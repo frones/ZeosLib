@@ -1178,9 +1178,8 @@ begin
     begin
       ZData := InParamValues[I].VArray.VIsNullArray;
       if (ZData = nil) then
-        ParamSqlData.UpdateNull(ParamIndex, False)
+        IsNull := False
       else
-      begin
         case TZSQLType(InParamValues[I].VArray.VIsNullArrayType) of
           stBoolean: IsNull := ZBooleanArray[J];
           stByte: IsNull := ZByteArray[J] <> 0;
@@ -1227,101 +1226,100 @@ begin
             raise EZIBConvertError.Create(SUnsupportedParameterType);
         end;
 
-        ZData := InParamValues[I].VArray.VArray;
-        if (ZData = nil) or (IsNull) then
-          ParamSqlData.UpdateNull(ParamIndex, True)
-        else
-          case TZSQLType(InParamValues[I].VArray.VArrayType) of
-            stBoolean: ParamSqlData.UpdateBoolean(ParamIndex, ZBooleanArray[J]);
-            stByte: ParamSqlData.UpdateSmall(ParamIndex, ZByteArray[J]);
-            stShort: ParamSqlData.UpdateSmall(ParamIndex, ZShortIntArray[J]);
-            stWord: ParamSqlData.UpdateInt(ParamIndex, ZWordArray[J]);
-            stSmall: ParamSqlData.UpdateSmall(ParamIndex, ZSmallIntArray[J]);
-            stLongWord: ParamSqlData.UpdateLong(ParamIndex, ZLongWordArray[J]);
-            stInteger: ParamSqlData.UpdateInt(ParamIndex, ZIntegerArray[J]);
-            stLong: ParamSqlData.UpdateLong(ParamIndex, ZInt64Array[J]);
-            stULong: ParamSqlData.UpdateLong(ParamIndex, ZUInt64Array[J]);
-            stFloat: ParamSqlData.UpdateFloat(ParamIndex, ZSingleArray[J]);
-            stDouble: ParamSqlData.UpdateDouble(ParamIndex, ZDoubleArray[J]);
-            stCurrency: ParamSqlData.UpdateBigDecimal(ParamIndex, ZCurrencyArray[J]);
-            stBigDecimal: ParamSqlData.UpdateBigDecimal(ParamIndex, ZExtendedArray[J]);
-            stGUID:
-              begin
-                Value := EncodeRawByteString({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(GUIDToString(ZGUIDArray[j])));
-                goto ProcString;
+      ZData := InParamValues[I].VArray.VArray;
+      if (ZData = nil) or (IsNull) then
+        ParamSqlData.UpdateNull(ParamIndex, True)
+      else
+        case TZSQLType(InParamValues[I].VArray.VArrayType) of
+          stBoolean: ParamSqlData.UpdateBoolean(ParamIndex, ZBooleanArray[J]);
+          stByte: ParamSqlData.UpdateSmall(ParamIndex, ZByteArray[J]);
+          stShort: ParamSqlData.UpdateSmall(ParamIndex, ZShortIntArray[J]);
+          stWord: ParamSqlData.UpdateInt(ParamIndex, ZWordArray[J]);
+          stSmall: ParamSqlData.UpdateSmall(ParamIndex, ZSmallIntArray[J]);
+          stLongWord: ParamSqlData.UpdateLong(ParamIndex, ZLongWordArray[J]);
+          stInteger: ParamSqlData.UpdateInt(ParamIndex, ZIntegerArray[J]);
+          stLong: ParamSqlData.UpdateLong(ParamIndex, ZInt64Array[J]);
+          stULong: ParamSqlData.UpdateLong(ParamIndex, ZUInt64Array[J]);
+          stFloat: ParamSqlData.UpdateFloat(ParamIndex, ZSingleArray[J]);
+          stDouble: ParamSqlData.UpdateDouble(ParamIndex, ZDoubleArray[J]);
+          stCurrency: ParamSqlData.UpdateBigDecimal(ParamIndex, ZCurrencyArray[J]);
+          stBigDecimal: ParamSqlData.UpdateBigDecimal(ParamIndex, ZExtendedArray[J]);
+          stGUID:
+            begin
+              Value := EncodeRawByteString({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(GUIDToString(ZGUIDArray[j])));
+              goto ProcString;
+            end;
+          stString, stUnicodeString:
+            begin
+              case InParamValues[i].VArray.VArrayVariantType of
+                vtString: Value := EncodeString(ZStringArray[j]);
+                vtAnsiString: Value := EncodeAnsiString(ZAnsiStringArray[j]);
+                vtUTF8String: Value := EncodeUTF8String(ZUTF8StringArray[j]);
+                vtRawByteString: Value := EncodeRawByteString(ZRawByteStringArray[j]);
+                vtUnicodeString: Value := EncodeUnicodeString(ZUnicodeStringArray[j]);
+                vtCharRec: Value := EncodeCharRec(ZCharRecArray[j]);
+                else
+                  raise Exception.Create('Unsupported String Variant');
               end;
-            stString, stUnicodeString:
-              begin
-                case InParamValues[i].VArray.VArrayVariantType of
-                  vtString: Value := EncodeString(ZStringArray[j]);
-                  vtAnsiString: Value := EncodeAnsiString(ZAnsiStringArray[j]);
-                  vtUTF8String: Value := EncodeUTF8String(ZUTF8StringArray[j]);
-                  vtRawByteString: Value := EncodeRawByteString(ZRawByteStringArray[j]);
-                  vtUnicodeString: Value := EncodeUnicodeString(ZUnicodeStringArray[j]);
-                  vtCharRec: Value := EncodeCharRec(ZCharRecArray[j]);
-                  else
-                    raise Exception.Create('Unsupported String Variant');
-                end;
 ProcString:     CP := ParamSqlData.GetIbSqlType(ParamIndex);
-                case CP of
-                  SQL_TEXT, SQL_VARYING:
-                    begin
-                      CP := ParamSqlData.GetIbSqlSubType(ParamIndex);  //get code page
-                      if CP = CS_BINARY then
-                        CharRec := ClientVarManager.GetAsCharRec(Value)
-                      else
-                        if CP > High(CodePageArray) then
-                          CharRec := ClientVarManager.GetAsCharRec(Value, ConSettings^.ClientCodePage^.CP)
-                        else
-                          CharRec := ClientVarManager.GetAsCharRec(Value, CodePageArray[CP]);
-                    end
-                  else
-                    CharRec := ClientVarManager.GetAsCharRec(Value);
-                end;
-                ParamSqlData.UpdatePAnsiChar(ParamIndex, CharRec.P, CharRec.Len);
-              end;
-            stBytes:
-              ParamSqlData.UpdateBytes(ParamIndex, ZBytesArray[j]);
-            stDate:
-              ParamSqlData.UpdateDate(ParamIndex, ZDateTimeArray[j]);
-            stTime:
-              ParamSqlData.UpdateTime(ParamIndex, ZDateTimeArray[j]);
-            stTimestamp:
-              ParamSqlData.UpdateTimestamp(ParamIndex, ZDateTimeArray[j]);
-            stAsciiStream,
-            stUnicodeStream,
-            stBinaryStream:
-              begin
-                TempBlob := ZInterfaceArray[j] as IZBlob;
-                if not TempBlob.IsEmpty then
-                begin
-                  if (ParamSqlData.GetFieldSqlType(ParamIndex) in [stUnicodeStream, stAsciiStream] ) then
-                    if TempBlob.IsClob then
-                    begin
-                      Buffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
-                      Len := TempBlob.Length;
-                    end
+              case CP of
+                SQL_TEXT, SQL_VARYING:
+                  begin
+                    CP := ParamSqlData.GetIbSqlSubType(ParamIndex);  //get code page
+                    if CP = CS_BINARY then
+                      CharRec := ClientVarManager.GetAsCharRec(Value)
                     else
-                    begin
-                      RawTemp := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
-                      Len := Length(RawTemp);
-                      if Len = 0 then
-                        Buffer := PEmptyAnsiString
+                      if CP > High(CodePageArray) then
+                        CharRec := ClientVarManager.GetAsCharRec(Value, ConSettings^.ClientCodePage^.CP)
                       else
-                        Buffer := Pointer(RawTemp);
-                    end
+                        CharRec := ClientVarManager.GetAsCharRec(Value, CodePageArray[CP]);
+                  end
+                else
+                  CharRec := ClientVarManager.GetAsCharRec(Value);
+              end;
+              ParamSqlData.UpdatePAnsiChar(ParamIndex, CharRec.P, CharRec.Len);
+            end;
+          stBytes:
+            ParamSqlData.UpdateBytes(ParamIndex, ZBytesArray[j]);
+          stDate:
+            ParamSqlData.UpdateDate(ParamIndex, ZDateTimeArray[j]);
+          stTime:
+            ParamSqlData.UpdateTime(ParamIndex, ZDateTimeArray[j]);
+          stTimestamp:
+            ParamSqlData.UpdateTimestamp(ParamIndex, ZDateTimeArray[j]);
+          stAsciiStream,
+          stUnicodeStream,
+          stBinaryStream:
+            begin
+              TempBlob := ZInterfaceArray[j] as IZBlob;
+              if not TempBlob.IsEmpty then
+              begin
+                if (ParamSqlData.GetFieldSqlType(ParamIndex) in [stUnicodeStream, stAsciiStream] ) then
+                  if TempBlob.IsClob then
+                  begin
+                    Buffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+                    Len := TempBlob.Length;
+                  end
                   else
                   begin
-                    Buffer := TempBlob.GetBuffer;
-                    Len := TempBlob.Length;
-                  end;
-                  if Buffer <> nil then
-                    ParamSqlData.WriteLobBuffer(ParamIndex, Buffer, Len);
+                    RawTemp := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+                    Len := Length(RawTemp);
+                    if Len = 0 then
+                      Buffer := PEmptyAnsiString
+                    else
+                      Buffer := Pointer(RawTemp);
+                  end
+                else
+                begin
+                  Buffer := TempBlob.GetBuffer;
+                  Len := TempBlob.Length;
                 end;
-              end
-            else
-              raise EZIBConvertError.Create(SUnsupportedParameterType);
-          end;
+                if Buffer <> nil then
+                  ParamSqlData.WriteLobBuffer(ParamIndex, Buffer, Len);
+              end;
+            end
+          else
+            raise EZIBConvertError.Create(SUnsupportedParameterType);
         end;
       Inc(ParamIndex);
     end;
@@ -2096,9 +2094,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-       Exit;
-
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2150,8 +2146,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-       Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2205,8 +2200,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-         Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
     case SQLCode of
       SQL_TEXT      : EncodePData(SQL_TEXT, Index, Pointer(Value), Length(Value));
@@ -2271,8 +2265,7 @@ begin
     TmpDate.tm_yday := 0;
     TmpDate.tm_isdst := 0;
 
-    if (sqlind <> nil) and (sqlind^ = -1) then
-       Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     case SQLCode of
@@ -2312,8 +2305,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-         Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2367,8 +2359,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-       Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2422,8 +2413,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-       Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2475,8 +2465,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-         Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2547,8 +2536,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-         Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
     case SQLCode of
       SQL_TEXT      :
@@ -2725,8 +2713,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-       Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
