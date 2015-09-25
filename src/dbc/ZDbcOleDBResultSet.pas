@@ -1816,6 +1816,7 @@ end;
     value returned is <code>null</code>
 }
 function TZOleDBResultSet.GetDate(ColumnIndex: Integer): TDateTime;
+var Failed: Boolean;
 begin
   Result := 0;
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
@@ -1833,11 +1834,10 @@ begin
           FLength);
       DBTYPE_STR or DBTYPE_BYREF:
         System.SetString(Result, PPAnsiChar(FData)^,
-          FLength);
+          FLength);*)
       DBTYPE_WSTR:
-        Result := PUnicodeToRaw(PWideChar(FData),
-          FLength shr 1, ConSettings^.ClientCodePage^.CP);
-      DBTYPE_WSTR or DBTYPE_BYREF:
+        Result := UnicodeSQLDateToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
+      (*DBTYPE_WSTR or DBTYPE_BYREF:
         Result := PUnicodeToRaw(ZPPWideChar(FData)^,
           FLength shr 1, ConSettings^.ClientCodePage^.CP);
 *)
@@ -1862,6 +1862,7 @@ end;
     value returned is <code>null</code>
 }
 function TZOleDBResultSet.GetTime(ColumnIndex: Integer): TDateTime;
+var Failed: Boolean;
 begin
   Result := 0;
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
@@ -1885,11 +1886,10 @@ begin
           FLength);
       DBTYPE_STR or DBTYPE_BYREF:
         System.SetString(Result, PPAnsiChar(FData)^,
-          FLength);
+          FLength);*)
       DBTYPE_WSTR:
-        Result := PUnicodeToRaw(PWideChar(FData),
-          FLength shr 1, ConSettings^.ClientCodePage^.CP);
-      DBTYPE_WSTR or DBTYPE_BYREF:
+        Result := UnicodeSQLTimeToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
+      (*DBTYPE_WSTR or DBTYPE_BYREF:
         Result := PUnicodeToRaw(ZPPWideChar(FData)^,
           FLength shr 1, ConSettings^.ClientCodePage^.CP);
 *)
@@ -1918,6 +1918,7 @@ end;
   @exception SQLException if a database access error occurs
 }
 function TZOleDBResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
+var Failed: Boolean;
 begin
   Result := 0;
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
@@ -1936,14 +1937,13 @@ begin
           FLength);
       DBTYPE_STR or DBTYPE_BYREF:
         System.SetString(Result, PPAnsiChar(FData)^,
-          FLength);
+          FLength);*)
       DBTYPE_WSTR:
-        Result := PUnicodeToRaw(PWideChar(FData),
-          FLength shr 1, ConSettings^.ClientCodePage^.CP);
-      DBTYPE_WSTR or DBTYPE_BYREF:
+        Result := UnicodeSQLTimeStampToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
+      (*DBTYPE_WSTR or DBTYPE_BYREF:
         Result := PUnicodeToRaw(ZPPWideChar(FData)^,
-          FLength shr 1, ConSettings^.ClientCodePage^.CP);
-*)
+          FLength shr 1, ConSettings^.ClientCodePage^.CP);*)
+
       DBTYPE_DBDATE:
         Result := EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month,
           PDBDate(FData)^.day);
