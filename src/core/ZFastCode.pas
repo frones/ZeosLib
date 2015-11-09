@@ -4363,10 +4363,8 @@ begin
     end;
   Flags := 0;
   P := S;
-  while P^ = ' ' do begin
-    Inc(Code);
+  while P^ = ' ' do
     Inc(P);
-  end;
   if P^ in ['+', '-'] then
     begin
       Flags := Flags or (Ord(S^) - Ord('+')); {Set/Reset Neg}
