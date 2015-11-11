@@ -53,6 +53,8 @@ unit ZPlainODBCDriver;
 
 interface
 
+{$I ZPlain.inc}
+
 uses
   ZCompatibility, ZPlainDriver;
 
@@ -63,7 +65,9 @@ const
 
 type
 (* API declaration data types *)
+  SQLCHAR = Byte;
   PSQLCHAR = PAnsiChar;
+  SQLWCHAR = Word;
   PSQLWCHAR = PWideChar;
   SQLSCHAR = ShortInt;
   SQLDATE = Byte;
@@ -110,6 +114,83 @@ type
 
   PRETCODE = ^RETCODE;
   RETCODE = SmallInt;
+
+  {$A-}
+//* transfer types for DATE, TIME, TIMESTAMP */
+  SQL_DATE_STRUCT = record
+    year:   SQLSMALLINT;
+    month:  SQLUSMALLINT;
+    day:    SQLUSMALLINT;
+  end;
+
+  SQL_TIME_STRUCT = record
+    hour:   SQLUSMALLINT;
+    minute: SQLUSMALLINT;
+    second: SQLUSMALLINT;
+  end;
+
+  SQL_TIMESTAMP_STRUCT = record
+    year:     SQLSMALLINT;
+    month:    SQLUSMALLINT;
+    day:      SQLUSMALLINT;
+    hour:     SQLUSMALLINT;
+    minute:   SQLUSMALLINT;
+    second:   SQLUSMALLINT;
+    fraction: SQLUINTEGER;
+  end;
+
+  SQLINTERVAL = (
+    SQL_IS_YEAR             = 1,
+    SQL_IS_MONTH            = 2,
+    SQL_IS_DAY              = 3,
+    SQL_IS_HOUR             = 4,
+    SQL_IS_MINUTE           = 5,
+    SQL_IS_SECOND           = 6,
+    SQL_IS_YEAR_TO_MONTH    = 7,
+    SQL_IS_DAY_TO_HOUR      = 8,
+    SQL_IS_DAY_TO_MINUTE    = 9,
+    SQL_IS_DAY_TO_SECOND    = 10,
+    SQL_IS_HOUR_TO_MINUTE   = 11,
+    SQL_IS_HOUR_TO_SECOND   = 12,
+    SQL_IS_MINUTE_TO_SECOND = 13);
+
+  SQL_YEAR_MONTH_STRUCT = record
+    year:   SQLUINTEGER;
+    month:  SQLUINTEGER;
+  end;
+
+  SQL_DAY_SECOND_STRUCT = record
+    day:      SQLUINTEGER;
+    hour:     SQLUINTEGER;
+    minute:   SQLUINTEGER;
+    second:   SQLUINTEGER;
+    fraction: SQLUINTEGER;
+  end;
+
+  SQL_INTERVAL_STRUCT = record
+    interval_type: SQLINTERVAL;
+    interval_sign: SQLSMALLINT;
+    case SQLINTERVAL of
+      SQL_IS_YEAR_TO_MONTH: (year_month: SQL_YEAR_MONTH_STRUCT);
+      SQL_IS_DAY_TO_HOUR,
+      SQL_IS_DAY_TO_MINUTE,
+      SQL_IS_DAY_TO_SECOND,
+      SQL_IS_HOUR_TO_MINUTE,
+      SQL_IS_HOUR_TO_SECOND,
+      SQL_IS_MINUTE_TO_SECOND: (day_second: SQL_DAY_SECOND_STRUCT);
+  end;
+
+const
+  SQL_MAX_NUMERIC_LEN = 16;
+
+type
+  SQL_NUMERIC_STRUCT = record
+    precision:  SQLCHAR;
+    scale:      SQLSCHAR;
+    sign:       SQLCHAR; //* 1 if positive, 0 if negative */
+    val:        array[0..SQL_MAX_NUMERIC_LEN-1] of SQLCHAR;
+  end;
+  {$A+}
 
 {$ifndef ODBCVER}
   const
