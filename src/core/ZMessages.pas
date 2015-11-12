@@ -1665,7 +1665,7 @@ resourcestring
   cSCanNotConnectToServer = 'Nie mo¿na po³¹czyæ siê z serwerem SQL';
   cSTableIsNotSpecified = 'Nie okreœlono tabeli';
   cSLiveResultSetsAreNotSupported = '"Live query" nie jest obs³ugiwane przez t¹ klasê';
-  cSInvalidInputParameterCount = 'Liczba parametrów wejsciowych jest mniejsza ni¿ oczekiwana';
+  cSInvalidInputParameterCount = 'Liczba parametrów wejœciowych jest mniejsza ni¿ oczekiwana';
   cSIsolationIsNotSupported = 'Poziom izolacji transakcji nie jest obs³ugiwany';
   cSColumnWasNotFound = 'Nie znaleziono kolumny o nazwie "%s"';
   cSWrongTypeForBlobParameter = 'B³êdny typ parametru Blob';
@@ -1684,17 +1684,17 @@ resourcestring
   cSOperationIsNotAllowed1 = 'Niedozwolona operacja w trybie FORWARD ONLY';
   cSOperationIsNotAllowed2 = 'Niedozwolona operacja w trybie READ ONLY';
   cSOperationIsNotAllowed3 = 'Niedozwolona operacja w trybie %s';
-  cSOperationIsNotAllowed4 = 'Niedozwolona operacja przy zamniêtym Ÿródle danych';
+  cSOperationIsNotAllowed4 = 'Niedozwolona operacja przy zamkniêtym Ÿródle danych';
   cSNoMoreRecords = 'Nie ma ju¿ wiêcej rekordów wynikowych';
-  cSCanNotOpenResultSet = 'Nie mozna otworzyæ danych wynikowych';
-  cSCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
+  cSCanNotOpenResultSet = 'Nie mo¿na otworzyæ danych wynikowych';
+  cSCanNotOpenDataSetWhenDestroying ='Nie mo¿na otworzyæ dataset gdy componentstate to dsDestroying';
   cSCircularLink = 'Datasource tworzy powi¹zanie cykliczne';
   cSBookmarkWasNotFound = 'Nie znaleziono zak³adki (Bookmark)';
   cSIncorrectSearchFieldsNumber = 'B³êdna liczba pól do wyszukiwania';
   cSInvalidOperationInTrans = 'B³êdna operacja w trybie transakcji';
   cSIncorrectSymbol = 'B³êdny symbol w liœcie pól "%s".';
   cSIncorrectToken = 'B³êdny wyraz za ":"';
-  cSIncorrectParamChar = 'TRANSLATE : Invalid value for ParamChar';
+  cSIncorrectParamChar = 'B³êdna wartoœæ dla ParamChar';
 
   cSSelectedTransactionIsolation = 'Wybrany poziom izolacji transakcji nie jest obs³ugiwany';
   cSDriverNotSupported = 'Nie obs³ugiwany sterownik %s';
@@ -1705,7 +1705,7 @@ resourcestring
   cSCannotPerformOperation = 'Nie mo¿na wykonaæ operacji na zamkniêtym zbiorze danych';
   cSInvalidState = 'B³êdny stan';
   cSErrorConvertion = 'B³¹d konwersji';
-  cSDataTypeDoesNotSupported = 'Nieobs³ugiwany typ dannych';
+  cSDataTypeDoesNotSupported = 'Nieobs³ugiwany typ danych';
   cSUnsupportedParameterType = 'Nieobs³ugiwany typ parametru';
   cSUnsupportedDataType = 'Nieobs³ugiwany typ danych';
   cSErrorConvertionField = 'B³¹d konwersji pola "%s" na SQLType "%s"';
@@ -1719,7 +1719,7 @@ resourcestring
 
   cSPropertyQuery = 'Zapytanie mo¿e chwilê potrwaæ na wiêkszej bazie danych!';
   cSPropertyTables = 'Powinieneœ uœciœliæ Katalog i/lub Schemat.';
-  cSPropertyColumns = 'Powinieneœ uœciœliæ Katalog, Schemat i/lub NazwêTabeli.';
+  cSPropertyColumns = 'Powinieneœ uœciœliæ Katalog, Schemat i/lub Nazwê Tabeli.';
   cSPropertyProcedures = 'Powinieneœ uœciœliæ Katalog i/lub Schemat.';
   cSPropertySequences = 'Powinieneœ uœciœliæ Katalog i/lub Schemat.';
   cSPropertyExecute = 'Czy mimo to wykonaæ zapytanie?';
@@ -1761,7 +1761,7 @@ resourcestring
   cSBoundVarStrIndexMissing = 'Nie istnieje zmienna licznikowa "%s"';
   cSBindVarOutOfRange      = 'Wartoœæ zmiennej licznikowej poza zakresem: %d';
   cSFailedToBindResults    = 'B³¹d aplikacji podczas ³¹czenia do wyników zapytania';
-  cSPreviousResultStillOpen = 'Previous resultset of this statement is still open';
+  cSPreviousResultStillOpen = 'Poprzedni zbiór wynikowy tego wyra¿enia jest nadal otwarty';
 
 //FOS+ 07112006
   cSRefreshRowOnlySupportedWithUpdateObject = 'Metoda refreshrow jest obs³ugiwana tylko przez obiekt typu "update"';
@@ -1771,7 +1771,7 @@ resourcestring
   cSFieldReadOnly        = 'Nie mo¿na przypisaæ do pola tylko do odczytu wartoœci: %d';
   cSInvalidUpdateCount     = 'Liczba zaktualizowanych rekordów: %d. tylko jeden rekord powinien byæ zaktualizowany.';
 
-  cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
+  cSRowBufferWidthExceeded ='Przekroczono rozmiar bufora. Spróbuj u¿yæ mniejszej liczby kolumn lub d³u¿szych kolumn w zapytaniu SQL.';
 
 {$ELSE} // default: ENGLISH
 
