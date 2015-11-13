@@ -63,6 +63,14 @@ const
   ODBC_LOCATION = {$IFDEF MSWINDOWS}'odbc32'{$ELSE}'libodbc'{$ENDIF}+ SharedSuffix;
 {$IFEND}
 
+(* maped headers are:
+  sql.h
+  sqlext.h
+  sqlspi.h
+  sqltypes.h
+  sqlucode.h
+*)
+
 type
 (* API declaration data types *)
   SQLCHAR = Byte;
@@ -114,6 +122,18 @@ type
 
   PRETCODE = ^RETCODE;
   RETCODE = SmallInt;
+
+const
+  { size of SQLSTATE  }
+  SQL_SQLSTATE_SIZE = 5;
+  { size of SQLSTATE for unicode }
+  SQL_SQLSTATE_SIZEW = 10;
+type
+  PSQLSTATE = ^TSQLSTATE;
+  TSQLSTATE = array[0..SQL_SQLSTATE_SIZE] of SQLCHAR;
+
+  PSQLSTATE_W = ^TSQLSTATE_W;
+  TSQLSTATE_W = array[0..SQL_SQLSTATE_SIZEW] of SQLCHAR;
 
   {$A-}
 //* transfer types for DATE, TIME, TIMESTAMP */
@@ -205,22 +225,13 @@ const
   SQL_SUCCESS = 0;
   SQL_SUCCESS_WITH_INFO = 1;
   SQL_NO_DATA = 100;
-//{$if (ODBCVER >= 0x0380)}
-  SQL_PARAM_DATA_AVAILABLE = 101;
-//{$ifend}
+  SQL_PARAM_DATA_AVAILABLE = 101; //(ODBCVER >= 0x0380)
 
 const
   SQL_ERROR = -(1);
   SQL_INVALID_HANDLE = -(2);
   SQL_STILL_EXECUTING = 2;
   SQL_NEED_DATA = 99;
-{ test for SQL_SUCCESS or SQL_SUCCESS_WITH_INFO  }
-{ was #define dname(params) para_def_expr }
-{ argument types are unknown }
-{ return type might be wrong }
-
-//#define SQL_SUCCEEDED(rc)  (((rc)&(~1))==0)
-//function SQL_SUCCEEDED(rc : longint) : longint;
 
 { flags for null-terminated string  }
 const
@@ -345,6 +356,25 @@ const
   SQL_DOUBLE = 8;
   SQL_DATETIME = 9;
   SQL_VARCHAR = 12;
+  SQL_WCHAR = (-8);
+  SQL_WVARCHAR = (-9);
+  SQL_WLONGVARCHAR = (-10);
+
+{ SQL extended datatypes  }
+const
+  SQL_DATE = 9;
+  SQL_INTERVAL = 10;
+  SQL_TIME = 10;
+  SQL_TIMESTAMP = 11;
+  SQL_LONGVARCHAR = -(1);
+  SQL_BINARY = -(2);
+  SQL_VARBINARY = -(3);
+  SQL_LONGVARBINARY = -(4);
+  SQL_BIGINT = -(5);
+  SQL_TINYINT = -(6);
+  SQL_BIT = -(7);
+  SQL_GUID = -(11); //(ODBCVER >= 0x0350)
+
   { One-parameter shortcuts for date/time data types  }
   SQL_TYPE_DATE = 91;
   SQL_TYPE_TIME = 92;
@@ -509,11 +539,8 @@ const
   SQL_API_SQLSTATISTICS = 53;
   SQL_API_SQLTABLES = 54;
   SQL_API_SQLTRANSACT = 23;
-//{$if (ODBCVER >= 0x0380)}
-const
-  SQL_API_SQLCANCELHANDLE = 1550;
-  SQL_API_SQLCOMPLETEASYNC = 1551;
-//{$ifend}
+  SQL_API_SQLCANCELHANDLE = 1550; //(ODBCVER >= 0x0380)
+  SQL_API_SQLCOMPLETEASYNC = 1551; //(ODBCVER >= 0x0380)
 
 { Information requested by SQLGetInfo()  }
 const
@@ -620,6 +647,7 @@ const
   SQL_CB_DELETE = 0;
   SQL_CB_CLOSE = 1;
   SQL_CB_PRESERVE = 2;
+
 { SQL_FETCH_DIRECTION bitmasks  }
   SQL_FD_FETCH_NEXT = $00000001;
   SQL_FD_FETCH_FIRST = $00000002;
@@ -627,16 +655,18 @@ const
   SQL_FD_FETCH_PRIOR = $00000008;
   SQL_FD_FETCH_ABSOLUTE = $00000010;
   SQL_FD_FETCH_RELATIVE = $00000020;
+
 { SQL_GETDATA_EXTENSIONS bitmasks  }
   SQL_GD_ANY_COLUMN = $00000001;
   SQL_GD_ANY_ORDER = $00000002;
+
 { SQL_IDENTIFIER_CASE values  }
   SQL_IC_UPPER = 1;
   SQL_IC_LOWER = 2;
   SQL_IC_SENSITIVE = 3;
   SQL_IC_MIXED = 4;
-{ SQL_OJ_CAPABILITIES bitmasks  }
 
+{ SQL_OJ_CAPABILITIES bitmasks  }
 { NB: this means 'outer join', not what  you may be thinking  }
 const
   SQL_OJ_LEFT = $00000001;
@@ -653,12 +683,14 @@ const
   SQL_SCCO_LOCK = $00000002;
   SQL_SCCO_OPT_ROWVER = $00000004;
   SQL_SCCO_OPT_VALUES = $00000008;
+
 { SQL_TXN_CAPABLE values  }
   SQL_TC_NONE = 0;
   SQL_TC_DML = 1;
   SQL_TC_ALL = 2;
   SQL_TC_DDL_COMMIT = 3;
   SQL_TC_DDL_IGNORE = 4;
+
 { SQL_TXN_ISOLATION_OPTION bitmasks  }
   SQL_TXN_READ_UNCOMMITTED = $00000001;
   SQL_TRANSACTION_READ_UNCOMMITTED = SQL_TXN_READ_UNCOMMITTED;
@@ -668,15 +700,466 @@ const
   SQL_TRANSACTION_REPEATABLE_READ = SQL_TXN_REPEATABLE_READ;
   SQL_TXN_SERIALIZABLE = $00000008;
   SQL_TRANSACTION_SERIALIZABLE = SQL_TXN_SERIALIZABLE;
+
 { SQL_NULL_COLLATION values  }
   SQL_NC_HIGH = 0;
   SQL_NC_LOW = 1;
 
 //sqlext.h constants
-  SQL_MAX_DSN_LENGTH = 32;  // maximum data source name size
+{ maximum data source name size  }
+const
+  SQL_MAX_DSN_LENGTH = 32;
+  SQL_MAX_OPTION_STRING_LENGTH = 256;
 
-  SQL_MAX_OPTION_STRING_LENGTH  =  256;
+{ return code SQL_NO_DATA_FOUND is the same as SQL_NO_DATA  }
+const
+  SQL_NO_DATA_FOUND = SQL_NO_DATA;
 
+{ an end handle type  }
+const
+  SQL_HANDLE_SENV = 5;
+
+{ env attribute  }
+const
+  SQL_ATTR_ODBC_VERSION = 200;
+  SQL_ATTR_CONNECTION_POOLING = 201;
+  SQL_ATTR_CP_MATCH = 202;
+
+{ values for SQL_ATTR_CONNECTION_POOLING  }
+const
+  SQL_CP_OFF = 0;
+  SQL_CP_ONE_PER_DRIVER = 1;
+  SQL_CP_ONE_PER_HENV = 2;
+  SQL_CP_DRIVER_AWARE = 3;
+  SQL_CP_DEFAULT = SQL_CP_OFF;
+{ values for SQL_ATTR_CP_MATCH  }
+  SQL_CP_STRICT_MATCH = 0;
+  SQL_CP_RELAXED_MATCH = 1;
+  SQL_CP_MATCH_DEFAULT = SQL_CP_STRICT_MATCH;
+{ values for SQL_ATTR_ODBC_VERSION  }
+  SQL_OV_ODBC3 = Pointer(3);
+  SQL_OV_ODBC351 = Pointer(351);
+
+{ new values for SQL_ATTR_ODBC_VERSION  }
+{ From ODBC 3.8 onwards, we should use <major version> * 100 + <minor version> }
+const
+  SQL_OV_ODBC3_80 = Pointer(380); //(ODBCVER >= 0x0380)
+
+{ connection attributes with new names  }
+const
+  SQL_ATTR_ACCESS_MODE = 101;
+  SQL_ATTR_AUTOCOMMIT = 102;
+  SQL_ATTR_CONNECTION_TIMEOUT = 113;
+  SQL_ATTR_CURRENT_CATALOG = 109;
+  SQL_ATTR_DISCONNECT_BEHAVIOR = 114;
+  SQL_ATTR_ENLIST_IN_DTC = 1207;
+  SQL_ATTR_ENLIST_IN_XA = 1208;
+  SQL_ATTR_LOGIN_TIMEOUT = 103;
+  SQL_ATTR_ODBC_CURSORS = 110;
+  SQL_ATTR_PACKET_SIZE = 112;
+  SQL_ATTR_QUIET_MODE = 111;
+  SQL_ATTR_TRACE = 104;
+  SQL_ATTR_TRACEFILE = 105;
+  SQL_ATTR_TRANSLATE_LIB = 106;
+  SQL_ATTR_TRANSLATE_OPTION = 107;
+  SQL_ATTR_TXN_ISOLATION = 108;
+
+{ GetConnectAttr only  }
+const
+  SQL_ATTR_CONNECTION_DEAD = 1209;
+{  ODBC Driver Manager sets this connection attribute to a unicode driver
+    (which supports SQLConnectW) when the application is an ANSI application
+    (which calls SQLConnect, SQLDriverConnect, or SQLBrowseConnect).
+    This is SetConnectAttr only and application does not set this attribute
+    This attribute was introduced because some unicode driver's some APIs may
+    need to behave differently on ANSI or Unicode applications. A unicode
+    driver, which  has same behavior for both ANSI or Unicode applications,
+    should return SQL_ERROR when the driver manager sets this connection
+    attribute. When a unicode driver returns SQL_SUCCESS on this attribute,
+    the driver manager treates ANSI and Unicode connections differently in
+    connection pooling.
+ }
+const
+  SQL_ATTR_ANSI_APP = 115; //(ODBCVER >= 0x0351)
+  SQL_ATTR_RESET_CONNECTION = 116; //(ODBCVER >= 0x0380)
+  SQL_ATTR_ASYNC_DBC_FUNCTIONS_ENABLE = 117; //(ODBCVER >= 0x0380)
+  SQL_ATTR_DBC_INFO_TOKEN = 118; // reset the pooled connection in case it is not a perfect match
+  SQL_ATTR_ASYNC_DBC_EVENT = 119; //(ODBCVER >= 0x0380)
+  { Async Notification }
+  SQL_ATTR_ASYNC_DBC_NOTIFICATION_CALLBACK = 120;
+  SQL_ATTR_ASYNC_DBC_NOTIFICATION_CONTEXT = 121;
+
+
+{ SQL_ACCESS_MODE options  }
+const
+  SQL_MODE_READ_WRITE = 0;
+  SQL_MODE_READ_ONLY = 1;
+  SQL_MODE_DEFAULT = SQL_MODE_READ_WRITE;
+
+{ SQL_AUTOCOMMIT options  }
+  SQL_AUTOCOMMIT_OFF = 0;
+  SQL_AUTOCOMMIT_ON = 1;
+  SQL_AUTOCOMMIT_DEFAULT = SQL_AUTOCOMMIT_ON;
+
+{ SQL_LOGIN_TIMEOUT options  }
+  SQL_LOGIN_TIMEOUT_DEFAULT = 15;
+
+{ SQL_OPT_TRACE options  }
+  SQL_OPT_TRACE_OFF = 0;
+  SQL_OPT_TRACE_ON = 1;
+  SQL_OPT_TRACE_DEFAULT = SQL_OPT_TRACE_OFF;
+  SQL_OPT_TRACE_FILE_DEFAULT = '\\SQL.LOG';
+
+{ SQL_ODBC_CURSORS options  }
+const
+  SQL_CUR_USE_DRIVER = 2;
+  SQL_CUR_DEFAULT = SQL_CUR_USE_DRIVER;
+
+{ values for SQL_ATTR_DISCONNECT_BEHAVIOR  }
+const
+  SQL_DB_RETURN_TO_POOL = 0;
+  SQL_DB_DISCONNECT = 1;
+  SQL_DB_DEFAULT = SQL_DB_RETURN_TO_POOL;
+{ values for SQL_ATTR_ENLIST_IN_DTC  }
+  SQL_DTC_DONE = 0;
+
+{ values for SQL_ATTR_CONNECTION_DEAD  }
+{ Connection is closed/dead  }
+const
+  SQL_CD_TRUE = 1;
+{ Connection is open/available  }
+  SQL_CD_FALSE = 0;
+
+{ values for SQL_ATTR_ANSI_APP  }
+const
+{ the application is an ANSI app  }
+  SQL_AA_TRUE = 1; //(ODBCVER >= 0x0351)
+{ the application is a Unicode app  }
+  SQL_AA_FALSE = 0; //(ODBCVER >= 0x0351)
+
+{ values for SQL_ATTR_RESET_CONNECTION  }
+const
+  SQL_RESET_CONNECTION_YES = 1; //(ODBCVER >= 0x0380)
+
+{ values for SQL_ATTR_ASYNC_DBC_FUNCTIONS_ENABLE  }
+const
+  SQL_ASYNC_DBC_ENABLE_ON = 1; //(ODBCVER >= 0x0380)
+  SQL_ASYNC_DBC_ENABLE_OFF = 0; //(ODBCVER >= 0x0380)
+  SQL_ASYNC_DBC_ENABLE_DEFAULT = SQL_ASYNC_DBC_ENABLE_OFF; //(ODBCVER >= 0x0380)
+
+{ statement attributes  }
+const
+  SQL_QUERY_TIMEOUT = 0;
+  SQL_MAX_ROWS = 1;
+  SQL_NOSCAN = 2;
+  SQL_MAX_LENGTH = 3;
+  SQL_ASYNC_ENABLE = 4;
+  SQL_BIND_TYPE = 5;
+  SQL_CURSOR_TYPE = 6;
+  SQL_CONCURRENCY = 7;
+  SQL_KEYSET_SIZE = 8;
+  SQL_ROWSET_SIZE = 9;
+  SQL_SIMULATE_CURSOR = 10;
+  SQL_RETRIEVE_DATA = 11;
+  SQL_USE_BOOKMARKS = 12;
+{      GetStmtOption Only  }
+  SQL_GET_BOOKMARK = 13;
+{      GetStmtOption Only  }
+  SQL_ROW_NUMBER = 14;
+
+{ statement attributes for ODBC 3.0  }
+const
+  SQL_ATTR_ASYNC_ENABLE = SQL_ASYNC_ENABLE;
+  SQL_ATTR_CONCURRENCY = SQL_CONCURRENCY;
+  SQL_ATTR_CURSOR_TYPE = SQL_CURSOR_TYPE;
+  SQL_ATTR_ENABLE_AUTO_IPD = 15;
+  SQL_ATTR_FETCH_BOOKMARK_PTR = 16;
+  SQL_ATTR_KEYSET_SIZE = SQL_KEYSET_SIZE;
+  SQL_ATTR_MAX_LENGTH = SQL_MAX_LENGTH;
+  SQL_ATTR_MAX_ROWS = SQL_MAX_ROWS;
+  SQL_ATTR_NOSCAN = SQL_NOSCAN;
+  SQL_ATTR_PARAM_BIND_OFFSET_PTR = 17;
+  SQL_ATTR_PARAM_BIND_TYPE = 18;
+  SQL_ATTR_PARAM_OPERATION_PTR = 19;
+  SQL_ATTR_PARAM_STATUS_PTR = 20;
+  SQL_ATTR_PARAMS_PROCESSED_PTR = 21;
+  SQL_ATTR_PARAMSET_SIZE = 22;
+  SQL_ATTR_QUERY_TIMEOUT = SQL_QUERY_TIMEOUT;
+  SQL_ATTR_RETRIEVE_DATA = SQL_RETRIEVE_DATA;
+  SQL_ATTR_ROW_BIND_OFFSET_PTR = 23;
+  SQL_ATTR_ROW_BIND_TYPE = SQL_BIND_TYPE;
+{GetStmtAttr }
+  SQL_ATTR_ROW_NUMBER = SQL_ROW_NUMBER;
+  SQL_ATTR_ROW_OPERATION_PTR = 24;
+  SQL_ATTR_ROW_STATUS_PTR = 25;
+  SQL_ATTR_ROWS_FETCHED_PTR = 26;
+  SQL_ATTR_ROW_ARRAY_SIZE = 27;
+  SQL_ATTR_SIMULATE_CURSOR = SQL_SIMULATE_CURSOR;
+  SQL_ATTR_USE_BOOKMARKS = SQL_USE_BOOKMARKS;
+  SQL_ATTR_ASYNC_STMT_EVENT = 29; //ODBCVER >= 0x0380
+
+{ define for SQL_DIAG_ROW_NUMBER and SQL_DIAG_COLUMN_NUMBER  }
+const
+  SQL_NO_ROW_NUMBER = -(1);
+  SQL_NO_COLUMN_NUMBER = -(1);
+  SQL_ROW_NUMBER_UNKNOWN = -(2);
+  SQL_COLUMN_NUMBER_UNKNOWN = -(2);
+
+{ SQLBindParameter extensions  }
+const
+  SQL_DEFAULT_PARAM = -(5);
+  SQL_IGNORE = -(6);
+  SQL_COLUMN_IGNORE = SQL_IGNORE;
+
+const
+  SQL_LEN_DATA_AT_EXEC_OFFSET = -(100);
+
+{ binary length for driver specific attributes  }
+const
+  SQL_LEN_BINARY_ATTR_OFFSET = -(100);
+
+const
+  SQL_FETCH_BOOKMARK = 8;
+{ SQLExtendedFetch "rgfRowStatus" element values  }
+  SQL_ROW_SUCCESS = 0;
+  SQL_ROW_DELETED = 1;
+  SQL_ROW_UPDATED = 2;
+  SQL_ROW_NOROW = 3;
+  SQL_ROW_ADDED = 4;
+  SQL_ROW_ERROR = 5;
+  SQL_ROW_SUCCESS_WITH_INFO = 6;
+  SQL_ROW_PROCEED = 0;
+  SQL_ROW_IGNORE = 1;
+
+{ value for SQL_DESC_ARRAY_STATUS_PTR  }
+const
+  SQL_PARAM_SUCCESS = 0;
+  SQL_PARAM_SUCCESS_WITH_INFO = 6;
+  SQL_PARAM_ERROR = 5;
+  SQL_PARAM_UNUSED = 7;
+  SQL_PARAM_DIAG_UNAVAILABLE = 1;
+  SQL_PARAM_PROCEED = 0;
+  SQL_PARAM_IGNORE = 1;
+
+{ Defines for SQLForeignKeys (UPDATE_RULE and DELETE_RULE)  }
+const
+  SQL_CASCADE = 0;
+  SQL_RESTRICT = 1;
+  SQL_SET_NULL = 2;
+  SQL_NO_ACTION = 3;
+  SQL_SET_DEFAULT = 4;
+
+{ Note that the following are in a different column of SQLForeignKeys than  }
+{ the previous #defines.   These are for DEFERRABILITY.                     }
+const
+  SQL_INITIALLY_DEFERRED = 5;
+  SQL_INITIALLY_IMMEDIATE = 6;
+  SQL_NOT_DEFERRABLE = 7;
+
+{ Defines for SQLBindParameter and SQLProcedureColumns (returned in the result set)  }
+const
+  SQL_PARAM_TYPE_UNKNOWN = 0;
+  SQL_PARAM_INPUT = 1;
+  SQL_PARAM_INPUT_OUTPUT = 2;
+  SQL_RESULT_COL = 3;
+  SQL_PARAM_OUTPUT = 4;
+  SQL_RETURN_VALUE = 5;
+  SQL_PARAM_INPUT_OUTPUT_STREAM = 8; //(ODBCVER >= 0x0380)
+  SQL_PARAM_OUTPUT_STREAM = 16; //(ODBCVER >= 0x0380)
+{ Defines for SQLProcedures (returned in the result set)  }
+
+const
+  SQL_PT_UNKNOWN = 0;
+  SQL_PT_PROCEDURE = 1;
+  SQL_PT_FUNCTION = 2;
+
+{ Defines used by Driver Manager when mapping SQLSetParam to SQLBindParameter }
+const
+  SQL_PARAM_TYPE_DEFAULT = SQL_PARAM_INPUT_OUTPUT;
+  SQL_SETPARAM_VALUE_MAX = -(1);
+
+{ SQLColAttributes defines  }
+  SQL_COLUMN_COUNT = 0;
+  SQL_COLUMN_NAME = 1;
+  SQL_COLUMN_TYPE = 2;
+  SQL_COLUMN_LENGTH = 3;
+  SQL_COLUMN_PRECISION = 4;
+  SQL_COLUMN_SCALE = 5;
+  SQL_COLUMN_DISPLAY_SIZE = 6;
+  SQL_COLUMN_NULLABLE = 7;
+  SQL_COLUMN_UNSIGNED = 8;
+  SQL_COLUMN_MONEY = 9;
+  SQL_COLUMN_UPDATABLE = 10;
+  SQL_COLUMN_AUTO_INCREMENT = 11;
+  SQL_COLUMN_CASE_SENSITIVE = 12;
+  SQL_COLUMN_SEARCHABLE = 13;
+  SQL_COLUMN_TYPE_NAME = 14;
+  SQL_COLUMN_TABLE_NAME = 15;
+  SQL_COLUMN_OWNER_NAME = 16;
+  SQL_COLUMN_QUALIFIER_NAME = 17;
+  SQL_COLUMN_LABEL = 18;
+  SQL_COLATT_OPT_MAX = SQL_COLUMN_LABEL;
+  SQL_COLATT_OPT_MIN = SQL_COLUMN_COUNT;
+
+{ SQLColAttributes subdefines for SQL_COLUMN_UPDATABLE  }
+  SQL_ATTR_READONLY = 0;
+  SQL_ATTR_WRITE = 1;
+  SQL_ATTR_READWRITE_UNKNOWN = 2;
+
+{ SQLColAttributes subdefines for SQL_COLUMN_SEARCHABLE  }
+{ These are also used by SQLGetInfo                      }
+  SQL_UNSEARCHABLE = 0;
+  SQL_LIKE_ONLY = 1;
+  SQL_ALL_EXCEPT_LIKE = 2;
+  SQL_SEARCHABLE = 3;
+  SQL_PRED_SEARCHABLE = SQL_SEARCHABLE;
+{ Special return values for SQLGetData  }
+  SQL_NO_TOTAL = -(4);
+
+{ New defines for SEARCHABLE column in SQLGetTypeInfo  }
+const
+  SQL_COL_PRED_CHAR = SQL_LIKE_ONLY;
+  SQL_COL_PRED_BASIC = SQL_ALL_EXCEPT_LIKE;
+
+{ whether an attribute is a pointer or not  }
+const
+  SQL_IS_POINTER = -(4);
+  SQL_IS_UINTEGER = -(5);
+  SQL_IS_INTEGER = -(6);
+  SQL_IS_USMALLINT = -(7);
+  SQL_IS_SMALLINT = -(8);
+
+{ the value of SQL_ATTR_PARAM_BIND_TYPE  }
+const
+  SQL_PARAM_BIND_BY_COLUMN = 0;
+  SQL_PARAM_BIND_TYPE_DEFAULT = SQL_PARAM_BIND_BY_COLUMN;
+
+{ SQL_QUERY_TIMEOUT options  }
+const
+  SQL_QUERY_TIMEOUT_DEFAULT = 0;
+{ SQL_MAX_ROWS options  }
+  SQL_MAX_ROWS_DEFAULT = 0;
+{ SQL_NOSCAN options  }
+{      1.0 FALSE  }
+  SQL_NOSCAN_OFF = 0;
+{      1.0 TRUE  }
+  SQL_NOSCAN_ON = 1;
+  SQL_NOSCAN_DEFAULT = SQL_NOSCAN_OFF;
+{ SQL_MAX_LENGTH options  }
+  SQL_MAX_LENGTH_DEFAULT = 0;
+{ values for SQL_ATTR_ASYNC_ENABLE  }
+  SQL_ASYNC_ENABLE_OFF = 0;
+  SQL_ASYNC_ENABLE_ON = 1;
+  SQL_ASYNC_ENABLE_DEFAULT = SQL_ASYNC_ENABLE_OFF;
+{ SQL_BIND_TYPE options  }
+  SQL_BIND_BY_COLUMN = 0;
+{ Default value  }
+  SQL_BIND_TYPE_DEFAULT = SQL_BIND_BY_COLUMN;
+{ SQL_CONCURRENCY options  }
+  SQL_CONCUR_READ_ONLY = 1;
+  SQL_CONCUR_LOCK = 2;
+  SQL_CONCUR_ROWVER = 3;
+  SQL_CONCUR_VALUES = 4;
+{ Default value  }
+  SQL_CONCUR_DEFAULT = SQL_CONCUR_READ_ONLY;
+{ SQL_CURSOR_TYPE options  }
+  SQL_CURSOR_FORWARD_ONLY = 0;
+  SQL_CURSOR_KEYSET_DRIVEN = 1;
+  SQL_CURSOR_DYNAMIC = 2;
+  SQL_CURSOR_STATIC = 3;
+{ Default value  }
+  SQL_CURSOR_TYPE_DEFAULT = SQL_CURSOR_FORWARD_ONLY;
+{ SQL_ROWSET_SIZE options  }
+  SQL_ROWSET_SIZE_DEFAULT = 1;
+{ SQL_KEYSET_SIZE options  }
+  SQL_KEYSET_SIZE_DEFAULT = 0;
+{ SQL_SIMULATE_CURSOR options  }
+  SQL_SC_NON_UNIQUE = 0;
+  SQL_SC_TRY_UNIQUE = 1;
+  SQL_SC_UNIQUE = 2;
+{ SQL_RETRIEVE_DATA options  }
+  SQL_RD_OFF = 0;
+  SQL_RD_ON = 1;
+  SQL_RD_DEFAULT = SQL_RD_ON;
+{ SQL_USE_BOOKMARKS options  }
+  SQL_UB_OFF = 0;
+  SQL_UB_ON = 01;
+  SQL_UB_DEFAULT = SQL_UB_OFF;
+{ New values for SQL_USE_BOOKMARKS attribute  }
+  SQL_UB_FIXED = SQL_UB_ON;
+  SQL_UB_VARIABLE = 2;
+
+{ extended descriptor field  }
+const
+  SQL_DESC_ARRAY_SIZE = 20;
+  SQL_DESC_ARRAY_STATUS_PTR = 21;
+  SQL_DESC_AUTO_UNIQUE_VALUE = SQL_COLUMN_AUTO_INCREMENT;
+  SQL_DESC_BASE_COLUMN_NAME = 22;
+  SQL_DESC_BASE_TABLE_NAME = 23;
+  SQL_DESC_BIND_OFFSET_PTR = 24;
+  SQL_DESC_BIND_TYPE = 25;
+  SQL_DESC_CASE_SENSITIVE = SQL_COLUMN_CASE_SENSITIVE;
+  SQL_DESC_CATALOG_NAME = SQL_COLUMN_QUALIFIER_NAME;
+  SQL_DESC_CONCISE_TYPE = SQL_COLUMN_TYPE;
+  SQL_DESC_DATETIME_INTERVAL_PRECISION = 26;
+  SQL_DESC_DISPLAY_SIZE = SQL_COLUMN_DISPLAY_SIZE;
+  SQL_DESC_FIXED_PREC_SCALE = SQL_COLUMN_MONEY;
+  SQL_DESC_LABEL = SQL_COLUMN_LABEL;
+  SQL_DESC_LITERAL_PREFIX = 27;
+  SQL_DESC_LITERAL_SUFFIX = 28;
+  SQL_DESC_LOCAL_TYPE_NAME = 29;
+  SQL_DESC_MAXIMUM_SCALE = 30;
+  SQL_DESC_MINIMUM_SCALE = 31;
+  SQL_DESC_NUM_PREC_RADIX = 32;
+  SQL_DESC_PARAMETER_TYPE = 33;
+  SQL_DESC_ROWS_PROCESSED_PTR = 34;
+  SQL_DESC_ROWVER = 35; //(ODBCVER >= 0x0350)
+  SQL_DESC_SCHEMA_NAME = SQL_COLUMN_OWNER_NAME;
+  SQL_DESC_SEARCHABLE = SQL_COLUMN_SEARCHABLE;
+  SQL_DESC_TYPE_NAME = SQL_COLUMN_TYPE_NAME;
+  SQL_DESC_TABLE_NAME = SQL_COLUMN_TABLE_NAME;
+  SQL_DESC_UNSIGNED = SQL_COLUMN_UNSIGNED;
+  SQL_DESC_UPDATABLE = SQL_COLUMN_UPDATABLE;
+
+{ defines for diagnostics fields  }
+const
+  SQL_DIAG_CURSOR_ROW_COUNT = -(1249);
+  SQL_DIAG_ROW_NUMBER = -(1248);
+  SQL_DIAG_COLUMN_NUMBER = -(1247);
+
+{ interval code  }
+const
+  SQL_CODE_YEAR = 1;
+  SQL_CODE_MONTH = 2;
+  SQL_CODE_DAY = 3;
+  SQL_CODE_HOUR = 4;
+  SQL_CODE_MINUTE = 5;
+  SQL_CODE_SECOND = 6;
+  SQL_CODE_YEAR_TO_MONTH = 7;
+  SQL_CODE_DAY_TO_HOUR = 8;
+  SQL_CODE_DAY_TO_MINUTE = 9;
+  SQL_CODE_DAY_TO_SECOND = 10;
+  SQL_CODE_HOUR_TO_MINUTE = 11;
+  SQL_CODE_HOUR_TO_SECOND = 12;
+  SQL_CODE_MINUTE_TO_SECOND = 13;
+  SQL_INTERVAL_YEAR = 100+SQL_CODE_YEAR;
+  SQL_INTERVAL_MONTH = 100+SQL_CODE_MONTH;
+  SQL_INTERVAL_DAY = 100+SQL_CODE_DAY;
+  SQL_INTERVAL_HOUR = 100+SQL_CODE_HOUR;
+  SQL_INTERVAL_MINUTE = 100+SQL_CODE_MINUTE;
+  SQL_INTERVAL_SECOND = 100+SQL_CODE_SECOND;
+  SQL_INTERVAL_YEAR_TO_MONTH = 100+SQL_CODE_YEAR_TO_MONTH;
+  SQL_INTERVAL_DAY_TO_HOUR = 100+SQL_CODE_DAY_TO_HOUR;
+  SQL_INTERVAL_DAY_TO_MINUTE = 100+SQL_CODE_DAY_TO_MINUTE;
+  SQL_INTERVAL_DAY_TO_SECOND = 100+SQL_CODE_DAY_TO_SECOND;
+  SQL_INTERVAL_HOUR_TO_MINUTE = 100+SQL_CODE_HOUR_TO_MINUTE;
+  SQL_INTERVAL_HOUR_TO_SECOND = 100+SQL_CODE_HOUR_TO_SECOND;
+  SQL_INTERVAL_MINUTE_TO_SECOND = 100+SQL_CODE_MINUTE_TO_SECOND;
+
+  SQL_UNICODE = SQL_WCHAR;
+  SQL_UNICODE_VARCHAR = SQL_WVARCHAR;
+  SQL_UNICODE_LONGVARCHAR = SQL_WLONGVARCHAR;
+  SQL_UNICODE_CHAR = SQL_WCHAR;
 
 type
   IODBC3BasePlainDriver = interface(IZPlainDriver)
@@ -703,6 +1186,8 @@ type
     function Disconnect(ConnectionHandle: SQLHDBC): SQLRETURN;
     function EndTran(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
       CompletionType: SQLSMALLINT): SQLRETURN;
+    function GetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
+       Value: SQLPOINTER; BufferLength: SQLINTEGER; StringLengthPtr: PSQLINTEGER): SQLRETURN;
     function Execute(StatementHandle: SQLHSTMT): SQLRETURN;
     function Fetch(StatementHandle: SQLHSTMT): SQLRETURN;
     function FetchScroll(StatementHandle: SQLHSTMT; FetchOrientation: SQLSMALLINT;
@@ -712,11 +1197,22 @@ type
     function GetData(StatementHandle: SQLHSTMT; ColumnNumber: SQLUSMALLINT;
       TargetType: SQLSMALLINT; TargetValue: SQLPOINTER; BufferLength: SQLLEN;
       StrLen_or_IndPtr: PSQLLEN): SQLRETURN;
+    function GetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
+      FieldIdentifier: SQLSMALLINT; Value: SQLPOINTER; BufferLength: SQLINTEGER;
+      StringLength: PSQLINTEGER): SQLRETURN;
+    function GetDiagField(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
+      RecNumber: SQLSMALLINT; DiagIdentifier: SQLSMALLINT; DiagInfo: SQLPOINTER;
+      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN;
     function GetEnvAttr(EnvironmentHandle: SQLHENV; Attribute: SQLINTEGER;
       ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER; StringLength: PSQLINTEGER): SQLRETURN;
     function GetFunctions(ConnectionHandle: SQLHDBC; FunctionId: SQLUSMALLINT;
       SupportedPtr: PSQLUSMALLINT): SQLRETURN;
+    function GetInfo(ConnectionHandle: SQLHDBC; InfoType: SQLUSMALLINT;
+      InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT): SQLRETURN;
     function GetTypeInfo(StatementHandle: SQLHSTMT; DataType: SQLSMALLINT): SQLRETURN;
+    function GetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
+      ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
+      StringLengthPtr: PSQLINTEGER): SQLRETURN;
     function MoreResults(StatementHandle: SQLHSTMT): SQLRETURN;
     function NumParams(StatementHandle: SQLHSTMT; ParameterCountPtr: PSQLSMALLINT): SQLRETURN;
     function NumResultCols(StatementHandle: SQLHSTMT; ColumnCountPtr: PSQLSMALLINT): SQLRETURN;
@@ -724,7 +1220,18 @@ type
     function PutData(StatementHandle: SQLHSTMT; DataPtr: SQLPOINTER;
       StrLen_or_Ind: SQLLEN): SQLRETURN;
     function RowCount(StatementHandle: SQLHSTMT; RowCountPtr: PSQLLEN): SQLRETURN;
+    function SetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
+      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
+    function SetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
+      FieldIdentifier: SQLSMALLINT; ValuePtr: SQLPOINTER;
+      BufferLength: SQLINTEGER): SQLRETURN;
+    function SetDescRec(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
+      _Type: SQLSMALLINT; SubType: SQLSMALLINT; Length: SQLLEN; Precision: SQLSMALLINT;
+      Scale: SQLSMALLINT; DataPtr: SQLPOINTER; StringLengthPtr: PSQLLEN;
+      IndicatorPtr: PSQLLEN): SQLRETURN;
     function SetEnvAttr(EnvironmentHandle: SQLHENV; Attribute: SQLINTEGER;
+      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
+    function SetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
       ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
     function SetPos(StatementHandle: SQLHSTMT; RowNumber: SQLSETPOSIROW;
       Operation: SQLUSMALLINT; LockType: SQLUSMALLINT): SQLRETURN;
@@ -776,28 +1283,18 @@ type
       FKCatalogName: PSQLWCHAR; NameLength4: SQLSMALLINT;
       FKSchemaName: PSQLWCHAR; NameLength5: SQLSMALLINT;
       FKTableName: PSQLWCHAR; NameLength6: SQLSMALLINT): SQLRETURN;
-    function GetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-       Value: SQLPOINTER; BufferLength: SQLINTEGER; StringLengthPtr: PSQLINTEGER): SQLRETURN;
     function GetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLWCHAR;
       BufferLength: SQLSMALLINT; NameLengthPtr: PSQLSMALLINT): SQLRETURN;
     function GetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
       FieldIdentifier: SQLSMALLINT; Value: SQLPOINTER; BufferLength: SQLINTEGER;
       StringLength: PSQLINTEGER): SQLRETURN;
     function GetDescRec(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-       Name: PSQLWCHAR; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT;
-       TypePtr: PSQLSMALLINT; SubTypePtr: PSQLSMALLINT; LengthPtr: PSQLLEN;
-       PrecisionPtr: PSQLSMALLINT; ScalePtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
-    function GetDiagField(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      RecNumber: SQLSMALLINT; DiagIdentifier: SQLSMALLINT; DiagInfo: SQLPOINTER;
-      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN;
+      Name: PSQLWCHAR; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT;
+      TypePtr: PSQLSMALLINT; SubTypePtr: PSQLSMALLINT; LengthPtr: PSQLLEN;
+      PrecisionPtr: PSQLSMALLINT; ScalePtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
     function GetDiagRec(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
       RecNumber: SQLSMALLINT; Sqlstate: PSQLWCHAR; NativeErrorPtr: PSQLINTEGER;
       MessageText: PSQLWCHAR; BufferLength: SQLSMALLINT; TextLength: PSQLSMALLINT): SQLRETURN;
-    function GetInfo(ConnectionHandle: SQLHDBC; InfoType: SQLUSMALLINT;
-      InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT): SQLRETURN;
-    function GetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLengthPtr: PSQLINTEGER): SQLRETURN;
     function NativeSql(ConnectionHandle: SQLHDBC;
       InStatementText: PSQLWCHAR; TextLength1: SQLINTEGER;
       OutStatementText: PSQLWCHAR; BufferLength: SQLINTEGER;
@@ -817,15 +1314,8 @@ type
       CatalogName: PSQLWCHAR; NameLength2: SQLSMALLINT;
       SchemaName: PSQLWCHAR; NameLength1: SQLSMALLINT;
       ProcName: PSQLWCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    function SetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-     ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
     function SetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLWCHAR;
       NameLength: SQLSMALLINT): SQLRETURN;
-    function SetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      FieldIdentifier: SQLSMALLINT; ValuePtr: SQLPOINTER;
-      BufferLength: SQLINTEGER): SQLRETURN;
-    function SetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
     function SpecialColumns(StatementHandle: SQLHSTMT; IdentifierType: SQLSMALLINT;
       CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
       SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
@@ -893,28 +1383,15 @@ type
       FKCatalogName: PSQLCHAR; NameLength4: SQLSMALLINT;
       FKSchemaName: PSQLCHAR; NameLength5: SQLSMALLINT;
       FKTableName: PSQLCHAR; NameLength6: SQLSMALLINT): SQLRETURN;
-    function GetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-       Value: SQLPOINTER; BufferLength: SQLINTEGER; StringLengthPtr: PSQLINTEGER): SQLRETURN;
     function GetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLCHAR;
       BufferLength: SQLSMALLINT; NameLengthPtr: PSQLSMALLINT): SQLRETURN;
-    function GetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      FieldIdentifier: SQLSMALLINT; Value: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLength: PSQLINTEGER): SQLRETURN;
     function GetDescRec(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
        Name: PSQLCHAR; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT;
        TypePtr: PSQLSMALLINT; SubTypePtr: PSQLSMALLINT; LengthPtr: PSQLLEN;
        PrecisionPtr: PSQLSMALLINT; ScalePtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
-    function GetDiagField(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      RecNumber: SQLSMALLINT; DiagIdentifier: SQLSMALLINT; DiagInfo: SQLPOINTER;
-      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN;
     function GetDiagRec(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
       RecNumber: SQLSMALLINT; Sqlstate: PSQLCHAR; NativeErrorPtr: PSQLINTEGER;
       MessageText: PSQLCHAR; BufferLength: SQLSMALLINT; TextLength: PSQLSMALLINT): SQLRETURN;
-    function GetInfo(ConnectionHandle: SQLHDBC; InfoType: SQLUSMALLINT;
-      InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT): SQLRETURN;
-    function GetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLengthPtr: PSQLINTEGER): SQLRETURN;
     function NativeSql(ConnectionHandle: SQLHDBC;
       InStatementText: PSQLCHAR; TextLength1: SQLINTEGER;
       OutStatementText: PSQLCHAR; BufferLength: SQLINTEGER;
@@ -934,15 +1411,8 @@ type
       CatalogName: PSQLCHAR; NameLength2: SQLSMALLINT;
       SchemaName: PSQLCHAR; NameLength1: SQLSMALLINT;
       ProcName: PSQLCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    function SetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-     ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
     function SetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLCHAR;
       NameLength: SQLSMALLINT): SQLRETURN;
-    function SetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      FieldIdentifier: SQLSMALLINT; ValuePtr: SQLPOINTER;
-      BufferLength: SQLINTEGER): SQLRETURN;
-    function SetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
     function SpecialColumns(StatementHandle: SQLHSTMT; IdentifierType: SQLSMALLINT;
       CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
       SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
@@ -1017,10 +1487,13 @@ type
       ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLSetPos: function(StatementHandle: SQLHSTMT; RowNumber: SQLSETPOSIROW;
       Operation: SQLUSMALLINT; LockType: SQLUSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+  private
+    FDriverName: String;
   protected
     procedure LoadApi; override;
   public
-    constructor Create;
+    function GetProtocol: string; override;
+    constructor Create(DriverName: String);
   public
     function AllocHandle(HandleType: SQLSMALLINT; InputHandle: SQLHANDLE;
       var OutputHandle: SQLHANDLE): SQLRETURN;
@@ -1037,27 +1510,40 @@ type
     function CloseCursor(StatementHandle: SQLHSTMT): SQLRETURN;
     function CompleteAsync(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
       var AsyncRetCodePtr: PRETCODE): SQLRETURN;
-    function CopyDesc (SourceDescHandle: SQLHDESC; TargetDescHandle: SQLHDESC): SQLRETURN;
+    function CopyDesc(SourceDescHandle: SQLHDESC; TargetDescHandle: SQLHDESC): SQLRETURN;
     function DescribeParam(StatementHandle: SQLHSTMT; ParameterNumber: SQLUSMALLINT;
       DataTypePtr: PSQLSMALLINT; ParameterSizePtr: PSQLULEN;
       DecimalDigitsPtr: SQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
     function Disconnect(ConnectionHandle: SQLHDBC): SQLRETURN;
     function EndTran(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
       CompletionType: SQLSMALLINT): SQLRETURN;
+    function GetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
+       Value: SQLPOINTER; BufferLength: SQLINTEGER; StringLengthPtr: PSQLINTEGER): SQLRETURN; virtual; abstract;
     function Execute(StatementHandle: SQLHSTMT): SQLRETURN;
     function Fetch(StatementHandle: SQLHSTMT): SQLRETURN;
     function FetchScroll(StatementHandle: SQLHSTMT; FetchOrientation: SQLSMALLINT;
       FetchOffset: SQLLEN): SQLRETURN;
     function FreeHandle(HandleType: SQLSMALLINT; Handle: SQLHANDLE): SQLRETURN;
     function FreeStmt(StatementHandle: SQLHSTMT; Option: SQLUSMALLINT): SQLRETURN;
+    function GetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
+      FieldIdentifier: SQLSMALLINT; Value: SQLPOINTER; BufferLength: SQLINTEGER;
+      StringLength: PSQLINTEGER): SQLRETURN; virtual; abstract;
     function GetData(StatementHandle: SQLHSTMT; ColumnNumber: SQLUSMALLINT;
       TargetType: SQLSMALLINT; TargetValue: SQLPOINTER; BufferLength: SQLLEN;
       StrLen_or_IndPtr: PSQLLEN): SQLRETURN;
+    function GetDiagField(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
+      RecNumber: SQLSMALLINT; DiagIdentifier: SQLSMALLINT; DiagInfo: SQLPOINTER;
+      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN; virtual; abstract;
     function GetEnvAttr(EnvironmentHandle: SQLHENV; Attribute: SQLINTEGER;
       ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER; StringLength: PSQLINTEGER): SQLRETURN;
     function GetFunctions(ConnectionHandle: SQLHDBC; FunctionId: SQLUSMALLINT;
       SupportedPtr: PSQLUSMALLINT): SQLRETURN;
+    function GetInfo(ConnectionHandle: SQLHDBC; InfoType: SQLUSMALLINT;
+      InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT): SQLRETURN;  virtual; abstract;
     function GetTypeInfo(StatementHandle: SQLHSTMT; DataType: SQLSMALLINT): SQLRETURN;
+    function GetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
+      ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
+      StringLengthPtr: PSQLINTEGER): SQLRETURN; virtual; abstract;
     function MoreResults(StatementHandle: SQLHSTMT): SQLRETURN;
     function NumParams(StatementHandle: SQLHSTMT; ParameterCountPtr: PSQLSMALLINT): SQLRETURN;
     function NumResultCols(StatementHandle: SQLHSTMT; ColumnCountPtr: PSQLSMALLINT): SQLRETURN;
@@ -1065,15 +1551,22 @@ type
     function PutData(StatementHandle: SQLHSTMT; DataPtr: SQLPOINTER;
       StrLen_or_Ind: SQLLEN): SQLRETURN;
     function RowCount(StatementHandle: SQLHSTMT; RowCountPtr: PSQLLEN): SQLRETURN;
+    function SetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
+      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;  virtual; abstract;
+    function SetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
+      FieldIdentifier: SQLSMALLINT; ValuePtr: SQLPOINTER;
+      BufferLength: SQLINTEGER): SQLRETURN;  virtual; abstract;
     function SetDescRec(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
       _Type: SQLSMALLINT; SubType: SQLSMALLINT; Length: SQLLEN; Precision: SQLSMALLINT;
       Scale: SQLSMALLINT; DataPtr: SQLPOINTER; StringLengthPtr: PSQLLEN;
       IndicatorPtr: PSQLLEN): SQLRETURN;
     function SetEnvAttr(EnvironmentHandle: SQLHENV; Attribute: SQLINTEGER;
       ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
+    function SetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
+      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; virtual; abstract;
     function SetPos(StatementHandle: SQLHSTMT; RowNumber: SQLSETPOSIROW;
       Operation: SQLUSMALLINT; LockType: SQLUSMALLINT): SQLRETURN;
-   end;
+  end;
 
   TODBC3UnicodePlainDriver = class(TODBC3BaseDriver, IODBC3UnicodePlainDriver)
   private
@@ -1194,9 +1687,9 @@ type
     function Clone: IZPlainDriver; override;
     procedure LoadApi; override;
   public
-    function GetProtocol: string; override;
     function GetDescription: string; override;
     procedure LoadCodePages; override;
+    constructor Create(DriverName: String = '_W');
   public
     function BrowseConnect(ConnectionHandle: SQLHDBC; InConnectionString: PSQLWCHAR;
       StringLength1: SQLSMALLINT; OutConnectionString: PSQLWCHAR;
@@ -1243,27 +1736,27 @@ type
       FKSchemaName: PSQLWCHAR; NameLength5: SQLSMALLINT;
       FKTableName: PSQLWCHAR; NameLength6: SQLSMALLINT): SQLRETURN;
     function GetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-       Value: SQLPOINTER; BufferLength: SQLINTEGER; StringLengthPtr: PSQLINTEGER): SQLRETURN;
+       Value: SQLPOINTER; BufferLength: SQLINTEGER; StringLengthPtr: PSQLINTEGER): SQLRETURN; override;
     function GetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLWCHAR;
       BufferLength: SQLSMALLINT; NameLengthPtr: PSQLSMALLINT): SQLRETURN;
     function GetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
       FieldIdentifier: SQLSMALLINT; Value: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLength: PSQLINTEGER): SQLRETURN;
+      StringLength: PSQLINTEGER): SQLRETURN; override;
     function GetDescRec(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
        Name: PSQLWCHAR; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT;
        TypePtr: PSQLSMALLINT; SubTypePtr: PSQLSMALLINT; LengthPtr: PSQLLEN;
        PrecisionPtr: PSQLSMALLINT; ScalePtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
     function GetDiagField(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
       RecNumber: SQLSMALLINT; DiagIdentifier: SQLSMALLINT; DiagInfo: SQLPOINTER;
-      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN;
+      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN; override;
     function GetDiagRec(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
       RecNumber: SQLSMALLINT; Sqlstate: PSQLWCHAR; NativeErrorPtr: PSQLINTEGER;
       MessageText: PSQLWCHAR; BufferLength: SQLSMALLINT; TextLength: PSQLSMALLINT): SQLRETURN;
     function GetInfo(ConnectionHandle: SQLHDBC; InfoType: SQLUSMALLINT;
-      InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT): SQLRETURN;
+      InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT): SQLRETURN; override;
     function GetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
       ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLengthPtr: PSQLINTEGER): SQLRETURN;
+      StringLengthPtr: PSQLINTEGER): SQLRETURN; override;
     function NativeSql(ConnectionHandle: SQLHDBC;
       InStatementText: PSQLWCHAR; TextLength1: SQLINTEGER;
       OutStatementText: PSQLWCHAR; BufferLength: SQLINTEGER;
@@ -1284,14 +1777,14 @@ type
       SchemaName: PSQLWCHAR; NameLength1: SQLSMALLINT;
       ProcName: PSQLWCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
     function SetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-     ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
+      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; override;
     function SetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLWCHAR;
       NameLength: SQLSMALLINT): SQLRETURN;
     function SetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
       FieldIdentifier: SQLSMALLINT; ValuePtr: SQLPOINTER;
-      BufferLength: SQLINTEGER): SQLRETURN;
+      BufferLength: SQLINTEGER): SQLRETURN; override;
     function SetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
+      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; override;
     function SpecialColumns(StatementHandle: SQLHSTMT; IdentifierType: SQLSMALLINT;
       CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
       SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
@@ -1432,9 +1925,9 @@ type
     function Clone: IZPlainDriver; override;
     procedure LoadApi; override;
   public
-    function GetProtocol: string; override;
     function GetDescription: string; override;
     procedure LoadCodePages; override;
+    constructor Create(DriverName: String = '_A');
   public
     function BrowseConnect(ConnectionHandle: SQLHDBC; InConnectionString: PSQLCHAR;
       StringLength1: SQLSMALLINT; OutConnectionString: PSQLCHAR;
@@ -1481,27 +1974,27 @@ type
       FKSchemaName: PSQLCHAR; NameLength5: SQLSMALLINT;
       FKTableName: PSQLCHAR; NameLength6: SQLSMALLINT): SQLRETURN;
     function GetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-       Value: SQLPOINTER; BufferLength: SQLINTEGER; StringLengthPtr: PSQLINTEGER): SQLRETURN;
+       Value: SQLPOINTER; BufferLength: SQLINTEGER; StringLengthPtr: PSQLINTEGER): SQLRETURN; override;
     function GetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLCHAR;
       BufferLength: SQLSMALLINT; NameLengthPtr: PSQLSMALLINT): SQLRETURN;
     function GetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
       FieldIdentifier: SQLSMALLINT; Value: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLength: PSQLINTEGER): SQLRETURN;
+      StringLength: PSQLINTEGER): SQLRETURN; override;
     function GetDescRec(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
        Name: PSQLCHAR; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT;
        TypePtr: PSQLSMALLINT; SubTypePtr: PSQLSMALLINT; LengthPtr: PSQLLEN;
        PrecisionPtr: PSQLSMALLINT; ScalePtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
     function GetDiagField(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
       RecNumber: SQLSMALLINT; DiagIdentifier: SQLSMALLINT; DiagInfo: SQLPOINTER;
-      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN;
+      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN; override;
     function GetDiagRec(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
       RecNumber: SQLSMALLINT; Sqlstate: PSQLCHAR; NativeErrorPtr: PSQLINTEGER;
       MessageText: PSQLCHAR; BufferLength: SQLSMALLINT; TextLength: PSQLSMALLINT): SQLRETURN;
     function GetInfo(ConnectionHandle: SQLHDBC; InfoType: SQLUSMALLINT;
-      InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT): SQLRETURN;
+      InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT): SQLRETURN; override;
     function GetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
       ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLengthPtr: PSQLINTEGER): SQLRETURN;
+      StringLengthPtr: PSQLINTEGER): SQLRETURN; override;
     function NativeSql(ConnectionHandle: SQLHDBC;
       InStatementText: PSQLCHAR; TextLength1: SQLINTEGER;
       OutStatementText: PSQLCHAR; BufferLength: SQLINTEGER;
@@ -1522,14 +2015,14 @@ type
       SchemaName: PSQLCHAR; NameLength1: SQLSMALLINT;
       ProcName: PSQLCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
     function SetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-     ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
+     ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; override;
     function SetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLCHAR;
       NameLength: SQLSMALLINT): SQLRETURN;
     function SetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
       FieldIdentifier: SQLSMALLINT; ValuePtr: SQLPOINTER;
-      BufferLength: SQLINTEGER): SQLRETURN;
+      BufferLength: SQLINTEGER): SQLRETURN; override;
     function SetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
+      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; override;
     function SpecialColumns(StatementHandle: SQLHSTMT; IdentifierType: SQLSMALLINT;
       CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
       SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
@@ -1560,7 +2053,10 @@ uses ZPlainLoader;
 function TODBC3BaseDriver.AllocHandle(HandleType: SQLSMALLINT;
   InputHandle: SQLHANDLE; var OutputHandle: SQLHANDLE): SQLRETURN;
 begin
-  Result := SQLAllocHandle(HandleType, InputHandle, OutputHandle);
+  if not Assigned(SQLAllocHandle) then
+    Result := SQL_ERROR
+  else
+    Result := SQLAllocHandle(HandleType, InputHandle, OutputHandle);
 end;
 
 function TODBC3BaseDriver.BindCol(StatementHandle: SQLHSTMT;
@@ -1616,13 +2112,14 @@ begin
   Result := SQLCopyDesc(SourceDescHandle, TargetDescHandle);
 end;
 
-constructor TODBC3BaseDriver.Create;
+constructor TODBC3BaseDriver.Create(DriverName: String);
 begin
   inherited Create;
   FLoader := TZNativeLibraryLoader.Create([]);
   {$IF defined(Unix) or defined (MSWINDOWS)}
   FLoader.AddLocation(ODBC_LOCATION);
   {$IFEND}
+  FDriverName := 'ODBC'+DriverName
 end;
 
 function TODBC3BaseDriver.DescribeParam(StatementHandle: SQLHSTMT;
@@ -1693,6 +2190,11 @@ function TODBC3BaseDriver.GetFunctions(ConnectionHandle: SQLHDBC;
   FunctionId: SQLUSMALLINT; SupportedPtr: PSQLUSMALLINT): SQLRETURN;
 begin
   Result := SQLGetFunctions(ConnectionHandle, FunctionId, SupportedPtr);
+end;
+
+function TODBC3BaseDriver.GetProtocol: string;
+begin
+  Result := FDriverName;
 end;
 
 function TODBC3BaseDriver.GetTypeInfo(StatementHandle: SQLHSTMT;
@@ -1846,6 +2348,11 @@ begin
     NameLength2, Authentication, NameLength3);
 end;
 
+constructor TODBC3UnicodePlainDriver.Create(DriverName: String = '_W');
+begin
+  inherited Create(DriverName)
+end;
+
 function TODBC3UnicodePlainDriver.DataSources(EnvironmentHandle: SQLHENV;
   Direction: SQLUSMALLINT; ServerName: PSQLWCHAR; BufferLength1: SQLSMALLINT;
   NameLength1Ptr: PSQLSMALLINT; Description: PSQLWCHAR;
@@ -1965,11 +2472,6 @@ function TODBC3UnicodePlainDriver.GetInfo(ConnectionHandle: SQLHDBC;
 begin
   Result := SQLGetInfoW(ConnectionHandle, InfoType, InfoValuePtr, BufferLength,
     StringLengthPtr);
-end;
-
-function TODBC3UnicodePlainDriver.GetProtocol: string;
-begin
-  Result := 'odbc_unicode'
 end;
 
 function TODBC3UnicodePlainDriver.GetStmtAttr(StatementHandle: SQLHSTMT;
@@ -2182,6 +2684,11 @@ begin
     NameLength2, Authentication, NameLength3);
 end;
 
+constructor TODBC3RawPlainDriver.Create(DriverName: String = '_A');
+begin
+  inherited Create(DriverName);
+end;
+
 function TODBC3RawPlainDriver.DataSources(EnvironmentHandle: SQLHENV;
   Direction: SQLUSMALLINT; ServerName: PSQLCHAR; BufferLength1: SQLSMALLINT;
   NameLength1Ptr: PSQLSMALLINT; Description: PSQLCHAR;
@@ -2301,11 +2808,6 @@ function TODBC3RawPlainDriver.GetInfo(ConnectionHandle: SQLHDBC;
 begin
   Result := SQLGetInfo(ConnectionHandle, InfoType, InfoValuePtr, BufferLength,
     StringLengthPtr);
-end;
-
-function TODBC3RawPlainDriver.GetProtocol: string;
-begin
-  Result := 'odbc_raw'
 end;
 
 function TODBC3RawPlainDriver.GetStmtAttr(StatementHandle: SQLHSTMT;
