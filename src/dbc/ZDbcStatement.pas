@@ -198,9 +198,7 @@ type
 
   TZAbstractPreparedStatement = class(TZAbstractStatement, IZPreparedStatement)
   private
-    FInParamValuesArray: array of TZVariantDynArray;
-    FInParamValuesIndex: Integer;
-    //FInParamValues: TZVariantDynArray;
+    FInParamValues: TZVariantDynArray;
     FInParamTypes: TZSQLTypeArray;
     FInParamDefaultValues: TStringDynArray;
     FInParamCount: Integer;
@@ -212,11 +210,9 @@ type
     FNCharDetected: TBooleanDynArray;
     FIsParamIndex: TBooleanDynArray;
     FIsPraparable: Boolean;
-    function GetInParamValues: TZVariantDynArray; overload;
-    procedure SetInParamValues(const Values: TZVariantDynArray);
   protected
-    function GetBatchInParamValues(const BatchIndex: Integer): TZVariantDynArray; overload; //need this after property..
     function GetClientVariantManger: IZClientVariantManager;
+    function SupportsSingleColumnArrays: Boolean; virtual;
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
     procedure UnPrepareInParameters; virtual;
@@ -229,7 +225,7 @@ type
     function GetOmitComments: Boolean; virtual;
     function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; virtual;
 
-    property InParamValues: TZVariantDynArray read GetInParamValues write SetInParamValues;
+    property InParamValues: TZVariantDynArray read FInParamValues write FInParamValues;
     property InParamTypes: TZSQLTypeArray read FInParamTypes write FInParamTypes;
     property InParamDefaultValues: TStringDynArray
       read FInParamDefaultValues write FInParamDefaultValues;
@@ -240,7 +236,6 @@ type
     property IsParamIndex: TBooleanDynArray read FIsParamIndex;
     property IsNCharIndex: TBooleanDynArray read FNCharDetected;
     property IsPreparable: Boolean read FIsPraparable;
-    property LastInParamValuesIndex: Integer read FInParamValuesIndex;
     property ArrayCount: ArrayLenInt read FInitialArrayCount;
     procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
@@ -304,7 +299,6 @@ type
 
     procedure ClearParameters; virtual;
 
-    procedure AddBatchPrepared; virtual;
     function GetMetaData: IZResultSetMetaData; virtual;
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
@@ -1300,8 +1294,6 @@ begin
   inherited Create(Connection, Info);
   FClientVariantManger := Connection.GetClientVariantManager;
   {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
-  SetLength(FInParamValuesArray, 1); //init one row space
-  FInParamValuesIndex := 0;
   SetInParamCount(0);
   FPrepared := False;
   FInitialArrayCount := 0;
@@ -1433,21 +1425,6 @@ begin
   Result := ExecutePrepared;
 end;
 
-function TZAbstractPreparedStatement.GetInParamValues: TZVariantDynArray;
-begin
-  Result := FInParamValuesArray[FInParamValuesIndex];
-end;
-
-function TZAbstractPreparedStatement.GetBatchInParamValues(const BatchIndex: Integer): TZVariantDynArray;
-begin
-  Result := FInParamValuesArray[BatchIndex];
-end;
-
-procedure TZAbstractPreparedStatement.SetInParamValues(const Values: TZVariantDynArray);
-begin
-  FInParamValuesArray[FInParamValuesIndex] := Values;
-end;
-
 {**
   Return a VariantManager which supports client encoded RawByteStrings
   @returns IZClientVariantManager
@@ -1487,12 +1464,12 @@ procedure TZAbstractPreparedStatement.SetInParamCount(const NewParamCount: Integ
 var
   I: Integer;
 begin
-  SetLength(FInParamValuesArray[FInParamValuesIndex], NewParamCount);
+  SetLength(FInParamValues, NewParamCount);
   SetLength(FInParamTypes, NewParamCount);
   SetLength(FInParamDefaultValues, NewParamCount);
   for I := FInParamCount to NewParamCount - 1 do
   begin
-    FInParamValuesArray[FInParamValuesIndex][i] := NullVariant;
+    FInParamValues[I] := NullVariant;
     FInParamTypes[I] := stUnknown;
 
     FInParamDefaultValues[I] := '';
@@ -1513,7 +1490,7 @@ begin
     SetInParamCount(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
 
   FInParamTypes[ParameterIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := SQLType;
-  FInParamValuesArray[FInParamValuesIndex][ParameterIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := Value;
+  FInParamValues[ParameterIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := Value;
 end;
 
 {**
@@ -2146,8 +2123,8 @@ var
        (InParamValues[ParameterIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}].VArray.VArray = nil))  then
       FInitialArrayCount := Len
     else
-      if Len <> FInitialArrayCount then
-        raise Exception.Create('Array count does not equal with initial count!');
+      if (not SupportsSingleColumnArrays) and (Len <> FInitialArrayCount) then
+        raise Exception.Create('Array count does not equal with initial count!')
   end;
 begin
   if Connection.GetMetadata.GetDatabaseInfo.SupportsArrayBindings then
@@ -2247,10 +2224,13 @@ end;
 
 procedure TZAbstractPreparedStatement.Unprepare;
 begin
-  if Assigned(FOpenResultSet) then
-  begin
+  if Assigned(FOpenResultSet) then begin
     IZResultSet(FOpenResultSet).Close;
     FOpenResultSet := nil;
+  end;
+  if Assigned(LastResultSet) then begin
+    LastResultSet.Close;
+    LastResultSet := nil;
   end;
   UnPrepareInParameters;
   FPrepared := False;
@@ -2262,17 +2242,6 @@ end;
 function TZAbstractPreparedStatement.IsPrepared: Boolean;
 begin
   Result := FPrepared;
-end;
-
-{**
-  Adds a set of parameters to this <code>PreparedStatement</code>
-  object's batch of commands.
-  @see Statement#addBatch
-}
-procedure TZAbstractPreparedStatement.AddBatchPrepared;
-begin
-  SetLength(FInParamValuesArray, Length(FInParamValuesArray)+1);
-  Inc(FInParamValuesIndex);
 end;
 
 {**
@@ -2354,6 +2323,11 @@ begin
   if Prepared and ( WSQL <> Value ) then
     Unprepare;
   inherited SetWSQL(Value);
+end;
+
+function TZAbstractPreparedStatement.SupportsSingleColumnArrays: Boolean;
+begin
+  Result := False;
 end;
 
 function TZAbstractPreparedStatement.GetOmitComments: Boolean;

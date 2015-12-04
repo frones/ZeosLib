@@ -77,6 +77,10 @@ type
       ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString; overload;
     procedure Initialize(const Location: String = '');
     function Clone: IZPlainDriver;
+    procedure AddCodePage(const Name: String; const ID:  Integer;
+      Encoding: TZCharEncoding = ceAnsi; const CP: Word = $ffff;
+      const ZAlias: String = ''; CharWidth: Integer = 1;
+      const ConsistentCP: Boolean = True);
   end;
 
   {ADDED by fduenas 15-06-2006}

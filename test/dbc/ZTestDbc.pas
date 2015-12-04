@@ -31,6 +31,9 @@ uses
   {$IFDEF ENABLE_ASA}
   ZTestDbcASA, ZTestDbcASAMetadata,
   {$ENDIF}
+  {$IFDEF ENABLE_ODBC}
+  ZTestDbcODBc,
+  {$ENDIF}
   ZTestDbcGeneric
   ;
 

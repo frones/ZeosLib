@@ -1962,6 +1962,10 @@ begin
   Result := False;
 end;
 
+{**
+  Does the database driver supports milliseconds?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
 function TZAbstractDatabaseInfo.SupportsMilliSeconds: Boolean;
 begin
   Result := True;
@@ -5210,7 +5214,7 @@ const
     (Name: 'BUFFER_LENGTH'; SQLType: stInteger; Length: 0),
     (Name: 'DECIMAL_DIGITS'; SQLType: stInteger; Length: 0),
     (Name: 'NUM_PREC_RADIX'; SQLType: stInteger; Length: 0),
-    (Name: 'NULLABLE'; SQLType: stInteger; Length: 0),
+    (Name: 'NULLABLE'; SQLType: stSmall; Length: 0),
     (Name: 'REMARKS'; SQLType: stString; Length: 255),
     (Name: 'COLUMN_DEF'; SQLType: stString; Length: 255),
     (Name: 'SQL_DATA_TYPE'; SQLType: stInteger; Length: 0),

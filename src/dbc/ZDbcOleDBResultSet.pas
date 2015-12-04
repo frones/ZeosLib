@@ -1836,7 +1836,7 @@ begin
         System.SetString(Result, PPAnsiChar(FData)^,
           FLength);*)
       DBTYPE_WSTR:
-        Result := UnicodeSQLDateToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
+        Result := UnicodeSQLDateToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed{%H-});
       (*DBTYPE_WSTR or DBTYPE_BYREF:
         Result := PUnicodeToRaw(ZPPWideChar(FData)^,
           FLength shr 1, ConSettings^.ClientCodePage^.CP);
@@ -1888,7 +1888,7 @@ begin
         System.SetString(Result, PPAnsiChar(FData)^,
           FLength);*)
       DBTYPE_WSTR:
-        Result := UnicodeSQLTimeToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
+        Result := UnicodeSQLTimeToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed{%H-});
       (*DBTYPE_WSTR or DBTYPE_BYREF:
         Result := PUnicodeToRaw(ZPPWideChar(FData)^,
           FLength shr 1, ConSettings^.ClientCodePage^.CP);
@@ -1939,7 +1939,7 @@ begin
         System.SetString(Result, PPAnsiChar(FData)^,
           FLength);*)
       DBTYPE_WSTR:
-        Result := UnicodeSQLTimeStampToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
+        Result := UnicodeSQLTimeStampToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed{%H-});
       (*DBTYPE_WSTR or DBTYPE_BYREF:
         Result := PUnicodeToRaw(ZPPWideChar(FData)^,
           FLength shr 1, ConSettings^.ClientCodePage^.CP);*)

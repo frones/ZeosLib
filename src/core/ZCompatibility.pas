@@ -414,6 +414,10 @@ procedure ZSetString(Src: PAnsiChar; const Len: LengthInt; var Dest: ZWideString
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
+{$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}
+function Min(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+{$ENDIF}
+
 var
   ClientCodePageDummy: TZCodepage =
     (Name: ''; ID: 0; CharWidth: 1; Encoding: ceAnsi;
@@ -805,6 +809,15 @@ begin
 end;
 {$ENDIF}
 
+{$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}
+function Min(const A, B: NativeUInt): NativeUInt;
+begin
+  if A < B then
+    Result := A
+  else
+    Result := B;
+end;
+{$ENDIF}
 
 initialization
   case ConSettingsDummy.CPType of

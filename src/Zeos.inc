@@ -483,6 +483,7 @@
 {.$DEFINE ZEOS_DISABLE_ORACLE}
 {.$DEFINE ZEOS_DISABLE_ASA}
 {.$DEFINE ZEOS_DISABLE_OLEDB}
+{.$DEFINE ZEOS_DISABLE_ODBC}
 {.$DEFINE ZEOS_DISABLE_POOLED}
 
 // Enables MySQL support in TZConnection/TZDataset
@@ -529,6 +530,11 @@
 {$IF not defined(ZEOS_DISABLE_OLEDB) and defined(MSWINDOWS)}
   {$DEFINE ENABLE_OLEDB}
 {$IFEND}
+
+// Enables ODBC support in TZConnection/TZDataset
+{$IFNDEF ZEOS_DISABLE_ODBC}
+{$DEFINE ENABLE_ODBC}
+{$ENDIF}
 
 // Enables Pooled connection support for all enabled db drivers in TZConnection/TZDataset
 {$IFNDEF ZEOS_DISABLE_POOLED}

@@ -621,10 +621,10 @@ begin
       if (sqlscale < 0)  then
       begin
         case SQLCode of
-          SQL_SHORT  : Result := PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale];
-          SQL_LONG   : Result := PInteger(sqldata)^  / IBScaleDivisor[sqlscale];
+          SQL_SHORT  : Result {%H-}:= PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale];
+          SQL_LONG   : Result {%H-}:= PInteger(sqldata)^  / IBScaleDivisor[sqlscale];
           SQL_INT64,
-          SQL_QUAD   : Result := PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
+          SQL_QUAD   : Result {%H-}:= PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
           SQL_DOUBLE : Result := PDouble(sqldata)^;
         else
           raise EZIBConvertError.Create(Format(SErrorConvertionField,
@@ -1927,7 +1927,7 @@ var
   Buffer: Pointer;
 begin
   InternalClear;
-  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size, Buffer, True, FConSettings);
+  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size{%H-}, Buffer{%H-}, True, FConSettings);
   BlobSize := Size;
   BlobData := Buffer;
   inherited ReadLob;
@@ -1957,7 +1957,7 @@ var
   Buffer: Pointer;
 begin
   InternalClear;
-  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size, Buffer, False, FConSettings);
+  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size{%H-}, Buffer{%H-}, False, FConSettings);
   (PAnsiChar(Buffer)+NativeUInt(Size))^ := #0; //add #0 terminator
   FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
   FBlobSize := Size+1;

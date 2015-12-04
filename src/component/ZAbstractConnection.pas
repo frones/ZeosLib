@@ -89,6 +89,9 @@ uses
 {$IFDEF ENABLE_OLEDB}
   ZDbcOleDB,
 {$ENDIF}
+{$IFDEF ENABLE_ODBC}
+  ZDbcODBCCon,
+{$ENDIF}
 
   SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   ZDbcIntfs, ZCompatibility, ZURL;

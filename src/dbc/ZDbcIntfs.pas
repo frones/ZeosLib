@@ -82,6 +82,7 @@ type
     constructor Create(const Msg: string);
     constructor CreateWithCode(const ErrorCode: Integer; const Msg: string);
     constructor CreateWithStatus(const StatusCode: String; const Msg: string);
+    constructor CreateWithCodeAndStatus(ErrorCode: Integer; const StatusCode: String; const Msg: string);
     constructor CreateClone(const E:EZSQLThrowable);
 
     property ErrorCode: Integer read FErrorCode;
@@ -100,9 +101,10 @@ type
   TZSQLType = (stUnknown, stBoolean,
     stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
     stFloat, stDouble, stCurrency, stBigDecimal,
-    stString, stUnicodeString,
     stBytes, stGUID,
     stDate, stTime, stTimestamp,
+    { note please add "high level" conversion enums after "simple" binary types -> save loads of code}
+    stString, stUnicodeString,
     stArray, stDataSet,
     stAsciiStream, stUnicodeStream, stBinaryStream);
 
@@ -149,6 +151,9 @@ type
 
   {** Defines a locate mode. }
   TZLocateUpdatesMode = (loWhereAll, loWhereChanged, loWhereKeyOnly);
+
+  {** Defines a MoreResults state }
+  TZMoreResultsIndicator = (mriUnknown, mriHasNoMoreResults, mriHasMoreResults);
 
 // Interfaces
 type
@@ -626,7 +631,6 @@ type
 
     procedure ClearParameters;
 
-    procedure AddBatchPrepared;
     function GetMetadata: IZResultSetMetadata;
   end;
 
@@ -1457,6 +1461,25 @@ begin
   FErrorCode := ErrorCode;
 end;
 
+{**
+  Creates an exception with message string.
+  @param ErrorCode a native server error code.
+  @param StatusCode a server status code.
+  @param Msg a error description.
+}
+constructor EZSQLThrowable.CreateWithCodeAndStatus(ErrorCode: Integer;
+  const StatusCode, Msg: string);
+begin
+  inherited Create(Msg);
+  FErrorCode := ErrorCode;
+  FStatusCode := StatusCode;
+end;
+
+{**
+  Creates an exception with message string.
+  @param StatusCode a server status code.
+  @param Msg a error description.
+}
 constructor EZSQLThrowable.CreateWithStatus(const StatusCode, Msg: string);
 begin
   inherited Create(Msg);

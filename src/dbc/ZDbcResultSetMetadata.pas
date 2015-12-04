@@ -145,7 +145,7 @@ type
       ColumnInfo: TZColumnInfo): Boolean;
     function ReadColumnByName(FieldName: string; TableRef: TZTableRef;
       ColumnInfo: TZColumnInfo): Boolean;
-    procedure ClearColumn(ColumnInfo: TZColumnInfo);
+    procedure ClearColumn(ColumnInfo: TZColumnInfo); virtual;
     procedure LoadColumns;
     procedure ReplaceStarColumns(SelectSchema: IZSelectSchema);
 

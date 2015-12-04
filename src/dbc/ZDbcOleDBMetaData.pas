@@ -58,8 +58,8 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZSysUtils, {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata, ZURL,
-  ZCompatibility, ZDbcConnection, ZOleDB;
+  ZSysUtils, {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata,
+  ZCompatibility, ZOleDB;
 
 type
   TSuppSchemaRec = record

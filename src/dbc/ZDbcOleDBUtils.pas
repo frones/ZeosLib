@@ -688,13 +688,13 @@ begin
               if InParamValues[i].vType = vtBytes then
                 ProcessBinary((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                   Pointer(InParamValues[i].vBytes),
-                  Min(DBBindingArray[I].cbMaxLen,NativeUInt(Length(InParamValues[i].vBytes))))
+                  {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen,NativeUInt(Length(InParamValues[i].vBytes))))
               else
               begin
                 InParamValues[i] := ClientVarManager.Convert(InParamValues[i], vtBytes);
                 ProcessBinary((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                   Pointer(InParamValues[i].vBytes),
-                  Min(DBBindingArray[I].cbMaxLen, NativeUInt(Length(InParamValues[i].vBytes))));
+                  {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen, NativeUInt(Length(InParamValues[i].vBytes))));
               end;
         DBTYPE_STR or DBTYPE_BYREF:
           if (DBBindingArray[i].dwFlags and DBPARAMFLAGS_ISLONG <> 0) then //Ansi lob's!!!
@@ -1501,7 +1501,7 @@ begin
                 stBytes:
                   ProcessBinary((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                     Pointer(ZBytesArray[ArrayOffSet]),
-                    Min(DBBindingArray[I].cbMaxLen,NativeUInt(Length(ZBytesArray[ArrayOffSet]))));
+                    {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen,NativeUInt(Length(ZBytesArray[ArrayOffSet]))));
                 stGUID:
                   ProcessBinary((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                     @ZGUIDArray[ArrayOffSet].D1, Min(DBBindingArray[I].cbMaxLen, 16));

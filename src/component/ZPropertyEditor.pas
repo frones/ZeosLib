@@ -232,6 +232,9 @@ uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo, ZSysUtils, ZSelectSchema
   {$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
 , ZDbcOleDBUtils
   {$IFEND}
+{$IFDEF ENABLE_ODBC}
+,ZDbcODBCUtils
+{$ENDIF}
 {$IFDEF SHOW_WARNING}
 ,ZMessages
 {$ENDIF SHOW_WARNING}
@@ -784,9 +787,16 @@ begin
     else
     if ((GetZComponent as TZAbstractConnection).Protocol = 'ado') or
        ((GetZComponent as TZAbstractConnection).Protocol = 'OleDB') then
-      (GetZComponent as TZAbstractConnection).Database := PromptDataSource({$IFDEF FPC}Application.MainFormHandle{$ELSE}Application.Handle{$ENDIF},
-        (GetZComponent as TZAbstractConnection).Database)
+      (GetZComponent as TZAbstractConnection).Database := String(PromptDataSource({$IFDEF FPC}Application.MainFormHandle{$ELSE}Application.Handle{$ENDIF},
+        ZWideString((GetZComponent as TZAbstractConnection).Database)))
 {$IFEND}
+{$IFDEF ENABLE_ODBC}
+    else
+    if ((GetZComponent as TZAbstractConnection).Protocol = 'odbc_a') or
+       ((GetZComponent as TZAbstractConnection).Protocol = 'odbc_w') then
+      (GetZComponent as TZAbstractConnection).Database := GetConnectionString({%H-}Pointer({$IFDEF FPC}Application.MainFormHandle{$ELSE}Application.Handle{$ENDIF}),
+        (GetZComponent as TZAbstractConnection).Database, (GetZComponent as TZAbstractConnection).LibLocation)
+{$ENDIF}
     else
     begin
       OD := TOpenDialog.Create(nil);
@@ -1151,15 +1161,19 @@ begin
     if ((GetZComponent as TZConnectionGroup).Protocol = 'mssql') or
     ((GetZComponent as TZConnectionGroup).Protocol = 'sybase') then
       inherited
-{$IFNDEF UNIX}
-{$IFNDEF FPC}
-{$IFDEF ENABLE_ADO}
+{$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
     else
-    if ((GetZComponent as TZConnectionGroup).Protocol = 'ado') then
-      (GetZComponent as TZConnectionGroup).Database := PromptDataSource(Application.Handle,
-        (GetZComponent as TZConnectionGroup).Database)
-{$ENDIF}
-{$ENDIF}
+    if ((GetZComponent as TZConnectionGroup).Protocol = 'ado') or
+       ((GetZComponent as TZConnectionGroup).Protocol = 'OleDB') then
+      (GetZComponent as TZConnectionGroup).Database := String(PromptDataSource({$IFDEF FPC}Application.MainFormHandle{$ELSE}Application.Handle{$ENDIF},
+        ZWideString((GetZComponent as TZConnectionGroup).Database)))
+{$IFEND}
+{$IFDEF ENABLE_ODBC}
+    else
+    if ((GetZComponent as TZConnectionGroup).Protocol = 'odbc_a') or
+       ((GetZComponent as TZConnectionGroup).Protocol = 'odbc_w') then
+      (GetZComponent as TZConnectionGroup).Database := GetConnectionString({%H-}Pointer({$IFDEF FPC}Application.MainFormHandle{$ELSE}Application.Handle{$ENDIF}),
+        (GetZComponent as TZConnectionGroup).Database, (GetZComponent as TZConnectionGroup).LibraryLocation)
 {$ENDIF}
     else
     begin

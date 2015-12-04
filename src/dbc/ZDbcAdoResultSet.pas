@@ -210,7 +210,7 @@ begin
     ColumnInfo.Signed := False;
     S := '';
     for J := 0 to F.Properties.Count - 1 do
-      S := S+F.Properties.Item[J].Name + '=' + VarToStr(F.Properties.Item[J].Value) + ', ';
+      S := S+String(F.Properties.Item[J].Name) + '=' + VarToStr(F.Properties.Item[J].Value) + ', ';
     if HasAutoIncProp then
       ColumnInfo.AutoIncrement := F.Properties.Item['ISAUTOINCREMENT'].Value;
     if ColType in [adTinyInt, adSmallInt, adInteger, adBigInt, adCurrency, adDecimal, adDouble, adNumeric, adSingle] then
@@ -722,7 +722,7 @@ begin
       {$ENDIF}
       adSingle:           FUniTemp := FloatToSQLUnicode(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSingle);
       adDouble:           FUniTemp := FloatToSQLUnicode(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDouble);
-      adCurrency:         FUniTemp := CurrToStr(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency);
+      adCurrency:         FUniTemp := {$IFNDEF UNICODE}ZWideString{$ENDIF}(CurrToStr(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency));
       adBoolean: FUniTemp := BoolToUnicodeEx(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean);
       adGUID:
         begin
