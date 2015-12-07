@@ -109,7 +109,7 @@ procedure OleBindArrayParams(const DBParams: TDBParams; ArrayOffSet: DB_UPARAMS;
   const SupportsMilliseconds: Boolean = True);
 
 procedure SetOleCommandProperties(Command: ICommandText; TimeOut: SmallInt;
-  ResultSetType: TZResultSetType; Provider: TServerProvider);
+  ResultSetType: TZResultSetType; Provider: TServerProvider; SupportsMARSConnection: Boolean);
 
 implementation
 
@@ -1950,7 +1950,7 @@ end;
 {$HINTS ON}
 
 procedure SetOleCommandProperties(Command: ICommandText; TimeOut: SmallInt;
-  ResultSetType: TZResultSetType; Provider: TServerProvider);
+  ResultSetType: TZResultSetType; Provider: TServerProvider; SupportsMARSConnection: Boolean);
 const
   SSPROP_DEFERPREPARE	= 13;
   DBPROPSET_SQLSERVERROWSET: TGUID 	= '{5cf4ca11-ef21-11d0-97e7-00c04fc2ad98}';
@@ -1988,8 +1988,13 @@ begin
     SetProp(rgPropertySets[0], DBPROP_COMMANDTIMEOUT,    Max(1, TimeOut)); //Set command time_out static!
     SetProp(rgPropertySets[0], DBPROP_SERVERCURSOR,      VARIANT_TRUE); //force a server side cursor
     SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,        VARIANT_FALSE);
-    SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         VARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
-    SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   VARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
+    if SupportsMARSConnection then begin
+      SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         VARIANT_FALSE);
+      SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   VARIANT_FALSE);
+    end else begin
+      SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         VARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
+      SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   VARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
+    end;
     SetProp(rgPropertySets[0], DBPROP_OTHERINSERT,       VARIANT_TRUE);
     SetProp(rgPropertySets[0], DBPROP_OTHERUPDATEDELETE, VARIANT_TRUE);
     if ResultSetType = rtForwardOnly then

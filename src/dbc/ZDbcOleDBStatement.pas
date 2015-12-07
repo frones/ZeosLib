@@ -193,7 +193,7 @@ begin
   begin
     FCommand := (Connection as IZOleDBConnection).CreateCommand;
     try
-      SetOleCommandProperties(FCommand, fStmtTimeOut, ResultSetType, (Connection as IZOleDBConnection).GetProvider);
+      SetOleCommandProperties(FCommand, fStmtTimeOut, ResultSetType, (Connection as IZOleDBConnection).GetProvider, (Connection as IZOleDBConnection).SupportsMARSConnection);
       OleDBCheck(fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL)));
       OleCheck(fCommand.QueryInterface(IID_ICommandPrepare, FOlePrepareCommand));
       OleDBCheck(FOlePrepareCommand.Prepare(0)); //unknown count of executions

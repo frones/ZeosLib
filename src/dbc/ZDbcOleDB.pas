@@ -82,6 +82,7 @@ type
     function GetMalloc: IMalloc;
     function SupportsMultipleResultSets: Boolean;
     function SupportsMultipleStorageObjects: Boolean;
+    function SupportsMARSConnection: Boolean;
     function GetProvider: TServerProvider;
   end;
 
@@ -93,6 +94,7 @@ type
     FDBCreateCommand: IDBCreateCommand;
     FRetaining: Boolean;
     FpulTransactionLevel: ULONG;
+    FSupportsMARSConnnection: Boolean;
     FSupportsMultipleResultSets: Boolean;
     FSupportsMultipleStorageObjects: Boolean;
     FServerProvider: TServerProvider;
@@ -136,6 +138,7 @@ type
     function GetMalloc: IMalloc;
     function SupportsMultipleResultSets: Boolean;
     function SupportsMultipleStorageObjects: Boolean;
+    function SupportsMARSConnection: Boolean;
     function GetProvider: TServerProvider;
   end;
 
@@ -497,6 +500,11 @@ begin
   Result := FMalloc;
 end;
 
+function TZOleDBConnection.SupportsMARSConnection: Boolean;
+begin
+  Result := FSupportsMARSConnnection;
+end;
+
 function TZOleDBConnection.SupportsMultipleResultSets: Boolean;
 begin
   Result := FSupportsMultipleResultSets;
@@ -587,6 +595,8 @@ begin
     // retrieve initialization parameters from connection string
     DataInitialize := CreateComObject(CLSID_DataLinks) as IDataInitialize;
     ConnectStrings := SplitString(DataBase, ';');
+    //https://msdn.microsoft.com/de-de/library/ms131686%28v=sql.120%29.aspx
+    FSupportsMARSConnnection := StrToBoolEx(ConnectStrings.Values['MarsConn']);
     if StrToBoolEx(ConnectStrings.Values['Trusted_Connection']) then
       ConnectString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(DataBase)
     else
