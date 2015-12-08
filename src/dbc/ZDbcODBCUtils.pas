@@ -60,7 +60,7 @@ uses SysUtils,
 
 type
   PStrLen_or_IndArray = ^TStrLen_or_IndArray;
-  TStrLen_or_IndArray = array[0..High(Word)] of SQLLEN;
+  TStrLen_or_IndArray = array[0..600] of SQLLEN;
 
 { param binding version }
 function ConvertODBCTypeToSQLType(ODBCType: SQLSMALLINT; SQLType: TZSQLType;
@@ -274,8 +274,6 @@ begin
     SQL_DATETIME, SQL_INTERVAL, SQL_TIMESTAMP:
     //SQL_TIME:           same as SQL_INTERVAL
     //SQL_DATE:           same as SQL_DATETIME
-      if SQLType in [stDate, stTime, stTimeStamp] then
-        Result := SQLType else
         Result := stTimeStamp;
     SQL_LONGVARCHAR:    Result := stAsciiStream;
     SQL_BINARY,
@@ -452,26 +450,25 @@ function CalcBufSize(ColumnSize: SQLSMALLINT; SQLType: TZSQLType;
   ClientCodePage: PZCodePage): SQLSMALLINT;
 begin
   Result := ColumnSize;
-  if (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
-              {1. Intf entry} {cur. array index} {ParameterIndex}
-    Result := SizeOf(Pointer)+  SizeOf(Integer)+  SizeOf(Integer)
-  else
-    case SQLType of
-      stBoolean, stByte, stShort:                         Result := 1;
-      stWord, stSmall:                                    Result := 2;
-      stLongWord, stInteger,stFloat:                      Result := 4;
-      stULong, stLong, stDouble, stCurrency, stBigDecimal:Result := 8;
-      stString,
-      stUnicodeString:
-        if ClientCodePage^.Encoding >= ceUTF16 then
-          Result := (Result +1) shl 1
-        else
-          Result := Result*ClientCodePage^.CharWidth +1;
-      stGUID:                     Result := SizeOf(TGUID);
-      stDate:                     Result := SizeOf(TSQL_DATE_STRUCT);
-      stTime:                     Result := SizeOf(TSQL_TIME_STRUCT);
-      stTimestamp:                Result := SizeOf(TSQL_TIMESTAMP_STRUCT);
-    end;
+  case SQLType of
+    stBoolean, stByte, stShort:                         Result := 1;
+    stWord, stSmall:                                    Result := 2;
+    stLongWord, stInteger,stFloat:                      Result := 4;
+    stULong, stLong, stDouble, stCurrency, stBigDecimal:Result := 8;
+    stString,
+    stUnicodeString:
+      if ClientCodePage^.Encoding >= ceUTF16 then
+        Result := (Result +1) shl 1
+      else
+        Result := Result*ClientCodePage^.CharWidth +1;
+    stGUID:                     Result := SizeOf(TGUID);
+    stDate:                     Result := SizeOf(TSQL_DATE_STRUCT);
+    stTime:                     Result := SizeOf(TSQL_TIME_STRUCT);
+    stTimestamp:                Result := SizeOf(TSQL_TIMESTAMP_STRUCT);
+    stAsciiStream,
+    stUnicodeStream,
+    stBinaryStream:             Result := 0;
+  end;
 end;
 
 function ParamTypeToODBCParamType(ParamType: TZProcedureColumnType;

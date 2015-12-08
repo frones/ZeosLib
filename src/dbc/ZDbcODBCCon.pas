@@ -526,10 +526,10 @@ end;
 procedure TZAbstractODBCConnection.SetAutoCommit(Value: Boolean);
 const CommitMode: Array[Boolean] of Pointer = (SQL_AUTOCOMMIT_OFF, SQL_AUTOCOMMIT_ON);
 begin
-  //if Value <> AutoCommit then begin
+  if Value <> AutoCommit then begin
     CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC,SQL_ATTR_AUTOCOMMIT,CommitMode[Value],0));
     inherited SetAutoCommit(Value);
-  //end;
+  end;
 end;
 
 procedure TZAbstractODBCConnection.SetCatalog(const Catalog: string);

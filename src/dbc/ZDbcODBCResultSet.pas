@@ -213,8 +213,8 @@ begin
         fPHSTMT^ := nil;
       end else
         if Assigned(Statement) and ((Statement as IZODBCStatement).GetMoreResultsIndicator = mriUnknown) then begin
-          CheckStmtError(fPlainDriver.FreeStmt(fPHSTMT^,SQL_UNBIND)); //discart bindings
           ResetCursor;
+          CheckStmtError(fPlainDriver.FreeStmt(fPHSTMT^,SQL_UNBIND)); //discart bindings
           RETCODE := fPlainDriver.MoreResults(fPHSTMT^);
           if RETCODE = SQL_SUCCESS then
             (Statement as IZODBCStatement).SetMoreResultsIndicator(mriHasMoreResults)
@@ -1332,7 +1332,7 @@ end;
 procedure TAbstractODBCResultSet.ResetCursor;
 begin
   if Assigned(fPHSTMT^) and fCursorOpened then begin
-    CheckStmtError(fPlainDriver.CloseCursor(fPHSTMT^)); //close cursor and discrad pending result
+    {CheckStmtError}(fPlainDriver.CloseCursor(fPHSTMT^)); //close cursor and discrad pending result
     fCursorOpened := False;
   end;
   inherited ResetCursor;
