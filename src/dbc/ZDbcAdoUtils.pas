@@ -151,9 +151,7 @@ var
 }
   ZAdoMalloc: IMalloc;
 
-{$ENDIF ENABLE_ADO}
 implementation
-{$IFDEF ENABLE_ADO}
 
 uses
   ComObj, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, Variants, Types, Math,
@@ -901,6 +899,8 @@ initialization
 finalization
   ZAdoMalloc := nil;
 
+{$ELSE}
+implementation
 {$ENDIF ENABLE_ADO}
 end.
 
