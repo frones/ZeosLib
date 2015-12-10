@@ -509,6 +509,11 @@ const
   ProcedureReserverd2Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
   ProcedureRemarksIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
   ProcedureTypeIndex = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+type
+  TProcedureMap = packed record
+    Initilized: Boolean;
+    ColIndices: array[CatalogNameIndex..ProcedureTypeIndex] of ShortInt
+  end;
 var
   ProceduresColumnsDynArray: TZMetadataColumnDefs;
 const
@@ -523,6 +528,11 @@ const
   ProcColRadixIndex = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
   ProcColNullableIndex = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
   ProcColRemarksIndex = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
+type
+  TProcedureColumnsColMap = packed record
+    Initilized: Boolean;
+    ColIndices: array[CatalogNameIndex..ProcColRemarksIndex] of ShortInt;
+  end;
 var
   ProceduresColColumnsDynArray: TZMetadataColumnDefs;
 const
@@ -560,6 +570,11 @@ const
   TableColColumnWritableIndex = {$IFDEF GENERIC_INDEX}21{$ELSE}22{$ENDIF};
   TableColColumnDefinitelyWritableIndex = {$IFDEF GENERIC_INDEX}22{$ELSE}23{$ENDIF};
   TableColColumnReadonlyIndex = {$IFDEF GENERIC_INDEX}23{$ELSE}24{$ENDIF};
+type
+  TTableColColumnMap = packed record
+    Initilized: Boolean;
+    ColIndices: array[CatalogNameIndex..TableColColumnReadonlyIndex] of ShortInt;
+  end;
 var
   TableColColumnsDynArray: TZMetadataColumnDefs;
 const
@@ -567,6 +582,11 @@ const
   TableColPrivGranteeIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
   TableColPrivPrivilegeIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
   TableColPrivIsGrantableIndex = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+type
+  TTableColPrivMap = packed record
+    Initilized: Boolean;
+    ColIndices: array[CatalogNameIndex..TableColPrivIsGrantableIndex] of ShortInt;
+  end;
 var
   TableColPrivColumnsDynArray: TZMetadataColumnDefs;
 const
@@ -574,6 +594,11 @@ const
   TablePrivGranteeIndex = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
   TablePrivPrivilegeIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
   TablePrivIsGrantableIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+type
+  TTablePrivMap = packed record
+    Initilized: Boolean;
+    ColIndices: array[CatalogNameIndex..TablePrivIsGrantableIndex] of ShortInt;
+  end;
 var
   TablePrivColumnsDynArray: TZMetadataColumnDefs;
 const
@@ -653,6 +678,11 @@ const
   CrossRefKeyColFKNameIndex = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
   CrossRefKeyColPKNameIndex = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
   CrossRefKeyColDeferrabilityIndex = {$IFDEF GENERIC_INDEX}13{$ELSE}14{$ENDIF};
+type
+  TCrossRefKeyCol = packed record
+    Initilized: Boolean;
+    ColIndices: array[CrossRefKeyColPKTableCatalogIndex..CrossRefKeyColDeferrabilityIndex] of ShortInt;
+  end;
 var
   CrossRefColumnsDynArray: TZMetadataColumnDefs;
 const
@@ -687,6 +717,11 @@ const
   IndexInfoColCardinalityIndex = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
   IndexInfoColPagesIndex = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
   IndexInfoColFilterConditionIndex = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
+type
+  TIndexInfoMap = packed record
+    Initilized: Boolean;
+    ColIndices: array[CatalogNameIndex..IndexInfoColFilterConditionIndex] of ShortInt;
+  end;
 var
   IndexInfoColumnsDynArray: TZMetadataColumnDefs;
   SequenceColumnsDynArray: TZMetadataColumnDefs;

@@ -239,23 +239,24 @@ begin
 end;
 
 procedure OleDBCheck(aResult: HRESULT; const aStatus: TDBBINDSTATUSDynArray = nil);
-{ thanks to AB from Synopse project! }
 var
-  OleDBErrorMessage: String;
+  OleDBErrorMessage, FirstSQLState: String;
   ErrorInfo, ErrorInfoDetails: IErrorInfo;
   SQLErrorInfo: ISQLErrorInfo;
   MSSQLErrorInfo: ISQLServerErrorInfo;
   ErrorRecords: IErrorRecords;
   SSErrorPtr: PMSErrorInfo;
-  i, ErrorCode: Integer;
+  i, ErrorCode, FirstErrorCode: Integer;
   ErrorCount: ULONG;
   Desc, SQLState: WideString;
   StringsBufferPtr: PWideChar;
   s: string;
 begin
-  OleDBErrorMessage := '';
   if not Succeeded(aResult) then
   begin // get OleDB specific error information
+    OleDBErrorMessage := '';
+    FirstSQLState := '';
+    FirstErrorCode := 0;
     GetErrorInfo(0,ErrorInfo);
     if Assigned(ErrorInfo) then
     begin
@@ -275,6 +276,11 @@ begin
               Assigned(SSErrorPtr) then
             begin
               if OleDBErrorMessage <> '' then OleDBErrorMessage := OleDBErrorMessage + LineEnding;
+              if I = 0 then begin
+                FirstErrorCode := SSErrorPtr^.lNative;
+                FirstSQLState := String(SSErrorPtr^.pwszMessage);
+              end;
+              if OleDBErrorMessage <> '' then OleDBErrorMessage := OleDBErrorMessage+LineEnding;
               OleDBErrorMessage := OleDBErrorMessage + 'SQLState: '+ String(SSErrorPtr^.pwszMessage) +
                 ' ErrorCode: '+ ZFastCode.IntToStr(SSErrorPtr^.lNative) +
                 ' Line: '+ZFastCode.IntToStr(SSErrorPtr^.wLineNumber);
@@ -290,6 +296,10 @@ begin
              Assigned(SQLErrorInfo) then
             try
               SQLErrorInfo.GetSQLInfo( SqlState, ErrorCode );
+              if I = 0 then begin
+                FirstErrorCode := ErrorCode;
+                FirstSQLState := String(SqlState);
+              end;
               if OleDBErrorMessage <> '' then OleDBErrorMessage := OleDBErrorMessage + LineEnding;
               OleDBErrorMessage := OleDBErrorMessage+'SQLState: '+ String(SqlState) + ' ErrorCode: '+ZFastCode.IntToStr(ErrorCode);
             finally
@@ -303,20 +313,20 @@ begin
         OleDBErrorMessage := OleDBErrorMessage+String(Desc);
         Desc := '';
         ErrorInfoDetails := nil;
-        OleDBErrorMessage := 'ERROR: '+OleDBErrorMessage;
       end;
     end;
     ErrorRecords := nil;
     ErrorInfo := nil;
     // get generic HRESULT error
-    if not Succeeded(aResult) or (OleDBErrorMessage<>'') then begin
-      s := SysErrorMessage(aResult);
-      if s='' then
-        s := 'OLEDB Error '+IntToHex(aResult,8);
-      OleDBErrorMessage := s+' - '+OleDBErrorMessage;
-    end;
-    if OleDBErrorMessage='' then
-      exit;
+    s := SysErrorMessage(aResult);
+    if s='' then
+      s := 'OLEDB Error '+IntToHex(aResult,8);
+    if OleDBErrorMessage = '' then begin
+      FirstErrorCode := aResult;
+      FirstSQLState := IntToHex(aResult,8);
+      OleDBErrorMessage := s;
+    end else
+      OleDBErrorMessage := s+':'+LineEnding+OleDBErrorMessage;
     // retrieve binding information from Status[]
     s := '';
     for i := 0 to high(aStatus) do
@@ -329,7 +339,7 @@ begin
       OleDBErrorMessage := OleDBErrorMessage+s;
     // raise exception
     DriverManager.LogMessage(lcExecute, 'OleDB', RawByteString(OleDBErrorMessage));
-    raise EZSQLException.Create(OleDBErrorMessage);
+    raise EZSQLException.CreateWithCodeAndStatus(FirstErrorCode, FirstSQLState, OleDBErrorMessage);
   end;
 end;
 
@@ -2020,9 +2030,9 @@ begin
     end;
   end;
 end;
-
+//(*
 {$ELSE}
 implementation
 {$IFEND}
-
+//*)
 end.

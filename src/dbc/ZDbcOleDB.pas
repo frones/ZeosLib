@@ -84,6 +84,7 @@ type
     function SupportsMultipleStorageObjects: Boolean;
     function SupportsMARSConnection: Boolean;
     function GetProvider: TServerProvider;
+    procedure UnRegisterPendingStatement(const Value: IZStatement);
   end;
 
   {** Implements a generic OleDB Connection. }
@@ -98,11 +99,13 @@ type
     FSupportsMultipleResultSets: Boolean;
     FSupportsMultipleStorageObjects: Boolean;
     FServerProvider: TServerProvider;
+    fPendingStmts: TList; //weak reference to pending stmts
     procedure StopTransaction;
     procedure SetProviderProps(DBinit: Boolean);
   protected
     procedure StartTransaction;
     procedure InternalCreate; override;
+    procedure RegisterPendingStatement(const Value: IZStatement);
     function OleDbGetDBPropValue(APropIDs: array of DBPROPID): string;
   public
     destructor Destroy; override;
@@ -140,6 +143,7 @@ type
     function SupportsMultipleStorageObjects: Boolean;
     function SupportsMARSConnection: Boolean;
     function GetProvider: TServerProvider;
+    procedure UnRegisterPendingStatement(const Value: IZStatement);
   end;
 
 var
@@ -224,6 +228,7 @@ procedure TZOleDBConnection.InternalCreate;
 begin
   CoInit;
   OleCheck(CoGetMalloc(1,fMalloc));
+  fPendingStmts := TList.Create;
   FMetadata := TOleDBDatabaseMetadata.Create(Self, URL);
   FRetaining := False; //not StrToBoolEx(URL.Properties.Values['hard_commit']);
   CheckCharEncoding('CP_UTF16');
@@ -237,6 +242,7 @@ destructor TZOleDBConnection.Destroy;
 begin
   try
     inherited Destroy; // call Disconnect;
+    fPendingStmts.Free;
     fMalloc := nil;
     CoUninit;
   except
@@ -439,8 +445,7 @@ end;
 function TZOleDBConnection.CreateRegularStatement(Info: TStrings):
   IZStatement;
 begin
-  if Closed then Open;
-  Result := TZOleDBPreparedStatement.Create(Self, Info);
+  Result := CreatePreparedStatement('', Info);
 end;
 
 {**
@@ -473,9 +478,12 @@ end;
 }
 function TZOleDBConnection.CreatePreparedStatement(const SQL: string; Info: TStrings):
   IZPreparedStatement;
+var Stmt: TZOleDBPreparedStatement;
 begin
   if Closed then Open;
-  Result := TZOleDBPreparedStatement.Create(Self, SQL, Info);
+  Stmt := TZOleDBPreparedStatement.Create(Self, SQL, Info);
+  RegisterPendingStatement(Stmt);
+  Result := Stmt;
 end;
 
 {**
@@ -513,6 +521,15 @@ end;
 function TZOleDBConnection.SupportsMultipleStorageObjects: Boolean;
 begin
   Result := FSupportsMultipleStorageObjects;
+end;
+
+procedure TZOleDBConnection.UnRegisterPendingStatement(
+  const Value: IZStatement);
+var
+  I: Integer;
+begin
+  I := fPendingStmts.IndexOf(Pointer(Value));
+  if I > -1 then fPendingStmts.Delete(I);
 end;
 
 function TZOleDBConnection.GetProvider: TServerProvider;
@@ -562,6 +579,11 @@ end;
   commit has been disabled.
   @see #setAutoCommit
 }
+procedure TZOleDBConnection.RegisterPendingStatement(const Value: IZStatement);
+begin
+  fPendingStmts.Add(Pointer(Value))
+end;
+
 procedure TZOleDBConnection.Rollback;
 var Transaction: ITransaction;
 begin
@@ -657,9 +679,11 @@ end;
   Connection.
 }
 procedure TZOleDBConnection.Close;
+var I: Integer;
 begin
-  if not Closed then
-  begin
+  if not Closed then begin
+    for i := 0 to fPendingStmts.Count-1 do
+      (IZStatement(fPendingStmts[i])).Close;
     StopTransaction;
     FDBCreateCommand := nil;
     OleDBCheck(fDBInitialize.Uninitialize);
@@ -677,9 +701,9 @@ finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(OleDBDriver);
   OleDBDriver := nil;
-
+//(*
 {$ELSE !ENABLE_OLEDB}
 implementation
 {$ENDIF ENABLE_OLEDB}
-
+//*)
 end.

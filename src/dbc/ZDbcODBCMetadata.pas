@@ -223,8 +223,14 @@ type
   TAbstractODBCDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
     fPHDBC: PSQLHDBC;
+    fTableColColumnMap: TTableColColumnMap;
+    fProcedureMap: TProcedureMap;
+    fProcedureColumnsColMap: TProcedureColumnsColMap;
   protected
     procedure CheckStmtError(RETCODE: SQLRETURN; StmtHandle: SQLHSTMT);
+    procedure IntializeTableColColumnMap(RS: IZResultSet);
+    procedure IntializeProcedureMap(RS: IZResultSet);
+    procedure IntializeProceduresProcedureColumnsColMap(RS: IZResultSet);
   protected
     function UncachedGetTableTypes: IZResultSet; override;
     function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
@@ -1645,12 +1651,14 @@ begin
     begin
       while Next do
       begin
+        IntializeProcedureMap(RS);
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), @Len);
-        Result.UpdatePWideChar(ProcedureNameIndex, GetPWideChar(ProcedureNameIndex, Len), @Len);
-        Result.UpdatePWideChar(ProcedureRemarksIndex, GetPWideCharByName('REMARKS', Len), @Len);
-        Result.UpdateSmall(ProcedureTypeIndex, GetSmallByName('PROCEDURE_TYPE') - 1);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fProcedureMap.ColIndices[CatalogNameIndex], Len), @Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fProcedureMap.ColIndices[SchemaNameIndex], Len), @Len);
+        Result.UpdatePWideChar(ProcedureNameIndex, GetPWideChar(fProcedureMap.ColIndices[ProcedureNameIndex], Len), @Len);
+        //overload?
+        Result.UpdatePWideChar(ProcedureRemarksIndex, GetPWideChar(fProcedureMap.ColIndices[ProcedureRemarksIndex], Len), @Len);
+        Result.UpdateSmall(ProcedureTypeIndex, GetSmall(fProcedureMap.ColIndices[ProcedureTypeIndex]) - 1);
         Result.InsertRow;
       end;
       Close;
@@ -1720,6 +1728,7 @@ var
   RS: IZResultSet;
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
+  SQLType: TZSQLType;
   Cat, Schem, Proc, Col: ZWideString;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
@@ -1737,12 +1746,13 @@ begin
     begin
       while Next do
       begin
+        IntializeProceduresProcedureColumnsColMap(RS);
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), @Len);
-        Result.UpdatePWideChar(ProcColProcedureNameIndex, GetPWideChar(ProcColProcedureNameIndex, Len), @Len);
-        Result.UpdatePWideChar(ProcColColumnNameIndex, GetPWideChar(ProcColColumnNameIndex, Len), @Len);
-        case GetSmall(ProcColColumnTypeIndex) of
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[CatalogNameIndex], Len), @Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[SchemaNameIndex], Len), @Len);
+        Result.UpdatePWideChar(ProcColProcedureNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColProcedureNameIndex], Len), @Len);
+        Result.UpdatePWideChar(ProcColColumnNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColColumnNameIndex], Len), @Len);
+        case GetSmall(fProcedureColumnsColMap.ColIndices[ProcColColumnTypeIndex]) of
           SQL_PARAM_INPUT:        Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctIn));
           SQL_PARAM_INPUT_OUTPUT: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctInOut));
           SQL_RESULT_COL:         Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctResultSet));
@@ -1750,15 +1760,20 @@ begin
           SQL_RETURN_VALUE:       Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctReturn));
           else                    Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctUnknown));
         end;
-        Result.UpdatePWideChar(ProcColTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), @Len);
-     //   Result.UpdateSmall(ProcColDataTypeIndex, Ord(ConvertODBCTypeToSQLType(
-       //   GetSmallByName('DATA_TYPE'), ConSettings.CPType, RS)));
-        Result.UpdateInt(ProcColPrecisionIndex, GetIntByName('COLUMN_SIZE'));
-        Result.UpdateInt(ProcColLengthIndex, GetIntByName('CHAR_OCTET_LENGTH'));
-        Result.UpdateSmall(ProcColScaleIndex, GetSmallByName('DECIMAL_DIGITS'));
-        Result.UpdateSmall(ProcColRadixIndex, GetSmallByName('NUM_PREC_RADIX'));
-        Result.UpdateSmall(ProcColNullableIndex, GetSmallByName('NULLABLE'));
-        Result.UpdatePWideChar(ProcColRemarksIndex, GetPWideCharByName('REMARKS', Len), @Len);
+        SQLType := ConvertODBCTypeToSQLType(GetSmall(fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex]), False, ConSettings.CPType);
+        if (Ord(SQLType) < Ord(stFloat)) and (Ord(SQLType) > Ord(stBoolean)) then
+          if SQLType = stShort then //spezial case: MSSQL should map stByte / MySQL should use stShort
+            SQLType := stByte
+          else //test unsigned
+            SQLType := TZSQLType(Ord(SQLType)-Ord(ZFastCode.Pos('U', UpperCase(GetString(fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex]))) > 0));
+        Result.UpdateSmall(ProcColDataTypeIndex, Ord(SQLType));
+        Result.UpdatePWideChar(ProcColTypeNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColTypeNameIndex], Len), @Len);
+        Result.UpdateInt(ProcColPrecisionIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex]));
+        Result.UpdateInt(ProcColLengthIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColLengthIndex]));
+        Result.UpdateSmall(ProcColScaleIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColScaleIndex]));
+        Result.UpdateSmall(ProcColRadixIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColRadixIndex]));
+        Result.UpdateSmall(ProcColNullableIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColNullableIndex]));
+        Result.UpdatePWideChar(ProcColRemarksIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColRemarksIndex], Len), @Len);
         Result.InsertRow;
       end;
       Close;
@@ -1916,41 +1931,45 @@ begin
     begin
       while Next do
       begin
+        IntializeTableColColumnMap(RS);
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), @Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TableNameIndex, Len), @Len);
-        Result.UpdatePWideChar(ColumnNameIndex, GetPWideChar(ColumnNameIndex, Len), @Len);
-        SQLType := ConvertODBCTypeToSQLType(GetSmall(TableColColumnTypeIndex), False, ConSettings.CPType);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[CatalogNameIndex], Len), @Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[SchemaNameIndex], Len), @Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableNameIndex], Len), @Len);
+        Result.UpdatePWideChar(ColumnNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[ColumnNameIndex], Len), @Len);
+        SQLType := ConvertODBCTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]), False, ConSettings.CPType);
         if (Ord(SQLType) < Ord(stFloat)) and (Ord(SQLType) > Ord(stBoolean)) then
           if SQLType = stShort then //spezial case: MSSQL should map stByte / MySQL should use stShort
             SQLType := stByte
           else //test unsigned
-            SQLType := TZSQLType(Ord(SQLType)-Ord(ZFastCode.Pos('U', UpperCase(GetString(TableColColumnTypeNameIndex))) > 0));
+            SQLType := TZSQLType(Ord(SQLType)-Ord(ZFastCode.Pos('U', UpperCase(GetString(fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex]))) > 0));
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
-        Result.UpdatePWideChar(TableColColumnTypeNameIndex, GetPWideChar(TableColColumnTypeNameIndex, Len), @Len);
-        Result.UpdateInt(TableColColumnSizeIndex, GetInt(TableColColumnSizeIndex));
-        Result.UpdateInt(TableColColumnBufLengthIndex, GetInt(TableColColumnBufLengthIndex));
-        Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetInt(TableColColumnDecimalDigitsIndex));
-        Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmall(TableColColumnNumPrecRadixIndex));
-        Result.UpdateSmall(TableColColumnNullableIndex, GetSmall(TableColColumnNullableIndex));
-        Result.UpdatePWideChar(TableColColumnRemarksIndex, GetPWideChar(TableColColumnRemarksIndex, Len), @Len);
-        Result.UpdatePWideChar(TableColColumnColDefIndex, GetPWideChar(TableColColumnColDefIndex, Len), @Len);
-        Result.UpdateSmall(TableColColumnSQLDataTypeIndex, GetSmall(TableColColumnSQLDataTypeIndex));
-        Result.UpdateSmall(TableColColumnSQLDateTimeSubIndex, GetSmall(TableColColumnSQLDateTimeSubIndex));
-        Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt(TableColColumnCharOctetLengthIndex));
-        Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(TableColColumnOrdPosIndex));
-        Result.UpdatePWideChar(TableColColumnIsNullableIndex, GetPWideChar(TableColColumnIsNullableIndex, Len), @Len);
-        if (GetMetaData.GetColumnCount > 18) and (FindColumn('SS_IS_SPARSE') <> -1) then begin//extended mssql version
-          //SS_IS_SPARSE ??
-          //SS_IS_COLUMN_SET
-          Result.UpdateBoolean(TableColColumnReadonlyIndex, GetBooleanByName('SS_IS_COMPUTED'));
-          Result.UpdateBoolean(TableColColumnWritableIndex, not GetBooleanByName('SS_IS_COMPUTED'));
-          Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, not GetBooleanByName('SS_IS_COMPUTED')); //is this correct?
-          Result.UpdateBoolean(TableColColumnAutoIncIndex, GetBooleanByName('SS_IS_IDENTITY'));
-          //'SS_DATA_TYPE'
-        end;
-        //Result.UpdateBoolean(TableColColumnSearchableIndex, ); not implemented
+        Result.UpdatePWideChar(TableColColumnTypeNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex], Len), @Len);
+        Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex]));
+        Result.UpdateInt(TableColColumnBufLengthIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]));
+        Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]));
+        Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnNumPrecRadixIndex]));
+        Result.UpdateSmall(TableColColumnNullableIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnNullableIndex]));
+        Result.UpdatePWideChar(TableColColumnRemarksIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnRemarksIndex], Len), @Len);
+        Result.UpdatePWideChar(TableColColumnColDefIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnColDefIndex], Len), @Len);
+        Result.UpdateSmall(TableColColumnSQLDataTypeIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnSQLDataTypeIndex]));
+        Result.UpdateSmall(TableColColumnSQLDateTimeSubIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnSQLDateTimeSubIndex]));
+        Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnCharOctetLengthIndex]));
+        Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnOrdPosIndex]));
+        Result.UpdatePWideChar(TableColColumnIsNullableIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnIsNullableIndex], Len), @Len);
+        { here equals do end just test if we know the column then do something }
+        if fTableColColumnMap.ColIndices[TableColColumnAutoIncIndex] <> InvalidDbcIndex then
+          Result.UpdateBoolean(TableColColumnAutoIncIndex, GetBoolean(fTableColColumnMap.ColIndices[TableColColumnAutoIncIndex]));
+        if fTableColColumnMap.ColIndices[TableColColumnCaseSensitiveIndex] <> InvalidDbcIndex then
+          Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, GetBoolean(fTableColColumnMap.ColIndices[TableColColumnCaseSensitiveIndex]));
+        if fTableColColumnMap.ColIndices[TableColColumnSearchableIndex] <> InvalidDbcIndex then
+          Result.UpdateBoolean(TableColColumnSearchableIndex, GetBoolean(fTableColColumnMap.ColIndices[TableColColumnSearchableIndex]));
+        if fTableColColumnMap.ColIndices[TableColColumnWritableIndex] <> InvalidDbcIndex then
+          Result.UpdateBoolean(TableColColumnWritableIndex, not GetBoolean(fTableColColumnMap.ColIndices[TableColColumnWritableIndex]));
+        if fTableColColumnMap.ColIndices[TableColColumnDefinitelyWritableIndex] <> InvalidDbcIndex then
+          Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, not GetBoolean(fTableColColumnMap.ColIndices[TableColColumnDefinitelyWritableIndex]));
+        if fTableColColumnMap.ColIndices[TableColColumnReadonlyIndex] <> InvalidDbcIndex then
+          Result.UpdateBoolean(TableColColumnReadonlyIndex, GetBoolean(fTableColColumnMap.ColIndices[TableColColumnReadonlyIndex]));
         Result.InsertRow;
       end;
       Close;
@@ -2233,7 +2252,6 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   PKCat, PKSchem, PKTabl, FKCat, FKSchem, FKTabl: ZWideString;
-
 begin
   Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
                                               ForeignCatalog, ForeignSchema, ForeignTable);
@@ -2426,33 +2444,28 @@ begin
 
   RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
   CheckStmtError(fPLainW.GetTypeInfo(HSTMT, SQL_ALL_TYPES), HSTMT);
-  with RS do
-  begin
-    while Next do
-    begin
+  with RS do begin
+    while Next do begin
       Result.MoveToInsertRow;
-      Result.UpdatePWideChar(TypeInfoTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), @Len);
+      Result.UpdatePWideChar(TypeInfoTypeNameIndex, GetPWideChar(TypeInfoTypeNameIndex, Len), @Len);
       Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertODBCTypeToSQLType(
-         GetSmallByName('DATA_TYPE'), GetBooleanByName('UNSIGNED_ATTRIBUTE'), ConSettings.CPType)));
-      Result.UpdateInt(TypeInfoPecisionIndex, GetIntByName('COLUMN_SIZE'));
-      Result.UpdatePWideChar(TypeInfoLiteralPrefixIndex, GetPWideCharByName('LITERAL_PREFIX', Len), @Len);
-      Result.UpdatePWideChar(TypeInfoLiteralSuffixIndex, GetPWideCharByName('LITERAL_SUFFIX', Len), @Len);
-      Result.UpdatePWideChar(TypeInfoCreateParamsIndex, GetPWideCharByName('CREATE_PARAMS', Len), @Len);
-      if GetBooleanByName('NULLABLE') then
-        Result.UpdateSmall(TypeInfoNullAbleIndex, 1)
-      else
-        Result.UpdateSmall(TypeInfoNullAbleIndex, 0);
-      Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, GetBooleanByName('CASE_SENSITIVE'));
-      Result.UpdateSmall(TypeInfoSearchableIndex, GetSmallByName('SEARCHABLE'));
-      Result.UpdateBoolean(TypeInfoUnsignedAttributeIndex, GetBooleanByName('UNSIGNED_ATTRIBUTE'));
-      Result.UpdateBoolean(TypeInfoFixedPrecScaleIndex, GetBooleanByName('FIXED_PREC_SCALE'));
-      Result.UpdateBoolean(TypeInfoAutoIncrementIndex, GetBooleanByName('AUTO_UNIQUE_VALUE'));
-      Result.UpdatePWideChar(TypeInfoLocaleTypeNameIndex, GetPWideCharByName('LOCAL_TYPE_NAME', Len), @Len);
-      Result.UpdateSmall(TypeInfoMinimumScaleIndex, GetSmallByName('MINIMUM_SCALE'));
-      Result.UpdateSmall(TypeInfoMaximumScaleIndex, GetSmallByName('MAXIMUM_SCALE'));
-      Result.UpdateSmall(TypeInfoSQLDataTypeIndex, GetSmallByName('SQL_DATA_TYPE'));
-      Result.UpdateSmall(TypeInfoSQLDateTimeSubIndex, GetSmallByName('SQL_DATETIME_SUB'));
-      Result.UpdateSmall(TypeInfoNumPrecRadix, GetSmallByName('NUM_PREC_RADIX'));
+         GetSmall(TypeInfoDataTypeIndex), GetBoolean(TypeInfoUnsignedAttributeIndex), ConSettings.CPType)));
+      Result.UpdateInt(TypeInfoPecisionIndex, GetInt(TypeInfoPecisionIndex));
+      Result.UpdatePWideChar(TypeInfoLiteralPrefixIndex, GetPWideChar(TypeInfoLiteralPrefixIndex, Len), @Len);
+      Result.UpdatePWideChar(TypeInfoLiteralSuffixIndex, GetPWideChar(TypeInfoLiteralSuffixIndex, Len), @Len);
+      Result.UpdatePWideChar(TypeInfoCreateParamsIndex, GetPWideChar(TypeInfoCreateParamsIndex, Len), @Len);
+      Result.UpdateSmall(TypeInfoNullAbleIndex, Ord(GetBoolean(TypeInfoNullAbleIndex)));
+      Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, GetBoolean(TypeInfoCaseSensitiveIndex));
+      Result.UpdateSmall(TypeInfoSearchableIndex, GetSmall(TypeInfoSearchableIndex));
+      Result.UpdateBoolean(TypeInfoUnsignedAttributeIndex, GetBoolean(TypeInfoUnsignedAttributeIndex));
+      Result.UpdateBoolean(TypeInfoFixedPrecScaleIndex, GetBoolean(TypeInfoFixedPrecScaleIndex));
+      Result.UpdateBoolean(TypeInfoAutoIncrementIndex, GetBoolean(TypeInfoAutoIncrementIndex));
+      Result.UpdatePWideChar(TypeInfoLocaleTypeNameIndex, GetPWideChar(TypeInfoLocaleTypeNameIndex, Len), @Len);
+      Result.UpdateSmall(TypeInfoMinimumScaleIndex, GetSmall(TypeInfoMinimumScaleIndex));
+      Result.UpdateSmall(TypeInfoMaximumScaleIndex, GetSmall(TypeInfoMaximumScaleIndex));
+      Result.UpdateSmall(TypeInfoSQLDataTypeIndex, GetSmall(TypeInfoSQLDataTypeIndex));
+      Result.UpdateSmall(TypeInfoSQLDateTimeSubIndex, GetSmall(TypeInfoSQLDateTimeSubIndex));
+      Result.UpdateSmall(TypeInfoNumPrecRadix, GetSmall(TypeInfoNumPrecRadix));
       Result.InsertRow;
     end;
     Close;
@@ -2543,12 +2556,14 @@ begin
     begin
       while Next do
       begin
+        IntializeProcedureMap(RS);
         Result.MoveToInsertRow;
-        Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(CatalogNameIndex, Len), @Len);
-        Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(SchemaNameIndex, Len), @Len);
-        Result.UpdatePAnsiChar(ProcedureNameIndex, GetPAnsiChar(ProcedureNameIndex, Len), @Len);
-        Result.UpdatePAnsiChar(ProcedureRemarksIndex, GetPAnsiCharByName('REMARKS', Len), @Len);
-        Result.UpdateSmall(ProcedureTypeIndex, GetSmallByName('PROCEDURE_TYPE') - 1);
+        Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(fProcedureMap.ColIndices[CatalogNameIndex], Len), @Len);
+        Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(fProcedureMap.ColIndices[SchemaNameIndex], Len), @Len);
+        Result.UpdatePAnsiChar(ProcedureNameIndex, GetPAnsiChar(fProcedureMap.ColIndices[ProcedureNameIndex], Len), @Len);
+        //overload?
+        Result.UpdatePAnsiChar(ProcedureRemarksIndex, GetPAnsiChar(fProcedureMap.ColIndices[ProcedureRemarksIndex], Len), @Len);
+        Result.UpdateSmall(ProcedureTypeIndex, GetSmall(fProcedureMap.ColIndices[ProcedureTypeIndex]) - 1);
         Result.InsertRow;
       end;
       Close;
@@ -2635,12 +2650,13 @@ begin
     begin
       while Next do
       begin
+        IntializeProceduresProcedureColumnsColMap(RS);
         Result.MoveToInsertRow;
-        Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(CatalogNameIndex, Len), @Len);
-        Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(SchemaNameIndex, Len), @Len);
-        Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiChar(ProcColProcedureNameIndex, Len), @Len);
-        Result.UpdatePAnsiChar(ProcColColumnNameIndex, GetPAnsiChar(ProcColColumnNameIndex, Len), @Len);
-        case GetSmall(ProcColColumnTypeIndex) of
+        Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(fProcedureColumnsColMap.ColIndices[CatalogNameIndex], Len), @Len);
+        Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(fProcedureColumnsColMap.ColIndices[SchemaNameIndex], Len), @Len);
+        Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiChar(fProcedureColumnsColMap.ColIndices[ProcColProcedureNameIndex], Len), @Len);
+        Result.UpdatePAnsiChar(ProcColColumnNameIndex, GetPAnsiChar(fProcedureColumnsColMap.ColIndices[ProcColColumnNameIndex], Len), @Len);
+        case GetSmall(fProcedureColumnsColMap.ColIndices[ProcColColumnTypeIndex]) of
           SQL_PARAM_INPUT:        Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctIn));
           SQL_PARAM_INPUT_OUTPUT: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctInOut));
           SQL_RESULT_COL:         Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctResultSet));
@@ -2648,15 +2664,15 @@ begin
           SQL_RETURN_VALUE:       Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctReturn));
           else                    Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctUnknown));
         end;
-        Result.UpdatePAnsiChar(ProcColTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), @Len);
      //   Result.UpdateSmall(ProcColDataTypeIndex, Ord(ConvertODBCTypeToSQLType(
-       //   GetSmallByName('DATA_TYPE'), ConSettings.CPType, RS)));
-        Result.UpdateInt(ProcColPrecisionIndex, GetIntByName('COLUMN_SIZE'));
-        Result.UpdateInt(ProcColLengthIndex, GetIntByName('CHAR_OCTET_LENGTH'));
-        Result.UpdateSmall(ProcColScaleIndex, GetSmallByName('DECIMAL_DIGITS'));
-        Result.UpdateSmall(ProcColRadixIndex, GetSmallByName('NUM_PREC_RADIX'));
-        Result.UpdateSmall(ProcColNullableIndex, GetSmallByName('NULLABLE'));
-        Result.UpdatePAnsiChar(ProcColRemarksIndex, GetPAnsiCharByName('REMARKS', Len), @Len);
+       //   GetSmall(fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex]), ConSettings.CPType, RS)));
+        Result.UpdatePAnsiChar(ProcColTypeNameIndex, GetPAnsiChar(fProcedureColumnsColMap.ColIndices[ProcColTypeNameIndex], Len), @Len);
+        Result.UpdateInt(ProcColPrecisionIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex]));
+        Result.UpdateInt(ProcColLengthIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColLengthIndex]));
+        Result.UpdateSmall(ProcColScaleIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColScaleIndex]));
+        Result.UpdateSmall(ProcColRadixIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColRadixIndex]));
+        Result.UpdateSmall(ProcColNullableIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColNullableIndex]));
+        Result.UpdatePAnsiChar(ProcColRemarksIndex, GetPAnsiChar(fProcedureColumnsColMap.ColIndices[ProcColRemarksIndex], Len), @Len);
         Result.InsertRow;
       end;
       Close;
@@ -2815,41 +2831,44 @@ begin
     begin
       while Next do
       begin
+        IntializeTableColColumnMap(RS);
         Result.MoveToInsertRow;
-        Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(CatalogNameIndex, Len), @Len);
-        Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(SchemaNameIndex, Len), @Len);
-        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(TableNameIndex, Len), @Len);
-        Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(ColumnNameIndex, Len), @Len);
-        SQLType := ConvertODBCTypeToSQLType(GetSmall(TableColColumnTypeIndex), False, ConSettings.CPType);
+        Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[CatalogNameIndex], Len), @Len);
+        Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[SchemaNameIndex], Len), @Len);
+        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[TableNameIndex], Len), @Len);
+        Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[ColumnNameIndex], Len), @Len);
+        SQLType := ConvertODBCTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]), False, ConSettings.CPType);
         if (Ord(SQLType) < Ord(stFloat)) and (Ord(SQLType) > Ord(stBoolean)) then
           if SQLType = stShort then //spezial case: MSSQL should map stByte / MySQL should use stShort
             SQLType := stByte
-          else
-            SQLType := TZSQLType(Ord(SQLType)-Ord(ZFastCode.Pos('U', UpperCase(GetString(TableColColumnTypeNameIndex))) > 0));
+          else //test unsigned
+            SQLType := TZSQLType(Ord(SQLType)-Ord(ZFastCode.Pos('U', UpperCase(GetString(fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex]))) > 0));
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
-        Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(TableColColumnTypeNameIndex, Len), @Len);
-        Result.UpdateInt(TableColColumnSizeIndex, GetInt(TableColColumnSizeIndex));
-        Result.UpdateInt(TableColColumnBufLengthIndex, GetInt(TableColColumnBufLengthIndex));
-        Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetInt(TableColColumnDecimalDigitsIndex));
-        Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmall(TableColColumnNumPrecRadixIndex));
-        Result.UpdateSmall(TableColColumnNullableIndex, GetSmall(TableColColumnNullableIndex));
-        Result.UpdatePAnsiChar(TableColColumnRemarksIndex, GetPAnsiChar(TableColColumnRemarksIndex, Len), @Len);
-        Result.UpdatePAnsiChar(TableColColumnColDefIndex, GetPAnsiChar(TableColColumnColDefIndex, Len), @Len);
-        Result.UpdateSmall(TableColColumnSQLDataTypeIndex, GetSmall(TableColColumnSQLDataTypeIndex));
-        Result.UpdateSmall(TableColColumnSQLDateTimeSubIndex, GetSmall(TableColColumnSQLDateTimeSubIndex));
-        Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt(TableColColumnCharOctetLengthIndex));
-        Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(TableColColumnOrdPosIndex));
-        Result.UpdatePAnsiChar(TableColColumnIsNullableIndex, GetPAnsiChar(TableColColumnIsNullableIndex, Len), @Len);
-        if (GetMetaData.GetColumnCount > 18) and (FindColumn('SS_IS_SPARSE') <> -1) then begin//extended mssql version
-          //SS_IS_SPARSE ??
-          //SS_IS_COLUMN_SET
-          Result.UpdateBoolean(TableColColumnReadonlyIndex, GetBooleanByName('SS_IS_COMPUTED'));
-          Result.UpdateBoolean(TableColColumnWritableIndex, not GetBooleanByName('SS_IS_COMPUTED'));
-          Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, not GetBooleanByName('SS_IS_COMPUTED')); //is this correct?
-          Result.UpdateBoolean(TableColColumnAutoIncIndex, GetBooleanByName('SS_IS_IDENTITY'));
-          //'SS_DATA_TYPE'
-        end;
-        //Result.UpdateBoolean(TableColColumnSearchableIndex, ); not implemented
+        Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex], Len), @Len);
+        Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex]));
+        Result.UpdateInt(TableColColumnBufLengthIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]));
+        Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]));
+        Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnNumPrecRadixIndex]));
+        Result.UpdateSmall(TableColColumnNullableIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnNullableIndex]));
+        Result.UpdatePAnsiChar(TableColColumnRemarksIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[TableColColumnRemarksIndex], Len), @Len);
+        Result.UpdatePAnsiChar(TableColColumnColDefIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[TableColColumnColDefIndex], Len), @Len);
+        Result.UpdateSmall(TableColColumnSQLDataTypeIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnSQLDataTypeIndex]));
+        Result.UpdateSmall(TableColColumnSQLDateTimeSubIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnSQLDateTimeSubIndex]));
+        Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnCharOctetLengthIndex]));
+        Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnOrdPosIndex]));
+        Result.UpdatePAnsiChar(TableColColumnIsNullableIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[TableColColumnIsNullableIndex], Len), @Len);
+        if fTableColColumnMap.ColIndices[TableColColumnAutoIncIndex] <> InvalidDbcIndex then
+          Result.UpdateBoolean(TableColColumnAutoIncIndex, GetBoolean(fTableColColumnMap.ColIndices[TableColColumnAutoIncIndex]));
+        if fTableColColumnMap.ColIndices[TableColColumnCaseSensitiveIndex] <> InvalidDbcIndex then
+          Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, GetBoolean(fTableColColumnMap.ColIndices[TableColColumnCaseSensitiveIndex]));
+        if fTableColColumnMap.ColIndices[TableColColumnSearchableIndex] <> InvalidDbcIndex then
+          Result.UpdateBoolean(TableColColumnSearchableIndex, GetBoolean(fTableColColumnMap.ColIndices[TableColColumnSearchableIndex]));
+        if fTableColColumnMap.ColIndices[TableColColumnWritableIndex] <> InvalidDbcIndex then
+          Result.UpdateBoolean(TableColColumnWritableIndex, not GetBoolean(fTableColColumnMap.ColIndices[TableColColumnWritableIndex]));
+        if fTableColColumnMap.ColIndices[TableColColumnDefinitelyWritableIndex] <> InvalidDbcIndex then
+          Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, not GetBoolean(fTableColColumnMap.ColIndices[TableColColumnDefinitelyWritableIndex]));
+        if fTableColColumnMap.ColIndices[TableColColumnReadonlyIndex] <> InvalidDbcIndex then
+          Result.UpdateBoolean(TableColColumnReadonlyIndex, GetBoolean(fTableColColumnMap.ColIndices[TableColColumnReadonlyIndex]));
         Result.InsertRow;
       end;
       Close;
@@ -3324,38 +3343,32 @@ begin
 
   RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
   CheckStmtError(fPLainA.GetTypeInfo(HSTMT, SQL_ALL_TYPES), HSTMT);
-  if RS <> nil then
-    with RS do
-    begin
-      while Next do
-      begin
-        Result.MoveToInsertRow;
-        Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), @Len);
-        Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertODBCTypeToSQLType(
-           GetSmallByName('DATA_TYPE'), GetBooleanByName('UNSIGNED_ATTRIBUTE'), ConSettings.CPType)));
-        Result.UpdateInt(TypeInfoPecisionIndex, GetIntByName('COLUMN_SIZE'));
-        Result.UpdatePAnsiChar(TypeInfoLiteralPrefixIndex, GetPAnsiCharByName('LITERAL_PREFIX', Len), @Len);
-        Result.UpdatePAnsiChar(TypeInfoLiteralSuffixIndex, GetPAnsiCharByName('LITERAL_SUFFIX', Len), @Len);
-        Result.UpdatePAnsiChar(TypeInfoCreateParamsIndex, GetPAnsiCharByName('CREATE_PARAMS', Len), @Len);
-        if GetBooleanByName('NULLABLE') then
-          Result.UpdateSmall(TypeInfoNullAbleIndex, 1)
-        else
-          Result.UpdateSmall(TypeInfoNullAbleIndex, 0);
-        Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, GetBooleanByName('CASE_SENSITIVE'));
-        Result.UpdateSmall(TypeInfoSearchableIndex, GetSmallByName('SEARCHABLE'));
-        Result.UpdateBoolean(TypeInfoUnsignedAttributeIndex, GetBooleanByName('UNSIGNED_ATTRIBUTE'));
-        Result.UpdateBoolean(TypeInfoFixedPrecScaleIndex, GetBooleanByName('FIXED_PREC_SCALE'));
-        Result.UpdateBoolean(TypeInfoAutoIncrementIndex, GetBooleanByName('AUTO_UNIQUE_VALUE'));
-        Result.UpdatePAnsiChar(TypeInfoLocaleTypeNameIndex, GetPAnsiCharByName('LOCAL_TYPE_NAME', Len), @Len);
-        Result.UpdateSmall(TypeInfoMinimumScaleIndex, GetSmallByName('MINIMUM_SCALE'));
-        Result.UpdateSmall(TypeInfoMaximumScaleIndex, GetSmallByName('MAXIMUM_SCALE'));
-        Result.UpdateSmall(TypeInfoSQLDataTypeIndex, GetSmallByName('SQL_DATA_TYPE'));
-        Result.UpdateSmall(TypeInfoSQLDateTimeSubIndex, GetSmallByName('SQL_DATETIME_SUB'));
-        Result.UpdateSmall(TypeInfoNumPrecRadix, GetSmallByName('NUM_PREC_RADIX'));
-        Result.InsertRow;
-      end;
-      Close;
+  with RS do begin
+    while Next do begin
+      Result.MoveToInsertRow;
+      Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiChar(TypeInfoTypeNameIndex, Len), @Len);
+      Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertODBCTypeToSQLType(
+         GetSmall(TypeInfoDataTypeIndex), GetBoolean(TypeInfoUnsignedAttributeIndex), ConSettings.CPType)));
+      Result.UpdateInt(TypeInfoPecisionIndex, GetInt(TypeInfoPecisionIndex));
+      Result.UpdatePAnsiChar(TypeInfoLiteralPrefixIndex, GetPAnsiChar(TypeInfoLiteralPrefixIndex, Len), @Len);
+      Result.UpdatePAnsiChar(TypeInfoLiteralSuffixIndex, GetPAnsiChar(TypeInfoLiteralSuffixIndex, Len), @Len);
+      Result.UpdatePAnsiChar(TypeInfoCreateParamsIndex, GetPAnsiChar(TypeInfoCreateParamsIndex, Len), @Len);
+      Result.UpdateSmall(TypeInfoNullAbleIndex, Ord(GetBoolean(TypeInfoNullAbleIndex)));
+      Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, GetBoolean(TypeInfoCaseSensitiveIndex));
+      Result.UpdateSmall(TypeInfoSearchableIndex, GetSmall(TypeInfoSearchableIndex));
+      Result.UpdateBoolean(TypeInfoUnsignedAttributeIndex, GetBoolean(TypeInfoUnsignedAttributeIndex));
+      Result.UpdateBoolean(TypeInfoFixedPrecScaleIndex, GetBoolean(TypeInfoFixedPrecScaleIndex));
+      Result.UpdateBoolean(TypeInfoAutoIncrementIndex, GetBoolean(TypeInfoAutoIncrementIndex));
+      Result.UpdatePAnsiChar(TypeInfoLocaleTypeNameIndex, GetPAnsiChar(TypeInfoLocaleTypeNameIndex, Len), @Len);
+      Result.UpdateSmall(TypeInfoMinimumScaleIndex, GetSmall(TypeInfoMinimumScaleIndex));
+      Result.UpdateSmall(TypeInfoMaximumScaleIndex, GetSmall(TypeInfoMaximumScaleIndex));
+      Result.UpdateSmall(TypeInfoSQLDataTypeIndex, GetSmall(TypeInfoSQLDataTypeIndex));
+      Result.UpdateSmall(TypeInfoSQLDateTimeSubIndex, GetSmall(TypeInfoSQLDateTimeSubIndex));
+      Result.UpdateSmall(TypeInfoNumPrecRadix, GetSmall(TypeInfoNumPrecRadix));
+      Result.InsertRow;
     end;
+    Close;
+  end;
 end;
 
 { TAbstractODBCDatabaseMetadata }
@@ -3437,6 +3450,63 @@ constructor TAbstractODBCDatabaseMetadata.Create(
 begin
   fPHDBC := @ConnectionHandle;
   inherited Create(Connection, URL);
+  fTableColColumnMap.Initilized := False;
+  fProcedureMap.Initilized := False;
+  fProcedureColumnsColMap.Initilized := False;
+end;
+
+procedure TAbstractODBCDatabaseMetadata.IntializeProcedureMap(
+  RS: IZResultSet);
+begin
+  if not fProcedureMap.Initilized then
+  begin
+    fProcedureMap.ColIndices[CatalogNameIndex] := CatalogNameIndex;
+    fProcedureMap.ColIndices[SchemaNameIndex] := SchemaNameIndex;
+    fProcedureMap.ColIndices[ProcedureNameIndex] := ProcedureNameIndex;
+    fProcedureMap.ColIndices[ProcedureRemarksIndex] := RS.FindColumn('REMARKS');
+    fProcedureMap.ColIndices[ProcedureOverloadIndex] := -1;
+    fProcedureMap.ColIndices[ProcedureTypeIndex] := RS.FindColumn('PROCEDURE_TYPE');
+    fProcedureMap.Initilized := True;
+  end;
+end;
+
+procedure TAbstractODBCDatabaseMetadata.IntializeProceduresProcedureColumnsColMap(
+  RS: IZResultSet);
+begin
+ if not fProcedureColumnsColMap.Initilized then begin
+   fProcedureColumnsColMap.ColIndices[CatalogNameIndex] := CatalogNameIndex;
+   fProcedureColumnsColMap.ColIndices[SchemaNameIndex] := SchemaNameIndex;
+   fProcedureColumnsColMap.ColIndices[ProcColProcedureNameIndex] := ProcColProcedureNameIndex;
+   fProcedureColumnsColMap.ColIndices[ProcColColumnNameIndex] := ProcColColumnNameIndex;
+   fProcedureColumnsColMap.ColIndices[ProcColColumnTypeIndex] := ProcColColumnTypeIndex;
+   fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex] := RS.FindColumn('TYPE_NAME');
+   fProcedureColumnsColMap.ColIndices[ProcColTypeNameIndex] := fTableColColumnMap.ColIndices[ProcColDataTypeIndex];
+   fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex] := RS.FindColumn('COLUMN_SIZE');
+   fProcedureColumnsColMap.ColIndices[ProcColLengthIndex] := RS.FindColumn('CHAR_OCTET_LENGTH');
+   fProcedureColumnsColMap.ColIndices[ProcColScaleIndex] := RS.FindColumn('DECIMAL_DIGITS');
+   fProcedureColumnsColMap.ColIndices[ProcColRadixIndex] := RS.FindColumn('NUM_PREC_RADIX');
+   fProcedureColumnsColMap.ColIndices[ProcColNullableIndex] := RS.FindColumn('NULLABLE');
+   fProcedureColumnsColMap.ColIndices[ProcColRemarksIndex] := RS.FindColumn('REMARKS');
+   fTableColColumnMap.Initilized := True;
+ end;
+end;
+
+procedure TAbstractODBCDatabaseMetadata.IntializeTableColColumnMap(
+  RS: IZResultSet);
+var I: ShortInt;
+begin
+  if not fTableColColumnMap.Initilized then begin
+    for i := CatalogNameIndex to TableColColumnIsNullableIndex do
+      fTableColColumnMap.ColIndices[I] := I;
+    fTableColColumnMap.ColIndices[TableColColumnAutoIncIndex] := RS.FindColumn('SS_IS_IDENTITY');
+    fTableColColumnMap.ColIndices[TableColColumnCaseSensitiveIndex] := InvalidDbcIndex;
+    fTableColColumnMap.ColIndices[TableColColumnSearchableIndex] := InvalidDbcIndex;
+    fTableColColumnMap.ColIndices[TableColColumnCaseSensitiveIndex] := InvalidDbcIndex;
+    fTableColColumnMap.ColIndices[TableColColumnWritableIndex] := RS.FindColumn('SS_IS_COMPUTED');
+    fTableColColumnMap.ColIndices[TableColColumnDefinitelyWritableIndex] := fTableColColumnMap.ColIndices[TableColColumnWritableIndex];
+    fTableColColumnMap.ColIndices[TableColColumnReadonlyIndex] := fTableColColumnMap.ColIndices[TableColColumnDefinitelyWritableIndex];
+    fTableColColumnMap.Initilized := true;
+  end;
 end;
 
 function TAbstractODBCDatabaseMetadata.UncachedGetExportedKeys(const Catalog,

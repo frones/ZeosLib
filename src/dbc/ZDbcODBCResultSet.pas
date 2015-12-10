@@ -171,21 +171,21 @@ type
   TZODBCBlob = class(TZAbstractBlob)
   public
     constructor Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
-      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; PlainDriver: IODBC3BasePlainDriver); overload;
+      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; PlainDriver: IODBC3BasePlainDriver);
   end;
 
   TZODBCClobA = class(TZAbstractCLob)
   public
     constructor Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
       StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; PlainDriver: IODBC3BasePlainDriver;
-      ConSettings: PZConSettings); overload;
+      ConSettings: PZConSettings);
   end;
 
   TZODBCClobW = class(TZAbstractCLob)
   public
     constructor Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
       StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; PlainDriver: IODBC3BasePlainDriver;
-      ConSettings: PZConSettings); overload;
+      ConSettings: PZConSettings);
   end;
 
 const
@@ -1421,6 +1421,9 @@ begin
     InternalDecTrailingSpaces(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
     Len := fStrLen_or_Ind shr 1;
     Result := fColDataPtr;
+  end else if (fSQLTypes[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] in [stAsciiStream, stUnicodeStream]) then begin
+    Result := fRowBlobs[ColumnIndex].GetPWideChar;
+    Len := fRowBlobs[ColumnIndex].Length shr 1
   end else
     Result := inherited GetPWideChar(ColumnIndex, Len);
 end;
@@ -1530,6 +1533,9 @@ begin
     InternalDecTrailingSpaces(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
     Len := fStrLen_or_Ind;
     Result := fColDataPtr;
+  end else if (fSQLTypes[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] in [stAsciiStream, stUnicodeStream]) then begin
+    Result := fRowBlobs[ColumnIndex].GetPAnsiChar(Consettings^.ClientCodePage^.CP);
+    Len := fRowBlobs[ColumnIndex].Length shr 1
   end else
     Result := inherited GetPAnsiChar(ColumnIndex, Len);
 end;

@@ -71,6 +71,9 @@ type
   IZOleDBPreparedStatement = Interface(IZPreparedStatement)
     ['{42A4A633-C63D-4EFA-A8BC-CF755237D0AD}']
     function GetInternalBufferSize: Integer;
+    function GetMoreResultsIndicator: TZMoreResultsIndicator;
+    procedure SetMoreResultsIndicator(Value: TZMoreResultsIndicator);
+    function GetNewRowSet(var RowSet: IRowSet): Boolean;
   End;
   {** Implements Prepared ADO Statement. }
   TZOleDBPreparedStatement = class(TZAbstractPreparedStatement,
@@ -91,9 +94,9 @@ type
     FRowsAffected: DBROWCOUNT;
     FParamsBuffer: TByteDynArray;
     FTempLobs: TInterfacesDynArray; //Temporary storage for LOB's if a conversion from different Types than IZLob's is required. May be dropped if someone know how to play with IPersistStream
+    fMoreResultsIndicator: TZMoreResultsIndicator;
     procedure CalcParamSetsAndBufferSize;
-  protected //interface based!
-    function GetInternalBufferSize: Integer;
+    procedure PrepareOpenedResultSetsForReusing;
   protected //overrides
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
@@ -118,6 +121,12 @@ type
 
     procedure SetDataArray(ParameterIndex: Integer; const Value;
       const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
+
+  protected //interface based!
+    function GetInternalBufferSize: Integer;
+    function GetMoreResultsIndicator: TZMoreResultsIndicator;
+    procedure SetMoreResultsIndicator(Value: TZMoreResultsIndicator);
+    function GetNewRowSet(var RowSet: IRowSet): Boolean;
   end;
   TZOleDBStatement = class(TZOleDBPreparedStatement);
 
@@ -149,6 +158,7 @@ end;
 
 destructor TZOleDBPreparedStatement.Destroy;
 begin
+  (Connection as IZOleDBConnection).UnRegisterPendingStatement(Self);
   inherited Destroy;
   FCommand := nil;
 end;
@@ -200,6 +210,10 @@ begin
     finally
       FOlePrepareCommand := nil;
     end;
+    if (Connection as IZOleDBConnection).SupportsMultipleResultSets then
+      fMoreResultsIndicator := mriUnknown
+    else
+      fMoreResultsIndicator := mriHasNoMoreResults;
     inherited Prepare;
   end
   else
@@ -247,6 +261,43 @@ begin
       if Assigned(FNamesBuffer) then (GetConnection as IZOleDBConnection).GetMalloc.Free(FNamesBuffer);
       FCommandWithParameters := nil;
     end;
+  end;
+end;
+
+procedure TZOleDBPreparedStatement.PrepareOpenedResultSetsForReusing;
+  procedure SetMoreResInd;
+  begin
+    if (fMoreResultsIndicator = mriUnknown) and Assigned(FMultipleResults) then begin
+      if GetMoreResults and (Assigned(LastResultSet) or (FRowsAffected <> -1)) then
+        fMoreResultsIndicator := mriHasMoreResults
+      else
+        fMoreResultsIndicator := mriHasNoMoreResults;
+    end;
+    if Assigned(LastResultSet) then begin
+      LastResultSet.Close;
+      LastResultSet := nil;
+    end;
+  end;
+begin
+  if Assigned(FOpenResultSet) then
+    if fMoreResultsIndicator <> mriHasNoMoreResults then begin
+      if (Pointer(LastResultSet) = FOpenResultSet) then begin
+        LastResultSet.Close;
+        LastResultSet := nil;
+      end else begin
+        IZResultSet(FOpenResultSet).Close;
+        FOpenResultSet := nil;
+      end;
+      SetMoreResInd;
+    end else
+      IZResultSet(FOpenResultSet).ResetCursor;
+  if Assigned(LastResultSet) then begin
+    if (fMoreResultsIndicator <> mriHasNoMoreResults) then begin
+      LastResultSet.Close;
+      LastResultSet := nil;
+      SetMoreResInd;
+    end else
+      LastResultSet.ResetCursor;
   end;
 end;
 
@@ -312,33 +363,33 @@ function TZOleDBPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 var
   FRowSet: IRowSet;
 begin
-  if Assigned(FOpenResultSet) then
-  begin
-    IZResultSet(FOpenResultSet).Close;
-    FOpenResultSet := nil;
-  end;
-  Result := nil;
+  PrepareOpenedResultSetsForReusing;
   Prepare;
   BindInParameters;
   try
     FRowsAffected := DB_COUNTUNAVAILABLE;
     FRowSet := nil;
-    if (Connection as IZOleDBConnection).SupportsMultipleResultSets then
-    begin
-      OleDbCheck((FCommand as ICommand).Execute(nil, IID_IMultipleResults,
-        FDBParams,@FRowsAffected,@FMultipleResults));
-      if Assigned(FMultipleResults) then
-        OleDbCheck(FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
-          IID_IRowset, @FRowsAffected, @FRowSet));
-    end
-    else
-      OleDbCheck((FCommand as ICommand).Execute(nil, IID_IRowset,
-        FDBParams,@FRowsAffected,@FRowSet));
-    Result := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
-      ChunkSize, FEnhancedColInfo, FInMemoryDataLobs, FOpenResultSet);
-    LastUpdateCount := FRowsAffected;
-    if not Assigned(Result) then
-      while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
+    if Assigned(FOpenResultSet) then
+      Result := IZResultSet(FOpenResultSet)
+    else begin
+      Result := nil;
+      if (Connection as IZOleDBConnection).SupportsMultipleResultSets then
+      begin
+        OleDbCheck((FCommand as ICommand).Execute(nil, IID_IMultipleResults,
+          FDBParams,@FRowsAffected,@FMultipleResults));
+        if Assigned(FMultipleResults) then
+          OleDbCheck(FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
+            IID_IRowset, @FRowsAffected, @FRowSet));
+      end
+      else
+        OleDbCheck((FCommand as ICommand).Execute(nil, IID_IRowset,
+          FDBParams,@FRowsAffected,@FRowSet));
+      Result := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
+        ChunkSize, FEnhancedColInfo, FInMemoryDataLobs, FOpenResultSet);
+      LastUpdateCount := FRowsAffected;
+      if not Assigned(Result) then
+        while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
+    end;
   finally
     FRowSet := nil;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
@@ -384,16 +435,7 @@ function TZOleDBPreparedStatement.ExecutePrepared: Boolean;
 var
   FRowSet: IRowSet;
 begin
-  if Assigned(FOpenResultSet) then
-  begin
-    IZResultSet(FOpenResultSet).Close;
-    FOpenResultSet := nil;
-  end;
-  if Assigned(LastResultSet) then
-  begin
-    LastResultSet.Close;
-    LastResultSet := nil;
-  end;
+  PrepareOpenedResultSetsForReusing;
   LastUpdateCount := -1;
 
   Prepare;
@@ -414,8 +456,8 @@ begin
       OleDbCheck((FCommand as ICommand).Execute(nil, IID_IRowset,
         FDBParams,@FRowsAffected,@FRowSet));
 
-    LastResultSet := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings,
-      FZBufferSize, ChunkSize, FEnhancedColInfo, FInMemoryDataLobs, FOpenResultSet);
+    LastResultSet := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
+      ChunkSize, FEnhancedColInfo, FInMemoryDataLobs, FOpenResultSet);
     LastUpdateCount := LastUpdateCount + FRowsAffected;
     Result := Assigned(LastResultSet);
   finally
@@ -427,6 +469,21 @@ begin
      Connection.Commit;
 end;
 
+{**
+  Moves to a <code>Statement</code> object's next result.  It returns
+  <code>true</code> if this result is a <code>ResultSet</code> object.
+  This method also implicitly closes any current <code>ResultSet</code>
+  object obtained with the method <code>getResultSet</code>.
+
+  <P>There are no more results when the following is true:
+  <PRE>
+        <code>(!getMoreResults() && (getUpdateCount() == -1)</code>
+  </PRE>
+
+ @return <code>true</code> if the next result is a <code>ResultSet</code> object;
+   <code>false</code> if it is an update count or there are no more results
+ @see #execute
+}
 function TZOleDBPreparedStatement.GetMoreResults: Boolean;
 var
   FRowSet: IRowSet;
@@ -438,8 +495,8 @@ begin
   begin
     FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
       IID_IRowset, @FRowsAffected, @FRowSet);
-    LastResultSet := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings,
-      FZBufferSize, ChunkSize, FEnhancedColInfo, FInMemoryDataLobs, FOpenResultSet);
+    LastResultSet := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
+      ChunkSize, FEnhancedColInfo, FInMemoryDataLobs, FOpenResultSet);
     Result := Assigned(LastResultSet);
     LastUpdateCount := FRowsAffected;
   end;
@@ -462,6 +519,21 @@ begin
     Result := False;
 end;
 
+function TZOleDBPreparedStatement.GetMoreResultsIndicator: TZMoreResultsIndicator;
+begin
+  Result := fMoreResultsIndicator;
+end;
+
+function TZOleDBPreparedStatement.GetNewRowSet(var RowSet: IRowSet): Boolean;
+begin
+  RowSet := nil;
+  if Prepared then begin
+    OleDbCheck((FCommand as ICommand).Execute(nil, IID_IRowset,
+      FDBParams,@FRowsAffected,@RowSet));
+    Result := Assigned(RowSet);
+  end else Result := False;
+end;
+
 procedure TZOleDBPreparedStatement.Unprepare;
 var
   Status: HRESULT;
@@ -470,6 +542,7 @@ begin
   if Prepared then
   begin
     try
+      inherited Unprepare;
       if FMultipleResults <> nil then
       repeat
         FRowSet := nil;
@@ -477,7 +550,6 @@ begin
           IID_IRowset, @FRowsAffected, @FRowSet);
       until (FRowSet = nil) or (Status = DB_S_NORESULT);
       FMultipleResults := nil;
-      inherited Unprepare;
       (FCommand as ICommandPrepare).UnPrepare;
       FCommand := nil;
     finally
@@ -497,12 +569,19 @@ begin
   inherited SetDataArray(ParameterIndex, Value, SQLType, VariantType);
 end;
 
+procedure TZOleDBPreparedStatement.SetMoreResultsIndicator(
+  Value: TZMoreResultsIndicator);
+begin
+  fMoreResultsIndicator := Value;
+end;
+
 //(*
 {$ELSE !ENABLE_OLEDB}
 implementation
 {$ENDIF ENABLE_OLEDB}
 //*)
 end.
+
 
 
 

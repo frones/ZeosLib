@@ -59,7 +59,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata,
-  ZCompatibility, ZOleDB;
+  ZCompatibility, ZOleDB, ZDbcConnection, ZURL;
 
 type
   TSuppSchemaRec = record
@@ -212,6 +212,13 @@ type
   TOleDBDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
     FSupportedSchemas: array of TSuppSchemaRec;
+    fCrossRefKeyCol: TCrossRefKeyCol;
+    fTableColColumnMap: TTableColColumnMap;
+    fTablePrivMap: TTablePrivMap;
+    fTableColPrivMap: TTableColPrivMap;
+    fProcedureMap: TProcedureMap;
+    fProcedureColumnsColMap: TProcedureColumnsColMap;
+    fIndexInfoMap: TIndexInfoMap;
     function OleDBOpenSchema(Schema: TGUID; const Args: array of String): IZResultSet;
     procedure InitializeSchemas;
     function FindSchema(SchemaId: TGUID): Integer;
@@ -253,6 +260,8 @@ type
     function UncachedGetTypeInfo: IZResultSet; override;
     function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
+  public
+    constructor Create(Connection: TZAbstractConnection; const Url: TZURL); override;
   end;
 
 implementation
@@ -261,6 +270,7 @@ uses
   Variants, ZGenericSqlToken,
   ZDbcOleDB, ZDbcOleDBUtils, ZDbcOleDBResultSet, ZDbcOleDBStatement;
 
+const bYesNo: Array[Boolean] of ZWideString = ('NO','YES');
 { TZOleDBDatabaseInfo }
 
 {**
@@ -1198,6 +1208,19 @@ end;
   internally by the constructor.
   @return the database information object interface
 }
+constructor TOleDBDatabaseMetadata.Create(Connection: TZAbstractConnection;
+  const Url: TZURL);
+begin
+  inherited Create(Connection, URL);
+  fTableColColumnMap.Initilized := False;
+  fTablePrivMap.Initilized := False;
+  fTableColPrivMap.Initilized := False;
+  fProcedureMap.Initilized := False;
+  fProcedureColumnsColMap.Initilized := False;
+  fIndexInfoMap.Initilized := False;
+  fCrossRefKeyCol.Initilized := False;
+end;
+
 function TOleDBDatabaseMetadata.CreateDatabaseInfo: IZDatabaseInfo;
 begin
   Result := TZOleDBDatabaseInfo.Create(Self);
@@ -1255,18 +1278,27 @@ begin
   Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
   RS := OleDBOpenSchema(DBSCHEMA_PROCEDURES,
-    [Catalog, SchemaPattern, ProcedureNamePattern, '']);
+    [DecomposeObjectString(Catalog), DecomposeObjectString(SchemaPattern), DecomposeObjectString(ProcedureNamePattern), '']);
   if RS <> nil then
     with RS do
     begin
+      if not fProcedureMap.Initilized then begin
+        fProcedureMap.ColIndices[CatalogNameIndex] := FindColumn('PROCEDURE_CATALOG');
+        fProcedureMap.ColIndices[SchemaNameIndex] := FindColumn('PROCEDURE_SCHEMA');
+        fProcedureMap.ColIndices[ProcedureNameIndex] := FindColumn('PROCEDURE_NAME');
+        fProcedureMap.ColIndices[ProcedureRemarksIndex] := FindColumn('DESCRIPTION');
+        fProcedureMap.ColIndices[ProcedureOverloadIndex] := FindColumn('PROCEDURE_DEFINITION');
+        fProcedureMap.ColIndices[ProcedureTypeIndex] := FindColumn('PROCEDURE_TYPE');
+      end;
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('PROCEDURE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('PROCEDURE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(ProcedureNameIndex, GetPWideCharByName('PROCEDURE_NAME', Len), @Len);
-        Result.UpdatePWideChar(ProcedureRemarksIndex, GetPWideCharByName('DESCRIPTION', Len), @Len);
-        Result.UpdateSmall(ProcedureTypeIndex, GetSmallByName('PROCEDURE_TYPE') - 1);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fProcedureMap.ColIndices[CatalogNameIndex], Len), @Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fProcedureMap.ColIndices[SchemaNameIndex], Len), @Len);
+        Result.UpdatePWideChar(ProcedureNameIndex, GetPWideChar(fProcedureMap.ColIndices[ProcedureNameIndex], Len), @Len);
+        Result.UpdatePWideChar(ProcedureOverloadIndex, GetPWideChar(fProcedureMap.ColIndices[ProcedureOverloadIndex], Len), @Len);
+        Result.UpdatePWideChar(ProcedureRemarksIndex, GetPWideChar(fProcedureMap.ColIndices[ProcedureRemarksIndex], Len), @Len);
+        Result.UpdateSmall(ProcedureTypeIndex, GetSmall(fProcedureMap.ColIndices[ProcedureTypeIndex]) - 1);
         Result.InsertRow;
       end;
       Close;
@@ -1338,41 +1370,47 @@ var
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
-  RS := OleDBOpenSchema(DBSCHEMA_PROCEDURE_PARAMETERS,
-    [Catalog, SchemaPattern, ProcedureNamePattern]);
+  RS := OleDBOpenSchema(DBSCHEMA_PROCEDURE_PARAMETERS, [DecomposeObjectString(Catalog),
+    DecomposeObjectString(SchemaPattern), DecomposeObjectString(ProcedureNamePattern)]);
   if RS <> nil then
     with RS do
     begin
+      if not fProcedureColumnsColMap.Initilized then begin
+        fProcedureColumnsColMap.ColIndices[CatalogNameIndex] := FindColumn('PROCEDURE_CATALOG');
+        fProcedureColumnsColMap.ColIndices[SchemaNameIndex] := FindColumn('PROCEDURE_SCHEMA');
+        fProcedureColumnsColMap.ColIndices[ProcColProcedureNameIndex] := FindColumn('PROCEDURE_NAME');
+        fProcedureColumnsColMap.ColIndices[ProcColColumnNameIndex] := FindColumn('PARAMETER_NAME');
+        fProcedureColumnsColMap.ColIndices[ProcColColumnTypeIndex] := FindColumn('PARAMETER_TYPE');
+        fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex] := FindColumn('DATA_TYPE');
+        fProcedureColumnsColMap.ColIndices[ProcColTypeNameIndex] := FindColumn('TYPE_NAME');
+        fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex] := FindColumn('NUMERIC_PRECISION');
+        fProcedureColumnsColMap.ColIndices[ProcColLengthIndex] := FindColumn('CHARACTER_OCTET_LENGTH');
+        fProcedureColumnsColMap.ColIndices[ProcColScaleIndex] := FindColumn('NUMERIC_SCALE');
+        fProcedureColumnsColMap.ColIndices[ProcColRadixIndex] := -1;
+        fProcedureColumnsColMap.ColIndices[ProcColNullableIndex] := FindColumn('IS_NULLABLE');
+        fProcedureColumnsColMap.ColIndices[ProcColRemarksIndex] := FindColumn('DESCRIPTION');
+        fProcedureColumnsColMap.Initilized := True;
+      end;
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('PROCEDURE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('PROCEDURE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(ProcColProcedureNameIndex, GetPWideCharByName('PROCEDURE_NAME', Len), @Len);
-        Result.UpdatePWideChar(ProcColColumnNameIndex, GetPWideCharByName('PARAMETER_NAME', Len), @Len);
-        case GetSmallByName('PARAMETER_TYPE') of
-          1: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctIn));
-          2: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctInOut));
-          3: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctOut));
-          4: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctReturn));
-        else
-          Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctUnknown));
-        end;
-        Result.UpdatePWideChar(ProcColTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), @Len);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[CatalogNameIndex], Len), @Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[SchemaNameIndex], Len), @Len);
+        Result.UpdatePWideChar(ProcColProcedureNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColProcedureNameIndex], Len), @Len);
+        Result.UpdatePWideChar(ProcColColumnNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColColumnNameIndex], Len), @Len);
+        Result.UpdateSmall(ProcColColumnTypeIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColColumnTypeIndex]));
         Result.UpdateSmall(ProcColDataTypeIndex, Ord(ConvertOleDBTypeToSQLType(
-          GetSmallByName('DATA_TYPE'), ConSettings.CPType, RS)));
-        Result.UpdateInt(ProcColPrecisionIndex, GetIntByName('NUMERIC_PRECISION'));
-        Result.UpdateInt(ProcColLengthIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
-        Result.UpdateSmall(ProcColScaleIndex, GetSmallByName('NUMERIC_SCALE'));
-  //      Result.UpdateSmall(ProcColRadixIndex, GetSmallByName('RADIX'));
-        if GetStringByName('IS_NULLABLE') = 'NO' then
-          Result.UpdateSmall(ProcColNullableIndex, 0)
+          GetSmall(fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex]), ConSettings.CPType, RS)));
+        Result.UpdatePWideChar(ProcColTypeNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColTypeNameIndex], Len), @Len);
+        Result.UpdateInt(ProcColPrecisionIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex]));
+        Result.UpdateInt(ProcColLengthIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColLengthIndex]));
+        Result.UpdateSmall(ProcColScaleIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColScaleIndex]));
+  //      Result.UpdateSmall(ProcColRadixIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColRadixIndex]));
+        if IsNull(fProcedureColumnsColMap.ColIndices[ProcColNullableIndex]) then
+          Result.UpdateSmall(ProcColNullableIndex, 2)
         else
-          if GetStringByName('IS_NULLABLE') = 'YES' then
-            Result.UpdateSmall(ProcColNullableIndex, 1)
-          else
-            Result.UpdateSmall(ProcColNullableIndex, 2);
-        Result.UpdatePWideChar(ProcColRemarksIndex, GetPWideCharByName('DESCRIPTION', Len), @Len);
+          Result.UpdateSmall(ProcColNullableIndex, Ord(GetBoolean(fProcedureColumnsColMap.ColIndices[ProcColNullableIndex])));
+        Result.UpdatePWideChar(ProcColRemarksIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColRemarksIndex], Len), @Len);
         Result.InsertRow;
       end;
       Close;
@@ -1413,7 +1451,7 @@ function TOleDBDatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
 var
-  I: Integer;
+  I, TableColumnsRemarksIndex: Integer;
   TableTypes: string;
   RS: IZResultSet;
   Len: NativeUInt;
@@ -1429,18 +1467,20 @@ begin
   end;
 
   RS := OleDBOpenSchema(DBSCHEMA_TABLES,
-    [Catalog, SchemaPattern, TableNamePattern, TableTypes]);
+    [DecomposeObjectString(Catalog), DecomposeObjectString(SchemaPattern),
+      DecomposeObjectString(TableNamePattern), TableTypes]);
   if Assigned(RS) then
     with RS do
     begin
+      TableColumnsRemarksIndex := FindColumn('DESCRIPTION');
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), @Len);
-        Result.UpdatePWideChar(TableColumnsSQLType, GetPWideCharByName('TABLE_TYPE', Len), @Len);
-        Result.UpdatePWideChar(TableColumnsRemarks, GetPWideCharByName('DESCRIPTION', Len), @Len);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), @Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), @Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TableNameIndex, Len), @Len);
+        Result.UpdatePWideChar(TableColumnsSQLType, GetPWideChar(TableColumnsSQLType, Len), @Len);
+        Result.UpdatePWideChar(TableColumnsRemarks, GetPWideChar(TableColumnsRemarksIndex, Len), @Len);
         Result.InsertRow;
       end;
       Close;
@@ -1473,8 +1513,7 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(SchemaColumnsTableSchemaIndex,
-          GetPWideCharByName('SCHEMA_NAME', Len), @Len);
+        Result.UpdatePWideChar(SchemaColumnsTableSchemaIndex, GetPWideChar(SchemaNameIndex, Len), @Len);
         Result.InsertRow;
       end;
       Close;
@@ -1507,7 +1546,7 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('CATALOG_NAME', Len), @Len);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), @Len);
         Result.InsertRow;
       end;
       Close;
@@ -1601,6 +1640,7 @@ end;
 function TOleDBDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
+const FlagColumn = TableColColumnIsNullableIndex+1;
 var
   RS: IZResultSet;
   Flags: Integer;
@@ -1615,40 +1655,54 @@ begin
     DecomposeObjectString(TableNamePattern), DecomposeObjectString(ColumnNamePattern)]);
   if Assigned(RS) then
   begin
-    //AdoRecordSet.Sort := 'ORDINAL_POSITION';
     with RS do
     begin
+      if not fTableColColumnMap.Initilized then begin
+        fTableColColumnMap.ColIndices[CatalogNameIndex] := CatalogNameIndex;
+        fTableColColumnMap.ColIndices[SchemaNameIndex] := SchemaNameIndex;
+        fTableColColumnMap.ColIndices[TableNameIndex] := TableNameIndex;
+        fTableColColumnMap.ColIndices[ColumnNameIndex] := ColumnNameIndex;
+        fTableColColumnMap.ColIndices[TableColColumnTypeIndex] := FindColumn('DATA_TYPE');
+        fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex] := fTableColColumnMap.ColIndices[TableColColumnTypeIndex];
+        fTableColColumnMap.ColIndices[TableColColumnSizeIndex] := FindColumn('CHARACTER_MAXIMUM_LENGTH');
+        fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex] := FindColumn('CHARACTER_OCTET_LENGTH');
+        fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex] := FindColumn('NUMERIC_SCALE');
+        fTableColColumnMap.ColIndices[TableColColumnNumPrecRadixIndex] := FindColumn('NUMERIC_PRECISION');;
+        fTableColColumnMap.ColIndices[TableColColumnNullableIndex] := FindColumn('IS_NULLABLE');
+        fTableColColumnMap.ColIndices[TableColColumnRemarksIndex] := FindColumn('DESCRIPTION');
+        fTableColColumnMap.ColIndices[TableColColumnColDefIndex] := FindColumn('COLUMN_DEFAULT');
+        fTableColColumnMap.ColIndices[TableColColumnSQLDataTypeIndex] := fTableColColumnMap.ColIndices[TableColColumnTypeIndex];
+        fTableColColumnMap.ColIndices[TableColColumnSQLDateTimeSubIndex] := FindColumn('DATETIME_PRECISION');
+        fTableColColumnMap.ColIndices[TableColColumnCharOctetLengthIndex] := FindColumn('CHARACTER_OCTET_LENGTH');
+        fTableColColumnMap.ColIndices[TableColColumnOrdPosIndex] := FindColumn('ORDINAL_POSITION');
+        fTableColColumnMap.ColIndices[TableColColumnIsNullableIndex] := FindColumn('IS_NULLABLE');
+        fTableColColumnMap.ColIndices[FlagColumn] := FindColumn('COLUMN_FLAGS');
+        fTableColColumnMap.Initilized := True;
+      end;
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), @Len);
-        Result.UpdatePWideChar(ColumnNameIndex, GetPWideCharByName('COLUMN_NAME', Len), @Len);
-
-        Flags := GetIntByName('COLUMN_FLAGS');
-        SQLType := ConvertOleDBTypeToSQLType(GetSmallByName('DATA_TYPE'),
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), @Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), @Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TableNameIndex, Len), @Len);
+        Result.UpdatePWideChar(ColumnNameIndex, GetPWideChar(ColumnNameIndex, Len), @Len);
+        Flags := GetInt(fTableColColumnMap.ColIndices[FlagColumn]);
+        SQLType := ConvertOleDBTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]),
           ((FLAGS and DBCOLUMNFLAGS_ISLONG) <> 0), ConSettings.CPType);
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
-        Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('CHARACTER_MAXIMUM_LENGTH'));
-        Result.UpdateInt(TableColColumnBufLengthIndex, GetIntByName('CHARACTER_MAXIMUM_LENGTH'));
-        Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetIntByName('NUMERIC_SCALE'));
-        Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmallByName('NUMERIC_PRECISION'));
-        if GetBooleanByName('IS_NULLABLE') then
-          Result.UpdateSmall(TableColColumnNullableIndex, 1)
-        else
-          Result.UpdateSmall(TableColColumnNullableIndex, 0);
-        Result.UpdatePWideChar(TableColColumnRemarksIndex, GetPWideCharByName('DESCRIPTION', Len), @Len);
-        Result.UpdatePWideChar(TableColColumnColDefIndex, GetPWideCharByName('COLUMN_DEFAULT', Len), @Len);
-        Result.UpdateSmall(TableColColumnSQLDataTypeIndex, GetSmallByName('DATETIME_PRECISION'));
-        Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
-        Result.UpdateInt(TableColColumnOrdPosIndex, GetIntByName('ORDINAL_POSITION'));
-        if UpperCase(GetStringByName('IS_NULLABLE')) = 'FALSE' then
-          Result.UpdateString(TableColColumnIsNullableIndex, 'NO')
-        else
-          Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
-
-        //Result.UpdateNullByName(TableColColumnAutoIncIndex);
+        Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex]));
+        Result.UpdateInt(TableColColumnBufLengthIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]));
+        Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]));
+        Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnNumPrecRadixIndex]));
+        Result.UpdateSmall(TableColColumnNullableIndex, Ord(GetBoolean(fTableColColumnMap.ColIndices[TableColColumnNullableIndex])));
+        Result.UpdatePWideChar(TableColColumnRemarksIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnRemarksIndex], Len), @Len);
+        Result.UpdatePWideChar(TableColColumnColDefIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnColDefIndex], Len), @Len);
+        Result.UpdateSmall(TableColColumnSQLDataTypeIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnSQLDataTypeIndex]));
+        Result.UpdateSmall(TableColColumnSQLDateTimeSubIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnSQLDateTimeSubIndex]));
+        Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnCharOctetLengthIndex]));
+        Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnOrdPosIndex]));
+        Result.UpdateUnicodeString(TableColColumnIsNullableIndex, bYesNo[GetBoolean(fTableColColumnMap.ColIndices[TableColColumnIsNullableIndex])]);
+        Result.UpdateBoolean(TableColColumnAutoIncIndex, Flags and DBCOLUMNFLAGS_ISROWID = DBCOLUMNFLAGS_ISROWID);
         Result.UpdateBoolean(TableColColumnSearchableIndex, (Flags and (DBCOLUMNFLAGS_ISLONG) = 0));
         Result.UpdateBoolean(TableColColumnWritableIndex, (Flags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) <> 0));
         Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, (Flags and (DBCOLUMNFLAGS_WRITE) <> 0));
@@ -1701,20 +1755,28 @@ begin
   if Assigned(RS) then
     with RS do
     begin
+      if not fTableColPrivMap.Initilized then begin
+        fTableColPrivMap.ColIndices[CatalogNameIndex] := FindColumn('TABLE_CATALOG');
+        fTableColPrivMap.ColIndices[SchemaNameIndex] := FindColumn('TABLE_SCHEMA');
+        fTableColPrivMap.ColIndices[TableNameIndex] := FindColumn('TABLE_NAME');
+        fTableColPrivMap.ColIndices[ColumnNameIndex] := FindColumn('COLUMN_NAME');
+        fTableColPrivMap.ColIndices[TableColPrivGrantorIndex] := FindColumn('GRANTOR');
+        fTableColPrivMap.ColIndices[TableColPrivGranteeIndex] := FindColumn('GRANTEE');
+        fTableColPrivMap.ColIndices[TableColPrivPrivilegeIndex] := FindColumn('PRIVILEGE_TYPE');
+        fTableColPrivMap.ColIndices[TableColPrivIsGrantableIndex] := FindColumn('IS_GRANTABLE');
+        fTableColPrivMap.Initilized := True;
+      end;
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), @Len);
-        Result.UpdatePWideChar(ColumnNameIndex, GetPWideCharByName('COLUMN_NAME', Len), @Len);
-        Result.UpdatePWideChar(TableColPrivGrantorIndex, GetPWideCharByName('GRANTOR', Len), @Len);
-        Result.UpdatePWideChar(TableColPrivGranteeIndex, GetPWideCharByName('GRANTEE', Len), @Len);
-        Result.UpdatePWideChar(TableColPrivPrivilegeIndex, GetPWideCharByName('PRIVILEGE_TYPE', Len), @Len);
-        if GetBooleanByName('IS_GRANTABLE') then
-          Result.UpdateString(TableColPrivIsGrantableIndex, 'YES')
-        else
-          Result.UpdateString(TableColPrivIsGrantableIndex, 'NO');
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fTableColPrivMap.ColIndices[CatalogNameIndex], Len), @Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fTableColPrivMap.ColIndices[SchemaNameIndex], Len), @Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(fTableColPrivMap.ColIndices[TableNameIndex], Len), @Len);
+        Result.UpdatePWideChar(ColumnNameIndex, GetPWideChar(fTableColPrivMap.ColIndices[ColumnNameIndex], Len), @Len);
+        Result.UpdatePWideChar(TableColPrivGrantorIndex, GetPWideChar(fTableColPrivMap.ColIndices[TableColPrivGrantorIndex], Len), @Len);
+        Result.UpdatePWideChar(TableColPrivGranteeIndex, GetPWideChar(fTableColPrivMap.ColIndices[TableColPrivGranteeIndex], Len), @Len);
+        Result.UpdatePWideChar(TableColPrivPrivilegeIndex, GetPWideChar(fTableColPrivMap.ColIndices[TableColPrivPrivilegeIndex], Len), @Len);
+        Result.UpdateUnicodeString(TableColPrivIsGrantableIndex, bYesNo[GetBoolean(fTableColPrivMap.ColIndices[TableColPrivIsGrantableIndex])]);
         Result.InsertRow;
       end;
       Close;
@@ -1762,23 +1824,29 @@ begin
   Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
 
   RS := OleDBOpenSchema(DBSCHEMA_TABLE_PRIVILEGES,
-    [Catalog, SchemaPattern, TableNamePattern]);
+    [DecomposeObjectString(Catalog), DecomposeObjectString(SchemaPattern), DecomposeObjectString(TableNamePattern)]);
   if Assigned(RS) then
-    with RS do
-    begin
+    with RS do begin
+      if not fTableColPrivMap.Initilized then begin
+        fTablePrivMap.ColIndices[CatalogNameIndex] := FindColumn('TABLE_CATALOG');
+        fTablePrivMap.ColIndices[SchemaNameIndex] := FindColumn('TABLE_SCHEMA');
+        fTablePrivMap.ColIndices[TableNameIndex] := FindColumn('TABLE_NAME');
+        fTablePrivMap.ColIndices[TablePrivGrantorIndex] := FindColumn('GRANTOR');
+        fTablePrivMap.ColIndices[TablePrivGranteeIndex] := FindColumn('GRANTEE');
+        fTablePrivMap.ColIndices[TablePrivPrivilegeIndex] := FindColumn('PRIVILEGE_TYPE');
+        fTablePrivMap.ColIndices[TablePrivIsGrantableIndex] := FindColumn('IS_GRANTABLE');
+        fTablePrivMap.Initilized := True;
+      end;
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), @Len);
-        Result.UpdatePWideChar(TablePrivGrantorIndex, GetPWideCharByName('GRANTOR', Len), @Len);
-        Result.UpdatePWideChar(TablePrivGranteeIndex, GetPWideCharByName('GRANTEE', Len), @Len);
-        Result.UpdatePWideChar(TablePrivPrivilegeIndex, GetPWideCharByName('PRIVILEGE_TYPE', Len), @Len);
-        if GetBooleanByName('IS_GRANTABLE') then
-          Result.UpdateString(TablePrivIsGrantableIndex, 'YES')
-        else
-          Result.UpdateString(TablePrivIsGrantableIndex, 'NO');
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fTablePrivMap.ColIndices[CatalogNameIndex], Len), @Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fTablePrivMap.ColIndices[SchemaNameIndex], Len), @Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(fTablePrivMap.ColIndices[TableNameIndex], Len), @Len);
+        Result.UpdatePWideChar(TablePrivGrantorIndex, GetPWideChar(fTablePrivMap.ColIndices[TablePrivGrantorIndex], Len), @Len);
+        Result.UpdatePWideChar(TablePrivGranteeIndex, GetPWideChar(fTablePrivMap.ColIndices[TablePrivGranteeIndex], Len), @Len);
+        Result.UpdatePWideChar(TablePrivPrivilegeIndex, GetPWideChar(fTablePrivMap.ColIndices[TablePrivIsGrantableIndex], Len), @Len);
+        Result.UpdateUnicodeString(TablePrivIsGrantableIndex, bYesNo[GetBoolean(fTablePrivMap.ColIndices[TablePrivIsGrantableIndex])]);
         Result.InsertRow;
       end;
       Close;
@@ -1817,8 +1885,6 @@ end;
 }
 function TOleDBDatabaseMetadata.UncachedGetVersionColumns(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
-const
-  DBCOLUMNFLAGS_ISROWVER = $00000200;
 var
   RS: IZResultSet;
   Len: NativeUInt;
@@ -1826,7 +1892,8 @@ var
 begin
   Result:=inherited UncachedGetVersionColumns(Catalog, Schema, Table);
 
-  RS := OleDBOpenSchema(DBSCHEMA_COLUMNS, [Catalog, Schema, Table]);
+  RS := OleDBOpenSchema(DBSCHEMA_COLUMNS, [DecomposeObjectString(Catalog),
+    DecomposeObjectString(Schema), DecomposeObjectString(Table)]);
   if Assigned(RS) then
     with RS do
     begin
@@ -1875,26 +1942,29 @@ end;
 }
 function TOleDBDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
+const
+  iKeyKeySeq = PrimaryKeyKeySeqIndex+2;
+  iKeyPKName = PrimaryKeyPKNameIndex+2;
 var
   RS: IZResultSet;
   Len: NativeUInt;
 begin
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
-  RS := OleDBOpenSchema(DBSCHEMA_PRIMARY_KEYS, [Catalog, Schema, Table]);
+  RS := OleDBOpenSchema(DBSCHEMA_PRIMARY_KEYS, [DecomposeObjectString(Catalog),
+    DecomposeObjectString(Schema), DecomposeObjectString(Table)]);
   if RS <> nil then
     with RS do
     begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), @Len);
-        Result.UpdatePWideChar(PrimaryKeyColumnNameIndex, GetPWideCharByName('COLUMN_NAME', Len), @Len);
-        Result.UpdateSmall(PrimaryKeyKeySeqIndex, GetSmallByName('ORDINAL'));
-        if FindColumn('PK_NAME') > FirstDbcIndex then
-          Result.UpdatePWideChar(PrimaryKeyPKNameIndex, GetPWideCharByName('PK_NAME', Len), @Len);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), @Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), @Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TableNameIndex, Len), @Len);
+        Result.UpdatePWideChar(PrimaryKeyColumnNameIndex, GetPWideChar(PrimaryKeyColumnNameIndex, Len), @Len);
+        Result.UpdateSmall(PrimaryKeyKeySeqIndex, GetSmall(iKeyKeySeq));
+        Result.UpdatePWideChar(PrimaryKeyPKNameIndex, GetPWideChar(iKeyPKName, Len), @Len);
         Result.InsertRow;
       end;
       Close;
@@ -2148,28 +2218,47 @@ begin
   Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
                                               ForeignCatalog, ForeignSchema, ForeignTable);
 
-  RS := OleDBOpenSchema(DBSCHEMA_FOREIGN_KEYS, [PrimaryCatalog,
-    PrimarySchema, PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable]);
+  RS := OleDBOpenSchema(DBSCHEMA_FOREIGN_KEYS, [DecomposeObjectString(PrimaryCatalog),
+    DecomposeObjectString(PrimarySchema), DecomposeObjectString(PrimaryTable),
+    DecomposeObjectString(ForeignCatalog), DecomposeObjectString(ForeignSchema), DecomposeObjectString(ForeignTable)]);
   if RS <> nil then
     with RS do
     begin
+      if not fCrossRefKeyCol.Initilized then begin
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColPKTableCatalogIndex] := FindColumn('PK_TABLE_CATALOG');
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColPKTableSchemaIndex] := FindColumn('PK_TABLE_SCHEMA');
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColPKTableNameIndex] := FindColumn('PK_TABLE_NAME');
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColPKColumnNameIndex] := FindColumn('PK_COLUMN_NAME');
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColFKTableCatalogIndex] := FindColumn('FK_TABLE_CATALOG');
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColFKTableSchemaIndex] := FindColumn('FK_TABLE_SCHEMA');
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColFKTableNameIndex] := FindColumn('FK_TABLE_NAME');
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColFKColumnNameIndex] := FindColumn('FK_COLUMN_NAME');
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColKeySeqIndex] := FindColumn('ORDINAL');
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColUpdateRuleIndex] := FindColumn('UPDATE_RULE');
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColDeleteRuleIndex] := FindColumn('DELETE_RULE');
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColFKNameIndex] := FindColumn('FK_NAME');
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColPKNameIndex] := FindColumn('PK_NAME');
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColDeferrabilityIndex] := FindColumn('DEFERRABILITY');
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColPKTableCatalogIndex] := FindColumn('PK_TABLE_CATALOG');
+        fCrossRefKeyCol.ColIndices[CrossRefKeyColPKTableCatalogIndex] := FindColumn('PK_TABLE_CATALOG');
+      end;
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CrossRefKeyColPKTableCatalogIndex, GetPWideCharByName('PK_TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColPKTableSchemaIndex, GetPWideCharByName('PK_TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColPKTableNameIndex, GetPWideCharByName('PK_TABLE_NAME', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColPKColumnNameIndex, GetPWideCharByName('PK_COLUMN_NAME', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColFKTableCatalogIndex, GetPWideCharByName('FK_TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColFKTableSchemaIndex, GetPWideCharByName('FK_TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColFKTableNameIndex, GetPWideCharByName('FK_TABLE_NAME', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColFKColumnNameIndex, GetPWideCharByName('FK_COLUMN_NAME', Len), @Len);
-        Result.UpdateSmall(CrossRefKeyColKeySeqIndex, GetSmallByName('ORDINAL'));
-        Result.UpdateSmall(CrossRefKeyColUpdateRuleIndex, Ord(GetRuleType(GetStringByName('UPDATE_RULE'))));
-        Result.UpdateSmall(CrossRefKeyColDeleteRuleIndex, Ord(GetRuleType(GetStringByName('DELETE_RULE'))));
-        Result.UpdatePWideChar(CrossRefKeyColFKNameIndex, GetPWideCharByName('FK_NAME', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColPKNameIndex, GetPWideCharByName('PK_NAME', Len), @Len);
-        Result.UpdateInt(CrossRefKeyColDeferrabilityIndex, GetSmallByName('DEFERRABILITY'));
+        Result.UpdatePWideChar(CrossRefKeyColPKTableCatalogIndex, GetPWideChar(fCrossRefKeyCol.ColIndices[CrossRefKeyColPKTableCatalogIndex], Len), @Len);
+        Result.UpdatePWideChar(CrossRefKeyColPKTableSchemaIndex, GetPWideChar(fCrossRefKeyCol.ColIndices[CrossRefKeyColPKTableSchemaIndex], Len), @Len);
+        Result.UpdatePWideChar(CrossRefKeyColPKTableNameIndex, GetPWideChar(fCrossRefKeyCol.ColIndices[CrossRefKeyColPKTableNameIndex], Len), @Len);
+        Result.UpdatePWideChar(CrossRefKeyColPKColumnNameIndex, GetPWideChar(fCrossRefKeyCol.ColIndices[CrossRefKeyColPKColumnNameIndex], Len), @Len);
+        Result.UpdatePWideChar(CrossRefKeyColFKTableCatalogIndex, GetPWideChar(fCrossRefKeyCol.ColIndices[CrossRefKeyColFKTableCatalogIndex], Len), @Len);
+        Result.UpdatePWideChar(CrossRefKeyColFKTableSchemaIndex, GetPWideChar(fCrossRefKeyCol.ColIndices[CrossRefKeyColFKTableSchemaIndex], Len), @Len);
+        Result.UpdatePWideChar(CrossRefKeyColFKTableNameIndex, GetPWideChar(fCrossRefKeyCol.ColIndices[CrossRefKeyColFKTableNameIndex], Len), @Len);
+        Result.UpdatePWideChar(CrossRefKeyColFKColumnNameIndex, GetPWideChar(fCrossRefKeyCol.ColIndices[CrossRefKeyColFKColumnNameIndex], Len), @Len);
+        Result.UpdateSmall(CrossRefKeyColKeySeqIndex, GetSmall(fCrossRefKeyCol.ColIndices[CrossRefKeyColKeySeqIndex]));
+        Result.UpdateSmall(CrossRefKeyColUpdateRuleIndex, Ord(GetRuleType(GetString(fCrossRefKeyCol.ColIndices[CrossRefKeyColUpdateRuleIndex]))));
+        Result.UpdateSmall(CrossRefKeyColDeleteRuleIndex, Ord(GetRuleType(GetString(fCrossRefKeyCol.ColIndices[CrossRefKeyColDeleteRuleIndex]))));
+        Result.UpdatePWideChar(CrossRefKeyColFKNameIndex, GetPWideChar(fCrossRefKeyCol.ColIndices[CrossRefKeyColFKNameIndex], Len), @Len);
+        Result.UpdatePWideChar(CrossRefKeyColPKNameIndex, GetPWideChar(fCrossRefKeyCol.ColIndices[CrossRefKeyColPKNameIndex], Len), @Len);
+        Result.UpdateInt(CrossRefKeyColDeferrabilityIndex, GetSmall(fCrossRefKeyCol.ColIndices[CrossRefKeyColDeferrabilityIndex]));
         Result.InsertRow;
       end;
       Close;
@@ -2222,6 +2311,7 @@ end;
   @return <code>ResultSet</code> - each row is an SQL type description
 }
 function TOleDBDatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
+const iIS_LONG = TypeInfoNumPrecRadix;
 var
   RS: IZResultSet;
   Len: NativeUInt;
@@ -2230,33 +2320,34 @@ begin
 
   RS := OleDBOpenSchema(DBSCHEMA_PROVIDER_TYPES, []);
   if RS <> nil then
-    with RS do
-    begin
-      while Next do
-      begin
+    with RS do begin
+      while Next do begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(TypeInfoTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), @Len);
+        Result.UpdatePWideChar(TypeInfoTypeNameIndex, GetPWideChar(TypeInfoTypeNameIndex, Len), @Len);
         Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertOleDBTypeToSQLType(
-          GetSmallByName('DATA_TYPE'), ConSettings.CPType, RS)));
-        Result.UpdateInt(TypeInfoPecisionIndex, 0);//GetIntByName('PRECISION'));
-        Result.UpdatePWideChar(TypeInfoLiteralPrefixIndex, GetPWideCharByName('LITERAL_PREFIX', Len), @Len);
-        Result.UpdatePWideChar(TypeInfoLiteralSuffixIndex, GetPWideCharByName('LITERAL_SUFFIX', Len), @Len);
-        Result.UpdatePWideChar(TypeInfoCreateParamsIndex, GetPWideCharByName('CREATE_PARAMS', Len), @Len);
-        if GetBooleanByName('IS_NULLABLE') then
-          Result.UpdateSmall(TypeInfoNullAbleIndex, 1)
-        else
-          Result.UpdateSmall(TypeInfoNullAbleIndex, 0);
-        Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, GetBooleanByName('CASE_SENSITIVE'));
-        Result.UpdateSmall(TypeInfoSearchableIndex, GetSmallByName('SEARCHABLE'));
-        Result.UpdateBoolean(TypeInfoUnsignedAttributeIndex, GetBooleanByName('UNSIGNED_ATTRIBUTE'));
-        Result.UpdateBoolean(TypeInfoFixedPrecScaleIndex, GetBooleanByName('FIXED_PREC_SCALE'));
-        Result.UpdateBoolean(TypeInfoAutoIncrementIndex, False);
-        Result.UpdatePWideChar(TypeInfoLocaleTypeNameIndex, GetPWideCharByName('LOCAL_TYPE_NAME', Len), @Len);
-        Result.UpdateSmall(TypeInfoMinimumScaleIndex, GetSmallByName('MINIMUM_SCALE'));
-        Result.UpdateSmall(TypeInfoMaximumScaleIndex, GetSmallByName('MAXIMUM_SCALE'));
+          GetSmall(TypeInfoDataTypeIndex), GetBoolean(iIS_LONG), ConSettings.CPType)));
+        Result.UpdateInt(TypeInfoPecisionIndex, GetInt(TypeInfoPecisionIndex));
+        Result.UpdatePWideChar(TypeInfoLiteralPrefixIndex, GetPWideChar(TypeInfoLiteralPrefixIndex, Len), @Len);
+        Result.UpdatePWideChar(TypeInfoLiteralSuffixIndex, GetPWideChar(TypeInfoLiteralSuffixIndex, Len), @Len);
+        Result.UpdatePWideChar(TypeInfoCreateParamsIndex, GetPWideChar(TypeInfoCreateParamsIndex, Len), @Len);
+        Result.UpdateSmall(TypeInfoNullAbleIndex, Ord(GetBoolean(TypeInfoNullAbleIndex)));
+        Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, GetBoolean(TypeInfoCaseSensitiveIndex));
+        Result.UpdateSmall(TypeInfoSearchableIndex, GetSmall(TypeInfoSearchableIndex));
+        Result.UpdateBoolean(TypeInfoUnsignedAttributeIndex, GetBoolean(TypeInfoUnsignedAttributeIndex));
+        Result.UpdateBoolean(TypeInfoFixedPrecScaleIndex, GetBoolean(TypeInfoFixedPrecScaleIndex));
+        Result.UpdateBoolean(TypeInfoAutoIncrementIndex, GetBoolean(TypeInfoAutoIncrementIndex));
+        Result.UpdatePWideChar(TypeInfoLocaleTypeNameIndex, GetPWideChar(TypeInfoLocaleTypeNameIndex, Len), @Len);
+        Result.UpdateSmall(TypeInfoMinimumScaleIndex, GetSmall(TypeInfoMinimumScaleIndex));
+        Result.UpdateSmall(TypeInfoMaximumScaleIndex, GetSmall(TypeInfoMaximumScaleIndex));
+        //GUID
+        //TYPE_LIB
+        //IS_LONG
+        //BEST_MATCH
+        //IS_FIXEDLENGTH
+        { NA }
         //Result.UpdateSmall(TypeInfoSQLDataTypeIndex, GetSmallByName('SQL_DATA_TYPE'));
-  //      Result.UpdateSmall(TypeInfoSQLDateTimeSubIndex, GetSmallByName('SQL_DATETIME_SUB'));
-  //      Result.UpdateSmall(TypeInfoNumPrecRadix, GetSmallByName('NUM_PREC_RADIX'));
+        //Result.UpdateSmall(TypeInfoSQLDateTimeSubIndex, GetSmallByName('SQL_DATETIME_SUB'));
+        //Result.UpdateSmall(TypeInfoNumPrecRadix, GetSmallByName('NUM_PREC_RADIX'));
         Result.InsertRow;
       end;
       Close;
@@ -2323,26 +2414,42 @@ var
 begin
   Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
-  RS := OleDBOpenSchema(DBSCHEMA_INDEXES,[Catalog, Schema, '', '', Table]);
+  RS := OleDBOpenSchema(DBSCHEMA_INDEXES,[DecomposeObjectString(Catalog), DecomposeObjectString(Schema), '', '', Table]);
   if RS <> nil then
     with RS do
     begin
+      if not fIndexInfoMap.Initilized then begin
+        fIndexInfoMap.ColIndices[CatalogNameIndex] := FindColumn('TABLE_CATALOG');
+        fIndexInfoMap.ColIndices[SchemaNameIndex] := FindColumn('TABLE_SCHEMA');
+        fIndexInfoMap.ColIndices[TableNameIndex] := FindColumn('TABLE_NAME');
+        fIndexInfoMap.ColIndices[IndexInfoColNonUniqueIndex] := FindColumn('UNIQUE');
+        fIndexInfoMap.ColIndices[IndexInfoColIndexQualifierIndex] := FindColumn('INDEX_CATALOG');
+        fIndexInfoMap.ColIndices[IndexInfoColIndexNameIndex] := FindColumn('INDEX_NAME');
+        fIndexInfoMap.ColIndices[IndexInfoColTypeIndex] := FindColumn('TYPE');
+        fIndexInfoMap.ColIndices[IndexInfoColOrdPositionIndex] := FindColumn('ORDINAL_POSITION');
+        fIndexInfoMap.ColIndices[IndexInfoColColumnNameIndex] := FindColumn('COLUMN_NAME');
+        fIndexInfoMap.ColIndices[IndexInfoColAscOrDescIndex] := FindColumn('STATUS');  //EH: no Idea
+        fIndexInfoMap.ColIndices[IndexInfoColCardinalityIndex] := FindColumn('CARDINALITY');
+        fIndexInfoMap.ColIndices[IndexInfoColPagesIndex] := FindColumn('PAGES');
+        fIndexInfoMap.ColIndices[IndexInfoColFilterConditionIndex] := FindColumn('FILTER_CONDITION');
+        fIndexInfoMap.Initilized := True;
+      end;
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), @Len);
-        Result.UpdateBoolean(IndexInfoColNonUniqueIndex, not GetBooleanByName('UNIQUE'));
-        Result.UpdatePWideChar(IndexInfoColIndexQualifierIndex, GetPWideCharByName('INDEX_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(IndexInfoColIndexNameIndex, GetPWideCharByName('INDEX_NAME', Len), @Len);
-        Result.UpdateSmall(IndexInfoColTypeIndex, GetSmallByName('TYPE'));
-        Result.UpdateSmall(IndexInfoColOrdPositionIndex, GetSmallByName('ORDINAL_POSITION'));
-        Result.UpdatePWideChar(IndexInfoColColumnNameIndex, GetPWideCharByName('COLUMN_NAME', Len), @Len);
-  //!!!      Result.UpdatePWideChar(IndexInfoColAscOrDescIndex, GetPWideCharByName('COLLATION', Len), @Len);
-        Result.UpdateInt(IndexInfoColCardinalityIndex, GetIntByName('CARDINALITY'));
-        Result.UpdateInt(IndexInfoColPagesIndex, GetIntByName('PAGES'));
-        Result.UpdatePWideChar(IndexInfoColFilterConditionIndex, GetPWideCharByName('FILTER_CONDITION', Len), @Len);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fIndexInfoMap.ColIndices[CatalogNameIndex], Len), @Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fIndexInfoMap.ColIndices[SchemaNameIndex], Len), @Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(fIndexInfoMap.ColIndices[TableNameIndex], Len), @Len);
+        Result.UpdateBoolean(IndexInfoColNonUniqueIndex, not GetBoolean(fIndexInfoMap.ColIndices[IndexInfoColNonUniqueIndex]));
+        Result.UpdatePWideChar(IndexInfoColIndexQualifierIndex, GetPWideChar(fIndexInfoMap.ColIndices[IndexInfoColIndexQualifierIndex], Len), @Len);
+        Result.UpdatePWideChar(IndexInfoColIndexNameIndex, GetPWideChar(fIndexInfoMap.ColIndices[IndexInfoColIndexNameIndex], Len), @Len);
+        Result.UpdateSmall(IndexInfoColTypeIndex, GetSmall(fIndexInfoMap.ColIndices[IndexInfoColTypeIndex]));
+        Result.UpdateSmall(IndexInfoColOrdPositionIndex, GetSmall(fIndexInfoMap.ColIndices[IndexInfoColOrdPositionIndex]));
+        Result.UpdatePWideChar(IndexInfoColColumnNameIndex, GetPWideChar(fIndexInfoMap.ColIndices[IndexInfoColColumnNameIndex], Len), @Len);
+  //!!!      Result.UpdatePWideChar(IndexInfoColAscOrDescIndex, GetPWideChar(fIndexInfoMap.ColIndices[IndexInfoColAscOrDescIndex], Len), @Len);
+        Result.UpdateInt(IndexInfoColCardinalityIndex, GetInt(fIndexInfoMap.ColIndices[IndexInfoColCardinalityIndex]));
+        Result.UpdateInt(IndexInfoColPagesIndex, GetInt(fIndexInfoMap.ColIndices[IndexInfoColPagesIndex]));
+        Result.UpdatePWideChar(IndexInfoColFilterConditionIndex, GetPWideChar(fIndexInfoMap.ColIndices[IndexInfoColFilterConditionIndex], Len), @Len);
         Result.InsertRow;
       end;
       Close;
@@ -2481,10 +2588,11 @@ begin
       Break;
     end;
 end;
-
+//(*
 {$ELSE !ENABLE_OLEDB}
 implementation
 {$ENDIF ENABLE_OLEDB}
+//*)
 end.
 
 
