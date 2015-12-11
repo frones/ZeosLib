@@ -121,7 +121,9 @@
   {$ENDIF}
   {$IF FPC_FULLVERSION>20700}       // will be introduced in 2.7+
     {$DEFINE WITH_TRECORDBUFFER}
-    {$DEFINE WITH_TBOOKMARK}        // Have TBookmark
+    {$ifndef MSEgui} 
+      {$DEFINE WITH_TBOOKMARK}        // Have TBookmark
+    {$endif}
     {$DEFINE TFIELD_HAS_ASBYTES}          // TField.AsBytes is supported
     {$DEFINE TFIELD_HAS_ASLARGEINT}  // TFIeld.AsLargeInt is supported
     {$UNDEF WITH_FPC_BOF_BUG}

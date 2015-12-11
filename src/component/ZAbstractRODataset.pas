@@ -83,7 +83,7 @@ type
   {** Options for dataset. }
   TZDatasetOption = (doOemTranslate, doCalcDefaults, doAlwaysDetailResync,
     doSmartOpen, doPreferPrepared, doDontSortOnPost, doUpdateMasterFirst,
-    doCachedLobs, doNoAlignDisplayWidth);
+    doCachedLobs, doAlignMaxRequiredWideStringFieldSize, doNoAlignDisplayWidth);
 
   {** Set of dataset options. }
   TZDatasetOptions = set of TZDatasetOption;
@@ -3189,7 +3189,15 @@ begin
       begin
         FieldType := ConvertDbcToDatasetType(GetColumnType(I));
         if FieldType in [ftBytes, ftString, ftWidestring] then
-          Size := GetPrecision(I)
+          if (FieldType = ftWideString) then
+            if (GetColumnDisplaySize(I) = 0) or ((doAlignMaxRequiredWideStringFieldSize in fOptions) and
+               (ResultSet.GetConSettings^.ClientCodePage^.Encoding = ceUTF8)) then
+              Size := GetPrecision(I) //most UTF8 DB's assume 4Byte / Char (surrogates included) such encoded characters may kill the heap of the FieldBuffer
+              //users are warned: http://zeoslib.sourceforge.net/viewtopic.php?f=40&p=51427#p51427
+            else
+              Size := GetColumnDisplaySize(I)
+          else
+            Size := GetPrecision(I)
         else
           {$IFDEF WITH_FTGUID}
           if FieldType = ftGUID then
