@@ -4364,7 +4364,7 @@ begin
   Flags := 0;
   P := S;
   while P^ = ' ' do begin
-    Inc(Code);
+    Inc(P);
     Inc(P);
   end;
   if P^ in ['+', '-'] then

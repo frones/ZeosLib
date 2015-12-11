@@ -572,7 +572,7 @@ begin
         if Value.values['controls_cp'] = 'CP_UTF16' then
         begin
           FControlsCodePage := cGET_ACP;
-          Value.values['controls_cp'] := {$IFDEF DLEPHI}'GET_ACP'{$ELSE}'CP_UTF8'{$ENDIF};
+          Value.values['controls_cp'] := {$IFDEF DELPHI}'GET_ACP'{$ELSE}'CP_UTF8'{$ENDIF};
         end;
         {$ELSE}
         if Value.values['controls_cp'] = 'GET_ACP' then

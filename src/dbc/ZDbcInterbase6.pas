@@ -509,7 +509,7 @@ begin
         'CREATE DATABASE "'+NewDB+'" AS USER "'+ ConSettings^.User+'"');
       URL.Properties.Values['createNewDatabase'] := '';
     end;
-
+    
     FHandle := 0;
     { Connect to Interbase6 database. }
     GetPlainDriver.isc_attach_database(@FStatusVector,

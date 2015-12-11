@@ -262,7 +262,7 @@ begin
   FFirstRow := True;
   if Assigned(FStmtHandle) then
   begin
-    CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.reset(FStmtHandle),
+    CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.reset(FStmtHandle),
       nil, lcOther, 'Reset Prepared Stmt', ConSettings);
     FStmtHandle := nil;
   end;
@@ -840,7 +840,7 @@ begin
   begin
     { Free handle when EOF. }
 ResetHndl:
-    CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.reset(FStmtHandle),
+    CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.reset(FStmtHandle),
       nil, lcOther, 'sqlite3_reset', ConSettings);
     FErrorCode := SQLITE_DONE;
     Exit;
