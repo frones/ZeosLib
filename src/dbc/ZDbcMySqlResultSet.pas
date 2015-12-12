@@ -56,6 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+{$ENDIF USE_SYNCOMMONS}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, Contnrs,
   ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
   ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement,
@@ -77,6 +80,7 @@ type
     FPlainDriver: IZMySQLPlainDriver;
     FLengthArray: PMySQLLengthArray;
     FMySQLTypes: array of TMysqlFieldTypes;
+    fMySQLFieldFlags: array of UInt;
     function GetBufferAndLength(ColumnIndex: Integer; var Len: ULong): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
     function GetBuffer(ColumnIndex: Integer): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
   protected
@@ -105,6 +109,10 @@ type
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
 
     function Next: Boolean; override;
+
+    {$IFDEF USE_SYNCOMMONS}
+    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; override;
+    {$ENDIF USE_SYNCOMMONS}
   end;
 
   TZMySQL_Store_ResultSet = class(TZAbstractMySQLResultSet)
@@ -229,6 +237,92 @@ end;
 
 { TZAbstractMySQLResultSet }
 
+{$IFDEF USE_SYNCOMMONS}
+function TZAbstractMySQLResultSet.ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String;
+var
+  C: Cardinal;
+  P: PAnsiChar;
+  Failed: boolean;
+begin
+  if JSONWriter.Expand then
+    JSONWriter.Add('{');
+  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+    if JSONWriter.Expand then
+      JSONWriter.AddString(JSONWriter.ColNames[C]);
+    P := FPlainDriver.GetFieldData(FRowHandle, C);
+    if P = nil then
+      JSONWriter.AddShort('null')
+    else
+      case FMySQLTypes[c] of
+        FIELD_TYPE_DECIMAL,
+        FIELD_TYPE_TINY,
+        FIELD_TYPE_SHORT,
+        FIELD_TYPE_LONG,
+        FIELD_TYPE_FLOAT,
+        FIELD_TYPE_DOUBLE,
+        FIELD_TYPE_LONGLONG,
+        FIELD_TYPE_INT24,
+        FIELD_TYPE_YEAR,
+        FIELD_TYPE_NEWDECIMAL : JSONWriter.AddNoJSONEscape(P, FLengthArray^[C]);
+        FIELD_TYPE_NULL       : JSONWriter.AddShort('null');
+        FIELD_TYPE_TIMESTAMP,
+        FIELD_TYPE_DATETIME   : begin
+                                  JSONWriter.Add('"');
+                                  JSONWriter.AddDateTime(RawSQLTimeStampToDateTime(P, FLengthArray^[C], ConSettings^.ReadFormatSettings, Failed));
+                                  JSONWriter.Add('"');
+                                end;
+
+        FIELD_TYPE_DATE,
+        FIELD_TYPE_NEWDATE    : begin
+                                  JSONWriter.Add('"');
+                                  JSONWriter.AddDateTime(RawSQLDateToDateTime(P, FLengthArray^[C], ConSettings^.ReadFormatSettings, Failed));
+                                  JSONWriter.Add('"');
+                                end;
+        FIELD_TYPE_TIME       : begin
+                                  JSONWriter.Add('"');
+                                  JSONWriter.AddDateTime(RawSQLTimeToDateTime(P, FLengthArray^[C], ConSettings^.ReadFormatSettings, Failed));
+                                  JSONWriter.Add('"');
+                                end;
+        FIELD_TYPE_BIT        : if FLengthArray^[C] = 1 then
+                                  JSONWriter.AddShort(JSONBool[PByte(P)^ <> 0]) else
+                                  JSONWriter.WrBase64(P, FLengthArray^[C], True);
+        FIELD_TYPE_ENUM       : if TZColumnInfo(ColumnsInfo[C]).ColumnType = stBoolean then
+                                  JSONWriter.AddShort(JSONBool[UpCase(P^) = 'Y'])
+                                else begin
+                                  JSONWriter.Add('"');
+                                  JSONWriter.AddJSONEscape(P, FLengthArray^[C]);
+                                  JSONWriter.Add('"');
+                                end;
+        FIELD_TYPE_SET        : begin
+                                  JSONWriter.Add('"');
+                                  JSONWriter.AddJSONEscape(P, FLengthArray^[C]);
+                                  JSONWriter.Add('"');
+                                end;
+        FIELD_TYPE_VARCHAR,
+        FIELD_TYPE_TINY_BLOB,
+        FIELD_TYPE_MEDIUM_BLOB,
+        FIELD_TYPE_LONG_BLOB,
+        FIELD_TYPE_BLOB,
+        FIELD_TYPE_VAR_STRING,
+        FIELD_TYPE_STRING     : if (fMySQLFieldFlags[c] and BINARY_FLAG) = 0 then begin
+                                  JSONWriter.Add('"');
+                                  JSONWriter.AddJSONEscape(P, FLengthArray^[C]);
+                                  JSONWriter.Add('"');
+                                end else
+                                  JSONWriter.WrBase64(P, FLengthArray^[C], True);
+        FIELD_TYPE_GEOMETRY   : JSONWriter.WrBase64(P, FLengthArray^[C], True);
+      end;
+    JSONWriter.Add(',');
+  end;
+  if EndJSONObject then
+  begin
+    JSONWriter.CancelLastComma; // cancel last ','
+    if JSONWriter.Expand then
+      JSONWriter.Add('}');
+  end;
+end;
+{$ENDIF USE_SYNCOMMONS}
+
 {**
   Constructs this object, assignes main properties and
   opens the record set.
@@ -308,13 +402,15 @@ begin
   { Fills the column info. }
   ColumnsInfo.Clear;
   SetLength(FMySQLTypes, FPlainDriver.GetFieldCount(FQueryHandle));
+  SetLength(fMySQLFieldFlags, Length(FMySQLTypes));
   for I := 0 to FPlainDriver.GetFieldCount(FQueryHandle) - 1 do
   begin
     FPlainDriver.SeekField(FQueryHandle, I);
     FieldHandle := FPlainDriver.FetchField(FQueryHandle);
-    FMySQLTypes[i] := PMYSQL_FIELD(FieldHandle)^._type;
     if FieldHandle = nil then
       Break;
+    FMySQLTypes[i] := PMYSQL_FIELD(FieldHandle)^._type;
+    fMySQLFieldFlags[i] := PMYSQL_FIELD(FieldHandle)^.flags;
 
     ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FieldHandle, ConSettings,
       (Self is TZMySQL_Use_ResultSet)));

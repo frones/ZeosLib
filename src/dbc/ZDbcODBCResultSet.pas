@@ -56,6 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+{$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFDEF OLD_FPC}ZClasses, {$ENDIF}ZSysUtils, ZDbcIntfs,
@@ -132,6 +135,9 @@ type
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
+    {$IFDEF USE_SYNCOMMONS}
+    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; override;
+    {$ENDIF USE_SYNCOMMONS}
   End;
 
   TODBCResultSetW = class(TAbstractODBCResultSet)
@@ -227,6 +233,102 @@ begin
     RowNo := LastRowNo + 1; //suppress a possible fetch approach
   end;
 end;
+
+{$IFDEF USE_SYNCOMMONS}
+function TAbstractODBCResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean): UTF8String;
+var C: Integer;
+    P: Pointer;
+begin
+  //init
+  if JSONWriter.Expand then
+    JSONWriter.Add('{');
+  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+    if JSONWriter.Expand then
+      JSONWriter.AddString(JSONWriter.ColNames[C]);
+    if IsNull(C+FirstDbcIndex) then
+      JSONWriter.AddShort('null')
+    else
+      case fSQLTypes[C] of
+        stBoolean:    JSONWriter.AddShort(JSONBool[PWordBool(PByte(fColDataPtr)^ <> 0)^]);
+        stByte:       JSONWriter.AddU(PByte(fColDataPtr)^);
+        stShort:      JSONWriter.Add(PShortInt(fColDataPtr)^);
+        stWord:       JSONWriter.AddU(PWord(fColDataPtr)^);
+        stSmall:      JSONWriter.Add(PSmallInt(fColDataPtr)^);
+        stLongWord:   JSONWriter.AddU(PLongWord(fColDataPtr)^);
+        stInteger:    JSONWriter.Add(PInteger(fColDataPtr)^);
+        stULong:      JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PUInt64(fColDataPtr)^));
+        stLong:       JSONWriter.Add(PInt64(fColDataPtr)^);
+        stFloat:      JSONWriter.AddSingle(PSingle(fColDataPtr)^);
+        stDouble,
+        stCurrency,
+        stBigDecimal: JSONWriter.AddDouble(PDouble(fColDataPtr)^);
+        stBytes:      JSONWriter.WrBase64(fColDataPtr,fStrLen_or_Ind,True);
+        stGUID:       JSONWriter.AddNoJSONEscapeUTF8(GuidToRaw(PGUID(fColDataPtr)^));
+        stTime:       begin
+                        JSONWriter.Add('"');
+                        JSONWriter.AddDateTime(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
+                        JSONWriter.Add('"');
+                      end;
+        stDate:       begin
+                        JSONWriter.Add('"');
+                        JSONWriter.AddDateTime(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
+                          PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day));
+                        JSONWriter.Add('"');
+                      end;
+        stTimeStamp:  begin
+                        JSONWriter.Add('"');
+                        JSONWriter.AddDateTime(EncodeDate(Abs(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year),
+                          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.day)+
+                          EncodeTime(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute,
+                          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction));
+                        JSONWriter.Add('"');
+                      end;
+        stString, stUnicodeString: begin
+            JSONWriter.Add('"');
+            if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then begin
+              if fFixedWidthStrings[c] then
+                while (PWideChar(fColDataPtr)+(fStrLen_or_Ind shr 1)-1)^ = ' ' do Dec(fStrLen_or_Ind, 2);
+              JSONWriter.AddJSONEscapeW(fColDataPtr, fStrLen_or_Ind shr 1)
+            end else begin
+              if fFixedWidthStrings[c] then
+                while (PAnsiChar(fColDataPtr)+(fStrLen_or_Ind)-1)^ = ' ' do Dec(fStrLen_or_Ind);
+              if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+                JSONWriter.AddJSONEscape(fColDataPtr, fStrLen_or_Ind)
+              else begin
+                FUniTemp := PRawToUnicode(fColDataPtr, fStrLen_or_Ind, ConSettings^.ClientCodePage^.CP);
+                JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+              end;
+            end;
+            JSONWriter.Add('"');
+          end;
+        stAsciiStream, stUnicodeStream: begin
+            JSONWriter.Add('"');
+            if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or (ConSettings^.ClientCodePage^.CP <> zCP_UTF8) then begin
+              P := fRowBlobs[C].GetPWideChar;
+              JSONWriter.AddJSONEscapeW(P, fRowBlobs[C].Length shr 1);
+            end else begin
+              P := fRowBlobs[C].GetPAnsiChar(zCP_UTF8);
+              JSONWriter.AddJSONEscape(P, fRowBlobs[C].Length);
+            end;
+            JSONWriter.Add('"');
+          end;
+        stBinaryStream:
+          JSONWriter.WrBase64(fRowBlobs[C].GetBuffer, fRowBlobs[C].Length, True);
+        else //stArray, stDataSet:
+          ;
+      end;
+    JSONWriter.Add(',');
+  end;
+  if EndJSONObject then
+  begin
+    JSONWriter.CancelLastComma; // cancel last ','
+    if JSONWriter.Expand then
+      JSONWriter.Add('}');
+  end;
+end;
+{$ENDIF USE_SYNCOMMONS}
 
 constructor TAbstractODBCResultSet.Create(Statement: IZStatement;
   var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; SQL: String; Connection: IZODBCConnection;

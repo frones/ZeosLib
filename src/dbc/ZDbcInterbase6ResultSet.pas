@@ -56,6 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+{$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
@@ -116,6 +119,9 @@ type
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
 
+    {$IFDEF USE_SYNCOMMONS}
+    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; override;
+    {$ENDIF USE_SYNCOMMONS}
     function Next: Boolean; override;
   end;
 
@@ -219,6 +225,145 @@ begin
   FStmtHandle := 0; //don't forget!
 end;
 
+{$IFDEF USE_SYNCOMMONS}
+function TZInterbase6XSQLDAResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean): UTF8String;
+var L: Integer;
+    P: Pointer;
+    C, SQLCode: SmallInt;
+    TempDate: TCTimeStructure;
+begin
+  //init
+  if JSONWriter.Expand then
+    JSONWriter.Add('{');
+  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+    if JSONWriter.Expand then
+      JSONWriter.AddString(JSONWriter.ColNames[C]);
+    {$R-}
+    with FXSQLDA.sqlvar[C] do
+      if (sqlind <> nil) and (sqlind^ = ISC_NULL) then
+        JSONWriter.AddShort('null')
+      else begin
+      SQLCode := (sqltype and not(1));
+      if (sqlscale < 0)  then
+        case SQLCode of
+          SQL_SHORT  : JSONWriter.AddDouble(PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale]);
+          SQL_LONG   : JSONWriter.AddDouble(PInteger(sqldata)^/IBScaleDivisor[sqlscale]);
+          SQL_INT64,
+          SQL_QUAD   : JSONWriter.AddDouble(PInt64(sqldata)^/IBScaleDivisor[sqlscale]);
+          SQL_DOUBLE : JSONWriter.AddDouble(PDouble(sqldata)^);
+        else
+          raise EZIBConvertError.Create(Format(SErrorConvertionField,
+            [FIZSQLDA.GetFieldAliasName(C), GetNameSqlType(SQLCode)]));
+        end
+      else
+        case SQLCode of
+          SQL_VARYING   : if sqlsubtype = 1 {octets} then
+                            JSONWriter.WrBase64(sqldata, sqllen, True)
+                          else begin
+                            JSONWriter.Add('"');
+                            if sqlsubtype > High(FCodePageArray) then begin //some weired issues here
+                              FUniTemp := PRawToUnicode(sqldata, sqllen, ConSettings^.ClientCodePage^.CP);
+                              JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp))
+                            end else if FCodePageArray[sqlsubtype] = zCP_UTF8 then
+                              JSONWriter.AddJSONEscape(sqldata, sqllen)
+                            else begin
+                              FUniTemp := PRawToUnicode(sqldata, sqllen, FCodePageArray[sqlsubtype]);
+                              JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp))
+                            end;
+                            JSONWriter.Add('"');
+                          end;
+          SQL_TEXT      : if sqlsubtype = 1 {octets} then
+                            JSONWriter.WrBase64(sqldata, sqllen, True)
+                          else begin
+                            JSONWriter.Add('"');
+                            l := sqllen; {last char = #0}
+                            if L > 0 then while ((sqldata+l-1)^ = ' ') do dec(l); // Trim spaces only
+                            if sqlsubtype > High(FCodePageArray) then begin //some weired issues here
+                              FUniTemp := PRawToUnicode(sqldata, L, ConSettings^.ClientCodePage^.CP);
+                              JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp))
+                            end else if FCodePageArray[sqlsubtype] = zCP_UTF8 then
+                              JSONWriter.AddJSONEscape(sqldata, L)
+                            else begin
+                              FUniTemp := PRawToUnicode(sqldata, L, FCodePageArray[sqlsubtype]);
+                              JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp))
+                            end;
+                            JSONWriter.Add('"');
+                          end;
+          SQL_DOUBLE    : JSONWriter.AddDouble(PDouble(sqldata)^);
+          SQL_FLOAT     : JSONWriter.AddSingle(PSingle(sqldata)^);
+          SQL_LONG      : JSONWriter.Add(PInteger(sqldata)^);
+          SQL_SHORT     : JSONWriter.Add(PSmallint(sqldata)^);
+          SQL_TIMESTAMP : begin
+                            JSONWriter.Add('"');
+                            FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
+                            JSONWriter.AddDateTime(SysUtils.EncodeDate(TempDate.tm_year + 1900,
+                              TempDate.tm_mon + 1, TempDate.tm_mday) + EncodeTime(TempDate.tm_hour,
+                            TempDate.tm_min, TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod 10000) div 10)));
+                            JSONWriter.Add('"');
+                          end;
+          SQL_QUAD,
+          SQL_BLOB      : begin
+                            P := nil;
+                            try
+                              if SqlSubType = isc_blob_text then begin
+                                JSONWriter.Add('"');
+                                with FIBConnection do
+                                  ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
+                                    PISC_QUAD(sqldata)^, L, P, False, ConSettings);
+                                if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+                                  JSONWriter.AddJSONEscape(P, L)
+                                else begin
+                                  fUniTemp := PRawToUnicode(P, L, ConSettings^.ClientCodePage^.CP);
+                                  JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+                                end;
+                                JSONWriter.Add('"');
+                              end else begin
+                                with FIBConnection do
+                                  ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
+                                    PISC_QUAD(sqldata)^, L, P, true, ConSettings);
+                                JSONWriter.WrBase64(P, L, True);
+                              end;
+                            finally
+                              FreeMem(P);
+                            end;
+                          end;
+          SQL_D_FLOAT   : JSONWriter.AddSingle(PSingle(sqldata)^);
+          SQL_ARRAY     : JSONWriter.AddShort('"Array"');
+          SQL_TYPE_TIME : begin
+                            JSONWriter.Add('"');
+                            FPlainDriver.isc_decode_sql_time(PISC_TIME(sqldata), @TempDate);
+                            JSONWriter.AddDateTime(SysUtils.EncodeTime(Word(TempDate.tm_hour), Word(TempDate.tm_min),
+                              Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod 10000) div 10)));
+                            JSONWriter.Add('"');
+                          end;
+          SQL_TYPE_DATE : begin
+                            JSONWriter.Add('"');
+                            FPlainDriver.isc_decode_sql_date(PISC_DATE(sqldata), @TempDate);
+                            JSONWriter.AddDateTime(SysUtils.EncodeDate(Word(TempDate.tm_year + 1900),
+                              Word(TempDate.tm_mon + 1), Word(TempDate.tm_mday)));
+                            JSONWriter.Add('"');
+                          end;
+          SQL_INT64     : JSONWriter.Add(PInt64(sqldata)^);
+          SQL_BOOLEAN   : JSONWriter.AddShort(JSONBool[PSmallint(sqldata)^ <> 0]);
+          SQL_BOOLEAN_FB: JSONWriter.AddShort(JSONBool[PByte(sqldata)^ <> 0]);
+        else
+          raise EZIBConvertError.Create(Format(SErrorConvertionField,
+            [FIZSQLDA.GetFieldAliasName(C), GetNameSqlType(SQLCode)]));
+        end;
+    end;
+    {$IFOPT D+} {$R+} {$ENDIF}
+    JSONWriter.Add(',');
+  end;
+  if EndJSONObject then
+  begin
+    JSONWriter.CancelLastComma; // cancel last ','
+    if JSONWriter.Expand then
+      JSONWriter.Add('}');
+  end;
+end;
+{$ENDIF USE_SYNCOMMONS}
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -236,10 +381,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
+  Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-    Result := 0
-  else
+  if not LastWasNull then
   begin
     {$IFNDEF GENERIC_INDEX}
     ColumnIndex := ColumnIndex -1;
@@ -247,9 +391,6 @@ begin
     {$R-}
     with FXSQLDA.sqlvar[ColumnIndex] do
     begin
-      Result := 0;
-      if (sqlind <> nil) and (sqlind^ = -1) then
-           Exit;
       SQLCode := (sqltype and not(1));
 
       if (sqlscale < 0)  then

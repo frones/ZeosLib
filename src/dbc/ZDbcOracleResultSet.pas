@@ -56,6 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+{$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}
@@ -109,6 +112,9 @@ type
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
     function GetDataSet(ColumnIndex: Integer): IZDataSet; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
+    {$IFDEF USE_SYNCOMMONS}
+    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; override;
+    {$ENDIF USE_SYNCOMMONS}
   end;
 
   TZOracleResultSet = class(TZOracleAbstractResultSet)
@@ -203,6 +209,90 @@ uses
   ZMessages, ZDbcUtils, ZEncoding;
 
 { TZOracleAbstractResultSet }
+
+{$IFDEF USE_SYNCOMMONS}
+function TZOracleAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean): UTF8String;
+var Len: Integer;
+    P: PAnsiChar;
+    C: SmallInt;
+    Blob: IZBlob;
+begin
+  //init
+  if JSONWriter.Expand then
+    JSONWriter.Add('{');
+  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+    if JSONWriter.Expand then
+      JSONWriter.AddString(JSONWriter.ColNames[C]);
+    with FColumns^.Variables[C] do
+    if oIndicatorArray^[FCurrentBufRowNo] < 0 then
+      JSONWriter.AddShort('null')
+    else begin
+      P := {%H-}Pointer({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+      case TypeCode of
+        SQLT_INT        : JSONWriter.Add(PLongInt(P)^);
+        SQLT_FLT        : JSONWriter.AddDouble(PDouble(P)^);
+        SQLT_STR        : begin
+                            JSONWriter.Add('"');
+                            if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+                              JSONWriter.AddJSONEscape(P, oDataSizeArray^[FCurrentBufRowNo])
+                            else begin
+                              FUniTemp := PRawToUnicode(P, oDataSizeArray^[FCurrentBufRowNo], ConSettings^.ClientCodePage^.CP);
+                              JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), System.Length(FUniTemp));
+                            end;
+                            JSONWriter.Add('"');
+                          end;
+        SQLT_AFC        : begin
+                            Len := oDataSize;
+                            while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+                            JSONWriter.Add('"');
+                            if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+                              JSONWriter.AddJSONEscape(P, Len)
+                            else begin
+                              FUniTemp := PRawToUnicode(P, Len, ConSettings^.ClientCodePage^.CP);
+                              JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), System.Length(FUniTemp));
+                            end;
+                            JSONWriter.Add('"');
+                          end;
+        SQLT_UIN        : JSONWriter.AddU(PLongWord(P)^);
+        SQLT_LVB,
+        SQLT_LVC,
+        SQLT_BIN        : JSONWriter.WrBase64(P+SizeOf(Integer), PInteger(P)^, True);
+        SQLT_DAT,
+        SQLT_TIMESTAMP,
+        SQLT_INTERVAL_DS,
+        SQLT_INTERVAL_YM: begin
+                            JSONWriter.Add('"');
+                            JSONWriter.AddDateTime(GetAsDateTimeValue(@FColumns^.Variables[C]));
+                            JSONWriter.Add('"');
+                          end;
+        SQLT_BLOB,
+        SQLT_BFILEE     : begin
+                            Blob := GetBlob(C+{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+                            JSONWriter.WrBase64(Blob.GetBuffer, Blob.Length, True);
+                          end;
+        SQLT_CLOB,
+        SQLT_CFILEE     : begin
+                            JSONWriter.Add('"');
+                            Blob := GetBlob(C{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+                            P := Blob.GetPAnsiChar(zCP_UTF8);
+                            JSONWriter.AddJSONEscape(P, Blob.Length);
+                            JSONWriter.Add('"');
+                          end;
+        else
+          raise Exception.Create('Missing OCI Type?');
+      end;
+    end;
+    JSONWriter.Add(',');
+  end;
+  if EndJSONObject then
+  begin
+    JSONWriter.CancelLastComma; // cancel last ','
+    if JSONWriter.Expand then
+      JSONWriter.Add('}');
+  end;
+end;
+{$ENDIF USE_SYNCOMMONS}
 
 {**
   Constructs this object, assignes main properties and

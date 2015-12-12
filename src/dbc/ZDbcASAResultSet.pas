@@ -56,6 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+{$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs,{$ENDIF}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA, ZCompatibility,
@@ -108,6 +111,9 @@ type
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
 
     property SQLData: IZASASQLDA read FSQLData;
+    {$IFDEF USE_SYNCOMMONS}
+    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; override;
+    {$ENDIF USE_SYNCOMMONS}
   end;
 
   TZASAParamererResultSet = Class(TZASAAbstractResultSet)
@@ -196,6 +202,117 @@ uses
  Math, ZFastCode, ZDbcLogging, ZDbcUtils, ZEncoding;
 
 { TZASAResultSet }
+
+{$IFDEF USE_SYNCOMMONS}
+function TZASAAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean = True): UTF8String;
+var L: NativeUInt;
+    P: Pointer;
+    C: SmallInt;
+    Blob: IZBlob;
+begin
+  //init
+  if JSONWriter.Expand then
+    JSONWriter.Add('{');
+  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+    if JSONWriter.Expand then
+      JSONWriter.AddString(JSONWriter.ColNames[C]);
+    {$R-}
+    with FSQLDA.sqlvar[C] do
+      if (sqlind <> nil) and (sqlind^ < 0) then
+        JSONWriter.AddShort('null')
+      else
+        case sqlType and $FFFE of
+          DT_NOTYPE           : JSONWriter.AddShort('""');
+          DT_SMALLINT         : JSONWriter.Add(PSmallint(sqldata)^);
+          DT_INT              : JSONWriter.Add(PInteger(sqldata)^);
+          //DT_DECIMAL bound to double
+          DT_FLOAT            : JSONWriter.AddSingle(PSingle(sqldata)^);
+          DT_DOUBLE           : JSONWriter.AddDouble(PDouble(sqldata)^);
+          //DT_DATE bound to TIMESTAMP_STRUCT
+          DT_STRING,
+          DT_FIXCHAR,
+          DT_VARCHAR          : begin
+                                  JSONWriter.Add('"');
+                                  if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+                                    JSONWriter.AddJSONEscape(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length)
+                                  else begin
+                                    FUniTemp := PRawToUnicode(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length, ConSettings^.ClientCodePage^.CP);
+                                    JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+                                  end;
+                                  JSONWriter.Add('"');
+                                end;
+          DT_LONGVARCHAR      : begin
+                                  JSONWriter.Add('"');
+                                  blob := TZASAClob.Create(FsqlData, C, ConSettings);
+                                  P := blob.GetPAnsiChar(zCP_UTF8);
+                                  JSONWriter.AddJSONEscape(P, blob.Length);
+                                  JSONWriter.Add('"');
+                                end;
+          DT_TIME,
+          DT_TIMESTAMP,
+          DT_TIMESTAMP_STRUCT : begin
+                                  JSONWriter.Add('"');
+                                  JSONWriter.AddDateTime(EncodeDate(
+                                    PZASASQLDateTime( sqlData).Year,
+                                    PZASASQLDateTime( sqlData).Month + 1,
+                                    PZASASQLDateTime( sqlData).Day) +
+                                    EncodeTime( PZASASQLDateTime( sqlData).Hour,
+                                    PZASASQLDateTime( sqlData).Minute,
+                                    PZASASQLDateTime( sqlData).Second,
+                                    PZASASQLDateTime( sqlData).MicroSecond div 1000));
+                                  JSONWriter.Add('"');
+                                end;
+          DT_BINARY           : JSONWriter.WrBase64(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length, True);
+          DT_LONGBINARY       : begin
+                                  P := nil;
+                                  try
+                                    FSqlData.ReadBlobToMem(C, P, L{%H-});
+                                    JSONWriter.WrBase64(P, L, True);
+                                  finally
+                                    FreeMem(P);
+                                  end;
+                                end;
+          //DT_VARIABLE: ?
+          DT_TINYINT          : JSONWriter.Add(PShortInt(sqldata)^);
+          DT_BIGINT           : JSONWriter.Add(PInt64(sqldata)^);
+          DT_UNSINT           : JSONWriter.AddU(PLongWord(sqldata)^);
+          DT_UNSSMALLINT      : JSONWriter.AddU(PWord(sqldata)^);
+          DT_UNSBIGINT        : JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PUInt64(sqldata)^));
+          DT_BIT              : JSONWriter.AddShort(JSONBool[PByte(sqldata)^ <> 0]);
+          DT_NSTRING,
+          DT_NFIXCHAR,
+          DT_NVARCHAR         : begin
+                                  JSONWriter.Add('"');
+                                  if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+                                    JSONWriter.AddJSONEscape(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length)
+                                  else begin
+                                    FUniTemp := PRawToUnicode(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length, ConSettings^.ClientCodePage^.CP);
+                                    JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+                                  end;
+                                  JSONWriter.Add('"');
+                                end;
+          DT_LONGNVARCHAR     : begin
+                                JSONWriter.Add('"');
+                                blob := TZASAClob.Create(FsqlData, C, ConSettings);
+                                P := blob.GetPAnsiChar(zCP_UTF8);
+                                JSONWriter.AddJSONEscape(P, blob.Length);
+                                JSONWriter.Add('"');
+                              end;
+        else
+          FSqlData.CreateException( Format( SErrorConvertionField,
+            [ FSqlData.GetFieldName(C), ConvertASATypeToString( sqlType)]));
+        end;
+    JSONWriter.Add(',');
+  end;
+  if EndJSONObject then
+  begin
+    JSONWriter.CancelLastComma; // cancel last ','
+    if JSONWriter.Expand then
+      JSONWriter.Add('}');
+  end;
+end;
+{$ENDIF USE_SYNCOMMONS}
 
 {**
   Constructs this object, assignes main properties and

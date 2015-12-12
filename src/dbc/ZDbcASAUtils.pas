@@ -395,6 +395,18 @@ begin
                             ( FSQLDA.sqlVar[i].sqlType and $0001);
                           FSQLDA.sqlVar[i].sqlLen := 0;
                         end;
+        DT_NSTRING,
+        DT_NFIXCHAR,
+        DT_NVARCHAR,
+        DT_LONGNVARCHAR: if FSQLDA.sqlVar[i].sqlLen < MinBLOBSize then
+                          FSQLDA.sqlVar[i].sqlType := DT_NVARCHAR +
+                            ( FSQLDA.sqlVar[i].sqlType and $0001)
+                        else
+                        begin
+                          FSQLDA.sqlVar[i].sqlType := DT_LONGNVARCHAR +
+                            ( FSQLDA.sqlVar[i].sqlType and $0001);
+                          FSQLDA.sqlVar[i].sqlLen := 0;
+                        end;
       end;
       SetFieldType( i, FSQLDA.sqlVar[i].sqlType, FSQLDA.sqlVar[i].sqlLen, False);
     end;

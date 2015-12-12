@@ -57,6 +57,9 @@ interface
 {$IFDEF ENABLE_OLEDB}
 
 uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+  {$ENDIF}
 {$IFNDEF FPC}
   DateUtils,
 {$ENDIF}
@@ -122,6 +125,10 @@ type
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
+
+    {$IFDEF USE_SYNCOMMONS}
+    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; override;
+    {$ENDIF USE_SYNCOMMONS}
   end;
 
   {** Implements a cached resolver with MSSQL specific functionality. }
@@ -164,6 +171,159 @@ var
   LobReadObj: TDBObject;
   LobDBBinding: TDBBinding;
 
+
+{$IFDEF USE_SYNCOMMONS}
+function TZOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean): UTF8String;
+var I, C: Integer;
+    P: PAnsiChar;
+    Len: NativeUInt;
+    blob: IZBlob;
+begin
+  //init
+  if JSONWriter.Expand then
+    JSONWriter.Add('{');
+  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+    if JSONWriter.Expand then
+      JSONWriter.AddString(JSONWriter.ColNames[C]);
+    if IsNull(C+FirstDbcIndex) then
+      JSONWriter.AddShort('null')
+    else
+      case FDBBindingArray[C].wType of
+        DBTYPE_EMPTY,
+        DBTYPE_IDISPATCH,
+        DBTYPE_IUNKNOWN:  JSONWriter.AddShort('""');
+        DBTYPE_NULL:      JSONWriter.AddShort('null');
+        DBTYPE_I2:        JSONWriter.Add(PSmallInt(FData)^);
+        DBTYPE_I4,
+        DBTYPE_ERROR:     JSONWriter.Add(PLongInt(FData)^);
+        DBTYPE_R4:        JSONWriter.AddSingle(PSingle(FData)^);
+        DBTYPE_R8:        JSONWriter.AddDouble(PDouble(FData)^);
+        DBTYPE_CY:        JSONWriter.AddCurr64(PCurrency(FData)^);
+        DBTYPE_DATE:      begin
+                            JSONWriter.Add('"');
+                            JSONWriter.AddDateTime(PDateTime(FData)^);
+                            JSONWriter.Add('"');
+                          end;
+        DBTYPE_BSTR:      begin
+            JSONWriter.Add('"');
+            if FDBBindingArray[c].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+              JSONWriter.AddJSONEscapeW(FData, Len shr 1)
+            else
+            begin //Fixed width
+              I := FLength shr 1;
+              while (PWideChar(FData)+I-1)^ = ' ' do Dec(I);
+              JSONWriter.AddJSONEscapeW(FData, I);
+            end;
+            JSONWriter.Add('"');
+          end;
+        DBTYPE_BSTR or DBTYPE_BYREF:
+                          JSONWriter.AddJSONEscapeW(PPointer(FData)^, FLength shr 1);
+        DBTYPE_BOOL:      JSONWriter.AddShort(JSONBool[PWordBool(FData)^]);
+        DBTYPE_VARIANT: begin
+            JSONWriter.Add('"');
+            FUniTemp := POleVariant(FData)^;
+            JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+            JSONWriter.Add('"');
+          end;
+        //DBTYPE_DECIMAL = 14;
+        DBTYPE_UI1:       JSONWriter.AddU(PByte(FData)^);
+        DBTYPE_I1:        JSONWriter.Add(PShortInt(FData)^);
+        DBTYPE_UI2:       JSONWriter.AddU(PWord(FData)^);
+        DBTYPE_UI4:       JSONWriter.AddU(PLongWord(FData)^);
+        DBTYPE_I8:        JSONWriter.Add(PInt64(FData)^);
+        DBTYPE_UI8:       JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PUInt64(FData)^));
+        DBTYPE_GUID:      JSONWriter.AddNoJSONEscapeUTF8(GuidToRaw(PGUID(FData)^));
+        DBTYPE_GUID or DBTYPE_BYREF:
+                          JSONWriter.AddNoJSONEscapeUTF8(GuidToRaw(PGUID(PPointer(FData)^)^));
+        DBTYPE_BYTES:
+          if FDBBindingArray[C].cbMaxLen = 0 then begin //streamed
+            blob := TZOleDBBLOB.Create(FRowSet, FLobAccessors[FDBBindingArray[C].obLength], FHROWS^[FCurrentBufRowNo], FChunkSize);
+            JSONWriter.WrBase64(Blob.GetBuffer,Blob.Length,true); // withMagic=true
+          end else
+            JSONWriter.WrBase64(FData,FLength, True);
+        DBTYPE_BYTES or DBTYPE_BYREF:
+          JSONWriter.WrBase64(PPointer(FData)^,FLength,True);
+        DBTYPE_STR: begin
+            JSONWriter.Add('"');
+            if FDBBindingArray[C].cbMaxLen = 0 then begin
+              blob := TZOleDBCLOB.Create(FRowSet, FLobAccessors[FDBBindingArray[C].obLength],
+                DBTYPE_STR, FHROWS^[FCurrentBufRowNo], FChunkSize, ConSettings);
+              P := Pointer(blob.GetPWideChar);
+              JSONWriter.AddJSONEscapeW(Pointer(P), blob.Length shr 1);
+            end else begin
+              if FDBBindingArray[c].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+                FUniTemp := PRawToUnicode(PAnsiChar(FData), FLength, ConSettings^.ClientCodePage^.CP)
+              else begin
+                I := FLength;
+                while (PAnsiChar(FData)+I-1)^ = ' ' do Dec(I);
+                  FUniTemp := PRawToUnicode(PAnsiChar(FData), I, ConSettings^.ClientCodePage^.CP);
+              end;
+              JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+            end;
+            JSONWriter.Add('"');
+          end;
+        DBTYPE_STR or DBTYPE_BYREF: begin
+            JSONWriter.Add('"');
+            FUniTemp := PRawToUnicode(PPAnsiChar(FData)^, FLength, ConSettings^.ClientCodePage^.CP);
+            JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+            JSONWriter.Add('"');
+          end;
+        DBTYPE_WSTR: begin
+            JSONWriter.Add('"');
+            if FDBBindingArray[c].cbMaxLen = 0 then begin
+              blob := TZOleDBCLOB.Create(FRowSet,
+                FLobAccessors[FDBBindingArray[C].obLength],
+                DBTYPE_WSTR, FHROWS^[FCurrentBufRowNo], FChunkSize, ConSettings);
+              P := Pointer(blob.GetPWideChar);
+              JSONWriter.AddJSONEscapeW(Pointer(P), blob.Length shr 1);
+            end else if FDBBindingArray[c].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+              JSONWriter.AddJSONEscapeW(FData, FLength shr 1)
+            else begin //Fixed width
+              I := FLength shr 1;
+              while (PWideChar(FData)+I-1)^ = ' ' do Dec(I);
+              JSONWriter.AddJSONEscapeW(FData, I);
+            end;
+            JSONWriter.Add('"');
+          end;
+        DBTYPE_WSTR or DBTYPE_BYREF: begin
+            JSONWriter.Add('"');
+            JSONWriter.AddJSONEscapeW(PPointer(FData)^, FLength shr 1);
+            JSONWriter.Add('"');
+          end;
+        //DBTYPE_NUMERIC	= 131;
+        //DBTYPE_UDT	= 132;
+        DBTYPE_DBDATE:    begin
+                            JSONWriter.Add('"');
+                            JSONWriter.AddDateTime(EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month, PDBDate(FData)^.day));
+                            JSONWriter.Add('"');
+                          end;
+        DBTYPE_DBTIME:    begin
+                            JSONWriter.Add('"');
+                            JSONWriter.AddDateTime(EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute, PDBTime(FData)^.second, 0));
+                            JSONWriter.Add('"');
+                          end;
+        DBTYPE_DBTIMESTAMP: begin
+                            JSONWriter.Add('"');
+                            JSONWriter.AddDateTime(EncodeDate(Abs(PDBTimeStamp(FData)^.year), PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day)+
+                            EncodeTime(PDBTimeStamp(FData)^.hour, PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second, 0));
+                            JSONWriter.Add('"');
+                          end;
+        DBTYPE_HCHAPTER:  JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PCHAPTER(FData)^));
+        //DBTYPE_FILETIME	= 64;
+        //DBTYPE_PROPVARIANT	= 138;
+        //DBTYPE_VARNUMERIC	= 139;
+        else Result := '';
+      end;
+    JSONWriter.Add(',');
+  end;
+  if EndJSONObject then
+  begin
+    JSONWriter.CancelLastComma; // cancel last ','
+    if JSONWriter.Expand then
+      JSONWriter.Add('}');
+  end;
+end;
+{$ENDIF USE_SYNCOMMONS}
 
 {**
   Creates this object and assignes the main properties.
@@ -508,7 +668,7 @@ begin
             {$ENDIF}
           else
           begin
-            I := FLength shr 1;
+            I := FLength;
             while (PAnsiChar(FData)+I-1)^ = ' ' do Dec(I);
             {$IFDEF UNICODE}
               Result := PRawToUnicode(PAnsiChar(FData), I, ConSettings^.ClientCodePage^.CP);

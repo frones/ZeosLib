@@ -56,6 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+{$ENDIF USE_SYNCOMMONS}
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
@@ -116,7 +119,6 @@ type
       read FResultSetConcurrency write FResultSetConcurrency;
     property Statement: IZStatement read FStatement;
     property Metadata: TContainedObject read FMetadata write FMetadata;
-
   public
     constructor Create(Statement: IZStatement; const SQL: string;
       Metadata: TContainedObject; ConSettings: PZConSettings);
@@ -356,6 +358,10 @@ type
 
     function GetConSettings: PZConsettings;
     property ColumnsInfo: TObjectList read FColumnsInfo write FColumnsInfo;
+
+    {$IFDEF USE_SYNCOMMONS}
+    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; virtual;
+    {$ENDIF}
   end;
 
   {** implents a optimal Converter function for Date, Time, DateTime conversion }
@@ -514,6 +520,11 @@ type
     function Clone(Empty: Boolean = False): IZBLob; override;
     procedure FlushBuffer; virtual;
   End;
+
+{$IFDEF USE_SYNCOMMONS}
+const
+  JSONBool: array[Boolean] of ShortString = ('false', 'true');
+{$ENDIF USE_SYNCOMMONS}
 
 implementation
 
@@ -3832,6 +3843,14 @@ end;
 procedure TZAbstractResultSet.MoveToCurrentRow;
 begin
 end;
+
+{$IFDEF USE_SYNCOMMONS}
+function TZAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean = True): UTF8String;
+begin
+  raise Exception.Create(SUnsupportedOperation);
+end;
+{$ENDIF}
 
 {**
   Compares fields from two row buffers.

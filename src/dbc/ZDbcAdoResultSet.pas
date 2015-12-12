@@ -57,6 +57,9 @@ interface
 {$IFDEF ENABLE_ADO}
 
 uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+{$ENDIF USE_SYNCOMMONS}
 {$IFNDEF FPC}
   DateUtils,
 {$ENDIF}
@@ -104,6 +107,9 @@ type
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
+    {$IFDEF USE_SYNCOMMONS}
+    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; override;
+    {$ENDIF USE_SYNCOMMONS}
   end;
 
   {** Implements a cached resolver with Ado specific functionality. }
@@ -119,13 +125,99 @@ type
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
   end;
 
-{$ENDIF ENABLE_ADO}
 implementation
-{$IFDEF ENABLE_ADO}
 
 uses
   Variants, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF},
   ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode;
+
+{$IFDEF USE_SYNCOMMONS}
+function TZAdoResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean): UTF8String;
+var Len, C: Integer;
+    P: PWideChar;
+begin
+  if JSONWriter.Expand then
+    JSONWriter.Add('{');
+  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+    if JSONWriter.Expand then
+      JSONWriter.AddString(JSONWriter.ColNames[C]);
+    if TVarData(FAdoRecordSet.Fields.Item[C].Value).VType in [varNull, varEmpty] then
+      JSONWriter.AddShort('null')
+    else
+  {ADO uses its own DataType-mapping different to System Variant type mapping}
+      case FAdoRecordSet.Fields.Item[C].Type_ of
+        adTinyInt:          JSONWriter.Add(TVarData(FAdoRecordSet.Fields.Item[C].Value).VShortInt);
+        adSmallInt:         JSONWriter.Add(TVarData(FAdoRecordSet.Fields.Item[C].Value).VSmallInt);
+        adInteger, adError: JSONWriter.Add(TVarData(FAdoRecordSet.Fields.Item[C].Value).VInteger);
+        adBigInt:           JSONWriter.Add(TVarData(FAdoRecordSet.Fields.Item[C].Value).VInt64);
+        adUnsignedTinyInt:  JSONWriter.AddU(TVarData(FAdoRecordSet.Fields.Item[C].Value).VByte);
+        adUnsignedSmallInt: JSONWriter.AddU(TVarData(FAdoRecordSet.Fields.Item[C].Value).VWord);
+        adUnsignedInt:      JSONWriter.AddU(TVarData(FAdoRecordSet.Fields.Item[C].Value).VLongWord);
+        {$IFDEF WITH_VARIANT_UINT64}
+        adUnsignedBigInt:   JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(TVarData(FAdoRecordSet.Fields.Item[C].Value).VUInt64));
+        {$ELSE}
+        adUnsignedBigInt:   JSONWriter.Add(TVarData(FAdoRecordSet.Fields.Item[C].Value).VInt64);
+        {$ENDIF}
+        adSingle:           JSONWriter.AddSingle(TVarData(FAdoRecordSet.Fields.Item[C].Value).VSingle);
+        adDouble:           JSONWriter.AddDouble(TVarData(FAdoRecordSet.Fields.Item[C].Value).VDouble);
+        adCurrency:         JSONWriter.AddCurr64(TVarData(FAdoRecordSet.Fields.Item[C].Value).VCurrency);
+        adBoolean:          JSONWriter.AddShort(JSONBool[TVarData(FAdoRecordSet.Fields.Item[C].Value).VBoolean]);
+        adGUID:             JSONWriter.AddNoJSONEscapeW(Pointer(TVarData(FAdoRecordSet.Fields.Item[C].Value).VOleStr), 38);
+        adDate,
+        adDBDate,
+        adDBTime,
+        adDBTimeStamp:
+          begin
+            JSONWriter.Add('"');
+            JSONWriter.AddDateTime(TVarData(FAdoRecordSet.Fields.Item[C].Value).VDate);
+            JSONWriter.Add('"');
+          end;
+        adChar:
+          begin
+            JSONWriter.Add('"');
+            P := TVarData(FAdoRecordSet.Fields.Item[C].Value).VOleStr;
+            Len := FAdoRecordSet.Fields.Item[C].ActualSize;
+            while (P+Len-1)^ = ' ' do dec(Len);
+            JSONWriter.AddJSONEscapeW(Pointer(P), Len);
+            JSONWriter.Add('"');
+          end;
+        adWChar: {fixed char fields}
+          begin
+            JSONWriter.Add('"');
+            P := TVarData(FAdoRecordSet.Fields.Item[C].Value).VOleStr;
+            Len := FAdoRecordSet.Fields.Item[C].ActualSize shr 1;
+            while (P+Len-1)^ = ' ' do dec(Len);
+            JSONWriter.AddJSONEscapeW(Pointer(P), Len);
+            JSONWriter.Add('"');
+          end;
+        adVarChar,
+        adLongVarChar: begin
+            JSONWriter.Add('"');
+            JSONWriter.AddJSONEscapeW(Pointer(TVarData(FAdoRecordSet.Fields.Item[C].Value).VOleStr), FAdoRecordSet.Fields.Item[C].ActualSize);
+            JSONWriter.Add('"');
+          end;
+        adVarWChar,
+        adLongVarWChar: begin
+            JSONWriter.Add('"');
+            JSONWriter.AddJSONEscapeW(Pointer(TVarData(FAdoRecordSet.Fields.Item[C].Value).VOleStr), FAdoRecordSet.Fields.Item[C].ActualSize shr 1);
+            JSONWriter.Add('"');
+          end;
+      adBinary,
+      adVarBinary,
+      adLongVarBinary:
+        JSONWriter.WrBase64(TVarData(FAdoRecordSet.Fields.Item[C].Value).VArray.Data, FAdoRecordSet.Fields.Item[C].ActualSize, True);
+    end;
+    JSONWriter.Add(',');
+  end;
+  if EndJSONObject then
+  begin
+    JSONWriter.CancelLastComma; // cancel last ','
+    if JSONWriter.Expand then
+      JSONWriter.Add('}');
+  end;
+end;
+{$ENDIF USE_SYNCOMMONS}
 
 {**
   Creates this object and assignes the main properties.
@@ -1714,7 +1806,11 @@ begin
   end;
 end;
 
+//(*
+{$ELSE}
+implementation
 {$ENDIF ENABLE_ADO}
+//*)
 end.
 
 

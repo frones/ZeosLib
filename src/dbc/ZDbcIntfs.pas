@@ -56,6 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
+  {$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+  {$ENDIF USE_SYNCOMMONS}
   Types, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF}, SysUtils,
   ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema,
   ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver, ZURL;
@@ -932,6 +935,10 @@ type
 
     function GetStatement: IZStatement;
     function GetConSettings: PZConsettings;
+
+    {$IFDEF USE_SYNCOMMONS}
+    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String;
+    {$ENDIF USE_SYNCOMMONS}
   end;
 
   {** TDataSet interface}
