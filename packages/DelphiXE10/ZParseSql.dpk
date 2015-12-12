@@ -28,11 +28,17 @@ package ZParseSql;
 {$LIBSUFFIX '230'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
+{$I ZPackages.inc}
 
 requires
   ZCore;
-{$I ZPackages.inc}
+
 contains
+
+{$IFDEF ENABLE_ODBC}
+  ZODBCToken in '..\..\src\parsesql\ZODBCToken.pas',
+{$ENDIF}
+
 {$IFDEF ENABLE_ADO}
   ZAdoToken in '..\..\src\parsesql\ZAdoToken.pas',
 {$ENDIF}
@@ -55,6 +61,10 @@ contains
 {$IFDEF ENABLE_DBLIB}
   ZSybaseAnalyser in '..\..\src\parsesql\ZSybaseAnalyser.pas',
   ZSybaseToken in '..\..\src\parsesql\ZSybaseToken.pas',
+{$ENDIF}
+
+{$IFDEF ENABLE_OLEDB}
+  ZOleDBToken in '..\..\src\parsesql\ZOleDBToken.pas',
 {$ENDIF}
 
 {$IFDEF ENABLE_ORACLE}
