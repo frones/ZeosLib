@@ -1765,7 +1765,7 @@ begin
           if SQLType = stShort then //spezial case: MSSQL should map stByte / MySQL should use stShort
             SQLType := stByte
           else //test unsigned
-            SQLType := TZSQLType(Ord(SQLType)-Ord(ZFastCode.Pos('U', UpperCase(GetString(fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex]))) > 0));
+            SQLType := TZSQLType(Ord(SQLType)-Ord(ZFastCode.Pos('U', UpperCase(GetString(fProcedureColumnsColMap.ColIndices[TableColColumnTypeNameIndex]))) > 0));
         Result.UpdateSmall(ProcColDataTypeIndex, Ord(SQLType));
         Result.UpdatePWideChar(ProcColTypeNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColTypeNameIndex], Len), @Len);
         Result.UpdateInt(ProcColPrecisionIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex]));
@@ -2633,6 +2633,7 @@ var
   RS: IZResultSet;
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
+  SQLType: TZSQLType;
   Cat, Schem, Proc, Col: RawByteString;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
@@ -2664,8 +2665,13 @@ begin
           SQL_RETURN_VALUE:       Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctReturn));
           else                    Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctUnknown));
         end;
-     //   Result.UpdateSmall(ProcColDataTypeIndex, Ord(ConvertODBCTypeToSQLType(
-       //   GetSmall(fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex]), ConSettings.CPType, RS)));
+        SQLType := ConvertODBCTypeToSQLType(GetSmall(fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex]), False, ConSettings.CPType);
+        if (Ord(SQLType) < Ord(stFloat)) and (Ord(SQLType) > Ord(stBoolean)) then
+          if SQLType = stShort then //spezial case: MSSQL should map stByte / MySQL should use stShort
+            SQLType := stByte
+          else //test unsigned
+            SQLType := TZSQLType(Ord(SQLType)-Ord(ZFastCode.Pos('U', UpperCase(GetString(fProcedureColumnsColMap.ColIndices[TableColColumnTypeNameIndex]))) > 0));
+        Result.UpdateSmall(ProcColDataTypeIndex, Ord(SQLType));
         Result.UpdatePAnsiChar(ProcColTypeNameIndex, GetPAnsiChar(fProcedureColumnsColMap.ColIndices[ProcColTypeNameIndex], Len), @Len);
         Result.UpdateInt(ProcColPrecisionIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex]));
         Result.UpdateInt(ProcColLengthIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColLengthIndex]));
@@ -3479,9 +3485,9 @@ begin
    fProcedureColumnsColMap.ColIndices[ProcColProcedureNameIndex] := ProcColProcedureNameIndex;
    fProcedureColumnsColMap.ColIndices[ProcColColumnNameIndex] := ProcColColumnNameIndex;
    fProcedureColumnsColMap.ColIndices[ProcColColumnTypeIndex] := ProcColColumnTypeIndex;
-   fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex] := RS.FindColumn('TYPE_NAME');
-   fProcedureColumnsColMap.ColIndices[ProcColTypeNameIndex] := fTableColColumnMap.ColIndices[ProcColDataTypeIndex];
-   fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex] := RS.FindColumn('COLUMN_SIZE');
+   fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex] := ProcColDataTypeIndex;
+   fProcedureColumnsColMap.ColIndices[ProcColTypeNameIndex] := ProcColTypeNameIndex;
+   fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex] := ProcColPrecisionIndex;
    fProcedureColumnsColMap.ColIndices[ProcColLengthIndex] := RS.FindColumn('CHAR_OCTET_LENGTH');
    fProcedureColumnsColMap.ColIndices[ProcColScaleIndex] := RS.FindColumn('DECIMAL_DIGITS');
    fProcedureColumnsColMap.ColIndices[ProcColRadixIndex] := RS.FindColumn('NUM_PREC_RADIX');
