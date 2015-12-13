@@ -506,7 +506,7 @@ var
         DBBindingArray[Index].dwPart    := DBPART_STATUS; //we only need a NULL indicator!
         DBBindingArray[Index].wType     := DBCOLUMNINFO^.wType; //Save the wType to know Binary/Ansi/Unicode-Lob's later on
         DBBindingArray[Index].obValue   := DBBindingArray[Index].obLength;
-        DBBindingArray[Index].dwFlags   := DBCOLUMNFLAGS_ISLONG;
+        //DBBindingArray[Index].dwFlags   := DBCOLUMNFLAGS_ISLONG; //indicate long values! <- trouble with SQLNCLI11 provider!
         //dirty improvements!
         DBBindingArray[Index].obLength  := Length(LobColIndexArray); //Save the HACCESSOR lookup index -> avoid loops!
       end;
