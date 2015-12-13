@@ -1922,6 +1922,10 @@ begin
       fParamInfos[ParameterNumber].DataType := ConvertSQLTypeToODBCType(fParamInfos[ParameterNumber].SQLType,
                                       fParamInfos[ParameterNumber].DataType, ConSettings^.ClientCodePage^.Encoding);
       fParamInfos[ParameterNumber].C_DataType := SQL2ODBC_Types[ConSettings^.ClientCodePage^.Encoding = ceUTF16][fParamInfos[ParameterNumber].SQLType];
+      //test for (N)VARCHAR(MAX)/VARBINARY(MAX)
+      if (fParamInfos[ParameterNumber].SQLType in [stBytes, stString, stUnicodeString]) and
+         (fParamInfos[ParameterNumber].ColumnSize = 0) then
+        fParamInfos[ParameterNumber].SQLType := TZSQLType(Ord(fParamInfos[ParameterNumber].SQLType)+3); //switch to streamed mode
       Inc(NoLobBoundParamCount, Ord((fParamInfos[ParameterNumber].SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) and
          (not (InParamTypes[ParameterNumber] in [stAsciiStream, stUnicodeStream, stBinaryStream]))));
       //note: Code is prepared to handle any case of Param-Directions  except fetching returned data

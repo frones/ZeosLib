@@ -101,15 +101,18 @@ type
 // Data types
 type
   {** Defines supported SQL types. }
-  TZSQLType = (stUnknown, stBoolean,
-    stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
-    stFloat, stDouble, stCurrency, stBigDecimal,
-    stBytes, stGUID,
+  TZSQLType = (stUnknown,
+    //fixed size DataTypes first
+    stBoolean,
+    stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,  //ordinals
+    stFloat, stDouble, stCurrency, stBigDecimal, //floats
     stDate, stTime, stTimestamp,
-    { note please add "high level" conversion enums after "simple" binary types -> save loads of code}
-    stString, stUnicodeString,
-    stArray, stDataSet,
-    stAsciiStream, stUnicodeStream, stBinaryStream);
+    stGUID,
+    //now varying size types in equal order
+    stString, stUnicodeString, stBytes,
+    stAsciiStream, stUnicodeStream, stBinaryStream,
+    //finally the object types
+    stArray, stDataSet);
 
   {** Defines a transaction isolation level. }
   TZTransactIsolationLevel = (tiNone, tiReadUncommitted, tiReadCommitted,

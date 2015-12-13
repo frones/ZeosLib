@@ -1201,7 +1201,7 @@ begin
   for ColumnIndex := fFirstGetDataIndex to fColumnCount-1 do begin
     StrLen_or_IndPtr := Pointer(fColumnBuffers[ColumnIndex]);
     if not fBoundColumns[ColumnIndex] then //some drivers allow GetData in mixed order so check it!
-      if Ord(fSQLTypes[ColumnIndex]) <= Ord(stUnicodeString) then //move data to buffers
+      if Ord(fSQLTypes[ColumnIndex]) < Ord(stAsciiStream) then //move data to buffers
         CheckStmtError(fPlainDriver.GetData(fPHSTMT^, ColumnIndex+1, SQL2ODBC_Types[ConSettings^.ClientCodePage^.Encoding = ceUTF16][fSQLTypes[ColumnIndex]],
           {%H-}Pointer({%H-}NativeUInt(StrLen_or_IndPtr)+SizeOf(SQLLEN)), fColumnBuffSizes[ColumnIndex], StrLen_or_IndPtr))
       else begin
@@ -1375,6 +1375,10 @@ begin
         end else if ColumnInfo.ColumnType in [stString, stUnicodeString, stBytes, stGUID] then begin
           { character / binary info}
           ColumnInfo.Precision := ColNumAttribute(ColumnNumber, SQL_DESC_LENGTH);
+          if ColumnInfo.Precision = 0 then begin
+             ColumnInfo.ColumnType := TZSQLType(Ord(ColumnInfo.ColumnType)+3); //switch to streamed mode
+             fSQLTypes[ColumnNumber-1] := ColumnInfo.ColumnType;
+          end;
           if ColumnInfo.ColumnType in [stString, stUnicodeString] then
             if Ord(ConSettings^.ClientCodePage^.Encoding) >= Ord(ceUTF16) then
               ColumnInfo.ColumnCodePage := zCP_UTF16
@@ -1384,6 +1388,9 @@ begin
       end else begin
         DescribeColumn(ColumnNumber, StrBuf, ColumnInfo);
         ColumnInfo.ColumnLabel := ColumnInfo.ColumnName;
+        if (ColumnInfo.ColumnType in [stString, stUnicodeString, stBytes]) and
+           (ColumnInfo.Precision = 0) then
+             ColumnInfo.ColumnType := TZSQLType(Ord(ColumnInfo.ColumnType)+3); //switch to streamed mode
         fSQLTypes[ColumnNumber-1] := ColumnInfo.ColumnType;
       end;
       { calc buf size }
@@ -1744,6 +1751,7 @@ begin
     end else begin
       Assert(StrLen_or_IndPtr^ = SQL_NO_TOTAL);
       GetMem(FBlobData, ChunkSize);
+      FBlobSize := ChunkSize;
       OffSetPtr := FBlobData;
       while (PlainDriver.GetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr) = SQL_SUCCESS_WITH_INFO) do begin
         ReallocMem(FBlobData, FBlobSize + ChunkSize);
