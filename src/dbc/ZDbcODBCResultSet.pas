@@ -136,7 +136,7 @@ type
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
     {$IFDEF USE_SYNCOMMONS}
-    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
     {$ENDIF USE_SYNCOMMONS}
   End;
 
@@ -235,8 +235,8 @@ begin
 end;
 
 {$IFDEF USE_SYNCOMMONS}
-function TAbstractODBCResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean): UTF8String;
+procedure TAbstractODBCResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean);
 var C: Integer;
     P: Pointer;
 begin

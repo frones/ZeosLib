@@ -127,7 +127,7 @@ type
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
 
     {$IFDEF USE_SYNCOMMONS}
-    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -173,7 +173,7 @@ var
 
 
 {$IFDEF USE_SYNCOMMONS}
-function TZOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean): UTF8String;
+procedure TZOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean);
 var I, C: Integer;
     P: PAnsiChar;
     Len: NativeUInt;
@@ -199,11 +199,7 @@ begin
         DBTYPE_R4:        JSONWriter.AddSingle(PSingle(FData)^);
         DBTYPE_R8:        JSONWriter.AddDouble(PDouble(FData)^);
         DBTYPE_CY:        JSONWriter.AddCurr64(PCurrency(FData)^);
-        DBTYPE_DATE:      begin
-                            JSONWriter.Add('"');
-                            JSONWriter.AddDateTime(PDateTime(FData)^);
-                            JSONWriter.Add('"');
-                          end;
+        DBTYPE_DATE:      JSONWriter.AddDateTime(PDateTime(FData), 'T', '"');
         DBTYPE_BSTR:      begin
             JSONWriter.Add('"');
             if FDBBindingArray[c].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
@@ -312,7 +308,6 @@ begin
         //DBTYPE_FILETIME	= 64;
         //DBTYPE_PROPVARIANT	= 138;
         //DBTYPE_VARNUMERIC	= 139;
-        else Result := '';
       end;
     JSONWriter.Add(',');
   end;

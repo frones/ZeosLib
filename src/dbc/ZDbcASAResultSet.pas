@@ -112,7 +112,7 @@ type
 
     property SQLData: IZASASQLDA read FSQLData;
     {$IFDEF USE_SYNCOMMONS}
-    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -204,8 +204,8 @@ uses
 { TZASAResultSet }
 
 {$IFDEF USE_SYNCOMMONS}
-function TZASAAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean = True): UTF8String;
+procedure TZASAAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean = True);
 var L: NativeUInt;
     P: Pointer;
     C: SmallInt;

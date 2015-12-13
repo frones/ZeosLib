@@ -108,7 +108,7 @@ type
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
     {$IFDEF USE_SYNCOMMONS}
-    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -132,8 +132,8 @@ uses
   ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode;
 
 {$IFDEF USE_SYNCOMMONS}
-function TZAdoResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean): UTF8String;
+procedure TZAdoResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean);
 var Len, C: Integer;
     P: PWideChar;
 begin

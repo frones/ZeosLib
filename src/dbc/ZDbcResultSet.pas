@@ -360,7 +360,7 @@ type
     property ColumnsInfo: TObjectList read FColumnsInfo write FColumnsInfo;
 
     {$IFDEF USE_SYNCOMMONS}
-    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; virtual;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); virtual;
     {$ENDIF}
   end;
 
@@ -3845,8 +3845,8 @@ begin
 end;
 
 {$IFDEF USE_SYNCOMMONS}
-function TZAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean = True): UTF8String;
+procedure TZAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean = True);
 begin
   raise Exception.Create(SUnsupportedOperation);
 end;

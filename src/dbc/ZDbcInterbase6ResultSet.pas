@@ -120,7 +120,7 @@ type
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
 
     {$IFDEF USE_SYNCOMMONS}
-    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
     {$ENDIF USE_SYNCOMMONS}
     function Next: Boolean; override;
   end;
@@ -226,14 +226,13 @@ begin
 end;
 
 {$IFDEF USE_SYNCOMMONS}
-function TZInterbase6XSQLDAResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean): UTF8String;
+procedure TZInterbase6XSQLDAResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean);
 var L: Integer;
     P: Pointer;
     C, SQLCode: SmallInt;
     TempDate: TCTimeStructure;
 begin
-  //init
   if JSONWriter.Expand then
     JSONWriter.Add('{');
   for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin

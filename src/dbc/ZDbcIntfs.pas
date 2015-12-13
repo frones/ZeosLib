@@ -937,7 +937,7 @@ type
     function GetConSettings: PZConsettings;
 
     {$IFDEF USE_SYNCOMMONS}
-    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True);
     {$ENDIF USE_SYNCOMMONS}
   end;
 

@@ -56,6 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+{$ENDIF USE_SYNCOMMONS}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
   ZClasses, ZDbcIntfs, ZDbcResultSet, ZDbcCache, ZCompatibility;
 
@@ -278,6 +281,9 @@ type
     procedure MoveToInitialRow; virtual;
     procedure PostUpdatesCached; virtual;
     procedure DisposeCachedUpdates; virtual;
+    {$IFDEF USE_SYNCOMMONS}
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
+    {$ENDIF USE_SYNCOMMONS}
   end;
 
   TZStringFieldAssignFromResultSet = procedure(ColumnIndex: Integer) of object;
@@ -2235,6 +2241,14 @@ begin
   else
     FRowAccessor.RowBuffer := nil;
 end;
+
+{$IFDEF USE_SYNCOMMONS}
+procedure TZAbstractCachedResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean);
+begin
+  FRowAccessor.ColumnsToJSON(JSONWriter)
+end;
+{$ENDIF USE_SYNCOMMONS}
 
 {**
   Compares fields from two row buffers.

@@ -111,7 +111,7 @@ type
 
     function Next: Boolean; override;
     {$IFDEF USE_SYNCOMMONS}
-    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -159,8 +159,8 @@ end;
 { TZSQLiteResultSet }
 
 {$IFDEF USE_SYNCOMMONS}
-function TZSQLiteResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean): UTF8String;
+procedure TZSQLiteResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean);
 var
   C, L, ColType: Integer;
   P: PAnsiChar;
@@ -255,6 +255,7 @@ begin
                           SQLITE_FLOAT  : JSONWriter.AddDateTime(FPlainDriver.column_double(FStmtHandle, C)+JulianEpoch);
                           SQLITE3_TEXT  : begin
                                             JSONWriter.Add('"');
+                                            P := FPlainDriver.column_text(FStmtHandle, C);
                                             JSONWriter.AddDateTime(RawSQLDateToDateTime(P, ZFastCode.StrLen(P), ConSettings^.ReadFormatSettings, Failed));
                                             JSONWriter.Add('"');
                                           end;
@@ -266,6 +267,7 @@ begin
                           SQLITE_FLOAT  : JSONWriter.AddDateTime(FPlainDriver.column_double(FStmtHandle, C)+JulianEpoch);
                           SQLITE3_TEXT  : begin
                                             JSONWriter.Add('"');
+                                            P := FPlainDriver.column_text(FStmtHandle, C);
                                             JSONWriter.AddDateTime(RawSQLTimeToDateTime(P, ZFastCode.StrLen(P), ConSettings^.ReadFormatSettings, Failed));
                                             JSONWriter.Add('"');
                                           end;
@@ -277,6 +279,7 @@ begin
                           SQLITE_FLOAT  : JSONWriter.AddDateTime(FPlainDriver.column_double(FStmtHandle, C)+JulianEpoch);
                           SQLITE3_TEXT  : begin
                                             JSONWriter.Add('"');
+                                            P := FPlainDriver.column_text(FStmtHandle, C);
                                             JSONWriter.AddDateTime(RawSQLTimeStampToDateTime(P, ZFastCode.StrLen(P), ConSettings^.ReadFormatSettings, Failed));
                                             JSONWriter.Add('"');
                                           end;

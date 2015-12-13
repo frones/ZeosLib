@@ -113,7 +113,7 @@ type
     function GetDataSet(ColumnIndex: Integer): IZDataSet; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
     {$IFDEF USE_SYNCOMMONS}
-    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -211,8 +211,8 @@ uses
 { TZOracleAbstractResultSet }
 
 {$IFDEF USE_SYNCOMMONS}
-function TZOracleAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean): UTF8String;
+procedure TZOracleAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean);
 var Len: Integer;
     P: PAnsiChar;
     C: SmallInt;

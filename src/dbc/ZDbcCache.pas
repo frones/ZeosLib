@@ -55,8 +55,10 @@ interface
 
 {$I ZDbc.inc}
 
-
 uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+{$ENDIF USE_SYNCOMMONS}
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
@@ -251,6 +253,10 @@ type
     procedure SetBlob(Const ColumnIndex: Integer; const Value: IZBlob);
     procedure SetDataSet(Const ColumnIndex: Integer; const Value: IZDataSet);
     procedure SetValue(Const ColumnIndex: Integer; const Value: TZVariant);
+
+    {$IFDEF USE_SYNCOMMONS}
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True);
+    {$ENDIF USE_SYNCOMMONS}
 
     property ColumnsSize: Integer read FColumnsSize;
     property RowSize: Integer read FRowSize;
@@ -1244,6 +1250,92 @@ procedure TZRowAccessor.CloneBuffer(SrcBuffer: PZRowBuffer; DestBuffer: PZRowBuf
 begin
   CopyBuffer(SrcBuffer, DestBuffer, True);
 end;
+
+{$IFDEF USE_SYNCOMMONS}
+procedure TZRowAccessor.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean);
+var P: Pointer;
+    C: SmallInt;
+    Blob: IZBlob;
+begin
+  if JSONWriter.Expand then
+    JSONWriter.Add('{');
+  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+    if JSONWriter.Expand then
+      JSONWriter.AddString(JSONWriter.ColNames[C]);
+    if FBuffer.Columns[FColumnOffsets[C]] = bIsNull then
+      JSONWriter.AddShort('null')
+    else
+      case FColumnTypes[C] of
+        stBoolean       : JSONWriter.AddShort(JSONBool[PWordBool(@FBuffer.Columns[FColumnOffsets[C] + 1])^]);
+        stByte          : JSONWriter.AddU(PByte(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stShort         : JSONWriter.Add(PShortInt(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stWord          : JSONWriter.AddU(PWord(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stSmall         : JSONWriter.Add(PSmallInt(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stLongWord      : JSONWriter.AddU(PCardinal(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stInteger       : JSONWriter.Add(PInteger(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stULong         : JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PUInt64(@FBuffer.Columns[FColumnOffsets[C] + 1])^));
+        stLong          : JSONWriter.Add(PInt64(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stFloat         : JSONWriter.AddSingle(PSingle(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stDouble        : JSONWriter.AddDouble(PDouble(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stCurrency      : JSONWriter.AddCurr64(PCurrency(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stBigDecimal    : JSONWriter.AddDouble(PExtended(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stString,
+        stUnicodeString : begin
+                            JSONWriter.Add('"');
+                            if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
+                               (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) then
+                              JSONWriter.AddJSONEscapeW(Pointer(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[C] + 1])^+PWideInc),
+                                PPLongWord(@FBuffer.Columns[FColumnOffsets[C] + 1])^^)
+                            else if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+                              JSONWriter.AddJSONEscape(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[C] + 1])^+PAnsiInc,
+                                PPLongWord(@FBuffer.Columns[FColumnOffsets[C] + 1])^^)
+                            else begin
+                              FUniTemp := PRawToUnicode(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[C] + 1])^+PAnsiInc,
+                                PPLongWord(@FBuffer.Columns[FColumnOffsets[C] + 1])^^, ConSettings^.ClientCodePage^.CP);
+                              JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+                            end;
+                            JSONWriter.Add('"');
+                          end;
+        stBytes         : JSONWriter.WrBase64(PPointer(@FBuffer.Columns[FColumnOffsets[C] + 1])^,
+                            PSmallInt(@FBuffer.Columns[FColumnOffsets[C] + 1 + SizeOf(Pointer)])^, True);
+        stGUID          : JSONWriter.AddNoJSONEscapeUTF8(GUIDToRaw(@FBuffer.Columns[FColumnOffsets[C] + 1], 16));
+        stDate,
+        stTime,
+        stTimestamp     : JSONWriter.AddDateTime(PDateTime(@FBuffer.Columns[FColumnOffsets[C] + 1]), 'T', '"');
+        stAsciiStream, stUnicodeStream:
+          begin
+            Blob := IZBlob(PPointer(FBuffer.Columns[FColumnOffsets[C] + 1])^);
+            if Blob.IsEmpty then
+              JSONWriter.AddShort('null')
+            else begin
+              if Blob.IsClob then
+                P := Blob.GetPAnsiChar(zCP_UTF8) else
+                P := Blob.GetBuffer;
+              JSONWriter.Add('"');
+              JSONWriter.AddJSONEscape(P, Blob.Length);
+              JSONWriter.Add('"');
+            end;
+          end;
+        stBinaryStream:
+          begin
+            Blob := IZBlob(PPointer(FBuffer.Columns[FColumnOffsets[C] + 1])^);
+            if Blob.IsEmpty then
+              JSONWriter.AddShort('null')
+            else
+              JSONWriter.WrBase64(Blob.GetBuffer, Blob.Length, True);
+          end;
+      end;
+    JSONWriter.Add(',');
+  end;
+  if EndJSONObject then
+  begin
+    JSONWriter.CancelLastComma; // cancel last ','
+    if JSONWriter.Expand then
+      JSONWriter.Add('}');
+  end;
+end;
+{$ENDIF USE_SYNCOMMONS}
 
 {**
   Compares fields from two row buffers.
@@ -5165,7 +5257,6 @@ end;
     value returned is <code>null</code>
 }
 function TZUnicodeRowAccessor.GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
-var US: ZWideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -5175,11 +5266,8 @@ begin
   begin
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
-        begin
-          System.SetString(US, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
-          Result := AnsiString(US);
-        end;
+        Result := PUnicodeToRaw(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc,
+          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^, zDefaultSystemCodePage);
       else
         Result := inherited GetAnsiString(ColumnIndex, IsNull);
     end;
@@ -5199,7 +5287,6 @@ end;
     value returned is <code>null</code>
 }
 function TZUnicodeRowAccessor.GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
-var US: ZWideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -5209,11 +5296,8 @@ begin
   begin
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
-        begin
-          System.SetString(US, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
-          Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(US);
-        end;
+        Result := PUnicodeToRaw(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc,
+          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^, zCP_UTF8);
       else
         Result := inherited GetUTF8String(ColumnIndex, IsNull);
     end;

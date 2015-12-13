@@ -113,7 +113,7 @@ type
 
     function MoveAbsolute(Row: Integer): Boolean; override;
     {$IFDEF USE_SYNCOMMONS}
-    function ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True): UTF8String; override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -155,8 +155,8 @@ uses
 { TZPostgreSQLResultSet }
 
 {$IFDEF USE_SYNCOMMONS}
-function TZPostgreSQLResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean): UTF8String;
+procedure TZPostgreSQLResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean);
 var
   C, L: Cardinal;
   P: PAnsiChar;
