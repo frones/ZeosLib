@@ -199,7 +199,7 @@ ProcBts:                  P := nil;
                             FreeMem(P);
                           end;
                         end;
-        stGUID        : JSONWriter.AddNoJSONEscape(P, ZFastCode.StrLen(P));//
+        stGUID        : JSONWriter.AddNoJSONEscape(P);//
         stDate        : begin
                           JSONWriter.Add('"');
                           JSONWriter.AddDateTime(RawSQLDateToDateTime(P, ZFastCode.StrLen(P), ConSettings^.ReadFormatSettings, Failed));
@@ -218,16 +218,18 @@ ProcBts:                  P := nil;
         stString,
         stUnicodeString:begin
                           JSONWriter.Add('"');
-                          L := ZFastCode.StrLen(P);
-                          if FFixedCharFields[C] and (L > 0) then
-                              while (P+L-1)^ = ' ' do dec(L);
-                          JSONWriter.AddJSONEscape(P, L);
+                          if FFixedCharFields[C] then begin
+                            L := ZFastCode.StrLen(P);
+                            if (L > 0) then while (P+L-1)^ = ' ' do dec(L);
+                            JSONWriter.AddJSONEscape(P, L);
+                          end else
+                            JSONWriter.AddJSONEscape(P);
                           JSONWriter.Add('"');
                         end;
         stAsciiStream,
         stUnicodeStream:begin
                           JSONWriter.Add('"');
-                          JSONWriter.AddJSONEscape(P, ZFastCode.StrLen(P));
+                          JSONWriter.AddJSONEscape(P);
                           JSONWriter.Add('"');
                         end;
         //stArray, stDataSet,

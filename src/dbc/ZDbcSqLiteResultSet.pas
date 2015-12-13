@@ -162,10 +162,9 @@ end;
 procedure TZSQLiteResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   EndJSONObject: Boolean);
 var
-  C, L, ColType: Integer;
+  C, ColType: Integer;
   P: PAnsiChar;
   Failed: Boolean;
-  Bts: array[0..7] of Byte;
 label ProcBts;
 begin
   if JSONWriter.Expand then
@@ -184,7 +183,7 @@ begin
                           SQLITE3_TEXT  : begin
                                             JSONWriter.Add('"');
                                             P := FPlainDriver.column_text(FStmtHandle, C);
-                                            JSONWriter.AddJSONEscape(P, ZFastCode.StrLen(P));
+                                            JSONWriter.AddJSONEscape(P);
                                             JSONWriter.Add('"');
                                           end;
                           SQLITE_BLOB   : JSONWriter.WrBase64(FPlainDriver.column_blob(FStmtHandle,C),
@@ -196,23 +195,18 @@ begin
                           SQLITE3_TEXT  : JSONWriter.AddShort(JSONBool[StrToBoolEx(FPlainDriver.column_text(FStmtHandle, C))]);
                           SQLITE_BLOB   : JSONWriter.AddShort(JSONBool[True]);
                         end;
+
         stByte,
+        stShort,
         stWord,
+        stSmall,
         stLongWord,
+        stInteger,
+        stLong,
         stULong       : case ColType of
                           SQLITE_INTEGER: JSONWriter.Add(FPlainDriver.column_int64(FStmtHandle, C));
                           SQLITE_FLOAT  : JSONWriter.Add(Trunc(FPlainDriver.column_double(FStmtHandle, C)));
-                          SQLITE3_TEXT  : JSONWriter.Add(RawToUInt64Def(FPlainDriver.column_text(FStmtHandle, C), 0));
-                          SQLITE_BLOB   : JSONWriter.WrBase64(FPlainDriver.column_blob(FStmtHandle,C),
-                                            FPlainDriver.column_bytes(FStmtHandle, C), True);
-                        end;
-        stShort,
-        stSmall,
-        stInteger,
-        stLong        : case ColType of
-                          SQLITE_INTEGER: JSONWriter.Add(FPlainDriver.column_int64(FStmtHandle, C));
-                          SQLITE_FLOAT  : JSONWriter.Add(Trunc(FPlainDriver.column_double(FStmtHandle, C)));
-                          SQLITE3_TEXT  : JSONWriter.Add(RawToInt64Def(FPlainDriver.column_text(FStmtHandle, C), 0));
+                          SQLITE3_TEXT  : JSONWriter.AddNoJSONEscape(FPlainDriver.column_text(FStmtHandle, C));
                           SQLITE_BLOB   : JSONWriter.WrBase64(FPlainDriver.column_blob(FStmtHandle,C),
                                             FPlainDriver.column_bytes(FStmtHandle, C), True);
                         end;
@@ -232,17 +226,17 @@ begin
                           SQLITE_BLOB   : JSONWriter.WrBase64(FPlainDriver.column_blob(FStmtHandle,C),
                                             FPlainDriver.column_bytes(FStmtHandle, C), True);
                         end;
+        stGUID        : case ColType of
+                          SQLITE_INTEGER: JSONWriter.WrBase64(FPlainDriver.column_value(FStmtHandle, C), 8, True);
+                          SQLITE_FLOAT  : JSONWriter.WrBase64(FPlainDriver.column_value(FStmtHandle, C), 8, True);
+                          SQLITE3_TEXT  : JSONWriter.AddNoJSONEscape(FPlainDriver.column_text(FStmtHandle, C));
+                          SQLITE_BLOB   : JSONWriter.WrBase64(FPlainDriver.column_blob(FStmtHandle,C),
+                                            FPlainDriver.column_bytes(FStmtHandle, C), True);
+                        end;
         stBytes,
-        stGUID,
         stBinaryStream: case ColType of
-                          SQLITE_INTEGER: begin
-                                            PInt64(@Bts[0])^ := FPlainDriver.column_int64(FStmtHandle, C);
-                                            JSONWriter.WrBase64(@Bts[0], 8, True);
-                                          end;
-                          SQLITE_FLOAT  : begin
-                                            PDouble(@Bts[0])^ := FPlainDriver.column_double(FStmtHandle, C);
-                                            JSONWriter.WrBase64(@Bts[0], 8, True);
-                                          end;
+                          SQLITE_INTEGER: JSONWriter.WrBase64(FPlainDriver.column_value(FStmtHandle, C), 8, True);
+                          SQLITE_FLOAT  : JSONWriter.WrBase64(FPlainDriver.column_value(FStmtHandle, C), 8, True);
                           SQLITE3_TEXT  : begin
                                             P := FPlainDriver.column_text(FStmtHandle, C);
                                             JSONWriter.WrBase64(P, ZFastCode.StrLen(P), True);
@@ -251,8 +245,16 @@ begin
                                             FPlainDriver.column_bytes(FStmtHandle, C), True);
                         end;
         stDate        : case ColType of
-                          SQLITE_INTEGER: JSONWriter.AddDateTime(FPlainDriver.column_int64(FStmtHandle, C));
-                          SQLITE_FLOAT  : JSONWriter.AddDateTime(FPlainDriver.column_double(FStmtHandle, C)+JulianEpoch);
+                          SQLITE_INTEGER: begin
+                                            JSONWriter.Add('"');
+                                            JSONWriter.AddDateTime(FPlainDriver.column_int64(FStmtHandle, C));
+                                            JSONWriter.Add('"');
+                                          end;
+                          SQLITE_FLOAT  : begin
+                                            JSONWriter.Add('"');
+                                            JSONWriter.AddDateTime(FPlainDriver.column_double(FStmtHandle, C)+JulianEpoch);
+                                            JSONWriter.Add('"');
+                                          end;
                           SQLITE3_TEXT  : begin
                                             JSONWriter.Add('"');
                                             P := FPlainDriver.column_text(FStmtHandle, C);
@@ -263,8 +265,16 @@ begin
                                             FPlainDriver.column_bytes(FStmtHandle, C), True);
                         end;
         stTime        : case ColType of
-                          SQLITE_INTEGER: JSONWriter.AddDateTime(FPlainDriver.column_int64(FStmtHandle, C));
-                          SQLITE_FLOAT  : JSONWriter.AddDateTime(FPlainDriver.column_double(FStmtHandle, C)+JulianEpoch);
+                          SQLITE_INTEGER: begin
+                                            JSONWriter.Add('"');
+                                            JSONWriter.AddDateTime(FPlainDriver.column_int64(FStmtHandle, C));
+                                            JSONWriter.Add('"');
+                                          end;
+                          SQLITE_FLOAT  : begin
+                                            JSONWriter.Add('"');
+                                            JSONWriter.AddDateTime(FPlainDriver.column_double(FStmtHandle, C)+JulianEpoch);
+                                            JSONWriter.Add('"');
+                                          end;
                           SQLITE3_TEXT  : begin
                                             JSONWriter.Add('"');
                                             P := FPlainDriver.column_text(FStmtHandle, C);
@@ -275,8 +285,16 @@ begin
                                             FPlainDriver.column_bytes(FStmtHandle, C), True);
                         end;
         stTimestamp   : case ColType of
-                          SQLITE_INTEGER: JSONWriter.AddDateTime(FPlainDriver.column_int64(FStmtHandle, C));
-                          SQLITE_FLOAT  : JSONWriter.AddDateTime(FPlainDriver.column_double(FStmtHandle, C)+JulianEpoch);
+                          SQLITE_INTEGER: begin
+                                            JSONWriter.Add('"');
+                                            JSONWriter.AddDateTime(FPlainDriver.column_int64(FStmtHandle, C));
+                                            JSONWriter.Add('"');
+                                          end;
+                          SQLITE_FLOAT  : begin
+                                            JSONWriter.Add('"');
+                                            JSONWriter.AddDateTime(FPlainDriver.column_double(FStmtHandle, C)+JulianEpoch);
+                                            JSONWriter.Add('"');
+                                          end;
                           SQLITE3_TEXT  : begin
                                             JSONWriter.Add('"');
                                             P := FPlainDriver.column_text(FStmtHandle, C);
@@ -292,20 +310,18 @@ begin
         stUnicodeStream:case ColType of
                           SQLITE_INTEGER: begin
                                             JSONWriter.Add('"');
-                                            fRawTemp := IntToRaw(FPlainDriver.column_int64(FStmtHandle, C));
-                                            JSONWriter.AddNoJSONEscape(Pointer(fRawTemp), Length(fRawTemp));
+                                            JSONWriter.Add(FPlainDriver.column_int64(FStmtHandle, C));
                                             JSONWriter.Add('"');
                                           end;
                           SQLITE_FLOAT  : begin
                                             JSONWriter.Add('"');
-                                            fRawTemp := FloatToRaw(FPlainDriver.column_double(FStmtHandle, C));
-                                            JSONWriter.AddNoJSONEscape(Pointer(fRawTemp), Length(fRawTemp));
+                                            JSONWriter.AddDouble(FPlainDriver.column_double(FStmtHandle, C));
                                             JSONWriter.Add('"');
                                           end;
                           SQLITE3_TEXT  : begin
                                             P := FPlainDriver.column_text(FStmtHandle, C);
                                             JSONWriter.Add('"');
-                                            JSONWriter.AddJSONEscape(P, ZFastCode.StrLen(P));
+                                            JSONWriter.AddJSONEscape(P);
                                             JSONWriter.Add('"');
                                           end;
                           SQLITE_BLOB   : JSONWriter.WrBase64(FPlainDriver.column_blob(FStmtHandle,C),

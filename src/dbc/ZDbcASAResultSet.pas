@@ -1345,7 +1345,7 @@ begin
       else
       begin
         TempRaw := InternalGetString(ColumnIndex);
-        Result := TZAbstractClob.CreateWithData(PAnsiChar(TempRaw), Length(TempBytes),
+        Result := TZAbstractClob.CreateWithData(PAnsiChar(TempRaw), Length(TempRaw),
           ConSettings^.ClientCodePage^.CP, ConSettings);
       end;
     end;
