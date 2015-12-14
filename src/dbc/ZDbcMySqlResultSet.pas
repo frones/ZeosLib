@@ -271,19 +271,31 @@ begin
         FIELD_TYPE_TIMESTAMP,
         FIELD_TYPE_DATETIME   : begin
                                   JSONWriter.Add('"');
-                                  JSONWriter.AddDateTime(RawSQLTimeStampToDateTime(P, FLengthArray^[C], ConSettings^.ReadFormatSettings, Failed));
+                                  if PWord(P)^ < ValidCenturyMagic then //Year below 1900
+                                    inc(P, 11)
+                                  else begin
+                                    JSONWriter.AddNoJSONEscape(P, 10);
+                                    inc(P, 11);
+                                  end;
+                                  if PInt64(P)^ <> ZeroTimeMagic then begin //not 00:00:00 ?
+                                    JSONWriter.Add('T');
+                                    JSONWriter.AddNoJSONEscape(P, 8);
+                                  end;
                                   JSONWriter.Add('"');
                                 end;
-
         FIELD_TYPE_DATE,
         FIELD_TYPE_NEWDATE    : begin
                                   JSONWriter.Add('"');
-                                  JSONWriter.AddDateTime(RawSQLDateToDateTime(P, FLengthArray^[C], ConSettings^.ReadFormatSettings, Failed));
+                                  if not PWord(P)^ < ValidCenturyMagic then //Year below 1900 then
+                                    JSONWriter.AddNoJSONEscape(P, 10);
                                   JSONWriter.Add('"');
                                 end;
         FIELD_TYPE_TIME       : begin
                                   JSONWriter.Add('"');
-                                  JSONWriter.AddDateTime(RawSQLTimeToDateTime(P, FLengthArray^[C], ConSettings^.ReadFormatSettings, Failed));
+                                  if PInt64(P)^ <> ZeroTimeMagic then begin //not 00:00:00 ?
+                                    JSONWriter.Add('T');
+                                    JSONWriter.AddNoJSONEscape(P, 8);
+                                  end;
                                   JSONWriter.Add('"');
                                 end;
         FIELD_TYPE_BIT        : if FLengthArray^[C] = 1 then

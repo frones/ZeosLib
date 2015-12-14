@@ -258,7 +258,7 @@ begin
                           SQLITE3_TEXT  : begin
                                             JSONWriter.Add('"');
                                             P := FPlainDriver.column_text(FStmtHandle, C);
-                                            if not PLongWord(P)^ < ValidYearMagic then //Year below 1900 then
+                                            if not PWord(P)^ < ValidCenturyMagic then //Year below 1900?
                                               JSONWriter.AddNoJSONEscape(P, 10);
                                             JSONWriter.Add('"');
                                           end;
@@ -302,7 +302,7 @@ begin
                           SQLITE3_TEXT  : begin
                                             JSONWriter.Add('"');
                                             P := FPlainDriver.column_text(FStmtHandle, C);
-                                            if PLongWord(P)^ < ValidYearMagic then //Year below 1900
+                                            if PWord(P)^ < ValidCenturyMagic then //Year below 1900
                                               inc(P, 11)
                                             else begin
                                               JSONWriter.AddNoJSONEscape(P, 10);
