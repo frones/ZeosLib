@@ -258,7 +258,8 @@ begin
                           SQLITE3_TEXT  : begin
                                             JSONWriter.Add('"');
                                             P := FPlainDriver.column_text(FStmtHandle, C);
-                                            JSONWriter.AddDateTime(RawSQLDateToDateTime(P, ZFastCode.StrLen(P), ConSettings^.ReadFormatSettings, Failed));
+                                            if not PLongWord(P)^ < ValidYearMagic then //Year below 1900 then
+                                              JSONWriter.AddNoJSONEscape(P, 10);
                                             JSONWriter.Add('"');
                                           end;
                           SQLITE_BLOB   : JSONWriter.WrBase64(FPlainDriver.column_blob(FStmtHandle,C),
@@ -278,7 +279,10 @@ begin
                           SQLITE3_TEXT  : begin
                                             JSONWriter.Add('"');
                                             P := FPlainDriver.column_text(FStmtHandle, C);
-                                            JSONWriter.AddDateTime(RawSQLTimeToDateTime(P, ZFastCode.StrLen(P), ConSettings^.ReadFormatSettings, Failed));
+                                            if PInt64(P)^ <> ZeroTimeMagic then begin //not 00:00:00 ?
+                                              JSONWriter.Add('T');
+                                              JSONWriter.AddNoJSONEscape(P, 8);
+                                            end;
                                             JSONWriter.Add('"');
                                           end;
                           SQLITE_BLOB   : JSONWriter.WrBase64(FPlainDriver.column_blob(FStmtHandle,C),
@@ -298,7 +302,16 @@ begin
                           SQLITE3_TEXT  : begin
                                             JSONWriter.Add('"');
                                             P := FPlainDriver.column_text(FStmtHandle, C);
-                                            JSONWriter.AddDateTime(RawSQLTimeStampToDateTime(P, ZFastCode.StrLen(P), ConSettings^.ReadFormatSettings, Failed));
+                                            if PLongWord(P)^ < ValidYearMagic then //Year below 1900
+                                              inc(P, 11)
+                                            else begin
+                                              JSONWriter.AddNoJSONEscape(P, 10);
+                                              inc(P, 11);
+                                            end;
+                                            if PInt64(P)^ <> ZeroTimeMagic then begin //not 00:00:00 ?
+                                              JSONWriter.Add('T');
+                                              JSONWriter.AddNoJSONEscape(P, 8);
+                                            end;
                                             JSONWriter.Add('"');
                                           end;
                           SQLITE_BLOB   : JSONWriter.WrBase64(FPlainDriver.column_blob(FStmtHandle,C),
