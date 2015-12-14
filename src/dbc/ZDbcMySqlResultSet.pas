@@ -1091,7 +1091,7 @@ begin
                                 end;
         FIELD_TYPE_BIT        : if length = 1 then
                                   JSONWriter.AddShort(JSONBool[PByte(Buffer)^ <> 0]) else
-                                  JSONWriter.WrBase64(P, length, True);
+                                  JSONWriter.WrBase64(Pointer(Buffer), length, True);
         FIELD_TYPE_ENUM       : if TZColumnInfo(ColumnsInfo[C]).ColumnType = stBoolean then
                                   JSONWriter.AddShort(JSONBool[UpCase(PAnsiChar(Buffer)^) = 'Y'])
                                 else begin
