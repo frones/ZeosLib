@@ -524,6 +524,8 @@ type
 {$IFDEF USE_SYNCOMMONS}
 const
   JSONBool: array[Boolean] of ShortString = ('false', 'true');
+  ValidYearMagic = LongWord(7927224); //'1900'
+  ZeroTimeMagic = Int64(7305533219993080);
 {$ENDIF USE_SYNCOMMONS}
 
 implementation
