@@ -264,7 +264,7 @@ begin
         stCurrency,
         stBigDecimal: JSONWriter.AddDouble(PDouble(fColDataPtr)^);
         stBytes:      JSONWriter.WrBase64(fColDataPtr,fStrLen_or_Ind,True);
-        stGUID:       JSONWriter.AddNoJSONEscapeUTF8(GuidToRaw(PGUID(fColDataPtr)^));
+        stGUID:       JSONWriter.Add(PGUID(fColDataPtr)^);
         stTime:       begin
                         JSONWriter.Add('"');
                         JSONWriter.AddDateTime(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,

@@ -228,9 +228,9 @@ begin
         DBTYPE_UI4:       JSONWriter.AddU(PLongWord(FData)^);
         DBTYPE_I8:        JSONWriter.Add(PInt64(FData)^);
         DBTYPE_UI8:       JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PUInt64(FData)^));
-        DBTYPE_GUID:      JSONWriter.AddNoJSONEscapeUTF8(GuidToRaw(PGUID(FData)^));
+        DBTYPE_GUID:      JSONWriter.Add(PGUID(FData)^);
         DBTYPE_GUID or DBTYPE_BYREF:
-                          JSONWriter.AddNoJSONEscapeUTF8(GuidToRaw(PGUID(PPointer(FData)^)^));
+                          JSONWriter.Add(PGUID(PPointer(FData)^)^);
         DBTYPE_BYTES:
           if FDBBindingArray[C].cbMaxLen = 0 then begin //streamed
             blob := TZOleDBBLOB.Create(FRowSet, FLobAccessors[FDBBindingArray[C].obLength], FHROWS^[FCurrentBufRowNo], FChunkSize);
