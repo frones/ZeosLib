@@ -549,7 +549,7 @@ var
       PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.hour, PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.second, fraction);
     PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.year := year;
     if Param.DecimalDigits = 7 then
-      PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.fraction := fraction
+      PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.fraction := fraction*10000
     else
       //https://social.msdn.microsoft.com/Forums/sqlserver/en-US/ac1b5a6d-5e64-4603-9c92-b75ba4e51bf2/error-22008-datetime-field-overflow-when-inserting-a-record-with-datetime2-field-via-odbc?forum=sqldataaccess
       PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.fraction := 0;//puff what a shit: fraction available but can't be set???;
@@ -1920,7 +1920,7 @@ begin
                                       InParamTypes[ParameterNumber], Consettings^.CPType);
       //now assign minimal conversion datatypes
       fParamInfos[ParameterNumber].DataType := ConvertSQLTypeToODBCType(fParamInfos[ParameterNumber].SQLType,
-                                      fParamInfos[ParameterNumber].DataType, ConSettings^.ClientCodePage^.Encoding);
+                                    fParamInfos[ParameterNumber].DataType, ConSettings^.ClientCodePage^.Encoding);
       fParamInfos[ParameterNumber].C_DataType := SQL2ODBC_Types[ConSettings^.ClientCodePage^.Encoding = ceUTF16][fParamInfos[ParameterNumber].SQLType];
       //test for (N)VARCHAR(MAX)/VARBINARY(MAX)
       if (fParamInfos[ParameterNumber].SQLType in [stBytes, stString, stUnicodeString]) and

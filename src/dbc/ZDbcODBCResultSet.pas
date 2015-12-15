@@ -998,7 +998,7 @@ begin
           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.day)+
           EncodeTime(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction);
+          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction div 10000);
       stString, stUnicodeString: begin
           InternalDecTrailingSpaces(ColumnIndex);
           if fIsUnicodeDriver then
