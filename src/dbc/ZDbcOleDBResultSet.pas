@@ -419,9 +419,14 @@ begin
       ColumnInfo.ColumnType := ConvertOleDBTypeToSQLType(prgInfo^.wType,
         prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG <> 0, ConSettings.CPType);
 
-      FieldSize := prgInfo^.ulColumnSize;
-      if FieldSize < 0 then
-        FieldSize := 0;
+      if (ColumnInfo.ColumnType = stTime) and (prgInfo^.wType = DBTYPE_DBTIME2) then begin
+        FDBBindingArray[i].dwFlags := DBCOLUMNFLAGS_SS_ISVARIABLESCALE;
+        FDBBindingArray[i].bPrecision := 0;
+      end;
+      if prgInfo^.ulColumnSize > Cardinal(MaxInt) then
+        FieldSize := 0
+      else
+        FieldSize := prgInfo^.ulColumnSize;
       if ColumnInfo.ColumnType = stGUID then
         ColumnInfo.ColumnDisplaySize := 38
       else

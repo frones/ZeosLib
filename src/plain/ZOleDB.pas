@@ -481,7 +481,8 @@ const
 	DBTYPE_DBTIME	= 134;
 	DBTYPE_DBTIMESTAMP	= 135;
   {SQL Server types only }
-  DBTYPE_DB_SS_TIME2 = 145;
+  DBTYPE_DBTIME2 = 145;
+  DBTYPE_DBTIMESTAMPOFFSET = 146;
 // DBTYPEENUM15 constants from oledb.h
 //@@@+ V1.5
 type
@@ -896,37 +897,49 @@ const
 
 type
   DBRESULTFLAGENUM = (
-    DBRESULTFLAG_DEFAULT	= 0,
-	  DBRESULTFLAG_ROWSET	= 1,
-	  DBRESULTFLAG_ROW	= 2
+    DBRESULTFLAG_DEFAULT = 0,
+    DBRESULTFLAG_ROWSET = 1,
+    DBRESULTFLAG_ROW = 2
     );
 
   DBPROPSTATUSENUM = (
-    DBPROPSTATUS_OK	= 0,
-    DBPROPSTATUS_NOTSUPPORTED	= 1,
-    DBPROPSTATUS_BADVALUE	= 2,
-    DBPROPSTATUS_BADOPTION	= 3,
-    DBPROPSTATUS_BADCOLUMN	= 4,
-    DBPROPSTATUS_NOTALLSETTABLE	= 5,
-    DBPROPSTATUS_NOTSETTABLE	= 6,
-    DBPROPSTATUS_NOTSET	= 7,
-    DBPROPSTATUS_CONFLICTING	= 8);
+    DBPROPSTATUS_OK = 0,
+    DBPROPSTATUS_NOTSUPPORTED = 1,
+    DBPROPSTATUS_BADVALUE = 2,
+    DBPROPSTATUS_BADOPTION = 3,
+    DBPROPSTATUS_BADCOLUMN = 4,
+    DBPROPSTATUS_NOTALLSETTABLE = 5,
+    DBPROPSTATUS_NOTSETTABLE = 6,
+    DBPROPSTATUS_NOTSET = 7,
+    DBPROPSTATUS_CONFLICTING = 8);
 
   DBKIND = TOleEnum;
   DBKINDENUM = (
-    DBKIND_GUID_NAME	= 0,
-	  DBKIND_GUID_PROPID	= ( DBKIND_GUID_NAME + 1 ) ,
-	  DBKIND_NAME	= ( DBKIND_GUID_PROPID + 1 ) ,
-	  DBKIND_PGUID_NAME	= ( DBKIND_NAME + 1 ) ,
-	  DBKIND_PGUID_PROPID	= ( DBKIND_PGUID_NAME + 1 ) ,
-	  DBKIND_PROPID	= ( DBKIND_PGUID_PROPID + 1 ) ,
-	  DBKIND_GUID	= ( DBKIND_PROPID + 1 ))
+    DBKIND_GUID_NAME = 0,
+    DBKIND_GUID_PROPID = ( DBKIND_GUID_NAME + 1 ) ,
+    DBKIND_NAME = ( DBKIND_GUID_PROPID + 1 ) ,
+    DBKIND_PGUID_NAME = ( DBKIND_NAME + 1 ) ,
+    DBKIND_PGUID_PROPID = ( DBKIND_PGUID_NAME + 1 ) ,
+    DBKIND_PROPID = ( DBKIND_PGUID_PROPID + 1 ) ,
+    DBKIND_GUID = ( DBKIND_PROPID + 1 ))
     ;
   PCHAPTER = ^HCHAPTER;
   HCHAPTER = NativeUInt;
 const
   DB_NULL_HCHAPTER = HCHAPTER($0000000000000000);
   DB_S_NORESULT   = HRESULT($00040EC9);
+
+{ sqlncli.h}
+type
+  DBPARAMFLAGSENUM_SS_100 = TOleEnum;
+const
+  DBPARAMFLAGS_SS_ISVARIABLESCALE  = $40000000;
+
+type
+  DBCOLUMNFLAGSENUM_SS_100 = TOleEnum;
+const
+  DBCOLUMNFLAGS_SS_ISVARIABLESCALE = $40000000;
+  DBCOLUMNFLAGS_SS_ISCOLUMNSET     = $80000000;
 
 //Forward declarations
 type
@@ -1351,6 +1364,29 @@ type
     second: USHORT;
     fraction: ULONG;
   end;
+  {$ALIGN 8}
+  //This struct is padded to 12 bytes on both 32-bit and 64-bit operating systems.
+  PDBTIME2 = ^TDBTIME2;
+  TDBTIME2 = record
+    hour:     USHORT;
+    minute:   USHORT;
+    second:   USHORT;
+    fraction: ULONG;
+  end;
+
+  DBTIMESTAMPOFFSET = record
+    year:           SHORT;
+    month:          USHORT;
+    day:            USHORT;
+    hour:           USHORT;
+    minute:         USHORT;
+    second:         USHORT;
+    fraction:       ULONG;
+    timezone_hour:  SHORT;
+    timezone_minute:SHORT;
+  end;
+
+
 {end:-----------------------used by zeos---------------------------------------}
 (*
  PTYPEATTR = ^TYPEATTR;

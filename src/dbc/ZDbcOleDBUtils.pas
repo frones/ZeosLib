@@ -154,7 +154,7 @@ begin
     DBTYPE_UDT:         Result := stUnknown;
     DBTYPE_DBDATE:      Result := stDate;
     DBTYPE_DBTIME,
-    DBTYPE_DB_SS_TIME2: Result := stTime;
+    DBTYPE_DBTIME2:     Result := stTime;
     DBTYPE_DBTIMESTAMP:	Result := stTimeStamp;
     DBTYPE_FILETIME:    Result := stTimeStamp;
     DBTYPE_PROPVARIANT: Result := stString;
@@ -224,7 +224,7 @@ begin
     DBTYPE_UDT:         Result := stUnknown;
     DBTYPE_DBDATE:      Result := stDate;
     DBTYPE_DBTIME,
-    DBTYPE_DB_SS_TIME2: Result := stTime;
+    DBTYPE_DBTIME2: Result := stTime;
     DBTYPE_DBTIMESTAMP:	Result := stTimeStamp;
     DBTYPE_FILETIME:    Result := stTimeStamp;
     DBTYPE_PROPVARIANT: Result := stString;
@@ -391,7 +391,7 @@ begin
     DBTYPE_FILETIME: Result := DBTYPE_DATE;
     //DBTYPE_PROPVARIANT	= 138;
     DBTYPE_VARNUMERIC: Result := DBTYPE_R8;
-    DBTYPE_DB_SS_TIME2: Result := DBTYPE_DBTIME;
+    DBTYPE_DBTIME2: Result := DBTYPE_DBTIME2;
   end;
 end;
 
@@ -462,8 +462,8 @@ var
     else
       DBBindingArray[Index].eParamIO := DBPARAMIO_OUTPUT;
     DBBindingArray[Index].dwFlags :=  ParamInfoArray^[Index].dwFlags; //set found flags to indicate long types too
-    DBBindingArray[Index].bPrecision := ParamInfoArray^[Index].bPrecision; //looks nice ... but do we need it?
-    DBBindingArray[Index].bScale := ParamInfoArray^[Index].bScale; //looks nice ... but do we need it?
+    DBBindingArray[Index].bPrecision := ParamInfoArray^[Index].bPrecision;
+    DBBindingArray[Index].bScale := ParamInfoArray^[Index].bScale;
   end;
 begin
   LobBufCount := 0;
@@ -540,8 +540,8 @@ var
       end
       else
       begin { fixed types do not need a length indicator }
-       // DBBindingArray[Index].bPrecision := DBCOLUMNINFO^.bPrecision;
-        //DBBindingArray[Index].bScale := DBCOLUMNINFO^.bScale;
+        DBBindingArray[Index].bPrecision := DBCOLUMNINFO^.bPrecision;
+        DBBindingArray[Index].bScale := DBCOLUMNINFO^.bScale;
         DBBindingArray[Index].cbMaxLen := DBCOLUMNINFO^.ulColumnSize;
         DBBindingArray[Index].obValue := DBBindingArray[Index].obLength;
         DBBindingArray[Index].dwPart := DBPART_VALUE or DBPART_STATUS;
@@ -823,6 +823,13 @@ begin
           DecodeTime(ClientVarManager.GetAsDateTime(InParamValues[i]),
             PDBTime(Data)^.hour, PDBTime(Data)^.minute, PDBTime(Data)^.second,
             MilliSecond);
+        DBTYPE_DBTIME2:
+          begin
+            DecodeTime(ClientVarManager.GetAsDateTime(InParamValues[i]),
+              PDBTIME2(Data)^.hour, PDBTIME2(Data)^.minute, PDBTIME2(Data)^.second,
+              MilliSecond);
+              PDBTIME2(Data)^.fraction := Millisecond * 1000000;
+          end;
         DBTYPE_DBTIMESTAMP:
           begin
             DecodeDate(ClientVarManager.GetAsDateTime(InParamValues[i]), Year,
@@ -832,7 +839,7 @@ begin
               PDBTimeStamp(Data)^.hour, PDBTimeStamp(Data)^.minute,
               PDBTimeStamp(Data)^.second, MilliSecond);
             if SupportsMilliSeconds then
-              PDBTimeStamp(Data)^.fraction := MilliSecond*1000*1000
+              PDBTimeStamp(Data)^.fraction := MilliSecond*1000000
             else
               PDBTimeStamp(Data)^.fraction := 0;
           end;
@@ -1902,6 +1909,49 @@ begin
                   raise EZSQLException.Create(IntToStr(Ord(SQLType))+' '+SUnsupportedParameterType);
               end;
               DecodeTime(DateTimeTemp, PDBTime(Data)^.hour, PDBTime(Data)^.minute, PDBTime(Data)^.second, MilliSecond);
+            end;
+          DBTYPE_DBTIME2:
+            begin
+              case SQLType of
+                stBoolean:    DateTimeTemp := Ord(ZBooleanArray[ArrayOffSet]);
+                stByte:       DateTimeTemp := ZByteArray[ArrayOffSet];
+                stShort:      DateTimeTemp := ZShortIntArray[ArrayOffSet];
+                stWord:       DateTimeTemp := ZWordArray[ArrayOffSet];
+                stSmall:      DateTimeTemp := ZSmallIntArray[ArrayOffSet];
+                stLongWord:   DateTimeTemp := ZLongWordArray[ArrayOffSet];
+                stInteger:    DateTimeTemp := ZIntegerArray[ArrayOffSet];
+                stLong:       DateTimeTemp := ZInt64Array[ArrayOffSet];
+                stULong:      DateTimeTemp := ZUInt64Array[ArrayOffSet];
+                stFloat:      DateTimeTemp := ZSingleArray[ArrayOffSet];
+                stDouble:     DateTimeTemp := ZDoubleArray[ArrayOffSet];
+                stCurrency:   DateTimeTemp := ZCurrencyArray[ArrayOffSet];
+                stBigDecimal: DateTimeTemp := ZExtendedArray[ArrayOffSet];
+                stString, stUnicodeString:
+                  case InParamValues[i].VArray.VArrayVariantType of
+                    vtString:
+                      DateTimeTemp := ClientVarManager.GetAsDateTime(EncodeString(ZStringArray[ArrayOffSet]));
+                    vtAnsiString:
+                      DateTimeTemp := ClientVarManager.GetAsDateTime(EncodeAnsiString(ZAnsiStringArray[ArrayOffSet]));
+                    vtUTF8String:
+                      DateTimeTemp := ClientVarManager.GetAsDateTime(EncodeUTF8String(ZUTF8StringArray[ArrayOffSet]));
+                    vtRawByteString:
+                      DateTimeTemp := ClientVarManager.GetAsDateTime(EncodeRawByteString(ZRawByteStringArray[ArrayOffSet]));
+                    vtUnicodeString:
+                      DateTimeTemp := ClientVarManager.GetAsDateTime(EncodeUnicodeString(ZUnicodeStringArray[ArrayOffSet]));
+                    vtCharRec:
+                      DateTimeTemp := ClientVarManager.GetAsDateTime(EncodeCharRec(ZCharRecArray[ArrayOffSet]));
+                    else
+                      raise Exception.Create('Unsupported String Variant');
+                  end;
+                stTime, stDate, stTimeStamp:
+                  DateTimeTemp := ZDateTimeArray[ArrayOffSet];
+                else
+                  raise EZSQLException.Create(IntToStr(Ord(SQLType))+' '+SUnsupportedParameterType);
+              end;
+              DecodeTime(DateTimeTemp,
+                PDBTIME2(Data)^.hour, PDBTIME2(Data)^.minute, PDBTIME2(Data)^.second,
+                MilliSecond);
+                PDBTIME2(Data)^.fraction := Millisecond * 1000000;
             end;
           DBTYPE_DBTIMESTAMP:
             begin
