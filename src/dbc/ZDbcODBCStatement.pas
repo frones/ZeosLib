@@ -538,8 +538,16 @@ var
   end;
   procedure SetTime(D: TDateTime);
   begin
-    DecodeTime(D, PSQL_TIME_STRUCT(ParameterDataPtr)^.hour, PSQL_TIME_STRUCT(ParameterDataPtr)^.minute,
-      PSQL_TIME_STRUCT(ParameterDataPtr)^.second, fraction);
+    if Param.C_DataType = SQL_C_BINARY then begin
+      //https://bytes.com/topic/sql-server/answers/851494-sql-state-22003-numeric-value-out-range-time-data-type
+      PSQLLEN(StrLen_or_IndPtr)^ := SizeOf(TSQL_SS_TIME2_STRUCT);
+      DecodeTime(D, PSQL_SS_TIME2_STRUCT(ParameterDataPtr)^.hour, PSQL_SS_TIME2_STRUCT(ParameterDataPtr)^.minute,
+        PSQL_SS_TIME2_STRUCT(ParameterDataPtr)^.second, fraction);
+      //https://msdn.microsoft.com/de-de/library/bb677243%28v=sql.120%29.aspx
+      PSQL_SS_TIME2_STRUCT(ParameterDataPtr)^.fraction := fraction*1000000;
+    end else
+      DecodeTime(D, PSQL_TIME_STRUCT(ParameterDataPtr)^.hour, PSQL_TIME_STRUCT(ParameterDataPtr)^.minute,
+        PSQL_TIME_STRUCT(ParameterDataPtr)^.second, fraction);
     Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
     Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
   end;
@@ -548,11 +556,9 @@ var
     DecodeDateTime(D, Year, PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.day,
       PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.hour, PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.second, fraction);
     PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.year := year;
-    if Param.DecimalDigits = 7 then
-      PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.fraction := fraction*10000
-    else
+    PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.fraction := fraction*1000000;
       //https://social.msdn.microsoft.com/Forums/sqlserver/en-US/ac1b5a6d-5e64-4603-9c92-b75ba4e51bf2/error-22008-datetime-field-overflow-when-inserting-a-record-with-datetime2-field-via-odbc?forum=sqldataaccess
-      PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.fraction := 0;//puff what a shit: fraction available but can't be set???;
+    //PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.fraction := 0;//puff what a shit: fraction available but can't be set???;
     Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
     Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
   end;
@@ -1676,6 +1682,12 @@ begin
         end;
         if Value.VType = vtNull then begin
           PSQLLEN(StrLen_or_IndPtr)^ := SQL_NULL_DATA;
+          if Param.SQLType in [stDate, stTimeStamp] then begin//year 0.0.0 is invalid also for NULL
+            PSQL_DATE_STRUCT(ParameterDataPtr)^.year := 1899;
+            PSQL_DATE_STRUCT(ParameterDataPtr)^.month := 12;
+            PSQL_DATE_STRUCT(ParameterDataPtr)^.day := 31;
+          end;
+
           Inc(PAnsiChar(ParameterDataPtr), Param.BufferSize);
         end else begin
           PSQLLEN(StrLen_or_IndPtr)^ := SQL_NO_NULLS;
@@ -1833,7 +1845,7 @@ begin
       if (Param.CurrParamDataPtr <> Param.LastParamDataPtr) or
          (Param.CurrStrLen_or_IndPtr <> Param.LastStrLen_or_IndPtr) then begin //..Bindings remain in effect until the application calls SQLBindParameter again...oslt.
         CheckStmtError(fPlainDriver.BindParameter(fHSTMT, I+1,//0=bookmark and Params do starts with 1
-          Param.InputDataType, Param.C_DataType, Param.DataType, Param.ColumnSize, Param.DecimalDigits * Ord(Param.SQLType in [stDouble, stTimeStamp]),
+          Param.InputDataType, Param.C_DataType, Param.DataType, Param.ColumnSize, Param.DecimalDigits * Ord(Param.SQLType in [stDouble, stTime, stTimeStamp]),
             Param.CurrParamDataPtr, Param.BufferSize, Param.CurrStrLen_or_IndPtr));
         Param.LastParamDataPtr := Param.CurrParamDataPtr;
         Param.LastStrLen_or_IndPtr := Param.CurrStrLen_or_IndPtr;
@@ -1921,7 +1933,8 @@ begin
       //now assign minimal conversion datatypes
       fParamInfos[ParameterNumber].DataType := ConvertSQLTypeToODBCType(fParamInfos[ParameterNumber].SQLType,
                                     fParamInfos[ParameterNumber].DataType, ConSettings^.ClientCodePage^.Encoding);
-      fParamInfos[ParameterNumber].C_DataType := SQL2ODBC_Types[ConSettings^.ClientCodePage^.Encoding = ceUTF16][fParamInfos[ParameterNumber].SQLType];
+      fParamInfos[ParameterNumber].C_DataType := ConvertODBCTypeToODBC_CType(fParamInfos[ParameterNumber].DataType,
+        fParamInfos[ParameterNumber].SQLType in [stByte, stWord, stLongWord, stULong], ConSettings^.ClientCodePage^.Encoding);
       //test for (N)VARCHAR(MAX)/VARBINARY(MAX)
       if (fParamInfos[ParameterNumber].SQLType in [stBytes, stString, stUnicodeString]) and
          (fParamInfos[ParameterNumber].ColumnSize = 0) then
@@ -1930,8 +1943,12 @@ begin
          (not (InParamTypes[ParameterNumber] in [stAsciiStream, stUnicodeStream, stBinaryStream]))));
       //note: Code is prepared to handle any case of Param-Directions  except fetching returned data
       fParamInfos[ParameterNumber].InputDataType := ParamTypeToODBCParamType(pctIn, fParamInfos[ParameterNumber].SQLType, fStreamSupport);
-      fParamInfos[ParameterNumber].BufferSize := CalcBufSize(fParamInfos[ParameterNumber].ColumnSize, fParamInfos[ParameterNumber].SQLType, ConSettings^.ClientCodePage);
-      if (fParamInfos[ParameterNumber].SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
+      fParamInfos[ParameterNumber].BufferSize := CalcBufSize(fParamInfos[ParameterNumber].ColumnSize,
+        fParamInfos[ParameterNumber].C_DataType, fParamInfos[ParameterNumber].SQLType, ConSettings^.ClientCodePage);
+      if fParamInfos[ParameterNumber].SQLType = stTimeStamp then begin
+        fParamInfos[ParameterNumber].ColumnSize := 23;
+        fParamInfos[ParameterNumber].DecimalDigits := 3;
+      end else if (fParamInfos[ParameterNumber].SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
                                                               {1. Intf entry} {cur. array index} {ParameterIndex}
         SetLength(fParamInfos[ParameterNumber].DescBindBuffer, SizeOf(Pointer)+  SizeOf(Integer)+  SizeOf(Integer));
       AllParamsAreArrays := ((ParameterNumber = 0) and (InParamValues[ParameterNumber].VType = vtArray)) or

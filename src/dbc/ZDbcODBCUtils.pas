@@ -69,15 +69,15 @@ function ConvertODBCTypeToSQLType(ODBCType: SQLSMALLINT; SQLType: TZSQLType;
 function ConvertODBCTypeToSQLType(ODBCType: SQLSMALLINT; UnSigned: Boolean;
   CtrlsCPType: TZControlsCodePage): TZSQLType; overload;
 
-function ConvertODBC_CTypeToSQLType(ODBC_CType: SQLSMALLINT;
-  CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertODBC_CTypeToSQLType(ODBC_CType: SQLSMALLINT; CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertODBCTypeToODBC_CType(ODBCType: SQLSMALLINT; UnSigned: Boolean; CharEncoding: TZCharEncoding): SQLSMALLINT;
 
 function ConvertSQLTypeToODBCType(SQLType: TZSQLType; DescribedSQLType: SQLSMALLINT; CharEncoding: TZCharEncoding): SQLSMALLINT;
 
 function ParamTypeToODBCParamType(ParamType: TZProcedureColumnType; SQLType: TZSQLType;
   StreamSupport: Boolean): SQLSMALLINT;
 
-function CalcBufSize(ColumnSize: SQLSMALLINT; SQLType: TZSQLType;
+function CalcBufSize(ColumnSize, ODBC_CType: SQLSMALLINT; SQLType: TZSQLType;
   ClientCodePage: PZCodePage): SQLSMALLINT;
 
 { macros of sqlext.h }
@@ -89,26 +89,11 @@ procedure CheckODBCError(RETCODE: SQLRETURN; Handle: SQLHANDLE;
 
 function GetConnectionString(WindowHandle: SQLHWND; InConnectionString, LibraryLocation: String): String;
 
-const SQL2ODBC_Types: array[Boolean, TZSQLType] of SQLSMALLINT =
-  ((SQL_TYPE_NULL, SQL_C_BIT,
-    SQL_C_UTINYINT, SQL_C_TINYINT, SQL_C_USHORT, SQL_C_SSHORT, SQL_C_ULONG, SQL_C_SLONG, SQL_C_UBIGINT, SQL_C_SBIGINT,
-    SQL_C_FLOAT, SQL_C_DOUBLE, SQL_C_DOUBLE, SQL_C_DOUBLE,
-    SQL_C_DATE, SQL_C_TIME, SQL_C_TYPE_TIMESTAMP,
-    SQL_C_GUID,
-    SQL_C_CHAR, SQL_C_CHAR, SQL_C_BINARY,
-    SQL_C_CHAR, SQL_C_CHAR, SQL_C_BINARY,
-    SQL_TYPE_NULL, SQL_TYPE_NULL),
-  (SQL_TYPE_NULL, SQL_C_BIT,
-    SQL_C_UTINYINT, SQL_C_TINYINT, SQL_C_USHORT, SQL_C_SSHORT, SQL_C_ULONG, SQL_C_SLONG, SQL_C_UBIGINT, SQL_C_SBIGINT,
-    SQL_C_FLOAT, SQL_C_DOUBLE, SQL_C_DOUBLE, SQL_C_DOUBLE,
-    SQL_C_DATE, SQL_C_TIME, SQL_C_TYPE_TIMESTAMP,
-    SQL_C_GUID,
-    SQL_C_WCHAR, SQL_C_WCHAR, SQL_C_BINARY,
-    SQL_C_WCHAR, SQL_C_WCHAR, SQL_C_BINARY,
-    SQL_TYPE_NULL, SQL_TYPE_NULL));
-
+const
   LobArrayIndexOffSet = NativeUInt(SizeOf(Pointer));
   LobParameterIndexOffSet = LobArrayIndexOffSet+NativeUInt(SizeOf(Integer));
+  SQL_SS_TIME2ScaleFactor: array[0..7] of word = (1,1,1,10,10,10,100,10);
+  SQL_SS_TIME2ScaleDevisor: array[0..7] of word = (10,10,10,1,1,1,1,1);
 
 implementation
 
@@ -289,8 +274,14 @@ begin
     SQL_GUID:           Result := stGUID;
     SQL_TYPE_DATE:      Result := stDate;
     SQL_TYPE_TIME:      Result := stTime;
-    SQL_TYPE_TIMESTAMP: if not ((SQLType <> stTimeStamp) and (SQLType in [stDate, stTime])) then
+    SQL_TYPE_TIMESTAMP: //if not ((SQLType <> stTimeStamp) and (SQLType in [stDate, stTime])) then
                           Result := stTimeStamp;
+    //SQL_TYPE_VARIANT:;
+    //SQL_SS_UDT:;
+    SQL_SS_XML:         Result := stAsciiStream;
+    SQL_SS_TABLE:       Result := stDataSet;
+    SQL_SS_TIME2:       Result := stTime;
+    SQL_SS_TIMESTAMPOFFSET: Result := stTimeStamp;
   end;
   if (Result = stString) and (CtrlsCPType = cCP_UTF16) then
     Result := stUnicodeString
@@ -338,7 +329,7 @@ begin
     SQL_GUID:           Result := stGUID;
     SQL_TYPE_DATE:      Result := stDate;
     SQL_TYPE_TIME,
-    SS_TIME2:           Result := stTime;
+    SQL_SS_TIME2:       Result := stTime;
     SQL_TYPE_TIMESTAMP: Result := stTimeStamp;
   end;
   if (Result = stString) and (CtrlsCPType = cCP_UTF16) then
@@ -365,7 +356,8 @@ begin
     SQL_C_TYPE_DATE:            Result := stDate;
 
     SQL_C_TIME,
-    SQL_C_TYPE_TIME:            Result := stTime;
+    SQL_C_TYPE_TIME,
+    SQL_C_SS_TIME2:             Result := stTime;
     SQL_C_TIMESTAMP,
     SQL_C_TYPE_TIMESTAMP,
     SQL_C_INTERVAL_YEAR,
@@ -380,7 +372,8 @@ begin
     SQL_C_INTERVAL_DAY_TO_SECOND,
     SQL_C_INTERVAL_HOUR_TO_MINUTE,
     SQL_C_INTERVAL_HOUR_TO_SECOND,
-    SQL_C_INTERVAL_MINUTE_TO_SECOND:  Result := stTimeStamp;
+    SQL_C_INTERVAL_MINUTE_TO_SECOND,
+    SQL_C_SS_TIMESTAMPOFFSET:         Result := stTimeStamp;
     SQL_C_BINARY:                     Result := stBytes;
     SQL_C_BIT:                        Result := stBoolean;
     SQL_C_SBIGINT:                    Result := stLong;
@@ -394,9 +387,63 @@ begin
   { BOOKMARK         }
     SQL_C_GUID:                       Result := stGUID;
     SQL_TYPE_NULL: ;
+
+
   end;
   if (Result = stString) and (CtrlsCPType = cCP_UTF16) then
     Result := stUnicodeString
+end;
+
+function ConvertODBCTypeToODBC_CType(ODBCType: SQLSMALLINT; UnSigned: Boolean;
+  CharEncoding: TZCharEncoding): SQLSMALLINT;
+begin
+  Result := SQL_TYPE_NULL;
+  case ODBCType of
+    SQL_NUMERIC,
+    SQL_DECIMAL:        REsult := SQL_C_DOUBLE;
+    SQL_INTEGER:        if Unsigned then
+                          Result := SQL_C_ULONG else
+                          Result := SQL_C_LONG;
+    SQL_SMALLINT:       if Unsigned then
+                          Result := SQL_C_USHORT else
+                          Result := SQL_C_SSHORT;
+    SQL_FLOAT,
+    SQL_DOUBLE:         Result := SQL_C_DOUBLE;
+    SQL_REAL:           Result := SQL_C_FLOAT;
+    SQL_DATETIME:       Result := SQL_C_TIMESTAMP;
+    SQL_CHAR,
+    SQL_VARCHAR,
+    SQL_WCHAR,
+    SQL_WVARCHAR,
+    SQL_WLONGVARCHAR,
+    SQL_LONGVARCHAR:   if CharEncoding = ceUTF16 then
+                          Result := SQL_C_WCHAR else
+                          Result := SQL_C_CHAR;
+    SQL_TIME:           Result := SQL_C_TYPE_TIME;
+    SQL_TIMESTAMP:      Result := SQL_C_TIMESTAMP;
+    SQL_BINARY,
+    SQL_VARBINARY,
+    SQL_LONGVARBINARY:  Result := SQL_C_BINARY;
+    SQL_BIGINT:         if Unsigned then
+                          Result := SQL_C_UBIGINT else
+                          Result := SQL_C_SBIGINT;
+    SQL_TINYINT:        if Unsigned then
+                          Result := SQL_C_UTINYINT else
+                          Result := SQL_C_STINYINT;
+    SQL_BIT:            Result := SQL_C_BIT;
+    SQL_GUID:           Result := SQL_C_GUID;
+    SQL_TYPE_DATE:      Result := SQL_C_TYPE_DATE;
+    SQL_TYPE_TIME:      Result := SQL_C_TYPE_TIME;
+    SQL_TYPE_TIMESTAMP: Result := SQL_C_TYPE_TIMESTAMP;
+    SQL_TYPE_VARIANT,
+    SQL_SS_UDT:         Result := SQL_TYPE_NULL;
+    SQL_SS_XML:         if CharEncoding = ceUTF16 then
+                          Result := SQL_C_WCHAR else
+                          Result := SQL_C_CHAR;
+    SQL_SS_TABLE:   Result := SQL_TYPE_NULL;
+    SQL_SS_TIME2:   Result := SQL_C_BINARY;
+    SQL_SS_TIMESTAMPOFFSET: Result := SQL_C_TYPE_TIMESTAMP;
+  end;
 end;
 
 function ConvertSQLTypeToODBCType(SQLType: TZSQLType;
@@ -429,7 +476,9 @@ begin
     stBytes:                            Result := SQL_VARBINARY;
     stGUID:                             Result := SQL_GUID;
     stDate:                             Result := SQL_TYPE_DATE;
-    stTime:                             Result := SQL_TYPE_TIME;
+    stTime:                             if DescribedSQLType = SQL_SS_TIME2 then
+                                          Result := SQL_SS_TIME2 else
+                                          Result := SQL_TYPE_TIME;
     stTimestamp:                        Result := SQL_TYPE_TIMESTAMP;
     stAsciiStream, stUnicodeStream:
       if Ord(CharEncoding) >= Ord(ceUTF16) then
@@ -446,7 +495,7 @@ begin
   end;
 end;
 
-function CalcBufSize(ColumnSize: SQLSMALLINT; SQLType: TZSQLType;
+function CalcBufSize(ColumnSize, ODBC_CType: SQLSMALLINT; SQLType: TZSQLType;
   ClientCodePage: PZCodePage): SQLSMALLINT;
 begin
   Result := ColumnSize;
@@ -463,7 +512,9 @@ begin
         Result := Result*ClientCodePage^.CharWidth +1;
     stGUID:                     Result := SizeOf(TGUID);
     stDate:                     Result := SizeOf(TSQL_DATE_STRUCT);
-    stTime:                     Result := SizeOf(TSQL_TIME_STRUCT);
+    stTime:                     if ODBC_CType = SQL_C_BINARY then
+                                  Result := SizeOf(TSQL_SS_TIME2_STRUCT) else
+                                  Result := SizeOf(TSQL_TIME_STRUCT);
     stTimestamp:                Result := SizeOf(TSQL_TIMESTAMP_STRUCT);
     stAsciiStream,
     stUnicodeStream,

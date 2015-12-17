@@ -332,9 +332,8 @@ begin
                                             JSONWriter.Add('"');
                                           end;
                           SQLITE3_TEXT  : begin
-                                            P := FPlainDriver.column_text(FStmtHandle, C);
                                             JSONWriter.Add('"');
-                                            JSONWriter.AddJSONEscape(P);
+                                            JSONWriter.AddJSONEscape(FPlainDriver.column_text(FStmtHandle, C));
                                             JSONWriter.Add('"');
                                           end;
                           SQLITE_BLOB   : JSONWriter.WrBase64(FPlainDriver.column_blob(FStmtHandle,C),

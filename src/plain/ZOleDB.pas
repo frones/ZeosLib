@@ -480,7 +480,8 @@ const
 	DBTYPE_DBDATE	= 133;
 	DBTYPE_DBTIME	= 134;
 	DBTYPE_DBTIMESTAMP	= 135;
-
+  {SQL Server types only }
+  DBTYPE_DB_SS_TIME2 = 145;
 // DBTYPEENUM15 constants from oledb.h
 //@@@+ V1.5
 type

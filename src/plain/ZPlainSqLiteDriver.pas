@@ -424,8 +424,7 @@ type
   IZSQLitePlainDriver = interface (IZPlainDriver)
     ['{B931C952-3076-4ECB-9630-D900E8DB9869}']
 
-    function Open(const filename: PAnsiChar; mode: Integer;
-      var errmsg: PAnsiChar): Psqlite;
+    function Open(const filename: PAnsiChar): Psqlite;
     function Close(db: Psqlite): Integer;
     function Execute(db: Psqlite; const sql: PAnsiChar;
       sqlite_callback: Tsqlite_callback; arg: Pointer;
@@ -547,8 +546,7 @@ type
   public
     constructor Create;
 
-    function Open(const filename: PAnsiChar; {%H-}mode: Integer;
-      var {%H-}errmsg: PAnsiChar): Psqlite;
+    function Open(const filename: PAnsiChar): Psqlite;
     function Close(db: Psqlite): Integer;
     function Execute(db: Psqlite; const sql: PAnsiChar;
       sqlite_callback: Tsqlite_callback; arg: Pointer;
@@ -862,16 +860,14 @@ begin
   Result := SQLite_API.sqlite_libversion;
 end;
 
-function TZSQLiteBaseDriver.Open(const filename: PAnsiChar; mode: Integer;
-  var errmsg: PAnsiChar): Psqlite;
-var
-  Result0: Psqlite;
+function TZSQLiteBaseDriver.Open(const filename: PAnsiChar): Psqlite;
 {$IFNDEF UNICODE}
+var
   Version: string;
   FileNameString: String;
 {$ENDIF}
 begin
-  Result0:= nil;
+  Result:= nil;
   (*Note to Windows users: The encoding used for the filename argument of
     sqlite3_open() and sqlite3_open_v2() must be UTF-8, not whatever codepage
     is currently defined. Filenames containing international characters must
@@ -879,20 +875,19 @@ begin
     sqlite3_open_v2(). *)
 
 {$IFDEF UNICODE}
-  SQLite_API.sqlite_open(filename, Result0);
+  SQLite_API.sqlite_open(filename, Result);
 {$ELSE}
   Version := LibVersion;
   FileNameString := filename;
   if (Version > '3.2.5') then
     {$IFDEF FPC}
-      SQLite_API.sqlite_open(PAnsiChar(FileNameString), Result0)
+      SQLite_API.sqlite_open(PAnsiChar(FileNameString), Result)
     {$ELSE}
-      SQLite_API.sqlite_open(PAnsiChar(AnsiToUTF8(FileNameString)), Result0)
+      SQLite_API.sqlite_open(PAnsiChar(AnsiToUTF8(FileNameString)), Result)
     {$ENDIF}
   else
-    SQLite_API.sqlite_open(filename, Result0);
+    SQLite_API.sqlite_open(filename, Result);
 {$ENDIF}
-  Result := Result0;
 end;
 
 function TZSQLiteBaseDriver.OpenEncrypted(const zFilename, pKey: PAnsiChar;

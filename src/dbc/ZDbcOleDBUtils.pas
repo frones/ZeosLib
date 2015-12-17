@@ -153,7 +153,8 @@ begin
     DBTYPE_NUMERIC:     Result := stDouble;
     DBTYPE_UDT:         Result := stUnknown;
     DBTYPE_DBDATE:      Result := stDate;
-    DBTYPE_DBTIME:      Result := stTime;
+    DBTYPE_DBTIME,
+    DBTYPE_DB_SS_TIME2: Result := stTime;
     DBTYPE_DBTIMESTAMP:	Result := stTimeStamp;
     DBTYPE_FILETIME:    Result := stTimeStamp;
     DBTYPE_PROPVARIANT: Result := stString;
@@ -222,7 +223,8 @@ begin
     DBTYPE_NUMERIC:     Result := stDouble;
     DBTYPE_UDT:         Result := stUnknown;
     DBTYPE_DBDATE:      Result := stDate;
-    DBTYPE_DBTIME:      Result := stTime;
+    DBTYPE_DBTIME,
+    DBTYPE_DB_SS_TIME2: Result := stTime;
     DBTYPE_DBTIMESTAMP:	Result := stTimeStamp;
     DBTYPE_FILETIME:    Result := stTimeStamp;
     DBTYPE_PROPVARIANT: Result := stString;
@@ -389,6 +391,7 @@ begin
     DBTYPE_FILETIME: Result := DBTYPE_DATE;
     //DBTYPE_PROPVARIANT	= 138;
     DBTYPE_VARNUMERIC: Result := DBTYPE_R8;
+    DBTYPE_DB_SS_TIME2: Result := DBTYPE_DBTIME;
   end;
 end;
 
@@ -537,6 +540,8 @@ var
       end
       else
       begin { fixed types do not need a length indicator }
+       // DBBindingArray[Index].bPrecision := DBCOLUMNINFO^.bPrecision;
+        //DBBindingArray[Index].bScale := DBCOLUMNINFO^.bScale;
         DBBindingArray[Index].cbMaxLen := DBCOLUMNINFO^.ulColumnSize;
         DBBindingArray[Index].obValue := DBBindingArray[Index].obLength;
         DBBindingArray[Index].dwPart := DBPART_VALUE or DBPART_STATUS;

@@ -279,11 +279,10 @@ begin
   LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
 
   SQL := {$IFDEF UNICODE}UTF8String{$ENDIF}(Database);
-  FHandle := GetPlainDriver.Open(Pointer(SQL), 0, ErrorMessage);
+  FHandle := GetPlainDriver.Open(Pointer(SQL));
 
   if FHandle = nil then
-    CheckSQLiteError(GetPlainDriver, FHandle, SQLITE_ERROR, ErrorMessage,
-      lcConnect, LogMessage, ConSettings);
+    CheckSQLiteError(GetPlainDriver, FHandle, SQLITE_ERROR, nil, lcConnect, LogMessage, ConSettings);
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
   { Turn on encryption if requested }

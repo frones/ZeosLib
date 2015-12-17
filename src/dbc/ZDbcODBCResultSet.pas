@@ -89,6 +89,7 @@ type
     fIsUnicodeDriver: Boolean;
     fFreeHandle, fCursorOpened: Boolean;
     fFixedWidthStrings, fBoundColumns: TBooleanDynArray;
+    fODBC_CTypes: array of SQLSMALLINT;
     fRowBlobs: array of IZBlob; //row wise storage of unbound lobs
     fSQL_GETDATA_EXTENSIONS: SQLUINTEGER;
     fFirstGetDataIndex: Integer;
@@ -267,8 +268,12 @@ begin
         stGUID:       JSONWriter.Add(PGUID(fColDataPtr)^);
         stTime:       begin
                         JSONWriter.Add('"');
-                        JSONWriter.AddDateTime(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-                          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
+                        if fODBC_CTypes[C] = SQL_C_BINARY then
+                          JSONWriter.AddDateTime(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                            PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
+                        else
+                          JSONWriter.AddDateTime(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                            PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
                         JSONWriter.Add('"');
                       end;
         stDate:       begin
@@ -426,9 +431,12 @@ begin
       stDouble,
       stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^ <> 0;
-      stTime:
-        Result := EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0) <> 0;
+      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+                      Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000) <> 0
+                    else
+                      Result := EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0) <> 0;
       stDate:
         Result := EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
           PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day) <> 0;
@@ -471,9 +479,12 @@ begin
       stDouble,
       stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:
-        Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
+      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+                      Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
+                    else
+                      Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
       stDate:
         Result := Trunc(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
           PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day));
@@ -572,9 +583,12 @@ begin
       stDouble,
       stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
-      stTime:
-        Result := EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0);
+      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+                      Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000)
+                    else
+                      Result := EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0);
       stDate:
         Result := EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
           PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day);
@@ -617,9 +631,12 @@ begin
       stDouble,
       stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
-      stTime:
-        Result := EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0);
+      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+                      Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000)
+                    else
+                      Result := EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0);
       stDate:
         Result := EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
           PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day);
@@ -662,9 +679,12 @@ begin
       stDouble,
       stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:
-        Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
+      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+                      Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
+                    else
+                      Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
       stDate:
         Result := Trunc(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
           PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day));
@@ -707,9 +727,12 @@ begin
       stDouble,
       stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:
-        Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
+      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+                      Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
+                    else
+                      Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
       stDate:
         Result := Trunc(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
           PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day));
@@ -752,9 +775,12 @@ begin
       stDouble,
       stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:
-        Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
+      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+                      Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
+                    else
+                      Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
       stDate:
         Result := Trunc(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
           PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day));
@@ -801,10 +827,12 @@ begin
       stBigDecimal: Result := FloatToSQLRaw(PDouble(fColDataPtr)^);
       stBytes:      SetString(Result, PAnsiChar(fColDataPtr), fStrLen_or_Ind);
       stGUID:       Result := GUIDToRaw(PGUID(fColDataPtr)^);
-      stTime:
-        Result := DateTimeToRawSQLTime(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0),
-            ConSettings.DisplayFormatSettings, False);
+      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+                      DateTimeToRawSQLTime(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000), ConSettings.DisplayFormatSettings, False)
+                    else
+                      DateTimeToRawSQLTime(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0),ConSettings.DisplayFormatSettings, False);
       stDate:
         Result := DateTimeToRawSQLDate(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
           PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day),
@@ -846,9 +874,12 @@ begin
       stDouble,
       stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:
-        Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
+      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+                      Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
+                    else
+                      Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
       stDate:
         Result := Trunc(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
           PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day));
@@ -891,9 +922,12 @@ begin
       stDouble,
       stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:
-        Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
+      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+                      Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
+                    else
+                      Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
       stDate:
         Result := Trunc(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
           PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day));
@@ -946,13 +980,16 @@ begin
       stDouble,
       stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
-      stTime:
-        Result := EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0);
+      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+                      Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000)
+                    else
+                      Result := EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0);
       stTimeStamp:
         Result := EncodeTime(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction);
+          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction div 1000000);
       stString, stUnicodeString: begin
           InternalDecTrailingSpaces(ColumnIndex);
           if fIsUnicodeDriver then
@@ -987,9 +1024,12 @@ begin
       stDouble,
       stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
-      stTime:
-        Result := EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0);
+      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+                      Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000)
+                    else
+                      Result := EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0);
       stDate:
         Result := EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
           PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day);
@@ -998,7 +1038,7 @@ begin
           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.day)+
           EncodeTime(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction div 10000);
+          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction div 1000000);
       stString, stUnicodeString: begin
           InternalDecTrailingSpaces(ColumnIndex);
           if fIsUnicodeDriver then
@@ -1032,9 +1072,12 @@ begin
       stDouble,
       stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:
-        Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
+      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+                      Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
+                    else
+                      Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
       stDate:
         Result := Trunc(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
           PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day));
@@ -1084,10 +1127,12 @@ begin
           Result := ASCII7ToUnicodeString(Pointer(fRawTemp), fStrLen_or_Ind);
         end;
       stGUID:       Result := GUIDToUnicode(PGUID(fColDataPtr)^);
-      stTime:
-        Result := DateTimeToUnicodeSQLTime(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0),
-            ConSettings.DisplayFormatSettings, False);
+      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+                      DateTimeToUnicodeSQLTime(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000), ConSettings.DisplayFormatSettings, False)
+                    else
+                      DateTimeToUnicodeSQLTime(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0),ConSettings.DisplayFormatSettings, False);
       stDate:
         Result := DateTimeToUnicodeSQLDate(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
           PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day),
@@ -1153,9 +1198,12 @@ begin
       stDouble,
       stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:
-        Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
+      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+                      Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
+                    else
+                      Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
       stDate:
         Result := Trunc(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
           PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day));
@@ -1202,12 +1250,12 @@ begin
     StrLen_or_IndPtr := Pointer(fColumnBuffers[ColumnIndex]);
     if not fBoundColumns[ColumnIndex] then //some drivers allow GetData in mixed order so check it!
       if Ord(fSQLTypes[ColumnIndex]) < Ord(stAsciiStream) then //move data to buffers
-        CheckStmtError(fPlainDriver.GetData(fPHSTMT^, ColumnIndex+1, SQL2ODBC_Types[ConSettings^.ClientCodePage^.Encoding = ceUTF16][fSQLTypes[ColumnIndex]],
+        CheckStmtError(fPlainDriver.GetData(fPHSTMT^, ColumnIndex+1, fODBC_CTypes[ColumnIndex],
           {%H-}Pointer({%H-}NativeUInt(StrLen_or_IndPtr)+SizeOf(SQLLEN)), fColumnBuffSizes[ColumnIndex], StrLen_or_IndPtr))
       else begin
         { check out length of lob }
         CheckStmtError(fPlainDriver.GetData(fPHSTMT^, ColumnIndex+1,
-          SQL2ODBC_Types[ConSettings^.ClientCodePage^.Encoding = ceUTF16][fSQLTypes[ColumnIndex]], Pointer(1){can not be nil}, 0, StrLen_or_IndPtr));
+          fODBC_CTypes[ColumnIndex], Pointer(1){can not be nil}, 0, StrLen_or_IndPtr));
         { store the lob -> a second call to same column is impossible for some Drivers }
         if fSQLTypes[ColumnIndex] = stBinaryStream then
           fRowBlobs[ColumnIndex] := TZODBCBlob.Create(ColumnIndex +1, fPHSTMT^, StrLen_or_IndPtr, fChunkSize, fPlainDriver)
@@ -1310,6 +1358,7 @@ begin
     SetLength(fBoundColumns, fColumnCount);
     SetLength(fRowBlobs, fColumnCount);
     SetLength(fFixedWidthStrings, fColumnCount);
+    SetLength(fODBC_CTypes, fColumnCount);
     SetLength(StrBuf, (Max(32,
       Max(fConnection.GetMetaData.GetDataBaseInfo.GetMaxTableNameLength,
         Max(fConnection.GetMetaData.GetDataBaseInfo.GetMaxSchemaNameLength,
@@ -1358,10 +1407,14 @@ begin
         ColumnInfo.Signed := ColNumAttribute(ColumnNumber, SQL_DESC_UNSIGNED) = SQL_FALSE;
         { process TZSQLType }
         bufSQLLEN := ColNumAttribute(ColumnNumber, SQL_DESC_CONCISE_TYPE);
-        ColumnInfo.ColumnType := ConvertODBCTypeToSQLType(bufSQLLEN, not ColumnInfo.Signed, ConSettings^.CPType);
         fFixedWidthStrings[ColumnNumber-1] := (bufSQLLEN = SQL_CHAR) or (bufSQLLEN = SQL_WCHAR);
-        if bufSQLLEN = SQL_TYPE_VARIANT then //SQL Server type
+        if bufSQLLEN = SQL_TYPE_VARIANT then begin//SQL Server type
           ColumnInfo.ColumnType := ConvertODBC_CTypeToSQLType(ColNumAttribute(ColumnNumber, SQL_CA_SS_VARIANT_TYPE), ConSettings^.CPType);
+          fODBC_CTypes[ColumnNumber-1] := ConvertODBCTypeToODBC_CType(ConvertSQLTypeToODBCType(ColumnInfo.ColumnType,SQL_TYPE_VARIANT, ConSettings^.ClientCodePage^.Encoding), not ColumnInfo.Signed, ConSettings^.ClientCodePage^.Encoding);
+        end else begin
+          fODBC_CTypes[ColumnNumber-1] := ConvertODBCTypeToODBC_CType(bufSQLLEN, not ColumnInfo.Signed, ConSettings^.ClientCodePage^.Encoding);
+          ColumnInfo.ColumnType := ConvertODBCTypeToSQLType(bufSQLLEN, not ColumnInfo.Signed, ConSettings^.CPType);
+        end;
         fSQLTypes[ColumnNumber-1] := ColumnInfo.ColumnType;
         {numeric data type infos: }
         if ColumnInfo.ColumnType in [stFloat, stDouble] then begin
@@ -1395,7 +1448,7 @@ begin
       end;
       { calc buf size }
       if not (ColumnInfo.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then begin //streams will be fetched by GetData()
-        fColumnBuffSizes[ColumnNumber-1] := CalcBufSize(ColumnInfo.Precision,
+        fColumnBuffSizes[ColumnNumber-1] := CalcBufSize(ColumnInfo.Precision, fODBC_CTypes[ColumnNumber-1],
           ColumnInfo.ColumnType, ConSettings^.ClientCodePage)+SizeOf(SQLLEN);
         Inc(RowSize, fColumnBuffSizes[ColumnNumber-1]);
       end else begin
@@ -1416,7 +1469,7 @@ begin
         fColumnBuffSizes[ColumnNumber] := fColumnBuffSizes[ColumnNumber]-SizeOf(SQLLEN); // now omit indicator space again
         if (ColumnNumber = 0) or ((ColumnNumber > 0) and fBoundColumns[ColumnNumber-1]) then begin
           CheckStmtError(fPlainDriver.BindCol(fPHSTMT^, ColumnNumber+1,
-            SQL2ODBC_Types[ConSettings^.ClientCodePage^.Encoding = ceUTF16][fSQLTypes[ColumnNumber]], @fColumnBuffers[ColumnNumber][SizeOf(SQLLEN)*fMaxFetchableRows],
+            fODBC_CTypes[ColumnNumber], @fColumnBuffers[ColumnNumber][SizeOf(SQLLEN)*fMaxFetchableRows],
             fColumnBuffSizes[ColumnNumber], @fColumnBuffers[ColumnNumber][0]));
           fBoundColumns[ColumnNumber] := True;
         end;
@@ -1427,8 +1480,7 @@ begin
           if (fSQL_GETDATA_EXTENSIONS and SQL_GD_ANY_COLUMN = SQL_GD_ANY_COLUMN ) //E: (DM) The number of the specified column was less than or equal to the number of the highest bound column
               or NoStreamedColFollows then begin
             CheckStmtError(fPlainDriver.BindCol(fPHSTMT^, ColumnNumber+1,
-              SQL2ODBC_Types[ConSettings^.ClientCodePage^.Encoding = ceUTF16][fSQLTypes[ColumnNumber]],
-              nil, SQL_DATA_AT_EXEC, @fColumnBuffers[ColumnNumber][0]));
+              fODBC_CTypes[ColumnNumber], nil, SQL_DATA_AT_EXEC, @fColumnBuffers[ColumnNumber][0]));
             fBoundColumns[ColumnNumber] := True;
           end;
         if not fBoundColumns[ColumnNumber] then
@@ -1513,6 +1565,7 @@ begin
   else
     ColumnInfo.Nullable := ntNullableUnknown;
   ColumnInfo.ColumnType := ConvertODBCTypeToSQLType(DataType, False, ConSettings^.CPType);
+  fODBC_CTypes[ColumnNumber-1] := ConvertODBCTypeToODBC_CType(DataType, False, ConSettings^.ClientCodePage^.Encoding);
   if ColumnInfo.ColumnType in [stString, stUnicodeString] then
     if Ord(ConSettings^.ClientCodePage^.Encoding) >= Ord(ceUTF16) then
       ColumnInfo.ColumnCodePage := zCP_UTF16
@@ -1625,6 +1678,7 @@ begin
   else
     ColumnInfo.Nullable := ntNullableUnknown;
   ColumnInfo.ColumnType := ConvertODBCTypeToSQLType(DataType, False, ConSettings^.CPType);
+  fODBC_CTypes[ColumnNumber-1] := ConvertODBCTypeToODBC_CType(DataType, False, ConSettings^.ClientCodePage^.Encoding);
   if ColumnInfo.ColumnType in [stString, stUnicodeString] then
     if Ord(ConSettings^.ClientCodePage^.Encoding) >= Ord(ceUTF16) then
       ColumnInfo.ColumnCodePage := zCP_UTF16

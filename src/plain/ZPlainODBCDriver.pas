@@ -137,24 +137,32 @@ type
   PSQLSTATE_W = ^TSQLSTATE_W;
   TSQLSTATE_W = array[0..SQL_SQLSTATE_SIZEW] of SQLCHAR;
 
-  {$A-}
+  {.$A-}
 //* transfer types for DATE, TIME, TIMESTAMP */
   PSQL_DATE_STRUCT = ^TSQL_DATE_STRUCT;
-  TSQL_DATE_STRUCT = record
+  TSQL_DATE_STRUCT = packed record
     year:   SQLSMALLINT;
     month:  SQLUSMALLINT;
     day:    SQLUSMALLINT;
   end;
 
   PSQL_TIME_STRUCT = ^TSQL_TIME_STRUCT;
-  TSQL_TIME_STRUCT = record
+  TSQL_TIME_STRUCT = packed  record
     hour:   SQLUSMALLINT;
     minute: SQLUSMALLINT;
     second: SQLUSMALLINT;
   end;
 
+  PSQL_SS_TIME2_STRUCT = ^TSQL_SS_TIME2_STRUCT;
+  TSQL_SS_TIME2_STRUCT = {packet is wrong! size should be 12 else numeric value out of range } record
+    hour:     SQLUSMALLINT;
+    minute:   SQLUSMALLINT;
+    second:   SQLUSMALLINT;
+    fraction: SQLUINTEGER;
+  end;
+
   PSQL_TIMESTAMP_STRUCT = ^TSQL_TIMESTAMP_STRUCT;
-  TSQL_TIMESTAMP_STRUCT = record
+  TSQL_TIMESTAMP_STRUCT = packed record
     year:     SQLSMALLINT;
     month:    SQLUSMALLINT;
     day:      SQLUSMALLINT;
@@ -164,27 +172,41 @@ type
     fraction: SQLUINTEGER;
   end;
 
-  SQLINTERVAL = (
-    SQL_IS_YEAR             = 1,
-    SQL_IS_MONTH            = 2,
-    SQL_IS_DAY              = 3,
-    SQL_IS_HOUR             = 4,
-    SQL_IS_MINUTE           = 5,
-    SQL_IS_SECOND           = 6,
-    SQL_IS_YEAR_TO_MONTH    = 7,
-    SQL_IS_DAY_TO_HOUR      = 8,
-    SQL_IS_DAY_TO_MINUTE    = 9,
-    SQL_IS_DAY_TO_SECOND    = 10,
-    SQL_IS_HOUR_TO_MINUTE   = 11,
-    SQL_IS_HOUR_TO_SECOND   = 12,
-    SQL_IS_MINUTE_TO_SECOND = 13);
+// New Structure for TIMESTAMPOFFSET
+  TSQL_SS_TIMESTAMPOFFSET_STRUCT = record
+    year:           SQLSMALLINT;
+    month:          SQLUSMALLINT;
+    day:            SQLUSMALLINT;
+    hour:           SQLUSMALLINT;
+    minute:         SQLUSMALLINT;
+    second:         SQLUSMALLINT;
+    fraction:       SQLUINTEGER;
+    timezone_hour:  SQLSMALLINT;
+    timezone_minute:SQLSMALLINT;
+  end;
 
-  SQL_YEAR_MONTH_STRUCT = record
+const
+  SQL_IS_YEAR             = 1;
+  SQL_IS_MONTH            = 2;
+  SQL_IS_DAY              = 3;
+  SQL_IS_HOUR             = 4;
+  SQL_IS_MINUTE           = 5;
+  SQL_IS_SECOND           = 6;
+  SQL_IS_YEAR_TO_MONTH    = 7;
+  SQL_IS_DAY_TO_HOUR      = 8;
+  SQL_IS_DAY_TO_MINUTE    = 9;
+  SQL_IS_DAY_TO_SECOND    = 10;
+  SQL_IS_HOUR_TO_MINUTE   = 11;
+  SQL_IS_HOUR_TO_SECOND   = 12;
+  SQL_IS_MINUTE_TO_SECOND = 13;
+
+type
+  SQL_YEAR_MONTH_STRUCT = packed record
     year:   SQLUINTEGER;
     month:  SQLUINTEGER;
   end;
 
-  SQL_DAY_SECOND_STRUCT = record
+  SQL_DAY_SECOND_STRUCT = packed record
     day:      SQLUINTEGER;
     hour:     SQLUINTEGER;
     minute:   SQLUINTEGER;
@@ -192,30 +214,25 @@ type
     fraction: SQLUINTEGER;
   end;
 
-  SQL_INTERVAL_STRUCT = record
-    interval_type: SQLINTERVAL;
+  SQL_INTERVAL_STRUCT = packed record
+    interval_type: SQLINTEGER;
     interval_sign: SQLSMALLINT;
-    case SQLINTERVAL of
+    case SQLINTEGER of
       SQL_IS_YEAR_TO_MONTH: (year_month: SQL_YEAR_MONTH_STRUCT);
-      SQL_IS_DAY_TO_HOUR,
-      SQL_IS_DAY_TO_MINUTE,
-      SQL_IS_DAY_TO_SECOND,
-      SQL_IS_HOUR_TO_MINUTE,
-      SQL_IS_HOUR_TO_SECOND,
-      SQL_IS_MINUTE_TO_SECOND: (day_second: SQL_DAY_SECOND_STRUCT);
+      SQL_IS_DAY_TO_SECOND: (day_second: SQL_DAY_SECOND_STRUCT);
   end;
 
 const
   SQL_MAX_NUMERIC_LEN = 16;
 
 type
-  SQL_NUMERIC_STRUCT = record
+  SQL_NUMERIC_STRUCT = packed record
     precision:  SQLCHAR;
     scale:      SQLSCHAR;
     sign:       SQLCHAR; //* 1 if positive, 0 if negative */
     val:        array[0..SQL_MAX_NUMERIC_LEN-1] of SQLCHAR;
   end;
-  {$A+}
+  {.$A+}
 
 {$ifndef ODBCVER}
   const
@@ -264,7 +281,7 @@ const
 
 { environment attribute  }
 const
-  SQL_ATTR_OUTPUT_NTS = 10001;
+  QL_ATTR_OUTPUT_NTSS = 10001;
 
 { connection attributes  }
 const
@@ -387,9 +404,14 @@ const
   SQL_TYPE_TIME = 92;
   SQL_TYPE_TIMESTAMP = 93;
 
-{ SQL Server spezific }
+// Driver specific SQL data type defines.
+// Microsoft has -150 thru -199 reserved for Microsoft SQL Server Native Client driver usage.
   SQL_TYPE_VARIANT = -(150);
-  SS_TIME2 = -(154);
+  SQL_SS_UDT = (-151);
+  SQL_SS_XML = (-152);
+  SQL_SS_TABLE = (-153);
+  SQL_SS_TIME2 = -(154);
+  SQL_SS_TIMESTAMPOFFSET = (-155);
 
 { interval code  }
 const
@@ -480,6 +502,11 @@ const
     SQL_C_BOOKMARK = {$ifdef CPU64}SQL_C_UBIGINT{$else}SQL_C_ULONG{$ENDIF};
     SQL_C_GUID = SQL_GUID; //(ODBCVER >= 0x0350)
     SQL_TYPE_NULL = 0;
+// Extended C Types range 4000 and above. Range of -100 thru 200 is reserved by Driver Manager.
+
+    SQL_C_TYPES_EXTENDED = $04000;
+    SQL_C_SS_TIME2 = (SQL_C_TYPES_EXTENDED+0);
+    SQL_C_SS_TIMESTAMPOFFSET = (SQL_C_TYPES_EXTENDED+1);
 
 { Statement attribute values for cursor sensitivity  }
 const
