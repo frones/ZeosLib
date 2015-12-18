@@ -174,7 +174,7 @@ begin
     if FPlainDriver.GetIsNull(FQueryHandle, RNo, C) <> 0 then
       JSONWriter.AddShort('null')
     else begin
-      P := FPlainDriver.GetValue(FQueryHandle, RowNo, C);
+      P := FPlainDriver.GetValue(FQueryHandle, RNo, C);
       case TZColumnInfo(ColumnsInfo[c]).ColumnType of
         stUnknown     : JSONWriter.AddShort('null');
         stBoolean     : JSONWriter.AddShort(JSONBool[StrToBoolEx(P, True, FFixedCharFields[C])]);
@@ -193,7 +193,7 @@ begin
         stBytes       : begin
 ProcBts:                  P := nil;
                           try
-                            L := FPlainDriver.DecodeBYTEA(RowNo, C, FIs_bytea_output_hex, FHandle, FQueryHandle, Pointer({%H-}P));
+                            L := FPlainDriver.DecodeBYTEA(RNo, C, FIs_bytea_output_hex, FHandle, FQueryHandle, Pointer({%H-}P));
                             JSONWriter.WrBase64(P, L, True);
                           finally
                             FreeMem(P);
