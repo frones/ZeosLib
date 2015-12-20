@@ -2028,11 +2028,6 @@ end;
 
 procedure SetOleCommandProperties(Command: ICommandText; TimeOut: SmallInt;
   Provider: TZServerProvider; SupportsMARSConnection: Boolean);
-const guidPropertySet: array[TZServerProvider] of PGUID =
-  (@DBPROPSET_ROWSET,@DBPROPSET_SQLSERVERROWSET,@DBPROPSET_ROWSET,@DBPROPSET_ROWSET,
-   @DBPROPSET_ROWSET,@DBPROPSET_ROWSET,@DBPROPSET_ROWSET,@DBPROPSET_ROWSET,
-    @DBPROPSET_ROWSET,@DBPROPSET_ROWSET,@DBPROPSET_ROWSET,@DBPROPSET_ROWSET,
-    @DBPROPSET_ROWSET,@DBPROPSET_ROWSET);
 var
   FCmdProps: ICommandProperties;
   rgCommonProperties: array[0..20] of TDBProp;
@@ -2059,7 +2054,10 @@ begin
     rgPropertySets[0].guidPropertySet := DBPROPSET_ROWSET;
     rgPropertySets[0].rgProperties    := @rgCommonProperties[0];
     rgPropertySets[1].cProperties     := 0;
-    rgPropertySets[1].guidPropertySet := guidPropertySet[Provider]^;
+    case Provider of
+      spMSSQL: rgPropertySets[1].guidPropertySet := DBPROPSET_SQLSERVERROWSET
+      else rgPropertySets[1].guidPropertySet := DBPROPSET_ROWSET;
+    end;
     rgPropertySets[1].rgProperties    := @rgProviderProperties;
 
     SetProp(rgPropertySets[0], DBPROP_COMMANDTIMEOUT,    Max(1, TimeOut)); //Set command time_out static!
