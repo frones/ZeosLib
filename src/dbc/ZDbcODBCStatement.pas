@@ -121,6 +121,7 @@ type
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
 
+    procedure Prepare; override;
     procedure Unprepare; override;
     procedure Close; override;
 
@@ -1906,6 +1907,15 @@ begin
     end;
   end else if not RETCODE in [SQL_NO_DATA, SQL_SUCCESS] then
     CheckStmtError(RetCode);
+end;
+
+procedure TZAbstractODBCStatement.Prepare;
+begin
+  if not Prepared then begin
+    if Connection.GetServerProvider = spMSSQL then
+      CheckStmtError(FPlainDriver.SetStmtAttr(fHSTMT, SQL_SOPT_SS_CURSOR_OPTIONS, Pointer(SQL_CO_FFO),0));
+    inherited Prepare;
+  end;
 end;
 
 procedure TZAbstractODBCStatement.PrepareInParameters;

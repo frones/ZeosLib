@@ -370,7 +370,7 @@ end;
 }
 function TZAbstractODBCDatabaseInfo.GetDriverName: string;
 begin
-  Result := 'Zeos Database Connectivity Driver for '+GetStringDbcInfo(SQL_DRIVER_NAME);
+  Result := GetStringDbcInfo(SQL_DRIVER_NAME);
 end;
 
 {**

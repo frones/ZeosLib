@@ -419,10 +419,6 @@ begin
       ColumnInfo.ColumnType := ConvertOleDBTypeToSQLType(prgInfo^.wType,
         prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG <> 0, ConSettings.CPType);
 
-      if (ColumnInfo.ColumnType = stTime) and (prgInfo^.wType = DBTYPE_DBTIME2) then begin
-        FDBBindingArray[i].dwFlags := DBCOLUMNFLAGS_SS_ISVARIABLESCALE;
-        FDBBindingArray[i].bPrecision := 0;
-      end;
       if prgInfo^.ulColumnSize > Cardinal(MaxInt) then
         FieldSize := 0
       else
@@ -1975,10 +1971,8 @@ begin
           FLength);*)
       DBTYPE_WSTR:
         Result := UnicodeSQLDateToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed{%H-});
-      (*DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(FData)^,
-          FLength shr 1, ConSettings^.ClientCodePage^.CP);
-*)
+      DBTYPE_WSTR or DBTYPE_BYREF:
+        Result := UnicodeSQLDateToDateTime(ZPPWideChar(FData)^, FLength shr 1, ConSettings^.ReadFormatSettings, Failed{%H-});
       DBTYPE_DBDATE:
         Result := EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month,
           PDBDate(FData)^.day);
@@ -2027,14 +2021,15 @@ begin
           FLength);*)
       DBTYPE_WSTR:
         Result := UnicodeSQLTimeToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed{%H-});
-      (*DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(FData)^,
-          FLength shr 1, ConSettings^.ClientCodePage^.CP);
-*)
+      DBTYPE_WSTR or DBTYPE_BYREF:
+        Result := UnicodeSQLTimeToDateTime(ZPPWideChar(FData)^, FLength shr 1, ConSettings^.ReadFormatSettings, Failed{%H-});
       DBTYPE_DBDATE: Result := 0;
       DBTYPE_DBTIME:
         Result := EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute,
             PDBTime(FData)^.second,0);
+      DBTYPE_DBTIME2:
+        Result := EncodeTime(PDBTime2(FData)^.hour, PDBTime2(FData)^.minute,
+            PDBTime2(FData)^.second,PDBTime2(FData)^.fraction div 1000000);
       DBTYPE_DBTIMESTAMP:
         Result := EncodeDate(Abs(PDBTimeStamp(FData)^.year),
                     PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day)+
@@ -2078,16 +2073,17 @@ begin
           FLength);*)
       DBTYPE_WSTR:
         Result := UnicodeSQLTimeStampToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed{%H-});
-      (*DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(FData)^,
-          FLength shr 1, ConSettings^.ClientCodePage^.CP);*)
-
+      DBTYPE_WSTR or DBTYPE_BYREF:
+        Result := UnicodeSQLTimeStampToDateTime(ZPPWideChar(FData)^, FLength shr 1, ConSettings^.ReadFormatSettings, Failed{%H-});
       DBTYPE_DBDATE:
         Result := EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month,
           PDBDate(FData)^.day);
       DBTYPE_DBTIME:
         Result := EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute,
             PDBTime(FData)^.second,0);
+      DBTYPE_DBTIME2:
+        Result := EncodeTime(PDBTime2(FData)^.hour, PDBTime2(FData)^.minute,
+            PDBTime2(FData)^.second,PDBTime2(FData)^.fraction div 1000000);
       DBTYPE_DBTIMESTAMP:
         Result := EncodeDate(Abs(PDBTimeStamp(FData)^.year),
                     PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day)+
@@ -2143,15 +2139,15 @@ begin
       DBTYPE_STR or DBTYPE_BYREF:
         Result := TZAbstractClob.CreateWithData(PPAnsiChar(FData)^,
           FLength, ConSettings^.ClientCodePage^.CP, ConSettings);
-      DBTYPE_WSTR:
+      DBTYPE_WSTR, DBTYPE_XML:
         if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
           Result := TZOleDBCLOB.Create(FRowSet,
             FLobAccessors[FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].obLength],
             DBTYPE_WSTR, FHROWS^[FCurrentBufRowNo], FChunkSize, ConSettings)
         else
-          Result := TZAbstractClob.CreateWithData(PWideChar(FData),
-            FLength shr 1, ConSettings);
-      DBTYPE_WSTR or DBTYPE_BYREF:
+          Result := TZAbstractClob.CreateWithData(PWideChar(FData), FLength shr 1, ConSettings);
+      DBTYPE_WSTR or DBTYPE_BYREF,
+      DBTYPE_XML or DBTYPE_BYREF:
         Result := TZAbstractClob.CreateWithData(ZPPWideChar(FData)^,
           FLength shr 1, ConSettings);
       else LastWasNull := True;
@@ -2288,7 +2284,7 @@ begin
     if (Statement.GetResultSetConcurrency = rcUpdatable) or
        (Statement.GetResultSetType <> rtForwardOnly) then
     begin
-      if (Statement.GetConnection as IZOleDBConnection).GetProvider = spMSSQL then
+      if Statement.GetConnection.GetServerProvider = spMSSQL then
         CachedResolver := TZOleDBMSSQLCachedResolver.Create(Statement, NativeResultSet.GetMetaData)
       else
         CachedResolver := TZGenericCachedResolver.Create(Statement, NativeResultSet.GetMetaData);

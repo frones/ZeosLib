@@ -83,7 +83,6 @@ type
     function SupportsMultipleResultSets: Boolean;
     function SupportsMultipleStorageObjects: Boolean;
     function SupportsMARSConnection: Boolean;
-    function GetProvider: TServerProvider;
     procedure UnRegisterPendingStatement(const Value: IZStatement);
   end;
 
@@ -98,15 +97,19 @@ type
     FSupportsMARSConnnection: Boolean;
     FSupportsMultipleResultSets: Boolean;
     FSupportsMultipleStorageObjects: Boolean;
-    FServerProvider: TServerProvider;
+    FServerProvider: TZServerProvider;
+    fSUPPORTEDTXNISOLEVELS: Integer; //bitmask of supported TILSs
     fPendingStmts: TList; //weak reference to pending stmts
+    fTransaction: ITransactionLocal;
+    function SupportsTIL(Level: TZTransactIsolationLevel): Boolean;
     procedure StopTransaction;
     procedure SetProviderProps(DBinit: Boolean);
   protected
     procedure StartTransaction;
     procedure InternalCreate; override;
     procedure RegisterPendingStatement(const Value: IZStatement);
-    function OleDbGetDBPropValue(APropIDs: array of DBPROPID): string;
+    function OleDbGetDBPropValue(APropIDs: array of DBPROPID): string; overload;
+    function OleDbGetDBPropValue(APropID: DBPROPID): Integer; overload;
   public
     destructor Destroy; override;
 
@@ -119,6 +122,7 @@ type
     {function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;}
 
+    procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
     procedure Commit; override;
@@ -134,6 +138,8 @@ type
 
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;}
+
+    function GetServerProvider: TZServerProvider; override;
   public
     { OleDB speziffic }
     function GetSession: IUnknown;
@@ -142,7 +148,6 @@ type
     function SupportsMultipleResultSets: Boolean;
     function SupportsMultipleStorageObjects: Boolean;
     function SupportsMARSConnection: Boolean;
-    function GetProvider: TServerProvider;
     procedure UnRegisterPendingStatement(const Value: IZStatement);
   end;
 
@@ -232,6 +237,9 @@ begin
   FMetadata := TOleDBDatabaseMetadata.Create(Self, URL);
   FRetaining := False; //not StrToBoolEx(URL.Properties.Values['hard_commit']);
   CheckCharEncoding('CP_UTF16');
+  FServerProvider := spMSSQL;
+  fTransaction := nil;
+  Inherited SetAutoCommit(True);
   Open;
 end;
 
@@ -242,24 +250,52 @@ destructor TZOleDBConnection.Destroy;
 begin
   try
     inherited Destroy; // call Disconnect;
+  finally
+    FDBCreateCommand := nil;
+    fDBInitialize := nil;
     fPendingStmts.Free;
     fMalloc := nil;
     CoUninit;
-  except
   end;
 end;
 
 procedure TZOleDBConnection.StopTransaction;
-var Transaction: ITransAction;
 begin
-  if (FpulTransactionLevel > 0) and assigned(FDBCreateCommand) and
-    Succeeded(FDBCreateCommand.QueryInterface(IID_ITransaction,Transaction)) then
+  if Assigned(fTransaction) then
   begin
-    if AutoCommit then
-      OleDbCheck(Transaction.Commit(False,XACTTC_SYNC,0))
-    else
-      OleDbCheck(Transaction.Abort(nil, False, False));
-    Dec(FpulTransactionLevel);
+    OleDbCheck(fTransaction.Abort(nil, False, False));
+    fTransaction := nil;
+    if (FpulTransactionLevel > 0) then
+      Dec(FpulTransactionLevel);
+  end;
+end;
+
+{**
+  Sets this connection's auto-commit mode.
+  If a connection is in auto-commit mode, then all its SQL
+  statements will be executed and committed as individual
+  transactions.  Otherwise, its SQL statements are grouped into
+  transactions that are terminated by a call to either
+  the method <code>commit</code> or the method <code>rollback</code>.
+  By default, new connections are in auto-commit mode.
+
+  The commit occurs when the statement completes or the next
+  execute occurs, whichever comes first. In the case of
+  statements returning a ResultSet, the statement completes when
+  the last row of the ResultSet has been retrieved or the
+  ResultSet has been closed. In advanced cases, a single
+  statement may return multiple results as well as output
+  parameter values. In these cases the commit occurs when all results and
+  output parameter values have been retrieved.
+
+  @param autoCommit true enables auto-commit; false disables auto-commit.
+}
+procedure TZOleDBConnection.SetAutoCommit(Value: Boolean);
+begin
+  if Value <> AutoCommit then begin
+    StopTransaction;
+    inherited SetAutoCommit(Value);
+    StartTransaction;
   end;
 end;
 
@@ -347,14 +383,30 @@ const
 
 procedure TZOleDBConnection.StartTransaction;
 var
-  Transaction: ITransactionLocal;
+  rgDBPROPSET_DBPROPSET_SESSION: TDBProp;
+  prgPropertySets: TDBPROPSET;
+  SessionProperties: ISessionProperties;
 begin
-  if (TransactIsolationLevel <> tiNone) and Assigned(FDBCreateCommand) and
-     Succeeded(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,Transaction)) then
-  begin
-    Transaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'Restart Transaction support');
-  end;
+  if (not Closed) and SupportsTIL(TransactIsolationLevel) then
+    if AutoCommit then begin
+      SessionProperties := nil;
+      if (FDBCreateCommand.QueryInterface(IID_ISessionProperties, SessionProperties) = S_OK) then begin
+        prgPropertySets.cProperties     := 1;
+        prgPropertySets.guidPropertySet := DBPROPSET_SESSION;
+        prgPropertySets.rgProperties    := @rgDBPROPSET_DBPROPSET_SESSION;
+        rgDBPROPSET_DBPROPSET_SESSION.dwPropertyID := DBPROP_SESS_AUTOCOMMITISOLEVELS;
+        rgDBPROPSET_DBPROPSET_SESSION.dwOptions    := DBPROPOPTIONS_REQUIRED;
+        rgDBPROPSET_DBPROPSET_SESSION.colid        := DB_NULLID;
+        rgDBPROPSET_DBPROPSET_SESSION.vValue       := TIL[TransactIsolationLevel];
+        OleDBCheck(SessionProperties.SetProperties(1, @prgPropertySets));
+      end;
+    end else
+      if not Assigned(fTransaction) and
+         Succeeded(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction)) then
+      begin
+        fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
+        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'Restart Transaction support');
+      end;
 end;
 
 // returns property value(-s) from Data Source Information group as string,
@@ -489,6 +541,11 @@ end;
 {**
   Returs the OleSession interface of current connection
 }
+function TZOleDBConnection.GetServerProvider: TZServerProvider;
+begin
+  Result := spMSSQL;
+end;
+
 function TZOleDBConnection.GetSession: IUnknown;
 begin
   Result := FDBCreateCommand;
@@ -523,6 +580,11 @@ begin
   Result := FSupportsMultipleStorageObjects;
 end;
 
+function TZOleDBConnection.SupportsTIL(Level: TZTransactIsolationLevel): Boolean;
+begin
+  Result := TIL[Level] and fSUPPORTEDTXNISOLEVELS > 0;
+end;
+
 procedure TZOleDBConnection.UnRegisterPendingStatement(
   const Value: IZStatement);
 var
@@ -532,21 +594,17 @@ begin
   if I > -1 then fPendingStmts.Delete(I);
 end;
 
-function TZOleDBConnection.GetProvider: TServerProvider;
-begin
-  Result := FServerProvider;
-end;
-
 {**
   Sets a new transact isolation level.
   @param Level a new transact isolation level.
 }
 procedure TZOleDBConnection.SetTransactionIsolation(Level: TZTransactIsolationLevel);
 begin
-  if not Closed and (TransactIsolationLevel <> Level) then
+  if (TransactIsolationLevel <> Level) and SupportsTIL(Level) then begin
     StopTransaction;
-  TransactIsolationLevel := Level;
-  StartTransaction;
+    inherited SetTransactionIsolation(Level);
+    StartTransaction;
+  end;
 end;
 
 {**
@@ -557,14 +615,13 @@ end;
   @see #setAutoCommit
 }
 procedure TZOleDBConnection.Commit;
-var Transaction: ITransAction;
 begin
-  if (FpulTransactionLevel > 0) and assigned(FDBCreateCommand) and
-    Succeeded(FDBCreateCommand.QueryInterface(IID_ITransaction,Transaction)) then
+  if assigned(fTransaction) then
   begin
-    OleDbCheck(Transaction.Commit(FRetaining,XACTTC_SYNC,0));
+    OleDbCheck(fTransaction.Commit(FRetaining,XACTTC_SYNC,0));
     if not FRetaining then
     begin
+      fTransaction := nil;
       Dec(FpulTransactionLevel);
       StartTransaction;
     end;
@@ -585,14 +642,13 @@ begin
 end;
 
 procedure TZOleDBConnection.Rollback;
-var Transaction: ITransaction;
 begin
-  if (FpulTransactionLevel > 0) and assigned(FDBCreateCommand) and
-    Succeeded(FDBCreateCommand.QueryInterface(IID_ITransaction,Transaction)) then
+  if (FpulTransactionLevel > 0) and assigned(fTransaction) then
   begin
-    OleDbCheck(Transaction.Abort(nil, FRetaining, False));
+    OleDbCheck(fTransaction.Abort(nil, FRetaining, False));
     if not FRetaining then
     begin
+      fTransaction := nil;
       Dec(FpulTransactionLevel);
       StartTransaction;
     end;
@@ -600,16 +656,74 @@ begin
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'ROLLBACK');
 end;
 
+function TZOleDBConnection.OleDbGetDBPropValue(APropID: DBPROPID): Integer;
+var
+  DBProperties: IDBProperties;
+  PropIDSet: TDBPROPIDSET;
+  prgPropertySets: PDBPropSet;
+  PropSet: TDBPropSet;
+  nPropertySets: ULONG;
+  i: Integer;
+begin
+  Result := 0;
+  DBProperties := nil;
+  OleDBCheck(FDBInitialize.QueryInterface(IID_IDBProperties, DBProperties) );
+  try
+    PropIDSet.rgPropertyIDs   := @APropID;
+    PropIDSet.cPropertyIDs    := 1;
+    PropIDSet.guidPropertySet := DBPROPSET_DATASOURCEINFO;
+    nPropertySets := 0;
+    prgPropertySets := nil;
+    OleDBCheck( DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ) );
+    Assert( nPropertySets = 1 );
+    PropSet := prgPropertySets^;
+    for i := 0 to PropSet.cProperties-1 do begin
+      if PropSet.rgProperties^[i].dwStatus <> DBPROPSTATUS(DBPROPSTATUS_OK) then
+        Continue;
+      Result := PropSet.rgProperties^[i].vValue;
+    end;
+    // free and clear elements of PropIDSet
+    for i := 0 to PropSet.cProperties-1 do
+      VariantClear(PropSet.rgProperties^[i].vValue);
+    FMAlloc.Free(PropSet.rgProperties);
+    FMAlloc.Free(prgPropertySets); //free prgPropertySets
+  finally
+    DBProperties := nil;
+  end;
+end;
+
 {**
   Opens a connection to database server with specified parameters.
 }
 procedure TZOleDBConnection.Open;
+type
+  TDriverNameAndServerProvider = record
+    ProviderNamePrefix: String;
+    Provider: TZServerProvider;
+  end;
+const
+  KnownDriverName2TypeMap: array[0..12] of TDriverNameAndServerProvider = (
+    (ProviderNamePrefix: 'ORAOLEDB';      Provider: spOracle),
+    (ProviderNamePrefix: 'MSDAORA';       Provider: spOracle),
+    (ProviderNamePrefix: 'SQLNCLI';       Provider: spMSSQL),
+    (ProviderNamePrefix: 'SQLOLEDB';      Provider: spMSSQL),
+    (ProviderNamePrefix: 'SSISOLEDB';     Provider: spMSSQL),
+    (ProviderNamePrefix: 'MSDASQL';       Provider: spMSSQL), //??
+    (ProviderNamePrefix: 'MYSQLPROV';     Provider: spMySQL),
+    (ProviderNamePrefix: 'IBMDA400';      Provider: spAS400),
+    (ProviderNamePrefix: 'IFXOLEDBC';     Provider: spInformix),
+    (ProviderNamePrefix: 'MICROSOFT.JET.OLEDB'; Provider: spMSJet),
+    (ProviderNamePrefix: 'IB';            Provider: spIB_FB),
+    (ProviderNamePrefix: 'POSTGRESSQL';   Provider: spPostgreSQL),
+    (ProviderNamePrefix: 'CUBRID';        Provider: spCUBRID)
+    );
 var
   DataInitialize : IDataInitialize;
   ConnectStrings: TStrings;
   ConnectString: ZWideString;
   Tmp: String;
   FDBCreateSession: IDBCreateSession;
+  I: Integer;
 begin
   if not Closed then
     Exit;
@@ -627,12 +741,19 @@ begin
       ConnectStrings.Values['Password'] := PassWord;
       ConnectString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(ComposeString(ConnectStrings, ';'));
     end;
+    Tmp := ConnectStrings.Values['Provider'];
+    for i := low(KnownDriverName2TypeMap) to high(KnownDriverName2TypeMap) do
+      if StartsWith(tmp, KnownDriverName2TypeMap[i].ProviderNamePrefix) then begin
+        FServerProvider := KnownDriverName2TypeMap[i].Provider;
+        Break;
+      end;
     ConnectStrings.Free;
     OleCheck(DataInitialize.GetDataSource(nil,CLSCTX_INPROC_SERVER,
       Pointer(ConnectString), IID_IDBInitialize,IUnknown(fDBInitialize)));
     DataInitialize := nil; //no longer required!
     SetProviderProps(True); //set's timeout values
-
+    if TransactIsolationLevel = tiNone then
+      Inherited SetTransactionIsolation(tiReadCommitted);
     // open the connection to the DB
     OleDBCheck(fDBInitialize.Initialize);
     OleCheck(fDBInitialize.QueryInterface(IID_IDBCreateSession, FDBCreateSession));
@@ -643,16 +764,9 @@ begin
     // Is IMultipleResults supported??
     FSupportsMultipleResultSets := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(OleDbGetDBPropValue([DBPROP_MULTIPLERESULTS]), 0 ) <> 0;
     FSupportsMultipleStorageObjects := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(OleDbGetDBPropValue([DBPROP_MULTIPLESTORAGEOBJECTS]), 0 ) <> 0;
-    // Now let's find which Server is used for optimal stms/parameters etc.
-    Tmp := OleDbGetDBPropValue([DBPROP_PROVIDERFRIENDLYNAME]);
-    { exact name leading to pain -> scan KeyWords instead! }
-    if ZFastCode.Pos('Oracle', Tmp) > 0 then
-      FServerProvider := spOracle
-    else if (ZFastCode.Pos('Microsoft', Tmp) > 0 ) and (ZFastCode.Pos('SQL Server', Tmp) > 0 ) then
-    begin
-      FServerProvider := spMSSQL;
+    fSUPPORTEDTXNISOLEVELS := OleDbGetDBPropValue(DBPROP_SUPPORTEDTXNISOLEVELS);
+    //if FServerProvider = spMSSQL then
       //SetProviderProps(False); //provider properties -> don't work??
-    end;
     inherited Open;
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
       'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"');

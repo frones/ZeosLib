@@ -245,7 +245,6 @@ procedure TZAbstractMySQLResultSet.ColumnsToJSON(JSONWriter: TJSONWriter; EndJSO
 var
   C: Cardinal;
   P: PAnsiChar;
-  Failed: boolean;
 begin
   if JSONWriter.Expand then
     JSONWriter.Add('{');

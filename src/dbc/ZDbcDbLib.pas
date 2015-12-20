@@ -143,6 +143,8 @@ type
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
     function GetServerAnsiCodePage: Word;
+
+    function GetServerProvider: TZServerProvider; override;
   end;
 
 var
@@ -899,6 +901,12 @@ end;
 function TZDBLibConnection.GetServerAnsiCodePage: Word;
 begin
   Result := FServerAnsiCodePage;
+end;
+
+function TZDBLibConnection.GetServerProvider: TZServerProvider;
+const DBLib2ServerProv: Array[TDBLIBProvider] of TZServerProvider = (spMSSQL, spSybase);
+begin
+  Result := DBLib2ServerProv[FProvider];
 end;
 
 initialization

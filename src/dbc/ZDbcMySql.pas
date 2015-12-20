@@ -128,6 +128,8 @@ type
     function GetConnectionHandle: PZMySQLConnect;
     function GetEscapeString(const Value: ZWideString): ZWideString; override;
     function GetEscapeString(const Value: RawByteString): RawByteString; override;
+
+    function GetServerProvider: TZServerProvider; override;
   end;
 
 
@@ -836,6 +838,11 @@ end;
 function TZMySQLConnection.GetPlainDriver: IZMySQLPlainDriver;
 begin
   Result := Self.PlainDriver as IZMySQLPlainDriver;
+end;
+
+function TZMySQLConnection.GetServerProvider: TZServerProvider;
+begin
+  Result := spMySQL;
 end;
 
 {**

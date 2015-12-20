@@ -1966,6 +1966,33 @@ const
   SQL_CA2_SIMULATE_TRY_UNIQUE = $00008000;
   SQL_CA2_SIMULATE_UNIQUE = $00010000;
 
+//sqlncli.h
+// SQLSetStmtAttr SQL Server Native Client driver specific defines.
+// Statement attributes
+  SQL_SOPT_SS_BASE                            = 1225;
+  SQL_SOPT_SS_TEXTPTR_LOGGING                 = (SQL_SOPT_SS_BASE+0); // Text pointer logging
+  SQL_SOPT_SS_CURRENT_COMMAND                 = (SQL_SOPT_SS_BASE+1); // dbcurcmd SQLGetStmtOption only
+  SQL_SOPT_SS_HIDDEN_COLUMNS                  = (SQL_SOPT_SS_BASE+2); // Expose FOR BROWSE hidden columns
+  SQL_SOPT_SS_NOBROWSETABLE                   = (SQL_SOPT_SS_BASE+3); // Set NOBROWSETABLE option
+  SQL_SOPT_SS_REGIONALIZE                     = (SQL_SOPT_SS_BASE+4); // Regionalize output character conversions
+  SQL_SOPT_SS_CURSOR_OPTIONS                  = (SQL_SOPT_SS_BASE+5); // Server cursor options
+  SQL_SOPT_SS_NOCOUNT_STATUS                  = (SQL_SOPT_SS_BASE+6); // Real vs. Not Real row count indicator
+  SQL_SOPT_SS_DEFER_PREPARE                   = (SQL_SOPT_SS_BASE+7); // Defer prepare until necessary
+  SQL_SOPT_SS_QUERYNOTIFICATION_TIMEOUT       = (SQL_SOPT_SS_BASE+8); // Notification timeout
+  SQL_SOPT_SS_QUERYNOTIFICATION_MSGTEXT       = (SQL_SOPT_SS_BASE+9); // Notification message text
+  SQL_SOPT_SS_QUERYNOTIFICATION_OPTIONS       = (SQL_SOPT_SS_BASE+10);// SQL service broker name
+  SQL_SOPT_SS_PARAM_FOCUS                     = (SQL_SOPT_SS_BASE+11);// Direct subsequent calls to parameter related methods to set properties on constituent columns/parameters of container types
+  SQL_SOPT_SS_NAME_SCOPE                      = (SQL_SOPT_SS_BASE+12);// Sets name scope for subsequent catalog function calls
+  SQL_SOPT_SS_MAX_USED                        = SQL_SOPT_SS_NAME_SCOPE;
+
+// Defines for use with SQL_SOPT_SS_CURSOR_OPTIONS
+  SQL_CO_OFF                          = 0;           //  Clear all cursor options
+  SQL_CO_FFO                          = 1;           //  Fast-forward cursor will be used
+  SQL_CO_AF                           = 2;           //  Autofetch on cursor open
+  SQL_CO_FFO_AF                       = (SQL_CO_FFO or SQL_CO_AF);  //  Fast-forward cursor with autofetch
+  SQL_CO_FIREHOSE_AF                  = 4;           //  Auto fetch on fire-hose cursors
+  SQL_CO_DEFAULT                      = SQL_CO_OFF;
+
 { Defines for SQLTables  }
 const
   SQL_ALL_CATALOGS = '%';

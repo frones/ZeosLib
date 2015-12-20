@@ -110,6 +110,8 @@ type
 
     procedure Open; override;
     procedure Close; override;
+
+    function GetServerProvider: TZServerProvider; override;
   end;
 
   {** Implements a specialized cached resolver for ASA. }
@@ -381,6 +383,11 @@ end;
 function TZASAConnection.GetPlainDriver: IZASAPlainDriver;
 begin
   Result := PlainDriver as IZASAPlainDriver;
+end;
+
+function TZASAConnection.GetServerProvider: TZServerProvider;
+begin
+  Result := spSybase;
 end;
 
 {**

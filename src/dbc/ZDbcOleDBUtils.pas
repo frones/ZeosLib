@@ -70,7 +70,6 @@ type
     DBBINDSTATUS_UNSUPPORTEDCONVERSION, DBBINDSTATUS_BADBINDINFO,
     DBBINDSTATUS_BADSTORAGEFLAGS, DBBINDSTATUS_NOINTERFACE,
     DBBINDSTATUS_MULTIPLESTORAGE);
-  TServerProvider = (spUnkown, spMSSQL, spOracle);
 
 const
   VARIANT_TRUE = Smallint(-1);
@@ -109,7 +108,7 @@ procedure OleBindArrayParams(const DBParams: TDBParams; ArrayOffSet: DB_UPARAMS;
   const SupportsMilliseconds: Boolean = True);
 
 procedure SetOleCommandProperties(Command: ICommandText; TimeOut: SmallInt;
-  ResultSetType: TZResultSetType; Provider: TServerProvider; SupportsMARSConnection: Boolean);
+  Provider: TZServerProvider; SupportsMARSConnection: Boolean);
 
 implementation
 
@@ -159,6 +158,8 @@ begin
     DBTYPE_FILETIME:    Result := stTimeStamp;
     DBTYPE_PROPVARIANT: Result := stString;
     DBTYPE_VARNUMERIC:  Result := stDouble;
+    DBTYPE_XML:         Result := stAsciiStream;
+    DBTYPE_TABLE:       Result := stDataSet;
     else //makes compiler happy
       {
       DBTYPE_IDISPATCH:
@@ -229,6 +230,8 @@ begin
     DBTYPE_FILETIME:    Result := stTimeStamp;
     DBTYPE_PROPVARIANT: Result := stString;
     DBTYPE_VARNUMERIC:  Result := stDouble;
+    DBTYPE_XML:         Result := stAsciiStream;
+    DBTYPE_TABLE:       Result := stDataSet;
     else //makes compiler happy
       {
       DBTYPE_IDISPATCH:
@@ -310,7 +313,11 @@ begin
         OleCheck(ErrorRecords.GetErrorInfo(i,GetSystemDefaultLCID,ErrorInfoDetails));
         OleCheck(ErrorInfoDetails.GetDescription(Desc));
         if OleDBErrorMessage<>'' then
-          OleDBErrorMessage := OleDBErrorMessage+LineEnding;
+          OleDBErrorMessage := OleDBErrorMessage+LineEnding
+        else begin
+          FirstErrorCode := aResult;
+          FirstSQLState:= IntToHex(aResult,8);
+        end;
         OleCheck(SetErrorInfo(0, ErrorInfoDetails));
         OleDBErrorMessage := OleDBErrorMessage+String(Desc);
         Desc := '';
@@ -391,7 +398,10 @@ begin
     DBTYPE_FILETIME: Result := DBTYPE_DATE;
     //DBTYPE_PROPVARIANT	= 138;
     DBTYPE_VARNUMERIC: Result := DBTYPE_R8;
-    DBTYPE_DBTIME2: Result := DBTYPE_DBTIME2;
+    //DBTYPE_DBTIME2: Result := DBTYPE_DBTIME2;
+    DBTYPE_XML:     Result := DBTYPE_WSTR;
+    DBTYPE_DBTIMESTAMPOFFSET: Result := DBTYPE_DBTIMESTAMP;
+   // DBTYPE_TABLE;
   end;
 end;
 
@@ -447,7 +457,7 @@ var
       end
       else
       begin { fixed types do not need a length indicator }
-        DBBindingArray[Index].cbMaxLen := ParamInfoArray^[Index].ulParamSize;
+        DBBindingArray[Index].cbMaxLen := ParamInfoArray[Index].ulParamSize;
         DBBindingArray[Index].obValue := DBBindingArray[Index].obLength;
         DBBindingArray[Index].dwPart := DBPART_VALUE or DBPART_STATUS;
       end;
@@ -540,6 +550,8 @@ var
       end
       else
       begin { fixed types do not need a length indicator }
+        if DBBindingArray[Index].wType = DBTYPE_DBTIME2 then
+          DBBindingArray[Index].dwFlags := DBCOLUMNINFO^.dwFlags; //keep it!
         DBBindingArray[Index].bPrecision := DBCOLUMNINFO^.bPrecision;
         DBBindingArray[Index].bScale := DBCOLUMNINFO^.bScale;
         DBBindingArray[Index].cbMaxLen := DBCOLUMNINFO^.ulColumnSize;
@@ -2015,15 +2027,18 @@ end;
 {$HINTS ON}
 
 procedure SetOleCommandProperties(Command: ICommandText; TimeOut: SmallInt;
-  ResultSetType: TZResultSetType; Provider: TServerProvider; SupportsMARSConnection: Boolean);
-const
-  SSPROP_DEFERPREPARE	= 13;
-  DBPROPSET_SQLSERVERROWSET: TGUID 	= '{5cf4ca11-ef21-11d0-97e7-00c04fc2ad98}';
+  Provider: TZServerProvider; SupportsMARSConnection: Boolean);
+const guidPropertySet: array[TZServerProvider] of PGUID =
+  (@DBPROPSET_ROWSET,@DBPROPSET_SQLSERVERROWSET,@DBPROPSET_ROWSET,@DBPROPSET_ROWSET,
+   @DBPROPSET_ROWSET,@DBPROPSET_ROWSET,@DBPROPSET_ROWSET,@DBPROPSET_ROWSET,
+    @DBPROPSET_ROWSET,@DBPROPSET_ROWSET,@DBPROPSET_ROWSET,@DBPROPSET_ROWSET,
+    @DBPROPSET_ROWSET,@DBPROPSET_ROWSET);
 var
   FCmdProps: ICommandProperties;
-  rgCommonProperties: array[0..10] of TDBProp;
-  rgMSSQLProperties: TDBProp;
+  rgCommonProperties: array[0..20] of TDBProp;
+  rgProviderProperties: TDBProp;
   rgPropertySets: array[0..1] of TDBPROPSET;
+
   procedure SetProp(var PropSet: TDBPROPSET; PropertyID: DBPROPID; Value: SmallInt);
   begin
     //initialize common property options
@@ -2044,47 +2059,43 @@ begin
     rgPropertySets[0].guidPropertySet := DBPROPSET_ROWSET;
     rgPropertySets[0].rgProperties    := @rgCommonProperties[0];
     rgPropertySets[1].cProperties     := 0;
-    rgPropertySets[1].guidPropertySet := DBPROPSET_SQLSERVERROWSET;
-    rgPropertySets[1].rgProperties    := @rgMSSQLProperties;
-    //to avoid http://support.microsoft.com/kb/272358/de we need a
-    //FAST_FORWARD(RO) server cursor
-    {common sets which are NOT default: according the cursor models of
-    http://msdn.microsoft.com/de-de/library/ms130840.aspx }
+    rgPropertySets[1].guidPropertySet := guidPropertySet[Provider]^;
+    rgPropertySets[1].rgProperties    := @rgProviderProperties;
+
     SetProp(rgPropertySets[0], DBPROP_COMMANDTIMEOUT,    Max(1, TimeOut)); //Set command time_out static!
     SetProp(rgPropertySets[0], DBPROP_SERVERCURSOR,      VARIANT_TRUE); //force a server side cursor
-    SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,        VARIANT_FALSE);
-    if SupportsMARSConnection then begin
-      SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         VARIANT_FALSE);
-      SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   VARIANT_FALSE);
-    end else begin
-      SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         VARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
-      SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   VARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
-    end;
-    SetProp(rgPropertySets[0], DBPROP_OTHERINSERT,       VARIANT_TRUE);
-    SetProp(rgPropertySets[0], DBPROP_OTHERUPDATEDELETE, VARIANT_TRUE);
-    if ResultSetType = rtForwardOnly then
-    begin
-      SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,         VARIANT_FALSE);
-      SetProp(rgPropertySets[0], DBPROP_CANFETCHBACKWARDS,  VARIANT_FALSE);
-      SetProp(rgPropertySets[0], DBPROP_CANSCROLLBACKWARDS, VARIANT_FALSE);
-    end
-    else
-    begin
-      SetProp(rgPropertySets[0], DBPROP_REMOVEDELETED,      VARIANT_TRUE);//??
-    end;
     if (Provider = spMSSQL) then
     begin
       //turn off deferred prepare -> raise exception on Prepare if command can't be executed!
       //http://msdn.microsoft.com/de-de/library/ms130779.aspx
       SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, VARIANT_FALSE);
+    end else begin
+      //to avoid http://support.microsoft.com/kb/272358/de we need a
+      //FAST_FORWARD(RO) server cursor
+      {common sets which are NOT default: according the cursor models of
+      http://msdn.microsoft.com/de-de/library/ms130840.aspx }
+      SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,        VARIANT_FALSE);
+      if SupportsMARSConnection then begin
+        SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         VARIANT_FALSE);
+        SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   VARIANT_FALSE);
+      end else begin
+        SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         VARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
+        SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   VARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
+      end;
+      SetProp(rgPropertySets[0], DBPROP_OTHERINSERT,       VARIANT_TRUE);
+      SetProp(rgPropertySets[0], DBPROP_OTHERUPDATEDELETE, VARIANT_TRUE);
+      SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,         VARIANT_FALSE);
+      SetProp(rgPropertySets[0], DBPROP_CANFETCHBACKWARDS,  VARIANT_FALSE);
+      SetProp(rgPropertySets[0], DBPROP_CANSCROLLBACKWARDS, VARIANT_FALSE);
     end;
     try
-      OleDBCheck(FCmdProps.SetProperties( 2,@rgPropertySets[0]));
+      OleDBCheck(FCmdProps.SetProperties(2,@rgPropertySets[0]));
     finally
       FCmdProps := nil;
     end;
   end;
 end;
+
 //(*
 {$ELSE}
 implementation

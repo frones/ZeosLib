@@ -187,6 +187,7 @@ type
     function GetTestMode : Byte;
     procedure SetTestMode(Mode: Byte);
     {$ENDIF}
+    function GetServerProvider: TZServerProvider;
   end;
 
   {$WARNINGS OFF}
@@ -556,9 +557,14 @@ begin
   Result := GetConnection.GetParameters;
 end;
 
+function TZDbcPooledConnection.GetServerProvider: TZServerProvider;
+begin
+  Result := GetConnection.GetServerProvider;
+end;
+
 function TZDbcPooledConnection.GetTransactionIsolation: TZTransactIsolationLevel;
 begin
-  Result := GetConnection.GetTransactionIsolation;  
+  Result := GetConnection.GetTransactionIsolation;
 end;
 
 function TZDbcPooledConnection.GetWarnings: EZSQLWarning;

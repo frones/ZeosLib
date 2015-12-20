@@ -117,9 +117,9 @@ Const
   (*IID_IDBInfo : TGUID = '{0C733A89-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IDBDataSourceAdmin : TGUID = '{0C733A7A-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IDBAsynchNotify : TGUID = '{0C733A96-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IDBAsynchStatus : TGUID = '{0C733A95-2A1C-11CE-ADE5-00AA0044773D}';
+  IID_IDBAsynchStatus : TGUID = '{0C733A95-2A1C-11CE-ADE5-00AA0044773D}';*)
   IID_ISessionProperties : TGUID = '{0C733A85-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IIndexDefinition : TGUID = '{0C733A68-2A1C-11CE-ADE5-00AA0044773D}';
+  (*IID_IIndexDefinition : TGUID = '{0C733A68-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ITableDefinition : TGUID = '{0C733A86-2A1C-11CE-ADE5-00AA0044773D}';*)
   IID_IOpenRowset : TGUID = '{0C733A69-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IDBSchemaRowset : TGUID = '{0C733A7B-2A1C-11CE-ADE5-00AA0044773D}';
@@ -172,6 +172,9 @@ Const
   IID_ILockBytes:       TGUID = '{0000000A-0000-0000-C000-000000000046}';
 
   IID_ISQLServerErrorInfo: TGUID= '{5CF4CA12-EF21-11D0-97E7-00C04FC2AD98}';
+//from sqlncli.h
+  IID_ISSCommandWithParameters: TGUID = '{EEC30162-6087-467C-B995-7C523CE96561}';
+
 //start from oledb.h
   DB_NULLGUID: TGuid = '{00000000-0000-0000-0000-000000000000}';
 
@@ -281,6 +284,7 @@ Const
   DBPROPSET_TABLEALL = '{C8B522F2-5CF3-11CE-ADE5-00AA0044773D}';
   DBPROPSET_TRUSTEEALL = '{C8B522F3-5CF3-11CE-ADE5-00AA0044773D}';
 
+  DBPROPSET_SQLSERVERROWSET: TGUID = '{5cf4ca11-ef21-11d0-97e7-00c04fc2ad98}';
 
   DBGUID_DEFAULT: TGUID = '{C8B521FB-5CF3-11CE-ADE5-00AA0044773D}';
   DBGUID_SQL: TGUID = '{C8B522D7-5CF3-11CE-ADE5-00AA0044773D}';
@@ -481,8 +485,10 @@ const
 	DBTYPE_DBTIME	= 134;
 	DBTYPE_DBTIMESTAMP	= 135;
   {SQL Server types only }
-  DBTYPE_DBTIME2 = 145;
-  DBTYPE_DBTIMESTAMPOFFSET = 146;
+  DBTYPE_XML = 141; // introduced in SQL 2005
+  DBTYPE_TABLE = 143; // introduced in SQL 2008
+  DBTYPE_DBTIME2 = 145; // introduced in SQL 2008
+  DBTYPE_DBTIMESTAMPOFFSET = 146; // introduced in SQL 2008
 // DBTYPEENUM15 constants from oledb.h
 //@@@+ V1.5
 type
@@ -933,7 +939,7 @@ const
 type
   DBPARAMFLAGSENUM_SS_100 = TOleEnum;
 const
-  DBPARAMFLAGS_SS_ISVARIABLESCALE  = $40000000;
+  DBPARAMFLAGS_SS_ISVARIABLESCALE	= $40000000;
 
 type
   DBCOLUMNFLAGSENUM_SS_100 = TOleEnum;
@@ -941,6 +947,22 @@ const
   DBCOLUMNFLAGS_SS_ISVARIABLESCALE = $40000000;
   DBCOLUMNFLAGS_SS_ISCOLUMNSET     = $80000000;
 
+// PropIds for DBPROPSET_SQLSERVERROWSET
+  SSPROP_MAXBLOBLENGTH            = 8;
+  SSPROP_FASTLOADOPTIONS          = 9;
+  SSPROP_FASTLOADKEEPNULLS        = 10;
+  SSPROP_FASTLOADKEEPIDENTITY     = 11;
+  SSPROP_CURSORAUTOFETCH          = 12;
+  SSPROP_DEFERPREPARE             = 13;
+  SSPROP_IRowsetFastLoad          = 14;
+  SSPROP_QP_NOTIFICATION_TIMEOUT  = 17;
+  SSPROP_QP_NOTIFICATION_MSGTEXT  = 18;
+  SSPROP_QP_NOTIFICATION_OPTIONS  = 19;
+  SSPROP_NOCOUNT_STATUS           = 20;
+  SSPROP_COMPUTE_ID               = 21;
+  SSPROP_COLUMN_ID                = 22;
+  SSPROP_COMPUTE_BYLIST           = 23;
+  SSPROP_ISSAsynchStatus          = 24;
 //Forward declarations
 type
  IColumnsInfo = interface;
@@ -983,14 +1005,14 @@ type
  //ISourcesRowset = interface;
  IDBProperties = interface;
  IDBInitialize = interface;
- (*IDBInfo = interface;
+ {IDBInfo = interface;
  IDBDataSourceAdmin = interface;
  IDBAsynchNotify = interface;
- IDBAsynchStatus = interface;
+ IDBAsynchStatus = interface;}
  ISessionProperties = interface;
- IIndexDefinition = interface;
+ {IIndexDefinition = interface;
  ITableDefinition = interface;
- IOpenRowset = interface;*)
+ IOpenRowset = interface;}
  IDBSchemaRowset = interface;
  (*IMDDataset = interface;
  IMDFind = interface;
@@ -1364,7 +1386,27 @@ type
     second: USHORT;
     fraction: ULONG;
   end;
-  {$ALIGN 8}
+
+  PMSErrorInfo  = ^TMSErrorInfo;
+  TMSErrorInfo  = record
+    pwszMessage: PWideChar; //equals to IErrorInfo.GetDescription
+    pwszServer: PWideChar;
+    pwszProcedure: PWideChar;
+    lNative: UINT;
+    bState: Byte;
+    bClass: Byte;
+    wLineNumber: Word;
+  end;
+
+  TSSPARAMPROP = record
+    iOrdinal:   DBORDINAL;
+    cPropertySets:  ULONG;
+    rgPropertySets: PDBPROPSET;
+  end;
+  TSSPARAMPROPS = array[0..MAXBOUND] of TSSPARAMPROP;
+  PSSPARAMPROPS = ^TSSPARAMPROPS;
+
+  {$A+}
   //This struct is padded to 12 bytes on both 32-bit and 64-bit operating systems.
   PDBTIME2 = ^TDBTIME2;
   TDBTIME2 = record
@@ -1385,7 +1427,7 @@ type
     timezone_hour:  SHORT;
     timezone_minute:SHORT;
   end;
-
+  {$A-}
 
 {end:-----------------------used by zeos---------------------------------------}
 (*
@@ -2411,17 +2453,18 @@ type
    function GetStatus(hChapter:ULONG_PTR;eOperation:LongWord;out pulProgress:LongWord;out pulProgressMax:LongWord;out peAsynchPhase:LongWord;out ppwszStatusText:PWideChar):HRESULT;stdcall;
   end;
 
-
+*)
 // ISessionProperties :
 
  ISessionProperties = interface(IUnknown)
    ['{0C733A85-2A1C-11CE-ADE5-00AA0044773D}']
     // GetProperties :
-   function GetProperties(cPropertyIDSets:LongWord;rgPropertyIDSets:PDBPropIDSetArray;var pcPropertySets:LongWord;out prgPropertySets:PDBPROPSET):HRESULT;stdcall;
+   function GetProperties(cPropertyIDSets: ULONG; rgPropertyIDSets: PDBPropIDSetArray;
+    var pcPropertySets: ULONG; out prgPropertySets: PDBPROPSET):HRESULT;stdcall;
     // SetProperties :
-   function SetProperties(cPropertySets:LongWord;rgPropertySets:PDBPropSetArray):HRESULT;stdcall;
+   function SetProperties(cPropertySets:ULONG;rgPropertySets:PDBPropSetArray):HRESULT;stdcall;
   end;
-
+(*
 
 // IIndexDefinition :
 
@@ -2985,25 +3028,20 @@ type
   end;
 //end add from msdasc.h
 
-  PMSErrorInfo  = ^TMSErrorInfo;
-  TMSErrorInfo  = record
-    pwszMessage: PWideChar; //equals to IErrorInfo.GetDescription
-    pwszServer: PWideChar;
-    pwszProcedure: PWideChar;
-    lNative: UINT;
-    bState: Byte;
-    bClass: Byte;
-    wLineNumber: Word;
-  end;
 // *********************************************************************//
 // Interface: ISQLServerErrorInfo
 // GUID:      {5CF4CA12-EF21-11d0-97E7-00C04FC2AD98}
 // *********************************************************************//
   ISQLServerErrorInfo = interface(IUnknown)
     ['{5CF4CA12-EF21-11d0-97E7-00C04FC2AD98}']
-    function GetErrorInfo(
-            out ppErrorInfo: PMSErrorInfo;
+    function GetErrorInfo(out ppErrorInfo: PMSErrorInfo;
             out ppStringsBuffer: PWideChar): HResult; stdcall;
+  end;
+
+  ISSCommandWithParameters = Interface(ICommandWithParameters)
+    ['{EEC30162-6087-467C-B995-7C523CE96561}']
+    function GetParameterProperties(var pcParams: DB_UPARAMS; var prgParamProperties: PSSPARAMPROPS): HRESULT; stdcall;
+    function SetParameterProperties(cParams: DB_UPARAMS; rgParamProperties: PSSPARAMPROPS): HRESULT; stdcall;
   end;
 
 const

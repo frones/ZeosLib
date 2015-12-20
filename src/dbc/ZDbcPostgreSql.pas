@@ -208,6 +208,7 @@ type
     {$IFDEF ZEOS_TEST_ONLY}
     constructor Create(const ZUrl: TZURL);
     {$ENDIF}
+    function GetServerProvider: TZServerProvider; override;
   end;
 
   {** Implements a Postgres sequence. }
@@ -1131,6 +1132,11 @@ begin
   if (FServerMajorVersion = 0) and (FServerMinorVersion = 0) then
     LoadServerVersion;
   Result := FServerMinorVersion;
+end;
+
+function TZPostgreSQLConnection.GetServerProvider: TZServerProvider;
+begin
+  Result := spPostgreSQL;
 end;
 
 {**

@@ -161,6 +161,10 @@ type
   {** Defines a MoreResults state }
   TZMoreResultsIndicator = (mriUnknown, mriHasNoMoreResults, mriHasMoreResults);
 
+  TZServerProvider = (spUnknown, spMSSQL, spMSJet, spOracle, spSybase,
+    spPostgreSQL, spIB_FB, spMySQL, spNexusDB, spSQLite, spDB2, spAS400,
+    spInformix, spCUBRID);
+
 // Interfaces
 type
 
@@ -313,6 +317,7 @@ type
     function GetConSettings: PZConSettings;
     function GetClientVariantManager: IZClientVariantManager;
     function GetURL: String;
+    function GetServerProvider: TZServerProvider;
 
     {$IFDEF ZEOS_TEST_ONLY}
     function GetTestMode : Byte;

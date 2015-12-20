@@ -139,6 +139,7 @@ type
     function GetBinaryEscapeString(const Value: TBytes): String; override;
     function GetEscapeString(const Value: RawByteString): RawByteString; override;
     function GetEscapeString(const Value: ZWideString): ZWideString; override;
+    function GetServerProvider: TZServerProvider; override;
   end;
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
@@ -451,6 +452,11 @@ end;
 function TZInterbase6Connection.GetPlainDriver: IZInterbasePlainDriver;
 begin
   Result := PlainDriver as IZInterbasePlainDriver;
+end;
+
+function TZInterbase6Connection.GetServerProvider: TZServerProvider;
+begin
+  Result := spIB_FB;
 end;
 
 {**

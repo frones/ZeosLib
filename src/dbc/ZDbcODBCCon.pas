@@ -92,8 +92,9 @@ type
     fLastWarning: EZSQLWarning;
     fCatalog: String; //cached
     fODBCVersion: SQLUSMALLINT;
-    fArraySelectSupported, fArrayRowSupported, fMetaDataSPSupported: Boolean;
+    fArraySelectSupported, fArrayRowSupported: Boolean;
     fPendingStmts: TList; //weak reference to pending stmts
+    fServerProvider: TZServerProvider;
     procedure StopTransaction;
   protected
     procedure StartTransaction;
@@ -131,6 +132,7 @@ type
 
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
+    function GetServerProvider: TZServerProvider; override;
   end;
 
   TZODBCConnectionW = class(TZAbstractODBCConnection)
@@ -347,6 +349,11 @@ begin
   Result := fPlainDriver;
 end;
 
+function TZAbstractODBCConnection.GetServerProvider: TZServerProvider;
+begin
+  Result := fServerProvider;
+end;
+
 {**
   Returns the first warning reported by calls on this Connection.
   <P><B>Note:</B> Subsequent warnings will be chained to this
@@ -428,8 +435,39 @@ end;
   Opens a connection to database server with specified parameters.
 }
 procedure TZAbstractODBCConnection.Open;
+type
+  TDriverNameAndServerProvider = record
+    DriverName: String;
+    Provider: TZServerProvider;
+  end;
+const
+  KnownDriverName2TypeMap: array[0..22] of TDriverNameAndServerProvider = (
+    (DriverName: 'SQLNCLI';     Provider: spMSSQL),
+    (DriverName: 'SQLSRV';      Provider: spMSSQL),
+    (DriverName: 'LIBTDSODBC';  Provider: spMSSQL),
+    (DriverName: 'IVSS';        Provider: spMSSQL),
+    (DriverName: 'IVMSSS';      Provider: spMSSQL),
+    (DriverName: 'PBSS';        Provider: spMSSQL),
+    (DriverName: 'DB2CLI';      Provider: spDB2),
+    (DriverName: 'LIBDB2';      Provider: spDB2),
+    (DriverName: 'IVDB2';       Provider: spDB2),
+    (DriverName: 'PBDB2';       Provider: spDB2),
+    (DriverName: 'MSDB2';       Provider: spDB2),
+    (DriverName: 'CWBODBC';     Provider: spDB2),
+    (DriverName: 'MYODBC';      Provider: spMySQL),
+    (DriverName: 'SQORA';       Provider: spOracle),
+    (DriverName: 'MSORCL';      Provider: spOracle),
+    (DriverName: 'PBOR';        Provider: spOracle),
+    (DriverName: 'IVOR';        Provider: spOracle),
+    (DriverName: 'ODBCFB';      Provider: spIB_FB),
+    (DriverName: 'IB';          Provider: spIB_FB),
+    (DriverName: 'SQLITE';      Provider: spSQLite),
+    (DriverName: 'PSQLODBC';    Provider: spPostgreSQL),
+    (DriverName: 'NXODBCDRIVER';Provider: spNexusDB),
+    (DriverName: 'ICLIT09B';    Provider: spInformix)
+    );
 var
-  ConnectString, OutConnectString: String;
+  tmp, OutConnectString: String;
   TimeOut: NativeUInt;
   aLen: SQLSMALLINT;
   ConnectStrings: TStrings;
@@ -447,12 +485,12 @@ begin
   end;
   ConnectStrings := SplitString(DataBase, ';');
   if StrToBoolEx(ConnectStrings.Values['Trusted_Connection']) then
-    ConnectString := DataBase
+    tmp := DataBase
   else
   begin
     ConnectStrings.Values['Uid'] := User;
     ConnectStrings.Values['Pwd'] := PassWord;
-    ConnectString := ComposeString(ConnectStrings, ';');
+    tmp := ComposeString(ConnectStrings, ';');
   end;
   DriverCompletion := SQL_DRIVER_NOPROMPT;
   if Info.Values['DriverCompletion'] <> '' then
@@ -466,7 +504,7 @@ begin
   SetLength(OutConnectString, 1024);
   try
     CheckDbcError(fPLainDriver.DriverConnect(fHDBC, {$IFDEF MSWINDOWS}{%H-}Pointer(GetDesktopWindow){$ELSE}Application.Handle{$ENDIF},
-      Pointer(ConnectString), Length(ConnectString), Pointer(OutConnectString),
+      Pointer(tmp), Length(tmp), Pointer(OutConnectString),
       Length(OutConnectString), @aLen, DriverCompletion));
     SetLength(OutConnectString, aLen);
     CheckDbcError(fPlainDriver.GetInfo(fHDBC, SQL_PARAM_ARRAY_ROW_COUNTS, @InfoValue, SizeOf(SQLUINTEGER), nil));
@@ -481,7 +519,13 @@ begin
   inherited SetReadOnly(GetMetaData.GetDatabaseInfo.IsReadOnly);
   fRetaining := GetMetaData.GetDatabaseInfo.SupportsOpenCursorsAcrossCommit and
                 GetMetaData.GetDatabaseInfo.SupportsOpenCursorsAcrossRollback;
-  fMetaDataSPSupported := GetMetaData.GetDatabaseInfo.GetDatabaseProductName = 'Mircosoft SQL Server';
+  tmp := UpperCase(GetMetaData.GetDatabaseInfo.GetDriverName);
+  fServerProvider := spUnknown;
+  for aLen := low(KnownDriverName2TypeMap) to high(KnownDriverName2TypeMap) do
+    if StartsWith(tmp, KnownDriverName2TypeMap[aLen].DriverName) then begin
+      fServerProvider := KnownDriverName2TypeMap[aLen].Provider;
+      Break;
+    end;
 end;
 
 {**
