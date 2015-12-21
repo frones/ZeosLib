@@ -5160,7 +5160,7 @@ end;
 function ZIntPower(const Exponent: Integer): Extended;
 var
   Y: Integer;
-  LBase: Int64;
+  LBase: Extended;
 begin
   Y := Abs(Exponent);
   LBase := 10;
