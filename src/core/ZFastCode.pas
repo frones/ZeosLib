@@ -354,7 +354,7 @@ uses
   {$IFDEF MSWINDOWS}Windows, {$ENDIF}
   {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings, {$ENDIF}
   {$IFDEF FPC}ZSysUtils, {$ENDIF}
-  SysUtils, SysConst;
+  SysUtils, SysConst, Math;
 
 {$IFDEF PatchSystemMove} //set in Zeos.inc
 var
@@ -5157,27 +5157,7 @@ begin
   Result := ValRawExt(Pointer(S), DecimalSep, Code);
 end;
 
-function ZIntPower(const Exponent: Integer): Extended;
-var
-  Y: Integer;
-  LBase: Extended;
-begin
-  Y := Abs(Exponent);
-  LBase := 10;
-  Result := 1.0;
-  while Y > 0 do
-  begin
-    while not Odd(Y) do
-    begin
-      Y := Y shr 1;
-      LBase := LBase * LBase
-    end;
-    Dec(Y);
-    Result := Result * LBase
-  end;
-  if Exponent < 0 then
-    Result := 1.0 / Result; //we got the XE4 bug!!! other IDE's?
-end;
+const LBase: Extended = 10.0;
 
 function ValRawExt(const s: PAnsiChar; const DecimalSep: AnsiChar; var code: Integer): Extended;
 //function ValExt_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Extended;
@@ -5259,7 +5239,7 @@ begin
     end;
   Digits := Digits + ExpValue;
   if Digits <> 0 then
-    Result := Result * ZIntPower(Digits);
+    Result := Result * IntPower(LBase, Digits);
   if Neg then
     Result := -Result;
   if Valid and (ch = #0) then
@@ -5447,7 +5427,7 @@ begin
     end;
   Digits := Digits + ExpValue;
   if Digits <> 0 then
-    Result := Result * ZIntPower(Digits);
+    Result := Result * IntPower(LBase, Digits);
   if Neg then
     Result := -Result;
   if Valid and (ch = #0) then
