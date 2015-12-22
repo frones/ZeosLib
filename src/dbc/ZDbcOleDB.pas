@@ -741,7 +741,7 @@ begin
       ConnectStrings.Values['Password'] := PassWord;
       ConnectString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(ComposeString(ConnectStrings, ';'));
     end;
-    Tmp := ConnectStrings.Values['Provider'];
+    Tmp := UpperCase(ConnectStrings.Values['Provider']);
     for i := low(KnownDriverName2TypeMap) to high(KnownDriverName2TypeMap) do
       if StartsWith(tmp, KnownDriverName2TypeMap[i].ProviderNamePrefix) then begin
         FServerProvider := KnownDriverName2TypeMap[i].Provider;
