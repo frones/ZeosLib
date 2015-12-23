@@ -147,9 +147,7 @@ var
 }
   ZAdoMalloc: IMalloc;
 
-{$ENDIF ENABLE_ADO}
 implementation
-{$IFDEF ENABLE_ADO}
 
 uses
   ComObj, Variants, Math,
@@ -881,6 +879,8 @@ initialization
 finalization
   ZAdoMalloc := nil;
 
+{$ELSE}
+implementation
 {$ENDIF ENABLE_ADO}
 end.
 

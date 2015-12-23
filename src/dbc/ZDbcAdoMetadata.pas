@@ -258,9 +258,8 @@ type
 //    function GetTokenizer: IZTokenizer; override;
   end;
 
-{$ENDIF ENABLE_ADO}
 implementation
-{$IFDEF ENABLE_ADO}
+
 uses
   Variants,
   Math, ZGenericSqlToken, ZDbcAdoUtils, ZDbcAdo, ZOleDB, ZDbcAdoResultSet;
@@ -2629,6 +2628,8 @@ begin
   end;
 end;
 
+{$ELSE}
+implementation
 {$ENDIF ENABLE_ADO}
 end.
 

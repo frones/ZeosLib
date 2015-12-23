@@ -125,11 +125,9 @@ type
 var
   {** The common driver manager object. }
   AdoDriver: IZDriver;
-{$ENDIF ENABLE_ADO}
 
 implementation
 
-{$IFDEF ENABLE_ADO}
 uses
   Variants, ActiveX,
   ZDbcUtils, ZDbcLogging, ZAdoToken, ZSysUtils, ZMessages,
@@ -656,5 +654,7 @@ finalization
   if Assigned(DriverManager) then
     DriverManager.DeregisterDriver(AdoDriver);
   AdoDriver := nil;
+{$ELSE}
+implementation
 {$ENDIF ENABLE_ADO}
 end.
