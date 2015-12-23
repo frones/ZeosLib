@@ -200,6 +200,7 @@
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
   {$DEFINE WITH_FASTCODE_INTTOSTR} //Since XE2 the full purepascal IntToStr func is included
+  {$DEFINE WITH_PUREPASCAL_INTPOWER} //Since XE2 a buggy purepascal IntPower exists
 {$ENDIF}
 
 // Compilation directives for Delphi XE3
