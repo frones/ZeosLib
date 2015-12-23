@@ -354,7 +354,7 @@ uses
   {$IFDEF MSWINDOWS}Windows, {$ENDIF}
   {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings, {$ENDIF}
   {$IFDEF FPC}ZSysUtils, {$ENDIF}
-  SysUtils, SysConst;
+  SysUtils, SysConst{$IFNDEF WITH_PUREPASCAL_INTPOWER}, Math{$ENDIF};
 
 {$IFDEF PatchSystemMove} //set in Zeos.inc
 var
@@ -5157,27 +5157,72 @@ begin
   Result := ValRawExt(Pointer(S), DecimalSep, Code);
 end;
 
-function ZIntPower(const Exponent: Integer): Extended;
+const LBase: Extended = 10.0;
+
+//Author:            Dennis Kjaer Christensen
+//Date:              15/10 2003
+//Optimized for:     Blended
+//Instructionset(s): IA32
+
+//EH: Note this version replaces the pascal Match.IntPower which have a range overflow
+{$IFDEF WITH_PUREPASCAL_INTPOWER}
+function IntPowerDKCPas4(const Base: Extended; const Exponent: Integer): Extended; overload;
 var
-  Y: Integer;
-  LBase: Int64;
+ I, I2, I3 : Integer;
+ Result2 : Extended;
 begin
-  Y := Abs(Exponent);
-  LBase := 10;
-  Result := 1.0;
-  while Y > 0 do
+ if Base = 0 then
   begin
-    while not Odd(Y) do
-    begin
-      Y := Y shr 1;
-      LBase := LBase * LBase
-    end;
-    Dec(Y);
-    Result := Result * LBase
+   if Exponent = 0 then
+    Result := 1
+   else
+    Result := 0;
+  end
+ else if Exponent = 0 then
+  Result := 1
+ else if Exponent = 1 then
+  Result := Base
+ else if Exponent = 2 then
+  Result := Base * Base
+ else if Exponent > 2 then
+  begin
+   Result := Base;
+   Result2 := 1;
+   I := 2;
+   I2 := Exponent;
+   repeat
+    I3 := I2 and 1;
+    if I3 = 1 then
+     Result2 := Result2 * Result;
+    I2 := I2 shr 1;
+    Result := Result * Result;
+    I := I * 2;
+   until(I > Exponent);
+   Result := Result * Result2;
+  end
+ else if Exponent = -1 then
+  Result := 1/Base
+ else if Exponent = -2 then
+  Result := 1/(Base*Base)
+ else //if Exponent < -2 then
+  begin
+   Result := Base;
+   Result2 := 1;
+   I := 2;
+   I2 := -Exponent;
+   repeat
+    I3 := I2 and 1;
+    if I3 = 1 then
+     Result2 := Result2 * Result;
+    I2 := I2 shr 1;
+    Result := Result * Result;
+    I := I * 2;
+   until(I > -Exponent);
+   Result := Result * Result2;
+   Result := 1 / Result;
   end;
-  if Exponent < 0 then
-    Result := 1.0 / Result; //we got the XE4 bug!!! other IDE's?
 end;
+{$ENDIF WITH_PUREPASCAL_INTPOWER}
 
 function ValRawExt(const s: PAnsiChar; const DecimalSep: AnsiChar; var code: Integer): Extended;
 //function ValExt_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Extended;
@@ -5259,7 +5304,11 @@ begin
     end;
   Digits := Digits + ExpValue;
   if Digits <> 0 then
-    Result := Result * ZIntPower(Digits);
+    {$IFDEF WITH_PUREPASCAL_INTPOWER}
+    Result := Result * IntPowerDKCPas4(LBase, Digits);
+    {$ELSE}
+    Result := Result * Math.IntPower(LBase, Digits);
+    {$ENDIF}
   if Neg then
     Result := -Result;
   if Valid and (ch = #0) then
@@ -5447,7 +5496,11 @@ begin
     end;
   Digits := Digits + ExpValue;
   if Digits <> 0 then
-    Result := Result * ZIntPower(Digits);
+    {$IFDEF WITH_PUREPASCAL_INTPOWER}
+    Result := Result * IntPowerDKCPas4(LBase, Digits);
+    {$ELSE}
+    Result := Result * Math.IntPower(LBase, Digits);
+    {$ENDIF}
   if Neg then
     Result := -Result;
   if Valid and (ch = #0) then

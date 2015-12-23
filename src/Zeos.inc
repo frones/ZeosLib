@@ -199,7 +199,6 @@
   {$DEFINE DELPHI16_UP} // Used in zeos.inc only
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
-  {$DEFINE WITH_FASTCODE_INTTOSTR} //Since XE2 the full purepascal IntToStr func is included
 {$ENDIF}
 
 // Compilation directives for Delphi XE3
@@ -349,7 +348,7 @@
 
 {$IFDEF DELPHI14_UP}
   {$WEAKLINKRTTI ON}                    //suppress extended RTTI  
-  {$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])} //suppress extended RTTI
+  {.$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])} //suppress extended RTTI for some unknown reason we've compilation issues. So enable this define manually!
   {$UNDEF WITH_INLINE_ANSICOMPARETEXT}  // AnsiCompareText is no more inline declared
   {$DEFINE WITH_PWIDECHAR_STRLEN}       // SysUtils.StrLen supports PWideChar
   {$DEFINE WITH_FTTIMESTAMPOFFSET}      // ftTimeStampOffset is supported
@@ -389,6 +388,8 @@
   {$DEFINE WITH_SYSTEM_PREFIX}
   {$DEFINE TLIST_ISNOT_PPOINTERLIST} //since XE2 TList is is TPointerList not PPointerList
   {$DEFINE HAVE_TRUE_NATIVE_TYPES} //since XE2 NativeInt, NativeUint are fixed and behave like FPC SizeInt, PtrInt (4/8Byte)
+  {$DEFINE WITH_FASTCODE_INTTOSTR} //Since XE2 the full purepascal IntToStr func is included
+  {$DEFINE WITH_PUREPASCAL_INTPOWER} //Since XE2 a buggy pure pascal version of Math.IntPower was introduced
 {$ENDIF}
 
 {$IFDEF DELPHI17_UP}
