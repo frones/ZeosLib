@@ -123,9 +123,7 @@ type
     procedure Unprepare; override;
   end;
 
-{$ENDIF ENABLE_ADO}
 implementation
-{$IFDEF ENABLE_ADO}
 
 uses
   Variants, ComObj,
@@ -794,6 +792,8 @@ begin
         ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], NullVariant, FDirectionTypes[i]);
 end;
 
+{$ELSE}
+implementation
 {$ENDIF ENABLE_ADO}
 end.
 
