@@ -348,7 +348,7 @@
 
 {$IFDEF DELPHI14_UP}
   {$WEAKLINKRTTI ON}                    //suppress extended RTTI  
-  {$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])} //suppress extended RTTI
+  {.$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])} //suppress extended RTTI for some unknown reason we've compilation issues. So enable this define manually!
   {$UNDEF WITH_INLINE_ANSICOMPARETEXT}  // AnsiCompareText is no more inline declared
   {$DEFINE WITH_PWIDECHAR_STRLEN}       // SysUtils.StrLen supports PWideChar
   {$DEFINE WITH_FTTIMESTAMPOFFSET}      // ftTimeStampOffset is supported
