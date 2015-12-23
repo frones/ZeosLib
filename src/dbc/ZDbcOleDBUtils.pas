@@ -110,6 +110,8 @@ procedure OleBindArrayParams(const DBParams: TDBParams; ArrayOffSet: DB_UPARAMS;
 procedure SetOleCommandProperties(Command: ICommandText; TimeOut: SmallInt;
   Provider: TZServerProvider; SupportsMARSConnection: Boolean);
 
+function ProviderNamePrefix2ServerProvider(const ProviderNamePrefix: String): TZServerProvider;
+
 implementation
 
 uses
@@ -2092,6 +2094,39 @@ begin
       FCmdProps := nil;
     end;
   end;
+end;
+
+function ProviderNamePrefix2ServerProvider(const ProviderNamePrefix: String): TZServerProvider;
+type
+  TDriverNameAndServerProvider = record
+    ProviderNamePrefix: String;
+    Provider: TZServerProvider;
+  end;
+const
+  KnownDriverName2TypeMap: array[0..12] of TDriverNameAndServerProvider = (
+    (ProviderNamePrefix: 'ORAOLEDB';      Provider: spOracle),
+    (ProviderNamePrefix: 'MSDAORA';       Provider: spOracle),
+    (ProviderNamePrefix: 'SQLNCLI';       Provider: spMSSQL),
+    (ProviderNamePrefix: 'SQLOLEDB';      Provider: spMSSQL),
+    (ProviderNamePrefix: 'SSISOLEDB';     Provider: spMSSQL),
+    (ProviderNamePrefix: 'MSDASQL';       Provider: spMSSQL), //??
+    (ProviderNamePrefix: 'MYSQLPROV';     Provider: spMySQL),
+    (ProviderNamePrefix: 'IBMDA400';      Provider: spAS400),
+    (ProviderNamePrefix: 'IFXOLEDBC';     Provider: spInformix),
+    (ProviderNamePrefix: 'MICROSOFT.JET.OLEDB'; Provider: spMSJet),
+    (ProviderNamePrefix: 'IB';            Provider: spIB_FB),
+    (ProviderNamePrefix: 'POSTGRESSQL';   Provider: spPostgreSQL),
+    (ProviderNamePrefix: 'CUBRID';        Provider: spCUBRID)
+    );
+var
+  I: Integer;
+begin
+  Result := spMSSQL;
+  for i := low(KnownDriverName2TypeMap) to high(KnownDriverName2TypeMap) do
+    if StartsWith(ProviderNamePrefix, KnownDriverName2TypeMap[i].ProviderNamePrefix) then begin
+      Result := KnownDriverName2TypeMap[i].Provider;
+      Break;
+    end;
 end;
 
 //(*

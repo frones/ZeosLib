@@ -237,7 +237,6 @@ begin
   FMetadata := TOleDBDatabaseMetadata.Create(Self, URL);
   FRetaining := False; //not StrToBoolEx(URL.Properties.Values['hard_commit']);
   CheckCharEncoding('CP_UTF16');
-  FServerProvider := spMSSQL;
   fTransaction := nil;
   Inherited SetAutoCommit(True);
   Open;
@@ -696,34 +695,11 @@ end;
   Opens a connection to database server with specified parameters.
 }
 procedure TZOleDBConnection.Open;
-type
-  TDriverNameAndServerProvider = record
-    ProviderNamePrefix: String;
-    Provider: TZServerProvider;
-  end;
-const
-  KnownDriverName2TypeMap: array[0..12] of TDriverNameAndServerProvider = (
-    (ProviderNamePrefix: 'ORAOLEDB';      Provider: spOracle),
-    (ProviderNamePrefix: 'MSDAORA';       Provider: spOracle),
-    (ProviderNamePrefix: 'SQLNCLI';       Provider: spMSSQL),
-    (ProviderNamePrefix: 'SQLOLEDB';      Provider: spMSSQL),
-    (ProviderNamePrefix: 'SSISOLEDB';     Provider: spMSSQL),
-    (ProviderNamePrefix: 'MSDASQL';       Provider: spMSSQL), //??
-    (ProviderNamePrefix: 'MYSQLPROV';     Provider: spMySQL),
-    (ProviderNamePrefix: 'IBMDA400';      Provider: spAS400),
-    (ProviderNamePrefix: 'IFXOLEDBC';     Provider: spInformix),
-    (ProviderNamePrefix: 'MICROSOFT.JET.OLEDB'; Provider: spMSJet),
-    (ProviderNamePrefix: 'IB';            Provider: spIB_FB),
-    (ProviderNamePrefix: 'POSTGRESSQL';   Provider: spPostgreSQL),
-    (ProviderNamePrefix: 'CUBRID';        Provider: spCUBRID)
-    );
 var
   DataInitialize : IDataInitialize;
   ConnectStrings: TStrings;
   ConnectString: ZWideString;
-  Tmp: String;
   FDBCreateSession: IDBCreateSession;
-  I: Integer;
 begin
   if not Closed then
     Exit;
@@ -741,12 +717,7 @@ begin
       ConnectStrings.Values['Password'] := PassWord;
       ConnectString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(ComposeString(ConnectStrings, ';'));
     end;
-    Tmp := UpperCase(ConnectStrings.Values['Provider']);
-    for i := low(KnownDriverName2TypeMap) to high(KnownDriverName2TypeMap) do
-      if StartsWith(tmp, KnownDriverName2TypeMap[i].ProviderNamePrefix) then begin
-        FServerProvider := KnownDriverName2TypeMap[i].Provider;
-        Break;
-      end;
+    FServerProvider := ProviderNamePrefix2ServerProvider(ConnectStrings.Values['Provider']);
     ConnectStrings.Free;
     OleCheck(DataInitialize.GetDataSource(nil,CLSCTX_INPROC_SERVER,
       Pointer(ConnectString), IID_IDBInitialize,IUnknown(fDBInitialize)));
