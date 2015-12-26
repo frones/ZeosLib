@@ -58,7 +58,7 @@ interface
 {$I ZCore.inc}
 
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
-  {$IFDEF MSWINDOWS}Windows,{$ENDIF}
+  {$IFDEF MSWINDOWS}Windows,{$ENDIF} RTTI,
   ZTestCase, ZSysUtils, ZClasses, ZVariant, ZMatchPattern, ZCompatibility;
 
 type
@@ -74,16 +74,16 @@ uses ZFastCode;
 { TZTestFastCodeCase }
 
 procedure TZTestFastCodeCase.TestValRawExt;
-const EValues: array[0..9] of Extended = (11111.1111, 3.402823466E+38,
+const EValues: array[0..10] of Extended = (-1.79769313486232e+308, 11111.1111, 3.402823466E+38,
   3.402823466E+38, 1.7976931348623157E+308, 21474836.47, 99999.9999,
   1.175494351E-38, 1.175494351E-38, 2.2250738585072014E-308, 21474836.47);
-const PValues: array[0..High(EValues)] of PAnsiChar = ('11111.1111', '3.402823466E+38',
+const PValues: array[0..High(EValues)] of PAnsiChar = ('-1.79769313486232e+308', '11111.1111', '3.402823466E+38',
   '3.402823466E+38', '1.7976931348623157E+308', '21474836.47', '99999.9999',
   '1.175494351E-38', '1.175494351E-38', '2.2250738585072014E-308', '21474836.47');
 var I, Code: Integer;
 begin
   for i := low(EValues) to high(EValues) do
-     Check({EValues[i], }ValRawExt(PValues[i], '.', Code) <> 0, 'Falied conversion of '+String(PValues[i]));
+     Check({EValues[i], }ValRawExt(PValues[i], '.', Code) <> 0, 'Failed conversion of '+String(PValues[i]));
 end;
 
 initialization
