@@ -8,7 +8,9 @@ interface
 
 uses
   ZDbcDbLib, ZDbcInterbase6, ZDbcIntfs, ZDbcMetadata, ZDbcMySql, ZDbcOracle, 
-  ZDbcPostgreSql, ZDbcSqLite, ZDbcASA, ZDbcPooled, ZDbcAdo, ZDbcOleDB;
+  ZDbcPostgreSql, ZDbcSqLite, ZDbcASA, ZDbcPooled, ZDbcAdo, ZDbcOleDB, 
+  ZDbcOleDBMetaData, ZDbcOleDBResultSet, ZDbcOleDBStatement, ZDbcODBCCon, 
+  ZDbcODBCMetadata, ZDbcODBCResultSet, ZDbcODBCStatement, ZDbcODBCUtils;
 
 implementation
 

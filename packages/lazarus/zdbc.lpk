@@ -17,13 +17,10 @@
           <UseAnsiStrings Value="False"/>
         </SyntaxOptions>
       </Parsing>
-      <Other>
-        <CompilerPath Value="$(CompPath)"/>
-      </Other>
     </CompilerOptions>
     <Description Value="Zeos Low Level Database API"/>
     <Version Major="7" Minor="3"/>
-    <Files Count="12">
+    <Files Count="20">
       <Item1>
         <Filename Value="..\..\src\dbc\ZDbcDbLib.pas"/>
         <UnitName Value="ZDbcDbLib"/>
@@ -72,6 +69,38 @@
         <Filename Value="..\..\src\dbc\ZDbcOleDB.pas"/>
         <UnitName Value="ZDbcOleDB"/>
       </Item12>
+      <Item13>
+        <Filename Value="..\..\src\dbc\ZDbcOleDBMetaData.pas"/>
+        <UnitName Value="ZDbcOleDBMetadata"/>
+      </Item13>
+      <Item14>
+        <Filename Value="..\..\src\dbc\ZDbcOleDBResultSet.pas"/>
+        <UnitName Value="ZDbcOleDBResultSet"/>
+      </Item14>
+      <Item15>
+        <Filename Value="..\..\src\dbc\ZDbcOleDBStatement.pas"/>
+        <UnitName Value="ZDbcOleDBStatement"/>
+      </Item15>
+      <Item16>
+        <Filename Value="..\..\src\dbc\ZDbcODBCCon.pas"/>
+        <UnitName Value="ZDbcODBCCon"/>
+      </Item16>
+      <Item17>
+        <Filename Value="..\..\src\dbc\ZDbcODBCMetadata.pas"/>
+        <UnitName Value="ZDbcODBCMetadata"/>
+      </Item17>
+      <Item18>
+        <Filename Value="..\..\src\dbc\ZDbcODBCResultSet.pas"/>
+        <UnitName Value="ZDbcODBCResultSet"/>
+      </Item18>
+      <Item19>
+        <Filename Value="..\..\src\dbc\ZDbcODBCStatement.pas"/>
+        <UnitName Value="ZDbcODBCStatement"/>
+      </Item19>
+      <Item20>
+        <Filename Value="..\..\src\dbc\ZDbcODBCUtils.pas"/>
+        <UnitName Value="ZDbcODBCUtils"/>
+      </Item20>
     </Files>
     <RequiredPkgs Count="5">
       <Item1>

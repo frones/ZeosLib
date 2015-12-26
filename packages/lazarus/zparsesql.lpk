@@ -18,7 +18,7 @@
     </CompilerOptions>
     <Description Value="Zeos SQL Parsing Classes and Interfaces"/>
     <Version Major="7" Minor="3"/>
-    <Files Count="18">
+    <Files Count="19">
       <Item1>
         <Filename Value="../../src/parsesql/ZSybaseToken.pas"/>
         <UnitName Value="ZSybaseToken"/>
@@ -91,6 +91,10 @@
         <Filename Value="../../src/parsesql/ZOleDBToken.pas"/>
         <UnitName Value="ZOleDBToken"/>
       </Item18>
+      <Item19>
+        <Filename Value="../../src/parsesql/ZODBCToken.pas"/>
+        <UnitName Value="ZODBCToken"/>
+      </Item19>
     </Files>
     <RequiredPkgs Count="3">
       <Item1>
