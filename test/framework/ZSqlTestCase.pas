@@ -464,7 +464,7 @@ begin
   FDropScripts := SplitStringToArray(TestConfig.ReadProperty(FName,
     DATABASE_DROP_SCRIPTS_KEY, ''), LIST_DELIMITERS);
   FProperties := SplitStringToArray(TestConfig.ReadProperty(FName,
-    DATABASE_PROPERTIES_KEY, ''), LIST_DELIMITERS);
+    DATABASE_PROPERTIES_KEY, ''), ',;');
   FConfigUses := [cuMainConnection];
   FSkip_RealPrepared := StrToBoolEx(TestConfig.ReadProperty(FName,
     SKIP_REAL_PREPARED_KEY, FALSE_VALUE));
@@ -1028,7 +1028,8 @@ begin
             Temp := UTF8ToAnsi(Value)
           else
             Temp := Value;
-      else //ceUTF8, ceUTF16, ceUTF32
+
+      ceUTF8: //, ceUTF32
         if ConSettings.AutoEncode then //Revert the expected value to test
           if IsUTF8Encoded then
             {$IFDEF UNICODE}
@@ -1038,11 +1039,36 @@ begin
             {$ENDIF}
           else
             Temp := Value
-        else
+        else //Return the expected value to test
           if IsUTF8Encoded then
             Temp := Value
           else
             Temp := UTF8Encode(WideString(Value)); //Return the expected value to test
+      ceUTF16:
+        if IsUTF8Encoded then
+          {$IFDEF UNICODE}
+          Temp := UTF8ToString(Value)
+          {$ELSE}
+          if ConSettings.AutoEncode then //Revert the expected value to test
+            if ConSettings.CPType = cCP_UTF8 then
+              Temp := UTF8ToAnsi(Value)
+            else
+              Temp := Value
+          else
+            Temp := UTF8ToAnsi(Value)
+          {$ENDIF}
+        else
+          {$IFDEF UNICODE}
+          Temp := Value
+          {$ELSE}
+          if ConSettings.AutoEncode then //Revert the expected value to test
+            if ConSettings.CPType = cCP_UTF8 then
+              Temp := Value
+            else
+              Temp := UTF8Encode(WideString(Value))
+          else
+            Temp := Value
+          {$ENDIF}
     end;
   if (MaxLen = -1) then
   begin
