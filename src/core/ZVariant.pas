@@ -1815,20 +1815,20 @@ begin
         vtFloat:
           Result.VFloat := Value.VFloat;
         vtString:
-          Result.VFloat := SqlStrToFloatDef(PChar(Pointer(Value.VString)), 0);
+          SqlStrToFloatDef(PChar(Pointer(Value.VString)), 0, Result.VFloat, Length(Value.VString));
         vtAnsiString:
-          Result.VFloat := RawToFloatDef(Pointer(Value.VAnsiString), '.', 0);
+          SqlStrToFloatDef(PAnsiChar(Pointer(Value.VAnsiString)), 0, Result.VFloat, Length(Value.VAnsiString));
         vtUTF8String:
-          Result.VFloat := RawToFloatDef(Pointer(Value.VUTF8String), '.', 0);
+          SqlStrToFloatDef(PAnsiChar(Pointer(Value.VUTF8String)), 0, Result.VFloat, Length(Value.VUTF8String));
         vtRawByteString:
-          Result.VFloat := RawToFloatDef(Pointer(Value.VRawByteString), '.', 0);
+          SqlStrToFloatDef(PAnsiChar(Pointer(Value.VRawByteString)), 0, Result.VFloat, Length(Value.VRawByteString));
         vtUnicodeString:
-          Result.VFloat := UnicodeToFloatDef(Pointer(Value.VUnicodeString), WideChar('.'), 0);
+          SqlStrToFloatDef(PWideChar(Pointer(Value.VUnicodeString)), 0, Result.VFloat, Length(Value.VUnicodeString));
         vtCharRec:
           if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
-            Result.VFloat := UnicodeToFloatDef(Value.VCharRec.P, WideChar('.'), 0)
+            SqlStrToFloatDef(PWideChar(Value.VCharRec.P), 0, Result.VFloat, Value.VCharRec.Len)
           else
-            Result.VFloat := RawToFloatDef(Value.VCharRec.P, '.', 0);
+            SqlStrToFloatDef(PAnsiChar(Value.VCharRec.P), 0, Result.VFloat, Value.VCharRec.Len);
         vtDateTime:
           Result.VFloat := Value.VDateTime;
         else

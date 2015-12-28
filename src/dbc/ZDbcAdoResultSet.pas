@@ -1308,8 +1308,7 @@ begin
   ProcessFixedChar:
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
-          System.SetString(FUniTemp, P, Len);
-          Result := UnicodeToFloatDef(FUniTemp, WideChar('.'), 0);
+          ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
         end;
       adVarChar,
       adLongVarChar, {varying char fields}
@@ -1380,8 +1379,7 @@ begin
   ProcessFixedChar:
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
-          System.SetString(FUniTemp, P, Len);
-          Result := UnicodeToFloatDef(FUniTemp, WideChar('.'), 0);
+          ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
         end;
       adVarChar,
       adLongVarChar, {varying char fields}
@@ -1453,8 +1451,7 @@ begin
   ProcessFixedChar:
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
-          System.SetString(FUniTemp, P, Len);
-          Result := UnicodeToFloatDef(FUniTemp, WideChar('.'), 0);
+          ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
         end;
       adVarChar,
       adLongVarChar, {varying char fields}

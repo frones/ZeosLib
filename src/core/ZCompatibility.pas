@@ -101,7 +101,7 @@ type
 {$ENDIF}
   // EgonHugeist: Use always a 4Byte unsigned Integer for Windows otherwise MySQL64 has problems on Win64!
   // don't know anything about reported issues on other OS's
-  ULong                 = {$IFDEF WIN64}LongWord{$ELSE}NativeUInt{$ENDIF};
+  ULong                 = {$IFDEF MSWINDOWS}LongWord{$ELSE}NativeUInt{$ENDIF};
   ULongLong             = UInt64;
   PULong                = ^ULong;
   PULongLong            = ^ULongLong;
@@ -412,6 +412,10 @@ procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8St
 procedure ZSetString(Src: PAnsiChar; const Len: LengthInt; var Dest: ZWideString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$IFDEF WITH_RAWBYTESTRING}
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+{$ENDIF}
+
+{$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}
+function Min(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
 var
@@ -805,6 +809,15 @@ begin
 end;
 {$ENDIF}
 
+{$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}
+function Min(const A, B: NativeUInt): NativeUInt;
+begin
+  if A < B then
+    Result := A
+  else
+    Result := B;
+end;
+{$ENDIF}
 
 initialization
   case ConSettingsDummy.CPType of

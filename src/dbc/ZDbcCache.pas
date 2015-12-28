@@ -2509,6 +2509,7 @@ end;
     value returned is <code>0</code>
 }
 function TZRowAccessor.GetFloat(Const ColumnIndex: Integer; var IsNull: Boolean): Single;
+var TempLob: IZBlob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
@@ -2532,12 +2533,25 @@ begin
       stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
       stString, stUnicodeString:
         if Self is TZRawRowAccessor then
-          Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0,
+          SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0, Result,
             PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
         else
           Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0,
             PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
-      stAsciiStream, stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+      stAsciiStream: begin
+          TempLob := GetBlob(ColumnIndex, IsNull);
+          if TempLob.IsClob then
+            SQLStrToFloatDef(TempLob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
+          else
+            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
+        end;
+      stUnicodeStream: begin
+          TempLob := GetBlob(ColumnIndex, IsNull);
+          if TempLob.IsClob then
+            SQLStrToFloatDef(TempLob.GetPWideChar, 0, Result)
+          else
+            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
+        end;
     end;
     IsNull := False;
   end
@@ -2555,6 +2569,7 @@ end;
     value returned is <code>0</code>
 }
 function TZRowAccessor.GetDouble(Const ColumnIndex: Integer; var IsNull: Boolean): Double;
+var TempLob: IZBlob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
@@ -2579,12 +2594,25 @@ begin
       stTime, stDate, stTimeStamp: Result := PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
       stString, stUnicodeString:
         if Self is TZRawRowAccessor then
-          Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0,
+          SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0, Result,
            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
         else
           Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0,
            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
-      stAsciiStream, stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+      stAsciiStream: begin
+          TempLob := GetBlob(ColumnIndex, IsNull);
+          if TempLob.IsClob then
+            SQLStrToFloatDef(TempLob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
+          else
+            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
+        end;
+      stUnicodeStream: begin
+          TempLob := GetBlob(ColumnIndex, IsNull);
+          if TempLob.IsClob then
+            SQLStrToFloatDef(TempLob.GetPWideChar, 0, Result)
+          else
+            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
+        end;
     end;
     IsNull := False;
   end
@@ -2602,6 +2630,7 @@ end;
     value returned is <code>0</code>
 }
 function TZRowAccessor.GetCurrency(Const ColumnIndex: Integer; var IsNull: Boolean): Currency;
+var TempLob: IZBlob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stCurrency);
@@ -2625,12 +2654,25 @@ begin
       stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
       stString, stUnicodeString:
         if Self is TZRawRowAccessor then
-          Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0,
-           PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
+          SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0, Result,
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
         else
-          Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0,
-           PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
-      stAsciiStream, stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+          SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0, Result,
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
+      stAsciiStream: begin
+          TempLob := GetBlob(ColumnIndex, IsNull);
+          if TempLob.IsClob then
+            SQLStrToFloatDef(TempLob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
+          else
+            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
+        end;
+      stUnicodeStream: begin
+          TempLob := GetBlob(ColumnIndex, IsNull);
+          if TempLob.IsClob then
+            SQLStrToFloatDef(TempLob.GetPWideChar, 0, Result)
+          else
+            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
+        end;
     end;
     IsNull := False;
   end
@@ -2649,6 +2691,8 @@ end;
     value returned is <code>null</code>
 }
 function TZRowAccessor.GetBigDecimal(Const ColumnIndex: Integer; var IsNull: Boolean): Extended;
+var
+  TempLob: IZBlob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
@@ -2672,12 +2716,25 @@ begin
       stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
       stString, stUnicodeString:
         if Self is TZRawRowAccessor then
-          Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0,
+          SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0, Result,
             PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
         else
           Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0,
             PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
-      stAsciiStream, stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+      stAsciiStream: begin
+          TempLob := GetBlob(ColumnIndex, IsNull);
+          if TempLob.IsClob then
+            SQLStrToFloatDef(TempLob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
+          else
+            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
+        end;
+      stUnicodeStream: begin
+          TempLob := GetBlob(ColumnIndex, IsNull);
+          if TempLob.IsClob then
+            SQLStrToFloatDef(TempLob.GetPWideChar, 0, Result)
+          else
+            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
+        end;
     end;
     IsNull := False;
   end
@@ -3892,10 +3949,10 @@ begin
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToIntDef(Value, 0);
     stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToInt64Def(Value, 0);
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToInt64Def(Value, 0);
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0, Len^);
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0, Len^);
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0, Len^);
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0, Len^);
+    stFloat: SQLStrToFloatDef(Value, 0, PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Len^);
+    stDouble: SQLStrToFloatDef(Value, 0, PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Len^);
+    stCurrency: SQLStrToFloatDef(Value, 0, PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Len^);
+    stBigDecimal: SQLStrToFloatDef(Value, 0, PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Len^);
     //stString, stUnicodeString: do not handle here!
     stBytes:
       begin
@@ -4109,10 +4166,10 @@ begin
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToIntDef(Value, 0);
     stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToInt64Def(Value, 0);
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToInt64Def(Value, 0);
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0);
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0);
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0);
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0);
+    stFloat: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
+    stDouble: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
+    stCurrency: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
+    stBigDecimal: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
     //stString, stUnicodeString: do not handle here!
     stBytes: SetBytes(ColumnIndex, StrToBytes(Value));
     stGUID:
@@ -4181,10 +4238,10 @@ begin
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
     stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToInt64Def(Value, 0);
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToInt64Def(Value, 0);
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0);
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0);
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0);
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0);
+    stFloat: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
+    stDouble: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
+    stCurrency: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
+    stBigDecimal: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
     //stUnicodeString, stString: do not handle here
     stAsciiStream, stUnicodeStream:
       begin

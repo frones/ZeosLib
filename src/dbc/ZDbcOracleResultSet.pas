@@ -627,8 +627,6 @@ end;
 function TZOracleAbstractResultSet.GetInt(ColumnIndex: Integer): Integer;
 var
   SQLVarHolder: PZSQLVar;
-  P: PAnsiChar;
-  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
@@ -640,13 +638,7 @@ begin
     with SQLVarHolder^ do
       case TypeCode of
         SQLT_AFC:
-          begin
-            Len := oDataSize;
-            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
-            ZSetString(P, Len, FRawTemp);
-            Result := RawToIntDef(FRawTemp, 0);
-          end;
+          Result := RawToIntDef({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)), 0);
         SQLT_INT:
           Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_UIN:
@@ -678,8 +670,6 @@ end;
 function TZOracleAbstractResultSet.GetLong(ColumnIndex: Integer): Int64;
 var
   SQLVarHolder: PZSQLVar;
-  P: PAnsiChar;
-  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
@@ -691,13 +681,7 @@ begin
     with SQLVarHolder^ do
       case TypeCode of
         SQLT_AFC:
-          begin
-            Len := oDataSize;
-            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
-            ZSetString(P, Len, FRawTemp);
-            Result := RawToInt64Def(FRawTemp, 0);
-          end;
+          Result := RawToInt64Def({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)), 0);
         SQLT_INT:
           Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_UIN:
@@ -729,8 +713,6 @@ end;
 function TZOracleAbstractResultSet.GetULong(ColumnIndex: Integer): UInt64;
 var
   SQLVarHolder: PZSQLVar;
-  P: PAnsiChar;
-  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stULong);
@@ -742,13 +724,7 @@ begin
     with SQLVarHolder^ do
       case TypeCode of
         SQLT_AFC:
-          begin
-            Len := oDataSize;
-            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
-            ZSetString(P, Len, FRawTemp);
-            Result := RawToUInt64Def(FRawTemp, 0);
-          end;
+          Result := RawToUInt64Def({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)), 0);
         SQLT_INT:
           Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_UIN:
@@ -797,8 +773,7 @@ begin
             Len := oDataSize;
             P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
-            ZSetString(P, Len, FRawTemp);
-            Result := SqlStrToFloatDef(FRawTemp, 0);
+            SqlStrToFloatDef(P, 0, Result, Len);
           end;
         SQLT_INT:
           Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
@@ -807,14 +782,14 @@ begin
         SQLT_FLT:
           Result := {%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_STR:
-          Result := SqlStrToFloatDef({%H-}PAnsichar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)),
-            oDataSizeArray^[FCurrentBufRowNo] , 0);
+           SqlStrToFloatDef({%H-}PAnsichar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)),
+            0, Result, oDataSizeArray^[FCurrentBufRowNo]);
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           Result := 0;
         SQLT_DAT, SQLT_TIMESTAMP:
           Result := GetAsDateTimeValue(SQLVarHolder);
         SQLT_BLOB, SQLT_CLOB:
-          Result := SqlStrToFloatDef(PAnsiChar(GetBlob(ColumnIndex).GetBuffer), 0);
+          SqlStrToFloatDef(PAnsiChar(GetBlob(ColumnIndex).GetBuffer), 0, Result);
       else
         Result := 0;
       end;
@@ -849,8 +824,7 @@ begin
             Len := oDataSize;
             P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
-            ZSetString(P, Len, FRawTemp);
-            Result := SqlStrToFloatDef(FRawTemp, 0);
+            SqlStrToFloatDef(P, 0, Result, Len);
           end;
         SQLT_INT:
           Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
@@ -859,14 +833,14 @@ begin
         SQLT_FLT:
           Result := {%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_STR:
-          Result := SqlStrToFloatDef({%H-}PAnsichar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)),
-            oDataSizeArray^[FCurrentBufRowNo] , 0);
+          SqlStrToFloatDef({%H-}PAnsichar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)),
+            0, Result, oDataSizeArray^[FCurrentBufRowNo]);
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           Result := 0;
         SQLT_DAT, SQLT_TIMESTAMP:
           Result := GetAsDateTimeValue(SQLVarHolder);
         SQLT_BLOB, SQLT_CLOB:
-          Result := SqlStrToFloatDef(PAnsiChar(GetBlob(ColumnIndex).GetBuffer), 0);
+          SqlStrToFloatDef(PAnsiChar(GetBlob(ColumnIndex).GetBuffer), 0, Result);
       else
         Result := 0;
       end;
@@ -902,8 +876,7 @@ begin
             Len := oDataSize;
             P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
-            ZSetString(P, Len, FRawTemp);
-            Result := SqlStrToFloatDef(FRawTemp, 0);
+            SqlStrToFloatDef(P, 0, Result, Len);
           end;
         SQLT_INT:
           Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
@@ -912,14 +885,14 @@ begin
         SQLT_FLT:
           Result := {%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_STR:
-          Result := SqlStrToFloatDef({%H-}PAnsichar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)),
-            oDataSizeArray^[FCurrentBufRowNo], 0);
+          SqlStrToFloatDef({%H-}PAnsichar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)),
+            0, Result, oDataSizeArray^[FCurrentBufRowNo]);
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           Result := 0;
         SQLT_DAT, SQLT_TIMESTAMP:
           Result := GetAsDateTimeValue(SQLVarHolder);
         SQLT_BLOB, SQLT_CLOB:
-          Result := SqlStrToFloatDef(PAnsiChar(GetBlob(ColumnIndex).GetBuffer), 0);
+          SqlStrToFloatDef(PAnsiChar(GetBlob(ColumnIndex).GetBuffer), 0, Result);
       else
         Result := 0;
       end;
