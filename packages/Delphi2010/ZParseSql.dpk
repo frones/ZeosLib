@@ -25,12 +25,13 @@ package ZParseSql;
 {$LIBSUFFIX '140'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
-{$I ZPackages.inc}
 
 requires
   ZCore;
 
 contains
+
+{$I ZPackages.inc} //after simplify Zeos.Inc by using {$IF CompilerVersion > x} i need to move this include AFTER contains!
 
 {$IFDEF ENABLE_ADO}
   ZAdoToken in '..\..\src\parsesql\ZAdoToken.pas',

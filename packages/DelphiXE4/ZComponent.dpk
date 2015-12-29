@@ -28,7 +28,6 @@ package ZComponent;
 {$LIBSUFFIX '180'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
-{$I ZPackages.inc}
 
 requires
   rtl,
@@ -41,6 +40,8 @@ requires
   vcl;
 
 contains
+  {$I ZPackages.inc} //after simplify Zeos.Inc by using {$IF CompilerVersion > x} i need to move this include AFTER contains!
+
   ZSqlUpdate in '..\..\src\component\ZSqlUpdate.pas',
   ZAbstractDataset in '..\..\src\component\ZAbstractDataset.pas',
   ZAbstractRODataset in '..\..\src\component\ZAbstractRODataset.pas',

@@ -28,7 +28,6 @@ package ZCore;
 {$LIBSUFFIX '210'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
-{$I ZPackages.inc}
 
 requires
   rtl;
