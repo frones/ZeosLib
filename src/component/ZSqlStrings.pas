@@ -106,6 +106,7 @@ type
     procedure Changed; override;
     function FindParam(const ParamName: string): Integer;
     procedure RebuildAll;
+    procedure SetTextStr(const Value: string); override;
   public
     constructor Create;
     destructor Destroy; override;
@@ -279,6 +280,12 @@ begin
   end;
 end;
 
+procedure TZSQLStrings.SetTextStr(const Value: string);
+begin
+  if Value <> Text then //prevent rebuildall if nothing changed see:
+    inherited SetTextStr(Value);
+end;
+
 {**
   Sets a new ParamChar value.
   @param Value a new ParamCheck value.
@@ -288,7 +295,7 @@ begin
   if FParamChar <> Value then
   begin
     If not(GetTokenizer.GetCharacterState(Value) is TZSymbolstate) Then
-      raise EZDatabaseError.Create('Ongeldige ParamChar waarde : '+Value);
+      raise EZDatabaseError.Create(cSIncorrectParamChar+' : '+Value);
     FParamChar := Value;
     RebuildAll;
   end;
