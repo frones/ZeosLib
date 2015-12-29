@@ -28,13 +28,19 @@ package ZPlain;
 {$LIBSUFFIX '220'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
+{$I ZPackages.inc}
 
 requires
   ZCore,
   rtl,
   vcl;
-{$I ZPackages.inc}
+
 contains
+
+{$IFDEF ENABLE_ODBC}
+  ZPlainODBCDriver in '..\..\src\plain\ZPlainODBCDriver.pas',
+{$ENDIF}
+
 {$IFDEF ENABLE_DBLIB}
   ZPlainDbLibDriver in '..\..\src\plain\ZPlainDbLibDriver.pas',
   ZPlainDbLibConstants in '..\..\src\plain\ZPlainDbLibConstants.pas',

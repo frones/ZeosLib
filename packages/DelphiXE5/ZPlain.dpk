@@ -36,6 +36,11 @@ requires
   vcl;
 
 contains
+
+{$IFDEF ENABLE_ODBC}
+  ZPlainODBCDriver in '..\..\src\plain\ZPlainODBCDriver.pas',
+{$ENDIF}
+
 {$IFDEF ENABLE_DBLIB}
   ZPlainDbLibDriver in '..\..\src\plain\ZPlainDbLibDriver.pas',
   ZPlainDbLibConstants in '..\..\src\plain\ZPlainDbLibConstants.pas',

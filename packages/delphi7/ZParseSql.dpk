@@ -33,9 +33,9 @@ requires
 
 contains
 
-{$IFDEF ENABLE_ODBC}
+{$IF defined(ENABLE_ODBC) or defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
   ZODBCToken in '..\..\src\parsesql\ZODBCToken.pas',
-{$ENDIF}
+{$IFEND}
 
 {$IFDEF ENABLE_ADO}
   ZAdoToken in '..\..\src\parsesql\ZAdoToken.pas',
