@@ -88,7 +88,7 @@ var
 var
   TwoDigitLookupLW : packed array[0..99] of LongWord;
 
-{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN)}
+{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN) or defined(USE_FAST_CHARPOS)}
   {$D-} {Prevent Steppping into Move Code} //EH: moved after FastCode.inc is loaded to prevent debugging
   {$IFDEF VER170}
     {$DEFINE SSE2}
