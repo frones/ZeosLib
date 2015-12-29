@@ -60,7 +60,7 @@ interface
 uses
   Types, Classes, ZClasses, ZCompatibility, ZDbcIntfs,
   ZConnectionGroup, ZAbstractConnection, ZURL,
-{$IFDEF BDS4_UP}
+{$IFDEF WITH_UNIT_WIDESTRINGS}
   WideStrings,
 {$ENDIF}
 {$IFNDEF FPC}

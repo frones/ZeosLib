@@ -33,8 +33,10 @@ requires
   ZCore,
   rtl,
   vcl;
-{$I ZPackages.inc}
+
 contains
+{$I ZPackages.inc} //after simplify Zeos.Inc by using {$IF CompilerVersion > x} i need to move this include AFTER contains!
+
 {$IFDEF ENABLE_DBLIB}
   ZPlainDbLibDriver in '..\..\src\plain\ZPlainDbLibDriver.pas',
   ZPlainDbLibConstants in '..\..\src\plain\ZPlainDbLibConstants.pas',

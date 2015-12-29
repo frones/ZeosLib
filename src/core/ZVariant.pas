@@ -103,14 +103,11 @@ type
       vtInteger: (VInteger: Int64);
       vtUInteger: (VUInteger: UInt64);
       vtFloat: (VFloat: Extended);
-      //CBuilder 2006/2007
-      //[BCC32 Error] Zvariant.hpp(81): E2019 'TZVariant:: :: :: ()' cannot be declared in an anonymous union
-      //See http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=3795&start=180
-      {$IF defined(BDS4_UP) and not defined(UNICODE)}
+      {$IFDEF BCC32_vtDateTime_ERROR}
       vtDateTime: (VDateTime: Double);
       {$ELSE}
       vtDateTime: (VDateTime: TDateTime);
-      {$IFEND}
+      {$ENDIF}
       vtPointer: (VPointer: Pointer);
       vtCharRec: (VCharRec: TZCharRec);
       vtArray: (VArray: TZArray);
@@ -1815,20 +1812,20 @@ begin
         vtFloat:
           Result.VFloat := Value.VFloat;
         vtString:
-          Result.VFloat := SqlStrToFloatDef(PChar(Pointer(Value.VString)), 0);
+          SqlStrToFloatDef(PChar(Pointer(Value.VString)), 0, Result.VFloat, Length(Value.VString));
         vtAnsiString:
-          Result.VFloat := RawToFloatDef(Pointer(Value.VAnsiString), '.', 0);
+          SqlStrToFloatDef(PAnsiChar(Pointer(Value.VAnsiString)), 0, Result.VFloat, Length(Value.VAnsiString));
         vtUTF8String:
-          Result.VFloat := RawToFloatDef(Pointer(Value.VUTF8String), '.', 0);
+          SqlStrToFloatDef(PAnsiChar(Pointer(Value.VUTF8String)), 0, Result.VFloat, Length(Value.VUTF8String));
         vtRawByteString:
-          Result.VFloat := RawToFloatDef(Pointer(Value.VRawByteString), '.', 0);
+          SqlStrToFloatDef(PAnsiChar(Pointer(Value.VRawByteString)), 0, Result.VFloat, Length(Value.VRawByteString));
         vtUnicodeString:
-          Result.VFloat := UnicodeToFloatDef(Pointer(Value.VUnicodeString), WideChar('.'), 0);
+          SqlStrToFloatDef(PWideChar(Pointer(Value.VUnicodeString)), 0, Result.VFloat, Length(Value.VUnicodeString));
         vtCharRec:
           if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
-            Result.VFloat := UnicodeToFloatDef(Value.VCharRec.P, WideChar('.'), 0)
+            SqlStrToFloatDef(PWideChar(Value.VCharRec.P), 0, Result.VFloat, Value.VCharRec.Len)
           else
-            Result.VFloat := RawToFloatDef(Value.VCharRec.P, '.', 0);
+            SqlStrToFloatDef(PAnsiChar(Value.VCharRec.P), 0, Result.VFloat, Value.VCharRec.Len);
         vtDateTime:
           Result.VFloat := Value.VDateTime;
         else
@@ -3077,7 +3074,7 @@ begin
     varDate: Result := EncodeDateTime(Value);
     varShortInt, varWord, varLongWord:
       Result := EncodeInteger(Value);
-    varInt64{$IFDEF BDS5_UP},varUInt64{$ENDIF}:
+    varInt64{$IFDEF WITH_VARIANT_UINT64},varUInt64{$ENDIF}:
       Result := EncodeInteger(Value);
   else
     Result := EncodeNull;

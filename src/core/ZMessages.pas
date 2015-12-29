@@ -690,14 +690,14 @@ resourcestring
   cSOperationIsNotAllowed4 = 'Die Operation ist bei einem geschlossenen DataSet nicht erlaubt';
   cSNoMoreRecords = 'Es gibt keine weiteren Datensätze in der Ergebnismenge';
   cSCanNotOpenResultSet = 'Die Ergebnismenge kann nicht geöffnet werden';
-  cSCanNotOpenDataSetWhenDestroying ='Dataset kann nicht im Komponenten-Status dsDestroying geöffnet werden';
+  cSCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   cSCircularLink = 'Die DataSource hat einen zirkulären Verweis';
   cSBookmarkWasNotFound = 'Das Lesezeichen (Bookmark) wurde nicht gefunden';
   cSIncorrectSearchFieldsNumber = 'Die Anzahl der Suchfeldwerte ist nicht korrekt';
   cSInvalidOperationInTrans = 'Ungültige Operatio im Zustand einer expliziten Transaktion';
   cSIncorrectSymbol = 'Falsches Symbol in der Feldliste "%s".';
   cSIncorrectToken = 'Falsches Token gefolgt von ":"';
-  cSIncorrectParamChar = 'Ungültiger Wert für Parameter-Indikator';
+  cSIncorrectParamChar = 'TRANSLATE : Invalid value for ParamChar';
 
   cSSelectedTransactionIsolation = 'Der gewählte Transaktions-Isolationslevel wird nicht unterstützt';
   cSDriverNotSupported = 'Der Treiber wird nicht unterstützt: %s';
@@ -749,18 +749,18 @@ resourcestring
   cSUpdateSQLRefreshStatementcount ='Translate : Update Refresh SQL Statement count must be 1';
 
   {$IFDEF FPC}
-  cSNotEditing = 'Das DataSet ist nicht im "Ändern" oder "Einfüge" Modus.';
+  cSNotEditing = 'Das DataSet ist nicht im "edit" oder "insert" Modus.';
   cSFieldTypeMismatch = 'Der Typ für Feld ''%s'' stimmt nicht. Erwartet wird %s der Typ ist aber momentan %s';
   cSFieldSizeMismatch = 'Die Größe des Feldes ''%s'' stimmt nicht. Erwartet wird  %d die Größe ist aber momentan %d';
   {$ENDIF}
-  cSNeedField               = 'Feld %s benötigt einen Wert, welcher nicht zugewiesen wurde.';
+  cSNeedField               = 'Translate: Field %s is required, but not supplied.';
 
-  cSFailedtoInitPrepStmt   = 'Die Initialisierung für vorbereitete Abfrage ist gescheitert';
-  cSFailedtoPrepareStmt    = 'Abfrage ist wärend des Vorbereitungsprozesses gescheitert.';
-  cSFailedToBindAllValues  = 'Anwendung konnte nicht alle Werte übergeben';
-  cSAttemptExecOnBadPrep   = 'Es wurde versucht eine nicht erfolgreich vorbereitete Abfrage auszuführen';
-  cSBindingFailure         = 'Konnte nicht alle ausgewählten Parameter der Abfrage binden';
-  cSPreparedStmtExecFailure = 'Vorbeitet Abfrage scheiterte beim Ausführen';
+  cSFailedtoInitPrepStmt   = 'Translate: Prepared statement failed to initialize';
+  cSFailedtoPrepareStmt    = 'Translate: Statement failed during prepare process';
+  cSFailedToBindAllValues  = 'Translate: Application failed to pre-bind all values';
+  cSAttemptExecOnBadPrep   = 'Translate: Attempt made to execute a statement before a successful preparation.';
+  cSBindingFailure         = 'Translate: Failed to bind parameter set';
+  cSPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
   cSBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   cSBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
   cSFailedToBindResults    = 'Translate: Application failed to bind to the result set';
@@ -769,9 +769,9 @@ resourcestring
   cSRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   cSMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
 
-  cSUnKnownParamDataType = 'Unbekannter Parameter-Datentyp';
-  cSFieldReadOnly          = 'Einem "Nur-Lesen" Feld kann kein Wert zugewiesen werden: %d';
-  cSInvalidUpdateCount     = '%d Datensätze geändert. Exakt ein Datensatz sollte geändert werden.';
+  cSUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
+  cSFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
+  cSInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.';
 
   cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 {$ELSE}

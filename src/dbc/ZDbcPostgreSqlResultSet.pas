@@ -612,7 +612,7 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := ZSysUtils.SQLStrToFloatDef(Buffer, 0, Len);
+    ZSysUtils.SQLStrToFloatDef(Buffer, 0, Result, Len);
 end;
 
 {**
@@ -640,7 +640,7 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := ZSysUtils.SQLStrToFloatDef(Buffer, 0, Len);
+    ZSysUtils.SQLStrToFloatDef(Buffer, 0, Result, Len);
 end;
 
 {**
@@ -669,7 +669,7 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := ZSysUtils.SQLStrToFloatDef(Buffer, 0, Len);
+    ZSysUtils.SQLStrToFloatDef(Buffer, 0, Result, Len);
 end;
 
 {**
