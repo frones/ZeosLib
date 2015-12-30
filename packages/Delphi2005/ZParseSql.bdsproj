@@ -168,7 +168,7 @@
 			<VersionInfoKeys Name="LegalTrademarks"></VersionInfoKeys>
 			<VersionInfoKeys Name="OriginalFilename"></VersionInfoKeys>
 			<VersionInfoKeys Name="ProductName"></VersionInfoKeys>
-			<VersionInfoKeys Name="ProductVersion">7.0.0.0</VersionInfoKeys>
+			<VersionInfoKeys Name="ProductVersion">7.2.0.0</VersionInfoKeys>
 			<VersionInfoKeys Name="Comments"></VersionInfoKeys>
 		</VersionInfoKeys>
 	</Delphi.Personality>

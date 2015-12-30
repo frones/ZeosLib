@@ -88,7 +88,7 @@ var
 var
   TwoDigitLookupLW : packed array[0..99] of LongWord;
 
-{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN)}
+{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN) or defined(USE_FAST_CHARPOS)}
   {$D-} {Prevent Steppping into Move Code} //EH: moved after FastCode.inc is loaded to prevent debugging
   {$IFDEF VER170}
     {$DEFINE SSE2}
@@ -303,6 +303,7 @@ function RawToUInt64(const Value: RawByteString): UInt64;
 function UnicodeToInt(const Value: ZWideString): Integer;
 function UnicodeToInt64(const Value: ZWideString): Int64;
 function UnicodeToUInt64(const Value: ZWideString): UInt64;
+
 function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer; overload;
 function RawToIntDef(const S: PAnsiChar; const Default: Integer) : Integer; overload;
 function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer; overload;
@@ -317,24 +318,35 @@ function UnicodeToUInt64Def(const S: ZWideString; const Default: UInt64) : UInt6
 function UnicodeToUInt64Def(const S: PWideChar; const Default: UInt64) : UInt64; overload;
 
 { Float convertion in Raw and Unicode Format}
-function RawToFloat(const s: RawByteString): Extended; overload;
-function RawToFloat(const s: PAnsiChar): Extended; overload;
-function RawToFloat(const s: RawByteString; const DecimalSep: AnsiChar): Extended; overload;
 function RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar): Extended; overload;
-function RawToFloatDef(const s: RawByteString; const DecimalSep: AnsiChar; const Default: Extended): Extended; overload;
+procedure RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar; var Result: Extended); overload;
+procedure RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar; var Result: Currency); overload;
+procedure RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar; var Result: Double); overload;
+procedure RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar; var Result: Single); overload;
 function RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar; const Default: Extended): Extended; overload;
-function ValRawExt(const s: RawByteString; const DecimalSep: AnsiChar; var code: Integer): Extended; overload;
+procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar; const Default: Extended; var Result: Extended); overload;
+procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar; const Default: Currency; var Result: Currency); overload;
+procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar; const Default: Double; var Result: Double); overload;
+procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar; const Default: Single; var Result: Single); overload;
 function ValRawExt(const s: PAnsiChar; const DecimalSep: AnsiChar; var code: Integer): Extended; overload;
+function ValRawDbl(const s: PAnsiChar; const DecimalSep: AnsiChar; var code: Integer): Double; overload;
+function ValRawSin(const s: PAnsiChar; const DecimalSep: AnsiChar; var code: Integer): Single; overload;
+
 function ValRawInt(const s: RawByteString; var code: Integer): Integer;
 
-function UnicodeToFloat(const s: ZWideString): Extended; overload;
-function UnicodeToFloat(const s: PWideChar): Extended; overload;
-function UnicodeToFloat(const s: ZWideString; const DecimalSep: WideChar): Extended; overload;
 function UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar): Extended; overload;
-function UnicodeToFloatDef(const s: ZWideString; const DecimalSep: WideChar; const Default: Extended): Extended;  overload;
+procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Extended); overload;
+procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Currency); overload;
+procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Double); overload;
+procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Single); overload;
 function UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Extended): Extended; overload;
-function ValUnicodeExt(const s: ZWideString; const DecimalSep: WideChar; var code: Integer): Extended; overload;
+procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Extended; var Result: Extended); overload;
+procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Currency; var Result: Currency); overload;
+procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Double; var Result: Double); overload;
+procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Single; var Result: Single); overload;
 function ValUnicodeExt(const s: PWideChar; const DecimalSep: WideChar; var code: Integer): Extended; overload;
+function ValUnicodeDbl(const s: PWideChar; const DecimalSep: WideChar; var code: Integer): Double; overload;
+function ValUnicodeSin(const s: PWideChar; const DecimalSep: WideChar; var code: Integer): Single; overload;
 
 {Faster Floating functions ..}
 
@@ -4209,7 +4221,9 @@ begin
   {$ELSE}
   Result := ValLong_JOH_PAS_4_b(Pointer(S), E{%H-});
   {$IFEND}
-  if E <> 0 then Result := Default;
+  if E > 0 then
+    if not ((E > 0) and Assigned(Pointer(S)) and ((S[E])=' ')) then
+      Result := Default;
 end;
 
 function RawToIntDef(const S: PAnsiChar; const Default: Integer) : Integer;
@@ -4221,7 +4235,9 @@ begin
   {$ELSE}
   Result := ValLong_JOH_PAS_4_b(S, E{%H-});
   {$IFEND}
-  if E <> 0 then Result := Default;
+  if E > 0 then
+    if not ((E > 0) and Assigned(S) and ((S+E-1)=' ')) then
+      Result := Default;
 end;
 
 {$WARNINGS OFF} //value digits might not be initialized
@@ -4325,7 +4341,9 @@ begin
   {$ELSE}
   Result := ValLong_JOH_PAS_4_b_unicode(Pointer(S), E);
   {$ENDIF}
-  if E <> 0 then Result := Default;
+  if E > 0 then
+    if not ((E > 0) and Assigned(Pointer(S)) and ((S[E])=' ')) then
+      Result := Default;
 end;
 
 function UnicodeToIntDef(const S: PWideChar; const Default: Integer) : Integer;
@@ -4337,7 +4355,9 @@ begin
   {$ELSE}
   Result := ValLong_JOH_PAS_4_b_unicode(Pointer(S), E);
   {$ENDIF}
-  if E <> 0 then Result := Default;
+  if E > 0 then
+    if not ((E > 0) and Assigned(S) and ((S+E-1)^=' ')) then
+      Result := Default;
 end;
 
 {$WARNINGS OFF} //value digits might not be initialized
@@ -4857,7 +4877,9 @@ begin
   {$ELSE}
   Result := ValInt64_JOH_PAS_8_a_raw(Pointer(S), E{%H-});
   {$IFEND}
-  if E <> 0 then Result := Default;
+  if E > 0 then
+    if not ((E > 0) and Assigned(Pointer(S)) and ((S[E])=' ')) then
+      Result := Default;
 end;
 
 function RawToInt64(const Value: RawByteString) : Int64;
@@ -4882,7 +4904,9 @@ begin
   {$ELSE}
   Result := ValInt64_JOH_PAS_8_a_raw(S, E{%H-});
   {$IFEND}
-  if E <> 0 then Result := Default;
+  if E > 0 then
+    if not ((E > 0) and Assigned(S) and ((S+E-1)=' ')) then
+      Result := Default;
 end;
 
 function RawToUInt64Def(const S: PAnsiChar; const Default: UInt64) : UInt64;
@@ -4890,7 +4914,9 @@ var
   E: Integer;
 begin
   Result := ValUInt64_JOH_PAS_8_a_raw(S, E{%H-});
-  if E <> 0 then Result := Default;
+  if E > 0 then
+    if not ((E > 0) and Assigned(S) and ((S+E-1)=' ')) then
+      Result := Default;
 end;
 
 function RawToUInt64(const Value: RawByteString) : UInt64;
@@ -4907,7 +4933,9 @@ var
   E: Integer;
 begin
   Result := ValUInt64_JOH_PAS_8_a_raw(Pointer(S), E{%H-});
-  if E <> 0 then Result := Default;
+  if E > 0 then
+    if not ((E > 0) and Assigned(Pointer(S)) and ((S[E])=' ')) then
+      Result := Default;
 end;
 
 {$WARNINGS OFF} //value digits might not be initialized
@@ -5033,7 +5061,9 @@ begin
   {$ELSE}
   Result := ValInt64_JOH_PAS_8_a_unicode(Pointer(S), E);
   {$ENDIF}
-  if E <> 0 then Result := Default;
+  if E > 0 then
+    if not ((E > 0) and Assigned(Pointer(S)) and ((S[E])=' ')) then
+      Result := Default;
 end;
 
 function UnicodeToInt64(const Value: ZWideString) : Int64;
@@ -5058,7 +5088,9 @@ begin
   {$ELSE}
   Result := ValInt64_JOH_PAS_8_a_unicode(S, E);
   {$ENDIF}
-  if E <> 0 then Result := Default;
+  if E > 0 then
+    if not ((E > 0) and Assigned(S) and ((S+E-1)^=' ')) then
+      Result := Default;
 end;
 
 function UnicodeToUInt64(const Value: ZWideString) : UInt64;
@@ -5083,7 +5115,9 @@ begin
   {$ELSE}
   Result := ValUInt64_JOH_PAS_8_a_unicode(Pointer(S), E);
   {$ENDIF}
-  if E <> 0 then Result := Default;
+  if E > 0 then
+    if not ((E > 0) and Assigned(Pointer(S)) and ((S[E])=' ')) then
+      Result := Default;
 end;
 
 function UnicodeToUInt64Def(const S: PWideChar; const Default: UInt64) : UInt64;
@@ -5095,16 +5129,9 @@ begin
   {$ELSE}
   Result := ValUInt64_JOH_PAS_8_a_unicode(S, E);
   {$ENDIF}
-  if E <> 0 then Result := Default;
-end;
-
-function RawToFloatDef(const s: RawByteString; const DecimalSep: AnsiChar;
-  const Default: Extended): Extended;
-var
-  E: Integer;
-begin
-  Result :=  ValRawExt(s, DecimalSep, E{%H-});
-  if E <> 0 then Result := Default;
+  if E > 0 then
+    if not ((E > 0) and Assigned(S) and ((S+E-1)^=' ')) then
+      Result := Default;
 end;
 
 function RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar;
@@ -5116,31 +5143,40 @@ begin
   if E <> 0 then Result := Default;
 end;
 
-function RawToFloat(const s: RawByteString): Extended;
+procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar;
+  const Default: Extended; var Result: Extended);
 var
   E: Integer;
 begin
-  Result :=  ValRawExt(Pointer(s), AnsiChar({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator), E{%H-});
-  if E <> 0 then
-    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
+  Result :=  ValRawExt(s, DecimalSep, E{%H-});
+  if E <> 0 then Result := Default;
 end;
 
-function RawToFloat(const s: PAnsiChar): Extended;
+procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar;
+  const Default: Currency; var Result: Currency);
 var
   E: Integer;
 begin
-  Result :=  ValRawExt(s, AnsiChar({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator), E{%H-});
-  if E <> 0 then
-    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
+  Result :=  ValRawDbl(s, DecimalSep, E{%H-});
+  if E <> 0 then Result := Default;
 end;
 
-function RawToFloat(const s: RawByteString; const DecimalSep: AnsiChar): Extended;
+procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar;
+  const Default: Double; var Result: Double);
 var
   E: Integer;
 begin
-  Result :=  ValRawExt(Pointer(s), DecimalSep, E{%H-});
-  if E <> 0 then
-    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
+  Result :=  ValRawDbl(s, DecimalSep, E{%H-});
+  if E <> 0 then Result := Default;
+end;
+
+procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar;
+  const Default: Single; var Result: Single);
+var
+  E: Integer;
+begin
+  Result :=  ValRawSin(s, DecimalSep, E{%H-});
+  if E <> 0 then Result := Default;
 end;
 
 function RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar): Extended; overload;
@@ -5152,12 +5188,46 @@ begin
     raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
 end;
 
-function ValRawExt(const s: RawByteString; const DecimalSep: AnsiChar; var code: Integer): Extended;
+procedure RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar; var Result: Extended); overload;
+var
+  E: Integer;
 begin
-  Result := ValRawExt(Pointer(S), DecimalSep, Code);
+  Result :=  ValRawExt(s, DecimalSep, E{%H-});
+  if E <> 0 then
+    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
 end;
 
-const LBase: Extended = 10.0;
+procedure RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar; var Result: Currency); overload;
+var
+  E: Integer;
+begin
+  Result :=  ValRawDbl(s, DecimalSep, E{%H-});
+  if E <> 0 then
+    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
+end;
+
+procedure RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar; var Result: Double); overload;
+var
+  E: Integer;
+begin
+  Result :=  ValRawDbl(s, DecimalSep, E{%H-});
+  if E <> 0 then
+    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
+end;
+
+procedure RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar; var Result: Single); overload;
+var
+  E: Integer;
+begin
+  Result :=  ValRawSin(s, DecimalSep, E{%H-});
+  if E <> 0 then
+    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
+end;
+
+const
+  EBase: Extended = 10.0;
+  DBase: Double = 10.0;
+  SBase: Single = 10.0;
 
 //Author:            Dennis Kjaer Christensen
 //Date:              15/10 2003
@@ -5167,6 +5237,120 @@ const LBase: Extended = 10.0;
 //EH: Note this version replaces the pascal Match.IntPower which have a range overflow
 {$IFDEF WITH_PUREPASCAL_INTPOWER}
 function IntPowerDKCPas4(const Base: Extended; const Exponent: Integer): Extended; overload;
+var
+ I, I2, I3 : Integer;
+ Result2 : Extended;
+begin
+ if Base = 0 then
+  begin
+   if Exponent = 0 then
+    Result := 1
+   else
+    Result := 0;
+  end
+ else if Exponent = 0 then
+  Result := 1
+ else if Exponent = 1 then
+  Result := Base
+ else if Exponent = 2 then
+  Result := Base * Base
+ else if Exponent > 2 then
+  begin
+   Result := Base;
+   Result2 := 1;
+   I := 2;
+   I2 := Exponent;
+   repeat
+    I3 := I2 and 1;
+    if I3 = 1 then
+     Result2 := Result2 * Result;
+    I2 := I2 shr 1;
+    Result := Result * Result;
+    I := I * 2;
+   until(I > Exponent);
+   Result := Result * Result2;
+  end
+ else if Exponent = -1 then
+  Result := 1/Base
+ else if Exponent = -2 then
+  Result := 1/(Base*Base)
+ else //if Exponent < -2 then
+  begin
+   Result := Base;
+   Result2 := 1;
+   I := 2;
+   I2 := -Exponent;
+   repeat
+    I3 := I2 and 1;
+    if I3 = 1 then
+     Result2 := Result2 * Result;
+    I2 := I2 shr 1;
+    Result := Result * Result;
+    I := I * 2;
+   until(I > -Exponent);
+   Result := Result * Result2;
+   Result := 1 / Result;
+  end;
+end;
+
+function IntPowerDKCPas4(const Base: Double; const Exponent: Integer): Double; overload;
+var
+ I, I2, I3 : Integer;
+ Result2 : Extended;
+begin
+ if Base = 0 then
+  begin
+   if Exponent = 0 then
+    Result := 1
+   else
+    Result := 0;
+  end
+ else if Exponent = 0 then
+  Result := 1
+ else if Exponent = 1 then
+  Result := Base
+ else if Exponent = 2 then
+  Result := Base * Base
+ else if Exponent > 2 then
+  begin
+   Result := Base;
+   Result2 := 1;
+   I := 2;
+   I2 := Exponent;
+   repeat
+    I3 := I2 and 1;
+    if I3 = 1 then
+     Result2 := Result2 * Result;
+    I2 := I2 shr 1;
+    Result := Result * Result;
+    I := I * 2;
+   until(I > Exponent);
+   Result := Result * Result2;
+  end
+ else if Exponent = -1 then
+  Result := 1/Base
+ else if Exponent = -2 then
+  Result := 1/(Base*Base)
+ else //if Exponent < -2 then
+  begin
+   Result := Base;
+   Result2 := 1;
+   I := 2;
+   I2 := -Exponent;
+   repeat
+    I3 := I2 and 1;
+    if I3 = 1 then
+     Result2 := Result2 * Result;
+    I2 := I2 shr 1;
+    Result := Result * Result;
+    I := I * 2;
+   until(I > -Exponent);
+   Result := Result * Result2;
+   Result := 1 / Result;
+  end;
+end;
+
+function IntPowerDKCPas4(const Base: Single; const Exponent: Integer): Single; overload;
 var
  I, I2, I3 : Integer;
  Result2 : Extended;
@@ -5305,9 +5489,191 @@ begin
   Digits := Digits + ExpValue;
   if Digits <> 0 then
     {$IFDEF WITH_PUREPASCAL_INTPOWER}
-    Result := Result * IntPowerDKCPas4(LBase, Digits);
+    Result := Result * IntPowerDKCPas4(EBase, Digits);
     {$ELSE}
-    Result := Result * Math.IntPower(LBase, Digits);
+    Result := Result * Math.IntPower(EBase, Digits);
+    {$ENDIF}
+  if Neg then
+    Result := -Result;
+  if Valid and (ch = #0) then
+    code := 0;
+end;
+
+function ValRawDbl(const s: PAnsiChar; const DecimalSep: AnsiChar; var code: Integer): Double;
+//function ValExt_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Extended;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified for varying DecimalSeperator
+var
+  Digits, ExpValue: Integer;
+  Ch: AnsiChar;
+  Neg, NegExp, Valid: Boolean;
+begin
+  Result := 0.0;
+  Code   := 0;
+  if s = nil then
+    begin
+      inc(Code);
+      Exit;
+    end;
+  Neg    := False;
+  NegExp := False;
+  Valid  := False;
+  while (S+code)^ = ' ' do
+    Inc(Code);
+  Ch := (S+code)^;
+  if Ch in ['+', '-'] then
+  begin
+    inc(Code);
+    Neg := (Ch = '-');
+  end;
+  while true do
+  begin
+    Ch := (S+code)^;
+    inc(Code);
+    if not (Ch in ['0'..'9']) then
+      break;
+    Result := (Result * 10) + Ord(Ch) - Ord('0');
+    Valid := True;
+  end;
+  Digits := 0;
+  if Ch = DecimalSep then
+  begin
+    while true do
+      begin
+        Ch := (S+code)^;
+        inc(Code);
+        if not (Ch in ['0'..'9']) then
+        begin
+          if not valid then {Starts with '.'}
+            if Ch = #0 then
+              dec(code); {s = '.'}
+          break;
+        end;
+        Result := (Result * 10) + Ord(Ch) - Ord('0');
+        Dec(Digits);
+        Valid := true;
+      end;
+    end;
+  ExpValue := 0;
+  if (Ord(Ch) or $20) = ord('e') then
+    begin {Ch in ['E','e']}
+      Valid := false;
+      Ch := (S+code)^;
+      if Ch in ['+', '-'] then
+        begin
+          inc(Code);
+          NegExp := (Ch = '-');
+        end;
+      while true do
+        begin
+          Ch := (S+code)^;
+          inc(Code);
+          if not (Ch in ['0'..'9']) then
+            break;
+          ExpValue := (ExpValue * 10) + Ord(Ch) - Ord('0');
+          Valid := true;
+        end;
+     if NegExp then
+       ExpValue := -ExpValue;
+    end;
+  Digits := Digits + ExpValue;
+  if Digits <> 0 then
+    {$IFDEF WITH_PUREPASCAL_INTPOWER}
+    Result := Result * IntPowerDKCPas4(DBase, Digits);
+    {$ELSE}
+    Result := Result * Math.IntPower(DBase, Digits);
+    {$ENDIF}
+  if Neg then
+    Result := -Result;
+  if Valid and (ch = #0) then
+    code := 0;
+end;
+
+function ValRawSin(const s: PAnsiChar; const DecimalSep: AnsiChar; var code: Integer): Single;
+//function ValExt_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Extended;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified for varying DecimalSeperator
+var
+  Digits, ExpValue: Integer;
+  Ch: AnsiChar;
+  Neg, NegExp, Valid: Boolean;
+begin
+  Result := 0.0;
+  Code   := 0;
+  if s = nil then
+    begin
+      inc(Code);
+      Exit;
+    end;
+  Neg    := False;
+  NegExp := False;
+  Valid  := False;
+  while (S+code)^ = ' ' do
+    Inc(Code);
+  Ch := (S+code)^;
+  if Ch in ['+', '-'] then
+  begin
+    inc(Code);
+    Neg := (Ch = '-');
+  end;
+  while true do
+  begin
+    Ch := (S+code)^;
+    inc(Code);
+    if not (Ch in ['0'..'9']) then
+      break;
+    Result := (Result * 10) + Ord(Ch) - Ord('0');
+    Valid := True;
+  end;
+  Digits := 0;
+  if Ch = DecimalSep then
+  begin
+    while true do
+      begin
+        Ch := (S+code)^;
+        inc(Code);
+        if not (Ch in ['0'..'9']) then
+        begin
+          if not valid then {Starts with '.'}
+            if Ch = #0 then
+              dec(code); {s = '.'}
+          break;
+        end;
+        Result := (Result * 10) + Ord(Ch) - Ord('0');
+        Dec(Digits);
+        Valid := true;
+      end;
+    end;
+  ExpValue := 0;
+  if (Ord(Ch) or $20) = ord('e') then
+    begin {Ch in ['E','e']}
+      Valid := false;
+      Ch := (S+code)^;
+      if Ch in ['+', '-'] then
+        begin
+          inc(Code);
+          NegExp := (Ch = '-');
+        end;
+      while true do
+        begin
+          Ch := (S+code)^;
+          inc(Code);
+          if not (Ch in ['0'..'9']) then
+            break;
+          ExpValue := (ExpValue * 10) + Ord(Ch) - Ord('0');
+          Valid := true;
+        end;
+     if NegExp then
+       ExpValue := -ExpValue;
+    end;
+  Digits := Digits + ExpValue;
+  if Digits <> 0 then
+    {$IFDEF WITH_PUREPASCAL_INTPOWER}
+    Result := Result * IntPowerDKCPas4(SBase, Digits);
+    {$ELSE}
+    Result := Result * Math.IntPower(SBase, Digits);
     {$ENDIF}
   if Neg then
     Result := -Result;
@@ -5324,46 +5690,6 @@ begin
   {$IFEND}
 end;
 
-function UnicodeToFloat(const s: ZWideString): Extended; overload;
-var
-  E: Integer;
-begin
-  {$IFDEF FPC}
-  Result := ValRawExt(Pointer(UnicodeStringToASCII7(s)), {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator, E{%H-});
-  {$ELSE}
-  Result :=  ValUnicodeExt(Pointer(s), {$IFNDEF UNICODE}WideChar{$ENDIF}({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator), E);
-  {$ENDIF}
-  if E <> 0 then
-    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
-end;
-
-function UnicodeToFloat(const s: PWideChar): Extended; overload;
-var
-  E: Integer;
-begin
-  {$IFDEF FPC}
-  Result := ValRawExt(Pointer(UnicodeStringToASCII7(s)), {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator, E{%H-});
-  {$ELSE}
-  Result :=  ValUnicodeExt(s, {$IFNDEF UNICODE}WideChar{$ENDIF}({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator), E);
-  {$ENDIF}
-  if E <> 0 then
-    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
-end;
-
-
-function UnicodeToFloat(const s: ZWideString; const DecimalSep: WideChar): Extended; overload;
-var
-  E: Integer;
-begin
-  {$IFDEF FPC}
-  Result := ValRawExt(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
-  {$ELSE}
-  Result :=  ValUnicodeExt(Pointer(s), DecimalSep, E);
-  {$ENDIF}
-  if E <> 0 then
-    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
-end;
-
 function UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar): Extended; overload;
 var
   E: Integer;
@@ -5377,16 +5703,56 @@ begin
     raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
 end;
 
-function UnicodeToFloatDef(const s: ZWideString; const DecimalSep: WideChar; const Default: Extended): Extended;
+procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Extended); overload;
 var
   E: Integer;
 begin
   {$IFDEF FPC}
   Result := ValRawExt(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
   {$ELSE}
-  Result :=  ValUnicodeExt(Pointer(s), DecimalSep, E);
+  Result :=  ValUnicodeExt(s, DecimalSep, E);
   {$ENDIF}
-  if E <> 0 then Result := Default;
+  if E <> 0 then
+    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
+end;
+
+procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Currency); overload;
+var
+  E: Integer;
+begin
+  {$IFDEF FPC}
+  Result := ValRawDbl(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
+  {$ELSE}
+  Result :=  ValUnicodeDbl(s, DecimalSep, E);
+  {$ENDIF}
+  if E <> 0 then
+    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
+end;
+
+procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Double); overload;
+var
+  E: Integer;
+begin
+  {$IFDEF FPC}
+  Result := ValRawDbl(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
+  {$ELSE}
+  Result :=  ValUnicodeDbl(s, DecimalSep, E);
+  {$ENDIF}
+  if E <> 0 then
+    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
+end;
+
+procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Single); overload;
+var
+  E: Integer;
+begin
+  {$IFDEF FPC}
+  Result := ValRawSin(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
+  {$ELSE}
+  Result :=  ValUnicodeSin(s, DecimalSep, E);
+  {$ENDIF}
+  if E <> 0 then
+    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
 end;
 
 function UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Extended): Extended;
@@ -5401,13 +5767,52 @@ begin
   if E <> 0 then Result := Default;
 end;
 
-function ValUnicodeExt(const s: ZWideString; const DecimalSep: WideChar; var code: Integer): Extended;
+procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Extended; var Result: Extended);
+var
+  E: Integer;
 begin
   {$IFDEF FPC}
-  Result := ValRawExt(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), Code);
+  Result := ValRawExt(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
   {$ELSE}
-  Result := ValUnicodeExt(Pointer(S), DecimalSep, Code);
+  Result :=  ValUnicodeExt(s, DecimalSep, E);
   {$ENDIF}
+  if E <> 0 then Result := Default;
+end;
+
+procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Currency; var Result: Currency);
+var
+  E: Integer;
+begin
+  {$IFDEF FPC}
+  Result := ValRawDbl(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
+  {$ELSE}
+  Result :=  ValUnicodeDbl(s, DecimalSep, E);
+  {$ENDIF}
+  if E <> 0 then Result := Default;
+end;
+
+procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Double; var Result: Double);
+var
+  E: Integer;
+begin
+  {$IFDEF FPC}
+  Result := ValRawDbl(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
+  {$ELSE}
+  Result :=  ValUnicodeDbl(s, DecimalSep, E);
+  {$ENDIF}
+  if E <> 0 then Result := Default;
+end;
+
+procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Single; var Result: Single);
+var
+  E: Integer;
+begin
+  {$IFDEF FPC}
+  Result := ValRawSin(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
+  {$ELSE}
+  Result :=  ValUnicodeSin(s, DecimalSep, E);
+  {$ENDIF}
+  if E <> 0 then Result := Default;
 end;
 
 {$WARNINGS OFF} //suppress a wrong warning!!
@@ -5497,9 +5902,203 @@ begin
   Digits := Digits + ExpValue;
   if Digits <> 0 then
     {$IFDEF WITH_PUREPASCAL_INTPOWER}
-    Result := Result * IntPowerDKCPas4(LBase, Digits);
+    Result := Result * IntPowerDKCPas4(EBase, Digits);
     {$ELSE}
-    Result := Result * Math.IntPower(LBase, Digits);
+    Result := Result * Math.IntPower(EBase, Digits);
+    {$ENDIF}
+  if Neg then
+    Result := -Result;
+  if Valid and (ch = #0) then
+    code := 0;
+end;
+{$ENDIF FPC}
+
+function ValUnicodeDbl(const s: PWideChar; const DecimalSep: WideChar; var code: Integer): Double;
+//function ValExt_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Extended;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified for varying DecimalSeperator
+{$IFDEF FPC}
+begin
+  Result := ValRawDbl(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), Code);
+end;
+{$ELSE}
+var
+  Digits, ExpValue: Integer;
+  Ch: WideChar;
+  Neg, NegExp, Valid: Boolean;
+begin
+  Result := 0.0;
+  Code   := 0;
+  if s = nil then
+    begin
+      inc(Code);
+      Exit;
+    end;
+  Neg    := False;
+  NegExp := False;
+  Valid  := False;
+  while (S+code)^ = ' ' do
+    Inc(Code);
+  Ch := (S+code)^;
+  if Ord(Ch) in [Ord('+'), Ord('-')] then
+  begin
+    inc(Code);
+    Neg := (Ch = '-');
+  end;
+  while true do
+  begin
+    Ch := (S+code)^;
+    inc(Code);
+    if not (Ord(Ch) in [Ord('0')..Ord('9')]) then
+      break;
+    Result := (Result * 10) + Ord(Ch) - Ord('0');
+    Valid := True;
+  end;
+  Digits := 0;
+  if Ch = DecimalSep then
+  begin
+    while true do
+      begin
+        Ch := (S+code)^;
+        inc(Code);
+        if not (Ord(Ch) in [Ord('0')..Ord('9')]) then
+        begin
+          if not valid then {Starts with '.'}
+            if Ch = #0 then
+              dec(code); {s = '.'}
+          break;
+        end;
+        Result := (Result * 10) + Ord(Ch) - Ord('0');
+        Dec(Digits);
+        Valid := true;
+      end;
+    end;
+  ExpValue := 0;
+  if (Ord(Ch) or $20) = ord('e') then
+    begin {Ch in ['E','e']}
+      Valid := false;
+      Ch := (S+code)^;
+      if Ord(Ch) in [Ord('+'), Ord('-')] then
+        begin
+          inc(Code);
+          NegExp := (Ch = '-');
+        end;
+      while true do
+        begin
+          Ch := (S+code)^;
+          inc(Code);
+          if not (Ord(Ch) in [Ord('0')..Ord('9')]) then
+            break;
+          ExpValue := (ExpValue * 10) + Ord(Ch) - Ord('0');
+          Valid := true;
+        end;
+     if NegExp then
+       ExpValue := -ExpValue;
+    end;
+  Digits := Digits + ExpValue;
+  if Digits <> 0 then
+    {$IFDEF WITH_PUREPASCAL_INTPOWER}
+    Result := Result * IntPowerDKCPas4(DBase, Digits);
+    {$ELSE}
+    Result := Result * Math.IntPower(DBase, Digits);
+    {$ENDIF}
+  if Neg then
+    Result := -Result;
+  if Valid and (ch = #0) then
+    code := 0;
+end;
+{$ENDIF FPC}
+
+function ValUnicodeSin(const s: PWideChar; const DecimalSep: WideChar; var code: Integer): Single;
+//function ValExt_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Extended;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified for varying DecimalSeperator
+{$IFDEF FPC}
+begin
+  Result := ValRawSin(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), Code);
+end;
+{$ELSE}
+var
+  Digits, ExpValue: Integer;
+  Ch: WideChar;
+  Neg, NegExp, Valid: Boolean;
+begin
+  Result := 0.0;
+  Code   := 0;
+  if s = nil then
+    begin
+      inc(Code);
+      Exit;
+    end;
+  Neg    := False;
+  NegExp := False;
+  Valid  := False;
+  while (S+code)^ = ' ' do
+    Inc(Code);
+  Ch := (S+code)^;
+  if Ord(Ch) in [Ord('+'), Ord('-')] then
+  begin
+    inc(Code);
+    Neg := (Ch = '-');
+  end;
+  while true do
+  begin
+    Ch := (S+code)^;
+    inc(Code);
+    if not (Ord(Ch) in [Ord('0')..Ord('9')]) then
+      break;
+    Result := (Result * 10) + Ord(Ch) - Ord('0');
+    Valid := True;
+  end;
+  Digits := 0;
+  if Ch = DecimalSep then
+  begin
+    while true do
+      begin
+        Ch := (S+code)^;
+        inc(Code);
+        if not (Ord(Ch) in [Ord('0')..Ord('9')]) then
+        begin
+          if not valid then {Starts with '.'}
+            if Ch = #0 then
+              dec(code); {s = '.'}
+          break;
+        end;
+        Result := (Result * 10) + Ord(Ch) - Ord('0');
+        Dec(Digits);
+        Valid := true;
+      end;
+    end;
+  ExpValue := 0;
+  if (Ord(Ch) or $20) = ord('e') then
+    begin {Ch in ['E','e']}
+      Valid := false;
+      Ch := (S+code)^;
+      if Ord(Ch) in [Ord('+'), Ord('-')] then
+        begin
+          inc(Code);
+          NegExp := (Ch = '-');
+        end;
+      while true do
+        begin
+          Ch := (S+code)^;
+          inc(Code);
+          if not (Ord(Ch) in [Ord('0')..Ord('9')]) then
+            break;
+          ExpValue := (ExpValue * 10) + Ord(Ch) - Ord('0');
+          Valid := true;
+        end;
+     if NegExp then
+       ExpValue := -ExpValue;
+    end;
+  Digits := Digits + ExpValue;
+  if Digits <> 0 then
+    {$IFDEF WITH_PUREPASCAL_INTPOWER}
+    Result := Result * IntPowerDKCPas4(SBase, Digits);
+    {$ELSE}
+    Result := Result * Math.IntPower(SBase, Digits);
     {$ENDIF}
   if Neg then
     Result := -Result;

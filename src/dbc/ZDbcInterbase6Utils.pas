@@ -2094,7 +2094,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
+
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2194,24 +2194,22 @@ var
  SQLCode: SmallInt;
 begin
   CheckRange(Index);
-//  SetFieldType(Index, Length(Value) + 1, SQL_TEXT + 1, 0);
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
     case SQLCode of
       SQL_TEXT      : EncodePData(SQL_TEXT, Index, Pointer(Value), Length(Value));
       SQL_VARYING   : EncodePData(SQL_VARYING, Index, Pointer(Value), Length(Value));
-      SQL_LONG      : PInteger (sqldata)^ := Round(RawToFloat(BytesToStr(Value)) * IBScaleDivisor[sqlscale]); //AVZ
-      SQL_SHORT     : PInteger (sqldata)^ := RawToInt(BytesToStr(Value));
+      SQL_LONG      : PInteger (sqldata)^ := Round(RawToFloat(PAnsiChar(Pointer(Value)), '.') * IBScaleDivisor[sqlscale]); //AVZ
+      SQL_SHORT     : PSmallint(sqldata)^ := RawToInt(BytesToStr(Value));
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, BytesToStr(Value));
       SQL_D_FLOAT,
-      SQL_DOUBLE    : PDouble (sqldata)^ := RawToFloat(BytesToStr(Value)) * IBScaleDivisor[sqlscale]; //AVZ
-      SQL_FLOAT     : PSingle (sqldata)^ := RawToFloat(BytesToStr(Value)) * IBScaleDivisor[sqlscale];  //AVZ
-      SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RawToFloat(BytesToStr(Value)) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
+      SQL_DOUBLE    : PDouble (sqldata)^ := RawToFloat(PAnsiChar(Pointer(Value)), '.')  * IBScaleDivisor[sqlscale]; //AVZ
+      SQL_FLOAT     : PSingle (sqldata)^ := RawToFloat(PAnsiChar(Pointer(Value)), '.') * IBScaleDivisor[sqlscale];  //AVZ
+      SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RawToFloat(PAnsiChar(Pointer(Value)), '.') * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
       SQL_BLOB,
       SQL_QUAD      : WriteLobBuffer(Index, Pointer(Value), Length(Value));
     else
@@ -2305,7 +2303,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
+
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2353,13 +2351,13 @@ var
   SQLCode: SmallInt;
 begin
   CheckRange(Index);
-  //SetFieldType(Index, sizeof(Single), SQL_FLOAT + 1, 1);
+
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
+
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2413,7 +2411,6 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2465,7 +2462,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
+
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2536,7 +2533,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
+
     SQLCode := (sqltype and not(1));
     case SQLCode of
       SQL_TEXT      :
@@ -2553,8 +2550,8 @@ begin
       SQL_LONG      : PInteger (sqldata)^ := RawToIntDef(Value, 0);
       SQL_SHORT     : PSmallint (sqldata)^ := RawToIntDef(Value, 0);
       SQL_D_FLOAT,
-      SQL_DOUBLE    : PDouble (sqldata)^ := SQLStrToFloatDef(Value, 0);
-      SQL_FLOAT     : PSingle (sqldata)^ := SQLStrToFloatDef(Value, 0);
+      SQL_DOUBLE    : SQLStrToFloatDef(Value, 0, PDouble(sqldata)^);
+      SQL_FLOAT     : SQLStrToFloatDef(Value, 0, PSingle (sqldata)^);
       SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RoundTo(SQLStrToFloatDef(Value, 0, Len) * IBScaleDivisor[sqlscale], 0)); //AVZ - INT64 value was not recognized
       SQL_BLOB, SQL_QUAD: WriteLobBuffer(Index, Value, Len);
       SQL_TYPE_DATE :
@@ -2713,7 +2710,6 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then

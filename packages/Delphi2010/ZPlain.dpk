@@ -25,7 +25,7 @@ package ZPlain;
 {$LIBSUFFIX '140'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
-{$I ZPackages.inc}
+
 requires
   ZCore,
   rtl,
@@ -33,6 +33,7 @@ requires
 
 contains
 
+{$I ZPackages.inc} //after simplify Zeos.Inc by using {$IF CompilerVersion > x} i need to move this include AFTER contains!
 {$IFDEF ENABLE_ODBC}
   ZPlainODBCDriver in '..\..\src\plain\ZPlainODBCDriver.pas',
 {$ENDIF}

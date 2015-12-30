@@ -948,11 +948,11 @@ begin
         DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := PSingle(sqldata)^;
         DT_DOUBLE      : Result := PDouble(sqldata)^;
-        DT_VARCHAR     : Result := SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), 0, PZASASQLSTRING( sqlData).length);
+        DT_VARCHAR     : SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), 0, Result, PZASASQLSTRING( sqlData).length);
         DT_LONGVARCHAR :
           begin
-            FSqlData.ReadBlobToString( ColumnIndex, FRawTemp);
-            Result := SQLStrToFloatDef(FRawTemp, 0);
+            FSqlData.ReadBlobToString(ColumnIndex, FRawTemp);
+            SQLStrToFloatDef(PAnsiChar(Pointer(FRawTemp)), 0, Result, Length(fRawTemp));
           end;
       else
         FSqlData.CreateException( Format( SErrorConvertionField,
@@ -992,11 +992,11 @@ begin
         DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := PSingle(sqldata)^;
         DT_DOUBLE      : Result := PDouble(sqldata)^;
-        DT_VARCHAR     : Result := SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), 0, PZASASQLSTRING( sqlData).length);
+        DT_VARCHAR     : SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), 0, Result, PZASASQLSTRING( sqlData).length);
         DT_LONGVARCHAR :
           begin
             FSqlData.ReadBlobToString( ColumnIndex, FRawTemp);
-            Result := SQLStrToFloatDef(FRawTemp, 0);
+            SQLStrToFloatDef(PAnsiChar(Pointer(FRawTemp)), 0, Result, Length(fRawTemp));
           end;
       else
         FSqlData.CreateException( Format( SErrorConvertionField,
@@ -1037,11 +1037,11 @@ begin
         DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := PSingle(sqldata)^;
         DT_DOUBLE      : Result := PDouble(sqldata)^;
-        DT_VARCHAR     : Result := SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), 0, PZASASQLSTRING( sqlData).length);
+        DT_VARCHAR     : SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), 0, Result, PZASASQLSTRING( sqlData).length);
         DT_LONGVARCHAR :
           begin
             FSqlData.ReadBlobToString( ColumnIndex, FRawTemp);
-            Result := SQLStrToFloatDef(FRawTemp, 0);
+            SQLStrToFloatDef(PAnsiChar(Pointer(FRawTemp)), 0, Result, Length(fRawTemp));
           end;
       else
         FSqlData.CreateException( Format( SErrorConvertionField,

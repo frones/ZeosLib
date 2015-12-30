@@ -694,7 +694,7 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := ZSysUtils.SQLStrToFloatDef(Buffer, 0, Len);
+    ZSysUtils.SQLStrToFloatDef(Buffer, 0, Result, Len);
 end;
 
 {**
@@ -719,7 +719,7 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := ZSysUtils.SQLStrToFloatDef(Buffer, 0, Len);
+    ZSysUtils.SQLStrToFloatDef(Buffer, 0, Result, Len);
 end;
 
 {**
@@ -745,7 +745,7 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := ZSysUtils.SQLStrToFloatDef(Buffer, 0, Len);
+    ZSysUtils.SQLStrToFloatDef(Buffer, 0, Result, Len);
 end;
 
 {**
@@ -2284,20 +2284,13 @@ begin
         Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_STRING,
       FIELD_TYPE_ENUM, FIELD_TYPE_SET:
-        Result := RawToFloatDef(PAnsiChar(FColBind^.buffer), '.', 0);
+        ZSysUtils.SQLStrToFloatDef(PAnsiChar(FColBind^.buffer), 0, Result, FColBind^.length);
       FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColBind^.length > 0 ) and
            (FColBind^.length < 30{Max Extended Length = 28 ??} ) then
-        begin
-          FTempBlob := GetBlob(ColumnIndex);
-          if FColBind^.binary then
-            Result := RawToFloatDef(FTempBlob.GetString, '.', 0)
-          else
-            Result := RawToFloatDef(FTempBlob.GetBuffer, '.', 0);
-          FTempBlob := nil;
-        end
+          RawToFloatDef(GetBlob(ColumnIndex).GetBuffer, '.', 0, Result)
         else //avoid senceless processing
           Result := 0;
       else
@@ -2358,20 +2351,13 @@ begin
         Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_STRING,
       FIELD_TYPE_ENUM, FIELD_TYPE_SET:
-        Result := RawToFloatDef(PAnsiChar(FColBind^.buffer), '.', 0);
+        ZSysUtils.SQLStrToFloatDef(PAnsiChar(FColBind^.buffer), 0, Result, FColBind^.length);
       FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColBind^.length > 0 ) and
            (FColBind^.length < 30{Max Extended Length = 28 ??+#0} ) then
-        begin
-          FTempBlob := GetBlob(ColumnIndex);
-          if FColBind^.binary then
-            Result := RawToFloatDef(FTempBlob.GetString, '.', 0)
-          else
-            Result := RawToFloatDef(FTempBlob.GetBuffer, '.', 0);
-          FTempBlob := nil;
-        end
+          RawToFloatDef(GetBlob(ColumnIndex).GetBuffer, '.', 0, Result)
         else //avoid senceless processing
           Result := 0;
       else
@@ -2433,20 +2419,13 @@ begin
         Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_STRING,
       FIELD_TYPE_ENUM, FIELD_TYPE_SET:
-        Result := RawToFloatDef(PAnsiChar(FColBind^.buffer), '.', 0);
+        ZSysUtils.SQLStrToFloatDef(PAnsiChar(FColBind^.buffer), 0, Result, FColBind^.length);
       FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColBind^.length > 0 ) and
            (FColBind^.length < 29{Max Extended Length = 28 ??+#0} ) then
-        begin
-          FTempBlob := GetBlob(ColumnIndex);
-          if FColBind^.binary then
-            Result := RawToFloatDef(FTempBlob.GetString, '.', 0)
-          else
-            Result := RawToFloatDef(FTempBlob.GetBuffer, '.', 0);
-          FTempBlob := nil;
-        end
+          RawToFloatDef(GetBlob(ColumnIndex).GetBuffer, '.', 0, Result)
         else //avoid senceless processing
           Result := 0;
       else

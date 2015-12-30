@@ -88,9 +88,9 @@ the fifteen, but this would be more work, and I know it is useless).
 unit MemCheck;
 {$A+}
 {$H+}
-{$IFDEF VER230}
+{$IF CompilerVersion >= 23}
   {$DEFINE DELPHI16_UP} // Used in code
-{$ENDIF}
+{$IFEND}
 {$IFDEF VER180}
   //VER180 = Delphi 2006 for Win32
   //Don't define DELPHI71_OR_LATER for Delphi 2006 for Win32.

@@ -1132,20 +1132,16 @@ begin
               stBigDecimal: PSingle(Data)^ := ZExtendedArray[ArrayOffSet];
               stString, stUnicodeString:
                 case InParamValues[i].VArray.VArrayVariantType of
-                  {$IFDEF UNICODE}
-                  vtString:         PSingle(Data)^ := UnicodeToFloatDef(ZStringArray[ArrayOffSet], '.', 0);
-                  {$ELSE}
-                  vtString:         PSingle(Data)^ := RawToFloatDef(ZStringArray[ArrayOffSet], '.', 0);
-                  {$ENDIF}
-                  vtAnsiString:     PSingle(Data)^ := RawToFloatDef(ZAnsiStringArray[ArrayOffSet], '.', 0);
-                  vtUTF8String:     PSingle(Data)^ := RawToFloatDef(ZUTF8StringArray[ArrayOffSet], '.', 0);
-                  vtRawByteString:  PSingle(Data)^ := RawToFloatDef(ZRawByteStringArray[ArrayOffSet], '.', 0);
-                  vtUnicodeString:  PSingle(Data)^ := UnicodeToFloatDef(ZUnicodeStringArray[ArrayOffSet], WideChar('.'), 0);
+                  {$IFNDEF UNICODE}vtString,{$ENDIF}
+                  vtAnsiString,vtUTF8String,
+                  vtRawByteString:  SQLStrToFloatDef(PAnsiChar(Pointer(ZRawByteStringArray[ArrayOffSet])), 0, PSingle(Data)^, Length(ZRawByteStringArray[ArrayOffSet]));
+                  {$IFDEF UNICODE}vtString,{$ENDIF}
+                  vtUnicodeString:  SQLStrToFloatDef(PWideChar(Pointer(ZUnicodeStringArray[ArrayOffSet])), 0, PSingle(Data)^, Length(ZUnicodeStringArray[ArrayOffSet]));
                   vtCharRec:
                     if ZCompatibleCodePages(ZCharRecArray[ArrayOffSet].CP, zCP_UTF16) then
-                      PSingle(Data)^ := UnicodeToFloatDef(ZCharRecArray[ArrayOffSet].P, WideChar('.'), 0)
+                      SQLStrToFloatDef(PWideChar(ZCharRecArray[ArrayOffSet].P), 0, PSingle(Data)^, ZCharRecArray[ArrayOffSet].Len)
                     else
-                      PSingle(Data)^ := RawToFloatDef(ZCharRecArray[ArrayOffSet].P, '.', 0);
+                      SQLStrToFloatDef(PAnsiChar(ZCharRecArray[ArrayOffSet].P), 0, PSingle(Data)^, ZCharRecArray[ArrayOffSet].Len)
                   else
                     raise Exception.Create('Unsupported String Variant');
                 end;
@@ -1171,20 +1167,16 @@ begin
               stBigDecimal: PDouble(Data)^ := ZExtendedArray[ArrayOffSet];
               stString, stUnicodeString:
                 case InParamValues[i].VArray.VArrayVariantType of
-                  {$IFDEF UNICODE}
-                  vtString:         PDouble(Data)^ := UnicodeToFloatDef(ZStringArray[ArrayOffSet], '.', 0);
-                  {$ELSE}
-                  vtString:         PDouble(Data)^ := RawToFloatDef(ZStringArray[ArrayOffSet], '.', 0);
-                  {$ENDIF}
-                  vtAnsiString:     PDouble(Data)^ := RawToFloatDef(ZAnsiStringArray[ArrayOffSet], '.', 0);
-                  vtUTF8String:     PDouble(Data)^ := RawToFloatDef(ZUTF8StringArray[ArrayOffSet], '.', 0);
-                  vtRawByteString:  PDouble(Data)^ := RawToFloatDef(ZRawByteStringArray[ArrayOffSet], '.', 0);
-                  vtUnicodeString:  PDouble(Data)^ := UnicodeToFloatDef(ZUnicodeStringArray[ArrayOffSet], WideChar('.'), 0);
+                  {$IFNDEF UNICODE}vtString,{$ENDIF}
+                  vtAnsiString,vtUTF8String,
+                  vtRawByteString:  SQLStrToFloatDef(PAnsiChar(Pointer(ZRawByteStringArray[ArrayOffSet])), 0, PDouble(Data)^, Length(ZRawByteStringArray[ArrayOffSet]));
+                  {$IFDEF UNICODE}vtString,{$ENDIF}
+                  vtUnicodeString:  SQLStrToFloatDef(PWideChar(Pointer(ZUnicodeStringArray[ArrayOffSet])), 0, PDouble(Data)^, Length(ZUnicodeStringArray[ArrayOffSet]));
                   vtCharRec:
                     if ZCompatibleCodePages(ZCharRecArray[ArrayOffSet].CP, zCP_UTF16) then
-                      PDouble(Data)^ := UnicodeToFloatDef(ZCharRecArray[ArrayOffSet].P, WideChar('.'), 0)
+                      SQLStrToFloatDef(PWideChar(ZCharRecArray[ArrayOffSet].P), 0, PDouble(Data)^, ZCharRecArray[ArrayOffSet].Len)
                     else
-                      PDouble(Data)^ := RawToFloatDef(ZCharRecArray[ArrayOffSet].P, '.', 0);
+                      SQLStrToFloatDef(PAnsiChar(ZCharRecArray[ArrayOffSet].P), 0, PDouble(Data)^, ZCharRecArray[ArrayOffSet].Len)
                   else
                     raise Exception.Create('Unsupported String Variant');
                 end;
@@ -1210,20 +1202,16 @@ begin
               stBigDecimal: PCurrency(Data)^ := ZExtendedArray[ArrayOffSet];
               stString, stUnicodeString:
                 case InParamValues[i].VArray.VArrayVariantType of
-                  {$IFDEF UNICODE}
-                  vtString:         PCurrency(Data)^ := UnicodeToFloatDef(ZStringArray[ArrayOffSet], '.', 0);
-                  {$ELSE}
-                  vtString:         PCurrency(Data)^ := RawToFloatDef(ZStringArray[ArrayOffSet], '.', 0);
-                  {$ENDIF}
-                  vtAnsiString:     PCurrency(Data)^ := RawToFloatDef(ZAnsiStringArray[ArrayOffSet], '.', 0);
-                  vtUTF8String:     PCurrency(Data)^ := RawToFloatDef(ZUTF8StringArray[ArrayOffSet], '.', 0);
-                  vtRawByteString:  PCurrency(Data)^ := RawToFloatDef(ZRawByteStringArray[ArrayOffSet], '.', 0);
-                  vtUnicodeString:  PCurrency(Data)^ := UnicodeToFloatDef(ZUnicodeStringArray[ArrayOffSet], WideChar('.'), 0);
+                  {$IFNDEF UNICODE}vtString,{$ENDIF}
+                  vtAnsiString,vtUTF8String,
+                  vtRawByteString:  SQLStrToFloatDef(PAnsiChar(Pointer(ZRawByteStringArray[ArrayOffSet])), 0, PCurrency(Data)^, Length(ZRawByteStringArray[ArrayOffSet]));
+                  {$IFDEF UNICODE}vtString,{$ENDIF}
+                  vtUnicodeString:  SQLStrToFloatDef(PWideChar(Pointer(ZUnicodeStringArray[ArrayOffSet])), 0, PCurrency(Data)^, Length(ZUnicodeStringArray[ArrayOffSet]));
                   vtCharRec:
                     if ZCompatibleCodePages(ZCharRecArray[ArrayOffSet].CP, zCP_UTF16) then
-                      PCurrency(Data)^ := UnicodeToFloatDef(ZCharRecArray[ArrayOffSet].P, WideChar('.'), 0)
+                      SQLStrToFloatDef(PWideChar(ZCharRecArray[ArrayOffSet].P), 0, PCurrency(Data)^, ZCharRecArray[ArrayOffSet].Len)
                     else
-                      PCurrency(Data)^ := RawToFloatDef(ZCharRecArray[ArrayOffSet].P, '.', 0);
+                      SQLStrToFloatDef(PAnsiChar(ZCharRecArray[ArrayOffSet].P), 0, PCurrency(Data)^, ZCharRecArray[ArrayOffSet].Len)
                   else
                     raise Exception.Create('Unsupported String Variant');
                 end;

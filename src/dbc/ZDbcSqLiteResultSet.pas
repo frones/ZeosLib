@@ -942,7 +942,6 @@ function TZSQLiteResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var
   ColType: Integer;
   Buffer: PAnsiChar;
-  Len: Cardinal;
   Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -964,9 +963,7 @@ begin
       else
       begin
         Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
-        Len := ZFastCode.StrLen(Buffer);
-
-        Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-});
+        Result := RawSQLTimeStampToDateTime(Buffer, ZFastCode.StrLen(Buffer), ConSettings^.ReadFormatSettings, Failed{%H-});
       end;
       LastWasNull := Result = 0;
     end;

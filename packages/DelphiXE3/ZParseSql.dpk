@@ -28,12 +28,12 @@ package ZParseSql;
 {$LIBSUFFIX '170'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
-{$I ZPackages.inc}
 
 requires
   ZCore;
 
 contains
+{$I ZPackages.inc} //after simplify Zeos.Inc by using {$IF CompilerVersion > x} i need to move this include AFTER contains!
 
 {$IF defined(ENABLE_ODBC) or defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
   ZODBCToken in '..\..\src\parsesql\ZODBCToken.pas',

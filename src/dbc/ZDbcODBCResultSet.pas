@@ -449,9 +449,9 @@ begin
       stString, stUnicodeString: begin
           InternalDecTrailingSpaces(ColumnIndex);
           if fIsUnicodeDriver then
-            Result := StrToBoolEx(PWideChar(fColDataPtr))
+            Result := StrToBoolEx(PWideChar(fColDataPtr), True, fFixedWidthStrings[ColumnIndex])
           else
-            Result := StrToBoolEx(PAnsiChar(fColDataPtr))
+            Result := StrToBoolEx(PAnsiChar(fColDataPtr), True, fFixedWidthStrings[ColumnIndex])
       end;
       //stAsciiStream, stUnicodeStream:
     end;
@@ -601,9 +601,9 @@ begin
       stString, stUnicodeString: begin
           InternalDecTrailingSpaces(ColumnIndex);
           if fIsUnicodeDriver then
-            Result := UnicodeToFloatDef(PWideChar(fColDataPtr), WideChar('.'), 0)
+            SQLStrToFloatDef(PWideChar(fColDataPtr), 0, Result, fStrLen_or_Ind)
           else
-            Result := RawToFloatDef(PAnsiChar(fColDataPtr), '.', 0);
+            SQLStrToFloatDef(PAnsiChar(fColDataPtr), 0, Result, fStrLen_or_Ind)
         end;
       //stAsciiStream, stUnicodeStream, stBinaryStream:
     end;
@@ -649,9 +649,9 @@ begin
       stString, stUnicodeString: begin
           InternalDecTrailingSpaces(ColumnIndex);
           if fIsUnicodeDriver then
-            Result := UnicodeToFloatDef(PWideChar(fColDataPtr), WideChar('.'), 0)
+            SQLStrToFloatDef(PWideChar(fColDataPtr), 0, Result, fStrLen_or_Ind)
           else
-            Result := RawToFloatDef(PAnsiChar(fColDataPtr), '.', 0);
+            SQLStrToFloatDef(PAnsiChar(fColDataPtr), 0, Result, fStrLen_or_Ind)
         end;
       //stAsciiStream, stUnicodeStream, stBinaryStream:
     end;

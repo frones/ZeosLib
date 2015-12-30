@@ -1333,18 +1333,9 @@ begin
       DBTYPE_R8:        Result := Trunc(PDouble(FData)^);
       DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
       DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
-      DBTYPE_BSTR:
-       if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := UnicodeToIntDef(PWideChar(FData), 0)
-        else
-        begin //Fixed width
-          FLength := FLength shr 1;
-          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
-          SetString(FUniTemp, PWideChar(FData), FLength);
-          Result := UnicodeToIntDef(FUniTemp,0);
-        end;
+      DBTYPE_BSTR:      Result := UnicodeToIntDef(PWideChar(FData), 0);
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
+                        Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
       DBTYPE_BOOL:      Result := PWord(FData)^;
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
@@ -1359,29 +1350,14 @@ begin
         if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
           Result := RawToIntDef(GetBlob(ColumnIndex).GetBuffer, 0)
         else
-          if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-            Result := RawToIntDef(PAnsiChar(FData),0)
-          else
-          begin //Fixed width
-            while (PAnsiChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
-            ZSetString(PAnsiChar(FData), FLength, FRawTemp);
-            Result := RawToIntDef(FRawTemp,0);
-          end;
+          Result := RawToIntDef(PAnsiChar(FData),0);
       DBTYPE_STR or DBTYPE_BYREF:
         Result := RawToIntDef(PPAnsiChar(FData)^, 0);
       DBTYPE_WSTR:
         if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
           Result := UnicodeToIntDef(GetBlob(ColumnIndex).GetPWideChar, 0)
         else
-          if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-            Result := UnicodeToIntDef(PWideChar(FData),0)
-          else
-          begin //Fixed width
-            FLength := FLength shr 1;
-            while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
-            SetString(FUniTemp, PWideChar(FData), FLength);
-            Result := UnicodeToIntDef(FUniTemp,0);
-          end;
+          Result := UnicodeToIntDef(PWideChar(FData),0);
       DBTYPE_WSTR or DBTYPE_BYREF:
         Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
       //DBTYPE_NUMERIC	= 131;
@@ -1416,18 +1392,9 @@ begin
       DBTYPE_R8:        Result := Trunc(PDouble(FData)^);
       DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
       DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
-      DBTYPE_BSTR:
-       if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := UnicodeToIntDef(PWideChar(FData), 0)
-        else
-        begin //Fixed width
-          FLength := FLength shr 1;
-          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
-          SetString(FUniTemp, PWideChar(FData), FLength);
-          Result := UnicodeToIntDef(FUniTemp,0);
-        end;
+      DBTYPE_BSTR:      Result := UnicodeToIntDef(PWideChar(FData), 0);
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
+                        Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
       DBTYPE_BOOL:      Result := PWord(FData)^;
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
@@ -1442,29 +1409,14 @@ begin
         if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
           Result := RawToIntDef(GetBlob(ColumnIndex).GetBuffer, 0)
         else
-          if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-            Result := RawToIntDef(PAnsiChar(FData),0)
-          else
-          begin //Fixed width
-            while (PAnsiChar(FData)+FLength -1)^ = ' ' do Dec(FLength);
-            ZSetString(PAnsiChar(FData), FLength, FRawTemp);
-            Result := RawToIntDef(FRawTemp,0);
-          end;
+          Result := RawToIntDef(PAnsiChar(FData),0);
       DBTYPE_STR or DBTYPE_BYREF:
         Result := RawToIntDef(PPAnsiChar(FData)^,0);
       DBTYPE_WSTR:
         if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
           Result := UnicodeToIntDef(GetBlob(ColumnIndex).GetPWideChar, 0)
         else
-          if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-            Result := UnicodeToIntDef(PWideChar(FData),0)
-          else
-          begin //Fixed width
-            FLength := FLength shr 1;
-            while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
-            SetString(FUniTemp, PWideChar(FData), FLength);
-            Result := UnicodeToIntDef(FUniTemp,0);
-          end;
+          Result := UnicodeToIntDef(PWideChar(FData),0);
       DBTYPE_WSTR or DBTYPE_BYREF:
         Result := UnicodeToIntDef(ZPPWideChar(FData)^, 0);
       //DBTYPE_NUMERIC	= 131;
@@ -1499,16 +1451,7 @@ begin
       DBTYPE_R8:        Result := Trunc(PDouble(FData)^);
       DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
       DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
-      DBTYPE_BSTR:
-        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := UnicodeToIntDef(PWideChar(FData), 0)
-        else
-        begin //Fixed width
-          FLength := FLength shr 1;
-          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
-          SetString(FUniTemp, PWideChar(FData), FLength);
-          Result := UnicodeToIntDef(FUniTemp,0);
-        end;
+      DBTYPE_BSTR:      Result := UnicodeToIntDef(PWideChar(FData), 0);
       DBTYPE_BSTR or DBTYPE_BYREF:
         Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
@@ -1525,30 +1468,14 @@ begin
         if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
           Result := RawToIntDef(GetBlob(ColumnIndex).GetBuffer, 0)
         else
-          if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-            Result := RawToIntDef(PAnsiChar(FData),0)
-          else
-          begin //Fixed width
-            while (PAnsiChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
-            ZSetString(PAnsiChar(FData), FLength, FRawTemp);
-            Result := RawToIntDef(FRawTemp,0);
-          end;
+          Result := RawToIntDef(PAnsiChar(FData),0);
       DBTYPE_STR or DBTYPE_BYREF:
         Result := RawToIntDef(PPAnsiChar(FData)^,0);
       DBTYPE_WSTR:
         if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
           Result := UnicodeToIntDef(GetBlob(ColumnIndex).GetPWideChar, 0)
         else
-          if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-            Result := UnicodeToIntDef(PWideChar(FData),0)
-          else
-          begin //Fixed width
-            FLength := FLength shr 1;
-            while (PWideChar(FData)+FLength-1)^ = ' ' do
-              Dec(FLength);
-            SetString(FUniTemp, PWideChar(FData), FLength);
-            Result := UnicodeToIntDef(FUniTemp,0);
-          end;
+          Result := UnicodeToIntDef(PWideChar(FData),0);
       DBTYPE_WSTR or DBTYPE_BYREF:
         Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
       //DBTYPE_NUMERIC	= 131;
@@ -1583,18 +1510,9 @@ begin
       DBTYPE_R8:        Result := Trunc(PDouble(FData)^);
       DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
       DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
-      DBTYPE_BSTR:
-        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := UnicodeToInt64Def(PWideChar(FData), 0)
-        else
-        begin //Fixed width
-          FLength := FLength shr 1;
-          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
-          SetString(FUniTemp, PWideChar(FData), FLength);
-          Result := UnicodeToInt64Def(FUniTemp,0);
-        end;
+      DBTYPE_BSTR:      Result := UnicodeToInt64Def(PWideChar(FData), 0);
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := UnicodeToInt64Def(ZPPWideChar(FData)^, 0);
+                        Result := UnicodeToInt64Def(ZPPWideChar(FData)^, 0);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
       DBTYPE_BOOL:      Result := PWord(FData)^;
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
@@ -1605,42 +1523,18 @@ begin
       DBTYPE_UI4:       Result := PLongWord(FData)^;
       DBTYPE_I8:        Result := PInt64(FData)^;
       DBTYPE_UI8:       Result := PUInt64(FData)^;
-      DBTYPE_STR:
-        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
-          Result := RawToInt64Def(GetBlob(ColumnIndex).GetBuffer, 0)
-        else
-          if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-            Result := RawToInt64Def(PAnsiChar(FData),0)
-          else
-          begin //Fixed width
-            while (PAnsiChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
-            ZSetString(PAnsiChar(FData), FLength, FRawTemp);
-            Result := RawToInt64Def(FRawTemp,0);
-          end;
+      DBTYPE_STR:       if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
+                          Result := RawToInt64Def(GetBlob(ColumnIndex).GetBuffer, 0)
+                        else
+                          Result := RawToInt64Def(PAnsiChar(FData),0);
       DBTYPE_STR or DBTYPE_BYREF:
-        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := RawToInt64Def(PAnsiChar(FData),0)
-        else
-        begin //Fixed width
-          while (PAnsiChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
-          ZSetString(PAnsiChar(FData), FLength, FRawTemp);
-          Result := RawToInt64Def(FRawTemp,0);
-        end;
-      DBTYPE_WSTR:
-        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
-          Result := UnicodeToInt64Def(GetBlob(ColumnIndex).GetPWideChar, 0)
-        else
-          if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-            Result := UnicodeToInt64Def(PWideChar(FData), 0)
-          else
-          begin //Fixed width
-            FLength := FLength shr 1;
-            while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
-            SetString(FUniTemp, PWideChar(FData), FLength);
-            Result := UnicodeToInt64Def(FUniTemp,0);
-          end;
+                        Result := RawToInt64Def(PAnsiChar(FData),0);
+      DBTYPE_WSTR:      if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
+                          Result := UnicodeToInt64Def(GetBlob(ColumnIndex).GetPWideChar, 0)
+                        else
+                          Result := UnicodeToInt64Def(PWideChar(FData), 0);
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeToInt64Def(ZPPWideChar(FData)^, 0);
+                        Result := UnicodeToInt64Def(ZPPWideChar(FData)^, 0);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
       //DBTYPE_DBDATE	= 133;
@@ -1673,18 +1567,9 @@ begin
       DBTYPE_R8:        Result := Trunc(PDouble(FData)^);
       DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
       DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
-      DBTYPE_BSTR:
-        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := UnicodeToUInt64Def(PWideChar(FData), 0)
-        else
-        begin //Fixed width
-          FLength := FLength shr 1;
-          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
-          SetString(FUniTemp, PWideChar(FData), FLength);
-          Result := UnicodeToUInt64Def(FUniTemp,0);
-        end;
+      DBTYPE_BSTR:      Result := UnicodeToUInt64Def(PWideChar(FData), 0);
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := UnicodeToUInt64Def(ZPPWideChar(FData)^, 0);
+                        Result := UnicodeToUInt64Def(ZPPWideChar(FData)^, 0);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
       DBTYPE_BOOL:      Result := PWord(FData)^;
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
@@ -1695,35 +1580,18 @@ begin
       DBTYPE_UI4:       Result := PLongWord(FData)^;
       DBTYPE_I8:        Result := PInt64(FData)^;
       DBTYPE_UI8:       Result := PUInt64(FData)^;
-      DBTYPE_STR:
-        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
-          Result := RawToUInt64Def(GetBlob(ColumnIndex).GetBuffer, 0)
-        else
-          if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-            Result := RawToUInt64Def(PAnsiChar(FData),0)
-          else
-          begin //Fixed width
-            while (PAnsiChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
-            ZSetString(PAnsiChar(FData), FLength, FRawTemp);
-            Result := RawToUInt64Def(FRawTemp,0);
-          end;
+      DBTYPE_STR:       if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
+                          Result := RawToUInt64Def(GetBlob(ColumnIndex).GetBuffer, 0)
+                        else
+                          Result := RawToUInt64Def(PAnsiChar(FData),0);
       DBTYPE_STR or DBTYPE_BYREF:
         Result := RawToUInt64Def(PPAnsiChar(FData)^, 0);
-      DBTYPE_WSTR:
-        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
-          Result := UnicodeToInt64Def(GetBlob(ColumnIndex).GetPWideChar, 0)
-        else
-          if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-            Result := UnicodeToUInt64Def(PWideChar(FData), 0)
-          else
-          begin //Fixed width
-            FLength := FLength shr 1;
-            while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
-            SetString(FUniTemp, PWideChar(FData), FLength);
-            Result := UnicodeToUInt64Def(FUniTemp,0);
-          end;
+      DBTYPE_WSTR:      if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
+                          Result := UnicodeToInt64Def(GetBlob(ColumnIndex).GetPWideChar, 0)
+                        else
+                          Result := UnicodeToUInt64Def(PWideChar(FData), 0);
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeToUInt64Def(ZPPWideChar(FData)^, 0);
+                          Result := UnicodeToUInt64Def(ZPPWideChar(FData)^, 0);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
       //DBTYPE_DBDATE	= 133;
@@ -1756,10 +1624,9 @@ begin
       DBTYPE_R8:        Result := PDouble(FData)^;
       DBTYPE_CY:        Result := PCurrency(FData)^;
       DBTYPE_DATE:      Result := PDateTime(FData)^;
-      DBTYPE_BSTR:
-        Result := UnicodeToFloatDef(PWideChar(FData), WideChar('.'), 0);
+      DBTYPE_BSTR:      SQLStrToFloatDef(PWideChar(FData), 0, Result, FLength shr 1);
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := UnicodeToFloatDef(ZPPWideChar(FData)^,WideChar('.'), 0);
+                        SQLStrToFloatDef(ZPPWideChar(FData)^, 0, Result, FLength shr 1);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
       DBTYPE_BOOL:      Result := PWord(FData)^;
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
@@ -1770,14 +1637,13 @@ begin
       DBTYPE_UI4:       Result := PLongWord(FData)^;
       DBTYPE_I8:        Result := PInt64(FData)^;
       DBTYPE_UI8:       Result := PUInt64(FData)^;
-      DBTYPE_STR:
-        Result := RawToFloatDef(PAnsiChar(FData),'.', 0);
+      DBTYPE_STR:       SQLStrToFloatDef(PAnsiChar(FData), 0, Result, FLength);
       DBTYPE_STR or DBTYPE_BYREF:
-        Result := RawToFloatDef(PPAnsiChar(FData)^,'.', 0);
+                        SQLStrToFloatDef(PPAnsiChar(FData)^, 0, Result, FLength);
       DBTYPE_WSTR:
-        Result := UnicodeToFloatDef(PWideChar(FData),WideChar('.'),0 );
+                        SQLStrToFloatDef(PWideChar(FData), 0, Result, FLength shr 1);
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeToFloatDef(ZPPWideChar(FData)^,WideChar('.'),0);
+                        SQLStrToFloatDef(ZPPWideChar(FData)^, 0, Result, FLength shr 1);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
       //DBTYPE_DBDATE	= 133;
@@ -1810,10 +1676,9 @@ begin
       DBTYPE_R8:        Result := PDouble(FData)^;
       DBTYPE_CY:        Result := PCurrency(FData)^;
       DBTYPE_DATE:      Result := PDateTime(FData)^;
-      DBTYPE_BSTR:
-        Result := UnicodeToFloatDef(PWideChar(FData), WideChar('.'), 0);
+      DBTYPE_BSTR:      SQLStrToFloatDef(PWideChar(FData), 0, Result, FLength shr 1);
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := UnicodeToFloatDef(ZPPWideChar(FData)^,WideChar('.'), 0);
+                        SQLStrToFloatDef(ZPPWideChar(FData)^, 0, Result, FLength shr 1);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
       DBTYPE_BOOL:      Result := PWord(FData)^;
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
@@ -1824,14 +1689,12 @@ begin
       DBTYPE_UI4:       Result := PLongWord(FData)^;
       DBTYPE_I8:        Result := PInt64(FData)^;
       DBTYPE_UI8:       Result := PUInt64(FData)^;
-      DBTYPE_STR:
-        Result := RawToFloatDef(PAnsiChar(FData),'.', 0);
+      DBTYPE_STR:       SQLStrToFloatDef(PAnsiChar(FData), 0, Result, FLength);
       DBTYPE_STR or DBTYPE_BYREF:
-        Result := RawToFloatDef(PPAnsiChar(FData)^,'.', 0);
-      DBTYPE_WSTR:
-        Result := UnicodeToFloatDef(PWideChar(FData),WideChar('.'),0 );
+                        SQLStrToFloatDef(PPAnsiChar(FData)^, 0, Result, FLength);
+      DBTYPE_WSTR:      SQLStrToFloatDef(PWideChar(FData), 0, Result, FLength shr 1);
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeToFloatDef(ZPPWideChar(FData)^,WideChar('.'),0);
+                        SQLStrToFloatDef(ZPPWideChar(FData)^, 0, Result, FLength shr 1);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
       //DBTYPE_DBDATE	= 133;
@@ -1865,10 +1728,9 @@ begin
       DBTYPE_R8:        Result := PDouble(FData)^;
       DBTYPE_CY:        Result := PCurrency(FData)^;
       DBTYPE_DATE:      Result := PDateTime(FData)^;
-      DBTYPE_BSTR:
-        Result := UnicodeToFloatDef(PWideChar(FData), WideChar('.'), 0);
+      DBTYPE_BSTR:      SQLStrToFloatDef(PWideChar(FData), 0, Result, FLength shr 1);
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := UnicodeToFloatDef(ZPPWideChar(FData)^,WideChar('.'), 0);
+                        SQLStrToFloatDef(ZPPWideChar(FData)^, 0, Result, FLength shr 1);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
       DBTYPE_BOOL:      Result := PWord(FData)^;
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
@@ -1879,14 +1741,12 @@ begin
       DBTYPE_UI4:       Result := PLongWord(FData)^;
       DBTYPE_I8:        Result := PInt64(FData)^;
       DBTYPE_UI8:       Result := PUInt64(FData)^;
-      DBTYPE_STR:
-        Result := RawToFloatDef(PAnsiChar(FData),'.', 0);
+      DBTYPE_STR:       SQLStrToFloatDef(PAnsiChar(FData), 0, Result, FLength);
       DBTYPE_STR or DBTYPE_BYREF:
-        Result := RawToFloatDef(PPAnsiChar(FData)^,'.', 0);
-      DBTYPE_WSTR:
-        Result := UnicodeToFloatDef(PWideChar(FData),WideChar('.'),0 );
+                        SQLStrToFloatDef(PPAnsiChar(FData)^, 0, Result, FLength);
+      DBTYPE_WSTR:      SQLStrToFloatDef(PWideChar(FData), 0, Result, FLength shr 1);
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeToFloatDef(ZPPWideChar(FData)^,WideChar('.'),0);
+                        SQLStrToFloatDef(ZPPWideChar(FData)^, 0, Result, FLength shr 1);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
       //DBTYPE_DBDATE	= 133;

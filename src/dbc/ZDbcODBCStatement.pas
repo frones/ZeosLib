@@ -510,15 +510,39 @@ var
     Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
     Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
   end;
-  procedure SetSingle(s: Single);
+  procedure SetSingle(s: Single); overload;
   begin
     PSingle(ParameterDataPtr)^ := S;
     Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
     Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
   end;
-  procedure SetDouble(d: Double);
+  procedure SetSingle(P: PAnsiChar; Len: Integer); overload;
+  begin
+    SQLStrToFloatDef(P, 0, PSingle(ParameterDataPtr)^, Len);
+    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
+    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
+  end;
+  procedure SetSingle(P: PWideChar; Len: Integer); overload;
+  begin
+    SQLStrToFloatDef(P, 0, PSingle(ParameterDataPtr)^, Len);
+    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
+    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
+  end;
+  procedure SetDouble(d: Double); overload;
   begin
     PDouble(ParameterDataPtr)^ := D;
+    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
+    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
+  end;
+  procedure SetDouble(P: PAnsiChar; Len: Integer); overload;
+  begin
+    SQLStrToFloatDef(P, 0, PDouble(ParameterDataPtr)^, Len);
+    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
+    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
+  end;
+  procedure SetDouble(P: PWideChar; Len: Integer); overload;
+  begin
+    SQLStrToFloatDef(P, 0, PDouble(ParameterDataPtr)^, Len);
     Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
     Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
   end;
@@ -1139,21 +1163,16 @@ begin
                   //stGUID:
                   stString, stUnicodeString:
                     case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtAnsiString,
-                      vtUTF8String,
-                      vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(RawToFloatDef(ZRawByteStringArray[J+fArrayOffSet], '.', 0));
-                      {$IFDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(UnicodeToFloatDef(ZUnicodeStringArray[J+fArrayOffSet], WideChar('.'),0));
+                      {$IFNDEF UNICODE}vtString, {$ENDIF}
+                      vtAnsiString, vtUTF8String,
+                      vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(PAnsiChar(Pointer(ZRawByteStringArray[J+fArrayOffSet])), Length(ZRawByteStringArray[J+fArrayOffSet]));
+                      {$IFDEF UNICODE}vtString, {$ENDIF}
+                      vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(PWideChar(Pointer(ZUnicodeStringArray[J+fArrayOffSet])), Length(ZUnicodeStringArray[J+fArrayOffSet]));
                       vtCharRec:        for J := 0 to fCurrentIterations -1 do
                                           if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                                            if IsNotNull then SetSingle(UnicodeToFloatDef(PWideChar(ZCharRecArray[J+fArrayOffSet].P), WideChar('.'),0))
+                                            if IsNotNull then SetSingle(PWideChar(ZCharRecArray[J+fArrayOffSet].P), ZCharRecArray[J+fArrayOffSet].Len)
                                           else
-                                            if IsNotNull then SetSingle(RawToFloatDef(PAnsiChar(ZCharRecArray[J+fArrayOffSet].P), '.',0));
+                                            if IsNotNull then SetSingle(PAnsiChar(ZCharRecArray[J+fArrayOffSet].P), ZCharRecArray[J+fArrayOffSet].Len);
                       vtNull:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(0);
                       else
                         raise Exception.Create('Unsupported String Variant');
@@ -1185,21 +1204,16 @@ begin
                   //stGUID:
                   stString, stUnicodeString:
                     case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtAnsiString,
-                      vtUTF8String,
-                      vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(RawToFloatDef(ZRawByteStringArray[J+fArrayOffSet], '.', 0));
-                      {$IFDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(UnicodeToFloatDef(ZUnicodeStringArray[J+fArrayOffSet], WideChar('.'),0));
+                      {$IFNDEF UNICODE}vtString,{$ENDIF}
+                      vtAnsiString, vtUTF8String,
+                      vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(PAnsiChar(Pointer(ZRawByteStringArray[J+fArrayOffSet])), Length(ZRawByteStringArray[J+fArrayOffSet]));
+                      {$IFDEF UNICODE}vtString,{$ENDIF}
+                      vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(PWidechar(Pointer(ZUnicodeStringArray[J+fArrayOffSet])), Length(ZUnicodeStringArray[J+fArrayOffSet]));
                       vtCharRec:        for J := 0 to fCurrentIterations -1 do
                                           if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                                            if IsNotNull then SetDouble(UnicodeToFloatDef(PWideChar(ZCharRecArray[J+fArrayOffSet].P), WideChar('.'),0))
+                                            if IsNotNull then SetDouble(PWideChar(ZCharRecArray[J+fArrayOffSet].P), ZCharRecArray[J+fArrayOffSet].Len)
                                           else
-                                            if IsNotNull then SetDouble(RawToFloatDef(PAnsiChar(ZCharRecArray[J+fArrayOffSet].P), '.',0));
+                                            if IsNotNull then SetDouble(PAnsiChar(ZCharRecArray[J+fArrayOffSet].P), ZCharRecArray[J+fArrayOffSet].Len);
                       vtNull:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(0);
                       else
                         raise Exception.Create('Unsupported String Variant');
