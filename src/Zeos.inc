@@ -51,6 +51,7 @@
 {.$DEFINE ZEOS_DISABLE_SQLITE}
 {.$DEFINE ZEOS_DISABLE_ORACLE}
 {.$DEFINE ZEOS_DISABLE_ASA}
+{.$DEFINE ZEOS_DISABLE_POOLED}
 
 {.$DEFINE WITH_ZSTRINGFIELDS}
 
@@ -87,6 +88,7 @@
   {$DEFINE WITH_FTGUID}                   //ftGuid is supported (binary 16Bytes)
   {$IFDEF WIN32}
     {$DEFINE USE_FAST_TRUNC}              //use Fascode Trunc(): Int64 functions
+    {$DEFINE USE_FAST_STRLEN}             //use FastCode StrLen() function with different instruction-sets
   {$ENDIF}
   {$DEFINE WITH_VIRTUAL_GETHASCONSTRAINTS}//TField has virtual methode GetHasConstraints
   {$DEFINE WITH_TOBJECTFIELD}             //unit DB contains TObjectField implementation
@@ -156,6 +158,7 @@
               {$UNDEF WITH_IPROVIDERSUPPORT2}           //TDataSet IProviderSupport2 has been removed again
               {$UNDEF WITH_DEPRECATED_EXTRACTFIELDNAME} //DB.pas proc ExtractFieldName String overload is no more deprecated -> Unicode}
               {$UNDEF BCC32_vtDateTime_ERROR}           //resolved by ide
+              {$UNDEF USE_FAST_CHARPOS}                 // Since Unidode this function is useless
 
               {$DEFINE WITH_TBOOKMARK}                  // Have TBookmark
               {$DEFINE WITH_TRECORDBUFFER}              // Abstract buffer type (pansichar or pbyte)
@@ -172,9 +175,8 @@
               {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}      // determine the AnsiString CP
               {$DEFINE WITH_UNITANSISTRINGS}            // Have unit AnsiStrings
               {$DEFINE WITH_TENCODING_CLASS}            // Have class TEncoding
-              {$UNDEF WITH_IPROVIDERWIDE}               // IProvider -W widestring using interface is deprecated since UNICODE and wo't be called anymore
+              {$UNDEF WITH_IPROVIDERWIDE}               // IProvider -W widestring using interface is deprecated since UNICODE and won't be called anymore
               {$DEFINE PWIDECHAR_IS_PUNICODECHAR}       // PWideChar = ^UnicodeString
-              {$UNDEF USE_FAST_CHARPOS}                 // Since Unidode this function is useless
               {$DEFINE WITH_ASANSISTRING}               // T(Wide)StringField supports AsAnsiString property
               {$DEFINE WITH_INC_PBYTE_SUPPORT}          // Compiler supports incrementing PByte-Pointer
               {$DEFINE WITH_PARAM_ASLARGEINT}           // TParam.AsLargint is supported
