@@ -321,12 +321,16 @@ function UnicodeToUInt64Def(const S: PWideChar; const Default: UInt64) : UInt64;
 function RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar): Extended; overload;
 procedure RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar; var Result: Extended); overload;
 procedure RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar; var Result: Currency); overload;
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar; var Result: Double); overload;
+{$IFEND}
 procedure RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar; var Result: Single); overload;
 function RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar; const Default: Extended): Extended; overload;
 procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar; const Default: Extended; var Result: Extended); overload;
 procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar; const Default: Currency; var Result: Currency); overload;
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar; const Default: Double; var Result: Double); overload;
+{$IFEND}
 procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar; const Default: Single; var Result: Single); overload;
 function ValRawExt(const s: PAnsiChar; const DecimalSep: AnsiChar; var code: Integer): Extended; overload;
 function ValRawDbl(const s: PAnsiChar; const DecimalSep: AnsiChar; var code: Integer): Double; overload;
@@ -337,12 +341,16 @@ function ValRawInt(const s: RawByteString; var code: Integer): Integer;
 function UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar): Extended; overload;
 procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Extended); overload;
 procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Currency); overload;
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Double); overload;
+{$IFEND}
 procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Single); overload;
 function UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Extended): Extended; overload;
 procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Extended; var Result: Extended); overload;
 procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Currency; var Result: Currency); overload;
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Double; var Result: Double); overload;
+{$IFEND}
 procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Single; var Result: Single); overload;
 function ValUnicodeExt(const s: PWideChar; const DecimalSep: WideChar; var code: Integer): Extended; overload;
 function ValUnicodeDbl(const s: PWideChar; const DecimalSep: WideChar; var code: Integer): Double; overload;
@@ -4226,6 +4234,7 @@ begin
       Result := Default;
 end;
 
+{$D+}
 function RawToIntDef(const S: PAnsiChar; const Default: Integer) : Integer;
 var
   E: Integer;
@@ -4236,7 +4245,7 @@ begin
   Result := ValLong_JOH_PAS_4_b(S, E{%H-});
   {$IFEND}
   if E > 0 then
-    if not ((E > 0) and Assigned(S) and ((S+E-1)=' ')) then
+    if not ((E > 0) and Assigned(S) and ((S+E-1)^=' ')) then
       Result := Default;
 end;
 
@@ -4905,7 +4914,7 @@ begin
   Result := ValInt64_JOH_PAS_8_a_raw(S, E{%H-});
   {$IFEND}
   if E > 0 then
-    if not ((E > 0) and Assigned(S) and ((S+E-1)=' ')) then
+    if not ((E > 0) and Assigned(S) and ((S+E-1)^=' ')) then
       Result := Default;
 end;
 
@@ -4915,7 +4924,7 @@ var
 begin
   Result := ValUInt64_JOH_PAS_8_a_raw(S, E{%H-});
   if E > 0 then
-    if not ((E > 0) and Assigned(S) and ((S+E-1)=' ')) then
+    if not ((E > 0) and Assigned(S) and ((S+E-1)^=' ')) then
       Result := Default;
 end;
 
@@ -5161,6 +5170,7 @@ begin
   if E <> 0 then Result := Default;
 end;
 
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar;
   const Default: Double; var Result: Double);
 var
@@ -5169,6 +5179,7 @@ begin
   Result :=  ValRawDbl(s, DecimalSep, E{%H-});
   if E <> 0 then Result := Default;
 end;
+{$IFEND}
 
 procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar;
   const Default: Single; var Result: Single);
@@ -5206,6 +5217,7 @@ begin
     raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
 end;
 
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar; var Result: Double); overload;
 var
   E: Integer;
@@ -5214,6 +5226,7 @@ begin
   if E <> 0 then
     raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
 end;
+{$IFEND}
 
 procedure RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar; var Result: Single); overload;
 var
@@ -5729,6 +5742,7 @@ begin
     raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
 end;
 
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Double); overload;
 var
   E: Integer;
@@ -5741,6 +5755,7 @@ begin
   if E <> 0 then
     raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
 end;
+{$IFEND}
 
 procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Single); overload;
 var
@@ -5791,6 +5806,7 @@ begin
   if E <> 0 then Result := Default;
 end;
 
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Double; var Result: Double);
 var
   E: Integer;
@@ -5802,6 +5818,7 @@ begin
   {$ENDIF}
   if E <> 0 then Result := Default;
 end;
+{$IFEND}
 
 procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Single; var Result: Single);
 var
