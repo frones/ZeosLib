@@ -3424,11 +3424,15 @@ begin
 end;
 
 function ASCII7ToUnicodeString(const Src: RawByteString): ZWideString;
+var I: Integer;
 begin
   if Pointer(Src) = nil then
     Result := ''
-  else
-    ZSetString(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, Result);
+  else begin
+    System.SetString(Result, nil, {H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^);
+    for i := 0 to {H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^-1 do
+      PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
+  end;
 end;
 
 function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString;
