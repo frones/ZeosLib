@@ -122,10 +122,13 @@ type
     function GetBlobObject(Buffer: PZRowBuffer; ColumnIndex: Integer): IZBlob;
     procedure SetBlobObject(const Buffer: PZRowBuffer; ColumnIndex: Integer;
       const Value: IZBlob);
-    function InternalGetBytes(const Buffer: PZRowBuffer; ColumnIndex: Integer): TBytes; {$IFDEF WITHINLINE} inline; {$ENDIF}
+    function InternalGetBytes(const Buffer: PZRowBuffer; ColumnIndex: Integer): TBytes; overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
+    function InternalGetBytes(const Buffer: PZRowBuffer; ColumnIndex: Integer; var Len: SmallInt): Pointer; overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetBytes(const Buffer: PZRowBuffer; ColumnIndex: Integer;
-      const Value: TBytes; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
-    procedure InternalSetString(const Buffer: PZRowBuffer; ColumnIndex: Integer;
+      const Value: TBytes; const NewPointer: Boolean = False); overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
+    procedure InternalSetBytes(const Buffer: PZRowBuffer; ColumnIndex: Integer;
+      Buf: Pointer; Len: SmallInt; const NewPointer: Boolean = False); overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
+   procedure InternalSetString(const Buffer: PZRowBuffer; ColumnIndex: Integer;
       const Value: RawByteString; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetUnicodeString(const Buffer: PZRowBuffer; ColumnIndex: Integer;
       const Value: ZWideString; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
@@ -243,7 +246,8 @@ type
     procedure SetUTF8String(Const ColumnIndex: Integer; const Value: UTF8String); virtual;
     procedure SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString); virtual;
     procedure SetUnicodeString(Const ColumnIndex: Integer; const Value: ZWideString); virtual;
-    procedure SetBytes(Const ColumnIndex: Integer; const Value: TBytes); virtual;
+    procedure SetBytes(Const ColumnIndex: Integer; const Value: TBytes); overload; virtual;
+    procedure SetBytes(Const ColumnIndex: Integer; Buf: Pointer; Len: SmallInt); overload; virtual;
     procedure SetDate(Const ColumnIndex: Integer; const Value: TDateTime); virtual;
     procedure SetTime(Const ColumnIndex: Integer; const Value: TDateTime); virtual;
     procedure SetTimestamp(Const ColumnIndex: Integer; const Value: TDateTime); virtual;
@@ -1047,8 +1051,19 @@ end;
 function TZRowAccessor.InternalGetBytes(const Buffer: PZRowBuffer;
   ColumnIndex: Integer): TBytes;
 var
-  P: PPointer;
+  P: Pointer;
   L: SmallInt;
+begin
+  P := InternalGetBytes(Buffer, ColumnIndex, L);
+  if P <> nil then begin
+    SetLength(Result, L);
+    Move(P^, Pointer(Result)^, L);
+  end else
+    Result := nil;
+end;
+
+function TZRowAccessor.InternalGetBytes(const Buffer: PZRowBuffer;
+  ColumnIndex: Integer; var Len: SmallInt): Pointer;
 begin
   Result := nil;
   {$IFNDEF GENERIC_INDEX}
@@ -1056,22 +1071,24 @@ begin
   {$ENDIF}
   if ( Buffer.Columns[FColumnOffsets[ColumnIndex]] = bIsNotNull )then
   begin
-    L := PSmallInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1 + SizeOf(Pointer)])^;
-    SetLength(Result, L);
-    if L > 0 then
-    begin
-      P := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
-      Move(P^^, Pointer(Result)^, L);
-    end;
-  end;
+    Len := PSmallInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1 + SizeOf(Pointer)])^;
+    if Len > 0 then
+      Result := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^;
+  end else Len := 0;
 end;
 
 procedure TZRowAccessor.InternalSetBytes(const Buffer: PZRowBuffer;
   ColumnIndex: Integer; const Value: TBytes;
   const NewPointer: Boolean = False);
+begin
+  InternalSetBytes(Buffer, ColumnIndex, Pointer(Value), Length(Value), NewPointer);
+end;
+
+procedure TZRowAccessor.InternalSetBytes(const Buffer: PZRowBuffer;
+  ColumnIndex: Integer; Buf: Pointer; Len: SmallInt;
+  const NewPointer: Boolean = False);
 var
   P: PPointer;
-  L: SmallInt;
 begin
   if Buffer <> nil then
   begin
@@ -1081,12 +1098,12 @@ begin
     if NewPointer then
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ := 0;
     P := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
-    L := Min(Length(Value), FColumnLengths[ColumnIndex]);
-    PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex] + 1 + SizeOf(Pointer)])^ := L;
-    if L > 0 then
+    Len := Min(Len, FColumnLengths[ColumnIndex]);
+    PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex] + 1 + SizeOf(Pointer)])^ := Len;
+    if Len > 0 then
     begin
-      ReallocMem(P^, L);
-      System.Move(Pointer(Value)^, P^^, L);
+      ReallocMem(P^, Len);
+      System.Move(Buf^, P^^, Len);
     end
     else
       if PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ > 0 then
@@ -4409,6 +4426,38 @@ begin
       stBinaryStream: GetBlob(ColumnIndex, IsNull{%H-}).SetBytes(Value);
       else
         SetString(ColumnIndex, String(BytesToStr(Value)));
+    end;
+  end
+  else
+    SetNull(ColumnIndex);
+end;
+
+{**
+  Sets the designated column with a <code>byte</code> array value.
+  The <code>SetXXX</code> methods are used to Set column values in the
+  current row or the insert row.  The <code>SetXXX</code> methods do not
+  Set the underlying database; instead the <code>SetRow</code> or
+  <code>insertRow</code> methods are called to Set the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZRowAccessor.SetBytes(Const ColumnIndex: Integer; Buf: Pointer; Len: SmallInt);
+var
+  IsNull: Boolean;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stBytes);
+{$ENDIF}
+  if (Buf <> nil) and (Len > 0) then
+  begin
+    FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+      stGUID: System.Move(Buf^, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
+      stBytes: InternalSetBytes(FBuffer, ColumnIndex, Buf, Len);
+      stBinaryStream: GetBlob(ColumnIndex, IsNull{%H-}).SetBuffer(Buf, Len);
+      else
+        raise EZSQLException.Create(cSConvertionIsNotPossible);
     end;
   end
   else

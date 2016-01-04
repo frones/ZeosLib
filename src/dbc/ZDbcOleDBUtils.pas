@@ -58,7 +58,7 @@ interface
 {$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
 uses
   Types, SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
-  ZCompatibility, ZDbcIntfs, ZOleDB, ZVariant, ZDbcStatement;
+  ZCompatibility, ZDbcIntfs, ZOleDB, ZVariant, ZDbcStatement, Variants;
 
 type
   TInterfacesDynArray = array of TInterfaceDynArray;
@@ -72,8 +72,8 @@ type
     DBBINDSTATUS_MULTIPLESTORAGE);
 
 const
-  VARIANT_TRUE = Smallint(-1);
-  VARIANT_FALSE = Smallint(0);
+  VARIANT_TRUE = -1;
+  VARIANT_FALSE = 0;
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM; IsLong: Boolean;
   CtrlsCPType: TZControlsCodePage): TZSQLType; overload;

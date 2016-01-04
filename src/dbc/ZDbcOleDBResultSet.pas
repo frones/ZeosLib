@@ -157,6 +157,16 @@ type
       CurrentRow: HROW; ChunkSize: Integer);
   end;
 
+  TZOleDBCachedResultSet = class(TZCachedResultSet)
+  private
+    FResultSet: TZOleDBResultSet;
+  protected
+    function Fetch: Boolean; override;
+  public
+    constructor Create(ResultSet: TZOleDBResultSet; const SQL: string;
+      Resolver: IZCachedResolver; ConSettings: PZConSettings);
+  end;
+
 function GetCurrentResultSet(RowSet: IRowSet; Statement: IZStatement;
   Const SQL: String; ConSettings: PZConSettings; BuffSize, ChunkSize: Integer;
   EnhancedColInfo, InMemoryDataLobs: Boolean; var PCurrRS: Pointer): IZResultSet;
@@ -1982,12 +1992,6 @@ begin
       DBTYPE_BYTES or DBTYPE_BYREF:
         Result := TZAbstractBlob.CreateWithData(PPointer(FData)^,
           FLength);
-      DBTYPE_BSTR:
-        Result := TZAbstractClob.CreateWithData(PWideChar(FData),
-          FLength shr 1, ConSettings);
-      DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := TZAbstractClob.CreateWithData(ZPPWideChar(FData)^,
-          FLength shr 1, ConSettings);
       DBTYPE_STR:
         if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
           Result := TZOleDBCLOB.Create(FRowSet,
@@ -1999,13 +2003,14 @@ begin
       DBTYPE_STR or DBTYPE_BYREF:
         Result := TZAbstractClob.CreateWithData(PPAnsiChar(FData)^,
           FLength, ConSettings^.ClientCodePage^.CP, ConSettings);
-      DBTYPE_WSTR, DBTYPE_XML:
+      DBTYPE_BSTR, DBTYPE_WSTR, DBTYPE_XML:
         if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
           Result := TZOleDBCLOB.Create(FRowSet,
             FLobAccessors[FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].obLength],
             DBTYPE_WSTR, FHROWS^[FCurrentBufRowNo], FChunkSize, ConSettings)
         else
           Result := TZAbstractClob.CreateWithData(PWideChar(FData), FLength shr 1, ConSettings);
+      DBTYPE_BSTR or DBTYPE_BYREF,
       DBTYPE_WSTR or DBTYPE_BYREF,
       DBTYPE_XML or DBTYPE_BYREF:
         Result := TZAbstractClob.CreateWithData(ZPPWideChar(FData)^,
@@ -2077,7 +2082,7 @@ begin
   FConSettings := ConSettings;
 
   if wType = DBTYPE_STR then
-    FCurrentCodePage := GetACP
+    FCurrentCodePage := ConSettings^.ClientCodePage^.CP
   else
     FCurrentCodePage := zCP_UTF16;
   OleDBCheck(RowSet.GetData(CurrentRow, Accessor, @IStream));
@@ -2133,7 +2138,7 @@ function GetCurrentResultSet(RowSet: IRowSet; Statement: IZStatement;
   EnhancedColInfo, InMemoryDataLobs: Boolean; var PCurrRS: Pointer): IZResultSet;
 var
   CachedResolver: IZCachedResolver;
-  NativeResultSet: IZResultSet;
+  NativeResultSet: TZOleDBResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
   Result := nil;
@@ -2148,7 +2153,7 @@ begin
         CachedResolver := TZOleDBMSSQLCachedResolver.Create(Statement, NativeResultSet.GetMetaData)
       else
         CachedResolver := TZGenericCachedResolver.Create(Statement, NativeResultSet.GetMetaData);
-      CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
+      CachedResultSet := TZOleDBCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
       CachedResultSet.SetConcurrency(Statement.GetResultSetConcurrency);
       Result := CachedResultSet;
     end
@@ -2156,6 +2161,161 @@ begin
       Result := NativeResultSet;
   end;
   PCurrRS := Pointer(Result);
+end;
+
+{ TZOleDBCachedResultSet }
+
+constructor TZOleDBCachedResultSet.Create(ResultSet: TZOleDBResultSet;
+  const SQL: string; Resolver: IZCachedResolver; ConSettings: PZConSettings);
+begin
+  inherited Create(ResultSet, SQL, Resolver, ConSettings);
+  FResultSet := ResultSet;
+end;
+
+function TZOleDBCachedResultSet.Fetch: Boolean;
+var
+  I: Integer;
+  TempRow: PZRowBuffer;
+  FColBuffer: TByteDynArray;
+  DBBINDING: PDBBINDING;
+  FData: PPointer;
+  FLength: PDBLENGTH;
+  Len: NativeUInt;
+begin
+  if Assigned(FResultSet) then
+    Result := FResultSet.Next
+  else
+    Result := False;
+  if not Result or ((MaxRows > 0) and (LastRowNo >= MaxRows)) then
+    Exit;
+
+  TempRow := RowAccessor.RowBuffer;
+  FColBuffer := FResultSet.FColBuffer;
+  FData := @FResultSet.FData;
+  FLength := @FResultSet.FLength;
+  RowAccessor.Alloc;
+  RowAccessor.RowBuffer.Index := GetNextRowIndex;
+  RowAccessor.RowBuffer.UpdateType := utUnmodified;
+  try
+    for I := FirstDbcIndex to {$IFDEF GENERIC_INDEX}High{$ELSE}Length{$ENDIF}(FResultSet.FDBBindingArray) do
+      if FResultSet.IsNull(I) then
+        RowAccessor.SetNull(I)
+      else begin
+        DBBINDING := @FResultSet.FDBBindingArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+        case DBBINDING.wType of
+          DBTYPE_EMPTY,
+          DBTYPE_NULL                 : RowAccessor.SetNull(I);
+          DBTYPE_I2                   : RowAccessor.SetSmall(I, PSmallInt(FData^)^);
+          DBTYPE_I4,
+          DBTYPE_ERROR,
+          DBTYPE_HCHAPTER             : RowAccessor.SetInt(I, PInteger(FData^)^);
+          DBTYPE_R4	                  : RowAccessor.SetFloat(I, PSingle(FData^)^);
+          DBTYPE_R8                   : RowAccessor.SetDouble(I, PDouble(FData^)^);
+          DBTYPE_CY                   : RowAccessor.SetCurrency(I, PCurrency(FData^)^);
+          DBTYPE_DATE                 : RowAccessor.SetTimeStamp(I, PDateTime(FData^)^);
+          DBTYPE_BSTR,
+          DBTYPE_WSTR                 : if DBBINDING.cbMaxLen = 0 then
+                                          RowAccessor.SetBlob(I, TZOleDBCLOB.Create(FResultSet.FRowSet,
+                                            FResultSet.FLobAccessors[DBBINDING.obLength],
+                                            DBTYPE_WSTR, FResultSet.FHROWS^[FResultSet.FCurrentBufRowNo],
+                                            FResultSet.FChunkSize, ConSettings))
+                                        else begin
+                                          Len := FLength^ shr 1;
+                                          if DBBINDING.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
+                                            while (PWideChar(FData^)+Len-1)^ = ' ' do Dec(Len);
+                                          RowAccessor.SetPWideChar(I, FData^, @Len);
+                                        end;
+          DBTYPE_BSTR or DBTYPE_BYREF,
+          DBTYPE_WSTR or DBTYPE_BYREF : begin
+                                          Len := FLength^ shr 1;
+                                          if DBBINDING.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
+                                            while (ZPPWideChar(FData^)^+Len-1)^ = ' ' do Dec(Len);
+                                          RowAccessor.SetPWideChar(I, ZPPWideChar(FData^)^, @Len);
+                                        end;
+          //DBTYPE_IDISPATCH = 9;
+          DBTYPE_BOOL                 : RowAccessor.SetBoolean(I, PWordBool(FData^)^);
+          DBTYPE_VARIANT              : case RowAccessor.GetColumnType(I) of
+                                          stBoolean: RowAccessor.SetBoolean(I, POleVariant(FData^)^);
+                                          stByte        : RowAccessor.SetByte(I, POleVariant(FData^)^);
+                                          stShort       : RowAccessor.SetShort(I, POleVariant(FData^)^);
+                                          stWord        : RowAccessor.SetWord(I, POleVariant(FData^)^);
+                                          stSmall       : RowAccessor.SetSmall(I, POleVariant(FData^)^);
+                                          stLongWord    : RowAccessor.SetUInt(I, POleVariant(FData^)^);
+                                          stInteger     : RowAccessor.SetInt(I, POleVariant(FData^)^);
+                                          stULong       : RowAccessor.SetULong(I, POleVariant(FData^)^);
+                                          stLong        : RowAccessor.SetLong(I, POleVariant(FData^)^);
+                                          stFloat       : RowAccessor.SetFloat(I, POleVariant(FData^)^);
+                                          stDouble      : RowAccessor.SetDouble(I, POleVariant(FData^)^);
+                                          stCurrency    : RowAccessor.SetCurrency(I, POleVariant(FData^)^);
+                                          stBigDecimal  : RowAccessor.SetBigDecimal(I, POleVariant(FData^)^);
+                                          {stDate, stTime, stTimestamp,
+                                          stGUID,
+                                          //now varying size types in equal order
+                                          stString, stUnicodeString, stBytes,
+                                          stAsciiStream, stUnicodeStream, stBinaryStream,
+                                          //finally the object types
+                                          stArray, stDataSet}
+                                        end;
+          //DBTYPE_IUNKNOWN = 13;
+          //DBTYPE_DECIMAL = 14;
+          DBTYPE_UI1                  : RowAccessor.SetByte(I, PByte(FData^)^);
+          DBTYPE_I1                   : RowAccessor.SetShort(I, PShortInt(FData^)^);
+          DBTYPE_UI2                  : RowAccessor.SetWord(I, PWord(FData^)^);
+          DBTYPE_UI4                  : RowAccessor.SetUInt(I, PLongWord(FData^)^);
+          DBTYPE_I8                   : RowAccessor.SetLong(I, PInt64(FData^)^);
+          DBTYPE_UI8                  : RowAccessor.SetULong(I, PInt64(FData^)^);
+          DBTYPE_GUID                 : RowAccessor.SetBytes(I, FData^, 16);
+          DBTYPE_BYTES                : if DBBINDING.cbMaxLen = 0 then
+                                          RowAccessor.SetBlob(I, TZOleDBBLOB.Create(FResultSet.FRowSet,
+                                            FResultSet.FLobAccessors[DBBINDING.obLength],
+                                            FResultSet.FHROWS^[FResultSet.FCurrentBufRowNo], FResultSet.FChunkSize))
+                                        else
+                                          RowAccessor.SetBytes(I, FData^, FLength^);
+          DBTYPE_STR                  : if DBBINDING.cbMaxLen = 0 then
+                                          RowAccessor.SetBlob(I, TZOleDBCLOB.Create(FResultSet.FRowSet,
+                                            FResultSet.FLobAccessors[DBBINDING.obLength],
+                                            DBTYPE_STR, FResultSet.FHROWS^[FResultSet.FCurrentBufRowNo],
+                                            FResultSet.FChunkSize, ConSettings))
+                                        else begin
+                                          Len := FLength^;
+                                          if DBBINDING.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
+                                            while (PAnsiChar(FData^)+Len-1)^ = ' ' do Dec(Len);
+                                          FUniTemp := PRawToUnicode(FData^, Len, ConSettings^.ClientCodePage^.CP);
+                                          RowAccessor.SetPWideChar(I, Pointer(FUniTemp), @Len);
+                                        end;
+          DBTYPE_STR or DBTYPE_BYREF  : begin
+                                          Len := FLength^;
+                                          if DBBINDING.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
+                                            while (PPAnsiChar(FData^)^+Len-1)^ = ' ' do Dec(Len);
+                                          FUniTemp := PRawToUnicode(PPAnsiChar(FData^)^, Len, ConSettings^.ClientCodePage^.CP);
+                                          RowAccessor.SetPWideChar(I, Pointer(FUniTemp), @Len);
+                                        end;
+          //DBTYPE_NUMERIC = 131;
+          //DBTYPE_UDT = 132;
+          DBTYPE_DBDATE               : RowAccessor.SetDate(I, EncodeDate(Abs(PDBDate(FData^)^.year), PDBDate(FData^)^.month, PDBDate(FData^)^.day));
+          DBTYPE_DBTIME               : RowAccessor.SetTime(I, EncodeTime(PDBTime(FData^)^.hour, PDBTime(FData^)^.minute, PDBTime(FData^)^.second, 0));
+          DBTYPE_DBTIMESTAMP          : RowAccessor.SetTimestamp(I, EncodeDate(Abs(PDBTimeStamp(FData^)^.year), PDBTimeStamp(FData^)^.month, PDBTimeStamp(FData^)^.day)
+                                                                   +EncodeTime(PDBTimeStamp(FData^)^.hour, PDBTimeStamp(FData^)^.minute, PDBTimeStamp(FData^)^.second, PDBTimeStamp(FData^)^.fraction div 1000000));
+          {SQL Server types only }
+          DBTYPE_XML                  : RowAccessor.SetBlob(I, TZOleDBCLOB.Create(FResultSet.FRowSet,
+                                            FResultSet.FLobAccessors[DBBINDING.obLength],
+                                            DBTYPE_WSTR, FResultSet.FHROWS^[FResultSet.FCurrentBufRowNo],
+                                            FResultSet.FChunkSize, ConSettings));
+
+          //DBTYPE_TABLE = 143; // introduced in SQL 2008
+          DBTYPE_DBTIME2              : RowAccessor.SetTime(I, EncodeTime(PDBTime2(FData^)^.hour, PDBTime2(FData^)^.minute, PDBTime2(FData^)^.second, PDBTime2(FData^)^.fraction div 1000000));
+          //DBTYPE_DBTIMESTAMPOFFSET = 146; // introduced in SQL 2008
+          //DBTYPE_FILETIME = 64;
+          //DBTYPE_PROPVARIANT = 138;
+          //DBTYPE_VARNUMERIC = 139;
+
+        end;
+      end;
+      RowsList.Add(RowAccessor.RowBuffer);
+      LastRowNo := RowsList.Count;
+    finally
+      RowAccessor.RowBuffer := TempRow;
+    end;
 end;
 
 initialization

@@ -1003,6 +1003,7 @@ type
     procedure SetStream(const Value: TStream); overload;
     function GetBuffer: Pointer;
     procedure SetBuffer(const Buffer: Pointer; const Length: Integer);
+    function GetBufferAddress: PPointer;
     {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
     procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal); overload;
     {$ENDIF}
