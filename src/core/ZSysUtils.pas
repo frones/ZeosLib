@@ -156,7 +156,9 @@ function EndsWith(const Str, SubStr: ZWideString): Boolean; overload;
 function SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended; Len: Integer = 0): Extended; overload;
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended; var Result: Extended; Len: Integer = 0); overload;
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency; var Result: Currency; Len: Integer = 0); overload;
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Double; var Result: Double; Len: Integer = 0); overload;
+{$IFEND}
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Single; var Result: Single; Len: Integer = 0); overload;
 
 {**
@@ -169,7 +171,9 @@ procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Single; var Result: Sing
 function SQLStrToFloatDef(Value: PWideChar; const Def: Extended; Len: Integer = 0): Extended; overload;
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Extended; var Result: Extended; Len: Integer = 0); overload;
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency; var Result: Currency; Len: Integer = 0); overload;
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Double; var Result: Double; Len: Integer = 0); overload;
+{$IFEND}
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Single; var Result: Single; Len: Integer = 0); overload;
 
 {**
@@ -962,6 +966,7 @@ begin
   end;
 end;
 
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Double;
   var Result: Double; Len: Integer = 0);
 var
@@ -995,6 +1000,7 @@ begin
       end;
   end;
 end;
+{$IFEND}
 
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Single;
   var Result: Single; Len: Integer = 0);
@@ -1190,6 +1196,7 @@ begin
   end;
 end;
 
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Double;
   var Result: Double; Len: Integer = 0);
 var
@@ -1226,6 +1233,7 @@ begin
       end;
   end;
 end;
+{$IFEND}
 
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Single;
   var Result: Single; Len: Integer = 0);
@@ -3416,11 +3424,15 @@ begin
 end;
 
 function ASCII7ToUnicodeString(const Src: RawByteString): ZWideString;
+var I: Integer;
 begin
   if Pointer(Src) = nil then
     Result := ''
-  else
-    ZSetString(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, Result);
+  else begin
+    System.SetString(Result, nil, {H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^);
+    for i := 0 to {H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^-1 do
+      PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
+  end;
 end;
 
 function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString;
