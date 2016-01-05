@@ -1835,7 +1835,7 @@ function TZMsSqlDatabaseMetadata.UncachedGetColumns(const Catalog: string;
 var
   SQLType: TZSQLType;
   default_val: String;
-  TableName: String;
+  TableName, tmp: String;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
@@ -1854,26 +1854,29 @@ begin
       Result.UpdateString(ColumnNameIndex, GetStringByName('COLUMN_NAME'));
       //The value in the resultset will be used
       SQLType := ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType);
+      tmp := UpperCase(GetStringByName('TYPE_NAME'));
       if SQLType = stUnknown then
         Result.UpdateNull(TableColColumnTypeIndex)
+      else if ( SQLType = stBytes) and (tmp = 'UNIQUEIDENTIFIER') then
+        Result.UpdateSmall(TableColColumnTypeIndex, Ord(stGUID))
+      else if ( SQLType = stDouble) and StartsWith(tmp, 'MONEY') then
+        Result.UpdateSmall(TableColColumnTypeIndex, Ord(stCurrency))
+      else if (SQLType = stString) and (tmp = 'DATE') then
+        Result.UpdateSmall(TableColColumnTypeIndex, Ord(stDate))
       else
-        if ( SQLType = stBytes) and (UpperCase(GetStringByName('TYPE_NAME')) = 'UNIQUEIDENTIFIER') then
-          Result.UpdateSmall(TableColColumnTypeIndex, Ord(stGUID))
-        else
-          if ( SQLType = stDouble) and StartsWith(UpperCase(GetStringByName('TYPE_NAME')), 'MONEY') then
-            Result.UpdateSmall(TableColColumnTypeIndex, Ord(stCurrency))
-          else
-            Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
-      Result.UpdateString(TableColColumnTypeNameIndex, GetStringByName('TYPE_NAME'));
+        Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
+      Result.UpdateString(TableColColumnTypeNameIndex, tmp);
       Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('LENGTH'));
       Result.UpdateInt(TableColColumnBufLengthIndex, GetIntByName('LENGTH'));
       Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetIntByName('SCALE'));
       Result.UpdateSmall(TableColColumnNumPrecRadixIndex, GetSmallByName('RADIX'));
-      Result.UpdateInt(TableColColumnNullableIndex, 2);
-      if GetStringByName('IS_NULLABLE') = 'NO' then
-        Result.UpdateSmall(TableColColumnNullableIndex, 0);
-      if GetStringByName('IS_NULLABLE') = 'YES' then
-        Result.UpdateSmall(TableColColumnNullableIndex, 1);
+      tmp := GetStringByName('IS_NULLABLE');
+      if tmp = 'NO' then
+        Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNoNulls))
+      else if tmp = 'YES' then
+        Result.UpdateSmall(TableColColumnNullableIndex, Ord(ntNullable))
+      else
+        Result.UpdateSmall(TableColColumnNullableIndex, Ord(ntNullableUnknown));
       Result.UpdateString(TableColColumnRemarksIndex, GetStringByName('REMARKS'));
       if (GetConnection as IZDBLibConnection).FreeTDS then
         Result.UpdateString(TableColColumnColDefIndex, GetStringByName('COLUMN_DEF'))
@@ -1887,12 +1890,11 @@ begin
       Result.UpdateSmall(TableColColumnSQLDateTimeSubIndex, GetSmallByName('SQL_DATETIME_SUB'));
       Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetIntByName('CHAR_OCTET_LENGTH'));
       Result.UpdateInt(TableColColumnOrdPosIndex, GetIntByName('ORDINAL_POSITION'));
-      Result.UpdateString(TableColColumnIsNullableIndex, GetStringByName('IS_NULLABLE'));
+      Result.UpdateString(TableColColumnIsNullableIndex, tmp);
       Result.UpdateSmall(TableColColumnCharOctetLengthIndex, GetSmallByName('CHAR_OCTET_LENGTH'));
-
-      Result.UpdateBoolean(TableColColumnSearchableIndex,
-        not (GetSmallByName('SS_DATA_TYPE') in [34, 35]));
-
+      if (GetConnection as IZDBLibConnection).GetProvider = dpMsSQL then
+        Result.UpdateBoolean(TableColColumnSearchableIndex,
+          not (GetSmallByName('SS_DATA_TYPE') in [34, 35]));
       Result.InsertRow;
     end;
     Close;

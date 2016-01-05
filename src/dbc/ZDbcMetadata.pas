@@ -724,6 +724,9 @@ type
   end;
 var
   IndexInfoColumnsDynArray: TZMetadataColumnDefs;
+const
+  SequenceNameIndex = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+var
   SequenceColumnsDynArray: TZMetadataColumnDefs;
 const
   UDTColTypeNameIndex = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
@@ -2355,7 +2358,7 @@ begin
   ColumnsInfo := TObjectList.Create(True);
   ConSettings := IZConnection(FConnection).GetConSettings;
   try
-    for I := {$IFNDEF GENERIC_INDEX}1{$ELSE}0{$ENDIF} to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     begin
       ColumnInfo := TZColumnInfo.Create;
       with ColumnInfo do
@@ -2417,13 +2420,10 @@ begin
   if HasNoWildcards(WorkPattern) then
   begin
     WorkPattern := StripEscape(WorkPattern);
-    Result := Format('%s = %s', [Column, EscapeString(WorkPattern)]);
+    Result := Column+' = '+EscapeString(WorkPattern);
   end
   else
-  begin
-    Result := Format('%s like %s',
-      [Column, EscapeString(WorkPattern)]);
-  end;
+    Result := Column+' like '+EscapeString(WorkPattern);
 end;
 
 {**
@@ -4561,14 +4561,15 @@ end;
 
 function TZAbstractDatabaseMetadata.NormalizePatternCase(Pattern:String): string;
 begin
-  if not GetIdentifierConvertor.IsQuoted(Pattern) then
-    if FDatabaseInfo.StoresUpperCaseIdentifiers then
-      Result := UpperCase(Pattern)
-    else if FDatabaseInfo.StoresLowerCaseIdentifiers then
-      Result := LowerCase(Pattern)
-    else Result := Pattern
-  else
-    Result := GetIdentifierConvertor.ExtractQuote(Pattern);
+  with GetIdentifierConvertor do
+    if not IsQuoted(Pattern) then
+      if FDatabaseInfo.StoresUpperCaseIdentifiers then
+        Result := UpperCase(Pattern)
+      else if FDatabaseInfo.StoresLowerCaseIdentifiers then
+        Result := LowerCase(Pattern)
+      else Result := Pattern
+    else
+      Result := ExtractQuote(Pattern);
 end;
 
 {**

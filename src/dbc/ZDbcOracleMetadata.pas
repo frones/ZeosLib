@@ -1715,7 +1715,7 @@ begin
   SQL := 'SELECT OWNER, TABLE_NAME, COLUMN_NAME, DATA_TYPE,'
     + ' DATA_LENGTH, DATA_PRECISION, DATA_SCALE, NULLABLE, '
     + ' DATA_DEFAULT, COLUMN_ID FROM SYS.ALL_TAB_COLUMNS'
-    + CreateWhere;
+    + CreateWhere+' order by COLUMN_ID';
 
   with GetConnection.CreateStatement.ExecuteQuery(SQL) do
   begin
