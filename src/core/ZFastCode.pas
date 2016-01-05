@@ -4234,7 +4234,6 @@ begin
       Result := Default;
 end;
 
-{$D+}
 function RawToIntDef(const S: PAnsiChar; const Default: Integer) : Integer;
 var
   E: Integer;
