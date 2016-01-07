@@ -118,6 +118,8 @@ type
   TZTransactIsolationLevel = (tiNone, tiReadUncommitted, tiReadCommitted,
     tiRepeatableRead, tiSerializable);
 
+  TZSupportedTransactIsolationLevels = set of TZTransactIsolationLevel;
+
   {** Defines a resultset fetch direction. }
   TZFetchDirection = (fdForward, fdReverse, fdUnknown);
 

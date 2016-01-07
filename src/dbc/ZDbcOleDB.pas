@@ -80,8 +80,6 @@ type
     function GetSession: IUnknown;
     function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
-    function SupportsMultipleResultSets: Boolean;
-    function SupportsMultipleStorageObjects: Boolean;
     function SupportsMARSConnection: Boolean;
     procedure UnRegisterPendingStatement(const Value: IZStatement);
   end;
@@ -95,13 +93,9 @@ type
     FRetaining: Boolean;
     FpulTransactionLevel: ULONG;
     FSupportsMARSConnnection: Boolean;
-    FSupportsMultipleResultSets: Boolean;
-    FSupportsMultipleStorageObjects: Boolean;
     FServerProvider: TZServerProvider;
-    fSUPPORTEDTXNISOLEVELS: Integer; //bitmask of supported TILSs
     fPendingStmts: TList; //weak reference to pending stmts
     fTransaction: ITransactionLocal;
-    function SupportsTIL(Level: TZTransactIsolationLevel): Boolean;
     procedure StopTransaction;
     procedure SetProviderProps(DBinit: Boolean);
   protected
@@ -145,8 +139,6 @@ type
     function GetSession: IUnknown;
     function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
-    function SupportsMultipleResultSets: Boolean;
-    function SupportsMultipleStorageObjects: Boolean;
     function SupportsMARSConnection: Boolean;
     procedure UnRegisterPendingStatement(const Value: IZStatement);
   end;
@@ -386,7 +378,7 @@ var
   prgPropertySets: TDBPROPSET;
   SessionProperties: ISessionProperties;
 begin
-  if (not Closed) and SupportsTIL(TransactIsolationLevel) then
+  if (not Closed) and Self.GetMetadata.GetDatabaseInfo.SupportsTransactionIsolationLevel(TransactIsolationLevel) then
     if AutoCommit then begin
       SessionProperties := nil;
       if (FDBCreateCommand.QueryInterface(IID_ISessionProperties, SessionProperties) = S_OK) then begin
@@ -569,21 +561,6 @@ begin
   Result := FSupportsMARSConnnection;
 end;
 
-function TZOleDBConnection.SupportsMultipleResultSets: Boolean;
-begin
-  Result := FSupportsMultipleResultSets;
-end;
-
-function TZOleDBConnection.SupportsMultipleStorageObjects: Boolean;
-begin
-  Result := FSupportsMultipleStorageObjects;
-end;
-
-function TZOleDBConnection.SupportsTIL(Level: TZTransactIsolationLevel): Boolean;
-begin
-  Result := TIL[Level] and fSUPPORTEDTXNISOLEVELS > 0;
-end;
-
 procedure TZOleDBConnection.UnRegisterPendingStatement(
   const Value: IZStatement);
 var
@@ -599,7 +576,7 @@ end;
 }
 procedure TZOleDBConnection.SetTransactionIsolation(Level: TZTransactIsolationLevel);
 begin
-  if (TransactIsolationLevel <> Level) and SupportsTIL(Level) then begin
+  if (TransactIsolationLevel <> Level) and GetMetadata.GetDatabaseInfo.SupportsTransactionIsolationLevel(Level) then begin
     StopTransaction;
     inherited SetTransactionIsolation(Level);
     StartTransaction;
@@ -731,11 +708,7 @@ begin
     //some Providers do NOT support commands, so let's check if we can use it
     OleCheck(FDBCreateSession.CreateSession(nil, IID_IDBCreateCommand, IUnknown(FDBCreateCommand)));
     FDBCreateSession := nil; //no longer required!
-    // Now let's find out what current server supports:
-    // Is IMultipleResults supported??
-    FSupportsMultipleResultSets := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(OleDbGetDBPropValue([DBPROP_MULTIPLERESULTS]), 0 ) <> 0;
-    FSupportsMultipleStorageObjects := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(OleDbGetDBPropValue([DBPROP_MULTIPLESTORAGEOBJECTS]), 0 ) <> 0;
-    fSUPPORTEDTXNISOLEVELS := OleDbGetDBPropValue(DBPROP_SUPPORTEDTXNISOLEVELS);
+    (GetMetadata.GetDatabaseInfo as IZOleDBDatabaseInfo).InitilizePropertiesFromDBInfo(fDBInitialize, fMalloc);
     //if FServerProvider = spMSSQL then
       //SetProviderProps(False); //provider properties -> don't work??
     inherited Open;

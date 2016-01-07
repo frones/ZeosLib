@@ -210,7 +210,7 @@ begin
     finally
       FOlePrepareCommand := nil;
     end;
-    if (Connection as IZOleDBConnection).SupportsMultipleResultSets then
+    if Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets then
       fMoreResultsIndicator := mriUnknown
     else
       fMoreResultsIndicator := mriHasNoMoreResults;
@@ -373,7 +373,7 @@ begin
       Result := IZResultSet(FOpenResultSet)
     else begin
       Result := nil;
-      if (Connection as IZOleDBConnection).SupportsMultipleResultSets then
+      if Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets then
       begin
         OleDbCheck((FCommand as ICommand).Execute(nil, IID_IMultipleResults,
           FDBParams,@FRowsAffected,@FMultipleResults));
@@ -442,7 +442,7 @@ begin
   FRowsAffected := DB_COUNTUNAVAILABLE;
   try
     FRowSet := nil;
-    if (Connection as IZOleDBConnection).SupportsMultipleResultSets then
+    if Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets then
     begin
       OleDbCheck((FCommand as ICommand).Execute(nil, IID_IMultipleResults,
         FDBParams,@FRowsAffected,@FMultipleResults));
