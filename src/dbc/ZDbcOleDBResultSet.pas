@@ -54,6 +54,7 @@ unit ZDbcOleDBResultSet;
 interface
 
 {$I ZDbc.inc}
+
 {$IFDEF ENABLE_OLEDB}
 
 uses
@@ -184,7 +185,7 @@ var
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean);
-var I, C: Integer;
+var I, C, L, H: Integer;
     P: PAnsiChar;
     Len: NativeUInt;
     blob: IZBlob;
@@ -192,7 +193,13 @@ begin
   //init
   if JSONWriter.Expand then
     JSONWriter.Add('{');
-  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+  if Assigned(JSONWriter.Fields) then
+    H := High(JSONWriter.Fields) else
+    H := High(JSONWriter.ColNames);
+  for I := 0 to H do begin
+    if Pointer(JSONWriter.Fields) = nil then
+      C := I else
+      C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
       JSONWriter.AddString(JSONWriter.ColNames[C]);
     if IsNull(C+FirstDbcIndex) then
@@ -210,20 +217,6 @@ begin
         DBTYPE_R8:        JSONWriter.AddDouble(PDouble(FData)^);
         DBTYPE_CY:        JSONWriter.AddCurr64(PCurrency(FData)^);
         DBTYPE_DATE:      JSONWriter.AddDateTime(PDateTime(FData), 'T', '"');
-        DBTYPE_BSTR:      begin
-            JSONWriter.Add('"');
-            if FDBBindingArray[c].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-              JSONWriter.AddJSONEscapeW(FData, Len shr 1)
-            else
-            begin //Fixed width
-              I := FLength shr 1;
-              while (PWideChar(FData)+I-1)^ = ' ' do Dec(I);
-              JSONWriter.AddJSONEscapeW(FData, I);
-            end;
-            JSONWriter.Add('"');
-          end;
-        DBTYPE_BSTR or DBTYPE_BYREF:
-                          JSONWriter.AddJSONEscapeW(PPointer(FData)^, FLength shr 1);
         DBTYPE_BOOL:      JSONWriter.AddShort(JSONBool[PWordBool(FData)^]);
         DBTYPE_VARIANT: begin
             JSONWriter.Add('"');
@@ -260,9 +253,9 @@ begin
               if FDBBindingArray[c].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
                 FUniTemp := PRawToUnicode(PAnsiChar(FData), FLength, ConSettings^.ClientCodePage^.CP)
               else begin
-                I := FLength;
-                while (PAnsiChar(FData)+I-1)^ = ' ' do Dec(I);
-                  FUniTemp := PRawToUnicode(PAnsiChar(FData), I, ConSettings^.ClientCodePage^.CP);
+                L := FLength;
+                while (PAnsiChar(FData)+L-1)^ = ' ' do Dec(L);
+                  FUniTemp := PRawToUnicode(PAnsiChar(FData), L, ConSettings^.ClientCodePage^.CP);
               end;
               JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
             end;
@@ -274,6 +267,7 @@ begin
             JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
             JSONWriter.Add('"');
           end;
+        DBTYPE_BSTR,
         DBTYPE_WSTR: begin
             JSONWriter.Add('"');
             if FDBBindingArray[c].cbMaxLen = 0 then begin
@@ -285,12 +279,13 @@ begin
             end else if FDBBindingArray[c].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
               JSONWriter.AddJSONEscapeW(FData, FLength shr 1)
             else begin //Fixed width
-              I := FLength shr 1;
-              while (PWideChar(FData)+I-1)^ = ' ' do Dec(I);
-              JSONWriter.AddJSONEscapeW(FData, I);
+              L := FLength shr 1;
+              while (PWideChar(FData)+L-1)^ = ' ' do Dec(L);
+              JSONWriter.AddJSONEscapeW(FData, L);
             end;
             JSONWriter.Add('"');
           end;
+        DBTYPE_BSTR or DBTYPE_BYREF,
         DBTYPE_WSTR or DBTYPE_BYREF: begin
             JSONWriter.Add('"');
             JSONWriter.AddJSONEscapeW(PPointer(FData)^, FLength shr 1);

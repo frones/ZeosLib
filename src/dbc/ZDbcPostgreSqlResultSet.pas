@@ -160,7 +160,7 @@ procedure TZPostgreSQLResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
 var
   C, L: Cardinal;
   P: PAnsiChar;
-  RNo: Integer;
+  RNo, H, I: Integer;
   Blob: IZBlob;
   Failed: Boolean;
 label ProcBts;
@@ -168,7 +168,13 @@ begin
   RNo := RowNo - 1;
   if JSONWriter.Expand then
     JSONWriter.Add('{');
-  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+  if Assigned(JSONWriter.Fields) then
+    H := High(JSONWriter.Fields) else
+    H := High(JSONWriter.ColNames);
+  for I := 0 to H do begin
+    if Pointer(JSONWriter.Fields) = nil then
+      C := I else
+      C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
       JSONWriter.AddString(JSONWriter.ColNames[C]);
     if FPlainDriver.GetIsNull(FQueryHandle, RNo, C) <> 0 then

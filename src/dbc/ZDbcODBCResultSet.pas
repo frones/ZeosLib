@@ -238,13 +238,19 @@ end;
 {$IFDEF USE_SYNCOMMONS}
 procedure TAbstractODBCResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   EndJSONObject: Boolean);
-var C: Integer;
+var C, H, I: Integer;
     P: Pointer;
 begin
   //init
   if JSONWriter.Expand then
     JSONWriter.Add('{');
-  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+  if Assigned(JSONWriter.Fields) then
+    H := High(JSONWriter.Fields) else
+    H := High(JSONWriter.ColNames);
+  for I := 0 to H do begin
+    if Pointer(JSONWriter.Fields) = nil then
+      C := I else
+      C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
       JSONWriter.AddString(JSONWriter.ColNames[C]);
     if IsNull(C+FirstDbcIndex) then

@@ -208,13 +208,19 @@ procedure TZASAAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   EndJSONObject: Boolean = True);
 var L: NativeUInt;
     P: Pointer;
-    C: SmallInt;
+    C, H, I: SmallInt;
     Blob: IZBlob;
 begin
   //init
   if JSONWriter.Expand then
     JSONWriter.Add('{');
-  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+  if Assigned(JSONWriter.Fields) then
+    H := High(JSONWriter.Fields) else
+    H := High(JSONWriter.ColNames);
+  for I := 0 to H do begin
+    if Pointer(JSONWriter.Fields) = nil then
+      C := I else
+      C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
       JSONWriter.AddString(JSONWriter.ColNames[C]);
     {$R-}

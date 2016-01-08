@@ -228,14 +228,20 @@ end;
 {$IFDEF USE_SYNCOMMONS}
 procedure TZInterbase6XSQLDAResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   EndJSONObject: Boolean);
-var L: Integer;
+var L, H, I: Integer;
     P: Pointer;
     C, SQLCode: SmallInt;
     TempDate: TCTimeStructure;
 begin
   if JSONWriter.Expand then
     JSONWriter.Add('{');
-  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+  if Assigned(JSONWriter.Fields) then
+    H := High(JSONWriter.Fields) else
+    H := High(JSONWriter.ColNames);
+  for I := 0 to H do begin
+    if Pointer(JSONWriter.Fields) = nil then
+      C := I else
+      C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
       JSONWriter.AddString(JSONWriter.ColNames[C]);
     {$R-}

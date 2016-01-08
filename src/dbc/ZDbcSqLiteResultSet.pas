@@ -162,14 +162,20 @@ end;
 procedure TZSQLiteResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   EndJSONObject: Boolean);
 var
-  C, ColType: Integer;
+  C, H, I, ColType: Integer;
   P: PAnsiChar;
   Failed: Boolean;
 label ProcBts;
 begin
   if JSONWriter.Expand then
     JSONWriter.Add('{');
-  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+  if Assigned(JSONWriter.Fields) then
+    H := High(JSONWriter.Fields) else
+    H := High(JSONWriter.ColNames);
+  for I := 0 to H do begin
+    if Pointer(JSONWriter.Fields) = nil then
+      C := I else
+      C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
       JSONWriter.AddString(JSONWriter.ColNames[C]);
     ColType := FPlainDriver.column_type(FStmtHandle, C);

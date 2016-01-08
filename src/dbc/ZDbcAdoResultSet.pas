@@ -134,12 +134,18 @@ uses
 {$IFDEF USE_SYNCOMMONS}
 procedure TZAdoResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   EndJSONObject: Boolean);
-var Len, C: Integer;
+var Len, C, H, I: Integer;
     P: PWideChar;
 begin
   if JSONWriter.Expand then
     JSONWriter.Add('{');
-  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+  if Assigned(JSONWriter.Fields) then
+    H := High(JSONWriter.Fields) else
+    H := High(JSONWriter.ColNames);
+  for I := 0 to H do begin
+    if Pointer(JSONWriter.Fields) = nil then
+      C := I else
+      C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
       JSONWriter.AddString(JSONWriter.ColNames[C]);
     if TVarData(FAdoRecordSet.Fields.Item[C].Value).VType in [varNull, varEmpty] then

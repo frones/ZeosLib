@@ -1272,12 +1272,18 @@ end;
 procedure TZRowAccessor.ColumnsToJSON(JSONWriter: TJSONWriter;
   EndJSONObject: Boolean);
 var P: Pointer;
-    C: SmallInt;
+    I, H, C: SmallInt;
     Blob: IZBlob;
 begin
   if JSONWriter.Expand then
     JSONWriter.Add('{');
-  for C := Low(JSONWriter.ColNames) to High(JSONWriter.ColNames) do begin
+  if Assigned(JSONWriter.Fields) then
+    H := High(JSONWriter.Fields) else
+    H := High(JSONWriter.ColNames);
+  for I := 0 to H do begin
+    if Pointer(JSONWriter.Fields) = nil then
+      C := I else
+      C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
       JSONWriter.AddString(JSONWriter.ColNames[C]);
     if FBuffer.Columns[FColumnOffsets[C]] = bIsNull then
