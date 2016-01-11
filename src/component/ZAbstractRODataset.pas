@@ -3189,13 +3189,10 @@ begin
       begin
         FieldType := ConvertDbcToDatasetType(GetColumnType(I));
         if FieldType in [ftBytes, ftString, ftWidestring] then
-          if (FieldType = ftWideString) then
-            if (GetColumnDisplaySize(I) = 0) or ((doAlignMaxRequiredWideStringFieldSize in fOptions) and
-               (ResultSet.GetConSettings^.ClientCodePage^.Encoding = ceUTF8)) then
-              Size := GetPrecision(I) //most UTF8 DB's assume 4Byte / Char (surrogates included) such encoded characters may kill the heap of the FieldBuffer
+          if (FieldType = ftWideString) and (ResultSet.GetConSettings^.ClientCodePage^.Encoding = ceUTF8) then
+              //most UTF8 DB's assume 4Byte / Char (surrogates included) such encoded characters may kill the heap of the FieldBuffer
               //users are warned: http://zeoslib.sourceforge.net/viewtopic.php?f=40&p=51427#p51427
-            else
-              Size := GetColumnDisplaySize(I)
+              Size := GetPrecision(I) shr Ord(not (doAlignMaxRequiredWideStringFieldSize in fOptions))
           else
             Size := GetPrecision(I)
         else
