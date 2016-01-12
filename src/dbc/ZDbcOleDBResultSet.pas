@@ -467,6 +467,8 @@ begin
       FRowSet := nil;
       FAccessor := 0;
       RowNo := 0;
+      FCurrentBufRowNo := 0;
+      FRowsObtained := 0;
     end;
   inherited ResetCursor;
 end;
