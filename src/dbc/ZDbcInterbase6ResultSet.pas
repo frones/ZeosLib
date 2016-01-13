@@ -268,12 +268,12 @@ begin
                           else begin
                             JSONWriter.Add('"');
                             if sqlsubtype > High(FCodePageArray) then begin //some weired issues here
-                              FUniTemp := PRawToUnicode(sqldata, sqllen, ConSettings^.ClientCodePage^.CP);
+                              FUniTemp := PRawToUnicode(@PISC_VARYING(sqldata).str[0], PISC_VARYING(sqldata).strlen, ConSettings^.ClientCodePage^.CP);
                               JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp))
                             end else if FCodePageArray[sqlsubtype] = zCP_UTF8 then
-                              JSONWriter.AddJSONEscape(sqldata, sqllen)
+                              JSONWriter.AddJSONEscape(@PISC_VARYING(sqldata).str[0], PISC_VARYING(sqldata).strlen)
                             else begin
-                              FUniTemp := PRawToUnicode(sqldata, sqllen, FCodePageArray[sqlsubtype]);
+                              FUniTemp := PRawToUnicode(@PISC_VARYING(sqldata).str[0], PISC_VARYING(sqldata).strlen, FCodePageArray[sqlsubtype]);
                               JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp))
                             end;
                             JSONWriter.Add('"');
