@@ -306,8 +306,8 @@ type
   TZUnicodeToRaw = function (const US: ZWideString; CP: Word): RawByteString;
   TZUnicodeToString = function (const Src: ZWideString; const StringCP: Word): String;
   TZStringToUnicode = function (const Src: String; const StringCP: Word): ZWideString;
-  TPRawToString = function (const Src: PAnsiChar; Len: LengthInt; const StringCP: Word): String;
-  TPUnicodeToString = function (const Src: PWideChar; CodePoints: NativeUInt; const StringCP: Word): String;
+  TPRawToString = function (Src: PAnsiChar; Len: LengthInt; const RawCP, StringCP: Word): String;
+  TPUnicodeToString = function (Src: PWideChar; CodePoints: NativeUInt; const StringCP: Word): String;
 
   {** Defines the Target Ansi codepages for the Controls }
   TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
@@ -787,21 +787,19 @@ end;
 {$IFDEF WITH_RAWBYTESTRING}
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString);
 begin
-  if ( Len = 0 ) then
+  if ( Len = 0 ) or (Src = nil ) then
     Dest := ''
   else
     if (Pointer(Dest) <> nil) and //Empty?
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
        ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
-    begin
-      if Src <> nil then Move(Src^, Pointer(Dest)^, Len)
-    end
+      Move(Src^, Pointer(Dest)^, Len)
     else
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
       begin
         Dest := '';
         SetLength(Dest, Len);
-        if Src <> nil then Move(Src^, Pointer(Dest)^, Len);
+        Move(Src^, Pointer(Dest)^, Len);
       end;
       {$ELSE}
       SetString(Dest, Src, Len);
