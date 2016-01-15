@@ -1762,13 +1762,13 @@ end;
 {$ENDIF}
 
 function PUnicodeToString(Source: PWideChar; CodePoints: NativeUInt; CP: Word): String;
-{$IF (not defined(UNICODE)) and (not defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER))}
+{$IF (not defined(UNICODE)) and ((not defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(MSWINDOWS)))}
 var
-  {$IF defined(WITH_LCONVENCODING) or not defined(MSWINDOWS)}
-  WS: UnicodeString;
-  {$ELSE}
+  {$IFDEF MSWINDOWS}
   ulen: Integer;
   Buf: Array[0..BufLen] of AnsiChar;
+  {$ELSE}
+  WS: UnicodeString;
   {$IFEND}
 {$IFEND}
 begin
