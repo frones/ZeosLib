@@ -1815,7 +1815,7 @@ function ZUnicodeToString(const Source: ZWideString; CP: Word): String; {$IF def
 var
   ulen: Integer;
   Buf: Array[0..BufLen] of AnsiChar;
-{$ENDIF}
+{$IFEND}
 begin
   {$IFDEF WITH_LCONVENCODING}
   Result := ZUnicodeToRaw(Source, CP);
