@@ -1769,7 +1769,7 @@ var
   Buf: Array[0..BufLen] of AnsiChar;
   {$ELSE}
   WS: UnicodeString;
-  {$IFEND}
+  {$ENDIF}
 {$IFEND}
 begin
   {$IFDEF WITH_LCONVENCODING}
