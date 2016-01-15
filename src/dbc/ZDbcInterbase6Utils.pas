@@ -142,7 +142,6 @@ type
     FTransactionHandle: PISC_TR_HANDLE;
     FXSQLDA: PXSQLDA;
     FPlainDriver: IZInterbasePlainDriver;
-    Temp: AnsiString;
     FDecribedLengthArray: TSmallIntDynArray;
     FDecribedScaleArray: TSmallIntDynArray;
     FDecribedTypeArray: TSmallIntDynArray;
@@ -1711,8 +1710,15 @@ function TZSQLDA.GetFieldAliasName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-  SetString(Temp, FXSQLDA.sqlvar[Index].aliasname, FXSQLDA.sqlvar[Index].aliasname_length);
-  Result := ConSettings^.ConvFuncs.ZRawToString(Temp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+  {$IFDEF UNICODE}
+  Result := PRawToUnicode(@FXSQLDA.sqlvar[Index].aliasname[0], FXSQLDA.sqlvar[Index].aliasname_length, ConSettings^.ClientCodePage^.CP);
+  {$ELSE}
+    if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
+      SetString(Result, PAnsiChar(@FXSQLDA.sqlvar[Index].aliasname[0]), FXSQLDA.sqlvar[Index].aliasname_length)
+    else
+      Result := ZUnicodeToString(PRawToUnicode(@FXSQLDA.sqlvar[Index].aliasname[0],
+        FXSQLDA.sqlvar[Index].aliasname_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
+  {$ENDIF}
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -1855,15 +1861,17 @@ function TZSQLDA.GetFieldOwnerName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-  {$IFDEF WITH_RAWBYTESTRING}
-  SetLength(Temp, FXSQLDA.sqlvar[Index].OwnName_length);
-  System.Move(FXSQLDA.sqlvar[Index].OwnName, PAnsiChar(Temp)^, FXSQLDA.sqlvar[Index].OwnName_length);
+  {$IFDEF UNICODE}
+  Result := PRawToUnicode(@FXSQLDA.sqlvar[Index].OwnName[0], FXSQLDA.sqlvar[Index].OwnName_length, ConSettings^.ClientCodePage^.CP);
   {$ELSE}
-  SetString(Temp, FXSQLDA.sqlvar[Index].OwnName, FXSQLDA.sqlvar[Index].OwnName_length);
+    if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
+      SetString(Result, PAnsiChar(@FXSQLDA.sqlvar[Index].OwnName[0]), FXSQLDA.sqlvar[Index].OwnName_length)
+    else
+      Result := ZUnicodeToString(PRawToUnicode(@FXSQLDA.sqlvar[Index].OwnName[0],
+        FXSQLDA.sqlvar[Index].OwnName_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
   {$ENDIF}
-  Result := ConSettings^.ConvFuncs.ZRawToString(Temp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
   {$IFOPT D+}
-{$R+}
+    {$R+}
 {$ENDIF}
 end;
 
@@ -1876,13 +1884,15 @@ function TZSQLDA.GetFieldRelationName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-    {$IFDEF WITH_RAWBYTESTRING}
-    SetLength(Temp, FXSQLDA.sqlvar[Index].RelName_length);
-    System.Move(FXSQLDA.sqlvar[Index].RelName, PAnsiChar(Temp)^, FXSQLDA.sqlvar[Index].RelName_length);
-    {$ELSE}
-    SetString(Temp, FXSQLDA.sqlvar[Index].RelName, FXSQLDA.sqlvar[Index].RelName_length);
-    {$ENDIF}
-    Result := ConSettings^.ConvFuncs.ZRawToString(Temp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+  {$IFDEF UNICODE}
+  Result := PRawToUnicode(@FXSQLDA.sqlvar[Index].RelName[0], FXSQLDA.sqlvar[Index].RelName_length, ConSettings^.ClientCodePage^.CP);
+  {$ELSE}
+    if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
+      SetString(Result, PAnsiChar(@FXSQLDA.sqlvar[Index].RelName[0]), FXSQLDA.sqlvar[Index].RelName_length)
+    else
+      Result := ZUnicodeToString(PRawToUnicode(@FXSQLDA.sqlvar[Index].RelName[0],
+        FXSQLDA.sqlvar[Index].RelName_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
+  {$ENDIF}
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -1912,13 +1922,15 @@ function TZSQLDA.GetFieldSqlName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-    {$IFDEF WITH_RAWBYTESTRING}
-    SetLength(Temp, FXSQLDA.sqlvar[Index].sqlname_length);
-    System.Move(FXSQLDA.sqlvar[Index].sqlname, PAnsiChar(Temp)^, FXSQLDA.sqlvar[Index].sqlname_length);
-    {$ELSE}
-    SetString(Temp, FXSQLDA.sqlvar[Index].sqlname, FXSQLDA.sqlvar[Index].sqlname_length);
-    {$ENDIF}
-    Result := ConSettings^.ConvFuncs.ZRawToString(Temp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+  {$IFDEF UNICODE}
+  Result := PRawToUnicode(@FXSQLDA.sqlvar[Index].sqlname[0], FXSQLDA.sqlvar[Index].sqlname_length, ConSettings^.ClientCodePage^.CP);
+  {$ELSE}
+    if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
+      SetString(Result, PAnsiChar(@FXSQLDA.sqlvar[Index].sqlname[0]), FXSQLDA.sqlvar[Index].sqlname_length)
+    else
+      Result := ZUnicodeToString(PRawToUnicode(@FXSQLDA.sqlvar[Index].sqlname[0],
+        FXSQLDA.sqlvar[Index].sqlname_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
+  {$ENDIF}
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
