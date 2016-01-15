@@ -399,7 +399,6 @@ var
   I, J: SQLUSMALLINT;
   Value: TZVariant;
   ParamSetChanged: Boolean;
-  MaxArrayCount: SQLULEN;
   TmpLobIndex: Integer;
   Param: PZODBCParamInfo;
   StrLen_or_IndOffSet, ParameterDataOffSet: Integer;
