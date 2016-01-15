@@ -366,8 +366,8 @@ type
     function GetConnection: IZConnection;
     function GetIdentifierConvertor: IZIdentifierConvertor;
 
-    procedure ClearCache;overload;
-		procedure ClearCache(const Key: string);overload;
+    procedure ClearCache;overload; 
+    procedure ClearCache(const Key: string);overload;
 
     function AddEscapeCharToWildcards(const Pattern:string): string;
     function NormalizePatternCase(Pattern:String): string;
@@ -940,29 +940,29 @@ type
     ['{47CA2144-2EA7-42C4-8444-F5154369B2D7}']
 
     function GetColumnCount: Integer;
-    function IsAutoIncrement(Column: Integer): Boolean;
-    function IsCaseSensitive(Column: Integer): Boolean;
-    function IsSearchable(Column: Integer): Boolean;
-    function IsCurrency(Column: Integer): Boolean;
-    function IsNullable(Column: Integer): TZColumnNullableType;
+    function IsAutoIncrement(ColumnIndex: Integer): Boolean;
+    function IsCaseSensitive(ColumnIndex: Integer): Boolean;
+    function IsSearchable(ColumnIndex: Integer): Boolean;
+    function IsCurrency(ColumnIndex: Integer): Boolean;
+    function IsNullable(ColumnIndex: Integer): TZColumnNullableType;
 
-    function IsSigned(Column: Integer): Boolean;
-    function GetColumnDisplaySize(Column: Integer): Integer;
-    function GetColumnLabel(Column: Integer): string;
-    function GetColumnName(Column: Integer): string;
-    function GetColumnCodePage(const Column: Integer): Word;
-    function GetSchemaName(Column: Integer): string;
-    function GetPrecision(Column: Integer): Integer;
-    function GetScale(Column: Integer): Integer;
-    function GetTableName(Column: Integer): string;
-    function GetCatalogName(Column: Integer): string;
-    function GetColumnType(Column: Integer): TZSQLType;
-    function GetColumnTypeName(Column: Integer): string;
-    function IsReadOnly(Column: Integer): Boolean;
-    function IsWritable(Column: Integer): Boolean;
-    function IsDefinitelyWritable(Column: Integer): Boolean;
-    function GetDefaultValue(Column: Integer): string;
-    function HasDefaultValue(Column: Integer): Boolean;
+    function IsSigned(ColumnIndex: Integer): Boolean;
+    function GetColumnDisplaySize(ColumnIndex: Integer): Integer;
+    function GetColumnLabel(ColumnIndex: Integer): string;
+    function GetColumnName(ColumnIndex: Integer): string;
+    function GetColumnCodePage(ColumnIndex: Integer): Word;
+    function GetSchemaName(ColumnIndex: Integer): string;
+    function GetPrecision(ColumnIndex: Integer): Integer;
+    function GetScale(ColumnIndex: Integer): Integer;
+    function GetTableName(ColumnIndex: Integer): string;
+    function GetCatalogName(ColumnIndex: Integer): string;
+    function GetColumnType(ColumnIndex: Integer): TZSQLType;
+    function GetColumnTypeName(ColumnIndex: Integer): string;
+    function IsReadOnly(ColumnIndex: Integer): Boolean;
+    function IsWritable(ColumnIndex: Integer): Boolean;
+    function IsDefinitelyWritable(ColumnIndex: Integer): Boolean;
+    function GetDefaultValue(ColumnIndex: Integer): string;
+    function HasDefaultValue(ColumnIndex: Integer): Boolean;
   end;
 
   {** External or internal blob wrapper object. }
@@ -1007,6 +1007,7 @@ type
     procedure SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal);
     function GetPWideChar: PWideChar;
     procedure SetPWideChar(const Buffer: PWideChar; const Len: Cardinal);
+    function GetBufferAddress: PPointer;
     {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
     procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal; const CodePage: Word); overload;
     {$ENDIF}
