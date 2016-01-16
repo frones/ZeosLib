@@ -207,17 +207,10 @@ type
 
     procedure FreeMem(ptr: Pointer);
     function LibVersion: PAnsiChar;
-    function LibEncoding: PAnsiChar;
 
-    function CreateFunction(db: Psqlite; const zName: PAnsiChar;
-      nArg: Integer; callback: Tsqlite_function_callback;
-      pUserData: Pointer): Integer;
-    function CreateAggregate(db: Psqlite; const zName: PAnsiChar;
-      nArg: Integer; callback: Tsqlite_function_callback;
-      finalize: Tsqlite_finalize_callback; pUserData: Pointer): Integer;
     function FunctionType(db: Psqlite; const zName: PAnsiChar;
       datatype: Integer): Integer;
-    function SetResultString(func: Psqlite_func; const arg: PAnsiChar;
+    function SetResultText(func: Psqlite_func; const arg: PAnsiChar;
       len: Integer): PAnsiChar;
     procedure SetResultInt(func: Psqlite_func; arg: Integer);
     procedure SetResultDouble(func: Psqlite_func; arg: Double);
@@ -289,8 +282,6 @@ type
     function CommitHook(db: Psqlite; callback: Tsqlite_simple_callback;
       ptr: Pointer): Pointer;
 
-    function OpenEncrypted(const zFilename: PAnsiChar; const pKey: PAnsiChar;
-      nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
     function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
   end;
@@ -389,28 +380,21 @@ type
     sqlite3_busy_timeout: procedure(db: Psqlite; ms: Integer); cdecl;
     sqlite3_free: procedure(ptr: Pointer); cdecl;
     sqlite3_libversion: function: PAnsiChar; cdecl;
-    sqlite3_libencoding: function: PAnsiChar; cdecl;
-    sqlite3_create_function: function(db: Psqlite; const zName: PAnsiChar;
-      nArg: Integer; callback: Tsqlite_function_callback; pUserData: Pointer): Integer; cdecl;
-    sqlite3_create_aggregate: function(db: Psqlite; const zName: PAnsiChar;
-      nArg: Integer; callback: Tsqlite_function_callback;
-      finalize: Tsqlite_finalize_callback; pUserData: Pointer): Integer; cdecl;
     sqlite3_function_type: function(db: Psqlite; const zName: PAnsiChar; datatype: Integer): Integer; cdecl;
-    sqlite3_result_string: function(func: Psqlite_func; const arg: PAnsiChar;
+    sqlite3_result_text: function(func: Psqlite_func; const arg: PAnsiChar;
       len: Integer; UN: Tsqlite_simple_callback): PAnsiChar; cdecl;
     sqlite3_result_int: procedure(func: Psqlite_func; arg: Integer); cdecl;
-    sqlite_set_result_double: procedure(func: Psqlite_func; arg: Double); cdecl;
-    sqlite_set_result_error: procedure(func: Psqlite_func; const arg: PAnsiChar; len: Integer); cdecl;
-    sqlite_user_data: function(func: Psqlite_func): Pointer; cdecl;
-    sqlite_aggregate_context: function(func: Psqlite_func; nBytes: Integer): Pointer; cdecl;
-    sqlite_aggregate_count: function(func: Psqlite_func): Integer; cdecl;
-    sqlite_set_authorizer: function(db: Psqlite; callback: Tsqlite_auth_callback; pUserData: Pointer): Integer; cdecl;
-    sqlite_trace: function(db: Psqlite; callback: Tsqlite_trace_callback; ptr: Pointer): Pointer; cdecl;
-    sqlite_progress_handler: procedure(db: Psqlite; p1: Integer; callback: Tsqlite_simple_callback; ptr: Pointer); cdecl;
-    sqlite_commit_hook: function(db: Psqlite; callback: Tsqlite_simple_callback; ptr: Pointer): Pointer; cdecl;
-    sqlite_open_encrypted: function(const zFilename: PAnsiChar; const pKey: PAnsiChar; nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite; cdecl;
-    sqlite_rekey: function(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer; cdecl;
-    sqlite_key: function(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer; cdecl;
+    sqlite3_result_double: procedure(func: Psqlite_func; arg: Double); cdecl;
+    sqlite3_result_error: procedure(func: Psqlite_func; const arg: PAnsiChar; len: Integer); cdecl;
+    sqlite3_user_data: function(func: Psqlite_func): Pointer; cdecl;
+    sqlite3_aggregate_context: function(func: Psqlite_func; nBytes: Integer): Pointer; cdecl;
+    sqlite3_aggregate_count: function(func: Psqlite_func): Integer; cdecl;
+    sqlite3_set_authorizer: function(db: Psqlite; callback: Tsqlite_auth_callback; pUserData: Pointer): Integer; cdecl;
+    sqlite3_trace: function(db: Psqlite; callback: Tsqlite_trace_callback; ptr: Pointer): Pointer; cdecl;
+    sqlite3_progress_handler: procedure(db: Psqlite; p1: Integer; callback: Tsqlite_simple_callback; ptr: Pointer); cdecl;
+    sqlite3_commit_hook: function(db: Psqlite; callback: Tsqlite_simple_callback; ptr: Pointer): Pointer; cdecl;
+    sqlite3_rekey: function(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer; cdecl;
+    sqlite3_key: function(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer; cdecl;
   protected
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
@@ -435,17 +419,10 @@ type
 
     procedure FreeMem(ptr: Pointer);
     function LibVersion: PAnsiChar;
-    function LibEncoding: PAnsiChar;
 
-    function CreateFunction({%H-}db: Psqlite; const {%H-}zName: PAnsiChar;
-      {%H-}nArg: Integer; {%H-}callback: Tsqlite_function_callback;
-      {%H-}pUserData: Pointer): Integer; virtual;
-    function CreateAggregate({%H-}db: Psqlite; const {%H-}zName: PAnsiChar;
-      {%H-}nArg: Integer; {%H-}callback: Tsqlite_function_callback;
-      {%H-}finalize: Tsqlite_finalize_callback; {%H-}pUserData: Pointer): Integer;
     function FunctionType({%H-}db: Psqlite; const {%H-}zName: PAnsiChar;
       {%H-}datatype: Integer): Integer;
-    function SetResultString(func: Psqlite_func; const arg: PAnsiChar;
+    function SetResultText(func: Psqlite_func; const arg: PAnsiChar;
       len: Integer): PAnsiChar;
     procedure SetResultInt(func: Psqlite_func; arg: Integer);
     procedure SetResultDouble(func: Psqlite_func; arg: Double);
@@ -517,8 +494,6 @@ type
     function CommitHook(db: Psqlite; callback: Tsqlite_simple_callback;
       ptr: Pointer): Pointer;
 
-    function OpenEncrypted(const {%H-}zFilename: PAnsiChar; const {%H-}pKey: PAnsiChar;
-      {%H-}nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
     function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
   end;
@@ -548,7 +523,7 @@ end;
 procedure TZSQLiteBaseDriver.LoadCodePages;  //Egonhugeist
 begin
   { MultiByte }
-  AddCodePage('UTF-8', 4, ceUTF8, zCP_UTF8);
+  AddCodePage('UTF-8', 1, ceUTF8, zCP_UTF8, '', 4);
   AddCodePage('UTF-16le', 2, ceUTF16, zCP_UTF16, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
   AddCodePage('UTF-16be', 3, ceUTF16, zCP_UTF16BE, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
   AddCodePage('UTF-16', 4, ceUTF16, zCP_UTF16, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
@@ -569,12 +544,12 @@ end;
 function TZSQLiteBaseDriver.AggregateContext(func: Psqlite_func;
   nBytes: Integer): Pointer;
 begin
-  Result := sqlite_aggregate_context(func, nBytes);
+  Result := sqlite3_aggregate_context(func, nBytes);
 end;
 
 function TZSQLiteBaseDriver.AggregateCount(func: Psqlite_func): Integer;
 begin
-  Result := sqlite_aggregate_count(func);
+  Result := sqlite3_aggregate_count(func);
 end;
 
 procedure TZSQLiteBaseDriver.BusyHandler(db: Psqlite;
@@ -596,26 +571,12 @@ end;
 function TZSQLiteBaseDriver.CommitHook(db: Psqlite;
   callback: Tsqlite_simple_callback; ptr: Pointer): Pointer;
 begin
-  Result := sqlite_commit_hook(db, callback, ptr);
+  Result := sqlite3_commit_hook(db, callback, ptr);
 end;
 
 function TZSQLiteBaseDriver.Complete(const sql: PAnsiChar): Integer;
 begin
   Result := sqlite3_complete(sql);
-end;
-
-function TZSQLiteBaseDriver.CreateAggregate(db: Psqlite;
-  const zName: PAnsiChar; nArg: Integer; callback: Tsqlite_function_callback;
-  finalize: Tsqlite_finalize_callback; pUserData: Pointer): Integer;
-begin
-  Result := SQLITE_MISUSE;
-end;
-
-function TZSQLiteBaseDriver.CreateFunction(db: Psqlite;
-  const zName: PAnsiChar; nArg: Integer; callback: Tsqlite_function_callback;
-  pUserData: Pointer): Integer;
-begin
-  Result := SQLITE_MISUSE;
 end;
 
 function TZSQLiteBaseDriver.ErrorString(db: Psqlite; code: Integer): RawByteString;
@@ -702,11 +663,6 @@ begin
   Result := SQLITE_MISUSE;
 end;
 
-function TZSQLiteBaseDriver.LibEncoding: PAnsiChar;
-begin
-  Result := nil;
-end;
-
 function TZSQLiteBaseDriver.LibVersion: PAnsiChar;
 begin
   Result := sqlite3_libversion;
@@ -742,62 +698,54 @@ begin
 {$ENDIF}
 end;
 
-function TZSQLiteBaseDriver.OpenEncrypted(const zFilename, pKey: PAnsiChar;
-  nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
-begin
-  pErrcode := SQLITE_MISUSE;
-  pzErrmsg := 'function is not used in the current version of the library';
-  Result:= nil;
-end;
-
 procedure TZSQLiteBaseDriver.ProgressHandler(db: Psqlite; p1: Integer;
   callback: Tsqlite_simple_callback; ptr: Pointer);
 begin
-  sqlite_progress_handler(db, p1, callback, ptr);
+  sqlite3_progress_handler(db, p1, callback, ptr);
 end;
 
 function TZSQLiteBaseDriver.ReKey(db: Psqlite; const pKey: Pointer;
   nKey: Integer): Integer;
 begin
-  if @sqlite_rekey = nil then
+  if @sqlite3_rekey = nil then
   begin
     Result := SQLITE_OK;
   end
   else
   begin
-    Result := sqlite_rekey(db, pKey, nKey);
+    Result := sqlite3_rekey(db, pKey, nKey);
   end;
 end;
 
 function TZSQLiteBaseDriver.Key(db: Psqlite; const pKey: Pointer;
   nKey: Integer): Integer;
 begin
-  if @sqlite_key = nil then
+  if @sqlite3_key = nil then
   begin
     Result := SQLITE_OK;
   end
   else
   begin
-    Result := sqlite_key(db, pKey, nKey);
+    Result := sqlite3_key(db, pKey, nKey);
   end;
 end;
 
 function TZSQLiteBaseDriver.SetAuthorizer(db: Psqlite;
   callback: Tsqlite_auth_callback; pUserData: Pointer): Integer;
 begin
-  Result := sqlite_set_authorizer(db, callback, pUserData);
+  Result := sqlite3_set_authorizer(db, callback, pUserData);
 end;
 
 procedure TZSQLiteBaseDriver.SetResultDouble(func: Psqlite_func;
   arg: Double);
 begin
-  sqlite_set_result_double(func, arg);
+  sqlite3_result_double(func, arg);
 end;
 
 procedure TZSQLiteBaseDriver.SetResultError(func: Psqlite_func;
   const arg: PAnsiChar; len: Integer);
 begin
-  sqlite_set_result_error(func, arg, len);
+  sqlite3_result_error(func, arg, len);
 end;
 
 procedure TZSQLiteBaseDriver.SetResultInt(func: Psqlite_func;
@@ -806,10 +754,10 @@ begin
   sqlite3_result_int(func, arg);
 end;
 
-function TZSQLiteBaseDriver.SetResultString(func: Psqlite_func;
+function TZSQLiteBaseDriver.SetResultText(func: Psqlite_func;
   const arg: PAnsiChar; len: Integer): PAnsiChar;
 begin
-  Result := sqlite3_result_string(func, arg, len, nil);
+  Result := sqlite3_result_text(func, arg, len, nil);
 end;
 
 { Prepared statmenet api }
@@ -1017,12 +965,12 @@ end;
 function TZSQLiteBaseDriver.Trace(db: Psqlite;
   callback: Tsqlite_trace_callback; ptr: Pointer): Pointer;
 begin
-  Result := sqlite_trace(db, callback, ptr);
+  Result := sqlite3_trace(db, callback, ptr);
 end;
 
 function TZSQLiteBaseDriver.UserData(func: Psqlite_func): Pointer;
 begin
-  Result := sqlite_user_data(func);
+  Result := sqlite3_user_data(func);
 end;
 
 function TZSQLiteBaseDriver.Close(db: Psqlite): Integer;
@@ -1106,24 +1054,20 @@ begin
   @sqlite3_busy_timeout           := GetAddress('sqlite3_busy_timeout');
   @sqlite3_free                   := GetAddress('sqlite3_free');
   @sqlite3_libversion             := GetAddress('sqlite3_libversion');
-  @sqlite3_libencoding            := GetAddress('sqlite3_libencoding');
-  @sqlite3_create_function        := GetAddress('sqlite3_create_function');
-  @sqlite3_create_aggregate       := GetAddress('sqlite3_create_aggregate');
   @sqlite3_function_type          := GetAddress('sqlite3_function_type');
-  @sqlite3_result_string          := GetAddress('sqlite3_result_string');
-  @sqlite3_result_int         := GetAddress('sqlite3_result_int');
-  @sqlite_set_result_double      := GetAddress('sqlite3_result_double');
-  @sqlite_set_result_error       := GetAddress('sqlite3_result_error');
-  @sqlite_user_data              := GetAddress('sqlite3_user_data');
-  @sqlite_aggregate_context      := GetAddress('sqlite3_aggregate_context');
-  @sqlite_aggregate_count        := GetAddress('sqlite3_aggregate_count');
-  @sqlite_set_authorizer         := GetAddress('sqlite3_set_authorizer');
-  @sqlite_trace                  := GetAddress('sqlite3_trace');
-  @sqlite_progress_handler       := GetAddress('sqlite3_progress_handler');
-  @sqlite_commit_hook            := GetAddress('sqlite3_commit_hook');
-  @sqlite_open_encrypted         := GetAddress('sqlite3_open_encrypted');
-  @sqlite_rekey                  := GetAddress('sqlite3_rekey');
-  @sqlite_key                    := GetAddress('sqlite3_key');
+  @sqlite3_result_text            := GetAddress('sqlite3_result_text');
+  @sqlite3_result_int             := GetAddress('sqlite3_result_int');
+  @sqlite3_result_double          := GetAddress('sqlite3_result_double');
+  @sqlite3_result_error           := GetAddress('sqlite3_result_error');
+  @sqlite3_user_data              := GetAddress('sqlite3_user_data');
+  @sqlite3_aggregate_context      := GetAddress('sqlite3_aggregate_context');
+  @sqlite3_aggregate_count        := GetAddress('sqlite3_aggregate_count');
+  @sqlite3_set_authorizer         := GetAddress('sqlite3_set_authorizer');
+  @sqlite3_trace                  := GetAddress('sqlite3_trace');
+  @sqlite3_progress_handler       := GetAddress('sqlite3_progress_handler');
+  @sqlite3_commit_hook            := GetAddress('sqlite3_commit_hook');
+  @sqlite3_rekey                  := GetAddress('sqlite3_rekey');
+  @sqlite3_key                    := GetAddress('sqlite3_key');
   end;
 end;
 
