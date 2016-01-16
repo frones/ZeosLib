@@ -165,7 +165,7 @@ function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
 implementation
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} Math,
-  ZMessages, ZDbcUtils, ZFastCode{$IFDEF UNICODE}, ZEncoding{$ENDIF};
+  ZMessages, ZDbcUtils, ZFastCode, ZEncoding;
 
 threadvar
   SilentMySQLError: Integer;
@@ -604,11 +604,24 @@ begin
     //Result.DefaultValue := PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.def,
       //PMYSQL_FIELD(FieldHandle)^.def_length, ConSettings^.ClientCodePage^.CP);
     {$ELSE}
-    Result.ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(PMYSQL_FIELD(FieldHandle)^.name, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-    Result.ColumnName := ConSettings^.ConvFuncs.ZRawToString(PMYSQL_FIELD(FieldHandle)^.org_name, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-    Result.TableName := ConSettings^.ConvFuncs.ZRawToString(PMYSQL_FIELD(FieldHandle)^.org_table, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-    Result.SchemaName := ConSettings^.ConvFuncs.ZRawToString(PMYSQL_FIELD(FieldHandle)^.db, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-    Result.CatalogName := ConSettings^.ConvFuncs.ZRawToString(PMYSQL_FIELD(FieldHandle)^.catalog, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+    if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then begin
+      Result.ColumnLabel := BufferToStr(PMYSQL_FIELD(FieldHandle)^.name, PMYSQL_FIELD(FieldHandle)^.name_length);
+      Result.ColumnName := BufferToStr(PMYSQL_FIELD(FieldHandle)^.org_name, PMYSQL_FIELD(FieldHandle)^.org_name_length);
+      Result.TableName := BufferToStr(PMYSQL_FIELD(FieldHandle)^.org_table, PMYSQL_FIELD(FieldHandle)^.org_table_length);
+      Result.SchemaName := BufferToStr(PMYSQL_FIELD(FieldHandle)^.db, PMYSQL_FIELD(FieldHandle)^.db_length);
+      Result.CatalogName := BufferToStr(PMYSQL_FIELD(FieldHandle)^.catalog, PMYSQL_FIELD(FieldHandle)^.catalog_length);
+    end else begin
+      Result.ColumnLabel := ZUnicodeToString(PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.name,
+        PMYSQL_FIELD(FieldHandle)^.name_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
+      Result.ColumnName := ZUnicodeToString(PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.org_name,
+        PMYSQL_FIELD(FieldHandle)^.org_name_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
+      Result.TableName := ZUnicodeToString(PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.org_table,
+        PMYSQL_FIELD(FieldHandle)^.org_table_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
+      Result.SchemaName := ZUnicodeToString(PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.db,
+        PMYSQL_FIELD(FieldHandle)^.db_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
+      Result.CatalogName := ZUnicodeToString(PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.catalog,
+        PMYSQL_FIELD(FieldHandle)^.catalog_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
+    end;
     //Result.DefaultValue := ConSettings^.ConvFuncs.ZRawToString(PMYSQL_FIELD(FieldHandle)^.def, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
     {$ENDIF}
     Result.ReadOnly := (PMYSQL_FIELD(FieldHandle)^.table = nil);
@@ -622,7 +635,8 @@ begin
     else
       Result.ColumnCodePage := High(Word);
 
-    if Result.ColumnType in [stString, stUnicodeString] then
+    if Result.ColumnType in [stString, stUnicodeString] then begin
+       Result.CharOctedLength := FieldLength;
        case PMYSQL_FIELD(FieldHandle)^.charsetnr of
         1, 84, {Big5}
         95, 96, {cp932 japanese}
@@ -660,7 +674,7 @@ begin
             ConSettings, Result.ColumnDisplaySize, 1, nil);
         end;
       end
-    else
+    end else
       Result.Precision := Integer(FieldLength)*Ord(not (PMYSQL_FIELD(FieldHandle)^._type in
         [FIELD_TYPE_BLOB, FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB]));
     Result.Scale := PMYSQL_FIELD(FieldHandle)^.decimals;

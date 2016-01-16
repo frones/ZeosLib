@@ -1253,7 +1253,7 @@ begin
     with ColumnInfo, FSqlData  do
     begin
       FieldSqlType := GetFieldSqlType(I);
-      ColumnName := ConSettings^.ConvFuncs.ZRawToString(GetFieldName(I), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+      ColumnName := GetFieldName(I);
       ColumnLabel := ColumnName;
       ColumnType := FieldSqlType;
 

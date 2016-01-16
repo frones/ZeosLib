@@ -236,6 +236,7 @@ var
   TableInfo: PZPGTableInfo;
   Connection: IZPostgreSQLConnection;
   ColIdx: Integer;
+  P: PAnsiChar;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -289,7 +290,16 @@ begin
         else
           ColumnName := TableInfo^.ColNames[ColIdx - 1];
       end;
-      ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.GetFieldName(FQueryHandle, I), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+      P := FPlainDriver.GetFieldName(FQueryHandle, I);
+      Precision := ZFastCode.StrLen(P);
+      {$IFDEF UNICODE}
+      ColumnLabel := PRawToUnicode(P, Precision, ConSettings^.ClientCodePage^.CP);
+      {$ELSE}
+      if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
+        ColumnLabel := BufferToStr(P, Precision)
+      else
+        ColumnLabel := ZUnicodeToString(PRawToUnicode(P, Precision, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
+      {$ENDIF}
       ColumnDisplaySize := 0;
       Scale := 0;
       Precision := 0;
