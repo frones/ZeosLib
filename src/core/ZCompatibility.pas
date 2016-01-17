@@ -756,10 +756,8 @@ begin
     if (Pointer(Dest{%H-}) = nil) or//empty
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
        (Len <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
-      SetString(Dest, nil, Len);
-    {$ELSE}
-    SetString(Dest, nil, Len);
     {$ENDIF}
+    SetString(Dest, nil, Len);
     if Src <> nil then
     begin
       PW := Pointer(Dest);
@@ -787,19 +785,19 @@ end;
 {$IFDEF WITH_RAWBYTESTRING}
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString);
 begin
-  if ( Len = 0 ) or (Src = nil ) then
+  if ( Len = 0 ) then
     Dest := ''
   else
     if (Pointer(Dest) <> nil) and //Empty?
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
-       ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
-      Move(Src^, Pointer(Dest)^, Len)
-    else
+       ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then begin
+      if Src <> nil then Move(Src^, Pointer(Dest)^, Len)
+    end else
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
       begin
         Dest := '';
         SetLength(Dest, Len);
-        Move(Src^, Pointer(Dest)^, Len);
+        if Src <> nil then Move(Src^, Pointer(Dest)^, Len);
       end;
       {$ELSE}
       SetString(Dest, Src, Len);

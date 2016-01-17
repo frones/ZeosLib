@@ -826,7 +826,7 @@ end;
 function SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
   Len: Integer = 0): Extended;
 begin
-  SQLStrToFloatDef(Value, Def, Result, Len);
+  SQLStrToFloatDef(Value, Def, Result{%H-}, Len);
 end;
 
 function CurrToRawBuff(Value: PAnsiChar; Buf: PByteArray; Len: Integer): Boolean;
@@ -909,7 +909,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValRawExt(Value, '.', InvalidPos{%H-});
+    Result := ValRawExt(Pointer(Value), '.', InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
       if ((Value+InvalidPos-1)^ = ',') and ((Value+Len*Ord(Len>0)-1)^ in ['0'..'9']) then  //nope no money. Just a comma instead of dot.
         RawToFloatDef(Value, ',', Def, Result)
@@ -943,7 +943,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValRawDbl(Value, '.', InvalidPos{%H-});
+    Result := ValRawDbl(Pointer(Value), '.', InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
       if ((Value+InvalidPos-1)^ = ',') and ((Value+Len*Ord(Len>0)-1)^ in ['0'..'9']) then  //nope no money. Just a comma instead of dot.
         RawToFloatDef(Value, ',', Def, Result)
@@ -978,7 +978,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValRawDbl(Value, '.', InvalidPos{%H-});
+    Result := ValRawDbl(Pointer(Value), '.', InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
       if ((Value+InvalidPos-1)^ = ',') and ((Value+Len*Ord(Len>0)-1)^ in ['0'..'9']) then  //nope no money. Just a comma instead of dot.
         RawToFloatDef(Value, ',', Def, Result)
@@ -1013,7 +1013,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValRawSin(Value, '.', InvalidPos{%H-});
+    Result := ValRawSin(Pointer(Value), '.', InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
       if ((Value+InvalidPos-1)^ = ',') and ((Value+Len*Ord(Len>0)-1)^ in ['0'..'9']) then  //nope no money. Just a comma instead of dot.
         RawToFloatDef(Value, ',', Def, Result)
@@ -1046,7 +1046,7 @@ end;
 function SQLStrToFloatDef(Value: PWideChar; const Def: Extended;
   Len: Integer = 0): Extended;
 begin
-  SQLStrToFloatDef(Value, Def, Result, Len);
+  SQLStrToFloatDef(Value, Def, Result{%H-}, Len);
 end;
 
 function CurrToUnicodeBuf(Value: PWideChar; Buffer: PWordArray; CodePoints: Integer): Boolean;
@@ -1131,7 +1131,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValUnicodeExt(Value, WideChar('.'), InvalidPos{%H-});
+    Result := ValUnicodeExt(PWordArray(Value), WideChar('.'), InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
       if ((Value+InvalidPos-1)^ = ',') and (AnsiChar((Value+Len*Ord(Len>0)-1)^) in ['0'..'9']) then  //nope no money. Just a comma instead of dot.
         UnicodeToFloatDef(Value, WideChar(','), Def, Result)
@@ -1169,7 +1169,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValUnicodeDbl(Value, WideChar('.'), InvalidPos{%H-});
+    Result := ValUnicodeDbl(PWordArray(Value), WideChar('.'), InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
       if ((Value+InvalidPos-1)^ = ',') and (AnsiChar((Value+Len*Ord(Len>0)-1)^) in ['0'..'9']) then  //nope no money. Just a comma instead of dot.
         UnicodeToFloatDef(Value, WideChar(','), Def, Result)
@@ -1208,7 +1208,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValUnicodeDbl(Value, WideChar('.'), InvalidPos{%H-});
+    Result := ValUnicodeDbl(PWordArray(Value), WideChar('.'), InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
       if ((Value+InvalidPos-1)^ = ',') and (AnsiChar((Value+Len*Ord(Len>0)-1)^) in ['0'..'9']) then  //nope no money. Just a comma instead of dot.
         UnicodeToFloatDef(Value, WideChar(','), Def, Result)
@@ -1246,7 +1246,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValUnicodeSin(Value, WideChar('.'), InvalidPos{%H-});
+    Result := ValUnicodeSin(PWordArray(Value), WideChar('.'), InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
       if ((Value+InvalidPos-1)^ = ',') and (AnsiChar((Value+Len*Ord(Len>0)-1)^) in ['0'..'9']) then  //nope no money. Just a comma instead of dot.
         UnicodeToFloatDef(Value, WideChar(','), Def, Result)
@@ -2032,7 +2032,7 @@ var
       end;
       if MPos > 2 then //float ValueTmp
       begin
-        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Value, '.', Code{%H-}));
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Pointer(Value), '.', Code{%H-}));
         Failed := Code <> 0;
         if Failed then  Exit;
       end;
@@ -2054,7 +2054,7 @@ var
           end
           else
           begin
-            Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Value, '.', Code));
+            Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Pointer(Value), '.', Code));
             if Code <> 0 then
               Result := 0;
             Exit;
@@ -2064,7 +2064,7 @@ var
         try
           Result := EncodeDate(Year, Month, Day);
         except
-          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Value, '.', Code));
+          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Pointer(Value), '.', Code));
           Failed := Code <> 0;
           if Failed then Result := 0;
         end;
@@ -2204,7 +2204,7 @@ var
       end;
       if NPos > 2 then //float value
       begin
-        Result := Frac(ValRawExt(Value, '.', Code));
+        Result := Frac(ValRawExt(Pointer(Value), '.', Code));
         Failed := Code <> 0;
         if Failed then
           Result := 0;
@@ -2241,7 +2241,7 @@ var
             end
             else
             begin
-              Result := Frac(ValRawExt(Value, '.', Code));
+              Result := Frac(ValRawExt(Pointer(Value), '.', Code));
               Failed := Code <> 0;
               if Failed then Result := 0;
               Exit;
@@ -2250,7 +2250,7 @@ var
       try
         Result := EncodeTime(Hour, Minute, Sec, MSec);
       except
-        Result := Frac(ValRawExt(Value, '.', Code));
+        Result := Frac(ValRawExt(Pointer(Value), '.', Code));
         Failed := Code <> 0;
         if Failed then Result := 0;
       end;
@@ -2496,7 +2496,7 @@ var
 
       if (MPos > 2) and ( DotCount = 1) then //float value
       begin
-        Result := ValRawExt(Value, '.', Code{%H-});
+        Result := ValRawExt(Pointer(Value), '.', Code{%H-});
         Failed := Code <> 0;
         if Failed then
           Result := 0;
@@ -2573,7 +2573,7 @@ var
           else
             if (DotCount = 1) or (DotCount = 0 ) then
             begin
-              Result := ValRawExt(Value, '.', Code);
+              Result := ValRawExt(Pointer(Value), '.', Code);
               Failed := ( Code <> 0 );
               if Failed then Result := 0;
               Exit;
@@ -2614,52 +2614,40 @@ begin
 end;
 
 procedure PrepareDateTimeStr(const Quoted: Boolean; const Suffix: ZWideString;
-  const Len: LengthInt; var Value: ZWideString; out P: PWideChar); overload;
+  const Len: LengthInt; var Value: ZWideString); overload;
 var
   SLen: LengthInt;
-  OrdQuoted: ShortInt;
+  P: PWideChar;
 begin
   SLen := Length(Suffix);
-  OrdQuoted := Ord(Quoted);
   { prepare Value if required }
-  if Length(Value) <> len+(2*OrdQuoted)+Slen then
-    ZSetString(nil, len+(2*OrdQuoted)+Slen, Value);
+  ZSetString(nil, len+(2*Ord(Quoted))+Slen, Value);
   P := Pointer(Value);
-  if Quoted then
-  begin
+  if Quoted then begin
     P^ := #39; //starting quote
-    Inc(P, OrdQuoted); //skip first quote
-    (P+Len)^ := #39; //leading quote
-  end;
+    (P+Len+1)^ := #39; //leading quote
+    if SLen > 0 then //move suffix after leading quote
+      System.Move(Pointer(Suffix)^, (P+Len+2)^, Slen shl 1);
+  end else
   if SLen > 0 then //move suffix after leading quote
-    System.Move(Pointer(Suffix)^, (P+Len+OrdQuoted)^, Slen shl 1);
+    System.Move(Pointer(Suffix)^, (P+Len)^, Slen shl 1);
 end;
 
-procedure PrepareDateTimeStr(const Quoted: Boolean;
-  const Suffix: RawByteString; const Len: LengthInt; var Value: RawByteString; out P: PAnsiChar); overload;
-var SLen: LengthInt;
+procedure PrepareDateTimeStr(const Quoted: Boolean; const Suffix: RawByteString;
+  const Len: LengthInt; var Value: RawByteString); overload;
+var
+  SLen: LengthInt;
+  P: PAnsiChar;
 begin
   SLen := Length(Suffix);
   { prepare Value if required }
-  if (Pointer(Value) = nil) or//empty
-     ({%H-}PRefCntInt(NativeUInt(Value) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-     (LengthInt(len+(2*Ord(Quoted))+Slen) <> {%H-}PLengthInt(NativeUInt(Value) - StringLenOffSet)^) then { length as expected ? }
-    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-    begin
-      Value := '';
-      SetLength(Value, len+(2*Ord(Quoted))+Slen);
-    end;
-    {$ELSE}
-    SetString(Value, nil, len+(2*Ord(Quoted))+Slen);
-    {$ENDIF}
+  ZSetString(nil, len+(2*Ord(Quoted))+Slen, Value);
   P := Pointer(Value);
-  if Quoted then
-  begin
+  if Quoted then begin
     P^ := #39; //starting quote
-    Inc(P); //skip first quote
-    (P+Len)^ := #39; //leading quote
+    (P+Len+1)^ := #39; //leading quote
     if SLen > 0 then //move suffix after leading quote
-      System.Move(Pointer(Suffix)^, (P+Len+1)^, Slen);
+      System.Move(Pointer(Suffix)^, (P+Len+2)^, Slen);
   end
   else
     if SLen > 0 then
@@ -2683,7 +2671,9 @@ var
 begin
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
   YearSet := False;
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result{%H-}, PA);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result{%H-});
+  PA := Pointer(Result);
+  Inc(PA, Ord(Quoted));
 
   I := ConFormatSettings.DateFormatLen-1;
   DateFormat := Pointer(ConFormatSettings.DateFormat);
@@ -2736,7 +2726,9 @@ var
 begin
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
   YearSet := False;
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result{%H-}, PW);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result{%H-});
+  PW := Pointer(Result);
+  Inc(PW, Ord(Quoted));
 
   I := ConFormatSettings.DateFormatLen-1;
   DateFormat := Pointer(ConFormatSettings.DateFormat);
@@ -2790,8 +2782,10 @@ var
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.TimeFormatLen, Result{%H-}, PA);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.TimeFormatLen, Result{%H-});
   ZSet := False;
+  PA := Pointer(Result);
+  Inc(PA, Ord(Quoted));
 
   I := ConFormatSettings.TimeFormatLen-1;
   TimeFormat := Pointer(ConFormatSettings.TimeFormat);
@@ -2850,8 +2844,10 @@ var
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.TimeFormatLen, Result{%H-}, PW);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.TimeFormatLen, Result{%H-});
   ZSet := False;
+  PW := Pointer(Result);
+  Inc(PW, Ord(Quoted));
 
   I := ConFormatSettings.TimeFormatLen-1;
   TimeFormat := Pointer(ConFormatSettings.TimeFormat);
@@ -2911,9 +2907,11 @@ var
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateTimeFormatLen, Result{%H-}, PA);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateTimeFormatLen, Result{%H-});
   ZSet := False;
   YearSet := False;
+  PA := Pointer(Result);
+  Inc(PA, Ord(Quoted));
 
   I := ConFormatSettings.DateTimeFormatLen-1;
   TimeStampFormat := Pointer(ConFormatSettings.DateTimeFormat);
@@ -2993,9 +2991,11 @@ var
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateTimeFormatLen, Result{%H-}, PW);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateTimeFormatLen, Result{%H-});
   ZSet := False;
   YearSet := False;
+  PW := Pointer(Result);
+  Inc(PW, Ord(Quoted));
 
   I := ConFormatSettings.DateTimeFormatLen-1;
   TimeStampFormat := Pointer(ConFormatSettings.DateTimeFormat);
@@ -3429,8 +3429,8 @@ begin
   if Pointer(Src) = nil then
     Result := ''
   else begin
-    System.SetString(Result, nil, {H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^);
-    for i := 0 to {H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^-1 do
+    System.SetString(Result, nil, {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^);
+    for i := 0 to {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^-1 do
       PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
   end;
 end;
