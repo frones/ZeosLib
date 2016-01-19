@@ -262,7 +262,7 @@ type
     //Ping Server Support (firmos) 27032006
 
     function PingServer: Integer;
-    function EscapeString(Value: RawByteString): RawByteString;
+    function EscapeString(const Value: RawByteString): RawByteString;
 
     procedure Open;
     procedure Close;
@@ -1008,6 +1008,7 @@ type
     function GetPWideChar: PWideChar;
     procedure SetPWideChar(const Buffer: PWideChar; const Len: Cardinal);
     function GetBufferAddress: PPointer;
+    function GetLengthAddress: PInteger;
     {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
     procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal; const CodePage: Word); overload;
     {$ENDIF}

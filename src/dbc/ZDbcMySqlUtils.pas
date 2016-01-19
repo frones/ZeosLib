@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants, ZDbcLogging,
-  ZCompatibility, ZDbcResultSetMetadata, ZVariant;
+  ZCompatibility, ZDbcResultSetMetadata, ZVariant, ZDbcMySql;
 
 const
   MAXBUF = 65535;
@@ -153,10 +153,9 @@ procedure ConvertMySQLColumnInfoFromString(const TypeInfo: String;
   ConSettings: PZConSettings; out TypeName, TypeInfoSecond: String;
   out FieldType: TZSQLType; out ColumnSize: Integer; out Precision: Integer);
 
-function MySQLPrepareAnsiSQLParam(Handle: PZMySQLConnect; Value: TZVariant;
+function MySQLPrepareAnsiSQLParam(Connection: IZMySQLConnection; Value: TZVariant;
   const DefaultValue: String; ClientVarManager: IZClientVariantManager;
-  PlainDriver: IZMySQLPlainDriver; const InParamType: TZSQLType;
-  const UseDefaults: Boolean; ConSettings: PZConSettings): RawByteString;
+  const InParamType: TZSQLType; const UseDefaults: Boolean): RawByteString;
 
 function ReverseWordBytes(Src: Pointer): Word;
 function ReverseLongWordBytes(Src: Pointer; Len: Byte): LongWord;
@@ -801,14 +800,16 @@ begin
   FreeAndNil(TypeInfoList);
 end;
 
-function MySQLPrepareAnsiSQLParam(Handle: PZMySQLConnect; Value: TZVariant;
+function MySQLPrepareAnsiSQLParam(Connection: IZMySQLConnection; Value: TZVariant;
   const DefaultValue: String; ClientVarManager: IZClientVariantManager;
-  PlainDriver: IZMySQLPlainDriver; const InParamType: TZSQLType;
-  const UseDefaults: Boolean; ConSettings: PZConSettings): RawByteString;
+  const InParamType: TZSQLType; const UseDefaults: Boolean): RawByteString;
 var
   TempBytes: TBytes;
   TempBlob: IZBlob;
+  CharRec: TZCharRec;
+  ConSettings: PZConSettings;
 begin
+  ConSettings := Connection.GetConSettings;
   if ClientVarManager.IsNull(Value) then
     if UseDefaults and (DefaultValue <> '') then
       Result := ConSettings^.ConvFuncs.ZStringToRaw(DefaultValue,
@@ -831,8 +832,10 @@ begin
           TempBytes := ClientVarManager.GetAsBytes(Value);
           Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes));
         end;
-      stString, stUnicodeString:
-        Result := PlainDriver.EscapeString(Handle, ClientVarManager.GetAsRawByteString(Value), ConSettings, True);
+      stString, stUnicodeString: begin
+          CharRec := ClientVarManager.GetAsCharRec(Value, Connection.GetConSettings^.ClientCodePage^.CP);
+          Result := Connection.EscapeString(CharRec.P, CharRec.Len, True);
+        end;
       stDate:
         Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
           ConSettings^.WriteFormatSettings, True);
@@ -851,17 +854,21 @@ begin
               stBinaryStream:
                 Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length);
               else
-                if TempBlob.IsClob then
-                  Result := PlainDriver.EscapeString(Handle,
-                    TempBlob.GetRawByteString, ConSettings, True)
+                if TempBlob.IsClob then begin
+                  CharRec.P := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+                  Result := Connection.EscapeString(CharRec.P, TempBlob.Length, True);
+                end
                 else
-                  Result := PlainDriver.EscapeString(Handle,
-                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                      TempBlob.Length, ConSettings), ConSettings, True);
+                  Result := Connection.EscapeString(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, ConSettings));
             end;
-         end
+          end
           else
-            Result := 'NULL';
+            if UseDefaults and (DefaultValue <> '') then
+              Result := ConSettings^.ConvFuncs.ZStringToRaw(DefaultValue,
+                ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
+            else
+              Result := 'NULL';
         end;
     end;
   end;

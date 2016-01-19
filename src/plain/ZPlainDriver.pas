@@ -71,10 +71,6 @@ type
       CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
-    function EscapeString(Handle: Pointer; const Value: ZWideString;
-      ConSettings: PZConSettings): ZWideString; overload;
-    function EscapeString(Handle: Pointer; const Value: RawByteString;
-      ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString; overload;
     procedure Initialize(const Location: String = '');
     function Clone: IZPlainDriver;
   end;
@@ -96,6 +92,8 @@ type
       ConSettings: PZConSettings): ZWideString; overload;
     function EscapeString(Handle: Pointer; const Value: RawByteString;
       ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString; overload; virtual;
+    function EscapeString(Handle: Pointer; const Value: PAnsiChar; Len: Integer;
+      ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString; overload;
   public
     constructor Create;
     constructor CreateWithLibrary(const LibName : String);
@@ -217,6 +215,14 @@ end;
 function TZAbstractPlainDriver.EscapeString(Handle: Pointer;
   const Value: RawByteString; ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString;
 begin
+  Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
+end;
+
+function TZAbstractPlainDriver.EscapeString(Handle: Pointer;
+  const Value: PAnsiChar; Len: Integer; ConSettings: PZConSettings;
+  WasEncoded: Boolean): RawByteString;
+begin
+  ZSetString(Value, Len, Result);
   Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
 end;
 {$IFDEF FPC}

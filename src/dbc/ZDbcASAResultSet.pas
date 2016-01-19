@@ -1778,14 +1778,9 @@ var
 begin
   inherited CreateWithData(nil, 0, ConSettings^.ClientCodePage^.CP, ConSettings);
   SQLData.ReadBlobToMem(ColId, Buffer{%H-}, Len{%H-}, False);
-  {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
   (PAnsiChar(Buffer)+Len)^ := #0; //add leading terminator
   FBlobData := Buffer;
   FBlobSize := Len+1;
-  {$ELSE}
-  InternalSetPAnsiChar(Buffer,ConSettings^.ClientCodePage^.CP, Len);
-  FreeMem(Buffer);
-  {$ENDIF}
 end;
 
 end.

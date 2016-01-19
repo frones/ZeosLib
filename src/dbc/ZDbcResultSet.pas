@@ -388,6 +388,7 @@ type
     function GetStream: TStream; virtual;
     procedure SetStream(const Value: TStream); overload; virtual;
     function GetBufferAddress: PPointer;
+    function GetLengthAddress: PInteger;
     function GetBuffer: Pointer; virtual;
     procedure SetBuffer(const Buffer: Pointer; const Length: Integer);
     {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
@@ -4215,6 +4216,11 @@ begin
   end
   else
     Result := nil;
+end;
+
+function TZAbstractBlob.GetLengthAddress: PInteger;
+begin
+  Result := @FBlobSize;
 end;
 
 {**

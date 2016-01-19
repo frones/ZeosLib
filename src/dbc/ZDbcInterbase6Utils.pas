@@ -1410,10 +1410,7 @@ begin
   SegmentLenght := BlobInfo.MaxSegmentSize;
 
   { Allocates a blob buffer }
-  if Binary then
-    Buffer := AllocMem(BlobSize)
-  else
-    Buffer := AllocMem(BlobSize+1); //left space for leading #0 terminator
+  Buffer := AllocMem(BlobSize+Ord(not Binary)); //left space for leading #0 terminator
 
   TempBuffer := Buffer;
 
@@ -1430,6 +1427,8 @@ begin
     Inc(TempBuffer, BytesRead);
     BytesRead := 0;
   end;
+  if not Binary then
+    (PAnsiChar(Buffer)+Size)^ := #0;
 
   { close blob handle }
   PlainDriver.isc_close_blob(@StatusVector, @BlobHandle);

@@ -87,6 +87,7 @@ type
 
     function GetPlainDriver: IZMySQLPlainDriver;
     function GetConnectionHandle: PZMySQLConnect;
+    function EscapeString(From: PAnsiChar; Len: ULong; Quoted: Boolean): RawByteString; overload;
   end;
 
   {** Implements MySQL Database Connection. }
@@ -110,7 +111,8 @@ type
     procedure Rollback; override;
 
     function PingServer: Integer; override;
-    function EscapeString(Value: RawByteString): RawByteString; override;
+    function EscapeString(const Value: RawByteString): RawByteString; overload; override;
+    function EscapeString(From: PAnsiChar; Len: ULong; Quoted: Boolean): RawByteString; overload;
 
     procedure Open; override;
     procedure Close; override;
@@ -286,6 +288,22 @@ end;
 destructor TZMySQLConnection.Destroy;
 begin
   inherited Destroy;
+end;
+
+function TZMySQLConnection.EscapeString(From: PAnsiChar;
+  Len: ULong; Quoted: Boolean): RawByteString;
+var
+  Buf: array[0..2048] of AnsiChar;
+begin
+  if ((Len+Byte(Ord(Quoted))) shl 1) > (SizeOf(Buf)-1) then begin
+    SetLength(Result, (Len+Byte(Ord(Quoted))) shl 1);
+    SetLength(Result, GetPlainDriver.EscapeString(FHandle, PAnsiChar(Pointer(Result))+Ord(Quoted), From, Len)+(Byte(Ord(Quoted)) shl 1));
+  end else
+    ZSetString(@Buf[0], GetPlainDriver.EscapeString(FHandle, @Buf[0+Ord(Quoted)], From, Len)+(Byte(Ord(Quoted) shl 1)), Result);
+  if Quoted then begin
+    Result[1] := '''';
+    Result[Length(Result)] := '''';
+  end;
 end;
 
 {**
@@ -469,7 +487,7 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     end;
     Self.CheckCharEncoding(FClientCodePage);
 
-    FMaxLobSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values['FMaxLobSize'], 0);
+    FMaxLobSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values['MaxLobSize'], 0);
     if FMaxLobSize <> 0 then
     begin
       SQL := 'SET GLOBAL max_allowed_packet='+IntToRaw(FMaxLobSize);
@@ -532,9 +550,9 @@ end;
   @param value string that should be escaped
   @return Escaped string
 }
-function TZMySQLConnection.EscapeString(Value: RawByteString): RawByteString;
+function TZMySQLConnection.EscapeString(const Value: RawByteString): RawByteString;
 begin
-  Result := PlainDriver.EscapeString(Self.FHandle,  Value, ConSettings);
+  Result := EscapeString(Pointer(Value), Length(Value), True);
 end;
 
 {**
@@ -847,13 +865,15 @@ end;
   @result the detectable Binary String
 }
 function TZMySQLConnection.GetEscapeString(const Value: ZWideString): ZWideString;
+var tmp: RawByteString;
 begin
-  Result := inherited GetEscapeString(GetPlainDriver.EscapeString(FHandle, Value, ConSettings));
+  tmp := GetEscapeString(PUnicodeToRaw(Pointer(Value), Length(Value), ConSettings^.ClientCodePage^.CP));
+  Result := PRawToUnicode(Pointer(tmp), Length(tmp), ConSettings^.ClientCodePage^.CP);
 end;
 
 function TZMySQLConnection.GetEscapeString(const Value: RawByteString): RawByteString;
 begin
-  Result := inherited GetEscapeString(GetPlainDriver.EscapeString(FHandle, Value, ConSettings));
+  Result := inherited GetEscapeString(EscapeString(Pointer(Value), Length(Value), True));
 end;
 
 initialization

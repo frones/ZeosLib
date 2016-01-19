@@ -802,20 +802,14 @@ begin
   ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
-  if LastWasNull then
-    Exit
-  else
-    case GetMetadata.GetColumnType(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) of
-      stAsciiStream, stUnicodeStream:
-        begin
-          Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
-          Result := TZAbstractClob.CreateWithData( Buffer,
-            ZFastCode.StrLen(Buffer), zCP_UTF8, ConSettings);
-        end;
-      stBinaryStream:
-         Result := TZAbstractBlob.CreateWithData(FPlainDriver.column_blob(FStmtHandle,ColumnIndex), FPlainDriver.column_bytes(FStmtHandle, ColumnIndex));
-      else
-        Result := TZAbstractBlob.CreateWithStream(nil);
+  if not LastWasNull then
+    if ColType = SQLITE_BLOB then
+      Result := TZAbstractBlob.CreateWithData(FPlainDriver.column_blob(FStmtHandle,ColumnIndex),
+        FPlainDriver.column_bytes(FStmtHandle, ColumnIndex))
+    else begin
+      Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
+      Result := TZAbstractClob.CreateWithData( Buffer,
+        ZFastCode.StrLen(Buffer), zCP_UTF8, ConSettings);
     end;
 end;
 
