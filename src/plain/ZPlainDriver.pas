@@ -88,12 +88,6 @@ type
     function GetUnicodeCodePageName: String; virtual;
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
-    function EscapeString(Handle: Pointer; const Value: ZWideString;
-      ConSettings: PZConSettings): ZWideString; overload;
-    function EscapeString(Handle: Pointer; const Value: RawByteString;
-      ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString; overload; virtual;
-    function EscapeString(Handle: Pointer; const Value: PAnsiChar; Len: Integer;
-      ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString; overload;
   public
     constructor Create;
     constructor CreateWithLibrary(const LibName : String);
@@ -200,34 +194,6 @@ begin
   if (DoArrange) and (Result^.ZAlias <> '' ) then
     ValidateCharEncoding(Result^.ZAlias); //recalls em selves
 end;
-
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
-function TZAbstractPlainDriver.EscapeString(Handle: Pointer;
-  const Value: ZWideString; ConSettings: PZConSettings): ZWideString;
-begin
-  Result := ConSettings^.ConvFuncs.ZRawToUnicode(EscapeString(Handle,
-    ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP),
-    ConSettings, True) , ConSettings^.ClientCodePage^.CP);
-end;
-
-function TZAbstractPlainDriver.EscapeString(Handle: Pointer;
-  const Value: RawByteString; ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString;
-begin
-  Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
-end;
-
-function TZAbstractPlainDriver.EscapeString(Handle: Pointer;
-  const Value: PAnsiChar; Len: Integer; ConSettings: PZConSettings;
-  WasEncoded: Boolean): RawByteString;
-begin
-  ZSetString(Value, Len, Result);
-  Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
-end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
 
 procedure TZAbstractPlainDriver.AddCodePage(const Name: String;
       const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
