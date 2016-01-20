@@ -472,25 +472,18 @@ end;
 function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZWideString;
 var P: PWideChar;
 begin
-  Result := ''; //init speeds setlength x2
-  if ODBC then
-  begin
-    SetLength(Result,(Len shl 1)+2); //shl 1 = * 2 but faster
+  ZSetString(nil, ((Len+1) shl 1)+Ord(not Odbc), Result);
+  if ODBC then begin
     P := Pointer(Result);
     P^ := '0';
-    Inc(P);
-    P^ := 'x';
-    Inc(P);
+    (P+1)^ := 'x';
+    Inc(P, 2);
     ZBinToHex(Value, P, Len);
-  end
-  else
-  begin
-    SetLength(Result, (Len shl 1)+3); //shl 1 = * 2 but faster
+  end else begin
     P := Pointer(Result);
     P^ := 'x';
-    Inc(P);
-    P^ := #39;
-    Inc(P);
+    (P+1)^ := #39;
+    Inc(P,2);
     ZBinToHex(Value, P, Len);
     Inc(P, Len shl 1); //shl 1 = * 2 but faster
     P^ := #39;
@@ -500,25 +493,18 @@ end;
 function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): RawByteString;
 var P: PAnsiChar;
 begin
-  Result := ''; //init speeds setlength x2
-  if ODBC then
-  begin
-    System.SetLength(Result,(Len shl 1)+2);//shl 1 = * 2 but faster
+  ZSetString(nil, ((Len+1) shl 1)+Ord(not Odbc), Result);
+  if ODBC then begin
     P := Pointer(Result);
     P^ := '0';
-    Inc(P);
-    P^ := 'x';
-    Inc(P);
+    (P+1)^ := 'x';
+    Inc(P, 2);
     ZBinToHex(Value, P, Len);
-  end
-  else
-  begin
-    SetLength(Result, (Len shl 1)+3); //shl 1 = * 2 but faster
+  end else begin
     P := Pointer(Result);
     P^ := 'x';
-    Inc(P);
-    P^ := #39;
-    Inc(P);
+    (P+1)^ := #39;
+    Inc(P,2);
     ZBinToHex(Value, P, Len);
     Inc(P, Len shl 1); //shl 1 = * 2 but faster
     P^ := #39;
