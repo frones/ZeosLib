@@ -590,7 +590,7 @@ begin
   if FTableColumns.Get(TableKey) = nil then
   begin
     Result := Metadata.GetColumns(TableRef.Catalog,
-      TableRef.Schema, TableRef.Table, '');
+      TableRef.Schema, FResultSet.GetStatement.GetConnection.GetMetadata.AddEscapeCharToWildcards(TableRef.Table), '');
     FTableColumns.Put(TableKey, Result);
   end
   else

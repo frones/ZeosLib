@@ -805,12 +805,14 @@ end;
 procedure TZUpdateSQLEditForm.GetTableFieldNames;
 var
   ResultSet: IZResultSet;
+  MetaData: IZDatabaseMetadata;
 begin
   if Assigned(DataSet) and Assigned(DataSet.Connection) and Assigned(DataSet.Connection.dbcConnection)then
   begin
     KeyFieldList.Clear;
     UpdateFieldList.Clear;
-    ResultSet := DataSet.Connection.DbcConnection.GetMetadata.GetColumns('', '', UpdateTableName.Text, '');
+    MetaData := DataSet.Connection.DbcConnection.GetMetadata;
+    ResultSet := MetaData.GetColumns('', '', MetaData.AddEscapeCharToWildcards(UpdateTableName.Text), '');
     if Assigned(ResultSet) then
     begin
       while ResultSet.Next do

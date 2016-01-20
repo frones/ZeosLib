@@ -3390,7 +3390,7 @@ begin
         end;
       end;
 
-      with GetColumns(Catalog, Schema, Table, '') do
+      with GetColumns(Catalog, AddEscapeCharToWildcards(Schema), AddEscapeCharToWildcards(Table), '') do
       begin
         while Next do
         begin
@@ -4490,11 +4490,9 @@ end;
 }
 procedure TZAbstractDatabaseMetadata.FillWildcards;
 begin
-  SetLength(WildcardsArray,1);
-  WildcardsArray[0]:='%';
-  {SetLength(WildcardsArray,2);
-  WildcardsArray[0]:='_';  <---- seems to be a trublemaker, no idea how to test it with our tests. See http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=13184
-  WildcardsArray[1]:='%';}
+  SetLength(WildcardsArray,2);
+  WildcardsArray[0]:='_';  //<---- seems to be a trublemaker, no idea how to test it with our tests. See http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=13184
+  WildcardsArray[1]:='%';
 end;
 
 function TZAbstractDatabaseMetadata.NormalizePatternCase(Pattern:String): string;
