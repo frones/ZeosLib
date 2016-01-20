@@ -397,6 +397,7 @@ type
 {$IFNDEF WITH_CHARINSET}
 function CharInSet(const C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 function CharInSet(const C: WideChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+function CharInSet(const C: Word; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
 {$IF not Declared(UTF8ToString)}
@@ -414,8 +415,9 @@ procedure ZSetString(Src: PAnsiChar; const Len: LengthInt; var Dest: ZWideString
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
-{$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}
+{$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}
 function Min(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+function Max(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
 var
@@ -692,8 +694,14 @@ end;
 
 function CharInSet(const C: WideChar; const CharSet: TSysCharSet): Boolean;
 begin
-  result := Char(C) in Charset;
+  result := CharInSet(Word(C), CharSet);
 end;
+
+function CharInSet(const C: Word; const CharSet: TSysCharSet): Boolean;
+begin
+  result := (C <= High(Byte)) and (AnsiChar(Byte(C)) in Charset);
+end;
+
 {$ENDIF}
 
 {$IFDEF  ZUTF8ToString}
@@ -805,10 +813,18 @@ begin
 end;
 {$ENDIF}
 
-{$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}
+{$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}
 function Min(const A, B: NativeUInt): NativeUInt;
 begin
   if A < B then
+    Result := A
+  else
+    Result := B;
+end;
+
+function Max(const A, B: NativeUInt): NativeUInt;
+begin
+  if A > B then
     Result := A
   else
     Result := B;
