@@ -1215,12 +1215,21 @@ end;
 function TZInterbase6DatabaseMetadata.ConstructNameCondition(Pattern: string;
   Column: string): string;
 begin
-  if (GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and
-      (GetConnection.GetHostVersion >= 2000000) then
-    Result := Inherited ConstructnameCondition(Pattern,'trim('+Column+')')
-  else
-    //Old FireBird and Interbase do NOT support 'trim'
+  if HasNoWildcards(Pattern) then begin
     Result := Inherited ConstructnameCondition(Pattern,Column)
+  end else begin
+    if (GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and
+      (GetConnection.GetHostVersion < 2000000)
+    then begin
+      //Old FireBird do NOT support 'trim'
+      //-> raise exception to find bugs in Software...
+      raise EZSQLException.Create('Wildcard searches are not suported with Firebird 1.5 and 1.0. Use IZDatabaseMetadata.AddEscapeCharToWildcards to escape wildcards in table names.');
+    end else begin
+      // add trim because otherwise the like condition will not find the table columns
+      // because they are padded with spaces in Firebird
+      Result := Inherited ConstructnameCondition(Pattern,'trim('+Column+')');
+    end;
+  end;
 end;
 
 function TZInterbase6DatabaseMetadata.UncachedGetTriggers(const Catalog: string;
@@ -2753,7 +2762,7 @@ var
   SQL : string;
   LTable: String;
 begin
-  LTable := ConstructNameCondition(Table, 'I.RDB$RELATION_NAME');
+  LTable := ConstructNameCondition(AddEscapeCharToWildcards(Table), 'I.RDB$RELATION_NAME');
   if LTable <> '' then
     LTable := ' AND ' + LTable;
 
