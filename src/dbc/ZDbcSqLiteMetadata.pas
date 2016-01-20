@@ -1323,6 +1323,12 @@ var
   ResSet: IZResultSet;
   TempTableNamePattern: String;
 begin
+  if not HasNoWildcards(SchemaPattern) then raise EZSQLException.Create('UncachedGetColumns for SQLite can not do schema wildcard searches currently. Please provide a schema name.');
+  if not HasNoWildcards(TableNamePattern) then raise EZSQLException.Create('UncachedGetColumns for SQLite can not do table wildcard searches currently. Please provide a table name.');
+  if (ColumnNamePattern <> '') and (ColumnNamePattern <> '%') then raise EZSQLException.Create('UncachedGetColumns for SQLite cannot limit the returned columns by a pattern.');
+  SchemaPattern := StripEscape(SchemaPattern);
+  TableNamePattern := StripEscape(TableNamePattern);
+
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
   if SchemaPattern = '' then
@@ -1334,7 +1340,7 @@ begin
 
   TempTableNamePattern := NormalizePatternCase(TableNamePattern);
   ResSet := GetConnection.CreateStatement.ExecuteQuery(
-    Format('PRAGMA %s table_info(''%s'')', [Temp_scheme, TempTableNamePattern]));
+    Format('PRAGMA %stable_info(''%s'')', [Temp_scheme, TempTableNamePattern]));
   if ResSet <> nil then
     with ResSet do
   begin
