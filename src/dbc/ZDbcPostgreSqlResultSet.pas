@@ -333,7 +333,7 @@ begin
             CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth;
             ColumnDisplaySize := Precision;
           end else if ColumnType = stUnicodeString then begin
-            CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth;
+            CharOctedLength := Precision shl 1;
             ColumnDisplaySize := Precision;
           end;
         end;
