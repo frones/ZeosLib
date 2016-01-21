@@ -310,6 +310,7 @@ procedure MapByteToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
 procedure AnsiMBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
   const MapProc: TMBCSMapProc; var Dest: ZWideString);
 function UTF8ToWideChar(Source: PAnsichar; SourceBytes: NativeUInt; Dest: PWideChar): LengthInt;
+function PUTF8ToRaw(Source: PAnsiChar; SourceBytes: NativeUInt; RawCP: Word): RawByteString;
 
 const
   {$IFDEF USE_RAW2WIDE_PROCS} //compiler related: D7 is less optimal use MultibultToWidechar instead for known CP's
@@ -1310,7 +1311,7 @@ const
   //UTF8_FIRSTBYTE: packed array[2..6] of byte = ($c0,$e0,$f0,$f8,$fc);
 
 function UTF8ToWideChar(Source: PAnsichar; SourceBytes: NativeUInt; Dest: PWideChar): LengthInt;
-{$IF defined (WIN32) and not (defined(FPC) or defined(UNICODE))}
+(*{$IF defined (WIN32) and not (defined(FPC) or defined(UNICODE))}
 //new Delphi's make same code -> terrific wheres FPC instruction set is twice longer!
 //but pure pascal is almost faster than System.UTFDecode or MultiByteToWideChar
 asm
@@ -1430,39 +1431,50 @@ asm
   ret {do not remove, this is for the alignment }
   nop {do not remove, this is for the alignment }
 end;
-{$else}
+{$else} *)
 // faster than System.UTF8Decode()
 var c: cardinal;
     begd: pWideChar;
-    endSource: PAnsiChar;
+    endSource, endSourceBy4: PAnsiChar;
     i,extra: integer;
-label Quit;
+label Quit, NoSource, By1, By4;
 begin
+  result := 0;
+  if dest=nil then
+   exit;
+  if source=nil then
+    goto NoSource;
+  if sourceBytes=0 then begin
+    if source^=#0 then
+      goto NoSource;
+    sourceBytes := StrLen(source);
+  end;
   begd := dest;
   endSource := Source+SourceBytes;
+  endSourceBy4 := endSource-4;
+  if SourceBytes < 4 then
+    goto By1;
   repeat
     // first handle 7 bit ASCII chars, by quad (Sha optimization)
-    if (PCardinal(Source)^ and $80808080=0) and (Source+4<endSource) then
-    begin
-      c := pCardinal(Source)^;
+By4:  c := PCardinal(Source)^;
+      if c and $80808080<>0 then
+        goto By1; // break on first non ASCII quad
       inc(Source,4);
-      pCardinal(dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
+      PCardinal(dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
       c := c shr 16;
-      pCardinal(dest+2)^ := (c shl 8 or c) and $00ff00ff;
+      PCardinal(dest+2)^ := (c shl 8 or c) and $00ff00ff;
       inc(dest,4);
-    end
-    else
-    begin
-      c := byte(Source^);
+    until Source>EndSourceBy4;
+  if Source<endSource then
+    repeat
+By1:  c := byte(Source^);
       inc(Source);
       if c and $80=0 then begin
-        PWord(dest)^ := c;
+        PWord(dest)^ := c; // much faster than dest^ := WideChar(c) for FPC
         inc(dest);
-        if Source<endsource then
-          continue else
-          break;
+        if (NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+        if Source<endSource then continue else break;
       end;
-      //handle UTF8 byte sequences by A.Bouches optimization
       extra := UTF8_EXTRABYTES[c];
       if (extra=0) or (Source+extra>endSource) then break;
       for i := 1 to extra do begin
@@ -1479,22 +1491,53 @@ begin
       if c<=$ffff then begin
         PWord(dest)^ := c;
         inc(dest);
-        if Source<endsource then
-          continue else
-          break;
+        if (NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+        if Source<endSource then continue else break;
       end;
       dec(c,$10000); // store as UTF-16 surrogates
-      PWord(dest)^ := c shr 10  +UTF16_HISURROGATE_MIN;
-      PWord(dest+1)^ := c and $3FF+UTF16_LOSURROGATE_MIN;
+      PWordArray(dest)[0] := c shr 10  +UTF16_HISURROGATE_MIN;
+      PWordArray(dest)[1] := c and $3FF+UTF16_LOSURROGATE_MIN;
       inc(dest,2);
-      if Source>=endsource then
-        break;
-    end;
-  until false;
+      if (NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+      if Source>=endSource then break;
+    until false;
 Quit:
   result := ({%H-}NativeUInt(dest)-{%H-}NativeUInt(begd)) shr 1; // dest-begd return codepoint length
+NoSource:
+  PWord(dest)^ := Ord(#0); // always append a WideChar(0) to the end of the buffer
 end;
-{$IFEND}
+{.$IFEND}
+
+function PUTF8ToRaw(Source: PAnsiChar; SourceBytes: NativeUInt; RawCP: Word): RawByteString;
+var
+  {$IFDEF WITH_LCONVENCODING}
+  Tmp: ZWideString;
+  {$ELSE}
+  WBuf: Array[0..BufLen] of Word;
+  Tmp: array of Word;
+  Dest: PWideChar;
+  {$ENDIF}
+begin
+  if (SourceBytes = 0) or (Source = nil) then
+    Result := ''
+  else if RawCP = zCP_UTF8 then
+    ZSetString(Source, SourceBytes, Result)
+  else begin
+    {$IFDEF WITH_LCONVENCODING}
+    SetLength(Tmp, SourceBytes);
+    SetLength(Tmp, UTF8ToWideChar(Source, SourceBytes, Pointer(Tmp)));
+    Result := ZUnicodeToRaw(Tmp, RawCP);
+    {$ELSE}
+    if SourceBytes <= BufLen then
+      Dest := @WBuf[0]
+    else begin
+      SetLength(Tmp, SourceBytes+1);
+      Dest := Pointer(Tmp);
+    end;
+    Result := PUnicodeToRaw(Dest, UTF8ToWideChar(Source, SourceBytes, Dest), RawCP);
+    {$ENDIF}
+  end;
+end;
 
 function PRawToUnicode(Source: PAnsiChar; const SourceBytes: NativeUInt;
   CP: Word): ZWideString;
