@@ -462,7 +462,7 @@ end;
 }
 function TZSQLiteDatabaseInfo.GetSearchStringEscape: string;
 begin
-  Result := '//';
+  Result := '/';
 end;
 
 {**
@@ -1200,27 +1200,27 @@ var
   end;
 
 begin
-    WhereClause := '';
-    if IncludedType('TABLE') then
-      WhereClause := 'TYPE=''table''';
-    if IncludedType('VIEW') then
-    begin
-      if WhereClause <> '' then
-        WhereClause := '(' + WhereClause + ' OR TYPE=''view'')'
-      else WhereClause := 'TYPE=''view''';
-    end;
+  WhereClause := '';
+  if IncludedType('TABLE') then
+    WhereClause := 'TYPE=''table''';
+  if IncludedType('VIEW') then
+  begin
+    if WhereClause <> '' then
+      WhereClause := '(' + WhereClause + ' OR TYPE=''view'')'
+    else WhereClause := 'TYPE=''view''';
+  end;
 
-    SQL := 'SELECT ''' + Catalog + ''' AS TABLE_CAT, NULL AS TABLE_SCHEM,'
-      + ' TBL_NAME AS TABLE_NAME, UPPER(TYPE) AS TABLE_TYPE, NULL AS REMARKS'
-      + ' FROM ';
-    if Catalog <> '' then
-      SQL := SQL + Catalog + '.';
-    SQL := SQL + 'SQLITE_MASTER WHERE ' + WhereClause
-      + ' AND TBL_NAME LIKE ''' + ToLikeString(TableNamePattern) + '''';
+  SQL := 'SELECT ''' + Catalog + ''' AS TABLE_CAT, NULL AS TABLE_SCHEM,'
+    + ' TBL_NAME AS TABLE_NAME, UPPER(TYPE) AS TABLE_TYPE, NULL AS REMARKS'
+    + ' FROM ';
+  if Catalog <> '' then
+    SQL := SQL + Catalog + '.';
+  SQL := SQL + 'SQLITE_MASTER WHERE ' + WhereClause
+    + ' AND TBL_NAME LIKE ''' + ToLikeString(TableNamePattern) + '''';
 
-    Result := CopyToVirtualResultSet(
-      GetConnection.CreateStatement.ExecuteQuery(SQL),
-      ConstructVirtualResultSet(TableColumnsDynArray));
+  Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    ConstructVirtualResultSet(TableColumnsDynArray));
 end;
 
 {**
@@ -1317,81 +1317,85 @@ const
   pk_index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
 var
   Len: NativeUInt;
-  Temp: string;
+  Temp_scheme, TempTableNamePattern: String;
   Precision, Decimals, UndefinedVarcharAsStringLength: Integer;
-  Temp_scheme: string;
   ResSet: IZResultSet;
-  TempTableNamePattern: String;
+  RawTmp: RawByteString;
+  SQLType: TZSQLType;
+  P: PAnsiChar;
 begin
   if not HasNoWildcards(SchemaPattern) then raise EZSQLException.Create('UncachedGetColumns for SQLite can not do schema wildcard searches currently. Please provide a schema name.');
   if not HasNoWildcards(TableNamePattern) then raise EZSQLException.Create('UncachedGetColumns for SQLite can not do table wildcard searches currently. Please provide a table name.');
   if (ColumnNamePattern <> '') and (ColumnNamePattern <> '%') then raise EZSQLException.Create('UncachedGetColumns for SQLite cannot limit the returned columns by a pattern.');
-  SchemaPattern := StripEscape(SchemaPattern);
-  TableNamePattern := StripEscape(TableNamePattern);
+  Temp_scheme := StripEscape(SchemaPattern);
+  TempTableNamePattern := StripEscape(TableNamePattern);
 
-  Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
-
-  if SchemaPattern = '' then
-    Temp_scheme := '' // OR  'main.'
-  else
-    Temp_scheme := SchemaPattern +'.';
+  Result:=inherited UncachedGetColumns(Catalog, Temp_scheme, TempTableNamePattern, ColumnNamePattern);
 
   UndefinedVarcharAsStringLength := (GetConnection as IZSQLiteConnection).GetUndefinedVarcharAsStringLength;
+  TempTableNamePattern := NormalizePatternCase(TempTableNamePattern);
 
-  TempTableNamePattern := NormalizePatternCase(TableNamePattern);
-  ResSet := GetConnection.CreateStatement.ExecuteQuery(
-    Format('PRAGMA %stable_info(''%s'')', [Temp_scheme, TempTableNamePattern]));
+  if Temp_scheme <> '' then
+    RawTmp := ConSettings.ConvFuncs.ZStringToRaw(Temp_scheme, ConSettings^.CTRL_CP, 65001)+'.'
+  else RawTmp := '';
+  ResSet := GetStatement.ExecuteQuery('PRAGMA '+RawTmp+'table_info('''+ConSettings.ConvFuncs.ZStringToRaw(TempTableNamePattern, ConSettings^.CTRL_CP, 65001)+''')');
   if ResSet <> nil then
-    with ResSet do
-  begin
-    while Next do
-    begin
-      Result.MoveToInsertRow;
-      if SchemaPattern <> '' then
-        Result.UpdateString(CatalogNameIndex, SchemaPattern);
-      //else Result.UpdateNull(CatalogNameIndex);
-      //Result.UpdateNull(SchemaNameIndex);
-      Result.UpdateString(TableNameIndex, TempTableNamePattern);
-      Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(name_index, Len), @Len);
-      Result.UpdateInt(TableColColumnTypeIndex, Ord(ConvertSQLiteTypeToSQLType(GetRawByteString(type_index),
-        UndefinedVarcharAsStringLength, Precision{%H-}, Decimals{%H-}, ConSettings.CPType)));
-
-      { Defines a table name. }
-      Temp := UpperCase(GetString(type_index));
-      if ZFastCode.Pos('(', Temp) > 0 then
-        Temp := Copy(Temp, 1, ZFastCode.Pos('(', Temp) - 1);
-      Result.UpdateString(TableColColumnTypeNameIndex, Temp);
-
-      Result.UpdateInt(TableColColumnSizeIndex, Precision);  //Precision will be converted higher up
-      Result.UpdateInt(TableColColumnDecimalDigitsIndex, Decimals);
-      Result.UpdateInt(TableColColumnNumPrecRadixIndex, 0);
-
-      if GetInt(notnull_index) <> 0 then
+    with ResSet do begin
+      while Next do
       begin
-        Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNoNulls));
-        Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'NO');
-      end
-      else
-      begin
-        Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
-        Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'YES');
+        Result.MoveToInsertRow;
+        if SchemaPattern <> '' then
+          Result.UpdateString(CatalogNameIndex, SchemaPattern);
+        Result.UpdateString(TableNameIndex, TempTableNamePattern);
+        Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(name_index, Len), @Len);
+        RawTmp := GetRawByteString(type_index);
+        SQLType := ConvertSQLiteTypeToSQLType(RawTmp, UndefinedVarcharAsStringLength,
+          Precision{%H-}, Decimals{%H-}, ConSettings.CPType);
+        Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
+
+        Len := Length(RawTmp);
+        Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, Pointer(RawTmp), @Len);
+
+        Result.UpdateInt(TableColColumnSizeIndex, Precision);  //Precision will be converted higher up
+        if SQLType = stString then begin
+          Result.UpdateInt(TableColColumnBufLengthIndex, (Precision shl 2) +1);
+          Result.UpdateInt(TableColColumnCharOctetLengthIndex, Precision shl 2);
+        end else if SQLType = stUnicodeString then begin
+          Result.UpdateInt(TableColColumnBufLengthIndex, (Precision+1) shl 1);
+          Result.UpdateInt(TableColColumnCharOctetLengthIndex, Precision shl 1);
+        end else if SQLType = stBytes then
+          Result.UpdateInt(TableColColumnBufLengthIndex, Precision);
+
+        Result.UpdateInt(TableColColumnDecimalDigitsIndex, Decimals);
+        Result.UpdateInt(TableColColumnNumPrecRadixIndex, 0);
+
+        if GetInt(notnull_index) <> 0 then
+        begin
+          Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNoNulls));
+          Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'NO');
+        end
+        else
+        begin
+          Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
+          Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'YES');
+        end;
+
+        P := GetPAnsiChar(dflt_value_index, Len);
+        if Len > 0 then
+          Result.UpdatePAnsiChar(TableColColumnColDefIndex, P, @Len);
+
+        Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(cid_index) +1);
+        Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetInt(pk_index) = 1) and (Ord(SQLType) > ord(stBoolean)) and (Ord(SQLType) < Ord(stFloat)));
+        Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, False);
+        Result.UpdateBoolean(TableColColumnSearchableIndex, True);
+        Result.UpdateBoolean(TableColColumnWritableIndex, True);
+        Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);
+        Result.UpdateBoolean(TableColColumnReadonlyIndex, False);
+
+        Result.InsertRow;
       end;
-
-      if Trim(GetString(dflt_value_index)) <> '' then
-        Result.UpdatePAnsiChar(TableColColumnColDefIndex, GetPAnsiChar(dflt_value_index, Len), @Len);
-      Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(cid_index) +1);
-
-      Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetInt(pk_index) = 1) and (Temp = 'INTEGER'));
-      Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, False);
-      Result.UpdateBoolean(TableColColumnSearchableIndex, True);
-      Result.UpdateBoolean(TableColColumnWritableIndex, True);
-      Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);
-      Result.UpdateBoolean(TableColColumnReadonlyIndex, False);
-
-      Result.InsertRow;
+      Close;
     end;
-    Close;
-  end;
 end;
 
 {**

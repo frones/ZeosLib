@@ -66,7 +66,7 @@ uses
   @param Decimals the column position after decimal point
   @result the SQLType field type value
 }
-function ConvertSQLiteTypeToSQLType(TypeName: RawByteString;
+function ConvertSQLiteTypeToSQLType(var TypeName: RawByteString;
   const UndefinedVarcharAsStringLength: Integer; var Precision: Integer;
   var Decimals: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
 
@@ -105,7 +105,7 @@ uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   @param Decimals the column position after decimal point
   @result the SQLType field type value
 }
-function ConvertSQLiteTypeToSQLType(TypeName: RawByteString;
+function ConvertSQLiteTypeToSQLType(var TypeName: RawByteString;
   const UndefinedVarcharAsStringLength: Integer; var Precision: Integer;
   var Decimals: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
 var
@@ -118,22 +118,26 @@ begin
   Decimals := 0;
 
   P1 := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('('), TypeName);
-  P2 := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(')'), TypeName);
-  if (P1 > 0) and (P2 > 0) then
+  if P1 > 0 then
+    P2 := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(')'), TypeName) else
+    P2 := 0;
+  if (P1 > 0) and (P2 > 0) and (P2 > P1) then
   begin
     Temp := Copy(TypeName, P1 + 1, P2 - P1 - 1);
     TypeName := Copy(TypeName, 1, P1 - 1);
     P1 := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(','), Temp);
     if P1 > 0 then
     begin
-      Precision := RawToIntDef(Copy(Temp, 1, P1 - 1), 0);
-      Decimals := RawToIntDef(Copy(Temp, P1 + 1, Length(Temp) - P1), 0);
+      Temp[P1] := #0;
+      Precision := RawToIntDef(Pointer(Temp), 0);
+      Decimals := RawToIntDef(@Temp[P1+1], 0);
     end
     else
       Precision := RawToIntDef(Temp, 0);
   end;
-
-  if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('BOOL')) then
+  if TypeName = '' then
+    Result := stString
+  else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('BOOL')) then
     Result := stBoolean
   else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('TINYINT') then
     Result := stShort
@@ -154,11 +158,7 @@ begin
   else if (TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('NUMERIC')) or
     (TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('DECIMAL'))
       or (TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('NUMBER')) then
-  begin
-   { if Decimals = 0 then
-      Result := stInteger
-    else} Result := stDouble;
-  end
+    Result := stDouble
   else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('DOUB')) then
     Result := stDouble
   else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('MONEY') then
@@ -205,18 +205,11 @@ begin
       else
         Precision := UndefinedVarcharAsStringLength;
 
-
   if ( CtrlsCPType = cCP_UTF16 ) then
     case Result of
       stString:  Result := stUnicodeString;
       stAsciiStream: Result := stUnicodeStream;
     end;
-
-  if (Result = stString) then
-    Precision := Precision shl 2;//UTF8 assumes 4Byte/Char
-
-  if (Result = stUnicodeString) then
-    Precision := Precision shl 1;//shl 1 = * 2 but faster UTF8 assumes 4Byte/Char
 end;
 
 {**

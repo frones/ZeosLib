@@ -192,6 +192,7 @@ var
   FieldPrecision: Integer;
   FieldDecimals: Integer;
   P: PAnsiChar;
+  tmp: RawByteString;
   function ColAttributeToStr(P: PAnsichar): String;
   begin
     if P = nil then
@@ -220,8 +221,7 @@ begin
   for I := 0 to FColumnCount-1 do
   begin
     ColumnInfo := TZColumnInfo.Create;
-    with ColumnInfo do
-    begin
+    with ColumnInfo do begin
       ColumnName := ColAttributeToStr(FPlainDriver.column_origin_name(FStmtHandle, i));
       ColumnLabel := ColAttributeToStr(FPlainDriver.column_name(FStmtHandle, i));
       TableName := ColAttributeToStr(FPlainDriver.column_table_name(FStmtHandle, i));
@@ -229,23 +229,25 @@ begin
       ReadOnly := TableName <> '';
       P := FPlainDriver.column_decltype(FStmtHandle, i);
       if P = nil then
-        ColumnType := ConvertSQLiteTypeToSQLType(NativeSQLite3Types[FPlainDriver.column_type(FStmtHandle, i)],
-          FUndefinedVarcharAsStringLength, FieldPrecision{%H-}, FieldDecimals{%H-},
-          ConSettings.CPType)
+        tmp := NativeSQLite3Types[FPlainDriver.column_type(FStmtHandle, i)]
       else
-        ColumnType := ConvertSQLiteTypeToSQLType(P, FUndefinedVarcharAsStringLength,
-          FieldPrecision, FieldDecimals, ConSettings.CPType);
+        ZSetString(P, ZFastCode.StrLen(P), tmp);
+      ColumnType := ConvertSQLiteTypeToSQLType(tmp, FUndefinedVarcharAsStringLength,
+        FieldPrecision, FieldDecimals, ConSettings.CPType);
 
       if ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
       begin
         ColumnCodePage := zCP_UTF8;
-        if ColumnType = stString then
-          ColumnDisplaySize := FieldPrecision shr 2 //shr 2 = div 4 but faster
-        else if ColumnType = stUnicodeString then
-          ColumnDisplaySize := FieldPrecision shr 1; //shr 1 = div 2 but faster
-        CharOctedLength := ColumnDisplaySize shl 2;
-      end
-      else
+        if ColumnType = stString then begin
+          ColumnDisplaySize := FieldPrecision;
+          CharOctedLength := FieldPrecision shl 2;
+          Precision := FieldPrecision;
+        end else if ColumnType = stUnicodeString then begin
+          ColumnDisplaySize := FieldPrecision;
+          CharOctedLength := FieldPrecision shl 1;
+          Precision := FieldPrecision;
+        end;
+      end else
         ColumnCodePage := zCP_NONE;
 
       AutoIncrement := False;

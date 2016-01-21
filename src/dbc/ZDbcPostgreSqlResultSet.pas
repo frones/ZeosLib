@@ -320,22 +320,23 @@ begin
         FieldSize := FPlainDriver.GetFieldSize(FQueryHandle, I);
         Precision := Max(Max(FieldMode - 4, FieldSize), 0);
 
-        if ColumnType in [stString, stUnicodeString] then
+        if ColumnType in [stString, stUnicodeString] then begin
           {begin patch: varchar() is equal to text!}
           if ( FieldMode = -1 ) and ( FieldSize = -1 ) and ( FieldType = 1043) then
-            if FUndefinedVarcharAsStringLength > 0 then
-              Precision := GetFieldSize(ColumnType, ConSettings,
-                FUndefinedVarcharAsStringLength,
-                ConSettings.ClientCodePage^.CharWidth, nil, False)
-            else
+            if FUndefinedVarcharAsStringLength > 0 then begin
+              Precision := FUndefinedVarcharAsStringLength;
+            end else
               DefinePostgreSQLToSQLType(ColumnInfo, 25) //assume text instead!
-          else
-            if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
-              Precision := GetFieldSize(ColumnType, ConSettings, 255,
-                ConSettings.ClientCodePage^.CharWidth, nil, True)
-            else
-              Precision := GetFieldSize(ColumnType, ConSettings, Precision,
-                ConSettings.ClientCodePage^.CharWidth, @ColumnDisplaySize);
+          else if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
+            Precision := 255;
+          if ColumnType = stString then begin
+            CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth;
+            ColumnDisplaySize := Precision;
+          end else if ColumnType = stUnicodeString then begin
+            CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth;
+            ColumnDisplaySize := Precision;
+          end;
+        end;
       end;
     end;
     ColumnsInfo.Add(ColumnInfo);
