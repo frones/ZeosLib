@@ -1686,6 +1686,7 @@ var
   SQL, oDataType: string;
   SQLType: TZSQLType;
   OwnerCondition,TableCondition,ColumnCondition: String;
+  FieldSize: Integer;
 
   function CreateWhere: String;
   begin
@@ -1730,9 +1731,15 @@ begin
         GetInt(DATA_PRECISION_Index), GetInt(DATA_SCALE_Index), ConSettings.CPType);
       Result.UpdateByte(TableColColumnTypeIndex, Ord(SQLType));
       Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(DATA_TYPE_Index, Len), @Len);
-      Result.UpdateInt(TableColColumnSizeIndex, GetFieldSize(SQLType, ConSettings,
-        GetInt(DATA_LENGTH_Index), ConSettings.ClientCodePage.CharWidth));
-      //Result.UpdateNull(TableColColumnBufLengthIndex);
+      FieldSize := GetInt(DATA_LENGTH_Index);
+      if SQLType = stString then begin
+        Result.UpdateInt(TableColColumnBufLengthIndex, FieldSize * ConSettings^.ClientCodePage^.CharWidth +1);
+        Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldSize * ConSettings^.ClientCodePage^.CharWidth);
+      end else if SQLType = stUnicodeString then begin
+        Result.UpdateInt(TableColColumnBufLengthIndex, (FieldSize+1) shl 1);
+        Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldSize shl 1);
+      end else if SQLType = stBytes then
+        Result.UpdateInt(TableColColumnBufLengthIndex, FieldSize);
       Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetInt(DATA_PRECISION_Index));
       Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetInt(DATA_SCALE_Index));
 

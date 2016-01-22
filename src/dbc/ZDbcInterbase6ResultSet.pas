@@ -1846,8 +1846,14 @@ begin
             //see: http://sourceforge.net/p/zeoslib/tickets/97/
             ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP); //get column CodePage info
           ColumnCodePage := ZCodePageInfo^.CP;
-          Precision := GetFieldSize(ColumnType, ConSettings, FIZSQLDA.GetIbSqlLen(I),
-            ZCodePageInfo^.CharWidth, @ColumnDisplaySize, True);
+          Precision := FIZSQLDA.GetIbSqlLen(I) div ZCodePageInfo^.CharWidth;
+          if ColumnType = stString then begin
+            CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth;
+            ColumnDisplaySize := Precision;
+          end else begin
+            CharOctedLength := Precision shl 1;
+            ColumnDisplaySize := Precision;
+          end;
         end
         else
           if FieldSqlType in [stAsciiStream, stUnicodeStream] then

@@ -260,7 +260,7 @@ implementation
 
 uses
   Math,
-  ZFastCode, ZMessages, ZDbcMySqlUtils;
+  ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils;
 
 { TZMySQLDatabaseInfo }
 
@@ -1132,8 +1132,8 @@ var
   MySQLType: TZSQLType;
   TempCatalog, TempColumnNamePattern, TempTableNamePattern: string;
 
-  TypeName, TypeInfoSecond: String;
-  Nullable, DefaultValue: String;
+  TypeName, TypeInfoSecond, DefaultValue: RawByteString;
+  Nullable: String;
   HasDefaultValue: Boolean;
   ColumnSize, ColumnDecimals: Integer;
   OrdPosition: Integer;
@@ -1187,13 +1187,13 @@ begin
             Result.UpdateString(TableNameIndex, TempTableNamePattern) ;
             Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(ColumnIndexes[1], Len), @Len);
 
-            ConvertMySQLColumnInfoFromString(GetString(ColumnIndexes[2]),
-              ConSettings, TypeName,
+            TypeName := GetRawByteString(ColumnIndexes[2]);
+            ConvertMySQLColumnInfoFromString(TypeName, ConSettings,
               TypeInfoSecond, MySQLType, ColumnSize, ColumnDecimals);
             Result.UpdateInt(TableColColumnTypeIndex, Ord(MySQLType));
-            Result.UpdateString(TableColColumnTypeNameIndex, TypeName);
+            Result.UpdateRawByteString(TableColColumnTypeNameIndex, TypeName);
             Result.UpdateInt(TableColColumnSizeIndex, ColumnSize);
-            Result.UpdateInt(TableColColumnBufLengthIndex, MAXBUF);
+
             Result.UpdateInt(TableColColumnDecimalDigitsIndex, ColumnDecimals);
             Result.UpdateNull(TableColColumnNumPrecRadixIndex);
 
@@ -1225,14 +1225,11 @@ begin
               // So we just ignore this, the field gets set to NULL if nothing was specified...
               HasDefaultValue := false;
               DefaultValue := '';
-            end
-            else
-            begin
-              DefaultValue := GetString(ColumnIndexes[5]);
+            end else begin
+              DefaultValue := GetRawByteString(ColumnIndexes[5]);
               if not (DefaultValue = '') then
                  HasDefaultValue := true
-              else
-              begin
+              else begin
                 // MySQL bizarity 2:
                 // For CHAR, BLOB, TEXT and SET types, '' either means: default value is '' or: no default value
                 // There's absolutely no way of telling when using SHOW COLUMNS FROM,
@@ -1241,16 +1238,14 @@ begin
                 // For ENUM types, '' means: default value is first value in enum set
                 // For other types, '' means: no default value
                 HasDefaultValue := false;
-                if ZFastCode.Pos('blob', TypeName) > 0 then HasDefaultValue := true;
-                if ZFastCode.Pos('text', TypeName) > 0 then HasDefaultValue := true;
-                if ZFastCode.Pos('char', TypeName) > 0 then HasDefaultValue := true;
+                if MySQLType in [stAsciiStream, stUnicodeStream, stBinaryStream] then HasDefaultValue := true;
+                if EndsWith(TypeName, RawByteString('char')) then HasDefaultValue := true;
                 if 'set' = TypeName then HasDefaultValue := true;
-                if 'enum' =  TypeName then
-                  begin
-                    HasDefaultValue := true;
-                    DefaultValue := Copy(TypeInfoSecond, 2,length(TypeInfoSecond)-1);
-                    DefaultValue := Copy(DefaultValue, 1, ZFastCode.Pos('''', DefaultValue) - 1);
-                  end;
+                if 'enum' = TypeName then begin
+                  HasDefaultValue := true;
+                  DefaultValue := Copy(TypeInfoSecond, 2,length(TypeInfoSecond)-1);
+                  DefaultValue := Copy(DefaultValue, 1, ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(''''), DefaultValue) - 1);
+                end;
               end;
             end;
             if HasDefaultValue then
@@ -1277,11 +1272,20 @@ begin
                 else
                   DefaultValue := '0';
               end;
+              Result.UpdateRawByteString(TableColColumnColDefIndex, DefaultValue);
             end;
-            Result.UpdateString(TableColColumnColDefIndex, DefaultValue);
+            if MySQLType = stString then begin
+              Result.UpdateInt(TableColColumnBufLengthIndex, ColumnSize * ConSettings^.ClientCodePage^.CharWidth +1);
+              Result.UpdateInt(TableColColumnCharOctetLengthIndex, ColumnSize * ConSettings^.ClientCodePage^.CharWidth);
+            end else if MySQLType = stUnicodeString then begin
+              Result.UpdateInt(TableColColumnBufLengthIndex, (ColumnSize+1) shl 1);
+              Result.UpdateInt(TableColColumnCharOctetLengthIndex, ColumnSize shl 1);
+            end else if MySQLType in [stBytes, stAsciiStream, stUnicodeStream, stBinaryStream] then
+              Result.UpdateInt(TableColColumnBufLengthIndex, ColumnSize)
+            else
+              Result.UpdateInt(TableColColumnBufLengthIndex, ZSQLTypeToBuffSize(MySQLType));
             //Result.UpdateNull(TableColColumnSQLDataTypeIndex);
             //Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);
-            //Result.UpdateNull(TableColColumnCharOctetLengthIndex);
             Result.UpdateInt(TableColColumnOrdPosIndex, OrdPosition);
 
             Result.UpdateBoolean(TableColColumnAutoIncIndex, //AUTO_INCREMENT
@@ -2375,7 +2379,8 @@ const
   RETURN_VALUES_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
   Len: NativeUInt;
-  SQL, TypeName, Temp: string;
+  SQL: String;
+  TypeName, Temp: RawByteString;
   ParamList, Params, Names, Returns: TStrings;
   I, ColumnSize, Precision: Integer;
   FieldType: TZSQLType;
@@ -2402,7 +2407,7 @@ var
   function DecomposeParamFromList(AList: TStrings): String;
   var
     J, I, N: Integer;
-    Temp: String;
+    Temp, TypeName: String;
     procedure AddTempString(Const Value: String);
     begin
       if Temp = '' then
@@ -2511,9 +2516,8 @@ begin
             Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(PROCEDURE_SCHEM_index, Len), @Len); //PROCEDURE_CAT
             //Result.UpdateNull(SchemaNameIndex); //PROCEDURE_SCHEM
             Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiChar(PROCEDURE_NAME_Index, Len), @Len); //PROCEDURE_NAME
-            ConvertMySQLColumnInfoFromString(Params[2],
-              ConSettings, TypeName, Temp,
-              FieldType, ColumnSize, Precision);
+            TypeName := ConSettings^.ConvFuncs.ZStringToRaw(Params[2], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+            ConvertMySQLColumnInfoFromString(TypeName, ConSettings, Temp, FieldType, ColumnSize, Precision);
             { process COLUMN_NAME }
             if Params[1] = '' then
               if Params[0] = 'RETURNS' then
@@ -2521,10 +2525,7 @@ begin
               else
                 Result.UpdateString(ProcColColumnNameIndex, GetNextName('$', True))
             else
-              if IC.IsQuoted(Params[1]) then
-                Result.UpdateString(ProcColColumnNameIndex, GetNextName(Copy(Params[1], 2, Length(Params[1])-2), (Length(Params[1])=2)))
-              else
-                Result.UpdateString(ProcColColumnNameIndex, GetNextName(Params[1]));
+              Result.UpdateString(ProcColColumnNameIndex, GetNextName(DecomposeObjectString(Params[1])));
             { COLUMN_TYPE }
             if UpperCase(Params[0]) = 'OUT' then
               Result.UpdateByte(ProcColColumnTypeIndex, Ord(pctOut))
@@ -2543,7 +2544,7 @@ begin
             { DATA_TYPE }
             Result.UpdateByte(ProcColDataTypeIndex, Ord(FieldType));
             { TYPE_NAME }
-            Result.UpdateString(ProcColTypeNameIndex, TypeName);
+            Result.UpdateRawByteString(ProcColTypeNameIndex, TypeName);
             { PRECISION }
             Result.UpdateInt(ProcColPrecisionIndex, ColumnSize);
             { LENGTH }

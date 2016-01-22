@@ -109,31 +109,27 @@ function ConvertSQLiteTypeToSQLType(var TypeName: RawByteString;
   const UndefinedVarcharAsStringLength: Integer; var Precision: Integer;
   var Decimals: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
 var
-  P1, P2: Integer;
-  Temp: RawByteString;
+  pBL, pBR, pC: Integer;
 begin
   TypeName := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(TypeName);
   Result := stString;
   Precision := 0;
   Decimals := 0;
 
-  P1 := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('('), TypeName);
-  if P1 > 0 then
-    P2 := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(')'), TypeName) else
-    P2 := 0;
-  if (P1 > 0) and (P2 > 0) and (P2 > P1) then
-  begin
-    Temp := Copy(TypeName, P1 + 1, P2 - P1 - 1);
-    TypeName := Copy(TypeName, 1, P1 - 1);
-    P1 := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(','), Temp);
-    if P1 > 0 then
-    begin
-      Temp[P1] := #0;
-      Precision := RawToIntDef(Pointer(Temp), 0);
-      Decimals := RawToIntDef(@Temp[P1+1], 0);
-    end
-    else
-      Precision := RawToIntDef(Temp, 0);
+  pBL := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('('), TypeName);
+  if pBL > 0 then begin
+    pBR := ZFastCode.PosEx({$IFDEF UNICODE}RawByteString{$ENDIF}(')'), TypeName, pBL+1);
+    if (pBR > 0) then begin
+      pC := ZFastCode.PosEx({$IFDEF UNICODE}RawByteString{$ENDIF}(','), TypeName, pBL+1);
+      TypeName[pBR] := #0;
+      if pC > 0 then begin
+        TypeName[pC] := #0;
+        Precision := RawToIntDef(@TypeName[pBL+1], 0);
+        Decimals := RawToIntDef(@TypeName[pC+1], 0);
+      end else
+        Precision := RawToIntDef(@TypeName[pBL+1], 0);
+      TypeName := Copy(TypeName, 1, pBL - 1);
+    end;
   end;
   if TypeName = '' then
     Result := stString

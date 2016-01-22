@@ -450,7 +450,7 @@ function TZURL.GetParamAndValue(AString: String; Var Param, Value: String): Bool
 var
   DelimPos: Integer;
 begin
-  DelimPos := PosEx('=', AString);
+  DelimPos := ZFastCode.Pos('=', AString);
   Result := DelimPos <> 0;
   Param := '';
   Value := '';

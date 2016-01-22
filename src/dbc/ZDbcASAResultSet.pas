@@ -1257,16 +1257,18 @@ begin
       ColumnLabel := ColumnName;
       ColumnType := FieldSqlType;
 
-      if FieldSqlType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
-      begin
+      if FieldSqlType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then begin
         ColumnCodePage := ConSettings^.ClientCodePage^.CP;
-        case FieldSqlType of
-          stString,
-          stUnicodeString: Precision := GetFieldSize(FieldSqlType, ConSettings,
-            GetFieldLength(I)-4, ConSettings^.ClientCodePage^.CharWidth, @ColumnDisplaySize, True);
+        if ColumnType = stString then begin
+          CharOctedLength := GetFieldLength(I)-4;
+          Precision := CharOctedLength div ConSettings^.ClientCodePage^.CharWidth;
+          ColumnDisplaySize := Precision;
+        end else if FieldSQLType = stUnicodeString then begin
+          Precision := GetFieldLength(I)-4 div ConSettings^.ClientCodePage^.CharWidth;
+          CharOctedLength := Precision shl 1;
+          ColumnDisplaySize := Precision;
         end;
-      end
-      else
+      end else
         ColumnCodePage := High(Word);
 
       ReadOnly := False;

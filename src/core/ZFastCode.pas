@@ -267,7 +267,7 @@ var
   CharPos: function(ch: char; const s: String): integer;
 {$ENDIF}
 
-function IntToStr(Value: Integer): String; overload;  //keep always this one @first pos becouse of the Ansi-Delphi faster BASM code (the int64 version call the 32bit within range)
+function IntToStr(Value: Integer): String; overload;  //keep always this one @first pos because of the Ansi-Delphi faster BASM code (the int64 version call the 32bit within range)
 function IntToStr(const Value: ShortInt): String; overload;
 function IntToStr(Value: Byte; Const Negative: Boolean = False): String; overload;
 function IntToStr(const Value: SmallInt): String; overload;
@@ -277,7 +277,7 @@ function IntToStr({$IF not defined(Delphi) or defined(UNICODE)}const{$IFEND} Val
 function IntToStr(Value: UInt64; Const Negative: Boolean = False): String; overload;
 
 { Integer convertion in Raw and Unicode Strings}
-function IntToRaw(Value: Integer): RawByteString; overload;  //keep always this one @first pos becouse of the Ansi-Delphi faster BASM code (the int64 version call the 32bit within range)
+function IntToRaw(Value: Integer): RawByteString; overload;  //keep always this one @first pos because of the Ansi-Delphi faster BASM code (the int64 version call the 32bit within range)
 function IntToRaw(const Value: ShortInt): RawByteString; overload;
 function IntToRaw(Value: Byte; Const Negative: Boolean = False): RawByteString; overload;
 function IntToRaw(const Value: SmallInt): RawByteString; overload;
@@ -364,10 +364,9 @@ function Trunc(const X: Double): Int64; overload;
 function Trunc(const X: Single): Int64; overload;
 {$ENDIF USE_FAST_TRUNC}
 
-{.$IFDEF USE_FAST_POS}
 function Pos(const SubStr: RawByteString; const Str: RawByteString): Integer; overload;
+function PosEx(const SubStr, S: RawByteString; Offset: Integer = 1): Integer;
 function Pos(const SubStr, Str: ZWideString): Integer; overload;
-{.$ENDIF}
 implementation
 
 uses
@@ -6701,6 +6700,101 @@ asm
  pop   esi
  pop   ebx
 end;
+
+function PosEx(const SubStr, S: RawByteString; Offset: Integer = 1): Integer;
+//from John O'Harrow PosEx_JOH_IA32_7_c(const SubStr, S: string; Offset: Integer = 1): Integer;
+asm {180 Bytes}
+  push    ebx
+  cmp     eax, 1
+  sbb     ebx, ebx         {-1 if SubStr = '' else 0}
+  sub     edx, 1           {-1 if S = ''}
+  sbb     ebx, 0           {Negative if S = '' or SubStr = '' else 0}
+  dec     ecx              {Offset - 1}
+  or      ebx, ecx         {Negative if S = '' or SubStr = '' or Offset < 1}
+  jl      @@InvalidInput
+  push    edi
+  push    esi
+  push    ebp
+  push    edx
+  mov     edi, [eax-4]     {Length(SubStr)}
+  mov     esi, [edx-3]     {Length(S)}
+  add     ecx, edi
+  cmp     ecx, esi
+  jg      @@NotFound       {Offset to High for a Match}
+  test    edi, edi
+  jz      @@NotFound       {Length(SubStr = 0)}
+  lea     ebp, [eax+edi]   {Last Character Position in SubStr + 1}
+  add     esi, edx         {Last Character Position in S}
+  movzx   eax, [ebp-1]     {Last Character of SubStr}
+  add     edx, ecx         {Search Start Position in S for Last Character}
+  mov     ah, al
+  neg     edi              {-Length(SubStr)}
+  mov     ecx, eax
+  shl     eax, 16
+  or      ecx, eax         {All 4 Bytes = Last Character of SubStr}
+@@MainLoop:
+  add     edx, 4
+  cmp     edx, esi
+  ja      @@Remainder      {1 to 4 Positions Remaining}
+  mov     eax, [edx-4]     {Check Next 4 Bytes of S}
+  xor     eax, ecx         {Zero Byte at each Matching Position}
+  lea     ebx, [eax-$01010101]
+  not     eax
+  and     eax, ebx
+  and     eax, $80808080   {Set Byte to $80 at each Match Position else $00}
+  jz      @@MainLoop       {Loop Until any Match on Last Character Found}
+  bsf     eax, eax         {Find First Match Bit}
+  shr     eax, 3           {Byte Offset of First Match (0..3)}
+  lea     edx, [eax+edx-4] {Address of First Match on Last Character}
+@@Compare:
+  inc     edx
+  cmp     edi, -4
+  jle     @@Large          {Lenght(SubStr) >= 4}
+  cmp     edi, -1
+  je      @@SetResult      {Exit with Match if Lenght(SubStr) = 1}
+  mov     ax, [ebp+edi]    {Last Char Matches - Compare First 2 Chars}
+  cmp     ax, [edx+edi]
+  jne     @@MainLoop       {No Match on First 2 Characters}
+@@SetResult:               {Full Match}
+  lea     eax, [edx+edi]   {Calculate and Return Result}
+  pop     edx
+  pop     ebp
+  pop     esi
+  pop     edi
+  pop     ebx
+  sub     eax, edx         {Subtract Start Position}
+  ret
+@@NotFound:
+  pop     edx              {Dump Start Position}
+  pop     ebp
+  pop     esi
+  pop     edi
+@@InvalidInput:
+  pop     ebx
+  xor     eax, eax         {No Match Found - Return 0}
+  ret
+@@Remainder:               {Check Last 1 to 4 Characters}
+  sub     edx, 4
+@@RemainderLoop:
+  cmp     cl, [edx]
+  je      @@Compare
+  cmp     edx, esi
+  jae     @@NotFound
+  inc     edx
+  jmp     @@RemainderLoop
+@@Large:
+  mov     eax, [ebp-4]     {Compare Last 4 Characters}
+  cmp     eax, [edx-4]
+  jne     @@MainLoop       {No Match on Last 4 Characters}
+  mov     ebx, edi
+@@CompareLoop:             {Compare Remaining Characters}
+  add     ebx, 4           {Compare 4 Characters per Loop}
+  jge     @@SetResult      {All Characters Matched}
+  mov     eax, [ebp+ebx-4]
+  cmp     eax, [edx+ebx-4]
+  je      @@CompareLoop    {Match on Next 4 Characters}
+  jmp     @@MainLoop       {No Match}
+end; {PosEx}
 {$ELSE}
 //Author:            Aleksandr Sharahov
 //function Pos_Sha_Pas_3(const SubStr: AnsiString; const Str: AnsiString): Integer;
@@ -6823,6 +6917,85 @@ begin
       end;
     end;
   end;
+end;
+
+// from Aleksandr Sharahov's PosEx_Sha_Pas_2()
+function PosEx(const SubStr, S: RawByteString; Offset: Integer = 1): Integer;
+var len, lenSub: PtrInt;
+    ch: AnsiChar;
+    p, pSub, pStart, pStop: PUTF8Char;
+label Loop0, Loop4, TestT, Test0, Test1, Test2, Test3, Test4,
+      AfterTestT, AfterTest0, Ret, Exit;
+begin;
+  pSub := pointer(SubStr);
+  p := pointer(S);
+  if (p=nil) or (pSub=nil) or (Offset<1) then begin
+    Result := 0;
+    goto Exit;
+  end;
+  {$ifdef FPC}
+  len := PStrRec(Pointer(PtrInt(p)-STRRECSIZE))^.length;
+  lenSub := PStrRec(Pointer(PtrInt(pSub)-STRRECSIZE))^.length-1;
+  {$else}
+  len := PInteger(p-4)^;
+  lenSub := PInteger(pSub-4)^-1;
+  {$endif}
+  if (len<lenSub+PtrInt(Offset)) or (lenSub<0) then begin
+    Result := 0;
+    goto Exit;
+  end;
+  pStop := p+len;
+  p := p+lenSub;
+  pSub := pSub+lenSub;
+  pStart := p;
+  p := p+Offset+3;
+  ch := pSub[0];
+  lenSub := -lenSub;
+  if p<pStop then goto Loop4;
+  p := p-4;
+  goto Loop0;
+Loop4:
+  if ch=p[-4] then goto Test4;
+  if ch=p[-3] then goto Test3;
+  if ch=p[-2] then goto Test2;
+  if ch=p[-1] then goto Test1;
+Loop0:
+  if ch=p[0] then goto Test0;
+AfterTest0:
+  if ch=p[1] then goto TestT;
+AfterTestT:
+  p := p+6;
+  if p<pStop then goto Loop4;
+  p := p-4;
+  if p<pStop then goto Loop0;
+  Result := 0;
+  goto Exit;
+Test3: p := p-2;
+Test1: p := p-2;
+TestT: len := lenSub;
+  if lenSub<>0 then
+  repeat
+    if (psub[len]<>p[len+1]) or (psub[len+1]<>p[len+2]) then
+      goto AfterTestT;
+    len := len+2;
+  until len>=0;
+  p := p+2;
+  if p<=pStop then goto Ret;
+  Result := 0;
+  goto Exit;
+Test4: p := p-2;
+Test2: p := p-2;
+Test0: len := lenSub;
+  if lenSub<>0 then
+  repeat
+    if (psub[len]<>p[len]) or (psub[len+1]<>p[len+1]) then
+      goto AfterTest0;
+    len := len+2;
+  until len>=0;
+  inc(p);
+Ret:
+  Result := p-pStart;
+Exit:
 end;
 {$IFEND}
 
