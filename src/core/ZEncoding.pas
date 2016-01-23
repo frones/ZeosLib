@@ -1135,7 +1135,7 @@ const
 
 implementation
 
-uses SysUtils;
+uses SysUtils, ZFastCode;
 
 const BufLen = 2048;
 
@@ -1447,7 +1447,7 @@ begin
   if sourceBytes=0 then begin
     if source^=#0 then
       goto NoSource;
-    sourceBytes := StrLen(source);
+    sourceBytes := ZFastCode.StrLen(source);
   end;
   begd := dest;
   endSource := Source+SourceBytes;
