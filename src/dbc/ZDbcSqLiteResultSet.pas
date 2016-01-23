@@ -164,7 +164,6 @@ procedure TZSQLiteResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
 var
   C, H, I, ColType: Integer;
   P: PAnsiChar;
-  Failed: Boolean;
 label ProcBts;
 begin
   if JSONWriter.Expand then
