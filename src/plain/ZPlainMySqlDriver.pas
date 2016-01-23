@@ -179,6 +179,7 @@ type
     function GetSQLState (Handle: PZMySQLConnect): AnsiString;
     // warning_count
 
+    function EscapeString(Handle: PMYSQL; PTo: PAnsiChar; const PFrom: PAnsiChar; length: ULong): ULong;
     function stmt_affected_rows(Handle: PZMySqlPrepStmt): Int64;
     // stmt_attr_get
     function stmt_attr_set(stmt: PZMySqlPrepStmt; option: TMysqlStmtAttrType;
@@ -430,8 +431,7 @@ type
     function GetStatInfo(Handle: PZMySQLConnect): PAnsiChar;
     function SetOptions(Handle: PZMySQLConnect; Option: TMySQLOption;
       const Arg: Pointer): Integer;
-    function EscapeString(Handle: Pointer; const Value: RawByteString;
-      ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString; override;
+    function EscapeString(Handle: PMYSQL; PTo: PAnsiChar; const PFrom: PAnsiChar; length: ULong): ULong;
     function GetServerInfo(Handle: PZMySQLConnect): PAnsiChar;
     function GetClientInfo: PAnsiChar;
     function GetHostInfo(Handle: PZMySQLConnect): PAnsiChar;
@@ -893,29 +893,13 @@ begin
   Result := mysql_get_client_info;
 end;
 
-function TZMySQLBaseDriver.EscapeString(Handle: Pointer; const Value: RawByteString;
-  ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString;
-var
-  Len, outlength: integer;
-  Outbuffer: RawByteString;
-  TempValue: RawByteString;
+function TZMySQLBaseDriver.EscapeString(Handle: PMYSQL; PTo: PAnsiChar;
+  const PFrom: PAnsiChar; length: ULong): ULong;
 begin
-  {$IFDEF UNICODE}
-  TempValue := Value;
-  {$ELSE}
-  if WasEncoded then
-    TempValue := Value
-  else
-    TempValue := ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP); //check encoding too
-  {$ENDIF}
-  Len := Length(TempValue);
-  Setlength(Outbuffer,Len*2+1);
   if Handle = nil then
-    OutLength := mysql_escape_string(PAnsiChar(OutBuffer), PAnsiChar(TempValue), Len)
+    Result := mysql_escape_string(PTo, PFrom, Length)
   else
-    OutLength := mysql_real_escape_string(Handle, PAnsiChar(OutBuffer), PAnsiChar(TempValue), Len);
-  Setlength(Outbuffer,OutLength);
-  Result := #39+Outbuffer+#39;
+    Result := mysql_real_escape_string(Handle, PTo, PFrom, Length);
 end;
 
 function TZMySQLBaseDriver.GetHostInfo(Handle: PZMySQLConnect): PAnsiChar;
@@ -1010,12 +994,6 @@ begin
   Result := mysql_real_connect(Handle, Host, User, Password, Db,
     Port, UnixSocket, ClientFlag);
 end;
-
-{function TZMySQLBaseDriver.GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar;
-  Length: Cardinal): Cardinal;
-begin
-  Result := mysql_real_escape_string(Handle, StrTo, StrFrom, Length);
-end;}
 
 function TZMySQLBaseDriver.Refresh(Handle: PZMySQLConnect;
   Options: Cardinal): Integer;

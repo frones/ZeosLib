@@ -143,7 +143,7 @@ begin
   CheckEquals(ord(stSmall), ResultSet.GetIntByName('DATA_TYPE'));
   CheckEquals('smallint', ResultSet.GetStringByName('TYPE_NAME'));
   CheckEquals('6', ResultSet.GetStringByName('COLUMN_SIZE'));
-  CheckEquals('65535', ResultSet.GetStringByName('BUFFER_LENGTH'));
+  CheckEquals('2', ResultSet.GetStringByName('BUFFER_LENGTH'));
   CheckEquals('0', ResultSet.GetStringByName('DECIMAL_DIGITS'));
   CheckEquals('1', ResultSet.GetStringByName('PSEUDO_COLUMN'));
   ResultSet.Close;
@@ -272,10 +272,10 @@ begin
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
   CheckEquals('p_redundant', ResultSet.GetStringByName('COLUMN_NAME'));
-  CheckEquals(ord(stSmall), ResultSet.GetIntByName('DATA_TYPE'));
+  CheckEquals(ord(stShort), ResultSet.GetIntByName('DATA_TYPE'));
   CheckEquals('TINYINT', UpperCase(ResultSet.GetStringByName('TYPE_NAME')));
-  CheckEquals(1, ResultSet.GetIntByName('COLUMN_SIZE'));
-  CheckEquals(65535, ResultSet.GetIntByName('BUFFER_LENGTH'));
+  CheckEquals(4, ResultSet.GetIntByName('COLUMN_SIZE'));
+  CheckEquals(1, ResultSet.GetIntByName('BUFFER_LENGTH'));
   CheckEquals(0, ResultSet.GetIntByName('DECIMAL_DIGITS'));
   CheckEquals(0, ResultSet.GetIntByName('NUM_PREC_RADIX'));
   CheckEquals(1, ResultSet.GetIntByName('NULLABLE'));

@@ -152,7 +152,7 @@ type
     procedure CommitPrepared(const transactionid: string);
     procedure RollbackPrepared(const transactionid: string);
     function PingServer: Integer;
-    function EscapeString(Value : RawByteString) : RawByteString;
+    function EscapeString(const Value : RawByteString) : RawByteString;
     procedure Open;
     procedure Close;
     function IsClosed: Boolean;
@@ -499,7 +499,7 @@ begin
   Result := GetConnection.CreateStatementWithParams(Info);
 end;
 
-function TZDbcPooledConnection.EscapeString(Value: RawByteString): RawByteString;
+function TZDbcPooledConnection.EscapeString(const Value: RawByteString): RawByteString;
 begin
   Result := GetConnection.EscapeString(Value);
 end;

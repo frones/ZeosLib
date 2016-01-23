@@ -500,7 +500,11 @@ begin
       ColumnInfo := TZColumnInfo.Create;
       with ColumnInfo do
       begin
+        {$IFNDEF UNICODE}
+        ColumnLabel := PUnicodeToString(Pointer(FAdoCommand.Parameters.Item[i].Name), Length(FAdoCommand.Parameters.Item[i].Name), ConSettings^.CTRL_CP);
+        {$ELSE}
         ColumnLabel := FAdoCommand.Parameters.Item[i].Name;
+        {$ENDIF}
         ColumnType := ConvertAdoToSqlType(FAdoCommand.Parameters.Item[I].Type_, ConSettings.CPType);
         ColumnDisplaySize := FAdoCommand.Parameters.Item[I].Precision;
         Precision := FAdoCommand.Parameters.Item[I].Precision;
@@ -575,7 +579,7 @@ begin
                   P := VarArrayLock(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
                   try
                     Stream := TMemoryStream.Create;
-                    Stream.Size := VarArrayHighBound(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value, 1)+1;
+                    Stream.Size {%H-}:= VarArrayHighBound(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value, 1)+1;
                     System.Move(P^, TMemoryStream(Stream).Memory^, Stream.Size);
                     RS.UpdateBinaryStream(I, Stream);
                     FreeAndNil(Stream);
@@ -704,7 +708,6 @@ end;
 function TZAdoCallableStatement.GetOutParam(ParameterIndex: Integer): TZVariant;
 var
   Temp: Variant;
-  V: Variant;
   P: Pointer;
   TempBlob: IZBLob;
 begin
@@ -735,19 +738,19 @@ begin
         ClientVarManager.SetAsDateTime(Result, Temp);
       stBinaryStream:
         begin
-          if VarIsStr(V) then
+          if VarIsStr(Temp) then
           begin
             TempBlob := TZAbstractBlob.CreateWithStream(nil);
-            TempBlob.SetString(AnsiString(V));
+            TempBlob.SetString(AnsiString(Temp));
           end
           else
-            if VarIsArray(V) then
+            if VarIsArray(Temp) then
             begin
-              P := VarArrayLock(V);
+              P := VarArrayLock(Temp);
               try
-                TempBlob := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(V, 1)+1);
+                TempBlob := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(Temp, 1)+1);
               finally
-                VarArrayUnLock(V);
+                VarArrayUnLock(Temp);
               end;
             end;
           ClientVarManager.SetAsInterface(Result, TempBlob);
@@ -795,6 +798,7 @@ end;
 {$ELSE}
 implementation
 {$ENDIF ENABLE_ADO}
+
 end.
 
 

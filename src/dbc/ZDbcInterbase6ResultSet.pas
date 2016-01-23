@@ -303,45 +303,43 @@ end;
 {$ENDIF}
 function TZInterbase6XSQLDAResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
-  Size: Integer;
-  Buffer: Pointer;
   BlobId: TISC_QUAD;
 begin
   Result := nil;
+{$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
+{$ENDIF}
 
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-      Exit;
-
-  BlobId := GetQuad(ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF});
-  if FCachedBlob then
-    try
-      with FIBConnection do
-        ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
-          BlobId, Size, Buffer, Self.GetMetaData.GetColumnType(ColumnIndex) = stBinaryStream,
-          ConSettings);
+  if not  LastWasNull then begin
+    BlobId := GetQuad(ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF});
+    if FCachedBlob then begin
+      case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+        stBinaryStream: begin
+          Result := TZAbstractBlob.Create;
+          with FIBConnection do
+            ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
+              BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, True, ConSettings);
+        end;
+        stAsciiStream, stUnicodeStream: begin
+          Result := TZAbstractClob.CreateWithData(nil, 0, Consettings^.ClientCodePage^.CP, ConSettings);
+          with FIBConnection do
+            ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
+              BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, False, ConSettings);
+        end;
+      end;
+    end else
       case GetMetaData.GetColumnType(ColumnIndex) of
         stBinaryStream:
-          Result := TZAbstractBlob.CreateWithData(Buffer, Size);
+          Result := TZInterbase6UnCachedBlob.Create(FIBConnection.GetDBHandle,
+            FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId,
+            ConSettings);
         stAsciiStream, stUnicodeStream:
-          Result := TZAbstractClob.CreateWithData(Buffer,
-            Size, ConSettings^.ClientCodePage^.CP, ConSettings);
+          Result := TZInterbase6UnCachedClob.Create(FIBConnection.GetDBHandle,
+            FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId,
+            ConSettings);
       end;
-    finally
-      FreeMem(Buffer, Size);
-    end
-  else
-    case GetMetaData.GetColumnType(ColumnIndex) of
-      stBinaryStream:
-        Result := TZInterbase6UnCachedBlob.Create(FIBConnection.GetDBHandle,
-          FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId,
-          ConSettings);
-      stAsciiStream, stUnicodeStream:
-        Result := TZInterbase6UnCachedClob.Create(FIBConnection.GetDBHandle,
-          FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId,
-          ConSettings);
-    end;
+  end;
 end;
 {$IFDEF FPC}
   {$HINTS ON}
@@ -1848,8 +1846,14 @@ begin
             //see: http://sourceforge.net/p/zeoslib/tickets/97/
             ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP); //get column CodePage info
           ColumnCodePage := ZCodePageInfo^.CP;
-          Precision := GetFieldSize(ColumnType, ConSettings, FIZSQLDA.GetIbSqlLen(I),
-            ZCodePageInfo^.CharWidth, @ColumnDisplaySize, True);
+          Precision := FIZSQLDA.GetIbSqlLen(I) div ZCodePageInfo^.CharWidth;
+          if ColumnType = stString then begin
+            CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth;
+            ColumnDisplaySize := Precision;
+          end else begin
+            CharOctedLength := Precision shl 1;
+            ColumnDisplaySize := Precision;
+          end;
         end
         else
           if FieldSqlType in [stAsciiStream, stUnicodeStream] then

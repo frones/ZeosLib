@@ -1253,20 +1253,22 @@ begin
     with ColumnInfo, FSqlData  do
     begin
       FieldSqlType := GetFieldSqlType(I);
-      ColumnName := ConSettings^.ConvFuncs.ZRawToString(GetFieldName(I), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+      ColumnName := GetFieldName(I);
       ColumnLabel := ColumnName;
       ColumnType := FieldSqlType;
 
-      if FieldSqlType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
-      begin
+      if FieldSqlType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then begin
         ColumnCodePage := ConSettings^.ClientCodePage^.CP;
-        case FieldSqlType of
-          stString,
-          stUnicodeString: Precision := GetFieldSize(FieldSqlType, ConSettings,
-            GetFieldLength(I)-4, ConSettings^.ClientCodePage^.CharWidth, @ColumnDisplaySize, True);
+        if ColumnType = stString then begin
+          CharOctedLength := GetFieldLength(I)-4;
+          Precision := CharOctedLength div ConSettings^.ClientCodePage^.CharWidth;
+          ColumnDisplaySize := Precision;
+        end else if FieldSQLType = stUnicodeString then begin
+          Precision := GetFieldLength(I)-4 div ConSettings^.ClientCodePage^.CharWidth;
+          CharOctedLength := Precision shl 1;
+          ColumnDisplaySize := Precision;
         end;
-      end
-      else
+      end else
         ColumnCodePage := High(Word);
 
       ReadOnly := False;
@@ -1778,14 +1780,9 @@ var
 begin
   inherited CreateWithData(nil, 0, ConSettings^.ClientCodePage^.CP, ConSettings);
   SQLData.ReadBlobToMem(ColId, Buffer{%H-}, Len{%H-}, False);
-  {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
   (PAnsiChar(Buffer)+Len)^ := #0; //add leading terminator
   FBlobData := Buffer;
   FBlobSize := Len+1;
-  {$ELSE}
-  InternalSetPAnsiChar(Buffer,ConSettings^.ClientCodePage^.CP, Len);
-  FreeMem(Buffer);
-  {$ENDIF}
 end;
 
 end.

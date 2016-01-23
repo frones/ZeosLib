@@ -77,7 +77,7 @@ type
     FNullable: TZColumnNullableType;
     FSigned: Boolean;
     FColumnDisplaySize: Integer;
-    FMaxLenghtBytes: Integer;
+    FCharOctedLength: Integer;
     FColumnLabel: string;
     FColumnName: string;
     FSchemaName: string;
@@ -105,8 +105,8 @@ type
     property Signed: Boolean read FSigned write FSigned;
     property ColumnDisplaySize: Integer read FColumnDisplaySize
       write FColumnDisplaySize;
-    property MaxLenghtBytes: Integer read FMaxLenghtBytes
-      write FMaxLenghtBytes;
+    property CharOctedLength: Integer read FCharOctedLength
+      write FCharOctedLength;
     property ColumnLabel: string read FColumnLabel write FColumnLabel;
     property ColumnName: string read FColumnName write FColumnName;
     property SchemaName: string read FSchemaName write FSchemaName;
@@ -141,11 +141,10 @@ type
       SelectSchema: IZSelectSchema); virtual;
 
     function GetTableColumns(TableRef: TZTableRef): IZResultSet;
-    function ReadColumnByRef(FieldRef: TZFieldRef;
-      ColumnInfo: TZColumnInfo): Boolean;
+    function ReadColumnByRef(FieldRef: TZFieldRef; ColumnInfo: TZColumnInfo): Boolean;
     function ReadColumnByName(FieldName: string; TableRef: TZTableRef;
       ColumnInfo: TZColumnInfo): Boolean;
-    procedure ClearColumn(ColumnInfo: TZColumnInfo);
+    procedure ClearColumn(ColumnInfo: TZColumnInfo); virtual;
     procedure LoadColumns;
     procedure ReplaceStarColumns(SelectSchema: IZSelectSchema);
 
@@ -162,29 +161,30 @@ type
     destructor Destroy; override;
 
     function GetColumnCount: Integer; virtual;
-    function IsAutoIncrement(Column: Integer): Boolean; virtual;
-    function IsCaseSensitive(Column: Integer): Boolean; virtual;
-    function IsSearchable(Column: Integer): Boolean; virtual;
-    function IsCurrency(Column: Integer): Boolean; virtual;
-    function IsNullable(Column: Integer): TZColumnNullableType; virtual;
+    function IsAutoIncrement(ColumnIndex: Integer): Boolean; virtual;
+    function IsCaseSensitive(ColumnIndex: Integer): Boolean; virtual;
+    function IsSearchable(ColumnIndex: Integer): Boolean; virtual;
+    function IsCurrency(ColumnIndex: Integer): Boolean; virtual;
+    function IsNullable(ColumnIndex: Integer): TZColumnNullableType; virtual;
 
-    function IsSigned(Column: Integer): Boolean; virtual;
-    function GetColumnDisplaySize(Column: Integer): Integer; virtual;
-    function GetColumnLabel(Column: Integer): string; virtual;
-    function GetColumnName(Column: Integer): string; virtual;
-    function GetColumnCodePage(const Column: Integer): Word;
-    function GetSchemaName(Column: Integer): string; virtual;
-    function GetPrecision(Column: Integer): Integer; virtual;
-    function GetScale(Column: Integer): Integer; virtual;
-    function GetTableName(Column: Integer): string; virtual;
-    function GetCatalogName(Column: Integer): string; virtual;
-    function GetColumnType(Column: Integer): TZSQLType; virtual;
-    function GetColumnTypeName(Column: Integer): string; virtual;
-    function IsReadOnly(Column: Integer): Boolean; virtual;
-    function IsWritable(Column: Integer): Boolean; virtual;
-    function IsDefinitelyWritable(Column: Integer): Boolean; virtual;
-    function GetDefaultValue(Column: Integer): string; virtual;
-    function HasDefaultValue(Column: Integer): Boolean; virtual;
+    function IsSigned(ColumnIndex: Integer): Boolean; virtual;
+    function GetColumnDisplaySize(ColumnIndex: Integer): Integer; virtual;
+    function GetColumnLabel(ColumnIndex: Integer): string; virtual;
+    function GetColumnName(ColumnIndex: Integer): string; virtual;
+    function GetColumnCodePage(ColumnIndex: Integer): Word;
+    function GetSchemaName(ColumnIndex: Integer): string; virtual;
+    function GetPrecision(ColumnIndex: Integer): Integer; virtual;
+    function GetCharOctedLength(ColumnIndex: Integer): Integer; virtual;
+    function GetScale(ColumnIndex: Integer): Integer; virtual;
+    function GetTableName(ColumnIndex: Integer): string; virtual;
+    function GetCatalogName(ColumnIndex: Integer): string; virtual;
+    function GetColumnType(ColumnIndex: Integer): TZSQLType; virtual;
+    function GetColumnTypeName(ColumnIndex: Integer): string; virtual;
+    function IsReadOnly(ColumnIndex: Integer): Boolean; virtual;
+    function IsWritable(ColumnIndex: Integer): Boolean; virtual;
+    function IsDefinitelyWritable(ColumnIndex: Integer): Boolean; virtual;
+    function GetDefaultValue(ColumnIndex: Integer): string; virtual;
+    function HasDefaultValue(ColumnIndex: Integer): Boolean; virtual;
   end;
 
 implementation
@@ -281,93 +281,93 @@ end;
 
 {**
   Indicates whether the designated column is automatically numbered, thus read-only.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZAbstractResultSetMetadata.IsAutoIncrement(Column: Integer): Boolean;
+function TZAbstractResultSetMetadata.IsAutoIncrement(ColumnIndex: Integer): Boolean;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).AutoIncrement;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).AutoIncrement;
 end;
 
 {**
   Indicates whether a column's case matters.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZAbstractResultSetMetadata.IsCaseSensitive(Column: Integer): Boolean;
+function TZAbstractResultSetMetadata.IsCaseSensitive(ColumnIndex: Integer): Boolean;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).CaseSensitive;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).CaseSensitive;
 end;
 
 {**
   Indicates whether the designated column can be used in a where clause.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZAbstractResultSetMetadata.IsSearchable(Column: Integer): Boolean;
+function TZAbstractResultSetMetadata.IsSearchable(ColumnIndex: Integer): Boolean;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Searchable;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Searchable;
 end;
 
 {**
   Indicates whether the designated column is a cash value.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZAbstractResultSetMetadata.IsCurrency(Column: Integer): Boolean;
+function TZAbstractResultSetMetadata.IsCurrency(ColumnIndex: Integer): Boolean;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Currency;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Currency;
 end;
 
 {**
   Indicates the nullability of values in the designated column.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return the nullability status of the given column; one of <code>columnNoNulls</code>,
     <code>columnNullable</code> or <code>columnNullableUnknown</code>
 }
 function TZAbstractResultSetMetadata.IsNullable(
-  Column: Integer): TZColumnNullableType;
+  ColumnIndex: Integer): TZColumnNullableType;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Nullable;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Nullable;
 end;
 
 {**
   Indicates whether values in the designated column are signed numbers.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZAbstractResultSetMetadata.IsSigned(Column: Integer): Boolean;
+function TZAbstractResultSetMetadata.IsSigned(ColumnIndex: Integer): Boolean;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Signed;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Signed;
 end;
 
 {**
   Indicates the designated column's normal maximum width in characters.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return the normal maximum number of characters allowed as the width
     of the designated column
 }
 function TZAbstractResultSetMetadata.GetColumnDisplaySize(
-  Column: Integer): Integer;
+  ColumnIndex: Integer): Integer;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnDisplaySize;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnDisplaySize;
 end;
 
 {**
   Gets the designated column's suggested title for use in printouts and
   displays.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return the suggested column title
 }
-function TZAbstractResultSetMetadata.GetColumnLabel(Column: Integer): string;
+function TZAbstractResultSetMetadata.GetColumnLabel(ColumnIndex: Integer): string;
 var
   I, J, N: Integer;
   ColumnName: string;
@@ -395,173 +395,185 @@ begin
     end;
   end;
 
-  Result := ColumnsLabels[Column{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
+  Result := ColumnsLabels[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
 end;
 
 {**
   Get the designated column's name.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return column name
 }
 function TZAbstractResultSetMetadata.GetColumnName(
-  Column: Integer): string;
+  ColumnIndex: Integer): string;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnName;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnName;
 end;
 
 {**
   Get the designated column's codepage.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return schema name or "" if not applicable
 }
-function TZAbstractResultSetMetadata.GetColumnCodePage(const Column: Integer): Word;
+function TZAbstractResultSetMetadata.GetColumnCodePage(ColumnIndex: Integer): Word;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage;
 end;
 
 {**
   Get the designated column's table's schema.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return schema name or "" if not applicable
 }
 function TZAbstractResultSetMetadata.GetSchemaName(
-  Column: Integer): string;
+  ColumnIndex: Integer): string;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).SchemaName;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).SchemaName;
 end;
 
 {**
   Get the designated column's number of decimal digits.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return precision
 }
-function TZAbstractResultSetMetadata.GetPrecision(Column: Integer): Integer;
+function TZAbstractResultSetMetadata.GetPrecision(ColumnIndex: Integer): Integer;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Precision;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Precision;
 end;
 
 {**
   Gets the designated column's number of digits to right of the decimal point.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return scale
 }
-function TZAbstractResultSetMetadata.GetScale(Column: Integer): Integer;
+function TZAbstractResultSetMetadata.GetScale(ColumnIndex: Integer): Integer;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Scale;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Scale;
 end;
 
 {**
   Gets the designated column's table name.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first ColumnIndex is 1, the second is 2, ...
   @return table name or "" if not applicable
 }
-function TZAbstractResultSetMetadata.GetTableName(Column: Integer): string;
+function TZAbstractResultSetMetadata.GetTableName(ColumnIndex: Integer): string;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).TableName;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).TableName;
 end;
 
 {**
   Gets the designated column's table's catalog name.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return column name or "" if not applicable
 }
-function TZAbstractResultSetMetadata.GetCatalogName(Column: Integer): string;
+function TZAbstractResultSetMetadata.GetCatalogName(ColumnIndex: Integer): string;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).CatalogName;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).CatalogName;
+end;
+
+{**
+  Gets the designated column's table's character octed length. This is
+  count of bytes for a buffer to store the data. This may depend to DB's
+  character set or true UFT16 vs Raw encoded strings
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return char octed length name or "" if not applicable
+}
+function TZAbstractResultSetMetadata.GetCharOctedLength(ColumnIndex: Integer): Integer;
+begin
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).CharOctedLength;
 end;
 
 {**
   Retrieves the designated column's SQL type.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return SQL type from java.sql.Types
 }
-function TZAbstractResultSetMetadata.GetColumnType(Column: Integer): TZSQLType;
+function TZAbstractResultSetMetadata.GetColumnType(ColumnIndex: Integer): TZSQLType;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType;
 end;
 
 {**
   Retrieves the designated column's database-specific type name.
 
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return type name used by the database. If the column type is
     a user-defined type, then a fully-qualified type name is returned.
 }
-function TZAbstractResultSetMetadata.GetColumnTypeName(Column: Integer): string;
+function TZAbstractResultSetMetadata.GetColumnTypeName(ColumnIndex: Integer): string;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).GetColumnTypeName;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).GetColumnTypeName;
 end;
 
 {**
   Indicates whether the designated column is definitely not writable.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZAbstractResultSetMetadata.IsReadOnly(Column: Integer): Boolean;
+function TZAbstractResultSetMetadata.IsReadOnly(ColumnIndex: Integer): Boolean;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ReadOnly;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ReadOnly;
 end;
 
 {**
   Indicates whether it is possible for a write on the designated column to succeed.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZAbstractResultSetMetadata.IsWritable(Column: Integer): Boolean;
+function TZAbstractResultSetMetadata.IsWritable(ColumnIndex: Integer): Boolean;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Writable;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Writable;
 end;
 
 {**
   Indicates whether a write on the designated column will definitely succeed.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZAbstractResultSetMetadata.IsDefinitelyWritable(
-  Column: Integer): Boolean;
+  ColumnIndex: Integer): Boolean;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).DefinitelyWritable;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).DefinitelyWritable;
 end;
 
 {**
   Gets a default value for this field.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return a default value for this field.
 }
 function TZAbstractResultSetMetadata.GetDefaultValue(
-  Column: Integer): string;
+  ColumnIndex: Integer): string;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).DefaultValue;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).DefaultValue;
 end;
 
 {**
   Finds whether this field has a default value.
-  @param column the first column is 1, the second is 2, ...
+  @param ColumnIndex the first column is 1, the second is 2, ...
   @return true if this field has a default value.
 }
 function TZAbstractResultSetMetadata.HasDefaultValue(
-  Column: Integer): Boolean;
+  ColumnIndex: Integer): Boolean;
 begin
   if not Loaded then
      LoadColumns;
   // '' = NULL / no default value, '''''' = empty string (''), etc.
-  Result := not(TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).DefaultValue = '');
+  Result := not(TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).DefaultValue = '');
 end;
 
 {**
@@ -578,7 +590,7 @@ begin
   if FTableColumns.Get(TableKey) = nil then
   begin
     Result := Metadata.GetColumns(TableRef.Catalog,
-      TableRef.Schema, TableRef.Table, '');
+      TableRef.Schema, FResultSet.GetStatement.GetConnection.GetMetadata.AddEscapeCharToWildcards(TableRef.Table), '');
     FTableColumns.Put(TableKey, Result);
   end
   else

@@ -306,8 +306,8 @@ type
   TZUnicodeToRaw = function (const US: ZWideString; CP: Word): RawByteString;
   TZUnicodeToString = function (const Src: ZWideString; const StringCP: Word): String;
   TZStringToUnicode = function (const Src: String; const StringCP: Word): ZWideString;
-  TPRawToString = function (const Src: PAnsiChar; Len: LengthInt; const StringCP: Word): String;
-  TPUnicodeToString = function (const Src: PWideChar; CodePoints: NativeUInt; const StringCP: Word): String;
+  TPRawToString = function (Src: PAnsiChar; Len: LengthInt; const RawCP, StringCP: Word): String;
+  TPUnicodeToString = function (Src: PWideChar; CodePoints: NativeUInt; const StringCP: Word): String;
 
   {** Defines the Target Ansi codepages for the Controls }
   TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
@@ -397,6 +397,7 @@ type
 {$IFNDEF WITH_CHARINSET}
 function CharInSet(const C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 function CharInSet(const C: WideChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+function CharInSet(const C: Word; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
 {$IF not Declared(UTF8ToString)}
@@ -414,8 +415,9 @@ procedure ZSetString(Src: PAnsiChar; const Len: LengthInt; var Dest: ZWideString
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
-{$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}
+{$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}
 function Min(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+function Max(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
 var
@@ -692,8 +694,14 @@ end;
 
 function CharInSet(const C: WideChar; const CharSet: TSysCharSet): Boolean;
 begin
-  result := Char(C) in Charset;
+  result := CharInSet(Word(C), CharSet);
 end;
+
+function CharInSet(const C: Word; const CharSet: TSysCharSet): Boolean;
+begin
+  result := (C <= High(Byte)) and (AnsiChar(Byte(C)) in Charset);
+end;
+
 {$ENDIF}
 
 {$IFDEF  ZUTF8ToString}
@@ -756,10 +764,8 @@ begin
     if (Pointer(Dest{%H-}) = nil) or//empty
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
        (Len <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
-      SetString(Dest, nil, Len);
-    {$ELSE}
-    SetString(Dest, nil, Len);
     {$ENDIF}
+    SetString(Dest, nil, Len);
     if Src <> nil then
     begin
       PW := Pointer(Dest);
@@ -792,11 +798,9 @@ begin
   else
     if (Pointer(Dest) <> nil) and //Empty?
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
-       ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
-    begin
+       ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then begin
       if Src <> nil then Move(Src^, Pointer(Dest)^, Len)
-    end
-    else
+    end else
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
       begin
         Dest := '';
@@ -809,10 +813,18 @@ begin
 end;
 {$ENDIF}
 
-{$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}
+{$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}
 function Min(const A, B: NativeUInt): NativeUInt;
 begin
   if A < B then
+    Result := A
+  else
+    Result := B;
+end;
+
+function Max(const A, B: NativeUInt): NativeUInt;
+begin
+  if A > B then
     Result := A
   else
     Result := B;

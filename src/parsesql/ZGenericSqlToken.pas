@@ -174,7 +174,8 @@ var
   LastChar: Char;
   ReadCounter, NumericCounter, CountDoublePoint, CountSlash, CountSpace : integer;
 begin
-  Result.Value := FirstChar;
+  Result.Value := '';
+  InitBuf(FirstChar);
   LastChar := #0;
   CountDoublePoint := 0;
   CountSlash := 0;
@@ -199,11 +200,12 @@ begin
       inc(NumericCounter);
     Inc(ReadCounter);
 
-    Result.Value := Result.Value + ReadChar;
+    ToBuf(ReadChar, Result.Value);
     if (LastChar = FirstChar) and (ReadChar = FirstChar) then
       LastChar := #0
     else LastChar := ReadChar;
   end;
+  FlushBuf(Result.Value);
 
   if FirstChar = '"' then
     Result.TokenType := ttWord
@@ -246,10 +248,6 @@ begin
     except
     end;
   end;
-
-  if not ( Result.TokenType in [ttQuoted, ttWord] ) then
-    Exit;
-
 end;
 {$IFDEF FPC}
   {$HINTS ON}

@@ -116,7 +116,6 @@ type
       read FResultSetConcurrency write FResultSetConcurrency;
     property Statement: IZStatement read FStatement;
     property Metadata: TContainedObject read FMetadata write FMetadata;
-
   public
     constructor Create(Statement: IZStatement; const SQL: string;
       Metadata: TContainedObject; ConSettings: PZConSettings);
@@ -388,6 +387,8 @@ type
     procedure SetBytes(const Value: TBytes); virtual;
     function GetStream: TStream; virtual;
     procedure SetStream(const Value: TStream); overload; virtual;
+    function GetBufferAddress: PPointer;
+    function GetLengthAddress: PInteger;
     function GetBuffer: Pointer; virtual;
     procedure SetBuffer(const Buffer: Pointer; const Length: Integer);
     {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
@@ -517,7 +518,7 @@ type
 
 implementation
 
-uses Math, ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding, ZFastCode
+uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding, ZFastCode
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 function CompareNothing(const Null1, Null2: Boolean; const V1, V2): Integer; //emergency exit for complex types we can't sort quickly like arrays, dataset ...
@@ -4217,6 +4218,11 @@ begin
     Result := nil;
 end;
 
+function TZAbstractBlob.GetLengthAddress: PInteger;
+begin
+  Result := @FBlobSize;
+end;
+
 {**
   Sets a new byte buffer to this blob content.
   @param Value a new byte buffer.
@@ -4279,6 +4285,11 @@ end;
 function TZAbstractBlob.GetBuffer: Pointer;
 begin
   Result := FBlobData;
+end;
+
+function TZAbstractBlob.GetBufferAddress: PPointer;
+begin
+  Result := @FBlobData;
 end;
 
 procedure TZAbstractBlob.SetBuffer(const Buffer: Pointer; const Length: Integer);

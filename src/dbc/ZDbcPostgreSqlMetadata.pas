@@ -2050,11 +2050,12 @@ const
   description_index = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
 var
   Len: NativeUInt;
-  TypeOid, AttTypMod: Integer;
+  TypeOid, AttTypMod, Precision: Integer;
   SQL, PgType: string;
   SQLType: TZSQLType;
   CheckVisibility: Boolean;
   ColumnNameCondition, TableNameCondition, SchemaCondition: string;
+label FillSizes;
 begin
   CheckVisibility := (GetConnection as IZPostgreSQLConnection).CheckFieldVisibility; //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11174
   SchemaCondition := ConstructNameCondition(SchemaPattern,'n.nspname');
@@ -2134,18 +2135,28 @@ begin
 
       if (PgType = 'bpchar') or (PgType = 'varchar') or (PgType = 'enum') then
       begin
-        if AttTypMod <> -1 then
-          Result.UpdateInt(TableColColumnSizeIndex, GetFieldSize(SQLType, ConSettings, (AttTypMod - 4),
-            ConSettings.ClientCodePage.CharWidth))
-        else
+        if AttTypMod <> -1 then begin
+          Precision := AttTypMod - 4;
+FillSizes:
+          Result.UpdateInt(TableColColumnSizeIndex, Precision);
+          if SQLType = stString then begin
+            Result.UpdateInt(TableColColumnBufLengthIndex, Precision * ConSettings^.ClientCodePage^.CharWidth +1);
+            Result.UpdateInt(TableColColumnCharOctetLengthIndex, Precision * ConSettings^.ClientCodePage^.CharWidth);
+          end else if SQLType = stUnicodeString then begin
+            Result.UpdateInt(TableColColumnBufLengthIndex, (Precision+1) shl 1);
+            Result.UpdateInt(TableColColumnCharOctetLengthIndex, Precision shl 1);
+          end;
+        end else
           if (PgType = 'varchar') then
             if ( (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength = 0 ) then
             begin
               Result.UpdateInt(TableColColumnTypeIndex, Ord(GetSQLTypeByOid(25))); //Assume text-lob instead
               Result.UpdateInt(TableColColumnSizeIndex, 0); // need no size for streams
             end
-            else //keep the string type but with user defined count of chars
-              Result.UpdateInt(TableColColumnSizeIndex, (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength )
+            else begin //keep the string type but with user defined count of chars
+              Precision := (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength;
+              goto FillSizes;
+            end
           else
             Result.UpdateInt(TableColColumnSizeIndex, 0);
       end

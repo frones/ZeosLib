@@ -262,8 +262,8 @@ begin
       if ParamIndex > InParamCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} then
         raise EZSQLException.Create(SInvalidInputParameterCount);
       Result := Result + PGPrepareAnsiSQLParam(InParamValues[ParamIndex],
-        ClientVarManager, (Connection as IZPostgreSQLConnection), FPlainDriver,
-        ChunkSize, InParamTypes[ParamIndex], Foidasblob, True, False, ConSettings);
+        ClientVarManager, (Connection as IZPostgreSQLConnection), ChunkSize,
+          InParamTypes[ParamIndex], Foidasblob, True, False, ConSettings);
       Inc(ParamIndex);
     end
     else
@@ -514,8 +514,8 @@ begin
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
   Result := PGPrepareAnsiSQLParam(InParamValues[ParamIndex], ClientVarManager,
-    (Connection as IZPostgreSQLConnection), FPlainDriver, ChunkSize,
-    InParamTypes[ParamIndex], Foidasblob, Escaped, True, ConSettings);
+    (Connection as IZPostgreSQLConnection), ChunkSize, InParamTypes[ParamIndex],
+      Foidasblob, Escaped, True, ConSettings);
 end;
 
 {**
@@ -834,8 +834,8 @@ begin
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
   Result := PGPrepareAnsiSQLParam(InParamValues[ParamIndex], ClientVarManager,
-    (Connection as IZPostgreSQLConnection), FPlainDriver, ChunkSize,
-    InParamTypes[ParamIndex], Foidasblob, True, False, ConSettings);
+    (Connection as IZPostgreSQLConnection), ChunkSize, InParamTypes[ParamIndex],
+      Foidasblob, True, False, ConSettings);
 end;
 
 {**

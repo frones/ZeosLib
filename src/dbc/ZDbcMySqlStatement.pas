@@ -482,71 +482,13 @@ end;
   @return a string representation of the parameter.
 }
 function TZMySQLEmulatedPreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
-var
-  Value: TZVariant;
-  TempBytes: TBytes;
-  TempBlob: IZBlob;
 begin
   if InParamCount <= ParamIndex then
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
-  Value := InParamValues[ParamIndex];
-  if ClientVarManager.IsNull(Value) then
-    if FUseDefaults and (InParamDefaultValues[ParamIndex] <> '') then
-      Result := ConSettings^.ConvFuncs.ZStringToRaw(InParamDefaultValues[ParamIndex],
-        ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
-    else
-      Result := 'NULL'
-  else
-  begin
-    case InParamTypes[ParamIndex] of
-      stBoolean:
-        if ClientVarManager.GetAsBoolean(Value) then
-           Result := '''Y'''
-        else
-           Result := '''N''';
-      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
-      stFloat, stDouble, stCurrency, stBigDecimal:
-        Result := ClientVarManager.GetAsRawByteString(Value);
-      stBytes:
-        begin
-          TempBytes := ClientVarManager.GetAsBytes(Value);
-          Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes));
-        end;
-      stString, stUnicodeString:
-        Result := FPlainDriver.EscapeString(FHandle, ClientVarManager.GetAsRawByteString(Value), ConSettings, True);
-      stDate:
-        Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
-          ConSettings^.WriteFormatSettings, True);
-      stTime:
-        Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
-          ConSettings^.WriteFormatSettings, True);
-      stTimestamp:
-        Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
-          ConSettings^.WriteFormatSettings, True);
-      stAsciiStream, stUnicodeStream, stBinaryStream:
-        begin
-          TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-          begin
-            case InParamTypes[ParamIndex] of
-              stBinaryStream:
-                Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length);
-              else
-                if TempBlob.IsClob then
-                  Result := FPlainDriver.EscapeString(FHandle,
-                    TempBlob.GetRawByteString, ConSettings, True)
-                else
-                  Result := FPlainDriver.EscapeString(FHandle,
-                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                      TempBlob.Length, ConSettings), ConSettings, True);
-            end;
-          end
-          else
-            Result := 'NULL';
-        end;
-    end;
-  end;
+  Result := ZDbcMySQLUtils.MySQLPrepareAnsiSQLParam(GetConnection as IZMySQLConnection,
+    InParamValues[ParamIndex], InParamDefaultValues[ParamIndex], ClientVarManager,
+    InParamTypes[ParamIndex], FUseDefaults);
 end;
 
 { TZMySQLPreparedStatement }
@@ -1224,70 +1166,13 @@ end;
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
 function TZMySQLCallableStatement.PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
-var
-  Value: TZVariant;
-  TempBytes: TBytes;
-  TempBlob: IZBlob;
 begin
-  TempBytes := nil;
   if InParamCount <= ParamIndex then
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
-  Value := InParamValues[ParamIndex];
-  if ClientVarManager.IsNull(Value) then
-    if FUseDefaults and (InParamDefaultValues[ParamIndex] <> '') then
-      Result := ConSettings^.ConvFuncs.ZStringToRaw(InParamDefaultValues[ParamIndex],
-        ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
-    else
-      Result := 'NULL'
-  else
-  begin
-    case InParamTypes[ParamIndex] of
-      stBoolean:
-        if ClientVarManager.GetAsBoolean(Value) then
-          Result := '''Y'''
-        else
-          Result := '''N''';
-      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong,
-      stFloat, stDouble, stCurrency, stBigDecimal:
-        Result := ClientVarManager.GetAsRawByteString(Value);
-      stBytes:
-        begin
-          TempBytes := ClientVarManager.GetAsBytes(Value);
-          Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes));
-        end;
-      stString, stUnicodeString:
-        Result := FPlainDriver.EscapeString(FHandle, ClientVarManager.GetAsRawByteString(Value), ConSettings, True);
-      stDate:
-        Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
-          ConSettings^.WriteFormatSettings, True);
-      stTime:
-        Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
-          ConSettings^.WriteFormatSettings, True);
-      stTimestamp:
-        Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
-          ConSettings^.WriteFormatSettings, True);
-      stAsciiStream, stUnicodeStream, stBinaryStream:
-        begin
-          TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-            case InParamTypes[ParamIndex] of
-              stBinaryStream:
-                Result := GetSQLHexAnsiString(TempBlob.GetBuffer, TempBlob.Length);
-              else
-                if TempBlob.IsClob then
-                  Result := FPlainDriver.EscapeString(FHandle,
-                    TempBlob.GetRawByteString, ConSettings, True)
-                else
-                  Result := FPlainDriver.EscapeString(FHandle,
-                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings), ConSettings, True);
-            end
-          else
-            Result := 'NULL';
-        end;
-    end;
-  end;
+  Result := ZDbcMySQLUtils.MySQLPrepareAnsiSQLParam(GetConnection as IZMySQLConnection,
+    InParamValues[ParamIndex], InParamDefaultValues[ParamIndex], ClientVarManager,
+    InParamTypes[ParamIndex], FUseDefaults);
 end;
 
 function TZMySQLCallableStatement.GetStmtHandle: PZMySqlPrepStmt;
