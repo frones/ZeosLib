@@ -1375,7 +1375,7 @@ begin
       ColumnInfo := TZColumnInfo.Create;
       ColumnsInfo.Add(ColumnInfo); //add first -> memleaksave
       if fEnhancedColInfo then begin
-        ColumnInfo.MaxLenghtBytes := ColNumAttribute(ColumnNumber, SQL_DESC_OCTET_LENGTH);
+        ColumnInfo.CharOctedLength := ColNumAttribute(ColumnNumber, SQL_DESC_OCTET_LENGTH);
         ColumnInfo.AutoIncrement := ColNumAttribute(ColumnNumber, SQL_DESC_AUTO_UNIQUE_VALUE) = SQL_TRUE;
         ColumnInfo.CaseSensitive := ColNumAttribute(ColumnNumber, SQL_DESC_CASE_SENSITIVE) = SQL_TRUE;
         ColumnInfo.ColumnDisplaySize := ColNumAttribute(ColumnNumber, SQL_DESC_DISPLAY_SIZE);

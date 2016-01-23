@@ -208,7 +208,7 @@ type
 
     //Ping Support initially for MySQL 27032006 (firmos)
     function PingServer: Integer; virtual;
-    function EscapeString(Value: RawByteString): RawByteString; virtual;
+    function EscapeString(const Value: RawByteString): RawByteString; overload; virtual;
 
     procedure Open; virtual;
     procedure Close; virtual;
@@ -1216,7 +1216,7 @@ end;
   @param value string that should be escaped
   @return Escaped string
 }
-function TZAbstractConnection.EscapeString(Value : RawByteString) : RawByteString;
+function TZAbstractConnection.EscapeString(const Value : RawByteString) : RawByteString;
 begin
   Result := AnsiString(EncodeCString(String(Value)));
 end;

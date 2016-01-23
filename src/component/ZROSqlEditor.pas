@@ -628,7 +628,7 @@ begin
     if ListBoxRelations.ItemIndex >= 0 then
     begin
       TPName := ListBoxRelations.Items[ListBoxRelations.ItemIndex];
-      with Metadata.GetColumns(FDS.Connection.Catalog,'', TPName,'') do
+      with Metadata.GetColumns(FDS.Connection.Catalog,'', Metadata.AddEscapeCharToWildcards(TPName),'') do
       try
         while Next do
           if ListBoxFields.Items.IndexOf(GetStringByName('COLUMN_NAME')) = -1 then

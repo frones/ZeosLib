@@ -81,7 +81,7 @@ type
     FLengthArray: PMySQLLengthArray;
     FMySQLTypes: array of TMysqlFieldTypes;
     fMySQLFieldFlags: array of UInt;
-    function GetBufferAndLength(ColumnIndex: Integer; var Len: ULong): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
+    function GetBufferAndLength(ColumnIndex: Integer; var Len: NativeUInt): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
     function GetBuffer(ColumnIndex: Integer): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
   protected
     procedure Open; override;
@@ -372,7 +372,7 @@ begin
     AffectedRows^ := LastRowNo;
 end;
 
-function TZAbstractMySQLResultSet.GetBufferAndLength(ColumnIndex: Integer; var Len: ULong): PAnsiChar;
+function TZAbstractMySQLResultSet.GetBufferAndLength(ColumnIndex: Integer; var Len: NativeUInt): PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -503,11 +503,8 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractMySQLResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
-var
-  L: ULong;
 begin
-  Result := GetBufferAndLength(ColumnIndex, L{%H-});
-  Len := L;
+  Result := GetBufferAndLength(ColumnIndex, Len{%H-});
 end;
 
 {**
@@ -520,10 +517,8 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractMySQLResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
-var
-  Len: ULong;
 begin
-  Result := GetBufferAndLength(ColumnIndex, Len{%H-});
+  Result := GetBuffer(ColumnIndex);
 end;
 
 {**
@@ -537,7 +532,7 @@ end;
 }
 function TZAbstractMySQLResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
 var
-  Len: ULong;
+  Len: NativeUInt;
   Buffer: PAnsiChar;
 begin
   Buffer := GetBufferAndLength(ColumnIndex, Len{%H-});
@@ -690,7 +685,7 @@ end;
 }
 function TZAbstractMySQLResultSet.GetFloat(ColumnIndex: Integer): Single;
 var
-  Len: ULong;
+  Len: NativeUInt;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -715,7 +710,7 @@ end;
 }
 function TZAbstractMySQLResultSet.GetDouble(ColumnIndex: Integer): Double;
 var
-  Len: ULong;
+  Len: NativeUInt;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -741,7 +736,7 @@ end;
 }
 function TZAbstractMySQLResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 var
-  Len: ULong;
+  Len: NativeUInt;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -767,7 +762,7 @@ end;
 }
 function TZAbstractMySQLResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 var
-  Len: ULong;
+  Len: NativeUInt;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -791,7 +786,7 @@ end;
 }
 function TZAbstractMySQLResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var
-  Len: ULong;
+  Len: NativeUInt;
   Buffer: PAnsiChar;
   Failed: Boolean;
 begin
@@ -824,7 +819,7 @@ end;
 }
 function TZAbstractMySQLResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
-  Len: ULong;
+  Len: NativeUInt;
   Buffer: PAnsiChar;
   Failed: Boolean;
 begin
@@ -856,7 +851,7 @@ end;
 }
 function TZAbstractMySQLResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var
-  Len: ULong;
+  Len: NativeUInt;
   Buffer: PAnsiChar;
   Failed: Boolean;
 begin
@@ -890,7 +885,7 @@ end;
 function TZAbstractMySQLResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   Buffer: PAnsiChar;
-  Len: ULong;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);

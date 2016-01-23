@@ -73,7 +73,7 @@ type
   protected
     function GetSupportedProtocols: string; override;
   published
-    procedure DummyTest;
+    procedure TestUndefined_Varchar_AsString_Length;
   end;
 
   {** Implements a MBC bug report test case for SQLite components. }
@@ -95,10 +95,24 @@ begin
   Result := pl_all_sqlite;
 end;
 
-procedure ZTestCompSQLiteBugReport.DummyTest;
+procedure ZTestCompSQLiteBugReport.TestUndefined_Varchar_AsString_Length;
+var
+  Query: TZQuery;
 begin
-  Check(True);
-  //Remove me if more tests are available
+  Query := CreateQuery;
+  try
+    Query.Properties.Values['Undefined_Varchar_AsString_Length'] := '255';
+    Query.SQL.Text := 'select p_name ||'',''|| p_name from people';
+    Query.Open;
+    CheckEquals(1, Query.FieldCount);
+    CheckStringFieldType(Query.Fields[0].DataType, Query.Connection.DbcConnection.GetConSettings);
+    CheckEquals('Vasia Pupkin,Vasia Pupkin', Query.Fields[0].AsString, 'The SQLite concat');
+    Query.Next;
+    CheckEquals('Andy Karto,Andy Karto', Query.Fields[0].AsString, 'The SQLite concat');
+    Query.Close;
+  finally
+    Query.Free;
+  end;
 end;
 
 { ZTestCompSQLiteBugReportMBCs }

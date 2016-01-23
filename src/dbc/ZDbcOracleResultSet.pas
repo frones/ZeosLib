@@ -1544,7 +1544,10 @@ begin
         {$IFDEF UNICODE}
         ColumnLabel := ZEncoding.PRawToUnicode(P, TempColumnNameLen, ConSettings^.ClientCodePage^.CP)
         {$ELSE}
-        ColumnLabel := BufferToStr(P, TempColumnNameLen)
+        if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
+          ColumnLabel := BufferToStr(P, TempColumnNameLen)
+        else
+          ColumnLabel := ZUnicodeToString(PRawToUnicode(P, TempColumnNameLen, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP)
         {$ENDIF}
       else
         ColumnLabel := 'Col_'+ZFastCode.IntToStr(I+1);
@@ -1562,8 +1565,13 @@ begin
           @CSForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
         if CSForm = SQLCS_NCHAR then //We should determine the NCHAR set on connect
           ColumnDisplaySize := ColumnDisplaySize shr 1; //shr 1 = div 2 but faster
-        Precision := GetFieldSize(ColumnType, ConSettings, ColumnDisplaySize,
-          ConSettings.ClientCodePage^.CharWidth);
+        Precision := ColumnDisplaySize;
+        CharOctedLength := CurrentVar^.oDataSize;
+        if ColumnType = stString then begin
+          CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth;
+        end else begin
+          CharOctedLength := Precision shl 1;
+        end;
       end
       else
         if (ColumnType = stBytes ) then
@@ -1762,8 +1770,7 @@ begin
       if ( ColumnType in [stString, stUnicodeString] ) then
       begin
         ColumnDisplaySize := CurrentVar.oDataSize;
-        Precision := GetFieldSize(ColumnType, ConSettings, CurrentVar.oDataSize,
-          ConSettings.ClientCodePage^.CharWidth);
+        Precision := CurrentVar.oDataSize;
       end
       else
         Precision := CurrentVar.Precision;

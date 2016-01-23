@@ -148,18 +148,6 @@ function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = Fal
 function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): RawByteString;
 function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
 
-{**
-  Returns a FieldSize in Bytes dependend to the FieldType and CharWidth
-  @param <code>TZSQLType</code> the Zeos FieldType
-  @param <code>Integer</code> the Current given FieldLength
-  @param <code>Integer</code> the Current CountOfByte/Char
-  @param <code>Boolean</code> does the Driver returns the FullSizeInBytes
-  @returns <code>Integer</code> the count of AnsiChars for Field.Size * SizeOf(Char)
-}
-function GetFieldSize(const SQLType: TZSQLType;ConSettings: PZConSettings;
-  const Precision, CharWidth: Integer; DisplaySize: PInteger = nil;
-    SizeInBytes: Boolean = False): Integer;
-
 function WideStringStream(const AString: WideString): TStream;
 
 function TokenizeSQLQueryRaw(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
@@ -204,6 +192,8 @@ function GetValidatedUnicodeStream(const Buffer: Pointer; Size: Cardinal;
 
 function GetValidatedUnicodeStream(const Ansi: RawByteString;
   ConSettings: PZConSettings; FromDB: Boolean): TStream; overload;
+
+function ZSQLTypeToBuffSize(SQLType: TZSQLType): Integer;
 
 implementation
 
@@ -472,25 +462,18 @@ end;
 function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZWideString;
 var P: PWideChar;
 begin
-  Result := ''; //init speeds setlength x2
-  if ODBC then
-  begin
-    SetLength(Result,(Len shl 1)+2); //shl 1 = * 2 but faster
+  ZSetString(nil, ((Len+1) shl 1)+Ord(not Odbc), Result);
+  if ODBC then begin
     P := Pointer(Result);
     P^ := '0';
-    Inc(P);
-    P^ := 'x';
-    Inc(P);
+    (P+1)^ := 'x';
+    Inc(P, 2);
     ZBinToHex(Value, P, Len);
-  end
-  else
-  begin
-    SetLength(Result, (Len shl 1)+3); //shl 1 = * 2 but faster
+  end else begin
     P := Pointer(Result);
     P^ := 'x';
-    Inc(P);
-    P^ := #39;
-    Inc(P);
+    (P+1)^ := #39;
+    Inc(P,2);
     ZBinToHex(Value, P, Len);
     Inc(P, Len shl 1); //shl 1 = * 2 but faster
     P^ := #39;
@@ -500,25 +483,18 @@ end;
 function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): RawByteString;
 var P: PAnsiChar;
 begin
-  Result := ''; //init speeds setlength x2
-  if ODBC then
-  begin
-    System.SetLength(Result,(Len shl 1)+2);//shl 1 = * 2 but faster
+  ZSetString(nil, ((Len+1) shl 1)+Ord(not Odbc), Result);
+  if ODBC then begin
     P := Pointer(Result);
     P^ := '0';
-    Inc(P);
-    P^ := 'x';
-    Inc(P);
+    (P+1)^ := 'x';
+    Inc(P, 2);
     ZBinToHex(Value, P, Len);
-  end
-  else
-  begin
-    SetLength(Result, (Len shl 1)+3); //shl 1 = * 2 but faster
+  end else begin
     P := Pointer(Result);
     P^ := 'x';
-    Inc(P);
-    P^ := #39;
-    Inc(P);
+    (P+1)^ := #39;
+    Inc(P,2);
     ZBinToHex(Value, P, Len);
     Inc(P, Len shl 1); //shl 1 = * 2 but faster
     P^ := #39;
@@ -532,57 +508,6 @@ begin
   {$ELSE}
   Result := GetSQLHexAnsiString(Value, Len, ODBC);
   {$ENDIF}
-end;
-
-{**
-  Returns a FieldSize in Bytes dependend to the FieldType and CharWidth
-  @param <code>TZSQLType</code> the Zeos FieldType
-  @param <code>Integer</code> the Current given FieldLength
-  @param <code>Integer</code> the Current CountOfByte/Char
-  @param <code>Boolean</code> does the Driver returns the FullSizeInBytes
-  @returns <code>Integer</code> the count of AnsiChars for Field.Size * SizeOf(Char)
-}
-function GetFieldSize(const SQLType: TZSQLType; ConSettings: PZConSettings;
-  const Precision, CharWidth: Integer; DisplaySize: PInteger = nil;
-    SizeInBytes: Boolean = False): Integer;
-var
-  TempPrecision: Integer;
-begin
-  if ( SQLType in [stString, stUnicodeString] ) and ( Precision <> 0 )then
-  begin
-    if SizeInBytes then
-      TempPrecision := Precision div CharWidth
-    else
-      TempPrecision := Precision;
-
-    if Assigned(DisplaySize) then
-      DisplaySize^ := TempPrecision;
-
-    if SQLType = stString then
-      //the RowAccessor assumes SizeOf(Char)*Precision+SizeOf(Char)
-      //the Field assumes Precision*SizeOf(Char)
-      {$IFDEF UNICODE}
-      if ConSettings^.ClientCodePage^.CharWidth >= 2 then //All others > 3 are UTF8
-        Result := TempPrecision shl 1 //add more mem for a reserved thirt byte
-      else //two and one byte AnsiChars are one WideChar
-        Result := TempPrecision
-      {$ELSE}
-        if ( ConSettings^.CPType = cCP_UTF8 ) or (ConSettings^.CTRL_CP = zCP_UTF8) then
-          Result := TempPrecision shl 2 // = *4
-        else
-          Result := TempPrecision * CharWidth
-      {$ENDIF}
-    else //stUnicodeString
-      //UTF8 can pickup LittleEndian/BigEndian 4 Byte Chars
-      //the RowAccessor assumes 2*Precision+2!
-      //the Field assumes 2*Precision ??Does it?
-      if CharWidth > 2 then
-        Result := TempPrecision shl 1
-      else
-        Result := TempPrecision;
-  end
-  else
-    Result := Precision;
 end;
 
 function WideStringStream(const AString: WideString): TStream;
@@ -1099,6 +1024,21 @@ begin
       System.Move(Pointer(US)^, TMemoryStream(Result).Memory^, Len);
       Result.Position := 0;
     end;
+  end;
+end;
+
+function ZSQLTypeToBuffSize(SQLType: TZSQLType): Integer;
+begin
+  Result := 0;
+  case SQLType of
+    stUnknown: ;
+    stBoolean: Result := SizeOf(WordBool);
+    stByte, stShort: Result := 1;
+    stWord, stSmall: Result := 2;
+    stLongWord, stInteger, stFloat: Result := 4;
+    stULong, stLong, stDouble, stCurrency, stDate, stTime, stTimestamp: Result := 8;
+    stBigDecimal: Result := SizeOf(Extended);
+    stGUID: Result := SizeOf(TGUID);
   end;
 end;
 

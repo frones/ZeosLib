@@ -88,7 +88,7 @@ type
     function IsNullable(const Index: Word): boolean;
 
     function GetFieldCount: Integer;
-    function GetFieldName(const Index: Word): RawByteString;
+    function GetFieldName(const Index: Word): String;
     function GetFieldIndex(const Name: String): Word;
     function GetFieldScale(const Index: Word): integer;
     function GetFieldSqlType(const Index: Word): TZSQLType;
@@ -154,7 +154,7 @@ type
     function IsNullable(const Index: Word): boolean;
 
     function GetFieldCount: Integer;
-    function GetFieldName(const Index: Word): RawByteString;
+    function GetFieldName(const Index: Word): String;
     function GetFieldIndex(const Name: String): Word;
     function GetFieldScale(const Index: Word): Integer;
     function GetFieldSqlType(const Index: Word): TZSQLType;
@@ -485,15 +485,18 @@ end;
    @param Index the index fields
    @return the name
 }
-function TZASASQLDA.GetFieldName(const Index: Word): RawByteString;
+function TZASASQLDA.GetFieldName(const Index: Word): String;
 begin
   CheckIndex(Index);
-  {$IFDEF WITH_RAWBYTESTRING}
-  Result := '';
-  ZSetString(FSQLDA.sqlvar[Index].sqlname.data, FSQLDA.sqlvar[Index].sqlname.length-1, Result);
+  {$IFDEF UNICODE}
+  Result := PRawToUnicode(@FSQLDA.sqlvar[Index].sqlname.data[0],
+    FSQLDA.sqlvar[Index].sqlname.length-1, FConSettings^.ClientCodePage^.CP);
   {$ELSE}
-  SetString( Result, FSQLDA.sqlvar[Index].sqlname.data,
-    FSQLDA.sqlvar[Index].sqlname.length-1);
+    if (not FConSettings^.AutoEncode) or ZCompatibleCodePages(FConSettings^.ClientCodePage^.CP, FConSettings^.CTRL_CP) then
+      SetString(Result, PAnsiChar(@FSQLDA.sqlvar[Index].sqlname.data[0]), FSQLDA.sqlvar[Index].sqlname.length-1)
+    else
+      Result := ZUnicodeToString(PRawToUnicode(@FSQLDA.sqlvar[Index].sqlname.data[0],
+        FSQLDA.sqlvar[Index].sqlname.length-1, FConSettings^.ClientCodePage^.CP), FConSettings^.CTRL_CP);
   {$ENDIF}
 end;
 
@@ -1015,10 +1018,7 @@ begin
           end;
           if Rd <> Length then
             CreateException( 'Could''nt complete BLOB-Read');
-
-          DriverManager.LogMessage( lcExecute, FConSettings^.Protocol,
-            'GET DATA for Column: '+ GetFieldName(Index));
-          FreeMem(sqlData);//, SizeOf(TZASABlobStruct)+Min( BlockSize, Length));
+          FreeMem(sqlData);
           FPlainDriver.db_free_sqlda( TempSQLDA);
           TempSQLDA := nil;
         end;

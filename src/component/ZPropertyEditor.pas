@@ -409,7 +409,7 @@ begin
     begin
       try
         // Look for the Tables of the defined Catalog and Schema
-        ResultSet := Metadata.GetTables(Catalog, Schema, '', nil);
+        ResultSet := Metadata.GetTables(Catalog, Metadata.AddEscapeCharToWildcards(Schema), '', nil);
         while ResultSet.Next do
           begin
             TableName := ResultSet.GetStringByName('TABLE_NAME');
@@ -506,7 +506,7 @@ begin
       try
         Metadata := Connection.DbcConnection.GetMetadata;
         // Look for the Procedures
-        ResultSet := Metadata.GetProcedures(Catalog, Schema, '');
+        ResultSet := Metadata.GetProcedures(Catalog, Metadata.AddEscapeCharToWildcards(Schema), '');
         while ResultSet.Next do
         begin
           ProcedureName := ResultSet.GetStringByName('PROCEDURE_NAME');
@@ -572,6 +572,7 @@ begin
       try
         Metadata := Connection.DbcConnection.GetMetadata;
         // Look for the Procedures of the defined Catalog and Schema
+        Schema := Metadata.AddEscapeCharToWildcards(Schema);
         ResultSet := Metadata.GetSequences(Catalog, Schema, '');
         while ResultSet.Next do
           List.Add(ResultSet.GetStringByName('SEQUENCE_NAME'));
@@ -982,7 +983,7 @@ begin
     try
       Metadata := Connection.DbcConnection.GetMetadata;
       // Look for the Columns of the defined Catalog, Schema and TableName
-      ResultSet := Metadata.GetColumns(Catalog, Schema, TableName, '');
+      ResultSet := Metadata.GetColumns(Catalog, Metadata.AddEscapeCharToWildcards(Schema), Metadata.AddEscapeCharToWildcards(TableName), '');
       while ResultSet.Next do
         if List.IndexOf(ResultSet.GetStringByName('COLUMN_NAME')) = -1 then
           List.Add(ResultSet.GetStringByName('COLUMN_NAME'));

@@ -74,6 +74,7 @@
 // ENGLISH, GERMAN, PORTUGUESE, DUTCH, SPANISH, ROMANA, INDONESIAN, RUSSIAN, CZECH, POLISH, FRENCH
 {$DEFINE ENGLISH} //see \core\ZMessages.pas
 
+{$DEFINE MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD} //IDE can't determine overload for NativeUInt(64-Bit)
  // Compilation directives for Lazarus/FPC
 {$IFDEF FPC}
   {$I ZeosLazarus.inc}

@@ -3163,6 +3163,7 @@ var
   ResultSet: IZResultSet;
   FieldName: string;
   FName: string;
+  ConSettings: PZConSettings;
 begin
   FieldDefs.Clear;
   ResultSet := Self.ResultSet;
@@ -3184,18 +3185,18 @@ begin
 
     with ResultSet.GetMetadata do
     begin
+    ConSettings := ResultSet.GetConSettings;
     if GetColumnCount > 0 then
       for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
       begin
         FieldType := ConvertDbcToDatasetType(GetColumnType(I));
         if FieldType in [ftBytes, ftString, ftWidestring] then
           if (FieldType = ftWideString) then
-            if (GetColumnDisplaySize(I) = 0) or ((doAlignMaxRequiredWideStringFieldSize in fOptions) and
-               (ResultSet.GetConSettings^.ClientCodePage^.Encoding = ceUTF8)) then
-              Size := GetPrecision(I) //most UTF8 DB's assume 4Byte / Char (surrogates included) such encoded characters may kill the heap of the FieldBuffer
+              //most UTF8 DB's assume 4Byte / Char (surrogates included) such encoded characters may kill the heap of the FieldBuffer
               //users are warned: http://zeoslib.sourceforge.net/viewtopic.php?f=40&p=51427#p51427
-            else
-              Size := GetColumnDisplaySize(I)
+              Size := GetPrecision(I) shl Ord((ConSettings^.ClientCodePage^.CharWidth > 2) and (doAlignMaxRequiredWideStringFieldSize in fOptions))
+          else if (ConSettings^.CPType = cCP_UTF8) or ((not ConSettings^.AutoEncode) and (ConSettings^.ClientCodePage^.Encoding = ceUTF8)) then
+            Size := GetPrecision(I) shl 2
           else
             Size := GetPrecision(I)
         else
@@ -3379,7 +3380,9 @@ begin
             {$ENDIF}
               if not (ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) = 0) then
               begin
-                {$IFNDEF FPC}Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});{$ENDIF}
+                {$IFNDEF FPC}
+                //Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+                {$ENDIF}
                 Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
               end;
     end;

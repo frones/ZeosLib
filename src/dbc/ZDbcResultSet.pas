@@ -395,6 +395,7 @@ type
     function GetStream: TStream; virtual;
     procedure SetStream(const Value: TStream); overload; virtual;
     function GetBufferAddress: PPointer;
+    function GetLengthAddress: PInteger;
     function GetBuffer: Pointer; virtual;
     procedure SetBuffer(const Buffer: Pointer; const Length: Integer);
     {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
@@ -531,7 +532,7 @@ const
 
 implementation
 
-uses Math, ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding, ZFastCode
+uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding, ZFastCode
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 function CompareNothing(const Null1, Null2: Boolean; const V1, V2): Integer; //emergency exit for complex types we can't sort quickly like arrays, dataset ...
@@ -4237,6 +4238,11 @@ begin
   end
   else
     Result := nil;
+end;
+
+function TZAbstractBlob.GetLengthAddress: PInteger;
+begin
+  Result := @FBlobSize;
 end;
 
 {**

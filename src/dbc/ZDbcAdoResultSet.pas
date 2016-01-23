@@ -255,8 +255,6 @@ var
   ColType: Integer;
   HasAutoIncProp: Boolean;
   F: ZPlainAdo.Field20;
-  S: string;
-  J: Integer;
 begin
 //Check if the current statement can return rows
   if not Assigned(FAdoRecordSet) or (FAdoRecordSet.State = adStateClosed) then
@@ -291,7 +289,11 @@ begin
     ColumnInfo := TZColumnInfo.Create;
 
     F := FAdoRecordSet.Fields.Item[I];
-    ColName := String(F.Name);
+    {$IFDEF UNICODE}
+    ColName := F.Name;
+    {$ELSE}
+    ColName := PUnicodeToString(Pointer(F.Name), Length(F.Name), ConSettings.CTRL_CP);
+    {$ENDIF}
     ColType := F.Type_;
     ColumnInfo.ColumnLabel := ColName;
     ColumnInfo.ColumnName := ColName;
@@ -306,9 +308,6 @@ begin
     ColumnInfo.Precision := FieldSize;
     ColumnInfo.Currency := ColType = adCurrency;
     ColumnInfo.Signed := False;
-    S := '';
-    for J := 0 to F.Properties.Count - 1 do
-      S := S+String(F.Properties.Item[J].Name) + '=' + VarToStr(F.Properties.Item[J].Value) + ', ';
     if HasAutoIncProp then
       ColumnInfo.AutoIncrement := F.Properties.Item['ISAUTOINCREMENT'].Value;
     if ColType in [adTinyInt, adSmallInt, adInteger, adBigInt, adCurrency, adDecimal, adDouble, adNumeric, adSingle] then

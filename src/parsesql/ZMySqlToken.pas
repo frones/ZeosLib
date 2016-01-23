@@ -121,16 +121,12 @@ var
   FloatPoint: Boolean;
   LastChar: Char;
 
-  function ReadHexDigits: string;
+  procedure ReadHexDigits;
   begin
-    Result := '';
     LastChar := #0;
     while Stream.Read(LastChar, SizeOf(Char)) > 0 do
-    begin
-      if CharInSet(LastChar, ['0'..'9','a'..'f','A'..'F']) then
-      begin
-        Result := Result + LastChar;
-        HexDecimal := HexDecimal or CharInSet(LastChar, ['a'..'f','A'..'F']);
+      if CharInSet(LastChar, ['0'..'9','a'..'f','A'..'F']) then begin
+        ToBuf(LastChar, Result.Value);
         LastChar := #0;
       end
       else
@@ -138,90 +134,82 @@ var
         Stream.Seek(-SizeOf(Char), soFromCurrent);
         Break;
       end;
-    end;
   end;
 
-  function ReadDecDigits: string;
+  procedure ReadDecDigits;
   begin
-    Result := '';
     LastChar := #0;
     while Stream.Read(LastChar, SizeOf(Char)) > 0 do
-    begin
-      if CharInSet(LastChar, ['0'..'9']) then
-      begin
-        Result := Result + LastChar;
+      if CharInSet(LastChar, ['0'..'9']) then begin
+        ToBuf(LastChar, Result.Value);
         LastChar := #0;
-      end
-      else
-      begin
+      end else begin
         Stream.Seek(-SizeOf(Char), soFromCurrent);
         Break;
       end;
-    end;
   end;
 
 begin
   HexDecimal := False;
   FloatPoint := FirstChar = '.';
-  Result.Value := FirstChar;
+  Result.Value := '';
+  InitBuf(FirstChar);
   Result.TokenType := ttUnknown;
   LastChar := #0;
 
   { Reads the first part of the number before decimal point }
   if not FloatPoint then
   begin
-    Result.Value := Result.Value + ReadDecDigits;
-    FloatPoint := (LastChar = '.') and not HexDecimal;
+    ReadDecDigits;
+    FloatPoint := (LastChar = '.');
     if FloatPoint then
     begin
       Stream.Read(LastChar, SizeOf(Char));
-      Result.Value := Result.Value + LastChar;
+      ToBuf(LastChar, Result.Value);
     end;
   end;
 
   { Reads the second part of the number after decimal point }
   if FloatPoint then
-    Result.Value := Result.Value + ReadDecDigits;
+    ReadDecDigits;
 
   { Reads a power part of the number }
-  if not HexDecimal and CharInSet(LastChar, ['e','E']) then
+  if (Ord(LastChar) or $20) = ord('e') then //CharInSet(LastChar, ['e','E']) then
   begin
     Stream.Read(LastChar, SizeOf(Char));
-    Result.Value := Result.Value + LastChar;
+    ToBuf(LastChar, Result.Value);
     FloatPoint := True;
 
     Stream.Read(LastChar, SizeOf(Char));
-    if CharInSet(LastChar, ['0'..'9','-','+']) then
-      Result.Value := Result.Value + LastChar + ReadDecDigits
-    else
-    begin
+    if CharInSet(LastChar, ['0'..'9','-','+']) then begin
+      ToBuf(LastChar, Result.Value);
+      ReadDecDigits;
+    end else begin
+      FlushBuf(Result.Value);
       Result.Value := Copy(Result.Value, 1, Length(Result.Value) - 1);
       Stream.Seek(-2*SizeOf(Char), soFromCurrent);
     end;
   end;
 
   { Reads the nexdecimal number }
-  if (Result.Value = '0') and CharInSet(LastChar, ['x','X']) then
+  if (Result.Value = '') and (FirstChar = '0') and ((Ord(LastChar) or $20) = ord('x')) then // CharInSet(LastChar, ['x','X']) then
   begin
     Stream.Read(LastChar, SizeOf(Char));
-    Result.Value := Result.Value + LastChar + ReadHexDigits;
+    ToBuf(LastChar, Result.Value);
+    ReadHexDigits;
     HexDecimal := True;
   end;
+  FlushBuf(Result.Value);
 
   { Prepare the result }
-  if Result.Value = '.' then
-  begin
+  if Result.Value = '.' then begin
     if Tokenizer.SymbolState <> nil then
       Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer);
-  end
-  else
-  begin
-    if HexDecimal then
-      Result.TokenType := ttHexDecimal
-    else if FloatPoint then
-      Result.TokenType := ttFloat
-    else Result.TokenType := ttInteger;
-  end;
+  end else if HexDecimal then
+    Result.TokenType := ttHexDecimal
+  else if FloatPoint then
+    Result.TokenType := ttFloat
+  else Result.TokenType := ttInteger;
 end;
 
 { TZMySQLQuoteState }
@@ -239,41 +227,30 @@ const BackSlash = Char('\');
 var
   ReadChar: Char;
   LastChar: Char;
-  //QuoteChar: Char;
-  //QuoteCount: Integer;
 begin
-  Result.Value := FirstChar;
-  //QuoteCount := 1;
+  Result.Value := '';
+  InitBuf(FirstChar);
+
   If FirstChar = '`' then
     Result.TokenType := ttQuotedIdentifier
-  Else
+  else
     Result.TokenType := ttQuoted;
 
-  //QuoteChar := FirstChar;
-
   LastChar := #0;
-
   while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do
   begin
-    //if ReadChar = QuoteChar then Inc(QuoteCount);
-    if (LastChar = FirstChar) and (ReadChar <> FirstChar) then
-    begin
-      //if QuoteCount mod 2 = 0 then // only valid for Pascal AnsiQuoted/QuotedStr
-      begin
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-        Break;
-      end;
+    if (LastChar = FirstChar) and (ReadChar <> FirstChar) then begin
+      Stream.Seek(-SizeOf(Char), soFromCurrent);
+      Break;
     end;
-    Result.Value := Result.Value + ReadChar;
+    ToBuf(ReadChar, Result.Value);
     if LastChar = BackSlash then
-//    begin
-//      if Readchar = FirstChar then Inc(QuoteCount);  //Escaped single Quote (A QuoteChar instead of FirstChar would be better..)
       LastChar := #0
-//    end
     else if (LastChar = FirstChar) and (ReadChar = FirstChar) then
       LastChar := #0
     else LastChar := ReadChar;
   end;
+  FlushBuf(Result.Value);
 end;
 
 {**
@@ -324,44 +301,36 @@ var
   ReadNum, ReadNum2: Integer;
 begin
   Result.TokenType := ttUnknown;
-  Result.Value := FirstChar;
+  InitBuf(Firstchar);
+  Result.Value := '';
 
-  if FirstChar = '-' then
-  begin
+  if FirstChar = '-' then begin
     ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
-    if (ReadNum > 0) and (ReadChar = '-') then
-    begin
+    if (ReadNum > 0) and (ReadChar = '-') then begin
       Result.TokenType := ttComment;
-      Result.Value := '--' + GetSingleLineComment(Stream);
-    end
-    else
-    begin
+      ToBuf(ReadChar, Result.Value);
+      GetSingleLineComment(Stream, Result.Value);
+    end else begin
       if ReadNum > 0 then
         Stream.Seek(-SizeOf(Char), soFromCurrent);
     end;
-  end
-  else if FirstChar = '#' then
-  begin
+  end else if FirstChar = '#' then begin
     Result.TokenType := ttComment;
-    Result.Value := '#' + GetSingleLineComment(Stream);
-  end
-  else if FirstChar = '/' then
-  begin
+    GetSingleLineComment(Stream, Result.Value);
+  end else if FirstChar = '/' then begin
     ReadNum := Stream.Read(ReadChar, SizeOf(Char));
     if (ReadNum > 0) and (ReadChar = '*') then
     begin
+      ToBuf(ReadChar, Result.Value);
       ReadNum2 := Stream.Read(ReadChar, SizeOf(Char));
       // Don't treat '/*!' comments as normal comments!!
-      if (ReadNum2 > 0) and (ReadChar <> '!') then
-      begin
-        Result.TokenType := ttComment;
-        Result.Value := '/*'+ReadChar + GetMultiLineComment(Stream);
-      end
-      else
-      begin
-        if ReadNum2 > 0 then
+      if (ReadNum2 > 0) then begin
+        ToBuf(ReadChar, Result.Value);
+        if (ReadChar <> '!') then
+          Result.TokenType := ttComment
+        else
           Result.TokenType := ttSymbol;
-          Result.Value := '/*!' + GetMultiLineComment(Stream);
+        GetMultiLineComment(Stream, Result.Value);
       end;
     end
     else
@@ -372,7 +341,9 @@ begin
   end;
 
   if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil) then
-    Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer);
+    Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer)
+  else
+    FlushBuf(Result.Value);
 end;
 
 { TZMySQLSymbolState }

@@ -2065,31 +2065,27 @@ end;
 }
 function TZAbstractDatabaseMetadata.StripEscape(const Pattern: string): string;
 var
-  I: Integer;
-  PreviousChar: Char;
-  EscapeChar: string;
+  I, J: Integer;
+  PreviousChar, EscapeChar: Char;
 begin
   PreviousChar := #0;
-  Result := '';
-  EscapeChar := GetDatabaseInfo.GetSearchStringEscape;
-  for I := 1 to Length(Pattern) do
-  begin
-    if (Pattern[i] <> EscapeChar) then
-    begin
-      Result := Result + Pattern[I];
+  Result := Pattern;
+  EscapeChar := GetDatabaseInfo.GetSearchStringEscape[1];
+  J := 0;
+  for I := 1 to Length(Pattern) do begin
+    if (Pattern[i] <> EscapeChar) then begin
+      Inc(J);
+      Result[J] := Pattern[I];
       PreviousChar := Pattern[I];
-    end
-    else
-    begin
-      if (PreviousChar = EscapeChar) then
-      begin
-        Result := Result + Pattern[I];
-        PreviousChar := #0;
-      end
-      else
-        PreviousChar := Pattern[i];
-    end;
+    end else if (PreviousChar = EscapeChar) then begin
+      Inc(J);
+      Result[J] := Pattern[I];
+      PreviousChar := #0;
+    end else
+      PreviousChar := Pattern[i];
   end;
+  if J <> Length(Result) then
+    SetLength(Result, j);
 end;
 
 {**
@@ -2097,8 +2093,7 @@ end;
    @param Pattern a sql pattern
    @return if pattern contain wildcards return true otherwise false
 }
-function TZAbstractDatabaseMetadata.HasNoWildcards(const Pattern: string
-  ): boolean;
+function TZAbstractDatabaseMetadata.HasNoWildcards(const Pattern: string): boolean;
 var
   I: Integer;
   PreviousCharWasEscape: Boolean;
@@ -2108,10 +2103,9 @@ begin
   Result := False;
   PreviousChar := #0;
   PreviousCharWasEscape := False;
-  EscapeChar := Char(GetDatabaseInfo.GetSearchStringEscape[1]);
+  EscapeChar := GetDatabaseInfo.GetSearchStringEscape[1];
   WildcardsSet := GetWildcardsSet;
-  for I := 1 to Length(Pattern) do
-  begin
+  for I := 1 to Length(Pattern) do begin
     if (not PreviousCharWasEscape) and CharInset(Pattern[I], WildcardsSet) then
      Exit;
 
@@ -3452,7 +3446,7 @@ begin
         end;
       end;
 
-      with GetColumns(Catalog, Schema, Table, '') do
+      with GetColumns(Catalog, AddEscapeCharToWildcards(Schema), AddEscapeCharToWildcards(Table), '') do
       begin
         while Next do
         begin
@@ -4552,11 +4546,9 @@ end;
 }
 procedure TZAbstractDatabaseMetadata.FillWildcards;
 begin
-  SetLength(WildcardsArray,1);
-  WildcardsArray[0]:='%';
-  {SetLength(WildcardsArray,2);
-  WildcardsArray[0]:='_';  <---- seems to be a trublemaker, no idea how to test it with our tests. See http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=13184
-  WildcardsArray[1]:='%';}
+  SetLength(WildcardsArray,2);
+  WildcardsArray[0]:='_';  //<---- seems to be a trublemaker, no idea how to test it with our tests. See http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=13184
+  WildcardsArray[1]:='%';
 end;
 
 function TZAbstractDatabaseMetadata.NormalizePatternCase(Pattern:String): string;
