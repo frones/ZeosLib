@@ -6936,7 +6936,7 @@ begin;
   end;
   len:=PLengthInt(p-StringLenOffSet)^;
   lenSub:=PLengthInt(pSub-StringLenOffSet)^;
-  if (len<lenSub+PtrInt(Offset)) or (lenSub<0) then begin
+  if (len<lenSub+LengthInt(Offset)) or (lenSub<0) then begin
     Result := 0;
     goto Exit;
   end;
