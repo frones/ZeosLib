@@ -157,15 +157,12 @@ begin
     Result := stDouble
   else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('DOUB')) then
     Result := stDouble
-  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('MONEY') then
+  else if EndsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('MONEY')) then
     Result := stCurrency
-  else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('CHAR')) then
+  else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('CHAR')) or
+          EndsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('CHAR')) then
     Result := stString
-  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('VARCHAR') then
-    Result := stString
-  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('VARBINARY') then
-    Result := stBytes
-  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('BINARY') then
+  else if EndsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('BINARY')) then
     Result := stBytes
   else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('DATE') then
     Result := stDate

@@ -1364,7 +1364,9 @@ begin
           Result.UpdateInt(TableColColumnBufLengthIndex, (Precision+1) shl 1);
           Result.UpdateInt(TableColColumnCharOctetLengthIndex, Precision shl 1);
         end else if SQLType = stBytes then
-          Result.UpdateInt(TableColColumnBufLengthIndex, Precision);
+          Result.UpdateInt(TableColColumnBufLengthIndex, Precision)
+        else if not (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
+          Result.UpdateInt(TableColColumnBufLengthIndex, ZSQLTypeToBuffSize(SQLType));
 
         Result.UpdateInt(TableColColumnDecimalDigitsIndex, Decimals);
         Result.UpdateInt(TableColColumnNumPrecRadixIndex, 0);

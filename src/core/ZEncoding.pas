@@ -1472,7 +1472,7 @@ By1:  c := byte(Source^);
       if c and $80=0 then begin
         PWord(dest)^ := c; // much faster than dest^ := WideChar(c) for FPC
         inc(dest);
-        if (NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+        if ({%H-}NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
         if Source<endSource then continue else break;
       end;
       extra := UTF8_EXTRABYTES[c];
@@ -1491,14 +1491,14 @@ By1:  c := byte(Source^);
       if c<=$ffff then begin
         PWord(dest)^ := c;
         inc(dest);
-        if (NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+        if ({%H-}NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
         if Source<endSource then continue else break;
       end;
       dec(c,$10000); // store as UTF-16 surrogates
       PWordArray(dest)[0] := c shr 10  +UTF16_HISURROGATE_MIN;
       PWordArray(dest)[1] := c and $3FF+UTF16_LOSURROGATE_MIN;
       inc(dest,2);
-      if (NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+      if ({%H-}NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
       if Source>=endSource then break;
     until false;
 Quit:

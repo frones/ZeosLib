@@ -6920,10 +6920,11 @@ begin
 end;
 
 // from Aleksandr Sharahov's PosEx_Sha_Pas_2()
+// changed Fast Lenght to compiler common PLengthInt and StringLenOffSet
 function PosEx(const SubStr, S: RawByteString; Offset: Integer = 1): Integer;
-var len, lenSub: PtrInt;
+var len, lenSub: LengthInt;
     ch: AnsiChar;
-    p, pSub, pStart, pStop: PUTF8Char;
+    p, pSub, pStart, pStop: PAnsiChar;
 label Loop0, Loop4, TestT, Test0, Test1, Test2, Test3, Test4,
       AfterTestT, AfterTest0, Ret, Exit;
 begin;
@@ -6933,13 +6934,8 @@ begin;
     Result := 0;
     goto Exit;
   end;
-  {$ifdef FPC}
-  len := PStrRec(Pointer(PtrInt(p)-STRRECSIZE))^.length;
-  lenSub := PStrRec(Pointer(PtrInt(pSub)-STRRECSIZE))^.length-1;
-  {$else}
-  len := PInteger(p-4)^;
-  lenSub := PInteger(pSub-4)^-1;
-  {$endif}
+  len:=PLengthInt(p-StringLenOffSet)^;
+  lenSub:=PLengthInt(pSub-StringLenOffSet)^;
   if (len<lenSub+PtrInt(Offset)) or (lenSub<0) then begin
     Result := 0;
     goto Exit;

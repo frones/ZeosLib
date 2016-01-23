@@ -1739,7 +1739,9 @@ begin
         Result.UpdateInt(TableColColumnBufLengthIndex, (FieldSize+1) shl 1);
         Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldSize shl 1);
       end else if SQLType = stBytes then
-        Result.UpdateInt(TableColColumnBufLengthIndex, FieldSize);
+        Result.UpdateInt(TableColColumnBufLengthIndex, FieldSize)
+      else if not (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
+        Result.UpdateInt(TableColColumnBufLengthIndex, ZSQLTypeToBuffSize(SQLType));
       Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetInt(DATA_PRECISION_Index));
       Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetInt(DATA_SCALE_Index));
 
