@@ -184,8 +184,9 @@ end;
 }
 procedure TZSQLiteResultSet.Open;
 const
-  NativeSQLite3Types: array[SQLITE_INTEGER..SQLITE_NULL] of RawByteString =
-    ('BIGINT','DOUBLE','TEXT','BLOB','');
+  NativeSQLite3Types: array[Boolean, SQLITE_INTEGER..SQLITE_NULL] of RawByteString =
+    (('BIGINT','DOUBLE','CHAR','BLOB',''),
+    ('BIGINT','DOUBLE','TEXT','BLOB',''));
 var
   I: Integer;
   ColumnInfo: TZColumnInfo;
@@ -229,7 +230,7 @@ begin
       ReadOnly := TableName <> '';
       P := FPlainDriver.column_decltype(FStmtHandle, i);
       if P = nil then
-        tmp := NativeSQLite3Types[FPlainDriver.column_type(FStmtHandle, i)]
+        tmp := NativeSQLite3Types[FUndefinedVarcharAsStringLength = 0][FPlainDriver.column_type(FStmtHandle, i)]
       else
         ZSetString(P, ZFastCode.StrLen(P), tmp);
       ColumnType := ConvertSQLiteTypeToSQLType(tmp, FUndefinedVarcharAsStringLength,
