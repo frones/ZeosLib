@@ -711,7 +711,7 @@ begin
             begin
               TempBlob := InParamValues[i].vInterface as IZBLob;
               ProcessBinary((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
-                TempBlob.GetBuffer, Min(DBBindingArray[I].cbMaxLen, TempBlob.Length));
+                TempBlob.GetBuffer, {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen, TempBlob.Length));
             end
             else
               if InParamValues[i].vType = vtBytes then
@@ -756,7 +756,7 @@ begin
                 TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
                 ProcessAnsi((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                   TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP),
-                    Min(DBBindingArray[I].cbMaxLen-1, TempBlob.Length));
+                    {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen-1, TempBlob.Length));
               end
               else
               begin
@@ -764,7 +764,7 @@ begin
                   TempBlob.GetBuffer, TempBlob.Length, ConSettings);
                 ProcessAnsi((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                   Pointer(InParamValues[i].VRawByteString),
-                  Min(DBBindingArray[I].cbMaxLen-1, Length(InParamValues[i].VRawByteString)));
+                  {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen-1, Length(InParamValues[i].VRawByteString)));
               end;
             end
             else
@@ -772,7 +772,7 @@ begin
               InParamValues[i].VRawByteString := ClientVarManager.GetAsRawByteString(InParamValues[i]);
               ProcessAnsi((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                 Pointer(InParamValues[i].VRawByteString),
-                Min(DBBindingArray[I].cbMaxLen-1, Length(InParamValues[i].VRawByteString)));
+                {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen-1, Length(InParamValues[i].VRawByteString)));
             end;
         DBTYPE_WSTR or DBTYPE_BYREF:
           if (DBBindingArray[i].dwFlags and DBPARAMFLAGS_ISLONG <> 0) then //insi lob's!!!
@@ -807,7 +807,7 @@ begin
                 TempBlob.GetPWideChar;
                 ProcessUnicode((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                   TempBlob.GetPWideChar,
-                  Min((DBBindingArray[I].cbMaxLen shr 1)-1, TempBlob.Length shr 1));
+                  {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min((DBBindingArray[I].cbMaxLen shr 1)-1, TempBlob.Length shr 1));
               end
               else
               begin
@@ -817,7 +817,7 @@ begin
                 TmpStream.Free;
                 ProcessUnicode((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                   TempBlob.GetPWideChar,
-                  Min((DBBindingArray[I].cbMaxLen shr 1)-1, TempBlob.Length shr 1));
+                  {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min((DBBindingArray[I].cbMaxLen shr 1)-1, TempBlob.Length shr 1));
               end;
             end
             else
@@ -825,7 +825,7 @@ begin
               InParamValues[i].VUnicodeString := ClientVarManager.GetAsUnicodeString(InParamValues[i]);
               ProcessUnicode((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                 Pointer(InParamValues[i].VUnicodeString),
-                Min((DBBindingArray[I].cbMaxLen shr 1)-1, Length(InParamValues[i].VUnicodeString)));
+                {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min((DBBindingArray[I].cbMaxLen shr 1)-1, Length(InParamValues[i].VUnicodeString)));
             end;
         DBTYPE_DBDATE:
           begin
@@ -1520,7 +1520,7 @@ begin
                   begin
                     TempBlob := ZInterfaceArray[ArrayOffSet] as IZBLob;
                     ProcessBinary((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
-                      TempBlob.GetBuffer, Min(DBBindingArray[I].cbMaxLen, TempBlob.Length));
+                      TempBlob.GetBuffer, {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen, TempBlob.Length));
                   end;
                 stBytes:
                   ProcessBinary((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
@@ -1528,7 +1528,7 @@ begin
                     {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen,NativeUInt(Length(ZBytesArray[ArrayOffSet]))));
                 stGUID:
                   ProcessBinary((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
-                    @ZGUIDArray[ArrayOffSet].D1, Min(DBBindingArray[I].cbMaxLen, 16));
+                    @ZGUIDArray[ArrayOffSet].D1, {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen, 16));
                 else
                   raise Exception.Create('Unsupported Byte-Array Variant');
               end;
@@ -1628,7 +1628,7 @@ begin
                       begin
                         ProcessAnsi((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                           Pointer(ZAnsiStringArray[ArrayOffSet]),
-                          Min(DBBindingArray[I].cbMaxLen-1, Length(ZAnsiStringArray[ArrayOffSet])));
+                          {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen-1, Length(ZAnsiStringArray[ArrayOffSet])));
                         Continue;
                       end;
                     vtUTF8String: AnsiTemp := ZConvertUTF8ToAnsi(ZUTF8StringArray[ArrayOffSet]);
@@ -1636,7 +1636,7 @@ begin
                       begin
                         ProcessAnsi((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                           Pointer(ZRawByteStringArray[ArrayOffSet]),
-                          Min(DBBindingArray[I].cbMaxLen-1, Length(ZRawByteStringArray[ArrayOffSet])));
+                          {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen-1, Length(ZRawByteStringArray[ArrayOffSet])));
                         Continue;
                       end;
                     vtUnicodeString: AnsiTemp := AnsiString(ZUnicodeStringArray[ArrayOffSet]);
@@ -1645,7 +1645,7 @@ begin
                       begin
                         ProcessAnsi((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                           ZCharRecArray[ArrayOffSet].P,
-                          Min(DBBindingArray[I].cbMaxLen-1, ZCharRecArray[ArrayOffSet].Len));
+                          {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen-1, ZCharRecArray[ArrayOffSet].Len));
                         continue;
                       end
                       else
@@ -1667,7 +1667,7 @@ begin
                       TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP); //make internal conversion first
                       ProcessAnsi((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                         TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP),
-                        Min(DBBindingArray[I].cbMaxLen, TempBlob.Length));
+                        {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen, TempBlob.Length));
                     end
                     else
                     begin
@@ -1675,7 +1675,7 @@ begin
                         TempBlob.Length, ConSettings));
                       ProcessAnsi((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                         TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP),
-                        Min(DBBindingArray[I].cbMaxLen, TempBlob.Length));
+                        {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen, TempBlob.Length));
                     end;
                     Continue;
                   end;
@@ -1683,7 +1683,7 @@ begin
                   raise Exception.Create('Unsupported AnsiString-Array Variant');
               end;
               ProcessAnsi(False, Pointer(AnsiTemp), //converted values can't be referenced
-                Min(DBBindingArray[I].cbMaxLen-1, Length(AnsiTemp)));
+                {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen-1, Length(AnsiTemp)));
             end;
           DBTYPE_WSTR or DBTYPE_BYREF:
             if (DBBindingArray[i].dwFlags and DBPARAMFLAGS_ISLONG <> 0) then //insi lob's!!!
@@ -1779,7 +1779,7 @@ begin
                       begin
                         ProcessUnicode((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                           Pointer(ZStringArray[ArrayOffSet]),
-                          Min((DBBindingArray[I].cbMaxLen shr 1) -1, Length(ZStringArray[ArrayOffSet])));
+                          {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min((DBBindingArray[I].cbMaxLen shr 1) -1, Length(ZStringArray[ArrayOffSet])));
                         continue;
                       end;
                       {$ELSE}
@@ -1792,7 +1792,7 @@ begin
                       begin
                         ProcessUnicode((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                           Pointer(ZUnicodeStringArray[ArrayOffSet]),
-                          Min((DBBindingArray[I].cbMaxLen shr 1) -1, Length(ZUnicodeStringArray[ArrayOffSet])));
+                          {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min((DBBindingArray[I].cbMaxLen shr 1) -1, Length(ZUnicodeStringArray[ArrayOffSet])));
                         continue;
                       end;
                     vtCharRec:
@@ -1800,7 +1800,7 @@ begin
                       begin
                         ProcessUnicode((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                           ZCharRecArray[ArrayOffSet].P,
-                          Min((DBBindingArray[I].cbMaxLen shr 1) -1, ZCharRecArray[ArrayOffSet].Len));
+                          {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min((DBBindingArray[I].cbMaxLen shr 1) -1, ZCharRecArray[ArrayOffSet].Len));
                         continue;
                       end
                       else
@@ -1822,14 +1822,14 @@ begin
                     end;
                     ProcessUnicode((DBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
                       TempBlob.GetPWideChar,
-                      Min((DBBindingArray[I].cbMaxLen shr 1) -1, TempBlob.Length shr 1));
+                      {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min((DBBindingArray[I].cbMaxLen shr 1) -1, TempBlob.Length shr 1));
                     Continue;
                   end;
                 else
                   raise Exception.Create('Unsupported AnsiString-Array Variant');
               end;
               ProcessUnicode(False, Pointer(UniTemp),
-                Min((DBBindingArray[I].cbMaxLen shr 1)-1, Length(UniTemp)));
+                {$IFDEF MISS_MATH_UINT64_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min((DBBindingArray[I].cbMaxLen shr 1)-1, Length(UniTemp)));
             end;
           DBTYPE_DBDATE:
             begin
