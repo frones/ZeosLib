@@ -61,7 +61,7 @@ interface
 {$IFEND}
 
 uses
-{$IFNDEF UNIX}
+{$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
   Variants, Types, SysUtils, Classes, FMTBcd, {$IFNDEF FPC}SqlTimSt,{$ENDIF}
@@ -2852,9 +2852,9 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
 var
   ColumnIndex: Integer;
   Len: NativeUInt;
+  bLen: Word;
   P: PWideChar;
   RowBuffer: PZRowBuffer;
-  Bts: TBytes;
 begin
   if GetActiveBuffer(RowBuffer{%H-}) then
   begin
@@ -2874,16 +2874,22 @@ begin
           else
             DateTimeToNative(Field.DataType,
               RowAccessor.GetTime(ColumnIndex, Result), Buffer);
-        { Processes binary array fields. }
+        { Processes binary fields. }
+        ftVarBytes:
+          begin
+            P := RowAccessor.GetBytes(ColumnIndex, Result, PWord(Buffer)^);
+            System.Move((PAnsiChar(P)+SizeOf(Word))^,
+              PAnsiChar(Buffer)^, Min(PWord(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex)));
+          end;
         ftBytes:
           begin
-            Bts := RowAccessor.GetBytes(ColumnIndex, Result);
-            System.Move(PAnsiChar(Bts)^,
-              PAnsiChar(Buffer)^, Min(Length(Bts), RowAccessor.GetColumnDataSize(ColumnIndex)));
+            P := RowAccessor.GetBytes(ColumnIndex, Result, bLen);
+            System.Move(P^, Pointer(Buffer)^, Min(bLen, RowAccessor.GetColumnDataSize(ColumnIndex)));
           end;
         { Processes blob fields. }
         ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF} :
           Result := RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty;
+        { Processes String fields. }
         ftWideString:
           begin
             P := RowAccessor.GetPWidechar(ColumnIndex, Result, Len);
@@ -2896,6 +2902,8 @@ begin
               (PWideChar(Buffer)+Len)^ := WideChar(#0);
             end;
           end;
+        ftString:
+          Result := FStringFieldGetter(ColumnIndex, PAnsiChar(Buffer));
         {$IFDEF WITH_FTGUID}
         ftGUID:
           begin
@@ -2906,8 +2914,6 @@ begin
               GUIDToBuffer(PAnsiChar(P), PAnsiChar(Buffer), True);
           end;
         {$ENDIF}
-        ftString:
-          Result := FStringFieldGetter(ColumnIndex, PAnsiChar(Buffer));
         {$IFDEF WITH_FTDATASETSUPPORT}
         ftDataSet:
           Result := RowAccessor.GetDataSet(ColumnIndex, Result).IsEmpty;
@@ -3004,12 +3010,14 @@ begin
           RowAccessor.SetTimestamp(ColumnIndex, NativeToDateTime(Field.DataType, Buffer));
         ftTime: { Processes Time fields. }
           RowAccessor.SetTime(ColumnIndex, NativeToDateTime(Field.DataType, Buffer));
+        ftVarBytes: { Processes varbinary fields. }
+          RowAccessor.SetBytes(ColumnIndex, PAnsiChar(Buffer)+SizeOf(Word), PWord(Buffer)^);
         ftBytes: { Processes binary array fields. }
-          RowAccessor.SetBytes(ColumnIndex, BufferToBytes(Pointer(Buffer), Field.Size));
+          RowAccessor.SetBytes(ColumnIndex, Pointer(Buffer), Field.Size);
         ftWideString: { Processes widestring fields. }
           //EH: Using the WideRec setter doesn't perform better. Don't know why but it seems like the IDE's are faster by setting the UnicodeStrings directly
           {$IFDEF WITH_PWIDECHAR_TOWIDESTRING}
-          RowAccessor.SetUnicodeString(ColumnIndex,  PWideChar(Buffer));
+          RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
           {$ELSE}
           RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
           {$ENDIF}
