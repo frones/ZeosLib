@@ -78,14 +78,6 @@ type
 function ConvertMySQLHandleToSQLType(FieldHandle: PZMySQLField;
   CtrlsCPType: TZControlsCodePage): TZSQLType;
 
-(**
-  Convert string mysql field type to SQLType
-  @param string field type value
-  @result the SQLType field type value
-}
-function ConvertMySQLTypeToSQLType(const TypeName: RawByteString; TypeSecond: RawByteString;
-  const CtrlsCPType: TZControlsCodePage): TZSQLType;
-*)
 {**
   Checks for possible sql errors.
   @param PlainDriver a MySQL plain driver.
@@ -276,171 +268,6 @@ begin
       raise Exception.Create('Unknown MySQL data type!');
    end;
 end;
-
-(**
-  Convert string mysql field type to SQLType
-  @param string field type value
-  @result the SQLType field type value
-}
-function ConvertMySQLTypeToSQLType(const TypeName: RawByteString; TypeSecond: RawByteString;
-  const CtrlsCPType: TZControlsCodePage): TZSQLType;
-const
-  GeoTypes: array[0..7] of string = (
-   'POINT','LINESTRING','POLYGON','GEOMETRY',
-   'MULTIPOINT','MULTILINESTRING','MULTIPOLYGON','GEOMETRYCOLLECTION'
-  );
-var
-  IsUnsigned: Boolean;
-  Posi, Len, i: Integer;
-  Spec: RawByteString;
-begin
-  TypeName := UpperCase(TypeName);
-  TypeNameFull := UpperCase(TypeNameFull);
-  Result := stUnknown;
-
-  Posi := FirstDelimiter(' ', TypeName);
-  if Posi > 0 then
-    TypeName := Copy(TypeName, 1, Posi - 1);
-
-  Spec := '';
-  Posi := FirstDelimiter(' ', TypeNameFull);
-  if Posi > 0 then
-    Spec := Copy(TypeNameFull, Posi + 1, Length(TypeNameFull)-Posi);
-
-  IsUnsigned := ZFastCode.Pos('UNSIGNED', Spec) > 0;
-
-  if TypeName = 'TINYINT' then
-  begin
-    if IsUnsigned then
-      Result := stByte
-    else
-      Result := stSmall;
-  end
-  else if TypeName = 'YEAR' then
-    Result := stWord  //1901 to 2155, and 0000 in the 4 year format and 1970-2069 if you use the 2 digit format (70-69).
-  else if TypeName = 'SMALLINT' then
-  begin
-    if IsUnsigned then
-      Result := stWord  //0 - 65535
-    else
-      Result := stSmall; //-32768 - 32767
-  end
-  else if TypeName = 'MEDIUMINT' then
-    if IsUnsigned then  //0 - 16777215
-       Result := stLongWord
-    else
-       Result := stInteger //-8388608 - 8388607
-  else if (TypeName = 'INT') or (TypeName = 'INTEGER') or (TypeName = 'INT24') then
-    if IsUnsigned then
-       Result := stLongWord //0 - 4294967295
-    else
-       Result := stInteger //-2147483648 - 2147483647
-  else if TypeName = 'BIGINT' then
-    if IsUnsigned then
-       Result := stULong //0 - 18446744073709551615
-    else
-       Result := stLong // -9223372036854775808 - 9223372036854775807
-  //else if TypeName = 'INT24' then  //no docs?
-    //Result := stLong
-  else if TypeName = 'REAL' then
-  begin
-    if IsUnsigned then
-      Result := stDouble
-    else
-      Result := stFloat;
-  end
-  else if TypeName = 'FLOAT' then
-  begin
-//    if IsUnsigned then
-      Result := stDouble
-//    else Result := stFloat;
-  end
-  else if TypeName = 'DECIMAL' then
-  begin
-    if EndsWith(TypeNameFull, ',0)') then
-    begin
-      Len := StrToInt(Copy(TypeNameFull, 9, Length(TypeNameFull) - 11));
-      if Len < 10 then
-        Result := stInteger
-      else
-        Result := stLong;
-    end
-    else
-      Result := stDouble;
-  end
-  else if TypeName = 'DOUBLE' then
-    Result := stDouble
-  else if TypeName = 'CHAR' then
-    Result := stString
-  else if TypeName = 'VARCHAR' then
-    Result := stString
-  else if TypeName = 'VARBINARY' then
-    Result := stBytes
-  else if TypeName = 'BINARY' then
-    Result := stBytes
-  else if TypeName = 'DATE' then
-    Result := stDate
-  else if TypeName = 'TIME' then
-    Result := stTime
-  else if TypeName = 'TIMESTAMP' then
-    Result := stTimestamp
-  else if TypeName = 'DATETIME' then
-    Result := stTimestamp
-  else if TypeName = 'TINYBLOB' then
-    Result := stBinaryStream
-  else if TypeName = 'BLOB' then
-    Result := stBinaryStream
-  else if TypeName = 'MEDIUMBLOB' then
-    Result := stBinaryStream
-  else if TypeName = 'LONGBLOB' then
-    Result := stBinaryStream
-  else if TypeName = 'TINYTEXT' then
-    Result := stAsciiStream
-  else if TypeName = 'TEXT' then
-    Result := stAsciiStream
-  else if TypeName = 'MEDIUMTEXT' then
-    Result := stAsciiStream
-  else if TypeName = 'LONGTEXT' then
-    Result := stAsciiStream
-  else if TypeName = 'ENUM' then
-  begin
-    if (TypeNameFull = 'ENUM(''Y'',''N'')')
-      or (TypeNameFull = 'ENUM(''N'',''Y'')') then
-      Result := stBoolean
-    else
-      Result := stString;
-  end
-  else if TypeName = 'SET' then
-    Result := stString
-  else if TypeName = 'BIT' then  //see: http://dev.mysql.com/doc/refman/5.1/en/bit-type.html
-  begin
-    Posi := ZFastCode.Pos('(', TypeNameFull);
-    if (Posi > 0) and EndsWith(TypeNameFull, ')') then
-    begin
-      Len := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Copy(TypeNameFull, Posi+1, Length(TypeNameFull)-Posi-1), 1);
-      case Len of
-        1..8: Result := stByte;
-        9..16: Result := stWord;
-        17..32: Result := stLongWord;
-        else Result := stULong;
-      end;
-    end
-    else
-      Result := stByte
-  end else
-    for i := 0 to Length(GeoTypes) - 1 do
-       if GeoTypes[i] = TypeName then
-          Result := stBinaryStream;
-
-  if ( CtrlsCPType = cCP_UTF16) then
-  case result of
-    stString: Result := stUnicodeString;
-    stAsciiStream: Result := stUnicodeStream;
-  end;
-
-  if Result = stUnknown then
-     raise Exception.Create('Unknown MySQL data type!');
-end; *)
 
 {**
   Checks for possible sql errors.
@@ -750,109 +577,107 @@ begin
   end else if TypeName = 'set' then begin
     ColumnSize := 255;
     FieldType := stString;
-  end else begin
-    pC := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(' '), TypeName)+1;
-
-    if ZFastCode.PosEx('tinyint', TypeName, pc) > 0 then begin
+  end else if ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('int'), TypeName) > 0 then begin
+    if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('tiny')) then begin
 lByte:
       FieldType := TZSQLType(Ord(stByte)+Ord(Signed));  //0 - 255 or -128 - 127
       ColumnSize := 3+Ord(Signed);
-    end else if TypeName = 'year' then begin
-      FieldType := stWord;  //1901 to 2155, and 0000 in the 4 year format and 1970-2069 if you use the 2 digit format (70-69).
-      ColumnSize := 4;
-    end else if ZFastCode.PosEx('smallint', TypeName, pc) > 0 then begin
+    end else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('small')) then begin
 lWord:
       FieldType := TZSQLType(Ord(stWord)+Ord(Signed));  //0 - 65535 or -32768 - 32767
       ColumnSize := 5+Ord(Signed);
-    end else if (ZFastCode.PosEx('mediumint', TypeName, pc) > 0) or 
-                (ZFastCode.PosEx('int24', TypeName, pc) > 0) then begin
+    end else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('medium')) or
+                EndsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('24')) then begin
       FieldType := TZSQLType(Ord(stLongWord)+Ord(Signed)); //0 - 16777215 or -8388608 - 8388607
       ColumnSize := 8;
-    end else if ZFastCode.PosEx('bigint', TypeName, pc) > 0 then begin
+    end else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('big')) then begin
 lLongLong:
       FieldType := TZSQLType(Ord(stULong)+Ord(Signed)); //0 - 18446744073709551615 or -9223372036854775808 - 922337203685477580
       ColumnSize := 20;
-    end else if ZFastCode.PosEx('int', TypeName, pc) > 0 then begin//includes INTEGER
+    end else begin//includes INTEGER
 lLong:
       FieldType := TZSQLType(Ord(stLongWord)+Ord(Signed));  //0 - 4294967295 or -2147483648 - 2147483647
       ColumnSize := 10+Ord(Signed);
-    end else if TypeName = 'real' then begin
-      FieldType := stFloat
-    end else if {(TypeName = 'float') or }(TypeName = 'decimal') {or StartsWith(TypeName, RawByteString('double'))} then begin
-      //read careful! http://dev.mysql.com/doc/refman/5.7/en/floating-point-types.html
-      if TypeInfoSecond = '' then begin
-        FieldType := stDouble;
-        ColumnSize := 12;
-      end else begin
-        pC := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(','), TypeInfoSecond);
-        if pC > 0 then begin
-          TypeInfoSecond[pC] := #0;
-          ColumnSize := RawToIntDef(@TypeInfoSecond[1], 0);
-          Scale := RawToIntDef(@TypeInfoSecond[pC+1], 0);
-          TypeInfoSecond[pC] := ',';
-        end;
-        if Scale = 0 then
-          if ColumnSize < 10 then
-            goto lLong
-          else
-            goto lLongLong
-        else {if ColumnSize < 25 then begin
-          FieldType := stFloat;
-          ColumnSize := 12;
-        end else} begin
-          FieldType := stDouble;
-          ColumnSize := 22;
-        end;
-      end
-    end else if (TypeName = 'float') or StartsWith(TypeName, RawByteString('double')) then begin
+    end;
+  end else if TypeName = 'year' then begin
+    FieldType := stWord;  //1901 to 2155, and 0000 in the 4 year format and 1970-2069 if you use the 2 digit format (70-69).
+    ColumnSize := 4;
+  end else if TypeName = 'real' then begin
+    FieldType := stFloat
+  end else if {(TypeName = 'float') or }(TypeName = 'decimal') {or StartsWith(TypeName, RawByteString('double'))} then begin
+    //read careful! http://dev.mysql.com/doc/refman/5.7/en/floating-point-types.html
+    if TypeInfoSecond = '' then begin
       FieldType := stDouble;
-      ColumnSize := 22;
-    end else if EndsWith(TypeName, RawByteString('char')) then begin //includes 'VARCHAR'
-      FieldType := stString;
-      ColumnSize := RawToIntDef(TypeInfoSecond, 0);
-    end else if EndsWith(TypeName, RawByteString('binary')) then begin //includes 'VARBINARY'
-      FieldType := stBytes;
-      ColumnSize := RawToIntDef(TypeInfoSecond, 0);
-    end else if TypeName = 'date' then begin
-      FieldType := stDate;
-      ColumnSize := 10;
-    end else if TypeName = 'time' then begin
-      FieldType := stTime;
-      ColumnSize := 8;
-    end else if (TypeName = 'timestamp') or (TypeName = 'datetime') then begin
-      FieldType := stTimestamp;
-      ColumnSize := 19;
-    end else if EndsWith(TypeName, RawByteString('blob')) then begin //includes 'TINYBLOB', 'MEDIUMBLOB', 'LONGBLOB'
-      FieldType := stBinaryStream;
-SetLobSize:
-      if StartsWith(TypeName, RawByteString('tiny')) then
-        ColumnSize := 255
-      else if StartsWith(TypeName, RawByteString('medium')) then
-        ColumnSize := 16277215//may be 65535
-      else if StartsWith(TypeName, RawByteString('long')) then
-        ColumnSize := High(Integer)//2147483657//may be 65535
-      else ColumnSize := MAXBUF;
-    end else if EndsWith(TypeName, RawByteString('text')) then begin //includes 'TINYTEXT', 'MEDIUMTEXT', 'LONGTEXT'
-      FieldType := stAsciiStream;
-      goto SetLobSize;
-    end else if TypeName = 'bit' then begin //see: http://dev.mysql.com/doc/refman/5.1/en/bit-type.html
-      ColumnSize := RawToIntDef(TypeInfoSecond, 1);
-      Signed := False;
-      case ColumnSize of
-        1..8: goto lByte;
-        9..16: goto lWord;
-        17..32: goto lLong;
-        else goto lLongLong;
+      ColumnSize := 12;
+    end else begin
+      pC := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(','), TypeInfoSecond);
+      if pC > 0 then begin
+        TypeInfoSecond[pC] := #0;
+        ColumnSize := RawToIntDef(@TypeInfoSecond[1], 0);
+        Scale := RawToIntDef(@TypeInfoSecond[pC+1], 0);
+        TypeInfoSecond[pC] := ',';
       end;
-    end else if TypeName = 'json' then
-      FieldType := stAsciiStream
-    else
-      for pC := 0 to High(GeoTypes) do
-         if GeoTypes[pC] = TypeName then begin
-            FieldType := stBinaryStream;
-            Break;
-         end;
-  end;
+      if Scale = 0 then
+        if ColumnSize < 10 then
+          goto lLong
+        else
+          goto lLongLong
+      else {if ColumnSize < 25 then begin
+        FieldType := stFloat;
+        ColumnSize := 12;
+      end else} begin
+        FieldType := stDouble;
+        ColumnSize := 22;
+      end;
+    end
+  end else if (TypeName = 'float') or StartsWith(TypeName, RawByteString('double')) then begin
+    FieldType := stDouble;
+    ColumnSize := 22;
+  end else if EndsWith(TypeName, RawByteString('char')) then begin //includes 'VARCHAR'
+    FieldType := stString;
+    ColumnSize := RawToIntDef(TypeInfoSecond, 0);
+  end else if EndsWith(TypeName, RawByteString('binary')) then begin //includes 'VARBINARY'
+    FieldType := stBytes;
+    ColumnSize := RawToIntDef(TypeInfoSecond, 0);
+  end else if TypeName = 'date' then begin
+    FieldType := stDate;
+    ColumnSize := 10;
+  end else if TypeName = 'time' then begin
+    FieldType := stTime;
+    ColumnSize := 8;
+  end else if (TypeName = 'timestamp') or (TypeName = 'datetime') then begin
+    FieldType := stTimestamp;
+    ColumnSize := 19;
+  end else if EndsWith(TypeName, RawByteString('blob')) then begin //includes 'TINYBLOB', 'MEDIUMBLOB', 'LONGBLOB'
+    FieldType := stBinaryStream;
+SetLobSize:
+    if StartsWith(TypeName, RawByteString('tiny')) then
+      ColumnSize := 255
+    else if StartsWith(TypeName, RawByteString('medium')) then
+      ColumnSize := 16277215//may be 65535
+    else if StartsWith(TypeName, RawByteString('long')) then
+      ColumnSize := High(Integer)//2147483657//may be 65535
+    else ColumnSize := MAXBUF;
+  end else if EndsWith(TypeName, RawByteString('text')) then begin //includes 'TINYTEXT', 'MEDIUMTEXT', 'LONGTEXT'
+    FieldType := stAsciiStream;
+    goto SetLobSize;
+  end else if TypeName = 'bit' then begin //see: http://dev.mysql.com/doc/refman/5.1/en/bit-type.html
+    ColumnSize := RawToIntDef(TypeInfoSecond, 1);
+    Signed := False;
+    case ColumnSize of
+      1..8: goto lByte;
+      9..16: goto lWord;
+      17..32: goto lLong;
+      else goto lLongLong;
+    end;
+  end else if TypeName = 'json' then
+    FieldType := stAsciiStream
+  else
+    for pC := 0 to High(GeoTypes) do
+       if GeoTypes[pC] = TypeName then begin
+          FieldType := stBinaryStream;
+          Break;
+       end;
 
   case FieldType of
     stString: if ( ConSettings^.CPType = cCP_UTF16) then FieldType := stUnicodeString;

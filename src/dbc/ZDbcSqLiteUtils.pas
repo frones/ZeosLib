@@ -135,18 +135,16 @@ begin
     Result := stString
   else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('BOOL')) then
     Result := stBoolean
-  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('TINYINT') then
-    Result := stShort
-  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('SMALLINT') then
-    Result := stSmall
-  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('MEDIUMINT') then
-    Result := stInteger
-  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('INTEGER') then
-    Result := stLong //http://www.sqlite.org/autoinc.html
-  else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('INT')) then
-    Result := stInteger
-  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('BIGINT') then
-    Result := stLong
+  else if ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('INT'), TypeName) > 0 then
+    if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('TINY')) then
+      Result := stShort
+    else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('SMALL')) then
+      Result := stSmall
+    else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('BIG')) or
+             (TypeName = 'INTEGER') then //http://www.sqlite.org/autoinc.html
+      Result := stLong
+    else //includes 'INT' / 'MEDIUMINT'
+      Result := stInteger
   else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('REAL')) then
     Result := stDouble
   else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('FLOAT')) then
@@ -159,9 +157,11 @@ begin
     Result := stDouble
   else if EndsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('MONEY')) then
     Result := stCurrency
-  else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('CHAR')) or
-          EndsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('CHAR')) then
-    Result := stString
+  else if ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('CHAR'), TypeName) > 0 then
+    if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('LONG')) then
+      Result := stAsciiStream
+    else
+      Result := stString
   else if EndsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('BINARY')) then
     Result := stBytes
   else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('DATE') then
@@ -191,12 +191,11 @@ begin
       Result := stLong;
   end;
 
-  if (Result = stString) then
-    if  (Precision = 0) then
-      if (UndefinedVarcharAsStringLength = 0) then
-        Result := stAsciiStream
-      else
-        Precision := UndefinedVarcharAsStringLength;
+  if (Result = stString) and (Precision = 0) then
+    if (UndefinedVarcharAsStringLength = 0) then
+      Result := stAsciiStream
+    else
+      Precision := UndefinedVarcharAsStringLength;
 
   if ( CtrlsCPType = cCP_UTF16 ) then
     case Result of

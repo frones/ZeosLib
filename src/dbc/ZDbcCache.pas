@@ -123,11 +123,11 @@ type
     procedure SetBlobObject(const Buffer: PZRowBuffer; ColumnIndex: Integer;
       const Value: IZBlob);
     function InternalGetBytes(const Buffer: PZRowBuffer; ColumnIndex: Integer): TBytes; overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
-    function InternalGetBytes(const Buffer: PZRowBuffer; ColumnIndex: Integer; var Len: SmallInt): Pointer; overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
+    function InternalGetBytes(const Buffer: PZRowBuffer; ColumnIndex: Integer; var Len: Word): Pointer; overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetBytes(const Buffer: PZRowBuffer; ColumnIndex: Integer;
       const Value: TBytes; const NewPointer: Boolean = False); overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetBytes(const Buffer: PZRowBuffer; ColumnIndex: Integer;
-      Buf: Pointer; Len: SmallInt; const NewPointer: Boolean = False); overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
+      Buf: Pointer; Len: Word; const NewPointer: Boolean = False); overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
    procedure InternalSetString(const Buffer: PZRowBuffer; ColumnIndex: Integer;
       const Value: RawByteString; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetUnicodeString(const Buffer: PZRowBuffer; ColumnIndex: Integer;
@@ -208,7 +208,8 @@ type
     function GetDouble(Const ColumnIndex: Integer; var IsNull: Boolean): Double;
     function GetCurrency(Const ColumnIndex: Integer; var IsNull: Boolean): Currency;
     function GetBigDecimal(Const ColumnIndex: Integer; var IsNull: Boolean): Extended;
-    function GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean): TBytes;
+    function GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean): TBytes; overload;
+    function GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: Word): Pointer; overload;
     function GetDate(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
     function GetTime(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
     function GetTimestamp(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
@@ -247,7 +248,7 @@ type
     procedure SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString); virtual;
     procedure SetUnicodeString(Const ColumnIndex: Integer; const Value: ZWideString); virtual;
     procedure SetBytes(Const ColumnIndex: Integer; const Value: TBytes); overload; virtual;
-    procedure SetBytes(Const ColumnIndex: Integer; Buf: Pointer; Len: SmallInt); overload; virtual;
+    procedure SetBytes(Const ColumnIndex: Integer; Buf: Pointer; Len: Word); overload; virtual;
     procedure SetDate(Const ColumnIndex: Integer; const Value: TDateTime); virtual;
     procedure SetTime(Const ColumnIndex: Integer; const Value: TDateTime); virtual;
     procedure SetTimestamp(Const ColumnIndex: Integer; const Value: TDateTime); virtual;
@@ -663,9 +664,9 @@ begin
   if Null1 and Null2 then Result := 0
   else if Null1 <> Null2 then Result := 1
   else begin
-    Result := PSmallInt(PAnsiChar(V1)+SizeOf(Pointer))^ - PSmallInt(PAnsiChar(V1)+SizeOf(Pointer))^;
+    Result := PWord(PAnsiChar(V1)+SizeOf(Pointer))^ - PWord(PAnsiChar(V1)+SizeOf(Pointer))^;
     if Result = 0 then
-      Result := ZMemLComp(PPointer(V1)^, PPointer(V2)^, PSmallInt(PAnsiChar(V1)+SizeOf(Pointer))^)
+      Result := ZMemLComp(PPointer(V1)^, PPointer(V2)^, PWord(PAnsiChar(V1)+SizeOf(Pointer))^)
   end;
 end;
 
@@ -998,7 +999,7 @@ begin
       Result := SizeOf(Pointer);
     stGUID: Result := 16;
     stBytes:
-      Result := SizeOf(Pointer) + SizeOf(SmallInt);
+      Result := SizeOf(Pointer) + SizeOf(Word);
     stDate, stTime, stTimestamp:
       Result := SizeOf(TDateTime);
     else
@@ -1052,7 +1053,7 @@ function TZRowAccessor.InternalGetBytes(const Buffer: PZRowBuffer;
   ColumnIndex: Integer): TBytes;
 var
   P: Pointer;
-  L: SmallInt;
+  L: Word;
 begin
   P := InternalGetBytes(Buffer, ColumnIndex, L);
   if P <> nil then begin
@@ -1063,7 +1064,7 @@ begin
 end;
 
 function TZRowAccessor.InternalGetBytes(const Buffer: PZRowBuffer;
-  ColumnIndex: Integer; var Len: SmallInt): Pointer;
+  ColumnIndex: Integer; var Len: Word): Pointer;
 begin
   Result := nil;
   {$IFNDEF GENERIC_INDEX}
@@ -1071,7 +1072,7 @@ begin
   {$ENDIF}
   if ( Buffer.Columns[FColumnOffsets[ColumnIndex]] = bIsNotNull )then
   begin
-    Len := PSmallInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1 + SizeOf(Pointer)])^;
+    Len := PWord(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1 + SizeOf(Pointer)])^;
     if Len > 0 then
       Result := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^;
   end else Len := 0;
@@ -1085,7 +1086,7 @@ begin
 end;
 
 procedure TZRowAccessor.InternalSetBytes(const Buffer: PZRowBuffer;
-  ColumnIndex: Integer; Buf: Pointer; Len: SmallInt;
+  ColumnIndex: Integer; Buf: Pointer; Len: Word;
   const NewPointer: Boolean = False);
 var
   P: PPointer;
@@ -1099,7 +1100,7 @@ begin
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ := 0;
     P := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
     Len := Min(Len, FColumnLengths[ColumnIndex]);
-    PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex] + 1 + SizeOf(Pointer)])^ := Len;
+    PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex] + 1 + SizeOf(Pointer)])^ := Len;
     if Len > 0 then
     begin
       ReallocMem(P^, Len);
@@ -2894,6 +2895,51 @@ begin
     IsNull := True;
 end;
 
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>Pointer</code> reference.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param IsNull if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+  @param Len return the count of Bytes for the value
+  @return the column value
+}
+function TZRowAccessor.GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean;
+  out Len: Word): Pointer;
+var Blob: IZBlob;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stBytes);
+{$ENDIF}
+  Result := nil;
+  Len := 0;
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
+  begin
+    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+      stGUID:
+        begin
+          Len := 16;
+          Result := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+        end;
+      stBytes:
+        Result := InternalGetBytes(FBuffer, ColumnIndex, Len);
+      stBinaryStream: begin
+          Blob := GetBlob(ColumnIndex, IsNull);
+          if (Blob <> nil) and (not Blob.IsEmpty) then begin
+            Result := Blob.GetBuffer;
+            Len := Blob.Length;
+          end;
+        end;
+    end;
+    IsNull := False;
+  end
+  else
+    IsNull := True;
+end;
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -4049,7 +4095,6 @@ procedure TZRowAccessor.SetPAnsiChar(Const ColumnIndex: Integer; Value: PAnsicha
 var
   IsNull: Boolean;
   GUID: TGUID;
-  Bts: TBytes;
   Blob: IZBlob;
   Failed: Boolean;
 begin
@@ -4069,12 +4114,7 @@ begin
     stCurrency: SQLStrToFloatDef(Value, 0, PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Len^);
     stBigDecimal: SQLStrToFloatDef(Value, 0, PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Len^);
     //stString, stUnicodeString: do not handle here!
-    stBytes:
-      begin
-        SetLength(Bts, Len^);
-        System.Move(Value^, Pointer(Bts)^, Len^);
-        SetBytes(ColumnIndex, Bts);
-      end;
+    stBytes: SetBytes(ColumnIndex, Value, len^);
     stGUID:
       if Value = nil then
         SetNull(ColumnIndex)
@@ -4086,7 +4126,6 @@ begin
         GUID := StringToGUID(Value);
         {$ENDIF}
         System.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
-        SetBytes(ColumnIndex, Bts);
       end;
     stDate:
       begin
@@ -4448,7 +4487,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetBytes(Const ColumnIndex: Integer; Buf: Pointer; Len: SmallInt);
+procedure TZRowAccessor.SetBytes(Const ColumnIndex: Integer; Buf: Pointer; Len: Word);
 var
   IsNull: Boolean;
 begin
@@ -4762,8 +4801,10 @@ begin
   System.Move(SrcBuffer^.Columns, DestBuffer^.Columns, FColumnsSize);
   if FHasBytes then
     for i := 0 to FHighBytesCols do
-      InternalSetBytes(DestBuffer, FBytesCols[i] {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
-        InternalGetBytes(SrcBuffer, FBytesCols[i] {$IFNDEF GENERIC_INDEX}+1{$ENDIF}), True);
+      if SrcBuffer^.Columns[FColumnOffsets[FBytesCols[i]]] = bIsNotNull then
+        InternalSetBytes(DestBuffer, FBytesCols[i] {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+          PPointer(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1+SizeOf(Pointer)])^,
+          PWord(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1])^, True);
   if FHasStrings then
     for i := 0 to FHighStringCols do
       if SrcBuffer^.Columns[FColumnOffsets[FStringCols[i]]] = bIsNotNull then
@@ -5240,8 +5281,10 @@ begin
   System.Move(SrcBuffer^.Columns, DestBuffer^.Columns, FColumnsSize);
   if FHasBytes then
     for i := 0 to FHighBytesCols do
-      InternalSetBytes(DestBuffer, FBytesCols[i]{$IFNDEF GENERIC_INDEX} +1{$ENDIF},
-        InternalGetBytes(SrcBuffer, FBytesCols[i]{$IFNDEF GENERIC_INDEX} +1{$ENDIF}), True);
+      if SrcBuffer^.Columns[FColumnOffsets[FBytesCols[i]]] = bIsNotNull then
+        InternalSetBytes(DestBuffer, FBytesCols[i] {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+          PPointer(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1])^,
+          PWord(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1+SizeOf(Pointer)])^, True);
   if FHasStrings then
     for i := 0 to FHighStringCols do
       if SrcBuffer^.Columns[FColumnOffsets[FStringCols[i]]] = bIsNotNull then
