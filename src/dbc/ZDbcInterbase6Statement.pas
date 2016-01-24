@@ -339,10 +339,10 @@ end;
 function TZInterbase6PreparedStatement.ExecutePrepared: Boolean;
 begin
   Prepare;
+  PrepareLastResultSetForReUse;
+  BindInParameters;
   with FIBConnection do
   begin
-    PrepareLastResultSetForReUse;
-    BindInParameters;
     ExecuteInternal;
     LastUpdateCount := GetAffectedRows(GetPlainDriver, FStmtHandle, FStatementType, ConSettings);
 
@@ -380,7 +380,6 @@ function TZInterbase6PreparedStatement.ExecuteQueryPrepared: IZResultSet;
 var
   iError : Integer; //Check for database disconnect AVZ
 begin
-  Result := nil;
   Prepare;
   PrepareOpenResultSetForReUse;
   BindInParameters;
