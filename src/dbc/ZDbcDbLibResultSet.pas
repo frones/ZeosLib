@@ -684,11 +684,8 @@ begin
     if DT = tdsInt8 then //sybase only
       Result := PInt64(Data)^
     else
-      if DT = tdsFlt8 then
-        Result := Trunc(PDouble(Data)^)
-      else
-        FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsInt8),
-          @Result, SizeOf(Int64));
+      FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsInt8),
+        @Result, SizeOf(Int64));
   FDBLibConnection.CheckDBLibError(lcOther, 'GETLONG');
 end;
 
