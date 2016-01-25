@@ -56,7 +56,7 @@ interface
 {$I ZCore.inc}
 
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   {$IFDEF WITH_LCONVENCODING}
   {$MACRO ON}
    LCLVersion, LConvEncoding,
@@ -281,7 +281,7 @@ procedure SetConvertFunctions(ConSettings: PZConSettings); {$IFDEF WITH_LCONVENC
 
 Type
   TEncodeType = (etUSASCII, etUTF8, etANSI);
-  TSBCSMapProc = procedure(Source: PAnsichar; SourceBytes: NativeUInt; Dest: PWideChar);
+  TSBCSMapProc = procedure(Source: PByteArray; SourceBytes: NativeUInt; Dest: PWordArray);
   TMBCSMapProc = function(Source: PAnsichar; SourceBytes: NativeUInt; Dest: PWideChar): LengthInt;
   PSBCS_MAP = ^TSBCS_MAP;
   TSBCS_MAP = packed array[$00..$FF] of Word;
@@ -299,12 +299,12 @@ function ConvertEMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF} Raw
 {SBCS codepages $00..FF}
 procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
   var Dest: ZWideString; SBCS_MAP: PSBCS_MAP); overload;
-procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
-  Dest: PWideChar; SBCS_MAP: PSBCS_MAP); overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure AnsiSBCSToUCS2(Source: PByteArray; Dest: PWordArray;
+  SBCS_MAP: PSBCS_MAP; SourceBytes: NativeUInt); overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
   const MapProc: TSBCSMapProc; var Dest: ZWideString); overload;
-procedure MapByteToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
-  Dest: PWideChar); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure MapByteToUCS2(Source: PByteArray; SourceBytes: NativeUInt;
+  Dest: PWordArray); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 {MBCS codepages }
 procedure AnsiMBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
@@ -313,7 +313,6 @@ function UTF8ToWideChar(Source: PAnsichar; SourceBytes: NativeUInt; Dest: PWideC
 function PUTF8ToRaw(Source: PAnsiChar; SourceBytes: NativeUInt; RawCP: Word): RawByteString;
 
 const
-  {$IFDEF USE_RAW2WIDE_PROCS} //compiler related: D7 is less optimal use MultibultToWidechar instead for known CP's
   CP437ToUnicodeMap: packed array[$00..$FF] of Word = ( {generated with MultiByteToWideChar}
     $0000, $0001, $0002, $0003, $0004, $0005, $0006, $0007, $0008, $0009, $000A, $000B, $000C, $000D, $000E, $000F,
     $0010, $0011, $0012, $0013, $0014, $0015, $0016, $0017, $0018, $0019, $001A, $001B, $001C, $001D, $001E, $001F,
@@ -1079,8 +1078,7 @@ const
     $00D0, $00D1, $00D2, $00D3, $00D4, $00D5, $00D6, $00D7, $00D8, $00D9, $00DA, $00DB, $00DC, $00DD, $00DE, $00DF,
     $00E0, $00E1, $00E2, $00E3, $00E4, $00E5, $00E6, $00E7, $00E8, $00E9, $00EA, $00EB, $00EC, $00ED, $00EE, $00EF,
     $00F0, $00F1, $00F2, $00F3, $00F4, $00F5, $00F6, $00F7, $00F8, $00F9, $00FA, $00FB, $00FC, $00FD, $00FE, $00FF);
-{$ENDIF}
-{windows unsupported CP's}
+  {windows unsupported CP's}
   CP28600ToUnicodeMap: packed array[$00..$FF] of Word = ( {not supported by MultiByteToWideChar -> www.unicode.org }
     $0000, $0001, $0002, $0003, $0004, $0005, $0006, $0007, $0008, $0009, $000A, $000B, $000C, $000D, $000E, $000F,
     $0010, $0011, $0012, $0013, $0014, $0015, $0016, $0017, $0018, $0019, $001A, $001B, $001C, $001D, $001E, $001F,
@@ -1135,7 +1133,7 @@ const
 
 implementation
 
-uses SysUtils, ZFastCode;
+uses ZFastCode;
 
 const BufLen = 2048;
 
@@ -1176,33 +1174,44 @@ begin
     Result := PRawToUnicode(Pointer(S), {%H-}PLengthInt(NativeUInt(S) - StringLenOffSet)^, CP);
 end;
 
-procedure MapByteToUCS2(Source: PAnsichar; SourceBytes: NativeUInt; Dest: PWideChar);
+{**
+  EgonHugeist:
+  my fast Byte to Word shift without a lookup table
+  eg. USACII7/LATIN 1 cp's
+}
+procedure MapByteToUCS2(Source: PByteArray; SourceBytes: NativeUInt; Dest: PWordArray);
 var
   PEnd: PAnsiChar;
 begin
-  PEnd := Source+SourceBytes-8;
-  while Source < PEnd do //octet loop
+  PEnd := PAnsiChar(Source)+SourceBytes-8;
+  while PAnsiChar(Source) < PEnd do //making a octed processing loop
   begin
-    PWord(Dest)^ := PByte(Source)^;
-    PWord(Dest+1)^ := PByte(Source+1)^;
-    PWord(Dest+2)^ := PByte(Source+2)^;
-    PWord(Dest+3)^ := PByte(Source+3)^;
-    PWord(Dest+4)^ := PByte(Source+4)^;
-    PWord(Dest+5)^ := PByte(Source+5)^;
-    PWord(Dest+6)^ := PByte(Source+6)^;
-    PWord(Dest+7)^ := PByte(Source+7)^;
-    Inc(Dest, 8);
-    Inc(Source, 8);
+    Dest[0] := Source[0];
+    Dest[1] := Source[1];
+    Dest[2] := Source[2];
+    Dest[3] := Source[3];
+    Dest[4] := Source[4];
+    Dest[5] := Source[5];
+    Dest[6] := Source[6];
+    Dest[7] := Source[7];
+    Inc(PWideChar(Dest), 8);
+    Inc(PAnsiChar(Source), 8);
   end;
   Inc(PEnd, 8);
-  while Source < PEnd do
+  while PAnsiChar(Source) < PEnd do //processing final bytes
   begin
-    PWord(Dest)^ := Byte(Source^); //Shift Byte to Word
-    inc(Source);
-    inc(Dest);
+    Dest[0] := Source[0];
+    inc(PAnsiChar(Source));
+    inc(PWideChar(Dest));
   end;
+  Dest[0] := Ord(#0);
 end;
 
+{**
+  EgonHugeist:
+  my fast Byte to Word shift with a lookup table
+  eg. all single byte encodings
+}
 procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
   var Dest: ZWideString; SBCS_MAP: PSBCS_MAP);
 begin
@@ -1212,50 +1221,55 @@ begin
      (SourceBytes <> NativeUInt({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^)) then { length as expected ? }
   {$ENDIF}
     System.SetLength(Dest, SourceBytes);
-  AnsiSBCSToUCS2(Source, SourceBytes, Pointer(Dest), SBCS_MAP);
+  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), SBCS_MAP, SourceBytes);
 end;
 
-procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
-  Dest: PWideChar; SBCS_MAP: PSBCS_MAP);
+{**
+  EgonHugeist:
+  my fast Byte to Word shift with a lookup table
+  eg. all single byte encodings
+}
+procedure AnsiSBCSToUCS2(Source: PByteArray; Dest: PWordArray;
+  SBCS_MAP: PSBCS_MAP; SourceBytes: NativeUInt);
 var
-  C: LongWord;
   PEnd: PAnsiChar;
 begin
-  PEnd := Source+SourceBytes-4;
-  while Source < PEnd do //convert remaining characters with codepage agnostic
+  PEnd := PAnsiChar(Source)+SourceBytes-8;
+  while PAnsiChar(Source) < PEnd do //making a octed processing loop
   begin
-    { quad ASCII conversion by SHA }
-    if (PLongWord(Source)^ and $80808080 = 0) then  //all in range $00..$79 ASCII7
-    begin
-      C := PLongWord(Source)^;
-      PLongWord(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
-      c := c shr 16;
-      PLongWord(Dest+2)^ := (c shl 8 or c) and $00ff00ff;
-    end
-    else
     begin //we need a lookup here
-      PWord(Dest)^ := SBCS_MAP^[PByte(Source)^];
-      PWord(Dest+1)^ := SBCS_MAP^[PByte(Source+1)^];
-      PWord(Dest+2)^ := SBCS_MAP^[PByte(Source+2)^];
-      PWord(Dest+3)^ := SBCS_MAP^[PByte(Source+3)^];
+      Dest[0] := SBCS_MAP[Source[0]];
+      Dest[1] := SBCS_MAP[Source[1]];
+      Dest[2] := SBCS_MAP[Source[2]];
+      Dest[3] := SBCS_MAP[Source[3]];
+      Dest[4] := SBCS_MAP[Source[4]];
+      Dest[5] := SBCS_MAP[Source[5]];
+      Dest[6] := SBCS_MAP[Source[6]];
+      Dest[7] := SBCS_MAP[Source[7]];
     end;
-    inc(Source,4);
-    inc(Dest,4);
+    inc(PAnsiChar(Source),8);
+    inc(PWideChar(Dest),8);
   end;
-  Inc(PEnd, 4);
-  while Source < PEnd do
+  Inc(PEnd, 8);
+  while PAnsiChar(Source) < PEnd do //processing final bytes
   begin
-    PWord(Dest)^ := SBCS_MAP^[PByte(Source)^];
-    inc(Dest);
-    inc(Source);
+    Dest[0] := SBCS_MAP[Source[0]];
+    inc(PWideChar(Dest));
+    inc(PAnsiChar(Source));
   end;
+  Dest[0] := Ord(#0);
 end;
 
 procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
   const MapProc: TSBCSMapProc; var Dest: ZWideString);
 begin
+  {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
+  if (Pointer(Dest) = nil) or//empty
+     ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
+     (SourceBytes <> NativeUInt({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^)) then { length as expected ? }
+  {$ENDIF}
   SetLength(Dest, SourceBytes);
-  MapProc(Source, SourceBytes, Pointer(Dest));
+  MapProc(Pointer(Source), SourceBytes, Pointer(Dest));
 end;
 
 procedure AnsiMBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
@@ -1311,127 +1325,6 @@ const
   //UTF8_FIRSTBYTE: packed array[2..6] of byte = ($c0,$e0,$f0,$f8,$fc);
 
 function UTF8ToWideChar(Source: PAnsichar; SourceBytes: NativeUInt; Dest: PWideChar): LengthInt;
-(*{$IF defined (WIN32) and not (defined(FPC) or defined(UNICODE))}
-//new Delphi's make same code -> terrific wheres FPC instruction set is twice longer!
-//but pure pascal is almost faster than System.UTFDecode or MultiByteToWideChar
-asm
-  push ebx
-  push esi
-  push edi
-  add esp,-$0c
-  mov edi,ecx
-//begin
-  mov [esp],edi //begd := dest;
-  add edx,eax //endSource := Source+SourceBytes;
-  mov [esp+$04],edx
-@@Loop:
-  mov edx,[eax] //PCardinal(Source)^
-  test edx,$80808080 //if (PCardinal(Source)^ and $80808080=0)
-  jnz @@CheckByte //nope -> jump to byte compare
-  lea ecx,[eax+$04] //Source+4
-  cmp ecx,[esp+$04] //(Source+4<endSource)
-  jnb @@CheckByte //nope -> jump to byte compare
-  add eax,$04 //inc(Source,4)
-//pCardinal(dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
-  mov ecx,edx
-  shl ecx,$08 //c shl 8
-  mov ebx,edx
-  and ebx,$000000ff //(c and $FF)
-  or ecx,ebx  //or
-  and ecx,$00ff00ff //and $00ff00ff
-  mov [edi],ecx
-  shr edx,$10 //c := c shr 16;
-  mov ecx,edx
-  shl ecx,$08 //c shl 8
-  or edx,ecx //or c
-  and edx,$00ff00ff //and $00ff00ff
-  lea ecx,[edi+$04] //pCardinal(dest+2)^
-  mov [ecx],edx //save
-  add edi,$08 //inc(dest,4);
-  jmp @@Loop //start Loop again
-@@CheckByte:
-  movzx edx,[eax] //c := byte(Source^);
-  inc eax //inc(Source)
-  test dl,$80 //if c and $80=0
-  jnz @@Extra //nope no ASCII7 goto Extra
-  mov [edi],dx //PWord(dest)^ := c;
-  add edi,$02 //inc(dest);
-  cmp eax,[esp+$04] //if Source<endsource then
-  jb @@Loop //start Loop again
-  jmp @@Quit //quit
-@@Extra:
-//extra := UTF8_EXTRABYTES[c];
-  movzx ecx, [edx+UTF8_EXTRABYTES-$80]
-  mov [esp+$08],ecx
-//if (extra=0) or (Source+extra>endSource) then break;
-  cmp dword ptr [esp+$08],$00
-  jz @@Quit
-  mov ecx,[esp+$08]
-  add ecx,eax
-  cmp ecx,[esp+$04]
-  jnbe @@Quit //break
-//for i := 1 to extra do begin
-  mov esi,[esp+$08]
-  test esi,esi
-  jle @@WITH_UTF8_EXTRA
-//if byte(Source^) and $c0<>$80 then
-@@CompareByte:
-  movzx ecx,[eax]
-  mov ebx,ecx
-  and bl,$c0
-  cmp bl,$80
-  jnz @@Quit //nope invalid input content
-//c := c shl 6+byte(Source^);
-  shl edx,$06 //c shl 6
-  movzx ecx,cl //save byte(Source^)
-  inc eax //inc(Source)
-  add edx,ecx //process c := c +byte
-//for i := 1 to extra do begin
-  dec esi
-  jnz @@CompareByte
-@@WITH_UTF8_EXTRA:
-//with UTF8_EXTRA[extra] do begin
-  mov ecx,[esp+$08]
-  lea ecx,[ecx*8+UTF8_EXTRA]
-  //lea ecx, dword ptr [UTF8_EXTRA+ebx*8]
-  sub edx,[ecx] //dec(c,offset);
-  cmp edx,[ecx+$04] //if c<minimum then
-  jb @@Quit //nope wrong input content
-  cmp edx,$0000ffff //if c<=$ffff then
-  jnbe @@StoreSurrogate //nope goto Surrogate processing
-  mov [edi],dx //PWord(dest)^ := c;
-  add edi,$02 //inc(dest);
-  cmp eax,[esp+$04] //if Source<endsource then
-  jb @@Loop //start loop again
-  jmp @@Quit //ready
-@@StoreSurrogate:
-  sub edx,$00010000 //dec(c,$10000); // store as UTF-16 surrogates
-//PWord(dest)^ := c shr 10  +UTF16_HISURROGATE_MIN;
-  mov ecx,edx
-  shr ecx,$0a //c shr 10
-  add cx,UTF16_HISURROGATE_MIN
-  mov [edi],cx //PWord(dest)^ :=
-  and dx,$03ff //c and $3FF
-  add dx,UTF16_LOSURROGATE_MIN
-  lea ecx,[edi+$02] //dest+1
-  mov [ecx],dx //save to Dest
-  add edi,$04 //inc(dest,2)
-  cmp eax,[esp+$04] //if Source>=endsource then
-  jb @@Loop //start loop again
-@@Quit:
-//result := dest-begd; // dest-begd return widechar length
-  mov eax,edi
-  sub eax,[esp]
-  shr eax,1
-@@NoSource:
-  add esp,$0c
-  pop edi
-  pop esi
-  pop ebx
-  ret {do not remove, this is for the alignment }
-  nop {do not remove, this is for the alignment }
-end;
-{$else} *)
 // faster than System.UTF8Decode()
 var c: cardinal;
     begd: pWideChar;
@@ -1506,7 +1399,6 @@ Quit:
 NoSource:
   PWord(dest)^ := Ord(#0); // always append a WideChar(0) to the end of the buffer
 end;
-{.$IFEND}
 
 function PUTF8ToRaw(Source: PAnsiChar; SourceBytes: NativeUInt; RawCP: Word): RawByteString;
 var
@@ -1572,11 +1464,6 @@ A2U:
               goto A2U;
             end;
         end;
-      {$IFDEF USE_RAW2WIDE_PROCS} //compiler related: D7 is less optimal use MultibultToWidechar instead for known CP's
-      //FPC code is less optimal ... very slow. Wasn't able to get a asm code running
-      //so i left the code for Non-Mindows OS's which will benefit here. No LIBICONV link is required.
-      //let's see what comming FPC 2.7.1 is able to do (if they have it's own codepage maps)
-      //Delphi7 needs 10% of time the FPC requires whereas the UnicodeIDE are 60% faster than D7
       zCP_DOS437:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP437ToUnicodeMap);
       zCP_DOS708:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP708ToUnicodeMap);
       zCP_DOS720:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP720ToUnicodeMap);
@@ -1621,7 +1508,6 @@ A2U:
       zCP_L5_ISO_8859_9:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28599ToUnicodeMap);
       zCP_L7_ISO_8859_13:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28603ToUnicodeMap);
       zCP_L9_ISO_8859_15:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28605ToUnicodeMap);
-      {$ENDIF USE_RAW2WIDE_PROCS}
       {not supported codepages by Windows MultiByteToWideChar}
       zCP_L6_ISO_8859_10:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28600ToUnicodeMap);
       zCP_L8_ISO_8859_14:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28604ToUnicodeMap);
