@@ -1219,8 +1219,13 @@ begin
   if (Pointer(Dest) = nil) or//empty
      ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
      (SourceBytes <> NativeUInt({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^)) then { length as expected ? }
+  {$ELSE}
+  if Length(Dest) <> LengthInt(SourceBytes) then //WideString isn't ref counted
   {$ENDIF}
+  begin
+    Dest := '';
     System.SetLength(Dest, SourceBytes);
+  end;
   AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), SBCS_MAP, SourceBytes);
 end;
 
@@ -1267,8 +1272,13 @@ begin
   if (Pointer(Dest) = nil) or//empty
      ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
      (SourceBytes <> NativeUInt({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^)) then { length as expected ? }
+  {$ELSE}
+  if Length(Dest) <> LengthInt(SourceBytes) then //WideString isn't ref counted
   {$ENDIF}
-  SetLength(Dest, SourceBytes);
+  begin
+    Dest := '';
+    System.SetLength(Dest, SourceBytes);
+  end;
   MapProc(Pointer(Source), SourceBytes, Pointer(Dest));
 end;
 
@@ -1276,12 +1286,36 @@ procedure AnsiMBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
   const MapProc: TMBCSMapProc; var Dest: ZWideString);
 var
   Buf: array[0..BufLen+1] of WideChar; //static buf to avoid mem allocs
+  NewLen: LengthInt;
 begin
   if SourceBytes > BufLen then begin
-    SetLength(Dest, SourceBytes);
-    SetLength(Dest, MapProc(Source, SourceBytes, Pointer(Dest)));
-  end else
-    System.SetString(Dest, PWideChar(@Buf[0]), MapProc(Source, SourceBytes, @Buf[0]));
+    {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
+    if (Pointer(Dest) = nil) or//empty
+       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
+       (SourceBytes <> NativeUInt({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^)) then { length as expected ? }
+    {$ELSE}
+    if Length(Dest) <> NewLen then //WideString isn't ref counted
+    {$ENDIF}
+    begin
+      Dest := '';
+      System.SetLength(Dest, SourceBytes);
+    end;
+    NewLen := MapProc(Source, SourceBytes, Pointer(Dest));
+    if NewLen <> Length(Dest) then
+      SetLength(Dest, NewLen);
+  end else begin
+    NewLen := MapProc(Source, SourceBytes, @Buf[0]);
+    {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
+    if (Pointer(Dest) = nil) or//empty
+       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
+       (NewLen <> PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
+    {$ELSE}
+    if Length(Dest) <> NewLen then //WideString isn't ref counted
+    {$ENDIF}
+      System.SetString(Dest, PWideChar(@Buf[0]), NewLen)
+    else
+      System.Move(Buf[0], Dest[1], NewLen shl 1);
+  end;
 end;
 
 { UTF8ToWideChar and its's used constant original written by Arnaud Bouchez

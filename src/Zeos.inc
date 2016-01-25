@@ -442,7 +442,7 @@
 {.$DEFINE USE_SYNEDIT}
 
 //run ZSysUtils benchmarks
-{$DEFINE BENCHMARK}
+{.$DEFINE BENCHMARK}
 
 //stop incrementing column/param index -> always start on [0]
 {.$DEFINE GENERIC_INDEX}
