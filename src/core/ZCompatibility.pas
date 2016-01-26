@@ -764,6 +764,8 @@ begin
     if (Pointer(Dest{%H-}) = nil) or//empty
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
        (Len <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
+    {$ELSE}
+    if Length(Dest) <> Len then //WideString isn't ref counted
     {$ENDIF}
     SetString(Dest, nil, Len);
     if Src <> nil then

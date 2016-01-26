@@ -428,7 +428,7 @@ function TZAbstractCachedResultSet.AppendRow(Row: PZRowBuffer): PZRowBuffer;
 begin
   if LocateRow(FInitialRowsList, Row.Index) < 0 then
   begin
-    FRowAccessor.AllocBuffer(Result);
+    FRowAccessor.AllocBuffer(Result{%H-});
     FRowAccessor.CopyBuffer(Row, Result);
     FInitialRowsList.Add(Result);
     FCurrentRowsList.Add(Row);

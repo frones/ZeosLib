@@ -129,7 +129,6 @@
     {$DEFINE VER150BELOW}                   //found in ZTestBugCompPostgreSql.pas
     {$IF CompilerVersion >= 16} //Delphi 8+
       {$IF CompilerVersion >= 17} //Delphi 2005+
-        {$DEFINE USE_RAW2WIDE_PROCS}   // compiler related: D7/8 is less optimal for fast mapping -> use MultiByteToWidechar instead for known CP's
         {$DEFINE WITH_INLINE}          // compiler supports inline methodes
 
         {$IF CompilerVersion >= 18} //Delphi 2006+

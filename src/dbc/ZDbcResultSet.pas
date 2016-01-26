@@ -4848,7 +4848,8 @@ begin
       Result := PWideChar(FBlobData)
     else
     begin
-      GetUnicodeString;
+      FBlobSize := (PRaw2PUnicodeBuf(FBlobData, Length, 0, FBlobData, FCurrentCodePage)+1) shl 1 ;
+      FCurrentCodePage := zCP_UTF16;
       Result := PWideChar(FBlobData);
     end;
 end;

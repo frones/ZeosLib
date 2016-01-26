@@ -119,7 +119,7 @@ type
 
 implementation
 
-uses ZCompatibility, StrUtils, ZFastCode;
+uses ZCompatibility, ZFastCode;
 
 {TZURLStringList}
 function TZURLStringList.GetTextStr: string;

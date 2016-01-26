@@ -439,7 +439,7 @@ begin
       else
         ZSetString(P, ZFastCode.StrLen(P), tmp);
       ColumnType := ConvertSQLiteTypeToSQLType(tmp, FUndefinedVarcharAsStringLength,
-        FieldPrecision, FieldDecimals, ConSettings.CPType);
+        FieldPrecision{%H-}, FieldDecimals{%H-}, ConSettings.CPType);
 
       if ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
       begin

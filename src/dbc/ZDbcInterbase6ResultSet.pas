@@ -161,7 +161,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  ZDbcUtils, ZEncoding, ZFastCode, ZSysUtils;
+  ZEncoding, ZFastCode, ZSysUtils;
 
 { TZInterbase6XSQLDAResultSet }
 
