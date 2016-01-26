@@ -200,7 +200,7 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZFastCode,
-  ZMessages, ZDbcUtils, ZEncoding;
+  ZMessages, ZEncoding;
 
 { TZOracleAbstractResultSet }
 

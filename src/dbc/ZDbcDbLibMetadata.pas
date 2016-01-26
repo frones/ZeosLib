@@ -1836,17 +1836,54 @@ var
   SQLType: TZSQLType;
   default_val: String;
   TableName, tmp: String;
+  ResultHasRows: Boolean;
+  TmpSchemaPattern, TmpTableNamePattern, TmpColumnNamePattern: String;
+
+  function ConvertEscapes(Pattern: String): String;
+  var
+    x: Integer;
+    EscapeChar: Char;
+    NextStart: Integer;
+    SkipNextChar: Boolean;
+  begin
+    if Length(Pattern) = 0 then Exit;
+    EscapeChar := GetDatabaseInfo.GetSearchStringEscape[1];
+    NextStart := 1;
+    SkipNextChar := False;
+    for x := 1 to Length(Pattern) do begin
+      if SkipNextChar then begin
+        SkipNextChar := false;
+        Continue;
+      end;
+
+      if (Pattern[x] = EscapeChar) and (x < Length(Pattern)) then begin
+        Result := Result + Copy(Pattern, NextStart, x - NextStart);
+        Result := Result + '[' + Pattern[x + 1] + ']';
+        SkipNextChar := true;
+        NextStart := x + 2;
+      end;
+    end;
+
+    if (NextStart <= Length(Pattern))
+    then Result := Result + Copy(Pattern, NextStart, length(Pattern) - NextStart + 1);
+  end;
 begin
+  ResultHasRows := False;
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
-  with GetStatement.ExecuteQuery('exec '+GetSP_Prefix(Catalog, SchemaPattern)+'sp_columns '+
-      ComposeObjectString(TableNamePattern)+', '+
-       ComposeObjectString(SchemaPattern)+', '+
+  TmpSchemaPattern := ConvertEscapes(SchemaPattern);
+  TmpTableNamePattern := ConvertEscapes(TableNamePattern);
+  TmpColumnNamePattern := ConvertEscapes(ColumnNamePattern);
+
+  with GetStatement.ExecuteQuery('exec '+GetSP_Prefix(Catalog, TmpSchemaPattern)+'sp_columns '+
+      ComposeObjectString(TmpTableNamePattern)+', '+
+       ComposeObjectString(TmpSchemaPattern)+', '+
        ComposeObjectString(Catalog)+', '+
-       ComposeObjectString(ColumnNamePattern)) do
+       ComposeObjectString(TmpColumnNamePattern)) do
   begin
     while Next do
     begin
+      ResultHasRows := True;
       Result.MoveToInsertRow;
       Result.UpdateString(CatalogNameIndex, GetStringByName('TABLE_QUALIFIER'));
       Result.UpdateString(SchemaNameIndex, GetStringByName('TABLE_OWNER'));
@@ -1900,40 +1937,42 @@ begin
     Close;
   end;
 
-  TableName := Result.GetString(TableNameIndex);
+  if ResultHasRows then begin
+    TableName := Result.GetString(TableNameIndex);
 
-  Result.BeforeFirst;
-  with GetStatement.ExecuteQuery('select c.colid, c.name, c.type, c.prec, '+
-    'c.scale, c.colstat, c.status, c.iscomputed from syscolumns c inner join'
-    + ' sysobjects o on (o.id = c.id) where o.name COLLATE Latin1_General_CS_AS = '+
-    DeComposeObjectString(TableName)+' and c.number=0 order by colid') do
-    // hint http://blog.sqlauthority.com/2007/04/30/case-sensitive-sql-query-search/ for the collation setting to get a case sensitive behavior
-  begin
-    while Next do
+    Result.BeforeFirst;
+    with GetStatement.ExecuteQuery('select c.colid, c.name, c.type, c.prec, '+
+      'c.scale, c.colstat, c.status, c.iscomputed from syscolumns c inner join'
+      + ' sysobjects o on (o.id = c.id) where o.name COLLATE Latin1_General_CS_AS = '+
+      DeComposeObjectString(TableName)+' and c.number=0 order by colid') do
+      // hint http://blog.sqlauthority.com/2007/04/30/case-sensitive-sql-query-search/ for the collation setting to get a case sensitive behavior
     begin
-      Result.Next;
-      Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetSmallByName('status') and $80) <> 0);
-      //Result.UpdateNull(TableColColumnCaseSensitiveIndex);
-      Result.UpdateBoolean(TableColColumnSearchableIndex,
-        Result.GetBoolean(TableColColumnSearchableIndex) and (GetIntByName('iscomputed') = 0));
-      Result.UpdateBoolean(TableColColumnWritableIndex,
-        ((GetSmallByName('status') and $80) = 0)
-        (*and (GetSmallByName('type') <> 37)*)   // <<<< *DEBUG WARUM?
-        and (GetIntByName('iscomputed') = 0));
-      Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex,
-        Result.GetBoolean(TableColColumnWritableIndex));
-      Result.UpdateBoolean(TableColColumnReadonlyIndex,
-        not Result.GetBoolean(TableColColumnWritableIndex));
-      if Result.GetBoolean(TableColColumnAutoIncIndex) then
+      while Next do
       begin
-        Result.UpdateSmall(TableColColumnNullableIndex, 1);
-        Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
+        Result.Next;
+        Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetSmallByName('status') and $80) <> 0);
+        //Result.UpdateNull(TableColColumnCaseSensitiveIndex);
+        Result.UpdateBoolean(TableColColumnSearchableIndex,
+          Result.GetBoolean(TableColColumnSearchableIndex) and (GetIntByName('iscomputed') = 0));
+        Result.UpdateBoolean(TableColColumnWritableIndex,
+          ((GetSmallByName('status') and $80) = 0)
+          (*and (GetSmallByName('type') <> 37)*)   // <<<< *DEBUG WARUM?
+          and (GetIntByName('iscomputed') = 0));
+        Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex,
+          Result.GetBoolean(TableColColumnWritableIndex));
+        Result.UpdateBoolean(TableColColumnReadonlyIndex,
+          not Result.GetBoolean(TableColColumnWritableIndex));
+        if Result.GetBoolean(TableColColumnAutoIncIndex) then
+        begin
+          Result.UpdateSmall(TableColColumnNullableIndex, 1);
+          Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
+        end;
+        Result.UpdateRow;
       end;
-      Result.UpdateRow;
+      Close;
     end;
-    Close;
+    Result.BeforeFirst;
   end;
-  Result.BeforeFirst;
 end;
 
 {**

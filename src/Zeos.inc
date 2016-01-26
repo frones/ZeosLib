@@ -41,6 +41,7 @@
 {********************************************************@}
 //common compilation directives
 {$DEFINE ZEOS72UP}
+{$DEFINE ZEOS73UP}
 
 // Uncomment these defines to disable some DB drivers (reduce binary size)
 {.$DEFINE ZEOS_DISABLE_MYSQL}
@@ -52,8 +53,12 @@
 {.$DEFINE ZEOS_DISABLE_ORACLE}
 {.$DEFINE ZEOS_DISABLE_ASA}
 {.$DEFINE ZEOS_DISABLE_POOLED}
+{.$DEFINE ZEOS_DISABLE_OLEDB}
+{.$DEFINE ZEOS_DISABLE_ODBC}
 
+{.$DEFINE USE_SYNCOMMONS} //enable JSON content support by using SynCommons.pas from Synopse project 
 {.$DEFINE WITH_ZSTRINGFIELDS}
+
 
 // In Version 6.1.5 there are several bugs with the TZSQLMetadata-Component
 // For Version 6.5.0 you should uncomment the following line
@@ -124,7 +129,6 @@
     {$DEFINE VER150BELOW}                   //found in ZTestBugCompPostgreSql.pas
     {$IF CompilerVersion >= 16} //Delphi 8+
       {$IF CompilerVersion >= 17} //Delphi 2005+
-        {$DEFINE USE_RAW2WIDE_PROCS}   // compiler related: D7/8 is less optimal for fast mapping -> use MultiByteToWidechar instead for known CP's
         {$DEFINE WITH_INLINE}          // compiler supports inline methodes
 
         {$IF CompilerVersion >= 18} //Delphi 2006+
@@ -335,6 +339,7 @@
 {$DEFINE DISABLE_CHECKING}
 {$ENDIF}
 
+
 // Enables MySQL support in TZConnection/TZDataset
 {$IFNDEF ZEOS_DISABLE_MYSQL}
 {$DEFINE ENABLE_MYSQL}
@@ -373,6 +378,16 @@
 // Enables ASA support in TZConnection/TZDataset
 {$IFNDEF ZEOS_DISABLE_ASA}
 {$DEFINE ENABLE_ASA}
+{$ENDIF}
+
+// Enables OleDB support in TZConnection/TZDataset
+{$IF not defined(ZEOS_DISABLE_OLEDB) and defined(MSWINDOWS)}
+  {$DEFINE ENABLE_OLEDB}
+{$IFEND}
+
+// Enables ODBC support in TZConnection/TZDataset
+{$IFNDEF ZEOS_DISABLE_ODBC}
+{$DEFINE ENABLE_ODBC}
 {$ENDIF}
 
 // Enables Pooled connection support for all enabled db drivers in TZConnection/TZDataset

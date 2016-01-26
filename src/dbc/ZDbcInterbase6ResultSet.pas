@@ -155,7 +155,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  ZDbcUtils, ZEncoding, ZFastCode, ZSysUtils;
+  ZEncoding, ZFastCode, ZSysUtils;
 
 { TZInterbase6XSQLDAResultSet }
 
@@ -1909,7 +1909,7 @@ var
   Buffer: Pointer;
 begin
   InternalClear;
-  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size, Buffer, True, FConSettings);
+  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size{%H-}, Buffer{%H-}, True, FConSettings);
   BlobSize := Size;
   BlobData := Buffer;
   inherited ReadLob;
@@ -1939,7 +1939,7 @@ var
   Buffer: Pointer;
 begin
   InternalClear;
-  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size, Buffer, False, FConSettings);
+  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size{%H-}, Buffer{%H-}, False, FConSettings);
   (PAnsiChar(Buffer)+NativeUInt(Size))^ := #0; //add #0 terminator
   FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
   FBlobSize := Size+1;
