@@ -163,6 +163,7 @@ type
   {$ENDIF WITH_FIELDDEFLIST}
   TStringFieldSetter = procedure(ColumnIndex: Integer; Buffer: PAnsiChar) of object;
   TStringFieldGetter = function(ColumnIndex: Integer; Buffer: PAnsiChar): Boolean of object;
+  TWideStringFieldGetter = function(ColumnIndex: Integer; Buffer: PWideChar): Boolean of object;
 
   {$IFNDEF WITH_TDATASETFIELD}
   TDataSetField = class;
@@ -233,6 +234,7 @@ type
     FUseZFields: Boolean;
     FStringFieldSetter: TStringFieldSetter;
     FStringFieldGetter: TStringFieldGetter;
+    FWideStringFieldGetter: TWideStringFieldGetter;
     {$IFNDEF WITH_NESTEDDATASETS}
     FNestedDataSets: TList;
     {$ENDIF}
@@ -265,6 +267,8 @@ type
     {$ENDIF}
     function StringFieldGetterFromAnsi(ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
     function StringFieldGetterFromAnsiRec(ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+    function WideStringGetterFromUnicode(ColumnIndex: Integer; Buffer: PWideChar): Boolean;
+    function WideStringGetterFromRaw(ColumnIndex: Integer; Buffer: PWideChar): Boolean;
   private
     function GetReadOnly: Boolean;
     procedure SetReadOnly(Value: Boolean);
@@ -2121,6 +2125,35 @@ begin
   end;
 end;
 
+function TZAbstractRODataset.WideStringGetterFromRaw(ColumnIndex: Integer;
+  Buffer: PWideChar): Boolean;
+var
+  P: PAnsiChar;
+  L: NativeUInt;
+begin
+  P := RowAccessor.GetPAnsiChar(ColumnIndex, Result{%H-}, L);
+  if Result then
+    PWord(Buffer)^ := Ord(#0)
+  else //instead of WStrLCopy
+    PRaw2PUnicode(P, PWideChar(Buffer), L,
+      RowAccessor.GetColumnDataSize(ColumnIndex) shl Ord((RowAccessor.ConSettings^.ClientCodePage^.CharWidth > 2) and (doAlignMaxRequiredWideStringFieldSize in Options)), RowAccessor.ConSettings^.ClientCodePage^.CP);
+end;
+
+function TZAbstractRODataset.WideStringGetterFromUnicode(ColumnIndex: Integer; Buffer: PWideChar): Boolean;
+var
+  P: PWideChar;
+  L: NativeUInt;
+begin
+  P := RowAccessor.GetPWideChar(ColumnIndex, Result{%H-}, L);
+  if not Result then
+  begin //instead of StrPLCopy
+    L := Min(L, RowAccessor.GetColumnDataSize(ColumnIndex) shl Ord((RowAccessor.ConSettings^.ClientCodePage^.CharWidth > 2) and (doAlignMaxRequiredWideStringFieldSize in Options))); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+    System.Move(P^, Pointer(Buffer)^, L shl 1);
+    Inc(Buffer, L);
+  end;
+  PWord(Buffer)^ := Ord(#0);
+end;
+
 {**
   Sets database connection object.
   @param Value a database connection object.
@@ -2184,7 +2217,9 @@ end;
 
 
 procedure TZAbstractRODataset.SetStringFieldSetterAndSetter;
+var ConSettings: PZConSettings;
 begin
+  ConSettings := Connection.DbcConnection.GetConSettings;
   {$IFNDEF UNICODE}
   //Hint: the UnicodeIDE's do return allways a AnsiString casted UnicodeString
   //So it's impossible to retrieve a UTF8 encoded string SAFELY
@@ -2192,26 +2227,37 @@ begin
   //not Unicode-Save since the AnsiString(AUnicodeString) cast.
   //Known issues: Simplified chinese or Persian f.e. have some equal UTF8
   //two/four byte sequense wich lead to data loss. So success is randomly!!
-  if Connection.DbcConnection.AutoEncodeStrings then
+  if ConSettings^.AutoEncode then
   begin
     FStringFieldSetter := StringFieldSetterFromRawAutoEncode;
-    if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF8 then
-      FStringFieldGetter := StringFieldGetterFromUTF8
+    if ConSettings.CPType = cCP_UTF8 then
+      if (ConSettings^.ClientCodePage^.Encoding = ceUTF8) and
+         ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        FStringFieldGetter := StringFieldGetterFromAnsiRec
+      else
+        FStringFieldGetter := StringFieldGetterFromUTF8
+    else if (ConSettings^.ClientCodePage^.Encoding = ceAnsi) and
+         ZCompatibleCodePages(ZDefaultSystemCodePage, ConSettings^.ClientCodePage^.CP) then
+      FStringFieldGetter := StringFieldGetterFromAnsiRec
     else
       FStringFieldGetter := StringFieldGetterFromAnsi;
-  end
-  else
-  begin
+  end else begin
     FStringFieldGetter := StringFieldGetterFromAnsiRec;
     FStringFieldSetter := StringFieldSetterFromRaw;
   end;
   {$ELSE}
-  if ZCompatibleCodePages(ZDefaultSystemCodePage, Connection.DbcConnection.GetConSettings^.ClientCodePage^.CP) then
+  if ZCompatibleCodePages(ZDefaultSystemCodePage, Connection.DbcConnection.GetConSettings^.ClientCodePage^.CP) and
+     (ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) then
     FStringFieldGetter := StringFieldGetterFromAnsiRec
   else
     FStringFieldGetter := StringFieldGetterFromAnsi;
   FStringFieldSetter := StringFieldSetterFromAnsi;
   {$ENDIF}
+  if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
+     (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) then
+    FWideStringFieldGetter := WideStringGetterFromUnicode
+  else
+    FWideStringFieldGetter := WideStringGetterFromRaw;
 end;
 
 {**
@@ -2851,7 +2897,6 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
     {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean;
 var
   ColumnIndex: Integer;
-  Len: NativeUInt;
   bLen: Word;
   P: Pointer;
   RowBuffer: PZRowBuffer;
@@ -2891,25 +2936,7 @@ begin
           Result := RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty;
         { Processes String fields. }
         ftWideString:
-          if RowAccessor is TZUnicodeRowAccessor then
-          begin
-            P := RowAccessor.GetPWideChar(ColumnIndex, Result, Len);
-            if Result then
-              PWord(Buffer)^ := Ord(#0)
-            else
-            begin //instead of WStrCopy()
-              Len := Min(Len, RowAccessor.GetColumnDataSize(ColumnIndex) shl Ord((RowAccessor.ConSettings^.ClientCodePage^.CharWidth > 2) and (doAlignMaxRequiredWideStringFieldSize in Options))); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
-              System.Move(P^, Pointer(Buffer)^, Len shl 1);
-              PWord(PWideChar(Buffer)+Len)^ := Ord(#0);
-            end;
-          end else begin
-            P := RowAccessor.GetPAnsiChar(ColumnIndex, Result, Len);
-            if Result then
-              PWord(Buffer)^ := Ord(#0)
-            else //fast encode raw into wide buffer
-              PRaw2PUnicode(P, PWideChar(Buffer), Len,
-                RowAccessor.GetColumnDataSize(ColumnIndex) shl Ord((RowAccessor.ConSettings^.ClientCodePage^.CharWidth > 2) and (doAlignMaxRequiredWideStringFieldSize in Options)), RowAccessor.ConSettings^.ClientCodePage^.CP);
-          end;
+          Result := FWideStringFieldGetter(ColumnIndex, PWideChar(Buffer));
         ftString:
           Result := FStringFieldGetter(ColumnIndex, PAnsiChar(Buffer));
         {$IFDEF WITH_FTGUID}
