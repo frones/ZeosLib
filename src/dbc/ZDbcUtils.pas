@@ -462,7 +462,7 @@ end;
 function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZWideString;
 var P: PWideChar;
 begin
-  ZSetString(nil, ((Len+1) shl 1)+Ord(not Odbc), Result);
+  ZSetString(nil, ((Len+1) shl 1)+Ord(not Odbc), Result{%H-});
   if ODBC then begin
     P := Pointer(Result);
     P^ := '0';
@@ -483,7 +483,7 @@ end;
 function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): RawByteString;
 var P: PAnsiChar;
 begin
-  ZSetString(nil, ((Len+1) shl 1)+Ord(not Odbc), Result);
+  ZSetString(nil, ((Len+1) shl 1)+Ord(not Odbc), Result{%H-});
   if ODBC then begin
     P := Pointer(Result);
     P^ := '0';

@@ -2853,7 +2853,7 @@ var
   ColumnIndex: Integer;
   Len: NativeUInt;
   bLen: Word;
-  P: PWideChar;
+  P: Pointer;
   RowBuffer: PZRowBuffer;
 begin
   if GetActiveBuffer(RowBuffer{%H-}) then
@@ -2891,16 +2891,24 @@ begin
           Result := RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty;
         { Processes String fields. }
         ftWideString:
+          if RowAccessor is TZUnicodeRowAccessor then
           begin
-            P := RowAccessor.GetPWidechar(ColumnIndex, Result, Len);
+            P := RowAccessor.GetPWideChar(ColumnIndex, Result, Len);
             if Result then
-              PWideChar(Buffer)^ := WideChar(#0)
+              PWord(Buffer)^ := Ord(#0)
             else
             begin //instead of WStrCopy()
-              Len := Min(Len, RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+              Len := Min(Len, RowAccessor.GetColumnDataSize(ColumnIndex) shl Ord((RowAccessor.ConSettings^.ClientCodePage^.CharWidth > 2) and (doAlignMaxRequiredWideStringFieldSize in Options))); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
               System.Move(P^, Pointer(Buffer)^, Len shl 1);
-              (PWideChar(Buffer)+Len)^ := WideChar(#0);
+              PWord(PWideChar(Buffer)+Len)^ := Ord(#0);
             end;
+          end else begin
+            P := RowAccessor.GetPAnsiChar(ColumnIndex, Result, Len);
+            if Result then
+              PWord(Buffer)^ := Ord(#0)
+            else //fast encode raw into wide buffer
+              PRaw2PUnicode(P, PWideChar(Buffer), Len,
+                RowAccessor.GetColumnDataSize(ColumnIndex) shl Ord((RowAccessor.ConSettings^.ClientCodePage^.CharWidth > 2) and (doAlignMaxRequiredWideStringFieldSize in Options)), RowAccessor.ConSettings^.ClientCodePage^.CP);
           end;
         ftString:
           Result := FStringFieldGetter(ColumnIndex, PAnsiChar(Buffer));

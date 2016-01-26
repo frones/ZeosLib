@@ -56,16 +56,13 @@ interface
 {$I ZCore.inc}
 
 uses
-  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} {$IFNDEF FPC}Math,{$ENDIF}
   {$IFDEF WITH_LCONVENCODING}
   {$MACRO ON}
    LCLVersion, LConvEncoding,
   {$ENDIF}
   {$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
-  {$IFEND}
-  {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
-  Math,
   {$IFEND}
   ZCompatibility;
 
@@ -171,18 +168,17 @@ const
 function IsLConvEncodingCodePage(const CP: Word): Boolean;
 procedure SetConvertFunctions(const CTRL_CP, DB_CP: Word;
   out PlainConvert, DbcConvert: TConvertEncodingFunction); overload;
-{$ELSE}
-
-function StringToAnsiEx(const s: String; const {$IFNDEF UNICODE}FromCP,{$ENDIF} ToCP: Word): RawByteString; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-function AnsiToStringEx(const s: RawByteString; const FromCP{$IFNDEF UNICODE}, ToCP{$ENDIF}: Word): String; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 {$ENDIF}
 
 function ZRawToUnicode(const S: RawByteString; const CP: Word): ZWideString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
-function PRawToUnicode(Source: PAnsiChar; const SourceBytes: NativeUInt; CP: Word): ZWideString; //{$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+function PRawToUnicode(Source: PAnsiChar; const SourceBytes: LengthInt; CP: Word): ZWideString;
+procedure PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar; SourceBytes, BufCodePoints: LengthInt; CP: Word); overload; //{$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+function PRaw2PUnicodeBuf(Source: PAnsiChar; Dest: Pointer; SourceBytes: LengthInt; CP: Word): LengthInt; overload; //{$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+function PRaw2PUnicodeBuf(Source: PAnsiChar; SourceBytes, BufCodePoints: LengthInt; var Dest: Pointer; CP: Word): LengthInt; overload; //{$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function ZUnicodeToRaw(const US: ZWideString; CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
-function PUnicodeToRaw(Source: PWideChar; CodePoints: NativeUInt; CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
-function PUnicodeToString(Source: PWideChar; CodePoints: NativeUInt; CP: Word): String; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
-function ZUnicodeToString(const Source: ZWideString; CP: Word): String; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+function PUnicodeToRaw(Source: PWideChar; CodePoints: LengthInt; CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+function PUnicodeToString(Source: PWideChar; CodePoints: LengthInt; CP: Word): String;
+function ZUnicodeToString(const Source: ZWideString; CP: Word): String;
 
 {converter functions for the String-types}
 {$IFDEF WITH_LCONVENCODING}
@@ -272,6 +268,8 @@ function ZUnicodeToUnknownRaw(const US: ZWideString; CP: Word): RawByteString;
 }
 function ZCompatibleCodePages(const CP1, CP2: Word): Boolean; {$IF defined (WITH_INLINE) and not defined(WITH_C11389_ERROR)}inline;{$IFEND}
 
+function IsMBCSCodePage(CP: Word): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
 {**
   Set the string-types conversion funtion in relation to the Connection-Settings.
   The Results should be as optimal as possible to speed up the behavior
@@ -281,8 +279,8 @@ procedure SetConvertFunctions(ConSettings: PZConSettings); {$IFDEF WITH_LCONVENC
 
 Type
   TEncodeType = (etUSASCII, etUTF8, etANSI);
-  TSBCSMapProc = procedure(Source: PByteArray; SourceBytes: NativeUInt; Dest: PWordArray);
-  TMBCSMapProc = function(Source: PAnsichar; SourceBytes: NativeUInt; Dest: PWideChar): LengthInt;
+  TSBCSMapProc = procedure(Source: PByteArray; SourceBytes: LengthInt; Dest: PWordArray);
+  TMBCSMapProc = function(Source: PAnsichar; SourceBytes: LengthInt; Dest: PWideChar): LengthInt;
   PSBCS_MAP = ^TSBCS_MAP;
   TSBCS_MAP = packed array[$00..$FF] of Word;
 
@@ -297,20 +295,20 @@ function ConvertEMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF} Raw
 
 
 {SBCS codepages $00..FF}
-procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
+procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
   var Dest: ZWideString; SBCS_MAP: PSBCS_MAP); overload;
 procedure AnsiSBCSToUCS2(Source: PByteArray; Dest: PWordArray;
-  SBCS_MAP: PSBCS_MAP; SourceBytes: NativeUInt); overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
+  SBCS_MAP: PSBCS_MAP; SourceBytes: LengthInt); overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
   const MapProc: TSBCSMapProc; var Dest: ZWideString); overload;
-procedure MapByteToUCS2(Source: PByteArray; SourceBytes: NativeUInt;
+procedure MapByteToUCS2(Source: PByteArray; SourceBytes: LengthInt;
   Dest: PWordArray); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 {MBCS codepages }
-procedure AnsiMBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
+procedure AnsiMBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
   const MapProc: TMBCSMapProc; var Dest: ZWideString);
-function UTF8ToWideChar(Source: PAnsichar; SourceBytes: NativeUInt; Dest: PWideChar): LengthInt;
-function PUTF8ToRaw(Source: PAnsiChar; SourceBytes: NativeUInt; RawCP: Word): RawByteString;
+function UTF8ToWideChar(Source: PAnsichar; SourceBytes: LengthInt; Dest: PWideChar): LengthInt; overload;
+function PUTF8ToRaw(Source: PAnsiChar; SourceBytes: LengthInt; RawCP: Word): RawByteString;
 
 const
   CP437ToUnicodeMap: packed array[$00..$FF] of Word = ( {generated with MultiByteToWideChar}
@@ -1179,7 +1177,7 @@ end;
   my fast Byte to Word shift without a lookup table
   eg. USACII7/LATIN 1 cp's
 }
-procedure MapByteToUCS2(Source: PByteArray; SourceBytes: NativeUInt; Dest: PWordArray);
+procedure MapByteToUCS2(Source: PByteArray; SourceBytes: LengthInt; Dest: PWordArray);
 var
   PEnd: PAnsiChar;
 begin
@@ -1212,13 +1210,13 @@ end;
   my fast Byte to Word shift with a lookup table
   eg. all single byte encodings
 }
-procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
+procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
   var Dest: ZWideString; SBCS_MAP: PSBCS_MAP);
 begin
   {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
   if (Pointer(Dest) = nil) or//empty
      ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-     (SourceBytes <> NativeUInt({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^)) then { length as expected ? }
+     (SourceBytes <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
   {$ELSE}
   if Length(Dest) <> LengthInt(SourceBytes) then //WideString isn't ref counted
   {$ENDIF}
@@ -1235,7 +1233,7 @@ end;
   eg. all single byte encodings
 }
 procedure AnsiSBCSToUCS2(Source: PByteArray; Dest: PWordArray;
-  SBCS_MAP: PSBCS_MAP; SourceBytes: NativeUInt);
+  SBCS_MAP: PSBCS_MAP; SourceBytes: LengthInt);
 var
   PEnd: PAnsiChar;
 begin
@@ -1265,15 +1263,15 @@ begin
   Dest[0] := Ord(#0);
 end;
 
-procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
+procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
   const MapProc: TSBCSMapProc; var Dest: ZWideString);
 begin
   {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
   if (Pointer(Dest) = nil) or//empty
      ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-     (SourceBytes <> NativeUInt({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^)) then { length as expected ? }
+     (SourceBytes <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
   {$ELSE}
-  if Length(Dest) <> LengthInt(SourceBytes) then //WideString isn't ref counted
+  if Length(Dest) <> SourceBytes then //WideString isn't ref counted
   {$ENDIF}
   begin
     Dest := '';
@@ -1282,7 +1280,7 @@ begin
   MapProc(Pointer(Source), SourceBytes, Pointer(Dest));
 end;
 
-procedure AnsiMBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
+procedure AnsiMBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
   const MapProc: TMBCSMapProc; var Dest: ZWideString);
 var
   Buf: array[0..BufLen+1] of WideChar; //static buf to avoid mem allocs
@@ -1292,9 +1290,9 @@ begin
     {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
     if (Pointer(Dest) = nil) or//empty
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-       (SourceBytes <> NativeUInt({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^)) then { length as expected ? }
+       (SourceBytes <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
     {$ELSE}
-    if Length(Dest) <> NewLen then //WideString isn't ref counted
+    if Length(Dest) <> SourceBytes then //WideString isn't ref counted
     {$ENDIF}
     begin
       Dest := '';
@@ -1308,7 +1306,7 @@ begin
     {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
     if (Pointer(Dest) = nil) or//empty
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-       (NewLen <> PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
+       (NewLen <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
     {$ELSE}
     if Length(Dest) <> NewLen then //WideString isn't ref counted
     {$ENDIF}
@@ -1358,7 +1356,7 @@ const
   //UTF8_EXTRA_SURROGATE = 3;
   //UTF8_FIRSTBYTE: packed array[2..6] of byte = ($c0,$e0,$f0,$f8,$fc);
 
-function UTF8ToWideChar(Source: PAnsichar; SourceBytes: NativeUInt; Dest: PWideChar): LengthInt;
+function UTF8ToWideChar(Source: PAnsichar; SourceBytes: LengthInt; Dest: PWideChar): LengthInt;
 // faster than System.UTF8Decode()
 var c: cardinal;
     begd: pWideChar;
@@ -1366,16 +1364,6 @@ var c: cardinal;
     i,extra: integer;
 label Quit, NoSource, By1, By4;
 begin
-  result := 0;
-  if dest=nil then
-   exit;
-  if source=nil then
-    goto NoSource;
-  if sourceBytes=0 then begin
-    if source^=#0 then
-      goto NoSource;
-    sourceBytes := ZFastCode.StrLen(source);
-  end;
   begd := dest;
   endSource := Source+SourceBytes;
   endSourceBy4 := endSource-4;
@@ -1434,7 +1422,74 @@ NoSource:
   PWord(dest)^ := Ord(#0); // always append a WideChar(0) to the end of the buffer
 end;
 
-function PUTF8ToRaw(Source: PAnsiChar; SourceBytes: NativeUInt; RawCP: Word): RawByteString;
+function UTF8ToWideChar(source: PAnsiChar; dest: PWideChar; sourceBytes, BufCodePoints: LengthInt): LengthInt; overload;
+// faster than System.UTF8Decode()
+var c: cardinal;
+    begd, endDest: pWideChar;
+    endSource, endSourceBy4: PAnsiChar;
+    i,extra: integer;
+label Quit, NoSource, By1, By4;
+begin
+  begd := dest;
+  endSource := Source+SourceBytes;
+  endSourceBy4 := endSource-4;
+  endDest := Dest+BufCodePoints;
+  if SourceBytes < 4 then
+    goto By1;
+  repeat
+    // first handle 7 bit ASCII chars, by quad (Sha optimization)
+By4:  c := PCardinal(Source)^;
+      if (c and $80808080<>0) or (endDest-4 < Dest) then
+        goto By1; // break on first non ASCII quad
+      inc(Source,4);
+      PCardinal(dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
+      c := c shr 16;
+      PCardinal(dest+2)^ := (c shl 8 or c) and $00ff00ff;
+      inc(dest,4);
+    until Source>EndSourceBy4;
+  if Source<endSource then
+    repeat
+By1:  c := byte(Source^);
+      inc(Source);
+      if c and $80=0 then begin
+        PWord(dest)^ := c; // much faster than dest^ := WideChar(c) for FPC
+        inc(dest);
+        if ({%H-}NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+        if (Source<endSource) and (dest<endDest) then continue else break;
+      end;
+      extra := UTF8_EXTRABYTES[c];
+      if (extra=0) or (Source+extra>endSource) then break;
+      for i := 1 to extra do begin
+        if byte(Source^) and $c0<>$80 then
+          goto Quit; // invalid input content
+        c := c shl 6+byte(Source^);
+        inc(Source);
+      end;
+      with UTF8_EXTRA[extra] do begin
+        dec(c,offset);
+        if c<minimum then
+          break; // invalid input content
+      end;
+      if c<=$ffff then begin
+        PWord(dest)^ := c;
+        inc(dest);
+        if ({%H-}NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+        if (Source<endSource) and (dest<endDest) then continue else break;
+      end;
+      dec(c,$10000); // store as UTF-16 surrogates
+      PWordArray(dest)[0] := c shr 10  +UTF16_HISURROGATE_MIN;
+      PWordArray(dest)[1] := c and $3FF+UTF16_LOSURROGATE_MIN;
+      inc(dest,2);
+      if ({%H-}NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+      if (source>=endsource) or (dest>=endDest) then break;
+    until false;
+Quit:
+  result := ({%H-}NativeUInt(dest)-{%H-}NativeUInt(begd)) shr 1; // dest-begd return codepoint length
+NoSource:
+  PWord(dest)^ := Ord(#0); // always append a WideChar(0) to the end of the buffer
+end;
+
+function PUTF8ToRaw(Source: PAnsiChar; SourceBytes: LengthInt; RawCP: Word): RawByteString;
 var
   {$IFDEF WITH_LCONVENCODING}
   Tmp: ZWideString;
@@ -1465,87 +1520,106 @@ begin
   end;
 end;
 
-function PRawToUnicode(Source: PAnsiChar; const SourceBytes: NativeUInt;
+function PRawToUnicode(Source: PAnsiChar; const SourceBytes: LengthInt;
   CP: Word): ZWideString;
 var
-  S: RawByteString;
-  {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
+  wlen: LengthInt;
+  mbcsBuf: array[0..BufLen] of WideChar;
+begin
+  if (SourceBytes = 0) or (Source = nil) then
+    Result := ''
+  else begin
+    //test multibyte encodings:
+    if IsMBCSCodePage(cp) then begin
+      if SourceBytes < BufLen then begin //can we use a static buf? -> avoid memrealloc for the Result String
+        wlen := PRaw2PUnicodeBuf(Source, @mbcsBuf[0], sourceBytes, CP);
+        ZSetString(nil, wlen, Result);
+        System.Move(mbcsBuf[0], Result[1], wlen shl 1);
+      end else begin //nope Buf to small
+        ZSetString(nil, SourceBytes, Result);
+        wlen := PRaw2PUnicodeBuf(Source, Pointer(Result), sourceBytes, CP);
+        if wlen <> Length(Result) then
+          SetLength(Result, wlen);
+      end;
+    end else begin //single byte encoding -> encode into result directly
+      ZSetString(nil, SourceBytes, Result);
+      PRaw2PUnicodeBuf(Source, Pointer(Result), sourceBytes, CP);
+    end;
+  end;
+end;
+
+{**
+  convert a raw encoded string into a uniocde buffer with a Maximum of CodePoints
+  this procedure propably is used to fill static buffers like the TField.Buffer
+  Space must be reserved to fill the trailing #0 term
+}
+procedure PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar;
+  SourceBytes, BufCodePoints: LengthInt; CP: Word);
+var
   C: LongWord;
   PEnd: PAnsiChar;
-  Dest: PWideChar;
-  wlen: LengthInt;
+  {$IF not defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
+    {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
+    S: RawByteString;
+    {$ENDIF}
+  W: ZWideString;
   {$IFEND}
 label A2U;
 begin
-  if SourceBytes = 0 then
-    Result := ''
+  if Dest=nil then exit;
+  if (SourceBytes = 0) or (BufCodePoints = 0) then
+    PWord(Dest)^ := Ord(#0)
   else
 A2U:
     case CP of
-      zCP_NONE:
-        case ZDetectUTF8Encoding(Source, SourceBytes) of
-          etUSASCII: Result := USASCII7ToUnicodeString(Source, SourceBytes);
-          etUTF8: AnsiMBCSToUCS2(Source, SourceBytes, UTF8ToWideChar, Result);
-          else
-            if ZCompatibleCodePages(ZDefaultSystemCodePage,zCP_UTF8) then
-            begin
-              ZSetString(Source, SourceBytes, S{%H-});
-              Result := ZWideString(S); //random success, we don't know ANY proper CP here
-            end
-            else
-            begin
-              CP := ZDefaultSystemCodePage; //still a random success here!
-              goto A2U;
-            end;
-        end;
-      zCP_DOS437:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP437ToUnicodeMap);
-      zCP_DOS708:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP708ToUnicodeMap);
-      zCP_DOS720:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP720ToUnicodeMap);
-      zCP_DOS737:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP737ToUnicodeMap);
-      zCP_DOS775:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP775ToUnicodeMap);
-      zCP_DOS850:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP850ToUnicodeMap);
-      zCP_DOS852:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP852ToUnicodeMap);
-      zCP_DOS857:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP857ToUnicodeMap);
-      zCP_DOS858:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP858ToUnicodeMap);
-      zCP_DOS860:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP860ToUnicodeMap);
-      zCP_DOS861:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP861ToUnicodeMap);
-      zCP_DOS862:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP862ToUnicodeMap);
-      zCP_DOS863:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP863ToUnicodeMap);
-      zCP_DOS864:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP864ToUnicodeMap);
-      zCP_DOS865:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP865ToUnicodeMap);
-      zCP_DOS866:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP866ToUnicodeMap);
-      zCP_DOS869:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP869ToUnicodeMap);
-      zCP_WIN874:   AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP874ToUnicodeMap);
-      zCP_WIN1250:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP1250ToUnicodeMap);
-      zCP_WIN1251:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP1251ToUnicodeMap);
-      zCP_WIN1252:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP1252ToUnicodeMap);
-      zCP_WIN1253:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP1253ToUnicodeMap);
-      zCP_WIN1254:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP1254ToUnicodeMap);
-      zCP_WIN1255:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP1255ToUnicodeMap);
-      cCP_WIN1256:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP1256ToUnicodeMap);
-      zCP_WIN1257:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP1257ToUnicodeMap);
-      zCP_WIN1258:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP1258ToUnicodeMap);
-      zCP_macintosh: AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP10000ToUnicodeMap);
-      zCP_x_mac_ce: AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP10029ToUnicodeMap);
-      zCP_x_IA5_Swedish:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP20107ToUnicodeMap);
-      zCP_KOI8R:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP20866ToUnicodeMap);
-      zCP_us_ascii: AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP20127ToUnicodeMap);
-      zCP_KOI8U:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP21866ToUnicodeMap);
-      zCP_L1_ISO_8859_1: AnsiSBCSToUCS2(Source, SourceBytes, MapByteToUCS2, Result);
-      zCP_L2_ISO_8859_2:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28592ToUnicodeMap);
-      zCP_L3_ISO_8859_3:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28593ToUnicodeMap);
-      zCP_L4_ISO_8859_4:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28594ToUnicodeMap);
-      zCP_L5_ISO_8859_5:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28595ToUnicodeMap);
-      zCP_L6_ISO_8859_6:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28596ToUnicodeMap);
-      zCP_L7_ISO_8859_7:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28597ToUnicodeMap);
-      zCP_L8_ISO_8859_8:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28598ToUnicodeMap);
-      zCP_L5_ISO_8859_9:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28599ToUnicodeMap);
-      zCP_L7_ISO_8859_13:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28603ToUnicodeMap);
-      zCP_L9_ISO_8859_15:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28605ToUnicodeMap);
+      zCP_DOS437:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP437ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS708:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP708ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS720:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP720ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS737:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP737ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS775:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP775ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS850:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP850ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS852:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP852ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS857:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP857ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS858:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP858ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS860:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP860ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS861:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP861ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS862:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP862ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS863:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP863ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS864:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP864ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS865:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP865ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS866:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP866ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS869:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP869ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN874:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP874ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1250:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1250ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1251:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1251ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1252:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1252ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1253:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1253ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1254:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1254ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1255:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1255ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      cCP_WIN1256:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1256ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1257:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1257ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1258:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1258ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_macintosh:      AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP10000ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_x_mac_ce:       AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP10029ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_x_IA5_Swedish:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP20107ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_KOI8R:          AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP20866ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_us_ascii:       AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP20127ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_KOI8U:          AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP21866ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L1_ISO_8859_1:  MapByteToUCS2(Pointer(Source), Min(SourceBytes, BufCodePoints), Pointer(Dest));
+      zCP_L2_ISO_8859_2:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28592ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L3_ISO_8859_3:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28593ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L4_ISO_8859_4:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28594ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L5_ISO_8859_5:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28595ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L6_ISO_8859_6:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28596ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L7_ISO_8859_7:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28597ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L8_ISO_8859_8:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28598ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L5_ISO_8859_9:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28599ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L7_ISO_8859_13: AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28603ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L9_ISO_8859_15: AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28605ToUnicodeMap, Min(SourceBytes, BufCodePoints));
       {not supported codepages by Windows MultiByteToWideChar}
-      zCP_L6_ISO_8859_10:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28600ToUnicodeMap);
-      zCP_L8_ISO_8859_14:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28604ToUnicodeMap);
-      zCP_L10_ISO_8859_16:  AnsiSBCSToUCS2(Source, SourceBytes, Result, @CP28606ToUnicodeMap);
+      zCP_L6_ISO_8859_10: AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28600ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L8_ISO_8859_14: AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28604ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L10_ISO_8859_16:AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28606ToUnicodeMap, Min(SourceBytes, BufCodePoints));
       (* remaing fast conversion for MBCS encodings
       zCP_MSWIN921 = 921;
       zCP_MSWIN923 = 923;
@@ -1563,55 +1637,287 @@ A2U:
       zCP_GB18030 = 54936;	{Windows XP and later: GB18030 Simplified Chinese (4 byte); Chinese Simplified (GB18030)}
       zCP_UTF7 = 65000;
       *)
-      zCP_UTF8: AnsiMBCSToUCS2(Source, SourceBytes, UTF8ToWideChar, Result);
-      else //for these where we do not have a conversion routine...
-        {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
+      zCP_UTF8:           if BufCodePoints <= SourceBytes then
+                            UTF8ToWideChar(Source, SourceBytes, Dest)
+                          else
+                            UTF8ToWideChar(Source, Dest, SourceBytes, BufCodePoints);
+      else begin//for these where we do not have a conversion routine...
+        PEnd := Source+SourceBytes-4;
+        {first handle leading ASCII if possible }
+        while (Source < PEnd ) and (PLongWord(Source)^ and $80808080 = 0) and (BufCodePoints > 3)  do
         begin
-          PEnd := Source+SourceBytes-4;
-          Result := ''; //speeds up SetLength x2
-          SetLength(result, SourceBytes);
-          Dest := Pointer(Result);
-          {first handle leading ASCII if possible }
-          while (Source < PEnd ) and (PLongWord(Source)^ and $80808080 = 0) do
-          begin
-            C := PLongWord(Source)^;
-            PLongWord(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
-            c := c shr 16;
-            PLongWord(Dest+2)^ := (c shl 8 or c) and $00ff00ff;
-            inc(Source,4);
-            inc(Dest,4);
-          end;
-          inc(PEnd, 4);
-          while (Source < PEnd) and (PByte(Source)^ and $80 = 0) do
-          begin
-            PWord(Dest)^ := Byte(Source^); //Shift Byte to Word
-            inc(Source);
-            inc(Dest);
-          end;
-          if Source < PEnd then //convert remaining characters with codepage agnostic
-          begin
-            wlen :=  PEnd-Source; //elimainate already processed chars
-            {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-            SetLength(Result, LengthInt(SourceBytes) - wlen + UnicodeFromLocaleChars(CP, 0, Source, wlen, Dest, wlen));
-            {$ELSE}
-            SetLength(Result, LengthInt(SourceBytes) - wlen + MultiByteToWideChar(CP, 0, Source, wlen, Dest, wlen)); //Convert Ansi to Wide with supported Chars
-            {$ENDIF}
-          end;
+          C := PLongWord(Source)^;
+          PLongWord(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
+          c := c shr 16;
+          PLongWord(Dest+2)^ := (c shl 8 or c) and $00ff00ff;
+          inc(Source,4);
+          inc(Dest,4);
+          Dec(BufCodePoints, 4);
         end;
-        {$ELSE}
-          {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
-          WidestringManager.Ansi2UnicodeMoveProc(Source, CP, Result, SourceBytes);
-          {$ELSE}
-          begin
-            ZSetString(Source, SourceBytes, S);
-            if ZCompatibleCodePages(CP, zCP_UTF8) then
-              Result := UTF8Decode(S)
+        inc(PEnd, 4);
+        while (Source < PEnd) and (PByte(Source)^ and $80 = 0) and (BufCodePoints > 0)  do
+        begin
+          PWord(Dest)^ := PByte(Source)^; //Shift Byte to Word
+          inc(Source);
+          inc(Dest);
+          Dec(BufCodePoints);
+        end;
+        SourceBytes := PEnd-Source;
+        if CP = zCP_NONE then
+          case ZDetectUTF8Encoding(Source, SourceBytes) of
+            etUTF8: begin
+                      if BufCodePoints <= SourceBytes then
+                        UTF8ToWideChar(Source, SourceBytes, Dest)
+                      else
+                        UTF8ToWideChar(Source, Dest, SourceBytes, BufCodePoints);
+                      Exit;
+                    end;
             else
-              Result := ZWideString(S); //random success
+              if ZCompatibleCodePages(ZDefaultSystemCodePage,zCP_UTF8) then begin //random success, we don't know ANY proper CP here
+                MapByteToUCS2(Pointer(Source), Min(SourceBytes, BufCodePoints), Pointer(Dest));
+                Exit;
+              end else begin
+                CP := ZDefaultSystemCodePage; //still a random success here!
+                goto A2U;
+              end;
           end;
+        if (Source < PEnd) and (BufCodePoints > 0) then begin//convert remaining characters with codepage agnostic
+          {$IFDEF WITH_UNICODEFROMLOCALECHARS}
+          Inc(Dest, UnicodeFromLocaleChars(CP, 0, Source, SourceBytes, Dest, BufCodePoints));
+          {$ELSE}
+            {$IFDEF MSWINDOWS}
+            Inc(Dest, MultiByteToWideChar(CP, 0, Source, SourceBytes, Dest, BufCodePoints)); //Convert Ansi to Wide with supported Chars
+            {$ELSE}
+              {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
+              WidestringManager.Ansi2UnicodeMoveProc(Source, CP, W, SourceBytes);
+              {$ELSE}
+              ZSetString(Source, SourceBytes, S);
+              W := ZWideString(S); //random success
+              {$ENDIF}
+              BufCodePoints := Min(Length(W), BufCodePoints);
+              System.Move(W[1], Dest^, BufCodePoints shl 1);
+              Inc(Dest, BufCodePoints);
+            {$ENDIF}
           {$ENDIF}
-        {$IFEND}
+        end;
+        PWord(Dest)^ := $0; //allways append the term
+      end;
     end;
+end;
+
+{**
+  convert a raw encoded string into a uniocde buffer
+  Dest reserved space must be minimum SourceBytes + trailing #0 in codepoints
+}
+function PRaw2PUnicodeBuf(Source: PAnsiChar; Dest: Pointer;
+  SourceBytes: LengthInt; CP: Word): LengthInt;
+var
+  C: LongWord;
+  PEnd: PAnsiChar;
+  wlen, BufCodePoints: LengthInt;
+  {$IF not defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
+    {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
+    S: RawByteString;
+    {$ENDIF}
+  W: ZWideString;
+  {$IFEND}
+label A2U;
+begin
+  if Dest = nil then begin
+    Result := 0;
+    exit;
+  end;
+  Result := SourceBytes;
+  if (SourceBytes = 0) or (Source = nil) then
+    PWord(Dest)^ := Ord(#0)
+  else
+    case CP of
+      zCP_DOS437:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP437ToUnicodeMap, SourceBytes);
+      zCP_DOS708:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP708ToUnicodeMap, SourceBytes);
+      zCP_DOS720:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP720ToUnicodeMap, SourceBytes);
+      zCP_DOS737:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP737ToUnicodeMap, SourceBytes);
+      zCP_DOS775:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP775ToUnicodeMap, SourceBytes);
+      zCP_DOS850:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP850ToUnicodeMap, SourceBytes);
+      zCP_DOS852:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP852ToUnicodeMap, SourceBytes);
+      zCP_DOS857:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP857ToUnicodeMap, SourceBytes);
+      zCP_DOS858:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP858ToUnicodeMap, SourceBytes);
+      zCP_DOS860:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP860ToUnicodeMap, SourceBytes);
+      zCP_DOS861:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP861ToUnicodeMap, SourceBytes);
+      zCP_DOS862:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP862ToUnicodeMap, SourceBytes);
+      zCP_DOS863:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP863ToUnicodeMap, SourceBytes);
+      zCP_DOS864:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP864ToUnicodeMap, SourceBytes);
+      zCP_DOS865:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP865ToUnicodeMap, SourceBytes);
+      zCP_DOS866:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP866ToUnicodeMap, SourceBytes);
+      zCP_DOS869:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP869ToUnicodeMap, SourceBytes);
+      zCP_WIN874:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP874ToUnicodeMap, SourceBytes);
+      zCP_WIN1250:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1250ToUnicodeMap, SourceBytes);
+      zCP_WIN1251:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1251ToUnicodeMap, SourceBytes);
+      zCP_WIN1252:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1252ToUnicodeMap, SourceBytes);
+      zCP_WIN1253:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1253ToUnicodeMap, SourceBytes);
+      zCP_WIN1254:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1254ToUnicodeMap, SourceBytes);
+      zCP_WIN1255:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1255ToUnicodeMap, SourceBytes);
+      cCP_WIN1256:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1256ToUnicodeMap, SourceBytes);
+      zCP_WIN1257:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1257ToUnicodeMap, SourceBytes);
+      zCP_WIN1258:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1258ToUnicodeMap, SourceBytes);
+      zCP_macintosh:      AnsiSBCSToUCS2(Pointer(Source), Dest, @CP10000ToUnicodeMap, SourceBytes);
+      zCP_x_mac_ce:       AnsiSBCSToUCS2(Pointer(Source), Dest, @CP10029ToUnicodeMap, SourceBytes);
+      zCP_x_IA5_Swedish:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP20107ToUnicodeMap, SourceBytes);
+      zCP_KOI8R:          AnsiSBCSToUCS2(Pointer(Source), Dest, @CP20866ToUnicodeMap, SourceBytes);
+      zCP_us_ascii:       AnsiSBCSToUCS2(Pointer(Source), Dest, @CP20127ToUnicodeMap, SourceBytes);
+      zCP_KOI8U:          AnsiSBCSToUCS2(Pointer(Source), Dest, @CP21866ToUnicodeMap, SourceBytes);
+      zCP_L1_ISO_8859_1:  MapByteToUCS2(Pointer(Source), SourceBytes, Dest);
+      zCP_L2_ISO_8859_2:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28592ToUnicodeMap, SourceBytes);
+      zCP_L3_ISO_8859_3:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28593ToUnicodeMap, SourceBytes);
+      zCP_L4_ISO_8859_4:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28594ToUnicodeMap, SourceBytes);
+      zCP_L5_ISO_8859_5:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28595ToUnicodeMap, SourceBytes);
+      zCP_L6_ISO_8859_6:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28596ToUnicodeMap, SourceBytes);
+      zCP_L7_ISO_8859_7:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28597ToUnicodeMap, SourceBytes);
+      zCP_L8_ISO_8859_8:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28598ToUnicodeMap, SourceBytes);
+      zCP_L5_ISO_8859_9:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28599ToUnicodeMap, SourceBytes);
+      zCP_L7_ISO_8859_13: AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28603ToUnicodeMap, SourceBytes);
+      zCP_L9_ISO_8859_15: AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28605ToUnicodeMap, SourceBytes);
+      {not supported codepages by Windows MultiByteToWideChar}
+      zCP_L6_ISO_8859_10: AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28600ToUnicodeMap, SourceBytes);
+      zCP_L8_ISO_8859_14: AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28604ToUnicodeMap, SourceBytes);
+      zCP_L10_ISO_8859_16:AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28606ToUnicodeMap, SourceBytes);
+      (* remaing fast conversion for MBCS encodings
+      zCP_MSWIN921 = 921;
+      zCP_MSWIN923 = 923;
+      zCP_SHIFTJS = 932; {ANSI/OEM Japanese; Japanese (Shift-JIS)}
+      zCP_GB2312 = 936; {ANSI/OEM Simplified Chinese (PRC, Singapore); Chinese Simplified (GB2312)}
+      zCP_EUCKR = 949; {ANSI/OEM Korean (Unified Hangul Code)}
+      zCP_Big5 = 950; {ANSI/OEM Traditional Chinese (Taiwan; Hong Kong SAR, PRC); Chinese Traditional (Big5)}
+      ZCP_JOHAB = 1361; {Korean (Johab)}
+      zCP_EUC_JP = 20932; {Japanese (JIS 0208-1990 and 0121-1990)}
+
+      zCP_csISO2022JP = 50221;	{ISO 2022 Japanese with halfwidth Katakana; Japanese (JIS-Allow 1 byte Kana)}
+      zCP_euc_JP_win = 51932; {EUC Japanese}
+      zCP_EUC_CN = 51936; {EUC Simplified Chinese; Chinese Simplified (EUC)}
+      zCP_euc_kr = 51949; {EUC Korean}
+      zCP_GB18030 = 54936;	{Windows XP and later: GB18030 Simplified Chinese (4 byte); Chinese Simplified (GB18030)}
+      zCP_UTF7 = 65000;
+      *)
+      zCP_UTF8:           Result := UTF8ToWideChar(Source, SourceBytes, Dest);
+      else begin//for these where we do not have a conversion routine...
+        PEnd := Source+SourceBytes-4;
+        {first handle leading ASCII if possible }
+        while (Source < PEnd ) and (PLongWord(Source)^ and $80808080 = 0) do
+        begin
+          C := PLongWord(Source)^;
+          PLongWord(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
+          c := c shr 16;
+          PLongWord(PWideChar(Dest)+2)^ := (c shl 8 or c) and $00ff00ff;
+          inc(Source,4);
+          inc(PWideChar(Dest),4);
+        end;
+        inc(PEnd, 4);
+        while (Source < PEnd) and (PByte(Source)^ and $80 = 0) do
+        begin
+          PWord(Dest)^ := PByte(Source)^; //Shift Byte to Word
+          inc(Source);
+          inc(PWideChar(Dest));
+        end;
+        if (Source < PEnd) then begin//convert remaining characters with codepage agnostic
+          wlen := PEnd-Source;
+          if CP = zCP_NONE then
+            case ZDetectUTF8Encoding(Source, PEnd-Source) of
+              etUTF8: begin
+                        BufCodePoints := UTF8ToWideChar(Source, wlen, Dest);
+                        goto A2U;
+                      end;
+              else
+                if ZCompatibleCodePages(ZDefaultSystemCodePage,zCP_UTF8) then begin //random success, we don't know ANY proper CP here
+                  MapByteToUCS2(Pointer(Source), wlen, Dest);
+                  Exit;
+                end else
+                  CP := ZDefaultSystemCodePage; //still a random success here!
+            end;
+          {$IFDEF WITH_UNICODEFROMLOCALECHARS}
+          BufCodePoints := UnicodeFromLocaleChars(CP, 0, Source, wlen, Dest, wlen);
+          {$ELSE}
+            {$IFDEF MSWINDOWS}
+            BufCodePoints := MultiByteToWideChar(CP, 0, Source, wlen, Dest, wlen); //Convert Ansi to Wide with supported Chars
+            {$ELSE}
+              {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
+              WidestringManager.Ansi2UnicodeMoveProc(Source, CP, W, wlen);
+              {$ELSE}
+              ZSetString(Source, wlen, S);
+              W := ZWideString(S); //random success
+              {$ENDIF}
+              BufCodePoints := Min(Length(W), wlen);
+              if BufCodePoints > 0 then
+                System.Move(W[1], Dest^, BufCodePoints shl 1);
+            {$ENDIF}
+          {$ENDIF}
+A2U:      Result := SourceBytes - wlen + BufCodePoints;
+          Inc(PWideChar(Dest), BufCodePoints);
+        end;
+        PWord(Dest)^ := Ord(#0); //allways append the term
+      end;
+    end;
+end;
+
+{**
+  convert a raw string into a Unicode buffer
+  initial idea to use: IZCLob conversions
+}
+function PRaw2PUnicodeBuf(Source: PAnsiChar; SourceBytes, BufCodePoints: LengthInt;
+  var Dest: Pointer; CP: Word): LengthInt;
+var
+  Buf: Pointer;
+  sBuf: Array[0..BufLen] of WideChar; //avoid memallocs
+begin
+  if Source = nil then begin
+    Result := 0;
+    if Dest <> nil then begin
+      FreeMem(Dest);
+      Dest := nil;
+    end;
+    Exit;
+  end;
+  if SourceBytes = 0 then begin
+    Result := 0;
+    if Dest <> nil then
+      FreeMem(Dest);
+    Dest := AllocMem(SizeOf(WideChar));
+    PWord(Dest)^ := Ord(#0);
+    Exit;
+  end;
+  if Source = Dest then
+    if SourceBytes <= BufLen then begin
+      Result := PRaw2PUnicodeBuf(Source, @sBuf[0], SourceBytes, CP);
+      ReallocMem(Dest, (Result+1) shl 1);
+      System.Move(sBuf[0], Dest^, (Result+1) shl 1);
+    end else if SourceBytes < SizeOf(BufLen) then begin
+      //Change logic vice versa use the sBuf as Raw buffer
+      System.Move(Source^, sBuf[0], SourceBytes+1);
+      FreeMem(Dest); //Dest can't be nil -> skip move buf
+      Dest := AllocMem((SourceBytes+1) shl 1);
+      Result := PRaw2PUnicodeBuf(@sBuf[0], Dest, SourceBytes, CP);
+      if Result <> SourceBytes then
+        ReallocMem(Dest, (Result+1) shl 1);
+    end else begin
+      Buf := AllocMem((SourceBytes+1) shl 1);
+      try
+        Result := PRaw2PUnicodeBuf(Source, Buf, SourceBytes, CP);
+        ReallocMem(Dest, (Result+1) shl 1);
+        System.Move(Buf^, Dest^, (Result+1) shl 1);
+      finally
+        FreeMem(Buf, (SourceBytes+1) shl 1);
+      end
+    end
+  else begin
+    if SourceBytes > BufCodePoints then begin
+      //skip buf move
+      if Dest <> nil then
+        FreeMem(Dest);
+      Dest := AllocMem((SourceBytes+1) shl 1);
+      BufCodePoints := SourceBytes;
+    end;
+    Result := PRaw2PUnicodeBuf(Source, Dest, SourceBytes, CP);
+    if Result <> BufCodePoints then
+      ReallocMem(Dest, (Result+1) shl 1);
+  end;
 end;
 
 function ZUnicodeToRaw(const US: ZWideString; CP: Word): RawByteString;
@@ -1673,7 +1979,7 @@ begin
 end;
 {$ENDIF}
 
-function PUnicodeToRaw(Source: PWideChar; CodePoints: NativeUInt; CP: Word): RawByteString;
+function PUnicodeToRaw(Source: PWideChar; CodePoints: LengthInt; CP: Word): RawByteString;
 {$IFDEF WITH_LCONVENCODING}
 var
   US: ZWideString;
@@ -1694,7 +2000,7 @@ begin
     if CP = zCP_NONE then
       CP := ZDefaultSystemCodePage; //random success
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
-    ULen := Min(Integer(CodePoints) shl 2, High(Integer)-1);
+    ULen := Min(CodePoints shl 2, High(Integer)-1);
     if Ulen < BufLen then
       {$IFDEF WITH_UNICODEFROMLOCALECHARS}
       ZSetString(@Buf[0], LocaleCharsFromUnicode(CP, 0, Source, CodePoints, @Buf[0], ulen, NIL, NIL), Result)
@@ -1724,7 +2030,7 @@ begin
 end;
 {$ENDIF}
 
-function PUnicodeToString(Source: PWideChar; CodePoints: NativeUInt; CP: Word): String;
+function PUnicodeToString(Source: PWideChar; CodePoints: LengthInt; CP: Word): String;
 {$IF (not defined(UNICODE)) and ((not defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(MSWINDOWS)))}
 var
   {$IFDEF MSWINDOWS}
@@ -1773,7 +2079,7 @@ begin
   {$ENDIF WITH_LCONVENCODING}
 end;
 
-function ZUnicodeToString(const Source: ZWideString; CP: Word): String; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+function ZUnicodeToString(const Source: ZWideString; CP: Word): String;
 {$if defined(MSWINDOWS) and not defined(UNICODE)}
 var
   ulen: Integer;
@@ -1793,12 +2099,11 @@ begin
       else
       {$IFDEF MSWINDOWS}
       begin
-        ULen := Min(Length(Source) shl 2, High(Integer)-1);
+        ULen := Min(Length(Source) shl (2*Ord(IsMBCSCodePage(cp))), High(Integer)-1);
         if Ulen < BufLen then
           ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Pointer(Source), Length(Source), @Buf[0], ulen, NIL, NIL), Result)
         else begin
-          Result := '';
-          setlength(Result, ulen); //oversized
+          ZSetString(nil, uLen, Result);
           setlength(Result, WideCharToMultiByte(CP,0, Pointer(Source), Length(Source), Pointer(Result), ulen, nil, nil)); // Convert Wide down to Ansi
         end;
       end;
@@ -1816,46 +2121,7 @@ begin
   {$ENDIF WITH_LCONVENCODING}
 end;
 
-{$IFNDEF WITH_LCONVENCODING}
-function AnsiToStringEx(const s: RawByteString;
-  const FromCP{$IFNDEF UNICODE}, ToCP{$ENDIF}: Word): String;
-begin
-  if s = '' then
-    Result := ''
-  else
-    if ( FromCP = zCP_NONE ) {$IFNDEF UNICODE} or ( FromCP = ToCP ){$ENDIF}then
-      Result := String(s)
-    else
-      {$IFDEF UNICODE}
-      if FromCP = zCP_UTF8 then
-        result := UTF8ToString(s)
-      else
-        Result := ZRawToUnicode(s, FromCP);
-      {$ELSE} //Ansi-Compiler
-        Result := ZUnicodeToRaw(ZRawToUnicode(s, FromCP), ToCP);
-      {$ENDIF}
-end;
-
-function StringToAnsiEx(const s: String; const {$IFNDEF UNICODE}FromCP, {$ENDIF} ToCP: Word): RawByteString;
-begin
-  if s = '' then
-    Result := ''
-  else
-    if ( ToCP = zCP_NONE ) {$IFNDEF UNICODE} or ( FromCP = ToCP ){$ENDIF}then
-      Result := RawByteString(s)
-    else
-      {$IFDEF UNICODE}
-      if ToCP = zCP_UTF8 then
-        result := UTF8Encode(s)
-      else
-        Result := ZUnicodeToRaw(s, ToCP);
-      {$ELSE} //Ansi-Compiler
-        Result := ZUnicodeToRaw(ZRawToUnicode(s, FromCP), ToCP);
-      {$ENDIF}
-end;
-
-{$ELSE}
-
+{$IFDEF WITH_LCONVENCODING}
 function ZConvertRaw28591ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
 begin
   Result := ISO_8859_1ToUTF8(PAnsiChar(Src));
@@ -2175,6 +2441,11 @@ function ZCompatibleCodePages(const CP1, CP2: Word): Boolean;
 begin
   Result := (CP1 = CP2) or ((CP1 = zCP_us_ascii) or (CP2 = zCP_us_ascii)) or
     (((CP1 = zCP_UTF16) or (CP1 = zCP_UTF16BE)) and ((CP2 = zCP_UTF16) or (CP2 = zCP_UTF16BE)));
+end;
+
+function IsMBCSCodePage(CP: Word): Boolean;
+begin
+  Result := (CP >= zCP_csISO2022JP) or ((CP >=zCP_MSWIN921) and (CP <=zCP_Big5)) or (CP = ZCP_JOHAB) or (CP=zCP_EUC_JP)
 end;
 
 function ZConvertPRawToUTF8(const Src: PAnsiChar; Len: NativeUInt; const RawCP: Word): UTF8String;

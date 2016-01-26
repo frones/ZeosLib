@@ -55,7 +55,6 @@ interface
 
 {$I ZDbc.inc}
 
-
 uses
 {$IFDEF MSWINDOWS}
   Windows,
@@ -139,7 +138,6 @@ type
   protected
     procedure CheckColumnIndex(Const ColumnIndex: Integer);
     procedure CheckColumnConvertion(Const ColumnIndex: Integer; ResultType: TZSQLType);
-    property ConSettings: PZConSettings read FConSettings;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings);
 
@@ -260,6 +258,7 @@ type
     property ColumnsSize: Integer read FColumnsSize;
     property RowSize: Integer read FRowSize;
     property RowBuffer: PZRowBuffer read FBuffer write FBuffer;
+    property ConSettings: PZConSettings read FConSettings;
   end;
 
   {** Implements a raw-string based column buffer accessor. }
@@ -1049,7 +1048,7 @@ var
   P: Pointer;
   L: Word;
 begin
-  P := InternalGetBytes(Buffer, ColumnIndex, L);
+  P := InternalGetBytes(Buffer, ColumnIndex, L{%H-});
   if P <> nil then begin
     SetLength(Result, L);
     Move(P^, Pointer(Result)^, L);
