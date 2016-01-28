@@ -229,7 +229,7 @@ begin
       C := I else
       C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[C]);
+      JSONWriter.AddString(JSONWriter.ColNames[i]);
     with FColumns^.Variables[C] do
     if oIndicatorArray^[FCurrentBufRowNo] < 0 then
       JSONWriter.AddShort('null')

@@ -147,7 +147,7 @@ begin
       C := I else
       C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[C]);
+      JSONWriter.AddString(JSONWriter.ColNames[I]);
     if TVarData(FAdoRecordSet.Fields.Item[C].Value).VType in [varNull, varEmpty] then
       JSONWriter.AddShort('null')
     else

@@ -222,7 +222,7 @@ begin
       C := I else
       C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[C]);
+      JSONWriter.AddString(JSONWriter.ColNames[I]);
     {$R-}
     with FSQLDA.sqlvar[C] do
       if (sqlind <> nil) and (sqlind^ < 0) then

@@ -243,7 +243,7 @@ begin
       C := I else
       C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[C]);
+      JSONWriter.AddString(JSONWriter.ColNames[I]);
     {$R-}
     with FXSQLDA.sqlvar[C] do
       if (sqlind <> nil) and (sqlind^ = ISC_NULL) then

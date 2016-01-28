@@ -257,7 +257,7 @@ begin
       C := I else
       C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[C]);
+      JSONWriter.AddString(JSONWriter.ColNames[i]);
     P := FPlainDriver.GetFieldData(FRowHandle, C);
     if P = nil then
       JSONWriter.AddShort('null')
@@ -1050,7 +1050,7 @@ begin
       C := I else
       C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[C]);
+      JSONWriter.AddString(JSONWriter.ColNames[I]);
     with FColumnArray[C] do
     if is_null = 1 then
       JSONWriter.AddShort('null')

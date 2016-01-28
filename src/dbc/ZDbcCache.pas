@@ -1286,7 +1286,7 @@ begin
       C := I else
       C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[C]);
+      JSONWriter.AddString(JSONWriter.ColNames[I]);
     if FBuffer.Columns[FColumnOffsets[C]] = bIsNull then
       JSONWriter.AddShort('null')
     else

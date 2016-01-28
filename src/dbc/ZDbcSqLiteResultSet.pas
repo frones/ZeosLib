@@ -176,7 +176,7 @@ begin
       C := I else
       C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[C]);
+      JSONWriter.AddString(JSONWriter.ColNames[i]);
     ColType := FPlainDriver.column_type(FStmtHandle, C);
     if ColType = SQLITE_NULL then
       JSONWriter.AddShort('null')

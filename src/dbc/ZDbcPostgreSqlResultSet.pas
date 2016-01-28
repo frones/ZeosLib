@@ -172,7 +172,7 @@ begin
       C := I else
       C := JSONWriter.Fields[i];
     if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[C]);
+      JSONWriter.AddString(JSONWriter.ColNames[i]);
     if FPlainDriver.GetIsNull(FQueryHandle, RNo, C) <> 0 then
       JSONWriter.AddShort('null')
     else begin
