@@ -60,13 +60,15 @@ uses
 
 const
   ZEOS_MAJOR_VERSION = 7;
-  ZEOS_MINOR_VERSION = 2;
+  ZEOS_MINOR_VERSION = 3;
   ZEOS_SUB_VERSION = 0;
-  ZEOS_STATUS = 'beta';
-  ZEOS_VERSION = '7.2.0-beta';
+  ZEOS_STATUS = 'alpha';
+  ZEOS_VERSION = Char(48+ZEOS_MAJOR_VERSION)+'.'+
+                 Char(48+ZEOS_MINOR_VERSION)+'.'+
+                 Char(48+ZEOS_SUB_VERSION)+'-'+ZEOS_STATUS;
 {$IFDEF ENABLE_POOLED}
   {Pooled Protocol Prefix, including final dot}
-  PooledPrefix = 'pooled.';
+  PooledPrefix = 'pooled.'+ZEOS_VERSION;
 {$ENDIF}
 
 
