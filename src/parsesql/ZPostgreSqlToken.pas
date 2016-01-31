@@ -73,10 +73,10 @@ type
   private
     FStandardConformingStrings: Boolean;
   protected
-    function GetModifier(Stream: TStream; FirstChar: Char; ResetPosition: Boolean = True): string;
-    function GetDollarQuotedString(Stream: TStream; QuoteChar: Char): string;
-    function GetQuotedString(Stream: TStream; QuoteChar: Char; EscapeSyntax: Boolean): String;
-    function GetQuotedStringWithModifier(Stream: TStream; FirstChar: Char): string;
+    function GetModifier(Stream: TStream; FirstChar: Char; ResetPosition: Boolean = True): String;
+    procedure GetDollarQuotedString(Stream: TStream; QuoteChar: Char; var Result: String);
+    procedure GetQuotedString(Stream: TStream; QuoteChar: Char; EscapeSyntax: Boolean; var Result: String);
+    procedure GetQuotedStringWithModifier(Stream: TStream; FirstChar: Char; var Result: String);
   public
     function NextToken(Stream: TStream; FirstChar: Char;
       {%H-}Tokenizer: TZTokenizer): TZToken; override;
@@ -221,7 +221,7 @@ end;
   or empty string otherwise.
 }
 function TZPostgreSQLQuoteState.GetModifier(Stream: TStream;
-    FirstChar: Char; ResetPosition: boolean = True): string;
+  FirstChar: Char; ResetPosition: boolean = True): String;
 var
   ReadChar: Char;
   Modifier: string;
@@ -238,10 +238,8 @@ begin
         Modifier := Modifier + ReadChar;
         ReadNum := ReadNum + Stream.Read(ReadChar, SizeOf(Char));
       end;
-
       if (ReadChar = SingleQuoteChar) then
          Result := Modifier;
-
       if ResetPosition then
         Stream.Seek(-ReadNum, soFromCurrent);
     end;
@@ -255,44 +253,42 @@ end;
 
   @return a quoted string token from a reader
 }
-function TZPostgreSQLQuoteState.GetDollarQuotedString(Stream: TStream; QuoteChar: Char): string;
+procedure TZPostgreSQLQuoteState.GetDollarQuotedString(Stream: TStream;
+  QuoteChar: Char; var Result: String);
 var
   ReadChar: Char;
   Tag, TempTag: string;
   TagState: integer;
 begin
-  Result := QuoteChar;
+  Result := '';
+  InitBuf(QuoteChar);
   TagState := 0;
   while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do
   begin
     if (ReadChar = QuoteChar) then
     begin
-      if (TagState = 0) then
-      begin
+      if (TagState = 0) then begin
         TagState := 1;
+        FlushBuf(Result);
         Tag := Result;
-      end
-      else if (TagState = 1) then
+      end else if (TagState = 1) then
       begin
         TagState := 2;
         TempTag := '';
-      end
-      else if (TagState = 2) then
-      begin
+      end else if (TagState = 2) then
         if TempTag = Tag then
           TagState := 3
         else
           TempTag := '';
-      end;
     end;
-
-    Result := Result + ReadChar;
+    ToBuf(ReadChar, Result);
 
     if TagState = 2 then
       TempTag := TempTag + ReadChar
     else if TagState = 3 then
       Break;
   end;
+  FlushBuf(Result);
 end;
 
 {**
@@ -302,8 +298,8 @@ end;
 
   @return a quoted string token from a reader
 }
-function TZPostgreSQLQuoteState.GetQuotedString(Stream: TStream; QuoteChar: Char;
-  EscapeSyntax: Boolean): String;
+procedure TZPostgreSQLQuoteState.GetQuotedString(Stream: TStream; QuoteChar: Char;
+  EscapeSyntax: Boolean; var Result: String);
 const BackSlash = Char('\');
 var
   ReadChar: Char;
@@ -311,7 +307,8 @@ var
   QuoteCount: Integer;
 begin
   LastChar := #0;
-  Result := QuoteChar;
+  Result := '';
+  InitBuf(QuoteChar);
   QuoteCount := 1;
 
   while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do
@@ -324,32 +321,32 @@ begin
         Stream.Seek(-SizeOf(Char), soFromCurrent);
         Break;
       end;
-    Result := Result + ReadChar;
+    ToBuf(ReadChar, Result);
     if (LastChar = BackSlash) and EscapeSyntax then
       LastChar := #0
     else if (LastChar = QuoteChar) and (ReadChar = QuoteChar) then
       LastChar := #0
     else LastChar := ReadChar;
   end;
+  FlushBuf(Result);
 end;
 
 {**
   Returns a quoted string token with leading modifier from a reader.
-
   @return a quoted string token from a reader
 }
-function TZPostgreSQLQuoteState.GetQuotedStringWithModifier(Stream: TStream;
-    FirstChar: Char): string;
+procedure TZPostgreSQLQuoteState.GetQuotedStringWithModifier(Stream: TStream;
+  FirstChar: Char; var Result: String);
 var
   Modifier: string;
-  EscapeSyntax: Boolean;
 begin
   Modifier := GetModifier(Stream, FirstChar, False);
   if (Modifier <> '') then
     FirstChar := SingleQuoteChar;
-  EscapeSyntax := (not FStandardConformingStrings and (Modifier = '')) or
-    (UpperCase(Modifier) = 'E');
-  Result := Modifier + GetQuotedString(Stream, FirstChar, EscapeSyntax);
+  GetQuotedString(Stream, FirstChar, (not FStandardConformingStrings and (Modifier = '')) or
+    ((Modifier <> '') and (UpCase(Modifier[1]) = 'E')), Result);
+  if (Modifier <> '') then
+    Result := Modifier + Result;
 end;
 
 {**
@@ -362,20 +359,15 @@ end;
 function TZPostgreSQLQuoteState.NextToken(Stream: TStream;
   FirstChar: Char; Tokenizer: TZTokenizer): TZToken;
 begin
-  if FirstChar = NameQuoteChar then
-  begin
+  if FirstChar = NameQuoteChar then begin
     Result.TokenType := ttWord;
-    Result.Value := GetQuotedString(Stream, FirstChar, False);
-  end
-  else if FirstChar = DollarQuoteChar then
-  begin
+    GetQuotedString(Stream, FirstChar, False, Result.Value);
+  end else if FirstChar = DollarQuoteChar then begin
     Result.TokenType := ttQuoted;
-    Result.Value := GetDollarQuotedString(Stream, FirstChar);
-  end
-  else
-  begin
+    GetDollarQuotedString(Stream, FirstChar, Result.Value);
+  end else begin
     Result.TokenType := ttQuoted;
-    Result.Value := GetQuotedStringWithModifier(Stream, FirstChar);
+    GetQuotedStringWithModifier(Stream, FirstChar, Result.Value);
   end;
 end;
 
@@ -433,8 +425,7 @@ begin
   InitBuf(FirstChar);
   Result.Value := '';
 
-  if FirstChar = '-' then
-  begin
+  if FirstChar = '-' then begin
     ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
     if (ReadNum > 0) and (ReadChar = '-') then begin
       Result.TokenType := ttComment;
@@ -444,12 +435,9 @@ begin
       if ReadNum > 0 then
         Stream.Seek(-SizeOf(Char), soFromCurrent);
     end;
-  end
-  else if FirstChar = '/' then
-  begin
+  end else if FirstChar = '/' then begin
     ReadNum := Stream.Read(ReadChar, SizeOf(Char));
-    if (ReadNum > 0) and (ReadChar = '*') then
-    begin
+    if (ReadNum > 0) and (ReadChar = '*') then begin
       Result.TokenType := ttComment;
       ToBuf(ReadChar, Result.Value);
       GetMultiLineComment(Stream, Result.Value);

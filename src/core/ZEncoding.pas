@@ -176,8 +176,9 @@ procedure PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar; SourceBytes, BufCode
 function PRaw2PUnicodeBuf(Source: PAnsiChar; Dest: Pointer; SourceBytes: LengthInt; CP: Word): LengthInt; overload; //{$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function PRaw2PUnicodeBuf(Source: PAnsiChar; SourceBytes, BufCodePoints: LengthInt; var Dest: Pointer; CP: Word): LengthInt; overload; //{$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function ZUnicodeToRaw(const US: ZWideString; CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
-function PUnicodeToRaw(Source: PWideChar; CodePoints: LengthInt; CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
-function PUnicodeToString(Source: PWideChar; CodePoints: LengthInt; CP: Word): String;
+function PUnicodeToRaw(Source: PWideChar; SrcCodePoints: LengthInt; CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+function PUnicode2PRawBuf(Source: PWideChar; Dest: PAnsiChar; SrcCodePoints, MaxDestBytes: LengthInt; CP: Word): LengthInt; overload;
+function PUnicodeToString(Source: PWideChar; SrcCodePoints: LengthInt; CP: Word): String;
 function ZUnicodeToString(const Source: ZWideString; CP: Word): String;
 
 {converter functions for the String-types}
@@ -1979,58 +1980,108 @@ begin
 end;
 {$ENDIF}
 
-function PUnicodeToRaw(Source: PWideChar; CodePoints: LengthInt; CP: Word): RawByteString;
-{$IFDEF WITH_LCONVENCODING}
-var
-  US: ZWideString;
-begin
-  SetString(US, Source, CodePoints);
-  Result := ZUnicodeToRaw(US, CP);
-end;
-{$ELSE}
-{$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
+function PUnicodeToRaw(Source: PWideChar; SrcCodePoints: LengthInt; CP: Word): RawByteString;
 var
   ulen: Integer;
   Buf: Array[0..BufLen] of AnsiChar;
+{$IF defined(FPC) and not defined(MSWINDOWS) and not defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
+  US: ZWideString;
 {$IFEND}
 begin
-  if CodePoints = 0 then
+  if SrcCodePoints = 0 then
     Result := ''
   else begin
     if CP = zCP_NONE then
       CP := ZDefaultSystemCodePage; //random success
+    ULen := Min(SrcCodePoints shl 2, High(Integer)-1);
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
-    ULen := Min(CodePoints shl 2, High(Integer)-1);
-    if Ulen < BufLen then
+    if Ulen <= BufLen then
       {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-      ZSetString(@Buf[0], LocaleCharsFromUnicode(CP, 0, Source, CodePoints, @Buf[0], ulen, NIL, NIL), Result)
+      ZSetString(@Buf[0], LocaleCharsFromUnicode(CP, 0, Source, SrcCodePoints, @Buf[0], ulen, NIL, NIL), Result)
       {$ELSE}
-      ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Source, CodePoints, @Buf[0], ulen, NIL, NIL), Result)
+      ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Source, SrcCodePoints, @Buf[0], ulen, NIL, NIL), Result)
       {$ENDIF}
     else begin
-      Result := ''; //speed up setlength *2
-      setlength(Result, ulen); //oversized
+      ZSetString(nil, ULen, Result); //oversized
       {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-      SetLength(Result, LocaleCharsFromUnicode(CP, 0, Source, CodePoints, Pointer(Result), ulen, NIL, NIL)); // Convert Unicode down to Ansi
+      SetLength(Result, LocaleCharsFromUnicode(CP, 0, Source, SrcCodePoints, Pointer(Result), ulen, NIL, NIL)); // Convert Unicode down to Ansi
       {$ELSE}
-      SetLength(Result, WideCharToMultiByte(CP,0, Source, CodePoints, Pointer(Result), ulen, nil, nil)); // Convert Wide down to Ansi
+      SetLength(Result, WideCharToMultiByte(CP,0, Source, SrcCodePoints, Pointer(Result), ulen, nil, nil)); // Convert Wide down to Ansi
       {$ENDIF}
     end;
     {$ELSE}
+    if ZCompatibleCodePages(CP, zCP_UTF8) then begin
+      if Ulen <= BufLen then
+        ZSetString(@Buf[0], UnicodeToUtf8(@Buf[0], ULen, Source, SrcCodePoints), Result)
+      else begin
+        ZSetString(nil, ULen, Result); //oversized
+        SetLength(Result, UnicodeToUtf8(Pointer(Result), ULen, Source, SrcCodePoints));
+      end
+    end else begin
       {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
-        WidestringManager.Unicode2AnsiMoveProc(Source, Result, CP, CodePoints);
+        WidestringManager.Unicode2AnsiMoveProc(Source, Result, CP, SrcCodePoints);
       {$ELSE}
-        if ZCompatibleCodePages(CP, zCP_UTF8) then
-          Result := UTF8Encode(ZWideString(Source))
-        else
-          Result := RawByteString(Source); //random success
+        SetString(US, Source, SrcCodePoints);
+        {$IFDEF WITH_LCONVENCODING}
+        Result := ZUnicodeToRaw(US, CP);
+        {$ELSE}
+        Result := RawByteString(Source); //random success
+        {$ENDIF}
+        end;
       {$ENDIF}
     {$IFEND}
   end;
 end;
-{$ENDIF}
 
-function PUnicodeToString(Source: PWideChar; CodePoints: LengthInt; CP: Word): String;
+function PUnicode2PRawBuf(Source: PWideChar; Dest: PAnsiChar; SrcCodePoints, MaxDestBytes: LengthInt; CP: Word): LengthInt;
+{$IF not defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
+var
+  {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
+  s: RawByteString;
+  {$ENDIF}
+  W: ZWideString;
+{$IFEND}
+begin
+  if Dest = nil then begin
+    Result := 0;
+    Exit;
+  end;
+  if SrcCodePoints = 0 then begin
+    PWord(Dest)^ := Ord(#0);
+    Result := 0;
+  end else begin
+    if CP = zCP_NONE then
+      CP := ZDefaultSystemCodePage; //random success
+    {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
+      {$IFDEF WITH_UNICODEFROMLOCALECHARS}
+      Result := LocaleCharsFromUnicode(CP, 0, Source, SrcCodePoints, Dest, MaxDestBytes, NIL, NIL);
+      {$ELSE}
+      Result := WideCharToMultiByte(CP, 0, Source, SrcCodePoints, Dest, MaxDestBytes, NIL, NIL);
+      {$ENDIF}
+      PWord(Dest+Result)^ := Ord(#0);
+    {$ELSE} //FPC non Windows
+      if ZCompatibleCodePages(CP, zCP_UTF8) then //FPC has a build in function here just for UTF16 to UTF8
+        Result := UnicodeToUtf8(Dest, MaxDestBytes, Source, SrcCodePoints)
+      else begin //no other build in function to encode into a buffer available yet ): i'm forced to localize the values
+        {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
+        WidestringManager.Unicode2AnsiMoveProc(Source, S, CP, SrcCodePoints);
+        {$ELSE}
+          SetString(W, Source, SrcCodePoints);
+          {$IFDEF WITH_LCONVENCODING}
+          S := ZUnicodeToRaw(W, CP);
+          {$ELSE}
+          S := RawByteString(W); //random success
+          {$ENDIF}
+        {$ENDIF}
+        Result := Min(Length(S), MaxDestBytes);
+        System.Move(S[1], Dest^, Result);
+        PWord(Dest+Result)^ := Ord(#0);
+      end;
+    {$IFEND}
+  end;
+end;
+
+function PUnicodeToString(Source: PWideChar; SrcCodePoints: LengthInt; CP: Word): String;
 {$IF (not defined(UNICODE)) and ((not defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(MSWINDOWS)))}
 var
   {$IFDEF MSWINDOWS}
@@ -2042,33 +2093,33 @@ var
 {$IFEND}
 begin
   {$IFDEF WITH_LCONVENCODING}
-  SetString(WS, Source, CodePoints);
+  SetString(WS, Source, SrcCodePoints);
   Result := ZUnicodeToString(WS, CP);
   {$ELSE}
     {$IFDEF UNICODE}
-    System.SetString(Result, Source, CodePoints);
+    System.SetString(Result, Source, SrcCodePoints);
     {$ELSE}
       if CP = zCP_NONE then
         CP := ZDefaultSystemCodePage; //random success
-      if (CodePoints = 0) or (Source = nil) then
+      if (SrcCodePoints = 0) or (Source = nil) then
         Result := ''
       else
       {$IFDEF MSWINDOWS}
       begin
-        ULen := Min(Integer(CodePoints) shl 2, High(Integer)-1);
+        ULen := Min(Integer(SrcCodePoints) shl 2, High(Integer)-1);
         if Ulen < BufLen then
-          ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Source, CodePoints, @Buf[0], ulen, NIL, NIL), Result)
+          ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Source, SrcCodePoints, @Buf[0], ulen, NIL, NIL), Result)
         else begin
           Result := '';
           setlength(Result, ulen); //oversized
-          setlength(Result, WideCharToMultiByte(CP,0, Source, CodePoints, Pointer(Result), ulen, nil, nil)); // Convert Wide down to Ansi
+          setlength(Result, WideCharToMultiByte(CP,0, Source, SrcCodePoints, Pointer(Result), ulen, nil, nil)); // Convert Wide down to Ansi
         end;
       end;
       {$ELSE}
         {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
-        WidestringManager.Unicode2AnsiMoveProc(Source, Result, CP, CodePoints);
+        WidestringManager.Unicode2AnsiMoveProc(Source, Result, CP, SrcCodePoints);
         {$ELSE} //FPC 2.6 down
-        SetString(WS, Source, CodePoints);
+        SetString(WS, Source, SrcCodePoints);
         if ZCompatibleCodePages(CP, zCP_UTF8) then
           Result := UTF8Encode(WS)
         else
