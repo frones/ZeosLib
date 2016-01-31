@@ -1632,11 +1632,14 @@ begin
       CheckEquals(False, FieldByName(TextLob).IsNull, 'Memo is not empty.');
       CheckEquals('', FieldByName(TextLob).AsString, 'Empty but not null String');
       Close;
-      SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
-      ExecSQL;
     end;
   finally
-    Query.Free;
+    try
+      Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-2);
+      Query.ExecSQL;
+    finally
+      Query.Free;
+    end;
   end;
 end;
 
@@ -1806,7 +1809,12 @@ begin
       TextStreamE.Free;
     if Assigned(TempConnection) then
       TempConnection.Free;
-    Query.Free;
+    Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
+    try
+      Query.ExecSQL;
+    finally
+      Query.Free;
+    end;
   end;
 end;
 
@@ -2007,8 +2015,6 @@ begin
       CheckEquals(BinStream.Size, BinStream1.Size, 'Binary Stream');
       CheckEquals(BinStream, BinStream1, 'Binary Stream');
       Close;
-      SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
-      ExecSQL;
     end;
   finally
     if assigned(BinStream) then
@@ -2019,7 +2025,12 @@ begin
       TextStreams.Free;
     if Assigned(TempConnection) then
       TempConnection.Free;
-    Query.Free;
+    Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
+    try
+      Query.ExecSQL;
+    finally
+      Query.Free;
+    end;
   end;
 end;
 
