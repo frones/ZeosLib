@@ -1807,13 +1807,13 @@ begin
       TextStreamA.Free;
     if assigned(TextStreamE) then
       TextStreamE.Free;
-    if Assigned(TempConnection) then
-      TempConnection.Free;
     Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
     finally
       Query.Free;
+      if Assigned(TempConnection) then
+        TempConnection.Free;
     end;
   end;
 end;
@@ -2023,13 +2023,13 @@ begin
       BinStream1.Free;
     if assigned(TextStreams) then
       TextStreams.Free;
-    if Assigned(TempConnection) then
-      TempConnection.Free;
     Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
     finally
       Query.Free;
+      if Assigned(TempConnection) then
+        TempConnection.Free;
     end;
   end;
 end;
