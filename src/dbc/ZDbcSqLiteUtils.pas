@@ -90,7 +90,7 @@ procedure CheckSQLiteError(const PlainDriver: IZSQLitePlainDriver;
   @param SQLiteVersion an integer containing the Full Version to decode.
   @return Encoded Zeos SQL Version Value.
 }
-function ConvertSQLiteVersionToSQLVersion( const SQLiteVersion: PAnsiChar ): Integer;
+function ConvertSQLiteVersionToSQLVersion(SQLiteVersion: PAnsiChar ): Integer;
 
 
 implementation
@@ -246,17 +246,15 @@ end;
   @param SQLiteVersion an integer containing the Full Version to decode.
   @return Encoded Zeos SQL Version Value.
 }
-function ConvertSQLiteVersionToSQLVersion( const SQLiteVersion: PAnsiChar ): Integer;
+function ConvertSQLiteVersionToSQLVersion(SQLiteVersion: PAnsiChar ): Integer;
 var
-  MajorVersion, MinorVersion, SubVersion: Integer;
-  s:string;
+  MajorVersion, MinorVersion, SubVersion, Code: Integer;
 begin
-  s:=String(SQLiteVersion);
-  MajorVersion:=StrToIntDef(copy(s,1,ZFastCode.pos('.',s)-1),0);
-  delete(s,1,ZFastCode.pos('.',s));
-  MinorVersion:=StrToIntDef(copy(s,1,ZFastCode.pos('.',s)-1),0);
-  delete(s,1,ZFastCode.pos('.',s));
-  SubVersion:=StrToIntDef(s,0);
+  MajorVersion := ValRawInt(SQLiteVersion, Code);
+  Inc(SQLiteVersion, Code);
+  MinorVersion := ValRawInt(SQLiteVersion, Code);
+  Inc(SQLiteVersion, Code);
+  SubVersion := ValRawInt(SQLiteVersion, Code);
   Result := EncodeSQLVersioning(MajorVersion,MinorVersion,SubVersion);
 end;
 
