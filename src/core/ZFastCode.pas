@@ -336,7 +336,8 @@ function ValRawExt(const S: PByteArray; const DecimalSep: AnsiChar; var code: In
 function ValRawDbl(const S: PByteArray; const DecimalSep: AnsiChar; var code: Integer): Double;
 function ValRawSin(const S: PByteArray; const DecimalSep: AnsiChar; var code: Integer): Single;
 
-function ValRawInt(const s: RawByteString; var code: Integer): Integer;
+function ValRawInt(const s: RawByteString; var code: Integer): Integer; overload;
+function ValRawInt(s: PAnsiChar; var code: Integer): Integer; overload;
 
 function UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar): Extended; overload;
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
@@ -5558,6 +5559,15 @@ begin
   Result := ValLong_JOH_IA32_8_a(Pointer(s), Code);
   {$ELSE}
   Result := ValLong_JOH_PAS_4_b(Pointer(S), Code);
+  {$IFEND}
+end;
+
+function ValRawInt(s: PAnsiChar; var code: Integer): Integer;
+begin
+  {$IF defined(WIN32) and not defined(FPC)}
+  Result := ValLong_JOH_IA32_8_a(s, Code);
+  {$ELSE}
+  Result := ValLong_JOH_PAS_4_b(S, Code);
   {$IFEND}
 end;
 
