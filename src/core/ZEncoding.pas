@@ -2037,9 +2037,9 @@ function PUnicode2PRawBuf(Source: PWideChar; Dest: PAnsiChar; SrcCodePoints, Max
 {$IF not defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
 var
   {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
-  s: RawByteString;
-  {$ENDIF}
   W: ZWideString;
+  {$ENDIF}
+  s: RawByteString;
 {$IFEND}
 begin
   if Dest = nil then begin
