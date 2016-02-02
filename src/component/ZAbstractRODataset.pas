@@ -261,13 +261,13 @@ type
     {$IFNDEF UNICODE}
     procedure StringFieldSetterFromRawAutoEncode(ColumnIndex: Integer; Buffer: PAnsiChar);
     procedure StringFieldSetterFromRaw(ColumnIndex: Integer; Buffer: PAnsiChar);
-    function StringFieldGetterFromUTF8(ColumnIndex, FieldSize: Integer; Buffer: PAnsiChar): Boolean;
     {$ELSE}
     procedure StringFieldSetterFromAnsi(ColumnIndex: Integer; Buffer: PAnsiChar);
     {$ENDIF}
+    procedure StringFieldSetterRawToUnicode(ColumnIndex: Integer; Buffer: PAnsiChar);
     function StringFieldGetterFromUnicode(ColumnIndex, FieldSize: Integer; Buffer: PAnsiChar): Boolean;
-    function StringFieldGetterFromAnsi(ColumnIndex, FieldSize: Integer; Buffer: PAnsiChar): Boolean;
     function StringFieldGetterFromAnsiRec(ColumnIndex, FieldSize: Integer; Buffer: PAnsiChar): Boolean;
+    function StringFieldGetterRaw2RawConvert(ColumnIndex, FieldSize: Integer; Buffer: PAnsiChar): Boolean;
     function WideStringGetterFromUnicode(ColumnIndex, FieldSize: Integer; Buffer: PWideChar): Boolean;
     function WideStringGetterFromRaw(ColumnIndex, FieldSize: Integer; Buffer: PWideChar): Boolean;
   private
@@ -2051,6 +2051,25 @@ begin
   inherited Destroy;
 end;
 
+procedure TZAbstractRODataset.StringFieldSetterRawToUnicode(ColumnIndex: Integer;
+  Buffer: PAnsiChar);
+var
+  len: NativeUInt;
+  wBuf: array[0..dsMaxStringSize shr 1] of WideChar;
+  wDynBuf: array of WideChar;
+  Dest: PWideChar;
+begin
+  len := ZFastCode.StrLen(Buffer);
+  if Len > dsMaxStringSize shr 1 then begin
+    SetLength(wDynBuf, Len);
+    Dest := @wDynBuf[0];
+  end else
+    Dest := @wBuf[0];
+  Len := PRaw2PUnicodeBuf(Buffer, Dest, Len, RowAccessor.ConSettings^.CTRL_CP);
+  RowAccessor.SetPWideChar(ColumnIndex, Dest, @Len);
+end;
+
+
 {$IFNDEF UNICODE}
 procedure TZAbstractRODataset.StringFieldSetterFromRawAutoEncode(
   ColumnIndex: Integer; Buffer: PAnsiChar);
@@ -2068,22 +2087,6 @@ begin
   RowAccessor.SetRawByteString(ColumnIndex, Buffer);
 end;
 
-function TZAbstractRODataset.StringFieldGetterFromUTF8(
-  ColumnIndex, FieldSize: Integer; Buffer: PAnsiChar): Boolean;
-var
-  UTF8: UTF8String;
-  L: Integer;
-begin
-  UTF8 := RowAccessor.GetUTF8String(ColumnIndex, Result{%H-});
-  if Result then
-    Buffer^ := #0
-  else
-  begin //instead of StrPLCopy
-    L := Min(Length(UTF8), Max(dsMaxStringSize, FieldSize)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
-    System.Move(UTF8[1], Buffer^, L);
-    (Buffer+L)^ := #0;
-  end;
-end;
 {$ELSE}
 procedure TZAbstractRODataset.StringFieldSetterFromAnsi(
   ColumnIndex: Integer; Buffer: PAnsiChar);
@@ -2091,24 +2094,6 @@ begin
   RowAccessor.SetAnsiString(ColumnIndex, Buffer);
 end;
 {$ENDIF}
-
-function TZAbstractRODataset.StringFieldGetterFromAnsi(
-  ColumnIndex, FieldSize: Integer; Buffer: PAnsiChar): Boolean;
-var
-  L: Integer;
-  Ansi: AnsiString;
-begin
-  Ansi := RowAccessor.GetAnsiString(ColumnIndex, Result{%H-});
-  if Result then
-    Buffer^ := #0
-  else
-  begin //instead of StrPLCopy
-    L := Min(Length(Ansi), Max(dsMaxStringSize, FieldSize)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
-    if L > 0 then
-      System.Move(Ansi[1], Buffer^, L);
-    (Buffer+L)^ := #0;
-  end;
-end;
 
 function TZAbstractRODataset.StringFieldGetterFromAnsiRec(
   ColumnIndex, FieldSize: Integer; Buffer: PAnsiChar): Boolean;
@@ -2138,6 +2123,20 @@ begin
     Buffer^ := #0
   else //instead of StrPLCopy
     PUnicode2PRawBuf(P, Buffer, L, Max(dsMaxStringSize, FieldSize), RowAccessor.ConSettings^.CTRL_CP);
+end;
+
+function TZAbstractRODataset.StringFieldGetterRaw2RawConvert(ColumnIndex,
+  FieldSize: Integer; Buffer: PAnsiChar): Boolean;
+var
+  P: PAnsiChar;
+  L: NativeUInt;
+begin
+  P := RowAccessor.GetPAnsiChar(ColumnIndex, Result{%H-}, L);
+  if Result then
+    PWord(Buffer)^ := Ord(#0)
+  else //instead of WStrLCopy
+    PRawToPRawBuf(P, Buffer, L, Max(dsMaxStringSize, FieldSize),
+      RowAccessor.ConSettings^.ClientCodePage^.CP, RowAccessor.ConSettings^.CTRL_CP);
 end;
 
 function TZAbstractRODataset.WideStringGetterFromRaw(ColumnIndex, FieldSize: Integer;
@@ -2236,9 +2235,17 @@ var ConSettings: PZConSettings;
 begin
   ConSettings := Connection.DbcConnection.GetConSettings;
   if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
-     (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) then
-    FStringFieldGetter := StringFieldGetterFromUnicode
-  else
+     (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) then begin
+    FStringFieldGetter := StringFieldGetterFromUnicode;
+    {$IFNDEF UNICODE}
+    if ConSettings^.AutoEncode then
+      FStringFieldSetter := StringFieldSetterFromRawAutoEncode
+    else
+    {$ENDIF}
+      FStringFieldSetter := StringFieldSetterRawToUnicode;
+    FWideStringFieldGetter := WideStringGetterFromUnicode;
+  end else
+    FWideStringFieldGetter := WideStringGetterFromRaw;
     {$IFNDEF UNICODE}
     //Hint: the UnicodeIDE's do return allways a AnsiString casted UnicodeString
     //So it's impossible to retrieve a UTF8 encoded string SAFELY
@@ -2250,33 +2257,26 @@ begin
     begin
       FStringFieldSetter := StringFieldSetterFromRawAutoEncode;
       if ConSettings.CPType = cCP_UTF8 then
-        if (ConSettings^.ClientCodePage^.Encoding = ceUTF8) and
-           ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        if (ConSettings^.ClientCodePage^.Encoding = ceUTF8) then
           FStringFieldGetter := StringFieldGetterFromAnsiRec
         else
-          FStringFieldGetter := StringFieldGetterFromUTF8
+          FStringFieldGetter := StringFieldGetterRaw2RawConvert
       else if (ConSettings^.ClientCodePage^.Encoding = ceAnsi) and
-           ZCompatibleCodePages(ZDefaultSystemCodePage, ConSettings^.ClientCodePage^.CP) then
+              ZCompatibleCodePages(ZDefaultSystemCodePage, ConSettings^.ClientCodePage^.CP) then
         FStringFieldGetter := StringFieldGetterFromAnsiRec
       else
-        FStringFieldGetter := StringFieldGetterFromAnsi;
+        FStringFieldGetter := StringFieldGetterRaw2RawConvert;
     end else begin
       FStringFieldGetter := StringFieldGetterFromAnsiRec;
       FStringFieldSetter := StringFieldSetterFromRaw;
     end;
     {$ELSE}
-    if ZCompatibleCodePages(ZDefaultSystemCodePage, Connection.DbcConnection.GetConSettings^.ClientCodePage^.CP) and
-       (ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) then
+    if ZCompatibleCodePages(ZDefaultSystemCodePage, ConSettings^.ClientCodePage^.CP) then
       FStringFieldGetter := StringFieldGetterFromAnsiRec
     else
-      FStringFieldGetter := StringFieldGetterFromAnsi;
+      FStringFieldGetter := StringFieldGetterRaw2RawConvert;
     FStringFieldSetter := StringFieldSetterFromAnsi;
     {$ENDIF}
-  if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
-     (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) then
-    FWideStringFieldGetter := WideStringGetterFromUnicode
-  else
-    FWideStringFieldGetter := WideStringGetterFromRaw;
 end;
 
 {**
