@@ -2305,6 +2305,8 @@ begin
           DestResultSet.UpdateFloat(I, SrcResultSet.GetFloat(I));
         stDouble:
           DestResultSet.UpdateDouble(I, SrcResultSet.GetDouble(I));
+        stCurrency:
+          DestResultSet.UpdateCurrency(I, SrcResultSet.GetCurrency(I));
         stBigDecimal:
           DestResultSet.UpdateBigDecimal(I, SrcResultSet.GetBigDecimal(I));
         stString, stUnicodeString, stAsciiStream, stUnicodeStream:
