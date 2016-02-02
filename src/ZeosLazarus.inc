@@ -52,6 +52,7 @@
 {$DEFINE HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES} //seems FPC behaves different to Delphi. Some weired ref issues arrive if Ancastor units using Descendants in implementation uses section??
 {$DEFINE NEED_TYPED_UINT64_CONSTANTS}
 {$DEFINE WITH_PUREPASCAL_INTPOWER}
+{$DEFINE WITH_SETSTRING_MEMLEAK_BUG}
 {$IFDEF SYSTEMINLINE} //global FPC define
   {$DEFINE WITH_INLINE}           // compiler supports inline methodes
 {$ENDIF}
