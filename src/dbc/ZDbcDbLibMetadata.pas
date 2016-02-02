@@ -1846,6 +1846,7 @@ var
     NextStart: Integer;
     SkipNextChar: Boolean;
   begin
+    Result := '';
     if Length(Pattern) = 0 then Exit;
     EscapeChar := GetDatabaseInfo.GetSearchStringEscape[1];
     NextStart := 1;
