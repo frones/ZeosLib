@@ -722,9 +722,16 @@ begin
        ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
     begin
       if Src <> nil then Move(Src^, Pointer(Dest)^, Len)
-    end
-    else
+    end else
+    {$IF defined(MISS_RBS_SETSTRING_OVERLOAD) or defined(WITH_SETSTRING_MEMLEAK_BUG)}
+    begin
+      Dest := '';
+      SetLength(Dest, Len);
+      if Src <> nil then Move(Src^, Pointer(Dest)^, Len);
+    end;
+    {$ELSE}
       SetString(Dest, Src, Len);
+    {$IFEND}
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String);
@@ -739,7 +746,7 @@ begin
       if Src <> nil then Move(Src^, Pointer(Dest)^, Len);
     end
     else
-      {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+      {$IF defined(MISS_RBS_SETSTRING_OVERLOAD) or defined(WITH_SETSTRING_MEMLEAK_BUG)}
       begin
         Dest := '';
         SetLength(Dest, Len);
@@ -747,7 +754,7 @@ begin
       end;
       {$ELSE}
       SetString(Dest, Src, Len);
-      {$ENDIF}
+      {$IFEND}
 end;
 
 //EgonHugeist: my fast ByteToWord shift without encoding maps and/or alloc a ZWideString
@@ -767,7 +774,7 @@ begin
     {$ELSE}
     if Length(Dest) <> Len then //WideString isn't ref counted
     {$ENDIF}
-    SetString(Dest, nil, Len);
+    SetLength(Dest, Len);
     if Src <> nil then
     begin
       PW := Pointer(Dest);
@@ -803,7 +810,7 @@ begin
        ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then begin
       if Src <> nil then Move(Src^, Pointer(Dest)^, Len)
     end else
-      {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+      {$IF defined(MISS_RBS_SETSTRING_OVERLOAD) or defined(WITH_SETSTRING_MEMLEAK_BUG)}
       begin
         Dest := '';
         SetLength(Dest, Len);
@@ -811,7 +818,7 @@ begin
       end;
       {$ELSE}
       SetString(Dest, Src, Len);
-      {$ENDIF}
+      {$IFEND}
 end;
 {$ENDIF}
 
