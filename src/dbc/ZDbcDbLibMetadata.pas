@@ -1231,10 +1231,11 @@ begin
     Result := 'null'
   else
   begin
-    Result := ConvertEscapes(S);
     if IC.IsQuoted(Result) then
-      Result := IC.ExtractQuote(Result);
-    Result := AnsiQuotedStr(Result, #39);
+      Result := IC.ExtractQuote(S)
+    else
+      Result := S;
+    Result := AnsiQuotedStr(Result, #39) + ' ESCAPE '''+GetDataBaseInfo.GetSearchStringEscape+'''';
   end;
 end;
 
@@ -1249,7 +1250,7 @@ begin
   P := Pointer(Pattern);
   ClearBuf;
   while P^ <> #0 do begin
-    if (P^ = EscapeChar) then begin
+    if (P^ = EscapeChar) and (((P+1)^ = WildcardsArray[0]) or ((P+1)^=WildcardsArray[1])) then begin
       ToBuf('[', Result);
       Inc(P);
       ToBuf(P^, Result);
