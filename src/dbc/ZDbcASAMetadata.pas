@@ -208,6 +208,7 @@ type
     FASAConnection: TZASAConnection;
     function ComposeObjectString(const S: String; Const NullText: String = 'null';
       QuoteChar: Char = #39): String;
+    function ConvertEscapes(Pattern: String): String;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-28
 
@@ -1200,6 +1201,29 @@ end;
 
 { TZASADatabaseMetadata }
 
+function TZASADatabaseMetadata.ConvertEscapes(Pattern: String): String;
+var
+  EscapeChar: Char;
+  P: PChar;
+begin
+  Result := '';
+  if Length(Pattern) = 0 then Exit;
+  EscapeChar := GetDatabaseInfo.GetSearchStringEscape[1];
+  P := Pointer(Pattern);
+  ClearBuf;
+  while P^ <> #0 do begin
+    if (P^ = EscapeChar) then begin
+      ToBuf('[', Result);
+      Inc(P);
+      ToBuf(P^, Result);
+      ToBuf(']', Result);
+    end else
+      ToBuf(P^, Result);
+    Inc(P);
+  end;
+  FlushBuf(Result);
+end;
+
 {**
   Constructs this object and assignes the main properties.
   @param Connection a database connection object.
@@ -1225,11 +1249,11 @@ function TZASADatabaseMetadata.ComposeObjectString(const S: String;
 begin
   if S = '' then
     Result := NullText
-  else
-    if IC.IsQuoted(s) then
-      Result := S
-    else
-      Result := AnsiQuotedStr(S, QuoteChar);
+  else begin
+    Result := ConvertEscapes(S);
+    if not IC.IsQuoted(Result) then
+      Result := AnsiQuotedStr(Result, QuoteChar);
+  end;
 end;
 
 {**
@@ -1631,9 +1655,8 @@ begin
         'c.column_name like %s escape ''\'' and c.column_type=''C'' '+
         'order by USER_NAME(t.creator) asc,t.table_name asc,c.column_id asc',
         [DeComposeObjectString(TableNamePattern),//, '''%'''),
-        //[ComposeObjectString(TableNamePattern), '''%'''),
-         ComposeObjectString(SchemaPattern, '''%'''),
-         ComposeObjectString(ColumnNamePattern, '''%''')])) do
+         DeComposeObjectString(SchemaPattern, '''%'''),
+         DeComposeObjectString(ColumnNamePattern, '''%''')])) do
   begin
     while Next do
     begin
