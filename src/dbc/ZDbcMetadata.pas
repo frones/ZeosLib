@@ -122,6 +122,14 @@ type
     FIC: IZIdentifierConvertor;
     function GetInfo: TStrings;
     function GetURLString: String;
+  private
+    fCurrentBufIndex: Byte;
+    fBuf: Array[Byte] of Char;
+  protected
+    procedure InitBuf(FirstChar: Char); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+    procedure ClearBuf; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+    procedure FlushBuf(var Value: String); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+    procedure ToBuf(C: Char; var Value: String); {$IFDEF WITH_INLINE}inline;{$ENDIF}
   protected
     FDatabase: String;
     WildcardsArray: array of char; //Added by Cipto
@@ -2046,6 +2054,17 @@ begin
     SetLength(Result, j);
 end;
 
+procedure TZAbstractDatabaseMetadata.ToBuf(C: Char; var Value: String);
+begin
+  if fCurrentBufIndex < High(Byte) then begin
+    fBuf[fCurrentBufIndex] := C;
+    Inc(fCurrentBufIndex);
+  end else begin
+    FlushBuf(Value);
+    InitBuf(C);
+  end;
+end;
+
 {**
    Check if pattern does not contain wildcards
    @param Pattern a sql pattern
@@ -2074,6 +2093,12 @@ begin
       PreviousChar := Pattern[I];
   end;
   Result := True;
+end;
+
+procedure TZAbstractDatabaseMetadata.InitBuf(FirstChar: Char);
+begin
+  fBuf[0] := FirstChar;
+  fCurrentBufIndex := 1;
 end;
 
 function TZAbstractDatabaseMetadata.EscapeString(const S: string): string;
@@ -2179,6 +2204,11 @@ end;
 {**
   Clears specific cached metadata.
 }
+procedure TZAbstractDatabaseMetadata.ClearBuf;
+begin
+  fCurrentBufIndex := 0;
+end;
+
 procedure TZAbstractDatabaseMetadata.ClearCache(const Key: string);
 var
   TempKey: IZAnyValue;
@@ -4491,6 +4521,17 @@ begin
   WildcardsArray[1]:='%';
 end;
 
+procedure TZAbstractDatabaseMetadata.FlushBuf(var Value: String);
+var I: Integer;
+begin
+  if fCurrentBufIndex > 0 then begin
+    I := Length(Value);
+    SetLength(Value, i+fCurrentBufIndex);
+    System.Move(fBuf[0], Value[I+1], fCurrentBufIndex * SizeOf(Char));
+    fCurrentBufIndex := 0;
+  end;
+end;
+
 function TZAbstractDatabaseMetadata.NormalizePatternCase(Pattern:String): string;
 begin
   with GetIdentifierConvertor do
@@ -4884,15 +4925,18 @@ end;
 }
 function TZDefaultIdentifierConvertor.IsLowerCase(const Value: string): Boolean;
 var
-  I: Integer;
+  P: PChar;
 begin
   Result := True;
-  for I := 1 to Length(Value) do
-    if not CharInSet(Value[I], ['a'..'z','0'..'9','_']) then
-    begin
+  if Value = '' then Exit;
+  P := Pointer(Value);
+  while P^<> #0 do begin
+    if not CharInSet(P^, ['a'..'z','0'..'9','_']) then begin
       Result := False;
       Break;
     end;
+    Inc(P);
+  end;
 end;
 
 {**
@@ -4902,15 +4946,19 @@ end;
 }
 function TZDefaultIdentifierConvertor.IsUpperCase(const Value: string): Boolean;
 var
-  I: Integer;
+  P: PChar;
 begin
   Result := True;
-  for I := 1 to Length(Value) do
-    if not CharInSet(Value[I], ['A'..'Z','0'..'9','_']) then
+  if Value = '' then Exit;
+  P := Pointer(Value);
+  while P^<> #0 do begin
+    if not CharInSet(P^, ['A'..'Z','0'..'9','_']) then
     begin
       Result := False;
       Break;
     end;
+    Inc(P);
+  end;
 end;
 
 {**
@@ -4920,21 +4968,20 @@ end;
 }
 function TZDefaultIdentifierConvertor.IsSpecialCase(const Value: string): Boolean;
 var
-  I: Integer;
+  P: PChar;
 begin
   Result := False;
-  if CharInSet(Value[1], ['0'..'9']) then
-  begin
-    Result := True;
-    exit;
-  end;
-  for I := 1 to Length(Value) do
-  begin
-    if not CharInSet(Value[I], ['A'..'Z','a'..'z','0'..'9','_']) then
+  if Value = '' then Exit;
+  P := Pointer(Value);
+  if CharInSet(P^, ['0'..'9']) then
+    Result := True
+  else while P^<> #0 do begin
+    if not CharInSet(P^, ['A'..'Z','a'..'z','0'..'9','_']) then
     begin
       Result := True;
       Break;
     end;
+    Inc(P);
   end;
 end;
 
@@ -4990,22 +5037,17 @@ end;
 }
 function TZDefaultIdentifierConvertor.ExtractQuote(const Value: string): string;
 begin
-  if IsQuoted(Value) then
-  begin
+  if IsQuoted(Value) then begin
     Result := Copy(Value, 2, Length(Value) - 2);
-    if not Metadata.GetDatabaseInfo.StoresMixedCaseQuotedIdentifiers then
-    begin
+    if not Metadata.GetDatabaseInfo.StoresMixedCaseQuotedIdentifiers then begin
       if Metadata.GetDatabaseInfo.StoresLowerCaseQuotedIdentifiers then
         Result := LowerCase(Result)
       else if Metadata.GetDatabaseInfo.StoresUpperCaseQuotedIdentifiers then
         Result := UpperCase(Result);
     end;
-  end
-  else
-  begin
+  end else begin
     Result := Value;
-    if not Metadata.GetDatabaseInfo.StoresMixedCaseIdentifiers then
-    begin
+    if not Metadata.GetDatabaseInfo.StoresMixedCaseIdentifiers then begin
       if Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers then
         Result := LowerCase(Result)
       else if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers then

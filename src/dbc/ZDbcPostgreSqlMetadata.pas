@@ -292,7 +292,7 @@ implementation
 
 uses
   //Math,
-  ZFastCode, ZMessages, ZSysUtils, ZDbcUtils, ZDbcPostgreSql;
+  ZFastCode, ZMessages, ZSysUtils, ZDbcPostgreSql;
 
 { TZPostgreSQLDatabaseInfo }
 

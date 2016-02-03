@@ -850,6 +850,7 @@ var
   DT: TTDSType;
   TempDate: DBDATETIME;
   tdsTempDate: TTDSDBDATETIME;
+  Failed: Boolean;
 begin
   DT := DBLibColTypeCache[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   {$IFDEF GENERIC_INDEX}
@@ -868,6 +869,13 @@ begin
         Result := PTDSDBDATETIME(Data)^.dtdays + 2 + (PTDSDBDATETIME(Data)^.dttime / 25920000)
       else
         Result := PDBDATETIME(Data)^.dtdays + 2 + (PDBDATETIME(Data)^.dttime / 25920000)
+    else if (DT in [tdsNText, tdsNVarChar, tdsText, tdsVarchar, tdsChar]) then
+      if (PAnsiChar(Data)+2)^ = ':' then
+        Result := RawSQLTimeToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed{%H-})
+      else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Word(DL)) <= 4 then
+          Result := RawSQLTimeStampToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
+      else
+        Result := RawSQLTimeToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
     else
       if FDBLibConnection.FreeTDS then //type diff
       begin

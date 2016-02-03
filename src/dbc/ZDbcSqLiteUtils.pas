@@ -250,7 +250,7 @@ function ConvertSQLiteVersionToSQLVersion(SQLiteVersion: PAnsiChar ): Integer;
 var
   MajorVersion, MinorVersion, SubVersion, Code: Integer;
 begin
-  MajorVersion := ValRawInt(SQLiteVersion, Code);
+  MajorVersion := ValRawInt(SQLiteVersion, Code{%H-});
   Inc(SQLiteVersion, Code);
   MinorVersion := ValRawInt(SQLiteVersion, Code);
   Inc(SQLiteVersion, Code);

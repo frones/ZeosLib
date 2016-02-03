@@ -139,7 +139,7 @@ implementation
 
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} Math,
-  ZMessages, ZDbcUtils, ZEncoding, ZFastCode,
+  ZMessages, ZEncoding, ZFastCode,
   ZDbcPostgreSql, ZDbcPostgreSqlUtils, ZDbcPostgreSqlStatement;
 
 { TZPostgreSQLResultSet }
@@ -453,7 +453,7 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  P := GetBuffer(ColumnIndex, L);
+  P := GetBuffer(ColumnIndex, L{%H-});
   if LastWasNull then
     Result := ''
   else

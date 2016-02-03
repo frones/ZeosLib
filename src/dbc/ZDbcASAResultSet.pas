@@ -193,7 +193,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
- Math, ZFastCode, ZDbcLogging, ZDbcUtils, ZEncoding;
+ Math, ZFastCode, ZDbcLogging, ZEncoding;
 
 { TZASAResultSet }
 
