@@ -1535,7 +1535,8 @@ begin
     Dest^ := #0
   else if ZCompatibleCodePages(SrcCP, DestCP) then begin
     len := Min(DestBytes, DestBytes);
-    Move(Source^, Dest^, len);
+    if Source <> Dest then
+      Move(Source^, Dest^, len);
     (Dest+Len)^ := #0
   end else if SourceBytes <= dsMaxWStringSize then begin //can we use a static buf? -> avoid memrealloc for the buffer
     len := PRaw2PUnicodeBuf(Source, @wBuf[0], sourceBytes, SrcCP);
@@ -1895,27 +1896,23 @@ var
   sBuf: Array[0..dsMaxWStringSize] of WideChar; //avoid memallocs
 begin
   if Source = nil then begin
-    Result := 0;
+    Result := -1;
     if Dest <> nil then begin
       FreeMem(Dest);
       Dest := nil;
     end;
-    Exit;
-  end;
-  if SourceBytes = 0 then begin
+  end else if SourceBytes = 0 then begin
     Result := 0;
     if Dest <> nil then
       FreeMem(Dest);
     Dest := AllocMem(SizeOf(WideChar));
     PWord(Dest)^ := Ord(#0);
-    Exit;
-  end;
-  if Source = Dest then
+  end else if Source = Dest then
     if SourceBytes <= dsMaxWStringSize then begin
       Result := PRaw2PUnicodeBuf(Source, @sBuf[0], SourceBytes, CP);
       ReallocMem(Dest, (Result+1) shl 1);
       System.Move(sBuf[0], Dest^, (Result+1) shl 1);
-    end else if SourceBytes < SizeOf(dsMaxWStringSize) then begin
+    end else if SourceBytes < SizeOf(sBuf) then begin
       //Change logic vice versa use the sBuf as Raw buffer
       System.Move(Source^, sBuf[0], SourceBytes+1);
       FreeMem(Dest); //Dest can't be nil -> skip move buf
@@ -2068,13 +2065,10 @@ var
   W: ZWideString;
 {$IFEND}
 begin
-  if Dest = nil then begin
-    Result := 0;
-    Exit;
-  end;
-  if SrcCodePoints = 0 then begin
-    PWord(Dest)^ := Ord(#0);
-    Result := 0;
+  if (Dest = nil) or (SrcCodePoints = 0) then begin
+    Result := 0-Ord(Dest = nil);
+    if Dest <> nil then
+      Dest^ := #0;
   end else begin
     if CP = zCP_NONE then
       CP := ZDefaultSystemCodePage; //random success
@@ -2084,7 +2078,7 @@ begin
       {$ELSE}
       Result := WideCharToMultiByte(CP, 0, Source, SrcCodePoints, Dest, MaxDestBytes, NIL, NIL);
       {$ENDIF}
-      PWord(Dest+Result)^ := Ord(#0);
+      (Dest+Result)^ := #0;
     {$ELSE} //FPC non Windows
       if ZCompatibleCodePages(CP, zCP_UTF8) then //FPC has a build in function here just for UTF16 to UTF8
         Result := UnicodeToUtf8(Dest, MaxDestBytes, Source, SrcCodePoints)
@@ -2101,7 +2095,7 @@ begin
         {$ENDIF}
         Result := Min(Length(S), MaxDestBytes);
         System.Move(S[1], Dest^, Result);
-        PWord(Dest+Result)^ := Ord(#0);
+        (Dest+Result)^ := #0;
       end;
     {$IFEND}
   end;
