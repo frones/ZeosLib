@@ -510,7 +510,7 @@ begin
       StrStream.position := 0;
       SetLength(Ansi,StrStream.Size);
       StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
-      WS := UTF8ToString(Ansi);
+      WS := {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(Ansi);
       StrStream.Clear;
       StrStream.Write(PWideChar(WS)^, Length(WS)*2);
       StrStream.Position := 0;
@@ -980,9 +980,9 @@ begin
       begin
         iqry.SQL.Add('insert into string_values(s_id,s_varchar) values (:i1,:s1)');
         iqry.Prepare;
-        AddRecord(RowID, UTF8ToString(S1));
-        AddRecord(RowID+1,UTF8ToString(S2));
-        AddRecord(RowID+2,UTF8ToString(S3));
+        AddRecord(RowID, {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S1));
+        AddRecord(RowID+1,{$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S2));
+        AddRecord(RowID+2,{$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S3));
 
         iqry.SQL.Text := 'select s_varchar from string_values where s_id > 213 and s_id < 217';
         iqry.open;
@@ -990,11 +990,11 @@ begin
         CheckEquals(3, iqry.RecordCount, 'RecordCount');
         {$IFDEF WITH_FTWIDESTRING}
           {$IFDEF UNICODE}
-          CheckEquals(UTF8ToString(S1), iqry.Fields[0].AsString);
+          CheckEquals({$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S1), iqry.Fields[0].AsString);
           iqry.Next;
-          CheckEquals(UTF8ToString(S2), iqry.Fields[0].AsString);
+          CheckEquals({$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S2), iqry.Fields[0].AsString);
           iqry.Next;
-          CheckEquals(UTF8ToString(S3), iqry.Fields[0].AsString);
+          CheckEquals({$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S3), iqry.Fields[0].AsString);
           {$ELSE}
           CheckEquals(UTF8Decode(S1), iqry.Fields[0].AsWideString);
           iqry.Next;
@@ -1037,7 +1037,7 @@ begin
             if ZDefaultSystemCodePage = zCP_WIN1251 then
               CheckEquals(UTF8ToAnsi(S2), iqry.Fields[0].AsString); //i can't display the russian chars right
           iqry.Next;
-          CheckEquals(String(UTF8ToString(S3)), iqry.Fields[0].AsString);
+          CheckEquals(String({$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S3)), iqry.Fields[0].AsString);
         end
         else
         begin //CPType = cCP_UTF8

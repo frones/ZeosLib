@@ -388,8 +388,12 @@ begin
   { Reads default properties. }
   FEnableMemCheck := StrToBoolEx(ReadProperty(COMMON_GROUP,
     ENABLE_MEMCHECK_KEY, FALSE_VALUE));
+  if FEnableMemCheck and not CommandLineSwitches.memcheck then
+    CommandLineSwitches.memcheck := True;
   FMemCheckLogFile := ReadProperty(COMMON_GROUP,
     MEMCHECK_LOGFILE_KEY, '');
+  if CommandLineSwitches.memcheck and (CommandLineSwitches.memcheck_file = '') then
+    CommandLineSwitches.memcheck_file := FMemCheckLogFile;
   FMemCheckShowResult := StrToBoolEx(ReadProperty(COMMON_GROUP,
     MEMCHECK_SHOWRESULT_KEY, FALSE_VALUE));
 end;
