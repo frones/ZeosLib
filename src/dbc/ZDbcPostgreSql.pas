@@ -116,8 +116,8 @@ type
     function GetConnectionHandle: PZPostgreSQLConnect;
     function GetServerMajorVersion: Integer;
     function GetServerMinorVersion: Integer;
-    function EncodeBinary(const Value: RawByteString): RawByteString; overload;
-    function EncodeBinary(const Value: TBytes): RawByteString; overload;
+    function EncodeBinary(Buf: Pointer; Len: Integer; Quoted: Boolean): RawByteString; overload;
+    function EncodeBinary(const Value: TBytes; Quoted: Boolean): RawByteString; overload;
     function EscapeString(const FromChar: PAnsiChar; len: NativeUInt; Quoted: Boolean): RawByteString; overload;
     procedure RegisterPreparedStmtName(const value: String);
     procedure UnregisterPreparedStmtName(const value: String);
@@ -157,9 +157,9 @@ type
     procedure LoadServerVersion;
     procedure OnPropertiesChange(Sender: TObject); override;
     procedure SetStandardConformingStrings(const Value: Boolean);
-    function EncodeBinary(const Value: RawByteString): RawByteString; overload;
-    function EncodeBinary(const Value: TBytes): RawByteString; overload;
-    function EncodeBinary(Buf: Pointer; Len: Integer; Quoted: Boolean = False): RawByteString; overload;
+    function EncodeBinary(const Value: RawByteString; Quoted: Boolean): RawByteString; overload;
+    function EncodeBinary(const Value: TBytes; Quoted: Boolean): RawByteString; overload;
+    function EncodeBinary(Buf: Pointer; Len: Integer; Quoted: Boolean): RawByteString; overload;
     function EscapeString(const FromChar: PAnsiChar; len: NativeUInt; Quoted: Boolean): RawByteString; overload;
     procedure RegisterPreparedStmtName(const value: String);
     procedure UnregisterPreparedStmtName(const value: String);
@@ -630,18 +630,18 @@ end;
   @param Value the Binary String
   @result the encoded String
 }
-function TZPostgreSQLConnection.EncodeBinary(const Value: TBytes): RawByteString;
+function TZPostgreSQLConnection.EncodeBinary(const Value: TBytes; Quoted: Boolean): RawByteString;
 begin
-  Result := EncodeBinary(Pointer(Value), Length(Value));
+  Result := EncodeBinary(Pointer(Value), Length(Value), Quoted);
 end;
 {**
   Encodes a Binary-AnsiString to a PostgreSQL format
   @param Value the Binary String
   @result the encoded String
 }
-function TZPostgreSQLConnection.EncodeBinary(const Value: RawByteString): RawByteString;
+function TZPostgreSQLConnection.EncodeBinary(const Value: RawByteString; Quoted: Boolean): RawByteString;
 begin
-  Result := EncodeBinary(Pointer(Value), Length(Value));
+  Result := EncodeBinary(Pointer(Value), Length(Value), Quoted);
 end;
 
 procedure TZPostgreSQLConnection.RegisterPreparedStmtName(const value: String);
@@ -1246,7 +1246,7 @@ end;
 }
 function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
-  Result := String(EncodeBinary(Value));
+  Result := String(EncodeBinary(Value, True));
   if GetAutoEncodeStrings then
     Result := GetDriver.GetTokenizer.GetEscapeString(Result);
 end;
@@ -1263,7 +1263,7 @@ function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: TBytes): Stri
 var Tmp: RawByteString;
 begin
   ZSetString(PAnsiChar(Value), Length(Value), Tmp{%H-});
-  Result := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(EncodeBinary(Tmp));
+  Result := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(EncodeBinary(Tmp, True));
   if GetAutoEncodeStrings then
     Result := GetDriver.GetTokenizer.GetEscapeString(Result);
 end;
@@ -1411,7 +1411,7 @@ begin
 end;
 
 function TZPostgreSQLConnection.EncodeBinary(Buf: Pointer;
-  Len: Integer; Quoted: Boolean = False): RawByteString;
+  Len: Integer; Quoted: Boolean): RawByteString;
 var
   escapedBuf: PAnsiChar;
   escapedLen: LongWord;
@@ -1422,7 +1422,8 @@ begin
       Result := ''
   else if GetPlainDriver.SupportsEncodeBYTEA then begin
     escapedBuf := GetPlainDriver.EscapeBytea(GetConnectionHandle, Buf, Len, @escapedLen);
-    ZSetString(nil, Len+(Ord(Quoted) shl 1), Result);
+    escapedLen := escapedLen -1; //return length including #0
+    ZSetString(nil, escapedLen+Byte(Ord(Quoted) shl 1), Result);
     if Quoted then begin
       Result[1] := '''';
       Result[Length(Result)] := '''';

@@ -349,7 +349,7 @@ begin
         StrStream.position := 0;
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
-        WS := UTF8ToString(Ansi);
+        WS := {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(Ansi);
         StrStream.Clear;
         StrStream.Write(PWideChar(WS)^, Length(WS)*2);
         StrStream.Position := 0;
@@ -697,7 +697,7 @@ begin
       begin
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
-        WS := UTF8ToString(Ansi);
+        WS := {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(Ansi);
         StrStream.Clear;
         StrStream.Write(PWideChar(WS)^, Length(WS)*2);
         StrStream.Position := 0;
