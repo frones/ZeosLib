@@ -2040,17 +2040,18 @@ begin
         ZSetString(nil, ULen, Result); //oversized
         SetLength(Result, UnicodeToUtf8(Pointer(Result), ULen, Source, SrcCodePoints));
       end
-    end else begin
+    end else
       {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
         WidestringManager.Unicode2AnsiMoveProc(Source, Result, CP, SrcCodePoints);
       {$ELSE}
+      begin
         SetString(US, Source, SrcCodePoints);
         {$IFDEF WITH_LCONVENCODING}
         Result := ZUnicodeToRaw(US, CP);
         {$ELSE}
         Result := RawByteString(Source); //random success
         {$ENDIF}
-        end;
+      end;
       {$ENDIF}
     {$IFEND}
   end;
@@ -2060,9 +2061,9 @@ function PUnicode2PRawBuf(Source: PWideChar; Dest: PAnsiChar; SrcCodePoints, Max
 {$IF not defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
 var
   {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
-  s: RawByteString;
-  {$ENDIF}
   W: ZWideString;
+  {$ENDIF}
+  s: RawByteString;
 {$IFEND}
 begin
   if (Dest = nil) or (SrcCodePoints = 0) then begin
