@@ -757,7 +757,7 @@ begin
           if QuotedNumbers then Result := #39+Result+#39;
         end;
       stBytes:
-        Result := Connection.EncodeBinary(SoftVarManager.GetAsBytes(Value));
+        Result := Connection.EncodeBinary(SoftVarManager.GetAsBytes(Value), True);
       stString, stUnicodeString: begin
           CharRec := ClientVarManager.GetAsCharRec(Value, ConSettings.ClientCodePage^.CP);
           Result := Connection.EscapeString(CharRec.P, CharRec.Len, True);
@@ -802,7 +802,7 @@ begin
                   end;
                 end
                 else
-                  Result := Connection.EncodeBinary(TempBlob.GetString);
+                  Result := Connection.EncodeBinary(TempBlob.GetBuffer, TempBlob.Length, True);
               stAsciiStream, stUnicodeStream:
                 if TempBlob.IsClob then begin
                   CharRec.P := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);

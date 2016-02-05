@@ -141,11 +141,22 @@ type
     function Clone(Empty: Boolean = False): IZBlob; override;
   end;
 
+  TZPostgreSQLByteaHexBlob = class(TZAbstractBlob)
+  public
+    constructor Create(Data: PAnsiChar);
+  end;
+
+  TZPostgreSQLByteaEscapedBlob = class(TZAbstractBlob)
+  public
+    constructor Create(PlainDriver: IZPostgreSQLPlainDriver; Data: PAnsiChar);
+  end;
+
+
 implementation
 
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} Math,
-  ZMessages, ZDbcUtils, ZEncoding, ZFastCode,
+  ZMessages, ZEncoding, ZFastCode,
   ZDbcPostgreSql, ZDbcPostgreSqlUtils, ZDbcPostgreSqlStatement;
 
 { TZPostgreSQLResultSet }
@@ -574,7 +585,7 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  P := GetBuffer(ColumnIndex, L);
+  P := GetBuffer(ColumnIndex, L{%H-});
   if LastWasNull then
     Result := ''
   else
@@ -810,17 +821,20 @@ begin
       if FIs_bytea_output_hex then begin
         {skip trailing /x}
         SetLength(Result, (ZFastCode.StrLen(Buffer)-2) shr 1);
-        HexToBin(Buffer+2, Pointer(Result), Length(Result));
+        if Assigned(Result) then
+          HexToBin(Buffer+2, Pointer(Result), Length(Result));
       end else begin
         if FPlainDriver.SupportsDecodeBYTEA then begin
           pgBuff := FPlainDriver.UnescapeBytea(Buffer, @Len);
           SetLength(Result, Len);
-          System.Move(pgBuff^, Pointer(Result)^, Len);
+          if Assigned(Result) then
+            System.Move(pgBuff^, Pointer(Result)^, Len);
           FPlainDriver.FreeMem(pgBuff);
         end else begin
           Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
           SetLength(Result, Len);
-          System.Move(Buffer^, Pointer(Result)^, Len);
+          if Assigned(Result) then
+            System.Move(Buffer^, Pointer(Result)^, Len);
         end;
       end;
     end else if FpgOIDTypes[ColumnIndex] = 26 { oid } then
@@ -960,22 +974,13 @@ begin
         RawToIntDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0), FChunk_Size)
   else if not LastWasNull then
     if FpgOIDTypes[ColumnIndex] = 17{bytea} then begin
-      if FIs_bytea_output_hex then begin
-        {skip trailing /x}
-        Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
-        Result := TZAbstractBlob.Create;
-        Len := (ZFastCode.StrLen(Buffer)-2) shr 1;
-        Result.GetLengthAddress^ := Len;
-        System.GetMem(Result.GetBufferAddress^, Len);
-        HexToBin(Buffer+2, Result.GetBufferAddress^, Len);
-      end else if FPlainDriver.SupportsDecodeBYTEA then begin
-        Result := TZAbstractBlob.Create;
-        Buffer := FPlainDriver.UnescapeBytea(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), @Len);
-        System.GetMem(Result.GetBufferAddress^, Len);
-        System.Move(Buffer^, Result.GetBufferAddress^^, Len);
-        FPlainDriver.FreeMem(Buffer);
-      end else
-        Result := TZAbstractBlob.CreateWithData(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex),
+      Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
+      if FIs_bytea_output_hex then
+        Result := TZPostgreSQLByteaHexBlob.Create(Buffer)
+      else if FPlainDriver.SupportsDecodeBYTEA then
+        Result := TZPostgreSQLByteaEscapedBlob.Create(FPlainDriver, Buffer)
+      else
+        Result := TZAbstractBlob.CreateWithData(Buffer,
           FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex));
     end else begin
       Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
@@ -1182,4 +1187,36 @@ begin
       FHandle, FBlobOid, FChunk_Size);
 end;
 
+{ TZPostgreSQLByteaBlob }
+
+constructor TZPostgreSQLByteaEscapedBlob.Create(PlainDriver: IZPostgreSQLPlainDriver;
+  Data: PAnsiChar);
+var
+  to_length: LongWord;
+  pgBuffer: Pointer;
+begin
+  inherited CreateWithData(nil, 0);
+  pgBuffer := PlainDriver.UnescapeBytea(Data, @to_length);
+  fBlobSize := to_length;
+  if fBlobSize > 0 then begin
+    System.GetMem(FBlobData, fBlobSize);
+    System.Move(pgBuffer^, FBlobData^, fBlobSize);
+  end;
+  PlainDriver.FreeMem(pgBuffer);
+end;
+
+{ TZPostgreSQLByteaHexBlob }
+
+constructor TZPostgreSQLByteaHexBlob.Create(Data: PAnsiChar);
+begin
+  inherited CreateWithData(nil, 0);
+  {skip trailing /x}
+  fBlobSize := (ZFastCode.StrLen(Data)-2) shr 1;
+  if fBlobSize > 0 then begin
+    System.GetMem(FBlobData, fBlobSize);
+    HexToBin(Data+2, fBlobData, fBlobSize);
+  end;
+end;
+
 end.
+

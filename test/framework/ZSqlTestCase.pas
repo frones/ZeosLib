@@ -1011,7 +1011,7 @@ begin
   Result := Value;
   if ConSettings.CPType = cCP_UTF16 then
     if isUTF8Encoded then
-      Temp := UTF8ToString(RawByteString(Value))
+      Temp := {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(RawByteString(Value))
     else
       Temp := Value
   else
@@ -1033,7 +1033,7 @@ begin
         if ConSettings.AutoEncode then //Revert the expected value to test
           if IsUTF8Encoded then
             {$IFDEF UNICODE}
-            Temp := UTF8ToString(Value)
+            Temp := {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(Value)
             {$ELSE}
             Temp := UTF8ToAnsi(Value)
             {$ENDIF}
@@ -1047,7 +1047,7 @@ begin
       ceUTF16:
         if IsUTF8Encoded then
           {$IFDEF UNICODE}
-          Temp := UTF8ToString(Value)
+          Temp := {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(Value)
           {$ELSE}
           if ConSettings.AutoEncode then //Revert the expected value to test
             if ConSettings.CPType = cCP_UTF8 then
@@ -1089,7 +1089,7 @@ begin
   Result := Value;
   if ConSettings.CPType = cCP_UTF16 then
     if isUTF8Encoded then
-      Temp := UTF8ToString(RawByteString(Value))
+      Temp := {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(RawByteString(Value))
     else
       Temp := Value
   else
@@ -1124,7 +1124,7 @@ begin
   if ( ConSettings.CPType = cCP_UTF16 ) then
   begin
     if isUTF8Encoded then
-      WS := UTF8ToString(RawByteString(Value))
+      WS := {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(RawByteString(Value))
     else
       WS := ZWideString(Value);
     Result.Write(PWideChar(WS)^, Length(WS)*2);

@@ -364,6 +364,8 @@ begin
     CheckDBLibError(lcConnect, LogMessage);
     FHandle := GetPlainDriver.dbOpen(LoginRec, PAnsiChar(AnsiString(HostName)));
     CheckDBLibError(lcConnect, LogMessage);
+    if not Assigned(FHandle) then raise EZSQLException.Create('The connection to the server failed, no proper handle was returned. Insufficient memory, unable to connect for any reason. ');
+
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
   finally
     GetPLainDriver.dbLoginFree(LoginRec);
