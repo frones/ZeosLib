@@ -138,7 +138,7 @@
     {$ENDIF}
   {$IFEND}
   {$IF FPC_FULLVERSION>30000}       // will be introduced in 3.0+
-    {$UNDEF MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is available now
+    {.$UNDEF MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is available now
   {$IFEND}
 
   // todo
