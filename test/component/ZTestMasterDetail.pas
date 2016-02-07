@@ -311,22 +311,25 @@ begin
 end;
 
 procedure TZTestMasterDetailCaseMBCs.TestClientDatasetWithForeignKey_ApplyUpdates;
+const
+  Str1: ZWideString = 'צהüüהצ';
+  Str2: ZWideString = 'A adress of צהüüהצ';
 var
   SQLMonitor: TZSQLMonitor;
   procedure SetTheData(Index: Integer);
   begin
     MasterQuery.Append;
     MasterQuery.FieldByName('dep_id').AsInteger := TestRowID + Index;
-    MasterQuery.FieldByName('dep_name').AsString := GetDBTestString('צהüüהצ', Connection.DbcConnection.GetConSettings);
+    MasterQuery.FieldByName('dep_name').AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
     MasterQuery.FieldByName('dep_shname').AsString := 'abc';
-    MasterQuery.FieldByName('dep_address').AsString := GetDBTestString('A adress of צהüüהצ', Connection.DbcConnection.GetConSettings);
+    MasterQuery.FieldByName('dep_address').AsString := GetDBTestString(Str2, Connection.DbcConnection.GetConSettings);
 
     CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
 
     DetailQuery.Append;
     DetailQuery.FieldByName('p_id').AsInteger := TestRowID + Index;
     DetailQuery.FieldByName('p_dep_id').AsInteger := TestRowID + Index;
-    DetailQuery.FieldByName('p_name').AsString := GetDBTestString('üהצצהü', Connection.DbcConnection.GetConSettings);
+    DetailQuery.FieldByName('p_name').AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
     DetailQuery.FieldByName('p_begin_work').AsDateTime := now;
     DetailQuery.FieldByName('p_end_work').AsDateTime := now;
     DetailQuery.FieldByName('p_picture').AsString := '';
@@ -412,9 +415,9 @@ begin
   try
     MasterQuery.Append;
     MasterQuery.FieldByName('dep_id').AsInteger := TestRowID;
-    MasterQuery.FieldByName('dep_name').AsString := GetDBTestString('צהüüהצ', Connection.DbcConnection.GetConSettings);
+    MasterQuery.FieldByName('dep_name').AsString := GetDBTestString(ZWideString('צהüüהצ'), Connection.DbcConnection.GetConSettings);
     MasterQuery.FieldByName('dep_shname').AsString := 'abc';
-    MasterQuery.FieldByName('dep_address').AsString := GetDBTestString('A adress of צהüüהצ', Connection.DbcConnection.GetConSettings);
+    MasterQuery.FieldByName('dep_address').AsString := GetDBTestString(ZWideString('A adress of צהüüהצ'), Connection.DbcConnection.GetConSettings);
 
     CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
 

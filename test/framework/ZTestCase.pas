@@ -650,7 +650,7 @@ procedure TZAbstractTestCase.CheckEquals(Expected: ZWideString; Actual: String;
   ConSettings: PZConSettings; _Message: string);
 begin
   if ConSettings^.AutoEncode or (ConSettings^.ClientcodePage^.Encoding = ceUTF16) or
-     ZCompatibleCodePages(ZDefaultSystemCodePage, ConSettings^.ClientcodePage^.CP) then
+     (not ConSettings^.ClientcodePage^.IsStringFieldCPConsistent) then
     CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.CTRL_CP), _Message)
   else
     CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.ClientcodePage^.CP), _Message);
@@ -682,17 +682,6 @@ begin
   if dpSec in Parts then CheckEquals(ESec, ASec, s + '(DateTime.Sec)');
   if dpMSec in Parts then CheckEquals(EMSec, AMSec, s + '(DateTime.MSec)');
 end;
-
-(*{$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
-procedure TZAbstractTestCase.CheckEquals(Expected, Actual: RawByteString;
-  Msg: string = '');
-begin
-  if MemLCompAnsi(PAnsiChar(Expected), PAnsiChar(Actual), Max(Length(Expected),Length(Actual))) then
-    Check(True)
-  else
-    CheckEquals(String(Expected), String(Actual), Msg);
-end;
-{$IFEND}*)
 
 {**
   Prints a debug message to standard output.

@@ -717,6 +717,8 @@ procedure TZTestDbcPostgreSQLBugReportMBCs.Test739514;
 const
   id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   fld_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  Str1: ZWideString = 'Абракадабра';
+  Str2: ZWideString = '\Победа\';
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -733,11 +735,11 @@ begin
   begin
     Check(Next);
     CheckEquals(1, ResultSet.GetInt(id_index));
-    CheckEquals('Абракадабра', ResultSet.GetString(fld_index), Connection.GetConSettings);
+    CheckEquals(Str1, ResultSet.GetString(fld_index), Connection.GetConSettings);
     MoveToInsertRow;
     UpdateIntByName('id', 2);
 
-    UpdateStringByName('fld', GetDBTestString('\Победа\', Connection.GetConSettings));
+    UpdateStringByName('fld', GetDBTestString(Str2, Connection.GetConSettings));
     InsertRow;
     Close;
   end;
@@ -747,11 +749,11 @@ begin
   begin
     Check(Next);
     CheckEquals(1, ResultSet.GetInt(id_index));
-    CheckEquals('Абракадабра', ResultSet.GetString(fld_index), Connection.GetConSettings);
+    CheckEquals(Str1, ResultSet.GetString(fld_index), Connection.GetConSettings);
 
     Check(Next);
     CheckEquals(2, ResultSet.GetInt(id_index));
-    CheckEquals('\Победа\', ResultSet.GetString(fld_index), Connection.GetConSettings);
+    CheckEquals(Str2, ResultSet.GetString(fld_index), Connection.GetConSettings);
     Close;
   end;
 
