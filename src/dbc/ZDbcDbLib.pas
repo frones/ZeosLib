@@ -346,6 +346,12 @@ begin
         GetPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(AnsiString(Password)));
         LogMessage := LogMessage + ' AS USER "'+ConSettings^.User+'"';
       end;
+
+      if FFreeTDS then begin
+        S := Info.Values['codepage'];
+        if S <> '' then
+          GetPlainDriver.dbSetLCharSet(LoginRec, Pointer({$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S)))
+      end;
     end;
 
     //sybase specific parameters
@@ -360,7 +366,10 @@ begin
     end;
 
     CheckDBLibError(lcConnect, LogMessage);
-    FHandle := GetPlainDriver.dbOpen(LoginRec, PAnsiChar(AnsiString(HostName)));
+    s := HostName;
+    // add port number if FreeTDS is used, the port number was specified and no server instance name was given:
+    if FreeTDS and (Port <> 0) and (ZFastCode.Pos('\', HostName) = 0)  then s := s + ':' + ZFastCode.IntToStr(Port);
+    FHandle := GetPlainDriver.dbOpen(LoginRec, PAnsiChar(AnsiString(s)));
     CheckDBLibError(lcConnect, LogMessage);
     if not Assigned(FHandle) then raise EZSQLException.Create('The connection to the server failed, no proper handle was returned. Insufficient memory, unable to connect for any reason. ');
 
