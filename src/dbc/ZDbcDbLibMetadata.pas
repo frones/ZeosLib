@@ -2714,6 +2714,7 @@ function TZSybaseDatabaseMetadata.UncachedGetTables(const Catalog: string;
 var
   I: Integer;
   TableTypes: string;
+  StatementResult: IZResultSet;
 begin
   Result:=inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
 
@@ -2725,9 +2726,9 @@ begin
     TableTypes := TableTypes + AnsiQuotedStr(Types[I], '''');
   end;
 
-  with GetStatement.ExecuteQuery(
-    Format('exec sp_jdbc_tables %s, %s, %s, %s',
-    [ComposeObjectString(TableNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog), ComposeObjectString(TableTypes)])) do
+  StatementResult := GetStatement.ExecuteQuery(Format('exec sp_jdbc_tables %s, %s, %s, %s',
+    [ComposeObjectString(TableNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog), ComposeObjectString(TableTypes)]));
+  if Assigned(StatementResult) then with StatementResult do
   begin
     while Next do
     begin
