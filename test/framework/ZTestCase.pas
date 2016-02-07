@@ -130,6 +130,10 @@ type
       _Message: string = ''); overload;
     procedure CheckEquals(Expected, Actual: String; ConSettings: PZConSettings;
       _Message: string = ''); overload;
+    {$IFNDEF UNICODE}
+    procedure CheckEquals(Expected: ZWideString; Actual: String; ConSettings: PZConSettings;
+      _Message: string = ''); overload;
+    {$ENDIF UNICODE}
     procedure CheckEquals(OrgStr: String; ActualLobStream: TStream; ConSettings: PZConSettings;
       const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: TStream;
@@ -627,6 +631,7 @@ procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Byte;
 begin
   CheckEquals(Cardinal(Expected), Cardinal(Actual), Msg);
 end;
+
 procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: Word;
   const Msg: string = '');
 begin
@@ -639,6 +644,18 @@ begin
   CheckNotEquals(Cardinal(Expected), Cardinal(Actual), Msg);
 end;
 {$ENDIF}
+
+{$IFNDEF UNICODE}
+procedure TZAbstractTestCase.CheckEquals(Expected: ZWideString; Actual: String;
+  ConSettings: PZConSettings; _Message: string);
+begin
+  if ConSettings^.AutoEncode or (ConSettings^.ClientcodePage^.Encoding = ceUTF16) or
+     ZCompatibleCodePages(ZDefaultSystemCodePage, ConSettings^.ClientcodePage^.CP) then
+    CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.CTRL_CP), _Message)
+  else
+    CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.ClientcodePage^.CP), _Message);
+end;
+{$ENDIF UNICODE}
 
 procedure TZAbstractTestCase.CheckEqualsDate(const Expected, Actual: TDateTime;
   Parts: TDateParts; const Msg: string);
