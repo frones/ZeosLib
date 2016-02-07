@@ -465,6 +465,7 @@ type
     constructor Create; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
+    function dbsetlversion({%H-}Login: PLOGINREC): RETCODE; override;
     function dbsetversion: RETCODE; override;
   end;
 
@@ -2152,8 +2153,8 @@ end;
 function TZFreeTDSBasePlainDriver.dbLogin: PLOGINREC;
 begin
   Result := inherited dbLogin;
-  if not Assigned(Result)  then
-    if not  (dbsetlversion(Result) = DBSUCCEED ) then
+  if Assigned(Result)  then
+    if not (dbsetlversion(Result) = DBSUCCEED ) then
     begin
       dbloginfree(Result);
       Result := nil;
@@ -2387,7 +2388,12 @@ end;
 
 function TZFreeTDS50PlainDriver.dbsetversion: RETCODE;
 begin
-  Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_46);
+  Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_100);
+end;
+
+function TZFreeTDS50PlainDriver.dbsetlversion(Login: PLOGINREC): RETCODE;
+begin
+  Result := FreeTDSAPI.dbsetlversion(Login, DBVERSION_100);
 end;
 
 { TZFreeTDS70PlainDriver }
