@@ -680,7 +680,7 @@ var
 
   procedure AbsorbDigits;
   begin
-    while CharInSet(FirstChar, ['0'..'9']) do begin
+    while (Ord(FirstChar) >= Ord('0')) and (Ord(FirstChar) <= Ord('9')) do begin
       ToBuf(FirstChar, Result.Value);
       GotAdigit := True;
       ReadNum := Stream.Read(FirstChar, SizeOf(Char));
@@ -851,16 +851,16 @@ procedure TZCppCommentState.GetSingleLineComment(Stream: TStream; var Result: St
 var
   ReadChar: Char;
 begin
-  while (Stream.Read(ReadChar, SizeOf(Char)) > 0) and not CharInSet(ReadChar, [#10, #13]) do
+  while (Stream.Read(ReadChar, SizeOf(Char)) > 0) and not ((ReadChar = #10) or (ReadChar = #13)) do
     ToBuf(ReadChar, Result);
 
   // mdaems : for single line comments the line ending must be included
   // as it should never be stripped off or unified with other whitespace characters
-  if CharInSet(ReadChar, [#10, #13]) then begin
+  if (ReadChar = #10) or (ReadChar = #13) then begin
     ToBuf(ReadChar, Result);
     // ludob Linux line terminator is just LF, don't read further if we already have LF
     if (ReadChar<>#10) and (Stream.Read(ReadChar, SizeOf(Char)) > 0) then
-      if CharInSet(ReadChar, [#10, #13]) then
+      if (ReadChar = #10) or (ReadChar = #13) then
         ToBuf(ReadChar, Result)
       else
         Stream.Seek(-SizeOf(Char), soFromCurrent);
