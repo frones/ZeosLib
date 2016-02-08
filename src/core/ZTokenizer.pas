@@ -856,16 +856,15 @@ begin
 
   // mdaems : for single line comments the line ending must be included
   // as it should never be stripped off or unified with other whitespace characters
-  if CharInSet(ReadChar, [#10, #13]) then
-    begin
-      ToBuf(ReadChar, Result);
-      // ludob Linux line terminator is just LF, don't read further if we already have LF
-      if (ReadChar<>#10) and (Stream.Read(ReadChar, SizeOf(Char)) > 0) then
-        if CharInSet(ReadChar, [#10, #13]) then
-          ToBuf(ReadChar, Result)
-        else
-          Stream.Seek(-SizeOf(Char), soFromCurrent);
-    end;
+  if CharInSet(ReadChar, [#10, #13]) then begin
+    ToBuf(ReadChar, Result);
+    // ludob Linux line terminator is just LF, don't read further if we already have LF
+    if (ReadChar<>#10) and (Stream.Read(ReadChar, SizeOf(Char)) > 0) then
+      if CharInSet(ReadChar, [#10, #13]) then
+        ToBuf(ReadChar, Result)
+      else
+        Stream.Seek(-SizeOf(Char), soFromCurrent);
+  end;
 end;
 
 {**
@@ -892,6 +891,11 @@ begin
     GetMultiLineComment(Stream, Result.Value);
     FlushBuf(Result.Value);
   end else if (ReadNum > 0) and (ReadChar = '/') then begin
+    Result.TokenType := ttComment;
+    ToBuf(ReadChar, Result.Value);
+    GetSingleLineComment(Stream, Result.Value);
+    FlushBuf(Result.Value);
+  end else if (ReadNum > 0) and (ReadChar = '-') then begin
     Result.TokenType := ttComment;
     ToBuf(ReadChar, Result.Value);
     GetSingleLineComment(Stream, Result.Value);
