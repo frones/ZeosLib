@@ -305,16 +305,20 @@ var
   ReadChar: Char;
   LastChar: Char;
   QuoteCount: Integer;
+  LastWasEscapeChar: Boolean;
 begin
   LastChar := #0;
   Result := '';
   InitBuf(QuoteChar);
   QuoteCount := 1;
 
+  LastWasEscapeChar := False;
   while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do
   begin
     if ReadChar = QuoteChar then
-      Inc(QuoteCount);
+      Inc(QuoteCount, Ord((not EscapeSyntax) or (not LastWasEscapeChar)))
+    else
+      LastWasEscapeChar := False;
 
     if (LastChar = QuoteChar) and (ReadChar <> QuoteChar) then
       if QuoteCount mod 2 = 0 then begin
@@ -322,10 +326,12 @@ begin
         Break;
       end;
     ToBuf(ReadChar, Result);
-    if (LastChar = BackSlash) and EscapeSyntax then
-      LastChar := #0
-    else if (LastChar = QuoteChar) and (ReadChar = QuoteChar) then
-      LastChar := #0
+    if (LastChar = BackSlash) and EscapeSyntax then begin
+      LastChar := #0;
+      LastWasEscapeChar := True;
+      //Dec(QuoteCount); nope that doesnt' work @all see the tests
+    end else if (LastChar = QuoteChar) and (ReadChar = QuoteChar) then
+      LastChar := #0;
     else LastChar := ReadChar;
   end;
   FlushBuf(Result);
