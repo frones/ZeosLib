@@ -331,7 +331,7 @@ begin
       LastWasEscapeChar := True;
       //Dec(QuoteCount); nope that doesnt' work @all see the tests
     end else if (LastChar = QuoteChar) and (ReadChar = QuoteChar) then
-      LastChar := #0;
+      LastChar := #0
     else LastChar := ReadChar;
   end;
   FlushBuf(Result);
