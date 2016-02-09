@@ -260,7 +260,6 @@ type
     mysql_get_server_info:        function(Handle: PMYSQL): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_info:                   function(Handle: PMYSQL): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_init:                   function(Handle: PMYSQL): PMYSQL; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-    mysql_library_end:            procedure; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_insert_id:              function(Handle: PMYSQL): ULongLong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_kill:                   function(Handle: PMYSQL; Pid: ULong): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_list_dbs:               function(Handle: PMYSQL; Wild: PAnsiChar): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
@@ -294,8 +293,10 @@ type
 
     { Set up and bring down the server; to ensure that applications will work when linked against either the
       standard client library or the embedded server library, these functions should be called. }
-    mysql_server_init:            function(Argc: Integer; Argv, Groups: Pointer): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-    mysql_server_end:             procedure; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_server_init:            function(Argc: Integer; Argv, Groups: Pointer): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF}; //deprecated
+    mysql_library_init:           function(Argc: Integer; Argv, Groups: Pointer): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_server_end:             procedure; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF}; //deprecated
+    mysql_library_end:            procedure; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     mysql_change_user:            function(mysql: PMYSQL; const user: PAnsiChar; const passwd: PAnsiChar; const db: PAnsiChar): Byte;
     mysql_field_count:            function(Handle: PMYSQL): UInt; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
@@ -661,8 +662,9 @@ begin
   @mysql_thread_end             := GetAddress('mysql_thread_end');
   @mysql_thread_safe            := GetAddress('mysql_thread_safe');
 
-  @mysql_server_init            := GetAddress('mysql_server_init');
-  @mysql_server_end             := GetAddress('mysql_server_end');
+  @mysql_server_init            := GetAddress('mysql_server_init'); //deprecated
+  @mysql_library_init           := GetAddress('mysql_library_init');
+  @mysql_server_end             := GetAddress('mysql_server_end');  //deprecated
   @mysql_library_end            := GetAddress('mysql_library_end');
 
   @mysql_change_user            := GetAddress('mysql_change_user');
@@ -773,10 +775,10 @@ begin
     {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(ServerArgs[i]);
 
   if (FLoader.Loaded) then
-    if (@mysql_library_end <> nil) then
+    if Assigned(mysql_library_end) then
       mysql_library_end //since 5.0.3
     else
-      if (@mysql_server_end <> nil) then
+      if Assigned(mysql_server_end) then
         mysql_server_end; //deprected since 5.0.3
   inherited Destroy;
 end;
@@ -967,8 +969,13 @@ var
   ClientInfo: PAnsiChar;
   L: LengthInt;
 begin
-  if @mysql_server_init <> nil then
-    mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS);
+  if (Assigned(mysql_server_init) or Assigned(mysql_library_init)){ and (ServerArgsLen > 0) }then
+    if Assigned(mysql_library_init) then
+      //http://dev.mysql.com/doc/refman/5.7/en/mysql-library-init.html
+      mysql_library_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS) //<<<-- Isn't threadsafe
+    else
+      //http://dev.mysql.com/doc/refman/5.7/en/mysql-server-init.html
+      mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS); //<<<-- Isn't threadsafe
   Result := mysql_init(Handle);
   ClientInfo := GetClientInfo;
   L := ZFastCode.StrLen(ClientInfo);
