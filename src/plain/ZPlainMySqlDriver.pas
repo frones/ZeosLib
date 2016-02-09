@@ -104,7 +104,7 @@ type
     {END ADDED by fduenas 15-06-2006}
 
     function GetAffectedRows(Handle: PZMySQLConnect): Int64;
-    function GetConnectionCharacterSet(Handle: PMYSQL): PAnsiChar;// char_set_name
+    function character_set_name(Handle: PMYSQL): PAnsiChar;// char_set_name
     procedure Close(Handle: PZMySQLConnect);
     function Connect(Handle: PZMySQLConnect; const Host, User, Password: PAnsiChar): PZMySQLConnect;
     function CreateDatabase(Handle: PZMySQLConnect; const Database: PAnsiChar): Integer;
@@ -174,7 +174,7 @@ type
     function RetrieveNextRowset   (Handle: PZMySQLConnect): Integer;
     function Rollback (Handle: PZMySQLConnect): Boolean;
     {ADDED by EgonHugeist}
-    function SetConnectionCharacterSet(Handle: PMYSQL; const csname: PAnsiChar): Integer; // set_character_set returns 0 if valid
+    function set_character_set(Handle: PMYSQL; const csname: PAnsiChar): Integer; // set_character_set returns 0 if valid
     // set_server_option
     function GetSQLState (Handle: PZMySQLConnect): AnsiString;
     // warning_count
@@ -455,8 +455,8 @@ type
     procedure FreeResult(Res: PZMySQLResult);
     function GetAffectedRows(Handle: PZMySQLConnect): Int64;
     {ADDED by EgonHugeist}
-    function GetConnectionCharacterSet(Handle: PMYSQL): PAnsiChar;// char_set_name
-    function SetConnectionCharacterSet(Handle: PMYSQL; const csname: PAnsiChar): Integer; // set_character_set Returns 0 if valid
+    function character_set_name(Handle: PMYSQL): PAnsiChar;// char_set_name
+    function set_character_set(Handle: PMYSQL; const csname: PAnsiChar): Integer; // set_character_set Returns 0 if valid
 
     function FetchRow(Res: PZMySQLResult): PZMySQLRow;
     function FetchLengths(Res: PZMySQLResult): PMySQLLengthArray;
@@ -866,12 +866,12 @@ end;
   EgonHugeist: Get CharacterSet of current Connection
   Returns the default character set name for the current connection.
 }
-function TZMySQLBaseDriver.GetConnectionCharacterSet(Handle: PMYSQL): PAnsiChar;// char_set_name
+function TZMySQLBaseDriver.character_set_name(Handle: PMYSQL): PAnsiChar;// char_set_name
 begin
   if Assigned(mysql_character_set_name) then
     Result := mysql_character_set_name(Handle)
   else
-    Result := '';
+    Result := nil;
 end;
 
 {**
@@ -882,10 +882,13 @@ end;
   of mysql->charset, and thus affects the character set
   used by mysql_real_escape_string()
 }
-function TZMySQLBaseDriver.SetConnectionCharacterSet(Handle: PMYSQL;
+function TZMySQLBaseDriver.set_character_set(Handle: PMYSQL;
   const csname: PAnsiChar): Integer; // set_character_set Returns 0 if valid
 begin
-  Result := mysql_set_character_set(Handle, csName);
+  if Assigned(mysql_set_character_set) then
+    Result := mysql_set_character_set(Handle, csName)
+  else
+    Result := 1;
 end;
 
 function TZMySQLBaseDriver.GetClientInfo: PAnsiChar;
