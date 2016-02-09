@@ -810,41 +810,41 @@ begin
           begin
             Params[I].CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], zCP_UTF8);
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam, Ord(tdsChar),
-              MaxInt, Max(1, Params[I].CharRec.Len), Params[I].CharRec.P);
+              -1, Max(1, Params[I].CharRec.Len), Params[I].CharRec.P);
           end
           else
           begin
             Params[I].CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP);
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam, Ord(tdsChar),
-              MaxInt, Max(1, Params[I].CharRec.Len), Params[I].CharRec.P);
+              -1, Max(1, Params[I].CharRec.Len), Params[I].CharRec.P);
           end;
         stDate:
           begin
             Params[I].AsString := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(InParamValues[I]),
               ConSettings^.WriteFormatSettings, False);
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam, ord(tdsChar),
-              MaxInt, ConSettings^.WriteFormatSettings.DateFormatLen, Pointer(Params[I].AsString));
+              -1, ConSettings^.WriteFormatSettings.DateFormatLen, Pointer(Params[I].AsString));
           end;
         stTime:
           begin
             Params[I].AsString := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(InParamValues[I]),
               ConSettings^.WriteFormatSettings, False);
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam, ord(tdsChar),
-              MaxInt, ConSettings^.WriteFormatSettings.TimeFormatLen, Pointer(Params[I].AsString));
+              -1, ConSettings^.WriteFormatSettings.TimeFormatLen, Pointer(Params[I].AsString));
           end;
         stTimeStamp:
           begin
             Params[I].AsString := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(InParamValues[I]),
               ConSettings^.WriteFormatSettings, False);
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam, ord(tdsChar),
-              MaxInt, ConSettings^.WriteFormatSettings.DateTimeFormatLen, Pointer(Params[I].AsString));
+              -1, ConSettings^.WriteFormatSettings.DateTimeFormatLen, Pointer(Params[I].AsString));
           end;
         stAsciiStream, stUnicodeStream, stBinaryStream:
           begin
             Params[I].TempBlob := SoftVarManager.GetAsInterface(InParamValues[I]) as IZBlob;
             if ParamType = stBinaryStream then
               FPlainDriver.dbRpcParam(FHandle, nil, RetParam, Ord(tdsImage),
-                MaxInt, Max(1, Params[I].TempBlob.Length), Params[I].TempBlob.GetBuffer)
+                -1, Max(1, Params[I].TempBlob.Length), Params[I].TempBlob.GetBuffer)
             else
               if IsNCharIndex[i] then
               begin
@@ -868,7 +868,7 @@ begin
                   end;
                 end;
                 FPlainDriver.dbRpcParam(FHandle, nil, RetParam, Ord(tdsText),
-                    MaxInt, Params[I].CharRec.Len, Params[I].CharRec.P)
+                    -1, Params[I].CharRec.Len, Params[I].CharRec.P)
               end
               else
               begin
@@ -893,14 +893,14 @@ begin
                   end;
                 end;
                 FPlainDriver.dbRpcParam(FHandle, nil, RetParam, Ord(tdsText),
-                    MaxInt, Params[I].CharRec.Len, Params[I].CharRec.P)
+                    -1, Params[I].CharRec.Len, Params[I].CharRec.P)
               end;
           end;
         stBytes:
           begin
             Params[I].AsBytes := SoftVarManager.GetAsBytes(InParamValues[I]);
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam, Ord(tdsBinary),
-              MaxInt, Length(Params[I].AsBytes), Pointer(Params[I].AsBytes));
+              -1, Length(Params[I].AsBytes), Pointer(Params[I].AsBytes));
           end;
       else
         FPlainDriver.dbRpcParam(FHandle, nil, 0, Ord(tdsChar), 0, 0, nil);
