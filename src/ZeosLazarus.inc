@@ -122,7 +122,6 @@
     {$UNDEF WITH_FPC_FTTIME_BUG} //seems like the never FPC2.6.2 also have fixed the NativData bug for TTimeFields+TDataSet
   {$ENDIF}
   {$IF FPC_FULLVERSION>20700}       // will be introduced in 2.7+
-    {$DEFINE WITH_SETSTRING_MEMLEAK_BUG} //used in ZCompatibility.pas
     {$DEFINE WITH_TRECORDBUFFER}
     {$ifndef MSEgui} 
       {$DEFINE WITH_TBOOKMARK}        // Have TBookmark
@@ -138,6 +137,9 @@
     {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //Hack for *nix systems where i couldn't locate this define )):
       {$DEFINE FPC_HAS_BUILTIN_WIDESTR_MANAGER}
     {$ENDIF}
+  {$IFEND}
+  {$IF FPC_FULLVERSION>30000}       // will be introduced in 3.0+
+    {.$UNDEF MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is available now
   {$IFEND}
 
   // todo

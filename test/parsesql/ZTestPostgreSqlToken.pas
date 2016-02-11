@@ -105,8 +105,11 @@ end;
 }
 procedure TZTestPostgreSQLTokenizer.TestQuoteState;
 const
-  TokenString1: string = '"a\""\''aa" ''c\'' ''c''''c''';
+  TokenString146: string = 'nazwa1 = ''\'''',';
+  TokenValues146Off: array[0..3] of string = ('nazwa1', '=', '''\''''',',');
+  TokenTypes146Off: array[0..3] of TZTokenType = (ttWord, ttSymbol, ttQuoted, ttSymbol);
 
+  TokenString1: string = '"a\""\''aa" ''c\'' ''c''''c''';
   TokenTypes1Off: array[0..1] of TZTokenType = (ttWord, ttQuoted);
   TokenValues1Off: array[0..1] of string = ('"a\""\''aa"', '''c\'' ''c''''c''');
 
@@ -128,6 +131,10 @@ begin
   (Tokenizer as TZPostgreSQLTokenizer).SetStandardConformingStrings(False);
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1,
     [toSkipEOF, toSkipWhitespaces]), TokenTypes1Off, TokenValues1Off);
+
+  (Tokenizer as TZPostgreSQLTokenizer).SetStandardConformingStrings(False);
+  CheckTokens(Tokenizer.TokenizeBuffer(TokenString146,
+    [toSkipEOF, toSkipWhitespaces]), TokenTypes146Off, TokenValues146Off);
 
   (Tokenizer as TZPostgreSQLTokenizer).SetStandardConformingStrings(True);
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1,

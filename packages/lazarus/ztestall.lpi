@@ -85,6 +85,11 @@
         <UseAnsiStrings Value="False"/>
       </SyntaxOptions>
     </Parsing>
+    <Linking>
+      <Debugging>
+        <UseHeaptrc Value="True"/>
+      </Debugging>
+    </Linking>
   </CompilerOptions>
   <Debugging>
     <Exceptions Count="12">

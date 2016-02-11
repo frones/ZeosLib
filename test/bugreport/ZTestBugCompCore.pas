@@ -1767,12 +1767,12 @@ begin
 end;
 
 const {Test Strings}
-  Str1 = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
-  Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
-  Str3 = 'ќдной из наиболее';
-  Str4 = 'тривиальных задач';
-  Str5 = 'решаемых многими';
-  Str6 = 'коллективами программистов';
+  Str1: ZWideString = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
+  Str2: ZWideString = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
+  Str3: ZWideString = 'ќдной из наиболее';
+  Str4: ZWideString = 'тривиальных задач';
+  Str5: ZWideString = 'решаемых многими';
+  Str6: ZWideString = 'коллективами программистов';
 
 
 procedure ZTestCompCoreBugReportMBCs.TestUnicodeBehavior;
@@ -1809,7 +1809,7 @@ begin
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
 
-        CheckEquals(Str2+LineEnding, StrStream1, Connection.DbcConnection.GetConSettings, 'Param().LoadFromStream(StringStream, ftMemo)');
+        CheckEquals(Str2+ZWideString(LineEnding), StrStream1, Connection.DbcConnection.GetConSettings, 'Param().LoadFromStream(StringStream, ftMemo)');
         CheckEquals(Str3, FieldByName('P_NAME').AsString, Connection.DbcConnection.GetConSettings);
 
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
@@ -1838,7 +1838,7 @@ var
   Query: TZQuery;
   RowCounter: Integer;
   I: Integer;
-  procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: String);
+  procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: ZWideString);
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
     Query.ParamByName('s_char').AsString := GetDBTestString(s_char, Connection.DbcConnection.GetConSettings);;
@@ -1871,7 +1871,7 @@ begin
     Query.Open;
     CheckEquals(True, Query.RecordCount = 5);
     if StartsWith(Connection.Protocol, 'ASA') then //ASA has a limitation of 125chars for like statements
-      Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings , False, 125)+'%'''
+      Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings , 125)+'%'''
     else
       if StartsWith(Connection.Protocol, 'oracle') or //oracle asumes one char = one byte except for varchar2
         ((StartsWith(Connection.Protocol, 'firebird') or StartsWith(Connection.Protocol, 'interbase'))
@@ -1880,16 +1880,16 @@ begin
       else
         Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
-    CheckEquals(True, Query.RecordCount = 1);
+    Check(Query.RecordCount = 1, 'RowCount of Str2');
     Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str3+'%''', Connection.DbcConnection.GetConSettings);
     Query.Open;
-    CheckEquals(True, Query.RecordCount = 2);
+    Check(Query.RecordCount = 2, 'RowCount of Str3');
     Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str4+'%''', Connection.DbcConnection.GetConSettings);
     Query.Open;
-    CheckEquals(True, Query.RecordCount = 2);
+    Check(Query.RecordCount = 2, 'RowCount of Str4');
     Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str5+'%''', Connection.DbcConnection.GetConSettings);
     Query.Open;
-    CheckEquals(True, Query.RecordCount = 2);
+    Check(Query.RecordCount = 2, 'RowCount of Str5');
     Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str6+'%''', Connection.DbcConnection.GetConSettings);
     Query.Open;
   finally
