@@ -3,7 +3,10 @@ program ztestall;
 {$mode objfpc}{$H+}
 
 uses
-  heaptrc,custapp, sysutils,
+  {$IF FPC_FULLVERSION<30000} //use compiler option -gh instead
+  heaptrc,
+  {$IFEND}
+  custapp, sysutils,
   Interfaces, Forms, GuiTestRunner, LResources,
   Classes, consoletestrunner, fpcunit, fpcunitreport, testregistry,
   plaintestreport,latextestreport, xmltestreport,
@@ -206,7 +209,9 @@ begin
   begin
     if FileExists(CommandLineSwitches.memcheck_file) then
       DeleteFile(CommandLineSwitches.memcheck_file);
+    {$IF FPC_FULLVERSION<30000}
     SetHeapTraceOutput(CommandLineSwitches.memcheck_file);
+    {$IFEND}
   end;
   TestGroup := COMMON_GROUP;
 

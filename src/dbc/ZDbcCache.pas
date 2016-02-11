@@ -4704,8 +4704,8 @@ begin
     for i := 0 to FHighBytesCols do
       if SrcBuffer^.Columns[FColumnOffsets[FBytesCols[i]]] = bIsNotNull then
         InternalSetBytes(DestBuffer, FBytesCols[i] {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
-          PPointer(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1+SizeOf(Pointer)])^,
-          PWord(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1])^, True);
+          PPointer(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1])^,
+          PWord(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1+SizeOf(Pointer)])^, True);
   if FHasStrings then
     for i := 0 to FHighStringCols do
       if SrcBuffer^.Columns[FColumnOffsets[FStringCols[i]]] = bIsNotNull then

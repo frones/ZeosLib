@@ -329,21 +329,15 @@ begin
   if not Closed then
     Exit;
 
-  LogMessage := 'CONNECT TO "'+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Database)+
-    '" AS USER "'+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(User)+'"';
+  LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
   FHandle := GetPlainDriver.Init(FHandle);
-  {EgonHugeist: Arrange Client-CodePage/CharacterSet first
-    Now we know if UTFEncoding is neccessary or not}
-  sMy_client_Char_Set := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(GetPlainDriver.GetConnectionCharacterSet(FHandle));
-  ConSettings^.ClientCodePage := GetPlainDriver.ValidateCharEncoding(sMy_client_Char_Set);
-  ZEncoding.SetConvertFunctions(ConSettings);
-  {EgonHugeist:
-    Now we know in which kind of CharacterSet we have to send the next Connection-Properties
-    before we can change to the CharacterSet we want to have here..
-    This sets also all environment-variables to the Codepaged Object.
-    Now the compatibility-functions ZString/ZPlainString working like
-    Database-expected Data has to be!!. }
-
+  {EgonHugeist: get current characterset first }
+  sMy_client_Char_Set := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(GetPlainDriver.character_set_name(FHandle));
+  if (sMy_client_Char_Set <> '') {mysql 4down doesn't have this function } and
+     (sMy_client_Char_Set <> FClientCodePage) then begin
+    ConSettings^.ClientCodePage := GetPlainDriver.ValidateCharEncoding(sMy_client_Char_Set);
+    ZEncoding.SetConvertFunctions(ConSettings);
+  end;
   try
     { Sets a default port number. }
     if Port = 0 then
@@ -457,8 +451,7 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     if GetPlainDriver.RealConnect(FHandle, PAnsiChar(AnsiString(HostName)),
                               PAnsiChar(ConSettings^.User), PAnsiChar(AnsiString(Password)),
                               PAnsiChar(ConSettings^.Database), Port, nil,
-                              ClientFlag) = nil then
-    begin
+                              ClientFlag) = nil then begin
       CheckMySQLError(GetPlainDriver, FHandle, lcConnect, LogMessage, ConSettings);
       DriverManager.LogError(lcConnect, ConSettings^.Protocol, LogMessage,
         0, ConSettings.ConvFuncs.ZStringToRaw(SUnknownError,
@@ -470,32 +463,34 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     { Fix Bugs in certain Versions where real_conncet resets the Reconnect flag }
     if (Info.Values['MYSQL_OPT_RECONNECT'] <> '') and
       ((ClientVersion>=50013) and (ClientVersion<50019)) or
-      ((ClientVersion>=50100) and (ClientVersion<50106)) then
-    begin
+      ((ClientVersion>=50100) and (ClientVersion<50106)) then begin
       MyBoolOpt := Ord(StrToBoolEx(Info.Values['MYSQL_OPT_RECONNECT']));
       GetPlainDriver.SetOptions(FHandle, MYSQL_OPT_RECONNECT, @MyBoolOpt);
     end;
     if (FClientCodePage = '') and (sMy_client_Char_Set <> '') then
       FClientCodePage := sMy_client_Char_Set;
 
-    if (FClientCodePage <> sMy_client_Char_Set) then
-    begin
-      SQL := 'SET NAMES '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FClientCodePage);
-      GetPlainDriver.ExecRealQuery(FHandle, Pointer(SQL), Length(SQL));
-      CheckMySQLError(GetPlainDriver, FHandle, lcExecute, SQL, ConSettings);
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+    if (FClientCodePage <> sMy_client_Char_Set) then begin
+      //http://dev.mysql.com/doc/refman/5.7/en/mysql-set-character-set.html
+      //take care mysql_real_escape_string works like expected!
+      SQL := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FClientCodePage);
+      if GetPlainDriver.set_character_set(FHandle, Pointer(SQL)) <> 0 then begin //failed? might be possible the function does not exists
+        SQL := 'SET NAMES '+SQL;
+        GetPlainDriver.ExecRealQuery(FHandle, Pointer(SQL), Length(SQL));
+        CheckMySQLError(GetPlainDriver, FHandle, lcExecute, SQL, ConSettings);
+        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+      end;
+      CheckCharEncoding(FClientCodePage);
     end;
-    Self.CheckCharEncoding(FClientCodePage);
 
     FMaxLobSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values['MaxLobSize'], 0);
-    if FMaxLobSize <> 0 then
-    begin
+    if FMaxLobSize <> 0 then begin
       SQL := 'SET GLOBAL max_allowed_packet='+IntToRaw(FMaxLobSize);
       GetPlainDriver.ExecRealQuery(FHandle, Pointer(SQL), Length(SQL));
       CheckMySQLError(GetPlainDriver, FHandle, lcExecute, SQL, ConSettings);
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
-    end
-    else FMaxLobSize := MaxBlobSize;
+    end else
+      FMaxLobSize := MaxBlobSize;
 
     { Sets transaction isolation level. }
     OldLevel := TransactIsolationLevel;
@@ -506,18 +501,15 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     OldAutoCommit := AutoCommit;
     AutoCommit := True;
     SetAutoCommit(OldAutoCommit);
+    inherited Open;
   except
     GetPlainDriver.Close(FHandle);
     FHandle := nil;
     raise;
   end;
 
-  inherited Open;
-
-  if FClientCodePage = '' then //workaround for MySQL 4 down
-  begin
-    with CreateStatement.ExecuteQuery('show variables like "character_set_database"') do
-    begin
+  if FClientCodePage = '' then begin //workaround for MySQL 4 down
+    with CreateStatement.ExecuteQuery('show variables like "character_set_database"') do begin
       if Next then
         FClientCodePage := GetString(FirstDbcIndex+1);
       Close;

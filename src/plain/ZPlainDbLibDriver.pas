@@ -394,6 +394,7 @@ type
     FreeTDSAPI: TFreeTDSAPI;
   protected
     function Clone: IZPlainDriver; override; abstract;
+    procedure LoadCodePages; override;
   public
     constructor Create; override;
     destructor Destroy; override;
@@ -465,6 +466,7 @@ type
     constructor Create; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
+    function dbsetlversion({%H-}Login: PLOGINREC): RETCODE; override;
     function dbsetversion: RETCODE; override;
   end;
 
@@ -554,15 +556,15 @@ end;
 procedure AddmMSCodePages(PlainDriver: TZAbstractPlainDriver);
 begin
   { SingleByte }
-  PlainDriver.AddCodePage('WIN1250', 1, ceAnsi, zCP_WIN1250, '', 1, False); {Microsoft Windows Codepage 1250 (East European)}
-  PlainDriver.AddCodePage('WIN1251', 2, ceAnsi, zCP_WIN1251, '', 1, False); {Microsoft Windows Codepage 1251 (Cyrl)}
-  PlainDriver.AddCodePage('WIN1252', 3, ceAnsi, zCP_WIN1252, '', 1, False); {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
-  PlainDriver.AddCodePage('WIN1253', 4, ceAnsi, zCP_WIN1253, '', 1, False); {Microsoft Windows Codepage 1253 (Greek)}
-  PlainDriver.AddCodePage('WIN1254', 5, ceAnsi, zCP_WIN1254, '', 1, False); {Microsoft Windows Codepage 1254 (Turk)}
-  PlainDriver.AddCodePage('WIN1255', 6, ceAnsi, zCP_WIN1255, '', 1, False); {Microsoft Windows Codepage 1255 (Hebrew)}
-  PlainDriver.AddCodePage('WIN1256', 7, ceAnsi, cCP_WIN1256, '', 1, False); {Microsoft Windows Codepage 1256 (Arab)}
-  PlainDriver.AddCodePage('WIN1257', 8, ceAnsi, zCP_WIN1257, '', 1, False); {Microsoft Windows Codepage 1257 (BaltRim)}
-  PlainDriver.AddCodePage('WIN1258', 9, ceAnsi, zCP_WIN1258, '', 1, False); {Microsoft Windows Codepage 1258 (Viet), TCVN-5712}
+  PlainDriver.AddCodePage('WINDOWS-1250', 1, ceAnsi, zCP_WIN1250, '', 1, False); {Microsoft Windows Codepage 1250 (East European)}
+  PlainDriver.AddCodePage('WINDOWS-1251', 2, ceAnsi, zCP_WIN1251, '', 1, False); {Microsoft Windows Codepage 1251 (Cyrl)}
+  PlainDriver.AddCodePage('WINDOWS-1252', 3, ceAnsi, zCP_WIN1252, '', 1, False); {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
+  PlainDriver.AddCodePage('WINDOWS-1253', 4, ceAnsi, zCP_WIN1253, '', 1, False); {Microsoft Windows Codepage 1253 (Greek)}
+  PlainDriver.AddCodePage('WINDOWS-1254', 5, ceAnsi, zCP_WIN1254, '', 1, False); {Microsoft Windows Codepage 1254 (Turk)}
+  PlainDriver.AddCodePage('WINDOWS-1255', 6, ceAnsi, zCP_WIN1255, '', 1, False); {Microsoft Windows Codepage 1255 (Hebrew)}
+  PlainDriver.AddCodePage('WINDOWS-1256', 7, ceAnsi, cCP_WIN1256, '', 1, False); {Microsoft Windows Codepage 1256 (Arab)}
+  PlainDriver.AddCodePage('WINDOWS-1257', 8, ceAnsi, zCP_WIN1257, '', 1, False); {Microsoft Windows Codepage 1257 (BaltRim)}
+  PlainDriver.AddCodePage('WINDOWS-1258', 9, ceAnsi, zCP_WIN1258, '', 1, False); {Microsoft Windows Codepage 1258 (Viet), TCVN-5712}
 end;
 
 { Handle sql server error messages }
@@ -2152,8 +2154,8 @@ end;
 function TZFreeTDSBasePlainDriver.dbLogin: PLOGINREC;
 begin
   Result := inherited dbLogin;
-  if not Assigned(Result)  then
-    if not  (dbsetlversion(Result) = DBSUCCEED ) then
+  if Assigned(Result)  then
+    if not (dbsetlversion(Result) = DBSUCCEED ) then
     begin
       dbloginfree(Result);
       Result := nil;
@@ -2266,6 +2268,14 @@ begin
     Result := False;
 end;
 
+procedure TZFreeTDSBasePlainDriver.LoadCodePages;
+begin
+  AddCodePage('UTF-8', 1, ceUTF8, zCP_UTF8,  '', 4, True);
+  AddCodePage('ISO-8859-1', 2, ceAnsi, zCP_L1_ISO_8859_1, '', 1, True);
+  AddCodePage('ASCII', 3, ceAnsi, zCP_us_ascii, '', 1, True);
+  //AddCodePage('UTF-16', 4, ceUTF16, zCP_UTF16, '', 2, True);
+end;
+
 { TZFreeTDS42MsSQLPlainDriver }
 function TZFreeTDS42MsSQLPlainDriver.Clone: IZPlainDriver;
 begin
@@ -2275,6 +2285,7 @@ end;
 procedure TZFreeTDS42MsSQLPlainDriver.LoadCodePages;
 begin
   AddmMSCodePages(Self);
+  inherited;
 end;
 
 constructor TZFreeTDS42MsSQLPlainDriver.Create;
@@ -2320,8 +2331,7 @@ end;
 
 procedure TZFreeTDS42SybasePlainDriver.LoadCodePages;
 begin
-  AddCodePage('Not implemented!', -1);
-   { TODO -oEgonHugeist : Must be completed!!!! }
+  inherited;
 end;
 
 constructor TZFreeTDS42SybasePlainDriver.Create;
@@ -2366,7 +2376,7 @@ end;
 
 procedure TZFreeTDS50PlainDriver.LoadCodePages;
 begin
-  AddSybaseCodePages(Self);
+  inherited;
 end;
 
 constructor TZFreeTDS50PlainDriver.Create;
@@ -2387,7 +2397,12 @@ end;
 
 function TZFreeTDS50PlainDriver.dbsetversion: RETCODE;
 begin
-  Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_46);
+  Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_100);
+end;
+
+function TZFreeTDS50PlainDriver.dbsetlversion(Login: PLOGINREC): RETCODE;
+begin
+  Result := FreeTDSAPI.dbsetlversion(Login, DBVERSION_100);
 end;
 
 { TZFreeTDS70PlainDriver }

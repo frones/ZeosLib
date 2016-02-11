@@ -321,6 +321,7 @@ begin
   SetCharacterState('`', '`', QuoteState);
 
   SetCharacterState('/', '/', CommentState);
+  SetCharacterState('-', '-', CommentState);
 end;
 
 end.
