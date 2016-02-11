@@ -260,8 +260,12 @@ AssignGeneric:  {this is the old way we did determine the ColumnInformations}
         ColumnInfo.Scale := 0;
         ColumnInfo.Signed := not (DBLibColTypeCache[I-1] = tdsInt1);
       end;
-    if (ColumnInfo.ColumnType in [stString, stUnicodeString]) and (FUserEncoding = ceUTF8) then
-      ColumnInfo.ColumnCodePage := zCP_UTF8;
+    if (ColumnInfo.ColumnType in [stString, stUnicodeString]) then begin
+      if (ConSettings.ClientCodepage^.IsStringFieldCPConsistent) then
+        ColumnInfo.ColumnCodePage := ConSettings^.ClientCodePage^.CP
+      else if (FUserEncoding = ceUTF8) then
+        ColumnInfo.ColumnCodePage := zCP_UTF8;
+    end;
     ColumnsInfo.Add(ColumnInfo);
   end;
 

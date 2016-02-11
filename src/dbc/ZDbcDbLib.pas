@@ -349,8 +349,10 @@ begin
 
       if FFreeTDS then begin
         S := Info.Values['codepage'];
-        if S <> '' then
-          GetPlainDriver.dbSetLCharSet(LoginRec, Pointer({$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S)))
+        if S <> '' then begin
+          GetPlainDriver.dbSetLCharSet(LoginRec, Pointer({$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S)));
+          CheckCharEncoding(s);
+        end;
       end;
     end;
 
@@ -447,7 +449,7 @@ begin
 
   inherited Open;
 
-  if FProvider = dpMsSQL then
+  if (FProvider = dpMsSQL) and (not FreeTDS) then
   begin
   {note: this is a hack from a user-request of synopse project!
     Purpose is to notify Zeos all Character columns are
