@@ -168,7 +168,7 @@ begin
         Result := stUnicodeStream
       else
         Result := stAsciiStream;
-    tdsUnique: //EH: need to be checket(have no tascase for this type) -> unique identifier?
+    tdsUnique:
       Result := stGUID;
     tdsBinary, tdsVarBinary, tdsBigBinary, tdsBigVarBinary:
       Result := stBytes;
