@@ -169,10 +169,7 @@ begin
       else
         Result := stAsciiStream;
     tdsUnique: //EH: need to be checket(have no tascase for this type) -> unique identifier?
-      if CtrlsCPType = cCP_UTF16 then
-        Result := stUnicodeString
-      else
-        Result := stString;
+      Result := stGUID;
     tdsBinary, tdsVarBinary, tdsBigBinary, tdsBigVarBinary:
       Result := stBytes;
     tdsIntN:
