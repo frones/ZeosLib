@@ -62,10 +62,10 @@ const
   NTWDBLIB_DLL_LOCATION ='ntwdblib.dll';
   LIBSYBDB_WINDOWS_DLL_LOCATION = 'libsybdb.dll';
   LIBSYBDB_LINUX_DLL_LOCATION = 'libsybdb.so';
-  FREETDS_MSSQL_WINDOWS_DLL_LOCATION = 'msdblibr.dll';
+  FREETDS_MSSQL_WINDOWS_DLL_LOCATION = 'sybdb.dll';
   FREETDS_LINUX_DLL_LOCATION = 'dblib.so';
   FREETDS_OSX_DLL_LOCATION = 'dblib.dylib';
-  FREETDS_SYBASE_WINDOWS_DLL_LOCATION = 'sybdblibd.dll';
+  FREETDS_SYBASE_WINDOWS_DLL_LOCATION = 'sybdb.dll';
 type
   {** Represents a generic interface to DBLIB native API. }
   IZDBLibPlainDriver = interface (IZPlainDriver)
