@@ -545,7 +545,9 @@ Var
       end
     else // if test is TTestCase then
       begin
-      if comparetext(test.TestName, ATestName) = 0 then
+        S := test.TestName;
+        c := ATestName;
+      if comparetext(s, C) = 0 then
         Result.Add(test);
       end;
   end;

@@ -1881,16 +1881,16 @@ begin
         Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
     Check(Query.RecordCount = 1, 'RowCount of Str2');
-    Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str3+'%''', Connection.DbcConnection.GetConSettings);
+    Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str3, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
     Check(Query.RecordCount = 2, 'RowCount of Str3');
-    Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str4+'%''', Connection.DbcConnection.GetConSettings);
+    Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str4, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
     Check(Query.RecordCount = 2, 'RowCount of Str4');
-    Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str5+'%''', Connection.DbcConnection.GetConSettings);
+    Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str5, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
     Check(Query.RecordCount = 2, 'RowCount of Str5');
-    Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str6+'%''', Connection.DbcConnection.GetConSettings);
+    Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str6, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
   finally
     for i := TestRowID to TestRowID+RowCounter do

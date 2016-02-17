@@ -408,7 +408,7 @@ function UTF8ToString(const s: RawByteString): ZWideString;
 function Hash(const S : RawByteString) : LongWord; overload;
 function Hash(const Key : ZWideString) : Cardinal; overload;
 
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: {$IFDEF UNICODE}AnsiString{$ELSE}String{$ENDIF}); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 procedure ZSetString(Src: PAnsiChar; const Len: LengthInt; var Dest: ZWideString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$IFDEF WITH_RAWBYTESTRING}
@@ -712,7 +712,7 @@ end;
 {$UNDEF ZUTF8ToString}
 {$ENDIF}
 
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: {$IFDEF UNICODE}AnsiString{$ELSE}String{$ENDIF});
 begin
   if ( Len = 0 ) then
     Dest := ''
@@ -800,6 +800,7 @@ begin
 end;
 
 {$IFDEF WITH_RAWBYTESTRING}
+
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString);
 begin
   if ( Len = 0 ) then

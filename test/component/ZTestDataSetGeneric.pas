@@ -55,9 +55,6 @@ interface
 {$I ZComponent.inc}
 
 uses
-{$IFNDEF VER130BELOW}
-  Types,
-{$ENDIF}
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
   ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility;
 
@@ -110,6 +107,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
+  {$IFDEF UNICODE}ZEncoding,{$ENDIF}
   DateUtils, ZSysUtils, ZTestConsts, ZAbstractRODataset, ZTestCase,
   ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -1919,13 +1917,27 @@ end;
 { TZGenericTestDataSetMBCs }
 
 procedure TZGenericTestDataSetMBCs.TestVeryLargeBlobs;
-const teststring = '123456ייאא';
+const teststring: ZWideString = '123456ייאא';
 var
   Query: TZQuery;
   BinStream,BinStream1,TextStreamS: TMemoryStream;
   s:  RawByteString;
   TextLob, BinLob: String;
+  W: ZWideString;
   TempConnection: TZConnection;
+
+  function WideDupeString(const AText: ZWideString; ACount: Integer): ZWideString;
+  var i,l : integer;
+  begin
+    result:='';
+    if aCount>=0 then
+    begin
+      l:=length(atext);
+      SetLength(Result,aCount*l);
+      for i:=0 to ACount-1 do
+        move(atext[1],Result[l*i+1],l shl 1);
+    end;
+  end;
 begin
   TempConnection := nil;
   BinStream:=nil;
@@ -1978,12 +1990,13 @@ begin
       Params[2].DataType := ftBlob;
       Params[0].AsInteger := TEST_ROW_ID-1;
       TextStreamS := TMemoryStream.Create;
-      if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-        not ( (Connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and
-          Connection.DbcConnection.GetConSettings.AutoEncode )  then
-        s:={$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}DupeString(utf8encode(teststring),6000)
-      else
-        s:={$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}DupeString(teststring,6000);
+      W := WideDupeString(teststring,6000);
+      {$IFNDEF UNICODE}
+      s:= GetDBTestString(W, Connection.DbcConnection.GetConSettings);
+      {$ELSE}
+      S := ZUnicodeToRaw(W, Connection.DbcConnection.GetConSettings.CTRL_CP);
+      {$ENDIF}
+
       TextStreamS.Write(s[1],length(s));
       Params[1].LoadFromStream(TextStreamS, ftMemo);
       BinStream := TMemoryStream.Create;
@@ -2009,7 +2022,7 @@ begin
       BinStream1 := TMemoryStream.Create;
       (FieldByName(TextLob) as TBlobField).SaveToStream(BinStream1);
 
-      CheckEquals(DupeString(teststring, 6000), BinStream1, Connection.DbcConnection.GetConSettings, 'Text-Stream');
+      CheckEquals(W, BinStream1, Connection.DbcConnection.GetConSettings, 'Text-Stream');
       BinStream1.Position:=0;
       (FieldByName(BinLob) as TBlobField).SaveToStream(BinStream1);
       CheckEquals(BinStream.Size, BinStream1.Size, 'Binary Stream');

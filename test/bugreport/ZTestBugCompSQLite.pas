@@ -65,7 +65,7 @@ uses
     DBCtrls,
     {$ENDIF}
   {$ENDIF}
-  ZCompatibility;
+  ZCompatibility, ZEncoding;
 type
 
   {** Implements a bug report test case for SQLite components. }
@@ -175,33 +175,33 @@ begin
     Query.Open;
     CheckEquals(True, Query.RecordCount = 5);
 
-    Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+GetDBValidString(Str2, Connection.DbcConnection.GetConSettings)+'%', #39);
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToString(Str2, zCP_UTF8)+'%''';
     Query.Open;
     CheckEquals(True, Query.RecordCount = 1);
     CheckColumnValues(Str2);
 
-    Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+GetDBValidString(Str3, Connection.DbcConnection.GetConSettings)+'%', #39);
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToString(Str3, zCP_UTF8)+'%''';
     Query.Open;
     CheckEquals(True, Query.RecordCount = 2);
     CheckColumnValues(Str2);
     Query.Next;
     CheckColumnValues(Str3);
 
-    Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+GetDBValidString(Str4, Connection.DbcConnection.GetConSettings)+'%', #39);
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToString(Str4, zCP_UTF8)+'%''';
     Query.Open;
     CheckEquals(True, Query.RecordCount = 2);
     CheckColumnValues(Str2);
     Query.Next;
     CheckColumnValues(Str4);
 
-    Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+GetDBValidString(Str5, Connection.DbcConnection.GetConSettings)+'%', #39);
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToString(Str5, zCP_UTF8)+'%''';
     Query.Open;
     CheckEquals(True, Query.RecordCount = 2);
     CheckColumnValues(Str2);
     Query.Next;
     CheckColumnValues(Str5);
 
-    Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+GetDBValidString(Str6, Connection.DbcConnection.GetConSettings)+'%', #39);
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToString(Str6, zCP_UTF8)+'%''';
     Query.Open;
     CheckEquals(True, Query.RecordCount = 2);
     CheckColumnValues(Str2);

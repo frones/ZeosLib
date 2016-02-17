@@ -1002,7 +1002,7 @@ begin
       US := ZRawToUnicode(Ansi, ConSettings.ClientCodePage.CP)
       {$ENDIF}
     else
-      case ZDetectUTF8Encoding(Ansi) of
+      case ZDetectUTF8Encoding(Pointer(Ansi), Length(Ansi)) of
         etUSASCII: US := USASCII7ToUnicodeString(Ansi);
         etUTF8: US := PRawToUnicode(Pointer(Ansi), Length(Ansi), zCP_UTF8);
         etAnsi:
