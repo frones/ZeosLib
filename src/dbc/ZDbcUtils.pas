@@ -871,11 +871,11 @@ begin
           end
         else  //Database expects UTF8
           if ( ConSettings.CTRL_CP = zCP_UTF8) then
-            if ZDefaultSystemCodePage = zCP_UTF8 then
+            if ZOSCodePage = zCP_UTF8 then
               Result := AnsiToUTF8(String(PAnsiChar(Bytes))) //Can't localize the ansi CP
             else
             begin
-              US := PRawToUnicode(Pointer(Bytes), Size, ZDefaultSystemCodePage);
+              US := PRawToUnicode(Pointer(Bytes), Size, ZOSCodePage);
               Result := ZUnicodeToRaw(US, ConSettings.ClientCodePage.CP);
             end
           else

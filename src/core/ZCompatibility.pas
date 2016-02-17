@@ -461,7 +461,7 @@ const
   PEmptyAnsiString: PAnsiChar = '';
 
 var
-  ZDefaultSystemCodePage: Word;
+  ZOSCodePage: Word;
 
 implementation
 
@@ -470,7 +470,7 @@ begin
   if Assigned(Info) and Assigned(FConSettings) then
   begin
     {$IFDEF UNICODE}
-    ConSettings.CTRL_CP := ZDefaultSystemCodePage;
+    ConSettings.CTRL_CP := ZOSCodePage;
     if Info.values['controls_cp'] = 'GET_ACP' then
       ConSettings.CPType := cGET_ACP
     else
@@ -485,7 +485,7 @@ begin
     if Info.values['controls_cp'] = 'GET_ACP' then
     begin
       ConSettings.CPType := cGET_ACP;
-      ConSettings.CTRL_CP := ZDefaultSystemCodePage;
+      ConSettings.CTRL_CP := ZOSCodePage;
     end
     else
       if Info.values['controls_cp'] = 'CP_UTF8' then
@@ -498,7 +498,7 @@ begin
         begin
           {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING)}
           ConSettings.CPType := {$IFDEF WITH_WIDEFIELDS}cCP_UTF16{$ELSE}cCP_UTF8{$ENDIF};
-          ConSettings.CTRL_CP := ZDefaultSystemCodePage;
+          ConSettings.CTRL_CP := ZOSCodePage;
           ConSettings.AutoEncode := True;
           {$ELSE}
           if ConSettings.ClientCodePage.Encoding = ceUTF8 then
@@ -843,7 +843,7 @@ end;
 
 initialization
   case ConSettingsDummy.CPType of
-    cCP_UTF16, cGET_ACP: ConSettingsDummy.CTRL_CP := ZDefaultSystemCodePage;
+    cCP_UTF16, cGET_ACP: ConSettingsDummy.CTRL_CP := ZOSCodePage;
     cCP_UTF8: ConSettingsDummy.CTRL_CP := 65001;
   end;
 end.

@@ -460,7 +460,7 @@ begin
     Else all results are invalid!!!!! Just to invoke later questions, reports!}
     FDisposeCodePage := True;
     ConSettings^.ClientCodePage := New(PZCodePage);
-    ConSettings^.ClientCodePage^.CP := ZDefaultSystemCodePage; //need a tempory CP for the SQL preparation
+    ConSettings^.ClientCodePage^.CP := ZOSCodePage; //need a tempory CP for the SQL preparation
     ConSettings^.ClientCodePage^.Encoding := ceAnsi;
     ConSettings^.ClientCodePage^.Name := DetermineMSServerCollation;
     FServerAnsiCodePage := DetermineMSServerCodePage(ConSettings^.ClientCodePage^.Name);

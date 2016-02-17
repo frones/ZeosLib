@@ -1011,31 +1011,31 @@ begin
     if ConSettings.CTRL_CP = zCP_UTF8 then
       Result := ZUnicodeToString(Value, zCP_UTF8)
     else
-      Result := ZUnicodeToString(Value, ZDefaultSystemCodePage)
+      Result := ZUnicodeToString(Value, ZOSCodePage)
   else
     case ConSettings.ClientCodePage.Encoding of
-      ceDefault: Result := ZUnicodeToRaw(Value, ZDefaultSystemCodePage); //Souldn't be possible
+      ceDefault: Result := ZUnicodeToRaw(Value, ZOSCodePage); //Souldn't be possible
       ceAnsi:
         if ConSettings.AutoEncode then //Revert the expected value to test
           Result := ZUnicodeToString(Value, zCP_UTF8)
         else  //Return the expected value to test
-          Result := ZUnicodeToString(Value, ZDefaultSystemCodePage);
+          Result := ZUnicodeToString(Value, ZOSCodePage);
       ceUTF8: //, ceUTF32
         if ConSettings.AutoEncode then //Revert the expected value to test
-          Result := ZUnicodeToString(Value, ZDefaultSystemCodePage)
+          Result := ZUnicodeToString(Value, ZOSCodePage)
         else
           Result := ZUnicodeToString(Value, zCP_UTF8);
       ceUTF16:
         if ConSettings.AutoEncode then //Revert the expected value to test
           if ConSettings.CPType = cCP_UTF8 then
-            Result := ZUnicodeToString(Value, ZDefaultSystemCodePage)
+            Result := ZUnicodeToString(Value, ZOSCodePage)
           else
             Result := ZUnicodeToString(Value, zCP_UTF8)
         else
           if ConSettings.CPType = cCP_UTF8 then
             Result := ZUnicodeToString(Value, zCP_UTF8)
           else
-            Result := ZUnicodeToString(Value, ZDefaultSystemCodePage);
+            Result := ZUnicodeToString(Value, ZOSCodePage);
     end;
   {$ELSE}
   Result := Value;
@@ -1136,10 +1136,10 @@ begin
         if ConSettings.AutoEncode then //Revert the expected value to test
           Ansi := UTF8Encode(Value)
         else
-          Ansi := ZUnicodeToRaw(Value, ZDefaultSystemCodePage);
+          Ansi := ZUnicodeToRaw(Value, ZOSCodePage);
       ceUTF8:
         if ConSettings.AutoEncode then //Revert the expected value to test
-          Ansi := ZUnicodeToRaw(Value, ZDefaultSystemCodePage)
+          Ansi := ZUnicodeToRaw(Value, ZOSCodePage)
         else
           Ansi := UTF8Encode(Value);
       else
@@ -1148,10 +1148,10 @@ begin
             if ConSettings.AutoEncode then //Revert the expected value to test
               Ansi := UTF8Encode(Value)
             else
-              Ansi := ZUnicodeToRaw(Value, ZDefaultSystemCodePage);
+              Ansi := ZUnicodeToRaw(Value, ZOSCodePage);
           else
             if ConSettings.AutoEncode then //Revert the expected value to test
-              Ansi := ZUnicodeToRaw(Value, ZDefaultSystemCodePage)
+              Ansi := ZUnicodeToRaw(Value, ZOSCodePage)
             else
               Ansi := UTF8Encode(Value);
         end;

@@ -488,7 +488,7 @@ begin
       adCurrency:         Result := {$IFDEF UNICODE}AnsiString{$ENDIF}(CurrToStr(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency));
       adBoolean:          Result := BoolToRawEx(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean);
       adGUID:
-        Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, 38, ZDefaultSystemCodePage);
+        Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, 38, ZOSCodePage);
       adChar:
         begin
           Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
@@ -500,18 +500,18 @@ begin
 ProcessFixedChar:
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
-          Result := PUnicodeToRaw(P, Len, ZDefaultSystemCodePage);
+          Result := PUnicodeToRaw(P, Len, ZOSCodePage);
         end;
       adVarChar,
       adLongVarChar: {varying char fields}
         Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize, ZDefaultSystemCodePage);
+          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize, ZOSCodePage);
       adBSTR,
       adVarWChar,
       adLongVarWChar: {varying char fields}
         Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
           FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1, //shr 1 = div 2 but faster, OleDb returns size in Bytes!
-          ZDefaultSystemCodePage);
+          ZOSCodePage);
       else
         try
           Result := AnsiString(FAdoRecordSet.Fields.Item[ColumnIndex].Value);

@@ -1028,27 +1028,27 @@ begin
           if not  (Connection.DbcConnection.AutoEncodeStrings) then
             CheckEquals(S1, iqry.Fields[0].AsString)
           else
-            if ZDefaultSystemCodePage = zCP_WIN1252 then
+            if ZOSCodePage = zCP_WIN1252 then
               CheckEquals(UTF8ToAnsi(S1), iqry.Fields[0].AsString);
           iqry.Next;
           if not  (Connection.DbcConnection.AutoEncodeStrings) then
             CheckEquals(S2, iqry.Fields[0].AsString)
           else
-            if ZDefaultSystemCodePage = zCP_WIN1251 then
+            if ZOSCodePage = zCP_WIN1251 then
               CheckEquals(UTF8ToAnsi(S2), iqry.Fields[0].AsString); //i can't display the russian chars right
           iqry.Next;
           CheckEquals(String({$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S3)), iqry.Fields[0].AsString);
         end
         else
         begin //CPType = cCP_UTF8
-          if ( ZDefaultSystemCodePage = zCP_WIN1252 ) and
+          if ( ZOSCodePage = zCP_WIN1252 ) and
              ( Connection.DbcConnection.AutoEncodeStrings ) then
             CheckEquals(S1, iqry.Fields[0].AsString)
           else
             if not (Connection.DbcConnection.AutoEncodeStrings) then
               CheckEquals(S1, iqry.Fields[0].AsString);
           iqry.Next;
-          if ( ZDefaultSystemCodePage = zCP_WIN1251 ) and
+          if ( ZOSCodePage = zCP_WIN1251 ) and
               ( Connection.DbcConnection.AutoEncodeStrings ) then
             CheckEquals(S2, iqry.Fields[0].AsString)
           else

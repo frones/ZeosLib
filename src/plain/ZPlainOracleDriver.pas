@@ -740,8 +740,6 @@ type
     OCIDescribeAny: function(svchp: POCISvcCtx; errhp: POCIError;
       objptr: Pointer; objnm_len: ub4; objptr_typ: ub1; info_level: ub1;
       objtyp: ub1; dschp: POCIDescribe): sword; cdecl;
-  {private
-    OracleAPI: OracleOCI_API;}
   protected
     procedure LoadApi; override;
     function Clone: IZPlainDriver; override;

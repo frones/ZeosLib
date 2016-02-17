@@ -499,7 +499,7 @@ uses
 constructor {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.Create;
 begin
   inherited;
-  FSystemCodePage := ZDefaultSystemCodePage;
+  FSystemCodePage := ZOSCodePage;
   if ZCompatibleCodePages(zCP_UTF8, FSystemCodePage) then
   begin
     ZAnsiToUTF8 := @ZMoveAnsiToUTF8;
@@ -699,11 +699,11 @@ begin
             {$IFDEF UNICODE}
             SetString(Result.VString, PChar(Value.VCharRec.P), Value.VCharRec.Len)
             {$ELSE}
-            Result.VString := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, ZDefaultSystemCodePage)
+            Result.VString := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, ZOSCodePage)
             {$ENDIF}
           else
             {$IFNDEF UNICODE}
-            if ZCompatibleCodePages(ZDefaultSystemCodePage, Value.VCharRec.CP) then
+            if ZCompatibleCodePages(ZOSCodePage, Value.VCharRec.CP) then
               SetString(Result.VString, PChar(Value.VCharRec.P), Value.VCharRec.Len)
             else
             {$ENDIF}
@@ -732,7 +732,7 @@ begin
             Result.VAnsiString := AnsiString(UniTemp);
           end
           else
-            if ZCompatibleCodePages(ZDefaultSystemCodePage, Value.VCharRec.CP) then
+            if ZCompatibleCodePages(ZOSCodePage, Value.VCharRec.CP) then
               SetString(Result.VAnsiString, PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len)
             else
               Result.VAnsiString := AnsiString(PRawToUnicode(Value.VCharRec.P,
@@ -850,7 +850,7 @@ begin
           begin
             Result.VString := Value.VString;
 VStringToCharRec:
-            Result.VCharRec.CP := {$IFDEF UNICODE}zCP_UTF16{$ELSE}ZDefaultSystemCodePage{$ENDIF};
+            Result.VCharRec.CP := {$IFDEF UNICODE}zCP_UTF16{$ELSE}ZOSCodePage{$ENDIF};
             if Pointer(Result.VString) = nil then
             begin
               Result.VCharRec.Len := 0;
@@ -865,7 +865,7 @@ VStringToCharRec:
         vtAnsiString:
           begin
             Result.VAnsiString := Value.VAnsiString;
-            Result.VCharRec.CP := ZDefaultSystemCodePage;
+            Result.VCharRec.CP := ZOSCodePage;
             if Pointer(Result.VAnsiString) = nil then
             begin
               Result.VCharRec.Len := 0;
@@ -980,7 +980,7 @@ DoWideCompare:
         Result := WideCompareStr(PWideChar(Value1.VCharRec.P), PWideChar(GetAsUnicodeString(Value2)))
         {$ENDIF}
       else
-        if ZCompatibleCodePages(Value1.VCharRec.CP, ZDefaultSystemCodePage) then
+        if ZCompatibleCodePages(Value1.VCharRec.CP, ZOSCodePage) then
           Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrComp(PAnsiChar(Value1.VCharRec.P), PAnsiChar(Pointer(GetAsAnsiString(Value2))))
         else
           goto DoWideCompare;
@@ -1861,11 +1861,11 @@ begin
             {$IFDEF UNICODE}
             SetString(Result.VString, PChar(Value.VCharRec.P), Value.VCharRec.Len)
             {$ELSE}
-            Result.VString := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, ZDefaultSystemCodePage)
+            Result.VString := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, ZOSCodePage)
             {$ENDIF}
           else
           {$IFNDEF UNICODE}
-          if ZCompatibleCodePages(ZDefaultSystemCodePage, Value.VCharRec.CP) then
+          if ZCompatibleCodePages(ZOSCodePage, Value.VCharRec.CP) then
             SetString(Result.VString, PChar(Value.VCharRec.P), Value.VCharRec.Len)
           else
           {$ENDIF}
@@ -1898,19 +1898,16 @@ begin
         vtUTF8String:
           Result.VAnsiString := ZUTF8ToAnsi(Value.VUTF8String);
         vtUnicodeString:
-          Result.VAnsiString := AnsiString(Value.VUnicodeString);
+          Result.VAnsiString := ZUnicodeToRaw(Value.VUnicodeString, ZOSCodePage);
         vtCharRec:
           if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
-          begin
-            SetString(UniTemp, PWideChar(Value.VCharRec.P), Value.VCharRec.Len);
-            Result.VAnsiString := AnsiString(UniTemp);
-          end
+            Result.VAnsiString := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, ZOSCodePage)
           else
-            if ZCompatibleCodePages(ZDefaultSystemCodePage, Value.VCharRec.CP) then
+            if ZCompatibleCodePages(ZOSCodePage, Value.VCharRec.CP) then
               SetString(Result.VAnsiString, PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len)
             else
-              Result.VAnsiString := AnsiString(PRawToUnicode(Value.
-                VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP));
+              Result.VAnsiString := ZUnicodeToRaw(PRawToUnicode(Value.
+                VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP), ZOSCodePage);
         vtDateTime:
           Result.VAnsiString := {$IFDEF UNICODE}AnsiString{$ENDIF}(DateTimeToAnsiSQLDate(Value.VDateTime));
         else
@@ -2000,7 +1997,7 @@ begin
         vtString:
           Result.VUnicodeString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(Value.VString);
         vtAnsiString:
-          Result.VUnicodeString := ZWideString(Value.VAnsiString);
+          Result.VUnicodeString := ZRawToUnicode(Value.VAnsiString, ZOSCodePage);
         vtUTF8String:
           Result.VUnicodeString := {$IFDEF WITH_RAWBYTESTRING}ZWideString{$ELSE}UTF8Decode{$ENDIF}(Value.VUTF8String);
         vtUnicodeString:
@@ -2091,7 +2088,7 @@ begin
           begin
             Result.VString := Value.VString;
 AsVCharRecFromVString:
-            Result.VCharRec.CP := {$IFDEF UNICODE}zCP_UTF16{$ELSE}ZDefaultSystemCodePage{$ENDIF};
+            Result.VCharRec.CP := {$IFDEF UNICODE}zCP_UTF16{$ELSE}ZOSCodePage{$ENDIF};
             if Pointer(Result.VString) = nil then
             begin
               Result.VCharRec.Len := 0;
@@ -2106,7 +2103,7 @@ AsVCharRecFromVString:
         vtAnsiString:
           begin
             Result.VAnsiString := Value.VAnsiString;
-            Result.VCharRec.CP := ZDefaultSystemCodePage;
+            Result.VCharRec.CP := ZOSCodePage;
             if Pointer(Result.VAnsiString) = nil then
             begin
               Result.VCharRec.Len := 0;
@@ -2325,11 +2322,11 @@ DateTimeFromUnicode:
             {$IFDEF UNICODE}
             SetString(Result.VString, PChar(Value.VCharRec.P), Value.VCharRec.Len)
             {$ELSE}
-            Result.VString := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, ZDefaultSystemCodePage)
+            Result.VString := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, ZOSCodePage)
             {$ENDIF}
           else
             {$IFNDEF UNICODE}
-            if ZCompatibleCodePages(ZDefaultSystemCodePage, Value.VCharRec.CP) then
+            if ZCompatibleCodePages(ZOSCodePage, Value.VCharRec.CP) then
               SetString(Result.VString, PChar(Value.VCharRec.P), Value.VCharRec.Len)
             else
             {$ENDIF}
@@ -2364,7 +2361,7 @@ DateTimeFromUnicode:
         vtRawByteString:
           Result.VAnsiString := FConSettings^.ConvFuncs.ZRawToAnsi(Value.VRawByteString, FConSettings^.ClientCodePage^.CP);
         vtUnicodeString:
-          Result.VAnsiString := ZUnicodeToRaw(Value.VUnicodeString, ZDefaultSystemCodePage);
+          Result.VAnsiString := ZUnicodeToRaw(Value.VUnicodeString, ZOSCodePage);
         vtCharRec:
           if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
           begin
@@ -2372,7 +2369,7 @@ DateTimeFromUnicode:
             Result.VAnsiString := AnsiString(UniTemp);
           end
           else
-            if ZCompatibleCodePages(ZDefaultSystemCodePage, Value.VCharRec.CP) then
+            if ZCompatibleCodePages(ZOSCodePage, Value.VCharRec.CP) then
               SetString(Result.VAnsiString, PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len)
             else
               Result.VAnsiString := AnsiString(PRawToUnicode(Value.VCharRec.P,
@@ -2487,7 +2484,7 @@ DateTimeFromUnicode:
         vtString:
           Result.VUnicodeString := FConSettings^.ConvFuncs.ZStringToUnicode(Value.VString, FConSettings^.CTRL_CP);
         vtAnsiString:
-          Result.VUnicodeString := ZRawToUnicode(Value.VAnsiString, ZDefaultSystemCodePage);
+          Result.VUnicodeString := ZRawToUnicode(Value.VAnsiString, ZOSCodePage);
         vtUTF8String:
           Result.VUnicodeString := PRawToUnicode(Pointer(Value.VUTF8String), Length(Value.VUTF8String), zCP_UTF8);
         vtRawByteString:
@@ -2544,7 +2541,7 @@ DateTimeFromUnicode:
         vtString:
           begin
             Result.VString := Value.VString;
-            Result.VCharRec.CP := {$IFDEF UNICODE}zCP_UTF16{$ELSE}ZDefaultSystemCodePage{$ENDIF};
+            Result.VCharRec.CP := {$IFDEF UNICODE}zCP_UTF16{$ELSE}ZOSCodePage{$ENDIF};
             if Pointer(Result.VString) = nil then
             begin
               Result.VCharRec.Len := 0;
@@ -2559,7 +2556,7 @@ DateTimeFromUnicode:
         vtAnsiString:
           begin
             Result.VAnsiString := Value.VAnsiString;
-            Result.VCharRec.CP := ZDefaultSystemCodePage;
+            Result.VCharRec.CP := ZOSCodePage;
             if Pointer(Result.VAnsiString) = nil then
             begin
               Result.VCharRec.Len := 0;
@@ -2629,7 +2626,7 @@ begin
     vtString:
       Result := ZConvertStringToRawWithAutoEncode(Value.VString, FConSettings^.CTRL_CP, RawCP);
     vtAnsiString:
-      if ZCompatibleCodePages(ZDefaultSystemCodePage, RawCP) then
+      if ZCompatibleCodePages(ZOSCodePage, RawCP) then
         Result := ZMoveAnsiToRaw(Value.VAnsiString, RawCP)
       else
         Result := ZConvertAnsiToRaw(Value.VAnsiString, RawCP);

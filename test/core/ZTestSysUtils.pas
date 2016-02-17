@@ -752,13 +752,13 @@ end;
 
 procedure TZTestSysUtilsCase.TestDateTimeToUnicodeSQLDate;
 begin
-  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, False),
+  CheckEquals(String(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, False)),
     FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31)));
-  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, True),
+  CheckEquals(String(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, True)),
     #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39);
-  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, False, '::'),
+  CheckEquals(String(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, False, '::')),
     FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31))+'::');
-  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, True, '::'),
+  CheckEquals(String(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, True, '::')),
     #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39'::');
 end;
 
@@ -869,14 +869,14 @@ var
                   goto A2U;
                 end
               else
-                if ZCompatibleCodePages(ZDefaultSystemCodePage,zCP_UTF8) then
+                if ZCompatibleCodePages(ZOSCodePage,zCP_UTF8) then
                 begin
                   ZSetString(P, Len, S{%H-});
                   Result := ZWideString(S); //random success, we don't know ANY proper CP here
                 end
                 else
                 begin
-                  CP := ZDefaultSystemCodePage; //still a random success here!
+                  CP := ZOSCodePage; //still a random success here!
                   goto A2U;
                 end;
             end;
