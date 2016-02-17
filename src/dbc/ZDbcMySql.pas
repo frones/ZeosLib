@@ -191,8 +191,11 @@ end;
 function TZMySQLDriver.Connect(const Url: TZURL): IZConnection;
 begin
   MySQLCriticalSection.Enter;
-  Result := TZMySQLConnection.Create(Url);
-  MySQLCriticalSection.Leave;
+  try
+    Result := TZMySQLConnection.Create(Url);
+  finally
+    MySQLCriticalSection.Leave;
+  end;
 end;
 {$WARNINGS ON}
 
