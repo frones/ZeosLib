@@ -58,7 +58,6 @@ interface
 {$I ZCore.inc}
 
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
-  {$IFDEF MSWINDOWS}Windows,{$ENDIF}
   ZTestCase, ZSysUtils, ZClasses, ZVariant, ZMatchPattern, ZCompatibility;
 
 type

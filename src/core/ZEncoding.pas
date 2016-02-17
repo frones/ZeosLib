@@ -2551,7 +2551,7 @@ begin
     Result := ''
   else
   begin
-    US := ZWideString(Src);
+    US := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, ZDefaultSystemCodePage);
     Result := ZUnicodeToRaw(US, RawCP);
   end;
 end;
@@ -2564,7 +2564,7 @@ begin
   else
   begin
     US := ZRawToUnicode(Src, RawCP);
-    Result := AnsiString(US); //use compiler convertation
+    Result := ZUnicodeToRaw(US, ZDefaultSystemCodePage); //use compiler convertation
   end;
 end;
 
@@ -2575,7 +2575,7 @@ begin
     Result := ''
   else
   begin
-    US := ZWideString(Src);
+    US := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, ZDefaultSystemCodePage);
     Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(US);
   end;
 end;
@@ -2588,7 +2588,7 @@ begin
   else
   begin
     US := {$IFDEF WITH_RAWBYTESTRING}ZWideString{$ELSE}UTF8Decode{$ENDIF}(Src);
-    Result := AnsiString(US);
+    Result := ZUnicodeToRaw(US, ZDefaultSystemCodePage);
   end;
 end;
 
@@ -2920,7 +2920,7 @@ begin
         begin
           Tmp := PRawToUnicode(Pointer(Src),
             {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, zCP_UTF8);
-          Result := AnsiString(Tmp);
+          Result := ZUnicodeToRaw(Tmp, StringCP);
         end;
     end;
     {$ENDIF}

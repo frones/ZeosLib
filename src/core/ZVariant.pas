@@ -2364,7 +2364,7 @@ DateTimeFromUnicode:
         vtRawByteString:
           Result.VAnsiString := FConSettings^.ConvFuncs.ZRawToAnsi(Value.VRawByteString, FConSettings^.ClientCodePage^.CP);
         vtUnicodeString:
-          Result.VAnsiString := AnsiString(Value.VUnicodeString);
+          Result.VAnsiString := ZUnicodeToRaw(Value.VUnicodeString, ZDefaultSystemCodePage);
         vtCharRec:
           if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
           begin
@@ -2487,7 +2487,7 @@ DateTimeFromUnicode:
         vtString:
           Result.VUnicodeString := FConSettings^.ConvFuncs.ZStringToUnicode(Value.VString, FConSettings^.CTRL_CP);
         vtAnsiString:
-          Result.VUnicodeString := ZWideString(Value.VAnsiString);
+          Result.VUnicodeString := ZRawToUnicode(Value.VAnsiString, ZDefaultSystemCodePage);
         vtUTF8String:
           Result.VUnicodeString := PRawToUnicode(Pointer(Value.VUTF8String), Length(Value.VUTF8String), zCP_UTF8);
         vtRawByteString:
