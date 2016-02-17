@@ -394,6 +394,7 @@ type
     FreeTDSAPI: TFreeTDSAPI;
   protected
     function Clone: IZPlainDriver; override; abstract;
+    procedure LoadCodePages; override;
   public
     constructor Create; override;
     destructor Destroy; override;
