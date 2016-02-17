@@ -143,11 +143,12 @@ type
   TZOracleParams = array of TZOracleParam;
 
 type
+  {$A-}
   TOraDate = record
     Cent, Year, Month, Day, Hour, Min, Sec: Byte;
   end;
   POraDate = ^TOraDate;
-
+  {$A+}
 {**
   Allocates memory for Oracle SQL Variables.
   @param Variables a pointer to array of variables.
