@@ -3257,7 +3257,9 @@ begin
               //most UTF8 DB's assume 4Byte / Char (surrogates included) such encoded characters may kill the heap of the FieldBuffer
               //users are warned: http://zeoslib.sourceforge.net/viewtopic.php?f=40&p=51427#p51427
               Size := GetPrecision(I) shl Ord((ConSettings^.ClientCodePage^.CharWidth > 2) and (doAlignMaxRequiredWideStringFieldSize in fOptions))
-          else if (ConSettings^.CPType = cCP_UTF8) or ((not ConSettings^.AutoEncode) and (ConSettings^.ClientCodePage^.Encoding = ceUTF8)) then
+          else if (ConSettings^.CPType = cCP_UTF8) or
+            ((not ConSettings^.AutoEncode) and (ConSettings^.ClientCodePage^.Encoding = ceUTF8)) or
+            ((ConSettings^.CPType = cGET_ACP) and (ZDefaultSystemCodePage = zCP_UTF8)) then
             Size := GetPrecision(I) shl 2
           else
             Size := GetPrecision(I)
