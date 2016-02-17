@@ -61,6 +61,7 @@ interface
 
 {$I ZPlain.inc}
 
+{$A-} //pack the records!
 uses
    ZCompatibility;
 
