@@ -470,7 +470,7 @@ begin
   if Assigned(Info) and Assigned(FConSettings) then
   begin
     {$IFDEF UNICODE}
-    ConSettings.CTRL_CP := ZOSCodePage;
+    ConSettings.CTRL_CP := DefaultSystemCodePage;
     if Info.values['controls_cp'] = 'GET_ACP' then
       ConSettings.CPType := cGET_ACP
     else
@@ -496,33 +496,31 @@ begin
       else
         if Info.values['controls_cp'] = 'CP_UTF16' then
         begin
-          {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING)}
-          ConSettings.CPType := {$IFDEF WITH_WIDEFIELDS}cCP_UTF16{$ELSE}cCP_UTF8{$ENDIF};
-          ConSettings.CTRL_CP := ZOSCodePage;
-          ConSettings.AutoEncode := True;
+          {$IFDEF WITH_WIDEFIELDS}
+          ConSettings.CPType := cCP_UTF16;
+            {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+            ConSettings.CTRL_CP := DefaultSystemCodePage;
+            {$ELSE}
+            ConSettings.CTRL_CP := ZOSCodePage;
+            {$ENDIF}
           {$ELSE}
-          if ConSettings.ClientCodePage.Encoding = ceUTF8 then
-          begin
-            ConSettings.CPType := {$IFDEF WITH_WIDEFIELDS}cCP_UTF16{$ELSE}cCP_UTF8{$ENDIF};
-            ConSettings.CTRL_CP := 65001;
-            ConSettings.AutoEncode := True;
-          end
-          else
-          begin
-            ConSettings.CPType := cCP_UTF8;
-            ConSettings.CTRL_CP := 65001;
-            ConSettings.AutoEncode := False;
-          end;
-          {$IFEND}
+          ConSettings.CPType := cCP_UTF8;
+          ConSettings.CTRL_CP := 65001;
+          {$ENDIF}
+          ConSettings.AutoEncode := True;
         end
         else // nothing was found set defaults
         begin
-          {$IFDEF FPC}
+          {$IFDEF LCL}
           ConSettings.CPType := cCP_UTF8;
           ConSettings.CTRL_CP := 65001;
           {$ELSE}
           ConSettings.CPType := cGET_ACP;
-          ConSettings.CTRL_CP := GetACP;
+            {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+            ConSettings.CTRL_CP := DefualtSystemCodePage;
+            {$ELSE}
+            ConSettings.CTRL_CP := ZOSCodePage;
+            {$ENDIF}
           {$ENDIF}
         end;
     {$ENDIF}

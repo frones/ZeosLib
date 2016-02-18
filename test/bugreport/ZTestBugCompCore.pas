@@ -1780,6 +1780,7 @@ var
   Query: TZQuery;
   StrStream1: TMemoryStream;
   SL: TStringList;
+  ConSettings: PZConSettings;
 begin
   StrStream1 := TMemoryStream.Create;
   SL := TStringList.Create;
@@ -1789,14 +1790,15 @@ begin
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
       ExecSQL;
+      ConSettings := Connection.DbcConnection.GetConSettings;
       //bugreport of mrLion
 
       SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
-      ParamByName('P_NAME').AsString := GetDBTestString(Str3, Connection.DbcConnection.GetConSettings);
+      ParamByName('P_NAME').AsString := GetDBTestString(Str3, ConSettings);
       CheckEquals(3, Query.Params.Count, 'Param.Count');
-      SL.Text := GetDBTestString(Str2, Connection.DbcConnection.GetConSettings);
+      SL.Text := GetDBTestString(Str2, ConSettings);
       SL.SaveToStream(StrStream1);
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftMemo);
 
@@ -1809,8 +1811,8 @@ begin
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
 
-        CheckEquals(Str2+ZWideString(LineEnding), StrStream1, Connection.DbcConnection.GetConSettings, 'Param().LoadFromStream(StringStream, ftMemo)');
-        CheckEquals(Str3, FieldByName('P_NAME').AsString, Connection.DbcConnection.GetConSettings);
+        CheckEquals(Str2+ZWideString(LineEnding), StrStream1, ConSettings, 'Param().LoadFromStream(StringStream, ftMemo)');
+        CheckEquals(Str3, FieldByName('P_NAME').AsString, ConSettings);
 
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
