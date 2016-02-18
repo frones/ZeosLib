@@ -117,7 +117,7 @@ begin
           Buffer := Blob.GetBuffer;
       end
     else
-    Buffer := Blob.GetBuffer;
+      Buffer := Blob.GetBuffer;
     ASize := Blob.Length;
     {$IFNDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
     if Mode = bmReadWrite then

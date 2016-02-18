@@ -1920,7 +1920,7 @@ procedure TZGenericTestDataSetMBCs.TestVeryLargeBlobs;
 const teststring: ZWideString = '123456ייאא';
 var
   Query: TZQuery;
-  BinStream,BinStream1,TextStreamS: TMemoryStream;
+  BinStreamE,BinStreamA,TextStream: TMemoryStream;
   s:  RawByteString;
   TextLob, BinLob: String;
   W: ZWideString;
@@ -1940,9 +1940,9 @@ var
   end;
 begin
   TempConnection := nil;
-  BinStream:=nil;
-  BinStream1:=nil;
-  TextStreamS:=nil;
+  BinStreamE:=nil;
+  BinStreamA:=nil;
+  TextStream:=nil;
 
   Query := CreateQuery;
   try
@@ -1989,7 +1989,7 @@ begin
       Params[1].DataType := ftMemo;
       Params[2].DataType := ftBlob;
       Params[0].AsInteger := TEST_ROW_ID-1;
-      TextStreamS := TMemoryStream.Create;
+      TextStream := TMemoryStream.Create;
       W := WideDupeString(teststring,6000);
       {$IFNDEF UNICODE}
       s:= GetDBTestString(W, Connection.DbcConnection.GetConSettings);
@@ -1997,17 +1997,20 @@ begin
       S := ZUnicodeToRaw(W, Connection.DbcConnection.GetConSettings.CTRL_CP);
       {$ENDIF}
 
-      TextStreamS.Write(s[1],length(s));
-      Params[1].LoadFromStream(TextStreamS, ftMemo);
-      BinStream := TMemoryStream.Create;
-      BinStream.LoadFromFile('../../../database/images/horse.jpg');
-      setlength(s,BinStream.Size);
-      BinStream.Read(s[1],length(s));
+      TextStream.Write(s[1],length(s));
+      s := '';
+      Params[1].LoadFromStream(TextStream, ftMemo);
+      FreeAndNil(TextStream);
+      BinStreamE := TMemoryStream.Create;
+      BinStreamE.LoadFromFile('../../../database/images/horse.jpg');
+      setlength(s,BinStreamE.Size);
+      BinStreamE.Read(s[1],length(s));
       s := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}DupeString(s, 10);
-      CheckEquals(BinStream.Size * 10, length(s), 'Length of DupeString result');
-      BinStream.Position := 0;
-      BinStream.Write(s[1],length(s));
-      Params[2].LoadFromStream(BinStream, ftBlob);
+      CheckEquals(BinStreamE.Size * 10, length(s), 'Length of DupeString result');
+      S := '';
+      BinStreamE.Position := 0;
+      BinStreamE.Write(s[1],length(s));
+      Params[2].LoadFromStream(BinStreamE, ftBlob);
       ExecSQL;
 
       CheckEquals(1, RowsAffected);
@@ -2019,23 +2022,23 @@ begin
       CheckEquals(1, RecordCount);
       CheckEquals(False, IsEmpty);
       CheckEquals(TEST_ROW_ID-1, FieldByName('b_id').AsInteger);
-      BinStream1 := TMemoryStream.Create;
-      (FieldByName(TextLob) as TBlobField).SaveToStream(BinStream1);
-
-      CheckEquals(W, BinStream1, Connection.DbcConnection.GetConSettings, 'Text-Stream');
-      BinStream1.Position:=0;
-      (FieldByName(BinLob) as TBlobField).SaveToStream(BinStream1);
-      CheckEquals(BinStream.Size, BinStream1.Size, 'Binary Stream');
-      CheckEquals(BinStream, BinStream1, 'Binary Stream');
+      TextStream := TMemoryStream.Create;
+      (FieldByName(TextLob) as TBlobField).SaveToStream(TextStream);
+      CheckEquals(W, TextStream, Connection.DbcConnection.GetConSettings, 'Text-Stream');
+      FreeAndNil(TextStream);
+      BinStreamA := TMemoryStream.Create;
+      BinStreamA.Position:=0;
+      (FieldByName(BinLob) as TBlobField).SaveToStream(BinStreamA);
+      CheckEquals(BinStreamE, BinStreamA, 'Binary Stream');
       Close;
     end;
   finally
-    if assigned(BinStream) then
-      BinStream.Free;
-    if assigned(BinStream1) then
-      BinStream1.Free;
-    if assigned(TextStreams) then
-      TextStreams.Free;
+    if assigned(BinStreamE) then
+      BinStreamE.Free;
+    if assigned(BinStreamA) then
+      BinStreamA.Free;
+    if assigned(TextStream) then
+      TextStream.Free;
     Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
