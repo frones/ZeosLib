@@ -73,6 +73,10 @@ type
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
     procedure Initialize(const Location: String = '');
     function Clone: IZPlainDriver;
+    procedure AddCodePage(const Name: String; const ID:  Integer;
+      Encoding: TZCharEncoding = ceAnsi; const CP: Word = $ffff;
+      const ZAlias: String = ''; CharWidth: Integer = 1;
+      const ConsistentCP: Boolean = True);
   end;
 
   {ADDED by fduenas 15-06-2006}
@@ -299,10 +303,10 @@ begin
             {$IFDEF WITH_LCONVENCODING} //Lazarus only
             if ( IsLConvEncodingCodePage(FCodePages[i].CP) ) or //Lazarus can convert to UTF8 then we convert to wide (double En/Decoding!)
                ( FCodePages[i].Encoding = ceUTF8 ) or //decode the strings to wide
-               ( FCodePages[i].CP = OSCodePage ) then //to allow a valid cast
+               ( FCodePages[i].CP = ZOSCodePage ) then //to allow a valid cast
               AddCurrent; //all these charset can be converted to wide
             {$ELSE}
-            if ( FCodePages[i].CP = OSCodePage ) or //to allow a valid cast
+            if ( FCodePages[i].CP = ZOSCodePage ) or //to allow a valid cast
                ( FCodePages[i].Encoding = ceUTF8 ) then //decode the strings to wide
               AddCurrent;
             {$ENDIF}
