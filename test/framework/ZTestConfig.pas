@@ -543,10 +543,14 @@ Var
         for I := 0 to TTestSuite(test).Tests.Count - 1 do
           CheckTestRegistry (TTest(TTestSuite(test).Tests[I]), c)
       end
-    else // if test is TTestCase then
-      begin
-      if comparetext(test.TestName, ATestName) = 0 then
-        Result.Add(test);
+    else if test is TTestCase then begin
+      S := TTestCase(test).TestName;
+      if comparetext(s, ATestName) = 0 then
+          Result.Add(test)
+      end else if test.ClassName = 'TTestItem' then begin
+         S := PString(PAnsiChar(Pointer(Test))+SizeOf(TObject))^; //Dirty hack to get our Suite logic running -> TTestItem is private declared
+         if comparetext(s, ATestName) = 0 then
+            Result.Add(test);
       end;
   end;
 begin
@@ -555,7 +559,7 @@ begin
   begin
     for J := 0 to High(CommandLineSwitches.suiteitems) do
       for I := 0 to GetTestregistry.Tests.count-1 do
-        CheckTestRegistry (GetTestregistry[I], CommandLineSwitches.suiteitems[J]);
+        CheckTestRegistry (GetTestregistry.Test[I], CommandLineSwitches.suiteitems[J]);
   end
   else
     Result.Assign(GetTestregistry.Tests);

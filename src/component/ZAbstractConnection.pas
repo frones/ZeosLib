@@ -1579,7 +1579,7 @@ procedure TZAbstractConnection.SetControlsCodePage(const Value: TZControlsCodePa
             FControlsCodePage := Value;
           end;
         cGET_ACP:
-          if ZDefaultSystemCodePage = zCP_UTF8 then
+          if ZOSCodePage = zCP_UTF8 then
           begin
             Properties.values['controls_cp'] := 'CP_UTF8';
             FControlsCodePage := cCP_UTF8;
@@ -1603,7 +1603,7 @@ procedure TZAbstractConnection.SetControlsCodePage(const Value: TZControlsCodePa
             FControlsCodePage := Value;
           end;
         cGET_ACP:
-          if ZDefaultSystemCodePage = zCP_UTF8 then
+          if ZOSCodePage = zCP_UTF8 then
           begin
             Properties.values['controls_cp'] := 'CP_UTF8';
             FControlsCodePage := cCP_UTF8;

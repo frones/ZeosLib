@@ -62,10 +62,10 @@ const
   NTWDBLIB_DLL_LOCATION ='ntwdblib.dll';
   LIBSYBDB_WINDOWS_DLL_LOCATION = 'libsybdb.dll';
   LIBSYBDB_LINUX_DLL_LOCATION = 'libsybdb.so';
-  FREETDS_MSSQL_WINDOWS_DLL_LOCATION = 'msdblibr.dll';
+  FREETDS_MSSQL_WINDOWS_DLL_LOCATION = 'sybdb.dll';
   FREETDS_LINUX_DLL_LOCATION = 'dblib.so';
   FREETDS_OSX_DLL_LOCATION = 'dblib.dylib';
-  FREETDS_SYBASE_WINDOWS_DLL_LOCATION = 'sybdblibd.dll';
+  FREETDS_SYBASE_WINDOWS_DLL_LOCATION = 'sybdb.dll';
 type
   {** Represents a generic interface to DBLIB native API. }
   IZDBLibPlainDriver = interface (IZPlainDriver)
@@ -530,7 +530,7 @@ begin
   PlainDriver.AddCodePage('EUC_KOREA', 23, ceAnsi, 1361); { Koreanisch KS C 5601-1992 8-Bit-Zeichensatz, Johab}
   PlainDriver.AddCodePage('EUC_TAIWAN', 24, ceAnsi, 964); {EUC-TW-Kodierung}
   PlainDriver.AddCodePage('UCA', 29, ceUTF16, zCP_UTF16, 'utf8'); {UCA	UCA-Standardkollatierung}
-  PlainDriver.AddCodePage('UTF8BIN', 30, ceUTF8, zCP_UTF8); {UTF-8, 8-Bit-Mehrbyte-Zeichensatz für Unicode, binäre Reihenfolge}
+  PlainDriver.AddCodePage('UTF8BIN', 30, ceUTF8, zCP_UTF8); {UTF-8 8-Bit-Mehrbyte-Zeichensatz für Unicode, binäre Reihenfolge}
 
   { SingleByte }
   PlainDriver.AddCodePage('1250LATIN2', 7, ceAnsi, zCP_WIN1250); {Windows Latin 2, Mittel- und Osteuropa}
@@ -691,8 +691,10 @@ begin
   while I < SQLMessages.Count do begin
     lMesageEntry := PDBLibMessage(SQLMessages[I]);
     if (dbProc = nil) or (lMesageEntry^.dbProc = dbProc) or (lMesageEntry^.dbProc = nil) then begin
-      if lMesageEntry^.Severity > EXINFO then
-        AddToErrorMsg(String(lMesageEntry^.MsgText));
+      if lMesageEntry^.Severity > EXINFO then begin
+        if lMesageEntry^.MsgNo <> 5701
+        then AddToErrorMsg(String(lMesageEntry^.MsgText));
+      end;
       Dispose(lMesageEntry);
       SQLMessages.Delete(I);
     end

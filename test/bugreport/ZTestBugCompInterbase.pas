@@ -957,6 +957,7 @@ const
   S3 = RawByteString('abc'); // can be written and reread
 var
   iqry: TZQuery;
+  ConSettings: PZConSettings;
   Procedure AddRecord(ID: Integer; WS: ZWideString);
   begin
     iqry.ParamByName('i1').AsInteger:= ID;
@@ -974,9 +975,10 @@ begin
   iqry:= CreateQuery;
   try
     Connection.Connect; // DbcConnection needed
-    if Connection.DbcConnection.GetEncoding = ceUTF8 then
+    ConSettings := Connection.DbcConnection.GetConSettings;
+    if ConSettings^.ClientCodePage^.Encoding = ceUTF8 then
     begin
-      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+      if ( ConSettings.CPType = cCP_UTF16 ) then
       begin
         iqry.SQL.Add('insert into string_values(s_id,s_varchar) values (:i1,:s1)');
         iqry.Prepare;
@@ -990,11 +992,11 @@ begin
         CheckEquals(3, iqry.RecordCount, 'RecordCount');
         {$IFDEF WITH_FTWIDESTRING}
           {$IFDEF UNICODE}
-          CheckEquals({$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S1), iqry.Fields[0].AsString);
+          CheckEquals(UTF8ToString(S1), iqry.Fields[0].AsString);
           iqry.Next;
-          CheckEquals({$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S2), iqry.Fields[0].AsString);
+          CheckEquals(UTF8ToString(S2), iqry.Fields[0].AsString);
           iqry.Next;
-          CheckEquals({$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S3), iqry.Fields[0].AsString);
+          CheckEquals(UTF8ToString(S3), iqry.Fields[0].AsString);
           {$ELSE}
           CheckEquals(UTF8Decode(S1), iqry.Fields[0].AsWideString);
           iqry.Next;
@@ -1009,13 +1011,13 @@ begin
         iqry.SQL.Add('insert into string_values(s_id,s_varchar) values (:i1,:s1)');
         iqry.Prepare;
         iqry.ParamByName('i1').AsInteger:= RowID;
-        iqry.ParamByName('s1').AsString:= GetDBTestString(S1, Connection.DbcConnection.GetConSettings, True);
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S1, ConSettings, True);
         iqry.ExecSQL;
         iqry.ParamByName('i1').AsInteger:= RowID+1;
-        iqry.ParamByName('s1').AsString:= GetDBTestString(S2, Connection.DbcConnection.GetConSettings, True);
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S2, ConSettings, True);
         iqry.ExecSQL;
         iqry.ParamByName('i1').AsInteger:= RowID+2;
-        iqry.ParamByName('s1').AsString:= GetDBTestString(S3, Connection.DbcConnection.GetConSettings, True);
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S3, ConSettings, True);
         iqry.ExecSQL;
         iqry.Unprepare;
 
@@ -1023,40 +1025,17 @@ begin
         iqry.open;
 
         CheckEquals(3, iqry.RecordCount, 'RecordCount');
-        if (Connection.DbcConnection.GetConSettings.CPType = cGET_ACP ) then
-        begin
-          if not  (Connection.DbcConnection.AutoEncodeStrings) then
-            CheckEquals(S1, iqry.Fields[0].AsString)
-          else
-            if ZDefaultSystemCodePage = zCP_WIN1252 then
-              CheckEquals(UTF8ToAnsi(S1), iqry.Fields[0].AsString);
-          iqry.Next;
-          if not  (Connection.DbcConnection.AutoEncodeStrings) then
-            CheckEquals(S2, iqry.Fields[0].AsString)
-          else
-            if ZDefaultSystemCodePage = zCP_WIN1251 then
-              CheckEquals(UTF8ToAnsi(S2), iqry.Fields[0].AsString); //i can't display the russian chars right
-          iqry.Next;
-          CheckEquals(String({$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S3)), iqry.Fields[0].AsString);
-        end
-        else
-        begin //CPType = cCP_UTF8
-          if ( ZDefaultSystemCodePage = zCP_WIN1252 ) and
-             ( Connection.DbcConnection.AutoEncodeStrings ) then
-            CheckEquals(S1, iqry.Fields[0].AsString)
-          else
-            if not (Connection.DbcConnection.AutoEncodeStrings) then
-              CheckEquals(S1, iqry.Fields[0].AsString);
-          iqry.Next;
-          if ( ZDefaultSystemCodePage = zCP_WIN1251 ) and
-              ( Connection.DbcConnection.AutoEncodeStrings ) then
-            CheckEquals(S2, iqry.Fields[0].AsString)
-          else
-            if not (Connection.DbcConnection.AutoEncodeStrings) then
-              CheckEquals(S2, iqry.Fields[0].AsString);
-          iqry.Next;
-          CheckEquals(S3, iqry.Fields[0].AsString);
-        end;
+        { note GetDBTestString might have dataloss if AutoEncode is set and the os-code does not support cyrylic or Latin1 chars ...
+          so we'll skip the check because we'll never be able to get a match in such cases }
+        if ((ZOSCodePage = zCP_WIN1252) or (ZOSCodePage = zCP_UTF8)) or (not ConSettings^.AutoEncode and (ConSettings.CTRL_CP = zCP_UTF8)) then
+           if (ConSettings.CTRL_CP = zCP_WIN1252) or (ConSettings.CTRL_CP = zCP_UTF8) then
+              CheckEquals({$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S1), iqry.Fields[0].AsString, ConSettings);
+        iqry.Next;
+        if ((ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zCP_UTF8)) or (not ConSettings^.AutoEncode and (ConSettings.CTRL_CP = zCP_UTF8)) then
+           if (ConSettings.CTRL_CP = zCP_WIN1251) or (ConSettings.CTRL_CP = zCP_UTF8) then
+              CheckEquals({$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S2), iqry.Fields[0].AsString, ConSettings);
+        iqry.Next;
+        CheckEquals(S3, iqry.Fields[0].AsString);
       end;
     end;
   finally

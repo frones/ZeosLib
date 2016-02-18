@@ -4398,7 +4398,7 @@ end;
 procedure TZAbstractCLob.InternalSetAnsiString(Const Value: AnsiString);
 begin
   FBlobSize := System.Length(Value)+1;
-  FCurrentCodePage := ZDefaultSystemCodePage;
+  FCurrentCodePage := ZOSCodePage;
   ReallocMem(FBlobData, FBlobSize);
   System.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
 end;
@@ -4441,7 +4441,7 @@ begin
           else
             if zCompatibleCodePages(FConSettings^.ClientCodePage^.CP, zCP_UTF8) then
               if ZCompatibleCodePages(FConSettings^.CTRL_CP, zCP_UTF8) then
-                CodePage := zDefaultSystemCodePage
+                CodePage := ZOSCodePage
               else
                 CodePage := FConSettings^.CTRL_CP
             else
@@ -4583,7 +4583,7 @@ var
 begin
   Result := '';
   if FBlobSize > 0 then
-    if ZCompatibleCodePages(FCurrentCodePage, ZDefaultSystemCodePage) then
+    if ZCompatibleCodePages(FCurrentCodePage, ZOSCodePage) then
        System.SetString(Result, PAnsiChar(FBlobData), FBlobSize -1)
     else
     begin
@@ -4728,7 +4728,7 @@ begin
   Result := TMemoryStream.Create;
   if (FBlobSize > 0) and Assigned(FBlobData) then
   begin
-    if ZCompatibleCodePages(FCurrentCodePage, ZDefaultSystemCodePage) then
+    if ZCompatibleCodePages(FCurrentCodePage, ZOSCodePage) then
     begin
       Result.Size := Length;
       System.Move(FBlobData^, TMemoryStream(Result).Memory^, Length)
