@@ -2624,7 +2624,7 @@ begin
     vtFloat:
       Result := FloatToSqlRaw(Value.VFloat);
     vtString:
-      Result := ZConvertStringToRawWithAutoEncode(Value.VString, FConSettings^.CTRL_CP, RawCP);
+      Result := fConSettings.ConvFuncs.ZStringToRaw(Value.VString, FConSettings^.CTRL_CP, RawCP);
     vtAnsiString:
       if ZCompatibleCodePages(ZOSCodePage, RawCP) then
         Result := ZMoveAnsiToRaw(Value.VAnsiString, RawCP)
@@ -2717,7 +2717,7 @@ begin
     vtAnsiString:
       if CodePage = zCP_UTF16 then
       begin
-        Value.VUnicodeString := ZWideString(Value.VAnsiString);
+        Value.VUnicodeString := PRawToUnicode(Pointer(Value.VAnsiString), Length(Value.VAnsiString), ZOSCodePage);
         Result.Len := Length(Value.VUnicodeString);
         if Result.Len = 0 then
           Result.P := PEmptyUnicodeString //Pointer Result would be nil

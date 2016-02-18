@@ -530,7 +530,7 @@ begin
   PlainDriver.AddCodePage('EUC_KOREA', 23, ceAnsi, 1361); { Koreanisch KS C 5601-1992 8-Bit-Zeichensatz, Johab}
   PlainDriver.AddCodePage('EUC_TAIWAN', 24, ceAnsi, 964); {EUC-TW-Kodierung}
   PlainDriver.AddCodePage('UCA', 29, ceUTF16, zCP_UTF16, 'utf8'); {UCA	UCA-Standardkollatierung}
-  PlainDriver.AddCodePage('UTF8BIN', 30, ceUTF8, zCP_UTF8); {UTF-8, 8-Bit-Mehrbyte-Zeichensatz für Unicode, binäre Reihenfolge}
+  PlainDriver.AddCodePage('UTF8BIN', 30, ceUTF8, zCP_UTF8); {UTF-8 8-Bit-Mehrbyte-Zeichensatz für Unicode, binäre Reihenfolge}
 
   { SingleByte }
   PlainDriver.AddCodePage('1250LATIN2', 7, ceAnsi, zCP_WIN1250); {Windows Latin 2, Mittel- und Osteuropa}

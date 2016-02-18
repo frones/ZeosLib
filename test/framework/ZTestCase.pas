@@ -633,7 +633,8 @@ procedure TZAbstractTestCase.CheckEquals(Expected: ZWideString; Actual: String;
   ConSettings: PZConSettings; _Message: string);
 begin
   if ConSettings^.AutoEncode or (ConSettings^.ClientcodePage^.Encoding = ceUTF16) or
-     (not ConSettings^.ClientcodePage^.IsStringFieldCPConsistent) then
+     (not ConSettings^.ClientcodePage^.IsStringFieldCPConsistent) or
+     (ConSettings^.CPType = cCP_UTF16) then
     CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.CTRL_CP), _Message)
   else
     CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.ClientcodePage^.CP), _Message);

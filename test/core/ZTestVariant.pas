@@ -633,12 +633,18 @@ begin
     CheckEquals(StringVar.VString, TestVar1.VString, 'String from RawByteString'+GetOptionString);
   if Supports(Manager, IZClientVariantManager, AManager) then //only the ClientVarManager can convert other StringCP's than Get_ACP
   begin
+    {$IFNDEF UNICODE}
+    if ConSettings^.AutoEncode or (ConSettings^.ClientCodePage^.CP = FNotEqualClientCP) then
+    {$ENDIF}
     CheckEquals(PAnsiChar(ZUnicodeToRaw(UnicodeVar.VUnicodeString, FNotEqualClientCP)),
       PAnsiChar(AManager.GetAsRawByteString(TestVar1, FNotEqualClientCP)),
         'GetAsRawByteString(TZVariant, CP: '+IntToStr(FNotEqualClientCP)+')'+GetOptionString);
-    CheckEquals(PAnsiChar(ZUnicodeToRaw(UnicodeVar.VUnicodeString, ConSettings^.ClientCodePage^.CP)),
-      PAnsiChar(AManager.GetAsRawByteString(TestVar1, ConSettings^.ClientCodePage^.CP)),
-        'GetAsRawByteString(TZVariant, CP: '+IntToStr(ConSettings^.ClientCodePage^.CP)+')'+GetOptionString);
+    {$IFNDEF UNICODE}
+    if ConSettings^.AutoEncode or (ConSettings^.ClientCodePage^.CP = ConSettings^.CTRL_CP) then
+    {$ENDIF}
+      CheckEquals(PAnsiChar(ZUnicodeToRaw(UnicodeVar.VUnicodeString, ConSettings^.ClientCodePage^.CP)),
+        PAnsiChar(AManager.GetAsRawByteString(TestVar1, ConSettings^.ClientCodePage^.CP)),
+          'GetAsRawByteString(TZVariant, CP: '+IntToStr(ConSettings^.ClientCodePage^.CP)+')'+GetOptionString);
   end;
 end;
 

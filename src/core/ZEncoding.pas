@@ -2619,9 +2619,6 @@ function ZConvertRawToString(const Src: RawByteString;
 {$IF not defined(UNICODE) and not defined(WITH_LCONVENCODING)}
 var
   US: ZWideString; //COM based. So localize the String to avoid Buffer overrun
-  {$IFDEF WITH_RAWBYTESTRING}
-  Raw: RawByteString;
-  {$ENDIF}
 {$IFEND}
 begin
   if Src = '' then
@@ -2676,12 +2673,7 @@ begin
       Result := ZRawToUnicode(Src, RawCP);
       {$ELSE}
         US := ZRawToUnicode(Src, RawCP);
-        {$IFDEF WITH_RAWBYTESTRING}
-        Raw := ZUnicodeToRaw(US, StringCP);
-        ZSetString(Pointer(Raw), {%H-}PLengthInt(NativeUInt(Raw) - StringLenOffSet)^, Result);
-        {$ELSE}
-        Result := ZUnicodeToRaw(US, StringCP);
-        {$ENDIF}
+        Result := ZUnicodeToString(US, StringCP);
       {$ENDIF}
     {$ENDIF}
   end;
@@ -2767,11 +2759,11 @@ begin
   {$ELSE !UNICODE}
   case ZDetectUTF8Encoding(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^) of
     etUSASCII:
-      {$IFDEF WITH_RAWBYTESTRING}
+      {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
       ZSetString(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^ , Result);
-      {$ELSE !WITH_RAWBYTESTRING}
+      {$ELSE !WITH_RAWBYTESTRING_CONVERSION_BUG}
       Result := Src;
-      {$ENDIF WITH_RAWBYTESTRING}
+      {$ENDIF WITH_RAWBYTESTRING_CONVERSION_BUG}
     etAnsi:
       if (RawCP = zCP_UTF8) then
         if ZCompatibleCodePages(StringCP, zCP_UTF8 ) then begin
@@ -2783,18 +2775,18 @@ begin
         end else
           Result := ZConvertStringToRaw(Src, StringCP, RawCP)
       else
-        {$IFDEF WITH_RAWBYTESTRING}
+        {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
         ZSetString(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, Result);
-        {$ELSE !WITH_RAWBYTESTRING}
+        {$ELSE !WITH_RAWBYTESTRING_CONVERSION_BUG}
         Result := Src;
-        {$ENDIF WITH_RAWBYTESTRING}
+        {$ENDIF WITH_RAWBYTESTRING_CONVERSION_BUG}
     else //etUTF8:
       if (RawCP = zCP_UTF8) then
-        {$IFDEF WITH_RAWBYTESTRING}
+        {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
         ZSetString(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, Result)
-        {$ELSE !WITH_RAWBYTESTRING}
+        {$ELSE !WITH_RAWBYTESTRING_CONVERSION_BUG}
         Result := Src
-        {$ENDIF WITH_RAWBYTESTRING}
+        {$ENDIF WITH_RAWBYTESTRING_CONVERSION_BUG}
       else
         Result := ZConvertStringToRaw(Src, zCP_UTF8, RawCP);
   end;
@@ -3029,7 +3021,7 @@ end;
 
 function ZMoveAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString;
 begin
-  {$IFDEF WITH_RAWBYTESTRING}
+  {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
   ZSetString(Pointer(Src), Length(Src), Result{%H-});
   {$ELSE}
   Result := Src;
@@ -3038,8 +3030,8 @@ end;
 
 function ZMoveRawToAnsi(const Src: RawByteString; const RawCP: Word): AnsiString;
 begin
-  {$IFDEF WITH_RAWBYTESTRING}
-  System.SetString(Result, PAnsiChar(Pointer(Src)), Length(Src));
+  {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
+  ZSetString(Pointer(Src), Length(Src), Result{%H-});
   {$ELSE}
   Result := Src;
   {$ENDIF}
@@ -3065,7 +3057,7 @@ end;
 
 function ZMoveRawToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
 begin
-  {$IFDEF WITH_RAWBYTESTRING}
+  {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
   ZSetString(Pointer(Src), Length(Src), Result{%H-});
   {$ELSE}
   Result := Src;
@@ -3074,7 +3066,7 @@ end;
 
 function ZMoveUTF8ToRaw(Const Src: UTF8String; const CP: Word): RawByteString;
 begin
-  {$IFDEF WITH_RAWBYTESTRING}
+  {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
   ZSetString(Pointer(Src), Length(Src), Result{%H-});
   {$ELSE}
   Result := Src;
@@ -3086,7 +3078,7 @@ begin
   {$IFDEF UNICODE}
   Result := AnsiString(Src);
   {$ELSE}
-    {$IFDEF WITH_RAWBYTESTRING}
+    {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
     ZSetString(Pointer(Src), Length(Src), Result{%H-});
     {$ELSE}
     Result := Src;
@@ -3114,7 +3106,7 @@ begin
   {$IFDEF UNICODE}
   Result := ZRawToUnicode(Src, RawCP);
   {$ELSE}
-    {$IFDEF WITH_RAWBYTESTRING}
+    {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
     ZSetString(Pointer(Src), Length(Src), Result{%H-});
     {$ELSE}
     Result := Src;
@@ -3128,7 +3120,7 @@ begin
   {$IFDEF UNICODE}
   Result := ZUnicodeToRaw(Src, RawCP);
   {$ELSE}
-    {$IFDEF WITH_RAWBYTESTRING}
+    {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
     ZSetString(Pointer(Src), Length(Src), Result{%H-});
     {$ELSE}
     Result := Src;
