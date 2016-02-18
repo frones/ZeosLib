@@ -691,8 +691,10 @@ begin
   while I < SQLMessages.Count do begin
     lMesageEntry := PDBLibMessage(SQLMessages[I]);
     if (dbProc = nil) or (lMesageEntry^.dbProc = dbProc) or (lMesageEntry^.dbProc = nil) then begin
-      if lMesageEntry^.Severity > EXINFO then
-        AddToErrorMsg(String(lMesageEntry^.MsgText));
+      if lMesageEntry^.Severity > EXINFO then begin
+        if lMesageEntry^.MsgNo <> 5701
+        then AddToErrorMsg(String(lMesageEntry^.MsgText));
+      end;
       Dispose(lMesageEntry);
       SQLMessages.Delete(I);
     end
