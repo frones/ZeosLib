@@ -56,8 +56,8 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility;
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZDataSet, DB, ZDbcIntfs, ZSqlTestCase, ZCompatibility;
 
 type
 

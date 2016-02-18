@@ -60,7 +60,7 @@ uses
   DateUtils,
 {$ENDIF}
   Contnrs, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZDbcCache, {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZSysUtils, ZDbcResultSet,
+  ZDbcCache, {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZSysUtils,
   ZDbcIntfs, SysUtils, Classes, ZDbcResultSetMetadata,
   ZCompatibility, ZTestCase;
 

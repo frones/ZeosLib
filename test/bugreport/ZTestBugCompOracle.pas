@@ -150,7 +150,7 @@ end;
 procedure ZTestCompOracleBugReport.TestNCLOBValues;
 const
   row_id = 1000;
-  testString = 'όδόδόδό';
+  testString: ZWideString = 'όδόδόδό';
 var
   Query: TZQuery;
   BinFileStream: TFileStream;

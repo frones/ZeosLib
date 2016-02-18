@@ -408,7 +408,7 @@ function UTF8ToString(const s: RawByteString): ZWideString;
 function Hash(const S : RawByteString) : LongWord; overload;
 function Hash(const Key : ZWideString) : Cardinal; overload;
 
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: {$IFDEF UNICODE}AnsiString{$ELSE}String{$ENDIF}); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 procedure ZSetString(Src: PAnsiChar; const Len: LengthInt; var Dest: ZWideString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$IFDEF WITH_RAWBYTESTRING}
@@ -461,7 +461,7 @@ const
   PEmptyAnsiString: PAnsiChar = '';
 
 var
-  ZDefaultSystemCodePage: Word;
+  ZOSCodePage: Word;
 
 implementation
 
@@ -470,7 +470,7 @@ begin
   if Assigned(Info) and Assigned(FConSettings) then
   begin
     {$IFDEF UNICODE}
-    ConSettings.CTRL_CP := ZDefaultSystemCodePage;
+    ConSettings.CTRL_CP := DefaultSystemCodePage;
     if Info.values['controls_cp'] = 'GET_ACP' then
       ConSettings.CPType := cGET_ACP
     else
@@ -485,7 +485,7 @@ begin
     if Info.values['controls_cp'] = 'GET_ACP' then
     begin
       ConSettings.CPType := cGET_ACP;
-      ConSettings.CTRL_CP := ZDefaultSystemCodePage;
+      ConSettings.CTRL_CP := ZOSCodePage;
     end
     else
       if Info.values['controls_cp'] = 'CP_UTF8' then
@@ -496,33 +496,31 @@ begin
       else
         if Info.values['controls_cp'] = 'CP_UTF16' then
         begin
-          {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING)}
-          ConSettings.CPType := {$IFDEF WITH_WIDEFIELDS}cCP_UTF16{$ELSE}cCP_UTF8{$ENDIF};
-          ConSettings.CTRL_CP := ZDefaultSystemCodePage;
-          ConSettings.AutoEncode := True;
+          {$IFDEF WITH_WIDEFIELDS}
+          ConSettings.CPType := cCP_UTF16;
+            {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+            ConSettings.CTRL_CP := DefaultSystemCodePage;
+            {$ELSE}
+            ConSettings.CTRL_CP := ZOSCodePage;
+            {$ENDIF}
           {$ELSE}
-          if ConSettings.ClientCodePage.Encoding = ceUTF8 then
-          begin
-            ConSettings.CPType := {$IFDEF WITH_WIDEFIELDS}cCP_UTF16{$ELSE}cCP_UTF8{$ENDIF};
-            ConSettings.CTRL_CP := 65001;
-            ConSettings.AutoEncode := True;
-          end
-          else
-          begin
-            ConSettings.CPType := cCP_UTF8;
-            ConSettings.CTRL_CP := 65001;
-            ConSettings.AutoEncode := False;
-          end;
-          {$IFEND}
+          ConSettings.CPType := cCP_UTF8;
+          ConSettings.CTRL_CP := 65001;
+          {$ENDIF}
+          ConSettings.AutoEncode := True;
         end
         else // nothing was found set defaults
         begin
-          {$IFDEF FPC}
+          {$IFDEF LCL}
           ConSettings.CPType := cCP_UTF8;
           ConSettings.CTRL_CP := 65001;
           {$ELSE}
           ConSettings.CPType := cGET_ACP;
-          ConSettings.CTRL_CP := GetACP;
+            {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+            ConSettings.CTRL_CP := DefualtSystemCodePage;
+            {$ELSE}
+            ConSettings.CTRL_CP := ZOSCodePage;
+            {$ENDIF}
           {$ENDIF}
         end;
     {$ENDIF}
@@ -712,7 +710,7 @@ end;
 {$UNDEF ZUTF8ToString}
 {$ENDIF}
 
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: {$IFDEF UNICODE}AnsiString{$ELSE}String{$ENDIF});
 begin
   if ( Len = 0 ) then
     Dest := ''
@@ -800,6 +798,7 @@ begin
 end;
 
 {$IFDEF WITH_RAWBYTESTRING}
+
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString);
 begin
   if ( Len = 0 ) then
@@ -842,7 +841,7 @@ end;
 
 initialization
   case ConSettingsDummy.CPType of
-    cCP_UTF16, cGET_ACP: ConSettingsDummy.CTRL_CP := ZDefaultSystemCodePage;
+    cCP_UTF16, cGET_ACP: ConSettingsDummy.CTRL_CP := ZOSCodePage;
     cCP_UTF8: ConSettingsDummy.CTRL_CP := 65001;
   end;
 end.

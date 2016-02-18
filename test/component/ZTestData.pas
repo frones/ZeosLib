@@ -58,9 +58,6 @@ interface
 {$I ZComponent.inc}
 
 uses
-{$IFNDEF VER130BELOW}
-  Types,
-{$ENDIF}
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils,
   ZTestCase,ZDataset;
 

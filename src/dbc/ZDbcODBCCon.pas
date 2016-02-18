@@ -409,7 +409,7 @@ begin
     if IPos > 0 then
       CodePageName[IPos] := #0 else
       goto fail;
-    CodePage := ZFastCode.{$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(PChar(@CodePageName[IPos+1]), ZDefaultSystemCodePage);
+    CodePage := ZFastCode.{$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(PChar(@CodePageName[IPos+1]), ZOSCodePage);
     CodePageName := Copy(CodePageName, 1, iPos-1);
     if Supports(fPlainDriver, IODBC3UnicodePlainDriver) then
       fPlainDriver.AddCodePage(CodePageName, 0, ceUTF16, CodePage, '', BytesPerChar)
@@ -700,7 +700,7 @@ begin
       SetLength(Buf, aLen shr 1);
       CheckDbcError((fPlainDriver as IODBC3UnicodePlainDriver).GetConnectAttr(fHDBC,
         SQL_ATTR_CURRENT_CATALOG, Pointer(Result), Length(Result), @aLen));
-      Result := PUnicodeToRaw(Pointer(Buf), Length(Buf), ZDefaultSystemCodePage);
+      Result := PUnicodeToRaw(Pointer(Buf), Length(Buf), ZOSCodePage);
       {$ENDIF}
       inherited SetCatalog(Result);
     end;
@@ -752,7 +752,7 @@ var aCatalog: ZWideString;
 begin
   if Catalog <> inherited GetCatalog then begin
     {$IFNDEF UNICODE}
-    aCatalog := PRawToUnicode(Pointer(Catalog), Length(Catalog), ZDefaultSystemCodePage);
+    aCatalog := PRawToUnicode(Pointer(Catalog), Length(Catalog), ZOSCodePage);
     CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC, SQL_ATTR_CURRENT_CATALOG,
       Pointer(aCatalog), Length(aCatalog) shl 1));
     {$ELSE}
@@ -805,7 +805,7 @@ begin
       SetLength(Buf, aLen);
       CheckDbcError((fPlainDriver as IODBC3UnicodePlainDriver).GetConnectAttr(fHDBC,
         SQL_ATTR_CURRENT_CATALOG, Pointer(Result), Length(Result), @aLen));
-      Result := PRawToUnicode(Pointer(Buf), Length(Buf), ZDefaultSystemCodePage);
+      Result := PRawToUnicode(Pointer(Buf), Length(Buf), ZOSCodePage);
       {$ENDIF}
       inherited SetCatalog(Result);
     end;
@@ -830,11 +830,11 @@ var NewLength: SQLINTEGER;
 begin
   if SQL <> '' then begin
     {$IFDEF UNICODE}
-    aSQL := PUnicodeToRaw(Pointer(SQL), Length(SQL), ZDefaultSystemCodePage);
+    aSQL := PUnicodeToRaw(Pointer(SQL), Length(SQL), ZOSCodePage);
     SetLength(nSQL, Length(aSQL) shl 1); //
     CheckDbcError((fPlainDriver as IODBC3RawPlainDriver).NativeSql(fHDBC,
       Pointer(aSQL), Length(aSQL), Pointer(nSQL), Length(nSQL), @NewLength));
-    Result := PRawToUnicode(Pointer(nSQL), NewLength, ZDefaultSystemCodePage);
+    Result := PRawToUnicode(Pointer(nSQL), NewLength, ZOSCodePage);
     {$ELSE}
     SetLength(Result, Length(SQL) shl 1); //
     CheckDbcError((fPlainDriver as IODBC3RawPlainDriver).NativeSql(fHDBC,
@@ -857,7 +857,7 @@ var aCatalog: RawByteString;
 begin
   if Catalog <> inherited GetCatalog then begin
     {$IFDEF UNICODE}
-    aCatalog := PUnicodeToRaw(Pointer(Catalog), Length(Catalog), ZDefaultSystemCodePage);
+    aCatalog := PUnicodeToRaw(Pointer(Catalog), Length(Catalog), ZOSCodePage);
     CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC, SQL_ATTR_CURRENT_CATALOG,
       Pointer(aCatalog), Length(aCatalog)));
     {$ELSE}

@@ -3641,7 +3641,7 @@ begin
   {$IFDEF UNICODE}
   SetString(Result, PWideChar(@Buf[0]), PropLength shr 1);
   {$ELSE}
-  Result := PUnicodeToRaw(PWideChar(@Buf[0]),PropLength shr 1,ZDefaultSystemCodePage);
+  Result := PUnicodeToRaw(PWideChar(@Buf[0]),PropLength shr 1,ZOSCodePage);
   {$ENDIF}
 end;
 
@@ -3657,7 +3657,7 @@ begin
   ODBCConnection.CheckDbcError((ODBCConnection.GetPlainDriver as IODBC3RawPlainDriver).GetInfo(fPHDBC^,
     InfoType, @Buf[0], SizeOf(Buf), @PropLength));
   {$IFDEF UNICODE}
-  Result := PRawToUnicode(PAnsiChar(@Buf[0]),PropLength,ZDefaultSystemCodePage);
+  Result := PRawToUnicode(PAnsiChar(@Buf[0]),PropLength,ZOSCodePage);
   {$ELSE}
   SetString(Result, PAnsiChar(@Buf[0]), PropLength);
   {$ENDIF}

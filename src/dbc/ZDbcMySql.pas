@@ -134,7 +134,6 @@ type
     function GetServerProvider: TZServerProvider; override;
   end;
 
-
 var
   {** The common driver manager object. }
   MySQLDriver: IZDriver;
@@ -142,9 +141,13 @@ var
 implementation
 
 uses
+  {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZMessages, ZSysUtils, ZDbcMySqlStatement, ZMySqlToken, ZFastCode,
   ZDbcMySqlUtils, ZDbcMySqlMetadata, ZMySqlAnalyser, TypInfo, Math,
   ZEncoding;
+
+var
+  MySQLCriticalSection: TCriticalSection;
 
 { TZMySQLDriver }
 
@@ -189,7 +192,12 @@ end;
 {$WARNINGS OFF}
 function TZMySQLDriver.Connect(const Url: TZURL): IZConnection;
 begin
-  Result := TZMySQLConnection.Create(Url);
+  MySQLCriticalSection.Enter;
+  try
+    Result := TZMySQLConnection.Create(Url);
+  finally
+    MySQLCriticalSection.Leave;
+  end;
 end;
 {$WARNINGS ON}
 
@@ -878,9 +886,11 @@ end;
 initialization
   MySQLDriver := TZMySQLDriver.Create;
   DriverManager.RegisterDriver(MySQLDriver);
+  MySQLCriticalSection := TCriticalSection.Create;
 finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(MySQLDriver);
   MySQLDriver := nil;
+  FreeAndNil(MySQLCriticalSection);
 end.
 

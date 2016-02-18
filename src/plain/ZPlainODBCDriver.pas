@@ -3412,7 +3412,7 @@ end;
 
 procedure TODBC3UnicodePlainDriver.LoadCodePages;
 begin
-  AddCodePage('CP_UTF16', 0, ceUTF16, ZDefaultSystemCodePage , '', 1, False);
+  AddCodePage('CP_UTF16', 0, ceUTF16, ZOSCodePage, '', 1, False);
 end;
 
 function TODBC3UnicodePlainDriver.NativeSql(ConnectionHandle: SQLHDBC;
@@ -3729,7 +3729,7 @@ end;
 
 procedure TODBC3RawPlainDriver.LoadCodePages;
 begin
-  AddCodePage('CP_ACP', 0, ceAnsi, ZDefaultSystemCodePage , '', 1, True);
+  AddCodePage('CP_ACP', 0, ceAnsi, ZOSCodePage, '', 1, True);
 end;
 
 function TODBC3RawPlainDriver.NativeSql(ConnectionHandle: SQLHDBC;

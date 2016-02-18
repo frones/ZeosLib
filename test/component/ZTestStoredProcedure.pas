@@ -598,7 +598,7 @@ begin
 end;
 
 procedure TZTestMySQLStoredProcedure.Test_TEST_All_TYPES;
-const Str1 = 'צהüךבאüהצ';
+const Str1: ZWideString = 'צהüךבאüהצ';
 var
   SQLTime: TDateTime;
   TempBytes: TBytes;

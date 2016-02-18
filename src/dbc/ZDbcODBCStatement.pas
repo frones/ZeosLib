@@ -1439,7 +1439,7 @@ begin
                           {$ELSE}
                           for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(ConSettings^.ConvFuncs.ZStringToUnicode(ZStringArray[J+fArrayOffSet], ConSettings^.CTRL_CP));
                           {$ENDIF}
-                        vtAnsiString:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(PRawToUnicode(Pointer(ZAnsiStringArray[J+fArrayOffSet]), Length(ZAnsiStringArray[J+fArrayOffSet]), ZDefaultSystemCodePage));
+                        vtAnsiString:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(PRawToUnicode(Pointer(ZAnsiStringArray[J+fArrayOffSet]), Length(ZAnsiStringArray[J+fArrayOffSet]), ZOSCodePage));
                         vtUTF8String:     for J := 0 to fCurrentIterations -1 do if IsNotNull then
                           if Assigned(Pointer(ZUTF8StringArray[J+fArrayOffSet])) and (Length(ZUTF8StringArray[J+fArrayOffSet]) <= Param.ColumnSize) then begin
                             PSQLLEN(StrLen_or_IndPtr)^ := UTF8ToWideChar(Pointer(ZUTF8StringArray[J+fArrayOffSet]), Length(ZUTF8StringArray[J+fArrayOffSet]), ParameterDataPtr) shl 1;
@@ -1494,7 +1494,7 @@ begin
                     stString, stUnicodeString:
                       case InParamValues[i].VArray.VArrayVariantType of
                         vtString:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[J+fArrayOffSet], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-                        vtAnsiString:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[J+fArrayOffSet], ZDefaultSystemCodePage, ConSettings^.ClientCodePage^.CP));
+                        vtAnsiString:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[J+fArrayOffSet], ZOSCodePage, ConSettings^.ClientCodePage^.CP));
                         vtUTF8String:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ConSettings^.ConvFuncs.ZUTF8ToRaw(ZUTF8StringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
                         vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ZRawByteStringArray[J+fArrayOffSet]);
                         vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ConSettings^.ConvFuncs.ZUnicodeToRaw(ZUnicodeStringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
@@ -1559,7 +1559,7 @@ begin
                           {$ELSE}
                           for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(ConSettings^.ConvFuncs.ZStringToUnicode(ZStringArray[J+fArrayOffSet], ConSettings^.CTRL_CP));
                           {$ENDIF}
-                        vtAnsiString:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(PRawToUnicode(Pointer(ZAnsiStringArray[J+fArrayOffSet]), Length(ZAnsiStringArray[J+fArrayOffSet]), ZDefaultSystemCodePage));
+                        vtAnsiString:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(PRawToUnicode(Pointer(ZAnsiStringArray[J+fArrayOffSet]), Length(ZAnsiStringArray[J+fArrayOffSet]), ZOSCodePage));
                         vtUTF8String:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(PRawToUnicode(Pointer(ZUTF8StringArray[J+fArrayOffSet]), Length(ZUTF8StringArray[J+fArrayOffSet]), zCP_UTF8));
                         vtRawByteString:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(ConSettings.ConvFuncs.ZRawToUnicode(ZRawByteStringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
                         vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(ZUnicodeStringArray[J+fArrayOffSet]);
@@ -1607,7 +1607,7 @@ begin
                     stString, stUnicodeString:
                       case InParamValues[i].VArray.VArrayVariantType of
                         vtString:         for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[J+fArrayOffSet], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-                        vtAnsiString:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[J+fArrayOffSet], ZDefaultSystemCodePage, ConSettings^.ClientCodePage^.CP));
+                        vtAnsiString:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[J+fArrayOffSet], ZOSCodePage, ConSettings^.ClientCodePage^.CP));
                         vtUTF8String:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ConSettings^.ConvFuncs.ZUTF8ToRaw(ZUTF8StringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
                         vtRawByteString:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ZRawByteStringArray[J+fArrayOffSet]);
                         vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ConSettings^.ConvFuncs.ZUnicodeToRaw(ZUnicodeStringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));

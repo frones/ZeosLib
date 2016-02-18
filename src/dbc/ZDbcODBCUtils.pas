@@ -168,10 +168,10 @@ begin
           {$ELSE}
           if RETCODE = SQL_SUCCESS_WITH_INFO then
             aException := EZSQLWarning.CreateWithCodeAndStatus(FirstNativeError, UnicodeStringToASCII7(FirstNErrW),
-              PUnicodeToRaw(Pointer(ErrorStringW), Length(ErrorStringW), ZDefaultSystemCodePage))
+              PUnicodeToRaw(Pointer(ErrorStringW), Length(ErrorStringW), ZOSCodePage))
           else
             aException := EZSQLException.CreateWithCodeAndStatus(FirstNativeError, UnicodeStringToASCII7(FirstNErrW),
-              PUnicodeToRaw(Pointer(ErrorStringW), Length(ErrorStringW), ZDefaultSystemCodePage))
+              PUnicodeToRaw(Pointer(ErrorStringW), Length(ErrorStringW), ZOSCodePage))
           {$ENDIF}
       end else
       if Connection.GetPlainDriver.QueryInterface(IODBC3RawPlainDriver, PlainA) = S_OK then begin
@@ -206,10 +206,10 @@ begin
           {$IFDEF UNICODE}
           if RETCODE = SQL_SUCCESS_WITH_INFO then
             aException := EZSQLWarning.CreateWithCodeAndStatus(FirstNativeError,
-              ASCII7ToUnicodeString(FirstNErrA), PRawToUnicode(Pointer(ErrorStringA), Length(ErrorStringA), ZDefaultSystemCodePage))
+              ASCII7ToUnicodeString(FirstNErrA), PRawToUnicode(Pointer(ErrorStringA), Length(ErrorStringA), ZOSCodePage))
           else
             aException := EZSQLException.CreateWithCodeAndStatus(FirstNativeError,
-              ASCII7ToUnicodeString(FirstNErrA), PRawToUnicode(Pointer(ErrorStringA), Length(ErrorStringA), ZDefaultSystemCodePage))
+              ASCII7ToUnicodeString(FirstNErrA), PRawToUnicode(Pointer(ErrorStringA), Length(ErrorStringA), ZOSCodePage))
           {$ELSE}
           if RETCODE = SQL_SUCCESS_WITH_INFO then
             aException := EZSQLWarning.CreateWithCodeAndStatus(FirstNativeError, FirstNErrA, ErrorStringA)
@@ -221,7 +221,7 @@ begin
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcOther,
         {$IFDEF UNICODE}
-        PUnicodeToRaw(Pointer(aException.Message), Length(aException.Message), ZDefaultSystemCodePage),
+        PUnicodeToRaw(Pointer(aException.Message), Length(aException.Message), ZOSCodePage),
         UnicodeStringToASCII7(Connection.GetIZPlainDriver.GetProtocol)
         {$ELSE}
         aException.Message, Connection.GetIZPlainDriver.GetProtocol

@@ -65,7 +65,7 @@ uses
     DBCtrls,
     {$ENDIF}
   {$ENDIF}
-  ZCompatibility;
+  ZCompatibility, ZEncoding;
 type
 
   {** Implements a bug report test case for SQLite components. }
@@ -117,11 +117,11 @@ end;
 
 { ZTestCompSQLiteBugReportMBCs }
 const
-  Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
-  Str3 = 'ќдной из наиболее';
-  Str4 = 'тривиальных задач';
-  Str5 = 'решаемых многими';
-  Str6 = 'коллективами программистов';
+  Str2: ZWideString = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
+  Str3: ZWideString = 'ќдной из наиболее';
+  Str4: ZWideString = 'тривиальных задач';
+  Str5: ZWideString = 'решаемых многими';
+  Str6: ZWideString = 'коллективами программистов';
 
 function ZTestCompSQLiteBugReportMBCs.GetSupportedProtocols: string;
 begin
@@ -137,7 +137,7 @@ var
   Query: TZQuery;
   RowCounter: Integer;
   I: Integer;
-  procedure InsertValues(TestString: String);
+  procedure InsertValues(TestString: ZWideString);
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
     Query.ParamByName('s_char').AsString := GetDBTestString(TestString, Connection.DbcConnection.GetConSettings);
@@ -149,7 +149,7 @@ var
     inc(RowCounter);
   end;
 
-  procedure CheckColumnValues(TestString: String);
+  procedure CheckColumnValues(TestString: ZWideString);
   begin
     CheckEquals(TestString, Query.FieldByName('s_char').AsString, Connection.DbcConnection.GetConSettings);
     CheckEquals(TestString, Query.FieldByName('s_varchar').AsString, Connection.DbcConnection.GetConSettings);
@@ -175,33 +175,33 @@ begin
     Query.Open;
     CheckEquals(True, Query.RecordCount = 5);
 
-    Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+GetDBValidString(Str2, Connection.DbcConnection.GetConSettings)+'%', #39);
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToString(Str2, zCP_UTF8)+'%''';
     Query.Open;
     CheckEquals(True, Query.RecordCount = 1);
     CheckColumnValues(Str2);
 
-    Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+GetDBValidString(Str3, Connection.DbcConnection.GetConSettings)+'%', #39);
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToString(Str3, zCP_UTF8)+'%''';
     Query.Open;
     CheckEquals(True, Query.RecordCount = 2);
     CheckColumnValues(Str2);
     Query.Next;
     CheckColumnValues(Str3);
 
-    Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+GetDBValidString(Str4, Connection.DbcConnection.GetConSettings)+'%', #39);
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToString(Str4, zCP_UTF8)+'%''';
     Query.Open;
     CheckEquals(True, Query.RecordCount = 2);
     CheckColumnValues(Str2);
     Query.Next;
     CheckColumnValues(Str4);
 
-    Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+GetDBValidString(Str5, Connection.DbcConnection.GetConSettings)+'%', #39);
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToString(Str5, zCP_UTF8)+'%''';
     Query.Open;
     CheckEquals(True, Query.RecordCount = 2);
     CheckColumnValues(Str2);
     Query.Next;
     CheckColumnValues(Str5);
 
-    Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+GetDBValidString(Str6, Connection.DbcConnection.GetConSettings)+'%', #39);
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToString(Str6, zCP_UTF8)+'%''';
     Query.Open;
     CheckEquals(True, Query.RecordCount = 2);
     CheckColumnValues(Str2);

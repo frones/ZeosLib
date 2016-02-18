@@ -109,7 +109,7 @@ type
 
 implementation
 
-uses SysUtils, ZTestConsts, ZTestCase, ZDbcResultSet, ZVariant;
+uses SysUtils, ZTestCase, ZDbcResultSet, ZVariant;
 
 { TZTestDbcADOCase }
 

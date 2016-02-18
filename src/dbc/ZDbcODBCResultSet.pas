@@ -388,7 +388,7 @@ begin
       {$ENDIF}
       case fSQLTypes[ColumnIndex] of
         stString, stUnicodeString:
-          Result := InternalGetRaw(ColumnIndex, ZDefaultSystemCodePage);
+          Result := InternalGetRaw(ColumnIndex, ZOSCodePage);
         stAsciiStream, stUnicodeStream:
           Result := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetAnsiString;
         stBinaryStream:
@@ -851,7 +851,7 @@ begin
           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction), ConSettings.DisplayFormatSettings, False);
       stString, stUnicodeString:
-        Result := InternalGetRaw(ColumnIndex, ZDefaultSystemCodePage);
+        Result := InternalGetRaw(ColumnIndex, ZOSCodePage);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         Result := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetRawByteString;
       else {stArray, stDataSet:} Result := '';

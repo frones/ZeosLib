@@ -4937,7 +4937,7 @@ begin
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
         begin
-          if ZCompatibleCodePages(ZDefaultsystemCodePage, ConSettings^.ClientCodePage^.CP) then
+          if ZCompatibleCodePages(ZOSCodePage, ConSettings^.ClientCodePage^.CP) then
             System.SetString(Result, PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc,
               PLongWord(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^)^)
           else
@@ -5422,7 +5422,7 @@ begin
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
         Result := PUnicodeToRaw(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc,
-          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^, zDefaultSystemCodePage);
+          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^, ZOSCodePage);
       else
         Result := inherited GetAnsiString(ColumnIndex, IsNull);
     end;

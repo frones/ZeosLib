@@ -1560,7 +1560,7 @@ begin
                     vtRawByteString: AnsiTemp := ZRawByteStringArray[ArrayOffSet];
                     vtUnicodeString: AnsiTemp := AnsiString(ZUnicodeStringArray[ArrayOffSet]);
                     vtCharRec:
-                      if ZCompatibleCodePages(ZCharRecArray[ArrayOffSet].CP, ZDefaultSystemCodePage) then
+                      if ZCompatibleCodePages(ZCharRecArray[ArrayOffSet].CP, ZOSCodePage) then
                       begin //here we always reference as long we do not support Out-IO. So this is valid!
                         PPointer(Data)^ := ZCharRecArray[ArrayOffSet].P;
                         PDBLENGTH(NativeUInt(DBParams.pData)+(DBBindingArray[i].obLength + BuffOffSet))^ := ZCharRecArray[ArrayOffSet].Len; //inlcuding #0

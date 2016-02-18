@@ -265,7 +265,7 @@ begin
           {$IFDEF UNICODE}
           AddCurrent; //result are ?valid? but does that makes sence for all if not CP_UTF8?
           {$ELSE}
-          if ( FCodePages[i].CP = ZDefaultSystemCodePage ) then
+          if ( FCodePages[i].CP = ZOSCodePage ) then
             AddCurrent
           else
             if AutoEncode then
@@ -303,10 +303,10 @@ begin
             {$IFDEF WITH_LCONVENCODING} //Lazarus only
             if ( IsLConvEncodingCodePage(FCodePages[i].CP) ) or //Lazarus can convert to UTF8 then we convert to wide (double En/Decoding!)
                ( FCodePages[i].Encoding = ceUTF8 ) or //decode the strings to wide
-               ( FCodePages[i].CP = ZDefaultSystemCodePage ) then //to allow a valid cast
+               ( FCodePages[i].CP = OSCodePage ) then //to allow a valid cast
               AddCurrent; //all these charset can be converted to wide
             {$ELSE}
-            if ( FCodePages[i].CP = ZDefaultSystemCodePage ) or //to allow a valid cast
+            if ( FCodePages[i].CP = OSCodePage ) or //to allow a valid cast
                ( FCodePages[i].Encoding = ceUTF8 ) then //decode the strings to wide
               AddCurrent;
             {$ENDIF}

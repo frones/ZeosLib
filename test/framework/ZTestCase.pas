@@ -134,7 +134,7 @@ type
     procedure CheckEquals(Expected: ZWideString; Actual: String; ConSettings: PZConSettings;
       _Message: string = ''); overload;
     {$ENDIF UNICODE}
-    procedure CheckEquals(OrgStr: String; ActualLobStream: TStream; ConSettings: PZConSettings;
+    procedure CheckEquals(OrgStr: ZWideString; ActualLobStream: TStream; ConSettings: PZConSettings;
       const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: TStream;
       const Msg: string = ''); overload;
@@ -497,12 +497,10 @@ end;
    @param Actual the second stream for compare
    @param ConSettings the Connection given settings
 }
-procedure TZAbstractTestCase.CheckEquals(OrgStr: String; ActualLobStream: TStream;
+procedure TZAbstractTestCase.CheckEquals(OrgStr: ZWideString; ActualLobStream: TStream;
   ConSettings: PZConSettings; const Msg: string = '');
 var
-  WS: WideString;
   StrStream: TMemoryStream;
-
   procedure SetAnsiStream(Value: RawByteString);
   begin
     StrStream.Write(PAnsiChar(Value)^, Length(Value));
@@ -511,29 +509,14 @@ var
 begin
   StrStream := TMemoryStream.Create;
   case ConSettings.CPType of
-    cGET_ACP:
+    cGET_ACP, cCP_UTF8:
       if ConSettings.AutoEncode then
-        if ConSettings.CTRL_CP = 65001 then
-          SetAnsiStream(RawByteString(UTF8Encode(WideString(OrgStr))))
-        else
-          SetAnsiStream(RawByteString(OrgStr))
+        SetAnsiStream(ZUnicodeToRaw(OrgStr, ConSettings.CTRL_CP))
       else
-        if ConSettings.ClientCodePage.Encoding = ceUTF8 then
-          SetAnsiStream(RawByteString(UTF8Encode(WideString(OrgStr))))
-        else
-          SetAnsiStream(RawByteString(OrgStr));
-    cCP_UTF8:
-      if ConSettings.AutoEncode then
-        SetAnsiStream(RawByteString(UTF8Encode(WideString(OrgStr))))
-      else
-        if ConSettings.ClientCodePage.Encoding = ceUTF8 then
-          SetAnsiStream(RawByteString(UTF8Encode(WideString(OrgStr))))
-        else
-          SetAnsiStream(RawByteString(OrgStr));
+        SetAnsiStream(ZUnicodeToRaw(OrgStr, ConSettings^.ClientCodePage^.CP));
     cCP_UTF16:
       begin
-        WS := WideString(OrgStr);
-        StrStream.Write(PWideChar(WS)^, Length(WS)*2);
+        StrStream.Write(PWideChar(OrgStr)^, Length(OrgStr)*2);
         StrStream.Position := 0;
       end;
   end;
@@ -650,7 +633,8 @@ procedure TZAbstractTestCase.CheckEquals(Expected: ZWideString; Actual: String;
   ConSettings: PZConSettings; _Message: string);
 begin
   if ConSettings^.AutoEncode or (ConSettings^.ClientcodePage^.Encoding = ceUTF16) or
-     (not ConSettings^.ClientcodePage^.IsStringFieldCPConsistent) then
+     (not ConSettings^.ClientcodePage^.IsStringFieldCPConsistent) or
+     (ConSettings^.CPType = cCP_UTF16) then
     CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.CTRL_CP), _Message)
   else
     CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.ClientcodePage^.CP), _Message);

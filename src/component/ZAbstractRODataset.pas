@@ -2262,7 +2262,7 @@ begin
         else
           FStringFieldGetter := StringFieldGetterRaw2RawConvert
       else if (ConSettings^.ClientCodePage^.Encoding = ceAnsi) and
-              ZCompatibleCodePages(ZDefaultSystemCodePage, ConSettings^.ClientCodePage^.CP) then
+              ZCompatibleCodePages(ZOSCodePage, ConSettings^.ClientCodePage^.CP) then
         FStringFieldGetter := StringFieldGetterFromAnsiRec
       else
         FStringFieldGetter := StringFieldGetterRaw2RawConvert;
@@ -2271,7 +2271,7 @@ begin
       FStringFieldSetter := StringFieldSetterFromRaw;
     end;
     {$ELSE}
-    if ZCompatibleCodePages(ZDefaultSystemCodePage, ConSettings^.ClientCodePage^.CP) then
+    if ZCompatibleCodePages(ZOSCodePage, ConSettings^.ClientCodePage^.CP) then
       FStringFieldGetter := StringFieldGetterFromAnsiRec
     else
       FStringFieldGetter := StringFieldGetterRaw2RawConvert;
@@ -3257,7 +3257,9 @@ begin
               //most UTF8 DB's assume 4Byte / Char (surrogates included) such encoded characters may kill the heap of the FieldBuffer
               //users are warned: http://zeoslib.sourceforge.net/viewtopic.php?f=40&p=51427#p51427
               Size := GetPrecision(I) shl Ord((ConSettings^.ClientCodePage^.CharWidth > 2) and (doAlignMaxRequiredWideStringFieldSize in fOptions))
-          else if (ConSettings^.CPType = cCP_UTF8) or ((not ConSettings^.AutoEncode) and (ConSettings^.ClientCodePage^.Encoding = ceUTF8)) then
+          else if (ConSettings^.CPType = cCP_UTF8) or
+            ((not ConSettings^.AutoEncode) and (ConSettings^.ClientCodePage^.Encoding = ceUTF8)) or
+            ((ConSettings^.CPType = cGET_ACP) and (ZOSCodePage = zCP_UTF8)) then
             Size := GetPrecision(I) shl 2
           else
             Size := GetPrecision(I)

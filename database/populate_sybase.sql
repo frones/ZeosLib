@@ -4,8 +4,9 @@
 /* Created on:     17.02.2003 20:27:07                          */
 /*==============================================================*/
 
+/*
 use zeoslib
-go
+go*/
 
 INSERT INTO string_values VALUES (1, '', '', '', '', convert(binary, ''), convert(varbinary, ''))
 go

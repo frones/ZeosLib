@@ -989,7 +989,7 @@ end;
 
 procedure TZTestCompPostgreSQLBugReportMBCs.TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);
 const
-  QuoteString1: ZWideString = '\'', 1 --''';
+  QuoteString1 = '\'', 1 --''';
   QuoteString2: ZWideString = 'ТестЁЙ\000';
 begin
   Query.ParamChar := ':';

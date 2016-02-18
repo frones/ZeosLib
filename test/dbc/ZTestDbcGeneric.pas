@@ -364,7 +364,8 @@ begin
 //  CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
   Connection.SetAutoCommit(False);
-  CheckEquals(Ord(tiNone), Ord(Connection.GetTransactionIsolation));
+  if Connection.GetMetadata.GetDatabaseInfo.SupportsTransactionIsolationLevel(tiNone) then
+    CheckEquals(Ord(tiNone), Ord(Connection.GetTransactionIsolation));
 
   { Checks without transactions. }
   CheckNotNull(Connection.CreateStatement);
@@ -1198,7 +1199,7 @@ begin
   Use_S_BIT := Not(StartsWith(Protocol, 'sqlite') or StartsWith(Protocol, 'ado') or
     StartsWith(Protocol, 'mssql') or StartsWith(Protocol, 'sybase') or
     StartsWith(Protocol, 'FreeTDS') or StartsWith(Protocol, 'ASA') or
-    StartsWith(Protocol, 'OleDB'));
+    StartsWith(Protocol, 'OleDB') or StartsWith(Protocol, 'odbc'));
   if Use_S_BIT then
     PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)')
   else
@@ -1334,7 +1335,7 @@ begin
   Use_S_BIT := Not(StartsWith(Protocol, 'sqlite') or StartsWith(Protocol, 'ado')
     or StartsWith(Protocol, 'mssql') or StartsWith(Protocol, 'sybase') or
     StartsWith(Protocol, 'FreeTDS') or StartsWith(Protocol, 'ASA') or
-    StartsWith(Protocol, 'OleDB'));
+    StartsWith(Protocol, 'OleDB') or StartsWith(Protocol, 'odbc'));
   if Use_S_BIT then
     PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)')
   else

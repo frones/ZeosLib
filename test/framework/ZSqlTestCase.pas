@@ -225,8 +225,7 @@ type
 
     function GetDBTestString(const Value: ZWideString; ConSettings: PZConSettings; MaxLen: Integer = -1): String; overload;
     function GetDBTestString(const Value: RawByteString; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False; MaxLen: Integer = -1): String; overload;
-    function GetDBValidString(const Value: ZWideString; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): String; overload;
-    function GetDBTestStream(const Value: String; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): TStream; overload;
+    function GetDBTestStream(const Value: ZWideString; ConSettings: PZConSettings): TStream; overload;
   public
     destructor Destroy; override;
 
@@ -320,7 +319,7 @@ const
 implementation
 
 uses {$IFDEF WITH_FTGUID}ComObj, ActiveX,{$ENDIF} Math,
-  ZSysUtils, ZTestConsts, ZTestConfig, ZSqlProcessor, ZURL, ZAbstractRODataset;
+  ZSysUtils, ZEncoding, ZTestConsts, ZTestConfig, ZSqlProcessor, ZURL, ZAbstractRODataset;
 
 function PropPos(const PropDynArray: TStringDynArray; const AProp: String): Integer; overload;
 var
@@ -1006,203 +1005,96 @@ end;
 {$ENDIF}
 function TZAbstractSQLTestCase.GetDBTestString(const Value: ZWideString;
   ConSettings: PZConSettings; MaxLen: Integer = -1): String;
-{$IFNDEF UNICODE}
-var Temp: RawByteString;
-{$ENDIF}
 begin
-  Result := Value;
   {$IFNDEF UNICODE}
   if ConSettings.CPType = cCP_UTF16 then
-    if ConSettings.CTRL_CP = 65001 then
-      Temp := UTF8Encode(Value)
+    if ConSettings.CTRL_CP = zCP_UTF8 then
+      Result := ZUnicodeToString(Value, zCP_UTF8)
     else
-      Temp := AnsiString(Value)
+      Result := ZUnicodeToString(Value, ZOSCodePage)
   else
     case ConSettings.ClientCodePage.Encoding of
-      ceDefault: Result := Value; //Souldn't be possible
+      ceDefault: Result := ZUnicodeToRaw(Value, ZOSCodePage); //Souldn't be possible
       ceAnsi:
         if ConSettings.AutoEncode then //Revert the expected value to test
-          Temp := UTF8Encode(Value)
+          Result := ZUnicodeToString(Value, zCP_UTF8)
         else  //Return the expected value to test
-          Temp := AnsiString(Value);
+          Result := ZUnicodeToString(Value, ZOSCodePage);
       ceUTF8: //, ceUTF32
         if ConSettings.AutoEncode then //Revert the expected value to test
-          Temp := AnsiString(Value)
+          Result := ZUnicodeToString(Value, ZOSCodePage)
         else
-          Temp := UTF8Encode(Value);
+          Result := ZUnicodeToString(Value, zCP_UTF8);
       ceUTF16:
         if ConSettings.AutoEncode then //Revert the expected value to test
           if ConSettings.CPType = cCP_UTF8 then
-            Temp := AnsiString(Value)
+            Result := ZUnicodeToString(Value, ZOSCodePage)
           else
-            Temp := Value
+            Result := ZUnicodeToString(Value, zCP_UTF8)
         else
           if ConSettings.CPType = cCP_UTF8 then
-            Temp := UTF8Encode(Value)
+            Result := ZUnicodeToString(Value, zCP_UTF8)
           else
-            Temp := AnsiString(Value);
+            Result := ZUnicodeToString(Value, ZOSCodePage);
     end;
-  if (MaxLen = -1) then
-  begin
-    SetLength(Result, Length(Temp));
-    System.Move(PChar(Temp)^, PChar(Result)^, Length(Temp));
-  end
-  else
-  begin
-    SetLength(Result, Min(MaxLen, Length(Temp)));
-    System.Move(PChar(Temp)^, PChar(Result)^, Length(Result));
-  end;
   {$ELSE}
+  Result := Value;
+  {$ENDIF}
   if (MaxLen > 0) and (Length(Result) > MaxLen) then
     SetLength(Result, MaxLen);
-  {$ENDIF}
 end;
 
 function TZAbstractSQLTestCase.GetDBTestString(const Value: RawByteString;
   ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False; MaxLen: Integer = -1): String;
-{$IFNDEF UNICODE}
-var Temp: RawByteString;
-{$ENDIF}
+var
+  W: ZWideString;
 begin
-  {$IFDEF UNICODE}
-  if isUTF8Encoded then
-    Result := UTF8ToString(Value)
+  if IsUTF8Encoded then
+    W := UTF8Decode(Value)
   else
-    Result := String(Value);
-  if (MaxLen > 0) and (Length(Result) > MaxLen) then
-    SetLength(Result, MaxLen);
-  {$ELSE}
-  Result := Value;
-  case ConSettings.ClientCodePage^.Encoding of
-    ceDefault: Temp := Value; //Souldn't be possible
-    ceAnsi:
-      if ConSettings.AutoEncode then //Revert the expected value to test
-        if IsUTF8Encoded then
-          Temp := Value
-        else
-          Temp := UTF8Encode(ZWideString(Value))
-      else  //Return the expected value to test
-        if IsUTF8Encoded then
-          Temp := UTF8ToAnsi(Value)
-        else
-          Temp := Value;
-    ceUTF8:
-      if ConSettings.AutoEncode then //Revert the expected value to test
-        if IsUTF8Encoded then
-          Temp := UTF8ToAnsi(Value)
-        else
-          Temp := Value
-      else //Return the expected value to test
-        if IsUTF8Encoded then
-          Temp := Value
-        else
-          Temp := UTF8Encode(WideString(Value)); //Return the expected value to test
-    ceUTF16:
-      if ConSettings.ClientCodePage.Encoding = ceUTF16 then
-        case ConSettings^.CPType of
-          cGET_ACP:
-            if isUTF8Encoded then //Revert the expected value to test
-              Temp := Value
-            else
-              Temp := AnsiString(UTF8Decode(Value));
-          cCP_UTF8:
-            if isUTF8Encoded then //Revert the expected value to test
-              Temp := AnsiString(UTF8Decode(Value))
-            else
-              Temp := Value;
-          else
-            if ConSettings^.CTRL_CP = 65001 then //Revert the expected value to test
-              Temp := AnsiString(UTF8Decode(Value))
-            else
-              Temp := Value;
-        end
-  end;
-  if (MaxLen = -1) then
-  begin
-    SetLength(Result, Length(Temp));
-    System.Move(PChar(Temp)^, PChar(Result)^, Length(Temp));
-  end
-  else
-  begin
-    SetLength(Result, MaxLen);
-    System.Move(PChar(Temp)^, PChar(Result)^, MaxLen);
-  end;
-  {$ENDIF}
-end;
-
-function TZAbstractSQLTestCase.GetDBValidString(const Value: ZWideString;
-  ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): String;
-var Temp: {$IFNDEF UNICODE}RawByteString{$ELSe}String{$ENDIF};
-begin
-  Result := Value;
-  if ConSettings.CPType = cCP_UTF16 then
-    if isUTF8Encoded then
-      Temp := {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(RawByteString(Value))
-    else
-      Temp := Value
-  else
-    case ConSettings.ClientCodePage.Encoding of
-      ceDefault: Result := Value; //Souldn't be possible
-      ceAnsi:
-          if IsUTF8Encoded then
-            Temp := UTF8ToAnsi(Value)
-          else
-            Temp := Value;
-      else //ceUTF8, ceUTF16, ceUTF32
-        if IsUTF8Encoded then
-          Temp := Value
-        else
-          Temp := UTF8Encode(WideString(Value)); //Return the expected value to test
-    end;
-  SetLength(Result, Length(Temp));
-  System.Move(PChar(Temp)^, PChar(Result)^, Length(Temp)*SizeOf(Char));
+    W := ZRawToUnicode(Value, ZOSCodePage);
+  Result := GetDBTestString(W, ConSettings, MaxLen);
 end;
 
 {$IFDEF UNICODE}
   {$WARNINGS ON}
 {$ENDIF}
 
-function TZAbstractSQLTestCase.GetDBTestStream(const Value: String; ConSettings:
-  PZConSettings; IsUTF8Encoded: Boolean = False): TStream;
+function TZAbstractSQLTestCase.GetDBTestStream(const Value: ZWideString;
+  ConSettings: PZConSettings): TStream;
 var
-  WS: ZWideString;
   Ansi: RawByteString;
 begin
   Result := TMemoryStream.Create;
   if ( ConSettings.CPType = cCP_UTF16 ) then
   begin
-    if isUTF8Encoded then
-      WS := {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(RawByteString(Value))
-    else
-      WS := ZWideString(Value);
-    Result.Write(PWideChar(WS)^, Length(WS)*2);
+    Result.Write(PWideChar(Value)^, Length(Value)*2);
     Result.Position := 0;
-  end
-  else
-  begin
+  end else begin
     case ConSettings.ClientCodePage.Encoding of
       ceAnsi:
         if ConSettings.AutoEncode then //Revert the expected value to test
-          if IsUTF8Encoded then
-            Ansi := RawByteString(Value)
-          else
-            Ansi := UTF8Encode(WideString(Value))
-        else  //Return the expected value to test
-          if IsUTF8Encoded then
-            Ansi := RawByteString(UTF8ToAnsi(RawByteString(Value)))
-          else
-            Ansi := RawByteString(Value);
-      else //ceUTF8, ceUTF16, ceUTF32
-        if ConSettings.AutoEncode then //Revert the expected value to test
-          if IsUTF8Encoded then
-            Ansi := RawByteString(UTF8ToAnsi(RawByteString(Value)))
-          else
-            Ansi := RawByteString(Value)
+          Ansi := UTF8Encode(Value)
         else
-          if IsUTF8Encoded then
-            Ansi := RawByteString(Value)
+          Ansi := ZUnicodeToRaw(Value, ZOSCodePage);
+      ceUTF8:
+        if ConSettings.AutoEncode then //Revert the expected value to test
+          Ansi := ZUnicodeToRaw(Value, ZOSCodePage)
+        else
+          Ansi := UTF8Encode(Value);
+      else
+        case ConSettings.CPType of
+          cGET_ACP:
+            if ConSettings.AutoEncode then //Revert the expected value to test
+              Ansi := UTF8Encode(Value)
+            else
+              Ansi := ZUnicodeToRaw(Value, ZOSCodePage);
           else
-            Ansi := UTF8Encode(WideString(Value)); //Return the expected value to test
+            if ConSettings.AutoEncode then //Revert the expected value to test
+              Ansi := ZUnicodeToRaw(Value, ZOSCodePage)
+            else
+              Ansi := UTF8Encode(Value);
+        end;
     end;
     Result.Write(PAnsiChar(Ansi)^, Length(Ansi));
     Result.Position := 0;

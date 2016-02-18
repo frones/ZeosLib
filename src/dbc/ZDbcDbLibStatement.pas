@@ -743,14 +743,7 @@ var
   Params: array of TZDbLibParam;
 
   OutString: RawByteString;
-  OutCharRec: TZCharRec;
   OutBytes: TBytes;
-  OutTempBlob: IZBlob;
-  OutBoolean: Boolean;
-  OutByte: Byte;
-  OutSmall: SmallInt;
-  OutInteger: Integer;
-  OutFloat: Single;
   OutDouble: Double;
   OutDBDATETIME: DBDATETIME;
 begin
@@ -942,20 +935,24 @@ begin
           begin
             P := FPLainDriver.dbRetData(FHandle, ParamIndex);
             Len := NativeUInt(FPLainDriver.dbRetLen(FHandle, ParamIndex));
-            case ZDetectUTF8Encoding(P, Len) of
-              etUTF8:
-                begin
-                  ZSetString(P, Len, OutString);
-                  ClientVarManager.SetAsUTF8String(Temp, OutString);
-                end;
-              etUSASCII:
-                begin
-                  ZSetString(P, Len, OutString);
-                  ClientVarManager.SetAsRawByteString(Temp, OutString);
-                end;
-              else
-                ClientVarManager.SetAsUnicodeString(Temp, USASCII7ToUnicodeString(P, Len));
-            end;
+            if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then begin
+              ZSetString(P, Len, OutString);
+              ClientVarManager.SetAsRawByteString(Temp, OutString);
+            end else
+              case ZDetectUTF8Encoding(P, Len) of
+                etUTF8:
+                  begin
+                    ZSetString(P, Len, OutString);
+                    ClientVarManager.SetAsUTF8String(Temp, OutString);
+                  end;
+                etUSASCII:
+                  begin
+                    ZSetString(P, Len, OutString);
+                    ClientVarManager.SetAsRawByteString(Temp, OutString);
+                  end;
+                else
+                  ClientVarManager.SetAsUnicodeString(Temp, PRawToUnicode(P, Len, ConSettings^.ClientCodePage^.CP));
+              end;
           end;
         tdsBinary, tdsVarBinary, tdsBigBinary, tdsBigVarBinary:
           begin
