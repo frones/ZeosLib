@@ -1538,7 +1538,7 @@ begin
   if (SourceBytes = 0) or (Source = nil) then
     Dest^ := #0
   else if ZCompatibleCodePages(SrcCP, DestCP) then begin
-    len := Min(DestBytes, DestBytes);
+    len := Min(SourceBytes, DestBytes);
     if Source <> Dest then
       Move(Source^, Dest^, len);
     (Dest+Len)^ := #0

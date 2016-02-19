@@ -280,7 +280,7 @@ begin
     FAdoConnection.Set_CursorLocation(adUseClient);
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
     ConSettings^.AutoEncode := {$IFDEF UNICODE}False{$ELSE}True{$ENDIF};
-    CheckCharEncoding('CP_ADO');
+    CheckCharEncoding('CP_UTF16');
   except
     on E: Exception do
     begin
