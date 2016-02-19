@@ -880,7 +880,7 @@ begin
           Result := UTF8Encode(US);
         end;
       ceUTF8:
-        if ConSettings.ClientCodePage.Encoding = ceAnsi then begin//ansi expected
+        if (ConSettings.ClientCodePage.Encoding in [ceAnsi, ceUTF16]) then begin//ansi expected
           {$IFDEF WITH_LCONVENCODING}
           ZSetString(Buffer, Size, Result);
           Result := Consettings.PlainConvertFunc(Result);

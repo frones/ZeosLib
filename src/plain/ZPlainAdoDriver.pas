@@ -60,6 +60,8 @@ uses ZClasses, ZPlainDriver;
 
 type
   TZAdoPlainDriver = class (TZAbstractPlainDriver, IZPlainDriver)
+  protected
+    function GetUnicodeCodePageName: String; override;
   public
     constructor Create;
 
@@ -78,7 +80,7 @@ uses ZCompatibility, ZEncoding, Windows;
 
 procedure TZAdoPlainDriver.LoadCodePages;
 begin
-  AddCodePage('CP_ADO', 0, ceUTF16, GetACP,'', 1, False);
+  AddCodePage('CP_UTF16', 0, ceUTF16, GetACP,'', 1, True);
 end;
 
 constructor TZAdoPlainDriver.Create;
@@ -89,6 +91,11 @@ end;
 function TZAdoPlainDriver.GetProtocol: string;
 begin
   Result := 'ado';
+end;
+
+function TZAdoPlainDriver.GetUnicodeCodePageName: String;
+begin
+  Result := 'CP_UTF16';
 end;
 
 function TZAdoPlainDriver.GetDescription: string;
