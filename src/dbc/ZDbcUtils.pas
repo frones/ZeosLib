@@ -883,7 +883,7 @@ begin
         if ConSettings.ClientCodePage.Encoding = ceAnsi then begin//ansi expected
           {$IFDEF WITH_LCONVENCODING}
           ZSetString(Buffer, Size, Result);
-          Result := Consettings.PlainConvertFunc(Result));
+          Result := Consettings.PlainConvertFunc(Result);
           {$ELSE}
           US := PRawToUnicode(Buffer, Size, zCP_UTF8);
           Result := ZUnicodeToRaw(US, ConSettings.ClientCodePage.CP)
