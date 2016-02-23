@@ -142,15 +142,15 @@ begin
   With FIBConnection do
   begin
     case FStatementType of
-      stSelect: //AVZ Get many rows - only need to use execute not execute2
+      stSelect, stSelectForUpdate: //AVZ Get many rows - only need to use execute not execute2
         GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @FStmtHandle,
           GetDialect, FParamSQLData.GetData);
       stExecProc:
         GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @FStmtHandle,
           GetDialect, FParamSQLData.GetData, FResultXSQLDA.GetData); //expecting a result
       else
-        GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @FStmtHandle,
-          GetDialect, FParamSQLData.GetData, nil) //not expecting a result
+        GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @FStmtHandle,
+          GetDialect, FParamSQLData.GetData) //not expecting a result
     end;
     Result := ZDbcInterbase6Utils.CheckInterbase6Error(GetPlainDriver,
       FStatusVector, ConSettings, lcExecute, ASQL);
@@ -164,9 +164,9 @@ begin
   begin
     Result := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
       GetDBHandle, GetTrHandle, GetDialect, SQL, ConSettings, FStmtHandle); //allocate handle if required or reuse it
-    if PrepareParams and (Result in [stInsert, stUpdate, stDelete]) then
+    if PrepareParams and (Result in [stInsert, stUpdate, stDelete, stExecProc, stSelectForUpdate]) then
       PrepareInParameters;
-    if Result in [stSelect, stExecProc] then
+    if Result in [stSelect, stExecProc, stSelectForUpdate] then
     begin
       FResultXSQLDA := TZSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
       PrepareResultSqlData(GetPlainDriver, GetDialect,
