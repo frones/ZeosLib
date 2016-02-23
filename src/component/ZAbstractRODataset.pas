@@ -2739,26 +2739,35 @@ begin
   TempParam := TParam.Create(nil);
 
   try
-    for I := Low(ParamNames) to High(ParamNames) do
-    begin
-      if Assigned(Dataset) then
-        Field := Dataset.FindField(ParamNames[I])
-      else
-        Field := nil;
-
-      if Assigned(Field) then
-      begin
-        TempParam.AssignField(Field);
-        Param := TempParam;
-      end
-      else
-      begin
-        Param := Params.FindParam(ParamNames[I]);
+    if (not ParamCheck) and (not Assigned(ParamNames)) and (FParams.Count > 0) then begin
+      for I := 0 to Params.Count -1 do begin
+        Param := Params[i];
         if not Assigned(Param) or (Param.ParamType in [ptOutput, ptResult]) then
           Continue;
+        SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, Param);
       end;
+    end else begin
+      for I := Low(ParamNames) to High(ParamNames) do
+      begin
+        if Assigned(Dataset) then
+          Field := Dataset.FindField(ParamNames[I])
+        else
+          Field := nil;
 
-      SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, Param);
+        if Assigned(Field) then
+        begin
+          TempParam.AssignField(Field);
+          Param := TempParam;
+        end
+        else
+        begin
+          Param := Params.FindParam(ParamNames[I]);
+          if not Assigned(Param) or (Param.ParamType in [ptOutput, ptResult]) then
+            Continue;
+        end;
+
+        SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, Param);
+      end;
     end;
   finally
     TempParam.Free;

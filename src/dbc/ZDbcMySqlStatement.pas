@@ -742,19 +742,19 @@ begin
       case Bind^.buffer_type of
         FIELD_TYPE_TINY:
           if Bind^.is_signed then
-            PShortInt(PBuffer)^ := ShortInt(ClientVarManager.GetAsUInteger(InParamValues[i]))
+            PShortInt(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i])
           else
-            PByte(PBuffer)^ := Byte(ClientVarManager.GetAsInteger(InParamValues[i]));
+            PByte(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i]);
         FIELD_TYPE_SHORT:
           if Bind^.is_signed then
-            PSmallInt(PBuffer)^ := SmallInt(ClientVarManager.GetAsInteger(InParamValues[i]))
+            PSmallInt(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
           else
-            PWord(PBuffer)^ := Word(ClientVarManager.GetAsUInteger(InParamValues[i]));
+            PWord(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
         FIELD_TYPE_LONG:
           if Bind^.is_signed then
-            PLongInt(PBuffer)^ := LongInt(ClientVarManager.GetAsInteger(InParamValues[i]))
+            PLongInt(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
           else
-            PLongWord(PBuffer)^ := LongWord(ClientVarManager.GetAsUInteger(InParamValues[i]));
+            PLongWord(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
         FIELD_TYPE_LONGLONG:
           if Bind^.is_signed then
             PInt64(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])

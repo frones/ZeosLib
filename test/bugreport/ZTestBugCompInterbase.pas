@@ -88,6 +88,7 @@ type
     procedure Test_Decimal;
     procedure Test_Ticket54;
     procedure Test_Ticket63;
+    procedure Test_Ticket67;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -797,6 +798,25 @@ begin
     Table.Free;
     Connection.ExecuteDirect('Delete from PLUS__');
     Connection.ExecuteDirect('Delete from PLUSA');
+  end;
+end;
+
+procedure ZTestCompInterbaseBugReport.Test_Ticket67;
+var
+  Query: TZQuery;
+begin
+
+  Query := CreateQuery;
+  Query.ParamCheck := False;
+  Query.SQL.Text := 'execute block (P1 integer = ?) returns (P2 integer) as begin select R1 from PROCEDURE1(:p1) into :P2; suspend; end';
+  Query.Params.CreateParam(ftInteger, 'P1', ptInput);
+  Query.Params[0].AsInteger := 10;
+  try
+    Query.Open;
+    CheckEquals(1, Query.RecordCount, 'the RecordCount');
+    CheckEquals(11, Query.Fields[0].AsInteger, 'the returned value');
+  finally
+    Query.Free;
   end;
 end;
 
