@@ -99,6 +99,7 @@ type
     procedure TestTicket44;
     procedure TestUnicodeEscape;
     procedure TestTicket51;
+    procedure TestSF81;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1043,6 +1044,34 @@ begin
   finally
     Query.Free;
     TempConnection.Free;
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF81;
+var
+  TempConnection: TZConnection;
+  Query: TZQuery;
+begin
+  TempConnection := CreateDatasetConnection;
+  try
+    Query := TZQuery.Create(nil);
+    try
+      Query.Connection := TempConnection;
+      Query.SQL.Text := 'select * from public."RANMeter"';
+      Query.Open;
+      Query.Edit;
+      try
+        Query.FieldByName('MeterID').AsInteger := 32134;
+        Query.Post;
+      except
+        Query.Cancel;
+        raise;
+      end;
+    finally
+      FreeAndNil(Query);
+    end;
+  finally
+    FreeAndNil(TempConnection);
   end;
 end;
 

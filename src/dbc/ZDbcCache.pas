@@ -784,9 +784,7 @@ function CompareUnicodeCLob_Equals(const {%H-}Null1, Null2: Boolean; const V1, V
 var
   Blob1, Blob2: IZBlob;
   BlobEmpty1, BlobEmpty2: Boolean;
-  {$IFDEF MSWINDOWS}
   ValuePtr1, ValuePtr2: Pointer;
-  {$ENDIF}
 begin
   Blob1 := IZBlob(PPointer(V1)^);
   BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
@@ -797,16 +795,11 @@ begin
   else if Blob1.IsUpdated or Blob2.IsUpdated then
     if Blob1.IsClob and Blob2.IsClob then
     begin
-      {$IFDEF MSWINDOWS}
       ValuePtr1 := Blob1.GetPWideChar;
       ValuePtr2 := Blob2.GetPWideChar;
-      SetLastError(0);
-      Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
-        ValuePtr1, Blob1.Length, ValuePtr2, Blob2.Length) - 2{CSTR_EQUAL};
-      if GetLastError <> 0 then RaiseLastOSError;
-      {$ELSE}
-      Result := WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
-      {$ENDIF}
+      if Blob1.Length <> Blob2.Length then
+        Result := 1 else
+        Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length);
     end
     else
       Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)

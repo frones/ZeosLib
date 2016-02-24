@@ -517,7 +517,7 @@ begin
           {$ELSE}
           ConSettings.CPType := cGET_ACP;
             {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-            ConSettings.CTRL_CP := DefualtSystemCodePage;
+            ConSettings.CTRL_CP := DefaultSystemCodePage;
             {$ELSE}
             ConSettings.CTRL_CP := ZOSCodePage;
             {$ENDIF}
