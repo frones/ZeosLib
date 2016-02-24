@@ -2653,7 +2653,7 @@ begin
   end;
 {$ELSE}
 {$IFDEF madExcept}
-  Result := madStackTrace.StackTrace( false, false, false, nil,
+  Result := madStackTrace.StackTrace( false, false, false, nil, nil,
                                            ThrownExceptionAddress, false,
                                            false, 0, 0, nil,
                                            @ThrownExceptionAddress );

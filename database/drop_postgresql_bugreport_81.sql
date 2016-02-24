@@ -8,6 +8,7 @@
 drop table if exists test815852;
 drop table if exists xyz.test824780;
 drop table if exists test824780;
+drop table if exists "RANMeter";
 drop schema if exists xyz;
 
 drop domain if exists tinteger;

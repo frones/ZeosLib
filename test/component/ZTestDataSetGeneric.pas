@@ -56,7 +56,8 @@ interface
 
 uses
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
-  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility;
+  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility,
+  ZAbstractRODataset;
 
 type
   {** Implements a test case for . }
@@ -65,6 +66,8 @@ type
 
   TZGenericTestDataSet = class(TZAbstractCompSQLTestCase)
   private
+    procedure TestReadCachedLobs(const BinLob: String; aOptions: TZDataSetOptions;
+      BinStreamE: TMemoryStream; Query: TZReadOnlyQuery);
   protected
     procedure TestQueryGeneric(Query: TDataset);
     procedure TestFilterGeneric(Query: TDataset);
@@ -94,6 +97,7 @@ type
     procedure TestClobEmptyString;
     procedure TestLobModes;
     procedure TestSpaced_Names;
+    procedure Test_doCachedLobs;
   end;
 
   TZGenericTestDataSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -108,7 +112,7 @@ uses
   Variants,
 {$ENDIF}
   {$IFDEF UNICODE}ZEncoding,{$ENDIF}
-  DateUtils, ZSysUtils, ZTestConsts, ZAbstractRODataset, ZTestCase,
+  DateUtils, ZSysUtils, ZTestConsts, ZTestCase,
   ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZGenericTestDataSet }
@@ -542,6 +546,46 @@ end;
 {**
   Check functionality of TZReadOnlyQuery
 }
+procedure TZGenericTestDataSet.TestReadCachedLobs(const BinLob: String;
+  aOptions: TZDataSetOptions; BinStreamE: TMemoryStream; Query: TZReadOnlyQuery);
+var
+  BinStreamA: TMemoryStream;
+begin
+  BinStreamA := nil;
+  try
+    with Query do
+    begin
+      Options := aOptions;
+      SQL.Text := 'SELECT * FROM blob_values where b_id >= '+ IntToStr(TEST_ROW_ID-1);
+      Open;
+      CheckEquals(2, RecordCount, 'RecordCount');
+      CheckEquals(False, IsEmpty);
+      CheckEquals(TEST_ROW_ID-1, FieldByName('b_id').AsInteger);
+      Next;
+      CheckEquals(TEST_ROW_ID, FieldByName('b_id').AsInteger);
+      BinStreamA := TMemoryStream.Create;
+      BinStreamA.Position:=0;
+      (FieldByName(BinLob) as TBlobField).SaveToStream(BinStreamA);
+      CheckEquals(BinStreamE, BinStreamA, 'Binary Stream');
+      First;
+      Refresh;
+      CheckEquals(2, RecordCount, 'RecordCount');
+      CheckEquals(False, IsEmpty);
+      CheckEquals(TEST_ROW_ID-1, FieldByName('b_id').AsInteger);
+      Next;
+      CheckEquals(TEST_ROW_ID, FieldByName('b_id').AsInteger);
+      BinStreamA := TMemoryStream.Create;
+      BinStreamA.Position:=0;
+      (FieldByName(BinLob) as TBlobField).SaveToStream(BinStreamA);
+      CheckEquals(BinStreamE, BinStreamA, 'Binary Stream');
+      Close;
+    end;
+  finally
+    if assigned(BinStreamA) then
+      BinStreamA.Free;
+  end;
+end;
+
 procedure TZGenericTestDataSet.TestReadOnlyQuery;
 var
   Query: TZReadOnlyQuery;
@@ -1507,6 +1551,90 @@ begin
     Query.Close;
   finally
     Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDataSet.Test_doCachedLobs;
+var
+  Query: TZQuery;
+  ROQuery: TZReadOnlyQuery;
+  BinStreamE: TMemoryStream;
+  BinLob: String;
+  TempConnection: TZConnection;
+  aOptions: TZDataSetOptions;
+begin
+  TempConnection := nil;
+  BinStreamE:=nil;
+
+  Query := CreateQuery;
+  ROQuery := CreateReadOnlyQuery;
+  aOptions := Query.Options;
+  try
+    if StartsWith(LowerCase(Connection.Protocol), 'postgre') then
+    begin
+      TempConnection := TZConnection.Create(nil);
+      TempConnection.HostName := Connection.HostName;
+      TempConnection.Port     := Connection.Port;
+      TempConnection.Database := Connection.Database;
+      TempConnection.User     := Connection.User;
+      TempConnection.Password := Connection.Password;
+      TempConnection.Protocol := Connection.Protocol;
+      TempConnection.Catalog  := Connection.Catalog;
+      TempConnection.Properties.Text := Connection.Properties.Text;
+      TempConnection.Properties.Add('oidasblob=true');
+      TempConnection.TransactIsolationLevel := tiReadCommitted;
+      TempConnection.Connect;
+      Query.Connection := TempConnection;
+      ROQuery.Connection := TempConnection;
+      Connection.TransactIsolationLevel:=tiReadCommitted;
+    end;
+    with Query do
+    begin
+      Query.Options := aOptions;
+      SQL.Text := 'DELETE FROM blob_values where b_id >= '+ IntToStr(TEST_ROW_ID-1);
+      ExecSQL;
+      Sql.Text := 'INSERT INTO blob_values (b_id) values ('+IntToStr(TEST_ROW_ID-1)+')';
+      ExecSQL;
+
+      if StartsWith(LowerCase(Connection.Protocol), 'oracle') then
+        BinLob := 'b_blob'
+      else if StartsWith(LowerCase(Connection.Protocol), 'sqlite') then
+        BinLob := 'b_blob'
+      else
+        BinLob := 'b_image';
+      Sql.Text := 'INSERT INTO blob_values (b_id,'+BinLob+')'
+        + ' VALUES (:b_id,:b_image)';
+      CheckEquals(2, Params.Count);
+      Params[0].DataType := ftInteger;
+      Params[1].DataType := ftBlob;
+      Params[0].AsInteger := TEST_ROW_ID;
+      BinStreamE := TMemoryStream.Create;
+      BinStreamE.LoadFromFile('../../../database/images/horse.jpg');
+      Params[1].LoadFromStream(BinStreamE, ftBlob);
+      ExecSQL;
+      CheckEquals(1, RowsAffected);
+
+    end;
+    TestReadCachedLobs(BinLob, aOptions, BinStreamE, TZReadOnlyQuery(Query));
+    TestReadCachedLobs(BinLob, aOptions, BinStreamE, ROQuery);
+    Include(aOptions, doCachedLobs);
+    TestReadCachedLobs(BinLob, aOptions, BinStreamE, TZReadOnlyQuery(Query));
+    TestReadCachedLobs(BinLob, aOptions, BinStreamE, ROQuery);
+  finally
+    if assigned(BinStreamE) then
+      BinStreamE.Free;
+    Query.SQL.Text := 'DELETE FROM blob_values where b_id >= '+ IntToStr(TEST_ROW_ID-1);
+    try
+      Query.ExecSQL;
+    finally
+      Query.Free;
+      try
+        ROQuery.Free;
+      finally
+        if Assigned(TempConnection) then
+          TempConnection.Free;
+      end;
+    end;
   end;
 end;
 

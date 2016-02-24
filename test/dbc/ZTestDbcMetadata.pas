@@ -198,8 +198,8 @@ var
   SqlDateTimeSub, CharOctetLength, OrdinalPosition: Integer; IsNullable: string);
   begin
     CheckEquals(ResultSet.Next, True, 'The column is missing: ' + ColumnName);
-    CheckEquals(Catalog, ResultSet.GetStringByName('TABLE_CAT'));
-    CheckEquals(Schema, ResultSet.GetStringByName('TABLE_SCHEM'));
+    CheckEquals(Catalog, ResultSet.GetStringByName('TABLE_CAT'), 'The column catalog information is wrong: ');
+    CheckEquals(Schema, ResultSet.GetStringByName('TABLE_SCHEM'), 'The column schema information is wrong: ');
     CheckEquals(UpperCase(TableName), UpperCase(ResultSet.GetStringByName('TABLE_NAME')));
     CheckEquals(UpperCase(ColumnName), UpperCase(ResultSet.GetStringByName('COLUMN_NAME')));
 //    CheckEquals(DataType, ResultSet.GetSmallByName('DATA_TYPE'));

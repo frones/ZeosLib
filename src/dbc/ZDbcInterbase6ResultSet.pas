@@ -464,7 +464,7 @@ begin
   if not  LastWasNull then begin
     BlobId := GetQuad(ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF});
     if FCachedBlob then begin
-      case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+      case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType of
         stBinaryStream: begin
           Result := TZAbstractBlob.Create;
           with FIBConnection do
@@ -479,7 +479,7 @@ begin
         end;
       end;
     end else
-      case GetMetaData.GetColumnType(ColumnIndex) of
+      case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType of
         stBinaryStream:
           Result := TZInterbase6UnCachedBlob.Create(FIBConnection.GetDBHandle,
             FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId,

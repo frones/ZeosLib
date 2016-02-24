@@ -2895,8 +2895,8 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdateString(CatalogNameIndex, ''{GetStringByName('TABLE_CAT')});
-      Result.UpdateString(SchemaNameIndex, ''{GetStringByName('TABLE_SCHEM')});
+      Result.UpdateString(CatalogNameIndex, GetStringByName('TABLE_CAT'));
+      Result.UpdateString(SchemaNameIndex, GetStringByName('TABLE_SCHEM'));
       Result.UpdateString(TableNameIndex, GetStringByName('TABLE_NAME'));
       Result.UpdateString(ColumnNameIndex, GetStringByName('COLUMN_NAME'));
 //The value in the resultset will be used
@@ -3329,9 +3329,12 @@ end;
 }
 function TZSybaseDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
+var
+  i: Integer;
 begin
   Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
-
+{
+  //Jan: The Code is nice to see but the inherited call already is doing all the necessary work...
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_exportkey %s, %s, %s',
     [ComposeObjectString(Catalog), ComposeObjectString(Schema), ComposeObjectString(Table)])) do
@@ -3357,6 +3360,7 @@ begin
     end;
     Close;
   end;
+}
 end;
 
 {**
@@ -3437,14 +3441,19 @@ end;
 function TZSybaseDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog: string;
   const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
+var
+  Statement: String;
 begin
   Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
                                       ForeignCatalog, ForeignSchema, ForeignTable);
 
-  with GetStatement.ExecuteQuery(
+  statement :=
     Format('exec sp_jdbc_getcrossreferences %s, %s, %s, %s, %s, %s',
     [ComposeObjectString(PrimaryCatalog), ComposeObjectString(PrimarySchema), ComposeObjectString(PrimaryTable),
-     ComposeObjectString(ForeignCatalog), ComposeObjectString(ForeignSchema), ComposeObjectString(ForeignTable)])) do
+     ComposeObjectString(ForeignCatalog), ComposeObjectString(ForeignSchema), ComposeObjectString(ForeignTable)]);
+
+  with GetStatement.ExecuteQuery(Statement
+       ) do
   begin
     while Next do
     begin
