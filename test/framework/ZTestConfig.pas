@@ -229,9 +229,7 @@ var
   {** The active test group. }
   TestGroup: string;
 
-  {$IFDEF FPC}
-  function GetExecutedTests: TFPList;
-  {$ELSE}
+  {$IFNDEF FPC}
   function CreateTestSuite:ITestSuite;
   {$ENDIF}
 procedure EnableZSQLMonitor;
@@ -516,56 +514,7 @@ end;
   configuration file
   Unfortunately fpcunit and DUnit need different approaches
 }
-{$IFDEF FPC}
-function GetExecutedTests: TFPList;
-Var
-  I, J: integer;
-  procedure CheckTestRegistry (test:TTest; ATestName:string);
-  var s, c : string;
-      I, p : integer;
-  begin
-    if test is TTestSuite then
-      begin
-      p := System.pos ('.', ATestName);
-      if p > 0 then
-        begin
-        s := copy (ATestName, 1, p-1);
-        c := copy (ATestName, p+1, maxint);
-        end
-      else
-        begin
-        s := '';
-        c := ATestName;
-        end;
-      if comparetext(c, test.TestName) = 0 then
-        Result.Add(test)
-      else if (CompareText( s, Test.TestName) = 0) or (s = '') then
-        for I := 0 to TTestSuite(test).Tests.Count - 1 do
-          CheckTestRegistry (TTest(TTestSuite(test).Tests[I]), c)
-      end
-    else if test is TTestCase then begin
-      S := TTestCase(test).TestName;
-      if comparetext(s, ATestName) = 0 then
-          Result.Add(test)
-      end else if test.ClassName = 'TTestItem' then begin
-         S := PString(PAnsiChar(Pointer(Test))+SizeOf(TObject))^; //Dirty hack to get our Suite logic running -> TTestItem is private declared
-         if comparetext(s, ATestName) = 0 then
-            Result.Add(test);
-      end;
-  end;
-begin
-  Result := TFPList.Create;
-  If CommandLineSwitches.Suite then
-  begin
-    for J := 0 to High(CommandLineSwitches.suiteitems) do
-      for I := 0 to GetTestregistry.Tests.count-1 do
-        CheckTestRegistry (GetTestregistry.Test[I], CommandLineSwitches.suiteitems[J]);
-  end
-  else
-    Result.Assign(GetTestregistry.Tests);
-end;
-
-{$ELSE}
+{$IFNDEF FPC}
 function CreateTestSuite:ITestSuite;
 var
   I, J: integer;

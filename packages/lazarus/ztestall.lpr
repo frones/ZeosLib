@@ -44,14 +44,15 @@ type
 
   TMyTestRunner = class(TTestRunner)
   private
+    {$IFNDEF FPC}
     FullRegistryItems: TFPList;
     CurrentRegistryItems: TFPList;
+    {$ENDIF}
   protected
   // override the protected methods of TTestRunner to customize its behavior
     procedure WriteCustomHelp; override;
     function GetShortOpts: string; override;
     function GetResultsWriter: TCustomResultsWriter; override;
-    //procedure DoRun; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -61,8 +62,10 @@ type
 
   TMyGUITestRunner = class(TGUITestRunner)
   private
+    {$IFNDEF FPC}
     FullRegistryItems: TFPList;
     CurrentRegistryItems: TFPList;
+    {$ENDIF}
   protected
   // override the protected methods of TGUITestRunner to customize its behavior
   public
@@ -72,19 +75,23 @@ type
 
 constructor TMyGUITestRunner.Create(TheOwner: TComponent);
 begin
+  {$IFNDEF FPC}
   // Dirty Workaround to make sure ALL tests can be destroyed in the destructor
   FullRegistryItems := TFPList.Create;
   CurrentRegistryItems := GetExecutedTests;
   FullRegistryItems.Assign(GetTestRegistry.Tests); //save old list
   GetTestRegistry.Tests.Assign(CurrentRegistryItems); //assign new or same list
+  {$ENDIF}
   inherited Create(TheOwner);
 end;
 
 destructor TMyGUITestRunner.Destroy;
 begin
+  {$IFNDEF FPC}
   GetTestRegistry.Tests.Assign(FullRegistryItems); //assign old list again -> destroy the tests
   FreeAndNil(FullRegistryItems); //free old list
   FreeAndNil(CurrentRegistryItems); //free possible changed list
+  {$ENDIF}
   inherited Destroy;
 end;
 
@@ -138,50 +145,15 @@ begin
     Result:=inherited GetResultsWriter;
 end;
 
-{procedure TMyTestRunner.DoRun;
-  var
-    tempTestSuite : TTestSuite;
-    S: string;
-  begin
-    S := CheckOptions(GetShortOpts, LongOpts);
-    if (S <> '') then
-      Writeln(S);
-
-    ParseOptions;
-
-    tempTestSuite := CreateTestSuite;
-
-    //get a list of all registed tests
-    if CommandLineSwitches.list then
-      case FormatParam of
-        fLatex: Write(GetSuiteAsLatex(tempTestSuite));
-        fPlain: Write(GetSuiteAsPlain(tempTestSuite));
-        fXML: Write(GetSuiteAsXML(tempTestSuite));
-      else
-        Write(GetSuiteAsLatex(tempTestSuite));;
-      end;
-
-    //run the tests
-    if CommandLineSwitches.runall or CommandLineSwitches.Suite or (DefaultRunAllTests and Not CommandLineSwitches.list) then
-       DoTestRun(tempTestSuite)
-    else
-      if CommandLineSwitches.Suite then
-      begin
-        //FullRegistryItems := TFPList.Create;
-        //FullRegistryItems.Assign(GetTestRegistry.Tests);
-        tempTestSuite := CreateTestSuite;
-        GetTestRegistry.Tests.Assign(tempTestSuite.Tests);
-      end;
-    Terminate;
-  end;
- }
 constructor TMyTestRunner.Create(AOwner: TComponent);
 begin
+  {$IFNDEF FPC}
   // Dirty Workaround to make sure ALL tests can be destroyed in the destructor
   FullRegistryItems := TFPList.Create;
   CurrentRegistryItems := GetExecutedTests;
   FullRegistryItems.Assign(GetTestRegistry.Tests); //save old list
   GetTestRegistry.Tests.Assign(CurrentRegistryItems); //assign new or same list
+  {$ENDIF}
   inherited Create(AOwner);
   longopts.Add('batch');
   longopts.Add('verbose');
@@ -192,9 +164,11 @@ end;
 
 destructor TMyTestRunner.Destroy;
 begin
+  {$IFNDEF FPC}
   GetTestRegistry.Tests.Assign(FullRegistryItems); //assign old list again -> destroy the tests
   FreeAndNil(FullRegistryItems); //free old list
   FreeAndNil(CurrentRegistryItems); //free possible changed list
+  {$ENDIF}
   inherited Destroy;
 end;
 
