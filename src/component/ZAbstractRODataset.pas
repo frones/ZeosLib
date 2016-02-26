@@ -7335,6 +7335,7 @@ begin
   { Size is computed, no validation }
 end;
 
+{$IFNDEF WITH_VIRTUAL_TFIELD_BIND}
 procedure TObjectField.Bind(Binding: Boolean);
 begin
   if FieldKind = fkLookup then
@@ -7346,6 +7347,7 @@ begin
         ValidateLookupInfo(True);
    end;
 end;
+{$ENDIF}
 
 procedure TObjectField.FreeBuffers;
 {var
