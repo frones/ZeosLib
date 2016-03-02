@@ -576,7 +576,7 @@ begin
   PlainDriver.AddCodePage('ISO8859_9', CS_ISO8859_9, ceAnsi, zCP_L5_ISO_8859_9); {Latin 5}
   PlainDriver.AddCodePage('ISO8859_13', CS_ISO8859_13, ceAnsi, zCP_L7_ISO_8859_13); {Latin 7 — Baltic Rim}
   PlainDriver.AddCodePage('WIN1255', CS_WIN1255, ceAnsi, zCP_WIN1255); {ANSI Hebrew}
-  PlainDriver.AddCodePage('WIN1256', CS_WIN1256, ceAnsi, cCP_WIN1256); {ANSI Arabic}
+  PlainDriver.AddCodePage('WIN1256', CS_WIN1256, ceAnsi, zCP_WIN1256); {ANSI Arabic}
   PlainDriver.AddCodePage('WIN1257', CS_WIN1257, ceAnsi, zCP_WIN1257); {ANSI Baltic}
 end;
 

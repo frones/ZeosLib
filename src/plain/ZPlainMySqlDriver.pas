@@ -594,7 +594,7 @@ begin
   AddCodePage('cp852', 28, ceAnsi, zCP_DOS852); {DOS Central European}
   AddCodePage('latin7', 29, ceAnsi, zCP_L7_ISO_8859_13); {ISO 8859-13 Baltic}
   AddCodePage('cp1251', 30, ceAnsi, zCP_WIN1251); {Windows Cyrillic}
-  AddCodePage('cp1256', 31, ceAnsi, cCP_WIN1256); {Windows Arabic}
+  AddCodePage('cp1256', 31, ceAnsi, zCP_WIN1256); {Windows Arabic}
   AddCodePage('cp1257', 32, ceAnsi, zCP_WIN1257); {Windows Baltic}
   AddCodePage('binary', 33); {Binary pseudo charset}
   AddCodePage('geostd8', 34); {GEOSTD8 Georgian}

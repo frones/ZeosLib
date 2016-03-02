@@ -939,7 +939,7 @@ begin
   AddCodePage('KOI8', Ord(csKOI8), ceAnsi, zCP_KOI8R);  { KOI8-R(U) 	Cyrillic }
   AddCodePage('WIN', Ord(csWIN), ceAnsi, zCP_WIN1251); { Windows CP1251 }
   AddCodePage('ALT', Ord(csALT), ceAnsi, zCP_DOS866); { Windows CP866 }
-  AddCodePage('WIN1256', Ord(csWIN1256), ceAnsi, cCP_WIN1256);  { Windows CP1256 	Arabic }
+  AddCodePage('WIN1256', Ord(csWIN1256), ceAnsi, zCP_WIN1256);  { Windows CP1256 	Arabic }
   AddCodePage('TCVN', Ord(csTCVN), ceAnsi, zCP_WIN1258); { TCVN-5712/Windows CP1258 (Vietnamese) }
   AddCodePage('WIN874', Ord(csWIN874), ceAnsi, zCP_WIN874); { Windows CP874 (Thai) }
 end;
