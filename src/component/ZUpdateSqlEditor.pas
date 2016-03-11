@@ -323,7 +323,7 @@ begin
       {$ELSE}
         if not (FieldDefs[I].DataType in [ftBlob..ftTypedBinary]) then
       {$ENDIF}
-          List.AddObject(FieldDefs[I].Name, Pointer(not FieldDefs[I].Required));
+          List.AddObject(FieldDefs[I].Name, Pointer(Ord(not FieldDefs[I].Required)));
     finally
       List.EndUpdate;
     end;

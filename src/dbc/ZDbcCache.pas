@@ -799,7 +799,7 @@ begin
       ValuePtr2 := Blob2.GetPWideChar;
       if Blob1.Length <> Blob2.Length then
         Result := 1 else
-        Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length);
+        Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length  shl 1);
     end
     else
       Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)

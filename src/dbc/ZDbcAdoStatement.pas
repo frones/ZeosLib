@@ -235,9 +235,7 @@ var
 begin
   LastResultSet := nil;
   LastUpdateCount := -1;
-  {$IFDEF UNICODE}
   WSQL := SQL;
-  {$ENDIF}
   try
     (Connection as IZAdoConnection).GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
     Result := RC;
@@ -256,9 +254,7 @@ function TZAdoPreparedStatement.Execute(const SQL: ZWideString): Boolean;
 var
   RC: OleVariant;
 begin
-  {$IFDEF UNICODE}
   WSQL := SQL;
-  {$ENDIF}
   LastResultSet := nil;
   LastUpdateCount := -1;
   try

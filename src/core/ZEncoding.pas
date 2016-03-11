@@ -67,7 +67,7 @@ uses
   ZCompatibility;
 
 const
-  {code page identifiers http://msdn.microsoft.com/en-us/library/bb643325.aspx}
+  {code page identifiers https://msdn.microsoft.com/en-us/library/windows/desktop/dd317756%28v=vs.85%29.aspx}
   zCP_Binary = -1;
   zCP_DOS437 = 437; {IBM437/MS-DOS odepage 437 (US)}
   zCP_DOS708 = 708; {Arabic (ASMO 708)}
@@ -76,6 +76,7 @@ const
   zCP_DOS775 = 775; {MS-DOS Codepage 775 (BaltRim)}
   zCP_DOS850 = 850;	{MS-DOS Codepage 850 (Multilingual Latin 1)}
   zCP_DOS852 = 852; {ibm852 852 east european(DOS)}
+  zcp_DOS855 = 855; {OEM Cyrillic (primarily Russian)}
   zCP_DOS857 = 857;	{MS-DOS Codepage 857 (Multilingual Latin 5)}
   zCP_DOS858 = 858; {MS-DOS Codepage 858  Latin I + Euro symbol}
   zCP_DOS860 = 860;	{MS-DOS Codepage 860 (Portugal)}
@@ -104,7 +105,7 @@ const
   zCP_WIN1253 = 1253; {Microsoft Windows Codepage 1253 (Greek)}
   zCP_WIN1254 = 1254; {Microsoft Windows Codepage 1254 (Turk)}
   zCP_WIN1255 = 1255; {Microsoft Windows Codepage 1255 (Hebrew)}
-  cCP_WIN1256 = 1256; {Microsoft Windows Codepage 1256 (Arab)}
+  zCP_WIN1256 = 1256; {Microsoft Windows Codepage 1256 (Arab)}
   zCP_WIN1257 = 1257; {Microsoft Windows Codepage 1257 (BaltRim)}
   zCP_WIN1258 = 1258; {Microsoft Windows Codepage 1258 (Viet), TCVN-5712}
   ZCP_JOHAB = 1361; {Korean (Johab)}
@@ -431,6 +432,23 @@ const
     $0111, $0110, $010E, $00CB, $010F, $0147, $00CD, $00CE, $011B, $2518, $250C, $2588, $2584, $0162, $016E, $2580,
     $00D3, $00DF, $00D4, $0143, $0144, $0148, $0160, $0161, $0154, $00DA, $0155, $0170, $00FD, $00DD, $0163, $00B4,
     $00AD, $02DD, $02DB, $02C7, $02D8, $00A7, $00F7, $00B8, $00B0, $00A8, $02D9, $0171, $0158, $0159, $25A0, $00A0);
+  CP855ToUnicodeMap: TSBCS_MAP = ( {generated with MultiByteToWideChar}
+    $0000, $0001, $0002, $0003, $0004, $0005, $0006, $0007, $0008, $0009, $000A, $000B, $000C, $000D, $000E, $000F,
+    $0010, $0011, $0012, $0013, $0014, $0015, $0016, $0017, $0018, $0019, $001A, $001B, $001C, $001D, $001E, $001F,
+    $0020, $0021, $0022, $0023, $0024, $0025, $0026, $0027, $0028, $0029, $002A, $002B, $002C, $002D, $002E, $002F,
+    $0030, $0031, $0032, $0033, $0034, $0035, $0036, $0037, $0038, $0039, $003A, $003B, $003C, $003D, $003E, $003F,
+    $0040, $0041, $0042, $0043, $0044, $0045, $0046, $0047, $0048, $0049, $004A, $004B, $004C, $004D, $004E, $004F,
+    $0050, $0051, $0052, $0053, $0054, $0055, $0056, $0057, $0058, $0059, $005A, $005B, $005C, $005D, $005E, $005F,
+    $0060, $0061, $0062, $0063, $0064, $0065, $0066, $0067, $0068, $0069, $006A, $006B, $006C, $006D, $006E, $006F,
+    $0070, $0071, $0072, $0073, $0074, $0075, $0076, $0077, $0078, $0079, $007A, $007B, $007C, $007D, $007E, $007F,
+    $0452, $0402, $0453, $0403, $0451, $0401, $0454, $0404, $0455, $0405, $0456, $0406, $0457, $0407, $0458, $0408,
+    $0459, $0409, $045A, $040A, $045B, $040B, $045C, $040C, $045E, $040E, $045F, $040F, $044E, $042E, $044A, $042A,
+    $0430, $0410, $0431, $0411, $0446, $0426, $0434, $0414, $0435, $0415, $0444, $0424, $0433, $0413, $00AB, $00BB,
+    $2591, $2592, $2593, $2502, $2524, $0445, $0425, $0438, $0418, $2563, $2551, $2557, $255D, $0439, $0419, $2510,
+    $2514, $2534, $252C, $251C, $2500, $253C, $043A, $041A, $255A, $2554, $2569, $2566, $2560, $2550, $256C, $00A4,
+    $043B, $041B, $043C, $041C, $043D, $041D, $043E, $041E, $043F, $2518, $250C, $2588, $2584, $041F, $044F, $2580,
+    $042F, $0440, $0420, $0441, $0421, $0442, $0422, $0443, $0423, $0436, $0416, $0432, $0412, $044C, $042C, $2116,
+    $00AD, $044B, $042B, $0437, $0417, $0448, $0428, $044D, $042D, $0449, $0429, $0447, $0427, $00A7, $25A0, $00A0);
   CP857ToUnicodeMap: TSBCS_MAP = ( {generated with MultiByteToWideChar}
     $0000, $0001, $0002, $0003, $0004, $0005, $0006, $0007, $0008, $0009, $000A, $000B, $000C, $000D, $000E, $000F,
     $0010, $0011, $0012, $0013, $0014, $0015, $0016, $0017, $0018, $0019, $001A, $001B, $001C, $001D, $001E, $001F,
@@ -1611,6 +1629,7 @@ A2U:
       zCP_DOS775:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP775ToUnicodeMap, Min(SourceBytes, BufCodePoints));
       zCP_DOS850:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP850ToUnicodeMap, Min(SourceBytes, BufCodePoints));
       zCP_DOS852:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP852ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS855:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP855ToUnicodeMap, Min(SourceBytes, BufCodePoints));
       zCP_DOS857:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP857ToUnicodeMap, Min(SourceBytes, BufCodePoints));
       zCP_DOS858:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP858ToUnicodeMap, Min(SourceBytes, BufCodePoints));
       zCP_DOS860:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP860ToUnicodeMap, Min(SourceBytes, BufCodePoints));
@@ -1628,7 +1647,7 @@ A2U:
       zCP_WIN1253:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1253ToUnicodeMap, Min(SourceBytes, BufCodePoints));
       zCP_WIN1254:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1254ToUnicodeMap, Min(SourceBytes, BufCodePoints));
       zCP_WIN1255:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1255ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      cCP_WIN1256:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1256ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1256:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1256ToUnicodeMap, Min(SourceBytes, BufCodePoints));
       zCP_WIN1257:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1257ToUnicodeMap, Min(SourceBytes, BufCodePoints));
       zCP_WIN1258:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1258ToUnicodeMap, Min(SourceBytes, BufCodePoints));
       zCP_macintosh:      AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP10000ToUnicodeMap, Min(SourceBytes, BufCodePoints));
@@ -1771,6 +1790,7 @@ begin
       zCP_DOS775:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP775ToUnicodeMap, SourceBytes);
       zCP_DOS850:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP850ToUnicodeMap, SourceBytes);
       zCP_DOS852:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP852ToUnicodeMap, SourceBytes);
+      zCP_DOS855:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP855ToUnicodeMap, SourceBytes);
       zCP_DOS857:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP857ToUnicodeMap, SourceBytes);
       zCP_DOS858:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP858ToUnicodeMap, SourceBytes);
       zCP_DOS860:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP860ToUnicodeMap, SourceBytes);
@@ -1788,7 +1808,7 @@ begin
       zCP_WIN1253:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1253ToUnicodeMap, SourceBytes);
       zCP_WIN1254:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1254ToUnicodeMap, SourceBytes);
       zCP_WIN1255:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1255ToUnicodeMap, SourceBytes);
-      cCP_WIN1256:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1256ToUnicodeMap, SourceBytes);
+      zCP_WIN1256:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1256ToUnicodeMap, SourceBytes);
       zCP_WIN1257:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1257ToUnicodeMap, SourceBytes);
       zCP_WIN1258:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1258ToUnicodeMap, SourceBytes);
       zCP_macintosh:      AnsiSBCSToUCS2(Pointer(Source), Dest, @CP10000ToUnicodeMap, SourceBytes);

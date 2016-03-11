@@ -23,7 +23,7 @@
     <RunParams>
       <local>
         <FormatVersion Value="1"/>
-        <CommandLineParams Value="-a -p --format=plain"/>
+        <CommandLineParams Value="-b -a -p --format=plain --suite=core -n"/>
         <LaunchingApplication PathPlusParams="/usr/X11R6/bin/xterm -T 'Lazarus Run Output' -e $(LazarusDir)/tools/runwait.sh $(TargetCmdLine)"/>
       </local>
     </RunParams>
@@ -45,37 +45,30 @@
       <Unit0>
         <Filename Value="ztestall.lpr"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ztestall"/>
       </Unit0>
       <Unit1>
         <Filename Value="../../test/component/ZTestComponents.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ZTestComponents"/>
       </Unit1>
       <Unit2>
         <Filename Value="../../test/dbc/ZTestDbc.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ZTestDbc"/>
       </Unit2>
       <Unit3>
         <Filename Value="../../test/parsesql/ZTestParseSql.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ZTestParseSql"/>
       </Unit3>
       <Unit4>
         <Filename Value="../../test/bugreport/ZTestBugReports.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ZTestBugReports"/>
       </Unit4>
       <Unit5>
         <Filename Value="../../test/core/ZTestCore.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ZTestCore"/>
       </Unit5>
       <Unit6>
         <Filename Value="../../test/performance/ZTestPerformance.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ZTestPerformance"/>
       </Unit6>
     </Units>
   </ProjectOptions>
@@ -83,7 +76,7 @@
     <Version Value="11"/>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="../../src/core;../../src/parsesql;../../src/plain;../../src/dbc;../../src/component;../../test/framework;../../test/core;../../test/parsesql;../../test/plain;../../test/dbc;../../test/component;../../test/bugreport;../../test/performance"/>
+      <OtherUnitFiles Value="../../src/core;../../src/parsesql;../../src/plain;../../src/dbc;../../src/component;../../test/framework;../../test/core;../../test/parsesql;../../test/plain;../../test/dbc;../../test/component;../../test/bugreport;../../test/performance;$(FPCSrcDir)/packages/fcl-fpcunit/src"/>
       <UnitOutputDirectory Value="build"/>
     </SearchPaths>
     <Parsing>

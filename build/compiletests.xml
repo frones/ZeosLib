@@ -306,8 +306,8 @@
       <arg value="-vewnhi"/>
       <arg value="-l"/>
       <arg line=" -Fu${lazarus.path}/lcl/units/${lazarus.processor}-${lazarus.os}/ -Fu${lazarus.path}/lcl/units/${lazarus.processor}-${lazarus.os}/${lazarus.interface}/"/>
-      <arg line=" -Fu${lazarus.path}/components/fpcunit/console/lib/${lazarus.processor}-${lazarus.os}/ -Fu${lazarus.path}/components/synedit/units/${lazarus.processor}-${lazarus.os}/ -Fu${lazarus.path}/components/synedit/units/${lazarus.processor}-${lazarus.os}/${lazarus.interface}/ "/>
-      <arg line=" -Fu${lazarus.path}/components/fpcunit/lib/${lazarus.processor}-${lazarus.os}/${lazarus.interface}/  -Fu${lazarus.path}/components/fpcunit/lib/${lazarus.processor}-${lazarus.os}/ "/>
+      <arg line=" -Fu${lazarus.path}/components/synedit/units/${lazarus.processor}-${lazarus.os}/ -Fu${lazarus.path}/components/synedit/units/${lazarus.processor}-${lazarus.os}/${lazarus.interface}/ "/>
+      <arg line=" -Fu${lazarus.path}/components/fpcunit/lib/${lazarus.processor}-${lazarus.os}/${lazarus.interface}/ "/>
       <arg line=" -Fu${lazarus.path}/components/lazutils/lib/${lazarus.processor}-${lazarus.os}/ "/>
       <arg line=" -Fu../../test/framework/ ${extra_unit_path}"/>
       <arg value="-B"/>
