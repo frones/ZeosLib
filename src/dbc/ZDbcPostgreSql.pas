@@ -1428,7 +1428,7 @@ begin
       Result[1] := '''';
       Result[Length(Result)] := '''';
     end;
-    System.Move(escapedBuf^, Result[1+Ord(Quoted)], escapedLen);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(escapedBuf^, Result[1+Ord(Quoted)], escapedLen);
     GetPlainDriver.FreeMem(escapedBuf);
   end else
     Result := ZDbcPostgreSqlUtils.EncodeBinaryString(Buf, Len, Quoted);

@@ -177,7 +177,8 @@ type
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils;
+uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils
+  {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 { TZResolverParameter }
 
@@ -700,7 +701,7 @@ var
   begin 
     if Length(Temp1) < l1 + length(app) then 
       SetLength(Temp1, 2 * (length(app) + l1)); 
-    Move(app[1], Temp1[l1+1], length(app)*SizeOf(Char)); 
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(app[1], Temp1[l1+1], length(app)*SizeOf(Char));
     Inc(l1, length(app)); 
   end; 
 

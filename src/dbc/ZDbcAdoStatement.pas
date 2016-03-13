@@ -129,7 +129,8 @@ uses
   Variants, ComObj,
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet,
-  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages;
+  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages
+  {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 { TZAdoPreparedStatement }
 
@@ -576,7 +577,7 @@ begin
                   try
                     Stream := TMemoryStream.Create;
                     Stream.Size {%H-}:= VarArrayHighBound(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value, 1)+1;
-                    System.Move(P^, TMemoryStream(Stream).Memory^, Stream.Size);
+                    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, TMemoryStream(Stream).Memory^, Stream.Size);
                     RS.UpdateBinaryStream(I, Stream);
                     FreeAndNil(Stream);
                   finally

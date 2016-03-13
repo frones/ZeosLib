@@ -157,7 +157,8 @@ uses
   Types, Math,
   ZDbcLogging, ZDbcCachedResultSet, ZDbcDbLibUtils, ZDbcDbLibResultSet,
   ZVariant, ZDbcUtils, ZEncoding, ZDbcResultSet
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
+  {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 constructor TZUpdateCount.Create(ACount: Integer);
 begin
@@ -958,7 +959,7 @@ begin
           begin
             DatLen := FPLainDriver.dbRetLen(FHandle, ParamIndex);
             SetLength(OutBytes, DatLen);
-            Move(FPLainDriver.dbRetData(FHandle, ParamIndex)^,
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FPLainDriver.dbRetData(FHandle, ParamIndex)^,
               Pointer(OutBytes)^, DatLen);
             SoftVarManager.SetAsBytes(Temp, OutBytes);
           end;

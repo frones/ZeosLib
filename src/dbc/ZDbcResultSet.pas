@@ -3985,7 +3985,7 @@ begin
   if FBlobSize > 0 then
   begin
     GetMem(FBlobData, FBlobSize);
-    System.Move(Data^, FBlobData^, FBlobSize);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Data^, FBlobData^, FBlobSize);
   end;
   FUpdated := False;
 end;
@@ -4170,7 +4170,7 @@ end;
 function TZAbstractBlob.GetString: RawByteString;
 begin
   SetLength(Result, FBlobSize);
-  System.Move(FBlobData^, Result[1], FBlobSize);
+  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, Result[1], FBlobSize);
 end;
 
 {**
@@ -4185,7 +4185,7 @@ begin
     FBlobSize := System.Length(Value)+1;
     GetMem(FBlobData, FBlobSize);
     if FBlobSize > 1 then
-      System.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
     (PAnsiChar(FBlobData)+FBlobSize-1)^ := #0;
   end
   else
@@ -4194,7 +4194,7 @@ begin
     if FBlobSize > 0 then
     begin
       GetMem(FBlobData, FBlobSize);
-      System.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
     end;
   end;
   FUpdated := True;
@@ -4210,7 +4210,7 @@ begin
   begin
     if (FBlobSize > 0) and Assigned(FBlobData) then begin
       SetLength(Result, FBlobSize);
-      Move(FBlobData^, Result[0], FBlobSize);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, Result[0], FBlobSize);
     end else
       Result := nil;
   end
@@ -4236,7 +4236,7 @@ begin
     if FBlobSize > 0 then
     begin
       GetMem(FBlobData, FBlobSize);
-      System.Move(Value[0], FBlobData^, FBlobSize);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value[0], FBlobData^, FBlobSize);
     end;
   end;
   FUpdated := True;
@@ -4252,7 +4252,7 @@ begin
   if (FBlobSize > 0) and Assigned(FBlobData) then
   begin
     Result.Size := FBlobSize;
-    System.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize);
   end;
   Result.Position := 0;
 end;
@@ -4299,7 +4299,7 @@ begin
   if Assigned(Buffer) and ( Length > 0 ) then
   begin
     GetMem(FBlobData, Length);
-    Move(Buffer^, FBlobData^, Length);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, FBlobData^, Length);
   end;
   FUpdated := True;
 end;
@@ -4392,7 +4392,7 @@ begin
   FBlobSize := System.Length(Value)+1;
   FCurrentCodePage := CodePage;
   ReallocMem(FBlobData, FBlobSize);
-  System.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
+  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetAnsiString(Const Value: AnsiString);
@@ -4400,7 +4400,7 @@ begin
   FBlobSize := System.Length(Value)+1;
   FCurrentCodePage := ZOSCodePage;
   ReallocMem(FBlobData, FBlobSize);
-  System.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
+  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetUTF8String(Const Value: UTF8String);
@@ -4408,7 +4408,7 @@ begin
   FBlobSize := System.Length(Value)+1;
   FCurrentCodePage := zCP_UTF8;
   ReallocMem(FBlobData, FBlobSize);
-  System.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
+  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetUnicodeString(const Value: ZWideString);
@@ -4416,7 +4416,7 @@ begin
   FBlobSize := (System.Length(Value)+1) shl 1;
   FCurrentCodePage := zCP_UTF16;
   ReallocMem(FBlobData, FBlobSize);
-  System.Move(PWideChar(Value)^, FBlobData^, FBlobSize);
+  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PWideChar(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetPAnsiChar(const Buffer: PAnsiChar; CodePage: Word; const Len: Cardinal);
@@ -4456,7 +4456,7 @@ SetData:
       FBlobSize := Len +1;
       FCurrentCodePage := CodePage;
       GetMem(FBlobData, FBlobSize);
-      System.Move(Buffer^, FBlobData^, FBlobSize-1);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, FBlobData^, FBlobSize-1);
       (PAnsiChar(FBlobData)+Len)^ := #0; //set leading terminator
     end;
   end;
@@ -4471,7 +4471,7 @@ begin
     FBlobSize := (Len +1) shl 1; //shl 1 = * 2 but faster
     FCurrentCodePage := zCP_UTF16;
     ReallocMem(FBlobData, FBlobSize);
-    System.Move(Buffer^, FBlobData^, FBlobSize-2);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, FBlobData^, FBlobSize-2);
     (PWideChar(FBlobData)+Len)^ := WideChar(#0); //set leading terminator
   end;
 end;
@@ -4519,7 +4519,7 @@ begin
   begin
     FBlobSize := (Len+1) shl 1; //shl 1 = * 2 but faster, include #0#0 terminator
     GetMem(FBlobData, FBlobSize);
-    System.Move(Data^, FBlobData^, FBlobSize);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Data^, FBlobData^, FBlobSize);
     (PWideChar(FBlobData)+Len)^ := WideChar(#0);
   end
   else
@@ -4650,7 +4650,7 @@ begin
        (FCurrentCodePage = zCP_UTF16BE) then
     begin
       SetLength(Result, (FBlobSize shr 1) -1);
-      System.Move(FBlobData^, PWideChar(Result)^, FBlobSize - 2);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, PWideChar(Result)^, FBlobSize - 2);
     end
     else
     begin
@@ -4679,7 +4679,7 @@ begin
     else
       GetPAnsiChar(FConSettings^.ClientCodePage^.CP);
     Result.Size := Length;
-    System.Move(FBlobData^, TMemoryStream(Result).Memory^, Length)
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, Length)
   end;
 end;
 
@@ -4711,13 +4711,13 @@ begin
     if ZCompatibleCodePages(FCurrentCodePage, FConSettings^.ClientCodePage^.CP) then
     begin
       Result.Size := FBlobSize-1;
-      System.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize-1)
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize-1)
     end
     else
     begin
       Tmp := GetRawByteString;
       Result.Size := Length;
-      System.Move(Tmp[1], TMemoryStream(Result).Memory^, Length)
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Tmp[1], TMemoryStream(Result).Memory^, Length)
     end;
   end;
   Result.Position := 0;
@@ -4731,13 +4731,13 @@ begin
     if ZCompatibleCodePages(FCurrentCodePage, ZOSCodePage) then
     begin
       Result.Size := Length;
-      System.Move(FBlobData^, TMemoryStream(Result).Memory^, Length)
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, Length)
     end
     else
     begin
       GetAnsiString; //does the required conversion
       Result.Size := Length;
-      System.Move(FBlobData^, TMemoryStream(Result).Memory^, Length)
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, Length)
     end;
   end;
   Result.Position := 0;
@@ -4751,13 +4751,13 @@ begin
     if ZCompatibleCodePages(FCurrentCodePage, zCP_UTF8) then
     begin
       Result.Size := FBlobSize -1;
-      System.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize -1)
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize -1)
     end
     else
     begin
       GetUTF8String;
       Result.Size := Length;
-      System.Move(FBlobData, TMemoryStream(Result).Memory^, FBlobSize -1)
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData, TMemoryStream(Result).Memory^, FBlobSize -1)
     end;
   end;
   Result.Position := 0;
@@ -4772,13 +4772,13 @@ begin
        (FCurrentCodePage = zCP_UTF16) then
     begin
       Result.Size := FBlobSize -2;
-      System.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize-2)
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize-2)
     end
     else
     begin
       GetUnicodeString;
       Result.Size := FBlobSize-2;
-      System.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize-2)
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize-2)
     end;
   end;
   Result.Position := 0;

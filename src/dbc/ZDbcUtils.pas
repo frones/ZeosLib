@@ -855,7 +855,7 @@ begin
   else
   begin
     SetLength(Bytes, Size +2);
-    System.move(Buffer^, Pointer(Bytes)^, Size);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.move(Buffer^, Pointer(Bytes)^, Size);
     Encoding := TestEncoding(Bytes, Size, ConSettings);
     SetLength(Bytes, 0);
     case Encoding of
@@ -893,7 +893,7 @@ begin
       ceUTF16:
         begin
           SetLength(US, Size shr 1);
-          System.Move(Buffer^, US[1], Size);
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, US[1], Size);
           if ConSettings.ClientCodePage.Encoding = ceAnsi then
             {$IFDEF WITH_LCONVENCODING}
             Result := Consettings.PlainConvertFunc(UTF8Encode(US))
@@ -955,7 +955,7 @@ begin
   if Assigned(Buffer) and ( Size > 0 ) then
   begin
     SetLength(Bytes, Size +2);
-    System.move(Buffer^, Pointer(Bytes)^, Size);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Bytes)^, Size);
     if FromDB then //do not check encoding twice
       US := PRawToUnicode(Buffer, Size, ConSettings.ClientCodePage.CP)
     else begin
@@ -966,13 +966,13 @@ begin
         ceAnsi: //We've to start from the premisse we've got a Unicode string in here ):
           begin
             SetLength(US, Size shr 1);
-            System.Move(Buffer^, Pointer(US)^, Size);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(US)^, Size);
           end;
         ceUTF8: US := PRawToUnicode(Buffer, size, zCP_UTF8);
         ceUTF16:
           begin
             SetLength(US, Size shr 1);
-            System.Move(Buffer^, Pointer(US)^, Size);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(US)^, Size);
           end;
       end;
     end;
@@ -982,7 +982,7 @@ begin
     begin
       Result := TMemoryStream.Create;
       Result.Size := Len;
-      System.Move(Pointer(US)^, TMemoryStream(Result).Memory^, Len);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(US)^, TMemoryStream(Result).Memory^, Len);
       Result.Position := 0;
     end;
   end;

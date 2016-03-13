@@ -94,6 +94,10 @@ type
 
 implementation
 
+{$IFDEF FAST_MOVE}
+uses ZFastCode;
+{$ENDIF}
+
 { TZGenericSQLSymbolState }
 
 {**

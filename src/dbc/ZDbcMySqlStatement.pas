@@ -793,12 +793,9 @@ JmpClob:            P := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
                       {now we've to set the Buffer of binding-record to nil to indicate we send data as chunks}
 JmpChunked:           Bind^.buffer_address^ := nil;
                       ChunkedData := True;
-                    end
-                    else
-                      System.Move(P^, PBuffer^, Bind^.Length);
-                  end
-                  else
-                  begin
+                    end else
+                      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, PBuffer^, Bind^.Length);
+                  end else begin
                     TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                               TempBlob.Length, ConSettings);
                     TempBlob := TZAbstractClob.CreateWithData(Pointer(TempAnsi), Length(TempAnsi),
@@ -814,7 +811,7 @@ JmpCharRec:     CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSe
                 if CharRec.Len > Cardinal(ChunkSize)-1 then
                   goto JmpChunked
                 else {within buffer range}
-                  System.Move(CharRec.P^, PBuffer^, CharRec.Len); //trailing #0 included
+                  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(CharRec.P^, PBuffer^, CharRec.Len); //trailing #0 included
               end;
           end;
         FIELD_TYPE_TINY_BLOB: {stBytes}
@@ -828,7 +825,7 @@ JmpCharRec:     CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSe
               if P = nil then
                 Bind^.is_null := 1
               else
-                System.Move(P^, PBuffer^, CharRec.Len);
+                {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, PBuffer^, CharRec.Len);
           end;
         FIELD_TYPE_DATETIME:
           begin
@@ -855,7 +852,7 @@ JmpCharRec:     CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSe
                 {out of buffer range}
                 goto JmpChunked
               else
-                System.Move(P^, PBuffer^, Bind^.Length);
+                {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, PBuffer^, Bind^.Length);
             end;
           end;
         FIELD_TYPE_NULL:;

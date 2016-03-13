@@ -1338,7 +1338,7 @@ begin
     {$ENDIF}
       System.SetString(Dest, PWideChar(@Buf[0]), NewLen)
     else
-      System.Move(Buf[0], Dest[1], NewLen shl 1);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf[0], Dest[1], NewLen shl 1);
   end;
 end;
 
@@ -1558,7 +1558,7 @@ begin
   else if ZCompatibleCodePages(SrcCP, DestCP) then begin
     len := Min(SourceBytes, DestBytes);
     if Source <> Dest then
-      Move(Source^, Dest^, len);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Source^, Dest^, len);
     (Dest+Len)^ := #0
   end else if SourceBytes <= dsMaxWStringSize then begin //can we use a static buf? -> avoid memrealloc for the buffer
     len := PRaw2PUnicodeBuf(Source, @wBuf[0], sourceBytes, SrcCP);
@@ -1584,7 +1584,7 @@ begin
       if SourceBytes <= dsMaxWStringSize then begin //can we use a static buf? -> avoid memrealloc for the Result String
         wlen := PRaw2PUnicodeBuf(Source, @wBuf[0], sourceBytes, CP);
         ZSetString(nil, wlen, Result);
-        System.Move(wBuf[0], Result[1], wlen shl 1);
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(wBuf[0], Result[1], wlen shl 1);
       end else begin //nope Buf to small
         ZSetString(nil, SourceBytes, Result);
         wlen := PRaw2PUnicodeBuf(Source, Pointer(Result), sourceBytes, CP);
@@ -1746,7 +1746,7 @@ A2U:
               W := ZWideString(S); //random success
               {$ENDIF}
               BufCodePoints := Min(Length(W), BufCodePoints);
-              System.Move(W[1], Dest^, BufCodePoints shl 1);
+              {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(W[1], Dest^, BufCodePoints shl 1);
               Inc(Dest, BufCodePoints);
             {$ENDIF}
           {$ENDIF}
@@ -1898,7 +1898,7 @@ begin
               {$ENDIF}
               BufCodePoints := Min(Length(W), wlen);
               if BufCodePoints > 0 then
-                System.Move(W[1], Dest^, BufCodePoints shl 1);
+                {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(W[1], Dest^, BufCodePoints shl 1);
             {$ENDIF}
           {$ENDIF}
 A2U:      Result := SourceBytes - wlen + BufCodePoints;
@@ -1935,10 +1935,10 @@ begin
     if SourceBytes <= dsMaxWStringSize then begin
       Result := PRaw2PUnicodeBuf(Source, @sBuf[0], SourceBytes, CP);
       ReallocMem(Dest, (Result+1) shl 1);
-      System.Move(sBuf[0], Dest^, (Result+1) shl 1);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(sBuf[0], Dest^, (Result+1) shl 1);
     end else if SourceBytes < SizeOf(sBuf) then begin
       //Change logic vice versa use the sBuf as Raw buffer
-      System.Move(Source^, sBuf[0], SourceBytes+1);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Source^, sBuf[0], SourceBytes+1);
       FreeMem(Dest); //Dest can't be nil -> skip move buf
       Dest := AllocMem((SourceBytes+1) shl 1);
       Result := PRaw2PUnicodeBuf(@sBuf[0], Dest, SourceBytes, CP);
@@ -1949,7 +1949,7 @@ begin
       try
         Result := PRaw2PUnicodeBuf(Source, Buf, SourceBytes, CP);
         ReallocMem(Dest, (Result+1) shl 1);
-        System.Move(Buf^, Dest^, (Result+1) shl 1);
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, Dest^, (Result+1) shl 1);
       finally
         FreeMem(Buf, (SourceBytes+1) shl 1);
       end
@@ -2119,7 +2119,7 @@ begin
           {$ENDIF}
         {$ENDIF}
         Result := Min(Length(S), MaxDestBytes);
-        System.Move(S[1], Dest^, Result);
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(S[1], Dest^, Result);
         (Dest+Result)^ := #0;
       end;
     {$IFEND}

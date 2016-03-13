@@ -80,6 +80,10 @@ type
 implementation
 {$IFDEF ENABLE_ADO}
 
+{$IFDEF FAST_MOVE}
+uses ZFastCode;
+{$ENDIF}
+
 { TZAdoSQLQuoteState }
 
 {**

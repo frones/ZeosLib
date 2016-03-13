@@ -206,7 +206,7 @@ type
 
 implementation
 
-uses SysUtils, ZMessages;
+uses SysUtils, ZMessages {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 {$IFDEF FPC}
   {$HINTS OFF}
@@ -449,7 +449,7 @@ begin
   Dec(FCount);
   if Index < FCount then
   begin
-    System.Move(FList^[Index + 1], FList^[Index],
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FList^[Index + 1], FList^[Index],
       (FCount - Index) * SizeOf(IZInterface));
     {now nil pointer or on replacing the entry we'll get a bad interlockdecrement}
     Pointer(FList^[FCount]) := nil; //see http://sourceforge.net/p/zeoslib/tickets/100/
@@ -576,7 +576,7 @@ begin
     Grow;
   if Index < FCount then
   begin
-    System.Move(FList^[Index], FList^[Index + 1],
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FList^[Index], FList^[Index + 1],
       (FCount - Index) * SizeOf(IZInterface));
     {now nil pointer or on replacing the entry we'll get a bad interlockdecrement}
     Pointer(Flist^[Index]) := nil; //see http://sourceforge.net/p/zeoslib/tickets/100/

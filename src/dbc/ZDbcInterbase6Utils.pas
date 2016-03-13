@@ -2074,14 +2074,14 @@ begin
         begin
           sqllen := Min(Len, FDecribedLengthArray[Index]);
           if Len > 0 then
-            Move(Value^, sqldata^, sqllen);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, sqldata^, sqllen);
         end;
       SQL_VARYING:
         begin
           PISC_VARYING(sqldata).strlen :=  Min(Len, FDecribedLengthArray[Index]);
           sqllen := Len+SizeOf(Short);
           if sqllen > 0 then
-            Move(Value^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
         end;
     end;
   {$IFOPT D+}
@@ -2550,13 +2550,13 @@ begin
       SQL_TEXT      :
         begin
           sqllen := Min(Len, FDecribedLengthArray[Index]);
-          Move(Value^, sqldata^, sqllen);
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, sqldata^, sqllen);
         end;
       SQL_VARYING   :
         begin
           PISC_VARYING(sqldata).strlen :=  Min(Len, FDecribedLengthArray[Index]);
           sqllen := Len+SizeOf(Short);
-          Move(Value^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
         end;
       SQL_LONG      : PInteger (sqldata)^ := RawToIntDef(Value, 0);
       SQL_SHORT     : PSmallint (sqldata)^ := RawToIntDef(Value, 0);
@@ -2847,7 +2847,7 @@ var
   begin
     for I := low(Args) to high(Args) do //Move data
     begin
-      System.Move(Pointer(Args[i])^, Dest^, {%H-}PLengthInt(NativeUInt(Args[i]) - StringLenOffSet)^);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Args[i])^, Dest^, {%H-}PLengthInt(NativeUInt(Args[i]) - StringLenOffSet)^);
       Inc(Dest, {%H-}PLengthInt(NativeUInt(Args[i]) - StringLenOffSet)^);
     end;
   end;

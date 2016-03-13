@@ -4527,7 +4527,7 @@ begin
   if fCurrentBufIndex > 0 then begin
     I := Length(Value);
     SetLength(Value, i+fCurrentBufIndex);
-    System.Move(fBuf[0], Value[I+1], fCurrentBufIndex * SizeOf(Char));
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(fBuf[0], Value[I+1], fCurrentBufIndex * SizeOf(Char));
     fCurrentBufIndex := 0;
   end;
 end;
