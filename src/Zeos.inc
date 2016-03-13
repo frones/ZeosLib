@@ -119,7 +119,7 @@
   {$ELSE}
     {$DEFINE WITH_UINT64_C1118_ERROR}       //D7-D2005 has proplems to assign code constants for UInt64
     {$DEFINE WITH_MILLISECONDOFTHEYEAR_BUG} //D7-D005 Bug -> a Int64 Cast of SecondOfTheYear(AValue) is missing
-    {$DEFINE PatchSystemMove}               //replaces System.Move by FastCode-Project Move proc
+    {.$DEFINE PatchSystemMove}               //replaces System.Move by FastCode-Project Move proc
     {$DEFINE Use_FastCodeFillChar}          //use ZFastCode FillChar() instead
     {$DEFINE USE_FAST_CHARPOS}              //use ZFastCode CharPos function
     {$DEFINE VER150BELOW}                   //found in ZTestBugCompPostgreSql.pas
