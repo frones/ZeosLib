@@ -806,7 +806,7 @@ begin
       ValuePtr2 := Blob2.GetPWideChar;
       if Blob1.Length <> Blob2.Length then
         Result := 1 else
-        Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length);
+        Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length  shl 1);
     end
     else
       Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
@@ -1051,7 +1051,7 @@ begin
   P := InternalGetBytes(Buffer, ColumnIndex, L{%H-});
   if P <> nil then begin
     SetLength(Result, L);
-    Move(P^, Pointer(Result)^, L);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Pointer(Result)^, L);
   end else
     Result := nil;
 end;
@@ -1097,7 +1097,7 @@ begin
     if Len > 0 then
     begin
       ReallocMem(P^, Len);
-      System.Move(Buf^, P^^, Len);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, P^^, Len);
     end
     else
       if PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ > 0 then
@@ -1125,7 +1125,7 @@ begin
     C := PPAnsiChar(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
     L := Length(Value);
     ReallocMem(C^, L +SizeOf(Cardinal)+1); //add space for leading #0
-    System.Move(Pointer(Value)^, (C^+PAnsiInc)^, L);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, (C^+PAnsiInc)^, L);
     PLongWord(C^)^ := L;
     (C^+PAnsiInc+L)^ := #0; //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
   end;
@@ -1149,7 +1149,7 @@ begin
     LStr := Length(Value);
     LMem := LStr shl 1;
     ReallocMem(W^, LMem+SizeOf(Cardinal)+2); //including #0#0 terminator
-    System.Move(Pointer(Value)^, (W^+PWideInc)^, LMem);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, (W^+PWideInc)^, LMem);
     PLongWord(W^)^ := LStr;
     (W^+PWideInc+LStr)^ := WideChar(#0);
   end;
@@ -1172,7 +1172,7 @@ begin
     W := ZPPWideChar(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
     LMem := Len shl 1;
     ReallocMem(W^, LMem+SizeOf(Cardinal)+2); //including #0#0 terminator
-    System.Move(Value^, (W^+PWideInc)^, LMem);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, (W^+PWideInc)^, LMem);
     PLongWord(W^)^ := Len;
     (W^+PWideInc+Len)^ := WideChar(#0);
   end;
@@ -1194,7 +1194,7 @@ begin
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ := 0;
     C := PPAnsiChar(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
     ReallocMem(C^, Len+SizeOf(LongWord)+1);
-    Move(Value^, (C^+PAnsiInc)^, Len);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, (C^+PAnsiInc)^, Len);
     PLongWord(C^)^ := Len;
     (C^+PAnsiInc+Len)^ := #0; //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
   end;
@@ -2873,7 +2873,7 @@ begin
       stGUID:
         begin
           SetLength(Result, 16);
-          System.Move(FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], Result[0], 16);
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], Result[0], 16);
         end;
       stBytes:
         Result := InternalGetBytes(FBuffer, ColumnIndex);
@@ -4028,7 +4028,7 @@ begin
       else
       begin
         GUID := StringToGUID(Value);
-        System.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
       end;
     stDate:
       begin
@@ -4118,7 +4118,7 @@ begin
         {$ELSE}
         GUID := StringToGUID(Value);
         {$ENDIF}
-        System.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
       end;
     stDate:
       begin
@@ -4222,7 +4222,7 @@ begin
       else
       begin
         GUID := StringToGUID({$IFDEF UNICODE}Value{$ELSE}UnicodeStringToASCII7(Value, Len^){$ENDIF});
-        System.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
       end;
     stDate:
       begin
@@ -4325,7 +4325,7 @@ begin
       else
       begin
         GUID := StringToGUID({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(Value));
-        System.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
       end;
     stDate:
       begin
@@ -4406,7 +4406,7 @@ begin
       else
       begin
         GUID := StringToGUID({$IFNDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Value));
-        System.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
       end;
     stDate:
       begin
@@ -4459,7 +4459,7 @@ begin
   begin
     FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stGUID: System.Move(Value[0], FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
+      stGUID: {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value[0], FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
       stBytes: InternalSetBytes(FBuffer, ColumnIndex, Value);
       stBinaryStream: GetBlob(ColumnIndex, IsNull{%H-}).SetBytes(Value);
       else
@@ -4491,7 +4491,7 @@ begin
   begin
     FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stGUID: System.Move(Buf^, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
+      stGUID: {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
       stBytes: InternalSetBytes(FBuffer, ColumnIndex, Buf, Len);
       stBinaryStream: GetBlob(ColumnIndex, IsNull{%H-}).SetBuffer(Buf, Len);
       else
@@ -4791,7 +4791,7 @@ begin
   DestBuffer^.Index := SrcBuffer^.Index;
   DestBuffer^.UpdateType := SrcBuffer^.UpdateType;
   DestBuffer^.BookmarkFlag := SrcBuffer^.BookmarkFlag;
-  System.Move(SrcBuffer^.Columns, DestBuffer^.Columns, FColumnsSize);
+  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(SrcBuffer^.Columns, DestBuffer^.Columns, FColumnsSize);
   if FHasBytes then
     for i := 0 to FHighBytesCols do
       if SrcBuffer^.Columns[FColumnOffsets[FBytesCols[i]]] = bIsNotNull then
@@ -4973,7 +4973,7 @@ begin
         {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
         begin
           SetLength(Result, PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
-          System.Move((PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc)^,
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move((PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc)^,
             Pointer(Result)^, PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
         end
         {$ELSE}
@@ -5271,7 +5271,7 @@ begin
   DestBuffer^.Index := SrcBuffer^.Index;
   DestBuffer^.UpdateType := SrcBuffer^.UpdateType;
   DestBuffer^.BookmarkFlag := SrcBuffer^.BookmarkFlag;
-  System.Move(SrcBuffer^.Columns, DestBuffer^.Columns, FColumnsSize);
+  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(SrcBuffer^.Columns, DestBuffer^.Columns, FColumnsSize);
   if FHasBytes then
     for i := 0 to FHighBytesCols do
       if SrcBuffer^.Columns[FColumnOffsets[FBytesCols[i]]] = bIsNotNull then

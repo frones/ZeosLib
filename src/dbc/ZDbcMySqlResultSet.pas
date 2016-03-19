@@ -772,7 +772,7 @@ begin
 
   SetLength(Result, Len);
   if Len > 0 then
-    System.Move(Buffer^, Pointer(Result)^, Len);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Result)^, Len);
 end;
 
 {**
@@ -2482,7 +2482,7 @@ begin
       FIELD_TYPE_ENUM, FIELD_TYPE_SET:
         begin
           SetLength(Result, FColBind^.length);
-          System.Move(Pointer(FColBind^.buffer)^, Pointer(Result)^, FColBind^.length);
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(FColBind^.buffer)^, Pointer(Result)^, FColBind^.length);
         end;
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:

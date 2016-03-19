@@ -60,6 +60,9 @@ uses
   ZODBCToken;
 
 type
+  {** Implements a quote string state object. }
+  TZAdoSQLQuoteState = TZODBCQuoteState;
+
   {** Implements a default tokenizer object. }
   TZAdoSQLTokenizer = TZODBCTokenizer;
 {$ENDIF ENABLE_ADO}

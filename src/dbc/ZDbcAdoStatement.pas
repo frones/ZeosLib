@@ -391,9 +391,7 @@ function TZAdoPreparedStatement.Execute(const SQL: ZWideString): Boolean;
 var
   RC: OleVariant;
 begin
-  {$IFDEF UNICODE}
   WSQL := SQL;
-  {$ENDIF}
   LastResultSet := nil;
   LastUpdateCount := -1;
   try
@@ -751,7 +749,7 @@ begin
                   try
                     Stream := TMemoryStream.Create;
                     Stream.Size {%H-}:= VarArrayHighBound(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value, 1)+1;
-                    System.Move(P^, TMemoryStream(Stream).Memory^, Stream.Size);
+                    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, TMemoryStream(Stream).Memory^, Stream.Size);
                     RS.UpdateBinaryStream(I, Stream);
                     FreeAndNil(Stream);
                   finally

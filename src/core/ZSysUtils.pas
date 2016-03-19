@@ -1297,7 +1297,7 @@ end;
 function BufferToBytes(Buffer: Pointer; Length: LongInt): TBytes;
 begin
   SetLength(Result, Length);
-  System.Move(Buffer^, Pointer(Result)^, Length);
+  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Result)^, Length);
 end;
 
 {**
@@ -1612,14 +1612,14 @@ begin
   begin
     if (i > 0) and (DelimLen > 0) then
     begin
-      Move(Pointer(Delimiter)^, P^, DelimLen * SizeOf(Char));
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Delimiter)^, P^, DelimLen * SizeOf(Char));
       Inc(P, DelimLen);
     end;
     S := List[i];
     Len := Length(S);
     if Len > 0 then
     begin
-      Move(Pointer(S)^, P^, Len * SizeOf(Char));
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(S)^, P^, Len * SizeOf(Char));
       Inc(P, Len);
     end;
   end;
@@ -1719,7 +1719,7 @@ begin
   Result := '';
   L := Length(Value);
   SetLength(Result, L);
-  System.Move(Pointer(Value)^, Pointer(Result)^, L);
+  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Result)^, L);
   {$ELSE}
   SetString(Result, PAnsiChar(@Value[0]), Length(Value))
   {$ENDIF}
@@ -1736,7 +1736,7 @@ begin
   L := Length(Value);
   SetLength(Result, L);
   if Value <> '' then
-    Move(Value[1], Result[0], L)
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value[1], Result[0], L)
 end;
 
 {$IFDEF WITH_RAWBYTESTRING}
@@ -1751,7 +1751,7 @@ begin
   L := Length(Value);
   SetLength(Result, L);
   if Value <> '' then
-    Move(Value[1], Result[0], L)
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value[1], Result[0], L)
 end;
 
 {**
@@ -1765,7 +1765,7 @@ begin
   L := Length(Value);
   SetLength(Result, L);
   if Value <> '' then
-    Move(Value[1], Result[0], L)
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value[1], Result[0], L)
 end;
 {$ENDIF}
 {**
@@ -1786,7 +1786,7 @@ begin
     RBS := UnicodeStringToASCII7(Value);
     SetLength(Result, L);
     if Value <> '' then
-      Move(RBS[1], Result[0], L)
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(RBS[1], Result[0], L)
   end;
 end;
 {**
@@ -1808,7 +1808,7 @@ begin
     RBS := UnicodeStringToASCII7(Value);
     SetLength(Result, L);
     if Value <> '' then
-      Move(RBS[1], Result[0], L)
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(RBS[1], Result[0], L)
   end;
 end;
 {$ENDIF}
@@ -2627,10 +2627,10 @@ begin
     P^ := #39; //starting quote
     (P+Len+1)^ := #39; //leading quote
     if SLen > 0 then //move suffix after leading quote
-      System.Move(Pointer(Suffix)^, (P+Len+2)^, Slen shl 1);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^, (P+Len+2)^, Slen shl 1);
   end else
   if SLen > 0 then //move suffix after leading quote
-    System.Move(Pointer(Suffix)^, (P+Len)^, Slen shl 1);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^, (P+Len)^, Slen shl 1);
 end;
 
 procedure PrepareDateTimeStr(const Quoted: Boolean; const Suffix: RawByteString;
@@ -2647,11 +2647,11 @@ begin
     P^ := #39; //starting quote
     (P+Len+1)^ := #39; //leading quote
     if SLen > 0 then //move suffix after leading quote
-      System.Move(Pointer(Suffix)^, (P+Len+2)^, Slen);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^, (P+Len+2)^, Slen);
   end
   else
     if SLen > 0 then
-      System.Move(Pointer(Suffix)^, (P+Len)^, Slen);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^, (P+Len)^, Slen);
 end;
 {**
   Converts DateTime value to a rawbyteString

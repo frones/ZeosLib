@@ -501,7 +501,7 @@ begin
       if DL > 0 then
       begin
         SetLength(Result, DL);
-        Move(Data^, Pointer(Result)^, DL);
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Data^, Pointer(Result)^, DL);
       end;
     end else
     if DT = tdsUnique then
@@ -806,7 +806,7 @@ begin
 
   SetLength(Result, DL);
   if Assigned(Data) then
-      Move(PAnsiChar(Data)^, Result[0], DL);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(Data)^, Result[0], DL);
 end;
 
 {**

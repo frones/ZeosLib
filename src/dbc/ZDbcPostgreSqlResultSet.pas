@@ -828,13 +828,13 @@ begin
           pgBuff := FPlainDriver.UnescapeBytea(Buffer, @Len);
           SetLength(Result, Len);
           if Assigned(Result) then
-            System.Move(pgBuff^, Pointer(Result)^, Len);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(pgBuff^, Pointer(Result)^, Len);
           FPlainDriver.FreeMem(pgBuff);
         end else begin
           Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
           SetLength(Result, Len);
           if Assigned(Result) then
-            System.Move(Buffer^, Pointer(Result)^, Len);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Result)^, Len);
         end;
       end;
     end else if FpgOIDTypes[ColumnIndex] = 26 { oid } then
@@ -1115,7 +1115,7 @@ begin
         Inc(OffSet, ReadNum);
         ReallocMem(FBlobData, OffSet);
         if ReadNum > 0 then
-          System.Move(Buffer^, {%H-}Pointer({%H-}NativeUInt(FBlobData)+NativeUInt(OffSet-ReadNum))^, ReadNum);
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, {%H-}Pointer({%H-}NativeUInt(FBlobData)+NativeUInt(OffSet-ReadNum))^, ReadNum);
       until ReadNum < FChunk_Size;
       BlobSize := OffSet;
       FPlainDriver.CloseLargeObject(FHandle, BlobHandle);
@@ -1200,7 +1200,7 @@ begin
   fBlobSize := to_length;
   if fBlobSize > 0 then begin
     System.GetMem(FBlobData, fBlobSize);
-    System.Move(pgBuffer^, FBlobData^, fBlobSize);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(pgBuffer^, FBlobData^, fBlobSize);
   end;
   PlainDriver.FreeMem(pgBuffer);
 end;

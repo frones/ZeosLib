@@ -108,7 +108,7 @@ type
 
 implementation
 
-uses SysUtils, ZCompatibility;
+uses SysUtils, ZCompatibility{$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 { TZSQLiteNumberState }
 

@@ -203,7 +203,7 @@ begin
                         {no idea what to do with ansiencoding, if everything if set to UTF8!}
                         begin
                           SetLength(ATmp, Size-2);
-                          System.Move(Memory^, Pointer(ATmp)^, Size -2);
+                          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Memory^, Pointer(ATmp)^, Size -2);
                           UTmp := ZWideString(ATmp); //random success
                           Blob.SetPWideChar(Pointer(UTmp), Length(UTmp));
                         end

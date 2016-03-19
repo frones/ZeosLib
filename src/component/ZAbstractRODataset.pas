@@ -2107,7 +2107,7 @@ begin
   else
   begin //instead of StrPLCopy
     L := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(L, Max(dsMaxStringSize, FieldSize)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
-    System.Move(P^, Buffer^, L);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Buffer^, L);
     (Buffer+L)^ := #0;
   end;
 end;
@@ -2162,7 +2162,7 @@ begin
   if not Result then
   begin //instead of StrPLCopy
     L := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(L, Max(dsMaxStringSize shr 1, FieldSize)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
-    System.Move(P^, Pointer(Buffer)^, L shl 1);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Pointer(Buffer)^, L shl 1);
     Inc(Buffer, L);
   end;
   PWord(Buffer)^ := Ord(#0);
@@ -2951,13 +2951,13 @@ begin
         ftVarBytes:
           begin
             P := RowAccessor.GetBytes(ColumnIndex, Result, PWord(Buffer)^);
-            System.Move((PAnsiChar(P)+SizeOf(Word))^,
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move((PAnsiChar(P)+SizeOf(Word))^,
               PAnsiChar(Buffer)^, Min(PWord(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex)));
           end;
         ftBytes:
           begin
             P := RowAccessor.GetBytes(ColumnIndex, Result, bLen);
-            System.Move(P^, Pointer(Buffer)^, Min(bLen, RowAccessor.GetColumnDataSize(ColumnIndex)));
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Pointer(Buffer)^, Min(bLen, RowAccessor.GetColumnDataSize(ColumnIndex)));
           end;
         { Processes blob fields. }
         ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF} :
@@ -2985,7 +2985,7 @@ begin
         ftCurrency: //sade TCurrencyField is Descendant of TFloatField and uses Double values
           PDouble(Buffer)^ := RowAccessor.GetDouble(ColumnIndex, Result);
         else
-          System.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^,
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^,
             Pointer(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex));
       end;
       Result := not Result;
@@ -3097,7 +3097,7 @@ begin
           RowAccessor.SetCurrency(ColumnIndex, PDouble(Buffer)^); //cast Double to Currency
         else  { Processes all other fields. }
           begin
-            System.Move(Pointer(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
             RowAccessor.GetColumnDataSize(ColumnIndex));
             RowAccessor.SetNotNull(ColumnIndex);
           end;
@@ -5716,7 +5716,7 @@ var IsNull: Boolean;
   GUID: TGUID absolute Bts;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    System.Move(Pointer((DataSet as TZAbstractRODataset).FRowAccessor.GetBytes(FFieldIndex, IsNull{%H-}))^, Bts{%H-}, 16)
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer((DataSet as TZAbstractRODataset).FRowAccessor.GetBytes(FFieldIndex, IsNull{%H-}))^, Bts{%H-}, 16)
   else
     FillChar(Bts, 16, #0);
   Result := GUID;
@@ -7335,6 +7335,7 @@ begin
   { Size is computed, no validation }
 end;
 
+{$IFNDEF WITH_VIRTUAL_TFIELD_BIND}
 procedure TObjectField.Bind(Binding: Boolean);
 begin
   if FieldKind = fkLookup then
@@ -7346,6 +7347,7 @@ begin
         ValidateLookupInfo(True);
    end;
 end;
+{$ENDIF}
 
 procedure TObjectField.FreeBuffers;
 {var

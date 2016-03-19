@@ -784,14 +784,14 @@ begin
     begin
       SetFieldType( Index, DT_VARCHAR or 1, MinBLOBSize - 1);
       PZASASQLSTRING( sqlData).length := Min(Len, sqllen-3);
-      System.Move(Value^, PZASASQLSTRING( sqlData).data[0], PZASASQLSTRING( sqlData).length);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PZASASQLSTRING( sqlData).data[0], PZASASQLSTRING( sqlData).length);
       (PAnsiChar(@PZASASQLSTRING( sqlData).data[0])+PZASASQLSTRING( sqlData).length)^ := #0;
     end
     else
     begin
       SetFieldType( Index, DT_LONGVARCHAR or 1, Len);
       PZASABlobStruct( sqlData).array_len := Len;
-      System.Move(Value^, PZASABlobStruct( sqlData).arr[0], Len);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PZASABlobStruct( sqlData).arr[0], Len);
       PZASABlobStruct( sqlData).stored_len := Len;
       PZASABlobStruct( sqlData).untrunc_len := Len;
     end;
@@ -816,12 +816,12 @@ begin
     begin
       SetFieldType( Index, DT_BINARY or 1, MinBLOBSize - 1);
       PZASASQLSTRING( sqlData).length := BlobSize;
-      Move( Value[0], PZASASQLSTRING( sqlData).data[0], BlobSize);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( Value[0], PZASASQLSTRING( sqlData).data[0], BlobSize);
     end
     else
     begin
       SetFieldType( Index, DT_LONGBINARY or 1, BlobSize);
-      Move( Value[0], PZASABlobStruct( sqlData).arr[0], BlobSize);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( Value[0], PZASABlobStruct( sqlData).arr[0], BlobSize);
       PZASABlobStruct( sqlData).stored_len := BlobSize;
       PZASABlobStruct( sqlData).untrunc_len := BlobSize;
     end;
@@ -975,7 +975,7 @@ begin
         'Blob Record is not correctly initialized');
       if PZASABlobStruct( sqlData).array_len <> Length then
         CreateException( 'Could''nt complete BLOB-Read');
-      move( PZASABlobStruct( sqlData).arr[0], PAnsiChar( Buffer)[0], PZASABlobStruct( sqlData).array_len);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( PZASABlobStruct( sqlData).arr[0], PAnsiChar( Buffer)[0], PZASABlobStruct( sqlData).array_len);
     end
     else
     begin
@@ -1010,7 +1010,7 @@ begin
               break;
             Inc( Rd, PZASABlobStruct( sqlData)^.stored_len);
             if Offs = 0 then ReallocMem(Buffer, PZASABlobStruct( sqlData)^.untrunc_len);
-            Move((PZASABlobStruct( sqlData)^.arr[0]), (PAnsiChar(Buffer)+Offs)^, PZASABlobStruct( sqlData)^.stored_len);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move((PZASABlobStruct( sqlData)^.arr[0]), (PAnsiChar(Buffer)+Offs)^, PZASABlobStruct( sqlData)^.stored_len);
             if ( sqlind^ = 0 ) or ( RD = Length) then
               break;
             Inc( Offs, PZASABlobStruct( sqlData)^.stored_len);
@@ -1082,7 +1082,7 @@ begin
       GetMem(Buffer, PZASABlobStruct( sqlData).untrunc_len);
       SetLength( Str, PZASABlobStruct( sqlData).untrunc_len);
       ReadBlob(Index, Buffer, Length(Str));
-      System.Move(Buffer^, Str[1], PZASABlobStruct( sqlData).untrunc_len);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Str[1], PZASABlobStruct( sqlData).untrunc_len);
       FreeMem(buffer);
     end
     else

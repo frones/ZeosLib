@@ -1082,7 +1082,7 @@ begin
         DT_BINARY:
           begin
             SetLength( Result, PZASASQLSTRING( sqlData).length);
-            Move(PZASASQLSTRING(sqlData).data[0], Result[0], PZASASQLSTRING(sqlData).length);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PZASASQLSTRING(sqlData).data[0], Result[0], PZASASQLSTRING(sqlData).length);
           end;
       else
         FSqlData.CreateException( Format( SErrorConvertionField,

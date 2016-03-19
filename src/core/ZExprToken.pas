@@ -109,7 +109,7 @@ type
   end;
 
 implementation
-uses ZCompatibility;
+uses ZCompatibility{$IFDEF FAST_MOVE},ZFastCode{$ENDIF};
 
 const
   {** List of keywords. }

@@ -124,7 +124,7 @@ type
 
 implementation
 
-uses ZCompatibility;
+uses ZCompatibility{$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 const
   NameQuoteChar   = Char('"');
