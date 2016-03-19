@@ -234,7 +234,7 @@ var
  FastCodeTarget: TFastCodeTarget;
 {$IFEND}
 
-{$IFDEF PatchSystemMove} //set in Zeos.inc
+{$IF defined(PatchSystemMove) or defined(FAST_MOVE)} //set in Zeos.inc
 var
   Move : procedure(const Source; var Dest; Count : Integer); {Fastest Move}
 
@@ -244,7 +244,7 @@ var
   procedure Move_JOH_SSE_10 (const Source; var Dest; Count : Integer);
   procedure Move_JOH_SSE2_10(const Source; var Dest; Count : Integer);
   procedure Move_JOH_SSE3_10(const Source; var Dest; Count : Integer);
-{$ENDIF PatchSystemMove} //set in Zeos.inc
+{$IFEND PatchSystemMove} //set in Zeos.inc
 
 {$IFDEF Use_FastCodeFillChar}
 var
@@ -375,14 +375,14 @@ uses
   {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings, {$ENDIF}
   SysConst{$IFNDEF WITH_PUREPASCAL_INTPOWER}, Math{$ENDIF};
 
-{$IFDEF PatchSystemMove} //set in Zeos.inc
+{$IF defined(PatchSystemMove) or defined(FAST_MOVE)} //set in Zeos.inc
 var
   CacheLimit : Integer; {Used within SSE Moves}
 {-------------------------------------------------------------------------}
 {Move without using any BASM Code}
 const
   TINYSIZE = 36;
-{$ENDIF}
+{$IFEND}
 
 function IntToStr(Value: Integer): String;
 begin
@@ -1065,7 +1065,7 @@ asm
 end;
 {$ENDIF Use_FastCodeFillChar}
 
-{$IFDEF PatchSystemMove} //set in Zeos.inc
+{$IF defined (PatchSystemMove) or defined(FAST_MOVE)} //set in Zeos.inc
 (*
 Copyright (c) 2005, John O'Harrow (john@almcrest.demon.co.uk)
 
@@ -2478,7 +2478,7 @@ begin
   VirtualProtect(@System.Move, 256, OldProtect, @Protect);
   FlushInstructionCache(GetCurrentProcess, @System.Move, SizeOf(NewMove));
 end; {PatchMove}
-{$ENDIF PatchSystemMove} //set in Zeos.inc
+{$IFEND} //set in Zeos.inc
 
 function IntToRaw(const Value: ShortInt): RawByteString;
 begin
@@ -7707,7 +7707,7 @@ initialization
 
 FillTwoDigitLoopLW;
 
-{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN) or defined(USE_FAST_CHARPOS)}
+{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN) or defined(USE_FAST_CHARPOS) or defined(FAST_MOVE)}
   GetCPUInfo;
   GetFastCodeTarget;
 {$IFEND}
@@ -7728,7 +7728,7 @@ FillTwoDigitLoopLW;
           FillChar := FillChar_JOH_IA32_4_a; {Processor does not Support MMX or SSE}
 {$ENDIF Use_FastCodeFillChar}
 
-{$IFDEF PatchSystemMove} //set in Zeos.inc
+{$IF defined(PatchSystemMove) or defined(FAST_MOVE)} //set in Zeos.inc
   if isSSE3 in CPU.InstructionSupport then
     Move := Move_JOH_SSE3_10 {Processor Supports SSE3}
   else
@@ -7743,8 +7743,10 @@ FillTwoDigitLoopLW;
         else
           Move := Move_JOH_IA32_10; {Processor does not Support MMX or SSE}
   CacheLimit := CPU.L2CacheSize * -512; {Used within SSE Based Moves}
+  {$IFDEF PatchSystemMove}
   PatchMove; {Patch Delphi's System.Move}
-{$ENDIF PatchSystemMove} //set in Zeos.inc
+  {$ENDIF}
+{$IFEND} //set in Zeos.inc
 
 {$IFDEF USE_FAST_STRLEN}
   if isSSE3 in CPU.InstructionSupport then

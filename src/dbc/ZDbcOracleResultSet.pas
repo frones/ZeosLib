@@ -1921,7 +1921,7 @@ var
     begin
       Inc(Offset, ReadNumChars);
       ReallocMem(FBlobData, Offset+1);
-      System.Move(Buf^, (PAnsiChar(FBlobData)+NativeUInt(OffSet-ReadNumChars))^, ReadNumChars);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, (PAnsiChar(FBlobData)+NativeUInt(OffSet-ReadNumChars))^, ReadNumChars);
     end;
   end;
 begin

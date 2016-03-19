@@ -56,7 +56,6 @@
 
 {.$DEFINE WITH_ZSTRINGFIELDS}
 
-
 // In Version 6.1.5 there are several bugs with the TZSQLMetadata-Component
 // For Version 6.5.0 you should uncomment the following line
 {$DEFINE USE_METADATA}
@@ -120,7 +119,7 @@
   {$ELSE}
     {$DEFINE WITH_UINT64_C1118_ERROR}       //D7-D2005 has proplems to assign code constants for UInt64
     {$DEFINE WITH_MILLISECONDOFTHEYEAR_BUG} //D7-D005 Bug -> a Int64 Cast of SecondOfTheYear(AValue) is missing
-    {$DEFINE PatchSystemMove}               //replaces System.Move by FastCode-Project Move proc
+    {.$DEFINE PatchSystemMove}               //replaces System.Move by FastCode-Project Move proc
     {$DEFINE Use_FastCodeFillChar}          //use ZFastCode FillChar() instead
     {$DEFINE USE_FAST_CHARPOS}              //use ZFastCode CharPos function
     {$DEFINE VER150BELOW}                   //found in ZTestBugCompPostgreSql.pas
@@ -153,7 +152,6 @@
 
           {$IF CompilerVersion >= 18.5} //Delphi 2007+
             {$UNDEF VER150BELOW}      //found in ZTestBugCompPostgreSql.pas
-            {$UNDEF PatchSystemMove}  //FastCode-Project Move proc included
             {$DEFINE HAVE_TBYTES}     //Compiler has TBytes. For newer Delphi RTTI Generic Array of <Byte>
 
             {$IF CompilerVersion >= 20} //Delphi 2009+
@@ -206,6 +204,10 @@
                       {$UNDEF WITH_DBTABLES} //BDE unit DBTables (TestSuites) isn't supported on CPU64
                       {$IFNDEF PUREPASCAL}
                         {$DEFINE PUREPASCAL}
+                      {$ENDIF}
+                    {$ELSE}
+                      {$IFDEF PatchSystemMove}
+                        {$UNDEF PatchSystemMove}  //FastCode-Project Move currently not ported to other plattforms
                       {$ENDIF}
                     {$ENDIF}
                     {$DEFINE WITH_SYSTEMCLASSES}          //Need System.Classes
@@ -274,17 +276,16 @@
                 {$DEFINE WITH_INLINE_ANSISTRLCOMP} //AnsiStrLComp is inlined in D2009 only
                 {$DEFINE WITH_URW1135_ISSUE} //D2009 can't compile for some strange reasons with inlined code.
               {$IFEND CompilerVersion >= 21}
-            {$ELSE !CompilerVersion >= 20} //Delphi 2007
-            {$IFEND CompilerVersion >= 20}
-          {$ELSE !CompilerVersion >= 18.5} //Delphi 2006
-          {$IFEND CompilerVersion >= 18.5}
+            {$IFEND CompilerVersion >= 20} //Delphi 2007
+          {$IFEND CompilerVersion >= 18.5} //Delphi 2006
         {$ELSE !CompilerVersion >= 18} //Delphi 2005
           {$DEFINE WITH_C11389_ERROR} //D2005 has some inline problems
         {$IFEND CompilerVersion >= 18}
-      {$ELSE !CompilerVersion >= 17} //Delphi 8
-      {$IFEND CompilerVersion >= 17}
-    {$ELSE !CompilerVersion >= 16} //Delphi 7
-    {$IFEND CompilerVersion >= 16}
+      {$IFEND CompilerVersion >= 17} //Delphi 8
+    {$IFEND CompilerVersion >= 16} //Delphi 7
+    {$IF not defined(PatchSystemMove) and defined(WIN32)}
+      {$DEFINE FAST_MOVE}
+    {$IFEND}
   {$IFEND CompilerVersion < 15}
 {$ENDIF}
 

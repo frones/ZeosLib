@@ -443,7 +443,7 @@ begin
         SQL_TEXT, SQL_VARYING:
           begin
             SetLength(Result, sqllen);
-            System.Move(PAnsiChar(sqldata)^, Pointer(Result)^, sqllen);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(sqldata)^, Pointer(Result)^, sqllen);
           end;
         else
           raise EZIBConvertError.Create(Format(SErrorConvertionField,

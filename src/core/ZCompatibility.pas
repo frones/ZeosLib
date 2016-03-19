@@ -465,6 +465,10 @@ var
 
 implementation
 
+{$IFDEF FAST_MOVE}
+uses ZFastCode;
+{$ENDIF}
+
 procedure TZCodePagedObject.SetConSettingsFromInfo(Info: TStrings);
 begin
   if Assigned(Info) and Assigned(FConSettings) then
@@ -719,13 +723,13 @@ begin
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
        ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
     begin
-      if Src <> nil then Move(Src^, Pointer(Dest)^, Len)
+      if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len)
     end else
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
     begin
       Dest := '';
       SetLength(Dest, Len);
-      if Src <> nil then Move(Src^, Pointer(Dest)^, Len);
+      if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
     end;
     {$ELSE}
       SetString(Dest, Src, Len);
@@ -741,14 +745,14 @@ begin
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
        ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
     begin
-      if Src <> nil then Move(Src^, Pointer(Dest)^, Len);
+      if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
     end
     else
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
       begin
         Dest := '';
         SetLength(Dest, Len);
-        if Src <> nil then Move(Src^, Pointer(Dest)^, Len);
+        if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
       end;
       {$ELSE}
       SetString(Dest, Src, Len);
@@ -807,13 +811,13 @@ begin
     if (Pointer(Dest) <> nil) and //Empty?
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
        ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then begin
-      if Src <> nil then Move(Src^, Pointer(Dest)^, Len)
+      if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len)
     end else
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
       begin
         Dest := '';
         SetLength(Dest, Len);
-        if Src <> nil then Move(Src^, Pointer(Dest)^, Len);
+        if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
       end;
       {$ELSE}
       SetString(Dest, Src, Len);

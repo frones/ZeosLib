@@ -606,7 +606,7 @@ var
   end;
   procedure MoveString(Const Data: Pointer; Iter: LongWord);
   begin
-    System.Move(Data^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+Iter*Variable^.Length)^, Variable^.oDataSizeArray^[Iter]);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Data^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+Iter*Variable^.Length)^, Variable^.oDataSizeArray^[Iter]);
     ({%H-}PAnsiChar({%H-}NativeUInt(Variable^.Data)+Iter*Variable^.Length)+Variable^.oDataSizeArray^[Iter]-1)^ := #0; //improve  StrLCopy... set a leadin #0 if truncation happens
   end;
 begin
@@ -655,7 +655,7 @@ begin
             else
             begin
               PInteger(Variable^.Data)^ := Math.Min(System.Length(Value.VBytes), Variable^.oDataSize);
-              System.Move(Pointer(Value.VBytes)^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+SizeOf(Integer))^, PInteger(Variable^.Data)^);
+              {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value.VBytes)^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+SizeOf(Integer))^, PInteger(Variable^.Data)^);
             end;
         SQLT_BLOB:
           begin
@@ -803,24 +803,24 @@ begin
           else
             for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZLongWordArray[I];
         stInteger: { no conversion required }
-          System.Move(ZIntegerArray[0], Variable^.Data^, Iteration*SizeOf(LongInt));
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(ZIntegerArray[0], Variable^.Data^, Iteration*SizeOf(LongInt));
         stULong: //we use String types here
           for i := 0 to Iteration -1 do
           begin
             AnsiTemp := IntToRaw(ZUInt64Array[I]);
             Variable^.oDataSizeArray^[i] := Length(AnsiTemp)+1;
-            System.Move(Pointer(AnsiTemp)^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^, Variable^.oDataSizeArray^[i]);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(AnsiTemp)^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^, Variable^.oDataSizeArray^[i]);
           end;
         stLong: //conversion required below 11.2
           //since 11.2 we can use Int64 types too
           if Connection.GetClientVersion >= 11002000 then
-            System.Move(ZInt64Array[0], Variable^.Data^, Iteration*SizeOf(Int64))
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(ZInt64Array[0], Variable^.Data^, Iteration*SizeOf(Int64))
           else
             for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZInt64Array[I];
         stFloat: //conversion required
           for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZSingleArray[I];
         stDouble: //no conversion required
-          System.Move(ZDoubleArray[0], Variable^.Data^, Iteration*SizeOf(Double));
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(ZDoubleArray[0], Variable^.Data^, Iteration*SizeOf(Double));
         stCurrency: //conversion required
           for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZCurrencyArray[I];
         stBigDecimal: //conversion required
@@ -948,7 +948,7 @@ begin
             else
             begin
               {%H-}PInteger({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^ := Math.Min(System.Length(ZBytesArray[I]), Variable^.oDataSize);
-              System.Move(Pointer(ZBytesArray[I])^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length+SizeOf(Integer))^,{%H-}PInteger({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^);
+              {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(ZBytesArray[I])^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length+SizeOf(Integer))^,{%H-}PInteger({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^);
             end;
         stGUID: //AFAIK OCI doesn't support GUID fields so let's convert them to stings
           for i := 0 to Iteration -1 do
@@ -956,7 +956,7 @@ begin
             begin
               AnsiTemp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(GuidToString(ZGUIDArray[I]));
               Variable^.oDataSizeArray^[i] := 39;
-              System.Move(Pointer(AnsiTemp)^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*39)^, 39);
+              {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(AnsiTemp)^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*39)^, 39);
             end;
         stDate, stTime, stTimeStamp:
           for i := 0 to Iteration -1 do

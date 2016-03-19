@@ -1710,7 +1710,7 @@ begin
               SetLength(Result.VBytes, Value.VCharRec.Len*2)
             else
               SetLength(Result.VBytes, Value.VCharRec.Len);
-            System.Move(Value.VCharRec.P^, Pointer(Result.VBytes)^, Length(Result.VBytes));
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value.VCharRec.P^, Pointer(Result.VBytes)^, Length(Result.VBytes));
           end;
         else
           RaiseTypeMismatchError;
