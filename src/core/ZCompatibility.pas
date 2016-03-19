@@ -729,7 +729,7 @@ begin
     begin
       Dest := '';
       SetLength(Dest, Len);
-      if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.(Src^, Pointer(Dest)^, Len);
+      if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
     end;
     {$ELSE}
       SetString(Dest, Src, Len);

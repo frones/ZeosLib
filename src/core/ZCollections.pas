@@ -320,7 +320,7 @@ begin
   begin
     ReallocMem(FList, NewCapacity * SizeOf(IZInterface));
     if NewCapacity > FCapacity then
-         FillChar(FList^[FCount], (NewCapacity - FCapacity) *
+      System.FillChar(FList^[FCount], (NewCapacity - FCapacity) *
             SizeOf(IZInterface), 0);
     FCapacity := NewCapacity;
   end;
