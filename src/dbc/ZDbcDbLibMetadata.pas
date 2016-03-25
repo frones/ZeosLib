@@ -3139,12 +3139,30 @@ end;
 }
 function TZSybaseDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
+var
+  QuoteStr: String;
+  TempCatalog, TempSchema, TempTable: String;
+
+  function RemoveQuotes(Identifier: String): String;
+  begin
+    if Length(Identifier) > 0 then begin
+      if (Identifier[1] = QuoteStr) and (Identifier[Length(Identifier)] = QuoteStr)
+      then Result := Copy(Identifier, 2, length(Identifier) - 2)
+      else Result := Identifier;
+    end else begin
+      Result := Identifier;
+    end;
+  end;
 begin
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
+  QuoteStr := GetDatabaseInfo.GetIdentifierQuoteString;
+  TempCatalog := RemoveQuotes(Catalog);
+  TempSchema := RemoveQuotes(Schema);
+  TempTable := RemoveQuotes(Table);
 
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_primarykey %s, %s, %s',
-    [ComposeObjectString(Catalog), ComposeObjectString(Schema), ComposeObjectString(Table)])) do
+    [ComposeObjectString(TempCatalog), ComposeObjectString(TempSchema), ComposeObjectString(TempTable)])) do
   begin
     while Next do
     begin
