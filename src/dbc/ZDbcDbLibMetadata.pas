@@ -299,6 +299,7 @@ type
     function UncachedGetTypeInfo: IZResultSet; override;
     function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
+    function RemoveQuotesFromIdentifier(Identifier: String): String;
   end;
 
 implementation
@@ -2884,13 +2885,19 @@ end;
 function TZSybaseDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
+var
+  TempCatalog, TempSchema, TempTable, TempColumn: String;
 begin
   Result := inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
+  TempCatalog := RemoveQuotesFromIdentifier(Catalog);
+  TempSchema := RemoveQuotesFromIdentifier(SchemaPattern);
+  TempTable := RemoveQuotesFromIdentifier(TableNamePattern);
+  TempColumn := RemoveQuotesFromIdentifier(ColumnNamePattern);
 
   with GetStatement.ExecuteQuery('exec '+GetSP_Prefix(Catalog, SchemaPattern)+
-    'sp_jdbc_columns '+ComposeObjectString(TableNamePattern)+', '+
-    ComposeObjectString(SchemaPattern)+', '+ComposeObjectString(Catalog)+', '+
-    ComposeObjectString(ColumnNamePattern)) do
+    'sp_jdbc_columns '+ComposeObjectString(TempTable)+', '+
+    ComposeObjectString(TempSchema)+', '+ComposeObjectString(TempCatalog)+', '+
+    ComposeObjectString(TempColumn)) do
   begin
     while Next do
     begin
@@ -2923,7 +2930,7 @@ begin
   with GetStatement.ExecuteQuery(
     Format('select c.colid, c.name, c.type, c.prec, c.scale, c.status'
     + ' from syscolumns c inner join sysobjects o on (o.id = c.id)'
-    + ' where o.name like %s order by colid', [ComposeObjectString(TableNamePattern)])) do
+    + ' where o.name like %s order by colid', [ComposeObjectString(TempTable)])) do
   begin
     while Next do
     begin
@@ -3116,6 +3123,26 @@ begin
 end;
 
 {**
+  Removes Quotes from Identifier Names if they are passed with quotes.
+
+  @param Identifier The Identifier where the quotes are to be removed
+  @return The identifier without quotes
+}
+function TZSybaseDatabaseMetadata.RemoveQuotesFromIdentifier(Identifier: String): String;
+var
+  QuoteStr: String;
+begin
+  QuoteStr := GetDatabaseInfo.GetIdentifierQuoteString;
+  if Length(Identifier) > 0 then begin
+    if (Identifier[1] = QuoteStr) and (Identifier[Length(Identifier)] = QuoteStr)
+    then Result := Copy(Identifier, 2, length(Identifier) - 2)
+    else Result := Identifier;
+  end else begin
+    Result := Identifier;
+  end;
+end;
+
+{**
   Gets a description of a table's primary key columns.  They
   are ordered by COLUMN_NAME.
 
@@ -3140,25 +3167,12 @@ end;
 function TZSybaseDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
-  QuoteStr: String;
   TempCatalog, TempSchema, TempTable: String;
-
-  function RemoveQuotes(Identifier: String): String;
-  begin
-    if Length(Identifier) > 0 then begin
-      if (Identifier[1] = QuoteStr) and (Identifier[Length(Identifier)] = QuoteStr)
-      then Result := Copy(Identifier, 2, length(Identifier) - 2)
-      else Result := Identifier;
-    end else begin
-      Result := Identifier;
-    end;
-  end;
 begin
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
-  QuoteStr := GetDatabaseInfo.GetIdentifierQuoteString;
-  TempCatalog := RemoveQuotes(Catalog);
-  TempSchema := RemoveQuotes(Schema);
-  TempTable := RemoveQuotes(Table);
+  TempCatalog := RemoveQuotesFromIdentifier(Catalog);
+  TempSchema := RemoveQuotesFromIdentifier(Schema);
+  TempTable := RemoveQuotesFromIdentifier(Table);
 
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_primarykey %s, %s, %s',
