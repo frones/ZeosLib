@@ -374,8 +374,8 @@ go
 create table "Spaced Names" (
 cs_id                 INTEGER                        not null,
 "Cs Data1"            INTEGER,
-"cs data1"            INTEGER,
-"cS data1"            INTEGER,
+"cs data2"            INTEGER,
+"cS data3"            INTEGER,
 primary key (cs_id)
 )
 go
