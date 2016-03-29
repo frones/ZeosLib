@@ -312,7 +312,7 @@ const
     10000000,1000000,100000,10000,1000,100,10);
 
   { count database parameters }
-  MAX_DPB_PARAMS = 67;
+  MAX_DPB_PARAMS = 90;
   { prefix database parameters names it used in paramters scann procedure }
   BPBPrefix = RawByteString('isc_dpb_');
   { list database parameters and their apropriate numbers }
@@ -384,7 +384,30 @@ const
     (Name:'isc_dpb_set_db_readonly';  Number: isc_dpb_set_db_readonly),
     (Name:'isc_dpb_set_db_sql_dialect'; Number: isc_dpb_set_db_SQL_dialect),
     (Name:'isc_dpb_gfix_attach';      Number: isc_dpb_gfix_attach),
-    (Name:'isc_dpb_gstat_attach';     Number: isc_dpb_gstat_attach)
+    (Name:'isc_dpb_gstat_attach';     Number: isc_dpb_gstat_attach),
+    (Name:'isc_dpb_set_db_charset';   Number: isc_dpb_set_db_charset),
+    (Name:'isc_dpb_gsec_attach';      Number: isc_dpb_gsec_attach),
+    (Name:'isc_dpb_address_path';     Number: isc_dpb_address_path),
+    (Name:'isc_dpb_process_id';       Number: isc_dpb_process_id),
+    (Name:'isc_dpb_no_db_triggers';   Number: isc_dpb_no_db_triggers),
+    (Name:'isc_dpb_trusted_auth';     Number: isc_dpb_trusted_auth),
+    (Name:'isc_dpb_process_name';     Number: isc_dpb_process_name),
+    (Name:'isc_dpb_trusted_role';     Number: isc_dpb_trusted_role),
+    (Name:'isc_dpb_org_filename';     Number: isc_dpb_org_filename),
+    (Name:'isc_dpb_utf8_filename';    Number: isc_dpb_utf8_filename),
+    (Name:'isc_dpb_ext_call_depth';   Number: isc_dpb_ext_call_depth),
+    (Name:'isc_dpb_auth_block';       Number: isc_dpb_auth_block),
+    (Name:'isc_dpb_client_version';   Number: isc_dpb_client_version),
+    (Name:'isc_dpb_remote_protocol';  Number: isc_dpb_remote_protocol),
+    (Name:'isc_dpb_host_name';        Number: isc_dpb_host_name),
+    (Name:'isc_dpb_os_user';          Number: isc_dpb_os_user),
+    (Name:'isc_dpb_specific_auth_data'; Number: isc_dpb_specific_auth_data),
+    (Name:'isc_dpb_auth_plugin_list'; Number: isc_dpb_auth_plugin_list),
+    (Name:'isc_dpb_auth_plugin_name'; Number: isc_dpb_auth_plugin_name),
+    (Name:'isc_dpb_config';           Number: isc_dpb_config),
+    (Name:'isc_dpb_nolinger';         Number: isc_dpb_nolinger),
+    (Name:'isc_dpb_reset_icu';        Number: isc_dpb_reset_icu),
+    (Name:'isc_dpb_map_attach';       Number: isc_dpb_map_attach)
   );
 
   { count transaction parameters }
@@ -498,7 +521,7 @@ begin
       isc_dpb_user_name, isc_dpb_password, isc_dpb_password_enc,
       isc_dpb_sys_user_name, isc_dpb_license, isc_dpb_encrypt_key,
       isc_dpb_lc_messages, isc_dpb_lc_ctype, isc_dpb_sql_role_name,
-	  isc_dpb_connect_timeout:
+	    isc_dpb_connect_timeout, isc_dpb_config:
         begin
           DPB := DPB + AnsiChar(ParamNo) + AnsiChar(Length(ParamValue)) + ParamValue;
           Inc(FDPBLength, 2 + Length(ParamValue));

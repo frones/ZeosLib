@@ -4881,12 +4881,12 @@ function TZAbstractCLob.Clone(Empty: Boolean = False): IZBLob;
 begin
   if (FCurrentCodePage = zCP_UTF16) or
      (FCurrentCodePage = zCP_UTF16BE) then
-    if Empty then
+    if Empty or not Assigned(FBlobData) or (FBlobSize <= 1) then
       Result := TZAbstractCLob.CreateWithData(nil, 0, FConSettings)
     else
       Result := TZAbstractCLob.CreateWithData(FBlobData, (FBlobSize shr 1)-1, FConSettings)
   else
-    if Empty then
+    if Empty or not Assigned(FBlobData) or (FBlobSize <= 0) then
       Result := TZAbstractCLob.CreateWithData(nil, 0, FCurrentCodePage, FConSettings)
     else
       Result := TZAbstractCLob.CreateWithData(FBlobData, FBlobSize-1, FCurrentCodePage, FConSettings);
