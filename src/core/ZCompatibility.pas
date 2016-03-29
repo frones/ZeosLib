@@ -562,6 +562,11 @@ end;
   {$DEFINE OverFlowCheckEnabled}
   {$OVERFLOWCHECKS OFF}
 {$ENDIF}
+{$IFOPT R+}
+  {$DEFINE RangeCheckEnabled}
+  {$R-}
+{$ENDIF}
+
 function Hash(const key: ZWideString): Cardinal;
 var
   I: integer;
@@ -664,6 +669,9 @@ begin
   end;
 end;
 
+{$IFDEF RangeCheckEnabled}
+  {$R+}
+{$ENDIF}
 {$IFDEF OverFlowCheckEnabled}
   {$OVERFLOWCHECKS ON}
 {$ENDIF}
