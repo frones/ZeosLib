@@ -339,6 +339,7 @@ procedure TZInterbase6Connection.InternalCreate;
 var
   RoleName: string;
   ConnectTimeout : integer;
+  WireCompression: Boolean;
 begin
   Self.FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
 
@@ -372,6 +373,10 @@ begin
   ConnectTimeout := StrToIntDef(URL.Properties.Values['timeout'], -1);
   if ConnectTimeout >= 0 then
     URL.Properties.Values['isc_dpb_connect_timeout'] := ZFastCode.IntToStr(ConnectTimeout);
+
+  WireCompression := StrToBoolEx(URL.Properties.Values['wirecompression']);
+  if WireCompression then URL.Properties.Add('isc_dpb_config=WireCompression=true');
+
   FXSQLDAMaxSize := 64*1024; //64KB by default
   FHandle := 0;
 end;

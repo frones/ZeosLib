@@ -652,7 +652,30 @@ const
   isc_dpb_set_db_SQL_dialect     = 65;
   isc_dpb_gfix_attach            = 66;
   isc_dpb_gstat_attach           = 67;
-  isc_dpb_last_dpb_constant      = isc_dpb_gstat_attach;
+  isc_dpb_set_db_charset         = 68;
+  isc_dpb_gsec_attach            = 69;		(* deprecated *)
+  isc_dpb_address_path           = 70;
+  isc_dpb_process_id             = 71;
+  isc_dpb_no_db_triggers         = 72;
+  isc_dpb_trusted_auth			     = 73;
+  isc_dpb_process_name           = 74;
+  isc_dpb_trusted_role			     = 75;
+  isc_dpb_org_filename			     = 76;
+  isc_dpb_utf8_filename			     = 77;
+  isc_dpb_ext_call_depth			   = 78;
+  isc_dpb_auth_block				     = 79;
+  isc_dpb_client_version			   = 80;
+  isc_dpb_remote_protocol			   = 81;
+  isc_dpb_host_name				       = 82;
+  isc_dpb_os_user					       = 83;
+  isc_dpb_specific_auth_data		 = 84;
+  isc_dpb_auth_plugin_list		   = 85;
+  isc_dpb_auth_plugin_name		   = 86;
+  isc_dpb_config					       = 87;
+  isc_dpb_nolinger				       = 88;
+  isc_dpb_reset_icu				       = 89;
+  isc_dpb_map_attach             = 90;
+  isc_dpb_last_dpb_constant      = isc_dpb_map_attach;
 
   { isc_dpb_verify specific flags }
   isc_dpb_pages                  = 1;
@@ -664,10 +687,17 @@ const
   isc_dpb_ignore                 = 64;
 
   { isc_dpb_shutdown specific flags }
-  isc_dpb_shut_cache             = 1;
-  isc_dpb_shut_attachment        = 2;
-  isc_dpb_shut_transaction       = 4;
-  isc_dpb_shut_force             = 8;
+  isc_dpb_shut_cache             = $1;
+  isc_dpb_shut_attachment        = $2;
+  isc_dpb_shut_transaction       = $4;
+  isc_dpb_shut_force             = $8;
+  isc_dpb_shut_mode_mask         = $70;
+
+  isc_dpb_shut_default           = $0;
+  isc_dpb_shut_normal            = $10;
+  isc_dpb_shut_multi             = $20;
+  isc_dpb_shut_single            = $30;
+  isc_dpb_shut_full              = $40;
 
   { Transaction parameter block stuff }
   isc_tpb_version1               = 1;
@@ -707,6 +737,12 @@ const
   isc_bpb_source_interp          = 4;
   isc_bpb_target_interp          = 5;
   isc_bpb_filter_parameter       = 6;
+  isc_bpb_storage                = 7;
+
+  isc_bpb_type_segmented         = $0;
+  isc_bpb_type_stream            = $1;
+  isc_bpb_storage_main           = $0;
+  isc_bpb_storage_temp           = $2;
 
   { SQL information items }
   isc_info_sql_select            = 4;
@@ -745,9 +781,6 @@ const
   isc_info_sql_stmt_rollback       = 11;
   isc_info_sql_stmt_select_for_upd = 12;
   isc_info_sql_stmt_set_generator  = 13;
-
-  isc_bpb_type_segmented           = 0;
-  isc_bpb_type_stream              = 1;
 
   {************** Information call declarations **************}
 

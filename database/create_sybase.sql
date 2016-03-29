@@ -69,6 +69,12 @@ if exists (select 1
    drop table date_values
 go
 
+if exists (select 1
+            from  sysobjects
+           where  id = object_id('default_values')
+            and   type = 'U')
+   drop table default_values
+go
 
 if exists (select 1
             from  sysobjects
@@ -207,6 +213,20 @@ constraint PK_DATE_VALUES primary key  (d_id)
 )
 go
 
+/*==============================================================*/
+/* Table : default_values                                       */
+/*==============================================================*/
+create table default_values(
+   d_id                           int 	      not null,
+   d_fld1                         int 	      default 123456,
+   d_fld2                         float       default 123.456,
+   d_fld3                     	  varchar(10) default 'xyz',
+   d_fld4                     	  datetime    default '2003-12-11',
+   d_fld5                     	  datetime    default '23:12:11',
+   d_fld6                     	  datetime    default '2003-12-11 23:12:11',
+   constraint PK_DEFAULT_VALUES primary key (d_id)
+)
+go
 
 /*==============================================================*/
 /* Table : department                                           */
@@ -354,8 +374,8 @@ go
 create table "Spaced Names" (
 cs_id                 INTEGER                        not null,
 "Cs Data1"            INTEGER,
-"cs data1"            INTEGER,
-"cS data1"            INTEGER,
+"cs data2"            INTEGER,
+"cS data3"            INTEGER,
 primary key (cs_id)
 )
 go

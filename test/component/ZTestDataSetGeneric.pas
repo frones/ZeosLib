@@ -856,7 +856,8 @@ begin
       FreeAndNil(StrStream);
     if Assigned(StrStream1) then
       FreeAndNil(StrStream1);
-    Query.Free;
+    if Assigned(Query) then
+      FreeAndNil(Query);
   end;
 end;
 
@@ -2137,7 +2138,8 @@ begin
       CheckEquals(BinStreamE.Size * 10, length(s), 'Length of DupeString result');
       S := '';
       BinStreamE.Position := 0;
-      BinStreamE.Write(s[1],length(s));
+      // this operation is useless - s is empty so length(s) is zero - even worse - it generates a range overflow because s[1] doesn't exist.
+      //BinStreamE.Write(s[1], length(s));
       Params[2].LoadFromStream(BinStreamE, ftBlob);
       ExecSQL;
 
