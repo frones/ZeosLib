@@ -225,8 +225,6 @@ type
 
     function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
-    function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
   end;
 
   {** Implements MsSql Database Metadata. }
@@ -250,6 +248,8 @@ type
     function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
       const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
       const ForeignTable: string): IZResultSet; override;
+    function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
     function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
       Unique: Boolean; Approximate: Boolean): IZResultSet; override;
     function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
@@ -1347,79 +1347,6 @@ begin
 end;
 
 {**
-  Gets a description of the foreign key columns that reference a
-  table's primary key columns (the foreign keys exported by a
-  table).  They are ordered by FKTABLE_CAT, FKTABLE_SCHEM,
-  FKTABLE_NAME, and KEY_SEQ.
-
-  <P>Each foreign key column description has the following columns:
-   <OL>
-        <LI><B>PKTABLE_CAT</B> String => primary key table catalog (may be null)
-        <LI><B>PKTABLE_SCHEM</B> String => primary key table schema (may be null)
-        <LI><B>PKTABLE_NAME</B> String => primary key table name
-        <LI><B>PKCOLUMN_NAME</B> String => primary key column name
-        <LI><B>FKTABLE_CAT</B> String => foreign key table catalog (may be null)
-       being exported (may be null)
-        <LI><B>FKTABLE_SCHEM</B> String => foreign key table schema (may be null)
-       being exported (may be null)
-        <LI><B>FKTABLE_NAME</B> String => foreign key table name
-       being exported
-        <LI><B>FKCOLUMN_NAME</B> String => foreign key column name
-       being exported
-        <LI><B>KEY_SEQ</B> short => sequence number within foreign key
-        <LI><B>UPDATE_RULE</B> short => What happens to
-        foreign key when primary is updated:
-       <UL>
-       <LI> importedNoAction - do not allow update of primary
-                key if it has been imported
-       <LI> importedKeyCascade - change imported key to agree
-                with primary key update
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been updated
-       <LI> importedKeySetDefault - change imported key to default values
-                if its primary key has been updated
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       </UL>
-        <LI><B>DELETE_RULE</B> short => What happens to
-       the foreign key when primary is deleted.
-       <UL>
-       <LI> importedKeyNoAction - do not allow delete of primary
-                key if it has been imported
-       <LI> importedKeyCascade - delete rows that import a deleted key
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been deleted
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       <LI> importedKeySetDefault - change imported key to default if
-                its primary key has been deleted
-       </UL>
-        <LI><B>FK_NAME</B> String => foreign key name (may be null)
-        <LI><B>PK_NAME</B> String => primary key name (may be null)
-        <LI><B>DEFERRABILITY</B> short => can the evaluation of foreign key
-       constraints be deferred until commit
-       <UL>
-       <LI> importedKeyInitiallyDeferred - see SQL92 for definition
-       <LI> importedKeyInitiallyImmediate - see SQL92 for definition
-       <LI> importedKeyNotDeferrable - see SQL92 for definition
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a foreign key column description
-  @see #getImportedKeys
-}
-function TZDbLibBaseDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
-  const Schema: string; const Table: string): IZResultSet;
-begin
-  Result := UncachedGetCrossReference(Catalog, Schema, Table, '', '', '');
-end;
-
-{**
   What's the name of this database product?
   @return database product name
 }
@@ -2291,6 +2218,79 @@ begin
     Close;
   end;
   Result.BeforeFirst;
+end;
+
+{**
+  Gets a description of the foreign key columns that reference a
+  table's primary key columns (the foreign keys exported by a
+  table).  They are ordered by FKTABLE_CAT, FKTABLE_SCHEM,
+  FKTABLE_NAME, and KEY_SEQ.
+
+  <P>Each foreign key column description has the following columns:
+   <OL>
+        <LI><B>PKTABLE_CAT</B> String => primary key table catalog (may be null)
+        <LI><B>PKTABLE_SCHEM</B> String => primary key table schema (may be null)
+        <LI><B>PKTABLE_NAME</B> String => primary key table name
+        <LI><B>PKCOLUMN_NAME</B> String => primary key column name
+        <LI><B>FKTABLE_CAT</B> String => foreign key table catalog (may be null)
+       being exported (may be null)
+        <LI><B>FKTABLE_SCHEM</B> String => foreign key table schema (may be null)
+       being exported (may be null)
+        <LI><B>FKTABLE_NAME</B> String => foreign key table name
+       being exported
+        <LI><B>FKCOLUMN_NAME</B> String => foreign key column name
+       being exported
+        <LI><B>KEY_SEQ</B> short => sequence number within foreign key
+        <LI><B>UPDATE_RULE</B> short => What happens to
+        foreign key when primary is updated:
+       <UL>
+       <LI> importedNoAction - do not allow update of primary
+                key if it has been imported
+       <LI> importedKeyCascade - change imported key to agree
+                with primary key update
+       <LI> importedKeySetNull - change imported key to NULL if
+                its primary key has been updated
+       <LI> importedKeySetDefault - change imported key to default values
+                if its primary key has been updated
+       <LI> importedKeyRestrict - same as importedKeyNoAction
+                                  (for ODBC 2.x compatibility)
+       </UL>
+        <LI><B>DELETE_RULE</B> short => What happens to
+       the foreign key when primary is deleted.
+       <UL>
+       <LI> importedKeyNoAction - do not allow delete of primary
+                key if it has been imported
+       <LI> importedKeyCascade - delete rows that import a deleted key
+       <LI> importedKeySetNull - change imported key to NULL if
+                its primary key has been deleted
+       <LI> importedKeyRestrict - same as importedKeyNoAction
+                                  (for ODBC 2.x compatibility)
+       <LI> importedKeySetDefault - change imported key to default if
+                its primary key has been deleted
+       </UL>
+        <LI><B>FK_NAME</B> String => foreign key name (may be null)
+        <LI><B>PK_NAME</B> String => primary key name (may be null)
+        <LI><B>DEFERRABILITY</B> short => can the evaluation of foreign key
+       constraints be deferred until commit
+       <UL>
+       <LI> importedKeyInitiallyDeferred - see SQL92 for definition
+       <LI> importedKeyInitiallyImmediate - see SQL92 for definition
+       <LI> importedKeyNotDeferrable - see SQL92 for definition
+       </UL>
+   </OL>
+
+  @param catalog a catalog name; "" retrieves those without a
+  catalog; null means drop catalog name from the selection criteria
+  @param schema a schema name; "" retrieves those
+  without a schema
+  @param table a table name
+  @return <code>ResultSet</code> - each row is a foreign key column description
+  @see #getImportedKeys
+}
+function TZMsSqlDatabaseMetadata.UncachedGetExportedKeys(const Catalog, Schema,
+  Table: string): IZResultSet;
+begin
+  Result := UncachedGetCrossReference(Catalog, Schema, Table, '', '', '');
 end;
 
 {**
@@ -3361,12 +3361,9 @@ end;
 }
 function TZSybaseDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
-var
-  i: Integer;
 begin
-  Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
-{
-  //Jan: The Code is nice to see but the inherited call already is doing all the necessary work...
+  Result := inherited UncachedGetExportedKeys(Catalog, Schema, Table);
+
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_exportkey %s, %s, %s',
     [ComposeObjectString(Catalog), ComposeObjectString(Schema), ComposeObjectString(Table)])) do
@@ -3392,7 +3389,6 @@ begin
     end;
     Close;
   end;
-}
 end;
 
 {**
