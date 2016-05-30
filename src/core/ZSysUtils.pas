@@ -1380,6 +1380,19 @@ begin
               end;
           end;
         end;
+      'O', 'o': //Check mixed case of 'ON' or 'on' string
+        begin
+          Inc(Str);
+          case Str^ of
+            'N', 'n': begin
+                Inc(Str);
+                case Str^ of
+                  #0: Result := True;
+                  ' ': if IgnoreTrailingSaces then goto SkipSpaces;
+                end;
+              end;
+          end;
+        end;
       else
         Result := CheckInt and (RawToIntDef(Str, 0) <> 0);
     end;
@@ -1462,6 +1475,19 @@ begin
                 SkipSpaces:
                 while Str^ = ' ' do Inc(Str);
                 Result := Str^ = #0;
+              end;
+          end;
+        end;
+      'O', 'o': //Check mixed case of 'ON' or 'on' string
+        begin
+          Inc(Str);
+          case Str^ of
+            'N', 'n': begin
+                Inc(Str);
+                case Str^ of
+                  #0: Result := True;
+                  ' ': if IgnoreTrailingSaces then goto SkipSpaces;
+                end;
               end;
           end;
         end;
