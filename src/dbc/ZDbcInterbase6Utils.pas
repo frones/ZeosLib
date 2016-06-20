@@ -695,7 +695,6 @@ end;
 }
 function ConvertInterbase6ToSqlType(const SqlType, SqlSubType, Scale: Integer;
   const CtrlsCPType: TZControlsCodePage): TZSQLType;
-label numeric;
 begin
   Result := ZDbcIntfs.stUnknown;
 
@@ -722,16 +721,13 @@ begin
           if Scale = 0 then
             Result := stLong
           else
-            goto numeric;
+            Result := stBigDecimal;
         RDB_NUMBERS_NUMERIC: Result := stDouble;
         RDB_NUMBERS_DECIMAL:
           if Scale = 0 then
             Result := stLong
           else
-            if Abs(Scale) <= 4 then
-              Result := stCurrency
-            else
-              Result := stBigDecimal;
+            Result := stBigDecimal;
       end;
     blr_long:
       case SqlSubType of
@@ -741,10 +737,7 @@ begin
           if Scale = 0 then
             Result := stInteger
           else
-numeric:    if Abs(Scale) <= 4 then
-              Result := stCurrency
-            else
-              Result := stBigDecimal;
+            Result := stBigDecimal;
       end;
     blr_short:
       case SqlSubType of
@@ -1851,8 +1844,6 @@ begin
       begin
         if SqlScale = 0 then
           Result := stLong
-        else if SqlScale <= 4 then
-          Result := stCurrency
         else
           Result := stBigDecimal;
       end;
