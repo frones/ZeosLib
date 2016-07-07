@@ -1329,7 +1329,7 @@ begin
         stTimestamp     : JSONWriter.AddDateTime(PDateTime(@FBuffer.Columns[FColumnOffsets[C] + 1]), 'T', '"');
         stAsciiStream, stUnicodeStream:
           begin
-            Blob := IZBlob(PPointer(FBuffer.Columns[FColumnOffsets[C] + 1])^);
+            Blob := IZBlob(PPointer(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
             if Blob.IsEmpty then
               JSONWriter.AddShort('null')
             else begin
@@ -1343,7 +1343,7 @@ begin
           end;
         stBinaryStream:
           begin
-            Blob := IZBlob(PPointer(FBuffer.Columns[FColumnOffsets[C] + 1])^);
+            Blob := IZBlob(PPointer(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
             if Blob.IsEmpty then
               JSONWriter.AddShort('null')
             else
