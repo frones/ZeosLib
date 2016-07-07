@@ -470,6 +470,7 @@ begin
       FCurrentBufRowNo := 0;
       FRowsObtained := 0;
     end;
+  FRowSet := nil;//handle 'Object is in use Exception'
   inherited ResetCursor;
 end;
 
