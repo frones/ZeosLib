@@ -131,7 +131,7 @@ implementation
 uses
   Variants, ActiveX,
   ZDbcUtils, ZDbcLogging, ZAdoToken, ZSysUtils, ZMessages,
-  ZDbcAdoStatement, ZDbcAdoMetaData, ZEncoding;
+  ZDbcAdoStatement, ZDbcAdoMetadata, ZEncoding;
 
 const                                                //adXactUnspecified
   IL: array[TZTransactIsolationLevel] of TOleEnum = (adXactChaos, adXactReadUncommitted, adXactReadCommitted, adXactRepeatableRead, adXactSerializable);
