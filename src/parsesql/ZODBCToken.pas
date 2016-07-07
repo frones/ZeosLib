@@ -79,6 +79,8 @@ type
 
 implementation
 
+uses ZFastCode;
+
 { TZODBCQuoteState }
 
 {**
