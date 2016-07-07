@@ -2050,7 +2050,7 @@ begin
     end;
     rgPropertySets[1].rgProperties    := @rgProviderProperties;
 
-    SetProp(rgPropertySets[0], DBPROP_COMMANDTIMEOUT,    Max(1, TimeOut)); //Set command time_out static!
+    SetProp(rgPropertySets[0], DBPROP_COMMANDTIMEOUT,    Max(0, TimeOut)); //Set command time_out static!
     SetProp(rgPropertySets[0], DBPROP_SERVERCURSOR,      VARIANT_TRUE); //force a server side cursor
     if (Provider = spMSSQL) then
     begin
