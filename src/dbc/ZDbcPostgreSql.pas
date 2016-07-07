@@ -100,7 +100,7 @@ type
     public
       constructor Create(const ConSettings: PZConSettings;
         const Handle: PZPostgreSQLConnect; const PlainDriver: IZPostgreSQLPlainDriver);
-      function GetTableInfo(const TblOid: Oid; CurrentFieldCount: Integer): PZPGTableInfo;
+      function GetTableInfo(const TblOid: Oid): PZPGTableInfo;
       procedure Clear;
   end;
 
@@ -123,7 +123,7 @@ type
     procedure UnregisterPreparedStmtName(const value: String);
     function ClientSettingsChanged: Boolean;
     function GetUndefinedVarcharAsStringLength: Integer;
-    function GetTableInfo(const TblOid: Oid; CurrentFieldCount: Integer): PZPGTableInfo;
+    function GetTableInfo(const TblOid: Oid): PZPGTableInfo;
     function CheckFieldVisibility: Boolean;
   end;
 
@@ -152,7 +152,7 @@ type
   protected
     procedure InternalCreate; override;
     function GetUndefinedVarcharAsStringLength: Integer;
-    function GetTableInfo(const TblOid: Oid; CurrentFieldCount: Integer): PZPGTableInfo;
+    function GetTableInfo(const TblOid: Oid): PZPGTableInfo;
     function BuildConnectStr: AnsiString;
     procedure StartTransactionSupport;
     procedure LoadServerVersion;
@@ -330,8 +330,7 @@ begin
   Clear;
 end;
 
-function TZPGTableInfoCache.GetTableInfo(const TblOid: Oid;
-  CurrentFieldCount: Integer): PZPGTableInfo;
+function TZPGTableInfoCache.GetTableInfo(const TblOid: Oid): PZPGTableInfo;
 var Idx: Integer;
 begin
   Idx := GetTblPos(TblOid);
@@ -343,8 +342,6 @@ begin
   else
   begin
     Result := @FTblInfo[Idx];
-    if Result^.ColCount <> CurrentFieldCount then //something changed ?
-      LoadTblInfo(TblOid, Idx, Result); //refresh all data
   end;
 end;
 
@@ -476,12 +473,12 @@ begin
   Result := FUndefinedVarcharAsStringLength;
 end;
 
-function TZPostgreSQLConnection.GetTableInfo(const TblOid: Oid; CurrentFieldCount: Integer): PZPGTableInfo;
+function TZPostgreSQLConnection.GetTableInfo(const TblOid: Oid): PZPGTableInfo;
 begin
   if FNoTableInfoCache then
     Result := nil
   else
-    Result := FTableInfoCache.GetTableInfo(TblOid, CurrentFieldCount);
+    Result := FTableInfoCache.GetTableInfo(TblOid);
 end;
 
 {**

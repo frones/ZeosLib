@@ -268,7 +268,7 @@ begin
     with ColumnInfo do
     begin
       if Statement.GetResultSetConcurrency = rcUpdatable then //exclude system-tables and if no updates happen -> useless
-        TableInfo := Connection.GetTableInfo(FPlainDriver.GetFieldTableOID(FQueryHandle, I), FieldCount)
+        TableInfo := Connection.GetTableInfo(FPlainDriver.GetFieldTableOID(FQueryHandle, I))
       else
         TableInfo := nil;
       if TableInfo = nil then
