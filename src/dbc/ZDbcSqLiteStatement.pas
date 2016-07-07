@@ -78,6 +78,7 @@ type
     FPlainDriver: IZSQLitePlainDriver;
     FBindDoubleDateTimeValues: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
+    fBindOrdinalBoolValues: Boolean;
     function CreateResultSet: IZResultSet;
   protected
     function GetLastErrorCodeAndHandle(var StmtHandle: Psqlite3_stmt): Integer;
@@ -159,9 +160,10 @@ begin
     raise Exception.Create('Invalid InParamCount');
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.BindInParameters;
 const
-  BoolArray: array[Boolean] of PAnsiChar = ('N', 'Y');
+  BoolArray: array[Boolean, Boolean] of PAnsiChar = (('N', 'Y'),('0','1'));
+
+procedure TZSQLiteCAPIPreparedStatement.BindInParameters;
 var
   TempBlob: IZBlob;
   I: Integer;
@@ -179,7 +181,7 @@ begin
       case InParamTypes[I-1] of
         stBoolean:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            BoolArray[ClientVarManager.GetAsBoolean(InParamValues[i-1])], 1, nil);
+            BoolArray[fBindOrdinalBoolValues][ClientVarManager.GetAsBoolean(InParamValues[i-1])], 1, nil);
         stByte, stShort, stWord, stSmall, stInteger:
           FErrorcode := FPlainDriver.bind_int(FStmtHandle, i,
             ClientVarManager.GetAsInteger(InParamValues[i-1]));
@@ -285,6 +287,7 @@ begin
   ResultSetType := rtForwardOnly;
   FBindDoubleDateTimeValues :=  StrToBoolEx(DefineStatementParameter(Self, 'BindDoubleDateTimeValues', 'false'));
   FUndefinedVarcharAsStringLength := StrToIntDef(DefineStatementParameter(Self, 'Undefined_Varchar_AsString_Length', '0'), 0);
+  fBindOrdinalBoolValues := StrToBoolEx(DefineStatementParameter(Self, 'BindOrdinalBoolValues', 'false'));
 end;
 
 constructor TZSQLiteCAPIPreparedStatement.Create(const PlainDriver: IZSQLitePlainDriver;

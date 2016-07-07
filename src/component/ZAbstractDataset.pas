@@ -218,6 +218,11 @@ end;
 }
 destructor TZAbstractDataset.Destroy;
 begin
+  AfterCancel := nil;
+  BeforeCancel := nil;
+  if State in [dsEdit, dsInsert]
+  then Cancel;
+
   FreeAndNil(FDetailDataSets);
   if Assigned(FUpdateObject) then
   begin

@@ -1412,11 +1412,7 @@ begin
               10..19: CurrentVar^.ColType := stLong; // -9223372036854775808..9223372036854775807
               //skip 20 can be UInt64 or Int64  assume Double values instead
               21: CurrentVar^.ColType := stULong; //0..18446744073709551615
-            end
-          else
-            if (CurrentVar^.Scale <= 4) and (CurrentVar^.Precision > 0) and
-               (CurrentVar^.Precision <= 19) then
-              CurrentVar^.ColType := stCurrency;
+            end;
         end;
       SQLT_BFLOAT, SQLT_BDOUBLE, SQLT_IBFLOAT, SQLT_IBDOUBLE:
         CurrentVar^.ColType := stDouble;
