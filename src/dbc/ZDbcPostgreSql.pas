@@ -528,8 +528,10 @@ begin
 
   AddParamToResult('port', IntToStr(Port));
   AddParamToResult('dbname', Database);
-  AddParamToResult('user', User);
-  AddParamToResult('password', Password);
+  if user <> '' then begin
+    AddParamToResult('user', User);
+    AddParamToResult('password', Password);
+  end;
 
   If Info.Values['sslmode'] <> '' then
   begin
