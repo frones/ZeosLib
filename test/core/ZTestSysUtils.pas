@@ -1385,11 +1385,12 @@ end;
 
 {$IFDEF WITH_UNICODEFROMLOCALECHARS}
 procedure TZTestSysUtilsCase.TestLocalCharsFromUnicode;
-const TestString = ZWideString('ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...');
+const AnsiTestString: TBytes = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
 var
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
   S1, S2: RawByteString;
+  TestString: ZWideString;
 
     function TestUTF8EncodeOversized: RawByteString;
     var i, wlen, ulen: Integer;
@@ -1443,6 +1444,11 @@ var
       end;
     end;
 begin
+  Between1 := UnicodeFromLocaleChars(1251, 0, AnsiTestString, length(AnsiTestString), nil, 0);
+  SetLength(TestString, Between1);
+  Between1 := UnicodeFromLocaleChars(1251, 0, AnsiTestString, length(AnsiTestString), TestString, Length(TestString));
+  if Between1 = 0 then RaiseLastOsError;
+
   Start := GetTickCount;
   S1 := TestUTF8EncodeOversized;
   Stop := GetTickCount;
@@ -1476,12 +1482,13 @@ begin
 end;
 
 procedure TZTestSysUtilsCase.TestUnicodeFromLocalChars;
-const TestString = ZWideString('ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...');
+const AnsiTestString: TBytes = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
 var
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
   S1, S2: ZWideString;
   RBS: RawByteString;
+  TestString: ZWideString;
 
     function TestUTF8EncodeOversized: ZWideString;
     var i, wlen, ulen: Integer;
@@ -1540,6 +1547,11 @@ var
       end;
     end;
 begin
+  Between1 := UnicodeFromLocaleChars(1251, 0, AnsiTestString, length(AnsiTestString), nil, 0);
+  SetLength(TestString, Between1);
+  Between1 := UnicodeFromLocaleChars(1251, 0, AnsiTestString, length(AnsiTestString), TestString, Length(TestString));
+  if Between1 = 0 then RaiseLastOsError;
+
   RBS := UTF8Encode(TestString);
   Start := GetTickCount;
   S1 := TestUTF8EncodeOversized;
