@@ -688,8 +688,8 @@ procedure TZAbstractDataset.CommitUpdates;
 begin
   CheckBrowseMode;
 
-  if CachedResultSet <> nil then
-    CachedResultSet.CancelUpdates;
+  if (CachedResultSet <> nil) and CachedResultSet.IsPendingUpdates then
+    CachedResultSet.DisposeCachedUpdates;
 end;
 
 {**
