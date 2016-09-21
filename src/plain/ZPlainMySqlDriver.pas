@@ -968,14 +968,17 @@ function TZMySQLBaseDriver.Init(const Handle: PZMySQLConnect): PZMySQLConnect;
 var
   ClientInfo: PAnsiChar;
   L: LengthInt;
+  ErrorNo: Integer;
 begin
-  if (Assigned(mysql_server_init) or Assigned(mysql_library_init)){ and (ServerArgsLen > 0) }then
+  if (Assigned(mysql_server_init) or Assigned(mysql_library_init)){ and (ServerArgsLen > 0) }then begin
     if Assigned(mysql_library_init) then
       //http://dev.mysql.com/doc/refman/5.7/en/mysql-library-init.html
-      mysql_library_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS) //<<<-- Isn't threadsafe
+      ErrorNo := mysql_library_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS) //<<<-- Isn't threadsafe
     else
       //http://dev.mysql.com/doc/refman/5.7/en/mysql-server-init.html
-      mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS); //<<<-- Isn't threadsafe
+      ErrorNo := mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS); //<<<-- Isn't threadsafe
+    if ErrorNo <> 0 then raise Exception.Create('Could not initialize the MySQL / MariaDB client library. Error No: ' + ZFastCode.IntToStr(ErrorNo));  // The manual says nothing else can be called until this call succeeds. So lets just throw the error number...
+  end;
   Result := mysql_init(Handle);
   ClientInfo := GetClientInfo;
   L := ZFastCode.StrLen(ClientInfo);
