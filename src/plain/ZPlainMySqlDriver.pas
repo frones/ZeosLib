@@ -741,7 +741,7 @@ begin
     SetLength(ServerArgs, ServerArgsLen);
     for i := 0 to ServerArgsLen - 1 do
       {$IFDEF UNICODE}
-      ServerArgs[i] := {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(UTF8String(TmpList[i])));
+      ServerArgs[i] := {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(AnsiString(TmpList[i])));
       {$ELSE}
       ServerArgs[i] := StrNew(PAnsiChar(TmpList[i]));
       {$ENDIF}
