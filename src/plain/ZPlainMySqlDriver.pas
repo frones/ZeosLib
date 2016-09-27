@@ -980,6 +980,7 @@ begin
     if ErrorNo <> 0 then raise Exception.Create('Could not initialize the MySQL / MariaDB client library. Error No: ' + ZFastCode.IntToStr(ErrorNo));  // The manual says nothing else can be called until this call succeeds. So lets just throw the error number...
   end;
   Result := mysql_init(Handle);
+  if not Assigned(Result) then raise Exception.Create('Could not finish the call to mysql_init. Not enough memory?');
   ClientInfo := GetClientInfo;
   L := ZFastCode.StrLen(ClientInfo);
   FIsMariaDBDriver := CompareMem(ClientInfo+L-7, PAnsiChar('MariaDB'), 7);
