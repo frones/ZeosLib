@@ -235,7 +235,8 @@ end;
 
 procedure TZUpdateSqlEditor.Edit;
 begin
-  EditUpdateSQL(TZUpdateSQL(Component));
+  if EditUpdateSQL(TZUpdateSQL(Component)) then
+    Designer.Modified;
 end;
 
 { Global Interface functions }
@@ -637,8 +638,11 @@ begin
     if ShowModal = mrOk then
     begin
       for Index := low(TUpdateKind) to high(TUpdateKind) do
-        UpdateSQL.SQL[Index] := SQLText[Index];
-      Result := True;
+        if UpdateSQL.SQL[Index].Text <> SQLText[Index].Text then
+        begin
+          UpdateSQL.SQL[Index] := SQLText[Index];
+          Result := True;
+        end;
     end;
   finally
     for Index := Low(TUpdateKind) to High(TUpdateKind) do

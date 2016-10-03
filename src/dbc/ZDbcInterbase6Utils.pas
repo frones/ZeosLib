@@ -1053,9 +1053,8 @@ begin
   for I := 0 to ParamSqlData.GetFieldCount - 1 do
   begin
     ParamSqlData.UpdateNull(I, SoftVarManager.IsNull(InParamValues[I]));
-    if SoftVarManager.IsNull(InParamValues[I])then
-      Continue
-    else
+    if SoftVarManager.IsNull(InParamValues[I])then Continue;
+    if ParamSqlData.GetIbSqlType(I) = SQL_NULL then Continue;
     case InParamTypes[I] of
       stBoolean:
         ParamSqlData.UpdateBoolean(I,

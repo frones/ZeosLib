@@ -100,7 +100,7 @@ type
     public
       constructor Create(const ConSettings: PZConSettings;
         const Handle: PZPostgreSQLConnect; const PlainDriver: IZPostgreSQLPlainDriver);
-      function GetTableInfo(const TblOid: Oid; CurrentFieldCount: Integer): PZPGTableInfo;
+      function GetTableInfo(const TblOid: Oid): PZPGTableInfo;
       procedure Clear;
   end;
 
@@ -123,7 +123,7 @@ type
     procedure UnregisterPreparedStmtName(const value: String);
     function ClientSettingsChanged: Boolean;
     function GetUndefinedVarcharAsStringLength: Integer;
-    function GetTableInfo(const TblOid: Oid; CurrentFieldCount: Integer): PZPGTableInfo;
+    function GetTableInfo(const TblOid: Oid): PZPGTableInfo;
     function CheckFieldVisibility: Boolean;
   end;
 
@@ -143,6 +143,7 @@ type
     FServerSubVersion: Integer;
     FNoticeProcessor: TZPostgreSQLNoticeProcessor;
     FPreparedStmts: TStrings;
+    FUnpreparableStmts: TStringList;
     FClientSettingsChanged: Boolean;
     FTableInfoCache: TZPGTableInfoCache;
     FIs_bytea_output_hex: Boolean;
@@ -151,7 +152,7 @@ type
   protected
     procedure InternalCreate; override;
     function GetUndefinedVarcharAsStringLength: Integer;
-    function GetTableInfo(const TblOid: Oid; CurrentFieldCount: Integer): PZPGTableInfo;
+    function GetTableInfo(const TblOid: Oid): PZPGTableInfo;
     function BuildConnectStr: AnsiString;
     procedure StartTransactionSupport;
     procedure LoadServerVersion;
@@ -330,8 +331,7 @@ begin
   Clear;
 end;
 
-function TZPGTableInfoCache.GetTableInfo(const TblOid: Oid;
-  CurrentFieldCount: Integer): PZPGTableInfo;
+function TZPGTableInfoCache.GetTableInfo(const TblOid: Oid): PZPGTableInfo;
 var Idx: Integer;
 begin
   Idx := GetTblPos(TblOid);
@@ -343,8 +343,6 @@ begin
   else
   begin
     Result := @FTblInfo[Idx];
-    if Result^.ColCount <> CurrentFieldCount then //something changed ?
-      LoadTblInfo(TblOid, Idx, Result); //refresh all data
   end;
 end;
 
@@ -442,6 +440,7 @@ procedure TZPostgreSQLConnection.InternalCreate;
 begin
   FMetaData := TZPostgreSQLDatabaseMetadata.Create(Self, Url);
   FPreparedStmts := nil;
+  FUnpreparableStmts := nil;
   FTableInfoCache := nil;
 
   { Sets a default PostgreSQL port }
@@ -475,12 +474,12 @@ begin
   Result := FUndefinedVarcharAsStringLength;
 end;
 
-function TZPostgreSQLConnection.GetTableInfo(const TblOid: Oid; CurrentFieldCount: Integer): PZPGTableInfo;
+function TZPostgreSQLConnection.GetTableInfo(const TblOid: Oid): PZPGTableInfo;
 begin
   if FNoTableInfoCache then
     Result := nil
   else
-    Result := FTableInfoCache.GetTableInfo(TblOid, CurrentFieldCount);
+    Result := FTableInfoCache.GetTableInfo(TblOid);
 end;
 
 {**
@@ -492,6 +491,8 @@ begin
   inherited Destroy;
   if FTableInfoCache <> nil then FreeAndNil(FTableInfoCache);
   if FPreparedStmts <> nil then FreeAndNil(FPreparedStmts);
+  if Assigned(FUnpreparableStmts) then FreeAndNil(FUnpreparableStmts);
+
 end;
 
 {**
@@ -527,8 +528,10 @@ begin
 
   AddParamToResult('port', ZFastCode.IntToStr(Port));
   AddParamToResult('dbname', Database);
-  AddParamToResult('user', User);
-  AddParamToResult('password', Password);
+  if user <> '' then begin
+    AddParamToResult('user', User);
+    AddParamToResult('password', Password);
+  end;
 
   If Info.Values['sslmode'] <> '' then
   begin
@@ -593,6 +596,7 @@ procedure TZPostgreSQLConnection.StartTransactionSupport;
 var
   QueryHandle: PZPostgreSQLResult;
   SQL: RawByteString;
+  x: Integer;
 begin
   if TransactIsolationLevel <> tiNone then
   begin
@@ -624,6 +628,18 @@ begin
     else
       raise EZSQLException.Create(SIsolationIsNotSupported);
   end;
+
+  if Assigned(FUnpreparableStmts) then begin
+    for x := FUnpreparableStmts.Count - 1 downto 0 do begin
+      SQL := 'DEALLOCATE "' + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FUnpreparableStmts.Strings[x]) + '";';;
+      QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
+      CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
+      GetPlainDriver.PQclear(QueryHandle);
+      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+      FUnpreparableStmts.Delete(x);
+    end;
+  end;
+
 end;
 
 {**
@@ -654,8 +670,10 @@ procedure TZPostgreSQLConnection.UnregisterPreparedStmtName(const value: String)
 var Index: Integer;
 begin
   Index := FPreparedStmts.IndexOf(Value);
-  if Index > -1 then
+  if Index > -1 then begin
+    FUnpreparableStmts.Add(FPreparedStmts.Strings[Index]);
     FPreparedStmts.Delete(Index);
+  end;
 end;
 
 function TZPostgreSQLConnection.ClientSettingsChanged: Boolean;
@@ -712,6 +730,8 @@ begin
 
     if FPreparedStmts = nil then
       FPreparedStmts := TStringList.Create;
+    if not Assigned(FUnpreparableStmts) then
+      FUnpreparableStmts := TStringList.Create;
     if FTableInfoCache = nil then
       FTableInfoCache := TZPGTableInfoCache.Create(ConSettings, FHandle, GetPlainDriver);
 

@@ -187,7 +187,8 @@ var
   TestConSettings: PZConSettings;
 
 const
-  S: ZWideString = 'üהצßגבא';
+  //S: ZWideString = 'üהצßגבא';
+  S: ZwideString = #$00FC#$00E4#$00F6#$00DF#$00E2#$00E1#$00E0;
 
 { TZTestVariantCase }
 

@@ -435,12 +435,8 @@ procedure TZPostgreSQLPreparedStatement.Unprepare;
 begin
   if Prepared and Assigned(FPostgreSQLConnection.GetConnectionHandle) then
   begin
-    if not Findeterminate_datatype then
-    begin
-      QueryHandle := ExecuteInternal(GetDeallocateSQL, eicUnprepStmt);
-      FPlainDriver.PQclear(QueryHandle);
-      FPostgreSQLConnection.UnregisterPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
-    end;
+    if not Findeterminate_datatype
+    then FPostgreSQLConnection.UnregisterPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
   end;
   inherited Unprepare;
 end;

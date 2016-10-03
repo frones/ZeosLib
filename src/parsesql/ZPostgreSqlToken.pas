@@ -318,7 +318,7 @@ begin
     if ReadChar = QuoteChar then
       Inc(QuoteCount, Ord((not EscapeSyntax) or (not LastWasEscapeChar)))
     else
-      LastWasEscapeChar := False;
+      LastWasEscapeChar :=(ReadChar=BackSlash) and (not LastWasEscapeChar); //False; //Kamil Giza comment False;
 
     if (LastChar = QuoteChar) and (ReadChar <> QuoteChar) then
       if QuoteCount mod 2 = 0 then begin
@@ -328,7 +328,7 @@ begin
     ToBuf(ReadChar, Result);
     if (LastChar = BackSlash) and EscapeSyntax then begin
       LastChar := #0;
-      LastWasEscapeChar := True;
+      //LastWasEscapeChar := True; //Kamil Giza add comment
       //Dec(QuoteCount); nope that doesnt' work @all see the tests
     end else if (LastChar = QuoteChar) and (ReadChar = QuoteChar) then
       LastChar := #0
