@@ -122,7 +122,7 @@ type
 
 implementation
 
-uses ZEncoding {$IFDEF BENCHMARK},ZFastCode, Types, Classes{$ENDIF};
+uses ZEncoding {$IFDEF BENCHMARK},ZFastCode, Types, Classes{$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}, Windows{$IFEND}{$ENDIF};
 
 { TZTestSysUtilsCase }
 
@@ -821,7 +821,7 @@ const CPArray: Array[0..42] of Word = (zCP_DOS437, zCP_DOS708, zCP_DOS720,
   zCP_DOS737, zCP_DOS775, zCP_DOS850, zCP_DOS852, zCP_DOS857, zCP_DOS858,
   zCP_DOS860, zCP_DOS861, zCP_DOS862, zCP_DOS863, zCP_DOS864, zCP_DOS865,
   zCP_DOS866, zCP_DOS869, zCP_WIN874, zCP_WIN1250, zCP_WIN1251, zCP_WIN1252,
-  zCP_WIN1253, zCP_WIN1254, zCP_WIN1255, cCP_WIN1256, zCP_WIN1257, zCP_WIN1258,
+  zCP_WIN1253, zCP_WIN1254, zCP_WIN1255, zCP_WIN1256, zCP_WIN1257, zCP_WIN1258,
   zCP_macintosh, zCP_x_mac_ce, {zCP_x_IA5_Swedish, }zCP_us_ascii, zCP_KOI8R,
   zCP_KOI8U, zCP_L1_ISO_8859_1, zCP_L2_ISO_8859_2, zCP_L3_ISO_8859_3,
   zCP_L4_ISO_8859_4, zCP_L5_ISO_8859_5, zCP_L6_ISO_8859_6, zCP_L7_ISO_8859_7,
@@ -1028,8 +1028,8 @@ begin
     system.WriteLn('');
     system.WriteLn('Benchmarking(x 5.000.000): Ansi(CP '+IntToStr(CPArray[j])+') to Unicode');
     system.WriteLn(Format('TestWinEncode: %d ms VS. TestZEncode: %d ms', [Between1, Between2]));
-    for i := low(Byte) to high(Byte) do
-      if Word(S1[I+1]) = Word(S2[I+1]) then
+    for i := low(Byte) + 1 to high(Byte) do
+      if Word(S1[I]) = Word(S2[I]) then
         Check(True)
       else
         Check(True, 'Byte: '+IntToHex(I, 2)+' Expected('+IntToHex(Word(S1[I+1]), 4)+') was ('+IntToHex(Word(S2[I+1]), 4)+'(');
@@ -1385,11 +1385,12 @@ end;
 
 {$IFDEF WITH_UNICODEFROMLOCALECHARS}
 procedure TZTestSysUtilsCase.TestLocalCharsFromUnicode;
-const TestString = ZWideString('ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...');
+const AnsiTestString: TBytes = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
 var
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
   S1, S2: RawByteString;
+  TestString: ZWideString;
 
     function TestUTF8EncodeOversized: RawByteString;
     var i, wlen, ulen: Integer;
@@ -1443,6 +1444,11 @@ var
       end;
     end;
 begin
+  Between1 := UnicodeFromLocaleChars(1251, 0, AnsiTestString, length(AnsiTestString), nil, 0);
+  SetLength(TestString, Between1);
+  Between1 := UnicodeFromLocaleChars(1251, 0, AnsiTestString, length(AnsiTestString), TestString, Length(TestString));
+  if Between1 = 0 then RaiseLastOsError;
+
   Start := GetTickCount;
   S1 := TestUTF8EncodeOversized;
   Stop := GetTickCount;
@@ -1476,12 +1482,13 @@ begin
 end;
 
 procedure TZTestSysUtilsCase.TestUnicodeFromLocalChars;
-const TestString = ZWideString('ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...');
+const AnsiTestString: TBytes = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
 var
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
   S1, S2: ZWideString;
   RBS: RawByteString;
+  TestString: ZWideString;
 
     function TestUTF8EncodeOversized: ZWideString;
     var i, wlen, ulen: Integer;
@@ -1540,6 +1547,11 @@ var
       end;
     end;
 begin
+  Between1 := UnicodeFromLocaleChars(1251, 0, AnsiTestString, length(AnsiTestString), nil, 0);
+  SetLength(TestString, Between1);
+  Between1 := UnicodeFromLocaleChars(1251, 0, AnsiTestString, length(AnsiTestString), TestString, Length(TestString));
+  if Between1 = 0 then RaiseLastOsError;
+
   RBS := UTF8Encode(TestString);
   Start := GetTickCount;
   S1 := TestUTF8EncodeOversized;
@@ -1940,7 +1952,7 @@ var
     var
       I,N: Integer;
     begin
-      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
+      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ELSE}SysUtils.{$ENDIF}DecimalSeparator := '.';
       for N := 0 to 1000000 do
       begin
         for i := 0 to 20 do
@@ -1986,7 +1998,7 @@ var
         for i := 1 to 10 do
           Result := Result + UnicodeToFloat(PWideChar(ZWideString(sTestFloat[i])), WideChar('.'));
       end;
-      Result := Result + UnicodeToFloatDef(ZWideString('test'), WideChar('.'), -999);
+      Result := Result + UnicodeToFloatDef(@ZWideString('test')[1], WideChar('.'), -999);
     end;
 
     function TStrToFloat: Extended;

@@ -66,6 +66,7 @@ type
     property IsUniDirectional;
     property SQL;
     property ParamCheck;
+    property ParamChar;
     property Params;
     property FetchRow;     // added by Patyi
     property Properties;

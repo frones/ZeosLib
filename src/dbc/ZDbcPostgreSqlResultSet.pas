@@ -153,6 +153,49 @@ uses
   ZMessages, ZEncoding, ZFastCode,
   ZDbcPostgreSql, ZDbcPostgreSqlUtils, ZDbcPostgreSqlStatement;
 
+
+// added for suporting Infinity, -Infinity and NaN.
+// See https://sourceforge.net/p/zeoslib/tickets/173/
+// maybe this should be pushed into ZSysUtils.SQLStrToFloatDef?
+procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
+  var Result: Extended); overload;
+begin
+  if Value = 'Infinity' then
+    Result := Infinity
+  else if Value = '-Infinity' then
+    Result := NegInfinity
+  else if Value = 'NaN' then
+    Result := NaN
+  else
+    ZSysUtils.SQLStrToFloatDef(Value, 0, Result);
+end;
+
+procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
+  var Result: Single); overload;
+begin
+  if Value = 'Infinity' then
+    Result := Infinity
+  else if Value = '-Infinity' then
+    Result := NegInfinity
+  else if Value = 'NaN' then
+    Result := NaN
+  else
+    ZSysUtils.SQLStrToFloatDef(Value, 0, Result);
+end;
+
+procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
+  var Result: Double); overload;
+begin
+  if Value = 'Infinity' then
+    Result := Infinity
+  else if Value = '-Infinity' then
+    Result := NegInfinity
+  else if Value = 'NaN' then
+    Result := NaN
+  else
+    ZSysUtils.SQLStrToFloatDef(Value, 0, Result);
+end;
+
 { TZPostgreSQLResultSet }
 
 {**
@@ -268,7 +311,7 @@ begin
     with ColumnInfo do
     begin
       if Statement.GetResultSetConcurrency = rcUpdatable then //exclude system-tables and if no updates happen -> useless
-        TableInfo := Connection.GetTableInfo(FPlainDriver.GetFieldTableOID(FQueryHandle, I), FieldCount)
+        TableInfo := Connection.GetTableInfo(FPlainDriver.GetFieldTableOID(FQueryHandle, I))
       else
         TableInfo := nil;
       if TableInfo = nil then
@@ -620,7 +663,7 @@ begin
   if LastWasNull then
     Result := 0
   else
-    ZSysUtils.SQLStrToFloatDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0, Result);
+    pgSQLStrToFloatDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0, Result);
 end;
 
 {**
@@ -644,7 +687,7 @@ begin
   if LastWasNull then
     Result := 0
   else
-    ZSysUtils.SQLStrToFloatDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0, Result);
+    pgSQLStrToFloatDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0, Result);
 end;
 
 {**
@@ -669,7 +712,7 @@ begin
   if LastWasNull then
     Result := 0
   else
-    ZSysUtils.SQLStrToFloatDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0, Result);
+    pgSQLStrToFloatDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0, Result);
 end;
 
 {**

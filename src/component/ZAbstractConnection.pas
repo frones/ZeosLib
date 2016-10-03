@@ -999,11 +999,13 @@ begin
             THack_ZAbstractDataset(FDatasets[i]).DisposeCachedUpdates;
       FConnection.Commit;
     finally
-      FExplicitTransactionCounter := 0;
-      if ExplicitTran then
-        AutoCommit := True;
       HideSQLHourGlass;
     end;
+
+    FExplicitTransactionCounter := 0;
+    if ExplicitTran then
+      AutoCommit := True;
+
     DoCommit;
   end
   else

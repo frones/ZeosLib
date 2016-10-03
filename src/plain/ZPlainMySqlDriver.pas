@@ -741,7 +741,7 @@ begin
     SetLength(ServerArgs, ServerArgsLen);
     for i := 0 to ServerArgsLen - 1 do
       {$IFDEF UNICODE}
-      ServerArgs[i] := {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(UTF8String(TmpList[i])));
+      ServerArgs[i] := {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(AnsiString(TmpList[i])));
       {$ELSE}
       ServerArgs[i] := StrNew(PAnsiChar(TmpList[i]));
       {$ENDIF}
@@ -968,15 +968,19 @@ function TZMySQLBaseDriver.Init(const Handle: PZMySQLConnect): PZMySQLConnect;
 var
   ClientInfo: PAnsiChar;
   L: LengthInt;
+  ErrorNo: Integer;
 begin
-  if (Assigned(mysql_server_init) or Assigned(mysql_library_init)){ and (ServerArgsLen > 0) }then
+  if (Assigned(mysql_server_init) or Assigned(mysql_library_init)){ and (ServerArgsLen > 0) }then begin
     if Assigned(mysql_library_init) then
       //http://dev.mysql.com/doc/refman/5.7/en/mysql-library-init.html
-      mysql_library_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS) //<<<-- Isn't threadsafe
+      ErrorNo := mysql_library_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS) //<<<-- Isn't threadsafe
     else
       //http://dev.mysql.com/doc/refman/5.7/en/mysql-server-init.html
-      mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS); //<<<-- Isn't threadsafe
+      ErrorNo := mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS); //<<<-- Isn't threadsafe
+    if ErrorNo <> 0 then raise Exception.Create('Could not initialize the MySQL / MariaDB client library. Error No: ' + ZFastCode.IntToStr(ErrorNo));  // The manual says nothing else can be called until this call succeeds. So lets just throw the error number...
+  end;
   Result := mysql_init(Handle);
+  if not Assigned(Result) then raise Exception.Create('Could not finish the call to mysql_init. Not enough memory?');
   ClientInfo := GetClientInfo;
   L := ZFastCode.StrLen(ClientInfo);
   FIsMariaDBDriver := CompareMem(ClientInfo+L-7, PAnsiChar('MariaDB'), 7);
