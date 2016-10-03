@@ -1282,7 +1282,7 @@ begin
   { Checks for maximum row. }
   Result := False;
   if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or (fPHSTMT^ = nil) then
-    Exit;
+    goto Fail;
   if (RowNo = 0) then begin//fetch Iteration count of rows
     if Closed then Open;
 FetchData:

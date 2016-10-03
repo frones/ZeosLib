@@ -499,7 +499,7 @@ begin
   Result := False;
   if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or
     Closed or ((not Closed) and (FRowSet = nil) and  (not (Supports(Statement, IZOleDBPreparedStatement, Stmt) and Stmt.GetNewRowSet(FRowSet)))) then
-    Exit;
+    goto NoSuccess;
 
   if (RowNo = 0) then //fetch Iteration count of rows
   begin
