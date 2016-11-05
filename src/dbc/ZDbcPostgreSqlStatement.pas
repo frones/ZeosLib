@@ -334,10 +334,6 @@ begin
     FPlainDriver.PQclear(QueryHandle);
   end;
 
-  { Autocommit statement. }
-  if Connection.GetAutoCommit then
-    Connection.Commit;
-
   inherited ExecuteUpdatePrepared;
 end;
 
@@ -390,10 +386,6 @@ begin
         FPlainDriver.PQclear(QueryHandle);
       end;
   end;
-
-  { Autocommit statement. }
-  if not Result and Connection.GetAutoCommit then
-    Connection.Commit;
 
   inherited ExecutePrepared;
 end;
@@ -960,10 +952,6 @@ begin
     AssignOutParamValuesFromResultSet(CreateResultSet(Self.SQL, QueryHandle),
       OutParamValues, OutParamCount , FDBParamTypes);
   end;
-
-  { Autocommit statement. }
-  if Connection.GetAutoCommit then
-    Connection.Commit;
 end;
 
 
