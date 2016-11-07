@@ -84,6 +84,7 @@ type
     Findeterminate_datatype: Boolean;
     FUseEmulatedStmtsOnly: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
+    fPrepareCnt: Cardinal;
   protected
     function CreateResultSet(QueryHandle: PZPostgreSQLResult): IZResultSet;
     function ExecuteInternal(const SQL: RawByteString;
@@ -97,6 +98,7 @@ type
       Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings); overload;
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
       Connection: IZPostgreSQLConnection; Info: TStrings); overload;
+    procedure AfterConstruction; override;
     function GetLastQueryHandle: PZPostgreSQLResult;
 
     function ExecuteQueryPrepared: IZResultSet; override;
@@ -207,6 +209,12 @@ begin
   { see http://zeoslib.sourceforge.net/viewtopic.php?f=20&t=10695&p=30151#p30151
     the pgBouncer does not support the RealPrepareds.... }
   FUseEmulatedStmtsOnly := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'EMULATE_PREPARES', 'FALSE'));
+end;
+
+procedure TZPostgreSQLPreparedStatement.AfterConstruction;
+begin
+  inherited;
+  fPrepareCnt := 0;
 end;
 
 constructor TZPostgreSQLPreparedStatement.Create(PlainDriver: IZPostgreSQLPlainDriver;
@@ -397,7 +405,8 @@ var
 begin
   if not Prepared then
   begin
-    FRawPlanName := IntToRaw(Hash(ASQL))+IntToRaw(FStatementId)+IntToRaw({%H-}NativeUInt(FConnectionHandle));
+    Inc(fPrepareCnt);
+    FRawPlanName := IntToRaw(FStatementId)+IntToRaw({%H-}NativeUInt(FConnectionHandle))+IntToRaw(fPrepareCnt);
     TempSQL := GetPrepareSQLPrefix;
     N := 0;
     for I := 0 to High(CachedQueryRaw) do
