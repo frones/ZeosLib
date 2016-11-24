@@ -360,7 +360,8 @@ type
     property ColumnsInfo: TObjectList read FColumnsInfo write FColumnsInfo;
 
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); virtual;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); virtual;
     {$ENDIF}
   end;
 
@@ -3850,7 +3851,8 @@ end;
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean = True);
+  EndJSONObject: Boolean = True; With_DATETIME_MAGIC: Boolean = False;
+  SkipNullFields: Boolean = False);
 begin
   raise Exception.Create(SUnsupportedOperation);
 end;

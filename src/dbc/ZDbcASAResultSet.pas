@@ -112,7 +112,8 @@ type
 
     property SQLData: IZASASQLDA read FSQLData;
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -205,7 +206,7 @@ uses
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZASAAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean = True);
+  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
 var L: NativeUInt;
     P: Pointer;
     C, H, I: SmallInt;
@@ -221,13 +222,19 @@ begin
     if Pointer(JSONWriter.Fields) = nil then
       C := I else
       C := JSONWriter.Fields[i];
-    if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[I]);
     {$R-}
     with FSQLDA.sqlvar[C] do
       if (sqlind <> nil) and (sqlind^ < 0) then
-        JSONWriter.AddShort('null')
-      else
+        if JSONWriter.Expand then begin
+          if (not SkipNullFields) then begin
+            JSONWriter.AddString(JSONWriter.ColNames[I]);
+            JSONWriter.AddShort('null,')
+          end;
+        end else
+          JSONWriter.AddShort('null,')
+      else begin
+        if JSONWriter.Expand then
+          JSONWriter.AddString(JSONWriter.ColNames[I]);
         case sqlType and $FFFE of
           DT_NOTYPE           : JSONWriter.AddShort('""');
           DT_SMALLINT         : JSONWriter.Add(PSmallint(sqldata)^);
@@ -305,11 +312,12 @@ begin
                                 JSONWriter.AddJSONEscape(P, blob.Length);
                                 JSONWriter.Add('"');
                               end;
-        else
-          FSqlData.CreateException( Format( SErrorConvertionField,
-            [ FSqlData.GetFieldName(C), ConvertASATypeToString( sqlType)]));
+          else
+            FSqlData.CreateException( Format( SErrorConvertionField,
+              [ FSqlData.GetFieldName(C), ConvertASATypeToString( sqlType)]));
         end;
-    JSONWriter.Add(',');
+        JSONWriter.Add(',');
+      end;
   end;
   if EndJSONObject then
   begin

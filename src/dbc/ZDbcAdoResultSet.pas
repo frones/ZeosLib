@@ -108,7 +108,8 @@ type
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -133,7 +134,7 @@ uses
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZAdoResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean);
+  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
 var Len, C, H, I: Integer;
     P: PWideChar;
 begin
@@ -146,11 +147,17 @@ begin
     if Pointer(JSONWriter.Fields) = nil then
       C := I else
       C := JSONWriter.Fields[i];
-    if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[I]);
-    if TVarData(FAdoRecordSet.Fields.Item[C].Value).VType in [varNull, varEmpty] then
-      JSONWriter.AddShort('null')
-    else
+    if TVarData(FAdoRecordSet.Fields.Item[C].Value).VType in [varNull, varEmpty] then begin
+      if JSONWriter.Expand then begin
+        if (not SkipNullFields) then begin
+          JSONWriter.AddString(JSONWriter.ColNames[I]);
+          JSONWriter.AddShort('null,')
+        end;
+      end else
+        JSONWriter.AddShort('null,');
+    end else begin
+      if JSONWriter.Expand then
+        JSONWriter.AddString(JSONWriter.ColNames[I]);
   {ADO uses its own DataType-mapping different to System Variant type mapping}
       case FAdoRecordSet.Fields.Item[C].Type_ of
         adTinyInt:          JSONWriter.Add(TVarData(FAdoRecordSet.Fields.Item[C].Value).VShortInt);
@@ -209,12 +216,13 @@ begin
             JSONWriter.AddJSONEscapeW(Pointer(TVarData(FAdoRecordSet.Fields.Item[C].Value).VOleStr), FAdoRecordSet.Fields.Item[C].ActualSize shr 1);
             JSONWriter.Add('"');
           end;
-      adBinary,
-      adVarBinary,
-      adLongVarBinary:
-        JSONWriter.WrBase64(TVarData(FAdoRecordSet.Fields.Item[C].Value).VArray.Data, FAdoRecordSet.Fields.Item[C].ActualSize, True);
+        adBinary,
+        adVarBinary,
+        adLongVarBinary:
+          JSONWriter.WrBase64(TVarData(FAdoRecordSet.Fields.Item[C].Value).VArray.Data, FAdoRecordSet.Fields.Item[C].ActualSize, True);
+      end;
+      JSONWriter.Add(',');
     end;
-    JSONWriter.Add(',');
   end;
   if EndJSONObject then
   begin

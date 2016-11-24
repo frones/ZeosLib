@@ -314,6 +314,7 @@ var
     Inc(PropSet.cProperties);
   end;
 begin
+//some examples: https://blogs.msdn.microsoft.com/sqlnativeclient/2009/05/06/sql-server-native-client-connection-strings-and-ole-db/
   DBProps := nil; //init
   if Succeeded(FDBInitialize.QueryInterface(IID_IDBProperties, DBProps)) then
   begin

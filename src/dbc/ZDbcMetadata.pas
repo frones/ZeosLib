@@ -99,6 +99,8 @@ type
 
   {** Implements Virtual ResultSet. }
   TZVirtualResultSet = class(TZAbstractCachedResultSet, IZVirtualResultSet)
+  private
+    fConSettings: TZConSettings;
   protected
     procedure CalculateRowDefaults({%H-}RowAccessor: TZRowAccessor); override;
     procedure PostRowUpdates({%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
@@ -4926,7 +4928,8 @@ end;
 constructor TZVirtualResultSet.CreateWithStatement(const SQL: string;
    Statement: IZStatement; ConSettings: PZConSettings);
 begin
-  inherited CreateWithStatement(SQL, Statement, ConSettings);
+  fConSettings := ConSettings^;
+  inherited CreateWithStatement(SQL, Statement, @fConSettings);
 end;
 
 {**
@@ -4956,7 +4959,8 @@ end;
 constructor TZVirtualResultSet.CreateWithColumns(ColumnsInfo: TObjectList;
   const SQL: string; ConSettings: PZConSettings);
 begin
-  inherited CreateWithColumns(ColumnsInfo, SQL, ConSettings);
+  fConSettings := ConSettings^;
+  inherited CreateWithColumns(ColumnsInfo, SQL, @fConSettings);
 end;
 
 {**

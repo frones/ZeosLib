@@ -109,7 +109,8 @@ type
 
     function MoveAbsolute(Row: Integer): Boolean; override;
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -206,7 +207,7 @@ end;
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZPostgreSQLResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean);
+  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
 var
   C, L: Cardinal;
   P, pgBuff: PAnsiChar;
@@ -225,11 +226,17 @@ begin
     if Pointer(JSONWriter.Fields) = nil then
       C := I else
       C := JSONWriter.Fields[i];
-    if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[i]);
     if FPlainDriver.GetIsNull(FQueryHandle, RNo, C) <> 0 then
-      JSONWriter.AddShort('null')
+      if JSONWriter.Expand then begin
+        if (not SkipNullFields) then begin
+          JSONWriter.AddString(JSONWriter.ColNames[I]);
+          JSONWriter.AddShort('null,')
+        end;
+      end else
+        JSONWriter.AddShort('null,')
     else begin
+      if JSONWriter.Expand then
+        JSONWriter.AddString(JSONWriter.ColNames[i]);
       P := FPlainDriver.GetValue(FQueryHandle, RNo, C);
       case TZColumnInfo(ColumnsInfo[c]).ColumnType of
         stUnknown     : JSONWriter.AddShort('null');
@@ -307,8 +314,8 @@ begin
                         end;
         //stArray, stDataSet,
       end;
+      JSONWriter.Add(',');
     end;
-    JSONWriter.Add(',');
   end;
   if EndJSONObject then
   begin

@@ -259,7 +259,8 @@ type
     procedure SetValue(Const ColumnIndex: Integer; const Value: TZVariant);
 
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True);
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False);
     {$ENDIF USE_SYNCOMMONS}
 
     property ColumnsSize: Integer read FColumnsSize;
@@ -1271,7 +1272,7 @@ end;
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZRowAccessor.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean);
+  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
 var P: Pointer;
     I, H, C: SmallInt;
     Blob: IZBlob;
@@ -1285,11 +1286,17 @@ begin
     if Pointer(JSONWriter.Fields) = nil then
       C := I else
       C := JSONWriter.Fields[i];
-    if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[I]);
-    if FBuffer.Columns[FColumnOffsets[C]] = bIsNull then
-      JSONWriter.AddShort('null')
-    else
+    if FBuffer.Columns[FColumnOffsets[C]] = bIsNull then begin
+      if JSONWriter.Expand then begin
+        if (not SkipNullFields) then begin
+          JSONWriter.AddString(JSONWriter.ColNames[I]);
+          JSONWriter.AddShort('null,')
+        end;
+      end else
+        JSONWriter.AddShort('null,');
+    end else begin
+      if JSONWriter.Expand then
+        JSONWriter.AddString(JSONWriter.ColNames[I]);
       case FColumnTypes[C] of
         stBoolean       : JSONWriter.AddShort(JSONBool[PWordBool(@FBuffer.Columns[FColumnOffsets[C] + 1])^]);
         stByte          : JSONWriter.AddU(PByte(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
@@ -1350,7 +1357,8 @@ begin
               JSONWriter.WrBase64(Blob.GetBuffer, Blob.Length, True);
           end;
       end;
-    JSONWriter.Add(',');
+      JSONWriter.Add(',');
+    end;
   end;
   if EndJSONObject then
   begin

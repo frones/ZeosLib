@@ -113,7 +113,8 @@ type
     function GetDataSet(ColumnIndex: Integer): IZDataSet; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -212,7 +213,7 @@ uses
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZOracleAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean);
+  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
 var Len: Integer;
     P: PAnsiChar;
     C, H, I: SmallInt;
@@ -228,12 +229,18 @@ begin
     if Pointer(JSONWriter.Fields) = nil then
       C := I else
       C := JSONWriter.Fields[i];
-    if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[i]);
     with FColumns^.Variables[C] do
     if oIndicatorArray^[FCurrentBufRowNo] < 0 then
-      JSONWriter.AddShort('null')
+      if JSONWriter.Expand then begin
+        if (not SkipNullFields) then begin
+          JSONWriter.AddString(JSONWriter.ColNames[I]);
+          JSONWriter.AddShort('null,')
+        end;
+      end else
+        JSONWriter.AddShort('null,')
     else begin
+      if JSONWriter.Expand then
+        JSONWriter.AddString(JSONWriter.ColNames[I]);
       P := {%H-}Pointer({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
       case TypeCode of
         SQLT_INT        : JSONWriter.Add(PLongInt(P)^);
@@ -288,8 +295,8 @@ begin
         else
           raise Exception.Create('Missing OCI Type?');
       end;
+      JSONWriter.Add(',');
     end;
-    JSONWriter.Add(',');
   end;
   if EndJSONObject then
   begin

@@ -111,7 +111,8 @@ type
     function Next: Boolean; override;
 
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -166,7 +167,8 @@ type
     function Next: Boolean; override;
     //procedure ResetCursor; override;
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -241,7 +243,8 @@ end;
 { TZAbstractMySQLResultSet }
 
 {$IFDEF USE_SYNCOMMONS}
-procedure TZAbstractMySQLResultSet.ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True);
+procedure TZAbstractMySQLResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
 var
   C: Cardinal;
   H, I: Integer;
@@ -256,12 +259,18 @@ begin
     if Pointer(JSONWriter.Fields) = nil then
       C := I else
       C := JSONWriter.Fields[i];
-    if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[i]);
     P := FPlainDriver.GetFieldData(FRowHandle, C);
     if P = nil then
-      JSONWriter.AddShort('null')
-    else
+      if JSONWriter.Expand then begin
+        if (not SkipNullFields) then begin
+          JSONWriter.AddString(JSONWriter.ColNames[I]);
+          JSONWriter.AddShort('null,')
+        end;
+      end else
+        JSONWriter.AddShort('null,')
+    else begin
+      if JSONWriter.Expand then
+        JSONWriter.AddString(JSONWriter.ColNames[I]);
       case FMySQLTypes[c] of
         FIELD_TYPE_DECIMAL,
         FIELD_TYPE_TINY,
@@ -333,7 +342,8 @@ begin
                                   JSONWriter.WrBase64(P, FLengthArray^[C], True);
         FIELD_TYPE_GEOMETRY   : JSONWriter.WrBase64(P, FLengthArray^[C], True);
       end;
-    JSONWriter.Add(',');
+      JSONWriter.Add(',');
+    end;
   end;
   if EndJSONObject then
   begin
@@ -1031,8 +1041,8 @@ end;
 { TZAbstractMySQLPreparedResultSet }
 
 {$IFDEF USE_SYNCOMMONS}
-procedure TZAbstractMySQLPreparedResultSet.ColumnsToJSON(
-  JSONWriter: TJSONWriter; EndJSONObject: Boolean);
+procedure TZAbstractMySQLPreparedResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
 var
   C: Cardinal;
   P: PAnsiChar;
@@ -1049,12 +1059,18 @@ begin
     if Pointer(JSONWriter.Fields) = nil then
       C := I else
       C := JSONWriter.Fields[i];
-    if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[I]);
     with FColumnArray[C] do
     if is_null = 1 then
-      JSONWriter.AddShort('null')
-    else
+      if JSONWriter.Expand then begin
+        if (not SkipNullFields) then begin
+          JSONWriter.AddString(JSONWriter.ColNames[I]);
+          JSONWriter.AddShort('null,')
+        end;
+      end else
+        JSONWriter.AddShort('null,')
+    else begin
+      if JSONWriter.Expand then
+        JSONWriter.AddString(JSONWriter.ColNames[I]);
       case buffer_type of
         //FIELD_TYPE_DECIMAL,
         FIELD_TYPE_TINY       : if is_signed then
@@ -1154,7 +1170,8 @@ begin
                                   JSONWriter.WrBase64(Blob.GetBuffer, Blob.Length, True)
                                 end;
       end;
-    JSONWriter.Add(',');
+      JSONWriter.Add(',');
+    end;
   end;
   if EndJSONObject then
   begin

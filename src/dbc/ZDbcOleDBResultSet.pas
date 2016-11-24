@@ -128,7 +128,8 @@ type
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
 
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -184,7 +185,8 @@ var
 
 
 {$IFDEF USE_SYNCOMMONS}
-procedure TZOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean);
+procedure TZOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
 var I, C, L, H: Integer;
     P: PAnsiChar;
     Len: NativeUInt;
@@ -200,11 +202,17 @@ begin
     if Pointer(JSONWriter.Fields) = nil then
       C := I else
       C := JSONWriter.Fields[i];
-    if JSONWriter.Expand then
-      JSONWriter.AddString(JSONWriter.ColNames[i]);
     if IsNull(C+FirstDbcIndex) then
-      JSONWriter.AddShort('null')
-    else
+      if JSONWriter.Expand then begin
+        if (not SkipNullFields) then begin
+          JSONWriter.AddString(JSONWriter.ColNames[I]);
+          JSONWriter.AddShort('null,')
+        end;
+      end else
+        JSONWriter.AddShort('null,')
+    else begin
+      if JSONWriter.Expand then
+        JSONWriter.AddString(JSONWriter.ColNames[i]);
       case FDBBindingArray[C].wType of
         DBTYPE_EMPTY,
         DBTYPE_IDISPATCH,
@@ -295,26 +303,37 @@ begin
         //DBTYPE_UDT	= 132;
         DBTYPE_DBDATE:    begin
                             JSONWriter.Add('"');
-                            JSONWriter.AddDateTime(EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month, PDBDate(FData)^.day));
-                            JSONWriter.Add('"');
-                          end;
+                            if With_DATETIME_MAGIC then
+                              JSONWriter.AddNoJSONEscapeUTF8(SynCommons.DateTimeToSQL(EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month, PDBDate(FData)^.day)))
+                            else
+                              JSONWriter.AddDateTime(EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month, PDBDate(FData)^.day));
+                              JSONWriter.Add('"');
+                            end;
         DBTYPE_DBTIME:    begin
                             JSONWriter.Add('"');
-                            JSONWriter.AddDateTime(EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute, PDBTime(FData)^.second, 0));
+                            if With_DATETIME_MAGIC then
+                              JSONWriter.AddNoJSONEscapeUTF8( SynCommons.DateTimeToSQL(EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute, PDBTime(FData)^.second, 0)))
+                            else
+                              JSONWriter.AddDateTime(EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute, PDBTime(FData)^.second, 0));
                             JSONWriter.Add('"');
                           end;
         DBTYPE_DBTIMESTAMP: begin
-                            JSONWriter.Add('"');
-                            JSONWriter.AddDateTime(EncodeDate(Abs(PDBTimeStamp(FData)^.year), PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day)+
-                            EncodeTime(PDBTimeStamp(FData)^.hour, PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second, 0));
-                            JSONWriter.Add('"');
-                          end;
+                              JSONWriter.Add('"');
+                              if With_DATETIME_MAGIC then
+                                JSONWriter.AddNoJSONEscapeUTF8(SynCommons.DateTimeToSQL(EncodeDate(Abs(PDBTimeStamp(FData)^.year), PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day)+
+                                  EncodeTime(PDBTimeStamp(FData)^.hour, PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second, 0)))
+                                else
+                                  JSONWriter.AddDateTime((EncodeDate(Abs(PDBTimeStamp(FData)^.year), PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day)+
+                                    EncodeTime(PDBTimeStamp(FData)^.hour, PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second, 0)));
+                              JSONWriter.Add('"');
+                            end;
         DBTYPE_HCHAPTER:  JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PCHAPTER(FData)^));
         //DBTYPE_FILETIME	= 64;
         //DBTYPE_PROPVARIANT	= 138;
         //DBTYPE_VARNUMERIC	= 139;
       end;
-    JSONWriter.Add(',');
+      JSONWriter.Add(',');
+    end;
   end;
   if EndJSONObject then
   begin
@@ -1345,7 +1364,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
                         Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
@@ -1404,7 +1423,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
                         Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
@@ -1463,7 +1482,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
         Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
@@ -1522,7 +1541,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
                         Result := UnicodeToInt64Def(ZPPWideChar(FData)^, 0);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
@@ -1579,7 +1598,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
                         Result := UnicodeToUInt64Def(ZPPWideChar(FData)^, 0);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
@@ -1636,7 +1655,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
                         SQLStrToFloatDef(ZPPWideChar(FData)^, 0, Result, FLength shr 1);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
@@ -1688,7 +1707,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
                         SQLStrToFloatDef(ZPPWideChar(FData)^, 0, Result, FLength shr 1);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
@@ -1740,7 +1759,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
                         SQLStrToFloatDef(ZPPWideChar(FData)^, 0, Result, FLength shr 1);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
