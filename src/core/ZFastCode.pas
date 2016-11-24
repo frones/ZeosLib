@@ -308,12 +308,12 @@ function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer; 
 function RawToIntDef(const S: PAnsiChar; const Default: Integer) : Integer; overload;
 function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer; overload;
 function UnicodeToIntDef(const S: PWideChar; const Default: Integer) : Integer; overload;
-function RawToInt64Def(const S: RawByteString; const Default: Integer) : Int64; overload;
-function RawToInt64Def(const S: PAnsiChar; const Default: Integer) : Int64; overload;
+function RawToInt64Def(const S: RawByteString; const Default: Int64) : Int64; overload;
+function RawToInt64Def(const S: PAnsiChar; const Default: Int64) : Int64; overload;
 function RawToUInt64Def(const S: PAnsiChar; const Default: UInt64) : UInt64; overload;
 function RawToUInt64Def(const S: RawByteString; const Default: UInt64) : UInt64; overload;
-function UnicodeToInt64Def(const S: ZWideString; const Default: Integer) : Int64; overload;
-function UnicodeToInt64Def(const S: PWideChar; const Default: Integer) : Int64; overload;
+function UnicodeToInt64Def(const S: ZWideString; const Default: Int64) : Int64; overload;
+function UnicodeToInt64Def(const S: PWideChar; const Default: Int64) : Int64; overload;
 function UnicodeToUInt64Def(const S: ZWideString; const Default: UInt64) : UInt64; overload;
 function UnicodeToUInt64Def(const S: PWideChar; const Default: UInt64) : UInt64; overload;
 
@@ -4803,7 +4803,7 @@ asm
 end;
 {$IFEND}
 
-function RawToInt64Def(const S: RawByteString; const Default: Integer) : Int64;
+function RawToInt64Def(const S: RawByteString; const Default: Int64) : Int64;
 var
   E: Integer;
 begin
@@ -4830,7 +4830,7 @@ begin
     raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
 end;
 
-function RawToInt64Def(const S: PAnsiChar; const Default: Integer) : Int64;
+function RawToInt64Def(const S: PAnsiChar; const Default: Int64) : Int64;
 var
   E: Integer;
 begin
@@ -4968,7 +4968,7 @@ begin
 end;
 {$WARNINGS ON}
 
-function UnicodeToInt64Def(const S: ZWideString; const Default: Integer) : Int64;
+function UnicodeToInt64Def(const S: ZWideString; const Default: Int64) : Int64;
 var
   E: Integer;
 begin
@@ -4987,7 +4987,7 @@ begin
     raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
 end;
 
-function UnicodeToInt64Def(const S: PWideChar; const Default: Integer) : Int64;
+function UnicodeToInt64Def(const S: PWideChar; const Default: Int64) : Int64;
 var
   E: Integer;
 begin
