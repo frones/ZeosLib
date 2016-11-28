@@ -1656,7 +1656,7 @@ begin
     FDecribedScaleArray[i] := SqlVar.sqlscale;
     FDecribedTypeArray[i] := SqlVar.sqltype;
     case SqlVar.sqltype and (not 1) of
-      SQL_BOOLEAN, SQL_TEXT, SQL_TYPE_DATE, SQL_TYPE_TIME, SQL_DATE,
+      SQL_BOOLEAN_FB, SQL_BOOLEAN, SQL_TEXT, SQL_TYPE_DATE, SQL_TYPE_TIME, SQL_DATE,
       SQL_BLOB, SQL_ARRAY, SQL_QUAD, SQL_SHORT,
       SQL_LONG, SQL_INT64, SQL_DOUBLE, SQL_FLOAT, SQL_D_FLOAT:
         IbReAlloc(SqlVar.sqldata, 0, Max(1, SqlVar.sqllen));
