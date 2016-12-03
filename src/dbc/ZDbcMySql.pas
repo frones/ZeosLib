@@ -88,6 +88,7 @@ type
     function GetPlainDriver: IZMySQLPlainDriver;
     function GetConnectionHandle: PZMySQLConnect;
     function EscapeString(From: PAnsiChar; Len: ULong; Quoted: Boolean): RawByteString; overload;
+    function GetDatabaseName: String;
   end;
 
   {** Implements MySQL Database Connection. }
@@ -96,6 +97,8 @@ type
     FCatalog: string;
     FHandle: PZMySQLConnect;
     FMaxLobSize: ULong;
+    FDatabaseName: String;
+    FIKnowMyDatabaseName: Boolean;
   protected
     procedure InternalCreate; override;
   public
@@ -130,6 +133,7 @@ type
     function GetConnectionHandle: PZMySQLConnect;
     function GetEscapeString(const Value: ZWideString): ZWideString; override;
     function GetEscapeString(const Value: RawByteString): RawByteString; override;
+    function GetDatabaseName: String;
   end;
 
 var
@@ -280,7 +284,7 @@ end;
 }
 procedure TZMySQLConnection.InternalCreate;
 begin
-  FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url);
+  FIKnowMyDatabaseName := False;
   if Self.Port = 0 then
      Self.Port := MYSQL_PORT;
   AutoCommit := True;
@@ -288,6 +292,7 @@ begin
   FHandle := nil;
   { Processes connection properties. }
   Open;
+  FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url);
 end;
 
 {**
@@ -874,6 +879,19 @@ end;
 function TZMySQLConnection.GetEscapeString(const Value: RawByteString): RawByteString;
 begin
   Result := inherited GetEscapeString(EscapeString(Pointer(Value), Length(Value), True));
+end;
+
+function TZMySQLConnection.GetDatabaseName: String;
+var
+  ResultSet: IZResultSet;
+begin
+  if not FIKnowMyDatabaseName then begin
+    ResultSet := CreateStatement.ExecuteQuery('select database() as ''DATABASE''');
+    if ResultSet.Next
+    then FDatabaseName := ResultSet.GetStringByName('DATABASE');
+    FIKnowMyDatabaseName := True;
+  end;
+  Result := FDatabaseName;
 end;
 
 initialization

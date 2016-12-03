@@ -155,15 +155,17 @@ var
   ResultSet: IZResultSet;
   DBFound: boolean;
   CatalogName: string;
+  RealCatalogName: string;
 begin
   DBFound := False;
   ResultSet := Metadata.GetCatalogs;
+  RealCatalogName := (Connection as IZMySQLConnection).GetDatabaseName;
   CheckEquals(CatalogNameIndex, ResultSet.FindColumn('TABLE_CAT'));
 
   while ResultSet.Next do
   begin
     CatalogName := ResultSet.GetString(CatalogNameIndex);
-    if CatalogName = Connection.GetMetadata.NormalizePatternCase(ConnectionConfig.Database) then
+    if CatalogName = RealCatalogName then
       DBFound := True;
   end;
   Check(DBFound);

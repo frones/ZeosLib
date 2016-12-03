@@ -258,16 +258,21 @@ begin
 end;
 
 function TZAbstractMySQLResultSet.GetBufferAndLength(ColumnIndex: Integer; var Len: NativeUInt): PAnsiChar;
+var
+  x: ULong;
 begin
-{$IFNDEF DISABLE_CHECKING}
+  {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
   if FRowHandle = nil then
     raise EZSQLException.Create(SRowDataIsNotAvailable);
-{$ENDIF}
+  {$ENDIF}
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex - 1;
   {$ENDIF}
-  Len := FLengthArray^[ColumnIndex];
+  {$R-}
+  x := FLengthArray^[ColumnIndex];
+  {$R+}
+  Len := x;
   Result := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
   LastWasNull := Result = nil;
 end;
@@ -437,6 +442,7 @@ end;
 function TZAbstractMySQLResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 var
   Buffer: PAnsiChar;
+  Len: ULong;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
@@ -446,15 +452,18 @@ begin
   if LastWasNull then
     Result := False
   else
-    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then
-      case FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
+    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then begin
+      {$R-}
+      Len := FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+      {$R+}
+      case Len of
         1: Result := PByte(Buffer)^ <> 0;
         2: Result := ReverseWordBytes(Buffer) <> 0;
-        3, 4: Result := ReverseLongWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) <> 0;
+        3, 4: Result := ReverseLongWordBytes(Buffer, Len) <> 0;
         else //5..8: makes compiler happy
-          Result := ReverseQuadWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) <> 0;
+          Result := ReverseQuadWordBytes(Buffer, Len) <> 0;
       end
-    else
+    end else
       Result := StrToBoolEx(Buffer, True, False);
 end;
 
@@ -470,6 +479,7 @@ end;
 function TZAbstractMySQLResultSet.GetInt(ColumnIndex: Integer): Integer;
 var
   Buffer: PAnsiChar;
+  Len: Ulong;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
@@ -479,15 +489,18 @@ begin
   if LastWasNull then
     Result := 0
   else
-    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then
-      case FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
+    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then begin
+      {$R-}
+      Len := FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+      {$R+}
+      case Len of
         1: Result := PByte(Buffer)^;
         2: Result := ReverseWordBytes(Buffer);
-        3, 4: Result := ReverseLongWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
+        3, 4: Result := ReverseLongWordBytes(Buffer, Len);
         else //5..8: makes compiler happy
-          Result := ReverseQuadWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
+          Result := ReverseQuadWordBytes(Buffer, Len);
       end
-    else
+    end else
       Result := RawToIntDef(Buffer, 0);
 end;
 
@@ -503,6 +516,7 @@ end;
 function TZAbstractMySQLResultSet.GetLong(ColumnIndex: Integer): Int64;
 var
   Buffer: PAnsiChar;
+  Len: ULong;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
@@ -512,15 +526,18 @@ begin
   if LastWasNull then
     Result := 0
   else
-    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then
-      case FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
+    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then begin
+      {$R-}
+      Len := FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+      {$R+}
+      case Len of
         1: Result := PByte(Buffer)^;
         2: Result := ReverseWordBytes(Buffer);
-        3, 4: Result := ReverseLongWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
+        3, 4: Result := ReverseLongWordBytes(Buffer, Len);
         else //5..8: makes compiler happy
-          Result := ReverseQuadWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
+          Result := ReverseQuadWordBytes(Buffer, Len);
       end
-    else
+    end else
       Result := RawToInt64Def(Buffer, 0);
 end;
 
@@ -536,6 +553,7 @@ end;
 function TZAbstractMySQLResultSet.GetULong(ColumnIndex: Integer): UInt64;
 var
   Buffer: PAnsiChar;
+  Len: ULong;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
@@ -545,15 +563,18 @@ begin
   if LastWasNull then
     Result := 0
   else
-    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then
-      case FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
+    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then begin
+      {$R-}
+      Len := FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+      {$R+}
+      case Len of
         1: Result := PByte(Buffer)^;
         2: Result := ReverseWordBytes(Buffer);
-        3, 4: Result := ReverseLongWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
+        3, 4: Result := ReverseLongWordBytes(Buffer, Len);
         else //5..8: makes compiler happy
-          Result := ReverseQuadWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
+          Result := ReverseQuadWordBytes(Buffer, Len);
       end
-    else
+    end else
       Result := RawToUInt64Def(Buffer, 0);
 end;
 
