@@ -55,6 +55,10 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFOPT R+}
+  {$DEFINE RangeCheck}
+{$ENDIF}
+
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
@@ -373,12 +377,12 @@ var
   end;
 
 begin
-  if Variables <> nil then
-  begin
+  if Variables <> nil then begin
     { Frees allocated memory for output variables }
-    for I := 0 to Variables.AllocNum-1 do
-    begin
+    for I := 0 to Variables.AllocNum-1 do begin
+      {$R-}
       CurrentVar := @Variables.Variables[I];
+      {$IFDEF RangeCheck} {$R+} {$ENDIF}
       if Assigned(CurrentVar^._Obj) then
         DisposeObject(CurrentVar^._Obj);
       if (CurrentVar^.Data <> nil) and (CurrentVar^.DescriptorType > 0) then
@@ -600,14 +604,18 @@ var
 
   procedure SetEmptyString;
   begin
+    {$R-}
     Variable^.oIndicatorArray^[I] := -1;
     Variable^.oDataSizeArray^[i] := 1; //place of #0
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     ({%H-}PAnsiChar({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length))^ := #0; //OCI expects the trailing $0 byte
   end;
   procedure MoveString(Const Data: Pointer; Iter: LongWord);
   begin
+    {$R-}
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Data^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+Iter*Variable^.Length)^, Variable^.oDataSizeArray^[Iter]);
     ({%H-}PAnsiChar({%H-}NativeUInt(Variable^.Data)+Iter*Variable^.Length)+Variable^.oDataSizeArray^[Iter]-1)^ := #0; //improve  StrLCopy... set a leadin #0 if truncation happens
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
   end;
 begin
   OracleConnection := Connection as IZOracleConnection;
@@ -734,21 +742,21 @@ begin
   end
   else
   { array DML binding }
+  {$R-}
   begin
     //More code(the loops), i know but this avoids loads of If's /case processing
     //step one: build up null inticators
     if (Value.VArray.VArray = nil) then
-      for i := 0 to Iteration -1 do 
+      for i := 0 to Iteration -1 do
       begin
         Variable^.oIndicatorArray^[i] := -1; //set all null
-        if Variable^.TypeCode = SQLT_STR then 
+        if Variable^.TypeCode = SQLT_STR then
           {%H-}PAnsiChar({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^ := #0; //oci expects a terminating $0 byte
         Exit; //we are ready here
       end
     else if (Value.VArray.VIsNullArray = nil) then
       for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[i] := 0 //set all not null
-    else
-    begin
+    else begin
       ZData := Value.VArray.VIsNullArray;
       case TZSQLType(Value.VArray.VIsNullArrayType) of
         stBoolean:        for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(ZBooleanArray[I]);
@@ -1016,6 +1024,7 @@ begin
             end;
       end;
   end;
+ {$IFDEF RangeCheck} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1030,7 +1039,9 @@ begin
   for i := 0 to Variables^.AllocNum -1 do
     if (Variables^.Variables[i].DescriptorType > 0) and (Length(Variables^.Variables[i].Lobs) > 0) then
       for j := 0 to Iteration -1 do
-          Variables^.Variables[i].Lobs[j] := nil;
+        {$R-}
+        Variables^.Variables[i].Lobs[j] := nil;
+        {$IFDEF RangeCheck} {$R+} {$ENDIF}
 end;
 
 {**
