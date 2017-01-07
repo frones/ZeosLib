@@ -174,10 +174,10 @@ begin
   else if Value = 'NaN' then
     Result := NaN
   else
-    ZSysUtils.SQLStrToFloatDef(Value, 0, Result);
+    ZSysUtils.SQLStrToFloatDef(Value, Def, Result);
 end;
 
-procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
+procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Single;
   var Result: Single); overload;
 begin
   if Value = 'Infinity' then
@@ -187,10 +187,11 @@ begin
   else if Value = 'NaN' then
     Result := NaN
   else
-    ZSysUtils.SQLStrToFloatDef(Value, 0, Result);
+    ZSysUtils.SQLStrToFloatDef(Value, Def, Result);
 end;
 
-procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
+procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Double;
   var Result: Double); overload;
 begin
   if Value = 'Infinity' then
@@ -202,6 +203,7 @@ begin
   else
     ZSysUtils.SQLStrToFloatDef(Value, 0, Result);
 end;
+{$IFEND}
 
 { TZPostgreSQLResultSet }
 

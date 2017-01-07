@@ -1622,7 +1622,9 @@ end;
 
 function TZMySQLAbstractBindBuffer.GetBufferAddress: Pointer;
 begin
+  {$R-}
   result := @FBindArray[0];
+  {$R+}
 end;
 
 { TZMySQLResultSetBindBuffer }

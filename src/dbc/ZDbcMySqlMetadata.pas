@@ -260,7 +260,7 @@ implementation
 
 uses
   Math,
-  ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils;
+  ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZDbcMySql;
 
 { TZMySQLDatabaseInfo }
 
@@ -894,6 +894,7 @@ begin
   inherited Create(Connection, Url);
   FInfo := TStringList.Create;
   FInfo.Add('UseResult=True');
+  FDatabase := (GetConnection as IZMySQLConnection).GetDatabaseName;
 end;
 {**
   Destroys this object and cleanups the memory.
@@ -2763,8 +2764,6 @@ begin
     Close;
   end;
 end;
-
-
 
 end.
 

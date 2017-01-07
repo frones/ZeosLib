@@ -691,7 +691,6 @@ begin
     ConnectionLost := (PlainDriver.GetStatus(Handle) = CONNECTION_BAD);
 
     if Assigned(Connection) then begin
-      if Connection.GetAutoCommit and not ConnectionLost then Connection.Rollback;
       DriverManager.LogError(LogCategory, Connection.GetConSettings^.Protocol, LogMessage,
         0, ErrorMessage);
     end else begin
