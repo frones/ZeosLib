@@ -55,6 +55,10 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFOPT R+}
+  {$DEFINE RangeCheck}
+{$ENDIF}
+
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   {$IFDEF MSWINDOWS}{%H-}Windows,{$ENDIF}
@@ -245,7 +249,9 @@ begin
   {first determine oracle type and check out required buffer-size we need }
   for I := 0 to FParams^.AllocNum - 1 do
   begin
+    {$R-}
     CurrentVar := @FParams.Variables[I];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     CurrentVar.Handle := nil;
 
     { Artificially define Oracle internal type. }
@@ -290,11 +296,12 @@ procedure TZOraclePreparedStatement.BindInParameters;
 var
   I: Integer;
 begin
+  {$R-}
   if FParams^.AllocNum > 0 then
   for I := 0 to FParams^.AllocNum - 1 do
     LoadOracleVar(FPlainDriver, Connection, FErrorHandle, @FParams.Variables[I],
       InParamValues[i], ChunkSize, Max(1, Min(FIteration, ArrayCount)));
-
+  {$IFDEF RangeCheck} {$R+} {$ENDIF}
   inherited BindInParameters;
 end;
 
@@ -595,7 +602,9 @@ begin
   for I := 0 to FParams^.AllocNum - 1 do
   begin
     FParamNames[I] := Self.FOracleParams[I].pName;
+    {$R-}
     CurrentVar := @FParams.Variables[I];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     CurrentVar.Handle := nil;
     SQLType := TZSQLType(FOracleParams[I].pSQLType);
     { Artificially define Oracle internal type. }
@@ -619,7 +628,9 @@ begin
   { now let's set data-entries, bind them }
   for i := 0 to FParams.AllocNum -1 do
   begin
+    {$R-}
     CurrentVar := @FParams.Variables[I];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     CurrentVar.Handle := nil;
     SetVariableDataEntrys(CurrentBufferEntry, CurrentVar, FIteration);
     AllocDesriptors(FPlainDriver, (Connection as IZOracleConnection).GetConnectionHandle,
@@ -642,6 +653,7 @@ var
 begin
   FIteration := Max(1, Min(FIteration, ArrayCount));
   if FParams^.AllocNum > 0 then
+    {$R-}
     for I := 0 to FParams^.AllocNum - 1 do
       if (FOracleParams[i].pType in [1,3]) then
         LoadOracleVar(FPlainDriver, Connection, FErrorHandle, @FParams.Variables[I],
@@ -651,6 +663,7 @@ begin
         LoadOracleVar(FPlainDriver, Connection, FErrorHandle,
           @FParams.Variables[I], NullVariant, ChunkSize,
             Max(1, Min(FIteration, ArrayCount)));
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
   inherited BindInParameters;
 end;
 
@@ -758,9 +771,11 @@ var
       end;
   end;
 begin
+  {$R-}
   for I := 0 to FOracleParamsCount -1 do
     if FOracleParams[i].pType in [2,3,4] then
       SetOutParam(@FParams^.Variables[I], FOracleParams[i].pParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
+  {$IFDEF RangeCheck} {$R+} {$ENDIF}
 end;
 
 function TZOracleCallableStatement.GetProcedureSql: RawByteString;

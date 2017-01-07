@@ -209,7 +209,7 @@ type
 
     function PingServer: Integer; override;
 
-    procedure SetReadOnly(Value: Boolean);
+    procedure SetReadOnly(Value: Boolean); override;
 
     function EscapeString(const Value: RawByteString): RawByteString; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
@@ -958,12 +958,9 @@ end;
   @see #setAutoCommit
 }
 procedure TZPostgreSQLConnection.Commit;
-var
-  QueryHandle: PZPostgreSQLResult;
-  SQL: RawByteString;
 begin
-  if GetAutoCommit
-  then raise Exception.Create('Commit cannot be called while in auto-commit mode.');
+  if GetAutoCommit then
+    raise Exception.Create('Commit cannot be called while in auto-commit mode.');
 
   if not Closed then begin
     DoCommit;
@@ -1003,15 +1000,11 @@ end;
   @see #setAutoCommit
 }
 procedure TZPostgreSQLConnection.Rollback;
-var
-  QueryHandle: PZPostgreSQLResult;
-  SQL: RawByteString;
 begin
-  if GetAutoCommit
-  then raise Exception.Create('Rollback is not supported while in auto-commit mode.');
+  if GetAutoCommit then
+    raise Exception.Create('Rollback is not supported while in auto-commit mode.');
 
-  if not Closed then
-  begin
+  if not Closed then begin
     DoRollback;
     DeallocatePreparedStatements;
     DoStartTransaction;
