@@ -97,7 +97,7 @@ begin
   CheckEquals(False, Connection.IsReadOnly);
   CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
-  CheckEquals(Ord(tiNone), Ord(Connection.GetTransactionIsolation));
+  CheckEquals(Ord(tiReadCommitted), Ord(Connection.GetTransactionIsolation));
 
   CheckEquals('inet', (Connection as IZPostgreSQLConnection).
     GetTypeNameByOid(869));
@@ -105,13 +105,14 @@ begin
   { Checks without transactions. }
   Connection.CreateStatement;
   CheckEquals(False, Connection.IsClosed);
-  Connection.Commit;
-  Connection.Rollback;
+//  Connection.Commit;
+//  Connection.Rollback;
   Connection.Close;
   CheckEquals(True, Connection.IsClosed);
 
   { Checks with transactions. }
   Connection.SetTransactionIsolation(tiSerializable);
+  Connection.SetAutoCommit(false);
   Connection.CreateStatement;
   CheckEquals(False, Connection.IsClosed);
   Connection.Commit;

@@ -3758,6 +3758,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  {$R-}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value <> 0;
     stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
@@ -3778,6 +3779,7 @@ begin
       else
         SetUnicodeString(ColumnIndex, IntToUnicode(Value));
   end;
+  {$R+}
 end;
 
 {**
