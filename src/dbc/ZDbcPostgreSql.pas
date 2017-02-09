@@ -1077,7 +1077,7 @@ var
   QueryHandle: PZPostgreSQLResult;
   SQL: RawByteString;
 begin
-  SQL := RawByteString('SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION ');
+  SQL := RawByteString('SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL ');
   case level of
     tiNone, tiReadUncommitted, tiReadCommitted:
       SQL := SQL + RawByteString('READ COMMITTED');
