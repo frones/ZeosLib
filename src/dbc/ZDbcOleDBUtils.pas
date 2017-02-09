@@ -110,7 +110,7 @@ procedure OleBindArrayParams(const DBParams: TDBParams; ArrayOffSet: DB_UPARAMS;
 procedure SetOleCommandProperties(Command: ICommandText; TimeOut: SmallInt;
   Provider: TZServerProvider; SupportsMARSConnection: Boolean);
 
-function ProviderNamePrefix2ServerProvider(const ProviderNamePrefix: String): TZServerProvider;
+function ProviderNamePrefix2ServerProvider(ProviderNamePrefix: String): TZServerProvider;
 
 implementation
 
@@ -2084,7 +2084,7 @@ begin
   end;
 end;
 
-function ProviderNamePrefix2ServerProvider(const ProviderNamePrefix: String): TZServerProvider;
+function ProviderNamePrefix2ServerProvider(ProviderNamePrefix: String): TZServerProvider;
 type
   TDriverNameAndServerProvider = record
     ProviderNamePrefix: String;
@@ -2110,6 +2110,7 @@ var
   I: Integer;
 begin
   Result := spMSSQL;
+  ProviderNamePrefix := UpperCase(ProviderNamePrefix);
   for i := low(KnownDriverName2TypeMap) to high(KnownDriverName2TypeMap) do
     if StartsWith(ProviderNamePrefix, KnownDriverName2TypeMap[i].ProviderNamePrefix) then begin
       Result := KnownDriverName2TypeMap[i].Provider;
