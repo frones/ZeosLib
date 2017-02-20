@@ -465,13 +465,15 @@ begin
     P^ := '0';
     (P+1)^ := 'x';
     Inc(P, 2);
-    ZBinToHex(Value, P, Len);
+    if (Value <> nil) and (Len > 0)then
+      ZBinToHex(Value, P, Len);
   end else begin
     P := Pointer(Result);
     P^ := 'x';
     (P+1)^ := #39;
     Inc(P,2);
-    ZBinToHex(Value, P, Len);
+    if (Value <> nil) and (Len > 0)then
+      ZBinToHex(Value, P, Len);
     Inc(P, Len shl 1); //shl 1 = * 2 but faster
     P^ := #39;
   end;
@@ -486,13 +488,15 @@ begin
     P^ := '0';
     (P+1)^ := 'x';
     Inc(P, 2);
-    ZBinToHex(Value, P, Len);
+    if (Value <> nil) and (Len > 0)then
+      ZBinToHex(Value, P, Len);
   end else begin
     P := Pointer(Result);
     P^ := 'x';
     (P+1)^ := #39;
     Inc(P,2);
-    ZBinToHex(Value, P, Len);
+    if (Value <> nil) and (Len > 0)then
+      ZBinToHex(Value, P, Len);
     Inc(P, Len shl 1); //shl 1 = * 2 but faster
     P^ := #39;
   end;
