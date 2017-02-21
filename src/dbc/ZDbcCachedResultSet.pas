@@ -536,7 +536,11 @@ end;
 }
 function TZAbstractCachedResultSet.IsPendingUpdates: Boolean;
 begin
-  Result := FInitialRowsList.Count > 0;
+  //patch by Soner
+  Result := Assigned(FInitialRowsList) and (FInitialRowsList.Count > 0);
+  //Original:  Result := FInitialRowsList.Count > 0;
+  //this can cause error if you Call TZQuery.UpdatesPending at DoBeforeClose;
+  //because FInitialRowsList can be nil if nothing inserted/deleted/modified
 end;
 
 {**
