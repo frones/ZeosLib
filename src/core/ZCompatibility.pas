@@ -355,12 +355,12 @@ type
   end;
 
   TZFormatSettings = Record
-    DateFormat: RawByteString;
-    DateFormatLen: Cardinal;
-    TimeFormat: RawByteString;
-    TimeFormatLen: Cardinal;
-    DateTimeFormat: RawByteString;
-    DateTimeFormatLen: Cardinal;
+    DateFormat: String;
+    DateFormatLen: Byte;
+    TimeFormat: String;
+    TimeFormatLen: Byte;
+    DateTimeFormat: String;
+    DateTimeFormatLen: Byte;
   End;
 
   PZConSettings = ^TZConSettings;
