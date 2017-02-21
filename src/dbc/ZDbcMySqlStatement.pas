@@ -303,11 +303,16 @@ function TZMySQLStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 begin
   Result := inherited ExecuteQuery(SQL);
   if FPlainDriver.ExecRealQuery(FHandle, Pointer(ASQL), Length(ASQL)) = 0 then
-  begin
-    if not FPlainDriver.ResultSetExists(FHandle) then
-      raise EZSQLException.Create(SCanNotOpenResultSet);
-    Result := CreateResultSet(Self.SQL);
-  end
+    if not FPlainDriver.ResultSetExists(FHandle) then begin
+      while GetMoreResults do
+        if LastResultSet <> nil then begin
+          Result := LastResultSet;
+          Break;
+        end;
+      if Result = nil then
+        raise EZSQLException.Create(SCanNotOpenResultSet);
+    end else
+      Result := CreateResultSet(Self.SQL)
   else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
 end;
