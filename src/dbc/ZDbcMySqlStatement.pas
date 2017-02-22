@@ -324,12 +324,24 @@ begin
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
-      raise EZSQLException.Create(SCanNotOpenResultSet);
-    Result := CreateResultSet(LogSQL);
+    begin
+      while GetMoreResults do
+      begin
+        if LastResultSet <> nil then
+        begin
+          Result := LastResultSet;
+          Break;
+        end;
+      end;
+
+      if Result = nil then
+        raise EZSQLException.Create(SCanNotOpenResultSet);
+    end
+    else
+      Result := CreateResultSet(LogSQL);
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
-end;
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);end;
 
 {**
   Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or

@@ -2521,6 +2521,8 @@ destructor TZEmulatedPreparedStatement.Destroy;
 begin
   if FCachedQuery <> nil then
     FCachedQuery.Free;
+  if FExecStatement <> nil then
+    FExecStatement.Close;
   inherited Destroy;
 end;
 
