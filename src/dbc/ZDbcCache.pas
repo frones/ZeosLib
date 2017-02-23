@@ -1330,7 +1330,11 @@ begin
                           end;
         stBytes         : JSONWriter.WrBase64(PPointer(@FBuffer.Columns[FColumnOffsets[C] + 1])^,
                             PSmallInt(@FBuffer.Columns[FColumnOffsets[C] + 1 + SizeOf(Pointer)])^, True);
-        stGUID          : JSONWriter.Add(PGUID(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stGUID          : begin
+                            JSONWriter.Add('"');
+                            JSONWriter.Add(PGUID(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+                            JSONWriter.Add('"');
+                          end;
         stDate,
         stTime,
         stTimestamp     : JSONWriter.AddDateTime(PDateTime(@FBuffer.Columns[FColumnOffsets[C] + 1]), 'T', '"');

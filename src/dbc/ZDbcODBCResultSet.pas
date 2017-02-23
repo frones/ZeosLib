@@ -278,7 +278,11 @@ begin
         stCurrency,
         stBigDecimal: JSONWriter.AddDouble(PDouble(fColDataPtr)^);
         stBytes:      JSONWriter.WrBase64(fColDataPtr,fStrLen_or_Ind,True);
-        stGUID:       JSONWriter.Add(PGUID(fColDataPtr)^);
+        stGUID:       begin
+                        JSONWriter.Add('"');
+                        JSONWriter.Add(PGUID(fColDataPtr)^);
+                        JSONWriter.Add('"');
+                      end;
         stTime:       begin
                         JSONWriter.Add('"');
                         if fODBC_CTypes[C] = SQL_C_BINARY then
