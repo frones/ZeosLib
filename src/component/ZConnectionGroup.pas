@@ -158,8 +158,7 @@ end;
 destructor TZConnectionGroup.Destroy;
 begin
   UnregisterAllDataSets;
-  FClients := nil;
-  FClients.Free;
+  FreeAndNil(FClients);
   inherited Destroy;
 end;
 
