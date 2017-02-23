@@ -39,9 +39,10 @@
 {                                                         }
 {                                 Zeos Development Group. }
 {********************************************************@}
+{.$DEFINE ZEOS_TEST_ONLY}
+{.$DEFINE GENERIC_INDEX}
 //common compilation directives
 {$DEFINE ZEOS72UP}
-{$DEFINE ZEOS73UP}
 
 // Uncomment these defines to disable some DB drivers (reduce binary size)
 {.$DEFINE ZEOS_DISABLE_MYSQL}
@@ -70,7 +71,9 @@
 // ENGLISH, GERMAN, PORTUGUESE, DUTCH, SPANISH, ROMANA, INDONESIAN, RUSSIAN, CZECH, POLISH, FRENCH
 {$DEFINE ENGLISH} //see \core\ZMessages.pas
 
-{$DEFINE MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD} //IDE can't determine overload for NativeUInt(64-Bit)
+{$DEFINE MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD} //Compiler can't determine overload for NativeUInt(64-Bit)
+{$DEFINE HAS_PANSICHAR} //Compiler supports PAnsiChar
+{$DEFINE HAS_ANSICHAR} //Compiler supports AnsiChar
  // Compilation directives for Lazarus/FPC
 {$IFDEF FPC}
   {$I ZeosLazarus.inc}
@@ -287,6 +290,14 @@
       {$DEFINE FAST_MOVE}
     {$IFEND}
   {$IFEND CompilerVersion < 15}
+{$ENDIF}
+
+{$IFDEF NEXTGEN}
+  {$DEFINE MISS_RBS_SETSTRING_OVERLOAD}
+  {$UNDEF WITH_ASANSISTRING}
+  {$UNDEF WITH_UNITANSISTRINGS}
+  {$UNDEF HAS_PANSICHAR}
+  {$UNDEF HAS_ANSICHAR}
 {$ENDIF}
 
 {$IFDEF LINUX}
