@@ -3461,30 +3461,33 @@ begin
     end;
     BindFields(True);
 
-    { Initializes accessors and buffers. }
-    ColumnList := ConvertFieldsToColumnInfo(Fields);
-    try
-      if Connection.DbcConnection.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-        and (Connection.DbcConnection.GetConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
-        RowAccessor := TZRawRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings)
-      else
-        RowAccessor := TZUnicodeRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings);
-    finally
-      ColumnList.Free;
+    if not FRefreshInProgress then begin
+      { Initializes accessors and buffers. }
+      ColumnList := ConvertFieldsToColumnInfo(Fields);
+      try
+        if Connection.DbcConnection.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent
+          and (Connection.DbcConnection.GetConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+          RowAccessor := TZRawRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings)
+        else
+          RowAccessor := TZUnicodeRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings);
+      finally
+        ColumnList.Free;
+      end;
+      if not IsUnidirectional then
+      begin
+        FOldRowBuffer := PZRowBuffer(AllocRecordBuffer);
+        FNewRowBuffer := PZRowBuffer(AllocRecordBuffer);
+      end;
+
+      SetStringFieldSetterAndSetter;
+
+      FieldsLookupTable := CreateFieldsLookupTable(Fields);
+
+      InitFilterFields := False;
+
+      IndexFields.Clear;
+      GetFieldList(IndexFields, FLinkedFields); {renamed by bangfauzan}
     end;
-    if not IsUnidirectional then
-    begin
-      FOldRowBuffer := PZRowBuffer(AllocRecordBuffer);
-      FNewRowBuffer := PZRowBuffer(AllocRecordBuffer);
-    end;
-
-    SetStringFieldSetterAndSetter;
-
-    FieldsLookupTable := CreateFieldsLookupTable(Fields);
-    InitFilterFields := False;
-
-    IndexFields.Clear;
-    GetFieldList(IndexFields, FLinkedFields); {renamed by bangfauzan}
 
     { Performs sorting. }
     if FSortedFields <> '' then
@@ -3518,16 +3521,19 @@ begin
 {$ENDIF}
   FNewRowBuffer := nil;
 
-  if RowAccessor <> nil then
-    RowAccessor.Free;
-  RowAccessor := nil;
+  if not FRefreshInProgress then begin
+    if RowAccessor <> nil then
+      RowAccessor.Free;
+    RowAccessor := nil;
+  end;
 
   { Destroy default fields }
   if DefaultFields and not FRefreshInProgress then
     DestroyFields;
 
   CurrentRows.Clear;
-  FieldsLookupTable := nil;
+  if not FRefreshInProgress then
+    FieldsLookupTable := nil;
 end;
 
 {**
