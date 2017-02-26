@@ -1309,12 +1309,12 @@ function TZSQLiteDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 const
-  cid_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  name_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  type_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  notnull_index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  dflt_value_index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  pk_index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  cid_index = FirstDbcIndex;
+  name_index = cid_index+1;
+  type_index = name_index+1;
+  notnull_index = type_index+1;
+  dflt_value_index = notnull_index+1;
+  pk_index = dflt_value_index+1;
 var
   Len: NativeUInt;
   Temp_scheme, TempTableNamePattern: String;
@@ -1425,12 +1425,12 @@ end;
 function TZSQLiteDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 const
-  cid_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  name_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  {%H-}type_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  {%H-}notnull_index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  {%H-}dflt_value_index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  pk_index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  cid_index = FirstDbcIndex;
+  name_index = cid_index+1;
+  {%H-}type_index = name_index+1;
+  {%H-}notnull_index = type_index+1;
+  {%H-}dflt_value_index = notnull_index+1;
+  pk_index = dflt_value_index+1;
 var
   Len: NativeUInt;
   Temp_scheme: string;
@@ -1543,24 +1543,13 @@ begin
       begin
         Result.UpdateString(TypeInfoLiteralPrefixIndex, '''');
         Result.UpdateString(TypeInfoLiteralSuffixIndex, '''');
-      end
-      {else
-      begin
-        Result.UpdateNull(TypeInfoLiteralPrefixIndex);
-        Result.UpdateNull(TypeInfoLiteralSuffixIndex);
-      end};
-      //Result.UpdateNull(TypeInfoCreateParamsIndex);
+      end;
       Result.UpdateInt(TypeInfoNullAbleIndex, Ord(ntNullable));
       Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, False);
       Result.UpdateBoolean(TypeInfoSearchableIndex, False);
       Result.UpdateBoolean(TypeInfoUnsignedAttributeIndex, False);
       Result.UpdateBoolean(TypeInfoFixedPrecScaleIndex, False);
       Result.UpdateBoolean(TypeInfoAutoIncrementIndex, TypeNames[I] = 'INTEGER');
-      //Result.UpdateNull(TypeInfoLocaleTypeNameIndex);
-      //Result.UpdateNull(TypeInfoMinimumScaleIndex);
-      //Result.UpdateNull(TypeInfoMaximumScaleIndex);
-      //Result.UpdateNull(TypeInfoSQLDataTypeIndex);
-      //Result.UpdateNull(TypeInfoSQLDateTimeSubIndex);
       Result.UpdateInt(TypeInfoNumPrecRadix, 10);
 
       Result.InsertRow;
@@ -1622,12 +1611,13 @@ function TZSQLiteDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
 const
-  {%H-}main_seq_field_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  main_name_field_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  main_unique_field_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  sub_seqno_field_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  {%H-}sub_cid_field_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  sub_name_field_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  {%H-}main_seq_field_index = FirstDbcIndex;
+  main_name_field_index = main_seq_field_index+1;
+  main_unique_field_index = main_name_field_index+1;
+
+  sub_seqno_field_index = FirstDbcIndex;
+  {%H-}sub_cid_field_index = sub_seqno_field_index+1;
+  sub_name_field_index = sub_cid_field_index+1;
 var
   Len: NativeUInt;
   MainResultSet, ResultSet: IZResultSet;
@@ -1659,7 +1649,7 @@ begin
             Result.UpdateString(TableNameIndex, Table);
             Result.UpdateBoolean(IndexInfoColNonUniqueIndex, MainResultSet.GetInt(main_unique_field_index) = 0);
             Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, MainResultSet.GetPAnsiChar(main_name_field_index, Len), @Len);
-            Result.UpdateInt(IndexInfoColOrdPositionIndex, ResultSet.GetInt(sub_seqno_field_index){$IFNDEF GENERIC_INDEX} + 1{$ENDIF});
+            Result.UpdateInt(IndexInfoColOrdPositionIndex, ResultSet.GetInt(sub_seqno_field_index)+FirstDbcIndex);
             Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, ResultSet.GetPAnsiChar(sub_name_field_index, Len), @Len);
             Result.UpdateString(IndexInfoColAscOrDescIndex, 'A');
             Result.UpdateInt(IndexInfoColCardinalityIndex, 0);
