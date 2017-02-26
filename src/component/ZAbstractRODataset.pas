@@ -330,6 +330,10 @@ type
 
     function GetDataSource: TDataSource; override;
   protected { Internal protected properties. }
+    function CreateStatement(const SQL: string; Properties: TStrings):
+      IZPreparedStatement; virtual;
+    function CreateResultSet(const {%H-}SQL: string; MaxRows: Integer):
+      IZResultSet; virtual;
     {$IFDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES} //EH: there is something weired with cirtcular references + FPC and implementation uses! So i added this virtual function to get a IsUpdatable state
     function GetUpdatable: Boolean; virtual;
     property Updatable: Boolean read GetUpdatable;
@@ -421,10 +425,7 @@ type
 {$ENDIF}
     function CreateNestedDataSet({%H-}DataSetField: TDataSetField): TDataSet; {$IFDEF WITH_FTDATASETSUPPORT}override;{$ENDIF}
     procedure CloseBlob({%H-}Field: TField); override;
-    function CreateStatement(const SQL: string; Properties: TStrings):
-      IZPreparedStatement; virtual;
-    function CreateResultSet(const {%H-}SQL: string; MaxRows: Integer):
-      IZResultSet; virtual;
+    procedure DataEvent(Event: TDataEvent; Info: Longint); override;
 
     procedure CheckFieldCompatibility(Field: TField; FieldDef: TFieldDef); {$IFDEF WITH_CHECKFIELDCOMPATIBILITY} override;{$ENDIF}
     procedure CreateFields; override;
@@ -2303,8 +2304,10 @@ end;
 }
 procedure TZAbstractRODataset.SetParamCheck(Value: Boolean);
 begin
-  FSQL.ParamCheck := Value;
-  UpdateSQLStrings(Self);
+  if Value <> FSQL.ParamCheck then begin
+    FSQL.ParamCheck := Value;
+    UpdateSQLStrings(Self);
+  end;
 end;
 
 {**
@@ -2322,8 +2325,10 @@ end;
 }
 procedure TZAbstractRODataset.SetParamChar(Value: Char);
 begin
-  FSQL.ParamChar := Value;
-  UpdateSQLStrings(Self);
+  if Value <> FSQL.ParamChar then begin
+    FSQL.ParamChar := Value;
+    UpdateSQLStrings(Self);
+  end;
 end;
 
 {**
@@ -3056,8 +3061,6 @@ begin
 
   if GetActiveBuffer(RowBuffer{%H-}) then
   begin
-    if True then
-
     ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
     RowAccessor.RowBuffer := RowBuffer;
 
@@ -3503,37 +3506,39 @@ end;
 procedure TZAbstractRODataset.InternalClose;
 begin
   if ResultSet <> nil then
-    if not FDoNotCloseResultSet then ResultSet.ResetCursor;
+    if not FDoNotCloseResultSet then
+      ResultSet.ResetCursor;
   ResultSet := nil;
 
-  if FOldRowBuffer <> nil then
-{$IFDEF WITH_TRECORDBUFFER}
-    FreeRecordBuffer(TRecordBuffer(FOldRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
-{$ELSE}
-    FreeRecordBuffer(PChar(FOldRowBuffer));
-{$ENDIF}
-  FOldRowBuffer := nil;
-  if FNewRowBuffer <> nil then
-{$IFDEF WITH_TRECORDBUFFER}
-    FreeRecordBuffer(TRecordBuffer(FNewRowBuffer));
-{$ELSE}
-    FreeRecordBuffer(PChar(FNewRowBuffer));
-{$ENDIF}
-  FNewRowBuffer := nil;
-
   if not FRefreshInProgress then begin
+    if (FOldRowBuffer <> nil) then
+{$IFDEF WITH_TRECORDBUFFER}
+      FreeRecordBuffer(TRecordBuffer(FOldRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+{$ELSE}
+      FreeRecordBuffer(PChar(FOldRowBuffer));
+{$ENDIF}
+    FOldRowBuffer := nil;
+
+    if (FNewRowBuffer <> nil) and not FRefreshInProgress then
+{$IFDEF WITH_TRECORDBUFFER}
+      FreeRecordBuffer(TRecordBuffer(FNewRowBuffer));
+{$ELSE}
+      FreeRecordBuffer(PChar(FNewRowBuffer));
+{$ENDIF}
+    FNewRowBuffer := nil;
+
     if RowAccessor <> nil then
       RowAccessor.Free;
     RowAccessor := nil;
+
+    { Destroy default fields }
+    if DefaultFields then
+      DestroyFields;
+
+    FieldsLookupTable := nil;
   end;
 
-  { Destroy default fields }
-  if DefaultFields and not FRefreshInProgress then
-    DestroyFields;
-
   CurrentRows.Clear;
-  if not FRefreshInProgress then
-    FieldsLookupTable := nil;
 end;
 
 {**
@@ -3973,6 +3978,11 @@ begin
   Result := DefaultFieldDefListClass;
 end;
 {$ENDIF}
+
+procedure TZAbstractRODataset.DataEvent(Event: TDataEvent; Info: Integer);
+begin
+  inherited DataEvent(Event, Info);
+end;
 
 {$IFNDEF WITH_VIRTUAL_DEFCHANGED}
 procedure TZAbstractRODataset.DefChanged(Sender: TObject);
