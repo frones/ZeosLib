@@ -1978,7 +1978,7 @@ function RawSQLDateToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
 var
   Year, Month: Int64;
   Day: Word;
-  DateFormat: PAnsiChar;
+  DateFormat: PChar;
 
   procedure TryExtractDateFromFormat(Value: PAnsiChar);
   var
@@ -2746,7 +2746,7 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
-  DateFormat: PAnsiChar;
+  DateFormat: PChar;
   PW: PWideChar;
   YearSet: Boolean;
 begin
