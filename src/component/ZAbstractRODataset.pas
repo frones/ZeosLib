@@ -425,7 +425,6 @@ type
 {$ENDIF}
     function CreateNestedDataSet({%H-}DataSetField: TDataSetField): TDataSet; {$IFDEF WITH_FTDATASETSUPPORT}override;{$ENDIF}
     procedure CloseBlob({%H-}Field: TField); override;
-    procedure DataEvent(Event: TDataEvent; Info: Longint); override;
 
     procedure CheckFieldCompatibility(Field: TField; FieldDef: TFieldDef); {$IFDEF WITH_CHECKFIELDCOMPATIBILITY} override;{$ENDIF}
     procedure CreateFields; override;
@@ -3978,11 +3977,6 @@ begin
   Result := DefaultFieldDefListClass;
 end;
 {$ENDIF}
-
-procedure TZAbstractRODataset.DataEvent(Event: TDataEvent; Info: Integer);
-begin
-  inherited DataEvent(Event, Info);
-end;
 
 {$IFNDEF WITH_VIRTUAL_DEFCHANGED}
 procedure TZAbstractRODataset.DefChanged(Sender: TObject);
