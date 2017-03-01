@@ -330,6 +330,10 @@ type
 
     function GetDataSource: TDataSource; override;
   protected { Internal protected properties. }
+    function CreateStatement(const SQL: string; Properties: TStrings):
+      IZPreparedStatement; virtual;
+    function CreateResultSet(const {%H-}SQL: string; MaxRows: Integer):
+      IZResultSet; virtual;
     {$IFDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES} //EH: there is something weired with cirtcular references + FPC and implementation uses! So i added this virtual function to get a IsUpdatable state
     function GetUpdatable: Boolean; virtual;
     property Updatable: Boolean read GetUpdatable;
@@ -421,10 +425,6 @@ type
 {$ENDIF}
     function CreateNestedDataSet({%H-}DataSetField: TDataSetField): TDataSet; {$IFDEF WITH_FTDATASETSUPPORT}override;{$ENDIF}
     procedure CloseBlob({%H-}Field: TField); override;
-    function CreateStatement(const SQL: string; Properties: TStrings):
-      IZPreparedStatement; virtual;
-    function CreateResultSet(const {%H-}SQL: string; MaxRows: Integer):
-      IZResultSet; virtual;
 
     procedure CheckFieldCompatibility(Field: TField; FieldDef: TFieldDef); {$IFDEF WITH_CHECKFIELDCOMPATIBILITY} override;{$ENDIF}
     procedure CreateFields; override;
@@ -2303,8 +2303,10 @@ end;
 }
 procedure TZAbstractRODataset.SetParamCheck(Value: Boolean);
 begin
-  FSQL.ParamCheck := Value;
-  UpdateSQLStrings(Self);
+  if Value <> FSQL.ParamCheck then begin
+    FSQL.ParamCheck := Value;
+    UpdateSQLStrings(Self);
+  end;
 end;
 
 {**
@@ -2322,8 +2324,10 @@ end;
 }
 procedure TZAbstractRODataset.SetParamChar(Value: Char);
 begin
-  FSQL.ParamChar := Value;
-  UpdateSQLStrings(Self);
+  if Value <> FSQL.ParamChar then begin
+    FSQL.ParamChar := Value;
+    UpdateSQLStrings(Self);
+  end;
 end;
 
 {**
@@ -3056,8 +3060,6 @@ begin
 
   if GetActiveBuffer(RowBuffer{%H-}) then
   begin
-    if True then
-
     ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
     RowAccessor.RowBuffer := RowBuffer;
 
@@ -3461,30 +3463,33 @@ begin
     end;
     BindFields(True);
 
-    { Initializes accessors and buffers. }
-    ColumnList := ConvertFieldsToColumnInfo(Fields);
-    try
-      if Connection.DbcConnection.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-        and (Connection.DbcConnection.GetConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
-        RowAccessor := TZRawRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings)
-      else
-        RowAccessor := TZUnicodeRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings);
-    finally
-      ColumnList.Free;
+    if not FRefreshInProgress then begin
+      { Initializes accessors and buffers. }
+      ColumnList := ConvertFieldsToColumnInfo(Fields);
+      try
+        if Connection.DbcConnection.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent
+          and (Connection.DbcConnection.GetConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+          RowAccessor := TZRawRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings)
+        else
+          RowAccessor := TZUnicodeRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings);
+      finally
+        ColumnList.Free;
+      end;
+      if not IsUnidirectional then
+      begin
+        FOldRowBuffer := PZRowBuffer(AllocRecordBuffer);
+        FNewRowBuffer := PZRowBuffer(AllocRecordBuffer);
+      end;
+
+      SetStringFieldSetterAndSetter;
+
+      FieldsLookupTable := CreateFieldsLookupTable(Fields);
+
+      InitFilterFields := False;
+
+      IndexFields.Clear;
+      GetFieldList(IndexFields, FLinkedFields); {renamed by bangfauzan}
     end;
-    if not IsUnidirectional then
-    begin
-      FOldRowBuffer := PZRowBuffer(AllocRecordBuffer);
-      FNewRowBuffer := PZRowBuffer(AllocRecordBuffer);
-    end;
-
-    SetStringFieldSetterAndSetter;
-
-    FieldsLookupTable := CreateFieldsLookupTable(Fields);
-    InitFilterFields := False;
-
-    IndexFields.Clear;
-    GetFieldList(IndexFields, FLinkedFields); {renamed by bangfauzan}
 
     { Performs sorting. }
     if FSortedFields <> '' then
@@ -3500,34 +3505,39 @@ end;
 procedure TZAbstractRODataset.InternalClose;
 begin
   if ResultSet <> nil then
-    if not FDoNotCloseResultSet then ResultSet.ResetCursor;
+    if not FDoNotCloseResultSet then
+      ResultSet.ResetCursor;
   ResultSet := nil;
 
-  if FOldRowBuffer <> nil then
+  if not FRefreshInProgress then begin
+    if (FOldRowBuffer <> nil) then
 {$IFDEF WITH_TRECORDBUFFER}
-    FreeRecordBuffer(TRecordBuffer(FOldRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+      FreeRecordBuffer(TRecordBuffer(FOldRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
 {$ELSE}
-    FreeRecordBuffer(PChar(FOldRowBuffer));
+      FreeRecordBuffer(PChar(FOldRowBuffer));
 {$ENDIF}
-  FOldRowBuffer := nil;
-  if FNewRowBuffer <> nil then
+    FOldRowBuffer := nil;
+
+    if (FNewRowBuffer <> nil) and not FRefreshInProgress then
 {$IFDEF WITH_TRECORDBUFFER}
-    FreeRecordBuffer(TRecordBuffer(FNewRowBuffer));
+      FreeRecordBuffer(TRecordBuffer(FNewRowBuffer));
 {$ELSE}
-    FreeRecordBuffer(PChar(FNewRowBuffer));
+      FreeRecordBuffer(PChar(FNewRowBuffer));
 {$ENDIF}
-  FNewRowBuffer := nil;
+    FNewRowBuffer := nil;
 
-  if RowAccessor <> nil then
-    RowAccessor.Free;
-  RowAccessor := nil;
+    if RowAccessor <> nil then
+      RowAccessor.Free;
+    RowAccessor := nil;
 
-  { Destroy default fields }
-  if DefaultFields and not FRefreshInProgress then
-    DestroyFields;
+    { Destroy default fields }
+    if DefaultFields then
+      DestroyFields;
+
+    FieldsLookupTable := nil;
+  end;
 
   CurrentRows.Clear;
-  FieldsLookupTable := nil;
 end;
 
 {**

@@ -1539,11 +1539,7 @@ begin
     case VType of
       vtNull : result := '(NULL)';
       vtBoolean : if VBoolean then result := '(TRUE)' else result := '(FALSE)';
-      vtBytes:
-        begin
-          SetLength(Result, Length(VBytes)*2);
-          ZBinToHex(Pointer(VBytes), PAnsiChar(Result), Length(VBytes));
-        end;
+      vtBytes : Result := GetSQLHexAnsiString(Pointer(VBytes), Length(VBytes), False);
       vtInteger : result := IntToRaw(VInteger);
       vtFloat : result := FloatToRaw(VFloat);
       vtString,
