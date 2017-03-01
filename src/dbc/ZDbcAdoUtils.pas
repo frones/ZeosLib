@@ -58,7 +58,7 @@ interface
 
 uses Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   Types,
-  ZDbcIntfs, ZCompatibility, ZPlainAdo, ZDbcAdo, ZVariant, ZDbcStatement, ZOleDB;
+  ZDbcIntfs, ZCompatibility, ZPlainAdo, ZDbcAdo, ZVariant, ZOleDB;
 
 type
   PDirectionTypes = ^TDirectionTypes;

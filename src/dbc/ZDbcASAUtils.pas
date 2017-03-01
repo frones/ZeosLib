@@ -783,7 +783,7 @@ begin
     if Len < MinBLOBSize then
     begin
       SetFieldType( Index, DT_VARCHAR or 1, MinBLOBSize - 1);
-      PZASASQLSTRING( sqlData).length := Min(Len, sqllen-3);
+      PZASASQLSTRING( sqlData).length := {%H-}Min(Len, sqllen-3);
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PZASASQLSTRING( sqlData).data[0], PZASASQLSTRING( sqlData).length);
       (PAnsiChar(@PZASASQLSTRING( sqlData).data[0])+PZASASQLSTRING( sqlData).length)^ := #0;
     end

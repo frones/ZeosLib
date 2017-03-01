@@ -1254,7 +1254,7 @@ begin
   fColDataPtr := nil;
   if (Ord(fSQLTypes[ColumnIndex]) <= Ord(stUnicodeString)) and (not Result) then
     fColDataPtr := { Start entry }            @fColumnBuffers[ColumnIndex][
-      { increase by size of indicator array } (SizeOf(SQLLEN)*fMaxFetchableRows)+
+      { increase by size of indicator array } (SizeOf(SQLLEN)*fMaxFetchableRows){%H-}+
       { get entry of Data in current row }    (fColumnBuffSizes[ColumnIndex]*(fCurrentBufRowNo-1))];
   LastWasNull := Result;
 end;
@@ -1869,7 +1869,7 @@ begin
       OffSetPtr := FBlobData;
       while (PlainDriver.GetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr) = SQL_SUCCESS_WITH_INFO) do begin
         ReallocMem(FBlobData, FBlobSize + ChunkSize);
-        OffSetPtr := {%H-}Pointer({%H-}NativeUInt(FBlobData)+NativeUInt(FBlobSize)-2);
+        OffSetPtr := {%H-}Pointer({%H-}NativeUInt(FBlobData)+NativeUInt(FBlobSize){%H-}-2);
         FBlobSize := FBlobSize + ChunkSize-2;
       end;
       FBlobSize := FBlobSize - ChunkSize + StrLen_or_IndPtr^ +2;

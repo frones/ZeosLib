@@ -2201,7 +2201,6 @@ function TZOleDBCachedResultSet.Fetch: Boolean;
 var
   I: Integer;
   TempRow: PZRowBuffer;
-  FColBuffer: TByteDynArray;
   DBBINDING: PDBBINDING;
   FData: PPointer;
   FLength: PDBLENGTH;
@@ -2215,7 +2214,6 @@ begin
     Exit;
 
   TempRow := RowAccessor.RowBuffer;
-  FColBuffer := FResultSet.FColBuffer;
   FData := @FResultSet.FData;
   FLength := @FResultSet.FLength;
   RowAccessor.Alloc;

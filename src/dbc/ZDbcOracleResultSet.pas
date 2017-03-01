@@ -2114,7 +2114,7 @@ begin
     OraWriteLob(FPlainDriver, Buffer, FContextHandle, FErrorHandle, FLobLocator,
       FChunkSize, Len, False, FConSettings)
   else
-    OraWriteLob(FPlainDriver, Buffer, FContextHandle, FErrorHandle, FLobLocator,
+    {%H-}OraWriteLob(FPlainDriver, Buffer, FContextHandle, FErrorHandle, FLobLocator,
       FChunkSize, Len+1, False, FConSettings);
 end;
 

@@ -161,7 +161,6 @@ const
 type
   PLobArray = ^TLobArray;
   TLobArray = array[0..High(Word)] of IInterface;
-  PIInterface = ^IInterface;
 
 { TZAbstractODBCStatement }
 
@@ -1681,8 +1680,8 @@ begin
         end;
         if (fBindRowWise) then begin
           { enter new param in 1. row }
-          StrLen_or_IndPtr := Pointer(NativeUInt(Param.CurrStrLen_or_IndPtr)+Cardinal(Param.BufferSize)+SizeOf(SQLLEN));
-          ParameterDataPtr := Pointer(NativeUInt(StrLen_or_IndPtr)+SizeOf(SQLLEN));
+          StrLen_or_IndPtr := {%H-}Pointer({%H-}NativeUInt(Param.CurrStrLen_or_IndPtr)+Cardinal(Param.BufferSize)+SizeOf(SQLLEN));
+          ParameterDataPtr := {%H-}Pointer({%H-}NativeUInt(StrLen_or_IndPtr)+SizeOf(SQLLEN));
         end else begin
           { enter new param array }
           StrLen_or_IndPtr := ParameterDataPtr;
@@ -1731,7 +1730,7 @@ begin
                   (PWideChar(Param.CurrParamDataPtr)+(PSQLLEN(StrLen_or_IndPtr)^ shr 1))^ := #0; //set a terminating #0 to top of data
                 end else begin
                   CharRec := ClientVarManager.GetAsCharRec(InParamValues[i], ConSettings^.ClientCodePage^.CP);
-                  PSQLLEN(StrLen_or_IndPtr)^ := Min((Param.ColumnSize*ConSettings^.ClientCodePage^.CharWidth), CharRec.Len);
+                  PSQLLEN(StrLen_or_IndPtr)^ := {%H-}Min((Param.ColumnSize*ConSettings^.ClientCodePage^.CharWidth), CharRec.Len);
                   if Param.InputDataType = SQL_PARAM_INPUT then
                     Param.CurrParamDataPtr := CharRec.P
                   else
@@ -1984,7 +1983,7 @@ begin
     else
       fMaxBufArrayBound := -1;
     if fBindRowWise then
-      CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_PARAM_BIND_TYPE, Pointer(fBufferSize), 0))
+      CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_PARAM_BIND_TYPE, {%H-}Pointer(fBufferSize), 0))
     else
       CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_PARAM_BIND_TYPE, Pointer(SQL_PARAM_BIND_BY_COLUMN), 0));
   end;

@@ -571,12 +571,12 @@ begin
 
   DBBindingArray[0].obStatus := 0;
   SetDBBindingProps(0);
-  Inc(NativeUInt(DBCOLUMNINFO), SizeOf(TDBCOLUMNINFO));
+  Inc({%H-}NativeUInt(DBCOLUMNINFO), SizeOf(TDBCOLUMNINFO));
   for i := 1 to DBUPARAMS -1 do
   begin
     DBBindingArray[i].obStatus := DBBindingArray[i-1].obValue  + DBBindingArray[i-1].cbMaxLen;
     SetDBBindingProps(I);
-    Inc(NativeUInt(DBCOLUMNINFO), SizeOf(TDBCOLUMNINFO));
+    Inc({%H-}NativeUInt(DBCOLUMNINFO), SizeOf(TDBCOLUMNINFO));
   end;
   Result := DBBindingArray[DBUPARAMS -1].obValue + DBBindingArray[DBUPARAMS -1].cbMaxLen;
 end;
