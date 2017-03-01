@@ -908,6 +908,7 @@ begin
       CheckEquals('p_name', Query.Fields[0].FieldName);
       CheckEquals('p_id', Query.Fields[1].FieldName);
       CheckEquals('p_resume', Query.Fields[2].FieldName);
+      Query.Refresh;
 
       Query.First;
       CheckEquals(1, Query.FieldByName('p_id').AsInteger);

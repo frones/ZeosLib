@@ -627,17 +627,17 @@ begin
     if Info.Values['datewriteformat'] = '' then
       ConSettings^.WriteFormatSettings.DateFormat := 'YYYY-MM-DD'
     else
-      ConSettings^.WriteFormatSettings.DateFormat := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(UpperCase(Info.Values['datewriteformat']));
+      ConSettings^.WriteFormatSettings.DateFormat := UpperCase(Info.Values['datewriteformat']);
 
     if Info.Values['datereadformat'] = '' then
       ConSettings^.ReadFormatSettings.DateFormat := 'YYYY-MM-DD'
     else
-      ConSettings^.ReadFormatSettings.DateFormat := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(UpperCase(Info.Values['datereadformat']));
+      ConSettings^.ReadFormatSettings.DateFormat := UpperCase(Info.Values['datereadformat']);
 
     if Info.Values['datedisplayformat'] = '' then
-      ConSettings^.DisplayFormatSettings.DateFormat := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat)
+      ConSettings^.DisplayFormatSettings.DateFormat := ({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat)
     else
-      ConSettings^.DisplayFormatSettings.DateFormat := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(UpperCase(Info.Values['datedisplayformat']));
+      ConSettings^.DisplayFormatSettings.DateFormat := UpperCase(Info.Values['datedisplayformat']);
 
     {time formats}
     if Info.Values['timewiteformat'] = '' then
@@ -646,7 +646,7 @@ begin
       else
         ConSettings^.WriteFormatSettings.TimeFormat := 'HH:NN:SS'
     else
-      ConSettings^.WriteFormatSettings.TimeFormat := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(UpperCase(Info.Values['timewiteformat']));
+      ConSettings^.WriteFormatSettings.TimeFormat := UpperCase(Info.Values['timewiteformat']);
 
     if Info.Values['timereadformat'] = '' then
       if GetMetaData.GetDatabaseInfo.SupportsMilliseconds then
@@ -654,28 +654,28 @@ begin
       else
         ConSettings^.ReadFormatSettings.TimeFormat := 'HH:NN:SS'
     else
-      ConSettings^.ReadFormatSettings.TimeFormat := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(UpperCase(Info.Values['timereadformat']));
+      ConSettings^.ReadFormatSettings.TimeFormat := UpperCase(Info.Values['timereadformat']);
 
     if Info.Values['timedisplayformat'] = '' then
-      ConSettings^.DisplayFormatSettings.TimeFormat := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat)
+      ConSettings^.DisplayFormatSettings.TimeFormat := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat
     else
-      ConSettings^.DisplayFormatSettings.TimeFormat := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(UpperCase(Info.Values['timedisplayformat']));
+      ConSettings^.DisplayFormatSettings.TimeFormat := UpperCase(Info.Values['timedisplayformat']);
 
     {timestamp format}
     if Info.Values['datetimewriteformat'] = '' then
       ConSettings^.WriteFormatSettings.DateTimeFormat := ConSettings^.WriteFormatSettings.DateFormat+' '+ConSettings^.WriteFormatSettings.TimeFormat
     else
-      ConSettings^.WriteFormatSettings.DateTimeFormat := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(UpperCase(Info.Values['datetimewriteformat']));
+      ConSettings^.WriteFormatSettings.DateTimeFormat := Info.Values['datetimewriteformat'];
 
     if Info.Values['datetimereadformat'] = '' then
       ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat
     else
-      ConSettings^.ReadFormatSettings.DateTimeFormat := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(UpperCase(Info.Values['datetimereadformat']));
+      ConSettings^.ReadFormatSettings.DateTimeFormat := UpperCase(Info.Values['datetimereadformat']);
 
     if Info.Values['datetimedisplayformat'] = '' then
       ConSettings^.DisplayFormatSettings.DateTimeFormat := ConSettings^.DisplayFormatSettings.DateFormat+' '+ConSettings^.DisplayFormatSettings.TimeFormat
     else
-      ConSettings^.DisplayFormatSettings.DateTimeFormat := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(UpperCase(Info.Values['datetimedisplayformat']));
+      ConSettings^.DisplayFormatSettings.DateTimeFormat := UpperCase(Info.Values['datetimedisplayformat']);
   end;
 
   ConSettings^.WriteFormatSettings.DateFormatLen := Length(ConSettings^.WriteFormatSettings.DateFormat);

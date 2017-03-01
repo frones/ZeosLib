@@ -226,6 +226,10 @@ uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZFastCode,
   ZSysUtils, ZMessages, ZDbcMySqlUtils, ZDbcMysql, ZEncoding, ZDbcUtils;
 
+{$IFOPT R+}
+  {$DEFINE RangeCheckEnabled}
+{$ENDIF}
+
 { TZMySQLResultSetMetadata }
 
 {**
@@ -396,7 +400,7 @@ begin
   {$ENDIF}
   {$R-}
   x := FLengthArray^[ColumnIndex];
-  {$R+}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   Len := x;
   Result := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
   LastWasNull := Result = nil;
@@ -578,20 +582,19 @@ begin
 
   if LastWasNull then
     Result := False
-  else
-    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then begin
-      {$R-}
-      Len := FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-      {$R+}
-      case Len of
-        1: Result := PByte(Buffer)^ <> 0;
-        2: Result := ReverseWordBytes(Buffer) <> 0;
-        3, 4: Result := ReverseLongWordBytes(Buffer, Len) <> 0;
-        else //5..8: makes compiler happy
-          Result := ReverseQuadWordBytes(Buffer, Len) <> 0;
-      end
-    end else
-      Result := StrToBoolEx(Buffer, True, False);
+  else if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then begin
+    {$R-}
+    Len := FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    case Len of
+      1: Result := PByte(Buffer)^ <> 0;
+      2: Result := ReverseWordBytes(Buffer) <> 0;
+      3, 4: Result := ReverseLongWordBytes(Buffer, Len) <> 0;
+      else //5..8: makes compiler happy
+        Result := ReverseQuadWordBytes(Buffer, Len) <> 0;
+    end
+  end else
+    Result := StrToBoolEx(Buffer, True, False);
 end;
 
 {**
@@ -615,20 +618,19 @@ begin
 
   if LastWasNull then
     Result := 0
-  else
-    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then begin
-      {$R-}
-      Len := FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-      {$R+}
-      case Len of
-        1: Result := PByte(Buffer)^;
-        2: Result := ReverseWordBytes(Buffer);
-        3, 4: Result := ReverseLongWordBytes(Buffer, Len);
-        else //5..8: makes compiler happy
-          Result := ReverseQuadWordBytes(Buffer, Len);
-      end
-    end else
-      Result := RawToIntDef(Buffer, 0);
+  else if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then begin
+    {$R-}
+    Len := FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    case Len of
+      1: Result := PByte(Buffer)^;
+      2: Result := ReverseWordBytes(Buffer);
+      3, 4: Result := ReverseLongWordBytes(Buffer, Len);
+      else //5..8: makes compiler happy
+        Result := ReverseQuadWordBytes(Buffer, Len);
+    end
+  end else
+    Result := RawToIntDef(Buffer, 0);
 end;
 
 {**
@@ -652,20 +654,19 @@ begin
 
   if LastWasNull then
     Result := 0
-  else
-    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then begin
-      {$R-}
-      Len := FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-      {$R+}
-      case Len of
-        1: Result := PByte(Buffer)^;
-        2: Result := ReverseWordBytes(Buffer);
-        3, 4: Result := ReverseLongWordBytes(Buffer, Len);
-        else //5..8: makes compiler happy
-          Result := ReverseQuadWordBytes(Buffer, Len);
-      end
-    end else
-      Result := RawToInt64Def(Buffer, 0);
+  else if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then begin
+    {$R-}
+    Len := FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    case Len of
+      1: Result := PByte(Buffer)^;
+      2: Result := ReverseWordBytes(Buffer);
+      3, 4: Result := ReverseLongWordBytes(Buffer, Len);
+      else //5..8: makes compiler happy
+        Result := ReverseQuadWordBytes(Buffer, Len);
+    end
+  end else
+    Result := RawToInt64Def(Buffer, 0);
 end;
 
 {**
@@ -689,20 +690,19 @@ begin
 
   if LastWasNull then
     Result := 0
-  else
-    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then begin
-      {$R-}
-      Len := FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-      {$R+}
-      case Len of
-        1: Result := PByte(Buffer)^;
-        2: Result := ReverseWordBytes(Buffer);
-        3, 4: Result := ReverseLongWordBytes(Buffer, Len);
-        else //5..8: makes compiler happy
-          Result := ReverseQuadWordBytes(Buffer, Len);
-      end
-    end else
-      Result := RawToUInt64Def(Buffer, 0);
+  else if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then begin
+    {$R-}
+    Len := FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    case Len of
+      1: Result := PByte(Buffer)^;
+      2: Result := ReverseWordBytes(Buffer);
+      3, 4: Result := ReverseLongWordBytes(Buffer, Len);
+      else //5..8: makes compiler happy
+        Result := ReverseQuadWordBytes(Buffer, Len);
+    end
+  end else
+    Result := RawToUInt64Def(Buffer, 0);
 end;
 
 {**

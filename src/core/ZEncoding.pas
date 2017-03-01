@@ -2603,7 +2603,7 @@ begin
     Result := ''
   else
   begin
-    US := {$IFDEF WITH_RAWBYTESTRING}ZWideString{$ELSE}UTF8Decode{$ENDIF}(Src);
+    US := PRawToUnicode(Pointer(Src), Length(Src), zCP_UTF8);
     Result := ZUnicodeToRaw(US, ZOSCodePage);
   end;
 end;
@@ -2629,7 +2629,7 @@ begin
     Result := ''
   else
   begin
-    US := {$IFDEF WITH_RAWBYTESTRING}ZWideString{$ELSE}UTF8Decode{$ENDIF}(Src);
+    US := PRawToUnicode(Pointer(Src), Length(Src), zCP_UTF8);
     Result := ZUnicodeToRaw(US, CP);
   end;
 end;

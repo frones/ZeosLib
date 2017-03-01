@@ -1978,7 +1978,7 @@ function RawSQLDateToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
 var
   Year, Month: Int64;
   Day: Word;
-  DateFormat: PAnsiChar;
+  DateFormat: PChar;
 
   procedure TryExtractDateFromFormat(Value: PAnsiChar);
   var
@@ -2136,7 +2136,7 @@ var
   Hour, Minute: Int64;
   Sec, MSec: Word;
   Code: Integer;
-  TimeFormat: PAnsiChar;
+  TimeFormat: PChar;
 
   procedure TryExtractTimeFromFormat(Value: PAnsiChar);
   var
@@ -2147,7 +2147,7 @@ var
     if not Failed then
     begin
       Hour := 0; Minute := 0; Sec := 0; MSec := 0;
-      Failed := ( ZFormatSettings.TimeFormatLen = 0 ) and not (ValLen <= ZFormatSettings.TimeFormatLen-4);
+      Failed := ( ZFormatSettings.TimeFormatLen = 0 ) and not (ValLen <= Byte(ZFormatSettings.TimeFormatLen-4));
       if not Failed then
       begin
         for i := 0 to ZFormatSettings.TimeFormatLen-1 do
@@ -2321,7 +2321,7 @@ var
   Year, Month: Int64;
   Day, Hour, Minute, Sec, MSec: Word;
   YPos, MPos, HPos: Integer;
-  TimeStampFormat: PAnsiChar;
+  TimeStampFormat: PChar;
 
   procedure CheckFailAndEncode;
   begin
@@ -2355,7 +2355,7 @@ var
     Failed := ZFormatSettings.DateTimeFormatLen = 0;
     if not Failed then
     begin
-      Failed  := (ValLen <= ZFormatSettings.DateTimeFormatLen-4);
+      Failed  := (ValLen <= Byte(ZFormatSettings.DateTimeFormatLen-4));
       if not Failed then
       begin
         Year := 0; Month := 0; Day := 0;
@@ -2691,7 +2691,7 @@ function DateTimeToRawSQLDate(const Value: TDateTime;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
-  DateFormat: PAnsiChar;
+  DateFormat: PChar;
   PA: PAnsiChar;
   YearSet: Boolean;
 begin
@@ -2728,7 +2728,7 @@ begin
         end;
       else
       begin
-        (PA+i)^ := (DateFormat+i)^;
+        PByte(PA+i)^ := Ord((DateFormat+i)^);
         Dec(i);
       end;
   end;
@@ -2746,7 +2746,7 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
-  DateFormat: PAnsiChar;
+  DateFormat: PChar;
   PW: PWideChar;
   YearSet: Boolean;
 begin
@@ -2783,7 +2783,7 @@ begin
         end;
       else
       begin
-        PWord(PW+i)^ := Word((DateFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
+        PWord(PW+i)^ := Ord((DateFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
         Dec(i);
       end;
   end;
@@ -2802,7 +2802,7 @@ function DateTimeToRawSQLTime(const Value: TDateTime;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
-  TimeFormat: PAnsiChar;
+  TimeFormat: PChar;
   PA: PAnsiChar;
   ZSet: Boolean;
 begin
@@ -2846,7 +2846,7 @@ begin
         end;
       else
       begin
-        (PA+i)^ := (TimeFormat+i)^;
+        PByte(PA+i)^ := Ord((TimeFormat+i)^);
         Dec(i);
       end;
     end;
@@ -2864,7 +2864,7 @@ function DateTimeToUnicodeSQLTime(const Value: TDateTime;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
-  TimeFormat: PAnsiChar;
+  TimeFormat: PChar;
   PW: PWideChar;
   ZSet: Boolean;
 begin
@@ -2908,7 +2908,7 @@ begin
         end;
       else
       begin
-        PWord(PW+i)^ := Word((TimeFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
+        PWord(PW+i)^ := Ord((TimeFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
         Dec(i);
       end;
     end;
@@ -2927,7 +2927,7 @@ function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
-  TimeStampFormat: PAnsiChar;
+  TimeStampFormat: PChar;
   ZSet, YearSet: Boolean;
   PA: PAnsiChar;
 begin
@@ -2993,7 +2993,7 @@ begin
         end;
       else
       begin
-        (PA+i)^ := (TimeStampFormat+i)^;
+        PByte(PA+i)^ := Ord((TimeStampFormat+i)^);
         Dec(i);
       end;
     end;
@@ -3011,7 +3011,7 @@ function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
-  TimeStampFormat: PAnsiChar;
+  TimeStampFormat: PChar;
   ZSet, YearSet: Boolean;
   PW: PWideChar;
 begin
@@ -3077,7 +3077,7 @@ begin
         end;
       else
       begin
-        PWord(PW+i)^ := Word((TimeStampFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
+        PWord(PW+i)^ := Ord((TimeStampFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
         Dec(i);
       end;
     end;

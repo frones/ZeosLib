@@ -161,7 +161,7 @@ begin
 end;
 
 const
-  BoolArray: array[Boolean, Boolean] of PAnsiChar = (('N', 'Y'),('0','1'));
+  BoolArray: array[Boolean] of PAnsiChar = ('N', 'Y');
 
 procedure TZSQLiteCAPIPreparedStatement.BindInParameters;
 var
@@ -180,8 +180,12 @@ begin
     begin
       case InParamTypes[I-1] of
         stBoolean:
-          FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            BoolArray[fBindOrdinalBoolValues][ClientVarManager.GetAsBoolean(InParamValues[i-1])], 1, nil);
+          if fBindOrdinalBoolValues then
+            FErrorcode := FPlainDriver.bind_int(FStmtHandle, i,
+              Ord(ClientVarManager.GetAsBoolean(InParamValues[i-1])))
+          else
+            FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+              BoolArray[ClientVarManager.GetAsBoolean(InParamValues[i-1])], 1, nil);
         stByte, stShort, stWord, stSmall, stInteger:
           FErrorcode := FPlainDriver.bind_int(FStmtHandle, i,
             ClientVarManager.GetAsInteger(InParamValues[i-1]));

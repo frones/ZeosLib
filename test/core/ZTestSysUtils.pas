@@ -379,7 +379,7 @@ const
   Date4_3 = RawByteString('36525.0a');
 
   procedure TestRawSQLDateToDateTime(Value: RawByteString;
-    const Expected: TDateTime; const ExpFailed: Boolean; const DateFormat: RawByteString = '');
+    const Expected: TDateTime; const ExpFailed: Boolean; const DateFormat: String = '');
   var
     Failed: Boolean;
     ZFormatSettings: TZFormatSettings;
@@ -462,7 +462,7 @@ const
   Time5_3 = RawByteString('00000000000.999999988425926');
 
   procedure TestRawSQLTimeToDateTime(Value: RawByteString;
-    const Expected: TDateTime; const ExpFailed: Boolean; const TimeFormat: RawByteString = '');
+    const Expected: TDateTime; const ExpFailed: Boolean; const TimeFormat: String = '');
   var
     Failed: Boolean;
     ZFormatSettings: TZFormatSettings;
@@ -593,7 +593,7 @@ const
   TimeStamp4_3 = RawByteString('36525.99u999988425926');
 
   procedure TestRawSQLTimeStampToDateTime(Value: RawByteString;
-    const Expected: TDateTime; const ExpFailed: Boolean; const DateTimeFormat: RawByteString = '');
+    const Expected: TDateTime; const ExpFailed: Boolean; const DateTimeFormat: String = '');
   var
     Failed: Boolean;
     ZFormatSettings: TZFormatSettings;
