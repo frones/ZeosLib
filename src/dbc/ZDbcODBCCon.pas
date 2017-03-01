@@ -503,7 +503,7 @@ begin
 
   SetLength(OutConnectString, 1024);
   try
-    CheckDbcError(fPLainDriver.DriverConnect(fHDBC, {$IFDEF MSWINDOWS}{%H-}Pointer(GetDesktopWindow){$ELSE}Application.Handle{$ENDIF},
+    CheckDbcError(fPLainDriver.DriverConnect(fHDBC, {$IFDEF MSWINDOWS}{%H-}Pointer(GetDesktopWindow){$ELSE}nil{$ENDIF},
       Pointer(tmp), Length(tmp), Pointer(OutConnectString),
       Length(OutConnectString), @aLen, DriverCompletion));
     SetLength(OutConnectString, aLen);
