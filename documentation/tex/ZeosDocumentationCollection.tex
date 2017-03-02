@@ -1,0 +1,442 @@
+\documentclass[a4paper,12pt,oneside]{book}
+%\usepackage{geometry}
+%\usepackage{fancyhdr}
+%\usepackage{amsmath,amsthm,amssymb }
+\usepackage{graphicx}
+%\usepackage{lipsum}
+\usepackage[utf8]{inputenc}
+%\usepackage{ngerman}
+%\usepackage{parskip}
+\usepackage{textcomp}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{placeins}
+
+\setlength{\parskip}{0.2cm}
+
+\hypersetup{
+    pdfborder = {0 0 0},		
+}
+
+% Hurenkinder und Schusterjungen verhindern
+\clubpenalty10000
+\widowpenalty10000
+\displaywidowpenalty=10000
+
+\pagestyle{plain}
+
+\title{Zeos Documentation Collection}
+\author{Jan Baumgarten}
+\date{\today}
+%\overfullrule=2mm
+\begin{document}
+\maketitle
+\tableofcontents
+
+\chapter{Introduction}
+This document is an effort to combine all the available Zeos documentation in one Manual.
+It includes a tutorial as found on the Internet and several other pieces.
+It is started in the hopes that it somehow will evolve into a kinda manual.
+
+\part{A ZEOS basics tutorial not only for Firebird ...}
+This tutorial was originally written by Michael Seeger.
+
+\chapter{Preface}
+The ZeosLib DBOs 6.1.5 - With Delphi 7 and Firebird 1.5.
+This little article shows how to access Firebird databases by using the ZEOS component Library in version 6.1.5 (including Patches 1\&2) and how to use these components in database applications.
+It does not matter if you use the "real" SQL-Server or the embedded version which is restricted to local held databases.
+A couple of examples (also migrated Delphi-BDE demos) shall explain how to use the ZEOS
+components.
+
+Although this article describes the usage of the ZEOS Library using Firebird, all the basics can be used with other SQL servers / databases that are supported by ZEOS.
+
+Note: The Firebird Server can be downloaded from download section of
+http://www.ibphoenix.com
+http://www.firebirdsql.org
+
+\chapter{The ZEOS Library}
+The name "ZEOS" has no special meaning. The founders of ZEOS found that this name just sounded good.
+Since that time the Library is called "ZEOS".
+
+Generally we can say about the ZEOS Library that the developers are inteneded to
+copy the functions and the behaviour of the corresponding BDE components as good
+as possible.
+The intention is to minimize the learning courve for developers who
+migrate from BDE to ZEOS.
+Of course there must have been made some compromises so that they are not a hundred percent compatible because the ZEOS components shall be applicable universally.
+
+The ZEOS Library in version 6.1.5 consists of the following nine components
+which shall be introduced in the following:
+\begin{itemize}
+\item TZConnection
+\item TZQuery
+\item TZReadOnlyQuery
+\item TZUpdateSQL
+\item TZTable
+\item TZStoredProc
+\item TZSQLProcessor
+\item TZSQLMonitor
+\item TZSQLMetadata
+\end{itemize}
+
+\chapter{Installing the ZEOS Library and additional stuff}
+
+The installation of the ZEOS Library under Delphi 7 professional is not that complicated.
+Once the current ZEOS version and all the patches (while writing this article it was library version 6.1.5 and the corresponding patches 1\&2) are downloaded and unzipped into a directory of your choice completely you only have to follow the installation instructions (note: Firebird does not need any additional DLL's, here!):
+
+Open the delphi project group ZeosDbo.bpg from subdirectory packages\textbackslash delphi7 ZeosDbo.bpg and install
+the following components in given order:
+\begin{itemize}
+\item ZCore.bpl
+\item ZParseSql.bpl
+\item ZPlain.bpl
+\item ZDbc.bpl
+\item ZComponent.bpl
+\end{itemize}
+
+Note: If there occur some errors while compiling that say that a certain dcu file could not be found then just add the subdirectory packages\textbackslash delphi7\textbackslash build to delphis library path.
+All dcu files that are created while compilation are located here.
+
+Attention: The client library of Firebird Server version 1.5.1 (not embedded!) was delivered as "gds32.dll" and not "fbclient.dll".
+This causes trouble while accessing via ZEOS because the protocol "firebird1.5" assumes a DLL named "fbclient.dll".
+A workaround is to copy the "gds32.dll" and rename this copy to "fbclient.dll".
+
+\chapter{Basics: Transactions}
+Some mandatory basics about transactions have to be told in order to understand how the TZConnection
+component works internally and how to work with it.
+
+In general: You only can have access to a database within the context of a valid ("running") transaction.
+A transaction has to fulfill the following four characteristics that are known as ACID characteristics of a transaction.
+
+Atomicity: All actions performed on a database have to be executed successfully.
+If only one error occurs then the original state of the database has to be restored.
+According to the principle "all or nothing".
+
+Consitency: A transaction transfers a database from one consitent state to an other consistent state.
+If an error occurs then the original state of the database has to be restored.
+
+Isolation: A transaction has to be handled by the server as if it was the only one running.
+This means it has to run indepently from other transactions.
+A user must not notice the changes done by other users.
+
+Durability: Changes in the dataset of a database that are caused by SQL statements that are executed between the start of a transaction and a COMMIT have to be fixed irrevocably.
+
+Transactions encapsulate consecutive accesses on a database.
+A database access may be of reading or writing nature (INSERT, UPDATE, DELETE) or it may change the structure of a database.
+Transactions are terminated by COMMIT or ROLLBACK.
+COMMIT confirms all changes in a database since the start of a transaction.
+ROLLBACK resets all changes in a database since the start of a transaction.
+
+Transactions running on the server have to be isolated from each other.
+So they may run independently.
+A transaction has to be handled by the server as it was the only one that is currently running.
+This means for the user that he must never see the changes of other users while he is in a running transaction because the other changes have nothing to do with his transaction.
+This is called the isolation of a transaction.
+By using different transaction isolation levels (TILs) the developer may protect the data of an SQL resultset from access by other transactions.
+The behaviour described above is called the standard isolationlevel known as SERIALIZABLE.
+The standard isolationlevel of Firebird is called SNAPSHOT and comes very close to SERIALIZABLE.
+
+\chapter{The Zeos Components}
+
+\section{TZConnection}
+The TZConnection component is a combination of a BDE TDatabase like component a component that
+handles a transaction.
+This combination makes sense because all access to a Firebird database (and also other databases) is always made in a running transaction.
+Such a transaction is startet by the ZEOS Library whenever a connection (method Connect of TZConnection) to a database is opened.
+This causes that each database access is done within the context of a running transaction, automatically.
+The so called AutoCommit mode is always on (set to "True").
+This is also the standard behaviour of the corresponding BDE component.
+If AutoCommit is activated then every change of an SQL statement will be confirmed in the
+database by COMMIT ater its successfull execution.
+If this behaviour shall be turned off and an explicit transaction shall be started then the method StartTransaction has to be called.
+Within this explicit transaction it is possible to execute a couple of SQL statements that make changes to the database, in succession.
+These statements then can be confirmed as a "group" by COMMIT.
+If an explicit transaction is active then AutoCommit is always turned off.
+By Calling the Method Commit all the changes made within this explicit transaction are confirmed.
+Calling the method Rollback resets these changes.
+In both cases AutoCommit will be set to True when the method call (Commit or Rollback) is done.
+The explicit transaction has ended.
+
+\subsection{Retaining}
+After confirming the chanes made in a transaction by COMMIT or resetting them by ROLLLBACK the
+transaction normally is going to be ended and an existing resultset of a query or stored procedure will be discarded.
+These COMMITs and ROLLBACKs are called "hard" commit or "hard" rollback.
+By using the ZEOS library this will become a little bit different.
+ZEOS keeps the resultset alive.
+This is achieved by closing transaction with "soft" commits or "soft" rollbacks.
+All this is done by the TZConnection object.
+This method is called retaining.
+The COMMIT and ROLLBACK commands are executed with the addition RETAINING.
+Retaining causes the closing of the current transaction and immediately opening a new transaction with all the data and resources (especially the resultset) of the "old" transaction.
+
+Retaining becomes a problem if it is uses for huge tables.
+It constrains the internal cleanup mechanism of firebird (garbage collection).
+This leads (because of the versioning and the multigenerational architecture of Firebird) to a lot of old records that have to be kept but will not be needed anymore.
+This influences the server's performanced in a negative way.
+A so called sweep would discard these old versions and improve the performance.
+This sweep will only be executed by sending a "hard" COMMIT or ROLLBACK.
+The ZEOS Library only executes these "hard" commands when ending the database connection (closing connection).
+It is not possible to send them while a database connection is active. So the database connection should be deactivated and immediately activated occasionally to achieve this performance improvement.
+
+\subsection{Transaction Isolation Levels of TZConnection}
+
+The TZConnection component provides four useful and predefined Transaction Isolation Levels (TIL):
+
+tiRepeatableRead:
+It corresponds to the TIL "SNAPSHOT" which is the standard of Firebird servers.
+It is a combination of the trasaction parameters "concurrency" and "nowait".
+A snapshot of the current database is made.
+Other users are only influenced (constrained) if two transactions work on one record simultaneously.
+If conflicts arise while accessing data an error message will be returned.
+Changes within other transactions will not be noticed.
+This TIL covers the requirement of the SQL standard (SERIALIZABLE) widely.
+
+tiReadCommitted:
+It corresponds to the TIL "READ COMMITTED".
+It is a combination of the transaction parameters "read\_committed", "rec\_version" and "nowait".
+This TIL recognizes all changes in other transaction that have been confirmed by COMMIT.
+The parameter "rec\_version" is responsible for the behaviour that the most current values that were committed by other users will be considered.
+The parameter "nowait" is resposible for the behaviour that there is no waiting for the release of a locked record.
+So the server is more stressed than in TIL tiRepeatableRead because it has to do all the refreshes to get these values again and again.
+
+tiSerializable:
+It corresponds to the TIL "SNAPSHOT TABLE STABILITY".
+It is used to get an exclusive access to the result set.
+Realized by transaction parameter "consistency" it prevents that "foreign" transaction may access the written data.
+Only the transaction which has written the data may access them.
+This prevents also a multi user access to the written data.
+Because this TIL is very restrictive by accessing written data it should be applied with caution and care.
+
+tiNone: No TIL is used to isolate the transaction.
+
+The TIL tiReadUncommitted is not supported by Firebird.
+If this TIL is used, an error will be triggerded and the transaction will not be isolated (like using tiNone).
+
+\subsection{Recommendation}
+It is advisable to isolate transactions with transaction isolation level tiRepeatableRead (the Firebird standard).
+This TIL covers the requirement of the SQL standard (SERIALIZABLE) widely.
+It prevents all problems concerning consistency that may arise by using transactions.
+Second choice would be tiReadCommitted but this depends on the application and the necessity if the reseult set always has to be current.
+
+\subsection{Customizing TILs}
+
+If you want to customize your TILs or expand a given TIL then you can do this by using the parameters of TZConnection.
+The most important thing about this is that the TIL that should be expanded has to be set in
+property IsolationLevel.
+If it is set the TIL parameters (see IB/FB API reference) you want to add may be added in sourcecode.
+The following example shows the expansion of a TIL preset to tiNone:
+\begin{verbatim}
+ZConnection.TransactIsolationLevel := tiNone;
+ZConnection.Properties.Add('isc\_tpb\_concurrency');
+ZConnection.Properties.Add('isc\_tpb\_wait');
+ZConnection.Connect;
+\end{verbatim}
+
+\subsection{Protocol}
+The most important setting in a TZConnection object is the server protocol it is set in property Protocol.
+It determines which protocol shall be used and thus which SQL server will be accessed.
+This method makes ZEOS so flexible.
+You don't have to install special components for each database you want to access as it was in Versions 5.x and earlier.
+The components will be installed once.
+This is enough.
+You only choose the protocol for the supported SQL server you want to access and you are done.
+So you set protocol "firebird1.5" to access Firebird 1.5 server.
+
+\subsection{Read-Only-Connection}
+
+The database connection maintained by a TZConnection object is set to read only by default (ReadOnly = True).
+This means that no writing access to the connected database is allowed.
+To get writing access to the database you have to set ReadOnly to False.
+
+\subsection{Codepages}
+Codepages will be determined by setting parameter "lc\_ctype" or "Codepage" in TZConnection.
+This parameter must be added to the property Properties. E. g.:
+\begin{verbatim}
+ZConection.Properties.Add ('lc\_ctype=ISO8859\_1');
+\end{verbatim}
+or
+\begin{verbatim}
+ZConnection.Properties.Add ('Codepage=ISO8859\_1');
+\end{verbatim}
+
+Note: The Codepage support of Firebird (also embedded version) in version 1.5 with ZEOS is a little bit buggy. These bugs are corrected in Firebird version 1.5.1.
+
+\subsection{Features of the Firebird embedded server}
+
+Normally the server name or IP address of the server is given in property HostName.
+By using a Firebird embedded server you may leave this property empty.
+Only property Database has to be determined.
+Here you have to specify drive path and name of the database including extension.
+
+An other feature of the embedded server is that you may specify any login name with a pasword of your choice.
+It doesn't matter what you choose you will get connected.
+
+Setting the TZConnection object property Connected to True in designtime is extremely bad if you don't reset it to False before compiling.
+If you then start the compiled application with IDE running you will get an error that says that the database cannot be opened because it is already in use.
+So you should establish the connection to the database when starting the application (e. g. in OnCreate event of the main form) and then open the needed queries and tables.
+Deactivating the connection should also be done in main form (e. g. in OnDestroy).
+It is not necessary to close all open queries and tables.
+This will be done when closing the connection of the TZConnection object.
+If you use datamodel forms you have to take care that the datamodel form is created before the main form is created (set in the IDE's project options)...
+
+\subsection{Useful TZConnection parameters}
+
+Additional parameters for establishing connections to Firebird databases are:
+
+CreateNewDataBase:
+A new database will be created based on the specified CREATE DATABASE statements.
+When the database is created the connection will be established immediately.
+All this happens by calling the Connect method of TZConnection.
+\begin{verbatim}
+ZConnection1.Database := 'd:\db1.fdb';
+ZConnection1.Protocol := 'firebird-1.5';
+ZConnection1.Properties.Add ('CreateNewDatabase=CREATE DATABASE ' + QuotedStr ('d:\db1.fdb') + ' USER ' + QuotedStr ('sysdba') + ' PASSWORD ' + QuotedStr ('masterkey') + ' PAGE\_SIZE 4096 DEFAULT CHARACTER SET ISO8859\_1');
+ZConnection1.Connect;
+\end{verbatim}
+
+To execute this correctly you have to set the Database and Protocol properties at minimum (also possible in objectinspector).
+
+Dialect:
+This parameter sets Firebird's SQL dialiect. To set dialect "1" you have to use the following code:
+\begin{verbatim}
+ZConnection.Properties.Add ('Dialect=1');
+\end{verbatim}
+
+The dialect of Firebird 1.5.x is set to "3" by default.
+
+Rolename:
+This parameter sets a rolename. A logged in user then works in the context of the role's rights but before the user has to be assigned to this role.
+The Firebird embedded server does not support this feature.
+
+\section{TZQuery}
+
+The usage of TZQuery is similar to the usage of BDE's TQuery component.
+
+\subsection{Recommandation: RequestLive and TZUpdateSQL}
+If an SQL dataset shall be updatable then RequestLive has to be set to true and you should generally use according update SQL statements that will be defined in TZUpdateSQL.
+If this is done just assign TZUpdateSQL to the TZQuery object.
+Now all changes that will be made in the result set will be done to the database by using the defined statements of TZUpdateSQL.
+According to experience RequestLive mode runs more smoothly by using TZUpdateSQL.
+
+\subsection{Usage of parameters in SQL statements}
+
+Using parameters in SELECT statments is as easy as using them with BDE's TQuery.
+If TZQuery has a result set then you have to use the Open method.
+If you want to execute an SQL statement which has no result set (e. g.: INSERT or UPDATE) you have to use ExecSQL (see also: TZStoredProc).
+
+\section{TZReadOnlyQuery}
+
+This is a Query component that is quite similar to the TZQuery component.
+There is just one difference:
+The result set is read only.
+There is no possibility to assign a TZUpdateSQL object.
+
+\section{TZUpdateSQL}
+
+A TZUpdateSQL object provides statements to modify the data of a result set that is retrieved by a TZQuery object.
+The TZUpdateSQL component is comparable to BDE's TUpdateSQL component.
+Here is an example how to define the statements of an SQL statement with corresponding update statements (based on a dialect 3 database):
+
+SQL: SELECT * FROM names
+
+UpdateSQL.InsertSql: INSERT INTO names (recno, name) VALUES (:recno, :name)
+
+UpdateSQL.ModifySql: UPDATE names SET recno = :RecNo, name = :name WHERE recno = :old\_recno
+
+UpdateSQL.DeleteSql: DELETE FROM names WHERE recno = :old\_recno
+
+\subsection{The "OLD\_" parameter prefix for SQL statements}
+
+The "old\_" prefix is handled according to the handling with BDE components.
+By using "OLD\_" as prefix for a fieldname you are able to access the value of the field before it was changed.
+This is very helpful if you have to compare fieldvalues in a WHERE clause.
+
+\subsection{Queries with read only resultsets}
+In geneal a TZUpdateSQL object is assigned to a TZQuery object that has a read only resultset.
+This makes it possible to change its data.
+Such read only queries are queries that join multiple tables.
+But also with "normal" "RequestLive" resultsets you may use TZUpdateSQL (see: TZQuery).
+
+\subsection{Multiple statements in TZQuery and TZUpdateSQL}
+The components TZQuery and TZUpdateSql provide the possibility to execute multiple statements, internally.
+So it is possible to place multiple SQL statements (even with parameters) for execution in SQL property.
+They only have to be separated by semicolon. Here an example:
+\begin{verbatim}
+:
+With Query do Begin
+Sql.Clear;
+Sql.Add('DELETE FROM table1;');
+Sql.Add('INSERT INTO table1 VALUES (:Val1, :Val2);');
+Sql.Add('INSERT INTO table2 VALUES (:Val3, :Val2);');
+Sql.Add('UPDATE table3 SET field1 = :Val4;');
+Params.ParamByName('Val1').AsInteger := 123;
+:
+ExecSql;
+End;
+:
+\end{verbatim}
+
+The statements will be executed in given order.
+It is also possible to execute multiple statements if they are grouped in this manner inside multiple TZUpdateSqlObjects in order to update multiple tables.
+
+\section{TZTable}
+TZTable acts like BDE's TTable.
+As a principle you only should use TZTable in a C/S application if you have very small tables because all records of the table will be transferred from server into client's memory by
+opening the TZTable.
+This is a bahaviour similar to a "SELECT * FROM XYZ" statement.
+You should even prevent a statement like this in a C/S application.
+The intension is to keep the resultset that has to be transferred from server to client as small as possible (perferably onle one record).
+
+\section{TZStoredProc}
+TZStoredProc provides the possiblity to execute stored procedures that are saved in a database.
+There are two kinds of stored procedures: Procedures that return a resultset and procedures that do not return a resultset.
+TZStoredProc works similar to BDE's TStoredProc.
+The only difference between them is that you don't have to call Prepare before you call the ExecProc method.
+
+\subsection{Stored Procedures with Resultsets}
+
+If a stored procedure returns a result set then it will be activated by calling the Open method (when all existing parameters have got their values):
+
+\begin{verbatim}
+:
+With spSumByName do Begin
+Close;
+ParamByName ('Name').Value := 'DontKnowHow';
+Open;
+End;
+:
+\end{verbatim}
+
+The resultset can be worked on like a resultset of a TZQuery.
+
+\subsection{Stored Procedures without Resultsets}
+
+If a stored procedure has no resultset then it will be executed by calling the ExecProc method (when all existing parameters have got their values).
+Here is an example (conConnection.AutoCommit = True):
+
+\begin{verbatim}
+:
+With spDeleteByName do Begin
+  ParamByName ('Name').Value := 'DontKnowHow';
+  conConnection.StartTransaction
+  Try
+    // execute StoredProc
+    ExecProc;
+  Except
+    conConnection.Rollback;
+  End;
+  conConnection.Commit;
+End;
+:
+\end{verbatim}
+
+\subsection{Problems with TZStoredProc when using dialect 1 databases}
+The problem when using dialect 1 databases is that the metadata of stored proecedure is not properly
+transferred to the TZStoredProc objects when choosing the stored procedure in object inspector.
+All parapeter data is not properly interpreted.
+An update from dialect 1 to dialect 3 solves this problem.
+Is the dialect 1 database vital for the application system then a TZQuery or TZReadOnlyQuery has to be used as workaround.
+
+
+
+\end{document}
