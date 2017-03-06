@@ -437,6 +437,213 @@ All parapeter data is not properly interpreted.
 An update from dialect 1 to dialect 3 solves this problem.
 Is the dialect 1 database vital for the application system then a TZQuery or TZReadOnlyQuery has to be used as workaround.
 
+\section{TZSQLMonitor}
+Using the TZSQLMonitor component you may log certain actions or events of the ZEOS database
+components. The journal may be written as file or collected in a TMemo object or something like that.
+
+Writing the actions or events to a logfile only needs a few settings:
+
+\begin{verbatim}
+:
+sqlMonitor.FileName := 'C:\Log\MyAppLog.log';
+sqlMonitor.Active := True;
+sqlMonitor.AutoSave := True;
+:
+\end{verbatim}
+
+To collect the logged actions or events in a TMemo object you have to implement the OnLogTrace event as
+follows:
+
+\begin{verbatim}
+Procedure Tfrm_MyApp.sqlMonitorLogTrace (Sender: TObject; 
+  Event: TZLoggingEvent);
+Begin
+  If Trim (Event.Error) > '' Then
+    memMontor.Lines.Add (DateTimeToStr (Event.Timestamp) + ': ' 
+		      + Event.Message + #13#10 + ' Error: ' + Event.Error)
+  Else
+    memMontor.Lines.Add (DateTimeToStr (Event.Timestamp) + ': ' 
+		      + Event.Message);
+End; // sqlMonitorLogTrace
+\end{verbatim}
+
+The OnLogTrace event is always triggered when an action or event was logged by sqlMonitor.LogEvent(oEvent).
+The oEvent parameter stands for an instance of a TZLoggingEvent class object.
+
+\subsection{Properties of TZLoggingEvent}
+Category (TZLoggingCategory): Stands for the category of the logged action or event (lcConnect,
+lcDisconnect, lcTransaction, lcExecute or lcOther)
+
+Protocol (String): The protocol that is used to access the database (see: TZConnection)
+
+Message (String): The text that is logged.
+
+ErrorCode (Integer): The error code in case of an error.
+
+Error (String): The error text in case of an error.
+
+Timestamp (TDateTime): Date and time of the logged action or event.
+
+\section{TZSQLMetadata}
+With this special TDataSet component it is possible to access the metadata of a database like tables, columns, etc.
+(This chapter is still to be expanded!)
+
+\section{TZIBEventAlerter}
+By using this component you are able to intercept events triggered by stored procedures of a Firebird
+database and react to them.
+You only have to register the event's text (string) you want to react to in property Events which is a stringlist.
+You can do this using objectinspector or inside the sourcecode.
+The event alerter is activated by registering the listed events.
+To do this you should call the Registerevents method because the Properties AutoRegister and Registered do not work properly.
+If you once have registered the events the component is able to react to them.
+All events are unregistered (deleted) by calling method UnregisterEvents and the event alerter is turned off.
+
+Registration of events and "activation" of the event alerter:
+
+\begin{verbatim}
+:
+EventAlerter.Events.Add ('Minimum Stock Level Reached');
+EventAlerter.Events.Add ('Credit Limit Exceeded');
+EventAlerter.RegisterEvents;
+:
+\end{verbatim}
+
+\chapter{Master/Detail with ZEOS Library}
+ZEOS DataSet components come with two kinds of master/detail connections:
+those with a server sided filter and those with a client sided filter.
+Both kinds and one kind in additioin that is independent from ZEOS (and thus without any comfort) will be described here.
+
+Note: If we talk about "master" or "detail" then a TDataSet descendant (TZQuery/TZReadOnlyQuery, TZTable or a TZStoredProc) is meant that accesses either a master resultset or a detail resultset of a master/detail connection.
+
+\section{Master/Detail with server sided filters}
+This method is the default behaviour of the BDE's TQuery component.
+A master/detail connection of two DataSets is established as follows:
+
+\begin{itemize}
+  \item The master's DataSource is assigned to the DataSource of the detail.
+	\item All primary key fields of the master have to be compared with the foreign key fields of the detail in the detail SQL statement.
+\end{itemize}
+
+This is an example for a simple master/detail queries. Requirement: We use TZQuery or TZReadOnlyQuery to establish the master/detail connection:
+
+\begin{itemize}
+\item Master SQL:
+\begin{verbatim}
+SELECT id, feld1, feld2, feld3
+FROM master
+\end{verbatim}
+
+\item DetailSQL:
+\begin{verbatim}
+SELECT feld1, feld2, master_id
+FROM detail
+WHERE master_id = :id
+\end{verbatim}
+\end{itemize}
+
+Parameter :id stands for the content of master's "id" field (is the primary key) because the master's DataSource is assigned to the property DataSource of the detail.
+So this parameter references to the "id" field of the master.
+The field "master\_id" in detail query is the foreign key field of the detail table which references the primary key of the master.
+
+If the cursor of the master changes its position while server sided filters are used, the SQL statement of the detail is executed using the current key values.
+So the result set of the detail is automatically refreshed.
+
+\section{Master/Detail with client sided filters}
+This is the default behaviour of a BDE TTable component.
+Here a master/detail connection between two DataSets is established as follows:
+
+\begin{itemize}
+  \item The DataSource of the master is assigned to the property MasterDataSource of the detail.
+	\item The primary key fields of the master are assigned to property MasterField of the detail.
+	\item The foreign key of the detail which references the primary key of the master is assigned to propety IndexFieldNames.
+\end{itemize}
+
+This is an example for a simple master/detail queries.
+Requirement: We use TZQuery or TZReadOnlyQuery to establish the master/detail connection:
+
+\begin{itemize}
+  \item Master SQL:
+	  \begin{verbatim}
+SELECT id, feld1, feld2, feld3
+FROM master
+    \end{verbatim}
+  \item DetailSQL:
+	  \begin{verbatim}
+SELECT feld1, feld2, master_id
+FROM detail
+WHERE master_id = :id
+    \end{verbatim}
+\end{itemize}
+
+Parameter :id stands for the content of master's "id" field (is the primary key) because the master's DataSource is assigned to the property DataSource of the detail.
+So this parameter references to the "id" field of the master.
+The field "master\_id" in detail query is the foreign key field of the detail table which references the primary key of the master.
+
+If the cursor of the master changes its position while server sided filters are used, the SQL statement of the detail is executed using the current key values.
+So the result set of the detail is automatically refreshed.
+
+\section{Master/Detail with client sided filters}
+This is the default behaviour of a BDE TTable component. Here a master/detail connection between two DataSets is established as follows:
+
+\begin{itemize}
+  \item The DataSource of the master is assigned to the property MasterDataSource of the detail.
+  \item The primary key fields of the master are assigned to property MasterField of the detail.
+  \item The foreign key of the detail which references the primary key of the master is assigned to property IndexFieldNames.
+\end{itemize}
+
+With client sided filters both DataSets first transfer all table rows from server to client.
+The detail then sets a filter (on client side) to get the details according to the current master record.
+
+In case of creating a new detail record for a master/detail connection with a client sided filter there is a kind of automatism:
+The Foreign key fields of the detail (set in property IndexFieldNames of the detail) will be filled automatically with the according (current) primary key data of the master (set in proptery MasterField of the detail).
+Note: With server sided filters you have to care about this functionality, manually in your program's code.
+This can be achieved by implementing the OnNewRecord event of the detail.
+This event is always triggered when an new record is to be created (see: Delphi online help for TDataSet).
+According to the SQL statements, defined above you only have to implement the following:
+
+\begin{verbatim}
+Procedure dmMasterDetail.qryDetailNewRecord (DataSet: TDataSet);
+Begin
+  qryDetailMASTER_ID.Value := qryMasterID.Value;
+End;
+\end{verbatim}
+
+Corresponding TFields were created for the fields "master\_id" of the detail and "id" of the master using the fieldeditor.
+
+For master/detail connections in ZEOS there is an additional option that is set in property Options: It is doAlwaysResyncDetail.
+If this option is set then the resultset of the detail is only refreshed when post is called or a record changes (both within master DataSet).
+
+\section{Master/Detail "by hand"}
+Normally you implement a master/detail connection according to the method used by server sided filters.
+The SQL statements for this look exactly like that.
+Only the properties that are set in master and detail (see above) will not be set here.
+Both TZQueris are working independently.
+This means: The detail DataSet does not recognize any changes in master DataSet.
+Its synchronzation has to be implemented, manually.
+This will be done in the OnChange event of the master.
+OnChange is triggered when changing to a new record or field data has been changed (see: Delphi online help for TDataSource).
+Synchronization of the detail (according to the example above) would be implemented like this:
+
+\begin{verbatim}
+Procedure dmMasterDetail.dsMasterDataChange (
+  Sender: TObject; Field: TField);
+Begin
+  With qryDetail do Begin
+    Close;
+    ParamByName('id').Value := qryMasterID.Value;
+    Open;
+  End;
+End;
+\end{verbatim}
+
+This is the same function that ZEOS executes automatically when using server sided filters:
+The detail query is executed (agin) with the current ID value of the master which will be assigned to parameter ":id" in the detail query.
+So the resultset of the detail will be refreshed according to the current master record.
+
+If a new record shall be created in detail DataSet then you have to act the same way as with server sided filters (see above).
+
+\chapter{Cached Updates}
+%hier
 
 
 \end{document}
