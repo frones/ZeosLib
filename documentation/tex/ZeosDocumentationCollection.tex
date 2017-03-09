@@ -643,7 +643,615 @@ So the resultset of the detail will be refreshed according to the current master
 If a new record shall be created in detail DataSet then you have to act the same way as with server sided filters (see above).
 
 \chapter{Cached Updates}
-%hier
+The developers of the ZEOS Library are intended to implement the functionality of the BDE components as good as possible.
+This is why there is also the possibility of cached updates with ZEOS.
+You only have to set the property CachedUpdates of a DataSet descendant (TZTable, TZQuery oder TZStoredProc) to true.
+From this time on all changes in the result set will be cached and they can be easily committed to the database by calling ApplyUpdates and CommitUpdates one after the other either automatically in your program code or triggered manually by a user.
+CancelUpdates causes that the canges will not be committed to the database.
+In this case all cached changes will be reset (like using a ROLLBACK).
+Here you will find a little code snippet that tries to show you how cached updates are implemented (don't argue about the sense in this...).
+AutoCommit mode of TZConnectin is turned on (True):
 
+\begin{verbatim}
+:
+With DataSet do Begin
+  bEverythingOK := True;
+  CachedUpdates := True;
+  DataSet.First;
+  While (not DataSet.EOF) and (bEverythingOK) do Begin
+  DataSet.Edit;
+  :
+  // process record
+  :
+  DataSet.Post;
+  DataSet.Next;
+  :
+  bEverythingOK := AFunctionForValidation;
+End;
+If bEverythingOK Then Begin
+  ApplyUpdates;
+  CommitUpdates;
+End
+  Else
+    CancelUpdates;
+  CachedUpdates := False;
+End;
+:
+\end{verbatim}
+\chapter{BLOB Fields}
+According to BDE's components the components of the ZEOS Library are capable of handling BLOB fields.
+Here is an example how a new record with a BLOB field is created.
+The BLOB field is filled with a bitmap.
+To achieve this we have to use a Stream:
+\begin{verbatim}
+:
+Var TheStream : TMemoryStream;
+Begin
+  TheStream := TMemoryStream.Create;
+  Try
+    Image1.Picture.Bitmap.Savetostream(TheStream);
+    With qryBlobInsert do Begin
+      Sql.Text := 'INSERT INTO EVENTS (EventNo,EVENT_PHOTO) ' 
+			          + 'VALUES (100,:ThePicture)';
+      Params.Clear;
+      Params.CreateParam(ftBlob,'ThePicture', ptInput);
+      ParamByName('ThePicture').LoadfromStream(TheStream,ftBlob);
+      ExecSQL;
+    End;
+  Finally
+    TheStream.Free;
+  End;
+End;
+:
+\end{verbatim}
+
+\chapter{Sample project: "EasyQuery"}
+To prevent being too theoretical now we will create a small sample project tho demonstrate how the ZEOS components are used in general.
+We will create a small application that accesses the tables "Customer" and "Country" of the Firebird sample datbase "Employee".
+You should be able to navigate in table "Customer" and edit its data.
+And not being too boring we will implement a DBLookupCombobox for field "Country" in table "Customer".
+This field is a foreign key that references to field "Country" in table "Country".
+
+So let's get started!
+
+First of all we have to create a new project in Delphi.
+Additionaly to the default form we have to create a DataModule.
+
+The following properties of the DataModule have to be set:
+\begin{itemize}
+\item Name: dmEasyQuery
+\end{itemize}
+
+\section{Components for the DataModule}
+\begin{figure}[htbp] 
+  \centering
+  \includegraphics[width=0.7\textwidth]{ZeosTutorial/dmEasyQuery.png}
+  \caption{dmEasyQuery}
+  \label{fig:dmEasyQuery}
+\end{figure}
+
+TZConnection:
+\begin{itemize}
+  \item Database: Employee.fdb
+  \item Name: conEmployee
+  \item Password: "password"
+  \item Protocol: firebird-1.5
+  \item ReadOnly: False
+  \item TransactionIsolationLevel: tiReadCommitted
+  \item User: "username"
+\end{itemize}
+
+TZQuery:
+\begin{itemize}
+  \item Connection: conEmployee
+  \item Name: qryCustomer
+  \item RequestLive: True
+  \item SQL: SELECT * FROM customer ORDER BY customer
+  \item UpdateObject: updCustomer
+\end{itemize}
+
+Note: You have to create persistent TFields for all tablefields using the fieldeditor!
+
+The OnAfterPost event of qryCustomer will be implemented like this:
+\begin{verbatim}
+procedure TdmEasyQuery.qryCustomerAfterPost(DataSet: TDataSet);
+begin
+  // Refresh of resultset to actualize (sort) data shown in DBGrid.
+  qryCustomer.Refresh;
+end;
+\end{verbatim}
+
+TZReadOnlyQuery
+\begin{itemize}
+  \item Connection: conEmployee
+	\item Name: roqryCountry
+	\item SQL: SELECT country FROM country ORDER BY 1
+\end{itemize}
+
+Note: You have to create persistent TFields for all tablefields using the fieldeditor!
+
+TZUpdateSQL
+\begin{itemize}
+  \item DeleteSQL: created by UpdateSql editor
+  \item InsertSQL: created by UpdateSql editor
+  \item ModifySQL: created by UpdateSql editor
+  \item Name: updCustomer
+\end{itemize}
+
+The delete-, insert- and modify-statements for the TZUpdateSQL object are created with the UpdateSQL editor, automatically.
+The editor will be activated by double clicking on the TZUpdateSQL component.
+As key field you have to select the field CUST\_NO. The fields ADDRESS\_LINE1, ADDRESS\_LINE2, CITY, STATE\_PROVINCE, COUNTRY und POSTAL\_CODE will selected as update fields in list "Update Fields".
+Now the statements will be generated by clicking button "Generate SQL" (see firgures \ref{fig:dmEasyQuery_updCustomer_options} and \ref{fig:dmEasyQuery_updCustomer_sql}).
+If you only have such easy queries you can save a lot of typing by using the UpdateSQL editor.
+If it gets a little more complex you should create the needed statements "by hand".
+
+\begin{figure}[htbp] 
+  \centering
+  \includegraphics[width=0.7\textwidth]{ZeosTutorial/dmEasyQuery_updCustomer_options.png}
+  \caption{options tab in UpdateSQL editor updCustomer}
+  \label{fig:dmEasyQuery_updCustomer_options}
+\end{figure}
+
+\begin{figure}[htbp] 
+  \centering
+  \includegraphics[width=0.7\textwidth]{ZeosTutorial/dmEasyQuery_updCustomer_sql.png}
+  \caption{SQL tab in UpdateSQL editor updCustomer}
+  \label{fig:dmEasyQuery_updCustomer_sql}
+\end{figure}
+	
+TDataSource
+\begin{itemize}
+  \item DataSet: sqlCustomer
+  \item Name: dsCustomer
+\end{itemize}
+
+TDataSource
+\begin{itemize}
+  \item DataSet: rosqlCountry
+	\item Name: dsCountry
+\end{itemize}
+
+Now the created DataModule will be saved as dm\_EasyQuery.pas.
+
+\section{Components for the form}
+\begin{figure}[htbp] 
+  \centering
+  \includegraphics[width=0.7\textwidth]{ZeosTutorial/frmEasyQuery.png}
+  \caption{EasyQuery main form}
+  \label{fig:frmEasyQuery}
+\end{figure}
+
+The main form will have the following components and is initialized as follows:
+
+Properties:
+\begin{itemize}
+  \item Caption: Easy Query Demo
+  \item Name: frmEasyQuery
+\end{itemize}
+
+In the Unit's interface you have to add dm\_EasyQuery to the uses clause to get access to the database components.
+
+The following events of the main form have to be implemented:
+
+OnCreate:
+When creating the form the connection to the database will be established.
+After connecting to the database the queries will be opened:
+\begin{verbatim}
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+  dmEasyQuery.conEmployee.Connect;
+  dmEasyQuery.qryCustomer.Open;
+  dmEasyQuery.roqryCountry.Open;
+end;
+\end{verbatim}
+
+OnDestroy:
+When closing the application (destroying the main form) the database connection will be cut.
+All queries will be closed automatically before disconnecting.
+\begin{verbatim}
+procedure TForm1.FormDestroy(Sender: TObject);
+begin
+  dmEasyQuery.conEmployee.Disconnect;
+end;
+\end{verbatim}
+
+TLabel
+\begin{itemize}
+  \item Caption: CUSTOMER
+\end{itemize}
+
+TDBGrid
+\begin{itemize}
+  \item DataSource: dmEasyQuery.dsCustomer
+	\item Options.dgTabs: False
+\end{itemize}
+
+In column editor we will create a TColumn setting its property FieldName to "CUSTOMER".
+After that the according column in DBGrid1 will be enlarged.
+
+\begin{figure}[htbp] 
+  \centering
+  \includegraphics[width=0.7\textwidth]{ZeosTutorial/dbgrid1_columns.png}
+  \caption{columns editor of DBGrid1}
+  \label{fig:dbgrid1_columns}
+\end{figure}
+
+TDBEdit
+\begin{itemize}
+  \item (5x)
+\end{itemize}
+
+TLabel
+\begin{itemize}
+  \item (5x)
+\end{itemize}
+
+These objects will be created by using the columneditor of qryCustomer:
+Select columns ADDRESS\_LINE1, ADDRESS\_LINE2, CITY, STATE\_PROVINCE and POSTAL\_CODE and drag and drop them onto then main form.
+Align them and adapt them to the layout you see in the screenshot (figure \ref{fig:frmEasyQuery}).
+
+TLabel
+\begin{itemize}
+  \item Caption: COUNTRY
+\end{itemize}
+
+TDBLookUpComboBox
+\begin{itemize}
+  \item DataField: COUNTRY
+	\item DataSource: dmEasyQuery.dsCustomer
+	\item KeyField: COUNTRY
+	\item ListField: COUNTRY
+	\item ListSource: dmEasyQuery.dsCountry
+\end{itemize}
+
+TDBNavigator
+\begin{itemize}
+  \item DataSource: dmEasyQuery.dsCustomer
+\end{itemize}
+
+Now the created form will be saved as frm\_EasyQuery.pas.
+
+Note: The following project options have to be changed:
+
+dmEasyQuery has to be placed on top of the creation order in list "Create automatically".
+This ensures that all objects of frmEasyQuery may access the database objects.
+frmEasyQuery is still the main form (see figure \ref{fig:EasyQuery_ProjectOptions}).
+	
+\begin{figure}[htbp] 
+  \centering
+  \includegraphics[width=0.7\textwidth]{ZeosTutorial/EasyQuery_ProjectOptions.png}
+  \caption{EasyQuery project options}
+  \label{fig:EasyQuery_ProjectOptions}
+\end{figure}
+
+\chapter{Additional Examples}
+FishFact:
+This is the most popular database demo for Delphi. It was migrated to use ZEOS components.
+
+Transactions:
+A sample application concerning "transactions with ZEOS". It uses a small self made test database.
+
+StoredProc:
+This is a sample applikation that shows how to use stored proecedures. The database is the Firebird
+Employee sample database.
+
+MasterDetail:
+A small application that shows how master/detail connections (server and client sided) will be implemented.
+
+EventDemo:
+Also a Delphi database sample that was migrated from IBX to ZEOS.
+It uses the component TIBEventAlerter.
+This application needs the database Events (shipped with Delphi) that had to be migrated to dialect 3 to get this sample running.
+
+\part{An Introduction To ZDBC API}
+This document has been recovered from the original Zeoslib Foum Knoledge Base.
+
+Zeos Database Connectivity Interface (or ZDBC for short) is a low-level API used by ZeosDBO to "hide" differences in native database client APIs and provide a uniform interface for high-level component layers. Originally, ZDBC was a port of JDBC 2.0 (Java Database Connectivity API) to Object Pascal. Since that time the API was slightly extended but the main ideas remain unchanged.
+
+The main purpose of ZDBC is to be an intermediate layer in ZeosDBO. But it is also useful for application programming as it provides extremely light and fast access to SQL databases.
+
+The best way to master ZDBC is to study the JDBC 2.0 specification http://java.sun.com/products/jdbc/jdbc20.pdf and then use analogy to convert JDBC abstractions and calls to ZDBC. To understand the role of ZDBC API in ZeosDBO architecture you may look at the Architecture Overview document http://www.zeoslib.net/modules.php?name=News\&file=article\&sid=23\&mode=\&order=0\&thold=0 For those who prefer a simpler introduction to ZDBC we propose a "hackers" guide as a starting point. 
+
+\chapter{Pros and Cons of using ZDBC}
+Before coding let's think why and when we should use ZDBC. Using ZDBC in applications has some clear benefits:
+\begin{itemize}
+  \item It's extremely fast and lightweight.
+  \item It's database independent and supports many SQL servers. All supported SQL databases in ZeosDBO have correspondent ZDBC drivers.
+  \item It does not require DB unit to be present. Some Personal Editions of Borland compilers do not include the DB unit with the TDataset implementation. This prevents the use of ZeosDBO components with these compilers.
+\end{itemize}
+
+There are also a few disadvantages which you need to consider carefully: 
+\begin{itemize}
+  \item It's not portable. You won’t be able to switch to other products without major changes in your applications (except Java and JDBC of course).
+  \item It doesn't provide binding with data-aware visual controls. Implementation of such bindings manually can be a Herculean job.
+  \item It doesn't contain all functionality of TDatasets such as client-side filtering, master-detail linking, sorting, etc.
+\end{itemize}
+
+So, from our point of view usage of ZDBC makes sense only in few special situations (of course you may have your personal opinion):
+\begin{itemize}
+  \item Your application is a console type application or does not allow users to edit relational data directly.
+  \item Database access performance is very important.
+  \item You don't care about porting your application to other database connectivity products.
+\end{itemize}
+
+\chapter{Establishing Connections}
+In JDBC/ZDBC the entry point to the API is a special DriverManager object which serves as a factory for database connections. 
+
+\begin{verbatim}
+uses ZDbcIntfs...
+...
+var
+  Connection: TZConnection;
+...
+Connection := DriverManager.GetConnection(<Connection URL>);
+...
+\end{verbatim}
+
+Connection URL also comes from JDBC and has the following format:
+\begin{verbatim}
+zdbc:<protocol>://<host>[:<port>]/<database>[?<param1>[=<value1>]...]
+\end{verbatim}
+
+Protocol is essentially the name of the ZDBC driver you want to use. ZeosDBO version 6.1 has a number of protocols:
+\begin{itemize}
+  \item MySQL: mysql, mysql-3.20, mysql-3.23, mysql-4.0
+	\item PostgreSQL: postgresql, postgresql-6.5, postgresql-7.2, postgresql-7.3
+	\item Interbase: interbase, interbase-5, interbase-6
+	\item Firebird: firebird, firebird-1.0, firebird-1.5
+	\item Sybase: sybase
+	\item MS SQL: mssql
+	\item ADO: ado
+\end{itemize}
+
+Parameters in the connection URL specify different switches for the drivers.
+There are several standard parameters for all drivers.
+For other driver-specific parameters you need to refer to the ZeosDBO documentation. 
+\begin{itemize}
+  \item username – user name to connect to the database.
+  \item password – user password to connect to the database.
+  \item defaults \[yes \| no\] – calculate default values.
+  \item update \[changed \| all\] – update only changed or all fields.
+  \item where \[keyonly \| all\] – include where clause only key or all fields.
+\end{itemize}
+
+For example, to connect to MySQL 4.0 database with the compression protocol enabled you need to write:
+\begin{verbatim}
+uses ZDbcIntfs...;
+
+...
+var
+  Connection: TZConnection;
+...
+Connection := DriverManager.GetConnection(
+  'zdbc:mysql-4.0://localhost:3306/mydb?'
+  + 'username=myuser;password=mypwd;compress=yes');
+...
+\end{verbatim}
+
+If you want, you may specify the login and password separately: 
+
+\begin{verbatim}
+...
+Connection := DriverManager.GetConnectionWithLogin(
+  'zdbc:mysql-4.0://localhost:3306/mydb'
+  + '?compress=yes', 'myuser', 'mypwd');
+...
+\end{verbatim}
+
+Or you may specify parameters in a TStringList object:
+
+\begin{verbatim}
+...
+var
+  Connection: IZConnection;
+  Params: TStrings;
+...
+Params := TStringList.Create;
+Params.Values['username'] := 'myuser';
+Params.Values['password'] := 'mypwd';
+Params.Values['compress'] := 'yes';
+
+Connection := DriverManager.GetConnectionWithParams(
+  'zdbc:mysql-4.0://localhost:3306/mydb', Params);
+\end{verbatim}
+
+\chapter{Executing SQL statements}
+We already know how to connect to our SQL database. But to do something useful you need to execute SQL statements. Let's look how to do that.
+
+The simplest way to execute static SQL statements is the following:
+\begin{verbatim}
+var
+  ...
+  Statement: IZStatement;
+  UpdatedRows: Integer;
+...
+Statement := Connection.CreateStatement;
+UpdatedRows := Statement.ExecuteUpdate(
+  'UPDATE MyTable SET MyField=''abc'' WHERE MyKey=123');
+...
+\end{verbatim}
+
+Additionally to static SQL queries you can execute queries with parameters.
+In some cases they may be more efficient because the parsing step is skipped.
+But some SQL databases like MySQL or PostgreSQL don't support that feature and queries with parameters are emulated on the client side. 
+
+\begin{verbatim}
+var
+  ...
+  Statement: IZPreparedStatement;
+  UpdatedRows: Integer;
+...
+Statement := Connection.PrepareStatement(
+  'UPDATE MyTable SET MyField=? WHERE MyKey=?');
+
+// Execute first update
+Statement.SetString(1, 'abc');
+Statement.SetInt(2, 123);
+Statement.ExecutePrepared;
+
+// Execute second update
+Statement.SetString(1, 'xyz');
+Statenent.SetInt(2, 789);
+Statement.ExecutePrepared;
+...
+\end{verbatim}
+
+If you execute several SQL queries one by one it makes sense to group them together in a single "batch update". 
+
+\begin{verbatim}
+...
+Statement.AddBatch('UPDATE MyTable SET MyField=''abc'' WHERE MyKey=123');
+Statement.AddBatch('UPDATE MyTable SET MyField=''xyz'' WHERE MyKey=789');
+Statement.ExecuteBatch;
+...
+\end{verbatim}
+
+Batch updates are also supported for prepared statements (statements with parameters): 
+
+\begin{verbatim}
+...
+Statement := Connection.PrepareStatement(
+  'UPDATE MyTable SET MyField=? WHERE MyKey=?');
+
+// Execute first update
+Statement.SetString(1, 'abc');
+Statement.SetInt(2, 123);
+Statement.AddBatchPrepared;
+
+// Execute second update
+Statement.SetString(1, 'xyz');
+Statenent.SetInt(2, 789);
+Statement.AddBatchPrepared;
+
+Statement.ExecuteBatch;
+...
+\end{verbatim}
+
+\chapter{Error Handling}
+If any errors on the client or server side happens, ZDBC raises an EZSQLException exception.
+This exception let you know not only the error message but also the error code from the server
+
+\begin{verbatim}
+try
+  ...
+  Statement.ExecuteUpdate(...);
+   ...
+catch
+  on E: EZSQLException do
+    WriteLn(Format('SQL Error: %d with Code: %d',
+      [E.Message, E.ErrorCode]));
+end;
+\end{verbatim}
+
+\chapter{Transaction Management}
+Transaction management in ZDBC is controlled by the Connection object.
+By default, Connection works in AutoCommit mode but it also provides you with all necessary methods to manage transactions manually.
+Let's look how to execute SQL statements in a read-commited transaction:
+
+\begin{verbatim}
+...
+Connection.SetAutoCommit(False);
+Connection.SetTransactionIsolation(tiReadCommited);
+...
+try
+  ...
+  Statement.ExecuteUpdate(...);
+  Statement.ExecuteUpdate(...);
+  ...
+  Statement.Commit;
+except
+  Statement.Rollback;
+end;
+...
+\end{verbatim}
+
+Please note that there is no out-of-transaction state.
+Your connection object is always in-transaction so you don't need to start transactions manually.
+Connection starts a transaction automatically when:
+\begin{itemize}
+  \item A connection is established
+  \item AutoCommit or TransactIsolation level are changed
+  \item Commit or Rollback are executed
+\end{itemize}
+
+JDBC considers this a safer approach.
+You just need to be careful and complete transactions explicitly when you change AutoCommit or TransactionIsolation properties. 
+
+\chapter{Retrieving data from SQL server}
+
+Getting data from your SQL server may be the most interesting part of the story. Fortunately, it's not much more complicated than what we have seen so far. ZDBC API has two abstractions for queries: IZResultSet and IZResultSetMetadata. IZResultSet provides access to relational data retrieved as a result of executing a SELECT statement or a stored procedure. IZResultSetMetadata contains metadata for the query like: number of columns, column names and their types, etc.
+
+The following example shows how to execute a SELECT statement and read its data:
+
+\begin{verbatim}
+var
+...
+  ResultSet: IZResultSet;
+  Metadata: IZResultSetMetadata;
+...
+Statement := Connection.CreateStatement;
+ResultSet := Statement.ExecuteQuery('SELECT * FROM MyTable');
+Metadata := ResultSet.GetMetadata;
+
+// Printing column headers
+for I := 1 to Metadata.GetColumnCount do
+  Write(Metadata.GetColumnName(I), ' ');
+WriteLn;
+
+// Printing query data
+while ResultSet.Next do
+begin
+  for I := 1 to Metadata.GetColumnCount do
+    Write(ResultSet.GetString(I), ' ');
+  WriteLn;
+end;
+...
+\end{verbatim}
+
+SQL Queries can also contain parameters. Look at the next example to see how to use them:
+
+\begin{verbatim}
+...
+var
+...
+  Statement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+...
+Statement := Connection.PrepareStatement(
+  'SELECT * FROM MyTable WHERE MyKey=?');
+Statement.SetInt(1, 123);
+ResultSet := Statement.ExecuteQueryPrepared;
+...
+\end{verbatim}
+
+The good news about ZDBC is that it allows you not only to read but also to write data.
+You just need to set a ResultSetConcurrency mode for the Statement object.
+
+\begin{verbatim}
+...
+Statement.SetResultSetConcurrency(rcUpdatable);
+Statement.SetResultSetType(rtScrollInsensitive);
+ResultSet := Statement.ExecuteQuery('SELECT * FROM MyTable');
+
+...
+// Insert a new row
+ResultSet.MoveToInsertRow;
+ResultSet.UpdateInt(1, 123);
+ResultSet.UpdateString(2, 'abc');
+ResultSet.InsertRow;
+...
+// Update row
+ResultSet.UpdateString(2, 'xyz');
+ResultSet.UpdateRow;
+...
+// Delete row
+ResultSet.DeleteRow;
+...
+\end{verbatim}
+
+\chapter{Advanced Topics}
+This description of ZDBC API is not full. ZDBC has many other features like Database Metadata, Blobs, Cached Updates, Stored Procedures, Sequence Generators, etc. Unfortunately, due to size constraints, we couldn't discuss all of these topics in this article. If you want to explore more of ZDBC you need to look at the JDBC specification and the source code of the ZDbcIntfs unit for more information.
+
+(c) 2005 ZeosLib Team
 
 \end{document}
