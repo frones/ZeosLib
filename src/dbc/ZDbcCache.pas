@@ -770,6 +770,26 @@ begin
   end;
 end;
 
+function CompareNativeCLob_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+var
+  Blob1, Blob2: IZBlob;
+  BlobEmpty1, BlobEmpty2: Boolean;
+begin
+  Blob1 := IZBlob(PPointer(V1)^);
+  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
+  Blob2 := IZBlob(PPointer(V2)^);
+  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
+  if BlobEmpty1 and BlobEmpty2 then Result := 0
+  else if (BlobEmpty1) then Result := 1
+  else if (BlobEmpty2) then Result := -1
+  else
+    Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString);
+end;
+
+function CompareNativeCLob_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := -CompareNativeCLob_Asc(Null1, Null2, V1, V2);
+end;
 
 function CompareNativeCLob_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
@@ -785,6 +805,43 @@ begin
   else if Blob1.IsUpdated or Blob2.IsUpdated then
     Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
   else Result := 0;
+end;
+
+function CompareUnicodeCLob_Asc(const {%H-}Null1, Null2: Boolean; const V1, V2): Integer;
+var
+  Blob1, Blob2: IZBlob;
+  BlobEmpty1, BlobEmpty2: Boolean;
+  {$IFDEF MSWINDOWS}
+  ValuePtr1, ValuePtr2: Pointer;
+  {$ENDIF}
+begin
+  Blob1 := IZBlob(PPointer(V1)^);
+  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
+  Blob2 := IZBlob(PPointer(V2)^);
+  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
+  if BlobEmpty1 and BlobEmpty2 then Result := 0
+  else if BlobEmpty1 then Result := 1
+  else if BlobEmpty2 then Result := -1
+  else if Blob1.IsClob and Blob2.IsClob then
+    begin
+      {$IFDEF MSWINDOWS}
+      ValuePtr1 := Blob1.GetPWideChar;
+      ValuePtr2 := Blob2.GetPWideChar;
+      SetLastError(0);
+      Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
+        ValuePtr1, Blob1.Length, ValuePtr2, Blob2.Length) - 2{CSTR_EQUAL};
+      if GetLastError <> 0 then RaiseLastOSError;
+      {$ELSE}
+      Result := WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
+      {$ENDIF}
+    end
+  else
+      Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
+end;
+
+function CompareUnicodeCLob_Desc(const {%H-}Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result:=-CompareUnicodeClob_Asc(Null1,Null2,V1,V2);
 end;
 
 function CompareUnicodeCLob_Equals(const {%H-}Null1, Null2: Boolean; const V1, V2): Integer;
@@ -1426,11 +1483,18 @@ begin
           ckEquals:     Result := CompareUnicode_Equals;
         end;
     stAsciiStream, stUnicodeStream:
-      if CompareKind = ckEquals then
-        if ConSettings^.CPType in [cCP_UTF16, cCP_UTF8] then
-          Result := CompareUnicodeCLob_Equals
-        else
-          Result := CompareNativeCLob_Equals;
+      if ConSettings^.CPType in [cCP_UTF16, cCP_UTF8] then
+        case CompareKind of
+          ckAscending: Result := CompareUnicodeCLob_Asc;
+          ckDescending: Result := CompareUnicodeCLob_Desc;
+          ckEquals: Result := CompareUnicodeCLob_Equals;
+        end;
+      else
+        case CompareKind of
+          ckAscending: Result := CompareNativeCLob_Asc;
+          ckDescending: Result := CompareNativeCLob_Desc;
+          ckEquals: Result := CompareNativeCLob_Equals;
+        end;
   end;
 end;
 
