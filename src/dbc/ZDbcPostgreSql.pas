@@ -826,9 +826,11 @@ begin
   Case GetTestMode of
     0:
   {$ENDIF}
+      {$IF NOT(DEFINED(FPC) and DEFINED(CPUARM))}
       if GetServerMajorVersion >= 8 then
         Result := TZPostgreSQLCAPIPreparedStatement.Create(GetPlainDriver, Self, '', Info)
       else
+      {$IFEND}
         Result := TZPostgreSQLClassicPreparedStatement.Create(GetPlainDriver, Self, '', Info);
   {$IFDEF ZEOS_TEST_ONLY}
     1: Result := TZPostgreSQLClassicPreparedStatement.Create(GetPlainDriver, Self, '', Info);
@@ -874,9 +876,11 @@ begin
   Case GetTestMode of
     0:
   {$ENDIF}
+      {$IF NOT(DEFINED(FPC) and DEFINED(CPUARM))}
       if GetServerMajorVersion >= 8 then
         Result := TZPostgreSQLCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
       else
+      {$IFEND}
         Result := TZPostgreSQLClassicPreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
   {$IFDEF ZEOS_TEST_ONLY}
     1: Result := TZPostgreSQLClassicPreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
