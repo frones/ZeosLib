@@ -371,9 +371,10 @@ type
         resultFormat: Integer): PPGresult; cdecl;
   TPQprepare        = function(Handle: PPGconn; stmtName: PAnsichar;
         query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): PPGresult; cdecl;
-  TPQexecPrepared   = function(Handle: PPGconn; stmtName: PAnsichar;
+  TPQexecPrepared2   = function(Handle: PPGconn; stmtName: PAnsichar;
         nParams: Integer; {%H-}paramValues: TPQparamValues; {%H-}paramLengths: TPQparamLengths;
         {%H-}paramFormats: TPQparamFormats; resultFormat: Integer): PPGresult; cdecl;
+  TPQexecPrepared   = function (Handle: PPGconn; stmtName:Pchar; nParams:longint; paramValues:PPchar; paramLengths:Plongint;paramFormats:Plongint; resultFormat:longint):PPGresult;cdecl;
 //* Interface for multiple-result or asynchronous queries */
   TPQsendQuery      = function(Handle: PPGconn; query: PAnsiChar): Integer; cdecl;
   TPQsendQueryParams= function(Handle: PPGconn; command: PAnsichar;
@@ -1180,7 +1181,7 @@ function TZPostgreSQLBaseDriver.ExecPrepared(Handle: PPGconn; stmtName: PAnsicha
 begin
   if Assigned(POSTGRESQL_API.PQexecPrepared) then
     Result := POSTGRESQL_API.PQexecPrepared(Handle, stmtName, nParams,
-      paramValues, paramLengths, paramFormats, resultFormat)
+      @paramValues[0], @paramLengths[0], @paramFormats[0], resultFormat)
   else
     Result := nil;
 end;
