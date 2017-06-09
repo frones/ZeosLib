@@ -1160,7 +1160,7 @@ function TZPostgreSQLBaseDriver.ExecParams(Handle: PPGconn; command: PAnsichar;
 begin
   if Assigned(POSTGRESQL_API.PQexecParams) then
     Result := POSTGRESQL_API.PQexecParams(Handle, command, nParams, paramtypes,
-      @paramValues, @paramLengths, @paramFormats, resultFormat)
+      Pointer(paramValues), Pointer(paramLengths), Pointer(paramFormats), resultFormat)
   else
     Result := nil;
 end;
@@ -1169,7 +1169,7 @@ function TZPostgreSQLBaseDriver.Prepare(Handle: PPGconn; stmtName: PAnsichar;
     query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): PPGresult;
 begin
   if Assigned(POSTGRESQL_API.PQprepare) then
-    Result := POSTGRESQL_API.PQprepare(Handle, stmtName, query, nParams, @paramTypes)
+    Result := POSTGRESQL_API.PQprepare(Handle, stmtName, query, nParams, Pointer(paramTypes))
   else
     Result := nil;
 end;
@@ -1180,7 +1180,7 @@ function TZPostgreSQLBaseDriver.ExecPrepared(Handle: PPGconn; stmtName: PAnsicha
 begin
   if Assigned(POSTGRESQL_API.PQexecPrepared) then
     Result := POSTGRESQL_API.PQexecPrepared(Handle, stmtName, nParams,
-      Pointer(paramValues), @paramLengths, @paramFormats, resultFormat)
+      Pointer(paramValues), Pointer(paramLengths), Pointer(paramFormats), resultFormat)
   else
     Result := nil;
 end;
