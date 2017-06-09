@@ -367,27 +367,25 @@ type
 //* Simple synchronous query */
   TPQexec          = function(Handle: PPGconn; Query: PAnsiChar): PPGresult; cdecl;
   TPQexecParams    = function(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: TPQparamTypes; {%H-}paramValues: TPQparamValues;
-        {%H-}paramLengths: TPQparamLengths; {%H-}paramFormats: TPQparamFormats;
+        nParams: Integer; paramTypes: TPQparamTypes; paramValues: PPointer;
+        paramLengths: PInteger; paramFormats: PInteger;
         resultFormat: Integer): PPGresult; cdecl;
   TPQprepare        = function(Handle: PPGconn; stmtName: PAnsichar;
-        query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): PPGresult; cdecl;
-  TPQexecPrepared2   = function(Handle: PPGconn; stmtName: PAnsichar;
-        nParams: Integer; {%H-}paramValues: TPQparamValues; {%H-}paramLengths: TPQparamLengths;
-        {%H-}paramFormats: TPQparamFormats; resultFormat: Integer): PPGresult; cdecl;
-  TPQexecPrepared   = function (Handle: PPGconn; stmtName:Pchar; nParams:longint; paramValues:PPchar; paramLengths:Plongint;paramFormats:Plongint; resultFormat:longint):PPGresult;cdecl;
+        query: PAnsiChar; nParams: Integer; paramTypes: PInteger): PPGresult; cdecl;
+  TPQexecPrepared   = function(Handle: PPGconn; stmtName: PAnsichar;
+        nParams: Integer; paramValues: PPointer; paramLengths: PInteger;
+        paramFormats: PInteger; resultFormat: Integer): PPGresult; cdecl;
 //* Interface for multiple-result or asynchronous queries */
   TPQsendQuery      = function(Handle: PPGconn; query: PAnsiChar): Integer; cdecl;
   TPQsendQueryParams= function(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: TPQparamTypes; {%H-}paramValues: TPQparamValues;
-        {%H-}paramLengths: TPQparamLengths; {%H-}paramFormats: TPQparamFormats;
+        nParams: Integer; paramTypes: PInteger; paramValues: PPointer;
+        paramLengths: PInteger; paramFormats: PInteger;
         resultFormat: Integer): Integer; cdecl;
   TPQsendPrepare    = function(Handle: PPGconn; stmtName: PAnsichar;
         query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): Integer; cdecl;
   TPQsendQueryPrepared = function(Handle: PPGconn; stmtName: PAnsichar;
-         nParams: Integer; {%H-}paramValues: TPQparamValues;
-         {%H-}paramLengths: TPQparamLengths; {%H-}paramFormats: TPQparamFormats;
-         resultFormat: Integer): Integer; cdecl;
+         nParams: Integer; paramValues: PPointer; paramLengths: PInteger;
+         paramFormats: PInteger; resultFormat: Integer): Integer; cdecl;
   TPQgetResult     = function(Handle: PPGconn): PPGresult;  cdecl;
   TPQsetSingleRowMode = function(Handle: PPGconn): Integer; cdecl;
 //* Describe prepared statements and portals */
@@ -1162,7 +1160,7 @@ function TZPostgreSQLBaseDriver.ExecParams(Handle: PPGconn; command: PAnsichar;
 begin
   if Assigned(POSTGRESQL_API.PQexecParams) then
     Result := POSTGRESQL_API.PQexecParams(Handle, command, nParams, paramtypes,
-      paramValues, paramLengths, paramFormats, resultFormat)
+      @paramValues, @paramLengths, @paramFormats, resultFormat)
   else
     Result := nil;
 end;
@@ -1171,7 +1169,7 @@ function TZPostgreSQLBaseDriver.Prepare(Handle: PPGconn; stmtName: PAnsichar;
     query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): PPGresult;
 begin
   if Assigned(POSTGRESQL_API.PQprepare) then
-    Result := POSTGRESQL_API.PQprepare(Handle, stmtName, query, nParams, paramTypes)
+    Result := POSTGRESQL_API.PQprepare(Handle, stmtName, query, nParams, @paramTypes)
   else
     Result := nil;
 end;
@@ -1182,7 +1180,7 @@ function TZPostgreSQLBaseDriver.ExecPrepared(Handle: PPGconn; stmtName: PAnsicha
 begin
   if Assigned(POSTGRESQL_API.PQexecPrepared) then
     Result := POSTGRESQL_API.PQexecPrepared(Handle, stmtName, nParams,
-      @paramValues[0], @paramLengths[0], @paramFormats[0], resultFormat)
+      Pointer(paramValues), @paramLengths, @paramFormats, resultFormat)
   else
     Result := nil;
 end;
@@ -1199,7 +1197,7 @@ function TZPostgreSQLBaseDriver.SendQueryParams(Handle: PPGconn; command: PAnsic
 begin
   if Assigned(POSTGRESQL_API.PQsendQueryParams) then
     Result := POSTGRESQL_API.PQsendQueryParams(Handle, command, nParams,
-      paramTypes, paramValues, paramLengths, paramFormats, resultFormat)
+      Pointer(paramTypes), Pointer(paramValues), Pointer(paramLengths), Pointer(paramFormats), resultFormat)
   else
     Result := -1;
 end;
@@ -1221,7 +1219,7 @@ function TZPostgreSQLBaseDriver.SendQueryPrepared(Handle: PPGconn; stmtName: PAn
 begin
   if Assigned(POSTGRESQL_API.PQsendQueryPrepared) then
     Result := POSTGRESQL_API.PQsendQueryPrepared(Handle, stmtName, nParams,
-      paramValues, paramLengths, paramFormats, resultFormat)
+      Pointer(paramValues), Pointer(paramLengths), Pointer(paramFormats), resultFormat)
   else
     Result := -1;
 end;
