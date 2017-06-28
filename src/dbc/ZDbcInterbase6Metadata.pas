@@ -1793,16 +1793,23 @@ begin
         Result.UpdateInt(TableColColumnTypeIndex, Ord(SQLType));
         // TYPE_NAME
         case TypeName of
-          7  : Result.UpdateString(TableColColumnTypeNameIndex, 'SMALLINT');
-          8  : Result.UpdateString(TableColColumnTypeNameIndex, 'INTEGER' );
-          16 :
-            begin
-              if (SubTypeName = 0) then
-                Result.UpdateString(TableColColumnTypeNameIndex, GetString(ColumnIndexes[8]));
-              if (SubTypeName = 1) then
-                Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
-              if (SubTypeName = 2) then
-                Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
+          7:
+            case SubTypeName of
+              1: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
+              2: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
+              else  Result.UpdateString(TableColColumnTypeNameIndex, 'SMALLINT');
+            end;
+          8:
+            case SubTypeName of
+              1: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
+              2: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
+              else Result.UpdateString(TableColColumnTypeNameIndex, 'INTEGER' );
+            end;
+          16:
+            case SubTypeName of
+              1: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
+              2: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
+              else Result.UpdateString(TableColColumnTypeNameIndex, GetString(ColumnIndexes[8]));
             end;
           37 : Result.UpdateString(TableColColumnTypeNameIndex, 'VARCHAR'); // Instead of VARYING
         else
@@ -1810,18 +1817,11 @@ begin
         end;
         // COLUMN_SIZE.
         case TypeName of
-          7, 8 : Result.UpdateInt(TableColColumnSizeIndex, 0);
-          16   : Result.UpdateInt(TableColColumnSizeIndex, GetInt(ColumnIndexes[9]));
+          7, 8, 16: Result.UpdateInt(TableColColumnSizeIndex, GetInt(ColumnIndexes[9]));
           37, 38: Result.UpdateNull(TableColColumnSizeIndex);  //the defaults of the resultsets will be used if null
-            {if ( ConSettings.ClientCodePage.ID = 0 ) then //CharcterSet 'NONE'
-              Result.UpdateInt(TableColColumnSizeIndex, GetFieldSize(SQLType, ConSettings,
-                GetInt(ColumnIndexes[10]), GetConnection.GetIZPlainDriver.ValidateCharEncoding(SubTypeName).CharWidth, nil, True)) //FireBird return Char*Bytes for Varchar
-            else
-              Result.UpdateInt(TableColColumnSizeIndex, GetFieldSize(SQLType, ConSettings,
-                GetInt(ColumnIndexes[10]), ConSettings.ClientCodePage.CharWidth, nil, True)); //FireBird return Char*Bytes for Varchar}
         else
           Result.UpdateInt(TableColColumnSizeIndex, GetInt(ColumnIndexes[10]));
-        end;
+        end; 
 
         Result.UpdateNull(TableColColumnBufLengthIndex);    //BUFFER_LENGTH
 

@@ -201,6 +201,7 @@ type
     verbose:         boolean;
     runall:          boolean;
     batch:           boolean;
+    xml:             boolean;
     norebuild:       boolean;
     suite:           boolean;
     memcheck:        boolean;
@@ -476,6 +477,7 @@ begin
   CommandLineSwitches.verbose := Application.HasOption('v', 'verbose');
   CommandLineSwitches.runall := Application.HasOption('a', 'all');
   CommandLineSwitches.batch := Application.HasOption('b', 'batch');
+  CommandLineSwitches.xml := Application.HasOption('x', 'xml');
   CommandLineSwitches.norebuild := Application.HasOption('n', 'norebuild');
   CommandLineSwitches.memcheck := Application.HasOption('memcheck');
   if CommandLineSwitches.memcheck then
@@ -494,6 +496,7 @@ begin
   CommandLineSwitches.verbose := (FindCmdLineSwitch('V',true) or FindCmdLineSwitch('Verbose',true));
   CommandLineSwitches.runall := (FindCmdLineSwitch('A',true) or FindCmdLineSwitch('All',true));
   CommandLineSwitches.batch := (FindCmdLineSwitch('B',true) or FindCmdLineSwitch('Batch',true));
+  CommandLineSwitches.xml := (FindCmdLineSwitch('X',true) or FindCmdLineSwitch('XML',true));
   CommandLineSwitches.norebuild := (FindCmdLineSwitch('N',true) or FindCmdLineSwitch('NoRebuild',true));
   CommandLineSwitches.memcheck := FindCmdLineSwitch('MemCheck',true);
   if CommandLineSwitches.memcheck then
