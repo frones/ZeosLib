@@ -74,6 +74,7 @@ type
     procedure Test886914;
     procedure Test886854;
     procedure Test934253;
+    procedure Test_SourceForge192;
   end;
 
 implementation
@@ -454,6 +455,31 @@ begin
   end;
   ResultSet.Close;
   ResultSet := nil;
+end;
+
+procedure TZTestDbcInterbaseBugReport.Test_SourceForge192;
+var
+  DbcCols: IZResultSet;
+  x: Integer;
+begin
+  DbcCols := Connection.GetMetadata.GetColumns('', '', 'Ticket192', '');
+  CheckTrue(Assigned(DbcCols), 'DbcCols is not assigned');
+  CheckTrue(DbcCols.Next, 'Could not move to first row');
+  CheckEquals('N51', DbcCols.GetString(ColumnNameIndex));
+  CheckEquals('NUMERIC', DbcCols.GetString(TableColColumnTypeNameIndex));
+  CheckEquals(5, DbcCols.GetInt(TableColColumnSizeIndex));
+  CheckEquals(1, DbcCols.GetInt(TableColColumnDecimalDigitsIndex));
+  CheckTrue(DbcCols.Next, 'Could not move to second row');
+  CheckEquals('N41', DbcCols.GetString(ColumnNameIndex));
+  CheckEquals('NUMERIC', DbcCols.GetString(TableColColumnTypeNameIndex));
+  CheckEquals(4, DbcCols.GetInt(TableColColumnSizeIndex));
+  CheckEquals(1, DbcCols.GetInt(TableColColumnDecimalDigitsIndex));
+  CheckTrue(DbcCols.Next, 'Could not move to third row');
+  CheckEquals('D51', DbcCols.GetString(ColumnNameIndex));
+  CheckEquals('DECIMAL', DbcCols.GetString(TableColColumnTypeNameIndex));
+  CheckEquals(5, DbcCols.GetInt(TableColColumnSizeIndex));
+  CheckEquals(1, DbcCols.GetInt(TableColColumnDecimalDigitsIndex));
+  CheckFalse(DbcCols.Next, 'Could move behind third row');
 end;
 
 initialization
