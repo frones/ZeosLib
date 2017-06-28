@@ -202,7 +202,7 @@ begin
   Result := TZOleDBTokenizer.Create;
 end;
 
-threadvar
+var
   OleDBCoinitialized: integer;
 
 procedure CoInit;
