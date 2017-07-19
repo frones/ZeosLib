@@ -175,6 +175,10 @@ function GetCurrentResultSet(RowSet: IRowSet; Statement: IZStatement;
 
 implementation
 
+{$IFOPT R+}
+  {$DEFINE WITH_RANGE_CHECK}
+{$ENDIF}
+
 uses
   Variants, Math, ComObj,
   ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode;
@@ -225,7 +229,7 @@ begin
         DBTYPE_R8:        JSONWriter.AddDouble(PDouble(FData)^);
         DBTYPE_CY:        JSONWriter.AddCurr64(PCurrency(FData)^);
         DBTYPE_DATE:      JSONWriter.AddDateTime(PDateTime(FData), 'T', '"');
-        DBTYPE_BOOL:      JSONWriter.AddShort(JSONBool[PWordBool(FData)^]);
+        DBTYPE_BOOL:      JSONWriter.AddShort(JSONBool[PWord(FData)^ <> 0]);
         DBTYPE_VARIANT: begin
             JSONWriter.Add('"');
             FUniTemp := POleVariant(FData)^;
@@ -597,6 +601,7 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex-1;
   {$ENDIF}
+  {$R-}
   Result := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(FRowSize*FCurrentBufRowNo)])^ = DBSTATUS_S_ISNULL;
   LastWasNull := Result;
   if Result then
@@ -611,6 +616,7 @@ begin
     //note FLength is valid only if DBPART_LENGTH was set in Bindings.dwFlags!!!
     FLength := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
   end;
+  {$IFDEF WITH_RANGE_CHECK} {$R+} {$ENDIF}
 end;
 
 {**
