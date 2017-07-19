@@ -1488,7 +1488,7 @@ begin
           ckAscending: Result := CompareUnicodeCLob_Asc;
           ckDescending: Result := CompareUnicodeCLob_Desc;
           ckEquals: Result := CompareUnicodeCLob_Equals;
-        end;
+        end
       else
         case CompareKind of
           ckAscending: Result := CompareNativeCLob_Asc;
