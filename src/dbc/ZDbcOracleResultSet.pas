@@ -2012,7 +2012,7 @@ begin
       FChunkSize, Len, False, FConSettings)
   else
     OraWriteLob(FPlainDriver, Buffer, FContextHandle, FErrorHandle, FLobLocator,
-      FChunkSize, Len+1, False, FConSettings);
+      FChunkSize, Int64(Len)+1, False, FConSettings);
 end;
 
 end.
