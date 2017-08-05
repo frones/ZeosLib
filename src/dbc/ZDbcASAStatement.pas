@@ -124,7 +124,7 @@ type
 implementation
 
 uses ZSysUtils, ZDbcUtils, ZMessages, ZPlainASAConstants, ZDbcASAResultSet,
-  ZDbcResultSet, ZEncoding;
+  ZEncoding;
 
 { TZASAPreparedStatement }
 

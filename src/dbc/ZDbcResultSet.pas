@@ -543,7 +543,7 @@ function CompareInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   if Null1 and Null2 then Result := 0
   else if Null1 then Result := -1
-  else if Null2 then Result := 0
+  else if Null2 then Result := 1
   else Result := Ord(TZVariant(V1).VInteger > TZVariant(V2).VInteger)-Ord(TZVariant(V1).VInteger < TZVariant(V2).VInteger);
 end;
 
