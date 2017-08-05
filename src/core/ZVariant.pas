@@ -921,36 +921,21 @@ function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManag
   Value2: TZVariant): Integer;
 var
   TempFloat: Extended;
+  i: Int64;
   TempDateTime: TDateTime;
 label DoWideCompare;
 begin
   case Value1.VType of
-    vtNull:
-      begin
-        if IsNull(Value2) then
-          Result := 0
-        else
-          Result := -1;
-      end;
+    vtNull: if IsNull(Value2) then
+              Result := 0 else
+              Result := -1;
     vtBoolean:
-      begin
-        if GetAsBoolean(Value2) then
-        begin
-          if Value1.VBoolean then
-            Result := 0
-          else
-            Result := -1;
-        end
-        else
-        begin
-          if Value1.VBoolean then
-            Result := 1
-          else
-            Result := 0;
-        end;
+      Result := Ord(Value1.VBoolean)-Ord(GetAsBoolean(Value2));
+    vtInteger: begin
+      //EH: aware of range overflow(result is an integer not a Int64) comparing hashes leads to pain:
+        i := GetAsInteger(Value2);
+        Result := Ord(Value1.VInteger > I)-Ord(Value1.VInteger < I);
       end;
-    vtInteger:
-      Result := Value1.VInteger - GetAsInteger(Value2);
     vtFloat:
       begin
         TempFloat := GetAsFloat(Value2);

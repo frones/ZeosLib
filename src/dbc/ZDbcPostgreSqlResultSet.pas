@@ -201,7 +201,7 @@ begin
   else if Value = 'NaN' then
     Result := NaN
   else
-    ZSysUtils.SQLStrToFloatDef(Value, 0, Result);
+    ZSysUtils.SQLStrToFloatDef(Value, Def, Result);
 end;
 {$IFEND}
 

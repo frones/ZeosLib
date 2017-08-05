@@ -1456,7 +1456,9 @@ begin
     { Compares column values. }
     ValuePtr1 := @Buffer1.Columns[FColumnOffsets[ColumnIndex] + 1];
     ValuePtr2 := @Buffer2.Columns[FColumnOffsets[ColumnIndex] + 1];
-    Result := CompareFuncs[i](
+    if @CompareFuncs[i] = @CompareNothing
+    then Result := -1
+    else Result := CompareFuncs[i](
       (Buffer1.Columns[FColumnOffsets[ColumnIndex]] = bIsNull),
       (Buffer2.Columns[FColumnOffsets[ColumnIndex]] = bIsNull),
         ValuePtr1, ValuePtr2);
@@ -1599,7 +1601,7 @@ begin
           ckAscending: Result := CompareUnicodeCLob_Asc;
           ckDescending: Result := CompareUnicodeCLob_Desc;
           ckEquals: Result := CompareUnicodeCLob_Equals;
-        end;
+        end
       else
         case CompareKind of
           ckAscending: Result := CompareNativeCLob_Asc;
