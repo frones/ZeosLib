@@ -329,7 +329,9 @@ begin
     ErrorRecords := nil;
     ErrorInfo := nil;
     // get generic HRESULT error
-    s := SysErrorMessage(aResult);
+    if aResult < 0 then //avoid range check error for some negative unknown errors
+      s := '' else
+      s := SysErrorMessage(aResult);
     if s='' then
       s := 'OLEDB Error '+IntToHex(aResult,8);
     if OleDBErrorMessage = '' then begin
