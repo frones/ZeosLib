@@ -116,6 +116,7 @@ type
     function GetByte(ColumnIndex: Integer): Byte; override;
     function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
+    function GetUInt(ColumnIndex: Integer): Cardinal; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetULong(ColumnIndex: Integer): UInt64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
@@ -1378,7 +1379,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
                         Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
+      DBTYPE_BOOL:      Result := Ord(PWord(FData)^<>0);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
@@ -1437,7 +1438,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
                         Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
+      DBTYPE_BOOL:      Result := Ord(PWord(FData)^ <> 0);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
@@ -1496,7 +1497,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
         Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
+      DBTYPE_BOOL:      Result := Ord(PWord(FData)^ <> 0);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
@@ -1555,7 +1556,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
                         Result := UnicodeToInt64Def(ZPPWideChar(FData)^, 0);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
+      DBTYPE_BOOL:      Result := Ord(PWord(FData)^ <> 0);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
@@ -1597,7 +1598,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZOleDBResultSet.GetULong(ColumnIndex: Integer): UInt64;
+function TZOleDBResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
 begin
   Result := 0;
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
@@ -1612,7 +1613,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
                         Result := UnicodeToUInt64Def(ZPPWideChar(FData)^, 0);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
+      DBTYPE_BOOL:      Result := Ord(PWord(FData)^ <> 0);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
@@ -1633,15 +1634,63 @@ begin
                           Result := UnicodeToUInt64Def(PWideChar(FData), 0);
       DBTYPE_WSTR or DBTYPE_BYREF:
                           Result := UnicodeToUInt64Def(ZPPWideChar(FData)^, 0);
-      //DBTYPE_NUMERIC	= 131;
-      //DBTYPE_UDT	= 132;
-      //DBTYPE_DBDATE	= 133;
-      //DBTYPE_DBTIME	= 134;
-      //DBTYPE_DBTIMESTAMP	= 135;
+      //DBTYPE_NUMERIC = 131;
+      //DBTYPE_UDT = 132;
+      //DBTYPE_DBDATE = 133;
+      //DBTYPE_DBTIME = 134;
+      //DBTYPE_DBTIMESTAMP = 135;
       DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^;
       //DBTYPE_FILETIME	= 64;
-      //DBTYPE_PROPVARIANT	= 138;
-      //DBTYPE_VARNUMERIC	= 139;
+      //DBTYPE_PROPVARIANT = 138;
+      //DBTYPE_VARNUMERIC = 139;
+    end;
+end;
+
+function TZOleDBResultSet.GetULong(ColumnIndex: Integer): UInt64;
+begin
+  Result := 0;
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
+      DBTYPE_I2:        Result := PSmallInt(FData)^;
+      DBTYPE_I4:        Result := PLongInt(FData)^;
+      DBTYPE_R4:        Result := Trunc(PSingle(FData)^);
+      DBTYPE_R8:        Result := Trunc(PDouble(FData)^);
+      DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
+      DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
+      DBTYPE_BSTR:      Result := UnicodeToUInt64Def(PWideChar(FData), 0);
+      DBTYPE_BSTR or DBTYPE_BYREF:
+                        Result := UnicodeToUInt64Def(ZPPWideChar(FData)^, 0);
+      DBTYPE_ERROR:     Result := PLongInt(FData)^;
+      DBTYPE_BOOL:      Result := Ord(PWord(FData)^ <> 0);
+      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
+      //DBTYPE_DECIMAL = 14;
+      DBTYPE_UI1:       Result := PByte(FData)^;
+      DBTYPE_I1:        Result := PShortInt(FData)^;
+      DBTYPE_UI2:       Result := PWord(FData)^;
+      DBTYPE_UI4:       Result := PLongWord(FData)^;
+      DBTYPE_I8:        Result := PInt64(FData)^;
+      DBTYPE_UI8:       Result := PUInt64(FData)^;
+      DBTYPE_STR:       if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
+                          Result := RawToUInt64Def(GetBlob(ColumnIndex).GetBuffer, 0)
+                        else
+                          Result := RawToUInt64Def(PAnsiChar(FData),0);
+      DBTYPE_STR or DBTYPE_BYREF:
+        Result := RawToUInt64Def(PPAnsiChar(FData)^, 0);
+      DBTYPE_WSTR:      if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
+                          Result := UnicodeToInt64Def(GetBlob(ColumnIndex).GetPWideChar, 0)
+                        else
+                          Result := UnicodeToUInt64Def(PWideChar(FData), 0);
+      DBTYPE_WSTR or DBTYPE_BYREF:
+                          Result := UnicodeToUInt64Def(ZPPWideChar(FData)^, 0);
+      //DBTYPE_NUMERIC = 131;
+      //DBTYPE_UDT = 132;
+      //DBTYPE_DBDATE = 133;
+      //DBTYPE_DBTIME = 134;
+      //DBTYPE_DBTIMESTAMP = 135;
+      DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^;
+      //DBTYPE_FILETIME = 64;
+      //DBTYPE_PROPVARIANT = 138;
+      //DBTYPE_VARNUMERIC = 139;
     end;
 end;
 
@@ -1669,7 +1718,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
                         SQLStrToFloatDef(ZPPWideChar(FData)^, 0, Result, FLength shr 1);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
+      DBTYPE_BOOL:      Result := Ord(PWord(FData)^ <> 0);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
@@ -1721,7 +1770,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
                         SQLStrToFloatDef(ZPPWideChar(FData)^, 0, Result, FLength shr 1);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
+      DBTYPE_BOOL:      Result := Ord(PWord(FData)^ <> 0);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
@@ -1773,7 +1822,7 @@ begin
       DBTYPE_BSTR or DBTYPE_BYREF:
                         SQLStrToFloatDef(ZPPWideChar(FData)^, 0, Result, FLength shr 1);
       DBTYPE_ERROR:     Result := PLongInt(FData)^;
-      DBTYPE_BOOL:      Result := Ord(PWordBool(FData)^);
+      DBTYPE_BOOL:      Result := Ord(PWord(FData)^ <> 0);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := PByte(FData)^;
