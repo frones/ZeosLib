@@ -607,6 +607,7 @@ type
     procedure SetString(ParameterIndex: Integer; const Value: String);
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); //AVZ
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes);
+    procedure SetGuid(ParameterIndex: Integer; const Value: TGUID);
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString);
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String);
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString);

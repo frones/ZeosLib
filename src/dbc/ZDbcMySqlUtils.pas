@@ -756,6 +756,8 @@ begin
             else
               Result := 'NULL';
         end;
+      else
+        RaiseUnsupportedParameterTypeException(InParamType);
     end;
   end;
 end;

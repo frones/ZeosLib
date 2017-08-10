@@ -576,6 +576,7 @@ var
   Current: TZResolverParameter;
   RowAccessor: TZRowAccessor;
   WasNull: Boolean;
+  TempBytes: TBytes;
 begin
   WasNull := False;
   for I := 0 to Params.Count - 1 do
@@ -622,8 +623,14 @@ begin
       stString, stUnicodeString:
         Statement.SetCharRec(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           RowAccessor.GetCharRec(ColumnIndex, WasNull));
-      stBytes, stGUID:
+      stBytes:
         Statement.SetBytes(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetBytes(ColumnIndex, WasNull));
+      stGUID: begin
+          TempBytes := RowAccessor.GetBytes(ColumnIndex, WasNull);
+          if Length(TempBytes) <> 16
+          then raise EZSQLException.Create('The rowaccessor did not return 16 bytes while trying to set a GUID.');
+          Statement.SetGuid(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGUID(@TempBytes[0])^);
+        end;
       stDate:
         Statement.SetDate(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetDate(ColumnIndex, WasNull));
       stTime:

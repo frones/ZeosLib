@@ -819,6 +819,8 @@ begin
             Result := 'NULL';
           TempBlob := nil;
         end; {if not TempBlob.IsEmpty then}
+      else
+        RaiseUnsupportedParameterTypeException(InParamType);	  
     end;
   end;
 end;

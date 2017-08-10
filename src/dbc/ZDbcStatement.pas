@@ -291,6 +291,7 @@ type
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); virtual;
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);  virtual; //AVZ
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); virtual;
+    procedure SetGUID(ParameterIndex: Integer; const Value: TGUID); virtual;
     procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); virtual;
     procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); virtual;
     procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); virtual;
@@ -1931,6 +1932,16 @@ procedure TZAbstractPreparedStatement.SetBytes(ParameterIndex: Integer;
   const Value: TBytes);
 begin
   SetInParam(ParameterIndex, stBytes, EncodeBytes(Value));
+end;
+
+{**
+  Sets the designated parameter to a GUID.
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractPreparedStatement.SetGUID(ParameterIndex: Integer; const Value: TGUID);
+begin
+  SetInParam(ParameterIndex, stGUID, EncodeGUID(Value));
 end;
 
 {**
