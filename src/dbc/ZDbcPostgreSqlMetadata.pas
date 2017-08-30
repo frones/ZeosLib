@@ -2160,6 +2160,12 @@ FillSizes:
           else
             Result.UpdateInt(TableColColumnSizeIndex, 0);
       end
+      else if (PgType = 'uuid') then
+      begin
+        // I set break point and see code reaching here. Below assignments, I have no idea what I am doing.
+        Result.UpdateInt(TableColColumnBufLengthIndex, 16); // MSSQL returns 16 here - which makes sense since a GUID is 16 bytes long.
+        // TableColColumnCharOctetLengthIndex is removed - PG returns 0 and in the dblib driver 0 is also used, although MSSQL returns null...
+      end
       else if (PgType = 'numeric') or (PgType = 'decimal') then
       begin
         Result.UpdateInt(TableColColumnSizeIndex, ((AttTypMod - 4) div 65536)); //precision

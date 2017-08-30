@@ -273,6 +273,8 @@ begin
             else
               FErrorcode := FPlainDriver.bind_null(FStmtHandle, I);
           end;
+        else
+          RaiseUnsupportedParameterTypeException(InParamTypes[I-1]);
       end;
     end;
     CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcBindPrepStmt, ASQL, ConSettings);

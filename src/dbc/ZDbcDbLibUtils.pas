@@ -355,6 +355,15 @@ begin
           else
             Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes), True);
         end;
+      stGuid:
+        begin
+          TempBytes := ClientVarManager.GetAsBytes(Value);
+          case Length(TempBytes) of
+            0: Result := 'NULL';
+            16: Result := GUIDToRaw(TempBytes);
+            else EZSQLException.Create('The TBytes was not 16 bytes long when trying to convert it to a GUID');
+          end;
+        end;
       stDate:
         Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
           ConSettings^.WriteFormatSettings, True);

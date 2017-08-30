@@ -718,6 +718,13 @@ begin
                   end;
               end; {case..}
           end;
+        stGuid:
+          begin
+            InParamValues[ParamIndex].VRawByteString := GUIDToRaw(ClientVarManager.GetAsBytes(InParamValues[ParamIndex]));
+            UpdatePAnsiChar(PAnsiChar(InParamValues[ParamIndex].VRawByteString), ParamIndex);
+          end;
+        else
+          RaiseUnsupportedParameterTypeException(InParamTypes[ParamIndex]);
       end;
   end;
   inherited BindInParameters;

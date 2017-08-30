@@ -900,7 +900,7 @@ begin
       if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
         Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
       else
-        Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
+        Result := RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
   LastWasNull := Result = 0;
 end;
 
@@ -2791,7 +2791,7 @@ begin
             if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - FColBind^.length) <= 4 then
               Result := RawSQLTimeStampToDateTime(PAnsiChar(FColBind^.buffer), FColBind^.length, ConSettings^.ReadFormatSettings, Failed)
             else
-              Result := RawSQLTimeToDateTime(PAnsiChar(FColBind^.buffer), FColBind^.length, ConSettings^.ReadFormatSettings, Failed);
+              Result := RawSQLDateToDateTime(PAnsiChar(FColBind^.buffer), FColBind^.length, ConSettings^.ReadFormatSettings, Failed);
           LastWasNull := Result = 0;
         end;
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
