@@ -1480,7 +1480,7 @@ begin
             end;
           end;
         else
-          raise EZASAConvertError.Create( SUnsupportedParameterType);
+          RaiseUnsupportedParameterTypeException(InParamTypes[i]);
     end;
 end;
 

@@ -192,9 +192,11 @@ function GetValidatedUnicodeStream(const Buffer: Pointer; Size: Cardinal;
 
 function ZSQLTypeToBuffSize(SQLType: TZSQLType): Integer;
 
+procedure RaiseUnsupportedParameterTypeException(ParamType: TZSQLType);
+
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding, ZFastCode;
+uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, TypInfo;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -1005,6 +1007,14 @@ begin
     stBigDecimal: Result := SizeOf(Extended);
     stGUID: Result := SizeOf(TGUID);
   end;
+end;
+
+procedure RaiseUnsupportedParameterTypeException(ParamType: TZSQLType);
+var
+  TypeName: String;
+begin
+  TypeName := GetEnumName(TypeInfo(TZSQLType), Ord(ParamType));
+  raise EZSQLException.Create(SUnsupportedParameterType + ': ' + TypeName);
 end;
 
 end.

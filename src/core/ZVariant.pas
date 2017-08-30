@@ -393,6 +393,12 @@ function EncodeBoolean(const Value: Boolean): TZVariant; {$IFDEF WITH_INLINE}inl
 }
 function EncodeBytes(const Value: TBytes): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 {**
+  Encodes a GUID into a custom variant.
+  @param Value a GUID to be encoded.
+  @returns an encoded custom variant.
+}
+function EncodeGUID(const Value: TGUID): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+{**
   Encodes an integer into a custom variant.
   @param Value an intger value to be encoded.
   @returns an encoded custom variant.
@@ -3116,7 +3122,18 @@ begin
 end;
 
 {**
-  Creates a integer variant.
+  Creates a bytes array variant from a GUID.
+  @param Value a value to be assigned.
+}
+function EncodeGUID(const Value: TGUID): TZVariant;
+begin
+  Result.VType := vtBytes;
+  SetLength(Result.VBytes, SizeOf(TGUID));
+  Move(Value, Result.VBytes[0], SizeOf(TGUID));
+end;
+
+{**
+  Creates an integer variant.
   @param Value a value to be assigned.
 }
 function EncodeInteger(const Value: Int64): TZVariant;
@@ -3126,7 +3143,7 @@ begin
 end;
 
 {**
-  Creates a integer variant.
+  Creates an unsigned integer variant.
   @param Value a value to be assigned.
 }
 function EncodeUInteger(const Value: UInt64): TZVariant;

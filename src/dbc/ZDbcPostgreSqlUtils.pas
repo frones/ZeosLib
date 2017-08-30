@@ -230,6 +230,8 @@ begin
     Result := stAsciiStream
   else if (TypeName <> '') and (TypeName[1] = '_') then // ARRAY TYPES
     Result := stAsciiStream
+  else if (TypeName = 'uuid') then
+    Result := stGuid
   else
     Result := stUnknown;
 
@@ -287,6 +289,7 @@ begin
         else
           Result := stBinaryStream;
       end;
+    2950: Result := stGUID;
     22,30: Result := stAsciiStream; { int2vector/oidvector. no '_aclitem' }
     143,629,651,719,791,1000..1028,1040,1041,1115,1182,1183,1185,1187,1231,1263,
     1270,1561,1563,2201,2207..2211,2949,2951,3643,3644,3645,3735,3770 : { other array types }
@@ -310,6 +313,7 @@ begin
     stDate: Result := 'date';
     stTime: Result := 'time';
     stTimestamp: Result := 'timestamp';
+    stGuid: Result := 'uuid';
     stBinaryStream, stBytes:
       if IsOidAsBlob then
         Result := 'oid'
@@ -815,6 +819,8 @@ begin
             Result := 'NULL';
           TempBlob := nil;
         end; {if not TempBlob.IsEmpty then}
+      else
+        RaiseUnsupportedParameterTypeException(InParamType);	  
     end;
   end;
 end;
