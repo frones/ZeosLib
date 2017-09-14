@@ -841,7 +841,7 @@ end;
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
-  if EndsWith(GetPlainDriver.GetProtocol, '2.5') then
+  if (Connection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and (GetHostVersion > 2005000) then
     if (Length(Value)*2+3) < 32*1024 then
       Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
     else
@@ -853,7 +853,7 @@ end;
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
-  if EndsWith(GetPlainDriver.GetProtocol, '2.5') then
+  if (Connection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and (GetHostVersion > 2005000) then
     if (Length(Value)*2+3) < 32*1024 then
       Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
     else
@@ -968,8 +968,7 @@ var
 begin
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery(Format(
-    'SELECT GEN_ID("%s", 0) FROM rdb$generators ' +
-    'WHERE rdb$generators.rdb$generator_name = ''%s''', [Name, Name]));
+    'SELECT %s FROM RDB$DATABASE', [GetCurrentValueSQL, Name]));
   if ResultSet.Next then
     Result := ResultSet.GetLong(1)
   else
@@ -993,9 +992,8 @@ var
   ResultSet: IZResultSet;
 begin
   Statement := Connection.CreateStatement;
-  ResultSet := Statement.ExecuteQuery(Format(
-    'SELECT GEN_ID("%s", %d) FROM rdb$generators ' +
-    'WHERE rdb$generators.rdb$generator_name = ''%s''', [Name, BlockSize, Name]));
+  ResultSet := Statement.ExecuteQuery(
+    Format('SELECT %s FROM RDB$DATABASE', [GetNextValueSQL]));
   if ResultSet.Next then
     Result := ResultSet.GetLong(1)
   else
@@ -1006,7 +1004,12 @@ end;
 
 function TZInterbase6Sequence.GetNextValueSQL: string;
 begin
-  Result := Format(' GEN_ID("%s", %d) ', [Name, BlockSize]);
+  // Firebird 2.0+ supports SQL-compliant syntax
+  if (Connection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and
+     (Connection.GetHostVersion >= 2000000) and (BlockSize = 1) then
+    Result := Format(' NEXT VALUE FOR "%s" ', [Name])
+  else
+    Result := Format(' GEN_ID("%s", %d) ', [Name, BlockSize]);
 end;
 
 initialization

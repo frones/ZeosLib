@@ -1502,7 +1502,8 @@ var
   ResultSet: IZResultSet;
 begin
   Statement := Connection.CreateStatement;
-  ResultSet := Statement.ExecuteQuery('SELECT CURRVAL('''+Name+''')');
+  ResultSet := Statement.ExecuteQuery(
+    Format('SELECT %s', [GetCurrentValueSQL]));
   if ResultSet.Next then
     Result := ResultSet.GetLong(1)
   else
@@ -1517,7 +1518,7 @@ end;
 }
 function TZPostgreSQLSequence.GetCurrentValueSQL: String;
 begin
-  result:= ' CURRVAL('''+Name+''')';
+  Result := Format(' CURRVAL(''%s'')', [Name]);
 end;
 
 function TZPostgreSQLSequence.GetNextValue: Int64;
@@ -1526,7 +1527,8 @@ var
   ResultSet: IZResultSet;
 begin
   Statement := Connection.CreateStatement;
-  ResultSet := Statement.ExecuteQuery('SELECT NEXTVAL('''+Name+''')');
+  ResultSet := Statement.ExecuteQuery(
+    Format('SELECT %s', [GetNextValueSQL]));
   if ResultSet.Next then
     Result := ResultSet.GetLong(1)
   else
@@ -1537,7 +1539,7 @@ end;
 
 function TZPostgreSQLSequence.GetNextValueSQL: String;
 begin
-  result := ' NEXTVAL('''+Name+''') ';
+  Result := Format(' NEXTVAL(''%s'')', [Name]);
 end;
 
 function TZPostgreSQLConnection.EncodeBinary(Buf: Pointer;
