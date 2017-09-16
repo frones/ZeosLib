@@ -446,7 +446,6 @@ type
     function GetDescription: string; override;
   end;
 
-
   {** Implements a native driver for Firebird 2.0}
   TZFirebird20PlainDriver = class (TZFirebirdBaseDriver)
   protected
@@ -460,6 +459,7 @@ type
     function GetDescription: string; override;
   end;
 
+  {** Implements a native driver for Firebird 2.0 Embedded}
   TZFirebirdD20PlainDriver = class (TZFirebird20PlainDriver)
   protected
     function Clone: IZPlainDriver; override;
@@ -472,24 +472,21 @@ type
 
   {** Represents class to Interbase 6+ native API. }
 
-  { TZFirebird21PlainDriver }
-
+  {** Implements a native driver for Firebird 2.1}
   TZFirebird21PlainDriver = class (TZFirebirdBaseDriver)
   protected
     function Clone: IZPlainDriver; override;
   protected
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
-    procedure LoadApi; override;
   public
     constructor Create;
 
     function GetProtocol: string; override;
     function GetDescription: string; override;
-
-    function isc_interprete(buffer: PAnsiChar; status_vector: PPISC_STATUS): ISC_STATUS; override;
   end;
 
+  {** Implements a native driver for Firebird 2.1 Embedded}
   TZFirebirdD21PlainDriver = class (TZFirebird21PlainDriver)
   protected
     function Clone: IZPlainDriver; override;
@@ -500,33 +497,20 @@ type
     function GetDescription: string; override;
   end;
 
-  { TZFirebird25PlainDriver }
-
+  {** Implements a native driver for Firebird 2.5}
   TZFirebird25PlainDriver = class (TZFirebirdBaseDriver)
   protected
     function Clone: IZPlainDriver; override;
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
-    procedure LoadApi; override;
   public
     constructor Create;
 
     function GetProtocol: string; override;
     function GetDescription: string; override;
-
-    function isc_interprete(buffer: PAnsiChar; status_vector: PPISC_STATUS): ISC_STATUS; override;
   end;
 
-  { TZFirebird3PlainDriver }
-  TZFirebird30PlainDriver = class (TZFirebird25PlainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-  public
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
-
-  { TZFirebirdD25PlainDriver }
+  {** Implements a native driver for Firebird 2.5 Embedded}
   TZFirebirdD25PlainDriver = class (TZFirebird25PlainDriver)
   protected
     function Clone: IZPlainDriver; override;
@@ -537,7 +521,16 @@ type
     function GetDescription: string; override;
   end;
 
-  { TZFirebirdD30PlainDriver }
+  {** Implements a native driver for Firebird 3.0}
+  TZFirebird30PlainDriver = class (TZFirebird25PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
+  public
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+  end;
+
+  {** Implements a native driver for Firebird 3.0 Embedded}
   TZFirebirdD30PlainDriver = class (TZFirebirdD25PlainDriver)
   protected
     function Clone: IZPlainDriver; override;
@@ -711,6 +704,8 @@ begin
     @FIREBIRD_API.isc_encode_sql_date := GetAddress('isc_encode_sql_date');
     @FIREBIRD_API.isc_encode_sql_time := GetAddress('isc_encode_sql_time');
     @FIREBIRD_API.isc_encode_timestamp := GetAddress('isc_encode_timestamp');
+
+    @FIREBIRD_API.fb_interpret        := GetAddress('fb_interpret');
   end;
 end;
 
@@ -1062,7 +1057,10 @@ end;
 function TZFirebirdBaseDriver.isc_interprete(buffer: PAnsiChar;
   status_vector: PPISC_STATUS): ISC_STATUS;
 begin
-  Result := FIREBIRD_API.isc_interprete(buffer, status_vector);
+  if Assigned(FIREBIRD_API.fb_interpret) then
+    Result := FIREBIRD_API.fb_interpret(buffer, IBBigLocalBufferLength, status_vector)
+  else
+    Result := FIREBIRD_API.isc_interprete(buffer, status_vector);
 end;
 
 function TZFirebirdBaseDriver.isc_open_blob2(status_vector: PISC_STATUS;
@@ -1387,16 +1385,6 @@ begin
   AddFireBird21CodePages(Self);
 end;
 
-procedure TZFirebird21PlainDriver.LoadApi;
-begin
-  inherited LoadApi;
-
-  with Loader do
-  begin
-  @FIREBIRD_API.fb_interpret        := GetAddress('fb_interpret');
-  end;
-end;
-
 constructor TZFirebird21PlainDriver.Create;
 begin
    inherited create;
@@ -1431,15 +1419,6 @@ end;
 function TZFirebird21PlainDriver.GetProtocol: string;
 begin
   Result := 'firebird-2.1';
-end;
-
-function TZFirebird21PlainDriver.isc_interprete(buffer: PAnsiChar;
-  status_vector: PPISC_STATUS): ISC_STATUS;
-var
-   bufsize : integer;
-begin
-  bufsize := 1024;
-  Result := FIREBIRD_API.fb_interpret(buffer, bufsize, status_vector);
 end;
 
 { IZFirebirdD21PlainDriver }
@@ -1495,16 +1474,6 @@ begin
   Self.AddCodePage('GB18030', CS_GB18030, ceAnsi, zCP_GB18030, '', 4); {Chinese}
 end;
 
-procedure TZFirebird25PlainDriver.LoadApi;
-begin
-  inherited LoadApi;
-
-  with Loader do
-  begin
-    @FIREBIRD_API.fb_interpret        := GetAddress('fb_interpret');
-  end;
-end;
-
 constructor TZFirebird25PlainDriver.Create;
 begin
   inherited create;
@@ -1538,12 +1507,6 @@ end;
 function TZFirebird25PlainDriver.GetDescription: string;
 begin
   Result := 'Native Plain Driver for Firebird 2.5';
-end;
-
-function TZFirebird25PlainDriver.isc_interprete(buffer: PAnsiChar;
-  status_vector: PPISC_STATUS): ISC_STATUS;
-begin
-  Result:=inherited isc_interprete(buffer, status_vector);
 end;
 
 { TZFirebird30PlainDriver }
