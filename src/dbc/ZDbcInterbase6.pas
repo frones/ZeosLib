@@ -841,7 +841,7 @@ end;
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
-  if (Connection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and (GetHostVersion > 2005000) then
+  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and (GetHostVersion > 2005000) then
     if (Length(Value)*2+3) < 32*1024 then
       Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
     else
@@ -853,7 +853,7 @@ end;
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
-  if (Connection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and (GetHostVersion > 2005000) then
+  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and (GetHostVersion > 2005000) then
     if (Length(Value)*2+3) < 32*1024 then
       Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
     else
