@@ -536,7 +536,7 @@ begin
       tmp := Copy(tmp, i+1, ZFastCode.Pos(' ', tmp)-i-1)
     else
       tmp := Copy(tmp, i+1, Length(tmp)-i);
-    FHostVersion := FHostVersion + StrToInt(tmp)*100000;
+    FHostVersion := FHostVersion + StrToInt(tmp)*1000;
     if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird then
       if (FHostVersion >= 3000000) then FXSQLDAMaxSize := 10*1024*1024; //might be much more! 4GB? 10MB sounds enough / roundtrip
 
@@ -841,7 +841,7 @@ end;
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
-  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and (GetHostVersion > 2005000) then
+  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and (GetHostVersion >= 2005000) then
     if (Length(Value)*2+3) < 32*1024 then
       Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
     else
@@ -853,7 +853,7 @@ end;
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
-  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and (GetHostVersion > 2005000) then
+  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and (GetHostVersion >= 2005000) then
     if (Length(Value)*2+3) < 32*1024 then
       Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
     else
