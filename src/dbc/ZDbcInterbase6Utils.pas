@@ -314,7 +314,7 @@ const
   { count database parameters }
   MAX_DPB_PARAMS = 90;
   { prefix database parameters names it used in paramters scann procedure }
-  BPBPrefix = RawByteString('isc_dpb_');
+  BPBPrefix = 'isc_dpb_';
   { list database parameters and their apropriate numbers }
   DatabaseParams: array [0..MAX_DPB_PARAMS]of TZIbParam = (
     (Name:'isc_dpb_version1';         Number: isc_dpb_version1),
@@ -521,13 +521,14 @@ begin
       isc_dpb_user_name, isc_dpb_password, isc_dpb_password_enc,
       isc_dpb_sys_user_name, isc_dpb_license, isc_dpb_encrypt_key,
       isc_dpb_lc_messages, isc_dpb_lc_ctype, isc_dpb_sql_role_name,
-	    isc_dpb_connect_timeout, isc_dpb_config:
+      isc_dpb_config:
         begin
           DPB := DPB + AnsiChar(ParamNo) + AnsiChar(Length(ParamValue)) + ParamValue;
           Inc(FDPBLength, 2 + Length(ParamValue));
         end;
       isc_dpb_num_buffers, isc_dpb_dbkey_scope, isc_dpb_force_write,
-      isc_dpb_no_reserve, isc_dpb_damaged, isc_dpb_verify:
+      isc_dpb_no_reserve, isc_dpb_damaged, isc_dpb_verify,
+      isc_dpb_connect_timeout:
         begin
           DPB := DPB + AnsiChar(ParamNo) + #1 + AnsiChar(ZFastCode.RawToInt(ParamValue));
           Inc(FDPBLength, 3);
