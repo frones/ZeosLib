@@ -710,7 +710,7 @@ end;
   It does not matter what info we request, we are not looking at it, as long
   as it is something which should _always_ work if the connection is there.
   We check if the error returned is one of the net_* errors described in the
-  firebird client documentation (335544721 .. 335544727).
+  firebird client documentation (isc_network_error .. isc_net_write_err).
   Returns 0 if the connection is OK
   Returns non zero if the connection is not OK
 }
@@ -725,10 +725,12 @@ begin
   ErrorCode := GetPlainDriver.isc_database_info(@FStatusVector, @FHandle, 1, @DatabaseInfoCommand,
                            IBLocalBufferLength, Buffer);
 
-  if (ErrorCode >= 335544721) and (ErrorCode <= 335544727) then
-   result := -1
-  else
-   result := 0;
+  case ErrorCode of
+    isc_network_error..isc_net_write_err:
+      Result := -1
+    else
+      Result := 0;
+  end;
 end;
 
 {**
