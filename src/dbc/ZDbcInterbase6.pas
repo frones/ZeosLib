@@ -786,7 +786,6 @@ begin
         { Add user defined parameters for transaction }
         if ZFastCode.Pos(TPBPrefix, Info.Text) > 0 then
         begin
-          Params.Clear;
           Params.AddStrings(Info);
         end
         else
