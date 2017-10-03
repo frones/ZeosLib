@@ -314,7 +314,7 @@ const
   { count database parameters }
   MAX_DPB_PARAMS = 90;
   { prefix database parameters names it used in paramters scann procedure }
-  BPBPrefix = 'isc_dpb_';
+  DPBPrefix = 'isc_dpb_';
   { list database parameters and their apropriate numbers }
   DatabaseParams: array [0..MAX_DPB_PARAMS]of TZIbParam = (
     (Name:'isc_dpb_version1';         Number: isc_dpb_version1),
@@ -652,7 +652,7 @@ var
 begin
   ParamName := AnsiLowerCase(Value);
   Result := 0;
-  if ZFastCode.Pos(BPBPrefix, ParamName) = 1 then
+  if ZFastCode.Pos(DPBPrefix, ParamName) = 1 then
     for I := 1 to MAX_DPB_PARAMS do
     begin
       if ParamName = DatabaseParams[I].Name then
