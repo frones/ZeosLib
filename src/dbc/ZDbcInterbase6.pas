@@ -479,8 +479,7 @@ end;
 procedure TZInterbase6Connection.Open;
 const sCS_NONE = 'NONE';
 var
-  DPB: PAnsiChar;
-  FDPBLength: Word;
+  DPB: RawByteString;
   DBName: array[0..512] of AnsiChar;
   NewDB: RawByteString;
   tmp: String;
@@ -494,8 +493,6 @@ begin
   if ConSettings^.ClientCodePage = nil then
     CheckCharEncoding(FClientCodePage, True);
 
-  DPB := GenerateDPB(Info, FDPBLength{%H-}, FDialect);
-
   if HostName <> '' then
     if Port <> 3050 then
       {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.ConvFuncs.ZStringToRaw((HostName + '/' + ZFastCode.IntToStr(Port) + ':' + Database),
@@ -506,109 +503,109 @@ begin
   else
     {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.Database);
 
-  try
-    { Create new db if needed }
-    if Info.Values['createNewDatabase'] <> '' then
-    begin
-      NewDB := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values['createNewDatabase'],
-        ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-      CreateNewDatabase(NewDB);
-      { Logging connection action }
-      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-        'CREATE DATABASE "'+NewDB+'" AS USER "'+ ConSettings^.User+'"');
-      URL.Properties.Values['createNewDatabase'] := '';
-    end;
-    
-    FHandle := 0;
-    { Connect to Interbase6 database. }
-    GetPlainDriver.isc_attach_database(@FStatusVector,
-      ZFastCode.StrLen(DBName), DBName,
-        @FHandle, FDPBLength, DPB);
-
-    { Check connection error }
-    CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcConnect);
-
-    (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).CollectServerInformations; //keep this one first!
-    tmp := GetMetadata.GetDatabaseInfo.GetDatabaseProductVersion;
-    I := ZFastCode.Pos('.', tmp);
-    FHostVersion := StrToInt(Copy(tmp, 1, i-1))*1000000;
-    if ZFastCode.Pos(' ', tmp) > 0 then //possible beta or alfa release
-      tmp := Copy(tmp, i+1, ZFastCode.Pos(' ', tmp)-i-1)
-    else
-      tmp := Copy(tmp, i+1, Length(tmp)-i);
-    FHostVersion := FHostVersion + StrToInt(tmp)*1000;
-    if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird then
-      if (FHostVersion >= 3000000) then FXSQLDAMaxSize := 10*1024*1024; //might be much more! 4GB? 10MB sounds enough / roundtrip
-
+  { Create new db if needed }
+  if Info.Values['createNewDatabase'] <> '' then
+  begin
+    NewDB := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values['createNewDatabase'],
+      ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+    CreateNewDatabase(NewDB);
     { Logging connection action }
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-      'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"');
+      'CREATE DATABASE "'+NewDB+'" AS USER "'+ ConSettings^.User+'"');
+    URL.Properties.Values['createNewDatabase'] := '';
+  end;
 
-    { Start transaction }
-    if not FHardCommit then
-      StartTransaction;
+  FHandle := 0;
+  DPB := GenerateDPB(Info);
+  { Connect to Interbase6 database. }
+  GetPlainDriver.isc_attach_database(@FStatusVector,
+    ZFastCode.StrLen(DBName), DBName,
+    @FHandle, Length(DPB), Pointer(DPB));
 
-    inherited Open;
+  { Check connection error }
+  CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcConnect);
 
-    {Check for ClientCodePage: if empty switch to database-defaults
-      and/or check for charset 'NONE' which has a different byte-width
-      and no conversations where done except the collumns using collations}
-    with GetMetadata.GetCollationAndCharSet('', '', '', '') do
-    begin
-      if Next then
-        if FCLientCodePage = '' then
+  (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).CollectServerInformations; //keep this one first!
+  tmp := GetMetadata.GetDatabaseInfo.GetDatabaseProductVersion;
+  I := ZFastCode.Pos('.', tmp);
+  FHostVersion := StrToInt(Copy(tmp, 1, i-1))*1000000;
+  if ZFastCode.Pos(' ', tmp) > 0 then //possible beta or alfa release
+    tmp := Copy(tmp, i+1, ZFastCode.Pos(' ', tmp)-i-1)
+  else
+    tmp := Copy(tmp, i+1, Length(tmp)-i);
+  FHostVersion := FHostVersion + StrToInt(tmp)*1000;
+  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird then
+    if (FHostVersion >= 3000000) then FXSQLDAMaxSize := 10*1024*1024; //might be much more! 4GB? 10MB sounds enough / roundtrip
+
+  { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
+  FDialect := GetDBSQLDialect(GetPlainDriver, @FHandle, ConSettings);
+
+  { Logging connection action }
+  DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+    'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"');
+
+  { Start transaction }
+  if not FHardCommit then
+    StartTransaction;
+
+  inherited Open;
+
+  {Check for ClientCodePage: if empty switch to database-defaults
+    and/or check for charset 'NONE' which has a different byte-width
+    and no conversations where done except the collumns using collations}
+  with GetMetadata.GetCollationAndCharSet('', '', '', '') do
+  begin
+    if Next then
+      if FCLientCodePage = '' then
+      begin
+        FCLientCodePage := GetString(CollationAndCharSetNameIndex);
+        if URL.Properties.Values['ResetCodePage'] <> '' then
         begin
-          FCLientCodePage := GetString(CollationAndCharSetNameIndex);
-          if URL.Properties.Values['ResetCodePage'] <> '' then
-          begin
-            ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(FClientCodePage);
-            ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
-          end
-          else
-            CheckCharEncoding(FClientCodePage);
+          ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(FClientCodePage);
+          ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
         end
         else
-          if GetString(CollationAndCharSetNameIndex) = sCS_NONE then
+          CheckCharEncoding(FClientCodePage);
+      end
+      else
+        if GetString(CollationAndCharSetNameIndex) = sCS_NONE then
+        begin
+          if not ( FClientCodePage = sCS_NONE ) then
           begin
-            if not ( FClientCodePage = sCS_NONE ) then
-            begin
-              URL.Properties.Values['isc_dpb_lc_ctype'] := sCS_NONE;
-              {save the user wanted CodePage-Informations}
-              URL.Properties.Values['ResetCodePage'] := FClientCodePage;
-              FClientCodePage := sCS_NONE;
-              { charset 'NONE' can't convert anything and write 'Data as is'!
-                If another charset was set on attaching the Server then all
-                column collations are retrieved with newly choosen collation.
-                BUT NO string convertations where done! So we need a
-                reopen (since we can set the Client-CharacterSet only on
-                connecting) to determine charset 'NONE' corectly. Then the column
-                collations have there proper CharsetID's to encode all strings
-                correctly. }
-              Self.Close;
-              Self.Open;
-              { Create a new PZCodePage for the new environment-variables }
-            end
-            else
-            begin
-              if URL.Properties.Values['ResetCodePage'] <> '' then
-              begin
-                ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(sCS_NONE);
-                ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
-              end
-              else
-                CheckCharEncoding(sCS_NONE);
-            end;
+            URL.Properties.Values['isc_dpb_lc_ctype'] := sCS_NONE;
+            {save the user wanted CodePage-Informations}
+            URL.Properties.Values['ResetCodePage'] := FClientCodePage;
+            FClientCodePage := sCS_NONE;
+            { charset 'NONE' can't convert anything and write 'Data as is'!
+              If another charset was set on attaching the Server then all
+              column collations are retrieved with newly choosen collation.
+              BUT NO string convertations where done! So we need a
+              reopen (since we can set the Client-CharacterSet only on
+              connecting) to determine charset 'NONE' corectly. Then the column
+              collations have there proper CharsetID's to encode all strings
+              correctly. }
+            Self.Close;
+            Self.Open;
+            { Create a new PZCodePage for the new environment-variables }
           end
           else
+          begin
             if URL.Properties.Values['ResetCodePage'] <> '' then
+            begin
+              ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(sCS_NONE);
               ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
-      Close;
-    end;
-    if FClientCodePage = sCS_NONE then
-      ConSettings.AutoEncode := True; //Must be set!
-  finally
-    {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(DPB);
+            end
+            else
+              CheckCharEncoding(sCS_NONE);
+          end;
+        end
+        else
+          if URL.Properties.Values['ResetCodePage'] <> '' then
+            ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
+    Close;
   end;
+  if FClientCodePage = sCS_NONE then
+    ConSettings.AutoEncode := True; //Must be set!
 end;
 
 {**
@@ -737,7 +734,47 @@ end;
    Start Interbase transaction
 }
 procedure TZInterbase6Connection.StartTransaction;
-const tpb_Access: array[boolean] of String = ('isc_tpb_write','isc_tpb_read');
+
+const
+  Tpb_Access: array[boolean] of String = ('isc_tpb_write','isc_tpb_read');
+
+{ List of parameters that are assigned according to values of properties but
+  could be overwritten by user.
+  These parameters are all simple flags having no value so no splitting is required. }
+type
+  TOverwritableParams = (parTIL, parRW, parRecVer, parWait);
+  TOverwritableParamValues = array[TOverwritableParams] of string;
+
+  { Add all items from Src to Dest except those which define overwritable params.
+    Value of these params are returned in OverwritableParams array. }
+  procedure AddStrings(Dest, Src: TStrings; var OverwritableParams: TOverwritableParamValues);
+  var
+    I: Integer;
+    SrcPar: string;
+  begin
+    for I := 0 to Src.Count - 1 do
+    begin
+      SrcPar := LowerCase(Src[I]);
+      if (SrcPar = 'isc_tpb_consistency') or
+         (SrcPar = 'isc_tpb_concurrency') or
+         (SrcPar = 'isc_tpb_read_committed') then
+        OverwritableParams[parTIL] := SrcPar
+      else
+      if (SrcPar = 'isc_tpb_wait') or
+         (SrcPar = 'isc_tpb_nowait') then
+        OverwritableParams[parWait] := SrcPar
+      else
+      if (SrcPar = 'isc_tpb_read') or
+         (SrcPar = 'isc_tpb_write') then
+        OverwritableParams[parRW] := SrcPar
+      else
+      if (SrcPar = 'isc_tpb_rec_version') or
+         (SrcPar = 'isc_tpb_no_rec_version') then
+        OverwritableParams[parRecVer] := SrcPar
+      else
+        Dest.Add(Src[I]);
+    end;
+  end;
 
 {EH: We do NOT handle the isc_tpb_autocommit of FB because we noticed a huge
  performance drop especially for Batch executions. Note Zeos handles one Batch
@@ -747,7 +784,9 @@ const tpb_Access: array[boolean] of String = ('isc_tpb_write','isc_tpb_read');
 //const tpb_AutoCommit: array[boolean] of String = ('','isc_tpb_autocommit');
 var
   Params: TStrings;
-  PTEB: PISC_TEB;
+  TPB: RawByteString;
+  TEB: TISC_TEB;
+  OverwritableParams: TOverwritableParamValues;
 begin
   if FHandle <> 0 then
   begin
@@ -757,59 +796,62 @@ begin
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
       FTrHandle := 0;
     end;
-    PTEB := nil;
     Params := TStringList.Create;
+    OverwritableParams[parRW] := tpb_Access[ReadOnly];
 
     { Set transaction parameters by TransactIsolationLevel }
-    Params.Add('isc_tpb_version3');
     case TransactIsolationLevel of
       tiReadCommitted:
         begin
-          Params.Add(tpb_Access[ReadOnly]);
-          Params.Add('isc_tpb_read_committed');
-          Params.Add('isc_tpb_rec_version');
-          Params.Add('isc_tpb_nowait');
+          OverwritableParams[parRecVer] := 'isc_tpb_rec_version';
+          OverwritableParams[parWait] := 'isc_tpb_nowait';
+          AddStrings(Params, Info, OverwritableParams);
+          OverwritableParams[parRW] := tpb_Access[ReadOnly];
+          OverwritableParams[parTIL] := 'isc_tpb_read_committed';
         end;
       tiRepeatableRead:
         begin
-          Params.Add(tpb_Access[ReadOnly]);
-          Params.Add('isc_tpb_concurrency');
-          Params.Add('isc_tpb_nowait');
+          OverwritableParams[parWait] := 'isc_tpb_nowait';
+          AddStrings(Params, Info, OverwritableParams);
+          OverwritableParams[parRW] := tpb_Access[ReadOnly];
+          OverwritableParams[parTIL] := 'isc_tpb_concurrency';
         end;
       tiSerializable:
         begin
-          Params.Add(tpb_Access[ReadOnly]);
-          Params.Add('isc_tpb_consistency');
+          AddStrings(Params, Info, OverwritableParams);
+          OverwritableParams[parRW] := tpb_Access[ReadOnly];
+          OverwritableParams[parTIL] := 'isc_tpb_consistency';
         end;
       else
       begin
-        { Add user defined parameters for transaction }
-        if ZFastCode.Pos(TPBPrefix, Info.Text) > 0 then
-        begin
-          Params.AddStrings(Info);
-        end
-        else
-        begin
-          {extend the firebird defaults by ReadOnly}
-          Params.Add(tpb_Access[ReadOnly]);
-          Params.Add('isc_tpb_concurrency');
-          Params.Add('isc_tpb_wait');
-        end;
+        OverwritableParams[parRW] := tpb_Access[ReadOnly];
+        { FB default values for non-standard TIL }
+        OverwritableParams[parTIL] := 'isc_tpb_concurrency';
+        OverwritableParams[parWait] := 'isc_tpb_wait';
+        AddStrings(Params, Info, OverwritableParams);
       end;
     end;
 
+    { Add overwitable parameters to the beginning of list }
+    if OverwritableParams[parRW] <> '' then
+      Params.Insert(0, OverwritableParams[parRW]);
+    if OverwritableParams[parWait] <> '' then
+      Params.Insert(0, OverwritableParams[parWait]);
+    if OverwritableParams[parRecVer] <> '' then
+      Params.Insert(0, OverwritableParams[parRecVer]);
+    if OverwritableParams[parTIL] <> '' then
+      Params.Insert(0, OverwritableParams[parTIL]);
+
     try
-      { GenerateTPB return PTEB with null pointer tpb_address from default
-        transaction }
-      PTEB := GenerateTPB(Params, FHandle);
-      GetPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, PTEB);
+      TPB := GenerateTPB(Params);
+      TEB := GenerateTEB(@FHandle, TPB);
+
+      GetPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @TEB);
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
         'TRANSACTION STARTED.');
     finally
       FreeAndNil(Params);
-      {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(PTEB.tpb_address);
-      FreeMem(PTEB);
     end
   end;
 end;

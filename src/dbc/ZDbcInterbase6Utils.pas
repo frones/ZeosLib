@@ -69,9 +69,18 @@ type
   { Interbase Error Class}
   EZIBConvertError = class(Exception);
 
+  TZIbParamValueType = (
+    pvtNotImpl,  // unsupported
+    pvtNone,     // no value
+    pvtByteZ,    // 1-byte int that always = 0 (value ignored)
+    pvtNum,      // 1/2/4-byte int, depending on a value
+    pvtString    // raw byte string
+  );
+
   { Paparameter string name and it value}
   TZIbParam = record
     Name: String;
+    ValueType: TZIbParamValueType;
     Number: word;
   end;
   PZIbParam = ^TZIbParam;
@@ -211,10 +220,13 @@ function CreateIBResultSet(const SQL: string; const Statement: IZStatement;
   const NativeResultSet: IZResultSet): IZResultSet;
 
 {Interbase6 Connection Functions}
-function GenerateDPB(Info: TStrings; var FDPBLength, Dialect: Word): PAnsiChar;
-function GenerateTPB(Params: TStrings; var Handle: TISC_DB_HANDLE): PISC_TEB;
+function GenerateDPB(Info: TStrings): RawByteString; overload;
+function GenerateTPB(Params: TStrings): RawByteString; overload;
+function GenerateTEB(PHandle: PISC_DB_HANDLE; const TPB: RawByteString): TISC_TEB;
+function GenerateDPB(Info: TStrings; var FDPBLength, Dialect: Word): PAnsiChar; overload; deprecated;
+function GenerateTPB(Params: TStrings; var Handle: TISC_DB_HANDLE): PISC_TEB; overload; deprecated;
 function GetInterbase6DatabaseParamNumber(const Value: String): word;
-function GetInterbase6TransactionParamNumber(const Value: String): word;
+function GetInterbase6TransactionParamNumber(const Value: String): word; 
 
 { Interbase6 errors functions }
 function GetNameSqlType(Value: Word): RawByteString;
@@ -316,131 +328,132 @@ const
   { prefix database parameters names it used in paramters scann procedure }
   DPBPrefix = 'isc_dpb_';
   { list database parameters and their apropriate numbers }
-  DatabaseParams: array [0..MAX_DPB_PARAMS]of TZIbParam = (
-    (Name:'isc_dpb_version1';         Number: isc_dpb_version1),
-    (Name:'isc_dpb_cdd_pathname';     Number: isc_dpb_cdd_pathname),
-    (Name:'isc_dpb_allocation';       Number: isc_dpb_allocation),
-    (Name:'isc_dpb_journal';          Number: isc_dpb_journal),
-    (Name:'isc_dpb_page_size';        Number: isc_dpb_page_size),
-    (Name:'isc_dpb_num_buffers';      Number: isc_dpb_num_buffers),
-    (Name:'isc_dpb_buffer_length';    Number: isc_dpb_buffer_length),
-    (Name:'isc_dpb_debug';            Number: isc_dpb_debug),
-    (Name:'isc_dpb_garbage_collect';  Number: isc_dpb_garbage_collect),
-    (Name:'isc_dpb_verify';           Number: isc_dpb_verify),
-    (Name:'isc_dpb_sweep';            Number: isc_dpb_sweep),
-    (Name:'isc_dpb_enable_journal';   Number: isc_dpb_enable_journal),
-    (Name:'isc_dpb_disable_journal';  Number: isc_dpb_disable_journal),
-    (Name:'isc_dpb_dbkey_scope';      Number: isc_dpb_dbkey_scope),
-    (Name:'isc_dpb_number_of_users';  Number: isc_dpb_number_of_users),
-    (Name:'isc_dpb_trace';            Number: isc_dpb_trace),
-    (Name:'isc_dpb_no_garbage_collect'; Number: isc_dpb_no_garbage_collect),
-    (Name:'isc_dpb_damaged';          Number: isc_dpb_damaged),
-    (Name:'isc_dpb_license';          Number: isc_dpb_license),
-    (Name:'isc_dpb_sys_user_name';    Number: isc_dpb_sys_user_name),
-    (Name:'isc_dpb_encrypt_key';      Number: isc_dpb_encrypt_key),
-    (Name:'isc_dpb_activate_shadow';  Number: isc_dpb_activate_shadow),
-    (Name:'isc_dpb_sweep_interval';   Number: isc_dpb_sweep_interval),
-    (Name:'isc_dpb_delete_shadow';    Number: isc_dpb_delete_shadow),
-    (Name:'isc_dpb_force_write';      Number: isc_dpb_force_write),
-    (Name:'isc_dpb_begin_log';        Number: isc_dpb_begin_log),
-    (Name:'isc_dpb_quit_log';         Number: isc_dpb_quit_log),
-    (Name:'isc_dpb_no_reserve';       Number: isc_dpb_no_reserve),
-    (Name:'isc_dpb_username';         Number: isc_dpb_user_name),
-    (Name:'isc_dpb_password';         Number: isc_dpb_password),
-    (Name:'isc_dpb_password_enc';     Number: isc_dpb_password_enc),
-    (Name:'isc_dpb_sys_user_name_enc';  Number: isc_dpb_sys_user_name_enc),
-    (Name:'isc_dpb_interp';           Number: isc_dpb_interp),
-    (Name:'isc_dpb_online_dump';      Number: isc_dpb_online_dump),
-    (Name:'isc_dpb_old_file_size';    Number: isc_dpb_old_file_size),
-    (Name:'isc_dpb_old_num_files';    Number: isc_dpb_old_num_files),
-    (Name:'isc_dpb_old_file';         Number: isc_dpb_old_file),
-    (Name:'isc_dpb_old_start_page';   Number: isc_dpb_old_start_page),
-    (Name:'isc_dpb_old_start_seqno';  Number: isc_dpb_old_start_seqno),
-    (Name:'isc_dpb_old_start_file';   Number: isc_dpb_old_start_file),
-    (Name:'isc_dpb_drop_walfile';     Number: isc_dpb_drop_walfile),
-    (Name:'isc_dpb_old_dump_id';      Number: isc_dpb_old_dump_id),
-    (Name:'isc_dpb_wal_backup_dir';   Number: isc_dpb_wal_backup_dir),
-    (Name:'isc_dpb_wal_chkptlen';     Number: isc_dpb_wal_chkptlen),
-    (Name:'isc_dpb_wal_numbufs';      Number: isc_dpb_wal_numbufs),
-    (Name:'isc_dpb_wal_bufsize';      Number: isc_dpb_wal_bufsize),
-    (Name:'isc_dpb_wal_grp_cmt_wait'; Number: isc_dpb_wal_grp_cmt_wait),
-    (Name:'isc_dpb_lc_messages';      Number: isc_dpb_lc_messages),
-    (Name:'isc_dpb_lc_ctype';         Number: isc_dpb_lc_ctype),
-    (Name:'isc_dpb_cache_manager';    Number: isc_dpb_cache_manager),
-    (Name:'isc_dpb_shutdown';         Number: isc_dpb_shutdown),
-    (Name:'isc_dpb_online';           Number: isc_dpb_online),
-    (Name:'isc_dpb_shutdown_delay';   Number: isc_dpb_shutdown_delay),
-    (Name:'isc_dpb_reserved';         Number: isc_dpb_reserved),
-    (Name:'isc_dpb_overwrite';        Number: isc_dpb_overwrite),
-    (Name:'isc_dpb_sec_attach';       Number: isc_dpb_sec_attach),
-    (Name:'isc_dpb_disable_wal';      Number: isc_dpb_disable_wal),
-    (Name:'isc_dpb_connect_timeout';  Number: isc_dpb_connect_timeout),
-    (Name:'isc_dpb_dummy_packet_interval'; Number: isc_dpb_dummy_packet_interval),
-    (Name:'isc_dpb_gbak_attach';      Number: isc_dpb_gbak_attach),
-    (Name:'isc_dpb_sql_role_name';    Number: isc_dpb_sql_role_name),
-    (Name:'isc_dpb_set_page_buffers'; Number: isc_dpb_set_page_buffers),
-    (Name:'isc_dpb_working_directory';  Number: isc_dpb_working_directory),
-    (Name:'isc_dpb_sql_dialect';      Number: isc_dpb_SQL_dialect),
-    (Name:'isc_dpb_set_db_readonly';  Number: isc_dpb_set_db_readonly),
-    (Name:'isc_dpb_set_db_sql_dialect'; Number: isc_dpb_set_db_SQL_dialect),
-    (Name:'isc_dpb_gfix_attach';      Number: isc_dpb_gfix_attach),
-    (Name:'isc_dpb_gstat_attach';     Number: isc_dpb_gstat_attach),
-    (Name:'isc_dpb_set_db_charset';   Number: isc_dpb_set_db_charset),
-    (Name:'isc_dpb_gsec_attach';      Number: isc_dpb_gsec_attach),
-    (Name:'isc_dpb_address_path';     Number: isc_dpb_address_path),
-    (Name:'isc_dpb_process_id';       Number: isc_dpb_process_id),
-    (Name:'isc_dpb_no_db_triggers';   Number: isc_dpb_no_db_triggers),
-    (Name:'isc_dpb_trusted_auth';     Number: isc_dpb_trusted_auth),
-    (Name:'isc_dpb_process_name';     Number: isc_dpb_process_name),
-    (Name:'isc_dpb_trusted_role';     Number: isc_dpb_trusted_role),
-    (Name:'isc_dpb_org_filename';     Number: isc_dpb_org_filename),
-    (Name:'isc_dpb_utf8_filename';    Number: isc_dpb_utf8_filename),
-    (Name:'isc_dpb_ext_call_depth';   Number: isc_dpb_ext_call_depth),
-    (Name:'isc_dpb_auth_block';       Number: isc_dpb_auth_block),
-    (Name:'isc_dpb_client_version';   Number: isc_dpb_client_version),
-    (Name:'isc_dpb_remote_protocol';  Number: isc_dpb_remote_protocol),
-    (Name:'isc_dpb_host_name';        Number: isc_dpb_host_name),
-    (Name:'isc_dpb_os_user';          Number: isc_dpb_os_user),
-    (Name:'isc_dpb_specific_auth_data'; Number: isc_dpb_specific_auth_data),
-    (Name:'isc_dpb_auth_plugin_list'; Number: isc_dpb_auth_plugin_list),
-    (Name:'isc_dpb_auth_plugin_name'; Number: isc_dpb_auth_plugin_name),
-    (Name:'isc_dpb_config';           Number: isc_dpb_config),
-    (Name:'isc_dpb_nolinger';         Number: isc_dpb_nolinger),
-    (Name:'isc_dpb_reset_icu';        Number: isc_dpb_reset_icu),
-    (Name:'isc_dpb_map_attach';       Number: isc_dpb_map_attach)
+  DatabaseParams: array [0..MAX_DPB_PARAMS-1] of TZIbParam =
+  (
+    (Name: 'isc_dpb_cdd_pathname';          ValueType: pvtNotImpl; Number: isc_dpb_cdd_pathname),
+    (Name: 'isc_dpb_allocation';            ValueType: pvtNotImpl; Number: isc_dpb_allocation),
+    (Name: 'isc_dpb_journal';               ValueType: pvtNotImpl; Number: isc_dpb_journal),
+    (Name: 'isc_dpb_page_size';             ValueType: pvtNum;     Number: isc_dpb_page_size),
+    (Name: 'isc_dpb_num_buffers';           ValueType: pvtNum;     Number: isc_dpb_num_buffers),
+    (Name: 'isc_dpb_buffer_length';         ValueType: pvtNotImpl; Number: isc_dpb_buffer_length),
+    (Name: 'isc_dpb_debug';                 ValueType: pvtNum;     Number: isc_dpb_debug),
+    (Name: 'isc_dpb_garbage_collect';       ValueType: pvtNone;    Number: isc_dpb_garbage_collect),
+    (Name: 'isc_dpb_verify';                ValueType: pvtNum;     Number: isc_dpb_verify),    // Bitmask
+    (Name: 'isc_dpb_sweep';                 ValueType: pvtNum;     Number: isc_dpb_sweep),
+    (Name: 'isc_dpb_enable_journal';        ValueType: pvtString;  Number: isc_dpb_enable_journal),
+    (Name: 'isc_dpb_disable_journal';       ValueType: pvtNone;    Number: isc_dpb_disable_journal),
+    (Name: 'isc_dpb_dbkey_scope';           ValueType: pvtNum;     Number: isc_dpb_dbkey_scope),
+    (Name: 'isc_dpb_number_of_users';       ValueType: pvtNotImpl; Number: isc_dpb_number_of_users),
+    (Name: 'isc_dpb_trace';                 ValueType: pvtNone;    Number: isc_dpb_trace),
+    (Name: 'isc_dpb_no_garbage_collect';    ValueType: pvtNone;    Number: isc_dpb_no_garbage_collect),
+    (Name: 'isc_dpb_damaged';               ValueType: pvtNum;     Number: isc_dpb_damaged),
+    (Name: 'isc_dpb_license';               ValueType: pvtString;  Number: isc_dpb_license),
+    (Name: 'isc_dpb_sys_user_name';         ValueType: pvtString;  Number: isc_dpb_sys_user_name),
+    (Name: 'isc_dpb_encrypt_key';           ValueType: pvtString;  Number: isc_dpb_encrypt_key),
+    (Name: 'isc_dpb_activate_shadow';       ValueType: pvtByteZ;   Number: isc_dpb_activate_shadow),
+    (Name: 'isc_dpb_sweep_interval';        ValueType: pvtNum;     Number: isc_dpb_sweep_interval),
+    (Name: 'isc_dpb_delete_shadow';         ValueType: pvtByteZ;   Number: isc_dpb_delete_shadow),
+    (Name: 'isc_dpb_force_write';           ValueType: pvtNum;     Number: isc_dpb_force_write),
+    (Name: 'isc_dpb_begin_log';             ValueType: pvtString;  Number: isc_dpb_begin_log),
+    (Name: 'isc_dpb_quit_log';              ValueType: pvtNone;    Number: isc_dpb_quit_log),
+    (Name: 'isc_dpb_no_reserve';            ValueType: pvtNum;     Number: isc_dpb_no_reserve),
+    (Name: 'isc_dpb_username';              ValueType: pvtString;  Number: isc_dpb_user_name),
+    (Name: 'isc_dpb_password';              ValueType: pvtString;  Number: isc_dpb_password),
+    (Name: 'isc_dpb_password_enc';          ValueType: pvtString;  Number: isc_dpb_password_enc),
+    (Name: 'isc_dpb_sys_user_name_enc';     ValueType: pvtString;  Number: isc_dpb_sys_user_name_enc),
+    (Name: 'isc_dpb_interp';                ValueType: pvtNum;     Number: isc_dpb_interp),
+    (Name: 'isc_dpb_online_dump';           ValueType: pvtNum;     Number: isc_dpb_online_dump),
+    (Name: 'isc_dpb_old_file_size';         ValueType: pvtNum;     Number: isc_dpb_old_file_size),
+    (Name: 'isc_dpb_old_num_files';         ValueType: pvtNum;     Number: isc_dpb_old_num_files),
+    (Name: 'isc_dpb_old_file';              ValueType: pvtString;  Number: isc_dpb_old_file),
+    (Name: 'isc_dpb_old_start_page';        ValueType: pvtNum;     Number: isc_dpb_old_start_page),
+    (Name: 'isc_dpb_old_start_seqno';       ValueType: pvtNum;     Number: isc_dpb_old_start_seqno),
+    (Name: 'isc_dpb_old_start_file';        ValueType: pvtNum;     Number: isc_dpb_old_start_file),
+    (Name: 'isc_dpb_drop_walfile';          ValueType: pvtNum;     Number: isc_dpb_drop_walfile),
+    (Name: 'isc_dpb_old_dump_id';           ValueType: pvtNum;     Number: isc_dpb_old_dump_id),
+    (Name: 'isc_dpb_wal_backup_dir';        ValueType: pvtString;  Number: isc_dpb_wal_backup_dir),
+    (Name: 'isc_dpb_wal_chkptlen';          ValueType: pvtNum;     Number: isc_dpb_wal_chkptlen),
+    (Name: 'isc_dpb_wal_numbufs';           ValueType: pvtNum;     Number: isc_dpb_wal_numbufs),
+    (Name: 'isc_dpb_wal_bufsize';           ValueType: pvtNum;     Number: isc_dpb_wal_bufsize),
+    (Name: 'isc_dpb_wal_grp_cmt_wait';      ValueType: pvtNum;     Number: isc_dpb_wal_grp_cmt_wait),
+    (Name: 'isc_dpb_lc_messages';           ValueType: pvtString;  Number: isc_dpb_lc_messages),
+    (Name: 'isc_dpb_lc_ctype';              ValueType: pvtString;  Number: isc_dpb_lc_ctype),
+    (Name: 'isc_dpb_cache_manager';         ValueType: pvtNotImpl; Number: isc_dpb_cache_manager),
+    (Name: 'isc_dpb_shutdown';              ValueType: pvtNum;     Number: isc_dpb_shutdown), // Bitmask
+    (Name: 'isc_dpb_online';                ValueType: pvtNone;    Number: isc_dpb_online),
+    (Name: 'isc_dpb_shutdown_delay';        ValueType: pvtNum;     Number: isc_dpb_shutdown_delay),
+    (Name: 'isc_dpb_reserved';              ValueType: pvtNone;    Number: isc_dpb_reserved),
+    (Name: 'isc_dpb_overwrite';             ValueType: pvtNone;    Number: isc_dpb_overwrite),
+    (Name: 'isc_dpb_sec_attach';            ValueType: pvtNone;    Number: isc_dpb_sec_attach),
+    (Name: 'isc_dpb_disable_wal';           ValueType: pvtNone;    Number: isc_dpb_disable_wal),
+    (Name: 'isc_dpb_connect_timeout';       ValueType: pvtNum;     Number: isc_dpb_connect_timeout),
+    (Name: 'isc_dpb_dummy_packet_interval'; ValueType: pvtNum;     Number: isc_dpb_dummy_packet_interval),
+    (Name: 'isc_dpb_gbak_attach';           ValueType: pvtNone;    Number: isc_dpb_gbak_attach),
+    (Name: 'isc_dpb_sql_role_name';         ValueType: pvtString;  Number: isc_dpb_sql_role_name),
+    (Name: 'isc_dpb_set_page_buffers';      ValueType: pvtNum;     Number: isc_dpb_set_page_buffers),
+    (Name: 'isc_dpb_working_directory';     ValueType: pvtString;  Number: isc_dpb_working_directory),
+    (Name: 'isc_dpb_sql_dialect';           ValueType: pvtNum;     Number: isc_dpb_SQL_dialect),
+    (Name: 'isc_dpb_set_db_readonly';       ValueType: pvtNone;    Number: isc_dpb_set_db_readonly),
+    (Name: 'isc_dpb_set_db_sql_dialect';    ValueType: pvtNum;     Number: isc_dpb_set_db_SQL_dialect),
+    (Name: 'isc_dpb_gfix_attach';           ValueType: pvtNone;    Number: isc_dpb_gfix_attach),
+    (Name: 'isc_dpb_gstat_attach';          ValueType: pvtNone;    Number: isc_dpb_gstat_attach),
+    (Name: 'isc_dpb_set_db_charset';        ValueType: pvtString;  Number: isc_dpb_set_db_charset),
+    (Name: 'isc_dpb_gsec_attach';           ValueType: pvtNone;    Number: isc_dpb_gsec_attach),
+    (Name: 'isc_dpb_address_path';          ValueType: pvtString;  Number: isc_dpb_address_path),
+    (Name: 'isc_dpb_process_id';            ValueType: pvtNum;     Number: isc_dpb_process_id),
+    (Name: 'isc_dpb_no_db_triggers';        ValueType: pvtNone;    Number: isc_dpb_no_db_triggers),
+    (Name: 'isc_dpb_trusted_auth';          ValueType: pvtNone;    Number: isc_dpb_trusted_auth),
+    (Name: 'isc_dpb_process_name';          ValueType: pvtString;  Number: isc_dpb_process_name),
+    (Name: 'isc_dpb_trusted_role';          ValueType: pvtString;  Number: isc_dpb_trusted_role),
+    (Name: 'isc_dpb_org_filename';          ValueType: pvtString;  Number: isc_dpb_org_filename),
+    (Name: 'isc_dpb_utf8_filename';         ValueType: pvtNone;    Number: isc_dpb_utf8_filename),
+    (Name: 'isc_dpb_ext_call_depth';        ValueType: pvtNum;     Number: isc_dpb_ext_call_depth),
+    (Name: 'isc_dpb_auth_block';            ValueType: pvtString; Number: isc_dpb_auth_block), // Bytes
+    (Name: 'isc_dpb_client_version';        ValueType: pvtString; Number: isc_dpb_client_version),
+    (Name: 'isc_dpb_remote_protocol';       ValueType: pvtString; Number: isc_dpb_remote_protocol),
+    (Name: 'isc_dpb_host_name';             ValueType: pvtString; Number: isc_dpb_host_name),
+    (Name: 'isc_dpb_os_user';               ValueType: pvtString; Number: isc_dpb_os_user),
+    (Name: 'isc_dpb_specific_auth_data';    ValueType: pvtString; Number: isc_dpb_specific_auth_data),  
+    (Name: 'isc_dpb_auth_plugin_list';      ValueType: pvtString; Number: isc_dpb_auth_plugin_list),  
+    (Name: 'isc_dpb_auth_plugin_name';      ValueType: pvtString; Number: isc_dpb_auth_plugin_name),
+    (Name: 'isc_dpb_config';                ValueType: pvtString; Number: isc_dpb_config),
+    (Name: 'isc_dpb_nolinger';              ValueType: pvtNone; Number: isc_dpb_nolinger),
+    (Name: 'isc_dpb_reset_icu';             ValueType: pvtNone; Number: isc_dpb_reset_icu),
+    (Name: 'isc_dpb_map_attach';            ValueType: pvtNone; Number: isc_dpb_map_attach)
   );
 
   { count transaction parameters }
-  MAX_TPB_PARAMS = 24;
+  MAX_TPB_PARAMS = 22;
   { prefix transaction parameters names it used in paramters scann procedure }
   TPBPrefix = 'isc_tpb_';
   { list transaction parameters and their apropriate numbers }
-  TransactionParams: array [0..MAX_TPB_PARAMS-1]of TZIbParam = (
-    (Name:'isc_tpb_version1';         Number: isc_tpb_version1),
-    (Name:'isc_tpb_version3';         Number: isc_tpb_version3),
-    (Name:'isc_tpb_consistency';      Number: isc_tpb_consistency),
-    (Name:'isc_tpb_concurrency';      Number: isc_tpb_concurrency),
-    (Name:'isc_tpb_shared';           Number: isc_tpb_shared),
-    (Name:'isc_tpb_protected';        Number: isc_tpb_protected),
-    (Name:'isc_tpb_exclusive';        Number: isc_tpb_exclusive),
-    (Name:'isc_tpb_wait';             Number: isc_tpb_wait),
-    (Name:'isc_tpb_nowait';           Number: isc_tpb_nowait),
-    (Name:'isc_tpb_read';             Number: isc_tpb_read),
-    (Name:'isc_tpb_write';            Number: isc_tpb_write),
-    (Name:'isc_tpb_lock_read';        Number: isc_tpb_lock_read),
-    (Name:'isc_tpb_lock_write';       Number: isc_tpb_lock_write),
-    (Name:'isc_tpb_verb_time';        Number: isc_tpb_verb_time),
-    (Name:'isc_tpb_commit_time';      Number: isc_tpb_commit_time),
-    (Name:'isc_tpb_ignore_limbo';     Number: isc_tpb_ignore_limbo),
-    (Name:'isc_tpb_read_committed';   Number: isc_tpb_read_committed),
-    (Name:'isc_tpb_autocommit';       Number: isc_tpb_autocommit),
-    (Name:'isc_tpb_rec_version';      Number: isc_tpb_rec_version),
-    (Name:'isc_tpb_no_rec_version';   Number: isc_tpb_no_rec_version),
-    (Name:'isc_tpb_restart_requests'; Number: isc_tpb_restart_requests),
-    (Name:'isc_tpb_no_auto_undo';     Number: isc_tpb_no_auto_undo),
-    (Name:'isc_tpb_no_savepoint';     Number: isc_tpb_no_savepoint),// Since IB75+
-    (Name:'isc_tpb_lock_timeout';     Number: isc_tpb_lock_timeout) // Since FB20+
-    );
+  TransactionParams: array [0..MAX_TPB_PARAMS-1] of TZIbParam =
+  (
+    (Name: 'isc_tpb_consistency';      ValueType: pvtNone;    Number: isc_tpb_consistency),
+    (Name: 'isc_tpb_concurrency';      ValueType: pvtNone;    Number: isc_tpb_concurrency),
+    (Name: 'isc_tpb_shared';           ValueType: pvtNone;    Number: isc_tpb_shared),
+    (Name: 'isc_tpb_protected';        ValueType: pvtNone;    Number: isc_tpb_protected),
+    (Name: 'isc_tpb_exclusive';        ValueType: pvtNone;    Number: isc_tpb_exclusive),
+    (Name: 'isc_tpb_wait';             ValueType: pvtNone;    Number: isc_tpb_wait),
+    (Name: 'isc_tpb_nowait';           ValueType: pvtNone;    Number: isc_tpb_nowait),
+    (Name: 'isc_tpb_read';             ValueType: pvtNone;    Number: isc_tpb_read),
+    (Name: 'isc_tpb_write';            ValueType: pvtNone;    Number: isc_tpb_write),
+    (Name: 'isc_tpb_lock_read';        ValueType: pvtString;  Number: isc_tpb_lock_read),
+    (Name: 'isc_tpb_lock_write';       ValueType: pvtString;  Number: isc_tpb_lock_write),
+    (Name: 'isc_tpb_verb_time';        ValueType: pvtNotImpl; Number: isc_tpb_verb_time),
+    (Name: 'isc_tpb_commit_time';      ValueType: pvtNotImpl; Number: isc_tpb_commit_time),
+    (Name: 'isc_tpb_ignore_limbo';     ValueType: pvtNone;    Number: isc_tpb_ignore_limbo),
+    (Name: 'isc_tpb_read_committed';   ValueType: pvtNone;    Number: isc_tpb_read_committed),
+    (Name: 'isc_tpb_autocommit';       ValueType: pvtNone;    Number: isc_tpb_autocommit),
+    (Name: 'isc_tpb_rec_version';      ValueType: pvtNone;    Number: isc_tpb_rec_version),
+    (Name: 'isc_tpb_no_rec_version';   ValueType: pvtNone;    Number: isc_tpb_no_rec_version),
+    (Name: 'isc_tpb_restart_requests'; ValueType: pvtNone;    Number: isc_tpb_restart_requests),
+    (Name: 'isc_tpb_no_auto_undo';     ValueType: pvtNone;    Number: isc_tpb_no_auto_undo),
+    // IB75+
+    (Name: 'isc_tpb_no_savepoint';     ValueType: pvtNone;    Number: isc_tpb_no_savepoint),
+    // FB20+
+    (Name: 'isc_tpb_lock_timeout';     ValueType: pvtNum;     Number: isc_tpb_lock_timeout)
+  );
 
 implementation
 
@@ -488,8 +501,142 @@ begin
     Result := NativeResultSet;
 end;
 
+function FindPBParam(const ParamName: string; const ParamArr: array of TZIbParam): PZIbParam;
+var
+  I: Integer;
+begin
+  for I := Low(ParamArr) to High(ParamArr) do
+    if ParamName = ParamArr[I].Name then
+    begin
+      Result := @ParamArr[I];
+      Exit;
+    end;
+  Result := nil;
+end;
+
+{**
+  Build parameter block string
+
+  @param Info - a list connection interbase parameters
+  @param VersionCode - isc_dpb_version1 for TPB or isc_dpb_version3 for DPB
+  @param FilterPrefix - TPBPrefix for TPB or DPBPrefix for DPB
+  @param ParamArr - array of parameter properties
+
+  @return generated string
+}
+function BuildPB(Info: TStrings; VersionCode: Byte; const FilterPrefix: string; ParamArr: array of TZIbParam): RawByteString;
+
+  procedure ExtractParamNameAndValue(const S: string; out ParamName: String; out ParamValue: RawByteString);
+  var
+    Pos: Integer;
+  begin
+    Pos := FirstDelimiter(' ='#9#10#13, S);
+    if Pos = 0 then
+    begin
+      ParamName := S;
+      ParamValue := '';
+    end
+    else
+    begin
+      ParamName := Trim(LowerCase(Copy(S, 1, Pos - 1)));
+      ParamValue := Trim(RawByteString(Copy(S, Pos + 1, MaxInt)));
+    end;
+  end;
+
+  function NumToPB(Value: Integer): RawByteString;
+  var
+    U16: Word;
+  begin
+    case Cardinal(Value) of
+      0..High(Byte):
+        Result := #1 + AnsiChar(Value);
+      Succ(High(Byte))..High(Word):
+        begin
+          U16 := Word(Cardinal(Value));
+          Result := #2 + PAnsiChar(@U16)[0] + PAnsiChar(@U16)[1];
+        end;
+      else
+        Result := #4 + PAnsiChar(@Value)[0] + PAnsiChar(@Value)[1] + PAnsiChar(@Value)[2] + PAnsiChar(@Value)[3];
+    end;
+  end;
+
+var
+  I, IntValue: Integer;
+  ParamName: String;
+  ParamValue: RawByteString;
+  PParam: PZIbParam;
+begin
+  Result := AnsiChar(VersionCode);
+
+  for I := 0 to Info.Count - 1 do
+  begin
+    ExtractParamNameAndValue(Info.Strings[I], ParamName, ParamValue);
+    if ZFastCode.Pos(FilterPrefix, ParamName) <> 1 then
+      Continue;
+    PParam := FindPBParam(ParamName, ParamArr);
+    if PParam = nil then
+      raise EZSQLException.CreateFmt('Unknown PB parameter "%s"', [ParamName]);
+
+    case PParam.ValueType of
+      pvtNone:
+        Result := Result + AnsiChar(PParam.Number);
+
+      pvtByteZ:
+        Result := Result + AnsiChar(PParam.Number) + #1 + #0;
+
+      pvtNum:
+        begin
+          IntValue := ZFastCode.RawToInt(ParamValue);
+          Result := Result + AnsiChar(PParam.Number) + NumToPB(IntValue);
+        end;
+
+      pvtString:
+        Result := Result + AnsiChar(PParam.Number) + AnsiChar(Length(ParamValue)) + ParamValue;
+    end;
+  end;
+end;
+
 {**
   Generate database connection string by connection information
+
+  @param Info - a list connection interbase parameters
+  @return a generated string
+}
+function GenerateDPB(Info: TStrings): RawByteString;
+begin
+  Result := BuildPB(Info, isc_dpb_version1, DPBPrefix, DatabaseParams);
+end;
+
+{**
+  Generate transaction string by connection information
+
+  @param Params - a transaction parameters list
+  @return a generated string 
+}
+function GenerateTPB(Params: TStrings): RawByteString;
+begin
+  Result := BuildPB(Params, isc_tpb_version3, TPBPrefix, TransactionParams);
+end;
+
+{**
+  Generate transaction structure by connection information
+
+  @param PHandle - pointer to database connection handle
+  @param TPB - transaction parameter string
+  @return a transaction ISC structure
+}
+function GenerateTEB(PHandle: PISC_DB_HANDLE; const TPB: RawByteString): TISC_TEB;
+begin
+  Result.db_handle := PHandle;
+  Result.tpb_length := Length(TPB);
+  Result.tpb_address := Pointer(TPB);
+end;
+
+{**
+  Generate database connection string by connection information
+  The function is deprecated and shouldn't be used.
+  Use GenerateDPB(Info: TStrings) overload instead.
+
   @param DPB - a database connection string
   @param Dialect - a sql dialect number
   @param Info - a list connection interbase parameters
@@ -497,62 +644,10 @@ end;
 }
 function GenerateDPB(Info: TStrings; var FDPBLength, Dialect: Word): PAnsiChar;
 var
-  I, Pos, PValue: Integer;
-  ParamNo: Word;
-  ParamName, Buffer: String;
-  DPB, ParamValue: RawByteString;
+  DPB: RawByteString;
 begin
-  FDPBLength := 1;
-  DPB := AnsiChar(isc_dpb_version1);
-
-  for I := 0 to Info.Count - 1 do
-  begin
-    Buffer := Info.Strings[I];
-    Pos := FirstDelimiter(' ='#9#10#13, Buffer);
-    ParamName := Copy(Buffer, 1, Pos - 1);
-    Delete(Buffer, 1, Pos);
-    ParamValue := RawByteString(Buffer);
-    ParamNo := GetInterbase6DatabaseParamNumber(ParamName);
-
-    case ParamNo of
-      0: Continue;
-      isc_dpb_set_db_SQL_dialect:
-        Dialect := RawToIntDef(ParamValue, 0);
-      isc_dpb_user_name, isc_dpb_password, isc_dpb_password_enc,
-      isc_dpb_sys_user_name, isc_dpb_license, isc_dpb_encrypt_key,
-      isc_dpb_lc_messages, isc_dpb_lc_ctype, isc_dpb_sql_role_name,
-      isc_dpb_config:
-        begin
-          DPB := DPB + AnsiChar(ParamNo) + AnsiChar(Length(ParamValue)) + ParamValue;
-          Inc(FDPBLength, 2 + Length(ParamValue));
-        end;
-      isc_dpb_num_buffers, isc_dpb_dbkey_scope, isc_dpb_force_write,
-      isc_dpb_no_reserve, isc_dpb_damaged, isc_dpb_verify,
-      isc_dpb_connect_timeout:
-        begin
-          DPB := DPB + AnsiChar(ParamNo) + #1 + AnsiChar(ZFastCode.RawToInt(ParamValue));
-          Inc(FDPBLength, 3);
-        end;
-      isc_dpb_sweep:
-        begin
-          DPB := DPB + AnsiChar(ParamNo) + #1 + AnsiChar(isc_dpb_records);
-          Inc(FDPBLength, 3);
-        end;
-      isc_dpb_sweep_interval:
-        begin
-          PValue := ZFastCode.RawToInt(ParamValue);
-          DPB := DPB + AnsiChar(ParamNo) + #4 + PAnsiChar(@PValue)[0] +
-                 PAnsiChar(@PValue)[1] + PAnsiChar(@PValue)[2] + PAnsiChar(@PValue)[3];
-          Inc(FDPBLength, 6);
-        end;
-      isc_dpb_activate_shadow, isc_dpb_delete_shadow, isc_dpb_begin_log,
-      isc_dpb_quit_log:
-        begin
-          DPB := DPB + AnsiChar(ParamNo) + #1 + #0;
-          Inc(FDPBLength, 3);
-        end;
-    end;
-  end;
+  DPB := GenerateDPB(Info);
+  FDPBLength := Length(DPB);
 
   {$IFDEF UNICODE}
   Result := AnsiStrAlloc(FDPBLength + 1);
@@ -560,83 +655,39 @@ begin
   Result := StrAlloc(FDPBLength + 1);
   {$ENDIF}
 
-
   {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(Result, DPB);
 end;
 
 {**
-   Generate transaction structuer by connection information
-   @param Params - a transaction parameters list
-   @param Dialect - a database connection handle
-   @return a transaction ISC structure
+  Generate transaction structuer by connection information
+  The function is deprecated and shouldn't be used.
+  Use GenerateTPB(Params: TStrings) overload and GenerateTEB instead.
+
+  @param Params - a transaction parameters list
+  @param Handle - a database connection handle
+  @return a transaction ISC structure
 }
 function GenerateTPB(Params: TStrings; var Handle: TISC_DB_HANDLE): PISC_TEB;
 var
-  I: Integer;
-  TPBLength,ParamNo: Word;
-  TempStr, ParamValue: AnsiString;
-  TPB: PAnsiChar;
-  IsolationLevel: Boolean;
+  TPB: RawByteString;
 begin
-  TPBLength := 0;
-  TempStr := '';
-  IsolationLevel := False;
-
-  { Prepare transaction parameters string }
-  for I := 0 to Params.Count - 1 do
-  begin
-    ParamNo := GetInterbase6TransactionParamNumber(Params.Strings[I]);
-
-    case ParamNo of
-      0: Continue;
-      isc_tpb_lock_read, isc_tpb_lock_write:
-        begin
-          ParamValue := {$IFDEF UNICODE}RawbyteString{$ENDIF}(Params.Strings[I]);
-          TempStr := TempStr + AnsiChar(ParamNo) + AnsiChar(Length(ParamValue)) + ParamValue;
-          Inc(TPBLength, Length(ParamValue) + 2);
-        end;
-      else
-        begin
-          TempStr := TempStr + AnsiChar(ParamNo);
-          Inc(TPBLength, 1);
-        end;
-    end;
-
-    { Check what was set use transaction isolation level }
-    if not IsolationLevel then
-      case ParamNo of
-        isc_tpb_concurrency, isc_tpb_consistency,
-        isc_tpb_read_committed:
-          IsolationLevel := True
-        else
-          IsolationLevel := False;
-      end;
-
-  end;
-
-   { Allocate transaction parameters PAnsiChar buffer
-    if temporally parameters string is empty the set null pointer for
-    default database transaction}
-  if (TPBLength > 0) and (IsolationLevel) then
-  begin
-    {$IFDEF UNICODE}
-    TPB := AnsiStrAlloc(TPBLength + 1);
-    {$ELSE}
-    TPB := StrAlloc(TPBLength + 1);
-    {$ENDIF}
-    TPB := {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(TPB, TempStr);
-
-  end
-  else
-    TPB := nil;
-
-  { Allocate transaction structure }
+  TPB := GenerateTPB(Params);
   Result := AllocMem(SizeOf(TISC_TEB));
-  with Result^ do
+  Result^ := GenerateTEB(@Handle, TPB);
+end;
+
+function GetPBNumber(const FilterPrefix, ParamName: string; const ParamArr: array of TZIbParam): Word;
+var
+  pParam: PZIbParam;
+  ParamNameLO: String;
+begin
+  ParamNameLO := LowerCase(ParamName);
+  Result := 0;
+  if ZFastCode.Pos(FilterPrefix, ParamNameLO) = 1 then
   begin
-    db_handle := @Handle;
-    tpb_length := TPBLength;
-    tpb_address := TPB;
+    pParam := FindPBParam(ParamNameLO, ParamArr);
+    if pParam <> nil then
+      Result := pParam^.Number;
   end;
 end;
 
@@ -646,21 +697,8 @@ end;
   @return - connection parameter number
 }
 function GetInterbase6DatabaseParamNumber(const Value: String): Word;
-var
- I: Integer;
- ParamName: String;
 begin
-  ParamName := AnsiLowerCase(Value);
-  Result := 0;
-  if ZFastCode.Pos(DPBPrefix, ParamName) = 1 then
-    for I := 1 to MAX_DPB_PARAMS do
-    begin
-      if ParamName = DatabaseParams[I].Name then
-      begin
-        Result := DatabaseParams[I].Number;
-        Break;
-      end;
-    end;
+  Result := GetPBNumber(DPBPrefix, Value, DatabaseParams);
 end;
 
 {**
@@ -669,21 +707,8 @@ end;
   @return - transaction parameter number
 }
 function GetInterbase6TransactionParamNumber(const Value: String): Word;
-var
- I: Integer;
- ParamName: String;
 begin
-  ParamName := AnsiLowerCase(Value);
-  Result := 0;
-  if ZFastCode.Pos(TPBPrefix, ParamName) = 1 then
-    for I := 1 to MAX_TPB_PARAMS do
-    begin
-      if ParamName = TransactionParams[I].Name then
-      begin
-        Result := TransactionParams[I].Number;
-        Break;
-      end;
-    end;
+  Result := GetPBNumber(TPBPrefix, Value, TransactionParams);
 end;
 
 {**
