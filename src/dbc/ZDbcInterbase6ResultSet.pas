@@ -1047,16 +1047,8 @@ begin
           SQL_LONG      : Result := IntToRaw(PInteger(sqldata)^);
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := FloatToRaw(PSingle(sqldata)^);
-          SQL_BOOLEAN   :
-            if PSmallint(sqldata)^ <> 0 then
-              Result := 'YES'
-            else
-              Result := 'NO';
-          SQL_BOOLEAN_FB:
-            if PByte(sqldata)^ <> 0 then
-              Result := 'YES'
-            else
-              Result := 'NO';
+          SQL_BOOLEAN   : Result := BoolToRawEx(PSmallint(sqldata)^ <> 0);
+          SQL_BOOLEAN_FB: Result := BoolToRawEx(PByte(sqldata)^ <> 0);
           SQL_SHORT     : Result := IntToRaw(PSmallint(sqldata)^);
           SQL_INT64     : Result := IntToRaw(PInt64(sqldata)^);
           SQL_TEXT,
@@ -1284,16 +1276,8 @@ begin
           SQL_LONG      : FRawTemp := IntToRaw(PInteger(sqldata)^);
           SQL_D_FLOAT,
           SQL_FLOAT     : FRawTemp := FloatToRaw(PSingle(sqldata)^);
-          SQL_BOOLEAN   :
-            if PSmallint(sqldata)^ <> 0 then
-              FRawTemp := 'YES'
-            else
-              FRawTemp := 'NO';
-          SQL_BOOLEAN_FB:
-            if PByte(sqldata)^ <> 0 then
-              FRawTemp := 'YES'
-            else
-              FRawTemp := 'NO';
+          SQL_BOOLEAN   : FRawTemp := BoolToRawEx(PSmallint(sqldata)^ <> 0);
+          SQL_BOOLEAN_FB: FRawTemp := BoolToRawEx(PByte(sqldata)^ <> 0);
           SQL_SHORT     : FRawTemp := IntToRaw(PSmallint(sqldata)^);
           SQL_INT64     : FRawTemp := IntToRaw(PInt64(sqldata)^);
           SQL_TEXT,
@@ -1397,16 +1381,8 @@ begin
           SQL_LONG      : Result := IntToRaw(PInteger(sqldata)^);
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := FloatToRaw(PSingle(sqldata)^);
-          SQL_BOOLEAN   :
-            if PSmallint(sqldata)^ <> 0 then
-              Result := 'YES'
-            else
-              Result := 'NO';
-          SQL_BOOLEAN_FB:
-            if PByte(sqldata)^ <> 0 then
-              Result := 'YES'
-            else
-              Result := 'NO';
+          SQL_BOOLEAN   : Result := BoolToRawEx(PSmallint(sqldata)^ <> 0);
+          SQL_BOOLEAN_FB: Result := BoolToRawEx(PByte(sqldata)^ <> 0);
           SQL_SHORT     : Result := IntToRaw(PSmallint(sqldata)^);
           SQL_INT64     : Result := IntToRaw(PInt64(sqldata)^);
           SQL_TEXT,
@@ -1490,16 +1466,8 @@ begin
           SQL_LONG      : Result := ZFastCode.IntToStr(PInteger(sqldata)^);
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := FloatToStr(PSingle(sqldata)^);
-          SQL_BOOLEAN   :
-            if PSmallint(sqldata)^ <> 0 then
-              Result := 'YES'
-            else
-              Result := 'NO';
-          SQL_BOOLEAN_FB:
-            if PByte(sqldata)^ <> 0 then
-              Result := 'YES'
-            else
-              Result := 'NO';
+          SQL_BOOLEAN   : Result := {$IFDEF UNICODE}BoolToUnicodeEx{$ELSE}BoolToRawEx{$ENDIF}(PSmallint(sqldata)^ <> 0);
+          SQL_BOOLEAN_FB: Result := {$IFDEF UNICODE}BoolToUnicodeEx{$ELSE}BoolToRawEx{$ENDIF}(PByte(sqldata)^ <> 0);
           SQL_SHORT     : Result := ZFastCode.IntToStr(PSmallint(sqldata)^);
           SQL_INT64     : Result := ZFastCode.IntToStr(PInt64(sqldata)^);
           SQL_TEXT,
