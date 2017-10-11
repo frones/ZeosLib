@@ -257,7 +257,7 @@ var
   hasParamPart : boolean;
   procedure AddParamPart(const ParamPart: String);
   const
-    ParamSep: array[Boolean] of Char = (';', '?');
+    ParamSep: array[Boolean] of Char = ('?', ';');
   begin
     Result := Result + ParamSep[hasParamPart] + ParamPart;
     hasParamPart := True;
