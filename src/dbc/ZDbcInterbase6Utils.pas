@@ -69,6 +69,40 @@ type
   { Interbase Error Class}
   EZIBConvertError = class(Exception);
 
+  { Full info about single Interbase status entry}
+  TZIBStatus = record
+    IBDataType: Integer; // one of isc_arg_* constants
+    IBDataInt: Integer;  // int data (error code)
+    IBDataStr: string;   // string data
+    IBMessage: string;   // result of isc_interpret
+    SQLCode: Integer;    // result of isc_sqlcode
+    SQLMessage: string;  // result of isc_sql_interprete
+  end;
+
+  TZIBStatusVector = array of TZIBStatus;
+
+  { IB/FB-specific data}
+  TZIBSpecificData = class(TZExceptionSpecificData)
+  protected
+    FStatusVector: TZIBStatusVector;
+    FSQL: string;
+    FIBErrorCode: Integer;
+    FIBStatusCode: String;
+  public
+    function Clone: TZExceptionSpecificData; override;
+
+    property IBErrorCode: Integer read FIBErrorCode;
+    property IBStatusCode: string read FIBStatusCode;
+    property StatusVector: TZIBStatusVector read FStatusVector;
+    property SQL: string read FSQL;
+  end;
+
+  { Interbase SQL Error Class}
+  EZIBSQLException = class(EZSQLException)
+  public
+    constructor Create(const Msg: string; const StatusVector: TZIBStatusVector; const SQL: string);
+  end;
+
   TZIbParamValueType = (
     pvtNotImpl,  // unsupported
     pvtNone,     // no value
@@ -230,6 +264,9 @@ function GetInterbase6TransactionParamNumber(const Value: String): word;
 
 { Interbase6 errors functions }
 function GetNameSqlType(Value: Word): RawByteString;
+function InterpretInterbaseStatus(const PlainDriver: IZInterbasePlainDriver;
+  const StatusVector: TARRAY_ISC_STATUS;
+  const ConSettings: PZConSettings) : TZIBStatusVector;
 function CheckInterbase6Error(const PlainDriver: IZInterbasePlainDriver;
   const StatusVector: TARRAY_ISC_STATUS; const ConSettings: PZConSettings;
   const LoggingCategory: TZLoggingCategory = lcOther;
@@ -830,6 +867,85 @@ begin
   end
 end;
 
+function ConnRawToString(const Src: RawByteString; ConSettings: PZConSettings): String;
+begin
+  if ConSettings <> nil then
+    Result := ConSettings^.ConvFuncs.ZRawToString(Src, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
+  else
+    Result := string(Src);
+end;
+
+{**
+  Processes Interbase status vector and returns array of status data.
+  @param PlainDriver a Interbase Plain drver
+  @param StatusVector a status vector. It contain information about error
+  @param ConSettings pointer to connection settings containing codepage info
+
+  @return array of TInterbaseStatus records
+}
+function InterpretInterbaseStatus(const PlainDriver: IZInterbasePlainDriver;
+  const StatusVector: TARRAY_ISC_STATUS;
+  const ConSettings: PZConSettings) : TZIBStatusVector;
+var
+  Msg: array[0..IBBigLocalBufferLength] of AnsiChar;
+  s: RawByteString;
+  PStatusVector: PISC_STATUS;
+  StatusIdx: Integer;
+begin
+  if not ((StatusVector[0] = 1) and (StatusVector[1] > 0)) then Exit;
+
+  PStatusVector := @StatusVector; StatusIdx := 0;
+  repeat
+    SetLength(Result, Length(Result) + 1);
+    // SQL code and status
+    Result[High(Result)].SQLCode := PlainDriver.isc_sqlcode(PStatusVector);
+    PlainDriver.isc_sql_interprete(Result[High(Result)].SQLCode, Msg, Length(Msg));
+    Result[High(Result)].SQLMessage := ConnRawToString(Msg, ConSettings);
+    // IB data
+    Result[High(Result)].IBDataType := StatusVector[StatusIdx];
+    case StatusVector[StatusIdx] of
+      isc_arg_end:  // end of argument list
+        Break;
+      isc_arg_gds,  // Long int code
+      isc_arg_number,
+      isc_arg_vms,
+      isc_arg_unix,
+      isc_arg_domain,
+      isc_arg_dos,
+      isc_arg_mpexl,
+      isc_arg_mpexl_ipc,
+      isc_arg_next_mach,
+      isc_arg_netware,
+      isc_arg_win32:
+        begin
+          Result[High(Result)].IBDataInt := StatusVector[StatusIdx + 1];
+          Inc(StatusIdx, 2);
+        end;
+      isc_arg_string,  // pointer to string
+      isc_arg_interpreted,
+      isc_arg_sql_state:                                                                                      
+        begin
+          Result[High(Result)].IBDataStr := ConnRawToString(RawByteString(PAnsiChar(StatusVector[StatusIdx + 1])), ConSettings);
+          Inc(StatusIdx, 2);
+        end;
+      isc_arg_cstring: // length and pointer to string
+        begin
+          SetLength(s, StatusVector[StatusIdx + 1]);
+          Move(PAnsiChar(StatusVector[StatusIdx + 2])^, s[1], Length(s));
+          Result[High(Result)].IBDataStr := s;
+          Inc(StatusIdx, 3);
+        end;
+      isc_arg_warning: // must not happen for error vector
+        Break;
+      else
+        Break;
+    end; // case
+    if PlainDriver.isc_interprete(Msg, @PStatusVector) = 0 then
+      Break;
+    Result[High(Result)].IBMessage := ConnRawToString(Msg, ConSettings);  
+  until False;
+end;
+
 {**
   Checks for possible sql errors.
   @param PlainDriver a Interbase Plain drver
@@ -843,35 +959,33 @@ function CheckInterbase6Error(const PlainDriver: IZInterbasePlainDriver;
   const LoggingCategory: TZLoggingCategory = lcOther;
   SQL: RawByteString = '') : Integer;
 var
-  Msg: array[0..1024] of AnsiChar;
-  PStatusVector: PISC_STATUS;
-  ErrorMessage, ErrorSqlMessage: RawByteString;
+  ErrorMessage, ErrorSqlMessage: string;
   ErrorCode: LongInt;
+  i: Integer;
+  InterbaseStatusVector: TZIBStatusVector;
 begin
   Result := 0;
-  if (StatusVector[0] = 1) and (StatusVector[1] > 0) then
+  if not ((StatusVector[0] = 1) and (StatusVector[1] > 0)) then Exit;
+
+  InterbaseStatusVector := InterpretInterbaseStatus(PlainDriver, StatusVector, ConSettings);
+
+  ErrorMessage := '';
+  for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do
+    ErrorMessage := ErrorMessage + InterbaseStatusVector[i].IBMessage + '; ';
+
+  ErrorCode := InterbaseStatusVector[0].SQLCode;
+  ErrorSqlMessage := InterbaseStatusVector[0].SQLMessage;
+
+  if SQL <> '' then
+    ErrorSqlMessage := ErrorSqlMessage + ' The SQL: '+ConnRawToString(SQL, ConSettings)+'; ';
+
+  if ErrorMessage <> '' then
   begin
-    ErrorMessage := '';
-    PStatusVector := @StatusVector;
-    while PlainDriver.isc_interprete(Msg, @PStatusVector) > 0 do
-      ErrorMessage := ErrorMessage + ' ' + Msg;
-
-    ErrorCode := PlainDriver.isc_sqlcode(@StatusVector);
-    PlainDriver.isc_sql_interprete(ErrorCode, Msg, 1024);
-    ErrorSqlMessage := Msg;
-
-    if SQL <> '' then
-      SQL := ' The SQL: '+SQL+'; ';
-
-    if ErrorMessage <> '' then
-    begin
-      DriverManager.LogError(LoggingCategory, ConSettings^.Protocol,
-        ErrorMessage, ErrorCode, ErrorSqlMessage + SQL);
-
-      raise EZSQLException.CreateWithCode(ErrorCode,
-        ConSettings^.ConvFuncs.ZRawToString('SQL Error: '+ErrorMessage+'. Error Code: '+IntToRaw(ErrorCode)+
-        '. '+ErrorSqlMessage + SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-    end;
+    DriverManager.LogError(LoggingCategory, ConSettings^.Protocol,
+      ErrorMessage, ErrorCode, ErrorSqlMessage);
+    raise EZIBSQLException.Create(
+      Format(SSQLError1, [InterbaseStatusVector[0].SQLMessage]),
+      InterbaseStatusVector, SQL);
   end;
 end;
 
@@ -1636,6 +1750,43 @@ begin
      Length := PlainDriver.isc_vax_integer(@Buffer[1], 2);
      Result := PlainDriver.isc_vax_integer(@Buffer[3], Length);
    end;
+end;
+
+{ TZFBSpecificData }
+
+function TZIBSpecificData.Clone: TZExceptionSpecificData;
+begin
+  Result := TZIBSpecificData.Create;
+  TZIBSpecificData(Result).FStatusVector := StatusVector;
+  TZIBSpecificData(Result).FSQL := SQL;
+  TZIBSpecificData(Result).FIBErrorCode := IBErrorCode;
+  TZIBSpecificData(Result).FIBStatusCode := IBStatusCode;
+end;
+
+{ EZIBSQLException }
+
+constructor EZIBSQLException.Create(const Msg: string; const StatusVector: TZIBStatusVector; const SQL: string);
+var
+  i, SQLErrCode, IBErrorCode: Integer;
+  IBStatusCode: String;
+begin
+  SQLErrCode := 0; IBErrorCode := 0;
+  // find main IB code
+  for i := Low(StatusVector) to High(StatusVector) do
+    if StatusVector[i].IBDataType = isc_arg_gds then
+    begin
+      IBErrorCode := StatusVector[i].IBDataInt;
+      IBStatusCode := StatusVector[i].IBMessage;
+      SQLErrCode := StatusVector[i].SQLCode;
+      Break;
+    end;
+
+  inherited CreateWithCode(SQLErrCode, Msg);
+  FSpecificData := TZIBSpecificData.Create;
+  TZIBSpecificData(FSpecificData).FStatusVector := StatusVector;
+  TZIBSpecificData(FSpecificData).FSQL := SQL;
+  TZIBSpecificData(FSpecificData).FIBErrorCode := IBErrorCode;
+  TZIBSpecificData(FSpecificData).FIBStatusCode := IBStatusCode;
 end;
 
 { TSQLDA }

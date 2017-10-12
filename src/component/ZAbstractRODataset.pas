@@ -96,13 +96,16 @@ type
   private
     FErrorCode: Integer;
     FStatusCode: String;
+    FSpecificData: TZExceptionSpecificData;
     procedure SetStatusCode(const Value: String);
    public
     constructor Create(const Msg: string);
     constructor CreateFromException(E: EZSQLThrowable);
+    destructor Destroy; override;
 
     property ErrorCode: Integer read FErrorCode write FErrorCode;
     property StatusCode: String read FStatusCode write SetStatusCode;
+    property SpecificData: TZExceptionSpecificData read FSpecificData;
   end;
 
   {** Dataset Linker class. }
@@ -1815,11 +1818,19 @@ begin
   inherited Create(E.Message);
   ErrorCode := E.ErrorCode;
   Statuscode:= E.StatusCode;
+  if E.SpecificData <> nil then
+    FSpecificData := E.SpecificData.Clone;
 end;
 
 procedure EZDatabaseError.SetStatusCode(const Value: String);
 begin
   FStatusCode := value;
+end;
+
+destructor EZDatabaseError.Destroy;
+begin
+  FreeAndNil(FSpecificData);
+  inherited;
 end;
 
 { TZDataLink }

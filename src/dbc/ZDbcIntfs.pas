@@ -75,21 +75,29 @@ const
 
 // Exceptions
 type
+  TZExceptionSpecificData = class
+  public
+    function Clone: TZExceptionSpecificData; virtual; abstract;
+  end;
 
   {** Abstract SQL exception. }
   EZSQLThrowable = class(Exception)
   private
     FErrorCode: Integer;
     FStatusCode: String;
+  protected
+    FSpecificData: TZExceptionSpecificData;
   public
     constructor Create(const Msg: string);
     constructor CreateWithCode(const ErrorCode: Integer; const Msg: string);
     constructor CreateWithStatus(const StatusCode: String; const Msg: string);
     constructor CreateWithCodeAndStatus(ErrorCode: Integer; const StatusCode: String; const Msg: string);
     constructor CreateClone(const E:EZSQLThrowable);
+    destructor Destroy; override;
 
     property ErrorCode: Integer read FErrorCode;
     property StatusCode: string read FStatuscode; // The "String" Errocode // FirmOS
+    property SpecificData: TZExceptionSpecificData read FSpecificData; // Engine-specific data
   end;
 
   {** Generic SQL exception. }
@@ -1453,17 +1461,19 @@ end;
 
 { EZSQLThrowable }
 
-{**
-  Creates an exception with message string.
-  @param Msg a error description.
-}
 constructor EZSQLThrowable.CreateClone(const E: EZSQLThrowable);
 begin
   inherited Create(E.Message);
   FErrorCode:=E.ErrorCode;
   FStatusCode:=E.Statuscode;
+  if E.SpecificData <> nil then
+    FSpecificData := E.SpecificData.Clone;
 end;
 
+{**
+  Creates an exception with message string.
+  @param Msg a error description.
+}
 constructor EZSQLThrowable.Create(const Msg: string);
 begin
   inherited Create(Msg);
@@ -1505,6 +1515,12 @@ constructor EZSQLThrowable.CreateWithStatus(const StatusCode, Msg: string);
 begin
   inherited Create(Msg);
   FStatusCode := StatusCode;
+end;
+
+destructor EZSQLThrowable.Destroy;
+begin
+  FreeAndNil(FSpecificData);
+  inherited;
 end;
 
 initialization
