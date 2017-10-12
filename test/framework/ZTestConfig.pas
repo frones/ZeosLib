@@ -125,6 +125,7 @@ const
 
 const
   { Names of the connection configuration keys. }
+  DATABASE_LIBLOCATION_KEY    = 'liblocation';
   DATABASE_ALIAS_KEY          = 'alias';
   DATABASE_PROTOCOL_KEY       = 'protocol';
   DATABASE_HOST_KEY           = 'host';

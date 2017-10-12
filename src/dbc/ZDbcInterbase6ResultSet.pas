@@ -84,8 +84,7 @@ type
     FStmtType: TZIbSqlStatementType;
     procedure CheckRange(const Index: Word); {$IFDEF WITH_INLINE} inline; {$ENDIF}
     function GetIbSqlSubType(const Index: Word): Smallint; {$IF defined(WITH_INLINE) and not (defined(WITH_URW1135_ISSUE) or defined(WITH_URW1111_ISSUE))} inline; {$IFEND}
-    function DecodeString(const IsText: Boolean; const Index: Word): RawByteString; {$IF defined(WITH_INLINE) and not (defined(WITH_URW1135_ISSUE) or defined(WITH_URW1111_ISSUE))} inline; {$IFEND}
-    function GetQuad(const Index: Integer): TISC_QUAD;
+    function GetQuad(ColumnIndex: Integer): TISC_QUAD;
   protected
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
@@ -104,8 +103,6 @@ type
     function GetString(ColumnIndex: Integer): String; override;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
-    function GetShort(ColumnIndex: Integer): ShortInt; override;
-    function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetULong(ColumnIndex: Integer): UInt64; override;
@@ -163,6 +160,41 @@ uses
   Variants,
 {$ENDIF}
   ZEncoding, ZFastCode, ZSysUtils;
+
+procedure GetPCharFromTextVar(SQLCode: SmallInt; sqldata: Pointer; sqllen: Short; out P: PAnsiChar; out Len: NativeUInt); {$IF defined(WITH_INLINE)} inline; {$IFEND}
+begin
+  case SQLCode of
+    SQL_TEXT:
+      begin
+        P := sqldata;
+        // Trim only trailing spaces. TrimRight also removes other characters)
+        Len := sqllen;
+        if Len > 0 then while (P + Len - 1)^ = ' ' do Dec(Len);
+      end;
+    SQL_VARYING:
+      begin
+        P := PISC_VARYING(sqldata).str;
+        Len := PISC_VARYING(sqldata).strlen;
+      end;
+    else // should not happen
+      begin
+        P := nil;
+        Len := 0;
+      end;
+  end;
+end;
+
+function GetRawFromTextVar(SQLCode: SmallInt; sqldata: Pointer; sqllen: Short): RawByteString; {$IF defined(WITH_INLINE)} inline; {$IFEND}
+var
+  P: PAnsiChar;
+  Len: NativeUInt;
+begin
+  GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
+  if Len > 0 then
+    ZSetString(P, Len, Result{%H-})
+  else
+    Result := '';
+end;
 
 { TZInterbase6XSQLDAResultSet }
 
@@ -389,14 +421,17 @@ end;
 function TZInterbase6XSQLDAResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 var
   SQLCode: SmallInt;
-  L: Integer;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if not LastWasNull then begin
+  if LastWasNull then
+    Result := 0
+  else
+  begin
     {$IFNDEF GENERIC_INDEX}
     ColumnIndex := ColumnIndex -1;
     {$ENDIF}
@@ -404,7 +439,6 @@ begin
     with FXSQLDA.sqlvar[ColumnIndex] do
     begin
       SQLCode := (sqltype and not(1));
-
       if (sqlscale < 0)  then
       begin
         case SQLCode of
@@ -428,21 +462,19 @@ begin
           SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
-          SQL_TEXT      : begin
-                            l := sqllen; {last char = #0}
-                            if L > 0 then
-                              while ((sqldata+l-1)^ = ' ') do dec(l); {last char = #0}
-                            ZSysUtils.SQLStrToFloatDef(PAnsiChar(sqldata), 0, Result, L)
+          SQL_TEXT,
+          SQL_VARYING   : begin
+                            GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
+                            ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
                           end;
-          SQL_VARYING   : ZSysUtils.SQLStrToFloatDef(PAnsiChar(@PISC_VARYING(sqldata).str[0]), 0, Result, PISC_VARYING(sqldata).strlen);
         else
           raise EZIBConvertError.Create(Format(SErrorConvertionField,
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
     {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+    {$R+}
+    {$ENDIF}
   end;
 end;
 
@@ -462,30 +494,35 @@ function TZInterbase6XSQLDAResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   BlobId: TISC_QUAD;
 begin
-  Result := nil;
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
-
   LastWasNull := IsNull(ColumnIndex);
-  if not  LastWasNull then begin
-    BlobId := GetQuad(ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF});
-    if FCachedBlob then begin
+  if LastWasNull then
+    Result := nil
+  else
+  begin
+    BlobId := GetQuad(ColumnIndex);
+    if FCachedBlob then
+    begin
       case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType of
-        stBinaryStream: begin
-          Result := TZAbstractBlob.Create;
-          with FIBConnection do
-            ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
-              BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, True, ConSettings);
-        end;
-        stAsciiStream, stUnicodeStream: begin
-          Result := TZAbstractClob.CreateWithData(nil, 0, Consettings^.ClientCodePage^.CP, ConSettings);
-          with FIBConnection do
-            ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
-              BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, False, ConSettings);
-        end;
+        stBinaryStream:
+          begin
+            Result := TZAbstractBlob.Create;
+            with FIBConnection do
+              ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
+                BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, True, ConSettings);
+          end;
+        stAsciiStream, stUnicodeStream:
+          begin
+            Result := TZAbstractClob.CreateWithData(nil, 0, Consettings^.ClientCodePage^.CP, ConSettings);
+            with FIBConnection do
+              ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
+                BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, False, ConSettings);
+          end;
       end;
-    end else
+    end
+    else
       case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType of
         stBinaryStream:
           Result := TZInterbase6UnCachedBlob.Create(FIBConnection.GetDBHandle,
@@ -515,13 +552,17 @@ function TZInterbase6XSQLDAResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 label Fail;
 var
   SQLCode: SmallInt;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
   LastWasNull := IsNull(ColumnIndex);
-  Result := False;
-  if not LastWasNull then
+  if LastWasNull then
+    Result := False
+  else
+  begin
     {$R-}
     {$IFNDEF GENERIC_INDEX}
     ColumnIndex := ColumnIndex -1;
@@ -529,7 +570,6 @@ begin
     with FXSQLDA.sqlvar[ColumnIndex] do
     begin
       SQLCode := (sqltype and not(1));
-
       if (sqlscale < 0)  then
         case SQLCode of
           SQL_SHORT  : Result := PSmallInt(sqldata)^ div IBScaleDivisor[sqlscale] <> 0;
@@ -549,11 +589,15 @@ begin
           SQL_BOOLEAN_FB: Result := PByte(sqldata)^<>0;
           SQL_SHORT     : Result := PSmallint(sqldata)^ <> 0;
           SQL_INT64     : Result := PInt64(sqldata)^ <> 0;
-          SQL_TEXT      : Result := StrToBoolEx(PAnsiChar(sqldata));
-          SQL_VARYING   : Result := StrToBoolEx(PAnsiChar(sqldata)+2{Inc SQLData by sizeof(smallint)});
+          SQL_TEXT,
+          SQL_VARYING   :
+            begin
+              GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
+              Result := StrToBoolEx(P);
+            end;
           SQL_BLOB:
             if sqlsubtype = 1 then
-              StrToBoolEx(GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetRawByteString)
+              Result := StrToBoolEx(GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetRawByteString)
             else
               goto Fail;
         else
@@ -563,8 +607,9 @@ begin
         end;
     end;
     {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+    {$R+}
+    {$ENDIF}
+  end;
 end;
 
 {**
@@ -585,9 +630,10 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
-  Result := nil;
   LastWasNull := IsNull(ColumnIndex);
-  if not LastWasNull then
+  if LastWasNull then
+    Result := nil
+  else
   begin
     {$IFNDEF GENERIC_INDEX}
     ColumnIndex := ColumnIndex -1;
@@ -608,8 +654,8 @@ begin
       end;
     end;
     {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+    {$R+}
+    {$ENDIF}
   end;
 end;
 
@@ -628,6 +674,7 @@ var
   Len: NativeUInt;
   P: PAnsiChar;
   Failed: Boolean;
+  SQLCode: SmallInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
@@ -636,9 +683,12 @@ begin
   if LastWasNull then
     Result := 0
   else
+  begin
     {$R-}
     with FXSQLDA.sqlvar[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do
-      case (sqltype and not(1)) of
+    begin
+      SQLCode := (sqltype and not(1));
+      case SQLCode of
         SQL_TIMESTAMP :
           begin
             FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
@@ -652,9 +702,10 @@ begin
               Word(TempDate.tm_mon + 1), Word(TempDate.tm_mday));
           end;
         SQL_TYPE_TIME : Result := 0;
-        SQL_TEXT, SQL_VARYING:
+        SQL_TEXT,
+        SQL_VARYING:
           begin
-            P := GetPAnsiChar(ColumnIndex, Len);
+            GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
             if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
               Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
@@ -664,10 +715,12 @@ begin
           end;
         else
           Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}));
-        end;
-   {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+      end;
+    end;
+    {$IFOPT D+}
+    {$R+}
+    {$ENDIF}
+  end;
 end;
 
 {**
@@ -682,14 +735,16 @@ end;
 function TZInterbase6XSQLDAResultSet.GetDouble(ColumnIndex: Integer): Double;
 var
   SQLCode: SmallInt;
-  L: Integer;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if not LastWasNull then
+  if LastWasNull then
+    Result := 0
+  else
   begin
     {$IFNDEF GENERIC_INDEX}
     ColumnIndex := ColumnIndex -1;
@@ -698,7 +753,6 @@ begin
     with FXSQLDA.sqlvar[ColumnIndex] do
     begin
       SQLCode := (sqltype and not(1));
-
       if (sqlscale < 0)  then
       begin
         case SQLCode of
@@ -722,21 +776,19 @@ begin
           SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
-          SQL_TEXT      : begin
-                            l := sqllen; {last char = #0}
-                            if L > 0 then
-                              while ((sqldata+l-1)^ = ' ') do dec(l); {last char = #0}
-                            ZSysUtils.SQLStrToFloatDef(PAnsiChar(sqldata), 0, Result, L)
+          SQL_TEXT,
+          SQL_VARYING   : begin
+                            GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
+                            ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
                           end;
-          SQL_VARYING   : ZSysUtils.SQLStrToFloatDef(PAnsiChar(@PISC_VARYING(sqldata).str[0]), 0, Result, PISC_VARYING(sqldata).strlen);
         else
           raise EZIBConvertError.Create(Format(SErrorConvertionField,
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
     {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+    {$R+}
+    {$ENDIF}
   end;
 end;
 
@@ -752,14 +804,16 @@ end;
 function TZInterbase6XSQLDAResultSet.GetCurrency(ColumnIndex: Integer): Currency;
 var
   SQLCode: SmallInt;
-  L: Integer;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stCurrency);
 {$ENDIF}
-  Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if not LastWasNull then
+  if LastWasNull then
+    Result := 0
+  else
   begin
     {$R-}
     {$IFNDEF GENERIC_INDEX}
@@ -791,21 +845,19 @@ begin
           SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
-          SQL_TEXT      : begin
-                            l := sqllen; {last char = #0}
-                            if L > 0 then
-                              while ((sqldata+l-1)^ = ' ') do dec(l); {last char = #0}
-                            ZSysUtils.SQLStrToFloatDef(PAnsiChar(sqldata), 0, Result, L)
+          SQL_TEXT,
+          SQL_VARYING   : begin
+                            GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
+                            ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
                           end;
-          SQL_VARYING   : ZSysUtils.SQLStrToFloatDef(PAnsiChar(@PISC_VARYING(sqldata).str[0]), 0, Result, PISC_VARYING(sqldata).strlen);
         else
           raise EZIBConvertError.Create(Format(SErrorConvertionField,
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
     {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+    {$R+}
+    {$ENDIF}
   end;
 end;
 
@@ -821,14 +873,16 @@ end;
 function TZInterbase6XSQLDAResultSet.GetFloat(ColumnIndex: Integer): Single;
 var
   SQLCode: SmallInt;
-  L: Integer;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if not LastWasNull then
+  if LastWasNull then
+    Result := 0
+  else
   begin
     {$IFNDEF GENERIC_INDEX}
     ColumnIndex := ColumnIndex -1;
@@ -837,7 +891,6 @@ begin
     with FXSQLDA.sqlvar[ColumnIndex] do
     begin
       SQLCode := (sqltype and not(1));
-
       if (sqlscale < 0)  then
       begin
         case SQLCode of
@@ -861,22 +914,20 @@ begin
           SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
-          SQL_TEXT      : begin
-                            l := sqllen; {last char = #0}
-                            if L > 0 then
-                              while ((sqldata+l-1)^ = ' ') do dec(l); {last char = #0}
-                            ZSysUtils.SQLStrToFloatDef(PAnsiChar(sqldata), 0, Result, L)
+          SQL_TEXT,
+          SQL_VARYING   : begin
+                            GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
+                            ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
                           end;
-          SQL_VARYING   : ZSysUtils.SQLStrToFloatDef(PAnsiChar(@PISC_VARYING(sqldata).str[0]), 0, Result, PISC_VARYING(sqldata).strlen);
         else
           raise EZIBConvertError.Create(Format(SErrorConvertionField,
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-  end;
     {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+    {$R+}
+    {$ENDIF}
+  end;
 end;
 
 {**
@@ -892,13 +943,16 @@ function TZInterbase6XSQLDAResultSet.GetInt(ColumnIndex: Integer): Integer;
 label Fail;
 var
   SQLCode: SmallInt;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if not LastWasNull then
+  if LastWasNull then
+    Result := 0
+  else
   begin
     {$IFNDEF GENERIC_INDEX}
     ColumnIndex := ColumnIndex -1;
@@ -926,12 +980,17 @@ begin
           SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
-          SQL_TEXT      : Result := RawToIntDef(sqldata, 0);
-          SQL_VARYING   : Result := RawToIntDef(PAnsiChar(sqldata)+2{Inc SQLData by sizeof(smallint)}, 0);
+          SQL_TEXT,
+          SQL_VARYING   :
+            begin
+              GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
+              Result := RawToIntDef(P, 0);
+            end;
           SQL_BLOB:
             if sqlsubtype = 1 then
               Result := RawToIntDef(GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetRawByteString, 0)
-            else goto Fail;
+            else
+              goto Fail;
         else
           Fail:
           raise EZIBConvertError.Create(Format(SErrorConvertionField,
@@ -939,8 +998,8 @@ begin
         end;
     end;
     {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+    {$R+}
+    {$ENDIF}
   end;
 end;
 
@@ -957,13 +1016,16 @@ function TZInterbase6XSQLDAResultSet.GetLong(ColumnIndex: Integer): Int64;
 label Fail;
 var
   SQLCode: SmallInt;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if not LastWasNull then
+  if LastWasNull then
+    Result := 0
+  else
   begin
     {$IFNDEF GENERIC_INDEX}
     ColumnIndex := ColumnIndex -1;
@@ -994,8 +1056,12 @@ begin
           SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
-          SQL_TEXT      : Result := RawToInt64Def(sqldata, 0);
-          SQL_VARYING   : Result := RawToInt64Def(PAnsiChar(sqldata)+2{Inc SQLData by sizeof(smallint)}, 0);
+          SQL_TEXT,
+          SQL_VARYING   :
+            begin
+              GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
+              Result := RawToInt64Def(P, 0);
+            end;
           SQL_BLOB:
             if sqlsubtype = 1 then
               Result := RawToInt64Def(GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetRawByteString, 0)
@@ -1008,8 +1074,8 @@ begin
         end;
     end;
     {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+    {$R+}
+    {$ENDIF}
   end;
 end;
 
@@ -1026,17 +1092,20 @@ function TZInterbase6XSQLDAResultSet.GetULong(ColumnIndex: Integer): UInt64;
 label Fail;
 var
   SQLCode: SmallInt;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stLong);
+  CheckColumnConvertion(ColumnIndex, stULong);
 {$ENDIF}
-  {$IFDEF WITH_UINT64_C1118_ERROR}
-  Result := UInt64(0); //need that type cast for D7 else "internal error C1118"
-  {$ELSE}
-  Result := 0;
-  {$ENDIF}
   LastWasNull := IsNull(ColumnIndex);
-  if not LastWasNull then
+  if LastWasNull then
+    {$IFDEF WITH_UINT64_C1118_ERROR}
+    Result := UInt64(0) //need that type cast for D7 else "internal error C1118"
+    {$ELSE}
+    Result := 0
+    {$ENDIF}
+  else
   begin
     {$IFNDEF GENERIC_INDEX}
     ColumnIndex := ColumnIndex -1;
@@ -1067,8 +1136,12 @@ begin
           SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
-          SQL_TEXT      : Result := RawToUInt64Def(DecodeString(True, ColumnIndex), 0);
-          SQL_VARYING   : Result := RawToUInt64Def(PAnsiChar(sqldata)+2{Inc SQLData by sizeof(smallint)}, 0);
+          SQL_TEXT,
+          SQL_VARYING   :
+            begin
+              GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
+              Result := RawToUInt64Def(P, 0);
+            end;
           SQL_BLOB:
             if sqlsubtype = 1 then
               Result := RawToUInt64Def(GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetRawByteString, 0)
@@ -1081,140 +1154,8 @@ begin
         end;
     end;
     {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
-  end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>short</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZInterbase6XSQLDAResultSet.GetShort(ColumnIndex: Integer): ShortInt;
-label Fail;
-var
-  SQLCode: SmallInt;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stShort);
-{$ENDIF}
-  Result := 0;
-  LastWasNull := IsNull(ColumnIndex);
-  if not LastWasNull then
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex -1;
+    {$R+}
     {$ENDIF}
-    {$R-}
-    with FXSQLDA.sqlvar[ColumnIndex] do
-    begin
-      SQLCode := (sqltype and not(1));
-
-      if (sqlscale < 0)  then
-        case SQLCode of
-          SQL_SHORT  : Result := PSmallInt(sqldata)^ div IBScaleDivisor[sqlscale];
-          SQL_LONG   : Result := PInteger(sqldata)^  div IBScaleDivisor[sqlscale];
-          SQL_INT64,
-          SQL_QUAD   : Result := PInt64(sqldata)^    div IBScaleDivisor[sqlscale];
-          SQL_DOUBLE : Result := Trunc(PDouble(sqldata)^);
-        else goto Fail;
-        end
-      else
-        case SQLCode of
-          SQL_DOUBLE    : Result := Trunc(PDouble(sqldata)^);
-          SQL_LONG      : Result := PInteger(sqldata)^;
-          SQL_D_FLOAT,
-          SQL_FLOAT     : Result := Trunc(PSingle(sqldata)^);
-          SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
-          SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
-          SQL_SHORT     : Result := PSmallint(sqldata)^;
-          SQL_INT64     : Result := PInt64(sqldata)^;
-          SQL_TEXT      : Result := RawToIntDef(sqldata, 0);
-          SQL_VARYING   : Result := RawToIntDef(PAnsiChar(sqldata)+2{Inc SQLData by sizeof(smallint)}, 0);
-          SQL_BLOB:
-            if sqlsubtype = 1 then
-              Result := RawToIntDef(GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetRawByteString, 0)
-            else
-              goto Fail;
-        else
-          Fail:
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
-        end;
-    end;
-    {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
-  end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>short</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZInterbase6XSQLDAResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
-label Fail;
-var
-  SQLCode: SmallInt;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stShort);
-{$ENDIF}
-  Result := 0;
-  LastWasNull := IsNull(ColumnIndex);
-  if not LastWasNull then
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex -1;
-    {$ENDIF}
-    {$R-}
-    with FXSQLDA.sqlvar[ColumnIndex] do
-    begin
-      SQLCode := (sqltype and not(1));
-      if (sqlscale < 0)  then
-        case SQLCode of
-          SQL_SHORT  : Result := PSmallInt(sqldata)^ div IBScaleDivisor[sqlscale];
-          SQL_LONG   : Result := PInteger(sqldata)^  div IBScaleDivisor[sqlscale];
-          SQL_INT64,
-          SQL_QUAD   : Result := PInt64(sqldata)^    div IBScaleDivisor[sqlscale];
-          SQL_DOUBLE : Result := Trunc(PDouble(sqldata)^);
-        else goto Fail;
-        end
-      else
-        case SQLCode of
-          SQL_DOUBLE    : Result := Trunc(PDouble(sqldata)^);
-          SQL_LONG      : Result := PInteger(sqldata)^;
-          SQL_D_FLOAT,
-          SQL_FLOAT     : Result := Trunc(PSingle(sqldata)^);
-          SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
-          SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
-          SQL_SHORT     : Result := PSmallint(sqldata)^;
-          SQL_INT64     : Result := PInt64(sqldata)^;
-          SQL_TEXT      : Result := RawToIntDef(sqldata, 0);
-          SQL_VARYING   : Result := RawToIntDef(PAnsiChar(sqldata)+2{Inc SQLData by sizeof(smallint)}, 0);
-          SQL_BLOB:
-            if sqlsubtype = 1 then
-              Result := RawToIntDef(GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetRawByteString, 0)
-            else goto Fail;
-        else
-          Fail:
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
-        end;
-    end;
-    {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
   end;
 end;
 
@@ -1243,10 +1184,7 @@ begin
     {$R-}
     with FXSQLDA.sqlvar[ColumnIndex] do
     begin
-      if (sqlind <> nil) and (sqlind^ = -1) then
-           Exit;
       SQLCode := (sqltype and not(1));
-
       if (sqlscale < 0)  then
       begin
         case SQLCode of
@@ -1266,20 +1204,12 @@ begin
           SQL_LONG      : Result := IntToRaw(PInteger(sqldata)^);
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := FloatToRaw(PSingle(sqldata)^);
-          SQL_BOOLEAN   :
-            if PSmallint(sqldata)^ <> 0 then
-              Result := 'YES'
-            else
-              Result := 'NO';
-          SQL_BOOLEAN_FB:
-            if PByte(sqldata)^ <> 0 then
-              Result := 'YES'
-            else
-              Result := 'NO';
+          SQL_BOOLEAN   : Result := BoolToRawEx(PSmallint(sqldata)^ <> 0);
+          SQL_BOOLEAN_FB: Result := BoolToRawEx(PByte(sqldata)^ <> 0);
           SQL_SHORT     : Result := IntToRaw(PSmallint(sqldata)^);
           SQL_INT64     : Result := IntToRaw(PInt64(sqldata)^);
-          SQL_TEXT      : Result := DecodeString(True, ColumnIndex);
-          SQL_VARYING   : Result := DecodeString(False, ColumnIndex);
+          SQL_TEXT,
+          SQL_VARYING   : Result := GetRawFromTextVar(SQLCode, sqldata, sqllen);
           SQL_BLOB      :
             Begin
               FBlobTemp := GetBlob(ColumnIndex);
@@ -1295,8 +1225,8 @@ begin
         end;
     end;
     {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+    {$R+}
+    {$ENDIF}
   end;
 end;
 
@@ -1315,6 +1245,7 @@ var
   Failed: Boolean;
   P: PAnsiChar;
   Len: NativeUInt;
+  SQLCode: SmallInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
@@ -1323,9 +1254,12 @@ begin
   if LastWasNull then
     Result := 0
   else
+  begin
     {$R-}
     with FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}] do
-      case (sqltype and not(1)) of
+    begin
+      SQLCode := sqltype and not(1);
+      case SQLCode of
         SQL_TIMESTAMP :
           begin
             FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
@@ -1341,7 +1275,7 @@ begin
           end;
         SQL_TEXT, SQL_VARYING:
           begin
-            P := GetPAnsiChar(ColumnIndex, Len);
+            GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
             if (P+2)^ = ':' then //possible date if Len = 10 then
               Result := RawSQLTimeToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
@@ -1349,10 +1283,12 @@ begin
           end;
         else
           Result := Frac(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}));
-        end;
-   {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+      end;
+    end;
+    {$IFOPT D+}
+    {$R+}
+    {$ENDIF}
+  end;
 end;
 
 {**
@@ -1370,6 +1306,7 @@ var
   Failed: Boolean;
   P: PAnsiChar;
   Len: NativeUInt;
+  SQLCode: SmallInt;
   TempDate: TCTimeStructure;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1379,9 +1316,12 @@ begin
   if LastWasNull then
     Result := 0
   else
+  begin
     {$R-}
     with FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}] do
-      case (sqltype and not(1)) of
+    begin
+      SQLCode := sqltype and not(1);
+      case SQLCode of
         SQL_TIMESTAMP :
           begin
             FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
@@ -1403,7 +1343,7 @@ begin
           end;
         SQL_TEXT, SQL_VARYING:
           begin
-            P := GetPAnsiChar(ColumnIndex, Len);
+            GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
             if (P+2)^ = ':' then
               Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
@@ -1414,10 +1354,12 @@ begin
           end;
         else
           Result := GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
-        end;
-   {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+      end;
+    end;
+    {$IFOPT D+}
+    {$R+}
+    {$ENDIF}
+  end;
 end;
 
 {**
@@ -1439,8 +1381,8 @@ begin
   with FXSQLDA.sqlvar[ColumnIndex] do
     Result := (sqlind <> nil) and (sqlind^ = ISC_NULL);
   {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$R+}
+  {$ENDIF}
 end;
 
 {**
@@ -1472,7 +1414,6 @@ begin
     with FXSQLDA.sqlvar[ColumnIndex] do
     begin
       SQLCode := (sqltype and not(1));
-
       if (sqlscale < 0)  then
       begin
         case SQLCode of
@@ -1492,30 +1433,14 @@ begin
           SQL_LONG      : FRawTemp := IntToRaw(PInteger(sqldata)^);
           SQL_D_FLOAT,
           SQL_FLOAT     : FRawTemp := FloatToRaw(PSingle(sqldata)^);
-          SQL_BOOLEAN   :
-            if PSmallint(sqldata)^ <> 0 then
-              FRawTemp := 'YES'
-            else
-              FRawTemp := 'NO';
-          SQL_BOOLEAN_FB:
-            if PByte(sqldata)^ <> 0 then
-              FRawTemp := 'YES'
-            else
-              FRawTemp := 'NO';
+          SQL_BOOLEAN   : FRawTemp := BoolToRawEx(PSmallint(sqldata)^ <> 0);
+          SQL_BOOLEAN_FB: FRawTemp := BoolToRawEx(PByte(sqldata)^ <> 0);
           SQL_SHORT     : FRawTemp := IntToRaw(PSmallint(sqldata)^);
           SQL_INT64     : FRawTemp := IntToRaw(PInt64(sqldata)^);
-          SQL_TEXT      :
+          SQL_TEXT,
+          SQL_VARYING   :
             begin
-              Result := sqldata;
-              // Trim only trailing spaces. TrimRight also removes other characters)
-              Len := sqllen;
-              if Len > 0 then while (Result+Len-1)^ = ' ' do dec(Len);
-              Exit;
-            end;
-          SQL_VARYING :
-            begin
-              Result := PISC_VARYING(sqldata).str;
-              Len := PISC_VARYING(sqldata).strlen;
+              GetPCharFromTextVar(SQLCode, sqldata, sqllen, Result, Len);
               Exit;
             end;
           SQL_BLOB      :
@@ -1541,8 +1466,8 @@ begin
     Result := Pointer(FRawTemp);
     Len := NativeUInt({%H-}PLengthInt(NativeUInt(FRawTemp) - StringLenOffSet)^);
     {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+    {$R+}
+    {$ENDIF}
   end;
 end;
 
@@ -1556,9 +1481,13 @@ end;
     value returned is <code>null</code>
 }
 function TZInterbase6XSQLDAResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
-var Len: NativeUInt;
+var
+  Len: NativeUInt;
+  P: PAnsiChar;
 begin
-  Result := GetPAnsiChar(ColumnIndex, Len);
+  P := GetPAnsiChar(ColumnIndex, Len);
+  ZSetString(P, Len, FRawTemp);
+  Result := Pointer(FRawTemp);
 end;
 
 {**
@@ -1589,10 +1518,7 @@ begin
     {$R-}
     with FXSQLDA.sqlvar[ColumnIndex] do
     begin
-      if (sqlind <> nil) and (sqlind^ = -1) then
-           Exit;
       SQLCode := (sqltype and not(1));
-
       if (sqlscale < 0)  then
       begin
         case SQLCode of
@@ -1612,32 +1538,15 @@ begin
           SQL_LONG      : Result := IntToRaw(PInteger(sqldata)^);
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := FloatToRaw(PSingle(sqldata)^);
-          SQL_BOOLEAN   :
-            if PSmallint(sqldata)^ <> 0 then
-              Result := 'YES'
-            else
-              Result := 'NO';
-          SQL_BOOLEAN_FB:
-            if PByte(sqldata)^ <> 0 then
-              Result := 'YES'
-            else
-              Result := 'NO';
+          SQL_BOOLEAN   : Result := BoolToRawEx(PSmallint(sqldata)^ <> 0);
+          SQL_BOOLEAN_FB: Result := BoolToRawEx(PByte(sqldata)^ <> 0);
           SQL_SHORT     : Result := IntToRaw(PSmallint(sqldata)^);
           SQL_INT64     : Result := IntToRaw(PInt64(sqldata)^);
-          SQL_TEXT      :
+          SQL_TEXT,
+          SQL_VARYING   :
             begin
-              // Trim only trailing spaces. TrimRight also removes other characters)
-              Len := sqllen;
-              P := sqldata;
-              if Len > 0 then
-                while (P+Len-1)^ = ' ' do dec(Len);
-              goto AssignResult;
-            end;
-          SQL_VARYING :
-            begin
-              P := PISC_VARYING(sqldata).str;
-              Len := PISC_VARYING(sqldata).strlen;
-AssignResult: if sqlsubtype > High(FCodePageArray) then
+              GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
+              if sqlsubtype > High(FCodePageArray) then
                 Result := ZConvertPRawToUTF8(P, Len, ConSettings^.ClientCodePage^.cp)
               else
                 if (FCodePageArray[sqlsubtype] = zCP_UTF8) then
@@ -1659,8 +1568,8 @@ AssignResult: if sqlsubtype > High(FCodePageArray) then
         end;
     end;
     {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+    {$R+}
+    {$ENDIF}
   end;
 end;
 
@@ -1678,7 +1587,7 @@ var
   SubType: SmallInt;
   SQLCode: SmallInt;
   P: PAnsiChar;
-  Len: LengthInt;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -1694,10 +1603,7 @@ begin
     {$R-}
     with FXSQLDA.sqlvar[ColumnIndex] do
     begin
-      if (sqlind <> nil) and (sqlind^ = -1) then
-           Exit;
       SQLCode := (sqltype and not(1));
-
       if (sqlscale < 0)  then
       begin
         case SQLCode of
@@ -1717,25 +1623,15 @@ begin
           SQL_LONG      : Result := ZFastCode.IntToStr(PInteger(sqldata)^);
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := FloatToStr(PSingle(sqldata)^);
-          SQL_BOOLEAN   :
-            if PSmallint(sqldata)^ <> 0 then
-              Result := 'YES'
-            else
-              Result := 'NO';
-          SQL_BOOLEAN_FB:
-            if PByte(sqldata)^ <> 0 then
-              Result := 'YES'
-            else
-              Result := 'NO';
+          SQL_BOOLEAN   : Result := {$IFDEF UNICODE}BoolToUnicodeEx{$ELSE}BoolToRawEx{$ENDIF}(PSmallint(sqldata)^ <> 0);
+          SQL_BOOLEAN_FB: Result := {$IFDEF UNICODE}BoolToUnicodeEx{$ELSE}BoolToRawEx{$ENDIF}(PByte(sqldata)^ <> 0);
           SQL_SHORT     : Result := ZFastCode.IntToStr(PSmallint(sqldata)^);
           SQL_INT64     : Result := ZFastCode.IntToStr(PInt64(sqldata)^);
-          SQL_TEXT      :
+          SQL_TEXT,
+          SQL_VARYING   :
             begin
-              P := sqldata;
-              // Trim only trailing spaces. TrimRight also removes other characters)
-              Len := sqllen;
-              if Len > 0 then
-                while ((P+Len-1)^ = ' ') do dec(Len);
+              GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
+
               SubType := GetIbSqlSubType(ColumnIndex);
               if SubType > High(FCodePageArray) then
                 {$IFDEF UNICODE}
@@ -1753,32 +1649,6 @@ begin
                 {$ELSE}
                 begin
                   ZSetString(P, Len, FRawTemp);
-                  Result := ConSettings^.ConvFuncs.ZRawToString(FRawTemp,
-                    FCodePageArray[SubType], ConSettings^.CTRL_CP);
-                end;
-                {$ENDIF}
-            end;
-          SQL_VARYING :
-            begin
-              SubType := GetIbSqlSubType(ColumnIndex);
-              if SubType > High(FCodePageArray) then
-                {$IFDEF UNICODE}
-                Result := PRawToUnicode(PISC_VARYING(sqldata).str,
-                  PISC_VARYING(sqldata).strlen, ConSettings^.ClientCodePage^.CP)
-                {$ELSE}
-                begin
-                  ZSetString(PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen, FRawTemp);
-                  Result := ConSettings^.ConvFuncs.ZRawToString(FRawTemp,
-                    ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-                end
-                {$ENDIF}
-              else
-                {$IFDEF UNICODE}
-                Result := PRawToUnicode(PISC_VARYING(sqldata).str,
-                  PISC_VARYING(sqldata).strlen, FCodePageArray[SubType]);
-                {$ELSE}
-                begin
-                  ZSetString(PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen, FRawTemp);
                   Result := ConSettings^.ConvFuncs.ZRawToString(FRawTemp,
                     FCodePageArray[SubType], ConSettings^.CTRL_CP);
                 end;
@@ -1807,8 +1677,8 @@ begin
         end;
     end;
     {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+    {$R+}
+    {$ENDIF}
   end;
 end;
 
@@ -1912,34 +1782,8 @@ begin
   {$R-}
   result := FXSQLDA.sqlvar[Index].sqlsubtype;
   {$IFOPT D+}
-{$R+}
-{$ENDIF}
-end;
-
-function TZInterbase6XSQLDAResultSet.DecodeString(const IsText: Boolean;
-  const Index: Word): RawByteString;
-var
-   l: integer;
-begin
-  {$R-}
-  with FXSQLDA.sqlvar[Index] do
-  if IsText then
-    begin
-      l := sqllen; {last char = #0}
-      // Trim only spaces. TrimRight also removes other characters)
-      if L > 0 then
-      begin
-        while ((sqldata+l-1)^ = ' ') do dec(l); {last char = #0}
-        ZSetString(sqldata, l, Result{%H-});
-      end
-      else
-        Result := '';
-    end
-  else
-    ZSetString(PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen, Result);
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$R+}
+  {$ENDIF}
 end;
 
 {**
@@ -1947,22 +1791,26 @@ end;
    @param Index the field index
    @return the field Interbase QUAD value
 }
-function TZInterbase6XSQLDAResultSet.GetQuad(const Index: Integer): TISC_QUAD;
+function TZInterbase6XSQLDAResultSet.GetQuad(ColumnIndex: Integer): TISC_QUAD;
 begin
-  CheckRange(Index);
   {$R-}
-  with FXSQLDA.sqlvar[Index] do
-  if not ((sqlind <> nil) and (sqlind^ = -1)) then
-    case (sqltype and not(1)) of
-      SQL_QUAD, SQL_DOUBLE, SQL_INT64, SQL_BLOB, SQL_ARRAY: result := PISC_QUAD(sqldata)^;
-    else
-      raise EZIBConvertError.Create(SUnsupportedDataType + ' ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr((sqltype and not(1))));
-    end
+  if not IsNull(ColumnIndex) then
+  begin
+    {$IFNDEF GENERIC_INDEX}
+    ColumnIndex := ColumnIndex -1;
+    {$ENDIF}
+    with FXSQLDA.sqlvar[ColumnIndex] do
+      case (sqltype and not(1)) of
+        SQL_QUAD, SQL_DOUBLE, SQL_INT64, SQL_BLOB, SQL_ARRAY: result := PISC_QUAD(sqldata)^;
+      else
+        raise EZIBConvertError.Create(SUnsupportedDataType + ' ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr((sqltype and not(1))));
+      end;
+  end
   else
     raise EZIBConvertError.Create('Invalid State.');
   {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$R+}
+  {$ENDIF}
 end;
 
 {**

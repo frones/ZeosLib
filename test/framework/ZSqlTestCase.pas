@@ -72,8 +72,8 @@ const
   pl_all_mysql = pl_mysql_client_server + ','+ pl_mysql_embedded;
   pl_all_postgresql = 'postgresql,postgresql-7,postgresql-8,postgresql-9';
   pl_all_sqlite = 'sqlite,sqlite-3';
-  pl_interbase_client_server = 'interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebird-2.5';
-  pl_interbase_embedded = 'firebirdd-1.5,firebirdd-2.0,firebirdd-2.1,firebirdd-2.5';
+  pl_interbase_client_server = 'interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebird-2.5,firebird-3.0';
+  pl_interbase_embedded = 'firebirdd-1.5,firebirdd-2.0,firebirdd-2.1,firebirdd-2.5,firebirdd-3.0';
   pl_all_interbase = pl_interbase_client_server + ',' + pl_interbase_embedded;
   pl_all_oracle = 'oracle,oracle-9i';
 
@@ -93,6 +93,7 @@ type
   private
     FConfigUses: TZConfigUses;
     FName: string;
+    FLibLocation: string;
     FAlias: string;
     FProtocol: string;
     FHostName: string;
@@ -129,6 +130,7 @@ type
     destructor Destroy; override;
     procedure CreateExtendedConfigurations(ConnectionsList: TObjectList);
     property Name: string read FName write FName;
+    property LibLocation: string read FLibLocation write FLibLocation;
     property Alias: string read FAlias write FAlias;
     property Protocol: string read FProtocol write FProtocol;
     property HostName: string read FHostName write FHostName;
@@ -174,6 +176,7 @@ type
     FSkipSetup: boolean;
     FTraceList: TStrings;
 
+    function GetLibLocation: string;
     function GetAlias: string;
     function GetConnectionName: string;
     function GetCreateScripts: TStringDynArray;
@@ -241,6 +244,7 @@ type
     { Properties to access active connection settings. }
     property ConnectionConfig:TZConnectionConfig read FCurrentConnectionConfig write SetCurrentConnectionConfig;
     property ConnectionName: string read GetConnectionName;
+    property LibLocation: string read GetLibLocation;
     property Alias: string read GetAlias;
     property Protocol: string read GetProtocol;
     property HostName: string read GetHostName;
@@ -423,6 +427,7 @@ begin
     FName := TemplateConfig.Name+'_'+Suffix
   else
     FName := TemplateConfig.Name;
+  FLibLocation := TemplateConfig.LibLocation;
   FAlias := TemplateConfig.Alias;
   FProtocol := TemplateConfig.Protocol;
   FHostName := TemplateConfig.HostName;
@@ -444,6 +449,7 @@ constructor TZConnectionConfig.Create(ConnectionName: String);
 begin
   Create;
   FName := ConnectionName;
+  FLibLocation := TestConfig.ReadProperty(FName, DATABASE_LIBLOCATION_KEY, '');
   FAlias := TestConfig.ReadProperty(FName, DATABASE_ALIAS_KEY, '');
   FProtocol := TestConfig.ReadProperty(FName, DATABASE_PROTOCOL_KEY, '');
   FHostName := TestConfig.ReadProperty(FName, DATABASE_HOST_KEY,
@@ -664,6 +670,11 @@ procedure TZAbstractSQLTestCase.SetCurrentConnectionConfig(
 begin
   if FCurrentConnectionConfig=AValue then Exit;
   FCurrentConnectionConfig:=AValue;
+end;
+
+function TZAbstractSQLTestCase.GetLibLocation: string;
+begin
+  Result := FCurrentConnectionConfig.LibLocation;
 end;
 
 function TZAbstractSQLTestCase.GetAlias: string;
@@ -1147,23 +1158,23 @@ end;
 }
 function TZAbstractSQLTestCase.CreateDbcConnection: IZConnection;
 var
-  URL: string;
+  zURL: TZURL;
   TempProperties :TStrings;
   I: Integer;
 begin
-  if Port <> 0 then
-    URL := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [Protocol, HostName, Port, Database, UserName, Password])
-  else URL := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [Protocol, HostName, Database, UserName, Password]);
+  zURL := TZURL.Create(Format('zdbc:%s://', [Protocol]), HostName, Port, Database, UserName, Password, nil);
+  zURL.LibLocation := LibLocation;
   TempProperties := TStringList.Create;
   for I := 0 to High(Properties) do
   begin
     TempProperties.Add(Properties[I])
   end;
-  Result := DriverManager.GetConnectionWithParams(URL, TempProperties);
+  Result := DriverManager.GetConnectionWithParams(zURL.URL, TempProperties);
   {$IFDEF ZEOS_TEST_ONLY}
   Result.SetTestMode(ConnectionConfig.TestMode);
   {$ENDIF}
   TempProperties.Free;
+  zURL.Free;
 end;
 
 {**
@@ -1175,6 +1186,7 @@ var
   I: Integer;
 begin
   Result := TZConnection.Create(nil);
+  Result.LibLocation := LibLocation;
   Result.Protocol := Protocol;
   Result.Port := Port;
   Result.HostName := HostName;

@@ -256,12 +256,10 @@ function TZURL.GetURL: string;
 var
   hasParamPart : boolean;
   procedure AddParamPart(const ParamPart: String);
+  const
+    ParamSep: array[Boolean] of Char = ('?', ';');
   begin
-    if hasParamPart then
-      Result := Result + ';'
-    else
-      Result := Result + '?';
-    Result := Result + ParamPart;
+    Result := Result + ParamSep[hasParamPart] + ParamPart;
     hasParamPart := True;
   end;
 
@@ -302,8 +300,8 @@ begin
     AddParamPart(Properties.GetURLText); //Adds the escaped string
 
   // LibLocation
-    if FLibLocation <> '' then
-      AddParamPart('LibLocation='+ FLibLocation);
+  if FLibLocation <> '' then
+    AddParamPart('LibLocation='+ FLibLocation);
 end;
 
 procedure TZURL.SetURL(const Value: string);
@@ -331,6 +329,15 @@ begin
   try
     AValue := Value;
 
+    // Strip out the parameters
+    I := ZFastCode.Pos('?', AValue);
+    if I > 0 then
+    begin
+      AValue := Copy(AValue, I + 1, MaxInt);
+      AProperties.Text := StringReplace(AValue, ';', LineEnding, [rfReplaceAll]);
+      AValue := Copy(Value, 1, I - 1);
+    end;
+
     // APrefix
     I := ZFastCode.Pos(':', AValue);
     if I = 0 then
@@ -349,47 +356,35 @@ begin
     if ZFastCode.Pos('//', AValue) = 1 then
     begin
       Delete(AValue, 1, 2);
-      if (ZFastCode.Pos(':', AValue) > 0) and
-         ((ZFastCode.Pos(':', AValue) < ZFastCode.Pos('/', AValue)) or
-         (ZFastCode.Pos('/', AValue)=0)) then
-        AHostName := Copy(AValue, 1, ZFastCode.Pos(':', AValue) - 1)
-      else if ZFastCode.Pos('/', AValue) > 0 then
-        AHostName := Copy(AValue, 1, ZFastCode.Pos('/', AValue) - 1)
-      else if ZFastCode.Pos('?', AValue) > 0 then
-        AHostName := Copy(AValue, 1, ZFastCode.Pos('?', AValue) - 1)
-      else
-        AHostName := AValue;
 
-      Delete(AValue, 1, Length(AHostName));
+      // Strip "hostname[:port]" out of "/database"
+      I := ZFastCode.Pos('/', AValue);
+      if I > 0 then
+      begin
+        AHostName := Copy(AValue, 1, I - 1);
+        Delete(AValue, 1, I);    
+      end
+      else
+      begin
+        AHostName := AValue;
+        AValue := '';
+      end;
 
       // APort
-      if ZFastCode.Pos(':', AValue) = 1 then
+      I := ZFastCode.Pos(':', AHostName);
+      if I > 0 then
       begin
-        Delete(AValue, 1, 1);
-        if ZFastCode.Pos('/', AValue) > 0 then
-          APort := Copy(AValue, 1, ZFastCode.Pos('/', AValue) - 1)
-        else if ZFastCode.Pos('?', AValue) > 0 then
-          APort := Copy(AValue, 1, ZFastCode.Pos('?', AValue) - 1)
-        else
-          APort := AValue;
-
-        Delete(AValue, 1, Length(APort));
+        APort := Copy(AHostName, I + 1, MaxInt);
+        Delete(AHostName, I, MaxInt);  
       end;
-    end;
-
+    end
+    else
+    // Likely a database delimited by / so remove the /
     if ZFastCode.Pos('/', AValue) = 1 then
       Delete(AValue, 1, 1);
 
     // ADatabase
-    I := ZFastCode.Pos('?', AValue);
-    if I > 0 then
-    begin
-      ADatabase := Copy(AValue, 1, I - 1);
-      Delete(AValue, 1, I);
-      AProperties.Text := StringReplace(AValue, ';', LineEnding, [rfReplaceAll]);
-    end
-    else
-      ADatabase := AValue;
+    ADatabase := AValue;
 
     FPrefix := APrefix;
     FProtocol := AProtocol;

@@ -833,7 +833,7 @@ var
 begin
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery(
-    Format('SELECT %s.CURRVAL FROM DUAL', [Name]));
+    GetCurrentValueSQL);
   if ResultSet.Next then
     Result := ResultSet.GetLong(1)
   else
@@ -844,7 +844,7 @@ end;
 
 function TZOracleSequence.GetCurrentValueSQL: String;
 begin
- result:=Format('SELECT %s.CURRVAL FROM DUAL', [Name]);
+  Result := Format('SELECT %s.CURRVAL FROM DUAL', [Name]);
 end;
 
 {**
@@ -858,7 +858,7 @@ var
 begin
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery(
-    Format('SELECT %s.NEXTVAL FROM DUAL', [Name]));
+    GetNextValueSQL);
   if ResultSet.Next then
     Result := ResultSet.GetLong(1)
   else
@@ -870,7 +870,7 @@ end;
 
 function TZOracleSequence.GetNextValueSQL: String;
 begin
- result:=Format('SELECT %s.NEXTVAL FROM DUAL', [Name]);
+  Result := Format('SELECT %s.NEXTVAL FROM DUAL', [Name]);
 end;
 
 { TZOracleCachedResolver }

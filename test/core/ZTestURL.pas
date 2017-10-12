@@ -69,7 +69,7 @@ type
   published
     procedure TestAssignToUrl;
     procedure TestAssignToProperties;
-    procedure TestAssignToProperties_DatabaseIsFile;
+    procedure TestAssignToUrl_DatabaseIsFile;
     procedure TestAssignToProperties_NoHostUserPwd;
     procedure TestAssignToProperties_NoUser;
     procedure TestAssignToProperties_Properties;
@@ -83,7 +83,10 @@ type
     procedure TestAssignToProperties_Properties_NoHost;
     procedure TestSemicolons;
     procedure TestUnixPathDelimiter;
+    procedure TestAssignToUrl_NoParams;
+    procedure TestAssignToUrl_NoDatabase;
     procedure TestSFTicket8_HostPort_NoDB_Properties;
+    procedure TestSFTicket158_LibLocWithSemicolon;
   end;
 
 implementation
@@ -308,7 +311,7 @@ begin
   end;
 end;
 
-procedure TZURLTest.TestAssignToProperties_DatabaseIsFile;
+procedure TZURLTest.TestAssignToUrl_DatabaseIsFile;
 var
   ZURL: TZURL;
 begin
@@ -444,6 +447,41 @@ begin
   end;
 end;
 
+procedure TZURLTest.TestAssignToUrl_NoParams;
+var
+  ZURL: TZURL;
+begin
+  // Test assignment to URL without params
+  ZURL := nil;
+  try
+    ZURL := TZURL.Create;
+    ZURL.URL := 'zdbc:firebird-2.0:/database.fdb';
+    CheckEquals('zdbc', ZURL.Prefix);
+    CheckEquals('firebird-2.0', ZURL.Protocol);
+    CheckEquals('', ZURL.HostName);
+    CheckEquals(0, ZURL.Port);
+    CheckEquals('database.fdb', ZURL.Database);
+    CheckEquals('', ZURL.Properties.Text);
+  finally
+    ZURL.Free;
+  end;
+  // Test assignment to URL without params and ? sign
+  ZURL := nil;
+  try
+    ZURL := TZURL.Create;
+    ZURL.URL := 'zdbc:firebird-2.0:/database.fdb?';
+    CheckEquals('zdbc', ZURL.Prefix);
+    CheckEquals('firebird-2.0', ZURL.Protocol);
+    CheckEquals('', ZURL.HostName);
+    CheckEquals(0, ZURL.Port);
+    CheckEquals('database.fdb', ZURL.Database);
+    CheckEquals('', ZURL.Properties.Text);
+  finally
+    ZURL.Free;
+  end;
+end;
+
+
 { SourceForge.net Ticket #8:
 TZURL.SetURL(const Value: string); maybe parse error.
 
@@ -468,6 +506,74 @@ begin
     CheckEquals('root', ZURL.UserName);
     CheckEquals('test', ZURL.Password);
     CheckEquals('zdbc:firebird-2.0://localhost:3306?username=root;password=test', ZURL.URL);
+  finally
+    ZURL.Free;
+  end;
+end;
+
+procedure TZURLTest.TestAssignToUrl_NoDatabase;
+var
+  ZURL: TZURL;
+begin
+  // Test assignment to URL without params
+  ZURL := nil;
+  try
+    ZURL := TZURL.Create;
+    ZURL.URL := 'zdbc:firebird-2.0:';
+    CheckEquals('zdbc', ZURL.Prefix);
+    CheckEquals('firebird-2.0', ZURL.Protocol);
+    CheckEquals('', ZURL.HostName);
+    CheckEquals(0, ZURL.Port);
+    CheckEquals('', ZURL.Database);
+    CheckEquals('', ZURL.Properties.Text);
+  finally
+    ZURL.Free;
+  end;
+end;
+
+{ SourceForge.net Ticket #158:
+  Liblocation with ":" breaks parsing
+}
+procedure TZURLTest.TestSFTicket158_LibLocWithSemicolon;
+var
+  ZURL: TZURL;
+begin
+  ZURL := nil;
+  try
+    ZURL := TZURL.Create;
+    ZURL.URL := 'zdbc:firebird-2.0://localhost:3306/database?LibLocation=c:\fbclient.dll';
+    CheckEquals('zdbc', ZURL.Prefix);
+    CheckEquals('firebird-2.0', ZURL.Protocol);
+    CheckEquals('localhost', ZURL.HostName);
+    CheckEquals(3306, ZURL.Port);
+    CheckEquals('database', ZURL.Database);
+    CheckEquals('c:\fbclient.dll', ZURL.LibLocation);
+  finally
+    ZURL.Free;
+  end;
+  ZURL := nil;
+  try
+    ZURL := TZURL.Create;
+    ZURL.URL := 'zdbc:firebird-2.0:///database?LibLocation=c:\fbclient.dll';
+    CheckEquals('zdbc', ZURL.Prefix);
+    CheckEquals('firebird-2.0', ZURL.Protocol);
+    CheckEquals('', ZURL.HostName);
+    CheckEquals(0, ZURL.Port);
+    CheckEquals('database', ZURL.Database);
+    CheckEquals('c:\fbclient.dll', ZURL.LibLocation);
+  finally
+    ZURL.Free;
+  end;
+  ZURL := nil;
+  try
+    ZURL := TZURL.Create;
+    ZURL.URL := 'zdbc:firebird-2.0:///c:\test\database.fdb?LibLocation=c:\fbclient.dll';
+    CheckEquals('zdbc', ZURL.Prefix);
+    CheckEquals('firebird-2.0', ZURL.Protocol);
+    CheckEquals('', ZURL.HostName);
+    CheckEquals(0, ZURL.Port);
+    CheckEquals('c:\test\database.fdb', ZURL.Database);
+    CheckEquals('c:\fbclient.dll', ZURL.LibLocation);
   finally
     ZURL.Free;
   end;
