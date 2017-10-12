@@ -177,7 +177,8 @@ type
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils
+uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZDatasetUtils, ZTokenizer,
+  ZAbstractRODataset
   {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 { TZResolverParameter }
@@ -420,12 +421,38 @@ end;
   @param Columns a collection of key columns.
 }
 procedure TZGenericCachedResolver.DefineWhereKeyColumns(Columns: TObjectList);
+
+  function AddColumn(const Table, ColumnName: string; WhereColumns: TObjectList): Boolean;
+  var
+    ColIdx, I: Integer;
+  begin
+    Result := False;
+    ColIdx := InvalidDbcIndex;
+    for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+      if (ColumnName = Metadata.GetColumnName(I))
+        and (Table = Metadata.GetTableName(I)) then
+      begin
+        ColIdx := I;
+        Break;
+      end;
+    if ColIdx = InvalidDbcIndex then
+    begin
+      WhereColumns.Clear;
+      Exit;
+    end;
+    WhereColumns.Add(TZResolverParameter.Create(I, ColumnName,
+      stUnknown, False, ''));
+    Result := True;
+  end;
+
 var
   I: Integer;
-  Found: Boolean;
-  ColumnName: string;
+  KeyFields: string;
   Catalog, Schema, Table: string;
   PrimaryKeys: IZResultSet;
+  Tokens: TStrings;
+  TokenType: TZTokenType;
+  TokenValue: string;
 begin
   { Use precached values. }
   if WhereColumns.Count > 0 then
@@ -450,31 +477,43 @@ begin
   { Tryes to define primary keys. }
   if not WhereAll then
   begin
-    {For exact results: quote all identifiers SEE: http://sourceforge.net/p/zeoslib/tickets/81/
-    If table names have mixed case ConstructNameCondition will return wrong results
-    and we fall back to WhereAll}
-    PrimaryKeys := DatabaseMetadata.GetPrimaryKeys(IdentifierConvertor.Quote(Catalog),
-      IdentifierConvertor.Quote(Schema), IdentifierConvertor.Quote(Table));
-    while PrimaryKeys.Next do
+    KeyFields := FStatement.GetParameters.Values['KeyFields'];
+    { Let user define key fields }
+    if KeyFields <> '' then
     begin
-      ColumnName := PrimaryKeys.GetString(ColumnNameIndex);
-      Found := False;
-      for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-      begin
-        if (ColumnName = Metadata.GetColumnName(I))
-          and (Table = Metadata.GetTableName(I)) then
+      Tokens := CommonTokenizer.TokenizeBufferToList(KeyFields,
+        [toSkipEOF, toSkipWhitespaces, toUnifyNumbers, toDecodeStrings]);
+
+      try
+        for I := 0 to Tokens.Count - 1 do
         begin
-          Found := True;
-          Break;
+          TokenType := TZTokenType({$IFDEF oldFPC}Pointer({$ENDIF}
+            Tokens.Objects[I]{$IFDEF oldFPC}){$ENDIF});
+          TokenValue := Tokens[I];
+
+          if TokenType in [ttWord, ttQuoted] then
+          begin
+            if not AddColumn(Table, TokenValue, WhereColumns) then
+              Break;
+          end
+          else if (TokenValue <> ',') and (TokenValue <> ';') then
+            raise EZDatabaseError.Create(Format(SIncorrectSymbol, [TokenValue]));
         end;
+      finally
+        Tokens.Free;
       end;
-      if not Found then
-      begin
-        WhereColumns.Clear;
-        Break;
-      end;
-      WhereColumns.Add(TZResolverParameter.Create(I, ColumnName,
-        stUnknown, False, ''));
+    end
+    else
+    { Ask DB for key fields }
+    begin
+      {For exact results: quote all identifiers SEE: http://sourceforge.net/p/zeoslib/tickets/81/
+      If table names have mixed case ConstructNameCondition will return wrong results
+      and we fall back to WhereAll}
+      PrimaryKeys := DatabaseMetadata.GetPrimaryKeys(IdentifierConvertor.Quote(Catalog),
+        IdentifierConvertor.Quote(Schema), IdentifierConvertor.Quote(Table));
+      while PrimaryKeys.Next do
+        if not AddColumn(Table, PrimaryKeys.GetString(ColumnNameIndex), WhereColumns) then
+          Break;
     end;
   end;
 
@@ -857,7 +896,7 @@ begin
       begin
         if DeleteStatement = nil then
         begin
-        SQL := FormDeleteStatement(FDeleteParams, OldRowAccessor);
+          SQL := FormDeleteStatement(FDeleteParams, OldRowAccessor);
           If Assigned(DeleteStatement) and (SQL <> DeleteStatement.GetSQL) then
             DeleteStatement := nil;
           If not Assigned(DeleteStatement) then
