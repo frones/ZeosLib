@@ -835,7 +835,7 @@ begin
   ResultSet := Statement.ExecuteQuery(
     GetCurrentValueSQL);
   if ResultSet.Next then
-    Result := ResultSet.GetLong(1)
+    Result := ResultSet.GetLong(FirstDbcIndex)
   else
     Result := inherited GetCurrentValue;
   ResultSet.Close;
@@ -860,7 +860,7 @@ begin
   ResultSet := Statement.ExecuteQuery(
     GetNextValueSQL);
   if ResultSet.Next then
-    Result := ResultSet.GetLong(1)
+    Result := ResultSet.GetLong(FirstDbcIndex)
   else
     Result := inherited GetNextValue;
   ResultSet.Close;

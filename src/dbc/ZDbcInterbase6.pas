@@ -227,7 +227,7 @@ end;
 }
 function TZInterbase6Driver.GetMajorVersion: Integer;
 begin
- Result := 1;
+  Result := 1;
 end;
 
 {**
@@ -292,7 +292,7 @@ end;
 procedure TZInterbase6Connection.Close;
 begin
   if Closed or (not Assigned(PlainDriver)) then
-     Exit;
+    Exit;
 
   CloseTransaction;
 
@@ -315,7 +315,7 @@ end;
 procedure TZInterbase6Connection.Commit;
 begin
   if Closed then
-     Exit;
+    Exit;
 
   if FTrHandle <> 0 then
   begin
@@ -413,7 +413,7 @@ function TZInterbase6Connection.CreateRegularStatement(Info: TStrings):
   IZStatement;
 begin
   if IsClosed then
-     Open;
+    Open;
   Result := TZInterbase6Statement.Create(Self, Info);
 end;
 
@@ -488,11 +488,9 @@ var
   DPB: RawByteString;
   DBName: array[0..512] of AnsiChar;
   NewDB: RawByteString;
-  tmp: String;
-  i: Integer;
 begin
   if not Closed then
-     Exit;
+    Exit;
 
   if TransactIsolationLevel = tiReadUncommitted then
     raise EZSQLException.Create('Isolation level do not capable');
@@ -509,110 +507,105 @@ begin
   else
     {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.Database);
 
-    { Create new db if needed }
-    if Info.Values['createNewDatabase'] <> '' then
-    begin
-      NewDB := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values['createNewDatabase'],
-        ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-      CreateNewDatabase(NewDB);
-      { Logging connection action }
-      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-        'CREATE DATABASE "'+NewDB+'" AS USER "'+ ConSettings^.User+'"');
-      URL.Properties.Values['createNewDatabase'] := '';
-    end;
+  { Create new db if needed }
+  if Info.Values['createNewDatabase'] <> '' then
+  begin
+    NewDB := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values['createNewDatabase'],
+      ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+    CreateNewDatabase(NewDB);
+    { Logging connection action }
+    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+      'CREATE DATABASE "'+NewDB+'" AS USER "'+ ConSettings^.User+'"');
+    URL.Properties.Values['createNewDatabase'] := '';
+  end;
 
-    FHandle := 0;
+  FHandle := 0;
   DPB := GenerateDPB(Info);
-    { Connect to Interbase6 database. }
-    GetPlainDriver.isc_attach_database(@FStatusVector,
-      ZFastCode.StrLen(DBName), DBName,
-    @FHandle, Length(DPB), Pointer(DPB));
+  { Connect to Interbase6 database. }
+  GetPlainDriver.isc_attach_database(@FStatusVector,
+    ZFastCode.StrLen(DBName), DBName,
+  @FHandle, Length(DPB), Pointer(DPB));
 
-    { Check connection error }
-    CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcConnect);
+  { Check connection error }
+  CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcConnect);
 
-    (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).CollectServerInformations; //keep this one first!
-    tmp := GetMetadata.GetDatabaseInfo.GetDatabaseProductVersion;
-    I := ZFastCode.Pos('.', tmp);
-    FHostVersion := StrToInt(Copy(tmp, 1, i-1))*1000000;
-    if ZFastCode.Pos(' ', tmp) > 0 then //possible beta or alfa release
-      tmp := Copy(tmp, i+1, ZFastCode.Pos(' ', tmp)-i-1)
-    else
-      tmp := Copy(tmp, i+1, Length(tmp)-i);
-  FHostVersion := FHostVersion + StrToInt(tmp)*1000;
-    if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird then
-      if (FHostVersion >= 3000000) then FXSQLDAMaxSize := 10*1024*1024; //might be much more! 4GB? 10MB sounds enough / roundtrip
+  with GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo do
+  begin
+    CollectServerInformations; //keep this one first!
+    FHostVersion := GetHostVersion;
+    FXSQLDAMaxSize := GetMaxSQLDASize;
+  end;
 
   { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
   FDialect := GetDBSQLDialect(GetPlainDriver, @FHandle, ConSettings);
 
-    { Logging connection action }
-    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-      'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"');
+  { Logging connection action }
+  DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+    'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"');
 
-    { Start transaction }
-    if not FHardCommit then
-      StartTransaction;
+  { Start transaction }
+  if not FHardCommit then
+    StartTransaction;
 
-    inherited Open;
+  inherited Open;
 
-    {Check for ClientCodePage: if empty switch to database-defaults
-      and/or check for charset 'NONE' which has a different byte-width
-      and no conversations where done except the collumns using collations}
-    with GetMetadata.GetCollationAndCharSet('', '', '', '') do
-    begin
-      if Next then
-        if FCLientCodePage = '' then
+  {Check for ClientCodePage: if empty switch to database-defaults
+    and/or check for charset 'NONE' which has a different byte-width
+    and no conversations where done except the collumns using collations}
+  with GetMetadata.GetCollationAndCharSet('', '', '', '') do
+  begin
+    if Next then
+      if FCLientCodePage = '' then
+      begin
+        FCLientCodePage := GetString(CollationAndCharSetNameIndex);
+        if URL.Properties.Values['ResetCodePage'] <> '' then
         begin
-          FCLientCodePage := GetString(CollationAndCharSetNameIndex);
-          if URL.Properties.Values['ResetCodePage'] <> '' then
-          begin
-            ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(FClientCodePage);
-            ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
-          end
-          else
-            CheckCharEncoding(FClientCodePage);
+          ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(FClientCodePage);
+          ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
         end
         else
-          if GetString(CollationAndCharSetNameIndex) = sCS_NONE then
+          CheckCharEncoding(FClientCodePage);
+      end
+      else
+        if GetString(CollationAndCharSetNameIndex) = sCS_NONE then
+        begin
+          if not ( FClientCodePage = sCS_NONE ) then
           begin
-            if not ( FClientCodePage = sCS_NONE ) then
-            begin
-              URL.Properties.Values['isc_dpb_lc_ctype'] := sCS_NONE;
-              {save the user wanted CodePage-Informations}
-              URL.Properties.Values['ResetCodePage'] := FClientCodePage;
-              FClientCodePage := sCS_NONE;
-              { charset 'NONE' can't convert anything and write 'Data as is'!
-                If another charset was set on attaching the Server then all
-                column collations are retrieved with newly choosen collation.
-                BUT NO string convertations where done! So we need a
-                reopen (since we can set the Client-CharacterSet only on
-                connecting) to determine charset 'NONE' corectly. Then the column
-                collations have there proper CharsetID's to encode all strings
-                correctly. }
-              Self.Close;
-              Self.Open;
-              { Create a new PZCodePage for the new environment-variables }
-            end
-            else
-            begin
-              if URL.Properties.Values['ResetCodePage'] <> '' then
-              begin
-                ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(sCS_NONE);
-                ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
-              end
-              else
-                CheckCharEncoding(sCS_NONE);
-            end;
+            URL.Properties.Values['isc_dpb_lc_ctype'] := sCS_NONE;
+            {save the user wanted CodePage-Informations}
+            URL.Properties.Values['ResetCodePage'] := FClientCodePage;
+            FClientCodePage := sCS_NONE;
+            { charset 'NONE' can't convert anything and write 'Data as is'!
+              If another charset was set on attaching the Server then all
+              column collations are retrieved with newly choosen collation.
+              BUT NO string convertations where done! So we need a
+              reopen (since we can set the Client-CharacterSet only on
+              connecting) to determine charset 'NONE' corectly. Then the column
+              collations have there proper CharsetID's to encode all strings
+              correctly. }
+            Self.Close;
+            Self.Open;
+            { Create a new PZCodePage for the new environment-variables }
           end
           else
+          begin
             if URL.Properties.Values['ResetCodePage'] <> '' then
+            begin
+              ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(sCS_NONE);
               ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
-      Close;
-    end;
-    if FClientCodePage = sCS_NONE then
-      ConSettings.AutoEncode := True; //Must be set!
+            end
+            else
+              CheckCharEncoding(sCS_NONE);
+          end;
+        end
+        else
+          if URL.Properties.Values['ResetCodePage'] <> '' then
+            ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
+    Close;
   end;
+  if FClientCodePage = sCS_NONE then
+    ConSettings.AutoEncode := True; //Must be set!
+end;
 
 {**
   Creates a <code>PreparedStatement</code> object for sending
@@ -645,7 +638,7 @@ function TZInterbase6Connection.CreatePreparedStatement(
   const SQL: string; Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then
-     Open;
+    Open;
   Result := TZInterbase6PreparedStatement.Create(Self, SQL, Info);
 end;
 
@@ -679,7 +672,7 @@ function TZInterbase6Connection.CreateCallableStatement(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
   if IsClosed then
-     Open;
+    Open;
   Result := TZInterbase6CallableStatement.Create(Self, SQL, Info);
 end;
 
@@ -731,9 +724,9 @@ begin
   case ErrorCode of
     isc_network_error..isc_net_write_err:
       Result := -1
-  else
+    else
       Result := 0;
-end;
+  end;
 end;
 
 {**
@@ -890,7 +883,7 @@ end;
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
-  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and (GetHostVersion >= 2005000) then
+  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsBinaryInSQL then
     if (Length(Value)*2+3) < 32*1024 then
       Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
     else
@@ -902,7 +895,7 @@ end;
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
-  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and (GetHostVersion >= 2005000) then
+  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsBinaryInSQL then
     if (Length(Value)*2+3) < 32*1024 then
       Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
     else
@@ -1019,7 +1012,7 @@ begin
   ResultSet := Statement.ExecuteQuery(Format(
     'SELECT %s FROM RDB$DATABASE', [GetCurrentValueSQL, Name]));
   if ResultSet.Next then
-    Result := ResultSet.GetLong(1)
+    Result := ResultSet.GetLong(FirstDbcIndex)
   else
     Result := inherited GetCurrentValue;
   ResultSet.Close;
@@ -1044,7 +1037,7 @@ begin
   ResultSet := Statement.ExecuteQuery(
     Format('SELECT %s FROM RDB$DATABASE', [GetNextValueSQL]));
   if ResultSet.Next then
-    Result := ResultSet.GetLong(1)
+    Result := ResultSet.GetLong(FirstDbcIndex)
   else
     Result := inherited GetNextValue;
   ResultSet.Close;
@@ -1053,12 +1046,10 @@ end;
 
 function TZInterbase6Sequence.GetNextValueSQL: string;
 begin
-  // Firebird 2.0+ supports SQL-compliant syntax
-  if (Connection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and
-     (Connection.GetHostVersion >= 2000000) and (BlockSize = 1) then
+  if (Connection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsNextValueFor and (BlockSize = 1) then
     Result := Format(' NEXT VALUE FOR "%s" ', [Name])
   else
-  Result := Format(' GEN_ID("%s", %d) ', [Name, BlockSize]);
+    Result := Format(' GEN_ID("%s", %d) ', [Name, BlockSize]);
 end;
 
 initialization

@@ -1511,7 +1511,7 @@ begin
   ResultSet := Statement.ExecuteQuery(
     Format('SELECT %s', [GetCurrentValueSQL]));
   if ResultSet.Next then
-    Result := ResultSet.GetLong(1)
+    Result := ResultSet.GetLong(FirstDbcIndex)
   else
     Result := inherited GetCurrentValue;
   ResultSet.Close;
@@ -1536,7 +1536,7 @@ begin
   ResultSet := Statement.ExecuteQuery(
     Format('SELECT %s', [GetNextValueSQL]));
   if ResultSet.Next then
-    Result := ResultSet.GetLong(1)
+    Result := ResultSet.GetLong(FirstDbcIndex)
   else
     Result := inherited GetNextValue;
   ResultSet.Close;

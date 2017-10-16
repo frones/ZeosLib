@@ -66,6 +66,14 @@ type
   IZInterbaseDatabaseInfo = Interface(IZDatabaseInfo)
     ['{F2895A2A-C427-4984-9356-79349EAAD44F}']
     function HostIsFireBird: Boolean;
+    function GetHostVersion: Integer;
+
+    function SupportsNextValueFor: Boolean;
+    function SupportsTrim: Boolean;
+    function SupportsBinaryInSQL: Boolean;
+
+    function GetMaxSQLDASize: LongWord;
+
     procedure CollectServerInformations;
   End;
 
@@ -74,11 +82,17 @@ type
     FIsFireBird: Boolean;
     FServerVersion: string;
     FProductVersion: String;
+    FHostVersion: Integer;
 //    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
 //      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
     procedure CollectServerInformations;
+    function GetHostVersion: Integer;
     function HostIsFireBird: Boolean;
+    function SupportsNextValueFor: Boolean;
+    function SupportsTrim: Boolean;
+    function SupportsBinaryInSQL: Boolean;
+    function GetMaxSQLDASize: LongWord;
     // database/driver/server info:
     function GetDatabaseProductName: string; override;
     function GetDatabaseProductVersion: string; override;
@@ -279,6 +293,8 @@ const
 procedure TZInterbase6DatabaseInfo.CollectServerInformations;
 var
   FIBConnection: IZInterbase6Connection;
+  I: Integer;
+  tmp: string;
 begin
   if FServerVersion = '' then
   begin
@@ -288,12 +304,51 @@ begin
     FIsFireBird := ZFastCode.Pos('Firebird', FServerVersion) > 0;
     FProductVersion := Copy(FServerVersion, ZFastCode.Pos(DBProvider[FIsFireBird],
       FServerVersion)+8+Ord(not FIsFireBird)+1, Length(FServerVersion));
+    I := ZFastCode.Pos('.', FProductVersion);
+    FHostVersion := StrToInt(Copy(FProductVersion, 1, I-1))*1000000;
+    if ZFastCode.Pos(' ', FProductVersion) > 0 then //possible beta or alfa release
+      tmp := Copy(FProductVersion, I+1, ZFastCode.Pos(' ', FProductVersion)-I-1)
+    else
+      tmp := Copy(FProductVersion, I+1, MaxInt);
+    FHostVersion := FHostVersion + StrToInt(tmp)*1000;
   end;
+end;
+
+function TZInterbase6DatabaseInfo.GetHostVersion: Integer;
+begin
+  Result := FHostVersion;
 end;
 
 function TZInterbase6DatabaseInfo.HostIsFireBird: Boolean;
 begin
   Result := FIsFireBird;
+end;
+
+// Increased size for FB 3.0+
+function TZInterbase6DatabaseInfo.GetMaxSQLDASize: LongWord;
+begin
+  if FIsFireBird and (FHostVersion >= 3000000) then
+    Result := 10*1024*1024 //might be much more! 4GB? 10MB sounds enough / roundtrip
+  else
+    Result := 64*1024; //64KB by default
+end;
+
+// FB 2.5+: binary hex string inside SQL
+function TZInterbase6DatabaseInfo.SupportsBinaryInSQL: Boolean;
+begin
+  Result := FIsFireBird and (FHostVersion >= 2005000);
+end;
+
+// FB 2.0+: SQL-compliant syntax "NEXT VALUE FOR" for sequences
+function TZInterbase6DatabaseInfo.SupportsNextValueFor: Boolean;
+begin
+  Result := FIsFireBird and (FHostVersion >= 2000000);
+end;
+
+// FB 2.0+: has TRIM internal function
+function TZInterbase6DatabaseInfo.SupportsTrim: Boolean;
+begin
+  Result := FIsFireBird and (FHostVersion < 2000000);
 end;
 
 {**
@@ -1218,8 +1273,7 @@ begin
   if HasNoWildcards(Pattern) then begin
     Result := Inherited ConstructnameCondition(Pattern,Column)
   end else begin
-    if (GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and
-      (GetConnection.GetHostVersion < 2000000)
+    if (GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsTrim
     then begin
       //Old FireBird do NOT support 'trim'
       //-> raise exception to find bugs in Software...

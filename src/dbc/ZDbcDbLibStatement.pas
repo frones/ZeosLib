@@ -634,7 +634,7 @@ begin
       NativeResultSet := TZDBLibResultSet.Create(Self, 'select @@rowcount');
       try
         if NativeResultset.Next then
-          FLastRowsAffected := NativeResultSet.GetInt(1);
+          FLastRowsAffected := NativeResultSet.GetInt(FirstDbcIndex);
       finally
         NativeResultset.Close;
       end;
