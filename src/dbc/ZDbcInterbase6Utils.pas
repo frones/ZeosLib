@@ -712,6 +712,38 @@ begin
 end;
 
 {**
+  Read Interbase number (1..4 bytes) from buffer in standard format: [Len * 2 bytes][Number * Len bytes]
+  and increments buffer pointer skipping read data.
+  @param PlainDriver a Interbase Plain drver
+  @param pBuf - pointer to a buffer returned by driver. After the function it points to the next block.
+  @return - a number read
+}
+function ReadInterbase6NumberWithInc(const PlainDriver: IZInterbasePlainDriver; var pBuf: PAnsiChar): Integer;
+var
+  Len: Integer;
+begin
+  Len := PlainDriver.isc_vax_integer(pBuf, 2);
+  Inc(pBuf, 2);
+  Result := PlainDriver.isc_vax_integer(pBuf, Len);
+  Inc(pBuf, Len);
+end;
+
+{**
+  Read Interbase number (1..4 bytes) from buffer in standard format: [Len * 2 bytes][Number * Len bytes].
+  Function accepts constant pointer for easier usage with single reads.
+  @param PlainDriver a Interbase Plain drver
+  @param Buffer - a buffer returned by driver
+  @return - a number read
+}
+function ReadInterbase6Number(const PlainDriver: IZInterbasePlainDriver; const Buffer): Integer;
+var
+  pBuf: PAnsiChar;
+begin
+  pBuf := @Buffer;
+  Result := ReadInterbase6NumberWithInc(PlainDriver, pBuf);
+end;
+
+{**
   Converts a Interbase6 native types into ZDBC SQL types.
   @param the interbase type
   @param the interbase subtype
@@ -961,7 +993,6 @@ function GetStatementType(const PlainDriver: IZInterbasePlainDriver;
 var
   TypeItem: AnsiChar;
   StatusVector: TARRAY_ISC_STATUS;
-  StatementLength: integer;
   StatementBuffer: array[0..7] of AnsiChar;
 begin
   Result := stUnknown;
@@ -973,12 +1004,7 @@ begin
   CheckInterbase6Error(PlainDriver, StatusVector, ConSettings);
 
   if StatementBuffer[0] = AnsiChar(isc_info_sql_stmt_type) then
-  begin
-    StatementLength := PlainDriver.isc_vax_integer(
-      @StatementBuffer[1], 2);
-    Result := TZIbSqlStatementType(PlainDriver.isc_vax_integer(
-      @StatementBuffer[3], StatementLength));
-  end;
+    Result := TZIbSqlStatementType(ReadInterbase6Number(PlainDriver, StatementBuffer[1]));
 end;
 
 {**
@@ -1006,10 +1032,15 @@ end;
 function GetAffectedRows(const PlainDriver: IZInterbasePlainDriver;
   const StmtHandle: TISC_STMT_HANDLE; const StatementType: TZIbSqlStatementType;
   const ConSettings: PZConSettings): integer;
+type
+  TCountType = (cntSel, cntIns, cntDel, cntUpd);
 var
   ReqInfo: AnsiChar;
   OutBuffer: array[0..255] of AnsiChar;
   StatusVector: TARRAY_ISC_STATUS;
+  pBuf, pBufStart: PAnsiChar;
+  Len, Item, Count: Integer;
+  Counts: array[TCountType] of Integer;
 begin
   Result := -1;
   ReqInfo := AnsiChar(isc_info_sql_records);
@@ -1018,16 +1049,60 @@ begin
     @ReqInfo, SizeOf(OutBuffer), OutBuffer) > 0 then
     Exit;
   CheckInterbase6Error(PlainDriver, StatusVector, ConSettings);
-  if OutBuffer[0] = AnsiChar(isc_info_sql_records) then
+
+  pBufStart := @OutBuffer[0];
+  if pBufStart^ <> AnsiChar(isc_info_sql_records) then
+    Exit;
+
+  pBuf := pBufStart;
+  Inc(pBuf);
+  Len := PlainDriver.isc_vax_integer(pBuf, 2) + 1 + 2;
+  Inc(pBuf, 2);
+  if OutBuffer[Len] <> AnsiChar(isc_info_end) then
+    Exit;
+
+  FillChar(Counts, SizeOf(Counts), #0);
+  while pBuf - pBufStart <= Len do
   begin
-    case StatementType of
-      stUpdate: Result := PlainDriver.isc_vax_integer(@OutBuffer[6], 4);
-      stDelete: Result := PlainDriver.isc_vax_integer(@OutBuffer[13], 4);
-      stSelect: Result := PlainDriver.isc_vax_integer(@OutBuffer[20], 4);
-      stInsert: Result := PlainDriver.isc_vax_integer(@OutBuffer[27], 4);
-    else
-       Result := -1;
+    Item := Byte(pBuf^);
+
+    if Item = isc_info_end then
+      Break;
+
+    Inc(pBuf);
+    Count := ReadInterbase6NumberWithInc(PlainDriver, pBuf);
+
+    case Item of
+      isc_info_req_select_count: Counts[cntSel] := Count;
+      isc_info_req_insert_count: Counts[cntIns] := Count;
+      isc_info_req_update_count: Counts[cntUpd] := Count;
+      isc_info_req_delete_count: Counts[cntDel] := Count;
+      else
+        raise EZSQLException.Create(SInternalError);
     end;
+  end;
+
+  { Note: Update statements could have Select counter <> 0 as well }
+
+  case StatementType of
+    stSelect,
+    stSelectForUpdate: Result := Counts[cntSel];
+    stInsert:          Result := Counts[cntIns];
+    stUpdate:          Result := Counts[cntUpd];
+    stDelete:          Result := Counts[cntDel];
+    stExecProc:
+      begin
+        { Exec proc could have any counter... So search for the first non-zero counter }
+        Result := Counts[cntIns];
+        if Result > 0 then Exit;
+        Result := Counts[cntUpd];
+        if Result > 0 then Exit;
+        Result := Counts[cntDel];
+        if Result > 0 then Exit;
+        Result := Counts[cntSel];
+      end;
+    else
+      Result := -1;
   end;
 end;
 
@@ -1376,11 +1451,10 @@ procedure GetBlobInfo(const PlainDriver: IZInterbasePlainDriver;
 var
   Items: array[0..3] of AnsiChar;
   Results: array[0..99] of AnsiChar;
-  I, ItemLength: Integer;
-  Item: Integer;
+  pBuf, pBufStart: PAnsiChar;
+  Item, ItemVal: Integer;
   StatusVector: TARRAY_ISC_STATUS;
 begin
-  I := 0;
   Items[0] := AnsiChar(isc_info_blob_num_segments);
   Items[1] := AnsiChar(isc_info_blob_max_segment);
   Items[2] := AnsiChar(isc_info_blob_total_length);
@@ -1390,23 +1464,27 @@ begin
     SizeOf(Results), @Results[0]) > 0 then
   CheckInterbase6Error(PlainDriver, StatusVector, ConSettings);
 
-  while (I < SizeOf(Results)) and (Results[I] <> AnsiChar(isc_info_end)) do
+  pBufStart := @Results[0];
+  pBuf := pBufStart;
+  while pBuf - pBufStart <= SizeOf(Results) do
   begin
-    Item := Integer(Results[I]);
-    Inc(I);
-    ItemLength := PlainDriver.isc_vax_integer(@results[I], 2);
-    Inc(I, 2);
+    Item := Byte(pBuf^);
+    if Item = isc_info_end then
+      Break;
+
+    Inc(pBuf);
+    ItemVal := ReadInterbase6NumberWithInc(PlainDriver, pBuf);
+
     case Item of
       isc_info_blob_num_segments:
-        BlobInfo.NumSegments := PlainDriver.isc_vax_integer(@Results[I], ItemLength);
+        BlobInfo.NumSegments := ItemVal;
       isc_info_blob_max_segment:
-        BlobInfo.MaxSegmentSize := PlainDriver.isc_vax_integer(@Results[I], ItemLength);
+        BlobInfo.MaxSegmentSize := ItemVal;
       isc_info_blob_total_length:
-        BlobInfo.TotalSize := PlainDriver.isc_vax_integer(@Results[I], ItemLength);
+        BlobInfo.TotalSize := ItemVal;
       isc_info_blob_type:
-        BlobInfo.BlobType := PlainDriver.isc_vax_integer(@Results[I], ItemLength);
+        BlobInfo.BlobType := ItemVal;
     end;
-    Inc(i, ItemLength);
   end;
 end;
 
@@ -1575,7 +1653,6 @@ function GetLongDbInfo(const PlainDriver: IZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const DatabaseInfoCommand: Integer;
   const ConSettings: PZConSettings): LongInt;
 var
-  Length: Integer;
   DatabaseInfoCommand1: AnsiChar;
   StatusVector: TARRAY_ISC_STATUS;
   Buffer: array[0..IBBigLocalBufferLength - 1] of AnsiChar;
@@ -1584,8 +1661,7 @@ begin
   PlainDriver.isc_database_info(@StatusVector, Handle, 1, @DatabaseInfoCommand1,
     IBLocalBufferLength, Buffer);
   CheckInterbase6Error(PlainDriver, StatusVector, ConSettings);
-  Length := PlainDriver.isc_vax_integer(@Buffer[1], 2);
-  Result := PlainDriver.isc_vax_integer(@Buffer[4], Length);
+  Result := ReadInterbase6Number(PlainDriver, Buffer[1]);
 end;
 
 {**
@@ -1620,7 +1696,6 @@ end;
 function GetDBSQLDialect(const PlainDriver: IZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const ConSettings: PZConSettings): Integer;
 var
-  Length: Integer;
   DatabaseInfoCommand1: AnsiChar;
   StatusVector: TARRAY_ISC_STATUS;
   Buffer: array[0..IBBigLocalBufferLength - 1] of AnsiChar;
@@ -1632,10 +1707,7 @@ begin
    if (Buffer[0] <> AnsiChar(isc_info_db_SQL_dialect)) then
      Result := 1
    else
-   begin
-     Length := PlainDriver.isc_vax_integer(@Buffer[1], 2);
-     Result := PlainDriver.isc_vax_integer(@Buffer[3], Length);
-   end;
+     Result := ReadInterbase6Number(PlainDriver, Buffer[1]);
 end;
 
 { TSQLDA }
