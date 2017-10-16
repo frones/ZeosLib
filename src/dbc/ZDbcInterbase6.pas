@@ -482,8 +482,6 @@ var
   DPB: RawByteString;
   DBName: array[0..512] of AnsiChar;
   NewDB: RawByteString;
-  tmp: String;
-  i: Integer;
 begin
   if not Closed then
      Exit;
@@ -525,17 +523,12 @@ begin
   { Check connection error }
   CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcConnect);
 
-  (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).CollectServerInformations; //keep this one first!
-  tmp := GetMetadata.GetDatabaseInfo.GetDatabaseProductVersion;
-  I := ZFastCode.Pos('.', tmp);
-  FHostVersion := StrToInt(Copy(tmp, 1, i-1))*1000000;
-  if ZFastCode.Pos(' ', tmp) > 0 then //possible beta or alfa release
-    tmp := Copy(tmp, i+1, ZFastCode.Pos(' ', tmp)-i-1)
-  else
-    tmp := Copy(tmp, i+1, Length(tmp)-i);
-  FHostVersion := FHostVersion + StrToInt(tmp)*1000;
-  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird then
-    if (FHostVersion >= 3000000) then FXSQLDAMaxSize := 10*1024*1024; //might be much more! 4GB? 10MB sounds enough / roundtrip
+  with GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo do
+  begin
+    CollectServerInformations; //keep this one first!
+    FHostVersion := GetHostVersion;
+    FXSQLDAMaxSize := GetMaxSQLDASize;
+  end;
 
   { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
   FDialect := GetDBSQLDialect(GetPlainDriver, @FHandle, ConSettings);
@@ -884,7 +877,7 @@ end;
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
-  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and (GetHostVersion >= 2005000) then
+  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsBinaryInSQL then
     if (Length(Value)*2+3) < 32*1024 then
       Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
     else
@@ -896,7 +889,7 @@ end;
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
-  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and (GetHostVersion >= 2005000) then
+  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsBinaryInSQL then
     if (Length(Value)*2+3) < 32*1024 then
       Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
     else
@@ -1047,9 +1040,7 @@ end;
 
 function TZInterbase6Sequence.GetNextValueSQL: string;
 begin
-  // Firebird 2.0+ supports SQL-compliant syntax
-  if (Connection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and
-     (Connection.GetHostVersion >= 2000000) and (BlockSize = 1) then
+  if (Connection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsNextValueFor and (BlockSize = 1) then
     Result := Format(' NEXT VALUE FOR "%s" ', [Name])
   else
     Result := Format(' GEN_ID("%s", %d) ', [Name, BlockSize]);
