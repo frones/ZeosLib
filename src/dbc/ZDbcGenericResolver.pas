@@ -177,8 +177,7 @@ type
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZDatasetUtils, ZTokenizer,
-  ZAbstractRODataset
+uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZDatasetUtils
   {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 { TZResolverParameter }
@@ -424,25 +423,19 @@ procedure TZGenericCachedResolver.DefineWhereKeyColumns(Columns: TObjectList);
 
   function AddColumn(const Table, ColumnName: string; WhereColumns: TObjectList): Boolean;
   var
-    ColIdx, I: Integer;
+    I: Integer;
   begin
-    Result := False;
-    ColIdx := InvalidDbcIndex;
     for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
       if (ColumnName = Metadata.GetColumnName(I))
         and (Table = Metadata.GetTableName(I)) then
       begin
-        ColIdx := I;
-        Break;
+        WhereColumns.Add(TZResolverParameter.Create(I, ColumnName,
+          stUnknown, False, ''));
+        Result := True;
+        Exit;
       end;
-    if ColIdx = InvalidDbcIndex then
-    begin
-      WhereColumns.Clear;
-      Exit;
-    end;
-    WhereColumns.Add(TZResolverParameter.Create(I, ColumnName,
-      stUnknown, False, ''));
-    Result := True;
+    WhereColumns.Clear;
+    Result := False;
   end;
 
 var
@@ -450,9 +443,7 @@ var
   KeyFields: string;
   Catalog, Schema, Table: string;
   PrimaryKeys: IZResultSet;
-  Tokens: TStrings;
-  TokenType: TZTokenType;
-  TokenValue: string;
+  Fields: TStrings;
 begin
   { Use precached values. }
   if WhereColumns.Count > 0 then
@@ -481,26 +472,13 @@ begin
     { Let user define key fields }
     if KeyFields <> '' then
     begin
-      Tokens := CommonTokenizer.TokenizeBufferToList(KeyFields,
-        [toSkipEOF, toSkipWhitespaces, toUnifyNumbers, toDecodeStrings]);
-
+      Fields := ExtractFields(KeyFields, [',', ';']);
       try
-        for I := 0 to Tokens.Count - 1 do
-        begin
-          TokenType := TZTokenType({$IFDEF oldFPC}Pointer({$ENDIF}
-            Tokens.Objects[I]{$IFDEF oldFPC}){$ENDIF});
-          TokenValue := Tokens[I];
-
-          if TokenType in [ttWord, ttQuoted] then
-          begin
-            if not AddColumn(Table, TokenValue, WhereColumns) then
-              Break;
-          end
-          else if (TokenValue <> ',') and (TokenValue <> ';') then
-            raise EZDatabaseError.Create(Format(SIncorrectSymbol, [TokenValue]));
-        end;
+        for I := 0 to Fields.Count - 1 do
+          if not AddColumn(Table, Fields[I], WhereColumns) then
+            Break;
       finally
-        Tokens.Free;
+        Fields.Free;
       end;
     end
     else

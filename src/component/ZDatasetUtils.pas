@@ -114,6 +114,18 @@ function DefineFields(DataSet: TDataset; const FieldNames: string;
   var OnlyDataFields: Boolean): TObjectDynArray;
 
 {**
+  Extracts list of fields from a string. Fields could be quoted, delimited by any of
+  the specified delimiters and any number of whitespaces. Any other symbol or
+  unexpected delimiter will raise an exception. Quoted field names will be returned
+  without quotes.
+  @param FieldNames a list of field names.
+  @param SepChars set of field name delimiters
+
+  @returns list of field names.
+}
+function ExtractFields(const FieldNames: string; SepChars: TSysCharSet): TStrings;
+
+{**
   Defins a indices of filter fields.
   @param Dataset a dataset object.
   @param Expression a expression calculator.
@@ -728,6 +740,69 @@ begin
 
   if Length(Result) = 0 then
     Result := nil;
+end;
+
+{**
+  Extracts list of fields from a string. Fields could be quoted, delimited by any of
+  the specified delimiters and any number of whitespaces. Any other symbol or
+  unexpected delimiter will raise an exception. Quoted field names will be returned
+  without quotes.
+  @param FieldNames a list of field names.
+  @param SepChars set of field name delimiters
+
+  @returns list of field names.
+}
+function ExtractFields(const FieldNames: string; SepChars: TSysCharSet): TStrings;
+var
+  TokenType: TZTokenType;
+  TokenValue: string;
+
+  procedure RaiseTokenExc;
+  begin
+    raise EZDatabaseError.Create(Format('Unexpected token "%s" in string "%s"', [TokenValue, FieldNames]));
+  end;
+
+var
+  Tokens: TStrings;
+  I: Integer;
+  ExpectToken: TZTokenType;
+begin
+  ExpectToken := ttWord;
+  Tokens := CommonTokenizer.TokenizeBufferToList(FieldNames,
+    [toSkipEOF, toSkipWhitespaces, toDecodeStrings]);
+  Result := TStringList.Create;
+
+  try try
+    for I := 0 to Tokens.Count - 1 do
+    begin
+      TokenType := TZTokenType(Tokens.Objects[I]);
+      TokenValue := Tokens[I];
+      if TokenType <> ExpectToken then
+        RaiseTokenExc;
+
+      case TokenType of
+        ttWord:
+          begin
+            Result.Add(TokenValue);
+            ExpectToken := ttSymbol;
+          end;
+        ttSymbol:
+          begin
+            if not (TokenValue[1] in SepChars) then
+              RaiseTokenExc;
+            ExpectToken := ttWord;
+          end;
+        else
+          RaiseTokenExc;
+      end;
+    end;
+  except
+    FreeAndNil(Result);
+    raise;
+  end;
+  finally
+    Tokens.Free;
+  end;
 end;
 
 {**
