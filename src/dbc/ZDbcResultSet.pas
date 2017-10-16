@@ -2230,7 +2230,7 @@ function TZAbstractResultSet.GetColumnIndex(const ColumnName: string): Integer;
 begin
   Result := FindColumn(ColumnName);
 
-  if Result < {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF} then
+  if Result = InvalidDbcIndex then
     raise EZSQLException.Create(Format(SColumnWasNotFound, [ColumnName]));
 end;
 

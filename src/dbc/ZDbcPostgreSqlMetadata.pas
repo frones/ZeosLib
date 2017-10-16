@@ -1281,7 +1281,7 @@ begin
   begin
     if not Next then
       raise Exception.Create(SUnknownError); //CHANGE IT!
-    Result := GetInt(1);
+    Result := GetInt(FirstDbcIndex);
     Close;
   end;
 end;

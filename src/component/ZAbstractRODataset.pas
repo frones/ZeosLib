@@ -4048,7 +4048,7 @@ procedure TZAbstractRODataset.InternalPost;
             begin
            // allow autoincrement and defaulted fields to be null;
               columnindex := Resultset.FindColumn(Fields[i].FieldName);
-              if (Columnindex = 0) or
+              if (Columnindex = InvalidDbcIndex) or
                  (not Resultset.GetMetadata.HasDefaultValue(columnIndex) and
                   not Resultset.GetMetadata.IsAutoIncrement(columnIndex)) then
                 raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));

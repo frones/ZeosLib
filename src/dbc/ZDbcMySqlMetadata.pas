@@ -869,10 +869,10 @@ var
 begin
   DecodeSqlVersioning(Metadata.GetConnection.GetHostVersion,
     MajorVersion,MinorVersion, Subversion);
-  if (Majorversion < 4) or ((majorversion=4) and (Minorversion = 0)) then
+  if (Majorversion < 4) or ((MajorVersion=4) and (MinorVersion = 0)) then
    with Metadata.GetConnection.CreateStatement.ExecuteQuery('SELECT VERSION()') do
     begin
-      VersionList := SplitString(String(GetString(1)), '.-');
+      VersionList := SplitString(String(GetString(FirstDbcIndex)), '.-');
       try
         if VersionList.Count >= 2 then
         begin

@@ -680,7 +680,7 @@ begin
     begin
       RefreshColumnName := RefreshResultSet.GetMetadata.GetColumnLabel(I); // What Column from Resultset should be updated
       RefreshColumnIndex := Sender.FindColumn(RefreshColumnName); // Is the Column available in the select ?
-      if RefreshColumnIndex = 0 then continue; // Column not found in Select from Dataset
+      if RefreshColumnIndex = InvalidDbcIndex then continue; // Column not found in Select from Dataset
       if RefreshResultSet.IsNull(I) then
         RefreshRowAccessor.SetNull(RefreshColumnIndex)
       else
