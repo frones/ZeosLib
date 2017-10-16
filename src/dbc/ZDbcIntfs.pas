@@ -972,6 +972,8 @@ type
   IZResultSetMetadata = interface(IZInterface)
     ['{47CA2144-2EA7-42C4-8444-F5154369B2D7}']
 
+    function FindColumn(const ColumnName: string): Integer;
+
     function GetColumnCount: Integer;
     function IsAutoIncrement(ColumnIndex: Integer): Boolean;
     function IsCaseSensitive(ColumnIndex: Integer): Boolean;

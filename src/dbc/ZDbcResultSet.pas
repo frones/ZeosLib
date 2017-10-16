@@ -2257,29 +2257,9 @@ end;
   @return the column index of the given column name
 }
 function TZAbstractResultSet.FindColumn(const ColumnName: string): Integer;
-var
-  I: Integer;
-  Metadata: TZAbstractResultSetMetadata;
 begin
   CheckClosed;
-  Metadata := TZAbstractResultSetMetadata(FMetadata);
-  Result := InvalidDbcIndex;
-
-  { Search for case sensitive columns. }
-  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-    if Metadata.GetColumnLabel(I) = ColumnName then
-    begin
-      Result := I;
-      Exit;
-    end;
-
-  { Search for case insensitive columns. }
-  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-    if AnsiUpperCase(Metadata.GetColumnLabel(I)) = AnsiUpperCase(ColumnName) then
-    begin
-      Result := I;
-      Exit;
-    end;
+  Result := TZAbstractResultSetMetadata(FMetadata).FindColumn(ColumnName);
 end;
 
 //---------------------------------------------------------------------
