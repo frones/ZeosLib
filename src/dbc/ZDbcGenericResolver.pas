@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs, StrUtils,
   ZVariant, ZDbcIntfs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility,
   ZSelectSchema, {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZCollections;
 
@@ -108,12 +108,12 @@ type
     FWhereAll: Boolean;
     FUpdateAll: Boolean;
 
+    FUpdateStatements : TZHashMap;
+  protected
     InsertStatement   : IZPreparedStatement;
     UpdateStatement   : IZPreparedStatement;
     DeleteStatement   : IZPreparedStatement;
 
-    FUpdateStatements : TZHashMap;
-  protected
     procedure CopyResolveParameters(FromList, ToList: TObjectList);
     function ComposeFullTableName(Catalog, Schema, Table: string): string;
     function DefineTableName: string;
@@ -718,17 +718,8 @@ var
   I: Integer;
   Current: TZResolverParameter;
   TableName: string;
-  Temp1, Temp2: string;
-  l1: Integer; 
-
-  procedure Append(const app: String); 
-  begin 
-    if Length(Temp1) < l1 + length(app) then 
-      SetLength(Temp1, 2 * (length(app) + l1)); 
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(app[1], Temp1[l1+1], length(app)*SizeOf(Char));
-    Inc(l1, length(app)); 
-  end; 
-
+  Temp1: string;
+  Fields: TStrings; 
 begin
   TableName := DefineTableName;
   DefineInsertColumns(Columns);
@@ -738,20 +729,32 @@ begin
     Exit;
   end;
 
-  Temp1 := '';    l1 := 0; 
-  SetLength(Temp2, 2 * Columns.Count - 1); 
-  for I := 0 to Columns.Count - 1 do 
-  begin 
-    Current := TZResolverParameter(Columns[I]); 
-    if Temp1 <> '' then 
-      Append(','); 
-    Append(IdentifierConvertor.Quote(Current.ColumnName)); 
-    if I > 0 then 
-      Temp2[I*2] := ','; 
-    Temp2[I*2+1] := '?'; 
-  end; 
-  SetLength(Temp1, l1);
-  Result := 'INSERT INTO '+TableName+' ('+Temp1+') VALUES ('+Temp2+')';
+  Temp1 := '';
+  for I := 0 to Columns.Count - 1 do
+  begin
+    Current := TZResolverParameter(Columns[I]);
+    if Temp1 <> '' then
+      Temp1 := Temp1 + ',';
+    Temp1 := Temp1 + IdentifierConvertor.Quote(Current.ColumnName);
+  end;
+
+  Result := 'INSERT INTO '+TableName+' ('+Temp1+') VALUES ('+
+    DupeString('?,', Columns.Count - 1) + '?' +')';
+
+  Temp1 := FStatement.GetParameters.Values['InsertReturningFields'];
+  if Temp1 <> '' then
+  begin
+    Fields := ExtractFields(Temp1, [',', ';']);
+    Temp1 := '';
+    for I := 0 to Fields.Count - 1 do
+    begin
+      if Temp1 <> '' then
+        Temp1 := Temp1 + ',';
+      Temp1 := Temp1 + IdentifierConvertor.Quote(Fields[I]);
+    end;
+    Fields.Free;
+    Result := Result + ' RETURNING ' + Temp1;
+  end;
 end;
 
 {**

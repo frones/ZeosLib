@@ -57,10 +57,10 @@ interface
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
-  ZPlainFirebirdDriver, ZCompatibility, ZDbcUtils, ZDbcIntfs,
+  ZPlainFirebirdDriver, ZCompatibility, ZDbcUtils, ZDbcIntfs, ZDbcCachedResultSet,
   ZDbcConnection, ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcLogging,
   ZDbcInterbase6Utils, ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser,
-  ZURL;
+  ZDbcCache, ZURL;
 
 type
 
@@ -144,8 +144,16 @@ type
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
   TZInterbase6CachedResolver = class(TZGenericCachedResolver)
+  private
+    FInsertReturningFields: TStrings;
   public
+    constructor Create(Statement: IZStatement; Metadata: IZResultSetMetadata);
+    destructor Destroy; override;
     function FormCalculateStatement(Columns: TObjectList): string; override;
+    procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
+    procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); override;
   end;
 
   {** Implements a Interbase 6 sequence. }
@@ -165,7 +173,7 @@ var
 implementation
 
 uses ZFastCode, ZDbcInterbase6Statement, ZDbcInterbase6Metadata, ZEncoding,
-  ZInterbaseToken, ZInterbaseAnalyser, ZDbcMetadata
+  ZInterbaseToken, ZInterbaseAnalyser, ZDbcMetadata, ZMessages
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZInterbase6Driver }
@@ -974,6 +982,22 @@ end;
 
 { TZInterbase6CachedResolver }
 
+constructor TZInterbase6CachedResolver.Create(Statement: IZStatement; Metadata: IZResultSetMetadata);
+var
+  Fields: string;
+begin
+  inherited;
+  Fields := Statement.GetParameters.Values['InsertReturningFields'];
+  if Fields <> '' then
+    FInsertReturningFields := ExtractFields(Fields, [';', ',']);
+end;
+
+destructor TZInterbase6CachedResolver.Destroy;
+begin
+  inherited;
+  FreeAndNil(FInsertReturningFields);
+end;
+
 {**
   Forms a where clause for SELECT statements to calculate default values.
   @param Columns a collection of key columns.
@@ -995,6 +1019,40 @@ begin
       Result := Result + ' FROM RDB$DATABASE';
   end;
 // <-- ms
+end;
+
+procedure TZInterbase6CachedResolver.PostUpdates(Sender: IZCachedResultSet;
+  UpdateType: TZRowUpdateType; OldRowAccessor,
+  NewRowAccessor: TZRowAccessor);
+begin
+  inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);
+
+  if (UpdateType = utInserted) then
+    UpdateAutoIncrementFields(Sender, UpdateType, OldRowAccessor, NewRowAccessor, Self);
+end;
+
+procedure TZInterbase6CachedResolver.UpdateAutoIncrementFields(
+  Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
+  NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
+var
+  I, ColumnIdx: Integer;
+  RS: IZResultSet;
+begin
+  inherited;
+
+  RS := InsertStatement.GetResultSet;
+  if RS = nil then
+    Exit;
+
+  for I := 0 to FInsertReturningFields.Count - 1 do
+  begin
+    ColumnIdx := Metadata.FindColumn(FInsertReturningFields[I]);
+    if ColumnIdx = InvalidDbcIndex then
+      raise EZSQLException.Create(Format(SColumnWasNotFound, [FInsertReturningFields[I]]));
+    NewRowAccessor.SetValue(ColumnIdx, RS.GetValueByName(FInsertReturningFields[I]));
+  end;
+
+  RS.Close; { Without Close RS keeps circular ref to Statement causing mem leak }
 end;
 
 { TZInterbase6Sequence }

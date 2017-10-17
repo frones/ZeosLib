@@ -418,6 +418,7 @@ var
   iError : Integer; //Implementation for graceful disconnect AVZ
 begin
   Prepare;
+  LastResultSet := nil;
   with FIBConnection do
   begin
     BindInParameters;
@@ -425,6 +426,12 @@ begin
 
     Result := GetAffectedRows(GetPlainDriver, FStmtHandle, FStatementType, ConSettings);
     LastUpdateCount := Result;
+
+    { Create ResultSet if possible }
+    if (FStatementType in [stExecProc]) and (FResultXSQLDA.GetFieldCount <> 0) then
+      LastResultSet := CreateIBResultSet(SQL, Self,
+        TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+          FResultXSQLDA, CachedLob, FStatementType));
 
     case FStatementType of
       stCommit, stRollback, stUnknown: Result := -1;
