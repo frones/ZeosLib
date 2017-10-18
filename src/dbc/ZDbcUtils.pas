@@ -783,7 +783,7 @@ begin
           end;
         ttSymbol:
           begin
-            if not (TokenValue[1] in SepChars) then
+            if not CharInSet(TokenValue[1], SepChars) then
               RaiseTokenExc;
             ExpectToken := ttWord;
           end;

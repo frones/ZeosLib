@@ -586,14 +586,14 @@ function BuildPB(Info: TStrings; VersionCode: Byte; const FilterPrefix: string; 
   begin
     case Cardinal(Value) of
       0..High(Byte):
-        Result := #1 + AnsiChar(Value);
+        Result := AnsiChar(#1) + AnsiChar(Value);
       Succ(High(Byte))..High(Word):
         begin
           U16 := Word(Cardinal(Value));
-          Result := #2 + PAnsiChar(@U16)[0] + PAnsiChar(@U16)[1];
+          Result := AnsiChar(#2) + PAnsiChar(@U16)[0] + PAnsiChar(@U16)[1];
         end;
       else
-        Result := #4 + PAnsiChar(@Value)[0] + PAnsiChar(@Value)[1] + PAnsiChar(@Value)[2] + PAnsiChar(@Value)[3];
+        Result := AnsiChar(#4) + PAnsiChar(@Value)[0] + PAnsiChar(@Value)[1] + PAnsiChar(@Value)[2] + PAnsiChar(@Value)[3];
     end;
   end;
 
@@ -619,7 +619,7 @@ begin
         Result := Result + AnsiChar(PParam.Number);
 
       pvtByteZ:
-        Result := Result + AnsiChar(PParam.Number) + #1 + #0;
+        Result := Result + AnsiChar(PParam.Number) + AnsiChar(#1) + AnsiChar(#0);
 
       pvtNum:
         begin
@@ -899,12 +899,20 @@ begin
   end
 end;
 
-function ConnRawToString(const Src: RawByteString; ConSettings: PZConSettings): String;
+function ConvertConnRawToString(ConSettings: PZConSettings; const Src: RawByteString): string;
 begin
   if ConSettings <> nil then
     Result := ConSettings^.ConvFuncs.ZRawToString(Src, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
   else
     Result := string(Src);
+end;
+
+function ConvertStringToConnRaw(ConSettings: PZConSettings; const Src: string): RawByteString;
+begin
+  if ConSettings <> nil then
+    Result := ConSettings^.ConvFuncs.ZStringToRaw(Src, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
+  else
+    Result := RawByteString(Src);
 end;
 
 {**
@@ -932,7 +940,7 @@ begin
     // SQL code and status
     Result[High(Result)].SQLCode := PlainDriver.isc_sqlcode(PStatusVector);
     PlainDriver.isc_sql_interprete(Result[High(Result)].SQLCode, Msg, Length(Msg));
-    Result[High(Result)].SQLMessage := ConnRawToString(Msg, ConSettings);
+    Result[High(Result)].SQLMessage := ConvertConnRawToString(ConSettings, Msg);
     // IB data
     Result[High(Result)].IBDataType := StatusVector[StatusIdx];
     case StatusVector[StatusIdx] of
@@ -957,14 +965,13 @@ begin
       isc_arg_interpreted,
       isc_arg_sql_state:                                                                                      
         begin
-          Result[High(Result)].IBDataStr := ConnRawToString(RawByteString(PAnsiChar(StatusVector[StatusIdx + 1])), ConSettings);
+          Result[High(Result)].IBDataStr := ConvertConnRawToString(ConSettings, RawByteString(PAnsiChar(StatusVector[StatusIdx + 1])));
           Inc(StatusIdx, 2);
         end;
       isc_arg_cstring: // length and pointer to string
         begin
-          SetLength(s, StatusVector[StatusIdx + 1]);
-          Move(PAnsiChar(StatusVector[StatusIdx + 2])^, s[1], Length(s));
-          Result[High(Result)].IBDataStr := s;
+          ZSetString(PAnsiChar(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1], s);
+          Result[High(Result)].IBDataStr := ConvertConnRawToString(ConSettings, s);
           Inc(StatusIdx, 3);
         end;
       isc_arg_warning: // must not happen for error vector
@@ -974,7 +981,7 @@ begin
     end; // case
     if PlainDriver.isc_interprete(Msg, @PStatusVector) = 0 then
       Break;
-    Result[High(Result)].IBMessage := ConnRawToString(Msg, ConSettings);  
+    Result[High(Result)].IBMessage := ConvertConnRawToString(ConSettings, Msg);
   until False;
 end;
 
@@ -991,7 +998,7 @@ function CheckInterbase6Error(const PlainDriver: IZInterbasePlainDriver;
   const LoggingCategory: TZLoggingCategory = lcOther;
   SQL: RawByteString = '') : Integer;
 var
-  ErrorMessage, ErrorSqlMessage: string;
+  ErrorMessage, ErrorSqlMessage, sSQL: string;
   ErrorCode: LongInt;
   i: Integer;
   InterbaseStatusVector: TZIBStatusVector;
@@ -1008,16 +1015,18 @@ begin
   ErrorCode := InterbaseStatusVector[0].SQLCode;
   ErrorSqlMessage := InterbaseStatusVector[0].SQLMessage;
 
-  if SQL <> '' then
-    ErrorSqlMessage := ErrorSqlMessage + ' The SQL: '+ConnRawToString(SQL, ConSettings)+'; ';
+  sSQL := ConvertConnRawToString(ConSettings, SQL);
+  if sSQL <> '' then
+    ErrorSqlMessage := ErrorSqlMessage + ' The SQL: '+sSQL+'; ';
 
   if ErrorMessage <> '' then
   begin
     DriverManager.LogError(LoggingCategory, ConSettings^.Protocol,
-      ErrorMessage, ErrorCode, ErrorSqlMessage);
+      ConvertStringToConnRaw(ConSettings, ErrorMessage), ErrorCode,
+      ConvertStringToConnRaw(ConSettings, ErrorSqlMessage));
     raise EZIBSQLException.Create(
       Format(SSQLError1, [InterbaseStatusVector[0].SQLMessage]),
-      InterbaseStatusVector, SQL);
+      InterbaseStatusVector, sSQL);
   end;
 end;
 
