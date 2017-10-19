@@ -763,7 +763,7 @@ var
   ExpectToken: TZTokenType;
 begin
   ExpectToken := ttWord;
-  Tokens := TZGenericSQLTokenizer.Create.TokenizeBufferToList(FieldNames,
+  Tokens := (TZGenericSQLTokenizer.Create as IZTokenizer).TokenizeBufferToList(FieldNames,
     [toSkipEOF, toSkipWhitespaces, toDecodeStrings]);
   Result := TStringList.Create;
 
