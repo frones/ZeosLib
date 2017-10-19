@@ -549,14 +549,14 @@ function BuildPB(Info: TStrings; VersionCode: Byte; const FilterPrefix: string; 
   begin
     case Cardinal(Value) of
       0..High(Byte):
-        Result := #1 + AnsiChar(Value);
+        Result := AnsiChar(#1) + AnsiChar(Value);
       Succ(High(Byte))..High(Word):
         begin
           U16 := Word(Cardinal(Value));
-          Result := #2 + PAnsiChar(@U16)[0] + PAnsiChar(@U16)[1];
+          Result := AnsiChar(#2) + PAnsiChar(@U16)[0] + PAnsiChar(@U16)[1];
         end;
       else
-        Result := #4 + PAnsiChar(@Value)[0] + PAnsiChar(@Value)[1] + PAnsiChar(@Value)[2] + PAnsiChar(@Value)[3];
+        Result := AnsiChar(#4) + PAnsiChar(@Value)[0] + PAnsiChar(@Value)[1] + PAnsiChar(@Value)[2] + PAnsiChar(@Value)[3];
     end;
   end;
 
@@ -582,7 +582,7 @@ begin
         Result := Result + AnsiChar(PParam.Number);
 
       pvtByteZ:
-        Result := Result + AnsiChar(PParam.Number) + #1 + #0;
+        Result := Result + AnsiChar(PParam.Number) + AnsiChar(#1) + AnsiChar(#0);
 
       pvtNum:
         begin
