@@ -90,6 +90,7 @@ type
 
   TZSQLiteConnection = class(TZAbstractConnection, IZSQLiteConnection)
   private
+    FUndefinedVarcharAsStringLength: Integer;
     FCatalog: string;
     FHandle: Psqlite;
   protected
@@ -131,7 +132,7 @@ var
 implementation
 
 uses
-  ZSysUtils, ZDbcSqLiteStatement, ZSqLiteToken, ZFastCode,
+  ZSysUtils, ZDbcSqLiteStatement, ZSqLiteToken, ZFastCode, ZDbcProperties,
   ZDbcSqLiteUtils, ZDbcSqLiteMetadata, ZSqLiteAnalyser
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -224,7 +225,7 @@ begin
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
   CheckCharEncoding('UTF-8');
-  FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values['Undefined_Varchar_AsString_Length'], 0);
+  FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
   Open;
 end;
 
@@ -287,7 +288,7 @@ begin
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
   { Turn on encryption if requested }
-  if StrToBoolEx(Info.Values['encrypted']) then
+  if StrToBoolEx(Info.Values[ConnProps_Encrypted]) then
   begin
     SQL := {$IFDEF UNICODE}UTF8String{$ENDIF}(Password);
     ErrorCode := GetPlainDriver.Key(FHandle, Pointer(SQL), Length(SQL));
@@ -295,25 +296,25 @@ begin
   end;
 
   { Set busy timeout if requested }
-  TmpInt := StrToIntDef(Info.Values['busytimeout'], -1);
+  TmpInt := StrToIntDef(Info.Values[ConnProps_BusyTimeout], -1);
   if TmpInt >= 0 then
     GetPlainDriver.BusyTimeout(FHandle, TmpInt);
 
   { pimp performance }
-  SQL := 'PRAGMA cache_size = '+IntToRaw(StrToIntDef(Info.Values['cache_size'], 10000));
+  SQL := 'PRAGMA cache_size = '+IntToRaw(StrToIntDef(Info.Values[ConnProps_CacheSize], 10000));
   ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
   CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
 
-  if Info.Values['synchronous'] <> '' then //see http://www.sqlite.org/pragma.html#pragma_synchronous
+  if Info.Values[ConnProps_Synchronous] <> '' then //see http://www.sqlite.org/pragma.html#pragma_synchronous
   begin  //0 brings best performance
-    SQL := 'PRAGMA synchronous = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values['synchronous']);
+    SQL := 'PRAGMA synchronous = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values[ConnProps_Synchronous]);
     ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
   end;
 
-  if Info.Values['locking_mode'] <> '' then //see http://www.sqlite.org/pragma.html#pragma_locking_mode
+  if Info.Values[ConnProps_LockingMode] <> '' then //see http://www.sqlite.org/pragma.html#pragma_locking_mode
   begin //EXCLUSIVE brings best performance
-    SQL := 'PRAGMA locking_mode = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values['locking_mode']);
+    SQL := 'PRAGMA locking_mode = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values[ConnProps_LockingMode]);
     ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
   end;
@@ -330,12 +331,10 @@ begin
     ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
 
-    if Info.Values['foreign_keys'] <> '' then
+    if Info.Values[ConnProps_ForeignKeys] <> '' then
     begin
-      if StrToBoolEx(Info.Values['foreign_keys']) then
-        SQL := 'PRAGMA foreign_keys = 1'
-      else
-        SQL := 'PRAGMA foreign_keys = 0';
+      SQL := 'PRAGMA foreign_keys = ' +
+        BoolStrInts[StrToBoolEx(Info.Values[ConnProps_ForeignKeys])];
       ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
       CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
       DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, SQL);

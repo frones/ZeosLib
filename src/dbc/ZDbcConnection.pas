@@ -130,7 +130,6 @@ type
     function GetInfo: TStrings;
   protected
     FDisposeCodePage: Boolean;
-    FUndefinedVarcharAsStringLength: Integer; //used for PostgreSQL and SQLite
     FChunkSize: Integer; //indicates reading / writing lobs in Chunks of x Byte
     FClientCodePage: String;
     FMetadata: TContainedObject;
@@ -297,7 +296,8 @@ end;
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZEncoding
+uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZEncoding, ZConnProperties,
+  ZDbcProperties
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZAbstractDriver }
@@ -624,58 +624,58 @@ begin
   {date formats}
   if DetermineFromInfo then
   begin
-    if Info.Values['datewriteformat'] = '' then
+    if Info.Values[ConnProps_DateWriteFormat] = '' then
       ConSettings^.WriteFormatSettings.DateFormat := 'YYYY-MM-DD'
     else
-      ConSettings^.WriteFormatSettings.DateFormat := UpperCase(Info.Values['datewriteformat']);
+      ConSettings^.WriteFormatSettings.DateFormat := UpperCase(Info.Values[ConnProps_DateWriteFormat]);
 
-    if Info.Values['datereadformat'] = '' then
+    if Info.Values[ConnProps_DateReadFormat] = '' then
       ConSettings^.ReadFormatSettings.DateFormat := 'YYYY-MM-DD'
     else
-      ConSettings^.ReadFormatSettings.DateFormat := UpperCase(Info.Values['datereadformat']);
+      ConSettings^.ReadFormatSettings.DateFormat := UpperCase(Info.Values[ConnProps_DateReadFormat]);
 
-    if Info.Values['datedisplayformat'] = '' then
+    if Info.Values[ConnProps_DateDisplayFormat] = '' then
       ConSettings^.DisplayFormatSettings.DateFormat := ({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat)
     else
-      ConSettings^.DisplayFormatSettings.DateFormat := UpperCase(Info.Values['datedisplayformat']);
+      ConSettings^.DisplayFormatSettings.DateFormat := UpperCase(Info.Values[ConnProps_DateDisplayFormat]);
 
     {time formats}
-    if Info.Values['timewiteformat'] = '' then
+    if Info.Values[ConnProps_TimeWriteFormat] = '' then
       if GetMetaData.GetDatabaseInfo.SupportsMilliseconds then
         ConSettings^.WriteFormatSettings.TimeFormat := 'HH:NN:SS.ZZZ'
       else
         ConSettings^.WriteFormatSettings.TimeFormat := 'HH:NN:SS'
     else
-      ConSettings^.WriteFormatSettings.TimeFormat := UpperCase(Info.Values['timewiteformat']);
+      ConSettings^.WriteFormatSettings.TimeFormat := UpperCase(Info.Values[ConnProps_TimeWriteFormat]);
 
-    if Info.Values['timereadformat'] = '' then
+    if Info.Values[ConnProps_TimeReadFormat] = '' then
       if GetMetaData.GetDatabaseInfo.SupportsMilliseconds then
         ConSettings^.ReadFormatSettings.TimeFormat := 'HH:NN:SS.ZZZ'
       else
         ConSettings^.ReadFormatSettings.TimeFormat := 'HH:NN:SS'
     else
-      ConSettings^.ReadFormatSettings.TimeFormat := UpperCase(Info.Values['timereadformat']);
+      ConSettings^.ReadFormatSettings.TimeFormat := UpperCase(Info.Values[ConnProps_TimeReadFormat]);
 
-    if Info.Values['timedisplayformat'] = '' then
+    if Info.Values[ConnProps_TimeDisplayFormat] = '' then
       ConSettings^.DisplayFormatSettings.TimeFormat := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat
     else
-      ConSettings^.DisplayFormatSettings.TimeFormat := UpperCase(Info.Values['timedisplayformat']);
+      ConSettings^.DisplayFormatSettings.TimeFormat := UpperCase(Info.Values[ConnProps_TimeDisplayFormat]);
 
     {timestamp format}
-    if Info.Values['datetimewriteformat'] = '' then
+    if Info.Values[ConnProps_DateTimeWriteFormat] = '' then
       ConSettings^.WriteFormatSettings.DateTimeFormat := ConSettings^.WriteFormatSettings.DateFormat+' '+ConSettings^.WriteFormatSettings.TimeFormat
     else
-      ConSettings^.WriteFormatSettings.DateTimeFormat := Info.Values['datetimewriteformat'];
+      ConSettings^.WriteFormatSettings.DateTimeFormat := Info.Values[ConnProps_DateTimeWriteFormat];
 
-    if Info.Values['datetimereadformat'] = '' then
+    if Info.Values[ConnProps_DateTimeReadFormat] = '' then
       ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat
     else
-      ConSettings^.ReadFormatSettings.DateTimeFormat := UpperCase(Info.Values['datetimereadformat']);
+      ConSettings^.ReadFormatSettings.DateTimeFormat := UpperCase(Info.Values[ConnProps_DateTimeReadFormat]);
 
-    if Info.Values['datetimedisplayformat'] = '' then
+    if Info.Values[ConnProps_DateTimeDisplayFormat] = '' then
       ConSettings^.DisplayFormatSettings.DateTimeFormat := ConSettings^.DisplayFormatSettings.DateFormat+' '+ConSettings^.DisplayFormatSettings.TimeFormat
     else
-      ConSettings^.DisplayFormatSettings.DateTimeFormat := UpperCase(Info.Values['datetimedisplayformat']);
+      ConSettings^.DisplayFormatSettings.DateTimeFormat := UpperCase(Info.Values[ConnProps_DateTimeDisplayFormat]);
   end;
 
   ConSettings^.WriteFormatSettings.DateFormatLen := Length(ConSettings^.WriteFormatSettings.DateFormat);
@@ -826,7 +826,7 @@ begin
   FURL.OnPropertiesChange := OnPropertiesChange;
   FURL.URL := ZUrl.URL;
 
-  FClientCodePage := Info.Values['codepage'];
+  FClientCodePage := Info.Values[ConnProps_CodePage];
   {CheckCharEncoding}
   ConSettings := New(PZConSettings);
 
@@ -840,7 +840,7 @@ begin
   ConSettings^.Protocol := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FIZPlainDriver.GetProtocol);
   ConSettings^.Database := ConSettings^.ConvFuncs.ZStringToRaw(FURL.Database, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
   ConSettings^.User := ConSettings^.ConvFuncs.ZStringToRaw(FURL.UserName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-  FChunkSize := StrToIntDef(Info.Values['chunk_size'], 4096);
+  FChunkSize := StrToIntDef(Info.Values[DSProps_ChunkSize], 4096);
   // now InternalCreate will work, since it will try to Open the connection
   InternalCreate;
   SetDateTimeFormatProperties;
@@ -920,11 +920,11 @@ function TZAbstractConnection.CreateStatementWithParams(Info: TStrings):
 var UsedInfo: TStrings;
 begin
   UsedInfo := Info;
-  If StrToBoolEx(GetInfo.Values['preferprepared']) then
+  If StrToBoolEx(GetInfo.Values[DSProps_PreferPrepared]) then
     If UsedInfo = nil then
     begin
-      UsedInfo := TSTringList.Create;
-      UsedInfo.Append('preferprepared=TRUE');
+      UsedInfo := TStringList.Create;
+      UsedInfo.Values[DSProps_PreferPrepared] := 'true';
     end;
   Result := CreateRegularStatement(Info);
   if UsedInfo <> Info then UsedInfo.Free;
@@ -990,11 +990,11 @@ function TZAbstractConnection.PrepareStatementWithParams(const SQL: string;
 var UsedInfo: TStrings;
 begin
   UsedInfo := Info;
-  If StrToBoolEx(GetInfo.Values['preferprepared']) then
+  If StrToBoolEx(GetInfo.Values[DSProps_PreferPrepared]) then
     If UsedInfo = nil then
     begin
-      UsedInfo := TSTringList.Create;
-      UsedInfo.Append('preferprepared=TRUE');
+      UsedInfo := TStringList.Create;
+      UsedInfo.Values[DSProps_PreferPrepared] := 'true';
     end;
   Result := CreatePreparedStatement(SQL, UsedInfo);
   if UsedInfo <> Info then UsedInfo.Free;
@@ -1069,11 +1069,11 @@ function TZAbstractConnection.PrepareCallWithParams(const SQL: string;
 var UsedInfo: TStrings;
 begin
   UsedInfo := Info;
-  If StrToBoolEx(GetInfo.Values['preferprepared']) then
+  If StrToBoolEx(GetInfo.Values[DSProps_PreferPrepared]) then
     If UsedInfo = nil then
     begin
-      UsedInfo := TSTringList.Create;
-      UsedInfo.Append('preferprepared=TRUE');
+      UsedInfo := TStringList.Create;
+      UsedInfo.Values[DSProps_PreferPrepared] := 'true';
     end;
   Result := CreateCallableStatement(SQL, UsedInfo);
   if UsedInfo <> Info then UsedInfo.Free;

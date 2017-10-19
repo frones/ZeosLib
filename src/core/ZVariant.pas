@@ -72,6 +72,12 @@ const
     JulianEpoch = -2415018.5; // "julian day 0" is January 1, 4713 BC 12:00AM
   {$IFEND}
 
+  StrFalseUp = 'FALSE';
+  StrTrueUp = 'TRUE';
+  BoolStrsUp: array[Boolean] of string = (StrFalseUp, StrTrueUp);
+  BoolStrsUpRaw: array[Boolean] of RawByteString = (RawByteString(StrFalseUp), RawByteString(StrTrueUp));
+  BoolStrsUpW: array[Boolean] of ZWideString = (ZWideString(StrFalseUp), ZWideString(StrTrueUp));
+
 type
   {** Defines variant types. }
   TZVariantType = (vtNull, vtBoolean, vtInteger, vtUInteger, vtFloat, vtBytes,
@@ -1827,10 +1833,7 @@ begin
         vtNull:
           Result.VString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VString := 'TRUE'
-          else
-            Result.VString := 'FALSE';
+          Result.VString := BoolStrsUp[Value.VBoolean];
         vtBytes:
           ZSetString(Pointer(Value.VBytes), Length(Value.VBytes), Result.VString);
         vtInteger:
@@ -1872,10 +1875,7 @@ begin
         vtNull:
           Result.VAnsiString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VAnsiString := 'TRUE'
-          else
-            Result.VAnsiString := 'FALSE';
+          Result.VAnsiString := BoolStrsUpRaw[Value.VBoolean];
         vtInteger:
           Result.VAnsiString := IntToRaw(Value.VInteger);
         vtUInteger:
@@ -1909,10 +1909,7 @@ begin
         vtNull:
           Result.VUTF8String := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VUTF8String := 'TRUE'
-          else
-            Result.VUTF8String := 'FALSE';
+          Result.VUTF8String := BoolStrsUpRaw[Value.VBoolean];
         vtInteger:
           Result.VUTF8String := IntToRaw(Value.VInteger);
         vtUInteger:
@@ -1953,10 +1950,7 @@ begin
         vtNull:
           Result.VRawByteString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VRawByteString := 'TRUE'
-          else
-            Result.VRawByteString := 'FALSE';
+          Result.VRawByteString := BoolStrsUpRaw[Value.VBoolean];
         vtInteger:
           Result.VRawByteString := IntToRaw(Value.VInteger);
         vtUInteger:
@@ -1975,10 +1969,7 @@ begin
         vtNull:
           Result.VUnicodeString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VUnicodeString := 'TRUE'
-          else
-            Result.VUnicodeString := 'FALSE';
+          Result.VUnicodeString := BoolStrsUpW[Value.VBoolean];
         vtInteger:
           Result.VUnicodeString := IntToUnicode(Value.VInteger);
         vtUInteger:
@@ -2284,10 +2275,7 @@ DateTimeFromUnicode:
         vtNull:
           Result.VString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VString := 'TRUE'
-          else
-            Result.VString := 'FALSE';
+          Result.VString := BoolStrsUp[Value.VBoolean];
         vtBytes:
           ZSetString(Pointer(Value.VBytes), Length(Value.VBytes), Result.VString);
         vtInteger:
@@ -2333,10 +2321,7 @@ DateTimeFromUnicode:
         vtNull:
           Result.VAnsiString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VAnsiString := 'TRUE'
-          else
-            Result.VAnsiString := 'FALSE';
+          Result.VAnsiString := BoolStrsUpRaw[Value.VBoolean];
         vtInteger:
           Result.VAnsiString := IntToRaw(Value.VInteger);
         vtUInteger:
@@ -2375,10 +2360,7 @@ DateTimeFromUnicode:
         vtNull:
           Result.VUTF8String := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VUTF8String := 'TRUE'
-          else
-            Result.VUTF8String := 'FALSE';
+          Result.VUTF8String := BoolStrsUpRaw[Value.VBoolean];
         vtInteger:
           Result.VUTF8String := IntToRaw(Value.VInteger);
         vtUInteger:
@@ -2421,10 +2403,7 @@ DateTimeFromUnicode:
         vtNull:
           Result.VRawByteString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VRawByteString := 'TRUE'
-          else
-            Result.VRawByteString := 'FALSE';
+          Result.VRawByteString := BoolStrsUpRaw[Value.VBoolean];
         vtInteger:
           Result.VRawByteString := IntToRaw(Value.VInteger);
         vtUInteger:
@@ -2462,10 +2441,7 @@ DateTimeFromUnicode:
         vtNull:
           Result.VUnicodeString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VUnicodeString := 'TRUE'
-          else
-            Result.VUnicodeString := 'FALSE';
+          Result.VUnicodeString := BoolStrsUpW[Value.VBoolean];
         vtInteger:
           Result.VUnicodeString := IntToUnicode(Value.VInteger);
         vtUInteger:
@@ -2602,10 +2578,7 @@ begin
     vtNull:
       Result := '';
     vtBoolean:
-      if Value.VBoolean then
-        Result := 'TRUE'
-      else
-        Result := 'FALSE';
+      Result := BoolStrsUpRaw[Value.VBoolean];
     vtBytes:
       ZSetString(Pointer(Value.VBytes), Length(Value.VBytes), Result);
     vtInteger:

@@ -441,7 +441,7 @@ type
 implementation
 
 uses ZFastCode, ZSysUtils, ZMessages, ZDbcResultSet, ZCollections,
-  ZEncoding;
+  ZEncoding, ZDbcProperties;
 
 var
 {**
@@ -480,8 +480,8 @@ begin
   FInfo := TStringList.Create;
   if Info <> nil then
     FInfo.AddStrings(Info);
-  FChunkSize := StrToIntDef(DefineStatementParameter(Self, 'chunk_size', '4096'), 4096);
-  FCachedLob := StrToBoolEx(DefineStatementParameter(Self, 'cachedlob', 'false'));
+  FChunkSize := StrToIntDef(DefineStatementParameter(Self, DSProps_ChunkSize, '4096'), 4096);
+  FCachedLob := StrToBoolEx(DefineStatementParameter(Self, DSProps_CachedLobs, 'false'));
   FStatementId := Self.GetNextStatementId;
 end;
 

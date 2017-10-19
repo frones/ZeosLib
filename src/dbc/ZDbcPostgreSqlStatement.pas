@@ -79,7 +79,7 @@ type
     FPostgreSQLConnection: IZPostgreSQLConnection;
     FPlainDriver: IZPostgreSQLPlainDriver;
     QueryHandle: PZPostgreSQLResult;
-    Foidasblob: Boolean;
+    FOidAsBlob: Boolean;
     FConnectionHandle: PZPostgreSQLConnect;
     Findeterminate_datatype: Boolean;
     FUseEmulatedStmtsOnly: Boolean;
@@ -150,7 +150,7 @@ type
   {** Implements callable Postgresql Statement. }
   TZPostgreSQLCallableStatement = class(TZAbstractCallableStatement)
   private
-    Foidasblob: Boolean;
+    FOidAsBlob: Boolean;
     FPlainDriver: IZPostgreSQLPlainDriver;
     FUndefinedVarcharAsStringLength: Integer;
     function GetProcedureSql: string;
@@ -183,7 +183,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZSysUtils, ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils,
-  ZEncoding;
+  ZEncoding, ZDbcProperties;
 
 var PGPreparableTokens: TPreparablePrefixTokens;
 
@@ -198,17 +198,17 @@ constructor TZPostgreSQLPreparedStatement.Create(PlainDriver: IZPostgreSQLPlainD
   Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
-  Foidasblob := StrToBoolDef(Self.Info.Values['oidasblob'], False) or
+  FOidAsBlob := StrToBoolEx(Self.Info.Values[DSProps_OidAsBlob]) or
     (Connection as IZPostgreSQLConnection).IsOidAsBlob;
   FPostgreSQLConnection := Connection;
   FPlainDriver := PlainDriver;
   //ResultSetType := rtScrollInsensitive;
   FConnectionHandle := Connection.GetConnectionHandle;
   Findeterminate_datatype := False;
-  FUndefinedVarcharAsStringLength := StrToInt(ZDbcUtils.DefineStatementParameter(Self, 'Undefined_Varchar_AsString_Length' , '0'));
+  FUndefinedVarcharAsStringLength := StrToInt(ZDbcUtils.DefineStatementParameter(Self, DSProps_UndefVarcharAsStringLength, '0'));
   { see http://zeoslib.sourceforge.net/viewtopic.php?f=20&t=10695&p=30151#p30151
     the pgBouncer does not support the RealPrepareds.... }
-  FUseEmulatedStmtsOnly := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'EMULATE_PREPARES', 'FALSE'));
+  FUseEmulatedStmtsOnly := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_EmulatePrepares, 'FALSE'));
 end;
 
 procedure TZPostgreSQLPreparedStatement.AfterConstruction;
@@ -271,7 +271,7 @@ begin
         raise EZSQLException.Create(SInvalidInputParameterCount);
       Result := Result + PGPrepareAnsiSQLParam(InParamValues[ParamIndex],
         ClientVarManager, (Connection as IZPostgreSQLConnection), ChunkSize,
-          InParamTypes[ParamIndex], Foidasblob, True, False, ConSettings);
+          InParamTypes[ParamIndex], FOidAsBlob, True, False, ConSettings);
       Inc(ParamIndex);
     end
     else
@@ -512,7 +512,7 @@ begin
 
   Result := PGPrepareAnsiSQLParam(InParamValues[ParamIndex], ClientVarManager,
     (Connection as IZPostgreSQLConnection), ChunkSize, InParamTypes[ParamIndex],
-      Foidasblob, Escaped, True, ConSettings);
+      FOidAsBlob, Escaped, True, ConSettings);
 end;
 
 {**
@@ -693,7 +693,7 @@ begin
             else
               case InParamTypes[ParamIndex] of
                 stBinaryStream:
-                  if Foidasblob then
+                  if FOidAsBlob then
                   begin
                     try
                       WriteTempBlob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0,
@@ -769,9 +769,9 @@ begin
   inherited Create(Connection, SQL, Info);
   ResultSetType := rtScrollInsensitive;
   FPlainDriver := (Connection as IZPostgreSQLConnection).GetPlainDriver;
-  Foidasblob := StrToBoolDef(Self.Info.Values['oidasblob'], False) or
+  FOidAsBlob := StrToBoolEx(Self.Info.Values[DSProps_OidAsBlob]) or
     (Connection as IZPostgreSQLConnection).IsOidAsBlob;
-  FUndefinedVarcharAsStringLength := StrToInt(ZDbcUtils.DefineStatementParameter(Self, 'Undefined_Varchar_AsString_Length' , '0'));
+  FUndefinedVarcharAsStringLength := StrToInt(ZDbcUtils.DefineStatementParameter(Self, DSProps_UndefVarcharAsStringLength , '0'));
 end;
 
 {**
@@ -839,7 +839,7 @@ begin
 
   Result := PGPrepareAnsiSQLParam(InParamValues[ParamIndex], ClientVarManager,
     (Connection as IZPostgreSQLConnection), ChunkSize, InParamTypes[ParamIndex],
-      Foidasblob, True, False, ConSettings);
+      FOidAsBlob, True, False, ConSettings);
 end;
 
 {**

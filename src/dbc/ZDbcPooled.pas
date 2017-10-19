@@ -52,8 +52,6 @@ interface
 
 {$I ZDbc.inc}
 
-implementation
-
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs, DateUtils, SysUtils,
   SyncObjs,
@@ -211,6 +209,10 @@ type
   end;
   {$WARNINGS ON}
 
+implementation
+
+uses ZDbcProperties;
+
 { TConnectionPool }
 
 constructor TConnectionPool.Create(const URL: string; const ConnectionTimeout: Integer = 0; const MaxConnections: Integer = 0; const Wait: Boolean = True);
@@ -334,7 +336,7 @@ begin
     if FWait then
       Sleep(100)
     else
-      raise Exception.Create(ClassName + '.Acquire'+LineEnding+'O pool de conexatingiu o limite maximo');
+      raise Exception.Create(ClassName + '.Acquire'+LineEnding+'Connection pool reached the maximum limit');
             //2013-10-13 mse: please replace non ASCII characters (>127) by the 
             //#nnn notation in order to have encoding independent sources
   end;
@@ -785,7 +787,7 @@ var
   TempURL: TZURL;
   I: Integer;
   ConnectionPool: TConnectionPool;
-  ConnetionTimeout: Integer;
+  ConnectionTimeout: Integer;
   MaxConnections: Integer;
   Wait: Boolean;
 begin
@@ -818,10 +820,10 @@ begin
     //
     if ConnectionPool = nil then
     begin
-      ConnetionTimeout := StrToIntDef(TempURL.Properties.Values['ConnectionTimeout'], 0);
-      MaxConnections := StrToIntDef(TempURL.Properties.Values['MaxConnections'], 0);
-      Wait := StrToBoolDef(TempURL.Properties.Values['Wait'], True);
-      ConnectionPool := TConnectionPool.Create(TempURL.URL, ConnetionTimeout, MaxConnections, Wait);
+      ConnectionTimeout := StrToIntDef(TempURL.Properties.Values[ConnProps_ConnectionTimeout], 0);
+      MaxConnections := StrToIntDef(TempURL.Properties.Values[ConnProps_MaxConnections], 0);
+      Wait := StrToBoolDef(TempURL.Properties.Values[ConnProps_Wait], True);
+      ConnectionPool := TConnectionPool.Create(TempURL.URL, ConnectionTimeout, MaxConnections, Wait);
       PoolList.Add(ConnectionPool);
       URLList.Add(TempURL.URL);
     end;
@@ -852,9 +854,9 @@ begin
   Result := DriverManager.GetDriver(GetEmbeddedURL(URL)).GetPropertyInfo(GetEmbeddedURL(URL), Info);
   if Result = nil then
     Result := TStringList.Create;
-  Result.Values['ConnectionTimeout'] := '0';
-  Result.Values['MaxConnections'] := '0';
-  Result.Values['Wait'] := 'True';
+  Result.Values[ConnProps_ConnectionTimeout] := '0';
+  Result.Values[ConnProps_MaxConnections] := '0';
+  Result.Values[ConnProps_Wait] := 'True';
 end;
 
 function TZDbcPooledConnectionDriver.GetSubVersion: Integer;

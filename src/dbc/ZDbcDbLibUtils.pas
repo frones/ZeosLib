@@ -335,10 +335,7 @@ begin
   begin
     case ParamType of
       stBoolean:
-        if ClientVarManager.GetAsBoolean(Value) then
-          Result := '1'
-        else
-          Result := '0';
+        Result := BoolStrInts[ClientVarManager.GetAsBoolean(Value)];
       stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
       stFloat, stDouble, stCurrency, stBigDecimal:
         Result := ClientVarManager.GetAsRawByteString(Value);

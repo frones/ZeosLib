@@ -2348,15 +2348,8 @@ var
 begin
   Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
-  if Unique then
-    Is_Unique := '''1'''
-  else
-    Is_Unique := '''0''';
-
-  if Approximate then
-    Accuracy := '''1'''
-  else
-    Accuracy := '''0''';
+  Is_Unique := AnsiQuotedStr(BoolStrInts[Unique], '''');
+  Accuracy := AnsiQuotedStr(BoolStrInts[Approximate], '''');
 
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_getindexinfo %s, %s, %s, %s, %s',

@@ -170,7 +170,7 @@ implementation
 
 uses
   ZMessages, ZGenericSqlToken, ZDbcOracleStatement, ZSysUtils, ZFastCode,
-  ZDbcOracleUtils, ZDbcOracleMetadata, ZOracleToken, ZOracleAnalyser;
+  ZDbcOracleUtils, ZDbcOracleMetadata, ZOracleToken, ZOracleAnalyser, ZDbcProperties;
 
 { TZOracleDriver }
 
@@ -266,14 +266,14 @@ begin
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
 
-  if Info.Values['ServerCachedStmts'] = '' then
+  if Info.Values[ConnProps_ServerCachedStmts] = '' then
     FStmtMode := OCI_STMT_CACHE //use by default
   else
-    if StrToBoolEx(Info.Values['ServerCachedStmts'], False) then
+    if StrToBoolEx(Info.Values[ConnProps_ServerCachedStmts], False) then
       FStmtMode := OCI_STMT_CACHE //use by default
     else
       FStmtMode := OCI_DEFAULT;
-  FStatementPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values['StatementCache'], 30); //default = 20
+  FStatementPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_StatementCache], 30); //default = 20
   FBlobPrefetchSize := FChunkSize;
   Open;
 end;

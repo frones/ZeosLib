@@ -177,7 +177,7 @@ type
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils
+uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZDbcProperties
   {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 { TZResolverParameter }
@@ -224,11 +224,11 @@ begin
   FDeleteParams := TObjectList.Create(True);
 
   FCalcDefaults := StrToBoolEx(DefineStatementParameter(Statement,
-    'defaults', 'true'));
+    DSProps_Defaults, 'true'));
   FUpdateAll := UpperCase(DefineStatementParameter(Statement,
-    'update', 'changed')) = 'ALL';
+    DSProps_Update, 'changed')) = 'ALL';
   FWhereAll := UpperCase(DefineStatementParameter(Statement,
-    'where', 'keyonly')) = 'ALL';
+    DSProps_Where, 'keyonly')) = 'ALL';
 
   InsertStatement := nil;
   FUpdateStatements := TZHashMap.Create;
@@ -324,14 +324,14 @@ function TZGenericCachedResolver.CreateResolverStatement(SQL: String): IZPrepare
 var
   Temp : TStrings;
 begin
-  if StrToBoolEx(FStatement.GetParameters.Values['preferprepared']) then
+  if StrToBoolEx(FStatement.GetParameters.Values[DSProps_PreferPrepared]) then
     begin
       Temp := TStringList.Create;
-      Temp.Values['preferprepared'] := 'true';
-      if not ( Connection.GetParameters.Values['chunk_size'] = '' ) then //ordered by precedence
-        Temp.Values['chunk_size'] := Connection.GetParameters.Values['chunk_size']
+      Temp.Values[DSProps_PreferPrepared] := 'true';
+      if not ( Connection.GetParameters.Values[DSProps_ChunkSize] = '' ) then //ordered by precedence
+        Temp.Values[DSProps_ChunkSize] := Connection.GetParameters.Values[DSProps_ChunkSize]
       else
-        Temp.Values['chunk_size'] := FStatement.GetParameters.Values['chunk_size'];
+        Temp.Values[DSProps_ChunkSize] := FStatement.GetParameters.Values[DSProps_ChunkSize];
       Result := Connection.PrepareStatementWithParams(SQL, Temp);
       Temp.Free;
     end
@@ -468,7 +468,7 @@ begin
   { Tryes to define primary keys. }
   if not WhereAll then
   begin
-    KeyFields := FStatement.GetParameters.Values['KeyFields'];
+    KeyFields := FStatement.GetParameters.Values[DSProps_KeyFields];
     { Let user define key fields }
     if KeyFields <> '' then
     begin
@@ -741,7 +741,7 @@ begin
   Result := 'INSERT INTO '+TableName+' ('+Temp1+') VALUES ('+
     DupeString('?,', Columns.Count - 1) + '?' +')';
 
-  Temp1 := FStatement.GetParameters.Values['InsertReturningFields'];
+  Temp1 := FStatement.GetParameters.Values[DSProps_InsertReturningFields];
   if Temp1 <> '' then
   begin
     Fields := ExtractFields(Temp1, [',', ';']);
@@ -848,6 +848,7 @@ procedure TZGenericCachedResolver.PostUpdates(Sender: IZCachedResultSet;
   UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
   Statement            : IZPreparedStatement;
+  S                    : string;
   SQL                  : string;
   SQLParams            : TObjectList;
   lUpdateCount         : Integer;
@@ -916,8 +917,8 @@ begin
   begin
     FillStatement(Statement, SQLParams, OldRowAccessor, NewRowAccessor);
     // if Property ValidateUpdateCount isn't set : assume it's true
-    lValidateUpdateCount := (Sender.GetStatement.GetParameters.IndexOfName('ValidateUpdateCount') = -1)
-                          or StrToBoolEx(Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
+    S := Sender.GetStatement.GetParameters.Values[DSProps_ValidateUpdateCount];
+    lValidateUpdateCount := (S = '') or StrToBoolEx(S);
 
     lUpdateCount := Statement.ExecuteUpdatePrepared;
     {$IFDEF WITH_VALIDATE_UPDATE_COUNT}

@@ -124,6 +124,7 @@ contains
   ZDbcPooled in '..\..\src\dbc\ZDbcPooled.pas',
 {$ENDIF}
 
+  ZDbcProperties in '..\..\src\dbc\ZDbcProperties.pas',
   ZDbcUtils in '..\..\src\dbc\ZDbcUtils.pas',
   ZDbcCachedResultSet in '..\..\src\dbc\ZDbcCachedResultSet.pas',
   ZDbcConnection in '..\..\src\dbc\ZDbcConnection.pas',

@@ -154,7 +154,7 @@ var
 implementation
 
 uses
-  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
+  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZConnProperties, ZDbcProperties,
   ZSysUtils, ZMessages, ZDbcUtils, ZDbcDbLibStatement, ZEncoding, ZFastCode,
   ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser{$IFDEF OLDFPC}, ZClasses{$ENDIF};
 
@@ -301,31 +301,31 @@ begin
   LoginRec := GetPLainDriver.dbLogin;
   try
 //Common parameters
-    S := Info.Values['workstation'];
+    S := Info.Values[ConnProps_Workstation];
     if S <> '' then
       GetPlainDriver.dbSetLHost(LoginRec, PAnsiChar(AnsiString(S)));
 
-    S := Info.Values['appname'];
+    S := Info.Values[ConnProps_AppName];
     if S <> '' then
       GetPlainDriver.dbSetLApp(LoginRec, PAnsiChar(AnsiString(S)));
 
-    S := Info.Values['language'];
+    S := Info.Values[ConnProps_Language];
     if S <> '' then
       GetPlainDriver.dbSetLNatLang(LoginRec, PAnsiChar(AnsiString(S)));
 
-    S := Info.Values['timeout'];
+    S := Info.Values[ConnProps_Timeout];
     if S <> '' then
       GetPlainDriver.dbSetLoginTime(StrToIntDef(S, 60));
 
     if FFreeTDS then
     begin
-      if StrToBoolEx(Info.Values['log']) or StrToBoolEx(Info.Values['logging']) or
-         StrToBoolEx(Info.Values['tds_dump']) then begin
-           lLogFile := Info.Values['logfile'];
+      if StrToBoolEx(Info.Values[ConnProps_Log]) or StrToBoolEx(Info.Values[ConnProps_Logging]) or
+         StrToBoolEx(Info.Values[ConnProps_TDSDump]) then begin
+           lLogFile := Info.Values[ConnProps_LogFile];
            if lLogFile = '' then
-            lLogFile := Info.Values['log_file'];
+            lLogFile := Info.Values[ConnProps_Log_File];
            if lLogFile = '' then
-            lLogFile := Info.Values['tds_dump_file'];
+            lLogFile := Info.Values[ConnProps_TDSDumpFile];
            if lLogFile = '' then
             lLogFile := ChangeFileExt(ParamStr(0), '.tdslog');
            (GetPlainDriver as IZFreeTDSPlainDriver).tdsDump_Open(lLogFile);
@@ -336,8 +336,8 @@ begin
     //mssql specific parameters
     if ( FProvider = dpMsSQL ) then
     begin
-      if ( StrToBoolEx(Info.Values['NTAuth']) or StrToBoolEx(Info.Values['trusted'])
-        or StrToBoolEx(Info.Values['secure']) ) and ( not FFreeTDS ) then
+      if ( StrToBoolEx(Info.Values[ConnProps_NTAuth]) or StrToBoolEx(Info.Values[ConnProps_Trusted])
+        or StrToBoolEx(Info.Values[ConnProps_Secure]) ) and ( not FFreeTDS ) then
       begin
         GetPlainDriver.dbsetlsecure(LoginRec);
         LogMessage := LogMessage + ' USING WINDOWS AUTHENTICATION';
@@ -350,7 +350,7 @@ begin
       end;
 
       if FFreeTDS then begin
-        S := Info.Values['codepage'];
+        S := Info.Values[ConnProps_CodePage];
         if S <> '' then begin
           GetPlainDriver.dbSetLCharSet(LoginRec, Pointer({$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S)));
           CheckCharEncoding(s);
@@ -361,7 +361,7 @@ begin
     //sybase specific parameters
     if FProvider = dpSybase then
     begin
-      S := Info.Values['codepage'];
+      S := Info.Values[ConnProps_CodePage];
       if S <> '' then
         GetPlainDriver.dbSetLCharSet(LoginRec, Pointer({$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S)));
       GetPlainDriver.dbsetluser(LoginRec, PAnsiChar(ConSettings^.User));
@@ -466,7 +466,7 @@ begin
     ConSettings^.ClientCodePage^.Encoding := ceAnsi;
     ConSettings^.ClientCodePage^.Name := DetermineMSServerCollation;
     FServerAnsiCodePage := DetermineMSServerCodePage(ConSettings^.ClientCodePage^.Name);
-    if UpperCase(Info.Values['ResetCodePage']) = 'UTF8' then
+    if UpperCase(Info.Values[DSProps_ResetCodePage]) = 'UTF8' then
     begin
       ConSettings^.ClientCodePage^.CP := zCP_UTF8;
       ConSettings^.ClientCodePage^.Encoding := ceUTF8;
@@ -496,15 +496,13 @@ begin
   ConSettings^.WriteFormatSettings.DateFormat := 'YYYYMMDD';
   ConSettings^.WriteFormatSettings.DateTimeFormat := 'YYYY-MM-DDTHH:NN:SS';
   SetDateTimeFormatProperties(False);
-  if Info.Values['ANSI_PADDING'] <> '' then
-    if StrToBoolEx(Info.Values['ANSI_PADDING']) or
-       (UpperCase(Info.Values['ANSI_PADDING']) = 'ON') then
-      InternalExecuteStatement('SET ANSI_PADDING ON')
-    else
-    begin
-      InternalExecuteStatement('SET ANSI_DEFAULTS OFF');
-      InternalExecuteStatement('SET ANSI_PADDING OFF');
-    end;
+  if StrToBoolEx(Info.Values[ConnProps_AnsiPadding]) then
+    InternalExecuteStatement('SET ANSI_PADDING ON')
+  else
+  begin
+    InternalExecuteStatement('SET ANSI_DEFAULTS OFF');
+    InternalExecuteStatement('SET ANSI_PADDING OFF');
+  end;
 
   InternalSetTransactionIsolation(GetTransactionIsolation);
   ReStartTransactionSupport;

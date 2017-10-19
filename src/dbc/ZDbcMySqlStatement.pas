@@ -220,7 +220,7 @@ type
 implementation
 
 uses
-  Math, DateUtils, ZFastCode, ZDbcMySqlUtils, ZDbcMySqlResultSet,
+  Math, DateUtils, ZFastCode, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZDbcProperties,
   ZSysUtils, ZMessages, ZDbcCachedResultSet, ZEncoding, ZDbcResultSet
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -251,7 +251,7 @@ begin
   inherited Create(Connection, Info);
   FHandle := Handle;
   FPlainDriver := PlainDriver;
-  FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
+  FUseResult := StrToBoolEx(DefineStatementParameter(Self, DSProps_UseResult, 'false'));
   if not FUseResult then
     ResultSetType := rtScrollInsensitive;
 end;
@@ -465,8 +465,8 @@ begin
   inherited Create(Connection, SQL, Info);
   FHandle := Handle;
   FPlainDriver := PlainDriver;
-  FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'UseResult', 'false'));
-  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'));
+  FUseResult := StrToBoolEx(DefineStatementParameter(Self, DSProps_UseResult, 'false'));
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, DSProps_Defaults, 'true'));
   if not FUseResult then
     ResultSetType := rtScrollInsensitive;
 end;
@@ -537,11 +537,11 @@ begin
   FHandle := FMysqlConnection.GetConnectionHandle;
   FPlainDriver := PlainDriver;
 
-  FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
+  FUseResult := StrToBoolEx(DefineStatementParameter(Self, DSProps_UseResult, 'false'));
   if not FUseResult then
     ResultSetType := rtScrollInsensitive;
-  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'));
-  FPrefetchRows := Max(1,{$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, 'prefetch_rows', '100'),100));
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, DSProps_Defaults, 'true'));
+  FPrefetchRows := Max(1,{$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_PrefetchRows, '100'),100));
 end;
 
 procedure TZMySQLPreparedStatement.Prepare;
@@ -1287,8 +1287,8 @@ begin
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
-  FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
-  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'))
+  FUseResult := StrToBoolEx(DefineStatementParameter(Self, DSProps_UseResult, 'false'));
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, DSProps_Defaults, 'true'))
 end;
 
 {**

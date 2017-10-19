@@ -150,7 +150,7 @@ var
 implementation
 
 uses ZDbcOleDBMetadata, ZDbcOleDBStatement, ZSysUtils, ZDbcUtils,
-  ZMessages, ZFastCode;
+  ZMessages, ZFastCode, ZConnProperties, ZDbcProperties;
 
 { TZOleDBDriver }
 
@@ -332,16 +332,16 @@ begin
       PropertySets[2].rgProperties    := @rgDBPROPSET_SQLSERVERDBINIT;
       //http://msdn.microsoft.com/en-us/library/windows/desktop/ms723066%28v=vs.85%29.aspx
       //Indicates the number of seconds before the source initialization times out
-      SetProp(PropertySets[0], DBPROP_INIT_TIMEOUT,       StrToIntDef(Info.Values['timeout'], 0));
+      SetProp(PropertySets[0], DBPROP_INIT_TIMEOUT,       StrToIntDef(Info.Values[ConnProps_Timeout], 0));
       //Indicates the number of seconds before a request and command execution, times out
-      SetProp(PropertySets[0], DBPROP_INIT_GENERALTIMEOUT,StrToIntDef(Info.Values['timeout'], 0));
+      SetProp(PropertySets[0], DBPROP_INIT_GENERALTIMEOUT,StrToIntDef(Info.Values[ConnProps_Timeout], 0));
       //Force Multiple connections -> prevent transactional issues with IDBSchemaRowSet etc
       //http://support2.microsoft.com/default.aspx?scid=kb;en-us;272358
       SetProp(PropertySets[1], DBPROP_MULTIPLECONNECTIONS,VARIANT_TRUE);
       //supported for MSSQL only!!!
-      if (Info.Values['tds_packed_size'] <> '') then
+      if (Info.Values[ConnProps_TDSPacketSize] <> '') then
       begin
-        SetProp(PropertySets[2], SSPROP_INIT_PACKETSIZE, StrToIntDef(Info.Values['tds_packed_size'], 0));
+        SetProp(PropertySets[2], SSPROP_INIT_PACKETSIZE, StrToIntDef(Info.Values[ConnProps_TDSPacketSize], 0));
         cPropertySets := 3;
       end;
     end
@@ -686,16 +686,16 @@ begin
     DataInitialize := CreateComObject(CLSID_DataLinks) as IDataInitialize;
     ConnectStrings := SplitString(DataBase, ';');
     //https://msdn.microsoft.com/de-de/library/ms131686%28v=sql.120%29.aspx
-    FSupportsMARSConnnection := StrToBoolEx(ConnectStrings.Values['MarsConn']);
-    if StrToBoolEx(ConnectStrings.Values['Trusted_Connection']) then
+    FSupportsMARSConnnection := StrToBoolEx(ConnectStrings.Values[ConnProps_MarsConn]);
+    if StrToBoolEx(ConnectStrings.Values[ConnProps_TrustedConnection]) then
       ConnectString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(DataBase)
     else
     begin
-      ConnectStrings.Values['User Id'] := User;
-      ConnectStrings.Values['Password'] := PassWord;
+      ConnectStrings.Values[ConnProps_UserId] := User;
+      ConnectStrings.Values[ConnProps_Password] := PassWord;
       ConnectString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(ComposeString(ConnectStrings, ';'));
     end;
-    FServerProvider := ProviderNamePrefix2ServerProvider(ConnectStrings.Values['Provider']);
+    FServerProvider := ProviderNamePrefix2ServerProvider(ConnectStrings.Values[ConnProps_Provider]);
     ConnectStrings.Free;
     OleCheck(DataInitialize.GetDataSource(nil,CLSCTX_INPROC_SERVER,
       Pointer(ConnectString), IID_IDBInitialize,IUnknown(fDBInitialize)));

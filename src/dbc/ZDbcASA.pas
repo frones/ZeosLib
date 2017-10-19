@@ -129,7 +129,7 @@ implementation
 
 uses
   ZFastCode, ZDbcASAMetadata, ZDbcASAStatement, ZDbcASAUtils, ZSybaseToken,
-  ZSybaseAnalyser, ZDbcLogging, ZSysUtils
+  ZSybaseAnalyser, ZDbcLogging, ZSysUtils, ZDbcProperties
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZASADriver }
@@ -427,10 +427,10 @@ begin
     end;
 
     Links := '';
-    if Info.Values['CommLinks'] <> ''
-      then Links := 'CommLinks=' + Info.Values['CommLinks'];
-    if Info.Values['LINKS'] <> ''
-      then Links := 'LINKS=' + Info.Values['LINKS'];
+    if Info.Values[ConnProps_CommLinks] <> ''
+      then Links := 'CommLinks=' + Info.Values[ConnProps_CommLinks];
+    if Info.Values[ConnProps_Links] <> ''
+      then Links := 'LINKS=' + Info.Values[ConnProps_Links];
     if (Links = '') and (Port <> 0)
       then Links := 'LINKS=tcpip(PORT=' + ZFastCode.IntToStr(Port) + ')';
     if Links <> ''

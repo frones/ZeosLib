@@ -221,8 +221,8 @@ type
 
 implementation
 
-uses ZGenericSqlToken, ZDatasetUtils, ZAbstractRODataset,ZAbstractDataset,
-  ZSysUtils, ZDbcUtils, ZMessages, ZCompatibility;
+uses ZGenericSqlToken, ZDatasetUtils, ZAbstractRODataset, ZAbstractDataset,
+  ZSysUtils, ZDbcUtils, ZMessages, ZCompatibility, ZDbcProperties;
 
 { TZUpdateSQL }
 
@@ -572,7 +572,7 @@ begin
         RowAccessor := NewRowAccessor;
 
       if StrToBoolEx(DefineStatementParameter(
-        ResultSet.GetStatement, 'defaults', 'true')) then
+        ResultSet.GetStatement, DSProps_Defaults, 'true')) then
         Statement.SetDefaultValue(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           ResultSet.GetMetadata.GetDefaultValue(ColumnIndex));
 
@@ -757,6 +757,7 @@ var
     CalcDefaultValues,
     ExecuteStatement,
     UpdateAutoIncFields: Boolean;
+    S,
     Refresh_OldSQL:String;
     RefreshResultSet: IZResultSet;
     lValidateUpdateCount : Boolean;
@@ -789,7 +790,7 @@ begin
   if Dataset is TZAbstractRODataset then
     (Dataset as TZAbstractRODataset).Connection.ShowSqlHourGlass;
   CalcDefaultValues :=
-    ZSysUtils.StrToBoolEx(DefineStatementParameter(Sender.GetStatement,'defaults','true'));
+    ZSysUtils.StrToBoolEx(DefineStatementParameter(Sender.GetStatement, DSProps_Defaults, 'true'));
   try
     for I := 0 to Config.StatementCount - 1 do
     begin
@@ -811,8 +812,8 @@ begin
       if ExecuteStatement then
       begin
         // if Property ValidateUpdateCount isn't set : assume it's true
-        lValidateUpdateCount := (Sender.GetStatement.GetParameters.IndexOfName('ValidateUpdateCount') = -1)
-                              or StrToBoolEx(Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
+        S := Sender.GetStatement.GetParameters.Values[DSProps_ValidateUpdateCount];
+        lValidateUpdateCount := (S = '') or StrToBoolEx(S);
 
         lUpdateCount := Statement.ExecuteUpdatePrepared;
         {$IFDEF WITH_VALIDATE_UPDATE_COUNT}

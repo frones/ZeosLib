@@ -1086,7 +1086,7 @@ var
 
 implementation
 
-uses ZMessages;
+uses ZMessages, ZConnProperties;
 
 type
   {** Driver Manager interface. }
@@ -1279,8 +1279,8 @@ var
 begin
   Info := TStringList.Create;
   try
-    Info.Add('username=' + User);
-    Info.Add('password=' + Password);
+    Info.Values[ConnProps_Username] := User;
+    Info.Values[ConnProps_Password] := Password;
     Result := GetConnectionWithParams(Url, Info);
   finally
     Info.Free;

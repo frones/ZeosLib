@@ -130,7 +130,7 @@ implementation
 
 uses
   Variants, ActiveX,
-  ZDbcUtils, ZDbcLogging, ZAdoToken, ZSysUtils, ZMessages,
+  ZDbcUtils, ZDbcLogging, ZAdoToken, ZSysUtils, ZMessages, ZDbcProperties,
   ZDbcAdoStatement, ZDbcAdoMetaData, ZEncoding, ZDbcOleDBUtils;
 
 const                                                //adXactUnspecified
@@ -279,7 +279,7 @@ begin
       FAdoConnection.Set_Mode(adModeUnknown);
 
     ConnectStrings := SplitString(DataBase, ';');
-    FServerProvider := ProviderNamePrefix2ServerProvider(ConnectStrings.Values['Provider']);
+    FServerProvider := ProviderNamePrefix2ServerProvider(ConnectStrings.Values[ConnProps_Provider]);
     FreeAndNil(ConnectStrings);
 
     FAdoConnection.Open(WideString(Database), WideString(User), WideString(Password), -1{adConnectUnspecified});

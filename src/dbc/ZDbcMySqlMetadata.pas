@@ -260,7 +260,7 @@ implementation
 
 uses
   Math,
-  ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZDbcMySql;
+  ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZDbcMySql, ZDbcProperties;
 
 { TZMySQLDatabaseInfo }
 
@@ -893,7 +893,7 @@ constructor TZMySQLDatabaseMetadata.Create(Connection: TZAbstractConnection;
 begin
   inherited Create(Connection, Url);
   FInfo := TStringList.Create;
-  FInfo.Add('UseResult=True');
+  FInfo.Values[DSProps_UseResult] := 'True';
   FDatabase := (GetConnection as IZMySQLConnection).GetDatabaseName;
 end;
 {**
@@ -1268,10 +1268,7 @@ begin
               end
               else if (MySQLType = stBoolean) and (TypeName = 'enum') then
               begin
-                if (DefaultValue = 'y') or (DefaultValue = 'Y') then
-                  DefaultValue := '1'
-                else
-                  DefaultValue := '0';
+                DefaultValue := BoolStrInts[ (DefaultValue = 'y') or (DefaultValue = 'Y') ];
               end;
               Result.UpdateRawByteString(TableColColumnColDefIndex, DefaultValue);
             end;
@@ -2229,10 +2226,7 @@ begin
         Result.UpdateString(CatalogNameIndex, LCatalog);
         //Result.UpdateNull(SchemaNameIndex);
         Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(ColumnIndexes[1], Len), @Len);
-        if GetInt(ColumnIndexes[2]) = 0 then
-          Result.UpdateString(IndexInfoColNonUniqueIndex, 'true')
-        else
-          Result.UpdateString(IndexInfoColNonUniqueIndex, 'false');
+        Result.UpdateString(IndexInfoColNonUniqueIndex, LowerCase(BoolStrs[GetInt(ColumnIndexes[2]) = 0]));
         //Result.UpdateNull(IndexInfoColIndexQualifierIndex);
         Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiChar(ColumnIndexes[3], Len), @Len);
         Result.UpdateByte(IndexInfoColTypeIndex, Ord(tiOther));

@@ -124,7 +124,7 @@ type
 implementation
 
 uses ZSysUtils, ZDbcUtils, ZMessages, ZPlainASAConstants, ZDbcASAResultSet,
-  ZEncoding;
+  ZEncoding, ZDbcProperties;
 
 { TZASAPreparedStatement }
 
@@ -402,7 +402,7 @@ begin
   FetchSize := BlockSize;
   ResultSetConcurrency := rcUpdatable;
   ResultSetType := rtScrollSensitive;
-  FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
+  FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, DSProps_CachedBlob, 'true'));
   CursorName := AnsiString(RandomString(12));
   FParamSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
     FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings);

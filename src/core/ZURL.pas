@@ -119,7 +119,7 @@ type
 
 implementation
 
-uses ZCompatibility, ZFastCode;
+uses ZCompatibility, ZFastCode, ZConnProperties;
 
 {TZURLStringList}
 function TZURLStringList.GetTextStr: string;
@@ -400,37 +400,44 @@ begin
 end;
 
 procedure TZURL.DoOnPropertiesChange(Sender: TObject);
+var
+  S: string;
 begin
   FProperties.OnChange := nil;
   try
-    if FProperties.Values['UID'] <> '' then
+    S := FProperties.Values[ConnProps_UID];
+    if S <> '' then
     begin
-      UserName := FProperties.Values['UID'];
-      FProperties.Delete(FProperties.IndexOfName('UID'));
+      UserName := S;
+      FProperties.Values[ConnProps_UID] := '';
     end;
 
-    if FProperties.Values['PWD'] <> '' then
+    S := FProperties.Values[ConnProps_Username];
+    if S <> '' then
     begin
-      Password := FProperties.Values['PWD'];
-      FProperties.Delete(FProperties.IndexOfName('PWD'));
+      UserName := S;
+      FProperties.Values[ConnProps_Username] := '';
     end;
 
-    if FProperties.Values['username'] <> '' then
+    S := FProperties.Values[ConnProps_PWD];
+    if S <> '' then
     begin
-      UserName := FProperties.Values['username'];
-      FProperties.Delete(FProperties.IndexOfName('username'));
+      Password := S;
+      FProperties.Values[ConnProps_PWD] := '';
     end;
 
-    if FProperties.Values['password'] <> '' then
+    S := FProperties.Values[ConnProps_Password];
+    if S <> '' then
     begin
-      Password := FProperties.Values['password'];
-      FProperties.Delete(FProperties.IndexOfName('password'));
+      Password := S;
+      FProperties.Values[ConnProps_Password] := '';
     end;
 
-    if FProperties.Values['LibLocation'] <> '' then
+    S := FProperties.Values[ConnProps_LibLocation];
+    if S <> '' then
     begin
-      LibLocation := FProperties.Values['LibLocation'];
-      FProperties.Delete(FProperties.IndexOfName('LibLocation'));
+      LibLocation := S;
+      FProperties.Values[ConnProps_LibLocation] := '';
     end;
 
   finally

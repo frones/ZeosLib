@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs, TypInfo,
   ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata, ZTokenizer, ZVariant;
 
 type
@@ -198,7 +198,8 @@ procedure RaiseUnsupportedParameterTypeException(ParamType: TZSQLType);
 
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken, TypInfo;
+uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken,
+  ZConnProperties, ZDbcProperties;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -276,17 +277,17 @@ begin
   { Redefines user name if not avialble in the URL}
   if UserName = '' then //Priority 1: URL.UserName
   begin
-    UserName := ResultInfo.Values['UID']; //Priority 2: Info-UID
+    UserName := ResultInfo.Values[ConnProps_UID]; //Priority 2: Info-UID
     if UserName = '' then
-      UserName := ResultInfo.Values['username']; //Priority 3: Info-username
+      UserName := ResultInfo.Values[ConnProps_Username]; //Priority 3: Info-username
   end;
 
   { Redefines user password if not avialble in the URL }
   if Password = '' then //Priority 1: URL.Password
   begin
-    Password := ResultInfo.Values['PWD']; //Priority 2: Info-PWD
+    Password := ResultInfo.Values[ConnProps_PWD]; //Priority 2: Info-PWD
     if Password = '' then
-      Password := ResultInfo.Values['password']; //Priority 3: Info-password
+      Password := ResultInfo.Values[ConnProps_Password]; //Priority 3: Info-password
   end;
 end;
 

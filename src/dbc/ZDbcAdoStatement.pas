@@ -147,8 +147,9 @@ implementation
 uses
   Variants, ComObj, Math,
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
-  ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZFastCode,
-  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages;
+  ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet,
+  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages, ZDbcProperties
+  {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 { TZAdoPreparedStatement }
 
@@ -285,7 +286,7 @@ begin
         for i := 0 to InParamCount-1 do
           if ClientVarManager.IsNull(InParamValues[i]) then
             if (InParamDefaultValues[i] <> '') and (UpperCase(InParamDefaultValues[i]) <> 'NULL') and
-              StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
+              StrToBoolEx(DefineStatementParameter(Self, DSProps_Defaults, 'true')) then
             begin
               ClientVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
               ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], InParamValues[i], adParamInput)
@@ -951,7 +952,7 @@ begin
       if FDBParamTypes[i] in [1,3] then //ptInput, ptInputOutput
         if ClientVarManager.IsNull(InParamValues[i]) then
           if (InParamDefaultValues[i] <> '') and (UpperCase(InParamDefaultValues[i]) <> 'NULL') and
-            StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
+            StrToBoolEx(DefineStatementParameter(Self, DSProps_Defaults, 'true')) then
           begin
             ClientVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
             ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], InParamValues[i], adParamInput)

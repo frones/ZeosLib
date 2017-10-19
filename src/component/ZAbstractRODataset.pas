@@ -1792,7 +1792,7 @@ var
 implementation
 
 uses ZFastCode, Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
-  ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZEncoding
+  ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZEncoding, ZDbcProperties
   {$IFNDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES}, ZAbstractDataset{$ENDIF} //see comment of Updatable property
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
@@ -3357,18 +3357,9 @@ begin
     if Assigned(Properties) then
       Temp.AddStrings(Properties);
     { Define TDataset specific parameters. }
-    if doCalcDefaults in FOptions then
-      Temp.Values['defaults'] := 'true'
-    else
-      Temp.Values['defaults'] := 'false';
-    if doPreferPrepared in FOptions then
-      Temp.Values['preferprepared'] := 'true'
-    else
-      Temp.Values['preferprepared'] := 'false';
-    if doCachedLobs in FOptions then
-      Temp.Values['cachedlob'] := 'true'
-    else
-      Temp.Values['cachedlob'] := 'false';
+    Temp.Values[DSProps_Defaults] := BoolStrs[doCalcDefaults in FOptions];
+    Temp.Values[DSProps_PreferPrepared] := BoolStrs[doPreferPrepared in FOptions];
+    Temp.Values[DSProps_CachedLobs] := BoolStrs[doCachedLobs in FOptions];
 
     Result := FConnection.DbcConnection.PrepareStatementWithParams(SQL, Temp);
   finally
@@ -4211,8 +4202,8 @@ begin
       if ResultSet.GetRow <> RowNo then
         ResultSet.MoveAbsolute(RowNo);
 
-      if Properties.Values['KeyFields'] <> '' then
-        KeyFields := Properties.Values['KeyFields']
+      if Properties.Values[DSProps_KeyFields] <> '' then
+        KeyFields := Properties.Values[DSProps_KeyFields]
       else
         KeyFields := DefineKeyFields(Fields);
       FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields);

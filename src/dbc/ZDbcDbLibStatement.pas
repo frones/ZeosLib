@@ -156,7 +156,7 @@ implementation
 uses
   Types, Math,
   ZDbcLogging, ZDbcCachedResultSet, ZDbcDbLibUtils, ZDbcDbLibResultSet,
-  ZVariant, ZDbcUtils, ZEncoding, ZDbcResultSet
+  ZVariant, ZDbcUtils, ZEncoding, ZDbcResultSet, ZDbcProperties
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
@@ -198,7 +198,7 @@ begin
     So this is stopping all encoding detections and increases the performance in
     a high rate. If Varchar fields are fetched you Should use a cast to N-Fields!
     Else all results are invalid!!!!! Just to invoke later questions!}
-  if DefineStatementParameter(Self, 'ResetCodePage', '') = 'UTF8' then
+  if DefineStatementParameter(Self, DSProps_ResetCodePage, '') = 'UTF8' then
     FUserEncoding := ceUTF8
   else
     Self.FUserEncoding := ceDefault;
@@ -578,7 +578,7 @@ begin
     So this is stopping all encoding detections and increases the performance in
     a high rate. If Varchar fields are fetched you Should use a cast to N-Fields!
     Else all results are invalid!!!!! Just to invoke later questions!}
-  if DefineStatementParameter(Self, 'ResetCodePage', '') = 'UTF8' then
+  if DefineStatementParameter(Self, DSProps_ResetCodePage, '') = 'UTF8' then
     FUserEncoding := ceUTF8
   else
     Self.FUserEncoding := ceDefault;

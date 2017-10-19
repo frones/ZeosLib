@@ -163,7 +163,7 @@ implementation
 uses
   {$IFDEF MSWINDOWS}Windows,{$ENDIF}
   ZODBCToken, ZDbcODBCUtils, ZDbcODBCMetadata, ZDbcODBCStatement, ZDbcUtils,
-  ZPlainDriver, ZSysUtils, ZEncoding, ZFastCode;
+  ZPlainDriver, ZSysUtils, ZEncoding, ZFastCode, ZConnProperties, ZDbcProperties;
 
 { TZODBCDriver }
 
@@ -390,16 +390,16 @@ begin
     CheckODBCError(fPlainDriver.SetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0), fHENV, SQL_HANDLE_ENV, Self);
     fODBCVersion := {%H-}Word(SQL_OV_ODBC3) * 100;
   end;
-  if (Info.Values['codepage'] <> '') or (Info.Values['characterset'] <> '') then begin
+  if (Info.Values[ConnProps_Codepage] <> '') or (Info.Values[ConnProps_Charset] <> '') then begin
     //set a custom codepage to notify zeos about conversion routines note: cp must be equal for all fields else use the W driver
     //first place in a name
     //second use ':' for the codepage
     //third use '/' for the maximum amount of bytes / character equal to database defined charset
     //example: codepage=latin1:1252/1
     //example: characterset=utf8:65001/4
-    CodePageName := Info.Values['codepage'];
+    CodePageName := Info.Values[ConnProps_Codepage];
     if CodePageName = '' then
-      CodePageName := Info.Values['characterset'];
+      CodePageName := Info.Values[ConnProps_Charset];
     IPos := ZFastCode.Pos('/', CodePageName);
     if IPos > 0 then
       CodePageName[IPos] := #0 else
@@ -477,29 +477,32 @@ begin
   if not Closed then
     Exit;
   CheckODBCError(fPLainDriver.AllocHandle(SQL_HANDLE_DBC,fHENV,fHDBC),fHENV, SQL_HANDLE_ENV, Self);
-  if Info.Values['timeout'] <> '' then
+  if Info.Values[ConnProps_Timeout] <> '' then
   begin
-    TimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values['timeout'],0);
+    TimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_Timeout],0);
     CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC, SQL_ATTR_CONNECTION_TIMEOUT, {%H-}Pointer(TimeOut), 0));
     CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC, SQL_ATTR_LOGIN_TIMEOUT, {%H-}Pointer(TimeOut), SQL_LOGIN_TIMEOUT_DEFAULT));
   end;
+
+  DriverCompletion := SQL_DRIVER_NOPROMPT;
+  tmp := Info.Values[ConnProps_DriverCompletion];
+  if tmp <> '' then
+    if tmp = 'SQL_DRIVER_PROMPT' then
+      DriverCompletion := SQL_DRIVER_PROMPT
+    else if tmp = 'SQL_DRIVER_COMPLETE' then
+      DriverCompletion := SQL_DRIVER_COMPLETE
+    else if tmp = 'SQL_DRIVER_COMPLETE_REQUIRED' then
+      DriverCompletion := SQL_DRIVER_COMPLETE_REQUIRED;
+
   ConnectStrings := SplitString(DataBase, ';');
-  if StrToBoolEx(ConnectStrings.Values['Trusted_Connection']) then
+  if StrToBoolEx(ConnectStrings.Values[ConnProps_TrustedConnection]) then
     tmp := DataBase
   else
   begin
-    ConnectStrings.Values['Uid'] := User;
-    ConnectStrings.Values['Pwd'] := PassWord;
+    ConnectStrings.Values[ConnProps_UID] := User;
+    ConnectStrings.Values[ConnProps_PWD] := PassWord;
     tmp := ComposeString(ConnectStrings, ';');
   end;
-  DriverCompletion := SQL_DRIVER_NOPROMPT;
-  if Info.Values['DriverCompletion'] <> '' then
-    if Info.Values['DriverCompletion'] = 'SQL_DRIVER_PROMPT' then
-      DriverCompletion := SQL_DRIVER_PROMPT
-    else if Info.Values['DriverCompletion'] = 'SQL_DRIVER_COMPLETE' then
-      DriverCompletion := SQL_DRIVER_COMPLETE
-    else if Info.Values['DriverCompletion'] = 'SQL_DRIVER_COMPLETE_REQUIRED' then
-      DriverCompletion := SQL_DRIVER_COMPLETE_REQUIRED;
 
   SetLength(OutConnectString, 1024);
   try

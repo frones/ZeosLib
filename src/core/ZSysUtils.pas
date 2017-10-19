@@ -69,6 +69,14 @@ type
     procedure Sort(Compare: TZListSortCompare);
   end;
 
+const
+  StrFalse = 'False';
+  StrTrue = 'True';
+  BoolStrInts: array[Boolean] of string = ('0', '1');
+  BoolStrs: array[Boolean] of string = (StrFalse, StrTrue);
+  BoolStrsRaw: array[Boolean] of RawByteString = (RawByteString(StrFalse), RawByteString(StrTrue));
+  BoolStrsW: array[Boolean] of ZWideString = (ZWideString(StrFalse), ZWideString(StrTrue));
+
 var
   TwoDigitLookupHexW: packed array[Low(Byte)..High(Byte)] of Word;
   TwoDigitLookupHexLW: packed array[Low(Byte)..High(Byte)] of LongWord;
@@ -204,7 +212,7 @@ function BufferToBytes(Buffer: Pointer; Length: LongInt): TBytes;
   Converts a string into boolean value.
   @param Str a RawByteString value.
   @param CheckInt Check for "0" char too?
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
 function StrToBoolEx(Str: RawByteString; const CheckInt: Boolean = True): Boolean; overload;
 
@@ -213,7 +221,7 @@ function StrToBoolEx(Str: RawByteString; const CheckInt: Boolean = True): Boolea
   @param Str a PAnsiChar value.
   @param CheckInt Check for "0" char too?
   @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
 function StrToBoolEx(Str: PAnsiChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
@@ -221,7 +229,7 @@ function StrToBoolEx(Str: PAnsiChar; const CheckInt: Boolean = True;
 {**
   Converts a string into boolean value.
   @param Str a ZWideString value.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
 function StrToBoolEx(Str: ZWideString; const CheckInt: Boolean = True): Boolean; overload;
 
@@ -230,7 +238,7 @@ function StrToBoolEx(Str: ZWideString; const CheckInt: Boolean = True): Boolean;
   @param Str a PWideChar value.
   @param CheckInt Check for "0" char too?
   @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
 function StrToBoolEx(Str: PWideChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
@@ -240,14 +248,14 @@ function StrToBoolEx(Str: PWideChar; const CheckInt: Boolean = True;
   @param Bool a boolean value.
   @return <code>"True"</code> or <code>"False"</code>
 }
-function BoolToUnicodeEx(Value: Boolean): ZWideString;
+function BoolToUnicodeEx(Value: Boolean): ZWideString; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 {**
   Converts a boolean into RawByteString value.
   @param Bool a boolean value.
   @return <code>"True"</code> or <code>"False"</code>
 }
-function BoolToRawEx(Value: Boolean): RawByteString;
+function BoolToRawEx(Value: Boolean): RawByteString; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 {$IFDEF ENABLE_POSTGRESQL}
 {**
@@ -1303,7 +1311,7 @@ end;
 {**
   Converts a string into boolean value.
   @param Str a RawByteString value.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
 function StrToBoolEx(Str: RawByteString; const CheckInt: Boolean = True): Boolean;
 begin
@@ -1315,7 +1323,7 @@ end;
   @param Str a PAnsiChar value.
   @param CheckInt Check for "0" char too?
   @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
 function StrToBoolEx(Str: PAnsiChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean;
@@ -1503,10 +1511,7 @@ end;
 }
 function BoolToUnicodeEx(Value: Boolean): ZWideString;
 begin
-  if Value then
-    Result := 'True'
-  else
-    Result := 'False';
+  Result := BoolStrsW[Value];
 end;
 
 {**
@@ -1516,10 +1521,7 @@ end;
 }
 function BoolToRawEx(Value: Boolean): RawByteString;
 begin
-  if Value then
-    Result := 'True'
-  else
-    Result := 'False';
+  Result := BoolStrsRaw[Value];
 end;
 
 {$IFDEF ENABLE_POSTGRESQL}

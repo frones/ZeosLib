@@ -195,7 +195,7 @@ type
 
 implementation
 
-uses Math, ZMessages, ZDatasetUtils;
+uses Math, ZMessages, ZDatasetUtils, ZDbcProperties;
 
 { TZAbstractDataset }
 
@@ -316,13 +316,13 @@ begin
 
     { Sets update mode property.}
     case FUpdateMode of
-      umUpdateAll: Temp.Values['update'] := 'all';
-      umUpdateChanged: Temp.Values['update'] := 'changed';
+      umUpdateAll: Temp.Values[DSProps_Update] := 'all';
+      umUpdateChanged: Temp.Values[DSProps_Update] := 'changed';
     end;
     { Sets where mode property. }
     case FWhereMode of
-      wmWhereAll: Temp.Values['where'] := 'all';
-      wmWhereKeyOnly: Temp.Values['where'] := 'keyonly';
+      wmWhereAll: Temp.Values[DSProps_Where] := 'all';
+      wmWhereKeyOnly: Temp.Values[DSProps_Where] := 'keyonly';
     end;
 
     Result := inherited CreateStatement(SQL, Temp);
@@ -812,8 +812,8 @@ var
     FieldRefs: TObjectDynArray;
     OnlyDataFields: Boolean;
   begin
-    if Properties.Values['KeyFields'] <> '' then
-      KeyFields := Properties.Values['KeyFields']
+    if Properties.Values[DSProps_KeyFields] <> '' then
+      KeyFields := Properties.Values[DSProps_KeyFields]
     else
       KeyFields := DefineKeyFields(Fields);
     FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields);

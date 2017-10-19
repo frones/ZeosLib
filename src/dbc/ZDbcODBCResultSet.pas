@@ -202,7 +202,7 @@ const
 implementation
 
 uses Math,
-  ZMessages, ZDbcODBCUtils, ZEncoding, ZDbcODBCStatement;
+  ZMessages, ZDbcODBCUtils, ZEncoding, ZDbcODBCStatement, ZConnProperties, ZDbcProperties;
 
 { TAbstractODBCResultSet }
 
@@ -382,8 +382,8 @@ constructor TAbstractODBCResultSet.CreateForMetadataCall(
 begin
   StmtHandle := nil;
   Create(nil, StmtHandle, ConnectionHandle, '', Connection,
-    {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values['internal_buffer_size'], 131072), //by default 128KB
-    {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values['chunk_size'], 4096), False);
+    {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_InternalBufSize], 131072), //by default 128KB
+    {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_ChunkSize], 4096), False);
   Connection.CheckDbcError(fPlainDriver.AllocHandle(SQL_HANDLE_STMT, ConnectionHandle, StmtHandle));
 end;
 

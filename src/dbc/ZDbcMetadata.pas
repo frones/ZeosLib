@@ -748,7 +748,7 @@ var
 
 implementation
 
-uses ZFastCode, ZVariant, ZCollections, ZMessages;
+uses ZFastCode, ZVariant, ZCollections, ZMessages, ZConnProperties;
 
 { TZAbstractDatabaseInfo }
 
@@ -775,8 +775,8 @@ constructor TZAbstractDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMeta
 begin
   inherited Create;
   FMetadata := Metadata;
-  if FMetaData.FUrl.Properties.IndexOfName('identifier_quotes') > -1 then //prevent to loose emty quotes '' !!!
-    FIdentifierQuotes := FMetaData.FUrl.Properties.Values['identifier_quotes']
+  if FMetaData.FUrl.Properties.IndexOfName(ConnProps_IdentifierQuotes) > -1 then //prevent to loose emty quotes '' !!!
+    FIdentifierQuotes := FMetaData.FUrl.Properties.Values[ConnProps_IdentifierQuotes]
   else
     if IdentifierQuotes = '' then
       FIdentifierQuotes := '"'
