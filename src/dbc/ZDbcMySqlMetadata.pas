@@ -1268,7 +1268,7 @@ begin
               end
               else if (MySQLType = stBoolean) and (TypeName = 'enum') then
               begin
-                DefaultValue := BoolStrInts[ (DefaultValue = 'y') or (DefaultValue = 'Y') ];
+                DefaultValue := BoolStrIntsRaw[ (DefaultValue = 'y') or (DefaultValue = 'Y') ];
               end;
               Result.UpdateRawByteString(TableColColumnColDefIndex, DefaultValue);
             end;

@@ -147,9 +147,8 @@ implementation
 uses
   Variants, ComObj, Math,
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
-  ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet,
-  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages, ZDbcProperties
-  {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
+  ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZFastCode,
+  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages, ZDbcProperties;
 
 { TZAdoPreparedStatement }
 

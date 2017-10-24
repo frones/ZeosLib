@@ -73,6 +73,7 @@ const
   StrFalse = 'False';
   StrTrue = 'True';
   BoolStrInts: array[Boolean] of string = ('0', '1');
+  BoolStrIntsRaw: array[Boolean] of RawByteString = ('0', '1');
   BoolStrs: array[Boolean] of string = (StrFalse, StrTrue);
   BoolStrsRaw: array[Boolean] of RawByteString = (RawByteString(StrFalse), RawByteString(StrTrue));
   BoolStrsW: array[Boolean] of ZWideString = (ZWideString(StrFalse), ZWideString(StrTrue));

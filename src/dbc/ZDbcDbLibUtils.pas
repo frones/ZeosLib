@@ -335,7 +335,7 @@ begin
   begin
     case ParamType of
       stBoolean:
-        Result := BoolStrInts[ClientVarManager.GetAsBoolean(Value)];
+        Result := BoolStrIntsRaw[ClientVarManager.GetAsBoolean(Value)];
       stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
       stFloat, stDouble, stCurrency, stBigDecimal:
         Result := ClientVarManager.GetAsRawByteString(Value);

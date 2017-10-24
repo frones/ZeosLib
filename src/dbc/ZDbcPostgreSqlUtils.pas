@@ -749,7 +749,7 @@ begin
   begin
     case InParamType of
       stBoolean:
-        Result := BoolStrsUp[SoftVarManager.GetAsBoolean(Value)];
+        Result := BoolStrsUpRaw[SoftVarManager.GetAsBoolean(Value)];
       stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong,
       stFloat, stDouble, stCurrency, stBigDecimal:
         begin

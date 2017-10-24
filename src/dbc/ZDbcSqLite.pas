@@ -334,7 +334,7 @@ begin
     if Info.Values[ConnProps_ForeignKeys] <> '' then
     begin
       SQL := 'PRAGMA foreign_keys = ' +
-        BoolStrInts[StrToBoolEx(Info.Values[ConnProps_ForeignKeys])];
+        BoolStrIntsRaw[StrToBoolEx(Info.Values[ConnProps_ForeignKeys])];
       ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
       CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
       DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, SQL);
