@@ -157,8 +157,7 @@ Such a transaction is startet by the ZEOS Library whenever a connection (method 
 This causes that each database access is done within the context of a running transaction, automatically.
 The so called AutoCommit mode is always on (set to "True").
 This is also the standard behaviour of the corresponding BDE component.
-If AutoCommit is activated then every change of an SQL statement will be confirmed in the
-database by COMMIT ater its successfull execution.
+If AutoCommit is activated then every change of an SQL statement will be confirmed in the database by COMMIT after its successful execution.
 If this behaviour shall be turned off and an explicit transaction shall be started then the method StartTransaction has to be called.
 Within this explicit transaction it is possible to execute a couple of SQL statements that make changes to the database, in succession.
 These statements then can be confirmed as a "group" by COMMIT.
@@ -238,8 +237,8 @@ If it is set the TIL parameters (see IB/FB API reference) you want to add may be
 The following example shows the expansion of a TIL preset to tiNone:
 \begin{verbatim}
 ZConnection.TransactIsolationLevel := tiNone;
-ZConnection.Properties.Add('isc\_tpb\_concurrency');
-ZConnection.Properties.Add('isc\_tpb\_wait');
+ZConnection.Properties.Add('isc_tpb_concurrency');
+ZConnection.Properties.Add('isc_tpb_wait');
 ZConnection.Connect;
 \end{verbatim}
 

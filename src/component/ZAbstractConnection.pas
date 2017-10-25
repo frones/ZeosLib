@@ -164,6 +164,7 @@ type
     procedure SetProperties(Value: TStrings);
     procedure SetTransactIsolationLevel(Value: TZTransactIsolationLevel);
     procedure SetAutoCommit(Value: Boolean);
+    procedure SetReadOnly(Value: Boolean);
     function GetDbcDriver: IZDriver;
     function GetInTransaction: Boolean;
     function GetClientVersion: Integer;
@@ -271,7 +272,7 @@ type
     property Properties: TStrings read GetProperties write SetProperties;
     property AutoCommit: Boolean read FAutoCommit write SetAutoCommit
       default True;
-    property ReadOnly: Boolean read FReadOnly write FReadOnly
+    property ReadOnly: Boolean read FReadOnly write SetReadOnly
       default False;
     property UseMetadata: Boolean read FUseMetaData write SetUseMetadata default true;
     property TransactIsolationLevel: TZTransactIsolationLevel
@@ -606,6 +607,27 @@ begin
     try
       if FConnection <> nil then
         FConnection.SetAutoCommit(Value);
+    finally
+      HideSqlHourGlass
+    end;
+  end;
+end;
+
+{**
+  Sets readonly flag.
+  @param Value readonly flag.
+}
+procedure TZAbstractConnection.SetReadOnly(Value: Boolean);
+begin
+  if FReadOnly <> Value then
+  begin
+    if FExplicitTransactionCounter > 0 then
+      raise Exception.Create(SInvalidOperationInTrans);
+    FReadOnly := Value;
+    ShowSQLHourGlass;
+    try
+      if FConnection <> nil then
+        FConnection.SetReadOnly(Value);
     finally
       HideSqlHourGlass
     end;
