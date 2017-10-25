@@ -74,7 +74,6 @@ type
   {** Implements Ado ResultSet. }
   TZOleDBResultSet = class(TZAbstractResultSet)
   private
-    FEnhancedColInfo: Boolean;
     FInMemoryDataLobs: Boolean;
     FChunkSize: Integer;
     FRowSet: IRowSet;
@@ -102,7 +101,7 @@ type
     procedure Open; override;
   public
     constructor Create(Statement: IZStatement; const SQL: string; RowSet: IRowSet;
-      ZBufferSize, ChunkSize: Integer; InMemoryDataLobs: Boolean; const EnhancedColInfo: Boolean = True);
+      ZBufferSize, ChunkSize: Integer; InMemoryDataLobs: Boolean);
     procedure ResetCursor; override;
     function Next: Boolean; override;
     function IsNull(ColumnIndex: Integer): Boolean; override;
@@ -172,7 +171,7 @@ type
 
 function GetCurrentResultSet(RowSet: IRowSet; Statement: IZStatement;
   Const SQL: String; ConSettings: PZConSettings; BuffSize, ChunkSize: Integer;
-  EnhancedColInfo, InMemoryDataLobs: Boolean; var PCurrRS: Pointer): IZResultSet;
+    InMemoryDataLobs: Boolean; var PCurrRS: Pointer): IZResultSet;
 
 implementation
 
@@ -184,6 +183,9 @@ uses
   Variants, Math, ComObj,
   ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode;
 
+{$IFOPT R+}
+  {$DEFINE WITH_RANGE_CHECK}
+{$ENDIF}
 var
   LobReadObj: TDBObject;
   LobDBBinding: TDBBinding;
@@ -364,13 +366,11 @@ end;
   @param AdoRecordSet a ADO recordset object, the source of the ResultSet.
 }
 constructor TZOleDBResultSet.Create(Statement: IZStatement; const SQL: string;
-  RowSet: IRowSet; ZBufferSize, ChunkSize: Integer; InMemoryDataLobs: Boolean;
-  const EnhancedColInfo: Boolean = True);
+  RowSet: IRowSet; ZBufferSize, ChunkSize: Integer; InMemoryDataLobs: Boolean);
 begin
   inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
   FRowSet := RowSet;
   FZBufferSize := ZBufferSize;
-  FEnhancedColInfo := EnhancedColInfo;
   FAccessor := 0;
   FCurrentBufRowNo := 0;
   FRowsObtained := 0;
@@ -530,7 +530,7 @@ begin
   { Checks for maximum row. }
   Result := False;
   if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or
-    Closed or ((not Closed) and (FRowSet = nil) and  (not (Supports(Statement, IZOleDBPreparedStatement, Stmt) and Stmt.GetNewRowSet(FRowSet)))) then
+    Closed or ((not Closed) and (FRowSet = nil) and (not (Supports(Statement, IZOleDBPreparedStatement, Stmt) and Stmt.GetNewRowSet(FRowSet)))) then
     goto NoSuccess;
 
   if (RowNo = 0) then //fetch Iteration count of rows
@@ -2215,7 +2215,7 @@ end;
 
 function GetCurrentResultSet(RowSet: IRowSet; Statement: IZStatement;
   Const SQL: String; ConSettings: PZConSettings; BuffSize, ChunkSize: Integer;
-  EnhancedColInfo, InMemoryDataLobs: Boolean; var PCurrRS: Pointer): IZResultSet;
+  InMemoryDataLobs: Boolean; var PCurrRS: Pointer): IZResultSet;
 var
   CachedResolver: IZCachedResolver;
   NativeResultSet: TZOleDBResultSet;
@@ -2225,7 +2225,7 @@ begin
   if Assigned(RowSet) then
   begin
     NativeResultSet := TZOleDBResultSet.Create(Statement, SQL, RowSet,
-      BuffSize, ChunkSize, InMemoryDataLobs, EnhancedColInfo);
+      BuffSize, ChunkSize, InMemoryDataLobs);
     if (Statement.GetResultSetConcurrency = rcUpdatable) or
        (Statement.GetResultSetType <> rtForwardOnly) then
     begin

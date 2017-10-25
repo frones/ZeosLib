@@ -75,6 +75,8 @@ const
   VARIANT_TRUE = -1;
   VARIANT_FALSE = 0;
 
+function ConvertSQLTypeToOleDBType(SQLType: TZSQLType): DBTYPEENUM;
+
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM; IsLong: Boolean;
   CtrlsCPType: TZControlsCodePage): TZSQLType; overload;
 
@@ -92,6 +94,10 @@ function PrepareOleParamDBBindings(DBUPARAMS: DB_UPARAMS;
   var DBBindingArray: TDBBindingDynArray; const InParamTypes: TZSQLTypeArray;
   ParamInfoArray: PDBParamInfoArray; var TempLobs: TInterfacesDynArray): DBROWOFFSET;
 
+procedure InitOleParamDBBindings(var DBBindingArray: TDBParamInfoDynArray;
+  const InParamTypes: TZSQLTypeArray; InParamValues: TZVariantDynArray;
+  ClientVarManager: IZClientVariantManager);
+
 function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS; InMemoryData: Boolean;
   var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO;
   var LobColIndexArray: TIntegerDynArray): DBROWOFFSET;
@@ -108,7 +114,7 @@ procedure OleBindArrayParams(const DBParams: TDBParams; ArrayOffSet: DB_UPARAMS;
   const SupportsMilliseconds: Boolean = True);
 
 procedure SetOleCommandProperties(Command: ICommandText; TimeOut: SmallInt;
-  Provider: TZServerProvider; SupportsMARSConnection: Boolean);
+  Provider: TZServerProvider; SupportsMARSConnection, Prepare: Boolean);
 
 function ProviderNamePrefix2ServerProvider(ProviderNamePrefix: String): TZServerProvider;
 
@@ -118,6 +124,38 @@ uses
   {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
   ActiveX, Windows, Math, TypInfo,
   ZEncoding, ZDbcLogging, ZDbcUtils, ZDbcResultSet, ZFastCode, ZSysUtils, ZMessages;
+
+function ConvertSQLTypeToOleDBType(SQLType: TZSQLType): DBTYPEENUM;
+begin
+  case SQLType of
+    stBoolean:        Result := DBTYPE_BOOL;
+    stByte:           Result := DBTYPE_UI1;
+    stShort:          Result := DBTYPE_I1;
+    stWord:           Result := DBTYPE_UI2;
+    stSmall:          Result := DBTYPE_I2;
+    stLongWord:       Result := DBTYPE_UI4;
+    stInteger:        Result := DBTYPE_I4;
+    stULong:          Result := DBTYPE_UI8;
+    stLong:           Result := DBTYPE_I8;
+    stFloat:          Result := DBTYPE_R4;
+    stDouble:         Result := DBTYPE_R8;
+    stCurrency:       Result := DBTYPE_CY;
+    stBigDecimal:     Result := DBTYPE_R8;
+    stDate:           Result := DBTYPE_DBDATE;
+    stTime:           Result := DBTYPE_DBTIME2;
+    stTimestamp:      Result := DBTYPE_DATE;
+    stGUID:           Result := DBTYPE_GUID;
+    stString:         Result := DBTYPE_WSTR;
+    stUnicodeString:  Result := DBTYPE_WSTR;
+    stBytes:          Result := DBTYPE_BYTES;
+    stAsciiStream:    Result := DBTYPE_WSTR;
+    stUnicodeStream:  Result := DBTYPE_WSTR;
+    stBinaryStream:   Result := DBTYPE_BYTES;
+    stArray:          Result := DBTYPE_VARIANT;
+    stDataSet:        Result := DBTYPE_TABLE;
+    else Result := DBTYPE_VARIANT;
+  end;
+end;
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM; IsLong: Boolean;
   CtrlsCPType: TZControlsCodePage): TZSQLType;
@@ -581,6 +619,31 @@ begin
     Inc({%H-}NativeUInt(DBCOLUMNINFO), SizeOf(TDBCOLUMNINFO));
   end;
   Result := DBBindingArray[DBUPARAMS -1].obValue + DBBindingArray[DBUPARAMS -1].cbMaxLen;
+end;
+
+procedure InitOleParamDBBindings(var DBBindingArray: TDBParamInfoDynArray;
+  const InParamTypes: TZSQLTypeArray; InParamValues: TZVariantDynArray;
+  ClientVarManager: IZClientVariantManager);
+var I: Integer;
+begin
+  SetLength(DBBindingArray, Length(InParamTypes));
+  for I := 0 to High(InParamTypes) do begin
+    DBBindingArray[i].iOrdinal := i+1;
+    DBBindingArray[i].wType := ConvertSQLTypeToOleDBType(InParamTypes[i]);
+    DBBindingArray[i].ulParamSize := ZSQLTypeToBuffSize(InParamTypes[i]);
+    DBBindingArray[i].dwFlags := STGM_READ or DBPARAMFLAGS_ISINPUT;
+    DBBindingArray[i].pwszName := nil;
+    DBBindingArray[i].pTypeInfo := nil;
+    DBBindingArray[i].bPrecision := DBBindingArray[i].ulParamSize;
+    if (DBBindingArray[i].ulParamSize = 0) then begin
+      if InParamTypes[i] in [stString, stUnicodeString] then
+        DBBindingArray[i].ulParamSize := Min(255, Length(ClientVarManager.GetAsUnicodeString(InParamValues[i])) shl 3 shr 1)
+      else if InParamTypes[i] = stBytes then
+        DBBindingArray[i].ulParamSize := Min(255, Length(ClientVarManager.GetAsBytes(InParamValues[i])) shl 3 shr 1)
+      else if InParamTypes[i] in [stAsciiStream, stUnicodeStream, stBinaryStream] then
+        DBBindingArray[i].dwFlags := DBBindingArray[i].dwFlags and DBPARAMFLAGS_ISLONG;
+    end;
+  end;
 end;
 
 {$HINTS OFF}
@@ -2019,7 +2082,7 @@ end;
 {$HINTS ON}
 
 procedure SetOleCommandProperties(Command: ICommandText; TimeOut: SmallInt;
-  Provider: TZServerProvider; SupportsMARSConnection: Boolean);
+  Provider: TZServerProvider; SupportsMARSConnection: Boolean; Prepare: Boolean);
 var
   FCmdProps: ICommandProperties;
   rgCommonProperties: array[0..20] of TDBProp;
@@ -2058,7 +2121,10 @@ begin
     begin
       //turn off deferred prepare -> raise exception on Prepare if command can't be executed!
       //http://msdn.microsoft.com/de-de/library/ms130779.aspx
-      SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, VARIANT_FALSE);
+      if Prepare then
+        SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, VARIANT_FALSE)
+      else
+        SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, VARIANT_TRUE);
     end else begin
       //to avoid http://support.microsoft.com/kb/272358/de we need a
       //FAST_FORWARD(RO) server cursor

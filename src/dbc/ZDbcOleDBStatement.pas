@@ -81,7 +81,7 @@ type
   private
     FMultipleResults: IMultipleResults;
     FZBufferSize, fStmtTimeOut: Integer;
-    FEnhancedColInfo: Boolean;
+    fDEFERPREPARE: Boolean;
     FInMemoryDataLobs: Boolean;
     FCommand: ICommandText;
     FParameterAccessor: IAccessor;
@@ -144,9 +144,9 @@ constructor TZOleDBPreparedStatement.Create(Connection: IZConnection;
 begin
   inherited Create(Connection, SQL, Info);
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //by default 128KB
-  FEnhancedColInfo := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'enhanced_column_info', 'True'));
   FInMemoryDataLobs := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'InMemoryDataLobs', 'False'));
   fStmtTimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'StatementTimeOut', ''), 60); //execution timeout in seconds by default 1 min
+  fDEFERPREPARE := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'preferprepared', 'True'));
   FMultipleResults := nil;
 end;
 
@@ -203,10 +203,11 @@ begin
   begin
     FCommand := (Connection as IZOleDBConnection).CreateCommand;
     try
-      SetOleCommandProperties(FCommand, fStmtTimeOut, Connection.GetServerProvider, (Connection as IZOleDBConnection).SupportsMARSConnection);
+      SetOleCommandProperties(FCommand, fStmtTimeOut, Connection.GetServerProvider, (Connection as IZOleDBConnection).SupportsMARSConnection, fDEFERPREPARE);
       OleDBCheck(fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL)));
       OleCheck(fCommand.QueryInterface(IID_ICommandPrepare, FOlePrepareCommand));
-      OleDBCheck(FOlePrepareCommand.Prepare(0)); //unknown count of executions
+      if fDEFERPREPARE then
+        OleDBCheck(FOlePrepareCommand.Prepare(0)); //unknown count of executions
     finally
       FOlePrepareCommand := nil;
     end;
@@ -231,6 +232,7 @@ var
   FNamesBuffer: PPOleStr; //we don't need this here except as param!
   FParamInfoArray: PDBParamInfoArray;
   FCommandWithParameters: ICommandWithParameters;
+  DescripedDBPARAMINFO: TDBParamInfoDynArray;
 begin
   {check out the Parameter informations }
   if InParamCount >0 then
@@ -238,26 +240,30 @@ begin
     FParamInfoArray := nil; FNamesBuffer := nil;
     OleCheck(FCommand.QueryInterface(IID_ICommandWithParameters, FCommandWithParameters));
     try
-      FCommandWithParameters.GetParameterInfo(FDBUPARAMS,PDBPARAMINFO(FParamInfoArray), FNamesBuffer);
+      if fDEFERPREPARE then
+        FCommandWithParameters.GetParameterInfo(FDBUPARAMS,PDBPARAMINFO(FParamInfoArray), FNamesBuffer)
+      else begin
+        FDBUPARAMS := InParamCount;
+        InitOleParamDBBindings(DescripedDBPARAMINFO, InParamTypes, InParamValues, ClientVarManager);
+        FParamInfoArray := Pointer(DescripedDBPARAMINFO);
+      end;
       Assert(FDBUPARAMS = Cardinal(InParamCount), SInvalidInputParameterCount);
-      if FDBUPARAMS > 0 then
-      begin
+      if FDBUPARAMS > 0 then begin
         OleCheck(FCommand.QueryInterface(IID_IAccessor, FParameterAccessor));
         SetLength(FDBBINDSTATUSArray, FDBUPARAMS);
         FRowSize := PrepareOleParamDBBindings(FDBUPARAMS, FDBBindingArray,
           InParamTypes, FParamInfoArray, FTempLobs);
         CalcParamSetsAndBufferSize;
         Assert(FDBParams.hAccessor = 1, 'Accessor handle should be unique!');
-      end
-      else
-      begin
+      end else begin
         { init ! }
         FDBParams.pData := nil;
         FDBParams.cParamSets := 0;
         FDBParams.hAccessor := 0;
       end;
     finally
-      if Assigned(FParamInfoArray) then (GetConnection as IZOleDBConnection).GetMalloc.Free(FParamInfoArray);
+      if Assigned(FParamInfoArray) and (Pointer(FParamInfoArray) <> Pointer(DescripedDBPARAMINFO)) then
+        (GetConnection as IZOleDBConnection).GetMalloc.Free(FParamInfoArray);
       if Assigned(FNamesBuffer) then (GetConnection as IZOleDBConnection).GetMalloc.Free(FNamesBuffer);
       FCommandWithParameters := nil;
     end;
@@ -379,13 +385,13 @@ begin
           FDBParams,@FRowsAffected,@FMultipleResults));
         if Assigned(FMultipleResults) then
           OleDbCheck(FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
-            IID_IRowset, @FRowsAffected, @FRowSet));
+            IID_IRowset, @FRowsAffected, @FRowSet), FDBBINDSTATUSArray);
       end
       else
         OleDbCheck((FCommand as ICommand).Execute(nil, IID_IRowset,
-          FDBParams,@FRowsAffected,@FRowSet));
+          FDBParams,@FRowsAffected,@FRowSet), FDBBINDSTATUSArray);
       Result := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
-        ChunkSize, FEnhancedColInfo, FInMemoryDataLobs, FOpenResultSet);
+        ChunkSize, FInMemoryDataLobs, FOpenResultSet);
       LastUpdateCount := FRowsAffected;
       if not Assigned(Result) then
         while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
@@ -455,7 +461,7 @@ begin
         FDBParams,@FRowsAffected,@FRowSet));
 
     LastResultSet := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
-      ChunkSize, FEnhancedColInfo, FInMemoryDataLobs, FOpenResultSet);
+      ChunkSize, FInMemoryDataLobs, FOpenResultSet);
     LastUpdateCount := LastUpdateCount + FRowsAffected;
     Result := Assigned(LastResultSet);
   finally
@@ -492,7 +498,7 @@ begin
     FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
       IID_IRowset, @FRowsAffected, @FRowSet);
     LastResultSet := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
-      ChunkSize, FEnhancedColInfo, FInMemoryDataLobs, FOpenResultSet);
+      ChunkSize, FInMemoryDataLobs, FOpenResultSet);
     Result := Assigned(LastResultSet);
     LastUpdateCount := FRowsAffected;
   end;
@@ -507,7 +513,7 @@ begin
     FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
       IID_IRowset, @FRowsAffected, @FRowSet);
     RS := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
-      ChunkSize, FEnhancedColInfo, FInMemoryDataLobs, FOpenResultSet);
+      ChunkSize, FInMemoryDataLobs, FOpenResultSet);
     Result := Assigned(RS);
     LastUpdateCount := FRowsAffected;
   end
