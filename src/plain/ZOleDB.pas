@@ -1596,6 +1596,7 @@ type
   end;
   PDBParamInfoArray = ^TDBParamInfoArray;
   TDBParamInfoArray = array[0..MAXBOUND] of TDBPARAMINFO;
+  TDBParamInfoDynArray = array of TDBPARAMINFO;
 
   PHACCESSOR = ^HACCESSOR;
   HACCESSOR = NativeUInt;
