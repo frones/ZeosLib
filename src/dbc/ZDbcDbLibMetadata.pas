@@ -1858,10 +1858,14 @@ begin
     TableName := Result.GetString(TableNameIndex);
 
     Result.BeforeFirst;
-    with GetStatement.ExecuteQuery('select c.colid, c.name, c.type, c.prec, '+
-      'c.scale, c.colstat, c.status, c.iscomputed from syscolumns c inner join'
-      + ' sysobjects o on (o.id = c.id) where o.name COLLATE Latin1_General_CS_AS = '+
-      AnsiQuotedStr(TableName, #39)+' and c.number=0 order by colid') do
+    with GetStatement.ExecuteQuery(
+      Format('select c.colid, c.name, c.type, c.prec, c.scale, c.colstat, c.status, c.iscomputed '
+      + ' from syscolumns c inner join sysobjects o '
+      + ' on (o.id = c.id) '
+      + ' where o.name COLLATE Latin1_General_CS_AS = %s and c.number=0 '
+      + '     and o.uid=SCHEMA_ID(%s) '
+      + ' order by colid ',
+      [DeComposeObjectString(TableNamePattern),DeComposeObjectString(SchemaPattern)])) do
       // hint http://blog.sqlauthority.com/2007/04/30/case-sensitive-sql-query-search/ for the collation setting to get a case sensitive behavior
     begin
       while Next do
