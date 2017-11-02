@@ -2180,7 +2180,7 @@ begin
   Result := spMSSQL;
   ProviderNamePrefix := UpperCase(ProviderNamePrefix);
   for i := low(KnownDriverName2TypeMap) to high(KnownDriverName2TypeMap) do
-    if StartsWith(ProviderNamePrefix, KnownDriverName2TypeMap[i].ProviderNamePrefix) then begin
+    if StartsWith(UpperCase(ProviderNamePrefix), KnownDriverName2TypeMap[i].ProviderNamePrefix) then begin
       Result := KnownDriverName2TypeMap[i].Provider;
       Break;
     end;
