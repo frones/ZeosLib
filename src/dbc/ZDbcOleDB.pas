@@ -96,6 +96,7 @@ type
     FServerProvider: TZServerProvider;
     fPendingStmts: TList; //weak reference to pending stmts
     fTransaction: ITransactionLocal;
+    fCatalog: String;
     procedure StopTransaction;
     procedure SetProviderProps(DBinit: Boolean);
   protected
@@ -125,12 +126,12 @@ type
     procedure Open; override;
     procedure Close; override;
 
-    {procedure SetReadOnly(ReadOnly: Boolean); override;
+    {procedure SetReadOnly(ReadOnly: Boolean); override; }
 
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
-    function GetWarnings: EZSQLWarning; override;
+    {function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;}
 
     function GetServerProvider: TZServerProvider; override;
@@ -288,6 +289,21 @@ begin
     inherited SetAutoCommit(Value);
     StartTransaction;
   end;
+end;
+
+{**
+  Sets a catalog name in order to select
+  a subspace of this Connection's database in which to work.
+  If the driver does not support catalogs, it will
+  silently ignore this request.
+}
+procedure TZOleDBConnection.SetCatalog(const Catalog: string);
+begin
+  if Catalog <> '' then
+    if GetServerProvider in [spSybase,spMSSQL] then begin
+      CreateRegularStatement(info).ExecuteUpdate('use '+Catalog);
+      fCatalog := Catalog;
+    end;
 end;
 
 procedure TZOleDBConnection.SetProviderProps(DBinit: Boolean);
@@ -470,6 +486,15 @@ begin
   Result := GetSQLHexString(Pointer(Value), Length(Value), True);
   if GetAutoEncodeStrings then
     Result := GetDriver.GetTokenizer.GetEscapeString(Result)
+end;
+
+{**
+  Returns the Connection's current catalog name.
+  @return the current catalog name or null
+}
+function TZOleDBConnection.GetCatalog: string;
+begin
+  Result := fCatalog;
 end;
 
 {**
@@ -696,6 +721,7 @@ begin
       ConnectString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(ComposeString(ConnectStrings, ';'));
     end;
     FServerProvider := ProviderNamePrefix2ServerProvider(ConnectStrings.Values[ConnProps_Provider]);
+    fCatalog := ConnectStrings.Values[ConnProps_Initial_Catalog];
     ConnectStrings.Free;
     OleCheck(DataInitialize.GetDataSource(nil,CLSCTX_INPROC_SERVER,
       Pointer(ConnectString), IID_IDBInitialize,IUnknown(fDBInitialize)));

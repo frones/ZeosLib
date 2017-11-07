@@ -141,6 +141,7 @@ const
   // Type: STRING
   // ?
   ConnProps_Provider = 'Provider';
+  ConnProps_Initial_Catalog = 'Initial Catalog';
 {$IFEND}
 
   { Parameters specific to a single DBC }
