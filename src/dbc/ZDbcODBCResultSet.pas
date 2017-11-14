@@ -103,10 +103,10 @@ type
     function InternalGetRaw(ColumnIndex: SQLUSMALLINT; CodePage: Word): RawByteString; virtual; abstract;
     function InternalGetUnicode(ColumnIndex: SQLUSMALLINT): ZWideString; virtual; abstract;
   public
-    constructor Create(Statement: IZStatement; var StmtHandle: SQLHSTMT;
-      ConnectionHandle: SQLHDBC; SQL: String; Connection: IZODBCConnection;
+    constructor Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
+      ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
       ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean = True); virtual;
-    constructor CreateForMetadataCall(var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; Connection: IZODBCConnection); virtual;
+    constructor CreateForMetadataCall(var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; const Connection: IZODBCConnection); virtual;
     procedure Open; override;
     procedure Close; override;
 
@@ -153,8 +153,8 @@ type
     function InternalGetRaw(ColumnIndex: SQLUSMALLINT; CodePage: Word): RawByteString; override;
     function InternalGetUnicode(ColumnIndex: SQLUSMALLINT): ZWideString; override;
   public
-    constructor Create(Statement: IZStatement; var StmtHandle: SQLHSTMT;
-      ConnectionHandle: SQLHDBC; SQL: String; Connection: IZODBCConnection;
+    constructor Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
+      ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
       ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean = True); override;
     function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; override;
   end;
@@ -170,8 +170,8 @@ type
     function InternalGetRaw(ColumnIndex: SQLUSMALLINT; CodePage: Word): RawByteString; override;
     function InternalGetUnicode(ColumnIndex: SQLUSMALLINT): ZWideString; override;
   public
-    constructor Create(Statement: IZStatement; var StmtHandle: SQLHSTMT;
-      ConnectionHandle: SQLHDBC; SQL: String; Connection: IZODBCConnection;
+    constructor Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
+      ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
       ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean = True); override;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
   end;
@@ -179,20 +179,20 @@ type
   TZODBCBlob = class(TZAbstractBlob)
   public
     constructor Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
-      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; PlainDriver: IODBC3BasePlainDriver);
+      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: IODBC3BasePlainDriver);
   end;
 
   TZODBCClobA = class(TZAbstractCLob)
   public
     constructor Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
-      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; PlainDriver: IODBC3BasePlainDriver;
+      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: IODBC3BasePlainDriver;
       ConSettings: PZConSettings);
   end;
 
   TZODBCClobW = class(TZAbstractCLob)
   public
     constructor Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
-      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; PlainDriver: IODBC3BasePlainDriver;
+      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: IODBC3BasePlainDriver;
       ConSettings: PZConSettings);
   end;
 
@@ -353,8 +353,8 @@ begin
 end;
 {$ENDIF USE_SYNCOMMONS}
 
-constructor TAbstractODBCResultSet.Create(Statement: IZStatement;
-  var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; SQL: String; Connection: IZODBCConnection;
+constructor TAbstractODBCResultSet.Create(const Statement: IZStatement;
+  var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
   ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean = True);
 var Supported: SQLUSMALLINT;
 begin
@@ -378,7 +378,7 @@ begin
 end;
 
 constructor TAbstractODBCResultSet.CreateForMetadataCall(
-  var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; Connection: IZODBCConnection);
+  var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; const Connection: IZODBCConnection);
 begin
   StmtHandle := nil;
   Create(nil, StmtHandle, ConnectionHandle, '', Connection,
@@ -1544,8 +1544,8 @@ begin
   else Result := '';
 end;
 
-constructor TODBCResultSetW.Create(Statement: IZStatement; var StmtHandle: SQLHSTMT;
-  ConnectionHandle: SQLHDBC; SQL: String; Connection: IZODBCConnection;
+constructor TODBCResultSetW.Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
+  ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
   ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean);
 begin
   fPlainW := Connection.GetPLainDriver as IODBC3UnicodePlainDriver;
@@ -1657,8 +1657,8 @@ begin
   else Result := '';
 end;
 
-constructor TODBCResultSetA.Create(Statement: IZStatement; var StmtHandle: SQLHSTMT;
-  ConnectionHandle: SQLHDBC; SQL: String; Connection: IZODBCConnection;
+constructor TODBCResultSetA.Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
+  ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
   ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean);
 begin
   fPlainA := Connection.GetPLainDriver as IODBC3RawPlainDriver;
@@ -1763,7 +1763,7 @@ end;
 { TZODBCBlob }
 
 constructor TZODBCBlob.Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
-  StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; PlainDriver: IODBC3BasePlainDriver);
+  StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: IODBC3BasePlainDriver);
 var
   OffSetPtr: PAnsiChar;
   i: Integer;
@@ -1799,7 +1799,7 @@ end;
 
 constructor TZODBCClobA.Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
   StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer;
-  PlainDriver: IODBC3BasePlainDriver; ConSettings: PZConSettings);
+  const PlainDriver: IODBC3BasePlainDriver; ConSettings: PZConSettings);
 var
   OffSetPtr: PAnsiChar;
   i: Integer;
@@ -1841,7 +1841,7 @@ end;
 
 constructor TZODBCClobW.Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
   StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer;
-  PlainDriver: IODBC3BasePlainDriver; ConSettings: PZConSettings);
+  const PlainDriver: IODBC3BasePlainDriver; ConSettings: PZConSettings);
 var
   OffSetPtr: PAnsiChar;
   I: Integer;

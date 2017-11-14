@@ -83,9 +83,9 @@ type
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
-    constructor Create(Statement: IZStatement; const SQL: string;
+    constructor Create(const Statement: IZStatement; const SQL: string;
       var StmtNum: SmallInt; const CursorName: AnsiString;
-      SqlData: IZASASQLDA; CachedBlob: boolean);
+      const SqlData: IZASASQLDA; CachedBlob: boolean);
 
     procedure Close; override;
     procedure ResetCursor; override;
@@ -119,8 +119,8 @@ type
 
   TZASAParamererResultSet = Class(TZASAAbstractResultSet)
   public
-    constructor Create(Statement: IZStatement; const SQL: string;
-      var StmtNum: SmallInt; const CursorName: AnsiString; SqlData: IZASASQLDA;
+    constructor Create(const Statement: IZStatement; const SQL: string;
+      var StmtNum: SmallInt; const CursorName: AnsiString; const SqlData: IZASASQLDA;
       CachedBlob: boolean);
     function Next: Boolean; override;
   end;
@@ -142,8 +142,8 @@ type
     FUpdateSqlData: IZASASQLDA;
     procedure PrepareUpdateSQLData;
   public
-    constructor Create(Statement: IZStatement; const SQL: string;
-      var StmtNum: SmallInt; const CursorName: AnsiString; SqlData: IZASASQLDA;
+    constructor Create(const Statement: IZStatement; const SQL: string;
+      var StmtNum: SmallInt; const CursorName: AnsiString; const SqlData: IZASASQLDA;
       CachedBlob: boolean);
 
     procedure Close; override;
@@ -337,9 +337,9 @@ end;
   @param the sql out data previously allocated
   @param the Interbase sql dialect
 }
-constructor TZASAAbstractResultSet.Create(Statement: IZStatement;
+constructor TZASAAbstractResultSet.Create(const Statement: IZStatement;
   const SQL: string; var StmtNum: SmallInt; const CursorName: AnsiString;
-  SqlData: IZASASQLDA; CachedBlob: boolean);
+  const SqlData: IZASASQLDA; CachedBlob: boolean);
 begin
   inherited Create( Statement, SQL, nil,Statement.GetConnection.GetConSettings);
 
@@ -1454,9 +1454,9 @@ end;
 
 { TZASAParamererResultSet }
 
-constructor TZASAParamererResultSet.Create(Statement: IZStatement;
+constructor TZASAParamererResultSet.Create(const Statement: IZStatement;
   const SQL: string; var StmtNum: SmallInt; const CursorName: AnsiString;
-  SqlData: IZASASQLDA; CachedBlob: boolean);
+  const SqlData: IZASASQLDA; CachedBlob: boolean);
 begin
   inherited Create(Statement, SQL, StmtNum, CursorName, SqlData, CachedBlob);
   SetType(rtForwardOnly);
@@ -1631,8 +1631,8 @@ begin
 end;
 
 { TZASACachedResultSet }
-constructor TZASACachedResultSet.Create(Statement: IZStatement; const SQL: string;
-  var StmtNum: SmallInt; const CursorName: AnsiString; SqlData: IZASASQLDA;
+constructor TZASACachedResultSet.Create(const Statement: IZStatement; const SQL: string;
+  var StmtNum: SmallInt; const CursorName: AnsiString; const SqlData: IZASASQLDA;
   CachedBlob: boolean);
 begin
   inherited Create(Statement, SQL, StmtNum, CursorName, SqlData, CachedBlob);

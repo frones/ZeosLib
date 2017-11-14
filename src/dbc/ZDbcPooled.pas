@@ -127,7 +127,7 @@ type
     function GetConnection: IZConnection;
   protected // IZConnection
     FClientCodePage: String;
-    procedure CheckCharEncoding(CharSet: String;
+    procedure CheckCharEncoding(const CharSet: String;
       const DoArrange: Boolean = False);
     function GetClientCodePageInformations: PZCodePage; //EgonHugeist
     function GetClientVariantManager: IZClientVariantManager;
@@ -665,7 +665,7 @@ end;
     default. This means it ignores the choosen Client-CharacterSet and sets a
     "more" Zeos-Compatible Client-CharacterSet if known.
 }
-procedure TZDbcPooledConnection.CheckCharEncoding(CharSet: String;
+procedure TZDbcPooledConnection.CheckCharEncoding(const CharSet: String;
   const DoArrange: Boolean = False);
 begin
   Self.GetConSettings.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(CharSet, DoArrange);

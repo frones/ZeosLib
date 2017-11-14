@@ -71,8 +71,8 @@ type
     FNewValue: Boolean;
     FDefaultValue: string;
   public
-    constructor Create(ColumnIndex: Integer; ColumnName: string;
-      ColumnType: TZSQLType; NewValue: Boolean; DefaultValue: string);
+    constructor Create(ColumnIndex: Integer; const ColumnName: string;
+      ColumnType: TZSQLType; NewValue: Boolean; const DefaultValue: string);
 
     property ColumnIndex: Integer read FColumnIndex write FColumnIndex;
     property ColumnName: string read FColumnName write FColumnName;
@@ -115,10 +115,10 @@ type
     DeleteStatement   : IZPreparedStatement;
 
     procedure CopyResolveParameters(FromList, ToList: TObjectList);
-    function ComposeFullTableName(Catalog, Schema, Table: string): string;
+    function ComposeFullTableName(const Catalog, Schema, Table: string): string;
     function DefineTableName: string;
 
-    function CreateResolverStatement(SQL : String):IZPreparedStatement;
+    function CreateResolverStatement(const SQL : String):IZPreparedStatement;
 
     procedure DefineCalcColumns(Columns: TObjectList;
       RowAccessor: TZRowAccessor);
@@ -129,7 +129,7 @@ type
     procedure DefineWhereAllColumns(Columns: TObjectList; IgnoreKeyColumn: Boolean = False);
     function CheckKeyColumn(ColumnIndex: Integer): Boolean; virtual;
 
-    procedure FillStatement(Statement: IZPreparedStatement;
+    procedure FillStatement(const Statement: IZPreparedStatement;
       Params: TObjectList; OldRowAccessor, NewRowAccessor: TZRowAccessor);
 
     property Connection: IZConnection read FConnection write FConnection;
@@ -148,7 +148,7 @@ type
     property UpdateAll: Boolean read FUpdateAll write FUpdateAll;
 
   public
-    constructor Create(Statement: IZStatement; Metadata: IZResultSetMetadata);
+    constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
     destructor Destroy; override;
 
     function FormWhereClause(Columns: TObjectList;
@@ -161,17 +161,17 @@ type
       OldRowAccessor: TZRowAccessor): string;
     function FormCalculateStatement(Columns: TObjectList): string; virtual;
 
-    procedure CalculateDefaults(Sender: IZCachedResultSet;
+    procedure CalculateDefaults(const Sender: IZCachedResultSet;
       RowAccessor: TZRowAccessor);
-    procedure PostUpdates(Sender: IZCachedResultSet;
+    procedure PostUpdates(const Sender: IZCachedResultSet;
       UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor); virtual;
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet;
+    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet;
       {%H-}UpdateType: TZRowUpdateType;
-      {%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); virtual;
+      {%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); virtual;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure RefreshCurrentRow(Sender: IZCachedResultSet;{%H-}RowAccessor: TZRowAccessor); //FOS+ 07112006
+    procedure RefreshCurrentRow(const Sender: IZCachedResultSet;{%H-}RowAccessor: TZRowAccessor); //FOS+ 07112006
 
   end;
 
@@ -191,7 +191,7 @@ uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZDbcProperties
   @param DefaultValue a default column value to evalute on server.
 }
 constructor TZResolverParameter.Create(ColumnIndex: Integer;
-  ColumnName: string; ColumnType: TZSQLType; NewValue: Boolean; DefaultValue: string);
+  const ColumnName: string; ColumnType: TZSQLType; NewValue: Boolean; const DefaultValue: string);
 begin
   FColumnType := ColumnType;
   FColumnIndex := ColumnIndex;
@@ -206,8 +206,8 @@ end;
   Creates a cached resolver and assignes the main properties.
   @param ResultSet a related ResultSet object.
 }
-constructor TZGenericCachedResolver.Create(Statement: IZStatement;
-  Metadata: IZResultSetMetadata);
+constructor TZGenericCachedResolver.Create(const Statement: IZStatement;
+  const Metadata: IZResultSetMetadata);
 begin
   FStatement := Statement;
   FConnection := Statement.GetConnection;
@@ -283,7 +283,7 @@ end;
   @param Table a table name.
   @return a fully qualified table name.
 }
-function TZGenericCachedResolver.ComposeFullTableName(Catalog, Schema,
+function TZGenericCachedResolver.ComposeFullTableName(const Catalog, Schema,
   Table: string): string;
 begin
   if Table <> '' then
@@ -320,7 +320,7 @@ begin
     raise EZSQLException.Create(SCanNotUpdateThisQueryType);
 end;
 
-function TZGenericCachedResolver.CreateResolverStatement(SQL: String): IZPreparedStatement;
+function TZGenericCachedResolver.CreateResolverStatement(const SQL: String): IZPreparedStatement;
 var
   Temp : TStrings;
 begin
@@ -585,7 +585,7 @@ end;
   @param OldRowAccessor an accessor object to old column values.
   @param NewRowAccessor an accessor object to new column values.
 }
-procedure TZGenericCachedResolver.FillStatement(Statement: IZPreparedStatement;
+procedure TZGenericCachedResolver.FillStatement(const Statement: IZPreparedStatement;
   Params: TObjectList; OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
   I: Integer;
@@ -844,7 +844,7 @@ end;
   @param OldRowAccessor an accessor object to old column values.
   @param NewRowAccessor an accessor object to new column values.
 }
-procedure TZGenericCachedResolver.PostUpdates(Sender: IZCachedResultSet;
+procedure TZGenericCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
   UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
   Statement            : IZPreparedStatement;
@@ -928,7 +928,7 @@ begin
   end;
 end;
 
-procedure TZGenericCachedResolver.RefreshCurrentRow(Sender: IZCachedResultSet;  RowAccessor: TZRowAccessor);
+procedure TZGenericCachedResolver.RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
 begin
  raise EZSQLException.Create(SRefreshRowOnlySupportedWithUpdateObject);
 end;
@@ -939,7 +939,7 @@ end;
   @param RowAccessor an accessor object to column values.
 }
 procedure TZGenericCachedResolver.CalculateDefaults(
-  Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
+  const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
 var
   I: Integer;
   SQL: string;
@@ -1030,8 +1030,8 @@ end;
 
 {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 procedure TZGenericCachedResolver.UpdateAutoIncrementFields(
-  Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
-  NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
+  const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
+  NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 begin
  //Should be implemented at Specific database Level Cached resolver
 end;

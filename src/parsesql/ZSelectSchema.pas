@@ -123,7 +123,7 @@ type
 
     procedure AddTable(TableRef: TZTableRef);
 
-    procedure LinkReferences(Convertor: IZIdentifierConvertor);
+    procedure LinkReferences(const Convertor: IZIdentifierConvertor);
 
     function FindTableByFullName(const Catalog, Schema, Table: string): TZTableRef;
     function FindTableByShortName(const Table: string): TZTableRef;
@@ -149,7 +149,7 @@ type
     FFields: TObjectList;
     FTables: TObjectList;
 
-    procedure ConvertIdentifiers(Convertor: IZIdentifierConvertor);
+    procedure ConvertIdentifiers(const Convertor: IZIdentifierConvertor);
   public
     constructor Create;
     destructor Destroy; override;
@@ -160,7 +160,7 @@ type
 
     procedure AddTable(TableRef: TZTableRef);
 
-    procedure LinkReferences(Convertor: IZIdentifierConvertor);
+    procedure LinkReferences(const Convertor: IZIdentifierConvertor);
 
     function FindTableByFullName(const {%H-}Catalog, Schema, Table: string): TZTableRef;
     function FindTableByShortName(const Table: string): TZTableRef;
@@ -442,10 +442,10 @@ end;
   Convert all table and field identifiers..
   @param Convertor an identifier convertor.
 }
-procedure TZSelectSchema.ConvertIdentifiers(Convertor: IZIdentifierConvertor);
+procedure TZSelectSchema.ConvertIdentifiers(const Convertor: IZIdentifierConvertor);
 var
   I: Integer;
-  function ExtractNeedlessQuote(Value : String) : String;
+  function ExtractNeedlessQuote(const Value : String) : String;
   var
     tempstring: String;
   begin
@@ -487,7 +487,7 @@ end;
   Links references between fields and tables.
   @param Convertor an identifier convertor.
 }
-procedure TZSelectSchema.LinkReferences(Convertor: IZIdentifierConvertor);
+procedure TZSelectSchema.LinkReferences(const Convertor: IZIdentifierConvertor);
 var
   I, J: Integer;
   FieldRef: TZFieldRef;

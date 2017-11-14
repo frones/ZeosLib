@@ -216,7 +216,7 @@ type
   {** Implements DbLib Database Metadata. }
   TZDbLibBaseDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   protected
-    function ConvertEscapes(Pattern: String): String;
+    function ConvertEscapes(const Pattern: String): String;
     function GetSP_Prefix(const Catalog, Schema: String): String;
     function ComposeObjectString(const S: String; Const NullText: String = 'null';
       QuoteChar: Char = #39): String;
@@ -299,7 +299,7 @@ type
     function UncachedGetTypeInfo: IZResultSet; override;
     function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
-    function RemoveQuotesFromIdentifier(Identifier: String): String;
+    function RemoveQuotesFromIdentifier(const Identifier: String): String;
   end;
 
 implementation
@@ -1240,7 +1240,7 @@ begin
   end;
 end;
 
-function TZDbLibBaseDatabaseMetadata.ConvertEscapes(Pattern: String): String;
+function TZDbLibBaseDatabaseMetadata.ConvertEscapes(const Pattern: String): String;
 var
   EscapeChar: Char;
   P: PChar;
@@ -3128,7 +3128,7 @@ end;
   @param Identifier The Identifier where the quotes are to be removed
   @return The identifier without quotes
 }
-function TZSybaseDatabaseMetadata.RemoveQuotesFromIdentifier(Identifier: String): String;
+function TZSybaseDatabaseMetadata.RemoveQuotesFromIdentifier(const Identifier: String): String;
 var
   QuoteStr: String;
 begin

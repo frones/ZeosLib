@@ -110,16 +110,16 @@ type
   {** Defines an empty resolver class. }
   TZEmptyResolver = class(TInterfacedObject, IZCachedResolver)
   public
-    procedure CalculateDefaults(Sender: IZCachedResultSet;
+    procedure CalculateDefaults(const Sender: IZCachedResultSet;
       {%H-}RowAccessor: TZRowAccessor);
-    procedure PostUpdates(Sender: IZCachedResultSet; {%H-}UpdateType: TZRowUpdateType;
+    procedure PostUpdates(const Sender: IZCachedResultSet; {%H-}UpdateType: TZRowUpdateType;
       {%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet;
+    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet;
       {%H-}UpdateType: TZRowUpdateType;
-      {%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); virtual;
+      {%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); virtual;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure RefreshCurrentRow(Sender: IZCachedResultSet;RowAccessor: TZRowAccessor);
+    procedure RefreshCurrentRow(const Sender: IZCachedResultSet;RowAccessor: TZRowAccessor);
   end;
 
 implementation
@@ -1033,7 +1033,7 @@ end;
   @param Sender a cached result set object.
   @param RowAccessor an accessor object to column values.
 }
-procedure TZEmptyResolver.CalculateDefaults(Sender: IZCachedResultSet;
+procedure TZEmptyResolver.CalculateDefaults(const Sender: IZCachedResultSet;
   RowAccessor: TZRowAccessor);
 begin
 end;
@@ -1045,7 +1045,7 @@ end;
   @param OldRowAccessor a row accessor which contains old column values.
   @param NewRowAccessor a row accessor which contains new column values.
 }
-procedure TZEmptyResolver.PostUpdates(Sender: IZCachedResultSet;
+procedure TZEmptyResolver.PostUpdates(const Sender: IZCachedResultSet;
   UpdateType: TZRowUpdateType; OldRowAccessor,
   NewRowAccessor: TZRowAccessor);
 begin
@@ -1061,14 +1061,14 @@ end;
 
 {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 procedure TZEmptyResolver.UpdateAutoIncrementFields(
-  Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
-  NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
+  const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
+  NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 begin
  //Should be implemented at Specific database Level Cached resolver
 end;
 {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 
-procedure TZEmptyResolver.RefreshCurrentRow(Sender: IZCachedResultSet;RowAccessor: TZRowAccessor);
+procedure TZEmptyResolver.RefreshCurrentRow(const Sender: IZCachedResultSet;RowAccessor: TZRowAccessor);
 begin
  //Should be implemented at Specific database Level Cached resolver
 end;

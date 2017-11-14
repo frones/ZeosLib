@@ -106,7 +106,7 @@ type
     procedure PostRowUpdates({%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
       override;
   public
-    constructor CreateWithStatement(const SQL: string; Statement: IZStatement;
+    constructor CreateWithStatement(const SQL: string; const Statement: IZStatement;
       ConSettings: PZConSettings);
     constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
       ConSettings: PZConSettings);
@@ -146,18 +146,18 @@ type
     function GetStatement: IZSTatement; // technobot 2008-06-28 - moved from descendants
 
     { Metadata ResultSets Caching. }
-    procedure AddResultSetToCache(const Key: string; ResultSet: IZResultSet);
+    procedure AddResultSetToCache(const Key: string; const ResultSet: IZResultSet);
     function GetResultSetFromCache(const Key: string): IZResultSet;
     function ConstructVirtualResultSet(ColumnsDefs: TZMetadataColumnDefs):
       IZVirtualResultSet;
-    function CopyToVirtualResultSet(SrcResultSet: IZResultSet;
-      DestResultSet: IZVirtualResultSet): IZVirtualResultSet;
-    function CloneCachedResultSet(ResultSet: IZResultSet): IZResultSet;
-    function ConstructNameCondition(Pattern: string; Column: string): string; virtual;
-    function AddEscapeCharToWildcards(const Pattern:string): string;
+    function CopyToVirtualResultSet(const SrcResultSet: IZResultSet;
+      const DestResultSet: IZVirtualResultSet): IZVirtualResultSet;
+    function CloneCachedResultSet(const ResultSet: IZResultSet): IZResultSet;
+    function ConstructNameCondition(const Pattern: string; const Column: string): string; virtual;
+    function AddEscapeCharToWildcards(const Pattern: string): string;
     function GetWildcardsSet:TZWildcardsSet;
     procedure FillWildcards; virtual;
-    function NormalizePatternCase(Pattern:String): string;
+    function NormalizePatternCase(const Pattern: String): string;
     property Url: string read GetURLString;
     property Info: TStrings read GetInfo;
     property CachedResultSets: IZHashMap read FCachedResultSets
@@ -477,7 +477,7 @@ type
     function IsUpperCase(const Value: string): Boolean;
     function IsSpecialCase(const Value: string): Boolean; virtual;
   public
-    constructor Create(Metadata: IZDatabaseMetadata);
+    constructor Create(const Metadata: IZDatabaseMetadata);
 
     function IsCaseSensitive(const Value: string): Boolean;
     function IsQuoted(const Value: string): Boolean; virtual;
@@ -2267,7 +2267,7 @@ end;
   @param ResultSet a resultset interface.
 }
 procedure TZAbstractDatabaseMetadata.AddResultSetToCache(const Key: string;
-  ResultSet: IZResultSet);
+  const ResultSet: IZResultSet);
 var
   TempKey: IZAnyValue;
 begin
@@ -2298,7 +2298,7 @@ end;
   @returns a destination result set.
 }
 function TZAbstractDatabaseMetadata.CopyToVirtualResultSet(
-  SrcResultSet: IZResultSet; DestResultSet: IZVirtualResultSet):
+  const SrcResultSet: IZResultSet; const DestResultSet: IZVirtualResultSet):
   IZVirtualResultSet;
 var
   I: Integer;
@@ -2373,7 +2373,7 @@ end;
   @returns the clone of the specified resultset.
 }
 function TZAbstractDatabaseMetadata.CloneCachedResultSet(
-  ResultSet: IZResultSet): IZResultSet;
+  const ResultSet: IZResultSet): IZResultSet;
 var
   I: Integer;
   Metadata: IZResultSetMetadata;
@@ -2433,8 +2433,8 @@ end;
     @parma Column a sql column name
     @return processed string for query
 }
-function TZAbstractDatabaseMetadata.ConstructNameCondition(Pattern: string;
-  Column: string): string;
+function TZAbstractDatabaseMetadata.ConstructNameCondition(const Pattern: string;
+  const Column: string): string;
 var
   WorkPattern: string;
 begin
@@ -4596,7 +4596,7 @@ begin
   end;
 end;
 
-function TZAbstractDatabaseMetadata.NormalizePatternCase(Pattern:String): string;
+function TZAbstractDatabaseMetadata.NormalizePatternCase(const Pattern: String): string;
 begin
   with GetIdentifierConvertor do
     if not IsQuoted(Pattern) then
@@ -4926,7 +4926,7 @@ end;
   @param SQL an SQL query string.
 }
 constructor TZVirtualResultSet.CreateWithStatement(const SQL: string;
-   Statement: IZStatement; ConSettings: PZConSettings);
+   const Statement: IZStatement; ConSettings: PZConSettings);
 begin
   fConSettings := ConSettings^;
   inherited CreateWithStatement(SQL, Statement, @fConSettings);
@@ -4989,7 +4989,7 @@ end;
   @param Metadata a database metadata interface.
 }
 constructor TZDefaultIdentifierConvertor.Create(
-  Metadata: IZDatabaseMetadata);
+  const Metadata: IZDatabaseMetadata);
 begin
   inherited Create;
   FMetadata := Pointer(Metadata);

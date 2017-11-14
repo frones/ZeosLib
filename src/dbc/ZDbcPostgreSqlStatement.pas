@@ -94,10 +94,10 @@ type
     function GetPrepareSQLPrefix: RawByteString; virtual; abstract;
     function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; override;
   public
-    constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
-      Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings); overload;
-    constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
-      Connection: IZPostgreSQLConnection; Info: TStrings); overload;
+    constructor Create(const PlainDriver: IZPostgreSQLPlainDriver;
+      const Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings); overload;
+    constructor Create(const PlainDriver: IZPostgreSQLPlainDriver;
+      const Connection: IZPostgreSQLConnection; Info: TStrings); overload;
     procedure AfterConstruction; override;
     function GetLastQueryHandle: PZPostgreSQLResult;
 
@@ -163,7 +163,7 @@ type
       QueryHandle: PZPostgreSQLResult): IZResultSet;
     procedure TrimInParameters; override;
   public
-    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
+    constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
 
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
     function ExecuteUpdate(const SQL: RawByteString): Integer; override;
@@ -194,8 +194,8 @@ var PGPreparableTokens: TPreparablePrefixTokens;
   @param QueryHandle the Postgres query handle
   @return a created result set object.
 }
-constructor TZPostgreSQLPreparedStatement.Create(PlainDriver: IZPostgreSQLPlainDriver;
-  Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings);
+constructor TZPostgreSQLPreparedStatement.Create(const PlainDriver: IZPostgreSQLPlainDriver;
+  const Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
   FOidAsBlob := StrToBoolEx(Self.Info.Values[DSProps_OidAsBlob]) or
@@ -217,8 +217,8 @@ begin
   fPrepareCnt := 0;
 end;
 
-constructor TZPostgreSQLPreparedStatement.Create(PlainDriver: IZPostgreSQLPlainDriver;
-  Connection: IZPostgreSQLConnection; Info: TStrings);
+constructor TZPostgreSQLPreparedStatement.Create(const PlainDriver: IZPostgreSQLPlainDriver;
+  const Connection: IZPostgreSQLConnection; Info: TStrings);
 begin
   Create(PlainDriver, Connection, SQL, Info);
 end;
@@ -764,7 +764,7 @@ end;
   @param Handle a connection handle pointer.
 }
 constructor TZPostgreSQLCallableStatement.Create(
-  Connection: IZConnection; const SQL: string; Info: TStrings);
+  const Connection: IZConnection; const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
   ResultSetType := rtScrollInsensitive;

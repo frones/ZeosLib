@@ -90,7 +90,7 @@ type
     FWSQL: ZWideString;
     FaSQL: RawByteString;
     FCachedLob: Boolean;
-    procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
+    procedure SetLastResultSet(const ResultSet: IZResultSet); virtual;
   protected
     FStatementId : Integer;
     FOpenResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
@@ -132,7 +132,7 @@ type
     function CreateStmtLogEvent(Category: TZLoggingCategory;
       const Msg: RawByteString=''): TZLoggingEvent;
   public
-    constructor Create(Connection: IZConnection; Info: TStrings);
+    constructor Create(const Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
 
     function ExecuteQuery(const SQL: ZWideString): IZResultSet; overload; virtual;
@@ -240,7 +240,7 @@ type
     procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
   public
-    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
+    constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;
 
     function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
@@ -338,7 +338,7 @@ type
     property ProcSql: RawByteString read FProcSQL write SetProcSQL;
     property SQL: String read FSQL;
   public
-    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
+    constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
     procedure ClearParameters; override;
     procedure Close; override;
 
@@ -408,7 +408,7 @@ type
   private
     FExecStatement: IZStatement;
     FLastStatement: IZStatement;
-    procedure SetLastStatement(LastStatement: IZStatement);
+    procedure SetLastStatement(const LastStatement: IZStatement);
   protected
     FNeedNCharDetection: Boolean;
     property ExecStatement: IZStatement read FExecStatement write FExecStatement;
@@ -457,7 +457,7 @@ var
   @param Connection a database connection object.
   @param Info a statement parameters;
 }
-constructor TZAbstractStatement.Create(Connection: IZConnection; Info: TStrings);
+constructor TZAbstractStatement.Create(const Connection: IZConnection; Info: TStrings);
 begin
   { Sets the default properties. }
   inherited Create;
@@ -549,7 +549,7 @@ end;
   Sets a last result set to avoid problems with reference counting.
   @param ResultSet the lastest executed result set.
 }
-procedure TZAbstractStatement.SetLastResultSet(ResultSet: IZResultSet);
+procedure TZAbstractStatement.SetLastResultSet(const ResultSet: IZResultSet);
 begin
   if (FLastResultSet <> nil) then
     FLastResultSet.Close;
@@ -1289,7 +1289,7 @@ end;
   @param Sql a prepared Sql statement.
   @param Info a statement parameters.
 }
-constructor TZAbstractPreparedStatement.Create(Connection: IZConnection;
+constructor TZAbstractPreparedStatement.Create(const Connection: IZConnection;
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, Info);
@@ -2355,7 +2355,7 @@ end;
   @param Sql a prepared Sql statement.
   @param Info a statement parameters.
 }
-constructor TZAbstractCallableStatement.Create(Connection: IZConnection;
+constructor TZAbstractCallableStatement.Create(const Connection: IZConnection;
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
@@ -3134,7 +3134,7 @@ end;
   @param LastStatement the last statement interface.
 }
 procedure TZEmulatedPreparedStatement.SetLastStatement(
-  LastStatement: IZStatement);
+  const LastStatement: IZStatement);
 begin
   if FLastStatement <> nil then
     FLastStatement.Close;

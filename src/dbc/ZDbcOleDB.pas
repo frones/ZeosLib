@@ -103,7 +103,7 @@ type
     procedure StartTransaction;
     procedure InternalCreate; override;
     procedure RegisterPendingStatement(const Value: IZStatement);
-    function OleDbGetDBPropValue(APropIDs: array of DBPROPID): string; overload;
+    function OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string; overload;
     function OleDbGetDBPropValue(APropID: DBPROPID): Integer; overload;
   public
     destructor Destroy; override;
@@ -419,7 +419,7 @@ end;
 
 // returns property value(-s) from Data Source Information group as string,
 //where values are delimited using space
-function TZOleDBConnection.OleDbGetDBPropValue(APropIDs: array of DBPROPID): string;
+function TZOleDBConnection.OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string;
 var
   DBProperties: IDBProperties;
   PropIDSet: TDBPROPIDSET;

@@ -78,7 +78,7 @@ function ConvertTDSTypeToSqlType(const FieldType: TTDSType;
   @param string field type value
   @result the SqlType field type value
 }
-function ConvertDBLibTypeToSqlType({%H-}Value: string): TZSQLType;
+function ConvertDBLibTypeToSqlType(const {%H-}Value: string): TZSQLType;
 
 {**
   Converts ZDBC SQL types into MS SQL native types.
@@ -108,7 +108,7 @@ function ConvertDBLibNullability(DBLibNullability: Byte): TZColumnNullableType;
   @return a string representation of the parameter.
 }
 function PrepareSQLParameter(const Value: TZVariant; const ParamType: TZSQLType;
-  ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings;
+  const ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings;
   const NChar: Boolean = False): RawByteString;
 
 implementation
@@ -215,7 +215,7 @@ end;
   @param string field type value
   @result the SqlType field type value
 }
-function ConvertDBLibTypeToSqlType(Value: string): TZSQLType;
+function ConvertDBLibTypeToSqlType(const Value: string): TZSQLType;
 begin
   Result := stUnknown;
 end;
@@ -321,7 +321,7 @@ end;
   @return a string representation of the parameter.
 }
 function PrepareSQLParameter(const Value: TZVariant; const ParamType: TZSQLType;
-  ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings;
+  const ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings;
   const NChar: Boolean = False): RawByteString;
 var
   TempBytes: TBytes;

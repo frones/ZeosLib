@@ -1190,7 +1190,7 @@ function TZSQLiteDatabaseMetadata.UncachedGetTables(const Catalog: string;
 var
   WhereClause, SQL: string;
 
-  function IncludedType(TypeName: string): Boolean;
+  function IncludedType(const TypeName: string): Boolean;
   var I: Integer;
   begin
     Result := False;

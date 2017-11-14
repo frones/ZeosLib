@@ -89,9 +89,9 @@ type
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
   public
-    constructor Create(Connection: IZConnection; const SQL: string;
+    constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings); overload;
-    constructor Create(Connection: IZConnection; const Info: TStrings); overload;
+    constructor Create(const Connection: IZConnection; const Info: TStrings); overload;
     destructor Destroy; override;
 
     procedure Prepare; override;
@@ -131,7 +131,7 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
   public
-    constructor Create(Connection: IZConnection; const SQL: string;
+    constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings);
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -152,7 +152,7 @@ uses
 
 { TZAdoPreparedStatement }
 
-constructor TZAdoPreparedStatement.Create(Connection: IZConnection;
+constructor TZAdoPreparedStatement.Create(const Connection: IZConnection;
   const SQL: string; const Info: TStrings);
 begin
   FAdoCommand := CoCommand.Create;
@@ -164,7 +164,7 @@ begin
   FUseOle := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'use_ole_update_params', 'true')); //not set by default on 7.2
 end;
 
-constructor TZAdoPreparedStatement.Create(Connection: IZConnection;
+constructor TZAdoPreparedStatement.Create(const Connection: IZConnection;
   const Info: TStrings);
 begin
   Create(Connection, '', Info);
@@ -635,7 +635,7 @@ begin
 end;
 { TZAdoCallableStatement }
 
-constructor TZAdoCallableStatement.Create(Connection: IZConnection;
+constructor TZAdoCallableStatement.Create(const Connection: IZConnection;
   const SQL: string; const Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);

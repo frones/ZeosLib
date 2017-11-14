@@ -76,8 +76,8 @@ type
   protected
     FCachedPlainDrivers: IZHashMap;
     FSupportedProtocols: TStringDynArray;
-    procedure AddSupportedProtocol(AProtocol: String);
-    function AddPlainDriverToCache(PlainDriver: IZPlainDriver; const Protocol: string = ''; LibLocation: string = ''): String;
+    procedure AddSupportedProtocol(const AProtocol: String);
+    function AddPlainDriverToCache(const PlainDriver: IZPlainDriver; const Protocol: string = ''; const LibLocation: string = ''): String;
     function GetPlainDriverFromCache(const Protocol, LibLocation: string): IZPlainDriver;
     function GetPlainDriver(const Url: TZURL; const InitDriver: Boolean = True): IZPlainDriver; virtual;
   public
@@ -171,8 +171,8 @@ type
       read FTransactIsolationLevel write FTransactIsolationLevel;
     property Closed: Boolean read FClosed write FClosed;
   public
-    constructor Create({%H-}Driver: IZDriver; const Url: string;
-      {%H-}PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
+    constructor Create(const {%H-}Driver: IZDriver; const Url: string;
+      const {%H-}PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
       const Database: string; const User: string; const Password: string;
       Info: TStrings); overload; deprecated;
     constructor Create(const ZUrl: TZURL); overload;
@@ -256,7 +256,7 @@ end;
     property EventName: string read FEventName write FEventName;
     property Connection: IZConnection read FConnection write FConnection;
   public
-    constructor Create(Connection: IZConnection; EventName: string);
+    constructor Create(const Connection: IZConnection; const EventName: string);
     function GetEvent: string;
     procedure Listen; virtual;
     procedure Unlisten; virtual;
@@ -279,7 +279,7 @@ end;
     procedure SetBlockSize(const Value: Integer); virtual;
     property Connection: IZConnection read FConnection write FConnection;
   public
-    constructor Create(Connection: IZConnection; Name: string;
+    constructor Create(const Connection: IZConnection; const Name: string;
       BlockSize: Integer);
 
     function GetCurrentValue: Int64; virtual;
@@ -427,14 +427,14 @@ begin
   end;
 end;
 
-procedure TZAbstractDriver.AddSupportedProtocol(AProtocol: String);
+procedure TZAbstractDriver.AddSupportedProtocol(const AProtocol: String);
 begin
   SetLength(FSupportedProtocols, Length(FSupportedProtocols)+1);
   FSupportedProtocols[High(FSupportedProtocols)] := AProtocol;
 end;
 
-function TZAbstractDriver.AddPlainDriverToCache(PlainDriver: IZPlainDriver;
-  const Protocol: string = ''; LibLocation: string = ''): String;
+function TZAbstractDriver.AddPlainDriverToCache(const PlainDriver: IZPlainDriver;
+  const Protocol: string = ''; const LibLocation: string = ''): String;
 var
   TempKey: IZAnyValue;
 begin
@@ -795,8 +795,8 @@ end;
   @param Info a string list with extra connection parameters.
 }
 {$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
-constructor TZAbstractConnection.Create(Driver: IZDriver; const Url: string;
-  PlainDriver: IZPlainDriver;
+constructor TZAbstractConnection.Create(const Driver: IZDriver; const Url: string;
+  const PlainDriver: IZPlainDriver;
   const HostName: string; Port: Integer; const Database: string;
   const User: string; const Password: string; Info: TStrings);
 var
@@ -1547,8 +1547,8 @@ end;
   @param Connection a database connection object.
   @param EventName a name of the SQL event.
 }
-constructor TZAbstractNotification.Create(Connection: IZConnection;
-  EventName: string);
+constructor TZAbstractNotification.Create(const Connection: IZConnection;
+  const EventName: string);
 begin
   FConnection := Connection;
   FEventName := EventName;
@@ -1611,8 +1611,8 @@ end;
   @param Name a name of the sequence generator.
   @param BlockSize a number of unique keys requested in one trip to server.
 }
-constructor TZAbstractSequence.Create(Connection: IZConnection;
-  Name: string; BlockSize: Integer);
+constructor TZAbstractSequence.Create(const Connection: IZConnection;
+  const Name: string; BlockSize: Integer);
 begin
   FConnection := Connection;
   FName := Name;

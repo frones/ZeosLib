@@ -79,7 +79,7 @@ type
   IZStatementAnalyser = interface(IZInterface)
     ['{967635B6-411B-4DEF-990C-9C6C01F3DC0A}']
 
-    function TokenizeQuery(Tokenizer: IZTokenizer; const SQL: string;
+    function TokenizeQuery(const Tokenizer: IZTokenizer; const SQL: string;
       Cleanup: Boolean): TStrings;
     function SplitSections(Tokens: TStrings): TObjectList;
 
@@ -88,7 +88,7 @@ type
 
     function DefineSelectSchemaFromSections(
       Sections: TObjectList): IZSelectSchema;
-    function DefineSelectSchemaFromQuery(Tokenizer: IZTokenizer;
+    function DefineSelectSchemaFromQuery(const Tokenizer: IZTokenizer;
       const SQL: string): IZSelectSchema;
   end;
 
@@ -105,8 +105,8 @@ type
       Keywords: TStrings; var Keyword: string; var WordCount: Integer): Boolean;
     function FindSectionTokens(Sections: TObjectList; const Name: string): TStrings;
 
-    procedure FillFieldRefs(SelectSchema: IZSelectSchema; SelectTokens: TStrings);
-    procedure FillTableRefs(SelectSchema: IZSelectSchema; FromTokens: TStrings);
+    procedure FillFieldRefs(const SelectSchema: IZSelectSchema; SelectTokens: TStrings);
+    procedure FillTableRefs(const SelectSchema: IZSelectSchema; FromTokens: TStrings);
 
     function SkipOptionTokens(Tokens: TStrings; var TokenIndex: Integer;
       Options: TStrings): Boolean;
@@ -121,7 +121,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function TokenizeQuery(Tokenizer: IZTokenizer; const SQL: string;
+    function TokenizeQuery(const Tokenizer: IZTokenizer; const SQL: string;
       Cleanup: Boolean): TStrings;
     function SplitSections(Tokens: TStrings): TObjectList;
 
@@ -130,7 +130,7 @@ type
 
     function DefineSelectSchemaFromSections(
       Sections: TObjectList): IZSelectSchema;
-    function DefineSelectSchemaFromQuery(Tokenizer: IZTokenizer; const SQL: string):
+    function DefineSelectSchemaFromQuery(const Tokenizer: IZTokenizer; const SQL: string):
       IZSelectSchema;
   end;
 
@@ -314,7 +314,7 @@ end;
   @return a list with tokens.
 }
 function TZGenericStatementAnalyser.TokenizeQuery(
-  Tokenizer: IZTokenizer; const SQL: string; Cleanup: Boolean): TStrings;
+  const Tokenizer: IZTokenizer; const SQL: string; Cleanup: Boolean): TStrings;
 begin
   if Cleanup then
   begin
@@ -466,7 +466,7 @@ end;
   @param SelectTokens a list of tokens in select section.
 }
 procedure TZGenericStatementAnalyser.FillFieldRefs(
-  SelectSchema: IZSelectSchema; SelectTokens: TStrings);
+  const SelectSchema: IZSelectSchema; SelectTokens: TStrings);
 var
   TokenIndex: Integer;
   Catalog: string;
@@ -631,7 +631,7 @@ end;
 }
 {$HINTS OFF}
 procedure TZGenericStatementAnalyser.FillTableRefs(
-  SelectSchema: IZSelectSchema; FromTokens: TStrings);
+  const SelectSchema: IZSelectSchema; FromTokens: TStrings);
 var
   TokenIndex: Integer;
   Catalog: string;
@@ -781,7 +781,7 @@ end;
   @return a select statement schema.
 }
 function TZGenericStatementAnalyser.DefineSelectSchemaFromQuery(
-  Tokenizer: IZTokenizer; const SQL: string): IZSelectSchema;
+  const Tokenizer: IZTokenizer; const SQL: string): IZSelectSchema;
 var
   Tokens: TStrings;
   Sections: TObjectList;

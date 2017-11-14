@@ -71,11 +71,11 @@ type
     FRetrievedUpdateCount: Integer;
     FUserEncoding: TZCharEncoding;
 
-    procedure InternalExecuteStatement(SQL: RawByteString);
+    procedure InternalExecuteStatement(const SQL: RawByteString);
     procedure FetchResults; virtual;
 
   public
-    constructor Create(Connection: IZConnection; Info: TStrings);
+    constructor Create(const Connection: IZConnection; Info: TStrings);
     procedure Close; override;
 
     function GetMoreResults: Boolean; override;
@@ -90,13 +90,13 @@ type
   private
     FPlainDriver: IZDBLibPlainDriver;
   protected
-    function GetEscapeString(Value: string): string;
+    function GetEscapeString(const Value: string): string;
     function PrepareAnsiSQLQuery: RawByteString; override;
     function PrepareAnsiSQLParam(ParamIndex: Integer;
       const NChar: Boolean): RawByteString; reintroduce;
     function CreateExecStatement: IZStatement; override;
   public
-    constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
+    constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
     function GetMetaData: IZResultSetMetaData; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
@@ -121,7 +121,7 @@ type
   protected
     procedure SetInParamCount(const NewParamCount: Integer); override;
   public
-    constructor Create(Connection: IZConnection; ProcName: string; Info: TStrings);
+    constructor Create(const Connection: IZConnection; const ProcName: string; Info: TStrings);
     procedure Close; override;
 
     procedure RegisterOutParameter(ParameterIndex: Integer;
@@ -183,7 +183,7 @@ end;
   @param Connection a database connection object.
   @param Info a statement parameters.
 }
-constructor TZDBLibStatement.Create(Connection: IZConnection; Info: TStrings);
+constructor TZDBLibStatement.Create(const Connection: IZConnection; Info: TStrings);
 begin
   inherited Create(Connection, Info);
   Connection.QueryInterface(IZDBLibConnection, FDBLibConnection);
@@ -224,7 +224,7 @@ end;
   @param Handle a DBLib connection handle.
   @sql string containing the statements to execute
 }
-procedure TZDBLibStatement.InternalExecuteStatement(SQL: RawByteString);
+procedure TZDBLibStatement.InternalExecuteStatement(const SQL: RawByteString);
 var Ansi: RawByteString;
 begin
   if FDBLibConnection.GetProvider = dpMsSQL then
@@ -444,8 +444,8 @@ end;
   @param Info a statement parameters.
   @param Handle a connection handle pointer.
 }
-constructor TZDBLibPreparedStatementEmulated.Create(Connection: IZConnection;
-  SQL: string; Info: TStrings);
+constructor TZDBLibPreparedStatementEmulated.Create(const Connection: IZConnection;
+  const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
   FPlainDriver := (Connection as IZDBLibConnection).GetPlainDriver;
@@ -458,7 +458,7 @@ end;
   @param Value a regular string.
   @return a string in DBLib escape format.
 }
-function TZDBLibPreparedStatementEmulated.GetEscapeString(Value: string): string;
+function TZDBLibPreparedStatementEmulated.GetEscapeString(const Value: string): string;
 begin
   Result := AnsiQuotedStr(Value, '''');
 end;
@@ -563,8 +563,8 @@ begin
   Result := TZDBLibStatement.Create(Connection, Info);
 end;
 
-constructor TZDBLibCallableStatement.Create(Connection: IZConnection;
-  ProcName: string; Info: TStrings);
+constructor TZDBLibCallableStatement.Create(const Connection: IZConnection;
+  const ProcName: string; Info: TStrings);
 begin
   inherited Create(Connection, ProcName, Info);
   Connection.QueryInterface(IZDBLibConnection, FDBLibConnection);

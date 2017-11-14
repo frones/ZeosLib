@@ -87,8 +87,8 @@ type
     procedure UnPrepareInParameters; override;
     function CheckInterbase6Error(const Sql: RawByteString = '') : Integer;
   public
-    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings); overload;
-    constructor Create(Connection: IZConnection; Info: TStrings); overload;
+    constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings); overload;
+    constructor Create(const Connection: IZConnection; Info: TStrings); overload;
     procedure Close; override;
 
     procedure Prepare; override;
@@ -120,7 +120,7 @@ type
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
   public
-    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
+    constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
     procedure Close; override;
 
     procedure Prepare(SelectProc: Boolean); reintroduce;
@@ -251,7 +251,7 @@ end;
   @param Dialect a dialect Interbase SQL must be 1 or 2 or 3.
   @param Info a statement parameters.
 }
-constructor TZInterbase6PreparedStatement.Create(Connection: IZConnection;
+constructor TZInterbase6PreparedStatement.Create(const Connection: IZConnection;
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
@@ -265,7 +265,7 @@ begin
   FZBufferSize := Min(FZBufferSize, FIBConnection.GetXSQLDAMaxSize);
 end;
 
-constructor TZInterbase6PreparedStatement.Create(Connection: IZConnection;
+constructor TZInterbase6PreparedStatement.Create(const Connection: IZConnection;
   Info: TStrings);
 begin
   Create(Connection,'', Info);
@@ -503,7 +503,7 @@ end;
   @param Dialect a dialect Interbase SQL must be 1 or 2 or 3.
   @param Info a statement parameters.
 }
-constructor TZInterbase6CallableStatement.Create(Connection: IZConnection;
+constructor TZInterbase6CallableStatement.Create(const Connection: IZConnection;
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);

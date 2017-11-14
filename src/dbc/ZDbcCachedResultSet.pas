@@ -70,15 +70,15 @@ type
   IZCachedResolver = interface (IZInterface)
     ['{546ED716-BB88-468C-8CCE-D7111CF5E1EF}']
 
-    procedure CalculateDefaults(Sender: IZCachedResultSet;
+    procedure CalculateDefaults(const Sender: IZCachedResultSet;
       RowAccessor: TZRowAccessor);
-    procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+    procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor);
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
+    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure RefreshCurrentRow(Sender: IZCachedResultSet;RowAccessor: TZRowAccessor); //FOS+ 07112006
+    procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
   end;
 
   {** Represents a cached result set. }
@@ -86,7 +86,7 @@ type
     ['{BAF24A92-C8CE-4AB4-AEBC-3D4A9BCB0946}']
 
     function GetResolver: IZCachedResolver;
-    procedure SetResolver(Resolver: IZCachedResolver);
+    procedure SetResolver(const Resolver: IZCachedResolver);
 
     {BEGIN PATCH [1214009] Calc Defaults in TZUpdateSQL and Added Methods to GET and SET the database Native Resolver
       will help to implemented feature to Calculate default values in TZUpdateSQL
@@ -159,9 +159,9 @@ type
     property NativeResolver: IZCachedResolver read FNativeResolver;
     {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   public
-    constructor CreateWithStatement(SQL: string; Statement: IZStatement;
+    constructor CreateWithStatement(const SQL: string; const Statement: IZStatement;
       ConSettings: PZConSettings);
-    constructor CreateWithColumns(ColumnsInfo: TObjectList; SQL: string;
+    constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
       ConSettings: PZConSettings);
     destructor Destroy; override;
 
@@ -269,7 +269,7 @@ type
     //---------------------------------------------------------------------
 
     function GetResolver: IZCachedResolver;
-    procedure SetResolver(Resolver: IZCachedResolver);
+    procedure SetResolver(const Resolver: IZCachedResolver);
     {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
     function GetNativeResolver: IZCachedResolver;
     {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
@@ -308,8 +308,8 @@ type
 
     property ResultSet: IZResultSet read FResultSet write FResultSet;
   public
-    constructor Create(ResultSet: IZResultSet; const SQL: string;
-      Resolver: IZCachedResolver; ConSettings: PZConSettings);
+    constructor Create(const ResultSet: IZResultSet; const SQL: string;
+      const Resolver: IZCachedResolver; ConSettings: PZConSettings);
 
     procedure Close; override;
     procedure ResetCursor; override;
@@ -334,8 +334,8 @@ uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils, ZEncoding
   @param Statement an SQL statement object.
   @param SQL an SQL query.
 }
-constructor TZAbstractCachedResultSet.CreateWithStatement(SQL: string;
-  Statement: IZStatement; ConSettings: PZConSettings);
+constructor TZAbstractCachedResultSet.CreateWithStatement(const SQL: string;
+  const Statement: IZStatement; ConSettings: PZConSettings);
 begin
   inherited Create(Statement, SQL, nil, ConSettings);
   FCachedUpdates := False;
@@ -347,7 +347,7 @@ end;
   @param ColumnsInfo a columns info for cached rows.
 }
 constructor TZAbstractCachedResultSet.CreateWithColumns(
-  ColumnsInfo: TObjectList; SQL: string; ConSettings: PZConSettings);
+  ColumnsInfo: TObjectList; const SQL: string; ConSettings: PZConSettings);
 begin
   inherited Create(nil, SQL, nil, ConSettings);
 
@@ -495,7 +495,7 @@ end;
   Sets a new cached updates resolver object.
   @param Resolver a cached updates resolver object.
 }
-procedure TZAbstractCachedResultSet.SetResolver(Resolver: IZCachedResolver);
+procedure TZAbstractCachedResultSet.SetResolver(const Resolver: IZCachedResolver);
 begin
   FResolver := Resolver;
 {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
@@ -2308,8 +2308,8 @@ end;
   @param ResultSet a wrapped resultset object.
   @param Resolver a cached updates resolver object.
 }
-constructor TZCachedResultSet.Create(ResultSet: IZResultSet; const SQL: string;
-  Resolver: IZCachedResolver; ConSettings: PZConSettings);
+constructor TZCachedResultSet.Create(const ResultSet: IZResultSet; const SQL: string;
+  const Resolver: IZCachedResolver; ConSettings: PZConSettings);
 begin
   inherited Create(ResultSet.GetStatement, SQL, nil, ConSettings);
   FResultSet := ResultSet;

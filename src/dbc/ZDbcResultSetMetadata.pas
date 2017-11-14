@@ -138,15 +138,15 @@ type
     procedure SetMetadata(const Value: IZDatabaseMetadata);
   protected
     procedure LoadColumn(ColumnIndex: Integer; ColumnInfo: TZColumnInfo;
-      SelectSchema: IZSelectSchema); virtual;
+      const SelectSchema: IZSelectSchema); virtual;
 
     function GetTableColumns(TableRef: TZTableRef): IZResultSet;
     function ReadColumnByRef(FieldRef: TZFieldRef; ColumnInfo: TZColumnInfo): Boolean;
-    function ReadColumnByName(FieldName: string; TableRef: TZTableRef;
+    function ReadColumnByName(const FieldName: string; TableRef: TZTableRef;
       ColumnInfo: TZColumnInfo): Boolean;
     procedure ClearColumn(ColumnInfo: TZColumnInfo); virtual;
     procedure LoadColumns;
-    procedure ReplaceStarColumns(SelectSchema: IZSelectSchema);
+    procedure ReplaceStarColumns(const SelectSchema: IZSelectSchema);
 
     property MetaData: IZDatabaseMetadata read FMetadata write SetMetadata;
     property ColumnsLabels: TStrings read FColumnsLabels write FColumnsLabels;
@@ -156,7 +156,7 @@ type
     property Loaded: Boolean read FLoaded write FLoaded;
     property ResultSet: TZAbstractResultSet read FResultSet write FResultSet;
   public
-    constructor Create(Metadata: IZDatabaseMetadata; SQL: string;
+    constructor Create(const Metadata: IZDatabaseMetadata; const SQL: string;
       ParentResultSet: TZAbstractResultSet);
     destructor Destroy; override;
 
@@ -240,8 +240,8 @@ end;
   @param SQL an SQL query statement.
   @param ColumnsInfo a collection of columns info.
 }
-constructor TZAbstractResultSetMetadata.Create(Metadata: IZDatabaseMetadata;
-  SQL: string; ParentResultSet: TZAbstractResultSet);
+constructor TZAbstractResultSetMetadata.Create(const Metadata: IZDatabaseMetadata;
+  const SQL: string; ParentResultSet: TZAbstractResultSet);
 begin
   inherited Create(ParentResultSet);
 
@@ -654,7 +654,7 @@ end;
   @param ColumnInfo a column information object.
   @return <code>True</code> is column was found and read.
 }
-function TZAbstractResultSetMetadata.ReadColumnByName(FieldName: string;
+function TZAbstractResultSetMetadata.ReadColumnByName(const FieldName: string;
   TableRef: TZTableRef; ColumnInfo: TZColumnInfo): Boolean;
 const
   FieldNameIndex = {$IFNDEF GENERIC_INDEX}4{$ELSE}3{$ENDIF};
@@ -807,7 +807,7 @@ end;
   @param SelectSchema a schema of the select statement.
 }
 procedure TZAbstractResultSetMetadata.LoadColumn(ColumnIndex: Integer;
-  ColumnInfo: TZColumnInfo; SelectSchema: IZSelectSchema);
+  ColumnInfo: TZColumnInfo; const SelectSchema: IZSelectSchema);
 var
   I: Integer;
   FieldRef: TZFieldRef;
@@ -841,7 +841,7 @@ end;
   @param SelectSchema a query select schema.
 }
 procedure TZAbstractResultSetMetadata.ReplaceStarColumns(
-  SelectSchema: IZSelectSchema);
+  const SelectSchema: IZSelectSchema);
 var
   I: Integer;
   Current: TZFieldRef;

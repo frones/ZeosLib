@@ -102,9 +102,9 @@ type
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
   public
-    constructor Create(Connection: IZConnection; const SQL: string;
+    constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings); overload;
-    constructor Create(Connection: IZConnection; const Info: TStrings); overload;
+    constructor Create(const Connection: IZConnection; const Info: TStrings); overload;
     destructor Destroy; override;
 
     procedure Close; override;
@@ -139,7 +139,7 @@ uses
 
 { TZOleDBPreparedStatement }
 
-constructor TZOleDBPreparedStatement.Create(Connection: IZConnection;
+constructor TZOleDBPreparedStatement.Create(const Connection: IZConnection;
   const SQL: string; const Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
@@ -150,7 +150,7 @@ begin
   FMultipleResults := nil;
 end;
 
-constructor TZOleDBPreparedStatement.Create(Connection: IZConnection;
+constructor TZOleDBPreparedStatement.Create(const Connection: IZConnection;
   const Info: TStrings);
 begin
   Create(Connection, '', Info);

@@ -1300,7 +1300,7 @@ var
         end;
   end;
 
-  procedure InsertProcedureColumnValues(Source: IZResultSet; IsResultParam: Boolean = False);
+  procedure InsertProcedureColumnValues(const Source: IZResultSet; IsResultParam: Boolean = False);
   var
     TypeName{, SubTypeName}: string;
   begin
@@ -1346,11 +1346,11 @@ var
     Result.InsertRow;
   end;
 
-  function GetColumnSQL(PosChar: String; Package: String = ''): String;
+  function GetColumnSQL(const PosChar: String; const Package: String = ''): String;
   var
     OwnerCondition, PackageNameCondition, PackageAsProcCondition, PackageProcNameCondition: string;
 
-    procedure SplitPackageAndProc(Value: String);
+    procedure SplitPackageAndProc(const Value: String);
     var
       iPos: Integer;
     begin

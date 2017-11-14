@@ -83,8 +83,8 @@ type
     procedure Open; override;
     procedure DefinePostgreSQLToSQLType(ColumnInfo: TZColumnInfo; const TypeOid: Oid);
   public
-    constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
-      Statement: IZStatement; const SQL: string; Handle: PZPostgreSQLConnect;
+    constructor Create(const PlainDriver: IZPostgreSQLPlainDriver;
+      const Statement: IZStatement; const SQL: string; Handle: PZPostgreSQLConnect;
       QueryHandle: PZPostgreSQLResult; const CachedLob: Boolean;
       const Chunk_Size, UndefinedVarcharAsStringLength: Integer);
 
@@ -149,7 +149,7 @@ type
 
   TZPostgreSQLByteaEscapedBlob = class(TZAbstractBlob)
   public
-    constructor Create(PlainDriver: IZPostgreSQLPlainDriver; Data: PAnsiChar);
+    constructor Create(const PlainDriver: IZPostgreSQLPlainDriver; Data: PAnsiChar);
   end;
 
 
@@ -336,8 +336,8 @@ end;
   @param SQL a SQL statement.
   @param Handle a PostgreSQL specific query handle.
 }
-constructor TZPostgreSQLResultSet.Create(PlainDriver: IZPostgreSQLPlainDriver;
-  Statement: IZStatement; const SQL: string; Handle: PZPostgreSQLConnect;
+constructor TZPostgreSQLResultSet.Create(const PlainDriver: IZPostgreSQLPlainDriver;
+  const Statement: IZStatement; const SQL: string; Handle: PZPostgreSQLConnect;
   QueryHandle: PZPostgreSQLResult; const CachedLob: Boolean;
   const Chunk_Size, UndefinedVarcharAsStringLength: Integer);
 begin
@@ -1249,7 +1249,7 @@ end;
 
 { TZPostgreSQLByteaBlob }
 
-constructor TZPostgreSQLByteaEscapedBlob.Create(PlainDriver: IZPostgreSQLPlainDriver;
+constructor TZPostgreSQLByteaEscapedBlob.Create(const PlainDriver: IZPostgreSQLPlainDriver;
   Data: PAnsiChar);
 var
   to_length: LongWord;

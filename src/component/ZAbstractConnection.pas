@@ -227,8 +227,8 @@ type
 
     procedure RegisterDataSet(DataSet: TDataset);
     procedure UnregisterDataSet(DataSet: TDataset);
-    function ExecuteDirect(SQL:string):boolean;overload;
-    function ExecuteDirect(SQL:string; var RowsAffected:integer):boolean;overload;
+    function ExecuteDirect(const SQL: string): boolean; overload;
+    function ExecuteDirect(const SQL: string; var RowsAffected: integer): boolean; overload;
     // Modified by cipto 8/2/2007 10:16:50 AM
     procedure RegisterSequence(Sequence: TComponent);
     procedure UnregisterSequence(Sequence: TComponent);
@@ -239,7 +239,7 @@ type
     procedure GetSchemaNames(List: TStrings);
     procedure GetTableNames(const Pattern: string; List: TStrings);overload;
     procedure GetTableNames(const schemaPattern, tablePattern: string; List: TStrings);overload;
-    procedure GetTableNames(const schemaPattern, tablePattern: string; Types: TStringDynArray; List: TStrings);overload;
+    procedure GetTableNames(const schemaPattern, tablePattern: string; const Types: TStringDynArray; List: TStrings);overload;
     procedure GetColumnNames(const TablePattern, ColumnPattern: string; List: TStrings);
 
     procedure GetStoredProcNames(const Pattern: string; List: TStrings);
@@ -1348,7 +1348,7 @@ end;
                                        'TEMPORARY INDEX'
   @param List a string list to fill out.
 }
-procedure TZAbstractConnection.GetTableNames(const schemaPattern, tablePattern: string; Types: TStringDynArray; List: TStrings);
+procedure TZAbstractConnection.GetTableNames(const schemaPattern, tablePattern: string; const Types: TStringDynArray; List: TStrings);
 var
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
@@ -1695,11 +1695,11 @@ end;
   @param SQL the statement to be executed.
   Returns an indication if execution was succesfull.
 }
-function TZAbstractConnection.ExecuteDirect(SQL : String) : boolean;
+function TZAbstractConnection.ExecuteDirect(const SQL: String): boolean;
 var
   dummy : Integer;
 begin
-  result:= ExecuteDirect(SQL,dummy{%H-});
+  result:= ExecuteDirect(SQL, dummy{%H-});
 end;
 
 {**
@@ -1708,8 +1708,8 @@ end;
   @param RowsAffected the number of rows that were affected by the statement.
   Returns an indication if execution was succesfull.
 }
-function TZAbstractConnection.ExecuteDirect(SQL: string;
-  var RowsAffected: integer):boolean;
+function TZAbstractConnection.ExecuteDirect(const SQL: string;
+  var RowsAffected: integer): boolean;
 var
   stmt : IZStatement;
 begin

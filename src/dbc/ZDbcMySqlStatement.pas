@@ -78,8 +78,8 @@ type
     function CreateResultSet(const SQL: string): IZResultSet;
     function GetStmtHandle : Pointer;
   public
-    constructor Create(PlainDriver: IZMySQLPlainDriver;
-      Connection: IZConnection; Info: TStrings; Handle: PZMySQLConnect);
+    constructor Create(const PlainDriver: IZMySQLPlainDriver;
+      const Connection: IZConnection; Info: TStrings; Handle: PZMySQLConnect);
 
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
     function ExecuteUpdate(const SQL: RawByteString): Integer; override;
@@ -98,8 +98,8 @@ type
     function CreateExecStatement: IZStatement; override;
     function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString; override;
   public
-    constructor Create(PlainDriver: IZMySQLPlainDriver;
-      Connection: IZConnection; const SQL: string; Info: TStrings;
+    constructor Create(const PlainDriver: IZMySQLPlainDriver;
+      const Connection: IZConnection; const SQL: string; Info: TStrings;
       Handle: PZMySQLConnect);
   end;
 
@@ -113,7 +113,7 @@ type
     FBindArray: TByteDynArray;
     FPColumnArray: ^TZMysqlColumnBuffer;
   public
-    constructor Create(PlainDriver:IZMysqlPlainDriver;
+    constructor Create(const PlainDriver:IZMysqlPlainDriver;
       const BindCount : Integer; var ColumnArray: TZMysqlColumnBuffer); virtual;
     function GetBufferAddress : Pointer;
   end;
@@ -157,7 +157,7 @@ type
     function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; override;
   public
     property StmtHandle: PZMySqlPrepStmt read GetStmtHandle;
-    constructor Create(PlainDriver: IZMysqlPlainDriver; Connection: IZConnection;
+    constructor Create(const PlainDriver: IZMysqlPlainDriver; const Connection: IZConnection;
       const SQL: string; Info: TStrings);
     procedure Prepare; override;
     procedure Unprepare; override;
@@ -190,10 +190,10 @@ type
     procedure BindInParameters; override;
     function CreateResultSet(const SQL: string): IZResultSet;
     procedure RegisterParamTypeAndName(const ParameterIndex:integer;
-      ParamTypeName: String; const ParamName: String; Const ColumnSize, {%H-}Precision: Integer);
+      const ParamTypeName: String; const ParamName: String; Const ColumnSize, {%H-}Precision: Integer);
   public
-    constructor Create(PlainDriver: IZMySQLPlainDriver;
-      Connection: IZConnection; const SQL: string; Info: TStrings;
+    constructor Create(const PlainDriver: IZMySQLPlainDriver;
+      const Connection: IZConnection; const SQL: string; Info: TStrings;
       Handle: PZMySQLConnect);
 
     function Execute(const SQL: RawByteString): Boolean; override;
@@ -245,8 +245,8 @@ var
   @param Handle a connection handle pointer.
   @param Info a statement parameters.
 }
-constructor TZMySQLStatement.Create(PlainDriver: IZMySQLPlainDriver;
-  Connection: IZConnection; Info: TStrings; Handle: PZMySQLConnect);
+constructor TZMySQLStatement.Create(const PlainDriver: IZMySQLPlainDriver;
+  const Connection: IZConnection; Info: TStrings; Handle: PZMySQLConnect);
 begin
   inherited Create(Connection, Info);
   FHandle := Handle;
@@ -459,8 +459,8 @@ end;
   @param Info a statement parameters.
   @param Handle a connection handle pointer.
 }
-constructor TZMySQLEmulatedPreparedStatement.Create(PlainDriver: IZMySQLPlainDriver;
-  Connection: IZConnection; const SQL: string; Info: TStrings; Handle: PZMySQLConnect);
+constructor TZMySQLEmulatedPreparedStatement.Create(const PlainDriver: IZMySQLPlainDriver;
+  const Connection: IZConnection; const SQL: string; Info: TStrings; Handle: PZMySQLConnect);
 begin
   inherited Create(Connection, SQL, Info);
   FHandle := Handle;
@@ -506,7 +506,7 @@ end;
   @param Handle a connection handle pointer.
 }
 constructor TZMySQLPreparedStatement.Create(
-  PlainDriver: IZMySQLPlainDriver; Connection: IZConnection;
+  const PlainDriver: IZMySQLPlainDriver; const Connection: IZConnection;
   const SQL: string; Info: TStrings);
 begin
   if PlainDriver.GetClientVersion      < 40100 then
@@ -1247,40 +1247,41 @@ begin
 end;
 
 procedure TZMySQLCallableStatement.RegisterParamTypeAndName(const ParameterIndex:integer;
-  ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
+  const ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
+var ParamTypeNameLo: String;
 begin
   FParamNames[ParameterIndex] := ConSettings^.ConvFuncs.ZStringToRaw(ParamName,
     ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-  ParamTypeName := LowerCase(ParamTypeName);
-  if ( ZFastCode.Pos('char', ParamTypeName) > 0 ) or
-     ( ZFastCode.Pos('set', ParamTypeName) > 0 ) then
+  ParamTypeNameLo := LowerCase(ParamTypeName);
+  if ( ZFastCode.Pos('char', ParamTypeNameLo) > 0 ) or
+     ( ZFastCode.Pos('set', ParamTypeNameLo) > 0 ) then
     FParamTypeNames[ParameterIndex] := 'CHAR('+ZFastCode.IntToRaw(ColumnSize)+')'
   else
-    if ( ZFastCode.Pos('set', ParamTypeName) > 0 ) then
+    if ( ZFastCode.Pos('set', ParamTypeNameLo) > 0 ) then
       FParamTypeNames[ParameterIndex] := 'CHAR('+ZFastCode.IntToRaw(ColumnSize)+')'
     else
-      if ( ZFastCode.Pos('datetime', ParamTypeName) > 0 ) or
-         ( ZFastCode.Pos('timestamp', ParamTypeName) > 0 ) then
+      if ( ZFastCode.Pos('datetime', ParamTypeNameLo) > 0 ) or
+         ( ZFastCode.Pos('timestamp', ParamTypeNameLo) > 0 ) then
         FParamTypeNames[ParameterIndex] := 'DATETIME'
       else
-        if ( ZFastCode.Pos('date', ParamTypeName) > 0 ) then
+        if ( ZFastCode.Pos('date', ParamTypeNameLo) > 0 ) then
           FParamTypeNames[ParameterIndex] := 'DATE'
         else
-          if ( ZFastCode.Pos('time', ParamTypeName) > 0 ) then
+          if ( ZFastCode.Pos('time', ParamTypeNameLo) > 0 ) then
             FParamTypeNames[ParameterIndex] := 'TIME'
           else
-            if ( ZFastCode.Pos('int', ParamTypeName) > 0 ) or
-               ( ZFastCode.Pos('year', ParamTypeName) > 0 ) then
+            if ( ZFastCode.Pos('int', ParamTypeNameLo) > 0 ) or
+               ( ZFastCode.Pos('year', ParamTypeNameLo) > 0 ) then
               FParamTypeNames[ParameterIndex] := 'SIGNED'
             else
-              if ( ZFastCode.Pos('binary', ParamTypeName) > 0 ) then
+              if ( ZFastCode.Pos('binary', ParamTypeNameLo) > 0 ) then
                 FParamTypeNames[ParameterIndex] := 'BINARY('+ZFastCode.IntToRaw(ColumnSize)+')'
               else
                 FParamTypeNames[ParameterIndex] := '';
 end;
 
-constructor TZMySQLCallableStatement.Create(PlainDriver: IZMySQLPlainDriver;
-  Connection: IZConnection; const SQL: string; Info: TStrings;
+constructor TZMySQLCallableStatement.Create(const PlainDriver: IZMySQLPlainDriver;
+  const Connection: IZConnection; const SQL: string; Info: TStrings;
   Handle: PZMySQLConnect);
 begin
   inherited Create(Connection, SQL, Info);
@@ -1611,7 +1612,7 @@ end;
 
 { TZMySQLAbstractBindBuffer }
 
-constructor TZMySQLAbstractBindBuffer.Create(PlainDriver: IZMysqlPlainDriver;
+constructor TZMySQLAbstractBindBuffer.Create(const PlainDriver: IZMysqlPlainDriver;
   const BindCount: Integer; var ColumnArray: TZMysqlColumnBuffer);
 begin
   inherited Create;

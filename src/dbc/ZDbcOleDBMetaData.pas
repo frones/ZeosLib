@@ -69,7 +69,7 @@ type
 
   IZOleDBDatabaseInfo = interface(IZDatabaseInfo)
     ['{FCAE90AA-B0B6-49A2-AB74-33E604FF8804}']
-    procedure InitilizePropertiesFromDBInfo(DBInitialize: IDBInitialize; Malloc: IMalloc);
+    procedure InitilizePropertiesFromDBInfo(const DBInitialize: IDBInitialize; Malloc: IMalloc);
     function SupportsMultipleStorageObjects: Boolean;
   end;
   {** Implements OleDB Database Information. }
@@ -240,7 +240,7 @@ type
     function GetExtraNameCharacters: string; override;
 
     //Ole related
-    procedure InitilizePropertiesFromDBInfo(DBInitialize: IDBInitialize; Malloc: IMalloc);
+    procedure InitilizePropertiesFromDBInfo(const DBInitialize: IDBInitialize; Malloc: IMalloc);
   end;
 
   {** Implements Ado Metadata. }
@@ -551,7 +551,7 @@ begin
 end;
 
 procedure TZOleDBDatabaseInfo.InitilizePropertiesFromDBInfo(
-  DBInitialize: IDBInitialize; Malloc: IMalloc);
+  const DBInitialize: IDBInitialize; Malloc: IMalloc);
 const PropCount = 25;
   rgPropertyIDs: array[0..PropCount-1] of DBPROPID =
     ( DBPROP_PROVIDERFRIENDLYNAME,

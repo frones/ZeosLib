@@ -2445,7 +2445,7 @@ type
     // GetRowset :
    function GetRowset(var riid:GUID;out ppRowset:IUnknown):HRESULT;stdcall;
     // Initialize :
-   function Initialize(pRowset:IUnknown):HRESULT;stdcall;
+   function Initialize(const pRowset:IUnknown):HRESULT;stdcall;
     // SetRowPosition :
    function SetRowPosition(hChapter:ULONG_PTR;hRow:ULONG_PTR;dwPositionFlags:LongWord):HRESULT;stdcall;
   end;
@@ -2467,7 +2467,7 @@ type
     // GetSpecification :
    function GetSpecification(var riid:GUID;out ppObject:IUnknown):HRESULT;stdcall;
     // OpenViewRowset :
-   function OpenViewRowset(pUnkOuter:IUnknown;var riid:GUID;out ppRowset:IUnknown):HRESULT;stdcall;
+   function OpenViewRowset(const pUnkOuter:IUnknown;var riid:GUID;out ppRowset:IUnknown):HRESULT;stdcall;
   end;
 
 
@@ -2511,7 +2511,7 @@ type
  IRowsetView = interface(IUnknown)
    ['{0C733A99-2A1C-11CE-ADE5-00AA0044773D}']
     // CreateView :
-   function CreateView(pUnkOuter:IUnknown;var riid:GUID;out ppView:IUnknown):HRESULT;stdcall;
+   function CreateView(const pUnkOuter:IUnknown;var riid:GUID;out ppView:IUnknown):HRESULT;stdcall;
     // GetView :
    function GetView(hChapter:ULONG_PTR;var riid:GUID;out phChapterSource:ULONG_PTR;out ppView:IUnknown):HRESULT;stdcall;
   end;
@@ -2610,7 +2610,7 @@ type
  IMultipleResults = interface(IUnknown)
    ['{0C733A90-2A1C-11CE-ADE5-00AA0044773D}']
     // GetResult :
-   function GetResult(pUnkOuter:IUnknown;lResultFlag:DBRESULTFLAG;const riid: TGUID;
+   function GetResult(const pUnkOuter:IUnknown;lResultFlag:DBRESULTFLAG;const riid: TGUID;
     pcRowsAffected: PDBROWCOUNT; ppRowset: PIUnknown):HRESULT;stdcall;
   end;
 (*
@@ -2680,7 +2680,7 @@ type
     // GetAvailableColumns :
     function GetAvailableColumns(var pcOptColumns:DBORDINAL;var prgOptColumns:PDBID):HRESULT;stdcall;
     // GetColumnsRowset :
-    function GetColumnsRowset(pUnkOuter:IUnknown;cOptColumns:DBORDINAL;
+    function GetColumnsRowset(const pUnkOuter:IUnknown;cOptColumns:DBORDINAL;
       rgOptColumns: PDBIDArray;const riid:TGUID;cPropertySets:ULONG;
       rgPropertySets:PDBPropSetArray;out ppColRowset:IUnknown):HRESULT;stdcall;
   end;
@@ -2703,7 +2703,7 @@ type
  IDBCreateCommand = interface(IUnknown)
    ['{0C733A1D-2A1C-11CE-ADE5-00AA0044773D}']
     // CreateCommand :
-   function CreateCommand(pUnkOuter:IUnknown;const riid:TGUID;out ppCommand:IUnknown):HRESULT;stdcall;
+   function CreateCommand(const pUnkOuter:IUnknown;const riid:TGUID;out ppCommand:IUnknown):HRESULT;stdcall;
   end;
 
 
@@ -2722,7 +2722,7 @@ type
  ISourcesRowset = interface(IUnknown)
    ['{0C733A1E-2A1C-11CE-ADE5-00AA0044773D}']
     // GetSourcesRowset :
-   function GetSourcesRowset(pUnkOuter:IUnknown;var riid:GUID;cPropertySets:LongWord;var rgProperties:TDBPROPSET;out ppSourcesRowset:IUnknown):HRESULT;stdcall;
+   function GetSourcesRowset(const pUnkOuter:IUnknown;var riid:GUID;cPropertySets:LongWord;var rgProperties:TDBPROPSET;out ppSourcesRowset:IUnknown):HRESULT;stdcall;
   end;
 
 *)
@@ -2769,7 +2769,7 @@ type
  IDBDataSourceAdmin = interface(IUnknown)
    ['{0C733A7A-2A1C-11CE-ADE5-00AA0044773D}']
     // CreateDataSource :
-   function CreateDataSource(cPropertySets:LongWord;rgPropertySets:PDBPropSetArray;pUnkOuter:IUnknown;var riid:GUID;out ppDBSession:IUnknown):HRESULT;stdcall;
+   function CreateDataSource(cPropertySets:LongWord;rgPropertySets:PDBPropSetArray;const pUnkOuter:IUnknown;var riid:GUID;out ppDBSession:IUnknown):HRESULT;stdcall;
     // DestroyDataSource :
    function DestroyDataSource:HRESULT;stdcall;
     // GetCreationProperties :
@@ -2831,7 +2831,7 @@ type
  ITableDefinition = interface(IUnknown)
    ['{0C733A86-2A1C-11CE-ADE5-00AA0044773D}']
     // CreateTable :
-   function CreateTable(pUnkOuter:IUnknown;var pTableID:TDBID;cColumnDescs:LongWord;var rgColumnDescs:DBCOLUMNDESC;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppTableID:PDBID;out ppRowset:IUnknown):HRESULT;stdcall;
+   function CreateTable(const pUnkOuter:IUnknown;var pTableID:TDBID;cColumnDescs:LongWord;var rgColumnDescs:DBCOLUMNDESC;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppTableID:PDBID;out ppRowset:IUnknown):HRESULT;stdcall;
     // DropTable :
    function DropTable(var pTableID:TDBID):HRESULT;stdcall;
     // AddColumn :
@@ -2846,7 +2846,7 @@ type
  IOpenRowset = interface(IUnknown)
    ['{0C733A69-2A1C-11CE-ADE5-00AA0044773D}']
     // OpenRowset :
-   function OpenRowset(pUnkOuter:IUnknown;var pTableID:TDBID;var pIndexID:TDBID;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppRowset:IUnknown):HRESULT;stdcall;
+   function OpenRowset(const pUnkOuter:IUnknown;var pTableID:TDBID;var pIndexID:TDBID;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppRowset:IUnknown):HRESULT;stdcall;
   end;
 *)
 
@@ -2855,7 +2855,7 @@ type
   IDBSchemaRowset = interface(IUnknown)
     ['{0C733A7B-2A1C-11CE-ADE5-00AA0044773D}']
     // GetRowset :
-    function GetRowset(pUnkOuter:IUnknown; const rguidSchema:TGUID;
+    function GetRowset(const pUnkOuter:IUnknown; const rguidSchema:TGUID;
      cRestrictions:ULONG; const rgRestrictions: Pointer;
      const riid:TGUID;cPropertySets:ULONG; rgPropertySets:PDBPropSetArray;
      out ppRowset:IUnknown):HRESULT;stdcall;
@@ -2874,7 +2874,7 @@ type
     // GetAxisInfo :
    function GetAxisInfo(var pcAxes:LongWord;out prgAxisInfo:PMDAXISINFO):HRESULT;stdcall;
     // GetAxisRowset :
-   function GetAxisRowset(pUnkOuter:IUnknown;iAxis:LongWord;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppRowset:IUnknown):HRESULT;stdcall;
+   function GetAxisRowset(const pUnkOuter:IUnknown;iAxis:LongWord;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppRowset:IUnknown):HRESULT;stdcall;
     // GetCellData :
    function GetCellData(hAccessor:ULONG_PTR;ulStartCell:LongWord;ulEndCell:LongWord;out pData:pointer):HRESULT;stdcall;
     // GetSpecification :
@@ -2898,7 +2898,7 @@ type
  IMDRangeRowset = interface(IUnknown)
    ['{0C733AA0-2A1C-11CE-ADE5-00AA0044773D}']
     // GetRangeRowset :
-   function GetRangeRowset(pUnkOuter:IUnknown;ulStartCell:LongWord;ulEndCell:LongWord;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppRowset:IUnknown):HRESULT;stdcall;
+   function GetRangeRowset(const pUnkOuter:IUnknown;ulStartCell:LongWord;ulEndCell:LongWord;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppRowset:IUnknown):HRESULT;stdcall;
   end;
 
 
@@ -2962,7 +2962,7 @@ type
  IParentRowset = interface(IUnknown)
    ['{0C733AAA-2A1C-11CE-ADE5-00AA0044773D}']
     // GetChildRowset :
-   function GetChildRowset(pUnkOuter:IUnknown;iOrdinal:LongWord;var riid:GUID;out ppRowset:IUnknown):HRESULT;stdcall;
+   function GetChildRowset(const pUnkOuter:IUnknown;iOrdinal:LongWord;var riid:GUID;out ppRowset:IUnknown):HRESULT;stdcall;
   end;
 
 *)
@@ -2972,7 +2972,7 @@ type
     ['{0C733A67-2A1C-11CE-ADE5-00AA0044773D}']
     // AddErrorRecord :
     function AddErrorRecord(pErrorInfo:PERRORINFO;dwLookupID:DWORD;
-      const pDispParams:DISPPARAMS; punkCustomError:IUnknown;
+      const pDispParams:DISPPARAMS; const punkCustomError:IUnknown;
       dwDynamicErrorID:DWORD):HRESULT;stdcall;
     // GetBasicErrorInfo :
     function GetBasicErrorInfo(ulRecordNum:ULONG;out pErrorInfo:PERRORINFO):HRESULT;stdcall;
@@ -3077,7 +3077,7 @@ type
     // GetOptionsObject :
    function GetOptionsObject(out ppOptions:ITransactionOptions):HRESULT;stdcall;
     // JoinTransaction :
-   function JoinTransaction(punkTransactionCoord:IUnknown;isoLevel:Integer;isoFlags:LongWord;pOtherOptions:ITransactionOptions):HRESULT;stdcall;
+   function JoinTransaction(const punkTransactionCoord:IUnknown;isoLevel:Integer;isoFlags:LongWord;pOtherOptions:ITransactionOptions):HRESULT;stdcall;
   end;
 
 *)
@@ -3170,7 +3170,7 @@ type
     // AddConstraint :
    procedure AddConstraint(var pTableID:TDBID;var pConstraintDesc:DBCONSTRAINTDESC);safecall;
     // CreateTableWithConstraints :
-   procedure CreateTableWithConstraints(pUnkOuter:IUnknown;var pTableID:TDBID;cColumnDescs:LongWord;var rgColumnDescs:DBCOLUMNDESC;cConstraintDescs:LongWord;var rgConstraintDescs:DBCONSTRAINTDESC;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppTableID:PDBID;out ppRowset:IUnknown);safecall;
+   procedure CreateTableWithConstraints(const pUnkOuter:IUnknown;var pTableID:TDBID;cColumnDescs:LongWord;var rgColumnDescs:DBCOLUMNDESC;cConstraintDescs:LongWord;var rgConstraintDescs:DBCONSTRAINTDESC;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppTableID:PDBID;out ppRowset:IUnknown);safecall;
     // DropConstraint :
    procedure DropConstraint(var pTableID:TDBID;var pConstraintID:TDBID);safecall;
   end;
@@ -3185,7 +3185,7 @@ type
     // GetSourceRowset :
    function GetSourceRowset(var riid:GUID;out ppRowset:IUnknown;out phRow:ULONG_PTR):HRESULT;stdcall;
     // Open :
-   function Open(pUnkOuter:IUnknown;var pColumnID:TDBID;var rguidColumnType:GUID;dwBindFlags:LongWord;var riid:GUID;out ppUnk:IUnknown):HRESULT;stdcall;
+   function Open(const pUnkOuter:IUnknown;var pColumnID:TDBID;var rguidColumnType:GUID;dwBindFlags:LongWord;var riid:GUID;out ppUnk:IUnknown):HRESULT;stdcall;
   end;
 
 
@@ -3214,7 +3214,7 @@ type
  IGetRow = interface(IUnknown)
    ['{0C733AAF-2A1C-11CE-ADE5-00AA0044773D}']
     // GetRowFromHROW :
-   function GetRowFromHROW(pUnkOuter:IUnknown;hRow:ULONG_PTR;var riid:GUID;out ppUnk:IUnknown):HRESULT;stdcall;
+   function GetRowFromHROW(const pUnkOuter:IUnknown;hRow:ULONG_PTR;var riid:GUID;out ppUnk:IUnknown):HRESULT;stdcall;
     // GetURLFromHROW :
    function GetURLFromHROW(hRow:ULONG_PTR;out ppwszURL:PWideChar):HRESULT;stdcall;
   end;
@@ -3225,7 +3225,7 @@ type
  IBindResource = interface(IUnknown)
    ['{0C733AB1-2A1C-11CE-ADE5-00AA0044773D}']
     // Bind :
-   function Bind(pUnkOuter:IUnknown;pwszURL:PWideChar;dwBindURLFlags:LongWord;var rguid:GUID;var riid:GUID;pAuthenticate:IAuthenticate;var pImplSession:DBIMPLICITSESSION;var pdwBindStatus:LongWord;out ppUnk:IUnknown):HRESULT;stdcall;
+   function Bind(const pUnkOuter:IUnknown;pwszURL:PWideChar;dwBindURLFlags:LongWord;var rguid:GUID;var riid:GUID;pAuthenticate:IAuthenticate;var pImplSession:DBIMPLICITSESSION;var pdwBindStatus:LongWord;out ppUnk:IUnknown):HRESULT;stdcall;
   end;
 
 
@@ -3249,7 +3249,7 @@ type
     // Delete :
    procedure Delete(cRows:LongWord;var rgpwszURLs:PWideChar;dwDeleteFlags:LongWord;var rgdwStatus:LongWord);safecall;
     // OpenRowset :
-   procedure OpenRowset(pUnkOuter:IUnknown;var pTableID:TDBID;var pIndexID:TDBID;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppRowset:IUnknown);safecall;
+   procedure OpenRowset(const pUnkOuter:IUnknown;var pTableID:TDBID;var pIndexID:TDBID;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppRowset:IUnknown);safecall;
   end;
 
 
@@ -3258,7 +3258,7 @@ type
  ICreateRow = interface(IUnknown)
    ['{0C733AB2-2A1C-11CE-ADE5-00AA0044773D}']
     // CreateRow :
-   function CreateRow(pUnkOuter:IUnknown;pwszURL:PWideChar;dwBindURLFlags:LongWord;var rguid:GUID;var riid:GUID;pAuthenticate:IAuthenticate;var pImplSession:DBIMPLICITSESSION;var pdwBindStatus:LongWord;out ppwszNewURL:PWideChar;out ppUnk:IUnknown):HRESULT;stdcall;
+   function CreateRow(const pUnkOuter:IUnknown;pwszURL:PWideChar;dwBindURLFlags:LongWord;var rguid:GUID;var riid:GUID;pAuthenticate:IAuthenticate;var pImplSession:DBIMPLICITSESSION;var pdwBindStatus:LongWord;out ppwszNewURL:PWideChar;out ppUnk:IUnknown):HRESULT;stdcall;
   end;
 
 
@@ -3329,7 +3329,7 @@ type
     // GetCommandStream :
    function GetCommandStream(out piid:GUID;var pguidDialect:GUID;out ppCommandStream:IUnknown):HRESULT;stdcall;
     // SetCommandStream :
-   function SetCommandStream(var riid:GUID;var rguidDialect:GUID;pCommandStream:IUnknown):HRESULT;stdcall;
+   function SetCommandStream(var riid:GUID;var rguidDialect:GUID;const pCommandStream:IUnknown):HRESULT;stdcall;
   end;
 
 

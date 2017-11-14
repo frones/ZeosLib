@@ -145,8 +145,8 @@ procedure ConvertMySQLColumnInfoFromString(var TypeName: RawByteString;
   ConSettings: PZConSettings; out TypeInfoSecond: RawByteString;
   out FieldType: TZSQLType; out ColumnSize: Integer; out Scale: Integer);
 
-function MySQLPrepareAnsiSQLParam(Connection: IZMySQLConnection; Value: TZVariant;
-  const DefaultValue: String; ClientVarManager: IZClientVariantManager;
+function MySQLPrepareAnsiSQLParam(const Connection: IZMySQLConnection; Value: TZVariant;
+  const DefaultValue: String; const ClientVarManager: IZClientVariantManager;
   const InParamType: TZSQLType; const UseDefaults: Boolean): RawByteString;
 
 function GetMySQLOptionValue(Option: TMySQLOption): string;
@@ -688,8 +688,8 @@ SetLobSize:
   end;
 end;
 
-function MySQLPrepareAnsiSQLParam(Connection: IZMySQLConnection; Value: TZVariant;
-  const DefaultValue: String; ClientVarManager: IZClientVariantManager;
+function MySQLPrepareAnsiSQLParam(const Connection: IZMySQLConnection; Value: TZVariant;
+  const DefaultValue: String; const ClientVarManager: IZClientVariantManager;
   const InParamType: TZSQLType; const UseDefaults: Boolean): RawByteString;
 var
   TempBytes: TBytes;

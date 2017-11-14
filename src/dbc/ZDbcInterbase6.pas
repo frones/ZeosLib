@@ -147,13 +147,13 @@ type
   private
     FInsertReturningFields: TStrings;
   public
-    constructor Create(Statement: IZStatement; Metadata: IZResultSetMetadata);
+    constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
     destructor Destroy; override;
     function FormCalculateStatement(Columns: TObjectList): string; override;
-    procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+    procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
-    procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); override;
+    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); override;
   end;
 
   {** Implements a Interbase 6 sequence. }
@@ -983,7 +983,7 @@ end;
 
 { TZInterbase6CachedResolver }
 
-constructor TZInterbase6CachedResolver.Create(Statement: IZStatement; Metadata: IZResultSetMetadata);
+constructor TZInterbase6CachedResolver.Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
 var
   Fields: string;
 begin
@@ -1022,7 +1022,7 @@ begin
 // <-- ms
 end;
 
-procedure TZInterbase6CachedResolver.PostUpdates(Sender: IZCachedResultSet;
+procedure TZInterbase6CachedResolver.PostUpdates(const Sender: IZCachedResultSet;
   UpdateType: TZRowUpdateType; OldRowAccessor,
   NewRowAccessor: TZRowAccessor);
 begin
@@ -1033,8 +1033,8 @@ begin
 end;
 
 procedure TZInterbase6CachedResolver.UpdateAutoIncrementFields(
-  Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
-  NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
+  const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
+  NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 var
   I, ColumnIdx: Integer;
   RS: IZResultSet;

@@ -81,14 +81,14 @@ function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM; IsLong: Boolean;
   CtrlsCPType: TZControlsCodePage): TZSQLType; overload;
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM;
-  CtrlsCPType: TZControlsCodePage; SrcRS: IZResultSet): TZSQLType; overload;
+  CtrlsCPType: TZControlsCodePage; const SrcRS: IZResultSet): TZSQLType; overload;
 
 procedure OleDBCheck(aResult: HRESULT; const aStatus: TDBBINDSTATUSDynArray = nil);
 
 {**
   Brings up the OleDB connection string builder dialog.
 }
-function PromptDataSource(Handle: THandle; InitialString: WideString): WideString;
+function PromptDataSource(Handle: THandle; const InitialString: WideString): WideString;
 
 function PrepareOleParamDBBindings(DBUPARAMS: DB_UPARAMS;
   var DBBindingArray: TDBBindingDynArray; const InParamTypes: TZSQLTypeArray;
@@ -104,19 +104,19 @@ function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS; InMemoryData: Boolean
 
 procedure OleBindParams(const DBParams: TDBParams; ConSettings: PZConSettings;
   const DBBindingArray: TDBBindingDynArray; const InParamValues: TZVariantDynArray;
-  const InParamTypes: TZSQLTypeArray; ClientVarManager: IZClientVariantManager;
+  const InParamTypes: TZSQLTypeArray; const ClientVarManager: IZClientVariantManager;
   SupportsMilliSeconds: Boolean = True);
 
 procedure OleBindArrayParams(const DBParams: TDBParams; ArrayOffSet: DB_UPARAMS;
   RowSize: NativeUInt; ConSettings: PZConSettings;
-  const DBBindingArray: TDBBindingDynArray; ClientVarManager: IZClientVariantManager;
+  const DBBindingArray: TDBBindingDynArray; const ClientVarManager: IZClientVariantManager;
   const InParamValues: TZVariantDynArray; const TempLobs: TInterfacesDynArray;
   const SupportsMilliseconds: Boolean = True);
 
-procedure SetOleCommandProperties(Command: ICommandText; TimeOut: SmallInt;
+procedure SetOleCommandProperties(const Command: ICommandText; TimeOut: SmallInt;
   Provider: TZServerProvider; SupportsMARSConnection, Prepare: Boolean);
 
-function ProviderNamePrefix2ServerProvider(ProviderNamePrefix: String): TZServerProvider;
+function ProviderNamePrefix2ServerProvider(const ProviderNamePrefix: String): TZServerProvider;
 
 implementation
 
@@ -212,7 +212,7 @@ begin
 end;
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM;
-  CtrlsCPType: TZControlsCodePage; SrcRS: IZResultSet): TZSQLType; overload;
+  CtrlsCPType: TZControlsCodePage; const SrcRS: IZResultSet): TZSQLType; overload;
 const LongNames: array [0..8] of ZWideString = ('TEXT', 'NTEXT', 'MEDIUMTEXT',
   'LONGTEXT', 'CLOB', 'BLOB', 'MEDIUMBLOB', 'LONGBLOB', 'IMAGE');
 function IsLong: Boolean;
@@ -397,7 +397,7 @@ end;
 {**
   Brings up the OleDB connection string builder dialog.
 }
-function PromptDataSource(Handle: THandle; InitialString: WideString): WideString;
+function PromptDataSource(Handle: THandle; const InitialString: WideString): WideString;
 var
   DataInit: IDataInitialize;
   DBPrompt: IDBPromptInitialize;
@@ -649,7 +649,7 @@ end;
 {$HINTS OFF}
 procedure OleBindParams(const DBParams: TDBParams; ConSettings: PZConSettings;
   const DBBindingArray: TDBBindingDynArray; const InParamValues: TZVariantDynArray;
-  const InParamTypes: TZSQLTypeArray; ClientVarManager: IZClientVariantManager;
+  const InParamTypes: TZSQLTypeArray; const ClientVarManager: IZClientVariantManager;
   SupportsMilliSeconds: Boolean = True);
 var
   Year, MilliSecond: Word;
@@ -937,7 +937,7 @@ end;
 
 procedure OleBindArrayParams(const DBParams: TDBParams; ArrayOffSet: DB_UPARAMS;
   RowSize: NativeUInt; ConSettings: PZConSettings;
-  const DBBindingArray: TDBBindingDynArray; ClientVarManager: IZClientVariantManager;
+  const DBBindingArray: TDBBindingDynArray; const ClientVarManager: IZClientVariantManager;
   const InParamValues: TZVariantDynArray; const TempLobs: TInterfacesDynArray;
   const SupportsMilliseconds: Boolean = True);
 var
@@ -2081,7 +2081,7 @@ begin
 end;
 {$HINTS ON}
 
-procedure SetOleCommandProperties(Command: ICommandText; TimeOut: SmallInt;
+procedure SetOleCommandProperties(const Command: ICommandText; TimeOut: SmallInt;
   Provider: TZServerProvider; SupportsMARSConnection: Boolean; Prepare: Boolean);
 var
   FCmdProps: ICommandProperties;
@@ -2152,7 +2152,7 @@ begin
   end;
 end;
 
-function ProviderNamePrefix2ServerProvider(ProviderNamePrefix: String): TZServerProvider;
+function ProviderNamePrefix2ServerProvider(const ProviderNamePrefix: String): TZServerProvider;
 type
   TDriverNameAndServerProvider = record
     ProviderNamePrefix: String;
@@ -2176,11 +2176,12 @@ const
     );
 var
   I: Integer;
+  ProviderNamePrefixUp: string;
 begin
   Result := spMSSQL;
-  ProviderNamePrefix := UpperCase(ProviderNamePrefix);
+  ProviderNamePrefixUp := UpperCase(ProviderNamePrefix);
   for i := low(KnownDriverName2TypeMap) to high(KnownDriverName2TypeMap) do
-    if StartsWith(UpperCase(ProviderNamePrefix), KnownDriverName2TypeMap[i].ProviderNamePrefix) then begin
+    if StartsWith(ProviderNamePrefixUp, KnownDriverName2TypeMap[i].ProviderNamePrefix) then begin
       Result := KnownDriverName2TypeMap[i].Provider;
       Break;
     end;

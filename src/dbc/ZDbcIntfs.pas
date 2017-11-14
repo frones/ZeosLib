@@ -205,16 +205,16 @@ type
 
     function GetDriver(const Url: string): IZDriver;
     function GetClientVersion(const Url: string): Integer;
-    procedure RegisterDriver(Driver: IZDriver);
-    procedure DeregisterDriver(Driver: IZDriver);
+    procedure RegisterDriver(const Driver: IZDriver);
+    procedure DeregisterDriver(const Driver: IZDriver);
 
     function GetDrivers: IZCollection;
 
     function GetLoginTimeout: Integer;
     procedure SetLoginTimeout(Seconds: Integer);
 
-    procedure AddLoggingListener(Listener: IZLoggingListener);
-    procedure RemoveLoggingListener(Listener: IZLoggingListener);
+    procedure AddLoggingListener(const Listener: IZLoggingListener);
+    procedure RemoveLoggingListener(const Listener: IZLoggingListener);
     function HasLoggingListener: Boolean;
 
     procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
@@ -393,12 +393,12 @@ type
     function GetConnection: IZConnection;
     function GetIdentifierConvertor: IZIdentifierConvertor;
 
-    procedure ClearCache;overload; 
-    procedure ClearCache(const Key: string);overload;
+    procedure ClearCache; overload;
+    procedure ClearCache(const Key: string); overload;
 
-    function AddEscapeCharToWildcards(const Pattern:string): string;
-    function NormalizePatternCase(Pattern:String): string;
-    function CloneCachedResultSet(ResultSet: IZResultSet): IZResultSet;
+    function AddEscapeCharToWildcards(const Pattern: string): string;
+    function NormalizePatternCase(const Pattern: String): string;
+    function CloneCachedResultSet(const ResultSet: IZResultSet): IZResultSet;
   end;
 
   {**
@@ -705,7 +705,7 @@ type
   IZParamNamedCallableStatement = interface(IZCallableStatement)
     ['{99882891-81B2-4F3E-A3D7-35B6DCAA7136}']
     procedure RegisterParamTypeAndName(const ParameterIndex:integer;
-      ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
+      const ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
   end;
 
   {** EH: sort helper procs }
@@ -1111,8 +1111,8 @@ type
       const Password: string): IZConnection;
 
     function GetDriver(const Url: string): IZDriver;
-    procedure RegisterDriver(Driver: IZDriver);
-    procedure DeregisterDriver(Driver: IZDriver);
+    procedure RegisterDriver(const Driver: IZDriver);
+    procedure DeregisterDriver(const Driver: IZDriver);
 
     function GetDrivers: IZCollection;
 
@@ -1121,8 +1121,8 @@ type
     function GetLoginTimeout: Integer;
     procedure SetLoginTimeout(Value: Integer);
 
-    procedure AddLoggingListener(Listener: IZLoggingListener);
-    procedure RemoveLoggingListener(Listener: IZLoggingListener);
+    procedure AddLoggingListener(const Listener: IZLoggingListener);
+    procedure RemoveLoggingListener(const Listener: IZLoggingListener);
     function HasLoggingListener: Boolean;
 
     procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
@@ -1196,7 +1196,7 @@ end;
   Registers a driver for specific database.
   @param Driver a driver to be registered.
 }
-procedure TZDriverManager.RegisterDriver(Driver: IZDriver);
+procedure TZDriverManager.RegisterDriver(const Driver: IZDriver);
 begin
   if not FDrivers.Contains(Driver) then
     FDrivers.Add(Driver);
@@ -1206,7 +1206,7 @@ end;
   Unregisters a driver for specific database.
   @param Driver a driver to be unregistered.
 }
-procedure TZDriverManager.DeregisterDriver(Driver: IZDriver);
+procedure TZDriverManager.DeregisterDriver(const Driver: IZDriver);
 begin
   FDrivers.Remove(Driver);
 end;
@@ -1301,7 +1301,7 @@ end;
   Adds a logging listener to log SQL events.
   @param Listener a logging interface to be added.
 }
-procedure TZDriverManager.AddLoggingListener(Listener: IZLoggingListener);
+procedure TZDriverManager.AddLoggingListener(const Listener: IZLoggingListener);
 begin
   FLoggingListeners.Add(Listener);
   FHasLoggingListener := True;
@@ -1311,7 +1311,7 @@ end;
   Removes a logging listener from the list.
   @param Listener a logging interface to be removed.
 }
-procedure TZDriverManager.RemoveLoggingListener(Listener: IZLoggingListener);
+procedure TZDriverManager.RemoveLoggingListener(const Listener: IZLoggingListener);
 begin
   FLoggingListeners.Remove(Listener);
   FHasLoggingListener := (FLoggingListeners.Count>0);

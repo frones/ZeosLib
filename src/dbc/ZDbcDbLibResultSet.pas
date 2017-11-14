@@ -85,7 +85,7 @@ type
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
-    constructor Create(Statement: IZStatement; const SQL: string;
+    constructor Create(const Statement: IZStatement; const SQL: string;
       UserEncoding: TZCharEncoding = ceDefault);
 
     procedure Close; override;
@@ -115,9 +115,9 @@ type
   private
     FAutoColumnIndex: Integer;
   public
-    constructor Create(Statement: IZStatement; Metadata: IZResultSetMetadata);
+    constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
 
-    procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+    procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
   end;
 
@@ -135,7 +135,7 @@ uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding, ZSysUtils, ZFastCode
   @param Statement a related SQL statement object.
   @param Handle a DBLib specific query handle.
 }
-constructor TZDBLibResultSet.Create(Statement: IZStatement; const SQL: string;
+constructor TZDBLibResultSet.Create(const Statement: IZStatement; const SQL: string;
   UserEncoding: TZCharEncoding);
 begin
   inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
@@ -1005,8 +1005,8 @@ end;
   @param Statement a related SQL statement object.
   @param Metadata a resultset metadata reference.
 }
-constructor TZDBLibCachedResolver.Create(Statement: IZStatement;
-  Metadata: IZResultSetMetadata);
+constructor TZDBLibCachedResolver.Create(const Statement: IZStatement;
+  const Metadata: IZResultSetMetadata);
 begin
   inherited Create(Statement, Metadata);
 
@@ -1021,7 +1021,7 @@ end;
   @param OldRowAccessor an accessor object to old column values.
   @param NewRowAccessor an accessor object to new column values.
 }
-procedure TZDBLibCachedResolver.PostUpdates(Sender: IZCachedResultSet;
+procedure TZDBLibCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
   UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
   Statement: IZStatement;

@@ -241,10 +241,10 @@ type
     // (technobot) should any of these be moved to TZPostgreSQLDatabaseInfo?:
     function GetPostgreSQLType(Oid: Integer): string;
     function GetSQLTypeByOid(Oid: Integer): TZSQLType;
-    function GetSQLTypeByName(TypeName: string): TZSQLType;
-    function TableTypeSQLExpression(TableType: string; UseSchemas: Boolean):
+    function GetSQLTypeByName(const TypeName: string): TZSQLType;
+    function TableTypeSQLExpression(const TableType: string; UseSchemas: Boolean):
       string;
-    procedure ParseACLArray(List: TStrings; AclString: string);
+    procedure ParseACLArray(List: TStrings; const AclString: string);
     function GetPrivilegeName(Permission: char): string;
     // (technobot) end of questioned section
 
@@ -1497,7 +1497,7 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog:
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 
-  procedure InsertProcedureColumnRow(AResultSet: IZResultSet;
+  procedure InsertProcedureColumnRow(const AResultSet: IZResultSet;
     const ASchema, AProcedureName, AColumnName: string;
     const AColumnType, ADataType: integer; const ATypeName: string;
     const ANullable: integer);
@@ -3413,14 +3413,14 @@ begin
 end;
 
 function TZPostgreSQLDatabaseMetadata.GetSQLTypeByName(
-  TypeName: string): TZSQLType;
+  const TypeName: string): TZSQLType;
 begin
   Result := PostgreSQLToSQLType(
     GetConnection as IZPostgreSQLConnection, TypeName);
 end;
 
 function TZPostgreSQLDatabaseMetadata.TableTypeSQLExpression(
-  TableType: string; UseSchemas: Boolean): string;
+  const TableType: string; UseSchemas: Boolean): string;
 begin
   if UseSchemas then
   begin
@@ -3480,7 +3480,7 @@ begin
 end;
 
 procedure TZPostgreSQLDatabaseMetadata.ParseACLArray(
-  List: TStrings; AclString: string);
+  List: TStrings; const AclString: string);
 var
   PrevChar: Char;
   InQuotes: Boolean;

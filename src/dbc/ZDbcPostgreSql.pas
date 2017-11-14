@@ -509,14 +509,14 @@ function TZPostgreSQLConnection.BuildConnectStr: AnsiString;
 var
   ConnectTimeout: Integer;
   // backslashes and single quotes must be escaped with backslashes
-  function EscapeValue(AValue: String): String;
+  function EscapeValue(const AValue: String): String;
   begin
     Result := StringReplace(AValue, '\', '\\', [rfReplaceAll]);
     Result := StringReplace(Result, '''', '\''', [rfReplaceAll]);
   end;
 
   //parameters should be separated by whitespace
-  procedure AddParamToResult(AParam, AValue: String);
+  procedure AddParamToResult(const AParam, AValue: String);
   begin
     if Result <> '' then
       Result := Result + ' ';

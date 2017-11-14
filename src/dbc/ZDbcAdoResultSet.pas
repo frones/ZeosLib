@@ -79,8 +79,8 @@ type
   protected
     procedure Open; override;
   public
-    constructor Create(Statement: IZStatement; SQL: string;
-      AdoRecordSet: ZPlainAdo.RecordSet);
+    constructor Create(const Statement: IZStatement; const SQL: string;
+      const AdoRecordSet: ZPlainAdo.RecordSet);
     procedure Close; override;
     procedure ResetCursor; override;
     function Next: Boolean; override;
@@ -119,10 +119,10 @@ type
     FHandle: ZPlainAdo.Command;
     FAutoColumnIndex: Integer;
   public
-    constructor Create(Handle: ZPlainAdo.Connection;
-      Statement: IZStatement; Metadata: IZResultSetMetadata);
+    constructor Create(const Handle: ZPlainAdo.Connection;
+      const Statement: IZStatement; const Metadata: IZResultSetMetadata);
 
-    procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+    procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
   end;
 
@@ -239,7 +239,7 @@ end;
   @param SQL an SQL query string.
   @param AdoRecordSet a ADO recordset object, the source of the ResultSet.
 }
-constructor TZAdoResultSet.Create(Statement: IZStatement; SQL: string; AdoRecordSet: ZPlainAdo.RecordSet);
+constructor TZAdoResultSet.Create(const Statement: IZStatement; const SQL: string; const AdoRecordSet: ZPlainAdo.RecordSet);
 begin
   inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
   FAdoRecordSet := AdoRecordSet;
@@ -1770,8 +1770,8 @@ end;
   @param Statement a related SQL statement object.
   @param Metadata a resultset metadata reference.
 }
-constructor TZAdoCachedResolver.Create(Handle: ZPlainAdo.Connection;
-  Statement: IZStatement; Metadata: IZResultSetMetadata);
+constructor TZAdoCachedResolver.Create(const Handle: ZPlainAdo.Connection;
+  const Statement: IZStatement; const Metadata: IZResultSetMetadata);
 var
   I: Integer;
 begin
@@ -1799,7 +1799,7 @@ end;
   @param OldRowAccessor an accessor object to old column values.
   @param NewRowAccessor an accessor object to new column values.
 }
-procedure TZAdoCachedResolver.PostUpdates(Sender: IZCachedResultSet;
+procedure TZAdoCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
   UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
   Recordset: ZPlainAdo.Recordset;

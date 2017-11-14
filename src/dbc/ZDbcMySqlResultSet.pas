@@ -87,8 +87,8 @@ type
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
-    constructor Create(PlainDriver: IZMySQLPlainDriver;
-      Statement: IZStatement; const SQL: string; Handle: PZMySQLConnect;
+    constructor Create(const PlainDriver: IZMySQLPlainDriver;
+      const Statement: IZStatement; const SQL: string; Handle: PZMySQLConnect;
       AffectedRows: PInteger);
     procedure Close; override;
 
@@ -138,7 +138,7 @@ type
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
     procedure Open; override;
   public
-    constructor Create(PlainDriver: IZMySQLPlainDriver; Statement: IZStatement;
+    constructor Create(const PlainDriver: IZMySQLPlainDriver; const Statement: IZStatement;
       const SQL: string; Handle: PZMySQLConnect; StmtHandle: PZMySqlPrepStmt);
 
     procedure Close; override;
@@ -191,32 +191,32 @@ type
     FAutoColumnIndex: Integer;
     FStatement: IZMysqlStatement;
   public
-    constructor Create(PlainDriver: IZMySQLPlainDriver; Handle: PZMySQLConnect;
-      Statement: IZMysqlStatement; Metadata: IZResultSetMetadata);
+    constructor Create(const PlainDriver: IZMySQLPlainDriver; Handle: PZMySQLConnect;
+      const Statement: IZMysqlStatement; const Metadata: IZResultSetMetadata);
 
     function FormWhereClause(Columns: TObjectList;
       OldRowAccessor: TZRowAccessor): string; override;
-    procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+    procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
 
     // --> ms, 31/10/2005
     function FormCalculateStatement(Columns: TObjectList): string; override;
     // <-- ms
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); override;
+    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); override;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
   end;
 
   TZMySQLPreparedClob = Class(TZAbstractClob)
   public
-    constructor Create(PlainDriver: IZMySQLPlainDriver; Bind: PDOBindRecord2;
+    constructor Create(const PlainDriver: IZMySQLPlainDriver; Bind: PDOBindRecord2;
       StmtHandle: PZMySqlPrepStmt; ColumnIndex: Cardinal; ConSettings: PZConSettings);
   End;
 
   TZMySQLPreparedBlob = Class(TZAbstractBlob)
   public
-    constructor Create(PlainDriver: IZMySQLPlainDriver; Bind: PDOBindRecord2;
+    constructor Create(const PlainDriver: IZMySQLPlainDriver; Bind: PDOBindRecord2;
       StmtHandle: PZMySqlPrepStmt; ColumnIndex: Cardinal);
   End;
 
@@ -367,8 +367,8 @@ end;
   @param UseResult <code>True</code> to use results,
     <code>False</code> to store result.
 }
-constructor TZAbstractMySQLResultSet.Create(PlainDriver: IZMySQLPlainDriver;
-  Statement: IZStatement; const SQL: string; Handle: PZMySQLConnect;
+constructor TZAbstractMySQLResultSet.Create(const PlainDriver: IZMySQLPlainDriver;
+  const Statement: IZStatement; const SQL: string; Handle: PZMySQLConnect;
   AffectedRows: PInteger);
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
@@ -1212,8 +1212,8 @@ end;
   @param UseResult <code>True</code> to use results,
     <code>False</code> to store result.
 }
-constructor TZAbstractMySQLPreparedResultSet.Create(PlainDriver: IZMySQLPlainDriver;
-  Statement: IZStatement; const SQL: string; Handle: PZMySQLConnect;
+constructor TZAbstractMySQLPreparedResultSet.Create(const PlainDriver: IZMySQLPlainDriver;
+  const Statement: IZStatement; const SQL: string; Handle: PZMySQLConnect;
   StmtHandle: PZMySqlPrepStmt);
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
@@ -2989,8 +2989,8 @@ end;
   @param Statement a related SQL statement object.
   @param Metadata a resultset metadata reference.
 }
-constructor TZMySQLCachedResolver.Create(PlainDriver: IZMySQLPlainDriver;
-  Handle: PZMySQLConnect; Statement: IZMysqlStatement; Metadata: IZResultSetMetadata);
+constructor TZMySQLCachedResolver.Create(const PlainDriver: IZMySQLPlainDriver;
+  Handle: PZMySQLConnect; const Statement: IZMysqlStatement; const Metadata: IZResultSetMetadata);
 var
   I: Integer;
 begin
@@ -3085,7 +3085,7 @@ end;
   @param OldRowAccessor an accessor object to old column values.
   @param NewRowAccessor an accessor object to new column values.
 }
-procedure TZMySQLCachedResolver.PostUpdates(Sender: IZCachedResultSet;
+procedure TZMySQLCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
   UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
 begin
   inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);
@@ -3101,8 +3101,8 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 procedure TZMySQLCachedResolver.UpdateAutoIncrementFields(
-  Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
-  NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
+  const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
+  NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 var
   Plaindriver : IZMysqlPlainDriver;
 begin
@@ -3147,7 +3147,7 @@ begin
 end;
 
 { TZMySQLPreparedClob }
-constructor TZMySQLPreparedClob.Create(PlainDriver: IZMySQLPlainDriver;
+constructor TZMySQLPreparedClob.Create(const PlainDriver: IZMySQLPlainDriver;
   Bind: PDOBindRecord2; StmtHandle: PZMySqlPrepStmt;
   ColumnIndex: Cardinal; ConSettings: PZConSettings);
 var
@@ -3166,7 +3166,7 @@ begin
 End;
 
 { TZMySQLPreparedBlob }
-constructor TZMySQLPreparedBlob.Create(PlainDriver: IZMySQLPlainDriver;
+constructor TZMySQLPreparedBlob.Create(const PlainDriver: IZMySQLPlainDriver;
   Bind: PDOBindRecord2; StmtHandle: PZMySqlPrepStmt;
   ColumnIndex: Cardinal);
 var

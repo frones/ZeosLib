@@ -193,7 +193,7 @@ type
     procedure SetFieldType(const Index: Word; Size: Integer; Code: Smallint;
       Scale: Smallint);
   public
-    constructor Create(PlainDriver: IZInterbasePlainDriver;
+    constructor Create(const PlainDriver: IZInterbasePlainDriver;
       Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
       ConSettings: PZConSettings);
     destructor Destroy; override;
@@ -270,7 +270,7 @@ function InterpretInterbaseStatus(const PlainDriver: IZInterbasePlainDriver;
 function CheckInterbase6Error(const PlainDriver: IZInterbasePlainDriver;
   const StatusVector: TARRAY_ISC_STATUS; const ConSettings: PZConSettings;
   const LoggingCategory: TZLoggingCategory = lcOther;
-  SQL: RawByteString = '') : Integer;
+  const SQL: RawByteString = '') : Integer;
 
 { Interbase information functions}
 function GetISC_StringInfo(const PlainDriver: IZInterbasePlainDriver;
@@ -310,7 +310,7 @@ procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
   const InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
   const InParamCount: Integer; const ParamSqlData: IZParamsSQLDA;
   const ConSettings: PZConSettings; const CodePageArray: TWordDynArray); overload;
-procedure FreeStatement(PlainDriver: IZInterbasePlainDriver;
+procedure FreeStatement(const PlainDriver: IZInterbasePlainDriver;
   StatementHandle: TISC_STMT_HANDLE; Options : Word);
 function GetStatementType(const PlainDriver: IZInterbasePlainDriver;
   const StmtHandle: TISC_STMT_HANDLE; const ConSettings: PZConSettings): TZIbSqlStatementType;
@@ -561,7 +561,7 @@ end;
 
   @return generated string
 }
-function BuildPB(Info: TStrings; VersionCode: Byte; const FilterPrefix: string; ParamArr: array of TZIbParam): RawByteString;
+function BuildPB(Info: TStrings; VersionCode: Byte; const FilterPrefix: string; const ParamArr: array of TZIbParam): RawByteString;
 
   procedure ExtractParamNameAndValue(const S: string; out ParamName: String; out ParamValue: RawByteString);
   var
@@ -996,7 +996,7 @@ end;
 function CheckInterbase6Error(const PlainDriver: IZInterbasePlainDriver;
   const StatusVector: TARRAY_ISC_STATUS; const ConSettings: PZConSettings;
   const LoggingCategory: TZLoggingCategory = lcOther;
-  SQL: RawByteString = '') : Integer;
+  const SQL: RawByteString = '') : Integer;
 var
   ErrorMessage, ErrorSqlMessage, sSQL: string;
   ErrorCode: LongInt;
@@ -1135,7 +1135,7 @@ end;
    @param  the interbase plain driver
    @param  the interbse statement handle
 }
-procedure FreeStatement(PlainDriver: IZInterbasePlainDriver; StatementHandle: TISC_STMT_HANDLE; Options: Word);
+procedure FreeStatement(const PlainDriver: IZInterbasePlainDriver; StatementHandle: TISC_STMT_HANDLE; Options: Word);
 var
   StatusVector: TARRAY_ISC_STATUS;
 begin
@@ -1871,7 +1871,7 @@ begin
 end;
 
 { TSQLDA }
-constructor TZSQLDA.Create(PlainDriver: IZInterbasePlainDriver;
+constructor TZSQLDA.Create(const PlainDriver: IZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
   ConSettings: PZConSettings);
 begin

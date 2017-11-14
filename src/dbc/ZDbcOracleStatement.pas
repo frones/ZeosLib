@@ -91,10 +91,10 @@ type
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
   public
-    constructor Create(PlainDriver: IZOraclePlainDriver;
-      Connection: IZConnection; const SQL: string; Info: TStrings); overload;
-    constructor Create(PlainDriver: IZOraclePlainDriver;
-      Connection: IZConnection; Info: TStrings); overload;
+    constructor Create(const PlainDriver: IZOraclePlainDriver;
+      const Connection: IZConnection; const SQL: string; Info: TStrings); overload;
+    constructor Create(const PlainDriver: IZOraclePlainDriver;
+      const Connection: IZConnection; Info: TStrings); overload;
 
     procedure Prepare; override;
     procedure Unprepare; override;
@@ -130,7 +130,7 @@ type
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); override;
     procedure RegisterParamTypeAndName(const ParameterIndex:integer;
-      ParamTypeName: String; const ParamName: String; Const {%H-}ColumnSize, {%H-}Precision: Integer);
+      const ParamTypeName: String; const ParamName: String; Const {%H-}ColumnSize, {%H-}Precision: Integer);
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -142,7 +142,7 @@ type
 
     Function ExecuteUpdatePrepared: Integer; override;
     function ExecuteQueryPrepared: IZResultSet; override;
-    constructor Create(Connection: IZConnection; const pProcName: string; Info: TStrings);
+    constructor Create(const Connection: IZConnection; const pProcName: string; Info: TStrings);
     destructor Destroy; override;
     procedure ClearParameters; override;
   end;
@@ -164,7 +164,7 @@ uses
   @param Handle a connection handle pointer.
 }
 constructor TZOraclePreparedStatement.Create(
-  PlainDriver: IZOraclePlainDriver; Connection: IZConnection;
+  const PlainDriver: IZOraclePlainDriver; const Connection: IZConnection;
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
@@ -176,8 +176,8 @@ begin
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072);
 end;
 
-constructor TZOraclePreparedStatement.Create(PlainDriver: IZOraclePlainDriver;
-  Connection: IZConnection; Info: TStrings);
+constructor TZOraclePreparedStatement.Create(const PlainDriver: IZOraclePlainDriver;
+  const Connection: IZConnection; Info: TStrings);
 begin
   Create(PlainDriver, Connection, '', Info);
 end;
@@ -559,7 +559,7 @@ begin
 end;
 
 procedure TZOracleCallableStatement.RegisterParamTypeAndName(const ParameterIndex: integer;
-  ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
+  const ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
 var
   iPos: Integer;
   ProcName: String;
@@ -856,7 +856,7 @@ begin
   SetLength(FOracleParams, 0);
 end;
 
-constructor TZOracleCallableStatement.Create(Connection: IZConnection;
+constructor TZOracleCallableStatement.Create(const Connection: IZConnection;
   const pProcName: string; Info: TStrings);
 begin
   inherited Create(Connection, pProcName, Info);

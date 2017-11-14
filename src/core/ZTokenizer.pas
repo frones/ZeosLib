@@ -568,7 +568,7 @@ var
     IReadCount := 0;
   end;
 
-  function CheckMarkChars(Marks: String): Boolean;
+  function CheckMarkChars(const Marks: String): Boolean;
   var
     iMark: Integer;
   begin

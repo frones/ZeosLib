@@ -208,7 +208,7 @@ type
     FASAConnection: TZASAConnection;
     function ComposeObjectString(const S: String; Const NullText: String = 'null';
       QuoteChar: Char = #39): String;
-    function ConvertEscapes(Pattern: String): String;
+    function ConvertEscapes(const Pattern: String): String;
   protected
     function DecomposeObjectString(const S: String): String; override;
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-28
@@ -1202,7 +1202,7 @@ end;
 
 { TZASADatabaseMetadata }
 
-function TZASADatabaseMetadata.ConvertEscapes(Pattern: String): String;
+function TZASADatabaseMetadata.ConvertEscapes(const Pattern: String): String;
 var
   EscapeChar: Char;
   P: PChar;

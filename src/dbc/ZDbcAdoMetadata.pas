@@ -274,7 +274,7 @@ type
   IDBSchemaRowset = interface(IUnknown)
     ['{0c733a7b-2a1c-11ce-ade5-00aa0044773d}']
     function GetRowset(
-            pUnkOuter : IUnknown;
+            const pUnkOuter : IUnknown;
             const rguidSchema : TGUID;
             cRestrictions : Integer;
             var rgRestrictions : PVariant;{!!was: const VARIANT __RPC_FAR rgRestrictions[  ],}

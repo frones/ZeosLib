@@ -460,7 +460,6 @@ end;
 procedure TZTestDbcInterbaseBugReport.Test_SourceForge192;
 var
   DbcCols: IZResultSet;
-  x: Integer;
 begin
   DbcCols := Connection.GetMetadata.GetColumns('', '', 'Ticket192', '');
   CheckTrue(Assigned(DbcCols), 'DbcCols is not assigned');

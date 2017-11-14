@@ -100,8 +100,9 @@ type
   protected
     procedure Open; override;
   public
-    constructor Create(Statement: IZStatement; const SQL: string; RowSet: IRowSet;
-      ZBufferSize, ChunkSize: Integer; InMemoryDataLobs: Boolean);
+    constructor Create(const Statement: IZStatement; const SQL: string;
+      const RowSet: IRowSet; ZBufferSize, ChunkSize: Integer; InMemoryDataLobs: Boolean;
+      const EnhancedColInfo: Boolean = True);
     procedure ResetCursor; override;
     function Next: Boolean; override;
     function IsNull(ColumnIndex: Integer): Boolean; override;
@@ -140,22 +141,22 @@ type
     FResultSet: IZResultSet;
     fStmt: IZPreparedStatement;
   public
-    constructor Create(Statement: IZStatement; Metadata: IZResultSetMetadata);
+    constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
     destructor Destroy; override;
 
-    procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+    procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
   end;
 
   TZOleDBCLOB = class(TZAbstractClob)
   public
-    constructor Create(RowSet: IRowSet; Accessor: HACCESSOR; wType: DBTYPE;
+    constructor Create(var RowSet: IRowSet; Accessor: HACCESSOR; wType: DBTYPE;
       CurrentRow: HROW; ChunkSize: Integer; const ConSettings: PZConSettings);
   end;
 
   TZOleDBBLOB = class(TZAbstractBlob)
   public
-    constructor Create(RowSet: IRowSet; Accessor: HACCESSOR;
+    constructor Create(var RowSet: IRowSet; Accessor: HACCESSOR;
       CurrentRow: HROW; ChunkSize: Integer);
   end;
 
@@ -166,10 +167,10 @@ type
     function Fetch: Boolean; override;
   public
     constructor Create(ResultSet: TZOleDBResultSet; const SQL: string;
-      Resolver: IZCachedResolver; ConSettings: PZConSettings);
+      const Resolver: IZCachedResolver; ConSettings: PZConSettings);
   end;
 
-function GetCurrentResultSet(RowSet: IRowSet; Statement: IZStatement;
+function GetCurrentResultSet(const RowSet: IRowSet; const Statement: IZStatement;
   Const SQL: String; ConSettings: PZConSettings; BuffSize, ChunkSize: Integer;
     InMemoryDataLobs: Boolean; var PCurrRS: Pointer): IZResultSet;
 
@@ -365,8 +366,9 @@ end;
   @param SQL an SQL query string.
   @param AdoRecordSet a ADO recordset object, the source of the ResultSet.
 }
-constructor TZOleDBResultSet.Create(Statement: IZStatement; const SQL: string;
-  RowSet: IRowSet; ZBufferSize, ChunkSize: Integer; InMemoryDataLobs: Boolean);
+constructor TZOleDBResultSet.Create(const Statement: IZStatement; const SQL: string;
+  const RowSet: IRowSet; ZBufferSize, ChunkSize: Integer; InMemoryDataLobs: Boolean;
+  const EnhancedColInfo: Boolean);
 begin
   inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
   FRowSet := RowSet;
@@ -2105,8 +2107,8 @@ end;
 {**
   Creates a OleDB specific cached resolver object.
 }
-constructor TZOleDBMSSQLCachedResolver.Create(Statement: IZStatement;
-  Metadata: IZResultSetMetadata);
+constructor TZOleDBMSSQLCachedResolver.Create(const Statement: IZStatement;
+  const Metadata: IZResultSetMetadata);
 var
   I: Integer;
 begin
@@ -2137,7 +2139,7 @@ end;
   @param OldRowAccessor an accessor object to old column values.
   @param NewRowAccessor an accessor object to new column values.
 }
-procedure TZOleDBMSSQLCachedResolver.PostUpdates(Sender: IZCachedResultSet;
+procedure TZOleDBMSSQLCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
   UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
 begin
   inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);
@@ -2152,7 +2154,7 @@ begin
 end;
 
 { TZOleDBCLOB }
-constructor TZOleDBCLOB.Create(RowSet: IRowSet; Accessor: HACCESSOR; wType: DBTYPE;
+constructor TZOleDBCLOB.Create(var RowSet: IRowSet; Accessor: HACCESSOR; wType: DBTYPE;
   CurrentRow: HROW; ChunkSize: Integer; const ConSettings: PZConSettings);
 var
   IStream: ISequentialStream;
@@ -2188,7 +2190,7 @@ begin
 end;
 
 { TZOleDBBLOB }
-constructor TZOleDBBLOB.Create(RowSet: IRowSet; Accessor: HACCESSOR;
+constructor TZOleDBBLOB.Create(var RowSet: IRowSet; Accessor: HACCESSOR;
   CurrentRow: HROW; ChunkSize: Integer);
 var
   IStream: ISequentialStream;
@@ -2213,7 +2215,7 @@ begin
   end;
 end;
 
-function GetCurrentResultSet(RowSet: IRowSet; Statement: IZStatement;
+function GetCurrentResultSet(const RowSet: IRowSet; const Statement: IZStatement;
   Const SQL: String; ConSettings: PZConSettings; BuffSize, ChunkSize: Integer;
   InMemoryDataLobs: Boolean; var PCurrRS: Pointer): IZResultSet;
 var
@@ -2246,7 +2248,7 @@ end;
 { TZOleDBCachedResultSet }
 
 constructor TZOleDBCachedResultSet.Create(ResultSet: TZOleDBResultSet;
-  const SQL: string; Resolver: IZCachedResolver; ConSettings: PZConSettings);
+  const SQL: string; const Resolver: IZCachedResolver; ConSettings: PZConSettings);
 begin
   inherited Create(ResultSet, SQL, Resolver, ConSettings);
   FResultSet := ResultSet;

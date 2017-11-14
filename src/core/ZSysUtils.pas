@@ -215,7 +215,7 @@ function BufferToBytes(Buffer: Pointer; Length: LongInt): TBytes;
   @param CheckInt Check for "0" char too?
   @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
-function StrToBoolEx(Str: RawByteString; const CheckInt: Boolean = True): Boolean; overload;
+function StrToBoolEx(const Str: RawByteString; const CheckInt: Boolean = True): Boolean; overload;
 
 {**
   Converts a string into boolean value.
@@ -232,7 +232,7 @@ function StrToBoolEx(Str: PAnsiChar; const CheckInt: Boolean = True;
   @param Str a ZWideString value.
   @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
-function StrToBoolEx(Str: ZWideString; const CheckInt: Boolean = True): Boolean; overload;
+function StrToBoolEx(const Str: ZWideString; const CheckInt: Boolean = True): Boolean; overload;
 
 {**
   Converts a string into boolean value.
@@ -404,7 +404,7 @@ function AnsiSQLDateToDateTime(const Value: string): TDateTime;
   @return a decoded TDateTime value.
 }
 function RawSQLDateToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 
 {**
   Converts Unicode SQL Date (DateFormat) to TDateTime
@@ -413,7 +413,7 @@ function RawSQLDateToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
   @return a decoded TDateTime value.
 }
 function UnicodeSQLDateToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 
 {**
   Converts Ansi SQL Time (hh:nn:ss or hh:mm:nn.zzz or TimeFormat) to TDateTime
@@ -422,7 +422,7 @@ function UnicodeSQLDateToDateTime(Value: PWideChar; const ValLen: Cardinal;
   @return a decoded TDateTime value.
 }
 function RawSQLTimeToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 
 {**
   Converts Unicode SQL Time (hh:nn:ss or hh:mm:nn.zzz or TimeFormat) to TDateTime
@@ -431,7 +431,7 @@ function RawSQLTimeToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
   @return a decoded TDateTime value.
 }
 function UnicodeSQLTimeToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 
 {**
   Converts Ansi SQL DateTime/TimeStamp (yyyy-mm-dd hh:nn:ss or
@@ -441,7 +441,7 @@ function UnicodeSQLTimeToDateTime(Value: PWideChar; const ValLen: Cardinal;
   @return a decoded TDateTime value.
 }
 function RawSQLTimeStampToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 
 {**
   Converts Unicode SQL DateTime/TimeStamp (yyyy-mm-dd hh:nn:ss or
@@ -451,7 +451,7 @@ function RawSQLTimeStampToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
   @return a decoded TDateTime value.
 }
 function UnicodeSQLTimeStampToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 
 {**
   Converts DateTime value to a rawbyteString
@@ -461,8 +461,8 @@ function UnicodeSQLTimeStampToDateTime(Value: PWideChar; const ValLen: Cardinal;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToRawSQLDate(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
 
 {**
   Converts DateTime value to a WideString/UnicodeString
@@ -472,8 +472,8 @@ function DateTimeToRawSQLDate(const Value: TDateTime;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 
 {**
   Converts DateTime value into a RawByteString with format pattern
@@ -482,8 +482,8 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   @return a formated RawByteString with Time-Format pattern.
 }
 function DateTimeToRawSQLTime(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
 
 {**
   Converts DateTime value into a WideString/UnicodeString with format pattern
@@ -492,8 +492,8 @@ function DateTimeToRawSQLTime(const Value: TDateTime;
   @return a formated WideString/UnicodeString with Time-Format pattern.
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 
 {**
   Converts DateTime value to a RawByteString
@@ -502,8 +502,8 @@ function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   @return a formated RawByteString in TimeStamp-Format pattern.
 }
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
 
 {**
   Converts DateTime value to a WideString/UnicodeString
@@ -512,8 +512,8 @@ function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
   @return a formated WideString/UnicodeString in TimeStamp-Format pattern.
 }
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 
 {**
   Converts TDateTime to Ansi SQL Date/Time
@@ -1314,7 +1314,7 @@ end;
   @param Str a RawByteString value.
   @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
-function StrToBoolEx(Str: RawByteString; const CheckInt: Boolean = True): Boolean;
+function StrToBoolEx(const Str: RawByteString; const CheckInt: Boolean = True): Boolean;
 begin
   Result := StrToBoolEx(PAnsiChar(Pointer(Str)), CheckInt, False);
 end;
@@ -1412,7 +1412,7 @@ end;
   @param Str a ZWideString value.
   @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
 }
-function StrToBoolEx(Str: ZWideString; const CheckInt: Boolean = True): Boolean;
+function StrToBoolEx(const Str: ZWideString; const CheckInt: Boolean = True): Boolean;
 begin
   Result := StrToBoolEx(PWideChar(Pointer(Str)), CheckInt, False);
 end;
@@ -1554,10 +1554,12 @@ begin
 end;
 {$ENDIF}
 
-procedure SplitToStringList(List: TStrings; Str: string; const Delimiters: string);
+procedure SplitToStringList(List: TStrings; const AStr: string; const Delimiters: string);
 var
   DelimPos: Integer;
+  Str: string;
 begin
+  Str := AStr;
   repeat
     DelimPos := FirstDelimiter(Delimiters, Str);
     if DelimPos > 0 then
@@ -1885,7 +1887,7 @@ var
   Temp: string;
   DateFound: Boolean;
 
-  procedure ExtractTime(AString: String);
+  procedure ExtractTime(const AString: String);
   var dotPos: Integer;
   begin
     Hour := StrToIntDef(Copy(AString, 1, 2), 0);
@@ -1977,7 +1979,7 @@ end;
   @return a decoded TDateTime value.
 }
 function RawSQLDateToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 var
   Year, Month: Int64;
   Day: Word;
@@ -2120,7 +2122,7 @@ end;
   @return a decoded TDateTime value.
 }
 function UnicodeSQLDateToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 begin
   Result := RawSQLDateToDateTime(Pointer(UnicodeStringToASCII7(Value, ValLen)),
     ValLen, ZFormatSettings, Failed);
@@ -2134,11 +2136,10 @@ end;
   @return a decoded TDateTime value.
 }
 function RawSQLTimeToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 var
   Hour, Minute: Int64;
   Sec, MSec: Word;
-  Code: Integer;
   TimeFormat: PChar;
 
   procedure TryExtractTimeFromFormat(Value: PAnsiChar);
@@ -2192,7 +2193,7 @@ var
 
   procedure TryExtractTimeFromVaryingSize;
   var
-    HPos, NPos: Integer;
+    HPos, NPos, Code: Integer;
     TimeLenCount: Cardinal;
   begin
     Result := 0;
@@ -2305,7 +2306,7 @@ end;
   @return a decoded TDateTime value.
 }
 function UnicodeSQLTimeToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 begin
   Result := RawSQLTimeToDateTime(Pointer(UnicodeStringToAscii7(Value, ValLen)),
     ValLen, ZFormatSettings, Failed);
@@ -2319,7 +2320,7 @@ end;
   @return a decoded TDateTime value.
 }
 function RawSQLTimeStampToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 var
   Year, Month: Int64;
   Day, Hour, Minute, Sec, MSec: Word;
@@ -2636,7 +2637,7 @@ end;
   @return a decoded TDateTime value.
 }
 function UnicodeSQLTimeStampToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 begin
   Result := RawSQLTimeStampToDateTime(Pointer(UnicodeStringToAscii7(Value, ValLen)),
     ValLen, ZFormatSettings, Failed)
@@ -2689,8 +2690,8 @@ end;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToRawSQLDate(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2744,8 +2745,8 @@ end;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2800,8 +2801,8 @@ end;
 }
 {$WARNINGS OFF} //suppress D2007 Waring for undefined result
 function DateTimeToRawSQLTime(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2862,8 +2863,8 @@ end;
   @return a formated WideString/UnicodeString with Time-Format pattern.
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2925,8 +2926,8 @@ end;
   @return a formated RawByteString in TimeStamp-Format pattern.
 }
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -3009,8 +3010,8 @@ end;
   @return a formated WideString/UnicodeString in TimeStamp-Format pattern.
 }
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;

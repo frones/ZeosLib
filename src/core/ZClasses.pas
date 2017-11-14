@@ -176,7 +176,7 @@ type
     function GetValues: IZCollection;
     function GetCount: Integer;
 
-    function Remove(Key: IZInterface): Boolean;
+    function Remove(const Key: IZInterface): Boolean;
     procedure Clear;
 
     property Count: Integer read GetCount;
@@ -190,7 +190,7 @@ type
 
     function Peek: IZInterface;
     function Pop: IZInterface;
-    procedure Push(Value: IZInterface);
+    procedure Push(const Value: IZInterface);
     function GetCount: Integer;
 
     property Count: Integer read GetCount;

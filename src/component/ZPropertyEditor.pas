@@ -459,7 +459,7 @@ var
   Catalog, Schema: string;
   ProcedureName: string;
 
-  procedure ExtractOverload(OverloadSeparator: String);
+  procedure ExtractOverload(const OverloadSeparator: String);
   var
     I: Integer;
     SL: TStrings;

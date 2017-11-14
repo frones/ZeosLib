@@ -233,10 +233,10 @@ type
 
   TZInterbase6DatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
-    function GetPrivilege(Privilege: string): string;
+    function GetPrivilege(const Privilege: string): string;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-25
-    function ConstructNameCondition(Pattern: string; Column: string): string; override;
+    function ConstructNameCondition(const Pattern: string; const Column: string): string; override;
 
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
@@ -1267,8 +1267,8 @@ begin
   Result := TZInterbase6DatabaseInfo.Create(Self);
 end;
 
-function TZInterbase6DatabaseMetadata.ConstructNameCondition(Pattern: string;
-  Column: string): string;
+function TZInterbase6DatabaseMetadata.ConstructNameCondition(const Pattern: string;
+  const Column: string): string;
 begin
   if HasNoWildcards(Pattern) then begin
     Result := Inherited ConstructnameCondition(Pattern,Column)
@@ -2898,7 +2898,7 @@ end;
   @param  Interbase privilege name
   @returns a JDBC privilege name.
 }
-function TZInterbase6DatabaseMetadata.GetPrivilege(Privilege: string): string;
+function TZInterbase6DatabaseMetadata.GetPrivilege(const Privilege: string): string;
 begin
   if Privilege = 'S' then
     Result := 'SELECT'

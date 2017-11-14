@@ -114,7 +114,7 @@ type
     procedure UnPrepareInParameters; override;
     function SupportsSingleColumnArrays: Boolean; override;
   public
-    constructor Create(Connection: IZODBCConnection; var ConnectionHandle: SQLHDBC; const SQL: string; Info: TStrings);
+    constructor Create(const Connection: IZODBCConnection; var ConnectionHandle: SQLHDBC; const SQL: string; Info: TStrings);
     destructor Destroy; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
@@ -233,7 +233,7 @@ begin
   end;
 end;
 
-constructor TZAbstractODBCStatement.Create(Connection: IZODBCConnection;
+constructor TZAbstractODBCStatement.Create(const Connection: IZODBCConnection;
   var ConnectionHandle: SQLHDBC; const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
@@ -611,7 +611,7 @@ var
   begin
     SetPRaw(Pointer(R), Length(R));
   end;
-  procedure SetLob(Lob: IInterface);
+  procedure SetLob(const Lob: IInterface);
   begin
     PLobArray(PPointer(Param.CurrParamDataPtr)^)[j] := lob;
     Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);

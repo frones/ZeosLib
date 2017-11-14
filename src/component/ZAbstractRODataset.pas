@@ -294,9 +294,9 @@ type
     function GetLinkedFields: string; {renamed by bangfauzan}
     procedure SetLinkedFields(const Value: string);  {renamed by bangfauzan}
     function GetIndexFieldNames : String; {bangfauzan addition}
-    procedure SetIndexFieldNames(Value : String); {bangfauzan addition}
+    procedure SetIndexFieldNames(const Value : String); {bangfauzan addition}
     procedure SetOptions(Value: TZDatasetOptions);
-    procedure SetSortedFields({const} Value: string); {bangfauzan modification}
+    procedure SetSortedFields(const Value: string); {bangfauzan modification}
     procedure SetProperties(const Value: TStrings);
 
     function GetSortType : TSortType; {bangfauzan addition}
@@ -324,8 +324,8 @@ type
     function FilterRow(RowNo: NativeInt): Boolean;
     function GotoRow(RowNo: NativeInt): Boolean; // added by tohenk
     procedure RereadRows;
-    procedure SetStatementParams(Statement: IZPreparedStatement;
-      ParamNames: TStringDynArray; Params: TParams;
+    procedure SetStatementParams(const Statement: IZPreparedStatement;
+      const ParamNames: TStringDynArray; Params: TParams;
       DataLink: TDataLink); virtual;
     procedure MasterChanged(Sender: TObject);
     procedure MasterDisabled(Sender: TObject);
@@ -1353,8 +1353,8 @@ type
     FPrecision: Integer;
     procedure BcdRangeError(Value: Variant; Max, Min: string);
     procedure SetCurrency(Value: Boolean);
-    procedure SetMaxValue(Value: string);
-    procedure SetMinValue(Value: string);
+    procedure SetMaxValue(const Value: string);
+    procedure SetMinValue(const Value: string);
     procedure SetPrecision(Value: Integer);
     procedure UpdateCheckRange;
   protected
@@ -1689,8 +1689,8 @@ type
     procedure SetActive(Value: Boolean);
     function GetHandle: Pointer; virtual;
     procedure SetGroupingLevel(Value: Integer);
-    procedure SetIndexName(Value: string);
-    procedure SetExpression(Value: string);
+    procedure SetIndexName(const Value: string);
+    procedure SetExpression(const Value: string);
     procedure SetPrecision(Value: Integer);
     procedure SetCurrency(Value: Boolean);
   protected
@@ -2738,8 +2738,8 @@ end;
   @param Params a collection of SQL parameters.
   @param DataLink a datalink to get parameters.
 }
-procedure TZAbstractRODataset.SetStatementParams(Statement: IZPreparedStatement;
-  ParamNames: TStringDynArray; Params: TParams; DataLink: TDataLink);
+procedure TZAbstractRODataset.SetStatementParams(const Statement: IZPreparedStatement;
+  const ParamNames: TStringDynArray; Params: TParams; DataLink: TDataLink);
 var
   I: Integer;
   TempParam, Param: TParam;
@@ -3866,20 +3866,21 @@ end;
   Sets a new sorted fields.
   @param Value a new sorted fields.
 }
-procedure TZAbstractRODataset.SetSortedFields({const} Value: string); {bangfauzan modification}
+procedure TZAbstractRODataset.SetSortedFields(const Value: string); {bangfauzan modification}
+var aValue: string;
 begin
-  Value:=Trim(Value); {bangfauzan addition}
-  if (FSortedFields <> Value) or (FIndexFieldNames <> Value)then {bangfauzan modification}
+  aValue:=Trim(Value); {bangfauzan addition}
+  if (FSortedFields <> aValue) or (FIndexFieldNames <> aValue)then {bangfauzan modification}
   begin
-    FIndexFieldNames:=Value;
+    FIndexFieldNames:=aValue;
     FSortType := GetSortType; {bangfauzan addition}
     {removing ASC or DESC behind space}
     if (FSortType <> stIgnored) then
     begin {pawelsel modification}
-       Value:=StringReplace(Value,' Desc','',[rfReplaceAll,rfIgnoreCase]);
-       Value:=StringReplace(Value,' Asc','',[rfReplaceAll,rfIgnoreCase]);
+      aValue:=StringReplace(aValue,' Desc','',[rfReplaceAll,rfIgnoreCase]);
+      aValue:=StringReplace(aValue,' Asc','',[rfReplaceAll,rfIgnoreCase]);
     end;
-    FSortedFields := Value;
+    FSortedFields := aValue;
     if Active then
       if not ({$IFDEF FPC}Updatable{$ELSE}Self is TZAbstractDataSet{$ENDIF}) then
         InternalSort //enables clearsort which prevents rereading data
@@ -5383,23 +5384,24 @@ begin
   end;
 end;
 
-procedure TZAbstractRODataset.SetIndexFieldNames(Value: String);
+procedure TZAbstractRODataset.SetIndexFieldNames(const Value: String);
+var aValue: string;
 begin
-  Value:=Trim(Value);
+  aValue:=Trim(Value);
   {pawelsel modification}
-  Value:=StringReplace(Value,'[','',[rfReplaceAll]);
-  Value:=StringReplace(Value,']','',[rfReplaceAll]);
+  aValue:=StringReplace(aValue,'[','',[rfReplaceAll]);
+  aValue:=StringReplace(aValue,']','',[rfReplaceAll]);
 
-  if FIndexFieldNames <> Value then
+  if FIndexFieldNames <> aValue then
   begin
-     FIndexFieldNames := Value;
+     FIndexFieldNames := aValue;
      FSortType:=GetSortType;
      if (FSortType <> stIgnored) then
      begin {pawelsel modification}
-        Value:=StringReplace(Value,' Desc','',[rfReplaceAll,rfIgnoreCase]);
-        Value:=StringReplace(Value,' Asc','',[rfReplaceAll,rfIgnoreCase]);
+       aValue:=StringReplace(aValue,' Desc','',[rfReplaceAll,rfIgnoreCase]);
+       aValue:=StringReplace(aValue,' Asc','',[rfReplaceAll,rfIgnoreCase]);
      end;
-     FSortedFields:=Value;
+     FSortedFields:=aValue;
   end;
 
   {Perform sorting}

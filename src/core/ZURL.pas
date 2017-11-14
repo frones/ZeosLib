@@ -92,7 +92,7 @@ type
     function GetURL: string;
     procedure SetURL(const Value: string);
     procedure DoOnPropertiesChange(Sender: TObject);
-    function GetParamAndValue(AString: String; Var Param, Value: String): Boolean;
+    function GetParamAndValue(const AString: String; Var Param, Value: String): Boolean;
     procedure AddValues(Values: TStrings);
   public
     constructor Create; overload;
@@ -448,7 +448,7 @@ begin
     FOnPropertiesChange(Sender);
 end;
 
-function TZURL.GetParamAndValue(AString: String; Var Param, Value: String): Boolean;
+function TZURL.GetParamAndValue(const AString: String; Var Param, Value: String): Boolean;
 var
   DelimPos: Integer;
 begin

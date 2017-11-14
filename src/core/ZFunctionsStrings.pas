@@ -65,101 +65,101 @@ type
   TZConcatFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a SUBSTR function. }
   TZSubStrFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a LEFT function. }
   TZLeftFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a RIGHT function. }
   TZRightFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a STRPOS function. }
   TZStrPosFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a LENGTH function. }
   TZLengthFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a UPPER function. }
   TZUpperFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a LOWER function. }
   TZLowerFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a CAPITALIZE function. }
   TZCapitalizeFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a TRIM function. }
   TZTrimFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a LTRIM function. }
   TZLTrimFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a RTRIM function. }
   TZRTrimFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a SOUNDEX function. }
   TZSoundexFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a LEVENSHTEINDIST function. }
   TZLevenshteinDistanceFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
-Function Capitalize(const s:string; Delims : string = '') : string;
+Function Capitalize(const s: string; const Delims : string = '') : string;
 Function LevenshteinDistance(const s1, s2: string; const DoUpcase : BOOLEAN = TRUE): Integer;
 procedure AddStringFunctions(Functions : TZFunctionsList);
 
@@ -171,7 +171,7 @@ implementation
 uses
   Math, StrUtils, ZMessages, ZCompatibility, ZFastCode;
 
-Function Capitalize(const s:string; Delims : string = '') : string;
+Function Capitalize(const s: string; const Delims : string = '') : string;
 var
   sDelims : set of ansichar;
   i : integer;
@@ -332,7 +332,7 @@ end;
   @returns a function value.
 }
 function TZConcatFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   I, ParamsCount: Integer;
   Temp: string;
@@ -356,7 +356,7 @@ end;
   @returns a function value.
 }
 function TZSubStrFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 3);
   VariantManager.SetAsString(Result, Copy(
@@ -367,7 +367,7 @@ end;
 
 { TZLeftFunction }
 function TZLeftFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   Value1, Value2: TZVariant;
 begin
@@ -379,7 +379,7 @@ end;
 
 { TZRightFunction }
 function TZRightFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   Value1, Value2: TZVariant;
 begin
@@ -398,7 +398,7 @@ end;
   @returns a function value.
 }
 function TZStrPosFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 2);
   VariantManager.SetAsInteger(Result, ZFastCode.Pos(
@@ -415,7 +415,7 @@ end;
   @returns a function value.
 }
 function TZLengthFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, Length(VariantManager.GetAsString(Stack.GetParameter(1))));
@@ -430,7 +430,7 @@ end;
   @returns a function value.
 }
 function TZLowerFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsString(Result, AnsiLowerCase(
@@ -446,7 +446,7 @@ end;
   @returns a function value.
 }
 function TZUpperFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsString(Result, AnsiUpperCase(
@@ -456,7 +456,7 @@ end;
 { TZCapitalizeFunction }
 
 function TZCapitalizeFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   ParamsCount: Integer;
 begin
@@ -475,7 +475,7 @@ end;
 { TZTrimFunction }
 
 function TZTrimFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   Value: TZVariant;
 begin
@@ -487,7 +487,7 @@ end;
 { TZLTrimFunction }
 
 function TZLTrimFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   Value: TZVariant;
 begin
@@ -499,7 +499,7 @@ end;
 { TZRTrimFunction }
 
 function TZRTrimFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   Value: TZVariant;
 begin
@@ -511,7 +511,7 @@ end;
 { TZSoundexFunction }
 
 function TZSoundexFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   ParamsCount: Integer;
 begin
@@ -528,7 +528,7 @@ begin
 end;
 
 function TZLevenshteinDistanceFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 
 var
   ParamsCount: Integer;

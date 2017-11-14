@@ -77,8 +77,8 @@ type
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
   public
-    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings); overload;
-    constructor Create(Connection: IZConnection; Info: TStrings); overload;
+    constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings); overload;
+    constructor Create(const Connection: IZConnection; Info: TStrings); overload;
     destructor Destroy; override;
 
     procedure Prepare; override;
@@ -106,7 +106,7 @@ type
   protected
     function GetProcedureSQL: RawByteString;
   public
-    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
+    constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;
 
     procedure Close; override;
@@ -134,7 +134,7 @@ uses ZSysUtils, ZDbcUtils, ZMessages, ZPlainASAConstants, ZDbcASAResultSet,
   @param SQL the query
   @param Info a statement parameters.
 }
-constructor TZASAPreparedStatement.Create(Connection: IZConnection;
+constructor TZASAPreparedStatement.Create(const Connection: IZConnection;
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
@@ -152,7 +152,7 @@ end;
   @param Connection a database connection object.
   @param Info a statement parameters.
 }
-constructor TZASAPreparedStatement.Create(Connection: IZConnection; Info: TStrings);
+constructor TZASAPreparedStatement.Create(const Connection: IZConnection; Info: TStrings);
 begin
   Create(Connection, '', Info);
 end;
@@ -393,7 +393,7 @@ end;
   @param Handle a connection handle pointer.
   @param Info a statement parameters.
 }
-constructor TZASACallableStatement.Create(Connection: IZConnection;
+constructor TZASACallableStatement.Create(const Connection: IZConnection;
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);

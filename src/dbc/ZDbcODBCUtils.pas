@@ -85,9 +85,9 @@ function SQL_SUCCEDED(RETCODE: SQLRETURN): Boolean; {$IFDEF WITH_INLINE}inline; 
 function SQL_LEN_DATA_AT_EXEC(Len: SQLLEN): SQLLEN; {$IFDEF WITH_INLINE}inline; {$ENDIF}
 
 procedure CheckODBCError(RETCODE: SQLRETURN; Handle: SQLHANDLE;
-  HandleType: SQLSMALLINT; Connection: IZODBCConnection);
+  HandleType: SQLSMALLINT; const Connection: IZODBCConnection);
 
-function GetConnectionString(WindowHandle: SQLHWND; InConnectionString, LibraryLocation: String): String;
+function GetConnectionString(WindowHandle: SQLHWND; const InConnectionString, LibraryLocation: String): String;
 
 const
   LobArrayIndexOffSet = NativeUInt(SizeOf(Pointer));
@@ -110,7 +110,7 @@ begin
 end;
 
 procedure CheckODBCError(RETCODE: SQLRETURN; Handle: SQLHANDLE;
-  HandleType: SQLSMALLINT; Connection: IZODBCConnection);
+  HandleType: SQLSMALLINT; const Connection: IZODBCConnection);
 var
   PlainW: IODBC3UnicodePlainDriver;
   PlainA: IODBC3RawPlainDriver;
@@ -539,7 +539,7 @@ begin
   end;
 end;
 
-function GetConnectionString(WindowHandle: SQLHWND; InConnectionString, LibraryLocation: String): String;
+function GetConnectionString(WindowHandle: SQLHWND; const InConnectionString, LibraryLocation: String): String;
 var
   URL: TZURL;
   PlainDriver: IODBC3BasePlainDriver;

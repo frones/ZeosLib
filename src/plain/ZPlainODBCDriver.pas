@@ -2356,7 +2356,7 @@ type
     procedure LoadApi; override;
   public
     function GetProtocol: string; override;
-    constructor Create(DriverName: String);
+    constructor Create(const DriverName: String);
   public
     function AllocHandle(HandleType: SQLSMALLINT; InputHandle: SQLHANDLE;
       var OutputHandle: SQLHANDLE): SQLRETURN;
@@ -2566,7 +2566,7 @@ type
   public
     function GetDescription: string; override;
     procedure LoadCodePages; override;
-    constructor Create(DriverName: String = '_w');
+    constructor Create(const DriverName: String = '_w');
   public
     function BrowseConnect(ConnectionHandle: SQLHDBC; InConnectionString: PSQLWCHAR;
       StringLength1: SQLSMALLINT; OutConnectionString: PSQLWCHAR;
@@ -2788,7 +2788,7 @@ type
   public
     function GetDescription: string; override;
     procedure LoadCodePages; override;
-    constructor Create(DriverName: String = '_a');
+    constructor Create(const DriverName: String = '_a');
   public
     function BrowseConnect(ConnectionHandle: SQLHDBC; InConnectionString: PSQLCHAR;
       StringLength1: SQLSMALLINT; OutConnectionString: PSQLCHAR;
@@ -2986,7 +2986,7 @@ begin
   Result := SQLCopyDesc(SourceDescHandle, TargetDescHandle);
 end;
 
-constructor TODBC3BaseDriver.Create(DriverName: String);
+constructor TODBC3BaseDriver.Create(const DriverName: String);
 begin
   inherited Create;
   FLoader := TZNativeLibraryLoader.Create([]);
@@ -3247,7 +3247,7 @@ begin
     NameLength2, TableName, NameLength3, ColumnName, NameLength4);
 end;
 
-constructor TODBC3UnicodePlainDriver.Create(DriverName: String = '_w');
+constructor TODBC3UnicodePlainDriver.Create(const DriverName: String);
 begin
   inherited Create(DriverName)
 end;
@@ -3564,7 +3564,7 @@ begin
     NameLength2, TableName, NameLength3, ColumnName, NameLength4);
 end;
 
-constructor TODBC3RawPlainDriver.Create(DriverName: String = '_a');
+constructor TODBC3RawPlainDriver.Create(const DriverName: String);
 begin
   inherited Create(DriverName);
 end;

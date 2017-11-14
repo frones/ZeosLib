@@ -79,7 +79,7 @@ type
     ['{FAAAFCE0-F550-4098-96C6-580145813EBF}']
     function GetDBHandle: PZASASQLCA;
     function GetPlainDriver: IZASAPlainDriver;
-//    procedure CreateNewDatabase(SQL: String);
+//    procedure CreateNewDatabase(const SQL: String);
   end;
 
   {** Implements ASA Database Connection. }
@@ -95,7 +95,7 @@ type
   public
     function GetDBHandle: PZASASQLCA;
     function GetPlainDriver: IZASAPlainDriver;
-//    procedure CreateNewDatabase(SQL: String);
+//    procedure CreateNewDatabase(const SQL: String);
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):

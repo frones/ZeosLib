@@ -228,9 +228,9 @@ type
     fProcedureColumnsColMap: TProcedureColumnsColMap;
   protected
     procedure CheckStmtError(RETCODE: SQLRETURN; StmtHandle: SQLHSTMT);
-    procedure IntializeTableColColumnMap(RS: IZResultSet);
-    procedure IntializeProcedureMap(RS: IZResultSet);
-    procedure IntializeProceduresProcedureColumnsColMap(RS: IZResultSet);
+    procedure IntializeTableColColumnMap(const RS: IZResultSet);
+    procedure IntializeProcedureMap(const RS: IZResultSet);
+    procedure IntializeProceduresProcedureColumnsColMap(const RS: IZResultSet);
   protected
     function UncachedGetTableTypes: IZResultSet; override;
     function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
@@ -3462,7 +3462,7 @@ begin
 end;
 
 procedure TAbstractODBCDatabaseMetadata.IntializeProcedureMap(
-  RS: IZResultSet);
+  const RS: IZResultSet);
 begin
   if not fProcedureMap.Initilized then
   begin
@@ -3477,7 +3477,7 @@ begin
 end;
 
 procedure TAbstractODBCDatabaseMetadata.IntializeProceduresProcedureColumnsColMap(
-  RS: IZResultSet);
+  const RS: IZResultSet);
 begin
  if not fProcedureColumnsColMap.Initilized then begin
    fProcedureColumnsColMap.ColIndices[CatalogNameIndex] := CatalogNameIndex;
@@ -3498,7 +3498,7 @@ begin
 end;
 
 procedure TAbstractODBCDatabaseMetadata.IntializeTableColColumnMap(
-  RS: IZResultSet);
+  const RS: IZResultSet);
 var I: ShortInt;
 begin
   if not fTableColColumnMap.Initilized then begin
