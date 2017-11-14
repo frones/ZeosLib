@@ -3239,8 +3239,6 @@ end;
   @return <code>ResultSet</code> - each row is an SQL type description
 }
 function TZPostgreSQLDatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
-const
-  typname_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
 var
   SQL: string;
   Len: NativeUInt;
@@ -3256,8 +3254,8 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiChar(typname_Index, Len), @Len);
-        Result.UpdateInt(TypeInfoDataTypeIndex, Ord(GetSQLTypeByName(GetString(typname_Index))));
+        Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiChar(FirstDbcIndex, Len), @Len);
+        Result.UpdateInt(TypeInfoDataTypeIndex, Ord(GetSQLTypeByName(GetString(FirstDbcIndex))));
         Result.UpdateInt(TypeInfoPecisionIndex, 9);
         Result.UpdateInt(TypeInfoNullAbleIndex, Ord(ntNoNulls));
         Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, False);

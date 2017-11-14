@@ -3246,7 +3246,7 @@ begin
         Inc(SingleStmtLength, {%H-}PLengthInt(NativeUInt(CurrentSQLTokens[i]) - StringLenOffSet)^);
         if not ReturningFound and (CurrentSQLTokens[i][1] in ['R', 'r']) then
         begin
-          ReturningFound := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(CurrentSQLTokens[i]) = 'RETUNRING';
+          ReturningFound := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(CurrentSQLTokens[i]) = 'RETURNING';
           Inc(StmtLength, Ord(ReturningFound)*Length(EBSuspend));
         end;
       end;

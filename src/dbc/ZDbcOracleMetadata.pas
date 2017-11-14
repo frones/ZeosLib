@@ -1406,8 +1406,6 @@ var
   end;
 
   procedure GetMoreProcedures;
-  const
-    ObjectNameIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   var
     i: Integer;
     PackageNameCondition: String;
@@ -1419,7 +1417,7 @@ var
     TempSet := IZStmt.ExecuteQuery('select object_name from user_arguments '
                + PackageNameCondition + ' GROUP BY object_name order by object_name');
     while TempSet.Next do
-      Procs.Add(TempSet.GetString(ObjectNameIndex));
+      Procs.Add(TempSet.GetString(FirstDbcIndex));
     TempSet.Close;
     for i := 0 to Procs.Count -1 do
     begin
@@ -1430,8 +1428,6 @@ var
   end;
 
   function CheckSchema: Boolean;
-  const
-    CountIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   begin
     if TmpSchemaPattern = '' then
       Result := False
@@ -1439,7 +1435,7 @@ var
       with GetConnection.CreateStatement.ExecuteQuery('SELECT COUNT(*) FROM ALL_USERS WHERE '+ConstructNameCondition(TmpSchemaPattern,'username')) do
       begin
         Next;
-        Result := GetInt(CountIndex) > 0;
+        Result := GetInt(FirstDbcIndex) > 0;
         Close;
       end;
   end;

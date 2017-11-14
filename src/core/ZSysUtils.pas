@@ -310,6 +310,13 @@ function ComposeString(List: TStrings; const Delimiter: string): string;
 function FloatToSQLStr(Value: Extended): string;
 
 {**
+  Converts SQL string with '.' delimiter into a float value.
+  @param Str a string value to be converted.
+  @return a converted float value.
+}
+function SQLStrToFloat(const Str: String): Extended;
+
+{**
   Puts to list a splitted string using the delimiter string which replaces
   the previous list content.
   @param List a list with strings.
@@ -615,6 +622,10 @@ uses DateUtils, StrUtils, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   {$IFDEF WITH_RTLCONSTS_SInvalidGuidArray}RTLConsts,{$ENDIF}SysConst,
   ZFastCode;
 
+var
+  // Local copy of current FormatSettings with '.' as DecimalSeparator and
+  // ',' as ThousandSeparator
+  FSSqlFloat: TFormatSettings;
 
 {**
   Determines a position of a first delimiter.
@@ -1662,16 +1673,13 @@ end;
   @return a converted string value.
 }
 function FloatToSQLStr(Value: Extended): string;
-var
-  OldDecimalSeparator: Char;
 begin
-  OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
-  try
-    Result := FloatToStr(Value);
-  finally
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
+  Result := FloatToStr(Value, FSSqlFloat);
   end;
+
+function SQLStrToFloat(const Str: String): Extended;
+begin
+  Result := StrToFloat(Str, FSSqlFloat);
 end;
 
 {**
@@ -3533,16 +3541,17 @@ begin
 end;
 
 function FloatToSqlRaw(const Value: Extended): RawByteString;
+{$IFNDEF FPC}
 var
-  OldDecimalSeparator, OldThousandSeparator: Char;
+  Buffer: array[0..63] of AnsiChar;
+{$ENDIF}
 begin
-  OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
-  OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := ',';
-  Result := FloatToRaw(Value);
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
+  {$IFDEF FPC}
+  Result := FloatToStr(Value, FSSqlFloat);
+  {$ELSE}
+  SetString(Result, Buffer, {$IFDEF WITH_FLOATTOTEXT_DEPRECATED}AnsiStrings.{$ENDIF}FloatToText(PAnsiChar(@Buffer), Value, fvExtended,
+    ffGeneral, 15, 0, FSSqlFloat));
+  {$ENDIF}
 end;
 
 function FloatToUnicode(const Value: Extended): ZWideString;
@@ -3883,7 +3892,14 @@ end;
 
 initialization
 HexFiller;  //build up lookup table
+  {$IFDEF WITH_FORMATSETTINGS}
+  FSSqlFloat := FormatSettings;
+  {$ELSE}
+  FSSqlFloat.CurrencyString := CurrencyString;
+  FSSqlFloat.CurrencyFormat := CurrencyFormat;
+  FSSqlFloat.NegCurrFormat := NegCurrFormat;
+  {$ENDIF}
+  FSSqlFloat.DecimalSeparator := '.';
+  FSSqlFloat.ThousandSeparator := ',';
 
 end.
-
-
