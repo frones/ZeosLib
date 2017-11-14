@@ -6083,7 +6083,6 @@ end;
 
 function TZNumericField.ConvertSigned(const Value; const ValueType: TZSQLType): Int64;
 begin
-  Result := 0; //satisfy Compiler
   case ValueType of
     stByte: Result := Byte(Value);
     stShort: Result := ShortInt(Value);
@@ -6102,13 +6101,12 @@ begin
     stBigDecimal: Result := Round(Extended(Value));
     stDate, stTime, stTimeStamp: Result := Round(TDateTime(Value));
     else
-      Format(SConvertionIsNotPossible, [FFieldIndex, '','']);
+      raise EZSQLException.Create(Format(SConvertionIsNotPossible, [FFieldIndex, '','']));
   end;
 end;
 
 function TZNumericField.ConvertUnSigned(const Value; const ValueType: TZSQLType): UInt64;
 begin
-  Result := 0; //satisfy Compiler
   case ValueType of
     stByte: Result := Byte(Value);
     stShort: Result := ShortInt(Value);
@@ -6126,13 +6124,12 @@ begin
     stBigDecimal: Result := Round(Extended(Value));
     stDate, stTime, stTimeStamp: Result := Round(TDateTime(Value));
     else
-      Format(SConvertionIsNotPossible, [FFieldIndex, '','']);
+      raise EZSQLException.Create(Format(SConvertionIsNotPossible, [FFieldIndex, '','']));
   end;
 end;
 
 function TZNumericField.ConvertExtended(const Value; const ValueType: TZSQLType): Extended;
 begin
-  Result := 0; //satisfy Compiler
   case ValueType of
     stByte: Result := Byte(Value);
     stShort: Result := ShortInt(Value);
@@ -6150,7 +6147,7 @@ begin
     stBigDecimal: Result := Extended(Value);
     stDate, stTime, stTimeStamp: Result := TDateTime(Value);
     else
-      Format(SConvertionIsNotPossible, [FFieldIndex, '','']);
+      raise EZSQLException.Create(Format(SConvertionIsNotPossible, [FFieldIndex, '','']));
   end;
 end;
 
