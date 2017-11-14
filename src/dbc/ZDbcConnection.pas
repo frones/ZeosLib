@@ -1474,7 +1474,7 @@ begin
       Result := {$IFNDEF UNICODE}GetDriver.GetTokenizer.GetEscapeString{$ENDIF}(Value)
     else
       {$IFDEF WITH_UNITANSISTRINGS}
-      AnsiStrings.AnsiQuotedStr(Value, #39)
+      Result := AnsiStrings.AnsiQuotedStr(Value, #39)
       {$ELSE}
       Result := GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(Value, #39))
       {$ENDIF}

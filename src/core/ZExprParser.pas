@@ -300,19 +300,6 @@ var
   Tokens: TStrings;
   TokenType: TZExpressionTokenType;
   TokenValue: TZVariant;
-
-  function SQLStrToFloat(const Str: String): Extended;
-  var
-    OldDecimalSeparator: Char;
-  begin
-    OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
-    try
-      Result := StrToFloat(Str);
-    finally
-      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
-    end;
-  end;
 begin
   Tokens := FTokenizer.TokenizeBufferToList(FExpression,
     [toSkipWhitespaces, toSkipComments, toSkipEOF, toDecodeStrings]);
@@ -366,7 +353,7 @@ begin
         ttFloat:
           begin
             TokenType := ttConstant;
-            TokenValue:= EncodeFloat(SqlStrToFloat(Tokens[TokenIndex]));
+            TokenValue:= EncodeFloat(SQLStrToFloat(Tokens[TokenIndex]));
           end;
         ttQuoted:
           begin

@@ -1317,12 +1317,12 @@ begin
       Result.MoveToInsertRow;
       Result.UpdateNull(CatalogNameIndex);
       Result.UpdateNull(SchemaNameIndex);
-      Result.UpdateString(3, GetString(1)); //RDB$TRIGGER_NAME
-      Result.UpdateString(4, GetString(2)); //RDB$RELATION_NAME
-      Result.UpdateSmall(5, GetSmall(3)); //RDB$TRIGGER_TYPE
-      Result.UpdateSmall(6, GetSmall(4)); //RDB$TRIGGER_INACTIVE
-      Result.UpdateString(7, GetString(5)); //RDB$TRIGGER_SOURCE
-      Result.UpdateString(8, GetString(6)); //RDB$DESCRIPTION
+      Result.UpdateString(SchemaNameIndex + 1, GetString(FirstDbcIndex)); //RDB$TRIGGER_NAME
+      Result.UpdateString(SchemaNameIndex + 2, GetString(FirstDbcIndex + 1)); //RDB$RELATION_NAME
+      Result.UpdateSmall(SchemaNameIndex + 3,  GetSmall(FirstDbcIndex + 2)); //RDB$TRIGGER_TYPE
+      Result.UpdateSmall(SchemaNameIndex + 4,  GetSmall(FirstDbcIndex + 3)); //RDB$TRIGGER_INACTIVE
+      Result.UpdateString(SchemaNameIndex + 5, GetString(FirstDbcIndex + 4)); //RDB$TRIGGER_SOURCE
+      Result.UpdateString(SchemaNameIndex + 6, GetString(FirstDbcIndex + 5)); //RDB$DESCRIPTION
       Result.InsertRow;
     end;
     Close;
@@ -2168,14 +2168,14 @@ begin
     Result:=inherited UncachedGetVersionColumns(Catalog, Schema, Table);
 
     Result.MoveToInsertRow;
-    Result.UpdateNull(1);
-    Result.UpdateString(2, 'ctid');
-    //  Result.UpdateInt(3, GetSQLType('tid')); //FIX IT
-    Result.UpdateString(4, 'tid');
-    Result.UpdateNull(5);
-    Result.UpdateNull(6);
-    Result.UpdateNull(7);
-    Result.UpdateInt(4, Ord(vcPseudo));
+    Result.UpdateNull(FirstDbcIndex);
+    Result.UpdateString(FirstDbcIndex + 1, 'ctid');
+  //  Result.UpdateInt(FirstDbcIndex + 2, GetSQLType('tid')); //FIX IT
+    Result.UpdateString(FirstDbcIndex + 3, 'tid');
+    Result.UpdateNull(FirstDbcIndex + 4);
+    Result.UpdateNull(FirstDbcIndex + 5);
+    Result.UpdateNull(FirstDbcIndex + 6);
+    Result.UpdateInt(FirstDbcIndex + 7, Ord(vcPseudo));
     Result.InsertRow;
 end;
 
