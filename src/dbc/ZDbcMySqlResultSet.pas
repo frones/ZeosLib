@@ -2731,7 +2731,7 @@ begin
   FStatement := Statement as IZMysqlStatement;
 
   { Defines an index of autoincrement field. }
-  FAutoColumnIndex := {$IFDEF GENERIC_INDEX}-1{$ELSE}0{$ENDIF};
+  FAutoColumnIndex := InvalidDbcIndex;
   for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
   begin
     if Metadata.IsAutoIncrement(I) and
