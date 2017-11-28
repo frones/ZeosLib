@@ -1760,7 +1760,7 @@ begin
      or (StrPos(PChar(GetDatabaseInfo.GetServerVersion), 'V5.') <> nil) then
     begin
       SQL := 'SELECT a.RDB$RELATION_NAME, a.RDB$FIELD_NAME, a.RDB$FIELD_POSITION,'
-        + ' a.RDB$NULL_FLAG, b. RDB$FIELD_LENGTH, b.RDB$FIELD_SCALE,'
+        + ' a.RDB$NULL_FLAG, b.RDB$FIELD_LENGTH, b.RDB$FIELD_SCALE,'
         + ' c.RDB$TYPE_NAME, b.RDB$FIELD_TYPE, b.RDB$FIELD_SUB_TYPE,'
         + ' b.RDB$DESCRIPTION, b.RDB$CHARACTER_LENGTH, b.RDB$FIELD_SCALE'
         + ' as RDB$FIELD_PRECISION, a.RDB$DEFAULT_SOURCE, b.RDB$DEFAULT_SOURCE'
@@ -1775,7 +1775,7 @@ begin
     else
     begin
       SQL := ' SELECT a.RDB$RELATION_NAME, a.RDB$FIELD_NAME, a.RDB$FIELD_POSITION,'
-        + ' a.RDB$NULL_FLAG, a.RDB$DEFAULT_VALUE, b. RDB$FIELD_LENGTH,'
+        + ' a.RDB$NULL_FLAG, a.RDB$DEFAULT_VALUE, b.RDB$FIELD_LENGTH,'
         + ' b.RDB$FIELD_SCALE, c.RDB$TYPE_NAME, b.RDB$FIELD_TYPE,'
         + ' b.RDB$FIELD_SUB_TYPE, b.RDB$DESCRIPTION, b.RDB$CHARACTER_LENGTH,'
         + ' b.RDB$FIELD_PRECISION, a.RDB$DEFAULT_SOURCE, b.RDB$DEFAULT_SOURCE'
@@ -1808,7 +1808,7 @@ begin
       while Next do
       begin
         TypeName := GetInt(ColumnIndexes[1]);
-        if TypeName = 14 then //'TEXT'
+        if TypeName = blr_text then
           SubTypeName := GetInt(ColumnIndexes[15]) //need a way to determine CS_Binary (octets) for stBytes on the other hand the subtype is useless here
         else
           SubTypeName := GetInt(ColumnIndexes[2]);
@@ -1817,7 +1817,7 @@ begin
 
         if (GetString(ColumnIndexes[14]) <> '') then  //AVZ -- not isNull(14) was not working correcly here could be ' ' - subselect
         begin //Computed by Source  & Sub Selects  //AVZ
-          if ((TypeName = 16) and (FieldScale < 0)) then SubTypeName := 1; // Fix for 0 subtype which removes decimals
+          if ((TypeName = blr_int64) and (FieldScale < 0)) then SubTypeName := 1; // Fix for 0 subtype which removes decimals
         end;
 
         DefaultValue := GetString(ColumnIndexes[5]);
@@ -1831,10 +1831,10 @@ begin
 
         IF (UpperCase(DefaultValue)= '''NOW''') or (UpperCase(DefaultValue)= '"NOW"')then
           case TypeName of
-          12: DefaultValue := 'CURRENT_DATE';
-          13: DefaultValue := 'CURRENT_TIME';
-          35: DefaultValue := 'CURRENT_TIMESTAMP';
-          else begin end;
+            blr_sql_date:  DefaultValue := 'CURRENT_DATE';
+            blr_sql_time:  DefaultValue := 'CURRENT_TIME';
+            blr_timestamp: DefaultValue := 'CURRENT_TIMESTAMP';
+            else begin end;
           end;
 
         Result.MoveToInsertRow;
@@ -1847,32 +1847,32 @@ begin
         Result.UpdateInt(TableColColumnTypeIndex, Ord(SQLType));
         // TYPE_NAME
         case TypeName of
-          7:
+          blr_short:
             case SubTypeName of
               1: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
               2: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
-              else  Result.UpdateString(TableColColumnTypeNameIndex, 'SMALLINT');
+              else Result.UpdateString(TableColColumnTypeNameIndex, 'SMALLINT');
             end;
-          8:
+          blr_long:
             case SubTypeName of
               1: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
               2: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
               else Result.UpdateString(TableColColumnTypeNameIndex, 'INTEGER' );
             end;
-          16:
+          blr_int64:
             case SubTypeName of
               1: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
               2: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
               else Result.UpdateString(TableColColumnTypeNameIndex, GetString(ColumnIndexes[8]));
             end;
-          37 : Result.UpdateString(TableColColumnTypeNameIndex, 'VARCHAR'); // Instead of VARYING
+          blr_varying: Result.UpdateString(TableColColumnTypeNameIndex, 'VARCHAR'); // Instead of VARYING
         else
-            Result.UpdateString(TableColColumnTypeNameIndex, GetString(ColumnIndexes[8]));
+          Result.UpdateString(TableColColumnTypeNameIndex, GetString(ColumnIndexes[8]));
         end;
         // COLUMN_SIZE.
         case TypeName of
-          7, 8, 16: Result.UpdateInt(TableColColumnSizeIndex, GetInt(ColumnIndexes[9]));
-          37, 38: Result.UpdateNull(TableColColumnSizeIndex);  //the defaults of the resultsets will be used if null
+          blr_short, blr_long, blr_int64: Result.UpdateInt(TableColColumnSizeIndex, GetInt(ColumnIndexes[9]));
+          blr_varying, blr_varying2: Result.UpdateNull(TableColColumnSizeIndex);  //the defaults of the resultsets will be used if null
         else
           Result.UpdateInt(TableColColumnSizeIndex, GetInt(ColumnIndexes[10]));
         end; 
