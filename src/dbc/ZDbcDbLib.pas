@@ -496,13 +496,13 @@ begin
   ConSettings^.WriteFormatSettings.DateFormat := 'YYYYMMDD';
   ConSettings^.WriteFormatSettings.DateTimeFormat := 'YYYY-MM-DDTHH:NN:SS';
   SetDateTimeFormatProperties(False);
-  if StrToBoolEx(Info.Values[ConnProps_AnsiPadding]) then
-    InternalExecuteStatement('SET ANSI_PADDING ON')
-  else
-  begin
-    InternalExecuteStatement('SET ANSI_DEFAULTS OFF');
-    InternalExecuteStatement('SET ANSI_PADDING OFF');
-  end;
+  if Info.Values[ConnProps_AnsiPadding] <> '' then
+    if StrToBoolEx(Info.Values[ConnProps_AnsiPadding]) then
+      InternalExecuteStatement('SET ANSI_PADDING ON')
+    else begin
+      InternalExecuteStatement('SET ANSI_DEFAULTS OFF');
+      InternalExecuteStatement('SET ANSI_PADDING OFF');
+    end;
 
   InternalSetTransactionIsolation(GetTransactionIsolation);
   ReStartTransactionSupport;
