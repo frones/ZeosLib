@@ -1236,7 +1236,7 @@ begin
       Result := IC.ExtractQuote(S)
     else
       Result := S;
-    Result := AnsiQuotedStr(Result, #39) + ' ESCAPE '''+GetDataBaseInfo.GetSearchStringEscape+'''';
+    Result := AnsiQuotedStr(Result, #39);
   end;
 end;
 
@@ -1857,11 +1857,18 @@ begin
   if ResultHasRows then begin
     TableName := Result.GetString(TableNameIndex);
 
+    // hint by Jan: I am not sure wether this statement still works with SQL Server 2000 or before.
     Result.BeforeFirst;
-    with GetStatement.ExecuteQuery('select c.colid, c.name, c.type, c.prec, '+
-      'c.scale, c.colstat, c.status, c.iscomputed from syscolumns c inner join'
-      + ' sysobjects o on (o.id = c.id) where o.name COLLATE Latin1_General_CS_AS = '+
-      AnsiQuotedStr(TableName, #39)+' and c.number=0 order by colid') do
+    with GetStatement.ExecuteQuery(
+      Format('select c.colid, c.name, c.type, c.prec, c.scale, c.colstat, c.status, c.iscomputed '
+      + ' from syscolumns c '
+      + '   inner join sys.sysobjects o on (o.id = c.id) '
+      + '   inner join sys.schemas s on (o.uid = s.schema_id) '
+      + ' where c.number=0 '
+      + '   and (o.name like %0:s escape ''%2:s'' or (%0:s is null)) '
+      + '   and (s.name like %1:s escape ''%2:s'' or (%1:s is null)) '
+      + ' order by colid ',
+      [DeComposeObjectString(TableNamePattern), DeComposeObjectString(SchemaPattern), GetDataBaseInfo.GetSearchStringEscape])) do
       // hint http://blog.sqlauthority.com/2007/04/30/case-sensitive-sql-query-search/ for the collation setting to get a case sensitive behavior
     begin
       while Next do
