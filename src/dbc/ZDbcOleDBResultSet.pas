@@ -150,13 +150,13 @@ type
 
   TZOleDBCLOB = class(TZAbstractClob)
   public
-    constructor Create(var RowSet: IRowSet; Accessor: HACCESSOR; wType: DBTYPE;
+    constructor Create(const RowSet: IRowSet; Accessor: HACCESSOR; wType: DBTYPE;
       CurrentRow: HROW; ChunkSize: Integer; const ConSettings: PZConSettings);
   end;
 
   TZOleDBBLOB = class(TZAbstractBlob)
   public
-    constructor Create(var RowSet: IRowSet; Accessor: HACCESSOR;
+    constructor Create(const RowSet: IRowSet; Accessor: HACCESSOR;
       CurrentRow: HROW; ChunkSize: Integer);
   end;
 
@@ -2154,7 +2154,7 @@ begin
 end;
 
 { TZOleDBCLOB }
-constructor TZOleDBCLOB.Create(var RowSet: IRowSet; Accessor: HACCESSOR; wType: DBTYPE;
+constructor TZOleDBCLOB.Create(const RowSet: IRowSet; Accessor: HACCESSOR; wType: DBTYPE;
   CurrentRow: HROW; ChunkSize: Integer; const ConSettings: PZConSettings);
 var
   IStream: ISequentialStream;
@@ -2185,12 +2185,11 @@ begin
       (PWideChar(FBlobData)+(FBlobSize shr 1)-1)^ := #0
   finally
     IStream := nil;
-    RowSet := nil;
   end;
 end;
 
 { TZOleDBBLOB }
-constructor TZOleDBBLOB.Create(var RowSet: IRowSet; Accessor: HACCESSOR;
+constructor TZOleDBBLOB.Create(const RowSet: IRowSet; Accessor: HACCESSOR;
   CurrentRow: HROW; ChunkSize: Integer);
 var
   IStream: ISequentialStream;
@@ -2211,7 +2210,6 @@ begin
     until pcbRead < ChunkSize;
   finally
     IStream := nil;
-    RowSet := nil;
   end;
 end;
 
