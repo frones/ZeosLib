@@ -252,46 +252,46 @@ function PostgreSQLToSQLType(const ConSettings: PZConSettings;
   const OIDAsBlob: Boolean; const TypeOid: Integer): TZSQLType; overload;
 begin
   case TypeOid of
-    1186,18,1042,1043:  { interval/char/bpchar/varchar }
+    INTERVALOID, CHAROID, BPCHAROID, VARCHAROID:  { interval/char/bpchar/varchar }
       if (ConSettings.CPType = cCP_UTF16) then
           Result := stUnicodeString
         else
           Result := stString;
-    25: Result := stAsciiStream; { text }
-    26: { oid }
+    TEXTOID: Result := stAsciiStream; { text }
+    OIDOID: { oid }
       begin
         if OidAsBlob then
           Result := stBinaryStream
         else
           Result := stInteger;
       end;
-    19: Result := stString; { name }
-    21: Result := stSmall; { int2 }
-    23: Result := stInteger; { int4 }
-    20: Result := stLong; { int8 }
-    650: Result := stString; { cidr }
-    869: Result := stString; { inet }
-    829: Result := stString; { macaddr }
-    700: Result := stFloat; { float4 }
-    701,1700: Result := stDouble; { float8/numeric. no 'decimal' any more }
-    790: Result := stCurrency; { money }
-    16: Result := stBoolean; { bool }
-    1082: Result := stDate; { date }
-    1083: Result := stTime; { time }
-    1114,1184,702: Result := stTimestamp; { timestamp,timestamptz/abstime. no 'datetime' any more}
-    1560,1562: Result := stString; {bit/ bit varying string}
-    24: Result := stString; { regproc }
+    NAMEOID: Result := stString; { name }
+    INT2OID: Result := stSmall; { int2 }
+    INT4OID: Result := stInteger; { int4 }
+    INT8OID: Result := stLong; { int8 }
+    CIDROID: Result := stString; { cidr }
+    INETOID: Result := stString; { inet }
+    MACADDROID: Result := stString; { macaddr }
+    FLOAT4OID: Result := stFloat; { float4 }
+    FLOAT8OID, NUMERICOID: Result := stDouble; { float8/numeric. no 'decimal' any more }
+    CASHOID: Result := stCurrency; { money }
+    BOOLOID: Result := stBoolean; { bool }
+    DATEOID: Result := stDate; { date }
+    TIMEOID: Result := stTime; { time }
+    TIMESTAMPOID, TIMESTAMPTZOID, ABSTIMEOID: Result := stTimestamp; { timestamp,timestamptz/abstime. no 'datetime' any more}
+    BITOID, VARBITOID: Result := stString; {bit/ bit varying string}
+    REGPROCOID: Result := stString; { regproc }
     1034: Result := stAsciiStream; {aclitem[]}
-    17: { bytea }
+    BYTEAOID: { bytea }
       begin
         if OidAsBlob then
           Result := stBytes
         else
           Result := stBinaryStream;
       end;
-    2950: Result := stGUID;
-    22,30: Result := stAsciiStream; { int2vector/oidvector. no '_aclitem' }
-    143,629,651,719,791,1000..1028,1040,1041,1115,1182,1183,1185,1187,1231,1263,
+    UUIDOID: Result := stGUID; {uuid}
+    INT2VECTOROID, OIDVECTOROID: Result := stAsciiStream; { int2vector/oidvector. no '_aclitem' }
+    143,629,651,719,791,1000..OIDARRAYOID,1040,1041,1115,1182,1183,1185,1187,1231,1263,
     1270,1561,1563,2201,2207..2211,2949,2951,3643,3644,3645,3735,3770 : { other array types }
       Result := stAsciiStream;
     else
@@ -820,7 +820,7 @@ begin
           TempBlob := nil;
         end; {if not TempBlob.IsEmpty then}
       else
-        RaiseUnsupportedParameterTypeException(InParamType);	  
+        RaiseUnsupportedParameterTypeException(InParamType);
     end;
   end;
 end;

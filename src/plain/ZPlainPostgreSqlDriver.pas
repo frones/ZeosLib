@@ -80,6 +80,231 @@ const
   BLOB_SEEK_CUR     = 1;
   BLOB_SEEK_END     = 2;
 
+{ PostgreSQL basic type OIDs. These OIDs are hard coded in PostgreSQL and according to the following mail never change:
+  https://www.postgresql.org/message-id/AANLkTimiNjQa7ws1tyR_W6RQPec6RlxQtWfACNMnZ_1P@mail.gmail.com
+  
+  From: 	Merlin Moncure <mmoncure(at)gmail(dot)com>
+  To: 	zhong ming wu <mr(dot)z(dot)m(dot)wu(at)gmail(dot)com>
+  Cc: 	pgsql-general <pgsql-general(at)postgresql(dot)org>
+  Subject: 	Re: oid data types mapping in libpq functions
+  Date: 	2010-06-17 14:32:01
+  Message-ID: 	AANLkTimiNjQa7ws1tyR_W6RQPec6RlxQtWfACNMnZ_1P@mail.gmail.com (view raw or download thread mbox)
+
+  On Wed, Jun 16, 2010 at 10:42 PM, zhong ming wu <mr(dot)z(dot)m(dot)wu(at)gmail(dot)com> wrote:
+  > Dear List
+  >
+  > Where can I find this mapping of oid to pg data types mentioned in
+  > libpq documentation?
+  > Why is such information not mentioned in the documentation?  A general
+  > knowledge?
+
+  curious: what do you need the oids for?
+
+  built in type oids are defined in pg_type.h:
+  cat src/include/catalog/pg_type.h | grep OID | grep define
+
+  built in type oids don't change. you can pretty much copy/pasto the
+  output of above into an app...just watch out for some types that may
+  not be in older versions.
+
+  user defined type oids (tables, views, composite types, enums, and
+  domains) have an oid generated when it is created.  since that oid can
+  change via ddl so you should look it up by name at appropriate times.
+
+  if you want to be completely abstracted from the type oids, look here:
+  http://libpqtypes.esilo.com/
+
+  merlin
+
+  Ok - this information really should be somewhere else, in the developer documentation but I don't want to lose it for now. We can remove it later on.
+  
+  So what follows is a list of PG hard coded OIDs. All other OIDs must be converted
+  by a separate function to determine their type name.
+}
+
+{--------------------------------------------------------------------------------------}
+
+{ types as found in pg_type.h in PostgreSQL 9.6 }
+
+  { OIDS 1 - 99 }
+  BOOLOID			  = 16;
+  BYTEAOID			= 17;
+  CHAROID			  = 18;
+  NAMEOID			  = 19;
+  INT8OID			  = 20;
+  INT2OID			  = 21;
+  INT2VECTOROID	= 22;
+  INT4OID			  = 23;
+  REGPROCOID		= 24;
+  TEXTOID			  = 25;
+  OIDOID			  = 26;
+  TIDOID			  = 27;
+  XIDOID 			  = 28;
+  CIDOID 			  = 29;
+  OIDVECTOROID	= 30;
+
+  { OIDS 100 - 199 }
+  JSONOID 			= 114;
+  XMLOID 			  = 142;
+  PGNODETREEOID	= 194;
+  PGDDLCOMMANDOID = 32;
+
+  { OIDS 200 - 299 }
+
+  { OIDS 300 - 399 }
+
+  { OIDS 400 - 499 }
+
+  { OIDS 500 - 599 }
+
+  { OIDS 600 - 699 }
+  POINTOID		= 600;
+  LSEGOID			= 601;
+  PATHOID			= 602;
+  BOXOID			= 603;
+  POLYGONOID	= 604;
+  LINEOID			= 628;
+
+  { OIDS 700 - 799 }
+
+  FLOAT4OID 	= 700;
+  FLOAT8OID 	= 701;
+  ABSTIMEOID	= 702;
+  RELTIMEOID	= 703;
+  TINTERVALOID = 704;
+  UNKNOWNOID	= 705;
+
+  CIRCLEOID		= 718;
+  CASHOID 		= 790;
+
+  { OIDS 800 - 899 }
+  MACADDROID 	= 829;
+  INETOID 		= 869;
+  CIDROID 		= 650;
+
+  { OIDS 900 - 999 }
+
+  { OIDS 1000 - 1099 }
+  INT2ARRAYOID	= 1005;
+  INT4ARRAYOID	= 1007;
+  TEXTARRAYOID	= 1009;
+  OIDARRAYOID	  = 1028;
+  FLOAT4ARRAYOID 	= 1021;
+  ACLITEMOID		= 1033;
+  CSTRINGARRAYOID	= 1263;
+  BPCHAROID		  = 1042;
+  VARCHAROID		= 1043;
+  DATEOID			  = 1082;
+  TIMEOID			  = 1083;
+
+  { OIDS 1100 - 1199 }
+  TIMESTAMPOID	= 1114;
+  TIMESTAMPTZOID	= 1184;
+  INTERVALOID		= 1186;
+
+  { OIDS 1200 - 1299 }
+  TIMETZOID		  = 1266;
+
+  { OIDS 1500 - 1599 }
+  BITOID	 		  = 1560;
+  VARBITOID		  = 1562;
+
+  { OIDS 1600 - 1699 }
+
+  { OIDS 1700 - 1799 }
+  NUMERICOID		= 1700;
+  REFCURSOROID	= 1790;
+
+  { OIDS 2200 - 2299 }
+  REGPROCEDUREOID = 2202;
+  REGOPEROID		  = 2203;
+  REGOPERATOROID	= 2204;
+  REGCLASSOID		  = 2205;
+  REGTYPEOID		  = 2206;
+  REGROLEOID		  = 4096;
+  REGNAMESPACEOID	= 4089;
+  REGTYPEARRAYOID = 2211;
+
+  { uuid }
+  UUIDOID 		    = 2950;
+
+  { pg_lsn }
+  LSNOID			    = 3220;
+
+  { text search }
+  TSVECTOROID		  = 3614;
+  GTSVECTOROID	  = 3642;
+  TSQUERYOID		  = 3615;
+  REGCONFIGOID	  = 3734;
+  REGDICTIONARYOID = 3769;
+
+  { jsonb }
+  JSONBOID 		    = 3802;
+
+  { range types }
+  INT4RANGEOID	  = 3904;
+
+{
+ * pseudo-types
+ *
+ * types with typtype='p' represent various special cases in the type system.
+ *
+ * These cannot be used to define table columns, but are valid as function
+ * argument and result types (if supported by the function's implementation
+ * language).
+ *
+ * Note: cstring is a borderline case; it is still considered a pseudo-type,
+ * but there is now support for it in records and arrays.  Perhaps we should
+ * just treat it as a regular base type?
+}
+  RECORDOID		    = 2249;
+  RECORDARRAYOID	= 2287;
+  CSTRINGOID		  = 2275;
+  ANYOID			    = 2276;
+  ANYARRAYOID		  = 2277;
+  VOIDOID			    = 2278;
+  TRIGGEROID		  = 2279;
+  EVTTRIGGEROID	  = 3838;
+  LANGUAGE_HANDLEROID	= 2280;
+  INTERNALOID		  = 2281;
+  OPAQUEOID		    = 2282;
+  ANYELEMENTOID	  = 2283;
+  ANYNONARRAYOID	= 2776;
+  ANYENUMOID		  = 3500;
+  FDW_HANDLEROID	= 3115;
+  INDEX_AM_HANDLEROID = 325;
+  TSM_HANDLEROID	= 3310;
+  ANYRANGEOID		  = 3831;
+
+  { macros }
+  TYPTYPE_BASE		  = 'b'; { base type (ordinary scalar type) }
+  TYPTYPE_COMPOSITE	= 'c'; { composite (e.g., table's rowtype) }
+  TYPTYPE_DOMAIN		= 'd'; { domain over another type }
+  TYPTYPE_ENUM		  = 'e'; { enumerated type }
+  TYPTYPE_PSEUDO		= 'p'; { pseudo-type }
+  TYPTYPE_RANGE		  = 'r'; { range type }
+
+  TYPCATEGORY_INVALID	  = #0;	{ not an allowed category }
+  TYPCATEGORY_ARRAY		  = 'A';
+  TYPCATEGORY_BOOLEAN	  = 'B';
+  TYPCATEGORY_COMPOSITE	= 'C';
+  TYPCATEGORY_DATETIME	= 'D';
+  TYPCATEGORY_ENUM		  = 'E';
+  TYPCATEGORY_GEOMETRIC	= 'G';
+  TYPCATEGORY_NETWORK	  = 'I';		{ think INET }
+  TYPCATEGORY_NUMERIC	  = 'N';
+  TYPCATEGORY_PSEUDOTYPE = 'P';
+  TYPCATEGORY_RANGE		  = 'R';
+  TYPCATEGORY_STRING		= 'S';
+  TYPCATEGORY_TIMESPAN	= 'T';
+  TYPCATEGORY_USER		  = 'U';
+  TYPCATEGORY_BITSTRING	= 'V';		{ er ... "varbit"? }
+  TYPCATEGORY_UNKNOWN	  = 'X';
+
+{------------------------------------------------------------------------------------------}
+
+
+  
 type
 
 { Application-visible enum types }
