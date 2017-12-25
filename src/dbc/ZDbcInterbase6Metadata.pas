@@ -1460,11 +1460,21 @@ end;
 function TZInterbase6DatabaseMetadata.UncachedGetProcedureColumns(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
+const
+  PROCEDURE_NAME_Index  = FirstDbcIndex;
+  PARAMETER_NAME_Index  = FirstDbcIndex + 1;
+  PARAMETER_TYPE_Index  = FirstDbcIndex + 2;
+  FIELD_TYPE_Index      = FirstDbcIndex + 3;
+  FIELD_SUB_TYPE_Index  = FirstDbcIndex + 4;
+  FIELD_SCALE_Index     = FirstDbcIndex + 6;
+//FIELD_LENGTH_Index    = FirstDbcIndex + 7; - not used
+//DESCRIPTION_Index     = FirstDbcIndex + 8; - not used
+  FIELD_PRECISION_Index = FirstDbcIndex + 9;
+  NULL_FLAG_Index       = FirstDbcIndex + 10;
 var
   SQL: string;
   LProcedureNamePattern, LColumnNamePattern: string;
   TypeName, SubTypeName: Integer;
-  ColumnIndexes : Array[1..8] of integer;
 begin
     Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
@@ -1477,56 +1487,30 @@ begin
     If LColumnNamePattern <> '' then
       LColumnNamePattern := ' and ' + LColumnNamePattern;
 
-  if (StrPos(PChar(GetDatabaseInfo.GetServerVersion), 'Interbase 5') <> nil)
-     or (StrPos(PChar(GetDatabaseInfo.GetServerVersion), 'V5.') <> nil) then
-    begin
-      SQL := ' SELECT P.RDB$PROCEDURE_NAME, PP.RDB$PARAMETER_NAME,'
-        + ' PP.RDB$PARAMETER_TYPE, F.RDB$FIELD_TYPE, F.RDB$FIELD_SUB_TYPE,'
-        + ' F.RDB$FIELD_SCALE, F.RDB$FIELD_LENGTH, F.RDB$NULL_FLAG,'
-        + ' PP.RDB$DESCRIPTION, F.RDB$FIELD_SCALE as RDB$FIELD_PRECISION,'
-        + ' F.RDB$NULL_FLAG FROM RDB$PROCEDURES P'
-        + ' JOIN RDB$PROCEDURE_PARAMETERS PP ON P.RDB$PROCEDURE_NAME'
-        + '=PP.RDB$PROCEDURE_NAME JOIN RDB$FIELDS F ON PP.RDB$FIELD_SOURCE'
-        + '=F.RDB$FIELD_NAME '
-        + ' WHERE 1=1' + LProcedureNamePattern + LColumnNamePattern
-        + ' ORDER BY  P.RDB$PROCEDURE_NAME,'
-        + ' PP.RDB$PARAMETER_TYPE, PP.RDB$PARAMETER_NUMBER';
-    end
-    else
-    begin
-      SQL := ' SELECT P.RDB$PROCEDURE_NAME, PP.RDB$PARAMETER_NAME,'
-        + ' PP.RDB$PARAMETER_TYPE, F.RDB$FIELD_TYPE, F.RDB$FIELD_SUB_TYPE,'
-        + ' F.RDB$FIELD_SCALE, F.RDB$FIELD_LENGTH, F.RDB$NULL_FLAG,'
-        + ' PP.RDB$DESCRIPTION, F.RDB$FIELD_PRECISION, F.RDB$NULL_FLAG '
-        + ' FROM RDB$PROCEDURES P JOIN RDB$PROCEDURE_PARAMETERS PP ON'
-        + ' P.RDB$PROCEDURE_NAME = PP.RDB$PROCEDURE_NAME '
-        + ' JOIN RDB$FIELDS F ON PP.RDB$FIELD_SOURCE = F.RDB$FIELD_NAME '
-        + ' WHERE 1=1' + LProcedureNamePattern + LColumnNamePattern
-        + ' ORDER BY  P.RDB$PROCEDURE_NAME,'
-        + ' PP.RDB$PARAMETER_TYPE, PP.RDB$PARAMETER_NUMBER';
-    end;
+    SQL := ' SELECT P.RDB$PROCEDURE_NAME, PP.RDB$PARAMETER_NAME,'
+      + ' PP.RDB$PARAMETER_TYPE, F.RDB$FIELD_TYPE, F.RDB$FIELD_SUB_TYPE,'
+      + ' F.RDB$FIELD_SCALE, F.RDB$FIELD_LENGTH,'
+      + ' PP.RDB$DESCRIPTION, F.RDB$FIELD_PRECISION, F.RDB$NULL_FLAG '
+      + ' FROM RDB$PROCEDURES P JOIN RDB$PROCEDURE_PARAMETERS PP ON'
+      + ' P.RDB$PROCEDURE_NAME = PP.RDB$PROCEDURE_NAME '
+      + ' JOIN RDB$FIELDS F ON PP.RDB$FIELD_SOURCE = F.RDB$FIELD_NAME '
+      + ' WHERE 1=1' + LProcedureNamePattern + LColumnNamePattern
+      + ' ORDER BY  P.RDB$PROCEDURE_NAME,'
+      + ' PP.RDB$PARAMETER_TYPE, PP.RDB$PARAMETER_NUMBER';
 
     with GetConnection.CreateStatement.ExecuteQuery(SQL) do
     begin
-      ColumnIndexes[1] := FindColumn('RDB$PROCEDURE_NAME');
-      ColumnIndexes[2] := FindColumn('RDB$PARAMETER_NAME');
-      ColumnIndexes[3] := FindColumn('RDB$PARAMETER_TYPE');
-      ColumnIndexes[4] := FindColumn('RDB$FIELD_TYPE');
-      ColumnIndexes[5] := FindColumn('RDB$FIELD_SUB_TYPE');
-      ColumnIndexes[6] := FindColumn('RDB$FIELD_PRECISION');
-      ColumnIndexes[7] := FindColumn('RDB$FIELD_SCALE');
-      ColumnIndexes[8] := FindColumn('RDB$NULL_FLAG');
       while Next do
       begin
-        TypeName := GetInt(ColumnIndexes[4]);
-        SubTypeName := GetInt(ColumnIndexes[5]);
+        TypeName := GetInt(FIELD_TYPE_Index);
+        SubTypeName := GetInt(FIELD_SUB_TYPE_Index);
 
         Result.MoveToInsertRow;
         Result.UpdateNull(CatalogNameIndex);    //PROCEDURE_CAT
         Result.UpdateNull(SchemaNameIndex);    //PROCEDURE_SCHEM
-        Result.UpdateString(ProcColProcedureNameIndex, GetString(ColumnIndexes[1]));    //TABLE_NAME
-        Result.UpdateString(ProcColColumnNameIndex, GetString(ColumnIndexes[2]));    //COLUMN_NAME
-        case GetInt(ColumnIndexes[3]) of
+        Result.UpdateString(ProcColProcedureNameIndex, GetString(PROCEDURE_NAME_Index));
+        Result.UpdateString(ProcColColumnNameIndex, GetString(PARAMETER_NAME_Index));
+        case GetInt(PARAMETER_TYPE_Index) of
           0: Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctIn));
           1: Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctOut));
         else
@@ -1534,15 +1518,15 @@ begin
         end;
 
         Result.UpdateInt(ProcColDataTypeIndex,
-          Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName, GetInt(ColumnIndexes[7]),
+          Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName, GetInt(FIELD_SCALE_Index),
             ConSettings.CPType))); //DATA_TYPE
-        Result.UpdateString(ProcColTypeNameIndex,GetString(ColumnIndexes[4]));    //TYPE_NAME
-        Result.UpdateInt(ProcColPrecisionIndex, GetInt(ColumnIndexes[6]));
+        Result.UpdateString(ProcColTypeNameIndex,GetString(FIELD_TYPE_Index));
+        Result.UpdateInt(ProcColPrecisionIndex, GetInt(FIELD_PRECISION_Index));
         Result.UpdateNull(ProcColLengthIndex);    //BUFFER_LENGTH
-        Result.UpdateInt(ProcColScaleIndex, GetInt(ColumnIndexes[7]));
+        Result.UpdateInt(ProcColScaleIndex, GetInt(FIELD_SCALE_Index));
         Result.UpdateInt(ProcColRadixIndex, 10);
-        Result.UpdateInt(ProcColNullableIndex, GetInt(ColumnIndexes[8]));
-        //EH: ??? Result.UpdateString(12, GetString(ColumnIndexes[6]));
+        Result.UpdateInt(ProcColNullableIndex, GetInt(NULL_FLAG_Index));
+        //EH: ??? Result.UpdateString(12, GetString(FIELD_PRECISION_Index));
         Result.InsertRow;
       end;
       Close;
@@ -1738,11 +1722,28 @@ end;
 function TZInterbase6DatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
+const
+  RELATION_NAME_Index         = FirstDbcIndex;
+  FIELD_NAME_Index            = FirstDbcIndex + 1;
+  FIELD_POSITION_Index        = FirstDbcIndex + 2;
+  NULL_FLAG_Index             = FirstDbcIndex + 3;
+//DEFAULT_VALUE_Index         = FirstDbcIndex + 4;  - not used
+  FIELD_LENGTH_Index          = FirstDbcIndex + 5;
+  FIELD_SCALE_Index           = FirstDbcIndex + 6;
+  TYPE_NAME_Index             = FirstDbcIndex + 7;
+  FIELD_TYPE_Index            = FirstDbcIndex + 8;
+  FIELD_SUB_TYPE_Index        = FirstDbcIndex + 9;
+  DESCRIPTION_Index           = FirstDbcIndex + 10;
+//CHARACTER_LENGTH_Index      = FirstDbcIndex + 11; - not used
+  FIELD_PRECISION_Index       = FirstDbcIndex + 12;
+  DEFAULT_SOURCE_Index        = FirstDbcIndex + 13;
+  DEFAULT_SOURCE_DOMAIN_Index = FirstDbcIndex + 14;
+  COMPUTED_SOURCE_Index       = FirstDbcIndex + 15;
+  CHARACTER_SET_ID_Index      = FirstDbcIndex + 16;
 var
   SQL, ColumnName, DefaultValue: String;
   TypeName, SubTypeName, FieldScale: integer;
   LTableNamePattern, LColumnNamePattern: string;
-  ColumnIndexes : Array[1..15] of integer;
   SQLType: TZSQLType;
 begin
     Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
@@ -1756,73 +1757,39 @@ begin
     If LColumnNamePattern <> '' then
       LColumnNamePattern := ' and ' + LColumnNamePattern;
 
-  if (StrPos(PChar(GetDatabaseInfo.GetServerVersion), 'Interbase 5') <> nil)
-     or (StrPos(PChar(GetDatabaseInfo.GetServerVersion), 'V5.') <> nil) then
-    begin
-      SQL := 'SELECT a.RDB$RELATION_NAME, a.RDB$FIELD_NAME, a.RDB$FIELD_POSITION,'
-        + ' a.RDB$NULL_FLAG, b.RDB$FIELD_LENGTH, b.RDB$FIELD_SCALE,'
-        + ' c.RDB$TYPE_NAME, b.RDB$FIELD_TYPE, b.RDB$FIELD_SUB_TYPE,'
-        + ' b.RDB$DESCRIPTION, b.RDB$CHARACTER_LENGTH, b.RDB$FIELD_SCALE'
-        + ' as RDB$FIELD_PRECISION, a.RDB$DEFAULT_SOURCE, b.RDB$DEFAULT_SOURCE'
-        + ' as RDB$DEFAULT_SOURCE_DOMAIN, b.RDB$COMPUTED_SOURCE as RDB$COMPUTED_SOURCE'
-        + ' , b.RDB$CHARACTER_SET_ID FROM RDB$RELATION_FIELDS a'
-        + ' JOIN RDB$FIELDS b ON (b.RDB$FIELD_NAME = a.RDB$FIELD_SOURCE)'
-        + ' LEFT JOIN RDB$TYPES c ON b.RDB$FIELD_TYPE = c.RDB$TYPE'
-        + ' and c.RDB$FIELD_NAME = ''RDB$FIELD_TYPE'''
-        + ' WHERE 1=1' + LTableNamePattern + LColumnNamePattern
-        + ' ORDER BY a.RDB$RELATION_NAME, a.RDB$FIELD_POSITION';
-    end
-    else
-    begin
-      SQL := ' SELECT a.RDB$RELATION_NAME, a.RDB$FIELD_NAME, a.RDB$FIELD_POSITION,'
-        + ' a.RDB$NULL_FLAG, a.RDB$DEFAULT_VALUE, b.RDB$FIELD_LENGTH,'
-        + ' b.RDB$FIELD_SCALE, c.RDB$TYPE_NAME, b.RDB$FIELD_TYPE,'
-        + ' b.RDB$FIELD_SUB_TYPE, b.RDB$DESCRIPTION, b.RDB$CHARACTER_LENGTH,'
-        + ' b.RDB$FIELD_PRECISION, a.RDB$DEFAULT_SOURCE, b.RDB$DEFAULT_SOURCE'
-        + ' as RDB$DEFAULT_SOURCE_DOMAIN,b.RDB$COMPUTED_SOURCE as RDB$COMPUTED_SOURCE'
-        + ' , b.RDB$CHARACTER_SET_ID FROM RDB$RELATION_FIELDS a'
-        + ' JOIN RDB$FIELDS b ON (b.RDB$FIELD_NAME = a.RDB$FIELD_SOURCE)'
-        + ' LEFT JOIN RDB$TYPES c ON (b.RDB$FIELD_TYPE = c.RDB$TYPE'
-        + ' and c.RDB$FIELD_NAME = ''RDB$FIELD_TYPE'')'
-        + ' WHERE 1=1' + LTableNamePattern + LColumnNamePattern
-        + ' ORDER BY a.RDB$RELATION_NAME, a.RDB$FIELD_POSITION';
-    end;
+    SQL := ' SELECT a.RDB$RELATION_NAME, a.RDB$FIELD_NAME, a.RDB$FIELD_POSITION,'
+      + ' a.RDB$NULL_FLAG, a.RDB$DEFAULT_VALUE, b.RDB$FIELD_LENGTH,'
+      + ' b.RDB$FIELD_SCALE, c.RDB$TYPE_NAME, b.RDB$FIELD_TYPE,'
+      + ' b.RDB$FIELD_SUB_TYPE, b.RDB$DESCRIPTION, b.RDB$CHARACTER_LENGTH,'
+      + ' b.RDB$FIELD_PRECISION, a.RDB$DEFAULT_SOURCE, b.RDB$DEFAULT_SOURCE'
+      + ' as RDB$DEFAULT_SOURCE_DOMAIN, b.RDB$COMPUTED_SOURCE,'
+      + ' b.RDB$CHARACTER_SET_ID FROM RDB$RELATION_FIELDS a'
+      + ' JOIN RDB$FIELDS b ON (b.RDB$FIELD_NAME = a.RDB$FIELD_SOURCE)'
+      + ' LEFT JOIN RDB$TYPES c ON (b.RDB$FIELD_TYPE = c.RDB$TYPE'
+      + ' and c.RDB$FIELD_NAME = ''RDB$FIELD_TYPE'')'
+      + ' WHERE 1=1' + LTableNamePattern + LColumnNamePattern
+      + ' ORDER BY a.RDB$RELATION_NAME, a.RDB$FIELD_POSITION';
 
     with GetConnection.CreateStatement.ExecuteQuery(SQL) do
     begin
-      ColumnIndexes[1] := FindColumn('RDB$FIELD_TYPE');
-      ColumnIndexes[2] := FindColumn('RDB$FIELD_SUB_TYPE');
-      ColumnIndexes[3] := FindColumn('RDB$FIELD_SCALE');
-      ColumnIndexes[4] := FindColumn('RDB$FIELD_NAME');
-      ColumnIndexes[5] := FindColumn('RDB$DEFAULT_SOURCE');
-      ColumnIndexes[6] := FindColumn('RDB$DEFAULT_SOURCE_DOMAIN');
-      ColumnIndexes[7] := FindColumn('RDB$RELATION_NAME');
-      ColumnIndexes[8] := FindColumn('RDB$TYPE_NAME');
-      ColumnIndexes[9] := FindColumn('RDB$FIELD_PRECISION');
-      ColumnIndexes[10] := FindColumn('RDB$FIELD_LENGTH');
-      ColumnIndexes[11] := FindColumn('RDB$NULL_FLAG');
-      ColumnIndexes[12] := FindColumn('RDB$DESCRIPTION');
-      ColumnIndexes[13] := FindColumn('RDB$FIELD_POSITION');
-      ColumnIndexes[14] := FindColumn('RDB$COMPUTED_SOURCE');
-      ColumnIndexes[15] := FindColumn('RDB$CHARACTER_SET_ID');
       while Next do
       begin
-        TypeName := GetInt(ColumnIndexes[1]);
+        TypeName := GetInt(FIELD_TYPE_Index);
         if TypeName = blr_text then
-          SubTypeName := GetInt(ColumnIndexes[15]) //need a way to determine CS_Binary (octets) for stBytes on the other hand the subtype is useless here
+          SubTypeName := GetInt(CHARACTER_SET_ID_Index) //need a way to determine CS_Binary (octets) for stBytes on the other hand the subtype is useless here
         else
-          SubTypeName := GetInt(ColumnIndexes[2]);
-        FieldScale := GetInt(ColumnIndexes[3]);
-        ColumnName := GetString(ColumnIndexes[4]);
+          SubTypeName := GetInt(FIELD_SUB_TYPE_Index);
+        FieldScale := GetInt(FIELD_SCALE_Index);
+        ColumnName := GetString(FIELD_NAME_Index);
 
-        if (GetString(ColumnIndexes[14]) <> '') then  //AVZ -- not isNull(14) was not working correcly here could be ' ' - subselect
+        if (GetString(COMPUTED_SOURCE_Index) <> '') then  //AVZ -- not isNull(14) was not working correcly here could be ' ' - subselect
         begin //Computed by Source  & Sub Selects  //AVZ
           if ((TypeName = blr_int64) and (FieldScale < 0)) then SubTypeName := 1; // Fix for 0 subtype which removes decimals
         end;
 
-        DefaultValue := GetString(ColumnIndexes[5]);
+        DefaultValue := GetString(DEFAULT_SOURCE_Index);
         if DefaultValue = '' then
-          DefaultValue := GetString(ColumnIndexes[6]);
+          DefaultValue := GetString(DEFAULT_SOURCE_DOMAIN_Index);
         if StartsWith(Trim(UpperCase(DefaultValue)), 'DEFAULT') then
         begin
           DefaultValue := Trim(StringReplace(DefaultValue, 'DEFAULT ', '',
@@ -1840,7 +1807,7 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateNull(CatalogNameIndex);    //TABLE_CAT
         Result.UpdateNull(SchemaNameIndex);    //TABLE_SCHEM
-        Result.UpdateString(TableNameIndex, GetString(ColumnIndexes[7]));    //TABLE_NAME
+        Result.UpdateString(TableNameIndex, GetString(RELATION_NAME_Index));    //TABLE_NAME
         Result.UpdateString(ColumnNameIndex, ColumnName);    //COLUMN_NAME
         SQLType := ConvertInterbase6ToSqlType(TypeName, SubTypeName, FieldScale,
           ConSettings.CPType);
@@ -1863,18 +1830,18 @@ begin
             case SubTypeName of
               1: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
               2: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
-              else Result.UpdateString(TableColColumnTypeNameIndex, GetString(ColumnIndexes[8]));
+              else Result.UpdateString(TableColColumnTypeNameIndex, GetString(TYPE_NAME_Index));
             end;
           blr_varying: Result.UpdateString(TableColColumnTypeNameIndex, 'VARCHAR'); // Instead of VARYING
         else
-          Result.UpdateString(TableColColumnTypeNameIndex, GetString(ColumnIndexes[8]));
+          Result.UpdateString(TableColColumnTypeNameIndex, GetString(TYPE_NAME_Index));
         end;
         // COLUMN_SIZE.
         case TypeName of
-          blr_short, blr_long, blr_int64: Result.UpdateInt(TableColColumnSizeIndex, GetInt(ColumnIndexes[9]));
+          blr_short, blr_long, blr_int64: Result.UpdateInt(TableColColumnSizeIndex, GetInt(FIELD_PRECISION_Index));
           blr_varying, blr_varying2: Result.UpdateNull(TableColColumnSizeIndex);  //the defaults of the resultsets will be used if null
         else
-          Result.UpdateInt(TableColColumnSizeIndex, GetInt(ColumnIndexes[10]));
+          Result.UpdateInt(TableColColumnSizeIndex, GetInt(FIELD_LENGTH_Index));
         end; 
 
         Result.UpdateNull(TableColColumnBufLengthIndex);    //BUFFER_LENGTH
@@ -1886,19 +1853,19 @@ begin
 
         Result.UpdateInt(TableColColumnNumPrecRadixIndex, 10);   //NUM_PREC_RADIX
 
-        if GetInt(ColumnIndexes[11]) <> 0 then
+        if GetInt(NULL_FLAG_Index) <> 0 then
           Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNoNulls))   //NULLABLE
         else
           Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
 
-        Result.UpdateString(TableColColumnRemarksIndex, Copy(GetString(ColumnIndexes[12]),1,255));   //REMARKS
+        Result.UpdateString(TableColColumnRemarksIndex, Copy(GetString(DESCRIPTION_Index),1,255));   //REMARKS
         Result.UpdateString(TableColColumnColDefIndex, DefaultValue);   //COLUMN_DEF
         //Result.UpdateNull(TableColColumnSQLDataTypeIndex);   //SQL_DATA_TYPE
         //Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);   //SQL_DATETIME_SUB
-        Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt({$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF}));   //CHAR_OCTET_LENGTH
-        Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(ColumnIndexes[13])+ 1);   //ORDINAL_POSITION
+        Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt(FIELD_SCALE_Index));   //CHAR_OCTET_LENGTH
+        Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(FIELD_POSITION_Index)+ 1);   //ORDINAL_POSITION
 
-        if IsNull(ColumnIndexes[11]) then
+        if IsNull(NULL_FLAG_Index) then
           Result.UpdateString(TableColColumnIsNullableIndex, 'YES')   //IS_NULLABLE
         else
           Result.UpdateString(TableColColumnIsNullableIndex, 'NO'); //IS_NULLABLE
@@ -1911,7 +1878,7 @@ begin
           Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, True); //CASE_SENSITIVE
 
         Result.UpdateBoolean(TableColColumnSearchableIndex, True); //SEARCHABLE
-        if isNull(ColumnIndexes[14]) then
+        if isNull(COMPUTED_SOURCE_Index) then
           begin
             Result.UpdateBoolean(TableColColumnWritableIndex, True); //WRITABLE
             Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True); //DEFINITELYWRITABLE
@@ -2930,6 +2897,11 @@ end;
 }
 function TZInterbase6DatabaseMetadata.UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
   TableNamePattern, ColumnNamePattern: string): IZResultSet; //EgonHugeist
+const
+  CHARACTER_SET_NAME_Index   = FirstDbcIndex;
+  DEFAULT_COLLATE_NAME_Index = FirstDbcIndex + 1;
+  CHARACTER_SET_ID_Index     = FirstDbcIndex + 2;
+  BYTES_PER_CHARACTER_Index  = FirstDbcIndex + 3;
 var
   SQL, LCatalog: string;
   ColumnNameCondition, TableNameCondition: string;
@@ -2971,17 +2943,17 @@ begin
         begin
           if Next then
           begin
-            if not ( GetString(FindColumn('RDB$CHARACTER_SET_NAME')) = 'NONE' ) then
+            if not ( GetString(CHARACTER_SET_NAME_Index) = 'NONE' ) then
             begin
               Result.MoveToInsertRow;
               Result.UpdateString(CatalogNameIndex, LCatalog);   //COLLATION_CATALOG
               Result.UpdateString(SchemaNameIndex, LCatalog);   //COLLATION_SCHEMA
               Result.UpdateString(TableNameIndex, TableNamePattern); //COLLATION_TABLE
               Result.UpdateString(ColumnNameIndex, ColumnNamePattern);//COLLATION_COLUMN
-              Result.UpdateString(CollationNameIndex, GetString(FindColumn('RDB$DEFAULT_COLLATE_NAME'))); //COLLATION_NAME
-              Result.UpdateString(CharacterSetNameIndex, GetString(FindColumn('RDB$CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
-              Result.UpdateSmall(CharacterSetIDIndex, GetSmall(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
-              Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(FindColumn('RDB$BYTES_PER_CHARACTER'))); //CHARACTER_SET_SIZE
+              Result.UpdateString(CollationNameIndex, GetString(DEFAULT_COLLATE_NAME_Index)); //COLLATION_NAME
+              Result.UpdateString(CharacterSetNameIndex, GetString(CHARACTER_SET_NAME_Index)); //CHARACTER_SET_NAME
+              Result.UpdateSmall(CharacterSetIDIndex, GetSmall(CHARACTER_SET_ID_Index)); //CHARACTER_SET_ID
+              Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(BYTES_PER_CHARACTER_Index)); //CHARACTER_SET_SIZE
               Result.InsertRow;
               Close;
               Exit;
@@ -3007,10 +2979,10 @@ begin
       Result.UpdateString(SchemaNameIndex, LCatalog);   //COLLATION_SCHEMA
       Result.UpdateString(TableNameIndex, TableNamePattern); //COLLATION_TABLE
       //Result.UpdateNull(ColumnNameIndex);//COLLATION_COLUMN
-      Result.UpdateString(CollationNameIndex, GetString(FindColumn('RDB$DEFAULT_COLLATE_NAME'))); //COLLATION_NAME
-      Result.UpdateString(CharacterSetNameIndex, GetString(FindColumn('RDB$CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
-      Result.UpdateSmall(CharacterSetIDIndex, GetSmall(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
-      Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(FindColumn('RDB$BYTES_PER_CHARACTER'))); //CHARACTER_SET_SIZE
+      Result.UpdateString(CollationNameIndex, GetString(DEFAULT_COLLATE_NAME_Index)); //COLLATION_NAME
+      Result.UpdateString(CharacterSetNameIndex, GetString(CHARACTER_SET_NAME_Index)); //CHARACTER_SET_NAME
+      Result.UpdateSmall(CharacterSetIDIndex, GetSmall(CHARACTER_SET_ID_Index)); //CHARACTER_SET_ID
+      Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(BYTES_PER_CHARACTER_Index)); //CHARACTER_SET_SIZE
       Result.InsertRow;
     end;
     Close;
