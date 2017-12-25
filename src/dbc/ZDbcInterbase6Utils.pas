@@ -894,6 +894,7 @@ begin
     SQL_TYPE_DATE: Result := 'SQL_TYPE_DATE';
     SQL_INT64: Result := 'SQL_INT64';
     SQL_BOOLEAN: Result := 'SQL_BOOLEAN';
+    SQL_BOOLEAN_FB: Result := 'SQL_BOOLEAN_FB';
   else
     Result := 'Unknown';
   end
@@ -2094,6 +2095,8 @@ begin
       Result := stFloat;
     SQL_DOUBLE, SQL_D_FLOAT:
       Result := stDouble;
+    SQL_BOOLEAN, SQL_BOOLEAN_FB:
+      Result := stBoolean;
     SQL_DATE: Result := stTimestamp;
     SQL_TYPE_TIME: Result := stTime;
     SQL_TYPE_DATE: Result := stDate;
@@ -2398,6 +2401,7 @@ begin
         SQL_LONG      : PInteger(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
         SQL_FLOAT     : PSingle(sqldata)^ := Value;
         SQL_BOOLEAN   : PSmallint(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+        SQL_BOOLEAN_FB: PByte(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
         SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
         SQL_TEXT      : EncodeString(SQL_TEXT, Index, FloatToRaw(Value));
@@ -2487,6 +2491,8 @@ begin
       SQL_VARYING   : EncodePData(SQL_VARYING, Index, Pointer(Value), Length(Value));
       SQL_LONG      : PInteger (sqldata)^ := Round(RawToFloat(PAnsiChar(Pointer(Value)), '.') * IBScaleDivisor[sqlscale]); //AVZ
       SQL_SHORT     : PSmallint(sqldata)^ := RawToInt(BytesToStr(Value));
+      SQL_BOOLEAN   : PWordBool(sqldata)^ := StrToBoolEx(BytesToStr(Value));
+      SQL_BOOLEAN_FB: PByte(sqldata)^ := Ord(StrToBoolEx(BytesToStr(Value)));
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, BytesToStr(Value));
       SQL_D_FLOAT,
       SQL_DOUBLE    : PDouble (sqldata)^ := RawToFloat(PAnsiChar(Pointer(Value)), '.')  * IBScaleDivisor[sqlscale]; //AVZ
@@ -2608,6 +2614,7 @@ begin
         SQL_LONG      : PInteger(sqldata)^ := Round(Value);
         SQL_FLOAT     : PSingle(sqldata)^ := Value;
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Round(Value);
+        SQL_BOOLEAN_FB: PByte(sqldata)^ := Round(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := Round(Value);
         SQL_INT64     : PInt64(sqldata)^ := Round(Value);
         SQL_TEXT      : EncodeString(SQL_TEXT, Index, FloatToRaw(Value));
@@ -2663,6 +2670,7 @@ begin
         SQL_LONG      : PInteger(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
         SQL_FLOAT     : PSingle(sqldata)^ := Value;
         SQL_BOOLEAN   : PSmallint(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+        SQL_BOOLEAN_FB: PByte(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
         SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
         SQL_TEXT      : EncodeString(SQL_TEXT, Index, FloatToRaw(Value));
@@ -2714,6 +2722,7 @@ begin
         SQL_LONG      : PInteger(sqldata)^ := Value;
         SQL_FLOAT     : PSingle(sqldata)^ := Value;
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Value;
+        SQL_BOOLEAN_FB: PByte(sqldata)^ := Value;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
         SQL_TEXT      : EncodeString(SQL_TEXT, Index, IntToRaw(Value));
@@ -2766,6 +2775,7 @@ begin
         SQL_LONG      : PInteger(sqldata)^ := Value;
         SQL_FLOAT     : PSingle(sqldata)^ := Value;
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Value;
+        SQL_BOOLEAN_FB: PByte(sqldata)^ := Value;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
         SQL_TEXT      : EncodeString(SQL_TEXT, Index, IntToRaw(Value));
@@ -2831,6 +2841,8 @@ begin
         end;
       SQL_LONG      : PInteger (sqldata)^ := RawToIntDef(Value, 0);
       SQL_SHORT     : PSmallint (sqldata)^ := RawToIntDef(Value, 0);
+      SQL_BOOLEAN   : PWordBool(sqldata)^ := StrToBoolEx(Value);
+      SQL_BOOLEAN_FB: PByte(sqldata)^ := Ord(StrToBoolEx(Value));
       SQL_D_FLOAT,
       SQL_DOUBLE    : SQLStrToFloatDef(Value, 0, PDouble(sqldata)^);
       SQL_FLOAT     : SQLStrToFloatDef(Value, 0, PSingle (sqldata)^);
@@ -2962,6 +2974,7 @@ begin
                          raise EZIBConvertError.Create(SUnsupportedDataType);
                        PSmallint(sqldata)^ := Value;
                      end;
+        SQL_BOOLEAN   : ...
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
         SQL_TEXT      : EncodeString(SQL_TEXT, Index, IntToRaw(Value));
@@ -3018,6 +3031,7 @@ begin
                          raise EZIBConvertError.Create(SUnsupportedDataType);
                        PSmallint(sqldata)^ := Value;
                      end;
+        SQL_BOOLEAN_FB: PByte(sqldata)^ := Value;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
         SQL_TEXT      : EncodeString(SQL_TEXT, Index, IntToRaw(Value));
