@@ -730,8 +730,8 @@ end;
 function TZPostgreSQLResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 var
   Buffer, pgBuff: PAnsiChar;
-  TempString: RawByteString;
   Len: cardinal;
+  TempLob: IZBLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -763,16 +763,13 @@ begin
         end;
       end;
     end else if FpgOIDTypes[ColumnIndex] = UUIDOID { uuid } then begin
-      // Marsupilami79: InternalGetString is doing the same index decrement, as
-      // it is done at the beginning of this function, so we need to increment
-      // it again before we call it here
-      TempString := '{' + DecodeString(InternalGetString(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})) + '}';
       SetLength(Result, 16);
-      ValidGUIDToBinary(PAnsiChar(@TempString[1]), @Result[0]);
-    end else if FpgOIDTypes[ColumnIndex] = OIDOID { oid } then
-      Result := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FHandle,
-        RawToIntDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0), FChunk_Size).GetBytes
-    else
+      ValidGUIDToBinary(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), Pointer(Result));
+    end else if FpgOIDTypes[ColumnIndex] = OIDOID { oid } then begin
+      TempLob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FHandle,
+        RawToIntDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0), FChunk_Size);
+      Result := TempLob.GetBytes
+    end else
       Result := StrToBytes(DecodeString(InternalGetString(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}))); // Marsupilami79: InternalGetString is doing the same index decrement, as it is done here, so we need to increment it again before we call it here.
   end else Result := nil;
 end;
