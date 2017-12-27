@@ -967,6 +967,7 @@ type
   end;
 
   {** External or internal blob wrapper object. }
+  PIZLob = ^IZBlob;
   IZBlob = interface(IZInterface)
     ['{47D209F1-D065-49DD-A156-EFD1E523F6BF}']
 
