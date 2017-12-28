@@ -3825,7 +3825,7 @@ begin
     Inc(dest);
     Inc(src, 2);
   end;
-  if (Src^ <> '}') or (Src^ <> #0) then InvalidGUID(Char(Src^));
+  if not ((Src^ = '}') or (Src^ = #0)) then InvalidGUID(Char(Src^));
 end;
 
 {**
@@ -3882,7 +3882,7 @@ begin
     Inc(dest);
     Inc(src, 2);
   end;
-  if (Src^ <> '}') or (Src^ <> #0) then InvalidGUID(Char(Src^));
+  if not ((Src^ = '}') or (Src^ = #0)) then InvalidGUID(Char(Src^));
 end;
 
 initialization
