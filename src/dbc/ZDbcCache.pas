@@ -116,9 +116,6 @@ type
     FConSettings: PZConSettings;
 
     function GetColumnSize(ColumnInfo: TZColumnInfo): Integer;
-    function GetBlobObject(Buffer: PZRowBuffer; ColumnIndex: Integer): IZBlob;
-    procedure SetBlobObject(Buffer: PZRowBuffer; ColumnIndex: Integer;
-      const Value: IZBlob);
     procedure InternalSetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer;
       const Value: TBytes; const NewPointer: Boolean = False); overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer;
@@ -1061,51 +1058,6 @@ begin
   end;
 end;
 
-{**
-  Gets a stream from the specified columns.
-  @param Buffer a row buffer.
-  @param ColumnIndex an index of the column.
-}
-function TZRowAccessor.GetBlobObject(Buffer: PZRowBuffer;
-  ColumnIndex: Integer): IZBlob;
-begin
-  {$R-}
-  if Buffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
-    Result := IZBlob(PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^)
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  else
-    Result := nil;
-end;
-
-{**
-  Sets a blob into the specified columns.
-  @param Buffer a row buffer.
-  @param ColumnIndex an index of the column.
-  @param Value a stream object to be set.
-}
-procedure TZRowAccessor.SetBlobObject(Buffer: PZRowBuffer;
-  ColumnIndex: Integer; const Value: IZBlob);
-var LobPtr: PPointer;
-begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex -1;
-  {$ENDIF}
-  {$R-}
-  LobPtr := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
-  if Buffer.Columns[FColumnOffsets[ColumnIndex]] = bIsNotNull then
-    IZBlob(LobPtr^) := nil //Free Interface reference
-  else
-    LobPtr^ := nil; //nil Pointer reference without Interface ref -> do NOT dec refcount
-
-  IZBlob(LobPtr^) := Value; //set new value
-
-  if Value = nil then
-    Buffer.Columns[FColumnOffsets[ColumnIndex]] := bIsNull  //Set null byte
-  else
-    Buffer.Columns[FColumnOffsets[ColumnIndex]] := bIsNotNull; //Set not null byte
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
 procedure TZRowAccessor.InternalSetBytes(Buffer: PZRowBuffer;
   ColumnIndex: Integer; const Value: TBytes;
   const NewPointer: Boolean = False);
@@ -1504,23 +1456,24 @@ end;
 procedure TZRowAccessor.ClearBuffer(Buffer: PZRowBuffer; const WithFillChar: Boolean = True);
 var
   I: Integer;
-  P: PPointer;
 begin
   Buffer^.Index := -1;
   Buffer^.UpdateType := utUnmodified;
   Buffer^.BookmarkFlag := 0;
+  {$R-}
   for I := 0 to FColumnCount - 1 do
     case FColumnTypes[I] of
       stAsciiStream, stUnicodeStream, stBinaryStream:
         if (Buffer^.Columns[FColumnOffsets[I]] = bIsNotNull) then
-          SetBlobObject(Buffer, I {$IFNDEF GENERIC_INDEX}+ 1{$ENDIF}, nil);
+          PIZLob(@Buffer^.Columns[FColumnOffsets[I] +1])^ := nil;
       stBytes,stString, stUnicodeString:
-        if PNativeUInt(@Buffer^.Columns[FColumnOffsets[I] +1])^ > 0 then
-        begin
-          P := PPointer(@Buffer^.Columns[FColumnOffsets[I] +1]);
-          System.FreeMem(P^);
-        end;
+        if (Buffer^.Columns[FColumnOffsets[I]] = bIsNotNull) then
+          if PPointer(@Buffer^.Columns[FColumnOffsets[I] +1])^ <> nil then begin
+            System.FreeMem(PPointer(@Buffer^.Columns[FColumnOffsets[I] +1])^);
+            PPointer(@Buffer^.Columns[FColumnOffsets[I] +1])^ := nil;
+          end;
     end;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   if WithFillChar then
     FillChar(Buffer^.Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
 end;
@@ -1621,7 +1574,9 @@ end;
 }
 function TZRowAccessor.GetColumnCase(ColumnIndex: Integer): Boolean;
 begin
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnIndex(ColumnIndex);
+{$ENDIF}
   Result := FColumnCases[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
 end;
 
@@ -1747,8 +1702,6 @@ end;
     value returned is <code>true</code>. <code>false</code> otherwise.
 }
 function TZRowAccessor.IsNull(ColumnIndex: Integer): Boolean;
-var
-  TempBlob: IZBlob;
 begin
   if not Assigned(FBuffer) then
     raise EZSQLException.Create(SRowBufferIsNotAssigned);
@@ -1761,12 +1714,6 @@ begin
   {$R-}
   Result := FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNull;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  if not Result and (FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] in [stAsciiStream,
-    stBinaryStream, stUnicodeStream]) then
-  begin
-    TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-    Result := (TempBlob = nil) or TempBlob.IsEmpty;
-  end;
 end;
 
 {**
@@ -1804,16 +1751,12 @@ begin
     stCurrency: FRawTemp := FloatToSqlRaw(PCurrency(Data)^);
     stBigDecimal: FRawTemp := FloatToSqlRaw(PExtended(Data)^);
     //stString, stUnicodeString: do not handle here!
-    stBytes: begin
-              if Data^ <> nil then begin
+    stBytes:  if Data^ <> nil then begin
                 Len :=PWord(PAnsiChar(Data)+SizeOf(Pointer))^;
                 Result := Data^;
-              end else begin
-                Result := PEmptyAnsiString;
-                Len := 0;
-              end;
-              Exit;
-            end;
+                Exit;
+              end else
+                FRawTemp := '';
     stGUID: FRawTemp := GUIDToRaw(Data, 16);
     stDate: FRawTemp := DateTimeToRawSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
     stTime: FRawTemp := DateTimeToRawSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
@@ -1836,7 +1779,9 @@ begin
       FRawTemp := '';
   end;
   Len := Length(FRawTemp);
-  Result := Pointer(FRawTemp);
+  if Len = 0
+  then Result := PEmptyAnsiString
+  else Result := Pointer(FRawTemp);
 end;
 
 function TZRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
@@ -2097,8 +2042,10 @@ begin
     else
       FUniTemp := '';
   end;
-  Result := Pointer(FUniTemp);
-  Len := Length(FuniTemp);
+  Len := Length(FUniTemp);
+  if Len = 0
+  then Result := PEmptyUnicodeString
+  else Result := Pointer(FUniTemp);
 end;
 {**
   Gets the value of the designated column in the current row
@@ -3253,18 +3200,11 @@ var TempBlob: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnIndex(ColumnIndex);
-  if not (FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] in [stAsciiStream, stBinaryStream,
-    stUnicodeStream]) then
-  begin
-    raise EZSQLException.Create(
-      Format(SCanNotAccessBlobRecord,
-      [ColumnIndex, DefineColumnTypeName(FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}])]));
-  end;
 {$ENDIF}
   Result := nil;
   {$R-}
   TempBlob := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
-  IsNull := (TempBlob^ = nil);
+  IsNull := FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNull;
   {$IFDEF RangeCheck} {$R+} {$ENDIF}
   if FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] in [stUnicodeStream, stAsciiStream, stBinaryStream] then begin
     if (TempBlob^ <> nil) then
@@ -3274,12 +3214,11 @@ begin
         Result := TZAbstractBlob.CreateWithStream(nil)
       else
         Result := TZAbstractClob.CreateWithData(nil, 0, ConSettings^.ClientCodePage^.CP, ConSettings);
-      TempBlob^ := Result;
     end;
-    {$R-}
-    FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-    {$IFDEF RangeCheck} {$R+} {$ENDIF}
-  end;
+  end else
+    raise EZSQLException.Create(
+      Format(SCanNotAccessBlobRecord,
+      [ColumnIndex, DefineColumnTypeName(FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}])]));
 end;
 
 {**
@@ -4631,22 +4570,30 @@ end;
   @param x the new column value
 }
 procedure TZRowAccessor.SetAsciiStream(ColumnIndex: Integer; const Value: TStream);
-var
-  IsNull: Boolean;
-  Blob: IZBlob;
+var Data: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stAsciiStream);
 {$ENDIF}
-  IsNull := False;
-  Blob := GetBlob(ColumnIndex, IsNull);
-  if Blob.IsClob then
-    if ConSettings^.AutoEncode then
-      Blob.SetStream(Value)
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stAsciiStream, stUnicodeStream, stBinaryStream: begin
+        if Data^ = nil then
+          if FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] = stBinaryStream
+          then Data^ := TZAbstractBlob.Create
+          else  Data^ := TZAbstractClob.CreateWithData(nil, 0, ConSettings);
+        if Data^.IsClob then
+          if ConSettings^.AutoEncode
+          then Data^.SetStream(Value)
+          else Data^.SetStream(Value, ConSettings^.ClientCodePage^.CP)
+        else Data^.SetStream(Value);
+        FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+      end;
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     else
-      Blob.SetStream(Value, ConSettings^.ClientCodePage^.CP)
-  else
-    Blob.SetStream(Value);
+      raise EZSQLException.Create( Format(SCanNotAccessBlobRecord,
+      [ColumnIndex, DefineColumnTypeName(FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}])]));
+  end;
 end;
 
 {**
@@ -4661,14 +4608,24 @@ end;
   @param length the length of the stream
 }
 procedure TZRowAccessor.SetBinaryStream(ColumnIndex: Integer; const Value: TStream);
-var
-  IsNull: Boolean;
+var Data: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBinaryStream);
 {$ENDIF}
-  IsNull := False;
-  GetBlob(ColumnIndex, IsNull).SetStream(Value);
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stAsciiStream, stUnicodeStream, stBinaryStream: begin
+        if Data^ = nil
+        then Data^ := TZAbstractBlob.CreateWithStream(Value)
+        else Data^.SetStream(Value);
+        FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+      end;
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    else
+      raise EZSQLException.Create( Format(SCanNotAccessBlobRecord,
+      [ColumnIndex, DefineColumnTypeName(FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}])]));
+  end;
 end;
 
 {**
@@ -4683,19 +4640,28 @@ end;
 }
 procedure TZRowAccessor.SetUnicodeStream(ColumnIndex: Integer;
   const Value: TStream);
-var
-  IsNull: Boolean;
-  Blob: IZBlob;
+var Data: PIZLob;
 begin
-  IsNull := False;
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
-  Blob := GetBlob(ColumnIndex, IsNull);
-  if Blob.IsClob then
-    Blob.SetStream(Value, zCP_UTF16)
-  else
-    Blob.SetStream(Value);
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stAsciiStream, stUnicodeStream, stBinaryStream: begin
+        if Data^ = nil then
+          if FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] = stBinaryStream
+          then Data^ := TZAbstractBlob.Create
+          else  Data^ := TZAbstractClob.CreateWithData(nil, 0, ConSettings);
+        if Data^.IsClob
+        then Data^.SetStream(Value, zCP_UTF16)
+        else Data^.SetStream(Value);
+        FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+      end;
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    else
+      raise EZSQLException.Create( Format(SCanNotAccessBlobRecord,
+      [ColumnIndex, DefineColumnTypeName(FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}])]));
+  end;
 end;
 
 {**
@@ -4708,17 +4674,19 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   {$R-}
   CheckColumnIndex(ColumnIndex);
-  if not (FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] in [stAsciiStream, stBinaryStream,
-    stUnicodeStream]) then
-  begin
-    raise EZSQLException.Create(
-      Format(SCanNotAccessBlobRecord,
+{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stAsciiStream, stUnicodeStream, stBinaryStream: begin
+        PIZLob(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
+        if Value = nil
+        then FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNull
+        else FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+      end;
+    else
+      raise EZSQLException.Create( Format(SCanNotAccessBlobRecord,
       [ColumnIndex, DefineColumnTypeName(FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}])]));
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-{$ENDIF}
-
-  SetBlobObject(FBuffer, ColumnIndex, Value);
 end;
 
 {**
@@ -4815,7 +4783,6 @@ end;
 procedure TZRawRowAccessor.CopyBuffer(SrcBuffer: PZRowBuffer; DestBuffer: PZRowBuffer; const CloneLobs: Boolean = False);
 var
   I: Integer;
-  Blob: IZBlob;
 begin
   ClearBuffer(DestBuffer, False);
   DestBuffer^.Index := SrcBuffer^.Index;
@@ -4843,11 +4810,10 @@ begin
   if FHasLobs then
     for i := 0 to FHighLobCols do
       if (SrcBuffer^.Columns[FColumnOffsets[FLobCols[i]]] = bIsNotNull) then begin
-        DestBuffer^.Columns[FColumnOffsets[FLobCols[i]]] := bIsNull; //init Destbuffer flag to avoid IZLob() := nil;
-        Blob := GetBlobObject(SrcBuffer, FLobCols[i] {$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        if CloneLobs and (Blob <> nil) then
-          Blob := Blob.Clone;
-        SetBlobObject(DestBuffer, FLobCols[i] {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Blob); //this line increments RefCount but doesn't move data
+        PPointer(@DestBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^ := nil; //init to avoid refcounting
+        if CloneLobs
+        then PIZLob(@DestBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^ := PIZLob(@SrcBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^.Clone
+        else PIZLob(@DestBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^ := PIZLob(@SrcBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^;
       end;
   if FHasDataSets then
     for i := 0 to FHighDataSetCols do
@@ -5292,7 +5258,6 @@ procedure TZUnicodeRowAccessor.CopyBuffer(SrcBuffer: PZRowBuffer; DestBuffer: PZ
   const CloneLobs: Boolean = False);
 var
   I: Integer;
-  Blob: IZBlob;
 begin
   ClearBuffer(DestBuffer, False);
   DestBuffer^.Index := SrcBuffer^.Index;
@@ -5319,13 +5284,11 @@ begin
       ; //currently NOT implemented
   if FHasLobs then
     for i := 0 to FHighLobCols do
-      if (SrcBuffer^.Columns[FColumnOffsets[FLobCols[i]]] = bIsNotNull) then
-      begin
-        DestBuffer^.Columns[FColumnOffsets[FLobCols[i]]] := bIsNull; //init Destbuffer flag to avoid IZLob() := nil;
-        Blob := GetBlobObject(SrcBuffer, FLobCols[i] {$IFNDEF GENERIC_INDEX}+ 1{$ENDIF});
-        if CloneLobs and (Blob <> nil) then
-          Blob := Blob.Clone;
-        SetBlobObject(DestBuffer, FLobCols[i] {$IFNDEF GENERIC_INDEX}+ 1{$ENDIF}, Blob); //this line increments RefCount but doesn't move data
+      if (SrcBuffer^.Columns[FColumnOffsets[FLobCols[i]]] = bIsNotNull) then begin
+        PPointer(@DestBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^ := nil; //init to avoid refcounting
+        if CloneLobs
+        then PIZLob(@DestBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^ := PIZLob(@SrcBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^.Clone
+        else PIZLob(@DestBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^ := PIZLob(@SrcBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^;
       end;
   if FHasDataSets then
     for i := 0 to FHighDataSetCols do
