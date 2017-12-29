@@ -567,6 +567,7 @@ begin
       BinStreamA.Position:=0;
       (FieldByName(BinLob) as TBlobField).SaveToStream(BinStreamA);
       CheckEquals(BinStreamE, BinStreamA, 'Binary Stream');
+      FreeAndNil(BinStreamA);
       First;
       Refresh;
       CheckEquals(2, RecordCount, 'RecordCount');
@@ -578,6 +579,7 @@ begin
       BinStreamA.Position:=0;
       (FieldByName(BinLob) as TBlobField).SaveToStream(BinStreamA);
       CheckEquals(BinStreamE, BinStreamA, 'Binary Stream');
+      FreeAndNil(BinStreamA);
       Close;
     end;
   finally
