@@ -1466,11 +1466,11 @@ const
   PARAMETER_TYPE_Index  = FirstDbcIndex + 2;
   FIELD_TYPE_Index      = FirstDbcIndex + 3;
   FIELD_SUB_TYPE_Index  = FirstDbcIndex + 4;
-  FIELD_SCALE_Index     = FirstDbcIndex + 6;
-//FIELD_LENGTH_Index    = FirstDbcIndex + 7; - not used
-//DESCRIPTION_Index     = FirstDbcIndex + 8; - not used
-  FIELD_PRECISION_Index = FirstDbcIndex + 9;
-  NULL_FLAG_Index       = FirstDbcIndex + 10;
+  FIELD_SCALE_Index     = FirstDbcIndex + 5;
+//FIELD_LENGTH_Index    = FirstDbcIndex + 6; - not used
+//DESCRIPTION_Index     = FirstDbcIndex + 7; - not used
+  FIELD_PRECISION_Index = FirstDbcIndex + 8;
+  NULL_FLAG_Index       = FirstDbcIndex + 9;
 var
   SQL: string;
   LProcedureNamePattern, LColumnNamePattern: string;
