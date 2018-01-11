@@ -2064,6 +2064,9 @@ begin
   Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheck} {$R+} {$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stBoolean: if PWordBool(Data)^
+                then FUniTemp := 'True'
+                else FUniTemp := 'False';
     stByte: Result := IntToUnicode(PByte(Data)^);
     stShort: Result := IntToUnicode(PShortInt(Data)^);
     stWord: Result := IntToUnicode(PWord(Data)^);
