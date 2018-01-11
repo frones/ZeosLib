@@ -727,8 +727,7 @@ begin
   else
     if (Pointer(Dest) <> nil) and //Empty?
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
-       ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
-    begin
+       ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then begin
       if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len)
     end else
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}

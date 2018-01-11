@@ -380,18 +380,18 @@ begin
   Connection := Statement.GetConnection as IZPostgreSQLConnection;
 
   case TypeOid of
-    790: ColumnInfo.Currency := True; { money }
-    19: if (Connection.GetServerMajorVersion < 7) or
+    CASHOID: ColumnInfo.Currency := True; { money }
+    NAMEOID: if (Connection.GetServerMajorVersion < 7) or
            ((Connection.GetServerMajorVersion = 7) and (Connection.GetServerMinorVersion < 3)) then
           ColumnInfo.Precision := 32
         else
           ColumnInfo.Precision := 64; { name }
-    650: ColumnInfo.Precision := 100; { cidr }
-    869: ColumnInfo.Precision := 100; { inet }
-    829: ColumnInfo.Precision := 17; { macaddr }
-    1186: ColumnInfo.Precision := 32; { interval }
-    24: ColumnInfo.Precision := 64; { regproc } // M.A. was 10
-    17:{ bytea }
+    CIDROID: ColumnInfo.Precision := 100; { cidr }
+    INETOID: ColumnInfo.Precision := 100; { inet }
+    MACADDROID: ColumnInfo.Precision := 17; { macaddr }
+    INTERVALOID: ColumnInfo.Precision := 32; { interval }
+    REGPROCOID: ColumnInfo.Precision := 64; { regproc } // M.A. was 10
+    BYTEAOID:{ bytea }
       if Connection.IsOidAsBlob then
         ColumnInfo.Precision := 256;
   end;
@@ -571,7 +571,7 @@ begin
   else
   begin
     Result := FPlainDriver.GetValue(FQueryHandle, RNo, ColumnIndex);
-    if (FpgOIDTypes[ColumnIndex] = 18) and not (FIs_bytea_output_hex or FPlainDriver.SupportsDecodeBYTEA) then
+    if (FpgOIDTypes[ColumnIndex] = CHAROID) and not (FIs_bytea_output_hex or FPlainDriver.SupportsDecodeBYTEA) then
       Len := FPlainDriver.GetLength(FQueryHandle, RNo, ColumnIndex)
     else
     begin
@@ -583,8 +583,8 @@ begin
        For binary format this is essential information.
        Note that one should not rely on PQfsize to obtain the actual data length.}
       Len := ZFastCode.StrLen(Result);
-      if (FpgOIDTypes[ColumnIndex] = 18) { char } or
-         (FpgOIDTypes[ColumnIndex] = 1042)  { char/bpchar } then
+      if (FpgOIDTypes[ColumnIndex] = CHAROID) { char } or
+         (FpgOIDTypes[ColumnIndex] = BPCHAROID)  { char/bpchar } then
         while (Result+Len-1)^ = ' ' do dec(Len); //remove Trailing spaces for fixed character fields
     end;
   end;
@@ -641,7 +641,7 @@ begin
   if LastWasNull then
     Result := ''
   else
-    if (ConSettings^.ClientCodePage.CP = zCP_UTF8) or (FpgOIDTypes[ColumnIndex] = 17) {bytea} then
+    if (ConSettings^.ClientCodePage.CP = zCP_UTF8) or (FpgOIDTypes[ColumnIndex] = BYTEAOID) {bytea} then
       ZSetString(P, L, Result)
     else
     begin
@@ -697,7 +697,7 @@ begin
     Result := False
   else
     Result := StrToBoolEx(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), True,
-      (FpgOIDTypes[ColumnIndex] = 18) { char } or (FpgOIDTypes[ColumnIndex] = 1042)  { char/bpchar });
+      (FpgOIDTypes[ColumnIndex] = CHAROID) { char } or (FpgOIDTypes[ColumnIndex] = BPCHAROID)  { char/bpchar });
 end;
 
 {**
@@ -858,8 +858,8 @@ end;
 function TZPostgreSQLResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 var
   Buffer, pgBuff: PAnsiChar;
-  TempString: RawByteString;
   Len: cardinal;
+  TempLob: IZBLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -869,7 +869,7 @@ begin
   {$ENDIF}
   LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex) <> 0;
   if not LastWasNull then begin
-    if FpgOIDTypes[ColumnIndex] = 17{bytea} then begin
+    if FpgOIDTypes[ColumnIndex] = BYTEAOID {bytea} then begin
       Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
       if FIs_bytea_output_hex then begin
         {skip trailing /x}
@@ -890,17 +890,14 @@ begin
             {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Result)^, Len);
         end;
       end;
-    end else if FpgOIDTypes[ColumnIndex] = 2950 { uuid } then begin
-      // Marsupilami79: InternalGetString is doing the same index decrement, as
-      // it is done at the beginning of this function, so we need to increment
-      // it again before we call it here
-      TempString := '{' + DecodeString(InternalGetString(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})) + '}';
+    end else if FpgOIDTypes[ColumnIndex] = UUIDOID { uuid } then begin
       SetLength(Result, 16);
-      ValidGUIDToBinary(PAnsiChar(@TempString[1]), @Result[0]);
-    end else if FpgOIDTypes[ColumnIndex] = 26 { oid } then
-      Result := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FHandle,
-        RawToIntDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0), FChunk_Size).GetBytes
-    else
+      ValidGUIDToBinary(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), Pointer(Result));
+    end else if FpgOIDTypes[ColumnIndex] = OIDOID { oid } then begin
+      TempLob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FHandle,
+        RawToIntDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0), FChunk_Size);
+      Result := TempLob.GetBytes
+    end else
       Result := StrToBytes(DecodeString(InternalGetString(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}))); // Marsupilami79: InternalGetString is doing the same index decrement, as it is done here, so we need to increment it again before we call it here.
   end else Result := nil;
 end;
@@ -1026,14 +1023,14 @@ begin
   LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex) <> 0;
   Result := nil;
 
-  if (FpgOIDTypes[ColumnIndex] = 26) { oid } and (Statement.GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
+  if (FpgOIDTypes[ColumnIndex] = OIDOID) { oid } and (Statement.GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
     if LastWasNull then
       Result := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FHandle, 0, FChunk_Size)
     else
       Result := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FHandle,
         RawToIntDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0), FChunk_Size)
   else if not LastWasNull then
-    if FpgOIDTypes[ColumnIndex] = 17{bytea} then begin
+    if FpgOIDTypes[ColumnIndex] = BYTEAOID{bytea} then begin
       Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
       if FIs_bytea_output_hex then
         Result := TZPostgreSQLByteaHexBlob.Create(Buffer)
@@ -1045,8 +1042,8 @@ begin
     end else begin
       Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
       Len := ZFastCode.StrLen(Buffer);
-      if (FpgOIDTypes[ColumnIndex] = 18) { char } or
-         (FpgOIDTypes[ColumnIndex] = 1042)  { bpchar } then
+      if (FpgOIDTypes[ColumnIndex] = CHAROID) { char } or
+         (FpgOIDTypes[ColumnIndex] = BPCHAROID)  { bpchar } then
         while (Buffer+Len-1)^ = ' ' do dec(Len); //remove Trailing spaces for fixed character fields
       Result := TZAbstractCLob.CreateWithData(Buffer, Len, ConSettings^.ClientCodePage^.CP, ConSettings);
     end;
