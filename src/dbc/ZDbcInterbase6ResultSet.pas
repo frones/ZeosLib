@@ -82,7 +82,6 @@ type
     FDialect: Word;
     FCodePageArray: TWordDynArray;
     FStmtType: TZIbSqlStatementType;
-    procedure CheckRange(const Index: Word); {$IFDEF WITH_INLINE} inline; {$ENDIF}
     function GetIbSqlSubType(const Index: Word): Smallint; {$IF defined(WITH_INLINE) and not (defined(WITH_URW1135_ISSUE) or defined(WITH_URW1111_ISSUE))} inline; {$IFEND}
     function GetQuad(ColumnIndex: Integer): TISC_QUAD;
   protected
@@ -1376,7 +1375,9 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  CheckRange(ColumnIndex);
+  {$IFNDEF DISABLE_CHECKING}
+  Assert((ColumnIndex >= 0) and (ColumnIndex <= FXSQLDA.sqln), 'Index out of Range.');
+  {$ENDIF}
   {$R-}
   with FXSQLDA.sqlvar[ColumnIndex] do
     Result := (sqlind <> nil) and (sqlind^ = ISC_NULL);
@@ -1761,15 +1762,6 @@ begin
       Result := True;
     end;
   end;
-end;
-
-{**
-   Chech reange count fields. If index out of range raised exception.
-   @param Index the index field
-}
-procedure TZInterbase6XSQLDAResultSet.CheckRange(const Index: Word);
-begin
-  Assert(Index {$IFNDEF GENERIC_INDEX}<{$ELSE}<={$ENDIF} Word(FXSQLDA.sqln), 'Out of Range.');
 end;
 
 {**
