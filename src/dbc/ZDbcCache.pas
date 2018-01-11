@@ -116,28 +116,22 @@ type
     FConSettings: PZConSettings;
 
     function GetColumnSize(ColumnInfo: TZColumnInfo): Integer;
-    function GetBlobObject(Buffer: PZRowBuffer; ColumnIndex: Integer): IZBlob;
-    procedure SetBlobObject(const Buffer: PZRowBuffer; ColumnIndex: Integer;
-      const Value: IZBlob);
-    function InternalGetBytes(const Buffer: PZRowBuffer; ColumnIndex: Integer): TBytes; overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
-    function InternalGetBytes(const Buffer: PZRowBuffer; ColumnIndex: Integer; var Len: Word): Pointer; overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
-    procedure InternalSetBytes(const Buffer: PZRowBuffer; ColumnIndex: Integer;
+    procedure InternalSetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer;
       const Value: TBytes; const NewPointer: Boolean = False); overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
-    procedure InternalSetBytes(const Buffer: PZRowBuffer; ColumnIndex: Integer;
+    procedure InternalSetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer;
       Buf: Pointer; Len: Word; const NewPointer: Boolean = False); overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
-   procedure InternalSetString(const Buffer: PZRowBuffer; ColumnIndex: Integer;
+   procedure InternalSetString(Buffer: PZRowBuffer; ColumnIndex: Integer;
       const Value: RawByteString; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
-    procedure InternalSetUnicodeString(const Buffer: PZRowBuffer; ColumnIndex: Integer;
+    procedure InternalSetUnicodeString(Buffer: PZRowBuffer; ColumnIndex: Integer;
       const Value: ZWideString; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
-    procedure InternalSetPAnsiChar(const Buffer: PZRowBuffer;
-      ColumnIndex: Integer; const Value: PAnsiChar;
-      Const Len: Cardinal; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
-    procedure InternalSetPWideChar(const Buffer: PZRowBuffer;
-      ColumnIndex: Integer; const Value: PWideChar;
-      Const Len: Cardinal; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
+    procedure InternalSetPAnsiChar(Buffer: PZRowBuffer; ColumnIndex: Integer;
+      Value: PAnsiChar; Len: Cardinal; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
+    procedure InternalSetPWideChar(Buffer: PZRowBuffer;
+      ColumnIndex: Integer; Value: PWideChar; Len: Cardinal;
+      const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
   protected
-    procedure CheckColumnIndex(Const ColumnIndex: Integer);
-    procedure CheckColumnConvertion(Const ColumnIndex: Integer; ResultType: TZSQLType);
+    procedure CheckColumnIndex(ColumnIndex: Integer);
+    procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings);
 
@@ -166,94 +160,94 @@ type
     procedure Clear;
     procedure Dispose;
 
-    function GetColumnData(Const ColumnIndex: Integer; var IsNull: Boolean): Pointer;
-    function GetColumnDataSize(Const ColumnIndex: Integer): Integer;
+    function GetColumnData(ColumnIndex: Integer; var IsNull: Boolean): Pointer;
+    function GetColumnDataSize(ColumnIndex: Integer): Integer;
 
-    function GetColumnName(Const ColumnIndex: Integer): string;
-    function GetColumnCase(Const ColumnIndex: Integer): Boolean;
-    function GetColumnType(Const ColumnIndex: Integer): TZSQLType;
-    function GetColumnLength(Const ColumnIndex: Integer): Integer;
-    function GetColumnOffSet(Const ColumnIndex: Integer): Integer;
-    function GetColumnDefaultExpression(Const ColumnIndex: Integer): string;
-    procedure SetColumnDefaultExpression(Const ColumnIndex: Integer; const Value: string);
-    procedure SetColumnCodePage(Const ColumnIndex: Integer; const Value: Word);
+    function GetColumnName(ColumnIndex: Integer): string;
+    function GetColumnCase(ColumnIndex: Integer): Boolean;
+    function GetColumnType(ColumnIndex: Integer): TZSQLType;
+    function GetColumnLength(ColumnIndex: Integer): Integer;
+    function GetColumnOffSet(ColumnIndex: Integer): Integer;
+    function GetColumnDefaultExpression(ColumnIndex: Integer): string;
+    procedure SetColumnDefaultExpression(ColumnIndex: Integer; const Value: string);
+    procedure SetColumnCodePage(ColumnIndex: Integer; const Value: Word);
 
     //======================================================================
     // Methods for accessing results by column index
     //======================================================================
 
-    function IsNull(Const ColumnIndex: Integer): Boolean;
-    function GetPAnsiChar(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PAnsiChar; virtual;
-    function GetCharRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; virtual; abstract;
-    function GetString(Const ColumnIndex: Integer; var IsNull: Boolean): String; virtual;
-    function GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString; virtual;
-    function GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String; virtual;
-    function GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString; virtual;
-    function GetPWideChar(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PWideChar; virtual;
-    function GetUnicodeString(Const ColumnIndex: Integer; var IsNull: Boolean): ZWideString; virtual;
-    function GetBoolean(Const ColumnIndex: Integer; var IsNull: Boolean): Boolean;
-    function GetByte(Const ColumnIndex: Integer; var IsNull: Boolean): Byte;
-    function GetShort(Const ColumnIndex: Integer; var IsNull: Boolean): ShortInt;
-    function GetWord(Const ColumnIndex: Integer; var IsNull: Boolean): Word;
-    function GetSmall(Const ColumnIndex: Integer; var IsNull: Boolean): SmallInt;
-    function GetUInt(Const ColumnIndex: Integer; var IsNull: Boolean): Cardinal;
-    function GetInt(Const ColumnIndex: Integer; var IsNull: Boolean): Integer;
-    function GetULong(Const ColumnIndex: Integer; var IsNull: Boolean): UInt64;
-    function GetLong(Const ColumnIndex: Integer; var IsNull: Boolean): Int64;
-    function GetFloat(Const ColumnIndex: Integer; var IsNull: Boolean): Single;
-    function GetDouble(Const ColumnIndex: Integer; var IsNull: Boolean): Double;
-    function GetCurrency(Const ColumnIndex: Integer; var IsNull: Boolean): Currency;
-    function GetBigDecimal(Const ColumnIndex: Integer; var IsNull: Boolean): Extended;
-    function GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean): TBytes; overload;
-    function GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: Word): Pointer; overload;
-    function GetDate(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
-    function GetTime(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
-    function GetTimestamp(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
-    function GetAsciiStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
-    function GetUnicodeStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
-    function GetBinaryStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
-    function GetBlob(Const ColumnIndex: Integer; var IsNull: Boolean): IZBlob;
-    function GetDataSet(Const ColumnIndex: Integer; var {%H-}IsNull: Boolean): IZDataSet;
-    function GetValue(Const ColumnIndex: Integer): TZVariant;
+    function IsNull(ColumnIndex: Integer): Boolean;
+    function GetPAnsiChar(ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PAnsiChar; virtual;
+    function GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; virtual; abstract;
+    function GetString(ColumnIndex: Integer; var IsNull: Boolean): String; virtual;
+    function GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString; virtual;
+    function GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String; virtual;
+    function GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString; virtual;
+    function GetPWideChar(ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PWideChar; virtual;
+    function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): ZWideString; virtual;
+    function GetBoolean(ColumnIndex: Integer; var IsNull: Boolean): Boolean;
+    function GetByte(ColumnIndex: Integer; var IsNull: Boolean): Byte;
+    function GetShort(ColumnIndex: Integer; var IsNull: Boolean): ShortInt;
+    function GetWord(ColumnIndex: Integer; var IsNull: Boolean): Word;
+    function GetSmall(ColumnIndex: Integer; var IsNull: Boolean): SmallInt;
+    function GetUInt(ColumnIndex: Integer; var IsNull: Boolean): Cardinal;
+    function GetInt(ColumnIndex: Integer; var IsNull: Boolean): Integer;
+    function GetULong(ColumnIndex: Integer; var IsNull: Boolean): UInt64;
+    function GetLong(ColumnIndex: Integer; var IsNull: Boolean): Int64;
+    function GetFloat(ColumnIndex: Integer; var IsNull: Boolean): Single;
+    function GetDouble(ColumnIndex: Integer; var IsNull: Boolean): Double;
+    function GetCurrency(ColumnIndex: Integer; var IsNull: Boolean): Currency;
+    function GetBigDecimal(ColumnIndex: Integer; var IsNull: Boolean): Extended;
+    function GetBytes(ColumnIndex: Integer; var IsNull: Boolean): TBytes; overload;
+    function GetBytes(ColumnIndex: Integer; var IsNull: Boolean; out Len: Word): Pointer; overload;
+    function GetDate(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+    function GetTime(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+    function GetTimestamp(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+    function GetAsciiStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
+    function GetUnicodeStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
+    function GetBinaryStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
+    function GetBlob(ColumnIndex: Integer; var IsNull: Boolean): IZBlob;
+    function GetDataSet(ColumnIndex: Integer; var {%H-}IsNull: Boolean): IZDataSet;
+    function GetValue(ColumnIndex: Integer): TZVariant;
 
     //---------------------------------------------------------------------
     // Updates
     //---------------------------------------------------------------------
 
-    procedure SetNotNull(Const ColumnIndex: Integer);
-    procedure SetNull(Const ColumnIndex: Integer);
-    procedure SetBoolean(Const ColumnIndex: Integer; const Value: Boolean);
-    procedure SetByte(Const ColumnIndex: Integer; const Value: Byte);
-    procedure SetShort(Const ColumnIndex: Integer; const Value: ShortInt);
-    procedure SetWord(Const ColumnIndex: Integer; const Value: Word);
-    procedure SetSmall(Const ColumnIndex: Integer; const Value: SmallInt);
-    procedure SetUInt(Const ColumnIndex: Integer; const Value: Cardinal);
-    procedure SetInt(Const ColumnIndex: Integer; const Value: Integer);
-    procedure SetULong(Const ColumnIndex: Integer; const Value: UInt64);
-    procedure SetLong(Const ColumnIndex: Integer; const Value: Int64);
-    procedure SetFloat(Const ColumnIndex: Integer; const Value: Single);
-    procedure SetDouble(Const ColumnIndex: Integer; const Value: Double);
-    procedure SetCurrency(Const ColumnIndex: Integer; const Value: Currency);
-    procedure SetBigDecimal(Const ColumnIndex: Integer; const Value: Extended);
-    procedure SetString(Const ColumnIndex: Integer; const Value: String); virtual;
-    procedure SetPAnsiChar(Const ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); overload; virtual;
-    procedure SetPAnsiChar(Const ColumnIndex: Integer; const Value: PAnsiChar); overload; virtual;
-    procedure SetPWideChar(Const ColumnIndex: Integer; Value: PWideChar; Len: PNativeUInt); virtual;
-    procedure SetAnsiString(Const ColumnIndex: Integer; const Value: AnsiString); virtual;
-    procedure SetUTF8String(Const ColumnIndex: Integer; const Value: UTF8String); virtual;
-    procedure SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString); virtual;
-    procedure SetUnicodeString(Const ColumnIndex: Integer; const Value: ZWideString); virtual;
-    procedure SetBytes(Const ColumnIndex: Integer; const Value: TBytes); overload; virtual;
-    procedure SetBytes(Const ColumnIndex: Integer; Buf: Pointer; Len: Word); overload; virtual;
-    procedure SetDate(Const ColumnIndex: Integer; const Value: TDateTime); virtual;
-    procedure SetTime(Const ColumnIndex: Integer; const Value: TDateTime); virtual;
-    procedure SetTimestamp(Const ColumnIndex: Integer; const Value: TDateTime); virtual;
-    procedure SetAsciiStream(Const ColumnIndex: Integer; const Value: TStream);
-    procedure SetUnicodeStream(Const ColumnIndex: Integer; const Value: TStream);
-    procedure SetBinaryStream(Const ColumnIndex: Integer; const Value: TStream);
-    procedure SetBlob(Const ColumnIndex: Integer; const Value: IZBlob);
-    procedure SetDataSet(Const ColumnIndex: Integer; const Value: IZDataSet);
-    procedure SetValue(Const ColumnIndex: Integer; const Value: TZVariant);
+    procedure SetNotNull(ColumnIndex: Integer);
+    procedure SetNull(ColumnIndex: Integer);
+    procedure SetBoolean(ColumnIndex: Integer; Value: Boolean);
+    procedure SetByte(ColumnIndex: Integer; Value: Byte);
+    procedure SetShort(ColumnIndex: Integer; Value: ShortInt);
+    procedure SetWord(ColumnIndex: Integer; Value: Word);
+    procedure SetSmall(ColumnIndex: Integer; Value: SmallInt);
+    procedure SetUInt(ColumnIndex: Integer; Value: Cardinal);
+    procedure SetInt(ColumnIndex: Integer; Value: Integer);
+    procedure SetULong(ColumnIndex: Integer; const Value: UInt64);
+    procedure SetLong(ColumnIndex: Integer; const Value: Int64);
+    procedure SetFloat(ColumnIndex: Integer; Value: Single);
+    procedure SetDouble(ColumnIndex: Integer; const Value: Double);
+    procedure SetCurrency(ColumnIndex: Integer; const Value: Currency);
+    procedure SetBigDecimal(ColumnIndex: Integer; const Value: Extended);
+    procedure SetString(ColumnIndex: Integer; const Value: String); virtual;
+    procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); overload; virtual;
+    procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar); overload; virtual;
+    procedure SetPWideChar(ColumnIndex: Integer; Value: PWideChar; Len: PNativeUInt); virtual;
+    procedure SetAnsiString(ColumnIndex: Integer; const Value: AnsiString); virtual;
+    procedure SetUTF8String(ColumnIndex: Integer; const Value: UTF8String); virtual;
+    procedure SetRawByteString(ColumnIndex: Integer; const Value: RawByteString); virtual;
+    procedure SetUnicodeString(ColumnIndex: Integer; const Value: ZWideString); virtual;
+    procedure SetBytes(ColumnIndex: Integer; const Value: TBytes); overload; virtual;
+    procedure SetBytes(ColumnIndex: Integer; Buf: Pointer; Len: Word); overload; virtual;
+    procedure SetDate(ColumnIndex: Integer; const Value: TDateTime); virtual;
+    procedure SetTime(ColumnIndex: Integer; const Value: TDateTime); virtual;
+    procedure SetTimestamp(ColumnIndex: Integer; const Value: TDateTime); virtual;
+    procedure SetAsciiStream(ColumnIndex: Integer; const Value: TStream);
+    procedure SetUnicodeStream(ColumnIndex: Integer; const Value: TStream);
+    procedure SetBinaryStream(ColumnIndex: Integer; const Value: TStream);
+    procedure SetBlob(ColumnIndex: Integer; const Value: IZBlob);
+    procedure SetDataSet(ColumnIndex: Integer; const Value: IZDataSet);
+    procedure SetValue(ColumnIndex: Integer; const Value: TZVariant);
 
     property ColumnsSize: Integer read FColumnsSize;
     property RowSize: Integer read FRowSize;
@@ -270,26 +264,26 @@ type
     // Methods for accessing results by column index
     //======================================================================
 
-    function GetPAnsiChar(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PAnsiChar; override;
-    function GetCharRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; override;
-    function GetString(Const ColumnIndex: Integer; var IsNull: Boolean): String; override;
-    function GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString; override;
-    function GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String; override;
-    function GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString; override;
-    function GetPWideChar(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PWideChar; override;
-    function GetUnicodeString(Const ColumnIndex: Integer; var IsNull: Boolean): ZWideString; override;
+    function GetPAnsiChar(ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PAnsiChar; override;
+    function GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; override;
+    function GetString(ColumnIndex: Integer; var IsNull: Boolean): String; override;
+    function GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString; override;
+    function GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String; override;
+    function GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString; override;
+    function GetPWideChar(ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PWideChar; override;
+    function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): ZWideString; override;
 
     //---------------------------------------------------------------------
     // Updates
     //---------------------------------------------------------------------
 
-    procedure SetString(Const ColumnIndex: Integer; const Value: String); override;
-    procedure SetPAnsiChar(Const ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); override;
-    procedure SetPWideChar(Const ColumnIndex: Integer; Value: PWideChar; Len: PNativeUInt); override;
-    //procedure SetAnsiString(Const ColumnIndex: Integer; const Value: AnsiString); override;
-    //procedure SetUTF8String(Const ColumnIndex: Integer; const Value: UTF8String); override;
-    procedure SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString); override;
-    procedure SetUnicodeString(Const ColumnIndex: Integer; const Value: ZWideString); override;
+    procedure SetString(ColumnIndex: Integer; const Value: String); override;
+    procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); override;
+    procedure SetPWideChar(ColumnIndex: Integer; Value: PWideChar; Len: PNativeUInt); override;
+    //procedure SetAnsiString(ColumnIndex: Integer; const Value: AnsiString); override;
+    //procedure SetUTF8String(ColumnIndex: Integer; const Value: UTF8String); override;
+    procedure SetRawByteString(ColumnIndex: Integer; const Value: RawByteString); override;
+    procedure SetUnicodeString(ColumnIndex: Integer; const Value: ZWideString); override;
   end;
 
   {** Implements a unicode-string based column buffer accessor. }
@@ -301,26 +295,26 @@ type
     // Methods for accessing results by column index
     //======================================================================
 
-    function GetPAnsiChar(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PAnsiChar; override;
-    function GetCharRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; override;
-    function GetString(Const ColumnIndex: Integer; var IsNull: Boolean): String; override;
-    function GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString; override;
-    function GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String; override;
-    function GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString; override;
-    function GetPWideChar(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PWideChar; override;
-    function GetUnicodeString(Const ColumnIndex: Integer; var IsNull: Boolean): ZWideString; override;
+    function GetPAnsiChar(ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PAnsiChar; override;
+    function GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; override;
+    function GetString(ColumnIndex: Integer; var IsNull: Boolean): String; override;
+    function GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString; override;
+    function GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String; override;
+    function GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString; override;
+    function GetPWideChar(ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PWideChar; override;
+    function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): ZWideString; override;
 
     //---------------------------------------------------------------------
     // Updates
     //---------------------------------------------------------------------
 
-    procedure SetString(Const ColumnIndex: Integer; const Value: String); override;
-    procedure SetPAnsiChar(Const ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); override;
-    procedure SetPWideChar(Const ColumnIndex: Integer; Value: PWideChar; Len: PNativeUInt); override;
-    //procedure SetAnsiString(Const ColumnIndex: Integer; const Value: AnsiString); override;
-    //procedure SetUTF8String(Const ColumnIndex: Integer; const Value: UTF8String); override;
-    procedure SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString); override;
-    procedure SetUnicodeString(Const ColumnIndex: Integer; const Value: ZWideString); override;
+    procedure SetString(ColumnIndex: Integer; const Value: String); override;
+    procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); override;
+    procedure SetPWideChar(ColumnIndex: Integer; Value: PWideChar; Len: PNativeUInt); override;
+    //procedure SetAnsiString(ColumnIndex: Integer; const Value: AnsiString); override;
+    //procedure SetUTF8String(ColumnIndex: Integer; const Value: UTF8String); override;
+    procedure SetRawByteString(ColumnIndex: Integer; const Value: RawByteString); override;
+    procedure SetUnicodeString(ColumnIndex: Integer; const Value: ZWideString); override;
   end;
 
 const
@@ -661,46 +655,44 @@ end;
 
 function CompareBytes_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else begin
-    Result := PWord(PAnsiChar(V1)+SizeOf(Pointer))^ - PWord(PAnsiChar(V1)+SizeOf(Pointer))^;
-    if Result = 0 then
-      Result := ZMemLComp(PPointer(V1)^, PPointer(V2)^, PWord(PAnsiChar(V1)+SizeOf(Pointer))^)
-  end;
+  if (Null1 and Null2) or (
+    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
+  else if (Null1 or Null2) or (
+    ((PPointer(V1)^ <> nil) and (PPointer(V2)^ = nil)) or
+    ((PPointer(V1)^ = nil) and (PPointer(V2)^ <> nil))) then Result := 1 //one of both is null or empty?
+  else if PWord(PAnsiChar(V1)+SizeOf(Pointer))^ <> PWord(PAnsiChar(V1)+SizeOf(Pointer))^ then Result := 1//length different?
+  else Result := ZMemLComp(PPointer(V1)^, PPointer(V2)^, PWord(PAnsiChar(V1)+SizeOf(Pointer))^)
 end;
 
 function CompareRaw_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else begin
-    Result := Ord(PLongWord(Pointer(V1)^)^ <> PLongWord(Pointer(V2)^)^);
-    if Result = 0 then
-       Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
+  if (Null1 and Null2) or (
+    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
+  else if (Null1 or Null2) or (
+    ((PPointer(V1)^ <> nil) and (PPointer(V2)^ = nil)) or
+    ((PPointer(V1)^ = nil) and (PPointer(V2)^ <> nil))) then Result := 1 //one of both is null or empty?
+  else if PLongWord(Pointer(V1)^)^ <> PLongWord(Pointer(V2)^)^ then Result := 1//length different?
+  else Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
                            PAnsiChar(Pointer(V2)^)+PAnsiInc,
                            PLongWord(Pointer(V1)^)^);
-  end;
 end;
 
 function CompareNativeRaw_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
+  if (Null1 and Null2) or (
+    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
   else if Null1 then Result := -1
   else if Null2 then Result := 1
+  else if (PPointer(V1)^ = nil) then Result := -1
+  else if (PPointer(V2)^ = nil) then Result := 1
   else
     {$IFDEF MSWINDOWS}
     Result := CompareStringA(LOCALE_USER_DEFAULT, 0,
       PAnsiChar(Pointer(V1)^)+PAnsiInc, PLongWord(Pointer(V1)^)^,
       PAnsiChar(Pointer(V2)^)+PAnsiInc, PLongWord(Pointer(V2)^)^) - 2;{CSTR_EQUAL}
     {$ELSE}
-      if Assigned(PPAnsichar(Pointer(V1)^)) and Assigned(PPAnsiChar(Pointer(V2)^)) then
-        Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
-          AnsiStrComp(PPAnsiChar(V1)^+PAnsiInc, PPAnsiChar(V2)^+PAnsiInc)
-      else //we've found out on other (FPC)OS's a nil compare crahs!
-        if Assigned(PPAnsichar(Pointer(V1)^))
-        then Result := 1
-        else Result := -1;
+     Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
+        AnsiStrComp(PPAnsiChar(V1)^+PAnsiInc, PPAnsiChar(V2)^+PAnsiInc)
     {$ENDIF}
 end;
 
@@ -713,9 +705,12 @@ function CompareUnicodeFromUTF8_Asc(const Null1, Null2: Boolean; const V1, V2): 
 var
   S1, S2: ZWideString;
 begin
-  if Null1 and Null2 then Result := 0
+  if (Null1 and Null2) or (
+    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
   else if Null1 then Result := -1
   else if Null2 then Result := 1
+  else if (PPointer(V1)^ = nil) then Result := -1
+  else if (PPointer(V2)^ = nil) then Result := 1
   else begin
     S1 := PRawToUnicode(PAnsiChar(Pointer(V1)^)+PAnsiInc, PLongWord(Pointer(V1)^)^, zCP_UTF8);
     S2 := PRawToUnicode(PAnsiChar(Pointer(V2)^)+PAnsiInc, PLongWord(Pointer(V2)^)^, zCP_UTF8);
@@ -733,9 +728,12 @@ function CompareUnicode_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 var S1, S2: ZWideString;
 {$ENDIF}
 begin
-  if Null1 and Null2 then Result := 0
+  if (Null1 and Null2) or (
+    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
   else if Null1 then Result := -1
   else if Null2 then Result := 1
+  else if (PPointer(V1)^ = nil) then Result := -1
+  else if (PPointer(V2)^ = nil) then Result := 1
   else begin
     {$IFDEF MSWINDOWS}
     SetLastError(0);
@@ -759,8 +757,11 @@ end;
 
 function CompareUnicode_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
+  if (Null1 and Null2) or (
+    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
+  else if (Null1 or Null2) or (
+    ((PPointer(V1)^ <> nil) and (PPointer(V2)^ = nil)) or
+    ((PPointer(V1)^ = nil) and (PPointer(V2)^ <> nil))) then Result := 1 //one of both is null or empty?
   else begin
     Result := Ord(PLongWord(Pointer(V1)^)^ <> PLongWord(Pointer(V2)^)^);
     if Result = 0 then
@@ -972,7 +973,7 @@ end;
   Checks is the column index correct and row buffer is available.
   @param ColumnIndex an index of column.
 }
-procedure TZRowAccessor.CheckColumnIndex(Const ColumnIndex: Integer);
+procedure TZRowAccessor.CheckColumnIndex(ColumnIndex: Integer);
 begin
   if FBuffer = nil then
     raise EZSQLException.Create(SRowBufferIsNotAssigned);
@@ -992,7 +993,7 @@ end;
   @return <code>true</code> if convertion is allowed or throw exception
     otherwise.
 }
-procedure TZRowAccessor.CheckColumnConvertion(Const ColumnIndex: Integer;
+procedure TZRowAccessor.CheckColumnConvertion(ColumnIndex: Integer;
   ResultType: TZSQLType);
 begin
   if not Assigned(FBuffer) then
@@ -1057,90 +1058,14 @@ begin
   end;
 end;
 
-{**
-  Gets a stream from the specified columns.
-  @param Buffer a row buffer.
-  @param ColumnIndex an index of the column.
-}
-function TZRowAccessor.GetBlobObject(Buffer: PZRowBuffer;
-  ColumnIndex: Integer): IZBlob;
-begin
-  {$R-}
-  if Buffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
-    Result := IZBlob(PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^)
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  else
-    Result := nil;
-end;
-
-{**
-  Sets a blob into the specified columns.
-  @param Buffer a row buffer.
-  @param ColumnIndex an index of the column.
-  @param Value a stream object to be set.
-}
-procedure TZRowAccessor.SetBlobObject(const Buffer: PZRowBuffer;
-  ColumnIndex: Integer; const Value: IZBlob);
-var LobPtr: PPointer;
-begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex -1;
-  {$ENDIF}
-  {$R-}
-  LobPtr := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
-  if Buffer.Columns[FColumnOffsets[ColumnIndex]] = bIsNotNull then
-    IZBlob(LobPtr^) := nil //Free Interface reference
-  else
-    LobPtr^ := nil; //nil Pointer reference without Interface ref -> do NOT dec refcount
-
-  IZBlob(LobPtr^) := Value; //set new value
-
-  if Value = nil then
-    Buffer.Columns[FColumnOffsets[ColumnIndex]] := bIsNull  //Set null byte
-  else
-    Buffer.Columns[FColumnOffsets[ColumnIndex]] := bIsNotNull; //Set not null byte
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
-function TZRowAccessor.InternalGetBytes(const Buffer: PZRowBuffer;
-  ColumnIndex: Integer): TBytes;
-var
-  P: Pointer;
-  L: Word;
-begin
-  P := InternalGetBytes(Buffer, ColumnIndex, L{%H-});
-  if P <> nil then begin
-    SetLength(Result, L);
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Pointer(Result)^, L);
-  end else
-    Result := nil;
-end;
-
-function TZRowAccessor.InternalGetBytes(const Buffer: PZRowBuffer;
-  ColumnIndex: Integer; var Len: Word): Pointer;
-begin
-  Result := nil;
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex -1;
-  {$ENDIF}
-  {$R-}
-  if ( Buffer.Columns[FColumnOffsets[ColumnIndex]] = bIsNotNull )then
-  begin
-    Len := PWord(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1 + SizeOf(Pointer)])^;
-    if Len > 0 then
-      Result := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^;
-  end else Len := 0;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
-procedure TZRowAccessor.InternalSetBytes(const Buffer: PZRowBuffer;
+procedure TZRowAccessor.InternalSetBytes(Buffer: PZRowBuffer;
   ColumnIndex: Integer; const Value: TBytes;
   const NewPointer: Boolean = False);
 begin
   InternalSetBytes(Buffer, ColumnIndex, Pointer(Value), Length(Value), NewPointer);
 end;
 
-procedure TZRowAccessor.InternalSetBytes(const Buffer: PZRowBuffer;
+procedure TZRowAccessor.InternalSetBytes(Buffer: PZRowBuffer;
   ColumnIndex: Integer; Buf: Pointer; Len: Word;
   const NewPointer: Boolean = False);
 var
@@ -1156,21 +1081,17 @@ begin
     P := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
     Len := Min(Len, FColumnLengths[ColumnIndex]);
     PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex] + 1 + SizeOf(Pointer)])^ := Len;
-    if Len > 0 then
-    begin
+    if Len > 0 then begin
       ReallocMem(P^, Len);
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, P^^, Len);
-    end
-    else
-      if PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ > 0 then
-      begin
-        System.FreeMem(P^);
-        PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ := 0;
-      end;
+    end else if P^ <> nil then begin
+      System.FreeMem(P^);
+      P^ := nil;
+    end;
   end;
 end;
 
-procedure TZRowAccessor.InternalSetString(const Buffer: PZRowBuffer;
+procedure TZRowAccessor.InternalSetString(Buffer: PZRowBuffer;
   ColumnIndex: Integer; const Value: RawByteString;
   const NewPointer: Boolean = False);
 var
@@ -1186,14 +1107,19 @@ begin
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ := 0;
     C := PPAnsiChar(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
     L := Length(Value);
-    ReallocMem(C^, L +SizeOf(Cardinal)+1); //add space for leading #0
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, (C^+PAnsiInc)^, L);
-    PLongWord(C^)^ := L;
-    (C^+PAnsiInc+L)^ := #0; //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
+    if L > 0 then begin
+      ReallocMem(C^, L +SizeOf(Cardinal)+1); //add space for leading #0
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, (C^+PAnsiInc)^, L);
+      PLongWord(C^)^ := L;
+      (C^+PAnsiInc+L)^ := #0; //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
+    end else if C^ <> nil then begin
+      FreeMem(C^);
+      C^ := nil;
+    end;
   end;
 end;
 
-procedure TZRowAccessor.InternalSetUnicodeString(const Buffer: PZRowBuffer;
+procedure TZRowAccessor.InternalSetUnicodeString(Buffer: PZRowBuffer;
   ColumnIndex: Integer; const Value: ZWideString;
   const NewPointer: Boolean = False);
 var
@@ -1209,16 +1135,21 @@ begin
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ := 0;
     W := ZPPWideChar(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
     LStr := Length(Value);
-    LMem := LStr shl 1;
-    ReallocMem(W^, LMem+SizeOf(Cardinal)+2); //including #0#0 terminator
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, (W^+PWideInc)^, LMem);
-    PLongWord(W^)^ := LStr;
-    (W^+PWideInc+LStr)^ := WideChar(#0);
+    if LStr > 0 then begin
+      LMem := LStr shl 1;
+      ReallocMem(W^, LMem+SizeOf(Cardinal)+2); //including #0#0 terminator
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, (W^+PWideInc)^, LMem);
+      PLongWord(W^)^ := LStr;
+      (W^+PWideInc+LStr)^ := WideChar(#0);
+    end else if W^ <> nil then begin
+      FreeMem(W^);
+      W^ := nil;
+    end;
   end;
 end;
 
-procedure TZRowAccessor.InternalSetPWideChar(const Buffer: PZRowBuffer;
-  ColumnIndex: Integer; const Value: PWideChar; const Len: Cardinal;
+procedure TZRowAccessor.InternalSetPWideChar(Buffer: PZRowBuffer;
+  ColumnIndex: Integer; Value: PWideChar; Len: Cardinal;
   const NewPointer: Boolean = False);
 var
   W: ZPPWideChar;
@@ -1232,18 +1163,22 @@ begin
     if NewPointer then
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ := 0;
     W := ZPPWideChar(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
-    LMem := Len shl 1;
-    ReallocMem(W^, LMem+SizeOf(Cardinal)+2); //including #0#0 terminator
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, (W^+PWideInc)^, LMem);
-    PLongWord(W^)^ := Len;
-    (W^+PWideInc+Len)^ := WideChar(#0);
+    if Len > 0 then begin
+      LMem := Len shl 1;
+      ReallocMem(W^, LMem+SizeOf(Cardinal)+2); //including #0#0 terminator
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, (W^+PWideInc)^, LMem);
+      PLongWord(W^)^ := Len;
+      (W^+PWideInc+Len)^ := WideChar(#0);
+    end else if W^ <> nil then begin
+      FreeMem(W^);
+      W^ := nil;
+    end;
   end;
 end;
 
 
-procedure TZRowAccessor.InternalSetPAnsiChar(const Buffer: PZRowBuffer;
-  ColumnIndex: Integer; const Value: PAnsiChar; const Len: Cardinal;
-  const NewPointer: Boolean = False);
+procedure TZRowAccessor.InternalSetPAnsiChar(Buffer: PZRowBuffer;
+  ColumnIndex: Integer; Value: PAnsiChar; Len: Cardinal; const NewPointer: Boolean = False);
 var
   C: PPAnsiChar;
 begin
@@ -1255,10 +1190,15 @@ begin
     if NewPointer then
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ := 0;
     C := PPAnsiChar(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
-    ReallocMem(C^, Len+SizeOf(LongWord)+1);
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, (C^+PAnsiInc)^, Len);
-    PLongWord(C^)^ := Len;
-    (C^+PAnsiInc+Len)^ := #0; //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
+    if Len > 0 then begin
+      ReallocMem(C^, Len+SizeOf(LongWord)+1);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, (C^+PAnsiInc)^, Len);
+      PLongWord(C^)^ := Len;
+      (C^+PAnsiInc+Len)^ := #0; //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
+    end else if C^ <> nil then begin
+      FreeMem(C^);
+      C^ := nil;
+    end;
   end;
 end;
 
@@ -1516,23 +1456,24 @@ end;
 procedure TZRowAccessor.ClearBuffer(Buffer: PZRowBuffer; const WithFillChar: Boolean = True);
 var
   I: Integer;
-  P: PPointer;
 begin
   Buffer^.Index := -1;
   Buffer^.UpdateType := utUnmodified;
   Buffer^.BookmarkFlag := 0;
+  {$R-}
   for I := 0 to FColumnCount - 1 do
     case FColumnTypes[I] of
       stAsciiStream, stUnicodeStream, stBinaryStream:
         if (Buffer^.Columns[FColumnOffsets[I]] = bIsNotNull) then
-          SetBlobObject(Buffer, I {$IFNDEF GENERIC_INDEX}+ 1{$ENDIF}, nil);
+          PIZLob(@Buffer^.Columns[FColumnOffsets[I] +1])^ := nil;
       stBytes,stString, stUnicodeString:
-        if PNativeUInt(@Buffer^.Columns[FColumnOffsets[I] +1])^ > 0 then
-        begin
-          P := PPointer(@Buffer^.Columns[FColumnOffsets[I] +1]);
-          System.FreeMem(P^);
-        end;
+        if (Buffer^.Columns[FColumnOffsets[I]] = bIsNotNull) then
+          if PPointer(@Buffer^.Columns[FColumnOffsets[I] +1])^ <> nil then begin
+            System.FreeMem(PPointer(@Buffer^.Columns[FColumnOffsets[I] +1])^);
+            PPointer(@Buffer^.Columns[FColumnOffsets[I] +1])^ := nil;
+          end;
     end;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   if WithFillChar then
     FillChar(Buffer^.Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
 end;
@@ -1631,9 +1572,11 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return the case sensitive flag of the column data buffer.
 }
-function TZRowAccessor.GetColumnCase(Const ColumnIndex: Integer): Boolean;
+function TZRowAccessor.GetColumnCase(ColumnIndex: Integer): Boolean;
 begin
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnIndex(ColumnIndex);
+{$ENDIF}
   Result := FColumnCases[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
 end;
 
@@ -1643,12 +1586,16 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return a pointer to the column data buffer.
 }
-function TZRowAccessor.GetColumnData(Const ColumnIndex: Integer;
+function TZRowAccessor.GetColumnData(ColumnIndex: Integer;
   var IsNull: Boolean): Pointer;
 begin
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnIndex(ColumnIndex);
+{$ENDIF}
+  {$R-}
   Result := @FBuffer.Columns[FColumnOffsets[ColumnIndex {$IFNDEF GENERIC_INDEX}- 1{$ENDIF}] + 1];
   IsNull := FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNull;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1657,9 +1604,11 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return a size of the column data buffer.
 }
-function TZRowAccessor.GetColumnDataSize(Const ColumnIndex: Integer): Integer;
+function TZRowAccessor.GetColumnDataSize(ColumnIndex: Integer): Integer;
 begin
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnIndex(ColumnIndex);
+{$ENDIF}
   Result := FColumnLengths[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
 end;
 
@@ -1669,7 +1618,7 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return the length of the column data buffer.
 }
-function TZRowAccessor.GetColumnLength(Const ColumnIndex: Integer): Integer;
+function TZRowAccessor.GetColumnLength(ColumnIndex: Integer): Integer;
 begin
   CheckColumnIndex(ColumnIndex);
   Result := FColumnLengths[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
@@ -1681,9 +1630,11 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return the name of the column data buffer.
 }
-function TZRowAccessor.GetColumnName(Const ColumnIndex: Integer): string;
+function TZRowAccessor.GetColumnName(ColumnIndex: Integer): string;
 begin
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnIndex(ColumnIndex);
+{$ENDIF}
   Result := FColumnNames[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
 end;
 
@@ -1693,9 +1644,11 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return then offset of the column data buffer.
 }
-function TZRowAccessor.GetColumnOffSet(Const ColumnIndex: Integer): Integer;
+function TZRowAccessor.GetColumnOffSet(ColumnIndex: Integer): Integer;
 begin
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnIndex(ColumnIndex);
+{$ENDIF}
   Result := FColumnOffSets[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
 end;
 
@@ -1705,25 +1658,33 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return the SQLType of the column data buffer.
 }
-function TZRowAccessor.GetColumnType(Const ColumnIndex: Integer): TZSQLType;
+function TZRowAccessor.GetColumnType(ColumnIndex: Integer): TZSQLType;
 begin
   CheckColumnIndex(ColumnIndex);
   Result := FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
 end;
 
-function TZRowAccessor.GetColumnDefaultExpression(Const ColumnIndex: Integer): string;
+function TZRowAccessor.GetColumnDefaultExpression(ColumnIndex: Integer): string;
 begin
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnIndex(ColumnIndex);
+{$ENDIF}
   Result := FColumnDefaultExpressions[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
 end;
 
-procedure TZRowAccessor.SetColumnDefaultExpression(Const ColumnIndex: Integer; const Value: string);
+procedure TZRowAccessor.SetColumnDefaultExpression(ColumnIndex: Integer; const Value: string);
 begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnIndex(ColumnIndex);
+{$ENDIF}
   FColumnDefaultExpressions[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := Value;
 end;
 
-procedure TZRowAccessor.SetColumnCodePage(Const ColumnIndex: Integer; const Value: Word);
+procedure TZRowAccessor.SetColumnCodePage(ColumnIndex: Integer; const Value: Word);
 begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnIndex(ColumnIndex);
+{$ENDIF}
   FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := Value;
 end;
 
@@ -1740,11 +1701,8 @@ end;
   @return if the value is SQL <code>NULL</code>, the
     value returned is <code>true</code>. <code>false</code> otherwise.
 }
-function TZRowAccessor.IsNull(Const ColumnIndex: Integer): Boolean;
-var
-  TempBlob: IZBlob;
+function TZRowAccessor.IsNull(ColumnIndex: Integer): Boolean;
 begin
-  {$R-}
   if not Assigned(FBuffer) then
     raise EZSQLException.Create(SRowBufferIsNotAssigned);
 
@@ -1753,13 +1711,8 @@ begin
     raise EZSQLException.Create(
       Format(SColumnIsNotAccessable, [ColumnIndex]));
 
+  {$R-}
   Result := FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNull;
-  if not Result and (FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] in [stAsciiStream,
-    stBinaryStream, stUnicodeStream]) then
-  begin
-    TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-    Result := (TempBlob = nil) or TempBlob.IsEmpty;
-  end;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
@@ -1773,139 +1726,112 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetPAnsiChar(Const ColumnIndex: Integer; var IsNull: Boolean;
+function TZRowAccessor.GetPAnsiChar(ColumnIndex: Integer; var IsNull: Boolean;
   out Len: NativeUInt): PAnsiChar;
 var
-  Blob: IZBlob;
+  Data: PPointer;
 begin
   {$R-}
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF RangeCheck} {$R+} {$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean:
-      if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then
-        FRawTemp := 'True'
-      else
-        FRawTemp := 'False';
-    stByte: FRawTemp := IntToRaw(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stShort: FRawTemp := IntToRaw(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stWord: FRawTemp := IntToRaw(PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stSmall: FRawTemp := IntToRaw(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stLongWord: FRawTemp := IntToRaw(PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stInteger: FRawTemp := IntToRaw(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stULong: FRawTemp := IntToRaw(PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stLong: FRawTemp := IntToRaw(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stFloat: FRawTemp := FloatToSqlRaw(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stDouble: FRawTemp := FloatToSqlRaw(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stCurrency: FRawTemp := FloatToSqlRaw(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stBigDecimal: FRawTemp := FloatToSqlRaw(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
+    stBoolean: if PWordBool(Data)^
+              then FRawTemp := 'True'
+              else FRawTemp := 'False';
+    stByte: FRawTemp := IntToRaw(PByte(Data)^);
+    stShort: FRawTemp := IntToRaw(PShortInt(Data)^);
+    stWord: FRawTemp := IntToRaw(PWord(Data)^);
+    stSmall: FRawTemp := IntToRaw(PSmallInt(Data)^);
+    stLongWord: FRawTemp := IntToRaw(PCardinal(Data)^);
+    stInteger: FRawTemp := IntToRaw(PInteger(Data)^);
+    stULong: FRawTemp := IntToRaw(PUInt64(Data)^);
+    stLong: FRawTemp := IntToRaw(PInt64(Data)^);
+    stFloat: FRawTemp := FloatToSqlRaw(PSingle(Data)^);
+    stDouble: FRawTemp := FloatToSqlRaw(PDouble(Data)^);
+    stCurrency: FRawTemp := FloatToSqlRaw(PCurrency(Data)^);
+    stBigDecimal: FRawTemp := FloatToSqlRaw(PExtended(Data)^);
     //stString, stUnicodeString: do not handle here!
-    stBytes: FRawTemp := BytesToStr(GetBytes(ColumnIndex, IsNull));
-    stGUID: FRawTemp := GUIDToRaw(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
-    stDate: FRawTemp := DateTimeToRawSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
-      ConSettings^.DisplayFormatSettings, False);
-    stTime: FRawTemp := DateTimeToRawSQLTime(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
-      ConSettings^.DisplayFormatSettings, False);
-    stTimestamp: FRawTemp := DateTimeToRawSQLTimeStamp(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
-      ConSettings^.DisplayFormatSettings, False);
+    stBytes:  if Data^ <> nil then begin
+                Len :=PWord(PAnsiChar(Data)+SizeOf(Pointer))^;
+                Result := Data^;
+                Exit;
+              end else
+                FRawTemp := '';
+    stGUID: FRawTemp := GUIDToRaw(Data, 16);
+    stDate: FRawTemp := DateTimeToRawSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
+    stTime: FRawTemp := DateTimeToRawSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
+    stTimestamp: FRawTemp := DateTimeToRawSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
     stAsciiStream, stUnicodeStream:
-      begin
-        Blob := GetBlobObject(FBuffer, ColumnIndex);
-        if (Blob <> nil) and not Blob.IsEmpty then
-          if Blob.IsClob then
-          begin
-            if ConSettings^.AutoEncode then
-              Result := Blob.GetPAnsiChar(ConSettings^.CTRL_CP)
-            else
-              Result := Blob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
-            Len := Blob.Length;
-          end
-          else
-          begin
-            Result := Blob.GetBuffer;
-            Len := Blob.Length;
-          end
-        else
-        begin
-          Result := nil;
-          Len := 0;
+      if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then begin
+        if PIZLob(Data)^.IsClob then begin
+          if ConSettings^.AutoEncode
+          then Result := PIZLob(Data)^.GetPAnsiChar(ConSettings^.CTRL_CP)
+          else Result := PIZLob(Data)^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+          Len := PIZLob(Data)^.Length;
+        end else begin
+          Result := PIZLob(Data)^.GetBuffer;
+          Len := PIZLob(Data)^.Length;
         end;
         Exit;
-      end;
-    stBinaryStream:
-      begin
-        Blob := GetBlobObject(FBuffer, ColumnIndex);
-        if (Blob <> nil) and not Blob.IsEmpty then
-        begin
-          Result := Blob.GetBuffer;
-          Len := Blob.Length;
-        end
-        else
-        begin
-          Result := nil;
-          Len := 0;
-        end;
-        Exit;
-      end;
+      end else
+        FRawTemp := '';
     else
-      FRawTemp := {$IFDEF WITH_RAWBYTESTRING}RawByteString{$ENDIF}(GetString(ColumnIndex, IsNull));
+      FRawTemp := '';
   end;
   Len := Length(FRawTemp);
-  Result := Pointer(FRawTemp);
-  {$IFDEF RangeCheck} {$R+} {$ENDIF}
+  if Len = 0
+  then Result := PEmptyAnsiString
+  else Result := Pointer(FRawTemp);
 end;
 
-function TZRowAccessor.GetString(Const ColumnIndex: Integer; var IsNull: Boolean): String;
+function TZRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
 var
-  TempBlob: IZBlob;
+  Data: PPointer;
 begin
   {$R-}
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF RangeCheck} {$R+} {$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean:
-      if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then
-        Result := 'True'
-      else
-        Result := 'False';
-    stByte: Result := ZFastCode.IntToStr(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stShort: Result := ZFastCode.IntToStr(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stWord: Result := ZFastCode.IntToStr(PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stSmall: Result := ZFastCode.IntToStr(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stLongWord: Result := ZFastCode.IntToStr(PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stInteger: Result := ZFastCode.IntToStr(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stULong: Result := ZFastCode.IntToStr(PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stLong: Result := ZFastCode.IntToStr(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stFloat: Result := FloatToSQLStr(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stDouble: Result := FloatToSQLStr(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stCurrency: Result := FloatToSQLStr(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stBigDecimal: Result := FloatToSQLStr(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
+    stBoolean:  if PWordBool(Data)^
+                then Result := 'True'
+                else Result := 'False';
+    stByte: Result := ZFastCode.IntToStr(PByte(Data)^);
+    stShort: Result := ZFastCode.IntToStr(PShortInt(Data)^);
+    stWord: Result := ZFastCode.IntToStr(PWord(Data)^);
+    stSmall: Result := ZFastCode.IntToStr(PSmallInt(Data)^);
+    stLongWord: Result := ZFastCode.IntToStr(PCardinal(Data)^);
+    stInteger: Result := ZFastCode.IntToStr(PInteger(Data)^);
+    stULong: Result := ZFastCode.IntToStr(PUInt64(Data)^);
+    stLong: Result := ZFastCode.IntToStr(PInt64(Data)^);
+    stFloat: Result := FloatToSQLStr(PSingle(Data)^);
+    stDouble: Result := FloatToSQLStr(PDouble(Data)^);
+    stCurrency: Result := FloatToSQLStr(PCurrency(Data)^);
+    stBigDecimal: Result := FloatToSQLStr(PExtended(Data)^);
     //stString, stUnicodeString: do not handle here!
-    stUnicodeStream:
-      begin
-        TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-        if (TempBlob <> nil) and not TempBlob.IsEmpty then
-          if TempBlob.IsClob then
-            {$IFDEF UNICODE}
-            Result := TempBlob.GetUnicodeString
-            {$ELSE}
-            Result := TempBlob.GetPAnsiChar(ConSettings^.CTRL_CP)
-            {$ENDIF}
-          else
-            Result := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(TempBlob.GetString);
-      end;
-    stBytes: Result := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(BytesToStr(GetBytes(ColumnIndex, IsNull)));
-    stGUID: Result := {$IFDEF UNICODE}GUIDToUnicode{$ELSE}GUIDToRaw{$ENDIF}(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
-    stDate: Result := FormatDateTime('yyyy-mm-dd',
-      PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stTime: Result := FormatDateTime('hh:mm:ss',
-      PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stTimestamp: Result := FormatDateTime('yyyy-mm-dd hh:mm:ss',
-        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stAsciiStream, stBinaryStream:
-      begin
-        TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-        if (TempBlob <> nil) and not TempBlob.IsEmpty then
-          Result := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(TempBlob.GetString);
-      end;
+    stAsciiStream, stUnicodeStream, stBinaryStream:
+      if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then
+        if PIZLob(Data)^.IsClob
+        {$IFDEF UNICODE}
+        then Result := PIZLob(Data)^.GetUnicodeString
+        else Result := ASCII7ToUnicodeString(PIZLob(Data)^.GetBuffer, PIZLob(Data)^.Length)
+        {$ELSE}
+        then Result := PIZLob(Data)^.GetPAnsiChar(ConSettings^.CTRL_CP)
+        else Result := PIZLob(Data)^.GetString
+        {$ENDIF}
+      else Result := '';
+    stBytes: if (Data^ <> nil) then
+              {$IFDEF UNICODE}
+              Result := ASCII7ToUnicodeString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^)
+              {$ELSE}
+              System.SetString(Result, PAnsiChar(Data^), PWord(PAnsiChar(Data)+SizeOf(Pointer))^)
+              {$ENDIF}
+            else Result := '';
+    stGUID: Result := {$IFDEF UNICODE}GUIDToUnicode{$ELSE}GUIDToRaw{$ENDIF}(Data, 16);
+    stDate: Result := FormatDateTime('yyyy-mm-dd', PDateTime(Data)^);
+    stTime: Result := FormatDateTime('hh:mm:ss', PDateTime(Data)^);
+    stTimestamp: Result := FormatDateTime('yyyy-mm-dd hh:mm:ss', PDateTime(Data)^);
+    else Result := '';
   end;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1917,57 +1843,49 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+function TZRowAccessor.GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
 var
-  TempBlob: IZBlob;
+  Data: PPointer;
 begin
   {$R-}
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF RangeCheck} {$R+} {$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean:
-      if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then
-        Result := 'True'
-      else
-        Result := 'False';
-    stByte: Result := IntToRaw(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stShort: Result := IntToRaw(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stWord: Result := IntToRaw(PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stSmall: Result := IntToRaw(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stLongWord: Result := IntToRaw(PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stInteger: Result := IntToRaw(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stULong: Result := IntToRaw(PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stLong: Result := IntToRaw(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stFloat: Result := FloatToSqlRaw(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stDouble: Result := FloatToSqlRaw(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stCurrency: Result := FloatToSqlRaw(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stBigDecimal: Result := FloatToSqlRaw(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
+    stBoolean: if PWordBool(Data)^
+      then Result := 'True'
+      else Result := 'False';
+    stByte: Result := IntToRaw(PByte(Data)^);
+    stShort: Result := IntToRaw(PShortInt(Data)^);
+    stWord: Result := IntToRaw(PWord(Data)^);
+    stSmall: Result := IntToRaw(PSmallInt(Data)^);
+    stLongWord: Result := IntToRaw(PCardinal(Data)^);
+    stInteger: Result := IntToRaw(PInteger(Data)^);
+    stULong: Result := IntToRaw(PUInt64(Data)^);
+    stLong: Result := IntToRaw(PInt64(Data)^);
+    stFloat: Result := FloatToSqlRaw(PSingle(Data)^);
+    stDouble: Result := FloatToSqlRaw(PDouble(Data)^);
+    stCurrency: Result := FloatToSqlRaw(PCurrency(Data)^);
+    stBigDecimal: Result := FloatToSqlRaw(PExtended(Data)^);
     //stString, stUnicodeString: do not handle here!
-    stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
-    stGUID: Result := GUIDToRaw(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
-    stDate: Result := DateTimeToRawSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
+    stBytes: if Data^ <> nil
+              then ZSetString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^, Result)
+              else Result := '';
+    stGUID: Result := GUIDToRaw(Data, 16);
+    stDate: Result := DateTimeToRawSQLDate(PDateTime(Data)^,
       ConSettings^.DisplayFormatSettings, False);
-    stTime: Result := DateTimeToRawSQLTime(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
+    stTime: Result := DateTimeToRawSQLTime(PDateTime(Data)^,
       ConSettings^.DisplayFormatSettings, False);
-    stTimestamp: Result := DateTimeToRawSQLTimeStamp(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
+    stTimestamp: Result := DateTimeToRawSQLTimeStamp(PDateTime(Data)^,
       ConSettings^.DisplayFormatSettings, False);
-    stAsciiStream, stUnicodeStream:
-      begin
-        TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-        if (TempBlob <> nil) and not TempBlob.IsEmpty then
-          if TempBlob.IsClob then
-            Result := TempBlob.GetAnsiString
-          else
-            Result := TempBlob.GetString;
-      end;
-    stBinaryStream:
-      begin
-        TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-        if (TempBlob <> nil) and not TempBlob.IsEmpty then
-          Result := TempBlob.GetString;
-      end;
+    stAsciiStream, stUnicodeStream, stBinaryStream:
+      if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then
+        if PIZLob(Data)^.IsClob
+        then Result := PIZLob(Data)^.GetAnsiString
+        else Result := PIZLob(Data)^.GetString
+      else Result := '';
     else
-      Result := ConSettings^.ConvFuncs.ZStringToAnsi(GetString(ColumnIndex, IsNull), ConSettings^.CTRL_CP);
+      Result := '';
   end;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1979,57 +1897,45 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
-var
-  TempBlob: IZBlob;
+function TZRowAccessor.GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
+var Data: PPointer;
 begin
   {$R-}
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF RangeCheck} {$R+} {$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean:
-      if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then
-        Result := 'True'
-      else
-        Result := 'False';
-    stByte: Result := IntToRaw(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stShort: Result := IntToRaw(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stWord: Result := IntToRaw(PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stSmall: Result := IntToRaw(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stLongWord: Result := IntToRaw(PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stInteger: Result := IntToRaw(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stULong: Result := IntToRaw(PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stLong: Result := IntToRaw(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stFloat: Result := FloatToSqlRaw(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stDouble: Result := FloatToSqlRaw(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stCurrency: Result := FloatToSqlRaw(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stBigDecimal: Result := FloatToSqlRaw(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
-    stGUID: Result := GUIDToRaw(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
+    stBoolean: if PWordBool(Data)^
+      then Result := 'True'
+      else Result := 'False';
+    stByte: Result := IntToRaw(PByte(Data)^);
+    stShort: Result := IntToRaw(PShortInt(Data)^);
+    stWord: Result := IntToRaw(PWord(Data)^);
+    stSmall: Result := IntToRaw(PSmallInt(Data)^);
+    stLongWord: Result := IntToRaw(PCardinal(Data)^);
+    stInteger: Result := IntToRaw(PInteger(Data)^);
+    stULong: Result := IntToRaw(PUInt64(Data)^);
+    stLong: Result := IntToRaw(PInt64(Data)^);
+    stFloat: Result := FloatToSqlRaw(PSingle(Data)^);
+    stDouble: Result := FloatToSqlRaw(PDouble(Data)^);
+    stCurrency: Result := FloatToSqlRaw(PCurrency(Data)^);
+    stBigDecimal: Result := FloatToSqlRaw(PExtended(Data)^);
+    stBytes: if Data <> nil
+              then ZSetString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^, Result)
+              else Result := '';
+    stGUID: Result := GUIDToRaw(Data, 16);
     //stString, stUnicodeString: do not handle here!
-    stAsciiStream, stUnicodeStream:
-      begin
-        TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-        if (TempBlob <> nil) and not TempBlob.IsEmpty then
-          if TempBlob.IsClob then
-            Result := TempBlob.GetUTF8String
-          else
-            Result := TempBlob.GetString;
-      end;
-    stBinaryStream:
-      begin
-        TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-        if (TempBlob <> nil) and not TempBlob.IsEmpty then
-          Result := TempBlob.GetString;
-      end;
-    stDate: Result := DateTimeToRawSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
-      ConSettings^.DisplayFormatSettings, False);
-    stTime: Result := DateTimeToRawSQLTime(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
-      ConSettings^.DisplayFormatSettings, False);
-    stTimestamp: Result := DateTimeToRawSQLTimeStamp(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
-      ConSettings^.DisplayFormatSettings, False);
+    stAsciiStream, stUnicodeStream, stBinaryStream:
+      if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then
+        if PIZLob(Data)^.IsClob
+        then Result := PIZLob(Data)^.GetUTF8String
+        else Result := PIZLob(Data)^.GetString
+      else Result := '';
+    stDate: Result := DateTimeToRawSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
+    stTime: Result := DateTimeToRawSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
+    stTimestamp: Result := DateTimeToRawSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
     else
-      Result := ConSettings^.ConvFuncs.ZStringToUTF8(GetString(ColumnIndex, IsNull), ConSettings^.CTRL_CP);
+      Result := '';
   end;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2041,48 +1947,45 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
-var
-  TempBlob: IZBlob;
+function TZRowAccessor.GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
+var Data: PPointer;
 begin
   {$R-}
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF RangeCheck} {$R+} {$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean:
-      if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then
-        Result := 'True'
-      else
-        Result := 'False';
-    stByte: Result := IntToRaw(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stShort: Result := IntToRaw(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stWord: Result := IntToRaw(PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stSmall: Result := IntToRaw(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stLongWord: Result := IntToRaw(PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stInteger: Result := IntToRaw(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stULong: Result := IntToRaw(PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stLong: Result := IntToRaw(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stFloat: Result := FloatToSqlRaw(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stDouble: Result := FloatToSqlRaw(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stCurrency: Result := FloatToSqlRaw(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stBigDecimal: Result := FloatToSqlRaw(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
+    stBoolean:  if PWordBool(Data)^
+                then Result := 'True'
+                else Result := 'False';
+    stByte: Result := IntToRaw(PByte(Data)^);
+    stShort: Result := IntToRaw(PShortInt(Data)^);
+    stWord: Result := IntToRaw(PWord(Data)^);
+    stSmall: Result := IntToRaw(PSmallInt(Data)^);
+    stLongWord: Result := IntToRaw(PCardinal(Data)^);
+    stInteger: Result := IntToRaw(PInteger(Data)^);
+    stULong: Result := IntToRaw(PUInt64(Data)^);
+    stLong: Result := IntToRaw(PInt64(Data)^);
+    stFloat: Result := FloatToSqlRaw(PSingle(Data)^);
+    stDouble: Result := FloatToSqlRaw(PDouble(Data)^);
+    stCurrency: Result := FloatToSqlRaw(PCurrency(Data)^);
+    stBigDecimal: Result := FloatToSqlRaw(PExtended(Data)^);
     //stString, stUnicodeString: do not handle here!
-    stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
-    stGUID: Result := GUIDToRaw(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
-    stDate: Result := DateTimeToRawSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
-      ConSettings^.DisplayFormatSettings, False);
-    stTime: Result := DateTimeToRawSQLTime(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
-      ConSettings^.DisplayFormatSettings, False);
-    stTimestamp: Result := DateTimeToRawSQLTimeStamp(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
-      ConSettings^.DisplayFormatSettings, False);
+    stBytes: if Data <> nil
+              then ZSetString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^, Result)
+              else Result := '';
+    stGUID: Result := GUIDToRaw(Data, 16);
+    stDate: Result := DateTimeToRawSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
+    stTime: Result := DateTimeToRawSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
+    stTimestamp: Result := DateTimeToRawSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
     stAsciiStream, stUnicodeStream, stBinaryStream:
-      begin
-        TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-        if (TempBlob <> nil) and not TempBlob.IsEmpty then
-          Result := TempBlob.GetString;
-      end;
+      if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then
+        if PIZLob(Data)^.IsClob
+        then Result := PIZLob(Data)^.GetRawByteString
+        else Result := PIZLob(Data)^.GetString
+      else Result := '';
     else
-      Result := {$IFDEF WITH_RAWBYTESTRING}RawByteString{$ENDIF}(GetString(ColumnIndex, IsNull));
+      Result := '';
   end;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2095,58 +1998,54 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetPWideChar(Const ColumnIndex: Integer;
+function TZRowAccessor.GetPWideChar(ColumnIndex: Integer;
   var IsNull: Boolean; out Len: NativeUInt): PWideChar;
 var
-  TempBlob: IZBlob;
-  Bts: TBytes;
+  Data: PPointer;
 begin
   {$R-}
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF RangeCheck} {$R+} {$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stByte: FUniTemp := IntToUnicode(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stShort: FUniTemp := IntToUnicode(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stWord: FUniTemp := IntToUnicode(PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stSmall: FUniTemp := IntToUnicode(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stLongWord: FUniTemp := IntToUnicode(PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stInteger: FUniTemp := IntToUnicode(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stULong: FUniTemp := IntToUnicode(PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stLong: FUniTemp := IntToUnicode(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stFloat: FUniTemp := FloatToSqlUnicode(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stDouble: FUniTemp := FloatToSqlUnicode(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stCurrency: FUniTemp := FloatToSqlUnicode(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stBigDecimal: FUniTemp := FloatToSqlUnicode(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
+    stBoolean:  if PWordBool(Data)^
+                then FUniTemp := 'True'
+                else FUniTemp := 'False';
+    stByte: FUniTemp := IntToUnicode(PByte(Data)^);
+    stShort: FUniTemp := IntToUnicode(PShortInt(Data)^);
+    stWord: FUniTemp := IntToUnicode(PWord(Data)^);
+    stSmall: FUniTemp := IntToUnicode(PSmallInt(Data)^);
+    stLongWord: FUniTemp := IntToUnicode(PCardinal(Data)^);
+    stInteger: FUniTemp := IntToUnicode(PInteger(Data)^);
+    stULong: FUniTemp := IntToUnicode(PUInt64(Data)^);
+    stLong: FUniTemp := IntToUnicode(PInt64(Data)^);
+    stFloat: FUniTemp := FloatToSqlUnicode(PSingle(Data)^);
+    stDouble: FUniTemp := FloatToSqlUnicode(PDouble(Data)^);
+    stCurrency: FUniTemp := FloatToSqlUnicode(PCurrency(Data)^);
+    stBigDecimal: FUniTemp := FloatToSqlUnicode(PExtended(Data)^);
     //stUnicodeString, stString: do not handle here!
-    stAsciiStream, stUnicodeStream:
-      begin
-        TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-        if (TempBlob <> nil) and not TempBlob.IsEmpty then
-          if TempBlob.IsClob then
-          begin
-            Result := TempBlob.GetPWideChar;
-            Len := TempBlob.Length shr 1;
-            Exit;
-          end
-          else
-            FUniTemp := ASCII7ToUnicodeString(TempBlob.GetString);
-      end;
-    stBytes, stBinaryStream:
-      begin
-        Bts := GetBytes(ColumnIndex, IsNull);
-        FUniTemp := ASCII7ToUnicodeString(Pointer(Bts), Length(Bts));
-      end;
-    stGUID: FUniTemp := GUIDToUnicode(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
-    stDate: FUniTemp := DateTimeToUnicodeSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
-      ConSettings^.DisplayFormatSettings, False);
-    stTime: FUniTemp := DateTimeToUnicodeSQLTime(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
-      ConSettings^.DisplayFormatSettings, False);
-    stTimestamp: FUniTemp := DateTimeToUnicodeSQLTimeStamp(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
-      ConSettings^.DisplayFormatSettings, False);
+    stAsciiStream, stUnicodeStream, stBinaryStream:
+      if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+        if PIZlob(Data)^.IsClob then begin
+          Result := PIZlob(Data)^.GetPWideChar;
+          Len := PIZlob(Data)^.Length shr 1;
+          Exit;
+        end else
+          FUniTemp := ASCII7ToUnicodeString(PIZlob(Data)^.GetBuffer, PIZlob(Data)^.Length)
+      else FUniTemp := '';
+    stBytes: if Data^ <> nil
+              then FUniTemp := ASCII7ToUnicodeString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^)
+              else FUniTemp := '';
+    stGUID: FUniTemp := GUIDToUnicode(Data, 16);
+    stDate: FUniTemp := DateTimeToUnicodeSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
+    stTime: FUniTemp := DateTimeToUnicodeSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
+    stTimestamp: FUniTemp := DateTimeToUnicodeSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
     else
-      FUniTemp := {$IFNDEF UNICODE}ZWideString{$ENDIF}(GetString(ColumnIndex, IsNull));
+      FUniTemp := '';
   end;
-  Result := Pointer(FUniTemp);
-  Len := Length(FuniTemp);
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  Len := Length(FUniTemp);
+  if Len = 0
+  then Result := PEmptyUnicodeString
+  else Result := Pointer(FUniTemp);
 end;
 {**
   Gets the value of the designated column in the current row
@@ -2157,52 +2056,43 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetUnicodeString(Const ColumnIndex: Integer;
+function TZRowAccessor.GetUnicodeString(ColumnIndex: Integer;
   var IsNull: Boolean): ZWideString;
-var
-  TempBlob: IZBlob;
-  Bts: TBytes;
+var Data: PPointer;
 begin
   {$R-}
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF RangeCheck} {$R+} {$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stByte: Result := IntToUnicode(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stShort: Result := IntToUnicode(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stWord: Result := IntToUnicode(PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stSmall: Result := IntToUnicode(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stLongWord: Result := IntToUnicode(PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stInteger: Result := IntToUnicode(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stULong: Result := IntToUnicode(PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stLong: Result := IntToUnicode(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stFloat: Result := FloatToSqlUnicode(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stDouble: Result := FloatToSqlUnicode(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stCurrency: Result := FloatToSqlUnicode(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-    stBigDecimal: Result := FloatToSqlUnicode(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
+    stByte: Result := IntToUnicode(PByte(Data)^);
+    stShort: Result := IntToUnicode(PShortInt(Data)^);
+    stWord: Result := IntToUnicode(PWord(Data)^);
+    stSmall: Result := IntToUnicode(PSmallInt(Data)^);
+    stLongWord: Result := IntToUnicode(PCardinal(Data)^);
+    stInteger: Result := IntToUnicode(PInteger(Data)^);
+    stULong: Result := IntToUnicode(PUInt64(Data)^);
+    stLong: Result := IntToUnicode(PInt64(Data)^);
+    stFloat: Result := FloatToSqlUnicode(PSingle(Data)^);
+    stDouble: Result := FloatToSqlUnicode(PDouble(Data)^);
+    stCurrency: Result := FloatToSqlUnicode(PCurrency(Data)^);
+    stBigDecimal: Result := FloatToSqlUnicode(PExtended(Data)^);
     //stUnicodeString, stString: do not handle here!
-    stAsciiStream, stUnicodeStream:
-      begin
-        TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-        if (TempBlob <> nil) and not TempBlob.IsEmpty then
-          if TempBlob.IsClob then
-            Result := TempBlob.GetUnicodeString
-          else
-            Result := ASCII7ToUnicodeString(TempBlob.GetString);
-      end;
-    stBytes, stBinaryStream:
-      begin
-        Bts := GetBytes(ColumnIndex, IsNull);
-        Result := ASCII7ToUnicodeString(Pointer(Bts), Length(Bts));
-      end;
-    stGUID: Result := GUIDToUnicode(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
-    stDate: Result := DateTimeToUnicodeSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
-      ConSettings^.DisplayFormatSettings, False);
-    stTime: Result := DateTimeToUnicodeSQLTime(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
-      ConSettings^.DisplayFormatSettings, False);
-    stTimestamp: Result := DateTimeToUnicodeSQLTimeStamp(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
-      ConSettings^.DisplayFormatSettings, False);
+    stAsciiStream, stUnicodeStream, stBinaryStream:
+      if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+        if PIZlob(Data)^.IsClob
+        then Result := PIZlob(Data)^.GetUnicodeString
+        else Result := ASCII7ToUnicodeString(PIZlob(Data)^.GetBuffer, PIZlob(Data)^.Length)
+      else Result := '';
+    stBytes: if Data^ <> nil
+              then Result := ASCII7ToUnicodeString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^)
+              else Result := '';
+    stGUID: Result := GUIDToUnicode(Data, 16);
+    stDate: Result := DateTimeToUnicodeSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
+    stTime: Result := DateTimeToUnicodeSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
+    stTimestamp: Result := DateTimeToUnicodeSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
     else
-      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(GetString(ColumnIndex, IsNull));
+      Result := '';
   end;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2214,7 +2104,8 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>false</code>
 }
-function TZRowAccessor.GetBoolean(Const ColumnIndex: Integer; var IsNull: Boolean): Boolean;
+function TZRowAccessor.GetBoolean(ColumnIndex: Integer; var IsNull: Boolean): Boolean;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
@@ -2222,34 +2113,38 @@ begin
   Result := False;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
-    {$Q-}
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: Result := PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ <> 0;
-      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ <> 0;
-      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ <> 0;
-      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ <> 0;
-      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ <> 0;
-      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ <> 0;
-      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ <> 0;
-      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ <> 0;
-      stFloat: Result := PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ <> 0;
-      stDouble: Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ <> 0;
-      stCurrency: Result := PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ <> 0;
-      stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ <> 0;
-      stString, stUnicodeString:
-        if Self is TZRawRowAccessor then
-          Result := StrToBoolEx(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, False)
-        else
-          Result := StrToBoolEx(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, False);
-      stUnicodeStream, stAsciiStream:
-        Result := StrToBoolEx(GetBlob(ColumnIndex, IsNull).GetString);
+      stBoolean: Result := PWordBool(Data)^;
+      stByte: Result := PByte(Data)^ <> 0;
+      stShort: Result := PShortInt(Data)^ <> 0;
+      stWord: Result := PWord(Data)^ <> 0;
+      stSmall: Result := PSmallInt(Data)^ <> 0;
+      stLongWord: Result := PCardinal(Data)^ <> 0;
+      stInteger: Result := PInteger(Data)^ <> 0;
+      stULong: Result := PUInt64(Data)^ <> 0;
+      stLong: Result := PInt64(Data)^ <> 0;
+      stFloat: Result := PSingle(Data)^ <> 0;
+      stDouble: Result := PDouble(Data)^ <> 0;
+      stCurrency: Result := PCurrency(Data)^ <> 0;
+      stBigDecimal: Result := PExtended(Data)^ <> 0;
+      stDate, stTime, stTimeStamp: Result := PDateTime(Data)^ <> 0;
+      stString, stUnicodeString: if Data^ <> nil then
+        if Self is TZRawRowAccessor
+        then Result := StrToBoolEx(PPAnsiChar(Data)^+PAnsiInc, False)
+        else Result := StrToBoolEx(ZPPWideChar(Data)^+PWideInc, False);
+      stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := StrToBoolEx(PIZlob(Data)^.GetPWideChar)
+          else Result := StrToBoolEx(PAnsiChar(PIZlob(Data)^.GetBuffer));
+      stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := StrToBoolEx(PIZlob(Data)^.GetPAnsiChar(ConSettings.ClientCodePage.CP))
+          else Result := StrToBoolEx(PAnsiChar(PIZlob(Data)^.GetBuffer));
     end;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
     IsNull := False;
-  end
-  else
+  end else
     IsNull := True;
 end;
 
@@ -2262,41 +2157,48 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetByte(Const ColumnIndex: Integer; var IsNull: Boolean): Byte;
+function TZRowAccessor.GetByte(ColumnIndex: Integer; var IsNull: Boolean): Byte;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stByte);
+  CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
   Result := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     {$Q-}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then Result := 1;
-      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stString, stUnicodeString:
-        if Self is TZRawRowAccessor then
-          Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
-        else
-          Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
-      stUnicodeStream, stAsciiStream: Result := RawToIntDef(GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, IsNull).GetString, 0);
+      stBoolean: if PWordBool(Data)^ then Result := 1;
+      stByte: Result := PByte(Data)^;
+      stShort: Result := PShortInt(Data)^;
+      stWord: Result := PWord(Data)^;
+      stSmall: Result := PSmallInt(Data)^;
+      stLongWord: Result := PCardinal(Data)^;
+      stInteger: Result := PInteger(Data)^;
+      stULong: Result := PUInt64(Data)^;
+      stLong: Result := PInt64(Data)^;
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^);
+      stString, stUnicodeString: if Data^ <> nil then
+        if Self is TZRawRowAccessor
+        then Result := RawToIntDef(PPAnsiChar(Data)^+PAnsiInc, 0)
+        else Result := UnicodeToIntDef(ZPPWideChar(Data)^+PWideInc, 0);
+      stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := UnicodeToIntDef(PIZlob(Data)^.GetPWideChar, 0)
+          else Result := RawToIntDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
+      stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := RawToIntDef(PIZlob(Data)^.GetPAnsiChar(ConSettings.ClientCodePage.CP), 0)
+          else Result := RawToIntDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
     end;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
     IsNull := False;
-  end
-  else
+  end else
     IsNull := True;
 end;
 
@@ -2309,42 +2211,48 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetShort(Const ColumnIndex: Integer; var IsNull: Boolean): ShortInt;
+function TZRowAccessor.GetShort(ColumnIndex: Integer; var IsNull: Boolean): ShortInt;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
   Result := 0;
   {$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
-  begin
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     {$Q-}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then Result := 1;
-      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stString, stUnicodeString:
-        if Self is TZRawRowAccessor then
-          Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
-        else
-          Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
-      stUnicodeStream, stAsciiStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+      stBoolean: if PWordBool(Data)^ then Result := 1;
+      stByte: Result := PByte(Data)^;
+      stShort: Result := PShortInt(Data)^;
+      stWord: Result := PWord(Data)^;
+      stSmall: Result := PSmallInt(Data)^;
+      stLongWord: Result := PCardinal(Data)^;
+      stInteger: Result := PInteger(Data)^;
+      stULong: Result := PUInt64(Data)^;
+      stLong: Result := PInt64(Data)^;
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^);
+      stString, stUnicodeString: if Data^ <> nil then
+        if Self is TZRawRowAccessor
+        then Result := RawToIntDef(PPAnsiChar(Data)^+PAnsiInc, 0)
+        else Result := UnicodeToIntDef(ZPPWideChar(Data)^+PWideInc, 0);
+      stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := UnicodeToIntDef(PIZlob(Data)^.GetPWideChar, 0)
+          else Result := RawToIntDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
+      stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := RawToIntDef(PIZlob(Data)^.GetPAnsiChar(ConSettings.ClientCodePage.CP), 0)
+          else Result := RawToIntDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
     end;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
     IsNull := False;
-  end
-  else
+  end else
     IsNull := True;
 end;
 
@@ -2357,7 +2265,8 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetWord(Const ColumnIndex: Integer; var IsNull: Boolean): Word;
+function TZRowAccessor.GetWord(ColumnIndex: Integer; var IsNull: Boolean): Word;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stWord);
@@ -2365,33 +2274,39 @@ begin
   Result := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     {$Q-}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then Result := 1;
-      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stString, stUnicodeString:
-        if Self is TZRawRowAccessor then
-          Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
-        else
-          Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
-      stUnicodeStream, stAsciiStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+      stBoolean: if PWordBool(Data)^ then Result := 1;
+      stByte: Result := PByte(Data)^;
+      stShort: Result := PShortInt(Data)^;
+      stWord: Result := PWord(Data)^;
+      stSmall: Result := PSmallInt(Data)^;
+      stLongWord: Result := PCardinal(Data)^;
+      stInteger: Result := PInteger(Data)^;
+      stULong: Result := PUInt64(Data)^;
+      stLong: Result := PInt64(Data)^;
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^);
+      stString, stUnicodeString: if Data^ <> nil then
+        if Self is TZRawRowAccessor
+        then Result := RawToIntDef(PPAnsiChar(Data)^+PAnsiInc, 0)
+        else Result := UnicodeToIntDef(ZPPWideChar(Data)^+PWideInc, 0);
+      stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := UnicodeToIntDef(PIZlob(Data)^.GetPWideChar, 0)
+          else Result := RawToIntDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
+      stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := RawToIntDef(PIZlob(Data)^.GetPAnsiChar(ConSettings.ClientCodePage.CP), 0)
+          else Result := RawToIntDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
     end;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
     IsNull := False;
-  end
-  else
+  end else
     IsNull := True;
 end;
 {**
@@ -2403,7 +2318,8 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetSmall(Const ColumnIndex: Integer; var IsNull: Boolean): SmallInt;
+function TZRowAccessor.GetSmall(ColumnIndex: Integer; var IsNull: Boolean): SmallInt;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stSmall);
@@ -2411,33 +2327,39 @@ begin
   Result := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     {$Q-}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then Result := 1;
-      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stString, stUnicodeString:
-        if Self is TZRawRowAccessor then
-          Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
-        else
-          Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
-      stUnicodeStream, stAsciiStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+      stBoolean: if PWordBool(Data)^ then Result := 1;
+      stByte: Result := PByte(Data)^;
+      stShort: Result := PShortInt(Data)^;
+      stWord: Result := PWord(Data)^;
+      stSmall: Result := PSmallInt(Data)^;
+      stLongWord: Result := PCardinal(Data)^;
+      stInteger: Result := PInteger(Data)^;
+      stULong: Result := PUInt64(Data)^;
+      stLong: Result := PInt64(Data)^;
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^);
+      stString, stUnicodeString: if Data^ <> nil then
+        if Self is TZRawRowAccessor
+        then Result := RawToIntDef(PPAnsiChar(Data)^+PAnsiInc, 0)
+        else Result := UnicodeToIntDef(ZPPWideChar(Data)^+PWideInc, 0);
+      stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := UnicodeToIntDef(PIZlob(Data)^.GetPWideChar, 0)
+          else Result := RawToIntDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
+      stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := RawToIntDef(PIZlob(Data)^.GetPAnsiChar(ConSettings.ClientCodePage.CP), 0)
+          else Result := RawToIntDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
     end;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
     IsNull := False;
-  end
-  else
+  end else
     IsNull := True;
 end;
 
@@ -2450,7 +2372,8 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetUInt(Const ColumnIndex: Integer; var IsNull: Boolean): Cardinal;
+function TZRowAccessor.GetUInt(ColumnIndex: Integer; var IsNull: Boolean): Cardinal;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLongWord);
@@ -2458,33 +2381,39 @@ begin
   Result := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     {$Q-}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then Result := 1;
-      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stString, stUnicodeString:
-        if Self is TZRawRowAccessor then
-          Result := RawToUInt64Def(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
-        else
-          Result := UnicodeToUInt64Def(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
-      stUnicodeStream, stAsciiStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+      stBoolean: if PWordBool(Data)^ then Result := 1;
+      stByte: Result := PByte(Data)^;
+      stShort: Result := PShortInt(Data)^;
+      stWord: Result := PWord(Data)^;
+      stSmall: Result := PSmallInt(Data)^;
+      stLongWord: Result := PCardinal(Data)^;
+      stInteger: Result := PInteger(Data)^;
+      stULong: Result := PUInt64(Data)^;
+      stLong: Result := PInt64(Data)^;
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^);
+      stString, stUnicodeString: if Data^ <> nil then
+        if Self is TZRawRowAccessor
+        then Result := RawToUInt64Def(PPAnsiChar(Data)^+PAnsiInc, 0)
+        else Result := UnicodeToUInt64Def(ZPPWideChar(Data)^+PWideInc, 0);
+      stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := UnicodeToUInt64Def(PIZlob(Data)^.GetPWideChar, 0)
+          else Result := RawToUInt64Def(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
+      stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := RawToUInt64Def(PIZlob(Data)^.GetPAnsiChar(ConSettings.ClientCodePage.CP), 0)
+          else Result := RawToUInt64Def(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
     end;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
     IsNull := False;
-  end
-  else
+  end else
     IsNull := True;
 end;
 
@@ -2497,7 +2426,8 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetInt(Const ColumnIndex: Integer; var IsNull: Boolean): Integer;
+function TZRowAccessor.GetInt(ColumnIndex: Integer; var IsNull: Boolean): Integer;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
@@ -2505,33 +2435,39 @@ begin
   Result := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     {$Q-}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then Result := 1;
-      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stString, stUnicodeString:
-        if Self is TZRawRowAccessor then
-          Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
-        else
-          Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
-      stUnicodeStream, stAsciiStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+      stBoolean: if PWordBool(Data)^ then Result := 1;
+      stByte: Result := PByte(Data)^;
+      stShort: Result := PShortInt(Data)^;
+      stWord: Result := PWord(Data)^;
+      stSmall: Result := PSmallInt(Data)^;
+      stLongWord: Result := PCardinal(Data)^;
+      stInteger: Result := PInteger(Data)^;
+      stULong: Result := PUInt64(Data)^;
+      stLong: Result := PInt64(Data)^;
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^);
+      stString, stUnicodeString: if Data^ <> nil then
+        if Self is TZRawRowAccessor
+        then Result := RawToIntDef(PPAnsiChar(Data)^+PAnsiInc, 0)
+        else Result := UnicodeToIntDef(ZPPWideChar(Data)^+PWideInc, 0);
+      stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := UnicodeToIntDef(PIZlob(Data)^.GetPWideChar, 0)
+          else Result := RawToIntDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
+      stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := RawToIntDef(PIZlob(Data)^.GetPAnsiChar(ConSettings.ClientCodePage.CP), 0)
+          else Result := RawToIntDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
     end;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
     IsNull := False;
-  end
-  else
+  end else
     IsNull := True;
 end;
 
@@ -2544,7 +2480,8 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetULong(Const ColumnIndex: Integer; var IsNull: Boolean): UInt64;
+function TZRowAccessor.GetULong(ColumnIndex: Integer; var IsNull: Boolean): UInt64;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stULong);
@@ -2552,32 +2489,37 @@ begin
   Result := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then Result := 1;
-      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stString, stUnicodeString:
-        if Self is TZRawRowAccessor then
-          Result := RawToUInt64Def(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
-        else
-          Result := UnicodeToUInt64Def(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
-      stAsciiStream: Result := RawToUInt64Def(GetBlob(ColumnIndex, IsNull).GetPAnsiChar(zCP_us_ascii), 0);
-      stUnicodeStream: Result := UnicodeToUInt64Def(GetBlob(ColumnIndex, IsNull).GetPWideChar, 0);
+      stBoolean: if PWordBool(Data)^ then Result := 1;
+      stByte: Result := PByte(Data)^;
+      stShort: Result := PShortInt(Data)^;
+      stWord: Result := PWord(Data)^;
+      stSmall: Result := PSmallInt(Data)^;
+      stLongWord: Result := PCardinal(Data)^;
+      stInteger: Result := PInteger(Data)^;
+      stULong: Result := PUInt64(Data)^;
+      stLong: Result := PInt64(Data)^;
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^);
+      stString, stUnicodeString: if Data^ <> nil then
+        if Self is TZRawRowAccessor
+        then Result := RawToUInt64Def(PPAnsiChar(Data)^+PAnsiInc, 0)
+        else Result := UnicodeToUInt64Def(ZPPWideChar(Data)^+PWideInc, 0);
+      stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := UnicodeToUInt64Def(PIZlob(Data)^.GetPWideChar, 0)
+          else Result := RawToUInt64Def(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
+      stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := RawToUInt64Def(PIZlob(Data)^.GetPAnsiChar(ConSettings.ClientCodePage.CP), 0)
+          else Result := RawToUInt64Def(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
     end;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     IsNull := False;
-  end
-  else
+  end else
     IsNull := True;
 end;
 
@@ -2590,7 +2532,8 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetLong(Const ColumnIndex: Integer; var IsNull: Boolean): Int64;
+function TZRowAccessor.GetLong(ColumnIndex: Integer; var IsNull: Boolean): Int64;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
@@ -2598,30 +2541,36 @@ begin
   Result := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     {$Q-}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then Result := 1;
-      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stString, stUnicodeString:
-        if Self is TZRawRowAccessor then
-          Result := RawToInt64Def(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
-        else
-          Result := UnicodeToInt64Def(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
-      stAsciiStream: Result := RawToInt64Def(GetBlob(ColumnIndex, IsNull).GetPAnsiChar(zCP_us_ascii), 0);
-      stUnicodeStream: Result := UnicodeToInt64Def(GetBlob(ColumnIndex, IsNull).GetPWideChar, 0);
+      stBoolean: if PWordBool(Data)^ then Result := 1;
+      stByte: Result := PByte(Data)^;
+      stShort: Result := PShortInt(Data)^;
+      stWord: Result := PWord(Data)^;
+      stSmall: Result := PSmallInt(Data)^;
+      stLongWord: Result := PCardinal(Data)^;
+      stInteger: Result := PInteger(Data)^;
+      stULong: Result := PUInt64(Data)^;
+      stLong: Result := PInt64(Data)^;
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^);
+      stString, stUnicodeString: if Data^ <> nil then
+        if Self is TZRawRowAccessor
+        then Result := RawToInt64Def(PPAnsiChar(Data)^+PAnsiInc, 0)
+        else Result := UnicodeToInt64Def(ZPPWideChar(Data)^+PWideInc, 0);
+      stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := UnicodeToInt64Def(PIZlob(Data)^.GetPWideChar, 0)
+          else Result := RawToInt64Def(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
+      stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then Result := RawToInt64Def(PIZlob(Data)^.GetPAnsiChar(ConSettings.ClientCodePage.CP), 0)
+          else Result := RawToInt64Def(PAnsiChar(PIZlob(Data)^.GetBuffer), 0);
     end;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
     IsNull := False;
   end else
@@ -2637,8 +2586,8 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetFloat(Const ColumnIndex: Integer; var IsNull: Boolean): Single;
-var TempLob: IZBlob;
+function TZRowAccessor.GetFloat(ColumnIndex: Integer; var IsNull: Boolean): Single;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
@@ -2646,44 +2595,36 @@ begin
   Result := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     {$Q-}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then Result := 1;
-      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stFloat: Result := PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stDouble: Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stCurrency: Result := PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stString, stUnicodeString:
-        if Self is TZRawRowAccessor then
-          SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0, Result,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
-        else
-          Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
-      stAsciiStream: begin
-          TempLob := GetBlob(ColumnIndex, IsNull);
-          if TempLob.IsClob then
-            SQLStrToFloatDef(TempLob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
-          else
-            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
-        end;
-      stUnicodeStream: begin
-          TempLob := GetBlob(ColumnIndex, IsNull);
-          if TempLob.IsClob then
-            SQLStrToFloatDef(TempLob.GetPWideChar, 0, Result)
-          else
-            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
-        end;
+      stBoolean: if PWordBool(Data)^ then Result := 1;
+      stByte: Result := PByte(Data)^;
+      stShort: Result := PShortInt(Data)^;
+      stWord: Result := PWord(Data)^;
+      stSmall: Result := PSmallInt(Data)^;
+      stLongWord: Result := PCardinal(Data)^;
+      stInteger: Result := PInteger(Data)^;
+      stULong: Result := PUInt64(Data)^;
+      stLong: Result := PInt64(Data)^;
+      stFloat: Result := PSingle(Data)^;
+      stDouble: Result := PDouble(Data)^;
+      stCurrency: Result := PCurrency(Data)^;
+      stBigDecimal: Result := PExtended(Data)^;
+      stString, stUnicodeString: if Data^ <> nil then
+        if Self is TZRawRowAccessor
+        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PPLongWord(Data)^^)
+        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PPLongWord(Data)^^);
+      stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
+          else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
+      stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then SQLStrToFloatDef(PIZlob(Data)^.GetPWideChar, 0, Result)
+          else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
     end;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
     IsNull := False;
   end else
@@ -2699,8 +2640,8 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetDouble(Const ColumnIndex: Integer; var IsNull: Boolean): Double;
-var TempLob: IZBlob;
+function TZRowAccessor.GetDouble(ColumnIndex: Integer; var IsNull: Boolean): Double;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
@@ -2708,45 +2649,37 @@ begin
   Result := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     {$Q-}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then Result := 1;
-      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stFloat: Result := PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stDouble: Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stCurrency: Result := PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stTime, stDate, stTimeStamp: Result := PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stString, stUnicodeString:
-        if Self is TZRawRowAccessor then
-          SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0, Result,
-           PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
-        else
-          Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0,
-           PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
-      stAsciiStream: begin
-          TempLob := GetBlob(ColumnIndex, IsNull);
-          if TempLob.IsClob then
-            SQLStrToFloatDef(TempLob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
-          else
-            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
-        end;
-      stUnicodeStream: begin
-          TempLob := GetBlob(ColumnIndex, IsNull);
-          if TempLob.IsClob then
-            SQLStrToFloatDef(TempLob.GetPWideChar, 0, Result)
-          else
-            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
-        end;
+      stBoolean: if PWordBool(Data)^ then Result := 1;
+      stByte: Result := PByte(Data)^;
+      stShort: Result := PShortInt(Data)^;
+      stWord: Result := PWord(Data)^;
+      stSmall: Result := PSmallInt(Data)^;
+      stLongWord: Result := PCardinal(Data)^;
+      stInteger: Result := PInteger(Data)^;
+      stULong: Result := PUInt64(Data)^;
+      stLong: Result := PInt64(Data)^;
+      stFloat: Result := PSingle(Data)^;
+      stDouble: Result := PDouble(Data)^;
+      stCurrency: Result := PCurrency(Data)^;
+      stBigDecimal: Result := PExtended(Data)^;
+      stTime, stDate, stTimeStamp: Result := PDateTime(Data)^;
+      stString, stUnicodeString: if Data^ <> nil then
+        if Self is TZRawRowAccessor
+        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PPLongWord(Data)^^)
+        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PPLongWord(Data)^^);
+      stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
+          else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
+      stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then SQLStrToFloatDef(PIZlob(Data)^.GetPWideChar, 0, Result)
+          else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
     end;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
     IsNull := False;
   end else
@@ -2762,8 +2695,8 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetCurrency(Const ColumnIndex: Integer; var IsNull: Boolean): Currency;
-var TempLob: IZBlob;
+function TZRowAccessor.GetCurrency(ColumnIndex: Integer; var IsNull: Boolean): Currency;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stCurrency);
@@ -2771,44 +2704,36 @@ begin
   Result := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     {$Q-}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then Result := 1;
-      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stFloat: Result := PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stDouble: Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stCurrency: Result := PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stString, stUnicodeString:
-        if Self is TZRawRowAccessor then
-          SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0, Result,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
-        else
-          SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0, Result,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
-      stAsciiStream: begin
-          TempLob := GetBlob(ColumnIndex, IsNull);
-          if TempLob.IsClob then
-            SQLStrToFloatDef(TempLob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
-          else
-            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
-        end;
-      stUnicodeStream: begin
-          TempLob := GetBlob(ColumnIndex, IsNull);
-          if TempLob.IsClob then
-            SQLStrToFloatDef(TempLob.GetPWideChar, 0, Result)
-          else
-            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
-        end;
+      stBoolean: if PWordBool(Data)^ then Result := 1;
+      stByte: Result := PByte(Data)^;
+      stShort: Result := PShortInt(Data)^;
+      stWord: Result := PWord(Data)^;
+      stSmall: Result := PSmallInt(Data)^;
+      stLongWord: Result := PCardinal(Data)^;
+      stInteger: Result := PInteger(Data)^;
+      stULong: Result := PUInt64(Data)^;
+      stLong: Result := PInt64(Data)^;
+      stFloat: Result := PSingle(Data)^;
+      stDouble: Result := PDouble(Data)^;
+      stCurrency: Result := PCurrency(Data)^;
+      stBigDecimal: Result := PExtended(Data)^;
+      stString, stUnicodeString: if Data^ <> nil then
+        if Self is TZRawRowAccessor
+        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PPLongWord(Data)^^)
+        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PPLongWord(Data)^^);
+      stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
+          else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
+      stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then SQLStrToFloatDef(PIZlob(Data)^.GetPWideChar, 0, Result)
+          else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
     end;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
     IsNull := False;
   end else
@@ -2825,9 +2750,8 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetBigDecimal(Const ColumnIndex: Integer; var IsNull: Boolean): Extended;
-var
-  TempLob: IZBlob;
+function TZRowAccessor.GetBigDecimal(ColumnIndex: Integer; var IsNull: Boolean): Extended;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
@@ -2835,44 +2759,36 @@ begin
   Result := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     {$Q-}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ then Result := 1;
-      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stFloat: Result := PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stDouble: Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stCurrency: Result := PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
-      stString, stUnicodeString:
-        if Self is TZRawRowAccessor then
-          SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0, Result,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
-        else
-          Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
-      stAsciiStream: begin
-          TempLob := GetBlob(ColumnIndex, IsNull);
-          if TempLob.IsClob then
-            SQLStrToFloatDef(TempLob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
-          else
-            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
-        end;
-      stUnicodeStream: begin
-          TempLob := GetBlob(ColumnIndex, IsNull);
-          if TempLob.IsClob then
-            SQLStrToFloatDef(TempLob.GetPWideChar, 0, Result)
-          else
-            SQLStrToFloatDef(PAnsiChar(TempLob.GetBuffer), 0, Result, TempLob.Length)
-        end;
+      stBoolean: if PWordBool(Data)^ then Result := 1;
+      stByte: Result := PByte(Data)^;
+      stShort: Result := PShortInt(Data)^;
+      stWord: Result := PWord(Data)^;
+      stSmall: Result := PSmallInt(Data)^;
+      stLongWord: Result := PCardinal(Data)^;
+      stInteger: Result := PInteger(Data)^;
+      stULong: Result := PUInt64(Data)^;
+      stLong: Result := PInt64(Data)^;
+      stFloat: Result := PSingle(Data)^;
+      stDouble: Result := PDouble(Data)^;
+      stCurrency: Result := PCurrency(Data)^;
+      stBigDecimal: Result := PExtended(Data)^;
+      stString, stUnicodeString: if Data^ <> nil then
+        if Self is TZRawRowAccessor
+        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PPLongWord(Data)^^)
+        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PPLongWord(Data)^^);
+      stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
+          else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
+      stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
+          if PIZlob(Data)^.IsClob
+          then SQLStrToFloatDef(PIZlob(Data)^.GetPWideChar, 0, Result)
+          else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
     end;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
     IsNull := False;
   end else
@@ -2889,31 +2805,47 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean): TBytes;
+function TZRowAccessor.GetBytes(ColumnIndex: Integer; var IsNull: Boolean): TBytes;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
-  Result := nil;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stGUID:
-        begin
-          SetLength(Result, 16);
-          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], Result[0], 16);
-        end;
-      stBytes:
-        Result := InternalGetBytes(FBuffer, ColumnIndex);
-      stBinaryStream:
-        Result := GetBlob(ColumnIndex, IsNull).GetBytes;
-      else
-        Result := StrToBytes(GetRawByteString(ColumnIndex, IsNull));
+      stBytes: if (Data^ <> nil) and (PWord(PAnsiChar(Data)+SizeOf(Pointer))^ > 0) then begin
+            SetLength(Result, PWord(PAnsiChar(Data)+SizeOf(Pointer))^);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PPointer(Data)^^,
+              Pointer(Result)^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^);
+          end else
+            Result := nil;
+      stBinaryStream, stAsciiStream, stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data^)^.IsEmpty
+        then Result := PIZlob(Data^)^.GetBytes
+        else Result := nil;
+      stString, stUnicodeString: if Data^ <> nil then
+          if Self is TZRawRowAccessor then begin
+            SetLength(Result, PPLongWord(Data)^^);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move((PPAnsiChar(Data)^+PAnsiInc)^,
+              Pointer(Result)^, PPLongWord(Data)^^);
+          end else begin
+            FRawTemp := UnicodeStringToASCII7(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^);
+            SetLength(Result, Length(FRawTemp));
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(FRawTemp)^,
+              Pointer(Result)^, Length(FRawTemp));
+          end
+        else
+          Result := nil;
+      else begin
+        SetLength(Result, FColumnLengths[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]);
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Data^,
+          Pointer(Result)^, Length(Result));
+      end;
     end;
     IsNull := False;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  end
-  else
+  end else
     IsNull := True;
 end;
 
@@ -2929,9 +2861,8 @@ end;
   @param Len return the count of Bytes for the value
   @return the column value
 }
-function TZRowAccessor.GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean;
+function TZRowAccessor.GetBytes(ColumnIndex: Integer; var IsNull: Boolean;
   out Len: Word): Pointer;
-var Blob: IZBlob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -2940,26 +2871,32 @@ begin
   Len := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Result := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stGUID:
-        begin
-          Len := 16;
-          Result := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+      stBytes: if (PPointer(Result)^ <> nil) then begin
+          Len := PWord(PAnsiChar(Result)+SizeOf(Pointer))^;
+          Result := PPointer(Result)^; //from address to data
         end;
-      stBytes:
-        Result := InternalGetBytes(FBuffer, ColumnIndex, Len);
-      stBinaryStream: begin
-          Blob := GetBlob(ColumnIndex, IsNull);
-          if (Blob <> nil) and (not Blob.IsEmpty) then begin
-            Result := Blob.GetBuffer;
-            Len := Blob.Length;
+      stBinaryStream, stAsciiStream, stUnicodeStream:
+        if (PIZLob(Result)^ <> nil) and not PIZLob(Result)^.IsEmpty then begin
+          Len := PIZLob(Result)^.Length;
+          Result := PIZLob(Result)^.GetBuffer;
+        end;
+      stString, stUnicodeString: if (PPointer(Result)^ <> nil) then
+          if Self is TZRawRowAccessor then begin
+            Len := PPLongWord(Result)^^;
+            Result := PPAnsiChar(Result)^+PAnsiInc;
+          end else begin
+            FRawTemp := UnicodeStringToASCII7(ZPPWideChar(Result)^+PWideInc, PPLongWord(Result)^^);
+            Len := Length(FRawTemp);
+            Result := Pointer(FRawTemp);
           end;
-        end;
+      else //all other types have fixed length and points to data in buffer
+        Len := FColumnLengths[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
     end;
     IsNull := False;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  end
-  else
+  end else
     IsNull := True;
 end;
 
@@ -2972,13 +2909,11 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetDate(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+function TZRowAccessor.GetDate(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
 var
   Failed: Boolean;
-  AnsiBuffer: PAnsiChar;
-  WideBuffer: PWideChar;
-  TempBlob: IZBlob;
-  BufLen: LongWord;
+  Data: Pointer;
+  TempBlob: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
@@ -2986,49 +2921,39 @@ begin
   Result := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stDate, stTime, stTimestamp:
-        Result := Int(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-      stString, stUnicodeString:
-        if Self is TZRawRowAccessor then
-        begin
-          AnsiBuffer := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc;
-          BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^;
-          Result := ZSysUtils.RawSQLDateToDateTime(AnsiBuffer, BufLen,
-           ConSettings^.ReadFormatSettings, Failed{%H-});
+      stDate: Result := PDateTime(Data)^;
+      stTimestamp: Result := Int(PDateTime(Data)^);
+      stString, stUnicodeString: if (PPointer(Data)^ <> nil) then
+        if Self is TZRawRowAccessor then begin
+          Result := ZSysUtils.RawSQLDateToDateTime(PPAnsiChar(Data)^+PAnsiInc,
+            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed{%H-});
           if Failed then
-            Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ZSysUtils.RawSQLTimeStampToDateTime(
-              AnsiBuffer, BufLen, ConSettings^.ReadFormatSettings, Failed));
-        end
-        else
-        begin
-          WideBuffer := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc;
-          BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^;
-          Result := ZSysUtils.UnicodeSQLDateToDateTime(WideBuffer,
-            BufLen, ConSettings^.ReadFormatSettings, Failed);
+            Result := Int(ZSysUtils.RawSQLTimeStampToDateTime(PPAnsiChar(Data)^+PAnsiInc,
+              PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed{%H-}));
+        end else begin
+          Result := ZSysUtils.UnicodeSQLDateToDateTime(ZPPWideChar(Data)^+PWideInc,
+            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed);
           if Failed then
             Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ZSysUtils.UnicodeSQLTimeStampToDateTime(
-              WideBuffer, BufLen, ConSettings^.ReadFormatSettings, Failed));
+              ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed));
         end;
-      stAsciiStream, stUnicodeStream:
-        begin
-          TempBlob := GetBlob(ColumnIndex, IsNull);
-          if TempBlob.IsClob then
-          begin
-            AnsiBuffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
-            Result := ZSysUtils.RawSQLDateToDateTime(AnsiBuffer, TempBlob.Length,
-              ConSettings^.ReadFormatSettings, Failed);
+      stAsciiStream, stUnicodeStream: if (PPointer(Data)^ <> nil ) then begin
+          TempBlob := PPointer(Data)^; //from address to obj-pointer
+          if not TempBlob^.IsEmpty and TempBlob^.IsClob then begin
+            Data := TempBlob^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+            Result := ZSysUtils.RawSQLDateToDateTime(Data, TempBlob^.Length,
+              ConSettings^.ReadFormatSettings, Failed{%H-});
             if Failed then
-              Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-                ZSysUtils.RawSQLTimeStampToDateTime(AnsiBuffer, TempBlob.Length,
-                ConSettings^.ReadFormatSettings, Failed));
+              Result := Int(ZSysUtils.RawSQLTimeStampToDateTime(Data, TempBlob^.Length,
+                ConSettings^.ReadFormatSettings, Failed{%H-}));
           end;
         end;
     end;
     IsNull := False;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  end
-  else
+  end else
     IsNull := True;
 end;
 
@@ -3041,13 +2966,11 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetTime(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+function TZRowAccessor.GetTime(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
 var
   Failed: Boolean;
-  AnsiBuffer: PAnsiChar;
-  WideBuffer: PWideChar;
-  TempBlob: IZBlob;
-  BufLen: LongWord;
+  Data: Pointer;
+  TempBlob: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
@@ -3056,43 +2979,39 @@ begin
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
   begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stDate, stTime, stTimestamp:
-        Result := Frac(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
+      stTime: Result := PDateTime(Data)^;
+      stTimestamp: Result := Frac(PDateTime(Data)^);
       stString, stUnicodeString:
-        if Self is TZRawRowAccessor then
-        begin
-          AnsiBuffer := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc;
-          BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^;
-          Result := ZSysUtils.RawSQLTimeToDateTime(AnsiBuffer, BufLen,
+        if Self is TZRawRowAccessor then begin
+          Result := ZSysUtils.RawSQLTimeToDateTime(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^,
             ConSettings^.ReadFormatSettings, Failed{%H-});
           if Failed then
-            Result := Frac(ZSysUtils.RawSQLTimeStampToDateTime(AnsiBuffer,
-              BufLen, ConSettings^.ReadFormatSettings, Failed));
+            Result := Frac(ZSysUtils.RawSQLTimeStampToDateTime(PPAnsiChar(Data)^+PAnsiInc,
+              PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed));
         end else begin
-          WideBuffer := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc;
-          BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^;
-          Result := ZSysUtils.UnicodeSQLTimeToDateTime(WideBuffer, BufLen,
+          Result := ZSysUtils.UnicodeSQLTimeToDateTime(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^,
             ConSettings^.ReadFormatSettings, Failed);
           if Failed then
-            Result := Frac(ZSysUtils.UnicodeSQLTimeStampToDateTime(WideBuffer,
-              BufLen, ConSettings^.ReadFormatSettings, Failed));
+            Result := Frac(ZSysUtils.UnicodeSQLTimeStampToDateTime(ZPPWideChar(Data)^+PWideInc,
+              PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed));
         end;
       stAsciiStream, stUnicodeStream:
-        begin
-          TempBlob := GetBlob(ColumnIndex, IsNull);
-          if TempBlob.IsClob then begin
-            AnsiBuffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
-            Result := ZSysUtils.RawSQLTimeToDateTime(AnsiBuffer, TempBlob.Length,
+        if (PPointer(Data)^ <> nil) then begin
+          TempBlob := PPointer(Data)^; //from address to obj-pointer
+          if TempBlob^.IsEmpty and TempBlob^.IsClob then begin
+            Data := TempBlob^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP); //make a conversion
+            Result := ZSysUtils.RawSQLTimeToDateTime(Data, TempBlob^.Length,
               ConSettings^.ReadFormatSettings, Failed);
             if Failed then
-              Result := Frac(ZSysUtils.RawSQLTimeStampToDateTime(AnsiBuffer,
-                TempBlob.Length, ConSettings^.ReadFormatSettings, Failed));
+              Result := Frac(ZSysUtils.RawSQLTimeStampToDateTime(Data,
+                TempBlob^.Length, ConSettings^.ReadFormatSettings, Failed));
           end;
         end;
     end;
     IsNull := False;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   end else
     IsNull := True;
 end;
@@ -3107,10 +3026,11 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-function TZRowAccessor.GetTimestamp(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+function TZRowAccessor.GetTimestamp(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
 var
   Failed: Boolean;
-  TempBlob: IZBlob;
+  Data: Pointer;
+  TempBlob: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
@@ -3118,32 +3038,29 @@ begin
   Result := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stDate, stTime, stTimestamp:
-        Result := PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
+      stDate, stTime, stTimestamp: Result := PDateTime(Data)^;
       stString, stUnicodeString:
         if Self is TZRawRowAccessor then
-          Result := ZSysUtils.RawSQLTimeStampToDateTime(
-            PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^,
-                ConSettings^.ReadFormatSettings, Failed{%H-})
+          Result := ZSysUtils.RawSQLTimeStampToDateTime(PPAnsiChar(Data)^+PAnsiInc,
+            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed{%H-})
         else
-          Result := ZSysUtils.UnicodeSQLTimeStampToDateTime(
-            PPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^,
-                ConSettings^.ReadFormatSettings, Failed);
+          Result := ZSysUtils.UnicodeSQLTimeStampToDateTime(PPWideChar(Data)^+PWideInc,
+            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed);
       stAsciiStream, stUnicodeStream:
-        begin
-          TempBlob := GetBlob(ColumnIndex, IsNull);
-          if TempBlob.IsClob then
-            Result := ZSysUtils.RawSQLTimeStampToDateTime(TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP),
-              TempBlob.Length, ConSettings^.ReadFormatSettings, Failed);
+        if (PPointer(Data)^ <> nil) then begin
+          TempBlob := PPointer(Data)^; //from address to obj-pointer
+          if TempBlob^.IsEmpty and TempBlob^.IsClob then begin
+            Data := TempBlob^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+            Result := ZSysUtils.RawSQLTimeStampToDateTime(Data,
+              TempBlob^.Length, ConSettings^.ReadFormatSettings, Failed);
         end;
+      end;
     end;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     IsNull := False;
-  end
-  else
+  end else
     IsNull := True;
 end;
 
@@ -3168,18 +3085,21 @@ end;
     as a stream of one-byte ASCII characters; if the value is SQL
     <code>NULL</code>, the value returned is <code>null</code>
 }
-function TZRowAccessor.GetAsciiStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
-var
-  TempBlob: IZBlob;
+function TZRowAccessor.GetAsciiStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
+var TempBlob: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stAsciiStream);
 {$ENDIF}
-  TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-  if (TempBlob <> nil) and not TempBlob.IsEmpty then
-    Result := TempBlob.GetStream
-  else
-    Result := nil;
+  Result := nil;
+  {$R-}
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    TempBlob := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
+    if FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] in [stUnicodeStream, stAsciiStream, stBinaryStream] then
+      if (TempBlob^ <> nil) and not TempBlob^.IsEmpty then
+        Result := TempBlob^.GetStream;
+  end;
   IsNull := Result = nil;
 end;
 
@@ -3207,21 +3127,24 @@ end;
     as a stream in Java UTF-8 byte format; if the value is SQL
     <code>NULL</code>, the value returned is <code>null</code>
 }
-function TZRowAccessor.GetUnicodeStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
-var
-  TempBlob: IZBlob;
+function TZRowAccessor.GetUnicodeStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
+var TempBlob: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
-  TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-  if (TempBlob <> nil) and not TempBlob.IsEmpty then
-    if TempBlob.IsClob then
-      Result := TempBlob.GetUnicodeStream
-    else
-      Result := TempBlob.GetStream
-  else
-    Result := nil;
+  {$R-}
+  Result := nil;
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    TempBlob := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
+    if FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] in [stUnicodeStream, stAsciiStream, stBinaryStream] then
+      if (TempBlob^ <> nil) and not TempBlob^.IsEmpty then
+        if TempBlob^.IsClob then
+          Result := TempBlob^.GetUnicodeStream
+        else
+          Result := TempBlob^.GetStream
+  end;
   IsNull := Result = nil;
 end;
 
@@ -3245,18 +3168,21 @@ end;
     as a stream of uninterpreted bytes;
     if the value is SQL <code>NULL</code>, the value returned is <code>null</code>
 }
-function TZRowAccessor.GetBinaryStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
-var
-  TempBlob: IZBlob;
+function TZRowAccessor.GetBinaryStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
+var TempBlob: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBinaryStream);
 {$ENDIF}
-  TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-  if (TempBlob <> nil) and not TempBlob.IsEmpty then
-    Result := TempBlob.GetStream
-  else
-    Result := nil;
+  Result := nil;
+  {$R-}
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    TempBlob := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheck} {$R+} {$ENDIF}
+    if FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] in [stUnicodeStream, stAsciiStream, stBinaryStream] then
+      if (TempBlob^ <> nil) and not TempBlob^.IsEmpty then
+        Result := TempBlob^.GetStream;
+  end;
   IsNull := Result = nil;
 end;
 
@@ -3269,31 +3195,30 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZRowAccessor.GetBlob(Const ColumnIndex: Integer; var IsNull: Boolean): IZBlob;
+function TZRowAccessor.GetBlob(ColumnIndex: Integer; var IsNull: Boolean): IZBlob;
+var TempBlob: PIZLob;
 begin
-{$R-}
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnIndex(ColumnIndex);
-  if not (FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] in [stAsciiStream, stBinaryStream,
-    stUnicodeStream]) then
-  begin
+{$ENDIF}
+  Result := nil;
+  {$R-}
+  TempBlob := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  IsNull := FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNull;
+  {$IFDEF RangeCheck} {$R+} {$ENDIF}
+  if FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] in [stUnicodeStream, stAsciiStream, stBinaryStream] then begin
+    if (TempBlob^ <> nil) then
+      Result := TempBlob^
+    else begin
+      if (FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] = stBinaryStream) then
+        Result := TZAbstractBlob.CreateWithStream(nil)
+      else
+        Result := TZAbstractClob.CreateWithData(nil, 0, ConSettings^.ClientCodePage^.CP, ConSettings);
+    end;
+  end else
     raise EZSQLException.Create(
       Format(SCanNotAccessBlobRecord,
       [ColumnIndex, DefineColumnTypeName(FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}])]));
-  end;
-{$ENDIF}
-
-  Result := GetBlobObject(FBuffer, ColumnIndex);
-  IsNull := Result = nil;
-  if Result = nil then
-  begin
-    if (FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] = stBinaryStream) then
-      Result := TZAbstractBlob.CreateWithStream(nil)
-    else
-      Result := TZAbstractClob.CreateWithData(nil, 0, ConSettings^.ClientCodePage^.CP, ConSettings);
-    SetBlobObject(FBuffer, ColumnIndex, Result);
-  end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
 {**
@@ -3305,7 +3230,7 @@ end;
   @return a <code>ResultSet</code> object representing the SQL
     <code>ResultSet</code> value in the specified column
 }
-function TZRowAccessor.GetDataSet(Const ColumnIndex: Integer; var IsNull: Boolean): IZDataSet;
+function TZRowAccessor.GetDataSet(ColumnIndex: Integer; var IsNull: Boolean): IZDataSet;
 var
   Ptr: PPointer;
   NullPtr: {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF};
@@ -3343,7 +3268,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
   value returned is <code>null</code>
 }
-function TZRowAccessor.GetValue(Const ColumnIndex: Integer): TZVariant;
+function TZRowAccessor.GetValue(ColumnIndex: Integer): TZVariant;
 var
   ValuePtr: Pointer;
   IsNull: Boolean;
@@ -3467,7 +3392,7 @@ end;
 //---------------------------------------------------------------------
 
 {**
-  Gives a not nullable column a null value.
+  Gives a nullable column a not null value.
 
   The <code>SetXXX</code> methods are used to Set column values in the
   current row or the insert row.  The <code>SetXXX</code> methods do not
@@ -3476,20 +3401,26 @@ end;
 
   @param columnIndex the first column is 1, the second is 2, ...
 }
-procedure TZRowAccessor.SetNotNull(Const ColumnIndex: Integer);
+procedure TZRowAccessor.SetNotNull(ColumnIndex: Integer);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stString);
+  CheckColumnIndex(ColumnIndex);
 {$ENDIF}
   {$R-}
-  if (FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull)
-    and (FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] in [stAsciiStream, stBinaryStream,
-    stUnicodeStream]) then
-  begin
-    SetBlobObject(FBuffer, ColumnIndex, nil);
+  if (FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNull) then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+      stAsciiStream, stBinaryStream, stUnicodeStream:
+        if PIZLob(Data)^ = nil then
+          if FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] = stBinaryStream then
+            PIZLob(Data)^ := TZAbstractBlob.Create
+          else
+            PIZLob(Data)^ := TZAbstractClob.CreateWithData(nil, 0, Consettings);
+    end;
   end;
-  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
 {**
@@ -3502,25 +3433,27 @@ end;
 
   @param columnIndex the first column is 1, the second is 2, ...
 }
-procedure TZRowAccessor.SetNull(Const ColumnIndex: Integer);
+procedure TZRowAccessor.SetNull(ColumnIndex: Integer);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stString);
+  CheckColumnIndex(ColumnIndex);
 {$ENDIF}
   {$R-}
-  if (FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull) then
+  if (FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull) then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNull;
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stAsciiStream, stBinaryStream, stUnicodeStream:
-        SetBlobObject(FBuffer, ColumnIndex, nil);
+          PIZLob(Data)^ := nil;
       stBytes, stString, stUnicodeString:
-        if PNativeUInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ > 0 then
-        begin
-          System.FreeMem(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
-          PNativeUInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := 0;
+        if Data^ <> nil then begin
+          System.FreeMem(Data^);
+          Data^ := nil;
         end;
     end;
-  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNull;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  end;
 end;
 
 {**
@@ -3533,36 +3466,35 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetBoolean(Const ColumnIndex: Integer; const Value: Boolean);
+procedure TZRowAccessor.SetBoolean(ColumnIndex: Integer; Value: Boolean);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Ord(Value);
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Ord(Value);
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Ord(Value);
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Ord(Value);
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Ord(Value);
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Ord(Value);
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Ord(Value);
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Ord(Value);
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Ord(Value);
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Ord(Value);
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Ord(Value);
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Ord(Value);
-    stString, stUnicodeString:
-       if Value then
-          SetString(ColumnIndex, 'True')
-       else
-          SetString(ColumnIndex, 'False');
-    else
-      FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNull; //set null
-  end;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stBoolean: PWordBool(Data)^ := Value;
+    stByte: PByte(Data)^ := Ord(Value);
+    stShort: PShortInt(Data)^ := Ord(Value);
+    stWord: PWord(Data)^ := Ord(Value);
+    stSmall: PSmallInt(Data)^ := Ord(Value);
+    stLongWord: PCardinal(Data)^ := Ord(Value);
+    stInteger: PInteger(Data)^ := Ord(Value);
+    stULong: PUInt64(Data)^ := Ord(Value);
+    stLong: PInt64(Data)^ := Ord(Value);
+    stFloat: PSingle(Data)^ := Ord(Value);
+    stDouble: PDouble(Data)^ := Ord(Value);
+    stCurrency: PCurrency(Data)^ := Ord(Value);
+    stBigDecimal: PExtended(Data)^ := Ord(Value);
+    stString, stUnicodeString:
+       if Value
+       then SetString(ColumnIndex, 'True')
+       else SetString(ColumnIndex, 'False');
+  end;
 end;
 
 {**
@@ -3576,35 +3508,35 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetByte(Const ColumnIndex: Integer;
-  const Value: Byte);
+procedure TZRowAccessor.SetByte(ColumnIndex: Integer; Value: Byte);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value <> 0;
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stString, stUnicodeString:
-      if Self is TZRawRowAccessor then
-        SetRawByteString(ColumnIndex, IntToRaw(Value))
-      else
-        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
-  end;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stBoolean: PWordBool(Data)^ := Value <> 0;
+    stByte: PByte(Data)^ := Value;
+    stShort: PShortInt(Data)^ := Value;
+    stWord: PWord(Data)^ := Value;
+    stSmall: PSmallInt(Data)^ := Value;
+    stLongWord: PCardinal(Data)^ := Value;
+    stInteger: PInteger(Data)^ := Value;
+    stULong: PUInt64(Data)^ := Value;
+    stLong: PInt64(Data)^ := Value;
+    stFloat: PSingle(Data)^ := Value;
+    stDouble: PDouble(Data)^ := Value;
+    stCurrency: PCurrency(Data)^ := Value;
+    stBigDecimal: PExtended(Data)^ := Value;
+    stString, stUnicodeString:
+      if Self is TZRawRowAccessor
+      then SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else SetUnicodeString(ColumnIndex, IntToUnicode(Value));
+  end;
 end;
 
 {**
@@ -3618,35 +3550,35 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetShort(Const ColumnIndex: Integer;
-  const Value: ShortInt);
+procedure TZRowAccessor.SetShort(ColumnIndex: Integer; Value: ShortInt);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stByte);
+  CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value <> 0;
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stString, stUnicodeString:
-      if Self is TZRawRowAccessor then
-        SetRawByteString(ColumnIndex, IntToRaw(Value))
-      else
-        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
-  end;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stBoolean: PWordBool(Data)^ := Value <> 0;
+    stByte: PByte(Data)^ := Value;
+    stShort: PShortInt(Data)^ := Value;
+    stWord: PWord(Data)^ := Value;
+    stSmall: PSmallInt(Data)^ := Value;
+    stLongWord: PCardinal(Data)^ := Value;
+    stInteger: PInteger(Data)^ := Value;
+    stULong: PUInt64(Data)^ := Value;
+    stLong: PInt64(Data)^ := Value;
+    stFloat: PSingle(Data)^ := Value;
+    stDouble: PDouble(Data)^ := Value;
+    stCurrency: PCurrency(Data)^ := Value;
+    stBigDecimal: PExtended(Data)^ := Value;
+    stString, stUnicodeString:
+      if Self is TZRawRowAccessor
+      then SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else SetUnicodeString(ColumnIndex, IntToUnicode(Value));
+  end;
 end;
 
 {**
@@ -3660,35 +3592,35 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetWord(Const ColumnIndex: Integer;
-  const Value: Word);
+procedure TZRowAccessor.SetWord(ColumnIndex: Integer; Value: Word);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stWord);
 {$ENDIF}
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value <> 0;
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stString, stUnicodeString:
-      if Self is TZRawRowAccessor then
-        SetRawByteString(ColumnIndex, IntToRaw(Value))
-      else
-        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
-  end;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stBoolean: PWordBool(Data)^ := Value <> 0;
+    stByte: PByte(Data)^ := Value;
+    stShort: PShortInt(Data)^ := Value;
+    stWord: PWord(Data)^ := Value;
+    stSmall: PSmallInt(Data)^ := Value;
+    stLongWord: PCardinal(Data)^ := Value;
+    stInteger: PInteger(Data)^ := Value;
+    stULong: PUInt64(Data)^ := Value;
+    stLong: PInt64(Data)^ := Value;
+    stFloat: PSingle(Data)^ := Value;
+    stDouble: PDouble(Data)^ := Value;
+    stCurrency: PCurrency(Data)^ := Value;
+    stBigDecimal: PExtended(Data)^ := Value;
+    stString, stUnicodeString:
+      if Self is TZRawRowAccessor
+      then SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else SetUnicodeString(ColumnIndex, IntToUnicode(Value));
+  end;
 end;
 
 {**
@@ -3701,34 +3633,35 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetSmall(Const ColumnIndex: Integer; const Value: SmallInt);
+procedure TZRowAccessor.SetSmall(ColumnIndex: Integer; Value: SmallInt);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stSmall);
 {$ENDIF}
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value <> 0;
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stString, stUnicodeString:
-      if Self is TZRawRowAccessor then
-        SetRawByteString(ColumnIndex, IntToRaw(Value))
-      else
-        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
-  end;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stBoolean: PWordBool(Data)^ := Value <> 0;
+    stByte: PByte(Data)^ := Value;
+    stShort: PShortInt(Data)^ := Value;
+    stWord: PWord(Data)^ := Value;
+    stSmall: PSmallInt(Data)^ := Value;
+    stLongWord: PCardinal(Data)^ := Value;
+    stInteger: PInteger(Data)^ := Value;
+    stULong: PUInt64(Data)^ := Value;
+    stLong: PInt64(Data)^ := Value;
+    stFloat: PSingle(Data)^ := Value;
+    stDouble: PDouble(Data)^ := Value;
+    stCurrency: PCurrency(Data)^ := Value;
+    stBigDecimal: PExtended(Data)^ := Value;
+    stString, stUnicodeString:
+      if Self is TZRawRowAccessor
+      then SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else SetUnicodeString(ColumnIndex, IntToUnicode(Value));
+  end;
 end;
 
 {**
@@ -3741,35 +3674,35 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetUInt(Const ColumnIndex: Integer;
-  const Value: Cardinal);
+procedure TZRowAccessor.SetUInt(ColumnIndex: Integer; Value: Cardinal);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLongWord);
 {$ENDIF}
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value <> 0;
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stString, stUnicodeString:
-      if Self is TZRawRowAccessor then
-        SetRawByteString(ColumnIndex, IntToRaw(Value))
-      else
-        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
-  end;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stBoolean: PWordBool(Data)^ := Value <> 0;
+    stByte: PByte(Data)^ := Value;
+    stShort: PShortInt(Data)^ := Value;
+    stWord: PWord(Data)^ := Value;
+    stSmall: PSmallInt(Data)^ := Value;
+    stLongWord: PCardinal(Data)^ := Value;
+    stInteger: PInteger(Data)^ := Value;
+    stULong: PUInt64(Data)^ := Value;
+    stLong: PInt64(Data)^ := Value;
+    stFloat: PSingle(Data)^ := Value;
+    stDouble: PDouble(Data)^ := Value;
+    stCurrency: PCurrency(Data)^ := Value;
+    stBigDecimal: PExtended(Data)^ := Value;
+    stString, stUnicodeString:
+      if Self is TZRawRowAccessor
+      then SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else SetUnicodeString(ColumnIndex, IntToUnicode(Value));
+  end;
 end;
 
 {**
@@ -3782,34 +3715,35 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetInt(Const ColumnIndex: Integer; const Value: Integer);
+procedure TZRowAccessor.SetInt(ColumnIndex: Integer; Value: Integer);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value <> 0;
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stString, stUnicodeString:
-      if Self is TZRawRowAccessor then
-        SetRawByteString(ColumnIndex, IntToRaw(Value))
-      else
-        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
-  end;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stBoolean: PWordBool(Data)^ := Value <> 0;
+    stByte: PByte(Data)^ := Value;
+    stShort: PShortInt(Data)^ := Value;
+    stWord: PWord(Data)^ := Value;
+    stSmall: PSmallInt(Data)^ := Value;
+    stLongWord: PCardinal(Data)^ := Value;
+    stInteger: PInteger(Data)^ := Value;
+    stULong: PUInt64(Data)^ := Value;
+    stLong: PInt64(Data)^ := Value;
+    stFloat: PSingle(Data)^ := Value;
+    stDouble: PDouble(Data)^ := Value;
+    stCurrency: PCurrency(Data)^ := Value;
+    stBigDecimal: PExtended(Data)^ := Value;
+    stString, stUnicodeString:
+      if Self is TZRawRowAccessor
+      then SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else SetUnicodeString(ColumnIndex, IntToUnicode(Value));
+  end;
 end;
 
 {**
@@ -3822,34 +3756,35 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetULong(Const ColumnIndex: Integer; const Value: UInt64);
+procedure TZRowAccessor.SetULong(ColumnIndex: Integer; const Value: UInt64);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stULong);
 {$ENDIF}
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value <> 0;
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stString, stUnicodeString:
-      if Self is TZRawRowAccessor then
-        SetRawByteString(ColumnIndex, IntToRaw(Value))
-      else
-        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
-  end;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stBoolean: PWordBool(Data)^ := Value <> 0;
+    stByte: PByte(Data)^ := Value;
+    stShort: PShortInt(Data)^ := Value;
+    stWord: PWord(Data)^ := Value;
+    stSmall: PSmallInt(Data)^ := Value;
+    stLongWord: PCardinal(Data)^ := Value;
+    stInteger: PInteger(Data)^ := Value;
+    stULong: PUInt64(Data)^ := Value;
+    stLong: PInt64(Data)^ := Value;
+    stFloat: PSingle(Data)^ := Value;
+    stDouble: PDouble(Data)^ := Value;
+    stCurrency: PCurrency(Data)^ := Value;
+    stBigDecimal: PExtended(Data)^ := Value;
+    stString, stUnicodeString:
+      if Self is TZRawRowAccessor
+      then SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else SetUnicodeString(ColumnIndex, IntToUnicode(Value));
+  end;
 end;
 
 {**
@@ -3862,34 +3797,35 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetLong(Const ColumnIndex: Integer; const Value: Int64);
+procedure TZRowAccessor.SetLong(ColumnIndex: Integer; const Value: Int64);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value <> 0;
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stString, stUnicodeString:
-      if Self is TZRawRowAccessor then
-        SetRawByteString(ColumnIndex, IntToRaw(Value))
-      else
-        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
-  end;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stBoolean: PWordBool(Data)^ := Value <> 0;
+    stByte: PByte(Data)^ := Value;
+    stShort: PShortInt(Data)^ := Value;
+    stWord: PWord(Data)^ := Value;
+    stSmall: PSmallInt(Data)^ := Value;
+    stLongWord: PCardinal(Data)^ := Value;
+    stInteger: PInteger(Data)^ := Value;
+    stULong: PUInt64(Data)^ := Value;
+    stLong: PInt64(Data)^ := Value;
+    stFloat: PSingle(Data)^ := Value;
+    stDouble: PDouble(Data)^ := Value;
+    stCurrency: PCurrency(Data)^ := Value;
+    stBigDecimal: PExtended(Data)^ := Value;
+    stString, stUnicodeString:
+      if Self is TZRawRowAccessor
+      then SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else SetUnicodeString(ColumnIndex, IntToUnicode(Value));
+  end;
 end;
 
 {**
@@ -3902,34 +3838,35 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetFloat(Const ColumnIndex: Integer; const Value: Single);
+procedure TZRowAccessor.SetFloat(ColumnIndex: Integer; Value: Single);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value <> 0;
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stString, stUnicodeString:
-      if Self is TZRawRowAccessor then
-        SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
-      else
-        SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
-  end;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stBoolean: PWordBool(Data)^ := Value <> 0;
+    stByte: PByte(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stShort: PShortInt(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stWord: PWord(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stSmall: PSmallInt(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLongWord: PCardinal(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stInteger: PInteger(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLong: PInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stULong: PUInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stFloat: PSingle(Data)^ := Value;
+    stDouble: PDouble(Data)^ := Value;
+    stCurrency: PCurrency(Data)^ := Value;
+    stBigDecimal: PExtended(Data)^ := Value;
+    stString, stUnicodeString:
+      if Self is TZRawRowAccessor
+      then SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
+      else SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
+  end;
 end;
 
 {**
@@ -3942,32 +3879,34 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetDouble(Const ColumnIndex: Integer; const Value: Double);
+procedure TZRowAccessor.SetDouble(ColumnIndex: Integer; const Value: Double);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value <> 0;
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
+    stBoolean: PWordBool(Data)^ := Value <> 0;
+    stByte: PByte(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stShort: PShortInt(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stWord: PWord(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stSmall: PSmallInt(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLongWord: PCardinal(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stInteger: PInteger(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLong: PInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stULong: PUInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stFloat: PSingle(Data)^ := Value;
+    stDouble: PDouble(Data)^ := Value;
+    stCurrency: PCurrency(Data)^ := Value;
+    stBigDecimal: PExtended(Data)^ := Value;
     stString, stUnicodeString:
-      if Self is TZRawRowAccessor then
-        SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
-      else
-        SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
+      if Self is TZRawRowAccessor
+      then SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
+      else SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
@@ -3982,34 +3921,35 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetCurrency(Const ColumnIndex: Integer; const Value: Currency);
+procedure TZRowAccessor.SetCurrency(ColumnIndex: Integer; const Value: Currency);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value <> 0;
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stString, stUnicodeString:
-      if Self is TZRawRowAccessor then
-        SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
-      else
-        SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
-  end;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stBoolean: PWordBool(Data)^ := Value <> 0;
+    stByte: PByte(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stShort: PShortInt(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stWord: PWord(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stSmall: PSmallInt(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLongWord: PCardinal(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stInteger: PInteger(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLong: PInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stULong: PUInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stFloat: PSingle(Data)^ := Value;
+    stDouble: PDouble(Data)^ := Value;
+    stCurrency: PCurrency(Data)^ := Value;
+    stBigDecimal: PExtended(Data)^ := Value;
+    stString, stUnicodeString:
+      if Self is TZRawRowAccessor
+      then SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
+      else SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
+  end;
 end;
 
 {**
@@ -4023,34 +3963,35 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetBigDecimal(Const ColumnIndex: Integer; const Value: Extended);
+procedure TZRowAccessor.SetBigDecimal(ColumnIndex: Integer; const Value: Extended);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value <> 0;
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-    stString, stUnicodeString:
-      if Self is TZRawRowAccessor then
-        SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
-      else
-        SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
-  end;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stBoolean: PWordBool(Data)^ := Value <> 0;
+    stByte: PByte(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stShort: PShortInt(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stWord: PWord(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stSmall: PSmallInt(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLongWord: PCardinal(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stInteger: PInteger(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLong: PInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stULong: PUInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stFloat: PSingle(Data)^ := Value;
+    stDouble: PDouble(Data)^ := Value;
+    stCurrency: PCurrency(Data)^ := Value;
+    stBigDecimal: PExtended(Data)^ := Value;
+    stString, stUnicodeString:
+      if Self is TZRawRowAccessor
+      then SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
+      else SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
+  end;
 end;
 
 {**
@@ -4063,80 +4004,76 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetString(Const ColumnIndex: Integer; const Value: String);
+procedure TZRowAccessor.SetString(ColumnIndex: Integer; const Value: String);
 var
-  IsNull: Boolean;
-  GUID: TGUID;
-  TempBlob: IZBlob;
+  Data: PPointer;
   Failed: Boolean;
 begin
   {$R-}
-  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := StrToBoolEx(Value, False);
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
+    stBoolean: PWordBool(Data)^ := StrToBoolEx(Value, False);
+    stByte: PByte(Data)^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
+    stShort: PShortInt(Data)^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
+    stWord: PWord(Data)^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
+    stSmall: PSmallInt(Data)^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
+    stLongWord: PCardinal(Data)^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
+    stInteger: PInteger(Data)^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
+    stULong: PUInt64(Data)^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
+    stLong: PInt64(Data)^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
+    stFloat: PSingle(Data)^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
+    stDouble: PDouble(Data)^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
+    stCurrency: PCurrency(Data)^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
+    stBigDecimal: PExtended(Data)^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
     //stString, stUnicodeString: do not handle here!
-    stBytes: SetBytes(ColumnIndex, StrToBytes(Value));
+    stBytes: InternalSetBytes(FBuffer, ColumnIndex, StrToBytes(Value));
     stGUID:
-      if (Value = '') or (Length(Value) <> 38) then
-        SetNull(ColumnIndex)
-      else
-      begin
-        GUID := StringToGUID(Value);
-        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
-      end;
+      if (Value = '') or (Length(Value) <> 38) or (Length(Value) <> 36)
+      then SetNull(ColumnIndex)
+      else ZSysUtils.ValidGUIDToBinary(PChar(Pointer(Value)), PAnsiChar(Data));
     stDate:
       begin
-        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
+        PDateTime(Data)^ :=
           {$IFDEF UNICODE}UnicodeSQLDateToDateTime{$ELSE}RawSQLDateToDateTime{$ENDIF}(
-            PChar(Value), Length(Value), ConSettings^.DisplayFormatSettings, Failed{%H-});
+            PChar(Pointer(Value)), Length(Value), ConSettings^.DisplayFormatSettings, Failed{%H-});
         if Failed then
-          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-          {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-            {$IFDEF UNICODE}UnicodeSQLTimeStampToDateTime{$ELSE}RawSQLTimeStampToDateTime{$ENDIF}(
-              PChar(Value), Length(Value), ConSettings^.DisplayFormatSettings, Failed));
+          PDateTime(Data)^ := Int({$IFDEF UNICODE}UnicodeSQLTimeStampToDateTime{$ELSE}RawSQLTimeStampToDateTime{$ENDIF}(
+              PChar(Pointer(Value)), Length(Value), ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTime:
       begin
-        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
+        PDateTime(Data)^ :=
         {$IFDEF UNICODE}UnicodeSQLTimeToDateTime{$ELSE}RawSQLTimeToDateTime{$ENDIF}(
-          PChar(Value), Length(Value), ConSettings^.DisplayFormatSettings, Failed);
+          PChar(Pointer(Value)), Length(Value), ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
-          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
+          PDateTime(Data)^ :=
             Frac({$IFDEF UNICODE}UnicodeSQLTimeStampToDateTime{$ELSE}RawSQLTimeStampToDateTime{$ENDIF}(
-              PChar(Value), Length(Value), ConSettings^.DisplayFormatSettings, Failed));
+              PChar(Pointer(Value)), Length(Value), ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTimestamp:
-      PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
+      PDateTime(Data)^ :=
           {$IFDEF UNICODE}UnicodeSQLTimeStampToDateTime{$ELSE}RawSQLTimeStampToDateTime{$ENDIF}(
-            PChar(Value), Length(Value), ConSettings^.DisplayFormatSettings, Failed);
+            PChar(Pointer(Value)), Length(Value), ConSettings^.DisplayFormatSettings, Failed);
     stAsciiStream, stUnicodeStream:
       begin
-        TempBlob := GetBlob(ColumnIndex, IsNull{%H-});
-        if TempBlob.IsClob then
-          {$IF defined(DELPHI) or defined(UNICODE)}
-          TempBlob.SetUnicodeString(Value)
-          {$ELSE}
-          TempBlob.SetUTF8String(ConSettings^.ConvFuncs.ZStringToUTF8(Value, ConSettings^.CTRL_CP))
+        if (Data^ = nil) then
+          PIZLob(Data^)^ := TZAbstractCLob.CreateWithData(nil, 0, Consettings);
+        if PIZLob(Data^)^.IsClob then
+          {$IF defined(DELPHI) or defined(UNICODE)} //EH: assume this is correct? Unicode ok but why delphi in all cases what about MSE-GUI?
+          PIZLob(Data^)^.SetUnicodeString(Value)
+          {$ELSE} //same here UTF8 is ok for LCL but pure FPC? However this conversion has no data loss but might happen for nothing
+          PIZLob(Data^)^.SetUTF8String(ConSettings^.ConvFuncs.ZStringToUTF8(Value, ConSettings^.CTRL_CP))
           {$IFEND}
         else
-          GetBlob(ColumnIndex, IsNull).SetBytes(StrToBytes(Value));
+          PIZLob(Data^)^.SetBytes(StrToBytes(Value));
       end;
-    stBinaryStream:
-      GetBlob(ColumnIndex, IsNull).SetBytes(StrToBytes(Value));
+    stBinaryStream: begin
+        if (Data^ = nil) then
+          PIZLob(Data^)^ := TZAbstractBLob.Create;
+        PIZLob(Data^)^.SetBytes(StrToBytes(Value));
+      end;
   end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
 {**
@@ -4150,77 +4087,62 @@ end;
   @param Value the new column value
   @param Len the pointer to the length of the String in bytes
 }
-procedure TZRowAccessor.SetPAnsiChar(Const ColumnIndex: Integer; Value: PAnsichar;
+procedure TZRowAccessor.SetPAnsiChar(ColumnIndex: Integer; Value: PAnsichar;
   Len: PNativeUInt);
 var
-  IsNull: Boolean;
-  GUID: TGUID;
-  Blob: IZBlob;
+  Data: PPointer;
   Failed: Boolean;
 begin
   {$R-}
-  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := StrToBoolEx(Value, False);
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToIntDef(Value, 0);
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToIntDef(Value, 0);
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToIntDef(Value, 0);
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToIntDef(Value, 0);
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToInt64Def(Value, 0);
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToIntDef(Value, 0);
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToInt64Def(Value, 0);
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToInt64Def(Value, 0);
-    stFloat: SQLStrToFloatDef(Value, 0, PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Len^);
-    stDouble: SQLStrToFloatDef(Value, 0, PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Len^);
-    stCurrency: SQLStrToFloatDef(Value, 0, PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Len^);
-    stBigDecimal: SQLStrToFloatDef(Value, 0, PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Len^);
+    stBoolean: PWordBool(Data)^ := StrToBoolEx(Value, False);
+    stByte: PByte(Data)^ := RawToIntDef(Value, 0);
+    stShort: PShortInt(Data)^ := RawToIntDef(Value, 0);
+    stWord: PWord(Data)^ := RawToIntDef(Value, 0);
+    stSmall: PSmallInt(Data)^ := RawToIntDef(Value, 0);
+    stLongWord: PCardinal(Data)^ := RawToInt64Def(Value, 0);
+    stInteger: PInteger(Data)^ := RawToIntDef(Value, 0);
+    stULong: PUInt64(Data)^ := RawToInt64Def(Value, 0);
+    stLong: PInt64(Data)^ := RawToInt64Def(Value, 0);
+    stFloat: SQLStrToFloatDef(Value, 0, PSingle(Data)^, Len^);
+    stDouble: SQLStrToFloatDef(Value, 0, PDouble(Data)^, Len^);
+    stCurrency: SQLStrToFloatDef(Value, 0, PCurrency(Data)^, Len^);
+    stBigDecimal: SQLStrToFloatDef(Value, 0, PExtended(Data)^, Len^);
     //stString, stUnicodeString: do not handle here!
-    stBytes: SetBytes(ColumnIndex, Value, len^);
+    stBytes: InternalSetBytes(FBuffer, ColumnIndex, Value, len^);
     stGUID:
-      if Value = nil then
-        SetNull(ColumnIndex)
-      else
-      begin
-        {$IFDEF UNICODE}
-        GUID := StringToGUID(ASCII7ToUnicodeString(Value, Len^));
-        {$ELSE}
-        GUID := StringToGUID(Value);
-        {$ENDIF}
-        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
-      end;
+      if (Value = nil) or ((Len <> nil) and (Len^ <> 38)) or ((Len <> nil) and (Len^ <> 36))
+      then SetNull(ColumnIndex)
+      else ZSysUtils.ValidGUIDToBinary(Value, PAnsiChar(Data));
     stDate:
       begin
-        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-            RawSQLDateToDateTime (Value, Len^,
-              ConSettings^.DisplayFormatSettings, Failed{%H-});
+        PDateTime(Data)^ := RawSQLDateToDateTime (Value, Len^, ConSettings^.DisplayFormatSettings, Failed{%H-});
         if Failed then
-          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-          {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-            RawSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed));
+          PDateTime(Data)^ := Int(RawSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTime:
       begin
-        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-        RawSQLTimeToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
+        PDateTime(Data)^ := RawSQLTimeToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
-          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-            Frac(RawSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed));
+          PDateTime(Data)^ := Frac(RawSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTimestamp:
-      PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-          RawSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
+      PDateTime(Data)^ := RawSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
     stUnicodeStream, stAsciiStream:
-      begin
-        Blob := GetBlob(ColumnIndex, IsNull{%H-});
-        if Blob.IsClob then
-          Blob.SetPAnsiChar(Value, ConSettings^.ClientCodePage^.CP, Len^)
-        else
-          Blob.SetBuffer(Value, Len^);
-      end;
+      if (Data^ = nil) then
+        PIZLob(Data^)^ := TZAbstractCLob.CreateWithData(Value, Len^, ConSettings^.ClientCodePage^.CP, ConSettings)
+      else if PIZLob(Data^)^.IsClob then
+        PIZLob(Data^)^.SetPAnsiChar(Value, ConSettings^.ClientCodePage^.CP, Len^)
+      else
+        PIZLob(Data^)^.SetBuffer(Value, Len^);
     stBinaryStream:
-      GetBlob(ColumnIndex, IsNull).SetBuffer(Value, Len^);
+      if (Data^ = nil) then
+        PIZLob(Data^)^ := TZAbstractBLob.CreateWithData(Value, Len^)
+      else
+        PIZLob(Data^)^.SetBuffer(Value, Len^);
   end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
 {**
@@ -4233,7 +4155,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param Value the new column value
 }
-procedure TZRowAccessor.SetPAnsiChar(Const ColumnIndex: Integer; const Value: PAnsiChar);
+procedure TZRowAccessor.SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar);
 var Len: NativeUInt;
 begin
   Len := ZFastCode.StrLen(Value);
@@ -4251,74 +4173,61 @@ end;
   @param Len the pointer to the length of the string in codepoints
   @param Value the new column value
 }
-procedure TZRowAccessor.SetPWideChar(Const ColumnIndex: Integer;
+procedure TZRowAccessor.SetPWideChar(ColumnIndex: Integer;
   Value: PWideChar; Len: PNativeUInt);
 var
-  IsNull: Boolean;
-  GUID: TGUID;
-  Blob: IZBlob;
+  Data: PPointer;
   Failed: Boolean;
 begin
   {$R-}
-  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := StrToBoolEx(Value, False);
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToInt64Def(Value, 0);
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToInt64Def(Value, 0);
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToInt64Def(Value, 0);
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0, Len^);
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0, Len^);
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0, Len^);
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0, Len^);
+    stBoolean: PWordBool(Data)^ := StrToBoolEx(Value, False);
+    stByte: PByte(Data)^ := UnicodeToIntDef(Value, 0);
+    stShort: PShortInt(Data)^ := UnicodeToIntDef(Value, 0);
+    stWord: PWord(Data)^ := UnicodeToIntDef(Value, 0);
+    stSmall: PSmallInt(Data)^ := UnicodeToIntDef(Value, 0);
+    stLongWord: PCardinal(Data)^ := UnicodeToInt64Def(Value, 0);
+    stInteger: PInteger(Data)^ := UnicodeToIntDef(Value, 0);
+    stULong: PUInt64(Data)^ := UnicodeToInt64Def(Value, 0);
+    stLong: PInt64(Data)^ := UnicodeToInt64Def(Value, 0);
+    stFloat: PSingle(Data)^ := SQLStrToFloatDef(Value, 0, Len^);
+    stDouble: PDouble(Data)^ := SQLStrToFloatDef(Value, 0, Len^);
+    stCurrency: PCurrency(Data)^ := SQLStrToFloatDef(Value, 0, Len^);
+    stBigDecimal: PExtended(Data)^ := SQLStrToFloatDef(Value, 0, Len^);
     //stUnicodeString, stString: do not handle here
     stAsciiStream, stUnicodeStream:
-      begin
-        Blob := GetBlob(ColumnIndex, IsNull{%H-});
-        if Blob.IsClob then
-          Blob.SetPWideChar(Value, Len^)
-        else
-          Blob.SetBuffer(Value, Len^*2);
-      end;
+      if Data^ = nil then
+        PIZLob(Data^)^ := TZAbstractCLob.CreateWithData(Value, Len^, ConSettings)
+      else if PIZLob(Data^)^.IsClob then
+        PIZLob(Data^)^.SetPWideChar(Value, Len^)
+      else
+        PIZLob(Data^)^.SetBuffer(Value, Len^ shl 1);
     stBytes:
       SetBytes(ColumnIndex, StrToBytes(ZWideString(Value)));
     stGUID:
-      if Value = nil  then
-        SetNull(ColumnIndex)
-      else
-      begin
-        GUID := StringToGUID({$IFDEF UNICODE}Value{$ELSE}UnicodeStringToASCII7(Value, Len^){$ENDIF});
-        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
-      end;
+      if (Value = nil) or ((Len <> nil) and (Len^ <> 38)) or ((Len <> nil) and (Len^ <> 36))
+      then SetNull(ColumnIndex)
+      else ZSysUtils.ValidGUIDToBinary(Value, PAnsichar(Data));
     stDate:
       begin
-        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
+        PDateTime(Data)^ :=
           UnicodeSQLDateToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed{%H-});
-        if Failed then
-          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-          {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-            UnicodeSQLTimeStampToDateTime(Value, Len^,
+        if Failed then PDateTime(Data)^ := Int(UnicodeSQLTimeStampToDateTime(Value, Len^,
               ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTime:
       begin
-        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-        UnicodeSQLTimeToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
+        PDateTime(Data)^ := UnicodeSQLTimeToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
-          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-            Frac(UnicodeSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed));
+          PDateTime(Data)^ := Frac(UnicodeSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTimestamp:
-      PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-        UnicodeSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
+      PDateTime(Data)^ := UnicodeSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
     else
       SetString(ColumnIndex, ConSettings^.ConvFuncs.ZUnicodeToString(Value, ConSettings^.CTRL_CP));
   end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
 {**
@@ -4331,12 +4240,14 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetAnsiString(Const ColumnIndex: Integer; const Value: AnsiString);
+procedure TZRowAccessor.SetAnsiString(ColumnIndex: Integer; const Value: AnsiString);
 begin
   if Self is TZRawRowAccessor then
     SetRawByteString(ColumnIndex, ConSettings^.ConvFuncs.ZAnsiToRaw(Value, ConSettings^.ClientCodePage^.CP))
-  else
-    SetUnicodeString(ColumnIndex, ZWideString(Value));
+  else begin
+    fUniTemp := ZEncoding.ZRawToUnicode(Value, ZOSCodePage); //localize Value becuse of WideString overrun
+    SetUnicodeString(ColumnIndex, fUniTemp);
+  end;
 end;
 
 {**
@@ -4349,12 +4260,14 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetUTF8String(Const ColumnIndex: Integer; const Value: UTF8String);
+procedure TZRowAccessor.SetUTF8String(ColumnIndex: Integer; const Value: UTF8String);
 begin
   if Self is TZRawRowAccessor then
     SetRawByteString(ColumnIndex, ConSettings^.ConvFuncs.ZUTF8ToRaw(Value, ConSettings^.ClientCodePage^.CP))
-  else
-    SetUnicodeString(ColumnIndex, {$IFDEF WITH_RAWBYTESTRING}ZWideString{$ELSE}UTF8Decode{$ENDIF}(Value))
+  else begin
+    fUniTemp := ZEncoding.ZRawToUnicode(Value, zCP_UTF8); //localize Value becuse of WideString overrun
+    SetUnicodeString(ColumnIndex, fUniTemp);
+  end;
 end;
 
 {**
@@ -4367,67 +4280,65 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString);
+procedure TZRowAccessor.SetRawByteString(ColumnIndex: Integer; const Value: RawByteString);
 var
-  IsNull: Boolean;
-  GUID: TGUID;
+  Data: PPointer;
   Failed: Boolean;
 begin
   {$R-}
-  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := StrToBoolEx(Value, False);
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToIntDef(Value, 0);
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToIntDef(Value, 0);
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToIntDef(Value, 0);
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToIntDef(Value, 0);
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToInt64Def(Value, 0);
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToIntDef(Value, 0);
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToInt64Def(Value, 0);
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := RawToInt64Def(Value, 0);
-    stFloat: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
-    stDouble: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
-    stCurrency: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
-    stBigDecimal: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
+    stBoolean: PWordBool(Data)^ := StrToBoolEx(Value, False);
+    stByte: PByte(Data)^ := RawToIntDef(Value, 0);
+    stShort: PShortInt(Data)^ := RawToIntDef(Value, 0);
+    stWord: PWord(Data)^ := RawToIntDef(Value, 0);
+    stSmall: PSmallInt(Data)^ := RawToIntDef(Value, 0);
+    stLongWord: PCardinal(Data)^ := RawToInt64Def(Value, 0);
+    stInteger: PInteger(Data)^ := RawToIntDef(Value, 0);
+    stULong: PUInt64(Data)^ := RawToInt64Def(Value, 0);
+    stLong: PInt64(Data)^ := RawToInt64Def(Value, 0);
+    stFloat: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PSingle(Data)^, Length(Value));
+    stDouble: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PDouble(Data)^, Length(Value));
+    stCurrency: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PCurrency(Data)^, Length(Value));
+    stBigDecimal: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PExtended(Data)^, Length(Value));
     //stString, stUnicodeString: do not handle here!
-    stBytes: SetBytes(ColumnIndex, StrToBytes(Value));
+    stBytes: InternalSetBytes(fBuffer, ColumnIndex, Pointer(Value), Length(Value));
     stGUID:
-      if Value = '' then
-        SetNull(ColumnIndex)
-      else
-      begin
-        GUID := StringToGUID({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(Value));
-        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
-      end;
+      if (Value = '') or (Length(Value) <> 38) or (Length(Value) <> 36)
+      then SetNull(ColumnIndex)
+      else ZSysUtils.ValidGUIDToBinary(PAnsichar(Pointer(Value)), PAnsiChar(Data));
     stDate:
       begin
-        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-            RawSQLDateToDateTime (Pointer(Value), Length(Value),
+        PDateTime(Data)^ := RawSQLDateToDateTime(Pointer(Value), Length(Value),
               ConSettings^.DisplayFormatSettings, Failed{%H-});
         if Failed then
-          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-          {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-            RawSQLTimeStampToDateTime(Pointer(Value), Length(Value),
-              ConSettings^.DisplayFormatSettings, Failed));
+          PDateTime(Data)^ := Int(RawSQLTimeStampToDateTime(Pointer(Value),
+            Length(Value), ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTime:
       begin
-        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-        RawSQLTimeToDateTime(Pointer(Value), Length(Value),
+        PDateTime(Data)^ := RawSQLTimeToDateTime(Pointer(Value), Length(Value),
           ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
-          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-            Frac(RawSQLTimeStampToDateTime(Pointer(Value), Length(Value),
-              ConSettings^.DisplayFormatSettings, Failed));
+          PDateTime(Data)^ := Frac(RawSQLTimeStampToDateTime(Pointer(Value),
+            Length(Value), ConSettings^.DisplayFormatSettings, Failed));
       end;
-    stTimestamp:
-      PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-          RawSQLTimeStampToDateTime(Pointer(Value), Length(Value),
-            ConSettings^.DisplayFormatSettings, Failed);
-    stUnicodeStream, stAsciiStream, stBinaryStream:
-      GetBlob(ColumnIndex, IsNull{%H-}).SetString(Value);
+    stTimestamp: PDateTime(Data)^ := RawSQLTimeStampToDateTime(Pointer(Value),
+      Length(Value), ConSettings^.DisplayFormatSettings, Failed);
+    stAsciiStream, stUnicodeStream:
+      if Data^ = nil then
+        PIZLob(Data^)^ := TZAbstractCLob.CreateWithData(Pointer(Value), Length(Value), ConSettings^.ClientCodePage^.CP, ConSettings)
+      else if PIZLob(Data^)^.IsClob then
+        PIZLob(Data^)^.SetPAnsiChar(Pointer(Value), ConSettings^.ClientCodePage^.CP, Length(Value))
+      else
+        PIZLob(Data^)^.SetString(Value);
+    stBinaryStream:
+      if Data^ = nil then
+        PIZLob(Data^)^ := TZAbstractBLob.CreateWithData(Pointer(Value), Length(Value))
+      else
+        PIZLob(Data^)^.SetString(Value);
   end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
 {**
@@ -4440,77 +4351,71 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetUnicodeString(Const ColumnIndex: Integer; const Value: ZWideString);
+procedure TZRowAccessor.SetUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
 var
-  IsNull: Boolean;
-  GUID: TGUID;
-  Blob: IZBlob;
+  Data: PPointer;
   Failed: Boolean;
 begin
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := StrToBoolEx(Value, False);
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToInt64Def(Value, 0);
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToInt64Def(Value, 0);
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToInt64Def(Value, 0);
-    stFloat: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
-    stDouble: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
-    stCurrency: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
-    stBigDecimal: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^, Length(Value));
+    stBoolean: PWordBool(Data)^ := StrToBoolEx(Value, False);
+    stByte: PByte(Data)^ := UnicodeToIntDef(Value, 0);
+    stShort: PShortInt(Data)^ := UnicodeToIntDef(Value, 0);
+    stWord: PWord(Data)^ := UnicodeToIntDef(Value, 0);
+    stSmall: PSmallInt(Data)^ := UnicodeToIntDef(Value, 0);
+    stLongWord: PCardinal(Data)^ := UnicodeToInt64Def(Value, 0);
+    stInteger: PInteger(Data)^ := UnicodeToIntDef(Value, 0);
+    stULong: PUInt64(Data)^ := UnicodeToInt64Def(Value, 0);
+    stLong: PInt64(Data)^ := UnicodeToInt64Def(Value, 0);
+    stFloat: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PSingle(Data)^, Length(Value));
+    stDouble: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PDouble(Data)^, Length(Value));
+    stCurrency: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PCurrency(Data)^, Length(Value));
+    stBigDecimal: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PExtended(Data)^, Length(Value));
     //stUnicodeString, stString: do not handle here
     stAsciiStream, stUnicodeStream:
       begin
-        Blob := GetBlob(ColumnIndex, IsNull{%H-});
-        if Blob.IsClob then
-          Blob.SetUnicodeString(Value)
+        if Data ^ = nil then
+          PIZLob(Data^)^ := TZAbstractClob.CreateWithData(nil, 0, ConSettings);
+        if PIZLob(Data^)^.IsClob then
+          PIZLob(Data^)^.SetUnicodeString(Value)
         else
-          Blob.SetString(RawByteString(Value));
+          PIZLob(Data^)^.SetString(RawByteString(Value));
+      end;
+    stBinaryStream:
+      begin
+        if Data ^ = nil then
+          PIZLob(Data^)^ := TZAbstractBlob.CreateWithData(nil, 0);
+        PIZLob(Data^)^.SetString(RawByteString(Value));
       end;
     stBytes:
-      SetBytes(ColumnIndex, StrToBytes(Value));
+      InternalSetBytes(FBuffer, ColumnIndex, StrToBytes(Value));
     stGUID:
-      if Value = '' then
-        SetNull(ColumnIndex)
-      else
-      begin
-        GUID := StringToGUID({$IFNDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Value));
-        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(GUID.D1, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
-      end;
+      if (Value = '') or (Length(Value) <> 38) or (Length(Value) <> 36)
+      then SetNull(ColumnIndex)
+      else ZSysUtils.ValidGUIDToBinary(PWideChar(Pointer(Value)), PAnsiChar(Data));
     stDate:
       begin
-        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-          UnicodeSQLDateToDateTime(PWideChar(Value), Length(Value),
+        PDateTime(Data)^ := UnicodeSQLDateToDateTime(Pointer(Value), Length(Value),
             ConSettings^.DisplayFormatSettings, Failed{%H-});
         if Failed then
-          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-          {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-            UnicodeSQLTimeStampToDateTime(PWideChar(Value), Length(Value),
-              ConSettings^.DisplayFormatSettings, Failed));
+          PDateTime(Data)^ := Int(UnicodeSQLTimeStampToDateTime(Pointer(Value),
+            Length(Value), ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTime:
       begin
-        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-        UnicodeSQLTimeToDateTime(PWideChar(Value), Length(Value),
+        PDateTime(Data)^ := UnicodeSQLTimeToDateTime(Pointer(Value), Length(Value),
           ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
-          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-            Frac(UnicodeSQLTimeStampToDateTime(PWideChar(Value), Length(Value),
-              ConSettings^.DisplayFormatSettings, Failed));
+          PDateTime(Data)^ := Frac(UnicodeSQLTimeStampToDateTime(Pointer(Value),
+            Length(Value), ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTimestamp:
-      PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-        UnicodeSQLTimeStampToDateTime(PWideChar(Value), Length(Value),
-          ConSettings^.DisplayFormatSettings, Failed);
-    else
-      SetString(ColumnIndex, ConSettings^.ConvFuncs.ZUnicodeToString(Value, ConSettings^.CTRL_CP));
+      PDateTime(Data)^ := UnicodeSQLTimeStampToDateTime(Pointer(Value),
+        Length(Value), ConSettings^.DisplayFormatSettings, Failed);
   end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
 {**
@@ -4523,27 +4428,9 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetBytes(Const ColumnIndex: Integer; const Value: TBytes);
-var
-  IsNull: Boolean;
+procedure TZRowAccessor.SetBytes(ColumnIndex: Integer; const Value: TBytes);
 begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stBytes);
-{$ENDIF}
-  if Value <> nil then begin
-  {$R-}
-    FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stGUID: {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value[0], FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-      stBytes: InternalSetBytes(FBuffer, ColumnIndex, Value);
-      stBinaryStream: GetBlob(ColumnIndex, IsNull{%H-}).SetBytes(Value);
-      else
-        SetString(ColumnIndex, String(BytesToStr(Value)));
-    end;
-  end
-  else
-    SetNull(ColumnIndex);
+  SetBytes(ColumnIndex, Pointer(Value), Length(Value));
 end;
 
 {**
@@ -4556,27 +4443,36 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetBytes(Const ColumnIndex: Integer; Buf: Pointer; Len: Word);
-var
-  IsNull: Boolean;
+procedure TZRowAccessor.SetBytes(ColumnIndex: Integer; Buf: Pointer; Len: Word);
+var Data: PPointer;
+  L: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
   {$R-}
-  if (Buf <> nil) and (Len > 0) then begin
-    FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stGUID: {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1], 16);
+  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-      stBytes: InternalSetBytes(FBuffer, ColumnIndex, Buf, Len);
-      stBinaryStream: GetBlob(ColumnIndex, IsNull{%H-}).SetBuffer(Buf, Len);
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stGUID:
+      if Len = 16 then
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf, Data^, 16)
       else
-        raise EZSQLException.Create(cSConvertionIsNotPossible);
-    end;
-  end
-  else
-    SetNull(ColumnIndex);
+        SetNull(ColumnIndex);
+    stBytes: InternalSetBytes(FBuffer, ColumnIndex, Buf, Len);
+    stBinaryStream:
+        if Data^ = nil then
+          PIZLob(Data)^ := TZAbstractBlob.CreateWithData(Buf, Len)
+        else
+          PIZLob(Data)^.SetBuffer(Buf, Len);
+    stString, stUnicodeString: begin
+        L := Len;
+        SetPAnsiChar(ColumnIndex, Buf, @L);
+      end;
+    else
+      raise EZSQLException.Create(cSConvertionIsNotPossible);
+  end;
 end;
 
 {**
@@ -4589,21 +4485,18 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetDate(Const ColumnIndex: Integer; const Value: TDateTime);
+procedure TZRowAccessor.SetDate(ColumnIndex: Integer; const Value: TDateTime);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stTimestamp);
+  CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
   {$R-}
-  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stDate:
-      begin
-        FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-          {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-      end;
+  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    stTimestamp: SetTimestamp(ColumnIndex, Value);
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stDate, stTimestamp: PDateTime(Data)^ := Int(Value);
     stString, stUnicodeString: SetString(ColumnIndex, FormatDateTime('yyyy-mm-dd', Value));
   end;
 end;
@@ -4618,21 +4511,18 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetTime(Const ColumnIndex: Integer; const Value: TDateTime);
+procedure TZRowAccessor.SetTime(ColumnIndex: Integer; const Value: TDateTime);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
   {$R-}
-  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stTime:
-      begin
-        FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-          Frac(Value);
-      end;
+  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    stTimestamp: SetTimestamp(ColumnIndex, Frac(Value));
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stTime, stTimestamp: PDateTime(Data)^ := Frac(Value);
     stString, stUnicodeString:
       SetString(ColumnIndex, FormatDateTime('hh:nn:ss', Value));
   end;
@@ -4649,20 +4539,20 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetTimestamp(Const ColumnIndex: Integer; const Value: TDateTime);
+procedure TZRowAccessor.SetTimestamp(ColumnIndex: Integer; const Value: TDateTime);
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
   {$R-}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stDate: SetDate(ColumnIndex, Value);
-    stTime: SetTime(ColumnIndex, Value);
-    stTimestamp:
-      begin
-        FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
-      end;
+    stDate: PDateTime(Data)^ := Int(Value);
+    stTime: PDateTime(Data)^ := Frac(Value);
+    stTimestamp: PDateTime(Data)^ := Value;
     stString, stUnicodeString:
       SetString(ColumnIndex, FormatDateTime('yyyy-mm-dd hh:nn:ss', Value));
   end;
@@ -4679,23 +4569,31 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetAsciiStream(Const ColumnIndex: Integer; const Value: TStream);
-var
-  IsNull: Boolean;
-  Blob: IZBlob;
+procedure TZRowAccessor.SetAsciiStream(ColumnIndex: Integer; const Value: TStream);
+var Data: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stAsciiStream);
 {$ENDIF}
-  IsNull := False;
-  Blob := GetBlob(ColumnIndex, IsNull);
-  if Blob.IsClob then
-    if ConSettings^.AutoEncode then
-      Blob.SetStream(Value)
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stAsciiStream, stUnicodeStream, stBinaryStream: begin
+        if Data^ = nil then
+          if FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] = stBinaryStream
+          then Data^ := TZAbstractBlob.Create
+          else  Data^ := TZAbstractClob.CreateWithData(nil, 0, ConSettings);
+        if Data^.IsClob then
+          if ConSettings^.AutoEncode
+          then Data^.SetStream(Value)
+          else Data^.SetStream(Value, ConSettings^.ClientCodePage^.CP)
+        else Data^.SetStream(Value);
+        FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+      end;
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     else
-      Blob.SetStream(Value, ConSettings^.ClientCodePage^.CP)
-  else
-    GetBlob(ColumnIndex, IsNull).SetStream(Value);
+      raise EZSQLException.Create( Format(SCanNotAccessBlobRecord,
+      [ColumnIndex, DefineColumnTypeName(FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}])]));
+  end;
 end;
 
 {**
@@ -4709,15 +4607,25 @@ end;
   @param x the new column value
   @param length the length of the stream
 }
-procedure TZRowAccessor.SetBinaryStream(Const ColumnIndex: Integer; const Value: TStream);
-var
-  IsNull: Boolean;
+procedure TZRowAccessor.SetBinaryStream(ColumnIndex: Integer; const Value: TStream);
+var Data: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBinaryStream);
 {$ENDIF}
-  IsNull := False;
-  GetBlob(ColumnIndex, IsNull).SetStream(Value);
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stAsciiStream, stUnicodeStream, stBinaryStream: begin
+        if Data^ = nil
+        then Data^ := TZAbstractBlob.CreateWithStream(Value)
+        else Data^.SetStream(Value);
+        FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+      end;
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    else
+      raise EZSQLException.Create( Format(SCanNotAccessBlobRecord,
+      [ColumnIndex, DefineColumnTypeName(FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}])]));
+  end;
 end;
 
 {**
@@ -4730,21 +4638,30 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetUnicodeStream(Const ColumnIndex: Integer;
+procedure TZRowAccessor.SetUnicodeStream(ColumnIndex: Integer;
   const Value: TStream);
-var
-  IsNull: Boolean;
-  Blob: IZBlob;
+var Data: PIZLob;
 begin
-  IsNull := False;
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
-  Blob := GetBlob(ColumnIndex, IsNull);
-  if Blob.IsClob then
-    Blob.SetStream(Value, zCP_UTF16)
-  else
-    Blob.SetStream(Value);
+  Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stAsciiStream, stUnicodeStream, stBinaryStream: begin
+        if Data^ = nil then
+          if FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] = stBinaryStream
+          then Data^ := TZAbstractBlob.Create
+          else  Data^ := TZAbstractClob.CreateWithData(nil, 0, ConSettings);
+        if Data^.IsClob
+        then Data^.SetStream(Value, zCP_UTF16)
+        else Data^.SetStream(Value);
+        FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+      end;
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    else
+      raise EZSQLException.Create( Format(SCanNotAccessBlobRecord,
+      [ColumnIndex, DefineColumnTypeName(FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}])]));
+  end;
 end;
 
 {**
@@ -4752,22 +4669,24 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @param Value a blob wrapper object to be set.
 }
-procedure TZRowAccessor.SetBlob(Const ColumnIndex: Integer; const Value: IZBlob);
+procedure TZRowAccessor.SetBlob(ColumnIndex: Integer; const Value: IZBlob);
 begin
 {$IFNDEF DISABLE_CHECKING}
   {$R-}
   CheckColumnIndex(ColumnIndex);
-  if not (FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] in [stAsciiStream, stBinaryStream,
-    stUnicodeStream]) then
-  begin
-    raise EZSQLException.Create(
-      Format(SCanNotAccessBlobRecord,
+{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stAsciiStream, stUnicodeStream, stBinaryStream: begin
+        PIZLob(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
+        if Value = nil
+        then FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNull
+        else FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+      end;
+    else
+      raise EZSQLException.Create( Format(SCanNotAccessBlobRecord,
       [ColumnIndex, DefineColumnTypeName(FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}])]));
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-{$ENDIF}
-
-  SetBlobObject(FBuffer, ColumnIndex, Value);
 end;
 
 {**
@@ -4775,7 +4694,7 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @param Value a ResultSet wrapper object to be set.
 }
-procedure TZRowAccessor.SetDataSet(Const ColumnIndex: Integer; const Value: IZDataSet);
+procedure TZRowAccessor.SetDataSet(ColumnIndex: Integer; const Value: IZDataSet);
 var
   Ptr: PPointer;
   NullPtr: {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF};
@@ -4826,7 +4745,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetValue(Const ColumnIndex: Integer; const Value: TZVariant);
+procedure TZRowAccessor.SetValue(ColumnIndex: Integer; const Value: TZVariant);
 var
   Len: NativeUInt;
 begin
@@ -4843,21 +4762,14 @@ begin
     vtUnicodeString: SetUnicodeString(ColumnIndex, Value.VUnicodeString);
     vtDateTime: SetTimestamp(ColumnIndex, Value.VDateTime);
     vtCharRec:
-      if ZCompatibleCodePages(zCP_UTF16, Value.VCharRec.CP) then
-      begin
+      if ZCompatibleCodePages(zCP_UTF16, Value.VCharRec.CP) then begin
         Len := Value.VCharRec.Len;
         SetPWideChar(ColumnIndex, Value.VCharRec.P, @Len);
-      end
-      else
-      begin
-        if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, Value.VCharRec.CP) then
-        begin
-          Len := Value.VCharRec.Len;
-          SetPAnsiChar(ColumnIndex, Value.VCharRec.P, @Len)
-        end
-        else
-          SetUnicodeString(ColumnIndex, PRawToUnicode(Value.VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP));
-      end;
+      end else if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, Value.VCharRec.CP) then begin
+        Len := Value.VCharRec.Len;
+        SetPAnsiChar(ColumnIndex, Value.VCharRec.P, @Len)
+      end else
+        SetUnicodeString(ColumnIndex, PRawToUnicode(Value.VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP));
   end;
 end;
 
@@ -4871,7 +4783,6 @@ end;
 procedure TZRawRowAccessor.CopyBuffer(SrcBuffer: PZRowBuffer; DestBuffer: PZRowBuffer; const CloneLobs: Boolean = False);
 var
   I: Integer;
-  Blob: IZBlob;
 begin
   ClearBuffer(DestBuffer, False);
   DestBuffer^.Index := SrcBuffer^.Index;
@@ -4881,13 +4792,15 @@ begin
 {$R-}
   if FHasBytes then
     for i := 0 to FHighBytesCols do
-      if SrcBuffer^.Columns[FColumnOffsets[FBytesCols[i]]] = bIsNotNull then
+      if (SrcBuffer^.Columns[FColumnOffsets[FBytesCols[i]]] = bIsNotNull) and
+         (PPointer(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1])^ <> nil) then
         InternalSetBytes(DestBuffer, FBytesCols[i] {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           PPointer(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1])^,
           PWord(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1+SizeOf(Pointer)])^, True);
   if FHasStrings then
     for i := 0 to FHighStringCols do
-      if SrcBuffer^.Columns[FColumnOffsets[FStringCols[i]]] = bIsNotNull then
+      if (SrcBuffer^.Columns[FColumnOffsets[FStringCols[i]]] = bIsNotNull) and
+         (PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^ <> nil) then
         InternalSetPAnsiChar(DestBuffer, FStringCols[i]{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^+PAnsiInc,
           PPLongWord(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^^, True);
@@ -4896,13 +4809,11 @@ begin
       ; //currently NOT implemented
   if FHasLobs then
     for i := 0 to FHighLobCols do
-      if (SrcBuffer^.Columns[FColumnOffsets[FLobCols[i]]] = bIsNotNull) then
-      begin
-        DestBuffer^.Columns[FColumnOffsets[FLobCols[i]]] := bIsNull; //init Destbuffer flag to avoid IZLob() := nil;
-        Blob := GetBlobObject(SrcBuffer, FLobCols[i] {$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        if CloneLobs and (Blob <> nil) then
-          Blob := Blob.Clone;
-        SetBlobObject(DestBuffer, FLobCols[i] {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Blob); //this line increments RefCount but doesn't move data
+      if (SrcBuffer^.Columns[FColumnOffsets[FLobCols[i]]] = bIsNotNull) then begin
+        PPointer(@DestBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^ := nil; //init to avoid refcounting
+        if CloneLobs
+        then PIZLob(@DestBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^ := PIZLob(@SrcBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^.Clone
+        else PIZLob(@DestBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^ := PIZLob(@SrcBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^;
       end;
   if FHasDataSets then
     for i := 0 to FHighDataSetCols do
@@ -4919,35 +4830,38 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetPAnsiChar(Const ColumnIndex: Integer; var IsNull: Boolean;
+function TZRawRowAccessor.GetPAnsiChar(ColumnIndex: Integer; var IsNull: Boolean;
   out Len: NativeUInt): PAnsiChar;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
 {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
-        begin
-          Result := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc;
-          Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^;
+        if (Data^ = nil) then begin
+          Result := PEmptyAnsiString;
+          Len := 0
+        end else begin
+          Result := PPAnsiChar(Data)^+PAnsiInc;
+          Len := PPLongWord(Data)^^;
         end;
       else
         Result := inherited GetPAnsiChar(ColumnIndex, IsNull, Len);
     end;
     IsNull := False;
-  end
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  else
-  begin
+  end else begin
     Len := 0;
     Result := nil;
     IsNull := True;
   end;
 end;
 
-function TZRawRowAccessor.GetCharRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
+function TZRawRowAccessor.GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
 var Len: NativeUint;
 begin
   Result.P := GetPAnsiChar(ColumnIndex, IsNull, Len);
@@ -4964,40 +4878,37 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetString(Const ColumnIndex: Integer; var IsNull: Boolean): String;
+function TZRawRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-{$R-}
-  Result := '';
+  {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
+        if (Data^ = nil)
+        then Result := ''
         {$IFDEF UNICODE}
-        begin
-          Result := PRawToUnicode(
-            PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^,
-            ConSettings^.ClientCodePage^.CP);
-        end;
+        else Result := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^,
+              ConSettings^.ClientCodePage^.CP);
         {$ELSE}
-        if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) or not ConSettings^.AutoEncode then
-          System.SetString(Result, PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
-        else
-          Result := ConSettings^.ConvFuncs.ZRawToString(
-            PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc,
-            ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+        else if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) or not ConSettings^.AutoEncode
+          then System.SetString(Result, PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^)
+          else Result := ConSettings^.ConvFuncs.ZRawToString(PPAnsiChar(Data)^+PAnsiInc,
+              ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
         {$ENDIF}
       else
         Result := inherited GetString(ColumnIndex, IsNull);
     end;
     IsNull := False;
-  end
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  else
+  end else begin
     IsNull := True;
+    Result := '';
+  end;
 end;
 
 {**
@@ -5009,37 +4920,35 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+function TZRawRowAccessor.GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  Result := '';
-{$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
-  begin
+  {$R-}
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
-        begin
-          if ZCompatibleCodePages(ZOSCodePage, ConSettings^.ClientCodePage^.CP) then
-            System.SetString(Result, PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc,
-              PLongWord(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^)^)
-          else
-          begin
-            FUniTemp := PRawToUnicode(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc,
-              PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^,
-              ConSettings^.ClientCodePage^.CP);
-            Result := AnsiString(FUniTemp);
-          end;
+        if (Data^ = nil)
+        then Result := ''
+        else if ZCompatibleCodePages(ZOSCodePage, ConSettings^.ClientCodePage^.CP) then
+          System.SetString(Result, PPAnsiChar(Data)^+PAnsiInc, PLongWord(PPointer(Data)^)^)
+        else begin
+          FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
+            PPLongWord(Data)^^, ConSettings^.ClientCodePage^.CP); //Localized because of possible WideString overrun
+          Result := ZUnicodeToRaw(FUniTemp, ZOSCodePage);
         end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
       else
         Result := inherited GetAnsiString(ColumnIndex, IsNull);
     end;
     IsNull := False;
-  end
-  else
+  end else begin
+    Result := '';
     IsNull := True;
+  end;
 end;
 
 {**
@@ -5051,43 +4960,44 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
+function TZRawRowAccessor.GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  Result := '';
-{$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
-  begin
+  {$R-}
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
-        if ZCompatibleCodePages(zCP_UTF8, ConSettings^.ClientCodePage^.CP) then
-        {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-        begin
-          SetLength(Result, PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
-          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move((PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc)^,
-            Pointer(Result)^, PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
-        end
-        {$ELSE}
-          System.SetString(Result, PAnsiChar(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc),
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
-        {$ENDIF}
-        else
-        begin
-          FUniTemp := PRawToUnicode(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^,
-              ConSettings^.ClientCodePage^.CP); //localize the vals to avoid buffer overrun for WideStrings
-          Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(FUniTemp);
-        end;
+        if (Data^ = nil)
+        then Result := ''
+        else if ZCompatibleCodePages(zCP_UTF8, ConSettings^.ClientCodePage^.CP) then
+          {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+          begin
+            SetLength(Result, PPLongWord(Data)^^);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move((PPAnsiChar(Data)^+PAnsiInc)^,
+              Pointer(Result)^, PPLongWord(Data)^^);
+          end
+          {$ELSE}
+            System.SetString(Result, PAnsiChar(PPAnsiChar(Data)^+PAnsiInc), PPLongWord(Data)^^)
+          {$ENDIF}
+          else begin
+            FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
+              PPLongWord(Data)^^,
+                ConSettings^.ClientCodePage^.CP); //localize the vals to avoid buffer overrun for WideStrings
+            Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(FUniTemp);
+          end;
       else
         Result := inherited GetUTF8String(ColumnIndex, IsNull);
     end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     IsNull := False;
-  end
-  else
+  end else begin
     IsNull := True;
+    Result := '';
+  end;
 end;
 
 {**
@@ -5099,31 +5009,33 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
+function TZRawRowAccessor.GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  Result := '';
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
+        if (Data^ = nil)
+        then Result := ''
         {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-        ZSetString(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc,
-          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^, Result);
+        else ZSetString(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^, Result);
         {$ELSE}
-        System.SetString(Result, PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc,
-          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
+        else System.SetString(Result, PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^);
         {$ENDIF}
       else
         Result := Inherited GetRawByteString(ColumnIndex, IsNull);
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     end;
     IsNull := False;
-  end
-  else
+  end else begin
     IsNull := True;
+    Result := '';
+  end;
 end;
 
 {**
@@ -5136,45 +5048,33 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetPWideChar(Const ColumnIndex: Integer;
+function TZRawRowAccessor.GetPWideChar(ColumnIndex: Integer;
   var IsNull: Boolean; out Len: NativeUInt): PWideChar;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
 {$ENDIF}
   {$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
-  begin
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stUnicodeString, stString:
-        begin
-          if PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^ = 0 then //avoid all conversions
-          begin
-            Len := 0;
-            Result := PEmptyUnicodeString;
-          end
-          else
-          begin
-            FUniTemp := PRawToUnicode(
-              PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc,
-              PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^,
-              ConSettings^.ClientCodePage^.CP);
-            Result := Pointer(FUniTemp);
-            {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-            Len := {%H-}PLengthInt(NativeUInt(FUniTemp) - StringLenOffSet)^;
-            {$ELSE}
-            Len := Length(FUniTemp);
-            {$ENDIF}
-          end;
-        end
+        if (Data^ = nil) then begin//avoid all conversions
+          Len := 0;
+          Result := PEmptyUnicodeString;
+        end else begin
+          FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^,
+            ConSettings^.ClientCodePage^.CP);
+          Result := Pointer(FUniTemp);
+          Len := Length(FUniTemp);
+        end;
       else
         Result := inherited GetPWideChar(ColumnIndex, IsNull, Len);
     end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     IsNull := False;
-  end
-  else
-  begin
+  end else begin
     Result := nil;
     Len := 0;
     IsNull := True;
@@ -5190,31 +5090,31 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetUnicodeString(Const ColumnIndex: Integer;
+function TZRawRowAccessor.GetUnicodeString(ColumnIndex: Integer;
   var IsNull: Boolean): ZWideString;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
 {$ENDIF}
-  Result := '';
   {$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
-  begin
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stUnicodeString, stString:
-        begin
-          Result := PRawToUnicode(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^,
+        if (Data^ = nil) //avoid all conversions
+        then Result := ''
+        else Result := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^,
             ConSettings^.ClientCodePage^.CP);
-        end;
       else
         Result := inherited GetUnicodeString(ColumnIndex, IsNull);
     end;
     IsNull := False;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  end
-  else
+  end else begin
     IsNull := True;
+    Result := '';
+  end;
 end;
 
 {**
@@ -5227,19 +5127,17 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRawRowAccessor.SetString(Const ColumnIndex: Integer; const Value: String);
+procedure TZRawRowAccessor.SetString(ColumnIndex: Integer; const Value: String);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
   {$R-}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stString, stUnicodeString:
-      begin
         InternalSetString(FBuffer, ColumnIndex, ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-        FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-      end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     else
       Inherited SetString(ColumnIndex, Value);
   end;
@@ -5256,25 +5154,20 @@ end;
   @param Value the new column value
   @param Len pointer to the Length of the new column value in bytes
 }
-procedure TZRawRowAccessor.SetPAnsiChar(Const ColumnIndex: Integer;
+procedure TZRawRowAccessor.SetPAnsiChar(ColumnIndex: Integer;
   Value: PAnsiChar; Len: PNativeUInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  if Value = nil then
-    SetNull(ColumnIndex)
-  else
-{$R-}
-    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stString, stUnicodeString:
-        begin
-          InternalSetPAnsiChar(FBuffer, ColumnIndex, Value, Len^);
-          FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-        end;
-      else inherited SetPAnsiChar(ColumnIndex, Value, Len)
-    end;
+  {$R-}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stString, stUnicodeString:
+      InternalSetPAnsiChar(FBuffer, ColumnIndex, Value, Len^);
+    else inherited SetPAnsiChar(ColumnIndex, Value, Len)
+  end;
 end;
 
 {**
@@ -5288,25 +5181,20 @@ end;
   @param Len the pointer to the length of the string in codepoints
   @param x the new column value
 }
-procedure TZRawRowAccessor.SetPWideChar(Const ColumnIndex: Integer;
+procedure TZRawRowAccessor.SetPWideChar(ColumnIndex: Integer;
   Value: PWideChar; Len: PNativeUInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stString);
+  CheckColumnConvertion(ColumnIndex, stUnicodeString);
 {$ENDIF}
-  if Value = nil then
-    SetNull(ColumnIndex)
-  else
-{$R-}
-    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stString, stUnicodeString:
-        begin
-          InternalSetString(FBuffer, ColumnIndex, PUnicodeToRaw(Value, Len^, ConSettings^.ClientCodePage^.CP));
-          FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-        end;
-      else inherited SetPWideChar(ColumnIndex, Value, Len)
-    end;
+  {$R-}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stString, stUnicodeString:
+      InternalSetString(FBuffer, ColumnIndex, PUnicodeToRaw(Value, Len^, ConSettings^.ClientCodePage^.CP));
+    else inherited SetPWideChar(ColumnIndex, Value, Len)
+  end;
 end;
 
 {**
@@ -5319,21 +5207,19 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRawRowAccessor.SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString);
+procedure TZRawRowAccessor.SetRawByteString(ColumnIndex: Integer; const Value: RawByteString);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-{$R-}
+  {$R-}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stString, stUnicodeString:
-      begin
-        InternalSetString(FBuffer, ColumnIndex, Value);
-        FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-      end;
+      InternalSetString(FBuffer, ColumnIndex, Value);
     else inherited SetRawByteString(ColumnIndex, Value);
   end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
 {**
@@ -5346,21 +5232,19 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRawRowAccessor.SetUnicodeString(Const ColumnIndex: Integer; const Value: ZWideString);
+procedure TZRawRowAccessor.SetUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-{$R-}
+  {$R-}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stUnicodeString, stString:
-      begin
-        InternalSetString(FBuffer, ColumnIndex, ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP));
-        FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-      end;
+      InternalSetString(FBuffer, ColumnIndex, ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP));
     else inherited SetUnicodeString(ColumnIndex, Value);
   end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
 { TZUnicodeRowAccessor }
@@ -5374,7 +5258,6 @@ procedure TZUnicodeRowAccessor.CopyBuffer(SrcBuffer: PZRowBuffer; DestBuffer: PZ
   const CloneLobs: Boolean = False);
 var
   I: Integer;
-  Blob: IZBlob;
 begin
   ClearBuffer(DestBuffer, False);
   DestBuffer^.Index := SrcBuffer^.Index;
@@ -5384,13 +5267,15 @@ begin
 {$R-}
   if FHasBytes then
     for i := 0 to FHighBytesCols do
-      if SrcBuffer^.Columns[FColumnOffsets[FBytesCols[i]]] = bIsNotNull then
+      if (SrcBuffer^.Columns[FColumnOffsets[FBytesCols[i]]] = bIsNotNull) and
+         (PPointer(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1])^ <> nil) then
         InternalSetBytes(DestBuffer, FBytesCols[i] {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           PPointer(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1])^,
           PWord(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1+SizeOf(Pointer)])^, True);
   if FHasStrings then
     for i := 0 to FHighStringCols do
-      if SrcBuffer^.Columns[FColumnOffsets[FStringCols[i]]] = bIsNotNull then
+      if (SrcBuffer^.Columns[FColumnOffsets[FStringCols[i]]] = bIsNotNull) and
+         (ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^ <> nil) then
         InternalSetPWideChar(DestBuffer, FStringCols[i]{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^+PWideInc,
           PPLongWord(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^^, True);
@@ -5399,13 +5284,11 @@ begin
       ; //currently NOT implemented
   if FHasLobs then
     for i := 0 to FHighLobCols do
-      if (SrcBuffer^.Columns[FColumnOffsets[FLobCols[i]]] = bIsNotNull) then
-      begin
-        DestBuffer^.Columns[FColumnOffsets[FLobCols[i]]] := bIsNull; //init Destbuffer flag to avoid IZLob() := nil;
-        Blob := GetBlobObject(SrcBuffer, FLobCols[i] {$IFNDEF GENERIC_INDEX}+ 1{$ENDIF});
-        if CloneLobs and (Blob <> nil) then
-          Blob := Blob.Clone;
-        SetBlobObject(DestBuffer, FLobCols[i] {$IFNDEF GENERIC_INDEX}+ 1{$ENDIF}, Blob); //this line increments RefCount but doesn't move data
+      if (SrcBuffer^.Columns[FColumnOffsets[FLobCols[i]]] = bIsNotNull) then begin
+        PPointer(@DestBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^ := nil; //init to avoid refcounting
+        if CloneLobs
+        then PIZLob(@DestBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^ := PIZLob(@SrcBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^.Clone
+        else PIZLob(@DestBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^ := PIZLob(@SrcBuffer.Columns[FColumnOffsets[FLobCols[i]]+1])^;
       end;
   if FHasDataSets then
     for i := 0 to FHighDataSetCols do
@@ -5422,48 +5305,40 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetPAnsiChar(Const ColumnIndex: Integer; var IsNull: Boolean;
+function TZUnicodeRowAccessor.GetPAnsiChar(ColumnIndex: Integer; var IsNull: Boolean;
   out Len: NativeUInt): PAnsiChar;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-{$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
-  begin
+  {$R-}
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
-        begin
-          if PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^ = 0 then //avoid all conversions
-          begin
-            Len := 0;
-            Result := PEmptyAnsiString;
-          end
-          else
-          begin
-            FRawTemp := PUnicodeToRaw(
-              ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc,
-              PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^,
-              ConSettings^.ClientCodePage^.CP);
-            Len := {%H-}PLengthInt(NativeUInt(FRawTemp) - StringLenOffSet)^;
-            Result := Pointer(FRawTemp);
-          end;
-        end
+        if (Data^ = nil) then begin //avoid all conversions
+          Len := 0;
+          Result := PEmptyAnsiString;
+        end else begin
+          FRawTemp := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^,
+            ConSettings^.ClientCodePage^.CP);
+          Len := Length(FRawTemp);
+          Result := Pointer(FRawTemp);
+        end;
       else
         Result := Inherited GetPAnsiChar(ColumnIndex, IsNull, Len);
     end;
     IsNull := False;
-  end
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  else
-  begin
+  end else begin
     Result := nil;
     Len := 0;
     IsNull := True;
   end;
 end;
 
-function TZUnicodeRowAccessor.GetCharRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
+function TZUnicodeRowAccessor.GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
 var Len: NativeUInt;
 begin
   Result.P := GetPWideChar(ColumnIndex, IsNull, Len);
@@ -5479,35 +5354,37 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetString(Const ColumnIndex: Integer; var IsNull: Boolean): String;
+function TZUnicodeRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  Result := '';
-{$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
-  begin
+  {$R-}
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
+        if (Data^ = nil)
+        then Result := ''
         {$IFDEF UNICODE}
-        System.SetString(Result, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc,
-                          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
+        else System.SetString(Result, ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^)
         {$ELSE}
-        if ConSettings^.AutoEncode then
-          Result := PUnicodeToString(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^, ConSettings^.CTRL_CP)
+        else if ConSettings^.AutoEncode then
+          Result := PUnicodeToString(ZPPWideChar(Data)^+PWideInc,
+            PPLongWord(Data)^^, ConSettings^.CTRL_CP)
         else
-          Result := PUnicodeToString(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^, ConSettings^.ClientCodePage^.CP)
+          Result := PUnicodeToString(ZPPWideChar(Data)^+PWideInc,
+            PPLongWord(Data)^^, ConSettings^.ClientCodePage^.CP)
         {$ENDIF}
       else Result := Inherited GetString(ColumnIndex, IsNull);
     end;
     IsNull := False;
-  end
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  else
+  end else begin
+    Result := '';
     IsNull := True;
+  end;
 end;
 
 {**
@@ -5519,27 +5396,29 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+function TZUnicodeRowAccessor.GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  Result := '';
 {$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
-  begin
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
-        Result := PUnicodeToRaw(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc,
-          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^, ZOSCodePage);
+        if (Data^ = nil)
+        then Result := ''
+        else Result := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^, ZOSCodePage);
       else
         Result := inherited GetAnsiString(ColumnIndex, IsNull);
     end;
     IsNull := False;
-  end
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  else
+  end else begin
+    Result := '';
     IsNull := True;
+  end;
 end;
 
 {**
@@ -5551,27 +5430,29 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
+function TZUnicodeRowAccessor.GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  Result := '';
-{$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
-  begin
+  {$R-}
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
-        Result := PUnicodeToRaw(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc,
-          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^, zCP_UTF8);
+        if (Data^ = nil)
+        then Result := ''
+        else Result := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^, zCP_UTF8);
       else
         Result := inherited GetUTF8String(ColumnIndex, IsNull);
     end;
     IsNull := False;
-  end
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  else
+  end else begin
     IsNull := True;
+    Result := '';
+  end;
 end;
 
 {**
@@ -5583,29 +5464,30 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
+function TZUnicodeRowAccessor.GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  Result := '';
-{$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
-  begin
+  {$R-}
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
-          Result := PUnicodeToRaw(
-            ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc,
-            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^,
-            ConSettings^.ClientCodePage^.CP);
+        if (Data^ = nil)
+        then Result := ''
+        else Result := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc,
+          PPLongWord(Data)^^, ConSettings^.ClientCodePage^.CP);
       else
         Result := Inherited GetRawByteString(ColumnIndex, IsNull);
     end;
     IsNull := False;
-  end
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  else
+  end else begin
     IsNull := True;
+    Result := '';
+  end;
 end;
 
 {**
@@ -5618,29 +5500,31 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetPWideChar(Const ColumnIndex: Integer;
+function TZUnicodeRowAccessor.GetPWideChar(ColumnIndex: Integer;
   var IsNull: Boolean; out Len: NativeUInt): PWideChar;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
 {$ENDIF}
-{$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
-  begin
+  {$R-}
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stUnicodeString, stString:
-        begin
-          Result := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc;
-          Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^;
+        if (Data^ = nil) then begin
+          Result := PEmptyUnicodeString;
+          Len := 0;
+        end else begin
+          Result := ZPPWideChar(Data)^+PWideInc;
+          Len := PPLongWord(Data)^^;
         end;
       else
         Result := inherited GetPWideChar(ColumnIndex, IsNull, Len);
     end;
     IsNull := False;
-  end
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  else
-  begin
+  end else begin
     Result := nil;
     Len := 0;
     IsNull := True;
@@ -5656,26 +5540,31 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetUnicodeString(Const ColumnIndex: Integer; var IsNull: Boolean):
+function TZUnicodeRowAccessor.GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean):
    ZWideString;
+var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
 {$ENDIF}
-  Result := '';
-{$R-}
+  {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stUnicodeString, stString:
-        System.SetString(Result, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc,
-          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^);
+        if (Data^ = nil)
+        then Result := ''
+        else System.SetString(Result, ZPPWideChar(Data)^+PWideInc,
+          PPLongWord(Data)^^);
       else
         Result := inherited GetUnicodeString(ColumnIndex, IsNull);
     end;
     IsNull := False;
-  end else
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  end else begin
     IsNull := True;
+    Result := '';
+  end;
 end;
 
 {**
@@ -5688,23 +5577,22 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZUnicodeRowAccessor.SetString(Const ColumnIndex: Integer;
+procedure TZUnicodeRowAccessor.SetString(ColumnIndex: Integer;
   const Value: String);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
   {$R-}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stString, stUnicodeString:
-      begin
-        {$IFDEF UNICODE}
-        InternalSetUnicodeString(FBuffer, ColumnIndex, Value);
-        {$ELSE}
-        InternalSetUnicodeString(FBuffer, ColumnIndex, ConSettings^.ConvFuncs.ZStringToUnicode(Value, ConSettings^.CTRL_CP));
-        {$ENDIF}
-        FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-      end;
+      {$IFDEF UNICODE}
+      InternalSetUnicodeString(FBuffer, ColumnIndex, Value);
+      {$ELSE}
+      InternalSetUnicodeString(FBuffer, ColumnIndex, ConSettings^.ConvFuncs.ZStringToUnicode(Value, ConSettings^.CTRL_CP));
+      {$ENDIF}
     else inherited SetString(ColumnIndex, Value)
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
@@ -5720,26 +5608,23 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param Value the new column value
 }
-procedure TZUnicodeRowAccessor.SetPAnsiChar(Const ColumnIndex: Integer;
+procedure TZUnicodeRowAccessor.SetPAnsiChar(ColumnIndex: Integer;
   Value: PAnsiChar; Len: PNativeUInt);
+var tmp: ZWideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  if Value = nil then
-    SetNull(ColumnIndex)
-  else
-{$R-}
-    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stString, stUnicodeString:
-        begin
-          InternalSetUnicodeString(FBuffer, ColumnIndex, PRawToUnicode(Value,
-            Len^, ConSettings^.ClientCodePage^.CP));
-          FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-        end;
-      else inherited SetPAnsiChar(ColumnIndex, Value, Len)
-    end;
+  {$R-}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stString, stUnicodeString: begin
+        tmp := PRawToUnicode(Value, Len^, ConSettings^.ClientCodePage^.CP); //localize because of WideString overrun
+        InternalSetUnicodeString(FBuffer, ColumnIndex, tmp);
+      end;
+    else inherited SetPAnsiChar(ColumnIndex, Value, Len)
+  end;
 end;
 
 {**
@@ -5753,25 +5638,20 @@ end;
   @param len the pointer to the length of the string in codepoints
   @param Value the new column value
 }
-procedure TZUnicodeRowAccessor.SetPWideChar(Const ColumnIndex: Integer;
+procedure TZUnicodeRowAccessor.SetPWideChar(ColumnIndex: Integer;
   Value: PWideChar; Len: PNativeUInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  if Value = nil then
-    SetNull(ColumnIndex)
-  else
-{$R-}
+  {$R-}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
-        begin
-          InternalSetPWideChar(FBuffer, ColumnIndex, Value, Len^);
-          FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-        end;
+        InternalSetPWideChar(FBuffer, ColumnIndex, Value, Len^);
       else inherited SetPWideChar(ColumnIndex, Value, Len)
     end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
 {**
@@ -5784,22 +5664,23 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZUnicodeRowAccessor.SetRawByteString(Const ColumnIndex: Integer;
+procedure TZUnicodeRowAccessor.SetRawByteString(ColumnIndex: Integer;
   const Value: RawByteString);
+var tmp: ZWideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-{$R-}
+  {$R-}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stString, stUnicodeString:
-      begin
-        InternalSetUnicodeString(FBuffer, ColumnIndex, ConSettings^.ConvFuncs.ZRawToUnicode(Value, ConSettings^.ClientCodePage^.CP));
-        FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+    stString, stUnicodeString: begin
+        tmp := ConSettings^.ConvFuncs.ZRawToUnicode(Value, ConSettings^.ClientCodePage^.CP); //localize because of WideString overrun
+        InternalSetUnicodeString(FBuffer, ColumnIndex, tmp);
       end;
     else inherited SetRawByteString(ColumnIndex, Value);
   end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
 {**
@@ -5812,20 +5693,20 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZUnicodeRowAccessor.SetUnicodeString(Const ColumnIndex: Integer;
+procedure TZUnicodeRowAccessor.SetUnicodeString(ColumnIndex: Integer;
   const Value: ZWideString);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-{$R-}
+  {$R-}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stUnicodeString, stString:
       InternalSetUnicodeString(FBuffer, ColumnIndex, Value);
     else inherited SetUnicodeString(ColumnIndex, Value);
   end;
-  FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
 end.

@@ -78,6 +78,10 @@ const
   WINDOWS_DLL51_LOCATION_EMBEDDED = 'libmysqld51.dll';
   WINDOWS_DLL55_LOCATION = 'libmysql55.dll';
   WINDOWS_DLL55_LOCATION_EMBEDDED = 'libmysqld55.dll';
+  WINDOWS_DLL56_LOCATION = 'libmysql56.dll';
+  WINDOWS_DLL56_LOCATION_EMBEDDED = 'libmysqld56.dll';
+  WINDOWS_DLL57_LOCATION = 'libmysql57.dll';
+  WINDOWS_DLL57_LOCATION_EMBEDDED = 'libmysqld57.dll';
 {$ELSE}
   {$IFNDEF MYSQL_STRICT_DLL_LOADING}
   LINUX_DLL_LOCATION = 'libmysqlclient'+SharedSuffix;
@@ -91,6 +95,10 @@ const
   LINUX_DLL51_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix+'.16';
   LINUX_DLL55_LOCATION = 'libmysqlclient'+SharedSuffix+'.18';
   LINUX_DLL55_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix+'.18';
+  LINUX_DLL56_LOCATION = 'libmysqlclient'+SharedSuffix+'.19';
+  LINUX_DLL56_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix+'.19';
+  LINUX_DLL57_LOCATION = 'libmysqlclient'+SharedSuffix+'.20';
+  LINUX_DLL57_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix+'.20';
 {$ENDIF}
 
 type
@@ -1457,6 +1465,8 @@ begin
     FLoader.AddLocation(WINDOWS_DLL50_LOCATION);
     FLoader.AddLocation(WINDOWS_DLL51_LOCATION);
     FLoader.AddLocation(WINDOWS_DLL55_LOCATION);
+    FLoader.AddLocation(WINDOWS_DLL56_LOCATION);
+    FLoader.AddLocation(WINDOWS_DLL57_LOCATION);
   {$ELSE}
   {$IFNDEF MYSQL_STRICT_DLL_LOADING}
     FLoader.AddLocation(MARIADB_LOCATION);
@@ -1464,6 +1474,8 @@ begin
     FLoader.AddLocation(LINUX_DLL50_LOCATION);
     FLoader.AddLocation(LINUX_DLL51_LOCATION);
     FLoader.AddLocation(LINUX_DLL55_LOCATION);
+    FLoader.AddLocation(LINUX_DLL56_LOCATION);
+    FLoader.AddLocation(LINUX_DLL56_LOCATION);
   {$ENDIF}
 end;
 
@@ -1500,10 +1512,14 @@ begin
     FLoader.AddLocation(WINDOWS_DLL50_LOCATION_EMBEDDED);
     FLoader.AddLocation(WINDOWS_DLL51_LOCATION_EMBEDDED);
     FLoader.AddLocation(WINDOWS_DLL55_LOCATION_EMBEDDED);
+    FLoader.AddLocation(WINDOWS_DLL56_LOCATION_EMBEDDED);
+    FLoader.AddLocation(WINDOWS_DLL57_LOCATION_EMBEDDED);
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL50_LOCATION_EMBEDDED);
     FLoader.AddLocation(LINUX_DLL51_LOCATION_EMBEDDED);
     FLoader.AddLocation(LINUX_DLL55_LOCATION_EMBEDDED);
+    FLoader.AddLocation(LINUX_DLL56_LOCATION_EMBEDDED);
+    FLoader.AddLocation(LINUX_DLL57_LOCATION_EMBEDDED);
   {$ENDIF}
   IsEmbeddedDriver := True;
 end;
