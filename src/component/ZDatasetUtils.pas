@@ -1276,7 +1276,6 @@ end;
 function DefineKeyFields(Fields: TFields): string;
 var
   I: Integer;
-  Temp: string;
 begin
   Result := '';
   for I := 0 to Fields.Count - 1 do
@@ -1286,10 +1285,7 @@ begin
     begin
       if Result <> '' then
         Result := Result + ',';
-      Temp := Fields[I].FieldName;
-      if (ZFastCode.Pos(' ', Temp) > 0) or (ZFastCode.Pos('-', Temp) > 0) or (ZFastCode.Pos('.', Temp) > 0) then
-        Temp := '"' + Temp + '"';
-      Result := Result + Temp;
+      Result := Result +  '"' + Fields[I].FieldName+ '"';
     end;
   end;
 end;
