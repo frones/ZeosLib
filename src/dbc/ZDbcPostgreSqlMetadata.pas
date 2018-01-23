@@ -3541,8 +3541,6 @@ end;
 }
 function TZPostgreSQLDatabaseMetadata.UncachedGetCharacterSets: IZResultSet; //EgonHugeist
 const
-  CHARACTER_SET_NAME_Index = FirstDbcIndex + 0;
-  CHARACTER_SET_ID_Index   = FirstDbcIndex + 1;
   enc_Index  = FirstDbcIndex + 0;
   name_Index = FirstDbcIndex + 1;
 var Len: NativeUInt;
@@ -3576,8 +3574,8 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePAnsiChar(CHARACTER_SET_NAME_Index, GetPAnsiChar(name_Index, Len), @Len); //CHARACTER_SET_NAME
-      Result.UpdateSmall(CHARACTER_SET_ID_Index, GetSmall(enc_Index)); //CHARACTER_SET_ID
+      Result.UpdatePAnsiChar(CharacterSetsNameIndex, GetPAnsiChar(name_Index, Len), @Len); //CHARACTER_SET_NAME
+      Result.UpdateSmall(CharacterSetsIDIndex, GetSmall(enc_Index)); //CHARACTER_SET_ID
       Result.InsertRow;
     end;
     CLose;
