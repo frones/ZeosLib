@@ -1366,9 +1366,9 @@ end;
 function TZInterbase6DatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 const
-  PROCEDURE_NAME_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  PROCEDURE_OUTPUTS_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  DESCRIPTION_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  PROCEDURE_NAME_Index    = FirstDbcIndex + 0;
+  PROCEDURE_OUTPUTS_Index = FirstDbcIndex + 1;
+  DESCRIPTION_Index       = FirstDbcIndex + 2;
 var
   SQL: string;
   LProcedureNamePattern: string;
@@ -1584,10 +1584,10 @@ function TZInterbase6DatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string; 
   const Types: TStringDynArray): IZResultSet; 
 const
-  RELATION_NAME_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  SYSTEM_FLAG_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  VIEW_SOURCE_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  DESCRIPTION_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  RELATION_NAME_Index = FirstDbcIndex + 0;
+  SYSTEM_FLAG_Index   = FirstDbcIndex + 1;
+  VIEW_SOURCE_Index   = FirstDbcIndex + 2;
+  DESCRIPTION_Index   = FirstDbcIndex + 3;
 var
   SQL, TableType: string;
   I, SystemFlag: Integer;
@@ -1960,13 +1960,12 @@ end;
 function TZInterbase6DatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 const
-  RDB_USER = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  RDB_GRANTOR = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  RDB_PRIVILEGE = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  RDB_RELATION_NAME = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  RDB_FIELD_NAME = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-const
-  RDB_FIELD_NAME_SUB = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  RDB_USER_Index           = FirstDbcIndex + 0;
+  RDB_GRANTOR_Index        = FirstDbcIndex + 1;
+  RDB_PRIVILEGE_Index      = FirstDbcIndex + 2;
+//GRANT_OPTION_Index       = FirstDbcIndex + 3; - not used
+  RDB_RELATION_NAME_Index  = FirstDbcIndex + 4;
+  RDB_FIELD_NAME_Index     = FirstDbcIndex + 5;
 var
   SQL: string;
   TableName, FieldName, Privilege: String;
@@ -1996,11 +1995,11 @@ begin
       while Next do
       begin
 
-        TableName := GetString(RDB_RELATION_NAME); //RDB$RELATION_NAME
-        FieldName := GetString(RDB_FIELD_NAME); //RDB$FIELD_NAME
-        Privilege := GetPrivilege(GetString(RDB_PRIVILEGE)); //RDB$PRIVILEGE
-        Grantor := GetString(RDB_GRANTOR); //RDB$GRANTOR
-        Grantee := GetString(RDB_USER); //RDB$USER
+        TableName := GetString(RDB_RELATION_NAME_Index); //RDB$RELATION_NAME
+        FieldName := GetString(RDB_FIELD_NAME_Index); //RDB$FIELD_NAME
+        Privilege := GetPrivilege(GetString(RDB_PRIVILEGE_Index)); //RDB$PRIVILEGE
+        Grantor := GetString(RDB_GRANTOR_Index); //RDB$GRANTOR
+        Grantee := GetString(RDB_USER_Index); //RDB$USER
         if Grantor = Grantee then
           Grantable := 'YES'
         else
@@ -2018,7 +2017,7 @@ begin
               Result.UpdateNull(CatalogNameIndex);
               Result.UpdateNull(SchemaNameIndex);
               Result.UpdateString(TableNameIndex, TableName);
-              Result.UpdateString(ColumnNameIndex, GetString(RDB_FIELD_NAME_SUB)); //RDB$FIELD_NAME
+              Result.UpdateString(ColumnNameIndex, GetString(FirstDbcIndex)); //RDB$FIELD_NAME
               Result.UpdateString(TableColPrivGrantorIndex, Grantor);
               Result.UpdateString(TableColPrivGranteeIndex, Grantee);
               Result.UpdateString(TableColPrivPrivilegeIndex, Privilege);
@@ -2081,10 +2080,11 @@ end;
 function TZInterbase6DatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 const
-  RDB_USER = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  RDB_GRANTOR = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  RDB_PRIVILEGE = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  RDB_RELATION_NAME = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  RDB_USER_Index          = FirstDbcIndex + 0;
+  RDB_GRANTOR_Index       = FirstDbcIndex + 1;
+  RDB_PRIVILEGE_Index     = FirstDbcIndex + 2;
+//GRANT_OPTION_Index      = FirstDbcIndex + 3; - not used
+  RDB_RELATION_NAME_Index = FirstDbcIndex + 4;
 var
   SQL: string;
   TableName, Privilege, Grantor: String;
@@ -2108,10 +2108,10 @@ begin
     begin
       while Next do
       begin
-        TableName := GetString(RDB_RELATION_NAME); //RDB$RELATION_NAME
-        Privilege := GetPrivilege(GetString(RDB_PRIVILEGE)); //RDB$PRIVILEGE
-        Grantor := GetString(RDB_GRANTOR); //RDB$GRANTOR
-        Grantee := GetString(RDB_USER); //RDB$USER
+        TableName := GetString(RDB_RELATION_NAME_Index); //RDB$RELATION_NAME
+        Privilege := GetPrivilege(GetString(RDB_PRIVILEGE_Index)); //RDB$PRIVILEGE
+        Grantor := GetString(RDB_GRANTOR_Index); //RDB$GRANTOR
+        Grantee := GetString(RDB_USER_Index); //RDB$USER
 
         if Grantor = Grantee then
           Grantable := 'YES'
@@ -2310,15 +2310,15 @@ end;
 function TZInterbase6DatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 const
-  PK_RDB_RELATION_NAME = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  PK_RDB_FIELD_NAME = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  FK_RDB_RELATION_NAME = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  FK_RDB_FIELD_NAME = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  RDB_FIELD_POSITION = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  RDB_UPDATE_RULE = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  RDB_DELETE_RULE = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
-  FK_RDB_CONSTRAINT_NAME = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
-  PK_RDB_CONSTRAINT_NAME = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
+  PK_RDB_RELATION_NAME_Index   = FirstDbcIndex + 0;
+  PK_RDB_FIELD_NAME_Index      = FirstDbcIndex + 1;
+  FK_RDB_RELATION_NAME_Index   = FirstDbcIndex + 2;
+  FK_RDB_FIELD_NAME_Index      = FirstDbcIndex + 3;
+  RDB_FIELD_POSITION_Index     = FirstDbcIndex + 4;
+  RDB_UPDATE_RULE_Index        = FirstDbcIndex + 5;
+  RDB_DELETE_RULE_Index        = FirstDbcIndex + 6;
+  FK_RDB_CONSTRAINT_NAME_Index = FirstDbcIndex + 7;
+  PK_RDB_CONSTRAINT_NAME_Index = FirstDbcIndex + 8;
 var
   SQL: string;
   LTable: string;
@@ -2358,17 +2358,17 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateNull(ImportedKeyColPKTableCatalogIndex); //PKTABLE_CAT
         Result.UpdateNull(ImportedKeyColPKTableSchemaIndex); //PKTABLE_SCHEM
-        Result.UpdateString(ImportedKeyColPKTableNameIndex, GetString(PK_RDB_RELATION_NAME)); //PKTABLE_NAME
-        Result.UpdateString(ImportedKeyColPKColumnNameIndex, GetString(PK_RDB_FIELD_NAME)); //PKCOLUMN_NAME
+        Result.UpdateString(ImportedKeyColPKTableNameIndex, GetString(PK_RDB_RELATION_NAME_Index)); //PKTABLE_NAME
+        Result.UpdateString(ImportedKeyColPKColumnNameIndex, GetString(PK_RDB_FIELD_NAME_Index)); //PKCOLUMN_NAME
         Result.UpdateNull(ImportedKeyColFKTableCatalogIndex); //FKTABLE_CAT
         Result.UpdateNull(ImportedKeyColFKTableSchemaIndex); //FKTABLE_SCHEM
-        Result.UpdateString(ImportedKeyColFKTableNameIndex, GetString(FK_RDB_RELATION_NAME)); //FKTABLE_NAME
-        Result.UpdateString(ImportedKeyColFKColumnNameIndex, GetString(FK_RDB_FIELD_NAME)); //FKCOLUMN_NAME
-        Result.UpdateInt(ImportedKeyColKeySeqIndex, GetInt(RDB_FIELD_POSITION)+1); //KEY_SEQ
-        Result.UpdateInt(ImportedKeyColUpdateRuleIndex, Ord(GetRuleType(GetString(RDB_UPDATE_RULE))));
-        Result.UpdateInt(ImportedKeyColDeleteRuleIndex, Ord(GetRuleType(GetString(RDB_DELETE_RULE))));
-        Result.UpdateString(ImportedKeyColFKNameIndex, GetString(FK_RDB_CONSTRAINT_NAME)); //FK_NAME
-        Result.UpdateString(ImportedKeyColPKNameIndex, GetString(PK_RDB_CONSTRAINT_NAME)); //PK_NAME
+        Result.UpdateString(ImportedKeyColFKTableNameIndex, GetString(FK_RDB_RELATION_NAME_Index)); //FKTABLE_NAME
+        Result.UpdateString(ImportedKeyColFKColumnNameIndex, GetString(FK_RDB_FIELD_NAME_Index)); //FKCOLUMN_NAME
+        Result.UpdateInt(ImportedKeyColKeySeqIndex, GetInt(RDB_FIELD_POSITION_Index)+1); //KEY_SEQ
+        Result.UpdateInt(ImportedKeyColUpdateRuleIndex, Ord(GetRuleType(GetString(RDB_UPDATE_RULE_Index))));
+        Result.UpdateInt(ImportedKeyColDeleteRuleIndex, Ord(GetRuleType(GetString(RDB_DELETE_RULE_Index))));
+        Result.UpdateString(ImportedKeyColFKNameIndex, GetString(FK_RDB_CONSTRAINT_NAME_Index)); //FK_NAME
+        Result.UpdateString(ImportedKeyColPKNameIndex, GetString(PK_RDB_CONSTRAINT_NAME_Index)); //PK_NAME
         Result.UpdateNull(ImportedKeyColDeferrabilityIndex); //DEFERABILITY
         Result.InsertRow;
       end;
@@ -2446,15 +2446,15 @@ end;
 function TZInterbase6DatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 const
-  PKTABLE_NAME = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  PKCOLUMN_NAME = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  FKTABLE_NAME = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  FKCOLUMN_NAME = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  KEY_SEQ = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  UPDATE_RULE = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  DELETE_RULE = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
-  FK_NAME = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
-  PK_NAME = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
+  PKTABLE_NAME_Index  = FirstDbcIndex + 0;
+  PKCOLUMN_NAME_Index = FirstDbcIndex + 1;
+  FKTABLE_NAME_Index  = FirstDbcIndex + 2;
+  FKCOLUMN_NAME_Index = FirstDbcIndex + 3;
+  KEY_SEQ_Index       = FirstDbcIndex + 4;
+  UPDATE_RULE_Index   = FirstDbcIndex + 5;
+  DELETE_RULE_Index   = FirstDbcIndex + 6;
+  FK_NAME_Index       = FirstDbcIndex + 7;
+  PK_NAME_Index       = FirstDbcIndex + 8;
 var
   SQL: string;
   LTable: string;
@@ -2494,17 +2494,17 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateNull(ExportedKeyColPKTableCatalogIndex); //PKTABLE_CAT
         Result.UpdateNull(ExportedKeyColPKTableSchemaIndex); //PKTABLE_SCHEM
-        Result.UpdateString(ExportedKeyColPKTableNameIndex, GetString(PKTABLE_NAME)); //PKTABLE_NAME
-        Result.UpdateString(ExportedKeyColPKColumnNameIndex, GetString(PKCOLUMN_NAME)); //PKCOLUMN_NAME
+        Result.UpdateString(ExportedKeyColPKTableNameIndex, GetString(PKTABLE_NAME_Index)); //PKTABLE_NAME_Index
+        Result.UpdateString(ExportedKeyColPKColumnNameIndex, GetString(PKCOLUMN_NAME_Index)); //PKCOLUMN_NAME_Index
         Result.UpdateNull(ExportedKeyColFKTableCatalogIndex); //FKTABLE_CAT
         Result.UpdateNull(ExportedKeyColFKTableSchemaIndex); //FKTABLE_SCHEM'
-        Result.UpdateString(ExportedKeyColFKTableNameIndex, GetString(FKTABLE_NAME)); //FKTABLE_NAME
-        Result.UpdateString(ExportedKeyColFKColumnNameIndex, GetString(FKCOLUMN_NAME)); //FKCOLUMN_NAME
-        Result.UpdateInt(ExportedKeyColKeySeqIndex, GetInt(KEY_SEQ) + 1); //KEY_SEQ
-        Result.UpdateInt(ExportedKeyColUpdateRuleIndex, Ord(GetRuleType(GetString(UPDATE_RULE))));
-        Result.UpdateInt(ExportedKeyColDeleteRuleIndex, Ord(GetRuleType(GetString(DELETE_RULE))));
-        Result.UpdateString(ExportedKeyColFKNameIndex, GetString(FK_NAME)); //FK_NAME
-        Result.UpdateString(ExportedKeyColPKNameIndex, GetString(PK_NAME)); //PK_NAME
+        Result.UpdateString(ExportedKeyColFKTableNameIndex, GetString(FKTABLE_NAME_Index)); //FKTABLE_NAME_Index
+        Result.UpdateString(ExportedKeyColFKColumnNameIndex, GetString(FKCOLUMN_NAME_Index)); //FKCOLUMN_NAME_Index
+        Result.UpdateInt(ExportedKeyColKeySeqIndex, GetInt(KEY_SEQ_Index) + 1); //KEY_SEQ_Index
+        Result.UpdateInt(ExportedKeyColUpdateRuleIndex, Ord(GetRuleType(GetString(UPDATE_RULE_Index))));
+        Result.UpdateInt(ExportedKeyColDeleteRuleIndex, Ord(GetRuleType(GetString(DELETE_RULE_Index))));
+        Result.UpdateString(ExportedKeyColFKNameIndex, GetString(FK_NAME_Index)); //FK_NAME_Index
+        Result.UpdateString(ExportedKeyColPKNameIndex, GetString(PK_NAME_Index)); //PK_NAME_Index
         Result.UpdateNull(ExportedKeyColDeferrabilityIndex); //DEFERABILITY
         Result.InsertRow;
       end;
@@ -2593,15 +2593,15 @@ function TZInterbase6DatabaseMetadata.UncachedGetCrossReference(
   const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
   const ForeignTable: string): IZResultSet;
 const
-  PKTABLE_NAME = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  PKCOLUMN_NAME = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  FKTABLE_NAME = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  FKCOLUMN_NAME = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  UPDATE_RULE = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  DELETE_RULE = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  FK_NAME = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
-  PK_NAME = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
-  DEFERRABILITY = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
+  PKTABLE_NAME_Index  = FirstDbcIndex + 0;
+  PKCOLUMN_NAME_Index = FirstDbcIndex + 1;
+  FKTABLE_NAME_Index  = FirstDbcIndex + 2;
+  FKCOLUMN_NAME_Index = FirstDbcIndex + 3;
+  UPDATE_RULE_Index   = FirstDbcIndex + 4;
+  DELETE_RULE_Index   = FirstDbcIndex + 5;
+  FK_NAME_Index       = FirstDbcIndex + 6;
+  PK_NAME_Index       = FirstDbcIndex + 7;
+  DEFERRABILITY_Index = FirstDbcIndex + 8;
 var
   KeySeq: Integer;
   LCatalog, SQLString, LPTable, LFTable: String;
@@ -2651,21 +2651,21 @@ begin
       Result.MoveToInsertRow;
       Result.UpdateString(CrossRefKeyColPKTableCatalogIndex, LCatalog); //PKTABLE_CAT
       Result.UpdateNull(CrossRefKeyColPKTableSchemaIndex); //PKTABLE_SCHEM
-      Result.UpdateString(CrossRefKeyColPKTableNameIndex, GetString(PKTABLE_NAME)); //PKTABLE_NAME
-      Result.UpdateString(CrossRefKeyColPKColumnNameIndex, GetString(PKCOLUMN_NAME)); //PKCOLUMN_NAME
+      Result.UpdateString(CrossRefKeyColPKTableNameIndex, GetString(PKTABLE_NAME_Index)); //PKTABLE_NAME_Index
+      Result.UpdateString(CrossRefKeyColPKColumnNameIndex, GetString(PKCOLUMN_NAME_Index)); //PKCOLUMN_NAME_Index
       Result.UpdateString(CrossRefKeyColFKTableCatalogIndex, LCatalog); //PKTABLE_CAT
       Result.UpdateNull(CrossRefKeyColFKTableSchemaIndex); //FKTABLE_SCHEM
-      Result.UpdateString(CrossRefKeyColFKTableNameIndex, GetString(FKTABLE_NAME)); //FKTABLE_NAME
-      Result.UpdateString(CrossRefKeyColFKColumnNameIndex, GetString(FKCOLUMN_NAME)); //FKCOLUMN_NAME
+      Result.UpdateString(CrossRefKeyColFKTableNameIndex, GetString(FKTABLE_NAME_Index)); //FKTABLE_NAME_Index
+      Result.UpdateString(CrossRefKeyColFKColumnNameIndex, GetString(FKCOLUMN_NAME_Index)); //FKCOLUMN_NAME_Index
       Result.UpdateSmall(CrossRefKeyColKeySeqIndex, KeySeq); //KEY_SEQ
-      Result.UpdateSmall(CrossRefKeyColUpdateRuleIndex, Ord(GetRuleType(GetString(UPDATE_RULE)))); //UPDATE_RULE
-      Result.UpdateSmall(CrossRefKeyColDeleteRuleIndex, Ord(GetRuleType(GetString(DELETE_RULE)))); //DELETE_RULE
-      Result.UpdateString(CrossRefKeyColFKNameIndex, GetString(FK_NAME)); //FK_NAME
-      Result.UpdateString(CrossRefKeyColPKNameIndex, GetString(PK_NAME)); //PK_NAME
-      if GetString(DEFERRABILITY) = 'NO' then
-        Result.UpdateSmall(CrossRefKeyColDeferrabilityIndex, Ord(ikNotDeferrable)) //DEFERRABILITY
+      Result.UpdateSmall(CrossRefKeyColUpdateRuleIndex, Ord(GetRuleType(GetString(UPDATE_RULE_Index)))); //UPDATE_RULE_Index
+      Result.UpdateSmall(CrossRefKeyColDeleteRuleIndex, Ord(GetRuleType(GetString(DELETE_RULE_Index)))); //DELETE_RULE_Index
+      Result.UpdateString(CrossRefKeyColFKNameIndex, GetString(FK_NAME_Index)); //FK_NAME_Index
+      Result.UpdateString(CrossRefKeyColPKNameIndex, GetString(PK_NAME_Index)); //PK_NAME_Index
+      if GetString(DEFERRABILITY_Index) = 'NO' then
+        Result.UpdateSmall(CrossRefKeyColDeferrabilityIndex, Ord(ikNotDeferrable)) //DEFERRABILITY_Index
       else
-        Result.UpdateSmall(CrossRefKeyColDeferrabilityIndex, Ord(ikInitiallyDeferred)); //DEFERRABILITY
+        Result.UpdateSmall(CrossRefKeyColDeferrabilityIndex, Ord(ikInitiallyDeferred)); //DEFERRABILITY_Index
       Result.InsertRow;
     end;
     Close;
@@ -2719,8 +2719,8 @@ end;
 }
 function TZInterbase6DatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
 const
-  RDB_TYPE = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  RDB_TYPE_NAME = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  RDB_TYPE_Index      = FirstDbcIndex + 0;
+  RDB_TYPE_NAME_Index = FirstDbcIndex + 1;
 var
   SQL: string;
   Len: NativeUInt;
@@ -2734,9 +2734,9 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiChar(RDB_TYPE_NAME, Len), @Len);
+        Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiChar(RDB_TYPE_NAME_Index, Len), @Len);
         Result.UpdateInt(TypeInfoDataTypeIndex, Ord(ConvertInterbase6ToSqlType(
-          GetInt(RDB_TYPE), 0, 10, ConSettings.CPType))); //added a scale > 4 since type_info doesn't deal with user defined scale
+          GetInt(RDB_TYPE_Index), 0, 10, ConSettings.CPType))); //added a scale > 4 since type_info doesn't deal with user defined scale
         Result.UpdateInt(TypeInfoPecisionIndex, 9);
         Result.UpdateInt(TypeInfoNullAbleIndex, Ord(ntNoNulls));
         Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, false);
@@ -2805,13 +2805,13 @@ function TZInterbase6DatabaseMetadata.UncachedGetIndexInfo(const Catalog: string
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
 const
-  RDB_RELATION_NAME = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  RDB_UNIQUE_FLAG = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  RDB_INDEX_NAME = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  RDB_FIELD_POSITION = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  RDB_FIELD_NAME = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  {%H-}RDB_SEGMENT_COUNT = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  RDB_PAGE_NUMBER = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  RDB_RELATION_NAME_Index      = FirstDbcIndex + 0;
+  RDB_UNIQUE_FLAG_Index        = FirstDbcIndex + 1;
+  RDB_INDEX_NAME_Index         = FirstDbcIndex + 2;
+  RDB_FIELD_POSITION_Index     = FirstDbcIndex + 3;
+  RDB_FIELD_NAME_Index         = FirstDbcIndex + 4;
+  {%H-}RDB_SEGMENT_COUNT_Index = FirstDbcIndex + 5;
+  RDB_PAGE_NUMBER_Index        = FirstDbcIndex + 6;
 var
   SQL : string;
   LTable: String;
@@ -2847,16 +2847,16 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateNull(CatalogNameIndex); //TABLE_CAT
         Result.UpdateNull(SchemaNameIndex); //TABLE_SCHEM
-        Result.UpdateString(TableNameIndex, GetString(RDB_RELATION_NAME)); //TABLE_NAME, RDB$RELATION_NAME
-        Result.UpdateBoolean(IndexInfoColNonUniqueIndex, not GetBoolean(RDB_UNIQUE_FLAG)); //NON_UNIQUE, RDB$UNIQUE_FLAG
+        Result.UpdateString(TableNameIndex, GetString(RDB_RELATION_NAME_Index)); //TABLE_NAME, RDB$RELATION_NAME
+        Result.UpdateBoolean(IndexInfoColNonUniqueIndex, not GetBoolean(RDB_UNIQUE_FLAG_Index)); //NON_UNIQUE, RDB$UNIQUE_FLAG
         //Result.UpdateNull(IndexInfoColIndexQualifierIndex); //INDEX_QUALIFIER
-        Result.UpdateString(IndexInfoColIndexNameIndex, GetString(RDB_INDEX_NAME)); //INDEX_NAME, RDB$INDEX_NAME
+        Result.UpdateString(IndexInfoColIndexNameIndex, GetString(RDB_INDEX_NAME_Index)); //INDEX_NAME, RDB$INDEX_NAME
         Result.UpdateInt(IndexInfoColTypeIndex, Ord(ntNoNulls)); //TYPE
-        Result.UpdateInt(IndexInfoColOrdPositionIndex, GetInt(RDB_FIELD_POSITION){$IFNDEF GENERIC_INDEX} + 1{$ENDIF}); //ORDINAL_POSITION, RDB$FIELD_POSITION
-        Result.UpdateString(IndexInfoColColumnNameIndex, GetString(RDB_FIELD_NAME)); //COLUMN_NAME, RDB$FIELD_NAME
+        Result.UpdateInt(IndexInfoColOrdPositionIndex, GetInt(RDB_FIELD_POSITION_Index){$IFNDEF GENERIC_INDEX} + 1{$ENDIF}); //ORDINAL_POSITION, RDB$FIELD_POSITION
+        Result.UpdateString(IndexInfoColColumnNameIndex, GetString(RDB_FIELD_NAME_Index)); //COLUMN_NAME, RDB$FIELD_NAME
         //Result.UpdateNull(IndexInfoColAscOrDescIndex); //ASC_OR_DESC
         //Result.UpdateNull(IndexInfoColCardinalityIndex); //CARDINALITY
-        Result.UpdateInt(IndexInfoColPagesIndex, GetInt(RDB_PAGE_NUMBER)); //PAGES, COUNT (DISTINCT P.RDB$PAGE_NUMBER)
+        Result.UpdateInt(IndexInfoColPagesIndex, GetInt(RDB_PAGE_NUMBER_Index)); //PAGES, COUNT (DISTINCT P.RDB$PAGE_NUMBER)
         //Result.UpdateNull(IndexInfoColFilterConditionIndex); //FILTER_CONDITION
         Result.InsertRow;
       end;
@@ -3041,4 +3041,3 @@ begin
 end;
 
 end.
-

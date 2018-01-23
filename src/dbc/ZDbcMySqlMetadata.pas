@@ -1338,13 +1338,13 @@ end;
 function TZMySQLDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 const
-  host_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  db_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  grantor_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  user_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  {%H-}table_name_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  column_name_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  column_priv_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  host_Index            = FirstDbcIndex + 0;
+  db_Index              = FirstDbcIndex + 1;
+  grantor_Index         = FirstDbcIndex + 2;
+  user_Index            = FirstDbcIndex + 3;
+  {%H-}table_name_Index = FirstDbcIndex + 4;
+  column_name_Index     = FirstDbcIndex + 5;
+  column_priv_Index     = FirstDbcIndex + 6;
 var
   Len: NativeUInt;
   I: Integer;
@@ -1450,12 +1450,12 @@ end;
 function TZMySQLDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 const
-  host_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  db_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  table_name_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  grantor_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  user_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  column_priv_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  host_Index        = FirstDbcIndex + 0;
+  db_Index          = FirstDbcIndex + 1;
+  table_name_Index  = FirstDbcIndex + 2;
+  grantor_Index     = FirstDbcIndex + 3;
+  user_Index        = FirstDbcIndex + 4;
+  column_priv_Index = FirstDbcIndex + 5;
 var
   I: Integer;
   Len: NativeUInt;
@@ -2369,13 +2369,13 @@ function TZMySQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: stri
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 const
-  {%H-}PROCEDURE_CAT_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  PROCEDURE_SCHEM_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  PROCEDURE_NAME_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  PARAMS_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  {%H-}REMARKS_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  {%H-}PROCEDURE_TYPE_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  RETURN_VALUES_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  {%H-}PROCEDURE_CAT_index  = FirstDbcIndex + 0;
+  PROCEDURE_SCHEM_index     = FirstDbcIndex + 1;
+  PROCEDURE_NAME_Index      = FirstDbcIndex + 2;
+  PARAMS_Index              = FirstDbcIndex + 3;
+  {%H-}REMARKS_Index        = FirstDbcIndex + 4;
+  {%H-}PROCEDURE_TYPE_Index = FirstDbcIndex + 5;
+  RETURN_VALUES_Index       = FirstDbcIndex + 6;
 var
   Len: NativeUInt;
   SQL: String;
@@ -2764,6 +2764,3 @@ begin
 end;
 
 end.
-
-
-
