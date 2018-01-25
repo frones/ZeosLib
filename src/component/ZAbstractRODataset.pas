@@ -4204,7 +4204,7 @@ begin
         KeyFields := Properties.Values['KeyFields']
       else
         KeyFields := DefineKeyFields(Fields, Connection.DbcConnection.GetMetadata.GetIdentifierConvertor);
-      FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields);
+      FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
       SetLength(Temp, Length(FieldRefs));
       RetrieveDataFieldsFromResultSet(FieldRefs, ResultSet, Temp);
       if Length(FieldRefs) = 1 then
@@ -4418,7 +4418,7 @@ begin
   PartialKey := loPartialKey in Options;
   CaseInsensitive := loCaseInsensitive in Options;
 
-  FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields);
+  FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
   FieldIndices := nil;
   if FieldRefs = nil then
      Exit;
@@ -4565,7 +4565,7 @@ begin
      Exit;
 
   { Fill result array }
-  FieldRefs := DefineFields(Self, ResultFields, OnlyDataFields);
+  FieldRefs := DefineFields(Self, ResultFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
   FieldIndices := DefineFieldIndices(FieldsLookupTable, FieldRefs);
   SetLength(ResultValues, Length(FieldRefs));
   SearchRowBuffer := PZRowBuffer(AllocRecordBuffer);
