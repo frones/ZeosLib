@@ -2978,7 +2978,7 @@ begin
             if Result then
               PAnsiChar(Buffer)^ := #0
             else
-              GUIDToBuffer(PAnsiChar(P), PAnsiChar(Buffer), True);
+              GUIDToBuffer(P, PAnsiChar(Buffer), True);
           end;
         {$ENDIF}
         {$IFDEF WITH_FTDATASETSUPPORT}
