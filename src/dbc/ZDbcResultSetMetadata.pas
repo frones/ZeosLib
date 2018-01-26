@@ -142,7 +142,7 @@ type
 
     function GetTableColumns(TableRef: TZTableRef): IZResultSet;
     function ReadColumnByRef(FieldRef: TZFieldRef; ColumnInfo: TZColumnInfo): Boolean;
-    function ReadColumnByName(FieldName: string; TableRef: TZTableRef;
+    function ReadColumnByName(const FieldName: string; TableRef: TZTableRef;
       ColumnInfo: TZColumnInfo): Boolean;
     procedure ClearColumn(ColumnInfo: TZColumnInfo); virtual;
     procedure LoadColumns;
@@ -619,7 +619,7 @@ end;
   @param ColumnInfo a column information object.
   @return <code>True</code> is column was found and read.
 }
-function TZAbstractResultSetMetadata.ReadColumnByName(FieldName: string;
+function TZAbstractResultSetMetadata.ReadColumnByName(const FieldName: string;
   TableRef: TZTableRef; ColumnInfo: TZColumnInfo): Boolean;
 var
   TableColumns: IZResultSet;
