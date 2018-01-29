@@ -1895,7 +1895,7 @@ begin
         Result.UpdateString(TableColColumnColDefIndex, DefaultValue);   //COLUMN_DEF
         //Result.UpdateNull(TableColColumnSQLDataTypeIndex);   //SQL_DATA_TYPE
         //Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);   //SQL_DATETIME_SUB
-        Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt({$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF}));   //CHAR_OCTET_LENGTH
+        Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt(FirstDbcIndex+6));   //CHAR_OCTET_LENGTH
         Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(ColumnIndexes[13])+ 1);   //ORDINAL_POSITION
 
         if IsNull(ColumnIndexes[11]) then
@@ -2930,6 +2930,11 @@ end;
 }
 function TZInterbase6DatabaseMetadata.UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
   TableNamePattern, ColumnNamePattern: string): IZResultSet; //EgonHugeist
+const
+  CHARACTER_SET_NAME_Index   = FirstDbcIndex + 0;
+  DEFAULT_COLLATE_NAME_Index = FirstDbcIndex + 1;
+  CHARACTER_SET_ID_Index     = FirstDbcIndex + 2;
+  BYTES_PER_CHARACTER_Index  = FirstDbcIndex + 3;
 var
   SQL, LCatalog: string;
   ColumnNameCondition, TableNameCondition: string;
@@ -2971,17 +2976,17 @@ begin
         begin
           if Next then
           begin
-            if not ( GetString(FindColumn('RDB$CHARACTER_SET_NAME')) = 'NONE' ) then
+            if not ( GetString(CHARACTER_SET_NAME_Index) = 'NONE' ) then
             begin
               Result.MoveToInsertRow;
               Result.UpdateString(CatalogNameIndex, LCatalog);   //COLLATION_CATALOG
               Result.UpdateString(SchemaNameIndex, LCatalog);   //COLLATION_SCHEMA
               Result.UpdateString(TableNameIndex, TableNamePattern); //COLLATION_TABLE
               Result.UpdateString(ColumnNameIndex, ColumnNamePattern);//COLLATION_COLUMN
-              Result.UpdateString(CollationNameIndex, GetString(FindColumn('RDB$DEFAULT_COLLATE_NAME'))); //COLLATION_NAME
-              Result.UpdateString(CharacterSetNameIndex, GetString(FindColumn('RDB$CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
-              Result.UpdateSmall(CharacterSetIDIndex, GetSmall(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
-              Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(FindColumn('RDB$BYTES_PER_CHARACTER'))); //CHARACTER_SET_SIZE
+              Result.UpdateString(CollationNameIndex, GetString(DEFAULT_COLLATE_NAME_Index)); //COLLATION_NAME
+              Result.UpdateString(CharacterSetNameIndex, GetString(CHARACTER_SET_NAME_Index)); //CHARACTER_SET_NAME
+              Result.UpdateSmall(CharacterSetIDIndex, GetSmall(CHARACTER_SET_ID_Index)); //CHARACTER_SET_ID
+              Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(BYTES_PER_CHARACTER_Index)); //CHARACTER_SET_SIZE
               Result.InsertRow;
               Close;
               Exit;
@@ -3007,10 +3012,10 @@ begin
       Result.UpdateString(SchemaNameIndex, LCatalog);   //COLLATION_SCHEMA
       Result.UpdateString(TableNameIndex, TableNamePattern); //COLLATION_TABLE
       //Result.UpdateNull(ColumnNameIndex);//COLLATION_COLUMN
-      Result.UpdateString(CollationNameIndex, GetString(FindColumn('RDB$DEFAULT_COLLATE_NAME'))); //COLLATION_NAME
-      Result.UpdateString(CharacterSetNameIndex, GetString(FindColumn('RDB$CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
-      Result.UpdateSmall(CharacterSetIDIndex, GetSmall(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
-      Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(FindColumn('RDB$BYTES_PER_CHARACTER'))); //CHARACTER_SET_SIZE
+      Result.UpdateString(CollationNameIndex, GetString(DEFAULT_COLLATE_NAME_Index)); //COLLATION_NAME
+      Result.UpdateString(CharacterSetNameIndex, GetString(CHARACTER_SET_NAME_Index)); //CHARACTER_SET_NAME
+      Result.UpdateSmall(CharacterSetIDIndex, GetSmall(CHARACTER_SET_ID_Index)); //CHARACTER_SET_ID
+      Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(BYTES_PER_CHARACTER_Index)); //CHARACTER_SET_SIZE
       Result.InsertRow;
     end;
     Close;

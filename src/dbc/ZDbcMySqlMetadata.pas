@@ -2629,6 +2629,10 @@ end;
 }
 function TZMySQLDatabaseMetadata.UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
   TableNamePattern, ColumnNamePattern: string): IZResultSet; //EgonHugeist
+const
+  COLLATION_NAME_Index     = FirstDbcIndex + 0;
+  CHARACTER_SET_NAME_Index = FirstDbcIndex + 1;
+  MAXLEN_Index             = FirstDbcIndex + 2;
 var
   Len: NativeUInt;
   SQL, LCatalog: string;
@@ -2681,9 +2685,9 @@ begin
             Result.UpdateString(SchemaNameIndex, LCatalog);   //COLLATION_SCHEMA
             Result.UpdateString(TableNameIndex, TableNamePattern); //COLLATION_TABLE
             Result.UpdateString(ColumnNameIndex, ColumnNamePattern);//COLLATION_COLUMN
-            Result.UpdatePAnsiChar(CollationNameIndex, GetPAnsiCharByName('COLLATION_NAME', Len), @Len); //COLLATION_NAME
-            Result.UpdatePAnsiChar(CharacterSetNameIndex, GetPAnsiCharByName('CHARACTER_SET_NAME', Len), @Len); //CHARACTER_SET_NAME
-            Result.UpdateSmall(CharacterSetSizeIndex, GetSmallByName('MAXLEN')); //CHARACTER_SET_SIZE
+            Result.UpdatePAnsiChar(CollationNameIndex, GetPAnsiChar(COLLATION_NAME_Index, Len), @Len); //COLLATION_NAME
+            Result.UpdatePAnsiChar(CharacterSetNameIndex, GetPAnsiChar(CHARACTER_SET_NAME_Index, Len), @Len); //CHARACTER_SET_NAME
+            Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(MAXLEN_Index)); //CHARACTER_SET_SIZE
             Result.InsertRow;
           end;
           Close;
@@ -2704,9 +2708,9 @@ begin
             Result.UpdateString(CatalogNameIndex, LCatalog);
             Result.UpdateString(SchemaNameIndex, LCatalog);
             Result.UpdateString(TableNameIndex, TableNamePattern);
-            Result.UpdatePAnsiChar(CollationNameIndex, GetPAnsiCharByName('TABLE_COLLATION', Len), @Len);
-            Result.UpdatePAnsiChar(CharacterSetNameIndex, GetPAnsiCharByName('CHARACTER_SET_NAME', Len), @Len);
-            Result.UpdateSmall(CharacterSetSizeIndex, GetSmallByName('MAXLEN'));
+            Result.UpdatePAnsiChar(CollationNameIndex, GetPAnsiChar(COLLATION_NAME_Index, Len), @Len);  //COLLATION_NAME
+            Result.UpdatePAnsiChar(CharacterSetNameIndex, GetPAnsiChar(CHARACTER_SET_NAME_Index, Len), @Len); //CHARACTER_SET_NAME
+            Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(MAXLEN_Index)); //CHARACTER_SET_SIZE
             Result.InsertRow;
           end;
           Close;
@@ -2728,10 +2732,10 @@ begin
           Result.MoveToInsertRow;
           Result.UpdateString(CatalogNameIndex, LCatalog);
           Result.UpdateString(SchemaNameIndex, LCatalog);
-          Result.UpdatePAnsiChar(CollationNameIndex, GetPAnsiCharByName('DEFAULT_COLLATION_NAME', Len), @Len);
-          Result.UpdatePAnsiChar(CharacterSetNameIndex, GetPAnsiCharByName('DEFAULT_CHARACTER_SET_NAME', Len), @Len);
+          Result.UpdatePAnsiChar(CollationNameIndex, GetPAnsiChar(COLLATION_NAME_Index, Len), @Len);
+          Result.UpdatePAnsiChar(CharacterSetNameIndex, GetPAnsiChar(CHARACTER_SET_NAME_Index, Len), @Len);
           Result.UpdateNull(CharacterSetIDIndex); //CHARACTER_SET_ID
-          Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
+          Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(MAXLEN_Index)); //CHARACTER_SET_SIZE
           Result.InsertRow;
         end;
         Close;
@@ -2756,7 +2760,7 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePAnsiChar(CharacterSetsNameIndex, GetPAnsiCharByName('CHARACTER_SET_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(CharacterSetsNameIndex, GetPAnsiChar(FirstDbcIndex, Len), @Len);
       Result.InsertRow;
     end;
     Close;
