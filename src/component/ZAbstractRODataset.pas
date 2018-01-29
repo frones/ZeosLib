@@ -4203,7 +4203,7 @@ begin
       if Properties.Values['KeyFields'] <> '' then
         KeyFields := Properties.Values['KeyFields']
       else
-        KeyFields := DefineKeyFields(Fields);
+        KeyFields := DefineKeyFields(Fields, Connection.DbcConnection.GetMetadata.GetIdentifierConvertor);
       FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields);
       SetLength(Temp, Length(FieldRefs));
       RetrieveDataFieldsFromResultSet(FieldRefs, ResultSet, Temp);

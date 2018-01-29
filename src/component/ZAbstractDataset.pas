@@ -815,7 +815,7 @@ var
     if Properties.Values['KeyFields'] <> '' then
       KeyFields := Properties.Values['KeyFields']
     else
-      KeyFields := DefineKeyFields(Fields);
+      KeyFields := DefineKeyFields(Fields, Connection.DbcConnection.GetMetadata.GetIdentifierConvertor);
     FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields);
     Temp := VarArrayCreate([0, Length(FieldRefs) - 1], varVariant);
 

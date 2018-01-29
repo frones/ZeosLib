@@ -59,7 +59,8 @@ uses
   Types, Classes, SysUtils, {$IFDEF MSEgui}mclasses, mdb{$ELSE}Db{$ENDIF},
   Contnrs, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   {$IFDEF MSWINDOWS}Windows, {$ENDIF}
-  ZDbcIntfs, ZDbcCache, ZCompatibility, ZExpression, ZVariant, ZTokenizer;
+  ZDbcIntfs, ZDbcCache, ZCompatibility, ZExpression, ZVariant, ZTokenizer,
+  ZSelectSchema;
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -192,9 +193,10 @@ function CompareFieldsFromResultSet(const FieldRefs: TObjectDynArray;
 {**
   Defines a list of key field names.
   @param Fields a collection of dataset fields.
+  @param IZIdentifierConvertor IdentifierConverter for the used database
   @return a list of key field names.
 }
-function DefineKeyFields(Fields: TFields): string;
+function DefineKeyFields(Fields: TFields; const IdConverter: IZIdentifierConvertor): string;
 
 {**
   Converts datetime value into TDataset internal presentation.
@@ -1273,10 +1275,9 @@ end;
   @param Fields a collection of dataset fields.
   @return a list of key field names.
 }
-function DefineKeyFields(Fields: TFields): string;
+function DefineKeyFields(Fields: TFields; const IdConverter: IZIdentifierConvertor): string;
 var
   I: Integer;
-  Temp: string;
 begin
   Result := '';
   for I := 0 to Fields.Count - 1 do
@@ -1286,10 +1287,7 @@ begin
     begin
       if Result <> '' then
         Result := Result + ',';
-      Temp := Fields[I].FieldName;
-      if (ZFastCode.Pos(' ', Temp) > 0) or (ZFastCode.Pos('-', Temp) > 0) or (ZFastCode.Pos('.', Temp) > 0) then
-        Temp := '"' + Temp + '"';
-      Result := Result + Temp;
+      Result := Result + IdConverter.Quote(Fields[I].FieldName);
     end;
   end;
 end;
