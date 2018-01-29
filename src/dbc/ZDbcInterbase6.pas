@@ -1004,7 +1004,7 @@ var
 begin
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery(Format(
-    'SELECT %s FROM RDB$DATABASE', [GetCurrentValueSQL, Name]));
+    'SELECT %s FROM RDB$DATABASE', [GetCurrentValueSQL]));
   if ResultSet.Next then
     Result := ResultSet.GetLong(FirstDbcIndex)
   else
@@ -1018,8 +1018,11 @@ end;
   @param the next generated unique key.
 }
 function TZInterbase6Sequence.GetCurrentValueSQL: string;
+var
+  QuotedName: string;
 begin
-  Result := Format(' GEN_ID("%s", 0) ', [Name]);
+  QuotedName := GetConnection.GetMetadata.GetIdentifierConvertor.Quote(Name);
+  Result := Format(' GEN_ID(%s, 0) ', [QuotedName]);
 end;
 
 function TZInterbase6Sequence.GetNextValue: Int64;
@@ -1039,11 +1042,14 @@ begin
 end;
 
 function TZInterbase6Sequence.GetNextValueSQL: string;
+var
+  QuotedName: string;
 begin
+  QuotedName := GetConnection.GetMetadata.GetIdentifierConvertor.Quote(Name);
   if (Connection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsNextValueFor and (BlockSize = 1) then
-    Result := Format(' NEXT VALUE FOR "%s" ', [Name])
+    Result := Format(' NEXT VALUE FOR %s ', [QuotedName])
   else
-    Result := Format(' GEN_ID("%s", %d) ', [Name, BlockSize]);
+    Result := Format(' GEN_ID(%s, %d) ', [QuotedName, BlockSize]);
 end;
 
 initialization

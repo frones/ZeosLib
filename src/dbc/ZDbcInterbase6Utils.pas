@@ -1179,7 +1179,7 @@ begin
       stBigDecimal, stCurrency:
         ParamSqlData.UpdateBigDecimal(I,
           ClientVarManager.GetAsFloat(InParamValues[I]));
-      stString, stUnicodeString:
+      stGUID, stString, stUnicodeString:
         begin
           CP := ParamSqlData.GetIbSqlType(I);
           case CP of
@@ -1197,7 +1197,8 @@ begin
           ParamSqlData.UpdatePAnsiChar(I, CharRec.P, CharRec.Len);
         end;
       stBytes:
-        ParamSqlData.UpdateBytes(I, ClientVarManager.GetAsBytes(InParamValues[I]));
+        ParamSqlData.UpdateBytes(I,
+          ClientVarManager.GetAsBytes(InParamValues[I]));
       stDate:
         ParamSqlData.UpdateDate(I,
           ClientVarManager.GetAsDateTime(InParamValues[I]));

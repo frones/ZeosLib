@@ -1586,6 +1586,7 @@ begin
       TempConnection.Properties.Text := Connection.Properties.Text;
       TempConnection.Properties.Add('oidasblob=true');
       TempConnection.TransactIsolationLevel := tiReadCommitted;
+      TempConnection.AutoCommit := False;    //https://www.postgresql.org/message-id/002701c49d7e%240f059240%24d604460a%40zaphod
       TempConnection.Connect;
       Query.Connection := TempConnection;
       ROQuery.Connection := TempConnection;
@@ -1629,6 +1630,8 @@ begin
     Query.SQL.Text := 'DELETE FROM blob_values where b_id >= '+ IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
+      if Assigned(TempConnection) then
+        TempConnection.Commit;
     finally
       Query.Free;
       try
@@ -1807,6 +1810,7 @@ begin
       TempConnection.Properties.Text := Connection.Properties.Text;
       TempConnection.Properties.Add('oidasblob=true');
       TempConnection.TransactIsolationLevel := tiReadCommitted;
+      TempConnection.AutoCommit := False;    //https://www.postgresql.org/message-id/002701c49d7e%240f059240%24d604460a%40zaphod
       TempConnection.Connect;
       Query.Connection := TempConnection;
       Connection.TransactIsolationLevel:=tiReadCommitted;
@@ -1939,6 +1943,8 @@ begin
     Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
+      if Assigned(TempConnection) then
+        TempConnection.Commit;
     finally
       Query.Free;
       if Assigned(TempConnection) then
@@ -2090,6 +2096,7 @@ begin
       TempConnection.Properties.Text := Connection.Properties.Text;
       TempConnection.Properties.Add('oidasblob=true');
       TempConnection.TransactIsolationLevel := tiReadCommitted;
+      TempConnection.AutoCommit := False;    //https://www.postgresql.org/message-id/002701c49d7e%240f059240%24d604460a%40zaphod
       TempConnection.Connect;
       Query.Connection := TempConnection;
       Connection.TransactIsolationLevel:=tiReadCommitted;
@@ -2174,6 +2181,8 @@ begin
     Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
+      if Assigned(TempConnection) then
+        TempConnection.Commit;
     finally
       Query.Free;
       if Assigned(TempConnection) then

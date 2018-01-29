@@ -2978,7 +2978,7 @@ begin
             if Result then
               PAnsiChar(Buffer)^ := #0
             else
-              GUIDToBuffer(PAnsiChar(P), PAnsiChar(Buffer), True);
+              GUIDToBuffer(P, PAnsiChar(Buffer), True);
           end;
         {$ENDIF}
         {$IFDEF WITH_FTDATASETSUPPORT}
@@ -4204,7 +4204,7 @@ begin
         KeyFields := Properties.Values['KeyFields']
       else
         KeyFields := DefineKeyFields(Fields, Connection.DbcConnection.GetMetadata.GetIdentifierConvertor);
-      FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields);
+      FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
       SetLength(Temp, Length(FieldRefs));
       RetrieveDataFieldsFromResultSet(FieldRefs, ResultSet, Temp);
       if Length(FieldRefs) = 1 then
@@ -4418,7 +4418,7 @@ begin
   PartialKey := loPartialKey in Options;
   CaseInsensitive := loCaseInsensitive in Options;
 
-  FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields);
+  FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
   FieldIndices := nil;
   if FieldRefs = nil then
      Exit;
@@ -4565,7 +4565,7 @@ begin
      Exit;
 
   { Fill result array }
-  FieldRefs := DefineFields(Self, ResultFields, OnlyDataFields);
+  FieldRefs := DefineFields(Self, ResultFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
   FieldIndices := DefineFieldIndices(FieldsLookupTable, FieldRefs);
   SetLength(ResultValues, Length(FieldRefs));
   SearchRowBuffer := PZRowBuffer(AllocRecordBuffer);
@@ -5722,14 +5722,15 @@ end;
 
 function TZField.GetAsGUID: TGUID;
 var IsNull: Boolean;
-  Bts: Array[0..15] of Byte;
-  GUID: TGUID absolute Bts;
+  Bytes: TBytes;
 begin
+  FillChar(Result, SizeOf(Result), #0);
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer((DataSet as TZAbstractRODataset).FRowAccessor.GetBytes(FFieldIndex, IsNull{%H-}))^, Bts{%H-}, 16)
-  else
-    FillChar(Bts, 16, #0);
-  Result := GUID;
+  begin
+    Bytes := (DataSet as TZAbstractRODataset).FRowAccessor.GetBytes(FFieldIndex, IsNull{%H-});
+    if not IsNull then
+      Result := PGUID(Bytes)^;
+  end;
 end;
 
 function TZField.GetAsBytes: TBytes;

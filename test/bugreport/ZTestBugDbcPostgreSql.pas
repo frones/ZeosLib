@@ -366,6 +366,7 @@ begin
 
   Connection := DriverManager.GetConnection(GetConnectionUrl('oidasblob=true'));
   Connection.SetTransactionIsolation(tiReadCommitted);
+  Connection.SetAutoCommit(False);
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);

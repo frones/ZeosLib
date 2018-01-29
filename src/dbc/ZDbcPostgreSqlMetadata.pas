@@ -2038,16 +2038,16 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 const
-  nspname_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  relname_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  attname_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  atttypid_index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  attnotnull_index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  atttypmod_index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  attlen_index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
-  attnum_index = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
-  adsrc_index = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
-  description_index = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
+  nspname_index     = FirstDbcIndex + 0;
+  relname_index     = FirstDbcIndex + 1;
+  attname_index     = FirstDbcIndex + 2;
+  atttypid_index    = FirstDbcIndex + 3;
+  attnotnull_index  = FirstDbcIndex + 4;
+  atttypmod_index   = FirstDbcIndex + 5;
+  attlen_index      = FirstDbcIndex + 6;
+  attnum_index      = FirstDbcIndex + 7;
+  adsrc_index       = FirstDbcIndex + 8;
+  description_index = FirstDbcIndex + 9;
 var
   Len: NativeUInt;
   TypeOid, AttTypMod, Precision: Integer;
@@ -2612,20 +2612,20 @@ end;
 function TZPostgreSQLDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 const
-  {%H-}tc_constraint_catalog_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  tc_constraint_schema_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  ccu_table_name_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  ccu_column_name_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  {%H-}kcu_table_catalog_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  kcu_constraint_schema_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  kcu_table_name_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
-  kcu_column_name_Index = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
-  kcu_ordinal_position_Index = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
-  rf_update_rule_Index = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
-  rf_delete_rule_Index = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
-  kcu_constraint_name_Index = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
-  rf_unique_constraint_name_Index = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
-  tc_is_deferrable_Index = {$IFDEF GENERIC_INDEX}13{$ELSE}14{$ENDIF};
+  {%H-}tc_constraint_catalog_Index = FirstDbcIndex + 0;
+  tc_constraint_schema_Index       = FirstDbcIndex + 1;
+  ccu_table_name_Index             = FirstDbcIndex + 2;
+  ccu_column_name_Index            = FirstDbcIndex + 3;
+  {%H-}kcu_table_catalog_Index     = FirstDbcIndex + 4;
+  kcu_constraint_schema_Index      = FirstDbcIndex + 5;
+  kcu_table_name_Index             = FirstDbcIndex + 6;
+  kcu_column_name_Index            = FirstDbcIndex + 7;
+  kcu_ordinal_position_Index       = FirstDbcIndex + 8;
+  rf_update_rule_Index             = FirstDbcIndex + 9;
+  rf_delete_rule_Index             = FirstDbcIndex + 10;
+  kcu_constraint_name_Index        = FirstDbcIndex + 11;
+  rf_unique_constraint_name_Index  = FirstDbcIndex + 12;
+  tc_is_deferrable_Index           = FirstDbcIndex + 13;
 var
   Len: NativeUInt;
   SQL: string;
@@ -2765,20 +2765,20 @@ end;
 function TZPostgreSQLDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 const
-  {%H-}tc_constraint_catalog_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  tc_constraint_schema_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  ccu_table_name_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  ccu_column_name_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  {%H-}kcu_table_catalog_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  kcu_constraint_schema_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  kcu_table_name_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
-  kcu_column_name_Index = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
-  kcu_ordinal_position_Index = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
-  rf_update_rule_Index = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
-  rf_delete_rule_Index = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
-  kcu_constraint_name_Index = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
-  rf_unique_constraint_name_Index = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
-  tc_is_deferrable_Index = {$IFDEF GENERIC_INDEX}13{$ELSE}14{$ENDIF};
+  {%H-}tc_constraint_catalog_Index = FirstDbcIndex + 0;
+  tc_constraint_schema_Index       = FirstDbcIndex + 1;
+  ccu_table_name_Index             = FirstDbcIndex + 2;
+  ccu_column_name_Index            = FirstDbcIndex + 3;
+  {%H-}kcu_table_catalog_Index     = FirstDbcIndex + 4;
+  kcu_constraint_schema_Index      = FirstDbcIndex + 5;
+  kcu_table_name_Index             = FirstDbcIndex + 6;
+  kcu_column_name_Index            = FirstDbcIndex + 7;
+  kcu_ordinal_position_Index       = FirstDbcIndex + 8;
+  rf_update_rule_Index             = FirstDbcIndex + 9;
+  rf_delete_rule_Index             = FirstDbcIndex + 10;
+  kcu_constraint_name_Index        = FirstDbcIndex + 11;
+  rf_unique_constraint_name_Index  = FirstDbcIndex + 12;
+  tc_is_deferrable_Index           = FirstDbcIndex + 13;
 var
   Len: NativeUInt;
   SQL: string;
@@ -2928,34 +2928,34 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetCrossReference(const PrimaryCat
   const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
 const
-  {%H-}tc_constraint_catalog_Index_74 = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  tc_constraint_schema_Index_74 = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  ccu_table_name_Index_74 = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  ccu_column_name_Index_74 = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  {%H-}kcu_table_catalog_Index_74 = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  kcu_constraint_schema_Index_74 = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  kcu_table_name_Index_74 = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
-  kcu_column_name_Index_74 = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
-  kcu_ordinal_position_Index_74 = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
-  rf_update_rule_Index_74 = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
-  rf_delete_rule_Index_74 = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
-  kcu_constraint_name_Index_74 = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
-  rf_unique_constraint_name_Index_74 = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
-  tc_is_deferrable_Index_74 = {$IFDEF GENERIC_INDEX}13{$ELSE}14{$ENDIF};
+  {%H-}tc_constraint_catalog_Index_74 = FirstDbcIndex + 0;
+  tc_constraint_schema_Index_74       = FirstDbcIndex + 1;
+  ccu_table_name_Index_74             = FirstDbcIndex + 2;
+  ccu_column_name_Index_74            = FirstDbcIndex + 3;
+  {%H-}kcu_table_catalog_Index_74     = FirstDbcIndex + 4;
+  kcu_constraint_schema_Index_74      = FirstDbcIndex + 5;
+  kcu_table_name_Index_74             = FirstDbcIndex + 6;
+  kcu_column_name_Index_74            = FirstDbcIndex + 7;
+  kcu_ordinal_position_Index_74       = FirstDbcIndex + 8;
+  rf_update_rule_Index_74             = FirstDbcIndex + 9;
+  rf_delete_rule_Index_74             = FirstDbcIndex + 10;
+  kcu_constraint_name_Index_74        = FirstDbcIndex + 11;
+  rf_unique_constraint_name_Index_74  = FirstDbcIndex + 12;
+  tc_is_deferrable_Index_74           = FirstDbcIndex + 13;
 
-  pnspname_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  fnspname_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  prelname_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  frelname_index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  {%H-}t1_tgconstrname_index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  keyseq_index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  {%H-}fkeyname_index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
-  t1_tgdeferrable_index = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
-  t1_tginitdeferred_index = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
-  {%H-}t1_tgnargs_index = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
-  t1_tgargs_index = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
-  updaterule_index = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
-  deleterule_index = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
+  pnspname_index             = FirstDbcIndex + 0;
+  fnspname_index             = FirstDbcIndex + 1;
+  prelname_index             = FirstDbcIndex + 2;
+  frelname_index             = FirstDbcIndex + 3;
+  {%H-}t1_tgconstrname_index = FirstDbcIndex + 4;
+  keyseq_index               = FirstDbcIndex + 5;
+  {%H-}fkeyname_index        = FirstDbcIndex + 6;
+  t1_tgdeferrable_index      = FirstDbcIndex + 7;
+  t1_tginitdeferred_index    = FirstDbcIndex + 8;
+  {%H-}t1_tgnargs_index      = FirstDbcIndex + 9;
+  t1_tgargs_index            = FirstDbcIndex + 10;
+  updaterule_index           = FirstDbcIndex + 11;
+  deleterule_index           = FirstDbcIndex + 12;
 var
   Len: NativeUInt;
   SQL, Select, From, Where: string;
@@ -3541,10 +3541,8 @@ end;
 }
 function TZPostgreSQLDatabaseMetadata.UncachedGetCharacterSets: IZResultSet; //EgonHugeist
 const
-  CHARACTER_SET_NAME_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  CHARACTER_SET_ID_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  enc_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  enc_Index  = FirstDbcIndex + 0;
+  name_Index = FirstDbcIndex + 1;
 var Len: NativeUInt;
 begin
   Self.GetConnection.CreateStatement.Execute(
@@ -3576,8 +3574,8 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePAnsiChar(CHARACTER_SET_NAME_Index, GetPAnsiChar(name_Index, Len), @Len); //CHARACTER_SET_NAME
-      Result.UpdateSmall(CHARACTER_SET_ID_Index, GetSmall(enc_Index)); //CHARACTER_SET_ID
+      Result.UpdatePAnsiChar(CharacterSetsNameIndex, GetPAnsiChar(name_Index, Len), @Len); //CHARACTER_SET_NAME
+      Result.UpdateSmall(CharacterSetsIDIndex, GetSmall(enc_Index)); //CHARACTER_SET_ID
       Result.InsertRow;
     end;
     CLose;

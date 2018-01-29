@@ -108,11 +108,11 @@ procedure PostToResultSet(ResultSet: IZResultSet;
 {**
   Defines fields indices for the specified dataset.
   @param DataSet a dataset object.
-  @param FieldNames a list of field names.
+  @param FieldNames a list of field names or field indices separated by ',' or ';'
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
 function DefineFields(DataSet: TDataset; const FieldNames: string;
-  var OnlyDataFields: Boolean): TObjectDynArray;
+  var OnlyDataFields: Boolean; const Tokenizer: IZTokenizer): TObjectDynArray;
 
 {**
   Defins a indices of filter fields.
@@ -679,7 +679,7 @@ end;
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
 function DefineFields(DataSet: TDataset; const FieldNames: string;
-  var OnlyDataFields: Boolean): TObjectDynArray;
+  var OnlyDataFields: Boolean; const Tokenizer: IZTokenizer): TObjectDynArray;
 var
   I: Integer;
   Tokens: TStrings;
@@ -691,7 +691,7 @@ begin
   OnlyDataFields := True;
   FieldCount := 0;
   SetLength(Result, FieldCount);
-  Tokens := CommonTokenizer.TokenizeBufferToList(FieldNames,
+  Tokens := Tokenizer.TokenizeBufferToList(FieldNames,
     [toSkipEOF, toSkipWhitespaces, toUnifyNumbers, toDecodeStrings]);
 
   try
@@ -702,7 +702,7 @@ begin
       TokenValue := Tokens[I];
       Field := nil;
 
-      if TokenType in [ttWord, ttQuoted] then
+      if TokenType in [ttWord, ttQuoted, ttQuotedIdentifier] then
       begin
         Field := DataSet.FieldByName(TokenValue);
       end
@@ -727,9 +727,6 @@ begin
   finally
     Tokens.Free;
   end;
-
-  if Length(Result) = 0 then
-    Result := nil;
 end;
 
 {**
