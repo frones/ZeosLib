@@ -5722,14 +5722,15 @@ end;
 
 function TZField.GetAsGUID: TGUID;
 var IsNull: Boolean;
-  Bts: Array[0..15] of Byte;
-  GUID: TGUID absolute Bts;
+  Bytes: TBytes;
 begin
+  FillChar(Result, SizeOf(Result), #0);
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer((DataSet as TZAbstractRODataset).FRowAccessor.GetBytes(FFieldIndex, IsNull{%H-}))^, Bts{%H-}, 16)
-  else
-    FillChar(Bts, 16, #0);
-  Result := GUID;
+  begin
+    Bytes := (DataSet as TZAbstractRODataset).FRowAccessor.GetBytes(FFieldIndex, IsNull{%H-});
+    if not IsNull then
+      Result := PGUID(Bytes)^;
+  end;
 end;
 
 function TZField.GetAsBytes: TBytes;

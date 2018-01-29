@@ -1355,7 +1355,6 @@ var
   SQLCode: SmallInt;
   P: PAnsiChar;
   Len: NativeUInt;
-label AssignResult;
 begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then

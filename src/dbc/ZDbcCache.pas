@@ -4474,7 +4474,7 @@ begin
         SetPAnsiChar(ColumnIndex, Buf, @L);
       end;
     else
-      raise EZSQLException.Create(cSConvertionIsNotPossible);
+      raise EZSQLException.Create(SConvertionIsNotPossible);
   end;
 end;
 
