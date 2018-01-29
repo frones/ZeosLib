@@ -656,18 +656,6 @@ end;
 }
 function TZAbstractResultSetMetadata.ReadColumnByName(const FieldName: string;
   TableRef: TZTableRef; ColumnInfo: TZColumnInfo): Boolean;
-const
-  FieldNameIndex = {$IFNDEF GENERIC_INDEX}4{$ELSE}3{$ENDIF};
-  SQLTypeIndex = {$IFNDEF GENERIC_INDEX}5{$ELSE}4{$ENDIF};
-  SQLTypeNameIndex = {$IFNDEF GENERIC_INDEX}6{$ELSE}5{$ENDIF};
-  nullableIndex = {$IFNDEF GENERIC_INDEX}11{$ELSE}10{$ENDIF};
-  AutoIncIndex = {$IFNDEF GENERIC_INDEX}19{$ELSE}18{$ENDIF};
-  CaseSensitiveIndex = {$IFNDEF GENERIC_INDEX}20{$ELSE}19{$ENDIF};
-  SearchableIndex = {$IFNDEF GENERIC_INDEX}21{$ELSE}20{$ENDIF};
-  WritableIndex = {$IFNDEF GENERIC_INDEX}22{$ELSE}21{$ENDIF};
-  DefinitelyWritableIndex = {$IFNDEF GENERIC_INDEX}23{$ELSE}22{$ENDIF};
-  ReadOnlyIndex = {$IFNDEF GENERIC_INDEX}24{$ELSE}23{$ENDIF};
-  DefaultValueIndex = {$IFNDEF GENERIC_INDEX}13{$ELSE}12{$ENDIF};
 var
   TableColumns: IZResultSet;
   tempColType: TZSQLType;
@@ -681,14 +669,14 @@ begin
   { Locates a column row. }
   TableColumns.BeforeFirst;
   while TableColumns.Next do
-    if TableColumns.GetString(FieldNameIndex) = FieldName then
+    if TableColumns.GetString(ColumnNameIndex) = FieldName then
       Break;
   if TableColumns.IsAfterLast then
   begin
     { Locates a column row with case insensitivity. }
     TableColumns.BeforeFirst;
     while TableColumns.Next do
-      if AnsiUpperCase(TableColumns.GetString(FieldNameIndex)) = AnsiUpperCase(FieldName) then
+      if AnsiUpperCase(TableColumns.GetString(ColumnNameIndex)) = AnsiUpperCase(FieldName) then
         Break;
     if TableColumns.IsAfterLast then
       Exit;
@@ -703,7 +691,7 @@ begin
 
 //If the returned column information is null then the value assigned during
 //the resultset.open will be kept
-  if not TableColumns.IsNull(SQLTypeIndex) then
+  if not TableColumns.IsNull(TableColColumnTypeIndex) then
   begin
     //since Pointer referencing by RowAccessor we've a pointer and GetBlob
     //raises an exception if the pointer is a reference to PPAnsiChar or
@@ -716,7 +704,7 @@ begin
     //or the same vice versa:
     //(CASE WHEN (Ticket51_B."Name" IS NOT NULL) THEN Ticket51_B."Name" ELSE 'Empty' END) As "Name"
     //we've NO fixed length for a case(postgres and FB2.5up f.e.) select
-    tempColType := TZSQLType(TableColumns.GetSmall(SQLTypeIndex));
+    tempColType := TZSQLType(TableColumns.GetSmall(TableColColumnTypeIndex));
     if not (tempColType in [stBinaryStream, stAsciiStream,
         stUnicodeStream, stBytes, stString, stUnicodeString]) then
       ColumnInfo.ColumnType := tempColType;
@@ -730,54 +718,54 @@ begin
       ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
     else
       if FConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTf8] then //this excludes ADO which is allways 2Byte-String based
-        if (UpperCase(TableColumns.GetString(SQLTypeNameIndex)) = 'NVARCHAR') or
-           (UpperCase(TableColumns.GetString(SQLTypeNameIndex)) = 'NCHAR') then
+        if (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'NVARCHAR') or
+           (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'NCHAR') then
           ColumnInfo.ColumnCodePage := zCP_UTF8
         else
           ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP //assume locale codepage
   else
     ColumnInfo.ColumnCodePage := zCP_NONE; //not a character column
   {nullable}
-  if not TableColumns.IsNull(nullableIndex) then
-    ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(nullableIndex));
+  if not TableColumns.IsNull(TableColColumnNullableIndex) then
+    ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(TableColColumnNullableIndex));
   {auto increment field}
-  if not TableColumns.IsNull(AutoIncIndex) then
-    ColumnInfo.AutoIncrement := TableColumns.GetBoolean(AutoIncIndex);
+  if not TableColumns.IsNull(TableColColumnAutoIncIndex) then
+    ColumnInfo.AutoIncrement := TableColumns.GetBoolean(TableColColumnAutoIncIndex);
   {Case sensitive}
-  if not TableColumns.IsNull(CaseSensitiveIndex) then
-    ColumnInfo.CaseSensitive := TableColumns.GetBoolean(CaseSensitiveIndex);
-  if not TableColumns.IsNull(SearchableIndex) then
-    ColumnInfo.Searchable := TableColumns.GetBoolean(SearchableIndex);
+  if not TableColumns.IsNull(TableColColumnCaseSensitiveIndex) then
+    ColumnInfo.CaseSensitive := TableColumns.GetBoolean(TableColColumnCaseSensitiveIndex);
+  if not TableColumns.IsNull(TableColColumnSearchableIndex) then
+    ColumnInfo.Searchable := TableColumns.GetBoolean(TableColColumnSearchableIndex);
   {Writable}
-  if not TableColumns.IsNull(WritableIndex) then
+  if not TableColumns.IsNull(TableColColumnWritableIndex) then
     if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
       if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
-        ColumnInfo.Writable := TableColumns.GetBoolean(WritableIndex)
+        ColumnInfo.Writable := TableColumns.GetBoolean(TableColColumnWritableIndex)
       else
         ColumnInfo.Writable := False
     else
-      ColumnInfo.Writable := TableColumns.GetBoolean(WritableIndex);
+      ColumnInfo.Writable := TableColumns.GetBoolean(TableColColumnWritableIndex);
   {DefinitelyWritable}
-  if not TableColumns.IsNull(DefinitelyWritableIndex) then
+  if not TableColumns.IsNull(TableColColumnDefinitelyWritableIndex) then
     if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
       if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
-        ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(DefinitelyWritableIndex)
+        ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(TableColColumnDefinitelyWritableIndex)
       else
         ColumnInfo.DefinitelyWritable := False
     else
-      ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(DefinitelyWritableIndex);
+      ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(TableColColumnDefinitelyWritableIndex);
   {readonly}
-  if not TableColumns.IsNull(ReadOnlyIndex) then
+  if not TableColumns.IsNull(TableColColumnReadonlyIndex) then
     if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
       if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
-        ColumnInfo.ReadOnly := TableColumns.GetBoolean(ReadOnlyIndex)
+        ColumnInfo.ReadOnly := TableColumns.GetBoolean(TableColColumnReadonlyIndex)
       else
         ColumnInfo.ReadOnly := True
     else
-      ColumnInfo.ReadOnly := TableColumns.GetBoolean(ReadOnlyIndex);
+      ColumnInfo.ReadOnly := TableColumns.GetBoolean(TableColColumnReadonlyIndex);
   {default value}
-  if not TableColumns.IsNull(DefaultValueIndex) then
-    ColumnInfo.DefaultValue := TableColumns.GetString(DefaultValueIndex);
+  if not TableColumns.IsNull(TableColColumnColDefIndex) then
+    ColumnInfo.DefaultValue := TableColumns.GetString(TableColColumnColDefIndex);
 end;
 
 {**

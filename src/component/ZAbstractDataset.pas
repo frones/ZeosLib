@@ -815,8 +815,8 @@ var
     if Properties.Values[DSProps_KeyFields] <> '' then
       KeyFields := Properties.Values[DSProps_KeyFields]
     else
-      KeyFields := DefineKeyFields(Fields);
-    FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields);
+      KeyFields := DefineKeyFields(Fields, Connection.DbcConnection.GetMetadata.GetIdentifierConvertor);
+    FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
     Temp := VarArrayCreate([0, Length(FieldRefs) - 1], varVariant);
 
     for I := 0 to Length(FieldRefs) - 1 do

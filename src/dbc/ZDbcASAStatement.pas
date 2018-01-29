@@ -336,7 +336,6 @@ end;
 }
 function TZASAPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
-  Result := nil; //satisfy compiler
   Prepare;
   PrepareOpenResultSetForReUse;
   BindInParameters;

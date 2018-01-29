@@ -1508,12 +1508,12 @@ end;
 function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 const
-  {%H-}PROCEDURE_CAT_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  PROCEDURE_SCHEM_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  OBJECT_NAME_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  PROCEDURE_NAME_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  PROCEDURE_OVERLOAD_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  PROCEDURE_TYPE_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  {%H-}PROCEDURE_CAT_Index = FirstDbcIndex + 0;
+  PROCEDURE_SCHEM_Index    = FirstDbcIndex + 1;
+  OBJECT_NAME_Index        = FirstDbcIndex + 2;
+  PROCEDURE_NAME_Index     = FirstDbcIndex + 3;
+  PROCEDURE_OVERLOAD_Index = FirstDbcIndex + 4;
+  PROCEDURE_TYPE_Index     = FirstDbcIndex + 5;
 var
   Len: NativeUInt;
   SQL: string;
@@ -1667,16 +1667,16 @@ function TZOracleDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 const
-  OWNER_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  TABLE_NAME_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  COLUMN_NAME_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  DATA_TYPE_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  DATA_LENGTH_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  DATA_PRECISION_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  DATA_SCALE_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
-  NULLABLE_Index = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
-  DATA_DEFAULT_Index = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
-  COLUMN_ID_Index = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
+  OWNER_Index          = FirstDbcIndex + 0;
+  TABLE_NAME_Index     = FirstDbcIndex + 1;
+  COLUMN_NAME_Index    = FirstDbcIndex + 2;
+  DATA_TYPE_Index      = FirstDbcIndex + 3;
+  DATA_LENGTH_Index    = FirstDbcIndex + 4;
+  DATA_PRECISION_Index = FirstDbcIndex + 5;
+  DATA_SCALE_Index     = FirstDbcIndex + 6;
+  NULLABLE_Index       = FirstDbcIndex + 7;
+  DATA_DEFAULT_Index   = FirstDbcIndex + 8;
+  COLUMN_ID_Index      = FirstDbcIndex + 9;
 var
   Len: NativeUInt;
   SQL, oDataType: string;
@@ -2015,13 +2015,13 @@ function TZOracleDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
 const
-  OWNER_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  TABLE_NAME_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  UNIQUENESS_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  INDEX_NAME_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  COLUMN_POSITION_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  COLUMN_NAME_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  DESCEND_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  OWNER_Index           = FirstDbcIndex + 0;
+  TABLE_NAME_Index      = FirstDbcIndex + 1;
+  UNIQUENESS_Index      = FirstDbcIndex + 2;
+  INDEX_NAME_Index      = FirstDbcIndex + 3;
+  COLUMN_POSITION_Index = FirstDbcIndex + 4;
+  COLUMN_NAME_Index     = FirstDbcIndex + 5;
+  DESCEND_Index         = FirstDbcIndex + 6;
 var
   Len: NativeUint;
   SQL: string;

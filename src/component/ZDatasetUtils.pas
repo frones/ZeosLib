@@ -59,7 +59,8 @@ uses
   Types, Classes, SysUtils, {$IFDEF MSEgui}mclasses, mdb{$ELSE}Db{$ENDIF},
   Contnrs, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   {$IFDEF MSWINDOWS}Windows, {$ENDIF}
-  ZDbcIntfs, ZDbcCache, ZCompatibility, ZExpression, ZVariant, ZTokenizer;
+  ZDbcIntfs, ZDbcCache, ZCompatibility, ZExpression, ZVariant, ZTokenizer,
+  ZSelectSchema;
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -107,11 +108,11 @@ procedure PostToResultSet(const ResultSet: IZResultSet;
 {**
   Defines fields indices for the specified dataset.
   @param DataSet a dataset object.
-  @param FieldNames a list of field names.
+  @param FieldNames a list of field names or field indices separated by ',' or ';'
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
 function DefineFields(DataSet: TDataset; const FieldNames: string;
-  var OnlyDataFields: Boolean): TObjectDynArray;
+  var OnlyDataFields: Boolean; const Tokenizer: IZTokenizer): TObjectDynArray;
 
 {**
   Defins a indices of filter fields.
@@ -192,9 +193,10 @@ function CompareFieldsFromResultSet(const FieldRefs: TObjectDynArray;
 {**
   Defines a list of key field names.
   @param Fields a collection of dataset fields.
+  @param IZIdentifierConvertor IdentifierConverter for the used database
   @return a list of key field names.
 }
-function DefineKeyFields(Fields: TFields): string;
+function DefineKeyFields(Fields: TFields; const IdConverter: IZIdentifierConvertor): string;
 
 {**
   Converts datetime value into TDataset internal presentation.
@@ -677,7 +679,7 @@ end;
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
 function DefineFields(DataSet: TDataset; const FieldNames: string;
-  var OnlyDataFields: Boolean): TObjectDynArray;
+  var OnlyDataFields: Boolean; const Tokenizer: IZTokenizer): TObjectDynArray;
 var
   I: Integer;
   Tokens: TStrings;
@@ -689,7 +691,7 @@ begin
   OnlyDataFields := True;
   FieldCount := 0;
   SetLength(Result, FieldCount);
-  Tokens := CommonTokenizer.TokenizeBufferToList(FieldNames,
+  Tokens := Tokenizer.TokenizeBufferToList(FieldNames,
     [toSkipEOF, toSkipWhitespaces, toUnifyNumbers, toDecodeStrings]);
 
   try
@@ -700,7 +702,7 @@ begin
       TokenValue := Tokens[I];
       Field := nil;
 
-      if TokenType in [ttWord, ttQuoted] then
+      if TokenType in [ttWord, ttQuoted, ttQuotedIdentifier] then
       begin
         Field := DataSet.FieldByName(TokenValue);
       end
@@ -725,9 +727,6 @@ begin
   finally
     Tokens.Free;
   end;
-
-  if Length(Result) = 0 then
-    Result := nil;
 end;
 
 {**
@@ -1273,10 +1272,9 @@ end;
   @param Fields a collection of dataset fields.
   @return a list of key field names.
 }
-function DefineKeyFields(Fields: TFields): string;
+function DefineKeyFields(Fields: TFields; const IdConverter: IZIdentifierConvertor): string;
 var
   I: Integer;
-  Temp: string;
 begin
   Result := '';
   for I := 0 to Fields.Count - 1 do
@@ -1286,10 +1284,7 @@ begin
     begin
       if Result <> '' then
         Result := Result + ',';
-      Temp := Fields[I].FieldName;
-      if (ZFastCode.Pos(' ', Temp) > 0) or (ZFastCode.Pos('-', Temp) > 0) or (ZFastCode.Pos('.', Temp) > 0) then
-        Temp := '"' + Temp + '"';
-      Result := Result + Temp;
+      Result := Result + IdConverter.Quote(Fields[I].FieldName);
     end;
   end;
 end;

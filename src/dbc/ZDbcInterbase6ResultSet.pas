@@ -152,6 +152,12 @@ type
       var BlobId: TISC_QUAD; Const ConSettings: PZConSettings);
   end;
 
+  {** Implements Interbase ResultSetMetadata object. }
+  TZInterbaseResultSetMetadata = Class(TZAbstractResultSetMetadata)
+  public
+    function IsAutoIncrement(ColumnIndex: Integer): Boolean; override;
+  End;
+
 implementation
 
 uses
@@ -211,7 +217,7 @@ constructor TZInterbase6XSQLDAResultSet.Create(const Statement: IZStatement;
   const XSQLDA: IZSQLDA; const CachedBlob: Boolean;
   const StmtType: TZIbSqlStatementType);
 begin
-  inherited Create(Statement, SQL, nil,
+  inherited Create(Statement, SQL, TZInterbaseResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
     Statement.GetConnection.GetConSettings);
 
   FFetchStat := 0;
@@ -1506,7 +1512,6 @@ var
   SQLCode: SmallInt;
   P: PAnsiChar;
   Len: NativeUInt;
-label AssignResult;
 begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
@@ -1942,6 +1947,19 @@ begin
   FBlobSize := Size+1;
   BlobData := Buffer;
   inherited ReadLob;
+end;
+
+{ TZInterbaseResultSetMetadata }
+
+{**
+  Indicates whether the designated column is automatically numbered, thus read-only.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZInterbaseResultSetMetadata.IsAutoIncrement(
+  ColumnIndex: Integer): Boolean;
+begin
+  Result := False; //not supported by FB/IB
 end;
 
 end.

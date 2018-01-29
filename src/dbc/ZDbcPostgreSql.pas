@@ -463,7 +463,7 @@ begin
 //  else
 //    FBeginRequired := True;
 
-  TransactIsolationLevel := tiReadCommitted;
+  inherited SetTransactionIsolation(tiReadCommitted);
 
   { Processes connection properties. }
   FOidAsBlob := StrToBoolEx(Info.Values[DSProps_OidAsBlob]);
@@ -749,6 +749,10 @@ begin
       SetServerSetting('CLIENT_ENCODING', {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FClientCodePage));
 
     inherited Open;
+
+    SetTransactionIsolation(GetTransactionIsolation);
+    if not GetAutoCommit then
+      DoStartTransaction;
 
     { Gets the current codepage if it wasn't set..}
     if ( FClientCodePage = '') then
@@ -1074,24 +1078,26 @@ var
   QueryHandle: PZPostgreSQLResult;
   SQL: RawByteString;
 begin
-  SQL := RawByteString('SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL ');
-  case level of
-    tiNone, tiReadUncommitted, tiReadCommitted:
-      SQL := SQL + RawByteString('READ COMMITTED');
-    tiRepeatableRead:
-      if (GetServerMajorVersion >= 8)
-      then SQL := SQL + RawByteString('REPEATABLE READ')
-      else SQL := SQL + RawByteString('SERIALIZABLE');
-    tiSerializable:
-      SQL := SQL + RawByteString('SERIALIZABLE');
+  if Level <> GetTransactionIsolation then begin
+    SQL := RawByteString('SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL ');
+    case level of
+      tiNone, tiReadUncommitted, tiReadCommitted:
+        SQL := SQL + RawByteString('READ COMMITTED');
+      tiRepeatableRead:
+        if (GetServerMajorVersion >= 8)
+        then SQL := SQL + RawByteString('REPEATABLE READ')
+        else SQL := SQL + RawByteString('SERIALIZABLE');
+      tiSerializable:
+        SQL := SQL + RawByteString('SERIALIZABLE');
+    end;
+
+    QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
+    CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL ,QueryHandle);
+    GetPlainDriver.PQclear(QueryHandle);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+
+    inherited SetTransactionIsolation(Level);
   end;
-
-  QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
-  CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL ,QueryHandle);
-  GetPlainDriver.PQclear(QueryHandle);
-  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
-
-  inherited SetTransactionIsolation(Level);
 end;
 
 {**
