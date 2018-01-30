@@ -423,10 +423,12 @@ begin
       PMYSQL_FIELD(FieldHandle)^.org_name_length, ConSettings^.ClientCodePage^.CP);
     Result.TableName := PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.org_table,
       PMYSQL_FIELD(FieldHandle)^.org_table_length, ConSettings^.ClientCodePage^.CP);
-    Result.SchemaName := PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.db,
+    Result.CatalogName := PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.db,
       PMYSQL_FIELD(FieldHandle)^.db_length, ConSettings^.ClientCodePage^.CP);
-    Result.CatalogName := PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.catalog,
-      PMYSQL_FIELD(FieldHandle)^.catalog_length, ConSettings^.ClientCodePage^.CP);
+    {JDBC maps the MySQL MYSQK_FIELD.db to Catalog:
+      see: https://stackoverflow.com/questions/7942520/relationship-between-catalog-schema-user-and-database-instance}
+    //Result.CatalogName := PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.catalog,
+      //PMYSQL_FIELD(FieldHandle)^.catalog_length, ConSettings^.ClientCodePage^.CP);
     //Result.DefaultValue := PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.def,
       //PMYSQL_FIELD(FieldHandle)^.def_length, ConSettings^.ClientCodePage^.CP);
     {$ELSE}
@@ -434,8 +436,8 @@ begin
       Result.ColumnLabel := BufferToStr(PMYSQL_FIELD(FieldHandle)^.name, PMYSQL_FIELD(FieldHandle)^.name_length);
       Result.ColumnName := BufferToStr(PMYSQL_FIELD(FieldHandle)^.org_name, PMYSQL_FIELD(FieldHandle)^.org_name_length);
       Result.TableName := BufferToStr(PMYSQL_FIELD(FieldHandle)^.org_table, PMYSQL_FIELD(FieldHandle)^.org_table_length);
-      Result.SchemaName := BufferToStr(PMYSQL_FIELD(FieldHandle)^.db, PMYSQL_FIELD(FieldHandle)^.db_length);
-      Result.CatalogName := BufferToStr(PMYSQL_FIELD(FieldHandle)^.catalog, PMYSQL_FIELD(FieldHandle)^.catalog_length);
+      Result.CatalogName := BufferToStr(PMYSQL_FIELD(FieldHandle)^.db, PMYSQL_FIELD(FieldHandle)^.db_length);
+      //Result.CatalogName := BufferToStr(PMYSQL_FIELD(FieldHandle)^.catalog, PMYSQL_FIELD(FieldHandle)^.catalog_length);
     end else begin
       Result.ColumnLabel := ZUnicodeToString(PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.name,
         PMYSQL_FIELD(FieldHandle)^.name_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
@@ -443,10 +445,10 @@ begin
         PMYSQL_FIELD(FieldHandle)^.org_name_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
       Result.TableName := ZUnicodeToString(PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.org_table,
         PMYSQL_FIELD(FieldHandle)^.org_table_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
-      Result.SchemaName := ZUnicodeToString(PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.db,
+      Result.CatalogName := ZUnicodeToString(PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.db,
         PMYSQL_FIELD(FieldHandle)^.db_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
-      Result.CatalogName := ZUnicodeToString(PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.catalog,
-        PMYSQL_FIELD(FieldHandle)^.catalog_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
+      //Result.CatalogName := ZUnicodeToString(PRawToUnicode(PMYSQL_FIELD(FieldHandle)^.catalog,
+        //PMYSQL_FIELD(FieldHandle)^.catalog_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
     end;
     //Result.DefaultValue := ConSettings^.ConvFuncs.ZRawToString(PMYSQL_FIELD(FieldHandle)^.def, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
     {$ENDIF}
