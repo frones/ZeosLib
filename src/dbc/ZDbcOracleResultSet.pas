@@ -1284,6 +1284,21 @@ var
   RowSize: Integer;
   BufferPos: PAnsiChar;
   DescriptorColumnCount,SubObjectColumnCount: Integer;
+  function AttributeToString(var P: PAnsiChar; Len: Integer): string;
+  begin
+    if P <> nil then
+      {$IFDEF UNICODE}
+      Result := ZEncoding.PRawToUnicode(P, Len, ConSettings^.ClientCodePage^.CP)
+      {$ELSE}
+      if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
+        Result := BufferToStr(P, Len)
+      else
+        Result := ZUnicodeToString(PRawToUnicode(P, Len, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP)
+      {$ENDIF}
+    else
+      Result := '';
+    P := nil;
+  end;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -1297,8 +1312,10 @@ begin
       lcExecute, 'OCIStmtExecute', ConSettings);
 
   { Resize SQLVARS structure if needed }
-  FPlainDriver.AttrGet(FStmtHandle, OCI_HTYPE_STMT, @ColumnCount, nil,
-    OCI_ATTR_PARAM_COUNT, FErrorHandle);
+  CheckOracleError(FPlainDriver, FErrorHandle,
+    FPlainDriver.AttrGet(FStmtHandle, OCI_HTYPE_STMT, @ColumnCount, nil,
+      OCI_ATTR_PARAM_COUNT, FErrorHandle),
+      lcExecute, 'OCIStmtExecute', ConSettings);
 
   AllocateOracleSQLVars(FColumns, ColumnCount);
   RowSize := 0;
@@ -1469,28 +1486,29 @@ begin
     begin
       //ColumnName := ''; TableName := ''; ColumnDisplaySize := 0; AutoIncrement := False;
       ColumnCodePage := CurrentVar^.CodePage;
-      P := nil;
-      FPlainDriver.AttrGet(CurrentVar^.Handle, OCI_DTYPE_PARAM,
-        @P, @TempColumnNameLen, OCI_ATTR_NAME, FErrorHandle);
-      if P <> nil then
-        {$IFDEF UNICODE}
-        ColumnLabel := ZEncoding.PRawToUnicode(P, TempColumnNameLen, ConSettings^.ClientCodePage^.CP)
-        {$ELSE}
-        if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
-          ColumnLabel := BufferToStr(P, TempColumnNameLen)
-        else
-          ColumnLabel := ZUnicodeToString(PRawToUnicode(P, TempColumnNameLen, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP)
-        {$ENDIF}
-      else
-        ColumnLabel := 'Col_'+ZFastCode.IntToStr(I+1);
+      P := nil; //init
+      CheckOracleError(FPlainDriver, FErrorHandle,
+        FPlainDriver.AttrGet(CurrentVar^.Handle, OCI_DTYPE_PARAM,
+        @P, @TempColumnNameLen, OCI_ATTR_NAME, FErrorHandle),
+        lcExecute, 'OCI_ATTR_NAME', ConSettings);
+      ColumnName := AttributeToString(P, TempColumnNameLen);
+      if ColumnName = '' then
+        ColumnName := 'Col_'+ZFastCode.IntToStr(I+1);
+
+      ColumnLabel := ColumnName;
+
+      CheckOracleError(FPlainDriver, FErrorHandle,
+        FPlainDriver.AttrGet(CurrentVar^.Handle, OCI_DTYPE_PARAM,
+        @P, @TempColumnNameLen, OCI_ATTR_SCHEMA_NAME, FErrorHandle),
+        lcExecute, 'OCI_ATTR_SCHEMA_NAME', ConSettings);
+      SchemaName := AttributeToString(P, TempColumnNameLen);
 
       Signed := True;
       Nullable := ntNullable;
 
       ColumnType := CurrentVar^.ColType;
       Scale := CurrentVar^.Scale;
-      if (ColumnType in [stString, stUnicodeString]) then
-      begin
+      if (ColumnType in [stString, stUnicodeString]) then begin
         FPlainDriver.AttrGet(CurrentVar^.Handle, OCI_DTYPE_PARAM,
           @ColumnDisplaySize, nil, OCI_ATTR_DISP_SIZE, FErrorHandle);
         FPlainDriver.AttrGet(CurrentVar^.Handle, OCI_DTYPE_PARAM,
@@ -1504,12 +1522,10 @@ begin
         end else begin
           CharOctedLength := Precision shl 1;
         end;
-      end
+      end else if (ColumnType = stBytes ) then
+        Precision := CurrentVar^.oDataSize
       else
-        if (ColumnType = stBytes ) then
-          Precision := CurrentVar^.oDataSize
-        else
-          Precision := CurrentVar^.Precision;
+        Precision := CurrentVar^.Precision;
     end;
 
     ColumnsInfo.Add(ColumnInfo);
