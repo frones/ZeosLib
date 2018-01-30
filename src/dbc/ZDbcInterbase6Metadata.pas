@@ -1171,13 +1171,7 @@ end;
 function TZInterbase6DatabaseInfo.SupportsTransactionIsolationLevel(
   const Level: TZTransactIsolationLevel): Boolean;
 begin
-  case Level of
-    tiRepeatableRead, tiReadCommitted, tiSerializable: Result := True;
-    tiReadUncommitted: Result := False;
-    tiNone: Result := False; //MAY BE FIX IT
-    else
-      Result := False;
-  end;    
+  Result := Level in [tiNone, tiRepeatableRead, tiReadCommitted, tiSerializable]
 end;
 
 {**
