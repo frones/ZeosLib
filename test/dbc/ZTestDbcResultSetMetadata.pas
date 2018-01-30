@@ -85,12 +85,12 @@ procedure TZTestResultSetMetadataCase.CheckColumnMetadata(
   Metadata: IZResultSetMetadata; ColumnIndex: Integer; ColumnLabel,
   ColumnName, ColumnTable: string; IsAutoIncrement, IsWritable: Boolean);
 begin
-  CheckEquals(ColumnLabel, Metadata.GetColumnLabel(ColumnIndex));
-  CheckEquals(ColumnName, Metadata.GetColumnName(ColumnIndex));
-  CheckEquals(ColumnTable, Metadata.GetTableName(ColumnIndex));
-//  CheckEquals(IsAutoIncrement, Metadata.IsAutoIncrement(ColumnIndex));
-  CheckEquals(IsWritable, Metadata.IsWritable(ColumnIndex));
-  CheckEquals(IsWritable, Metadata.IsDefinitelyWritable(ColumnIndex));
+  CheckEquals(ColumnLabel, Metadata.GetColumnLabel(ColumnIndex), 'ColumnLabel does not match');
+  CheckEquals(ColumnName, Metadata.GetColumnName(ColumnIndex), 'ColumnName does not match');
+  CheckEquals(ColumnTable, Metadata.GetTableName(ColumnIndex), 'TableName does not match');
+//  CheckEquals(IsAutoIncrement, Metadata.IsAutoIncrement(ColumnIndex), 'IsAutoIncrement does not match');
+  CheckEquals(IsWritable, Metadata.IsWritable(ColumnIndex), 'IsWritable does not match');
+  CheckEquals(IsWritable, Metadata.IsDefinitelyWritable(ColumnIndex), 'IsDefinitelyWritable does not match');
 end;
 
 {**
