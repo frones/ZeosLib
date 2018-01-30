@@ -123,7 +123,7 @@ type
 
     procedure AddTable(TableRef: TZTableRef);
 
-    procedure LinkReferences(Convertor: IZIdentifierConvertor);
+    procedure LinkReferences(const Convertor: IZIdentifierConvertor);
 
     function FindTableByFullName(const Catalog, Schema, Table: string): TZTableRef;
     function FindTableByShortName(const Table: string): TZTableRef;
@@ -149,7 +149,7 @@ type
     FFields: TObjectList;
     FTables: TObjectList;
 
-    procedure ConvertIdentifiers(Convertor: IZIdentifierConvertor);
+    procedure ConvertIdentifiers(const Convertor: IZIdentifierConvertor);
   public
     constructor Create;
     destructor Destroy; override;
@@ -160,7 +160,7 @@ type
 
     procedure AddTable(TableRef: TZTableRef);
 
-    procedure LinkReferences(Convertor: IZIdentifierConvertor);
+    procedure LinkReferences(const Convertor: IZIdentifierConvertor);
 
     function FindTableByFullName(const {%H-}Catalog, Schema, Table: string): TZTableRef;
     function FindTableByShortName(const Table: string): TZTableRef;
@@ -442,7 +442,7 @@ end;
   Convert all table and field identifiers..
   @param Convertor an identifier convertor.
 }
-procedure TZSelectSchema.ConvertIdentifiers(Convertor: IZIdentifierConvertor);
+procedure TZSelectSchema.ConvertIdentifiers(const Convertor: IZIdentifierConvertor);
 var
   I: Integer;
   function ExtractNeedlessQuote(Value : String) : String;
@@ -487,7 +487,7 @@ end;
   Links references between fields and tables.
   @param Convertor an identifier convertor.
 }
-procedure TZSelectSchema.LinkReferences(Convertor: IZIdentifierConvertor);
+procedure TZSelectSchema.LinkReferences(const Convertor: IZIdentifierConvertor);
 var
   I, J: Integer;
   FieldRef: TZFieldRef;
@@ -499,49 +499,36 @@ begin
   FFields := TObjectList.Create;
 
   try
-    for I := 0 to TempFields.Count - 1 do
-    begin
+    for I := 0 to TempFields.Count - 1 do begin
       FieldRef := TZFieldRef(TempFields[I]);
       TableRef := nil;
 
-      if not FieldRef.IsField then
-      begin
+      if not FieldRef.IsField then begin
         FFields.Add(TZFieldRef.Create(FieldRef.IsField, FieldRef.Catalog,
           FieldRef.Schema, FieldRef.Table, FieldRef.Field, FieldRef.Alias,
           FieldRef.TableRef));
         Continue;
-      end
-      else if (FieldRef.Schema <> '') and (FieldRef.Table <> '') then
-      begin
+      end else if (FieldRef.Schema <> '') and (FieldRef.Table <> '') then
         TableRef := FindTableByFullName(FieldRef.Catalog, FieldRef.Schema,
-          FieldRef.Table);
-      end
+          FieldRef.Table)
       else if FieldRef.Table <> '' then
         TableRef := FindTableByShortName(FieldRef.Table)
-      else if FieldRef.Field = '*' then
-      begin
+      else if FieldRef.Field = '*' then begin
         { Add all fields from all tables. }
         for J := 0 to FTables.Count - 1 do
         begin
           with TZTableRef(FTables[J]) do
-          begin
             FFields.Add(TZFieldRef.Create(True, Catalog, Schema,
               Table, '*', '', TZTableRef(FTables[J])));
-          end;
         end;
         Continue;
       end;
 
-      if TableRef <> nil then
-      begin
-        FFields.Add(TZFieldRef.Create(True, TableRef.Catalog, TableRef.Schema,
-          TableRef.Table, FieldRef.Field, FieldRef.Alias, TableRef));
-      end
-      else
-      begin
-        FFields.Add(TZFieldRef.Create(True, FieldRef.Catalog, FieldRef.Schema,
+      if TableRef <> nil
+      then FFields.Add(TZFieldRef.Create(True, TableRef.Catalog, TableRef.Schema,
+          TableRef.Table, FieldRef.Field, FieldRef.Alias, TableRef))
+      else FFields.Add(TZFieldRef.Create(True, FieldRef.Catalog, FieldRef.Schema,
           FieldRef.Table, FieldRef.Field, FieldRef.Alias, TableRef));
-      end;
     end;
   finally
     TempFields.Free;
