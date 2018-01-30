@@ -397,7 +397,7 @@ type
   PZPostgreSQLResult = Pointer;
   PZPostgreSQLCancel = Pointer;
   POid = ^Oid;
-  Oid = Integer;
+  Oid = Cardinal;
 
 TZPgCharactersetType = (
 	csSQL_ASCII = 0,	{ SQL/ASCII }
