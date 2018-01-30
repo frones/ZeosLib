@@ -364,7 +364,9 @@ begin
 //  CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
   Connection.SetAutoCommit(False);
-  CheckEquals(Ord(tiNone), Ord(Connection.GetTransactionIsolation));
+  if Connection.GetMetadata.GetDatabaseInfo.SupportsTransactionIsolationLevel(tiNone)
+  then CheckEquals(Ord(tiNone), Ord(Connection.GetTransactionIsolation))
+  else CheckEquals(Ord(Connection.GetMetadata.GetDatabaseInfo.GetDefaultTransactionIsolation), Ord(Connection.GetTransactionIsolation));
 
   { Checks without transactions. }
   CheckNotNull(Connection.CreateStatement);
