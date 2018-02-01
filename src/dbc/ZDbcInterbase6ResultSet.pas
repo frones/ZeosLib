@@ -147,7 +147,13 @@ type
 
   {** Implements Interbase ResultSetMetadata object. }
   TZInterbaseResultSetMetadata = Class(TZAbstractResultSetMetadata)
+  protected
+    procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
   public
+    function GetCatalogName(ColumnIndex: Integer): string; override;
+    function GetColumnName(ColumnIndex: Integer): string; override;
+    function GetSchemaName(ColumnIndex: Integer): string; override;
+    function GetTableName(ColumnIndex: Integer): string; override;
     function IsAutoIncrement(ColumnIndex: Integer): Boolean; override;
   End;
 
@@ -1793,6 +1799,61 @@ begin
 end;
 
 { TZInterbaseResultSetMetadata }
+
+{**
+  Clears specified column information.
+  @param ColumnInfo a column information object.
+}
+procedure TZInterbaseResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
+begin
+  ColumnInfo.ReadOnly := True;
+  ColumnInfo.Writable := False;
+  ColumnInfo.DefinitelyWritable := False;
+end;
+
+{**
+  Gets the designated column's table's catalog name.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return column name or "" if not applicable
+}
+function TZInterbaseResultSetMetadata.GetCatalogName(
+  ColumnIndex: Integer): string;
+begin
+  Result := ''; //not supported by FB/IB
+end;
+
+{**
+  Get the designated column's name.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return column name
+}
+function TZInterbaseResultSetMetadata.GetColumnName(
+  ColumnIndex: Integer): string;
+begin
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnName;
+end;
+
+{**
+  Get the designated column's table's schema.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return schema name or "" if not applicable
+}
+function TZInterbaseResultSetMetadata.GetSchemaName(
+  ColumnIndex: Integer): string;
+begin
+  Result := ''; //not supported by FB/IB
+end;
+
+{**
+  Gets the designated column's table name.
+  @param ColumnIndex the first ColumnIndex is 1, the second is 2, ...
+  @return table name or "" if not applicable
+}
+function TZInterbaseResultSetMetadata.GetTableName(
+  ColumnIndex: Integer): string;
+begin
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).TableName;
+end;
 
 {**
   Indicates whether the designated column is automatically numbered, thus read-only.
