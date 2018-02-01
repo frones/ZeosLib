@@ -1491,11 +1491,7 @@ begin
         FPlainDriver.AttrGet(CurrentVar^.Handle, OCI_DTYPE_PARAM,
         @P, @TempColumnNameLen, OCI_ATTR_NAME, FErrorHandle),
         lcExecute, 'OCI_ATTR_NAME', ConSettings);
-      ColumnName := AttributeToString(P, TempColumnNameLen);
-      if ColumnName = '' then
-        ColumnName := 'Col_'+ZFastCode.IntToStr(I+1);
-
-      ColumnLabel := ColumnName;
+      ColumnLabel := AttributeToString(P, TempColumnNameLen);
 
       CheckOracleError(FPlainDriver, FErrorHandle,
         FPlainDriver.AttrGet(CurrentVar^.Handle, OCI_DTYPE_PARAM,
