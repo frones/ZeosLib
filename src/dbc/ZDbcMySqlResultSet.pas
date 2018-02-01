@@ -64,8 +64,14 @@ uses
 type
   {** Implements MySQL ResultSet Metadata. }
   TZMySQLResultSetMetadata = class(TZAbstractResultSetMetadata)
+  protected
+    procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
   public
-    function GetColumnType(Column: Integer): TZSQLType; override;
+    function GetCatalogName(ColumnIndex: Integer): string; override;
+    function GetColumnName(ColumnIndex: Integer): string; override;
+    function GetColumnType(ColumnIndex: Integer): TZSQLType; override;
+    function GetSchemaName(ColumnIndex: Integer): string; override;
+    function GetTableName(ColumnIndex: Integer): string; override;
   end;
 
   {** Implements MySQL ResultSet. }
@@ -219,16 +225,63 @@ uses
 
 { TZMySQLResultSetMetadata }
 
+procedure TZMySQLResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
+begin
+  ColumnInfo.ReadOnly := True;
+  ColumnInfo.Writable := False;
+  ColumnInfo.DefinitelyWritable := False;
+end;
+
+{**
+  Gets the designated column's table's catalog name.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return column name or "" if not applicable
+}
+function TZMySQLResultSetMetadata.GetCatalogName(ColumnIndex: Integer): string;
+begin
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).CatalogName;
+end;
+
+{**
+  Get the designated column's name.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return column name
+}
+function TZMySQLResultSetMetadata.GetColumnName(ColumnIndex: Integer): string;
+begin
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnName;
+end;
+
 {**
   Retrieves the designated column's SQL type.
   @param column the first column is 1, the second is 2, ...
   @return SQL type from java.sql.Types
 }
-function TZMySQLResultSetMetadata.GetColumnType(Column: Integer): TZSQLType;
+function TZMySQLResultSetMetadata.GetColumnType(ColumnIndex: Integer): TZSQLType;
 begin {EH: does anyone know why the LoadColumns was made? Note the column-types are perfect determinable on MySQL}
   //if not Loaded then
     // LoadColumns;
-  Result := TZColumnInfo(ResultSet.ColumnsInfo[Column{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType;
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType;
+end;
+
+{**
+  Get the designated column's table's schema.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return schema name or "" if not applicable
+}
+function TZMySQLResultSetMetadata.GetSchemaName(ColumnIndex: Integer): string;
+begin
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).SchemaName;
+end;
+
+{**
+  Gets the designated column's table name.
+  @param ColumnIndex the first ColumnIndex is 1, the second is 2, ...
+  @return table name or "" if not applicable
+}
+function TZMySQLResultSetMetadata.GetTableName(ColumnIndex: Integer): string;
+begin
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).TableName;
 end;
 
 { TZAbstractMySQLResultSet }
@@ -317,8 +370,7 @@ begin
   { Fills the column info. }
   ColumnsInfo.Clear;
   SetLength(FMySQLTypes, FPlainDriver.GetFieldCount(FQueryHandle));
-  for I := 0 to FPlainDriver.GetFieldCount(FQueryHandle) - 1 do
-  begin
+  for I := 0 to High(FMySQLTypes) do begin
     FPlainDriver.SeekField(FQueryHandle, I);
     FieldHandle := FPlainDriver.FetchField(FQueryHandle);
     FMySQLTypes[i] := PMYSQL_FIELD(FieldHandle)^._type;
