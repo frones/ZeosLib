@@ -626,6 +626,8 @@ var
   tempColType: TZSQLType;
 begin
   Result := False;
+  if (FieldName = '') then
+    Exit;
   TableColumns := GetTableColumns(TableRef);
   { Checks for unexisted table. }
   if not Assigned(TableColumns) then
@@ -770,14 +772,17 @@ begin
   { Initializes single columns with specified table. }
   FieldRef := SelectSchema.LinkFieldByIndexAndShortName(ColumnIndex,
     ColumnInfo.ColumnLabel, IdentifierConvertor);
-  ReadColumnByRef(FieldRef, ColumnInfo);
-  if ColumnInfo.ColumnName <> '' then
+  if ReadColumnByRef(FieldRef, ColumnInfo) then //else double processing down below
     Exit;
-
+ //EH commented: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&sid=97f200f6e575ecf37f4e6364c3102ea5&start=15
+ // if ColumnInfo.ColumnName <> '' then
+   // Exit;
+  if Assigned(FieldRef) and not FieldRef.IsField then
+    Exit;
   { Initializes single columns without specified table. }
   I := 0;
   Found := False;
-  while (ColumnInfo.ColumnName = '') and (I < SelectSchema.TableCount)
+  while {(ColumnInfo.ColumnName = '') and }(I < SelectSchema.TableCount)
     and not Found do
   begin
     TableRef := SelectSchema.Tables[I];

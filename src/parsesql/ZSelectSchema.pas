@@ -232,7 +232,8 @@ begin
   FField := Field;
   FAlias := Alias;
   FTableRef := TableRef;
-  FLinked := False;
+  //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&sid=97f200f6e575ecf37f4e6364c3102ea5&start=15
+  FLinked := TableRef <> nil; //set linked if a table ref already could be given
 end;
 
 { TZSelectSchema }
@@ -389,10 +390,11 @@ begin
   {$ENDIF}
   begin
     Current := TZFieldRef(FFields[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
-    if not Current.Linked
-      //note http://sourceforge.net/p/zeoslib/tickets/101/
-      and ((Current.Alias = Field) or (Current.Field = Field) or (Current.Field = Convertor.Quote(Field))) then
-    begin
+    if Current.Linked then begin //a linket column has a table ref!
+      Result := Current; //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&sid=97f200f6e575ecf37f4e6364c3102ea5&start=15
+      exit;
+    end  //note http://sourceforge.net/p/zeoslib/tickets/101/
+    else if ((Current.Alias = Field) or (Current.Field = Field) or (Current.Field = Convertor.Quote(Field)) or (Current.Alias = Convertor.ExtractQuote(Field))) then begin
       Result := Current;
       Result.Linked := True;
       Exit;
@@ -403,7 +405,8 @@ begin
   for I := 0 to FFields.Count - 1 do
   begin
     Current := TZFieldRef(FFields[I]);
-    if not Current.Linked and ((Current.Alias = Field) or (Current.Alias = Convertor.Quote(Field))) then
+    if not Current.Linked and (Current.Alias <> '') and
+       ((Current.Alias = Field) or (Current.Alias = Convertor.Quote(Field)) or (Current.Alias = Convertor.ExtractQuote(Field))) then
     begin
       Result := Current;
       Result.Linked := True;
@@ -429,7 +432,8 @@ begin
   for I := 0 to FFields.Count - 1 do
   begin
     Current := TZFieldRef(FFields[I]);
-    if not Current.Linked and (Current.Field = Field) then
+    if not Current.Linked and (Current.Field <> '') and
+       ((Current.Field = Field) or (Current.Field = Convertor.Quote(Field)) or (Current.Field = Convertor.ExtractQuote(Field))) then
     begin
       Result := Current;
       Result.Linked := True;
