@@ -69,7 +69,7 @@ type
       IsAutoIncrement, IsWritable: Boolean); overload;
   published
     procedure TestResultSetMetadata;
-    procedure TestTableDetermination;
+    procedure TestColumnTypeAndTableDetermination;
     procedure TestResultSetMetadata1;
   end;
 
@@ -233,7 +233,7 @@ begin
     False, False);
 end;
 
-procedure TZTestResultSetMetadataCase.TestTableDetermination;
+procedure TZTestResultSetMetadataCase.TestColumnTypeAndTableDetermination;
 const
   DEP_ID_Index        = FirstDbcIndex;
   DEP_NAME_Index      = FirstDbcIndex +1;
@@ -270,7 +270,11 @@ begin
 
   CheckColumnMetadata(Metadata, DEP_ID_Index, GetColumnLabeName(DEP_ID_Index, 'DEP_NAME'),
     GetIdentifierName('DEP_ID', False), GetIdentifierName('DEPARTMENT', True), True, True);
-  CheckEquals(Ord(stSmall), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match');
+  if StartsWith(Protocol, 'postgre')
+  then CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match')
+  else if StartsWith(Protocol, 'oracle')
+  then CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match')
+  else CheckEquals(Ord(stSmall), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match');
 
   CheckColumnMetadata(Metadata, DEP_NAME_Index, GetColumnLabeName(DEP_NAME_Index, 'DEP_ID'),
     GetIdentifierName('DEP_NAME', False), GetIdentifierName('DEPARTMENT', True), False, True);
