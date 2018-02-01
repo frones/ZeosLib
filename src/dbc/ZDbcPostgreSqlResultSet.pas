@@ -312,18 +312,10 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
     begin
-      if Statement.GetResultSetConcurrency = rcUpdatable then //exclude system-tables and if no updates happen -> useless
-        TableInfo := Connection.GetTableInfo(FPlainDriver.GetFieldTableOID(FQueryHandle, I))
-      else
-        TableInfo := nil;
-      if TableInfo = nil then
-      begin
-        SchemaName := '';
-        ColumnName := '';
-        TableName := '';
-      end
-      else
-      begin
+      if Statement.GetResultSetConcurrency = rcUpdatable //exclude system-tables and if no updates happen -> useless
+      then TableInfo := Connection.GetTableInfo(FPlainDriver.GetFieldTableOID(FQueryHandle, I))
+      else TableInfo := nil;
+      if TableInfo <> nil then begin
         SchemaName := TableInfo^.Schema;
         TableName := TableInfo^.Name;
         //See: http://zeoslib.sourceforge.net/viewtopic.php?f=38&t=20797
@@ -365,13 +357,11 @@ begin
       FieldType := FPlainDriver.GetFieldType(FQueryHandle, I);
       FpgOIDTypes[i] := FieldType;
       DefinePostgreSQLToSQLType(ColumnInfo, FieldType);
-      if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
-        ColumnCodePage := ConSettings^.ClientCodePage^.CP
-      else
-        ColumnCodePage := High(Word);
+      if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]
+      then ColumnCodePage := ConSettings^.ClientCodePage^.CP
+      else ColumnCodePage := High(Word);
 
-      if Precision = 0 then
-      begin
+      if Precision = 0 then begin
         FieldMode := FPlainDriver.GetFieldMode(FQueryHandle, I);
         FieldSize := FPlainDriver.GetFieldSize(FQueryHandle, I);
         Precision := Max(Max(FieldMode - 4, FieldSize), 0);
