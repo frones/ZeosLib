@@ -182,6 +182,9 @@ type
 
 implementation
 
+uses
+  ZDbcIntfs;
+
 { TZTableRef }
 
 {**
@@ -377,24 +380,24 @@ function TZSelectSchema.LinkFieldByIndexAndShortName(const ColumnIndex: Integer;
 var
   I: Integer;
   Current: TZFieldRef;
+  FieldQuoted, FieldUnquoted: string;
 begin
   Result := nil;
   if Field = '' then
     Exit;
 
+  FieldQuoted := Convertor.Quote(Field);
+  FieldUnquoted := Convertor.ExtractQuote(Field);
+
   { Looks by field index. }
-  {$IFDEF GENERIC_INDEX}
-  if (ColumnIndex >= 0) and (ColumnIndex < FFields.Count) then
-  {$ELSE}
-  if (ColumnIndex > 0) and (ColumnIndex <= FFields.Count) then
-  {$ENDIF}
+  if (ColumnIndex >= FirstDbcIndex) and (ColumnIndex <= FFields.Count {$IFDEF GENERIC_INDEX}-1{$ENDIF}) then
   begin
     Current := TZFieldRef(FFields[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
     if Current.Linked then begin //a linket column has a table ref!
       Result := Current; //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&sid=97f200f6e575ecf37f4e6364c3102ea5&start=15
       exit;
     end  //note http://sourceforge.net/p/zeoslib/tickets/101/
-    else if ((Current.Alias = Field) or (Current.Field = Field) or (Current.Field = Convertor.Quote(Field)) or (Current.Alias = Convertor.ExtractQuote(Field))) then begin
+    else if ((Current.Alias = Field) or (Current.Field = Field) or (Current.Field = FieldQuoted) or (Current.Alias = FieldUnquoted)) then begin
       Result := Current;
       Result.Linked := True;
       Exit;
@@ -406,7 +409,7 @@ begin
   begin
     Current := TZFieldRef(FFields[I]);
     if not Current.Linked and (Current.Alias <> '') and
-       ((Current.Alias = Field) or (Current.Alias = Convertor.Quote(Field)) or (Current.Alias = Convertor.ExtractQuote(Field))) then
+       ((Current.Alias = Field) or (Current.Alias = FieldQuoted) or (Current.Alias = FieldUnquoted)) then
     begin
       Result := Current;
       Result.Linked := True;
@@ -433,7 +436,7 @@ begin
   begin
     Current := TZFieldRef(FFields[I]);
     if not Current.Linked and (Current.Field <> '') and
-       ((Current.Field = Field) or (Current.Field = Convertor.Quote(Field)) or (Current.Field = Convertor.ExtractQuote(Field))) then
+       ((Current.Field = Field) or (Current.Field = FieldQuoted) or (Current.Field = FieldUnquoted)) then
     begin
       Result := Current;
       Result.Linked := True;
@@ -447,19 +450,21 @@ end;
   @param Convertor an identifier convertor.
 }
 procedure TZSelectSchema.ConvertIdentifiers(const Convertor: IZIdentifierConvertor);
-var
-  I: Integer;
+
   function ExtractNeedlessQuote(Value : String) : String;
-  var
-    tempstring: String;
   begin
-    tempstring := Convertor.ExtractQuote(Value);
-    if Convertor.IsCaseSensitive(tempstring) then
-      result := Value
-    else
-      result := tempstring;
+    if Value = '' then
+    begin
+      Result := '';
+      Exit;
+    end;
+    Result := Convertor.ExtractQuote(Value);
+    if Convertor.IsCaseSensitive(Result) then
+      Result := Value;
   end;
 
+var
+  I: Integer;
 begin
   if Convertor = nil then Exit;
 
