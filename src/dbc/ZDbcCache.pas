@@ -1775,17 +1775,17 @@ end;
 
 function TZRowAccessor.GetColumnDefaultExpression(ColumnIndex: Integer): string;
 begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnIndex(ColumnIndex);
-{$ENDIF}
+//{$IFNDEF DISABLE_CHECKING}
+//  CheckColumnIndex(ColumnIndex);
+//{$ENDIF}
   Result := FColumnDefaultExpressions[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
 end;
 
 procedure TZRowAccessor.SetColumnDefaultExpression(ColumnIndex: Integer; const Value: string);
 begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnIndex(ColumnIndex);
-{$ENDIF}
+//{$IFNDEF DISABLE_CHECKING}
+//  CheckColumnIndex(ColumnIndex);
+//{$ENDIF}
   FColumnDefaultExpressions[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := Value;
 end;
 
