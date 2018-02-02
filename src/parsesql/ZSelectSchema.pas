@@ -129,7 +129,7 @@ type
     function FindTableByShortName(const Table: string): TZTableRef;
     function FindFieldByShortName(const Field: string): TZFieldRef;
 
-    function LinkFieldByIndexAndShortName(const ColumnIndex: Integer; const Field: string;
+    function LinkFieldByIndexAndShortName(ColumnIndex: Integer; const Field: string;
       const Convertor: IZIdentifierConvertor): TZFieldRef;
 
     function GetFieldCount: Integer;
@@ -166,7 +166,7 @@ type
     function FindTableByShortName(const Table: string): TZTableRef;
     function FindFieldByShortName(const Field: string): TZFieldRef;
 
-    function LinkFieldByIndexAndShortName(const ColumnIndex: Integer; const Field: string;
+    function LinkFieldByIndexAndShortName(ColumnIndex: Integer; const Field: string;
       const Convertor: IZIdentifierConvertor): TZFieldRef;
 
     function GetFieldCount: Integer;
@@ -181,9 +181,6 @@ type
   end;
 
 implementation
-
-uses
-  ZDbcIntfs;
 
 { TZTableRef }
 
@@ -375,7 +372,7 @@ end;
   @param Field a table field name or alias.
   @return a found field reference object or <code>null</code> otherwise.
 }
-function TZSelectSchema.LinkFieldByIndexAndShortName(const ColumnIndex: Integer;
+function TZSelectSchema.LinkFieldByIndexAndShortName(ColumnIndex: Integer;
   const Field: string; const Convertor: IZIdentifierConvertor): TZFieldRef;
 var
   I: Integer;
@@ -389,10 +386,14 @@ begin
   FieldQuoted := Convertor.Quote(Field);
   FieldUnquoted := Convertor.ExtractQuote(Field);
 
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+
   { Looks by field index. }
-  if (ColumnIndex >= FirstDbcIndex) and (ColumnIndex <= FFields.Count {$IFDEF GENERIC_INDEX}-1{$ENDIF}) then
+  if (ColumnIndex >= 0) and (ColumnIndex <= FFields.Count - 1) then
   begin
-    Current := TZFieldRef(FFields[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
+    Current := TZFieldRef(FFields[ColumnIndex]);
     if Current.Linked then begin //a linket column has a table ref!
       Result := Current; //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&sid=97f200f6e575ecf37f4e6364c3102ea5&start=15
       exit;
