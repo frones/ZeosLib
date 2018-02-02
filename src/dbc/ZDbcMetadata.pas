@@ -4534,7 +4534,7 @@ end;
 
 function TZAbstractDatabaseMetadata.NormalizePatternCase(Pattern:String): string;
 begin
-  with GetIdentifierConvertor do
+  with FIC do
     if not IsQuoted(Pattern) then
       if FDatabaseInfo.StoresUpperCaseIdentifiers then
         Result := UpperCase(Pattern)
@@ -4999,8 +4999,11 @@ var
   Keywords: string;
 begin
   if Value = '' then
-    Result := False
-  else if IsSpecialCase(Value) then
+  begin
+    Result := False;
+    Exit;
+  end;
+  if IsSpecialCase(Value) then
     Result := True
   else if IsLowerCase(Value) then
     Result := Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers
