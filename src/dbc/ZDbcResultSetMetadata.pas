@@ -137,8 +137,9 @@ type
     FConSettings: PZConSettings;
     procedure SetMetadata(const Value: IZDatabaseMetadata);
   protected
+
     procedure LoadColumn(ColumnIndex: Integer; ColumnInfo: TZColumnInfo;
-      SelectSchema: IZSelectSchema); virtual;
+      const SelectSchema: IZSelectSchema); virtual;
 
     function GetTableColumns(TableRef: TZTableRef): IZResultSet;
     function ReadColumnByRef(FieldRef: TZFieldRef; ColumnInfo: TZColumnInfo): Boolean;
@@ -762,7 +763,7 @@ end;
   @param SelectSchema a schema of the select statement.
 }
 procedure TZAbstractResultSetMetadata.LoadColumn(ColumnIndex: Integer;
-  ColumnInfo: TZColumnInfo; SelectSchema: IZSelectSchema);
+  ColumnInfo: TZColumnInfo; const SelectSchema: IZSelectSchema);
 var
   I: Integer;
   FieldRef: TZFieldRef;
@@ -786,10 +787,11 @@ begin
     and not Found do
   begin
     TableRef := SelectSchema.Tables[I];
-    if Assigned(FieldRef) then
-      Found := ReadColumnByName(IdentifierConvertor.ExtractQuote(FieldRef.Field), TableRef, ColumnInfo)
-    else
-      Found := ReadColumnByName(IdentifierConvertor.ExtractQuote(ColumnInfo.ColumnLabel), TableRef, ColumnInfo);
+    if Assigned(FieldRef)
+    then Found := ReadColumnByName(FieldRef.Field, TableRef, ColumnInfo)
+    else if ColumnInfo.ColumnName <> ''
+    then Found := ReadColumnByName(ColumnInfo.ColumnName, TableRef, ColumnInfo)
+    else Found := ReadColumnByName(ColumnInfo.ColumnLabel, TableRef, ColumnInfo);
     Inc(I);
   end;
 end;
@@ -848,12 +850,11 @@ end;
 }
 procedure TZAbstractResultSetMetadata.LoadColumns;
 var
-  I: Integer;
+  I, FillByIndices: Integer;
   Driver: IZDriver;
   Tokenizer: IZTokenizer;
   StatementAnalyser: IZStatementAnalyser;
   SelectSchema: IZSelectSchema;
-  FillByIndices: Boolean;
 begin
   { Parses the Select statement and retrieves a schema object. }
   Driver := Metadata.GetConnection.GetDriver;
@@ -864,14 +865,11 @@ begin
   begin
     SelectSchema.LinkReferences(IdentifierConvertor);
     ReplaceStarColumns(SelectSchema);
-    FillByIndices := SelectSchema.FieldCount = FResultSet.ColumnsInfo.Count;
+    if SelectSchema.FieldCount = FResultSet.ColumnsInfo.Count
+    then FillByIndices := 1
+    else FillByIndices := -1;
     for I := 0 to FResultSet.ColumnsInfo.Count - 1 do
-    begin
-      if FillByIndices then
-        LoadColumn(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TZColumnInfo(FResultSet.ColumnsInfo[I]), SelectSchema)
-      else
-        LoadColumn(-1, TZColumnInfo(FResultSet.ColumnsInfo[I]), SelectSchema);
-    end;
+      LoadColumn(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}*FillByIndices, TZColumnInfo(FResultSet.ColumnsInfo[I]), SelectSchema)
   end;
   Loaded := True;
 end;

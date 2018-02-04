@@ -1137,9 +1137,9 @@ function TZSQLiteDatabaseMetadata.DecomposeObjectString(const S: String): String
 begin
   if S = '' then
     Result := S
-  else
-    if IC.IsQuoted(S) then
-       Result := IC.ExtractQuote(S)
+  else with GetIdentifierConvertor do
+    if IsQuoted(S) then
+       Result := ExtractQuote(S)
     else
       Result := s;
 end;

@@ -61,12 +61,15 @@ uses ZClasses, Contnrs, ZCompatibility
 
 type
 
+  {** Implements an enum for and identifier case Sensitive/Unsensitive value }
+  TZIdentifierCase = (icNone, icLower, icUpper, icMixed, icSpecial);
+
   {** Case Sensitive/Unsensitive identificator processor. }
   IZIdentifierConvertor = interface (IZInterface)
     ['{2EB07B9B-1E96-4A42-8084-6F98D9140B27}']
-
     function IsCaseSensitive(const Value: string): Boolean;
     function IsQuoted(const Value: string): Boolean;
+    function GetIdentifierCase(const Value: String; TestKeyWords: Boolean): TZIdentifierCase;
     function Quote(const Value: string): string;
     function ExtractQuote(const Value: string): string;
   end;
@@ -150,6 +153,7 @@ type
     FTables: TObjectList;
 
     procedure ConvertIdentifiers(const Convertor: IZIdentifierConvertor);
+
   public
     constructor Create;
     destructor Destroy; override;
@@ -272,6 +276,15 @@ begin
   Result := nil;
 
   { Looks a table by it's full name. }
+  for I := 0 to FTables.Count - 1 do begin
+    Current := TZTableRef(FTables[I]);
+    if (Current.Catalog = Catalog) and (Current.Schema = Schema) and (Current.Table = Table) then begin
+      Result := Current;
+      Exit;
+    end;
+  end;
+
+  { Looks a table by it's schema and table  name. }
   for I := 0 to FTables.Count - 1 do
   begin
     Current := TZTableRef(FTables[I]);
@@ -377,14 +390,10 @@ function TZSelectSchema.LinkFieldByIndexAndShortName(ColumnIndex: Integer;
 var
   I: Integer;
   Current: TZFieldRef;
-  FieldQuoted, FieldUnquoted: string;
 begin
   Result := nil;
   if Field = '' then
     Exit;
-
-  FieldQuoted := Convertor.Quote(Field);
-  FieldUnquoted := Convertor.ExtractQuote(Field);
 
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
@@ -395,10 +404,11 @@ begin
   begin
     Current := TZFieldRef(FFields[ColumnIndex]);
     if Current.Linked then begin //a linket column has a table ref!
-      Result := Current; //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&sid=97f200f6e575ecf37f4e6364c3102ea5&start=15
+      Result := Current; //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&start=15
       exit;
-    end  //note http://sourceforge.net/p/zeoslib/tickets/101/
-    else if ((Current.Alias = Field) or (Current.Field = Field) or (Current.Field = FieldQuoted) or (Current.Alias = FieldUnquoted)) then begin
+    end
+    else if (Current.Alias = Field) or (Current.Field = Field) then begin
+    //se if not Current.IsField or (Current.IsField and ((Current.Alias = Field) or (Current.Field = Field))) then begin
       Result := Current;
       Result.Linked := True;
       Exit;
@@ -409,8 +419,7 @@ begin
   for I := 0 to FFields.Count - 1 do
   begin
     Current := TZFieldRef(FFields[I]);
-    if not Current.Linked and (Current.Alias <> '') and
-       ((Current.Alias = Field) or (Current.Alias = FieldQuoted) or (Current.Alias = FieldUnquoted)) then
+    if not Current.Linked and (Current.Alias <> '') and (Current.Alias = Field) then
     begin
       Result := Current;
       Result.Linked := True;
@@ -436,8 +445,7 @@ begin
   for I := 0 to FFields.Count - 1 do
   begin
     Current := TZFieldRef(FFields[I]);
-    if not Current.Linked and (Current.Field <> '') and
-       ((Current.Field = Field) or (Current.Field = FieldQuoted) or (Current.Field = FieldUnquoted)) then
+    if not Current.Linked and (Current.Field <> '') and (Current.Field = Field) then
     begin
       Result := Current;
       Result.Linked := True;
@@ -451,46 +459,29 @@ end;
   @param Convertor an identifier convertor.
 }
 procedure TZSelectSchema.ConvertIdentifiers(const Convertor: IZIdentifierConvertor);
-
-  function ExtractNeedlessQuote(Value : String) : String;
-  begin
-    if Value = '' then
-    begin
-      Result := '';
-      Exit;
-    end;
-    Result := Convertor.ExtractQuote(Value);
-    if Convertor.IsCaseSensitive(Result) then
-      Result := Value;
-  end;
-
 var
   I: Integer;
 begin
   if Convertor = nil then Exit;
 
   for I := 0 to FFields.Count - 1 do
-  begin
     with TZFieldRef(FFields[I]) do
     begin
-      Catalog := ExtractNeedlessQuote(Catalog);
-      Schema := ExtractNeedlessQuote(Schema);
-      Table := ExtractNeedlessQuote(Table);
-      Field := ExtractNeedlessQuote(Field);
-      Alias := ExtractNeedlessQuote(Alias);
+      Catalog := Convertor.ExtractQuote(Catalog);
+      Schema := Convertor.ExtractQuote(Schema);
+      Table := Convertor.ExtractQuote(Table);
+      Field := Convertor.ExtractQuote(Field);
+      Alias := Convertor.ExtractQuote(Alias);
     end;
-  end;
 
   for I := 0 to FTables.Count - 1 do
-  begin
     with TZTableRef(FTables[I]) do
     begin
-      Catalog := ExtractNeedlessQuote(Catalog);
-      Schema := ExtractNeedlessQuote(Schema);
-      Table := ExtractNeedlessQuote(Table);
-      Alias := ExtractNeedlessQuote(Alias);
+      Catalog := Convertor.ExtractQuote(Catalog);
+      Schema := Convertor.ExtractQuote(Schema);
+      Table := Convertor.ExtractQuote(Table);
+      Alias := Convertor.ExtractQuote(Alias);
     end;
-  end;
 end;
 
 {**
