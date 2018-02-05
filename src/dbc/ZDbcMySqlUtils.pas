@@ -444,7 +444,7 @@ begin
       Result.CatalogName := ValueToString(PMYSQL_FIELD(FieldHandle)^.db,
         PMYSQL_FIELD(FieldHandle)^.db_length);
     end;
-    Result.ReadOnly := (PMYSQL_FIELD(FieldHandle)^.table = nil);
+    Result.ReadOnly := (PMYSQL_FIELD(FieldHandle)^.org_table = nil) or (PMYSQL_FIELD(FieldHandle)^.org_name = nil);
     Result.Writable := not Result.ReadOnly;
     Result.ColumnType := ConvertMySQLHandleToSQLType(FieldHandle, ConSettings.CPType);
     FieldLength := PMYSQL_FIELD(FieldHandle)^.length;
