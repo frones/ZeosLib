@@ -400,7 +400,7 @@ end;
 }
 function TZAdoDatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := False;
 end;
 
 {**
@@ -452,7 +452,7 @@ end;
 function TZAdoDatabaseInfo.GetSQLKeywords: string;
 begin
   { TODO -ofjanos -cAPI : SQL Keywords that are not SQL92 compliant }
-  Result := '';
+  Result := inherited GetSQLKeywords;
 end;
 
 {**
