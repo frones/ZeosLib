@@ -61,7 +61,7 @@ uses
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6, ZPlainFirebirdInterbaseConstants,
   ZPlainFirebirdDriver, ZCompatibility, ZDbcResultSetMetadata, ZMessages,
-  ZDbcInterbase6Utils;
+  ZDbcInterbase6Utils, ZSelectSchema;
 
 type
 
@@ -149,6 +149,8 @@ type
   TZInterbaseResultSetMetadata = Class(TZAbstractResultSetMetadata)
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
+    procedure LoadColumn(ColumnIndex: Integer; ColumnInfo: TZColumnInfo;
+      const SelectSchema: IZSelectSchema); override;
   public
     function GetCatalogName(ColumnIndex: Integer): string; override;
     function GetColumnName(ColumnIndex: Integer): string; override;
@@ -1864,6 +1866,26 @@ function TZInterbaseResultSetMetadata.IsAutoIncrement(
   ColumnIndex: Integer): Boolean;
 begin
   Result := False; //not supported by FB/IB
+end;
+
+{**
+  Initializes on single column of the result set.
+  @param ColumnIndex a column index in the query.
+  @param ColumnInfo a column information object to be initialized.
+  @param SelectSchema a schema of the select statement.
+}
+procedure TZInterbaseResultSetMetadata.LoadColumn(ColumnIndex: Integer;
+  ColumnInfo: TZColumnInfo; const SelectSchema: IZSelectSchema);
+var TableRef: TZTableRef;
+begin
+  if ColumnInfo.TableName = '' then begin
+    Self.ClearColumn(ColumnInfo);
+    Exit;
+  end;
+  TableRef := SelectSchema.FindTableByFullName(ColumnInfo.CatalogName,
+    ColumnInfo.SchemaName, ColumnInfo.TableName);
+  if (TableRef = nil) or not ReadColumnByName(ColumnInfo.ColumnName, TableRef, ColumnInfo) then
+    inherited LoadColumn(ColumnIndex, ColumnInfo, SelectSchema);
 end;
 
 end.
