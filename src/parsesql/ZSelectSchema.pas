@@ -61,12 +61,15 @@ uses ZClasses, Contnrs, ZCompatibility
 
 type
 
+  {** Implements an enum for and identifier case Sensitive/Unsensitive value }
+  TZIdentifierCase = (icNone, icLower, icUpper, icMixed, icSpecial);
+
   {** Case Sensitive/Unsensitive identificator processor. }
   IZIdentifierConvertor = interface (IZInterface)
     ['{2EB07B9B-1E96-4A42-8084-6F98D9140B27}']
-
     function IsCaseSensitive(const Value: string): Boolean;
     function IsQuoted(const Value: string): Boolean;
+    function GetIdentifierCase(const Value: String; TestKeyWords: Boolean): TZIdentifierCase;
     function Quote(const Value: string): string;
     function ExtractQuote(const Value: string): string;
   end;
@@ -272,6 +275,15 @@ begin
   Result := nil;
 
   { Looks a table by it's full name. }
+  for I := 0 to FTables.Count - 1 do begin
+    Current := TZTableRef(FTables[I]);
+    if (Current.Catalog = Catalog) and (Current.Schema = Schema) and (Current.Table = Table) then begin
+      Result := Current;
+      Exit;
+    end;
+  end;
+
+  { Looks a table by it's schema and table  name. }
   for I := 0 to FTables.Count - 1 do
   begin
     Current := TZTableRef(FTables[I]);
