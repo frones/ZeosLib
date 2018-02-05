@@ -138,7 +138,7 @@ type
     procedure SetMetadata(const Value: IZDatabaseMetadata);
   protected
     procedure LoadColumn(ColumnIndex: Integer; ColumnInfo: TZColumnInfo;
-      SelectSchema: IZSelectSchema); virtual;
+      const SelectSchema: IZSelectSchema); virtual;
 
     function GetTableColumns(TableRef: TZTableRef): IZResultSet;
     function ReadColumnByRef(FieldRef: TZFieldRef; ColumnInfo: TZColumnInfo): Boolean;
@@ -762,7 +762,7 @@ end;
   @param SelectSchema a schema of the select statement.
 }
 procedure TZAbstractResultSetMetadata.LoadColumn(ColumnIndex: Integer;
-  ColumnInfo: TZColumnInfo; SelectSchema: IZSelectSchema);
+  ColumnInfo: TZColumnInfo; const SelectSchema: IZSelectSchema);
 var
   I: Integer;
   FieldRef: TZFieldRef;
@@ -774,7 +774,7 @@ begin
     ColumnInfo.ColumnLabel, IdentifierConvertor);
   if ReadColumnByRef(FieldRef, ColumnInfo) then //else double processing down below
     Exit;
- //EH commented: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&sid=97f200f6e575ecf37f4e6364c3102ea5&start=15
+ //EH commented: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&start=15
  // if ColumnInfo.ColumnName <> '' then
    // Exit;
   if Assigned(FieldRef) and not FieldRef.IsField then
