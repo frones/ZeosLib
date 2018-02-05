@@ -185,21 +185,18 @@ var
   ResultSet: IZResultSet;
   Metadata: IZDatabaseMetadata;
 begin
-  if StartsWith(Protocol, 'mysql') or StartsWith(Protocol, 'mysql') or
+  if StartsWith(Protocol, 'mysql') or
     StartsWith(Protocol, 'FreeTDS') or ( Protocol = 'mssql') or
     ( Protocol = 'ado') or ( Protocol = 'sybase') or StartsWith(Protocol, 'ASA') then
-    Exit;
+    Exit; //not in build sripts because they depend to locale settings
 
   Metadata := Connection.GetMetadata;
   if Metadata.GetDatabaseInfo.SupportsMixedCaseIdentifiers then
     Exit;
-
-  Sql := 'DELETE FROM "Case_Sensitive" where cs_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
-  Connection.CreateStatement.ExecuteUpdate(Sql);
-  Sql := 'DELETE FROM case_sensitive where cs_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
+  Sql := 'DELETE FROM '+MetaData.GetIdentifierConvertor.Quote('Case_Sensitive')+' where cs_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Connection.CreateStatement.ExecuteUpdate(Sql);
 
-  Sql := 'SELECT * FROM "Case_Sensitive" WHERE cs_id = ?';
+  Sql := 'SELECT * FROM '+MetaData.GetIdentifierConvertor.Quote('Case_Sensitive')+' WHERE cs_id = ?';
 
   { Inserts row to "Case_Sensitive" table }
   Statement := Connection.PrepareStatement(Sql);
