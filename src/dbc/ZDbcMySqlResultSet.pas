@@ -59,15 +59,13 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, Contnrs,
   ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
   ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement,
-  ZPlainMySqlDriver, ZPlainMySqlConstants, ZSelectSchema;
+  ZPlainMySqlDriver, ZPlainMySqlConstants;
 
 type
   {** Implements MySQL ResultSet Metadata. }
   TZMySQLResultSetMetadata = class(TZAbstractResultSetMetadata)
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
-    procedure LoadColumn(ColumnIndex: Integer; ColumnInfo: TZColumnInfo;
-      const SelectSchema: IZSelectSchema); override;
   public
     function GetCatalogName(ColumnIndex: Integer): string; override;
     function GetColumnName(ColumnIndex: Integer): string; override;
@@ -284,26 +282,6 @@ end;
 function TZMySQLResultSetMetadata.GetTableName(ColumnIndex: Integer): string;
 begin
   Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).TableName;
-end;
-
-{**
-  Initializes on single column of the result set.
-  @param ColumnIndex a column index in the query.
-  @param ColumnInfo a column information object to be initialized.
-  @param SelectSchema a schema of the select statement.
-}
-procedure TZMySQLResultSetMetadata.LoadColumn(ColumnIndex: Integer;
-  ColumnInfo: TZColumnInfo; const SelectSchema: IZSelectSchema);
-var TableRef: TZTableRef;
-begin
-  if ColumnInfo.TableName = '' then begin
-    Self.ClearColumn(ColumnInfo);
-    Exit;
-  end;
-  TableRef := SelectSchema.FindTableByFullName(ColumnInfo.CatalogName,
-    ColumnInfo.SchemaName, ColumnInfo.TableName);
-  if (TableRef = nil) or not ReadColumnByName(ColumnInfo.ColumnName, TableRef, ColumnInfo) then
-    inherited LoadColumn(ColumnIndex, ColumnInfo, SelectSchema);
 end;
 
 { TZAbstractMySQLResultSet }

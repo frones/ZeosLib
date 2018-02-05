@@ -59,16 +59,13 @@ uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Contnrs{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
-  ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver,
-  ZSelectSchema;
+  ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver;
 
 type
   {** Implements SQLite ResultSet Metadata. }
   TZSQLiteResultSetMetadata = class(TZAbstractResultSetMetadata)
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
-    procedure LoadColumn(ColumnIndex: Integer; ColumnInfo: TZColumnInfo;
-      const SelectSchema: IZSelectSchema); override;
   public
     function GetCatalogName(ColumnIndex: Integer): string; override;
     function GetColumnName(ColumnIndex: Integer): string; override;
@@ -207,26 +204,6 @@ begin
     Result := ntNullable
   else
     Result := inherited IsNullable(Column);
-end;
-
-{**
-  Initializes on single column of the result set.
-  @param ColumnIndex a column index in the query.
-  @param ColumnInfo a column information object to be initialized.
-  @param SelectSchema a schema of the select statement.
-}
-procedure TZSQLiteResultSetMetadata.LoadColumn(ColumnIndex: Integer;
-  ColumnInfo: TZColumnInfo; const SelectSchema: IZSelectSchema);
-var TableRef: TZTableRef;
-begin
-  if ColumnInfo.TableName = '' then begin
-    Self.ClearColumn(ColumnInfo);
-    Exit;
-  end;
-  TableRef := SelectSchema.FindTableByFullName(ColumnInfo.CatalogName,
-    ColumnInfo.SchemaName, ColumnInfo.TableName);
-  if (TableRef = nil) or not ReadColumnByName(ColumnInfo.ColumnName, TableRef, ColumnInfo) then
-    inherited LoadColumn(ColumnIndex, ColumnInfo, SelectSchema);
 end;
 
 { TZSQLiteResultSet }

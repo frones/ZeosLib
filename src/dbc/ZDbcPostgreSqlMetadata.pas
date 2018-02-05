@@ -2078,10 +2078,12 @@ begin
       + ' FROM pg_catalog.pg_namespace n '
       + ' JOIN pg_catalog.pg_class c ON (c.relnamespace = n.oid) '
       + ' JOIN pg_catalog.pg_attribute a ON (a.attrelid=c.oid) '
-      + ' LEFT JOIN pg_catalog.pg_attrdef def ON (a.attrelid=def.adrelid AND a.attnum = def.adnum)'
-      + ' LEFT JOIN pg_catalog.pg_description dsc ON (c.oid=dsc.objoid AND a.attnum = dsc.objsubid) '
-      //+ ' LEFT JOIN pg_catalog.pg_class dc ON (dc.oid=dsc.classoid AND dc.relname=''pg_class'') '
-      //+ ' LEFT JOIN pg_catalog.pg_namespace dn ON (dc.relnamespace=dn.oid AND dn.nspname=''pg_catalog'') '
+      + ' LEFT JOIN pg_catalog.pg_attrdef def ON (a.attrelid=def.adrelid'
+      + ' AND a.attnum = def.adnum) LEFT JOIN pg_catalog.pg_description dsc'
+      + ' ON (c.oid=dsc.objoid AND a.attnum = dsc.objsubid) '
+      + ' LEFT JOIN pg_catalog.pg_class dc ON (dc.oid=dsc.classoid'
+      + ' AND dc.relname=''pg_class'') LEFT JOIN pg_catalog.pg_namespace dn'
+      + ' ON (dc.relnamespace=dn.oid AND dn.nspname=''pg_catalog'') '
       + ' WHERE a.attnum > 0 AND NOT a.attisdropped';
     if SchemaPattern <> '' then
       SQL := SQL + ' AND ' + SchemaCondition
@@ -3530,8 +3532,7 @@ end;
 
 function TZPostgreSQLDatabaseMetadata.GetIdentifierConvertor: IZIdentifierConvertor;
 begin
-  Result := TZDefaultIdentifierConvertor.Create(Self);
-  //Result:= TZPostgreSQLIdentifierConvertor.Create(Self);
+  Result:=TZPostgreSQLIdentifierConvertor.Create(Self);
 end;
 
 {**
