@@ -143,6 +143,7 @@ type
     { Metadata ResultSets Caching. }
     procedure AddResultSetToCache(const Key: string; ResultSet: IZResultSet);
     function GetResultSetFromCache(const Key: string): IZResultSet;
+    function HasKey(const Key: String): Boolean;
     function ConstructVirtualResultSet(ColumnsDefs: TZMetadataColumnDefs):
       IZVirtualResultSet;
     function CopyToVirtualResultSet(SrcResultSet: IZResultSet;
@@ -2148,6 +2149,13 @@ begin
     FlushBuf(Value);
     InitBuf(C);
   end;
+end;
+
+function TZAbstractDatabaseMetadata.HasKey(const Key: String): Boolean;
+var  TempKey: IZAnyValue;
+begin
+  TempKey := TZAnyValue.CreateWithString(Key);
+  Result := FCachedResultSets.Get(TempKey) <> nil;
 end;
 
 {**
