@@ -880,12 +880,12 @@ type
     function GetFieldCount(Res: PZPostgreSQLResult): Integer;
 
     function GetBinaryTuples(Res: PZPostgreSQLResult): Integer;
-    function GetFieldName(Res: PZPostgreSQLResult; FieldNum: Integer): PAnsiChar;
+    function PQfname(Res: PZPostgreSQLResult; FieldNum: Integer): PAnsiChar;
     function GetFieldNumber(Res: PZPostgreSQLResult; FieldName: PAnsiChar): Integer;
-    function GetFieldTableOID(Res: PZPostgreSQLResult; FieldNum: Integer) : Oid;
-    function GetFieldTableColIdx(Res: PZPostgreSQLResult; FieldNum: Integer) : Integer;
-    function GetFieldType(Res: PZPostgreSQLResult; FieldNum: Integer): Oid;
-    function GetFieldSize(Res: PZPostgreSQLResult;  FieldNum: Integer): Integer;
+    function PQftable(Res: PZPostgreSQLResult; FieldNum: Integer) : Oid;
+    function PQftablecol(Res: PZPostgreSQLResult; FieldNum: Integer) : Integer;
+    function PQftype(Res: PZPostgreSQLResult; FieldNum: Integer): Oid;
+    function PQfsize(Res: PZPostgreSQLResult;  FieldNum: Integer): Integer;
     function GetFieldMode(Res: PZPostgreSQLResult; FieldNum: Integer): Integer;
     function GetCommandStatus(Res: PZPostgreSQLResult): PAnsiChar;
     function GetOidValue(Res: PZPostgreSQLResult): Oid;
@@ -1028,15 +1028,15 @@ type
     function GetFieldCount(Res: PZPostgreSQLResult): Integer;
 
     function GetBinaryTuples(Res: PZPostgreSQLResult): Integer;
-    function GetFieldName(Res: PZPostgreSQLResult;
+    function PQfname(Res: PZPostgreSQLResult;
       FieldNum: Integer): PAnsiChar;
     function GetFieldNumber(Res: PZPostgreSQLResult;
       FieldName: PAnsiChar): Integer;
-    function GetFieldTableOID(Res: PZPostgreSQLResult; FieldNum: Integer) : Oid;
-    function GetFieldTableColIdx(Res: PZPostgreSQLResult; FieldNum: Integer) : Integer;
-    function GetFieldType(Res: PZPostgreSQLResult;
+    function PQftable(Res: PZPostgreSQLResult; FieldNum: Integer) : Oid;
+    function PQftablecol(Res: PZPostgreSQLResult; FieldNum: Integer) : Integer;
+    function PQftype(Res: PZPostgreSQLResult;
       FieldNum: Integer): Oid;
-    function GetFieldSize(Res: PZPostgreSQLResult;
+    function PQfsize(Res: PZPostgreSQLResult;
       FieldNum: Integer): Integer;
     function GetFieldMode(Res: PZPostgreSQLResult;
       FieldNum: Integer): Integer;
@@ -1560,7 +1560,7 @@ begin
   Result := POSTGRESQL_API.PQfmod(Res, FieldNum);
 end;
 
-function TZPostgreSQLBaseDriver.GetFieldName(Res: PZPostgreSQLResult;
+function TZPostgreSQLBaseDriver.PQfname(Res: PZPostgreSQLResult;
   FieldNum: Integer): PAnsiChar;
 begin
   Result := POSTGRESQL_API.PQfname(Res, FieldNum);
@@ -1572,23 +1572,23 @@ begin
   Result := POSTGRESQL_API.PQfnumber(Res, FieldName);
 end;
 
-function TZPostgreSQLBaseDriver.GetFieldTableOID(Res: PZPostgreSQLResult; FieldNum: Integer) : Oid;
+function TZPostgreSQLBaseDriver.PQftable(Res: PZPostgreSQLResult; FieldNum: Integer) : Oid;
 begin
   Result := POSTGRESQL_API.PQftable(Res, FieldNum);
 end;
 
-function TZPostgreSQLBaseDriver.GetFieldTableColIdx(Res: PZPostgreSQLResult; FieldNum: Integer) : Integer;
+function TZPostgreSQLBaseDriver.PQftablecol(Res: PZPostgreSQLResult; FieldNum: Integer) : Integer;
 begin
   Result := POSTGRESQL_API.PQftablecol(Res, FieldNum);
 end;
 
-function TZPostgreSQLBaseDriver.GetFieldSize(Res: PZPostgreSQLResult;
+function TZPostgreSQLBaseDriver.PQfsize(Res: PZPostgreSQLResult;
   FieldNum: Integer): Integer;
 begin
   Result := POSTGRESQL_API.PQfsize(Res, FieldNum);
 end;
 
-function TZPostgreSQLBaseDriver.GetFieldType(Res: PZPostgreSQLResult;
+function TZPostgreSQLBaseDriver.PQftype(Res: PZPostgreSQLResult;
   FieldNum: Integer): Oid;
 begin
   Result := POSTGRESQL_API.PQftype(Res, FieldNum);
