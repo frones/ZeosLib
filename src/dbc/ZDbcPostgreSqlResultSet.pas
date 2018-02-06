@@ -306,7 +306,7 @@ var
   I: Integer;
   ColumnInfo: TZPGColumnInfo;
   FieldMode, FieldSize, FieldType, FieldCount: Integer;
-  TableInfo: PZPGTableInfo;
+//  TableInfo: PZPGTableInfo;
   Connection: IZPostgreSQLConnection;
   P: PAnsiChar;
 begin
@@ -1176,6 +1176,9 @@ begin
   //ColumnInfo.ColumnName := '';
 end;
 
+{**
+  Initializes columns with additional data.
+}
 procedure TZPostgresResultSetMetadata.LoadColumns;
 {$IFNDEF ZEOS_TEST_ONLY}
 var
