@@ -61,7 +61,7 @@ uses
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6, ZPlainFirebirdInterbaseConstants,
   ZPlainFirebirdDriver, ZCompatibility, ZDbcResultSetMetadata, ZMessages,
-  ZDbcInterbase6Utils;
+  ZDbcInterbase6Utils, ZSelectSchema;
 
 type
 
@@ -149,7 +149,8 @@ type
   TZInterbaseResultSetMetadata = Class(TZAbstractResultSetMetadata)
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
-    procedure LoadColumns; override;
+    procedure LoadColumn(ColumnIndex: Integer; ColumnInfo: TZColumnInfo;
+      const SelectSchema: IZSelectSchema); override;
   public
     function GetCatalogName(ColumnIndex: Integer): string; override;
     function GetColumnName(ColumnIndex: Integer): string; override;
@@ -164,7 +165,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  ZEncoding, ZFastCode, ZSysUtils, ZDbcMetadata;
+  ZEncoding, ZFastCode, ZSysUtils;
 
 procedure GetPCharFromTextVar(SQLCode: SmallInt; sqldata: Pointer; sqllen: Short; out P: PAnsiChar; out Len: NativeUInt); {$IF defined(WITH_INLINE)} inline; {$IFEND}
 begin
@@ -1868,36 +1869,23 @@ begin
 end;
 
 {**
-  Initializes columns with additional data.
+  Initializes on single column of the result set.
+  @param ColumnIndex a column index in the query.
+  @param ColumnInfo a column information object to be initialized.
+  @param SelectSchema a schema of the select statement.
 }
-procedure TZInterbaseResultSetMetadata.LoadColumns;
-{$IFNDEF ZEOS_TEST_ONLY}
-var
-  Current: TZColumnInfo;
-  I: Integer;
-  TableColumns: IZResultSet;
-{$ENDIF}
+procedure TZInterbaseResultSetMetadata.LoadColumn(ColumnIndex: Integer;
+  ColumnInfo: TZColumnInfo; const SelectSchema: IZSelectSchema);
+var TableRef: TZTableRef;
 begin
-  {$IFDEF ZEOS_TEST_ONLY}
-  inherited LoadColumns;
-  {$ELSE}
-  for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
-    Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
-    ClearColumn(Current);
-    if Current.TableName = '' then
-      continue;
-    TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(Current.TableName), '');
-    if TableColumns <> nil then begin
-      TableColumns.BeforeFirst;
-      while TableColumns.Next do
-        if TableColumns.GetString(ColumnNameIndex) = Current.ColumnName then begin
-          FillColumInfoFromGetColumnsRS(Current, TableColumns, Current.ColumnName);
-          Break;
-        end;
-    end;
+  if ColumnInfo.TableName = '' then begin
+    Self.ClearColumn(ColumnInfo);
+    Exit;
   end;
-  Loaded := True;
-  {$ENDIF}
+  TableRef := SelectSchema.FindTableByFullName(ColumnInfo.CatalogName,
+    ColumnInfo.SchemaName, ColumnInfo.TableName);
+  if (TableRef = nil) or not ReadColumnByName(ColumnInfo.ColumnName, TableRef, ColumnInfo) then
+    inherited LoadColumn(ColumnIndex, ColumnInfo, SelectSchema);
 end;
 
 end.
