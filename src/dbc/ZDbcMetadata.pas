@@ -1013,11 +1013,17 @@ begin
       for i := 0 to SL.Count-1 do
         fIdentifierQuoteKeywordArray[i] := SL[I];
       SortList.Count := SL.Count;
+      {$IFDEF FPC}
+      //bug in FPC again: TList.List uses a getter not a field so we can't address with my quick assign ):
+      for i := 0 to high(fIdentifierQuoteKeywordArray) do
+        SortList.Add(Pointer(fIdentifierQuoteKeywordArray[i]));
+      {$ELSE}
       //EH: QickAssign first field of the TStringList Object = FList: PStringItemList;
-      OrgList := PPointer(@SortList.List)^;
+      OrgList := SortList.List; //safe current
       PPointer(@SortList.List)^ := Pointer(fIdentifierQuoteKeywordArray);
       SortList.Sort(CompareStr);
       PPointer(@SortList.List)^ := OrgList; //asign list back again
+      {$ENDIF}
       J := 0;
       for i := 0 to High(fIdentifierQuoteKeywordArray) do
         if I < High(fIdentifierQuoteKeywordArray) then
