@@ -3589,9 +3589,9 @@ begin
   if Result = nil then begin
     Result := InternalUncachedGetColumns('', '', '', '', ZFastCode.{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value));
     if Result.Next then begin
-      Key := GetColumnsCacheKey(Result.GetString(CatalogNameIndex),
-        Result.GetString(SchemaNameIndex), Result.GetString(TableNameIndex),
-        Result.GetString(ColumnNameIndex));
+      Key := GetColumnsCacheKey(
+        Result.GetString(CatalogNameIndex), Result.GetString(SchemaNameIndex),
+        AddEscapeCharToWildcards(IC.Quote(Result.GetString(TableNameIndex))),''); //use same analogy for key_gen as done in the RS_Metadat
       Result.BeforeFirst;
       if not HasKey(Key) then
         AddResultSetToCache(Key, Result); // so others may use the result too
