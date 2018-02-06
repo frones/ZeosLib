@@ -1191,22 +1191,23 @@ begin
   {$IFDEF ZEOS_TEST_ONLY}
   inherited LoadColumns;
   {$ELSE}
-  for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
-    Current := TZPGColumnInfo(ResultSet.ColumnsInfo[i]);
-    ClearColumn(Current);
-    PGMetaData := MetaData as IZPGDatabaseMetadata;
-    RS := PGMetaData.GetColumnsByTableOID(Current.TableOID);
-    if RS <> nil then begin
-      RS.BeforeFirst;
-      while RS.Next do
-        if RS.GetInt(TableColColumnOrdPosIndex) = Current.TableColNo then begin
-          FillColumInfoFromGetColumnsRS(Current, RS, RS.GetString(ColumnNameIndex));
-          Break;
-        end else
-          if RS.GetInt(TableColColumnOrdPosIndex) > Current.TableColNo then
+  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
+    for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
+      Current := TZPGColumnInfo(ResultSet.ColumnsInfo[i]);
+      ClearColumn(Current);
+      PGMetaData := MetaData as IZPGDatabaseMetadata;
+      RS := PGMetaData.GetColumnsByTableOID(Current.TableOID);
+      if RS <> nil then begin
+        RS.BeforeFirst;
+        while RS.Next do
+          if RS.GetInt(TableColColumnOrdPosIndex) = Current.TableColNo then begin
+            FillColumInfoFromGetColumnsRS(Current, RS, RS.GetString(ColumnNameIndex));
             Break;
+          end else
+            if RS.GetInt(TableColColumnOrdPosIndex) > Current.TableColNo then
+              Break;
+      end;
     end;
-  end;
   Loaded := True;
   {$ENDIF}
 end;

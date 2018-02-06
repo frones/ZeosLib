@@ -219,25 +219,25 @@ var
   TableColumns: IZResultSet;
 {$ENDIF}
 begin
-  inherited LoadColumns;
   {$IFDEF ZEOS_TEST_ONLY}
   inherited LoadColumns;
   {$ELSE}
-  for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
-    Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
-    ClearColumn(Current);
-    if Current.TableName = '' then
-      continue;
-    TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(Current.TableName),'');
-    if TableColumns <> nil then begin
-      TableColumns.BeforeFirst;
-      while TableColumns.Next do
-        if TableColumns.GetString(ColumnNameIndex) = Current.ColumnName then begin
-          FillColumInfoFromGetColumnsRS(Current, TableColumns, Current.ColumnName);
-          Break;
-        end;
+  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
+    for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
+      Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
+      ClearColumn(Current);
+      if Current.TableName = '' then
+        continue;
+      TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(Metadata.GetIdentifierConvertor.Quote(Current.TableName)),'');
+      if TableColumns <> nil then begin
+        TableColumns.BeforeFirst;
+        while TableColumns.Next do
+          if TableColumns.GetString(ColumnNameIndex) = Current.ColumnName then begin
+            FillColumInfoFromGetColumnsRS(Current, TableColumns, Current.ColumnName);
+            Break;
+          end;
+      end;
     end;
-  end;
   Loaded := True;
   {$ENDIF}
 end;

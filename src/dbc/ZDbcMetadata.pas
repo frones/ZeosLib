@@ -4636,6 +4636,11 @@ begin
                   Result := UpperCase(Pattern);
         icUpper: if FDatabaseInfo.StoresLowerCaseIdentifiers then
                    Result := LowerCase(Pattern);
+        icMixed: if not FDatabaseInfo.StoresLowerCaseIdentifiers then
+                  if FDatabaseInfo.StoresUpperCaseIdentifiers then
+                    Result := UpperCase(Pattern)
+                  else
+                    Result := LowerCase(Pattern);
       end
     end else
       Result := ExtractQuote(Pattern);

@@ -66,8 +66,7 @@ type
   TZMySQLResultSetMetadata = class(TZAbstractResultSetMetadata)
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
-    procedure LoadColumn(ColumnIndex: Integer; ColumnInfo: TZColumnInfo;
-      const SelectSchema: IZSelectSchema); override;
+    procedure LoadColumns; override;
   public
     function GetCatalogName(ColumnIndex: Integer): string; override;
     function GetColumnName(ColumnIndex: Integer): string; override;
@@ -218,8 +217,9 @@ type
 implementation
 
 uses
-  Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZFastCode,
-  ZSysUtils, ZMessages, ZDbcMySqlUtils, ZDbcMysql, ZEncoding, ZDbcUtils;
+  Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
+  ZFastCode, ZSysUtils, ZMessages, ZEncoding,
+  ZDbcMySqlUtils, ZDbcMysql, ZDbcUtils, ZDbcMetadata;
 
 {$IFOPT R+}
   {$DEFINE RangeCheckEnabled}
@@ -287,23 +287,37 @@ begin
 end;
 
 {**
-  Initializes on single column of the result set.
-  @param ColumnIndex a column index in the query.
-  @param ColumnInfo a column information object to be initialized.
-  @param SelectSchema a schema of the select statement.
+  Initializes columns with additional data.
 }
-procedure TZMySQLResultSetMetadata.LoadColumn(ColumnIndex: Integer;
-  ColumnInfo: TZColumnInfo; const SelectSchema: IZSelectSchema);
-var TableRef: TZTableRef;
+procedure TZMySQLResultSetMetadata.LoadColumns;
+{$IFNDEF ZEOS_TEST_ONLY}
+var
+  Current: TZColumnInfo;
+  I: Integer;
+  TableColumns: IZResultSet;
+{$ENDIF}
 begin
-  if ColumnInfo.TableName = '' then begin
-    Self.ClearColumn(ColumnInfo);
-    Exit;
-  end;
-  TableRef := SelectSchema.FindTableByFullName(ColumnInfo.CatalogName,
-    ColumnInfo.SchemaName, ColumnInfo.TableName);
-  if (TableRef = nil) or not ReadColumnByName(ColumnInfo.ColumnName, TableRef, ColumnInfo) then
-    inherited LoadColumn(ColumnIndex, ColumnInfo, SelectSchema);
+  {$IFDEF ZEOS_TEST_ONLY}
+  inherited LoadColumns;
+  {$ELSE}
+  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
+    for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
+      Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
+      ClearColumn(Current);
+      if Current.TableName = '' then
+        continue;
+      TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(Metadata.GetIdentifierConvertor.Quote(Current.TableName)),'');
+      if TableColumns <> nil then begin
+        TableColumns.BeforeFirst;
+        while TableColumns.Next do
+          if TableColumns.GetString(ColumnNameIndex) = Current.ColumnName then begin
+            FillColumInfoFromGetColumnsRS(Current, TableColumns, Current.ColumnName);
+            Break;
+          end;
+      end;
+    end;
+  Loaded := True;
+  {$ENDIF}
 end;
 
 { TZAbstractMySQLResultSet }
