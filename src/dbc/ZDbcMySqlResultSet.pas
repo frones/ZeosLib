@@ -59,13 +59,20 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, Contnrs,
   ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
   ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement,
-  ZPlainMySqlDriver, ZPlainMySqlConstants;
+  ZPlainMySqlDriver, ZPlainMySqlConstants, ZSelectSchema;
 
 type
   {** Implements MySQL ResultSet Metadata. }
   TZMySQLResultSetMetadata = class(TZAbstractResultSetMetadata)
+  protected
+    procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
+    procedure LoadColumns; override;
   public
-    function GetColumnType(Column: Integer): TZSQLType; override;
+    function GetCatalogName(ColumnIndex: Integer): string; override;
+    function GetColumnName(ColumnIndex: Integer): string; override;
+    function GetColumnType(ColumnIndex: Integer): TZSQLType; override;
+    function GetSchemaName(ColumnIndex: Integer): string; override;
+    function GetTableName(ColumnIndex: Integer): string; override;
   end;
 
   {** Implements MySQL ResultSet. }
@@ -210,8 +217,9 @@ type
 implementation
 
 uses
-  Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZFastCode,
-  ZSysUtils, ZMessages, ZDbcMySqlUtils, ZDbcMysql, ZEncoding, ZDbcUtils;
+  Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
+  ZFastCode, ZSysUtils, ZMessages, ZEncoding,
+  ZDbcMySqlUtils, ZDbcMysql, ZDbcUtils, ZDbcMetadata;
 
 {$IFOPT R+}
   {$DEFINE RangeCheckEnabled}
@@ -219,16 +227,97 @@ uses
 
 { TZMySQLResultSetMetadata }
 
+procedure TZMySQLResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
+begin
+  ColumnInfo.ReadOnly := True;
+  ColumnInfo.Writable := False;
+  ColumnInfo.DefinitelyWritable := False;
+end;
+
+{**
+  Gets the designated column's table's catalog name.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return column name or "" if not applicable
+}
+function TZMySQLResultSetMetadata.GetCatalogName(ColumnIndex: Integer): string;
+begin
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).CatalogName;
+end;
+
+{**
+  Get the designated column's name.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return column name
+}
+function TZMySQLResultSetMetadata.GetColumnName(ColumnIndex: Integer): string;
+begin
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnName;
+end;
+
 {**
   Retrieves the designated column's SQL type.
   @param column the first column is 1, the second is 2, ...
   @return SQL type from java.sql.Types
 }
-function TZMySQLResultSetMetadata.GetColumnType(Column: Integer): TZSQLType;
+function TZMySQLResultSetMetadata.GetColumnType(ColumnIndex: Integer): TZSQLType;
 begin {EH: does anyone know why the LoadColumns was made? Note the column-types are perfect determinable on MySQL}
   //if not Loaded then
     // LoadColumns;
-  Result := TZColumnInfo(ResultSet.ColumnsInfo[Column{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType;
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType;
+end;
+
+{**
+  Get the designated column's table's schema.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return schema name or "" if not applicable
+}
+function TZMySQLResultSetMetadata.GetSchemaName(ColumnIndex: Integer): string;
+begin
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).SchemaName;
+end;
+
+{**
+  Gets the designated column's table name.
+  @param ColumnIndex the first ColumnIndex is 1, the second is 2, ...
+  @return table name or "" if not applicable
+}
+function TZMySQLResultSetMetadata.GetTableName(ColumnIndex: Integer): string;
+begin
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).TableName;
+end;
+
+{**
+  Initializes columns with additional data.
+}
+procedure TZMySQLResultSetMetadata.LoadColumns;
+{$IFNDEF ZEOS_TEST_ONLY}
+var
+  Current: TZColumnInfo;
+  I: Integer;
+  TableColumns: IZResultSet;
+{$ENDIF}
+begin
+  {$IFDEF ZEOS_TEST_ONLY}
+  inherited LoadColumns;
+  {$ELSE}
+  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
+    for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
+      Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
+      ClearColumn(Current);
+      if Current.TableName = '' then
+        continue;
+      TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(Metadata.GetIdentifierConvertor.Quote(Current.TableName)),'');
+      if TableColumns <> nil then begin
+        TableColumns.BeforeFirst;
+        while TableColumns.Next do
+          if TableColumns.GetString(ColumnNameIndex) = Current.ColumnName then begin
+            FillColumInfoFromGetColumnsRS(Current, TableColumns, Current.ColumnName);
+            Break;
+          end;
+      end;
+    end;
+  Loaded := True;
+  {$ENDIF}
 end;
 
 { TZAbstractMySQLResultSet }
@@ -317,8 +406,7 @@ begin
   { Fills the column info. }
   ColumnsInfo.Clear;
   SetLength(FMySQLTypes, FPlainDriver.GetFieldCount(FQueryHandle));
-  for I := 0 to FPlainDriver.GetFieldCount(FQueryHandle) - 1 do
-  begin
+  for I := 0 to High(FMySQLTypes) do begin
     FPlainDriver.SeekField(FQueryHandle, I);
     FieldHandle := FPlainDriver.FetchField(FQueryHandle);
     FMySQLTypes[i] := PMYSQL_FIELD(FieldHandle)^._type;

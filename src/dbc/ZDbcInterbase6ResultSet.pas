@@ -61,7 +61,7 @@ uses
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6, ZPlainFirebirdInterbaseConstants,
   ZPlainFirebirdDriver, ZCompatibility, ZDbcResultSetMetadata, ZMessages,
-  ZDbcInterbase6Utils;
+  ZDbcInterbase6Utils, ZSelectSchema;
 
 type
 
@@ -147,7 +147,14 @@ type
 
   {** Implements Interbase ResultSetMetadata object. }
   TZInterbaseResultSetMetadata = Class(TZAbstractResultSetMetadata)
+  protected
+    procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
+    procedure LoadColumns; override;
   public
+    function GetCatalogName(ColumnIndex: Integer): string; override;
+    function GetColumnName(ColumnIndex: Integer): string; override;
+    function GetSchemaName(ColumnIndex: Integer): string; override;
+    function GetTableName(ColumnIndex: Integer): string; override;
     function IsAutoIncrement(ColumnIndex: Integer): Boolean; override;
   End;
 
@@ -157,7 +164,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  ZEncoding, ZFastCode, ZSysUtils;
+  ZEncoding, ZFastCode, ZSysUtils, ZDbcMetadata;
 
 procedure GetPCharFromTextVar(SQLCode: SmallInt; sqldata: Pointer; sqllen: Short; out P: PAnsiChar; out Len: NativeUInt); {$IF defined(WITH_INLINE)} inline; {$IFEND}
 begin
@@ -1795,6 +1802,61 @@ end;
 { TZInterbaseResultSetMetadata }
 
 {**
+  Clears specified column information.
+  @param ColumnInfo a column information object.
+}
+procedure TZInterbaseResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
+begin
+  ColumnInfo.ReadOnly := True;
+  ColumnInfo.Writable := False;
+  ColumnInfo.DefinitelyWritable := False;
+end;
+
+{**
+  Gets the designated column's table's catalog name.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return column name or "" if not applicable
+}
+function TZInterbaseResultSetMetadata.GetCatalogName(
+  ColumnIndex: Integer): string;
+begin
+  Result := ''; //not supported by FB/IB
+end;
+
+{**
+  Get the designated column's name.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return column name
+}
+function TZInterbaseResultSetMetadata.GetColumnName(
+  ColumnIndex: Integer): string;
+begin
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnName;
+end;
+
+{**
+  Get the designated column's table's schema.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return schema name or "" if not applicable
+}
+function TZInterbaseResultSetMetadata.GetSchemaName(
+  ColumnIndex: Integer): string;
+begin
+  Result := ''; //not supported by FB/IB
+end;
+
+{**
+  Gets the designated column's table name.
+  @param ColumnIndex the first ColumnIndex is 1, the second is 2, ...
+  @return table name or "" if not applicable
+}
+function TZInterbaseResultSetMetadata.GetTableName(
+  ColumnIndex: Integer): string;
+begin
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).TableName;
+end;
+
+{**
   Indicates whether the designated column is automatically numbered, thus read-only.
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return <code>true</code> if so; <code>false</code> otherwise
@@ -1803,6 +1865,40 @@ function TZInterbaseResultSetMetadata.IsAutoIncrement(
   ColumnIndex: Integer): Boolean;
 begin
   Result := False; //not supported by FB/IB
+end;
+
+{**
+  Initializes columns with additional data.
+}
+procedure TZInterbaseResultSetMetadata.LoadColumns;
+{$IFNDEF ZEOS_TEST_ONLY}
+var
+  Current: TZColumnInfo;
+  I: Integer;
+  TableColumns: IZResultSet;
+{$ENDIF}
+begin
+  {$IFDEF ZEOS_TEST_ONLY}
+  inherited LoadColumns;
+  {$ELSE}
+  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
+    for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
+      Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
+      ClearColumn(Current);
+      if Current.TableName = '' then
+        continue;
+      TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(Metadata.GetIdentifierConvertor.Quote(Current.TableName)),'');
+      if TableColumns <> nil then begin
+        TableColumns.BeforeFirst;
+        while TableColumns.Next do
+          if TableColumns.GetString(ColumnNameIndex) = Current.ColumnName then begin
+            FillColumInfoFromGetColumnsRS(Current, TableColumns, Current.ColumnName);
+            Break;
+          end;
+      end;
+    end;
+  Loaded := True;
+  {$ENDIF}
 end;
 
 end.

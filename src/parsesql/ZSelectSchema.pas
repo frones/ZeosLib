@@ -61,12 +61,15 @@ uses ZClasses, Contnrs, ZCompatibility
 
 type
 
+  {** Implements an enum for and identifier case Sensitive/Unsensitive value }
+  TZIdentifierCase = (icNone, icLower, icUpper, icMixed, icSpecial);
+
   {** Case Sensitive/Unsensitive identificator processor. }
   IZIdentifierConvertor = interface (IZInterface)
     ['{2EB07B9B-1E96-4A42-8084-6F98D9140B27}']
-
     function IsCaseSensitive(const Value: string): Boolean;
     function IsQuoted(const Value: string): Boolean;
+    function GetIdentifierCase(const Value: String; TestKeyWords: Boolean): TZIdentifierCase;
     function Quote(const Value: string): string;
     function ExtractQuote(const Value: string): string;
   end;
@@ -123,13 +126,13 @@ type
 
     procedure AddTable(TableRef: TZTableRef);
 
-    procedure LinkReferences(Convertor: IZIdentifierConvertor);
+    procedure LinkReferences(const Convertor: IZIdentifierConvertor);
 
     function FindTableByFullName(const Catalog, Schema, Table: string): TZTableRef;
     function FindTableByShortName(const Table: string): TZTableRef;
     function FindFieldByShortName(const Field: string): TZFieldRef;
 
-    function LinkFieldByIndexAndShortName(const ColumnIndex: Integer; const Field: string;
+    function LinkFieldByIndexAndShortName(ColumnIndex: Integer; const Field: string;
       const Convertor: IZIdentifierConvertor): TZFieldRef;
 
     function GetFieldCount: Integer;
@@ -149,7 +152,7 @@ type
     FFields: TObjectList;
     FTables: TObjectList;
 
-    procedure ConvertIdentifiers(Convertor: IZIdentifierConvertor);
+    procedure ConvertIdentifiers(const Convertor: IZIdentifierConvertor);
   public
     constructor Create;
     destructor Destroy; override;
@@ -160,13 +163,13 @@ type
 
     procedure AddTable(TableRef: TZTableRef);
 
-    procedure LinkReferences(Convertor: IZIdentifierConvertor);
+    procedure LinkReferences(const Convertor: IZIdentifierConvertor);
 
     function FindTableByFullName(const {%H-}Catalog, Schema, Table: string): TZTableRef;
     function FindTableByShortName(const Table: string): TZTableRef;
     function FindFieldByShortName(const Field: string): TZFieldRef;
 
-    function LinkFieldByIndexAndShortName(const ColumnIndex: Integer; const Field: string;
+    function LinkFieldByIndexAndShortName(ColumnIndex: Integer; const Field: string;
       const Convertor: IZIdentifierConvertor): TZFieldRef;
 
     function GetFieldCount: Integer;
@@ -232,7 +235,8 @@ begin
   FField := Field;
   FAlias := Alias;
   FTableRef := TableRef;
-  FLinked := False;
+  //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&sid=97f200f6e575ecf37f4e6364c3102ea5&start=15
+  FLinked := TableRef <> nil; //set linked if a table ref already could be given
 end;
 
 { TZSelectSchema }
@@ -271,6 +275,15 @@ begin
   Result := nil;
 
   { Looks a table by it's full name. }
+  for I := 0 to FTables.Count - 1 do begin
+    Current := TZTableRef(FTables[I]);
+    if (Current.Catalog = Catalog) and (Current.Schema = Schema) and (Current.Table = Table) then begin
+      Result := Current;
+      Exit;
+    end;
+  end;
+
+  { Looks a table by it's schema and table  name. }
   for I := 0 to FTables.Count - 1 do
   begin
     Current := TZTableRef(FTables[I]);
@@ -371,28 +384,33 @@ end;
   @param Field a table field name or alias.
   @return a found field reference object or <code>null</code> otherwise.
 }
-function TZSelectSchema.LinkFieldByIndexAndShortName(const ColumnIndex: Integer;
+function TZSelectSchema.LinkFieldByIndexAndShortName(ColumnIndex: Integer;
   const Field: string; const Convertor: IZIdentifierConvertor): TZFieldRef;
 var
   I: Integer;
   Current: TZFieldRef;
+  FieldQuoted, FieldUnquoted: string;
 begin
   Result := nil;
   if Field = '' then
     Exit;
 
-  { Looks by field index. }
-  {$IFDEF GENERIC_INDEX}
-  if (ColumnIndex >= 0) and (ColumnIndex < FFields.Count) then
-  {$ELSE}
-  if (ColumnIndex > 0) and (ColumnIndex <= FFields.Count) then
+  FieldQuoted := Convertor.Quote(Field);
+  FieldUnquoted := Convertor.ExtractQuote(Field);
+
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
   {$ENDIF}
+
+  { Looks by field index. }
+  if (ColumnIndex >= 0) and (ColumnIndex <= FFields.Count - 1) then
   begin
-    Current := TZFieldRef(FFields[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
-    if not Current.Linked
-      //note http://sourceforge.net/p/zeoslib/tickets/101/
-      and ((Current.Alias = Field) or (Current.Field = Field) or (Current.Field = Convertor.Quote(Field))) then
-    begin
+    Current := TZFieldRef(FFields[ColumnIndex]);
+    if Current.Linked then begin //a linket column has a table ref!
+      Result := Current; //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&sid=97f200f6e575ecf37f4e6364c3102ea5&start=15
+      exit;
+    end  //note http://sourceforge.net/p/zeoslib/tickets/101/
+    else if ((Current.Alias = Field) or (Current.Field = Field) or (Current.Field = FieldQuoted) or (Current.Alias = FieldUnquoted)) then begin
       Result := Current;
       Result.Linked := True;
       Exit;
@@ -403,7 +421,8 @@ begin
   for I := 0 to FFields.Count - 1 do
   begin
     Current := TZFieldRef(FFields[I]);
-    if not Current.Linked and ((Current.Alias = Field) or (Current.Alias = Convertor.Quote(Field))) then
+    if not Current.Linked and (Current.Alias <> '') and
+       ((Current.Alias = Field) or (Current.Alias = FieldQuoted) or (Current.Alias = FieldUnquoted)) then
     begin
       Result := Current;
       Result.Linked := True;
@@ -429,7 +448,8 @@ begin
   for I := 0 to FFields.Count - 1 do
   begin
     Current := TZFieldRef(FFields[I]);
-    if not Current.Linked and (Current.Field = Field) then
+    if not Current.Linked and (Current.Field <> '') and
+       ((Current.Field = Field) or (Current.Field = FieldQuoted) or (Current.Field = FieldUnquoted)) then
     begin
       Result := Current;
       Result.Linked := True;
@@ -442,20 +462,22 @@ end;
   Convert all table and field identifiers..
   @param Convertor an identifier convertor.
 }
-procedure TZSelectSchema.ConvertIdentifiers(Convertor: IZIdentifierConvertor);
-var
-  I: Integer;
+procedure TZSelectSchema.ConvertIdentifiers(const Convertor: IZIdentifierConvertor);
+
   function ExtractNeedlessQuote(Value : String) : String;
-  var
-    tempstring: String;
   begin
-    tempstring := Convertor.ExtractQuote(Value);
-    if Convertor.IsCaseSensitive(tempstring) then
-      result := Value
-    else
-      result := tempstring;
+    if Value = '' then
+    begin
+      Result := '';
+      Exit;
+    end;
+    Result := Convertor.ExtractQuote(Value);
+    if Convertor.IsCaseSensitive(Result) then
+      Result := Value;
   end;
 
+var
+  I: Integer;
 begin
   if Convertor = nil then Exit;
 
@@ -487,7 +509,7 @@ end;
   Links references between fields and tables.
   @param Convertor an identifier convertor.
 }
-procedure TZSelectSchema.LinkReferences(Convertor: IZIdentifierConvertor);
+procedure TZSelectSchema.LinkReferences(const Convertor: IZIdentifierConvertor);
 var
   I, J: Integer;
   FieldRef: TZFieldRef;
@@ -499,49 +521,36 @@ begin
   FFields := TObjectList.Create;
 
   try
-    for I := 0 to TempFields.Count - 1 do
-    begin
+    for I := 0 to TempFields.Count - 1 do begin
       FieldRef := TZFieldRef(TempFields[I]);
       TableRef := nil;
 
-      if not FieldRef.IsField then
-      begin
+      if not FieldRef.IsField then begin
         FFields.Add(TZFieldRef.Create(FieldRef.IsField, FieldRef.Catalog,
           FieldRef.Schema, FieldRef.Table, FieldRef.Field, FieldRef.Alias,
           FieldRef.TableRef));
         Continue;
-      end
-      else if (FieldRef.Schema <> '') and (FieldRef.Table <> '') then
-      begin
+      end else if (FieldRef.Schema <> '') and (FieldRef.Table <> '') then
         TableRef := FindTableByFullName(FieldRef.Catalog, FieldRef.Schema,
-          FieldRef.Table);
-      end
+          FieldRef.Table)
       else if FieldRef.Table <> '' then
         TableRef := FindTableByShortName(FieldRef.Table)
-      else if FieldRef.Field = '*' then
-      begin
+      else if FieldRef.Field = '*' then begin
         { Add all fields from all tables. }
         for J := 0 to FTables.Count - 1 do
         begin
           with TZTableRef(FTables[J]) do
-          begin
             FFields.Add(TZFieldRef.Create(True, Catalog, Schema,
               Table, '*', '', TZTableRef(FTables[J])));
-          end;
         end;
         Continue;
       end;
 
-      if TableRef <> nil then
-      begin
-        FFields.Add(TZFieldRef.Create(True, TableRef.Catalog, TableRef.Schema,
-          TableRef.Table, FieldRef.Field, FieldRef.Alias, TableRef));
-      end
-      else
-      begin
-        FFields.Add(TZFieldRef.Create(True, FieldRef.Catalog, FieldRef.Schema,
+      if TableRef <> nil
+      then FFields.Add(TZFieldRef.Create(True, TableRef.Catalog, TableRef.Schema,
+          TableRef.Table, FieldRef.Field, FieldRef.Alias, TableRef))
+      else FFields.Add(TZFieldRef.Create(True, FieldRef.Catalog, FieldRef.Schema,
           FieldRef.Table, FieldRef.Field, FieldRef.Alias, TableRef));
-      end;
     end;
   finally
     TempFields.Free;

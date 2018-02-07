@@ -133,8 +133,7 @@ begin
   Check(MD.GetIdentifierConvertor.Quote('99')=MD.GetDatabaseInfo.GetIdentifierQuoteString[1]+'99'+MD.GetDatabaseInfo.GetIdentifierQuoteString[length(MD.GetDatabaseInfo.GetIdentifierQuoteString)]);
   Check(MD.GetIdentifierConvertor.Quote('9A')=MD.GetDatabaseInfo.GetIdentifierQuoteString[1]+'9A'+MD.GetDatabaseInfo.GetIdentifierQuoteString[length(MD.GetDatabaseInfo.GetIdentifierQuoteString)]);
   Check(MD.GetIdentifierConvertor.Quote('A9 A')=MD.GetDatabaseInfo.GetIdentifierQuoteString[1]+'A9 A'+MD.GetDatabaseInfo.GetIdentifierQuoteString[length(MD.GetDatabaseInfo.GetIdentifierQuoteString)]);
-  if Not (StartsWith(Protocol, 'postgres') or StartsWith(Protocol, 'FreeTDS')
-     or ( Protocol = 'ado' ) or ( Protocol = 'mssql' )) then
+  if MD.GetDatabaseInfo.StoresUpperCaseIdentifiers then
     Check(MD.GetIdentifierConvertor.Quote('A9A')='A9A');
 end;
 
