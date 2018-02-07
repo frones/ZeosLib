@@ -286,15 +286,13 @@ end;
 function TZGenericCachedResolver.ComposeFullTableName(const Catalog, Schema,
   Table: string): string;
 begin
-  if Table <> '' then
-  begin
+  if Table <> '' then begin
     Result := IdentifierConvertor.Quote(Table);
-    if Schema <> '' then
+    if (Schema <> '') and FDatabaseMetadata.GetDatabaseInfo.SupportsSchemasInDataManipulation then
       Result := IdentifierConvertor.Quote(Schema) + '.' + Result;
-    if Catalog <> '' then
+    if (Catalog <> '') and FDatabaseMetadata.GetDatabaseInfo.SupportsCatalogsInDataManipulation then
       Result := IdentifierConvertor.Quote(Catalog) + '.' + Result;
-  end
-  else
+  end else
     Result := '';
 end;
 

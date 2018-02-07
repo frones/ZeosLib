@@ -272,14 +272,11 @@ procedure TZInterbase6Connection.CloseTransaction;
 begin
   if FTrHandle <> 0 then
   begin
-    if AutoCommit then
-    begin
+    if AutoCommit then begin
       GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
         'COMMIT TRANSACTION "'+ConSettings^.DataBase+'"');
-    end
-    else
-    begin
+    end else begin
       GetPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
         'ROLLBACK TRANSACTION "'+ConSettings^.DataBase+'"');
@@ -323,26 +320,20 @@ end;
 }
 procedure TZInterbase6Connection.Commit;
 begin
-  if Closed then
+  if Closed or (FTrHandle = 0) then
     Exit;
-
-  if FTrHandle <> 0 then
-  begin
-    if FHardCommit then begin
-      GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
-      // Jan Baumgarten: Added error checking here because setting the transaction
-      // handle to 0 before we have checked for an error is simply wrong.
-      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
-      DriverManager.LogMessage(lcTransaction,
-        ConSettings^.Protocol, 'TRANSACTION COMMIT');
-      FTrHandle := 0; //normaly not required! Old server code?
-    end else begin
-      GetPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
-
-      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
-      DriverManager.LogMessage(lcTransaction,
-        ConSettings^.Protocol, 'TRANSACTION COMMIT');
-    end;
+  if FHardCommit then begin
+    GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
+    // Jan Baumgarten: Added error checking here because setting the transaction
+    // handle to 0 before we have checked for an error is simply wrong.
+    CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
+    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
+    FTrHandle := 0; //normaly not required! Old server code?
+  end else begin
+    GetPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
+    CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
+    DriverManager.LogMessage(lcTransaction,
+      ConSettings^.Protocol, 'TRANSACTION COMMIT');
   end;
 end;
 
@@ -552,6 +543,7 @@ begin
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
     'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"');
 
+  inherited SetAutoCommit(GetAutoCommit or (Info.IndexOf('isc_tpb_autocommit') <> -1));
   { Start transaction }
   if not FHardCommit then
     StartTransaction;
@@ -745,12 +737,13 @@ procedure TZInterbase6Connection.StartTransaction;
 
 const
   Tpb_Access: array[boolean] of String = ('isc_tpb_write','isc_tpb_read');
+  tpb_AutoCommit: array[boolean] of String = ('','isc_tpb_autocommit');
 
 { List of parameters that are assigned according to values of properties but
   could be overwritten by user.
   These parameters are all simple flags having no value so no splitting is required. }
 type
-  TOverwritableParams = (parTIL, parRW, parRecVer, parWait);
+  TOverwritableParams = (parTIL, parRW, parRecVer, parWait, parAutoCommit);
   TOverwritableParamValues = array[TOverwritableParams] of string;
 
   { Add all items from Src to Dest except those which define overwritable params.
@@ -783,21 +776,13 @@ type
         Dest.Add(Src[I]);
     end;
   end;
-
-{EH: We do NOT handle the isc_tpb_autocommit of FB because we noticed a huge
- performance drop especially for Batch executions. Note Zeos handles one Batch
- Execution as one Update and loops until all batch array are send. FB with this
- param commits after each "execute block" which definitally kills the idea and
- the expected performance!}
-//const tpb_AutoCommit: array[boolean] of String = ('','isc_tpb_autocommit');
 var
   Params: TStrings;
   TPB: RawByteString;
   TEB: TISC_TEB;
   OverwritableParams: TOverwritableParamValues;
 begin
-  if FHandle <> 0 then
-  begin
+  if FHandle <> 0 then begin
     if FTrHandle <> 0 then
     begin {CLOSE Last Transaction first!}
       GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
@@ -806,6 +791,7 @@ begin
     end;
     Params := TStringList.Create;
     OverwritableParams[parRW] := tpb_Access[ReadOnly];
+    OverwritableParams[parAutoCommit] := tpb_AutoCommit[AutoCommit];
 
     { Set transaction parameters by TransactIsolationLevel }
     case TransactIsolationLevel of
@@ -849,6 +835,8 @@ begin
       Params.Insert(0, OverwritableParams[parRecVer]);
     if OverwritableParams[parTIL] <> '' then
       Params.Insert(0, OverwritableParams[parTIL]);
+    if OverwritableParams[parAutoCommit] <> '' then
+      Params.Insert(0, OverwritableParams[parAutoCommit]);
 
     try
       TPB := GenerateTPB(Params);

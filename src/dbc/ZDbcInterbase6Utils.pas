@@ -292,8 +292,8 @@ function GetDBSQLDialect(const PlainDriver: IZInterbasePlainDriver;
 
 { Interbase statement functions}
 function PrepareStatement(const PlainDriver: IZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const TrHandle: PISC_TR_HANDLE;
-  const Dialect: Word; const SQL: RawByteString; const ConSettings: PZConSettings;
+  Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE;
+  Dialect: Word; const SQL: RawByteString; ConSettings: PZConSettings;
   var StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
 procedure PrepareResultSqlData(const PlainDriver: IZInterbasePlainDriver;
   const Dialect: Word; const SQL: RawByteString;
@@ -1043,8 +1043,8 @@ end;
    @return sql statement type
 }
 function PrepareStatement(const PlainDriver: IZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const TrHandle: PISC_TR_HANDLE;
-  const Dialect: Word; const SQL: RawByteString; const ConSettings: PZConSettings;
+  Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE;
+  Dialect: Word; const SQL: RawByteString; ConSettings: PZConSettings;
   var StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
 var
   StatusVector: TARRAY_ISC_STATUS;

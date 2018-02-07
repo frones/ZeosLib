@@ -534,6 +534,7 @@ type
 
     // interface details (terms, keywords, etc):
     function GetIdentifierQuoteString: string;
+    function GetIdentifierQuoteKeywordsSorted: TStringDynArray;
     function GetSchemaTerm: string;
     function GetProcedureTerm: string;
     function GetCatalogTerm: string;

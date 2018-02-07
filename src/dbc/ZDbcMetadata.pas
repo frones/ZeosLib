@@ -148,6 +148,7 @@ type
     { Metadata ResultSets Caching. }
     procedure AddResultSetToCache(const Key: string; const ResultSet: IZResultSet);
     function GetResultSetFromCache(const Key: string): IZResultSet;
+    function HasKey(const Key: String): Boolean;
     function ConstructVirtualResultSet(ColumnsDefs: TZMetadataColumnDefs):
       IZVirtualResultSet;
     function CopyToVirtualResultSet(const SrcResultSet: IZResultSet;
@@ -316,8 +317,11 @@ type
   TZAbstractDatabaseInfo = class(TInterfacedObject, IZDatabaseInfo)
   private
     FMetadata: TZAbstractDatabaseMetadata;
+    fIdentifierQuoteKeywordArray: TStringDynArray;
+    function CompareStr(Item1, Item2: Pointer): Integer;
   protected
     FIdentifierQuotes: String;
+    fIdentifierQuoteKeywords: String;
     property Metadata: TZAbstractDatabaseMetadata read FMetadata;
   public
     constructor Create(const Metadata: TZAbstractDatabaseMetadata); overload;
@@ -456,6 +460,8 @@ type
     function GetCatalogTerm: string; virtual;
     function GetCatalogSeparator: string; virtual;
     function GetSQLKeywords: string; virtual;
+    function GetIdentifierQuoteKeywords: String; virtual;
+    function GetIdentifierQuoteKeywordsSorted: TStringDynArray;
     function GetNumericFunctions: string; virtual;
     function GetStringFunctions: string; virtual;
     function GetSystemFunctions: string; virtual;
@@ -479,6 +485,7 @@ type
   public
     constructor Create(const Metadata: IZDatabaseMetadata);
 
+    function GetIdentifierCase(const Value: String; TestKeyWords: Boolean): TZIdentifierCase;
     function IsCaseSensitive(const Value: string): Boolean;
     function IsQuoted(const Value: string): Boolean; virtual;
     function Quote(const Value: string): string; virtual;
@@ -770,6 +777,13 @@ end;
     A JDBC Compliant<sup><font size=-2>TM</font></sup>
     driver always uses a double quote character.
 }
+function TZAbstractDatabaseInfo.CompareStr(Item1, Item2: Pointer): Integer;
+begin
+  if NativeUInt(Item1) = NativeUInt(Item2)
+  then Result := 0
+  else Result := AnsiCompareStr(String(Item1), String(Item2));
+end;
+
 constructor TZAbstractDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata;
   const IdentifierQuotes: String);
 begin
@@ -1022,6 +1036,84 @@ end;
 function TZAbstractDatabaseInfo.StoresMixedCaseQuotedIdentifiers: Boolean;
 begin
   Result := False;
+end;
+
+function TZAbstractDatabaseInfo.GetIdentifierQuoteKeywordsSorted: TStringDynArray;
+var SL: TStrings;
+  SortList: TZSortedList;
+  I, j: Integer;
+  OrgList: Pointer;
+begin
+  if Pointer(fIdentifierQuoteKeywordArray) = nil then begin
+    SL := ZSysUtils.SplitString(GetIdentifierQuoteKeywords, ', ');//include the whitechar which prevents the trim
+    SortList := TZSortedList.Create;
+    try
+      SortList.Capacity := SL.Count;
+      SetLength(fIdentifierQuoteKeywordArray, SL.Count);
+      for i := 0 to SL.Count-1 do
+        fIdentifierQuoteKeywordArray[i] := SL[I];
+      SortList.Count := SL.Count;
+      {$IFDEF FPC}
+      //bug in FPC again: TList.List uses a getter not a field so we can't address with my quick assign ):
+      for i := 0 to high(fIdentifierQuoteKeywordArray) do
+        SortList.Add(Pointer(fIdentifierQuoteKeywordArray[i]));
+      {$ELSE}
+      //EH: QickAssign first field of the TStringList Object = FList: PStringItemList;
+      OrgList := SortList.List; //safe current
+      PPointer(@SortList.List)^ := Pointer(fIdentifierQuoteKeywordArray);
+      SortList.Sort(CompareStr);
+      PPointer(@SortList.List)^ := OrgList; //asign list back again
+      {$ENDIF}
+      J := 0;
+      for i := 0 to High(fIdentifierQuoteKeywordArray) do
+        if I < High(fIdentifierQuoteKeywordArray) then
+          if fIdentifierQuoteKeywordArray[i] = '' then
+            Break
+          else if fIdentifierQuoteKeywordArray[i] = fIdentifierQuoteKeywordArray[i+1] then begin
+            fIdentifierQuoteKeywordArray[i] := '';
+            System.Move(Pointer(@fIdentifierQuoteKeywordArray[i+1])^, Pointer(@fIdentifierQuoteKeywordArray[i])^, (Length(fIdentifierQuoteKeywordArray)-i-1)*SizeOf(Pointer));
+            if j = 0 then
+              Pointer(fIdentifierQuoteKeywordArray[High(fIdentifierQuoteKeywordArray)-j]) := nil; //ovoid gpf
+            Inc(j);
+          end;
+      SetLength(fIdentifierQuoteKeywordArray, Length(fIdentifierQuoteKeywordArray)-j);
+    finally
+      SL.Free;
+      SortList.Free;
+    end;
+  end;
+  Result := fIdentifierQuoteKeywordArray;
+end;
+
+function TZAbstractDatabaseInfo.GetIdentifierQuoteKeywords: String;
+const SQL92Keywords = 'insert,update,delete,select,drop,create,for,from,set,values,'
+    + 'where,order,group,by,having,into,as,table,index,primary,key,on,is,null,'
+    + 'char,varchar,integer,number,alter,column,value,values,'
+    + 'current,top,login,status,version';
+  procedure Append(const Values: String; Dest: TStrings);
+  begin
+    if StoresUpperCaseIdentifiers
+    then ZSysUtils.AppendSplitString(Dest, UpperCase(Values), ',')
+    else ZSysUtils.AppendSplitString(Dest, LowerCase(Values), ',');
+  end;
+var
+  SL: TStrings;
+begin
+  if fIdentifierQuoteKeywords = '' then begin
+    SL := TStringList.Create;
+    try
+      Append(SQL92Keywords, SL);
+      Append(GetSQLKeyWords, SL);
+      Append(GetNumericFunctions, SL);
+      Append(GetStringFunctions, SL);
+      Append(GetSystemFunctions, SL);
+      Append(GetTimeDateFunctions, SL);
+      fIdentifierQuoteKeywords := ZSysUtils.ComposeString(SL, ',');
+    finally
+      SL.Free;
+    end;
+  end;
+  Result := fIdentifierQuoteKeywords
 end;
 
 {**
@@ -2109,6 +2201,13 @@ begin
   end;
 end;
 
+function TZAbstractDatabaseMetadata.HasKey(const Key: String): Boolean;
+var  TempKey: IZAnyValue;
+begin
+  TempKey := TZAnyValue.CreateWithString(Key);
+  Result := FCachedResultSets.Get(TempKey) <> nil;
+end;
+
 {**
    Check if pattern does not contain wildcards
    @param Pattern a sql pattern
@@ -2444,7 +2543,7 @@ begin
 
   if (Pattern = '%') or (Pattern = '') then
      Exit;
-  WorkPattern:=NormalizePatternCase(Pattern);
+  WorkPattern := NormalizePatternCase(Pattern);
   if HasNoWildcards(WorkPattern) then
   begin
     WorkPattern := StripEscape(WorkPattern);
@@ -4598,14 +4697,22 @@ end;
 
 function TZAbstractDatabaseMetadata.NormalizePatternCase(const Pattern: String): string;
 begin
-  with GetIdentifierConvertor do
-    if not IsQuoted(Pattern) then
-      if FDatabaseInfo.StoresUpperCaseIdentifiers then
-        Result := UpperCase(Pattern)
-      else if FDatabaseInfo.StoresLowerCaseIdentifiers then
-        Result := LowerCase(Pattern)
-      else Result := Pattern
-    else
+  with FIC do
+    if not IsQuoted(Pattern) then begin
+      //EH: if this is not made test spaced name will fail
+      Result := Pattern;
+      case GetIdentifierCase(Pattern, False) of
+        icLower: if FDatabaseInfo.StoresUpperCaseIdentifiers then
+                  Result := UpperCase(Pattern);
+        icUpper: if FDatabaseInfo.StoresLowerCaseIdentifiers then
+                   Result := LowerCase(Pattern);
+        icMixed: if not FDatabaseInfo.StoresLowerCaseIdentifiers then
+                  if FDatabaseInfo.StoresUpperCaseIdentifiers then
+                    Result := UpperCase(Pattern)
+                  else
+                    Result := LowerCase(Pattern);
+      end
+    end else
       Result := ExtractQuote(Pattern);
 end;
 
@@ -4995,6 +5102,80 @@ begin
   FMetadata := Pointer(Metadata);
 end;
 
+{** written by FrOsT}
+function TZDefaultIdentifierConvertor.GetIdentifierCase(
+  const Value: String; TestKeyWords: Boolean): TZIdentifierCase;
+var
+  P1, P2: PChar;
+  UpCnt, LoCnt: Integer;
+  S: String;
+  I: Integer;
+  KeyWords: TStringDynArray;
+begin
+  Result := icNone;
+  if Value = '' then Exit;
+  P1 := Pointer(Value);
+  case P1^ of //don't use damn slow charInSet
+    '0'..'9': begin
+      Result := icSpecial;
+      Exit;
+    end;
+  end;
+  UpCnt := 0; LoCnt := 0;
+  while P1^<> #0 do begin
+    case P1^ of
+      'A'..'Z':
+        if LoCnt > 0 then begin //stop loop
+          Result := icMixed;
+          Exit;
+        end else
+          Inc(UpCnt);
+      'a'..'z':
+        if UpCnt > 0 then begin //stop loop
+          Result := icMixed;
+          Exit;
+        end else
+          Inc(LoCnt);
+      '0'..'9','_': ;
+      else begin //stop loop
+        Result := icMixed; //Exit(caseSpec) is supported since XE2 all older do not compile this
+        Exit;
+      end;
+    end;
+    Inc(P1);
+  end;
+  if (UpCnt > 0) and (LoCnt = 0) then
+    Result := icUpper
+  else if (UpCnt = 0) and (LoCnt > 0) then
+    Result := icLower
+  else //this could happen only if table starts with '_' and possible numbers follow
+    Result := icNone;
+
+  if not TestKeyWords and (Result = icSpecial) then
+     Result := icMixed
+  else if TestKeyWords and not (Result in [icNone,icMixed]) then begin
+    { Checks for reserved keywords. }
+    if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers and (Result <> icUpper) then
+      S := UpperCase(Value)
+    else if Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers and (Result <> icLower)
+    then s := LowerCase(Value)
+    else S := Value;
+    P1 := Pointer(S);
+    KeyWords := Metadata.GetDatabaseInfo.GetIdentifierQuoteKeywordsSorted; //they are Ascending sorted
+    for i := low(KeyWords) to high(KeyWords) do begin
+      if S = KeyWords[I] then begin
+        Result := icSpecial;
+        Break;
+      end else begin
+        P2 := Pointer(KeyWords[I]);
+        if (Ord(P1^) < Ord(P2^)) then //break the loop if firstchar is greater than..
+          Break;
+      end;
+    end;
+  end;
+
+end;
+
 function TZDefaultIdentifierConvertor.GetMetaData;
 begin
   if Assigned(FMetadata) then
@@ -5009,19 +5190,8 @@ end;
   @return <code>True</code> is the identifier string in lower case.
 }
 function TZDefaultIdentifierConvertor.IsLowerCase(const Value: string): Boolean;
-var
-  P: PChar;
 begin
-  Result := True;
-  if Value = '' then Exit;
-  P := Pointer(Value);
-  while P^<> #0 do begin
-    if not CharInSet(P^, ['a'..'z','0'..'9','_']) then begin
-      Result := False;
-      Break;
-    end;
-    Inc(P);
-  end;
+  Result := GetIdentifierCase(Value, False) = icLower;
 end;
 
 {**
@@ -5030,20 +5200,8 @@ end;
   @return <code>True</code> is the identifier string in upper case.
 }
 function TZDefaultIdentifierConvertor.IsUpperCase(const Value: string): Boolean;
-var
-  P: PChar;
 begin
-  Result := True;
-  if Value = '' then Exit;
-  P := Pointer(Value);
-  while P^<> #0 do begin
-    if not CharInSet(P^, ['A'..'Z','0'..'9','_']) then
-    begin
-      Result := False;
-      Break;
-    end;
-    Inc(P);
-  end;
+  Result := GetIdentifierCase(Value, False) = icUpper;
 end;
 
 {**
@@ -5052,22 +5210,8 @@ end;
   @return <code>True</code> is the identifier string in mixed case.
 }
 function TZDefaultIdentifierConvertor.IsSpecialCase(const Value: string): Boolean;
-var
-  P: PChar;
 begin
-  Result := False;
-  if Value = '' then Exit;
-  P := Pointer(Value);
-  if CharInSet(P^, ['0'..'9']) then
-    Result := True
-  else while P^<> #0 do begin
-    if not CharInSet(P^, ['A'..'Z','a'..'z','0'..'9','_']) then
-    begin
-      Result := True;
-      Break;
-    end;
-    Inc(P);
-  end;
+  Result := GetIdentifierCase(Value, True) = icSpecial;
 end;
 
 {**
@@ -5075,32 +5219,8 @@ end;
   @return <code>True</code> if the string case sensitive.
 }
 function TZDefaultIdentifierConvertor.IsCaseSensitive(const Value: string): Boolean;
-const
-  AnsiSQLKeywords = 'insert,update,delete,select,drop,create,from,set,values,'
-    + 'where,order,group,by,having,into,as,table,index,primary,key,on,is,null,'
-    + 'char,varchar,integer,number,alter,column,value,'
-    + 'current,top,login,status,version';
-var
-  Keywords: string;
 begin
-  if Value = '' then
-    Result := False
-  else if IsSpecialCase(Value) then
-    Result := True
-  else if IsLowerCase(Value) then
-    Result := Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers
-  else if IsUpperCase(Value) then
-    Result := Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers
-  else
-    Result := not Metadata.GetDatabaseInfo.StoresMixedCaseIdentifiers;
-
-  { Checks for reserved keywords. }
-  if not Result then
-  begin
-    Keywords := ',' + AnsiSQLKeywords + ','
-      + LowerCase(Metadata.GetDatabaseInfo.GetSQLKeywords) + ',';
-    Result := ZFastCode.Pos(',' + LowerCase(Value) + ',', Keywords) > 0;
-  end;
+  Result := GetIdentifierCase(Value, False) = icMixed;
 end;
 
 {**
@@ -5110,9 +5230,18 @@ end;
 function TZDefaultIdentifierConvertor.IsQuoted(const Value: string): Boolean;
 var
   QuoteDelim: string;
+  Q,P: PChar;
 begin
   QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-  Result := (QuoteDelim <> '') and (Value <> '') and (QuoteDelim[1] = Value[1]);
+  Result := False;
+  if (QuoteDelim <> '') and (Value <> '') then begin
+    Q := Pointer(QuoteDelim);
+    P := Pointer(Value);
+    if Q^ = P^ then begin
+      Inc(Q, Ord(Length(QuoteDelim) > 1));
+      Result := (P+Length(Value)-1)^ = Q^;
+    end;
+  end;
 end;
 
 {**
@@ -5121,22 +5250,34 @@ end;
   @return a extracted and processed string.
 }
 function TZDefaultIdentifierConvertor.ExtractQuote(const Value: string): string;
+var
+  QuoteDelim: string;
+  Q: PChar;
 begin
   if IsQuoted(Value) then begin
+    QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
     Result := Copy(Value, 2, Length(Value) - 2);
-    if not Metadata.GetDatabaseInfo.StoresMixedCaseQuotedIdentifiers then begin
-      if Metadata.GetDatabaseInfo.StoresLowerCaseQuotedIdentifiers then
-        Result := LowerCase(Result)
-      else if Metadata.GetDatabaseInfo.StoresUpperCaseQuotedIdentifiers then
-        Result := UpperCase(Result);
-    end;
+    Q := Pointer(QuoteDelim);
+    Result := StringReplace(Result,Q^+Q^,Q^,[rfReplaceAll]); //unescape first quote char
+    inc(q);
+    if q^ <> #0 then //unescape second quote char if different
+      Result := StringReplace(Result,Q^+Q^,Q^,[rfReplaceAll]);
   end else begin
     Result := Value;
-    if not Metadata.GetDatabaseInfo.StoresMixedCaseIdentifiers then begin
-      if Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers then
-        Result := LowerCase(Result)
-      else if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers then
+    case GetIdentifierCase(Value,True) of
+      icSpecial:
+          if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers
+          then Result := UpperCase(Result)
+          else Result := LowerCase(Result);
+      icMixed:
+        if not Metadata.GetDatabaseInfo.StoresMixedCaseIdentifiers then
+          if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers
+          then Result := UpperCase(Result)
+          else Result := LowerCase(Result);
+      icLower: if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers then
         Result := UpperCase(Result);
+      icUpper: if Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers then
+        Result := LowerCase(Result);
     end;
   end;
 end;
@@ -5149,15 +5290,29 @@ end;
 function TZDefaultIdentifierConvertor.Quote(const Value: string): string;
 var
   QuoteDelim: string;
+  Q: PChar;
+  DoQuote: Boolean;
 begin
   Result := Value;
-  if IsCaseSensitive(Value) then
-  begin
+  case GetIdentifierCase(Value, True) of
+    icLower:   DoQuote := Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers;
+    icUpper:   DoQuote := Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers;
+    icSpecial: DoQuote := True;
+    icMixed:   DoQuote := not Metadata.GetDatabaseInfo.StoresMixedCaseIdentifiers;
+    else DoQuote := False;
+  end;
+
+  if DoQuote then begin
     QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-    if Length(QuoteDelim) > 1 then
-      Result := QuoteDelim[1] + Result + QuoteDelim[2]
-    else if Length(QuoteDelim) = 1 then
-      Result := QuoteDelim[1] + Result + QuoteDelim[1];
+    Q := Pointer(QuoteDelim);
+    if Q <> nil then begin
+      Result := Q^+StringReplace(Value, Q^, Q^+Q^, [rfReplaceAll]); //escape first quote char
+      inc(q, Ord(Length(QuoteDelim) > 1));
+      if PChar(Pointer(Result))^ <> Q^ then
+        Result := StringReplace(Result, Q^, Q^+Q^, [rfReplaceAll]); //escape second quote char if different
+      Result := Result+Q^;
+    end else
+      Result := Value;
   end;
 end;
 

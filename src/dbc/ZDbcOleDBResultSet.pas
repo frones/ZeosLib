@@ -454,7 +454,6 @@ begin
         ColumnInfo.ColumnLabel := 'col_'+ZFastCode.IntToStr(i)
       else
         ColumnInfo.ColumnLabel := String(prgInfo^.pwszName);
-      ColumnInfo.ColumnName := ColumnInfo.ColumnLabel;
       ColumnInfo.ColumnType := ConvertOleDBTypeToSQLType(prgInfo^.wType,
         prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG <> 0, ConSettings.CPType);
 

@@ -62,9 +62,25 @@ uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZPlainPostgreSqlDriver, ZDbcLogging,
-  ZDbcResultSetMetadata, ZCompatibility;
+  ZDbcResultSetMetadata, ZCompatibility, ZSelectSchema;
 
 type
+  TZPGColumnInfo = class(TZColumnInfo)
+  protected
+    fTableOID: OID;
+    fTableColNo: Integer;
+  public
+    property TableOID: OID read fTableOID write fTableOID;
+    property TableColNo: Integer read fTableColNo write fTableColNo;
+  end;
+
+  {** Implements Postgres ResultSet Metadata. }
+  TZPostgresResultSetMetadata = class(TZAbstractResultSetMetadata)
+  protected
+    procedure LoadColumns; override;
+    procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
+  end;
+
   {** Implements PostgreSQL ResultSet. }
   TZPostgreSQLResultSet = class(TZAbstractResultSet)
   private
@@ -157,7 +173,7 @@ implementation
 
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} Math,
-  ZMessages, ZEncoding, ZFastCode,
+  ZMessages, ZEncoding, ZFastCode, ZDbcPostgreSqlMetadata, ZDbcMetadata,
   ZDbcPostgreSql, ZDbcPostgreSqlUtils, ZDbcPostgreSqlStatement;
 
 
@@ -341,7 +357,9 @@ constructor TZPostgreSQLResultSet.Create(const PlainDriver: IZPostgreSQLPlainDri
   QueryHandle: PZPostgreSQLResult; const CachedLob: Boolean;
   const Chunk_Size, UndefinedVarcharAsStringLength: Integer);
 begin
-  inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
+  inherited Create(Statement, SQL,
+    TZPostgresResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
+    Statement.GetConnection.GetConSettings);
 
   FHandle := Handle;
   FQueryHandle := QueryHandle;
@@ -414,11 +432,10 @@ end;
 procedure TZPostgreSQLResultSet.Open;
 var
   I: Integer;
-  ColumnInfo: TZColumnInfo;
+  ColumnInfo: TZPGColumnInfo;
   FieldMode, FieldSize, FieldType, FieldCount: Integer;
-  TableInfo: PZPGTableInfo;
+//  TableInfo: PZPGTableInfo;
   Connection: IZPostgreSQLConnection;
-  ColIdx: Integer;
   P: PAnsiChar;
 begin
   if ResultSetConcurrency = rcUpdatable then
@@ -437,11 +454,13 @@ begin
   SetLength(FpgOIDTypes, FieldCount);
   for I := 0 to FieldCount - 1 do
   begin
-    ColumnInfo := TZColumnInfo.Create;
+    ColumnInfo := TZPGColumnInfo.Create;
     with ColumnInfo do
     begin
-      if Statement.GetResultSetConcurrency = rcUpdatable then //exclude system-tables and if no updates happen -> useless
-        TableInfo := Connection.GetTableInfo(FPlainDriver.GetFieldTableOID(FQueryHandle, I))
+      TableOID := FPlainDriver.PQftable(FQueryHandle, I);
+      TableColNo := FplainDriver.PQftablecol(FQueryHandle, I);
+      (*if Statement.GetResultSetConcurrency = rcUpdatable then //exclude system-tables and if no updates happen -> useless
+        TableInfo := Connection.GetTableInfo(TableOID)
       else
         TableInfo := nil;
       if TableInfo = nil then
@@ -453,12 +472,11 @@ begin
       else
       begin
         SchemaName := TableInfo^.Schema;
-        TableName := TableInfo^.Name;
+        TableName := TableInfo^.Name;*)
         //See: http://zeoslib.sourceforge.net/viewtopic.php?f=38&t=20797
-        ColIdx := FplainDriver.GetFieldTableColIdx(FQueryHandle, I);
-        if ColIdx < 1 then
+        if TableColNo < 1 then
           // these fields have fixed numbers in the PostgreSQL source code, they seem to not use 0
-          case ColIdx of
+          case TableColNo of
             0: ColumnName := '';
             -1: ColumnName := 'ctid';
             -2: ColumnName := 'oid';
@@ -467,12 +485,11 @@ begin
             -5: ColumnName := 'xmax';
             -6: ColumnName := 'cmax';
             -7: ColumnName := 'tableoid';
-            else ColumnName := '';
           end
-        else
-          ColumnName := TableInfo^.ColNames[ColIdx - 1];
-      end;
-      P := FPlainDriver.GetFieldName(FQueryHandle, I);
+        (*else
+          ColumnName := TableInfo^.ColNames[TableColNo - 1];
+      end*);
+      P := FPlainDriver.PQfname(FQueryHandle, I);
       Precision := ZFastCode.StrLen(P);
       {$IFDEF UNICODE}
       ColumnLabel := PRawToUnicode(P, Precision, ConSettings^.ClientCodePage^.CP);
@@ -490,7 +507,7 @@ begin
       Signed := False;
       Nullable := ntNullable;
 
-      FieldType := FPlainDriver.GetFieldType(FQueryHandle, I);
+      FieldType := FPlainDriver.PQftype(FQueryHandle, I);
       FpgOIDTypes[i] := FieldType;
       DefinePostgreSQLToSQLType(ColumnInfo, FieldType);
       if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
@@ -498,10 +515,9 @@ begin
       else
         ColumnCodePage := High(Word);
 
-      if Precision = 0 then
-      begin
+      if Precision = 0 then begin
         FieldMode := FPlainDriver.GetFieldMode(FQueryHandle, I);
-        FieldSize := FPlainDriver.GetFieldSize(FQueryHandle, I);
+        FieldSize := FPlainDriver.PQfsize(FQueryHandle, I);
         Precision := Max(Max(FieldMode - 4, FieldSize), 0);
 
         if ColumnType in [stString, stUnicodeString] then begin
@@ -1273,6 +1289,55 @@ begin
     System.GetMem(FBlobData, fBlobSize);
     HexToBin(Data+2, fBlobData, fBlobSize);
   end;
+end;
+
+{ TZPostgresResultSetMetadata }
+
+procedure TZPostgresResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
+begin
+  ColumnInfo.ReadOnly := True;
+  ColumnInfo.Writable := False;
+  ColumnInfo.DefinitelyWritable := False;
+  ColumnInfo.CatalogName := '';
+  ColumnInfo.SchemaName := '';
+  ColumnInfo.TableName := '';
+  //ColumnInfo.ColumnName := '';
+end;
+
+{**
+  Initializes columns with additional data.
+}
+procedure TZPostgresResultSetMetadata.LoadColumns;
+{$IFNDEF ZEOS_TEST_ONLY}
+var
+  Current: TZPGColumnInfo;
+  I: Integer;
+  PGMetaData: IZPGDatabaseMetadata;
+  RS: IZResultSet;
+{$ENDIF}
+begin
+  {$IFDEF ZEOS_TEST_ONLY}
+  inherited LoadColumns;
+  {$ELSE}
+  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
+    for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
+      Current := TZPGColumnInfo(ResultSet.ColumnsInfo[i]);
+      ClearColumn(Current);
+      PGMetaData := MetaData as IZPGDatabaseMetadata;
+      RS := PGMetaData.GetColumnsByTableOID(Current.TableOID);
+      if RS <> nil then begin
+        RS.BeforeFirst;
+        while RS.Next do
+          if RS.GetInt(TableColColumnOrdPosIndex) = Current.TableColNo then begin
+            FillColumInfoFromGetColumnsRS(Current, RS, RS.GetString(ColumnNameIndex));
+            Break;
+          end else
+            if RS.GetInt(TableColColumnOrdPosIndex) > Current.TableColNo then
+              Break;
+      end;
+    end;
+  Loaded := True;
+  {$ENDIF}
 end;
 
 end.

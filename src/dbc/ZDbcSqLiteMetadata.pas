@@ -334,7 +334,7 @@ end;
 }
 function TZSQLiteDatabaseInfo.StoresLowerCaseIdentifiers: Boolean;
 begin
-  Result := False;
+  Result := True;
 end;
 
 {**
@@ -344,7 +344,7 @@ end;
 }
 function TZSQLiteDatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := False;
 end;
 
 {**

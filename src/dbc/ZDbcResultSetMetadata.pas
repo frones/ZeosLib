@@ -139,13 +139,14 @@ type
   protected
     procedure LoadColumn(ColumnIndex: Integer; ColumnInfo: TZColumnInfo;
       const SelectSchema: IZSelectSchema); virtual;
-
+    procedure FillColumInfoFromGetColumnsRS(ColumnInfo: TZColumnInfo;
+      const TableColumns: IZResultSet; const FieldName: String);
     function GetTableColumns(TableRef: TZTableRef): IZResultSet;
     function ReadColumnByRef(FieldRef: TZFieldRef; ColumnInfo: TZColumnInfo): Boolean;
     function ReadColumnByName(const FieldName: string; TableRef: TZTableRef;
       ColumnInfo: TZColumnInfo): Boolean;
     procedure ClearColumn(ColumnInfo: TZColumnInfo); virtual;
-    procedure LoadColumns;
+    procedure LoadColumns; virtual;
     procedure ReplaceStarColumns(const SelectSchema: IZSelectSchema);
 
     property MetaData: IZDatabaseMetadata read FMetadata write SetMetadata;
@@ -270,6 +271,95 @@ begin
   if FColumnsLabels <> nil then
     FColumnsLabels.Free;
   inherited Destroy;
+end;
+
+procedure TZAbstractResultSetMetadata.FillColumInfoFromGetColumnsRS(
+  ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet;
+  const FieldName: String);
+var TempColType: TZSQLType;
+begin
+  ColumnInfo.CatalogName := TableColumns.GetString(CatalogNameIndex);
+  ColumnInfo.SchemaName := TableColumns.GetString(SchemaNameIndex);
+  ColumnInfo.TableName := TableColumns.GetString(TableNameIndex);
+  ColumnInfo.ColumnName := FieldName;
+
+//If the returned column information is null then the value assigned during
+//the resultset.open will be kept
+  if not TableColumns.IsNull(TableColColumnTypeIndex) then
+  begin
+    //since Pointer referencing by RowAccessor we've a pointer and GetBlob
+    //raises an exception if the pointer is a reference to PPAnsiChar or
+    //ZPPWideChar. if we execute a cast of a lob field the database meta-informtions
+    //assume a IZLob-Pointer. So let's prevent this case and check for
+    //stByte, stString, stUnicoeString first. If this type is returned from the
+    //ResultSet-Metadata we do NOT overwrite the column-type
+    //f.e. select cast( name as varchar(100)), cast(setting as varchar(100)) from pg_settings
+
+    //or the same vice versa:
+    //(CASE WHEN (Ticket51_B."Name" IS NOT NULL) THEN Ticket51_B."Name" ELSE 'Empty' END) As "Name"
+    //we've NO fixed length for a case(postgres and FB2.5up f.e.) select
+    tempColType := TZSQLType(TableColumns.GetSmall(TableColColumnTypeIndex));
+    if not (tempColType in [stBinaryStream, stAsciiStream,
+        stUnicodeStream, stBytes, stString, stUnicodeString]) then
+      ColumnInfo.ColumnType := tempColType;
+  end;
+  if FConSettings = nil then //fix if on creation nil was assigned
+    FConSettings := ResultSet.GetStatement.GetConnection.GetConSettings;
+
+  {Assign ColumnCodePages}
+  if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
+    if FConSettings^.ClientCodePage^.IsStringFieldCPConsistent then //all except ADO and DBLib (currently)
+      ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
+    else
+      if FConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTf8] then //this excludes ADO which is allways 2Byte-String based
+        if (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'NVARCHAR') or
+           (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'NCHAR') then
+          ColumnInfo.ColumnCodePage := zCP_UTF8
+        else
+          ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP //assume locale codepage
+  else
+    ColumnInfo.ColumnCodePage := zCP_NONE; //not a character column
+  {nullable}
+  if not TableColumns.IsNull(TableColColumnNullableIndex) then
+    ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(TableColColumnNullableIndex));
+  {auto increment field}
+  if not TableColumns.IsNull(TableColColumnAutoIncIndex) then
+    ColumnInfo.AutoIncrement := TableColumns.GetBoolean(TableColColumnAutoIncIndex);
+  {Case sensitive}
+  if not TableColumns.IsNull(TableColColumnCaseSensitiveIndex) then
+    ColumnInfo.CaseSensitive := TableColumns.GetBoolean(TableColColumnCaseSensitiveIndex);
+  if not TableColumns.IsNull(TableColColumnSearchableIndex) then
+    ColumnInfo.Searchable := TableColumns.GetBoolean(TableColColumnSearchableIndex);
+  {Writable}
+  if not TableColumns.IsNull(TableColColumnWritableIndex) then
+    if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
+      if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
+        ColumnInfo.Writable := TableColumns.GetBoolean(TableColColumnWritableIndex)
+      else
+        ColumnInfo.Writable := False
+    else
+      ColumnInfo.Writable := TableColumns.GetBoolean(TableColColumnWritableIndex);
+  {DefinitelyWritable}
+  if not TableColumns.IsNull(TableColColumnDefinitelyWritableIndex) then
+    if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
+      if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
+        ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(TableColColumnDefinitelyWritableIndex)
+      else
+        ColumnInfo.DefinitelyWritable := False
+    else
+      ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(TableColColumnDefinitelyWritableIndex);
+  {readonly}
+  if not TableColumns.IsNull(TableColColumnReadonlyIndex) then
+    if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
+      if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
+        ColumnInfo.ReadOnly := TableColumns.GetBoolean(TableColColumnReadonlyIndex)
+      else
+        ColumnInfo.ReadOnly := True
+    else
+      ColumnInfo.ReadOnly := TableColumns.GetBoolean(TableColColumnReadonlyIndex);
+  {default value}
+  if not TableColumns.IsNull(TableColColumnColDefIndex) then
+    ColumnInfo.DefaultValue := TableColumns.GetString(TableColColumnColDefIndex);
 end;
 
 {**
@@ -658,9 +748,10 @@ function TZAbstractResultSetMetadata.ReadColumnByName(const FieldName: string;
   TableRef: TZTableRef; ColumnInfo: TZColumnInfo): Boolean;
 var
   TableColumns: IZResultSet;
-  tempColType: TZSQLType;
 begin
   Result := False;
+  if (FieldName = '') then
+    Exit;
   TableColumns := GetTableColumns(TableRef);
   { Checks for unexisted table. }
   if not Assigned(TableColumns) then
@@ -684,88 +775,7 @@ begin
 
   { Reads a column information. }
   Result := True;
-  ColumnInfo.CatalogName := TableColumns.GetString(CatalogNameIndex);
-  ColumnInfo.SchemaName := TableColumns.GetString(SchemaNameIndex);
-  ColumnInfo.TableName := TableColumns.GetString(TableNameIndex);
-  ColumnInfo.ColumnName := FieldName;
-
-//If the returned column information is null then the value assigned during
-//the resultset.open will be kept
-  if not TableColumns.IsNull(TableColColumnTypeIndex) then
-  begin
-    //since Pointer referencing by RowAccessor we've a pointer and GetBlob
-    //raises an exception if the pointer is a reference to PPAnsiChar or
-    //ZPPWideChar. if we execute a cast of a lob field the database meta-informtions
-    //assume a IZLob-Pointer. So let's prevent this case and check for
-    //stByte, stString, stUnicoeString first. If this type is returned from the
-    //ResultSet-Metadata we do NOT overwrite the column-type
-    //f.e. select cast( name as varchar(100)), cast(setting as varchar(100)) from pg_settings
-
-    //or the same vice versa:
-    //(CASE WHEN (Ticket51_B."Name" IS NOT NULL) THEN Ticket51_B."Name" ELSE 'Empty' END) As "Name"
-    //we've NO fixed length for a case(postgres and FB2.5up f.e.) select
-    tempColType := TZSQLType(TableColumns.GetSmall(TableColColumnTypeIndex));
-    if not (tempColType in [stBinaryStream, stAsciiStream,
-        stUnicodeStream, stBytes, stString, stUnicodeString]) then
-      ColumnInfo.ColumnType := tempColType;
-  end;
-  if FConSettings = nil then //fix if on creation nil was assigned
-    FConSettings := ResultSet.GetStatement.GetConnection.GetConSettings;
-
-  {Assign ColumnCodePages}
-  if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
-    if FConSettings^.ClientCodePage^.IsStringFieldCPConsistent then //all except ADO and DBLib (currently)
-      ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
-    else
-      if FConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTf8] then //this excludes ADO which is allways 2Byte-String based
-        if (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'NVARCHAR') or
-           (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'NCHAR') then
-          ColumnInfo.ColumnCodePage := zCP_UTF8
-        else
-          ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP //assume locale codepage
-  else
-    ColumnInfo.ColumnCodePage := zCP_NONE; //not a character column
-  {nullable}
-  if not TableColumns.IsNull(TableColColumnNullableIndex) then
-    ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(TableColColumnNullableIndex));
-  {auto increment field}
-  if not TableColumns.IsNull(TableColColumnAutoIncIndex) then
-    ColumnInfo.AutoIncrement := TableColumns.GetBoolean(TableColColumnAutoIncIndex);
-  {Case sensitive}
-  if not TableColumns.IsNull(TableColColumnCaseSensitiveIndex) then
-    ColumnInfo.CaseSensitive := TableColumns.GetBoolean(TableColColumnCaseSensitiveIndex);
-  if not TableColumns.IsNull(TableColColumnSearchableIndex) then
-    ColumnInfo.Searchable := TableColumns.GetBoolean(TableColColumnSearchableIndex);
-  {Writable}
-  if not TableColumns.IsNull(TableColColumnWritableIndex) then
-    if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
-      if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
-        ColumnInfo.Writable := TableColumns.GetBoolean(TableColColumnWritableIndex)
-      else
-        ColumnInfo.Writable := False
-    else
-      ColumnInfo.Writable := TableColumns.GetBoolean(TableColColumnWritableIndex);
-  {DefinitelyWritable}
-  if not TableColumns.IsNull(TableColColumnDefinitelyWritableIndex) then
-    if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
-      if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
-        ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(TableColColumnDefinitelyWritableIndex)
-      else
-        ColumnInfo.DefinitelyWritable := False
-    else
-      ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(TableColColumnDefinitelyWritableIndex);
-  {readonly}
-  if not TableColumns.IsNull(TableColColumnReadonlyIndex) then
-    if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
-      if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
-        ColumnInfo.ReadOnly := TableColumns.GetBoolean(TableColColumnReadonlyIndex)
-      else
-        ColumnInfo.ReadOnly := True
-    else
-      ColumnInfo.ReadOnly := TableColumns.GetBoolean(TableColColumnReadonlyIndex);
-  {default value}
-  if not TableColumns.IsNull(TableColColumnColDefIndex) then
-    ColumnInfo.DefaultValue := TableColumns.GetString(TableColColumnColDefIndex);
+  FillColumInfoFromGetColumnsRS(ColumnInfo, TableColumns, FieldName);
 end;
 
 {**
@@ -805,14 +815,17 @@ begin
   { Initializes single columns with specified table. }
   FieldRef := SelectSchema.LinkFieldByIndexAndShortName(ColumnIndex,
     ColumnInfo.ColumnLabel, IdentifierConvertor);
-  ReadColumnByRef(FieldRef, ColumnInfo);
-  if ColumnInfo.ColumnName <> '' then
+  if ReadColumnByRef(FieldRef, ColumnInfo) then //else double processing down below
     Exit;
-
+ //EH commented: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&start=15
+ // if ColumnInfo.ColumnName <> '' then
+   // Exit;
+  if Assigned(FieldRef) and not FieldRef.IsField then
+    Exit;
   { Initializes single columns without specified table. }
   I := 0;
   Found := False;
-  while (ColumnInfo.ColumnName = '') and (I < SelectSchema.TableCount)
+  while {(ColumnInfo.ColumnName = '') and }(I < SelectSchema.TableCount)
     and not Found do
   begin
     TableRef := SelectSchema.Tables[I];

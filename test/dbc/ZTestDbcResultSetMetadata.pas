@@ -64,11 +64,12 @@ type
   TZTestResultSetMetadataCase = class(TZAbstractDbcSQLTestCase)
   private
   protected
-    procedure CheckColumnMetadata(Metadata: IZResultSetMetadata;
+    procedure CheckColumnMetadata(const Metadata: IZResultSetMetadata;
       ColumnIndex: Integer; ColumnLabel, ColumnName, ColumnTable: string;
-      IsAutoIncrement, IsWritable: Boolean);
+      IsAutoIncrement, IsWritable: Boolean); overload;
   published
     procedure TestResultSetMetadata;
+    procedure TestColumnTypeAndTableDetermination;
     procedure TestResultSetMetadata1;
   end;
 
@@ -82,15 +83,15 @@ uses ZSysUtils;
   Checks metadata for one single resultset column.
 }
 procedure TZTestResultSetMetadataCase.CheckColumnMetadata(
-  Metadata: IZResultSetMetadata; ColumnIndex: Integer; ColumnLabel,
+  const Metadata: IZResultSetMetadata; ColumnIndex: Integer; ColumnLabel,
   ColumnName, ColumnTable: string; IsAutoIncrement, IsWritable: Boolean);
 begin
-  CheckEquals(ColumnLabel, Metadata.GetColumnLabel(ColumnIndex));
-  CheckEquals(ColumnName, Metadata.GetColumnName(ColumnIndex));
-  CheckEquals(ColumnTable, Metadata.GetTableName(ColumnIndex));
-//  CheckEquals(IsAutoIncrement, Metadata.IsAutoIncrement(ColumnIndex));
-  CheckEquals(IsWritable, Metadata.IsWritable(ColumnIndex));
-  CheckEquals(IsWritable, Metadata.IsDefinitelyWritable(ColumnIndex));
+  CheckEquals(ColumnLabel, Metadata.GetColumnLabel(ColumnIndex), 'ColumnLabel does not match');
+  CheckEquals(ColumnName, Metadata.GetColumnName(ColumnIndex), 'ColumnName does not match');
+  CheckEquals(ColumnTable, Metadata.GetTableName(ColumnIndex), 'TableName does not match');
+//  CheckEquals(IsAutoIncrement, Metadata.IsAutoIncrement(ColumnIndex), 'IsAutoIncrement does not match');
+  CheckEquals(IsWritable, Metadata.IsWritable(ColumnIndex), 'IsWritable does not match');
+  CheckEquals(IsWritable, Metadata.IsDefinitelyWritable(ColumnIndex), 'IsDefinitelyWritable does not match');
 end;
 
 {**
@@ -169,11 +170,11 @@ end;
 }
 procedure TZTestResultSetMetadataCase.TestResultSetMetadata1;
 const
-  DEP_ID_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  DEP_NAME_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  DEP_SHNAME_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  DEP_ADDRESS_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  DEP_ADDRESS_1_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  DEP_ID_Index = FirstDbcIndex;
+  DEP_NAME_Index = FirstDbcIndex +1;
+  DEP_SHNAME_Index = FirstDbcIndex +2;
+  DEP_ADDRESS_Index = FirstDbcIndex + 3;
+  DEP_ADDRESS_1_Index = FirstDbcIndex +4;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -230,6 +231,69 @@ begin
     False, True);
   CheckColumnMetadata(Metadata, DEP_ADDRESS_1_Index, 'DEP_ADDRESS_1', '', '',
     False, False);
+end;
+
+procedure TZTestResultSetMetadataCase.TestColumnTypeAndTableDetermination;
+const
+  DEP_ID_Index        = FirstDbcIndex;
+  DEP_NAME_Index      = FirstDbcIndex +1;
+  DEP_SHNAME_Index    = FirstDbcIndex +2;
+  DEP_ADDRESS_Index   = FirstDbcIndex +3;
+  DEP_ADDRESS_1_Index = FirstDbcIndex +4;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  Metadata: IZResultSetMetadata;
+  function GetIdentifierName(const Value: String; IsTable: boolean): String;
+  begin
+    if Connection.GetMetadata.GetDatabaseInfo.StoresUpperCaseIdentifiers then
+      Result := UpperCase(Value)
+    else if Connection.GetMetadata.GetDatabaseInfo.StoresLowerCaseIdentifiers then
+      Result := LowerCase(Value)
+    else Result := Value;
+  end;
+  function GetColumnLabeName(ColIndex: Integer; const Value: String): String;
+  begin
+    if StartsWith(Protocol, 'postgre') then //unquoted alias is also lowercase pffff...
+      Result := lowerCase(Value)
+    else
+      Result := Value;
+  end;
+  procedure TestAll;
+  begin
+    CheckEquals(4, Metadata.GetColumnCount);
+
+    CheckColumnMetadata(Metadata, DEP_ID_Index, GetColumnLabeName(DEP_ID_Index, 'DEP_NAME'),
+      GetIdentifierName('DEP_ID', False), GetIdentifierName('DEPARTMENT', True), True, True);
+    if StartsWith(Protocol, 'postgre')
+    then CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match')
+    else if StartsWith(Protocol, 'oracle')
+    then CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match')
+    else CheckEquals(Ord(stSmall), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match');
+
+    CheckColumnMetadata(Metadata, DEP_NAME_Index, GetColumnLabeName(DEP_NAME_Index, 'DEP_ID'),
+      GetIdentifierName('DEP_NAME', False), GetIdentifierName('DEPARTMENT', True), False, True);
+    Check(Metadata.GetColumnType(DEP_NAME_Index) in [stString, stUnicodeString], 'ColumnType does not match');
+
+    CheckColumnMetadata(Metadata, DEP_SHNAME_Index, GetColumnLabeName(DEP_SHNAME_Index, 'DEP_ADDRESS') ,
+      GetIdentifierName('DEP_SHNAME', False), GetIdentifierName('DEPARTMENT', True), False, True);
+    Check(Metadata.GetColumnType(DEP_SHNAME_Index) in [stString, stUnicodeString], 'ColumnType does not match');
+
+    CheckColumnMetadata(Metadata, DEP_ADDRESS_Index, GetColumnLabeName(DEP_ADDRESS_Index, 'DEP_ADDRESS_1'), '', '',
+      False, False);
+  end;
+begin
+  Statement := Connection.CreateStatement;
+
+  ResultSet := Statement.ExecuteQuery('SELECT T.DEP_ID AS DEP_NAME, T.DEP_NAME AS DEP_ID,'
+    + ' T.DEP_SHNAME as DEP_ADDRESS, 2+2 AS DEP_ADDRESS FROM DEPARTMENT T WHERE T.DEP_ID < 100');
+  Metadata := ResultSet.GetMetadata;
+  TestAll;
+
+  ResultSet := Statement.ExecuteQuery('SELECT DEP_ID AS DEP_NAME, DEP_NAME AS DEP_ID,'
+    + ' DEP_SHNAME as DEP_ADDRESS, 2+2 AS DEP_ADDRESS FROM DEPARTMENT WHERE DEP_ID < 100');
+  Metadata := ResultSet.GetMetadata;
+  TestAll;
 end;
 
 initialization
