@@ -485,11 +485,11 @@ begin
   begin
     with TZFieldRef(FFields[I]) do
     begin
-      Catalog := ExtractNeedlessQuote(Catalog);
-      Schema := ExtractNeedlessQuote(Schema);
-      Table := ExtractNeedlessQuote(Table);
-      Field := ExtractNeedlessQuote(Field);
-      Alias := ExtractNeedlessQuote(Alias);
+      Catalog := Convertor.ExtractQuote(Catalog);
+      Schema := Convertor.ExtractQuote(Schema);
+      Table := Convertor.ExtractQuote(Table);
+      Field := Convertor.ExtractQuote(Field);
+      Alias := Convertor.ExtractQuote(Alias);
     end;
   end;
 
@@ -497,10 +497,10 @@ begin
   begin
     with TZTableRef(FTables[I]) do
     begin
-      Catalog := ExtractNeedlessQuote(Catalog);
-      Schema := ExtractNeedlessQuote(Schema);
-      Table := ExtractNeedlessQuote(Table);
-      Alias := ExtractNeedlessQuote(Alias);
+      Catalog := Convertor.ExtractQuote(Catalog);
+      Schema := Convertor.ExtractQuote(Schema);
+      Table := Convertor.ExtractQuote(Table);
+      Alias := Convertor.ExtractQuote(Alias);
     end;
   end;
 end;
