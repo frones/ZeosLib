@@ -315,8 +315,6 @@ begin
   if not Assigned(FQueryHandle) then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
 
-  Connection := Statement.GetConnection as IZPostgreSQLConnection;
-
   LastRowNo := FPlainDriver.GetRowCount(FQueryHandle);
 
   { Fills the column info. }

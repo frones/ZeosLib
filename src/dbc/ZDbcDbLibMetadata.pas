@@ -1855,7 +1855,6 @@ begin
   end;
 
   if ResultHasRows then begin
-    TableName := Result.GetString(TableNameIndex);
 
     // hint by Jan: I am not sure wether this statement still works with SQL Server 2000 or before.
     Result.BeforeFirst;
