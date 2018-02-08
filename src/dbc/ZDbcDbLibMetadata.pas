@@ -304,7 +304,7 @@ type
 
 implementation
 
-uses ZFastCode, ZDbcDbLibUtils, ZDbcDbLib;
+uses ZFastCode, ZDbcDbLibUtils, ZDbcDbLib, ZSelectSchema;
 
 { TZDbLibDatabaseInfo }
 
@@ -2928,6 +2928,7 @@ begin
       Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetIntByName('CHAR_OCTET_LENGTH'));
       Result.UpdateInt(TableColColumnOrdPosIndex, GetIntByName('ORDINAL_POSITION'));
       Result.UpdateString(TableColColumnIsNullableIndex, GetStringByName('IS_NULLABLE'));
+      Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.GetIdentifierCase(GetStringByName('TYPE_NAME'), True) in [icMixed, icSpecial]);
       Result.InsertRow;
     end;
     Close;
@@ -2942,7 +2943,6 @@ begin
     begin
       Result.Next;
       Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetSmallByName('status') and $80) <> 0);
-      //Result.UpdateNull(TableColColumnCaseSensitiveIndex);
       Result.UpdateBoolean(TableColColumnSearchableIndex, not (GetSmallByName('type') in [34, 35]));
       Result.UpdateBoolean(TableColColumnWritableIndex, ((GetSmallByName('status') and $80) = 0)
         (*and (GetSmallByName('type') <> 37)*));   // <<<< *DEBUG WARUM?

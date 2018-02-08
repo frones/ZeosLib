@@ -245,7 +245,7 @@ type
 implementation
 
 uses
-  ZDbcUtils, ZDbcSqLite, ZFastCode;
+  ZDbcUtils, ZDbcSqLite, ZFastCode, ZSelectSchema;
 
 { TZSQLiteDatabaseInfo }
 
@@ -1388,7 +1388,7 @@ begin
 
         Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(cid_index) +1);
         Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetInt(pk_index) = 1) and (Ord(SQLType) > ord(stBoolean)) and (Ord(SQLType) < Ord(stFloat)));
-        Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, False);
+        Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.GetIdentifierCase(GetString(name_index), True) in [icMixed, icSpecial]);
         Result.UpdateBoolean(TableColColumnSearchableIndex, True);
         Result.UpdateBoolean(TableColColumnWritableIndex, True);
         Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);

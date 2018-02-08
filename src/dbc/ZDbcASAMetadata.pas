@@ -253,7 +253,7 @@ type
 
 implementation
 
-uses ZFastCode, ZDbcASAUtils, ZSysUtils;
+uses ZFastCode, ZDbcASAUtils, ZSysUtils, ZSelectSchema;
 
 { TZASADatabaseInfo }
 
@@ -1649,7 +1649,7 @@ begin
       Result.UpdatePAnsiChar(TableColColumnIsNullableIndex, GetPAnsiCharByName('IS_NULLABLE', Len), @Len);
       Result.UpdateBoolean(TableColColumnAutoIncIndex,
         CompareText( Trim(GetStringByName('COLUMN_DEF')), 'autoincrement') = 0 );
-      //Result.UpdateNull(TableColColumnCaseSensitiveIndex);
+      Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.GetIdentifierCase(GetStringByName('COLUMN_NAME'), True) in [icMixed, icSpecial]);
       Result.UpdateBoolean(TableColColumnSearchableIndex, False);
       Result.UpdateBoolean(TableColColumnWritableIndex, True);
       Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);

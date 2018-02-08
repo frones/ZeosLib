@@ -245,7 +245,7 @@ type
 implementation
 
 uses
-  ZFastCode, ZDbcUtils;
+  ZFastCode, ZDbcUtils, ZSelectSchema;
 
 { TZOracleDatabaseInfo }
 
@@ -1756,7 +1756,7 @@ begin
       Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(COLUMN_ID_Index));
 
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex,
-        IC.IsCaseSensitive(GetString(COLUMN_NAME_Index)));
+        IC.GetIdentifierCase(GetString(COLUMN_NAME_Index), True) in [icMixed, icSpecial]);
       Result.UpdateBoolean(TableColColumnSearchableIndex, True);
       Result.UpdateBoolean(TableColColumnWritableIndex, not (oDataType = 'BFILE'));
       Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);
