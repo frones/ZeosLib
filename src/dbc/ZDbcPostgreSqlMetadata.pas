@@ -3442,7 +3442,7 @@ FillSizes:
       Result.UpdateInt(TableColColumnCharOctetLengthIndex, Result.GetInt(attlen_index));
       Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(attnum_index));
 
-      Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(GetString(attname_index)));
+      Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.GetIdentifierCase(GetString(attname_index), True) in [icMixed, icSpecial]);
       Result.UpdateBoolean(TableColColumnSearchableIndex, True);
       Result.UpdateBoolean(TableColColumnWritableIndex, True);
       Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);
