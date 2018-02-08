@@ -191,7 +191,7 @@ begin
     Exit; //not in build sripts because they depend to locale settings
 
   Metadata := Connection.GetMetadata;
-  if Metadata.GetDatabaseInfo.SupportsMixedCaseIdentifiers then
+  if not Metadata.GetDatabaseInfo.SupportsMixedCaseQuotedIdentifiers then
     Exit;
   Sql := 'DELETE FROM '+MetaData.GetIdentifierConvertor.Quote('Case_Sensitive')+' where cs_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Connection.CreateStatement.ExecuteUpdate(Sql);
