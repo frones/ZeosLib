@@ -212,8 +212,34 @@ end;
   Initializes columns with additional data.
 }
 procedure TZSQLiteResultSetMetadata.LoadColumns;
+{$IFNDEF ZEOS_TEST_ONLY}
+var
+  Current: TZColumnInfo;
+  I: Integer;
+  TableColumns: IZResultSet;
+{$ENDIF}
 begin
+  {$IFDEF ZEOS_TEST_ONLY}
   inherited LoadColumns;
+  {$ELSE}
+  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
+    for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
+      Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
+      ClearColumn(Current);
+      if Current.TableName = '' then
+        continue;
+      TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(Metadata.GetIdentifierConvertor.Quote(Current.TableName)),'');
+      if TableColumns <> nil then begin
+        TableColumns.BeforeFirst;
+        while TableColumns.Next do
+          if TableColumns.GetString(ColumnNameIndex) = Current.ColumnName then begin
+            FillColumInfoFromGetColumnsRS(Current, TableColumns, Current.ColumnName);
+            Break;
+          end;
+      end;
+    end;
+  Loaded := True;
+  {$ENDIF}
 end;
 
 { TZSQLiteResultSet }
@@ -291,13 +317,14 @@ begin
     with ColumnInfo do begin
       ColumnName := ColAttributeToStr(FPlainDriver.column_origin_name(FStmtHandle, i));
       ColumnLabel := ColAttributeToStr(FPlainDriver.column_name(FStmtHandle, i));
-      TableName := ColAttributeToStr(FPlainDriver.column_table_name(FStmtHandle, i)); //EH: Tablename is NOT case sensitive!!
+      TableName := ColAttributeToStr(FPlainDriver.column_table_name(FStmtHandle, i));
       SchemaName := ColAttributeToStr(FPlainDriver.column_database_name(FStmtHandle, i));
       ReadOnly := TableName <> '';
       P := FPlainDriver.column_decltype(FStmtHandle, i);
-      if P = nil
-      then tmp := NativeSQLite3Types[FUndefinedVarcharAsStringLength = 0][FPlainDriver.column_type(FStmtHandle, i)]
-      else ZSetString(P, ZFastCode.StrLen(P), tmp);
+      if P = nil then
+        tmp := NativeSQLite3Types[FUndefinedVarcharAsStringLength = 0][FPlainDriver.column_type(FStmtHandle, i)]
+      else
+        ZSetString(P, ZFastCode.StrLen(P), tmp);
       ColumnType := ConvertSQLiteTypeToSQLType(tmp, FUndefinedVarcharAsStringLength,
         FieldPrecision{%H-}, FieldDecimals{%H-}, ConSettings.CPType);
 
