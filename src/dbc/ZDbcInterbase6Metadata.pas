@@ -1900,7 +1900,7 @@ begin
 
         Result.UpdateNull(TableColColumnAutoIncIndex); //AUTO_INCREMENT
 
-        Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.GetIdentifierCase(ColumnName, True) in [icMixed, icSpecial]); //CASE_SENSITIVE
+        Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(ColumnName)); //CASE_SENSITIVE
 
         Result.UpdateBoolean(TableColColumnSearchableIndex, True); //SEARCHABLE
         if isNull(ColumnIndexes[14]) then

@@ -1388,7 +1388,7 @@ begin
 
         Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(cid_index) +1);
         Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetInt(pk_index) = 1) and (Ord(SQLType) > ord(stBoolean)) and (Ord(SQLType) < Ord(stFloat)));
-        Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.GetIdentifierCase(GetString(name_index), True) in [icMixed, icSpecial]);
+        Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(GetString(name_index)));
         Result.UpdateBoolean(TableColColumnSearchableIndex, True);
         Result.UpdateBoolean(TableColColumnWritableIndex, True);
         Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);
@@ -1434,6 +1434,7 @@ const
 var
   Len: NativeUInt;
   Temp_scheme: string;
+  RS: IZResultSet;
 begin
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
@@ -1442,9 +1443,9 @@ begin
   else
     Temp_scheme := Schema +'.';
 
-  with GetConnection.CreateStatement.ExecuteQuery(
-    Format('PRAGMA %s table_info(''%s'')', [Temp_scheme,Table])) do
-  begin
+  RS := GetConnection.CreateStatement.ExecuteQuery(
+    Format('PRAGMA %s table_info(''%s'')', [Temp_scheme,Self.NormalizePatternCase(Table)]));
+  if RS <> nil then with RS do begin
     while Next do
     begin
       if GetInt(pk_index) = 0 then

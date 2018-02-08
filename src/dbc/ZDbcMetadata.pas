@@ -5122,7 +5122,13 @@ end;
 }
 function TZDefaultIdentifierConvertor.IsCaseSensitive(const Value: string): Boolean;
 begin
-  Result := GetIdentifierCase(Value, False) = icMixed;
+  case GetIdentifierCase(Value, True) of
+    icLower:   Result := Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers;
+    icUpper:   Result := Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers;
+    icSpecial: Result := True;
+    icMixed:   Result := not Metadata.GetDatabaseInfo.StoresMixedCaseIdentifiers;
+    else Result := False;
+  end;
 end;
 
 {**
@@ -5189,18 +5195,9 @@ function TZDefaultIdentifierConvertor.Quote(const Value: string): string;
 var
   QuoteDelim: string;
   Q: PChar;
-  DoQuote: Boolean;
 begin
   Result := Value;
-  case GetIdentifierCase(Value, True) of
-    icLower:   DoQuote := Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers;
-    icUpper:   DoQuote := Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers;
-    icSpecial: DoQuote := True;
-    icMixed:   DoQuote := not Metadata.GetDatabaseInfo.StoresMixedCaseIdentifiers;
-    else DoQuote := False;
-  end;
-
-  if DoQuote then begin
+  if IsCaseSensitive(Value) then begin
     QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
     Q := Pointer(QuoteDelim);
     if Q <> nil then begin

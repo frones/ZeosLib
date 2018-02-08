@@ -1756,7 +1756,7 @@ begin
       Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(COLUMN_ID_Index));
 
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex,
-        IC.GetIdentifierCase(GetString(COLUMN_NAME_Index), True) in [icMixed, icSpecial]);
+        IC.IsCaseSensitive(GetString(COLUMN_NAME_Index)));
       Result.UpdateBoolean(TableColColumnSearchableIndex, True);
       Result.UpdateBoolean(TableColColumnWritableIndex, not (oDataType = 'BFILE'));
       Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);

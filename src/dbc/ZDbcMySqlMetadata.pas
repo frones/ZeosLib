@@ -1300,7 +1300,7 @@ begin
             Result.UpdateBoolean(TableColColumnAutoIncIndex, //AUTO_INCREMENT
               Trim(LowerCase(GetString(ColumnIndexes[4]))) = 'auto_increment'); //Extra
             Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, //CASE_SENSITIVE
-              IC.GetIdentifierCase(GetString(ColumnIndexes[1]), True) in [icMixed, icSpecial]);//Field
+              IC.IsCaseSensitive(GetString(ColumnIndexes[1])));//Field
             Result.UpdateBoolean(TableColColumnSearchableIndex, True);  //SEARCHABLE
             Result.UpdateBoolean(TableColColumnWritableIndex, True);  //WRITABLE
             Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);  //DEFINITELYWRITABLE

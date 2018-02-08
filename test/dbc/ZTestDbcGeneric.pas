@@ -185,7 +185,7 @@ var
   ResultSet: IZResultSet;
   Metadata: IZDatabaseMetadata;
 begin
-  if StartsWith(Protocol, 'mysql') or
+  if StartsWith(Protocol, 'mysql') or StartsWith(Protocol, 'sqlite') or
     StartsWith(Protocol, 'FreeTDS') or ( Protocol = 'mssql') or
     ( Protocol = 'ado') or ( Protocol = 'sybase') or StartsWith(Protocol, 'ASA') then
     Exit; //not in build sripts because they depend to locale settings
