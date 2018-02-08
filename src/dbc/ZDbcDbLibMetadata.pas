@@ -1788,7 +1788,7 @@ function TZMsSqlDatabaseMetadata.UncachedGetColumns(const Catalog: string;
 var
   SQLType: TZSQLType;
   default_val: String;
-  TableName, tmp: String;
+  tmp: String;
   ResultHasRows: Boolean;
 begin
   ResultHasRows := False;

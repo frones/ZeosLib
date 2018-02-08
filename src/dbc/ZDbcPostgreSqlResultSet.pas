@@ -59,7 +59,7 @@ uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZPlainPostgreSqlDriver, ZDbcLogging,
-  ZDbcResultSetMetadata, ZCompatibility, ZSelectSchema;
+  ZDbcResultSetMetadata, ZCompatibility;
 
 type
   TZPGColumnInfo = class(TZColumnInfo)
@@ -307,7 +307,6 @@ var
   ColumnInfo: TZPGColumnInfo;
   FieldMode, FieldSize, FieldType, FieldCount: Integer;
 //  TableInfo: PZPGTableInfo;
-  Connection: IZPostgreSQLConnection;
   P: PAnsiChar;
 begin
   if ResultSetConcurrency = rcUpdatable then
