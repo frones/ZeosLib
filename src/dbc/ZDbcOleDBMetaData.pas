@@ -303,6 +303,7 @@ implementation
 
 uses
   Variants, ZGenericSqlToken, ZFastCode,
+  {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
   ZDbcOleDB, ZDbcOleDBUtils, ZDbcOleDBResultSet, ZDbcOleDBStatement;
 
 const bYesNo: Array[Boolean] of ZWideString = ('NO','YES');
@@ -498,7 +499,7 @@ end;
 }
 function TZOleDBDatabaseInfo.GetSQLKeywords: string;
 begin
-  Result := '';
+  Result := inherited GetSQLKeywords;
 end;
 
 {**
@@ -588,14 +589,14 @@ var
   i, intProp: Integer;
 begin
   DBProperties := nil;
-  OleDBCheck(DBInitialize.QueryInterface(IID_IDBProperties, DBProperties) );
+  OleCheck(DBInitialize.QueryInterface(IID_IDBProperties, DBProperties));
   try
     PropIDSet[0].rgPropertyIDs   := @rgPropertyIDs;
     PropIDSet[0].cPropertyIDs    := PropCount;
     PropIDSet[0].guidPropertySet := DBPROPSET_DATASOURCEINFO;
     nPropertySets := 0;
     prgPropertySets := nil;
-    OleDBCheck( DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ) );
+    OleCheck( DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ) );
     Assert( nPropertySets = 1 ); Assert(prgPropertySets.cProperties = PropCount);
     for i := 0 to prgPropertySets.cProperties-1 do begin
       PropSet := prgPropertySets^;

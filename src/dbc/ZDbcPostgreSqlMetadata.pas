@@ -1743,7 +1743,7 @@ var
   LTypes: TStringDynArray;
   TableNameCondition, SchemaCondition, CatalogCondition: string;
 begin
-  CatalogCondition := ConstructNameCondition(CatalogCondition,'dn.nspname');
+  CatalogCondition := ConstructNameCondition(Catalog,'dn.nspname');
   SchemaCondition := ConstructNameCondition(SchemaPattern,'n.nspname');
   TableNameCondition := ConstructNameCondition(TableNamePattern,'c.relname');
   UseSchemas := True;

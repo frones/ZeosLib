@@ -5124,42 +5124,29 @@ begin
   UpCnt := 0; LoCnt := 0;
   while P1^<> #0 do begin
     case P1^ of
-      'A'..'Z':
-        if LoCnt > 0 then begin //stop loop
-          Result := icMixed;
-          Exit;
-        end else
-          Inc(UpCnt);
-      'a'..'z':
-        if UpCnt > 0 then begin //stop loop
-          Result := icMixed;
-          Exit;
-        end else
-          Inc(LoCnt);
+      'A'..'Z': Inc(UpCnt);
+      'a'..'z': Inc(LoCnt);
       '0'..'9','_': ;
       else begin //stop loop
-        Result := icMixed; //Exit(caseSpec) is supported since XE2 all older do not compile this
+        Result := icSpecial; //Exit(caseSpec) is supported since XE2 all older do not compile this
         Exit;
       end;
     end;
     Inc(P1);
   end;
-  if (UpCnt > 0) and (LoCnt = 0) then
-    Result := icUpper
-  else if (UpCnt = 0) and (LoCnt > 0) then
-    Result := icLower
-  else //this could happen only if table starts with '_' and possible numbers follow
-    Result := icNone;
+  if (UpCnt > 0) then
+    if (LoCnt = 0)
+    then Result := icUpper
+    else Result := icMixed
+  else if (LoCnt > 0)
+  then Result := icLower
+  else Result := icNone; //this could happen only if table starts with '_' and possible numbers follow
 
-  if not TestKeyWords and (Result = icSpecial) then
-     Result := icMixed
-  else if TestKeyWords and not (Result in [icNone,icMixed]) then begin
+  if TestKeyWords and not (Result in [icNone, icSpecial]) then begin
     { Checks for reserved keywords. }
-    if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers and (Result <> icUpper) then
-      S := UpperCase(Value)
-    else if Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers and (Result <> icLower)
-    then s := LowerCase(Value)
-    else S := Value;
+    if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers and (Result <> icUpper)
+    then S := UpperCase(Value)
+    else s := LowerCase(Value);
     P1 := Pointer(S);
     KeyWords := Metadata.GetDatabaseInfo.GetIdentifierQuoteKeywordsSorted; //they are Ascending sorted
     for i := low(KeyWords) to high(KeyWords) do begin
@@ -5265,10 +5252,6 @@ begin
   end else begin
     Result := Value;
     case GetIdentifierCase(Value,True) of
-      icSpecial:
-          if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers
-          then Result := UpperCase(Result)
-          else Result := LowerCase(Result);
       icMixed:
         if not Metadata.GetDatabaseInfo.StoresMixedCaseIdentifiers then
           if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers
