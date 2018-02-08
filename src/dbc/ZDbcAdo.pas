@@ -54,6 +54,7 @@ unit ZDbcAdo;
 interface
 
 {$I ZDbc.inc}
+{.$DEFINE ENABLE_ADO}
 {$IFDEF ENABLE_ADO}
 
 uses
@@ -129,9 +130,9 @@ var
 implementation
 
 uses
-  Variants, ActiveX,
+  Variants, ActiveX, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF},
   ZDbcUtils, ZDbcLogging, ZAdoToken, ZSysUtils, ZMessages,
-  ZDbcAdoStatement, ZDbcAdoMetadata, ZEncoding;
+  ZDbcAdoStatement, ZDbcAdoMetadata, ZEncoding, ZDbcAdoUtils;
 
 const                                                //adXactUnspecified
   IL: array[TZTransactIsolationLevel] of TOleEnum = (adXactChaos, adXactReadUncommitted, adXactReadCommitted, adXactRepeatableRead, adXactSerializable);
@@ -267,6 +268,10 @@ end;
 procedure TZAdoConnection.Open;
 var
   LogMessage: RawByteString;
+  DBInitialize: IDBInitialize;
+  Command: ZPlainAdo.Command;
+  DBCreateCommand: IDBCreateCommand;
+  GetDataSource: IGetDataSource;
 begin
   if not Closed then Exit;
 
@@ -281,6 +286,13 @@ begin
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
     ConSettings^.AutoEncode := {$IFDEF UNICODE}False{$ELSE}True{$ENDIF};
     CheckCharEncoding('CP_UTF16');
+    {EH: the only way to get back to generic Ole is using the command ... }
+    Command := CoCommand.Create;
+    Command.Set_ActiveConnection(FAdoConnection);
+    if Succeeded(((Command as ADOCommandConstruction).OLEDBCommand as ICommand).GetDBSession(IID_IDBCreateCommand, IInterface(DBCreateCommand))) then
+      if DBCreateCommand.QueryInterface(IID_IGetDataSource, GetDataSource) = S_OK then
+        if Succeeded(GetDataSource.GetDataSource(IID_IDBInitialize, IInterFace(DBInitialize))) then
+          (GetMetadata.GetDatabaseInfo as IZOleDBDatabaseInfo).InitilizePropertiesFromDBInfo(DBInitialize, ZAdoMalloc);
   except
     on E: Exception do
     begin

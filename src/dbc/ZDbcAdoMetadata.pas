@@ -54,28 +54,60 @@ unit ZDbcAdoMetadata;
 interface
 
 {$I ZDbc.inc}
+{.$DEFINE ENABLE_ADO}
 {$IFDEF ENABLE_ADO}
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet, ZURL,
-  ZCompatibility, ZGenericSqlAnalyser, ZPlainAdo, ZDbcConnection;
+  ZCompatibility, ZGenericSqlAnalyser, ZPlainAdo, ZDbcConnection,
+  {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, ActiveX;
 
 type
+  IZOleDBDatabaseInfo = interface(IZDatabaseInfo)
+    ['{FCAE90AA-B0B6-49A2-AB74-33E604FF8804}']
+    procedure InitilizePropertiesFromDBInfo(const DBInitialize: IDBInitialize; const Malloc: IMalloc);
+  end;
+
   // technobot 2008-06-27 - methods moved as is from TZAdoDatabaseMetadata:
   {** Implements Ado Database Information. }
-  TZAdoDatabaseInfo = class(TZAbstractDatabaseInfo)
+  TZAdoDatabaseInfo = class(TZAbstractDatabaseInfo, IZOleDBDatabaseInfo)
+  private
+    fDBPROP_PROVIDERFRIENDLYNAME: String;
+    fDBPROP_PROVIDERVER: String;
+    fDBPROP_DBMSNAME: String;
+    fDBPROP_DBMSVER: string;
+    fSupportedTransactIsolationLevels: set of TZTransactIsolationLevel;
+    fSupportsMultipleResultSets: Boolean;
+    fSupportsMultipleStorageObjects: Boolean;
+    fDBPROP_CATALOGUSAGE: Integer;
+    fDBPROP_SCHEMAUSAGE: Integer;
+    fDBPROP_IDENTIFIERCASE: Integer;
+    fDBPROP_QUOTEDIDENTIFIERCASE: Integer;
+    fDBPROP_MAXROWSIZE: Integer;
+    fDBPROP_MAXROWSIZEINCLUDESBLOB: Boolean;
+    fDBPROP_SQLSUPPORT: Integer;
+    fDBPROP_CATALOGTERM: String;
+    fDBPROP_SCHEMATERM: String;
+    fDBPROP_PROCEDURETERM: String;
+    fDBPROP_SUPPORTEDTXNDDL: Integer;
+    fDBPROP_CONCATNULLBEHAVIOR: Boolean;
+    fDBPROP_NULLCOLLATION: Integer;
+    fDBPROP_SUBQUERIES: Integer;
+    fDBPROP_GROUPBY: Integer;
+    fDBPROP_ORDERBYCOLUMNSINSELECT: Boolean;
+    fDBPROP_PREPAREABORTBEHAVIOR: Integer;
+    fDBPROP_PREPARECOMMITBEHAVIOR: Integer;
   public
     constructor Create(const Metadata: TZAbstractDatabaseMetadata);
-
     // database/driver/server info:
     function GetDatabaseProductName: string; override;
     function GetDatabaseProductVersion: string; override;
     function GetDriverName: string; override;
-//    function GetDriverVersion: string; override; -> Same as parent
+    function GetDriverVersion: string; override;
     function GetDriverMajorVersion: Integer; override;
     function GetDriverMinorVersion: Integer; override;
-//    function GetServerVersion: string; -> Not implemented
+    function GetServerVersion: string; override;
 
     // capabilities (what it can/cannot do):
 //    function AllProceduresAreCallable: Boolean; override; -> Not implemented
@@ -96,15 +128,16 @@ type
     function SupportsGroupByUnrelated: Boolean; override;
     function SupportsGroupByBeyondSelect: Boolean; override;
 //    function SupportsLikeEscapeClause: Boolean; override; -> Not implemented
-//    function SupportsMultipleResultSets: Boolean; override; -> Not implemented
+    function SupportsMultipleResultSets: Boolean; override;
+    function SupportsMultipleStorageObjects: Boolean;
 //    function SupportsMultipleTransactions: Boolean; override; -> Not implemented
 //    function SupportsNonNullableColumns: Boolean; override; -> Not implemented
-//    function SupportsMinimumSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsCoreSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsExtendedSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsANSI92EntryLevelSQL: Boolean; override; -> Not implemented
-//    function SupportsANSI92IntermediateSQL: Boolean; override; -> Not implemented
-//    function SupportsANSI92FullSQL: Boolean; override; -> Not implemented
+    function SupportsMinimumSQLGrammar: Boolean; override;
+    function SupportsCoreSQLGrammar: Boolean; override;
+    function SupportsExtendedSQLGrammar: Boolean; override;
+    function SupportsANSI92EntryLevelSQL: Boolean; override;
+    function SupportsANSI92IntermediateSQL: Boolean; override;
+    function SupportsANSI92FullSQL: Boolean; override;
     function SupportsIntegrityEnhancementFacility: Boolean; override;
 //    function SupportsOuterJoins: Boolean; override; -> Not implemented
 //    function SupportsFullOuterJoins: Boolean; override; -> Not implemented
@@ -174,11 +207,11 @@ type
 //    function IsReadOnly: Boolean; override; -> Not implemented
 //    function IsCatalogAtStart: Boolean; override; -> Not implemented
     function DoesMaxRowSizeIncludeBlobs: Boolean; override;
-//    function NullsAreSortedHigh: Boolean; override; -> Not implemented
-//    function NullsAreSortedLow: Boolean; override; -> Not implemented
-//    function NullsAreSortedAtStart: Boolean; override; -> Not implemented
-//    function NullsAreSortedAtEnd: Boolean; override; -> Not implemented
-//    function NullPlusNonNullIsNull: Boolean; override; -> Not implemented
+    function NullsAreSortedHigh: Boolean; override;
+    function NullsAreSortedLow: Boolean; override;
+    function NullsAreSortedAtStart: Boolean; override;
+    function NullsAreSortedAtEnd: Boolean; override;
+    function NullPlusNonNullIsNull: Boolean; override;
 //    function UsesLocalFiles: Boolean; override; -> Not implemented
     function UsesLocalFilePerTable: Boolean; override;
     function StoresUpperCaseIdentifiers: Boolean; override;
@@ -203,6 +236,9 @@ type
     function GetTimeDateFunctions: string; override;
     function GetSearchStringEscape: string; override;
     function GetExtraNameCharacters: string; override;
+
+    //Ole related
+    procedure InitilizePropertiesFromDBInfo(const DBInitialize: IDBInitialize; const Malloc: IMalloc);
   end;
 
   {** Implements Ado Metadata. }
@@ -262,8 +298,9 @@ implementation
 
 uses
   Variants,
-  Math, ZGenericSqlToken, ZDbcAdoUtils, ZDbcAdo,
-  {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, ZDbcAdoResultSet;
+  Math, ZGenericSqlToken, ZDbcAdoUtils, ZDbcAdo, ZFastCode,
+  {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
+  ZDbcAdoResultSet;
 
 type
   TSuppSchemaRec = record
@@ -313,7 +350,7 @@ end;
 }
 function TZAdoDatabaseInfo.GetDatabaseProductName: string;
 begin
-  Result := 'ado';
+  Result := fDBPROP_DBMSNAME;
 end;
 
 {**
@@ -322,7 +359,7 @@ end;
 }
 function TZAdoDatabaseInfo.GetDatabaseProductVersion: string;
 begin
-  Result := String((Metadata.GetConnection as IZAdoConnection).GetAdoConnection.Version);
+  Result := fDBPROP_DBMSVER;
 end;
 
 {**
@@ -331,7 +368,16 @@ end;
 }
 function TZAdoDatabaseInfo.GetDriverName: string;
 begin
-  Result := 'Zeos Database Connectivity Driver for Microsoft ADO';
+  Result := fDBPROP_PROVIDERFRIENDLYNAME;
+end;
+
+{**
+  What's the version of this JDBC driver?
+  @return JDBC driver version
+}
+function TZAdoDatabaseInfo.GetDriverVersion: string;
+begin
+  Result := fDBPROP_PROVIDERVER;
 end;
 
 {**
@@ -340,7 +386,7 @@ end;
 }
 function TZAdoDatabaseInfo.GetDriverMajorVersion: Integer;
 begin
-  Result := 1;
+  Result := ZFastCode.{$IFDEF UNICODE}UnicodeToInt{$ELSE}RawToInt{$ENDIF}(Copy(fDBPROP_PROVIDERVER, 1, 2));
 end;
 
 {**
@@ -349,7 +395,7 @@ end;
 }
 function TZAdoDatabaseInfo.GetDriverMinorVersion: Integer;
 begin
-  Result := 0;
+  Result := ZFastCode.{$IFDEF UNICODE}UnicodeToInt{$ELSE}RawToInt{$ENDIF}(Copy(fDBPROP_PROVIDERVER, 4, 2));
 end;
 
 {**
@@ -362,6 +408,16 @@ begin
 end;
 
 {**
+  Is the ODBC Minimum SQL grammar supported?
+  All JDBC Compliant<sup><font size=-2>TM</font></sup> drivers must return true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAdoDatabaseInfo.SupportsMinimumSQLGrammar: Boolean;
+begin
+  Result := fDBPROP_SQLSUPPORT and DBPROPVAL_SQL_ODBC_MINIMUM = DBPROPVAL_SQL_ODBC_MINIMUM;
+end;
+
+{**
   Does the database treat mixed case unquoted SQL identifiers as
   case sensitive and as a result store them in mixed case?
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will
@@ -370,7 +426,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsMixedCaseIdentifiers: Boolean;
 begin
-  Result := False;
+  Result := fDBPROP_IDENTIFIERCASE = DBPROPVAL_IC_SENSITIVE;
 end;
 
 {**
@@ -380,7 +436,7 @@ end;
 }
 function TZAdoDatabaseInfo.StoresUpperCaseIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_IDENTIFIERCASE = DBPROPVAL_IC_UPPER;
 end;
 
 {**
@@ -390,7 +446,7 @@ end;
 }
 function TZAdoDatabaseInfo.StoresLowerCaseIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_IDENTIFIERCASE = DBPROPVAL_IC_LOWER;
 end;
 
 {**
@@ -400,7 +456,7 @@ end;
 }
 function TZAdoDatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
 begin
-  Result := False;
+  Result := fDBPROP_IDENTIFIERCASE = DBPROPVAL_IC_MIXED;
 end;
 
 {**
@@ -411,7 +467,21 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsMixedCaseQuotedIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_QUOTEDIDENTIFIERCASE = DBPROPVAL_IC_SENSITIVE;
+end;
+
+{**
+  Are multiple <code>ResultSet</code> from a single execute supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAdoDatabaseInfo.SupportsMultipleResultSets: Boolean;
+begin
+  Result := fSupportsMultipleResultSets;
+end;
+
+function TZAdoDatabaseInfo.SupportsMultipleStorageObjects: Boolean;
+begin
+  Result := fSupportsMultipleStorageObjects;
 end;
 
 {**
@@ -421,7 +491,7 @@ end;
 }
 function TZAdoDatabaseInfo.StoresUpperCaseQuotedIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_QUOTEDIDENTIFIERCASE = DBPROPVAL_IC_UPPER;
 end;
 
 {**
@@ -431,7 +501,7 @@ end;
 }
 function TZAdoDatabaseInfo.StoresLowerCaseQuotedIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_QUOTEDIDENTIFIERCASE = DBPROPVAL_IC_LOWER;
 end;
 
 {**
@@ -441,7 +511,7 @@ end;
 }
 function TZAdoDatabaseInfo.StoresMixedCaseQuotedIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_QUOTEDIDENTIFIERCASE = DBPROPVAL_IC_MIXED ;
 end;
 
 {**
@@ -504,6 +574,174 @@ begin
   Result := 'DATEADD,DATEDIFF,DATENAME,DATEPART,DAY,GETDATE,MONTH,YEAR';
 end;
 
+procedure TZAdoDatabaseInfo.InitilizePropertiesFromDBInfo(
+  const DBInitialize: IDBInitialize; const Malloc: IMalloc);
+const
+  VARIANT_TRUE = -1;
+  PropCount = 25;
+  rgPropertyIDs: array[0..PropCount-1] of DBPROPID =
+    ( DBPROP_PROVIDERFRIENDLYNAME,
+      DBPROP_PROVIDERVER,
+      DBPROP_DBMSNAME,
+      DBPROP_DBMSVER,
+      DBPROP_SUPPORTEDTXNISOLEVELS,
+      DBPROP_MULTIPLERESULTS,
+      DBPROP_MULTIPLESTORAGEOBJECTS,
+      DBPROP_SCHEMAUSAGE,
+      DBPROP_CATALOGUSAGE,
+      DBPROP_IDENTIFIERCASE,
+      DBPROP_QUOTEDIDENTIFIERCASE,
+      DBPROP_MAXROWSIZE,
+      DBPROP_MAXROWSIZEINCLUDESBLOB,
+      DBPROP_SQLSUPPORT,
+      DBPROP_CATALOGTERM,
+      DBPROP_SCHEMATERM,
+      DBPROP_PROCEDURETERM,
+      DBPROP_SUPPORTEDTXNDDL,
+      DBPROP_CONCATNULLBEHAVIOR,
+      DBPROP_NULLCOLLATION,
+      DBPROP_SUBQUERIES,
+      DBPROP_GROUPBY,
+      DBPROP_ORDERBYCOLUMNSINSELECT,
+      DBPROP_PREPAREABORTBEHAVIOR,
+      DBPROP_PREPARECOMMITBEHAVIOR);
+var
+  DBProperties: IDBProperties;
+  PropIDSet: array[0..PropCount-1] of TDBPROPIDSET;
+  prgPropertySets: PDBPropSet;
+  PropSet: TDBPropSet;
+  nPropertySets: ULONG;
+  i, intProp: Integer;
+begin
+  DBProperties := nil;
+  OleCheck(DBInitialize.QueryInterface(IID_IDBProperties, DBProperties));
+  try
+    PropIDSet[0].rgPropertyIDs   := @rgPropertyIDs;
+    PropIDSet[0].cPropertyIDs    := PropCount;
+    PropIDSet[0].guidPropertySet := DBPROPSET_DATASOURCEINFO;
+    nPropertySets := 0;
+    prgPropertySets := nil;
+    OleCheck( DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ) );
+    Assert( nPropertySets = 1 ); Assert(prgPropertySets.cProperties = PropCount);
+    for i := 0 to prgPropertySets.cProperties-1 do begin
+      PropSet := prgPropertySets^;
+      if PropSet.rgProperties^[i].dwStatus <> DBPROPSTATUS(DBPROPSTATUS_OK) then
+        Continue;
+      if PropSet.rgProperties^[i].dwPropertyID = DBPROP_PROVIDERFRIENDLYNAME then
+        fDBPROP_PROVIDERFRIENDLYNAME := String(PropSet.rgProperties^[i].vValue)
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_PROVIDERVER then
+        fDBPROP_PROVIDERVER := String(PropSet.rgProperties^[i].vValue)
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_DBMSNAME then
+        fDBPROP_DBMSNAME := String(PropSet.rgProperties^[i].vValue)
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_DBMSVER then
+        fDBPROP_DBMSVER := String(PropSet.rgProperties^[i].vValue)
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_SUPPORTEDTXNISOLEVELS then begin
+        intProp := PropSet.rgProperties^[i].vValue;
+        fSupportedTransactIsolationLevels := [];
+        if ISOLATIONLEVEL_CHAOS and intProp = ISOLATIONLEVEL_CHAOS then
+          Include(fSupportedTransactIsolationLevels, tiNone);
+        if ISOLATIONLEVEL_READUNCOMMITTED and intProp = ISOLATIONLEVEL_READUNCOMMITTED then
+          Include(fSupportedTransactIsolationLevels, tiReadUncommitted);
+        if ISOLATIONLEVEL_READCOMMITTED and intProp = ISOLATIONLEVEL_READCOMMITTED then
+          Include(fSupportedTransactIsolationLevels, tiReadCommitted);
+        if ISOLATIONLEVEL_REPEATABLEREAD and intProp = ISOLATIONLEVEL_REPEATABLEREAD then
+          Include(fSupportedTransactIsolationLevels, tiRepeatableRead);
+        if ISOLATIONLEVEL_SERIALIZABLE and intProp = ISOLATIONLEVEL_SERIALIZABLE then
+          Include(fSupportedTransactIsolationLevels, tiSerializable);
+      end else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_MULTIPLERESULTS then
+        fSupportsMultipleResultSets := PropSet.rgProperties^[i].vValue <> DBPROPVAL_MR_NOTSUPPORTED
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_MULTIPLESTORAGEOBJECTS then
+        fSupportsMultipleStorageObjects := PropSet.rgProperties^[i].vValue = VARIANT_TRUE
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_SCHEMAUSAGE then
+        fDBPROP_SCHEMAUSAGE := PropSet.rgProperties^[i].vValue
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_CATALOGUSAGE then
+        fDBPROP_CATALOGUSAGE := PropSet.rgProperties^[i].vValue
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_QUOTEDIDENTIFIERCASE then
+        fDBPROP_QUOTEDIDENTIFIERCASE := PropSet.rgProperties^[i].vValue
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_IDENTIFIERCASE then
+        fDBPROP_IDENTIFIERCASE := PropSet.rgProperties^[i].vValue
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_MAXROWSIZE then
+        fDBPROP_MAXROWSIZE := PropSet.rgProperties^[i].vValue
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_MAXROWSIZEINCLUDESBLOB then
+        fDBPROP_MAXROWSIZEINCLUDESBLOB := PropSet.rgProperties^[i].vValue = VARIANT_TRUE
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_SQLSUPPORT then
+        fDBPROP_SQLSUPPORT := PropSet.rgProperties^[i].vValue
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_CATALOGTERM then
+        fDBPROP_CATALOGTERM := String(PropSet.rgProperties^[i].vValue)
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_SCHEMATERM then
+        fDBPROP_SCHEMATERM := String(PropSet.rgProperties^[i].vValue)
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_PROCEDURETERM then
+        fDBPROP_PROCEDURETERM := String(PropSet.rgProperties^[i].vValue)
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_SUPPORTEDTXNDDL then
+        fDBPROP_SUPPORTEDTXNDDL := PropSet.rgProperties^[i].vValue
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_CONCATNULLBEHAVIOR then
+        fDBPROP_CONCATNULLBEHAVIOR := PropSet.rgProperties^[i].vValue = DBPROPVAL_CB_NULL
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_NULLCOLLATION then
+        fDBPROP_NULLCOLLATION := PropSet.rgProperties^[i].vValue
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_SUBQUERIES then
+        fDBPROP_SUBQUERIES := PropSet.rgProperties^[i].vValue
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_GROUPBY then
+        fDBPROP_GROUPBY := PropSet.rgProperties^[i].vValue
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_ORDERBYCOLUMNSINSELECT then
+        fDBPROP_ORDERBYCOLUMNSINSELECT := PropSet.rgProperties^[i].vValue = VARIANT_TRUE
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_PREPAREABORTBEHAVIOR then
+        fDBPROP_PREPAREABORTBEHAVIOR := PropSet.rgProperties^[i].vValue
+      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_PREPARECOMMITBEHAVIOR then
+        fDBPROP_PREPARECOMMITBEHAVIOR := PropSet.rgProperties^[i].vValue
+
+      ; VariantClear(PropSet.rgProperties^[i].vValue);
+    end;
+    // free and clear elements of PropIDSet
+    MAlloc.Free(PropSet.rgProperties);
+    MAlloc.Free(prgPropertySets); //free prgPropertySets
+  finally
+    DBProperties := nil;
+  end;
+end;
+
+{**
+  Are concatenations between NULL and non-NULL values NULL?
+  For SQL-92 compliance, a JDBC technology-enabled driver will
+  return <code>true</code>.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAdoDatabaseInfo.NullPlusNonNullIsNull: Boolean;
+begin
+  Result := fDBPROP_CONCATNULLBEHAVIOR
+end;
+
+function TZAdoDatabaseInfo.NullsAreSortedAtEnd: Boolean;
+begin
+  Result := fDBPROP_NULLCOLLATION = DBPROPVAL_NC_START;
+end;
+
+{**
+  Are NULL values sorted at the start regardless of sort order?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAdoDatabaseInfo.NullsAreSortedAtStart: Boolean;
+begin
+  Result := fDBPROP_NULLCOLLATION = DBPROPVAL_NC_END;
+end;
+
+{**
+  Are NULL values sorted high?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAdoDatabaseInfo.NullsAreSortedHigh: Boolean;
+begin
+  Result := fDBPROP_NULLCOLLATION = DBPROPVAL_NC_HIGH;
+end;
+
+{**
+  Are NULL values sorted low?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAdoDatabaseInfo.NullsAreSortedLow: Boolean;
+begin
+  Result := fDBPROP_NULLCOLLATION = DBPROPVAL_NC_LOW;
+end;
+
 {**
   Gets the string that can be used to escape wildcard characters.
   This is the string that can be used to escape '_' or '%' in
@@ -521,6 +759,15 @@ begin
 In sql server this must be specified as the parameter of like.
 example: WHERE ColumnA LIKE '%5/%%' ESCAPE '/' }
   Result := '/';
+end;
+
+{**
+  Returns the server version
+  @return the server version string
+}
+function TZAdoDatabaseInfo.GetServerVersion: string;
+begin
+  Result := fDBPROP_DBMSVER;
 end;
 
 {**
@@ -546,12 +793,21 @@ begin
 end;
 
 {**
+  Is the ODBC Extended SQL grammar supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAdoDatabaseInfo.SupportsExtendedSQLGrammar: Boolean;
+begin
+  Result := fDBPROP_SQLSUPPORT and DBPROPVAL_SQL_ODBC_EXTENDED = DBPROPVAL_SQL_ODBC_EXTENDED;
+end;
+
+{**
   Can an "ORDER BY" clause use columns not in the SELECT statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZAdoDatabaseInfo.SupportsOrderByUnrelated: Boolean;
 begin
-  Result := True;
+  Result := not fDBPROP_ORDERBYCOLUMNSINSELECT;
 end;
 
 {**
@@ -560,7 +816,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsGroupBy: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_GROUPBY <> 0;
 end;
 
 {**
@@ -569,7 +825,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsGroupByUnrelated: Boolean;
 begin
-  Result := True;
+  Result := (fDBPROP_GROUPBY = DBPROPVAL_GB_CONTAINS_SELECT) or SupportsGroupByBeyondSelect;
 end;
 
 {**
@@ -579,7 +835,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsGroupByBeyondSelect: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_GROUPBY = DBPROPVAL_GB_NO_RELATION;
 end;
 
 {**
@@ -588,7 +844,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsIntegrityEnhancementFacility: Boolean;
 begin
-  Result := False;
+  Result := fDBPROP_SQLSUPPORT and DBPROPVAL_SQL_ANSI89_IEF = DBPROPVAL_SQL_ANSI89_IEF;
 end;
 
 {**
@@ -597,7 +853,7 @@ end;
 }
 function TZAdoDatabaseInfo.GetSchemaTerm: string;
 begin
-  Result := 'owner';
+  Result := fDBPROP_SCHEMATERM;
 end;
 
 {**
@@ -606,7 +862,7 @@ end;
 }
 function TZAdoDatabaseInfo.GetProcedureTerm: string;
 begin
-  Result := 'procedure';
+  Result := fDBPROP_PROCEDURETERM;
 end;
 
 {**
@@ -615,7 +871,7 @@ end;
 }
 function TZAdoDatabaseInfo.GetCatalogTerm: string;
 begin
-  Result := 'database';
+  Result := fDBPROP_CATALOGTERM;
 end;
 
 {**
@@ -633,7 +889,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsSchemasInDataManipulation: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_SCHEMAUSAGE and DBPROPVAL_SU_DML_STATEMENTS = DBPROPVAL_SU_DML_STATEMENTS;
 end;
 
 {**
@@ -642,7 +898,8 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsSchemasInProcedureCalls: Boolean;
 begin
-  Result := True;
+  //NA
+  Result := SupportsStoredProcedures and SupportsSchemasInTableDefinitions;
 end;
 
 {**
@@ -651,7 +908,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsSchemasInTableDefinitions: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_SCHEMAUSAGE and DBPROPVAL_SU_TABLE_DEFINITION = DBPROPVAL_SU_TABLE_DEFINITION;
 end;
 
 {**
@@ -660,7 +917,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsSchemasInIndexDefinitions: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_SCHEMAUSAGE and DBPROPVAL_SU_INDEX_DEFINITION = DBPROPVAL_SU_INDEX_DEFINITION;
 end;
 
 {**
@@ -669,7 +926,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsSchemasInPrivilegeDefinitions: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_SCHEMAUSAGE and DBPROPVAL_SU_PRIVILEGE_DEFINITION = DBPROPVAL_SU_PRIVILEGE_DEFINITION;
 end;
 
 {**
@@ -678,7 +935,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsCatalogsInDataManipulation: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_CATALOGUSAGE and DBPROPVAL_CU_DML_STATEMENTS = DBPROPVAL_CU_DML_STATEMENTS;
 end;
 
 {**
@@ -687,7 +944,8 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsCatalogsInProcedureCalls: Boolean;
 begin
-  Result := True;
+  //NA
+  Result := SupportsStoredProcedures and SupportsCatalogsInTableDefinitions;
 end;
 
 {**
@@ -696,7 +954,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsCatalogsInTableDefinitions: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_CATALOGUSAGE and DBPROPVAL_CU_TABLE_DEFINITION = DBPROPVAL_CU_TABLE_DEFINITION;
 end;
 
 {**
@@ -705,7 +963,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsCatalogsInIndexDefinitions: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_CATALOGUSAGE and DBPROPVAL_CU_INDEX_DEFINITION = DBPROPVAL_CU_INDEX_DEFINITION;
 end;
 
 {**
@@ -714,7 +972,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsCatalogsInPrivilegeDefinitions: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_CATALOGUSAGE and DBPROPVAL_CU_PRIVILEGE_DEFINITION = DBPROPVAL_CU_PRIVILEGE_DEFINITION;
 end;
 
 {**
@@ -772,7 +1030,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsSubqueriesInComparisons: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_SQLSUPPORT and DBPROPVAL_SQ_COMPARISON = DBPROPVAL_SQ_COMPARISON;
 end;
 
 {**
@@ -782,7 +1040,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsSubqueriesInExists: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_SQLSUPPORT and DBPROPVAL_SQ_EXISTS = DBPROPVAL_SQ_EXISTS;
 end;
 
 {**
@@ -792,7 +1050,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsSubqueriesInIns: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_SQLSUPPORT and DBPROPVAL_SQ_IN = DBPROPVAL_SQ_IN;
 end;
 
 {**
@@ -802,7 +1060,16 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsSubqueriesInQuantifieds: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_SQLSUPPORT and DBPROPVAL_SQ_QUANTIFIED = DBPROPVAL_SQ_QUANTIFIED;
+end;
+
+{**
+  Is the ODBC Core SQL grammar supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAdoDatabaseInfo.SupportsCoreSQLGrammar: Boolean;
+begin
+  Result := fDBPROP_SQLSUPPORT and DBPROPVAL_SQL_ODBC_CORE = DBPROPVAL_SQL_ODBC_CORE;
 end;
 
 {**
@@ -812,7 +1079,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsCorrelatedSubqueries: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_SUBQUERIES and DBPROPVAL_SQ_CORRELATEDSUBQUERIES = DBPROPVAL_SQ_CORRELATEDSUBQUERIES;
 end;
 
 {**
@@ -840,7 +1107,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsOpenCursorsAcrossCommit: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_PREPARECOMMITBEHAVIOR = DBPROPVAL_CB_PRESERVE;
 end;
 
 {**
@@ -850,7 +1117,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsOpenCursorsAcrossRollback: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_PREPAREABORTBEHAVIOR = DBPROPVAL_CB_PRESERVE;
 end;
 
 {**
@@ -860,7 +1127,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsOpenStatementsAcrossCommit: Boolean;
 begin
-  Result := False;
+  Result := fDBPROP_PREPARECOMMITBEHAVIOR = DBPROPVAL_CB_PRESERVE;
 end;
 
 {**
@@ -870,7 +1137,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsOpenStatementsAcrossRollback: Boolean;
 begin
-  Result := False;
+  Result := fDBPROP_PREPAREABORTBEHAVIOR = DBPROPVAL_CB_PRESERVE;
 end;
 
 //----------------------------------------------------------------------
@@ -1028,7 +1295,7 @@ end;
 }
 function TZAdoDatabaseInfo.GetMaxRowSize: Integer;
 begin
-  Result := 8060;
+  Result := fDBPROP_MAXROWSIZE;
 end;
 
 {**
@@ -1038,7 +1305,7 @@ end;
 }
 function TZAdoDatabaseInfo.DoesMaxRowSizeIncludeBlobs: Boolean;
 begin
-  Result := False;
+  Result := fDBPROP_MAXROWSIZEINCLUDESBLOB;
 end;
 
 {**
@@ -1113,7 +1380,7 @@ end;
 }
 function TZAdoDatabaseInfo.SupportsTransactions: Boolean;
 begin
-  Result := True;
+  Result := fSupportedTransactIsolationLevels <> [];
 end;
 
 {**
@@ -1125,7 +1392,7 @@ end;
 function TZAdoDatabaseInfo.SupportsTransactionIsolationLevel(
   const Level: TZTransactIsolationLevel): Boolean;
 begin
-  Result := True;
+  Result := Level in fSupportedTransactIsolationLevels;
 end;
 
 {**
@@ -1136,7 +1403,7 @@ end;
 function TZAdoDatabaseInfo.
   SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_SUPPORTEDTXNDDL and DBPROPVAL_TC_ALL = DBPROPVAL_TC_ALL;
 end;
 
 {**
@@ -1147,7 +1414,7 @@ end;
 function TZAdoDatabaseInfo.
   SupportsDataManipulationTransactionsOnly: Boolean;
 begin
-  Result := False;
+  Result := fDBPROP_SUPPORTEDTXNDDL and DBPROPVAL_TC_DML = DBPROPVAL_TC_DML;
 end;
 
 {**
@@ -1157,7 +1424,7 @@ end;
 }
 function TZAdoDatabaseInfo.DataDefinitionCausesTransactionCommit: Boolean;
 begin
-  Result := False;
+  Result := fDBPROP_SUPPORTEDTXNDDL and DBPROPVAL_TC_DDL_COMMIT = DBPROPVAL_TC_DDL_COMMIT;
 end;
 
 {**
@@ -1166,7 +1433,7 @@ end;
 }
 function TZAdoDatabaseInfo.DataDefinitionIgnoredInTransactions: Boolean;
 begin
-  Result := False;
+  Result := fDBPROP_SUPPORTEDTXNDDL and DBPROPVAL_TC_DDL_IGNORE = DBPROPVAL_TC_DDL_IGNORE;
 end;
 
 {**
@@ -1211,6 +1478,34 @@ end;
 function TZAdoDatabaseInfo.SupportsUpdateAutoIncrementFields: Boolean;
 begin
   Result := False;
+end;
+
+{**
+  Is the ANSI92 entry level SQL grammar supported?
+  All JDBC Compliant<sup><font size=-2>TM</font></sup> drivers must return true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAdoDatabaseInfo.SupportsANSI92EntryLevelSQL: Boolean;
+begin
+  Result := fDBPROP_SQLSUPPORT and DBPROPVAL_SQL_ANSI92_ENTRY = DBPROPVAL_SQL_ANSI92_ENTRY;
+end;
+
+{**
+  Is the ANSI92 full SQL grammar supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAdoDatabaseInfo.SupportsANSI92FullSQL: Boolean;
+begin
+  Result := fDBPROP_SQLSUPPORT and DBPROPVAL_SQL_ANSI92_FULL = DBPROPVAL_SQL_ANSI92_FULL;
+end;
+
+{**
+  Is the ANSI92 intermediate SQL grammar supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAdoDatabaseInfo.SupportsANSI92IntermediateSQL: Boolean;
+begin
+  Result := fDBPROP_SQLSUPPORT and DBPROPVAL_SQL_ANSI92_INTERMEDIATE = DBPROPVAL_SQL_ANSI92_INTERMEDIATE;
 end;
 
 {**
