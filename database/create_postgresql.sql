@@ -42,6 +42,21 @@ create table default_values
 );
 
 /*==============================================================*/
+/* Table : default_values2                                          */
+/*==============================================================*/
+create table default_values2
+(
+   d_id                           SERIAL not null,
+   d_fld1                        FLOAT4 default 123.456,
+   d_fld2                         INT4 default 123456,
+   d_fld3                     	  DATE default '2003-12-11',
+   d_fld4                     	  VARCHAR(10) default 'xyz',
+   d_fld5                     	  TIMESTAMP default '2003-12-11 23:12:11',
+   d_fld6                     	  TIME default '23:12:11',
+   primary key (d_id)
+);
+
+/*==============================================================*/
 /* Table : department                                           */
 /*==============================================================*/
 create table department (

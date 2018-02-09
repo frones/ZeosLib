@@ -17,6 +17,7 @@ BEGIN
                                             'CASE_SENSITIVE',
                                             'HIGH_LOAD',
                                             'DEFAULT_VALUES',
+                                            'DEFAULT_VALUES2',
                                             'TABLE_NUM1',
                                             'CUSTOMERS',
                                             'SPACED NAMES')
