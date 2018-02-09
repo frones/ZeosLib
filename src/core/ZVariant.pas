@@ -1350,8 +1350,12 @@ function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManag
 begin
   case Value1.VType of
     vtNull: Result := EncodeNull;
-    vtInteger: Result := EncodeInteger(Value1.VInteger + GetAsInteger(Value2));
-    vtUInteger: Result := EncodeUInteger(Value1.VUInteger + GetAsUInteger(Value2));
+    //try handle D7 bug [Fatal error] ZVariant.pas (1364): Internal error: C1118.
+    //see http://www.delphigroups.info/2/90/405410.html
+    //and http://docwiki.embarcadero.com/RADStudio/Tokyo/en/Resolving_Internal_Errors_(Delphi)
+    vtInteger: Result := EncodeInteger(Int64(Value1.VInteger) + Int64(GetAsInteger(Value2)));
+    vtUInteger: Result := EncodeUInteger(UInt64(Value1.VUInteger) + UInt64(GetAsUInteger(Value2)));
+    //ugly but hope it helps
     vtFloat: Result := EncodeFloat(Value1.VFloat + GetAsFloat(Value2));
     vtString: Result := EncodeString(Value1.VString + GetAsString(Value2));
     vtAnsiString: Result := EncodeAnsiString(Value1.VAnsiString + GetAsAnsiString(Value2));
@@ -1375,8 +1379,11 @@ begin
   case Value1.VType of
     vtNull: Result := EncodeNull;
     vtBoolean: Result := EncodeBoolean(Value1.VBoolean and GetAsBoolean(Value2));
-    vtInteger: Result := EncodeInteger(Value1.VInteger and GetAsInteger(Value2));
-    vtUInteger: Result := EncodeUInteger(Value1.VUInteger and GetAsUInteger(Value2));
+    //try handle D7 bug [Fatal error] ZVariant.pas (1364): Internal error: C1118.
+    //see http://www.delphigroups.info/2/90/405410.html
+    //and http://docwiki.embarcadero.com/RADStudio/Tokyo/en/Resolving_Internal_Errors_(Delphi)
+    vtInteger: Result := EncodeInteger(Int64(Value1.VInteger) and Int64(GetAsInteger(Value2)));
+    vtUInteger: Result := EncodeUInteger(UInt64(Value1.VUInteger) and UInt64(GetAsUInteger(Value2)));
     else RaiseUnsupportedOperation;
   end;
 end;
@@ -1392,8 +1399,11 @@ function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManag
 begin
   case Value1.VType of
     vtNull: Result := EncodeNull;
-    vtInteger: Result := EncodeInteger(Value1.VInteger div GetAsInteger(Value2));
-    vtUInteger: Result := EncodeUInteger(Value1.VUInteger div GetAsUInteger(Value2));
+    //try handle D7 bug [Fatal error] ZVariant.pas (1364): Internal error: C1118.
+    //see http://www.delphigroups.info/2/90/405410.html
+    //and http://docwiki.embarcadero.com/RADStudio/Tokyo/en/Resolving_Internal_Errors_(Delphi)
+    vtInteger: Result := EncodeInteger(Int64(Value1.VInteger) div Int64(GetAsInteger(Value2)));
+    vtUInteger: Result := EncodeUInteger(UInt64(Value1.VUInteger) div UInt64(GetAsUInteger(Value2)));
     vtFloat: Result := EncodeFloat(Value1.VFloat / GetAsFloat(Value2));
     else RaiseUnsupportedOperation;
   end;
@@ -1446,8 +1456,11 @@ function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManag
 begin
   case Value1.VType of
     vtNull: Result := EncodeNull;
-    vtInteger: Result := EncodeInteger(Value1.VInteger mod GetAsInteger(Value2));
-    vtUInteger: Result := EncodeUInteger(Value1.VUInteger mod GetAsUInteger(Value2));
+    //try handle D7 bug [Fatal error] ZVariant.pas (1364): Internal error: C1118.
+    //see http://www.delphigroups.info/2/90/405410.html
+    //and http://docwiki.embarcadero.com/RADStudio/Tokyo/en/Resolving_Internal_Errors_(Delphi)
+    vtInteger: Result := EncodeInteger(Int64(Value1.VInteger) mod Int64(GetAsInteger(Value2)));
+    vtUInteger: Result := EncodeUInteger(UInt64(Value1.VUInteger) mod UInt64(GetAsUInteger(Value2)));
     else RaiseUnsupportedOperation;
   end;
 end;
