@@ -54,6 +54,7 @@ unit ZDbcAdoResultSet;
 interface
 
 {$I ZDbc.inc}
+{.$DEFINE ENABLE_ADO}
 {$IFDEF ENABLE_ADO}
 
 uses
@@ -66,6 +67,12 @@ uses
   ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility, ZPlainAdo;
 
 type
+  {** Implements SQLite ResultSet Metadata. }
+  TZADOResultSetMetadata = class(TZAbstractResultSetMetadata)
+  protected
+    procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
+  end;
+
   {** Implements Ado ResultSet. }
   TZAdoResultSet = class(TZAbstractResultSet)
   private
@@ -133,7 +140,9 @@ uses
 }
 constructor TZAdoResultSet.Create(Statement: IZStatement; SQL: string; AdoRecordSet: ZPlainAdo.RecordSet);
 begin
-  inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
+  inherited Create(Statement, SQL,
+    TZADOResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
+    Statement.GetConnection.GetConSettings);
   FAdoRecordSet := AdoRecordSet;
   Open;
 end;
@@ -148,13 +157,19 @@ var
   pcColumns: NativeUInt;
   prgInfo, OriginalprgInfo: PDBColumnInfo;
   ppStringsBuffer: PWideChar;
-  I: Integer;
+  I,j: Integer;
   FieldSize: Integer;
   ColumnInfo: TZColumnInfo;
   ColName: string;
   ColType: Integer;
-  HasAutoIncProp: Boolean;
   F: ZPlainAdo.Field20;
+  Prop: Property_;
+  function StringFromVar(const V: OleVariant): String;
+  begin
+    if not VarIsStr(V)
+    then Result := ''
+    else Result := V;
+  end;
 begin
 //Check if the current statement can return rows
   if not Assigned(FAdoRecordSet) or (FAdoRecordSet.State = adStateClosed) then
@@ -170,15 +185,6 @@ begin
   ColumnsInfo.Clear;
   AdoColumnCount := FAdoRecordSet.Fields.Count;
   SetLength(AdoColTypeCache, AdoColumnCount);
-
-  HasAutoIncProp := False;
-  if AdoColumnCount > 0 then
-    for I := 0 to FAdoRecordSet.Fields.Item[0].Properties.Count - 1 do
-      if FAdoRecordSet.Fields.Item[0].Properties.Item[I].Name = 'ISAUTOINCREMENT' then
-      begin
-        HasAutoIncProp := True;
-        Break;
-      end;
 
   if Assigned(prgInfo) then
     if prgInfo.iOrdinal = 0 then
@@ -196,7 +202,21 @@ begin
     {$ENDIF}
     ColType := F.Type_;
     ColumnInfo.ColumnLabel := ColName;
-    ColumnInfo.ColumnName := ColName;
+
+    for j := 0 to F.Properties.Count -1 do begin
+      Prop := F.Properties.Item[j];
+      if Prop.Name = 'BASECOLUMNNAME' then
+        ColumnInfo.ColumnName := StringFromVar(Prop.Value)
+      else if Prop.Name = 'BASETABLENAME' then
+        ColumnInfo.TableName := StringFromVar(Prop.Value)
+      else if Prop.Name = 'BASECATALOGNAME' then
+        ColumnInfo.CatalogName := StringFromVar(Prop.Value)
+      else if Prop.Name = 'BASESCHEMANAME' then
+        ColumnInfo.SchemaName := StringFromVar(Prop.Value)
+      else if (Prop.Name = 'ISAUTOINCREMENT') and not (TVarData(Prop.Value).VType in [varEmpty, varNull]) then
+        ColumnInfo.AutoIncrement := Prop.Value
+    end;
+
     ColumnInfo.ColumnType := ConvertAdoToSqlType(ColType, ConSettings.CPType);
     FieldSize := F.DefinedSize;
     if FieldSize < 0 then
@@ -208,8 +228,6 @@ begin
     ColumnInfo.Precision := FieldSize;
     ColumnInfo.Currency := ColType = adCurrency;
     ColumnInfo.Signed := False;
-    if HasAutoIncProp then
-      ColumnInfo.AutoIncrement := F.Properties.Item['ISAUTOINCREMENT'].Value;
     if ColType in [adTinyInt, adSmallInt, adInteger, adBigInt, adCurrency, adDecimal, adDouble, adNumeric, adSingle] then
       ColumnInfo.Signed := True;
 
@@ -1708,9 +1726,23 @@ begin
   end;
 end;
 
+{ TZADOResultSetMetadata }
+
+{**
+  Clears specified column information.
+  @param ColumnInfo a column information object.
+}
+procedure TZADOResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
+begin
+  ColumnInfo.ReadOnly := True;
+  ColumnInfo.Writable := False;
+  ColumnInfo.DefinitelyWritable := False;
+end;
+
 {$ELSE}
 implementation
 {$ENDIF ENABLE_ADO}
+
 end.
 
 
