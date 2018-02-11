@@ -1002,7 +1002,9 @@ function TZAbstractDatabaseInfo.GetIdentifierQuoteKeywordsSorted: TStringDynArra
 var SL: TStrings;
   SortList: TZSortedList;
   I, j: Integer;
+  {$IFNDEF FPC}
   OrgList: Pointer;
+  {$ENDIF}
 begin
   if Pointer(fIdentifierQuoteKeywordArray) = nil then begin
     SL := ZSysUtils.SplitString(GetIdentifierQuoteKeywords, ', ');//include the whitechar which prevents the trim
