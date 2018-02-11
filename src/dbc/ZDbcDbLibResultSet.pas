@@ -69,6 +69,15 @@ uses
   ZPlainDbLibConstants, ZPlainDBLibDriver;
 
 type
+  {** Implements SQLite ResultSet Metadata. }
+  TZDBLibResultSetMetadata = class(TZAbstractResultSetMetadata)
+  protected
+    procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
+  public
+    function GetColumnName(ColumnIndex: Integer): string; override;
+    function GetTableName(ColumnIndex: Integer): string; override;
+  end;
+
   {** Implements DBLib ResultSet. }
   TZDBLibResultSet = class(TZAbstractResultSet)
   private
@@ -85,7 +94,7 @@ type
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
-    constructor Create(Statement: IZStatement; const SQL: string;
+    constructor Create(const Statement: IZStatement; const SQL: string;
       UserEncoding: TZCharEncoding = ceDefault);
 
     procedure Close; override;
@@ -135,10 +144,12 @@ uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding, ZSysUtils, ZFastCode
   @param Statement a related SQL statement object.
   @param Handle a DBLib specific query handle.
 }
-constructor TZDBLibResultSet.Create(Statement: IZStatement; const SQL: string;
+constructor TZDBLibResultSet.Create(const Statement: IZStatement; const SQL: string;
   UserEncoding: TZCharEncoding);
 begin
-  inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
+  inherited Create(Statement, SQL,
+    TZDBLibResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
+    Statement.GetConnection.GetConSettings);
   Statement.GetConnection.QueryInterface(IZDBLibConnection, FDBLibConnection);
   FPlainDriver := FDBLibConnection.GetPlainDriver;
   FHandle := FDBLibConnection.GetConnectionHandle;
@@ -210,6 +221,14 @@ begin
         ColumnInfo.ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(tdsColInfo.ActualName,
           ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
       {$ENDIF}
+      if tdsColInfo.TableName[0] <> #0 then
+      {$IFDEF UNICODE}
+        ColumnInfo.TableName := PRawToUnicode(@tdsColInfo.TableName[0],
+          ZFastCode.StrLen(tdsColInfo.TableName), ConSettings^.ClientCodePage^.CP);
+      {$ELSE}
+        ColumnInfo.TableName := ConSettings^.ConvFuncs.ZRawToString(tdsColInfo.TableName,
+          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+      {$ENDIF}
       AssignGenericColumnInfoFromZDBCOL(I-1, tdsColInfo.ColInfo);
     end
     else
@@ -235,9 +254,7 @@ begin
           ColumnInfo.ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(ColInfo.ActualName,
             ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
         {$ENDIF}
-        if ColInfo.TableName[0] = #0 then
-          ColumnInfo.TableName := ''
-        else
+        if (ColInfo.TableName[0] <> #0) then
         {$IFDEF UNICODE}
           ColumnInfo.TableName := PRawToUnicode(@ColInfo.TableName[0],
             ZFastCode.StrLen(ColInfo.TableName), ConSettings^.ClientCodePage^.CP);
@@ -250,9 +267,10 @@ begin
       else
       begin
 AssignGeneric:  {this is the old way we did determine the ColumnInformations}
-        ColumnInfo.ColumnName := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.dbColName(FHandle, I),
+        ColumnInfo.ColumnName := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.dbColSource(FHandle, I),
           ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-        ColumnInfo.ColumnLabel := ColumnInfo.ColumnName;
+        ColumnInfo.ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.dbColName(FHandle, I),
+          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
         DBLibColTypeCache[I-1] := TTDSType(FPlainDriver.dbColtype(FHandle, I));
         ColumnInfo.ColumnType := ConvertTDSTypeToSqlType(DBLibColTypeCache[I-1], ConSettings.CPType);
         ColumnInfo.Currency := DBLibColTypeCache[I-1] in [tdsMoney, tdsMoney4, tdsMoneyN];
@@ -1052,6 +1070,41 @@ begin
       Statement.Close;
     end;
   end;
+end;
+
+{ TZDBLibResultSetMetadata }
+
+{**
+  Clears specified column information.
+  @param ColumnInfo a column information object.
+}
+procedure TZDBLibResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
+begin
+  ColumnInfo.ReadOnly := True;
+  ColumnInfo.Writable := False;
+  ColumnInfo.DefinitelyWritable := False;
+  ColumnInfo.CatalogName := '';
+  ColumnInfo.SchemaName := '';
+end;
+
+{**
+  Get the designated column's name.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return column name
+}
+function TZDBLibResultSetMetadata.GetColumnName(ColumnIndex: Integer): string;
+begin
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnName;
+end;
+
+{**
+  Gets the designated column's table name.
+  @param ColumnIndex the first ColumnIndex is 1, the second is 2, ...
+  @return table name or "" if not applicable
+}
+function TZDBLibResultSetMetadata.GetTableName(ColumnIndex: Integer): string;
+begin
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).TableName;
 end;
 
 end.
