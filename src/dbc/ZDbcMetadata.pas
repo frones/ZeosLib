@@ -98,6 +98,8 @@ type
 
   {** Implements Virtual ResultSet. }
   TZVirtualResultSet = class(TZAbstractCachedResultSet, IZVirtualResultSet)
+  private
+    fDoClose: Boolean;
   protected
     procedure CalculateRowDefaults({%H-}RowAccessor: TZRowAccessor); override;
     procedure PostRowUpdates({%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
@@ -107,6 +109,8 @@ type
       ConSettings: PZConSettings);
     constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
       ConSettings: PZConSettings);
+    procedure Close; override;
+    destructor Destroy; override;
   end;
 
   {** Implements Abstract Database Metadata. }
@@ -141,7 +145,7 @@ type
     function GetStatement: IZSTatement; // technobot 2008-06-28 - moved from descendants
 
     { Metadata ResultSets Caching. }
-    procedure AddResultSetToCache(const Key: string; ResultSet: IZResultSet);
+    procedure AddResultSetToCache(const Key: string; const ResultSet: IZResultSet);
     function GetResultSetFromCache(const Key: string): IZResultSet;
     function HasKey(const Key: String): Boolean;
     function ConstructVirtualResultSet(ColumnsDefs: TZMetadataColumnDefs):
@@ -2324,12 +2328,16 @@ end;
   @param ResultSet a resultset interface.
 }
 procedure TZAbstractDatabaseMetadata.AddResultSetToCache(const Key: string;
-  ResultSet: IZResultSet);
+  const ResultSet: IZResultSet);
 var
   TempKey: IZAnyValue;
 begin
   TempKey := TZAnyValue.CreateWithString(Key);
-  FCachedResultSets.Put(TempKey, CloneCachedResultSet(ResultSet));
+  if ResultSet <> nil then
+    ResultSet.BeforeFirst;
+  FCachedResultSets.Put(TempKey, ResultSet);
+  //EH: see my comment below
+  //FCachedResultSets.Put(TempKey, CloneCachedResultSet(ResultSet));
 end;
 
 {**
@@ -2344,8 +2352,17 @@ var
 begin
   TempKey := TZAnyValue.CreateWithString(Key);
   Result := FCachedResultSets.Get(TempKey) as IZResultSet;
+  //EH: this propably has been made because of thread-safety but this is wrong too
+  //worst case:
+  //while a thread moves the cursor anotherone could move the cursor of template RS as well
+  //count of copied rows may be randomly
+  //here we need a different way using the MainThreadID+CurrentThreadID,
+  //a Lock with a CriticalSection, Copy if Required
+  //and put back in a threadpooled list
   if Result <> nil then
     Result := CloneCachedResultSet(Result);
+  //if Result <> nil then
+    //Result.BeforeFirst;
 end;
 
 {**
@@ -4976,11 +4993,23 @@ begin
   inherited CreateWithStatement(SQL, Statement, ConSettings);
 end;
 
+destructor TZVirtualResultSet.Destroy;
+begin
+  fDoClose := True;
+  inherited Destroy;
+end;
+
 {**
   Creates this object and assignes the main properties.
   @param ColumnsInfo a columns info for cached rows.
   @param SQL an SQL query string.
 }
+procedure TZVirtualResultSet.Close;
+begin
+  if fDoClose then
+    inherited Close;
+end;
+
 constructor TZVirtualResultSet.CreateWithColumns(ColumnsInfo: TObjectList;
   const SQL: string; ConSettings: PZConSettings);
 begin
