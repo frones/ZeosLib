@@ -366,11 +366,11 @@ type
     property RequestLive: Boolean read FRequestLive write FRequestLive
       default False;
     property FetchRow: integer read FFetchRow write FFetchRow default 0;  // added by Patyi
-    property SQL: TStrings read GetSQL write SetSQL;
     property ParamCheck: Boolean read GetParamCheck write SetParamCheck
       default True;
     property ParamChar: Char read GetParamChar write SetParamChar
       default ':';
+    property SQL: TStrings read GetSQL write SetSQL;
     property Params: TParams read FParams write SetParams;
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default True;
     property ShowRecordTypes: TUpdateStatusSet read GetShowRecordTypes
