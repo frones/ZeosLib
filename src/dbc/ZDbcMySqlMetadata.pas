@@ -903,9 +903,11 @@ constructor TZMySQLDatabaseMetadata.Create(Connection: TZAbstractConnection;
 begin
   inherited Create(Connection, Url);
   FInfo := TStringList.Create;
-  FInfo.Add('UseResult=True');
+  FInfo.Assign(Url.Properties);
+  FInfo.Values['UseResult'] := 'True';
   FDatabase := (GetConnection as IZMySQLConnection).GetDatabaseName;
 end;
+
 {**
   Destroys this object and cleanups the memory.
 }
