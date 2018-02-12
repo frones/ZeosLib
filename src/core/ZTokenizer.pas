@@ -1241,7 +1241,6 @@ var
 begin
   InitBuf(FirstChar);
   Result.Value := '';
-  ReadNum := 0;
   while True do
   begin
     ReadNum := Stream.Read(ReadChar, SizeOf(Char));

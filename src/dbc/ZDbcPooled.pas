@@ -264,7 +264,6 @@ var
   I: Integer;
 begin
   Result := nil;
-  I := 0;
 
   while True do
   begin
