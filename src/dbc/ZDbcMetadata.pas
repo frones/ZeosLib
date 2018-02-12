@@ -2211,12 +2211,20 @@ begin
   Result := '''' + S + '''';
 end;
 
+{**
+  Decomposes a object name, AnsiQuotedStr or NullText
+  @param S the object string
+  @return a non-quoted string
+}
 function TZAbstractDatabaseMetadata.DecomposeObjectString(const S: String): String;
 begin
-  if IC.IsQuoted(s) then
-    Result := IC.ExtractQuote(s)
+  if S = '' then
+    Result := S
   else
-    Result := s;
+    if IC.IsQuoted(S) then
+      Result := IC.ExtractQuote(S)
+    else
+      Result := S;
 end;
 
 {**  Destroys this object and cleanups the memory.}

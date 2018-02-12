@@ -1231,13 +1231,7 @@ begin
   if S = '' then
     Result := 'null'
   else
-  begin
-    if IC.IsQuoted(Result) then
-      Result := IC.ExtractQuote(S)
-    else
-      Result := S;
-    Result := AnsiQuotedStr(Result, #39);
-  end;
+    Result := AnsiQuotedStr(Inherited DecomposeObjectString(S), #39);
 end;
 
 function TZDbLibBaseDatabaseMetadata.ConvertEscapes(Pattern: String): String;

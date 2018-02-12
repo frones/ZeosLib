@@ -204,7 +204,6 @@ type
   {** Implements SQLite Database Metadata. }
   TZSQLiteDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   protected
-    function DecomposeObjectString(const S: String): String; override;
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-28
 
     function UncachedGetTables(const Catalog: string; const {%H-}SchemaPattern: string;
@@ -1127,22 +1126,6 @@ end;
 
 
 { TZSQLiteDatabaseMetadata }
-
-{**
-  Decomposes a object name, AnsiQuotedStr or NullText
-  @param S the object string
-  @return a non-quoted string
-}
-function TZSQLiteDatabaseMetadata.DecomposeObjectString(const S: String): String;
-begin
-  if S = '' then
-    Result := S
-  else
-    if IC.IsQuoted(S) then
-       Result := IC.ExtractQuote(S)
-    else
-      Result := s;
-end;
 
 {**
   Constructs a database information object and returns the interface to it. Used
