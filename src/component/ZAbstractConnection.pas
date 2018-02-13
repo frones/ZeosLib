@@ -1708,17 +1708,13 @@ var
   stmt : IZStatement;
 begin
   try
-    try
-      CheckConnected;
-      stmt := DbcConnection.CreateStatement;
-      RowsAffected:= stmt.ExecuteUpdate(SQL);
-      result := (RowsAffected <> -1);
-    except
-      RowsAffected := -1;
-      raise; {------ added by Henk 09-10-2012 --------}
-    end;
-  finally
-    stmt:=nil;
+    CheckConnected;
+    stmt := DbcConnection.CreateStatement;
+    RowsAffected:= stmt.ExecuteUpdate(SQL);
+    result := (RowsAffected <> -1);
+  except
+    RowsAffected := -1;
+    raise; {------ added by Henk 09-10-2012 --------}
   end;
 end;
 
