@@ -1715,7 +1715,6 @@ begin
       result := (RowsAffected <> -1);
     except
       RowsAffected := -1;
-      result := False;
       raise; {------ added by Henk 09-10-2012 --------}
     end;
   finally

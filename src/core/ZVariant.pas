@@ -631,6 +631,8 @@ begin
           Result.VInteger := Value.VInteger;
         vtUInteger:
           Result.VInteger := Value.VUInteger;
+        vtFloat:
+          Result.VInteger := Trunc(Value.VFloat);
         vtString:
           Result.VInteger := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value.VString, 0);
         vtAnsiString:

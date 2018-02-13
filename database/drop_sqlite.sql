@@ -18,6 +18,7 @@ drop table not_null_values;
 drop table [case_sensitive];
 drop table high_load;
 drop table default_values;
+drop table default_values2;
 drop table empty_types;
 drop table "Spaced Names";
 

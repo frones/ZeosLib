@@ -473,10 +473,8 @@ begin
       N := 0;
       ColumnName := TZColumnInfo(ColumnsInfo[I]).ColumnLabel;
       for J := 0 to I - 1 do
-      begin
         if TZColumnInfo(ColumnsInfo[J]).ColumnLabel = ColumnName then
           Inc(N);
-      end;
       if ColumnName = '' then
         ColumnName := 'Column';
       if N > 0 then

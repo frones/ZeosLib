@@ -49,6 +49,19 @@ go
 drop table "Spaced Names"
 go
 
+if exists (select 1
+            from  sysobjects
+           where  id = object_id('default_values')
+            and   type = 'U')
+   drop table default_values
+go
+
+if exists (select 1
+            from  sysobjects
+           where  id = object_id('default_values2')
+            and   type = 'U')
+   drop table default_values
+go
 /*
 drop procedure abtest
 go */

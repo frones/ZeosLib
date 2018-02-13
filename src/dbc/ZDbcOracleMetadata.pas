@@ -245,7 +245,7 @@ type
 implementation
 
 uses
-  ZFastCode, ZDbcUtils;
+  ZFastCode, ZDbcUtils, ZSelectSchema;
 
 { TZOracleDatabaseInfo }
 
@@ -1302,10 +1302,10 @@ var
 
   procedure InsertProcedureColumnValues(Source: IZResultSet; IsResultParam: Boolean = False);
   var
-    TypeName, SubTypeName: string;
+    TypeName{, SubTypeName}: string;
   begin
     TypeName := Source.GetString(ColumnIndexes[4]);
-    SubTypeName := Source.GetString(ColumnIndexes[5]);
+    //SubTypeName := Source.GetString(ColumnIndexes[5]);
     PackageName := Source.GetString(ColumnIndexes[8]);
     ProcName := Source.GetString(ColumnIndexes[9]);
 

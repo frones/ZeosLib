@@ -7,6 +7,7 @@
 drop table if exists blob_values;
 drop table if exists date_values;
 drop table if exists default_values;
+drop table if exists default_values2;
 drop table if exists string_values;
 drop table if exists not_null_values;
 drop table if exists number_values;

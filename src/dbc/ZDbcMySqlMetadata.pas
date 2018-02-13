@@ -260,7 +260,7 @@ implementation
 
 uses
   Math,
-  ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZDbcMySql;
+  ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZDbcMySql, ZSelectSchema;
 
 { TZMySQLDatabaseInfo }
 
@@ -903,9 +903,11 @@ constructor TZMySQLDatabaseMetadata.Create(Connection: TZAbstractConnection;
 begin
   inherited Create(Connection, Url);
   FInfo := TStringList.Create;
-  FInfo.Add('UseResult=True');
+  FInfo.Assign(Url.Properties);
+  FInfo.Values['UseResult'] := 'True';
   FDatabase := (GetConnection as IZMySQLConnection).GetDatabaseName;
 end;
+
 {**
   Destroys this object and cleanups the memory.
 }
@@ -1300,7 +1302,7 @@ begin
             Result.UpdateBoolean(TableColColumnAutoIncIndex, //AUTO_INCREMENT
               Trim(LowerCase(GetString(ColumnIndexes[4]))) = 'auto_increment'); //Extra
             Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, //CASE_SENSITIVE
-              IC.IsCaseSensitive(GetString(ColumnIndexes[1]))); //Field
+              IC.IsCaseSensitive(GetString(ColumnIndexes[1])));//Field
             Result.UpdateBoolean(TableColColumnSearchableIndex, True);  //SEARCHABLE
             Result.UpdateBoolean(TableColColumnWritableIndex, True);  //WRITABLE
             Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);  //DEFINITELYWRITABLE

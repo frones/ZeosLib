@@ -103,6 +103,7 @@ type
     function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
     function dbNumCols(dbProc: PDBPROCESS): DBINT;
     function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
+    function dbColSource(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
     function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
     function dbcoltypeinfo(Proc: PDBPROCESS; Column: Integer): PDBTYPEINFO;
     function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
@@ -199,6 +200,7 @@ type
     function dbbind(Proc: PDBPROCESS; Column, VarType, VarLen: Integer; VarAddr: PByte): RETCODE;
 
     function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
+    function dbColSource(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
     function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
     function dbcoltypeinfo(dbProc: PDBPROCESS; Column: Integer): PDBTYPEINFO;
     function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
@@ -295,6 +297,7 @@ type
     function dbbind(Proc: PDBPROCESS; Column, VarType, VarLen: Integer; VarAddr: PByte): RETCODE;
 
     function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
+    function dbColSource(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
     function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
     function dbcoltypeinfo(dbProc: PDBPROCESS; Column: Integer): PDBTYPEINFO;
     function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
@@ -976,6 +979,13 @@ begin
   Result := DBLibAPI.dbColName(dbProc, Column);
 end;
 
+function TZDBLibBasePlainDriver.dbColSource(dbProc: PDBPROCESS; Column: Integer): PAnsiChar;
+begin
+  if Assigned(DBLibAPI.dbColSource)
+  then Result := DBLibAPI.dbColSource(dbProc, Column)
+  else Result := nil;
+end;
+
 function TZDBLibBasePlainDriver.dbColType(dbProc: PDBPROCESS; Column: Integer): Integer;
 begin
   Result := DBLibAPI.dbColType(dbProc, Column);
@@ -1574,6 +1584,13 @@ end;
 function TZDBLibSybaseASE125PlainDriver.dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
 begin
   Result := SybaseAPI.dbColName(dbProc, Column);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.dbColSource(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
+begin
+  if Assigned(SybaseAPI.dbColSource)
+  then Result := SybaseAPI.dbColSource(dbProc, Column)
+  else Result := nil;
 end;
 
 function TZDBLibSybaseASE125PlainDriver.dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;

@@ -15,6 +15,7 @@ drop function IF EXISTS FuncReturnInteger;
 drop table IF EXISTS blob_values;
 drop table IF EXISTS date_values;
 drop table IF EXISTS default_values;
+drop table IF EXISTS default_values2;
 drop table IF EXISTS department;
 drop table IF EXISTS equipment;
 drop table IF EXISTS equipment2;

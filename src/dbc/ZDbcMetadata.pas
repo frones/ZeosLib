@@ -98,6 +98,8 @@ type
 
   {** Implements Virtual ResultSet. }
   TZVirtualResultSet = class(TZAbstractCachedResultSet, IZVirtualResultSet)
+  private
+    fDoClose: Boolean;
   protected
     procedure CalculateRowDefaults({%H-}RowAccessor: TZRowAccessor); override;
     procedure PostRowUpdates({%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
@@ -107,6 +109,8 @@ type
       ConSettings: PZConSettings);
     constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
       ConSettings: PZConSettings);
+    procedure Close; override;
+    destructor Destroy; override;
   end;
 
   {** Implements Abstract Database Metadata. }
@@ -141,7 +145,7 @@ type
     function GetStatement: IZSTatement; // technobot 2008-06-28 - moved from descendants
 
     { Metadata ResultSets Caching. }
-    procedure AddResultSetToCache(const Key: string; ResultSet: IZResultSet);
+    procedure AddResultSetToCache(const Key: string; const ResultSet: IZResultSet);
     function GetResultSetFromCache(const Key: string): IZResultSet;
     function HasKey(const Key: String): Boolean;
     function ConstructVirtualResultSet(ColumnsDefs: TZMetadataColumnDefs):
@@ -1002,7 +1006,9 @@ function TZAbstractDatabaseInfo.GetIdentifierQuoteKeywordsSorted: TStringDynArra
 var SL: TStrings;
   SortList: TZSortedList;
   I, j: Integer;
+  {$IFNDEF FPC}
   OrgList: Pointer;
+  {$ENDIF}
 begin
   if Pointer(fIdentifierQuoteKeywordArray) = nil then begin
     SL := ZSysUtils.SplitString(GetIdentifierQuoteKeywords, ', ');//include the whitechar which prevents the trim
@@ -2205,12 +2211,20 @@ begin
   Result := '''' + S + '''';
 end;
 
+{**
+  Decomposes a object name, AnsiQuotedStr or NullText
+  @param S the object string
+  @return a non-quoted string
+}
 function TZAbstractDatabaseMetadata.DecomposeObjectString(const S: String): String;
 begin
-  if IC.IsQuoted(s) then
-    Result := IC.ExtractQuote(s)
+  if S = '' then
+    Result := S
   else
-    Result := s;
+    if IC.IsQuoted(S) then
+      Result := IC.ExtractQuote(S)
+    else
+      Result := S;
 end;
 
 {**  Destroys this object and cleanups the memory.}
@@ -2322,12 +2336,16 @@ end;
   @param ResultSet a resultset interface.
 }
 procedure TZAbstractDatabaseMetadata.AddResultSetToCache(const Key: string;
-  ResultSet: IZResultSet);
+  const ResultSet: IZResultSet);
 var
   TempKey: IZAnyValue;
 begin
   TempKey := TZAnyValue.CreateWithString(Key);
-  FCachedResultSets.Put(TempKey, CloneCachedResultSet(ResultSet));
+  if ResultSet <> nil then
+    ResultSet.BeforeFirst;
+  FCachedResultSets.Put(TempKey, ResultSet);
+  //EH: see my comment below
+  //FCachedResultSets.Put(TempKey, CloneCachedResultSet(ResultSet));
 end;
 
 {**
@@ -2342,8 +2360,17 @@ var
 begin
   TempKey := TZAnyValue.CreateWithString(Key);
   Result := FCachedResultSets.Get(TempKey) as IZResultSet;
+  //EH: this propably has been made because of thread-safety but this is wrong too
+  //worst case:
+  //while a thread moves the cursor anotherone could move the cursor of template RS as well
+  //count of copied rows may be randomly
+  //here we need a different way using the MainThreadID+CurrentThreadID,
+  //a Lock with a CriticalSection, Copy if Required
+  //and put back in a threadpooled list
   if Result <> nil then
     Result := CloneCachedResultSet(Result);
+  //if Result <> nil then
+    //Result.BeforeFirst;
 end;
 
 {**
@@ -4974,11 +5001,23 @@ begin
   inherited CreateWithStatement(SQL, Statement, ConSettings);
 end;
 
+destructor TZVirtualResultSet.Destroy;
+begin
+  fDoClose := True;
+  inherited Destroy;
+end;
+
 {**
   Creates this object and assignes the main properties.
   @param ColumnsInfo a columns info for cached rows.
   @param SQL an SQL query string.
 }
+procedure TZVirtualResultSet.Close;
+begin
+  if fDoClose then
+    inherited Close;
+end;
+
 constructor TZVirtualResultSet.CreateWithColumns(ColumnsInfo: TObjectList;
   const SQL: string; ConSettings: PZConSettings);
 begin
@@ -5122,7 +5161,13 @@ end;
 }
 function TZDefaultIdentifierConvertor.IsCaseSensitive(const Value: string): Boolean;
 begin
-  Result := GetIdentifierCase(Value, False) = icMixed;
+  case GetIdentifierCase(Value, True) of
+    icLower:   Result := Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers;
+    icUpper:   Result := Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers;
+    icSpecial: Result := True;
+    icMixed:   Result := not Metadata.GetDatabaseInfo.StoresMixedCaseIdentifiers;
+    else Result := False;
+  end;
 end;
 
 {**
@@ -5189,18 +5234,9 @@ function TZDefaultIdentifierConvertor.Quote(const Value: string): string;
 var
   QuoteDelim: string;
   Q: PChar;
-  DoQuote: Boolean;
 begin
   Result := Value;
-  case GetIdentifierCase(Value, True) of
-    icLower:   DoQuote := Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers;
-    icUpper:   DoQuote := Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers;
-    icSpecial: DoQuote := True;
-    icMixed:   DoQuote := not Metadata.GetDatabaseInfo.StoresMixedCaseIdentifiers;
-    else DoQuote := False;
-  end;
-
-  if DoQuote then begin
+  if IsCaseSensitive(Value) then begin
     QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
     Q := Pointer(QuoteDelim);
     if Q <> nil then begin

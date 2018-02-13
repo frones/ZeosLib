@@ -559,6 +559,9 @@ implementation
 uses SysUtils, ZPlainLoader, ZEncoding, ZFastCode
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
+{$IFOPT R+}
+  {$DEFINE RangeCheckEnabled}
+{$ENDIF}
 { TZMySQLPlainBaseDriver }
 function TZMySQLBaseDriver.GetUnicodeCodePageName: String;
 begin
@@ -1333,7 +1336,9 @@ end;
 function TZMySQLBaseDriver.GetFieldData(Row: PZMySQLRow;
   Offset: Cardinal): PAnsiChar;
 begin
+  {$R-}
   Result := PMYSQL_ROW(ROW)[Offset];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
 function TZMySQLBaseDriver.GetLastErrorCode(Handle: PZMySQLConnect): Integer;

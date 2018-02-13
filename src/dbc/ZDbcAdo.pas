@@ -283,6 +283,13 @@ begin
       FAdoConnection.Set_Mode(adModeUnknown);
     FAdoConnection.Open(WideString(Database), WideString(User), WideString(Password), -1{adConnectUnspecified});
     FAdoConnection.Set_CursorLocation(adUseClient);
+    case FAdoConnection.Get_IsolationLevel of
+      adXactReadUncommitted: inherited SetTransactionIsolation(tiReadUncommitted);
+      adXactReadCommitted: inherited SetTransactionIsolation(tiReadCommitted);
+      adXactRepeatableRead: inherited SetTransactionIsolation(tiRepeatableRead);
+      adXactSerializable: inherited SetTransactionIsolation(tiSerializable);
+      else inherited SetTransactionIsolation(tiNone);
+    end;
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
     ConSettings^.AutoEncode := {$IFDEF UNICODE}False{$ELSE}True{$ENDIF};
     CheckCharEncoding('CP_UTF16');
