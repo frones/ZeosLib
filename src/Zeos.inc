@@ -342,6 +342,11 @@
 
 {$ENDIF}
 
+// Range check mode and UInt64 can't live together on D7 so turn it off for all Zeos units
+{$IFDEF WITH_UINT64_C1118_ERROR}
+{$R-}
+{$ENDIF}
+
 // Disables checking code.
 // Use Range checking option to turn on/off optimization
 {$IFOPT R-}
