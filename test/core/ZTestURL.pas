@@ -87,6 +87,7 @@ type
     procedure TestAssignToUrl_NoDatabase;
     procedure TestSFTicket8_HostPort_NoDB_Properties;
     procedure TestSFTicket158_LibLocWithSemicolon;
+    procedure TestAssignWithOverwrite;
   end;
 
 implementation
@@ -111,8 +112,7 @@ begin
     CheckEquals('masterkey', ZURL.Password);
     CheckEquals('rolename=public'+LineEnding, ZURL.Properties.Text);
   finally
-    if Assigned(ZURL) then
-      ZURL.Free;
+    ZURL.Free;
   end;
 end;
 
@@ -134,8 +134,7 @@ begin
     ZURL.Properties.Text := 'rolename=public'+LineEnding;
     CheckEquals('zdbc:oracle://127.0.0.1:3050/model?username=root;password=passwd;rolename=public', ZURL.URL);
   finally
-    if Assigned(ZURL) then
-      ZURL.Free;
+    ZURL.Free;
   end;
 end;
 
@@ -157,8 +156,7 @@ begin
     CheckEquals('pw', ZURL.Password);
     CheckEquals('rolename=public'+LineEnding, ZURL.Properties.Text);
   finally
-    if Assigned(ZURL) then
-      ZURL.Free;
+    ZURL.Free;
   end;
 end;
 
@@ -408,10 +406,8 @@ begin
     CheckEquals('pass/;\word', ZURLOut.Password);
     CheckEquals('role=role/;\name'+LineEnding, ZURLOut.Properties.Text);
   finally
-    if Assigned(ZURLIn) then
-      ZURLIn.Free;
-    if Assigned(ZURLOut) then
-      ZURLOut.Free;
+    ZURLIn.Free;
+    ZURLOut.Free;
   end;
 end;
 
@@ -574,6 +570,41 @@ begin
     CheckEquals(0, ZURL.Port);
     CheckEquals('c:\test\database.fdb', ZURL.Database);
     CheckEquals('c:\fbclient.dll', ZURL.LibLocation);
+  finally
+    ZURL.Free;
+  end;
+end;
+
+{ Test if assign overwrites previous values }
+procedure TZURLTest.TestAssignWithOverwrite;
+var
+  ZURL: TZURL;
+begin
+  ZURL := nil;
+  try
+    ZURL := TZURL.Create;
+    ZURL.URL := 'zdbc:firebird-2.0://localhost:3306/database';
+    ZURL.UserName := 'user';
+    ZURL.Password := 'pass';
+    ZURL.LibLocation := 'c:\fbclient.dll';
+    ZURL.URL := 'zdbc:firebird-2.0://localhost:3306/database';
+    // user/pass must be cleared
+    CheckEquals('', ZURL.UserName);
+    CheckEquals('', ZURL.Password);
+    // lib loc must not be cleared
+    CheckEquals('c:\fbclient.dll', ZURL.LibLocation);
+
+    ZURL.UserName := 'user';
+    ZURL.Password := 'pass';
+    ZURL.URL := 'zdbc:firebird-2.0://localhost:3306/database?UID=;PWD=';
+    // user/pass must be cleared (empty values in props)
+    CheckEquals('', ZURL.UserName);
+    CheckEquals('', ZURL.Password);
+
+    ZURL.URL := 'zdbc:firebird-2.0://localhost:3306/database?UID=user;PWD=pass;username=;password=;';
+    // user/pass must have values ignoring empty values in props
+    CheckEquals('user', ZURL.UserName);
+    CheckEquals('pass', ZURL.Password);
   finally
     ZURL.Free;
   end;
