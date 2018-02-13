@@ -2367,10 +2367,10 @@ begin
   //here we need a different way using the MainThreadID+CurrentThreadID,
   //a Lock with a CriticalSection, Copy if Required
   //and put back in a threadpooled list
-  if Result <> nil then
-    Result := CloneCachedResultSet(Result);
   //if Result <> nil then
-    //Result.BeforeFirst;
+    //Result := CloneCachedResultSet(Result);
+  if Result <> nil then
+    Result.BeforeFirst;
 end;
 
 {**
