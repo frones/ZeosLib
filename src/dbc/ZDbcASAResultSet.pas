@@ -1384,8 +1384,7 @@ begin
     with ColumnInfo, FSqlData  do
     begin
       FieldSqlType := GetFieldSqlType(I);
-      ColumnName := GetFieldName(I);
-      ColumnLabel := ColumnName;
+      ColumnLabel := GetFieldName(I);
       ColumnType := FieldSqlType;
 
       if FieldSqlType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then begin

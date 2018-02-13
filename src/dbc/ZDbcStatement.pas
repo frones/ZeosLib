@@ -2706,7 +2706,7 @@ end;
 }
 function TZAbstractCallableStatement.GetString(ParameterIndex: Integer): String;
 begin
-  Result := SoftVarManager.GetAsString(GetOutParam(ParameterIndex));
+  Result := ClientVarManager.GetAsString(GetOutParam(ParameterIndex));
 end;
 
 {**
@@ -2727,7 +2727,7 @@ end;
 }
 function TZAbstractCallableStatement.GetAnsiString(ParameterIndex: Integer): AnsiString;
 begin
-  Result := SoftVarManager.GetAsAnsiString(GetOutParam(ParameterIndex));
+  Result := ClientVarManager.GetAsAnsiString(GetOutParam(ParameterIndex));
 end;
 
 {**
@@ -2748,7 +2748,7 @@ end;
 }
 function TZAbstractCallableStatement.GetUTF8String(ParameterIndex: Integer): UTF8String;
 begin
-  Result := SoftVarManager.GetAsUTF8String(GetOutParam(ParameterIndex));
+  Result := ClientVarManager.GetAsUTF8String(GetOutParam(ParameterIndex));
 end;
 
 {**
@@ -2769,7 +2769,7 @@ end;
 }
 function TZAbstractCallableStatement.GetRawByteString(ParameterIndex: Integer): RawByteString;
 begin
-  Result := SoftVarManager.GetAsRawByteString(GetOutParam(ParameterIndex));
+  Result := ClientVarManager.GetAsRawByteString(GetOutParam(ParameterIndex));
 end;
 
 {**
@@ -2791,7 +2791,7 @@ end;
 function TZAbstractCallableStatement.GetUnicodeString(
   ParameterIndex: Integer): ZWideString;
 begin
-  Result := SoftVarManager.GetAsUnicodeString(GetOutParam(ParameterIndex));
+  Result := ClientVarManager.GetAsUnicodeString(GetOutParam(ParameterIndex));
 end;
 
 {**
@@ -2817,7 +2817,7 @@ end;
 }
 function TZAbstractCallableStatement.GetByte(ParameterIndex: Integer): Byte;
 begin
-  Result := Byte(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
+  Result := Byte(ClientVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
 end;
 
 {**
@@ -2830,7 +2830,7 @@ end;
 }
 function TZAbstractCallableStatement.GetShort(ParameterIndex: Integer): ShortInt;
 begin
-  Result := ShortInt(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
+  Result := ShortInt(ClientVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
 end;
 
 {**
@@ -2843,7 +2843,7 @@ end;
 }
 function TZAbstractCallableStatement.GetWord(ParameterIndex: Integer): Word;
 begin
-  Result := Word(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
+  Result := Word(ClientVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
 end;
 
 {**
@@ -2856,7 +2856,7 @@ end;
 }
 function TZAbstractCallableStatement.GetSmall(ParameterIndex: Integer): SmallInt;
 begin
-  Result := SmallInt(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
+  Result := SmallInt(ClientVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
 end;
 
 {**
@@ -2869,7 +2869,7 @@ end;
 }
 function TZAbstractCallableStatement.GetUInt(ParameterIndex: Integer): Cardinal;
 begin
-  Result := Cardinal(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
+  Result := Cardinal(ClientVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
 end;
 
 {**
@@ -2882,7 +2882,7 @@ end;
 }
 function TZAbstractCallableStatement.GetInt(ParameterIndex: Integer): Integer;
 begin
-  Result := Integer(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
+  Result := Integer(ClientVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
 end;
 
 {**
@@ -2895,7 +2895,7 @@ end;
 }
 function TZAbstractCallableStatement.GetULong(ParameterIndex: Integer): UInt64;
 begin
-  Result := UInt64(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
+  Result := UInt64(ClientVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
 end;
 
 {**
@@ -2908,7 +2908,7 @@ end;
 }
 function TZAbstractCallableStatement.GetLong(ParameterIndex: Integer): Int64;
 begin
-  Result := SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex));
+  Result := ClientVarManager.GetAsInteger(GetOutParam(ParameterIndex));
 end;
 
 {**
@@ -2921,7 +2921,7 @@ end;
 }
 function TZAbstractCallableStatement.GetFloat(ParameterIndex: Integer): Single;
 begin
-  Result := SoftVarManager.GetAsFloat(GetOutParam(ParameterIndex));
+  Result := ClientVarManager.GetAsFloat(GetOutParam(ParameterIndex));
 end;
 
 {**
@@ -2934,7 +2934,7 @@ end;
 }
 function TZAbstractCallableStatement.GetDouble(ParameterIndex: Integer): Double;
 begin
-  Result := SoftVarManager.GetAsFloat(GetOutParam(ParameterIndex));
+  Result := ClientVarManager.GetAsFloat(GetOutParam(ParameterIndex));
 end;
 
 {**
@@ -2947,7 +2947,7 @@ end;
 }
 function TZAbstractCallableStatement.GetCurrency(ParameterIndex: Integer): Currency;
 begin
-  Result := SoftVarManager.GetAsFloat(GetOutParam(ParameterIndex));
+  Result := ClientVarManager.GetAsFloat(GetOutParam(ParameterIndex));
 end;
 
 {**
@@ -2962,7 +2962,7 @@ end;
 function TZAbstractCallableStatement.GetBigDecimal(ParameterIndex: Integer):
   Extended;
 begin
-  Result := SoftVarManager.GetAsFloat(GetOutParam(ParameterIndex));
+  Result := ClientVarManager.GetAsFloat(GetOutParam(ParameterIndex));
 end;
 
 {**
@@ -2977,7 +2977,7 @@ end;
 function TZAbstractCallableStatement.GetBytes(ParameterIndex: Integer):
   TBytes;
 begin
-  Result := SoftVarManager.GetAsBytes(GetOutParam(ParameterIndex));
+  Result := ClientVarManager.GetAsBytes(GetOutParam(ParameterIndex));
 end;
 
 {**
@@ -2991,7 +2991,7 @@ end;
 function TZAbstractCallableStatement.GetDate(ParameterIndex: Integer):
   TDateTime;
 begin
-  Result := SoftVarManager.GetAsDateTime(GetOutParam(ParameterIndex));
+  Result := ClientVarManager.GetAsDateTime(GetOutParam(ParameterIndex));
 end;
 
 {**
@@ -3005,7 +3005,7 @@ end;
 function TZAbstractCallableStatement.GetTime(ParameterIndex: Integer):
   TDateTime;
 begin
-  Result := SoftVarManager.GetAsDateTime(GetOutParam(ParameterIndex));
+  Result := ClientVarManager.GetAsDateTime(GetOutParam(ParameterIndex));
 end;
 
 {**
@@ -3019,7 +3019,7 @@ end;
 function TZAbstractCallableStatement.GetTimestamp(ParameterIndex: Integer):
   TDateTime;
 begin
-  Result := SoftVarManager.GetAsDateTime(GetOutParam(ParameterIndex));
+  Result := ClientVarManager.GetAsDateTime(GetOutParam(ParameterIndex));
 end;
 
 {**

@@ -245,7 +245,7 @@ type
 implementation
 
 uses
-  ZFastCode, ZDbcUtils;
+  ZFastCode, ZDbcUtils, ZSelectSchema;
 
 { TZOracleDatabaseInfo }
 

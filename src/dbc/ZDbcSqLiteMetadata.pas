@@ -204,7 +204,6 @@ type
   {** Implements SQLite Database Metadata. }
   TZSQLiteDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   protected
-    function DecomposeObjectString(const S: String): String; override;
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-28
 
     function UncachedGetTables(const Catalog: string; const {%H-}SchemaPattern: string;
@@ -245,7 +244,7 @@ type
 implementation
 
 uses
-  ZDbcUtils, ZDbcSqLite, ZFastCode;
+  ZDbcUtils, ZDbcSqLite, ZFastCode, ZSelectSchema;
 
 { TZSQLiteDatabaseInfo }
 
@@ -1129,22 +1128,6 @@ end;
 { TZSQLiteDatabaseMetadata }
 
 {**
-  Decomposes a object name, AnsiQuotedStr or NullText
-  @param S the object string
-  @return a non-quoted string
-}
-function TZSQLiteDatabaseMetadata.DecomposeObjectString(const S: String): String;
-begin
-  if S = '' then
-    Result := S
-  else
-    if IC.IsQuoted(S) then
-       Result := IC.ExtractQuote(S)
-    else
-      Result := s;
-end;
-
-{**
   Constructs a database information object and returns the interface to it. Used
   internally by the constructor.
   @return the database information object interface
@@ -1388,7 +1371,7 @@ begin
 
         Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(cid_index) +1);
         Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetInt(pk_index) = 1) and (Ord(SQLType) > ord(stBoolean)) and (Ord(SQLType) < Ord(stFloat)));
-        Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, False);
+        Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(GetString(name_index)));
         Result.UpdateBoolean(TableColColumnSearchableIndex, True);
         Result.UpdateBoolean(TableColColumnWritableIndex, True);
         Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);
@@ -1434,6 +1417,7 @@ const
 var
   Len: NativeUInt;
   Temp_scheme: string;
+  RS: IZResultSet;
 begin
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
@@ -1442,9 +1426,9 @@ begin
   else
     Temp_scheme := Schema +'.';
 
-  with GetConnection.CreateStatement.ExecuteQuery(
-    Format('PRAGMA %s table_info(''%s'')', [Temp_scheme,Table])) do
-  begin
+  RS := GetConnection.CreateStatement.ExecuteQuery(
+    Format('PRAGMA %s table_info(''%s'')', [Temp_scheme,Self.NormalizePatternCase(Table)]));
+  if RS <> nil then with RS do begin
     while Next do
     begin
       if GetInt(pk_index) = 0 then

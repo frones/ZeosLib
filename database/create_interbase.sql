@@ -207,6 +207,17 @@ create table default_values
    primary key (d_id)
 );
 
+create table default_values2
+(
+   d_id                           INTEGER NOT NULL,
+   d_fld1                         FLOAT DEFAULT 123.456,
+   d_fld2                         INTEGER DEFAULT 123456,
+   d_fld3                     	  DATE default '2003-12-11',
+   d_fld4                     	  VARCHAR(10) DEFAULT 'xyz',
+   d_fld5                     	  TIMESTAMP default '2003-12-11 23:12:11',
+   d_fld6                     	  TIME default '23:12:11',
+   primary key (d_id)
+);
 
 /*==============================================================*/
 /* Table : domain_values                                        */

@@ -473,7 +473,7 @@ var
       Exit;
     end;
     Result := Convertor.ExtractQuote(Value);
-    if Convertor.IsCaseSensitive(Result) then
+    if Convertor.GetIdentifierCase(Result, True) in [icMixed, icSpecial] then
       Result := Value;
   end;
 begin
@@ -483,11 +483,11 @@ begin
   begin
     with TZFieldRef(FFields[I]) do
     begin
-      Catalog := Convertor.ExtractQuote(Catalog);
-      Schema := Convertor.ExtractQuote(Schema);
-      Table := Convertor.ExtractQuote(Table);
-      Field := Convertor.ExtractQuote(Field);
-      Alias := Convertor.ExtractQuote(Alias);
+      Catalog := ExtractNeedlessQuote(Catalog);
+      Schema := ExtractNeedlessQuote(Schema);
+      Table := ExtractNeedlessQuote(Table);
+      Field := ExtractNeedlessQuote(Field);
+      Alias := ExtractNeedlessQuote(Alias);
     end;
   end;
 
@@ -495,10 +495,10 @@ begin
   begin
     with TZTableRef(FTables[I]) do
     begin
-      Catalog := Convertor.ExtractQuote(Catalog);
-      Schema := Convertor.ExtractQuote(Schema);
-      Table := Convertor.ExtractQuote(Table);
-      Alias := Convertor.ExtractQuote(Alias);
+      Catalog := ExtractNeedlessQuote(Catalog);
+      Schema := ExtractNeedlessQuote(Schema);
+      Table := ExtractNeedlessQuote(Table);
+      Alias := ExtractNeedlessQuote(Alias);
     end;
   end;
 end;

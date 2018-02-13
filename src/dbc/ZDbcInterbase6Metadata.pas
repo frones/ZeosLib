@@ -280,7 +280,8 @@ type
 
 implementation
 
-uses ZMessages, ZDbcInterbase6Utils, ZPlainFirebirdInterbaseConstants, ZFastCode;
+uses ZMessages, ZDbcInterbase6Utils, ZPlainFirebirdInterbaseConstants,
+  ZFastCode, ZSelectSchema;
 
 const
   DBProvider: array[Boolean] of String = ('Interbase', 'Firebird');
@@ -1866,10 +1867,7 @@ begin
 
         Result.UpdateNull(TableColColumnAutoIncIndex); //AUTO_INCREMENT
 
-        if CompareStr(ColumnName, UpperCase(ColumnName)) = 0 then
-          Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, False) //CASE_SENSITIVE
-        else
-          Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, True); //CASE_SENSITIVE
+        Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(ColumnName)); //CASE_SENSITIVE
 
         Result.UpdateBoolean(TableColColumnSearchableIndex, True); //SEARCHABLE
         if isNull(COMPUTED_SOURCE_Index) then

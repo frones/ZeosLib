@@ -727,7 +727,7 @@ end;
 
 function TZAbstractConnection.GetClientVariantManager: IZClientVariantManager;
 begin
-  Result := FClientVarManager;
+  Result := TZClientVariantManager.Create(ConSettings);
 end;
 
 {**

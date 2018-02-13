@@ -438,7 +438,7 @@ begin
   try
     if FStatementType = OCI_STMT_SELECT then
     begin
-      Result := -1;
+      LastUpdateCount := -1;
 
       { Executes the statement and gets a resultset. }
       ResultSet := CreateResultSet;

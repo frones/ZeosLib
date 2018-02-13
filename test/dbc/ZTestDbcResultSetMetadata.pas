@@ -63,6 +63,8 @@ type
  {** Implements a test case for TZAbstractBlob. }
   TZTestResultSetMetadataCase = class(TZAbstractDbcSQLTestCase)
   private
+    function GetFieldNameFromUnQuoted(const Value: String): String;
+    function GetColumnLabelFromUnQuoted(const Value: String; DuplicateIndex: Integer): String;
   protected
     procedure CheckColumnMetadata(const Metadata: IZResultSetMetadata;
       ColumnIndex: Integer; ColumnLabel, ColumnName, ColumnTable: string;
@@ -70,6 +72,8 @@ type
   published
     procedure TestResultSetMetadata;
     procedure TestColumnTypeAndTableDetermination;
+    procedure TestDefault_valuesJoinsDefault_values2Lower;
+    procedure TestDefault_values2JoinsDefault_valuesLower;
     procedure TestResultSetMetadata1;
   end;
 
@@ -233,6 +237,27 @@ begin
     False, False);
 end;
 
+function TZTestResultSetMetadataCase.GetColumnLabelFromUnQuoted(
+  const Value: String; DuplicateIndex: Integer): String;
+begin
+  if Connection.GetMetadata.GetDatabaseInfo.StoresUpperCaseIdentifiers then
+    Result := UpperCase(Value)
+  else if Connection.GetMetadata.GetDatabaseInfo.StoresLowerCaseIdentifiers then
+    Result := LowerCase(Value)
+  else Result := Value;
+  if DuplicateIndex > 0 then
+   Result := Result +'_'+IntToStr(DuplicateIndex);
+end;
+
+function TZTestResultSetMetadataCase.GetFieldNameFromUnQuoted(const Value: String): String;
+begin
+  if Connection.GetMetadata.GetDatabaseInfo.StoresUpperCaseIdentifiers then
+    Result := UpperCase(Value)
+  else if Connection.GetMetadata.GetDatabaseInfo.StoresLowerCaseIdentifiers then
+    Result := LowerCase(Value)
+  else Result := Value;
+end;
+
 procedure TZTestResultSetMetadataCase.TestColumnTypeAndTableDetermination;
 const
   DEP_ID_Index        = FirstDbcIndex;
@@ -244,7 +269,7 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
   Metadata: IZResultSetMetadata;
-  function GetIdentifierName(const Value: String; IsTable: boolean): String;
+  function GetIdentifierName(const Value: String): String;
   begin
     if Connection.GetMetadata.GetDatabaseInfo.StoresUpperCaseIdentifiers then
       Result := UpperCase(Value)
@@ -264,7 +289,8 @@ var
     CheckEquals(4, Metadata.GetColumnCount);
 
     CheckColumnMetadata(Metadata, DEP_ID_Index, GetColumnLabeName(DEP_ID_Index, 'DEP_NAME'),
-      GetIdentifierName('DEP_ID', False), GetIdentifierName('DEPARTMENT', True), True, True);
+      GetFieldNameFromUnQuoted('DEP_ID'), GetIdentifierName('DEPARTMENT'), True, True);
+
     if StartsWith(Protocol, 'postgre')
     then CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match')
     else if StartsWith(Protocol, 'oracle')
@@ -272,11 +298,11 @@ var
     else CheckEquals(Ord(stSmall), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match');
 
     CheckColumnMetadata(Metadata, DEP_NAME_Index, GetColumnLabeName(DEP_NAME_Index, 'DEP_ID'),
-      GetIdentifierName('DEP_NAME', False), GetIdentifierName('DEPARTMENT', True), False, True);
+      GetFieldNameFromUnQuoted('DEP_NAME'), GetIdentifierName('DEPARTMENT'), False, True);
     Check(Metadata.GetColumnType(DEP_NAME_Index) in [stString, stUnicodeString], 'ColumnType does not match');
 
     CheckColumnMetadata(Metadata, DEP_SHNAME_Index, GetColumnLabeName(DEP_SHNAME_Index, 'DEP_ADDRESS') ,
-      GetIdentifierName('DEP_SHNAME', False), GetIdentifierName('DEPARTMENT', True), False, True);
+      GetFieldNameFromUnQuoted('DEP_SHNAME'), GetIdentifierName('DEPARTMENT'), False, True);
     Check(Metadata.GetColumnType(DEP_SHNAME_Index) in [stString, stUnicodeString], 'ColumnType does not match');
 
     CheckColumnMetadata(Metadata, DEP_ADDRESS_Index, GetColumnLabeName(DEP_ADDRESS_Index, 'DEP_ADDRESS_1'), '', '',
@@ -294,6 +320,94 @@ begin
     + ' DEP_SHNAME as DEP_ADDRESS, 2+2 AS DEP_ADDRESS FROM DEPARTMENT WHERE DEP_ID < 100');
   Metadata := ResultSet.GetMetadata;
   TestAll;
+end;
+
+procedure TZTestResultSetMetadataCase.TestDefault_values2JoinsDefault_valuesLower;
+const
+  Field1 = FirstDbcIndex;
+  Field2 = FirstDbcIndex +1;
+  Field3 = FirstDbcIndex +2;
+  Field4 = FirstDbcIndex +3;
+  Field5 = FirstDbcIndex +4;
+  Field6 = FirstDbcIndex +5;
+  Field7 = FirstDbcIndex +6;
+  Field8 = FirstDbcIndex +7;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  Metadata: IZResultSetMetadata;
+begin
+  Statement := Connection.CreateStatement;
+
+  ResultSet := Statement.ExecuteQuery('SELECT dv2.d_fld1, dv1.d_fld1, dv2.d_fld2,'
+    + ' dv1.d_fld2, dv2.d_fld3, dv1.d_fld3, dv2.d_fld4, dv1.d_fld4'
+    +' from default_values dv1 left join default_values2 dv2 on dv1.d_id = dv2.d_id');
+  Metadata := ResultSet.GetMetadata;
+  CheckEquals(8, Metadata.GetColumnCount);
+
+  CheckColumnMetadata(Metadata, Field1, GetColumnLabelFromUnQuoted('d_fld1',0),
+    GetFieldNameFromUnQuoted('d_fld1'), GetFieldNameFromUnQuoted('default_values2'), False, True);
+  Check(Metadata.GetColumnType(Field1) in [stFloat, stDouble], 'ColumnType does not match');
+
+  CheckColumnMetadata(Metadata, Field2, GetColumnLabelFromUnQuoted('d_fld1', 1),
+    GetFieldNameFromUnQuoted('d_fld1'), GetFieldNameFromUnQuoted('default_values'), False, True);
+  if StartsWith(Protocol, 'oracle')
+  then Check(Metadata.GetColumnType(Field2) in [stDouble], 'ColumnType does not match')
+  else Check(Metadata.GetColumnType(Field2) in [stInteger], 'ColumnType does not match');
+
+  CheckColumnMetadata(Metadata, Field3, GetColumnLabelFromUnQuoted('d_fld2', 0),
+    GetFieldNameFromUnQuoted('d_fld2'), GetFieldNameFromUnQuoted('default_values2'), False, True);
+  if StartsWith(Protocol, 'oracle')
+  then Check(Metadata.GetColumnType(Field3) in [stDouble], 'ColumnType does not match')
+  else Check(Metadata.GetColumnType(Field3) in [stInteger], 'ColumnType does not match');
+
+  CheckColumnMetadata(Metadata, Field4, GetColumnLabelFromUnQuoted('d_fld2', 1),
+    GetFieldNameFromUnQuoted('d_fld2'), GetFieldNameFromUnQuoted('default_values'), False, True);
+  Check(Metadata.GetColumnType(Field4) in [stFloat, stDouble], 'ColumnType does not match')
+end;
+
+procedure TZTestResultSetMetadataCase.TestDefault_valuesJoinsDefault_values2Lower;
+const
+  Field1 = FirstDbcIndex;
+  Field2 = FirstDbcIndex +1;
+  Field3 = FirstDbcIndex +2;
+  Field4 = FirstDbcIndex +3;
+  Field5 = FirstDbcIndex +4;
+  Field6 = FirstDbcIndex +5;
+  Field7 = FirstDbcIndex +6;
+  Field8 = FirstDbcIndex +7;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  Metadata: IZResultSetMetadata;
+begin
+  Statement := Connection.CreateStatement;
+
+  ResultSet := Statement.ExecuteQuery('SELECT dv1.d_fld1, dv2.d_fld1, dv1.d_fld2,'
+    + ' dv2.d_fld2, dv1.d_fld3, dv2.d_fld3, dv1.d_fld4, dv2.d_fld4'
+    + ' from default_values dv1 left join default_values2 dv2 on dv1.d_id = dv2.d_id');
+  Metadata := ResultSet.GetMetadata;
+  CheckEquals(8, Metadata.GetColumnCount);
+
+  CheckColumnMetadata(Metadata, FirstDbcIndex, GetColumnLabelFromUnQuoted('d_fld1', 0),
+    GetFieldNameFromUnQuoted('d_fld1'), GetFieldNameFromUnQuoted('default_values'), False, True);
+  if StartsWith(Protocol, 'oracle')
+  then Check(Metadata.GetColumnType(Field1) in [stDouble], 'ColumnType does not match')
+  else Check(Metadata.GetColumnType(Field1) in [stInteger], 'ColumnType does not match');
+
+  CheckColumnMetadata(Metadata, Field2, GetColumnLabelFromUnQuoted('d_fld1', 1),
+    GetFieldNameFromUnQuoted('d_fld1'), GetFieldNameFromUnQuoted('default_values2'), False, True);
+  Check(Metadata.GetColumnType(Field2) in [stFloat, stDouble], 'ColumnType does not match');
+
+  CheckColumnMetadata(Metadata, Field3, GetColumnLabelFromUnQuoted('d_fld2', 0),
+    GetFieldNameFromUnQuoted('d_fld2'), GetFieldNameFromUnQuoted('default_values'), False, True);
+  Check(Metadata.GetColumnType(Field3) in [stFloat, stDouble], 'ColumnType does not match');
+
+  CheckColumnMetadata(Metadata, Field4, GetColumnLabelFromUnQuoted('d_fld2', 1),
+    GetFieldNameFromUnQuoted('d_fld2'), GetFieldNameFromUnQuoted('default_values2'), False, True);
+  if StartsWith(Protocol, 'oracle')
+  then Check(Metadata.GetColumnType(Field4) in [stDouble], 'ColumnType does not match')
+  else Check(Metadata.GetColumnType(Field4) in [stInteger], 'ColumnType does not match');
 end;
 
 initialization

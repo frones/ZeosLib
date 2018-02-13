@@ -185,14 +185,14 @@ var
   ResultSet: IZResultSet;
   Metadata: IZDatabaseMetadata;
 begin
-  if StartsWith(Protocol, 'mysql') or
+  if StartsWith(Protocol, 'mysql') or StartsWith(Protocol, 'sqlite') or
     StartsWith(Protocol, 'FreeTDS') or ( Protocol = 'mssql') or
     ( Protocol = 'ado') or ( Protocol = 'sybase') or
     StartsWith(Protocol, 'ASA') or StartsWith(Protocol, 'OleDB') then
     Exit; //not in build sripts because they depend to locale settings
 
   Metadata := Connection.GetMetadata;
-  if Metadata.GetDatabaseInfo.SupportsMixedCaseIdentifiers then
+  if not Metadata.GetDatabaseInfo.SupportsMixedCaseQuotedIdentifiers then
     Exit;
   Sql := 'DELETE FROM '+MetaData.GetIdentifierConvertor.Quote('Case_Sensitive')+' where cs_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Connection.CreateStatement.ExecuteUpdate(Sql);

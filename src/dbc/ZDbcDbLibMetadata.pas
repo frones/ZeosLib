@@ -304,7 +304,7 @@ type
 
 implementation
 
-uses ZFastCode, ZDbcDbLibUtils, ZDbcDbLib;
+uses ZFastCode, ZDbcDbLibUtils, ZDbcDbLib, ZSelectSchema;
 
 { TZDbLibDatabaseInfo }
 
@@ -1231,13 +1231,7 @@ begin
   if S = '' then
     Result := 'null'
   else
-  begin
-    if IC.IsQuoted(Result) then
-      Result := IC.ExtractQuote(S)
-    else
-      Result := S;
-    Result := AnsiQuotedStr(Result, #39);
-  end;
+    Result := AnsiQuotedStr(Inherited DecomposeObjectString(S), #39);
 end;
 
 function TZDbLibBaseDatabaseMetadata.ConvertEscapes(const Pattern: String): String;
@@ -2928,6 +2922,7 @@ begin
       Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetIntByName('CHAR_OCTET_LENGTH'));
       Result.UpdateInt(TableColColumnOrdPosIndex, GetIntByName('ORDINAL_POSITION'));
       Result.UpdateString(TableColColumnIsNullableIndex, GetStringByName('IS_NULLABLE'));
+      Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.GetIdentifierCase(GetStringByName('TYPE_NAME'), True) in [icMixed, icSpecial]);
       Result.InsertRow;
     end;
     Close;
@@ -2942,7 +2937,6 @@ begin
     begin
       Result.Next;
       Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetSmallByName('status') and $80) <> 0);
-      //Result.UpdateNull(TableColColumnCaseSensitiveIndex);
       Result.UpdateBoolean(TableColColumnSearchableIndex, not (GetSmallByName('type') in [34, 35]));
       Result.UpdateBoolean(TableColColumnWritableIndex, ((GetSmallByName('status') and $80) = 0)
         (*and (GetSmallByName('type') <> 37)*));   // <<<< *DEBUG WARUM?
