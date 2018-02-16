@@ -1562,7 +1562,44 @@ begin
 end;
 {$ENDIF}
 
-procedure SplitToStringList(List: TStrings; Str: string; const Delimiters: string);
+procedure SplitToStringList(List: TStrings; const Str: string; Delimiters: string);
+var
+  PStart, PCurr, PEnd, PDelim: PChar;
+  S: String;
+begin
+  //EH 5x faster version of SplitToStringList
+  if Str = ''
+  then Exit
+  else if Delimiters = '' then begin
+    List.Add(Str);
+    Exit;
+  end;
+  PStart := Pointer(Str);
+  PCurr := Pointer(Str);
+  PEnd := Pointer(Str);
+  Inc(PEnd, Length(Str));
+  while PCurr < PEnd do begin
+    PDelim := Pointer(Delimiters);
+    while PDelim^ <> #0 do
+      if PDelim^ = PCurr^
+      then Break
+      else Inc(PDelim);
+    if PDelim^ <> #0 then
+      if PCurr > PStart then begin
+        SetString(S, PStart, PCurr-PStart);
+        List.Add(S);
+        PStart := PCurr+1;
+      end else
+        inc(PStart, Ord(PStart^ = PDelim^));
+    inc(PCurr)
+  end;
+  if PCurr > PStart then begin
+    SetString(S, PStart, PCurr-PStart);
+    List.Add(S);
+  end;
+end;
+
+(*procedure SplitToStringList(List: TStrings; Str: string; const Delimiters: string);
 var
   DelimPos: Integer;
 begin
@@ -1579,7 +1616,7 @@ begin
   until DelimPos <= 0;
   if Str <> '' then
     List.Add(Str);
-end;
+end;*)
 
 {**
   Splits string using the multiple chars.
