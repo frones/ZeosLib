@@ -75,18 +75,18 @@ type
     FHandle: THandle;  //M.A. LongWord;
     FLoaded: Boolean;
     FCurrentLocation: String;
-    function ZLoadLibrary(Location: String): Boolean;
+    function ZLoadLibrary(const Location: String): Boolean;
   protected
     procedure FreeNativeLibrary; virtual;
   public
-    constructor Create(Locations: array of string);
+    constructor Create(const Locations: array of string);
     destructor Destroy; override;
 
     procedure ClearLocations;
-    procedure AddLocation(Location: String);
+    procedure AddLocation(const Location: String);
     function Load: Boolean; virtual;
     function LoadNativeLibrary: Boolean; virtual;
-    function LoadNativeLibraryStrict(Location: String): Boolean;
+    function LoadNativeLibraryStrict(const Location: String): Boolean;
     procedure LoadIfNeeded; virtual;
 
     property Loaded: Boolean read FLoaded write FLoaded;
@@ -113,7 +113,7 @@ uses SysUtils,
   Creates this loader class and assignes main properties.
   @param Locations locations of native library on windows platform.
 }
-constructor TZNativeLibraryLoader.Create(Locations: array of string);
+constructor TZNativeLibraryLoader.Create(const Locations: array of string);
 var
   I: Integer;
 begin
@@ -140,7 +140,7 @@ begin
   SetLength(FLocations,0);
 end;
 
-procedure TZNativeLibraryLoader.AddLocation(Location: String);
+procedure TZNativeLibraryLoader.AddLocation(const Location: String);
 var
    i: integer;
 begin
@@ -171,7 +171,7 @@ begin
     Load;
 end;
 
-function TZNativeLibraryLoader.ZLoadLibrary(Location: String): Boolean;
+function TZNativeLibraryLoader.ZLoadLibrary(const Location: String): Boolean;
 var newpath, temp: String; // AB modif
 begin
   if FLoaded then
@@ -240,7 +240,7 @@ begin
   Result := True;
 end;
 
-function TZNativeLibraryLoader.LoadNativeLibraryStrict(Location: String): Boolean;
+function TZNativeLibraryLoader.LoadNativeLibraryStrict(const Location: String): Boolean;
 begin
   If not ZLoadLibrary(Location) then
     if FileExists(Location) then

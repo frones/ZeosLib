@@ -343,7 +343,7 @@ begin
   end;
 end;
 
-procedure TZAbstractPlainDriver.Initialize(const Location: String = '');
+procedure TZAbstractPlainDriver.Initialize(const Location: String);
 begin
   If Assigned(Loader) then
     if not Loader.Loaded then
