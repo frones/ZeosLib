@@ -1710,21 +1710,13 @@ end;
 }
 function TZAbstractConnection.ExecuteDirect(const SQL: string;
   var RowsAffected: integer): boolean;
-var
-  stmt : IZStatement;
 begin
+  RowsAffected := -1;
   try
-    try
-      CheckConnected;
-      stmt := DbcConnection.CreateStatement;
-      RowsAffected:= stmt.ExecuteUpdate(SQL);
-      result := (RowsAffected <> -1);
-    except
-      RowsAffected := -1;
-      raise; {------ added by Henk 09-10-2012 --------}
-    end;
+    CheckConnected;
+    RowsAffected := DbcConnection.CreateStatement.ExecuteUpdate(SQL);
   finally
-    stmt:=nil;
+    result := (RowsAffected <> -1);
   end;
 end;
 

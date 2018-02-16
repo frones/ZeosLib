@@ -1565,7 +1565,44 @@ begin
 end;
 {$ENDIF}
 
-procedure SplitToStringList(List: TStrings; const AStr: string; const Delimiters: string);
+procedure SplitToStringList(List: TStrings; const Str: string; Delimiters: string);
+var
+  PStart, PCurr, PEnd, PDelim: PChar;
+  S: String;
+begin
+  //EH 5x faster version of SplitToStringList
+  if Str = ''
+  then Exit
+  else if Delimiters = '' then begin
+    List.Add(Str);
+    Exit;
+  end;
+  PStart := Pointer(Str);
+  PCurr := Pointer(Str);
+  PEnd := Pointer(Str);
+  Inc(PEnd, Length(Str));
+  while PCurr < PEnd do begin
+    PDelim := Pointer(Delimiters);
+    while PDelim^ <> #0 do
+      if PDelim^ = PCurr^
+      then Break
+      else Inc(PDelim);
+    if PDelim^ <> #0 then
+      if PCurr > PStart then begin
+        SetString(S, PStart, PCurr-PStart);
+        List.Add(S);
+        PStart := PCurr+1;
+      end else
+        inc(PStart, Ord(PStart^ = PDelim^));
+    inc(PCurr)
+  end;
+  if PCurr > PStart then begin
+    SetString(S, PStart, PCurr-PStart);
+    List.Add(S);
+  end;
+end;
+
+(*procedure SplitToStringList(List: TStrings; Str: string; const Delimiters: string);
 var
   DelimPos: Integer;
   Str: string;
@@ -1584,7 +1621,7 @@ begin
   until DelimPos <= 0;
   if Str <> '' then
     List.Add(Str);
-end;
+end;*)
 
 {**
   Splits string using the multiple chars.
@@ -3289,43 +3326,46 @@ var
   SrcBuffer, DestBuffer: PChar;
 begin
   SrcLength := Length(Value);
-  SrcBuffer := PChar(Value);
+  SrcBuffer := Pointer(Value);
   DestLength := 0;
   for I := 1 to SrcLength do
   begin
-    if CharInSet(SrcBuffer^, [#0]) then
+    if SrcBuffer^ = #0 then
        Inc(DestLength, 4)
-    else if CharInSet(SrcBuffer^, ['"', '''', '\']) then
-       Inc(DestLength, 2)
     else
-       Inc(DestLength);
+      case SrcBuffer^ of
+        '"', '''', '\':
+         Inc(DestLength, 2)
+        else
+         Inc(DestLength);
+      end;
     Inc(SrcBuffer);
   end;
 
-  SrcBuffer := PChar(Value);
+  SrcBuffer := Pointer(Value);
   SetLength(Result, DestLength);
-  DestBuffer := PChar(Result);
+  DestBuffer := Pointer(Result);
 
-  for I := 1 to SrcLength do
-  begin
-    if CharInSet(SrcBuffer^, [#0]) then
-    begin
-      DestBuffer[0] := '\';
-      DestBuffer[1] := Chr(Ord('0') + (Byte(SrcBuffer^) shr 6));
-      DestBuffer[2] := Chr(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
-      DestBuffer[3] := Chr(Ord('0') + (Byte(SrcBuffer^) and $07));
-      Inc(DestBuffer, 4);
-    end
-    else if CharInSet(SrcBuffer^, ['"', '''', '\']) then
-    begin
-      DestBuffer[0] := '\';
-      DestBuffer[1] := SrcBuffer^;
-      Inc(DestBuffer, 2);
-    end
-    else
-    begin
-      DestBuffer^ := SrcBuffer^;
-      Inc(DestBuffer);
+  for I := 1 to SrcLength do begin
+    case SrcBuffer^ of
+      #0: begin
+          DestBuffer[0] := '\';
+          DestBuffer[1] := Chr(Ord('0') + (Byte(SrcBuffer^) shr 6));
+          DestBuffer[2] := Chr(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
+          DestBuffer[3] := Chr(Ord('0') + (Byte(SrcBuffer^) and $07));
+          Inc(DestBuffer, 4);
+        end;
+      '"', '''', '\':
+        begin
+          DestBuffer[0] := '\';
+          DestBuffer[1] := SrcBuffer^;
+          Inc(DestBuffer, 2);
+        end;
+      else
+        begin
+          DestBuffer^ := SrcBuffer^;
+          Inc(DestBuffer);
+        end;
     end;
     Inc(SrcBuffer);
   end;
@@ -3342,39 +3382,38 @@ var
   SrcBuffer, DestBuffer: PChar;
 begin
   SrcLength := Length(Value);
-  SrcBuffer := PChar(Value);
+  SrcBuffer := Pointer(Value);
   SetLength(Result, SrcLength);
   DestLength := 0;
-  DestBuffer := PChar(Result);
+  DestBuffer := Pointer(Result);
 
-  while SrcLength > 0 do
-  begin
-    if SrcBuffer^ = '\' then
-    begin
+
+  while SrcLength > 0 do begin
+    if SrcBuffer^ = '\' then begin
       Inc(SrcBuffer);
-      if CharInSet(SrcBuffer^, ['0'..'9']) then
-      begin
-        DestBuffer^ := Chr(((Byte(SrcBuffer[0]) - Ord('0')) shl 6)
-          or ((Byte(SrcBuffer[1]) - Ord('0')) shl 3)
-          or ((Byte(SrcBuffer[2]) - Ord('0'))));
-        Inc(SrcBuffer, 3);
-        Dec(SrcLength, 4);
-      end
-      else
-      begin
-        case SrcBuffer^ of
-          'r': DestBuffer^ := #13;
-          'n': DestBuffer^ := #10;
-          't': DestBuffer^ := #9;
+      case SrcBuffer^ of
+        '0'..'9':
+          begin
+            DestBuffer^ := Chr(((Byte(SrcBuffer[0]) - Ord('0')) shl 6)
+              or ((Byte(SrcBuffer[1]) - Ord('0')) shl 3)
+              or ((Byte(SrcBuffer[2]) - Ord('0'))));
+            Inc(SrcBuffer, 3);
+            Dec(SrcLength, 4);
+          end
         else
-               DestBuffer^ := SrcBuffer^;
-        end;
-        Inc(SrcBuffer);
-        Dec(SrcLength, 2);
-      end
-    end
-    else
-    begin
+          begin
+            case SrcBuffer^ of
+              'r': DestBuffer^ := #13;
+              'n': DestBuffer^ := #10;
+              't': DestBuffer^ := #9;
+              else
+                DestBuffer^ := SrcBuffer^;
+            end;
+            Inc(SrcBuffer);
+            Dec(SrcLength, 2);
+          end
+      end;
+    end else begin
       DestBuffer^ := SrcBuffer^;
       Inc(SrcBuffer);
       Dec(SrcLength);

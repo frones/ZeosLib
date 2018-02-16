@@ -60,7 +60,7 @@ uses
   Types,
 {$ENDIF}
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZSqlTestCase, ZCompatibility,
-  ZDbcMySql, ZDbcPostgreSql, ZDbcDbLib, ZDbcInterbase6;
+  ZDbcInterbase6;
 
 type
   {** Implements a test case for. }

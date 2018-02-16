@@ -119,7 +119,7 @@ type
 
 implementation
 
-uses SysUtils, ZTestConsts, ZTestCase, ZDbcResultSet, ZVariant;
+uses SysUtils, ZTestConsts, ZTestCase, ZDbcResultSet, ZVariant, ZMessages;
 
 { TZTestDbcInterbaseCase }
 
@@ -433,6 +433,7 @@ end;
 {$WARNINGS ON} //implizit string conversion of...
 
 procedure TZTestDbcInterbaseCase.TestConnection;
+var Succeeded: Boolean;
 begin
   CheckEquals(False, Connection.IsReadOnly);
   CheckEquals(True, Connection.IsClosed);
@@ -444,8 +445,14 @@ begin
   { Checks without transactions. }
   Connection.CreateStatement;
   CheckEquals(False, Connection.IsClosed);
-  Connection.Commit;
-  Connection.Rollback;
+  Succeeded := False;
+  try
+    Connection.Commit;
+    Connection.Rollback;
+  except
+    Succeeded := True;
+  end;
+  Check(Succeeded, cSInvalidOpInAutoCommit);
   Connection.Close;
   CheckEquals(True, Connection.IsClosed);
 
@@ -453,8 +460,34 @@ begin
   Connection.SetTransactionIsolation(tiSerializable);
   Connection.CreateStatement;
   CheckEquals(False, Connection.IsClosed);
+  Succeeded := False;
+  try
+    Connection.Commit;
+    Connection.Rollback;
+  except
+    Succeeded := True;
+  end;
+  Check(Succeeded, cSInvalidOpInAutoCommit);
+  Check(not Connection.IsClosed, 'Connection should not be closed');
+  Connection.SetAutoCommit(False);
+  Check(not Connection.IsClosed, 'Connection should not be closed');
+  Connection.CreateStatement;
+  Check(not Connection.IsClosed, 'Connection should not be closed');
   Connection.Commit;
   Connection.Rollback;
+  Connection.SetAutoCommit(True);
+  Check(not Connection.IsClosed, 'Connection should not be closed');
+  Succeeded := False;
+  try
+    Connection.Commit;
+    Connection.Rollback;
+  except
+    Succeeded := True;
+  end;
+  Check(Succeeded, cSInvalidOpInAutoCommit);
+  Connection.SetTransactionIsolation(tiReadCommitted);
+  Check(not Connection.IsClosed, 'Connection should not be closed');
+  Connection.CreateStatement;
   Connection.Close;
   CheckEquals(True, Connection.IsClosed);
 end;
