@@ -291,7 +291,7 @@ type
     function GetLinkedFields: string; {renamed by bangfauzan}
     procedure SetLinkedFields(const Value: string);  {renamed by bangfauzan}
     function GetIndexFieldNames : String; {bangfauzan addition}
-    procedure SetIndexFieldNames(Value : String); {bangfauzan addition}
+    procedure SetIndexFieldNames(const Value : String); {bangfauzan addition}
     procedure SetOptions(Value: TZDatasetOptions);
     procedure SetSortedFields({const} Value: string); {bangfauzan modification}
     procedure SetProperties(const Value: TStrings);
@@ -5315,31 +5315,26 @@ end;
 function TZAbstractRODataset.GetSortType: TSortType;
 var
   AscCount, DescCount: Integer;
-  s: String;
+  s, Fragment: String;
 begin
   {pawelsel modification}
-  AscCount:=0;
-  DescCount:=0;
-  s:=StringReplace(FIndexFieldNames,';',',',[rfReplaceAll]);
-  while ZFastCode.Pos(',',s)>0 do
+  AscCount := 0;
+  DescCount := 0;
+  s := UpperCase(ReplaceChar(';', ',', FIndexFieldNames));
+  while s <> '' do
   begin
-    if ZFastCode.Pos(' DESC',UpperCase(Copy(s,1,ZFastCode.Pos(',',s))))>0 then
+    BreakString(s, ',', Fragment, s);
+    if ZFastCode.Pos(' DESC', Fragment) > 0 then
       Inc(DescCount)
     else
       Inc(AscCount);
-    s:=Copy(s,ZFastCode.Pos(',',s)+1,Length(s)-ZFastCode.Pos(',',s));
   end;
-  if Length(s)>0 then
-    if ZFastCode.Pos(' DESC',UpperCase(s))>0 then
-      Inc(DescCount)
-    else
-      Inc(AscCount);
   if (DescCount > 0) and (AscCount > 0) then
-    Result:=stIgnored
+    Result := stIgnored
   else if (DescCount > 0) then
-    Result:=stDescending
+    Result := stDescending
   else
-    Result:=stAscending;
+    Result := stAscending;
 end;
 
 procedure TZAbstractRODataset.SetSortType(Value: TSortType);
@@ -5381,23 +5376,24 @@ begin
   end;
 end;
 
-procedure TZAbstractRODataset.SetIndexFieldNames(Value: String);
+procedure TZAbstractRODataset.SetIndexFieldNames(const Value: String);
+var aValue: string;
 begin
-  Value:=Trim(Value);
+  aValue:=Trim(Value);
   {pawelsel modification}
-  Value:=StringReplace(Value,'[','',[rfReplaceAll]);
-  Value:=StringReplace(Value,']','',[rfReplaceAll]);
+  aValue:=RemoveChar('[', aValue);
+  aValue:=RemoveChar(']', aValue);
 
-  if FIndexFieldNames <> Value then
+  if FIndexFieldNames <> aValue then
   begin
-     FIndexFieldNames := Value;
+     FIndexFieldNames := aValue;
      FSortType:=GetSortType;
      if (FSortType <> stIgnored) then
      begin {pawelsel modification}
-        Value:=StringReplace(Value,' Desc','',[rfReplaceAll,rfIgnoreCase]);
-        Value:=StringReplace(Value,' Asc','',[rfReplaceAll,rfIgnoreCase]);
+        aValue:=StringReplace(aValue,' Desc','',[rfReplaceAll,rfIgnoreCase]);
+        aValue:=StringReplace(aValue,' Asc','',[rfReplaceAll,rfIgnoreCase]);
      end;
-     FSortedFields:=Value;
+     FSortedFields:=aValue;
   end;
 
   {Perform sorting}
