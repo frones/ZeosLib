@@ -544,6 +544,35 @@ function DecodeCString(const Value: string): string;
 function ReplaceChar(const Source, Target: Char; const Str: string): string;
 
 {**
+  Remove chars in the string.
+  More obvious and ~35 times faster than StringReplace(Str, ToRemove, '')
+  @param ToRemove a char to search and remove.
+  @param Str a source string.
+  @return a string with removed chars.
+}
+function RemoveChar(ToRemove: Char; const Str: string): string;
+
+{**
+  Append a string to another string separating the added string with delimiter.
+  Correctly processes cases where any of the arguments is empty
+  @param Str source string to append to. If empty, resulting Str value will be AddStr
+  @param AddStr string to append. If empty, Str won't be changed
+  @param Delimiter string to separate AddStr from Str
+}
+procedure AppendSepString(var Str: string; const AddStr, Delimiter: string);
+
+{**
+  Break a string into two parts according to appearance of Delimiter.
+  @param Str source string
+  @param Delimiter separator string; Str=Left+Delimiter+Right
+  @param Left left part of Str from the start to the first Delimiter.
+    Equals to Str if Str doesn't contain Delimiter
+  @param Right left part of Str from the first Delimiter to the end.
+    Empty if Str doesn't contain Delimiter
+}
+procedure BreakString(const Str, Delimiter: String; var Left, Right: String);
+
+{**
   Decodes a Full Version Value encoded with the format:
    (major_version * 1,000,000) + (minor_version * 1,000) + sub_version
   into separated major, minor and subversion values
@@ -3443,6 +3472,94 @@ begin
     Inc(P);
   end;
 end;
+
+
+{**
+  Remove chars in the string.
+  More obvious and ~35 times faster than StringReplace(Str, ToRemove, '')
+  @param ToRemove a char to search and remove.
+  @param Str a source string.
+  @return a string with removed chars.
+}
+function RemoveChar(ToRemove: Char; const Str: string): string;
+var
+  PSrc, PSrcEnd, PDest: PChar;
+  Len: Integer;
+begin
+  Len := Length(Str);
+  SetLength(Result, Len);
+  if Len = 0 then
+    Exit;
+  PSrc := Pointer(Str);
+  PSrcEnd := @Str[Len];
+  PDest := Pointer(Result);
+
+  while PSrc <= PSrcEnd do
+  begin
+    if PSrc^ <> ToRemove then
+    begin
+      PDest^ := PSrc^;
+      Inc(PDest);
+    end
+    else
+      Dec(Len);
+    Inc(PSrc);
+  end;
+  SetLength(Result, Len);
+end;
+
+{**
+  Append a string to another string separating the added string with delimiter.
+  Correctly processes cases where any of the arguments could be empty
+  @param Str source string to append to. If empty, resulting Str value will be AddStr
+  @param AddStr string to append. If empty, Str won't be changed
+  @param Delimiter string to separate AddStr from Str
+}
+procedure AppendSepString(var Str: string; const AddStr, Delimiter: string);
+begin
+  if AddStr <> '' then
+    if Str = '' then
+      Str := AddStr
+    else
+      Str := Str + Delimiter + AddStr;
+end;
+
+{**
+  Break a string into two parts according to appearance of Delimiter.
+  @param Str source string
+  @param Delimiter separator string; Str=Left+Delimiter+Right
+  @param Left left part of Str from the start to the first Delimiter.
+    Equals to Str if Str doesn't contain Delimiter
+  @param Right left part of Str from the first Delimiter to the end.
+    Empty if Str doesn't contain Delimiter
+
+  NB: "var" modifier here allows using the same variable both as source and dest,
+  for ex. in a loop like
+    while Str <> '' do
+    begin
+      BreakString(Str, Delim, Fragment, Str);
+      ...
+    end;
+  "out" modifier will clear the value at the entry of the proc!
+}
+procedure BreakString(const Str, Delimiter: String; var Left, Right: String);
+var
+  DelimPos, DelimLen: Integer;
+begin
+  DelimPos := ZFastCode.Pos(Delimiter, Str);
+  if DelimPos > 0 then
+  begin
+    DelimLen := Length(Delimiter);
+    Left := Copy(Str, 1, DelimPos - 1);
+    Right := Copy(Str, DelimPos + DelimLen, MaxInt);
+  end
+  else
+  begin
+    Left := Str;
+    Right := '';
+  end;
+end;
+
 
 {**
   Decodes a full version value encoded with Zeos SQL format:

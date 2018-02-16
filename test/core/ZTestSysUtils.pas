@@ -74,6 +74,9 @@ type
     procedure TestStrToBoolEx;
     procedure TestObjectComparison;
     procedure TestReplaceChar;
+    procedure TestRemoveChar;
+    procedure TestAppendSepString;
+    procedure TestBreakString;
     procedure TestMatch;
     procedure TestRawSQLDateToDateTime;
     procedure TestRawSQLTimeToDateTime;
@@ -241,6 +244,73 @@ const
   TargetChar = '.';
 begin
   CheckEquals(Target, ReplaceChar(SourceChar, TargetChar, Source));
+end;
+
+{**
+  Runs a test for RemoveChar function.
+}
+procedure TZTestSysUtilsCase.TestRemoveChar;
+begin
+  CheckEquals('123456', RemoveChar('.', '.123.456.'));
+  CheckEquals('123456', RemoveChar('.', '123456'));
+  CheckEquals('', RemoveChar('.', ''));
+  CheckEquals('', RemoveChar('.', '...'));
+end;
+
+{**
+  Runs a test for AppendSepString function.
+}
+procedure TZTestSysUtilsCase.TestAppendSepString;
+var
+  Str: string;
+begin
+  Str := '';
+  AppendSepString(Str, 'foo', ';');
+  CheckEquals(Str, 'foo');
+  AppendSepString(Str, 'bar', ';');
+  CheckEquals(Str, 'foo;bar');
+  AppendSepString(Str, '', ';');
+  CheckEquals(Str, 'foo;bar');
+end;
+
+
+{**
+  Runs a test for BreakString function.
+}
+procedure TZTestSysUtilsCase.TestBreakString;
+
+var
+  Delim, S, S1: string;
+
+  procedure Check(const Str, ExpLeft, ExpRight: string);
+  var
+    Left, Right: string;
+  begin
+    BreakString(Str, Delim, Left, Right);
+    CheckEquals(ExpLeft, Left);
+    CheckEquals(ExpRight, Right);
+  end;
+
+begin
+  Delim := '=';
+  Check('', '', '');
+  Check(Delim, '', '');
+  Check('aa', 'aa', '');
+  Check('aa'+Delim, 'aa', '');
+  Check('aa'+Delim+'bb', 'aa', 'bb');
+  Check('aa'+Delim+'bb'+Delim, 'aa', 'bb'+Delim);
+  Check('aa'+Delim+Delim+'bb', 'aa', Delim+'bb');
+
+  Delim := '==';
+  Check('aa'+Delim+'bb', 'aa', 'bb');
+
+  S := 'aa'+Delim+'bb';
+  BreakString(S, Delim, S1, S);
+  CheckEquals('aa', S1);
+  CheckEquals('bb', S);
+  BreakString(S, Delim, S1, S);
+  CheckEquals('bb', S1);
+  CheckEquals('', S);
 end;
 
 {**
