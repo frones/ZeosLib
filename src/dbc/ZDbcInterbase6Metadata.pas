@@ -349,7 +349,7 @@ end;
 // FB 2.0+: has TRIM internal function
 function TZInterbase6DatabaseInfo.SupportsTrim: Boolean;
 begin
-  Result := FIsFireBird and (FHostVersion < 2000000);
+  Result := FIsFireBird and (FHostVersion >= 2000000);
 end;
 
 {**
@@ -508,14 +508,14 @@ begin
     'CACHE,CHECK_POINT_LENGTH,COMPUTED,CONDITIONAL,CONTAINING,' +
     'CSTRING,DATABASE,RDB$DB_KEY,DEBUG,DESCENDING,DO,ENTRY_POINT,' +
     'EXIT,FILE,FILTER,FUNCTION,GDSCODE,GENERATOR,GEN_ID,' +
-    'GROUP_COMMIT_WAIT_TIME,IF,INACTIVE,INPUT_TYPE,INDEX,' +
+    'GROUP_COMMIT_WAIT_TIME,IF,INACTIVE,INPUT_TYPE,' +
     'LOGFILE,LOG_BUFFER_SIZE,MANUAL,MAXIMUM_SEGMENT,MERGE, MESSAGE,' +
     'MODULE_NAME,NCHAR,NUM_LOG_BUFFERS,OUTPUT_TYPE,OVERFLOW,PAGE,' +
     'PAGES,PAGE_SIZE,PARAMETER,PASSWORD,PLAN,POST_EVENT,PROTECTED,' +
     'RAW_PARTITIONS,RESERV,RESERVING,RETAIN,RETURNING_VALUES,RETURNS,' +
     'SEGMENT,SHADOW,SHARED,SINGULAR,SNAPSHOT,SORT,STABILITY,STARTS,' +
     'STARTING,STATISTICS,SUB_TYPE,SUSPEND,TRIGGER,VARIABLE,RECORD_VERSION,' +
-    'WAIT,WHILE,WORK,VALUE,POSITION,USER,CURRENCY,OPTION,DATE,START,END,USER,' +
+    'WAIT,WHILE,WORK,POSITION,USER,CURRENCY,OPTION,DATE,START,END,' +
     'READ,PARENT,TYPE'+
     {Ticket #63: http://sourceforge.net/p/zeoslib/tickets/62/}
     ',DEC,TIME,MIN,MAX'+
@@ -1265,20 +1265,15 @@ end;
 function TZInterbase6DatabaseMetadata.ConstructNameCondition(Pattern: string;
   Column: string): string;
 begin
-  if HasNoWildcards(Pattern) then begin
-    Result := Inherited ConstructnameCondition(Pattern,Column)
-  end else begin
-    if (GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsTrim
-    then begin
-      //Old FireBird do NOT support 'trim'
-      //-> raise exception to find bugs in Software...
-      raise EZSQLException.Create('Wildcard searches are not suported with Firebird 1.5 and 1.0. Use IZDatabaseMetadata.AddEscapeCharToWildcards to escape wildcards in table names.');
-    end else begin
-      // add trim because otherwise the like condition will not find the table columns
-      // because they are padded with spaces in Firebird
-      Result := Inherited ConstructnameCondition(Pattern,'trim('+Column+')');
-    end;
-  end;
+  if HasNoWildcards(Pattern)
+  then Result := Inherited ConstructnameCondition(Pattern,Column)
+  else if not (GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsTrim
+  //Old FireBird do NOT support 'trim'
+  //-> raise exception to find bugs in Software...
+  then raise EZSQLException.Create('Wildcard searches are not suported with Firebird 1.5 and 1.0. Use IZDatabaseMetadata.AddEscapeCharToWildcards to escape wildcards in table names.')
+  // add trim because otherwise the like condition will not find the table columns
+  // because they are padded with spaces in Firebird
+  else Result := Inherited ConstructnameCondition(Pattern,'trim('+Column+')');
 end;
 
 function TZInterbase6DatabaseMetadata.UncachedGetTriggers(const Catalog: string;
