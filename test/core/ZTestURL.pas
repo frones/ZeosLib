@@ -58,6 +58,7 @@ interface
 {$I ZCore.inc}
 
 uses
+  Classes,
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZTestCase, ZURL;
 
@@ -579,6 +580,7 @@ end;
 procedure TZURLTest.TestAssignWithOverwrite;
 var
   ZURL: TZURL;
+  Params: TStringList;
 begin
   ZURL := nil;
   try
@@ -607,6 +609,19 @@ begin
     CheckEquals('pass', ZURL.Password);
   finally
     ZURL.Free;
+  end;
+
+  ZURL := nil;
+  Params := TStringList.Create;
+  try
+    Params.Add('SomeValuelessParam');
+    Params.Add('SomeEmptyParam=');
+    ZURL := TZURL.Create('zdbc:firebird-2.0://localhost:3306/database?SomeValuelessParam', Params);
+    // test adding duplicated parameters
+    CheckEquals('zdbc:firebird-2.0://localhost:3306/database?SomeValuelessParam;SomeEmptyParam=', ZURL.URL);
+  finally
+    ZURL.Free;
+    Params.Free;
   end;
 end;
 
