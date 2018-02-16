@@ -101,6 +101,7 @@ type
     FHardCommit: boolean;
     FHostVersion: Integer;
     FXSQLDAMaxSize: LongWord;
+    fTPB: RawByteString; //cache the TPB String for hard commits else we're permanently build the str from Props
     procedure CloseTransaction;
   protected
     procedure InternalCreate; override;
@@ -113,7 +114,6 @@ type
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
     function GetXSQLDAMaxSize: LongWord;
-    function GetPlainDriver: IZInterbasePlainDriver;
     procedure CreateNewDatabase(const SQL: RawByteString);
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -126,6 +126,7 @@ type
       IZSequence; override;
 
     procedure SetReadOnly(Value: Boolean); override;
+    procedure SetAutoCommit(Value: Boolean); override;
 
     procedure Commit; override;
     procedure Rollback; override;
@@ -164,7 +165,7 @@ var
 implementation
 
 uses ZFastCode, ZDbcInterbase6Statement, ZDbcInterbase6Metadata, ZEncoding,
-  ZInterbaseToken, ZInterbaseAnalyser, ZDbcMetadata
+  ZInterbaseToken, ZInterbaseAnalyser, ZDbcMetadata, ZMessages
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZInterbase6Driver }
@@ -226,7 +227,7 @@ end;
 }
 function TZInterbase6Driver.GetMajorVersion: Integer;
 begin
- Result := 1;
+  Result := 1;
 end;
 
 {**
@@ -260,8 +261,7 @@ end;
 
 procedure TZInterbase6Connection.CloseTransaction;
 begin
-  if FTrHandle <> 0 then
-  begin
+  if FTrHandle <> 0 then begin
     if AutoCommit then begin
       GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
@@ -273,6 +273,7 @@ begin
     end;
     FTrHandle := 0;
     CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcDisconnect);
+    fTPB := '';
   end;
 end;
 
@@ -288,7 +289,7 @@ end;
 procedure TZInterbase6Connection.Close;
 begin
   if Closed or (not Assigned(PlainDriver)) then
-     Exit;
+    Exit;
 
   CloseTransaction;
 
@@ -310,21 +311,24 @@ end;
 }
 procedure TZInterbase6Connection.Commit;
 begin
-  if Closed or (FTrHandle = 0) then
+  if Closed then
     Exit;
-  if FHardCommit then begin
-    GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
-    // Jan Baumgarten: Added error checking here because setting the transaction
-    // handle to 0 before we have checked for an error is simply wrong.
-    CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
-    FTrHandle := 0; //normaly not required! Old server code?
-  end else begin
-    GetPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
-    CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
-    DriverManager.LogMessage(lcTransaction,
-      ConSettings^.Protocol, 'TRANSACTION COMMIT');
-  end;
+  if GetAutoCommit
+  then raise EZSQLException.Create(cSInvalidOpInAutoCommit);
+  if not (FTrHandle = 0)  then
+    if FHardCommit then begin
+      GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
+      // Jan Baumgarten: Added error checking here because setting the transaction
+      // handle to 0 before we have checked for an error is simply wrong.
+      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
+      FTrHandle := 0; //normaly not required! Old server code?
+    end else begin
+      GetPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
+      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
+      DriverManager.LogMessage(lcTransaction,
+        ConSettings^.Protocol, 'TRANSACTION COMMIT');
+    end;
 end;
 
 {**
@@ -378,9 +382,8 @@ end;
 
 procedure TZInterbase6Connection.OnPropertiesChange(Sender: TObject);
 begin
-  if StrToBoolEx(Info.Values['hard_commit']) <> FHardCommit then
-  begin
-    if FTrHandle <> 0 then CloseTransaction;
+  if StrToBoolEx(Info.Values['hard_commit']) <> FHardCommit then begin
+    CloseTransaction;
     FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
   end;
 end;
@@ -403,7 +406,7 @@ function TZInterbase6Connection.CreateRegularStatement(Info: TStrings):
   IZStatement;
 begin
   if IsClosed then
-     Open;
+    Open;
   Result := TZInterbase6Statement.Create(Self, Info);
 end;
 
@@ -624,7 +627,7 @@ function TZInterbase6Connection.CreatePreparedStatement(
   const SQL: string; Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then
-     Open;
+    Open;
   Result := TZInterbase6PreparedStatement.Create(Self, SQL, Info);
 end;
 
@@ -658,7 +661,7 @@ function TZInterbase6Connection.CreateCallableStatement(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
   if IsClosed then
-     Open;
+    Open;
   Result := TZInterbase6CallableStatement.Create(Self, SQL, Info);
 end;
 
@@ -671,10 +674,12 @@ end;
 }
 procedure TZInterbase6Connection.Rollback;
 begin
-  if FTrHandle <> 0 then
-  begin
-    if FHardCommit then
-    begin
+  if Closed then
+    Exit;
+  if GetAutoCommit
+  then raise EZSQLException.Create(cSInvalidOpInAutoCommit);
+  if FTrHandle <> 0 then begin
+    if FHardCommit then begin
       GetPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
@@ -763,7 +768,6 @@ type
   end;
 var
   Params: TStrings;
-  TPB: RawByteString;
   TEB: TISC_TEB;
   OverwritableParams: TOverwritableParamValues;
 begin
@@ -774,74 +778,93 @@ begin
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
       FTrHandle := 0;
     end;
-    Params := TStringList.Create;
-    OverwritableParams[parRW] := tpb_Access[ReadOnly];
-    OverwritableParams[parAutoCommit] := tpb_AutoCommit[AutoCommit];
+    if fTPB = '' then begin
+      Params := TStringList.Create;
+      OverwritableParams[parRW] := tpb_Access[ReadOnly];
+      OverwritableParams[parAutoCommit] := tpb_AutoCommit[AutoCommit];
 
-    { Set transaction parameters by TransactIsolationLevel }
-    case TransactIsolationLevel of
-      tiReadCommitted:
+      { Set transaction parameters by TransactIsolationLevel }
+      case TransactIsolationLevel of
+        tiReadCommitted:
+          begin
+            OverwritableParams[parRecVer] := 'isc_tpb_rec_version';
+            OverwritableParams[parWait] := 'isc_tpb_nowait';
+            AddStrings(Params, Info, OverwritableParams);
+            OverwritableParams[parRW] := tpb_Access[ReadOnly];
+            OverwritableParams[parTIL] := 'isc_tpb_read_committed';
+          end;
+        tiRepeatableRead:
+          begin
+            OverwritableParams[parWait] := 'isc_tpb_nowait';
+            AddStrings(Params, Info, OverwritableParams);
+            OverwritableParams[parRW] := tpb_Access[ReadOnly];
+            OverwritableParams[parTIL] := 'isc_tpb_concurrency';
+          end;
+        tiSerializable:
+          begin
+            AddStrings(Params, Info, OverwritableParams);
+            OverwritableParams[parRW] := tpb_Access[ReadOnly];
+            OverwritableParams[parTIL] := 'isc_tpb_consistency';
+          end;
+        else
         begin
-          OverwritableParams[parRecVer] := 'isc_tpb_rec_version';
-          OverwritableParams[parWait] := 'isc_tpb_nowait';
-          AddStrings(Params, Info, OverwritableParams);
           OverwritableParams[parRW] := tpb_Access[ReadOnly];
-          OverwritableParams[parTIL] := 'isc_tpb_read_committed';
-        end;
-      tiRepeatableRead:
-        begin
-          OverwritableParams[parWait] := 'isc_tpb_nowait';
-          AddStrings(Params, Info, OverwritableParams);
-          OverwritableParams[parRW] := tpb_Access[ReadOnly];
+          { FB default values for non-standard TIL }
           OverwritableParams[parTIL] := 'isc_tpb_concurrency';
-        end;
-      tiSerializable:
-        begin
+          OverwritableParams[parWait] := 'isc_tpb_wait';
           AddStrings(Params, Info, OverwritableParams);
-          OverwritableParams[parRW] := tpb_Access[ReadOnly];
-          OverwritableParams[parTIL] := 'isc_tpb_consistency';
         end;
-      else
-      begin
-        OverwritableParams[parRW] := tpb_Access[ReadOnly];
-        { FB default values for non-standard TIL }
-        OverwritableParams[parTIL] := 'isc_tpb_concurrency';
-        OverwritableParams[parWait] := 'isc_tpb_wait';
-        AddStrings(Params, Info, OverwritableParams);
       end;
-    end;
 
-    { Add overwitable parameters to the beginning of list }
-    if OverwritableParams[parRW] <> '' then
-      Params.Insert(0, OverwritableParams[parRW]);
-    if OverwritableParams[parWait] <> '' then
-      Params.Insert(0, OverwritableParams[parWait]);
-    if OverwritableParams[parRecVer] <> '' then
-      Params.Insert(0, OverwritableParams[parRecVer]);
-    if OverwritableParams[parTIL] <> '' then
-      Params.Insert(0, OverwritableParams[parTIL]);
-    if OverwritableParams[parAutoCommit] <> '' then
-      Params.Insert(0, OverwritableParams[parAutoCommit]);
+      { Add overwitable parameters to the beginning of list }
+      if OverwritableParams[parRW] <> '' then
+        Params.Insert(0, OverwritableParams[parRW]);
+      if OverwritableParams[parWait] <> '' then
+        Params.Insert(0, OverwritableParams[parWait]);
+      if OverwritableParams[parRecVer] <> '' then
+        Params.Insert(0, OverwritableParams[parRecVer]);
+      if OverwritableParams[parTIL] <> '' then
+        Params.Insert(0, OverwritableParams[parTIL]);
+      if OverwritableParams[parAutoCommit] <> '' then
+        Params.Insert(0, OverwritableParams[parAutoCommit]);
+    end else
+      Params := nil;
 
     try
-      TPB := GenerateTPB(Params);
-      TEB := GenerateTEB(@FHandle, TPB);
+      if fTPB = '' then
+        fTPB := GenerateTPB(Params);
+      TEB := GenerateTEB(@FHandle, fTPB);
 
       GetPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @TEB);
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
         'TRANSACTION STARTED.');
     finally
-      FreeAndNil(Params);
+      if Params <> nil then
+        FreeAndNil(Params);
     end
   end;
 end;
 
+{**
+  Attempts to change the transaction isolation level to the one given.
+  The constants defined in the interface <code>Connection</code>
+  are the possible transaction isolation levels.
+
+  <P><B>Note:</B> This method cannot be called while
+  in the middle of a transaction.
+
+  @param level one of the TRANSACTION_* isolation values with the
+    exception of TRANSACTION_NONE; some databases may not support other values
+  @see DatabaseMetaData#supportsTransactionIsolationLevel
+}
 procedure TZInterbase6Connection.SetTransactionIsolation(Level: TZTransactIsolationLevel);
 begin
-  if (Level <> TransactIsolationLevel) and (FHandle <> 0) then
+  if (Level <> TransactIsolationLevel) then begin
     CloseTransaction;
-  Inherited SetTransactionIsolation(Level);
+    Inherited SetTransactionIsolation(Level);
+    //restart automatically happens on GetTrHandle
+  end;
 end;
 
 {**
@@ -947,11 +970,52 @@ begin
   Result := TZInterbase6Sequence.Create(Self, Sequence, BlockSize);
 end;
 
+{**
+  Sets this connection's auto-commit mode.
+  If a connection is in auto-commit mode, then all its SQL
+  statements will be executed and committed as individual
+  transactions.  Otherwise, its SQL statements are grouped into
+  transactions that are terminated by a call to either
+  the method <code>commit</code> or the method <code>rollback</code>.
+  By default, new connections are in auto-commit mode.
+
+  The commit occurs when the statement completes or the next
+  execute occurs, whichever comes first. In the case of
+  statements returning a ResultSet, the statement completes when
+  the last row of the ResultSet has been retrieved or the
+  ResultSet has been closed. In advanced cases, a single
+  statement may return multiple results as well as output
+  parameter values. In these cases the commit occurs when all results and
+  output parameter values have been retrieved.
+
+  @param autoCommit true enables auto-commit; false disables auto-commit.
+}
+procedure TZInterbase6Connection.SetAutoCommit(Value: Boolean);
+begin
+  if (Value <> GetAutoCommit) then begin
+    CloseTransaction;
+    inherited SetAutoCommit(Value);
+    //restart automatically happens on GetTrHandle
+  end;
+end;
+
+{**
+  Puts this connection in read-only mode as a hint to enable
+  database optimizations.
+
+  <P><B>Note:</B> This method cannot be called while in the
+  middle of a transaction.
+
+  @param readOnly true enables read-only mode; false disables
+    read-only mode.
+}
 procedure TZInterbase6Connection.SetReadOnly(Value: Boolean);
 begin
-  if (ReadOnly <> Value) and (FTrHandle <> 0) then
+  if (ReadOnly <> Value) then begin
     CloseTransaction;
-  ReadOnly := Value;
+    inherited SetReadOnly(Value);
+    //restart automatically happens on GetTrHandle
+  end;
 end;
 
 { TZInterbase6CachedResolver }
