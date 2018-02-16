@@ -85,7 +85,7 @@ type
     function GetName(Index: Integer): string;
     function GetFunction(Index: Integer): IZFunction;
 
-    procedure Add(Func: IZFunction);
+    procedure Add(const Func: IZFunction);
     procedure Remove(const Name: string);
     function FindByName(const Name: string): Integer;
 
@@ -106,7 +106,7 @@ type
   public
     constructor Create(aName : string);
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; virtual; abstract;
+      const VariantManager: IZVariantManager): TZVariant; virtual; abstract;
 
     property Name: string read GetName;
   end;
@@ -226,7 +226,7 @@ end;
   Adds a new function to this list.
   @param Func a function reference.
 }
-procedure TZFunctionsList.Add(Func: IZFunction);
+procedure TZFunctionsList.Add(const Func: IZFunction);
 var
   Index: Integer;
   aKey : Cardinal;

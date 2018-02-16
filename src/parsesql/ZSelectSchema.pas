@@ -165,7 +165,7 @@ type
 
     procedure LinkReferences(const Convertor: IZIdentifierConvertor);
 
-    function FindTableByFullName(const {%H-}Catalog, Schema, Table: string): TZTableRef;
+    function FindTableByFullName(const Catalog, Schema, Table: string): TZTableRef;
     function FindTableByShortName(const Table: string): TZTableRef;
     function FindFieldByShortName(const Field: string): TZFieldRef;
 

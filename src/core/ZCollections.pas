@@ -126,7 +126,7 @@ type
   private
     procedure RaiseException;
   public
-    constructor Create(Collection: IZCollection);
+    constructor Create(const Collection: IZCollection);
     destructor Destroy; override;
 
     function Clone: IZInterface; override;
@@ -198,7 +198,7 @@ type
 
     function Peek: IZInterface;
     function Pop: IZInterface;
-    procedure Push(Value: IZInterface);
+    procedure Push(const Value: IZInterface);
     function GetCount: Integer;
 
     property Count: Integer read GetCount;
@@ -661,7 +661,7 @@ end;
   Constructs this object and assignes main properties.
   @param Collection an initial modifiable list of interfaces.
 }
-constructor TZUnmodifiableCollection.Create(Collection: IZCollection);
+constructor TZUnmodifiableCollection.Create(const Collection: IZCollection);
 begin
   inherited Create;
   FCollection := Collection;
@@ -1071,7 +1071,7 @@ end;
   Puts a new element to the top of this stack.
   @param Value a new element to be put.
 }
-procedure TZStack.Push(Value: IZInterface);
+procedure TZStack.Push(const Value: IZInterface);
 begin
   FValues.Add(Value);
 end;

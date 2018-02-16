@@ -65,35 +65,35 @@ type
   TZDateFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a TIME function. }
   TZTimeFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a NOW function. }
   TZNowFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a ENCODEDATE function. }
   TZEncodeDateFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a ENCODETIME function. }
   TZEncodeTimeFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a COMPOSEDATETIME function. }
@@ -103,28 +103,28 @@ type
   TZComposeDateTimeFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a INCDATE function. }
   TZIncDateFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a INCTIME function. }
   TZIncTimeFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a ISLEAPYEAR function. }
   TZIsLeapYearFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
 {-------------------- Extracting functions ----------------------------}
@@ -132,63 +132,63 @@ type
   TZDateOfFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a TIMEOF function. }
   TZTimeOfFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a YEAROF function. }
   TZYearOfFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MONTHOF function. }
   TZMonthOfFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a DAYOF function. }
   TZDayOfFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a HOUROF function. }
   TZHourOfFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MINUTEOF function. }
   TZMinuteOfFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a SECONDOF function. }
   TZSecondOfFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MILLISECONDOF function. }
   TZMilliSecondOfFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
 {-------------------- *OFTHEYEAR Extracting functions ----------------------------}
@@ -196,42 +196,42 @@ type
   TZWeekOfTheYearFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a DAYOFTHEYEAR function. }
   TZDayOfTheYearFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a HOUROFTHEYEAR function. }
   TZHourOfTheYearFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MINUTEOFTHEYEAR function. }
   TZMinuteOfTheYearFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a SECONDOFTHEYEAR function. }
   TZSecondOfTheYearFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MILLISECONDOFTHEYEAR function. }
   TZMilliSecondOfTheYearFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
 {-------------------- *OFTHEMONTH Extracting functions ----------------------------}
@@ -239,35 +239,35 @@ type
   TZWeekOfTheMonthFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a HOUROFTHEMONTH function. }
   TZHourOfTheMonthFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MINUTEOFTHEMONTH function. }
   TZMinuteOfTheMonthFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a SECONDOFTHEMONTH function. }
   TZSecondOfTheMonthFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MILLISECONDOFTHEMONTH function. }
   TZMilliSecondOfTheMonthFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
 {-------------------- *OFTHEWEEK Extracting functions ----------------------------}
@@ -275,35 +275,35 @@ type
   TZDayOfTheWeekFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a HOUROfTheWeek function. }
   TZHourOfTheWeekFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MINUTEOfTheWeek function. }
   TZMinuteOfTheWeekFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a SECONDOfTheWeek function. }
   TZSecondOfTheWeekFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MILLISECONDOfTheWeek function. }
   TZMilliSecondOfTheWeekFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
 
@@ -312,21 +312,21 @@ type
   TZMinuteOfTheDayFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a SECONDOFTHEDAY function. }
   TZSecondOfTheDayFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MILLISECONDOFTHEDAY function. }
   TZMilliSecondOfTheDayFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
 {---------------- *OfTheHour Extracting functions --------------------}
@@ -334,14 +334,14 @@ type
   TZSecondOfTheHourFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MILLISECONDOFTHEHOUR function. }
   TZMilliSecondOfTheHourFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
 {---------------- *OFTHEMINUTE Extracting functions --------------------}
@@ -349,7 +349,7 @@ type
   TZMilliSecondOfTheMinuteFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
 {---------------- *BETWEEN functions --------------------}
@@ -357,56 +357,56 @@ type
   TZYearsBetweenFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MONTHSBETWEEN function. }
   TZMonthsBetweenFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a WEEKSBETWEEN function. }
   TZWeeksBetweenFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a DAYSBETWEEN function. }
   TZDaysBetweenFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a HOURSBETWEEN function. }
   TZHoursBetweenFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MINUTESBETWEEN function. }
   TZMinutesBetweenFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a SECONDSBETWEEN function. }
   TZSecondsBetweenFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MILLISECONDSBETWEEN function. }
   TZMillisecondsBetweenFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
 procedure AddDateTimeFunctions(Functions : TZFunctionsList);
@@ -433,7 +433,7 @@ end;
 { TZDateFunction }
 
 function TZDateFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 0);
   VariantManager.SetAsDateTime(Result, Date);
@@ -448,7 +448,7 @@ end;
   @returns a function value.
 }
 function TZTimeFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 0);
   VariantManager.SetAsDateTime(Result, Time);
@@ -457,7 +457,7 @@ end;
 { TZNowFunction }
 
 function TZNowFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 0);
   VariantManager.SetAsDateTime(Result, Now);
@@ -466,7 +466,7 @@ end;
 { TZEncodeDateFunction }
 
 function TZEncodeDateFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   ParamsCount: Integer;
   Year , Month, Day : LongInt;
@@ -490,7 +490,7 @@ end;
 { TZEncodeDateFunction }
 
 function TZEncodeTimeFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   ParamsCount: Integer;
   Hour , Minute, Second, MilliSecond : LongInt;
@@ -517,7 +517,7 @@ end;
 { TZComposeDateTimeFunction }
 
 function TZComposeDateTimeFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 2);
   VariantManager.SetAsDateTime(Result, VariantManager.GetAsDateTime(Stack.GetParameter(2))+
@@ -527,7 +527,7 @@ end;
 { TZIncDateFunction }
 
 function TZIncDateFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   ParamsCount: Integer;
   Date : TDateTime;
@@ -556,7 +556,7 @@ end;
 { TZIncTimeFunction }
 
 function TZIncTimeFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   ParamsCount: Integer;
   Date : TDateTime;
@@ -587,7 +587,7 @@ end;
 { TZIsLeapYearFunction }
 
 function TZIsLeapYearFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsBoolean(Result, IsLeapYear(
@@ -597,7 +597,7 @@ end;
 { TZDateOfFunction }
 
 function TZDateOfFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsDateTime(Result, DateOf(
@@ -607,7 +607,7 @@ end;
 { TZTimeOfFunction }
 
 function TZTimeOfFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsDateTime(Result, TimeOf(
@@ -617,7 +617,7 @@ end;
 { TZYearOfFunction }
 
 function TZYearOfFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, YearOf(
@@ -627,7 +627,7 @@ end;
 { TZMonthOfFunction }
 
 function TZMonthOfFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, MonthOf(
@@ -637,7 +637,7 @@ end;
 { TZDayOfFunction }
 
 function TZDayOfFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, DayOf(
@@ -647,7 +647,7 @@ end;
 { TZHourOfFunction }
 
 function TZHourOfFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, HourOf(
@@ -657,7 +657,7 @@ end;
 { TZMinuteOfFunction }
 
 function TZMinuteOfFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, MinuteOf(
@@ -667,7 +667,7 @@ end;
 { TZSecondOfFunction }
 
 function TZSecondOfFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, SecondOf(
@@ -677,7 +677,7 @@ end;
 { TZMilliSecondOfFunction }
 
 function TZMilliSecondOfFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, MilliSecondOf(
@@ -687,7 +687,7 @@ end;
 { TZWeekOfTheYearFunction }
 
 function TZWeekOfTheYearFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, WeekOfTheYear(
@@ -697,7 +697,7 @@ end;
 { TZDayOfTheYearFunction }
 
 function TZDayOfTheYearFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, DayOfTheYear(
@@ -707,7 +707,7 @@ end;
 { TZHourOfTheYearFunction }
 
 function TZHourOfTheYearFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, HourOfTheYear(
@@ -717,7 +717,7 @@ end;
 { TZMinuteOfTheYearFunction }
 
 function TZMinuteOfTheYearFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, MinuteOfTheYear(
@@ -727,7 +727,7 @@ end;
 { TZSecondOfTheYearFunction }
 
 function TZSecondOfTheYearFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, SecondOfTheYear(
@@ -737,7 +737,7 @@ end;
 { TZMilliSecondOfTheYearFunction }
 
 function TZMilliSecondOfTheYearFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
   {$IFDEF WITH_MILLISECONDOFTHEYEAR_BUG}
   function MilliSecondOfTheYear(const AValue: TDateTime): Int64;
   begin
@@ -753,7 +753,7 @@ end;
 { TZWeekOfTheMonthFunction }
 
 function TZWeekOfTheMonthFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, WeekOfTheMonth(
@@ -763,7 +763,7 @@ end;
 { TZHourOfTheMonthFunction }
 
 function TZHourOfTheMonthFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, HourOfTheMonth(
@@ -773,7 +773,7 @@ end;
 { TZMinuteOfTheMonthFunction }
 
 function TZMinuteOfTheMonthFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, MinuteOfTheMonth(
@@ -783,7 +783,7 @@ end;
 { TZSecondOfTheMonthFunction }
 
 function TZSecondOfTheMonthFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, SecondOfTheMonth(
@@ -793,7 +793,7 @@ end;
 { TZMilliSecondOfTheMonthFunction }
 
 function TZMilliSecondOfTheMonthFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, MilliSecondOfTheMonth(
@@ -803,7 +803,7 @@ end;
 { TZDayOfTheWeekFunction }
 
 function TZDayOfTheWeekFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, DayOfTheWeek(
@@ -813,7 +813,7 @@ end;
 { TZHourOfTheWeekFunction }
 
 function TZHourOfTheWeekFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, HourOfTheWeek(
@@ -823,7 +823,7 @@ end;
 { TZMinuteOfTheWeekFunction }
 
 function TZMinuteOfTheWeekFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, MinuteOfTheWeek(
@@ -833,7 +833,7 @@ end;
 { TZSecondOfTheWeekFunction }
 
 function TZSecondOfTheWeekFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, SecondOfTheWeek(
@@ -843,7 +843,7 @@ end;
 { TZMilliSecondOfTheWeekFunction }
 
 function TZMilliSecondOfTheWeekFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, MilliSecondOfTheWeek(
@@ -853,7 +853,7 @@ end;
 { TZMinuteOfTheDayFunction }
 
 function TZMinuteOfTheDayFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, MinuteOfTheDay(
@@ -863,7 +863,7 @@ end;
 { TZSecondOfTheDayFunction }
 
 function TZSecondOfTheDayFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, SecondOfTheDay(
@@ -873,7 +873,7 @@ end;
 { TZMilliSecondOfTheDayFunction }
 
 function TZMilliSecondOfTheDayFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, MilliSecondOfTheDay(
@@ -883,7 +883,7 @@ end;
 { TZSecondOfTheHourFunction }
 
 function TZSecondOfTheHourFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, SecondOfTheHour(
@@ -893,7 +893,7 @@ end;
 { TZMilliSecondOfTheHourFunction }
 
 function TZMilliSecondOfTheHourFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, MilliSecondOfTheHour(
@@ -903,7 +903,7 @@ end;
 { TZMilliSecondOfTheMinuteFunction }
 
 function TZMilliSecondOfTheMinuteFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, MilliSecondOfTheMinute(
@@ -913,7 +913,7 @@ end;
 { TZYearsBetweenFunction }
 
 function TZYearsBetweenFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 2);
   VariantManager.SetAsInteger(Result, YearsBetween(
@@ -924,7 +924,7 @@ end;
 { TZMonthsBetweenFunction }
 
 function TZMonthsBetweenFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 2);
   VariantManager.SetAsInteger(Result, MonthsBetween(
@@ -935,7 +935,7 @@ end;
 { TZWeeksBetweenFunction }
 
 function TZWeeksBetweenFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 2);
   VariantManager.SetAsInteger(Result, WeeksBetween(
@@ -946,7 +946,7 @@ end;
 { TZDaysBetweenFunction }
 
 function TZDaysBetweenFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 2);
   VariantManager.SetAsInteger(Result, DaysBetween(
@@ -957,7 +957,7 @@ end;
 { TZHoursBetweenFunction }
 
 function TZHoursBetweenFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 2);
   VariantManager.SetAsInteger(Result, HoursBetween(
@@ -968,7 +968,7 @@ end;
 { TZMinutesBetweenFunction }
 
 function TZMinutesBetweenFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 2);
   VariantManager.SetAsInteger(Result, MinutesBetween(
@@ -979,7 +979,7 @@ end;
 { TZSecondsBetweenFunction }
 
 function TZSecondsBetweenFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 2);
   VariantManager.SetAsInteger(Result, SecondsBetween(
@@ -990,7 +990,7 @@ end;
 { TZHoursBetweenFunction }
 
 function TZMillisecondsBetweenFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 2);
   VariantManager.SetAsInteger(Result, MillisecondsBetween(
