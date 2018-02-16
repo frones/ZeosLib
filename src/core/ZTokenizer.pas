@@ -568,7 +568,7 @@ var
     IReadCount := 0;
   end;
 
-  function CheckMarkChars(Marks: String): Boolean;
+  function CheckMarkChars(const Marks: String): Boolean;
   var
     iMark: Integer;
   begin
@@ -1241,14 +1241,12 @@ var
 begin
   InitBuf(FirstChar);
   Result.Value := '';
-  ReadNum := 0;
-  while True do
-  begin
+  repeat
     ReadNum := Stream.Read(ReadChar, SizeOf(Char));
     if (ReadNum = 0) or not FWhitespaceChars[Ord(ReadChar)] then
       Break;
     ToBuf(ReadChar, Result.Value);
-  end;
+  until False;
   FlushBuf(Result.Value);
 
   if ReadNum > 0 then

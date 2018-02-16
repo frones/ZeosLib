@@ -265,8 +265,7 @@ var
 begin
   Result := nil;
 
-  while True do
-  begin
+  repeat
     FCriticalSection.Enter;
     try
       // Try to get an existing connection
@@ -333,7 +332,7 @@ begin
       raise Exception.Create(ClassName + '.Acquire'+LineEnding+'O pool de conexatingiu o limite maximo');
             //2013-10-13 mse: please replace non ASCII characters (>127) by the 
             //#nnn notation in order to have encoding independent sources
-  end;
+  until False;
 
   //
   // If there is no connection in the pool, create a new one.
