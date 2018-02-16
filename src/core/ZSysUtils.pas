@@ -1592,22 +1592,22 @@ begin
 end;
 {$ENDIF}
 
-procedure SplitToStringList(List: TStrings; const Str: string; Delimiters: string);
+procedure SplitToStringList(List: TStrings; const AStr, Delimiters: string);
 var
   PStart, PCurr, PEnd, PDelim: PChar;
   S: String;
 begin
   //EH: 5x faster version of SplitToStringList
-  if Str = ''
+  if AStr = ''
   then Exit
   else if Delimiters = '' then begin
-    List.Add(Str);
+    List.Add(AStr);
     Exit;
   end;
-  PStart := Pointer(Str);
-  PCurr := Pointer(Str);
-  PEnd := Pointer(Str);
-  Inc(PEnd, Length(Str));
+  PStart := Pointer(AStr);
+  PCurr := Pointer(AStr);
+  PEnd := Pointer(AStr);
+  Inc(PEnd, Length(AStr));
   while PCurr < PEnd do begin
     PDelim := Pointer(Delimiters);
     while PDelim^ <> #0 do
@@ -1632,7 +1632,9 @@ end;
 (*procedure SplitToStringList(List: TStrings; Str: string; const Delimiters: string);
 var
   DelimPos: Integer;
+  Str: string;
 begin
+  Str := AStr;
   repeat
     DelimPos := FirstDelimiter(Delimiters, Str);
     if DelimPos > 0 then

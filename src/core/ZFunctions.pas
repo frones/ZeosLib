@@ -104,7 +104,7 @@ type
     function CheckParamsCount(Stack: TZExecutionStack;
       ExpectedCount: Integer): Integer;
   public
-    constructor Create(aName : string);
+    constructor Create(const aName : string);
     function Execute(Stack: TZExecutionStack;
       const VariantManager: IZVariantManager): TZVariant; virtual; abstract;
 
@@ -319,7 +319,7 @@ end;
 {**
   Creates the function with a user defined name.
 }
-constructor TZAbstractFunction.Create(aName : string);
+constructor TZAbstractFunction.Create(const aName : string);
 begin
   inherited Create;
   FName := UpperCase(aName);

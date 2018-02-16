@@ -177,7 +177,7 @@ type
     function GetValues: IZCollection;
     function GetCount: Integer;
 
-    function Remove(Key: IZInterface): Boolean;
+    function Remove(const Key: IZInterface): Boolean;
     procedure Clear;
 
     property Count: Integer read GetCount;
@@ -975,7 +975,7 @@ end;
   @param Key a key of the element.
   @return <code>true</code> of the hash map was changed.
 }
-function TZHashMap.Remove(Key: IZInterface): Boolean;
+function TZHashMap.Remove(const Key: IZInterface): Boolean;
 var
   Index: Integer;
 begin

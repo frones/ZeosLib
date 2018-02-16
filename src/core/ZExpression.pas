@@ -76,7 +76,7 @@ type
     procedure DecStackPointer(const Value : integer);
     function Pop: TZVariant;
     function Peek: TZVariant;
-    procedure Push(Value: TZVariant);
+    procedure Push(const Value: TZVariant);
     function GetParameter(Index: Integer): TZVariant;
     procedure Swap;
 
@@ -304,7 +304,7 @@ end;
 {**
   Puts a value to the top of the stack.
 }
-procedure TZExecutionStack.Push(Value: TZVariant);
+procedure TZExecutionStack.Push(const Value: TZVariant);
 begin
   if FCapacity = FCount then
   begin

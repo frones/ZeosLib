@@ -159,7 +159,7 @@ type
       const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
-Function Capitalize(const s:string; Delims : string = '') : string;
+Function Capitalize(const s: string; const Delims : string = '') : string;
 Function LevenshteinDistance(const s1, s2: string; const DoUpcase : BOOLEAN = TRUE): Integer;
 procedure AddStringFunctions(Functions : TZFunctionsList);
 
@@ -171,7 +171,7 @@ implementation
 uses
   Math, StrUtils, ZMessages, ZCompatibility, ZFastCode;
 
-Function Capitalize(const s:string; Delims : string = '') : string;
+Function Capitalize(const s: string; const Delims : string = '') : string;
 var
   sDelims : set of ansichar;
   i : integer;
