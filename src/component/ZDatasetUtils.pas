@@ -112,7 +112,7 @@ procedure PostToResultSet(ResultSet: IZResultSet;
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
 function DefineFields(DataSet: TDataset; const FieldNames: string;
-  var OnlyDataFields: Boolean; const Tokenizer: IZTokenizer): TObjectDynArray;
+  out OnlyDataFields: Boolean; const Tokenizer: IZTokenizer): TObjectDynArray;
 
 {**
   Defins a indices of filter fields.
@@ -233,8 +233,8 @@ function CompareKeyFields(Field1: TField; ResultSet: IZResultSet;
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
 procedure DefineSortedFields(DataSet: TDataset;
-  const SortedFields: string; var FieldRefs: TObjectDynArray;
-  var CompareKinds: TComparisonKindArray; var OnlyDataFields: Boolean);
+  const SortedFields: string; out FieldRefs: TObjectDynArray;
+  out CompareKinds: TComparisonKindArray; out OnlyDataFields: Boolean);
 
 {**
   Creates a fields lookup table to define fixed position
@@ -679,9 +679,9 @@ end;
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
 function DefineFields(DataSet: TDataset; const FieldNames: string;
-  var OnlyDataFields: Boolean; const Tokenizer: IZTokenizer): TObjectDynArray;
+  out OnlyDataFields: Boolean; const Tokenizer: IZTokenizer): TObjectDynArray;
 var
-  I: Integer;
+  I, TokenValueInt: Integer;
   Tokens: TStrings;
   TokenType: TZTokenType;
   TokenValue: string;
@@ -697,23 +697,27 @@ begin
   try
     for I := 0 to Tokens.Count - 1 do
     begin
-      TokenType := TZTokenType({$IFDEF oldFPC}Pointer({$ENDIF}
-        Tokens.Objects[I]{$IFDEF oldFPC}){$ENDIF});
+      TokenType := TZTokenType({$IFDEF oldFPC}Pointer{$ENDIF}(Tokens.Objects[I]));
       TokenValue := Tokens[I];
       Field := nil;
 
-      if TokenType in [ttWord, ttQuoted, ttQuotedIdentifier] then
-      begin
-        Field := DataSet.FieldByName(TokenValue);
-      end
-      else if (TokenType = ttNumber)
-        and (StrToIntDef(TokenValue, 0) < Dataset.Fields.Count) then
-      begin
-        Field := Dataset.Fields[StrToIntDef(TokenValue, 0)];
-      end
-      else if (TokenValue <> ',') and (TokenValue <> ';') then
-      begin
-        raise EZDatabaseError.Create(Format(SIncorrectSymbol, [TokenValue]));
+      case TokenType of
+        // ttQuoted, ttQuotedIdentifier - shouldn't be returned as toDecodeStrings is used
+        ttWord:
+          Field := DataSet.FieldByName(TokenValue); // Will raise exception if field not present
+        ttNumber:
+          begin
+            TokenValueInt := StrToInt(TokenValue);
+            // Tokenizer always returns numbers > 0
+            if TokenValueInt >= Dataset.Fields.Count then
+              raise EZDatabaseError.CreateFmt(SFieldNotFound2, [TokenValueInt]);
+            Field := Dataset.Fields[TokenValueInt];
+          end;
+        ttSymbol:
+          if (TokenValue <> ',') and (TokenValue <> ';') then
+            raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [TokenValue]);
+        else
+          raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [TokenValue]);
       end;
 
       if Field <> nil then
@@ -1435,18 +1439,20 @@ end;
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
 procedure DefineSortedFields(DataSet: TDataset;
-  const SortedFields: string; var FieldRefs: TObjectDynArray;
-  var CompareKinds: TComparisonKindArray; var OnlyDataFields: Boolean);
+  const SortedFields: string; out FieldRefs: TObjectDynArray;
+  out CompareKinds: TComparisonKindArray; out OnlyDataFields: Boolean);
 var
-  I: Integer;
+  I, TokenValueInt: Integer;
   Tokens: TStrings;
   TokenType: TZTokenType;
   TokenValue: string;
   Field: TField;
   FieldCount: Integer;
+  PrevTokenWasField: Boolean;
 begin
   OnlyDataFields := True;
   FieldCount := 0;
+  PrevTokenWasField := False;
   SetLength(FieldRefs, FieldCount);
   SetLength(CompareKinds, FieldCount);
   Tokens := CommonTokenizer.TokenizeBufferToList(SortedFields,
@@ -1455,26 +1461,49 @@ begin
   try
     for I := 0 to Tokens.Count - 1 do
     begin
-      TokenType := TZTokenType({$IFDEF OLDFPC}Pointer({$ENDIF}
-        Tokens.Objects[I]{$IFDEF OLDFPC}){$ENDIF});
+      TokenType := TZTokenType({$IFDEF oldFPC}Pointer{$ENDIF}(Tokens.Objects[I]));
       TokenValue := Tokens[I];
       Field := nil;
 
-      if ((UpperCase(TokenValue) = 'DESC')
-        or (UpperCase(TokenValue) = 'ASC')) and (FieldCount > 0) then
-      begin
-        if UpperCase(TokenValue) = 'DESC' then
-          CompareKinds[FieldCount - 1] := ckDescending
-        else
-          CompareKinds[FieldCount - 1] := ckAscending;
-      end
-      else if TokenType in [ttWord, ttQuoted] then
-        Field := DataSet.FieldByName(TokenValue)
-      else if (TokenType = ttNumber) and (StrToIntDef(TokenValue, 0) < Dataset.Fields.Count) then
-        Field := Dataset.Fields[StrToIntDef(TokenValue, 0)]
-      else if (TokenValue <> ',') and (TokenValue <> ';') then
-        raise EZDatabaseError.Create(Format(SIncorrectSymbol, [TokenValue]));
+      case TokenType of
+        // ttQuoted, ttQuotedIdentifier - shouldn't be returned as toDecodeStrings is used
+        ttWord:
+          begin
+            // Check if current token is a sort order marker
+            // Note that ASC/DESC are valid field identifiers! So we must check
+            // if previous token was a field and then set sort order
+            // Otherwise - add current token as a field ("Field1 desc, Asc, Field2 desc")
 
+            // Could this be a sort order marker?
+            if PrevTokenWasField then
+            begin
+              if SameText(TokenValue, 'DESC') then
+                CompareKinds[FieldCount - 1] := ckDescending
+              else if SameText(TokenValue, 'ASC') then
+                CompareKinds[FieldCount - 1] := ckAscending
+              else
+                raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [TokenValue]);
+            end
+            else
+            // No, this is a field
+              Field := DataSet.FieldByName(TokenValue);  // Will raise exception if field not present
+          end;
+        ttNumber:
+          begin
+            TokenValueInt := StrToInt(TokenValue);
+            // Tokenizer always returns numbers > 0
+            if TokenValueInt >= Dataset.Fields.Count then
+              raise EZDatabaseError.CreateFmt(SFieldNotFound2, [TokenValueInt]);
+            Field := Dataset.Fields[TokenValueInt];
+          end;
+        ttSymbol:
+          if (TokenValue <> ',') and (TokenValue <> ';') then
+            raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [TokenValue]);
+        else
+          raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [TokenValue]);
+      end;
+
+      PrevTokenWasField := (Field <> nil);
       if Field <> nil then
       begin
         OnlyDataFields := OnlyDataFields and (Field.FieldKind = fkData);
@@ -1891,4 +1920,3 @@ initialization
 finalization
   CommonTokenizer := nil;
 end.
-

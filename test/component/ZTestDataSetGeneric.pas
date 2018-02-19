@@ -57,7 +57,7 @@ interface
 uses
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
   ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility,
-  ZAbstractRODataset;
+  ZAbstractRODataset, ZMessages;
 
 type
   {** Implements a test case for . }
@@ -98,6 +98,8 @@ type
     procedure TestLobModes;
     procedure TestSpaced_Names;
     procedure Test_doCachedLobs;
+    procedure TestDefineFields;
+    procedure TestDefineSortedFields;
   end;
 
   TZGenericTestDataSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -2047,6 +2049,150 @@ begin
     Query.SQL.Text := 'delete from '+Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Spaced Names')+
       ' where cs_id > '+IntToStr(TEST_ROW_ID-1);
     Query.ExecSQL;
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDataSet.TestDefineFields;
+
+var
+  Query: TZQuery;
+
+  procedure CheckFieldList(const FieldList: string; const Expect: array of TField);
+  var
+    Bool: Boolean;
+    Fields: TObjectDynArray;
+    i: Integer;
+  begin
+    Fields := DefineFields(Query, FieldList, Bool, CommonTokenizer);
+    CheckEquals(Length(Expect), Length(Fields), 'FieldList "' + FieldList + '" - item count');
+    for i := Low(Fields) to High(Fields) do
+      CheckSame(Expect[i], Fields[i], 'FieldList "' + FieldList + '" - item #' + IntToStr(i));
+  end;
+
+  procedure CheckExceptionRaised(const FieldList: string; Expect: ExceptionClass; const ExpectMsg: string = '');
+  var
+    Bool: Boolean;
+  begin
+    try
+      DefineFields(Query, FieldList, Bool, CommonTokenizer);
+    except on E: Exception do
+      begin
+        CheckIs(E, Expect, 'FieldList "' + FieldList + '" - unexpected exception class');
+        if ExpectMsg <> '' then
+          CheckEquals(ExpectMsg, E.Message, 'FieldList "' + FieldList + '" - unexpected exception message');
+        Exit; // OK
+      end;
+    end;
+    Check(False, 'FieldList "' + FieldList + '" - must raise exception');
+  end;
+
+var
+  F1, F2: TStringField;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    F1 := TStringField.Create(Query);
+    F1.FieldName := 'Field1';
+    Query.Fields.Add(F1);
+    F2 := TStringField.Create(Query);
+    F2.FieldName := 'Field2';
+    Query.Fields.Add(F2);
+
+    CheckFieldList('', []);
+    CheckFieldList('Field1,Field2', [F1, F2]);
+    CheckFieldList('Field1;Field2', [F1, F2]);
+    CheckFieldList('Field1 Field2', [F1, F2]); // this works currently but not recommended
+    CheckFieldList('"Field1", "Field2"', [F1, F2]);
+    CheckFieldList('1,0', [F2, F1]);
+
+    CheckExceptionRaised('-1,0', EZDatabaseError, Format(SIncorrectSymbol, ['-']));
+    CheckExceptionRaised('Field1/Field2', EZDatabaseError, Format(SIncorrectSymbol, ['/']));
+    CheckExceptionRaised('1,12345', EZDatabaseError, Format(SFieldNotFound2, [12345]));
+    CheckExceptionRaised('foo,bar', EDatabaseError);
+    CheckExceptionRaised('Field1,"not exists",Field2', EDatabaseError);
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDataSet.TestDefineSortedFields;
+
+var
+  Query: TZQuery;
+
+  procedure CheckFieldList(const FieldList: string; const ExpectFields: array of TField; const ExpectCompareKinds: array of TComparisonKind);
+  var
+    Bool: Boolean;
+    Fields: TObjectDynArray;
+    CompareKinds: TComparisonKindArray;
+    i: Integer;
+  begin
+    DefineSortedFields(Query, FieldList, Fields, CompareKinds, Bool);
+    CheckEquals(Length(ExpectFields), Length(Fields), 'FieldList "' + FieldList + '" - item count');
+    CheckEquals(Length(ExpectCompareKinds), Length(CompareKinds), 'FieldList "' + FieldList + '" - item count');
+    for i := Low(Fields) to High(Fields) do
+    begin
+      CheckSame(ExpectFields[i], Fields[i], 'FieldList "' + FieldList + '" - item #' + IntToStr(i));
+      CheckEquals(Integer(ExpectCompareKinds[i]), Integer(CompareKinds[i]), 'FieldList "' + FieldList + '" - item #' + IntToStr(i));
+    end;
+  end;
+
+  procedure CheckExceptionRaised(const FieldList: string; Expect: ExceptionClass; const ExpectMsg: string = '');
+  var
+    Bool: Boolean;
+    Fields: TObjectDynArray;
+    CompareKinds: TComparisonKindArray;
+  begin
+    try
+      DefineSortedFields(Query, FieldList, Fields, CompareKinds, Bool);
+    except on E: Exception do
+      begin
+        CheckIs(E, Expect, 'FieldList "' + FieldList + '" - unexpected exception class');
+        if ExpectMsg <> '' then
+          CheckEquals(E.Message, ExpectMsg, 'FieldList "' + FieldList + '" - unexpected exception message');
+        Exit; // OK
+      end;
+    end;
+    Check(False, 'FieldList "' + FieldList + '" - must raise exception');
+  end;
+
+var
+  F1, F2, F3: TStringField;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    F1 := TStringField.Create(Query);
+    F1.FieldName := 'Field1';
+    Query.Fields.Add(F1);
+    F2 := TStringField.Create(Query);
+    F2.FieldName := 'Field2';
+    Query.Fields.Add(F2);
+    F3 := TStringField.Create(Query);
+    F3.FieldName := 'Desc';
+    Query.Fields.Add(F3);
+
+    CheckFieldList('', [], []);
+    CheckFieldList('Field1,Field2', [F1, F2], [ckAscending, ckAscending]);
+    CheckFieldList('Field1;Field2', [F1, F2], [ckAscending, ckAscending]);
+    CheckFieldList('"Field1", "Field2"', [F1, F2], [ckAscending, ckAscending]);
+    CheckFieldList('1,0', [F2, F1], [ckAscending, ckAscending]);
+
+    CheckFieldList('Field1 desc, Field2 desc', [F1, F2], [ckDescending, ckDescending]);
+    CheckFieldList('Field1 desc, 1 asc', [F1, F2], [ckDescending, ckAscending]);
+    CheckFieldList('Field1 desc, Field2 desc, Desc', [F1, F2, F3], [ckDescending, ckDescending, ckAscending]);
+    CheckFieldList('Field1 desc, Field2 desc, Desc asc', [F1, F2, F3], [ckDescending, ckDescending, ckAscending]);
+    CheckFieldList('Field1 desc  Field2 desc Desc', [F1, F2, F3], [ckDescending, ckDescending, ckAscending]);
+
+    CheckExceptionRaised('-1,0', EZDatabaseError, Format(SIncorrectSymbol, ['-']));
+    CheckExceptionRaised('Field1/Field2', EZDatabaseError, Format(SIncorrectSymbol, ['/']));
+    CheckExceptionRaised('1,12345', EZDatabaseError, Format(SFieldNotFound2, [12345]));
+    CheckExceptionRaised('foo,bar', EDatabaseError);
+    CheckExceptionRaised('Field1,"not exists",Field2', EDatabaseError);
+
+    CheckExceptionRaised('Field1 Field2', EZDatabaseError, Format(SIncorrectSymbol, ['Field2']));
+    CheckExceptionRaised('Field1 desc,Field2 foo', EZDatabaseError, Format(SIncorrectSymbol, ['foo']));
+  finally
     Query.Free;
   end;
 end;
