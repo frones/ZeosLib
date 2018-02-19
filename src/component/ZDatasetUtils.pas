@@ -1285,11 +1285,7 @@ begin
   begin
     if (Fields[I].FieldKind = fkData)
       and not (Fields[I].DataType in [ftBlob, ftMemo, ftBytes {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}]) then
-    begin
-      if Result <> '' then
-        Result := Result + ',';
-      Result := Result + IdConverter.Quote(Fields[I].FieldName);
-    end;
+      AppendSepString(Result, IdConverter.Quote(Fields[I].FieldName), ',');
   end;
 end;
 
