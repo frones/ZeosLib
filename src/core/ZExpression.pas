@@ -466,9 +466,8 @@ end;
 
 Function TZExpression.NormalizeValues(var Val1, Val2: TZVariant): Boolean;
 begin
-  Result := ((Ord(Val1.VType) >= Ord(vtString)) and (Ord(Val1.VType) <= Ord(vtUnicodeString))) and
-     not ((Ord(Val2.VType) >= Ord(vtString)) and (Ord(Val2.VType) <= Ord(vtUnicodeString))) and
-     (Val2.VString <> '');
+  Result := (Val1.VType in [vtString..vtUnicodeString]) and
+        not (Val2.VType in [vtString..vtUnicodeString]) and (Val2.VString <> '');
   if Result then
     Val2 := EncodeString(Val2.VString);
 end;
