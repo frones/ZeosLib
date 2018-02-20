@@ -149,13 +149,10 @@ begin
   Temp := UpperCase(Result.Value);
 
   for I := Low(Keywords) to High(Keywords) do
-  begin
-    if Temp = Keywords[I] then
-    begin
+    if Temp = Keywords[I] then begin
       Result.TokenType := ttKeyword;
       Break;
     end;
-  end;
 end;
 
 
@@ -168,22 +165,18 @@ end;
 
   @return a quoted string token from a reader
 }
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 function TZGenericSQLQuoteState.NextToken(Stream: TStream;
   FirstChar: Char; Tokenizer: TZTokenizer): TZToken;
 var
-  ReadChar: Char;
-  LastChar: Char;
-  ReadCounter, NumericCounter, CountDoublePoint, CountSlash, CountSpace : integer;
+  ReadChar, LastChar: Char;
+  ReadCounter, NumericCounter, TimeSepCount, DateSepCount, SpaceCount: integer;
 begin
   Result.Value := '';
   InitBuf(FirstChar);
   LastChar := #0;
-  CountDoublePoint := 0;
-  CountSlash := 0;
-  CountSpace := 0;
+  TimeSepCount := 0;
+  DateSepCount := 0;
+  SpaceCount := 0;
   ReadCounter := 0;
   NumericCounter := 0;
 
@@ -194,19 +187,15 @@ begin
       Stream.Seek(-SizeOf(Char), soFromCurrent);
       Break;
     end;
-    if ReadChar = {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator then
-      inc(CountDoublePoint)
-    else if ReadChar = {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator then
-      inc(CountSlash)
-    else if ReadChar = ' ' then
-      inc(CountSpace)
-    else if CharInSet(ReadChar, ['0'..'9']) then
-      inc(NumericCounter);
+    inc(TimeSepCount, Ord(ReadChar = {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator));
+    inc(DateSepCount, Ord(ReadChar = {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator));
+    inc(SpaceCount, Ord(ReadChar = ' '));
+    inc(NumericCounter, Ord(Ord(ReadChar) in [Ord('0')..Ord('9')]));
     Inc(ReadCounter);
 
     ToBuf(ReadChar, Result.Value);
-    if (LastChar = FirstChar) and (ReadChar = FirstChar) then
-      LastChar := #0
+    if (LastChar = FirstChar) and (ReadChar = FirstChar)
+    then LastChar := #0
     else LastChar := ReadChar;
   end;
   FlushBuf(Result.Value);
@@ -215,47 +204,34 @@ begin
     Result.TokenType := ttWord
   else Result.TokenType := ttQuoted;
 
-  // Time constant
-  if (CountDoublePoint = 2) and (CountSlash = 0) and
-    ((NumericCounter + CountDoublePoint) = ReadCounter-1) then
-  begin
-    try
+  if (TimeSepCount = 2) and (DateSepCount = 0) and // test Time constant
+    ((NumericCounter + TimeSepCount) = ReadCounter-1) then 
+    try //D7 seems to make trouble here: TestDateTimeFilterExpression but why?? -> use a define instead
+    //EH: Is this correct??? This method uses Formatsettings which may differ to given Format!
       if StrToTimeDef(DecodeString(Result.Value, FirstChar), 0) = 0 then
         Exit;
       Result.Value := DecodeString(Result.Value,'"');
       Result.TokenType := ttTime;
-    except
-    end;
-  end;
-  // Date constant
-  if (CountDoublePoint = 0) and (CountSlash = 2) and
-    ((NumericCounter + CountSlash) = ReadCounter-1) then
-  begin
-    try
+    except end
+  else if (TimeSepCount = 0) and (DateSepCount = 2) and // test Date constant
+    ((NumericCounter + DateSepCount) = ReadCounter-1) then 
+    try //D7 seems to make trouble here: TestDateTimeFilterExpression but why?? -> use a define instead
+      //EH: Is this correct??? This method uses Formatsettings which may differ to given Format!
       if StrToDateDef(DecodeString(Result.Value, FirstChar), 0) = 0 then
         Exit;
       Result.Value := DecodeString(Result.Value,'"');
       Result.TokenType := ttDate;
-    except
-    end;
-  end;
-
-  // DateTime constant
-  if (CountDoublePoint = 2) and (CountSlash = 2) and
-    ((NumericCounter + CountDoublePoint + CountSlash + CountSpace) = ReadCounter-1) then
-  begin
-    try
+    except end
+  else if (TimeSepCount = 2) and (DateSepCount = 2) and // test DateTime constant
+    ((NumericCounter + TimeSepCount + DateSepCount + SpaceCount) = ReadCounter-1) then
+    try //D7 seems to make trouble here: TestDateTimeFilterExpression but why?? -> use a define instead
+      //EH: Is this correct??? This method uses Formatsettings which may differ to given Format!
       if StrToDateTimeDef(DecodeString(Result.Value, FirstChar), 0) = 0 then
         Exit;
       Result.Value := DecodeString(Result.Value,'"');
       Result.TokenType := ttDateTime;
-    except
-    end;
-  end;
+    except end
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
 
 {**
   Encodes a string value.
@@ -266,8 +242,8 @@ end;
 function TZGenericSQLQuoteState.EncodeString(const Value: string;
   QuoteChar: Char): string;
 begin
-  if CharInSet(QuoteChar, [#39, '"', '`']) then
-    Result := AnsiQuotedStr(Value, QuoteChar)
+  if Ord(QuoteChar) in [Ord(#39), Ord('"'), Ord('`')]
+  then Result := AnsiQuotedStr(Value, QuoteChar)
   else Result := Value;
 end;
 
@@ -281,15 +257,15 @@ function TZGenericSQLQuoteState.DecodeString(const Value: string;
   QuoteChar: Char): string;
 var
   Len: Integer;
+  P: PChar;
 begin
   Len := Length(Value);
-  if (Len >= 2) and CharInSet(QuoteChar, [#39, '"', '`'])
-    and (Value[1] = QuoteChar) and (Value[Len] = QuoteChar) then
-  begin
-    if Len > 2 then
-      Result := AnsiDequotedStr(Value, QuoteChar)
-    else Result := '';
-  end
+  P := Pointer(Value);
+  if (Len >= 2) and (Ord(QuoteChar) in [Ord(#39), Ord('"'), Ord('`')]) and
+    (P^ = QuoteChar) and ((P+Len-1)^ = QuoteChar)
+  then if Len > 2
+    then Result := AnsiDequotedStr(Value, QuoteChar)
+    else Result := ''
   else Result := Value;
 end;
 
