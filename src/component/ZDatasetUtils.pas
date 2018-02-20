@@ -702,7 +702,7 @@ begin
       Field := nil;
 
       case TokenType of
-        // ttQuoted, ttQuotedIdentifier - shouldn't be returned as toDecodeStrings is used
+        ttQuoted, ttQuotedIdentifier,// - shouldn't be returned as toDecodeStrings is used
         ttWord:
           Field := DataSet.FieldByName(TokenValue); // Will raise exception if field not present
         ttNumber:
@@ -1462,7 +1462,7 @@ begin
       Field := nil;
 
       case TokenType of
-        // ttQuoted, ttQuotedIdentifier - shouldn't be returned as toDecodeStrings is used
+        ttQuoted, ttQuotedIdentifier,
         ttWord:
           begin
             // Check if current token is a sort order marker
