@@ -266,15 +266,8 @@ function TZURL.GetURL: string;
 var
   Params: string;
 begin
-  Result := '';
-
-  // Prefix
-  Result := Result + Prefix + ':';
-
-  // Protocol
-  Result := Result + Protocol + ':';
-
-  Result := Result + '//'; //Allways set the doubleslash  to avoid unix '/' path issues if host is empty
+  // Prefix, Protocol and always set the doubleslash to avoid unix '/' path issues if host is empty
+  Result := Prefix + ':' + Protocol + ':' + '//';
 
   // HostName/Port
   if HostName <> '' then
@@ -303,7 +296,8 @@ begin
 
   // Construct the final string
 
-  AppendSepString(Result, Params, '?');
+  if Params <> '' then
+    Result := Result + '?' + Params;
 end;
 
 procedure TZURL.SetURL(const Value: string);
@@ -324,64 +318,37 @@ begin
   ADatabase := '';
   AProperties := '';
 
-  AValue := Value;
-
   // Strip out the parameters
-  I := ZFastCode.Pos('?', AValue);
-  if I > 0 then
-  begin
-    AValue := Copy(AValue, I + 1, MaxInt);
-    AProperties := AValue;
-    AValue := Copy(Value, 1, I - 1);
-  end;
+  BreakString(Value, '?', AValue, AProperties);
 
   // APrefix
   I := ZFastCode.Pos(':', AValue);
   if I = 0 then
     raise Exception.Create('TZURL.SetURL - The prefix is missing');
-  APrefix := Copy(AValue, 1, I - 1);
-  Delete(AValue, 1, I);
+  BreakString(AValue, ':', APrefix, AValue);
 
   // AProtocol
   I := ZFastCode.Pos(':', AValue);
   if I = 0 then
     raise Exception.Create('TZURL.SetURL - The protocol is missing');
-  AProtocol := Copy(AValue, 1, I - 1);
-  Delete(AValue, 1, I);
+  BreakString(AValue, ':', AProtocol, AValue);
 
-  // AHostName
-  if ZFastCode.Pos('//', AValue) = 1 then
+  if StartsWith(AValue, '//') then
   begin
-    Delete(AValue, 1, 2);
-
+    Delete(AValue, 1, Length('//'));
     // Strip "hostname[:port]" out of "/database"
-    I := ZFastCode.Pos('/', AValue);
-    if I > 0 then
-    begin
-      AHostName := Copy(AValue, 1, I - 1);
-      Delete(AValue, 1, I);    
-    end
-    else
-    begin
-      AHostName := AValue;
-      AValue := '';
-    end;
-
-    // APort
-    I := ZFastCode.Pos(':', AHostName);
-    if I > 0 then
-    begin
-      APort := Copy(AHostName, I + 1, MaxInt);
-      Delete(AHostName, I, MaxInt);  
-    end;
+    BreakString(AValue, '/', AValue, ADatabase);
+    // AHostName, APort
+    BreakString(AValue, ':', AHostName, APort);
   end
   else
-  // Likely a database delimited by / so remove the /
-  if ZFastCode.Pos('/', AValue) = 1 then
-    Delete(AValue, 1, 1);
-
-  // ADatabase
-  ADatabase := AValue;
+  begin
+    // Likely a database delimited by / so remove the /
+    if StartsWith(AValue, '/') then
+      Delete(AValue, 1, Length('/'));
+    // ADatabase
+    ADatabase := AValue;
+  end;
 
   FPrefix := APrefix;
   FProtocol := AProtocol;

@@ -2015,32 +2015,32 @@ begin
   end;
 end;
 
-function CheckNumberRange(const Value: AnsiChar; Var Failed: Boolean): Byte; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function CheckNumberRange(Value: AnsiChar; out Failed: Boolean): Byte; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 begin
-  Failed := not ((Ord(Value) > 47) and (Ord(Value) < 58));
+  Failed := not ((Value >= '0') and (Value <= '9'));
   if Failed then
     Result := 0
   else
-    Result := Ord(Value) -48;
+    Result := Ord(Value) - Ord('0');
 end;
 
-function CheckNumberRange(const Value: WideChar; Var Failed: Boolean): Word; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function CheckNumberRange(Value: WideChar; out Failed: Boolean): Word; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 begin
-  Failed := not ((Word(Value) > 47) and (Word(Value) < 58));
+  Failed := not ((Value >= '0') and (Value <= '9'));
   if Failed then
     Result := 0
   else
-    Result := Word(Value) -48;
+    Result := Ord(Value) - Ord('0');
 end;
 
-function CheckNumberRange(const Value: AnsiChar): Boolean; overload; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function CheckNumberRange(Value: AnsiChar): Boolean; overload; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 begin
-  Result := ((Ord(Value) > 47) and (Ord(Value) < 58));
+  Result := ((Value >= '0') and (Value <= '9'));
 end;
 
-function CheckNumberRange(const Value: WideChar): Boolean; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function CheckNumberRange(Value: WideChar): Boolean; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 begin
-  Result := ((Word(Value) > 47) and (Word(Value) < 58));
+  Result := ((Value >= '0') and (Value <= '9'));
 end;
 
 {**
@@ -3547,13 +3547,15 @@ end;
 procedure BreakString(const Str, Delimiter: String; var Left, Right: String);
 var
   DelimPos, DelimLen: Integer;
+  StrSave: string;
 begin
   DelimPos := ZFastCode.Pos(Delimiter, Str);
   if DelimPos > 0 then
   begin
     DelimLen := Length(Delimiter);
-    Left := Copy(Str, 1, DelimPos - 1);
-    Right := Copy(Str, DelimPos + DelimLen, MaxInt);
+    StrSave := Str; // allow one variable both as Str and Left
+    Left := Copy(StrSave, 1, DelimPos - 1);
+    Right := Copy(StrSave, DelimPos + DelimLen, MaxInt);
   end
   else
   begin
