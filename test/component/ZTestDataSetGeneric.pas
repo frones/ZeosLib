@@ -1149,7 +1149,7 @@ var
 begin
   Query := CreateQuery;
   try
-  { TODO : Enable this test }//TestFilterGeneric(Query);
+    TestFilterGeneric(Query);
   finally
     Query.Free;
   end;
@@ -1172,72 +1172,89 @@ begin
   begin
     Open;
     Filtered := True;
-    CheckEquals(4, RecordCount);
-    CheckEquals(False, IsEmpty);
+    CheckEquals(4, RecordCount, 'RecordCount');
+    CheckEquals(False, IsEmpty, 'IsEmpty');
+
+    //(*
+    Filter := 'eq_date = ''' + DateToStr(Encodedate(2001, 10, 7)) + '''';
+    CheckEquals(1, RecordCount);
+    CheckEquals(2, FieldByName('eq_id').AsInteger, 'field eq_id');
+
+    Filter := 'eq_date > ''' + DateToStr(Encodedate(2000, 1, 1)) + '''';
+    CheckEquals(2, RecordCount);
+    First;
+    CheckEquals(2, FieldByName('eq_id').AsInteger, 'field eq_id');
+    Next;
+    CheckEquals(4, FieldByName('eq_id').AsInteger, 'field eq_id');
 
     Filter := 'eq_id = 3';
     CheckEquals(1, RecordCount);
-    FieldByName('eq_name').AsString := 'Computer';
+    CheckEquals('Computer', FieldByName('eq_name').AsString, 'Field eq_name');
 
     Filter := 'eq_name = ''Volvo''';
     CheckEquals(1, RecordCount);
-    FieldByName('eq_id').AsInteger := 1;
+    CheckEquals(1, FieldByName('eq_id').AsInteger, 'field eq_id');
 
     Filter := 'eq_cost > 1000';
     CheckEquals(2, RecordCount);
     First;
-    FieldByName('eq_id').AsInteger := 1;
+    CheckEquals(1, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 2;
+    CheckEquals(2, FieldByName('eq_id').AsInteger, 'field eq_id');
 
     Filter := 'eq_type <= 10';
     CheckEquals(3, RecordCount);
     First;
-    FieldByName('eq_id').AsInteger := 1;
+    CheckEquals(1, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 2;
+    CheckEquals(2, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 3;
+    CheckEquals(3, FieldByName('eq_id').AsInteger, 'field eq_id');
 
-    Filter := 'eq_type = ''C*''';
-    CheckEquals(1, RecordCount);
-    FieldByName('eq_id').AsInteger := 3;
+    Filter := 'eq_name like ''C*''';
+    CheckEquals(1, RecordCount); //oracle, ADO, SQLite fails
+    CheckEquals(3, FieldByName('eq_id').AsInteger, 'field eq_id');
 
-    Filter := 'eq_type = ''*o*''';
+    Filter := 'eq_name like ''*o*''';
     CheckEquals(4, RecordCount);
     {check what cursor save position}
-    FieldByName('eq_id').AsInteger := 4;
+    CheckEquals(3, FieldByName('eq_id').AsInteger, 'field eq_id');
     First;
-    FieldByName('eq_id').AsInteger := 1;
+    CheckEquals(1, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 2;
+    CheckEquals(2, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 3;
+    CheckEquals(3, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 4;
-
-    Filter := 'eq_type = ''' + DateToStr(Encodedate(2001, 7, 10)) + '''';
-    CheckEquals(1, RecordCount);
-    FieldByName('eq_id').AsInteger := 2;
-
-    Filter := 'eq_type > ''' + DateToStr(Encodedate(2000, 1, 1)) + '''';
-    CheckEquals(2, RecordCount);
-    First;
-    FieldByName('eq_id').AsInteger := 2;
-    Next;
-    FieldByName('eq_id').AsInteger := 4;
+    CheckEquals(4, FieldByName('eq_id').AsInteger, 'field eq_id');
 
 
-    Filter := 'eq_type <= ''' + DateToStr(Encodedate(2000, 7, 8)) + '''';
+    Filter := 'eq_date <= ''' + DateToStr(Encodedate(2000, 8, 7)) + '''';
     CheckEquals(3, RecordCount);
     First;
-    FieldByName('eq_id').AsInteger := 1;
+    CheckEquals(1, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 3;
+    CheckEquals(3, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 4;
-
+    CheckEquals(4, FieldByName('eq_id').AsInteger, 'field eq_id');
+    Filter := '';
+//    *)
     Close;
+
+    CheckEquals(1, Connection.DbcConnection.CreateStatement.ExecuteUpdate('insert into equipment(eq_id, eq_name) values ('+
+      IntToStr(5)+','+{$IFDEF UNICODE}DateTimeToUnicodeSQLDate{$ELSE}DateTimeToRawSQLDate{$ENDIF}(
+      Encodedate(2000, 8, 7), Connection.DbcConnection.GetConSettings^.WriteFormatSettings, True, '')+')'), 'inserted row');
+    try
+      Open;
+      CheckEquals(5, RecordCount);
+
+      Filter := 'eq_name = '''+DateToStr(Encodedate(2000, 8, 7))+'''';
+      CheckEquals(1, RecordCount);
+      CheckEquals(5, FieldByName('eq_id').AsInteger, 'field eq_id');
+
+    finally
+      Connection.DbcConnection.CreateStatement.ExecuteUpdate('delete from equipment where eq_id = '+IntToStr(5));
+    end;
   end;
 end;
 
@@ -1278,7 +1295,7 @@ var
 begin
   Query := CreateReadOnlyQuery;
   try
-  { TODO : Enable this test }//!!  TestFilterGeneric(Query);
+    TestFilterGeneric(Query);
   finally
     Query.Free;
   end;
