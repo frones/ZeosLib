@@ -1241,9 +1241,9 @@ begin
 //    *)
     Close;
 
+    //(*
     CheckEquals(1, Connection.DbcConnection.CreateStatement.ExecuteUpdate('insert into equipment(eq_id, eq_name) values ('+
-      IntToStr(5)+','+{$IFDEF UNICODE}DateTimeToUnicodeSQLDate{$ELSE}DateTimeToRawSQLDate{$ENDIF}(
-      Encodedate(2000, 8, 7), Connection.DbcConnection.GetConSettings^.WriteFormatSettings, True, '')+')'), 'inserted row');
+      IntToStr(5)+','''+DateToStr(Encodedate(2000, 8, 7))+''')'), 'inserted row');
     try
       Open;
       CheckEquals(5, RecordCount);
@@ -1255,6 +1255,7 @@ begin
     finally
       Connection.DbcConnection.CreateStatement.ExecuteUpdate('delete from equipment where eq_id = '+IntToStr(5));
     end;
+    //*)
   end;
 end;
 

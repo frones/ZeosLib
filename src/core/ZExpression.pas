@@ -202,6 +202,8 @@ type
     procedure SetDefaultFunctions(const Value: IZFunctionsList);
     function GetAutoVariables: Boolean;
     procedure SetAutoVariables(Value: Boolean);
+  protected
+    function NormalizeValues(var Val1, Val2: TZVariant): Boolean;
   public
     constructor Create;
     constructor CreateWithExpression(const Expression: string);
@@ -312,6 +314,8 @@ begin
     SetLength(FValues, FCapacity);
   end;
   SoftVarManager.Assign(Value, FValues[FCount]);
+  if Value.VString <> '' then
+    FValues[FCount].VString := Value.VString; //keep parsed value alive
   Inc(FCount);
 end;
 
@@ -458,6 +462,15 @@ end;
 function TZExpression.GetVariantManager: IZVariantManager;
 begin
   Result := FVariantManager;
+end;
+
+Function TZExpression.NormalizeValues(var Val1, Val2: TZVariant): Boolean;
+begin
+  Result := ((Ord(Val1.VType) >= Ord(vtString)) and (Ord(Val1.VType) <= Ord(vtUnicodeString))) and
+     not ((Ord(Val2.VType) >= Ord(vtString)) and (Ord(Val2.VType) <= Ord(vtUnicodeString))) and
+     (Val2.VString <> '');
+  if Result then
+    Val2 := EncodeString(Val2.VString);
 end;
 
 {**
@@ -635,7 +648,7 @@ begin
           if Current.Value.VType = vtInterface then
           begin
             Value1 := IZFunction(Current.Value.VInterface).Execute(Stack, FVariantManager);
-            ParamsCount := SoftVarManager.GetAsInteger(Stack.Pop);
+            ParamsCount := FVariantManager.GetAsInteger(Stack.Pop);
             Stack.DecStackPointer(ParamsCount);
             Stack.Push(Value1);
           end
@@ -697,24 +710,28 @@ begin
         begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
+          NormalizeValues(Value1, Value2);
           Stack.Push(FVariantManager.OpEqual(Value1, Value2));
         end;
       ttNotEqual:
         begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
+          NormalizeValues(Value1, Value2);
           Stack.Push(FVariantManager.OpNotEqual(Value1, Value2));
         end;
       ttMore:
         begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
+          NormalizeValues(Value1, Value2);
           Stack.Push(FVariantManager.OpMore(Value1, Value2));
         end;
       ttLess:
         begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
+          NormalizeValues(Value1, Value2);
           Stack.Push(FVariantManager.OpLess(Value1, Value2));
         end;
       ttEqualMore:
