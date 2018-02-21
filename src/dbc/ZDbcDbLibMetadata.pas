@@ -57,15 +57,22 @@ interface
 
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZCompatibility;
+  ZCompatibility, ZSelectSchema;
 
 type
 
+   IZDbLibDatabaseInfo = Interface(IZDataBaseInfo)
+     ['{A99F9433-6A2F-40C8-9D15-96FE5632654E}']
+     procedure InitIdentifierCase(const Collation: String);
+   End;
   // technobot 2008-06-25 - methods moved as is from TZDbLibBaseDatabaseMetadata:
   {** Implements MsSql Database Information. }
-  TZDbLibDatabaseInfo = class(TZAbstractDatabaseInfo)
+  TZDbLibDatabaseInfo = class(TZAbstractDatabaseInfo, IZDbLibDatabaseInfo)
+  private
+    fCaseIdentifiers: TZIdentifierCase;
   public
-
+    procedure InitIdentifierCase(const Collation: String);
+  public
     // database/driver/server info:
     function GetDatabaseProductName: string; override;
     function GetDatabaseProductVersion: string; override;
@@ -304,7 +311,7 @@ type
 
 implementation
 
-uses ZFastCode, ZDbcDbLibUtils, ZDbcDbLib, ZSelectSchema;
+uses ZFastCode, ZDbcDbLibUtils, ZDbcDbLib;
 
 { TZDbLibDatabaseInfo }
 
@@ -375,7 +382,7 @@ end;
 }
 function TZDbLibDatabaseInfo.SupportsMixedCaseIdentifiers: Boolean;
 begin
-  Result := False;
+  Result := fCaseIdentifiers in [icMixed,icSpecial];
 end;
 
 {**
@@ -385,7 +392,7 @@ end;
 }
 function TZDbLibDatabaseInfo.StoresUpperCaseIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := False
 end;
 
 {**
@@ -395,7 +402,7 @@ end;
 }
 function TZDbLibDatabaseInfo.StoresLowerCaseIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := fCaseIdentifiers <> icSpecial;
 end;
 
 {**
@@ -405,7 +412,7 @@ end;
 }
 function TZDbLibDatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := fCaseIdentifiers = icSpecial;
 end;
 
 {**
@@ -426,7 +433,7 @@ end;
 }
 function TZDbLibDatabaseInfo.StoresUpperCaseQuotedIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := False;
 end;
 
 {**
@@ -436,7 +443,7 @@ end;
 }
 function TZDbLibDatabaseInfo.StoresLowerCaseQuotedIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := False;
 end;
 
 {**
@@ -507,6 +514,15 @@ end;
 function TZDbLibDatabaseInfo.GetTimeDateFunctions: string;
 begin
   Result := 'DATEADD,DATEDIFF,DATENAME,DATEPART,DAY,GETDATE,MONTH,YEAR';
+end;
+
+procedure TZDbLibDatabaseInfo.InitIdentifierCase(const Collation: String);
+begin
+  if ZFastCode.Pos('_CI_', Collation) > 0
+  then fCaseIdentifiers := icLower
+  else if (ZFastCode.Pos('_BIN', Collation) > 0){SQLServer} or (ZFastCode.Pos('bin_', Collation) > 0) {Sybase}
+  then fCaseIdentifiers := icSpecial
+  else fCaseIdentifiers := icMixed;
 end;
 
 {**
@@ -1781,7 +1797,6 @@ function TZMsSqlDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const ColumnNamePattern: string): IZResultSet;
 var
   SQLType: TZSQLType;
-  default_val: String;
   tmp: String;
   ResultHasRows: Boolean;
 begin
@@ -1799,7 +1814,9 @@ begin
       Result.UpdateString(CatalogNameIndex, GetStringByName('TABLE_QUALIFIER'));
       Result.UpdateString(SchemaNameIndex, GetStringByName('TABLE_OWNER'));
       Result.UpdateString(TableNameIndex, GetStringByName('TABLE_NAME'));
-      Result.UpdateString(ColumnNameIndex, GetStringByName('COLUMN_NAME'));
+      tmp := GetStringByName('COLUMN_NAME');
+      Result.UpdateString(ColumnNameIndex, tmp);
+      Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(tmp));
       //The value in the resultset will be used
       SQLType := ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType);
       tmp := UpperCase(GetStringByName('TYPE_NAME'));
@@ -1826,14 +1843,14 @@ begin
       else
         Result.UpdateSmall(TableColColumnNullableIndex, Ord(ntNullableUnknown));
       Result.UpdateString(TableColColumnRemarksIndex, GetStringByName('REMARKS'));
-      if (GetConnection as IZDBLibConnection).FreeTDS then
+      //if (GetConnection as IZDBLibConnection).GetProvider = dpSybase then
         Result.UpdateString(TableColColumnColDefIndex, GetStringByName('COLUMN_DEF'))
-      else //MSSQL bizarity: defaults are double braked '((value))' or braked and quoted '(''value'')'
+      {else //MSSQL bizarity: defaults are double braked '((value))' or braked and quoted '(''value'')'
       begin
         default_val := GetStringByName('COLUMN_DEF');
         if default_val <> '' then
-          Result.UpdateString(TableColColumnColDefIndex, Copy(default_val, 2, Length(default_val)-2));
-      end;
+          Result.UpdateString(TableColColumnColDefIndex, Copy(default_val, 3, Length(default_val)-4));
+      end};
       Result.UpdateSmall(TableColColumnSQLDataTypeIndex, GetSmallByName('SQL_DATA_TYPE'));
       Result.UpdateSmall(TableColColumnSQLDateTimeSubIndex, GetSmallByName('SQL_DATETIME_SUB'));
       Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetIntByName('CHAR_OCTET_LENGTH'));
@@ -1868,7 +1885,6 @@ begin
       begin
         Result.Next;
         Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetSmallByName('status') and $80) <> 0);
-        //Result.UpdateNull(TableColColumnCaseSensitiveIndex);
         Result.UpdateBoolean(TableColColumnSearchableIndex,
           Result.GetBoolean(TableColColumnSearchableIndex) and (GetIntByName('iscomputed') = 0));
         Result.UpdateBoolean(TableColColumnWritableIndex,

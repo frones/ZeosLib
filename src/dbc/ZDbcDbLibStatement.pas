@@ -97,8 +97,6 @@ type
     function CreateExecStatement: IZStatement; override;
   public
     constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
-    function GetMetaData: IZResultSetMetaData; override;
-
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
@@ -116,7 +114,7 @@ type
     FUserEncoding: TZCharEncoding;
 
     procedure FetchResults; virtual;
-    procedure FetchRowCount; virtual;
+    //procedure FetchRowCount; virtual;
 
   protected
     procedure SetInParamCount(const NewParamCount: Integer); override;
@@ -495,23 +493,10 @@ end;
 function TZDBLibPreparedStatementEmulated.PrepareAnsiSQLParam(ParamIndex: Integer;
   const NChar: Boolean): RawByteString;
 begin
-  if InParamCount <= ParamIndex then
-    Result := 'NULL'
-  else
-  begin
-    Result := PrepareSQLParameter(InParamValues[ParamIndex],
+  if InParamCount <= ParamIndex
+  then Result := 'NULL'
+  else Result := PrepareSQLParameter(InParamValues[ParamIndex],
       InParamTypes[ParamIndex], ClientVarManager, ConSettings, NChar);
-  end;
-end;
-
-{**
-  Gets the number, types and properties of a <code>ResultSet</code>
-  object's columns.
-  @return the description of a <code>ResultSet</code> object's columns
-}
-function TZDBLibPreparedStatementEmulated.GetMetaData: IZResultSetMetaData;
-begin
-  Result := nil;
 end;
 
 {**
@@ -621,11 +606,11 @@ begin
   FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS');
 end;
 
-procedure TZDBLibCallableStatement.FetchRowCount;
+(*procedure TZDBLibCallableStatement.FetchRowCount;
 var
   NativeResultSet: TZDBLibResultSet;
 begin
-//Sybase does not seem to return dbCount at all, so a workaround is made
+  //Sybase does not seem to return dbCount at all, so a workaround is made
   if FLastRowsAffected = -1 then
   begin
     FDBLibConnection.InternalExecuteStatement('select @@rowcount');
@@ -644,7 +629,7 @@ begin
     end;
     FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS');
   end;
-end;
+end;*)
 
 {**
   Moves to a <code>Statement</code> object's next result.  It returns
