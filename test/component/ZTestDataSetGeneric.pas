@@ -1238,10 +1238,19 @@ begin
     Next;
     CheckEquals(4, FieldByName('eq_id').AsInteger, 'field eq_id');
     Filter := '';
+
+    Filter := 'woff_date is null';  //SF.net ticket #229
+    CheckEquals(4, RecordCount);
+
+    Filter := 'woff_date is not null'; //SF.net ticket #229
+    CheckEquals(0, RecordCount);
+
+    Filter := '';
 //    *)
     Close;
 
     //(*
+    //SF.net ticket #200 ->
     CheckEquals(1, Connection.DbcConnection.CreateStatement.ExecuteUpdate('insert into equipment(eq_id, eq_name) values ('+
       IntToStr(5)+','''+DateToStr(Encodedate(2000, 8, 7))+''')'), 'inserted row');
     try
