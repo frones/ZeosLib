@@ -1946,14 +1946,13 @@ begin
   OwnerCondition := ConstructNameCondition(Schema,'A.OWNER');
   TableCondition := ConstructNameCondition(Table,'A.TABLE_NAME');
   SQL := 'SELECT NULL AS TABLE_CAT, A.OWNER AS TABLE_SCHEM, A.TABLE_NAME,'
-    + ' B.COLUMN_NAME, B.COLUMN_POSITION AS KEY_SEQ, A.INDEX_NAME AS PK_NAME'
-    + ' FROM ALL_INDEXES A, ALL_IND_COLUMNS B'
-    + ' WHERE A.OWNER=B.INDEX_OWNER AND A.INDEX_NAME=B.INDEX_NAME'
-    + ' AND A.TABLE_OWNER=B.TABLE_OWNER AND A.TABLE_NAME=B.TABLE_NAME'
-    + ' AND A.UNIQUENESS=''UNIQUE'' AND A.GENERATED=''Y'''
-    + ' AND A.INDEX_NAME LIKE ''SYS_%'''
-    + CreateExtraWhere
-    + ' ORDER BY A.INDEX_NAME, B.COLUMN_POSITION';
+        + ' B.COLUMN_NAME, B.POSITION AS KEY_SEQ, A.INDEX_NAME AS PK_NAME'
+        + ' FROM ALL_CONSTRAINTS A, ALL_CONS_COLUMNS B'
+        + ' WHERE A.CONSTRAINT_TYPE = ''P'''
+        + ' AND A.CONSTRAINT_NAME = B.CONSTRAINT_NAME'
+        + ' AND A.OWNER = B.OWNER'
+        + CreateExtraWhere
+        + ' ORDER BY A.INDEX_NAME, B.POSITION';
 
   Result := CopyToVirtualResultSet(
     GetConnection.CreateStatement.ExecuteQuery(SQL),
