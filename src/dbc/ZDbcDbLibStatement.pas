@@ -1044,7 +1044,8 @@ begin
 //Workaround for sybase. the dbCount does not work, so a select @@rowcount is
 //made but this cleared the returned output parameters, so this is moved here
 //after reading the output parameters
-  FetchRowCount;
+  //if Self.FDBLibConnection.GetProvider = dpSybase then
+    //FetchRowCount;
 
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'EXEC '+ ASQL);
 end;
