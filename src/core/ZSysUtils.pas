@@ -69,6 +69,15 @@ type
     procedure Sort(Compare: TZListSortCompare);
   end;
 
+const
+  StrFalse = 'False';
+  StrTrue = 'True';
+  BoolStrInts: array[Boolean] of string = ('0', '1');
+  BoolStrIntsRaw: array[Boolean] of RawByteString = ('0', '1');
+  BoolStrs: array[Boolean] of string = (StrFalse, StrTrue);
+  BoolStrsRaw: array[Boolean] of RawByteString = (RawByteString(StrFalse), RawByteString(StrTrue));
+  BoolStrsW: array[Boolean] of ZWideString = (ZWideString(StrFalse), ZWideString(StrTrue));
+
 var
   TwoDigitLookupHexW: packed array[Byte] of Word;
   TwoDigitLookupHexLW: packed array[Byte] of LongWord;
@@ -204,16 +213,16 @@ function BufferToBytes(Buffer: Pointer; Length: LongInt): TBytes;
   Converts a string into boolean value.
   @param Str a RawByteString value.
   @param CheckInt Check for "0" char too?
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
-function StrToBoolEx(Str: RawByteString; const CheckInt: Boolean = True): Boolean; overload;
+function StrToBoolEx(const Str: RawByteString; const CheckInt: Boolean = True): Boolean; overload;
 
 {**
   Converts a string into boolean value.
   @param Str a PAnsiChar value.
   @param CheckInt Check for "0" char too?
   @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
 function StrToBoolEx(Str: PAnsiChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
@@ -221,16 +230,16 @@ function StrToBoolEx(Str: PAnsiChar; const CheckInt: Boolean = True;
 {**
   Converts a string into boolean value.
   @param Str a ZWideString value.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
-function StrToBoolEx(Str: ZWideString; const CheckInt: Boolean = True): Boolean; overload;
+function StrToBoolEx(const Str: ZWideString; const CheckInt: Boolean = True): Boolean; overload;
 
 {**
   Converts a string into boolean value.
   @param Str a PWideChar value.
   @param CheckInt Check for "0" char too?
   @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
 function StrToBoolEx(Str: PWideChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
@@ -240,14 +249,14 @@ function StrToBoolEx(Str: PWideChar; const CheckInt: Boolean = True;
   @param Bool a boolean value.
   @return <code>"True"</code> or <code>"False"</code>
 }
-function BoolToUnicodeEx(Value: Boolean): ZWideString;
+function BoolToUnicodeEx(Value: Boolean): ZWideString; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 {**
   Converts a boolean into RawByteString value.
   @param Bool a boolean value.
   @return <code>"True"</code> or <code>"False"</code>
 }
-function BoolToRawEx(Value: Boolean): RawByteString;
+function BoolToRawEx(Value: Boolean): RawByteString; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 {$IFDEF ENABLE_POSTGRESQL}
 {**
@@ -402,7 +411,7 @@ function AnsiSQLDateToDateTime(const Value: string): TDateTime;
   @return a decoded TDateTime value.
 }
 function RawSQLDateToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
 
 {**
   Converts Unicode SQL Date (DateFormat) to TDateTime
@@ -411,7 +420,7 @@ function RawSQLDateToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
   @return a decoded TDateTime value.
 }
 function UnicodeSQLDateToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
 
 {**
   Converts Ansi SQL Time (hh:nn:ss or hh:mm:nn.zzz or TimeFormat) to TDateTime
@@ -420,7 +429,7 @@ function UnicodeSQLDateToDateTime(Value: PWideChar; const ValLen: Cardinal;
   @return a decoded TDateTime value.
 }
 function RawSQLTimeToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
 
 {**
   Converts Unicode SQL Time (hh:nn:ss or hh:mm:nn.zzz or TimeFormat) to TDateTime
@@ -429,7 +438,7 @@ function RawSQLTimeToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
   @return a decoded TDateTime value.
 }
 function UnicodeSQLTimeToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
 
 {**
   Converts Ansi SQL DateTime/TimeStamp (yyyy-mm-dd hh:nn:ss or
@@ -439,7 +448,7 @@ function UnicodeSQLTimeToDateTime(Value: PWideChar; const ValLen: Cardinal;
   @return a decoded TDateTime value.
 }
 function RawSQLTimeStampToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
 
 {**
   Converts Unicode SQL DateTime/TimeStamp (yyyy-mm-dd hh:nn:ss or
@@ -449,7 +458,7 @@ function RawSQLTimeStampToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
   @return a decoded TDateTime value.
 }
 function UnicodeSQLTimeStampToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
 
 {**
   Converts DateTime value to a rawbyteString
@@ -459,8 +468,8 @@ function UnicodeSQLTimeStampToDateTime(Value: PWideChar; const ValLen: Cardinal;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToRawSQLDate(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
 
 {**
   Converts DateTime value to a WideString/UnicodeString
@@ -470,8 +479,8 @@ function DateTimeToRawSQLDate(const Value: TDateTime;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 
 {**
   Converts DateTime value into a RawByteString with format pattern
@@ -480,8 +489,8 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   @return a formated RawByteString with Time-Format pattern.
 }
 function DateTimeToRawSQLTime(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
 
 {**
   Converts DateTime value into a WideString/UnicodeString with format pattern
@@ -490,8 +499,8 @@ function DateTimeToRawSQLTime(const Value: TDateTime;
   @return a formated WideString/UnicodeString with Time-Format pattern.
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 
 {**
   Converts DateTime value to a RawByteString
@@ -500,8 +509,8 @@ function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   @return a formated RawByteString in TimeStamp-Format pattern.
 }
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
 
 {**
   Converts DateTime value to a WideString/UnicodeString
@@ -510,8 +519,8 @@ function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
   @return a formated WideString/UnicodeString in TimeStamp-Format pattern.
 }
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 
 {**
   Converts TDateTime to Ansi SQL Date/Time
@@ -542,6 +551,35 @@ function DecodeCString(const Value: string): string;
   @return a string with replaced chars.
 }
 function ReplaceChar(const Source, Target: Char; const Str: string): string;
+
+{**
+  Remove chars in the string.
+  More obvious and ~35 times faster than StringReplace(Str, ToRemove, '')
+  @param ToRemove a char to search and remove.
+  @param Str a source string.
+  @return a string with removed chars.
+}
+function RemoveChar(ToRemove: Char; const Str: string): string;
+
+{**
+  Append a string to another string separating the added string with delimiter.
+  Correctly processes cases where any of the arguments is empty
+  @param Str source string to append to. If empty, resulting Str value will be AddStr
+  @param AddStr string to append. If empty, Str won't be changed
+  @param Delimiter string to separate AddStr from Str
+}
+procedure AppendSepString(var Str: string; const AddStr, Delimiter: string);
+
+{**
+  Break a string into two parts according to appearance of Delimiter.
+  @param Str source string
+  @param Delimiter separator string; Str=Left+Delimiter+Right
+  @param Left left part of Str from the start to the first Delimiter.
+    Equals to Str if Str doesn't contain Delimiter
+  @param Right left part of Str from the first Delimiter to the end.
+    Empty if Str doesn't contain Delimiter
+}
+procedure BreakString(const Str, Delimiter: String; var Left, Right: String);
 
 {**
   Decodes a Full Version Value encoded with the format:
@@ -582,8 +620,6 @@ function ASCII7ToUnicodeString(const Src: RawByteString): ZWideString; overload;
 function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString; overload;
 function UnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
 function UnicodeStringToASCII7(const Src: PWideChar; const Len: LengthInt): RawByteString; overload;
-
-//function ValUnicodeInt(const s: ZWideString; var code: Integer): Integer;
 
 function FloatToRaw(const Value: Extended): RawByteString;
 function FloatToSqlRaw(const Value: Extended): RawByteString;
@@ -1314,9 +1350,9 @@ end;
 {**
   Converts a string into boolean value.
   @param Str a RawByteString value.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
-function StrToBoolEx(Str: RawByteString; const CheckInt: Boolean = True): Boolean;
+function StrToBoolEx(const Str: RawByteString; const CheckInt: Boolean = True): Boolean;
 begin
   Result := StrToBoolEx(PAnsiChar(Pointer(Str)), CheckInt, False);
 end;
@@ -1326,7 +1362,7 @@ end;
   @param Str a PAnsiChar value.
   @param CheckInt Check for "0" char too?
   @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
 function StrToBoolEx(Str: PAnsiChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean;
@@ -1414,7 +1450,7 @@ end;
   @param Str a ZWideString value.
   @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
 }
-function StrToBoolEx(Str: ZWideString; const CheckInt: Boolean = True): Boolean;
+function StrToBoolEx(const Str: ZWideString; const CheckInt: Boolean = True): Boolean;
 begin
   Result := StrToBoolEx(PWideChar(Pointer(Str)), CheckInt, False);
 end;
@@ -1514,10 +1550,7 @@ end;
 }
 function BoolToUnicodeEx(Value: Boolean): ZWideString;
 begin
-  if Value then
-    Result := 'True'
-  else
-    Result := 'False';
+  Result := BoolStrsW[Value];
 end;
 
 {**
@@ -1527,10 +1560,7 @@ end;
 }
 function BoolToRawEx(Value: Boolean): RawByteString;
 begin
-  if Value then
-    Result := 'True'
-  else
-    Result := 'False';
+  Result := BoolStrsRaw[Value];
 end;
 
 {$IFDEF ENABLE_POSTGRESQL}
@@ -1562,22 +1592,22 @@ begin
 end;
 {$ENDIF}
 
-procedure SplitToStringList(List: TStrings; const Str: string; Delimiters: string);
+procedure SplitToStringList(List: TStrings; const AStr, Delimiters: string);
 var
   PStart, PCurr, PEnd, PDelim: PChar;
   S: String;
 begin
-  //EH 5x faster version of SplitToStringList
-  if Str = ''
+  //EH: 5x faster version of SplitToStringList
+  if AStr = ''
   then Exit
   else if Delimiters = '' then begin
-    List.Add(Str);
+    List.Add(AStr);
     Exit;
   end;
-  PStart := Pointer(Str);
-  PCurr := Pointer(Str);
-  PEnd := Pointer(Str);
-  Inc(PEnd, Length(Str));
+  PStart := Pointer(AStr);
+  PCurr := Pointer(AStr);
+  PEnd := Pointer(AStr);
+  Inc(PEnd, Length(AStr));
   while PCurr < PEnd do begin
     PDelim := Pointer(Delimiters);
     while PDelim^ <> #0 do
@@ -1602,7 +1632,9 @@ end;
 (*procedure SplitToStringList(List: TStrings; Str: string; const Delimiters: string);
 var
   DelimPos: Integer;
+  Str: string;
 begin
+  Str := AStr;
   repeat
     DelimPos := FirstDelimiter(Delimiters, Str);
     if DelimPos > 0 then
@@ -1927,7 +1959,7 @@ var
   Temp: string;
   DateFound: Boolean;
 
-  procedure ExtractTime(AString: String);
+  procedure ExtractTime(const AString: String);
   var dotPos: Integer;
   begin
     Hour := StrToIntDef(Copy(AString, 1, 2), 0);
@@ -1983,32 +2015,32 @@ begin
   end;
 end;
 
-function CheckNumberRange(const Value: AnsiChar; Var Failed: Boolean): Byte; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function CheckNumberRange(Value: AnsiChar; out Failed: Boolean): Byte; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 begin
-  Failed := not ((Ord(Value) > 47) and (Ord(Value) < 58));
+  Failed := not ((Value >= '0') and (Value <= '9'));
   if Failed then
     Result := 0
   else
-    Result := Ord(Value) -48;
+    Result := Ord(Value) - Ord('0');
 end;
 
-function CheckNumberRange(const Value: WideChar; Var Failed: Boolean): Word; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function CheckNumberRange(Value: WideChar; out Failed: Boolean): Word; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 begin
-  Failed := not ((Word(Value) > 47) and (Word(Value) < 58));
+  Failed := not ((Value >= '0') and (Value <= '9'));
   if Failed then
     Result := 0
   else
-    Result := Word(Value) -48;
+    Result := Ord(Value) - Ord('0');
 end;
 
-function CheckNumberRange(const Value: AnsiChar): Boolean; overload; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function CheckNumberRange(Value: AnsiChar): Boolean; overload; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 begin
-  Result := ((Ord(Value) > 47) and (Ord(Value) < 58));
+  Result := ((Value >= '0') and (Value <= '9'));
 end;
 
-function CheckNumberRange(const Value: WideChar): Boolean; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function CheckNumberRange(Value: WideChar): Boolean; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 begin
-  Result := ((Word(Value) > 47) and (Word(Value) < 58));
+  Result := ((Value >= '0') and (Value <= '9'));
 end;
 
 {**
@@ -2019,7 +2051,7 @@ end;
   @return a decoded TDateTime value.
 }
 function RawSQLDateToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
 var
   Year, Month: Int64;
   Day: Word;
@@ -2162,7 +2194,7 @@ end;
   @return a decoded TDateTime value.
 }
 function UnicodeSQLDateToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
 begin
   Result := RawSQLDateToDateTime(Pointer(UnicodeStringToASCII7(Value, ValLen)),
     ValLen, ZFormatSettings, Failed);
@@ -2176,11 +2208,10 @@ end;
   @return a decoded TDateTime value.
 }
 function RawSQLTimeToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
 var
   Hour, Minute: Int64;
   Sec, MSec: Word;
-  Code: Integer;
   TimeFormat: PChar;
 
   procedure TryExtractTimeFromFormat(Value: PAnsiChar);
@@ -2234,7 +2265,7 @@ var
 
   procedure TryExtractTimeFromVaryingSize;
   var
-    HPos, NPos: Integer;
+    HPos, NPos, Code: Integer;
     TimeLenCount: Cardinal;
   begin
     Result := 0;
@@ -2347,7 +2378,7 @@ end;
   @return a decoded TDateTime value.
 }
 function UnicodeSQLTimeToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
 begin
   Result := RawSQLTimeToDateTime(Pointer(UnicodeStringToAscii7(Value, ValLen)),
     ValLen, ZFormatSettings, Failed);
@@ -2361,7 +2392,7 @@ end;
   @return a decoded TDateTime value.
 }
 function RawSQLTimeStampToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
 var
   Year, Month: Int64;
   Day, Hour, Minute, Sec, MSec: Word;
@@ -2678,7 +2709,7 @@ end;
   @return a decoded TDateTime value.
 }
 function UnicodeSQLTimeStampToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
+  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
 begin
   Result := RawSQLTimeStampToDateTime(Pointer(UnicodeStringToAscii7(Value, ValLen)),
     ValLen, ZFormatSettings, Failed)
@@ -2731,8 +2762,8 @@ end;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToRawSQLDate(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2786,8 +2817,8 @@ end;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2842,8 +2873,8 @@ end;
 }
 {$WARNINGS OFF} //suppress D2007 Waring for undefined result
 function DateTimeToRawSQLTime(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2904,8 +2935,8 @@ end;
   @return a formated WideString/UnicodeString with Time-Format pattern.
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2967,8 +2998,8 @@ end;
   @return a formated RawByteString in TimeStamp-Format pattern.
 }
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -3051,8 +3082,8 @@ end;
   @return a formated WideString/UnicodeString in TimeStamp-Format pattern.
 }
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
-  ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -3443,6 +3474,96 @@ begin
     Inc(P);
   end;
 end;
+
+
+{**
+  Remove chars in the string.
+  More obvious and ~35 times faster than StringReplace(Str, ToRemove, '')
+  @param ToRemove a char to search and remove.
+  @param Str a source string.
+  @return a string with removed chars.
+}
+function RemoveChar(ToRemove: Char; const Str: string): string;
+var
+  PSrc, PSrcEnd, PDest: PChar;
+  Len: Integer;
+begin
+  Len := Length(Str);
+  SetLength(Result, Len);
+  if Len = 0 then
+    Exit;
+  PSrc := Pointer(Str);
+  PSrcEnd := @Str[Len];
+  PDest := Pointer(Result);
+
+  while PSrc <= PSrcEnd do
+  begin
+    if PSrc^ <> ToRemove then
+    begin
+      PDest^ := PSrc^;
+      Inc(PDest);
+    end
+    else
+      Dec(Len);
+    Inc(PSrc);
+  end;
+  SetLength(Result, Len);
+end;
+
+{**
+  Append a string to another string separating the added string with delimiter.
+  Correctly processes cases where any of the arguments could be empty
+  @param Str source string to append to. If empty, resulting Str value will be AddStr
+  @param AddStr string to append. If empty, Str won't be changed
+  @param Delimiter string to separate AddStr from Str
+}
+procedure AppendSepString(var Str: string; const AddStr, Delimiter: string);
+begin
+  if AddStr <> '' then
+    if Str = '' then
+      Str := AddStr
+    else
+      Str := Str + Delimiter + AddStr;
+end;
+
+{**
+  Break a string into two parts according to appearance of Delimiter.
+  @param Str source string
+  @param Delimiter separator string; Str=Left+Delimiter+Right
+  @param Left left part of Str from the start to the first Delimiter.
+    Equals to Str if Str doesn't contain Delimiter
+  @param Right left part of Str from the first Delimiter to the end.
+    Empty if Str doesn't contain Delimiter
+
+  NB: "var" modifier here allows using the same variable both as source and dest,
+  for ex. in a loop like
+    while Str <> '' do
+    begin
+      BreakString(Str, Delim, Fragment, Str);
+      ...
+    end;
+  "out" modifier will clear the value at the entry of the proc!
+}
+procedure BreakString(const Str, Delimiter: String; var Left, Right: String);
+var
+  DelimPos, DelimLen: Integer;
+  StrSave: string;
+begin
+  DelimPos := ZFastCode.Pos(Delimiter, Str);
+  if DelimPos > 0 then
+  begin
+    DelimLen := Length(Delimiter);
+    StrSave := Str; // allow one variable both as Str and Left
+    Left := Copy(StrSave, 1, DelimPos - 1);
+    Right := Copy(StrSave, DelimPos + DelimLen, MaxInt);
+  end
+  else
+  begin
+    Left := Str;
+    Right := '';
+  end;
+end;
+
 
 {**
   Decodes a full version value encoded with Zeos SQL format:

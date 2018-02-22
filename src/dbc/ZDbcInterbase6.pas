@@ -377,7 +377,9 @@ begin
     URL.Properties.Values['isc_dpb_connect_timeout'] := ZFastCode.IntToStr(ConnectTimeout);
 
   WireCompression := StrToBoolEx(URL.Properties.Values['wirecompression']);
-  if WireCompression then URL.Properties.Add('isc_dpb_config=WireCompression=true');
+  if WireCompression then
+    URL.Properties.Values['isc_dpb_config'] :=
+      URL.Properties.Values['isc_dpb_config'] + LineEnding + 'WireCompression=true';
 
   FXSQLDAMaxSize := 64*1024; //64KB by default
   FHandle := 0;

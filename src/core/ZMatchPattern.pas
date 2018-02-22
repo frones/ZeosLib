@@ -110,8 +110,8 @@ const
   MATCH_CHAR_CARET_NEGATE       = '^';
   MATCH_CHAR_EXCLAMATION_NEGATE	= '!';
 
-function Matche(Pattern, Text: string): Integer; forward;
-function MatchAfterStar(Pattern, Text: string): Integer; forward;
+function Matche(const Pattern, Text: string): Integer; forward;
+function MatchAfterStar(const Pattern, Text: string): Integer; forward;
 //function IsPattern(Pattern: string): Boolean; forward;
 
 function IsMatch(const Pattern, Text: string): Boolean;
@@ -119,50 +119,51 @@ begin
   Result := (Matche(Pattern, Text) = 1);
 end;
 
-function Matche(Pattern, Text: string): Integer;
+function Matche(const Pattern, Text: string): Integer;
 var
   RangeStart, RangeEnd, P, T, PLen, TLen: Integer;
   Invert, MemberMatch, Loop: Boolean;
+  aPattern, aText: string;
 begin
   P := 1;
   T := 1;
-  Pattern := AnsiLowerCase(pattern);
-  Text    := AnsiLowerCase(Text);
-  PLen    := Length(pattern);
-  TLen    := Length(text);
+  aPattern := AnsiLowerCase(Pattern);
+  aText    := AnsiLowerCase(Text);
+  PLen    := Length(aPattern);
+  TLen    := Length(aText);
   Result  := 0;
   while ((Result = 0) and (P <= PLen)) do
   begin
     if T > TLen then
     begin
-      if (Pattern[P] = MATCH_CHAR_KLEENE_CLOSURE) and (P+1 > PLen) then
+      if (aPattern[P] = MATCH_CHAR_KLEENE_CLOSURE) and (P+1 > PLen) then
         Result := MATCH_VALID
       else
         Result := MATCH_ABORT;
       Exit;
     end
     else
-      case (Pattern[P]) of
+      case (aPattern[P]) of
         MATCH_CHAR_KLEENE_CLOSURE:
-          Result := MatchAfterStar(Copy(Pattern,P,PLen),Copy(Text,T,TLen));
+          Result := MatchAfterStar(Copy(aPattern,P,PLen),Copy(aText,T,TLen));
         MATCH_CHAR_RANGE_OPEN:
           begin
             Inc(P);
             Invert := False;
-            if (Pattern[P] = MATCH_CHAR_EXCLAMATION_NEGATE) or
-              (Pattern[P] = MATCH_CHAR_CARET_NEGATE) then
+            if (aPattern[P] = MATCH_CHAR_EXCLAMATION_NEGATE) or
+              (aPattern[P] = MATCH_CHAR_CARET_NEGATE) then
             begin
               Invert := True;
               Inc(P);
             end;
-            if (Pattern[P] = MATCH_CHAR_RANGE_CLOSE) then
+            if (aPattern[P] = MATCH_CHAR_RANGE_CLOSE) then
             begin
               Result := MATCH_PATTERN;
               Exit;
             end;
             MemberMatch := False;
             Loop := True;
-            while (Loop and (Pattern[P] <> MATCH_CHAR_RANGE_CLOSE)) do
+            while (Loop and (aPattern[P] <> MATCH_CHAR_RANGE_CLOSE)) do
             begin
               RangeStart := P;
               RangeEnd := P;
@@ -172,11 +173,11 @@ begin
                 Result := MATCH_PATTERN;
                 Exit;
               end;
-              if Pattern[P] = MATCH_CHAR_RANGE then
+              if aPattern[P] = MATCH_CHAR_RANGE then
               begin
                 Inc(P);
                 RangeEnd := P;
-              if (P > PLen) or (Pattern[RangeEnd] = MATCH_CHAR_RANGE_CLOSE) then
+              if (P > PLen) or (aPattern[RangeEnd] = MATCH_CHAR_RANGE_CLOSE) then
               begin
                 Result := MATCH_PATTERN;
                 Exit;
@@ -190,8 +191,8 @@ begin
             end;
             if RangeStart < RangeEnd then
             begin
-              if (Text[T] >= Pattern[RangeStart]) and
-                (Text[T] <= Pattern[RangeEnd]) then
+              if (aText[T] >= aPattern[RangeStart]) and
+                (aText[T] <= aPattern[RangeEnd]) then
               begin
                 MemberMatch := True;
                 Loop := False;
@@ -199,8 +200,8 @@ begin
             end
             else
             begin
-              if (Text[T] >= Pattern[RangeEnd]) and
-                (Text[T] <= Pattern[RangeStart]) then
+              if (aText[T] >= aPattern[RangeEnd]) and
+                (aText[T] <= aPattern[RangeStart]) then
               begin
                 MemberMatch := True;
                 Loop := False;
@@ -213,7 +214,7 @@ begin
             Exit;
           end;
           if MemberMatch then
-            while (P <= PLen) and (Pattern[P] <> MATCH_CHAR_RANGE_CLOSE) do
+            while (P <= PLen) and (aPattern[P] <> MATCH_CHAR_RANGE_CLOSE) do
               Inc(P);
             if P > PLen then
             begin
@@ -222,8 +223,8 @@ begin
             end;
           end;
         else
-          if Pattern[P] <> MATCH_CHAR_SINGLE then
-            if Pattern[P] <> Text[T] then
+          if aPattern[P] <> MATCH_CHAR_SINGLE then
+            if aPattern[P] <> aText[T] then
               Result := MATCH_LITERAL;
       end;
     Inc(P);
@@ -236,9 +237,10 @@ begin
       Result := MATCH_VALID;
 end;
 
-function MatchAfterStar(Pattern, Text: string): Integer;
+function MatchAfterStar(const Pattern, Text: string): Integer;
 var
   P, T, PLen, TLen: Integer;
+  aPattern, aText: string;
 begin
   Result := 0;
   P := 1;
@@ -272,16 +274,18 @@ begin
     Result := MATCH_VALID;
     Exit;
   end;
+  aPattern := Pattern;
+  aText    := Text;
   repeat
-    if (Pattern[P] = Text[T]) or (Pattern[P] = MATCH_CHAR_RANGE_OPEN) then
+    if (aPattern[P] = aText[T]) or (aPattern[P] = MATCH_CHAR_RANGE_OPEN) then
     begin
-      Pattern := Copy(Pattern, P, PLen);
-      Text    := Copy(Text, T, TLen);
-      PLen    := Length(Pattern);
-      TLen    := Length(Text);
+      aPattern := Copy(aPattern, P, PLen);
+      aText    := Copy(aText, T, TLen);
+      PLen    := Length(aPattern);
+      TLen    := Length(aText);
       p := 1;
       t := 1;
-      Result  := Matche(Pattern, Text);
+      Result  := Matche(aPattern, aText);
       if Result <> MATCH_VALID then
         Result := 0;//retry until end of Text, (check below) or Result valid
     end;

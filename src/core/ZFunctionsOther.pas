@@ -66,42 +66,42 @@ type
   TZEmptyFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MIN function. }
   TZMinFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a MAX function. }
   TZMaxFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a SUM function. }
   TZSumFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a IIF function. }
   TZIIFFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a CASEF function. }
   TZCASEFFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
 procedure AddOtherFunctions(Functions : TZFunctionsList);
@@ -120,7 +120,7 @@ uses
   @returns a function value.
 }
 function TZEmptyFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   Value: TZVariant;
 begin
@@ -138,7 +138,7 @@ end;
   @returns a function value.
 }
 function TZMinFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   I, ParamsCount: Integer;
   Value: TZVariant;
@@ -165,7 +165,7 @@ end;
   @returns a function value.
 }
 function TZMaxFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   I, ParamsCount: Integer;
   Value: TZVariant;
@@ -192,7 +192,7 @@ end;
   @returns a function value.
 }
 function TZSumFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   I, ParamsCount: Integer;
 begin
@@ -214,7 +214,7 @@ end;
   @returns a function value.
 }
 function TZIIFFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 3);
   if VariantManager.GetAsBoolean(Stack.GetParameter(3)) then
@@ -232,7 +232,7 @@ end;
   @returns a function value.
 }
 function TZCASEFFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   ParamsCount, Index : Integer;
 

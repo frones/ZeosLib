@@ -522,74 +522,72 @@ end;
 }
 procedure TZAbstractConnection.SetProperties(Value: TStrings);
 begin
-  if Value <> nil then
-  begin
-    if ( Trim(Value.Values['codepage']) <> '' ) then
-      FClientCodepage := Trim(Value.Values['codepage'])
-    else
-      Value.Values['codepage'] := FClientCodepage;
+  FURL.Properties.Clear;
+  if Value = nil then Exit;
 
-    { check autoencodestrings }
-    {$IF (defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)) and not defined(UNICODE)}
-    if Connected then
-      DbcConnection.AutoEncodeStrings := Value.Values['AutoEncodeStrings'] = 'ON';
-    FAutoEncode := Value.Values['AutoEncodeStrings'] = 'ON';
+  if ( Trim(Value.Values['codepage']) <> '' ) then
+    FClientCodepage := Trim(Value.Values['codepage'])
+  else
+    Value.Values['codepage'] := FClientCodepage;
+
+  { check autoencodestrings }
+  {$IF (defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)) and not defined(UNICODE)}
+  if Connected then
+    DbcConnection.AutoEncodeStrings := Value.Values['AutoEncodeStrings'] = 'ON';
+  FAutoEncode := Value.Values['AutoEncodeStrings'] = 'ON';
+  {$ELSE}
+    {$IFDEF UNICODE}
+    Value.Values['AutoEncodeStrings'] := 'ON';
     {$ELSE}
-      {$IFDEF UNICODE}
-      Value.Values['AutoEncodeStrings'] := 'ON';
-      {$ELSE}
-      Value.Values['AutoEncodeStrings'] := '';
-      {$ENDIF}
-    {$IFEND}
+    Value.Values['AutoEncodeStrings'] := '';
+    {$ENDIF}
+  {$IFEND}
 
-    if Value.IndexOf('controls_cp') = -1 then
-      {$IFDEF UNICODE}
-      if ControlsCodePage = cCP_UTF16 then
-        Value.values['controls_cp'] := 'CP_UTF16'
-      else
-        Value.values['controls_cp'] := 'GET_ACP'
-      {$ELSE}
-      case ControlsCodePage of //automated check..
-        cCP_UTF16: Value.values['controls_cp'] := 'CP_UTF16';
-        cCP_UTF8: Value.values['controls_cp'] := 'CP_UTF8';
-        cGET_ACP: Value.values['controls_cp'] := 'GET_ACP';
-      end
-      {$ENDIF}
+  if Value.IndexOf('controls_cp') = -1 then
+    {$IFDEF UNICODE}
+    if ControlsCodePage = cCP_UTF16 then
+      Value.values['controls_cp'] := 'CP_UTF16'
     else
-      {$IFDEF UNICODE}
-      if Value.values['controls_cp'] = 'CP_UTF8' then
+      Value.values['controls_cp'] := 'GET_ACP'
+    {$ELSE}
+    case ControlsCodePage of //automated check..
+      cCP_UTF16: Value.values['controls_cp'] := 'CP_UTF16';
+      cCP_UTF8: Value.values['controls_cp'] := 'CP_UTF8';
+      cGET_ACP: Value.values['controls_cp'] := 'GET_ACP';
+    end
+    {$ENDIF}
+  else
+    {$IFDEF UNICODE}
+    if Value.values['controls_cp'] = 'CP_UTF8' then
+    begin
+      Value.values['controls_cp'] := 'CP_UTF16';
+      FControlsCodePage := cCP_UTF16;
+    end;
+    {$ELSE}
+      {$IFNDEF WITH_WIDEFIELDS} //old FPC and D7
+      if Value.values['controls_cp'] = 'CP_UTF16' then
       begin
-        Value.values['controls_cp'] := 'CP_UTF16';
-        FControlsCodePage := cCP_UTF16;
+        FControlsCodePage := cGET_ACP;
+        Value.values['controls_cp'] := {$IFDEF DELPHI}'GET_ACP'{$ELSE}'CP_UTF8'{$ENDIF};
       end;
       {$ELSE}
-        {$IFNDEF WITH_WIDEFIELDS} //old FPC and D7
-        if Value.values['controls_cp'] = 'CP_UTF16' then
-        begin
-          FControlsCodePage := cGET_ACP;
-          Value.values['controls_cp'] := {$IFDEF DELPHI}'GET_ACP'{$ELSE}'CP_UTF8'{$ENDIF};
-        end;
-        {$ELSE}
-        if Value.values['controls_cp'] = 'GET_ACP' then
-          FControlsCodePage := cGET_ACP
+      if Value.values['controls_cp'] = 'GET_ACP' then
+        FControlsCodePage := cGET_ACP
+      else
+        if Value.values['controls_cp'] = 'CP_UTF8' then
+          FControlsCodePage := cCP_UTF8
         else
-          if Value.values['controls_cp'] = 'CP_UTF8' then
-            FControlsCodePage := cCP_UTF8
+          if Value.values['controls_cp'] = 'CP_UTF16' then
+            FControlsCodePage := cCP_UTF16
           else
-            if Value.values['controls_cp'] = 'CP_UTF16' then
-              FControlsCodePage := cCP_UTF16
-            else
-              case ControlsCodePage of //automated check..
-                cCP_UTF16: Value.values['controls_cp'] := 'CP_UTF16';
-                cCP_UTF8: Value.values['controls_cp'] := 'CP_UTF8';
-                cGET_ACP: Value.values['controls_cp'] := 'GET_ACP';
-              end;
-        {$ENDIF}
+            case ControlsCodePage of //automated check..
+              cCP_UTF16: Value.values['controls_cp'] := 'CP_UTF16';
+              cCP_UTF8: Value.values['controls_cp'] := 'CP_UTF8';
+              cGET_ACP: Value.values['controls_cp'] := 'GET_ACP';
+            end;
       {$ENDIF}
-    FURL.Properties.Text := Value.Text;
-  end
-  else
-    FURL.Properties.Clear;
+    {$ENDIF}
+  FURL.Properties.AddStrings(Value);
 end;
 
 {**

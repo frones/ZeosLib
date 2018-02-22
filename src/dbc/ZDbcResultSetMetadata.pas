@@ -279,7 +279,7 @@ begin
   ColumnInfo.CatalogName := TableColumns.GetString(CatalogNameIndex);
   ColumnInfo.SchemaName := TableColumns.GetString(SchemaNameIndex);
   ColumnInfo.TableName := TableColumns.GetString(TableNameIndex);
-  ColumnInfo.ColumnName := FieldName;
+  ColumnInfo.ColumnName := TableColumns.GetString(ColumnNameIndex);;
 
 //If the returned column information is null then the value assigned during
 //the resultset.open will be kept

@@ -77,7 +77,7 @@ type
 
   public
     constructor Create;
-    constructor CreateWithTokenizer(Tokenizer: IZTokenizer);
+    constructor CreateWithTokenizer(const Tokenizer: IZTokenizer);
     destructor Destroy; override;
 
     procedure Clear;
@@ -119,7 +119,7 @@ end;
   Creates this object and assignes a tokenizer object.
   @param Tokenizer a tokenizer object.
 }
-constructor TZSQLScriptParser.CreateWithTokenizer(Tokenizer: IZTokenizer);
+constructor TZSQLScriptParser.CreateWithTokenizer(const Tokenizer: IZTokenizer);
 begin
   Create;
   FTokenizer := Tokenizer;

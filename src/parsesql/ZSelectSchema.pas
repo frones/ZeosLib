@@ -165,7 +165,7 @@ type
 
     procedure LinkReferences(const Convertor: IZIdentifierConvertor);
 
-    function FindTableByFullName(const {%H-}Catalog, Schema, Table: string): TZTableRef;
+    function FindTableByFullName(const Catalog, Schema, Table: string): TZTableRef;
     function FindTableByShortName(const Table: string): TZTableRef;
     function FindFieldByShortName(const Field: string): TZFieldRef;
 
@@ -463,8 +463,9 @@ end;
   @param Convertor an identifier convertor.
 }
 procedure TZSelectSchema.ConvertIdentifiers(const Convertor: IZIdentifierConvertor);
-
-  function ExtractNeedlessQuote(Value : String) : String;
+var
+  I: Integer;
+  function ExtractNeedlessQuote(const Value : String) : String;
   begin
     if Value = '' then
     begin
@@ -475,9 +476,6 @@ procedure TZSelectSchema.ConvertIdentifiers(const Convertor: IZIdentifierConvert
     if Convertor.GetIdentifierCase(Result, True) in [icMixed, icSpecial] then
       Result := Value;
   end;
-
-var
-  I: Integer;
 begin
   if Convertor = nil then Exit;
 

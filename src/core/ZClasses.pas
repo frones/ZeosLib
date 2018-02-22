@@ -63,7 +63,9 @@ const
   ZEOS_MINOR_VERSION = 2;
   ZEOS_SUB_VERSION = 2;
   ZEOS_STATUS = 'rc';
-  ZEOS_VERSION = '7.2.1-rc';
+  ZEOS_VERSION = Char(48+ZEOS_MAJOR_VERSION)+'.'+
+                 Char(48+ZEOS_MINOR_VERSION)+'.'+
+                 Char(48+ZEOS_SUB_VERSION)+'-'+ZEOS_STATUS;
 {$IFDEF ENABLE_POOLED}
   {Pooled Protocol Prefix, including final dot}
   PooledPrefix = 'pooled.';
@@ -174,7 +176,7 @@ type
     function GetValues: IZCollection;
     function GetCount: Integer;
 
-    function Remove(Key: IZInterface): Boolean;
+    function Remove(const Key: IZInterface): Boolean;
     procedure Clear;
 
     property Count: Integer read GetCount;
@@ -188,7 +190,7 @@ type
 
     function Peek: IZInterface;
     function Pop: IZInterface;
-    procedure Push(Value: IZInterface);
+    procedure Push(const Value: IZInterface);
     function GetCount: Integer;
 
     property Count: Integer read GetCount;

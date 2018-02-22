@@ -57,7 +57,7 @@ interface
 uses
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
   ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility,
-  ZAbstractRODataset;
+  ZAbstractRODataset, ZMessages;
 
 type
   {** Implements a test case for . }
@@ -98,6 +98,8 @@ type
     procedure TestLobModes;
     procedure TestSpaced_Names;
     procedure Test_doCachedLobs;
+    procedure TestDefineFields;
+    procedure TestDefineSortedFields;
   end;
 
   TZGenericTestDataSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1147,7 +1149,7 @@ var
 begin
   Query := CreateQuery;
   try
-  { TODO : Enable this test }//TestFilterGeneric(Query);
+    TestFilterGeneric(Query);
   finally
     Query.Free;
   end;
@@ -1170,72 +1172,99 @@ begin
   begin
     Open;
     Filtered := True;
-    CheckEquals(4, RecordCount);
-    CheckEquals(False, IsEmpty);
+    CheckEquals(4, RecordCount, 'RecordCount');
+    CheckEquals(False, IsEmpty, 'IsEmpty');
+
+    //(*
+    Filter := 'eq_date = ''' + DateToStr(Encodedate(2001, 10, 7)) + '''';
+    CheckEquals(1, RecordCount);
+    CheckEquals(2, FieldByName('eq_id').AsInteger, 'field eq_id');
+
+    Filter := 'eq_date > ''' + DateToStr(Encodedate(2000, 1, 1)) + '''';
+    CheckEquals(2, RecordCount);
+    First;
+    CheckEquals(2, FieldByName('eq_id').AsInteger, 'field eq_id');
+    Next;
+    CheckEquals(4, FieldByName('eq_id').AsInteger, 'field eq_id');
 
     Filter := 'eq_id = 3';
     CheckEquals(1, RecordCount);
-    FieldByName('eq_name').AsString := 'Computer';
+    CheckEquals('Computer', FieldByName('eq_name').AsString, 'Field eq_name');
 
     Filter := 'eq_name = ''Volvo''';
     CheckEquals(1, RecordCount);
-    FieldByName('eq_id').AsInteger := 1;
+    CheckEquals(1, FieldByName('eq_id').AsInteger, 'field eq_id');
 
     Filter := 'eq_cost > 1000';
     CheckEquals(2, RecordCount);
     First;
-    FieldByName('eq_id').AsInteger := 1;
+    CheckEquals(1, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 2;
+    CheckEquals(2, FieldByName('eq_id').AsInteger, 'field eq_id');
 
     Filter := 'eq_type <= 10';
     CheckEquals(3, RecordCount);
     First;
-    FieldByName('eq_id').AsInteger := 1;
+    CheckEquals(1, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 2;
+    CheckEquals(2, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 3;
+    CheckEquals(3, FieldByName('eq_id').AsInteger, 'field eq_id');
 
-    Filter := 'eq_type = ''C*''';
-    CheckEquals(1, RecordCount);
-    FieldByName('eq_id').AsInteger := 3;
+    Filter := 'eq_name like ''C*''';
+    CheckEquals(1, RecordCount); //oracle, ADO, SQLite fails
+    CheckEquals(3, FieldByName('eq_id').AsInteger, 'field eq_id');
 
-    Filter := 'eq_type = ''*o*''';
+    Filter := 'eq_name like ''*o*''';
     CheckEquals(4, RecordCount);
     {check what cursor save position}
-    FieldByName('eq_id').AsInteger := 4;
+    CheckEquals(3, FieldByName('eq_id').AsInteger, 'field eq_id');
     First;
-    FieldByName('eq_id').AsInteger := 1;
+    CheckEquals(1, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 2;
+    CheckEquals(2, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 3;
+    CheckEquals(3, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 4;
-
-    Filter := 'eq_type = ''' + DateToStr(Encodedate(2001, 7, 10)) + '''';
-    CheckEquals(1, RecordCount);
-    FieldByName('eq_id').AsInteger := 2;
-
-    Filter := 'eq_type > ''' + DateToStr(Encodedate(2000, 1, 1)) + '''';
-    CheckEquals(2, RecordCount);
-    First;
-    FieldByName('eq_id').AsInteger := 2;
-    Next;
-    FieldByName('eq_id').AsInteger := 4;
+    CheckEquals(4, FieldByName('eq_id').AsInteger, 'field eq_id');
 
 
-    Filter := 'eq_type <= ''' + DateToStr(Encodedate(2000, 7, 8)) + '''';
+    Filter := 'eq_date <= ''' + DateToStr(Encodedate(2000, 8, 7)) + '''';
     CheckEquals(3, RecordCount);
     First;
-    FieldByName('eq_id').AsInteger := 1;
+    CheckEquals(1, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 3;
+    CheckEquals(3, FieldByName('eq_id').AsInteger, 'field eq_id');
     Next;
-    FieldByName('eq_id').AsInteger := 4;
+    CheckEquals(4, FieldByName('eq_id').AsInteger, 'field eq_id');
+    Filter := '';
 
+    Filter := 'woff_date is null';  //SF.net ticket #229
+    CheckEquals(4, RecordCount);
+
+    Filter := 'woff_date is not null'; //SF.net ticket #229
+    CheckEquals(0, RecordCount);
+
+    Filter := '';
+//    *)
     Close;
+
+    //(*
+    //SF.net ticket #200 ->
+    CheckEquals(1, Connection.DbcConnection.CreateStatement.ExecuteUpdate('insert into equipment(eq_id, eq_name) values ('+
+      IntToStr(5)+','''+DateToStr(Encodedate(2000, 8, 7))+''')'), 'inserted row');
+    try
+      Open;
+      CheckEquals(5, RecordCount);
+
+      Filter := 'eq_name = '''+DateToStr(Encodedate(2000, 8, 7))+'''';
+      CheckEquals(1, RecordCount);
+      CheckEquals(5, FieldByName('eq_id').AsInteger, 'field eq_id');
+
+    finally
+      Connection.DbcConnection.CreateStatement.ExecuteUpdate('delete from equipment where eq_id = '+IntToStr(5));
+    end;
+    //*)
   end;
 end;
 
@@ -1276,7 +1305,7 @@ var
 begin
   Query := CreateReadOnlyQuery;
   try
-  { TODO : Enable this test }//!!  TestFilterGeneric(Query);
+    TestFilterGeneric(Query);
   finally
     Query.Free;
   end;
@@ -2047,6 +2076,150 @@ begin
     Query.SQL.Text := 'delete from '+Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Spaced Names')+
       ' where cs_id > '+IntToStr(TEST_ROW_ID-1);
     Query.ExecSQL;
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDataSet.TestDefineFields;
+
+var
+  Query: TZQuery;
+
+  procedure CheckFieldList(const FieldList: string; const Expect: array of TField);
+  var
+    Bool: Boolean;
+    Fields: TObjectDynArray;
+    i: Integer;
+  begin
+    Fields := DefineFields(Query, FieldList, Bool, CommonTokenizer);
+    CheckEquals(Length(Expect), Length(Fields), 'FieldList "' + FieldList + '" - item count');
+    for i := Low(Fields) to High(Fields) do
+      CheckSame(Expect[i], Fields[i], 'FieldList "' + FieldList + '" - item #' + IntToStr(i));
+  end;
+
+  procedure CheckExceptionRaised(const FieldList: string; Expect: ExceptionClass; const ExpectMsg: string = '');
+  var
+    Bool: Boolean;
+  begin
+    try
+      DefineFields(Query, FieldList, Bool, CommonTokenizer);
+    except on E: Exception do
+      begin
+        CheckIs(E, Expect, 'FieldList "' + FieldList + '" - unexpected exception class');
+        if ExpectMsg <> '' then
+          CheckEquals(ExpectMsg, E.Message, 'FieldList "' + FieldList + '" - unexpected exception message');
+        Exit; // OK
+      end;
+    end;
+    Check(False, 'FieldList "' + FieldList + '" - must raise exception');
+  end;
+
+var
+  F1, F2: TStringField;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    F1 := TStringField.Create(Query);
+    F1.FieldName := 'Field1';
+    Query.Fields.Add(F1);
+    F2 := TStringField.Create(Query);
+    F2.FieldName := 'Field2';
+    Query.Fields.Add(F2);
+
+    CheckFieldList('', []);
+    CheckFieldList('Field1,Field2', [F1, F2]);
+    CheckFieldList('Field1;Field2', [F1, F2]);
+    CheckFieldList('Field1 Field2', [F1, F2]); // this works currently but not recommended
+    CheckFieldList('"Field1", "Field2"', [F1, F2]);
+    CheckFieldList('1,0', [F2, F1]);
+
+    CheckExceptionRaised('-1,0', EZDatabaseError, Format(SIncorrectSymbol, ['-']));
+    CheckExceptionRaised('Field1/Field2', EZDatabaseError, Format(SIncorrectSymbol, ['/']));
+    CheckExceptionRaised('1,12345', EZDatabaseError, Format(SFieldNotFound2, [12345]));
+    CheckExceptionRaised('foo,bar', EDatabaseError);
+    CheckExceptionRaised('Field1,"not exists",Field2', EDatabaseError);
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDataSet.TestDefineSortedFields;
+
+var
+  Query: TZQuery;
+
+  procedure CheckFieldList(const FieldList: string; const ExpectFields: array of TField; const ExpectCompareKinds: array of TComparisonKind);
+  var
+    Bool: Boolean;
+    Fields: TObjectDynArray;
+    CompareKinds: TComparisonKindArray;
+    i: Integer;
+  begin
+    DefineSortedFields(Query, FieldList, Fields, CompareKinds, Bool);
+    CheckEquals(Length(ExpectFields), Length(Fields), 'FieldList "' + FieldList + '" - item count');
+    CheckEquals(Length(ExpectCompareKinds), Length(CompareKinds), 'FieldList "' + FieldList + '" - item count');
+    for i := Low(Fields) to High(Fields) do
+    begin
+      CheckSame(ExpectFields[i], Fields[i], 'FieldList "' + FieldList + '" - item #' + IntToStr(i));
+      CheckEquals(Integer(ExpectCompareKinds[i]), Integer(CompareKinds[i]), 'FieldList "' + FieldList + '" - item #' + IntToStr(i));
+    end;
+  end;
+
+  procedure CheckExceptionRaised(const FieldList: string; Expect: ExceptionClass; const ExpectMsg: string = '');
+  var
+    Bool: Boolean;
+    Fields: TObjectDynArray;
+    CompareKinds: TComparisonKindArray;
+  begin
+    try
+      DefineSortedFields(Query, FieldList, Fields, CompareKinds, Bool);
+    except on E: Exception do
+      begin
+        CheckIs(E, Expect, 'FieldList "' + FieldList + '" - unexpected exception class');
+        if ExpectMsg <> '' then
+          CheckEquals(E.Message, ExpectMsg, 'FieldList "' + FieldList + '" - unexpected exception message');
+        Exit; // OK
+      end;
+    end;
+    Check(False, 'FieldList "' + FieldList + '" - must raise exception');
+  end;
+
+var
+  F1, F2, F3: TStringField;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    F1 := TStringField.Create(Query);
+    F1.FieldName := 'Field1';
+    Query.Fields.Add(F1);
+    F2 := TStringField.Create(Query);
+    F2.FieldName := 'Field2';
+    Query.Fields.Add(F2);
+    F3 := TStringField.Create(Query);
+    F3.FieldName := 'Desc';
+    Query.Fields.Add(F3);
+
+    CheckFieldList('', [], []);
+    CheckFieldList('Field1,Field2', [F1, F2], [ckAscending, ckAscending]);
+    CheckFieldList('Field1;Field2', [F1, F2], [ckAscending, ckAscending]);
+    CheckFieldList('"Field1", "Field2"', [F1, F2], [ckAscending, ckAscending]);
+    CheckFieldList('1,0', [F2, F1], [ckAscending, ckAscending]);
+
+    CheckFieldList('Field1 desc, Field2 desc', [F1, F2], [ckDescending, ckDescending]);
+    CheckFieldList('Field1 desc, 1 asc', [F1, F2], [ckDescending, ckAscending]);
+    CheckFieldList('Field1 desc, Field2 desc, Desc', [F1, F2, F3], [ckDescending, ckDescending, ckAscending]);
+    CheckFieldList('Field1 desc, Field2 desc, Desc asc', [F1, F2, F3], [ckDescending, ckDescending, ckAscending]);
+    CheckFieldList('Field1 desc  Field2 desc Desc', [F1, F2, F3], [ckDescending, ckDescending, ckAscending]);
+
+    CheckExceptionRaised('-1,0', EZDatabaseError, Format(SIncorrectSymbol, ['-']));
+    CheckExceptionRaised('Field1/Field2', EZDatabaseError, Format(SIncorrectSymbol, ['/']));
+    CheckExceptionRaised('1,12345', EZDatabaseError, Format(SFieldNotFound2, [12345]));
+    CheckExceptionRaised('foo,bar', EDatabaseError);
+    CheckExceptionRaised('Field1,"not exists",Field2', EDatabaseError);
+
+    CheckExceptionRaised('Field1 Field2', EZDatabaseError, Format(SIncorrectSymbol, ['Field2']));
+    CheckExceptionRaised('Field1 desc,Field2 foo', EZDatabaseError, Format(SIncorrectSymbol, ['foo']));
+  finally
     Query.Free;
   end;
 end;

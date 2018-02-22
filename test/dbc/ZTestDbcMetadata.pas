@@ -335,7 +335,8 @@ begin
   CheckEquals('P_DEP_ID', UpperCase(Resultset.GetStringByName('FKCOLUMN_NAME')));
   CheckEquals(1, Resultset.GetSmallByName('KEY_SEQ'));
   {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
-  if not (Protocol = 'ado') then
+  //Oracle does not provide a update_rule and delete_role is 'no action'
+  if not (Protocol = 'ado') and not StartsWith(Protocol, 'oracle') then
   begin
     CheckEquals(1, Resultset.GetSmallByName('UPDATE_RULE'));
     CheckEquals(1, Resultset.GetSmallByName('DELETE_RULE'));
@@ -360,8 +361,9 @@ procedure TZGenericTestDbcMetadata.TestMetadataGetExportedKeys;
     CheckEquals(FKTable, UpperCase(Resultset.GetStringByName('FKTABLE_NAME')));
     CheckEquals(FKColumn, UpperCase(Resultset.GetStringByName('FKCOLUMN_NAME')));
     CheckEquals(KeySeq, Resultset.GetSmallByName('KEY_SEQ'));
-    {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
-    if not (Protocol = 'ado') then
+   {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
+   //Oracle does not provide a update_rule and delete_role is 'no action'
+   if not (Protocol = 'ado') and not StartsWith(Protocol, 'oracle') then
     begin
       CheckEquals(UpdateRule, Resultset.GetSmallByName('UPDATE_RULE'));
       CheckEquals(DeleteRule, Resultset.GetSmallByName('DELETE_RULE'));
@@ -405,7 +407,8 @@ begin
   CheckEquals('P_DEP_ID', UpperCase(Resultset.GetStringByName('FKCOLUMN_NAME')));
   CheckEquals(1, Resultset.GetSmallByName('KEY_SEQ'));
   {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
-  if not (Protocol = 'ado') then
+  //Oracle does not provide a update_rule and delete_role is 'no action'
+  if not (Protocol = 'ado') and not StartsWith(Protocol, 'oracle') then
   begin
     CheckEquals(1, Resultset.GetSmallByName('UPDATE_RULE'));
     CheckEquals(1, Resultset.GetSmallByName('DELETE_RULE'));

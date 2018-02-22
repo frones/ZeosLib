@@ -67,7 +67,7 @@ type
   TZValFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
 {**  Str <> Date}
@@ -75,21 +75,21 @@ type
   TZCtodFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a DTOS function. }
   TZDtosFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
   {** Implements a DTOS function. }
   TZFormatDateTimeFunction = class (TZAbstractFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant; override;
   end;
 
 procedure AddConvertFunctions(Functions : TZFunctionsList);
@@ -129,7 +129,7 @@ var
  { TZValFunction }
 
 function TZValFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsFloat(Result, StrToFloatDef(Stack.GetParameter(1).VString, 0, InternalDefaultFormatSettings));
@@ -138,7 +138,7 @@ end;
 { TZCtodFunction }
 
 function TZCtodFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   Value: TZVariant;
 begin
@@ -150,7 +150,7 @@ end;
 { TZDtosFunction }
 
 function TZDtosFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 var
   Value: TZVariant;
 begin
@@ -162,7 +162,7 @@ end;
 { TZFormatDateTimeFunction }
 
 function TZFormatDateTimeFunction.Execute(Stack: TZExecutionStack;
-  VariantManager: IZVariantManager): TZVariant;
+  const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 2);
   VariantManager.SetAsString(Result, FormatDateTime(Stack.GetParameter(2).VString, Stack.GetParameter(1).VDateTime));

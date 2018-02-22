@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs, StrUtils,
   ZVariant, ZDbcIntfs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility,
   ZSelectSchema, {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZCollections;
 
@@ -661,6 +661,7 @@ function TZGenericCachedResolver.FormWhereClause(Columns: TObjectList;
 var
   I, N: Integer;
   Current: TZResolverParameter;
+  Condition: string;
 begin
   Result := '';
   N := Columns.Count - WhereColumns.Count;
@@ -668,20 +669,19 @@ begin
   for I := 0 to WhereColumns.Count - 1 do
   begin
     Current := TZResolverParameter(WhereColumns[I]);
-    if Result <> '' then
-      Result := Result + ' AND ';
 
-    Result := Result + IdentifierConvertor.Quote(Current.ColumnName);
+    Condition := IdentifierConvertor.Quote(Current.ColumnName);
     if OldRowAccessor.IsNull(Current.ColumnIndex) then
     begin
-      Result := Result + ' IS NULL ';
+      Condition := Condition + ' IS NULL';
       Columns.Delete(N);
     end
     else
     begin
-      Result := Result + '=?';
+      Condition := Condition + '=?';
       Inc(N);
     end;
+    AppendSepString(Result, Condition, ' AND ');
   end;
 
   if Result <> '' then
@@ -699,17 +699,7 @@ var
   I: Integer;
   Current: TZResolverParameter;
   TableName: string;
-  Temp1, Temp2: string;
-  l1: Integer; 
-
-  procedure Append(const app: String); 
-  begin 
-    if Length(Temp1) < l1 + length(app) then 
-      SetLength(Temp1, 2 * (length(app) + l1)); 
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(app[1], Temp1[l1+1], length(app)*SizeOf(Char));
-    Inc(l1, length(app)); 
-  end; 
-
+  Temp1: string;
 begin
   TableName := DefineTableName;
   DefineInsertColumns(Columns);
@@ -719,20 +709,15 @@ begin
     Exit;
   end;
 
-  Temp1 := '';    l1 := 0; 
-  SetLength(Temp2, 2 * Columns.Count - 1); 
-  for I := 0 to Columns.Count - 1 do 
-  begin 
-    Current := TZResolverParameter(Columns[I]); 
-    if Temp1 <> '' then 
-      Append(','); 
-    Append(IdentifierConvertor.Quote(Current.ColumnName)); 
-    if I > 0 then 
-      Temp2[I*2] := ','; 
-    Temp2[I*2+1] := '?'; 
-  end; 
-  SetLength(Temp1, l1); 
-  Result := 'INSERT INTO '+TableName+' ('+Temp1+') VALUES ('+Temp2+')';
+  Temp1 := '';
+  for I := 0 to Columns.Count - 1 do
+  begin
+    Current := TZResolverParameter(Columns[I]);
+    AppendSepString(Temp1, IdentifierConvertor.Quote(Current.ColumnName), ',');
+  end;
+
+  Result := 'INSERT INTO '+TableName+' ('+Temp1+') VALUES ('+
+    DupeString('?,', Columns.Count - 1) + '?' +')';
 end;
 
 {**
@@ -761,9 +746,7 @@ begin
   for I := 0 to Columns.Count - 1 do
   begin
     Current := TZResolverParameter(Columns[I]);
-    if Temp <> '' then
-      Temp := Temp + ',';
-    Temp := Temp + IdentifierConvertor.Quote(Current.ColumnName) + '=?';
+    AppendSepString(Temp, IdentifierConvertor.Quote(Current.ColumnName) + '=?', ',');
   end;
 
   Result := 'UPDATE '+TableName+' SET '+Temp;
@@ -778,11 +761,8 @@ end;
 }
 function TZGenericCachedResolver.FormDeleteStatement(Columns: TObjectList;
   OldRowAccessor: TZRowAccessor): string;
-var
-  TableName: string;
 begin
-  TableName := DefineTableName;
-  Result := 'DELETE FROM '+ TableName;
+  Result := 'DELETE FROM '+ DefineTableName;
   DefineWhereKeyColumns(Columns);
   Result := Result + FormWhereClause(Columns, OldRowAccessor);
 end;
@@ -805,12 +785,10 @@ begin
   for I := 0 to Columns.Count - 1 do
   begin
     Current := TZResolverParameter(Columns[I]);
-    if Result <> '' then
-      Result := Result + ',';
     if Current.DefaultValue <> '' then
-      Result := Result + Current.DefaultValue
+      AppendSepString(Result, Current.DefaultValue, ',')
     else
-      Result := Result + 'NULL';
+      AppendSepString(Result, 'NULL', ',');
   end;
   Result := 'SELECT ' + Result;
 end;

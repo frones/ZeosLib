@@ -98,7 +98,7 @@ type
     function GetNextToken: TZExpressionToken;
     procedure ShiftToken;
     function CheckTokenTypes(
-      TokenTypes: array of TZExpressionTokenType): Boolean;
+      const TokenTypes: array of TZExpressionTokenType): Boolean;
 
     procedure TokenizeExpression;
 
@@ -110,10 +110,10 @@ type
     procedure SyntaxAnalyse5;
     procedure SyntaxAnalyse6;
   public
-    constructor Create(Tokenizer: IZTokenizer);
+    constructor Create(const Tokenizer: IZTokenizer);
     destructor Destroy; override;
 
-    procedure Parse(Expression: string);
+    procedure Parse(const Expression: string);
     procedure Clear;
 
     property Tokenizer: IZTokenizer read FTokenizer write FTokenizer;
@@ -162,7 +162,7 @@ const
   Creates this expression parser object.
   @param Tokenizer an expression tokenizer.
 }
-constructor TZExpressionParser.Create(Tokenizer: IZTokenizer);
+constructor TZExpressionParser.Create(const Tokenizer: IZTokenizer);
 begin
   FTokenizer := Tokenizer;
   FExpression := '';
@@ -200,7 +200,7 @@ end;
   Sets a new expression string and parses it into internal byte code.
   @param expression a new expression string.
 }
-procedure TZExpressionParser.Parse(Expression: string);
+procedure TZExpressionParser.Parse(const Expression: string);
 begin
   Clear;
   FExpression := Trim(Expression);
@@ -266,7 +266,7 @@ end;
   @return <code>True</code> if token types match.
 }
 function TZExpressionParser.CheckTokenTypes(
-  TokenTypes: array of TZExpressionTokenType): Boolean;
+  const TokenTypes: array of TZExpressionTokenType): Boolean;
 var
   I: Integer;
   Temp: TZExpressionToken;
@@ -376,6 +376,7 @@ begin
           begin
             TokenType := ttConstant;
             TokenValue:= EncodeDateTime(StrToDateTime(Tokens[TokenIndex]));
+            TokenValue.VString := Tokens[TokenIndex]; //this conversion is not 100%safe so'll keep the native value by using advantages of the ZVariant
           end;
       end;
 

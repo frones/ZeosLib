@@ -72,6 +72,12 @@ const
     JulianEpoch = -2415018.5; // "julian day 0" is January 1, 4713 BC 12:00AM
   {$IFEND}
 
+  StrFalseUp = 'FALSE';
+  StrTrueUp = 'TRUE';
+  BoolStrsUp: array[Boolean] of string = (StrFalseUp, StrTrueUp);
+  BoolStrsUpRaw: array[Boolean] of RawByteString = (RawByteString(StrFalseUp), RawByteString(StrTrueUp));
+  BoolStrsUpW: array[Boolean] of ZWideString = (ZWideString(StrFalseUp), ZWideString(StrTrueUp));
+
 type
   {** Defines variant types. }
   TZVariantType = (vtNull, vtBoolean, vtInteger, vtUInteger, vtFloat, vtBytes,
@@ -313,8 +319,8 @@ type
   public
     constructor Create(const Value: TZVariant);
     constructor CreateWithBoolean(Value: Boolean);
-    constructor CreateWithInteger(Value: Int64);
-    constructor CreateWithFloat(Value: Extended);
+    constructor CreateWithInteger(const Value: Int64);
+    constructor CreateWithFloat(const Value: Extended);
     constructor CreateWithString(const Value: String);
     {$IFDEF UNICODE}
     // unicodeType is a (dummy) default parameter to avoid
@@ -327,7 +333,7 @@ type
     {$ELSE}
     constructor CreateWithUnicodeString(const Value: WideString);
     {$ENDIF}
-    constructor CreateWithDateTime(Value: TDateTime);
+    constructor CreateWithDateTime(const Value: TDateTime);
 
     function IsNull: Boolean;
     function GetValue: TZVariant;
@@ -1829,10 +1835,7 @@ begin
         vtNull:
           Result.VString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VString := 'TRUE'
-          else
-            Result.VString := 'FALSE';
+          Result.VString := BoolStrsUp[Value.VBoolean];
         vtBytes:
           ZSetString(Pointer(Value.VBytes), Length(Value.VBytes), Result.VString);
         vtInteger:
@@ -1874,10 +1877,7 @@ begin
         vtNull:
           Result.VAnsiString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VAnsiString := 'TRUE'
-          else
-            Result.VAnsiString := 'FALSE';
+          Result.VAnsiString := BoolStrsUpRaw[Value.VBoolean];
         vtInteger:
           Result.VAnsiString := IntToRaw(Value.VInteger);
         vtUInteger:
@@ -1911,10 +1911,7 @@ begin
         vtNull:
           Result.VUTF8String := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VUTF8String := 'TRUE'
-          else
-            Result.VUTF8String := 'FALSE';
+          Result.VUTF8String := BoolStrsUpRaw[Value.VBoolean];
         vtInteger:
           Result.VUTF8String := IntToRaw(Value.VInteger);
         vtUInteger:
@@ -1955,10 +1952,7 @@ begin
         vtNull:
           Result.VRawByteString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VRawByteString := 'TRUE'
-          else
-            Result.VRawByteString := 'FALSE';
+          Result.VRawByteString := BoolStrsUpRaw[Value.VBoolean];
         vtInteger:
           Result.VRawByteString := IntToRaw(Value.VInteger);
         vtUInteger:
@@ -1977,10 +1971,7 @@ begin
         vtNull:
           Result.VUnicodeString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VUnicodeString := 'TRUE'
-          else
-            Result.VUnicodeString := 'FALSE';
+          Result.VUnicodeString := BoolStrsUpW[Value.VBoolean];
         vtInteger:
           Result.VUnicodeString := IntToUnicode(Value.VInteger);
         vtUInteger:
@@ -2286,10 +2277,7 @@ DateTimeFromUnicode:
         vtNull:
           Result.VString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VString := 'TRUE'
-          else
-            Result.VString := 'FALSE';
+          Result.VString := BoolStrsUp[Value.VBoolean];
         vtBytes:
           ZSetString(Pointer(Value.VBytes), Length(Value.VBytes), Result.VString);
         vtInteger:
@@ -2335,10 +2323,7 @@ DateTimeFromUnicode:
         vtNull:
           Result.VAnsiString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VAnsiString := 'TRUE'
-          else
-            Result.VAnsiString := 'FALSE';
+          Result.VAnsiString := BoolStrsUpRaw[Value.VBoolean];
         vtInteger:
           Result.VAnsiString := IntToRaw(Value.VInteger);
         vtUInteger:
@@ -2377,10 +2362,7 @@ DateTimeFromUnicode:
         vtNull:
           Result.VUTF8String := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VUTF8String := 'TRUE'
-          else
-            Result.VUTF8String := 'FALSE';
+          Result.VUTF8String := BoolStrsUpRaw[Value.VBoolean];
         vtInteger:
           Result.VUTF8String := IntToRaw(Value.VInteger);
         vtUInteger:
@@ -2423,10 +2405,7 @@ DateTimeFromUnicode:
         vtNull:
           Result.VRawByteString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VRawByteString := 'TRUE'
-          else
-            Result.VRawByteString := 'FALSE';
+          Result.VRawByteString := BoolStrsUpRaw[Value.VBoolean];
         vtInteger:
           Result.VRawByteString := IntToRaw(Value.VInteger);
         vtUInteger:
@@ -2464,10 +2443,7 @@ DateTimeFromUnicode:
         vtNull:
           Result.VUnicodeString := '';
         vtBoolean:
-          if Value.VBoolean then
-            Result.VUnicodeString := 'TRUE'
-          else
-            Result.VUnicodeString := 'FALSE';
+          Result.VUnicodeString := BoolStrsUpW[Value.VBoolean];
         vtInteger:
           Result.VUnicodeString := IntToUnicode(Value.VInteger);
         vtUInteger:
@@ -2604,10 +2580,7 @@ begin
     vtNull:
       Result := '';
     vtBoolean:
-      if Value.VBoolean then
-        Result := 'TRUE'
-      else
-        Result := 'FALSE';
+      Result := BoolStrsUpRaw[Value.VBoolean];
     vtBytes:
       ZSetString(Pointer(Value.VBytes), Length(Value.VBytes), Result);
     vtInteger:
@@ -2804,7 +2777,7 @@ end;
   Constructs this object and assignes the main properties.
   @param Value a datetime value.
 }
-constructor TZAnyValue.CreateWithDateTime(Value: TDateTime);
+constructor TZAnyValue.CreateWithDateTime(const Value: TDateTime);
 begin
   FValue := EncodeDateTime(Value);
 end;
@@ -2813,7 +2786,7 @@ end;
   Constructs this object and assignes the main properties.
   @param Value a float value.
 }
-constructor TZAnyValue.CreateWithFloat(Value: Extended);
+constructor TZAnyValue.CreateWithFloat(const Value: Extended);
 begin
   FValue := EncodeFloat(Value);
 end;
@@ -2822,7 +2795,7 @@ end;
   Constructs this object and assignes the main properties.
   @param Value a integer value.
 }
-constructor TZAnyValue.CreateWithInteger(Value: Int64);
+constructor TZAnyValue.CreateWithInteger(const Value: Int64);
 begin
   FValue := EncodeInteger(Value);
 end;
