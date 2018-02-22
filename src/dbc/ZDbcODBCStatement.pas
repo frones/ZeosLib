@@ -526,7 +526,7 @@ var
     Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
     Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
   end;
-  procedure SetDouble(d: Double); overload;
+  procedure SetDouble(const d: Double); overload;
   begin
     PDouble(ParameterDataPtr)^ := D;
     Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
@@ -552,14 +552,14 @@ var
     Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
     Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
   end;
-  procedure SetDate(D: TDateTime);
+  procedure SetDate(const D: TDateTime);
   begin
     DecodeDate(D, Year, PSQL_DATE_STRUCT(ParameterDataPtr)^.month, PSQL_DATE_STRUCT(ParameterDataPtr)^.day);
     PSQL_DATE_STRUCT(ParameterDataPtr)^.year := year;
     Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
     Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
   end;
-  procedure SetTime(D: TDateTime);
+  procedure SetTime(const D: TDateTime);
   begin
     if Param.C_DataType = SQL_C_BINARY then begin
       //https://bytes.com/topic/sql-server/answers/851494-sql-state-22003-numeric-value-out-range-time-data-type
@@ -574,7 +574,7 @@ var
     Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
     Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
   end;
-  procedure SetTimeStamp(D: TDateTime);
+  procedure SetTimeStamp(const D: TDateTime);
   begin
     DecodeDateTime(D, Year, PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.day,
       PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.hour, PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.second, fraction);
