@@ -54,6 +54,7 @@ unit ZDbcOleDBStatement;
 interface
 
 {$I ZDbc.inc}
+{.$DEFINE ENABLE_OLEDB}
 {$IFDEF ENABLE_OLEDB}
 {$IFDEF WIN64}
 {$ALIGN 8}

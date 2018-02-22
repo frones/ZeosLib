@@ -547,12 +547,11 @@ end;
 }
 function TZOleDBConnection.CreatePreparedStatement(const SQL: string; Info: TStrings):
   IZPreparedStatement;
-var Stmt: TZOleDBPreparedStatement;
 begin
-  if Closed then Open;
-  Stmt := TZOleDBPreparedStatement.Create(Self, SQL, Info);
-  RegisterPendingStatement(Stmt);
-  Result := Stmt;
+  if Closed then
+    Open;
+  Result := TZOleDBPreparedStatement.Create(Self, SQL, Info);
+  RegisterPendingStatement(Result);
 end;
 
 {**

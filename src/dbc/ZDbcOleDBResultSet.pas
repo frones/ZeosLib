@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{.$DEFINE ENABLE_OLEDB}
 {$IFDEF ENABLE_OLEDB}
 
 uses

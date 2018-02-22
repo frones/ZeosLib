@@ -54,7 +54,7 @@ unit ZDbcOleDBUtils;
 interface
 
 {$I ZDbc.inc}
-
+{.$DEFINE ENABLE_OLEDB}
 {$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
 uses
   Types, SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
@@ -95,8 +95,8 @@ function PrepareOleParamDBBindings(DBUPARAMS: DB_UPARAMS;
   ParamInfoArray: PDBParamInfoArray; var TempLobs: TInterfacesDynArray): DBROWOFFSET;
 
 procedure InitOleParamDBBindings(var DBBindingArray: TDBParamInfoDynArray;
-  const InParamTypes: TZSQLTypeArray; InParamValues: TZVariantDynArray;
-  ClientVarManager: IZClientVariantManager);
+  const InParamTypes: TZSQLTypeArray; const InParamValues: TZVariantDynArray;
+  const ClientVarManager: IZClientVariantManager);
 
 function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS; InMemoryData: Boolean;
   var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO;
@@ -622,8 +622,8 @@ begin
 end;
 
 procedure InitOleParamDBBindings(var DBBindingArray: TDBParamInfoDynArray;
-  const InParamTypes: TZSQLTypeArray; InParamValues: TZVariantDynArray;
-  ClientVarManager: IZClientVariantManager);
+  const InParamTypes: TZSQLTypeArray; const InParamValues: TZVariantDynArray;
+  const ClientVarManager: IZClientVariantManager);
 var I: Integer;
 begin
   SetLength(DBBindingArray, Length(InParamTypes));
@@ -641,7 +641,7 @@ begin
       else if InParamTypes[i] = stBytes then
         DBBindingArray[i].ulParamSize := Min(255, Length(ClientVarManager.GetAsBytes(InParamValues[i])) shl 3 shr 1)
       else if InParamTypes[i] in [stAsciiStream, stUnicodeStream, stBinaryStream] then
-        DBBindingArray[i].dwFlags := DBBindingArray[i].dwFlags and DBPARAMFLAGS_ISLONG;
+        DBBindingArray[i].dwFlags := DBBindingArray[i].dwFlags or DBPARAMFLAGS_ISLONG;
     end;
   end;
 end;
@@ -840,7 +840,7 @@ begin
                 {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(DBBindingArray[I].cbMaxLen-1, Length(InParamValues[i].VRawByteString)));
             end;
         DBTYPE_WSTR or DBTYPE_BYREF:
-          if (DBBindingArray[i].dwFlags and DBPARAMFLAGS_ISLONG <> 0) then //insi lob's!!!
+          if (DBBindingArray[i].dwFlags and DBPARAMFLAGS_ISLONG <> 0) then //Unicode lob's!!!
             if (InParamValues[i].vType = vtInterface) then
             begin
               TempBlob := InParamValues[i].vInterface as IZBLob;

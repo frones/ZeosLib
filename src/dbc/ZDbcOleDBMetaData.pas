@@ -54,7 +54,8 @@ unit ZDbcOleDBMetadata;
 interface
 
 {$I ZDbc.inc}
-{$IFDEF ENABLE_OLEDB}
+{.$DEFINE ENABLE_OLEDB}
+{$IF Defined(ENABLE_OLEDB) or defined(ENABLE_ADO)}
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -69,7 +70,7 @@ type
 
   IZOleDBDatabaseInfo = interface(IZDatabaseInfo)
     ['{FCAE90AA-B0B6-49A2-AB74-33E604FF8804}']
-    procedure InitilizePropertiesFromDBInfo(const DBInitialize: IDBInitialize; Malloc: IMalloc);
+    procedure InitilizePropertiesFromDBInfo(const DBInitialize: IDBInitialize; const Malloc: IMalloc);
     function SupportsMultipleStorageObjects: Boolean;
   end;
   {** Implements OleDB Database Information. }
@@ -240,9 +241,9 @@ type
     function GetExtraNameCharacters: string; override;
 
     //Ole related
-    procedure InitilizePropertiesFromDBInfo(const DBInitialize: IDBInitialize; Malloc: IMalloc);
+    procedure InitilizePropertiesFromDBInfo(const DBInitialize: IDBInitialize; const Malloc: IMalloc);
   end;
-
+  {$IFDEF ENABLE_OLEDB}
   {** Implements Ado Metadata. }
   TOleDBDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
@@ -298,13 +299,16 @@ type
   public
     constructor Create(Connection: TZAbstractConnection; const Url: TZURL); override;
   end;
+  {$ENDIF ENABLE_OLEDB}
 
 implementation
 
 uses
   Variants, ZGenericSqlToken, ZFastCode,
   {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
-  ZDbcOleDB, ZDbcOleDBUtils, ZDbcOleDBResultSet, ZDbcOleDBStatement;
+  {$IFDEF ENABLE_OLEDB} //Exclude for ADO
+  ZDbcOleDB, ZDbcOleDBUtils, ZDbcOleDBResultSet, ZDbcOleDBStatement
+  {$ENDIF};
 
 const bYesNo: Array[Boolean] of ZWideString = ('NO','YES');
 { TZOleDBDatabaseInfo }
@@ -552,7 +556,7 @@ begin
 end;
 
 procedure TZOleDBDatabaseInfo.InitilizePropertiesFromDBInfo(
-  const DBInitialize: IDBInitialize; Malloc: IMalloc);
+  const DBInitialize: IDBInitialize; const Malloc: IMalloc);
 const PropCount = 25;
   rgPropertyIDs: array[0..PropCount-1] of DBPROPID =
     ( DBPROP_PROVIDERFRIENDLYNAME,
@@ -1492,7 +1496,7 @@ begin
   Result := True;
 end;
 
-
+{$IFDEF ENABLE_OLEDB}
 { TOleDBDatabaseMetadata }
 
 {**
@@ -2880,10 +2884,11 @@ begin
       Break;
     end;
 end;
-//(*
-{$ELSE !ENABLE_OLEDB}
-implementation
 {$ENDIF ENABLE_OLEDB}
+//(*
+{$ELSE }
+implementation
+{$IFEND}
 //*)
 end.
 
