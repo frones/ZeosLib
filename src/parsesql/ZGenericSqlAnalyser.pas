@@ -130,8 +130,8 @@ type
 
     function DefineSelectSchemaFromSections(
       Sections: TObjectList): IZSelectSchema;
-    function DefineSelectSchemaFromQuery(const Tokenizer: IZTokenizer; const SQL: string):
-      IZSelectSchema;
+    function DefineSelectSchemaFromQuery(const Tokenizer: IZTokenizer;
+      const SQL: string): IZSelectSchema;
   end;
 
 implementation

@@ -350,6 +350,7 @@ procedure TZInterbase6Connection.InternalCreate;
 var
   RoleName: string;
   ConnectTimeout : integer;
+  WireCompression: Boolean;
 begin
   FPlainDriver := PlainDriver as IZInterbasePlainDriver; //force just one QueryIntf
   FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
@@ -385,7 +386,8 @@ begin
   if ConnectTimeout >= 0 then
     URL.Properties.Values['isc_dpb_connect_timeout'] := ZFastCode.IntToStr(ConnectTimeout);
 
-  if StrToBoolEx(URL.Properties.Values[ConnProps_WireCompression]) then
+  WireCompression := StrToBoolEx(URL.Properties.Values[ConnProps_WireCompression]);
+  if WireCompression then
     URL.Properties.Values['isc_dpb_config'] :=
       URL.Properties.Values['isc_dpb_config'] + LineEnding + 'WireCompression=true';
 

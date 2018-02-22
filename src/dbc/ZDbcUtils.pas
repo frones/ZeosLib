@@ -269,7 +269,7 @@ begin
   while FirstDelimiter('?', Temp) > 0 do //Get all aditional Parameters
     Temp := Copy(Temp, FirstDelimiter('?', Temp)+1, Length(Temp));
   PutSplitString(ResultInfo, Temp, ';'); //overrides all Strings
-  ResultInfo.Text := StringReplace(ResultInfo.Text, #9, ';', [rfReplaceAll]); //unescape the #9 char
+  ResultInfo.Text := ReplaceChar(#9, ';', ResultInfo.Text); //unescape the #9 char
 
   if Assigned(Info) then //isn't that strange? (Shouldn't we pick out double-values?)
     Resultinfo.AddStrings(Info);//All possible PWD/Password and UID/UserName are aviable now, but for what? And the can also be doubled!

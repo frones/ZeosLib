@@ -92,7 +92,6 @@ type
     function GetURL: string;
     procedure SetURL(const Value: string);
     procedure DoOnPropertiesChange(Sender: TObject);
-    function GetParamAndValue(const AString: String; out Param, Value: String): Boolean;
     procedure AddValues(Values: TStrings);
   public
     constructor Create; overload;
@@ -119,18 +118,18 @@ type
 
 implementation
 
-uses ZCompatibility, ZFastCode, ZConnProperties;
+uses ZCompatibility, ZFastCode, ZSysUtils, ZConnProperties;
 
 //escape the ';' char to #9
 function Escape(const S: string): string; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 begin
-  Result := StringReplace(S, ';', #9, [rfReplaceAll]);
+  Result := ReplaceChar(';', #9, S);
 end;
 
 //unescape the #9 char to ';'
 function UnEscape(const S: string): string; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 begin
-  Result := StringReplace(S, #9, ';', [rfReplaceAll]);
+  Result := ReplaceChar(#9, ';', S);
 end;
 
 {TZURLStringList}
@@ -265,26 +264,10 @@ end;
 
 function TZURL.GetURL: string;
 var
-  hasParamPart : boolean;
-  procedure AddParamPart(const ParamPart: String);
-  const
-    ParamSep: array[Boolean] of Char = ('?', ';');
-  begin
-    Result := Result + ParamSep[hasParamPart] + ParamPart;
-    hasParamPart := True;
-  end;
-
+  Params: string;
 begin
-  Result := '';
-  hasParamPart := false;
-
-  // Prefix
-  Result := Result + Prefix + ':';
-
-  // Protocol
-  Result := Result + Protocol + ':';
-
-  Result := Result + '//'; //Allways set the doubleslash  to avoid unix '/' path issues if host is empty
+  // Prefix, Protocol and always set the doubleslash to avoid unix '/' path issues if host is empty
+  Result := Prefix + ':' + Protocol + ':' + '//';
 
   // HostName/Port
   if HostName <> '' then
@@ -298,21 +281,23 @@ begin
   if Database <> '' then
     Result := Result + '/' + FDatabase;
 
-  // UserName
+  // Join the params
+
+  Params := '';
+
   if FUserName <> '' then
-    AddParamPart('username=' + FUserName);
-
-  // Password
+    AppendSepString(Params, 'username=' + FUserName, ';');
   if FPassword <> '' then
-    AddParamPart('password=' + FPassword);
-
-  // Properties
+    AppendSepString(Params, 'password=' + FPassword, ';');
   if Properties.Count > 0 then
-    AddParamPart(Properties.URLText); //Adds the escaped string
-
-  // LibLocation
+    AppendSepString(Params, Properties.URLText, ';'); //Adds the escaped string
   if FLibLocation <> '' then
-    AddParamPart('LibLocation='+ FLibLocation);
+    AppendSepString(Params, 'LibLocation='+ FLibLocation, ';');
+
+  // Construct the final string
+
+  if Params <> '' then
+    Result := Result + '?' + Params;
 end;
 
 procedure TZURL.SetURL(const Value: string);
@@ -333,64 +318,37 @@ begin
   ADatabase := '';
   AProperties := '';
 
-  AValue := Value;
-
   // Strip out the parameters
-  I := ZFastCode.Pos('?', AValue);
-  if I > 0 then
-  begin
-    AValue := Copy(AValue, I + 1, MaxInt);
-    AProperties := AValue;
-    AValue := Copy(Value, 1, I - 1);
-  end;
+  BreakString(Value, '?', AValue, AProperties);
 
   // APrefix
   I := ZFastCode.Pos(':', AValue);
   if I = 0 then
     raise Exception.Create('TZURL.SetURL - The prefix is missing');
-  APrefix := Copy(AValue, 1, I - 1);
-  Delete(AValue, 1, I);
+  BreakString(AValue, ':', APrefix, AValue);
 
   // AProtocol
   I := ZFastCode.Pos(':', AValue);
   if I = 0 then
     raise Exception.Create('TZURL.SetURL - The protocol is missing');
-  AProtocol := Copy(AValue, 1, I - 1);
-  Delete(AValue, 1, I);
+  BreakString(AValue, ':', AProtocol, AValue);
 
-  // AHostName
-  if ZFastCode.Pos('//', AValue) = 1 then
+  if StartsWith(AValue, '//') then
   begin
-    Delete(AValue, 1, 2);
-
+    Delete(AValue, 1, Length('//'));
     // Strip "hostname[:port]" out of "/database"
-    I := ZFastCode.Pos('/', AValue);
-    if I > 0 then
-    begin
-      AHostName := Copy(AValue, 1, I - 1);
-      Delete(AValue, 1, I);    
-    end
-    else
-    begin
-      AHostName := AValue;
-      AValue := '';
-    end;
-
-    // APort
-    I := ZFastCode.Pos(':', AHostName);
-    if I > 0 then
-    begin
-      APort := Copy(AHostName, I + 1, MaxInt);
-      Delete(AHostName, I, MaxInt);  
-    end;
+    BreakString(AValue, '/', AValue, ADatabase);
+    // AHostName, APort
+    BreakString(AValue, ':', AHostName, APort);
   end
   else
-  // Likely a database delimited by / so remove the /
-  if ZFastCode.Pos('/', AValue) = 1 then
-    Delete(AValue, 1, 1);
-
-  // ADatabase
-  ADatabase := AValue;
+  begin
+    // Likely a database delimited by / so remove the /
+    if StartsWith(AValue, '/') then
+      Delete(AValue, 1, Length('/'));
+    // ADatabase
+    ADatabase := AValue;
+  end;
 
   FPrefix := APrefix;
   FProtocol := AProtocol;
@@ -452,34 +410,20 @@ begin
     FOnPropertiesChange(Sender);
 end;
 
-function TZURL.GetParamAndValue(const AString: String; out Param, Value: String): Boolean;
-var
-  DelimPos: Integer;
-begin
-  DelimPos := ZFastCode.Pos('=', AString);
-  Result := DelimPos <> 0;
-  Param := '';
-  Value := '';
-  if DelimPos <> 0 then
-  begin
-    Param := Copy(AString, 1, DelimPos -1);
-    Value := Copy(AString, DelimPos+1, MaxInt);
-    Result := Value <> ''; //avoid losing empty but added Params. e.g TestIdentifierQuotes
-  end;
-end;
-
 procedure TZURL.AddValues(Values: TStrings);
 var
   I: Integer;
   Param, Value: String;
 begin
-  for i := 0 to Values.Count -1 do
-    if GetParamAndValue(Values[i], Param{%H-}, Value{%H-}) then
+  for I := 0 to Values.Count -1 do
+  begin
+    BreakString(Values[I], '=', Param{%H-}, Value{%H-});
+    if Value <> '' then
       FProperties.Values[Param] := Value
     else
-      if FProperties.IndexOf(Values[i]) = -1 then //add unique params only!
-        FProperties.Add(Values[i]);
+      if FProperties.IndexOf(Values[I]) = -1 then //add unique params only!
+        FProperties.Add(Values[I]);
+  end;
 end;
 
 end.
-

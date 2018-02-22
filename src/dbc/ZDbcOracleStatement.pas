@@ -808,7 +808,7 @@ var
   end;
 
 var
-  InParams: string;
+  InParams, sName: string;
 begin
   sFunc := '';
   if PackageIncludedList.Count > 0 then
@@ -822,13 +822,16 @@ begin
       sFunc := '';
       for i := LastIndex to high(FOracleParams) do
         if IncludeCount = FOracleParams[i].pProcIndex then
+        begin
+          sName := RemoveChar('.', FOracleParams[I].pName);
           if ( FOracleParams[I].pType = 4 ) then //ptResult
-            sFunc := ' :'+StringReplace(FOracleParams[I].pName, '.', '', [rfReplaceAll])+' := '
+            sFunc := ' :'+sName+' := '
           else
             if InParams <> '' then
-              InParams := InParams +', :'+StringReplace(FOracleParams[I].pName, '.', '', [rfReplaceAll])
+              InParams := InParams +', :'+sName
             else
-              InParams := InParams +':'+StringReplace(FOracleParams[I].pName, '.', '', [rfReplaceAll])
+              InParams := InParams +':'+sName
+        end
         else
         begin
           LastIndex := I;

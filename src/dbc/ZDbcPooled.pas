@@ -791,11 +791,8 @@ var
 begin
   Result := nil;
 
-  TempURL := TZURL.Create;
+  TempURL := TZURL.Create(GetEmbeddedURL(URL.URL), URL.Properties);
   try
-    TempURL.URL := GetEmbeddedURL(URL.URL);
-    TempURL.Properties.Text := URL.Properties.Text;
-
     ConnectionPool := nil;
 
 { TODO

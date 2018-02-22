@@ -319,8 +319,8 @@ type
   public
     constructor Create(const Value: TZVariant);
     constructor CreateWithBoolean(Value: Boolean);
-    constructor CreateWithInteger(Value: Int64);
-    constructor CreateWithFloat(Value: Extended);
+    constructor CreateWithInteger(const Value: Int64);
+    constructor CreateWithFloat(const Value: Extended);
     constructor CreateWithString(const Value: String);
     {$IFDEF UNICODE}
     // unicodeType is a (dummy) default parameter to avoid
@@ -333,7 +333,7 @@ type
     {$ELSE}
     constructor CreateWithUnicodeString(const Value: WideString);
     {$ENDIF}
-    constructor CreateWithDateTime(Value: TDateTime);
+    constructor CreateWithDateTime(const Value: TDateTime);
 
     function IsNull: Boolean;
     function GetValue: TZVariant;
@@ -2777,7 +2777,7 @@ end;
   Constructs this object and assignes the main properties.
   @param Value a datetime value.
 }
-constructor TZAnyValue.CreateWithDateTime(Value: TDateTime);
+constructor TZAnyValue.CreateWithDateTime(const Value: TDateTime);
 begin
   FValue := EncodeDateTime(Value);
 end;
@@ -2786,7 +2786,7 @@ end;
   Constructs this object and assignes the main properties.
   @param Value a float value.
 }
-constructor TZAnyValue.CreateWithFloat(Value: Extended);
+constructor TZAnyValue.CreateWithFloat(const Value: Extended);
 begin
   FValue := EncodeFloat(Value);
 end;
@@ -2795,7 +2795,7 @@ end;
   Constructs this object and assignes the main properties.
   @param Value a integer value.
 }
-constructor TZAnyValue.CreateWithInteger(Value: Int64);
+constructor TZAnyValue.CreateWithInteger(const Value: Int64);
 begin
   FValue := EncodeInteger(Value);
 end;

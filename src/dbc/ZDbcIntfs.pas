@@ -1422,8 +1422,9 @@ begin
   FURL.UserName := UserName;
   FURL.Password := Password;
   FURL.Port := Port;
+  FURL.Properties.Clear;
   if Assigned(Properties) then
-    FURL.Properties.Text := Properties.Text;
+    FURL.Properties.AddStrings(Properties);
   FURL.LibLocation := LibLocation;
   Result := FURL.URL;
 end;
@@ -1449,7 +1450,10 @@ begin
   UserName := FURL.UserName;
   PassWord := FURL.Password;
   if Assigned(ResultInfo) then
-    ResultInfo.Text := FURL.Properties.Text;
+  begin
+    ResultInfo.Clear;
+    ResultInfo.AddStrings(FURL.Properties);
+  end;
 end;
 
 {**

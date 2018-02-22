@@ -678,6 +678,7 @@ function TZGenericCachedResolver.FormWhereClause(Columns: TObjectList;
 var
   I, N: Integer;
   Current: TZResolverParameter;
+  Condition: string;
 begin
   Result := '';
   N := Columns.Count - WhereColumns.Count;
@@ -685,20 +686,19 @@ begin
   for I := 0 to WhereColumns.Count - 1 do
   begin
     Current := TZResolverParameter(WhereColumns[I]);
-    if Result <> '' then
-      Result := Result + ' AND ';
 
-    Result := Result + IdentifierConvertor.Quote(Current.ColumnName);
+    Condition := IdentifierConvertor.Quote(Current.ColumnName);
     if OldRowAccessor.IsNull(Current.ColumnIndex) then
     begin
-      Result := Result + ' IS NULL ';
+      Condition := Condition + ' IS NULL';
       Columns.Delete(N);
     end
     else
     begin
-      Result := Result + '=?';
+      Condition := Condition + '=?';
       Inc(N);
     end;
+    AppendSepString(Result, Condition, ' AND ');
   end;
 
   if Result <> '' then
@@ -731,9 +731,7 @@ begin
   for I := 0 to Columns.Count - 1 do
   begin
     Current := TZResolverParameter(Columns[I]);
-    if Temp1 <> '' then
-      Temp1 := Temp1 + ',';
-    Temp1 := Temp1 + IdentifierConvertor.Quote(Current.ColumnName);
+    AppendSepString(Temp1, IdentifierConvertor.Quote(Current.ColumnName), ',');
   end;
 
   Result := 'INSERT INTO '+TableName+' ('+Temp1+') VALUES ('+
@@ -781,9 +779,7 @@ begin
   for I := 0 to Columns.Count - 1 do
   begin
     Current := TZResolverParameter(Columns[I]);
-    if Temp <> '' then
-      Temp := Temp + ',';
-    Temp := Temp + IdentifierConvertor.Quote(Current.ColumnName) + '=?';
+    AppendSepString(Temp, IdentifierConvertor.Quote(Current.ColumnName) + '=?', ',');
   end;
 
   Result := 'UPDATE '+TableName+' SET '+Temp;
@@ -798,11 +794,8 @@ end;
 }
 function TZGenericCachedResolver.FormDeleteStatement(Columns: TObjectList;
   OldRowAccessor: TZRowAccessor): string;
-var
-  TableName: string;
 begin
-  TableName := DefineTableName;
-  Result := 'DELETE FROM '+ TableName;
+  Result := 'DELETE FROM '+ DefineTableName;
   DefineWhereKeyColumns(Columns);
   Result := Result + FormWhereClause(Columns, OldRowAccessor);
 end;
@@ -825,12 +818,10 @@ begin
   for I := 0 to Columns.Count - 1 do
   begin
     Current := TZResolverParameter(Columns[I]);
-    if Result <> '' then
-      Result := Result + ',';
     if Current.DefaultValue <> '' then
-      Result := Result + Current.DefaultValue
+      AppendSepString(Result, Current.DefaultValue, ',')
     else
-      Result := Result + 'NULL';
+      AppendSepString(Result, 'NULL', ',');
   end;
   Result := 'SELECT ' + Result;
 end;

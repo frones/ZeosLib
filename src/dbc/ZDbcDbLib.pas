@@ -101,6 +101,7 @@ type
     FProvider: TDBLibProvider;
     FFreeTDS: Boolean;
     FServerAnsiCodePage: Word;
+    FPlainDriver: IZDBLibPlainDriver;
     function FreeTDS: Boolean;
     function GetProvider: TDBLibProvider;
     procedure ReStartTransactionSupport;
@@ -117,6 +118,7 @@ type
     function GetConnectionHandle: PDBPROCESS;
     procedure CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: RawbyteString); virtual;
     procedure StartTransaction; virtual;
+    function GetServerCollation: String;
   public
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
@@ -229,6 +231,7 @@ end;
 }
 procedure TZDBLibConnection.InternalCreate;
 begin
+  FPlainDriver := PlainDriver as IZDBLibPlainDriver;
   FDisposeCodePage := False;
   if ZFastCode.Pos('mssql', LowerCase(Url.Protocol)) > 0  then
   begin
@@ -385,7 +388,7 @@ end;
 
 function TZDBLibConnection.GetPlainDriver: IZDBLibPlainDriver;
 begin
-  Result := PlainDriver as IZDBLibPlainDriver;
+  Result := FPlainDriver;
 end;
 
 function TZDBLibConnection.GetConnectionHandle: PDBPROCESS;
@@ -450,6 +453,8 @@ begin
   InternalExecuteStatement('set textsize 2147483647 set quoted_identifier on');
 
   inherited Open;
+
+  (GetMetadata.GetDatabaseInfo as IZDbLibDatabaseInfo).InitIdentifierCase(GetServerCollation);
 
   if (FProvider = dpMsSQL) and (not FreeTDS) then
   begin
@@ -686,6 +691,13 @@ begin
     ZSetString(PAnsiChar(GetPlainDriver.dbdata(FHandle, 1)), GetPlainDriver.dbDatLen(FHandle, 1), Result{%H-});
     {$ENDIF}
   GetPlainDriver.dbCancel(FHandle);
+end;
+
+function TZDBLibConnection.GetServerCollation: String;
+begin
+  if FProvider = dpMsSQL
+  then Result := DetermineMSServerCollation
+  else Result := 'unknown';
 end;
 
 function TZDBLibConnection.DetermineMSServerCodePage(const Collation: String): Word;

@@ -3817,9 +3817,9 @@ begin
     //stString, stUnicodeString: do not handle here!
     stBytes: InternalSetBytes(FBuffer, ColumnIndex, StrToBytes(Value));
     stGUID:
-      if (Value = '') or (Length(Value) <> 38) or (Length(Value) <> 36)
-      then SetNull(ColumnIndex)
-      else ZSysUtils.ValidGUIDToBinary(PChar(Pointer(Value)), PAnsiChar(Data));
+      if Length(Value) in [0, 36, 38]
+        then ValidGUIDToBinary(PAnsiChar(Pointer(Value)), PAnsiChar(Data))
+        else SetNull(ColumnIndex);
     stDate:
       begin
         PDateTime(Data)^ :=
@@ -3901,9 +3901,9 @@ begin
     //stString, stUnicodeString: do not handle here!
     stBytes: InternalSetBytes(FBuffer, ColumnIndex, Value, len^);
     stGUID:
-      if (Value = nil) or ((Len <> nil) and (Len^ <> 38)) or ((Len <> nil) and (Len^ <> 36))
-      then SetNull(ColumnIndex)
-      else ZSysUtils.ValidGUIDToBinary(Value, PAnsiChar(Data));
+      if (Value <> nil) and ((Len = nil) or (Len^ in [36, 38]))
+        then ValidGUIDToBinary(Value, PAnsiChar(Data))
+        else SetNull(ColumnIndex);
     stDate:
       begin
         PDateTime(Data)^ := RawSQLDateToDateTime (Value, Len^, ConSettings^.DisplayFormatSettings, Failed{%H-});
@@ -3995,9 +3995,9 @@ begin
     stBytes:
       SetBytes(ColumnIndex, StrToBytes(ZWideString(Value)));
     stGUID:
-      if (Value = nil) or ((Len <> nil) and (Len^ <> 38)) or ((Len <> nil) and (Len^ <> 36))
-      then SetNull(ColumnIndex)
-      else ZSysUtils.ValidGUIDToBinary(Value, PAnsichar(Data));
+      if (Value <> nil) and ((Len = nil) or (Len^ in [36, 38]))
+        then ValidGUIDToBinary(Value, PAnsiChar(Data))
+        else SetNull(ColumnIndex);
     stDate:
       begin
         PDateTime(Data)^ :=
@@ -4093,9 +4093,9 @@ begin
     //stString, stUnicodeString: do not handle here!
     stBytes: InternalSetBytes(fBuffer, ColumnIndex, Pointer(Value), Length(Value));
     stGUID:
-      if (Value = '') or (Length(Value) <> 38) or (Length(Value) <> 36)
-      then SetNull(ColumnIndex)
-      else ZSysUtils.ValidGUIDToBinary(PAnsichar(Pointer(Value)), PAnsiChar(Data));
+      if Length(Value) in [0, 36, 38]
+        then ValidGUIDToBinary(PAnsichar(Pointer(Value)), PAnsiChar(Data))
+        else SetNull(ColumnIndex);
     stDate:
       begin
         PDateTime(Data)^ := RawSQLDateToDateTime(Pointer(Value), Length(Value),
@@ -4181,9 +4181,9 @@ begin
     stBytes:
       InternalSetBytes(FBuffer, ColumnIndex, StrToBytes(Value));
     stGUID:
-      if (Value = '') or (Length(Value) <> 38) or (Length(Value) <> 36)
-      then SetNull(ColumnIndex)
-      else ZSysUtils.ValidGUIDToBinary(PWideChar(Pointer(Value)), PAnsiChar(Data));
+      if Length(Value) in [0, 36, 38]
+        then ValidGUIDToBinary(PWideChar(Pointer(Value)), PAnsiChar(Data))
+        else SetNull(ColumnIndex);
     stDate:
       begin
         PDateTime(Data)^ := UnicodeSQLDateToDateTime(Pointer(Value), Length(Value),

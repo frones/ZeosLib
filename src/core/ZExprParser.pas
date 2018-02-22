@@ -376,6 +376,7 @@ begin
           begin
             TokenType := ttConstant;
             TokenValue:= EncodeDateTime(StrToDateTime(Tokens[TokenIndex]));
+            TokenValue.VString := Tokens[TokenIndex]; //this conversion is not 100%safe so'll keep the native value by using advantages of the ZVariant
           end;
       end;
 
