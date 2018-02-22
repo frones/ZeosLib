@@ -1727,7 +1727,8 @@ begin
                     Param.CurrParamDataPtr := CharRec.P
                   else
                     System.Move(CharRec.P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
-                  (PWideChar(Param.CurrParamDataPtr)+(PSQLLEN(StrLen_or_IndPtr)^ shr 1))^ := #0; //set a terminating #0 to top of data
+                  if not ((PWideChar(Param.CurrParamDataPtr)+(PSQLLEN(StrLen_or_IndPtr)^ shr 1))^ = WideChar(#0)) then //WideChar use for FPC else dead slow
+                    (PWideChar(Param.CurrParamDataPtr)+(PSQLLEN(StrLen_or_IndPtr)^ shr 1))^ := WideChar(#0); //set a terminating #0 to top of data
                 end else begin
                   CharRec := ClientVarManager.GetAsCharRec(InParamValues[i], ConSettings^.ClientCodePage^.CP);
                   PSQLLEN(StrLen_or_IndPtr)^ := {%H-}Min((Param.ColumnSize*ConSettings^.ClientCodePage^.CharWidth), CharRec.Len);
@@ -1735,7 +1736,8 @@ begin
                     Param.CurrParamDataPtr := CharRec.P
                   else
                     System.Move(CharRec.P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
-                  (PAnsiChar(Param.CurrParamDataPtr)+PSQLLEN(StrLen_or_IndPtr)^)^ := #0; //terminate the String if a truncation happens
+                  if not ((PAnsiChar(Param.CurrParamDataPtr)+PSQLLEN(StrLen_or_IndPtr)^)^ = #0) then
+                    (PAnsiChar(Param.CurrParamDataPtr)+PSQLLEN(StrLen_or_IndPtr)^)^ := #0; //terminate the String if a truncation happens
                 end;
                 Inc(PAnsiChar(ParameterDataPtr), Param.BufferSize);
               end;
