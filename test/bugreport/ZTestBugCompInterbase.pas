@@ -89,6 +89,7 @@ type
     procedure Test_Ticket54;
     procedure Test_Ticket63;
     procedure Test_Ticket67;
+    procedure Test_Ticket228;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -739,6 +740,34 @@ begin
     Query.Free;
   end;
 end;
+
+procedure ZTestCompInterbaseBugReport.Test_Ticket228;
+var
+  Query: TZQuery;
+  I, j: Integer;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'SELECT RDB$RELATION_NAME' +
+      ' FROM RDB$RELATIONS' +
+      ' WHERE RDB$SYSTEM_FLAG=0;';
+    Query.Open;
+    I := Query.RecordCount;
+    J := 0;
+    while not Query.Eof do begin
+      Check(Query.Fields[0].AsString <> '');
+      Query.Next;
+      Inc(J);
+    end;
+    Query.Close;
+    Check(I = J, 'TestPassed');
+  finally
+    Query.Free;
+  end;
+end;
+
 {
 I'm using Firebird 2.5.2. This error appears for lazarus 1.0.12 (windows and linux) and delphi 7.
 INSERT with RETURNING works when executed Query.SQL.Text. If you do the Close and Open, the error is "Error Code: -502. The cursor identified in an OPEN statement is already open.".
