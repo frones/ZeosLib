@@ -552,8 +552,8 @@ var Stmt: TZOleDBPreparedStatement;
 begin
   if Closed then Open;
   Stmt := TZOleDBPreparedStatement.Create(Self, SQL, Info);
+  Result := Stmt; //inc refcount
   RegisterPendingStatement(Stmt); //this is required using the native IZStmt becouse of the weak reference
-  Result := Stmt;
 end;
 
 {**
