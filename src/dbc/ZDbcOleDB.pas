@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{.$DEFINE ENABLE_OLEDB}
 {$IFDEF ENABLE_OLEDB}
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
@@ -547,11 +548,12 @@ end;
 }
 function TZOleDBConnection.CreatePreparedStatement(const SQL: string; Info: TStrings):
   IZPreparedStatement;
+var Stmt: TZOleDBPreparedStatement;
 begin
-  if Closed then
-    Open;
-  Result := TZOleDBPreparedStatement.Create(Self, SQL, Info);
-  RegisterPendingStatement(Result);
+  if Closed then Open;
+  Stmt := TZOleDBPreparedStatement.Create(Self, SQL, Info);
+  RegisterPendingStatement(Stmt); //this is required using the native IZStmt becouse of the weak reference
+  Result := Stmt;
 end;
 
 {**

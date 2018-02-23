@@ -664,53 +664,44 @@ var
   begin
     PLen^ := CodePoints shl 1;
     if ByRef then
-      if (Src = nil) or (CodePoints = 0) then
-        PPointer(Data)^ := PEmptyUnicodeString
-      else
-        PPointer(Data)^ := Src
-    else
-    begin
+      if (Src = nil) or (CodePoints = 0)
+      then PPointer(Data)^ := PEmptyUnicodeString
+      else PPointer(Data)^ := Src
+    else begin
       {set Reference Pointer first! see: PrepareOleDBBindings comment}
       PNativeUInt(Data)^ := Data+SizeOf(Pointer);
-      if (Src = nil) or (CodePoints = 0) then
-        PWideChar(Data + SizeOf(Pointer))^ := #0
-      else
-        System.Move(Src^, Pointer(Data +SizeOf(Pointer))^, PLen^+2);
+      if (Src = nil)
+      then PWideChar(Data + SizeOf(Pointer))^ := #0
+      else System.Move(Src^, Pointer(Data +SizeOf(Pointer))^, PLen^+2);
     end;
   end;
   procedure ProcessAnsi(ByRef: Boolean; Src: Pointer; Len: Integer);
   begin
     PLen^ := Len;
     if ByRef then
-      if (Src = nil) or (Len = 0) then
-        PPointer(Data)^ := PEmptyAnsiString
-      else
-        PPointer(Data)^ := Src
-    else
-    begin
+      if (Src = nil) or (Len = 0)
+      then PPointer(Data)^ := PEmptyAnsiString
+      else PPointer(Data)^ := Src
+    else begin
       {set Reference Pointer first! see: PrepareOleDBBindings comment}
       PNativeUInt(Data)^ := Data +SizeOf(Pointer);
-      if (Src = nil) or (Len = 0) then
-        PAnsiChar(Data + SizeOf(Pointer))^ := #0
-      else
-        System.Move(Src^, Pointer(Data + SizeOf(Pointer))^, Len + 1);
+      if (Src = nil)
+      then PAnsiChar(Data + SizeOf(Pointer))^ := #0
+      else System.Move(Src^, Pointer(Data + SizeOf(Pointer))^, Len + 1);
     end;
   end;
   procedure ProcessBinary(ByRef: Boolean; Src: Pointer; Len: Cardinal);
   begin
     PLen^ := Len;
     if ByRef then
-      if (Src = nil) or (Len = 0) then
-        PPointer(Data)^ := nil
-      else
-        PPointer(Data)^ := Src
-    else
-    begin
+      if (Src = nil) or (Len = 0)
+      then PPointer(Data)^ := nil
+      else PPointer(Data)^ := Src
+    else begin
       PNativeUInt(Data)^ := Data+SizeOf(Pointer);
-      if (Src = nil) or (Len = 0) then
-        PPointer(Data+ SizeOf(Pointer))^ := nil
-      else
-        System.Move(Src^, Pointer(Data+ SizeOf(Pointer))^, Len);
+      if (Src = nil) or (Len = 0)
+      then PPointer(Data+ SizeOf(Pointer))^ := nil
+      else System.Move(Src^, Pointer(Data+ SizeOf(Pointer))^, Len);
     end;
   end;
 begin
