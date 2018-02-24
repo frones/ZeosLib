@@ -229,7 +229,6 @@ end;
 }
 procedure TZDBLibConnection.InternalCreate;
 begin
-  FPlainDriver := PlainDriver as IZDBLibPlainDriver;
   FDisposeCodePage := False;
   if ZFastCode.Pos('mssql', LowerCase(Url.Protocol)) > 0  then
   begin
@@ -386,6 +385,8 @@ end;
 
 function TZDBLibConnection.GetPlainDriver: IZDBLibPlainDriver;
 begin
+  if FPlainDriver = nil then
+    FPlainDriver := PlainDriver as IZDBLibPlainDriver;
   Result := FPlainDriver;
 end;
 

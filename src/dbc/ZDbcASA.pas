@@ -87,6 +87,7 @@ type
   private
     FSQLCA: TZASASQLCA;
     FHandle: PZASASQLCA;
+    FPLainDriver: IZASAPlainDriver;
   private
     procedure StartTransaction; virtual;
     function DetermineASACharSet: String;
@@ -380,7 +381,9 @@ end;
 }
 function TZASAConnection.GetPlainDriver: IZASAPlainDriver;
 begin
-  Result := PlainDriver as IZASAPlainDriver;
+  if fPlainDriver = nil then
+    fPlainDriver := PlainDriver as IZASAPlainDriver;
+  Result := fPlainDriver;
 end;
 
 {**
