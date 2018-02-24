@@ -69,6 +69,9 @@ type
 
   TZAbstractStatement = class(TZCodePagedObject, IZStatement, IZLoggingObject)
   private
+    fWBuffer: array[Byte] of WideChar;
+    fABuffer: array[Byte] of AnsiChar;
+    fABufferIndex, fWBufferIndex: Integer;
     FMaxFieldSize: Integer;
     FMaxRows: Integer;
     FEscapeProcessing: Boolean;
@@ -94,6 +97,10 @@ type
   protected
     FStatementId : Integer;
     FOpenResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
+    procedure ToBuff(const Value: ZWideString; var Result: ZWideString); overload;
+    procedure ToBuff(const Value: RawByteString; var Result: RawByteString); overload;
+    procedure FlushBuff(var Result: ZWideString); overload;
+    procedure FlushBuff(var Result: RawByteString); overload;
     procedure PrepareOpenResultSetForReUse; virtual;
     procedure PrepareLastResultSetForReUse; virtual;
     procedure FreeOpenResultSetReference;
@@ -528,6 +535,54 @@ begin
     {$ENDIF UNICODE}
 end;
 
+procedure TZAbstractStatement.ToBuff(const Value: RawByteString;
+  var Result: RawByteString);
+var
+  P: PAnsiChar;
+  L: Integer;
+begin
+  L := Length(Value);
+  if L = 0 then Exit;
+  if L <= (SizeOf(fABuffer)-fABufferIndex) then begin
+    System.Move(Pointer(Value)^, fABuffer[fABufferIndex], L);
+    Inc(fABufferIndex, L);
+  end else begin
+    SetLength(Result, Length(Result)+fABufferIndex+L);
+    P := Pointer(Result);
+    Inc(P, Length(Result)-fABufferIndex-L);
+    if fABufferIndex > 0 then begin
+      System.Move(fABuffer[0], P^, fABufferIndex);
+      Inc(P, fABufferIndex);
+      fABufferIndex := 0;
+    end;
+    System.Move(Pointer(Value)^, P^, L);
+  end;
+end;
+
+procedure TZAbstractStatement.ToBuff(const Value: ZWideString;
+  var Result: ZWideString);
+var
+  P: PWideChar;
+  L: Integer;
+begin
+  L := Length(Value);
+  if L = 0 then Exit;
+  if L <= ((SizeOf(fWBuffer) shr 1)-fWBufferIndex) then begin
+    System.Move(Pointer(Value)^, fWBuffer[fWBufferIndex], L shl 1);
+    Inc(fWBufferIndex, L);
+  end else begin
+    SetLength(Result, Length(Result)+fWBufferIndex+L);
+    P := Pointer(Result);
+    Inc(P, Length(Result)-fWBufferIndex-L);
+    if fWBufferIndex > 0 then begin
+      System.Move(fWBuffer[0], P^, fWBufferIndex shl 1);
+      Inc(P, fWBufferIndex);
+      fWBufferIndex := 0;
+    end;
+    System.Move(Pointer(Value)^, P^, L shl 1);
+  end;
+end;
+
 procedure TZAbstractStatement.SetASQL(const Value: RawByteString);
 begin
   if FASQL <> Value then
@@ -593,6 +648,30 @@ begin
         FLastResultSet.Close;
         FLastResultSet := nil;
       end;
+end;
+
+procedure TZAbstractStatement.FlushBuff(var Result: RawByteString);
+var P: PAnsiChar;
+begin
+  if fABufferIndex > 0 then begin
+    SetLength(Result, Length(Result)+fABufferIndex);
+    P := Pointer(Result);
+    Inc(P, Length(Result)-fABufferIndex);
+    System.Move(fABuffer[0], P^, fABufferIndex);
+    fABufferIndex := 0;
+  end;
+end;
+
+procedure TZAbstractStatement.FlushBuff(var Result: ZWideString);
+var P: PWideChar;
+begin
+  if fWBufferIndex > 0 then begin
+    SetLength(Result, Length(Result)+fWBufferIndex);
+    P := Pointer(Result);
+    Inc(P, Length(Result)-fWBufferIndex);
+    System.Move(fWBuffer[0], P^, fWBufferIndex shl 1);
+    fWBufferIndex := 0;
+  end;
 end;
 
 procedure TZAbstractStatement.FreeOpenResultSetReference;
@@ -818,28 +897,25 @@ begin
     Result := ''; //init for FPC
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
-    for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
-    begin
+    for i := Low(SQLTokens) to high(SQLTokens) do begin //Assembles the Query
       {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} + SQLTokens[i].Value;
-      case (SQLTokens[i].TokenType) of
+      case SQLTokens[i].TokenType of
         ttEscape:
           {$IFDEF UNICODE}
-          Result := Result + ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens[i].Value,
-            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+          ToBuff(ZUnicodeToRaw(SQLTokens[i].Value, ConSettings^.ClientCodePage^.CP), Result);
           {$ELSE}
-          Result := Result + SQLTokens[i].Value;
+          ToBuff(SQLTokens[i].Value, Result);
           {$ENDIF}
         ttQuoted, ttComment,
         ttWord, ttQuotedIdentifier, ttKeyword:
-          Result := Result + ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens[i].Value,
-            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+          ToBuff(ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens[i].Value,
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP), Result);
         else
-          Result := Result + {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(SQLTokens[i].Value);
+          ToBuff({$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(SQLTokens[i].Value), Result);
       end;
     end;
-  end
-  else
-  begin
+    FlushBuff(Result);
+  end else begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     {$IFDEF UNICODE}
     Result := ConSettings^.ConvFuncs.ZUnicodeToRaw(SQL, ConSettings^.ClientCodePage^.CP);
@@ -854,28 +930,30 @@ var
   SQLTokens: TZTokenDynArray;
   i: Integer;
 begin
-  if ConSettings^.AutoEncode then
-  begin
-    Result := ''; //init for FPC
+  if ConSettings^.AutoEncode then begin
+    Result := ''; //init
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
-    for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
-    begin
+    for i := Low(SQLTokens) to high(SQLTokens) do begin //Assembles the Query
       {$IFDEF UNICODE}
-      FWSQL := SQLTokens[i].Value;
-      Result := Result + SQLTokens[i].Value;
+      ToBuff(SQLTokens[i].Value, Result);
       {$ELSE !UNICODE}
-      FASQL := FASQL + SQLTokens[i].Value;
+      ToBuff(SQLTokens[i].Value, FASQL);
       case (SQLTokens[i].TokenType) of
         ttEscape,
         ttQuoted, ttComment,
         ttWord, ttQuotedIdentifier, ttKeyword:
-          Result := ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP);
+          ToBuff(ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP), Result);
         else
-          Result := Result + ASCII7ToUnicodeString(SQLTokens[i].Value);
+          ToBuff(ASCII7ToUnicodeString(SQLTokens[i].Value), Result);
       end;
       {$ENDIF UNICODE}
     end;
+    FlushBuff(Result);
+    FWSQL := Result;
+    {$IFNDEF UNICODE}
+    FlushBuff(FASQL);
+    {$ENDIF}
   end
   else
   begin
