@@ -192,6 +192,7 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
+{$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
 function TZMySQLDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := nil; //init
@@ -202,6 +203,7 @@ begin
     MySQLCriticalSection.Leave;
   end;
 end;
+{$WARNINGS ON} //suppress the deprecatad warning of calling create from internal
 
 {**
   Gets the driver's major version number. Initially this should be 1.

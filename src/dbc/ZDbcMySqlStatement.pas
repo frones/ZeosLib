@@ -98,8 +98,8 @@ type
     function CreateExecStatement: IZStatement; override;
     function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString; override;
   public
-    constructor Create(PlainDriver: IZMySQLPlainDriver;
-      Connection: IZConnection; const SQL: string; Info: TStrings;
+    constructor Create(const PlainDriver: IZMySQLPlainDriver;
+      const Connection: IZConnection; const SQL: string; Info: TStrings;
       Handle: PZMySQLConnect);
   end;
 
@@ -145,7 +145,6 @@ type
     FColumnArray: TZMysqlColumnBuffer;
     FParamBindBuffer: TZMySQLParamBindBuffer;
     FPrefetchRows: Ulong; //Number of rows to fetch from server at a time when using a cursor.
-    //function PrepareAnsiSQLQuery: RawByteString;
     function CreateResultSet(const SQL: string): IZResultSet;
 
     function GetFieldType(SQLType: TZSQLType; Var Signed: Boolean): TMysqlFieldTypes;
@@ -459,8 +458,8 @@ end;
   @param Info a statement parameters.
   @param Handle a connection handle pointer.
 }
-constructor TZMySQLEmulatedPreparedStatement.Create(PlainDriver: IZMySQLPlainDriver;
-  Connection: IZConnection; const SQL: string; Info: TStrings; Handle: PZMySQLConnect);
+constructor TZMySQLEmulatedPreparedStatement.Create(const PlainDriver: IZMySQLPlainDriver;
+  const Connection: IZConnection; const SQL: string; Info: TStrings; Handle: PZMySQLConnect);
 begin
   inherited Create(Connection, SQL, Info);
   FHandle := Handle;
@@ -622,31 +621,6 @@ begin
       LastUpdateCount := FPlainDriver.GetAffectedRows(FHandle);
   end;
 end;
-
-{**
-  Prepares an SQL statement and inserts all data values.
-  @return a RawByteString SQL statement.
-}
-(*function TZMySQLPreparedStatement.PrepareAnsiSQLQuery: RawByteString;
-var
-  I: Integer;
-  ParamIndex: Integer;
-begin
-  ParamIndex := 0;
-  Result := '';
-  for I := 0 to High(CachedQueryRaw) do
-    if IsParamIndex[I] then
-    begin
-      if ParamIndex > InParamCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} then
-        raise EZSQLException.Create(SInvalidInputParameterCount);
-      Result := Result + MySQLPrepareAnsiSQLParam(FHandle, InParamValues[ParamIndex],
-        InParamDefaultValues[ParamIndex], ClientVarManager, FPlainDriver,
-        InParamTypes[ParamIndex], FUseDefaults, ConSettings);
-      Inc(ParamIndex);
-    end
-    else
-      Result := Result + CachedQueryRaw[i];
-end;*)
 
 {**
   Creates a result set based on the current settings.

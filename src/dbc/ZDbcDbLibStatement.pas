@@ -471,20 +471,18 @@ begin
   TokenizeSQLQueryRaw;
 
   for I := 0 to High(CachedQueryRaw) do
-  begin
-    if IsParamIndex[i] then
-    begin
-      Result := Result + PrepareAnsiSQLParam(ParamIndex, IsNCharIndex[i]);
+    if IsParamIndex[i] then begin
+      ToBuff(PrepareAnsiSQLParam(ParamIndex, IsNCharIndex[i]), Result);
       Inc(ParamIndex);
-    end
-    else
-      Result := Result + CachedQueryRaw[I];
-  end;
+    end else
+      ToBuff(CachedQueryRaw[I], Result);
+  FlushBuff(Result);
   {$IFNDEF UNICODE}
   if GetConnection.AutoEncodeStrings then
      Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
   {$ENDIF}
 end;
+
 {**
   Prepares an SQL parameter for the query.
   @param ParameterIndex the first parameter is 1, the second is 2, ...

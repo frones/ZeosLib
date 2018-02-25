@@ -779,7 +779,7 @@ begin
   Create(TempURL);
   TempURL.Free;
 end;
-{$WARNINGS OFF}
+{$WARNINGS ON}
 
 {**
   Constructs this object and assignes the main properties.
@@ -1455,7 +1455,7 @@ begin
             ConSettings^.ClientCodePage^.CP)
       {$ENDIF}
   else
-    if StartsWith(Value, '''') and EndsWith(Value, '''') then
+    if StartsWith(Value, RawByteString(#39)) and EndsWith(Value, RawByteString(#39)) then
       Result := Value
     else
       {$IFDEF UNICODE}
@@ -1470,7 +1470,7 @@ end;
 function TZAbstractConnection.GetEscapeString(const Value: RawByteString): RawByteString;
 begin
   if GetAutoEncodeStrings then
-    if StartsWith(Value, '''') and EndsWith(Value, '''') then
+    if StartsWith(Value, RawByteString(#39)) and EndsWith(Value, RawByteString(#39)) then
       Result := {$IFNDEF UNICODE}GetDriver.GetTokenizer.GetEscapeString{$ENDIF}(Value)
     else
       {$IFDEF WITH_UNITANSISTRINGS}
@@ -1479,7 +1479,7 @@ begin
       Result := GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(Value, #39))
       {$ENDIF}
   else
-    if StartsWith(Value, '''') and EndsWith(Value, '''') then
+    if StartsWith(Value, RawByteString(#39)) and EndsWith(Value, RawByteString(#39)) then
       Result := Value
     else
       Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
