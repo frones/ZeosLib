@@ -3314,13 +3314,12 @@ begin
   TokenizeSQLQueryUni;
 
   for I := 0 to High(FCachedQueryUni) do
-    if FIsParamIndex[i] then
-    begin
-      Result := Result + PrepareWideSQLParam(ParamIndex);
+    if FIsParamIndex[i] then begin
+      ToBuff(PrepareWideSQLParam(ParamIndex), Result);
       Inc(ParamIndex);
-    end
-    else
-      Result := Result + FCachedQueryUni[I];
+    end else
+      ToBuff(FCachedQueryUni[I], Result);
+  FlushBuff(Result);
   {$IFDEF UNICODE}
   if ConSettings^.AutoEncode then
      Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
@@ -3341,15 +3340,12 @@ begin
   TokenizeSQLQueryRaw;
 
   for I := 0 to High(FCachedQueryRaw) do
-  begin
-    if IsParamIndex[i] then
-    begin
-      Result := Result + PrepareAnsiSQLParam(ParamIndex);
+    if IsParamIndex[i] then begin
+      ToBuff(PrepareAnsiSQLParam(ParamIndex), Result);
       Inc(ParamIndex);
-    end
-    else
-      Result := Result + FCachedQueryRaw[I];
-  end;
+    end else
+      ToBuff(FCachedQueryRaw[I], Result);
+  FlushBuff(Result);
   {$IFNDEF UNICODE}
   if ConSettings^.AutoEncode then
      Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
