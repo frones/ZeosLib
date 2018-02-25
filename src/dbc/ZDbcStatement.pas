@@ -205,9 +205,7 @@ type
 
   TZAbstractPreparedStatement = class(TZAbstractStatement, IZPreparedStatement)
   private
-    FInParamValuesArray: array of TZVariantDynArray;
-    FInParamValuesIndex: Integer;
-    //FInParamValues: TZVariantDynArray;
+    FInParamValues: TZVariantDynArray;
     FInParamTypes: TZSQLTypeArray;
     FInParamDefaultValues: TStringDynArray;
     FInParamCount: Integer;
@@ -222,7 +220,6 @@ type
     function GetInParamValues: TZVariantDynArray; overload;
     procedure SetInParamValues(const Values: TZVariantDynArray);
   protected
-    function GetBatchInParamValues(const BatchIndex: Integer): TZVariantDynArray; overload; //need this after property..
     function GetClientVariantManger: IZClientVariantManager;
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
@@ -247,7 +244,6 @@ type
     property IsParamIndex: TBooleanDynArray read FIsParamIndex;
     property IsNCharIndex: TBooleanDynArray read FNCharDetected;
     property IsPreparable: Boolean read FIsPraparable;
-    property LastInParamValuesIndex: Integer read FInParamValuesIndex;
     property ArrayCount: ArrayLenInt read FInitialArrayCount;
     procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
@@ -544,7 +540,10 @@ begin
   L := Length(Value);
   if L = 0 then Exit;
   if L <= (SizeOf(fABuffer)-fABufferIndex) then begin
-    System.Move(Pointer(Value)^, fABuffer[fABufferIndex], L);
+    P := Pointer(Value);
+    if L = 1 //happens very often (comma,space etc) -> no move
+    then fABuffer[fABufferIndex] := P^
+    else System.Move(Pointer(Value)^, fABuffer[fABufferIndex], L);
     Inc(fABufferIndex, L);
   end else begin
     SetLength(Result, Length(Result)+fABufferIndex+L);
@@ -568,7 +567,10 @@ begin
   L := Length(Value);
   if L = 0 then Exit;
   if L <= ((SizeOf(fWBuffer) shr 1)-fWBufferIndex) then begin
-    System.Move(Pointer(Value)^, fWBuffer[fWBufferIndex], L shl 1);
+    P := Pointer(Value);
+    if L = 1 //happens very often (comma,space etc) -> no move
+    then fWBuffer[fWBufferIndex] := P^
+    else System.Move(Pointer(Value)^, fWBuffer[fWBufferIndex], L shl 1);
     Inc(fWBufferIndex, L);
   end else begin
     SetLength(Result, Length(Result)+fWBufferIndex+L);
@@ -1379,8 +1381,6 @@ begin
   inherited Create(Connection, Info);
   FClientVariantManger := Connection.GetClientVariantManager;
   {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
-  SetLength(FInParamValuesArray, 1); //init one row space
-  FInParamValuesIndex := 0;
   SetInParamCount(0);
   FPrepared := False;
   FInitialArrayCount := 0;
@@ -1514,17 +1514,12 @@ end;
 
 function TZAbstractPreparedStatement.GetInParamValues: TZVariantDynArray;
 begin
-  Result := FInParamValuesArray[FInParamValuesIndex];
-end;
-
-function TZAbstractPreparedStatement.GetBatchInParamValues(const BatchIndex: Integer): TZVariantDynArray;
-begin
-  Result := FInParamValuesArray[BatchIndex];
+  Result := FInParamValues;
 end;
 
 procedure TZAbstractPreparedStatement.SetInParamValues(const Values: TZVariantDynArray);
 begin
-  FInParamValuesArray[FInParamValuesIndex] := Values;
+  FInParamValues := Values;
 end;
 
 {**
@@ -1566,12 +1561,12 @@ procedure TZAbstractPreparedStatement.SetInParamCount(const NewParamCount: Integ
 var
   I: Integer;
 begin
-  SetLength(FInParamValuesArray[FInParamValuesIndex], NewParamCount);
+  SetLength(FInParamValues, NewParamCount);
   SetLength(FInParamTypes, NewParamCount);
   SetLength(FInParamDefaultValues, NewParamCount);
   for I := FInParamCount to NewParamCount - 1 do
   begin
-    FInParamValuesArray[FInParamValuesIndex][i] := NullVariant;
+    FInParamValues[i] := NullVariant;
     FInParamTypes[I] := stUnknown;
 
     FInParamDefaultValues[I] := '';
@@ -1592,7 +1587,7 @@ begin
     SetInParamCount(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
 
   FInParamTypes[ParameterIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := SQLType;
-  FInParamValuesArray[FInParamValuesIndex][ParameterIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := Value;
+  FInParamValues[ParameterIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := Value;
 end;
 
 {**
@@ -2356,8 +2351,7 @@ end;
 }
 procedure TZAbstractPreparedStatement.AddBatchPrepared;
 begin
-  SetLength(FInParamValuesArray, Length(FInParamValuesArray)+1);
-  Inc(FInParamValuesIndex);
+  RaiseUnsupportedException;
 end;
 
 {**
