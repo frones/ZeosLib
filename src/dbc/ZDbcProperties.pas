@@ -92,7 +92,7 @@ const
 
   { Parameters for datasets }
 
-  // Type: STR, like Field1[,Field2,...]
+  // Type: STR, like Field1[, Field2, ...] (separators: "," or ";")
   // List of fields; if defined, they are used for locating and, if WhereMode = KeyOnly,
   // for constructing a WHERE clause
   DSProps_KeyFields = 'KeyFields';
@@ -131,14 +131,14 @@ const
 {$IFEND}
 
 {$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_POSTGRESQL) OR DEFINED(ENABLE_INTERBASE)}
-  // Type: STRING
-  // ','- or ';'-separated list of fields which will get their values on INSERT
+  // Type: STR, like Field1[, Field2, ...] (separators: "," or ";")
+  // List of fields which will get their values on INSERT
   // (by INSERT...RETURNING) construction.
   DSProps_InsertReturningFields = 'InsertReturningFields';
 {$IFEND}
 
 {$IF DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB)}
-  // Type: STRING
+  // Type: STR
   // ?
   ConnProps_Provider = 'Provider';
   ConnProps_Initial_Catalog = 'Initial Catalog';
@@ -259,6 +259,12 @@ const
   // Type: STR
   // Create new DB on the given path on connect
   ConnProps_CreateNewDatabase = 'CreateNewDatabase';
+  // Type: BOOLEAN
+  // Set a type of **all** CHAR(16) fields to GUID.
+  ConnProps_SetGUIDByType = 'SetGUIDByType';
+  // Type: STR, like Domain1[, Domain2, ...] (separators: "," or ";")
+  // List of domains; if defined, fields of that domains will get GUID type
+  ConnProps_GUIDDomains = 'GUIDDomains';
 
   { In addition, all isc_dpb_* (connection level) and isc_tpb_* (transaction level)
     parameters could be used as well, refer to Firebird manual for details.

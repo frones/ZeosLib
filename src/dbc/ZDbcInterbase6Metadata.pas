@@ -1717,7 +1717,7 @@ const
   FIELD_NAME_Index            = FirstDbcIndex + 1;
   FIELD_POSITION_Index        = FirstDbcIndex + 2;
   NULL_FLAG_Index             = FirstDbcIndex + 3;
-//DEFAULT_VALUE_Index         = FirstDbcIndex + 4;  - not used
+  FIELD_SOURCE_Index          = FirstDbcIndex + 4;
   FIELD_LENGTH_Index          = FirstDbcIndex + 5;
   FIELD_SCALE_Index           = FirstDbcIndex + 6;
   TYPE_NAME_Index             = FirstDbcIndex + 7;
@@ -1731,10 +1731,11 @@ const
   COMPUTED_SOURCE_Index       = FirstDbcIndex + 15;
   CHARACTER_SET_ID_Index      = FirstDbcIndex + 16;
 var
-  SQL, ColumnName, DefaultValue: String;
-  TypeName, SubTypeName, FieldScale: integer;
+  SQL, ColumnName, DefaultValue, ColumnDomain: string;
+  TypeName, SubTypeName, FieldScale, FieldLength: Integer;
   LTableNamePattern, LColumnNamePattern: string;
   SQLType: TZSQLType;
+  GUIDProps: TZInterbase6GUIDProps;
 begin
     Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
@@ -1748,7 +1749,7 @@ begin
       LColumnNamePattern := ' and ' + LColumnNamePattern;
 
     SQL := ' SELECT a.RDB$RELATION_NAME, a.RDB$FIELD_NAME, a.RDB$FIELD_POSITION,'
-      + ' a.RDB$NULL_FLAG, a.RDB$DEFAULT_VALUE, b.RDB$FIELD_LENGTH,'
+      + ' a.RDB$NULL_FLAG, a.RDB$FIELD_SOURCE, b.RDB$FIELD_LENGTH,'
       + ' b.RDB$FIELD_SCALE, c.RDB$TYPE_NAME, b.RDB$FIELD_TYPE,'
       + ' b.RDB$FIELD_SUB_TYPE, b.RDB$DESCRIPTION, b.RDB$CHARACTER_LENGTH,'
       + ' b.RDB$FIELD_PRECISION, a.RDB$DEFAULT_SOURCE, b.RDB$DEFAULT_SOURCE'
@@ -1759,6 +1760,8 @@ begin
       + ' and c.RDB$FIELD_NAME = ''RDB$FIELD_TYPE'')'
       + ' WHERE 1=1' + LTableNamePattern + LColumnNamePattern
       + ' ORDER BY a.RDB$RELATION_NAME, a.RDB$FIELD_POSITION';
+
+    GUIDProps := (GetConnection as IZInterbase6Connection).GetGUIDProps;
 
     with GetConnection.CreateStatement.ExecuteQuery(SQL) do
     begin
@@ -1771,6 +1774,8 @@ begin
           SubTypeName := GetInt(FIELD_SUB_TYPE_Index);
         FieldScale := GetInt(FIELD_SCALE_Index);
         ColumnName := GetString(FIELD_NAME_Index);
+        ColumnDomain := GetString(FIELD_SOURCE_Index);
+        FieldLength := GetInt(FIELD_LENGTH_Index);
 
         if (GetString(COMPUTED_SOURCE_Index) <> '') then  //AVZ -- not isNull(14) was not working correcly here could be ' ' - subselect
         begin //Computed by Source  & Sub Selects  //AVZ
@@ -1799,8 +1804,11 @@ begin
         Result.UpdateNull(SchemaNameIndex);    //TABLE_SCHEM
         Result.UpdateString(TableNameIndex, GetString(RELATION_NAME_Index));    //TABLE_NAME
         Result.UpdateString(ColumnNameIndex, ColumnName);    //COLUMN_NAME
+
         SQLType := ConvertInterbase6ToSqlType(TypeName, SubTypeName, FieldScale,
           ConSettings.CPType);
+        if GUIDProps.ColumnIsGUID(SQLType, FieldLength, ColumnDomain) then
+          SQLType := stGUID;
         Result.UpdateInt(TableColColumnTypeIndex, Ord(SQLType));
         // TYPE_NAME
         case TypeName of
@@ -1831,7 +1839,7 @@ begin
           blr_short, blr_long, blr_int64: Result.UpdateInt(TableColColumnSizeIndex, GetInt(FIELD_PRECISION_Index));
           blr_varying, blr_varying2: Result.UpdateNull(TableColColumnSizeIndex);  //the defaults of the resultsets will be used if null
         else
-          Result.UpdateInt(TableColColumnSizeIndex, GetInt(FIELD_LENGTH_Index));
+          Result.UpdateInt(TableColColumnSizeIndex, FieldLength);
         end; 
 
         Result.UpdateNull(TableColColumnBufLengthIndex);    //BUFFER_LENGTH
@@ -2792,7 +2800,6 @@ begin
       + ' I.RDB$INDEX_NAME, I.RDB$RELATION_NAME, I.RDB$UNIQUE_FLAG, '
       + ' ISGMT.RDB$FIELD_POSITION, ISGMT.RDB$FIELD_NAME, I.RDB$INDEX_TYPE, '
       + ' I.RDB$SEGMENT_COUNT ORDER BY 1,2,3,4';
-
 
     with GetConnection.CreateStatement.ExecuteQuery(SQL) do
     begin
