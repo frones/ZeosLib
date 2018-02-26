@@ -1070,28 +1070,35 @@ end;
 procedure TZGenericTestDbcResultSet.TestConcurrency;
 var
   Statement: IZStatement;
+  Statement2: IZStatement;
   ResultSet1: IZResultSet;
   ResultSet2: IZResultSet;
+  ResultSet3: IZResultSet;
 begin
   Statement := Connection.CreateStatement;
+  Statement2 := Connection.CreateStatement;
   CheckNotNull(Statement);
 
   try
     ResultSet1 := Statement.ExecuteQuery('select * from people');
     ResultSet2 := Statement.ExecuteQuery('select * from equipment');
+    ResultSet3 := Statement2.ExecuteQuery('select * from people');
     try
-      Check(ResultSet1.Next);
+      Check(not ResultSet1.Next, 'Resultset 1 should be closed');
       Check(ResultSet2.Next);
-      Check(ResultSet1.Next);
+      Check(ResultSet3.Next);
       Check(ResultSet2.Next);
-      Check(ResultSet1.Next);
+      Check(ResultSet3.Next);
       Check(ResultSet2.Next);
+      Check(ResultSet3.Next);
     finally
       ResultSet1.Close;
       ResultSet2.Close;
+      ResultSet3.Close;
     end;
   finally
     Statement.Close;
+    Statement2.Close;
   end;
 end;
 
