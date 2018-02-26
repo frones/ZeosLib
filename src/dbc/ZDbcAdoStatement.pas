@@ -54,6 +54,7 @@ unit ZDbcAdoStatement;
 interface
 
 {$I ZDbc.inc}
+{.$DEFINE ENABLE_ADO}
 {$IFDEF ENABLE_ADO}
 
 uses
@@ -81,14 +82,6 @@ type
     procedure Prepare; override;
     procedure Unprepare; override;
 
-    function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZWideString): Integer; override;
-    function Execute(const SQL: ZWideString): Boolean; override;
-
-    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
-    function Execute(const SQL: RawByteString): Boolean; override;
-
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
@@ -98,7 +91,27 @@ type
 
     procedure ClearParameters; override;
   end;
-  TZAdoStatement = class(TZAdoPreparedStatement);
+
+  TZAdoEmulatedPreparedStatement = class(TZEmulatedPreparedStatement_W)
+  private
+    AdoRecordSet: ZPlainAdo.RecordSet;
+    FAdoCommand: ZPlainAdo.Command;
+    FAdoConnection: IZAdoConnection;
+  protected
+    function GetParamAsString(ParamIndex: Integer): ZWideString; override;
+  public
+    constructor Create(Connection: IZConnection; const SQL: string;
+      const Info: TStrings); overload;
+    constructor Create(Connection: IZConnection; const Info: TStrings); overload;
+  public
+    function ExecuteQueryPrepared: IZResultSet; override;
+    function ExecuteUpdatePrepared: Integer; override;
+    function ExecutePrepared: Boolean; override;
+
+    function GetMoreResults: Boolean; overload; override;
+  end;
+
+  TZAdoStatement = class(TZAdoEmulatedPreparedStatement);
 
   {** Implements Callable ADO Statement. }
   TZAdoCallableStatement = class(TZAbstractCallableStatement)
@@ -201,106 +214,6 @@ begin
     else
       LastUpdateCount := ADOBindArrayParams(FAdoCommand, FAdoConnection, ConSettings,
             InParamValues, adParamInput, ArrayCount);
-end;
-
-function TZAdoPreparedStatement.ExecuteQuery(const SQL: ZWideString): IZResultSet;
-var
-  RC: OleVariant;
-begin
-  if Assigned(FOpenResultSet) then
-    IZResultSet(FOpenResultSet).Close;
-  FOpenResultSet := nil;
-  {$IFDEF UNICODE}
-  WSQL := SQL;
-  {$ENDIF}
-  Result := nil;
-  LastUpdateCount := -1;
-  if IsSelect(Self.SQL) then
-  begin
-    AdoRecordSet := CoRecordSet.Create;
-    AdoRecordSet.MaxRecords := MaxRows;
-    AdoRecordSet.Open(SQL, (Connection as IZAdoConnection).GetAdoConnection,
-      adOpenStatic, adLockOptimistic, adAsyncFetch);
-  end
-  else
-    AdoRecordSet := (Connection as IZAdoConnection).GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
-  Result := GetCurrentResultSet(AdoRecordSet, (Connection as IZAdoConnection), Self,
-    Self.SQL, ConSettings, ResultSetConcurrency);
-  if not Assigned(Result) then
-    while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
-end;
-
-function TZAdoPreparedStatement.ExecuteUpdate(const SQL: ZWideString): Integer;
-var
-  RC: OleVariant;
-begin
-  LastResultSet := nil;
-  LastUpdateCount := -1;
-  WSQL := SQL;
-  try
-    (Connection as IZAdoConnection).GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
-    Result := RC;
-    LastUpdateCount := Result;
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-  except
-    on E: Exception do
-    begin
-      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise;
-    end;
-  end
-end;
-
-function TZAdoPreparedStatement.Execute(const SQL: ZWideString): Boolean;
-var
-  RC: OleVariant;
-begin
-  WSQL := SQL;
-  LastResultSet := nil;
-  LastUpdateCount := -1;
-  try
-    if IsSelect(Self.SQL) then
-    begin
-      AdoRecordSet := CoRecordSet.Create;
-      AdoRecordSet.MaxRecords := MaxRows;
-      AdoRecordSet.Open(SQL, (Connection as IZAdoConnection).GetAdoConnection,
-        adOpenStatic, adLockOptimistic, adAsyncFetch);
-    end
-    else
-      AdoRecordSet := (Connection as IZAdoConnection).GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
-    LastResultSet := GetCurrentResultSet(AdoRecordSet, (Connection as IZAdoConnection), Self,
-      Self.SQL, ConSettings, ResultSetConcurrency);
-    Result := Assigned(LastResultSet);
-    LastUpdateCount := RC;
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-  except
-    on E: Exception do
-    begin
-      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise;
-    end;
-  end
-end;
-
-function TZAdoPreparedStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
-begin
-  if ASQL <> SQL then
-    ASQL := SQL;
-  Result := ExecuteQuery(WSQL);
-end;
-
-function TZAdoPreparedStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
-begin
-  if ASQL <> SQL then
-    ASQL := SQL;
-  Result := ExecuteUpdate(WSQL);
-end;
-
-function TZAdoPreparedStatement.Execute(const SQL: RawByteString): Boolean;
-begin
-  if ASQL <> SQL then
-    ASQL := SQL;
-  Result := Execute(WSQL);
 end;
 
 {**
@@ -792,10 +705,196 @@ begin
         ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], NullVariant, FDirectionTypes[i]);
 end;
 
+{ TZAdoEmulatedPreparedStatement }
+
+constructor TZAdoEmulatedPreparedStatement.Create(Connection: IZConnection;
+  const SQL: string; const Info: TStrings);
+begin
+  FAdoCommand := CoCommand.Create;
+  inherited Create(Connection, SQL, Info);
+  FAdoCommand.CommandText := WSQL;
+  FAdoConnection := Connection as IZAdoConnection;
+  FAdoCommand._Set_ActiveConnection(FAdoConnection.GetAdoConnection);
+end;
+
+constructor TZAdoEmulatedPreparedStatement.Create(Connection: IZConnection;
+  const Info: TStrings);
+begin
+  Create(Connection, '', Info);
+end;
+
+function TZAdoEmulatedPreparedStatement.ExecutePrepared: Boolean;
+var
+  RC: OleVariant;
+begin
+  LastResultSet := nil;
+  LastUpdateCount := -1;
+  Prepare;
+  FAdoCommand.CommandText := ComposeWideSQLQuery;
+  try
+    if IsSelect(SQL) then
+    begin
+      AdoRecordSet := CoRecordSet.Create;
+      AdoRecordSet.MaxRecords := MaxRows;
+      AdoRecordSet._Set_ActiveConnection(FAdoCommand.Get_ActiveConnection);
+      AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
+    end
+    else
+      AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{, adExecuteNoRecords});
+    LastResultSet := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
+      SQL, ConSettings, ResultSetConcurrency);
+    LastUpdateCount := {%H-}RC;
+    Result := Assigned(LastResultSet);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+  except
+    on E: Exception do
+    begin
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
+      raise;
+    end;
+  end
+end;
+
+function TZAdoEmulatedPreparedStatement.ExecuteQueryPrepared: IZResultSet;
+var
+  RC: OleVariant;
+begin
+  if Assigned(FOpenResultSet) then
+    IZResultSet(FOpenResultSet).Close;
+  FOpenResultSet := nil;
+  LastUpdateCount := -1;
+  Prepare;
+  FAdoCommand.CommandText := ComposeWideSQLQuery;
+  try
+    if IsSelect(SQL) then
+      begin
+        AdoRecordSet := CoRecordSet.Create;
+        AdoRecordSet.MaxRecords := MaxRows;
+        AdoRecordSet._Set_ActiveConnection(FAdoCommand.Get_ActiveConnection);
+        AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
+      end else
+        AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{, adExecuteNoRecords});
+    Result := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
+      SQL, ConSettings, ResultSetConcurrency);
+    LastUpdateCount := {%H-}RC;
+    if not Assigned(Result) then
+      while (not GetMoreResults) and (LastUpdateCount > -1) do ;
+    FOpenResultSet := Pointer(Result);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+  except
+    on E: Exception do
+    begin
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
+      raise;
+    end;
+  end
+end;
+
+function TZAdoEmulatedPreparedStatement.ExecuteUpdatePrepared: Integer;
+var
+  RC: OleVariant;
+begin
+  Prepare;
+  LastUpdateCount := -1;
+  Prepare;
+  FAdoCommand.CommandText := ComposeWideSQLQuery;
+  try
+    AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, adExecuteNoRecords);
+    LastUpdateCount := {%H-}RC;
+    Result := LastUpdateCount;
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+  except
+    on E: Exception do
+    begin
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
+      raise;
+    end;
+  end
+end;
+
+function TZAdoEmulatedPreparedStatement.GetMoreResults: Boolean;
+var
+  RC: OleVariant;
+begin
+  Result := False;
+  LastResultSet := nil;
+  LastUpdateCount := -1;
+  if Assigned(AdoRecordSet) then
+  begin
+    AdoRecordSet := AdoRecordSet.NextRecordset(RC);
+    LastResultSet := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
+      SQL, ConSettings, ResultSetConcurrency);
+    Result := Assigned(LastResultSet);
+    LastUpdateCount := RC;
+  end;
+end;
+
+function TZAdoEmulatedPreparedStatement.GetParamAsString(
+  ParamIndex: Integer): ZWideString;
+var
+  TempBytes: TBytes;
+  TempBlob: IZBlob;
+  CharRec: TZCharRec;
+  Tmp: ZWideString;
+label SetNull;
+begin
+  if ClientVarManager.IsNull(InParamValues[ParamIndex]) then
+SetNull:
+    if (InParamDefaultValues[ParamIndex] <> '')
+    then Result := ConSettings^.ConvFuncs.ZStringToUnicode(InParamDefaultValues[ParamIndex],
+          ConSettings^.CTRL_CP)
+    else Result := 'NULL'
+  else case InParamTypes[ParamIndex] of
+    stBoolean: if ClientVarManager.GetAsBoolean(InParamValues[ParamIndex])
+      then Result := '''1'''
+      else Result := '''0''';
+    stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
+    stFloat, stDouble, stCurrency, stBigDecimal:
+      Result := ClientVarManager.GetAsUnicodeString(InParamValues[ParamIndex]);
+    stBytes:
+      begin
+        TempBytes := ClientVarManager.GetAsBytes(InParamValues[ParamIndex]);
+        Result := GetSQLHexWideString(PAnsiChar(TempBytes), Length(TempBytes), True);
+      end;
+    stString, stUnicodeString: begin
+      CharRec := ClientVarManager.GetAsCharRec(InParamValues[ParamIndex], zCP_UTF16);
+      Result := SQLQuotedStr(CharRec.P, charRec.Len, WideChar(#39));
+    end;
+    stGUID: if InParamValues[ParamIndex].VType = vtBytes
+            then Result := #39+ZSysUtils.GUIDToUnicode(InParamValues[ParamIndex].VBytes)+#39
+            else Result := #39+ClientVarManager.GetAsUnicodeString(InParamValues[ParamIndex])+#39;
+    stDate:
+      Result := DateTimeToUnicodeSQLDate(ClientVarManager.GetAsDateTime(InParamValues[ParamIndex]),
+        ConSettings^.WriteFormatSettings, True);
+    stTime:
+      Result := DateTimeToUnicodeSQLTime(ClientVarManager.GetAsDateTime(InParamValues[ParamIndex]),
+        ConSettings^.WriteFormatSettings, True);
+    stTimestamp:
+      Result := DateTimeToUnicodeSQLTimeStamp(ClientVarManager.GetAsDateTime(InParamValues[ParamIndex]),
+        ConSettings^.WriteFormatSettings, True);
+    stAsciiStream, stUnicodeStream, stBinaryStream:
+      begin
+        TempBlob := ClientVarManager.GetAsInterface(InParamValues[ParamIndex]) as IZBlob;
+        if not TempBlob.IsEmpty then
+          if InParamTypes[ParamIndex] = stBinaryStream
+          then Result := GetSQLHexWideString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length, True)
+          else if TempBlob.IsClob then begin
+            Tmp := TempBlob.GetUnicodeString;
+            //CharRec.P := TempBlob.GetPWideChar;
+            //Result := SQLQuotedStr(CharRec.P, TempBlob.Length, WideChar(#39));
+            Result := SQLQuotedStr(Tmp, WideChar(#39));
+          end else RaiseUnsupportedException
+        else goto SetNull;
+        TempBlob := nil;
+      end;
+    else
+      RaiseUnsupportedParameterTypeException(InParamTypes[ParamIndex]);
+  end;
+end;
+
 {$ELSE}
 implementation
 {$ENDIF ENABLE_ADO}
-
 end.
 
 
