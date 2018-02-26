@@ -785,6 +785,7 @@ end;
   Constructs this object and assignes the main properties.
   @param Url a connection ZURL-class which exports all connection parameters.
 }
+{$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
 constructor TZAbstractConnection.Create(const ZUrl: TZURL);
 begin
   FClosed := True;
@@ -822,6 +823,7 @@ begin
   FTestMode := 0;
   {$ENDIF}
 end;
+{$WARNINGS ON}
 
 {**
   Destroys this object and cleanups the memory.
