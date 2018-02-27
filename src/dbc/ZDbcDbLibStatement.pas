@@ -69,6 +69,7 @@ type
     FResults: IZCollection;
     FUserEncoding: TZCharEncoding;
     FLastResultIndex: Integer;
+    FLastOptainedRS: IZResultSet;
   protected
     procedure InternalExecuteStatement(const SQL: RawByteString);
     procedure FetchResults;
@@ -179,11 +180,12 @@ var
   UpdateCount: IZAnyValue;
   I: Integer;
 begin
+  FLastOptainedRS := nil;
   Result := False;
   for i := 0 to FResults.Count -1 do begin
     Result := FResults.Items[I].QueryInterface(IZResultSet, ResultSet) = S_OK;
     if Result then begin
-      LastResultSet := ResultSet;
+      FLastOptainedRS := ResultSet;
       FResults.Delete(I);
       Break;
     end else//else TestStatement can't be resolved
@@ -307,6 +309,7 @@ begin
   FetchResults;
   LastUpdateCount := GetUpdateCount;
   Result := GetMoreResults;
+  LastResultSet := FLastOptainedRS;
 end;
 
 {**
@@ -322,7 +325,7 @@ begin
   InternalExecuteStatement(ComposeRawSQLQuery);
   FetchResults;
   if GetMoreResults then begin
-    Result := LastResultSet;
+    Result := FLastOptainedRS;
     FOpenResultSet := Pointer(Result);
   end;
 end;
