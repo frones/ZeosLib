@@ -1454,7 +1454,7 @@ var
   SQL: string;
   LProcedureNamePattern, LColumnNamePattern: string;
   TypeName, SubTypeName: Integer;
-  ColumnIndexes : Array[1..8] of integer;
+  ColumnIndexes : Array[1..10] of integer;
 begin
     Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
@@ -1474,7 +1474,7 @@ begin
         + ' PP.RDB$PARAMETER_TYPE, F.RDB$FIELD_TYPE, F.RDB$FIELD_SUB_TYPE,'
         + ' F.RDB$FIELD_SCALE, F.RDB$FIELD_LENGTH, F.RDB$NULL_FLAG,'
         + ' PP.RDB$DESCRIPTION, F.RDB$FIELD_SCALE as RDB$FIELD_PRECISION,'
-        + ' F.RDB$NULL_FLAG FROM RDB$PROCEDURES P'
+        + ' F.RDB$NULL_FLAG, F.RDB$CHARACTER_SET_ID FROM RDB$PROCEDURES P'
         + ' JOIN RDB$PROCEDURE_PARAMETERS PP ON P.RDB$PROCEDURE_NAME'
         + '=PP.RDB$PROCEDURE_NAME JOIN RDB$FIELDS F ON PP.RDB$FIELD_SOURCE'
         + '=F.RDB$FIELD_NAME '
@@ -1487,7 +1487,8 @@ begin
       SQL := ' SELECT P.RDB$PROCEDURE_NAME, PP.RDB$PARAMETER_NAME,'
         + ' PP.RDB$PARAMETER_TYPE, F.RDB$FIELD_TYPE, F.RDB$FIELD_SUB_TYPE,'
         + ' F.RDB$FIELD_SCALE, F.RDB$FIELD_LENGTH, F.RDB$NULL_FLAG,'
-        + ' PP.RDB$DESCRIPTION, F.RDB$FIELD_PRECISION, F.RDB$NULL_FLAG '
+        + ' PP.RDB$DESCRIPTION, F.RDB$FIELD_PRECISION, F.RDB$NULL_FLAG, '
+        + ' F.RDB$CHARACTER_SET_ID '
         + ' FROM RDB$PROCEDURES P JOIN RDB$PROCEDURE_PARAMETERS PP ON'
         + ' P.RDB$PROCEDURE_NAME = PP.RDB$PROCEDURE_NAME '
         + ' JOIN RDB$FIELDS F ON PP.RDB$FIELD_SOURCE = F.RDB$FIELD_NAME '
@@ -1506,10 +1507,16 @@ begin
       ColumnIndexes[6] := FindColumn('RDB$FIELD_PRECISION');
       ColumnIndexes[7] := FindColumn('RDB$FIELD_SCALE');
       ColumnIndexes[8] := FindColumn('RDB$NULL_FLAG');
+      ColumnIndexes[9] := FindColumn('RDB$DESCRIPTION');
+      ColumnIndexes[10] := FindColumn('RDB$CHARACTER_SET_ID');
       while Next do
       begin
         TypeName := GetInt(ColumnIndexes[4]);
-        SubTypeName := GetInt(ColumnIndexes[5]);
+        // For text fields subtype is 0, get codepage number instead to determine CS_Binary (octets) for stBytes
+        if TypeName in [blr_text, blr_text2, blr_varying, blr_varying2, blr_cstring, blr_cstring2] then
+          SubTypeName := GetInt(ColumnIndexes[10])
+        else
+          SubTypeName := GetInt(ColumnIndexes[5]);
 
         Result.MoveToInsertRow;
         Result.UpdateNull(CatalogNameIndex);    //PROCEDURE_CAT
@@ -1533,6 +1540,7 @@ begin
         Result.UpdateInt(ProcColRadixIndex, 10);
         Result.UpdateInt(ProcColNullableIndex, GetInt(ColumnIndexes[8]));
         //EH: ??? Result.UpdateString(12, GetString(ColumnIndexes[6]));
+        Result.UpdateString(ProcColRemarksIndex, GetString(ColumnIndexes[9]));
         Result.InsertRow;
       end;
       Close;
@@ -1798,8 +1806,9 @@ begin
       while Next do
       begin
         TypeName := GetInt(ColumnIndexes[1]);
-        if TypeName = blr_text then
-          SubTypeName := GetInt(ColumnIndexes[15]) //need a way to determine CS_Binary (octets) for stBytes on the other hand the subtype is useless here
+        // For text fields subtype is 0, get codepage number instead to determine CS_Binary (octets) for stBytes
+        if TypeName in [blr_text, blr_text2, blr_varying, blr_varying2, blr_cstring, blr_cstring2] then
+          SubTypeName := GetInt(ColumnIndexes[15])
         else
           SubTypeName := GetInt(ColumnIndexes[2]);
         FieldScale := GetInt(ColumnIndexes[3]);
@@ -1839,25 +1848,26 @@ begin
         case TypeName of
           blr_short:
             case SubTypeName of
-              1: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
-              2: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
+              RDB_NUMBERS_NUMERIC: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
+              RDB_NUMBERS_DECIMAL: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
               else Result.UpdateString(TableColColumnTypeNameIndex, 'SMALLINT');
             end;
           blr_long:
             case SubTypeName of
-              1: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
-              2: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
+              RDB_NUMBERS_NUMERIC: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
+              RDB_NUMBERS_DECIMAL: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
               else Result.UpdateString(TableColColumnTypeNameIndex, 'INTEGER' );
             end;
           blr_int64:
             case SubTypeName of
-              1: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
-              2: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
+              RDB_NUMBERS_NUMERIC: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
+              RDB_NUMBERS_DECIMAL: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
               else Result.UpdateString(TableColColumnTypeNameIndex, GetString(ColumnIndexes[8]));
             end;
-          blr_varying: Result.UpdateString(TableColColumnTypeNameIndex, 'VARCHAR'); // Instead of VARYING
-        else
-          Result.UpdateString(TableColColumnTypeNameIndex, GetString(ColumnIndexes[8]));
+          blr_varying:
+            Result.UpdateString(TableColColumnTypeNameIndex, 'VARCHAR'); // Instead of VARYING
+          else
+            Result.UpdateString(TableColColumnTypeNameIndex, GetString(ColumnIndexes[8]));
         end;
         // COLUMN_SIZE.
         case TypeName of
