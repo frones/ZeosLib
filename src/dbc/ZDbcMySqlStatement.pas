@@ -68,39 +68,39 @@ type
     function GetStmtHandle: Pointer;
   end;
 
-  {** Implements Generic MySQL Statement. }
-  TZMySQLStatement = class(TZAbstractStatement, IZMySQLStatement)
+  {** Implements Prepared MySQL Statement. }
+  TZMySQLEmulatedPreparedStatement = class(TZEmulatedPreparedStatement_A, IZMySQLStatement)
   private
-    FHandle: PZMySQLConnect;
-    FPlainDriver: IZMySQLPlainDriver;
-    FUseResult: Boolean;
-
-    function CreateResultSet(const SQL: string): IZResultSet;
-    function GetStmtHandle : Pointer;
-  public
-    constructor Create(PlainDriver: IZMySQLPlainDriver;
-      Connection: IZConnection; Info: TStrings; Handle: PZMySQLConnect);
-
-    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
-    function Execute(const SQL: RawByteString): Boolean; override;
-
-    function GetMoreResults: Boolean; override;
-  end;
-
-  {** Implements Prepared SQL Statement. }
-  TZMySQLEmulatedPreparedStatement = class(TZEmulatedPreparedStatement)
-  private
-    FHandle: PZMySQLConnect;
+    fMySQLConnection: IZMySQLConnection;
     FPlainDriver: IZMySQLPlainDriver;
     FUseDefaults, FUseResult: Boolean;
+    function CreateResultSet(const SQL: string): IZResultSet;
+    function GetStmtHandle: Pointer;
+    procedure FlushPendingResults;
   protected
-    function CreateExecStatement: IZStatement; override;
-    function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString; override;
+    function GetParamAsString(ParamIndex: Integer): RawByteString; override;
   public
     constructor Create(const PlainDriver: IZMySQLPlainDriver;
       const Connection: IZConnection; const SQL: string; Info: TStrings;
-      Handle: PZMySQLConnect);
+      Handle: PZMySQLConnect); overload;
+    constructor Create(const PlainDriver: IZMySQLPlainDriver;
+      const Connection: IZConnection; const SQL: string; Info: TStrings); overload;
+
+    function ExecuteQueryPrepared: IZResultSet; override;
+    function ExecuteUpdatePrepared: Integer; override;
+    function ExecutePrepared: Boolean; override;
+
+    function GetMoreResults: Boolean; override;
+
+    procedure Unprepare; override;
+    procedure Prepare; override;
+  end;
+
+  {** Implements MySQL Statement. }
+  TZMySQLStatement = class(TZMySQLEmulatedPreparedStatement)
+  public
+    constructor Create(const PlainDriver: IZMySQLPlainDriver;
+      const Connection: IZConnection; const Info: TStrings; Handle: PZMySQLConnect); overload;
   end;
 
   TZMysqlColumnBuffer = Array of TDOBindRecord2;
@@ -235,36 +235,66 @@ var
   MySQL56PreparableTokens: TPreparablePrefixTokens absolute MySQL55PreparableTokens; //equals
   MySQL568PreparableTokens: TPreparablePrefixTokens;
 
-{ TZMySQLStatement }
+{ TZMySQLEmulatedPreparedStatement }
+
+function TZMySQLEmulatedPreparedStatement.GetStmtHandle: Pointer;
+begin
+  Result := nil;
+end;
+
+procedure TZMySQLEmulatedPreparedStatement.Prepare;
+begin
+  inherited Prepare;
+  FlushPendingResults;
+end;
+
+procedure TZMySQLEmulatedPreparedStatement.Unprepare;
+begin
+  if IsPrepared then begin
+    inherited Unprepare;
+    FlushPendingResults;
+  end;
+end;
 
 {**
   Constructs this object and assignes the main properties.
-  @param PlainDriver a native MySQL plain driver.
+  @param PlainDriver a native MySQL Plain driver.
   @param Connection a database connection object.
-  @param Handle a connection handle pointer.
   @param Info a statement parameters.
+  @param Handle a connection handle pointer.
 }
-constructor TZMySQLStatement.Create(PlainDriver: IZMySQLPlainDriver;
-  Connection: IZConnection; Info: TStrings; Handle: PZMySQLConnect);
+constructor TZMySQLEmulatedPreparedStatement.Create(const PlainDriver: IZMySQLPlainDriver;
+  const Connection: IZConnection; const SQL: string; Info: TStrings;
+  Handle: PZMySQLConnect);
 begin
-  inherited Create(Connection, Info);
-  FHandle := Handle;
-  FPlainDriver := PlainDriver;
-  FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
-  if not FUseResult then
-    ResultSetType := rtScrollInsensitive;
+  //Keep the old constructors
+  Create(PlainDriver, Connection, SQL, Info);
 end;
 
-function TZMySQLStatement.GetStmtHandle: Pointer;
+{**
+  Constructs this object and assignes the main properties.
+  @param PlainDriver a native MySQL Plain driver.
+  @param Connection a database connection object.
+  @param SQL a statement.
+  @param Info a statement parameters.
+}
+constructor TZMySQLEmulatedPreparedStatement.Create(const PlainDriver: IZMySQLPlainDriver;
+  const Connection: IZConnection; const SQL: string; Info: TStrings);
 begin
-  Result := nil;
+  inherited create(Connection, SQL, Info);
+  fMySQLConnection := Connection as IZMySQLConnection;
+  FPlainDriver := PlainDriver;
+  FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'));
+  if not FUseResult then
+    ResultSetType := rtScrollInsensitive;
 end;
 
 {**
   Creates a result set based on the current settings.
   @return a created result set object.
 }
-function TZMySQLStatement.CreateResultSet(const SQL: string): IZResultSet;
+function TZMySQLEmulatedPreparedStatement.CreateResultSet(const SQL: string): IZResultSet;
 var
   CachedResolver: TZMySQLCachedResolver;
   NativeResultSet: IZResultSet;
@@ -274,14 +304,14 @@ begin
    subsequential queries (e.g. MetaData-informations) are running out of sync}
   if (GetResultSetType = rtForwardOnly) and FUseResult then
     NativeResultSet := TZMySQL_Use_ResultSet.Create(FPlainDriver, Self, SQL,
-      FHandle, nil)
+      fMySQLConnection.GetConnectionHandle, nil)
   else
     NativeResultSet := TZMySQL_Store_ResultSet.Create(FPlainDriver, Self, SQL,
-      FHandle, nil);
+      fMySQLConnection.GetConnectionHandle, nil);
   if (GetResultSetConcurrency = rcUpdatable) then
   begin
-    CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, FHandle, Self,
-      NativeResultSet.GetMetaData);
+    CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver,
+      fMySQLConnection.GetConnectionHandle, Self, NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
       CachedResolver, ConSettings);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
@@ -293,121 +323,123 @@ end;
 
 
 {**
-  Executes an SQL statement that returns a single <code>ResultSet</code> object.
-  @param sql typically this is a static SQL <code>SELECT</code> statement
+  Executes the SQL query in this <code>PreparedStatement</code> object
+  and returns the result set generated by the query.
+
   @return a <code>ResultSet</code> object that contains the data produced by the
-    given query; never <code>null</code>
+    query; never <code>null</code>
 }
-function TZMySQLStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
+function TZMySQLEmulatedPreparedStatement.ExecuteQueryPrepared: IZResultSet;
+var RSQL: RawByteString;
 begin
-  Result := inherited ExecuteQuery(SQL);
-  if FPlainDriver.ExecRealQuery(FHandle, Pointer(ASQL), Length(ASQL)) = 0 then
-    if not FPlainDriver.ResultSetExists(FHandle) then begin
+  Result := nil;
+  PrepareOpenResultSetForReUse;
+  Prepare;
+  RSQL := ComposeRawSQLQuery;
+  if FPlainDriver.ExecRealQuery(fMySQLConnection.GetConnectionHandle, Pointer(RSQL), Length(RSQL)) = 0 then begin
+    if not FPlainDriver.ResultSetExists(fMySQLConnection.GetConnectionHandle) then begin
       while GetMoreResults do
         if LastResultSet <> nil then begin
           Result := LastResultSet;
+          FOpenResultSet := Pointer(Result);
+          LastResultSet := nil;
           Break;
         end;
       if Result = nil then
         raise EZSQLException.Create(SCanNotOpenResultSet);
     end else
-      Result := CreateResultSet(Self.SQL)
-  else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
+      Result := CreateResultSet(SQL);
+    FOpenResultSet := Pointer(Result);
+  end else
+    CheckMySQLError(FPlainDriver, fMySQLConnection.GetConnectionHandle, lcExecute, RSQL, ConSettings);
+  inherited ExecuteQueryPrepared;
 end;
 
 {**
-  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
-  <code>DELETE</code> statement. In addition,
+  Executes the SQL INSERT, UPDATE or DELETE statement
+  in this <code>PreparedStatement</code> object.
+  In addition,
   SQL statements that return nothing, such as SQL DDL statements,
   can be executed.
 
-  @param sql an SQL <code>INSERT</code>, <code>UPDATE</code> or
-    <code>DELETE</code> statement or an SQL statement that returns nothing
-  @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
-    or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
+  @return either the row count for INSERT, UPDATE or DELETE statements;
+  or 0 for SQL statements that return nothing
 }
-function TZMySQLStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
+function TZMySQLEmulatedPreparedStatement.ExecuteUpdatePrepared: Integer;
 var
   QueryHandle: PZMySQLResult;
   HasResultset : Boolean;
+  RSQL: RawByteString;
 begin
-  Result := Inherited ExecuteUpdate(SQL);
-  if FPlainDriver.ExecRealQuery(FHandle, Pointer(ASQL), Length(ASQL)) = 0 then
-  begin
-    HasResultSet := FPlainDriver.ResultSetExists(FHandle);
+  Result := -1;
+  Prepare;
+  RSQL := ComposeRawSQLQuery;
+  if FPlainDriver.ExecRealQuery(fMySQLConnection.GetConnectionHandle, Pointer(RSQL), Length(RSQL)) = 0 then begin
+    HasResultSet := FPlainDriver.ResultSetExists(fMySQLConnection.GetConnectionHandle);
     { Process queries with result sets }
-    if HasResultSet then
-      begin
-        QueryHandle := FPlainDriver.StoreResult(FHandle);
-        if QueryHandle <> nil then
-        begin
-          Result := FPlainDriver.GetRowCount(QueryHandle);
-          FPlainDriver.FreeResult(QueryHandle);
-        end
-        else
-          Result := FPlainDriver.GetAffectedRows(FHandle);
-        while(FPlainDriver.RetrieveNextRowset(FHandle) = 0) do
-          begin
-           QueryHandle := FPlainDriver.StoreResult(FHandle);
-           if QueryHandle <> nil then
-             begin
-               FPlainDriver.FreeResult(QueryHandle);
-             end;
-           end;
-      end
+    if HasResultSet then begin
+      QueryHandle := FPlainDriver.StoreResult(fMySQLConnection.GetConnectionHandle);
+      if QueryHandle <> nil then begin
+        Result := FPlainDriver.GetRowCount(QueryHandle);
+        FPlainDriver.FreeResult(QueryHandle);
+      end else
+        Result := FPlainDriver.GetAffectedRows(fMySQLConnection.GetConnectionHandle);
+      while(FPlainDriver.RetrieveNextRowset(fMySQLConnection.GetConnectionHandle) = 0) do begin
+        QueryHandle := FPlainDriver.StoreResult(fMySQLConnection.GetConnectionHandle);
+        if QueryHandle <> nil
+        then FPlainDriver.FreeResult(QueryHandle);
+      end;
+    end
   { Process regular query }
     else
-      Result := FPlainDriver.GetAffectedRows(FHandle);
-  end
-  else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
+      Result := FPlainDriver.GetAffectedRows(fMySQLConnection.GetConnectionHandle);
+  end else
+    CheckMySQLError(FPlainDriver, fMySQLConnection.GetConnectionHandle, lcExecute, RSQL, ConSettings);
   LastUpdateCount := Result;
+  Inherited ExecutePrepared;
+end;
+
+procedure TZMySQLEmulatedPreparedStatement.FlushPendingResults;
+var FQueryHandle: PZMySQLResult;
+begin
+  while (FPlainDriver.RetrieveNextRowset(fMySQLConnection.GetConnectionHandle) = 0) do begin
+    FQueryHandle := FPlainDriver.StoreResult(fMySQLConnection.GetConnectionHandle);
+    if FQueryHandle <> nil then
+      FPlainDriver.FreeResult(FQueryHandle);
+  end;
 end;
 
 {**
-  Executes an SQL statement that may return multiple results.
-  Under some (uncommon) situations a single SQL statement may return
-  multiple result sets and/or update counts.  Normally you can ignore
-  this unless you are (1) executing a stored procedure that you know may
-  return multiple results or (2) you are dynamically executing an
-  unknown SQL string.  The  methods <code>execute</code>,
-  <code>getMoreResults</code>, <code>getResultSet</code>,
-  and <code>getUpdateCount</code> let you navigate through multiple results.
-
-  The <code>execute</code> method executes an SQL statement and indicates the
-  form of the first result.  You can then use the methods
-  <code>getResultSet</code> or <code>getUpdateCount</code>
-  to retrieve the result, and <code>getMoreResults</code> to
-  move to any subsequent result(s).
-
-  @param sql any SQL statement
-  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
-  <code>false</code> if it is an update count or there are no more results
+  Executes any kind of SQL statement.
+  Some prepared statements return multiple results; the <code>execute</code>
+  method handles these complex statements as well as the simpler
+  form of statements handled by the methods <code>executeQuery</code>
+  and <code>executeUpdate</code>.
+  @see Statement#execute
 }
-function TZMySQLStatement.Execute(const SQL: RawByteString): Boolean;
+function TZMySQLEmulatedPreparedStatement.ExecutePrepared: Boolean;
 var
   HasResultset : Boolean;
+  RSQL: RawByteString;
 begin
-  Result := inherited Execute(SQL);
-  if FPlainDriver.ExecRealQuery(FHandle, Pointer(ASQL), Length(ASQL)) = 0 then
-  begin
-    HasResultSet := FPlainDriver.ResultSetExists(FHandle);
-    { Process queries with result sets }
-    if HasResultSet then
-    begin
+  Result := False;
+  Prepare;
+  RSQL := ComposeRawSQLQuery;
+  if FPlainDriver.ExecRealQuery(fMySQLConnection.GetConnectionHandle, Pointer(RSQL), Length(RSQL)) = 0 then begin
+    HasResultSet := FPlainDriver.ResultSetExists(fMySQLConnection.GetConnectionHandle);
+    if HasResultSet then begin
+      { Process queries with result sets }
       Result := True;
       LastResultSet := CreateResultSet(Self.SQL);
-    end
-    { Processes regular query. }
-    else
-    begin
+      FOpenResultSet := Pointer(LastResultSet);
+    end else begin
+      { Processes regular query. }
       Result := False;
-      LastUpdateCount := FPlainDriver.GetAffectedRows(FHandle);
+      LastUpdateCount := FPlainDriver.GetAffectedRows(fMySQLConnection.GetConnectionHandle);
     end;
-  end
-  else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
+  end else
+    CheckMySQLError(FPlainDriver, fMySQLConnection.GetConnectionHandle, lcExecute, RSQL, ConSettings);
+  inherited ExecutePrepared;
 end;
 
 {**
@@ -425,72 +457,32 @@ end;
    <code>false</code> if it is an update count or there are no more results
  @see #execute
 }
-function TZMySQLStatement.GetMoreResults: Boolean;
+function TZMySQLEmulatedPreparedStatement.GetMoreResults: Boolean;
 var
   AStatus: integer;
 begin
   Result := False;
-  if FPlainDriver.GetClientVersion >= 40100 then
-  begin
-    AStatus := FPlainDriver.RetrieveNextRowset(FHandle);
-    if AStatus > 0 then
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings)
-    else
-      Result := (AStatus = 0);
+  if FPlainDriver.GetClientVersion >= 40100 then begin
+    AStatus := FPlainDriver.RetrieveNextRowset(fMySQLConnection.GetConnectionHandle);
+    if AStatus > 0
+    then CheckMySQLError(FPlainDriver, fMySQLConnection.GetConnectionHandle, lcExecute, ASQL, ConSettings);
 
-    if LastResultSet <> nil then
-      LastResultSet.Close;
     LastResultSet := nil;
     LastUpdateCount := -1;
-    if FPlainDriver.ResultSetExists(FHandle) then
-      LastResultSet := CreateResultSet(Self.SQL)
-    else
-      LastUpdateCount := FPlainDriver.GetAffectedRows(FHandle);
+    if FPlainDriver.ResultSetExists(fMySQLConnection.GetConnectionHandle) then begin
+      Result := True;
+      LastResultSet := CreateResultSet(Self.SQL);
+    end else
+      LastUpdateCount := FPlainDriver.GetAffectedRows(fMySQLConnection.GetConnectionHandle);
   end;
 end;
 
-{ TZMySQLEmulatedPreparedStatement }
-
-{**
-  Constructs this object and assignes the main properties.
-  @param PlainDriver a native MySQL Plain driver.
-  @param Connection a database connection object.
-  @param Info a statement parameters.
-  @param Handle a connection handle pointer.
-}
-constructor TZMySQLEmulatedPreparedStatement.Create(const PlainDriver: IZMySQLPlainDriver;
-  const Connection: IZConnection; const SQL: string; Info: TStrings; Handle: PZMySQLConnect);
-begin
-  inherited Create(Connection, SQL, Info);
-  FHandle := Handle;
-  FPlainDriver := PlainDriver;
-  FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'UseResult', 'false'));
-  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'));
-  if not FUseResult then
-    ResultSetType := rtScrollInsensitive;
-end;
-
-{**
-  Creates a temporary statement which executes queries.
-  @param Info a statement parameters.
-  @return a created statement object.
-}
-function TZMySQLEmulatedPreparedStatement.CreateExecStatement: IZStatement;
-begin
-  Result := TZMySQLStatement.Create(FPlainDriver, Connection, Info,FHandle);
-end;
-
-{**
-  Prepares an SQL parameter for the query.
-  @param ParameterIndex the first parameter is 1, the second is 2, ...
-  @return a string representation of the parameter.
-}
-function TZMySQLEmulatedPreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
+function TZMySQLEmulatedPreparedStatement.GetParamAsString(ParamIndex: Integer): RawByteString;
 begin
   if InParamCount <= ParamIndex then
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
-  Result := ZDbcMySQLUtils.MySQLPrepareAnsiSQLParam(GetConnection as IZMySQLConnection,
+  Result := ZDbcMySQLUtils.MySQLPrepareAnsiSQLParam(fMySQLConnection,
     InParamValues[ParamIndex], InParamDefaultValues[ParamIndex], ClientVarManager,
     InParamTypes[ParamIndex], FUseDefaults);
 end;
@@ -1706,6 +1698,21 @@ begin
   PPointer(@FbindArray[ColOffset+FBindOffsets.length])^ := @Bind^.length;
   PPointer(@FbindArray[ColOffset+FBindOffsets.is_null])^ := @Bind^.is_null;
   Inc(FAddedColumnCount);
+end;
+
+{ TZMySQLStatement }
+
+{**
+  Constructs this object and assignes the main properties.
+  @param PlainDriver a native MySQL Plain driver.
+  @param Connection a database connection object.
+  @param Info a statement parameters.
+  @param Handle a connection handle pointer.
+}
+constructor TZMySQLStatement.Create(const PlainDriver: IZMySQLPlainDriver;
+  const Connection: IZConnection; const Info: TStrings; Handle: PZMySQLConnect);
+begin
+  inherited Create(PlainDriver, Connection, '', Info, Handle);
 end;
 
 initialization

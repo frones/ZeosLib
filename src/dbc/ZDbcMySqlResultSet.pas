@@ -442,12 +442,6 @@ begin
        see: http://dev.mysql.com/doc/refman/5.0/en/mysql-use-result.html}
       while FPlainDriver.FetchRow(FQueryHandle) <> nil do;
     FPlainDriver.FreeResult(FQueryHandle);
-    while (FPlainDriver.RetrieveNextRowset(FHandle) = 0) do
-    begin
-      FQueryHandle := FPlainDriver.StoreResult(FHandle);
-      if FQueryHandle <> nil then
-        FPlainDriver.FreeResult(FQueryHandle);
-    end;
   end;
   FQueryHandle := nil;
   FRowHandle := nil;
@@ -914,7 +908,7 @@ function TZAbstractMySQLResultSet.Next: Boolean;
 begin
   { Checks for maximum row. }
   Result := False;
-  if (Closed) or (MaxRows > 0) and (RowNo >= MaxRows) then
+  if (Closed) or ((MaxRows > 0) and (RowNo >= MaxRows)) then
     Exit;
   if FQueryHandle <> nil then
     FRowHandle := FPlainDriver.FetchRow(FQueryHandle);
