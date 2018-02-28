@@ -75,7 +75,10 @@ type
     procedure TestStatement;
     procedure TestAutoIncFields;
     procedure TestDefaultValues;
-    procedure TestSelectMultipleQueries;
+    procedure TestSelectTwoQueriesGetMoreResults;
+    procedure TestSelectTwoQueriesGetMoreResultsWithCloseOfFirstRS;
+    procedure TestSelectTwoQueriesNoGetResults;
+    procedure TestSelectThreeQueriesGetMoreResults;
     procedure TestBitFields;
   end;
 
@@ -423,10 +426,30 @@ begin
   end;
 end;
 
-procedure TZTestDbcMySQLCase.TestSelectMultipleQueries;
-const
-  c_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  c_name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+procedure TZTestDbcMySQLCase.TestSelectThreeQueriesGetMoreResults;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  try
+    ResultSet := Statement.ExecuteQuery('call ThreeResultSets()');
+    CheckNotNull(ResultSet);
+    CheckEquals(8, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of people table');
+    Check(ResultSet.Next, 'There should be a row retrieved');
+    Check(Statement.GetMoreResults, 'There is a second resultset available!');
+    CheckEquals(7, Statement.GetResultSet.GetMetadata.GetColumnCount, 'ColumnCount of string_values table');
+    Check(Statement.GetResultSet.Next, 'There should be a row retrieved');
+    Check(Statement.GetMoreResults, 'There is a third resultset available!');
+    Check(Statement.GetResultSet.Next, 'There should be a row retrieved');
+    ResultSet.Close;
+  finally
+    Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcMySQLCase.TestSelectTwoQueriesGetMoreResults;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -437,8 +460,53 @@ begin
     ResultSet := Statement.ExecuteQuery('call TwoResultSets()');
     CheckNotNull(ResultSet);
     CheckEquals(8, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of people table');
+    Check(ResultSet.Next, 'There should be a row retrieved');
     Check(Statement.GetMoreResults, 'There is a second resultset available!');
     CheckEquals(7, Statement.GetResultSet.GetMetadata.GetColumnCount, 'ColumnCount of string_values table');
+    Check(ResultSet.Next, 'There should be a row retrieved');
+    Check(not Statement.GetMoreResults, 'There no more resultset available!');
+    ResultSet.Close;
+  finally
+    Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcMySQLCase.TestSelectTwoQueriesNoGetResults;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  try
+    ResultSet := Statement.ExecuteQuery('call TwoResultSets()');
+    CheckNotNull(ResultSet);
+    CheckEquals(8, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of people table');
+    ResultSet.Close;
+    ResultSet := Statement.ExecuteQuery('call  TwoResultSets()');
+    ResultSet.Close;
+  finally
+    Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcMySQLCase.TestSelectTwoQueriesGetMoreResultsWithCloseOfFirstRS;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  try
+    ResultSet := Statement.ExecuteQuery('call TwoResultSets()');
+    CheckNotNull(ResultSet);
+    CheckEquals(8, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of people table');
+    Check(ResultSet.Next, 'There should be a row retrieved');
+    ResultSet.Close;
+    Check(Statement.GetMoreResults, 'There is a second resultset available!');
+    CheckEquals(7, Statement.GetResultSet.GetMetadata.GetColumnCount, 'ColumnCount of string_values table');
+    Check(Statement.GetResultSet.Next, 'There should be a row retrieved');
+    ResultSet := Statement.GetResultSet;
     ResultSet.Close;
   finally
     Statement.Close;
