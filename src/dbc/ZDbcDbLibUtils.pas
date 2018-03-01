@@ -107,9 +107,9 @@ function ConvertDBLibNullability(DBLibNullability: Byte): TZColumnNullableType;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function PrepareSQLParameter(const Value: TZVariant; const ParamType: TZSQLType;
-  ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings;
-  const NChar: Boolean = False): RawByteString;
+function PrepareSQLParameter(const Value: TZVariant; ParamType: TZSQLType;
+  const ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings;
+  NChar: Boolean = False): RawByteString;
 
 implementation
 
@@ -320,9 +320,9 @@ end;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function PrepareSQLParameter(const Value: TZVariant; const ParamType: TZSQLType;
-  ClientVarManager: IZClientVariantManager;
-  ConSettings: PZConSettings; const NChar: Boolean = False): RawByteString;
+function PrepareSQLParameter(const Value: TZVariant; ParamType: TZSQLType;
+  const ClientVarManager: IZClientVariantManager;
+  ConSettings: PZConSettings; NChar: Boolean = False): RawByteString;
 var
   TempBytes: TBytes;
   TempBlob: IZBlob;
