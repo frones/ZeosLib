@@ -155,10 +155,14 @@ implementation
 
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
+  {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZSysUtils, ZMessages, ZDbcUtils, ZDbcDbLibStatement, ZEncoding, ZFastCode,
   ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser{$IFDEF OLDFPC}, ZClasses{$ENDIF};
 
-{ TZDBLibDriver }
+var
+  DBLIBCriticalSection: TCriticalSection;
+
+  { TZDBLibDriver }
 
 {**
   Constructs this object with default properties.
@@ -182,7 +186,13 @@ end;
 {$WARNINGS OFF}
 function TZDBLibDriver.Connect(const Url: TZURL): IZConnection;
 begin
-  Result := TZDBLibConnection.Create(Url);
+  Result := nil;
+  DBLIBCriticalSection.Enter;
+  try
+    Result := TZDBLibConnection.Create(Url);
+  finally
+    DBLIBCriticalSection.Release
+  end;
 end;
 {$WARNINGS ON}
 
@@ -930,8 +940,10 @@ end;
 initialization
   DBLibDriver := TZDBLibDriver.Create;
   DriverManager.RegisterDriver(DBLibDriver);
+  DBLIBCriticalSection := TCriticalSection.Create;
 finalization
   if Assigned(DriverManager) then
     DriverManager.DeregisterDriver(DBLibDriver);
   DBLibDriver := nil;
+  FreeAndNil(DBLIBCriticalSection);
 end.
