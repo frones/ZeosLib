@@ -1444,7 +1444,7 @@ end;
 function TZAbstractConnection.GetEscapeString(const Value: ZWideString): ZWideString;
 begin
   if GetAutoEncodeStrings then
-    if StartsWith(Value, '''') and EndsWith(Value, '''') then
+    if StartsWith(Value, ZWideString(#39)) and EndsWith(Value, ZWideString(#39)) then
       Result := GetDriver.GetTokenizer.GetEscapeString(Value)
     else
       {$IFDEF UNICODE}
@@ -1457,7 +1457,7 @@ begin
             ConSettings^.ClientCodePage^.CP)
       {$ENDIF}
   else
-    if StartsWith(Value, RawByteString(#39)) and EndsWith(Value, RawByteString(#39)) then
+    if StartsWith(Value, ZWideString(#39)) and EndsWith(Value, ZWideString(#39)) then
       Result := Value
     else
       {$IFDEF UNICODE}
