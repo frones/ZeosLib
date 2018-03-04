@@ -356,7 +356,6 @@ type
 
     function IsFunction: Boolean;
     function HasOutParameter: Boolean;
-    function HasMoreResultSets: Boolean; virtual;
     function GetFirstResultSet: IZResultSet; virtual;
     function GetPreviousResultSet: IZResultSet; virtual;
     function GetNextResultSet: IZResultSet; virtual;
@@ -2680,15 +2679,6 @@ end;
 function TZAbstractCallableStatement.HasOutParameter: Boolean;
 begin
   Result := FHasOutParameter;
-end;
-
-{**
-  Are more resultsets retrieved?
-  @result Returns <code>True</code> if more resultsets are retrieved
-}
-function TZAbstractCallableStatement.HasMoreResultSets: Boolean;
-begin
-  Result := False;
 end;
 
 {**
