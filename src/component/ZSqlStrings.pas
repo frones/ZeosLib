@@ -249,8 +249,8 @@ begin
       end;
   end else if FDataset is TZSQLProcessor then
     if Assigned(TZSQLProcessor(FDataset).Connection) then
-      if Assigned(TZAbstractRODataset(FDataset).Connection.DbcConnection)
-      then Result := TZAbstractRODataset(FDataset).Connection.DbcConnection.GetTokenizer
+      if Assigned(TZSQLProcessor(FDataset).Connection.DbcConnection)
+      then Result := TZSQLProcessor(FDataset).Connection.DbcConnection.GetTokenizer
       else begin
         Driver := TZSQLProcessor(FDataset).Connection.DbcDriver;
         if Assigned(Driver) then
