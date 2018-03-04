@@ -261,12 +261,10 @@ begin
     end
     else
       Blob.Clear;
-    try
+    //try
       if Assigned(FField.Dataset) then
         THackedDataset(FField.DataSet).DataEvent(deFieldChange, NativeInt(FField));
-    except
-        ApplicationHandleException(Self);
-    end;
+    //except ApplicationHandleException(Self); end; //commented see https://sourceforge.net/p/zeoslib/tickets/226/
   end
   else
   begin
