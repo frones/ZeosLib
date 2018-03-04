@@ -609,6 +609,8 @@ type
     {$IFDEF WITH_ZSTRINGFIELDS}
     property UseZFields: Boolean read FUseZFields write SetUseZFields default True;
     {$ENDIF}
+  public
+    function NextResultSet: Boolean; virtual;
   end;
 
   {$IFNDEF WITH_TFIELD_PARENTFIELD}
@@ -4360,6 +4362,15 @@ end;
 function TZAbstractRODataset.IsSequenced: Boolean;
 begin
   Result := (not FilterEnabled);
+end;
+
+function TZAbstractRODataset.NextResultSet: Boolean;
+begin
+  Result := False;
+  if Assigned(Statement) and Statement.GetMoreResults then begin
+    Result := True;
+    SetAnotherResultset(Statement.GetResultSet);
+  end;
 end;
 
 {**
