@@ -776,11 +776,12 @@ begin
 
     { sets standard_conforming_strings according to Properties if available }
     SCS := Info.Values[standard_conforming_strings];
-    if SCS <> '' then
-    begin
+    if SCS <> '' then begin
       SetServerSetting(standard_conforming_strings, {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(SCS));
       FClientSettingsChanged := True;
-    end;
+      SetStandardConformingStrings(StrToBoolEx(SCS));
+    end else
+      SetStandardConformingStrings(StrToBoolEx(GetServerSetting(#39+standard_conforming_strings+#39)));
     FIs_bytea_output_hex := UpperCase(GetServerSetting('''bytea_output''')) = 'HEX';
   finally
     if self.IsClosed and (Self.FHandle <> nil) then
