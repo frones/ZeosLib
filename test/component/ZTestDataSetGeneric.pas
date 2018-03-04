@@ -100,6 +100,7 @@ type
     procedure Test_doCachedLobs;
     procedure TestDefineFields;
     procedure TestDefineSortedFields;
+    procedure TestEmptyMemoAfterFullMemo;
   end;
 
   TZGenericTestDataSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -2365,6 +2366,53 @@ begin
       if Assigned(TempConnection) then
         TempConnection.Free;
     end;
+  end;
+end;
+
+procedure TZGenericTestDataSet.TestEmptyMemoAfterFullMemo;
+var
+  Query: TZQuery;
+  TxtValue: String;
+  ValueIsNull: Boolean;
+begin
+  if StartsWith(LowerCase(Connection.Protocol), 'oracle') then
+    Exit;   //not resolveable with ora -> empty is always null except use the or func
+  Query := CreateQuery;
+  try
+    try
+      Query.Connection.StartTransaction;
+      try
+        Query.SQL.Text := 'insert into blob_values (b_id, b_text) values (:id, :text)';
+        Query.ParamByName('id').DataType := ftInteger;
+        Query.ParamByName('text').DataType := ftMemo;
+
+        Query.ParamByName('id').AsInteger := 2000;
+        Query.ParamByName('text').AsMemo := '/* abc */';
+        Query.ExecSQL;
+        Query.ParamByName('id').AsInteger := 2001;
+        Query.ParamByName('text').AsMemo := '';
+        Query.ExecSQL;
+        Connection.Commit;
+      except
+        Connection.Rollback;
+      end;
+
+      Query.SQL.Text := 'select * from blob_values where b_id = 2001';
+      Query.Open;
+      try
+        TxtValue := Query.FieldByName('b_text').AsString;
+        ValueIsNull := Query.FieldByName('b_text').IsNull;
+      finally
+        Query.Close;
+      end;
+
+      CheckEquals('', TxtValue, 'Tried to insert an empty clob from a paramater, after the parameter has been used before.');
+      CheckEquals(false, ValueIsNull, 'Tried to insert an empty clob from a paramater, after the parameter has been used before. IsNull should return false.');
+    finally
+      Connection.ExecuteDirect('delete from blob_values where b_id in (2000, 2001)');
+    end;
+  finally
+    FreeAndNil(Query);
   end;
 end;
 
