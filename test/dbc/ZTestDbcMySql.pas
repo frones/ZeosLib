@@ -408,7 +408,7 @@ begin
     ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
     CheckNotNull(ResultSet);
     ResultSet2 := Statement.ExecuteQuery('SELECT * FROM department');
-    Check(ResultSet <> ResultSet2, 'same rs retrieved');
+    Check(ResultSet = ResultSet2, 'same rs retrieved');
   finally
     if Assigned(ResultSet) then
       ResultSet.Close;

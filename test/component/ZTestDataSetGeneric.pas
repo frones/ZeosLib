@@ -407,6 +407,13 @@ begin
       SQL.Text := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
       ExecSQL;
     end;
+    //see http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=49966
+    Query.SQL.Text := 'select IsNull(B.X||B.y, '+QuotedStr('')+') as X_Y_Z from "My_Table" as B '+
+    'where 1=1 and :user_ID = B.x and ((B.nazwa iLike :nazwaFiltr) or (B.skrot iLike :nazwaFiltr))';
+    CheckEquals(2, Query.Params.Count);
+    CheckEquals('user_ID', Query.Params[0].Name);
+    CheckEquals('nazwaFiltr', Query.Params[1].Name);
+    Query.SQL.Text := '';
 
     {
       The test for equipment table
