@@ -140,8 +140,6 @@ type
 
     function GetBinaryEscapeString(const Value: RawByteString): String; override;
     function GetBinaryEscapeString(const Value: TBytes): String; override;
-    function GetEscapeString(const Value: RawByteString): RawByteString; override;
-    function GetEscapeString(const Value: ZWideString): ZWideString; override;
   end;
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
@@ -895,75 +893,22 @@ function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
   if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsBinaryInSQL then
-    if (Length(Value)*2+3) < 32*1024 then
-      Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
-    else
-      raise Exception.Create('Binary data out of range! Use parameters!')
-  else
-    raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
+    if (Length(Value)*2+3) < 32*1024
+    then Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
+    else raise Exception.Create('Binary data out of range! Use parameters!')
+  else raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
 end;
 
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
   if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsBinaryInSQL then
-    if (Length(Value)*2+3) < 32*1024 then
-      Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
-    else
-      raise Exception.Create('Binary data out of range! Use parameters!')
-  else
-    raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
+    if (Length(Value)*2+3) < 32*1024
+    then Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
+    else raise Exception.Create('Binary data out of range! Use parameters!')
+  else raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
 end;
 
-function TZInterbase6Connection.GetEscapeString(const Value: RawByteString): RawByteString;
-begin
-  //http://www.firebirdsql.org/manual/qsg10-firebird-sql.html
-  if GetAutoEncodeStrings then
-    if StartsWith(Value, RawByteString('''')) and EndsWith(Value, RawByteString('''')) then
-      {$IFDEF UNICODE}
-      Result := Value
-      {$ELSE}
-      Result := GetTokenizer.GetEscapeString(Value)
-      {$ENDIF}
-    else
-      {$IFDEF UNICODE}
-      Result := #39+{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39
-      {$ELSE}
-      Result := GetTokenizer.GetEscapeString(#39+StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39)
-      {$ENDIF}
-  else
-    if StartsWith(Value, RawByteString('''')) and EndsWith(Value, RawByteString('''')) then
-      Result := Value
-    else
-      Result := #39+{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39;
-end;
-
-function TZInterbase6Connection.GetEscapeString(const Value: ZWideString): ZWideString;
-begin
-  //http://www.firebirdsql.org/manual/qsg10-firebird-sql.html
-  if GetAutoEncodeStrings then
-    if StartsWith(Value, ZWideString('''')) and EndsWith(Value, ZWideString('''')) then
-      {$IFDEF UNICODE}
-      Result := GetTokenizer.GetEscapeString(Value)
-      {$ELSE}
-      Result := Value
-      {$ENDIF}
-    else
-      {$IFDEF UNICODE}
-      Result := GetTokenizer.GetEscapeString(#39+StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39)
-      {$ELSE}
-      Result := ConSettings^.ConvFuncs.ZRawToUnicode(GetTokenizer.GetEscapeString(#39+StringReplace(ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP), #39, #39#39, [rfReplaceAll])+#39), ConSettings^.ClientCodePage^.CP)
-      {$ENDIF}
-  else
-    if StartsWith(Value, ZWideString('''')) and EndsWith(Value, ZWideString('''')) then
-      Result := Value
-    else
-      {$IFDEF UNICODE}
-      Result := #39+StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39;
-      {$ELSE}
-      Result := ConSettings^.ConvFuncs.ZRawToUnicode(#39+StringReplace(ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP), #39, #39#39, [rfReplaceAll])+#39, ConSettings^.ClientCodePage^.CP);
-      {$ENDIF}
-end;
 {**
   Creates a sequence generator object.
   @param Sequence a name of the sequence generator.

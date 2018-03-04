@@ -212,10 +212,6 @@ begin
     end;
   end;
   FServerStmtCache := SelectFound or FServerStmtCache;
-  {$IFNDEF UNICODE}
-  if ConSettings^.AutoEncode then
-     Result := GetConnection.GetTokenizer.GetEscapeString(Result);
-  {$ENDIF}
 end;
 
 function TZOraclePreparedStatement.CreateResultSet: IZResultSet;

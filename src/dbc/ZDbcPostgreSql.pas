@@ -1392,8 +1392,6 @@ end;
 function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   Result := String(EncodeBinary(Value, True));
-  if GetAutoEncodeStrings then
-    Result := GetTokenizer.GetEscapeString(Result);
 end;
 
 {**
@@ -1409,8 +1407,6 @@ var Tmp: RawByteString;
 begin
   ZSetString(PAnsiChar(Value), Length(Value), Tmp{%H-});
   Result := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(EncodeBinary(Tmp, True));
-  if GetAutoEncodeStrings then
-    Result := GetTokenizer.GetEscapeString(Result);
 end;
 
 {**
@@ -1424,19 +1420,11 @@ end;
 function TZPostgreSQLConnection.GetEscapeString(const Value: ZWideString): ZWideString;
 begin
   Result := ConSettings^.ConvFuncs.ZRawToUnicode(EscapeString(ConSettings.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP)), ConSettings^.ClientCodePage^.CP);
-  {$IFDEF UNICODE}
-  if GetAutoEncodeStrings then
-    Result := GetTokenizer.GetEscapeString(Result);
-  {$ENDIF}
 end;
 
 function TZPostgreSQLConnection.GetEscapeString(const Value: RawByteString): RawByteString;
 begin
   Result := EscapeString(Value);
-  {$IFNDEF UNICODE}
-  if GetAutoEncodeStrings then
-    Result := GetTokenizer.GetEscapeString(Result);
-  {$ENDIF}
 end;
 
 {**
@@ -1577,6 +1565,7 @@ function TZPostgreSQLConnection.EscapeString(const FromChar: PAnsiChar;
 var
   Buf: Array[0..2048] of AnsiChar;
   iError: Integer;
+  P: PAnsiChar;
 begin
   if GetPlainDriver.SupportsStringEscaping(FClientSettingsChanged) then begin
     if (Len+Byte(Ord(Quoted))) shl 1 > (SizeOf(Buf)-1) then begin
@@ -1587,8 +1576,9 @@ begin
     if iError <> 0 then
       raise Exception.Create('Wrong string escape behavior!');
     if Quoted then begin
-      Result[1] := '''';
-      Result[Length(Result)] := '''';
+      P := Pointer(Result);
+      P^ := #39;
+      (P+Length(Result)-1)^ := #39;
     end;
   end else
     Result := ZDbcPostgreSqlUtils.PGEscapeString(FromChar, Len, ConSettings, Quoted);

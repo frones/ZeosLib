@@ -393,7 +393,6 @@ procedure TZMySQLTokenizer.CreateTokenStates;
 begin
   WhitespaceState := TZWhitespaceState.Create;
 
-  EscapeState := TZEscapeState.Create;
   SymbolState := TZMySQLSymbolState.Create;
   NumberState := TZMySQLNumberState.Create;
   QuoteState := TZMySQLQuoteState.Create;

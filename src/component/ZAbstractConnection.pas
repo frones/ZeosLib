@@ -243,7 +243,6 @@ type
     function GetBinaryEscapeStringFromString(const BinaryString: AnsiString): String; overload;
     function GetBinaryEscapeStringFromStream(const Stream: TStream): String; overload;
     function GetBinaryEscapeStringFromFile(const FileName: String): String; overload;
-    function GetAnsiEscapeString(const Ansi: AnsiString): String;
     function GetURL: String;
 
     property InTransaction: Boolean read GetInTransaction;
@@ -1489,17 +1488,6 @@ begin
     Result := GetBinaryEscapeStringFromStream(FStream);
     FreeAndNil(FStream);
   end;
-end;
-
-{**
-  EgonHugeist: Returns a detectable String to inform the Tokenizer
-    to do no UTF8Encoding if neccessary
-  @param Ansi Represents the AnsiString wich has to prepered
-  @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Char's)''~<|1023|<~
-}
-function TZAbstractConnection.GetAnsiEscapeString(const Ansi: AnsiString): String;
-begin
-  Result := DbcConnection.GetTokenizer.GetEscapeString(String(Ansi));
 end;
 
 function TZAbstractConnection.GetURL: String;

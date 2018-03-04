@@ -135,7 +135,6 @@ end;
 }
 procedure TZOracleTokenizer.CreateTokenStates;
 begin
-  EscapeState := TZEscapeState.Create;
   WhitespaceState := TZWhitespaceState.Create;
 
   SymbolState := TZOracleSymbolState.Create;

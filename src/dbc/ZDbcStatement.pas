@@ -941,12 +941,6 @@ begin
     for i := Low(SQLTokens) to high(SQLTokens) do begin //Assembles the Query
       {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} + SQLTokens[i].Value;
       case SQLTokens[i].TokenType of
-        ttEscape:
-          {$IFDEF UNICODE}
-          ToBuff(ZUnicodeToRaw(SQLTokens[i].Value, ConSettings^.ClientCodePage^.CP), Result);
-          {$ELSE}
-          ToBuff(SQLTokens[i].Value, Result);
-          {$ENDIF}
         ttQuoted, ttComment,
         ttWord, ttQuotedIdentifier, ttKeyword:
           ToBuff(ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens[i].Value,
@@ -981,7 +975,6 @@ begin
       {$ELSE !UNICODE}
       ToBuff(SQLTokens[i].Value, FASQL);
       case (SQLTokens[i].TokenType) of
-        ttEscape,
         ttQuoted, ttComment,
         ttWord, ttQuotedIdentifier, ttKeyword:
           ToBuff(ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP), Result);
@@ -3398,10 +3391,6 @@ begin
     end else
       ToBuff(FCachedQueryUni[I], Result);
   FlushBuff(Result);
-  {$IFDEF UNICODE}
-  if ConSettings^.AutoEncode then
-     Result := GetConnection.GetTokenizer.GetEscapeString(Result);
-  {$ENDIF}
 end;
 
 {**
@@ -3424,10 +3413,6 @@ begin
     end else
       ToBuff(FCachedQueryRaw[I], Result);
   FlushBuff(Result);
-  {$IFNDEF UNICODE}
-  if ConSettings^.AutoEncode then
-     Result := GetConnection.GetTokenizer.GetEscapeString(Result);
-  {$ENDIF}
 end;
 
 {**
