@@ -816,7 +816,7 @@ var
       KeyFields := Properties.Values['KeyFields']
     else
       KeyFields := DefineKeyFields(Fields, Connection.DbcConnection.GetMetadata.GetIdentifierConvertor);
-    FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
+    FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, Connection.DbcConnection.GetTokenizer);
     Temp := VarArrayCreate([0, Length(FieldRefs) - 1], varVariant);
 
     for I := 0 to Length(FieldRefs) - 1 do

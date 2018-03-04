@@ -922,7 +922,7 @@ begin
     if Length(QuoteChar) = 1 then
       QuoteChar := QuoteChar + QuoteChar;
     { Parses the Select statement and retrieves a schema object. }
-    Tokenizer := DataSet.Connection.DbcDriver.GetTokenizer;
+    Tokenizer := DataSet.Connection.DbcConnection.GetTokenizer;
     StatementAnalyser := DataSet.Connection.DbcDriver.GetStatementAnalyser;
     SelectSchema := StatementAnalyser.DefineSelectSchemaFromQuery(Tokenizer,
       THackDataSet(DataSet).SQL.Text);

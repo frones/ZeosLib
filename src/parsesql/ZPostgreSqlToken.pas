@@ -80,7 +80,6 @@ type
   public
     function NextToken(Stream: TStream; FirstChar: Char;
       {%H-}Tokenizer: TZTokenizer): TZToken; override;
-    procedure SetStandardConformingStrings(const Value: Boolean);
   end;
 
   {**
@@ -109,7 +108,7 @@ type
 
   IZPostgreSQLTokenizer = interface (IZTokenizer)
     ['{82392175-9065-4048-9974-EE1253B921B4}']
-    procedure SetStandardConformingStrings(const Value: Boolean);
+    procedure SetStandardConformingStrings(Value: Boolean);
   end;
 
   {** Implements a default tokenizer object. }
@@ -119,7 +118,8 @@ type
         const FirstChar: Char): TZTokenizerState; override;
     procedure CreateTokenStates; override;
   public
-    procedure SetStandardConformingStrings(const Value: Boolean);
+    constructor Create(StandartConformingStrings: Boolean);
+    procedure SetStandardConformingStrings(Value: Boolean);
   end;
 
 implementation
@@ -377,16 +377,6 @@ begin
   end;
 end;
 
-{**
-  Sets how backslashes in quoted strings are handled
-  @param True means backslashes are escape characters
-}
-procedure TZPostgreSQLQuoteState.SetStandardConformingStrings(const Value:
-    Boolean);
-begin
-  FStandardConformingStrings := Value;
-end;
-
 { TZPostgreSQLCommentState }
 
 {**
@@ -494,13 +484,14 @@ begin
 end;
 
 {**
+  create the object and
   informs the Postgre Tokenizer '\' should be handled as Escape-char
   @param True means backslashes are quoted strings
 }
-procedure TZPostgreSQLTokenizer.SetStandardConformingStrings(
-  const Value: Boolean);
+constructor TZPostgreSQLTokenizer.Create(StandartConformingStrings: Boolean);
 begin
-  (QuoteState as TZPostgreSQLQuoteState).SetStandardConformingStrings(Value);
+  inherited Create;
+  SetStandardConformingStrings(StandartConformingStrings);
 end;
 
 {**
@@ -534,6 +525,15 @@ begin
 
   SetCharacterState('/', '/', CommentState);
   SetCharacterState('-', '-', CommentState);
+end;
+
+{**
+  Sets how backslashes in quoted strings are handled
+  @param True means backslashes are escape characters
+}
+procedure TZPostgreSQLTokenizer.SetStandardConformingStrings(Value: Boolean);
+begin
+  TZPostgreSQLQuoteState(QuoteState).FStandardConformingStrings := Value;
 end;
 
 {**

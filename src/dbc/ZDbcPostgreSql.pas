@@ -162,7 +162,6 @@ type
     procedure DoRollback;
     procedure LoadServerVersion;
     procedure OnPropertiesChange(Sender: TObject); override;
-    procedure SetStandardConformingStrings(const Value: Boolean);
     function EncodeBinary(const Value: RawByteString; Quoted: Boolean): RawByteString; overload;
     function EncodeBinary(const Value: TBytes; Quoted: Boolean): RawByteString; overload;
     function EncodeBinary(Buf: Pointer; Len: Integer; Quoted: Boolean): RawByteString; overload;
@@ -201,6 +200,7 @@ type
 
     function GetTypeNameByOid(Id: Oid): string;
     function GetPlainDriver: IZPostgreSQLPlainDriver;
+    function GetTokenizer: IZTokenizer; override;
     function GetConnectionHandle: PZPostgreSQLConnect;
 
     function GetHostVersion: Integer; override;
@@ -428,7 +428,7 @@ end;
 }
 function TZPostgreSQLDriver.GetTokenizer: IZTokenizer;
 begin
-  Result := TZPostgreSQLTokenizer.Create; { thread save! Allways return a new Tokenizer! }
+  Result := TZPostgreSQLTokenizer.Create(False); { thread save! Allways return a new Tokenizer! }
 end;
 
 {**
@@ -490,6 +490,11 @@ begin
     Result := nil
   else
     Result := FTableInfoCache.GetTableInfo(TblOid);
+end;
+
+function TZPostgreSQLConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := TZPostgreSQLTokenizer.Create(FStandardConformingStrings);
 end;
 
 {**
@@ -779,15 +784,15 @@ begin
     if SCS <> '' then begin
       SetServerSetting(standard_conforming_strings, {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(SCS));
       FClientSettingsChanged := True;
-      SetStandardConformingStrings(StrToBoolEx(SCS));
+      FStandardConformingStrings := StrToBoolEx(SCS);
     end else
-      SetStandardConformingStrings(StrToBoolEx(GetServerSetting(#39+standard_conforming_strings+#39)));
+      FStandardConformingStrings := StrToBoolEx(GetServerSetting(#39+standard_conforming_strings+#39));
     FIs_bytea_output_hex := UpperCase(GetServerSetting('''bytea_output''')) = 'HEX';
   finally
-    if self.IsClosed and (Self.FHandle <> nil) then
+    if self.IsClosed and (FHandle <> nil) then
     begin
-      GetPlainDriver.Finish(Self.FHandle);
-      Self.FHandle := nil;
+      GetPlainDriver.Finish(FHandle);
+      FHandle := nil;
     end;
   end;
 end;
@@ -1388,7 +1393,7 @@ function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: RawByteString
 begin
   Result := String(EncodeBinary(Value, True));
   if GetAutoEncodeStrings then
-    Result := GetDriver.GetTokenizer.GetEscapeString(Result);
+    Result := GetTokenizer.GetEscapeString(Result);
 end;
 
 {**
@@ -1405,7 +1410,7 @@ begin
   ZSetString(PAnsiChar(Value), Length(Value), Tmp{%H-});
   Result := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(EncodeBinary(Tmp, True));
   if GetAutoEncodeStrings then
-    Result := GetDriver.GetTokenizer.GetEscapeString(Result);
+    Result := GetTokenizer.GetEscapeString(Result);
 end;
 
 {**
@@ -1421,7 +1426,7 @@ begin
   Result := ConSettings^.ConvFuncs.ZRawToUnicode(EscapeString(ConSettings.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP)), ConSettings^.ClientCodePage^.CP);
   {$IFDEF UNICODE}
   if GetAutoEncodeStrings then
-    Result := GetDriver.GetTokenizer.GetEscapeString(Result);
+    Result := GetTokenizer.GetEscapeString(Result);
   {$ENDIF}
 end;
 
@@ -1430,7 +1435,7 @@ begin
   Result := EscapeString(Value);
   {$IFNDEF UNICODE}
   if GetAutoEncodeStrings then
-    Result := GetDriver.GetTokenizer.GetEscapeString(Result);
+    Result := GetTokenizer.GetEscapeString(Result);
   {$ENDIF}
 end;
 
@@ -1462,9 +1467,7 @@ begin
   { Define standard_conforming_strings setting}
   SCS := Trim(Info.Values[standard_conforming_strings]);
   if SCS <> '' then
-    SetStandardConformingStrings(UpperCase(SCS) = FON)
-  else
-    SetStandardConformingStrings(GetPlainDriver.GetStandardConformingStrings);
+    FStandardConformingStrings := StrToBoolEx(SCS);
 end;
 
 {**
@@ -1493,13 +1496,6 @@ begin
  inherited Create(ZUrl);
 end;
 {$ENDIF}
-
-procedure TZPostgreSQLConnection.SetStandardConformingStrings(const Value: Boolean);
-begin
-  FStandardConformingStrings := Value;
-  ( Self.GetDriver.GetTokenizer as IZPostgreSQLTokenizer ).SetStandardConformingStrings(FStandardConformingStrings);
-end;
-
 
 { TZPostgreSQLSequence }
 {**

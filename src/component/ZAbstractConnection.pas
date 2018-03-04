@@ -1499,7 +1499,7 @@ end;
 }
 function TZAbstractConnection.GetAnsiEscapeString(const Ansi: AnsiString): String;
 begin
-  Result := DbcConnection.GetDriver.GetTokenizer.GetEscapeString(String(Ansi));
+  Result := DbcConnection.GetTokenizer.GetEscapeString(String(Ansi));
 end;
 
 function TZAbstractConnection.GetURL: String;

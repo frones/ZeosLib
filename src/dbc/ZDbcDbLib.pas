@@ -922,14 +922,14 @@ function TZDBLibConnection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
   if GetAutoEncodeStrings then
-    Result := GetDriver.GetTokenizer.GetEscapeString(Result)
+    Result := GetTokenizer.GetEscapeString(Result)
 end;
 
 function TZDBLibConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
   if GetAutoEncodeStrings then
-    Result := GetDriver.GetTokenizer.GetEscapeString(Result)
+    Result := GetTokenizer.GetEscapeString(Result)
 end;
 
 function TZDBLibConnection.GetServerAnsiCodePage: Word;

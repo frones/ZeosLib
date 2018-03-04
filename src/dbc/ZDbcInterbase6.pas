@@ -923,13 +923,13 @@ begin
       {$IFDEF UNICODE}
       Result := Value
       {$ELSE}
-      Result := GetDriver.GetTokenizer.GetEscapeString(Value)
+      Result := GetTokenizer.GetEscapeString(Value)
       {$ENDIF}
     else
       {$IFDEF UNICODE}
       Result := #39+{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39
       {$ELSE}
-      Result := GetDriver.GetTokenizer.GetEscapeString(#39+StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39)
+      Result := GetTokenizer.GetEscapeString(#39+StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39)
       {$ENDIF}
   else
     if StartsWith(Value, RawByteString('''')) and EndsWith(Value, RawByteString('''')) then
@@ -944,15 +944,15 @@ begin
   if GetAutoEncodeStrings then
     if StartsWith(Value, ZWideString('''')) and EndsWith(Value, ZWideString('''')) then
       {$IFDEF UNICODE}
-      Result := GetDriver.GetTokenizer.GetEscapeString(Value)
+      Result := GetTokenizer.GetEscapeString(Value)
       {$ELSE}
       Result := Value
       {$ENDIF}
     else
       {$IFDEF UNICODE}
-      Result := GetDriver.GetTokenizer.GetEscapeString(#39+StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39)
+      Result := GetTokenizer.GetEscapeString(#39+StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39)
       {$ELSE}
-      Result := ConSettings^.ConvFuncs.ZRawToUnicode(GetDriver.GetTokenizer.GetEscapeString(#39+StringReplace(ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP), #39, #39#39, [rfReplaceAll])+#39), ConSettings^.ClientCodePage^.CP)
+      Result := ConSettings^.ConvFuncs.ZRawToUnicode(GetTokenizer.GetEscapeString(#39+StringReplace(ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP), #39, #39#39, [rfReplaceAll])+#39), ConSettings^.ClientCodePage^.CP)
       {$ENDIF}
   else
     if StartsWith(Value, ZWideString('''')) and EndsWith(Value, ZWideString('''')) then

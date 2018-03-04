@@ -936,7 +936,7 @@ begin
   if ConSettings^.AutoEncode then
   begin
     Result := ''; //init for FPC
-    SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
+    SQLTokens := GetConnection.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
     for i := Low(SQLTokens) to high(SQLTokens) do begin //Assembles the Query
       {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} + SQLTokens[i].Value;
@@ -974,7 +974,7 @@ begin
   if ConSettings^.AutoEncode then begin
     Result := ''; //init
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
-    SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
+    SQLTokens := GetConnection.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
     for i := Low(SQLTokens) to high(SQLTokens) do begin //Assembles the Query
       {$IFDEF UNICODE}
       ToBuff(SQLTokens[i].Value, Result);
@@ -2451,7 +2451,7 @@ begin
   begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
-      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetCompareFirstKeywordStrings, @FIsPraparable);
+      Connection.GetTokenizer, FIsParamIndex, FNCharDetected, GetCompareFirstKeywordStrings, @FIsPraparable);
 
     Result := ''; //init Result
     for I := 0 to High(FCachedQueryRaw) do
@@ -2468,7 +2468,7 @@ begin
   begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
-      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetCompareFirstKeywordStrings, @FIsPraparable);
+      Connection.GetTokenizer, FIsParamIndex, FNCharDetected, GetCompareFirstKeywordStrings, @FIsPraparable);
 
     Result := ''; //init Result
     for I := 0 to High(FCachedQueryUni) do
@@ -3361,7 +3361,7 @@ begin
   if Length(FCachedQueryRaw) = 0 then
     FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(
         {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
-      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
+      Connection.GetTokenizer, FIsParamIndex, FNCharDetected,
       GetCompareFirstKeywordStrings, @FIsPraparable, FNeedNCharDetection);
 end;
 
@@ -3374,7 +3374,7 @@ begin
   if Length(FCachedQueryUni) = 0 then
     FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni(
         {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
-      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
+      Connection.GetTokenizer, FIsParamIndex, FNCharDetected,
       GetCompareFirstKeywordStrings, @FIsPraparable, FNeedNCharDetection);
 end;
 
@@ -3400,7 +3400,7 @@ begin
   FlushBuff(Result);
   {$IFDEF UNICODE}
   if ConSettings^.AutoEncode then
-     Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
+     Result := GetConnection.GetTokenizer.GetEscapeString(Result);
   {$ENDIF}
 end;
 
@@ -3426,7 +3426,7 @@ begin
   FlushBuff(Result);
   {$IFNDEF UNICODE}
   if ConSettings^.AutoEncode then
-     Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
+     Result := GetConnection.GetTokenizer.GetEscapeString(Result);
   {$ENDIF}
 end;
 
@@ -3642,7 +3642,7 @@ begin
   if Length(FCachedQueryRaw) = 0 then
     FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(
         {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
-      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
+      Connection.GetTokenizer, FIsParamIndex, FNCharDetected,
       GetCompareFirstKeywordStrings, @FIsPraparable, FNeedNCharDetection);
 end;
 
@@ -3674,7 +3674,7 @@ begin
   if Length(FCachedQueryUni) = 0 then
     FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni(
         {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
-      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
+      Connection.GetTokenizer, FIsParamIndex, FNCharDetected,
       GetCompareFirstKeywordStrings, @FIsPraparable, FNeedNCharDetection);
 end;
 

@@ -798,7 +798,7 @@ begin
   ZBinToHex(PAnsiChar(Value), P, L);
   (P+L)^ := #39;
   if GetAutoEncodeStrings then
-    Result := GetDriver.GetTokenizer.GetEscapeString(Result)
+    Result := GetTokenizer.GetEscapeString(Result)
 end;
 
 function TZOracleConnection.GetBinaryEscapeString(const Value: RawByteString): String;
@@ -814,7 +814,7 @@ begin
   ZBinToHex(PAnsiChar(Value), P, L);
   (P+L)^ := #39;
   if GetAutoEncodeStrings then
-    Result := GetDriver.GetTokenizer.GetEscapeString(Result)
+    Result := GetTokenizer.GetEscapeString(Result)
 end;
 
 { TZOracleSequence }

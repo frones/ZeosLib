@@ -240,19 +240,22 @@ begin
   if FDataset is TZAbstractRODataset then
   begin
     if Assigned(TZAbstractRODataset(FDataset).Connection) then
-    begin
-      Driver := TZAbstractRODataset(FDataset).Connection.DbcDriver;
-      if Assigned(Driver) then
-        Result := Driver.GetTokenizer;
-    end;
-  end
-  else if FDataset is TZSQLProcessor then
+      if Assigned(TZAbstractRODataset(FDataset).Connection.DbcConnection)
+      then Result := TZAbstractRODataset(FDataset).Connection.DbcConnection.GetTokenizer
+      else begin
+        Driver := TZAbstractRODataset(FDataset).Connection.DbcDriver;
+        if Assigned(Driver) then
+          Result := Driver.GetTokenizer;
+      end;
+  end else if FDataset is TZSQLProcessor then
     if Assigned(TZSQLProcessor(FDataset).Connection) then
-    begin
-      Driver := TZSQLProcessor(FDataset).Connection.DbcDriver;
-      if Assigned(Driver) then
-        Result := Driver.GetTokenizer;
-    end;
+      if Assigned(TZAbstractRODataset(FDataset).Connection.DbcConnection)
+      then Result := TZAbstractRODataset(FDataset).Connection.DbcConnection.GetTokenizer
+      else begin
+        Driver := TZSQLProcessor(FDataset).Connection.DbcDriver;
+        if Assigned(Driver) then
+          Result := Driver.GetTokenizer;
+      end;
   if Result = nil then
     Result := TZGenericSQLTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
