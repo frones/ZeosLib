@@ -552,7 +552,8 @@ begin
 
   { the column type is ENUM}
   if TypeName = 'enum' then begin
-     if (TypeInfoSecond = '''Y'',''N''') or (TypeInfoSecond = '''N'',''Y''') then
+    FieldType := stString;
+    if (TypeInfoSecond = '''Y'',''N''') or (TypeInfoSecond = '''N'',''Y''') then
       FieldType := stBoolean
     else begin
       TempPos := 1;
