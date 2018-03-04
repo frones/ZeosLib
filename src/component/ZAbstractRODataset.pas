@@ -3469,11 +3469,7 @@ begin
       { Initializes accessors and buffers. }
       ColumnList := ConvertFieldsToColumnInfo(Fields);
       try
-        if Connection.DbcConnection.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-          and (Connection.DbcConnection.GetConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
-          RowAccessor := TZRawRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings)
-        else
-          RowAccessor := TZUnicodeRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings);
+        RowAccessor := TZRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings)
       finally
         ColumnList.Free;
       end;
