@@ -176,8 +176,7 @@ begin
   if Not Prepared then //prevent PrepareInParameters
   begin
     FIsSelectSQL := IsSelect(SQL);
-    if ArrayCount > 0 then
-      FAdoCommand.CommandText := WSQL;
+    FAdoCommand.CommandText := WSQL;
     inherited Prepare;
     FAdoCommand.Prepared := True;
   end;
