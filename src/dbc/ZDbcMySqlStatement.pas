@@ -132,7 +132,7 @@ type
   private
     fMySQL: PMySQL;
     FMySQLConnection: IZMySQLConnection;
-    FYSQL_STMT: PMYSQL_STMT;
+    FMYSQL_STMT: PMYSQL_STMT;
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult, FUseDefaults: Boolean;
     FPreparablePrefixTokens: TPreparablePrefixTokens;
@@ -547,24 +547,24 @@ procedure TZMySQLPreparedStatement.Prepare;
 begin
   FlushPendingResults;
   if not Prepared then begin
-    FYSQL_STMT := FPlainDriver.stmt_init(fMySQL);
-    if (FYSQL_STMT = nil) then begin
-      CheckMySQLPrepStmtError(FPlainDriver, FYSQL_STMT, lcPrepStmt,
+    FMYSQL_STMT := FPlainDriver.stmt_init(fMySQL);
+    if (FMYSQL_STMT = nil) then begin
+      CheckMySQLPrepStmtError(FPlainDriver, FMYSQL_STMT, lcPrepStmt,
         ConvertZMsgToRaw(SFailedtoInitPrepStmt, ZMessages.cCodePage,
           ConSettings^.ClientCodePage^.CP), ConSettings);
       exit;
     end;
-    if (FPlainDriver.stmt_prepare(FYSQL_STMT, Pointer(ASQL), length(ASQL)) <> 0) then begin
-      CheckMySQLPrepStmtError(FPlainDriver, FYSQL_STMT, lcPrepStmt,
+    if (FPlainDriver.stmt_prepare(FMYSQL_STMT, Pointer(ASQL), length(ASQL)) <> 0) then begin
+      CheckMySQLPrepStmtError(FPlainDriver, FMYSQL_STMT, lcPrepStmt,
         ConvertZMsgToRaw(SFailedtoPrepareStmt,
         ZMessages.cCodePage, ConSettings^.ClientCodePage^.CP), ConSettings);
       exit;
     end;
     //see user comment: http://dev.mysql.com/doc/refman/5.0/en/mysql-stmt-fetch.html
     if FUseResult and (FPlainDriver.GetClientVersion >= 50020 ) then //supported since 5.0.2
-      FPlainDriver.stmt_attr_set(FYSQL_STMT, STMT_ATTR_CURSOR_TYPE, @FSTMT_ATTR_CURSOR_TYPE); //we need this to be able to use more than !one! stmt -> keep cached
+      FPlainDriver.stmt_attr_set(FMYSQL_STMT, STMT_ATTR_CURSOR_TYPE, @FSTMT_ATTR_CURSOR_TYPE); //we need this to be able to use more than !one! stmt -> keep cached
     if FPlainDriver.GetClientVersion >= 50060 then //supported since 5.0.6
-      FPlainDriver.stmt_attr_set(FYSQL_STMT, STMT_ATTR_PREFETCH_ROWS, @FPrefetchRows); //try achieve best performnce. No idea how to calculate it
+      FPlainDriver.stmt_attr_set(FMYSQL_STMT, STMT_ATTR_PREFETCH_ROWS, @FPrefetchRows); //try achieve best performnce. No idea how to calculate it
     LogPrepStmtMessage(lcPrepStmt, ASQL);
     inherited Prepare;
   end;
@@ -573,12 +573,12 @@ end;
 procedure TZMySQLPreparedStatement.Unprepare;
 begin
   inherited Unprepare;
-  if FYSQL_STMT <> nil then begin
+  if FMYSQL_STMT <> nil then begin
     FlushPendingResults;
     //cancel all pending results:
     //https://mariadb.com/kb/en/library/mysql_stmt_close/
-    FPlainDriver.stmt_close(FYSQL_STMT);
-    FYSQL_STMT := nil;
+    FPlainDriver.stmt_close(FMYSQL_STMT);
+    FMYSQL_STMT := nil;
   end;
 end;
 
@@ -602,18 +602,18 @@ begin
   Result := False;
   if (FOpenResultSet <> nil)
   then IZResultSet(FOpenResultSet).Close;
-  if (FPlainDriver.GetClientVersion >= 40100) and Assigned(FYSQL_STMT) then begin
-    if FPlainDriver.stmt_next_result(FYSQL_STMT) > 0
+  if (FPlainDriver.GetClientVersion >= 40100) and Assigned(FMYSQL_STMT) then begin
+    if FPlainDriver.stmt_next_result(FMYSQL_STMT) > 0
     then CheckMySQLError(FPlainDriver, fMySQL, lcExecute, ASQL, ConSettings);
 
     FResultsCount := 0; //Reset -> user is expecting more resultsets
     LastResultSet := nil;
     LastUpdateCount := -1;
-    if FPlainDriver.stmt_field_count(FYSQL_STMT) > 0 then begin
+    if FPlainDriver.stmt_field_count(FMYSQL_STMT) > 0 then begin
       Result := True;
       LastResultSet := CreateResultSet(Self.SQL);
     end else
-      LastUpdateCount := FPlainDriver.stmt_affected_rows(FYSQL_STMT);
+      LastUpdateCount := FPlainDriver.stmt_affected_rows(FMYSQL_STMT);
   end;
 end;
 
@@ -636,8 +636,8 @@ begin
     end;
   end else begin
     if FUseResult
-    then NativeResultSet := TZMySQL_Use_PreparedResultSet.Create(FPlainDriver, Self, SQL, fMySQL, FYSQL_STMT)
-    else NativeResultSet := TZMySQL_Store_PreparedResultSet.Create(FPlainDriver, Self, SQL, fMySQL, FYSQL_STMT);
+    then NativeResultSet := TZMySQL_Use_PreparedResultSet.Create(FPlainDriver, Self, SQL, fMySQL, FMYSQL_STMT)
+    else NativeResultSet := TZMySQL_Store_PreparedResultSet.Create(FPlainDriver, Self, SQL, fMySQL, FMYSQL_STMT);
     if (GetResultSetConcurrency = rcUpdatable) or
        ((GetResultSetType = rtScrollInsensitive) and FUseResult) then begin
       if (GetResultSetConcurrency = rcUpdatable)
@@ -667,15 +667,15 @@ var
   Signed: Boolean;
 begin
   { Initialize Bind Array and Column Array }
-  Assert(FPlainDriver.stmt_param_count(FYSQL_STMT) = ULong(InParamCount), SInvalidInputParameterCount);
+  Assert(FPlainDriver.stmt_param_count(FMYSQL_STMT) = ULong(InParamCount), SInvalidInputParameterCount);
   FParamBindBuffer := TZMySqlParamBindBuffer.Create(FPlainDriver,InParamCount,FColumnArray);
   for i := 0 to InParamCount -1 do
   begin
     MySQLType := GetFieldType(InParamTypes[i], Signed{%H-});
     FParamBindBuffer.AddColumn(MySQLType, getMySQLFieldSize(MySQLType, ChunkSize), Signed);
   end;
-  if (FPlainDriver.stmt_bind_param(FYSQL_STMT, FParamBindBuffer.GetBufferAddress) <> 0) then
-    checkMySQLPrepStmtError (FPlainDriver, FYSQL_STMT, lcPrepStmt,
+  if (FPlainDriver.stmt_bind_param(FMYSQL_STMT, FParamBindBuffer.GetBufferAddress) <> 0) then
+    checkMySQLPrepStmtError (FPlainDriver, FMYSQL_STMT, lcPrepStmt,
       ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
       ConSettings^.ClientCodePage^.CP), ConSettings);
 end;
@@ -874,9 +874,9 @@ JmpCharRec:     CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSe
     end;
   end;
 
-  if ChunkedData and (FPlainDriver.stmt_bind_param(FYSQL_STMT, FParamBindBuffer.GetBufferAddress) <> 0) then
+  if ChunkedData and (FPlainDriver.stmt_bind_param(FMYSQL_STMT, FParamBindBuffer.GetBufferAddress) <> 0) then
   begin
-    checkMySQLPrepStmtError (FPlainDriver, FYSQL_STMT, lcPrepStmt,
+    checkMySQLPrepStmtError (FPlainDriver, FMYSQL_STMT, lcPrepStmt,
       ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
       ConSettings^.ClientCodePage^.CP), ConSettings);
     exit;
@@ -925,9 +925,9 @@ JmpInherited:
         begin
           if OffSet+PieceSize > Len then
             PieceSize := Len - OffSet;
-          if (FPlainDriver.stmt_send_long_data(FYSQL_STMT, I, P, PieceSize) <> 0) then
+          if (FPlainDriver.stmt_send_long_data(FMYSQL_STMT, I, P, PieceSize) <> 0) then
           begin
-            checkMySQLPrepStmtError (FPlainDriver, FYSQL_STMT, lcPrepStmt,
+            checkMySQLPrepStmtError (FPlainDriver, FMYSQL_STMT, lcPrepStmt,
               ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
               ConSettings^.ClientCodePage^.CP), ConSettings);
             exit;
@@ -992,11 +992,11 @@ begin
   PrepareOpenResultSetForReUse;
   Prepare;
   BindInParameters;
-  if (FPlainDriver.stmt_execute(FYSQL_STMT) <> 0) then
-      checkMySQLPrepStmtError(FPlainDriver,FYSQL_STMT, lcExecPrepStmt,
+  if (FPlainDriver.stmt_execute(FMYSQL_STMT) <> 0) then
+      checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
         ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
         ConSettings^.ClientCodePage^.CP), ConSettings);
-  if FPlainDriver.stmt_field_count(FYSQL_STMT) = 0
+  if FPlainDriver.stmt_field_count(FMYSQL_STMT) = 0
   then raise EZSQLException.Create(SCanNotOpenResultSet)
   else Result := CreateResultSet(SQL);
   inherited ExecuteQueryPrepared;
@@ -1018,30 +1018,30 @@ begin
   then IZResultSet(FOpenResultSet).Close;
   Prepare;
   BindInParameters;
-  if (FPlainDriver.stmt_execute(FYSQL_STMT) <> 0) then
-    checkMySQLPrepStmtError(FPlainDriver,FYSQL_STMT, lcExecPrepStmt,
+  if (FPlainDriver.stmt_execute(FMYSQL_STMT) <> 0) then
+    checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
       ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
         ConSettings^.ClientCodePage^.CP),
       ConSettings);
 
   { Process queries with result sets }
-  if FPlainDriver.stmt_field_count(FYSQL_STMT) > 0 then begin
-    FPlainDriver.stmt_store_result(FYSQL_STMT);
-    Result := FPlainDriver.stmt_affected_rows(FYSQL_STMT);
-    FPlainDriver.stmt_free_result(FYSQL_STMT);
+  if FPlainDriver.stmt_field_count(FMYSQL_STMT) > 0 then begin
+    FPlainDriver.stmt_store_result(FMYSQL_STMT);
+    Result := FPlainDriver.stmt_affected_rows(FMYSQL_STMT);
+    FPlainDriver.stmt_free_result(FMYSQL_STMT);
   end else { Process regular query }
-    Result := FPlainDriver.stmt_affected_rows(FYSQL_STMT);
+    Result := FPlainDriver.stmt_affected_rows(FMYSQL_STMT);
   LastUpdateCount := Result;
   Inherited ExecuteUpdatePrepared;
 end;
 
 procedure TZMySQLPreparedStatement.FlushPendingResults;
 begin
-  if FYSQL_STMT <> nil then
-    while FPlainDriver.stmt_next_result(FYSQL_STMT) = 0 do
-      if FPlainDriver.stmt_field_count(FYSQL_STMT) > 0 then begin
-        FPlainDriver.stmt_store_result(FYSQL_STMT);
-        FPlainDriver.stmt_free_result(FYSQL_STMT);
+  if FMYSQL_STMT <> nil then
+    while FPlainDriver.stmt_next_result(FMYSQL_STMT) = 0 do
+      if FPlainDriver.stmt_field_count(FMYSQL_STMT) > 0 then begin
+        FPlainDriver.stmt_store_result(FMYSQL_STMT);
+        FPlainDriver.stmt_free_result(FMYSQL_STMT);
         Inc(FResultsCount);
       end;
 end;
@@ -1060,15 +1060,15 @@ begin
   PrepareLastResultSetForReUse;
   Prepare;
   BindInParameters;
-  if (FPlainDriver.stmt_execute(FYSQL_STMT) <> 0) then
-    checkMySQLPrepStmtError(FPlainDriver,FYSQL_STMT, lcExecPrepStmt,
+  if (FPlainDriver.stmt_execute(FMYSQL_STMT) <> 0) then
+    checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
       ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
         ConSettings^.ClientCodePage^.CP), ConSettings);
-  if FPlainDriver.stmt_field_count(FYSQL_STMT) > 0 then begin
+  if FPlainDriver.stmt_field_count(FMYSQL_STMT) > 0 then begin
     Result := True;
     LastResultSet := CreateResultSet(SQL);
   end else { Processes regular query. }
-    LastUpdateCount := FPlainDriver.stmt_affected_rows(FYSQL_STMT);
+    LastUpdateCount := FPlainDriver.stmt_affected_rows(FMYSQL_STMT);
   inherited ExecutePrepared;
 end;
 
