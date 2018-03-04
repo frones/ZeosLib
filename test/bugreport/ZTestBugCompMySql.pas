@@ -111,6 +111,7 @@ type
     procedure TestMantis235;
     procedure TestTicket52;
     procedure TestMS56OBER9357;
+    procedure TestTicket186_MultipleResults;
   end;
 
 implementation
@@ -1703,6 +1704,38 @@ begin
 
   try
     CheckEquals(2, Query.RecordCount);
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZTestCompMySQLBugReport.TestTicket186_MultipleResults;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.Properties.Values['ValidateUpdateCount'] := 'False';
+    Query.CachedUpdates := False;
+
+    { Remove previously created record }
+    Query.SQL.Text := 'CALL ThreeResultSets()';
+    Query.ExecSQL;
+    Query.ExecSQL;
+    Query.Open;
+    Query.Close;
+    Query.Open;
+    CheckEquals(Query.FieldCount, 8,  'ColumnCount of people table');
+    Query.Next;
+    Check(Query.NextResultSet, 'There is a second resultset available!');
+    CheckEquals(7, Query.FieldCount, 'ColumnCount of string_values table');
+    Query.Next;
+    Check(Query.NextResultSet, 'There is a third resultset available!');
+    Query.Next;
+    CheckEquals(6, Query.FieldCount, 'ColumnCount of equipment table');
+    Query.Close;
   finally
     Query.Free;
   end;
