@@ -82,7 +82,7 @@ implementation
 }
 procedure TZTestPostgreSQLTokenizer.SetUp;
 begin
-  Tokenizer := TZPostgreSQLTokenizer.Create(False);
+  Tokenizer := TZPostgreSQLTokenizer.Create;
 end;
 
 {**

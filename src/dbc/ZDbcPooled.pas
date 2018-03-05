@@ -58,7 +58,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs, DateUtils, SysUtils,
   SyncObjs,
   ZCompatibility, ZClasses, ZURL, ZDbcConnection, ZDbcIntfs, ZPlainDriver,
-  ZMessages, ZVariant, ZTokenizer;
+  ZMessages, ZVariant;
 
 type
   TConnectionPool = class;
@@ -158,7 +158,6 @@ type
     function IsClosed: Boolean;
     function GetDriver: IZDriver;
     function GetIZPlainDriver: IZPlainDriver;
-    function GetTokenizer: IZTokenizer;
     function GetMetadata: IZDatabaseMetadata;
     function GetParameters: TStrings;
     function GetClientVersion: Integer;
@@ -543,14 +542,9 @@ begin
   Result := GetConnection.GetParameters;
 end;
 
-function TZDbcPooledConnection.GetTokenizer: IZTokenizer;
-begin
-  Result := GetConnection.GetTokenizer;
-end;
-
 function TZDbcPooledConnection.GetTransactionIsolation: TZTransactIsolationLevel;
 begin
-  Result := GetConnection.GetTransactionIsolation;
+  Result := GetConnection.GetTransactionIsolation;  
 end;
 
 function TZDbcPooledConnection.GetWarnings: EZSQLWarning;

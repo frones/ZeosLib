@@ -162,6 +162,7 @@ type
     procedure DoRollback;
     procedure LoadServerVersion;
     procedure OnPropertiesChange(Sender: TObject); override;
+    procedure SetStandardConformingStrings(const Value: Boolean);
     function EncodeBinary(const Value: RawByteString; Quoted: Boolean): RawByteString; overload;
     function EncodeBinary(const Value: TBytes; Quoted: Boolean): RawByteString; overload;
     function EncodeBinary(Buf: Pointer; Len: Integer; Quoted: Boolean): RawByteString; overload;
@@ -200,7 +201,6 @@ type
 
     function GetTypeNameByOid(Id: Oid): string;
     function GetPlainDriver: IZPostgreSQLPlainDriver;
-    function GetTokenizer: IZTokenizer; override;
     function GetConnectionHandle: PZPostgreSQLConnect;
 
     function GetHostVersion: Integer; override;
@@ -428,7 +428,7 @@ end;
 }
 function TZPostgreSQLDriver.GetTokenizer: IZTokenizer;
 begin
-  Result := TZPostgreSQLTokenizer.Create(False); { thread save! Allways return a new Tokenizer! }
+  Result := TZPostgreSQLTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
 
 {**
@@ -490,11 +490,6 @@ begin
     Result := nil
   else
     Result := FTableInfoCache.GetTableInfo(TblOid);
-end;
-
-function TZPostgreSQLConnection.GetTokenizer: IZTokenizer;
-begin
-  Result := TZPostgreSQLTokenizer.Create(FStandardConformingStrings);
 end;
 
 {**
@@ -784,15 +779,15 @@ begin
     if SCS <> '' then begin
       SetServerSetting(standard_conforming_strings, {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(SCS));
       FClientSettingsChanged := True;
-      FStandardConformingStrings := StrToBoolEx(SCS);
+      SetStandardConformingStrings(StrToBoolEx(SCS));
     end else
-      FStandardConformingStrings := StrToBoolEx(GetServerSetting(#39+standard_conforming_strings+#39));
+      SetStandardConformingStrings(StrToBoolEx(GetServerSetting(#39+standard_conforming_strings+#39)));
     FIs_bytea_output_hex := UpperCase(GetServerSetting('''bytea_output''')) = 'HEX';
   finally
-    if self.IsClosed and (FHandle <> nil) then
+    if self.IsClosed and (Self.FHandle <> nil) then
     begin
-      GetPlainDriver.Finish(FHandle);
-      FHandle := nil;
+      GetPlainDriver.Finish(Self.FHandle);
+      Self.FHandle := nil;
     end;
   end;
 end;
@@ -1455,7 +1450,9 @@ begin
   { Define standard_conforming_strings setting}
   SCS := Trim(Info.Values[standard_conforming_strings]);
   if SCS <> '' then
-    FStandardConformingStrings := StrToBoolEx(SCS);
+    SetStandardConformingStrings(UpperCase(SCS) = FON)
+  else
+    SetStandardConformingStrings(GetPlainDriver.GetStandardConformingStrings);
 end;
 
 {**
@@ -1484,6 +1481,13 @@ begin
  inherited Create(ZUrl);
 end;
 {$ENDIF}
+
+procedure TZPostgreSQLConnection.SetStandardConformingStrings(const Value: Boolean);
+begin
+  FStandardConformingStrings := Value;
+  ( Self.GetDriver.GetTokenizer as IZPostgreSQLTokenizer ).SetStandardConformingStrings(FStandardConformingStrings);
+end;
+
 
 { TZPostgreSQLSequence }
 {**

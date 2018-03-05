@@ -315,7 +315,7 @@ begin
   {$IFDEF ZEOS_TEST_ONLY}
   inherited LoadColumns;
   {$ELSE}
-  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetTokenizer, SQL) <> nil then
+  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
     for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
       Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
       ClearColumn(Current);

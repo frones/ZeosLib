@@ -4202,7 +4202,7 @@ begin
         KeyFields := Properties.Values['KeyFields']
       else
         KeyFields := DefineKeyFields(Fields, Connection.DbcConnection.GetMetadata.GetIdentifierConvertor);
-      FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, Connection.DbcConnection.GetTokenizer);
+      FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
       SetLength(Temp, Length(FieldRefs));
       RetrieveDataFieldsFromResultSet(FieldRefs, ResultSet, Temp);
       if Length(FieldRefs) = 1 then
@@ -4425,7 +4425,7 @@ begin
   PartialKey := loPartialKey in Options;
   CaseInsensitive := loCaseInsensitive in Options;
 
-  FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, Connection.DbcConnection.GetTokenizer);
+  FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
   FieldIndices := nil;
   if FieldRefs = nil then
      Exit;
@@ -4572,7 +4572,7 @@ begin
      Exit;
 
   { Fill result array }
-  FieldRefs := DefineFields(Self, ResultFields, OnlyDataFields, Connection.DbcConnection.GetTokenizer);
+  FieldRefs := DefineFields(Self, ResultFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
   FieldIndices := DefineFieldIndices(FieldsLookupTable, FieldRefs);
   SetLength(ResultValues, Length(FieldRefs));
   SearchRowBuffer := PZRowBuffer(AllocRecordBuffer);
@@ -5117,9 +5117,7 @@ begin
   if FConnection <> nil then
   begin
     Driver := FConnection.DbcDriver;
-    if Assigned(FConnection.DbcConnection)
-    then Tokenizer := FConnection.DbcConnection.GetTokenizer
-    else Tokenizer := Driver.GetTokenizer;
+    Tokenizer := Driver.GetTokenizer;
     StatementAnalyser := Driver.GetStatementAnalyser;
     SelectSchema := StatementAnalyser.DefineSelectSchemaFromQuery(
       Tokenizer, SQL.Text);

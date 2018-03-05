@@ -786,6 +786,9 @@ type
   {** Represents a generic interface to PostgreSQL native API. }
   IZPostgreSQLPlainDriver = interface (IZPlainDriver)
     ['{03CD6345-2D7A-4FE2-B03D-3C5656789FEB}']
+
+    function GetStandardConformingStrings: Boolean;
+
     function EscapeBytea(Handle: PGconn; from: PAnsiChar; from_length: LongWord; to_lenght:PLongword): PAnsiChar;
     function EscapeString(Handle: PGconn; ToChar: PAnsiChar; const FromChar: PAnsiChar;
       length: NativeUInt; error: PInteger): NativeUInt; overload;
@@ -926,6 +929,7 @@ type
   TZPostgreSQLBaseDriver = class(TZAbstractPlainDriver, IZPostgreSQLPlainDriver)
   protected
     POSTGRESQL_API: TZPOSTGRESQL_API;
+    function GetStandardConformingStrings: Boolean; virtual;
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
     procedure LoadApi; override;
@@ -1110,6 +1114,7 @@ type
   TZPostgreSQL9PlainDriver = class(TZPostgreSQL8PlainDriver)
   protected
     function Clone: IZPlainDriver; override;
+    function GetStandardConformingStrings: Boolean; override;
     procedure LoadCodePages; override;
   public
     constructor Create;
@@ -1682,6 +1687,11 @@ begin
   Result := POSTGRESQL_API.PQsocket(Handle);
 end;
 
+function TZPostgreSQLBaseDriver.GetStandardConformingStrings: Boolean;
+begin
+  Result := False;
+end;
+
 function TZPostgreSQLBaseDriver.GetStatus(
   Handle: PZPostgreSQLConnect): TZPostgreSQLConnectStatusType;
 begin
@@ -1992,6 +2002,11 @@ end;
 function TZPostgreSQL9PlainDriver.GetDescription: string;
 begin
   Result := 'Native Plain Driver for PostgreSQL 9.x';
+end;
+
+function TZPostgreSQL9PlainDriver.GetStandardConformingStrings: Boolean;
+begin
+  Result := True;
 end;
 
 end.

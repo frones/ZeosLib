@@ -283,7 +283,6 @@ type
 
     procedure SetTransactionIsolation(Value: TZTransactIsolationLevel);
     function GetTransactionIsolation: TZTransactIsolationLevel;
-    function GetTokenizer: IZTokenizer;
 
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;

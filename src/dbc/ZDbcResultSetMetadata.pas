@@ -863,7 +863,7 @@ var
 begin
   { Parses the Select statement and retrieves a schema object. }
   Driver := Metadata.GetConnection.GetDriver;
-  Tokenizer := Metadata.GetConnection.GetTokenizer;
+  Tokenizer := Driver.GetTokenizer;
   StatementAnalyser := Driver.GetStatementAnalyser;
   SelectSchema := StatementAnalyser.DefineSelectSchemaFromQuery(Tokenizer, SQL);
   if Assigned(SelectSchema) then

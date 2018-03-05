@@ -217,7 +217,6 @@ type
     function GetDriver: IZDriver;
     function GetIZPlainDriver: IZPlainDriver;
     function GetMetadata: IZDatabaseMetadata;
-    function GetTokenizer: IZTokenizer; virtual;
     function GetParameters: TStrings;
     {ADDED by fduenas 15-06-2006}
     function GetClientVersion: Integer; virtual;
@@ -1361,20 +1360,6 @@ procedure TZAbstractConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 begin
   FTransactIsolationLevel := Level;
-end;
-
-{**
-  Creates a generic tokenizer object.
-  Behavior of the tokenizer might change in some circumstances according
-  locale connection properties.
-  two examples:
-    - Changed QuoteChars(ADO f.e )
-    - escape behavior changes (postgresql standart_conforming_strings)
-  @returns a created generic tokenizer object.
-}
-function TZAbstractConnection.GetTokenizer: IZTokenizer;
-begin
-  Result := FDriver.GetTokenizer;
 end;
 
 {**
