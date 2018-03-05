@@ -99,7 +99,7 @@ type
     function SupportsGroupByUnrelated: Boolean; override;
     function SupportsGroupByBeyondSelect: Boolean; override;
 //    function SupportsLikeEscapeClause: Boolean; override; -> Not implemented
-//    function SupportsMultipleResultSets: Boolean; override; -> Not implemented
+    function SupportsMultipleResultSets: Boolean; override;
 //    function SupportsMultipleTransactions: Boolean; override; -> Not implemented
 //    function SupportsNonNullableColumns: Boolean; override; -> Not implemented
 //    function SupportsMinimumSQLGrammar: Boolean; override; -> Not implemented
@@ -865,6 +865,16 @@ function TZMySQLDatabaseInfo.SupportsMilliSeconds: Boolean;
 begin
   Result := False;
 end;
+
+{**
+  Are multiple <code>ResultSet</code> from a single execute supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZMySQLDatabaseInfo.SupportsMultipleResultSets: Boolean;
+begin
+  Result := True;
+end;
+
 {**
   Gets the MySQL version info.
   @param MajorVesion the major version of MySQL server.

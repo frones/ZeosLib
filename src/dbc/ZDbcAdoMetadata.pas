@@ -73,6 +73,7 @@ type
   {** Implements Ado Database Information. }
   TZAdoDatabaseInfo = class(TZAbstractDatabaseInfo, IZOleDBDatabaseInfo)
   private
+    fDBPROP_MULTIPLEPARAMSETS: Boolean;
     fDBPROP_PROVIDERFRIENDLYNAME: String;
     fDBPROP_PROVIDERVER: String;
     fDBPROP_DBMSNAME: String;
@@ -153,6 +154,7 @@ type
     function SupportsCatalogsInIndexDefinitions: Boolean; override;
     function SupportsCatalogsInPrivilegeDefinitions: Boolean; override;
     function SupportsOverloadPrefixInStoredProcedureName: Boolean; override;
+    function SupportsParameterBinding: Boolean; override;
     function SupportsPositionedDelete: Boolean; override;
     function SupportsPositionedUpdate: Boolean; override;
     function SupportsSelectForUpdate: Boolean; override;
@@ -577,7 +579,7 @@ procedure TZAdoDatabaseInfo.InitilizePropertiesFromDBInfo(
   const DBInitialize: IDBInitialize; const Malloc: IMalloc);
 const
   VARIANT_TRUE = -1;
-  PropCount = 25;
+  PropCount = 26;
   rgPropertyIDs: array[0..PropCount-1] of DBPROPID =
     ( DBPROP_PROVIDERFRIENDLYNAME,
       DBPROP_PROVIDERVER,
@@ -603,7 +605,8 @@ const
       DBPROP_GROUPBY,
       DBPROP_ORDERBYCOLUMNSINSELECT,
       DBPROP_PREPAREABORTBEHAVIOR,
-      DBPROP_PREPARECOMMITBEHAVIOR);
+      DBPROP_PREPARECOMMITBEHAVIOR,
+      DBPROP_MULTIPLEPARAMSETS);
 var
   DBProperties: IDBProperties;
   PropIDSet: array[0..PropCount-1] of TDBPROPIDSET;
@@ -626,69 +629,48 @@ begin
       PropSet := prgPropertySets^;
       if PropSet.rgProperties^[i].dwStatus <> DBPROPSTATUS(DBPROPSTATUS_OK) then
         Continue;
-      if PropSet.rgProperties^[i].dwPropertyID = DBPROP_PROVIDERFRIENDLYNAME then
-        fDBPROP_PROVIDERFRIENDLYNAME := String(PropSet.rgProperties^[i].vValue)
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_PROVIDERVER then
-        fDBPROP_PROVIDERVER := String(PropSet.rgProperties^[i].vValue)
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_DBMSNAME then
-        fDBPROP_DBMSNAME := String(PropSet.rgProperties^[i].vValue)
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_DBMSVER then
-        fDBPROP_DBMSVER := String(PropSet.rgProperties^[i].vValue)
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_SUPPORTEDTXNISOLEVELS then begin
-        intProp := PropSet.rgProperties^[i].vValue;
-        fSupportedTransactIsolationLevels := [];
-        if ISOLATIONLEVEL_CHAOS and intProp = ISOLATIONLEVEL_CHAOS then
-          Include(fSupportedTransactIsolationLevels, tiNone);
-        if ISOLATIONLEVEL_READUNCOMMITTED and intProp = ISOLATIONLEVEL_READUNCOMMITTED then
-          Include(fSupportedTransactIsolationLevels, tiReadUncommitted);
-        if ISOLATIONLEVEL_READCOMMITTED and intProp = ISOLATIONLEVEL_READCOMMITTED then
-          Include(fSupportedTransactIsolationLevels, tiReadCommitted);
-        if ISOLATIONLEVEL_REPEATABLEREAD and intProp = ISOLATIONLEVEL_REPEATABLEREAD then
-          Include(fSupportedTransactIsolationLevels, tiRepeatableRead);
-        if ISOLATIONLEVEL_SERIALIZABLE and intProp = ISOLATIONLEVEL_SERIALIZABLE then
-          Include(fSupportedTransactIsolationLevels, tiSerializable);
-      end else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_MULTIPLERESULTS then
-        fSupportsMultipleResultSets := PropSet.rgProperties^[i].vValue <> DBPROPVAL_MR_NOTSUPPORTED
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_MULTIPLESTORAGEOBJECTS then
-        fSupportsMultipleStorageObjects := PropSet.rgProperties^[i].vValue = VARIANT_TRUE
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_SCHEMAUSAGE then
-        fDBPROP_SCHEMAUSAGE := PropSet.rgProperties^[i].vValue
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_CATALOGUSAGE then
-        fDBPROP_CATALOGUSAGE := PropSet.rgProperties^[i].vValue
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_QUOTEDIDENTIFIERCASE then
-        fDBPROP_QUOTEDIDENTIFIERCASE := PropSet.rgProperties^[i].vValue
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_IDENTIFIERCASE then
-        fDBPROP_IDENTIFIERCASE := PropSet.rgProperties^[i].vValue
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_MAXROWSIZE then
-        fDBPROP_MAXROWSIZE := PropSet.rgProperties^[i].vValue
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_MAXROWSIZEINCLUDESBLOB then
-        fDBPROP_MAXROWSIZEINCLUDESBLOB := PropSet.rgProperties^[i].vValue = VARIANT_TRUE
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_SQLSUPPORT then
-        fDBPROP_SQLSUPPORT := PropSet.rgProperties^[i].vValue
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_CATALOGTERM then
-        fDBPROP_CATALOGTERM := String(PropSet.rgProperties^[i].vValue)
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_SCHEMATERM then
-        fDBPROP_SCHEMATERM := String(PropSet.rgProperties^[i].vValue)
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_PROCEDURETERM then
-        fDBPROP_PROCEDURETERM := String(PropSet.rgProperties^[i].vValue)
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_SUPPORTEDTXNDDL then
-        fDBPROP_SUPPORTEDTXNDDL := PropSet.rgProperties^[i].vValue
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_CONCATNULLBEHAVIOR then
-        fDBPROP_CONCATNULLBEHAVIOR := PropSet.rgProperties^[i].vValue = DBPROPVAL_CB_NULL
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_NULLCOLLATION then
-        fDBPROP_NULLCOLLATION := PropSet.rgProperties^[i].vValue
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_SUBQUERIES then
-        fDBPROP_SUBQUERIES := PropSet.rgProperties^[i].vValue
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_GROUPBY then
-        fDBPROP_GROUPBY := PropSet.rgProperties^[i].vValue
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_ORDERBYCOLUMNSINSELECT then
-        fDBPROP_ORDERBYCOLUMNSINSELECT := PropSet.rgProperties^[i].vValue = VARIANT_TRUE
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_PREPAREABORTBEHAVIOR then
-        fDBPROP_PREPAREABORTBEHAVIOR := PropSet.rgProperties^[i].vValue
-      else if PropSet.rgProperties^[i].dwPropertyID = DBPROP_PREPARECOMMITBEHAVIOR then
-        fDBPROP_PREPARECOMMITBEHAVIOR := PropSet.rgProperties^[i].vValue
-
-      ; VariantClear(PropSet.rgProperties^[i].vValue);
+      case PropSet.rgProperties^[i].dwPropertyID of
+        DBPROP_PROVIDERFRIENDLYNAME:    fDBPROP_PROVIDERFRIENDLYNAME := String(PropSet.rgProperties^[i].vValue);
+        DBPROP_PROVIDERVER:             fDBPROP_PROVIDERVER := String(PropSet.rgProperties^[i].vValue);
+        DBPROP_DBMSNAME:                fDBPROP_DBMSNAME := String(PropSet.rgProperties^[i].vValue);
+        DBPROP_DBMSVER:                 fDBPROP_DBMSVER := String(PropSet.rgProperties^[i].vValue);
+        DBPROP_SUPPORTEDTXNISOLEVELS:   begin
+            intProp := PropSet.rgProperties^[i].vValue;
+            fSupportedTransactIsolationLevels := [];
+            if ISOLATIONLEVEL_CHAOS and intProp = ISOLATIONLEVEL_CHAOS then
+              Include(fSupportedTransactIsolationLevels, tiNone);
+            if ISOLATIONLEVEL_READUNCOMMITTED and intProp = ISOLATIONLEVEL_READUNCOMMITTED then
+              Include(fSupportedTransactIsolationLevels, tiReadUncommitted);
+            if ISOLATIONLEVEL_READCOMMITTED and intProp = ISOLATIONLEVEL_READCOMMITTED then
+              Include(fSupportedTransactIsolationLevels, tiReadCommitted);
+            if ISOLATIONLEVEL_REPEATABLEREAD and intProp = ISOLATIONLEVEL_REPEATABLEREAD then
+              Include(fSupportedTransactIsolationLevels, tiRepeatableRead);
+            if ISOLATIONLEVEL_SERIALIZABLE and intProp = ISOLATIONLEVEL_SERIALIZABLE then
+              Include(fSupportedTransactIsolationLevels, tiSerializable);
+          end;
+        DBPROP_MULTIPLERESULTS:         fSupportsMultipleResultSets := PropSet.rgProperties^[i].vValue <> DBPROPVAL_MR_NOTSUPPORTED;
+        DBPROP_MULTIPLESTORAGEOBJECTS:  fSupportsMultipleStorageObjects := PropSet.rgProperties^[i].vValue = VARIANT_TRUE;
+        DBPROP_SCHEMAUSAGE:             fDBPROP_SCHEMAUSAGE := PropSet.rgProperties^[i].vValue;
+        DBPROP_CATALOGUSAGE:            fDBPROP_CATALOGUSAGE := PropSet.rgProperties^[i].vValue;
+        DBPROP_QUOTEDIDENTIFIERCASE:    fDBPROP_QUOTEDIDENTIFIERCASE := PropSet.rgProperties^[i].vValue;
+        DBPROP_IDENTIFIERCASE:          fDBPROP_IDENTIFIERCASE := PropSet.rgProperties^[i].vValue;
+        DBPROP_MAXROWSIZE:              fDBPROP_MAXROWSIZE := PropSet.rgProperties^[i].vValue;
+        DBPROP_MAXROWSIZEINCLUDESBLOB:  fDBPROP_MAXROWSIZEINCLUDESBLOB := PropSet.rgProperties^[i].vValue = VARIANT_TRUE;
+        DBPROP_SQLSUPPORT:              fDBPROP_SQLSUPPORT := PropSet.rgProperties^[i].vValue;
+        DBPROP_CATALOGTERM:             fDBPROP_CATALOGTERM := String(PropSet.rgProperties^[i].vValue);
+        DBPROP_SCHEMATERM:              fDBPROP_SCHEMATERM := String(PropSet.rgProperties^[i].vValue);
+        DBPROP_PROCEDURETERM:           fDBPROP_PROCEDURETERM := String(PropSet.rgProperties^[i].vValue);
+        DBPROP_SUPPORTEDTXNDDL:         fDBPROP_SUPPORTEDTXNDDL := PropSet.rgProperties^[i].vValue;
+        DBPROP_CONCATNULLBEHAVIOR:      fDBPROP_CONCATNULLBEHAVIOR := PropSet.rgProperties^[i].vValue = DBPROPVAL_CB_NULL;
+        DBPROP_NULLCOLLATION:           fDBPROP_NULLCOLLATION := PropSet.rgProperties^[i].vValue;
+        DBPROP_SUBQUERIES:              fDBPROP_SUBQUERIES := PropSet.rgProperties^[i].vValue;
+        DBPROP_GROUPBY:                 fDBPROP_GROUPBY := PropSet.rgProperties^[i].vValue;
+        DBPROP_ORDERBYCOLUMNSINSELECT:  fDBPROP_ORDERBYCOLUMNSINSELECT := PropSet.rgProperties^[i].vValue = VARIANT_TRUE;
+        DBPROP_PREPAREABORTBEHAVIOR:    fDBPROP_PREPAREABORTBEHAVIOR := PropSet.rgProperties^[i].vValue;
+        DBPROP_PREPARECOMMITBEHAVIOR:   fDBPROP_PREPARECOMMITBEHAVIOR := PropSet.rgProperties^[i].vValue;
+        DBPROP_MULTIPLEPARAMSETS:       fDBPROP_MULTIPLEPARAMSETS := PropSet.rgProperties^[i].vValue = VARIANT_TRUE;
+      end;
+      VariantClear(PropSet.rgProperties^[i].vValue);
     end;
     // free and clear elements of PropIDSet
     MAlloc.Free(PropSet.rgProperties);
@@ -981,6 +963,15 @@ end;
 function TZAdoDatabaseInfo.SupportsOverloadPrefixInStoredProcedureName: Boolean;
 begin
   Result := True;
+end;
+
+{**
+  Is parameter bindings supported by Provider?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAdoDatabaseInfo.SupportsParameterBinding: Boolean;
+begin
+  Result := fDBPROP_MULTIPLEPARAMSETS
 end;
 
 {**

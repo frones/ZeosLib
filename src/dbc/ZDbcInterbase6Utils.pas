@@ -758,10 +758,12 @@ begin
 
   case SqlType of
     blr_bool, blr_not_nullable: Result := stBoolean;
-    blr_varying2, blr_varying, blr_cstring, blr_cstring2, blr_domain_name,
-    blr_domain_name2, blr_column_name, blr_column_name2:
+    blr_domain_name, blr_domain_name2,
+    blr_column_name, blr_column_name2:
       Result := stString;
-    blr_text, blr_text2:
+    blr_varying2, blr_varying,
+    blr_text, blr_text2,
+    blr_cstring, blr_cstring2:
       case SqlSubType of
         CS_BINARY: Result := stBytes;
       else

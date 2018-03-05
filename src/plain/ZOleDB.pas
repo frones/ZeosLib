@@ -2442,7 +2442,7 @@ type
  IDBCreateCommand = interface(IUnknown)
    ['{0C733A1D-2A1C-11CE-ADE5-00AA0044773D}']
     // CreateCommand :
-   function CreateCommand(pUnkOuter:IUnknown;var riid:GUID;out ppCommand:IUnknown):HRESULT;stdcall;
+   function CreateCommand(pUnkOuter:IUnknown;var riid:TGUID;out ppCommand:IUnknown):HRESULT;stdcall;
   end;
 (*
 

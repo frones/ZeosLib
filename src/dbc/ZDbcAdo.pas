@@ -381,7 +381,9 @@ function TZAdoConnection.CreatePreparedStatement(
   const SQL: string; Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then Open;
-  Result := TZAdoPreparedStatement.Create(Self, SQL, Info);
+  if GetMetadata.GetDatabaseInfo.SupportsParameterBinding
+  then Result := TZAdoPreparedStatement.Create(Self, SQL, Info)
+  else Result := TZAdoEmulatedPreparedStatement.Create(Self, SQL, Info)
 end;
 
 {**

@@ -520,6 +520,13 @@ BEGIN
   SELECT * FROM string_values;
 END;//
 
+CREATE PROCEDURE ThreeResultSets()
+BEGIN
+  SELECT * FROM PEOPLE;
+  SELECT * FROM string_values;
+  SELECT * FROM equipment;
+END;//
+
 DELIMITER ;
 
 /*==============================================================*/

@@ -420,148 +420,154 @@ begin
   Connection.CreateStatement.ExecuteUpdate(Sql);
   Sql := 'DELETE FROM equipment where eq_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Connection.CreateStatement.ExecuteUpdate(Sql);
+  try
+    { The test for equipment table }
 
-  { The test for equipment table }
+    { Creates prepared statement for equipment table }
+    Statement := Connection.PrepareStatement(
+      'INSERT INTO equipment (eq_id, eq_name, eq_type, eq_cost, eq_date, '
+      + ' woff_date) VALUES(?,?,?,?,?,?)');
+    CheckNotNull(Statement);
+    with Statement do
+    begin
+      SetInt(Insert_eq_id_Index, TEST_ROW_ID);
+      SetString(Insert_eq_name_Index, 'xyz');
+      SetInt(Insert_eq_type_Index, 7);
+      SetDouble(Insert_eq_cost_Index, 1234.567);
+      SetDate(Insert_eq_date_Index, EncodeDate(1999, 8, 5));
+      SetNull(Insert_woff_date_Index, stDate);
+      CheckEquals(False, ExecutePrepared);
+      CheckEquals(1, GetUpdateCount);
+    end;
+    Statement := nil;
 
-  { Creates prepared statement for equipment table }
-  Statement := Connection.PrepareStatement(
-    'INSERT INTO equipment (eq_id, eq_name, eq_type, eq_cost, eq_date, '
-    + ' woff_date) VALUES(?,?,?,?,?,?)');
-  CheckNotNull(Statement);
-  with Statement do
-  begin
-    SetInt(Insert_eq_id_Index, TEST_ROW_ID);
-    SetString(Insert_eq_name_Index, 'xyz');
-    SetInt(Insert_eq_type_Index, 7);
-    SetDouble(Insert_eq_cost_Index, 1234.567);
-    SetDate(Insert_eq_date_Index, EncodeDate(1999, 8, 5));
-    SetNull(Insert_woff_date_Index, stDate);
-    CheckEquals(False, ExecutePrepared);
-    CheckEquals(1, GetUpdateCount);
+    { Checks inserted row from equipment table }
+    Statement := Connection.PrepareStatement(
+      'SELECT * FROM equipment WHERE eq_id = ?');
+    CheckNotNull(Statement);
+    Statement.SetInt(Select_eq_id_Index, TEST_ROW_ID);
+    ResultSet := Statement.ExecuteQueryPrepared;
+    CheckNotNull(ResultSet);
+    with ResultSet do
+    begin
+      Check(Next);
+      CheckEquals('xyz', GetStringByName('eq_name'));
+      CheckEquals(7, GetIntByName('eq_type'));
+      CheckEquals(1234.567, GetDoubleByName('eq_cost'), 0.001);
+      CheckEquals(EncodeDate(1999, 8, 5), GetDateByName('eq_date'));
+      CheckEquals(True, IsNullByName('woff_date'));
+      Close;
+    end;
+    ResultSet := nil;
+
+    { Updates inserted row from equipment table }
+    Statement := Connection.PrepareStatement(
+      'UPDATE equipment SET eq_name = ? WHERE eq_id = ?' );
+    CheckNotNull(Statement);
+    with Statement do
+    begin
+      SetString(Inserted_eq_name_Index, 'xyz1');
+      SetInt(Inserted_eq_id_Index, TEST_ROW_ID);
+      CheckEquals(1, ExecuteUpdatePrepared);
+    end;
+    Statement := nil;
+
+    { Deletes inserted row from equipment table }
+    Statement := Connection.PrepareStatement(
+      'DELETE FROM equipment WHERE eq_id = ?');
+    CheckNotNull(Statement);
+    with Statement do
+    begin
+      SetInt(Delete_eq_id_Index, TEST_ROW_ID);
+      CheckEquals(False, ExecutePrepared);
+      CheckEquals(1, GetUpdateCount);
+    end;
+    Statement := nil;
+
+    { The test for people table }
+
+    { Creates prepared statement for people table }
+    Statement := Connection.PrepareStatement(
+      'INSERT INTO people (p_id, p_dep_id, p_name, p_begin_work, p_end_work,'
+      + ' p_picture, p_resume, p_redundant) VALUES(?,?,?,?,?,?,?,?)');
+    CheckNotNull(Statement);
+    { Sets prepared statement parameters values. }
+    with Statement do
+    begin
+      SetInt(Insert_p_id_Index, TEST_ROW_ID);
+      SetInt(Insert_p_dep_id_Index, 2);
+      SetString(Insert_p_name_Index, 'xyz');
+      SetTime(Insert_p_begin_work_Index, EncodeTime(8, 0, 0, 0));
+      SetTime(Insert_p_end_work_Index, EncodeTime(17, 30, 0, 0));
+
+      BinStream := TMemoryStream.Create;
+      BinStream.LoadFromFile('../../../database/images/dogs.jpg');
+      BinStream.Size := 1024;
+      SetBinaryStream(Insert_p_picture_Index, BinStream);
+
+      StrStream := TMemoryStream.Create;
+      StrStream.LoadFromFile('../../../database/text/lgpl.txt');
+      StrStream.Size := 1024;
+      SetAsciiStream(Insert_p_resume_Index, StrStream);
+
+      SetNull(Insert_p_redundant_Index, stString);
+      CheckEquals(False, ExecutePrepared);
+      CheckEquals(1, GetUpdateCount);
+    end;
+    Statement := nil;
+
+    { Checks inserted row. }
+    Statement := Connection.PrepareStatement(
+      'SELECT * FROM people WHERE p_id = ?');
+    CheckNotNull(Statement);
+    Statement.SetInt(Select_p_id_Index, TEST_ROW_ID);
+    ResultSet := Statement.ExecuteQueryPrepared;
+    CheckNotNull(ResultSet);
+    with ResultSet do
+    begin
+      Check(Next);
+      CheckEquals(TEST_ROW_ID, GetIntByName('p_id'));
+      CheckEquals(2, GetIntByName('p_dep_id'));
+      CheckEquals('xyz', GetStringByName('p_name'));
+      CheckEquals(EncodeTime(8, 0, 0, 0), GetTimeByName('p_begin_work'), 0.0001);
+      CheckEquals(EncodeTime(17, 30, 0, 0), GetTimeByName('p_end_work'), 0.0001);
+      CheckEquals(False, IsNullByName('p_picture'));
+      CheckEquals(False, IsNullByName('p_resume'));
+      CheckEquals(0, GetIntByName('p_redundant'));
+
+      { Compares aciistream }
+      StrStream1 := GetAsciiStreamByName('p_resume');
+      CheckEquals(StrStream, StrStream1, 'Ascii Stream');
+      StrStream.Free;
+      StrStream1.Free;
+
+      { Compares BinaryStream }
+      BinStream1 := GetBinaryStreamByName('p_picture');
+      CheckEquals(BinStream, BinStream1, 'Binary Stream');
+      BinStream.Free;
+      BinStream1.Free;
+      Close;
+    end;
+    ResultSet := nil;
+
+
+    { Deletes the row. }
+    Statement := Connection.PrepareStatement(
+      'DELETE FROM people WHERE p_id=?');
+    CheckNotNull(Statement);
+    with Statement do
+    begin
+      SetInt(Delete_p_id_Index, TEST_ROW_ID);
+      CheckEquals(False, ExecutePrepared);
+      CheckEquals(1, GetUpdateCount);
+    end;
+    Statement := nil;
+  finally
+    Sql := 'DELETE FROM people where p_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
+    Connection.CreateStatement.ExecuteUpdate(Sql);
+    Sql := 'DELETE FROM equipment where eq_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
+    Connection.CreateStatement.ExecuteUpdate(Sql);
   end;
-  Statement := nil;
-
-  { Checks inserted row from equipment table }
-  Statement := Connection.PrepareStatement(
-    'SELECT * FROM equipment WHERE eq_id = ?');
-  CheckNotNull(Statement);
-  Statement.SetInt(Select_eq_id_Index, TEST_ROW_ID);
-  ResultSet := Statement.ExecuteQueryPrepared;
-  CheckNotNull(ResultSet);
-  with ResultSet do
-  begin
-    Check(Next);
-    CheckEquals('xyz', GetStringByName('eq_name'));
-    CheckEquals(7, GetIntByName('eq_type'));
-    CheckEquals(1234.567, GetDoubleByName('eq_cost'), 0.001);
-    CheckEquals(EncodeDate(1999, 8, 5), GetDateByName('eq_date'));
-    CheckEquals(True, IsNullByName('woff_date'));
-    Close;
-  end;
-  ResultSet := nil;
-
-  { Updates inserted row from equipment table }
-  Statement := Connection.PrepareStatement(
-    'UPDATE equipment SET eq_name = ? WHERE eq_id = ?' );
-  CheckNotNull(Statement);
-  with Statement do
-  begin
-    SetString(Inserted_eq_name_Index, 'xyz1');
-    SetInt(Inserted_eq_id_Index, TEST_ROW_ID);
-    CheckEquals(1, ExecuteUpdatePrepared);
-  end;
-  Statement := nil;
-
-  { Deletes inserted row from equipment table }
-  Statement := Connection.PrepareStatement(
-    'DELETE FROM equipment WHERE eq_id = ?');
-  CheckNotNull(Statement);
-  with Statement do
-  begin
-    SetInt(Delete_eq_id_Index, TEST_ROW_ID);
-    CheckEquals(False, ExecutePrepared);
-    CheckEquals(1, GetUpdateCount);
-  end;
-  Statement := nil;
-
-  { The test for people table }
-
-  { Creates prepared statement for people table }
-  Statement := Connection.PrepareStatement(
-    'INSERT INTO people (p_id, p_dep_id, p_name, p_begin_work, p_end_work,'
-    + ' p_picture, p_resume, p_redundant) VALUES(?,?,?,?,?,?,?,?)');
-  CheckNotNull(Statement);
-  { Sets prepared statement parameters values. }
-  with Statement do
-  begin
-    SetInt(Insert_p_id_Index, TEST_ROW_ID);
-    SetInt(Insert_p_dep_id_Index, 2);
-    SetString(Insert_p_name_Index, 'xyz');
-    SetTime(Insert_p_begin_work_Index, EncodeTime(8, 0, 0, 0));
-    SetTime(Insert_p_end_work_Index, EncodeTime(17, 30, 0, 0));
-
-    BinStream := TMemoryStream.Create;
-    BinStream.LoadFromFile('../../../database/images/dogs.jpg');
-    BinStream.Size := 1024;
-    SetBinaryStream(Insert_p_picture_Index, BinStream);
-
-    StrStream := TMemoryStream.Create;
-    StrStream.LoadFromFile('../../../database/text/lgpl.txt');
-    StrStream.Size := 1024;
-    SetAsciiStream(Insert_p_resume_Index, StrStream);
-
-    SetNull(Insert_p_redundant_Index, stString);
-    CheckEquals(False, ExecutePrepared);
-    CheckEquals(1, GetUpdateCount);
-  end;
-  Statement := nil;
-
-  { Checks inserted row. }
-  Statement := Connection.PrepareStatement(
-    'SELECT * FROM people WHERE p_id = ?');
-  CheckNotNull(Statement);
-  Statement.SetInt(Select_p_id_Index, TEST_ROW_ID);
-  ResultSet := Statement.ExecuteQueryPrepared;
-  CheckNotNull(ResultSet);
-  with ResultSet do
-  begin
-    Check(Next);
-    CheckEquals(TEST_ROW_ID, GetIntByName('p_id'));
-    CheckEquals(2, GetIntByName('p_dep_id'));
-    CheckEquals('xyz', GetStringByName('p_name'));
-    CheckEquals(EncodeTime(8, 0, 0, 0), GetTimeByName('p_begin_work'), 0.0001);
-    CheckEquals(EncodeTime(17, 30, 0, 0), GetTimeByName('p_end_work'), 0.0001);
-    CheckEquals(False, IsNullByName('p_picture'));
-    CheckEquals(False, IsNullByName('p_resume'));
-    CheckEquals(0, GetIntByName('p_redundant'));
-
-    { Compares aciistream }
-    StrStream1 := GetAsciiStreamByName('p_resume');
-    CheckEquals(StrStream, StrStream1, 'Ascii Stream');
-    StrStream.Free;
-    StrStream1.Free;
-
-    { Compares BinaryStream }
-    BinStream1 := GetBinaryStreamByName('p_picture');
-    CheckEquals(BinStream, BinStream1, 'Binary Stream');
-    BinStream.Free;
-    BinStream1.Free;
-    Close;
-  end;
-  ResultSet := nil;
-
-
-  { Deletes the row. }
-  Statement := Connection.PrepareStatement(
-    'DELETE FROM people WHERE p_id=?');
-  CheckNotNull(Statement);
-  with Statement do
-  begin
-    SetInt(Delete_p_id_Index, TEST_ROW_ID);
-    CheckEquals(False, ExecutePrepared);
-    CheckEquals(1, GetUpdateCount);
-  end;
-  Statement := nil;
 end;
 
 
@@ -1064,28 +1070,35 @@ end;
 procedure TZGenericTestDbcResultSet.TestConcurrency;
 var
   Statement: IZStatement;
+  Statement2: IZStatement;
   ResultSet1: IZResultSet;
   ResultSet2: IZResultSet;
+  ResultSet3: IZResultSet;
 begin
   Statement := Connection.CreateStatement;
+  Statement2 := Connection.CreateStatement;
   CheckNotNull(Statement);
 
   try
     ResultSet1 := Statement.ExecuteQuery('select * from people');
     ResultSet2 := Statement.ExecuteQuery('select * from equipment');
+    ResultSet3 := Statement2.ExecuteQuery('select * from people');
     try
-      Check(ResultSet1.Next);
+      Check(not ResultSet1.Next, 'Resultset 1 should be closed');
       Check(ResultSet2.Next);
-      Check(ResultSet1.Next);
+      Check(ResultSet3.Next);
       Check(ResultSet2.Next);
-      Check(ResultSet1.Next);
+      Check(ResultSet3.Next);
       Check(ResultSet2.Next);
+      Check(ResultSet3.Next);
     finally
       ResultSet1.Close;
       ResultSet2.Close;
+      ResultSet3.Close;
     end;
   finally
     Statement.Close;
+    Statement2.Close;
   end;
 end;
 

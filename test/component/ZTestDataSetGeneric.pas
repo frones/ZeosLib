@@ -383,6 +383,10 @@ begin
       CheckEquals(1, RowsAffected);
     end;
   finally
+    Query.SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+    Query.ExecSQL;
+    Query.SQL.Text := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
+    Query.ExecSQL;
     Query.Free;
   end;
 end;
@@ -2097,7 +2101,7 @@ var
       CheckSame(Expect[i], Fields[i], 'FieldList "' + FieldList + '" - item #' + IntToStr(i));
   end;
 
-  procedure CheckExceptionRaised(const FieldList: string; Expect: ExceptionClass; const ExpectMsg: string = '');
+  procedure CheckExceptionRaised(const FieldList: string; Expect: TClass; const ExpectMsg: string = '');
   var
     Bool: Boolean;
   begin
@@ -2165,7 +2169,7 @@ var
     end;
   end;
 
-  procedure CheckExceptionRaised(const FieldList: string; Expect: ExceptionClass; const ExpectMsg: string = '');
+  procedure CheckExceptionRaised(const FieldList: string; Expect: TClass; const ExpectMsg: string = '');
   var
     Bool: Boolean;
     Fields: TObjectDynArray;
