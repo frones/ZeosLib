@@ -311,16 +311,16 @@ procedure TZInterbase6Connection.CloseTransaction;
 begin
   if FTrHandle <> 0 then begin
     if AutoCommit then begin
-      FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
+      GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
         'COMMIT TRANSACTION "'+ConSettings^.DataBase+'"');
     end else begin
-      FPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
+      GetPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
         'ROLLBACK TRANSACTION "'+ConSettings^.DataBase+'"');
     end;
     FTrHandle := 0;
-    CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcDisconnect);
+    CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcDisconnect);
     fTPB := '';
   end;
 end;
@@ -343,9 +343,9 @@ begin
 
   if FHandle <> 0 then
   begin
-    FPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
+    GetPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
     FHandle := 0;
-    CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcDisconnect);
+    CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcDisconnect);
   end;
 
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
@@ -365,15 +365,15 @@ begin
   then raise EZSQLException.Create(SInvalidOpInAutoCommit);
   if not (FTrHandle = 0)  then
     if FHardCommit then begin
-      FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
+      GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
       // Jan Baumgarten: Added error checking here because setting the transaction
       // handle to 0 before we have checked for an error is simply wrong.
-      CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcTransaction);
+      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
       FTrHandle := 0; //normaly not required! Old server code?
     end else begin
-      FPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
-      CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcTransaction);
+      GetPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
+      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
       DriverManager.LogMessage(lcTransaction,
         ConSettings^.Protocol, 'TRANSACTION COMMIT');
     end;
@@ -388,7 +388,6 @@ var
   ConnectTimeout : integer;
   WireCompression: Boolean;
 begin
-  FPlainDriver := PlainDriver as IZInterbasePlainDriver; //force just one QueryIntf
   FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
   FGUIDProps.InitGUIDProps(Info);
 
@@ -506,6 +505,8 @@ end;
 }
 function TZInterbase6Connection.GetPlainDriver: IZInterbasePlainDriver;
 begin
+  if FPlainDriver = nil then
+    FPlainDriver := PlainDriver as IZInterbasePlainDriver;
   Result := FPlainDriver;
 end;
 
@@ -573,12 +574,12 @@ begin
   FHandle := 0;
   DPB := GenerateDPB(Info);
   { Connect to Interbase6 database. }
-  FPlainDriver.isc_attach_database(@FStatusVector,
+  GetPlainDriver.isc_attach_database(@FStatusVector,
     ZFastCode.StrLen(DBName), DBName,
   @FHandle, Length(DPB), Pointer(DPB));
 
   { Check connection error }
-  CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcConnect);
+  CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcConnect);
 
   with GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo do
   begin
@@ -588,7 +589,7 @@ begin
   end;
 
   { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
-  FDialect := GetDBSQLDialect(FPlainDriver, @FHandle, ConSettings);
+  FDialect := GetDBSQLDialect(GetPlainDriver, @FHandle, ConSettings);
 
   { Logging connection action }
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
@@ -743,13 +744,13 @@ begin
   then raise EZSQLException.Create(cSInvalidOpInAutoCommit);
   if FTrHandle <> 0 then begin
     if FHardCommit then begin
-      FPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
-      CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings);
+      GetPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
+      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
       FTrHandle := 0;
     end else begin
-      FPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle);
-      CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings);
+      GetPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle);
+      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
     end;
   end;
@@ -772,7 +773,7 @@ var
 begin
   DatabaseInfoCommand := Char(isc_info_reads);
 
-  ErrorCode := FPlainDriver.isc_database_info(@FStatusVector, @FHandle, 1, @DatabaseInfoCommand,
+  ErrorCode := GetPlainDriver.isc_database_info(@FStatusVector, @FHandle, 1, @DatabaseInfoCommand,
                            IBLocalBufferLength, Buffer);
 
   case ErrorCode of
@@ -837,8 +838,8 @@ begin
   if FHandle <> 0 then begin
     if FTrHandle <> 0 then
     begin {CLOSE Last Transaction first!}
-      FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
-      CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcTransaction);
+      GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
+      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
       FTrHandle := 0;
     end;
     if fTPB = '' then begin
@@ -898,8 +899,8 @@ begin
         fTPB := GenerateTPB(Params);
       TEB := GenerateTEB(@FHandle, fTPB);
 
-      FPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @TEB);
-      CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcTransaction);
+      GetPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @TEB);
+      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
         'TRANSACTION STARTED.');
     finally
@@ -939,13 +940,13 @@ var
   TrHandle: TISC_TR_HANDLE;
 begin
   TrHandle := 0;
-  FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle, @TrHandle,
+  GetPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle, @TrHandle,
     0, PAnsiChar(sql), FDialect, nil);
-  CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcExecute, SQL);
+  CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcExecute, SQL);
   //disconnect from the newly created database because the connection character set is NONE,
   //which usually nobody wants
-  FPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
-  CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcExecute, SQL);
+  GetPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
+  CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcExecute, SQL);
 end;
 
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;

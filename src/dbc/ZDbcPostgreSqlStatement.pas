@@ -265,17 +265,17 @@ begin
   ParamIndex := 0;
   Result := '';
   for I := 0 to High(CachedQueryRaw) do
-    if IsParamIndex[I] then
-    begin
+    if IsParamIndex[I] then begin
       if ParamIndex > InParamCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} then
-        raise EZSQLException.Create(SInvalidInputParameterCount);
-      Result := Result + PGPrepareAnsiSQLParam(InParamValues[ParamIndex],
-        ClientVarManager, (Connection as IZPostgreSQLConnection), ChunkSize,
-          InParamTypes[ParamIndex], FOidAsBlob, True, False, ConSettings);
+        raise EZSQLException.Create(SInvalidInputParameterCount)
+      else
+        ToBuff(PGPrepareAnsiSQLParam(InParamValues[ParamIndex],
+        ClientVarManager, FPostgreSQLConnection, ChunkSize,
+          InParamTypes[ParamIndex], FOidAsBlob, True, False, ConSettings), Result);
       Inc(ParamIndex);
-    end
-    else
-      Result := Result + CachedQueryRaw[i];
+    end else
+      ToBuff(CachedQueryRaw[i], Result);
+  FlushBuff(Result);
 end;
 
 {**

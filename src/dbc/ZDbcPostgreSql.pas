@@ -151,6 +151,7 @@ type
     FIs_bytea_output_hex: Boolean;
     FCheckFieldVisibility: Boolean;
     FNoTableInfoCache: Boolean;
+    fPlainDriver: IZPostgreSQLPlainDriver;
   protected
     procedure InternalCreate; override;
     function GetUndefinedVarcharAsStringLength: Integer;
@@ -1115,7 +1116,9 @@ end;
 }
 function TZPostgreSQLConnection.GetPlainDriver: IZPostgreSQLPlainDriver;
 begin
-  Result := PlainDriver as IZPostgreSQLPlainDriver;
+  if FPlainDriver = nil then
+    FPlainDriver := PlainDriver as IZPostgreSQLPlainDriver;
+  Result := FPlainDriver;
 end;
 
 {**

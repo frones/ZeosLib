@@ -93,6 +93,7 @@ type
     FUndefinedVarcharAsStringLength: Integer;
     FCatalog: string;
     FHandle: Psqlite;
+    FPlainDriver: IZSQLitePlainDriver;
   protected
     procedure InternalCreate; override;
     procedure StartTransactionSupport;
@@ -576,7 +577,9 @@ end;
 }
 function TZSQLiteConnection.GetPlainDriver: IZSQLitePlainDriver;
 begin
-  Result := PlainDriver as IZSQLitePlainDriver;
+  if fPlainDriver = nil then
+    fPlainDriver := PlainDriver as IZSQLitePlainDriver;
+  Result := fPlainDriver;
 end;
 
 function TZSQLiteConnection.GetServerProvider: TZServerProvider;

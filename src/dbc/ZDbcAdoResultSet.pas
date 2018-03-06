@@ -857,6 +857,7 @@ begin
         begin
           Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
+          while (Result+Len-1)^ = ' ' do dec(Len);
           Exit;
         end;
       adWChar: {fixed char fields}
@@ -1842,9 +1843,10 @@ end;
 }
 procedure TZADOResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
 begin
-  ColumnInfo.ReadOnly := True;
+  inherited ClearColumn(ColumnInfo);
+  {ColumnInfo.ReadOnly := True;
   ColumnInfo.Writable := False;
-  ColumnInfo.DefinitelyWritable := False;
+  ColumnInfo.DefinitelyWritable := False;}
 end;
 
 {$ELSE}

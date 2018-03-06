@@ -643,6 +643,11 @@ function GUIDToUnicode(Buffer: Pointer; Len: NativeInt): ZWideString; overload;
 procedure ValidGUIDToBinary(Src, Dest: PAnsiChar); overload;
 procedure ValidGUIDToBinary(Src: PWideChar; Dest: PAnsiChar); overload;
 
+function SQLQuotedStr(const S: ZWideString; Quote: WideChar): ZWidestring; overload;
+function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWidestring; overload;
+function SQLQuotedStr(const S: RawByteString; Quote: AnsiChar): RawByteString; overload;
+function SQLQuotedStr(Src: PAnsiChar; Len: LengthInt; Quote: AnsiChar): RawByteString; overload;
+
 implementation
 
 uses DateUtils, StrUtils, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
@@ -4047,7 +4052,112 @@ begin
   if not ((Src^ = '}') or (Src^ = #0)) then InvalidGUID(Char(Src^));
 end;
 
+function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWidestring; overload;
+var
+  P, Dest, PEnd, PFirst: PWideChar;
+begin
+  NativeUInt(Dest) := 0;
+  P := Src;
+  PEnd := P + Len;
+  PFirst := nil;
+  while P < PEnd do begin
+    Inc(NativeUInt(Dest), Ord(P^=Quote));
+    if NativeUInt(Dest) = 0 then
+      PFirst := P;
+    Inc(P);
+  end;
+  if NativeUInt(Dest) = 0 then begin
+    System.SetLength(Result, Len+2);
+    Dest := Pointer(Result);
+    Dest^ := Quote;
+    if Len > 0 then begin
+      System.Move(Src^, (Dest+1)^, Len shl 1);
+      Inc(Dest, Len+1);
+    end else
+      Inc(Dest);
+    Dest^ := Quote;
+    Exit;
+  end;
+  SetLength(Result, Len + NativeInt(Dest) + 2);
+  Dest := Pointer(Result);
+  Dest^ := Quote;
+  Inc(Dest);
+  P := PFirst+1;
+  repeat
+    Inc(P);
+    Move(Src^, Dest^, (P - Src) shl 1);
+    Inc(Dest, P - Src);
+    Dest^ := Quote;
+    Inc(Dest);
+    Src := P;
+    while (P<PEnd) do if P^=Quote
+      then Break
+      else Inc(P);
+  until P = PEnd;
+  Move(Src^, Dest^, (PEnd - Src) shl 1);
+  Inc(Dest, PEnd - Src);
+  Dest^ := Quote;
+end;
+
+function SQLQuotedStr(const S: ZWideString; Quote: WideChar): ZWidestring;
+begin
+  Result := SQLQuotedStr(Pointer(S), Length(S), Quote);
+end;
+
+function SQLQuotedStr(Src: PAnsiChar; Len: LengthInt; Quote: AnsiChar): RawByteString;
+var
+  P, Dest, PEnd, PFirst: PAnsiChar;
+begin
+  NativeUInt(Dest) := 0;
+  P := Src;
+  PEnd := P + Len;
+  PFirst := nil;
+  while P < PEnd do begin
+    Inc(NativeUInt(Dest), Ord(P^=Quote));
+    if NativeUInt(Dest) = 0 then
+      PFirst := P;
+    Inc(P);
+  end;
+  if NativeUInt(Dest) = 0 then begin
+    System.SetLength(Result, Len+2);
+    Dest := Pointer(Result);
+    Dest^ := Quote;
+    if Len > 0 then begin
+      System.Move(Src^, (Dest+1)^, Len);
+      Inc(Dest, Len+1);
+    end else
+      Inc(Dest);
+    Dest^ := Quote;
+    Exit;
+  end;
+  SetLength(Result, Len + NativeInt(Dest) + 2);
+  Dest := Pointer(Result);
+  Dest^ := Quote;
+  Inc(Dest);
+  P := PFirst+1;
+  repeat
+    Inc(P);
+    Move(Src^, Dest^, (P - Src));
+    Inc(Dest, P - Src);
+    Dest^ := Quote;
+    Inc(Dest);
+    Src := P;
+    while (P<PEnd) do if P^=Quote
+      then Break
+      else Inc(P);
+  until P = PEnd;
+  Move(Src^, Dest^, (PEnd - Src));
+  Inc(Dest, PEnd - Src);
+  Dest^ := Quote;
+end;
+
+function SQLQuotedStr(const S: RawByteString; Quote: AnsiChar): RawByteString;
+begin
+  Result := SQLQuotedStr(Pointer(S), Length(S), Quote);
+end;
+
 initialization
+
 HexFiller;  //build up lookup table
   {$IFDEF WITH_FORMATSETTINGS}
   FSSqlFloat := FormatSettings;

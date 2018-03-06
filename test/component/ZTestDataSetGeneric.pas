@@ -383,6 +383,10 @@ begin
       CheckEquals(1, RowsAffected);
     end;
   finally
+    Query.SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+    Query.ExecSQL;
+    Query.SQL.Text := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
+    Query.ExecSQL;
     Query.Free;
   end;
 end;

@@ -89,8 +89,8 @@ type
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
-      var StatementHandle: TISC_STMT_HANDLE; const XSQLDA: IZSQLDA;
-      const CachedBlob: boolean; const StmtType: TZIbSqlStatementType);
+      StatementHandle: TISC_STMT_HANDLE; const XSQLDA: IZSQLDA;
+      CachedBlob: boolean; StmtType: TZIbSqlStatementType);
 
     procedure Close; override;
     procedure ResetCursor; override;
@@ -220,9 +220,9 @@ end;
   @param the Interbase sql dialect
 }
 constructor TZInterbase6XSQLDAResultSet.Create(const Statement: IZStatement;
-  const SQL: string; var StatementHandle: TISC_STMT_HANDLE;
-  const XSQLDA: IZSQLDA; const CachedBlob: Boolean;
-  const StmtType: TZIbSqlStatementType);
+  const SQL: string; StatementHandle: TISC_STMT_HANDLE;
+  const XSQLDA: IZSQLDA; CachedBlob: Boolean;
+  StmtType: TZIbSqlStatementType);
 begin
   inherited Create(Statement, SQL, TZInterbaseResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
     Statement.GetConnection.GetConSettings);
@@ -241,7 +241,7 @@ begin
   ResultSetType := rtForwardOnly;
   ResultSetConcurrency := rcReadOnly;
 
-  FCodePageArray := (Statement.GetConnection.GetIZPlainDriver as IZInterbasePlainDriver).GetCodePageArray;
+  FCodePageArray := FPlainDriver.GetCodePageArray;
   FCodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
 
   Open;
@@ -522,14 +522,14 @@ begin
           begin
             Result := TZAbstractBlob.Create;
             with FIBConnection do
-              ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
+              ReadBlobBufer(FPlainDriver, GetDBHandle, GetTrHandle,
                 BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, True, ConSettings);
           end;
         stAsciiStream, stUnicodeStream:
           begin
             Result := TZAbstractClob.CreateWithData(nil, 0, Consettings^.ClientCodePage^.CP, ConSettings);
             with FIBConnection do
-              ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
+              ReadBlobBufer(FPlainDriver, GetDBHandle, GetTrHandle,
                 BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, False, ConSettings);
           end;
       end;
@@ -538,11 +538,11 @@ begin
       case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType of
         stBinaryStream:
           Result := TZInterbase6UnCachedBlob.Create(FIBConnection.GetDBHandle,
-            FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId,
+            FIBConnection.GetTrHandle, FPlainDriver, BlobId,
             ConSettings);
         stAsciiStream, stUnicodeStream:
           Result := TZInterbase6UnCachedClob.Create(FIBConnection.GetDBHandle,
-            FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId,
+            FIBConnection.GetTrHandle, FPlainDriver, BlobId,
             ConSettings);
       end;
   end;
@@ -1823,6 +1823,7 @@ end;
 procedure TZInterbase6XSQLDAResultSet.Open;
 var
   I: Word;
+  DataLen: SmallInt;
   FieldSqlType: TZSQLType;
   ColumnInfo: TZColumnInfo;
   ZCodePageInfo: PZCodePage;
@@ -1842,39 +1843,43 @@ begin
         TableName := FIZSQLDA.GetFieldRelationName(I);
         ColumnLabel := FIZSQLDA.GetFieldAliasName(I);
         FieldSqlType := FIZSQLDA.GetFieldSqlType(I);
+        DataLen := FIZSQLDA.GetIbSqlLen(I);
         ColumnType := FieldSqlType;
 
-        if FieldSqlType in [stString, stUnicodeString] then
-        begin
-          CP := GetIbSqlSubType(I);
-          if (CP = ConSettings^.ClientCodePage^.ID) or //avoid the loops if we allready have the info's we need
-             (CP > High(FCodePageArray)) then //spezial case for collations like PXW_INTL850 which are nowhere to find in docs
-            //see test Bug#886194, we retrieve 565 as CP...
-            ZCodePageInfo := ConSettings^.ClientCodePage
+        case FieldSqlType of
+          stString, stUnicodeString:
+            begin
+              CP := GetIbSqlSubType(I);
+              if (CP = ConSettings^.ClientCodePage^.ID) or //avoid the loops if we allready have the info's we need
+                 (CP > High(FCodePageArray)) then //spezial case for collations like PXW_INTL850 which are nowhere to find in docs
+                //see test Bug#886194, we retrieve 565 as CP...
+                ZCodePageInfo := ConSettings^.ClientCodePage
+              else
+                //see: http://sourceforge.net/p/zeoslib/tickets/97/
+                ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP); //get column CodePage info
+              ColumnCodePage := ZCodePageInfo^.CP;
+              Precision := DataLen div ZCodePageInfo^.CharWidth;
+              if ColumnType = stString then begin
+                CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth;
+                ColumnDisplaySize := Precision;
+              end else begin
+                CharOctedLength := Precision shl 1;
+                ColumnDisplaySize := Precision;
+              end;
+            end;
+          stAsciiStream, stUnicodeStream:
+            ColumnCodePage := ConSettings^.ClientCodePage^.CP;
           else
-            //see: http://sourceforge.net/p/zeoslib/tickets/97/
-            ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP); //get column CodePage info
-          ColumnCodePage := ZCodePageInfo^.CP;
-          Precision := FIZSQLDA.GetIbSqlLen(I) div ZCodePageInfo^.CharWidth;
-          if ColumnType = stString then begin
-            CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth;
-            ColumnDisplaySize := Precision;
-          end else begin
-            CharOctedLength := Precision shl 1;
-            ColumnDisplaySize := Precision;
-          end;
-        end
-        else
-          if FieldSqlType in [stAsciiStream, stUnicodeStream] then
-            ColumnCodePage := ConSettings^.ClientCodePage^.CP
-          else
-          begin
-            ColumnCodePage := zCP_NONE;
-            if FieldSQLType = stBytes then
-              Precision := FIZSQLDA.GetIbSqlLen(I)
-            else
-              Signed := FieldSqlType in [stShort, stSmall, stInteger, stLong];
-          end;
+            begin
+              ColumnCodePage := zCP_NONE;
+              case FieldSqlType of
+                stBytes:
+                  Precision := DataLen;
+                stShort, stSmall, stInteger, stLong:
+                  Signed := True;
+              end;
+            end;
+        end;
 
         ReadOnly := (TableName = '') or (ColumnName = '') or
           (ColumnName = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
@@ -1891,7 +1896,7 @@ end;
 procedure TZInterbase6XSQLDAResultSet.ResetCursor;
 begin
   FFetchStat := 0;
-  FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_CLOSE); //close handle but not free it
+  FreeStatement(FPlainDriver, FStmtHandle, DSQL_CLOSE); //close handle but not free it
   inherited ResetCursor;
 end;
 

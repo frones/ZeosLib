@@ -105,6 +105,7 @@ type
     FStatementPrefetchSize: Integer;
     FBlobPrefetchSize: Integer;
     FStmtMode: ub4;
+    FPlainDriver: IZOraclePlainDriver;
   protected
     procedure InternalCreate; override;
     procedure StartTransactionSupport;
@@ -695,7 +696,9 @@ end;
 }
 function TZOracleConnection.GetPlainDriver: IZOraclePlainDriver;
 begin
-  Result := PlainDriver as IZOraclePlainDriver;
+  if fPlainDriver = nil then
+    fPlainDriver := PlainDriver as IZOraclePlainDriver;
+  Result := fPlainDriver;
 end;
 
 {**

@@ -69,6 +69,9 @@ type
 
   TZAbstractStatement = class(TZCodePagedObject, IZStatement, IZLoggingObject)
   private
+    fWBuffer: array[Byte] of WideChar;
+    fABuffer: array[Byte] of AnsiChar;
+    fABufferIndex, fWBufferIndex: Integer;
     FMaxFieldSize: Integer;
     FMaxRows: Integer;
     FEscapeProcessing: Boolean;
@@ -94,6 +97,10 @@ type
   protected
     FStatementId : Integer;
     FOpenResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
+    procedure ToBuff(const Value: ZWideString; var Result: ZWideString); overload;
+    procedure ToBuff(const Value: RawByteString; var Result: RawByteString); overload;
+    procedure FlushBuff(var Result: ZWideString); overload;
+    procedure FlushBuff(var Result: RawByteString); overload;
     procedure PrepareOpenResultSetForReUse; virtual;
     procedure PrepareLastResultSetForReUse; virtual;
     procedure FreeOpenResultSetReference;
@@ -438,6 +445,32 @@ type
     function CreateLogEvent(const {%H-}Category: TZLoggingCategory): TZLoggingEvent; override;
   end;
 
+  TZAbstractEmulatedPreparedStatement = class(TZAbstractPreparedStatement)
+  protected
+    FNeedNCharDetection: Boolean;
+  public
+    function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: ZWideString): Integer; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
+    function Execute(const SQL: ZWideString): Boolean; override;
+    function Execute(const SQL: RawByteString): Boolean; override;
+  end;
+
+  TZEmulatedPreparedStatement_A = class(TZAbstractEmulatedPreparedStatement)
+  protected
+    procedure TokenizeSQLQueryRaw;
+    function GetParamAsString(ParamIndex: Integer): RawByteString; virtual; abstract;
+    function ComposeRawSQLQuery: RawByteString;
+  end;
+
+  TZEmulatedPreparedStatement_W = class(TZAbstractEmulatedPreparedStatement)
+  protected
+    procedure TokenizeSQLQueryUni;
+    function GetParamAsString(ParamIndex: Integer): ZWideString; virtual; abstract;
+    function ComposeWideSQLQuery: ZWideString;
+  end;
+
 implementation
 
 uses ZFastCode, ZSysUtils, ZMessages, ZDbcResultSet, ZCollections,
@@ -522,6 +555,60 @@ begin
     {$ENDIF UNICODE}
 end;
 
+procedure TZAbstractStatement.ToBuff(const Value: RawByteString;
+  var Result: RawByteString);
+var
+  P: PAnsiChar;
+  L: Integer;
+begin
+  L := Length(Value);
+  if L = 0 then Exit;
+  if L <= (SizeOf(fABuffer)-fABufferIndex) then begin
+    P := Pointer(Value);
+    if L = 1 //happens very often (comma,space etc) -> no move
+    then fABuffer[fABufferIndex] := P^
+    else System.Move(Pointer(Value)^, fABuffer[fABufferIndex], L);
+    Inc(fABufferIndex, L);
+  end else begin
+    SetLength(Result, Length(Result)+fABufferIndex+L);
+    P := Pointer(Result);
+    Inc(P, Length(Result)-fABufferIndex-L);
+    if fABufferIndex > 0 then begin
+      System.Move(fABuffer[0], P^, fABufferIndex);
+      Inc(P, fABufferIndex);
+      fABufferIndex := 0;
+    end;
+    System.Move(Pointer(Value)^, P^, L);
+  end;
+end;
+
+procedure TZAbstractStatement.ToBuff(const Value: ZWideString;
+  var Result: ZWideString);
+var
+  P: PWideChar;
+  L: Integer;
+begin
+  L := Length(Value);
+  if L = 0 then Exit;
+  if L <= ((SizeOf(fWBuffer) shr 1)-fWBufferIndex) then begin
+    P := Pointer(Value);
+    if L = 1 //happens very often (comma,space etc) -> no move
+    then fWBuffer[fWBufferIndex] := P^
+    else System.Move(Pointer(Value)^, fWBuffer[fWBufferIndex], L shl 1);
+    Inc(fWBufferIndex, L);
+  end else begin
+    SetLength(Result, Length(Result)+fWBufferIndex+L);
+    P := Pointer(Result);
+    Inc(P, Length(Result)-fWBufferIndex-L);
+    if fWBufferIndex > 0 then begin
+      System.Move(fWBuffer[0], P^, fWBufferIndex shl 1);
+      Inc(P, fWBufferIndex);
+      fWBufferIndex := 0;
+    end;
+    System.Move(Pointer(Value)^, P^, L shl 1);
+  end;
+end;
+
 procedure TZAbstractStatement.SetASQL(const Value: RawByteString);
 begin
   if FASQL <> Value then
@@ -587,6 +674,30 @@ begin
         FLastResultSet.Close;
         FLastResultSet := nil;
       end;
+end;
+
+procedure TZAbstractStatement.FlushBuff(var Result: RawByteString);
+var P: PAnsiChar;
+begin
+  if fABufferIndex > 0 then begin
+    SetLength(Result, Length(Result)+fABufferIndex);
+    P := Pointer(Result);
+    Inc(P, Length(Result)-fABufferIndex);
+    System.Move(fABuffer[0], P^, fABufferIndex);
+    fABufferIndex := 0;
+  end;
+end;
+
+procedure TZAbstractStatement.FlushBuff(var Result: ZWideString);
+var P: PWideChar;
+begin
+  if fWBufferIndex > 0 then begin
+    SetLength(Result, Length(Result)+fWBufferIndex);
+    P := Pointer(Result);
+    Inc(P, Length(Result)-fWBufferIndex);
+    System.Move(fWBuffer[0], P^, fWBufferIndex shl 1);
+    fWBufferIndex := 0;
+  end;
 end;
 
 procedure TZAbstractStatement.FreeOpenResultSetReference;
@@ -812,28 +923,25 @@ begin
     Result := ''; //init for FPC
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
-    for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
-    begin
+    for i := Low(SQLTokens) to high(SQLTokens) do begin //Assembles the Query
       {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} + SQLTokens[i].Value;
-      case (SQLTokens[i].TokenType) of
+      case SQLTokens[i].TokenType of
         ttEscape:
           {$IFDEF UNICODE}
-          Result := Result + ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens[i].Value,
-            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+          ToBuff(ZUnicodeToRaw(SQLTokens[i].Value, ConSettings^.ClientCodePage^.CP), Result);
           {$ELSE}
-          Result := Result + SQLTokens[i].Value;
+          ToBuff(SQLTokens[i].Value, Result);
           {$ENDIF}
         ttQuoted, ttComment,
         ttWord, ttQuotedIdentifier, ttKeyword:
-          Result := Result + ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens[i].Value,
-            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+          ToBuff(ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens[i].Value,
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP), Result);
         else
-          Result := Result + {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(SQLTokens[i].Value);
+          ToBuff({$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(SQLTokens[i].Value), Result);
       end;
     end;
-  end
-  else
-  begin
+    FlushBuff(Result);
+  end else begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     {$IFDEF UNICODE}
     Result := ConSettings^.ConvFuncs.ZUnicodeToRaw(SQL, ConSettings^.ClientCodePage^.CP);
@@ -848,28 +956,30 @@ var
   SQLTokens: TZTokenDynArray;
   i: Integer;
 begin
-  if ConSettings^.AutoEncode then
-  begin
-    Result := ''; //init for FPC
+  if ConSettings^.AutoEncode then begin
+    Result := ''; //init
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
-    for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
-    begin
+    for i := Low(SQLTokens) to high(SQLTokens) do begin //Assembles the Query
       {$IFDEF UNICODE}
-      FWSQL := SQLTokens[i].Value;
-      Result := Result + SQLTokens[i].Value;
+      ToBuff(SQLTokens[i].Value, Result);
       {$ELSE !UNICODE}
-      FASQL := FASQL + SQLTokens[i].Value;
+      ToBuff(SQLTokens[i].Value, FASQL);
       case (SQLTokens[i].TokenType) of
         ttEscape,
         ttQuoted, ttComment,
         ttWord, ttQuotedIdentifier, ttKeyword:
-          Result := ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP);
+          ToBuff(ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP), Result);
         else
-          Result := Result + ASCII7ToUnicodeString(SQLTokens[i].Value);
+          ToBuff(ASCII7ToUnicodeString(SQLTokens[i].Value), Result);
       end;
       {$ENDIF UNICODE}
     end;
+    FlushBuff(Result);
+    FWSQL := Result;
+    {$IFNDEF UNICODE}
+    FlushBuff(FASQL);
+    {$ENDIF}
   end
   else
   begin
@@ -2202,13 +2312,12 @@ end;
   and <code>executeUpdate</code>.
   @see Statement#execute
 }
-{$WARNINGS OFF}
 function TZAbstractPreparedStatement.ExecutePrepared: Boolean;
 begin
+  Result := False;
   { Logging Execution }
   DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
-{$WARNINGS ON}
 
 procedure TZAbstractPreparedStatement.Close;
 begin
@@ -2320,16 +2429,24 @@ end;
 
 procedure TZAbstractPreparedStatement.SetASQL(const Value: RawByteString);
 begin
-  if Prepared and ( ASQL <> Value ) then
-    Unprepare;
-  inherited SetASQL(Value);
+  if ( ASQL <> Value ) then begin
+    SetLength(FCachedQueryRaw, 0);
+    SetLength(FCachedQueryUni, 0);
+    if Prepared then
+      Unprepare;
+    inherited SetASQL(Value);
+  end;
 end;
 
 procedure TZAbstractPreparedStatement.SetWSQL(const Value: ZWideString);
 begin
-  if Prepared and ( WSQL <> Value ) then
-    Unprepare;
-  inherited SetWSQL(Value);
+  if ( WSQL <> Value ) then begin
+    SetLength(FCachedQueryRaw, 0);
+    SetLength(FCachedQueryUni, 0);
+    if Prepared then
+      Unprepare;
+    inherited SetWSQL(Value);
+  end;
 end;
 
 function TZAbstractPreparedStatement.SupportsSingleColumnArrays: Boolean;
@@ -3216,13 +3333,12 @@ begin
   TokenizeSQLQueryUni;
 
   for I := 0 to High(FCachedQueryUni) do
-    if FIsParamIndex[i] then
-    begin
-      Result := Result + PrepareWideSQLParam(ParamIndex);
+    if FIsParamIndex[i] then begin
+      ToBuff(PrepareWideSQLParam(ParamIndex), Result);
       Inc(ParamIndex);
-    end
-    else
-      Result := Result + FCachedQueryUni[I];
+    end else
+      ToBuff(FCachedQueryUni[I], Result);
+  FlushBuff(Result);
   {$IFDEF UNICODE}
   if ConSettings^.AutoEncode then
      Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
@@ -3243,15 +3359,12 @@ begin
   TokenizeSQLQueryRaw;
 
   for I := 0 to High(FCachedQueryRaw) do
-  begin
-    if IsParamIndex[i] then
-    begin
-      Result := Result + PrepareAnsiSQLParam(ParamIndex);
+    if IsParamIndex[i] then begin
+      ToBuff(PrepareAnsiSQLParam(ParamIndex), Result);
       Inc(ParamIndex);
-    end
-    else
-      Result := Result + FCachedQueryRaw[I];
-  end;
+    end else
+      ToBuff(FCachedQueryRaw[I], Result);
+  FlushBuff(Result);
   {$IFNDEF UNICODE}
   if ConSettings^.AutoEncode then
      Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
@@ -3439,6 +3552,172 @@ begin
     Result := ExecuteUpdate(PrepareWideSQLQuery)
   else
     Result := ExecuteUpdate(PrepareAnsiSQLQuery);
+end;
+
+{ TZEmulatedPreparedStatement_A }
+
+function TZEmulatedPreparedStatement_A.ComposeRawSQLQuery: RawByteString;
+var
+  I: Integer;
+  ParamIndex: Integer;
+begin
+  ParamIndex := 0;
+  Result := '';
+  TokenizeSQLQueryRaw;
+
+  if Length(FCachedQueryRaw) = 1
+  then Result := FCachedQueryRaw[0]
+  else begin
+    for I := 0 to High(FCachedQueryRaw) do
+      if IsParamIndex[i] then begin
+        ToBuff(GetParamAsString(ParamIndex), Result);
+        Inc(ParamIndex);
+      end else
+        ToBuff(FCachedQueryRaw[I], Result);
+    FlushBuff(Result);
+  end;
+end;
+
+procedure TZEmulatedPreparedStatement_A.TokenizeSQLQueryRaw;
+begin
+  if Length(FCachedQueryRaw) = 0 then
+    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(
+        {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
+      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
+      GetCompareFirstKeywordStrings, @FIsPraparable, FNeedNCharDetection);
+end;
+
+{ TZEmulatedPreparedStatement_W }
+
+function TZEmulatedPreparedStatement_W.ComposeWideSQLQuery: ZWideString;
+var
+  I: Integer;
+  ParamIndex: Integer;
+begin
+  ParamIndex := 0;
+  Result := '';
+  TokenizeSQLQueryUni;
+  if Length(FCachedQueryUni) = 1
+  then Result := FCachedQueryUni[0]
+  else begin
+    for I := 0 to High(FCachedQueryUni) do
+      if FIsParamIndex[i] then begin
+        ToBuff(GetParamAsString(ParamIndex), Result);
+        Inc(ParamIndex);
+      end else
+        ToBuff(FCachedQueryUni[I], Result);
+    FlushBuff(Result);
+  end;
+end;
+
+procedure TZEmulatedPreparedStatement_W.TokenizeSQLQueryUni;
+begin
+  if Length(FCachedQueryUni) = 0 then
+    FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni(
+        {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
+      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
+      GetCompareFirstKeywordStrings, @FIsPraparable, FNeedNCharDetection);
+end;
+
+{ TZAbstractEmulatedPreparedStatement }
+
+{**
+  Executes an SQL statement that may return multiple results.
+  Under some (uncommon) situations a single SQL statement may return
+  multiple result sets and/or update counts.  Normally you can ignore
+  this unless you are (1) executing a stored procedure that you know may
+  return multiple results or (2) you are dynamically executing an
+  unknown SQL string.  The  methods <code>execute</code>,
+  <code>getMoreResults</code>, <code>getResultSet</code>,
+  and <code>getUpdateCount</code> let you navigate through multiple results.
+
+  The <code>execute</code> method executes an SQL statement and indicates the
+  form of the first result.  You can then use the methods
+  <code>getResultSet</code> or <code>getUpdateCount</code>
+  to retrieve the result, and <code>getMoreResults</code> to
+  move to any subsequent result(s).
+
+  @param sql any SQL statement UCS2 encoded
+  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
+  <code>false</code> if it is an update count or there are no more results
+  @see #getResultSet
+  @see #getUpdateCount
+  @see #getMoreResults
+}
+function TZAbstractEmulatedPreparedStatement.Execute(const SQL: ZWideString): Boolean;
+begin
+  WSQL := SQL;
+  Result := ExecutePrepared;
+end;
+
+{**
+  Executes an SQL statement that may return multiple results.
+  Under some (uncommon) situations a single SQL statement may return
+  multiple result sets and/or update counts.  Normally you can ignore
+  this unless you are (1) executing a stored procedure that you know may
+  return multiple results or (2) you are dynamically executing an
+  unknown SQL string.  The  methods <code>execute</code>,
+  <code>getMoreResults</code>, <code>getResultSet</code>,
+  and <code>getUpdateCount</code> let you navigate through multiple results.
+
+  The <code>execute</code> method executes an SQL statement and indicates the
+  form of the first result.  You can then use the methods
+  <code>getResultSet</code> or <code>getUpdateCount</code>
+  to retrieve the result, and <code>getMoreResults</code> to
+  move to any subsequent result(s).
+
+  @param sql any SQL statement raw encoded
+  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
+  <code>false</code> if it is an update count or there are no more results
+  @see #getResultSet
+  @see #getUpdateCount
+  @see #getMoreResults
+}
+function TZAbstractEmulatedPreparedStatement.Execute(
+  const SQL: RawByteString): Boolean;
+begin
+  ASQL := SQL;
+  Result := ExecutePrepared;
+end;
+
+{**
+  Executes an SQL statement that returns a single <code>ResultSet</code> object.
+  @param sql typically this is a static SQL <code>SELECT</code> statement UCS2 encoded
+  @return a <code>ResultSet</code> object that contains the data produced by the
+    given query; never <code>null</code>
+}
+function TZAbstractEmulatedPreparedStatement.ExecuteQuery(
+  const SQL: RawByteString): IZResultSet;
+begin
+  ASQL := SQL;
+  Result := ExecuteQueryPrepared;
+end;
+
+{**
+  Executes an SQL statement that returns a single <code>ResultSet</code> object.
+  @param sql typically this is a static SQL <code>SELECT</code> statement raw encoded
+  @return a <code>ResultSet</code> object that contains the data produced by the
+    given query; never <code>null</code>
+}
+function TZAbstractEmulatedPreparedStatement.ExecuteQuery(
+  const SQL: ZWideString): IZResultSet;
+begin
+  WSQL := SQL;
+  Result := ExecuteQueryPrepared;
+end;
+
+function TZAbstractEmulatedPreparedStatement.ExecuteUpdate(
+  const SQL: RawByteString): Integer;
+begin
+  ASQL := SQL;
+  Result := ExecuteUpdatePrepared;
+end;
+
+function TZAbstractEmulatedPreparedStatement.ExecuteUpdate(
+  const SQL: ZWideString): Integer;
+begin
+  WSQL := SQL;
+  Result := ExecuteUpdatePrepared;
 end;
 
 end.

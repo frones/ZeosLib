@@ -384,6 +384,7 @@ type
     function SupportsCatalogsInIndexDefinitions: Boolean; virtual;
     function SupportsCatalogsInPrivilegeDefinitions: Boolean; virtual;
     function SupportsOverloadPrefixInStoredProcedureName: Boolean; virtual;
+    function SupportsParameterBinding: Boolean; virtual;
     function SupportsPositionedDelete: Boolean; virtual;
     function SupportsPositionedUpdate: Boolean; virtual;
     function SupportsSelectForUpdate: Boolean; virtual;
@@ -1620,6 +1621,15 @@ end;
 function TZAbstractDatabaseInfo.SupportsOverloadPrefixInStoredProcedureName: Boolean;
 begin
   Result := False;
+end;
+
+{**
+  Is parameter bindings supported by Provider?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsParameterBinding: Boolean;
+begin
+  Result := True;
 end;
 
 {**

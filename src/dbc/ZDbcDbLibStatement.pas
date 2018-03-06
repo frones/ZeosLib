@@ -60,47 +60,35 @@ uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcDbLib, ZPlainDbLibConstants, ZPlainDbLibDriver;
 
 type
-  {** Implements Generic DBLib Statement. }
-  TZDBLibStatement = class(TZAbstractStatement)
-  protected
+  {** Implements Prepared SQL Statement for DBLib. With emulation}
+  TZDBLibPreparedStatementEmulated = class(TZEmulatedPreparedStatement_A)
+  private
     FDBLibConnection: IZDBLibConnection;
     FPlainDriver: IZDBLibPlainDriver;
     FHandle: PDBPROCESS;
     FResults: IZCollection;
-    FRetrievedResultSet: IZResultSet;
-    FRetrievedUpdateCount: Integer;
     FUserEncoding: TZCharEncoding;
-
-    procedure InternalExecuteStatement(const SQL: RawByteString);
-    procedure FetchResults; virtual;
-
-  public
-    constructor Create(const Connection: IZConnection; Info: TStrings);
-    procedure Close; override;
-
-    function GetMoreResults: Boolean; override;
-
-    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
-    function Execute(const SQL: RawByteString): Boolean; override;
-  end;
-
-  {** Implements Prepared SQL Statement. With emulation}
-  TZDBLibPreparedStatementEmulated = class(TZEmulatedPreparedStatement)
-  private
-    FPlainDriver: IZDBLibPlainDriver;
+    FLastResultIndex: Integer;
+    FLastOptainedRS: IZResultSet;
   protected
-    function GetEscapeString(const Value: string): string;
-    function PrepareAnsiSQLQuery: RawByteString; override;
-    function PrepareAnsiSQLParam(ParamIndex: Integer;
-      const NChar: Boolean): RawByteString; reintroduce;
-    function CreateExecStatement: IZStatement; override;
+    procedure InternalExecuteStatement(const SQL: RawByteString);
+    procedure FetchResults;
+    function GetParamAsString(ParamIndex: Integer): RawByteString; override;
   public
-    constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
+    constructor Create(const Connection: IZConnection; const SQL: string;
+      const Info: TStrings); overload;
+    constructor Create(const Connection: IZConnection; const Info: TStrings); overload;
+    procedure Prepare; override;
+    procedure Unprepare; override;
+    function GetMoreResults: Boolean; override;
+    function GetUpdateCount: Integer; override;
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
   end;
+
+  {** Implements Generic DBLib Statement. }
+  TZDBLibStatement = class(TZDBLibPreparedStatementEmulated);
 
   TZDBLibCallableStatement = class(TZAbstractCallableStatement)
   private
@@ -113,7 +101,7 @@ type
     FRetrievedUpdateCount: Integer;
     FUserEncoding: TZCharEncoding;
 
-    procedure FetchResults; virtual;
+    procedure FetchResults;
     //procedure FetchRowCount; virtual;
 
   protected
@@ -131,24 +119,6 @@ type
 
   end;
 
-type
-  {** Interface for storing counter. }
-  IZUpdateCount = interface(IZInterface)
-    ['{03219BB4-E07F-4A50-80CD-291FEA629697}']
-    procedure SetCount(Value: Integer);
-    function GetCount: Integer;
-  end;
-
-  TZUpdateCount = class(TInterfacedObject, IZUpdateCount)
-  private
-    FCount: Integer;
-  public
-    constructor Create(ACount: Integer);
-    procedure SetCount(Value: Integer); virtual;
-    function GetCount: Integer; virtual;
-    property Count: Integer read GetCount write SetCount;
-  end;
-
 implementation
 
 uses
@@ -156,34 +126,20 @@ uses
   ZDbcLogging, ZDbcCachedResultSet, ZDbcDbLibUtils, ZDbcDbLibResultSet,
   ZVariant, ZDbcUtils, ZEncoding, ZDbcResultSet, ZDbcProperties
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
-  {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
+  {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF}, ZMessages;
 
-constructor TZUpdateCount.Create(ACount: Integer);
-begin
-  inherited Create;
-  FCount := ACount;
-end;
-
-procedure TZUpdateCount.SetCount(Value: Integer);
-begin
-  FCount := Value;
-end;
-
-function TZUpdateCount.GetCount: Integer;
-begin
-  Result := FCount;
-end;
-
-{ TZDBLibStatement }
+{ TZDBLibPreparedStatementEmulated }
 
 {**
   Constructs this object and assignes the main properties.
   @param Connection a database connection object.
+  @param SQL the command text.
   @param Info a statement parameters.
 }
-constructor TZDBLibStatement.Create(const Connection: IZConnection; Info: TStrings);
+constructor TZDBLibPreparedStatementEmulated.Create(
+  const Connection: IZConnection; const SQL: string; const Info: TStrings);
 begin
-  inherited Create(Connection, Info);
+  inherited Create(Connection, SQL, Info);
   Connection.QueryInterface(IZDBLibConnection, FDBLibConnection);
   if Assigned(FDBLibConnection) then
     FPLainDriver := FDBLibConnection.GetPlainDriver;
@@ -200,19 +156,79 @@ begin
     FUserEncoding := ceUTF8
   else
     Self.FUserEncoding := ceDefault;
+  FNeedNCharDetection := True;
 end;
 
-procedure TZDBLibStatement.Close;
+{**
+  Moves to a <code>Statement</code> object's next result.  It returns
+  <code>true</code> if this result is a <code>ResultSet</code> object.
+  This method also implicitly closes any current <code>ResultSet</code>
+  object obtained with the method <code>getResultSet</code>.
+
+  <P>There are no more results when the following is true:
+  <PRE>
+        <code>(!getMoreResults() && (getUpdateCount() == -1)</code>
+  </PRE>
+
+ @return <code>true</code> if the next result is a <code>ResultSet</code> object;
+   <code>false</code> if it is an update count or there are no more results
+ @see #execute
+}
+function TZDBLibPreparedStatementEmulated.GetMoreResults: Boolean;
 var
+  ResultSet: IZResultSet;
+  UpdateCount: IZAnyValue;
   I: Integer;
-  RS: IZResultSet;
 begin
-  for i := 0 to FResults.Count -1 do
-    if supports(FResults[i], IZResultSet, RS) then    //possible IZUpdateCount
-      RS.Close;
-  FResults.Clear;
-  FRetrievedResultSet := nil;
-  inherited Close;
+  FLastOptainedRS := nil;
+  Result := False;
+  for i := 0 to FResults.Count -1 do begin
+    Result := FResults.Items[I].QueryInterface(IZResultSet, ResultSet) = S_OK;
+    if Result then begin
+      FLastOptainedRS := ResultSet;
+      FResults.Delete(I);
+      Break;
+    end else//else TestStatement can't be resolved
+      if FResults.Items[I].QueryInterface(IZAnyValue, UpdateCount) = S_OK then
+        LastUpdateCount := UpdateCount.GetInteger;
+  end;
+end;
+
+function TZDBLibPreparedStatementEmulated.GetParamAsString(
+  ParamIndex: Integer): RawByteString;
+begin
+  if InParamCount <= ParamIndex
+  then Result := 'NULL'
+  else Result := PrepareSQLParameter(InParamValues[ParamIndex],
+      InParamTypes[ParamIndex], ClientVarManager, ConSettings, IsNCharIndex[ParamIndex]);
+end;
+
+{**
+  Returns the current result as an update count;
+  if the result is a <code>ResultSet</code> object or there are no more results, -1
+  is returned. This method should be called only once per result.
+
+  @return the current result as an update count; -1 if the current result is a
+    <code>ResultSet</code> object or there are no more results
+  @see #execute
+}
+function TZDBLibPreparedStatementEmulated.GetUpdateCount: Integer;
+var
+  UpdateCount: IZAnyValue;
+  I: Integer;
+begin
+  Result := inherited GetUpdateCount;
+  if (Result = -1) and (FResults.Count > 0) then
+    for i := 0 to FResults.Count -1 do
+      try
+        if FResults.Items[I].QueryInterface(IZAnyValue, UpdateCount) = S_OK then begin
+          Result := UpdateCount.GetInteger;
+          FResults.Delete(I);
+          Break;
+        end;
+      finally
+        UpdateCount := nil;
+      end;
 end;
 
 {**
@@ -222,7 +238,8 @@ end;
   @param Handle a DBLib connection handle.
   @sql string containing the statements to execute
 }
-procedure TZDBLibStatement.InternalExecuteStatement(const SQL: RawByteString);
+procedure TZDBLibPreparedStatementEmulated.InternalExecuteStatement(
+  const SQL: RawByteString);
 var Ansi: RawByteString;
 begin
   if FDBLibConnection.GetProvider = dpMsSQL then
@@ -245,258 +262,37 @@ begin
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 end;
 
-{**
-  Moves to a <code>Statement</code> object's next result.  It returns
-  <code>true</code> if this result is a <code>ResultSet</code> object.
-  This method also implicitly closes any current <code>ResultSet</code>
-  object obtained with the method <code>getResultSet</code>.
-
-  <P>There are no more results when the following is true:
-  <PRE>
-        <code>(!getMoreResults() && (getUpdateCount() == -1)</code>
-  </PRE>
-
- @return <code>true</code> if the next result is a <code>ResultSet</code> object;
-   <code>false</code> if it is an update count or there are no more results
- @see #execute
-}
-function TZDBLibStatement.GetMoreResults: Boolean;
-var
-  ResultSet: IZResultSet;
-  UpdateCount: IZUpdateCount;
+procedure TZDBLibPreparedStatementEmulated.Prepare;
 begin
-  Result := False;
-  FRetrievedResultSet := nil;
-  FRetrievedUpdateCount := -1;
-  if FResults.Count > 0 then
-  begin
-    try
-      Result := FResults.Items[0].QueryInterface(IZResultSet, ResultSet) = 0;
-      if Result then
-      begin
-        FRetrievedResultSet := ResultSet;
-        FRetrievedUpdateCount := 0;
-      end
-      else
-      begin
-        if FResults.Items[0].QueryInterface(IZUpdateCount, UpdateCount) = 0 then
-          FRetrievedUpdateCount := UpdateCount.GetCount;
-      end;
-      FResults.Delete(0);
-    finally
-      ResultSet := nil;
-      UpdateCount := nil;
-    end;
-  end;
+  inherited Prepare;
+  FLastResultIndex := 0;
 end;
 
-{**
-  Fetches all results and creates a cachedresultset object for each resultset
-  and a ZUpdateCount object for each count value.
-}
-procedure TZDBLibStatement.FetchResults;
+procedure TZDBLibPreparedStatementEmulated.Unprepare;
 var
-  NativeResultSet: TZDBLibResultSet;
-  CachedResultSet: TZCachedResultSet;
+  I: Integer;
   RS: IZResultSet;
-  RowsAffected: Integer;
 begin
-  for RowsAffected := 0 to FResults.Count -1 do
-    if Supports(FResults[RowsAffected], IZResultSet, RS) then
+  for i := 0 to FResults.Count -1 do
+    if supports(FResults[i], IZResultSet, RS) then    //possible IZUpdateCount
       RS.Close;
   FResults.Clear;
-//Sybase does not seem to return dbCount at all, so a workaround is made
-  RowsAffected := -2;
-  while FPlainDriver.dbresults(FHandle) = DBSUCCEED do
-  begin
-    if FPlainDriver.dbcmdrow(FHandle) = DBSUCCEED then
-    begin
-      {EH: Developer notes:
-       the TDS protocol does NOT support any stmt handles. All actions are
-       executed sequentially so in ALL cases we need cached Results NO WAY araound!!!}
-      NativeResultSet := TZDBLibResultSet.Create(Self, Self.SQL, FUserEncoding);
-      NativeResultSet.SetConcurrency(rcReadOnly);
-      CachedResultSet := TZCachedResultSet.Create(NativeResultSet,
-        Self.SQL, TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData), ConSettings);
-      CachedResultSet.SetType(rtScrollInsensitive);//!!!Cached resultsets are allways this
-      CachedResultSet.Last;
-      CachedResultSet.BeforeFirst; //!!!Just to invoke fetchall
-      CachedResultSet.SetConcurrency(GetResultSetConcurrency);
-      FResults.Add(CachedResultSet);
-    end
-    else
-    begin
-      RowsAffected := FPlainDriver.dbCount(FHandle);
-      if RowsAffected > -1 then
-        FResults.Add(TZUpdateCount.Create(RowsAffected));
-    end;
-    FPlainDriver.dbCanQuery(FHandle);
+  if Assigned(FOpenResultSet) then begin
+    IZResultSet(FOpenResultSet).Close;
+    FOpenResultSet := nil;
   end;
-  FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS');
-
-  if not FDBLibConnection.FreeTDS then
-    if RowsAffected = -1 then
-    begin
-      FDBLibConnection.InternalExecuteStatement('select @@rowcount');
-      try
-        FPlainDriver.dbresults(FHandle);
-        NativeResultSet := TZDBLibResultSet.Create(Self, 'select @@rowcount');
-        try
-          if NativeResultset.Next then
-            RowsAffected := NativeResultSet.GetInt(FirstDbcIndex);
-        finally
-          NativeResultSet.Close;
-        end;
-        FResults.Add(TZUpdateCount.Create(RowsAffected));
-      finally
-        FPlainDriver.dbCancel(FHandle);
-      end;
-      FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS');
-    end;
+  inherited UnPrepare;
 end;
-
-{**
-  Executes an SQL statement that returns a single <code>ResultSet</code> object.
-  @param sql typically this is a static SQL <code>SELECT</code> statement
-  @return a <code>ResultSet</code> object that contains the data produced by the
-    given query; never <code>null</code>
-}
-function TZDBLibStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
-begin
-  Result := nil;
-  if ASQL <> SQL then
-    ASQL := SQL;
-  try
-    InternalExecuteStatement(ASQL);
-    FetchResults;
-    repeat
-      if GetMoreResults then
-        Result := FRetrievedResultSet
-      else if FRetrievedUpdateCount = -1 then
-        Break;
-    until False;
-  finally
-    FRetrievedResultSet := nil;
-  end;
-end;
-
-{**
-  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
-  <code>DELETE</code> statement. In addition,
-  SQL statements that return nothing, such as SQL DDL statements,
-  can be executed.
-
-  @param sql an SQL <code>INSERT</code>, <code>UPDATE</code> or
-    <code>DELETE</code> statement or an SQL statement that returns nothing
-  @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
-    or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
-}
-function TZDBLibStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
-begin
-  if ASQL <> SQL then
-    ASQL := SQL;
-  InternalExecuteStatement(ASQL);
-  FetchResults;
-  GetMoreResults;
-  Result := FRetrievedUpdateCount;
-  FRetrievedResultSet := nil;
-end;
-
-{**
-  Executes an SQL statement that may return multiple results.
-  Under some (uncommon) situations a single SQL statement may return
-  multiple result sets and/or update counts.  Normally you can ignore
-  this unless you are (1) executing a stored procedure that you know may
-  return multiple results or (2) you are dynamically executing an
-  unknown SQL string.  The  methods <code>execute</code>,
-  <code>getMoreResults</code>, <code>getResultSet</code>,
-  and <code>getUpdateCount</code> let you navigate through multiple results.
-
-  The <code>execute</code> method executes an SQL statement and indicates the
-  form of the first result.  You can then use the methods
-  <code>getResultSet</code> or <code>getUpdateCount</code>
-  to retrieve the result, and <code>getMoreResults</code> to
-  move to any subsequent result(s).
-
-  @param sql any SQL statement
-  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
-  <code>false</code> if it is an update count or there are no more results
-}
-function TZDBLibStatement.Execute(const SQL: RawByteString): Boolean;
-begin
-  if ASQL <> SQL then
-    ASQL := SQL;
-  InternalExecuteStatement(ASQL);
-  FetchResults;
-  Result := GetMoreResults;
-  LastResultSet := FRetrievedResultSet;
-  LastUpdateCount := FRetrievedUpdateCount;
-  FRetrievedResultSet := nil;
-end;
-
-{ TZDBLibPreparedStatementEmulated }
 
 {**
   Constructs this object and assignes the main properties.
   @param Connection a database connection object.
   @param Info a statement parameters.
-  @param Handle a connection handle pointer.
 }
-constructor TZDBLibPreparedStatementEmulated.Create(const Connection: IZConnection;
-  const SQL: string; Info: TStrings);
+constructor TZDBLibPreparedStatementEmulated.Create(
+  const Connection: IZConnection; const Info: TStrings);
 begin
-  inherited Create(Connection, SQL, Info);
-  FPlainDriver := (Connection as IZDBLibConnection).GetPlainDriver;
-  ResultSetType := rtScrollInsensitive;
-  FNeedNCharDetection := True;
-end;
-
-{**
-  Converts an string into escape DBLib format.
-  @param Value a regular string.
-  @return a string in DBLib escape format.
-}
-function TZDBLibPreparedStatementEmulated.GetEscapeString(const Value: string): string;
-begin
-  Result := AnsiQuotedStr(Value, '''');
-end;
-
-function TZDBLibPreparedStatementEmulated.PrepareAnsiSQLQuery: RawByteString;
-var
-  I: Integer;
-  ParamIndex: Integer;
-begin
-  ParamIndex := 0;
-  Result := '';
-  TokenizeSQLQueryRaw;
-
-  for I := 0 to High(CachedQueryRaw) do
-  begin
-    if IsParamIndex[i] then
-    begin
-      Result := Result + PrepareAnsiSQLParam(ParamIndex, IsNCharIndex[i]);
-      Inc(ParamIndex);
-    end
-    else
-      Result := Result + CachedQueryRaw[I];
-  end;
-  {$IFNDEF UNICODE}
-  if GetConnection.AutoEncodeStrings then
-     Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
-  {$ENDIF}
-end;
-{**
-  Prepares an SQL parameter for the query.
-  @param ParameterIndex the first parameter is 1, the second is 2, ...
-  @return a string representation of the parameter.
-}
-function TZDBLibPreparedStatementEmulated.PrepareAnsiSQLParam(ParamIndex: Integer;
-  const NChar: Boolean): RawByteString;
-begin
-  if InParamCount <= ParamIndex
-  then Result := 'NULL'
-  else Result := PrepareSQLParameter(InParamValues[ParamIndex],
-      InParamTypes[ParamIndex], ClientVarManager, ConSettings, NChar);
+  Create(Connection, '', Info)
 end;
 
 {**
@@ -508,7 +304,12 @@ end;
 }
 function TZDBLibPreparedStatementEmulated.ExecutePrepared: Boolean;
 begin
-  Result := inherited Execute(PrepareAnsiSQLQuery);
+  Prepare;
+  InternalExecuteStatement(ComposeRawSQLQuery);
+  FetchResults;
+  LastUpdateCount := GetUpdateCount;
+  Result := GetMoreResults;
+  LastResultSet := FLastOptainedRS;
 end;
 
 {**
@@ -520,7 +321,13 @@ end;
 }
 function TZDBLibPreparedStatementEmulated.ExecuteQueryPrepared: IZResultSet;
 begin
-  Result := inherited ExecuteQuery(PrepareAnsiSQLQuery);
+  Prepare;
+  InternalExecuteStatement(ComposeRawSQLQuery);
+  FetchResults;
+  if GetMoreResults then begin
+    Result := FLastOptainedRS;
+    FOpenResultSet := Pointer(Result);
+  end;
 end;
 
 {**
@@ -535,17 +342,70 @@ end;
 }
 function TZDBLibPreparedStatementEmulated.ExecuteUpdatePrepared: Integer;
 begin
-  Result := inherited ExecuteUpdate(PrepareAnsiSQLQuery);
+  Prepare;
+  InternalExecuteStatement(ComposeRawSQLQuery);
+  FetchResults;
+  Result := GetUpdateCount;
 end;
 
 {**
-  Creates a temporary statement which executes queries.
-  @param Info a statement parameters.
-  @return a created statement object.
+  Fetches all results and creates a cachedresultset object for each resultset
+  and a ZAnyValue object for each count value.
 }
-function TZDBLibPreparedStatementEmulated.CreateExecStatement: IZStatement;
+procedure TZDBLibPreparedStatementEmulated.FetchResults;
+var
+  NativeResultSet: TZDBLibResultSet;
+  CachedResultSet: TZCachedResultSet;
+  RS: IZResultSet;
+  RowsAffected: Integer;
 begin
-  Result := TZDBLibStatement.Create(Connection, Info);
+  for RowsAffected := 0 to FResults.Count -1 do
+    if Supports(FResults[RowsAffected], IZResultSet, RS) then
+      RS.Close;
+  FResults.Clear;
+//Sybase does not seem to return dbCount at all, so a workaround is made
+  //RowsAffected := -2;
+  while FPlainDriver.dbresults(FHandle) = DBSUCCEED do begin
+    if FPlainDriver.dbcmdrow(FHandle) = DBSUCCEED then begin
+      {EH: Developer notes:
+       the TDS protocol does NOT support any stmt handles. All actions are
+       executed sequentially so in ALL cases we need cached Results NO WAY around!!!}
+      NativeResultSet := TZDBLibResultSet.Create(Self, Self.SQL, FUserEncoding);
+      CachedResultSet := TZCachedResultSet.Create(NativeResultSet,
+        Self.SQL, TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData), ConSettings);
+      CachedResultSet.SetType(rtScrollInsensitive);//!!!Cached resultsets are allways this
+      CachedResultSet.Last;
+      CachedResultSet.BeforeFirst; //!!!Just to invoke fetchall
+      CachedResultSet.SetConcurrency(GetResultSetConcurrency);
+      FResults.Add(CachedResultSet);
+    end else begin
+      RowsAffected := FPlainDriver.dbCount(FHandle);
+      if RowsAffected > -1 then
+        FResults.Add(TZAnyValue.CreateWithInteger(RowsAffected));
+    end;
+    FPlainDriver.dbCanQuery(FHandle);
+  end;
+  FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS');
+
+  (*if not FDBLibConnection.FreeTDS then
+    if RowsAffected = -1 then
+    begin
+      FDBLibConnection.InternalExecuteStatement('select @@rowcount');
+      try
+        FPlainDriver.dbresults(FHandle);
+        NativeResultSet := TZDBLibResultSet.Create(Self, 'select @@rowcount');
+        try
+          if NativeResultset.Next then
+            RowsAffected := NativeResultSet.GetInt(FirstDbcIndex);
+        finally
+          NativeResultSet.Close;
+        end;
+        FResults.Add(TZAnyValue.CreateWithInteger(RowsAffected));
+      finally
+        FPlainDriver.dbCancel(FHandle);
+      end;
+      FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS');
+    end; *)
 end;
 
 constructor TZDBLibCallableStatement.Create(const Connection: IZConnection;
@@ -557,7 +417,7 @@ begin
     FPLainDriver := FDBLibConnection.GetPlainDriver;
   FHandle := FDBLibConnection.GetConnectionHandle;
   ResultSetType := rtScrollInsensitive;
-  {note: this is a hack! Purpose is to notify Zeos all Charakter columns are
+  {note: this is a hack! Purpose is to notify Zeos all Character columns are
     UTF8-encoded. e.g. N(VAR)CHAR. Initial idea is made for MSSQL where we've NO
     valid tdsType to determine (Var)Char(Ansi-Encoding) or N(Var)Char encoding
     So this is stopping all encoding detections and increases the performance in
@@ -600,7 +460,7 @@ begin
     begin
       FLastRowsAffected := FPlainDriver.dbCount(FHandle);
       if FLastRowsAffected > -1 then
-        FResultSets.Add(TZUpdateCount.Create(FLastRowsAffected));
+        FResultSets.Add(TZAnyValue.CreateWithInteger(FLastRowsAffected));
     end;
   end;
   FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS');
@@ -649,7 +509,7 @@ end;*)
 function TZDBLibCallableStatement.GetMoreResults: Boolean;
 var
   ResultSet: IZResultSet;
-  UpdateCount: IZUpdateCount;
+  UpdateCount: IZAnyValue;
 begin
   Result := False;
   FRetrievedResultSet := nil;
@@ -664,8 +524,8 @@ begin
         FRetrievedUpdateCount := 0;
       end
       else
-        if Supports(FResultSets[0], IZUpdateCount, UpdateCount) then
-          FRetrievedUpdateCount := UpdateCount.GetCount;
+        if Supports(FResultSets[0], IZAnyValue, UpdateCount) then
+          FRetrievedUpdateCount := UpdateCount.GetInteger;
       FResultSets.Delete(0);
     finally
       ResultSet := nil;

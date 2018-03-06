@@ -1681,18 +1681,21 @@ begin
   Buffer^.UpdateType := utUnmodified;
   Buffer^.BookmarkFlag := 0;
   {$R-}
-  for I := 0 to FColumnCount - 1 do
-    case FColumnTypes[I] of
-      stAsciiStream, stUnicodeStream, stBinaryStream:
-        if (Buffer^.Columns[FColumnOffsets[I]] = bIsNotNull) then
-          PIZLob(@Buffer^.Columns[FColumnOffsets[I] +1])^ := nil;
-      stBytes,stString, stUnicodeString:
-        if (Buffer^.Columns[FColumnOffsets[I]] = bIsNotNull) then
-          if PPointer(@Buffer^.Columns[FColumnOffsets[I] +1])^ <> nil then begin
-            System.FreeMem(PPointer(@Buffer^.Columns[FColumnOffsets[I] +1])^);
-            PPointer(@Buffer^.Columns[FColumnOffsets[I] +1])^ := nil;
-          end;
-    end;
+  for I := 0 to High(FBytesCols) do
+    if (Buffer^.Columns[FColumnOffsets[FBytesCols[i]]] = bIsNotNull) then
+      if PPointer(@Buffer^.Columns[FColumnOffsets[FBytesCols[i]] +1])^ <> nil then begin
+        System.FreeMem(PPointer(@Buffer^.Columns[FColumnOffsets[FBytesCols[i]] +1])^);
+        PPointer(@Buffer^.Columns[FColumnOffsets[FBytesCols[i]] +1])^ := nil;
+      end;
+  for I := 0 to High(FStringCols) do
+    if (Buffer^.Columns[FColumnOffsets[FStringCols[i]]] = bIsNotNull) then
+      if PPointer(@Buffer^.Columns[FColumnOffsets[FStringCols[i]] +1])^ <> nil then begin
+        System.FreeMem(PPointer(@Buffer^.Columns[FColumnOffsets[FStringCols[i]] +1])^);
+        PPointer(@Buffer^.Columns[FColumnOffsets[FStringCols[i]] +1])^ := nil;
+      end;
+  for I := 0 to High(FLobCols) do
+    if (Buffer^.Columns[FColumnOffsets[FLobCols[I]]] = bIsNotNull) then
+      PIZLob(@Buffer^.Columns[FColumnOffsets[FLobCols[I]] +1])^ := nil;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   if WithFillChar then
     FillChar(Buffer^.Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});

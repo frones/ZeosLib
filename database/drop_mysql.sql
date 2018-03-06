@@ -10,6 +10,7 @@ drop procedure IF EXISTS MultipleVaryingResultSets;
 drop procedure IF EXISTS SingleResultSet;
 drop procedure IF EXISTS ALL_PARAMS_IN;
 drop procedure IF EXISTS TwoResultSets;
+drop procedure IF EXISTS ThreeResultSets;
 drop function IF EXISTS SIMPLE_FUNC;
 drop function IF EXISTS FuncReturnInteger;
 drop table IF EXISTS blob_values;

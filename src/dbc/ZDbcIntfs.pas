@@ -460,6 +460,7 @@ type
     function SupportsCatalogsInIndexDefinitions: Boolean;
     function SupportsCatalogsInPrivilegeDefinitions: Boolean;
     function SupportsOverloadPrefixInStoredProcedureName: Boolean;
+    function SupportsParameterBinding: Boolean;
     function SupportsPositionedDelete: Boolean;
     function SupportsPositionedUpdate: Boolean;
     function SupportsSelectForUpdate: Boolean;

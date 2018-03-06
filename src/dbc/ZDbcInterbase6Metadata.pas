@@ -1458,9 +1458,10 @@ const
   FIELD_SUB_TYPE_Index  = FirstDbcIndex + 4;
   FIELD_SCALE_Index     = FirstDbcIndex + 5;
 //FIELD_LENGTH_Index    = FirstDbcIndex + 6; - not used
-//DESCRIPTION_Index     = FirstDbcIndex + 7; - not used
+  DESCRIPTION_Index     = FirstDbcIndex + 7; 
   FIELD_PRECISION_Index = FirstDbcIndex + 8;
   NULL_FLAG_Index       = FirstDbcIndex + 9;
+//CHARACTER_SET_ID_Index= FirstDbcIndex +10; - not used
 var
   SQL: string;
   LProcedureNamePattern, LColumnNamePattern: string;
@@ -1480,7 +1481,8 @@ begin
     SQL := ' SELECT P.RDB$PROCEDURE_NAME, PP.RDB$PARAMETER_NAME,'
       + ' PP.RDB$PARAMETER_TYPE, F.RDB$FIELD_TYPE, F.RDB$FIELD_SUB_TYPE,'
       + ' F.RDB$FIELD_SCALE, F.RDB$FIELD_LENGTH,'
-      + ' PP.RDB$DESCRIPTION, F.RDB$FIELD_PRECISION, F.RDB$NULL_FLAG '
+      + ' PP.RDB$DESCRIPTION, F.RDB$FIELD_PRECISION, F.RDB$NULL_FLAG, '
+      + ' F.RDB$CHARACTER_SET_ID '
       + ' FROM RDB$PROCEDURES P JOIN RDB$PROCEDURE_PARAMETERS PP ON'
       + ' P.RDB$PROCEDURE_NAME = PP.RDB$PROCEDURE_NAME '
       + ' JOIN RDB$FIELDS F ON PP.RDB$FIELD_SOURCE = F.RDB$FIELD_NAME '
@@ -1517,6 +1519,7 @@ begin
         Result.UpdateInt(ProcColRadixIndex, 10);
         Result.UpdateInt(ProcColNullableIndex, GetInt(NULL_FLAG_Index));
         //EH: ??? Result.UpdateString(12, GetString(FIELD_PRECISION_Index));
+        Result.UpdateString(ProcColRemarksIndex, GetString(DESCRIPTION_Index));
         Result.InsertRow;
       end;
       Close;
@@ -1814,20 +1817,20 @@ begin
         case TypeName of
           blr_short:
             case SubTypeName of
-              1: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
-              2: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
+              RDB_NUMBERS_NUMERIC: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
+              RDB_NUMBERS_DECIMAL: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
               else Result.UpdateString(TableColColumnTypeNameIndex, 'SMALLINT');
             end;
           blr_long:
             case SubTypeName of
-              1: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
-              2: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
+              RDB_NUMBERS_NUMERIC: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
+              RDB_NUMBERS_DECIMAL: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
               else Result.UpdateString(TableColColumnTypeNameIndex, 'INTEGER' );
             end;
           blr_int64:
             case SubTypeName of
-              1: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
-              2: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
+              RDB_NUMBERS_NUMERIC: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
+              RDB_NUMBERS_DECIMAL: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
               else Result.UpdateString(TableColColumnTypeNameIndex, GetString(TYPE_NAME_Index));
             end;
           blr_varying: Result.UpdateString(TableColColumnTypeNameIndex, 'VARCHAR'); // Instead of VARYING

@@ -338,10 +338,9 @@ begin
     stFloat, stDouble, stCurrency, stBigDecimal:
       Result := ClientVarManager.GetAsRawByteString(Value);
     stString, stUnicodeString:
-      if NChar then
-        Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(ClientVarManager.GetAsRawByteString(Value, zCP_UTF8), #39)
-      else
-        Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(ClientVarManager.GetAsRawByteString(Value), #39);
+      if NChar
+      then Result := ZSysUtils.SQLQuotedStr(ClientVarManager.GetAsRawByteString(Value, zCP_UTF8), #39)
+      else Result := ZSysUtils.SQLQuotedStr(ClientVarManager.GetAsRawByteString(Value), #39);
     stBytes:
       begin
         TempBytes := ClientVarManager.GetAsBytes(Value);

@@ -98,6 +98,7 @@ type
     FHandle: PZMySQLConnect;
     FDatabaseName: String;
     FIKnowMyDatabaseName: Boolean;
+    FPlainDriver: IZMySQLPlainDriver;
   protected
     procedure InternalCreate; override;
   public
@@ -191,9 +192,10 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-{$WARNINGS OFF}
+{$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
 function TZMySQLDriver.Connect(const Url: TZURL): IZConnection;
 begin
+  Result := nil; //init
   MySQLCriticalSection.Enter;
   try
     Result := TZMySQLConnection.Create(Url);
@@ -201,7 +203,7 @@ begin
     MySQLCriticalSection.Leave;
   end;
 end;
-{$WARNINGS ON}
+{$WARNINGS ON} //suppress the deprecatad warning of calling create from internal
 
 {**
   Gets the driver's major version number. Initially this should be 1.
@@ -857,7 +859,9 @@ end;
 }
 function TZMySQLConnection.GetPlainDriver: IZMySQLPlainDriver;
 begin
-  Result := Self.PlainDriver as IZMySQLPlainDriver;
+  if FPlainDriver = nil then
+    fPlainDriver := PLainDriver as IZMySQLPlainDriver;
+  Result := fPlainDriver;
 end;
 
 function TZMySQLConnection.GetServerProvider: TZServerProvider;
