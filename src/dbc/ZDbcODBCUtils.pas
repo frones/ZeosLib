@@ -148,11 +148,11 @@ begin
           end else begin
             NErrW := IntToUnicode(NativeError);
             SetLength(MsgW, SizeOf(TSQLSTATE)+Length(NErrW)+2+TextLength);
-            System.Move(SqlstateW, MsgW[1], SQL_SQLSTATE_SIZE  shl 1);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(SqlstateW, MsgW[1], SQL_SQLSTATE_SIZE  shl 1);
             MsgW[6] := '[';
-            System.Move(NErrW[1], MsgW[7], Length(NErrW)  shl 1);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(NErrW[1], MsgW[7], Length(NErrW)  shl 1);
             MsgW[7+Length(NErrW)] := ']'; MsgW[8+Length(NErrW)] := ':';
-            System.Move(MessageText[0], MsgW[9+Length(NErrW)], TextLength shl 1);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(MessageText[0], MsgW[9+Length(NErrW)], TextLength shl 1);
             ErrorStringW := ErrorStringW+ZWideString(LineEnding)+MsgW;
           end;
           inc(RecNum);
@@ -191,11 +191,11 @@ begin
           end else begin
             NErrA := IntToRaw(NativeError);
             SetLength(MsgA, SizeOf(TSQLSTATE)+Length(NErrA)+2+TextLength);
-            System.Move(SqlstateA, MsgA[1], SQL_SQLSTATE_SIZE);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(SqlstateA, MsgA[1], SQL_SQLSTATE_SIZE);
             MsgA[6] := '[';
-            System.Move(NErrA[1], MsgA[7], Length(NErrA));
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(NErrA[1], MsgA[7], Length(NErrA));
             MsgA[7+Length(NErrA)] := ']'; MsgA[8+Length(NErrA)] := ':';
-            System.Move(MessageText[0], MsgA[9+Length(NErrA)], TextLength);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(MessageText[0], MsgA[9+Length(NErrA)], TextLength);
             ErrorStringA := ErrorStringA+RawByteString(LineEnding)+MsgA
           end;
           inc(RecNum);

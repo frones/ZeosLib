@@ -548,7 +548,7 @@ var
   begin
     PSQLLEN(StrLen_or_IndPtr)^ := Len;
     if Assigned(P) then
-      Move(P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
     Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
     Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
   end;
@@ -589,7 +589,7 @@ var
   begin
     PSQLLEN(StrLen_or_IndPtr)^ := Min(Param.BufferSize-2, Len shl 1);
     if Assigned(P) then
-      Move(P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
     (PWideChar(ParameterDataPtr)+(PSQLLEN(StrLen_or_IndPtr)^ shr 1))^ := #0;
     Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
     Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
@@ -602,7 +602,7 @@ var
   begin
     PSQLLEN(StrLen_or_IndPtr)^ := Min(Param.BufferSize-1, Len);
     if Assigned(P) then
-      Move(P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
     (PAnsiChar(ParameterDataPtr)+PSQLLEN(StrLen_or_IndPtr)^)^ := #0;
     Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
     Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
@@ -1726,7 +1726,7 @@ begin
                   if Param.InputDataType = SQL_PARAM_INPUT then
                     Param.CurrParamDataPtr := CharRec.P
                   else
-                    System.Move(CharRec.P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
+                    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(CharRec.P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
                   if not ((PWideChar(Param.CurrParamDataPtr)+(PSQLLEN(StrLen_or_IndPtr)^ shr 1))^ = WideChar(#0)) then //WideChar use for FPC else dead slow
                     (PWideChar(Param.CurrParamDataPtr)+(PSQLLEN(StrLen_or_IndPtr)^ shr 1))^ := WideChar(#0); //set a terminating #0 to top of data
                 end else begin
@@ -1735,7 +1735,7 @@ begin
                   if Param.InputDataType = SQL_PARAM_INPUT then
                     Param.CurrParamDataPtr := CharRec.P
                   else
-                    System.Move(CharRec.P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
+                    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(CharRec.P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
                   if not ((PAnsiChar(Param.CurrParamDataPtr)+PSQLLEN(StrLen_or_IndPtr)^)^ = #0) then
                     (PAnsiChar(Param.CurrParamDataPtr)+PSQLLEN(StrLen_or_IndPtr)^)^ := #0; //terminate the String if a truncation happens
                 end;
