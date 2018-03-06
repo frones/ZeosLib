@@ -408,16 +408,15 @@ var
 begin
   FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
 
-  FHardCommit := StrToBoolEx(URL.Properties.Values[ConnProps_HardCommit]);
   { Sets a default Interbase port }
 
   if Self.Port = 0 then
     Self.Port := 3050;
 
   { set default sql dialect it can be overriden }
-  FDialect := StrToIntDef(Info.Values['dialect'], SQL_DIALECT_CURRENT);
+  FDialect := StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT);
 
-  FDialect := StrToIntDef(URL.Properties.Values[ConnProps_Dialect], FDialect);
+  FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
 
   Info.BeginUpdate; // Do not call OnPropertiesChange every time a property changes
   { Processes connection properties. }
@@ -432,15 +431,15 @@ begin
     end;
   Info.Values['isc_dpb_lc_ctype'] := FClientCodePage;
 
-  RoleName := Trim(URL.Properties.Values[ConnProps_Rolename]);
+  RoleName := Trim(Info.Values[ConnProps_Rolename]);
   if RoleName <> '' then
     Info.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
 
-  ConnectTimeout := StrToIntDef(URL.Properties.Values[ConnProps_Timeout], -1);
+  ConnectTimeout := StrToIntDef(Info.Values[ConnProps_Timeout], -1);
   if ConnectTimeout >= 0 then
     Info.Values['isc_dpb_connect_timeout'] := ZFastCode.IntToStr(ConnectTimeout);
 
-  WireCompression := StrToBoolEx(URL.Properties.Values[ConnProps_WireCompression]);
+  WireCompression := StrToBoolEx(Info.Values[ConnProps_WireCompression]);
   if WireCompression then
     Info.Values['isc_dpb_config'] :=
       Info.Values['isc_dpb_config'] + LineEnding + 'WireCompression=true';
@@ -587,7 +586,7 @@ begin
     { Logging connection action }
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
       'CREATE DATABASE "'+NewDB+'" AS USER "'+ ConSettings^.User+'"');
-    URL.Properties.Values[ConnProps_CreateNewDatabase] := '';
+    Info.Values[ConnProps_CreateNewDatabase] := '';
   end;
 
   FHandle := 0;
@@ -630,10 +629,10 @@ begin
       if FCLientCodePage = '' then
       begin
         FCLientCodePage := GetString(CollationAndCharSetNameIndex);
-        if URL.Properties.Values[DSProps_ResetCodePage] <> '' then
+        if Info.Values[DSProps_ResetCodePage] <> '' then
         begin
           ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(FClientCodePage);
-          ResetCurrentClientCodePage(URL.Properties.Values[DSProps_ResetCodePage]);
+          ResetCurrentClientCodePage(Info.Values[DSProps_ResetCodePage]);
         end
         else
           CheckCharEncoding(FClientCodePage);
@@ -645,7 +644,7 @@ begin
           begin
             Info.Values['isc_dpb_lc_ctype'] := sCS_NONE;
             {save the user wanted CodePage-Informations}
-            URL.Properties.Values[DSProps_ResetCodePage] := FClientCodePage;
+            Info.Values[DSProps_ResetCodePage] := FClientCodePage;
             FClientCodePage := sCS_NONE;
             { charset 'NONE' can't convert anything and write 'Data as is'!
               If another charset was set on attaching the Server then all
@@ -661,18 +660,18 @@ begin
           end
           else
           begin
-            if URL.Properties.Values[DSProps_ResetCodePage] <> '' then
+            if Info.Values[DSProps_ResetCodePage] <> '' then
             begin
               ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(sCS_NONE);
-              ResetCurrentClientCodePage(URL.Properties.Values[DSProps_ResetCodePage]);
+              ResetCurrentClientCodePage(Info.Values[DSProps_ResetCodePage]);
             end
             else
               CheckCharEncoding(sCS_NONE);
           end;
         end
         else
-          if URL.Properties.Values[DSProps_ResetCodePage] <> '' then
-            ResetCurrentClientCodePage(URL.Properties.Values[DSProps_ResetCodePage]);
+          if Info.Values[DSProps_ResetCodePage] <> '' then
+            ResetCurrentClientCodePage(Info.Values[DSProps_ResetCodePage]);
     Close;
   end;
   if FClientCodePage = sCS_NONE then
