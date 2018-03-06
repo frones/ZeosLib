@@ -224,13 +224,7 @@ begin
       FIsSelectSQL := (ZFastCode.Pos('SELECT', UpperCase(SQL)) > 0)
     else
       FIsSelectSQL := IsSelect(SQL);
-    if not Assigned(FAdoCommand) then
-    begin
-      FAdoCommand := CoCommand.Create;
-      FAdoCommand.CommandText := WSQL;
-      FAdoConnection := Connection as IZAdoConnection;
-      FAdoCommand._Set_ActiveConnection(FAdoConnection.GetAdoConnection);
-    end;
+    FAdoCommand.CommandText := WSQL;
     inherited Prepare;
     if not Assigned(FParameterAccessor) then
       FAdoCommand.Prepared := True;
