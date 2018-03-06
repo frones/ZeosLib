@@ -314,7 +314,7 @@ begin
   if Closed then
     Exit;
   if GetAutoCommit
-  then raise EZSQLException.Create(cSInvalidOpInAutoCommit);
+  then raise EZSQLException.Create(SInvalidOpInAutoCommit);
   if not (FTrHandle = 0)  then
     if FHardCommit then begin
       GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
@@ -342,41 +342,42 @@ var
 begin
   FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
 
-  FHardCommit := StrToBoolEx(URL.Properties.Values['hard_commit']);
   { Sets a default Interbase port }
 
   if Self.Port = 0 then
     Self.Port := 3050;
 
   { set default sql dialect it can be overriden }
-  FDialect := 3;
+  FDialect := StrToIntDef(Info.Values['dialect'], SQL_DIALECT_CURRENT);
 
-  FDialect := StrToIntDef(URL.Properties.Values['dialect'], FDialect);
+  FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
 
+  Info.BeginUpdate; // Do not call OnPropertiesChange every time a property changes
   { Processes connection properties. }
-  self.Info.Values['isc_dpb_username'] := Url.UserName;
-  self.Info.Values['isc_dpb_password'] := Url.Password;
+  Info.Values['isc_dpb_username'] := Url.UserName;
+  Info.Values['isc_dpb_password'] := Url.Password;
 
   if FClientCodePage = '' then //was set on inherited Create(...)
-    if URL.Properties.Values['isc_dpb_lc_ctype'] <> '' then //Check if Dev set's it manually
+    if Info.Values['isc_dpb_lc_ctype'] <> '' then //Check if Dev set's it manually
     begin
-      FClientCodePage := URL.Properties.Values['isc_dpb_lc_ctype'];
+      FClientCodePage := Info.Values['isc_dpb_lc_ctype'];
       CheckCharEncoding(FClientCodePage, True);
     end;
-  URL.Properties.Values['isc_dpb_lc_ctype'] := FClientCodePage;
+  Info.Values['isc_dpb_lc_ctype'] := FClientCodePage;
 
-  RoleName := Trim(URL.Properties.Values['rolename']);
+  RoleName := Trim(Info.Values['rolename']);
   if RoleName <> '' then
-    URL.Properties.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
+    Info.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
 
-  ConnectTimeout := StrToIntDef(URL.Properties.Values['timeout'], -1);
+  ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
   if ConnectTimeout >= 0 then
-    URL.Properties.Values['isc_dpb_connect_timeout'] := ZFastCode.IntToStr(ConnectTimeout);
+    Info.Values['isc_dpb_connect_timeout'] := ZFastCode.IntToStr(ConnectTimeout);
 
-  WireCompression := StrToBoolEx(URL.Properties.Values['wirecompression']);
+  WireCompression := StrToBoolEx(Info.Values['wirecompression']);
   if WireCompression then
-    URL.Properties.Values['isc_dpb_config'] :=
-      URL.Properties.Values['isc_dpb_config'] + LineEnding + 'WireCompression=true';
+    Info.Values['isc_dpb_config'] :=
+      Info.Values['isc_dpb_config'] + LineEnding + 'WireCompression=true';
+  Info.EndUpdate;
 
   FXSQLDAMaxSize := 64*1024; //64KB by default
   FHandle := 0;
@@ -482,7 +483,7 @@ var
   NewDB: RawByteString;
 begin
   if not Closed then
-     Exit;
+    Exit;
 
   if TransactIsolationLevel = tiReadUncommitted then
     raise EZSQLException.Create('Isolation level do not capable');
@@ -508,7 +509,7 @@ begin
     { Logging connection action }
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
       'CREATE DATABASE "'+NewDB+'" AS USER "'+ ConSettings^.User+'"');
-    URL.Properties.Values['createNewDatabase'] := '';
+    Info.Values['createNewDatabase'] := '';
   end;
 
   FHandle := 0;
@@ -551,10 +552,10 @@ begin
       if FCLientCodePage = '' then
       begin
         FCLientCodePage := GetString(CollationAndCharSetNameIndex);
-        if URL.Properties.Values['ResetCodePage'] <> '' then
+        if Info.Values['ResetCodePage'] <> '' then
         begin
           ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(FClientCodePage);
-          ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
+          ResetCurrentClientCodePage(Info.Values['ResetCodePage']);
         end
         else
           CheckCharEncoding(FClientCodePage);
@@ -564,9 +565,9 @@ begin
         begin
           if not ( FClientCodePage = sCS_NONE ) then
           begin
-            URL.Properties.Values['isc_dpb_lc_ctype'] := sCS_NONE;
+            Info.Values['isc_dpb_lc_ctype'] := sCS_NONE;
             {save the user wanted CodePage-Informations}
-            URL.Properties.Values['ResetCodePage'] := FClientCodePage;
+            Info.Values['ResetCodePage'] := FClientCodePage;
             FClientCodePage := sCS_NONE;
             { charset 'NONE' can't convert anything and write 'Data as is'!
               If another charset was set on attaching the Server then all
@@ -582,18 +583,18 @@ begin
           end
           else
           begin
-            if URL.Properties.Values['ResetCodePage'] <> '' then
+            if Info.Values['ResetCodePage'] <> '' then
             begin
               ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(sCS_NONE);
-              ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
+              ResetCurrentClientCodePage(Info.Values['ResetCodePage']);
             end
             else
               CheckCharEncoding(sCS_NONE);
           end;
         end
         else
-          if URL.Properties.Values['ResetCodePage'] <> '' then
-            ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
+          if Info.Values['ResetCodePage'] <> '' then
+            ResetCurrentClientCodePage(Info.Values['ResetCodePage']);
     Close;
   end;
   if FClientCodePage = sCS_NONE then
