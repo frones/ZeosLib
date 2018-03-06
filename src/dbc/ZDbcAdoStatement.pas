@@ -74,9 +74,9 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
   public
-    constructor Create(Connection: IZConnection; const SQL: string;
+    constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings); overload;
-    constructor Create(Connection: IZConnection; const Info: TStrings); overload;
+    constructor Create(const Connection: IZConnection; const Info: TStrings); overload;
     destructor Destroy; override;
 
     procedure Prepare; override;
@@ -125,7 +125,7 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
   public
-    constructor Create(Connection: IZConnection; const SQL: string;
+    constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings);
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -147,7 +147,7 @@ uses
 
 { TZAdoPreparedStatement }
 
-constructor TZAdoPreparedStatement.Create(Connection: IZConnection;
+constructor TZAdoPreparedStatement.Create(const Connection: IZConnection;
   const SQL: string; const Info: TStrings);
 begin
   FAdoCommand := CoCommand.Create;
@@ -157,7 +157,7 @@ begin
   FAdoCommand._Set_ActiveConnection(FAdoConnection.GetAdoConnection);
 end;
 
-constructor TZAdoPreparedStatement.Create(Connection: IZConnection;
+constructor TZAdoPreparedStatement.Create(const Connection: IZConnection;
   const Info: TStrings);
 begin
   Create(Connection, '', Info);
@@ -176,8 +176,7 @@ begin
   if Not Prepared then //prevent PrepareInParameters
   begin
     FIsSelectSQL := IsSelect(SQL);
-    if ArrayCount > 0 then
-      FAdoCommand.CommandText := WSQL;
+    FAdoCommand.CommandText := WSQL;
     inherited Prepare;
     FAdoCommand.Prepared := True;
   end;
@@ -228,20 +227,20 @@ var
   RC: OleVariant;
 begin
   if Assigned(FOpenResultSet) then
-    IZResultSet(FOpenResultSet).Close;
+    IZResultSet(FOpenResultSet).Close; //Note keep track we close the RS and DO NOT Try to resync them!
   FOpenResultSet := nil;
   Prepare;
   LastUpdateCount := -1;
   BindInParameters;
   try
     if FIsSelectSQL then
-      begin
-        AdoRecordSet := CoRecordSet.Create;
-        AdoRecordSet.MaxRecords := MaxRows;
-        AdoRecordSet._Set_ActiveConnection(FAdoCommand.Get_ActiveConnection);
-        AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
-      end
-      else
+    begin
+      AdoRecordSet := CoRecordSet.Create;
+      AdoRecordSet.MaxRecords := MaxRows;
+      AdoRecordSet._Set_ActiveConnection(FAdoCommand.Get_ActiveConnection);
+      AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
+    end
+    else
       AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{, adExecuteNoRecords});
     Result := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
       SQL, ConSettings, ResultSetConcurrency);
@@ -376,7 +375,7 @@ begin
 end;
 { TZAdoCallableStatement }
 
-constructor TZAdoCallableStatement.Create(Connection: IZConnection;
+constructor TZAdoCallableStatement.Create(const Connection: IZConnection;
   const SQL: string; const Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
@@ -396,6 +395,7 @@ var
   IndexAlign: TIntegerDynArray;
   P: Pointer;
   Stream: TStream;
+  Temp: OleVariant;
 begin
   ExecutePrepared;
   SetLength(IndexAlign, 0);
@@ -430,77 +430,80 @@ begin
       SetConcurrency(rcReadOnly);
       RS.MoveToInsertRow;
       for i := FirstDbcIndex to ColumnsInfo.Count{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+      begin
+        Temp := FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value;
         case TZColumnInfo(ColumnsInfo[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
           stBoolean:
-            RS.UpdateBoolean(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateBoolean(i, Temp);
           stByte:
-            RS.UpdateByte(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateByte(i, Temp);
           stShort:
-            RS.UpdateShort(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateShort(i, Temp);
           stWord:
-            RS.UpdateWord(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateWord(i, Temp);
           stSmall:
-            RS.UpdateSmall(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateSmall(i, Temp);
           stLongWord:
-            RS.UpdateUInt(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateUInt(i, Temp);
           stInteger:
-            RS.UpdateInt(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateInt(i, Temp);
           stULong:
-            RS.UpdateULong(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateULong(i, Temp);
           stLong:
-            RS.UpdateLong(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateLong(i, Temp);
           stFloat, stDouble, stBigDecimal:
-            RS.UpdateFloat(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateFloat(i, Temp);
           stString:
-            RS.UpdateString(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateString(i, Temp);
           stAsciiStream:
             begin
-              Stream := TStringStream.Create(AnsiString(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value));
+              Stream := TStringStream.Create(AnsiString(Temp));
               RS.UpdateAsciiStream(I, Stream);
               Stream.Free;
             end;
           stUnicodeString:
-            RS.UpdateUnicodeString(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateUnicodeString(i, Temp);
           stUnicodeStream:
             begin
-              Stream := WideStringStream(WideString(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value));
+              Stream := WideStringStream(WideString(Temp));
               RS.UpdateUnicodeStream(I, Stream);
               FreeAndNil(Stream);
             end;
           stBytes:
-            RS.UpdateBytes(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateBytes(i, Temp);
           stDate:
-            RS.UpdateDate(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateDate(i, Temp);
           stTime:
-            RS.UpdateTime(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateTime(i, Temp);
           stTimestamp:
-            RS.UpdateTimestamp(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+            RS.UpdateTimestamp(i, Temp);
           stBinaryStream:
             begin
-              if VarIsStr(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value) then
+              if VarIsStr(Temp) then
               begin
-                Stream := TStringStream.Create(AnsiString(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value));
+                Stream := TStringStream.Create(AnsiString(Temp));
                 RS.UpdateBinaryStream(I, Stream);
                 FreeAndNil(Stream);
               end
               else
-                if VarIsArray(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value) then
+                if VarIsArray(Temp) then
                 begin
-                  P := VarArrayLock(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+                  P := VarArrayLock(Temp);
                   try
                     Stream := TMemoryStream.Create;
-                    Stream.Size {%H-}:= VarArrayHighBound(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value, 1)+1;
+                    Stream.Size {%H-}:= VarArrayHighBound(Temp, 1)+1;
                     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, TMemoryStream(Stream).Memory^, Stream.Size);
                     RS.UpdateBinaryStream(I, Stream);
                     FreeAndNil(Stream);
                   finally
-                    VarArrayUnLock(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
+                    VarArrayUnLock(Temp);
                   end;
                 end;
             end
           else
             RS.UpdateNull(i);
         end;
+      end;
       RS.InsertRow;
     end;
     Result := RS;
@@ -617,7 +620,7 @@ end;
 
 function TZAdoCallableStatement.GetOutParam(ParameterIndex: Integer): TZVariant;
 var
-  Temp: Variant;
+  Temp: OleVariant;
   P: Pointer;
   TempBlob: IZBLob;
 begin
@@ -896,6 +899,3 @@ end;
 implementation
 {$ENDIF ENABLE_ADO}
 end.
-
-
-

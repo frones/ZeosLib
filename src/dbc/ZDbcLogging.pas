@@ -90,10 +90,10 @@ type
     FError: RawByteString;
     FTimestamp: TDateTime;
   public
-    constructor Create(Category: TZLoggingCategory; Protocol: RawByteString;
-      Msg: RawByteString; ErrorCode: Integer; Error: RawByteString);
+    constructor Create(Category: TZLoggingCategory; const Protocol: RawByteString;
+      const Msg: RawByteString; ErrorCode: Integer; const Error: RawByteString);
 
-    function AsString(LoggingFormatter:IZLoggingFormatter = nil): RawByteString;
+    function AsString(const LoggingFormatter: IZLoggingFormatter = nil): RawByteString;
 
     property Category: TZLoggingCategory read FCategory;
     property Protocol: RawByteString read FProtocol;
@@ -159,7 +159,7 @@ end;
   @param Error an error message.
 }
 constructor TZLoggingEvent.Create(Category: TZLoggingCategory;
-  Protocol: RawByteString; Msg: RawByteString; ErrorCode: Integer; Error: RawByteString);
+  const Protocol: RawByteString; const Msg: RawByteString; ErrorCode: Integer; const Error: RawByteString);
 begin
   FCategory := Category;
   FProtocol := Protocol;
@@ -173,7 +173,7 @@ end;
   Gets a string representation for this event.
   @returns a string representation.
 }
-function TZLoggingEvent.AsString(LoggingFormatter:IZLoggingFormatter = nil): RawByteString;
+function TZLoggingEvent.AsString(const LoggingFormatter: IZLoggingFormatter = nil): RawByteString;
 begin
   If Assigned(LoggingFormatter) then
     Result := LoggingFormatter.Format(Self)

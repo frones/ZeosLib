@@ -78,7 +78,7 @@ function ConvertTDSTypeToSqlType(const FieldType: TTDSType;
   @param string field type value
   @result the SqlType field type value
 }
-function ConvertDBLibTypeToSqlType({%H-}Value: string): TZSQLType;
+function ConvertDBLibTypeToSqlType(const {%H-}Value: string): TZSQLType;
 
 {**
   Converts ZDBC SQL types into MS SQL native types.
@@ -107,9 +107,9 @@ function ConvertDBLibNullability(DBLibNullability: Byte): TZColumnNullableType;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function PrepareSQLParameter(const Value: TZVariant; const ParamType: TZSQLType;
-  ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings;
-  const NChar: Boolean = False): RawByteString;
+function PrepareSQLParameter(const Value: TZVariant; ParamType: TZSQLType;
+  const ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings;
+  NChar: Boolean = False): RawByteString;
 
 implementation
 
@@ -215,7 +215,7 @@ end;
   @param string field type value
   @result the SqlType field type value
 }
-function ConvertDBLibTypeToSqlType(Value: string): TZSQLType;
+function ConvertDBLibTypeToSqlType(const Value: string): TZSQLType;
 begin
   Result := stUnknown;
 end;
@@ -320,9 +320,9 @@ end;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function PrepareSQLParameter(const Value: TZVariant; const ParamType: TZSQLType;
-  ClientVarManager: IZClientVariantManager;
-  ConSettings: PZConSettings; const NChar: Boolean = False): RawByteString;
+function PrepareSQLParameter(const Value: TZVariant; ParamType: TZSQLType;
+  const ClientVarManager: IZClientVariantManager;
+  ConSettings: PZConSettings; NChar: Boolean = False): RawByteString;
 var
   TempBytes: TBytes;
   TempBlob: IZBlob;
@@ -333,10 +333,7 @@ begin
   then Result := 'NULL'
   else case ParamType of
     stBoolean:
-      if ClientVarManager.GetAsBoolean(Value) then
-        Result := '1'
-      else
-        Result := '0';
+      Result := BoolStrIntsRaw[ClientVarManager.GetAsBoolean(Value)];
     stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
     stFloat, stDouble, stCurrency, stBigDecimal:
       Result := ClientVarManager.GetAsRawByteString(Value);

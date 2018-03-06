@@ -79,7 +79,7 @@ type
     FPostgreSQLConnection: IZPostgreSQLConnection;
     FPlainDriver: IZPostgreSQLPlainDriver;
     QueryHandle: PZPostgreSQLResult;
-    Foidasblob: Boolean;
+    FOidAsBlob: Boolean;
     FConnectionHandle: PZPostgreSQLConnect;
     Findeterminate_datatype: Boolean;
     FUseEmulatedStmtsOnly: Boolean;
@@ -94,10 +94,10 @@ type
     function GetPrepareSQLPrefix: RawByteString; virtual; abstract;
     function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; override;
   public
-    constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
-      Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings); overload;
-    constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
-      Connection: IZPostgreSQLConnection; Info: TStrings); overload;
+    constructor Create(const PlainDriver: IZPostgreSQLPlainDriver;
+      const Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings); overload;
+    constructor Create(const PlainDriver: IZPostgreSQLPlainDriver;
+      const Connection: IZPostgreSQLConnection; Info: TStrings); overload;
     procedure AfterConstruction; override;
     function GetLastQueryHandle: PZPostgreSQLResult;
 
@@ -150,7 +150,7 @@ type
   {** Implements callable Postgresql Statement. }
   TZPostgreSQLCallableStatement = class(TZAbstractCallableStatement)
   private
-    Foidasblob: Boolean;
+    FOidAsBlob: Boolean;
     FPlainDriver: IZPostgreSQLPlainDriver;
     FUndefinedVarcharAsStringLength: Integer;
     function GetProcedureSql: string;
@@ -163,7 +163,7 @@ type
       QueryHandle: PZPostgreSQLResult): IZResultSet;
     procedure TrimInParameters; override;
   public
-    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
+    constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
 
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
     function ExecuteUpdate(const SQL: RawByteString): Integer; override;
@@ -194,11 +194,11 @@ var PGPreparableTokens: TPreparablePrefixTokens;
   @param QueryHandle the Postgres query handle
   @return a created result set object.
 }
-constructor TZPostgreSQLPreparedStatement.Create(PlainDriver: IZPostgreSQLPlainDriver;
-  Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings);
+constructor TZPostgreSQLPreparedStatement.Create(const PlainDriver: IZPostgreSQLPlainDriver;
+  const Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
-  Foidasblob := StrToBoolDef(Self.Info.Values['oidasblob'], False) or
+  FOidAsBlob := StrToBoolDef(Self.Info.Values['oidasblob'], False) or
     (Connection as IZPostgreSQLConnection).IsOidAsBlob;
   FPostgreSQLConnection := Connection;
   FPlainDriver := PlainDriver;
@@ -217,8 +217,8 @@ begin
   fPrepareCnt := 0;
 end;
 
-constructor TZPostgreSQLPreparedStatement.Create(PlainDriver: IZPostgreSQLPlainDriver;
-  Connection: IZPostgreSQLConnection; Info: TStrings);
+constructor TZPostgreSQLPreparedStatement.Create(const PlainDriver: IZPostgreSQLPlainDriver;
+  const Connection: IZPostgreSQLConnection; Info: TStrings);
 begin
   Create(PlainDriver, Connection, SQL, Info);
 end;
@@ -270,8 +270,8 @@ begin
         raise EZSQLException.Create(SInvalidInputParameterCount)
       else
         ToBuff(PGPrepareAnsiSQLParam(InParamValues[ParamIndex],
-        ClientVarManager, (Connection as IZPostgreSQLConnection), ChunkSize,
-          InParamTypes[ParamIndex], Foidasblob, True, False, ConSettings), Result);
+        ClientVarManager, FPostgreSQLConnection, ChunkSize,
+          InParamTypes[ParamIndex], FOidAsBlob, True, False, ConSettings), Result);
       Inc(ParamIndex);
     end else
       ToBuff(CachedQueryRaw[i], Result);
@@ -512,7 +512,7 @@ begin
 
   Result := PGPrepareAnsiSQLParam(InParamValues[ParamIndex], ClientVarManager,
     (Connection as IZPostgreSQLConnection), ChunkSize, InParamTypes[ParamIndex],
-      Foidasblob, Escaped, True, ConSettings);
+      FOidAsBlob, Escaped, True, ConSettings);
 end;
 
 {**
@@ -693,7 +693,7 @@ begin
             else
               case InParamTypes[ParamIndex] of
                 stBinaryStream:
-                  if Foidasblob then
+                  if FOidAsBlob then
                   begin
                     try
                       WriteTempBlob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0,
@@ -764,12 +764,12 @@ end;
   @param Handle a connection handle pointer.
 }
 constructor TZPostgreSQLCallableStatement.Create(
-  Connection: IZConnection; const SQL: string; Info: TStrings);
+  const Connection: IZConnection; const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
   ResultSetType := rtScrollInsensitive;
   FPlainDriver := (Connection as IZPostgreSQLConnection).GetPlainDriver;
-  Foidasblob := StrToBoolDef(Self.Info.Values['oidasblob'], False) or
+  FOidAsBlob := StrToBoolDef(Self.Info.Values['oidasblob'], False) or
     (Connection as IZPostgreSQLConnection).IsOidAsBlob;
   FUndefinedVarcharAsStringLength := StrToInt(ZDbcUtils.DefineStatementParameter(Self, 'Undefined_Varchar_AsString_Length' , '0'));
 end;
@@ -839,7 +839,7 @@ begin
 
   Result := PGPrepareAnsiSQLParam(InParamValues[ParamIndex], ClientVarManager,
     (Connection as IZPostgreSQLConnection), ChunkSize, InParamTypes[ParamIndex],
-      Foidasblob, True, False, ConSettings);
+      FOidAsBlob, True, False, ConSettings);
 end;
 
 {**

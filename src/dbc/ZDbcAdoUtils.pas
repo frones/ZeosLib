@@ -118,8 +118,8 @@ function ConvertOleDBToAdoSchema(OleDBSchema: TGUID): Integer;
 }
 function PromptDataSource(Handle: THandle; InitialString: WideString): WideString;
 
-function GetCurrentResultSet(AdoRecordSet: ZPlainAdo.RecordSet;
-  Connection: IZAdoConnection; Statement: IZStatement; Const SQL: String;
+function GetCurrentResultSet(const AdoRecordSet: ZPlainAdo.RecordSet;
+  const Connection: IZAdoConnection; const Statement: IZStatement; Const SQL: String;
   ConSettings: PZConSettings;
   const ResultSetConcurrency: TZResultSetConcurrency): IZResultSet;
 
@@ -133,17 +133,17 @@ function IsSelect(const SQL: string): Boolean;
   @param SqlType a parameter SQL type.
   @paran Value a new parameter value.
 }
-procedure ADOSetInParam(AdoCommand: ZPlainAdo.Command; Connection: IZConnection;
+procedure ADOSetInParam(const AdoCommand: ZPlainAdo.Command; const Connection: IZConnection;
   ParamCount: Integer; const ParameterIndex: Integer;
   const SQLType: TZSQLType; const Value: TZVariant;
   const ParamDirection: ParameterDirectionEnum);
 
-function ADOBindArrayParams(AdoCommand: ZPlainAdo.Command; Connection: IZConnection;
+function ADOBindArrayParams(const AdoCommand: ZPlainAdo.Command; const Connection: IZConnection;
   ConSettings: PZConSettings; const InParamValues: TZVariantDynArray;
   ParamDirection: ParameterDirectionEnum{note: should be an array later!!};
   ArrayCount: Integer): Integer;
 
-procedure RefreshParameters(AdoCommand: ZPlainAdo.Command; DirectionTypes: PDirectionTypes = nil);
+procedure RefreshParameters(const AdoCommand: ZPlainAdo.Command; DirectionTypes: PDirectionTypes = nil);
 
 var
 {**
@@ -437,8 +437,8 @@ begin
   end;
 end;
 
-function GetCurrentResultSet(AdoRecordSet: ZPlainAdo.RecordSet;
-  Connection: IZAdoConnection; Statement: IZStatement; Const SQL: String; ConSettings: PZConSettings;
+function GetCurrentResultSet(const AdoRecordSet: ZPlainAdo.RecordSet;
+  const Connection: IZAdoConnection; const Statement: IZStatement; Const SQL: String; ConSettings: PZConSettings;
   const ResultSetConcurrency: TZResultSetConcurrency): IZResultSet;
 var
   NativeResultSet: IZResultSet;
@@ -470,7 +470,7 @@ end;
   @param SqlType a parameter SQL type.
   @paran Value a new parameter value.
 }
-procedure ADOSetInParam(AdoCommand: ZPlainAdo.Command; Connection: IZConnection;
+procedure ADOSetInParam(const AdoCommand: ZPlainAdo.Command; const Connection: IZConnection;
   ParamCount: Integer; const ParameterIndex: Integer;
   const SQLType: TZSQLType; const Value: TZVariant;
   const ParamDirection: ParameterDirectionEnum);
@@ -603,7 +603,8 @@ begin
       'P' + ZFastCode.IntToUnicode(ParameterIndex), T, ParamDirection, S, V));
 end;
 
-function ADOBindArrayParams(AdoCommand: ZPlainAdo.Command; Connection: IZConnection;
+
+function ADOBindArrayParams(const AdoCommand: ZPlainAdo.Command; const Connection: IZConnection;
   ConSettings: PZConSettings; const InParamValues: TZVariantDynArray;
   ParamDirection: ParameterDirectionEnum{note: should be an array later!!};
   ArrayCount: Integer): Integer;
@@ -802,7 +803,7 @@ ProcString:         UniTemp := TempBlob.GetUnicodeString;
   end;
 end;
 
-procedure RefreshParameters(AdoCommand: ZPlainAdo.Command;
+procedure RefreshParameters(const AdoCommand: ZPlainAdo.Command;
   DirectionTypes: PDirectionTypes = nil);
   procedure RefreshFromOleDB;
   var

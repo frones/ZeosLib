@@ -2442,7 +2442,7 @@ type
  IDBCreateCommand = interface(IUnknown)
    ['{0C733A1D-2A1C-11CE-ADE5-00AA0044773D}']
     // CreateCommand :
-   function CreateCommand(pUnkOuter:IUnknown;var riid:TGUID;out ppCommand:IUnknown):HRESULT;stdcall;
+   function CreateCommand(pUnkOuter:IUnknown;const riid:TGUID;out ppCommand:IUnknown):HRESULT;stdcall;
   end;
 (*
 
@@ -2759,7 +2759,7 @@ type
  IGetDataSource = interface(IUnknown)
    ['{0C733A75-2A1C-11CE-ADE5-00AA0044773D}']
     // GetDataSource :
-   function GetDataSource(var riid:GUID;out ppDataSource:IUnknown):HRESULT;stdcall;
+   function GetDataSource(const riid: TGUID;out ppDataSource:IUnknown):HRESULT;stdcall;
   end;
 (*
 

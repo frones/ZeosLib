@@ -105,7 +105,7 @@ type
     procedure PostRowUpdates({%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
       override;
   public
-    constructor CreateWithStatement(const SQL: string; Statement: IZStatement;
+    constructor CreateWithStatement(const SQL: string; const Statement: IZStatement;
       ConSettings: PZConSettings);
     constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
       ConSettings: PZConSettings);
@@ -157,7 +157,7 @@ type
     function AddEscapeCharToWildcards(const Pattern:string): string;
     function GetWildcardsSet:TZWildcardsSet;
     procedure FillWildcards; virtual;
-    function NormalizePatternCase(Pattern:String): string;
+    function NormalizePatternCase(Pattern: String): string;
     property Url: string read GetURLString;
     property Info: TStrings read GetInfo;
     property CachedResultSets: IZHashMap read FCachedResultSets
@@ -483,7 +483,7 @@ type
     function IsUpperCase(const Value: string): Boolean;
     function IsSpecialCase(const Value: string): Boolean; virtual;
   public
-    constructor Create(Metadata: IZDatabaseMetadata);
+    constructor Create(const Metadata: IZDatabaseMetadata);
 
     function GetIdentifierCase(const Value: String; TestKeyWords: Boolean): TZIdentifierCase;
     function IsCaseSensitive(const Value: string): Boolean;
@@ -1038,7 +1038,9 @@ begin
             Break
           else if fIdentifierQuoteKeywordArray[i] = fIdentifierQuoteKeywordArray[i+1] then begin
             fIdentifierQuoteKeywordArray[i] := '';
-            System.Move(Pointer(@fIdentifierQuoteKeywordArray[i+1])^, Pointer(@fIdentifierQuoteKeywordArray[i])^, (Length(fIdentifierQuoteKeywordArray)-i-1)*SizeOf(Pointer));
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(
+              Pointer(@fIdentifierQuoteKeywordArray[i+1])^, Pointer(@fIdentifierQuoteKeywordArray[i])^,
+              (Length(fIdentifierQuoteKeywordArray)-i-1)*SizeOf(Pointer));
             if j = 0 then
               Pointer(fIdentifierQuoteKeywordArray[High(fIdentifierQuoteKeywordArray)-j]) := nil; //ovoid gpf
             Inc(j);
@@ -2078,6 +2080,10 @@ begin
   Result := False;
 end;
 
+{**
+  Does the database driver supports milliseconds?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
 function TZAbstractDatabaseInfo.SupportsMilliSeconds: Boolean;
 begin
   Result := True;
@@ -2489,11 +2495,12 @@ begin
       ColumnsInfo.Add(ColumnInfo);
     end;
 
-    ResultSet.BeforeFirst;
+    if ResultSet.GetType <> rtForwardOnly then
+      ResultSet.BeforeFirst;
     Result := CopyToVirtualResultSet(ResultSet,
-      TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '',
-        IZConnection(Self.FConnection).GetConSettings));
-    ResultSet.BeforeFirst;
+      TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', ConSettings));
+    if ResultSet.GetType <> rtForwardOnly then
+      ResultSet.BeforeFirst;
   finally
     ColumnsInfo.Free;
   end;
@@ -4668,7 +4675,7 @@ begin
   end;
 end;
 
-function TZAbstractDatabaseMetadata.NormalizePatternCase(Pattern:String): string;
+function TZAbstractDatabaseMetadata.NormalizePatternCase(Pattern: String): string;
 begin
   with FIC do
     if not IsQuoted(Pattern) then begin
@@ -5006,7 +5013,7 @@ end;
   @param SQL an SQL query string.
 }
 constructor TZVirtualResultSet.CreateWithStatement(const SQL: string;
-   Statement: IZStatement; ConSettings: PZConSettings);
+   const Statement: IZStatement; ConSettings: PZConSettings);
 begin
   inherited CreateWithStatement(SQL, Statement, ConSettings);
 end;
@@ -5060,7 +5067,7 @@ end;
   @param Metadata a database metadata interface.
 }
 constructor TZDefaultIdentifierConvertor.Create(
-  Metadata: IZDatabaseMetadata);
+  const Metadata: IZDatabaseMetadata);
 begin
   inherited Create;
   FMetadata := Pointer(Metadata);
@@ -5389,7 +5396,7 @@ const
     (Name: 'BUFFER_LENGTH'; SQLType: stInteger; Length: 0),
     (Name: 'DECIMAL_DIGITS'; SQLType: stInteger; Length: 0),
     (Name: 'NUM_PREC_RADIX'; SQLType: stInteger; Length: 0),
-    (Name: 'NULLABLE'; SQLType: stInteger; Length: 0),
+    (Name: 'NULLABLE'; SQLType: stSmall; Length: 0),
     (Name: 'REMARKS'; SQLType: stString; Length: 255),
     (Name: 'COLUMN_DEF'; SQLType: stString; Length: 255),
     (Name: 'SQL_DATA_TYPE'; SQLType: stInteger; Length: 0),

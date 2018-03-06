@@ -90,8 +90,8 @@ type
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
-    constructor Create(PlainDriver: IZSQLitePlainDriver; Statement: IZStatement;
-      SQL: string; const Handle: Psqlite; const StmtHandle: Psqlite_vm;
+    constructor Create(const PlainDriver: IZSQLitePlainDriver; const Statement: IZStatement;
+      const SQL: string; const Handle: Psqlite; const StmtHandle: Psqlite_vm;
       const UndefinedVarcharAsStringLength: Integer);
 
     procedure ResetCursor; override;
@@ -123,8 +123,8 @@ type
     FPlainDriver: IZSQLitePlainDriver;
     FAutoColumnIndex: Integer;
   public
-    constructor Create(PlainDriver: IZSQLitePlainDriver; Handle: Psqlite;
-      Statement: IZStatement; Metadata: IZResultSetMetadata);
+    constructor Create(const PlainDriver: IZSQLitePlainDriver; Handle: Psqlite;
+      const Statement: IZStatement; const Metadata: IZResultSetMetadata);
 
     procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
@@ -253,8 +253,8 @@ end;
   @param UseResult <code>True</code> to use results,
     <code>False</code> to store result.
 }
-constructor TZSQLiteResultSet.Create(PlainDriver: IZSQLitePlainDriver;
-  Statement: IZStatement; SQL: string; const Handle: Psqlite;
+constructor TZSQLiteResultSet.Create(const PlainDriver: IZSQLitePlainDriver;
+  const Statement: IZStatement; const SQL: string; const Handle: Psqlite;
   const StmtHandle: Psqlite_vm; const UndefinedVarcharAsStringLength: Integer);
 begin
   inherited Create(Statement, SQL, TZSQLiteResultSetMetadata.Create(
@@ -982,8 +982,8 @@ end;
   @param Statement a related SQL statement object.
   @param Metadata a resultset metadata reference.
 }
-constructor TZSQLiteCachedResolver.Create(PlainDriver: IZSQLitePlainDriver;
-  Handle: Psqlite; Statement: IZStatement; Metadata: IZResultSetMetadata);
+constructor TZSQLiteCachedResolver.Create(const PlainDriver: IZSQLitePlainDriver;
+  Handle: Psqlite; const Statement: IZStatement; const Metadata: IZResultSetMetadata);
 var
   I: Integer;
 begin

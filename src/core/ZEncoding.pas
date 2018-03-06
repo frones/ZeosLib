@@ -2119,7 +2119,7 @@ begin
           {$ENDIF}
         {$ENDIF}
         Result := Min(Length(S), MaxDestBytes);
-        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(S[1], Dest^, Result);
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(S), Dest^, Result);
         (Dest+Result)^ := #0;
       end;
     {$IFEND}

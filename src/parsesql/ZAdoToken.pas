@@ -169,7 +169,6 @@ end;
 }
 procedure TZAdoSQLTokenizer.CreateTokenStates;
 begin
-  EscapeState := TZEscapeState.Create;
   NumberState := TZNumberState.Create;
   QuoteState := TZAdoSQLQuoteState.Create;
   WhitespaceState := TZWhitespaceState.Create;

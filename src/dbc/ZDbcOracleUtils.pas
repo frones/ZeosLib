@@ -211,7 +211,7 @@ procedure UnloadOracleVars(var Variables: PZSQLVars; const Iteration: Integer);
   @param string field type value
   @result the SQLType field type value
 }
-function ConvertOracleTypeToSQLType(TypeName: string;
+function ConvertOracleTypeToSQLType(const TypeName: string;
   Precision, Scale: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
@@ -239,8 +239,8 @@ function CreateOracleResultSet(const PlainDriver: IZOraclePlainDriver;
   Creates an Oracle result set based on the current settings.
   @return a created result set object.
 }
-function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
-  Statement: IZStatement; LogSQL: string; StmtHandle: POCIStmt;
+function CreateOracleResultSet(const PlainDriver: IZOraclePlainDriver;
+  const Statement: IZStatement; const LogSQL: string; StmtHandle: POCIStmt;
   ErrorHandle: POCIError; const Params: PZSQLVars;
   Const OracleParams: TZOracleParams): IZResultSet; overload;
 
@@ -251,8 +251,8 @@ function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
   @param Handle a holder for Statement handle.
   @param ErrorHandle a holder for Error handle.
 }
-procedure AllocateOracleStatementHandles(PlainDriver: IZOraclePlainDriver;
-  Connection: IZConnection; var Handle: POCIStmt; var ErrorHandle: POCIError;
+procedure AllocateOracleStatementHandles(const PlainDriver: IZOraclePlainDriver;
+  const Connection: IZConnection; var Handle: POCIStmt; var ErrorHandle: POCIError;
   UserServerCachedStmt: Boolean = False);
 
 {**
@@ -261,7 +261,7 @@ procedure AllocateOracleStatementHandles(PlainDriver: IZOraclePlainDriver;
   @param Handle a holder for Statement handle.
   @param ErrorHandle a holder for Error handle.
 }
-procedure FreeOracleStatementHandles(PlainDriver: IZOraclePlainDriver;
+procedure FreeOracleStatementHandles(const PlainDriver: IZOraclePlainDriver;
   var Handle: POCIStmt; var ErrorHandle: POCIError);
 
 {**
@@ -302,7 +302,7 @@ procedure ExecuteOracleStatement(const PlainDriver: IZOraclePlainDriver;
 function GetOracleUpdateCount(const PlainDriver: IZOraclePlainDriver;
   const Handle: POCIStmt; const ErrorHandle: POCIError): ub4;
 
-function DescribeObject(PlainDriver: IZOraclePlainDriver; Connection: IZConnection;
+function DescribeObject(const PlainDriver: IZOraclePlainDriver; const Connection: IZConnection;
   ParamHandle: POCIParam; {%H-}stmt_handle: POCIHandle; Level: ub2): POCIObject;
 
 procedure OraWriteLob(const PlainDriver: IZOraclePlainDriver; const BlobData: Pointer;
@@ -1049,36 +1049,37 @@ end;
   @param string field type value
   @result the SQLType field type value
 }
-function ConvertOracleTypeToSQLType(TypeName: string;
+function ConvertOracleTypeToSQLType(const TypeName: string;
   Precision, Scale: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
+var TypeNameUp: string;
 begin
-  TypeName := UpperCase(TypeName);
+  TypeNameUp := UpperCase(TypeName);
 
-  if (TypeName = 'CHAR') or (TypeName = 'VARCHAR2') then
+  if (TypeNameUp = 'CHAR') or (TypeNameUp = 'VARCHAR2') then
     Result := stString
-  else if (TypeName = 'NCHAR') or (TypeName = 'NVARCHAR2') then
+  else if (TypeNameUp = 'NCHAR') or (TypeNameUp = 'NVARCHAR2') then
     Result := stString
-  else if (TypeName = 'FLOAT') or (TypeName = 'BINARY_FLOAT') or (TypeName = 'BINARY_DOUBLE') then
+  else if (TypeNameUp = 'FLOAT') or (TypeNameUp = 'BINARY_FLOAT') or (TypeNameUp = 'BINARY_DOUBLE') then
     Result := stDouble
-  else if TypeName = 'DATE' then  {precission - 1 sec, so Timestamp}
+  else if TypeNameUp = 'DATE' then  {precission - 1 sec, so Timestamp}
     Result := stTimestamp
-  else if TypeName = 'BLOB' then
+  else if TypeNameUp = 'BLOB' then
     Result := stBinaryStream
-  else if (TypeName = 'RAW') then
+  else if (TypeNameUp = 'RAW') then
     Result := stBytes
-  else if (TypeName = 'LONG RAW') then
+  else if (TypeNameUp = 'LONG RAW') then
     Result := stBinaryStream
-  else if TypeName = 'CLOB' then
+  else if TypeNameUp = 'CLOB' then
     Result := stAsciiStream
-  else if TypeName = 'NCLOB' then
+  else if TypeNameUp = 'NCLOB' then
     Result := stAsciiStream
-  else if TypeName = 'LONG' then
+  else if TypeNameUp = 'LONG' then
     Result := stAsciiStream
-  else if StartsWith(TypeName, 'TIMESTAMP') then
+  else if StartsWith(TypeNameUp, 'TIMESTAMP') then
     Result := stTimestamp
-  else if TypeName = 'BFILE' then
+  else if TypeNameUp = 'BFILE' then
     Result := stBinaryStream else
-  if TypeName = 'NUMBER' then
+  if TypeNameUp = 'NUMBER' then
   begin
     Result := stDouble;  { default for number types}
     if (Scale = 0) and (Precision <> 0) then
@@ -1093,14 +1094,14 @@ begin
         Result := stLong  {!!in fact, unusable}
     end;
   end
-  else if StartsWith(TypeName, 'INTERVAL') then
+  else if StartsWith(TypeNameUp, 'INTERVAL') then
     Result := stTimestamp
   else
     Result := stUnknown;
   if ( CtrlsCPType = cCP_UTF16 ) then
     case result of
       stString: Result := stUnicodeString;
-      stAsciiStream: if not (TypeName = 'LONG') then Result := stUnicodeStream; //fix: http://zeos.firmos.at/viewtopic.php?t=3530
+      stAsciiStream: if not (TypeNameUp = 'LONG') then Result := stUnicodeStream; //fix: http://zeos.firmos.at/viewtopic.php?t=3530
     end;
 end;
 
@@ -1200,8 +1201,8 @@ end;
   Creates an Oracle result set based on the current settings.
   @return a created result set object.
 }
-function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
-      Statement: IZStatement; LogSQL: string; StmtHandle: POCIStmt;
+function CreateOracleResultSet(const PlainDriver: IZOraclePlainDriver;
+      const Statement: IZStatement; const LogSQL: string; StmtHandle: POCIStmt;
       ErrorHandle: POCIError; const Params: PZSQLVars;
       Const OracleParams: TZOracleParams): IZResultSet;
 var
@@ -1228,9 +1229,9 @@ end;
   @param Handle a holder for Statement handle.
   @param ErrorHandle a holder for Error handle.
 }
-procedure AllocateOracleStatementHandles(PlainDriver: IZOraclePlainDriver;
-  Connection: IZConnection; var Handle: POCIStmt; var ErrorHandle: POCIError;
-  UserServerCachedStmt: Boolean = False);
+procedure AllocateOracleStatementHandles(const PlainDriver: IZOraclePlainDriver;
+  const Connection: IZConnection; var Handle: POCIStmt; var ErrorHandle: POCIError;
+  UserServerCachedStmt: Boolean);
 var
   OracleConnection: IZOracleConnection;
 begin
@@ -1250,7 +1251,7 @@ end;
   @param Handle a holder for Statement handle.
   @param ErrorHandle a holder for Error handle.
 }
-procedure FreeOracleStatementHandles(PlainDriver: IZOraclePlainDriver;
+procedure FreeOracleStatementHandles(const PlainDriver: IZOraclePlainDriver;
   var Handle: POCIStmt; var ErrorHandle: POCIError);
 begin
   if ErrorHandle <> nil then
@@ -1355,7 +1356,7 @@ end;
   recurses down the field's TDOs and saves the little bits it need for later
   use on a fetch SQLVar._obj
 }
-function DescribeObject(PlainDriver: IZOraclePlainDriver; Connection: IZConnection;
+function DescribeObject(const PlainDriver: IZOraclePlainDriver; const Connection: IZConnection;
   ParamHandle: POCIParam; stmt_handle: POCIHandle; Level: ub2): POCIObject;
 var
   type_ref: POCIRef;
@@ -1367,8 +1368,8 @@ var
     FillChar(Result^, SizeOf(TOCIObject), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
   end;
 
-  procedure DescribeObjectByTDO(PlainDriver: IZOraclePlainDriver;
-    Connection: IZConnection; var obj: POCIObject);
+  procedure DescribeObjectByTDO(const PlainDriver: IZOraclePlainDriver;
+    const Connection: IZConnection; var obj: POCIObject);
   var
     FConnection: IZOracleConnection;
     list_attibutes: POCIParam;

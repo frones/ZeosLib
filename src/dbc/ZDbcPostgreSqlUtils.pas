@@ -74,8 +74,8 @@ function IsNumber(Value: TZSQLType): Boolean;
    @param The TypeName is PostgreSQL type name
    @return The ZSQLType type
 }
-function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
-  TypeName: string): TZSQLType; overload;
+function PostgreSQLToSQLType(const Connection: IZPostgreSQLConnection;
+  const TypeName: string): TZSQLType; overload;
 
 {**
     Another version of PostgreSQLToSQLType()
@@ -150,10 +150,9 @@ function GetMinorVersion(const Value: string): Word;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function PGPrepareAnsiSQLParam(Value: TZVariant; ClientVarManager: IZClientVariantManager;
-  Connection: IZPostgreSQLConnection; const ChunkSize: Cardinal; const InParamType: TZSQLType;
-  const oidasblob, DateTimePrefix, QuotedNumbers: Boolean;
-  ConSettings: PZConSettings): RawByteString;
+function PGPrepareAnsiSQLParam(const Value: TZVariant; const ClientVarManager: IZClientVariantManager;
+  const Connection: IZPostgreSQLConnection; ChunkSize: Cardinal; InParamType: TZSQLType;
+  oidasblob, DateTimePrefix, QuotedNumbers: Boolean; ConSettings: PZConSettings): RawByteString;
 
 implementation
 
@@ -165,72 +164,74 @@ uses ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcUtils, ZSysUtils;
    @param The TypeName is PostgreSQL type name
    @return The ZSQLType type
 }
-function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
-  TypeName: string): TZSQLType;
+function PostgreSQLToSQLType(const Connection: IZPostgreSQLConnection;
+  const TypeName: string): TZSQLType;
+var
+  TypeNameLo: string;
 begin
-  TypeName := LowerCase(TypeName);
-  if (TypeName = 'interval') or (TypeName = 'char') or (TypeName = 'bpchar')
-    or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit')
+  TypeNameLo := LowerCase(TypeName);
+  if (TypeNameLo = 'interval') or (TypeNameLo = 'char') or (TypeNameLo = 'bpchar')
+    or (TypeNameLo = 'varchar') or (TypeNameLo = 'bit') or (TypeNameLo = 'varbit')
   then//EgonHugeist: Highest Priority Client_Character_set!!!!
     if (Connection.GetConSettings.CPType = cCP_UTF16) then
       Result := stUnicodeString
     else
       Result := stString
-  else if TypeName = 'text' then
+  else if TypeNameLo = 'text' then
     Result := stAsciiStream
-  else if TypeName = 'oid' then
+  else if TypeNameLo = 'oid' then
   begin
     if Connection.IsOidAsBlob() then
       Result := stBinaryStream
     else
       Result := stInteger;
   end
-  else if TypeName = 'name' then
+  else if TypeNameLo = 'name' then
     Result := stString
-  else if TypeName = 'enum' then
+  else if TypeNameLo = 'enum' then
     Result := stString
-  else if TypeName = 'cidr' then
+  else if TypeNameLo = 'cidr' then
     Result := stString
-  else if TypeName = 'inet' then
+  else if TypeNameLo = 'inet' then
     Result := stString
-  else if TypeName = 'macaddr' then
+  else if TypeNameLo = 'macaddr' then
     Result := stString
-  else if TypeName = 'int2' then
+  else if TypeNameLo = 'int2' then
     Result := stSmall
-  else if TypeName = 'int4' then
+  else if TypeNameLo = 'int4' then
     Result := stInteger
-  else if TypeName = 'int8' then
+  else if TypeNameLo = 'int8' then
     Result := stLong
-  else if TypeName = 'float4' then
+  else if TypeNameLo = 'float4' then
     Result := stFloat
-  else if (TypeName = 'float8') or (TypeName = 'decimal')
-    or (TypeName = 'numeric') then
+  else if (TypeNameLo = 'float8') or (TypeNameLo = 'decimal')
+    or (TypeNameLo = 'numeric') then
     Result := stDouble
-  else if TypeName = 'money' then
+  else if TypeNameLo = 'money' then
     Result := stCurrency
-  else if TypeName = 'bool' then
+  else if TypeNameLo = 'bool' then
     Result := stBoolean
-  else if TypeName = 'date' then
+  else if TypeNameLo = 'date' then
     Result := stDate
-  else if TypeName = 'time' then
+  else if TypeNameLo = 'time' then
     Result := stTime
-  else if (TypeName = 'datetime') or (TypeName = 'timestamp')
-    or (TypeName = 'timestamptz') or (TypeName = 'abstime') then
+  else if (TypeNameLo = 'datetime') or (TypeNameLo = 'timestamp')
+    or (TypeNameLo = 'timestamptz') or (TypeNameLo = 'abstime') then
     Result := stTimestamp
-  else if TypeName = 'regproc' then
+  else if TypeNameLo = 'regproc' then
     Result := stString
-  else if TypeName = 'bytea' then
+  else if TypeNameLo = 'bytea' then
   begin
     if Connection.IsOidAsBlob then
       Result := stBytes
     else
       Result := stBinaryStream;
   end
-  else if (TypeName = 'int2vector') or (TypeName = 'oidvector') then
+  else if (TypeNameLo = 'int2vector') or (TypeNameLo = 'oidvector') then
     Result := stAsciiStream
-  else if (TypeName <> '') and (TypeName[1] = '_') then // ARRAY TYPES
+  else if (TypeNameLo <> '') and (TypeNameLo[1] = '_') then // ARRAY TYPES
     Result := stAsciiStream
-  else if (TypeName = 'uuid') then
+  else if (TypeNameLo = 'uuid') then
     Result := stGuid
   else
     Result := stUnknown;
@@ -660,7 +661,7 @@ var
 //FirmOS
    ConnectionLost: boolean;
 
-   function GetMessage(AMessage: RawByteString): String;
+   function GetMessage(const AMessage: RawByteString): String;
    begin
     if Assigned(Connection) then
       Result := Trim(Connection.GetConSettings^.ConvFuncs.ZRawToString(AMessage,
@@ -734,94 +735,93 @@ end;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function PGPrepareAnsiSQLParam(Value: TZVariant; ClientVarManager: IZClientVariantManager;
-  Connection: IZPostgreSQLConnection; const ChunkSize: Cardinal;
-  const InParamType: TZSQLType; const oidasblob, DateTimePrefix, QuotedNumbers: Boolean;
+function PGPrepareAnsiSQLParam(const Value: TZVariant; const ClientVarManager: IZClientVariantManager;
+  const Connection: IZPostgreSQLConnection; ChunkSize: Cardinal;
+  InParamType: TZSQLType; oidasblob, DateTimePrefix, QuotedNumbers: Boolean;
   ConSettings: PZConSettings): RawByteString;
 var
   TempBlob: IZBlob;
   WriteTempBlob: IZPostgreSQLOidBlob;
   CharRec: TZCharRec;
+  TempVar: TZVariant;
 begin
   if ClientVarManager.IsNull(Value)  then
     Result := 'NULL'
-  else
-  begin
-    case InParamType of
-      stBoolean:
-        if SoftVarManager.GetAsBoolean(Value) then
-          Result := 'TRUE'
-        else
-          Result := 'FALSE';
-      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong,
-      stFloat, stDouble, stCurrency, stBigDecimal:
-        begin
-          Result := ClientVarManager.GetAsRawByteString(Value);
-          if QuotedNumbers then Result := #39+Result+#39;
-        end;
-      stBytes:
-        Result := Connection.EncodeBinary(SoftVarManager.GetAsBytes(Value), True);
-      stString, stUnicodeString: begin
-          CharRec := ClientVarManager.GetAsCharRec(Value, ConSettings.ClientCodePage^.CP);
-          Result := Connection.EscapeString(CharRec.P, CharRec.Len, True);
-        end;
-      stDate:
-        if DateTimePrefix then
-          Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
-            ConSettings^.WriteFormatSettings, True, '::date')
-        else
-          Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
-            ConSettings^.WriteFormatSettings, True);
-      stTime:
-        if DateTimePrefix then
-          Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
-            ConSettings^.WriteFormatSettings, True, '::time')
-        else
-          Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
-            ConSettings^.WriteFormatSettings, True);
-      stTimestamp:
-        if DateTimePrefix then
-          Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
-            ConSettings^.WriteFormatSettings, True, '::timestamp')
-        else
-          Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
-            ConSettings^.WriteFormatSettings, True);
-      stAsciiStream, stUnicodeStream, stBinaryStream:
-        begin
-          TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-          begin
-            case InParamType of
-              stBinaryStream:
-                if (Connection.IsOidAsBlob) or oidasblob then
-                begin
-                  try
-                    WriteTempBlob := TZPostgreSQLOidBlob.Create(Connection.GetPlainDriver, nil, 0,
-                      Connection.GetConnectionHandle, 0, ChunkSize);
-                    WriteTempBlob.WriteBuffer(TempBlob.GetBuffer, TempBlob.Length);
-                    Result := IntToRaw(WriteTempBlob.GetBlobOid);
-                  finally
-                    WriteTempBlob := nil;
-                  end;
-                end
-                else
-                  Result := Connection.EncodeBinary(TempBlob.GetBuffer, TempBlob.Length, True);
-              stAsciiStream, stUnicodeStream:
-                if TempBlob.IsClob then begin
-                  CharRec.P := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
-                  Result := Connection.EscapeString(CharRec.P, TempBlob.Length, True)
-                end else
-                  Result := Connection.EscapeString(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings));
-            end; {case..}
-          end
-          else
-            Result := 'NULL';
-          TempBlob := nil;
-        end; {if not TempBlob.IsEmpty then}
+  else case InParamType of
+    stBoolean:
+      Result := BoolStrsUpRaw[SoftVarManager.GetAsBoolean(Value)];
+    stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong,
+    stFloat, stDouble, stCurrency, stBigDecimal:
+      begin
+        Result := ClientVarManager.GetAsRawByteString(Value);
+        if QuotedNumbers then Result := #39+Result+#39;
+      end;
+    stBytes:
+      Result := Connection.EncodeBinary(SoftVarManager.GetAsBytes(Value), True);
+    stString, stUnicodeString: begin
+        ClientVarManager.Assign(Value, TempVar);
+        CharRec := ClientVarManager.GetAsCharRec(TempVar, ConSettings.ClientCodePage^.CP);
+        Result := Connection.EscapeString(CharRec.P, CharRec.Len, True);
+      end;
+    stGuid: if Value.VType = vtBytes
+            then Result := #39+GUIDToRaw(Value.VBytes)+#39
+            else Result := #39+ClientVarManager.GetAsRawByteString(Value)+#39;
+    stDate:
+      if DateTimePrefix then
+        Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+          ConSettings^.WriteFormatSettings, True, '::date')
       else
-        RaiseUnsupportedParameterTypeException(InParamType);
-    end;
+        Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+          ConSettings^.WriteFormatSettings, True);
+    stTime:
+      if DateTimePrefix then
+        Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+          ConSettings^.WriteFormatSettings, True, '::time')
+      else
+        Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+          ConSettings^.WriteFormatSettings, True);
+    stTimestamp:
+      if DateTimePrefix then
+        Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+          ConSettings^.WriteFormatSettings, True, '::timestamp')
+      else
+        Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+          ConSettings^.WriteFormatSettings, True);
+    stAsciiStream, stUnicodeStream, stBinaryStream:
+      begin
+        TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
+        if not TempBlob.IsEmpty then
+        begin
+          case InParamType of
+            stBinaryStream:
+              if (Connection.IsOidAsBlob) or oidasblob then
+              begin
+                try
+                  WriteTempBlob := TZPostgreSQLOidBlob.Create(Connection.GetPlainDriver, nil, 0,
+                    Connection.GetConnectionHandle, 0, ChunkSize);
+                  WriteTempBlob.WriteBuffer(TempBlob.GetBuffer, TempBlob.Length);
+                  Result := IntToRaw(WriteTempBlob.GetBlobOid);
+                finally
+                  WriteTempBlob := nil;
+                end;
+              end
+              else
+                Result := Connection.EncodeBinary(TempBlob.GetBuffer, TempBlob.Length, True);
+            stAsciiStream, stUnicodeStream:
+              if TempBlob.IsClob then begin
+                CharRec.P := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+                Result := Connection.EscapeString(CharRec.P, TempBlob.Length, True)
+              end else
+                Result := Connection.EscapeString(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                  TempBlob.Length, ConSettings));
+          end; {case..}
+        end
+        else
+          Result := 'NULL';
+        TempBlob := nil;
+      end; {if not TempBlob.IsEmpty then}
+    else
+      RaiseUnsupportedParameterTypeException(InParamType);
   end;
 end;
 

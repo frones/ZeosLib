@@ -499,10 +499,7 @@ begin
       SQLCode := (sqltype and not(1));
       case SQLCode of
         SQL_TEXT, SQL_VARYING:
-          begin
-            SetLength(Result, sqllen);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(sqldata)^, Pointer(Result)^, sqllen);
-          end;
+          Result := BufferToBytes(sqldata, sqllen);
         else
           raise EZIBConvertError.Create(Format(SErrorConvertionField,
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
@@ -680,10 +677,10 @@ begin
       if (sqlscale < 0)  then
       begin
         case SQLCode of
-          SQL_SHORT  : Result := PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale];
-          SQL_LONG   : Result := PInteger(sqldata)^  / IBScaleDivisor[sqlscale];
+          SQL_SHORT  : Result {%H-}:= PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale];
+          SQL_LONG   : Result {%H-}:= PInteger(sqldata)^  / IBScaleDivisor[sqlscale];
           SQL_INT64,
-          SQL_QUAD   : Result := PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
+          SQL_QUAD   : Result {%H-}:= PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
           SQL_DOUBLE : Result := PDouble(sqldata)^;
         else
           raise EZIBConvertError.Create(Format(SErrorConvertionField,

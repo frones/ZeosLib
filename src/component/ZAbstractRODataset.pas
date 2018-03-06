@@ -609,6 +609,8 @@ type
     {$IFDEF WITH_ZSTRINGFIELDS}
     property UseZFields: Boolean read FUseZFields write SetUseZFields default True;
     {$ENDIF}
+  public
+    function NextResultSet: Boolean; virtual;
   end;
 
   {$IFNDEF WITH_TFIELD_PARENTFIELD}
@@ -2956,7 +2958,7 @@ begin
           begin
             P := RowAccessor.GetBytes(ColumnIndex, Result, PWord(Buffer)^);
             {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move((PAnsiChar(P)+SizeOf(Word))^,
-              PAnsiChar(Buffer)^, Min(PWord(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex)));
+              Pointer(Buffer)^, Min(PWord(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex)));
           end;
         ftBytes:
           begin
@@ -3467,11 +3469,7 @@ begin
       { Initializes accessors and buffers. }
       ColumnList := ConvertFieldsToColumnInfo(Fields);
       try
-        if Connection.DbcConnection.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-          and (Connection.DbcConnection.GetConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
-          RowAccessor := TZRawRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings)
-        else
-          RowAccessor := TZUnicodeRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings);
+        RowAccessor := TZRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings)
       finally
         ColumnList.Free;
       end;
@@ -4360,6 +4358,15 @@ end;
 function TZAbstractRODataset.IsSequenced: Boolean;
 begin
   Result := (not FilterEnabled);
+end;
+
+function TZAbstractRODataset.NextResultSet: Boolean;
+begin
+  Result := False;
+  if Assigned(Statement) and Statement.GetMoreResults then begin
+    Result := True;
+    SetAnotherResultset(Statement.GetResultSet);
+  end;
 end;
 
 {**

@@ -353,7 +353,6 @@ end;
 }
 procedure TZSQLiteTokenizer.CreateTokenStates;
 begin
-  EscapeState := TZEscapeState.Create;
   WhitespaceState := TZWhitespaceState.Create;
 
   SymbolState := TZSQLiteSymbolState.Create;

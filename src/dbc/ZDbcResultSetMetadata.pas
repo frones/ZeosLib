@@ -147,7 +147,7 @@ type
       ColumnInfo: TZColumnInfo): Boolean;
     procedure ClearColumn(ColumnInfo: TZColumnInfo); virtual;
     procedure LoadColumns; virtual;
-    procedure ReplaceStarColumns(SelectSchema: IZSelectSchema);
+    procedure ReplaceStarColumns(const SelectSchema: IZSelectSchema);
 
     property MetaData: IZDatabaseMetadata read FMetadata write SetMetadata;
     property ColumnsLabels: TStrings read FColumnsLabels write FColumnsLabels;
@@ -157,7 +157,7 @@ type
     property Loaded: Boolean read FLoaded write FLoaded;
     property ResultSet: TZAbstractResultSet read FResultSet write FResultSet;
   public
-    constructor Create(Metadata: IZDatabaseMetadata; SQL: string;
+    constructor Create(const Metadata: IZDatabaseMetadata; const SQL: string;
       ParentResultSet: TZAbstractResultSet);
     destructor Destroy; override;
 
@@ -239,8 +239,8 @@ end;
   @param SQL an SQL query statement.
   @param ColumnsInfo a collection of columns info.
 }
-constructor TZAbstractResultSetMetadata.Create(Metadata: IZDatabaseMetadata;
-  SQL: string; ParentResultSet: TZAbstractResultSet);
+constructor TZAbstractResultSetMetadata.Create(const Metadata: IZDatabaseMetadata;
+  const SQL: string; ParentResultSet: TZAbstractResultSet);
 begin
   inherited Create(ParentResultSet);
 
@@ -805,7 +805,7 @@ end;
   @param SelectSchema a query select schema.
 }
 procedure TZAbstractResultSetMetadata.ReplaceStarColumns(
-  SelectSchema: IZSelectSchema);
+  const SelectSchema: IZSelectSchema);
 var
   I: Integer;
   Current: TZFieldRef;

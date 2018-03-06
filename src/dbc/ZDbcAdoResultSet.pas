@@ -83,8 +83,8 @@ type
   protected
     procedure Open; override;
   public
-    constructor Create(Statement: IZStatement; SQL: string;
-      AdoRecordSet: ZPlainAdo.RecordSet);
+    constructor Create(const Statement: IZStatement; const SQL: string;
+      const AdoRecordSet: ZPlainAdo.RecordSet);
     procedure Close; override;
     procedure ResetCursor; override;
     function Next: Boolean; override;
@@ -119,8 +119,8 @@ type
     FHandle: ZPlainAdo.Command;
     FAutoColumnIndex: Integer;
   public
-    constructor Create(Handle: ZPlainAdo.Connection;
-      Statement: IZStatement; Metadata: IZResultSetMetadata);
+    constructor Create(const Handle: ZPlainAdo.Connection;
+      const Statement: IZStatement; const Metadata: IZResultSetMetadata);
 
     procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
@@ -138,7 +138,7 @@ uses
   @param SQL an SQL query string.
   @param AdoRecordSet a ADO recordset object, the source of the ResultSet.
 }
-constructor TZAdoResultSet.Create(Statement: IZStatement; SQL: string; AdoRecordSet: ZPlainAdo.RecordSet);
+constructor TZAdoResultSet.Create(const Statement: IZStatement; const SQL: string; const AdoRecordSet: ZPlainAdo.RecordSet);
 begin
   inherited Create(Statement, SQL,
     TZADOResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
@@ -1517,9 +1517,9 @@ begin
       adVarBinary,
       adLongVarBinary:
         begin
-          SetLength(Result, FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
-          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VArray.Data^,
-            Result[0], FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
+          Result := BufferToBytes(
+            TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VArray.Data,
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
         end;
       else
         begin
@@ -1681,8 +1681,8 @@ end;
   @param Statement a related SQL statement object.
   @param Metadata a resultset metadata reference.
 }
-constructor TZAdoCachedResolver.Create(Handle: ZPlainAdo.Connection;
-  Statement: IZStatement; Metadata: IZResultSetMetadata);
+constructor TZAdoCachedResolver.Create(const Handle: ZPlainAdo.Connection;
+  const Statement: IZStatement; const Metadata: IZResultSetMetadata);
 var
   I: Integer;
 begin

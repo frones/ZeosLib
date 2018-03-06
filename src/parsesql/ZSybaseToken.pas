@@ -379,7 +379,6 @@ end;
 }
 procedure TZSybaseTokenizer.CreateTokenStates;
 begin
-  EscapeState := TZEscapeState.Create;
   WhitespaceState := TZWhitespaceState.Create;
 
   SymbolState := TZSybaseSymbolState.Create;

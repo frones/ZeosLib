@@ -156,9 +156,9 @@ type
     property NativeResolver: IZCachedResolver read FNativeResolver;
     {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   public
-    constructor CreateWithStatement(SQL: string; Statement: IZStatement;
+    constructor CreateWithStatement(const SQL: string; const Statement: IZStatement;
       ConSettings: PZConSettings);
-    constructor CreateWithColumns(ColumnsInfo: TObjectList; SQL: string;
+    constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
       ConSettings: PZConSettings);
     destructor Destroy; override;
 
@@ -301,8 +301,11 @@ type
 
     property ResultSet: IZResultSet read FResultSet write FResultSet;
   public
-    constructor Create(ResultSet: IZResultSet; const SQL: string;
-      Resolver: IZCachedResolver; ConSettings: PZConSettings);
+    constructor Create(const ResultSet: IZResultSet; const SQL: string;
+      const Resolver: IZCachedResolver; ConSettings: PZConSettings);
+    constructor CreateWithColumns(const ColumnsInfo: TObjectList;
+      const ResultSet: IZResultSet; const SQL: string;
+      const Resolver: IZCachedResolver; ConSettings: PZConSettings);
 
     procedure Close; override;
     procedure ResetCursor; override;
@@ -327,8 +330,8 @@ uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils, ZEncoding
   @param Statement an SQL statement object.
   @param SQL an SQL query.
 }
-constructor TZAbstractCachedResultSet.CreateWithStatement(SQL: string;
-  Statement: IZStatement; ConSettings: PZConSettings);
+constructor TZAbstractCachedResultSet.CreateWithStatement(const SQL: string;
+  const Statement: IZStatement; ConSettings: PZConSettings);
 begin
   inherited Create(Statement, SQL, nil, ConSettings);
   FCachedUpdates := False;
@@ -340,7 +343,7 @@ end;
   @param ColumnsInfo a columns info for cached rows.
 }
 constructor TZAbstractCachedResultSet.CreateWithColumns(
-  ColumnsInfo: TObjectList; SQL: string; ConSettings: PZConSettings);
+  ColumnsInfo: TObjectList; const SQL: string; ConSettings: PZConSettings);
 begin
   inherited Create(nil, SQL, nil, ConSettings);
 
@@ -730,19 +733,9 @@ begin
   FInitialRowsList := TList.Create;
   FCurrentRowsList := TList.Create;
 
-  if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
-    (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then
-  begin
-    FRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);
-    FOldRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);
-    FNewRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);
-  end
-  else
-  begin
-    FRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
-    FOldRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
-    FNewRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
-  end;
+  FRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
+  FOldRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
+  FNewRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
 
   FRowAccessor.AllocBuffer(FUpdatedRow);
   FRowAccessor.AllocBuffer(FInsertedRow);
@@ -2293,8 +2286,8 @@ end;
   @param ResultSet a wrapped resultset object.
   @param Resolver a cached updates resolver object.
 }
-constructor TZCachedResultSet.Create(ResultSet: IZResultSet; const SQL: string;
-  Resolver: IZCachedResolver; ConSettings: PZConSettings);
+constructor TZCachedResultSet.Create(const ResultSet: IZResultSet; const SQL: string;
+  const Resolver: IZCachedResolver; ConSettings: PZConSettings);
 begin
   inherited Create(ResultSet.GetStatement, SQL, nil, ConSettings);
   FResultSet := ResultSet;
@@ -2441,6 +2434,25 @@ begin
   If Assigned(FResultset) then
     FResultset.Close;
   FResultSet := nil;
+end;
+
+constructor TZCachedResultSet.CreateWithColumns(const ColumnsInfo: TObjectList;
+  const ResultSet: IZResultSet; const SQL: string;
+  const Resolver: IZCachedResolver; ConSettings: PZConSettings);
+begin
+  inherited Create(ResultSet.GetStatement, SQL, nil, ConSettings);
+  FResultSet := ResultSet;
+  FResolver := Resolver;
+  {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
+  FNativeResolver := Resolver;
+  {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
+  if (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) and
+    ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+      FStringFieldAssignFromResultSet := ZStringFieldAssignFromResultSet_AnsiRec
+    else
+      FStringFieldAssignFromResultSet := ZStringFieldAssignFromResultSet_Unicode;
+  ZDbcUtils.CopyColumnsInfo(ColumnsInfo, Self.ColumnsInfo);
+  inherited Open;
 end;
 
 procedure TZCachedResultSet.ResetCursor;

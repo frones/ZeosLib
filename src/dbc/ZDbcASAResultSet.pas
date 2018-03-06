@@ -80,9 +80,9 @@ type
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
-    constructor Create(Statement: IZStatement; const SQL: string;
+    constructor Create(const Statement: IZStatement; const SQL: string;
       var StmtNum: SmallInt; const CursorName: AnsiString;
-      SqlData: IZASASQLDA; CachedBlob: boolean);
+      const SqlData: IZASASQLDA; CachedBlob: boolean);
 
     procedure Close; override;
     procedure ResetCursor; override;
@@ -112,8 +112,8 @@ type
 
   TZASAParamererResultSet = Class(TZASAAbstractResultSet)
   public
-    constructor Create(Statement: IZStatement; const SQL: string;
-      var StmtNum: SmallInt; const CursorName: AnsiString; SqlData: IZASASQLDA;
+    constructor Create(const Statement: IZStatement; const SQL: string;
+      var StmtNum: SmallInt; const CursorName: AnsiString; const SqlData: IZASASQLDA;
       CachedBlob: boolean);
     function Next: Boolean; override;
   end;
@@ -135,8 +135,8 @@ type
     FUpdateSqlData: IZASASQLDA;
     procedure PrepareUpdateSQLData;
   public
-    constructor Create(Statement: IZStatement; const SQL: string;
-      var StmtNum: SmallInt; const CursorName: AnsiString; SqlData: IZASASQLDA;
+    constructor Create(const Statement: IZStatement; const SQL: string;
+      var StmtNum: SmallInt; const CursorName: AnsiString; const SqlData: IZASASQLDA;
       CachedBlob: boolean);
 
     procedure Close; override;
@@ -206,9 +206,9 @@ uses
   @param the sql out data previously allocated
   @param the Interbase sql dialect
 }
-constructor TZASAAbstractResultSet.Create(Statement: IZStatement;
+constructor TZASAAbstractResultSet.Create(const Statement: IZStatement;
   const SQL: string; var StmtNum: SmallInt; const CursorName: AnsiString;
-  SqlData: IZASASQLDA; CachedBlob: boolean);
+  const SqlData: IZASASQLDA; CachedBlob: boolean);
 begin
   inherited Create( Statement, SQL, nil,Statement.GetConnection.GetConSettings);
 
@@ -957,13 +957,11 @@ begin
     with FSQLDA.sqlvar[ColumnIndex] do
       case sqlType and $FFFE of
         DT_BINARY:
-          begin
-            SetLength( Result, PZASASQLSTRING( sqlData).length);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PZASASQLSTRING(sqlData).data[0], Result[0], PZASASQLSTRING(sqlData).length);
-          end;
-      else
-        FSqlData.CreateException( Format( SErrorConvertionField,
-          [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString( sqlType)]));
+          Result := BufferToBytes(
+            @(PZASASQLSTRING(sqlData).data), PZASASQLSTRING(sqlData).length)
+        else
+          FSqlData.CreateException( Format( SErrorConvertionField,
+            [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString( sqlType)]));
       end;
   end;
 end;
@@ -1228,7 +1226,7 @@ begin
       else
       begin
         TempRaw := InternalGetString(ColumnIndex);
-        Result := TZAbstractClob.CreateWithData(PAnsiChar(TempRaw), Length(TempBytes),
+        Result := TZAbstractClob.CreateWithData(PAnsiChar(TempRaw), Length(TempRaw),
           ConSettings^.ClientCodePage^.CP, ConSettings);
       end;
     end;
@@ -1322,9 +1320,9 @@ end;
 
 { TZASAParamererResultSet }
 
-constructor TZASAParamererResultSet.Create(Statement: IZStatement;
+constructor TZASAParamererResultSet.Create(const Statement: IZStatement;
   const SQL: string; var StmtNum: SmallInt; const CursorName: AnsiString;
-  SqlData: IZASASQLDA; CachedBlob: boolean);
+  const SqlData: IZASASQLDA; CachedBlob: boolean);
 begin
   inherited Create(Statement, SQL, StmtNum, CursorName, SqlData, CachedBlob);
   SetType(rtForwardOnly);
@@ -1499,8 +1497,8 @@ begin
 end;
 
 { TZASACachedResultSet }
-constructor TZASACachedResultSet.Create(Statement: IZStatement; const SQL: string;
-  var StmtNum: SmallInt; const CursorName: AnsiString; SqlData: IZASASQLDA;
+constructor TZASACachedResultSet.Create(const Statement: IZStatement; const SQL: string;
+  var StmtNum: SmallInt; const CursorName: AnsiString; const SqlData: IZASASQLDA;
   CachedBlob: boolean);
 begin
   inherited Create(Statement, SQL, StmtNum, CursorName, SqlData, CachedBlob);

@@ -78,7 +78,7 @@ type
   { Base interface for sqlda }
   IZASASQLDA = interface
     ['{7606E8EB-9FC8-4F76-8D91-E23AB96409E1}']
-    procedure CreateException( Msg: string);
+    procedure CreateException(const Msg: string);
     procedure AllocateSQLDA( NumVars: Word);
     procedure InitFields;
     procedure FreeSQLDA;
@@ -108,7 +108,7 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePRaw(const Index: Integer; Value: PAnsiChar; Len: NativeUInt);
-    procedure UpdateBytes(const Index: Integer; Value: TBytes);
+    procedure UpdateBytes(const Index: Integer; const Value: TBytes);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
     procedure UpdateTimestamp(const Index: Integer; Value: TDateTime);
@@ -130,7 +130,7 @@ type
     FPlainDriver: IZASAPlainDriver;
     FHandle: PZASASQLCA;
     FCursorName: PAnsiChar;
-    procedure CreateException( Msg: string);
+    procedure CreateException(const  Msg: string);
     procedure CheckIndex(const Index: Word);
     procedure CheckRange(const Index: Word);
     procedure SetFieldType(const Index: Word; ASAType: Smallint; Len: LongWord;
@@ -141,7 +141,7 @@ type
     FDeclType: array of TZASADECLTYPE;
     procedure ReadBlob(const Index: Word; var Buffer: Pointer; Length: LongWord);
   public
-    constructor Create(PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
+    constructor Create(const PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
       CursorName: PAnsiChar; ConSettings: PZConSettings; NumVars: Word = StdVars);
     destructor Destroy; override;
 
@@ -174,7 +174,7 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePRaw(const Index: Integer; Value: PAnsiChar; Len: NativeUInt);
-    procedure UpdateBytes(const Index: Integer; Value: TBytes);
+    procedure UpdateBytes(const Index: Integer; const Value: TBytes);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
     procedure UpdateTimestamp(const Index: Integer; Value: TDateTime);
@@ -220,18 +220,18 @@ procedure CheckASAError(const PlainDriver: IZASAPlainDriver;
   const ConSettings: PZConSettings; const LogMessage: RawByteString = '';
   const SupressExceptionID: Integer = 0);
 
-function GetCachedResultSet(SQL: string;
-  Statement: IZStatement; NativeResultSet: IZResultSet): IZResultSet;
+function GetCachedResultSet(const SQL: string;
+  const Statement: IZStatement; const NativeResultSet: IZResultSet): IZResultSet;
 
-procedure DescribeCursor( FASAConnection: IZASAConnection; FSQLData: IZASASQLDA;
-  Cursor: AnsiString; SQL: RawByteString);
+procedure DescribeCursor(const FASAConnection: IZASAConnection; const FSQLData: IZASASQLDA;
+  const Cursor: AnsiString; const SQL: RawByteString);
 
-procedure ASAPrepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
+procedure ASAPrepare(const FASAConnection: IZASAConnection; const FSQLData, FParamsSQLData: IZASASQLDA;
    const SQL: RawByteString; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
 
-procedure PrepareParameters( ClientVarManager: IZClientVariantManager;
-  InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray;
-  InParamCount: Integer; ParamSqlData: IZASASQLDA;
+procedure PrepareParameters(const ClientVarManager: IZClientVariantManager;
+  const InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
+  InParamCount: Integer; const ParamSqlData: IZASASQLDA;
   ConSettings: PZConSettings);
 
 function RandomString( Len: integer): string;
@@ -243,7 +243,7 @@ uses Variants, Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
 
 { TZASASQLDA }
 
-procedure TZASASQLDA.CreateException( Msg: string);
+procedure TZASASQLDA.CreateException(const Msg: string);
 begin
   DriverManager.LogError( lcOther, FConSettings^.Protocol, '', -1, ConvertEMsgToRaw(Msg, FConSettings^.ClientCodePage^.CP));
   raise EZSQLException.Create( Format( SSQLError1, [ Msg]));
@@ -315,7 +315,7 @@ begin
   SetFieldType(FSQLDA, Index, ASAType, Len, SetDeclType);
 end;
 
-constructor TZASASQLDA.Create(PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
+constructor TZASASQLDA.Create(const PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
    CursorName: PAnsiChar; ConSettings: PZConSettings; NumVars: Word = StdVars);
 begin
   FPlainDriver := PlainDriver;
@@ -392,6 +392,18 @@ begin
                         else
                         begin
                           FSQLDA.sqlVar[i].sqlType := DT_LONGBINARY +
+                            ( FSQLDA.sqlVar[i].sqlType and $0001);
+                          FSQLDA.sqlVar[i].sqlLen := 0;
+                        end;
+        DT_NSTRING,
+        DT_NFIXCHAR,
+        DT_NVARCHAR,
+        DT_LONGNVARCHAR: if FSQLDA.sqlVar[i].sqlLen < MinBLOBSize then
+                          FSQLDA.sqlVar[i].sqlType := DT_NVARCHAR +
+                            ( FSQLDA.sqlVar[i].sqlType and $0001)
+                        else
+                        begin
+                          FSQLDA.sqlVar[i].sqlType := DT_LONGNVARCHAR +
                             ( FSQLDA.sqlVar[i].sqlType and $0001);
                           FSQLDA.sqlVar[i].sqlLen := 0;
                         end;
@@ -771,7 +783,7 @@ begin
     if Len < MinBLOBSize then
     begin
       SetFieldType( Index, DT_VARCHAR or 1, MinBLOBSize - 1);
-      PZASASQLSTRING( sqlData).length := Min(Len, sqllen-3);
+      PZASASQLSTRING( sqlData).length := {%H-}Min(Len, sqllen-3);
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PZASASQLSTRING( sqlData).data[0], PZASASQLSTRING( sqlData).length);
       (PAnsiChar(@PZASASQLSTRING( sqlData).data[0])+PZASASQLSTRING( sqlData).length)^ := #0;
     end
@@ -793,7 +805,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZASASQLDA.UpdateBytes(const Index: Integer; Value: TBytes);
+procedure TZASASQLDA.UpdateBytes(const Index: Integer; const Value: TBytes);
 var
   BlobSize: Integer;
 begin
@@ -804,12 +816,12 @@ begin
     begin
       SetFieldType( Index, DT_BINARY or 1, MinBLOBSize - 1);
       PZASASQLSTRING( sqlData).length := BlobSize;
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( Value[0], PZASASQLSTRING( sqlData).data[0], BlobSize);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( Pointer(Value)^, PZASASQLSTRING( sqlData).data[0], BlobSize);
     end
     else
     begin
       SetFieldType( Index, DT_LONGBINARY or 1, BlobSize);
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( Value[0], PZASABlobStruct( sqlData).arr[0], BlobSize);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( Pointer(Value)^, PZASABlobStruct( sqlData).arr[0], BlobSize);
       PZASABlobStruct( sqlData).stored_len := BlobSize;
       PZASABlobStruct( sqlData).untrunc_len := BlobSize;
     end;
@@ -963,7 +975,7 @@ begin
         'Blob Record is not correctly initialized');
       if PZASABlobStruct( sqlData).array_len <> Length then
         CreateException( 'Could''nt complete BLOB-Read');
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( PZASABlobStruct( sqlData).arr[0], PAnsiChar( Buffer)[0], PZASABlobStruct( sqlData).array_len);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( PZASABlobStruct( sqlData).arr[0], Buffer, PZASABlobStruct( sqlData).array_len);
     end
     else
     begin
@@ -1301,8 +1313,8 @@ end;
   @param NativeResultSet a native result set
   @return cached ResultSet
 }
-function GetCachedResultSet(SQL: string;
-  Statement: IZStatement; NativeResultSet: IZResultSet): IZResultSet;
+function GetCachedResultSet(const SQL: string;
+  const Statement: IZStatement; const NativeResultSet: IZResultSet): IZResultSet;
 var
   CachedResultSet: TZCachedResultSet;
 begin
@@ -1320,8 +1332,8 @@ begin
     Result := NativeResultSet;
 end;
 
-procedure DescribeCursor( FASAConnection: IZASAConnection; FSQLData: IZASASQLDA;
-  Cursor: AnsiString; SQL: RawByteString);
+procedure DescribeCursor(const FASAConnection: IZASAConnection; const FSQLData: IZASASQLDA;
+  const Cursor: AnsiString; const SQL: RawByteString);
 begin
   //FSQLData.AllocateSQLDA( StdVars);
   with FASAConnection do
@@ -1340,7 +1352,7 @@ begin
   end;
 end;
 
-procedure ASAPrepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
+procedure ASAPrepare(const FASAConnection: IZASAConnection; const FSQLData, FParamsSQLData: IZASASQLDA;
    const SQL: RawByteString; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
 begin
   with FASAConnection do
@@ -1401,9 +1413,9 @@ begin
   end;
 end;
 
-procedure PrepareParameters( ClientVarManager: IZClientVariantManager;
-  InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray;
-  InParamCount: Integer; ParamSqlData: IZASASQLDA; ConSettings: PZConSettings);
+procedure PrepareParameters(const ClientVarManager: IZClientVariantManager;
+  const InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
+  InParamCount: Integer; const ParamSqlData: IZASASQLDA; ConSettings: PZConSettings);
 var
   i: Integer;
   TempBlob: IZBlob;

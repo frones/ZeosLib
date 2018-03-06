@@ -86,12 +86,12 @@ function ConvertMySQLHandleToSQLType(FieldHandle: PZMySQLField;
   @param LogMessage a logging message.
 }
 procedure CheckMySQLError(const PlainDriver: IZMySQLPlainDriver;
-  const Handle: PZMySQLConnect; const LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; Const ConSettings: PZConSettings);
+  Handle: PMySQL; LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; ConSettings: PZConSettings);
 procedure CheckMySQLPrepStmtError(const PlainDriver: IZMySQLPlainDriver;
-  const Handle: PZMySQLConnect; const LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; const ConSettings: PZConSettings;
-  ErrorIsIgnored: PBoolean = nil; const IgnoreErrorCode: Integer = 0);
+  Handle: PMySQL; LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; ConSettings: PZConSettings;
+  ErrorIsIgnored: PBoolean = nil; IgnoreErrorCode: Integer = 0);
 
 procedure EnterSilentMySQLError;
 procedure LeaveSilentMySQLError;
@@ -145,9 +145,10 @@ procedure ConvertMySQLColumnInfoFromString(var TypeName: RawByteString;
   ConSettings: PZConSettings; out TypeInfoSecond: RawByteString;
   out FieldType: TZSQLType; out ColumnSize: Integer; out Scale: Integer);
 
-function MySQLPrepareAnsiSQLParam(Connection: IZMySQLConnection; Value: TZVariant;
-  const DefaultValue: String; ClientVarManager: IZClientVariantManager;
-  const InParamType: TZSQLType; const UseDefaults: Boolean): RawByteString;
+function MySQLPrepareAnsiSQLParam(const Connection: IZMySQLConnection;
+  const Value: TZVariant; const DefaultValue: String;
+  const ClientVarManager: IZClientVariantManager;
+  InParamType: TZSQLType; UseDefaults: Boolean): RawByteString;
 
 function ReverseWordBytes(Src: Pointer): Word;
 function ReverseLongWordBytes(Src: Pointer; Len: Byte): LongWord;
@@ -205,7 +206,7 @@ begin
       else
         Result := stULong;
     FIELD_TYPE_FLOAT:
-      Result := stFloat;
+      Result := stDouble;//stFloat;
     FIELD_TYPE_DECIMAL, FIELD_TYPE_NEWDECIMAL: {ADDED FIELD_TYPE_NEWDECIMAL by fduenas 20-06-2006}
       if PMYSQL_FIELD(FieldHandle)^.decimals = 0 then
         if PMYSQL_FIELD(FieldHandle)^.length < 11 then
@@ -277,8 +278,8 @@ end;
   @param LogMessage a logging message.
 }
 procedure CheckMySQLError(const PlainDriver: IZMySQLPlainDriver;
-  const Handle: PZMySQLConnect; const LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; Const ConSettings: PZConSettings);
+  Handle: PMySQL; LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; ConSettings: PZConSettings);
 var
   ErrorMessage: RawByteString;
   ErrorCode: Integer;
@@ -299,9 +300,8 @@ begin
 end;
 
 procedure CheckMySQLPrepStmtError(const PlainDriver: IZMySQLPlainDriver;
-  const Handle: PZMySQLConnect; const LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; const ConSettings: PZConSettings;
-  ErrorIsIgnored: PBoolean = nil; const IgnoreErrorCode: Integer = 0);
+  Handle: PMySQL; LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
+  ConSettings: PZConSettings; ErrorIsIgnored: PBoolean = nil; IgnoreErrorCode: Integer = 0);
 var
   ErrorMessage: RawByteString;
   ErrorCode: Integer;
@@ -391,9 +391,9 @@ begin
     FIELD_TYPE_LONGLONG:    Result := 8;
     FIELD_TYPE_FLOAT:       Result := 4;
     FIELD_TYPE_DOUBLE:      Result := 8;
-    FIELD_TYPE_DATE:        Result := sizeOf(MYSQL_TIME);
-    FIELD_TYPE_TIME:        Result := sizeOf(MYSQL_TIME);
-    FIELD_TYPE_DATETIME:    Result := sizeOf(MYSQL_TIME);
+    FIELD_TYPE_DATE:        Result := sizeOf(TMYSQL_TIME);
+    FIELD_TYPE_TIME:        Result := sizeOf(TMYSQL_TIME);
+    FIELD_TYPE_DATETIME:    Result := sizeOf(TMYSQL_TIME);
     FIELD_TYPE_TINY_BLOB:   Result := field_size; //stBytes
     FIELD_TYPE_BLOB:        Result := field_size;
     FIELD_TYPE_STRING:      Result := field_size;
@@ -510,8 +510,8 @@ begin
       Result.Precision := Integer(FieldLength)*Ord(not (PMYSQL_FIELD(FieldHandle)^._type in
         [FIELD_TYPE_BLOB, FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB]));
     Result.Scale := PMYSQL_FIELD(FieldHandle)^.decimals;
-    Result.AutoIncrement := (AUTO_INCREMENT_FLAG and PMYSQL_FIELD(FieldHandle)^.flags <> 0) or
-      (TIMESTAMP_FLAG and PMYSQL_FIELD(FieldHandle)^.flags <> 0);
+    Result.AutoIncrement := (AUTO_INCREMENT_FLAG and PMYSQL_FIELD(FieldHandle)^.flags <> 0);// or
+      //(TIMESTAMP_FLAG and PMYSQL_FIELD(FieldHandle)^.flags <> 0);
     Result.Signed := (UNSIGNED_FLAG and PMYSQL_FIELD(FieldHandle)^.flags) = 0;
     if NOT_NULL_FLAG and PMYSQL_FIELD(FieldHandle)^.flags <> 0 then
       Result.Nullable := ntNoNulls
@@ -552,7 +552,8 @@ begin
 
   { the column type is ENUM}
   if TypeName = 'enum' then begin
-     if (TypeInfoSecond = '''Y'',''N''') or (TypeInfoSecond = '''N'',''Y''') then
+    FieldType := stString;
+    if (TypeInfoSecond = '''Y'',''N''') or (TypeInfoSecond = '''N'',''Y''') then
       FieldType := stBoolean
     else begin
       TempPos := 1;
@@ -680,17 +681,21 @@ SetLobSize:
   end;
 end;
 
-function MySQLPrepareAnsiSQLParam(Connection: IZMySQLConnection; Value: TZVariant;
-  const DefaultValue: String; ClientVarManager: IZClientVariantManager;
-  const InParamType: TZSQLType; const UseDefaults: Boolean): RawByteString;
+function MySQLPrepareAnsiSQLParam(const Connection: IZMySQLConnection;
+  const Value: TZVariant; const DefaultValue: String;
+  const ClientVarManager: IZClientVariantManager;
+  InParamType: TZSQLType; UseDefaults: Boolean): RawByteString;
 var
   TempBytes: TBytes;
   TempBlob: IZBlob;
   CharRec: TZCharRec;
   ConSettings: PZConSettings;
+  TempVar: TZVariant;
+label SetDefaultVal;
 begin
   ConSettings := Connection.GetConSettings;
   if ClientVarManager.IsNull(Value) then
+SetDefaultVal:
     if UseDefaults and (DefaultValue <> '') then
       Result := ConSettings^.ConvFuncs.ZStringToRaw(DefaultValue,
         ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
@@ -713,7 +718,8 @@ begin
           Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes));
         end;
       stString, stUnicodeString: begin
-          CharRec := ClientVarManager.GetAsCharRec(Value, Connection.GetConSettings^.ClientCodePage^.CP);
+          ClientVarManager.Assign(Value, TempVar);
+          CharRec := ClientVarManager.GetAsCharRec(TempVar, Connection.GetConSettings^.ClientCodePage^.CP);
           Result := Connection.EscapeString(CharRec.P, CharRec.Len, True);
         end;
       stDate:
@@ -729,26 +735,16 @@ begin
         begin
           TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-          begin
-            case InParamType of
-              stBinaryStream:
-                Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length);
-              else
-                if TempBlob.IsClob then begin
-                  CharRec.P := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
-                  Result := Connection.EscapeString(CharRec.P, TempBlob.Length, True);
-                end
-                else
-                  Result := Connection.EscapeString(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings));
-            end;
-          end
+            if InParamType  = stBinaryStream
+            then Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length)
+            else if TempBlob.IsClob then begin
+              CharRec.P := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+              Result := Connection.EscapeString(CharRec.P, TempBlob.Length, True);
+            end else
+              Result := Connection.EscapeString(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                TempBlob.Length, ConSettings))
           else
-            if UseDefaults and (DefaultValue <> '') then
-              Result := ConSettings^.ConvFuncs.ZStringToRaw(DefaultValue,
-                ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
-            else
-              Result := 'NULL';
+            goto SetDefaultVal;
         end;
       else
         RaiseUnsupportedParameterTypeException(InParamType);
