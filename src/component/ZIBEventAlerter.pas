@@ -61,7 +61,7 @@ uses
 {$IF defined(MSWINDOWS)and not defined(FPC)}
   Windows,
 {$IFEND}
-  ZDbcInterbase6, ZConnection, ZDbcIntfs,
+  ZDbcInterbase6, ZConnection, ZDbcIntfs, ZFastCode,
   ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants;
 
 type
