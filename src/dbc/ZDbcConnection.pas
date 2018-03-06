@@ -172,8 +172,8 @@ type
       read FTransactIsolationLevel write FTransactIsolationLevel;
     property Closed: Boolean read FClosed write FClosed;
   public
-    constructor Create({%H-}Driver: IZDriver; const Url: string;
-      {%H-}PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
+    constructor Create(const {%H-}Driver: IZDriver; const Url: string;
+      const {%H-}PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
       const Database: string; const User: string; const Password: string;
       Info: TStrings); overload; deprecated;
     constructor Create(const ZUrl: TZURL); overload;
@@ -223,7 +223,7 @@ type
     function GetHostVersion: Integer; virtual;
     {END ADDED by fduenas 15-06-2006}
     function GetDescription: String;
-    procedure SetReadOnly(ReadOnly: Boolean); virtual;
+    procedure SetReadOnly(Value: Boolean); virtual;
     function IsReadOnly: Boolean; virtual;
 
     procedure SetCatalog(const {%H-}Catalog: string); virtual;
@@ -255,7 +255,7 @@ end;
     property EventName: string read FEventName write FEventName;
     property Connection: IZConnection read FConnection write FConnection;
   public
-    constructor Create(Connection: IZConnection; EventName: string);
+    constructor Create(const Connection: IZConnection; const EventName: string);
     function GetEvent: string;
     procedure Listen; virtual;
     procedure Unlisten; virtual;
@@ -278,7 +278,7 @@ end;
     procedure SetBlockSize(const Value: Integer); virtual;
     property Connection: IZConnection read FConnection write FConnection;
   public
-    constructor Create(Connection: IZConnection; Name: string;
+    constructor Create(const Connection: IZConnection; const Name: string;
       BlockSize: Integer);
 
     function GetCurrentValue: Int64; virtual;
@@ -768,8 +768,8 @@ end;
   @param Info a string list with extra connection parameters.
 }
 {$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
-constructor TZAbstractConnection.Create(Driver: IZDriver; const Url: string;
-  PlainDriver: IZPlainDriver;
+constructor TZAbstractConnection.Create(const Driver: IZDriver; const Url: string;
+  const PlainDriver: IZPlainDriver;
   const HostName: string; Port: Integer; const Database: string;
   const User: string; const Password: string; Info: TStrings);
 var
@@ -1311,9 +1311,9 @@ end;
   @param readOnly true enables read-only mode; false disables
     read-only mode.
 }
-procedure TZAbstractConnection.SetReadOnly(ReadOnly: Boolean);
+procedure TZAbstractConnection.SetReadOnly(Value: Boolean);
 begin
-  FReadOnly := ReadOnly;
+  FReadOnly := Value;
 end;
 
 {**
@@ -1480,8 +1480,8 @@ end;
   @param Connection a database connection object.
   @param EventName a name of the SQL event.
 }
-constructor TZAbstractNotification.Create(Connection: IZConnection;
-  EventName: string);
+constructor TZAbstractNotification.Create(const Connection: IZConnection;
+  const EventName: string);
 begin
   FConnection := Connection;
   FEventName := EventName;
@@ -1544,8 +1544,8 @@ end;
   @param Name a name of the sequence generator.
   @param BlockSize a number of unique keys requested in one trip to server.
 }
-constructor TZAbstractSequence.Create(Connection: IZConnection;
-  Name: string; BlockSize: Integer);
+constructor TZAbstractSequence.Create(const Connection: IZConnection;
+  const Name: string; BlockSize: Integer);
 begin
   FConnection := Connection;
   FName := Name;

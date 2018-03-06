@@ -107,7 +107,7 @@ type
   protected
     procedure SetInParamCount(const NewParamCount: Integer); override;
   public
-    constructor Create(Connection: IZConnection; ProcName: string; Info: TStrings);
+    constructor Create(const Connection: IZConnection; const ProcName: string; Info: TStrings);
     procedure Close; override;
 
     procedure RegisterOutParameter(ParameterIndex: Integer;
@@ -408,8 +408,8 @@ begin
     end; *)
 end;
 
-constructor TZDBLibCallableStatement.Create(Connection: IZConnection;
-  ProcName: string; Info: TStrings);
+constructor TZDBLibCallableStatement.Create(const Connection: IZConnection;
+  const ProcName: string; Info: TStrings);
 begin
   inherited Create(Connection, ProcName, Info);
   Connection.QueryInterface(IZDBLibConnection, FDBLibConnection);

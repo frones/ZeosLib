@@ -208,7 +208,7 @@ type
     FASAConnection: TZASAConnection;
     function ComposeObjectString(const S: String; Const NullText: String = 'null';
       QuoteChar: Char = #39): String;
-    function ConvertEscapes(Pattern: String): String;
+    function ConvertEscapes(const Pattern: String): String;
   protected
     function DecomposeObjectString(const S: String): String; override;
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-28
@@ -1202,7 +1202,7 @@ end;
 
 { TZASADatabaseMetadata }
 
-function TZASADatabaseMetadata.ConvertEscapes(Pattern: String): String;
+function TZASADatabaseMetadata.ConvertEscapes(const Pattern: String): String;
 var
   EscapeChar: Char;
   P: PChar;
@@ -2348,15 +2348,8 @@ var
 begin
   Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
-  if Unique then
-    Is_Unique := '''1'''
-  else
-    Is_Unique := '''0''';
-
-  if Approximate then
-    Accuracy := '''1'''
-  else
-    Accuracy := '''0''';
+  Is_Unique := AnsiQuotedStr(BoolStrInts[Unique], '''');
+  Accuracy := AnsiQuotedStr(BoolStrInts[Approximate], '''');
 
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_getindexinfo %s, %s, %s, %s, %s',

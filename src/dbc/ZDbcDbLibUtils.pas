@@ -78,7 +78,7 @@ function ConvertTDSTypeToSqlType(const FieldType: TTDSType;
   @param string field type value
   @result the SqlType field type value
 }
-function ConvertDBLibTypeToSqlType({%H-}Value: string): TZSQLType;
+function ConvertDBLibTypeToSqlType(const {%H-}Value: string): TZSQLType;
 
 {**
   Converts ZDBC SQL types into MS SQL native types.
@@ -215,7 +215,7 @@ end;
   @param string field type value
   @result the SqlType field type value
 }
-function ConvertDBLibTypeToSqlType(Value: string): TZSQLType;
+function ConvertDBLibTypeToSqlType(const Value: string): TZSQLType;
 begin
   Result := stUnknown;
 end;
@@ -333,10 +333,7 @@ begin
   then Result := 'NULL'
   else case ParamType of
     stBoolean:
-      if ClientVarManager.GetAsBoolean(Value) then
-        Result := '1'
-      else
-        Result := '0';
+      Result := BoolStrIntsRaw[ClientVarManager.GetAsBoolean(Value)];
     stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
     stFloat, stDouble, stCurrency, stBigDecimal:
       Result := ClientVarManager.GetAsRawByteString(Value);

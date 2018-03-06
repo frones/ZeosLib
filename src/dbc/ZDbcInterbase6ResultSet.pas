@@ -677,10 +677,10 @@ begin
       if (sqlscale < 0)  then
       begin
         case SQLCode of
-          SQL_SHORT  : Result := PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale];
-          SQL_LONG   : Result := PInteger(sqldata)^  / IBScaleDivisor[sqlscale];
+          SQL_SHORT  : Result {%H-}:= PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale];
+          SQL_LONG   : Result {%H-}:= PInteger(sqldata)^  / IBScaleDivisor[sqlscale];
           SQL_INT64,
-          SQL_QUAD   : Result := PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
+          SQL_QUAD   : Result {%H-}:= PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
           SQL_DOUBLE : Result := PDouble(sqldata)^;
         else
           raise EZIBConvertError.Create(Format(SErrorConvertionField,

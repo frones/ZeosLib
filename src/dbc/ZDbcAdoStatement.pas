@@ -74,9 +74,9 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
   public
-    constructor Create(Connection: IZConnection; const SQL: string;
+    constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings); overload;
-    constructor Create(Connection: IZConnection; const Info: TStrings); overload;
+    constructor Create(const Connection: IZConnection; const Info: TStrings); overload;
     destructor Destroy; override;
 
     procedure Prepare; override;
@@ -125,7 +125,7 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
   public
-    constructor Create(Connection: IZConnection; const SQL: string;
+    constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings);
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -147,7 +147,7 @@ uses
 
 { TZAdoPreparedStatement }
 
-constructor TZAdoPreparedStatement.Create(Connection: IZConnection;
+constructor TZAdoPreparedStatement.Create(const Connection: IZConnection;
   const SQL: string; const Info: TStrings);
 begin
   FAdoCommand := CoCommand.Create;
@@ -157,7 +157,7 @@ begin
   FAdoCommand._Set_ActiveConnection(FAdoConnection.GetAdoConnection);
 end;
 
-constructor TZAdoPreparedStatement.Create(Connection: IZConnection;
+constructor TZAdoPreparedStatement.Create(const Connection: IZConnection;
   const Info: TStrings);
 begin
   Create(Connection, '', Info);
@@ -227,20 +227,20 @@ var
   RC: OleVariant;
 begin
   if Assigned(FOpenResultSet) then
-    IZResultSet(FOpenResultSet).Close;
+    IZResultSet(FOpenResultSet).Close; //Note keep track we close the RS and DO NOT Try to resync them!
   FOpenResultSet := nil;
   Prepare;
   LastUpdateCount := -1;
   BindInParameters;
   try
     if FIsSelectSQL then
-      begin
-        AdoRecordSet := CoRecordSet.Create;
-        AdoRecordSet.MaxRecords := MaxRows;
-        AdoRecordSet._Set_ActiveConnection(FAdoCommand.Get_ActiveConnection);
-        AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
-      end
-      else
+    begin
+      AdoRecordSet := CoRecordSet.Create;
+      AdoRecordSet.MaxRecords := MaxRows;
+      AdoRecordSet._Set_ActiveConnection(FAdoCommand.Get_ActiveConnection);
+      AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
+    end
+    else
       AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{, adExecuteNoRecords});
     Result := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
       SQL, ConSettings, ResultSetConcurrency);
@@ -375,7 +375,7 @@ begin
 end;
 { TZAdoCallableStatement }
 
-constructor TZAdoCallableStatement.Create(Connection: IZConnection;
+constructor TZAdoCallableStatement.Create(const Connection: IZConnection;
   const SQL: string; const Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);

@@ -1833,9 +1833,7 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(Data)^
-                then FRawTemp := 'True'
-                else FRawTemp := 'False';
+    stBoolean: FRawTemp := BoolStrsRaw[PWordBool(Data)^];
       stByte: FRawTemp := IntToRaw(PByte(Data)^);
       stShort: FRawTemp := IntToRaw(PShortInt(Data)^);
       stWord: FRawTemp := IntToRaw(PWord(Data)^);
@@ -1908,9 +1906,7 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean:  if PWordBool(Data)^
-                  then Result := 'True'
-                  else Result := 'False';
+    stBoolean: Result := BoolStrs[PWordBool(Data)^];
       stByte: Result := ZFastCode.IntToStr(PByte(Data)^);
       stShort: Result := ZFastCode.IntToStr(PShortInt(Data)^);
       stWord: Result := ZFastCode.IntToStr(PWord(Data)^);
@@ -1991,9 +1987,7 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(Data)^
-        then Result := 'True'
-        else Result := 'False';
+    stBoolean: Result := BoolStrsRaw[PWordBool(Data)^];
       stByte: Result := IntToRaw(PByte(Data)^);
       stShort: Result := IntToRaw(PShortInt(Data)^);
       stWord: Result := IntToRaw(PWord(Data)^);
@@ -2061,9 +2055,7 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(Data)^
-        then Result := 'True'
-        else Result := 'False';
+    stBoolean: Result := BoolStrsRaw[PWordBool(Data)^];
       stByte: Result := IntToRaw(PByte(Data)^);
       stShort: Result := IntToRaw(PShortInt(Data)^);
       stWord: Result := IntToRaw(PWord(Data)^);
@@ -2137,9 +2129,7 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean:  if PWordBool(Data)^
-                  then Result := 'True'
-                  else Result := 'False';
+    stBoolean:  Result := BoolStrsRaw[PWordBool(Data)^];
       stByte: Result := IntToRaw(PByte(Data)^);
       stShort: Result := IntToRaw(PShortInt(Data)^);
       stWord: Result := IntToRaw(PWord(Data)^);
@@ -2207,9 +2197,7 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean:  if PWordBool(Data)^
-                  then FUniTemp := 'True'
-                  else FUniTemp := 'False';
+    stBoolean:  FUniTemp := BoolStrsW[PWordBool(Data)^];
       stByte: FUniTemp := IntToUnicode(PByte(Data)^);
       stShort: FUniTemp := IntToUnicode(PShortInt(Data)^);
       stWord: FUniTemp := IntToUnicode(PWord(Data)^);
@@ -2283,9 +2271,7 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(Data)^
-                  then FUniTemp := 'True'
-                  else FUniTemp := 'False';
+    stBoolean: Result := BoolStrsW[PWordBool(Data)^];
       stByte: Result := IntToUnicode(PByte(Data)^);
       stShort: Result := IntToUnicode(PShortInt(Data)^);
       stWord: Result := IntToUnicode(PWord(Data)^);
@@ -3453,10 +3439,7 @@ begin
     stDouble: PDouble(Data)^ := Ord(Value);
     stCurrency: PCurrency(Data)^ := Ord(Value);
     stBigDecimal: PExtended(Data)^ := Ord(Value);
-    stString, stUnicodeString:
-       if Value
-       then SetString(ColumnIndex, 'True')
-       else SetString(ColumnIndex, 'False');
+    stString, stUnicodeString: SetString(ColumnIndex, BoolStrs[Value]);
   end;
 end;
 

@@ -329,7 +329,7 @@ begin
     if FWait then
       Sleep(100)
     else
-      raise Exception.Create(ClassName + '.Acquire'+LineEnding+'O pool de conexatingiu o limite maximo');
+      raise Exception.Create(ClassName + '.Acquire'+LineEnding+'Connection pool reached the maximum limit');
             //2013-10-13 mse: please replace non ASCII characters (>127) by the 
             //#nnn notation in order to have encoding independent sources
   until False;

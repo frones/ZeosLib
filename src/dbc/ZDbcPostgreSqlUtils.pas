@@ -74,8 +74,8 @@ function IsNumber(Value: TZSQLType): Boolean;
    @param The TypeName is PostgreSQL type name
    @return The ZSQLType type
 }
-function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
-  TypeName: string): TZSQLType; overload;
+function PostgreSQLToSQLType(const Connection: IZPostgreSQLConnection;
+  const TypeName: string): TZSQLType; overload;
 
 {**
     Another version of PostgreSQLToSQLType()
@@ -164,72 +164,74 @@ uses ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcUtils, ZSysUtils;
    @param The TypeName is PostgreSQL type name
    @return The ZSQLType type
 }
-function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
-  TypeName: string): TZSQLType;
+function PostgreSQLToSQLType(const Connection: IZPostgreSQLConnection;
+  const TypeName: string): TZSQLType;
+var
+  TypeNameLo: string;
 begin
-  TypeName := LowerCase(TypeName);
-  if (TypeName = 'interval') or (TypeName = 'char') or (TypeName = 'bpchar')
-    or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit')
+  TypeNameLo := LowerCase(TypeName);
+  if (TypeNameLo = 'interval') or (TypeNameLo = 'char') or (TypeNameLo = 'bpchar')
+    or (TypeNameLo = 'varchar') or (TypeNameLo = 'bit') or (TypeNameLo = 'varbit')
   then//EgonHugeist: Highest Priority Client_Character_set!!!!
     if (Connection.GetConSettings.CPType = cCP_UTF16) then
       Result := stUnicodeString
     else
       Result := stString
-  else if TypeName = 'text' then
+  else if TypeNameLo = 'text' then
     Result := stAsciiStream
-  else if TypeName = 'oid' then
+  else if TypeNameLo = 'oid' then
   begin
     if Connection.IsOidAsBlob() then
       Result := stBinaryStream
     else
       Result := stInteger;
   end
-  else if TypeName = 'name' then
+  else if TypeNameLo = 'name' then
     Result := stString
-  else if TypeName = 'enum' then
+  else if TypeNameLo = 'enum' then
     Result := stString
-  else if TypeName = 'cidr' then
+  else if TypeNameLo = 'cidr' then
     Result := stString
-  else if TypeName = 'inet' then
+  else if TypeNameLo = 'inet' then
     Result := stString
-  else if TypeName = 'macaddr' then
+  else if TypeNameLo = 'macaddr' then
     Result := stString
-  else if TypeName = 'int2' then
+  else if TypeNameLo = 'int2' then
     Result := stSmall
-  else if TypeName = 'int4' then
+  else if TypeNameLo = 'int4' then
     Result := stInteger
-  else if TypeName = 'int8' then
+  else if TypeNameLo = 'int8' then
     Result := stLong
-  else if TypeName = 'float4' then
+  else if TypeNameLo = 'float4' then
     Result := stFloat
-  else if (TypeName = 'float8') or (TypeName = 'decimal')
-    or (TypeName = 'numeric') then
+  else if (TypeNameLo = 'float8') or (TypeNameLo = 'decimal')
+    or (TypeNameLo = 'numeric') then
     Result := stDouble
-  else if TypeName = 'money' then
+  else if TypeNameLo = 'money' then
     Result := stCurrency
-  else if TypeName = 'bool' then
+  else if TypeNameLo = 'bool' then
     Result := stBoolean
-  else if TypeName = 'date' then
+  else if TypeNameLo = 'date' then
     Result := stDate
-  else if TypeName = 'time' then
+  else if TypeNameLo = 'time' then
     Result := stTime
-  else if (TypeName = 'datetime') or (TypeName = 'timestamp')
-    or (TypeName = 'timestamptz') or (TypeName = 'abstime') then
+  else if (TypeNameLo = 'datetime') or (TypeNameLo = 'timestamp')
+    or (TypeNameLo = 'timestamptz') or (TypeNameLo = 'abstime') then
     Result := stTimestamp
-  else if TypeName = 'regproc' then
+  else if TypeNameLo = 'regproc' then
     Result := stString
-  else if TypeName = 'bytea' then
+  else if TypeNameLo = 'bytea' then
   begin
     if Connection.IsOidAsBlob then
       Result := stBytes
     else
       Result := stBinaryStream;
   end
-  else if (TypeName = 'int2vector') or (TypeName = 'oidvector') then
+  else if (TypeNameLo = 'int2vector') or (TypeNameLo = 'oidvector') then
     Result := stAsciiStream
-  else if (TypeName <> '') and (TypeName[1] = '_') then // ARRAY TYPES
+  else if (TypeNameLo <> '') and (TypeNameLo[1] = '_') then // ARRAY TYPES
     Result := stAsciiStream
-  else if (TypeName = 'uuid') then
+  else if (TypeNameLo = 'uuid') then
     Result := stGuid
   else
     Result := stUnknown;
@@ -659,7 +661,7 @@ var
 //FirmOS
    ConnectionLost: boolean;
 
-   function GetMessage(AMessage: RawByteString): String;
+   function GetMessage(const AMessage: RawByteString): String;
    begin
     if Assigned(Connection) then
       Result := Trim(Connection.GetConSettings^.ConvFuncs.ZRawToString(AMessage,
@@ -747,10 +749,7 @@ begin
     Result := 'NULL'
   else case InParamType of
     stBoolean:
-      if SoftVarManager.GetAsBoolean(Value) then
-        Result := 'TRUE'
-      else
-        Result := 'FALSE';
+      Result := BoolStrsUpRaw[SoftVarManager.GetAsBoolean(Value)];
     stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong,
     stFloat, stDouble, stCurrency, stBigDecimal:
       begin

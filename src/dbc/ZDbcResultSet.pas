@@ -117,7 +117,7 @@ type
     property Statement: IZStatement read FStatement;
     property Metadata: TContainedObject read FMetadata write FMetadata;
   public
-    constructor Create(Statement: IZStatement; const SQL: string;
+    constructor Create(const Statement: IZStatement; const SQL: string;
       Metadata: TContainedObject; ConSettings: PZConSettings);
     destructor Destroy; override;
 
@@ -645,7 +645,7 @@ end;
   @param Metadata a resultset metadata object.
   @param ConSettings the pointer to Connection Settings record
 }
-constructor TZAbstractResultSet.Create(Statement: IZStatement; const SQL: string;
+constructor TZAbstractResultSet.Create(const Statement: IZStatement; const SQL: string;
   Metadata: TContainedObject; ConSettings: PZConSettings);
 var
   DatabaseMetadata: IZDatabaseMetadata;
@@ -4391,7 +4391,9 @@ begin
   FBlobSize := System.Length(Value)+1;
   FCurrentCodePage := CodePage;
   ReallocMem(FBlobData, FBlobSize);
-  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
+  if fBlobSize = 1
+  then PByte(FBlobData)^ := 0
+  else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetAnsiString(Const Value: AnsiString);
@@ -4399,7 +4401,9 @@ begin
   FBlobSize := System.Length(Value)+1;
   FCurrentCodePage := ZOSCodePage;
   ReallocMem(FBlobData, FBlobSize);
-  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
+  if fBlobSize = 1
+  then PByte(FBlobData)^ := 0
+  else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetUTF8String(Const Value: UTF8String);
@@ -4407,7 +4411,9 @@ begin
   FBlobSize := System.Length(Value)+1;
   FCurrentCodePage := zCP_UTF8;
   ReallocMem(FBlobData, FBlobSize);
-  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
+  if fBlobSize = 1
+  then PByte(FBlobData)^ := 0
+  else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetUnicodeString(const Value: ZWideString);
@@ -4415,7 +4421,9 @@ begin
   FBlobSize := (System.Length(Value)+1) shl 1;
   FCurrentCodePage := zCP_UTF16;
   ReallocMem(FBlobData, FBlobSize);
-  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
+  if fBlobSize = 2
+  then PWord(FBlobData)^ := 0
+  else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetPAnsiChar(const Buffer: PAnsiChar; CodePage: Word; const Len: Cardinal);
@@ -4465,8 +4473,7 @@ procedure TZAbstractCLob.InternalSetPWideChar(const Buffer: PWideChar; const Len
 begin
   if Buffer = nil then
     Clear
-  else
-  begin
+  else begin
     FBlobSize := (Len +1) shl 1; //shl 1 = * 2 but faster
     FCurrentCodePage := zCP_UTF16;
     ReallocMem(FBlobData, FBlobSize);

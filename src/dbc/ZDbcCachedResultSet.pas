@@ -156,9 +156,9 @@ type
     property NativeResolver: IZCachedResolver read FNativeResolver;
     {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   public
-    constructor CreateWithStatement(SQL: string; Statement: IZStatement;
+    constructor CreateWithStatement(const SQL: string; const Statement: IZStatement;
       ConSettings: PZConSettings);
-    constructor CreateWithColumns(ColumnsInfo: TObjectList; SQL: string;
+    constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
       ConSettings: PZConSettings);
     destructor Destroy; override;
 
@@ -330,8 +330,8 @@ uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils, ZEncoding
   @param Statement an SQL statement object.
   @param SQL an SQL query.
 }
-constructor TZAbstractCachedResultSet.CreateWithStatement(SQL: string;
-  Statement: IZStatement; ConSettings: PZConSettings);
+constructor TZAbstractCachedResultSet.CreateWithStatement(const SQL: string;
+  const Statement: IZStatement; ConSettings: PZConSettings);
 begin
   inherited Create(Statement, SQL, nil, ConSettings);
   FCachedUpdates := False;
@@ -343,7 +343,7 @@ end;
   @param ColumnsInfo a columns info for cached rows.
 }
 constructor TZAbstractCachedResultSet.CreateWithColumns(
-  ColumnsInfo: TObjectList; SQL: string; ConSettings: PZConSettings);
+  ColumnsInfo: TObjectList; const SQL: string; ConSettings: PZConSettings);
 begin
   inherited Create(nil, SQL, nil, ConSettings);
 

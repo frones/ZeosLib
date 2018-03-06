@@ -159,7 +159,7 @@ type
     procedure SetFieldType(const Index: Word; Size: Integer; Code: Smallint;
       Scale: Smallint);
   public
-    constructor Create(PlainDriver: IZInterbasePlainDriver;
+    constructor Create(const PlainDriver: IZInterbasePlainDriver;
       Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
       ConSettings: PZConSettings);
     destructor Destroy; override;
@@ -233,7 +233,7 @@ function GetNameSqlType(Value: Word): RawByteString;
 function CheckInterbase6Error(const PlainDriver: IZInterbasePlainDriver;
   const StatusVector: TARRAY_ISC_STATUS; const ConSettings: PZConSettings;
   const LoggingCategory: TZLoggingCategory = lcOther;
-  SQL: RawByteString = '') : Integer;
+  const SQL: RawByteString = '') : Integer;
 
 { Interbase information functions}
 function GetISC_StringInfo(const PlainDriver: IZInterbasePlainDriver;
@@ -273,7 +273,7 @@ procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
   const InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
   const InParamCount: Integer; const ParamSqlData: IZParamsSQLDA;
   const ConSettings: PZConSettings; const CodePageArray: TWordDynArray); overload;
-procedure FreeStatement(PlainDriver: IZInterbasePlainDriver;
+procedure FreeStatement(const PlainDriver: IZInterbasePlainDriver;
   StatementHandle: TISC_STMT_HANDLE; Options : Word);
 function GetStatementType(const PlainDriver: IZInterbasePlainDriver;
   const StmtHandle: TISC_STMT_HANDLE; const ConSettings: PZConSettings): TZIbSqlStatementType;
@@ -524,7 +524,7 @@ end;
 
   @return generated string
 }
-function BuildPB(Info: TStrings; VersionCode: Byte; const FilterPrefix: string; ParamArr: array of TZIbParam): RawByteString;
+function BuildPB(Info: TStrings; VersionCode: Byte; const FilterPrefix: string; const ParamArr: array of TZIbParam): RawByteString;
 
   procedure ExtractParamNameAndValue(const S: string; out ParamName: String; out ParamValue: RawByteString);
   var
@@ -876,12 +876,13 @@ end;
 function CheckInterbase6Error(const PlainDriver: IZInterbasePlainDriver;
   const StatusVector: TARRAY_ISC_STATUS; const ConSettings: PZConSettings;
   const LoggingCategory: TZLoggingCategory = lcOther;
-  SQL: RawByteString = '') : Integer;
+  const SQL: RawByteString = '') : Integer;
 var
   Msg: array[0..1024] of AnsiChar;
   PStatusVector: PISC_STATUS;
   ErrorMessage, ErrorSqlMessage: RawByteString;
   ErrorCode: LongInt;
+  aSQL: RawByteString;
 begin
   Result := 0;
   if (StatusVector[0] = 1) and (StatusVector[1] > 0) then
@@ -895,17 +896,18 @@ begin
     PlainDriver.isc_sql_interprete(ErrorCode, Msg, 1024);
     ErrorSqlMessage := Msg;
 
-    if SQL <> '' then
-      SQL := ' The SQL: '+SQL+'; ';
-
     if ErrorMessage <> '' then
     begin
+      if SQL <> ''
+      then aSQL := ' The SQL: '+SQL+'; '
+      else aSQL := '';
+
       DriverManager.LogError(LoggingCategory, ConSettings^.Protocol,
-        ErrorMessage, ErrorCode, ErrorSqlMessage + SQL);
+        ErrorMessage, ErrorCode, ErrorSqlMessage + aSQL);
 
       raise EZSQLException.CreateWithCode(ErrorCode,
         ConSettings^.ConvFuncs.ZRawToString('SQL Error: '+ErrorMessage+'. Error Code: '+IntToRaw(ErrorCode)+
-        '. '+ErrorSqlMessage + SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+        '. '+ErrorSqlMessage + aSQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
     end;
   end;
 end;
@@ -1015,7 +1017,7 @@ end;
    @param  the interbase plain driver
    @param  the interbse statement handle
 }
-procedure FreeStatement(PlainDriver: IZInterbasePlainDriver; StatementHandle: TISC_STMT_HANDLE; Options: Word);
+procedure FreeStatement(const PlainDriver: IZInterbasePlainDriver; StatementHandle: TISC_STMT_HANDLE; Options: Word);
 var
   StatusVector: TARRAY_ISC_STATUS;
 begin
@@ -1716,7 +1718,7 @@ begin
 end;
 
 { TSQLDA }
-constructor TZSQLDA.Create(PlainDriver: IZInterbasePlainDriver;
+constructor TZSQLDA.Create(const PlainDriver: IZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
   ConSettings: PZConSettings);
 begin

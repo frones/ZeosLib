@@ -72,8 +72,8 @@ type
   @param Url an initial database URL.
   @param SuupportedProtocols a driver's supported subprotocols.
 }
-function ResolveConnectionProtocol(Url: string;
-  SupportedProtocols: TStringDynArray): string;
+function ResolveConnectionProtocol(const Url: string;
+  const SupportedProtocols: TStringDynArray): string;
 
 {**
   Resolves a database URL and fills the database connection parameters.
@@ -126,7 +126,7 @@ procedure CopyColumnsInfo(FromList: TObjectList; ToList: TObjectList);
   @param Default a parameter default value.
   @return a parameter value or default if nothing was found.
 }
-function DefineStatementParameter(Statement: IZStatement; const ParamName: string;
+function DefineStatementParameter(const Statement: IZStatement; const ParamName: string;
   const Default: string): string;
 
 {**
@@ -162,7 +162,7 @@ function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTE
 
 {$IF defined(ENABLE_MYSQL) or defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
-  OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
+  const OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
   const PAramTypes: array of ShortInt);
 {$IFEND}
 
@@ -204,8 +204,8 @@ uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, TypInfo;
   @param Url an initial database URL.
   @param SupportedProtocols a driver's supported subprotocols.
 }
-function ResolveConnectionProtocol(Url: string;
-  SupportedProtocols: TStringDynArray): string;
+function ResolveConnectionProtocol(const Url: string;
+  const SupportedProtocols: TStringDynArray): string;
 var
   I: Integer;
   Protocol: string;
@@ -426,7 +426,7 @@ end;
   @param Default a parameter default value.
   @return a parameter value or default if nothing was found.
 }
-function DefineStatementParameter(Statement: IZStatement; const ParamName: string;
+function DefineStatementParameter(const Statement: IZStatement; const ParamName: string;
   const Default: string): string;
 begin
   Result := Statement.GetParameters.Values[ParamName];
@@ -729,7 +729,7 @@ end;
 
 {$IF defined(ENABLE_MYSQL) or defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE) or defined(EANABLE_ASA)}
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
-  OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
+  const OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
   const ParamTypes: array of ShortInt);
 var
   ParamIndex, I: Integer;
@@ -891,7 +891,7 @@ begin
       ceUTF16:
         begin
           SetLength(US, Size shr 1);
-          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(US), Size);
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(US)^, Size);
           if ConSettings.ClientCodePage.Encoding = ceAnsi then
             {$IFDEF WITH_LCONVENCODING}
             Result := Consettings.PlainConvertFunc(UTF8Encode(US))

@@ -134,7 +134,7 @@ type
     procedure Open; override;
   public
     constructor Create(const PlainDriver: IZOraclePlainDriver;
-      const Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
+      const Statement: IZStatement; const SQL: string; StmtHandle: POCIStmt;
       ErrorHandle: POCIError; const OutParams: PZSQLVars; const OracleParams: TZOracleParams);
     procedure Close; override;
     function Next: Boolean; override;
@@ -1738,7 +1738,7 @@ end;
   @param Handle a Oracle specific query handle.
 }
 constructor TZOracleCallableResultSet.Create(const PlainDriver: IZOraclePlainDriver;
-  const Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
+  const Statement: IZStatement; const SQL: string; StmtHandle: POCIStmt;
   ErrorHandle: POCIError; const OutParams: PZSQLVars;
   const OracleParams: TZOracleParams);
 begin

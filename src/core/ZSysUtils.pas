@@ -1872,7 +1872,8 @@ var L: Integer;
 begin
   L := Length(Value);
   SetLength(Result, L);
-  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Result)^, L*SizeOf(AnsiChar));
+  if Value <> '' then
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Result)^, L);
 end;
 {$ENDIF}
 {**
@@ -1915,7 +1916,7 @@ begin
     RBS := UnicodeStringToASCII7(Value);
     SetLength(Result, L);
     if Value <> '' then
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(RBS)^, Pointer(Result)^, L)
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(RBS[1], Result[0], L)
   end;
 end;
 {$ENDIF}
