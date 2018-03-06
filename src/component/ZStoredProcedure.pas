@@ -283,7 +283,7 @@ begin
           Param.DataType := ftWideMemo;
         end;
         {$ENDIF}
-        ftBytes, ftVarBytes:
+        ftBytes, ftVarBytes, ftGuid:
           Param.Value := FCallableStatement.GetBytes(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftDate:
           Param.AsDate := FCallableStatement.GetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});

@@ -68,8 +68,11 @@ const
   { Parameters common for all DBC's }
 
   { Following parameters are for datasets and statements but could be set for
-    connections to influence all linked objects. 
-    Values of all these parameters are being determined via DefineStatementParameter }
+    connections to influence all linked objects.
+    Values of all these parameters are being determined via DefineStatementParameter
+    (value from DS/Stmt properties retrieved first; if it is empty, then value
+    from Connection properties retrieved. If it is empty too, the default value
+    is returned (usually empty string for options of type STR) }
 
   // Type: all | changed
   // Same as Dataset.UpdateMode property
@@ -260,11 +263,29 @@ const
   // Create new DB on the given path on connect
   ConnProps_CreateNewDatabase = 'CreateNewDatabase';
   // Type: BOOLEAN
-  // Set a type of **all** CHAR(16) fields to GUID.
+  // Set a type of **all** CHAR(16) CHAR SET OCTETS fields to GUID.
   ConnProps_SetGUIDByType = 'SetGUIDByType';
   // Type: STR, like Domain1[, Domain2, ...] (separators: "," or ";")
   // List of domains; if defined, fields of that domains will get GUID type
   ConnProps_GUIDDomains = 'GUIDDomains';
+
+  { Parameters that are for datasets and statements but could be set for connections
+    (see comment above) }
+
+  // Type: STR, like Field1[, Field2, ...] (separators: "," or ";")
+  // List of fields; if defined, fields with these names will get GUID type
+  // Be careful using this option on connection level.
+  DSProps_GUIDFields = 'GUIDFields';
+
+  { Parameters for datasets }
+
+  // Type: BOOLEAN
+  // Set a type of **all** CHAR(16) CHAR SET OCTETS fields to GUID.
+  // The effective value of this parameter is also determined via
+  // DefineStatementParameter but declared as separate constant to logically
+  // distinguish DS-level and DB-level options.
+  // In addition, DB-level option affects things besides datasets.
+  DSProps_SetGUIDByType = ConnProps_SetGUIDByType;
 
   { In addition, all isc_dpb_* (connection level) and isc_tpb_* (transaction level)
     parameters could be used as well, refer to Firebird manual for details.

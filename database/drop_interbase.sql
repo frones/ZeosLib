@@ -5,7 +5,10 @@
 drop procedure ABTEST;
 drop procedure procedure2;
 drop procedure procedure1;
+drop procedure guidtest;
+
 drop view dep_view;
+
 drop table blob_values;
 drop table cargo;
 drop table people;
@@ -23,7 +26,9 @@ drop table high_load;
 drop table default_values;
 drop table default_values2;
 drop table domain_values;
+drop table guids;
 
 drop domain tinteger;
 drop domain tfloat;
 drop domain tstring;
+drop domain DOM_GUID;

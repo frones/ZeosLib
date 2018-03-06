@@ -1846,7 +1846,7 @@ begin
       ftWideString:
         Statement.SetUnicodeString(Index, Param.AsWideString);
       {$ENDIF}
-      ftBytes, ftVarBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
+      ftBytes, ftVarBytes:
         begin
           {$IFDEF TPARAM_HAS_ASBYTES}
           Bts := Param.AsBytes;
@@ -1862,6 +1862,22 @@ begin
           {$ENDIF}
           Statement.SetBytes(Index, TempBytes);
         end;
+      {$IFDEF WITH_FTGUID}
+      // As of now (on Delphi 10.2) TParam has no support of ftGuid data type.
+      // GetData and GetDataSize will raise exception on unsupported data types.
+      // But user can assign data type manually and as long as he doesn't call
+      // these methods things will be fine.
+      // Here we presume the data is stored as TBytes.
+      ftGuid:
+        begin
+          {$IFDEF TPARAM_HAS_ASBYTES}
+          TempBytes := Param.AsBytes;
+          {$ELSE}
+          TempBytes := VarToBytes(Param.Value);
+          {$ENDIF}
+          Statement.SetGuid(Index, PGUID(TempBytes)^);
+        end;
+      {$ENDIF}
       ftDate:
         Statement.SetDate(Index, Param.AsDate);
       ftTime:

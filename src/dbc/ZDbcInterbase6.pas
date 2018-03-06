@@ -78,7 +78,7 @@ type
   end;
   {$WARNINGS ON}
 
-  TZInterbase6GUIDProps = class;
+  TZInterbase6ConnectionGUIDProps = class;
 
   {** Represents a Interbase specific connection interface. }
   IZInterbase6Connection = interface (IZConnection)
@@ -88,23 +88,43 @@ type
     function GetDialect: Word;
     function GetPlainDriver: IZInterbasePlainDriver;
     function GetXSQLDAMaxSize: LongWord;
-    function GetGUIDProps: TZInterbase6GUIDProps;
+    function GetGUIDProps: TZInterbase6ConnectionGUIDProps;
   end;
 
-  TGUIDDetectFlag = (gfByType, gfByDomain);
+  TGUIDDetectFlag = (gfByType, gfByDomain, gfByFieldName);
   TGUIDDetectFlags = set of TGUIDDetectFlag;
 
   {** Implements GUID detection options/properties }
-  TZInterbase6GUIDProps = class
+
+  TZInterbase6AbstractGUIDProps = class
   private
     FDetectFlags: TGUIDDetectFlags;
     FDomains: TStrings;
-  protected // to access from other classes of the unit
-    procedure InitGUIDProps(Properties: TStrings);
+    FFields: TStrings;
+  protected // to access from descendants
+    procedure InternalInit(const OptionByType, OptionDomains, OptionFields: string);
+    function ColumnIsGUID(SQLType: TZSQLType; DataSize: Integer; const ColumnDomain, ColumnName: string): Boolean;
   public
     destructor Destroy; override;
     function ColumnCouldBeGUID(SQLType: TZSQLType; DataSize: Integer): Boolean;
-    function ColumnIsGUID(SQLType: TZSQLType; DataSize: Integer; const ColumnDomain: string): Boolean;
+  end;
+
+  // Reusable object intended for use on Connection level. Allows re-initialization
+  // if Connection properties are changed. Uses Connection properties only
+  TZInterbase6ConnectionGUIDProps = class(TZInterbase6AbstractGUIDProps)
+  protected // to access from other classes of the unit
+    procedure InitFromProps(Properties: TStrings);
+  public
+    function ColumnIsGUID(SQLType: TZSQLType; DataSize: Integer; const ColumnDomain, ColumnName: string): Boolean;
+  end;
+
+  // Temporary object intended for use on Statement level. Should be re-created
+  // whenever a Statement is opened. Uses Statement & Connection properties.
+  // Doesn't consider domain info (there's no domains on Statement level)
+  TZInterbase6StatementGUIDProps = class(TZInterbase6AbstractGUIDProps)
+  public
+    constructor Create(const Statement: IZStatement); overload;
+    function ColumnIsGUID(SQLType: TZSQLType; DataSize: Integer; const ColumnName: string): Boolean;
   end;
 
   {** Implements Interbase6 Database Connection. }
@@ -122,7 +142,7 @@ type
     FXSQLDAMaxSize: LongWord;
     fTPB: RawByteString; //cache the TPB String for hard commits else we're permanently build the str from Props
     FPlainDriver: IZInterbasePlainDriver;
-    FGUIDProps: TZInterbase6GUIDProps;
+    FGUIDProps: TZInterbase6ConnectionGUIDProps;
     procedure CloseTransaction;
   protected
     procedure InternalCreate; override;
@@ -138,7 +158,7 @@ type
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
     function GetXSQLDAMaxSize: LongWord;
-    function GetGUIDProps: TZInterbase6GUIDProps;
+    function GetGUIDProps: TZInterbase6ConnectionGUIDProps;
     procedure CreateNewDatabase(const SQL: RawByteString);
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -297,7 +317,7 @@ constructor TZInterbase6Connection.Create(const ZUrl: TZURL);
 begin
   // ! Create the object before parent's constructor because it is used in
   // TZAbstractConnection.Create > Url.OnPropertiesChange
-  FGUIDProps := TZInterbase6GUIDProps.Create;
+  FGUIDProps := TZInterbase6ConnectionGUIDProps.Create;
   inherited;
 end;
 
@@ -389,7 +409,6 @@ var
   WireCompression: Boolean;
 begin
   FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
-  FGUIDProps.InitGUIDProps(Info);
 
   FHardCommit := StrToBoolEx(URL.Properties.Values[ConnProps_HardCommit]);
   { Sets a default Interbase port }
@@ -437,7 +456,7 @@ begin
     CloseTransaction;
     FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
   end;
-  FGUIDProps.InitGUIDProps(Info);
+  FGUIDProps.InitFromProps(Info);
 end;
 
 {**
@@ -510,7 +529,7 @@ begin
   Result := FPlainDriver;
 end;
 
-function TZInterbase6Connection.GetGUIDProps: TZInterbase6GUIDProps;
+function TZInterbase6Connection.GetGUIDProps: TZInterbase6ConnectionGUIDProps;
 begin
   Result := FGUIDProps;
 end;
@@ -1218,41 +1237,43 @@ begin
     Result := Format(' GEN_ID(%s, %d) ', [QuotedName, BlockSize]);
 end;
 
-{ TZInterbase6GUIDProps }
+{ TZInterbase6AbstractGUIDProps }
 
-destructor TZInterbase6GUIDProps.Destroy;
+destructor TZInterbase6AbstractGUIDProps.Destroy;
 begin
   FreeAndNil(FDomains);
+  FreeAndNil(FFields);
   inherited;
 end;
 
-{**
-  Reads GUID-related properties and inits internal fields.
-}
-procedure TZInterbase6GUIDProps.InitGUIDProps(Properties: TStrings);
-var
-  sDomains: string;
+procedure TZInterbase6AbstractGUIDProps.InternalInit(const OptionByType, OptionDomains, OptionFields: string);
 begin
+  // Cleanup
   FreeAndNil(FDomains);
+  FreeAndNil(FFields);
   FDetectFlags := [];
 
-  if StrToBoolEx(Properties.Values[ConnProps_SetGUIDByType]) then
+  if StrToBoolEx(OptionByType) then
     Include(FDetectFlags, gfByType);
-  sDomains := Properties.Values[ConnProps_GUIDDomains];
-  if sDomains <> '' then
+  if OptionDomains <> '' then
   begin
     Include(FDetectFlags, gfByDomain);
-    FDomains := ExtractFields(sDomains, [';', ',']);
+    FDomains := ExtractFields(OptionDomains, [';', ',']);
+  end;
+  if OptionFields <> '' then
+  begin
+    Include(FDetectFlags, gfByFieldName);
+    FFields := ExtractFields(OptionFields, [';', ',']);
   end;
 end;
 
 {**
-  Determines if a column could have GUID / UUID type (type = bytes and length = 16)
+  Determines if a column could have GUID / UUID type (SQLType = stBytes and DataSize = 16)
   @param  SQL column type
   @param  length of column data
   @return True if domain could have GUID type
 }
-function TZInterbase6GUIDProps.ColumnCouldBeGUID(SQLType: TZSQLType; DataSize: Integer): Boolean;
+function TZInterbase6AbstractGUIDProps.ColumnCouldBeGUID(SQLType: TZSQLType; DataSize: Integer): Boolean;
 begin
   Result := (SQLType = stBytes) and (DataSize = 16);
 end;
@@ -1262,16 +1283,70 @@ end;
   @param  SQL column type             (used if GUID is determined by type)
   @param  length of column data       (used if GUID is determined by type)
   @param  domain name                 (used if GUID is determined by domain name)
+  @param  column name                 (used if GUID is determined by field name)
   @return True if column must have GUID type according to connection properties.
 }
-function TZInterbase6GUIDProps.ColumnIsGUID(SQLType: TZSQLType; DataSize: Integer; const ColumnDomain: string): Boolean;
+function TZInterbase6AbstractGUIDProps.ColumnIsGUID(SQLType: TZSQLType; DataSize: Integer; const ColumnDomain, ColumnName: string): Boolean;
 begin
-  Result := False;
+  if ColumnCouldBeGUID(SQLType, DataSize) then
+  begin
+    // Perform checking by descending importance, the first positive result breaks the chain
+    if (gfByFieldName in FDetectFlags) and (ColumnName <> '') then
+    begin
+      Result := (FFields.IndexOf(ColumnName) <> -1);
+      if Result then Exit;
+    end;
+    if (gfByDomain in FDetectFlags) and (ColumnDomain <> '') then
+    begin
+      Result := (FDomains.IndexOf(ColumnDomain) <> -1);
+      if Result then Exit;
+    end;
+    Result := (gfByType in FDetectFlags);
+  end
+  else
+    Result := False;
+end;
 
-  if gfByType in FDetectFlags then
-    Result := ColumnCouldBeGUID(SQLType, DataSize)
-  else if gfByDomain in FDetectFlags then
-    Result := (FDomains.IndexOf(ColumnDomain) <> -1);
+{ TZInterbase6ConnectionGUIDProps }
+
+{**
+  For use from this unit only.
+  Reads GUID-related values from Properties and inits internal fields.
+}
+procedure TZInterbase6ConnectionGUIDProps.InitFromProps(Properties: TStrings);
+begin
+  InternalInit(
+    Properties.Values[ConnProps_SetGUIDByType],
+    Properties.Values[ConnProps_GUIDDomains],
+    Properties.Values[DSProps_GUIDFields]
+  );
+end;
+
+function TZInterbase6ConnectionGUIDProps.ColumnIsGUID(SQLType: TZSQLType;
+  DataSize: Integer; const ColumnDomain, ColumnName: string): Boolean;
+begin
+  Result := inherited ColumnIsGUID(SQLType, DataSize, ColumnDomain, ColumnName);
+end;
+
+{ TZInterbase6StatementGUIDProps }
+
+{**
+  For use from outside the unit.
+  Creates an object based on Statement and Connection properties.
+  The object should be re-created every time a Statement is opened.
+}
+constructor TZInterbase6StatementGUIDProps.Create(const Statement: IZStatement);
+begin
+  inherited Create;
+  InternalInit(
+    DefineStatementParameter(Statement, DSProps_SetGUIDByType, ''),
+    '', // Domain info is useless when object is created based on Statement
+    DefineStatementParameter(Statement, DSProps_GUIDFields, '') );
+end;
+
+function TZInterbase6StatementGUIDProps.ColumnIsGUID(SQLType: TZSQLType; DataSize: Integer; const ColumnName: string): Boolean;
+begin
+  Result := inherited ColumnIsGUID(SQLType, DataSize, '', ColumnName);
 end;
 
 initialization

@@ -82,6 +82,7 @@ type
     FDialect: Word;
     FCodePageArray: TWordDynArray;
     FStmtType: TZIbSqlStatementType;
+    FGUIDProps: TZInterbase6StatementGUIDProps;
     function GetIbSqlSubType(const Index: Word): Smallint; {$IF defined(WITH_INLINE) and not (defined(WITH_URW1135_ISSUE) or defined(WITH_URW1111_ISSUE))} inline; {$IFEND}
     function GetQuad(ColumnIndex: Integer): TISC_QUAD;
   protected
@@ -262,6 +263,7 @@ end;
 }
 procedure TZInterbase6XSQLDAResultSet.Close;
 begin
+  FreeAndNil(FGUIDProps);
   { Free output allocated memory }
   FXSQLDA := nil;
   FIZSQLDA := nil;
@@ -365,7 +367,7 @@ begin
                                 if SqlSubType = isc_blob_text then begin
                                   JSONWriter.Add('"');
                                   with FIBConnection do
-                                    ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
+                                    ReadBlobBufer(FPlainDriver, GetDBHandle, GetTrHandle,
                                       PISC_QUAD(sqldata)^, L, P, False, ConSettings);
                                   if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
                                     JSONWriter.AddJSONEscape(P, L)
@@ -376,7 +378,7 @@ begin
                                   JSONWriter.Add('"');
                                 end else begin
                                   with FIBConnection do
-                                    ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
+                                    ReadBlobBufer(FPlainDriver, GetDBHandle, GetTrHandle,
                                       PISC_QUAD(sqldata)^, L, P, true, ConSettings);
                                   JSONWriter.WrBase64(P, L, True);
                                 end;
@@ -1832,6 +1834,8 @@ begin
   if FStmtHandle=0 then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
 
+  FGUIDProps := TZInterbase6StatementGUIDProps.Create(Statement);
+
   ColumnsInfo.Clear;
   if FXSQLDA.sqld > 0 then  //keep track we have a column to avoid range issues see: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=10595
     for I := 0 to FXSQLDA.sqld {FieldCount} - 1 do
@@ -1844,6 +1848,8 @@ begin
         ColumnLabel := FIZSQLDA.GetFieldAliasName(I);
         FieldSqlType := FIZSQLDA.GetFieldSqlType(I);
         DataLen := FIZSQLDA.GetIbSqlLen(I);
+        if FGUIDProps.ColumnIsGUID(FieldSqlType, DataLen, ColumnName) then
+          FieldSqlType := stGUID;
         ColumnType := FieldSqlType;
 
         case FieldSqlType of
