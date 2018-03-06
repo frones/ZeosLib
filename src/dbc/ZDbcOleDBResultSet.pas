@@ -1869,24 +1869,20 @@ begin
       DBTYPE_GUID:
         begin
           SetLength(Result, 16);
-          System.Move(Pointer(FData)^, Pointer(Result)^, 16);
+          PGUID(Result)^ := PGUID(FData)^;
         end;
       DBTYPE_GUID or DBTYPE_BYREF:
         begin
           SetLength(Result, 16);
-          System.Move(PPointer(FData)^^, Pointer(Result)^, 16);
+          PGUID(Result)^ := PGUID(PPointer(FData)^)^;
         end;
       DBTYPE_BYTES:
         begin
-          SetLength(Result, FLength);
-          System.Move(Pointer(FData)^,
-            Pointer(Result)^, FLength);
+          Result := BufferToBytes(FData, FLength);
         end;
       DBTYPE_BYTES or DBTYPE_BYREF:
         begin
-          SetLength(Result, FLength);
-          System.Move(PPointer(FData)^^,
-            Pointer(Result)^, FLength);
+          Result := BufferToBytes(PPointer(FData)^, FLength);
         end;
       else LastWasNull := True;
     end;

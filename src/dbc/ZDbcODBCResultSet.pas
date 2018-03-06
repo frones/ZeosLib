@@ -534,8 +534,9 @@ begin
     {$IFNDEF GENERIC_INDEX}
     ColumnIndex := ColumnIndex-1;
     {$ENDIF}
-    SetLength(Result, fStrLen_or_Ind shl Ord((fSQLTypes[ColumnIndex] in [stString, stUnicodeString]) and fIsUnicodeDriver));
-    System.Move(fColDataPtr^, Pointer(Result)^, Length(Result));
+    Result := BufferToBytes(
+      fColDataPtr,
+      fStrLen_or_Ind shl Ord((fSQLTypes[ColumnIndex] in [stString, stUnicodeString]) and fIsUnicodeDriver));
   end;
 
 end;
