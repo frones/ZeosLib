@@ -4209,8 +4209,7 @@ begin
   if not IsEmpty then
   begin
     if (FBlobSize > 0) and Assigned(FBlobData) then begin
-      SetLength(Result, FBlobSize);
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, Pointer(Result)^, FBlobSize);
+      Result := BufferToBytes(FBlobData, FBlobSize)
     end else
       Result := nil;
   end

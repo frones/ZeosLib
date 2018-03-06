@@ -1517,9 +1517,9 @@ begin
       adVarBinary,
       adLongVarBinary:
         begin
-          SetLength(Result, FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
-          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VArray.Data^,
-            Result[0], FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
+          Result := BufferToBytes(
+            TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VArray.Data,
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
         end;
       else
         begin

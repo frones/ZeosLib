@@ -764,10 +764,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
   Buffer := GetBufferAndLength(ColumnIndex, Len{%H-});
-
-  SetLength(Result, Len);
-  if Len > 0 then
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Result)^, Len);
+  Result := BufferToBytes(Buffer, Len);
 end;
 
 {**
@@ -2281,10 +2278,7 @@ begin
       FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
       FIELD_TYPE_STRING,
       FIELD_TYPE_ENUM, FIELD_TYPE_SET:
-        begin
-          SetLength(Result, FColBind^.length);
-          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(FColBind^.buffer)^, Pointer(Result)^, FColBind^.length);
-        end;
+        Result := BufferToBytes(Pointer(FColBind^.buffer), FColBind^.length);
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         begin

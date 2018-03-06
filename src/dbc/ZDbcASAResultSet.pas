@@ -957,13 +957,11 @@ begin
     with FSQLDA.sqlvar[ColumnIndex] do
       case sqlType and $FFFE of
         DT_BINARY:
-          begin
-            SetLength( Result, PZASASQLSTRING( sqlData).length);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PZASASQLSTRING(sqlData).data[0], Result[0], PZASASQLSTRING(sqlData).length);
-          end;
-      else
-        FSqlData.CreateException( Format( SErrorConvertionField,
-          [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString( sqlType)]));
+          Result := BufferToBytes(
+            @(PZASASQLSTRING(sqlData).data), PZASASQLSTRING(sqlData).length)
+        else
+          FSqlData.CreateException( Format( SErrorConvertionField,
+            [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString( sqlType)]));
       end;
   end;
 end;

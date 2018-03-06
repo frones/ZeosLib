@@ -2792,33 +2792,24 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBytes: if (Data^ <> nil) and (PWord(PAnsiChar(Data)+SizeOf(Pointer))^ > 0) then begin
-            SetLength(Result, PWord(PAnsiChar(Data)+SizeOf(Pointer))^);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PPointer(Data)^^,
-              Pointer(Result)^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^);
-          end else
-            Result := nil;
-      stBinaryStream, stAsciiStream, stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data^)^.IsEmpty
-        then Result := PIZlob(Data^)^.GetBytes
-        else Result := nil;
-      stString, stUnicodeString: if Data^ <> nil then
+      stBytes:
+        Result := BufferToBytes(PPointer(Data)^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^);
+      stBinaryStream, stAsciiStream, stUnicodeStream:
+        if (Data^ <> nil) and not PIZlob(Data^)^.IsEmpty
+          then Result := PIZlob(Data^)^.GetBytes
+          else Result := nil;
+      stString, stUnicodeString:
+        if Data^ <> nil then
           if fRaw then begin
-            SetLength(Result, PPLongWord(Data)^^);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move((PPAnsiChar(Data)^+PAnsiInc)^,
-              Pointer(Result)^, PPLongWord(Data)^^);
+            Result := BufferToBytes( (PPAnsiChar(Data)^+PAnsiInc), PPLongWord(Data)^^ )
           end else begin
             FRawTemp := UnicodeStringToASCII7(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^);
-            SetLength(Result, Length(FRawTemp));
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(FRawTemp)^,
-              Pointer(Result)^, Length(FRawTemp));
+            Result := BufferToBytes( Pointer(FRawTemp), Length(FRawTemp) );
           end
         else
           Result := nil;
-      else begin
-        SetLength(Result, FColumnLengths[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]);
-        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Data^,
-          Pointer(Result)^, Length(Result));
-      end;
+      else
+        Result := BufferToBytes(Data, FColumnLengths[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]);
     end;
     IsNull := False;
   end else

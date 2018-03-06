@@ -207,7 +207,7 @@ function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string; overload;
   @param Length a buffer length.
   @return a TBytes retrived from the buffer.
 }
-function BufferToBytes(Buffer: Pointer; Length: LongInt): TBytes;
+function BufferToBytes(Buffer: Pointer; Length: LongInt): TBytes; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 {**
   Converts a string into boolean value.
@@ -1872,8 +1872,7 @@ var L: Integer;
 begin
   L := Length(Value);
   SetLength(Result, L);
-  if Value <> '' then
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value[1], Result[0], L)
+  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Result)^, L*SizeOf(AnsiChar));
 end;
 {$ENDIF}
 {**
@@ -1894,7 +1893,7 @@ begin
     RBS := UnicodeStringToASCII7(Value);
     SetLength(Result, L);
     if Value <> '' then
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(RBS[1], Result[0], L)
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(RBS)^, Pointer(Result)^, L)
   end;
 end;
 {**
@@ -1916,7 +1915,7 @@ begin
     RBS := UnicodeStringToASCII7(Value);
     SetLength(Result, L);
     if Value <> '' then
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(RBS[1], Result[0], L)
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(RBS)^, Pointer(Result)^, L)
   end;
 end;
 {$ENDIF}
