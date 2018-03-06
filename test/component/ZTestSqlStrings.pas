@@ -131,6 +131,15 @@ begin
 
   SQLStrings.Clear;
   CheckEquals(0, SQLStrings.ParamCount);
+
+  //see http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=49966
+  SQLScript := 'select IsNull(B.X||B.y, '+QuotedStr('')+') as X_Y_Z from "My_Table" as B '+
+    'where 1=1 and :user_ID = B.x and ((B.nazwa iLike :nazwaFiltr) or (B.skrot iLike :nazwaFiltr))';
+  SQLStrings.Text := SQLScript;
+  CheckEquals(2, SQLStrings.ParamCount);
+  CheckEquals('user_ID', SQLStrings.ParamNames[0]);
+  CheckEquals('nazwaFiltr', SQLStrings.ParamNames[1]);
+  SQLStrings.Clear;
 end;
 
 {**

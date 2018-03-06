@@ -157,10 +157,14 @@ implementation
 
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZConnProperties, ZDbcProperties,
+  {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZSysUtils, ZMessages, ZDbcUtils, ZDbcDbLibStatement, ZEncoding, ZFastCode,
   ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser{$IFDEF OLDFPC}, ZClasses{$ENDIF};
 
-{ TZDBLibDriver }
+var
+  DBLIBCriticalSection: TCriticalSection;
+
+  { TZDBLibDriver }
 
 {**
   Constructs this object with default properties.
@@ -184,7 +188,13 @@ end;
 {$WARNINGS OFF}
 function TZDBLibDriver.Connect(const Url: TZURL): IZConnection;
 begin
-  Result := TZDBLibConnection.Create(Url);
+  Result := nil;
+  DBLIBCriticalSection.Enter;
+  try
+    Result := TZDBLibConnection.Create(Url);
+  finally
+    DBLIBCriticalSection.Release
+  end;
 end;
 {$WARNINGS ON}
 
@@ -911,15 +921,11 @@ end;
 function TZDBLibConnection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
-  if GetAutoEncodeStrings then
-    Result := GetDriver.GetTokenizer.GetEscapeString(Result)
 end;
 
 function TZDBLibConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
-  if GetAutoEncodeStrings then
-    Result := GetDriver.GetTokenizer.GetEscapeString(Result)
 end;
 
 function TZDBLibConnection.GetServerAnsiCodePage: Word;
@@ -936,8 +942,10 @@ end;
 initialization
   DBLibDriver := TZDBLibDriver.Create;
   DriverManager.RegisterDriver(DBLibDriver);
+  DBLIBCriticalSection := TCriticalSection.Create;
 finalization
   if Assigned(DriverManager) then
     DriverManager.DeregisterDriver(DBLibDriver);
   DBLibDriver := nil;
+  FreeAndNil(DBLIBCriticalSection);
 end.

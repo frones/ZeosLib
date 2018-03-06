@@ -100,6 +100,7 @@ type
     procedure Test_doCachedLobs;
     procedure TestDefineFields;
     procedure TestDefineSortedFields;
+    procedure TestEmptyMemoAfterFullMemo;
   end;
 
   TZGenericTestDataSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -132,105 +133,6 @@ type
     procedure Test_SP_Type_Dom;
     procedure Test_SP_Type_Type;
     procedure Test_SP_ParamSetVal;
-    procedure Test_SP_Type_Name;
-  protected
-    function GetSupportedProtocols: string; override;
-  published
-    procedure Test;
-  end;
-
-  TZInterbaseTestGUIDS = class(TZAbstractCompSQLTestCase)
-  private
-    CurrentTest: string;
-    Query: TZQuery;
-    SP: TZStoredProc;
-    procedure SetDefaults;
-    procedure DoTest(const TestDescr: string; TestMethod: TTestMethod);
-    procedure CheckEquals(expected, actual: TFieldType; msg: string = ''); overload;
-    procedure CheckNotEquals(expected, actual: TFieldType; msg: string = ''); overload;
-  private // Internal test methods
-    procedure Test_QT_Type_Type;
-    procedure Test_QT_Type_Dom;
-    procedure Test_QT_Type_FName;
-    procedure Test_QT_GetVal;
-    procedure Test_QT_SetVal;
-    procedure Test_QT_ParamSetVal;
-    procedure Test_QSP_Type_Type;
-    procedure Test_QSP_Type_Dom;
-    procedure Test_QSP_Type_FName;
-    procedure Test_SP_ParamType_Dom;
-    procedure Test_SP_ParamType_Type;
-    procedure Test_SP_ParamType_Name;
-    procedure Test_SP_Type_Dom;
-    procedure Test_SP_Type_Type;
-    procedure Test_SP_ParamGUIDSetVal;
-    procedure Test_SP_ParamBytesSetVal;
-    procedure Test_SP_Type_Name;
-  protected
-    function GetSupportedProtocols: string; override;
-  published
-    procedure Test;
-  end;
-
-  TZInterbaseTestGUIDS = class(TZAbstractCompSQLTestCase)
-  private
-    CurrentTest: string;
-    Query: TZQuery;
-    SP: TZStoredProc;
-    procedure SetDefaults;
-    procedure DoTest(const TestDescr: string; TestMethod: TTestMethod);
-    procedure CheckEquals(expected, actual: TFieldType; msg: string = ''); overload;
-    procedure CheckNotEquals(expected, actual: TFieldType; msg: string = ''); overload;
-  private // Internal test methods
-    procedure Test_QT_Type_Type;
-    procedure Test_QT_Type_Dom;
-    procedure Test_QT_Type_FName;
-    procedure Test_QT_GetVal;
-    procedure Test_QT_SetVal;
-    procedure Test_QT_ParamSetVal;
-    procedure Test_QSP_Type_Type;
-    procedure Test_QSP_Type_Dom;
-    procedure Test_QSP_Type_FName;
-    procedure Test_SP_ParamType_Dom;
-    procedure Test_SP_ParamType_Type;
-    procedure Test_SP_ParamType_Name;
-    procedure Test_SP_Type_Dom;
-    procedure Test_SP_Type_Type;
-    procedure Test_SP_ParamGUIDSetVal;
-    procedure Test_SP_ParamBytesSetVal;
-    procedure Test_SP_Type_Name;
-  protected
-    function GetSupportedProtocols: string; override;
-  published
-    procedure Test;
-  end;
-
-  TZInterbaseTestGUIDS = class(TZAbstractCompSQLTestCase)
-  private
-    CurrentTest: string;
-    Query: TZQuery;
-    SP: TZStoredProc;
-    procedure SetDefaults;
-    procedure DoTest(const TestDescr: string; TestMethod: TTestMethod);
-    procedure CheckEquals(expected, actual: TFieldType; msg: string = ''); overload;
-    procedure CheckNotEquals(expected, actual: TFieldType; msg: string = ''); overload;
-  private // Internal test methods
-    procedure Test_QT_Type_Type;
-    procedure Test_QT_Type_Dom;
-    procedure Test_QT_Type_FName;
-    procedure Test_QT_GetVal;
-    procedure Test_QT_SetVal;
-    procedure Test_QT_ParamSetVal;
-    procedure Test_QSP_Type_Type;
-    procedure Test_QSP_Type_Dom;
-    procedure Test_QSP_Type_FName;
-    procedure Test_SP_ParamType_Dom;
-    procedure Test_SP_ParamType_Type;
-    procedure Test_SP_ParamType_Name;
-    procedure Test_SP_Type_Dom;
-    procedure Test_SP_Type_Type;
-    procedure Test_SP_ParamGUIDSetVal;
-    procedure Test_SP_ParamBytesSetVal;
     procedure Test_SP_Type_Name;
   protected
     function GetSupportedProtocols: string; override;
@@ -538,6 +440,13 @@ begin
       SQL.Text := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
       ExecSQL;
     end;
+    //see http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=49966
+    Query.SQL.Text := 'select IsNull(B.X||B.y, '+QuotedStr('')+') as X_Y_Z from "My_Table" as B '+
+    'where 1=1 and :user_ID = B.x and ((B.nazwa iLike :nazwaFiltr) or (B.skrot iLike :nazwaFiltr))';
+    CheckEquals(2, Query.Params.Count);
+    CheckEquals('user_ID', Query.Params[0].Name);
+    CheckEquals('nazwaFiltr', Query.Params[1].Name);
+    Query.SQL.Text := '';
 
     {
       The test for equipment table
@@ -1123,7 +1032,7 @@ begin
     CheckEquals(10, FieldByName('c_width').AsInteger);
     CheckEquals(10, FieldByName('c_height').AsInteger);
     CheckEquals(986.47, FieldByName('c_cost').AsFloat, 0.001);
-    //CheckEquals('#14#17#TюЁЄ2', FieldByName('c_attributes').AsString);
+    //CheckEquals('#14#17#T???2', FieldByName('c_attributes').AsString);
     Close;
   end;
 
@@ -2363,7 +2272,7 @@ end;
 { TZGenericTestDataSetMBCs }
 
 procedure TZGenericTestDataSetMBCs.TestVeryLargeBlobs;
-const teststring: ZWideString = '123456ййаа';
+const teststring: ZWideString = '123456????';
 var
   Query: TZQuery;
   BinStreamE,BinStreamA,TextStream: TMemoryStream;
@@ -2501,6 +2410,52 @@ begin
 end;
 
 { TZInterbaseTestGUIDS }
+procedure TZGenericTestDataSet.TestEmptyMemoAfterFullMemo;
+var
+  Query: TZQuery;
+  TxtValue: String;
+  ValueIsNull: Boolean;
+begin
+  if StartsWith(LowerCase(Connection.Protocol), 'oracle') then
+    Exit;   //not resolveable with ora -> empty is always null except use the or func
+  Query := CreateQuery;
+  try
+    try
+      Query.Connection.StartTransaction;
+      try
+        Query.SQL.Text := 'insert into blob_values (b_id, b_text) values (:id, :text)';
+        Query.ParamByName('id').DataType := ftInteger;
+        Query.ParamByName('text').DataType := ftMemo;
+
+        Query.ParamByName('id').AsInteger := 2000;
+        Query.ParamByName('text').AsMemo := '/* abc */';
+        Query.ExecSQL;
+        Query.ParamByName('id').AsInteger := 2001;
+        Query.ParamByName('text').AsMemo := '';
+        Query.ExecSQL;
+        Connection.Commit;
+      except
+        Connection.Rollback;
+      end;
+
+      Query.SQL.Text := 'select * from blob_values where b_id = 2001';
+      Query.Open;
+      try
+        TxtValue := Query.FieldByName('b_text').AsString;
+        ValueIsNull := Query.FieldByName('b_text').IsNull;
+      finally
+        Query.Close;
+      end;
+
+      CheckEquals('', TxtValue, 'Tried to insert an empty clob from a paramater, after the parameter has been used before.');
+      CheckEquals(false, ValueIsNull, 'Tried to insert an empty clob from a paramater, after the parameter has been used before. IsNull should return false.');
+    finally
+      Connection.ExecuteDirect('delete from blob_values where b_id in (2000, 2001)');
+    end;
+  finally
+    FreeAndNil(Query);
+  end;
+end;
 
 const
   TBL_NAME = 'Guids';
@@ -2699,7 +2654,7 @@ end;
 
 procedure TZInterbaseTestGUIDS.Test_SP_ParamSetVal;
 begin
-{  Connection.Properties.Values[DSProps_GUIDFields] := 'G_IN,G_OUT';
+  Connection.Properties.Values[DSProps_GUIDFields] := 'G_IN,G_OUT';
   SP.StoredProcName := PROC_NAME;
   {$IFDEF TPARAM_HAS_ASBYTES}
   SP.Params[0].AsBytes := EncodeGUID(GuidVal).VBytes;
@@ -2710,8 +2665,8 @@ begin
   SP.Active := True;
   CheckEquals(1, Query.RecordCount, CurrentTest + ' rec count');
   CheckEquals(GUIDToString(GuidVal), GUIDToString(TGuidField(Query.FieldByName(GUID_DOM_FIELD)).AsGuid), CurrentTest);
-  Result := (SP.RecordCount = 1) and (TGuidField(SP.FieldByName('G_OUT')).AsGuid = GuidVal);
-}end;
+  Check((SP.RecordCount = 1) and (TGuidField(SP.FieldByName('G_OUT')).AsGuid = GuidVal));
+end;
 
 procedure TZInterbaseTestGUIDS.Test;
 var GuidHex: string;

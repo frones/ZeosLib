@@ -702,10 +702,9 @@ CheckColumnType:
           stCurrency: RefreshRowAccessor.SetCurrency(RefreshColumnIndex, RefreshResultSet.GetCurrency(I));
           stBigDecimal: RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex, RefreshResultSet.GetBigDecimal(I));
           stString, stUnicodeString:
-            if RefreshRowAccessor is TZRawRowAccessor then
-              RefreshRowAccessor.SetPAnsiChar(RefreshColumnIndex, RefreshResultSet.GetPAnsiChar(I, Len), @Len)
-            else
-              RefreshRowAccessor.SetPWideChar(RefreshColumnIndex, RefreshResultSet.GetPWideChar(I, Len), @Len);
+            if RefreshRowAccessor.IsRaw
+            then RefreshRowAccessor.SetPAnsiChar(RefreshColumnIndex, RefreshResultSet.GetPAnsiChar(I, Len), @Len)
+            else RefreshRowAccessor.SetPWideChar(RefreshColumnIndex, RefreshResultSet.GetPWideChar(I, Len), @Len);
           stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I));
           stDate: RefreshRowAccessor.SetDate(RefreshColumnIndex, RefreshResultSet.GetDate(I));
           stTime: RefreshRowAccessor.SetTime(RefreshColumnIndex, RefreshResultSet.GetTime(I));

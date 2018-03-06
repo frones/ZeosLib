@@ -892,15 +892,11 @@ begin
       end else begin
         if FPlainDriver.SupportsDecodeBYTEA then begin
           pgBuff := FPlainDriver.UnescapeBytea(Buffer, @Len);
-          SetLength(Result, Len);
-          if Assigned(Result) then
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(pgBuff^, Pointer(Result)^, Len);
+          Result := BufferToBytes(pgBuff, Len);
           FPlainDriver.FreeMem(pgBuff);
         end else begin
           Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
-          SetLength(Result, Len);
-          if Assigned(Result) then
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Result)^, Len);
+          Result := BufferToBytes(Buffer, Len);
         end;
       end;
     end else if FpgOIDTypes[ColumnIndex] = UUIDOID { uuid } then begin

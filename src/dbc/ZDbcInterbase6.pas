@@ -183,8 +183,6 @@ type
 
     function GetBinaryEscapeString(const Value: RawByteString): String; override;
     function GetBinaryEscapeString(const Value: TBytes): String; override;
-    function GetEscapeString(const Value: RawByteString): RawByteString; override;
-    function GetEscapeString(const Value: ZWideString): ZWideString; override;
     function GetServerProvider: TZServerProvider; override;
   end;
 
@@ -417,34 +415,36 @@ begin
     Self.Port := 3050;
 
   { set default sql dialect it can be overriden }
-  FDialect := 3;
+  FDialect := StrToIntDef(Info.Values['dialect'], SQL_DIALECT_CURRENT);
 
   FDialect := StrToIntDef(URL.Properties.Values[ConnProps_Dialect], FDialect);
 
+  Info.BeginUpdate; // Do not call OnPropertiesChange every time a property changes
   { Processes connection properties. }
-  self.Info.Values['isc_dpb_username'] := Url.UserName;
-  self.Info.Values['isc_dpb_password'] := Url.Password;
+  Info.Values['isc_dpb_username'] := Url.UserName;
+  Info.Values['isc_dpb_password'] := Url.Password;
 
   if FClientCodePage = '' then //was set on inherited Create(...)
-    if URL.Properties.Values['isc_dpb_lc_ctype'] <> '' then //Check if Dev set's it manually
+    if Info.Values['isc_dpb_lc_ctype'] <> '' then //Check if Dev set's it manually
     begin
-      FClientCodePage := URL.Properties.Values['isc_dpb_lc_ctype'];
+      FClientCodePage := Info.Values['isc_dpb_lc_ctype'];
       CheckCharEncoding(FClientCodePage, True);
     end;
-  URL.Properties.Values['isc_dpb_lc_ctype'] := FClientCodePage;
+  Info.Values['isc_dpb_lc_ctype'] := FClientCodePage;
 
   RoleName := Trim(URL.Properties.Values[ConnProps_Rolename]);
   if RoleName <> '' then
-    URL.Properties.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
+    Info.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
 
   ConnectTimeout := StrToIntDef(URL.Properties.Values[ConnProps_Timeout], -1);
   if ConnectTimeout >= 0 then
-    URL.Properties.Values['isc_dpb_connect_timeout'] := ZFastCode.IntToStr(ConnectTimeout);
+    Info.Values['isc_dpb_connect_timeout'] := ZFastCode.IntToStr(ConnectTimeout);
 
   WireCompression := StrToBoolEx(URL.Properties.Values[ConnProps_WireCompression]);
   if WireCompression then
-    URL.Properties.Values['isc_dpb_config'] :=
-      URL.Properties.Values['isc_dpb_config'] + LineEnding + 'WireCompression=true';
+    Info.Values['isc_dpb_config'] :=
+      Info.Values['isc_dpb_config'] + LineEnding + 'WireCompression=true';
+  Info.EndUpdate;
 
   FXSQLDAMaxSize := 64*1024; //64KB by default
   FHandle := 0;
@@ -643,7 +643,7 @@ begin
         begin
           if not ( FClientCodePage = sCS_NONE ) then
           begin
-            URL.Properties.Values['isc_dpb_lc_ctype'] := sCS_NONE;
+            Info.Values['isc_dpb_lc_ctype'] := sCS_NONE;
             {save the user wanted CodePage-Informations}
             URL.Properties.Values[DSProps_ResetCodePage] := FClientCodePage;
             FClientCodePage := sCS_NONE;
@@ -972,75 +972,22 @@ function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
   if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsBinaryInSQL then
-    if (Length(Value)*2+3) < 32*1024 then
-      Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
-    else
-      raise Exception.Create('Binary data out of range! Use parameters!')
-  else
-    raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
+    if (Length(Value)*2+3) < 32*1024
+    then Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
+    else raise Exception.Create('Binary data out of range! Use parameters!')
+  else raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
 end;
 
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
   if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsBinaryInSQL then
-    if (Length(Value)*2+3) < 32*1024 then
-      Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
-    else
-      raise Exception.Create('Binary data out of range! Use parameters!')
-  else
-    raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
+    if (Length(Value)*2+3) < 32*1024
+    then Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
+    else raise Exception.Create('Binary data out of range! Use parameters!')
+  else raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
 end;
 
-function TZInterbase6Connection.GetEscapeString(const Value: RawByteString): RawByteString;
-begin
-  //http://www.firebirdsql.org/manual/qsg10-firebird-sql.html
-  if GetAutoEncodeStrings then
-    if StartsWith(Value, RawByteString('''')) and EndsWith(Value, RawByteString('''')) then
-      {$IFDEF UNICODE}
-      Result := Value
-      {$ELSE}
-      Result := GetDriver.GetTokenizer.GetEscapeString(Value)
-      {$ENDIF}
-    else
-      {$IFDEF UNICODE}
-      Result := #39+{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39
-      {$ELSE}
-      Result := GetDriver.GetTokenizer.GetEscapeString(#39+StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39)
-      {$ENDIF}
-  else
-    if StartsWith(Value, RawByteString('''')) and EndsWith(Value, RawByteString('''')) then
-      Result := Value
-    else
-      Result := #39+{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39;
-end;
-
-function TZInterbase6Connection.GetEscapeString(const Value: ZWideString): ZWideString;
-begin
-  //http://www.firebirdsql.org/manual/qsg10-firebird-sql.html
-  if GetAutoEncodeStrings then
-    if StartsWith(Value, ZWideString('''')) and EndsWith(Value, ZWideString('''')) then
-      {$IFDEF UNICODE}
-      Result := GetDriver.GetTokenizer.GetEscapeString(Value)
-      {$ELSE}
-      Result := Value
-      {$ENDIF}
-    else
-      {$IFDEF UNICODE}
-      Result := GetDriver.GetTokenizer.GetEscapeString(#39+StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39)
-      {$ELSE}
-      Result := ConSettings^.ConvFuncs.ZRawToUnicode(GetDriver.GetTokenizer.GetEscapeString(#39+StringReplace(ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP), #39, #39#39, [rfReplaceAll])+#39), ConSettings^.ClientCodePage^.CP)
-      {$ENDIF}
-  else
-    if StartsWith(Value, ZWideString('''')) and EndsWith(Value, ZWideString('''')) then
-      Result := Value
-    else
-      {$IFDEF UNICODE}
-      Result := #39+StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39;
-      {$ELSE}
-      Result := ConSettings^.ConvFuncs.ZRawToUnicode(#39+StringReplace(ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP), #39, #39#39, [rfReplaceAll])+#39, ConSettings^.ClientCodePage^.CP);
-      {$ENDIF}
-end;
 {**
   Creates a sequence generator object.
   @param Sequence a name of the sequence generator.

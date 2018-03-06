@@ -1362,7 +1362,8 @@ begin
             end;
             if Buffer <> nil then
               ParamSqlData.WriteLobBuffer(i, Buffer, Len);
-          end;
+          end else
+            ParamSqlData.UpdateNull(I, True);
         end
       else
         raise EZIBConvertError.Create(SUnsupportedParameterType);
@@ -3090,8 +3091,7 @@ begin
   { put data to blob }
   CurPos := 0;
   SegLen := DefaultBlobSegmentSize;
-  while (CurPos < Len) do
-  begin
+  while (CurPos < Len) do begin
     if (CurPos + SegLen > Len) then
       SegLen := Len - CurPos;
     if FPlainDriver.isc_put_segment(@StatusVector, @BlobHandle, SegLen,

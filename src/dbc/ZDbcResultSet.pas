@@ -4174,7 +4174,7 @@ end;
 function TZAbstractBlob.GetString: RawByteString;
 begin
   SetLength(Result, FBlobSize);
-  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, Result[1], FBlobSize);
+  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, Pointer(Result)^, FBlobSize);
 end;
 
 {**
@@ -4189,7 +4189,7 @@ begin
     FBlobSize := System.Length(Value)+1;
     GetMem(FBlobData, FBlobSize);
     if FBlobSize > 1 then
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
     (PAnsiChar(FBlobData)+FBlobSize-1)^ := #0;
   end
   else
@@ -4198,7 +4198,7 @@ begin
     if FBlobSize > 0 then
     begin
       GetMem(FBlobData, FBlobSize);
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
     end;
   end;
   FUpdated := True;
@@ -4213,8 +4213,7 @@ begin
   if not IsEmpty then
   begin
     if (FBlobSize > 0) and Assigned(FBlobData) then begin
-      SetLength(Result, FBlobSize);
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, Result[0], FBlobSize);
+      Result := BufferToBytes(FBlobData, FBlobSize)
     end else
       Result := nil;
   end
@@ -4240,7 +4239,7 @@ begin
     if FBlobSize > 0 then
     begin
       GetMem(FBlobData, FBlobSize);
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value[0], FBlobData^, FBlobSize);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
     end;
   end;
   FUpdated := True;
@@ -4396,7 +4395,9 @@ begin
   FBlobSize := System.Length(Value)+1;
   FCurrentCodePage := CodePage;
   ReallocMem(FBlobData, FBlobSize);
-  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
+  if fBlobSize = 1
+  then PByte(FBlobData)^ := 0
+  else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetAnsiString(Const Value: AnsiString);
@@ -4404,7 +4405,9 @@ begin
   FBlobSize := System.Length(Value)+1;
   FCurrentCodePage := ZOSCodePage;
   ReallocMem(FBlobData, FBlobSize);
-  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
+  if fBlobSize = 1
+  then PByte(FBlobData)^ := 0
+  else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetUTF8String(Const Value: UTF8String);
@@ -4412,7 +4415,9 @@ begin
   FBlobSize := System.Length(Value)+1;
   FCurrentCodePage := zCP_UTF8;
   ReallocMem(FBlobData, FBlobSize);
-  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
+  if fBlobSize = 1
+  then PByte(FBlobData)^ := 0
+  else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetUnicodeString(const Value: ZWideString);
@@ -4420,7 +4425,9 @@ begin
   FBlobSize := (System.Length(Value)+1) shl 1;
   FCurrentCodePage := zCP_UTF16;
   ReallocMem(FBlobData, FBlobSize);
-  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PWideChar(Value)^, FBlobData^, FBlobSize);
+  if fBlobSize = 2
+  then PWord(FBlobData)^ := 0
+  else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetPAnsiChar(const Buffer: PAnsiChar; CodePage: Word; const Len: Cardinal);
@@ -4470,8 +4477,7 @@ procedure TZAbstractCLob.InternalSetPWideChar(const Buffer: PWideChar; const Len
 begin
   if Buffer = nil then
     Clear
-  else
-  begin
+  else begin
     FBlobSize := (Len +1) shl 1; //shl 1 = * 2 but faster
     FCurrentCodePage := zCP_UTF16;
     ReallocMem(FBlobData, FBlobSize);

@@ -221,7 +221,7 @@ type
     function GetClientVersion: Integer; virtual;
     function GetHostVersion: Integer; virtual;
     {END ADDED by fduenas 15-06-2006}
-    function GetDescription: AnsiString;
+    function GetDescription: String;
     procedure SetReadOnly(Value: Boolean); virtual;
     function IsReadOnly: Boolean; virtual;
     function GetURL: String;
@@ -1321,9 +1321,9 @@ begin
  Result := 0;
 end;
 
-function TZAbstractConnection.GetDescription: AnsiString;
+function TZAbstractConnection.GetDescription: String;
 begin
-  PlainDriver.GetDescription;
+  Result := PlainDriver.GetDescription;
 end;
 
 {END ADDED by fduenas 15-06-2006}
@@ -1458,10 +1458,7 @@ end;
 }
 function TZAbstractConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
-  if ConSettings^.AutoEncode then
-    Result := GetDriver.GetTokenizer.GetEscapeString({$IFDEF UNICODE}GetSQLHexWideString{$ELSE}GetSQLHexAnsiString{$ENDIF}(PAnsiChar(Value), Length(Value)))
-  else
-    Result := {$IFDEF UNICODE}GetSQLHexWideString{$ELSE}GetSQLHexAnsiString{$ENDIF}(PAnsiChar(Value), Length(Value));
+  Result := {$IFDEF UNICODE}GetSQLHexWideString{$ELSE}GetSQLHexAnsiString{$ENDIF}(PAnsiChar(Value), Length(Value));
 end;
 
 {**
@@ -1472,56 +1469,27 @@ end;
 }
 function TZAbstractConnection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
-  if ConSettings^.AutoEncode then
-    Result := GetDriver.GetTokenizer.GetEscapeString({$IFDEF UNICODE}GetSQLHexWideString{$ELSE}GetSQLHexAnsiString{$ENDIF}(PAnsiChar(Value), Length(Value)))
-  else
-    Result := {$IFDEF UNICODE}GetSQLHexWideString{$ELSE}GetSQLHexAnsiString{$ENDIF}(PAnsiChar(Value), Length(Value));
+  Result := {$IFDEF UNICODE}GetSQLHexWideString{$ELSE}GetSQLHexAnsiString{$ENDIF}(PAnsiChar(Value), Length(Value));
 end;
 
 function TZAbstractConnection.GetEscapeString(const Value: ZWideString): ZWideString;
+var P: PWideChar;
 begin
-  if GetAutoEncodeStrings then
-    if StartsWith(Value, '''') and EndsWith(Value, '''') then
-      Result := GetDriver.GetTokenizer.GetEscapeString(Value)
-    else
-      {$IFDEF UNICODE}
-      Result := AnsiQuotedStr(Value, #39)
-      {$ELSE}
-      Result := ConSettings^.ConvFuncs.ZRawToUnicode(
-        GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(
-          ConSettings^.ConvFuncs.ZUnicodeToRaw(Value,
-            ConSettings^.ClientCodePage^.CP), #39)),
-            ConSettings^.ClientCodePage^.CP)
-      {$ENDIF}
+  P := Pointer(Value);
+  if (P <> nil) and (Length(Value)>1) and (P^=WideChar(#39)) and ((P+Length(Value)-1)^=WideChar(#39)) then
+    Result := Value
   else
-    if StartsWith(Value, RawByteString(#39)) and EndsWith(Value, RawByteString(#39)) then
-      Result := Value
-    else
-      {$IFDEF UNICODE}
-      Result := AnsiQuotedStr(Value, #39);
-      {$ELSE}
-      Result := ConSettings^.ConvFuncs.ZRawToUnicode(
-        AnsiQuotedStr(ConSettings^.ConvFuncs.ZUnicodeToRaw(Value,
-        ConSettings^.ClientCodePage^.CP), #39), ConSettings^.ClientCodePage^.CP);
-      {$ENDIF}
+    Result := SQLQuotedStr(Value, #39);
 end;
 
 function TZAbstractConnection.GetEscapeString(const Value: RawByteString): RawByteString;
+var P: PAnsiChar;
 begin
-  if GetAutoEncodeStrings then
-    if StartsWith(Value, RawByteString(#39)) and EndsWith(Value, RawByteString(#39)) then
-      Result := {$IFNDEF UNICODE}GetDriver.GetTokenizer.GetEscapeString{$ENDIF}(Value)
-    else
-      {$IFDEF WITH_UNITANSISTRINGS}
-      Result := AnsiStrings.AnsiQuotedStr(Value, #39)
-      {$ELSE}
-      Result := GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(Value, #39))
-      {$ENDIF}
+  P := Pointer(Value);
+  if (P <> nil) and (Length(Value)>1) and (P^=#39) and ((P+Length(Value)-1)^=#39) then
+    Result := Value
   else
-    if StartsWith(Value, RawByteString(#39)) and EndsWith(Value, RawByteString(#39)) then
-      Result := Value
-    else
-      Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
+    Result := SQLQuotedStr(Value, #39);
 end;
 
 {**

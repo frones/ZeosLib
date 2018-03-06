@@ -243,7 +243,7 @@ var
 begin
   ColumnsInfo := GetColumnsInfoCollection;
   try
-    Result := TZUnicodeRowAccessor.Create(ColumnsInfo, @ConSettingsDummy);  //dummy cp: Stringfield cp is inconsistent
+    Result := TZRowAccessor.Create(ColumnsInfo, @ConSettingsDummy);  //dummy cp: Stringfield cp is inconsistent
     Result.Alloc;
   finally
     ColumnsInfo.Free;
@@ -873,7 +873,7 @@ var
 begin
   Collection := GetColumnsInfoCollection;
   try
-    RowAccessor := TZUnicodeRowAccessor.Create(Collection, @ConSettingsDummy); //dummy cp: Stringfield cp is inconsistent
+    RowAccessor := TZRowAccessor.Create(Collection, @ConSettingsDummy); //dummy cp: Stringfield cp is inconsistent
     try
       RowAccessor.Dispose;
     finally

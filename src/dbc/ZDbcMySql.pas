@@ -86,7 +86,7 @@ type
     ['{68E33DD3-4CDC-4BFC-8A28-E9F2EE94E457}']
 
     function GetPlainDriver: IZMySQLPlainDriver;
-    function GetConnectionHandle: PZMySQLConnect;
+    function GetConnectionHandle: PMySQL;
     function EscapeString(From: PAnsiChar; Len: ULong; Quoted: Boolean): RawByteString; overload;
     function GetDatabaseName: String;
   end;
@@ -95,15 +95,13 @@ type
   TZMySQLConnection = class(TZAbstractConnection, IZMySQLConnection)
   private
     FCatalog: string;
-    FHandle: PZMySQLConnect;
+    FHandle: PMySQL;
     FDatabaseName: String;
     FIKnowMyDatabaseName: Boolean;
     FPlainDriver: IZMySQLPlainDriver;
   protected
     procedure InternalCreate; override;
   public
-    destructor Destroy; override;
-
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
@@ -130,7 +128,7 @@ type
     function GetHostVersion: Integer; override;
     {END ADDED by fduenas 15-06-2006}
     function GetPlainDriver: IZMySQLPlainDriver;
-    function GetConnectionHandle: PZMySQLConnect;
+    function GetConnectionHandle: PMySQL;
     function GetEscapeString(const Value: ZWideString): ZWideString; override;
     function GetEscapeString(const Value: RawByteString): RawByteString; override;
     function GetDatabaseName: String;
@@ -297,18 +295,11 @@ begin
   FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url);
 end;
 
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZMySQLConnection.Destroy;
-begin
-  inherited Destroy;
-end;
-
 function TZMySQLConnection.EscapeString(From: PAnsiChar;
   Len: ULong; Quoted: Boolean): RawByteString;
 var
   Buf: array[0..2048] of AnsiChar;
+  P: PAnsichar;
 begin
   if ((Len+Byte(Ord(Quoted))) shl 1) > (SizeOf(Buf)-1) then begin
     SetLength(Result, (Len+Byte(Ord(Quoted))) shl 1);
@@ -316,8 +307,9 @@ begin
   end else
     ZSetString(@Buf[0], GetPlainDriver.EscapeString(FHandle, @Buf[0+Ord(Quoted)], From, Len)+(Byte(Ord(Quoted) shl 1)), Result);
   if Quoted then begin
-    Result[1] := '''';
-    Result[Length(Result)] := '''';
+    P := Pointer(Result);
+    P^ := #39;
+    (P+Length(Result)-1)^ := #39;
   end;
 end;
 
@@ -848,7 +840,7 @@ end;
   Gets a reference to MySQL connection handle.
   @return a reference to MySQL connection handle.
 }
-function TZMySQLConnection.GetConnectionHandle: PZMySQLConnect;
+function TZMySQLConnection.GetConnectionHandle: PMySQL;
 begin
   Result := FHandle;
 end;

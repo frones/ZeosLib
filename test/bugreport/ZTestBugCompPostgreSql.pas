@@ -100,6 +100,8 @@ type
     procedure TestUnicodeEscape;
     procedure TestTicket51;
     procedure TestSF81;
+    procedure TestSF218_royo;
+    procedure TestSF218_kgizmo;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1041,6 +1043,94 @@ begin
   Query.Connection := TempConnection;
   try
     TestStandartConfirmingStrings(Query, TempConnection);
+  finally
+    Query.Free;
+    TempConnection.Free;
+  end;
+end;
+
+//see: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=49966
+procedure TZTestCompPostgreSQLBugReport.TestSF218_kgizmo;
+var
+  TempConnection: TZConnection;
+  Query: TZQuery;
+  S: String;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  TempConnection := CreateDatasetConnection;
+  TempConnection.Properties.Add('standard_conforming_strings=OFF');
+  Query := TZQuery.Create(nil);
+  TempConnection.Connect;
+  Query.Connection := TempConnection;
+  try
+    Query.SQL.Text := 'select s_char||''\n''||s_varchar from string_values where 1=1 and (s_varbit iLike :param)';
+    Query.ParamByName('param').AsString := '%'; //kgizmo reports: Everything is OK with Params but I get "\n" string in the result text.
+    Query.Open;
+    Query.Next;
+    S := Query.Fields[0].AsString;
+    Check(s = 'Test string'+#10+'Test string', 'wrong string returned tested with pgadmin and standard_conforming_strings=OFF');
+    Query.Close;
+
+    Query.SQL.Text := 'select s_char||E''\n''||s_varchar from string_values where 1=1 and (s_varbit iLike :param)';
+    Query.ParamByName('param').AsString := '%'; //kgizmo reports: Parameter not found.
+    Query.Open;
+    Query.Next;
+    S := Query.Fields[0].AsString;
+    Check(s = 'Test string'+#10+'Test string', 'wrong string returned tested with pgadmin and standard_conforming_strings=OFF');
+    Query.Close;
+
+    TempConnection.Disconnect;
+    TempConnection.Properties.Add('standard_conforming_strings=ON');
+    Query := TZQuery.Create(nil);
+    TempConnection.Connect;
+
+    Query.Connection := TempConnection;
+    Query.SQL.Text := 'select s_char||''\n''||s_varchar from string_values where 1=1 and (s_varbit iLike :param)';
+    Query.ParamByName('param').AsString := '%'; //kgizmo reports: Everything is OK with Params but I get "\n" string in the result text.
+    Query.Open;
+    Query.Next;
+    S := Query.Fields[0].AsString;
+    Check(s <> 'Test string'+#10+'Test string', 'wrong string returned tested with pgadmin and standard_conforming_strings=ON');
+    Query.Close;
+
+    Query.SQL.Text := 'select s_char||E''\n''||s_varchar from string_values where 1=1 and (s_varbit iLike :param)';
+    Query.ParamByName('param').AsString := '%'; //kgizmo reports: Parameter not found.
+    Query.Open;
+    Query.Next;
+    S := Query.Fields[0].AsString;
+    Check(s = 'Test string'+#10+'Test string', 'wrong string returned tested with pgadmin and standard_conforming_strings=OFF');
+    Query.Close;
+  finally
+    Query.Free;
+    TempConnection.Free;
+  end;
+end;
+
+//see: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=49966
+procedure TZTestCompPostgreSQLBugReport.TestSF218_royo;
+var
+  TempConnection: TZConnection;
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  TempConnection := CreateDatasetConnection;
+  TempConnection.Properties.Add('standard_conforming_strings=OFF');
+  Query := TZQuery.Create(nil);
+  TempConnection.Connect;
+  Query.Connection := TempConnection;
+  try
+    Query.SQL.Text := 'select * from sys_user where user_id = :user_id';
+    Query.ParamByName('user_id').AsInteger := 1; //royo reports: param not found???
+    Query.SQL.Text := '';
+    TempConnection.Disconnect;
+    TempConnection.Properties.Add('standard_conforming_strings=ON');
+    TempConnection.Connect;
+    Query.Connection := TempConnection;
+    Query.SQL.Text := 'select * from sys_user where user_id = :user_id';
+    Query.ParamByName('user_id').AsInteger := 1; //royo reports: param not found???
+    Query.SQL.Text := '';
   finally
     Query.Free;
     TempConnection.Free;

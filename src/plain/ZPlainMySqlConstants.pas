@@ -61,7 +61,7 @@ interface
 
 {$I ZPlain.inc}
 
-{$A-} //pack the records!
+//{$A-} //pack the records!   EH: nope this is wrong!
 uses
    ZCompatibility;
 
@@ -179,8 +179,10 @@ const
       {MYSQL_OPT_SSL_ENFORCE}                   50703
     );
 type
+  my_bool = byte;
+
   PUSED_MEM=^USED_MEM;
-  USED_MEM = packed record
+  USED_MEM = record
     next:       PUSED_MEM;
     left:       Integer;
     size:       Integer;
@@ -190,7 +192,7 @@ type
   ERR_PROC = procedure;
 
   PMEM_ROOT = ^MEM_ROOT;
-  MEM_ROOT = packed record
+  MEM_ROOT = record
     free:          PUSED_MEM;
     used:          PUSED_MEM;
     pre_alloc:     PUSED_MEM;
@@ -222,8 +224,8 @@ type
 
   MYSQL_FIELD_OFFSET = UInt;
 
-  PMYSQL_OPTIONS   = ^_MYSQL_OPTIONS;
-  _MYSQL_OPTIONS = record
+  PMYSQL_OPTIONS   = ^TMYSQL_OPTIONS;
+  TMYSQL_OPTIONS = record
     connect_timeout:          UInt;
     read_timeout:             UInt;
     write_timeout:            UInt;
@@ -264,13 +266,11 @@ type
     local_infile_userdata:    Pointer;
   end;
 
-    PZMySQLConnect = Pointer;
-    PZMySQLResult = Pointer;
-    PZMySQLRow = Pointer;
-    PZMySQLField = Pointer;
-    PZMySQLRowOffset = Pointer;
-    PZMySqlPrepStmt = Pointer;
-    PZMysqlBindArray = Pointer;
+  PZMySQLResult = Pointer;
+  PZMySQLRow = Pointer;
+  PZMySQLField = Pointer;
+  PZMySQLRowOffset = Pointer;
+  PZMysqlBindArray = Pointer;
 
 { Enum Field Types }
   PMysqlFieldTypes = ^TMysqlFieldTypes;
@@ -381,7 +381,7 @@ TMYSQL_CLIENT_OPTIONS =
     MYSQL_TIMESTAMP_TIME = 2
   );
 
-  MYSQL_TIME = record
+  TMYSQL_TIME = record
     year:                UInt;
     month:               UInt;
     day:                 UInt;
@@ -389,11 +389,10 @@ TMYSQL_CLIENT_OPTIONS =
     minute:              UInt;
     second:              UInt;
     second_part:         ULong;
-    neg:                 Byte;
+    neg:                 my_bool;
     time_type:           mysql_timestamp_type;
-    padding:             UInt;    //ludob alignment is different? Mysql returns 36 bytes.
   end;
-  PMYSQL_TIME = ^MYSQL_TIME;
+  PMYSQL_TIME = ^TMYSQL_TIME;
 
   PLIST = ^LIST;
   LIST = record
@@ -544,9 +543,7 @@ TMYSQL_CLIENT_OPTIONS =
     mysql_bind:             Pointer; //Save exact address of bind for lob reading
   end;
 
-  PMYSQL = ^MYSQL;
-
-  MYSQL  = pointer;
+  PMYSQL  = pointer;
 
   PMY_CHARSET_INFO = ^MY_CHARSET_INFO;
   MY_CHARSET_INFO = record

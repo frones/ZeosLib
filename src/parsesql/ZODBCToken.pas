@@ -166,7 +166,6 @@ end;
 }
 procedure TZODBCTokenizer.CreateTokenStates;
 begin
-  EscapeState := TZEscapeState.Create;
   NumberState := TZNumberState.Create;
   QuoteState := TZODBCQuoteState.Create;
   WhitespaceState := TZWhitespaceState.Create;

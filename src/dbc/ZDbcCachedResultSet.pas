@@ -310,6 +310,9 @@ type
   public
     constructor Create(const ResultSet: IZResultSet; const SQL: string;
       const Resolver: IZCachedResolver; ConSettings: PZConSettings);
+    constructor CreateWithColumns(const ColumnsInfo: TObjectList;
+      const ResultSet: IZResultSet; const SQL: string;
+      const Resolver: IZCachedResolver; ConSettings: PZConSettings);
 
     procedure Close; override;
     procedure ResetCursor; override;
@@ -737,19 +740,9 @@ begin
   FInitialRowsList := TList.Create;
   FCurrentRowsList := TList.Create;
 
-  if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
-    (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then
-  begin
-    FRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);
-    FOldRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);
-    FNewRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);
-  end
-  else
-  begin
-    FRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
-    FOldRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
-    FNewRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
-  end;
+  FRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
+  FOldRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
+  FNewRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
 
   FRowAccessor.AllocBuffer(FUpdatedRow);
   FRowAccessor.AllocBuffer(FInsertedRow);
@@ -2456,6 +2449,25 @@ begin
   If Assigned(FResultset) then
     FResultset.Close;
   FResultSet := nil;
+end;
+
+constructor TZCachedResultSet.CreateWithColumns(const ColumnsInfo: TObjectList;
+  const ResultSet: IZResultSet; const SQL: string;
+  const Resolver: IZCachedResolver; ConSettings: PZConSettings);
+begin
+  inherited Create(ResultSet.GetStatement, SQL, nil, ConSettings);
+  FResultSet := ResultSet;
+  FResolver := Resolver;
+  {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
+  FNativeResolver := Resolver;
+  {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
+  if (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) and
+    ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+      FStringFieldAssignFromResultSet := ZStringFieldAssignFromResultSet_AnsiRec
+    else
+      FStringFieldAssignFromResultSet := ZStringFieldAssignFromResultSet_Unicode;
+  ZDbcUtils.CopyColumnsInfo(ColumnsInfo, Self.ColumnsInfo);
+  inherited Open;
 end;
 
 procedure TZCachedResultSet.ResetCursor;

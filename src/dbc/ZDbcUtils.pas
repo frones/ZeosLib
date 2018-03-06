@@ -609,14 +609,6 @@ begin
         end
         else
           case (Tokens[i].TokenType) of
-            ttEscape:
-              Temp := Temp +
-                {$IFDEF UNICODE}
-                ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i].Value,
-                  ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-                {$ELSE}
-                Tokens[i].Value;
-                {$ENDIF}
             ttQuoted, ttComment,
             ttWord, ttQuotedIdentifier, ttKeyword:
               Temp := Temp + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i].Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
@@ -719,7 +711,7 @@ begin
           Temp := Temp + Tokens[i].Value;
           {$ELSE}
           case (Tokens[i].TokenType) of
-            ttEscape, ttQuoted, ttComment,
+            ttQuoted, ttComment,
             ttWord, ttQuotedIdentifier, ttKeyword:
               Temp := Temp + ConSettings^.ConvFuncs.ZStringToUnicode(Tokens[i].Value, ConSettings^.CTRL_CP)
             else
@@ -965,7 +957,7 @@ begin
       ceUTF16:
         begin
           SetLength(US, Size shr 1);
-          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, US[1], Size);
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(US)^, Size);
           if ConSettings.ClientCodePage.Encoding = ceAnsi then
             {$IFDEF WITH_LCONVENCODING}
             Result := Consettings.PlainConvertFunc(UTF8Encode(US))

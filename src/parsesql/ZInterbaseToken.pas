@@ -130,7 +130,6 @@ end;
 
 procedure TZInterbaseTokenizer.CreateTokenStates;
 begin
-  EscapeState := TZEscapeState.Create;
   WhitespaceState := TZWhitespaceState.Create;
 
   SymbolState := TZInterbaseSymbolState.Create;

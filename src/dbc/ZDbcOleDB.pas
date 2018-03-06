@@ -472,8 +472,6 @@ end;
 function TZOleDBConnection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   Result := GetSQLHexString(Pointer(Value), Length(Value), True);
-  if GetAutoEncodeStrings then
-    Result := GetDriver.GetTokenizer.GetEscapeString(Result)
 end;
 
 {**
@@ -485,8 +483,6 @@ end;
 function TZOleDBConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   Result := GetSQLHexString(Pointer(Value), Length(Value), True);
-  if GetAutoEncodeStrings then
-    Result := GetDriver.GetTokenizer.GetEscapeString(Result)
 end;
 
 {**

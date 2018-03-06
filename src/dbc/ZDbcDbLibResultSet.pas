@@ -811,9 +811,7 @@ begin
   FDBLibConnection.CheckDBLibError(lcOther, 'GETBYTES');
   LastWasNull := Data = nil;
 
-  SetLength(Result, DL);
-  if Assigned(Data) then
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(Data)^, Result[0], DL);
+  Result := BufferToBytes(Data, DL);
 end;
 
 {**

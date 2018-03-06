@@ -115,8 +115,6 @@ type
   {** Implements a default tokenizer object. }
   TZPostgreSQLTokenizer = class (TZTokenizer, IZPostgreSQLTokenizer)
   protected
-    function CheckEscapeState(const ActualState: TZTokenizerState; Stream: TStream;
-        const FirstChar: Char): TZTokenizerState; override;
     procedure CreateTokenStates; override;
   public
     procedure SetStandardConformingStrings(const Value: Boolean);
@@ -508,7 +506,6 @@ end;
 }
 procedure TZPostgreSQLTokenizer.CreateTokenStates;
 begin
-  EscapeState := TZEscapeState.Create;
   WhitespaceState := TZWhitespaceState.Create;
 
   SymbolState := TZPostgreSQLSymbolState.Create;
@@ -534,26 +531,6 @@ begin
 
   SetCharacterState('/', '/', CommentState);
   SetCharacterState('-', '-', CommentState);
-end;
-
-{**
-  Checks if WordState is QuoteState with modifier and sets QuoteState.
-  @param Stream the Read-Stream which has to checked for Next-Chars.
-  @FirstChar The FirstChar which was readed and sets the Symbolstate
-  @returns either the given SymbolState or the QuoteState
-}
-function TZPostgreSQLTokenizer.CheckEscapeState(const ActualState:
-    TZTokenizerState; Stream: TStream; const FirstChar: Char): TZTokenizerState;
-var
-  Modifier: string;
-begin
-  Result := inherited CheckEscapeState(ActualState, Stream, FirstChar);
-  if (Result is TZWordState) then
-  begin
-    Modifier := (QuoteState as TZPostgreSQLQuoteState).GetModifier(Stream, FirstChar);
-    if (Modifier <> '') then
-      Result := QuoteState;
-  end;
 end;
 
 end.

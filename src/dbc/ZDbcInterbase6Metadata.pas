@@ -1510,8 +1510,8 @@ begin
         FieldLength := GetInt(FIELD_LENGTH_Index);
 
         Result.MoveToInsertRow;
-        Result.UpdateNull(CatalogNameIndex);    //PROCEDURE_CAT
-        Result.UpdateNull(SchemaNameIndex);    //PROCEDURE_SCHEM
+        //Result.UpdateNull(CatalogNameIndex);    //PROCEDURE_CAT
+        //Result.UpdateNull(SchemaNameIndex);    //PROCEDURE_SCHEM
         Result.UpdateString(ProcColProcedureNameIndex, GetString(PROCEDURE_NAME_Index));
         Result.UpdateString(ProcColColumnNameIndex, ColumnName);
         case GetInt(PARAMETER_TYPE_Index) of
@@ -1804,10 +1804,8 @@ begin
         if DefaultValue = '' then
           DefaultValue := GetString(DEFAULT_SOURCE_DOMAIN_Index);
         if StartsWith(Trim(UpperCase(DefaultValue)), 'DEFAULT') then
-        begin
           DefaultValue := Trim(StringReplace(DefaultValue, 'DEFAULT ', '',
             [rfIgnoreCase]));
-        end;
 
         IF (UpperCase(DefaultValue)= '''NOW''') or (UpperCase(DefaultValue)= '"NOW"')then
           case TypeName of
@@ -1818,8 +1816,8 @@ begin
           end;
 
         Result.MoveToInsertRow;
-        Result.UpdateNull(CatalogNameIndex);    //TABLE_CAT
-        Result.UpdateNull(SchemaNameIndex);    //TABLE_SCHEM
+       // Result.UpdateNull(CatalogNameIndex);    //TABLE_CAT
+       // Result.UpdateNull(SchemaNameIndex);    //TABLE_SCHEM
         Result.UpdateString(TableNameIndex, GetString(RELATION_NAME_Index));    //TABLE_NAME
         Result.UpdateString(ColumnNameIndex, ColumnName);    //COLUMN_NAME
 
@@ -1848,8 +1846,7 @@ begin
               RDB_NUMBERS_DECIMAL: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
               else Result.UpdateString(TableColColumnTypeNameIndex, GetString(TYPE_NAME_Index));
             end;
-          blr_varying:
-            Result.UpdateString(TableColColumnTypeNameIndex, 'VARCHAR'); // Instead of VARYING
+          blr_varying: Result.UpdateString(TableColColumnTypeNameIndex, 'VARCHAR'); // Instead of VARYING
           else
             Result.UpdateString(TableColColumnTypeNameIndex, GetString(TYPE_NAME_Index));
         end;

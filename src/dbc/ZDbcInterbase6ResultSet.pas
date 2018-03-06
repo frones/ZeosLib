@@ -658,10 +658,7 @@ begin
       SQLCode := (sqltype and not(1));
       case SQLCode of
         SQL_TEXT, SQL_VARYING:
-          begin
-            SetLength(Result, sqllen);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(sqldata)^, Pointer(Result)^, sqllen);
-          end;
+          Result := BufferToBytes(sqldata, sqllen);
         else
           raise EZIBConvertError.Create(Format(SErrorConvertionField,
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));

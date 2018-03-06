@@ -65,12 +65,20 @@ type
   TZTestDbcMySQLCase = class(TZAbstractDbcSQLTestCase)
   private
     procedure CheckBitFields(ResultSet: IZResultSet);
+    procedure InternalTestSelectTwoQueriesGetMoreResults(const Statement: IZStatement);
+    procedure InternalTestSelectTwoQueriesNoGetResults(const Statement: IZStatement);
+    procedure InternalTestSelectTwoQueriesGetMoreResultsWithCloseOfFirstRS(const Statement: IZStatement);
+    procedure InternalTestSelectThreeQueriesGetMoreResults(const Statement: IZStatement);
   protected
     function GetSupportedProtocols: string; override;
   published
     procedure TestConnection;
     procedure TestStoredResultSet;
-    procedure TestUseResultSet;
+    procedure TestStoredResultSetPrepared;
+    procedure TestStoredResultSetRealPrepared;
+    procedure TestUseResultSetForwardOnly;
+    procedure TestUseResultSetScrollable;
+    procedure TestUseResultSetUpdateable;
     procedure TestPreparedStatement;
     procedure TestStatement;
     procedure TestAutoIncFields;
@@ -201,6 +209,93 @@ begin
   Result := pl_all_mysql;
 end;
 
+procedure TZTestDbcMySQLCase.InternalTestSelectThreeQueriesGetMoreResults(
+  const Statement: IZStatement);
+var
+  ResultSet: IZResultSet;
+begin
+  CheckNotNull(Statement);
+  try
+    ResultSet := Statement.ExecuteQuery('call ThreeResultSets()');
+    CheckNotNull(ResultSet);
+    CheckEquals(8, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of people table');
+    Check(ResultSet.Next, 'There should be a row retrieved');
+    Check(Statement.GetMoreResults, 'There is a second resultset available!');
+    CheckEquals(7, Statement.GetResultSet.GetMetadata.GetColumnCount, 'ColumnCount of string_values table');
+    Check(Statement.GetResultSet.Next, 'There should be a row retrieved');
+    Check(not ResultSet.Next, 'First ResultSet should be closed');
+    ResultSet := Statement.GetResultSet;
+    Check(Statement.GetMoreResults, 'There is a third resultset available!');
+    Check(Statement.GetResultSet.Next, 'There should be a row retrieved');
+    Check(not ResultSet.Next, 'Second ResultSet should be closed');
+    Statement.GetResultSet.Close;
+  finally
+    Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcMySQLCase.InternalTestSelectTwoQueriesGetMoreResults(
+  const Statement: IZStatement);
+var
+  ResultSet: IZResultSet;
+begin
+  CheckNotNull(Statement);
+  try
+    ResultSet := Statement.ExecuteQuery('call TwoResultSets()');
+    CheckNotNull(ResultSet);
+    CheckEquals(8, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of people table');
+    Check(ResultSet.Next, 'There should be a row retrieved');
+    Check(Statement.GetMoreResults, 'There is a second resultset available!');
+    CheckEquals(7, Statement.GetResultSet.GetMetadata.GetColumnCount, 'ColumnCount of string_values table');
+    Check(Statement.GetResultSet.Next, 'There should be a row retrieved');
+    Check(not Statement.GetMoreResults, 'There no more resultset available!');
+    Check(not ResultSet.Next, 'Previous ResultSet should be closed');
+    ResultSet.Close;
+  finally
+    Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcMySQLCase.InternalTestSelectTwoQueriesGetMoreResultsWithCloseOfFirstRS(
+  const Statement: IZStatement);
+var
+  ResultSet: IZResultSet;
+begin
+  CheckNotNull(Statement);
+  try
+    ResultSet := Statement.ExecuteQuery('call TwoResultSets()');
+    CheckNotNull(ResultSet);
+    CheckEquals(8, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of people table');
+    Check(ResultSet.Next, 'There should be a row retrieved');
+    ResultSet.Close;
+    Check(Statement.GetMoreResults, 'There is a second resultset available!');
+    CheckEquals(7, Statement.GetResultSet.GetMetadata.GetColumnCount, 'ColumnCount of string_values table');
+    Check(Statement.GetResultSet.Next, 'There should be a row retrieved');
+    ResultSet := Statement.GetResultSet;
+    ResultSet.Close;
+  finally
+    Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcMySQLCase.InternalTestSelectTwoQueriesNoGetResults(
+  const Statement: IZStatement);
+var
+  ResultSet: IZResultSet;
+begin
+  CheckNotNull(Statement);
+  try
+    ResultSet := Statement.ExecuteQuery('call TwoResultSets()');
+    CheckNotNull(ResultSet);
+    CheckEquals(8, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of people table');
+    ResultSet.Close;
+    ResultSet := Statement.ExecuteQuery('call  TwoResultSets()');
+    ResultSet.Close;
+  finally
+    Statement.Close;
+  end;
+end;
+
 {**
   Runs a test for MySQL database connection.
 }
@@ -303,7 +398,7 @@ end;
 procedure TZTestDbcMySQLCase.TestStoredResultSet;
 var
   Statement: IZStatement;
-  ResultSet: IZResultSet;
+  ResultSet, ResultSet2: IZResultSet;
 begin
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
@@ -312,10 +407,67 @@ begin
   try
     ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
     CheckNotNull(ResultSet);
-    PrintResultSet(ResultSet, True);
+    ResultSet2 := Statement.ExecuteQuery('SELECT * FROM department');
+    Check(ResultSet = ResultSet2, 'same rs retrieved');
   finally
     if Assigned(ResultSet) then
       ResultSet.Close;
+    if Assigned(ResultSet2) then
+      ResultSet2.Close;
+    Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcMySQLCase.TestStoredResultSetPrepared;
+var
+  Statement: IZPreparedStatement;
+  ResultSet, ResultSet2: IZResultSet;
+begin
+  Statement := Connection.PrepareStatement('SELECT * FROM department');
+  CheckNotNull(Statement);
+  Statement.SetResultSetType(rtScrollInsensitive);
+  Statement.SetResultSetConcurrency(rcReadOnly);
+  try
+    ResultSet := Statement.ExecuteQueryPrepared;
+    CheckNotNull(ResultSet);
+    ResultSet2 := Statement.ExecuteQueryPrepared;
+    Check(ResultSet = ResultSet2, 'same rs retrieved');
+    Check(ResultSet2.Next, 'There is a row');
+    Check(ResultSet.Next, 'There is a row');
+  finally
+    if Assigned(ResultSet) then
+      ResultSet.Close;
+    if Assigned(ResultSet2) then
+      ResultSet2.Close;
+    Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcMySQLCase.TestStoredResultSetRealPrepared;
+var
+  Statement: IZPreparedStatement;
+  ResultSet, ResultSet2: IZResultSet;
+  Info: TStrings;
+begin
+  Info := TStringList.Create;
+  Info.Add('preferprepared=true');
+  Statement := Connection.PrepareStatementWithParams('SELECT * FROM department', Info);
+  CheckNotNull(Statement);
+  Statement.SetResultSetType(rtScrollInsensitive);
+  Statement.SetResultSetConcurrency(rcReadOnly);
+  try
+    ResultSet := Statement.ExecuteQueryPrepared;
+    CheckNotNull(ResultSet);
+    ResultSet2 := Statement.ExecuteQueryPrepared;
+    Check(ResultSet = ResultSet2, 'same rs retrieved');
+    Check(ResultSet2.Next, 'There is a row');
+    Check(ResultSet.Next, 'There is a row');
+  finally
+    Info.Free;
+    if Assigned(ResultSet) then
+      ResultSet.Close;
+    if Assigned(ResultSet2) then
+      ResultSet2.Close;
     Statement.Close;
   end;
 end;
@@ -323,12 +475,15 @@ end;
 {**
   Runs a test for MySQL DBC ResultSet with use results.
 }
-procedure TZTestDbcMySQLCase.TestUseResultSet;
+procedure TZTestDbcMySQLCase.TestUseResultSetForwardOnly;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
+  Info: TStrings;
 begin
-  Statement := Connection.CreateStatement;
+  Info := TStringList.Create;
+  Info.Add('useresult=true');
+  Statement := Connection.CreateStatementWithParams(Info);
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtForwardOnly);
   Statement.SetResultSetConcurrency(rcReadOnly);
@@ -337,6 +492,69 @@ begin
     CheckNotNull(ResultSet);
     PrintResultSet(ResultSet, False);
   finally
+    Info.Free;
+    if Assigned(ResultSet) then
+      ResultSet.Close;
+    Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcMySQLCase.TestUseResultSetScrollable;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  Info: TStrings;
+begin
+  Info := TStringList.Create;
+  Info.Add('useresult=true');
+  Statement := Connection.CreateStatementWithParams(Info);
+  CheckNotNull(Statement);
+  Statement.SetResultSetType(rtScrollInsensitive);
+  Statement.SetResultSetConcurrency(rcReadOnly);
+  try
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
+    CheckNotNull(ResultSet);
+    Check(ResultSet.Last);
+    Check(ResultSet.First);
+    Check(ResultSet.Next);
+    Check(ResultSet.Next);
+    Check(ResultSet.Last);
+    Check(not ResultSet.Next);
+    Check(ResultSet.IsAfterLast);
+    ResultSet.BeforeFirst;
+  finally
+    Info.Free;
+    if Assigned(ResultSet) then
+      ResultSet.Close;
+    Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcMySQLCase.TestUseResultSetUpdateable;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  Info: TStrings;
+begin
+  Info := TStringList.Create;
+  Info.Add('useresult=true');
+  Statement := Connection.CreateStatementWithParams(Info);
+  CheckNotNull(Statement);
+  Statement.SetResultSetType(rtScrollInsensitive);
+  Statement.SetResultSetConcurrency(rcUpdatable);
+  try
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
+    CheckNotNull(ResultSet);
+    Check(ResultSet.Last);
+    Check(ResultSet.First);
+    Check(ResultSet.Next);
+    Check(ResultSet.Next);
+    Check(ResultSet.Last);
+    Check(not ResultSet.Next);
+    Check(ResultSet.IsAfterLast);
+    ResultSet.BeforeFirst;
+  finally
+    Info.Free;
     if Assigned(ResultSet) then
       ResultSet.Close;
     Statement.Close;
@@ -428,88 +646,61 @@ end;
 
 procedure TZTestDbcMySQLCase.TestSelectThreeQueriesGetMoreResults;
 var
-  Statement: IZStatement;
-  ResultSet: IZResultSet;
+  Info: TStrings;
 begin
-  Statement := Connection.CreateStatement;
-  CheckNotNull(Statement);
+  Info := TStringList.Create;
+  Info.Add('preferprepared=true');
   try
-    ResultSet := Statement.ExecuteQuery('call ThreeResultSets()');
-    CheckNotNull(ResultSet);
-    CheckEquals(8, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of people table');
-    Check(ResultSet.Next, 'There should be a row retrieved');
-    Check(Statement.GetMoreResults, 'There is a second resultset available!');
-    CheckEquals(7, Statement.GetResultSet.GetMetadata.GetColumnCount, 'ColumnCount of string_values table');
-    Check(Statement.GetResultSet.Next, 'There should be a row retrieved');
-    Check(Statement.GetMoreResults, 'There is a third resultset available!');
-    Check(Statement.GetResultSet.Next, 'There should be a row retrieved');
-    ResultSet.Close;
+    InternalTestSelectThreeQueriesGetMoreResults(Connection.PrepareStatementWithParams('', Info));
+    InternalTestSelectThreeQueriesGetMoreResults(Connection.CreateStatement);
+    InternalTestSelectThreeQueriesGetMoreResults(Connection.PrepareStatement(''));
   finally
-    Statement.Close;
+    Info.Free;
   end;
 end;
 
 procedure TZTestDbcMySQLCase.TestSelectTwoQueriesGetMoreResults;
 var
-  Statement: IZStatement;
-  ResultSet: IZResultSet;
+  Info: TStrings;
 begin
-  Statement := Connection.CreateStatement;
-  CheckNotNull(Statement);
+  Info := TStringList.Create;
+  Info.Add('preferprepared=true');
   try
-    ResultSet := Statement.ExecuteQuery('call TwoResultSets()');
-    CheckNotNull(ResultSet);
-    CheckEquals(8, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of people table');
-    Check(ResultSet.Next, 'There should be a row retrieved');
-    Check(Statement.GetMoreResults, 'There is a second resultset available!');
-    CheckEquals(7, Statement.GetResultSet.GetMetadata.GetColumnCount, 'ColumnCount of string_values table');
-    Check(ResultSet.Next, 'There should be a row retrieved');
-    Check(not Statement.GetMoreResults, 'There no more resultset available!');
-    ResultSet.Close;
+    InternalTestSelectTwoQueriesGetMoreResults(Connection.PrepareStatementWithParams('', Info));
+    InternalTestSelectTwoQueriesGetMoreResults(Connection.CreateStatement);
+    InternalTestSelectTwoQueriesGetMoreResults(Connection.PrepareStatement(''));
   finally
-    Statement.Close;
+    Info.Free;
   end;
 end;
 
 procedure TZTestDbcMySQLCase.TestSelectTwoQueriesNoGetResults;
 var
-  Statement: IZStatement;
-  ResultSet: IZResultSet;
+  Info: TStrings;
 begin
-  Statement := Connection.CreateStatement;
-  CheckNotNull(Statement);
+  Info := TStringList.Create;
+  Info.Add('preferprepared=true');
   try
-    ResultSet := Statement.ExecuteQuery('call TwoResultSets()');
-    CheckNotNull(ResultSet);
-    CheckEquals(8, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of people table');
-    ResultSet.Close;
-    ResultSet := Statement.ExecuteQuery('call  TwoResultSets()');
-    ResultSet.Close;
+    InternalTestSelectTwoQueriesNoGetResults(Connection.PrepareStatementWithParams('', Info));
+    InternalTestSelectTwoQueriesNoGetResults(Connection.CreateStatement);
+    InternalTestSelectTwoQueriesNoGetResults(Connection.PrepareStatement(''));
   finally
-    Statement.Close;
+    Info.Free;
   end;
 end;
 
 procedure TZTestDbcMySQLCase.TestSelectTwoQueriesGetMoreResultsWithCloseOfFirstRS;
 var
-  Statement: IZStatement;
-  ResultSet: IZResultSet;
+  Info: TStrings;
 begin
-  Statement := Connection.CreateStatement;
-  CheckNotNull(Statement);
+  Info := TStringList.Create;
+  Info.Add('preferprepared=true');
   try
-    ResultSet := Statement.ExecuteQuery('call TwoResultSets()');
-    CheckNotNull(ResultSet);
-    CheckEquals(8, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of people table');
-    Check(ResultSet.Next, 'There should be a row retrieved');
-    ResultSet.Close;
-    Check(Statement.GetMoreResults, 'There is a second resultset available!');
-    CheckEquals(7, Statement.GetResultSet.GetMetadata.GetColumnCount, 'ColumnCount of string_values table');
-    Check(Statement.GetResultSet.Next, 'There should be a row retrieved');
-    ResultSet := Statement.GetResultSet;
-    ResultSet.Close;
+    InternalTestSelectTwoQueriesGetMoreResultsWithCloseOfFirstRS(Connection.PrepareStatementWithParams('', Info));
+    InternalTestSelectTwoQueriesGetMoreResultsWithCloseOfFirstRS(Connection.CreateStatement);
+    InternalTestSelectTwoQueriesGetMoreResultsWithCloseOfFirstRS(Connection.PrepareStatement(''));
   finally
-    Statement.Close;
+    Info.Free;
   end;
 end;
 

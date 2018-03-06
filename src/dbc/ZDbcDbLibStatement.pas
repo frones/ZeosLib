@@ -803,9 +803,7 @@ begin
         tdsBinary, tdsVarBinary, tdsBigBinary, tdsBigVarBinary:
           begin
             DatLen := FPLainDriver.dbRetLen(FHandle, ParamIndex);
-            SetLength(OutBytes, DatLen);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FPLainDriver.dbRetData(FHandle, ParamIndex)^,
-              Pointer(OutBytes)^, DatLen);
+            OutBytes := BufferToBytes(FPLainDriver.dbRetData(FHandle, ParamIndex), DatLen);
             SoftVarManager.SetAsBytes(Temp, OutBytes);
           end;
         tdsInt1:
