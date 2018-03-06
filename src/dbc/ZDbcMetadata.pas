@@ -1038,7 +1038,9 @@ begin
             Break
           else if fIdentifierQuoteKeywordArray[i] = fIdentifierQuoteKeywordArray[i+1] then begin
             fIdentifierQuoteKeywordArray[i] := '';
-            System.Move(Pointer(@fIdentifierQuoteKeywordArray[i+1])^, Pointer(@fIdentifierQuoteKeywordArray[i])^, (Length(fIdentifierQuoteKeywordArray)-i-1)*SizeOf(Pointer));
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(
+              Pointer(@fIdentifierQuoteKeywordArray[i+1])^, Pointer(@fIdentifierQuoteKeywordArray[i])^,
+              (Length(fIdentifierQuoteKeywordArray)-i-1)*SizeOf(Pointer));
             if j = 0 then
               Pointer(fIdentifierQuoteKeywordArray[High(fIdentifierQuoteKeywordArray)-j]) := nil; //ovoid gpf
             Inc(j);

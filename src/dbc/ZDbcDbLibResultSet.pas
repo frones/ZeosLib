@@ -813,7 +813,7 @@ begin
 
   SetLength(Result, DL);
   if Assigned(Data) then
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsiChar(Data)^, Result[0], DL);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Data)^, Result[0], DL);
 end;
 
 {**

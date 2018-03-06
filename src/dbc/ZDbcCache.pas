@@ -4297,7 +4297,7 @@ begin
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stGUID:
       if Len = 16 then
-        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, Data^, 16)
+        PGUID(Data)^ := PGUID(Buf)^
       else
         SetNull(ColumnIndex);
     stBytes: InternalSetBytes(FBuffer, ColumnIndex, Buf, Len);

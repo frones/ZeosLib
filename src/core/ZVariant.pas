@@ -3104,7 +3104,7 @@ function EncodeGUID(const Value: TGUID): TZVariant;
 begin
   Result.VType := vtBytes;
   SetLength(Result.VBytes, SizeOf(TGUID));
-  Move(Value, Result.VBytes[0], SizeOf(TGUID));
+  PGUID(Result.VBytes)^ := Value;
 end;
 
 {**

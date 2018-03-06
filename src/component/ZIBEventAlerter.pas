@@ -355,7 +355,7 @@ end;
 
 procedure TIBEventThread.UpdateResultBuffer(Length: UShort; Updated: PAnsiChar);
 begin
-  Move(Updated[0], ResultBuffer[0], Length);
+  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Updated^, ResultBuffer^, Length);
 end;
 
 procedure TIBEventThread.QueueEvents;

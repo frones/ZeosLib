@@ -108,7 +108,7 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePRaw(const Index: Integer; Value: PAnsiChar; Len: NativeUInt);
-    procedure UpdateBytes(const Index: Integer; Value: TBytes);
+    procedure UpdateBytes(const Index: Integer; const Value: TBytes);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
     procedure UpdateTimestamp(const Index: Integer; Value: TDateTime);
@@ -174,7 +174,7 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePRaw(const Index: Integer; Value: PAnsiChar; Len: NativeUInt);
-    procedure UpdateBytes(const Index: Integer; Value: TBytes);
+    procedure UpdateBytes(const Index: Integer; const Value: TBytes);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
     procedure UpdateTimestamp(const Index: Integer; Value: TDateTime);
@@ -793,7 +793,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZASASQLDA.UpdateBytes(const Index: Integer; Value: TBytes);
+procedure TZASASQLDA.UpdateBytes(const Index: Integer; const Value: TBytes);
 var
   BlobSize: Integer;
 begin
@@ -804,12 +804,12 @@ begin
     begin
       SetFieldType( Index, DT_BINARY or 1, MinBLOBSize - 1);
       PZASASQLSTRING( sqlData).length := BlobSize;
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( Value[0], PZASASQLSTRING( sqlData).data[0], BlobSize);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( Pointer(Value)^, PZASASQLSTRING( sqlData).data[0], BlobSize);
     end
     else
     begin
       SetFieldType( Index, DT_LONGBINARY or 1, BlobSize);
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( Value[0], PZASABlobStruct( sqlData).arr[0], BlobSize);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( Pointer(Value)^, PZASABlobStruct( sqlData).arr[0], BlobSize);
       PZASABlobStruct( sqlData).stored_len := BlobSize;
       PZASABlobStruct( sqlData).untrunc_len := BlobSize;
     end;
@@ -963,7 +963,7 @@ begin
         'Blob Record is not correctly initialized');
       if PZASABlobStruct( sqlData).array_len <> Length then
         CreateException( 'Could''nt complete BLOB-Read');
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( PZASABlobStruct( sqlData).arr[0], PAnsiChar( Buffer)[0], PZASABlobStruct( sqlData).array_len);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( PZASABlobStruct( sqlData).arr[0], Buffer, PZASABlobStruct( sqlData).array_len);
     end
     else
     begin

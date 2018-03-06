@@ -1850,8 +1850,8 @@ begin
         begin
           {$IFDEF TPARAM_HAS_ASBYTES}
           Bts := Param.AsBytes;
-          SetLength(TempBytes, High(Bts)+1);
-          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PAnsichar(Bts)^, PAnsichar(TempBytes)^, High(Bts)+1);
+          SetLength(TempBytes, Length(Bts));
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Bts)^, Pointer(TempBytes)^, Length(Bts));
           {$ELSE}
             {$IFDEF WITHOUT_VARBYTESASSTRING}
             V := Param.Value;

@@ -2958,7 +2958,7 @@ begin
           begin
             P := RowAccessor.GetBytes(ColumnIndex, Result, PWord(Buffer)^);
             {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move((PAnsiChar(P)+SizeOf(Word))^,
-              PAnsiChar(Buffer)^, Min(PWord(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex)));
+              Pointer(Buffer)^, Min(PWord(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex)));
           end;
         ftBytes:
           begin
