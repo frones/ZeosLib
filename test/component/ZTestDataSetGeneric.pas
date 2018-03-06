@@ -132,7 +132,8 @@ type
     procedure Test_SP_ParamType_Name;
     procedure Test_SP_Type_Dom;
     procedure Test_SP_Type_Type;
-    procedure Test_SP_ParamSetVal;
+    procedure Test_SP_ParamGUIDSetVal;
+    procedure Test_SP_ParamBytesSetVal;
     procedure Test_SP_Type_Name;
   protected
     function GetSupportedProtocols: string; override;
@@ -2471,12 +2472,6 @@ const
 var
   GuidVal: TGUID;
 
-function GUIDtoBytes(const Guid: TGUID): TBytes;
-begin
-  SetLength(Result, SizeOf(Guid));
-  PGUID(Result)^ := Guid;
-end;
-
 function TZInterbaseTestGUIDS.GetSupportedProtocols: string;
 begin
   Result := pl_all_interbase;
@@ -2652,7 +2647,7 @@ begin
   CheckEquals(ftGuid, SP.Fields[0].DataType, CurrentTest);
 end;
 
-procedure TZInterbaseTestGUIDS.Test_SP_ParamSetVal;
+procedure TZInterbaseTestGUIDS.Test_SP_ParamGUIDSetVal;
 begin
   Connection.Properties.Values[DSProps_GUIDFields] := 'G_IN,G_OUT';
   SP.StoredProcName := PROC_NAME;
@@ -2663,9 +2658,20 @@ begin
   {$ENDIF}
   SP.Params[0].DataType := ftGuid;
   SP.Active := True;
-  CheckEquals(1, Query.RecordCount, CurrentTest + ' rec count');
-  CheckEquals(GUIDToString(GuidVal), GUIDToString(TGuidField(Query.FieldByName(GUID_DOM_FIELD)).AsGuid), CurrentTest);
-  Check((SP.RecordCount = 1) and (TGuidField(SP.FieldByName('G_OUT')).AsGuid = GuidVal));
+  CheckEquals(1, SP.RecordCount, CurrentTest + ' rec count');
+  CheckEquals(GUIDToString(GuidVal), GUIDToString(TGuidField(SP.FieldByName('G_OUT')).AsGuid), CurrentTest);
+end;
+
+procedure TZInterbaseTestGUIDS.Test_SP_ParamBytesSetVal;
+begin
+  Connection.Properties.Values[DSProps_GUIDFields] := 'G_IN,G_OUT';
+  SP.StoredProcName := PROC_NAME;
+  {$IFDEF TPARAM_HAS_ASBYTES}
+  SP.Params[0].AsBytes := EncodeGUID(GuidVal).VBytes;
+  SP.Active := True;
+  CheckEquals(1, SP.RecordCount, CurrentTest + ' rec count');
+  CheckEquals(GUIDToString(GuidVal), GUIDToString(TGuidField(SP.FieldByName('G_OUT')).AsGuid), CurrentTest);
+  {$ENDIF}
 end;
 
 procedure TZInterbaseTestGUIDS.Test;
@@ -2692,17 +2698,18 @@ begin
   DoTest('Query from table: GUID type by field name', Test_QT_Type_FName);
   DoTest('Query from table: get GUID value', Test_QT_GetVal);
   DoTest('Query from table: set GUID value', Test_QT_SetVal);
-//{}  DoTest('Query from table: set param GUID value', Test_QT_ParamSetVal);
-{}  DoTest('Query from SP: GUID type by type', Test_QSP_Type_Type);
+  DoTest('Query from table: set param GUID value', Test_QT_ParamSetVal);
+  DoTest('Query from SP: GUID type by type', Test_QSP_Type_Type);
   DoTest('Query from SP: GUID type by domain (false)', Test_QSP_Type_Dom);
-{}  DoTest('Query from SP: GUID type by field name', Test_QSP_Type_FName);
+  DoTest('Query from SP: GUID type by field name', Test_QSP_Type_FName);
   DoTest('SP: GUID type of param by type', Test_SP_ParamType_Type);
   DoTest('SP: GUID type of param by domain', Test_SP_ParamType_Dom);
   DoTest('SP: GUID type of param by name', Test_SP_ParamType_Name);
-{}  DoTest('SP: GUID type of field by type', Test_SP_Type_Type);
+  DoTest('SP: GUID type of field by type', Test_SP_Type_Type);
   DoTest('SP: GUID type of field by domain (false)', Test_SP_Type_Dom);
-{}  DoTest('SP: GUID type of field by name', Test_SP_Type_Name);
-//{}  DoTest('SP: set param GUID value', Test_SP_ParamSetVal);
+  DoTest('SP: GUID type of field by name', Test_SP_Type_Name);
+  DoTest('SP: set param GUID value, type ftGUID', Test_SP_ParamGUIDSetVal);
+  DoTest('SP: set param GUID value, type ftBytes', Test_SP_ParamBytesSetVal);
 
   FreeAndNil(Query);
   FreeAndNil(SP);
@@ -2733,4 +2740,3 @@ initialization
   RegisterTest('component',TZGenericTestDataSetMBCs.Suite);
   RegisterTest('component',TZInterbaseTestGUIDS.Suite);
 end.
-
