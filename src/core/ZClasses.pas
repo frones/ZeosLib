@@ -344,7 +344,13 @@ end;
 function TZCharReaderStream.Read(var Buffer; Count: Integer): Longint;
 begin
   if (Count = SizeOf(Char)) and (fCurrent < fEnd) then begin
-    Char(Buffer) := fCurrent^; //just a little byte/dword inline move instead of Move()
+    //just a little byte/dword inline move instead of Move()
+    //skip all possible compiler magic
+    {$IFDEF UNICODE}
+    Word(Buffer) := PWord(fCurrent)^;
+    {$ELSE}
+    Byte(Buffer) := PByte(fCurrent)^;
+    {$ENDIF}
     Inc(fCurrent);
     Result := SizeOf(Char);
   end else
