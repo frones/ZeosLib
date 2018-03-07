@@ -212,6 +212,19 @@ type
   {$WARNINGS ON}
 {$ENDIF}
 
+  TZCharReaderStream = Class(TStream)
+  private
+    fEnd, fStart, fCurrent: PChar;
+  protected
+    function GetSize: Int64; override;
+  public
+    procedure SetBuffer(const Buffer: String);
+    function Read(var Buffer; Count: Longint): Longint; override;
+    function Write(const Buffer; Count: Longint): Longint; override;
+    function Seek(Offset: Longint; Origin: Word): Longint; override;
+    function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; override;
+  End;
+
 implementation
 
 uses ZMessages, ZCompatibility;
@@ -319,6 +332,61 @@ end;
 function TZAbstractObject.ToString: string;
 begin
   Result := Format('%s <%p>', [ClassName, Pointer(Self)])
+end;
+
+{ TZCharReaderStream }
+
+function TZCharReaderStream.GetSize: Int64;
+begin
+  Result := fEnd-fStart-1
+end;
+
+function TZCharReaderStream.Read(var Buffer; Count: Integer): Longint;
+begin
+  if Count = SizeOf(Char) then
+    if fCurrent < fEnd then begin
+      Char(Buffer) := fCurrent^; //just a little byte/dword inline move instead of Move()
+      Inc(fCurrent);
+      Result := SizeOf(Char);
+    end else
+      Result := 0
+  else raise Exception.Create(SUnsupportedOperation);
+end;
+
+function TZCharReaderStream.Seek(Offset: Integer; Origin: Word): Longint;
+begin
+  case Origin of
+    soFromBeginning: fCurrent := Pointer(NativeInt(fStart)+Offset);
+    soFromCurrent:   fCurrent := Pointer(NativeInt(fCurrent)+Offset);
+    soFromEnd:       fCurrent := Pointer(NativeInt(fEnd-1)+Offset);
+    else raise Exception.Create(SUnsupportedOperation);
+  end;
+  Result := origin; //make compiler happy: a true postioned processing is nowhere used in our code
+  //Result := LongInt(fCurrent-fStart);
+end;
+
+function TZCharReaderStream.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
+begin
+  case Ord(Origin) of
+    soFromBeginning: fCurrent := Pointer(NativeInt(fStart)+Offset);
+    soFromCurrent:   fCurrent := Pointer(NativeInt(fCurrent)+Offset);
+    soFromEnd:       fCurrent := Pointer(NativeInt(fEnd-1)+Offset);
+    else raise Exception.Create(SUnsupportedOperation);
+  end;
+  Result := Ord(origin); //make compiler happy: a true postioned processing is nowhere used in our code
+  //Result := Int64(fCurrent-fStart);
+end;
+
+procedure TZCharReaderStream.SetBuffer(const Buffer: String);
+begin
+  fStart := Pointer(Buffer);
+  fCurrent := fStart;
+  fEnd := fStart+Length(Buffer);
+end;
+
+function TZCharReaderStream.Write(const Buffer; Count: Integer): Longint;
+begin
+  raise Exception.Create(SUnsupportedOperation);
 end;
 
 end.
