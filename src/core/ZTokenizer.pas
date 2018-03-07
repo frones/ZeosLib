@@ -419,7 +419,7 @@ type
     function GetCharacterState(StartChar: Char): TZTokenizerState;
   end;
 
-  TTokenizerStream = Class(TMemoryStream); //just a hack to get protected access
+  TTokenizerStream = Class(TZCharReaderStream); //just a hack to get protected access
 
   {** Implements a default tokenizer object. }
   TZTokenizer = class (TZAbstractObject, IZTokenizer)
@@ -1170,7 +1170,7 @@ begin
 
   if FStream <> nil then
   begin
-    FStream.SetPointer(nil, 0); //take care we nil the pointer else we're trying to release memory the Stream doesn't own
+    //FStream.SetPointer(nil, 0); //take care we nil the pointer else we're trying to release memory the Stream doesn't own
     FreeAndNil(FStream);
   end;
 
@@ -1246,7 +1246,8 @@ end;
 function TZTokenizer.TokenizeBuffer(const Buffer: string;
   Options: TZTokenOptions): TZTokenDynArray;
 begin
-  FStream.SetPointer(Pointer(Buffer), Length(Buffer) * SizeOf(Char)); //instead of alloc+moving mem
+  //FStream.SetPointer(Pointer(Buffer), Length(Buffer) * SizeOf(Char)); //instead of alloc+moving mem
+  FStream.SetBuffer(Buffer);
   Result := TokenizeStream(FStream, Options);
 end;
 
@@ -1260,7 +1261,8 @@ end;
 function TZTokenizer.TokenizeBufferToList(const Buffer: string;
   Options: TZTokenOptions): TStrings;
 begin
-  FStream.SetPointer(Pointer(Buffer), Length(Buffer) * SizeOf(Char)); //instead of alloc+moving mem
+  //FStream.SetPointer(Pointer(Buffer), Length(Buffer) * SizeOf(Char)); //instead of alloc+moving mem
+  FStream.SetBuffer(Buffer);
   Result := TokenizeStreamToList(FStream, Options);
 end;
 
@@ -1358,7 +1360,7 @@ begin
   { Adds an EOF if option is not set. }
   if not (toSkipEOF in Options) then
     Result.AddObject('', TObject(Ord(ttEOF)));
-  FStream.Position := 0; //allways seek back to beginning else D7/FPC crashs
+  //FStream.Position := 0; //allways seek back to beginning else D7/FPC crashs
 end;
 
 {**

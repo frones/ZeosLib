@@ -343,14 +343,12 @@ end;
 
 function TZCharReaderStream.Read(var Buffer; Count: Integer): Longint;
 begin
-  if Count = SizeOf(Char) then
-    if fCurrent < fEnd then begin
-      Char(Buffer) := fCurrent^; //just a little byte/dword inline move instead of Move()
-      Inc(fCurrent);
-      Result := SizeOf(Char);
-    end else
-      Result := 0
-  else raise Exception.Create(SUnsupportedOperation);
+  if (Count = SizeOf(Char)) and (fCurrent < fEnd) then begin
+    Char(Buffer) := fCurrent^; //just a little byte/dword inline move instead of Move()
+    Inc(fCurrent);
+    Result := SizeOf(Char);
+  end else
+    Result := 0
 end;
 
 function TZCharReaderStream.Seek(Offset: Integer; Origin: Word): Longint;
@@ -359,7 +357,6 @@ begin
     soFromBeginning: fCurrent := Pointer(NativeInt(fStart)+Offset);
     soFromCurrent:   fCurrent := Pointer(NativeInt(fCurrent)+Offset);
     soFromEnd:       fCurrent := Pointer(NativeInt(fEnd-1)+Offset);
-    else raise Exception.Create(SUnsupportedOperation);
   end;
   Result := origin; //make compiler happy: a true postioned processing is nowhere used in our code
   //Result := LongInt(fCurrent-fStart);
@@ -371,7 +368,6 @@ begin
     soFromBeginning: fCurrent := Pointer(NativeInt(fStart)+Offset);
     soFromCurrent:   fCurrent := Pointer(NativeInt(fCurrent)+Offset);
     soFromEnd:       fCurrent := Pointer(NativeInt(fEnd-1)+Offset);
-    else raise Exception.Create(SUnsupportedOperation);
   end;
   Result := Ord(origin); //make compiler happy: a true postioned processing is nowhere used in our code
   //Result := Int64(fCurrent-fStart);
