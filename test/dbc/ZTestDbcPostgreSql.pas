@@ -75,6 +75,7 @@ type
     procedure TestCaseSensitive;
     procedure TestDefaultValues;
     procedure TestEnumValues;
+    procedure TestGUIDs;
   end;
 
 implementation
@@ -348,6 +349,26 @@ begin
   ResultSet.First;
   Check(ResultSet.GetInt(ext_id_index) = 1);
   CheckEquals('Car', ResultSet.GetString(ext_enum_index));
+  ResultSet.Close;
+  Statement.Close;
+end;
+
+procedure TZTestDbcPostgreSQLCase.TestGUIDs;
+const
+  ext_id_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+
+  ResultSet := Statement.ExecuteQuery('SELECT id, guid FROM guid_test WHERE id = 1');
+  CheckNotNull(ResultSet);
+  ResultSet.First;
+
+  // Compare initial inserted value vs database read value from table
+  CheckEquals(LowerCase('{BAD51CFF-F21F-40E8-A9EA-838977A681BE}'), ResultSet.GetString(ext_id_index));
   ResultSet.Close;
   Statement.Close;
 end;
