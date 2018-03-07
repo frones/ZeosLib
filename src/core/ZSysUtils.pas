@@ -4053,17 +4053,17 @@ function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWidestr
 var
   P, Dest, PEnd, PFirst: PWideChar;
 begin
-  NativeUInt(Dest) := 0;
+  Dest := Nil;
   P := Src;
   PEnd := P + Len;
   PFirst := nil;
   while P < PEnd do begin
-    Inc(NativeUInt(Dest), Ord(P^=Quote));
-    if NativeUInt(Dest) = 0 then
+    Inc({%H-}NativeUInt(Dest), Ord(P^=Quote));
+    if Dest = nil then
       PFirst := P;
     Inc(P);
   end;
-  if NativeUInt(Dest) = 0 then begin
+  if Dest = nil then begin
     System.SetLength(Result, Len+2);
     Dest := Pointer(Result);
     Dest^ := Quote;
@@ -4075,7 +4075,7 @@ begin
     Dest^ := Quote;
     Exit;
   end;
-  SetLength(Result, Len + NativeInt(Dest) + 2);
+  SetLength(Result, Len + {%H-}NativeInt(Dest) + 2);
   Dest := Pointer(Result);
   Dest^ := Quote;
   Inc(Dest);
@@ -4105,17 +4105,17 @@ function SQLQuotedStr(Src: PAnsiChar; Len: LengthInt; Quote: AnsiChar): RawByteS
 var
   P, Dest, PEnd, PFirst: PAnsiChar;
 begin
-  NativeUInt(Dest) := 0;
+  Dest := nil;
   P := Src;
   PEnd := P + Len;
   PFirst := nil;
   while P < PEnd do begin
-    Inc(NativeUInt(Dest), Ord(P^=Quote));
-    if NativeUInt(Dest) = 0 then
+    Inc({%H-}NativeUInt(Dest), Ord(P^=Quote));
+    if Dest = nil then
       PFirst := P;
     Inc(P);
   end;
-  if NativeUInt(Dest) = 0 then begin
+  if Dest = nil then begin
     System.SetLength(Result, Len+2);
     Dest := Pointer(Result);
     Dest^ := Quote;
@@ -4127,7 +4127,7 @@ begin
     Dest^ := Quote;
     Exit;
   end;
-  SetLength(Result, Len + NativeInt(Dest) + 2);
+  SetLength(Result, Len + {%H-}NativeInt(Dest) + 2);
   Dest := Pointer(Result);
   Dest^ := Quote;
   Inc(Dest);
