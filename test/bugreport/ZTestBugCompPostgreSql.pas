@@ -1168,6 +1168,9 @@ var
   Query: TZQuery;
   ROQuery: TZReadOnlyQuery;
 begin
+  Connection.Connect;
+  if Connection.DbcConnection.GetHostVersion < 9 then
+    Exit;
   Query := TZQuery.Create(nil);
   Query.ReadOnly := True;
   InternalTestSF224(TZReadOnlyQuery(Query));
