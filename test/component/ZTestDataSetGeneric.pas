@@ -107,6 +107,9 @@ type
   published
     procedure TestVeryLargeBlobs;
   end;
+  {$IF not declared(TTestMethod)}
+    TTestMethod = procedure of object;
+  {$ENDIF}
 
   TZInterbaseTestGUIDS = class(TZAbstractCompSQLTestCase)
   private
