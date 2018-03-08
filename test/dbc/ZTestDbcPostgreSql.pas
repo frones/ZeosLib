@@ -80,7 +80,7 @@ type
 
 implementation
 
-uses SysUtils, ZTestConsts;
+uses SysUtils, ZTestConsts, ZSysUtils;
 
 { TZTestDbcPostgreSQLCase }
 
@@ -355,22 +355,35 @@ end;
 
 procedure TZTestDbcPostgreSQLCase.TestGUIDs;
 const
-  ext_id_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  ext_id_index = FirstDbcIndex+1;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
+  S: String;
 begin
+  if Connection.GetHostVersion < 9 then
+    Exit;
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 
   ResultSet := Statement.ExecuteQuery('SELECT id, guid FROM guid_test WHERE id = 1');
-  CheckNotNull(ResultSet);
-  ResultSet.First;
+  try
+    CheckNotNull(ResultSet);
+    ResultSet.First;
 
-  // Compare initial inserted value vs database read value from table
-  CheckEquals(LowerCase('{BAD51CFF-F21F-40E8-A9EA-838977A681BE}'), ResultSet.GetString(ext_id_index));
-  ResultSet.Close;
-  Statement.Close;
+    // Compare initial inserted value vs database read value from table
+    {$IFDEF UNICODE}
+    S := ZSysUtils.GUIDToUnicode(ResultSet.GetBytes(ext_id_index));
+    {$ELSE}
+    S := ZSysUtils.GUIDToUnicode(ResultSet.GetBytes(ext_id_index));
+    {$ENDIF}
+    CheckEquals('{BAD51CFF-F21F-40E8-A9EA-838977A681BE}', s, 'UUID different');
+    S := ResultSet.GetString(ext_id_index);
+    CheckEquals(LowerCase('{BAD51CFF-F21F-40E8-A9EA-838977A681BE}'), s, 'UUID different');
+  finally
+    ResultSet.Close;
+    Statement.Close;
+  end;
 end;
 
 initialization
