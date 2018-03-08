@@ -74,7 +74,7 @@ type
   private
     FHandle: POCIStmt;
     FErrorHandle: POCIError;
-    FPlainDriver: IZOraclePlainDriver;
+    FPlainDriver: TZOraclePlainDriver;
     FParams: PZSQLVars;
     FRowPrefetchSize: ub4;
     FZBufferSize: Integer;
@@ -111,7 +111,7 @@ type
     FOutParamCount: Integer;
     FErrorHandle: POCIError;
     FParams: PZSQLVars;
-    FPlainDriver:IZOraclePlainDriver;
+    FPlainDriver: TZOraclePlainDriver;
     FHandle: POCIStmt;
     FOracleParams: TZOracleParams;
     FOracleParamsCount: Integer;
@@ -168,7 +168,7 @@ constructor TZOraclePreparedStatement.Create(
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
-  FPlainDriver := PlainDriver;
+  FPlainDriver := PlainDriver.GetInstance;
   ResultSetType := rtForwardOnly;
   ASQL := ConvertToOracleSQLQuery;
   FCanBindInt64 := Connection.GetClientVersion >= 11002000;
@@ -276,7 +276,7 @@ begin
     SetVariableDataEntrys(CurrentBufferEntry, CurrentVar, FIteration);
     AllocDesriptors(FPlainDriver, (Connection as IZOracleConnection).GetConnectionHandle,
       CurrentVar, FIteration, True);
-    Status := FPlainDriver.BindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
+    Status := FPlainDriver.OCIBindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
       I + 1, CurrentVar^.Data, CurrentVar^.Length, CurrentVar^.TypeCode,
       CurrentVar^.oIndicatorArray, CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT);
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, ASQL, ConSettings);
@@ -325,7 +325,7 @@ begin
     PrepareOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
       ASQL, FHandle, FErrorHandle, FRowPrefetchSize, False{FServerStmtCache}, ConSettings);
     { get Statemant type }
-    FPlainDriver.AttrGet(FHandle, OCI_HTYPE_STMT, @FStatementType, nil,
+    FPlainDriver.OCIAttrGet(FHandle, OCI_HTYPE_STMT, @FStatementType, nil,
       OCI_ATTR_STMT_TYPE, FErrorHandle);
     inherited Prepare;
   end;
@@ -337,7 +337,7 @@ begin
   try
     if False and FServerStmtCache then
     CheckOracleError(FPlainDriver, FErrorHandle,
-        FplainDriver.StmtRelease(FHandle, FErrorHandle, nil, 0, RELEASE_MODE[False]),
+        FPlainDriver.OCIStmtRelease(FHandle, FErrorHandle, nil, 0, RELEASE_MODE[False]),
       lcExecute, ASQL, ConSettings)
     else
       FreeOracleStatementHandles(FPlainDriver, FHandle, FErrorHandle);
@@ -473,7 +473,7 @@ begin
         FHandle, FErrorHandle);
     PrepareOracleStatement(FPlainDriver, nil, ASQL, FHandle, FErrorHandle,
           FRowPrefetchSize, False, ConSettings);
-    FPlainDriver.AttrGet(FHandle, OCI_HTYPE_STMT, @FStatementType, nil,
+    FPlainDriver.OCIAttrGet(FHandle, OCI_HTYPE_STMT, @FStatementType, nil,
       OCI_ATTR_STMT_TYPE, FErrorHandle);
     inherited Prepare;
   end;
@@ -487,7 +487,7 @@ begin
   try
     if False{FServerStmtCache} then
       CheckOracleError(FPlainDriver, FErrorHandle,
-        FplainDriver.StmtRelease(FHandle, FErrorHandle, nil, 0, RELEASE_MODE[False]),
+        FPlainDriver.OCIStmtRelease(FHandle, FErrorHandle, nil, 0, RELEASE_MODE[False]),
       lcExecute, ASQL, ConSettings)
     else
       FreeOracleStatementHandles(FPlainDriver, FHandle, FErrorHandle);
@@ -631,7 +631,7 @@ begin
     SetVariableDataEntrys(CurrentBufferEntry, CurrentVar, FIteration);
     AllocDesriptors(FPlainDriver, (Connection as IZOracleConnection).GetConnectionHandle,
       CurrentVar, FIteration, True);
-    Status := FPlainDriver.BindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
+    Status := FPlainDriver.OCIBindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
       I + 1, CurrentVar^.Data, CurrentVar^.Length, CurrentVar^.TypeCode,
       CurrentVar^.oIndicatorArray, CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT);
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, ASQL, ConSettings);
@@ -735,11 +735,11 @@ var
         SQLT_TIMESTAMP:
           begin
             OracleConnection := Connection as IZOracleConnection;
-            FPlainDriver.DateTimeGetDate(
+            FPlainDriver.OCIDateTimeGetDate(
               OracleConnection.GetConnectionHandle ,
               FErrorHandle, PPOCIDescriptor(CurrentVar^.Data)^,
               Year{%H-}, Month{%H-}, Day{%H-});
-            FPlainDriver.DateTimeGetTime(
+            FPlainDriver.OCIDateTimeGetTime(
               OracleConnection.GetConnectionHandle ,
               FErrorHandle, PPOCIDescriptor(CurrentVar^.Data)^,
               Hour{%H-}, Min{%H-}, Sec{%H-},MSec{%H-});
@@ -861,7 +861,7 @@ begin
   inherited Create(Connection, pProcName, Info);
 
   FOracleParamsCount := 0;
-  FPlainDriver := Connection.GetIZPlainDriver as IZOraclePlainDriver;
+  FPlainDriver := (Connection.GetIZPlainDriver as IZOraclePlainDriver).GetInstance;
   ResultSetType := rtForwardOnly;
   PackageIncludedList := TStringList.Create;
   FOutParamCount := 0;

@@ -496,7 +496,6 @@ begin
     FreeAndNil(FBatchQueries);
   FConnection := nil;
   FreeAndNil(FInfo);
-  FLastResultSet := nil;
   inherited Destroy;
 end;
 
