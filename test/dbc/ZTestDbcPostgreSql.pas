@@ -379,7 +379,10 @@ begin
     {$ENDIF}
     CheckEquals('{BAD51CFF-F21F-40E8-A9EA-838977A681BE}', s, 'UUID different');
     S := ResultSet.GetString(ext_id_index);
-    CheckEquals(LowerCase('{BAD51CFF-F21F-40E8-A9EA-838977A681BE}'), s, 'UUID different');
+    //it's offical documented what PG returns:
+    //https://www.postgresql.org/docs/9.1/static/datatype-uuid.html
+    //so a native dbc user whould not agree if something else is returned
+    CheckEquals(LowerCase('BAD51CFF-F21F-40E8-A9EA-838977A681BE'), s, 'UUID different');
   finally
     ResultSet.Close;
     Statement.Close;

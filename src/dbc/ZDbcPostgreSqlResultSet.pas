@@ -81,7 +81,7 @@ type
   {** Implements PostgreSQL ResultSet. }
   TZPostgreSQLResultSet = class(TZAbstractResultSet)
   private
-    FUUIDOIDBuf: array[0..38] of Ansichar; //include trailing #0
+    //FUUIDOIDBuf: array[0..38] of Ansichar; //include trailing #0
     FUUIDOIDOutBuff: TBytes;
     FHandle: PZPostgreSQLConnect;
     FQueryHandle: PZPostgreSQLResult;
@@ -235,8 +235,7 @@ begin
     TZPostgresResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
     Statement.GetConnection.GetConSettings);
 
-  FUUIDOIDBuf[0] := '{'; FUUIDOIDBuf[37] := '}';
-  SetLength(FUUIDOIDOutBuff, 16); //avoid memallocs for GUIDs
+ // FUUIDOIDBuf[0] := '{'; FUUIDOIDBuf[37] := '}';
   FHandle := Handle;
   FQueryHandle := QueryHandle;
   FPlainDriver := PlainDriver;
@@ -381,6 +380,9 @@ begin
       Nullable := ntNullable;
 
       FieldType := FPlainDriver.PQftype(FQueryHandle, I);
+      if (FieldType = UUIDOID) and (Pointer(FUUIDOIDOutBuff) = nil) then
+        SetLength(FUUIDOIDOutBuff, 16); //avoid memallocs for GUIDs
+
       FpgOIDTypes[i] := FieldType;
       DefinePostgreSQLToSQLType(ColumnInfo, FieldType);
       if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
@@ -462,13 +464,13 @@ begin
     Result := FPlainDriver.GetValue(FQueryHandle, RNo, ColumnIndex);
     if (FpgOIDTypes[ColumnIndex] = CHAROID) and not (FIs_bytea_output_hex or FPlainDriver.SupportsDecodeBYTEA) then
       Len := FPlainDriver.GetLength(FQueryHandle, RNo, ColumnIndex)
-    else if FpgOIDTypes[ColumnIndex] = UUIDOID then begin
+    (*else if FpgOIDTypes[ColumnIndex] = UUIDOID then begin
       //for ColumnIndex := 0 to 35 do
         //FUUIDOIDBuf[ColumnIndex+1] := UpCase((Result+ColumnIndex)^);
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Result^, FUUIDOIDBuf[1], 36);
       Len := 38;
       Result := @FUUIDOIDBuf[0];
-    end else begin
+    end *)else begin
       {http://www.postgresql.org/docs/9.0/static/libpq-exec.html
       PQgetlength:
        This is the actual data length for the particular data value, that is,
