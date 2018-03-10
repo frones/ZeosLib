@@ -718,9 +718,10 @@ begin
                   end;
               end; {case..}
           end;
-        stGuid:
-          begin
-            InParamValues[ParamIndex].VRawByteString := GUIDToRaw(ClientVarManager.GetAsBytes(InParamValues[ParamIndex]));
+        stGuid: begin
+            if InParamValues[ParamIndex].VType = vtBytes
+            then InParamValues[ParamIndex].VRawByteString := GUIDToRaw(InParamValues[ParamIndex].VBytes)
+            else InParamValues[ParamIndex].VRawByteString := ClientVarManager.GetAsRawByteString(InParamValues[ParamIndex]);
             UpdatePAnsiChar(PAnsiChar(InParamValues[ParamIndex].VRawByteString), ParamIndex);
           end;
         else

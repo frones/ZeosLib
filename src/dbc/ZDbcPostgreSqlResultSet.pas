@@ -84,6 +84,8 @@ type
   {** Implements PostgreSQL ResultSet. }
   TZPostgreSQLResultSet = class(TZAbstractResultSet)
   private
+    //FUUIDOIDBuf: array[0..38] of Ansichar; //include trailing #0
+    FUUIDOIDOutBuff: TBytes;
     FHandle: PZPostgreSQLConnect;
     FQueryHandle: PZPostgreSQLResult;
     FPlainDriver: IZPostgreSQLPlainDriver;
@@ -361,6 +363,7 @@ begin
     TZPostgresResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
     Statement.GetConnection.GetConSettings);
 
+ // FUUIDOIDBuf[0] := '{'; FUUIDOIDBuf[37] := '}';
   FHandle := Handle;
   FQueryHandle := QueryHandle;
   FPlainDriver := PlainDriver;
@@ -505,6 +508,7 @@ begin
       Nullable := ntNullable;
 
       FieldType := FPlainDriver.PQftype(FQueryHandle, I);
+
       FpgOIDTypes[i] := FieldType;
       DefinePostgreSQLToSQLType(ColumnInfo, FieldType);
       if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
@@ -586,8 +590,13 @@ begin
     Result := FPlainDriver.GetValue(FQueryHandle, RNo, ColumnIndex);
     if (FpgOIDTypes[ColumnIndex] = CHAROID) and not (FIs_bytea_output_hex or FPlainDriver.SupportsDecodeBYTEA) then
       Len := FPlainDriver.GetLength(FQueryHandle, RNo, ColumnIndex)
-    else
-    begin
+    (*else if FpgOIDTypes[ColumnIndex] = UUIDOID then begin
+      //for ColumnIndex := 0 to 35 do
+        //FUUIDOIDBuf[ColumnIndex+1] := UpCase((Result+ColumnIndex)^);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Result^, FUUIDOIDBuf[1], 36);
+      Len := 38;
+      Result := @FUUIDOIDBuf[0];
+    end *)else begin
       {http://www.postgresql.org/docs/9.0/static/libpq-exec.html
       PQgetlength:
        This is the actual data length for the particular data value, that is,
@@ -900,7 +909,8 @@ begin
         end;
       end;
     end else if FpgOIDTypes[ColumnIndex] = UUIDOID { uuid } then begin
-      SetLength(Result, 16);
+      SetLength(FUUIDOIDOutBuff, 16); //take care we've a unique dyn-array if so then this alloc happens once
+      Result := FUUIDOIDOutBuff;
       ValidGUIDToBinary(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), Pointer(Result));
     end else if FpgOIDTypes[ColumnIndex] = OIDOID { oid } then begin
       TempLob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FHandle,

@@ -75,11 +75,12 @@ type
     procedure TestCaseSensitive;
     procedure TestDefaultValues;
     procedure TestEnumValues;
+    procedure TestGUIDs;
   end;
 
 implementation
 
-uses SysUtils, ZTestConsts;
+uses SysUtils, ZTestConsts, ZSysUtils;
 
 { TZTestDbcPostgreSQLCase }
 
@@ -350,6 +351,42 @@ begin
   CheckEquals('Car', ResultSet.GetString(ext_enum_index));
   ResultSet.Close;
   Statement.Close;
+end;
+
+procedure TZTestDbcPostgreSQLCase.TestGUIDs;
+const
+  ext_id_index = FirstDbcIndex+1;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  S: String;
+begin
+  if Connection.GetHostVersion < 9 then
+    Exit;
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+
+  ResultSet := Statement.ExecuteQuery('SELECT id, guid FROM guid_test WHERE id = 1');
+  try
+    CheckNotNull(ResultSet);
+    ResultSet.First;
+
+    // Compare initial inserted value vs database read value from table
+    {$IFDEF UNICODE}
+    S := ZSysUtils.GUIDToUnicode(ResultSet.GetBytes(ext_id_index));
+    {$ELSE}
+    S := ZSysUtils.GUIDToUnicode(ResultSet.GetBytes(ext_id_index));
+    {$ENDIF}
+    CheckEquals('{BAD51CFF-F21F-40E8-A9EA-838977A681BE}', s, 'UUID different');
+    S := ResultSet.GetString(ext_id_index);
+    //it's offical documented what PG returns:
+    //https://www.postgresql.org/docs/9.1/static/datatype-uuid.html
+    //so a native dbc user whould not agree if something else is returned
+    CheckEquals(LowerCase('BAD51CFF-F21F-40E8-A9EA-838977A681BE'), s, 'UUID different');
+  finally
+    ResultSet.Close;
+    Statement.Close;
+  end;
 end;
 
 initialization

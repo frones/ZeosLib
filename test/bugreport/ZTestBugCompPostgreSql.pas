@@ -73,6 +73,8 @@ type
   TZTestCompPostgreSQLBugReport = class(TZAbstractCompSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
+  private
+    procedure InternalTestSF224(const Query: TZReadOnlyQuery);
   published
     procedure Test707339;
     procedure Test707337;
@@ -102,6 +104,7 @@ type
     procedure TestSF81;
     procedure TestSF218_royo;
     procedure TestSF218_kgizmo;
+    procedure TestSF224;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -735,6 +738,29 @@ end;
   Test the bug report #1043252.
   "No Argument for format %s" exception.
 }
+procedure TZTestCompPostgreSQLBugReport.InternalTestSF224(
+  const Query: TZReadOnlyQuery);
+var S: String;
+begin
+  try
+    Query.Connection := Connection;
+    Query.SQL.Text := 'select * from guid_test';
+    Query.Open;
+    Check(Query.Fields[1].DataType = ftGUID);
+    S := Query.Fields[1].AsString;
+    CheckEquals('{BAD51CFF-F21F-40E8-A9EA-838977A681BE}', s, 'UUID different');
+    Query.Close;
+    Query.SQL.Text := 'select * from guid_test where guid = :x';
+    Query.ParamByName('x').AsString := '{BAD51CFF-F21F-40E8-A9EA-838977A681BE}';
+    Query.Open;
+    Check(Query.Fields[1].DataType = ftGUID);
+    S := Query.Fields[1].AsString;
+    CheckEquals('{BAD51CFF-F21F-40E8-A9EA-838977A681BE}', s, 'UUID not found');
+  finally
+    Query.Free;
+  end;
+end;
+
 procedure TZTestCompPostgreSQLBugReport.Test1043252;
 var
   Query: TZQuery;
@@ -1135,6 +1161,27 @@ begin
     Query.Free;
     TempConnection.Free;
   end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF224;
+var
+  Query: TZQuery;
+  ROQuery: TZReadOnlyQuery;
+begin
+  Connection.Connect;
+  if Connection.DbcConnection.GetHostVersion < 9 then
+    Exit;
+  Query := TZQuery.Create(nil);
+  Query.ReadOnly := True;
+  InternalTestSF224(TZReadOnlyQuery(Query));
+  Query := TZQuery.Create(nil);
+  Query.ReadOnly := False;
+  InternalTestSF224(TZReadOnlyQuery(Query));
+  ROQuery := TZReadOnlyQuery.Create(nil);
+  InternalTestSF224(ROQuery);
+  ROQuery := TZReadOnlyQuery.Create(nil);
+  ROQuery.IsUniDirectional := True;
+  InternalTestSF224(ROQuery);
 end;
 
 procedure TZTestCompPostgreSQLBugReport.TestSF81;
