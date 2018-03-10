@@ -204,14 +204,14 @@ type
         const zSql: PAnsiChar;      // SQL statement, UTF-8 encoded
         nBytes: Integer;            // Maximum length of zSql in bytes. -1 = null terminated
         out ppStmt: Psqlite3_stmt;  // OUT: Statement handle
-        const pzTail: PPAnsichar      // OUT: Pointer to unused portion of zSql
+        var pzTail: PAnsichar       // OUT: Pointer to unused portion of zSql
       ): Integer; cdecl;
     sqlite3_prepare_v2: function(
         db: Psqlite;                // Database handle
         const zSql: PAnsiChar;      // SQL statement, UTF-8 encoded
         nBytes: Integer;            // Maximum length of zSql in bytes. -1 = null terminated
         out ppStmt: Psqlite3_stmt;  // OUT: Statement handle
-        const pzTail: PPAnsichar      // OUT: Pointer to unused portion of zSql
+        var pzTail: PAnsichar       // OUT: Pointer to unused portion of zSql
       ): Integer; cdecl;
     sqlite3_prepare_v3: function(
         db: Psqlite;                // Database handle
@@ -219,7 +219,7 @@ type
         nBytes: Integer;            // Maximum length of zSql in bytes. -1 = null terminated
         prepFlags: cardinal;        // Zero or more SQLITE_PREPARE_ flags
         out ppStmt: Psqlite3_stmt;  // OUT: Statement handle
-        const pzTail: PPAnsichar      // OUT: Pointer to unused portion of zSql
+        var pzTail: PAnsichar       // OUT: Pointer to unused portion of zSql
       ): Integer; cdecl;
 
     sqlite3_bind_parameter_count: function(pStmt: Psqlite3_stmt): Integer; cdecl;
@@ -338,146 +338,6 @@ begin
     FLoader.AddLocation(LINUX_DLL_LOCATION+'.0');
   {$ENDIF}
 end;
-
-(*
-function TZSQLitePlainDriver.ErrorString(db: Psqlite; code: Integer): RawByteString;
-begin
-  if code = SQLITE_OK then
-  begin
-    Result := 'not an error';
-    Exit;
-  end;
-
-  if code = SQLITE_NOMEM then
-  begin
-    Result := 'out of memory';
-    Exit;
-  end;
-
-  if ( db = nil ) or ( @sqlite3_errstr = nil ) then
-    case code of
-      SQLITE_OK:         Result := 'not an error';
-      SQLITE_ERROR:      Result := 'SQL logic error or missing database';
-      SQLITE_INTERNAL:   Result := 'internal SQLite implementation flaw';
-      SQLITE_PERM:       Result := 'access permission denied';
-      SQLITE_ABORT:      Result := 'callback requested query abort';
-      SQLITE_BUSY:       Result := 'database is locked';
-      SQLITE_LOCKED:     Result := 'database table is locked';
-      SQLITE_NOMEM:      Result := 'out of memory';
-      SQLITE_READONLY:   Result := 'attempt to write a readonly database';
-      SQLITE_INTERRUPT:  Result := 'interrupted';
-      SQLITE_IOERR:      Result := 'disk I/O error';
-      SQLITE_CORRUPT:    Result := 'database disk image is malformed';
-      SQLITE_NOTFOUND:   Result := 'table or record not found';
-      SQLITE_FULL:       Result := 'database is full';
-      SQLITE_CANTOPEN:   Result := 'unable to open database file';
-      SQLITE_PROTOCOL:   Result := 'database locking protocol failure';
-      SQLITE_EMPTY:      Result := 'table contains no data';
-      SQLITE_SCHEMA:     Result := 'database schema has changed';
-      SQLITE_TOOBIG:     Result := 'too much data for one table row';
-      SQLITE_CONSTRAINT: Result := 'constraint failed';
-      SQLITE_MISMATCH:   Result := 'datatype mismatch';
-      SQLITE_MISUSE:     Result := 'library routine called out of sequence';
-      SQLITE_NOLFS:      Result := 'kernel lacks large file support';
-      SQLITE_AUTH:       Result := 'authorization denied';
-      SQLITE_FORMAT:     Result := 'auxiliary database format error';
-      SQLITE_RANGE:      Result := 'bind index out of range';
-      SQLITE_NOTADB:     Result := 'file is encrypted or is not a database';
-    else
-      Result := 'unknown error';
-    end
-  else
-    Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(sqlite3_errstr(code));
-end;
-
-function TZSQLitePlainDriver.Execute(db: Psqlite; const sql: PAnsiChar;
-  sqlite_callback: Tsqlite_callback; arg: Pointer;
-  var errmsg: PAnsiChar): Integer;
-begin
-  errmsg:= nil;
-  Result := sqlite3_exec(db, sql, sqlite_callback, arg, errmsg);
-end;
-
-function TZSQLitePlainDriver.Open(const filename: PAnsiChar): Psqlite;
-{$IFNDEF UNICODE}
-var
-  Version: string;
-  FileNameString: String;
-{$ENDIF}
-begin
-  Result:= nil;
-  {Note to Windows users: The encoding used for the filename argument of
-    sqlite3_open() and sqlite3_open_v2() must be UTF-8, not whatever codepage
-    is currently defined. Filenames containing international characters must
-    be converted to UTF-8 prior to passing them into sqlite3_open() or
-    sqlite3_open_v2(). }
-
-{$IFDEF UNICODE}
-  sqlite3_open(filename, Result);
-{$ELSE}
-  Version := LibVersion;
-  FileNameString := filename;
-  if (Version > '3.2.5') then
-    {$IFDEF FPC}
-      sqlite3_open(PAnsiChar(FileNameString), Result)
-    {$ELSE}
-      sqlite3_open(PAnsiChar(AnsiToUTF8(FileNameString)), Result)
-    {$ENDIF}
-  else
-    sqlite3_open(filename, Result);
-{$ENDIF}
-end;
-
-function TZSQLitePlainDriver.ReKey(db: Psqlite; const pKey: Pointer;
-  nKey: Integer): Integer;
-begin
-  if @sqlite3_rekey = nil then
-  begin
-    Result := SQLITE_OK;
-  end
-  else
-  begin
-    Result := sqlite3_rekey(db, pKey, nKey);
-  end;
-end;
-
-function TZSQLitePlainDriver.Key(db: Psqlite; const pKey: Pointer;
-  nKey: Integer): Integer;
-begin
-  if sqlite3_key = nil then
-  begin
-    Result := SQLITE_OK;
-  end
-  else
-  begin
-    Result := sqlite3_key(db, pKey, nKey);
-  end;
-end;
-
-function TZSQLitePlainDriver.column_database_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
-begin
-  if Assigned(sqlite3_column_database_name) then
-    Result := sqlite3_column_database_name(pStmt, iCol)
-  else
-    Result := nil;
-end;
-
-function TZSQLitePlainDriver.column_table_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
-begin
-  if Assigned(sqlite3_column_table_name) then
-    Result := sqlite3_column_table_name(pStmt, iCol)
-  else
-    Result := nil;
-end;
-
-function TZSQLitePlainDriver.column_origin_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
-begin
-  if Assigned(sqlite3_column_origin_name) then
-    Result := sqlite3_column_origin_name(pStmt, iCol)
-  else
-    Result := nil;
-end;
-*)
 
 { TZSQLite3PlainDriver }
 
