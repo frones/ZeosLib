@@ -78,10 +78,10 @@ function ConvertSQLiteTypeToSQLType(var TypeName: RawByteString;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckSQLiteError(const PlainDriver: IZSQLitePlainDriver;
-  const Handle: PSqlite; const ErrorCode: Integer; const ErrorMessage: PAnsiChar;
-  const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  const ConSettings: PZConSettings);
+procedure CheckSQLiteError(const PlainDriver: TZSQLitePlainDriver;
+  Handle: PSqlite; ErrorCode: Integer; ErrorMessage: PAnsiChar;
+  LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
+  ConSettings: PZConSettings);
 
 {**
   Decodes a SQLite Version Value and Encodes it to a Zeos SQL Version format:
@@ -212,24 +212,52 @@ end;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckSQLiteError(const PlainDriver: IZSQLitePlainDriver;
-  const Handle: PSqlite; const ErrorCode: Integer; const ErrorMessage: PAnsiChar;
-  const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  const ConSettings: PZConSettings);
+procedure CheckSQLiteError(const PlainDriver: TZSQLitePlainDriver;
+  Handle: PSqlite; ErrorCode: Integer; ErrorMessage: PAnsiChar;
+  LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
+  ConSettings: PZConSettings);
 var
   Error: RawByteString;
 begin
-  if ErrorMessage <> nil then
-  begin
+  if ErrorMessage <> nil then begin
     Error := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(ErrorMessage);
-    PlainDriver.FreeMem(ErrorMessage);
-  end
-  else
+    PlainDriver.sqlite3_free(ErrorMessage);
+  end else
     Error := '';
-  if not (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
-  begin
+  if not (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then begin
+    if (Error = '') and ( Handle <> nil ) and ( Assigned(PlainDriver.sqlite3_errstr) ) then
+      Error := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PLainDriver.sqlite3_errstr(ErrorCode));
     if Error = '' then
-      Error := PlainDriver.ErrorString(Handle, ErrorCode);
+      case ErrorCode of
+        SQLITE_OK:          Error := 'not an error';
+        SQLITE_ERROR:       Error := 'SQL logic error or missing database';
+        SQLITE_INTERNAL:    Error := 'internal SQLite implementation flaw';
+        SQLITE_PERM:        Error := 'access permission denied';
+        SQLITE_ABORT:       Error := 'callback requested query abort';
+        SQLITE_BUSY:        Error := 'database is locked';
+        SQLITE_LOCKED:      Error := 'database table is locked';
+        SQLITE_NOMEM:       Error := 'out of memory';
+        SQLITE_READONLY:    Error := 'attempt to write a readonly database';
+        SQLITE_INTERRUPT:   Error := 'interrupted';
+        SQLITE_IOERR:       Error := 'disk I/O error';
+        SQLITE_CORRUPT:     Error := 'database disk image is malformed';
+        SQLITE_NOTFOUND:    Error := 'table or record not found';
+        SQLITE_FULL:        Error := 'database is full';
+        SQLITE_CANTOPEN:    Error := 'unable to open database file';
+        SQLITE_PROTOCOL:    Error := 'database locking protocol failure';
+        SQLITE_EMPTY:       Error := 'table contains no data';
+        SQLITE_SCHEMA:      Error := 'database schema has changed';
+        SQLITE_TOOBIG:      Error := 'too much data for one table row';
+        SQLITE_CONSTRAINT:  Error := 'constraint failed';
+        SQLITE_MISMATCH:    Error := 'datatype mismatch';
+        SQLITE_MISUSE:      Error := 'library routine called out of sequence';
+        SQLITE_NOLFS:       Error := 'kernel lacks large file support';
+        SQLITE_AUTH:        Error := 'authorization denied';
+        SQLITE_FORMAT:      Error := 'auxiliary database format error';
+        SQLITE_RANGE:       Error := 'bind index out of range';
+        SQLITE_NOTADB:      Error := 'file is encrypted or is not a database';
+        else                Error := 'unknown error';
+      end;
     DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
       ErrorCode, Error);
     raise EZSQLException.CreateWithCode(ErrorCode, Format(SSQLError1,
