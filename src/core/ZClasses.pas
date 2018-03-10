@@ -338,7 +338,7 @@ end;
 
 function TZCharReaderStream.GetSize: Int64;
 begin
-  Result := fEnd-fStart-1
+  Result := Int64(fEnd-fStart){%H-}-1
 end;
 
 function TZCharReaderStream.Read(var Buffer; Count: Integer): Longint;
@@ -360,22 +360,22 @@ end;
 function TZCharReaderStream.Seek(Offset: Integer; Origin: Word): Longint;
 begin
   case Origin of
-    soFromBeginning: fCurrent := Pointer(NativeInt(fStart)+Offset);
-    soFromCurrent:   fCurrent := Pointer(NativeInt(fCurrent)+Offset);
-    soFromEnd:       fCurrent := Pointer(NativeInt(fEnd-1)+Offset);
+    soFromBeginning: fCurrent := {%H-}Pointer({%H-}NativeInt(fStart)+Offset);
+    soFromCurrent:   fCurrent := {%H-}Pointer({%H-}NativeInt(fCurrent)+Offset);
+    soFromEnd:       fCurrent := {%H-}Pointer({%H-}NativeInt(fEnd-1)+Offset);
   end;
-  Result := origin; //make compiler happy: a true postioned processing is nowhere used in our code
+  Result := origin; //make compiler happy: a true positoned processing is nowhere used in our code
   //Result := LongInt(fCurrent-fStart);
 end;
 
 function TZCharReaderStream.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
 begin
   case Ord(Origin) of
-    soFromBeginning: fCurrent := Pointer(NativeInt(fStart)+Offset);
-    soFromCurrent:   fCurrent := Pointer(NativeInt(fCurrent)+Offset);
-    soFromEnd:       fCurrent := Pointer(NativeInt(fEnd-1)+Offset);
+    soFromBeginning: fCurrent := {%H-}Pointer({%H-}NativeInt(fStart)+Offset);
+    soFromCurrent:   fCurrent := {%H-}Pointer({%H-}NativeInt(fCurrent)+Offset);
+    soFromEnd:       fCurrent := {%H-}Pointer({%H-}NativeInt(fEnd-1)+Offset);
   end;
-  Result := Ord(origin); //make compiler happy: a true postioned processing is nowhere used in our code
+  Result := Ord(origin); //make compiler happy: a true positoned processing is nowhere used in our code
   //Result := Int64(fCurrent-fStart);
 end;
 
@@ -388,6 +388,8 @@ end;
 
 function TZCharReaderStream.Write(const Buffer; Count: Integer): Longint;
 begin
+  //satisfy FPC:
+  Result := 0;
   raise Exception.Create(SUnsupportedOperation);
 end;
 
