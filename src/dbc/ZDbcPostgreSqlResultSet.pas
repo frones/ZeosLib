@@ -380,8 +380,6 @@ begin
       Nullable := ntNullable;
 
       FieldType := FPlainDriver.PQftype(FQueryHandle, I);
-      if (FieldType = UUIDOID) and (Pointer(FUUIDOIDOutBuff) = nil) then
-        SetLength(FUUIDOIDOutBuff, 16); //avoid memallocs for GUIDs
 
       FpgOIDTypes[i] := FieldType;
       DefinePostgreSQLToSQLType(ColumnInfo, FieldType);
@@ -783,6 +781,7 @@ begin
         end;
       end;
     end else if FpgOIDTypes[ColumnIndex] = UUIDOID { uuid } then begin
+      SetLength(FUUIDOIDOutBuff, 16); //take care we've a unique dyn-array if so then this alloc happens once
       Result := FUUIDOIDOutBuff;
       ValidGUIDToBinary(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), Pointer(Result));
     end else if FpgOIDTypes[ColumnIndex] = OIDOID { oid } then begin
