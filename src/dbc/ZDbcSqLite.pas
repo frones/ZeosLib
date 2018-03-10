@@ -292,7 +292,7 @@ begin
   SQL := ZUnicodeToRaw(DataBase, zCP_UTF8);
   {$ELSE}
     {$IFDEF LCL}
-    SQL := DataBase
+    SQL := DataBase;
     {$ELSE}
     if ZEncoding.ZDetectUTF8Encoding(Pointer(DataBase), Length(DataBase)) = etANSI
     then SQL := ConSettings.ConvFuncs.ZStringToUTF8(DataBase, zOSCodePage)
