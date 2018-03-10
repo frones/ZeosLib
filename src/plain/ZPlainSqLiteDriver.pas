@@ -226,13 +226,13 @@ type
 
     { Prepared statmenet api }
     function Prepare(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
-      out ppStmt: Psqlite3_stmt; pzTail: PPAnsichar): Integer;
+      out ppStmt: Psqlite3_stmt; var pzTail: PAnsichar): Integer;
     function Prepare_v2(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
-      out ppStmt: Psqlite3_stmt; pzTail: PPAnsichar): Integer;
+      out ppStmt: Psqlite3_stmt; var pzTail: PAnsichar): Integer;
     function Prepare16(db: Psqlite; const zSql: PWideChar; nBytes: Integer;
-      out ppStmt: Psqlite3_stmt; pzTail: ZPPWideChar): Integer;
+      out ppStmt: Psqlite3_stmt; var pzTail: PWideChar): Integer;
     function Prepare16_v2(db: Psqlite; const zSql: PWideChar; nBytes: Integer;
-      out ppStmt: Psqlite3_stmt; pzTail: ZPPWideChar): Integer;
+      out ppStmt: Psqlite3_stmt; var pzTail: PWideChar): Integer;
 
     function bind_parameter_count(pStmt: Psqlite3_stmt): Integer;
     function bind_parameter_name(pStmt: Psqlite3_stmt; ParamIndex: Integer): PAnsichar;
@@ -298,28 +298,28 @@ type
         const zSql: PAnsiChar;      // SQL statement, UTF-8 encoded
         nBytes: Integer;            // Maximum length of zSql in bytes. -1 = null terminated
         out ppStmt: Psqlite3_stmt;  // OUT: Statement handle
-        out pzTail: PPAnsichar      // OUT: Pointer to unused portion of zSql
+        var pzTail: PAnsichar      // OUT: Pointer to unused portion of zSql
       ): Integer; cdecl;
     sqlite3_prepare_v2: function(
         db: Psqlite;                // Database handle
         const zSql: PAnsiChar;      // SQL statement, UTF-8 encoded
         nBytes: Integer;            // Maximum length of zSql in bytes. -1 = null terminated
         out ppStmt: Psqlite3_stmt;  // OUT: Statement handle
-        out pzTail: PPAnsichar      // OUT: Pointer to unused portion of zSql
+        var pzTail: PAnsichar      // OUT: Pointer to unused portion of zSql
       ): Integer; cdecl;
     sqlite3_prepare16: function(
         db: Psqlite;                // Database handle
         const zSql: PWideChar;      // SQL statement, UTF-16 encoded
         nBytes: Integer;            // Maximum length of zSql in bytes. -1 = null terminated
         out ppStmt: Psqlite3_stmt;  // OUT: Statement handle
-        out pzTail: ZPPWideChar      // OUT: Pointer to unused portion of zSql
+        var pzTail: PWideChar      // OUT: Pointer to unused portion of zSql
       ): Integer; cdecl;
     sqlite3_prepare16_v2: function(
         db: Psqlite;                // Database handle
         const zSql: PWideChar;      // SQL statement, UTF-16 encoded
         nBytes: Integer;            // Maximum length of zSql in bytes. -1 = null terminated
         out ppStmt: Psqlite3_stmt;  // OUT: Statement handle
-        out pzTail: ZPPWideChar      // OUT: Pointer to unused portion of zSql
+        var pzTail: PWideChar      // OUT: Pointer to unused portion of zSql
       ): Integer; cdecl;
 
     sqlite3_bind_parameter_count: function(pStmt: Psqlite3_stmt): Integer; cdecl;
@@ -438,13 +438,13 @@ type
 
     { Prepared statmenet api }
     function Prepare(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
-      out ppStmt: Psqlite3_stmt; pzTail: PPAnsichar): Integer;
+      out ppStmt: Psqlite3_stmt; var pzTail: PAnsichar): Integer;
     function Prepare_v2(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
-      out ppStmt: Psqlite3_stmt; pzTail: PPAnsichar): Integer;
+      out ppStmt: Psqlite3_stmt; var pzTail: PAnsichar): Integer;
     function Prepare16(db: Psqlite; const zSql: PWideChar; nBytes: Integer;
-      out ppStmt: Psqlite3_stmt; pzTail: ZPPWideChar): Integer;
+      out ppStmt: Psqlite3_stmt; var pzTail: PWideChar): Integer;
     function Prepare16_v2(db: Psqlite; const zSql: PWideChar; nBytes: Integer;
-      out ppStmt: Psqlite3_stmt; pzTail: ZPPWideChar): Integer;
+      out ppStmt: Psqlite3_stmt; var pzTail: PWideChar): Integer;
 
     function bind_parameter_count(pStmt: Psqlite3_stmt): Integer;
     function bind_parameter_name(pStmt: Psqlite3_stmt; ParamIndex: Integer): PAnsichar;
@@ -762,25 +762,25 @@ end;
 
 { Prepared statmenet api }
 function TZSQLiteBaseDriver.Prepare(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
-  out ppStmt: Psqlite3_stmt; pzTail: PPAnsichar): Integer;
+  out ppStmt: Psqlite3_stmt; var pzTail: PAnsichar): Integer;
 begin
   Result := sqlite3_prepare(db, zSql, nBytes, ppStmt, pzTail);
 end;
 
 function TZSQLiteBaseDriver.Prepare_v2(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
-  out ppStmt: Psqlite3_stmt; pzTail: PPAnsichar): Integer;
+  out ppStmt: Psqlite3_stmt; var pzTail: PAnsichar): Integer;
 begin
   Result := sqlite3_prepare_v2(db, zSql, nBytes, ppStmt, pzTail);
 end;
 
 function TZSQLiteBaseDriver.Prepare16(db: Psqlite; const zSql: PWideChar; nBytes: Integer;
-  out ppStmt: Psqlite3_stmt; pzTail: ZPPWideChar): Integer;
+  out ppStmt: Psqlite3_stmt; var pzTail: PWideChar): Integer;
 begin
   Result := sqlite3_prepare16(db, zSql, nBytes, ppStmt, pzTail);
 end;
 
 function TZSQLiteBaseDriver.Prepare16_v2(db: Psqlite; const zSql: PWideChar; nBytes: Integer;
-  out ppStmt: Psqlite3_stmt; pzTail: ZPPWideChar): Integer;
+  out ppStmt: Psqlite3_stmt; var pzTail: PWideChar): Integer;
 begin
   Result := sqlite3_prepare16_v2(db, zSql, nBytes, ppStmt, pzTail);
 end;

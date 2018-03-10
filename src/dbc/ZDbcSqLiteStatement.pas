@@ -304,10 +304,11 @@ begin
 end;
 
 procedure TZSQLiteCAPIPreparedStatement.Prepare;
+var pzTail: PAnsichar;
 begin
   if not Prepared then
   begin
-    FErrorCode := FPlainDriver.Prepare_v2(FHandle, Pointer(ASQL), Length(ASQL), FStmtHandle, nil);
+    FErrorCode := FPlainDriver.Prepare_v2(FHandle, Pointer(ASQL), Length(ASQL), FStmtHandle, pzTail);
     CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcPrepStmt, ASQL, ConSettings);
     inherited Prepare;
   end;
