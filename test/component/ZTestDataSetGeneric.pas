@@ -109,7 +109,7 @@ type
   end;
   {$IF not declared(TTestMethod)}
     TTestMethod = procedure of object;
-  {$ENDIF}
+  {$IFEND}
 
   TZInterbaseTestGUIDS = class(TZAbstractCompSQLTestCase)
   private
