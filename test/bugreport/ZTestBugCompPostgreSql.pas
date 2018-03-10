@@ -1108,7 +1108,6 @@ begin
 
     TempConnection.Disconnect;
     TempConnection.Properties.Add('standard_conforming_strings=ON');
-    Query := TZQuery.Create(nil);
     TempConnection.Connect;
 
     Query.Connection := TempConnection;
