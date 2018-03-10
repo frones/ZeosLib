@@ -1461,7 +1461,7 @@ const
   DESCRIPTION_Index     = FirstDbcIndex + 7; 
   FIELD_PRECISION_Index = FirstDbcIndex + 8;
   NULL_FLAG_Index       = FirstDbcIndex + 9;
-//CHARACTER_SET_ID_Index= FirstDbcIndex +10; - not used
+  CHARACTER_SET_ID_Index= FirstDbcIndex +10;
 var
   SQL: string;
   LProcedureNamePattern, LColumnNamePattern: string;
@@ -1513,7 +1513,11 @@ begin
       while Next do
       begin
         TypeName := GetInt(FIELD_TYPE_Index);
-        SubTypeName := GetInt(FIELD_SUB_TYPE_Index);
+        // For text fields subtype is 0, get codepage number instead to determine CS_Binary (octets) for stBytes
+        if TypeName in [blr_text, blr_text2, blr_varying, blr_varying2, blr_cstring, blr_cstring2] then
+          SubTypeName := GetInt(CHARACTER_SET_ID_Index)
+        else
+          SubTypeName := GetInt(FIELD_SUB_TYPE_Index);
 
         Result.MoveToInsertRow;
         //Result.UpdateNull(CatalogNameIndex);    //PROCEDURE_CAT
@@ -1807,7 +1811,7 @@ begin
         TypeName := GetInt(FIELD_TYPE_Index);
         // For text fields subtype is 0, get codepage number instead to determine CS_Binary (octets) for stBytes
         if TypeName in [blr_text, blr_text2, blr_varying, blr_varying2, blr_cstring, blr_cstring2] then
-          SubTypeName := GetInt(CHARACTER_SET_ID_Index) //need a way to determine CS_Binary (octets) for stBytes on the other hand the subtype is useless here
+          SubTypeName := GetInt(CHARACTER_SET_ID_Index)
         else
           SubTypeName := GetInt(FIELD_SUB_TYPE_Index);
         FieldScale := GetInt(FIELD_SCALE_Index);

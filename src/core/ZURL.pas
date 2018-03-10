@@ -56,13 +56,13 @@ uses
   SysUtils;
 
 type
+  // List of URL properties that could operate with URL-escaped strings
   TZURLStringList = Class(TStringList)
   protected
-    function GetTextStr: string; override;
-    procedure SetTextStr(const Value: string); override;
     function GetURLText: String;
+    procedure SetURLText(const Value: string);
   public
-    property URLText: String read GetURLText;
+    property URLText: String read GetURLText write SetURLText;
   end;
 
   TZURL = class
@@ -120,35 +120,32 @@ implementation
 
 uses ZCompatibility, ZFastCode, ZSysUtils;
 
-//escape the ';' char to #9
+// escape the ';' char to #9 and LineEnding to ';'
 function Escape(const S: string): string; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 begin
   Result := ReplaceChar(';', #9, S);
+  Result := StringReplace(Result, LineEnding, ';', [rfReplaceAll]);
 end;
 
-//unescape the #9 char to ';'
+// unescape the ';' to LineEnding and #9 char to ';'
 function UnEscape(const S: string): string; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 begin
-  Result := ReplaceChar(#9, ';', S);
+  Result := StringReplace(S, ';', LineEnding, [rfReplaceAll]);
+  Result := ReplaceChar(#9, ';', Result);
 end;
 
 {TZURLStringList}
-function TZURLStringList.GetTextStr: string;
-begin
-  Result := UnEscape(inherited GetTextStr);
-end;
-
-procedure TZURLStringList.SetTextStr(const Value: string);
-begin
-  inherited SetTextStr(Escape(Value));
-end;
 
 function TZURLStringList.GetURLText: String;
 begin
-  Result := Escape(GetTextStr);
-  Result := StringReplace(Result, LineEnding, ';', [rfReplaceAll]);  //return a URL-usable string
+  Result := Escape(Text);
   if Result[Length(Result)] = ';' then
-    Result := Copy(Result, 1, Length(Result)-1);
+    SetLength(Result, Length(Result)-1);
+end;
+
+procedure TZURLStringList.SetURLText(const Value: string);
+begin
+  Text := UnEscape(Value);
 end;
 
 { TZURL }
@@ -356,10 +353,11 @@ begin
   FPort := StrToIntDef(APort, 0);
   FDatabase := ADatabase;
 
-  // Clear fields that must be assigned from properties
+  // Clear fields that MUST be assigned from properties even if empty.
+  // LibLocation should remain uncleared
   FUserName := '';
   FPassword := '';
-  FProperties.Text := StringReplace(AProperties, ';', LineEnding, [rfReplaceAll]); // will launch DoOnPropertiesChange
+  FProperties.URLText := AProperties; // will launch DoOnPropertiesChange
 end;
 
 procedure TZURL.DoOnPropertiesChange(Sender: TObject);
@@ -378,33 +376,30 @@ procedure TZURL.DoOnPropertiesChange(Sender: TObject);
 var
   S: string;
 begin
-  FProperties.OnChange := nil;
-  try
-    // Assign UserName, Password and LibLocation if they're set in Properties
+  FProperties.OnChange := nil; // prevent re-entering
 
-    S := ExtractValueFromProperties('UID');
-    if S <> '' then
-      UserName := S;
+  // Assign UserName, Password and LibLocation if they're set in Properties
+  S := ExtractValueFromProperties('UID');
+  if S <> '' then
+    UserName := S;
 
-    S := ExtractValueFromProperties('username');
-    if S <> '' then
-      UserName := S;
+  S := ExtractValueFromProperties('username');
+  if S <> '' then
+    UserName := S;
 
-    S := ExtractValueFromProperties('PWD');
-    if S <> '' then
-      Password := S;
+  S := ExtractValueFromProperties('PWD');
+  if S <> '' then
+    Password := S;
 
-    S := ExtractValueFromProperties('password');
-    if S <> '' then
-      Password := S;
+  S := ExtractValueFromProperties('password');
+  if S <> '' then
+    Password := S;
 
-    S := ExtractValueFromProperties('LibLocation');
-    if S <> '' then
-      LibLocation := S;
+  S := ExtractValueFromProperties('LibLocation');
+  if S <> '' then
+    LibLocation := S;
 
-  finally
-    FProperties.OnChange := DoOnPropertiesChange;
-  end;
+  FProperties.OnChange := DoOnPropertiesChange;
 
   if Assigned(FOnPropertiesChange) then
     FOnPropertiesChange(Sender);
@@ -415,6 +410,7 @@ var
   I: Integer;
   Param, Value: String;
 begin
+  FProperties.BeginUpdate; // prevent calling OnChange on every iteration
   for I := 0 to Values.Count -1 do
   begin
     BreakString(Values[I], '=', Param{%H-}, Value{%H-});
@@ -424,6 +420,7 @@ begin
       if FProperties.IndexOf(Values[I]) = -1 then //add unique params only!
         FProperties.Add(Values[I]);
   end;
+  FProperties.EndUpdate;
 end;
 
 end.

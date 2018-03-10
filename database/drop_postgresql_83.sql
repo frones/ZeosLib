@@ -4,5 +4,5 @@
 /* Created on:     04.02.2003 19:59:06                          */
 /*==============================================================*/
 
-drop type TEnumTest cascade;
-drop table extension;
+drop type if exists TEnumTest cascade;
+drop table if exists extension;

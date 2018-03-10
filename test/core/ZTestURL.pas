@@ -406,6 +406,7 @@ begin
     CheckEquals('ad/;\min', ZURLOut.UserName);
     CheckEquals('pass/;\word', ZURLOut.Password);
     CheckEquals('role=role/;\name'+LineEnding, ZURLOut.Properties.Text);
+    CheckEquals('role/;\name', ZURLOut.Properties.Values['role']);
   finally
     ZURLIn.Free;
     ZURLOut.Free;
