@@ -411,9 +411,6 @@ begin
     FPlainDriver.reset(FStmtHandle); //reset handle allways without check else -> leaking mem
     LastUpdateCount := Result;
   end;
-  { Autocommit statement. }
-  if Connection.GetAutoCommit then
-    Connection.Commit;
 end;
 
 {**
@@ -448,10 +445,6 @@ begin
     FErrorCode := FPlainDriver.reset(FStmtHandle);
     CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcOther, 'Reset', ConSettings);
   end;
-  { Autocommit statement. }
-  if not Result and Connection.GetAutoCommit then
-    Connection.Commit;
-
   inherited ExecutePrepared;
 end;
 

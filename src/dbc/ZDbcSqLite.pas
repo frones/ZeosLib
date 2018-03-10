@@ -115,6 +115,8 @@ type
     procedure Open; override;
     procedure Close; override;
 
+    procedure SetAutoCommit(Value: Boolean); override;
+
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
@@ -138,7 +140,7 @@ implementation
 
 uses
   ZSysUtils, ZDbcSqLiteStatement, ZSqLiteToken, ZFastCode,
-  ZDbcSqLiteUtils, ZDbcSqLiteMetadata, ZSqLiteAnalyser
+  ZDbcSqLiteUtils, ZDbcSqLiteMetadata, ZSqLiteAnalyser, ZMessages
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZSQLiteDriver }
@@ -228,7 +230,8 @@ procedure TZSQLiteConnection.InternalCreate;
 begin
   FMetadata := TZSQLiteDatabaseMetadata.Create(Self, Url);
   AutoCommit := True;
-  TransactIsolationLevel := tiNone;
+  //https://sqlite.org/pragma.html#pragma_read_uncommitted
+  inherited SetTransactionIsolation(tiSerializable);
   CheckCharEncoding('UTF-8');
   FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values['Undefined_Varchar_AsString_Length'], 0);
   FTransactionStmts[traBegin].SQL := 'BEGIN TRANSACTION';
@@ -326,14 +329,15 @@ begin
     Stmt.ExecuteUpdate('PRAGMA locking_mode = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values['locking_mode']));
 
   try
-    if ( FClientCodePage <> '' ) then
+    if ( FClientCodePage <> '' ) and (FClientCodePage <> 'UTF-8') then
       Stmt.ExecuteUpdate('PRAGMA encoding = '''+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FClientCodePage)+'''');
 
     Stmt.ExecuteUpdate('PRAGMA show_datatypes = ON');
 
     if Info.Values['foreign_keys'] <> '' then
       Stmt.ExecuteUpdate('PRAGMA foreign_keys = '+BoolStrIntsRaw[StrToBoolEx(Info.Values['foreign_keys'])] );
-    StartTransactionSupport;
+    if not GetAutoCommit then
+      ExecTransactionStmt(traBegin);
   except
     GetPlainDriver.Close(FHandle);
     FHandle := nil;
@@ -428,7 +432,7 @@ end;
 }
 procedure TZSQLiteConnection.StartTransactionSupport;
 begin
-  if TransactIsolationLevel <> tiNone then
+  if not Closed and not AutoCommit then
     ExecTransactionStmt(traBegin);
 end;
 
@@ -446,10 +450,12 @@ end;
 }
 procedure TZSQLiteConnection.Commit;
 begin
-  if (TransactIsolationLevel <> tiNone) and not Closed then begin
-    ExecTransactionStmt(traCommit);
-    StartTransactionSupport;
-  end;
+  if not Closed then
+    if not GetAutoCommit then begin
+      ExecTransactionStmt(traCommit);
+      ExecTransactionStmt(traBegin);
+    end else
+      raise Exception.Create(SInvalidOpInAutoCommit);
 end;
 
 {**
@@ -461,10 +467,12 @@ end;
 }
 procedure TZSQLiteConnection.Rollback;
 begin
-  if (TransactIsolationLevel <> tiNone) and not Closed then begin
-    ExecTransactionStmt(traRollback);
-    StartTransactionSupport;
-  end;
+  if not Closed then
+    if not GetAutoCommit then begin
+      ExecTransactionStmt(traRollback);
+      ExecTransactionStmt(traBegin);
+    end else
+      raise Exception.Create(SInvalidOpInAutoCommit);
 end;
 
 {**
@@ -518,6 +526,17 @@ end;
   Sets a new selected catalog name.
   @param Catalog a selected catalog name.
 }
+procedure TZSQLiteConnection.SetAutoCommit(Value: Boolean);
+begin
+  if Value <> GetAutoCommit then begin
+    if not GetAutoCommit and not Closed then
+      ExecTransactionStmt(traRollBack);
+    inherited SetAutoCommit(Value);
+    if not Value and not Closed then
+      ExecTransactionStmt(traBegin);
+  end;
+end;
+
 procedure TZSQLiteConnection.SetCatalog(const Catalog: string);
 begin
   FCatalog := Catalog;
@@ -531,11 +550,11 @@ procedure TZSQLiteConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 begin
   if Level <> GetTransactionIsolation then begin
-    if (TransactIsolationLevel <> tiNone) and not Closed then
+    if not GetAutoCommit and not Closed then
       ExecTransactionStmt(traRollBack);
     inherited SetTransactionIsolation(Level);
-    if (TransactIsolationLevel <> tiNone) and not Closed then
-      StartTransactionSupport;
+    if not GetAutoCommit and not Closed then
+      ExecTransactionStmt(traBegin);
   end;
 end;
 

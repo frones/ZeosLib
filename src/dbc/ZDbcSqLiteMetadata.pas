@@ -1033,7 +1033,8 @@ end;
 function TZSQLiteDatabaseInfo.GetDefaultTransactionIsolation:
   TZTransactIsolationLevel;
 begin
-  Result := tiNone;
+  //https://sqlite.org/pragma.html#pragma_read_uncommitted
+  Result := tiSerializable;
 end;
 
 {**
@@ -1055,7 +1056,8 @@ end;
 function TZSQLiteDatabaseInfo.SupportsTransactionIsolationLevel(
   const Level: TZTransactIsolationLevel): Boolean;
 begin
-  Result := True;
+  //https://sqlite.org/pragma.html#pragma_read_uncommitted
+  Result := Level in [tiSerializable, tiReadUncommitted];
 end;
 
 {**
