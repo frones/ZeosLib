@@ -389,7 +389,9 @@ end;
 function TZCharReaderStream.Write(const Buffer; Count: Integer): Longint;
 begin
   //satisfy FPC:
+  {$IFDEF FPC}
   Result := 0;
+  {$ENDIF}
   raise Exception.Create(SUnsupportedOperation);
 end;
 
