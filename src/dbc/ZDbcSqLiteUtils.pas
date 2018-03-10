@@ -67,8 +67,8 @@ uses
   @result the SQLType field type value
 }
 function ConvertSQLiteTypeToSQLType(var TypeName: RawByteString;
-  const UndefinedVarcharAsStringLength: Integer; var Precision: Integer;
-  var Decimals: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
+  UndefinedVarcharAsStringLength: Integer; var Precision: Integer;
+  var Decimals: Integer; CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -106,30 +106,36 @@ uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   @result the SQLType field type value
 }
 function ConvertSQLiteTypeToSQLType(var TypeName: RawByteString;
-  const UndefinedVarcharAsStringLength: Integer; var Precision: Integer;
-  var Decimals: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
+  UndefinedVarcharAsStringLength: Integer; var Precision: Integer;
+  var Decimals: Integer; CtrlsCPType: TZControlsCodePage): TZSQLType;
 var
   pBL, pBR, pC: Integer;
+  P: PAnsiChar;
 begin
   TypeName := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(TypeName);
   Result := stString;
   Precision := 0;
   Decimals := 0;
-
   pBL := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('('), TypeName);
   if pBL > 0 then begin
-    pBR := ZFastCode.PosEx({$IFDEF UNICODE}RawByteString{$ENDIF}(')'), TypeName, pBL+1);
-    if (pBR > 0) then begin
-      pC := ZFastCode.PosEx({$IFDEF UNICODE}RawByteString{$ENDIF}(','), TypeName, pBL+1);
-      TypeName[pBR] := #0;
-      if pC > 0 then begin
-        TypeName[pC] := #0;
-        Precision := RawToIntDef(@TypeName[pBL+1], 0);
-        Decimals := RawToIntDef(@TypeName[pC+1], 0);
-      end else
-        Precision := RawToIntDef(@TypeName[pBL+1], 0);
-      TypeName := Copy(TypeName, 1, pBL - 1);
-    end;
+    {%H-}NativeUInt(P) := NativeUInt(TypeName)+Word(pBL);
+    Precision := ValRawInt(P, pC);
+    while (P+pC-1)^ = ' ' do inc(pC);
+    if (P+pC-1)^ = ',' then begin
+      Decimals := ValRawInt(P+pC, pBR);
+      while (P+pC+pBR-1)^ = ' ' do inc(pBR);
+      if (P+pC+pBR-1)^ = ')' then begin
+        while (P-2)^ = ' ' do Dec(p); //trim rigth
+        TypeName := Copy(TypeName, 1, P-Pointer(TypeName)-1)
+      end else begin //invalid
+        Precision := 0;
+        Decimals := 0;
+      end;
+    end else if (P+pC-1)^ = ')' then begin
+      while (P-2)^ = ' ' do Dec(p); //trim rigth
+      TypeName := Copy(TypeName, 1, P-Pointer(TypeName)-1)
+    end else
+      Precision := 0;
   end;
   if TypeName = '' then
     Result := stString
@@ -250,7 +256,8 @@ function ConvertSQLiteVersionToSQLVersion(SQLiteVersion: PAnsiChar ): Integer;
 var
   MajorVersion, MinorVersion, SubVersion, Code: Integer;
 begin
-  MajorVersion := ValRawInt(SQLiteVersion, Code{%H-});
+  Code := 0;
+  MajorVersion := ValRawInt(SQLiteVersion, Code);
   Inc(SQLiteVersion, Code);
   MinorVersion := ValRawInt(SQLiteVersion, Code);
   Inc(SQLiteVersion, Code);
