@@ -580,7 +580,6 @@ begin
     inherited Close;
     if FAdoConnection.State = adStateOpen then
       FAdoConnection.Close;
-    FAdoConnection := nil;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
   except
     on E: Exception do
