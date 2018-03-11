@@ -116,6 +116,7 @@ type
     procedure Test1036916;
     procedure Test1004584;
     procedure TestParamUx;
+    procedure TestTicket228;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -1762,6 +1763,25 @@ begin
     Query.SQL.Text := 'DELETE FROM equipment WHERE eq_id>=:id';
     Query.ParamByName('id').AsInteger := TEST_ROW_ID - 2;
     Query.ExecSQL;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestTicket228;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'SELECT * from people';
+    Connection.StartTransaction;
+    Query.Open;
+    //Connection.Commit; <- this crash with FB only
+    Check(Query.RecordCount = 5);
+    Query.Close;
   finally
     Query.Free;
   end;
