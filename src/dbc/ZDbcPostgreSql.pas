@@ -966,7 +966,7 @@ end;
 procedure TZPostgreSQLConnection.Commit;
 begin
   if GetAutoCommit then
-    raise Exception.Create('Commit cannot be called while in auto-commit mode.');
+    raise Exception.Create(SInvalidOpInAutoCommit);
 
   if not Closed then begin
     DoCommit;
@@ -1008,7 +1008,7 @@ end;
 procedure TZPostgreSQLConnection.Rollback;
 begin
   if GetAutoCommit then
-    raise Exception.Create('Rollback is not supported while in auto-commit mode.');
+    raise Exception.Create(SInvalidOpInAutoCommit);
 
   if not Closed then begin
     DoRollback;
