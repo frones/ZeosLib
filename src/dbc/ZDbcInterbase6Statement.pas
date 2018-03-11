@@ -272,12 +272,10 @@ end;
 procedure TZInterbase6PreparedStatement.Close;
 begin
   inherited Close;
-  if FStmtHandle <> 0 then // Free statement-handle! On the other hand: Exception!
-  begin
+  if (FStmtHandle <> 0) then begin// Free statement-handle! On the other hand: Exception!
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_drop);
     FStmtHandle := 0;
   end;
-  FParamSQLData := nil;
 end;
 
 procedure TZInterbase6PreparedStatement.Prepare;
@@ -290,7 +288,7 @@ procedure TZInterbase6PreparedStatement.Prepare;
         FTypeTokens, FInitialStatementType, FZBufferSize), False);
   end;
 begin
-  if (not Prepared)  then
+  if (not Prepared) then
   begin
     FStatementType := InternalPrepare(ASQL, ArrayCount > 0);
     FInitialStatementType := FStatementType;
@@ -312,9 +310,10 @@ end;
 
 procedure TZInterbase6PreparedStatement.Unprepare;
 begin
-  if FStmtHandle <> 0 then //check if prepare did fail. otherwise we unprepare the handle
+  if (FStmtHandle <> 0) then //check if prepare did fail. otherwise we unprepare the handle
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_UNPREPARE); //unprepare avoids new allocation for the stmt handle
   FResultXSQLDA := nil;
+  FParamSQLData := nil;
   SetLength(FTypeTokens, 0);
   FMemPerRow := 0;
   inherited Unprepare;
@@ -350,7 +349,7 @@ begin
       if not Assigned(LastResultSet) then
         LastResultSet := CreateIBResultSet(SQL, Self,
           TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-            FResultXSQLDA, CachedLob, FStatementType))
+            FResultXSQLDA, True, CachedLob, FStatementType))
     else
       LastResultSet := nil;
   end;
@@ -381,7 +380,7 @@ begin
       if (iError <> DISCONNECT_ERROR) then
         Result := CreateIBResultSet(SQL, Self,
           TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-          FResultXSQLDA, CachedLob, FStatementType));
+            FResultXSQLDA, False, CachedLob, FStatementType));
       FOpenResultSet := Pointer(Result);
     end
   else
@@ -564,8 +563,7 @@ end;
 procedure TZInterbase6CallableStatement.Close;
 begin
   inherited Close;
-  if FStmtHandle <> 0 then // Free statement-handle! On the other hand: Exception!
-  begin
+  if FStmtHandle <> 0 then begin// Free statement-handle! On the other hand: Exception!
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_DROP);
     FStmtHandle := 0;
   end;
@@ -598,14 +596,14 @@ begin
     if (FStatementType in [stSelect, stExecProc]) and (FResultXSQLDA.GetFieldCount <> 0) then
       if not Assigned(LastResultSet) then
         LastResultSet := TZInterbase6XSQLDAResultSet.Create(Self, SQL,
-          FStmtHandle, FResultXSQLDA, CachedLob, FStatementType)
+          FStmtHandle, FResultXSQLDA, True, CachedLob, FStatementType)
       else begin
         { Fetch data and fill Output params }
         LastResultSet := nil;
         if not Assigned(FOpenResultSet) then
         begin
           RS := TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-            FResultXSQLDA, CachedLob, FStatementType);
+            FResultXSQLDA, False, CachedLob, FStatementType);
           FOpenResultSet := Pointer(RS);
         end;
         AssignOutParamValuesFromResultSet(IZResultSet(FOpenResultSet),
@@ -637,8 +635,8 @@ begin
         Result := IZResultSet(FOpenResultSet)
       else
       begin
-        Result := TZInterbase6XSQLDAResultSet.Create(Self, Self.SQL, FStmtHandle,
-          FResultXSQLDA, CachedLob, FStatementType);
+        Result := TZInterbase6XSQLDAResultSet.Create(Self, Self.SQL,
+          FStmtHandle, FResultXSQLDA, False, CachedLob, FStatementType);
         FOpenResultSet := Pointer(Result);
       end;
   end;
@@ -672,7 +670,7 @@ begin
     if not Assigned(FOpenResultSet) then
     begin
       RS := TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-        FResultXSQLDA, CachedLob, FStatementType);
+        FResultXSQLDA, False, CachedLob, FStatementType);
       FOpenResultSet := Pointer(RS);
     end;
     AssignOutParamValuesFromResultSet(IZResultSet(FOpenResultSet), OutParamValues, OutParamCount , FDBParamTypes);
