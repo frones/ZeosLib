@@ -814,10 +814,11 @@ procedure TZDBLibConnection.Close;
 var
   LogMessage: RawByteString;
 begin
-  if Closed then
+  if Closed or not Assigned(PlainDriver) then
     Exit;
-  if  Assigned(PlainDriver) then
-  begin
+  try
+    inherited Close;
+  finally
     if not GetPlainDriver.dbDead(FHandle) then
       InternalExecuteStatement('if @@trancount > 0 rollback');
 
@@ -825,10 +826,9 @@ begin
 
     if GetPlainDriver.dbclose(FHandle) <> DBSUCCEED then
       CheckDBLibError(lcDisConnect, LogMessage);
+    FHandle := nil;
     DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
   end;
-  FHandle := nil;
-  inherited;
 end;
 
 {**

@@ -595,26 +595,29 @@ procedure TZOracleConnection.Close;
 var
   LogMessage: RawByteString;
 begin
-  if not Closed then
-  begin
+  if Closed or not Assigned(PlainDriver) then
+    Exit;
+
+  { Closes started transaction }
+  CheckOracleError(GetPlainDriver, FErrorHandle,
+    GetPlainDriver.TransRollback(FContextHandle, FErrorHandle, OCI_DEFAULT),
+    lcDisconnect, LogMessage, ConSettings);
+  GetPlainDriver.HandleFree(FTransHandle, OCI_HTYPE_TRANS);
+  FTransHandle := nil;
+
+  { Closes the session }
+  CheckOracleError(GetPlainDriver, FErrorHandle,
+    GetPlainDriver.SessionEnd(FContextHandle, FErrorHandle, FSessionHandle,
+    OCI_DEFAULT), lcDisconnect, LogMessage, ConSettings);
+
+  { Detaches from the server }
+  CheckOracleError(GetPlainDriver, FErrorHandle,
+    GetPlainDriver.ServerDetach(FServerHandle, FErrorHandle, OCI_DEFAULT),
+    lcDisconnect, LogMessage, ConSettings);
+  try
+    inherited Close;
+  finally
     LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
-
-    { Closes started transaction }
-    CheckOracleError(GetPlainDriver, FErrorHandle,
-      GetPlainDriver.TransRollback(FContextHandle, FErrorHandle, OCI_DEFAULT),
-      lcDisconnect, LogMessage, ConSettings);
-    GetPlainDriver.HandleFree(FTransHandle, OCI_HTYPE_TRANS);
-    FTransHandle := nil;
-
-    { Closes the session }
-    CheckOracleError(GetPlainDriver, FErrorHandle,
-      GetPlainDriver.SessionEnd(FContextHandle, FErrorHandle, FSessionHandle,
-      OCI_DEFAULT), lcDisconnect, LogMessage, ConSettings);
-
-    { Detaches from the server }
-    CheckOracleError(GetPlainDriver, FErrorHandle,
-      GetPlainDriver.ServerDetach(FServerHandle, FErrorHandle, OCI_DEFAULT),
-      lcDisconnect, LogMessage, ConSettings);
 
     { Frees all handlers }
     GetPlainDriver.HandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
@@ -630,7 +633,6 @@ begin
 
     DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
   end;
-  inherited Close;
 end;
 
 {**

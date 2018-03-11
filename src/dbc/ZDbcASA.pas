@@ -227,27 +227,28 @@ begin
   if Closed or (not Assigned(PlainDriver))then
      Exit;
 
-  if AutoCommit then
-    Commit
-  else
-    Rollback;
+  if AutoCommit
+  then Commit
+  else Rollback;
 
-  GetPlainDriver.db_string_disconnect( FHandle, nil);
-  CheckASAError( GetPlainDriver, FHandle, lcDisconnect, ConSettings);
+  try
+    inherited Close;
+  finally
+    GetPlainDriver.db_string_disconnect( FHandle, nil);
+    CheckASAError( GetPlainDriver, FHandle, lcDisconnect, ConSettings);
 
-  FHandle := nil;
-  if GetPlainDriver.db_fini( @FSQLCA) = 0 then
-  begin
-    DriverManager.LogError( lcConnect, ConSettings^.Protocol, 'Inititalizing SQLCA',
-      0, 'Error closing SQLCA');
-    raise EZSQLException.CreateWithCode( 0,
-      'Error closing SQLCA');
+    FHandle := nil;
+    if GetPlainDriver.db_fini( @FSQLCA) = 0 then
+    begin
+      DriverManager.LogError( lcConnect, ConSettings^.Protocol, 'Inititalizing SQLCA',
+        0, 'Error closing SQLCA');
+      raise EZSQLException.CreateWithCode( 0,
+        'Error closing SQLCA');
+    end;
+
+    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
+        'DISCONNECT FROM "'+ConSettings^.Database+'"');
   end;
-
-  DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
-      'DISCONNECT FROM "'+ConSettings^.Database+'"');
-
-  inherited Close;
 end;
 
 {**

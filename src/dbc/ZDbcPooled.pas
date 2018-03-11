@@ -129,6 +129,8 @@ type
     function GetConnection: IZConnection;
   protected // IZConnection
     FClientCodePage: String;
+    procedure RegisterStatement(const Value: IZStatement);
+    procedure DeregisterStatement(const Value: IZStatement);
     procedure CheckCharEncoding(CharSet: String;
       const DoArrange: Boolean = False);
     function GetClientCodePageInformations: PZCodePage; //EgonHugeist
@@ -422,6 +424,11 @@ begin
   {$ENDIF}
 end;
 
+procedure TZDbcPooledConnection.DeregisterStatement(const Value: IZStatement);
+begin
+  GetConnection.DeregisterStatement(Value);
+end;
+
 destructor TZDbcPooledConnection.Destroy;
 begin
   if FConnection <> nil then
@@ -600,6 +607,11 @@ end;
 procedure TZDbcPooledConnection.PrepareTransaction(const transactionid: string);
 begin
   GetConnection.PrepareTransaction(transactionid);
+end;
+
+procedure TZDbcPooledConnection.RegisterStatement(const Value: IZStatement);
+begin
+  GetConnection.RegisterStatement(Value);
 end;
 
 procedure TZDbcPooledConnection.Rollback;

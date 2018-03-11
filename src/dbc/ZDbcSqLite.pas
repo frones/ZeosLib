@@ -492,20 +492,22 @@ var
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
-  for TransactionAction := low(TSQLite3TransactionAction) to high(TSQLite3TransactionAction) do
-    if FTransactionStmts[TransactionAction].Stmt <> nil then begin
-      GetPlainDriver.finalize(FTransactionStmts[TransactionAction].Stmt);
-      FTransactionStmts[TransactionAction].Stmt := nil;
-    end;
-
   LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
-  ErrorCode := GetPlainDriver.Close(FHandle);
-  CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode,
-    lcOther, LogMessage, ConSettings);
-  FHandle := nil;
-  if Assigned(DriverManager) and DriverManager.HasLoggingListener then //thread save
-    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
-  inherited Close;
+  try
+    inherited Close;
+  finally
+    for TransactionAction := low(TSQLite3TransactionAction) to high(TSQLite3TransactionAction) do
+      if FTransactionStmts[TransactionAction].Stmt <> nil then begin
+        GetPlainDriver.finalize(FTransactionStmts[TransactionAction].Stmt);
+        FTransactionStmts[TransactionAction].Stmt := nil;
+      end;
+    ErrorCode := GetPlainDriver.Close(FHandle);
+    FHandle := nil;
+    CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode,
+      lcOther, LogMessage, ConSettings);
+    if Assigned(DriverManager) and DriverManager.HasLoggingListener then //thread save
+      DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+  end;
 end;
 
 {**

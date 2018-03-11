@@ -1061,12 +1061,14 @@ begin
 
   DeallocatePreparedStatements;
   FTableInfoCache.Clear;
-
-  GetPlainDriver.Finish(FHandle);
-  FHandle := nil;
-  LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
-  DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
-  inherited Close;
+  try
+    inherited Close;
+  finally
+    GetPlainDriver.Finish(FHandle);
+    FHandle := nil;
+    LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
+    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+  end;
 end;
 
 {**

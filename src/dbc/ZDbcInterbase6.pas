@@ -292,18 +292,19 @@ begin
     Exit;
 
   CloseTransaction;
-
-  if FHandle <> 0 then
-  begin
-    GetPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
-    FHandle := 0;
-    CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcDisconnect);
+  try
+    inherited Close; //closes all pending statements
+  finally
+    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+        'DISCONNECT FROM "'+ConSettings^.DataBase+'"');
+    if FHandle <> 0 then
+    begin
+      GetPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
+      FHandle := 0;
+      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcDisconnect);
+    end;
   end;
 
-  DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-      'DISCONNECT FROM "'+ConSettings^.DataBase+'"');
-
-  inherited Close;
 end;
 
 {**

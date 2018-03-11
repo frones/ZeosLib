@@ -701,12 +701,14 @@ var
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
-
-  GetPlainDriver.Close(FHandle);
-  FHandle := nil;
-  LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
-  DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
-  inherited Close;
+  try
+    inherited Close;
+  finally
+    GetPlainDriver.Close(FHandle);
+    FHandle := nil;
+    LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
+    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+  end;
 end;
 
 {**

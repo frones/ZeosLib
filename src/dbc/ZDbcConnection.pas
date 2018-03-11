@@ -117,6 +117,7 @@ type
     FURL: TZURL;
     FUseMetadata: Boolean;
     FClientVarManager: IZClientVariantManager;
+    fRegisteredStatements: TList; //weak reference to pending stmts
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetPort: Integer;
@@ -150,13 +151,16 @@ type
     procedure OnPropertiesChange(Sender: TObject); virtual;
     procedure RaiseUnsupportedException;
 
+    procedure RegisterStatement(const Value: IZStatement);
+    procedure DeregisterStatement(const Value: IZStatement);
+    procedure CloseRegisteredStatements;
+
     function CreateRegularStatement({%H-}Info: TStrings): IZStatement;
       virtual;
     function CreatePreparedStatement(const {%H-}SQL: string; {%H-}Info: TStrings):
       IZPreparedStatement; virtual;
     function CreateCallableStatement(const {%H-}SQL: string; {%H-}Info: TStrings):
       IZCallableStatement; virtual;
-
     property Driver: IZDriver read FDriver write FDriver;
     property PlainDriver: IZPlainDriver read FIZPlainDriver write FIZPlainDriver;
     property HostName: string read GetHostName write SetHostName;
@@ -664,6 +668,13 @@ begin
   ConSettings^.DisplayFormatSettings.DateTimeFormatLen := Length(ConSettings^.DisplayFormatSettings.DateTimeFormat);
 end;
 
+procedure TZAbstractConnection.RegisterStatement(
+  const Value: IZStatement);
+begin
+  if fRegisteredStatements.IndexOf(Pointer(Value)) = -1 then
+    fRegisteredStatements.Add(Pointer(Value))
+end;
+
 procedure TZAbstractConnection.ResetCurrentClientCodePage(const Name: String);
 var NewCP, tmp: PZCodePage;
 begin
@@ -796,7 +807,7 @@ begin
     FURL := TZURL.Create();
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
-
+  fRegisteredStatements := TList.Create;
   FURL.OnPropertiesChange := OnPropertiesChange;
   FURL.URL := ZUrl.URL;
 
@@ -834,6 +845,7 @@ begin
     Close;
   FreeAndNil(FMetadata);
   FURL.Free;
+  FreeAndNil(fRegisteredStatements);
   FIZPlainDriver := nil;
   FDriver := nil;
   if Assigned(ConSettings) then
@@ -1214,7 +1226,21 @@ begin
     ConSettings^.ClientCodePage := nil;
     FDisposeCodePage := False;
   end;
-  FClosed := True;
+  try
+    CloseRegisteredStatements;
+  finally
+    FClosed := True;
+  end;
+end;
+
+procedure TZAbstractConnection.CloseRegisteredStatements;
+var I: Integer;
+begin
+  for i := fRegisteredStatements.Count-1 downto 0 do begin
+    //try
+      IZStatement(fRegisteredStatements[i]).Close;
+    //except end;
+  end;
 end;
 
 {**
@@ -1389,6 +1415,15 @@ end;
 }
 procedure TZAbstractConnection.ClearWarnings;
 begin
+end;
+
+procedure TZAbstractConnection.DeregisterStatement(
+  const Value: IZStatement);
+var
+  I: Integer;
+begin
+  I := fRegisteredStatements.IndexOf(Pointer(Value));
+  if I > -1 then fRegisteredStatements.Delete(I);
 end;
 
 function TZAbstractConnection.UseMetadata: boolean;
