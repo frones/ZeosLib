@@ -1606,9 +1606,9 @@ begin
           RS := Statement.GetResultSet;
         end else
           RS := (Statement as IZPreparedStatement).ExecuteQueryPrepared;
+        fTISC_TR_HANDLE := fPISC_TR_HANDLE^;//set current transaction handle
         for i := 1 to OldRow do
           RS.Next; //reload data
-        fTISC_TR_HANDLE := fPISC_TR_HANDLE^;//set current transaction handle
       end;
       FFetchStat := FPlainDriver.isc_dsql_fetch(@StatusVector,
         @FStmtHandle, FDialect, FXSQLDA);
