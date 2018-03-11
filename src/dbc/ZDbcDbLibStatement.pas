@@ -277,9 +277,9 @@ begin
     if supports(FResults[i], IZResultSet, RS) then    //possible IZUpdateCount
       RS.Close;
   FResults.Clear;
-  if Assigned(FOpenResultSet) then begin
-    IZResultSet(FOpenResultSet).Close;
-    FOpenResultSet := nil;
+  if FLastOptainedRS <> nil then begin
+    FLastOptainedRS.Close;
+    FLastOptainedRS := nil;
   end;
   inherited UnPrepare;
 end;
