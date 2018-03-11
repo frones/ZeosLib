@@ -1,0 +1,91 @@
+\documentclass[a4paper,12pt,oneside]{article}
+%\usepackage{geometry}
+%\usepackage{fancyhdr}
+%\usepackage{amsmath,amsthm,amssymb }
+\usepackage{graphicx}
+%\usepackage{lipsum}
+\usepackage[utf8]{inputenc}
+%\usepackage{ngerman}
+%\usepackage{parskip}
+\usepackage{textcomp}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{placeins}
+
+\setlength{\parskip}{0.2cm}
+
+\hypersetup{
+    pdfborder = {0 0 0},		
+}
+
+% Hurenkinder und Schusterjungen verhindern
+\clubpenalty10000
+\widowpenalty10000
+\displaywidowpenalty=10000
+
+\pagestyle{plain}
+
+\title{Zeos 7.2 Release Notes}
+\author{Jan Baumgarten}
+\date{\today}
+%\overfullrule=2mm
+\begin{document}
+\maketitle
+
+\section{General Changes}
+In Zeos 7.2 we added support for Free Pascal 3.0.
+
+\section{Breaking changes on the DBC layer}
+BEWARE: If you call Metadata functions on the DBC layer or use the TZMetadata object be sure that the case of the object name that you retrieve information for is in the correct case.
+Zeos will not do any guesswork - it will simply query the underlying database for the identifier that you supply.
+Example: In former versions of Zeos the call GetColumns('PEOPLE') might have returned information for the table people.
+This will not happen anymore.
+To query information about the table people you will have to use GetColumns('people').
+If you want the former behavior restored, your call has to be like this:
+GetColumns(IZConnection.GetMetadata.NormalizePatternCase('PEOPLE')).
+
+\section{specific changes for drivers}
+\subsection{PostgreSQL}
+\begin{itemize}
+\item The postgresql driver now uses autocommit. Writing to OID BLOBs only works in explicit transactions because of this. 
+This is a limitation in PostgreSQL and cannot be fixed in Zeos. The proposed workaround is to use the bytea data type.
+\item GUID columns are now supported.
+\item 
+  New parameters, so PostgreSQL can connect using SSL (sslmode, requiressl, sslcompression, sslcert, sslkey, sslrootcert, sslcrl). 
+	Take a look at the PostgreSQL documentation on how to use these parameters.
+\item
+  Zeos now can use SSPI, Kerberos and Windows Authentication with PostgreSQL.
+	Just leave the username and password empty for this.
+\item
+  The PostgreSQL driver now maps tiNone and tiReadUncommitted to tiReadCommitted.
+	It is no longer vallid to use your own transaction handling code.
+\item
+  The PostgreSQL driver now supports read only transactions.
+\item
+  The PostgreSQL driver now supports +Infinity, -Infinity and NaN for floating point values.
+\end{itemize}
+
+\subsection{Firebird / Interbase}
+\begin{itemize}
+\item Support for Firebird 3.0.
+\item new parameter to enable Firebird 3 wire compression: wirecompression
+\end{itemize}
+
+\subsection{MySQL / MariaDB}
+\begin{itemize}
+\item
+  TZQuery and TZReadOnlyQuery now support the use of multiple statements in the query.
+	The first result that is returned by the server will be the result that gets loaded into the Dataset.
+\item
+  The MySQL driver should now be thread safe.
+\end{itemize}
+
+\subsection{MS SQL / SAP ASE (Sybase ASE)}
+\begin{itemize}
+\item reenabled Sybase support
+\item the driver now supports GUID-Columns on MS SQL Server.
+\item enable support of TDS 5.0 for newer Sybase Servers
+\item with FreeTDS the server port can now be specified
+\end{itemize}
+
+\end{document}
