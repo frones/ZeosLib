@@ -277,22 +277,6 @@ procedure PrepareOracleStatement(const PlainDriver: IZOraclePlainDriver;
   const ConSettings: PZConSettings);
 
 {**
-  Executes an Oracle statement.
-  @param PlainDriver an Oracle plain driver.
-  @param ContectHandle the OCI ContextHandle.
-  @param SQL an SQL query to be logged.
-  @param Handle a holder for Statement handle.
-  @param ErrorHandle a holder for Error handle.
-  @param ConSettings the connection settings record.
-  @param AutoCommit the commit each execution?.
-}
-procedure ExecuteOracleStatement(const PlainDriver: IZOraclePlainDriver;
-  const ContextHandle: POCISvcCtx; const LogSQL: RawByteString;
-  const Handle: POCIStmt; const ErrorHandle: POCIError;
-  const ConSettings: PZConSettings; const AutoCommit: Boolean;
-  const Iters: Integer);
-
-{**
   Gets a number of updates made by executed Oracle statement.
   @param PlainDriver an Oracle plain driver.
   @param Handle a holder for Statement handle.
@@ -1307,34 +1291,6 @@ begin
       ErrorHandle, Pointer(SQL), Length(SQL)+1, OCI_NTV_SYNTAX, OCI_DEFAULT),
       lcExecute, SQL, ConSettings);
   end;
-end;
-
-{**
-  Executes an Oracle statement.
-  @param PlainDriver an Oracle plain driver.
-  @param ContectHandle the OCI ContextHandle.
-  @param SQL an SQL query to be logged.
-  @param Handle a holder for Statement handle.
-  @param ErrorHandle a holder for Error handle.
-  @param ConSettings the connection settings record.
-  @param AutoCommit the commit each execution?.
-}
-procedure ExecuteOracleStatement(const PlainDriver: IZOraclePlainDriver;
-  const ContextHandle: POCISvcCtx; const LogSQL: RawByteString;
-  const Handle: POCIStmt; const ErrorHandle: POCIError;
-  const ConSettings: PZConSettings; const AutoCommit: Boolean;
-  const Iters: Integer);
-begin
-  if AutoCommit then
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.StmtExecute(ContextHandle,
-        Handle, ErrorHandle, Iters, 0, nil, nil, OCI_COMMIT_ON_SUCCESS),
-      lcExecute, LogSQL, ConSettings)
-  else
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.StmtExecute(ContextHandle,
-        Handle, ErrorHandle, Iters, 0, nil, nil, OCI_DEFAULT),
-      lcExecute, LogSQL, ConSettings);
 end;
 
 {**
