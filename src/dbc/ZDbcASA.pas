@@ -110,7 +110,7 @@ type
       const Value: string);
 
     procedure Open; override;
-    procedure Close; override;
+    procedure InternalClose; override;
   end;
 
   {** Implements a specialized cached resolver for ASA. }
@@ -222,7 +222,7 @@ end;
   garbage collected. Certain fatal errors also result in a closed
   Connection.
 }
-procedure TZASAConnection.Close;
+procedure TZASAConnection.InternalClose;
 begin
   if Closed or (not Assigned(PlainDriver))then
      Exit;
@@ -231,24 +231,20 @@ begin
   then Commit
   else Rollback;
 
-  try
-    inherited Close;
-  finally
-    GetPlainDriver.db_string_disconnect( FHandle, nil);
-    CheckASAError( GetPlainDriver, FHandle, lcDisconnect, ConSettings);
+  GetPlainDriver.db_string_disconnect( FHandle, nil);
+  CheckASAError( GetPlainDriver, FHandle, lcDisconnect, ConSettings);
 
-    FHandle := nil;
-    if GetPlainDriver.db_fini( @FSQLCA) = 0 then
-    begin
-      DriverManager.LogError( lcConnect, ConSettings^.Protocol, 'Inititalizing SQLCA',
-        0, 'Error closing SQLCA');
-      raise EZSQLException.CreateWithCode( 0,
-        'Error closing SQLCA');
-    end;
-
-    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
-        'DISCONNECT FROM "'+ConSettings^.Database+'"');
+  FHandle := nil;
+  if GetPlainDriver.db_fini( @FSQLCA) = 0 then
+  begin
+    DriverManager.LogError( lcConnect, ConSettings^.Protocol, 'Inititalizing SQLCA',
+      0, 'Error closing SQLCA');
+    raise EZSQLException.CreateWithCode( 0,
+      'Error closing SQLCA');
   end;
+
+  DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
+      'DISCONNECT FROM "'+ConSettings^.Database+'"');
 end;
 
 {**

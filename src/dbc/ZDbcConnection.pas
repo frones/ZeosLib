@@ -215,7 +215,8 @@ type
     function EscapeString(const Value: RawByteString): RawByteString; overload; virtual;
 
     procedure Open; virtual;
-    procedure Close; virtual;
+    procedure Close;
+    procedure InternalClose; virtual; abstract;
     function IsClosed: Boolean; virtual;
 
     function GetDriver: IZDriver;
@@ -844,12 +845,14 @@ begin
   if not FClosed then
     Close;
   FreeAndNil(FMetadata);
-  FURL.Free;
+  FreeAndNil(FURL);
   FreeAndNil(fRegisteredStatements);
   FIZPlainDriver := nil;
   FDriver := nil;
-  if Assigned(ConSettings) then
+  if Assigned(ConSettings) then begin
     Dispose(ConSettings);
+    ConSettings := nil;
+  end;
   FClientVarManager := nil;
   inherited Destroy;
 end;
@@ -1219,17 +1222,31 @@ end;
 }
 
 procedure TZAbstractConnection.Close;
+var RefCountAdded: Boolean;
 begin
-  if FDisposeCodePage then
-  begin
-    Dispose(ConSettings^.ClientCodePage);
-    ConSettings^.ClientCodePage := nil;
-    FDisposeCodePage := False;
-  end;
+  //while killing pending statements which keep the Connection.RefCount greater than 0
+  //we need to take care about calling Destroy which calls Close again.
+  if RefCount > 0 then begin //manual close called
+    RefCountAdded := True;
+    _AddRef;
+  end else
+    RefCountAdded := False; //destructor did call close;
   try
-    CloseRegisteredStatements;
+    try
+      CloseRegisteredStatements;
+    finally
+      InternalClose;
+    end;
   finally
     FClosed := True;
+    if FDisposeCodePage then
+    begin
+      Dispose(ConSettings^.ClientCodePage);
+      ConSettings^.ClientCodePage := nil;
+      FDisposeCodePage := False;
+    end;
+    if RefCountAdded then
+      _Release; //destructor will call close again
   end;
 end;
 

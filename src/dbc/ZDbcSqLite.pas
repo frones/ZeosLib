@@ -113,7 +113,7 @@ type
     procedure Rollback; override;
 
     procedure Open; override;
-    procedure Close; override;
+    procedure InternalClose; override;
 
     procedure SetAutoCommit(Value: Boolean); override;
 
@@ -484,7 +484,7 @@ end;
   garbage collected. Certain fatal errors also result in a closed
   Connection.
 }
-procedure TZSQLiteConnection.Close;
+procedure TZSQLiteConnection.InternalClose;
 var
   LogMessage: RawByteString;
   ErrorCode: Integer;
@@ -493,21 +493,17 @@ begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
   LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
-  try
-    inherited Close;
-  finally
-    for TransactionAction := low(TSQLite3TransactionAction) to high(TSQLite3TransactionAction) do
-      if FTransactionStmts[TransactionAction].Stmt <> nil then begin
-        GetPlainDriver.finalize(FTransactionStmts[TransactionAction].Stmt);
-        FTransactionStmts[TransactionAction].Stmt := nil;
-      end;
-    ErrorCode := GetPlainDriver.Close(FHandle);
-    FHandle := nil;
-    CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode,
-      lcOther, LogMessage, ConSettings);
-    if Assigned(DriverManager) and DriverManager.HasLoggingListener then //thread save
-      DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
-  end;
+  for TransactionAction := low(TSQLite3TransactionAction) to high(TSQLite3TransactionAction) do
+    if FTransactionStmts[TransactionAction].Stmt <> nil then begin
+      GetPlainDriver.finalize(FTransactionStmts[TransactionAction].Stmt);
+      FTransactionStmts[TransactionAction].Stmt := nil;
+    end;
+  ErrorCode := GetPlainDriver.Close(FHandle);
+  FHandle := nil;
+  CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode,
+    lcOther, LogMessage, ConSettings);
+  if Assigned(DriverManager) and DriverManager.HasLoggingListener then //thread save
+    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
 end;
 
 {**

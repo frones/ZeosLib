@@ -136,7 +136,7 @@ type
     function PingServer: Integer; override;
 
     procedure Open; override;
-    procedure Close; override;
+    procedure InternalClose; override;
 
     function GetBinaryEscapeString(const Value: RawByteString): String; override;
     function GetBinaryEscapeString(const Value: TBytes): String; override;
@@ -286,25 +286,17 @@ end;
   garbage collected. Certain fatal errors also result in a closed
   Connection.
 }
-procedure TZInterbase6Connection.Close;
+procedure TZInterbase6Connection.InternalClose;
 begin
-  if Closed or (not Assigned(PlainDriver)) then
-    Exit;
-
   CloseTransaction;
-  try
-    inherited Close; //closes all pending statements
-  finally
+  if Assigned(DriverManager) and DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
         'DISCONNECT FROM "'+ConSettings^.DataBase+'"');
-    if FHandle <> 0 then
-    begin
-      GetPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
-      FHandle := 0;
-      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcDisconnect);
-    end;
+  if FHandle <> 0 then begin
+    GetPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
+    FHandle := 0;
   end;
-
+  CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcDisconnect);
 end;
 
 {**

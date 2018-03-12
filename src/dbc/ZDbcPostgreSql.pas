@@ -191,7 +191,7 @@ type
     procedure RollbackPrepared(const transactionid:string);override;
 
     procedure Open; override;
-    procedure Close; override;
+    procedure InternalClose; override;
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
@@ -1050,7 +1050,7 @@ end;
   garbage collected. Certain fatal errors also result in a closed
   Connection.
 }
-procedure TZPostgreSQLConnection.Close;
+procedure TZPostgreSQLConnection.InternalClose;
 var
   LogMessage: RawbyteString;
 begin
@@ -1061,14 +1061,10 @@ begin
 
   DeallocatePreparedStatements;
   FTableInfoCache.Clear;
-  try
-    inherited Close;
-  finally
-    GetPlainDriver.Finish(FHandle);
-    FHandle := nil;
-    LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
-    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
-  end;
+  GetPlainDriver.Finish(FHandle);
+  FHandle := nil;
+  LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
+  DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
 end;
 
 {**
