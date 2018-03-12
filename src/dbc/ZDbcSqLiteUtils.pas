@@ -79,9 +79,8 @@ function ConvertSQLiteTypeToSQLType(var TypeName: RawByteString;
   @param LogMessage a logging message.
 }
 procedure CheckSQLiteError(const PlainDriver: IZSQLitePlainDriver;
-  const Handle: PSqlite; const ErrorCode: Integer; const ErrorMessage: PAnsiChar;
-  const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  const ConSettings: PZConSettings);
+  Handle: PSqlite; ErrorCode: Integer; LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; ConSettings: PZConSettings);
 
 {**
   Decodes a SQLite Version Value and Encodes it to a Zeos SQL Version format:
@@ -219,19 +218,11 @@ end;
   @param LogMessage a logging message.
 }
 procedure CheckSQLiteError(const PlainDriver: IZSQLitePlainDriver;
-  const Handle: PSqlite; const ErrorCode: Integer; const ErrorMessage: PAnsiChar;
-  const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  const ConSettings: PZConSettings);
+  Handle: PSqlite; ErrorCode: Integer; LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; ConSettings: PZConSettings);
 var
   Error: RawByteString;
 begin
-  if ErrorMessage <> nil then
-  begin
-    Error := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(ErrorMessage);
-    PlainDriver.FreeMem(ErrorMessage);
-  end
-  else
-    Error := '';
   if not (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
   begin
     if Error = '' then

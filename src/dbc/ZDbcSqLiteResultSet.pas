@@ -367,7 +367,7 @@ begin
   if Assigned(FStmtHandle) then
   begin
     CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.reset(FStmtHandle),
-      nil, lcOther, 'Reset Prepared Stmt', ConSettings);
+      lcOther, 'Reset Prepared Stmt', ConSettings);
     FStmtHandle := nil;
   end;
   inherited ResetCursor;
@@ -936,7 +936,7 @@ begin
     { Free handle when EOF. }
 ResetHndl:
     CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.reset(FStmtHandle),
-      nil, lcOther, 'sqlite3_reset', ConSettings);
+      lcOther, 'sqlite3_reset', ConSettings);
     FErrorCode := SQLITE_DONE;
     Exit;
   end;
@@ -944,7 +944,7 @@ ResetHndl:
   if (FStmtHandle <> nil ) and not FFirstRow then
   begin
     FErrorCode := FPlainDriver.Step(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcOther, 'FETCH', ConSettings);
+    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcOther, 'FETCH', ConSettings);
   end;
 
   if FFirstRow then //avoid incrementing issue on fetching since the first row is allready fetched by stmt

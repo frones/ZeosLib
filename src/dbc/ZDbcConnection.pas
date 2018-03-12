@@ -117,6 +117,7 @@ type
     FURL: TZURL;
     FUseMetadata: Boolean;
     FClientVarManager: IZClientVariantManager;
+    fRegisteredStatements: TList; //weak reference to pending stmts
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetPort: Integer;
@@ -150,13 +151,16 @@ type
     procedure OnPropertiesChange(Sender: TObject); virtual;
     procedure RaiseUnsupportedException;
 
+    procedure RegisterStatement(const Value: IZStatement);
+    procedure DeregisterStatement(const Value: IZStatement);
+    procedure CloseRegisteredStatements;
+
     function CreateRegularStatement({%H-}Info: TStrings): IZStatement;
       virtual;
     function CreatePreparedStatement(const {%H-}SQL: string; {%H-}Info: TStrings):
       IZPreparedStatement; virtual;
     function CreateCallableStatement(const {%H-}SQL: string; {%H-}Info: TStrings):
       IZCallableStatement; virtual;
-
     property Driver: IZDriver read FDriver write FDriver;
     property PlainDriver: IZPlainDriver read FIZPlainDriver write FIZPlainDriver;
     property HostName: string read GetHostName write SetHostName;
@@ -211,7 +215,8 @@ type
     function EscapeString(const Value: RawByteString): RawByteString; overload; virtual;
 
     procedure Open; virtual;
-    procedure Close; virtual;
+    procedure Close;
+    procedure InternalClose; virtual; abstract;
     function IsClosed: Boolean; virtual;
 
     function GetDriver: IZDriver;
@@ -664,6 +669,13 @@ begin
   ConSettings^.DisplayFormatSettings.DateTimeFormatLen := Length(ConSettings^.DisplayFormatSettings.DateTimeFormat);
 end;
 
+procedure TZAbstractConnection.RegisterStatement(
+  const Value: IZStatement);
+begin
+  if fRegisteredStatements.IndexOf(Pointer(Value)) = -1 then
+    fRegisteredStatements.Add(Pointer(Value))
+end;
+
 procedure TZAbstractConnection.ResetCurrentClientCodePage(const Name: String);
 var NewCP, tmp: PZCodePage;
 begin
@@ -796,7 +808,7 @@ begin
     FURL := TZURL.Create();
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
-
+  fRegisteredStatements := TList.Create;
   FURL.OnPropertiesChange := OnPropertiesChange;
   FURL.URL := ZUrl.URL;
 
@@ -833,11 +845,14 @@ begin
   if not FClosed then
     Close;
   FreeAndNil(FMetadata);
-  FURL.Free;
+  FreeAndNil(FURL);
+  FreeAndNil(fRegisteredStatements);
   FIZPlainDriver := nil;
   FDriver := nil;
-  if Assigned(ConSettings) then
+  if Assigned(ConSettings) then begin
     Dispose(ConSettings);
+    ConSettings := nil;
+  end;
   FClientVarManager := nil;
   inherited Destroy;
 end;
@@ -1207,14 +1222,42 @@ end;
 }
 
 procedure TZAbstractConnection.Close;
+var RefCountAdded: Boolean;
 begin
-  if FDisposeCodePage then
-  begin
-    Dispose(ConSettings^.ClientCodePage);
-    ConSettings^.ClientCodePage := nil;
-    FDisposeCodePage := False;
+  //while killing pending statements which keep the Connection.RefCount greater than 0
+  //we need to take care about calling Destroy which calls Close again.
+  if RefCount > 0 then begin //manual close called
+    RefCountAdded := True;
+    _AddRef;
+  end else
+    RefCountAdded := False; //destructor did call close;
+  try
+    try
+      CloseRegisteredStatements;
+    finally
+      InternalClose;
+    end;
+  finally
+    FClosed := True;
+    if FDisposeCodePage then
+    begin
+      Dispose(ConSettings^.ClientCodePage);
+      ConSettings^.ClientCodePage := nil;
+      FDisposeCodePage := False;
+    end;
+    if RefCountAdded then
+      _Release; //destructor will call close again
   end;
-  FClosed := True;
+end;
+
+procedure TZAbstractConnection.CloseRegisteredStatements;
+var I: Integer;
+begin
+  for i := fRegisteredStatements.Count-1 downto 0 do begin
+    //try
+      IZStatement(fRegisteredStatements[i]).Close;
+    //except end;
+  end;
 end;
 
 {**
@@ -1389,6 +1432,15 @@ end;
 }
 procedure TZAbstractConnection.ClearWarnings;
 begin
+end;
+
+procedure TZAbstractConnection.DeregisterStatement(
+  const Value: IZStatement);
+var
+  I: Integer;
+begin
+  I := fRegisteredStatements.IndexOf(Pointer(Value));
+  if I > -1 then fRegisteredStatements.Delete(I);
 end;
 
 function TZAbstractConnection.UseMetadata: boolean;

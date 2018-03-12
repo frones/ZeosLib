@@ -117,7 +117,7 @@ type
     function EscapeString(From: PAnsiChar; Len: ULong; Quoted: Boolean): RawByteString; overload;
 
     procedure Open; override;
-    procedure Close; override;
+    procedure InternalClose; override;
 
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
@@ -695,18 +695,16 @@ end;
   garbage collected. Certain fatal errors also result in a closed
   Connection.
 }
-procedure TZMySQLConnection.Close;
+procedure TZMySQLConnection.InternalClose;
 var
   LogMessage: RawByteString;
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
-
   GetPlainDriver.Close(FHandle);
   FHandle := nil;
   LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
   DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
-  inherited Close;
 end;
 
 {**

@@ -191,7 +191,7 @@ type
     procedure RollbackPrepared(const transactionid:string);override;
 
     procedure Open; override;
-    procedure Close; override;
+    procedure InternalClose; override;
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
@@ -966,7 +966,7 @@ end;
 procedure TZPostgreSQLConnection.Commit;
 begin
   if GetAutoCommit then
-    raise Exception.Create('Commit cannot be called while in auto-commit mode.');
+    raise Exception.Create(SInvalidOpInAutoCommit);
 
   if not Closed then begin
     DoCommit;
@@ -1008,7 +1008,7 @@ end;
 procedure TZPostgreSQLConnection.Rollback;
 begin
   if GetAutoCommit then
-    raise Exception.Create('Rollback is not supported while in auto-commit mode.');
+    raise Exception.Create(SInvalidOpInAutoCommit);
 
   if not Closed then begin
     DoRollback;
@@ -1050,7 +1050,7 @@ end;
   garbage collected. Certain fatal errors also result in a closed
   Connection.
 }
-procedure TZPostgreSQLConnection.Close;
+procedure TZPostgreSQLConnection.InternalClose;
 var
   LogMessage: RawbyteString;
 begin
@@ -1061,12 +1061,10 @@ begin
 
   DeallocatePreparedStatements;
   FTableInfoCache.Clear;
-
   GetPlainDriver.Finish(FHandle);
   FHandle := nil;
   LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
   DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
-  inherited Close;
 end;
 
 {**
