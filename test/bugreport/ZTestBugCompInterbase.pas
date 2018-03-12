@@ -753,6 +753,7 @@ begin
     Query.SQL.Text := 'SELECT RDB$RELATION_NAME' +
       ' FROM RDB$RELATIONS' +
       ' WHERE RDB$SYSTEM_FLAG=0;';
+    Connection.StartTransaction;
     Query.Open;
     Connection.Commit;
     I := Query.RecordCount; //<- did crash
