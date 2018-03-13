@@ -108,7 +108,7 @@ begin
   CheckEquals(False, Connection.IsReadOnly);
 //  CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
-  CheckEquals(Ord(tiNone), Ord(Connection.GetTransactionIsolation));
+  CheckEquals(Ord(tiSerializable), Ord(Connection.GetTransactionIsolation));
 
   { Checks without transactions. }
   Connection.CreateStatement;
@@ -121,6 +121,7 @@ begin
   { Checks with transactions. }
   Connection.SetTransactionIsolation(tiReadCommitted);
   Connection.CreateStatement;
+  Connection.SetAutoCommit(False);
   CheckEquals(False, Connection.IsClosed);
   Connection.Commit;
   Connection.Rollback;
