@@ -74,9 +74,12 @@ type
     FCachedBlob: boolean;
     FFetchStat: Integer;
     FStmtHandle: TISC_STMT_HANDLE;
+    fPISC_TR_HANDLE: PISC_TR_HANDLE; //save address
+    fTISC_TR_HANDLE: TISC_TR_HANDLE; //save current
+    fWasLastResult: Boolean;
     FXSQLDA: PXSQLDA;
     FIZSQLDA: IZSQLDA;
-    FIBConnection: IZInterbase6Connection;
+    FPISC_DB_HANDLE: PISC_DB_HANDLE;
     FBlobTemp: IZBlob;
     FPlainDriver: IZInterbasePlainDriver;
     FDialect: Word;
@@ -91,7 +94,7 @@ type
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
       StatementHandle: TISC_STMT_HANDLE; const XSQLDA: IZSQLDA;
-      CachedBlob: boolean; StmtType: TZIbSqlStatementType);
+      WasLastResult, CachedBlob: boolean; StmtType: TZIbSqlStatementType);
 
     procedure Close; override;
     procedure ResetCursor; override;
@@ -128,7 +131,7 @@ type
   private
     FBlobId: TISC_QUAD;
     FDBHandle: PISC_DB_HANDLE;
-    FTrHandle: PISC_TR_HANDLE;
+    fTISC_TR_HANDLE: PISC_TR_HANDLE;
     FPlainDriver: IZInterbasePlainDriver;
     FConSettings: PZConSettings;
   protected
@@ -143,7 +146,7 @@ type
   private
     FBlobId: TISC_QUAD;
     FDBHandle: PISC_DB_HANDLE;
-    FTrHandle: PISC_TR_HANDLE;
+    fTISC_TR_HANDLE: PISC_TR_HANDLE;
     FPlainDriver: IZInterbasePlainDriver;
   protected
     procedure ReadLob; override;
@@ -221,9 +224,9 @@ end;
   @param the Interbase sql dialect
 }
 constructor TZInterbase6XSQLDAResultSet.Create(const Statement: IZStatement;
-  const SQL: string; StatementHandle: TISC_STMT_HANDLE;
-  const XSQLDA: IZSQLDA; CachedBlob: Boolean;
-  StmtType: TZIbSqlStatementType);
+  const SQL: string; StatementHandle: TISC_STMT_HANDLE; const XSQLDA: IZSQLDA;
+  WasLastResult, CachedBlob: Boolean; StmtType: TZIbSqlStatementType);
+var FIBConnection: IZInterbase6Connection;
 begin
   inherited Create(Statement, SQL, TZInterbaseResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
     Statement.GetConnection.GetConSettings);
@@ -234,9 +237,13 @@ begin
 
   FCachedBlob := CachedBlob;
   FIBConnection := Statement.GetConnection as IZInterbase6Connection;
+  fPISC_TR_HANDLE := FIBConnection.GetTrHandle;
+  fTISC_TR_HANDLE := fPISC_TR_HANDLE^;
+  FPISC_DB_HANDLE := FIBConnection.GetDBHandle;
   FPlainDriver := FIBConnection.GetPlainDriver;
   FDialect := FIBConnection.GetDialect;
   FStmtType := StmtType; //required to know how to fetch the columns for ExecProc
+  fWasLastResult := WasLastResult;
 
   FStmtHandle := StatementHandle;
   ResultSetType := rtForwardOnly;
@@ -501,9 +508,6 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 function TZInterbase6XSQLDAResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   BlobId: TISC_QUAD;
@@ -511,47 +515,36 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
+  Result := nil;
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-    Result := nil
-  else
-  begin
+  if not LastWasNull then begin
     BlobId := GetQuad(ColumnIndex);
     if FCachedBlob then
-    begin
       case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType of
         stBinaryStream:
           begin
             Result := TZAbstractBlob.Create;
-            with FIBConnection do
-              ReadBlobBufer(FPlainDriver, GetDBHandle, GetTrHandle,
-                BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, True, ConSettings);
+            ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, fPISC_TR_HANDLE,
+              BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, True, ConSettings);
           end;
         stAsciiStream, stUnicodeStream:
           begin
             Result := TZAbstractClob.CreateWithData(nil, 0, Consettings^.ClientCodePage^.CP, ConSettings);
-            with FIBConnection do
-              ReadBlobBufer(FPlainDriver, GetDBHandle, GetTrHandle,
-                BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, False, ConSettings);
+            ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, fPISC_TR_HANDLE,
+              BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, False, ConSettings);
           end;
-      end;
-    end
+      end
     else
       case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType of
         stBinaryStream:
-          Result := TZInterbase6UnCachedBlob.Create(FIBConnection.GetDBHandle,
-            FIBConnection.GetTrHandle, FPlainDriver, BlobId,
-            ConSettings);
+          Result := TZInterbase6UnCachedBlob.Create(FPISC_DB_HANDLE, fPISC_TR_HANDLE,
+            FPlainDriver, BlobId, ConSettings);
         stAsciiStream, stUnicodeStream:
-          Result := TZInterbase6UnCachedClob.Create(FIBConnection.GetDBHandle,
-            FIBConnection.GetTrHandle, FPlainDriver, BlobId,
-            ConSettings);
+          Result := TZInterbase6UnCachedClob.Create(FPISC_DB_HANDLE, fPISC_TR_HANDLE,
+            FPlainDriver, BlobId, ConSettings);
       end;
   end;
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -1745,6 +1738,8 @@ end;
 function TZInterbase6XSQLDAResultSet.Next: Boolean;
 var
   StatusVector: TARRAY_ISC_STATUS;
+  I, OldRow: Integer;
+  RS: IZResultSet;
 begin
   { Checks for maximum row. }
   Result := False;
@@ -1756,6 +1751,24 @@ begin
   begin
     if (FStmtType = stSelect) then  //AVZ - Test for ExecProc - this is for multiple rows
     begin
+      { FireBirdAPI:
+      Both isc_commit_transaction() and isc_rollback_transaction() close the record streams
+      associated with the transaction, reinitialize the transaction name to zero, and release
+      system resources allocated for the transaction. Freed system resources are available for
+      subsequent use by any application or program. }
+      if (fPISC_TR_HANDLE^ <> fTISC_TR_HANDLE) and (Statement.GetUpdateCount = 0) then begin //transaction changed and no updates done?
+        OldRow := RowNo-1; //safe -> reuse resets the rowno
+        //this finally goes to !self! or IZCachedResultSet containing !self! recursive
+        //and scrolls to RowNo -1
+        if fWasLastResult then begin
+          (Statement as IZPreparedStatement).ExecutePrepared;
+          RS := Statement.GetResultSet;
+        end else
+          RS := (Statement as IZPreparedStatement).ExecuteQueryPrepared;
+        fTISC_TR_HANDLE := fPISC_TR_HANDLE^;//set current transaction handle
+        for i := 1 to OldRow do
+          RS.Next; //reload data
+      end;
       FFetchStat := FPlainDriver.isc_dsql_fetch(@StatusVector,
         @FStmtHandle, FDialect, FXSQLDA);
       if FFetchStat = 0 then
@@ -1899,7 +1912,8 @@ end;
 procedure TZInterbase6XSQLDAResultSet.ResetCursor;
 begin
   FFetchStat := 0;
-  FreeStatement(FPlainDriver, FStmtHandle, DSQL_CLOSE); //close handle but not free it
+  if (FStmtHandle <> 0) then
+    FreeStatement(FPlainDriver, FStmtHandle, DSQL_CLOSE); //close handle but not free it
   inherited ResetCursor;
 end;
 
@@ -1915,7 +1929,7 @@ constructor TZInterbase6UnCachedBlob.Create(const DBHandle: PISC_DB_HANDLE;
 begin
   FBlobId := BlobId;
   FDBHandle := DBHandle;
-  FTrHandle := TrHandle;
+  fTISC_TR_HANDLE := TrHandle;
   FPlainDriver := PlainDriver;
   FConSettings := ConSettings;
 end;
@@ -1926,7 +1940,7 @@ var
   Buffer: Pointer;
 begin
   InternalClear;
-  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size{%H-}, Buffer{%H-}, True, FConSettings);
+  ReadBlobBufer(FPlainDriver, FDBHandle, fTISC_TR_HANDLE, FBlobId, Size{%H-}, Buffer{%H-}, True, FConSettings);
   BlobSize := Size;
   BlobData := Buffer;
   inherited ReadLob;
@@ -1946,7 +1960,7 @@ begin
   inherited CreateWithData(nil, 0, ConSettings^.ClientCodePage^.CP, ConSettings);
   FBlobId := BlobId;
   FDBHandle := DBHandle;
-  FTrHandle := TrHandle;
+  fTISC_TR_HANDLE := TrHandle;
   FPlainDriver := PlainDriver;
 end;
 
@@ -1956,7 +1970,7 @@ var
   Buffer: Pointer;
 begin
   InternalClear;
-  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size{%H-}, Buffer{%H-}, False, FConSettings);
+  ReadBlobBufer(FPlainDriver, FDBHandle, fTISC_TR_HANDLE, FBlobId, Size{%H-}, Buffer{%H-}, False, FConSettings);
   (PAnsiChar(Buffer)+NativeUInt(Size))^ := #0; //add #0 terminator
   FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
   FBlobSize := Size+1;

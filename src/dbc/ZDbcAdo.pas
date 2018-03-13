@@ -113,7 +113,7 @@ type
     procedure Rollback; override;
 
     procedure Open; override;
-    procedure Close; override;
+    procedure InternalClose; override;
 
     procedure SetReadOnly(ReadOnly: Boolean); override;
 
@@ -573,7 +573,7 @@ end;
   garbage collected. Certain fatal errors also result in a closed
   Connection.
 }
-procedure TZAdoConnection.Close;
+procedure TZAdoConnection.InternalClose;
 var
   LogMessage: RawByteString;
 begin
@@ -581,22 +581,19 @@ begin
     Exit;
 
   SetAutoCommit(True);
-
-  LogMessage := 'CLOSE CONNECTION TO "'+ConSettings^.Database+'"';
   try
+    LogMessage := 'CLOSE CONNECTION TO "'+ConSettings^.Database+'"';
     if FAdoConnection.State = adStateOpen then
       FAdoConnection.Close;
+//      FAdoConnection := nil;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
   except
-    on E: Exception do
-    begin
+    on E: Exception do begin
       DriverManager.LogError(lcExecute, ConSettings^.Protocol, LogMessage, 0,
        ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end;
-
-  inherited;
 end;
 
 {**

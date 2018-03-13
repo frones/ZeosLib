@@ -78,7 +78,6 @@ type
     function GetArrayRowSupported: Boolean;
     function GetArraySelectSupported: Boolean;
     function GetPlainDriver: IODBC3BasePlainDriver;
-    procedure UnRegisterPendingStatement(const Stmt: IZStatement);
     procedure SetLastWarning(Warning: EZSQLWarning);
     function ODBCVersion: SQLUSMALLINT;
   End;
@@ -93,13 +92,11 @@ type
     fCatalog: String; //cached
     fODBCVersion: SQLUSMALLINT;
     fArraySelectSupported, fArrayRowSupported: Boolean;
-    fPendingStmts: TList; //weak reference to pending stmts
     fServerProvider: TZServerProvider;
     procedure StopTransaction;
   protected
     procedure StartTransaction;
     procedure InternalCreate; override;
-    procedure RegisterPendingStatement(const Value: IZStatement);
   public
     function GetArrayRowSupported: Boolean;
     function GetArraySelectSupported: Boolean;
@@ -107,7 +104,6 @@ type
     procedure CheckDbcError(RETCODE: SQLRETURN); //{$IFDEF WITH_INLINE}inline; {$ENDIF}
     procedure SetLastWarning(Warning: EZSQLWarning);
     function ODBCVersion: Word;
-    procedure UnRegisterPendingStatement(const Value: IZStatement);
   public
     destructor Destroy; override;
 
@@ -128,7 +124,7 @@ type
     procedure Rollback; override;
 
     procedure Open; override;
-    procedure Close; override;
+    procedure InternalClose; override;
 
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
@@ -243,21 +239,18 @@ end;
   garbage collected. Certain fatal errors also result in a closed
   Connection.
 }
-procedure TZAbstractODBCConnection.Close;
-var I: Integer;
+procedure TZAbstractODBCConnection.InternalClose;
 begin
-  if not Closed then begin
-    for i := 0 to fPendingStmts.Count-1 do
-      (IZStatement(fPendingStmts[i])).Close;
-    StopTransaction;
-    try
+  if Closed or not Assigned(fPLainDriver) then
+    Exit;
+  StopTransaction;
+  try
+    if fHDBC <> nil then
       CheckDbcError(fPLainDriver.Disconnect(fHDBC));
-    finally
-      if Assigned(fHDBC) then begin
-        fPlainDriver.FreeHandle(SQL_HANDLE_DBC, fHDBC);
-        fHDBC := nil;
-      end;
-      inherited Close;
+  finally
+    if Assigned(fHDBC) then begin
+      fPlainDriver.FreeHandle(SQL_HANDLE_DBC, fHDBC);
+      fHDBC := nil;
     end;
   end;
 end;
@@ -291,11 +284,10 @@ end;
 }
 destructor TZAbstractODBCConnection.Destroy;
 begin
+  inherited Destroy;
   if Assigned(fHENV) then
     fPlainDriver.FreeHandle(SQL_HANDLE_ENV, fHENV);
   ClearWarnings;
-  inherited Destroy;
-  FreeAndNil(fPendingStmts);
 end;
 
 {**
@@ -369,7 +361,6 @@ var
 label fail;
 begin
   fPlainDriver := GetIZPlainDriver as IODBC3BasePlainDriver;
-  fPendingStmts := TList.Create;
   fHENV := nil;
   fHDBC := nil;
   if Supports(fPlainDriver, IODBC3UnicodePlainDriver) then
@@ -377,7 +368,8 @@ begin
   else
     FMetaData := TODBCDatabaseMetadataA.Create(Self, Url, fHDBC);
   fCatalog := '';
-  Assert(SQL_SUCCEDED(fPlainDriver.AllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), fHENV)), 'Couldn''t allocate an Environment handle');
+  if not SQL_SUCCEDED(fPlainDriver.AllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), fHENV)) then
+    raise EZSQLException.Create('Couldn''t allocate an Environment handle');
   //Try to SET Major Version 3 and minior Version 8
   if SQL_SUCCEDED(fPlainDriver.SetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0)) then
     fODBCVersion := {%H-}Word(SQL_OV_ODBC3_80)
@@ -534,12 +526,6 @@ end;
   commit has been disabled.
   @see #setAutoCommit
 }
-procedure TZAbstractODBCConnection.RegisterPendingStatement(
-  const Value: IZStatement);
-begin
-  fPendingStmts.Add(Pointer(Value))
-end;
-
 procedure TZAbstractODBCConnection.Rollback;
 begin
   if (not AutoCommit) and (not Closed) then
@@ -648,15 +634,6 @@ begin
     CheckDbcError(fPlainDriver.EndTran(SQL_HANDLE_DBC,fHDBC,CompletionType[AutoCommit]));
 end;
 
-procedure TZAbstractODBCConnection.UnRegisterPendingStatement(
-  const Value: IZStatement);
-var
-  I: Integer;
-begin
-  I := fPendingStmts.IndexOf(Pointer(Value));
-  if I > -1 then fPendingStmts.Delete(I);
-end;
-
 { TZODBCConnectionW }
 
 {**
@@ -667,12 +644,9 @@ end;
 }
 function TZODBCConnectionW.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
-var Stmt: TZODBCPreparedStatementW;
 begin
   if Closed then Open;
-  Stmt := TZODBCPreparedStatementW.Create(Self, fHDBC, SQL, Info);
-  RegisterPendingStatement(Stmt);
-  Result := Stmt;
+  Result := TZODBCPreparedStatementW.Create(Self, fHDBC, SQL, Info);
 end;
 
 {**
@@ -772,12 +746,9 @@ end;
 }
 function TZODBCConnectionA.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
-var Stmt: TZODBCPreparedStatementA;
 begin
   if Closed then Open;
-  Stmt := TZODBCPreparedStatementA.Create(Self, fHDBC, SQL, Info);
-  RegisterPendingStatement(Stmt);
-  Result := Stmt;
+  Result := TZODBCPreparedStatementA.Create(Self, fHDBC, SQL, Info);
 end;
 
 {**

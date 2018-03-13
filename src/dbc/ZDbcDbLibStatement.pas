@@ -68,11 +68,11 @@ type
     FHandle: PDBPROCESS;
     FResults: IZCollection;
     FUserEncoding: TZCharEncoding;
-    FLastResultIndex: Integer;
     FLastOptainedRS: IZResultSet;
   protected
     procedure InternalExecuteStatement(const SQL: RawByteString);
     procedure FetchResults;
+    procedure FlushPendingResults;
     function GetParamAsString(ParamIndex: Integer): RawByteString; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string;
@@ -264,23 +264,13 @@ end;
 
 procedure TZDBLibPreparedStatementEmulated.Prepare;
 begin
+  FlushPendingResults;
   inherited Prepare;
-  FLastResultIndex := 0;
 end;
 
 procedure TZDBLibPreparedStatementEmulated.Unprepare;
-var
-  I: Integer;
-  RS: IZResultSet;
 begin
-  for i := 0 to FResults.Count -1 do
-    if supports(FResults[i], IZResultSet, RS) then    //possible IZUpdateCount
-      RS.Close;
-  FResults.Clear;
-  if Assigned(FOpenResultSet) then begin
-    IZResultSet(FOpenResultSet).Close;
-    FOpenResultSet := nil;
-  end;
+  FlushPendingResults;
   inherited UnPrepare;
 end;
 
@@ -310,6 +300,7 @@ begin
   LastUpdateCount := GetUpdateCount;
   Result := GetMoreResults;
   LastResultSet := FLastOptainedRS;
+  FLastOptainedRS := nil;
 end;
 
 {**
@@ -327,6 +318,7 @@ begin
   if GetMoreResults then begin
     Result := FLastOptainedRS;
     FOpenResultSet := Pointer(Result);
+    FLastOptainedRS := nil;
   end;
 end;
 
@@ -356,13 +348,8 @@ procedure TZDBLibPreparedStatementEmulated.FetchResults;
 var
   NativeResultSet: TZDBLibResultSet;
   CachedResultSet: TZCachedResultSet;
-  RS: IZResultSet;
   RowsAffected: Integer;
 begin
-  for RowsAffected := 0 to FResults.Count -1 do
-    if Supports(FResults[RowsAffected], IZResultSet, RS) then
-      RS.Close;
-  FResults.Clear;
 //Sybase does not seem to return dbCount at all, so a workaround is made
   //RowsAffected := -2;
   while FPlainDriver.dbresults(FHandle) = DBSUCCEED do begin
@@ -406,6 +393,22 @@ begin
       end;
       FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS');
     end; *)
+end;
+
+procedure TZDBLibPreparedStatementEmulated.FlushPendingResults;
+var I: Integer;
+begin
+  if FLastOptainedRS <> nil then begin
+    FLastOptainedRS.Close;
+    FLastOptainedRS := nil;
+  end;
+  for I := 0 to FResults.Count -1 do
+    if Supports(FResults[I], IZResultSet, FLastOptainedRS) then begin
+      FLastOptainedRS.Close;
+      FLastOptainedRS := nil;
+    end;
+  FResults.Clear;
+  FLastOptainedRS := nil;
 end;
 
 constructor TZDBLibCallableStatement.Create(const Connection: IZConnection;

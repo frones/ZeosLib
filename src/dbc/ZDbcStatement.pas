@@ -476,6 +476,7 @@ begin
   FCursorName := '';
 
   FConnection := Connection;
+  Connection.RegisterStatement(Self);
   FBatchQueries := TStringList.Create;
 
   FInfo := TStringList.Create;
@@ -494,6 +495,7 @@ begin
   Close;
   if Assigned(FBatchQueries) then
     FreeAndNil(FBatchQueries);
+  FConnection.DeregisterStatement(Self);
   FConnection := nil;
   FreeAndNil(FInfo);
   inherited Destroy;
@@ -2356,10 +2358,7 @@ begin
     IZResultSet(FOpenResultSet).Close;
     FOpenResultSet := nil;
   end;
-  if Assigned(LastResultSet) then begin
-    LastResultSet.Close;
-    LastResultSet := nil;
-  end;
+  LastResultSet := nil;
   UnPrepareInParameters;
   FPrepared := False;
   Self.FInitialArrayCount := 0;

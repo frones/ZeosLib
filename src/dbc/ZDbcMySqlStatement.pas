@@ -604,7 +604,7 @@ begin
   then IZResultSet(FOpenResultSet).Close;
   if (FPlainDriver.GetClientVersion >= 40100) and Assigned(FMYSQL_STMT) then begin
     if FPlainDriver.stmt_next_result(FMYSQL_STMT) > 0
-    then CheckMySQLError(FPlainDriver, fMySQL, lcExecute, ASQL, ConSettings);
+    then checkMySQLPrepStmtError(FPlainDriver, FMYSQL_STMT, lcExecute, ASQL, ConSettings);
 
     FResultsCount := 0; //Reset -> user is expecting more resultsets
     LastResultSet := nil;

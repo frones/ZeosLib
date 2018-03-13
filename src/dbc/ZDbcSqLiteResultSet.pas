@@ -145,7 +145,7 @@ type
 implementation
 
 uses
-  ZMessages, ZDbcSqLite, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode,
+  ZMessages, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode,
   ZVariant, ZDbcSqLiteStatement, ZDbcMetadata
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -583,7 +583,7 @@ begin
   if Assigned(FStmtHandle) then
   begin
     CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.sqlite3_reset(FStmtHandle),
-      nil, lcOther, 'Reset Prepared Stmt', ConSettings);
+      lcOther, 'Reset Prepared Stmt', ConSettings);
     FStmtHandle := nil;
   end;
   inherited ResetCursor;
@@ -1152,7 +1152,7 @@ begin
     { Free handle when EOF. }
 ResetHndl:
     CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.sqlite3_reset(FStmtHandle),
-      nil, lcOther, 'sqlite3_reset', ConSettings);
+      lcOther, 'sqlite3_reset', ConSettings);
     FErrorCode := SQLITE_DONE;
     Exit;
   end;
@@ -1160,7 +1160,7 @@ ResetHndl:
   if (FStmtHandle <> nil ) and not FFirstRow then
   begin
     FErrorCode := FPlainDriver.sqlite3_Step(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcOther, 'FETCH', ConSettings);
+    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcOther, 'FETCH', ConSettings);
   end;
 
   if FFirstRow then //avoid incrementing issue on fetching since the first row is allready fetched by stmt

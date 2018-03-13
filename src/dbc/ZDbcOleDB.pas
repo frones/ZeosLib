@@ -55,7 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
-{.$DEFINE ENABLE_OLEDB}
+{$DEFINE ENABLE_OLEDB}
 {$IFDEF ENABLE_OLEDB}
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
@@ -82,7 +82,6 @@ type
     function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
     function SupportsMARSConnection: Boolean;
-    procedure UnRegisterPendingStatement(const Value: IZStatement);
   end;
 
   {** Implements a generic OleDB Connection. }
@@ -95,7 +94,6 @@ type
     FpulTransactionLevel: ULONG;
     FSupportsMARSConnnection: Boolean;
     FServerProvider: TZServerProvider;
-    fPendingStmts: TList; //weak reference to pending stmts
     fTransaction: ITransactionLocal;
     fCatalog: String;
     procedure StopTransaction;
@@ -103,7 +101,6 @@ type
   protected
     procedure StartTransaction;
     procedure InternalCreate; override;
-    procedure RegisterPendingStatement(const Value: IZStatement);
     function OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string; overload;
     function OleDbGetDBPropValue(APropID: DBPROPID): Integer; overload;
   public
@@ -125,7 +122,7 @@ type
     procedure Rollback; override;
 
     procedure Open; override;
-    procedure Close; override;
+    procedure InternalClose; override;
 
     {procedure SetReadOnly(ReadOnly: Boolean); override; }
 
@@ -142,7 +139,6 @@ type
     function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
     function SupportsMARSConnection: Boolean;
-    procedure UnRegisterPendingStatement(const Value: IZStatement);
   end;
 
 var
@@ -227,7 +223,6 @@ procedure TZOleDBConnection.InternalCreate;
 begin
   CoInit;
   OleCheck(CoGetMalloc(1,fMalloc));
-  fPendingStmts := TList.Create;
   FMetadata := TOleDBDatabaseMetadata.Create(Self, URL);
   FRetaining := False; //not StrToBoolEx(URL.Properties.Values['hard_commit']);
   CheckCharEncoding('CP_UTF16');
@@ -246,7 +241,6 @@ begin
   finally
     FDBCreateCommand := nil;
     fDBInitialize := nil;
-    fPendingStmts.Free;
     fMalloc := nil;
     CoUninit;
   end;
@@ -544,12 +538,9 @@ end;
 }
 function TZOleDBConnection.CreatePreparedStatement(const SQL: string; Info: TStrings):
   IZPreparedStatement;
-var Stmt: TZOleDBPreparedStatement;
 begin
   if Closed then Open;
-  Stmt := TZOleDBPreparedStatement.Create(Self, SQL, Info);
-  Result := Stmt; //inc refcount
-  RegisterPendingStatement(Stmt); //this is required using the native IZStmt becouse of the weak reference
+  Result := TZOleDBPreparedStatement.Create(Self, SQL, Info);
 end;
 
 {**
@@ -582,15 +573,6 @@ end;
 function TZOleDBConnection.SupportsMARSConnection: Boolean;
 begin
   Result := FSupportsMARSConnnection;
-end;
-
-procedure TZOleDBConnection.UnRegisterPendingStatement(
-  const Value: IZStatement);
-var
-  I: Integer;
-begin
-  I := fPendingStmts.IndexOf(Pointer(Value));
-  if I > -1 then fPendingStmts.Delete(I);
 end;
 
 {**
@@ -635,11 +617,6 @@ end;
   commit has been disabled.
   @see #setAutoCommit
 }
-procedure TZOleDBConnection.RegisterPendingStatement(const Value: IZStatement);
-begin
-  fPendingStmts.Add(Pointer(Value))
-end;
-
 procedure TZOleDBConnection.Rollback;
 begin
   if (FpulTransactionLevel > 0) and assigned(fTransaction) then
@@ -760,20 +737,17 @@ end;
   garbage collected. Certain fatal errors also result in a closed
   Connection.
 }
-procedure TZOleDBConnection.Close;
-var I: Integer;
+procedure TZOleDBConnection.InternalClose;
 begin
-  if not Closed then begin
-    for i := 0 to fPendingStmts.Count-1 do
-      (IZStatement(fPendingStmts[i])).Close;
-    StopTransaction;
-    FDBCreateCommand := nil;
-    OleDBCheck(fDBInitialize.Uninitialize);
-    fDBInitialize := nil;
-    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
-      'DISCONNECT FROM "'+ConSettings^.Database+'"');
-    inherited Close;
-  end;
+  if Closed or not Assigned(fDBInitialize) then
+    Exit;
+
+  StopTransaction;
+  FDBCreateCommand := nil;
+  OleDBCheck(fDBInitialize.Uninitialize);
+  fDBInitialize := nil;
+  DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
+    'DISCONNECT FROM "'+ConSettings^.Database+'"');
 end;
 
 initialization

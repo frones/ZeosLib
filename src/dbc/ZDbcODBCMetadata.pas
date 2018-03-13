@@ -227,7 +227,8 @@ type
     fProcedureMap: TProcedureMap;
     fProcedureColumnsColMap: TProcedureColumnsColMap;
   protected
-    procedure CheckStmtError(RETCODE: SQLRETURN; StmtHandle: SQLHSTMT);
+    procedure CheckStmtError(RETCODE: SQLRETURN; StmtHandle: SQLHSTMT;
+      const Connection: IZODBCConnection);
     procedure IntializeTableColColumnMap(const RS: IZResultSet);
     procedure IntializeProcedureMap(const RS: IZResultSet);
     procedure IntializeProceduresProcedureColumnsColMap(const RS: IZResultSet);
@@ -1577,7 +1578,8 @@ constructor TODBCDatabaseMetadataW.Create(Connection: TZAbstractConnection;
   const Url: TZURL; var ConnectionHandle: SQLHDBC);
 begin
   inherited Create(Connection, URL, ConnectionHandle);
-  Assert(Connection.GetIZPlainDriver.QueryInterface(IODBC3UnicodePlainDriver, fPlainW) = S_OK, 'Wrong PlainDriver');
+  if not Connection.GetIZPlainDriver.QueryInterface(IODBC3UnicodePlainDriver, fPlainW) = S_OK then
+     raise EZSQLException.Create('Wrong PlainDriver');
 end;
 
 function TODBCDatabaseMetadataW.CreateDatabaseInfo: IZDatabaseInfo;
@@ -1636,6 +1638,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Proc: ZWideString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
@@ -1643,9 +1646,12 @@ begin
   Schem := DecomposeObjectString(SchemaPattern);
   Proc := DecomposeObjectString(ProcedureNamePattern);
 
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.Procedures(HSTMT, Pointer(Cat), Length(Cat),
-    Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc)), HSTMT);
+    Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc)), HSTMT, ODBCConnection);
   if RS <> nil then
     with RS do
     begin
@@ -1730,6 +1736,7 @@ var
   HSTMT: SQLHSTMT;
   SQLType: TZSQLType;
   Cat, Schem, Proc, Col: ZWideString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
@@ -1738,9 +1745,12 @@ begin
   Proc := DecomposeObjectString(ProcedureNamePattern);
   Col := DecomposeObjectString(ColumnNamePattern);
 
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.ProcedureColumns(HSTMT, Pointer(Cat), Length(Cat),
-    Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc), Pointer(Col), Length(Col)), HSTMT);
+    Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc), Pointer(Col), Length(Col)), HSTMT, ODBCConnection);
   if RS <> nil then
     with RS do
     begin
@@ -1819,6 +1829,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Table, TableTypes: ZWideString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
 
@@ -1833,9 +1844,12 @@ begin
       TableTypes := TableTypes + ',';
     TableTypes := TableTypes + ConSettings^.ConvFuncs.ZStringToUnicode(Types[I], ConSettings^.CTRL_CP);
   end;
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.Tables(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem), Length(Schem),
-    Pointer(Table), Length(Table), Pointer(TableTypes), Length(TableTypes)), HSTMT);
+    Pointer(Table), Length(Table), Pointer(TableTypes), Length(TableTypes)), HSTMT, ODBCConnection);
   if Assigned(RS) then
     with RS do
     begin
@@ -1913,6 +1927,7 @@ var
   HSTMT: SQLHSTMT;
   SQLType: TZSQLType;
   Cat, Schem, Table, Column: ZWideString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern,
       TableNamePattern, ColumnNamePattern);
@@ -1921,10 +1936,14 @@ begin
   Schem := DecomposeObjectString(SchemaPattern);
   Table := DecomposeObjectString(TableNamePattern);
   Column := DecomposeObjectString(ColumnNamePattern);
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.Columns(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Table), Length(Table),
-    Pointer(Column), Length(Column)), HSTMT);
+    Pointer(Column), Length(Column)), HSTMT, ODBCConnection);
   if Assigned(RS) then
   begin
     with RS do
@@ -2012,6 +2031,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Tabl, Col: ZWideString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
@@ -2020,9 +2040,12 @@ begin
   Tabl := DecomposeObjectString(Table);
   Col := DecomposeObjectString(ColumnNamePattern);
 
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.ColumnPrivileges(HSTMT, Pointer(Cat), Length(Cat),
-    Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl), Pointer(Col), Length(Col)), HSTMT);
+    Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl), Pointer(Col), Length(Col)), HSTMT, ODBCConnection);
   if Assigned(RS) then
     with RS do
     begin
@@ -2082,6 +2105,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Table: ZWideString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
 
@@ -2089,9 +2113,12 @@ begin
   Schem := DecomposeObjectString(SchemaPattern);
   Table := DecomposeObjectString(TableNamePattern);
 
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.TablePrivileges(HSTMT, Pointer(Cat), Length(Cat),
-    Pointer(Schem), Length(Schem), Pointer(Table), Length(Table)), HSTMT);
+    Pointer(Schem), Length(Schem), Pointer(Table), Length(Table)), HSTMT, ODBCConnection);
   if Assigned(RS) then
     with RS do
     begin
@@ -2141,6 +2168,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Tabl: ZWideString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
@@ -2148,9 +2176,12 @@ begin
   Schem := DecomposeObjectString(Schema);
   Tabl := DecomposeObjectString(Table);
 
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.PrimaryKeys(HSTMT, Pointer(Cat), Length(Cat),
-    Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl)), HSTMT);
+    Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl)), HSTMT, ODBCConnection);
   if RS <> nil then
     with RS do
     begin
@@ -2252,6 +2283,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   PKCat, PKSchem, PKTabl, FKCat, FKSchem, FKTabl: ZWideString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
                                               ForeignCatalog, ForeignSchema, ForeignTable);
@@ -2263,11 +2295,14 @@ begin
   FKSchem := DecomposeObjectString(ForeignSchema);
   FKTabl := DecomposeObjectString(ForeignTable);
 
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.ForeignKeys(HSTMT, Pointer(PKCat), Length(PKCat),
     Pointer(PKSchem), Length(PKSchem), Pointer(PKTabl), Length(PKTabl),
     Pointer(FKCat), Length(FKCat),
-    Pointer(FKSchem), Length(FKSchem), Pointer(FKTabl), Length(FKTabl)), HSTMT);
+    Pointer(FKSchem), Length(FKSchem), Pointer(FKTabl), Length(FKTabl)), HSTMT, ODBCConnection);
   if RS <> nil then
     with RS do
     begin
@@ -2354,6 +2389,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Tabl: ZWideString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
@@ -2361,10 +2397,13 @@ begin
   Schem := DecomposeObjectString(Schema);
   Tabl := DecomposeObjectString(Table);
 
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.Statistics(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Table),
-    Ord(Unique), Ord(Approximate)), HSTMT);
+    Ord(Unique), Ord(Approximate)), HSTMT, ODBCConnection);
   with RS do
   begin
     while Next do
@@ -2439,11 +2478,15 @@ var
   RS: IZResultSet;
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetTypeInfo;
 
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
-  CheckStmtError(fPLainW.GetTypeInfo(HSTMT, SQL_ALL_TYPES), HSTMT);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  CheckStmtError(fPLainW.GetTypeInfo(HSTMT, SQL_ALL_TYPES), HSTMT, ODBCConnection);
   with RS do begin
     while Next do begin
       Result.MoveToInsertRow;
@@ -2483,7 +2526,8 @@ constructor TODBCDatabaseMetadataA.Create(Connection: TZAbstractConnection;
   const Url: TZURL; var ConnectionHandle: SQLHDBC);
 begin
   inherited Create(Connection, URL, ConnectionHandle);
-  Assert(Connection.GetIZPlainDriver.QueryInterface(IODBC3RawPlainDriver, fPlainA) = S_OK, 'Wrong PlainDriver');
+  if not Connection.GetIZPlainDriver.QueryInterface(IODBC3RawPlainDriver, fPlainA) = S_OK then
+     raise EZSQLException.Create('Wrong PlainDriver');
 end;
 
 function TODBCDatabaseMetadataA.CreateDatabaseInfo: IZDatabaseInfo;
@@ -2541,6 +2585,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Proc: RawByteString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
@@ -2548,9 +2593,12 @@ begin
   Schem := DecomposeObjectString(SchemaPattern);
   Proc := DecomposeObjectString(ProcedureNamePattern);
 
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.Procedures(HSTMT, Pointer(Cat), Length(Cat),
-    Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc)), HSTMT);
+    Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc)), HSTMT, ODBCConnection);
   if RS <> nil then
     with RS do
     begin
@@ -2635,6 +2683,7 @@ var
   HSTMT: SQLHSTMT;
   SQLType: TZSQLType;
   Cat, Schem, Proc, Col: RawByteString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
@@ -2643,9 +2692,13 @@ begin
   Proc := DecomposeObjectString(ProcedureNamePattern);
   Col := DecomposeObjectString(ColumnNamePattern);
 
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.ProcedureColumns(HSTMT, Pointer(Cat), Length(Cat),
-    Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc), Pointer(Col), Length(Col)), HSTMT);
+    Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc), Pointer(Col), Length(Col)),
+    HSTMT, ODBCConnection);
   if RS <> nil then
     with RS do
     begin
@@ -2724,6 +2777,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Tabl, TableTypes: RawByteString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
 
@@ -2739,9 +2793,12 @@ begin
     TableTypes := TableTypes + ConSettings^.ConvFuncs.ZStringToRaw(Types[I], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
   end;
 
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.Tables(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem), Length(Schem),
-    Pointer(Tabl), Length(Tabl), Pointer(TableTypes), Length(TableTypes)), HSTMT);
+    Pointer(Tabl), Length(Tabl), Pointer(TableTypes), Length(TableTypes)), HSTMT, ODBCConnection);
   if Assigned(RS) then
     with RS do
     begin
@@ -2819,6 +2876,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Tabl, Col: RawByteString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern,
       TableNamePattern, ColumnNamePattern);
@@ -2828,9 +2886,12 @@ begin
   Tabl := DecomposeObjectString(TableNamePattern);
   Col := DecomposeObjectString(ColumnNamePattern);
 
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
-  CheckStmtError(fPLainA.Columns(HSTMT, Pointer(Cat), Length(Cat),
-    Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl), Pointer(Col), Length(Col)), HSTMT);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  CheckStmtError(fPLainA.Columns(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem),
+    Length(Schem), Pointer(Tabl), Length(Tabl), Pointer(Col), Length(Col)), HSTMT, ODBCConnection);
   if Assigned(RS) then
   begin
     with RS do
@@ -2917,6 +2978,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Tabl,Col: RawByteString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
@@ -2925,9 +2987,13 @@ begin
   Tabl := DecomposeObjectString(Table);
   Col := DecomposeObjectString(ColumnNamePattern);
 
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.ColumnPrivileges(HSTMT, Pointer(Cat), Length(Cat),
-    Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl), Pointer(Col), Length(Col)), HSTMT);
+    Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl), Pointer(Col), Length(Col)),
+    HSTMT, ODBCConnection);
   if Assigned(RS) then
     with RS do
     begin
@@ -2987,6 +3053,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Tabl: RawByteString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
 
@@ -2994,9 +3061,12 @@ begin
   Schem := DecomposeObjectString(SchemaPattern);
   Tabl := DecomposeObjectString(TableNamePattern);
 
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.TablePrivileges(HSTMT, Pointer(Cat), Length(Cat),
-    Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl)), HSTMT);
+    Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl)), HSTMT, ODBCConnection);
   if Assigned(RS) then
     with RS do
     begin
@@ -3046,6 +3116,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Tabl: RawByteString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
@@ -3053,9 +3124,12 @@ begin
   Schem := DecomposeObjectString(Schema);
   Tabl := DecomposeObjectString(Table);
 
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.PrimaryKeys(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem),
-    Length(Schem), Pointer(Tabl), Length(Tabl)), HSTMT);
+    Length(Schem), Pointer(Tabl), Length(Tabl)), HSTMT, ODBCConnection);
   if RS <> nil then
     with RS do
     begin
@@ -3157,7 +3231,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   PKCat, PKSchem, PKTabl, FKCat, FKSchem, FKTabl: RawByteString;
-
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
                                               ForeignCatalog, ForeignSchema, ForeignTable);
@@ -3169,10 +3243,14 @@ begin
   FKSchem := DecomposeObjectString(ForeignSchema);
   FKTabl := DecomposeObjectString(ForeignTable);
 
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.ForeignKeys(HSTMT, Pointer(PKCat), Length(PKCat),
     Pointer(PKSchem), Length(PKSchem), Pointer(PKTabl), Length(PKTabl),
-    Pointer(FKCat), Length(FKCat), Pointer(FKSchem), Length(FKSchem), Pointer(FKTabl), Length(FKTabl)), HSTMT);
+    Pointer(FKCat), Length(FKCat), Pointer(FKSchem), Length(FKSchem), Pointer(FKTabl), Length(FKTabl)),
+    HSTMT, ODBCConnection);
   if RS <> nil then
     with RS do
     begin
@@ -3259,6 +3337,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Tabl: RawByteString;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
@@ -3266,10 +3345,13 @@ begin
   Schem := DecomposeObjectString(Schema);
   Tabl := DecomposeObjectString(Table);
 
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.Statistics(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Table),
-    Ord(Unique), Ord(Approximate)), HSTMT);
+    Ord(Unique), Ord(Approximate)), HSTMT, ODBCConnection);
   with RS do
   begin
     while Next do
@@ -3344,11 +3426,15 @@ var
   RS: IZResultSet;
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
+  ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetTypeInfo;
 
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, GetConnection as IZODBCConnection);
-  CheckStmtError(fPLainA.GetTypeInfo(HSTMT, SQL_ALL_TYPES), HSTMT);
+  //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
+  //we need to localize the connection
+  ODBCConnection := GetConnection as IZODBCConnection;
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  CheckStmtError(fPLainA.GetTypeInfo(HSTMT, SQL_ALL_TYPES), HSTMT, ODBCConnection);
   with RS do begin
     while Next do begin
       Result.MoveToInsertRow;
@@ -3379,9 +3465,10 @@ end;
 
 { TAbstractODBCDatabaseMetadata }
 
-procedure TAbstractODBCDatabaseMetadata.CheckStmtError(RETCODE: SQLRETURN; StmtHandle: SQLHSTMT);
+procedure TAbstractODBCDatabaseMetadata.CheckStmtError(RETCODE: SQLRETURN;
+  StmtHandle: SQLHSTMT; const Connection: IZODBCConnection);
 begin
-  CheckODBCError(RETCODE, StmtHandle, SQL_HANDLE_STMT, GetConnection as IZODBCConnection);
+  CheckODBCError(RETCODE, StmtHandle, SQL_HANDLE_STMT, Connection);
 end;
 
 {**

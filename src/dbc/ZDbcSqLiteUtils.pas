@@ -79,9 +79,8 @@ function ConvertSQLiteTypeToSQLType(var TypeName: RawByteString;
   @param LogMessage a logging message.
 }
 procedure CheckSQLiteError(const PlainDriver: TZSQLitePlainDriver;
-  Handle: PSqlite; ErrorCode: Integer; ErrorMessage: PAnsiChar;
-  LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  ConSettings: PZConSettings);
+  Handle: PSqlite; ErrorCode: Integer; LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; ConSettings: PZConSettings);
 
 {**
   Decodes a SQLite Version Value and Encodes it to a Zeos SQL Version format:
@@ -219,19 +218,13 @@ end;
   @param LogMessage a logging message.
 }
 procedure CheckSQLiteError(const PlainDriver: TZSQLitePlainDriver;
-  Handle: PSqlite; ErrorCode: Integer; ErrorMessage: PAnsiChar;
-  LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  ConSettings: PZConSettings);
+  Handle: PSqlite; ErrorCode: Integer; LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; ConSettings: PZConSettings);
 var
   Error: RawByteString;
 begin
-  if ErrorMessage <> nil then begin
-    Error := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(ErrorMessage);
-    PlainDriver.sqlite3_free(ErrorMessage);
-  end else
-    Error := '';
   if not (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then begin
-    if (Error = '') and ( Handle <> nil ) and ( Assigned(PlainDriver.sqlite3_errstr) ) then
+    if ( Handle <> nil ) and ( Assigned(PlainDriver.sqlite3_errstr) ) then
       Error := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PLainDriver.sqlite3_errstr(ErrorCode));
     if Error = '' then
       case ErrorCode of

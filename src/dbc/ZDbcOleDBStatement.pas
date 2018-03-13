@@ -159,7 +159,6 @@ end;
 
 destructor TZOleDBPreparedStatement.Destroy;
 begin
-  (Connection as IZOleDBConnection).UnRegisterPendingStatement(Self);
   inherited Destroy;
   FCommand := nil;
 end;
@@ -248,14 +247,16 @@ begin
         InitOleParamDBBindings(DescripedDBPARAMINFO, InParamTypes, InParamValues, ClientVarManager);
         FParamInfoArray := Pointer(DescripedDBPARAMINFO);
       end;
-      Assert(FDBUPARAMS = Cardinal(InParamCount), SInvalidInputParameterCount);
+      if FDBUPARAMS <> Cardinal(InParamCount) then
+        raise EZSQLException.Create(SInvalidInputParameterCount);
       if FDBUPARAMS > 0 then begin
         OleCheck(FCommand.QueryInterface(IID_IAccessor, FParameterAccessor));
         SetLength(FDBBINDSTATUSArray, FDBUPARAMS);
         FRowSize := PrepareOleParamDBBindings(FDBUPARAMS, FDBBindingArray,
           InParamTypes, FParamInfoArray, FTempLobs);
         CalcParamSetsAndBufferSize;
-        Assert(FDBParams.hAccessor = 1, 'Accessor handle should be unique!');
+        if not (FDBParams.hAccessor = 1) then
+          raise EZSQLException.Create('Accessor handle should be unique!');
       end else begin
         { init ! }
         FDBParams.pData := nil;

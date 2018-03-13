@@ -153,6 +153,8 @@ begin
     end;
     Result := ZDbcInterbase6Utils.CheckInterbase6Error(GetPlainDriver,
       FStatusVector, ConSettings, lcExecute, ASQL);
+    if Result <> DISCONNECT_ERROR then
+      LastUpdateCount := GetAffectedRows(GetPlainDriver, FStmtHandle, FStatementType, ConSettings);
   end;
 end;
 
@@ -272,12 +274,10 @@ end;
 procedure TZInterbase6PreparedStatement.Close;
 begin
   inherited Close;
-  if FStmtHandle <> 0 then // Free statement-handle! On the other hand: Exception!
-  begin
+  if (FStmtHandle <> 0) then begin// Free statement-handle! On the other hand: Exception!
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_drop);
     FStmtHandle := 0;
   end;
-  FParamSQLData := nil;
 end;
 
 procedure TZInterbase6PreparedStatement.Prepare;
@@ -290,7 +290,7 @@ procedure TZInterbase6PreparedStatement.Prepare;
         FTypeTokens, FInitialStatementType, FZBufferSize), False);
   end;
 begin
-  if (not Prepared)  then
+  if (not Prepared) then
   begin
     FStatementType := InternalPrepare(ASQL, ArrayCount > 0);
     FInitialStatementType := FStatementType;
@@ -312,9 +312,10 @@ end;
 
 procedure TZInterbase6PreparedStatement.Unprepare;
 begin
-  if FStmtHandle <> 0 then //check if prepare did fail. otherwise we unprepare the handle
+  if (FStmtHandle <> 0) then //check if prepare did fail. otherwise we unprepare the handle
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_UNPREPARE); //unprepare avoids new allocation for the stmt handle
   FResultXSQLDA := nil;
+  FParamSQLData := nil;
   SetLength(FTypeTokens, 0);
   FMemPerRow := 0;
   inherited Unprepare;
@@ -329,31 +330,29 @@ end;
   @see Statement#execute
 }
 function TZInterbase6PreparedStatement.ExecutePrepared: Boolean;
+var iError: Integer;
 begin
   Prepare;
   PrepareLastResultSetForReUse;
   BindInParameters;
-  with FIBConnection do
-  begin
-    ExecuteInternal;
-    LastUpdateCount := GetAffectedRows(GetPlainDriver, FStmtHandle, FStatementType, ConSettings);
+  iError := ExecuteInternal;
 
-    case FStatementType of
-      stInsert, stDelete, stUpdate, stSelectForUpdate:
-        Result := False;
-      else
-        Result := True;
-    end;
+  case FStatementType of
+    stInsert, stDelete, stUpdate, stSelectForUpdate:
+      Result := False;
+    else
+      Result := True;
+  end;
 
-    { Create ResultSet if possible else free Statement Handle }
+  { Create ResultSet if possible else free Statement Handle }
+  if iError <> DISCONNECT_ERROR then
     if (FStatementType in [stSelect, stExecProc]) and (FResultXSQLDA.GetFieldCount <> 0) then
       if not Assigned(LastResultSet) then
         LastResultSet := CreateIBResultSet(SQL, Self,
           TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-            FResultXSQLDA, CachedLob, FStatementType))
+            FResultXSQLDA, True, CachedLob, FStatementType))
     else
       LastResultSet := nil;
-  end;
   inherited ExecutePrepared;
 end;
 
@@ -373,20 +372,21 @@ begin
   BindInParameters;
   iError := ExecuteInternal;
 
-  if (FStatementType in [stSelect, stExecProc]) and ( FResultXSQLDA.GetFieldCount <> 0) then
-    if Assigned(FOpenResultSet) then
-      Result := IZResultSet(FOpenResultSet)
-    else
-    begin
-      if (iError <> DISCONNECT_ERROR) then
-        Result := CreateIBResultSet(SQL, Self,
-          TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-          FResultXSQLDA, CachedLob, FStatementType));
-      FOpenResultSet := Pointer(Result);
-    end
-  else
-    if (iError <> DISCONNECT_ERROR) then    //AVZ
-      raise EZSQLException.Create(SCanNotRetrieveResultSetData);
+  if (iError <> DISCONNECT_ERROR) then begin
+    if (FStatementType in [stSelect, stExecProc]) and ( FResultXSQLDA.GetFieldCount <> 0) then
+      if Assigned(FOpenResultSet) then
+        Result := IZResultSet(FOpenResultSet)
+      else
+      begin
+          Result := CreateIBResultSet(SQL, Self,
+            TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+              FResultXSQLDA, False, CachedLob, FStatementType));
+        FOpenResultSet := Pointer(Result);
+      end
+  end else begin
+    Result := nil;
+    raise EZSQLException.Create(SCanNotRetrieveResultSetData);
+  end;
 
   inherited ExecuteQueryPrepared;
 end;
@@ -406,34 +406,15 @@ var
   iError : Integer; //Implementation for graceful disconnect AVZ
 begin
   Prepare;
-  LastResultSet := nil;
-  with FIBConnection do
-  begin
-    BindInParameters;
-    iError := ExecuteInternal;
-
-    Result := GetAffectedRows(GetPlainDriver, FStmtHandle, FStatementType, ConSettings);
-    LastUpdateCount := Result;
-
-    { Create ResultSet if possible }
-    if (FStatementType in [stExecProc]) and (FResultXSQLDA.GetFieldCount <> 0) then
-      LastResultSet := CreateIBResultSet(SQL, Self,
-        TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-          FResultXSQLDA, CachedLob, FStatementType));
-
-    case FStatementType of
-      stCommit, stRollback, stUnknown: Result := -1;
-      stSelect: FreeStatement(GetPlainDriver, FStmtHandle, DSQL_CLOSE);  //AVZ
-    end;
+  BindInParameters;
+  iError := ExecuteInternal;
+  Result := LastUpdateCount;
+  case FStatementType of
+    stCommit, stRollback, stUnknown: Result := -1;
+    stSelect: if (iError <> DISCONNECT_ERROR) then
+      FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_CLOSE);  //AVZ
   end;
   inherited ExecuteUpdatePrepared;
-
-  //Trail for the disconnection of the database gracefully - AVZ
-  if (iError = DISCONNECT_ERROR) then
-  begin
-    Result := DISCONNECT_ERROR;
-  end;
-
 end;
 
 procedure TZInterbase6PreparedStatement.SetDataArray(ParameterIndex: Integer;
@@ -571,8 +552,7 @@ end;
 procedure TZInterbase6CallableStatement.Close;
 begin
   inherited Close;
-  if FStmtHandle <> 0 then // Free statement-handle! On the other hand: Exception!
-  begin
+  if FStmtHandle <> 0 then begin// Free statement-handle! On the other hand: Exception!
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_DROP);
     FStmtHandle := 0;
   end;
@@ -605,14 +585,14 @@ begin
     if (FStatementType in [stSelect, stExecProc]) and (FResultXSQLDA.GetFieldCount <> 0) then
       if not Assigned(LastResultSet) then
         LastResultSet := TZInterbase6XSQLDAResultSet.Create(Self, SQL,
-          FStmtHandle, FResultXSQLDA, CachedLob, FStatementType)
+          FStmtHandle, FResultXSQLDA, True, CachedLob, FStatementType)
       else begin
         { Fetch data and fill Output params }
         LastResultSet := nil;
         if not Assigned(FOpenResultSet) then
         begin
           RS := TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-            FResultXSQLDA, CachedLob, FStatementType);
+            FResultXSQLDA, False, CachedLob, FStatementType);
           FOpenResultSet := Pointer(RS);
         end;
         AssignOutParamValuesFromResultSet(IZResultSet(FOpenResultSet),
@@ -644,8 +624,8 @@ begin
         Result := IZResultSet(FOpenResultSet)
       else
       begin
-        Result := TZInterbase6XSQLDAResultSet.Create(Self, Self.SQL, FStmtHandle,
-          FResultXSQLDA, CachedLob, FStatementType);
+        Result := TZInterbase6XSQLDAResultSet.Create(Self, Self.SQL,
+          FStmtHandle, FResultXSQLDA, False, CachedLob, FStatementType);
         FOpenResultSet := Pointer(Result);
       end;
   end;
@@ -679,7 +659,7 @@ begin
     if not Assigned(FOpenResultSet) then
     begin
       RS := TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-        FResultXSQLDA, CachedLob, FStatementType);
+        FResultXSQLDA, False, CachedLob, FStatementType);
       FOpenResultSet := Pointer(RS);
     end;
     AssignOutParamValuesFromResultSet(IZResultSet(FOpenResultSet), OutParamValues, OutParamCount , FDBParamTypes);

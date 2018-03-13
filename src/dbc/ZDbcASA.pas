@@ -110,7 +110,7 @@ type
       const Value: string);
 
     procedure Open; override;
-    procedure Close; override;
+    procedure InternalClose; override;
 
     function GetServerProvider: TZServerProvider; override;
   end;
@@ -224,15 +224,14 @@ end;
   garbage collected. Certain fatal errors also result in a closed
   Connection.
 }
-procedure TZASAConnection.Close;
+procedure TZASAConnection.InternalClose;
 begin
   if Closed or (not Assigned(PlainDriver))then
      Exit;
 
-  if AutoCommit then
-    Commit
-  else
-    Rollback;
+  if AutoCommit
+  then Commit
+  else Rollback;
 
   GetPlainDriver.db_string_disconnect( FHandle, nil);
   CheckASAError( GetPlainDriver, FHandle, lcDisconnect, ConSettings);
@@ -248,8 +247,6 @@ begin
 
   DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
       'DISCONNECT FROM "'+ConSettings^.Database+'"');
-
-  inherited Close;
 end;
 
 {**

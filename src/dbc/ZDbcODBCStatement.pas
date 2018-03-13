@@ -114,8 +114,8 @@ type
     procedure UnPrepareInParameters; override;
     function SupportsSingleColumnArrays: Boolean; override;
   public
-    constructor Create(const Connection: IZODBCConnection; var ConnectionHandle: SQLHDBC; const SQL: string; Info: TStrings);
-    destructor Destroy; override;
+    constructor Create(const Connection: IZODBCConnection;
+      var ConnectionHandle: SQLHDBC; const SQL: string; Info: TStrings);
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -246,12 +246,6 @@ begin
   fStmtTimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'StatementTimeOut', ''), SQL_QUERY_TIMEOUT_DEFAULT); //execution timeout in seconds by default 1
   fMoreResultsIndicator := TZMoreResultsIndicator(Ord(not Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets));
   fBindRowWise := False;
-end;
-
-destructor TZAbstractODBCStatement.Destroy;
-begin
-  (Connection as IZODBCConnection).UnRegisterPendingStatement(Self);
-  inherited Destroy;
 end;
 
 function TZAbstractODBCStatement.ExecutePrepared: Boolean;

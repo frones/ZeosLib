@@ -106,7 +106,8 @@ type
     constructor Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
       ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
       ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean = True); virtual;
-    constructor CreateForMetadataCall(var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; const Connection: IZODBCConnection); virtual;
+    constructor CreateForMetadataCall(var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC;
+      {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection); virtual; //fpc skope for (GetConneaction as IZODBCConnection) is different to dephi and crashs
     procedure Open; override;
     procedure Close; override;
 
@@ -202,7 +203,7 @@ const
 implementation
 
 uses Math,
-  ZMessages, ZDbcODBCUtils, ZEncoding, ZDbcODBCStatement, ZConnProperties, ZDbcProperties;
+  ZMessages, ZDbcODBCUtils, ZEncoding, ZDbcODBCStatement, ZDbcProperties;
 
 { TAbstractODBCResultSet }
 
@@ -378,7 +379,7 @@ begin
 end;
 
 constructor TAbstractODBCResultSet.CreateForMetadataCall(
-  var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; const Connection: IZODBCConnection);
+  var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection);
 begin
   StmtHandle := nil;
   Create(nil, StmtHandle, ConnectionHandle, '', Connection,

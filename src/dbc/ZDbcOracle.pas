@@ -125,7 +125,7 @@ type
     function PingServer: Integer; override;
 
     procedure Open; override;
-    procedure Close; override;
+    procedure InternalClose; override;
 
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
@@ -591,46 +591,43 @@ end;
   garbage collected. Certain fatal errors also result in a closed
   Connection.
 }
-procedure TZOracleConnection.Close;
+procedure TZOracleConnection.InternalClose;
 var
   LogMessage: RawByteString;
 begin
-  if not Closed then
-  begin
-    LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
+  if Closed or not Assigned(PlainDriver) then
+    Exit;
+  LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
+  { Closes started transaction }
+  CheckOracleError(FPlainDriver, FErrorHandle,
+    FPlainDriver.OCITransRollback(FContextHandle, FErrorHandle, OCI_DEFAULT),
+    lcDisconnect, LogMessage, ConSettings);
+  FPlainDriver.OCIHandleFree(FTransHandle, OCI_HTYPE_TRANS);
+  FTransHandle := nil;
 
-    { Closes started transaction }
-    CheckOracleError(FPlainDriver, FErrorHandle,
-      FPlainDriver.OCITransRollback(FContextHandle, FErrorHandle, OCI_DEFAULT),
-      lcDisconnect, LogMessage, ConSettings);
-    FPlainDriver.OCIHandleFree(FTransHandle, OCI_HTYPE_TRANS);
-    FTransHandle := nil;
+  { Closes the session }
+  CheckOracleError(FPlainDriver, FErrorHandle,
+    FPlainDriver.OCISessionEnd(FContextHandle, FErrorHandle, FSessionHandle,
+    OCI_DEFAULT), lcDisconnect, LogMessage, ConSettings);
 
-    { Closes the session }
-    CheckOracleError(FPlainDriver, FErrorHandle,
-      FPlainDriver.OCISessionEnd(FContextHandle, FErrorHandle, FSessionHandle,
-      OCI_DEFAULT), lcDisconnect, LogMessage, ConSettings);
+  { Detaches from the server }
+  CheckOracleError(FPlainDriver, FErrorHandle,
+    FPlainDriver.OCIServerDetach(FServerHandle, FErrorHandle, OCI_DEFAULT),
+    lcDisconnect, LogMessage, ConSettings);
 
-    { Detaches from the server }
-    CheckOracleError(FPlainDriver, FErrorHandle,
-      FPlainDriver.OCIServerDetach(FServerHandle, FErrorHandle, OCI_DEFAULT),
-      lcDisconnect, LogMessage, ConSettings);
+  { Frees all handlers }
+  FPlainDriver.OCIHandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
+  FDescibeHandle := nil;
+  FPlainDriver.OCIHandleFree(FSessionHandle, OCI_HTYPE_SESSION);
+  FSessionHandle := nil;
+  FPlainDriver.OCIHandleFree(FContextHandle, OCI_HTYPE_SVCCTX);
+  FContextHandle := nil;
+  FPlainDriver.OCIHandleFree(FServerHandle, OCI_HTYPE_SERVER);
+  FServerHandle := nil;
+  FPlainDriver.OCIHandleFree(FErrorHandle, OCI_HTYPE_ERROR);
+  FErrorHandle := nil;
 
-    { Frees all handlers }
-    FPlainDriver.OCIHandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
-    FDescibeHandle := nil;
-    FPlainDriver.OCIHandleFree(FSessionHandle, OCI_HTYPE_SESSION);
-    FSessionHandle := nil;
-    FPlainDriver.OCIHandleFree(FContextHandle, OCI_HTYPE_SVCCTX);
-    FContextHandle := nil;
-    FPlainDriver.OCIHandleFree(FServerHandle, OCI_HTYPE_SERVER);
-    FServerHandle := nil;
-    FPlainDriver.OCIHandleFree(FErrorHandle, OCI_HTYPE_ERROR);
-    FErrorHandle := nil;
-
-    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
-  end;
-  inherited Close;
+  DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
 end;
 
 {**

@@ -133,7 +133,7 @@ type
     procedure Rollback; override;
 
     procedure Open; override;
-    procedure Close; override;
+    procedure InternalClose; override;
 
     procedure SetReadOnly(ReadOnly: Boolean); override;
 
@@ -810,25 +810,21 @@ end;
   garbage collected. Certain fatal errors also result in a closed
   Connection.
 }
-procedure TZDBLibConnection.Close;
+procedure TZDBLibConnection.InternalClose;
 var
   LogMessage: RawByteString;
 begin
-  if Closed then
+  if Closed or not Assigned(PlainDriver) then
     Exit;
-  if  Assigned(PlainDriver) then
-  begin
-    if not GetPlainDriver.dbDead(FHandle) then
-      InternalExecuteStatement('if @@trancount > 0 rollback');
+  if not GetPlainDriver.dbDead(FHandle) then
+    InternalExecuteStatement('if @@trancount > 0 rollback');
 
-    LogMessage := 'CLOSE CONNECTION TO "'+ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+'" DATABASE "'+ConSettings^.Database+'"';
+  LogMessage := 'CLOSE CONNECTION TO "'+ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+'" DATABASE "'+ConSettings^.Database+'"';
 
-    if GetPlainDriver.dbclose(FHandle) <> DBSUCCEED then
-      CheckDBLibError(lcDisConnect, LogMessage);
-    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
-  end;
+  if GetPlainDriver.dbclose(FHandle) <> DBSUCCEED then
+    CheckDBLibError(lcDisConnect, LogMessage);
   FHandle := nil;
-  inherited;
+  DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
 end;
 
 {**

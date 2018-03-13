@@ -256,6 +256,8 @@ type
   {** Database Connection interface. }
   IZConnection = interface(IZInterface)
     ['{8EEBBD1A-56D1-4EC0-B3BD-42B60591457F}']
+    procedure RegisterStatement(const Value: IZStatement);
+    procedure DeregisterStatement(const Statement: IZStatement);
 
     function CreateStatement: IZStatement;
     function PrepareStatement(const SQL: string): IZPreparedStatement;

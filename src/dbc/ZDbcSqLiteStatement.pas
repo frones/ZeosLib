@@ -172,7 +172,7 @@ var
   CharRec: TZCharRec;
 begin
   FErrorcode := FPlainDriver.sqlite3_clear_bindings(FStmtHandle);
-  CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcBindPrepStmt, ASQL, ConSettings);
+  CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
   for i := 1 to InParamCount do
   begin
     if ClientVarManager.IsNull(InParamValues[i-1])  then
@@ -278,7 +278,7 @@ begin
           RaiseUnsupportedParameterTypeException(InParamTypes[I-1]);
       end;
     end;
-    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcBindPrepStmt, ASQL, ConSettings);
+    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
   end;
   inherited BindInParameters;
 end;
@@ -309,7 +309,7 @@ begin
   if not Prepared then
   begin
     FErrorCode := FPlainDriver.sqlite3_prepare_v2(FHandle, Pointer(ASQL), Length(ASQL), FStmtHandle, pzTail);
-    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcPrepStmt, ASQL, ConSettings);
+    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcPrepStmt, ASQL, ConSettings);
     inherited Prepare;
   end;
 end;
@@ -319,7 +319,7 @@ begin
   { EH: do not change this sequence!: first close possbile opened resultset}
   inherited UnPrepare;
   CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.sqlite3_finalize(FStmtHandle),
-    nil, lcUnprepStmt, 'Unprepare SQLite Statement', ConSettings);
+    lcUnprepStmt, 'Unprepare SQLite Statement', ConSettings);
   FStmtHandle := nil; //Keep track we do not try to finalize the handle again on destroy or so
 end;
 
@@ -351,7 +351,7 @@ begin
   { we need this here too: TZTestDbcSQLiteCase.TestResultSet would raise an Error on Connection.Close if Stmt isn't freed!}
   if Assigned(FStmtHandle) then
     CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.sqlite3_finalize(FStmtHandle),
-      nil, lcUnprepStmt, 'Unprepare SQLite Statement', ConSettings);
+      lcUnprepStmt, 'Unprepare SQLite Statement', ConSettings);
   FStmtHandle := nil; //Keep track we do not try to finalize the handle again on destroy or so
 end;
 
@@ -369,7 +369,7 @@ begin
   BindInParameters;
 
   FErrorCode := FPlainDriver.sqlite3_step(FStmtHandle); //exec prepared
-  CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcOther,
+  CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcOther,
     ConSettings^.ConvFuncs.ZStringToRaw(SCanNotRetrieveResultsetData,
     ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP), ConSettings);
   if FPlainDriver.sqlite3_column_count(FStmtHandle) = 0 then
@@ -404,16 +404,13 @@ begin
   Result := 0;
   try
     CheckSQLiteError(FPlainDriver, FHandle, fPlainDriver.sqlite3_step(FStmtHandle),
-      nil, lcExecPrepStmt, ASQL, ConSettings); //exec prepared
+      lcExecPrepStmt, ASQL, ConSettings); //exec prepared
     Result := FPlainDriver.sqlite3_Changes(FHandle);
     inherited ExecuteUpdatePrepared; //log values
   finally
     FPlainDriver.sqlite3_reset(FStmtHandle); //reset handle allways without check else -> leaking mem
     LastUpdateCount := Result;
   end;
-  { Autocommit statement. }
-  if Connection.GetAutoCommit then
-    Connection.Commit;
 end;
 
 {**
@@ -431,7 +428,7 @@ begin
   BindInParameters;
 
   FErrorCode := FPlainDriver.sqlite3_step(FStmtHandle);
-  CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcExecPrepStmt, 'Step', ConSettings);
+  CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcExecPrepStmt, 'Step', ConSettings);
 
   { Process queries with result sets }
   if FPlainDriver.sqlite3_column_count(FStmtHandle) <> 0 then
@@ -446,12 +443,8 @@ begin
     Result := False;
     LastUpdateCount := FPlainDriver.sqlite3_Changes(FHandle);
     FErrorCode := FPlainDriver.sqlite3_reset(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcOther, 'Reset', ConSettings);
+    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcOther, 'Reset', ConSettings);
   end;
-  { Autocommit statement. }
-  if not Result and Connection.GetAutoCommit then
-    Connection.Commit;
-
   inherited ExecutePrepared;
 end;
 
