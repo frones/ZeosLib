@@ -58,12 +58,14 @@ interface
 uses ZClasses, ZPlainLoader, ZCompatibility, Types;
 
 type
+  TZAbstractPlainDriver = class;
 
   {** Represents a generic interface to plain driver. }
   IZPlainDriver = interface (IZInterface)
     ['{2A0CC600-B3C4-43AF-92F5-C22A3BB1BB7D}']
     function GetProtocol: string;
     function GetDescription: string;
+    function GetInstance: TZAbstractPlainDriver;
     {EgonHugeist:
       Why this here? -> No one else then Plaindriver knows which Characterset
       is supported. Here i've made a intervention in dependency of used Compiler.}
@@ -98,6 +100,7 @@ type
     destructor Destroy; override;
     function GetProtocol: string; virtual; abstract;
     function GetDescription: string; virtual; abstract;
+    function GetInstance: TZAbstractPlainDriver;
     function GetSupportedClientCodePages(const {$IFNDEF UNICODE}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean;
       CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
     procedure Initialize(const Location: String = ''); virtual;
@@ -327,6 +330,10 @@ begin
   inherited Destroy;
 end;
 
+function TZAbstractPlainDriver.GetInstance: TZAbstractPlainDriver;
+begin
+  Result := Self;
+end;
 
 procedure TZAbstractPlainDriver.LoadApi;
 begin
