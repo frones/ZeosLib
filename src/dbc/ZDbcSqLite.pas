@@ -333,19 +333,19 @@ begin
   if TmpInt >= 0 then
     FPlainDriver.sqlite3_busy_timeout(FHandle, TmpInt);
 
-  Stmt := TZSQLiteStatement.Create(FPlainDriver, Self, Info, FHandle);
+  Stmt := TZSQLiteStatement.Create(Self, Info, FHandle);
   { pimp performance }
-  Stmt.ExecuteUpdate('PRAGMA cache_size = '+IntToRaw(StrToIntDef(Info.Values['cache_size'], 10000)));
+  Stmt.ExecuteUpdate('PRAGMA cache_size = '+IntToRaw(StrToIntDef(Info.Values[ConnProps_CacheSize], 10000)));
 
   //see http://www.sqlite.org/pragma.html#pragma_synchronous
   //0 brings best performance
-  if Info.Values['synchronous'] <> '' then
-    Stmt.ExecuteUpdate('PRAGMA synchronous = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values['synchronous']));
+  if Info.Values[ConnProps_Synchronous] <> '' then
+    Stmt.ExecuteUpdate('PRAGMA synchronous = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values[ConnProps_Synchronous]));
 
   //see http://www.sqlite.org/pragma.html#pragma_locking_mode
   //EXCLUSIVE brings best performance
-  if Info.Values['locking_mode'] <> '' then
-    Stmt.ExecuteUpdate('PRAGMA locking_mode = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values['locking_mode']));
+  if Info.Values[ConnProps_LockingMode] <> '' then
+    Stmt.ExecuteUpdate('PRAGMA locking_mode = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values[ConnProps_LockingMode]));
 
   try
     if ( FClientCodePage <> '' ) and (FClientCodePage <> 'UTF-8') then
@@ -354,7 +354,7 @@ begin
     Stmt.ExecuteUpdate('PRAGMA show_datatypes = ON');
 
     if Info.Values[ConnProps_ForeignKeys] <> '' then
-      Stmt.ExecuteUpdate('PRAGMA foreign_keys = '+BoolStrIntsRaw[StrToBoolEx(Info.Values['foreign_keys'])] );
+      Stmt.ExecuteUpdate('PRAGMA foreign_keys = '+BoolStrIntsRaw[StrToBoolEx(Info.Values[ConnProps_ForeignKeys])] );
     if not GetAutoCommit then
       ExecTransactionStmt(traBegin);
   except
