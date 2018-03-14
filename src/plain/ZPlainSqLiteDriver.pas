@@ -185,11 +185,9 @@ type
 
 { ************* Plain API Function variables definition ************ }
 type
-  TZSQLitePlainDriver = class;
   {** Represents a generic interface to SQLite native API. }
   IZSQLitePlainDriver = interface (IZPlainDriver)
     ['{B931C952-3076-4ECB-9630-D900E8DB9869}']
-    function GetInstance: TZSQLitePlainDriver;
   end;
 
   {** Implements a base driver for SQLite}
@@ -291,7 +289,6 @@ type
     procedure LoadCodePages; override;
   public
     constructor Create;
-    function GetInstance: TZSQLitePlainDriver;
   end;
 
   {** Implements a driver for SQLite 3 }
@@ -310,11 +307,6 @@ implementation
 uses ZPlainLoader, ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZSQLitePlainDriver }
-
-function TZSQLitePlainDriver.GetInstance: TZSQLitePlainDriver;
-begin
-  Result := Self;
-end;
 
 function TZSQLitePlainDriver.GetUnicodeCodePageName: String;
 begin

@@ -85,10 +85,10 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
   public
-    constructor Create(const PlainDriver: IZSQLitePlainDriver;
+    constructor Create(
       const Connection: IZConnection; const SQL: string; const Info: TStrings;
       const Handle: Psqlite); overload;
-    constructor Create(const PlainDriver: IZSQLitePlainDriver;
+    constructor Create(
       const Connection: IZConnection; const Info: TStrings; const Handle: Psqlite); overload;
 
     procedure Prepare; override;
@@ -132,7 +132,7 @@ var
   CachedResultSet: TZCachedResultSet;
 begin
   { Creates a native result set. }
-  NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, Self.SQL, FHandle,
+  NativeResultSet := TZSQLiteResultSet.Create(Self, Self.SQL, FHandle,
     FStmtHandle, FUndefinedVarcharAsStringLength);
   NativeResultSet.SetConcurrency(rcReadOnly);
 
@@ -140,7 +140,7 @@ begin
     or (GetResultSetType <> rtForwardOnly) then
   begin
     { Creates a cached result set. }
-    CachedResolver := TZSQLiteCachedResolver.Create(FPlainDriver, FHandle, Self,
+    CachedResolver := TZSQLiteCachedResolver.Create(FHandle, Self,
       NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, Self.SQL,
       CachedResolver,GetConnection.GetConSettings);
@@ -284,23 +284,23 @@ begin
 end;
 
 constructor TZSQLiteCAPIPreparedStatement.Create(
-  const PlainDriver: IZSQLitePlainDriver; const Connection: IZConnection;
+  const Connection: IZConnection;
   const SQL: string; const Info: TStrings; const Handle: Psqlite);
 begin
   inherited Create(Connection, SQL, Info);
   FStmtHandle := nil;
   FHandle := Handle;
-  FPlainDriver := PlainDriver.GetInstance;
+  FPlainDriver := TZSQLitePlainDriver(Connection.GetIZPlainDriver.GetInstance);
   ResultSetType := rtForwardOnly;
   FBindDoubleDateTimeValues :=  StrToBoolEx(DefineStatementParameter(Self, DSProps_BindDoubleDateTimeValues, 'false'));
   FUndefinedVarcharAsStringLength := StrToIntDef(DefineStatementParameter(Self, DSProps_UndefVarcharAsStringLength, '0'), 0);
   fBindOrdinalBoolValues := StrToBoolEx(DefineStatementParameter(Self, DSProps_BindOrdinalBoolValues, 'false'));
 end;
 
-constructor TZSQLiteCAPIPreparedStatement.Create(const PlainDriver: IZSQLitePlainDriver;
+constructor TZSQLiteCAPIPreparedStatement.Create(
   const Connection: IZConnection; const Info: TStrings; const Handle: Psqlite);
 begin
-  Create(PlainDriver, Connection, '', Info, Handle);
+  Create(Connection, '', Info, Handle);
 end;
 
 procedure TZSQLiteCAPIPreparedStatement.Prepare;

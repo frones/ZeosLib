@@ -229,7 +229,7 @@ end;
 }
 procedure TZSQLiteConnection.InternalCreate;
 begin
-  FPlainDriver := (PlainDriver as IZSQLitePlainDriver).GetInstance;
+  FPlainDriver := TZSQLitePlainDriver(PlainDriver.GetInstance);
   FMetadata := TZSQLiteDatabaseMetadata.Create(Self, Url);
   AutoCommit := True;
   //https://sqlite.org/pragma.html#pragma_read_uncommitted
@@ -386,7 +386,7 @@ begin
   if IsClosed then
     Open;
 
-  Result := TZSQLiteStatement.Create(FPlainDriver, Self, Info, FHandle);
+  Result := TZSQLiteStatement.Create(Self, Info, FHandle);
 end;
 
 procedure TZSQLiteConnection.ExecTransactionStmt(
@@ -443,7 +443,7 @@ function TZSQLiteConnection.CreatePreparedStatement(const SQL: string;
 begin
   if IsClosed then
     Open;
-  Result := TZSQLiteCAPIPreparedStatement.Create(FPlainDriver, Self, SQL, Info, FHandle);
+  Result := TZSQLiteCAPIPreparedStatement.Create(Self, SQL, Info, FHandle);
 end;
 
 {**

@@ -93,7 +93,7 @@ type
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
-    constructor Create(const PlainDriver: TZSQLitePlainDriver; const Statement: IZStatement;
+    constructor Create(const Statement: IZStatement;
       const SQL: string; const Handle: Psqlite; const StmtHandle: Psqlite_vm;
       const UndefinedVarcharAsStringLength: Integer);
 
@@ -130,7 +130,7 @@ type
     FPlainDriver: TZSQLitePlainDriver;
     FAutoColumnIndex: Integer;
   public
-    constructor Create(const PlainDriver: TZSQLitePlainDriver; Handle: Psqlite;
+    constructor Create(Handle: Psqlite;
       const Statement: IZStatement; const Metadata: IZResultSetMetadata);
 
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
@@ -466,7 +466,7 @@ end;
   @param UseResult <code>True</code> to use results,
     <code>False</code> to store result.
 }
-constructor TZSQLiteResultSet.Create(const PlainDriver: TZSQLitePlainDriver;
+constructor TZSQLiteResultSet.Create(
   const Statement: IZStatement; const SQL: string; const Handle: Psqlite;
   const StmtHandle: Psqlite_vm; const UndefinedVarcharAsStringLength: Integer);
 begin
@@ -476,7 +476,7 @@ begin
 
   FHandle := Handle;
   FStmtHandle := StmtHandle;
-  FPlainDriver := PlainDriver;
+  FPlainDriver := TZSQLitePlainDriver(Statement.GetConnection.GetIZPlainDriver.GetInstance);
   ResultSetConcurrency := rcReadOnly;
   FUndefinedVarcharAsStringLength := UndefinedVarcharAsStringLength;
   FFirstRow := True;
@@ -1198,13 +1198,13 @@ end;
   @param Statement a related SQL statement object.
   @param Metadata a resultset metadata reference.
 }
-constructor TZSQLiteCachedResolver.Create(const PlainDriver: TZSQLitePlainDriver;
+constructor TZSQLiteCachedResolver.Create(
   Handle: Psqlite; const Statement: IZStatement; const Metadata: IZResultSetMetadata);
 var
   I: Integer;
 begin
   inherited Create(Statement, Metadata);
-  FPlainDriver := PlainDriver;
+  FPlainDriver := TZSQLitePlainDriver(Statement.GetConnection.GetIZPlainDriver.GetInstance);
   FHandle := Handle;
 
   { Defines an index of autoincrement field. }
