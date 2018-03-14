@@ -94,7 +94,7 @@ type
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
-    constructor Create(const PlainDriver: TZOraclePlainDriver;
+    constructor Create(
       const Statement: IZStatement; const SQL: string;
       const StmtHandle: POCIStmt; const ErrorHandle: POCIError;
       const ZBufferSize: Integer);
@@ -140,7 +140,7 @@ type
   protected
     procedure Open; override;
   public
-    constructor Create(const PlainDriver: TZOraclePlainDriver;
+    constructor Create(
       const Statement: IZStatement; const SQL: string; StmtHandle: POCIStmt;
       ErrorHandle: POCIError; const OutParams: PZSQLVars; const OracleParams: TZOracleParams);
     procedure Close; override;
@@ -322,7 +322,7 @@ end;
   @param Handle a Oracle specific query handle.
 }
 constructor TZOracleAbstractResultSet.Create(
-  const PlainDriver: TZOraclePlainDriver; const Statement: IZStatement;
+  const Statement: IZStatement;
   const SQL: string; const StmtHandle: POCIStmt; const ErrorHandle: POCIError;
   const ZBufferSize: Integer);
 begin
@@ -330,7 +330,7 @@ begin
 
   FStmtHandle := StmtHandle;
   FErrorHandle := ErrorHandle;
-  FPlainDriver := PlainDriver;
+  FPlainDriver := TZOraclePlainDriver(Statement.GetConnection.GetIZPlainDriver.GetInstance);
   ResultSetConcurrency := rcReadOnly;
   FConnection := Statement.GetConnection as IZOracleConnection;
   FConnectionHandle := FConnection.GetConnectionHandle;
@@ -1842,13 +1842,13 @@ end;
   @param SQL a SQL statement.
   @param Handle a Oracle specific query handle.
 }
-constructor TZOracleCallableResultSet.Create(const PlainDriver: TZOraclePlainDriver;
+constructor TZOracleCallableResultSet.Create(
   const Statement: IZStatement; const SQL: string; StmtHandle: POCIStmt;
   ErrorHandle: POCIError; const OutParams: PZSQLVars;
   const OracleParams: TZOracleParams);
 begin
   FColumns := PrepareOracleOutVars(OutParams, OracleParams);
-  inherited Create(PlainDriver, Statement, SQL, StmtHandle, ErrorHandle, 0);
+  inherited Create(Statement, SQL, StmtHandle, ErrorHandle, 0);
   FConnection := Statement.GetConnection as IZOracleConnection;
   MaxRows := 1;
 end;

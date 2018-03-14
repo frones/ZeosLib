@@ -93,9 +93,9 @@ type
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
   public
-    constructor Create(const PlainDriver: IZOraclePlainDriver;
+    constructor Create(
       const Connection: IZConnection; const SQL: string; Info: TStrings); overload;
-    constructor Create(const PlainDriver: IZOraclePlainDriver;
+    constructor Create(
       const Connection: IZConnection; Info: TStrings); overload;
 
     procedure Prepare; override;
@@ -167,11 +167,11 @@ uses
   @param Handle a connection handle pointer.
 }
 constructor TZOraclePreparedStatement.Create(
-  const PlainDriver: IZOraclePlainDriver; const Connection: IZConnection;
+  const Connection: IZConnection;
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
-  FPlainDriver := PlainDriver.GetInstance;
+  FPlainDriver := TZOraclePlainDriver(Connection.GetIZPlainDriver.GetInstance);
   ResultSetType := rtForwardOnly;
   fOracleConnection := Connection as IZOracleConnection;
   ASQL := ConvertToOracleSQLQuery;
@@ -180,10 +180,10 @@ begin
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072);
 end;
 
-constructor TZOraclePreparedStatement.Create(const PlainDriver: IZOraclePlainDriver;
+constructor TZOraclePreparedStatement.Create(
   const Connection: IZConnection; Info: TStrings);
 begin
-  Create(PlainDriver, Connection, '', Info);
+  Create(Connection, '', Info);
 end;
 
 {**
@@ -222,7 +222,7 @@ function TZOraclePreparedStatement.CreateResultSet: IZResultSet;
 begin
   if FOpenResultSet = nil then
   begin
-    Result := CreateOracleResultSet(FPlainDriver, Self, SQL, FHandle, FErrorHandle, FZBufferSize);
+    Result := CreateOracleResultSet(Self, SQL, FHandle, FErrorHandle, FZBufferSize);
     FOpenResultSet := Pointer(Result);
   end
   else
@@ -865,7 +865,7 @@ begin
   inherited Create(Connection, pProcName, Info);
   FOracleConnection := Connection as IZOracleConnection;
   FOracleParamsCount := 0;
-  FPlainDriver := (Connection.GetIZPlainDriver as IZOraclePlainDriver).GetInstance;
+  FPlainDriver := TZOraclePlainDriver(Connection.GetIZPlainDriver.GetInstance);
   ResultSetType := rtForwardOnly;
   PackageIncludedList := TStringList.Create;
   FOutParamCount := 0;
@@ -917,7 +917,7 @@ begin
         FHandle, FErrorHandle, FIteration, 0, nil, nil, CommitMode[Connection.GetAutoCommit]),
       lcExecute, ASQL, ConSettings);
     FetchOutParamsFromOracleVars;
-    LastResultSet := CreateOracleResultSet(FPlainDriver, Self, Self.SQL,
+    LastResultSet := CreateOracleResultSet(Self, Self.SQL,
       FHandle, FErrorHandle, FParams, FOracleParams);
     Result := LastResultSet;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);

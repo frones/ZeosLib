@@ -73,11 +73,9 @@ const
 
 type
 
-  TZOraclePlainDriver = class;
   {** Represents a generic interface to Oracle native API. }
   IZOraclePlainDriver = interface (IZPlainDriver)
     ['{22404660-C95F-4346-A3DB-7C6DFE15F115}']
-    function GetInstance: TZOraclePlainDriver;
   end;
 
   {** Implements a driver for Oracle 9i }
@@ -91,7 +89,6 @@ type
     procedure LoadApi; override;
   public
     function Clone: IZPlainDriver; override;
-    function GetInstance: TZOraclePlainDriver;
   public
     OCIEnvNlsCreate: function(var envhpp: POCIEnv; mode: ub4; ctxp: Pointer;
       malocfp: Pointer; ralocfp: Pointer; mfreefp: Pointer; xtramemsz: size_T;
@@ -427,12 +424,4 @@ begin
   Result := 'Native Plain Driver for Oracle 9i';
 end;
 
-function TZOraclePlainDriver.GetInstance: TZOraclePlainDriver;
-begin
-  Result := Self;
-end;
-
-
 end.
-
-

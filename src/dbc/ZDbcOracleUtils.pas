@@ -231,7 +231,7 @@ procedure CheckOracleError(const PlainDriver: TZOraclePlainDriver;
   Creates an Oracle result set based on the current settings.
   @return a created result set object.
 }
-function CreateOracleResultSet(const PlainDriver: TZOraclePlainDriver;
+function CreateOracleResultSet(
   const Statement: IZStatement; const LogSQL: string; const Handle: POCIStmt;
   const ErrorHandle: POCIError; ZBufferSize: Integer): IZResultSet; overload;
 
@@ -239,7 +239,7 @@ function CreateOracleResultSet(const PlainDriver: TZOraclePlainDriver;
   Creates an Oracle result set based on the current settings.
   @return a created result set object.
 }
-function CreateOracleResultSet(const PlainDriver: TZOraclePlainDriver;
+function CreateOracleResultSet(
   const Statement: IZStatement; const LogSQL: string; StmtHandle: POCIStmt;
   ErrorHandle: POCIError; const Params: PZSQLVars;
   Const OracleParams: TZOracleParams): IZResultSet; overload;
@@ -1157,14 +1157,14 @@ end;
   Creates an Oracle result set based on the current settings.
   @return a created result set object.
 }
-function CreateOracleResultSet(const PlainDriver: TZOraclePlainDriver;
+function CreateOracleResultSet(
   const Statement: IZStatement; const LogSQL: string; const Handle: POCIStmt;
   const ErrorHandle: POCIError; ZBufferSize: Integer): IZResultSet;
 var
   NativeResultSet: TZOracleResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
-  NativeResultSet := TZOracleResultSet.Create(PlainDriver, Statement,
+  NativeResultSet := TZOracleResultSet.Create(Statement,
     LogSQL, Handle, ErrorHandle, ZBufferSize);
   NativeResultSet.SetConcurrency(rcReadOnly);
   if (Statement.GetResultSetConcurrency = rcUpdatable)
@@ -1185,7 +1185,7 @@ end;
   Creates an Oracle result set based on the current settings.
   @return a created result set object.
 }
-function CreateOracleResultSet(const PlainDriver: TZOraclePlainDriver;
+function CreateOracleResultSet(
       const Statement: IZStatement; const LogSQL: string; StmtHandle: POCIStmt;
       ErrorHandle: POCIError; const Params: PZSQLVars;
       Const OracleParams: TZOracleParams): IZResultSet;
@@ -1193,7 +1193,7 @@ var
   NativeResultSet: TZOracleCallableResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
-  NativeResultSet := TZOracleCallableResultSet.Create(PlainDriver, Statement,
+  NativeResultSet := TZOracleCallableResultSet.Create(Statement,
     LogSQL, StmtHandle, ErrorHandle, Params, OracleParams);
   NativeResultSet.SetConcurrency(rcReadOnly);
   CachedResultSet := TZCachedResultSet.Create(NativeResultSet, LogSQL, nil,
@@ -1585,7 +1585,4 @@ begin
   CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Close Large Object', ConSettings);
 end;
 
-
 end.
-
-

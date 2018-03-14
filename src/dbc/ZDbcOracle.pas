@@ -256,7 +256,7 @@ end;
 }
 procedure TZOracleConnection.InternalCreate;
 begin
-  FPlainDriver := (PlainDriver as IZOraclePlainDriver).GetInstance;
+  FPlainDriver := TZOraclePlainDriver(PlainDriver.GetInstance);
   FMetaData := TZOracleDatabaseMetadata.Create(Self, URL);
   FHandle := nil;
 
@@ -483,7 +483,7 @@ function TZOracleConnection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
      Open;
-  Result := TZOraclePreparedStatement.Create(FPlainDriver, Self, '', Info);
+  Result := TZOraclePreparedStatement.Create(Self, '', Info);
 end;
 
 {**
@@ -519,7 +519,7 @@ function TZOracleConnection.CreatePreparedStatement(const SQL: string;
 begin
   if IsClosed then
      Open;
-  Result := TZOraclePreparedStatement.Create(FPlainDriver, Self, SQL, Info);
+  Result := TZOraclePreparedStatement.Create(Self, SQL, Info);
 end;
 
 {**
@@ -893,4 +893,3 @@ finalization
     DriverManager.DeregisterDriver(OracleDriver);
   OracleDriver := nil;
 end.
-
