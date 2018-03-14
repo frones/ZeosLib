@@ -115,6 +115,7 @@ type
     procedure TestMsec;
     procedure TestEmptyStrings;
     procedure TestArrayBindings;
+    procedure TestInsertReturning;
   end;
 
 implementation
@@ -999,6 +1000,61 @@ begin
   end;
 end;
 {$WARNINGS ON} //implizit string conversion of...
+
+procedure TZTestDbcInterbaseCase.TestInsertReturning;
+const
+  D_ID   = FirstDbcIndex + 0;
+  D_FLD1 = FirstDbcIndex + 1;
+  D_FLD2 = FirstDbcIndex + 2;
+  D_FLD3 = FirstDbcIndex + 3;
+  D_FLD4 = FirstDbcIndex + 4;
+
+  procedure CheckValues(const ResultSet: IZResultSet);
+  begin
+    CheckEquals(1, ResultSet.GetInt(D_ID));
+    CheckEquals(123456, ResultSet.GetInt(D_FLD1));
+    CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
+    CheckEquals('xyz', ResultSet.GetString(D_FLD3));
+    CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(D_FLD4), 0);
+  end;
+
+const
+  SQLDel = 'DELETE FROM DEFAULT_VALUES';
+  SQLIns = 'INSERT INTO DEFAULT_VALUES(D_ID) VALUES(1) RETURNING D_ID,D_FLD1,D_FLD2,D_FLD3,D_FLD4';
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  ResCount: Integer;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  Statement.SetResultSetType(rtScrollInsensitive);
+  Statement.SetResultSetConcurrency(rcUpdatable);
+
+  // Cleanup
+  Statement.ExecuteUpdate(SQLDel);
+
+  // Exec query
+  ResultSet := Statement.ExecuteQuery(SQLIns);
+  CheckNotNull(ResultSet);
+  ResultSet.Next;
+  CheckValues(ResultSet);
+  ResultSet.Close;
+
+  // Cleanup
+  Statement.ExecuteUpdate(SQLDel);
+
+  // Exec update
+  ResCount := Statement.ExecuteUpdate(SQLIns);
+  Check(ResCount > 0);
+  ResultSet := Statement.GetResultSet;
+  CheckNotNull(ResultSet);
+  ResultSet.Next;
+  CheckValues(ResultSet);
+  ResultSet.Close;
+
+  Statement.Close;
+end;
 
 initialization
   RegisterTest('dbc',TZTestDbcInterbaseCase.Suite);
