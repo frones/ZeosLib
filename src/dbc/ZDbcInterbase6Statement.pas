@@ -406,6 +406,7 @@ var
   iError : Integer; //Implementation for graceful disconnect AVZ
 begin
   Prepare;
+  LastResultSet := nil;
   BindInParameters;
   iError := ExecuteInternal;
   Result := LastUpdateCount;
@@ -413,6 +414,12 @@ begin
     stCommit, stRollback, stUnknown: Result := -1;
     stSelect: if (iError <> DISCONNECT_ERROR) then
       FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_CLOSE);  //AVZ
+    stExecProc:
+      { Create ResultSet if possible }
+      if FResultXSQLDA.GetFieldCount <> 0 then
+        LastResultSet := CreateIBResultSet(SQL, Self,
+          TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+            FResultXSQLDA, True, CachedLob, FStatementType));
   end;
   inherited ExecuteUpdatePrepared;
 end;
