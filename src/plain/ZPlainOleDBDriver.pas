@@ -72,7 +72,7 @@ type
 
 implementation
 
-uses ZCompatibility, ZEncoding, Windows;
+uses ZCompatibility, Windows;
 
 procedure TZOleDBPlainDriver.LoadCodePages;
 begin
