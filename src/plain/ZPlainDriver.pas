@@ -92,8 +92,6 @@ type
     function Clone: IZPlainDriver; reintroduce; virtual; abstract;
     procedure LoadCodePages; virtual; abstract;
     function GetUnicodeCodePageName: String; virtual;
-    function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
-    function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
   public
     constructor Create;
     constructor CreateWithLibrary(const LibName : String);
@@ -104,6 +102,8 @@ type
     function GetSupportedClientCodePages(const {$IFNDEF UNICODE}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean;
       CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
     procedure Initialize(const Location: String = ''); virtual;
+    function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
+    function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
 
     property Loader: TZNativeLibraryLoader read FLoader;
     procedure AddCodePage(const Name: String; const ID:  Integer;

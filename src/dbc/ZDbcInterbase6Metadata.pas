@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
-  ZDbcInterbase6;
+  ZDbcInterbase6, ZPlainFirebirdDriver;
 
 type
 
@@ -293,15 +293,17 @@ const
 
 procedure TZInterbase6DatabaseInfo.CollectServerInformations;
 var
-  FIBConnection: IZInterbase6Connection;
+  IBConnection: IZInterbase6Connection;
+  PlainDriver: TZInterbasePlainDriver;
   I: Integer;
   tmp: string;
 begin
   if FServerVersion = '' then
   begin
-    FIBConnection := Metadata.GetConnection as IZInterbase6Connection;
-    FServerVersion := GetISC_StringInfo(FIBConnection.GetPlainDriver,
-      FIBConnection.GetDBHandle, isc_info_version, FIBConnection.GetConSettings);
+    IBConnection := Metadata.GetConnection as IZInterbase6Connection;
+    PlainDriver := TZInterbasePlainDriver(IBConnection.GetIZPlainDriver.GetInstance);
+    FServerVersion := GetISC_StringInfo(PlainDriver,
+      IBConnection.GetDBHandle, isc_info_version, IBConnection.GetConSettings);
     FIsFireBird := ZFastCode.Pos('Firebird', FServerVersion) > 0;
     FProductVersion := Copy(FServerVersion, ZFastCode.Pos(DBProvider[FIsFireBird],
       FServerVersion)+8+Ord(not FIsFireBird)+1, Length(FServerVersion));

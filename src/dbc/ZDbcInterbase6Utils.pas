@@ -78,6 +78,7 @@ type
     SQLCode: Integer;    // result of isc_sqlcode
     SQLMessage: string;  // result of isc_sql_interprete
   end;
+  PZIBStatus = ^TZIBStatus;
 
   TZIBStatusVector = array of TZIBStatus;
 
@@ -184,7 +185,7 @@ type
     FHandle: PISC_DB_HANDLE;
     FTransactionHandle: PISC_TR_HANDLE;
     FXSQLDA: PXSQLDA;
-    FPlainDriver: IZInterbasePlainDriver;
+    FPlainDriver: TZInterbasePlainDriver;
     FDecribedLengthArray: TSmallIntDynArray;
     FDecribedScaleArray: TSmallIntDynArray;
     FDecribedTypeArray: TSmallIntDynArray;
@@ -264,42 +265,42 @@ function GetInterbase6TransactionParamNumber(const Value: String): word;
 
 { Interbase6 errors functions }
 function GetNameSqlType(Value: Word): RawByteString;
-function InterpretInterbaseStatus(const PlainDriver: IZInterbasePlainDriver;
+function InterpretInterbaseStatus(const PlainDriver: TZInterbasePlainDriver;
   const StatusVector: TARRAY_ISC_STATUS;
   const ConSettings: PZConSettings) : TZIBStatusVector;
-function CheckInterbase6Error(const PlainDriver: IZInterbasePlainDriver;
+function CheckInterbase6Error(const PlainDriver: TZInterbasePlainDriver;
   const StatusVector: TARRAY_ISC_STATUS; const ConSettings: PZConSettings;
   const LoggingCategory: TZLoggingCategory = lcOther;
   const SQL: RawByteString = '') : Integer;
 
 { Interbase information functions}
-function GetISC_StringInfo(const PlainDriver: IZInterbasePlainDriver;
+function GetISC_StringInfo(const PlainDriver: TZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; isc_info: Byte; ConSettings: PZConSettings): String;
-function GetFB_ISC_IntegerInfo(const PlainDriver: IZInterbasePlainDriver;
+function GetFB_ISC_IntegerInfo(const PlainDriver: TZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; isc_info: Byte; ConSettings: PZConSettings): LongInt;
-function GetDBImplementationNo(const PlainDriver: IZInterbasePlainDriver;
+function GetDBImplementationNo(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const ConSettings: PZConSettings): LongInt;
-function GetDBImplementationClass(const PlainDriver: IZInterbasePlainDriver;
+function GetDBImplementationClass(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const ConSettings: PZConSettings): LongInt;
-function GetLongDbInfo(const PlainDriver: IZInterbasePlainDriver;
+function GetLongDbInfo(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const DatabaseInfoCommand: Integer;
   const ConSettings: PZConSettings): LongInt;
-function GetStringDbInfo(const PlainDriver: IZInterbasePlainDriver;
+function GetStringDbInfo(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const DatabaseInfoCommand: Integer;
   const ConSettings: PZConSettings): AnsiString;
-function GetDBSQLDialect(const PlainDriver: IZInterbasePlainDriver;
+function GetDBSQLDialect(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const ConSettings: PZConSettings): Integer;
 
 { Interbase statement functions}
-function PrepareStatement(const PlainDriver: IZInterbasePlainDriver;
+function PrepareStatement(const PlainDriver: TZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE;
   Dialect: Word; const SQL: RawByteString; ConSettings: PZConSettings;
   var StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
-procedure PrepareResultSqlData(const PlainDriver: IZInterbasePlainDriver;
+procedure PrepareResultSqlData(const PlainDriver: TZInterbasePlainDriver;
   const Dialect: Word; const SQL: RawByteString;
   var StmtHandle: TISC_STMT_HANDLE; const SqlData: IZSQLDA;
   const ConSettings: PZConSettings); overload;
-procedure PrepareParameters(const PlainDriver: IZInterbasePlainDriver;
+procedure PrepareParameters(const PlainDriver: TZInterbasePlainDriver;
   const SQL: RawByteString; const Dialect: Word; var StmtHandle: TISC_STMT_HANDLE;
   const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings);
 procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
@@ -310,11 +311,11 @@ procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
   const InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
   const InParamCount: Integer; const ParamSqlData: IZParamsSQLDA;
   const ConSettings: PZConSettings; const CodePageArray: TWordDynArray); overload;
-procedure FreeStatement(const PlainDriver: IZInterbasePlainDriver;
+procedure FreeStatement(const PlainDriver: TZInterbasePlainDriver;
   StatementHandle: TISC_STMT_HANDLE; Options : Word);
-function GetStatementType(const PlainDriver: IZInterbasePlainDriver;
+function GetStatementType(const PlainDriver: TZInterbasePlainDriver;
   const StmtHandle: TISC_STMT_HANDLE; const ConSettings: PZConSettings): TZIbSqlStatementType;
-function GetAffectedRows(const PlainDriver: IZInterbasePlainDriver;
+function GetAffectedRows(const PlainDriver: TZInterbasePlainDriver;
   const StmtHandle: TISC_STMT_HANDLE; const StatementType: TZIbSqlStatementType;
   const ConSettings: PZConSettings): integer;
 
@@ -322,10 +323,10 @@ function ConvertInterbase6ToSqlType(const SqlType, SqlSubType, Scale: Integer;
   const CtrlsCPType: TZControlsCodePage): TZSqlType;
 
 { interbase blob routines }
-procedure GetBlobInfo(const PlainDriver: IZInterbasePlainDriver;
+procedure GetBlobInfo(const PlainDriver: TZInterbasePlainDriver;
   const BlobHandle: TISC_BLOB_HANDLE; var BlobInfo: TIbBlobInfo;
   const ConSettings: PZConSettings);
-procedure ReadBlobBufer(const PlainDriver: IZInterbasePlainDriver;
+procedure ReadBlobBufer(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const TransactionHandle: PISC_TR_HANDLE;
   const BlobId: TISC_QUAD; var Size: Integer; var Buffer: Pointer;
   const Binary: Boolean; const ConSettings: PZConSettings);
@@ -334,7 +335,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   const IsParamIndexArray: TBooleanDynArray;
   const InParamCount, RemainingArrayRows: Integer;
   const CurrentSQLTokens: TRawByteStringDynArray;
-  const PlainDriver: IZInterbasePlainDriver;
+  const PlainDriver: TZInterbasePlainDriver;
   var MemPerRow, PreparedRowsOfArray: Integer;
   var TypeTokens: TRawByteStringDynArray;
   InitialStatementType: TZIbSqlStatementType;
@@ -755,7 +756,7 @@ end;
   @param pBuf - pointer to a buffer returned by driver. After the function it points to the next block.
   @return - a number read
 }
-function ReadInterbase6NumberWithInc(const PlainDriver: IZInterbasePlainDriver; var pBuf: PAnsiChar): Integer;
+function ReadInterbase6NumberWithInc(const PlainDriver: TZInterbasePlainDriver; var pBuf: PAnsiChar): Integer;
 var
   Len: Integer;
 begin
@@ -772,7 +773,7 @@ end;
   @param Buffer - a buffer returned by driver
   @return - a number read
 }
-function ReadInterbase6Number(const PlainDriver: IZInterbasePlainDriver; const Buffer): Integer;
+function ReadInterbase6Number(const PlainDriver: TZInterbasePlainDriver; const Buffer): Integer;
 var
   pBuf: PAnsiChar;
 begin
@@ -926,7 +927,7 @@ end;
 
   @return array of TInterbaseStatus records
 }
-function InterpretInterbaseStatus(const PlainDriver: IZInterbasePlainDriver;
+function InterpretInterbaseStatus(const PlainDriver: TZInterbasePlainDriver;
   const StatusVector: TARRAY_ISC_STATUS;
   const ConSettings: PZConSettings) : TZIBStatusVector;
 var
@@ -934,18 +935,20 @@ var
   s: RawByteString;
   PStatusVector: PISC_STATUS;
   StatusIdx: Integer;
+  pCurrStatus: PZIBStatus;
 begin
   if not ((StatusVector[0] = 1) and (StatusVector[1] > 0)) then Exit;
 
   PStatusVector := @StatusVector; StatusIdx := 0;
   repeat
     SetLength(Result, Length(Result) + 1);
+    pCurrStatus := @Result[High(Result)]; // save pointer to avoid multiple High() calls
     // SQL code and status
-    Result[High(Result)].SQLCode := PlainDriver.isc_sqlcode(PStatusVector);
-    PlainDriver.isc_sql_interprete(Result[High(Result)].SQLCode, Msg, Length(Msg));
-    Result[High(Result)].SQLMessage := ConvertConnRawToString(ConSettings, Msg);
+    pCurrStatus.SQLCode := PlainDriver.isc_sqlcode(PStatusVector);
+    PlainDriver.isc_sql_interprete(pCurrStatus.SQLCode, @Msg, Length(Msg));
+    pCurrStatus.SQLMessage := ConvertConnRawToString(ConSettings, RawByteString(Msg));
     // IB data
-    Result[High(Result)].IBDataType := StatusVector[StatusIdx];
+    pCurrStatus.IBDataType := StatusVector[StatusIdx];
     case StatusVector[StatusIdx] of
       isc_arg_end:  // end of argument list
         Break;
@@ -961,20 +964,20 @@ begin
       isc_arg_netware,
       isc_arg_win32:
         begin
-          Result[High(Result)].IBDataInt := StatusVector[StatusIdx + 1];
+          pCurrStatus.IBDataInt := StatusVector[StatusIdx + 1];
           Inc(StatusIdx, 2);
         end;
       isc_arg_string,  // pointer to string
       isc_arg_interpreted,
-      isc_arg_sql_state:                                                                                      
+      isc_arg_sql_state:
         begin
-          Result[High(Result)].IBDataStr := ConvertConnRawToString(ConSettings, RawByteString(PAnsiChar(StatusVector[StatusIdx + 1])));
+          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, RawByteString(PAnsiChar(StatusVector[StatusIdx + 1])));
           Inc(StatusIdx, 2);
         end;
       isc_arg_cstring: // length and pointer to string
         begin
           ZSetString(PAnsiChar(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1], s);
-          Result[High(Result)].IBDataStr := ConvertConnRawToString(ConSettings, s);
+          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, s);
           Inc(StatusIdx, 3);
         end;
       isc_arg_warning: // must not happen for error vector
@@ -982,9 +985,16 @@ begin
       else
         Break;
     end; // case
-    if PlainDriver.isc_interprete(Msg, @PStatusVector) = 0 then
+
+    // isc_interprete is deprecated so use fb_interpret instead if available
+    if Assigned(PlainDriver.fb_interpret) then
+      if PlainDriver.fb_interpret(@Msg, Length(Msg), @PStatusVector) = 0 then
+        Break
+      else
+    else
+    if PlainDriver.isc_interprete(@Msg, @PStatusVector) = 0 then
       Break;
-    Result[High(Result)].IBMessage := ConvertConnRawToString(ConSettings, Msg);
+    pCurrStatus.IBMessage := ConvertConnRawToString(ConSettings, RawByteString(Msg));
   until False;
 end;
 
@@ -996,7 +1006,7 @@ end;
 
   @Param Integer Return is the ErrorCode that happened - for disconnecting the database
 }
-function CheckInterbase6Error(const PlainDriver: IZInterbasePlainDriver;
+function CheckInterbase6Error(const PlainDriver: TZInterbasePlainDriver;
   const StatusVector: TARRAY_ISC_STATUS; const ConSettings: PZConSettings;
   const LoggingCategory: TZLoggingCategory = lcOther;
   const SQL: RawByteString = '') : Integer;
@@ -1013,7 +1023,7 @@ begin
 
   ErrorMessage := '';
   for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do
-    ErrorMessage := ErrorMessage + InterbaseStatusVector[i].IBMessage + '; ';
+    AppendSepString(ErrorMessage, InterbaseStatusVector[i].IBMessage, '; ');
 
   ErrorCode := InterbaseStatusVector[0].SQLCode;
   ErrorSqlMessage := InterbaseStatusVector[0].SQLMessage;
@@ -1044,7 +1054,7 @@ end;
    @param StmtHandle a statement handle
    @return sql statement type
 }
-function PrepareStatement(const PlainDriver: IZInterbasePlainDriver;
+function PrepareStatement(const PlainDriver: TZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE;
   Dialect: Word; const SQL: RawByteString; ConSettings: PZConSettings;
   var StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
@@ -1086,7 +1096,7 @@ end;
    @param StmtHandle a statement handle
    @param SqlData a interbase sql result data
 }
-procedure PrepareResultSqlData(const PlainDriver: IZInterbasePlainDriver;
+procedure PrepareResultSqlData(const PlainDriver: TZInterbasePlainDriver;
   const Dialect: Word; const SQL: RawByteString;
   var StmtHandle: TISC_STMT_HANDLE; const SqlData: IZSQLDA;
   const ConSettings: PZConSettings);
@@ -1114,7 +1124,7 @@ end;
    @param StmtHandle a statement handle
    @return interbase statement type
 }
-function GetStatementType(const PlainDriver: IZInterbasePlainDriver;
+function GetStatementType(const PlainDriver: TZInterbasePlainDriver;
   const StmtHandle: TISC_STMT_HANDLE; const ConSettings: PZConSettings): TZIbSqlStatementType;
 var
   TypeItem: AnsiChar;
@@ -1138,7 +1148,7 @@ end;
    @param  the interbase plain driver
    @param  the interbse statement handle
 }
-procedure FreeStatement(const PlainDriver: IZInterbasePlainDriver; StatementHandle: TISC_STMT_HANDLE; Options: Word);
+procedure FreeStatement(const PlainDriver: TZInterbasePlainDriver; StatementHandle: TISC_STMT_HANDLE; Options: Word);
 var
   StatusVector: TARRAY_ISC_STATUS;
 begin
@@ -1155,7 +1165,7 @@ end;
    @param StatementType a statement type
    @return affected rows
 }
-function GetAffectedRows(const PlainDriver: IZInterbasePlainDriver;
+function GetAffectedRows(const PlainDriver: TZInterbasePlainDriver;
   const StmtHandle: TISC_STMT_HANDLE; const StatementType: TZIbSqlStatementType;
   const ConSettings: PZConSettings): integer;
 type
@@ -1239,7 +1249,7 @@ end;
    @param StmtHandle a statement handle
    @param SqlData a interbase sql result data
 }
-procedure PrepareParameters(const PlainDriver: IZInterbasePlainDriver;
+procedure PrepareParameters(const PlainDriver: TZInterbasePlainDriver;
   const SQL: RawByteString; const Dialect: Word; var StmtHandle: TISC_STMT_HANDLE;
   const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings);
 var
@@ -1573,7 +1583,7 @@ end;
    @param PlainDriver
    @param BlobInfo the blob information structure
 }
-procedure GetBlobInfo(const PlainDriver: IZInterbasePlainDriver;
+procedure GetBlobInfo(const PlainDriver: TZInterbasePlainDriver;
   const BlobHandle: TISC_BLOB_HANDLE; var BlobInfo: TIbBlobInfo;
   const ConSettings: PZConSettings);
 var
@@ -1628,7 +1638,7 @@ end;
    Note: Buffer must be nill. Function self allocate memory for data
     and return it size
 }
-procedure ReadBlobBufer(const PlainDriver: IZInterbasePlainDriver;
+procedure ReadBlobBufer(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const TransactionHandle: PISC_TR_HANDLE;
   const BlobId: TISC_QUAD; var Size: Integer; var Buffer: Pointer;
   const Binary: Boolean; const ConSettings: PZConSettings);
@@ -1690,7 +1700,7 @@ end;
    @param ConSettings then PZConSettings of active connection
    @return ISC_INFO string
 }
-function GetISC_StringInfo(const PlainDriver: IZInterbasePlainDriver;
+function GetISC_StringInfo(const PlainDriver: TZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; isc_info: Byte; ConSettings: PZConSettings): String;
 var
   StatusVector: TARRAY_ISC_STATUS;
@@ -1716,7 +1726,7 @@ end;
    @param ConSettings then PZConSettings of active connection
    @return ISC_INFO Integer
 }
-function GetFB_ISC_IntegerInfo(const PlainDriver: IZInterbasePlainDriver;
+function GetFB_ISC_IntegerInfo(const PlainDriver: TZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; isc_info: Byte; ConSettings: PZConSettings): LongInt;
 var
   StatusVector: TARRAY_ISC_STATUS;
@@ -1736,7 +1746,7 @@ end;
    @param Handle the database connection handle
    @return interbase database implementation
 }
-function GetDBImplementationNo(const PlainDriver: IZInterbasePlainDriver;
+function GetDBImplementationNo(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const ConSettings: PZConSettings): LongInt;
 var
   DatabaseInfoCommand: AnsiChar;
@@ -1756,7 +1766,7 @@ end;
    @param Handle the database connection handle
    @return interbase database implementation class
 }
-function GetDBImplementationClass(const PlainDriver: IZInterbasePlainDriver;
+function GetDBImplementationClass(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const ConSettings: PZConSettings): LongInt;
 var
   DatabaseInfoCommand: AnsiChar;
@@ -1777,7 +1787,7 @@ end;
    @param DatabaseInfoCommand a database information command
    @return interbase database info
 }
-function GetLongDbInfo(const PlainDriver: IZInterbasePlainDriver;
+function GetLongDbInfo(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const DatabaseInfoCommand: Integer;
   const ConSettings: PZConSettings): LongInt;
 var
@@ -1799,7 +1809,7 @@ end;
    @param DatabaseInfoCommand a database information command
    @return interbase database info string
 }
-function GetStringDbInfo(const PlainDriver: IZInterbasePlainDriver;
+function GetStringDbInfo(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const DatabaseInfoCommand: Integer;
   const ConSettings: PZConSettings): AnsiString;
 var
@@ -1821,7 +1831,7 @@ end;
    @param Handle the database connection handle
    @return interbase database dialect
 }
-function GetDBSQLDialect(const PlainDriver: IZInterbasePlainDriver;
+function GetDBSQLDialect(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const ConSettings: PZConSettings): Integer;
 var
   DatabaseInfoCommand1: AnsiChar;
@@ -1881,7 +1891,7 @@ constructor TZSQLDA.Create(const PlainDriver: IZInterbasePlainDriver;
   ConSettings: PZConSettings);
 begin
   Self.ConSettings := ConSettings;
-  FPlainDriver := PlainDriver;
+  FPlainDriver := TZInterbasePlainDriver(PlainDriver.GetInstance);
   FHandle := Handle;
   FTransactionHandle := TransactionHandle;
 
@@ -3111,7 +3121,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   const IsParamIndexArray: TBooleanDynArray;
   const InParamCount, RemainingArrayRows: Integer;
   const CurrentSQLTokens: TRawByteStringDynArray;
-  const PlainDriver: IZInterbasePlainDriver;
+  const PlainDriver: TZInterbasePlainDriver;
   var MemPerRow, PreparedRowsOfArray: Integer;
   var TypeTokens: TRawByteStringDynArray;
   InitialStatementType: TZIbSqlStatementType;
@@ -3120,7 +3130,7 @@ const
   EBStart = AnsiString('EXECUTE BLOCK(');
   EBBegin =  AnsiString(')AS BEGIN'+LineEnding);
   EBSuspend =  AnsiString('SUSPEND;'+LineEnding); //required for RETURNING synatax
-  EBEnd = AnsiString('end');
+  EBEnd = AnsiString('END');
   LBlockLen = Length(EBStart)+Length(EBBegin)+Length(EBEnd);
 var
   IndexName, ArrayName: RawByteString;

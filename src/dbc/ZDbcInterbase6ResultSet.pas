@@ -63,7 +63,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6, ZPlainFirebirdInterbaseConstants,
-  ZPlainFirebirdDriver, ZCompatibility, ZDbcResultSetMetadata, ZMessages,
+  ZPlainFirebirdDriver, ZCompatibility, ZDbcResultSetMetadata, ZMessages, ZPlainDriver,
   ZDbcInterbase6Utils, ZSelectSchema;
 
 type
@@ -81,7 +81,7 @@ type
     FIZSQLDA: IZSQLDA;
     FPISC_DB_HANDLE: PISC_DB_HANDLE;
     FBlobTemp: IZBlob;
-    FPlainDriver: IZInterbasePlainDriver;
+    FPlainDriver: TZInterbasePlainDriver;
     FDialect: Word;
     FCodePageArray: TWordDynArray;
     FStmtType: TZIbSqlStatementType;
@@ -132,13 +132,14 @@ type
     FBlobId: TISC_QUAD;
     FDBHandle: PISC_DB_HANDLE;
     FTISC_TR_HANDLE: PISC_TR_HANDLE;
-    FPlainDriver: IZInterbasePlainDriver;
+    FNativePlainDriver: IZPlainDriver; //keep alive
+    FPlainDriver: TZInterbasePlainDriver;
     FConSettings: PZConSettings;
   protected
     procedure ReadLob; override;
   public
-    constructor Create(const DBHandle: PISC_DB_HANDLE;
-      const TrHandle: PISC_TR_HANDLE; const PlainDriver: IZInterbasePlainDriver;
+    constructor Create(const PlainDriver: IZInterbasePlainDriver;
+      const DBHandle: PISC_DB_HANDLE; const TrHandle: PISC_TR_HANDLE;
       var BlobId: TISC_QUAD; Const ConSettings: PZConSettings);
   end;
 
@@ -147,12 +148,13 @@ type
     FBlobId: TISC_QUAD;
     FDBHandle: PISC_DB_HANDLE;
     FTISC_TR_HANDLE: PISC_TR_HANDLE;
-    FPlainDriver: IZInterbasePlainDriver;
+    FNativePlainDriver: IZPlainDriver; //keep alive
+    FPlainDriver: TZInterbasePlainDriver;
   protected
     procedure ReadLob; override;
   public
-    constructor Create(const DBHandle: PISC_DB_HANDLE;
-      const TrHandle: PISC_TR_HANDLE; const PlainDriver: IZInterbasePlainDriver;
+    constructor Create(const PlainDriver: IZInterbasePlainDriver;
+      const DBHandle: PISC_DB_HANDLE; const TrHandle: PISC_TR_HANDLE;
       var BlobId: TISC_QUAD; Const ConSettings: PZConSettings);
   end;
 
@@ -240,7 +242,7 @@ begin
   FPISC_TR_HANDLE := IBConnection.GetTrHandle;
   FTISC_TR_HANDLE := FPISC_TR_HANDLE^;
   FPISC_DB_HANDLE := IBConnection.GetDBHandle;
-  FPlainDriver := IBConnection.GetPlainDriver;
+  FPlainDriver := TZInterbasePlainDriver(IBConnection.GetIZPlainDriver.GetInstance);
   FDialect := IBConnection.GetDialect;
   FStmtType := StmtType; //required to know how to fetch the columns for ExecProc
   FWasLastResult := WasLastResult;
@@ -537,11 +539,11 @@ begin
     else
       case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType of
         stBinaryStream:
-          Result := TZInterbase6UnCachedBlob.Create(FPISC_DB_HANDLE, FPISC_TR_HANDLE,
-            FPlainDriver, BlobId, ConSettings);
+          Result := TZInterbase6UnCachedBlob.Create(FPlainDriver,
+            FPISC_DB_HANDLE, FPISC_TR_HANDLE, BlobId, ConSettings);
         stAsciiStream, stUnicodeStream:
-          Result := TZInterbase6UnCachedClob.Create(FPISC_DB_HANDLE, FPISC_TR_HANDLE,
-            FPlainDriver, BlobId, ConSettings);
+          Result := TZInterbase6UnCachedClob.Create(FPlainDriver,
+            FPISC_DB_HANDLE, FPISC_TR_HANDLE, BlobId, ConSettings);
       end;
   end;
 end;
@@ -1872,7 +1874,7 @@ begin
                 ZCodePageInfo := ConSettings^.ClientCodePage
               else
                 //see: http://sourceforge.net/p/zeoslib/tickets/97/
-                ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP); //get column CodePage info
+                ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP); //get column CodePage info}
               ColumnCodePage := ZCodePageInfo^.CP;
               Precision := DataLen div ZCodePageInfo^.CharWidth;
               if ColumnType = stString then begin
@@ -1923,14 +1925,15 @@ end;
   @param handle a Interbase6 database connect handle.
   @param the statement previously prepared
 }
-constructor TZInterbase6UnCachedBlob.Create(const DBHandle: PISC_DB_HANDLE;
-  const TrHandle: PISC_TR_HANDLE; const PlainDriver: IZInterbasePlainDriver;
-  var BlobId: TISC_QUAD;Const ConSettings: PZConSettings);
+constructor TZInterbase6UnCachedBlob.Create(const PlainDriver: IZInterbasePlainDriver;
+  const DBHandle: PISC_DB_HANDLE; const TrHandle: PISC_TR_HANDLE;
+  var BlobId: TISC_QUAD; Const ConSettings: PZConSettings);
 begin
   FBlobId := BlobId;
   FDBHandle := DBHandle;
   FTISC_TR_HANDLE := TrHandle;
-  FPlainDriver := PlainDriver;
+  FPlainDriver := TZInterbasePlainDriver(PlainDriver.GetInstance);
+  FNativePlainDriver := PlainDriver;
   FConSettings := ConSettings;
 end;
 
@@ -1953,15 +1956,16 @@ end;
   @param handle a Interbase6 database connect handle.
   @param the statement previously prepared
 }
-constructor TZInterbase6UnCachedClob.Create(const DBHandle: PISC_DB_HANDLE;
-  const TrHandle: PISC_TR_HANDLE; const PlainDriver: IZInterbasePlainDriver;
+constructor TZInterbase6UnCachedClob.Create(const PlainDriver: IZInterbasePlainDriver;
+  const DBHandle: PISC_DB_HANDLE; const TrHandle: PISC_TR_HANDLE;
   var BlobId: TISC_QUAD; const ConSettings: PZConSettings);
 begin
   inherited CreateWithData(nil, 0, ConSettings^.ClientCodePage^.CP, ConSettings);
   FBlobId := BlobId;
   FDBHandle := DBHandle;
   FTISC_TR_HANDLE := TrHandle;
-  FPlainDriver := PlainDriver;
+  FPlainDriver := TZInterbasePlainDriver(PlainDriver.GetInstance);
+  FNativePlainDriver := PlainDriver;
 end;
 
 procedure TZInterbase6UnCachedClob.ReadLob;

@@ -78,6 +78,7 @@ type
     FNativeHandle: PISC_DB_HANDLE;
     ThreadException: boolean;
     FConnection: TZConnection;
+    FPlainDriver: TZInterbasePlainDriver;
     FOnError: TErrorEvent;
     FAutoRegister: boolean;
     FRegistered: boolean;
@@ -86,7 +87,6 @@ type
     procedure SetEvents(Value: TStrings);
     function GetRegistered: boolean;
     procedure SetRegistered(const Value: boolean);
-    function GetPlainDriver: IZInterbasePlainDriver;
   protected
     { Protected declarations }
     function GetNativeHandle: PISC_DB_HANDLE; virtual;
@@ -99,10 +99,10 @@ type
     destructor Destroy; override;
     procedure RegisterEvents; virtual;
     procedure UnRegisterEvents; virtual;
-    property NativeHandle: PISC_DB_HANDLE read GetNativeHandle;
-    property PlainDriver: IZInterbasePlainDriver read GetPlainDriver;
     procedure SetAutoRegister(const Value: boolean);
     function GetAutoRegister: boolean;
+    property NativeHandle: PISC_DB_HANDLE read GetNativeHandle;
+    property PlainDriver: TZInterbasePlainDriver read FPlainDriver;
   published
     { Published declarations }
     property AutoRegister: boolean read GetAutoRegister write SetAutoRegister;
@@ -190,11 +190,6 @@ constructor TZIBEventAlerter.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
 
-  ThreadException := False;
-  FOnEventAlert := nil;
-  FNativeHandle := nil;
-  FConnection := nil;
-  FAutoRegister := False;
   FEvents := TStringList.Create;
   with TStringList(FEvents) do
   begin
@@ -289,6 +284,7 @@ Begin
          If WasRegistered Then
             RegisterEvents;
       End;
+      FPlainDriver := FConnection.DbcConnection.GetIZPlainDriver.GetInstance as TZInterbasePlainDriver;
    End;
 End; // SetConnection
 
@@ -329,11 +325,6 @@ begin
     end;
   end;
   FRegistered := FThreads.Count <> 0;
-end;
-
-function TZIBEventAlerter.GetPlainDriver: IZInterbasePlainDriver;
-begin
-  Result := (FConnection.DbcConnection as IZInterbase6Connection).GetPlainDriver;
 end;
 
 { TIBEventThread }
@@ -441,13 +432,11 @@ begin
   else
     sib_event_block := Tsib_event_block(ZPlainInterbase6.isc_event_block);
   }
-  sib_event_block := Tsib_event_block(Parent.GetPlainDriver.GetFirebirdAPI.isc_event_block);
+  sib_event_block := Tsib_event_block(Parent.PlainDriver.isc_event_block);
   EventBufferLen := sib_event_block(@EventBuffer,
     @ResultBuffer, EventCount,
     EBP(1), EBP(2),  EBP(3),  EBP(4),  EBP(5),  EBP(6),  EBP(7), EBP(8),
     EBP(9), EBP(10), EBP(11), EBP(12), EBP(13), EBP(14), EBP(15));
-
-
 end;
 
 procedure TIBEventThread.SignalEvent;
@@ -631,4 +620,3 @@ begin
 end;
 
 end.
-
