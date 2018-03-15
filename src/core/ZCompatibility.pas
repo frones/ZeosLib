@@ -56,15 +56,11 @@ interface
 {$I ZCore.inc}
 
 uses
-  Variants,
 {$IFDEF FPC}
   {$IFDEF UNIX}
     dynlibs,
   {$endif}
 {$ENDIF}
-  {$If defined(MSWINDOWS) and not defined(FPC)}
-  Windows,
-  {$IFEND}
   Classes,
   {$IFDEF MSEgui}mclasses,{$ENDIF}
   {$IFDEF WITH_LCONVENCODING} LConvEncoding,{$ENDIF}
@@ -856,7 +852,3 @@ initialization
     cCP_UTF8: ConSettingsDummy.CTRL_CP := 65001;
   end;
 end.
-
-
-
-
