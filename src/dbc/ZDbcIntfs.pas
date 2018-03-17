@@ -747,7 +747,6 @@ type
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
-    function GetBinaryString(ColumnIndex: Integer): RawByteString; deprecated;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString;
     function GetPWideChar(ColumnIndex: Integer): PWideChar; overload;
     function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
@@ -788,7 +787,6 @@ type
     function GetAnsiStringByName(const ColumnName: string): AnsiString;
     function GetUTF8StringByName(const ColumnName: string): UTF8String;
     function GetRawByteStringByName(const ColumnName: string): RawByteString;
-    function GetBinaryStringByName(const ColumnName: string): RawByteString; deprecated;
     function GetUnicodeStringByName(const ColumnName: string): ZWideString;
     function GetPWideCharByName(const ColumnName: string): PWideChar; overload;
     function GetPWideCharByName(const ColumnName: string; out Len: NativeUInt): PWideChar; overload;

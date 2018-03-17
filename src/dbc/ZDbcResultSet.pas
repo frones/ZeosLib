@@ -149,7 +149,6 @@ type
     function GetAnsiString(ColumnIndex: Integer): AnsiString; virtual;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; virtual;
     function GetRawByteString(ColumnIndex: Integer): RawByteString; virtual;
-    function GetBinaryString(ColumnIndex: Integer): RawByteString;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString; virtual;
     function GetBoolean(ColumnIndex: Integer): Boolean; virtual;
     function GetByte(ColumnIndex: Integer): Byte; virtual;
@@ -190,7 +189,6 @@ type
     function GetAnsiStringByName(const ColumnName: string): AnsiString; virtual;
     function GetUTF8StringByName(const ColumnName: string): UTF8String; virtual;
     function GetRawByteStringByName(const ColumnName: string): RawByteString; virtual;
-    function GetBinaryStringByName(const ColumnName: string): RawByteString;
     function GetUnicodeStringByName(const ColumnName: string): ZWideString; virtual;
     function GetBooleanByName(const ColumnName: string): Boolean; virtual;
     function GetByteByName(const ColumnName: string): Byte; virtual;
@@ -1092,20 +1090,6 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>String</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractResultSet.GetBinaryString(ColumnIndex: Integer): RawByteString;
-begin
-  Result := InternalGetString(ColumnIndex);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
   a <code>WideString</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -1782,20 +1766,6 @@ end;
 function TZAbstractResultSet.GetRawByteStringByName(const ColumnName: string): RawByteString;
 begin
   Result := GetRawByteString(GetColumnIndex(ColumnName));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>String</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractResultSet.GetBinaryStringByName(const ColumnName: string): RawByteString;
-begin
-  Result := GetBinaryString(GetColumnIndex(ColumnName));
 end;
 
 {**

@@ -721,7 +721,7 @@ begin
   //EH@JAN is this corret?? Flush all Prepared statements???
   //https://www.postgresql.org/docs/8.1/static/sql-deallocate.html
   //Zitat: "If you do not explicitly deallocate a prepared statement, it is deallocated when the session ends."
-  if GetAutoCommit then DeallocatePreparedStatements;
+  //if GetAutoCommit then DeallocatePreparedStatements;
 end;
 
 function TZPostgreSQLConnection.ClientSettingsChanged: Boolean;
