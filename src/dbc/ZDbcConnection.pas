@@ -106,7 +106,8 @@ type
 
   { TZAbstractConnection }
 
-  TZAbstractConnection = class(TZCodePagedObject, IZConnection)
+  TZAbstractConnection = class(TZCodePagedObject, IZConnection,
+    IImmediatelyReleasable)
   private
     FDriver: IZDriver;
     FIZPlainDriver: IZPlainDriver;
@@ -216,6 +217,7 @@ type
     procedure Open; virtual;
     procedure Close;
     procedure InternalClose; virtual; abstract;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); virtual;
     function IsClosed: Boolean; virtual;
 
     function GetDriver: IZDriver;
@@ -701,6 +703,17 @@ procedure TZAbstractConnection.RegisterStatement(
 begin
   if fRegisteredStatements.IndexOf(Pointer(Value)) = -1 then
     fRegisteredStatements.Add(Pointer(Value))
+end;
+
+procedure TZAbstractConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable);
+var I: Integer;
+  ImmediatelyReleasable: IImmediatelyReleasable;
+begin
+  fClosed := True;
+  for I := fRegisteredStatements.Count-1 downto 0 do
+    If Supports(IZStatement(fRegisteredStatements[I]), IImmediatelyReleasable, ImmediatelyReleasable)
+      and (Sender <> ImmediatelyReleasable) then
+      ImmediatelyReleasable.ReleaseImmediat(Sender);
 end;
 
 procedure TZAbstractConnection.ResetCurrentClientCodePage(const Name: String);
