@@ -109,6 +109,7 @@ type
   TZAbstractConnection = class(TZCodePagedObject, IZConnection)
   private
     FDriver: IZDriver;
+    FDriverManager: IZDriverManager; //just keep refcount high until last conection is gone e.g. Logging
     FIZPlainDriver: IZPlainDriver;
     FAutoCommit: Boolean;
     FReadOnly: Boolean;
@@ -806,6 +807,7 @@ begin
     raise Exception.Create('ZUrl is not assigned!')
   else
     FURL := TZURL.Create();
+  FDriverManager := DriverManager; //just keep refcount high
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
   fRegisteredStatements := TList.Create;
