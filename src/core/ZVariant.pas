@@ -2070,17 +2070,9 @@ begin
         vtUnicodeString:
           Result.VInteger := UnicodeToInt64Def(Value.VUnicodeString, 0);
         vtCharRec:
-          if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
-          begin
-            {$IFDEF FPC}
-            SetString(UniTemp, PWideChar(Value.VCharRec.P), Value.VCharRec.Len);
-            Result.VInteger := UnicodeToInt64Def(UniTemp, 0);
-            {$ELSE}
-            Result.VInteger := UnicodeToInt64Def(Value.VCharRec.P, 0);
-            {$ENDIF}
-          end
-          else
-            Result.VInteger := RawToInt64Def(Value.VCharRec.P, 0);
+          if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16)
+          then Result.VInteger := UnicodeToInt64Def(PWideChar(Value.VCharRec.P), 0)
+          else Result.VInteger := RawToInt64Def(PAnsiChar(Value.VCharRec.P), 0);
         vtDateTime:
           Result.VInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VDateTime);
         vtPointer:
