@@ -383,6 +383,8 @@ type
   protected
     procedure SetConSettingsFromInfo(Info: TStrings);
     property ConSettings: PZConSettings read FConSettings write FConSettings;
+  public
+    function GetConSettings: PZConSettings;
   end;
 
   {$IFDEF WITH_LCONVENCODING}
@@ -464,6 +466,11 @@ implementation
 {$IFDEF FAST_MOVE}
 uses ZFastCode;
 {$ENDIF}
+
+function TZCodePagedObject.GetConSettings: PZConSettings;
+begin
+  Result := FConSettings;
+end;
 
 procedure TZCodePagedObject.SetConSettingsFromInfo(Info: TStrings);
 begin

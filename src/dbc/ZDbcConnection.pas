@@ -143,7 +143,6 @@ type
     procedure SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
     procedure ResetCurrentClientCodePage(const Name: String);
     function GetEncoding: TZCharEncoding;
-    function GetConSettings: PZConSettings;
     function GetClientVariantManager: IZClientVariantManager;
     procedure CheckCharEncoding(const CharSet: String; const DoArrange: Boolean = False);
     function GetClientCodePageInformations: PZCodePage; //EgonHugeist
@@ -704,11 +703,6 @@ end;
 function TZAbstractConnection.GetEncoding: TZCharEncoding;
 begin
   Result := ConSettings.ClientCodePage^.Encoding;
-end;
-
-function TZAbstractConnection.GetConSettings: PZConSettings;
-begin
-  Result := ConSettings;
 end;
 
 function TZAbstractConnection.GetClientVariantManager: IZClientVariantManager;
