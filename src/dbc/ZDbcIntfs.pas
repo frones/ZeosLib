@@ -173,7 +173,7 @@ type
 
   TZServerProvider = (spUnknown, spMSSQL, spMSJet, spOracle, spSybase,
     spPostgreSQL, spIB_FB, spMySQL, spNexusDB, spSQLite, spDB2, spAS400,
-    spInformix, spCUBRID);
+    spInformix, spCUBRID, spFoxPro);
 
 // Interfaces
 type
