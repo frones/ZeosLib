@@ -1907,7 +1907,7 @@ begin
           end;
         end;
       else
-        raise EZDatabaseError.Create(SUnKnownParamDataType + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(Param.DataType)));
+        raise EZDatabaseError.Create(SUnKnownParamDataType + ' ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(Param.DataType)));
     end;
   end;
 end;

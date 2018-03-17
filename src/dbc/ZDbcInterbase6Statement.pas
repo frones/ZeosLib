@@ -351,6 +351,7 @@ begin
         LastResultSet := CreateIBResultSet(SQL, Self,
           TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
             FResultXSQLDA, True, CachedLob, FStatementType))
+      else
     else
       LastResultSet := nil;
   inherited ExecutePrepared;

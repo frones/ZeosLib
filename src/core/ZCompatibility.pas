@@ -56,15 +56,11 @@ interface
 {$I ZCore.inc}
 
 uses
-  Variants,
 {$IFDEF FPC}
   {$IFDEF UNIX}
     dynlibs,
   {$endif}
 {$ENDIF}
-  {$If defined(MSWINDOWS) and not defined(FPC)}
-  Windows,
-  {$IFEND}
   Classes,
   {$IFDEF MSEgui}mclasses,{$ENDIF}
   {$IFDEF WITH_LCONVENCODING} LConvEncoding,{$ENDIF}
@@ -387,6 +383,8 @@ type
   protected
     procedure SetConSettingsFromInfo(Info: TStrings);
     property ConSettings: PZConSettings read FConSettings write FConSettings;
+  public
+    function GetConSettings: PZConSettings;
   end;
 
   {$IFDEF WITH_LCONVENCODING}
@@ -468,6 +466,11 @@ implementation
 {$IFDEF FAST_MOVE}
 uses ZFastCode;
 {$ENDIF}
+
+function TZCodePagedObject.GetConSettings: PZConSettings;
+begin
+  Result := FConSettings;
+end;
 
 procedure TZCodePagedObject.SetConSettingsFromInfo(Info: TStrings);
 begin
@@ -856,7 +859,3 @@ initialization
     cCP_UTF8: ConSettingsDummy.CTRL_CP := 65001;
   end;
 end.
-
-
-
-

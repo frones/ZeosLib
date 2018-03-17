@@ -511,7 +511,7 @@ begin
     CheckEquals(True, ResultSet.Next); //fetch second row.
     CheckEquals(True, ResultSet.Next); //fetch third row.
     {ignore last row}
-    connection.Commit;
+    //connection.Commit;
   finally
     InsertPreparedStatement.ClearParameters;
     InsertPreparedStatement.ExecuteUpdate('delete from people where p_id=10');
