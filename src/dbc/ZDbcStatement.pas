@@ -67,7 +67,8 @@ type
 
   { TZAbstractStatement }
 
-  TZAbstractStatement = class(TZCodePagedObject, IZStatement, IZLoggingObject)
+  TZAbstractStatement = class(TZCodePagedObject, IZStatement, IZLoggingObject,
+    IImmediatelyReleasable)
   private
     fWBuffer: array[Byte] of WideChar;
     fABuffer: array[Byte] of AnsiChar;
@@ -153,6 +154,8 @@ type
     function GetSQL : String;
 
     procedure Close; virtual;
+    function IsClosed: Boolean;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); virtual;
 
     function GetMaxFieldSize: Integer; virtual;
     procedure SetMaxFieldSize(Value: Integer); virtual;
@@ -203,7 +206,8 @@ type
 
   { TZAbstractPreparedStatement }
 
-  TZAbstractPreparedStatement = class(TZAbstractStatement, IZPreparedStatement)
+  TZAbstractPreparedStatement = class(TZAbstractStatement, IZPreparedStatement,
+    IImmediatelyReleasable)
   private
     FInParamValues: TZVariantDynArray;
     FInParamTypes: TZSQLTypeArray;
@@ -268,6 +272,7 @@ type
     procedure Unprepare; virtual;
     function IsPrepared: Boolean; virtual;
     property Prepared: Boolean read IsPrepared;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
@@ -601,6 +606,21 @@ begin
   raise EZSQLException.Create(SUnsupportedOperation);
 end;
 
+procedure TZAbstractStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable);
+var ImmediatelyReleasable: IImmediatelyReleasable;
+begin
+  FClosed := True;
+  if (FOpenResultSet <> nil) and Supports(IZResultSet(FOpenResultSet), IImmediatelyReleasable, ImmediatelyReleasable) and
+     (ImmediatelyReleasable <> Sender) then
+    ImmediatelyReleasable.ReleaseImmediat(Sender);
+  if Assigned(FLastResultSet) and Supports(FLastResultSet, IImmediatelyReleasable, ImmediatelyReleasable) and
+     (ImmediatelyReleasable <> Sender) then
+    ImmediatelyReleasable.ReleaseImmediat(Sender);
+  if Assigned(Connection) and Supports(Connection, IImmediatelyReleasable, ImmediatelyReleasable) and
+     (ImmediatelyReleasable <> Sender) then
+    ImmediatelyReleasable.ReleaseImmediat(Sender);
+end;
+
 {**
   Sets a last result set to avoid problems with reference counting.
   @param ResultSet the lastest executed result set.
@@ -880,6 +900,11 @@ end;
 function TZAbstractStatement.GetWarnings: EZSQLWarning;
 begin
   Result := nil;
+end;
+
+function TZAbstractStatement.IsClosed: Boolean;
+begin
+  Result := fClosed;
 end;
 
 {**
@@ -1523,6 +1548,12 @@ end;
 }
 procedure TZAbstractPreparedStatement.PrepareInParameters;
 begin
+end;
+
+procedure TZAbstractPreparedStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable);
+begin
+  FPrepared := False;
+  inherited ReleaseImmediat(Sender);
 end;
 
 {**

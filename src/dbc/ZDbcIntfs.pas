@@ -570,6 +570,7 @@ type
     function GetSQL : String;
 
     procedure Close;
+    function IsClosed: Boolean;
 
     function GetMaxFieldSize: Integer;
     procedure SetMaxFieldSize(Value: Integer);
@@ -732,6 +733,7 @@ type
     procedure Close;
     procedure ResetCursor;
     function WasNull: Boolean;
+    function IsClosed: Boolean;
 
     //======================================================================
     // Methods for accessing results by column index
