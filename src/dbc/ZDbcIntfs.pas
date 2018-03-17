@@ -253,6 +253,11 @@ type
     function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
+  IImmediatelyReleasable = interface(IZInterface)
+    ['{7AA5A5DA-5EC7-442E-85B0-CCCC71C13169}']
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable);
+  end;
+
   {** Database Connection interface. }
   IZConnection = interface(IZInterface)
     ['{8EEBBD1A-56D1-4EC0-B3BD-42B60591457F}']
