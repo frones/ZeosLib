@@ -193,6 +193,7 @@ type
 
     procedure Open; override;
     procedure InternalClose; override;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
@@ -699,6 +700,16 @@ begin
   FPreparedStmts.Add(Value);
 end;
 
+procedure TZPostgreSQLConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable);
+begin
+  if Assigned(FUnpreparableStmts) then
+    FUnpreparableStmts.Clear;
+  if Assigned(FPreparedStmts) then
+    FPreparedStmts.Clear;
+  FHandle := nil;
+  inherited ReleaseImmediat(Sender);
+end;
+
 procedure TZPostgreSQLConnection.UnregisterPreparedStmtName(const value: String);
 var Index: Integer;
 begin
@@ -707,6 +718,9 @@ begin
     FUnpreparableStmts.Add(FPreparedStmts.Strings[Index]);
     FPreparedStmts.Delete(Index);
   end;
+  //EH@JAN is this corret?? Flush all Prepared statements???
+  //https://www.postgresql.org/docs/8.1/static/sql-deallocate.html
+  //Zitat: "If you do not explicitly deallocate a prepared statement, it is deallocated when the session ends."
   if GetAutoCommit then DeallocatePreparedStatements;
 end;
 
