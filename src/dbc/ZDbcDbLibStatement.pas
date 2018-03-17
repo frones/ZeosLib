@@ -402,13 +402,13 @@ begin
     FLastOptainedRS.Close;
     FLastOptainedRS := nil;
   end;
+  FLastOptainedRS := nil;
   for I := 0 to FResults.Count -1 do
     if Supports(FResults[I], IZResultSet, FLastOptainedRS) then begin
       FLastOptainedRS.Close;
       FLastOptainedRS := nil;
     end;
   FResults.Clear;
-  FLastOptainedRS := nil;
 end;
 
 constructor TZDBLibCallableStatement.Create(const Connection: IZConnection;

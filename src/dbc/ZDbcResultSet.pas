@@ -359,7 +359,6 @@ type
 
     function GetStatement: IZStatement; virtual;
 
-    function GetConSettings: PZConsettings;
     property ColumnsInfo: TObjectList read FColumnsInfo write FColumnsInfo;
 
     {$IFDEF USE_SYNCOMMONS}
@@ -3965,11 +3964,6 @@ end;
 function TZAbstractResultSet.GetStatement: IZStatement;
 begin
   Result := FStatement;
-end;
-
-function TZAbstractResultSet.GetConSettings: PZConsettings;
-begin
-  Result := ConSettings;
 end;
 
 { TZAbstractBlob }

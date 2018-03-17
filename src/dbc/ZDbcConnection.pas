@@ -110,6 +110,7 @@ type
     IImmediatelyReleasable)
   private
     FDriver: IZDriver;
+    FDriverManager: IZDriverManager; //just keep refcount high until last conection is gone e.g. Logging
     FIZPlainDriver: IZPlainDriver;
     FAutoCommit: Boolean;
     FReadOnly: Boolean;
@@ -142,7 +143,6 @@ type
     procedure SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
     procedure ResetCurrentClientCodePage(const Name: String);
     function GetEncoding: TZCharEncoding;
-    function GetConSettings: PZConSettings;
     function GetClientVariantManager: IZClientVariantManager;
     procedure CheckCharEncoding(const CharSet: String; const DoArrange: Boolean = False);
     function GetClientCodePageInformations: PZCodePage; //EgonHugeist
@@ -745,11 +745,6 @@ begin
   Result := ConSettings.ClientCodePage^.Encoding;
 end;
 
-function TZAbstractConnection.GetConSettings: PZConSettings;
-begin
-  Result := ConSettings;
-end;
-
 function TZAbstractConnection.GetClientVariantManager: IZClientVariantManager;
 begin
   Result := TZClientVariantManager.Create(ConSettings);
@@ -846,6 +841,7 @@ begin
     raise Exception.Create('ZUrl is not assigned!')
   else
     FURL := TZURL.Create();
+  FDriverManager := DriverManager; //just keep refcount high
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
   fRegisteredStatements := TList.Create;

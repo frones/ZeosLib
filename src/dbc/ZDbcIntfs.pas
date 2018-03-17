@@ -1097,7 +1097,7 @@ var
 
 implementation
 
-uses ZMessages, ZConnProperties;
+uses ZMessages, ZConnProperties, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF};
 
 type
   {** Driver Manager interface. }
@@ -1110,6 +1110,7 @@ type
     FLoginTimeout: Integer;
     FLoggingListeners: IZCollection;
     FHasLoggingListener: Boolean;
+    FCriticalSection: TCriticalSection;
     FURL: TZURL;
     procedure LogEvent(const Event: TZLoggingEvent);
   public
@@ -1163,6 +1164,7 @@ begin
   FLoggingListeners := TZCollection.Create;
   FHasLoggingListener := False;
   FURL := TZURL.Create;
+  fCriticalSection := TCriticalSection.Create;
 end;
 
 {**
@@ -1170,9 +1172,10 @@ end;
 }
 destructor TZDriverManager.Destroy;
 begin
-  FURL.Free;
+  FreeAndNil(FURL);
   FDrivers := nil;
   FLoggingListeners := nil;
+  FreeAndNil(fCriticalSection);
   inherited Destroy;
 end;
 
@@ -1314,8 +1317,13 @@ end;
 }
 procedure TZDriverManager.AddLoggingListener(const Listener: IZLoggingListener);
 begin
-  FLoggingListeners.Add(Listener);
-  FHasLoggingListener := True;
+  fCriticalSection.Enter;
+  try
+    FLoggingListeners.Add(Listener);
+    FHasLoggingListener := True;
+  finally
+    fCriticalSection.Leave;
+  end;
 end;
 
 {**
@@ -1324,8 +1332,13 @@ end;
 }
 procedure TZDriverManager.RemoveLoggingListener(const Listener: IZLoggingListener);
 begin
-  FLoggingListeners.Remove(Listener);
-  FHasLoggingListener := (FLoggingListeners.Count>0);
+  fCriticalSection.Enter;
+  try
+    FLoggingListeners.Remove(Listener);
+    FHasLoggingListener := (FLoggingListeners.Count>0);
+  finally
+    fCriticalSection.Leave;
+  end;
 end;
 
 function TZDriverManager.HasLoggingListener: Boolean;
@@ -1372,13 +1385,18 @@ var
 begin
   if not FHasLoggingListener then
     Exit;
-  for I := 0 to FLoggingListeners.Count - 1 do
-  begin
-    Listener := FLoggingListeners[I] as IZLoggingListener;
-    try
-      Listener.LogEvent(Event);
-    except
+  fCriticalSection.Enter;
+  try
+    for I := 0 to FLoggingListeners.Count - 1 do
+    begin
+      Listener := FLoggingListeners[I] as IZLoggingListener;
+      try
+        Listener.LogEvent(Event);
+      except
+      end;
     end;
+  finally
+    fCriticalSection.Leave;
   end;
 end;
 

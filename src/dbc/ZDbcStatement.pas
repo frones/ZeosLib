@@ -467,18 +467,8 @@ constructor TZAbstractStatement.Create(const Connection: IZConnection; Info: TSt
 begin
   { Sets the default properties. }
   inherited Create;
-  ConSettings := Connection.GetConSettings;
-  FMaxFieldSize := 0;
-  FMaxRows := 0;
-  FEscapeProcessing := False;
-  FQueryTimeout := 0;
+  Self.ConSettings := Connection.GetConSettings;
   FLastUpdateCount := -1;
-  FLastResultSet := nil;
-  FFetchDirection := fdForward;
-  FFetchSize := 0;
-  FResultSetConcurrency := rcReadOnly;
-  FResultSetType := rtForwardOnly;
-  FCursorName := '';
 
   FConnection := Connection;
   Connection.RegisterStatement(Self);

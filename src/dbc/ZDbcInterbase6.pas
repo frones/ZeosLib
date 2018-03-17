@@ -359,8 +359,8 @@ begin
   if FHandle <> 0 then begin
     FPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
     FHandle := 0;
+    CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcDisconnect);
   end;
-  CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcDisconnect);
 end;
 
 {**
