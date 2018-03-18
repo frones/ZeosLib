@@ -73,6 +73,7 @@ type
     procedure Test881634;
     procedure Test924861;
     procedure Test961337;
+    procedure TestBin_Collation;
   end;
 
 implementation
@@ -204,7 +205,7 @@ end;
 procedure TZTestDbcMySQLBugReport.Test768163;
 const
   fld1_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  fld2_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  //fld2_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -356,6 +357,28 @@ begin
       CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld2_Index)));
       CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld3_Index)));
       CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld4_Index)));
+    finally
+      ResultSet.Close;
+    end;
+  finally
+    Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcMySQLBugReport.TestBin_Collation;
+var
+  ResultSet: IZResultSet;
+  Statement: IZStatement;
+  Metadata: IZResultSetMetadata;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Statement := Connection.CreateStatement;
+  try
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM `mysql`.`user`');
+    try
+      Metadata := ResultSet.GetMetadata;
+      Check(Metadata.GetColumnType(FirstDbcIndex) in [stString, stUnicodeString], 'Wrong fieldtype');
     finally
       ResultSet.Close;
     end;

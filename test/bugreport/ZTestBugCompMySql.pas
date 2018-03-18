@@ -112,6 +112,7 @@ type
     procedure TestTicket52;
     procedure TestMS56OBER9357;
     procedure TestTicket186_MultipleResults;
+    procedure TestBin_Collation;
   end;
 
 implementation
@@ -1546,6 +1547,24 @@ begin
   finally
     Query.Free;
     UpdateSQL.Free;
+  end;
+end;
+
+procedure TZTestCompMySQLBugReport.TestBin_Collation;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'SELECT * FROM `mysql`.`user`';
+
+    Query.Open;
+    Self.CheckStringFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+    Query.Close;
+  finally
+    Query.Free;
   end;
 end;
 
