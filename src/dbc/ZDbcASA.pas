@@ -169,6 +169,7 @@ end;
 constructor TZASADriver.Create;
 begin
   inherited Create;
+  AddSupportedProtocol(AddPlainDriverToCache(TZASA12PlainDriver.Create, 'asa'));
   AddSupportedProtocol(AddPlainDriverToCache(TZASA7PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZASA8PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZASA9PlainDriver.Create));

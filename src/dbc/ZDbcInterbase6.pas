@@ -213,6 +213,8 @@ begin
   AddSupportedProtocol(AddPlainDriverToCache(TZFirebird21PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZFirebird25PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZFirebird30PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZFirebird30PlainDriver.Create, 'firebird'));
+  AddSupportedProtocol(AddPlainDriverToCache(TZInterbase6PlainDriver.Create, 'interbase'));
   // embedded drivers
   AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdD15PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdD20PlainDriver.Create));
