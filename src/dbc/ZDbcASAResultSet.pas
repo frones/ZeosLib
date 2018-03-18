@@ -62,7 +62,8 @@ uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs,{$ENDIF}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA, ZCompatibility,
-  ZDbcResultSetMetadata, ZDbcASAUtils, ZMessages, ZPlainASAConstants;
+  ZDbcResultSetMetadata, ZDbcASAUtils, ZMessages, ZPlainASAConstants,
+  ZPLainASADriver;
 
 type
 
@@ -76,6 +77,7 @@ type
     FStmtNum: SmallInt;
     FSqlData: IZASASQLDA;
     FASAConnection: IZASAConnection;
+    FPlainDriver: TZASAPlainDriver;
   private
     procedure CheckIndex(const Index: Word);
     procedure CheckRange(const Index: Word);
@@ -349,7 +351,7 @@ begin
   FCursorName := CursorName;
   FCachedBlob := CachedBlob;
   FASAConnection := Statement.GetConnection as IZASAConnection;
-
+  FPLainDriver := FASAConnection.GetPlainDriver;
   FStmtNum := StmtNum;
   ResultSetType := rtScrollSensitive;
   ResultSetConcurrency := rcUpdatable;
@@ -1445,7 +1447,7 @@ end;
 procedure TZASAAbstractResultSet.ResetCursor;
 begin
   if FCursorName <> '' then
-    FASAConnection.GetPlainDriver.db_close(FASAConnection.GetDBHandle, PAnsiChar(FCursorName));
+    FPLainDriver.dbpp_close(FASAConnection.GetDBHandle, Pointer(FCursorName));
   inherited ResetCursor;
 end;
 
@@ -1530,9 +1532,9 @@ begin
   if Closed or ((MaxRows > 0) and (Row >= MaxRows)) then
     Exit;
 
-  FASAConnection.GetPlainDriver.db_fetch( FASAConnection.GetDBHandle,
+  FPlainDriver.dbpp_fetch( FASAConnection.GetDBHandle,
     Pointer(FCursorName), CUR_ABSOLUTE, Row, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
-  ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
+  ZDbcASAUtils.CheckASAError(FPlainDriver,
     FASAConnection.GetDBHandle, lcOther, ConSettings);
 
   if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then
@@ -1571,13 +1573,12 @@ begin
   Result := False;
   if Closed or ((RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows))) then
     Exit;
-  FASAConnection.GetPlainDriver.db_fetch( FASAConnection.GetDBHandle,
+  FPlainDriver.dbpp_fetch( FASAConnection.GetDBHandle,
     Pointer(FCursorName), CUR_RELATIVE, Rows, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
-    ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
+    ZDbcASAUtils.CheckASAError(FPlainDriver,
       FASAConnection.GetDBHandle, lcOther, ConSettings, '', SQLE_CURSOR_NOT_OPEN); //handle a known null resultset issue (cursor not open)
   if FASAConnection.GetDBHandle.sqlCode = SQLE_CURSOR_NOT_OPEN then Exit;
-  if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then
-  begin
+  if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then begin
     //if ( RowNo > 0) or ( RowNo + Rows < 0) then
       RowNo := RowNo + Rows;
     Result := True;
@@ -1813,7 +1814,7 @@ procedure TZASACachedResultSet.InsertRow;
 begin
   if Assigned( FUpdateSQLData) and FInsert then
   begin
-    FASAConnection.GetPlainDriver.db_put_into( FASAConnection.GetDBHandle,
+    FPlainDriver.dbpp_put_into( FASAConnection.GetDBHandle,
       PAnsiChar(FCursorName), FUpdateSQLData.GetData, FSQLData.GetData);
     ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
       FASAConnection.GetDBHandle, lcOther, ConSettings, 'Insert row');
@@ -1827,7 +1828,7 @@ procedure TZASACachedResultSet.UpdateRow;
 begin
   if Assigned( FUpdateSQLData) and FUpdate then
   begin
-    FASAConnection.GetPlainDriver.db_update( FASAConnection.GetDBHandle,
+    FASAConnection.GetPlainDriver.dbpp_update( FASAConnection.GetDBHandle,
       PAnsiChar(FCursorName), FUpdateSQLData.GetData);
     ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
       FASAConnection.GetDBHandle, lcOther, ConSettings, 'Update row:' + IntToRaw( RowNo));
@@ -1840,8 +1841,8 @@ end;
 
 procedure TZASACachedResultSet.DeleteRow;
 begin
-  FASAConnection.GetPlainDriver.db_delete( FASAConnection.GetDBHandle,
-    PAnsiChar(FCursorName));
+  FASAConnection.GetPlainDriver.dbpp_delete( FASAConnection.GetDBHandle,
+    Pointer(FCursorName), nil, nil);
   ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
     FASAConnection.GetDBHandle, lcOther, ConSettings, 'Delete row:' + IntToRaw( RowNo));
 

@@ -233,7 +233,8 @@ begin
       Result := stTimestamp;
     FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
-      if (PMYSQL_FIELD(FieldHandle)^.flags and BINARY_FLAG) = 0 then
+      if //((PMYSQL_FIELD(FieldHandle).flags and BINARY_FLAG) = 0)
+         (PMYSQL_FIELD(FieldHandle)^.charsetnr <> 63{binary}) then
         If ( CtrlsCPType = cCP_UTF16) then
           Result := stUnicodeStream
         else
@@ -250,7 +251,8 @@ begin
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
-      if (PMYSQL_FIELD(FieldHandle)^.flags and BINARY_FLAG) = 0 then
+      if //((PMYSQL_FIELD(FieldHandle)^.flags and BINARY_FLAG) = 0)
+         (PMYSQL_FIELD(FieldHandle)^.charsetnr <> 63{binary}) then
         if ( CtrlsCPType = cCP_UTF16) then
           Result := stUnicodeString
         else
