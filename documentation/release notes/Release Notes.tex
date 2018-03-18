@@ -32,19 +32,30 @@
 \begin{document}
 \maketitle
 
-\section{General Changes}
-In Zeos 7.2 we added support for Free Pascal 3.0.
+\section{Zeos 7.2}
+The Zeos Team is proud to announce the availability of Zeos 7.2 as a stable release.
+This is the newest stable version of Zeos.
+It deprecates Zeos 7.1, which will not be supported anymore.
+Zeos 7.2 has seen tons of bug fixes and improvements.
+We urge all people still using older versions of Zeos to upgrade.
+If you have any problems with Zeos 7.2, please get in contact with us on the forums (\url{http://zeoslib.sourceforge.net}) or on the bugtracker (\url{https://sourceforge.net/p/zeoslib/tickets/})
 
-\section{Breaking changes on the DBC layer}
+\section{General Changes}
+\begin{itemize}
+\item In Zeos 7.2 we added support for Free Pascal 3.0
+\item ADO is now also supported for FPC and not only for Delphi anymore.
+\end{itemize}
+
+\section{Breaking changes}
 BEWARE: If you call Metadata functions on the DBC layer or use the TZMetadata object be sure that the case of the object name that you retrieve information for is in the correct case.
 Zeos will not do any guesswork - it will simply query the underlying database for the identifier that you supply.
 Example: In former versions of Zeos the call GetColumns('PEOPLE') might have returned information for the table people.
 This will not happen anymore.
 To query information about the table people you will have to use GetColumns('people').
-If you want the former behavior restored, your call has to be like this:
-GetColumns(IZConnection.GetMetadata.NormalizePatternCase('PEOPLE')).
+If you want the former behavior restored, your call has to be like this:\\
+GetColumns(\-IZConnection.\-GetMetadata.\-NormalizePatternCase('PEOPLE'))
 
-\section{specific changes for drivers}
+\section{Driver specific changes}
 \subsection{PostgreSQL}
 \begin{itemize}
 \item The postgresql driver now uses autocommit. Writing to OID BLOBs only works in explicit transactions because of this. 
@@ -57,18 +68,26 @@ This is a limitation in PostgreSQL and cannot be fixed in Zeos. The proposed wor
   Zeos now can use SSPI, Kerberos and Windows Authentication with PostgreSQL.
 	Just leave the username and password empty for this.
 \item
-  The PostgreSQL driver now maps tiNone and tiReadUncommitted to tiReadCommitted.
-	It is no longer vallid to use your own transaction handling code.
+  The PostgreSQL driver now maps the transaction isolation levels tiNone and tiReadUncommitted to tiReadCommitted.
+	It is no longer valid to use your own transaction handling code.
 \item
   The PostgreSQL driver now supports read only transactions.
 \item
   The PostgreSQL driver now supports +Infinity, -Infinity and NaN for floating point values.
+\item
+  If you still use PostgreSQL 7 databases, we urge you to move on to a newer version.
+	PostgreSQL 7 is deprecated with this version and will be removed with Zeos 7.3.
 \end{itemize}
 
 \subsection{Firebird / Interbase}
 \begin{itemize}
-\item Support for Firebird 3.0.
+\item we added support for Firebird 3.0.
 \item new parameter to enable Firebird 3 wire compression: wirecompression
+\item support for Firebird 3.0 boolean fields
+\item we reenabled the use of Firebird and Interbase autocommit
+\item 
+  If you still use Interbase 5 databases, we urge you to move on to a newer version.
+	Interbase 5 is deprecated with this version and will be removed with Zeos 7.3.
 \end{itemize}
 
 \subsection{MySQL / MariaDB}
@@ -78,14 +97,49 @@ This is a limitation in PostgreSQL and cannot be fixed in Zeos. The proposed wor
 	The first result that is returned by the server will be the result that gets loaded into the Dataset.
 \item
   The MySQL driver should now be thread safe.
+	This still means that threads are not allowed to share a connection.
 \end{itemize}
 
 \subsection{MS SQL / SAP ASE (Sybase ASE)}
 \begin{itemize}
-\item reenabled Sybase support
+\item 
+  reenabled Sybase support.
+	This should allow some basic usage, but your mileage may vary.
+	If you have problems please get in contact.
 \item the driver now supports GUID-Columns on MS SQL Server.
 \item enable support of TDS 5.0 for newer Sybase Servers
 \item with FreeTDS the server port can now be specified
+\item 
+  The FreeTDS drivers now use sybdb.dll as the default dll to load.
+	Watch out if your program doesn't set the LibraryPath property in TZConnection.
+\item 
+  If you still use the mssql protocol using ntwdblib.dll to connect to MS SQL Server, we urge you to move on to either use ADO or FreeTDS.
+	The ntwdblib.dll is not supported by Microsoft for ages now and we will discontinue its support with Zeos 7.3.
+\end{itemize}
+
+\section{Known Problems}
+\begin{itemize}
+\item 
+  Zeos currently doesn't support the BCD type columns of Delphi.
+	NUMERIC and DECIMAL columns still get mapped to floating point types.
+	This will be adressed in Zeos 7.3 because it requires a lot of changes in the Zeos core.
+\end{itemize}
+
+\section{The future of Zeos}
+The next version of Zeos will be Zeos 7.3 which currently is in the making.
+Currently the following changes and features are planned:
+\begin{itemize}
+\item support for OLEDB
+\item support for ODBC
+\item support for BCD type columns to allow correct usage of NUMERIC and DECIMAL fields
+\item support for GUID type columns in Firebird
+\item Interbase 5 will not be supported officially anymore
+\item PostgreSQL 7 databases will not be supported officially anymore
+\item the use of ntwdblib.dll will not be supported anymore.
+\item DBC layer: the use of TZDriverManager.Connect will not be supported with a string anymore, only the use of a TZURL object will be supported.
+\item
+  Drivers with version numbers will not be used in Zeos 7.3 anymore (i.e. firebird-2.5 will become firebird).
+  Please migrate.
 \end{itemize}
 
 \end{document}
