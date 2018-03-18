@@ -81,6 +81,7 @@ type
     procedure TestStringGetter;
     procedure TestStringToSignedIntegerConversions;
     procedure TestStringToUnsignedIntegerConversions;
+    procedure TestAfterLast;
   end;
 
 implementation
@@ -88,6 +89,24 @@ implementation
 uses ZSysUtils, ZTestConsts, ZFastCode;
 
 { TZGenericTestDbcResultSet }
+procedure TZGenericTestDbcResultSet.TestAfterLast;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  Statement := Connection.CreateStatement;
+  Resultset := Statement.ExecuteQuery('select * from people');
+  try
+    while ResultSet.Next do Check(True);
+    Check(ResultSet.IsAfterLast, 'Missing afterlast logic');
+  finally
+    ResultSet.Close;
+    ResultSet := nil;
+    Statement.Close;
+    Statement := nil;
+  end;
+end;
+
 {**
    Test table with aliases
 }
