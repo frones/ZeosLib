@@ -38,7 +38,7 @@ This is the newest stable version of Zeos.
 It deprecates Zeos 7.1, which will not be supported anymore.
 Zeos 7.2 has seen tons of bug fixes and improvements.
 We urge all people still using older versions of Zeos to upgrade.
-If you have any problems with Zeos 7.2, please get in contact with us on the forums (\url{http://zeoslib.sourceforge.net}) or on the bugtracker (\url{https://sourceforge.net/p/zeoslib/tickets/})
+If you have any problems with Zeos 7.2, please get in contact with us on the forums (\url{http://zeoslib.sourceforge.net}) or on the bugtracker (\url{https://sourceforge.net/p/zeoslib/tickets/}).
 
 \section{General Changes}
 \begin{itemize}
@@ -58,8 +58,12 @@ GetColumns(\-IZConnection.\-GetMetadata.\-NormalizePatternCase('PEOPLE'))
 \section{Driver specific changes}
 \subsection{PostgreSQL}
 \begin{itemize}
-\item The postgresql driver now uses autocommit. Writing to OID BLOBs only works in explicit transactions because of this. 
-This is a limitation in PostgreSQL and cannot be fixed in Zeos. The proposed workaround is to use the bytea data type.
+\item 
+  The postgresql driver now uses autocommit.
+	Writing to OID BLOBs only works in explicit transactions because of this. 
+  This is a limitation in PostgreSQL and cannot be fixed in Zeos.
+	The proposed workaround is to use the bytea data type.
+	For more information see \url{https://www.postgresql.org/message-id/002701c49d7e%240f059240%24d604460a%40zaphod}.
 \item GUID columns are now supported.
 \item 
   New parameters, so PostgreSQL can connect using SSL (sslmode, requiressl, sslcompression, sslcert, sslkey, sslrootcert, sslcrl). 
