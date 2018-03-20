@@ -1605,7 +1605,7 @@ begin
   if Status = OCI_NO_DATA then begin
     FPlainDriver.AttrGet(FStmtHandle,OCI_HTYPE_STMT,@FetchedRows,nil,OCI_ATTR_ROWS_FETCHED,FErrorHandle);
     LastRowNo := RowNo+Integer(FetchedRows);  //this makes Exit out in first check on next fetch
-    FMaxBufIndex := FetchedRows-1;
+    FMaxBufIndex := Integer(FetchedRows)-1;
     RowNo := RowNo + 1;
     //did we retrieve a row or is table empty?
     if FetchedRows > 0 then
