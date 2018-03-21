@@ -949,11 +949,10 @@ end;
 }
 procedure TZPostgreSQLConnection.SetAutoCommit(Value: Boolean);
 begin
-  if Value xor GetAutoCommit then begin
-    case Value of
-       true: DoCommit;
-       false: DoStartTransaction;
-    end;
+  if Value <> GetAutoCommit then begin
+	if Value
+    then DoCommit
+    else DoStartTransaction;
     inherited SetAutoCommit(Value);
   end;
 end;
