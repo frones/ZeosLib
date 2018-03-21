@@ -357,6 +357,8 @@
 // Enables MySQL support in TZConnection/TZDataset
 {$IFNDEF ZEOS_DISABLE_MYSQL}
 {$DEFINE ENABLE_MYSQL}
+{$ELSE}
+  {.$DEFINE MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
 {$ENDIF}
 
 // Enables PostgreSQL support in TZConnection/TZDataset

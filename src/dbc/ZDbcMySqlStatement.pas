@@ -729,25 +729,21 @@ begin
       Bind^.buffer_length_address^ := Length(Bind^.buffer); //reset Buffer_Length
       case Bind^.buffer_type of
         FIELD_TYPE_TINY:
-          if Bind^.is_signed then
-            PShortInt(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i])
-          else
-            PByte(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i]);
+          if Bind^.is_signed
+          then PShortInt(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
+          else PByte(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
         FIELD_TYPE_SHORT:
-          if Bind^.is_signed then
-            PSmallInt(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
-          else
-            PWord(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
+          if Bind^.is_signed
+          then PSmallInt(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
+          else PWord(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
         FIELD_TYPE_LONG:
-          if Bind^.is_signed then
-            PLongInt(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
-          else
-            PLongWord(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
+          if Bind^.is_signed
+          then PLongInt(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
+          else PLongWord(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
         FIELD_TYPE_LONGLONG:
-          if Bind^.is_signed then
-            PInt64(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
-          else
-            PUInt64(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
+          if Bind^.is_signed
+          then PInt64(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
+          else PUInt64(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
         FIELD_TYPE_FLOAT: PSingle(PBuffer)^:= ClientVarManager.GetAsFloat(InParamValues[i]);
         FIELD_TYPE_DOUBLE: PDouble(PBuffer)^:= ClientVarManager.GetAsFloat(InParamValues[i]);
         FIELD_TYPE_STRING:
@@ -956,7 +952,11 @@ function TZMysqlPreparedStatement.getFieldType(SQLType: TZSQLType; Var Signed: B
 begin
   Signed := SQLType in [stShort, stSmall, stInteger, stLong];
   case SQLType of
+    {$IFDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
+    stBoolean:                Result := FIELD_TYPE_TINY;//does NOT WORK: FIELD_TYPE_ENUM('Y'/'N'), TINY LEADS to truncations ):
+    {$ELSE}
     stBoolean:                Result := FIELD_TYPE_STRING;//does NOT WORK: FIELD_TYPE_ENUM('Y'/'N'), TINY LEADS to truncations ):
+    {$ENDIF}
     stByte, stShort:          Result := FIELD_TYPE_TINY;
     stWord, stSmall:          Result := FIELD_TYPE_SHORT;
     stLongWord, stInteger:    Result := FIELD_TYPE_LONG;
@@ -1656,6 +1656,12 @@ begin
   bind^.buffer_type := MYSQL_FIELD^._type; //safe initialtype
   bind^.binary := (MYSQL_FIELD^.flags and BINARY_FLAG) <> 0;
   case MYSQL_FIELD^._type of
+    FIELD_TYPE_BIT: case MYSQL_FIELD^.length of
+                      0..8  : bind^.Length := SizeOf(Byte);
+                      9..16 : bind^.Length := SizeOf(Word);
+                      17..32: bind^.Length := SizeOf(LongWord);
+                      else    bind^.Length := SizeOf(UInt64);
+                    end;
     FIELD_TYPE_DATE:        bind^.Length := sizeOf(TMYSQL_TIME);
     FIELD_TYPE_TIME:        bind^.Length := sizeOf(TMYSQL_TIME);
     FIELD_TYPE_DATETIME:    bind^.Length := sizeOf(TMYSQL_TIME);

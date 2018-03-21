@@ -184,27 +184,23 @@ function ConvertMySQLHandleToSQLType(FieldHandle: PZMySQLField;
 begin
     case PMYSQL_FIELD(FieldHandle)^._type of
     FIELD_TYPE_TINY:
-      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0 then
-         Result := stShort
-      else
-         Result := stByte;
+      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0
+      then Result := stShort
+      else Result := stByte;
     FIELD_TYPE_YEAR:
       Result := stWord;
     FIELD_TYPE_SHORT:
-      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0 then
-         Result := stSmall
-      else
-         Result := stWord;
+      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0
+      then Result := stSmall
+      else Result := stWord;
     FIELD_TYPE_INT24, FIELD_TYPE_LONG:
-      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0 then
-         Result := stInteger
-      else
-         Result := stLongWord;
+      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0
+      then Result := stInteger
+      else Result := stLongWord;
     FIELD_TYPE_LONGLONG:
-      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0 then
-         Result := stLong
-      else
-        Result := stULong;
+      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0
+      then Result := stLong
+      else Result := stULong;
     FIELD_TYPE_FLOAT:
       Result := stDouble;//stFloat;
     FIELD_TYPE_DECIMAL, FIELD_TYPE_NEWDECIMAL: {ADDED FIELD_TYPE_NEWDECIMAL by fduenas 20-06-2006}
@@ -241,7 +237,12 @@ begin
         Result := stBinaryStream;
     FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.1/en/bit-type.html
       case PMYSQL_FIELD(FieldHandle)^.length of
+        {$IFDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
+        1: Result := stBoolean;
+        2..8: Result := stByte;
+        {$ELSE}
         1..8: Result := stByte;
+        {$ENDIF}
         9..16: Result := stWord;
         17..32: Result := stLongWord;
         else Result := stULong;
@@ -251,12 +252,10 @@ begin
     FIELD_TYPE_STRING:
       if //((PMYSQL_FIELD(FieldHandle)^.flags and BINARY_FLAG) = 0)
          (PMYSQL_FIELD(FieldHandle)^.charsetnr <> 63{binary}) then
-        if ( CtrlsCPType = cCP_UTF16) then
-          Result := stUnicodeString
-        else
-          Result := stString
-      else
-        Result := stBytes;
+        if ( CtrlsCPType = cCP_UTF16)
+        then Result := stUnicodeString
+        else Result := stString
+      else Result := stBytes;
     FIELD_TYPE_ENUM:
       Result := stString;
     FIELD_TYPE_SET:
@@ -662,7 +661,12 @@ SetLobSize:
     ColumnSize := RawToIntDef(TypeInfoSecond, 1);
     Signed := False;
     case ColumnSize of
+      {$IFDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
+      1: FieldType := stBoolean;
+      2..8: goto lByte;
+      {$ELSE}
       1..8: goto lByte;
+      {$ENDIF}
       9..16: goto lWord;
       17..32: goto lLong;
       else goto lLongLong;
@@ -707,10 +711,13 @@ SetDefaultVal:
   begin
     case InParamType of
       stBoolean:
-        if ClientVarManager.GetAsBoolean(Value) then
-           Result := '''Y'''
-        else
-           Result := '''N''';
+        {$IFDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
+        Result := ZSysUtils.BoolStrIntsRaw[ClientVarManager.GetAsBoolean(Value)];
+        {$ELSE}
+        if ClientVarManager.GetAsBoolean(Value)
+        then Result := '''Y'''
+        else Result := '''N''';
+        {$ENDIF}
       stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
       stFloat, stDouble, stCurrency, stBigDecimal:
         Result := ClientVarManager.GetAsRawByteString(Value);

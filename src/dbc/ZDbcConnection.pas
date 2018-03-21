@@ -600,8 +600,7 @@ end;
 procedure TZAbstractConnection.SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
 begin
   {date formats}
-  if DetermineFromInfo then
-  begin
+  if DetermineFromInfo then begin
     if Info.Values['datewriteformat'] = '' then
       ConSettings^.WriteFormatSettings.DateFormat := 'YYYY-MM-DD'
     else

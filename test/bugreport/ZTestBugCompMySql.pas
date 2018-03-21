@@ -113,6 +113,7 @@ type
     procedure TestMS56OBER9357;
     procedure TestTicket186_MultipleResults;
     procedure TestBin_Collation;
+    procedure TestEvalue2Params;
   end;
 
 implementation
@@ -208,20 +209,32 @@ end;
   version 6.0.8. When you use this fieldtype, the values
   returned are strings, not booleans. The fieldtype is
   correct (Boolean) in version 5.4.1.
+
+  EH: but this is not correct for all cases. loads users want to have it mapped
+  as string. So since 2018 MySQL still not have a true bool type we'll
+  map fieldtype bit(1) as Boolean which is the only type with just a 0/1
+  switch. Keep hands far away from (un)signed tinyint(1) which has a range
+  of shortint/byte
 }
 procedure TZTestCompMySQLBugReport.Test735299;
 var
   Query: TZQuery;
+  tbl: String;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
+  {$IFDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
+  tbl := 'table735299_bit';
+  {$ELSE}
+  tbl := 'table735299';
+  {$ENDIF}
   Query := CreateQuery;
   try
     // Query.RequestLive := True;
-    Query.SQL.Text := 'DELETE FROM table735299';
+    Query.SQL.Text := 'DELETE FROM '+tbl;
     Query.ExecSQL;
 
-    Query.SQL.Text := 'SELECT * FROM table735299';
+    Query.SQL.Text := 'SELECT * FROM '+tbl;
     Query.Open;
     CheckEquals(3, Query.FieldCount);
     CheckEquals(Ord(ftInteger), Ord(Query.FieldDefs[0].DataType));
@@ -234,7 +247,7 @@ begin
     Query.Post;
     Query.Close;
 
-    Query.SQL.Text := 'SELECT * FROM table735299';
+    Query.SQL.Text := 'SELECT * FROM '+tbl;
     Query.Open;
     CheckEquals(1, Query.RecordCount);
     CheckEquals(1, Query.Fields[0].AsInteger);
@@ -243,7 +256,7 @@ begin
     Query.Delete;
     Query.Close;
 
-    Query.SQL.Text := 'SELECT * FROM table735299';
+    Query.SQL.Text := 'SELECT * FROM '+tbl;
     Query.Open;
     CheckEquals(0, Query.RecordCount);
     Query.Close;
@@ -264,16 +277,22 @@ end;
 procedure TZTestCompMySQLBugReport.Test740144;
 var
   Query: TZQuery;
+  tbl: String;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
+  {$IFDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
+  tbl := 'table735299_bit';
+  {$ELSE}
+  tbl := 'table735299';
+  {$ENDIF}
   Query := CreateQuery;
   try
     // Query.RequestLive := True;
-    Query.SQL.Text := 'DELETE FROM table735299';
+    Query.SQL.Text := 'DELETE FROM '+tbl;
     Query.ExecSQL;
 
-    Query.SQL.Text := 'SELECT * FROM table735299';
+    Query.SQL.Text := 'SELECT * FROM '+tbl;
     Query.Open;
     Query.Append;
     Query.Fields[0].AsInteger := 1;
@@ -290,7 +309,7 @@ begin
     Query.Post;
     Query.Close;
 
-    Query.SQL.Text := 'SELECT * FROM table735299 ORDER BY id';
+    Query.SQL.Text := 'SELECT * FROM '+tbl+' ORDER BY id';
     Query.Open;
     CheckEquals(True, Query.Locate('fld1', VarArrayOf([True]), []));
     CheckEquals(1, Query.RecNo);
@@ -1563,6 +1582,34 @@ begin
     Query.Open;
     Self.CheckStringFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
     Query.Close;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZTestCompMySQLBugReport.TestEvalue2Params;
+var
+  Query: TZReadOnlyQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateReadOnlyQuery;
+  Query.Connection.Connect;
+  Query.SQL.Text := 'SELECT p_ID, p_begin_work, '+
+    '/* IF condition, show SubName value*/ '+
+    'IF (:ShowSubName = True, p_name, NULL) AS SubName '+
+    'FROM people WHERE people.p_ID = :ID ';
+  try
+    CheckEquals(2, Query.Params.Count, 'Wrong param count');
+    {$IFDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
+    Query.ParamByName('ShowSubName').AsBoolean := True;
+    {$ELSE}
+    Query.ParamByName('ShowSubName').AsInteger := Ord(True);
+    {$ENDIF}
+    Query.ParamByName('ID').AsInteger := 1;
+    Query.Open;
+    Check(Query.RecordCount = 1, 'Wrong ReocrdCount');
+    Check(not Query.FieldByName('SubName').IsNull, 'Should be null');
   finally
     Query.Free;
   end;
