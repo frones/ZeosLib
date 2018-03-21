@@ -330,6 +330,12 @@ end;
 {**
   Runs a test for bug report #961337
   ENUM('Y','N') is not recognized as Boolean when column name is renamed.
+
+  EH: but this is not correct for all cases. loads users want to have it mapped
+  as string. So since 2018 MySQL still not have a true bool type we'll
+  map fieldtype bit(1) as Boolean which is the only type with just a 0/1
+  switch. Keep hands far away from (un)signed tinyint(1) which has a range
+  of shortint/byte
 }
 procedure TZTestDbcMySQLBugReport.Test961337;
 const
@@ -353,10 +359,17 @@ begin
     try
       Metadata := ResultSet.GetMetadata;
       CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(id_Index)));
+      {$IFNDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
       CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld1_Index)));
       CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld2_Index)));
       CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld3_Index)));
       CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld4_Index)));
+      {$ELSE}
+      Check(Metadata.GetColumnType(fld1_Index) in [stString, stUnicodeString]);
+      Check(Metadata.GetColumnType(fld2_Index) in [stString, stUnicodeString]);
+      Check(Metadata.GetColumnType(fld3_Index) in [stString, stUnicodeString]);
+      Check(Metadata.GetColumnType(fld4_Index) in [stString, stUnicodeString]);
+      {$ENDIF}
     finally
       ResultSet.Close;
     end;

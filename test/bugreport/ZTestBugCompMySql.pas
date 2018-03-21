@@ -1101,10 +1101,18 @@ begin
     Query.SQL.Text := 'SELECT * FROM table886841';
     Query.Open;
 
+    {$IFNDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[0].DataType));
+    {$ELSE}
+    Check(Query.Fields[0].DataType in [ftString, ftWideString]);
+    {$ENDIF}
     Query.Append;
     Query.Post;
+    {$IFNDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
     CheckEquals(True, Query.Fields[0].AsBoolean);
+    {$ELSE}
+    CheckEquals('y', LowerCase(Query.Fields[0].AsString));
+    {$ENDIF}
 
     Query.Close;
 
@@ -1138,7 +1146,11 @@ begin
       CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
     CheckEquals(Ord(ftFloat), Ord(Query.Fields[1].DataType));
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[2].DataType));
+    {$IFNDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[3].DataType));
+    {$ELSE}
+    Check(Query.Fields[3].DataType in [ftString, ftWideString]);
+    {$ENDIF}
     CheckEquals(Ord(ftBlob), Ord(Query.Fields[4].DataType));
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[5].DataType));
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[6].DataType));
@@ -1158,7 +1170,11 @@ begin
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[0].DataType))
     else
       CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
+    {$IFNDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[1].DataType));
+    {$ELSE}
+    Check(Query.Fields[1].DataType in [ftString, ftWideString]);
+    {$ENDIF}
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[2].DataType));
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[3].DataType));
     CheckEquals(Ord(ftFloat), Ord(Query.Fields[4].DataType));
@@ -1369,6 +1385,12 @@ end;
 {**
   Tests the bug report #961337
   ENUM('Y','N') is not recognized as Boolean when column name is renamed.
+
+  EH: but this is not correct for all cases. loads users want to have it mapped
+  as string. So since 2018 MySQL still not have a true bool type we'll
+  map fieldtype bit(1) as Boolean which is the only type with just a 0/1
+  switch. Keep hands far away from (un)signed tinyint(1) which has a range
+  of shortint/byte
 }
 procedure TZTestCompMySQLBugReport.Test961337;
 var
@@ -1382,11 +1404,19 @@ begin
       + ' fld2 as fld4 FROM table735299';
     // Query.RequestLive := True;
     Query.Open;
+    {$IFNDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[0].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[1].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[2].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[3].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[4].DataType));
+    {$ELSE}
+    CheckEquals(Ord(ftInteger), Ord(Query.Fields[0].DataType));
+    Check(Query.Fields[1].DataType in [ftString, ftWideString]);
+    Check(Query.Fields[2].DataType in [ftString, ftWideString]);
+    Check(Query.Fields[3].DataType in [ftString, ftWideString]);
+    Check(Query.Fields[4].DataType in [ftString, ftWideString]);
+    {$ENDIF}
     Query.Close;
   finally
     Query.Free;

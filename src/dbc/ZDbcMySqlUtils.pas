@@ -554,11 +554,12 @@ begin
   { the column type is ENUM}
   if TypeName = 'enum' then begin
     FieldType := stString;
+    {$IFNDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
     if (TypeInfoSecond = '''Y'',''N''') or (TypeInfoSecond = '''N'',''Y''') then
       FieldType := stBoolean
-    else begin
+    else {$ENDIF} begin
       TempPos := 1;
-      while true do begin 
+      while true do begin
         pC := PosEx({$IFDEF UNICODE}RawByteString{$ENDIF}(','), TypeInfoSecond, TempPos);
         if pC > 0 then begin
           TypeInfoSecond[pc] := #0;
