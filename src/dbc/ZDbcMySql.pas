@@ -287,11 +287,6 @@ begin
   FIKnowMyDatabaseName := False;
   if Self.Port = 0 then
      Self.Port := MYSQL_PORT;
-  AutoCommit := True;
-  TransactIsolationLevel := tiNone;
-  FHandle := nil;
-  { Processes connection properties. }
-  Open;
   FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url);
 end;
 
