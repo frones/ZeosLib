@@ -89,6 +89,7 @@ type
     function GetConnectionHandle: PMySQL;
     function EscapeString(From: PAnsiChar; Len: ULong; Quoted: Boolean): RawByteString; overload;
     function GetDatabaseName: String;
+    function MySQL_FieldType_Bit_1_IsBoolean: Boolean;
   end;
 
   {** Implements MySQL Database Connection. }
@@ -98,7 +99,7 @@ type
     FHandle: PMySQL;
     FMaxLobSize: ULong;
     FDatabaseName: String;
-    FIKnowMyDatabaseName: Boolean;
+    FIKnowMyDatabaseName, FMySQL_FieldType_Bit_1_IsBoolean: Boolean;
     FPlainDriver: IZMySQLPlainDriver;
   protected
     procedure InternalCreate; override;
@@ -133,6 +134,7 @@ type
     function GetEscapeString(const Value: ZWideString): ZWideString; override;
     function GetEscapeString(const Value: RawByteString): RawByteString; override;
     function GetDatabaseName: String;
+    function MySQL_FieldType_Bit_1_IsBoolean: Boolean;
   end;
 
 var
@@ -287,7 +289,13 @@ begin
   FIKnowMyDatabaseName := False;
   if Self.Port = 0 then
      Self.Port := MYSQL_PORT;
+  FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(URL.Properties.Values['MySQL_FieldType_Bit_1_IsBoolean']);
   FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url);
+end;
+
+function TZMySQLConnection.MySQL_FieldType_Bit_1_IsBoolean: Boolean;
+begin
+  Result := FMySQL_FieldType_Bit_1_IsBoolean;
 end;
 
 function TZMySQLConnection.EscapeString(From: PAnsiChar;

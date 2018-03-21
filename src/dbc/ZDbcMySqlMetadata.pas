@@ -209,6 +209,7 @@ type
   TZMySQLDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
     FInfo: TStrings;
+    FMySQL_FieldType_Bit_1_IsBoolean: Boolean;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-26
 
@@ -914,6 +915,7 @@ begin
   FInfo := TStringList.Create;
   FInfo.Assign(Url.Properties);
   FInfo.Values['UseResult'] := 'True';
+  fMySQL_FieldType_Bit_1_IsBoolean := (GetConnection as IZMySQLConnection).MySQL_FieldType_Bit_1_IsBoolean;
   FDatabase := (GetConnection as IZMySQLConnection).GetDatabaseName;
 end;
 
@@ -1209,7 +1211,7 @@ begin
 
             TypeName := GetRawByteString(ColumnIndexes[2]);
             ConvertMySQLColumnInfoFromString(TypeName, ConSettings,
-              TypeInfoSecond, MySQLType, ColumnSize, ColumnDecimals);
+              TypeInfoSecond, MySQLType, ColumnSize, ColumnDecimals, fMySQL_FieldType_Bit_1_IsBoolean);
             Result.UpdateInt(TableColColumnTypeIndex, Ord(MySQLType));
             Result.UpdateRawByteString(TableColColumnTypeNameIndex, TypeName);
             Result.UpdateInt(TableColColumnSizeIndex, ColumnSize);
@@ -2534,7 +2536,8 @@ begin
             //Result.UpdateNull(SchemaNameIndex); //PROCEDURE_SCHEM
             Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiChar(PROCEDURE_NAME_Index, Len), @Len); //PROCEDURE_NAME
             TypeName := ConSettings^.ConvFuncs.ZStringToRaw(Params[2], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-            ConvertMySQLColumnInfoFromString(TypeName, ConSettings, Temp, FieldType, ColumnSize, Precision);
+            ConvertMySQLColumnInfoFromString(TypeName, ConSettings, Temp, FieldType, ColumnSize, Precision,
+              fMySQL_FieldType_Bit_1_IsBoolean);
             { process COLUMN_NAME }
             if Params[1] = '' then
               if Params[0] = 'RETURNS' then

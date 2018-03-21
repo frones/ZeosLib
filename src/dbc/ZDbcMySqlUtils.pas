@@ -76,7 +76,7 @@ type
   @return a SQL undepended type.
 }
 function ConvertMySQLHandleToSQLType(FieldHandle: PZMySQLField;
-  CtrlsCPType: TZControlsCodePage): TZSQLType;
+  CtrlsCPType: TZControlsCodePage; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -139,11 +139,12 @@ function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord):
   @returns a new TZColumnInfo
 }
 function GetMySQLColumnInfoFromFieldHandle(FieldHandle: PZMySQLField;
-  ConSettings: PZConSettings; bUseResult:boolean): TZColumnInfo;
+  ConSettings: PZConSettings; MySQL_FieldType_Bit_1_IsBoolean: boolean): TZColumnInfo;
 
 procedure ConvertMySQLColumnInfoFromString(var TypeName: RawByteString;
   ConSettings: PZConSettings; out TypeInfoSecond: RawByteString;
-  out FieldType: TZSQLType; out ColumnSize: Integer; out Scale: Integer);
+  out FieldType: TZSQLType; out ColumnSize: Integer; out Scale: Integer;
+  MySQL_FieldType_Bit_1_IsBoolean: Boolean);
 
 function MySQLPrepareAnsiSQLParam(const Connection: IZMySQLConnection;
   const Value: TZVariant; const DefaultValue: String;
@@ -180,7 +181,7 @@ end;
   @return a SQL undepended type.
 }
 function ConvertMySQLHandleToSQLType(FieldHandle: PZMySQLField;
-  CtrlsCPType: TZControlsCodePage): TZSQLType;
+  CtrlsCPType: TZControlsCodePage; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TZSQLType;
 begin
     case PMYSQL_FIELD(FieldHandle)^._type of
     FIELD_TYPE_TINY:
@@ -237,12 +238,10 @@ begin
         Result := stBinaryStream;
     FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.1/en/bit-type.html
       case PMYSQL_FIELD(FieldHandle)^.length of
-        {$IFDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
-        1: Result := stBoolean;
+        1: if MySQL_FieldType_Bit_1_IsBoolean
+           then Result := stBoolean
+           else result := stByte;
         2..8: Result := stByte;
-        {$ELSE}
-        1..8: Result := stByte;
-        {$ENDIF}
         9..16: Result := stWord;
         17..32: Result := stLongWord;
         else Result := stULong;
@@ -410,7 +409,7 @@ end;
   @returns a new TZColumnInfo
 }
 function GetMySQLColumnInfoFromFieldHandle(FieldHandle: PZMySQLField;
-  ConSettings: PZConSettings; bUseResult:boolean): TZColumnInfo;
+  ConSettings: PZConSettings; MySQL_FieldType_Bit_1_IsBoolean:boolean): TZColumnInfo;
 var
   FieldLength: ULong;
   function ValueToString(Buf: PAnsiChar; Len: Cardinal): String;
@@ -447,7 +446,7 @@ begin
     end;
     Result.ReadOnly := (PMYSQL_FIELD(FieldHandle)^.org_table = nil) or (PMYSQL_FIELD(FieldHandle)^.org_name = nil);
     Result.Writable := not Result.ReadOnly;
-    Result.ColumnType := ConvertMySQLHandleToSQLType(FieldHandle, ConSettings.CPType);
+    Result.ColumnType := ConvertMySQLHandleToSQLType(FieldHandle, ConSettings.CPType, MySQL_FieldType_Bit_1_IsBoolean);
     FieldLength := PMYSQL_FIELD(FieldHandle)^.length;
     //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
 
@@ -526,7 +525,8 @@ end;
 
 procedure ConvertMySQLColumnInfoFromString(var TypeName: RawByteString;
   ConSettings: PZConSettings; out TypeInfoSecond: RawByteString;
-  out FieldType: TZSQLType; out ColumnSize: Integer; out Scale: Integer);
+  out FieldType: TZSQLType; out ColumnSize: Integer; out Scale: Integer;
+  MySQL_FieldType_Bit_1_IsBoolean: Boolean);
 const
   GeoTypes: array[0..7] of RawByteString = (
    'point','linestring','polygon','geometry',
@@ -541,7 +541,7 @@ begin
   TypeInfoSecond := '';
   Scale := 0;
   ColumnSize := 0;
-                                 
+
   TypeName := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}LowerCase(TypeName);
   Signed := (not (ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('unsigned'), TypeName) > 0));
   pB := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('('), TypeName);
@@ -554,10 +554,9 @@ begin
   { the column type is ENUM}
   if TypeName = 'enum' then begin
     FieldType := stString;
-    {$IFNDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
-    if (TypeInfoSecond = '''Y'',''N''') or (TypeInfoSecond = '''N'',''Y''') then
+    if not MySQL_FieldType_Bit_1_IsBoolean and ((TypeInfoSecond = '''Y'',''N''') or (TypeInfoSecond = '''N'',''Y''')) then
       FieldType := stBoolean
-    else {$ENDIF} begin
+    else begin
       TempPos := 1;
       while true do begin
         pC := PosEx({$IFDEF UNICODE}RawByteString{$ENDIF}(','), TypeInfoSecond, TempPos);
@@ -662,7 +661,7 @@ SetLobSize:
     ColumnSize := RawToIntDef(TypeInfoSecond, 1);
     Signed := False;
     case ColumnSize of
-      {$IFDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
+      {$IFDEF MySQL_FieldType_Bit_1_IsBoolean}
       1: FieldType := stBoolean;
       2..8: goto lByte;
       {$ELSE}
@@ -712,13 +711,11 @@ SetDefaultVal:
   begin
     case InParamType of
       stBoolean:
-        {$IFDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
-        Result := ZSysUtils.BoolStrIntsRaw[ClientVarManager.GetAsBoolean(Value)];
-        {$ELSE}
-        if ClientVarManager.GetAsBoolean(Value)
-        then Result := '''Y'''
-        else Result := '''N''';
-        {$ENDIF}
+        if Connection.MySQL_FieldType_Bit_1_IsBoolean
+        then Result := ZSysUtils.BoolStrIntsRaw[ClientVarManager.GetAsBoolean(Value)]
+        else if ClientVarManager.GetAsBoolean(Value)
+          then Result := '''Y'''
+          else Result := '''N''';
       stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
       stFloat, stDouble, stCurrency, stBigDecimal:
         Result := ClientVarManager.GetAsRawByteString(Value);

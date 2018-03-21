@@ -142,7 +142,8 @@ type
     FResultsCount: Integer;
     function CreateResultSet(const SQL: string): IZResultSet;
     procedure FlushPendingResults;
-    function GetFieldType(SQLType: TZSQLType; Var Signed: Boolean): TMysqlFieldTypes;
+    function GetFieldType(SQLType: TZSQLType; Var Signed: Boolean;
+      MySQL_FieldType_Bit_1_IsBoolean: Boolean): TMysqlFieldTypes;
   protected
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
@@ -671,7 +672,7 @@ begin
   FParamBindBuffer := TZMySqlParamBindBuffer.Create(FPlainDriver,InParamCount,FColumnArray);
   for i := 0 to InParamCount -1 do
   begin
-    MySQLType := GetFieldType(InParamTypes[i], Signed{%H-});
+    MySQLType := GetFieldType(InParamTypes[i], Signed{%H-}, FMySQLConnection.MySQL_FieldType_Bit_1_IsBoolean);
     FParamBindBuffer.AddColumn(MySQLType, getMySQLFieldSize(MySQLType, ChunkSize), Signed);
   end;
   if (FPlainDriver.stmt_bind_param(FMYSQL_STMT, FParamBindBuffer.GetBufferAddress) <> 0) then
@@ -948,15 +949,14 @@ begin
   Result := FPreparablePrefixTokens;
 end;
 
-function TZMysqlPreparedStatement.getFieldType(SQLType: TZSQLType; Var Signed: Boolean): TMysqlFieldTypes;
+function TZMysqlPreparedStatement.getFieldType(SQLType: TZSQLType;
+  Var Signed: Boolean; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TMysqlFieldTypes;
 begin
   Signed := SQLType in [stShort, stSmall, stInteger, stLong];
   case SQLType of
-    {$IFDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
-    stBoolean:                Result := FIELD_TYPE_TINY;//does NOT WORK: FIELD_TYPE_ENUM('Y'/'N'), TINY LEADS to truncations ):
-    {$ELSE}
-    stBoolean:                Result := FIELD_TYPE_STRING;//does NOT WORK: FIELD_TYPE_ENUM('Y'/'N'), TINY LEADS to truncations ):
-    {$ENDIF}
+    stBoolean:  if MySQL_FieldType_Bit_1_IsBoolean
+                then Result := FIELD_TYPE_TINY
+                else Result := FIELD_TYPE_STRING;//does NOT WORK: FIELD_TYPE_ENUM('Y'/'N'), TINY LEADS to truncations ):
     stByte, stShort:          Result := FIELD_TYPE_TINY;
     stWord, stSmall:          Result := FIELD_TYPE_SHORT;
     stLongWord, stInteger:    Result := FIELD_TYPE_LONG;
