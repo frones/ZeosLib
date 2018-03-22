@@ -81,7 +81,7 @@ Documentation for this feature is yet to become officially available.
 \label{sec:BreakingChanges}
 \subsection{Case sensitivity of the TZMetadata object and DBC layer meta data functions}
 \label{sec:BreakingChanges_MetadataCaseSensitivity}
-BEWARE: If you call Metadata functions on the DBC layer or use the TZMetadata object be sure that the case of the object name that you retrieve information for is in the correct case.
+If you call Metadata functions on the DBC layer or use the TZMetadata object be sure that the case of the object name that you retrieve information for is in the correct case.
 Zeos will not do any guesswork - it will simply query the underlying database for the identifier that you supply.
 Example: In former versions of Zeos the call GetColumns('PEOPLE') might have returned information for the table people.
 This will not happen anymore.
@@ -96,6 +96,11 @@ Writing to OID BLOBs only works in explicit transactions because of this.
 This is a limitation in PostgreSQL and cannot be fixed in Zeos.
 The proposed workaround is to use the bytea data type.
 For more information see \url{https://www.postgresql.org/message-id/002701c49d7e%240f059240%24d604460a%40zaphod}.
+
+\subsection{FreeTDS default library name}
+\label{sec:BreakingChanges_FreetdsDefaultLIbraryName}
+The FreeTDS drivers now uses sybdb.dll / sybdb.so as the default library to load.
+Watch out if your program doesn't set the LibraryPath property in TZConnection.
 
 \section{Driver specific changes}
 \label{sec:DriverSpecificChanges}
@@ -129,10 +134,14 @@ For more information see \url{https://www.postgresql.org/message-id/002701c49d7e
 \subsection{Firebird / Interbase}
 \label{sec:DriverSpecificChanges_FirebirdInterbase}
 \begin{itemize}
-\item we added support for Firebird 3.0.
-\item new parameter to enable Firebird 3 wire compression: wirecompression
-\item support for Firebird 3.0 boolean fields
-\item we reenabled the use of Firebird and Interbase autocommit
+\item We added support for Firebird 3.0.
+\item 
+  We added a new parameter to enable Firebird 3 wire compression: wirecompression.
+	Setting it to 1/Yes/True will enable Firebird 3 wire compression.
+\item 
+  Zeos now supports Firebird 3.0 boolean fields.
+\item
+  We reenabled the use of Firebird and Interbase autocommit.
 \item
   We added support for the new DBC layer batch loading API to the Firebird / Interbase driver.
 	For more information see \ref{sec:GeneralChanges_BatchLoading} \nameref{sec:GeneralChanges_BatchLoading}, Page \pageref{sec:GeneralChanges_BatchLoading}.
@@ -152,29 +161,32 @@ For more information see \url{https://www.postgresql.org/message-id/002701c49d7e
 	This still means that threads are not allowed to share a connection.
 \item
   New connection level parameter MySQL\_FieldType\_Bit\_1\_IsBoolean.
-	If this parameter is enabled, fields declared as BIT(1) will be treated as boolean fields.
+	If this parameter is enabled (set to 1/Yes/True), fields declared as BIT(1) will be treated as boolean fields.
 	The old assumption that an enum('Y','N') is a boolean field is disabled if this parameter is enabled.
 	If this parameter is enabled, enum('Y','N') will be a string field.
 	Other enums behave as before, they will be mapped to a sting filed in any case.
-	This parameter will be enabled by default in Zeos 7.3.
+	This parameter will be enabled by default in Zeos 7.3 if the server version is \textgreater= 5.0.3.
 \end{itemize}
 
 \subsection{MS SQL / SAP ASE (Sybase ASE)}
 \label{sec:DriverSpecificChanges_MssqlAse}
 \begin{itemize}
 \item 
-  reenabled Sybase support.
+  We reenabled Sybase support.
 	This should allow some basic usage, but your mileage may vary.
 	If you have problems please get in contact.
-\item the driver now supports GUID-Columns on MS SQL Server.
-\item enable support of TDS 5.0 for newer Sybase Servers
-\item with FreeTDS the server port can now be specified
 \item 
-  The FreeTDS drivers now use sybdb.dll as the default dll to load.
+  The driver now supports GUID-Columns on MS SQL Server.
+\item 
+  We enabled support of TDS 5.0 for newer Sybase Servers.
+\item 
+  With FreeTDS the server port can now be specified.
+\item 
+  The FreeTDS drivers now uses sybdb.dll as the default dll to load.
 	Watch out if your program doesn't set the LibraryPath property in TZConnection.
 \item 
   If you still use the mssql protocol using ntwdblib.dll to connect to MS SQL Server, we urge you to move on to either use ADO or FreeTDS.
-	The ntwdblib.dll is not supported by Microsoft for ages now and we will discontinue its support with Zeos 7.3.
+	The mssql protocol using ntwdblib.dll is not supported by Microsoft for ages now and we will discontinue its support with Zeos 7.3.
 \end{itemize}
 
 \subsection{Oracle}
@@ -201,6 +213,7 @@ For more information see \url{https://www.postgresql.org/message-id/002701c49d7e
   Zeos emulates named parameters for ADO drivers that don't support parameters.
 	Unfortunately this means Zeos doesn't know how to correctly format timestamps and similar data types to be correctly recognized by the underlying database.
 	Please use the new connection parameters ReadFormatSettings, WriteFormatSettings, DisplayFormatSettings.
+	For more information see \ref{sec:GeneralChanges_DateAndTimeFormatSettings} \nameref{sec:GeneralChanges_DateAndTimeFormatSettings}, Page \pageref{sec:GeneralChanges_DateAndTimeFormatSettings}.
 \end{itemize}
 
 \section{Known Problems}
@@ -223,10 +236,12 @@ Currently the following changes and features are planned:
 \item support for GUID type columns in Firebird
 \item Interbase 5 will not be supported officially anymore
 \item PostgreSQL 7 databases will not be supported officially anymore
-\item the use of ntwdblib.dll will not be supported anymore.
+\item 
+  The mssql protocol that uses ntwdblib.dll will not be supported anymore.
+	With Zeos 7.3 there will be plenty of other options to connect to Microsoft SQL Server.
 \item DBC layer: the use of TZDriverManager.Connect will not be supported with a string anymore, only the use of a TZURL object will be supported.
 \item
-  Drivers with version numbers will not be used in Zeos 7.3 anymore (i.e. firebird-2.5 will become firebird).
+  Protocols with version numbers will not be used in Zeos 7.3 anymore (i.e. firebird-2.5 will become firebird).
   Please migrate.
 \end{itemize}
 
