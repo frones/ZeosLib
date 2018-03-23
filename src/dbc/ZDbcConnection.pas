@@ -1334,6 +1334,8 @@ end;
 }
 function TZAbstractConnection.GetMetadata: IZDatabaseMetadata;
 begin
+  if Closed then
+    Open;
   Result := FMetadata as IZDatabaseMetadata;
 end;
 

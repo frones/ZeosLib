@@ -1447,24 +1447,18 @@ var
   I: Integer;
 begin
   if not FSupportedSchemasInitialized then begin
-    if GetConnection.IsClosed then
-      GetConnection.Open;
-    if not Assigned(FAdoConnection) then
-    begin
+    if not Assigned(FAdoConnection) then begin
       GetConnection.QueryInterface(IZAdoConnection, AdoConnection);
       FAdoConnection := AdoConnection.GetAdoConnection;
     end;
     (FAdoConnection as ADOConnectionConstruction).Get_Session(OleDBSession);
-    if Assigned(OleDBSession) then
-    begin
+    if Assigned(OleDBSession) then begin
       OleDBSession.QueryInterface(IDBSchemaRowset, SchemaRS);
-      if Assigned(SchemaRS) then
-      begin
+      if Assigned(SchemaRS) then begin
         SchemaRS.GetSchemas(Nr{%H-}, PG{%H-}, PInteger({%H-}IA));
         OriginalPG := PG;
         SetLength(SupportedSchemas, Nr);
-        for I := 0 to Nr - 1 do
-        begin
+        for I := 0 to Nr - 1 do begin
           SupportedSchemas[I].SchemaGuid := PG^;
           SupportedSchemas[I].SupportedRestrictions := IA^[I];
           SupportedSchemas[I].AdoSchemaId := ConvertOleDBToAdoSchema(PG^);

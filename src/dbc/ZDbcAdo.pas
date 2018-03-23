@@ -80,7 +80,6 @@ type
     ['{50D1AF76-0174-41CD-B90B-4FB770EFB14F}']
     function GetAdoConnection: ZPlainAdo.Connection;
     procedure InternalExecuteStatement(const SQL: ZWideString);
-    procedure CheckAdoError;
   end;
 
   {** Implements a generic Ado Connection. }
@@ -92,7 +91,6 @@ type
     FAdoConnection: ZPlainAdo.Connection;
     function GetAdoConnection: ZPlainAdo.Connection;
     procedure InternalExecuteStatement(const SQL: ZWideString);
-    procedure CheckAdoError;
     procedure StartTransaction;
     procedure InternalCreate; override;
   public
@@ -247,10 +245,6 @@ begin
   end;
 end;
 
-procedure TZAdoConnection.CheckAdoError;
-begin
-end;
-
 {**
   Starts a transaction support.
 }
@@ -258,7 +252,7 @@ procedure TZAdoConnection.ReStartTransactionSupport;
 begin
   if Closed then Exit;
 
-  if not (AutoCommit or (GetTransactionIsolation = tiNone)) then
+  if not (AutoCommit) then
     StartTransaction;
 end;
 
@@ -289,13 +283,6 @@ begin
 
     FAdoConnection.Open(WideString(Database), WideString(User), WideString(Password), -1{adConnectUnspecified});
     FAdoConnection.Set_CursorLocation(adUseClient);
-    case FAdoConnection.Get_IsolationLevel of
-      adXactReadUncommitted: inherited SetTransactionIsolation(tiReadUncommitted);
-      adXactReadCommitted: inherited SetTransactionIsolation(tiReadCommitted);
-      adXactRepeatableRead: inherited SetTransactionIsolation(tiRepeatableRead);
-      adXactSerializable: inherited SetTransactionIsolation(tiSerializable);
-      else inherited SetTransactionIsolation(tiNone);
-    end;
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
     ConSettings^.AutoEncode := {$IFDEF UNICODE}False{$ELSE}True{$ENDIF};
     CheckCharEncoding('CP_UTF16');
@@ -318,6 +305,8 @@ begin
       if Succeeded(GetDataSource.GetDataSource(IID_IDBInitialize, IInterFace(DBInitialize))) then
         (GetMetadata.GetDatabaseInfo as IZOleDBDatabaseInfo).InitilizePropertiesFromDBInfo(DBInitialize, ZAdoMalloc);
 
+  if not GetMetadata.GetDatabaseInfo.SupportsTransactionIsolationLevel(GetTransactionIsolation) then
+    inherited SetTransactionIsolation(GetMetadata.GetDatabaseInfo.GetDefaultTransactionIsolation);
   FAdoConnection.IsolationLevel := IL[GetTransactionIsolation];
   ReStartTransactionSupport;
 end;
