@@ -406,18 +406,20 @@ var
   {$ENDIF}
 
   function EBP(Index: integer): PAnsiChar;
+  var EvListIndex: Integer;
   begin
-    Inc(Index, (EventGroup * IB_MAX_EVENT_BLOCK));
-    if (Index > Parent.FEvents.Count) then
+    // Index is 1-based, FEvents is 0-based
+    EvListIndex := Index + (EventGroup * IB_MAX_EVENT_BLOCK) - 1;
+    if (EvListIndex >= Parent.FEvents.Count) then
       Result := nil
     else
     {$IFDEF UNICODE}
     begin
-      EBPArray[Index] := AnsiString(Parent.FEvents[Index - 1]);
+      EBPArray[Index] := AnsiString(Parent.FEvents[EvListIndex]);
       Result := PAnsiChar(EBPArray[Index]);
     end;
     {$ELSE}
-    Result := PAnsiChar(Parent.FEvents[Index - 1]);
+    Result := PAnsiChar(Parent.FEvents[EvListIndex]);
     {$ENDIF}
   end;
 
