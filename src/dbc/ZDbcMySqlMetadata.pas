@@ -205,11 +205,17 @@ type
     function GetExtraNameCharacters: string; override;
   end;
 
+  IZMySQLDatabaseMetadata = interface(IZDatabaseMetadata)
+    ['{204A7ABF-36B2-4753-9F48-4942619C31FA}']
+    procedure SetMySQL_FieldType_Bit_1_IsBoolean(Value: Boolean);
+    procedure SetDataBaseName(const Value: String);
+  end;
   {** Implements MySQL Database Metadata. }
-  TZMySQLDatabaseMetadata = class(TZAbstractDatabaseMetadata)
+  TZMySQLDatabaseMetadata = class(TZAbstractDatabaseMetadata, IZMySQLDatabaseMetadata)
   private
     FInfo: TStrings;
     FMySQL_FieldType_Bit_1_IsBoolean: Boolean;
+    FBoolCachedResultSets: IZCollection;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-26
 
@@ -255,13 +261,18 @@ type
   public
     constructor Create(Connection: TZAbstractConnection; const Url: TZURL); override;
     destructor Destroy; override;
+  public
+    procedure SetMySQL_FieldType_Bit_1_IsBoolean(Value: Boolean);
+    procedure SetDataBaseName(const Value: String);
+    procedure ClearCache; override;
   end;
 
 implementation
 
 uses
   Math,
-  ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZDbcMySql, ZSelectSchema;
+  ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZDbcMySql, ZCollections,
+  ZSelectSchema;
 
 { TZMySQLDatabaseInfo }
 
@@ -908,6 +919,12 @@ end;
 
 { TZMySQLDatabaseMetadata }
 
+procedure TZMySQLDatabaseMetadata.ClearCache;
+begin
+  FBoolCachedResultSets.Clear;
+  inherited ClearCache;
+end;
+
 constructor TZMySQLDatabaseMetadata.Create(Connection: TZAbstractConnection;
   const Url: TZURL);
 begin
@@ -915,8 +932,7 @@ begin
   FInfo := TStringList.Create;
   FInfo.Assign(Url.Properties);
   FInfo.Values['UseResult'] := 'True';
-  fMySQL_FieldType_Bit_1_IsBoolean := (GetConnection as IZMySQLConnection).MySQL_FieldType_Bit_1_IsBoolean;
-  FDatabase := (GetConnection as IZMySQLConnection).GetDatabaseName;
+  FBoolCachedResultSets := TZCollection.Create;
 end;
 
 {**
@@ -955,6 +971,25 @@ begin
     OutNamePattern := '%'
   else
     OutNamePattern := NormalizePatternCase(NamePattern);
+end;
+
+procedure TZMySQLDatabaseMetadata.SetDataBaseName(const Value: String);
+begin
+  FDatabase := Value;
+end;
+
+procedure TZMySQLDatabaseMetadata.SetMySQL_FieldType_Bit_1_IsBoolean(Value: Boolean);
+var I, Idx: Integer;
+begin
+  if Value <> FMySQL_FieldType_Bit_1_IsBoolean then begin
+    FMySQL_FieldType_Bit_1_IsBoolean := Value;
+    for i := FBoolCachedResultSets.Count -1 downto 0 do begin
+      Idx := CachedResultSets.Values.IndexOf(FBoolCachedResultSets[i]);
+      if Idx > -1 then
+        CachedResultSets.Remove(CachedResultSets.Keys[idx]);
+      FBoolCachedResultSets.Delete(i);
+    end;
+  end;
 end;
 
 {**
@@ -1156,7 +1191,7 @@ var
 
   TypeName, TypeInfoSecond, DefaultValue: RawByteString;
   Nullable: String;
-  HasDefaultValue: Boolean;
+  HasDefaultValue, AddToBoolCache: Boolean;
   ColumnSize, ColumnDecimals: Integer;
   OrdPosition: Integer;
 
@@ -1172,11 +1207,10 @@ begin
 
     TableNameLength := 0;
     TableNameList := TStringList.Create;
+    AddToBoolCache := False;
     try
-      with GetTables(Catalog, SchemaPattern, TableNamePattern, nil) do
-      begin
-        while Next do
-        begin
+      with GetTables(Catalog, SchemaPattern, TableNamePattern, nil) do begin
+        while Next do begin
           TableNameList.Add(GetString(TableNameIndex)); //TABLE_NAME
           TableNameLength := Max(TableNameLength, Length(TableNameList[TableNameList.Count - 1]));
         end;
@@ -1212,6 +1246,11 @@ begin
             TypeName := GetRawByteString(ColumnIndexes[2]);
             ConvertMySQLColumnInfoFromString(TypeName, ConSettings,
               TypeInfoSecond, MySQLType, ColumnSize, ColumnDecimals, fMySQL_FieldType_Bit_1_IsBoolean);
+            if TypeName = 'enum'
+            then AddToBoolCache := AddToBoolCache or ((TypeInfoSecond = '''Y'''#0'''N''') or (TypeInfoSecond = '''N'''#0'''Y'''))
+            else if TypeName = 'bit'
+            then AddToBoolCache := AddToBoolCache or (TypeInfoSecond = '1');
+
             Result.UpdateInt(TableColColumnTypeIndex, Ord(MySQLType));
             Result.UpdateRawByteString(TableColColumnTypeNameIndex, TypeName);
             Result.UpdateInt(TableColColumnSizeIndex, ColumnSize);
@@ -1322,6 +1361,8 @@ begin
           Close;
         end;
       end;
+      if AddToBoolCache then
+        FBoolCachedResultSets.Add(Result);
     finally
       TableNameList.Free;
     end;
@@ -2306,10 +2347,9 @@ var
   ProcedureNameCondition, SchemaCondition: string;
 begin
   If Catalog = '' then
-    If SchemaPattern <> '' then
-    SchemaCondition := ConstructNameCondition(SchemaPattern,'p.db')
-    else
-    SchemaCondition := ConstructNameCondition(FDatabase,'p.db')
+    If SchemaPattern <> ''
+    then SchemaCondition := ConstructNameCondition(SchemaPattern,'p.db')
+    else SchemaCondition := ConstructNameCondition(FDatabase,'p.db')
   else
     SchemaCondition := ConstructNameCondition(Catalog,'p.db');
   ProcedureNameCondition := ConstructNameCondition(ProcedureNamePattern,'p.name');

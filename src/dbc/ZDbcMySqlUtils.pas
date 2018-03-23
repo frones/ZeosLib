@@ -562,10 +562,11 @@ begin
         pC := PosEx({$IFDEF UNICODE}RawByteString{$ENDIF}(','), TypeInfoSecond, TempPos);
         if pC > 0 then begin
           TypeInfoSecond[pc] := #0;
-          ColumnSize := Max(ColumnSize, ZFastCode.StrLen(@TypeInfoSecond[TempPos]));
-          TempPos := pc;
+          ColumnSize := Max(ColumnSize, ZFastCode.StrLen(@TypeInfoSecond[TempPos])-2);
+          //TypeInfoSecond[pc] := ',';
+          TempPos := pc+1;
         end else begin
-          ColumnSize := Max(ColumnSize, ZFastCode.StrLen(@TypeInfoSecond[TempPos]));
+          ColumnSize := Max(ColumnSize, ZFastCode.StrLen(@TypeInfoSecond[TempPos])-2);
           Break;
         end;
       end;
@@ -661,12 +662,10 @@ SetLobSize:
     ColumnSize := RawToIntDef(TypeInfoSecond, 1);
     Signed := False;
     case ColumnSize of
-      {$IFDEF MySQL_FieldType_Bit_1_IsBoolean}
-      1: FieldType := stBoolean;
+      1: if MySQL_FieldType_Bit_1_IsBoolean
+         then FieldType := stBoolean
+         else goto lByte;
       2..8: goto lByte;
-      {$ELSE}
-      1..8: goto lByte;
-      {$ENDIF}
       9..16: goto lWord;
       17..32: goto lLong;
       else goto lLongLong;

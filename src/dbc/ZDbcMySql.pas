@@ -90,6 +90,7 @@ type
     function EscapeString(From: PAnsiChar; Len: ULong; Quoted: Boolean): RawByteString; overload;
     function GetDatabaseName: String;
     function MySQL_FieldType_Bit_1_IsBoolean: Boolean;
+    function SupportsFieldTypeBit: Boolean;
   end;
 
   {** Implements MySQL Database Connection. }
@@ -99,7 +100,8 @@ type
     FHandle: PMySQL;
     FMaxLobSize: ULong;
     FDatabaseName: String;
-    FIKnowMyDatabaseName, FMySQL_FieldType_Bit_1_IsBoolean: Boolean;
+    FIKnowMyDatabaseName, FMySQL_FieldType_Bit_1_IsBoolean,
+    FSupportsBitType: Boolean;
     FPlainDriver: IZMySQLPlainDriver;
   protected
     procedure InternalCreate; override;
@@ -135,6 +137,7 @@ type
     function GetEscapeString(const Value: RawByteString): RawByteString; override;
     function GetDatabaseName: String;
     function MySQL_FieldType_Bit_1_IsBoolean: Boolean;
+    function SupportsFieldTypeBit: Boolean;
   end;
 
 var
@@ -289,7 +292,6 @@ begin
   FIKnowMyDatabaseName := False;
   if Self.Port = 0 then
      Self.Port := MYSQL_PORT;
-  FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(URL.Properties.Values['MySQL_FieldType_Bit_1_IsBoolean']);
   FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url);
 end;
 
@@ -502,6 +504,14 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     end else
       FMaxLobSize := MaxBlobSize;
 
+    //no real version check required -> the user can simply switch off treading
+    //enum('Y','N')
+    FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(Info.Values['MySQL_FieldType_Bit_1_IsBoolean']);
+    (GetMetadata as IZMySQLDatabaseMetadata).SetMySQL_FieldType_Bit_1_IsBoolean(FMySQL_FieldType_Bit_1_IsBoolean);
+    FSupportsBitType := (
+      (    GetPlainDriver.IsMariaDBDriver and ((ClientVersion >= 100109) and (GetHostVersion >= EncodeSQLVersioning(10,0,0)))) or
+      (not GetPlainDriver.IsMariaDBDriver and ((ClientVersion >=  50003) and (GetHostVersion >= EncodeSQLVersioning(5,0,3)))));
+
     { Sets transaction isolation level. }
     OldLevel := TransactIsolationLevel;
     TransactIsolationLevel := tiNone;
@@ -512,6 +522,7 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     AutoCommit := True;
     SetAutoCommit(OldAutoCommit);
     inherited Open;
+    (GetMetadata as IZMySQLDatabaseMetadata).SetDataBaseName(GetDatabaseName);
   except
     GetPlainDriver.Close(FHandle);
     FHandle := nil;
@@ -774,6 +785,13 @@ begin
         DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     end;
   end;
+end;
+
+function TZMySQLConnection.SupportsFieldTypeBit: Boolean;
+begin
+  if Closed then
+    Open;
+  Result := FSupportsBitType;
 end;
 
 {**

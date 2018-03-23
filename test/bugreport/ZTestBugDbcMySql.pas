@@ -78,7 +78,7 @@ type
 
 implementation
 
-uses ZTestCase;
+uses ZTestCase, ZSysUtils;
 
 { TZTestDbcMySQLBugReport }
 
@@ -339,42 +339,49 @@ end;
 }
 procedure TZTestDbcMySQLBugReport.Test961337;
 const
-  id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  fld1_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  fld2_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  fld3_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  fld4_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  id_Index = FirstDbcIndex;
+  fld1_Index = FirstDbcIndex + 1;
+  fld2_Index = FirstDbcIndex + 2;
+  fld3_Index = FirstDbcIndex + 3;
+  fld4_Index = FirstDbcIndex + 4;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
   Metadata: IZResultSetMetadata;
+  B: Boolean;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
-  Statement := Connection.CreateStatement;
-  try
-    Statement.SetResultSetConcurrency(rcUpdatable);
-    ResultSet := Statement.ExecuteQuery('SELECT id, fld1, fld2, fld1 as fld3,'
-      + ' fld2 as fld4 FROM table735299');
+  Connection.Open;
+  for B := (Connection as IZMySQLConnection).SupportsFieldTypeBit downto False do begin
+    if not Connection.IsClosed then
+      Connection.Close;
+    Connection.GetParameters.Values['MySQL_FieldType_Bit_1_IsBoolean']:= ZSysUtils.BoolStrs[B];
+    Statement := Connection.CreateStatement;
     try
-      Metadata := ResultSet.GetMetadata;
-      CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(id_Index)));
-      {$IFNDEF MYSQL_FIELTYPE_BIT_1_ISBOOLEN}
-      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld1_Index)));
-      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld2_Index)));
-      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld3_Index)));
-      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld4_Index)));
-      {$ELSE}
-      Check(Metadata.GetColumnType(fld1_Index) in [stString, stUnicodeString]);
-      Check(Metadata.GetColumnType(fld2_Index) in [stString, stUnicodeString]);
-      Check(Metadata.GetColumnType(fld3_Index) in [stString, stUnicodeString]);
-      Check(Metadata.GetColumnType(fld4_Index) in [stString, stUnicodeString]);
-      {$ENDIF}
+      Statement.SetResultSetConcurrency(rcUpdatable);
+      ResultSet := Statement.ExecuteQuery('SELECT id, fld1, fld2, fld1 as fld3,'
+        + ' fld2 as fld4 FROM table735299');
+      try
+        Metadata := ResultSet.GetMetadata;
+        CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(id_Index)));
+        if not b then begin
+          CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld1_Index)));
+          CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld2_Index)));
+          CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld3_Index)));
+          CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld4_Index)));
+        end else begin
+          Check(Metadata.GetColumnType(fld1_Index) in [stString, stUnicodeString]);
+          Check(Metadata.GetColumnType(fld2_Index) in [stString, stUnicodeString]);
+          Check(Metadata.GetColumnType(fld3_Index) in [stString, stUnicodeString]);
+          Check(Metadata.GetColumnType(fld4_Index) in [stString, stUnicodeString]);
+        end;
+      finally
+        ResultSet.Close;
+      end;
     finally
-      ResultSet.Close;
+      Statement.Close;
     end;
-  finally
-    Statement.Close;
   end;
 end;
 
