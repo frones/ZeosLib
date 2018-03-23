@@ -66,8 +66,8 @@ type
   private
   protected
     function GetSupportedProtocols: string; override;
-    procedure TestConnection;
   published
+    procedure TestConnection;
     procedure TestStoredResultSet;
     procedure TestUseResultSet;
     procedure TestPreparedStatement;
@@ -88,7 +88,7 @@ uses ZTestConsts;
 }
 function TZTestDbcMSSqlCase.GetSupportedProtocols: string;
 begin
-  Result := 'mssql,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005';
+  Result := 'mssql,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,ado';
 end;
 
 {**
@@ -96,10 +96,8 @@ end;
 }
 procedure TZTestDbcMSSqlCase.TestConnection;
 begin
-(*  if Protocol <> 'mssql' then Exit;
-
   CheckEquals(False, Connection.IsReadOnly);
-//  CheckEquals(True, Connection.IsClosed);
+  CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
   Connection.SetAutoCommit(False);
   CheckEquals(Ord(tiNone), Ord(Connection.GetTransactionIsolation));
@@ -107,8 +105,8 @@ begin
   { Check without transactions }
   Connection.CreateStatement;
   CheckEquals(False, Connection.IsClosed);
-  Connection.Commit;
-  Connection.Rollback;
+  //Connection.Commit;
+  //Connection.Rollback;
   Connection.Close;
   CheckEquals(True, Connection.IsClosed);
 
@@ -120,7 +118,7 @@ begin
   Connection.Commit;
   Connection.Rollback;
   Connection.Close;
-  CheckEquals(True, Connection.IsClosed); *)
+  CheckEquals(True, Connection.IsClosed);
 end;
 
 {**
