@@ -504,13 +504,6 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     end else
       FMaxLobSize := MaxBlobSize;
 
-    //no real version check required -> the user can simply switch off treading
-    //enum('Y','N')
-    FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(Info.Values['MySQL_FieldType_Bit_1_IsBoolean']);
-    (GetMetadata as IZMySQLDatabaseMetadata).SetMySQL_FieldType_Bit_1_IsBoolean(FMySQL_FieldType_Bit_1_IsBoolean);
-    FSupportsBitType := (
-      (    GetPlainDriver.IsMariaDBDriver and ((ClientVersion >= 100109) and (GetHostVersion >= EncodeSQLVersioning(10,0,0)))) or
-      (not GetPlainDriver.IsMariaDBDriver and ((ClientVersion >=  50003) and (GetHostVersion >= EncodeSQLVersioning(5,0,3)))));
 
     { Sets transaction isolation level. }
     OldLevel := TransactIsolationLevel;
@@ -523,6 +516,13 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     SetAutoCommit(OldAutoCommit);
     inherited Open;
     (GetMetadata as IZMySQLDatabaseMetadata).SetDataBaseName(GetDatabaseName);
+    //no real version check required -> the user can simply switch off treading
+    //enum('Y','N')
+    FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(Info.Values['MySQL_FieldType_Bit_1_IsBoolean']);
+    (GetMetadata as IZMySQLDatabaseMetadata).SetMySQL_FieldType_Bit_1_IsBoolean(FMySQL_FieldType_Bit_1_IsBoolean);
+    FSupportsBitType := (
+      (    GetPlainDriver.IsMariaDBDriver and ((ClientVersion >= 100109) and (GetHostVersion >= EncodeSQLVersioning(10,0,0)))) or
+      (not GetPlainDriver.IsMariaDBDriver and ((ClientVersion >=  50003) and (GetHostVersion >= EncodeSQLVersioning(5,0,3)))));
   except
     GetPlainDriver.Close(FHandle);
     FHandle := nil;
