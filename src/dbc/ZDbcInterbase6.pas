@@ -520,7 +520,6 @@ begin
   with GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo do
   begin
     CollectServerInformations; //keep this one first!
-    FHostVersion := GetHostVersion;
     FXSQLDAMaxSize := GetMaxSQLDASize;
   end;
 
