@@ -1446,8 +1446,9 @@ var
   Nr: Integer;
   I: Integer;
 begin
-  if not FSupportedSchemasInitialized then
-  begin
+  if not FSupportedSchemasInitialized then begin
+    if GetConnection.IsClosed then
+      GetConnection.Open;
     if not Assigned(FAdoConnection) then
     begin
       GetConnection.QueryInterface(IZAdoConnection, AdoConnection);

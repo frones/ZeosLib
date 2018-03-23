@@ -1751,8 +1751,7 @@ begin
   { Fetch row. }
   if (ResultSetType = rtForwardOnly) and (FFetchStat = 0) then
   begin
-    if (FStmtType = stSelect) then  //AVZ - Test for ExecProc - this is for multiple rows
-    begin
+    if (FStmtType = stSelect) then begin //AVZ - Test for ExecProc - this is for multiple rows
       { FireBirdAPI:
       Both isc_commit_transaction() and isc_rollback_transaction() close the record streams
       associated with the transaction, reinitialize the transaction name to zero, and release
@@ -1773,17 +1772,18 @@ begin
       end;
       FFetchStat := FPlainDriver.isc_dsql_fetch(@StatusVector,
         @FStmtHandle, FDialect, FXSQLDA);
-      if FFetchStat = 0 then
-      begin
+      if FFetchStat = 0 then begin
         RowNo := RowNo + 1;
         LastRowNo := RowNo;
         Result := True;
-      end
-      else
+      end else begin
         CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings);
-    end
-    else
-    begin
+        {no error occoured -> notify IsAfterLast and close the stmt}
+        RowNo := RowNo + 1;
+        FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE); //close handle but not free it
+        CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings);
+      end;
+    end else begin
       FFetchStat := 1;
       Result := True;
     end;
@@ -1914,7 +1914,7 @@ end;
 procedure TZInterbase6XSQLDAResultSet.ResetCursor;
 begin
   FFetchStat := 0;
-  if (FStmtHandle <> 0) then
+  if (FStmtHandle <> 0) and not IsAfterLast{already done} then
     FreeStatement(FPlainDriver, FStmtHandle, DSQL_CLOSE); //close handle but not free it
   inherited ResetCursor;
 end;

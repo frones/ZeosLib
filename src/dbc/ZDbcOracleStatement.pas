@@ -456,7 +456,7 @@ begin
       { Executes the statement and gets a result. }
       CheckOracleError(FPlainDriver, FErrorHandle,
         FPlainDriver.OCIStmtExecute(FOracleConnection.GetContextHandle,
-          FHandle, FErrorHandle, FIteration, 0, nil, nil, CommitMode[Connection.GetAutoCommit]),
+          FHandle, FErrorHandle, Max(1, Min(FIteration, ArrayCount)), 0, nil, nil, CommitMode[Connection.GetAutoCommit]),
         lcExecute, ASQL, ConSettings);
       LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
     end;

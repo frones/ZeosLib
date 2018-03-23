@@ -410,6 +410,9 @@ begin
       FAdoRecordSet.MoveNext;
   FFirstFetch := False;
   Result := not FAdoRecordSet.EOF;
+  RowNo := RowNo +1;
+  if Result then
+    LastRowNo := RowNo;
 end;
 
 {**

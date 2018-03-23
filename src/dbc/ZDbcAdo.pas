@@ -206,7 +206,6 @@ begin
   CoInit;
   FAdoConnection := CoConnection.Create;
   Self.FMetadata := TZAdoDatabaseMetadata.Create(Self, URL);
-  Open;
 end;
 
 {**
@@ -300,13 +299,6 @@ begin
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
     ConSettings^.AutoEncode := {$IFDEF UNICODE}False{$ELSE}True{$ENDIF};
     CheckCharEncoding('CP_UTF16');
-    {EH: the only way to get back to generic Ole is using the command ... }
-    Command := CoCommand.Create;
-    Command.Set_ActiveConnection(FAdoConnection);
-    if Succeeded(((Command as ADOCommandConstruction).OLEDBCommand as ICommand).GetDBSession(IID_IDBCreateCommand, IInterface(DBCreateCommand))) then
-      if DBCreateCommand.QueryInterface(IID_IGetDataSource, GetDataSource) = S_OK then
-        if Succeeded(GetDataSource.GetDataSource(IID_IDBInitialize, IInterface(DBInitialize))) then
-          (GetMetadata.GetDatabaseInfo as IZOleDBDatabaseInfo).InitilizePropertiesFromDBInfo(DBInitialize, ZAdoMalloc);
   except
     on E: Exception do
     begin
@@ -317,6 +309,14 @@ begin
   end;
 
   inherited Open;
+
+  {EH: the only way to get back to generic Ole is using the command ... }
+  Command := CoCommand.Create;
+  Command.Set_ActiveConnection(FAdoConnection);
+  if Succeeded(((Command as ADOCommandConstruction).OLEDBCommand as ICommand).GetDBSession(IID_IDBCreateCommand, IInterface(DBCreateCommand))) then
+    if DBCreateCommand.QueryInterface(IID_IGetDataSource, GetDataSource) = S_OK then
+      if Succeeded(GetDataSource.GetDataSource(IID_IDBInitialize, IInterFace(DBInitialize))) then
+        (GetMetadata.GetDatabaseInfo as IZOleDBDatabaseInfo).InitilizePropertiesFromDBInfo(DBInitialize, ZAdoMalloc);
 
   FAdoConnection.IsolationLevel := IL[GetTransactionIsolation];
   ReStartTransactionSupport;

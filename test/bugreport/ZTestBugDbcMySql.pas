@@ -73,11 +73,12 @@ type
     procedure Test881634;
     procedure Test924861;
     procedure Test961337;
+    procedure TestBin_Collation;
   end;
 
 implementation
 
-uses ZTestCase;
+uses ZTestCase, ZSysUtils;
 
 { TZTestDbcMySQLBugReport }
 
@@ -329,14 +330,62 @@ end;
 {**
   Runs a test for bug report #961337
   ENUM('Y','N') is not recognized as Boolean when column name is renamed.
+
+  EH: but this is not correct for all cases. loads users want to have it mapped
+  as string. So since 2018 MySQL still not have a true bool type we'll
+  map fieldtype bit(1) as Boolean which is the only type with just a 0/1
+  switch. Keep hands far away from (un)signed tinyint(1) which has a range
+  of shortint/byte
 }
 procedure TZTestDbcMySQLBugReport.Test961337;
 const
-  id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  fld1_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  fld2_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  fld3_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  fld4_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  id_Index = FirstDbcIndex;
+  fld1_Index = FirstDbcIndex + 1;
+  fld2_Index = FirstDbcIndex + 2;
+  fld3_Index = FirstDbcIndex + 3;
+  fld4_Index = FirstDbcIndex + 4;
+var
+  ResultSet: IZResultSet;
+  Statement: IZStatement;
+  Metadata: IZResultSetMetadata;
+  B: Boolean;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Connection.Open;
+  for B := (Connection as IZMySQLConnection).SupportsFieldTypeBit downto False do begin
+    if not Connection.IsClosed then
+      Connection.Close;
+    Connection.GetParameters.Values['MySQL_FieldType_Bit_1_IsBoolean']:= ZSysUtils.BoolStrs[B];
+    Statement := Connection.CreateStatement;
+    try
+      Statement.SetResultSetConcurrency(rcUpdatable);
+      ResultSet := Statement.ExecuteQuery('SELECT id, fld1, fld2, fld1 as fld3,'
+        + ' fld2 as fld4 FROM table735299');
+      try
+        Metadata := ResultSet.GetMetadata;
+        CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(id_Index)));
+        if not b then begin
+          CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld1_Index)));
+          CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld2_Index)));
+          CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld3_Index)));
+          CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld4_Index)));
+        end else begin
+          Check(Metadata.GetColumnType(fld1_Index) in [stString, stUnicodeString]);
+          Check(Metadata.GetColumnType(fld2_Index) in [stString, stUnicodeString]);
+          Check(Metadata.GetColumnType(fld3_Index) in [stString, stUnicodeString]);
+          Check(Metadata.GetColumnType(fld4_Index) in [stString, stUnicodeString]);
+        end;
+      finally
+        ResultSet.Close;
+      end;
+    finally
+      Statement.Close;
+    end;
+  end;
+end;
+
+procedure TZTestDbcMySQLBugReport.TestBin_Collation;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -346,16 +395,10 @@ begin
 
   Statement := Connection.CreateStatement;
   try
-    Statement.SetResultSetConcurrency(rcUpdatable);
-    ResultSet := Statement.ExecuteQuery('SELECT id, fld1, fld2, fld1 as fld3,'
-      + ' fld2 as fld4 FROM table735299');
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM `mysql`.`user`');
     try
       Metadata := ResultSet.GetMetadata;
-      CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(id_Index)));
-      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld1_Index)));
-      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld2_Index)));
-      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld3_Index)));
-      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld4_Index)));
+      Check(Metadata.GetColumnType(FirstDbcIndex) in [stString, stUnicodeString], 'Wrong fieldtype');
     finally
       ResultSet.Close;
     end;

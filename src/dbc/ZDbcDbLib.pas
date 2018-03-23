@@ -104,7 +104,6 @@ type
     FPlainDriver: IZDBLibPlainDriver;
     function FreeTDS: Boolean;
     function GetProvider: TDBLibProvider;
-    procedure ReStartTransactionSupport;
     procedure InternalSetTransactionIsolation(Level: TZTransactIsolationLevel);
     procedure DetermineMSDateFormat;
     function DetermineMSServerCollation: String;
@@ -117,7 +116,6 @@ type
     function GetPlainDriver: IZDBLibPlainDriver;
     function GetConnectionHandle: PDBPROCESS;
     procedure CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: RawbyteString); virtual;
-    procedure StartTransaction; virtual;
     function GetServerCollation: String;
   public
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -428,18 +426,6 @@ begin
 end;
 
 {**
-  Starts a transaction support.
-}
-procedure TZDBLibConnection.ReStartTransactionSupport;
-begin
-  if Closed then
-    Exit;
-
-  if not (AutoCommit or (GetTransactionIsolation = tiNone)) then
-    StartTransaction;
-end;
-
-{**
   Opens a connection to database server with specified parameters.
 }
 procedure TZDBLibConnection.Open;
@@ -464,6 +450,12 @@ begin
   InternalExecuteStatement('set textsize 2147483647 set quoted_identifier on');
 
   inherited Open;
+
+  if not (GetTransactionIsolation in [tiNone, tiReadCommitted]) then
+    InternalSetTransactionIsolation(GetTransactionIsolation);
+
+  if not AutoCommit then
+    InternalExecuteStatement('begin transaction');
 
   (GetMetadata.GetDatabaseInfo as IZDbLibDatabaseInfo).InitIdentifierCase(GetServerCollation);
 
@@ -519,9 +511,6 @@ begin
       InternalExecuteStatement('SET ANSI_DEFAULTS OFF');
       InternalExecuteStatement('SET ANSI_PADDING OFF');
     end;
-
-  InternalSetTransactionIsolation(GetTransactionIsolation);
-  ReStartTransactionSupport;
 end;
 
 {**
@@ -637,25 +626,27 @@ end;
 }
 procedure TZDBLibConnection.SetAutoCommit(Value: Boolean);
 begin
-  if AutoCommit = Value then  Exit;
-  if not Closed and Value then InternalExecuteStatement('commit');
-  inherited;
-  ReStartTransactionSupport;
+  if GetAutoCommit = Value then
+    Exit;
+  if not Closed and Value
+  then InternalExecuteStatement('commit');
+  inherited SetAutoCommit(Value);
+  if not Closed and not Value then
+    InternalExecuteStatement('begin transaction');
 end;
 
-procedure TZDBLibConnection.InternalSetTransactionIsolation(Level: TZTransactIsolationLevel);
 const
-  IL: array[TZTransactIsolationLevel, 0..1] of {$IFDEF FPC}AnsiString{$ELSE}RawByteString{$ENDIF} = (('READ COMMITTED', '1'), ('READ UNCOMMITTED', '0'), ('READ COMMITTED', '1'), ('REPEATABLE READ', '2'), ('SERIALIZABLE', '3'));
-var
-  Index: Integer;
-begin
-  Index := -1;
-  if FProvider = dpMsSQL then Index := 0;
-  if FProvider = dpSybase then Index := 1;
+  DBLibIsolationLevels: array[Boolean, TZTransactIsolationLevel] of AnsiString = ((
+   'SET TRANSACTION ISOLATION LEVEL READ COMMITTED',
+   'SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED',
+   'SET TRANSACTION ISOLATION LEVEL READ COMMITTED',
+   'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ',
+   'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE'),
+   ('1','0','1','2','3'));
 
-  InternalExecuteStatement('SET TRANSACTION ISOLATION LEVEL ' + IL[GetTransactionIsolation, Index]);
-  if not (AutoCommit) then
-    InternalExecuteStatement('BEGIN TRANSACTION');
+procedure TZDBLibConnection.InternalSetTransactionIsolation(Level: TZTransactIsolationLevel);
+begin
+  InternalExecuteStatement(DBLibIsolationLevels[FProvider = dpSybase, Level]);
 end;
 
 procedure TZDBLibConnection.DetermineMSDateFormat;
@@ -752,23 +743,14 @@ begin
   if GetTransactionIsolation = Level then
     Exit;
 
-  if not Closed and not AutoCommit and (GetTransactionIsolation <> tiNone) then
+  if not Closed and not AutoCommit then
     InternalExecuteStatement('commit');
-
   inherited;
-
-  if not Closed then
+  if not Closed then begin
     InternalSetTransactionIsolation(Level);
-
-  RestartTransactionSupport;
-end;
-
-{**
-  Starts a new transaction. Used internally.
-}
-procedure TZDBLibConnection.StartTransaction;
-begin
-  InternalExecuteStatement('begin transaction');
+    if not GetAutoCommit then
+      InternalExecuteStatement('begin transaction');
+  end;
 end;
 
 {**
@@ -782,8 +764,10 @@ procedure TZDBLibConnection.Commit;
 begin
   if AutoCommit then
     raise Exception.Create(SCannotUseCommit);
-  InternalExecuteStatement('commit');
-  StartTransaction;
+  if not Closed then begin
+    InternalExecuteStatement('commit');
+    InternalExecuteStatement('begin transaction');
+  end;
 end;
 
 {**
@@ -797,8 +781,10 @@ procedure TZDBLibConnection.Rollback;
 begin
   if AutoCommit then
     raise Exception.Create(SCannotUseRollBack);
-  InternalExecuteStatement('rollback');
-  StartTransaction;
+  if not Closed then begin
+    InternalExecuteStatement('rollback');
+    InternalExecuteStatement('begin transaction');
+  end;
 end;
 
 {**

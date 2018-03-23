@@ -8,6 +8,7 @@ drop table IF EXISTS table735226a;
 drop table IF EXISTS table735226b;
 drop table IF EXISTS Table726788;
 drop table IF EXISTS table735299;
+drop table IF EXISTS table735299_bit;
 drop table IF EXISTS table740899;
 drop table IF EXISTS table724542;
 drop table IF EXISTS table739448a;

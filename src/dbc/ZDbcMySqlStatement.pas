@@ -142,7 +142,8 @@ type
     FResultsCount: Integer;
     function CreateResultSet(const SQL: string): IZResultSet;
     procedure FlushPendingResults;
-    function GetFieldType(SQLType: TZSQLType; Var Signed: Boolean): TMysqlFieldTypes;
+    function GetFieldType(SQLType: TZSQLType; Var Signed: Boolean;
+      MySQL_FieldType_Bit_1_IsBoolean: Boolean): TMysqlFieldTypes;
   protected
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
@@ -671,7 +672,7 @@ begin
   FParamBindBuffer := TZMySqlParamBindBuffer.Create(FPlainDriver,InParamCount,FColumnArray);
   for i := 0 to InParamCount -1 do
   begin
-    MySQLType := GetFieldType(InParamTypes[i], Signed{%H-});
+    MySQLType := GetFieldType(InParamTypes[i], Signed{%H-}, FMySQLConnection.MySQL_FieldType_Bit_1_IsBoolean);
     FParamBindBuffer.AddColumn(MySQLType, getMySQLFieldSize(MySQLType, ChunkSize), Signed);
   end;
   if (FPlainDriver.stmt_bind_param(FMYSQL_STMT, FParamBindBuffer.GetBufferAddress) <> 0) then
@@ -729,25 +730,21 @@ begin
       Bind^.buffer_length_address^ := Length(Bind^.buffer); //reset Buffer_Length
       case Bind^.buffer_type of
         FIELD_TYPE_TINY:
-          if Bind^.is_signed then
-            PShortInt(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i])
-          else
-            PByte(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i]);
+          if Bind^.is_signed
+          then PShortInt(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
+          else PByte(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
         FIELD_TYPE_SHORT:
-          if Bind^.is_signed then
-            PSmallInt(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
-          else
-            PWord(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
+          if Bind^.is_signed
+          then PSmallInt(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
+          else PWord(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
         FIELD_TYPE_LONG:
-          if Bind^.is_signed then
-            PLongInt(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
-          else
-            PLongWord(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
+          if Bind^.is_signed
+          then PLongInt(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
+          else PLongWord(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
         FIELD_TYPE_LONGLONG:
-          if Bind^.is_signed then
-            PInt64(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
-          else
-            PUInt64(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
+          if Bind^.is_signed
+          then PInt64(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
+          else PUInt64(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
         FIELD_TYPE_FLOAT: PSingle(PBuffer)^:= ClientVarManager.GetAsFloat(InParamValues[i]);
         FIELD_TYPE_DOUBLE: PDouble(PBuffer)^:= ClientVarManager.GetAsFloat(InParamValues[i]);
         FIELD_TYPE_STRING:
@@ -952,11 +949,14 @@ begin
   Result := FPreparablePrefixTokens;
 end;
 
-function TZMysqlPreparedStatement.getFieldType(SQLType: TZSQLType; Var Signed: Boolean): TMysqlFieldTypes;
+function TZMysqlPreparedStatement.getFieldType(SQLType: TZSQLType;
+  Var Signed: Boolean; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TMysqlFieldTypes;
 begin
   Signed := SQLType in [stShort, stSmall, stInteger, stLong];
   case SQLType of
-    stBoolean:                Result := FIELD_TYPE_STRING;//does NOT WORK: FIELD_TYPE_ENUM('Y'/'N'), TINY LEADS to truncations ):
+    stBoolean:  if MySQL_FieldType_Bit_1_IsBoolean
+                then Result := FIELD_TYPE_TINY
+                else Result := FIELD_TYPE_STRING;//does NOT WORK: FIELD_TYPE_ENUM('Y'/'N'), TINY LEADS to truncations ):
     stByte, stShort:          Result := FIELD_TYPE_TINY;
     stWord, stSmall:          Result := FIELD_TYPE_SHORT;
     stLongWord, stInteger:    Result := FIELD_TYPE_LONG;
@@ -1657,6 +1657,12 @@ begin
   bind^.buffer_type := MYSQL_FIELD^._type; //safe initialtype
   bind^.binary := (MYSQL_FIELD^.flags and BINARY_FLAG) <> 0;
   case MYSQL_FIELD^._type of
+    FIELD_TYPE_BIT: case MYSQL_FIELD^.length of
+                      0..8  : bind^.Length := SizeOf(Byte);
+                      9..16 : bind^.Length := SizeOf(Word);
+                      17..32: bind^.Length := SizeOf(LongWord);
+                      else    bind^.Length := SizeOf(UInt64);
+                    end;
     FIELD_TYPE_DATE:        bind^.Length := sizeOf(TMYSQL_TIME);
     FIELD_TYPE_TIME:        bind^.Length := sizeOf(TMYSQL_TIME);
     FIELD_TYPE_DATETIME:    bind^.Length := sizeOf(TMYSQL_TIME);

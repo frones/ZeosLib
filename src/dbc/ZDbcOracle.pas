@@ -258,13 +258,10 @@ procedure TZOracleConnection.InternalCreate;
 begin
   FPlainDriver := TZOraclePlainDriver(PlainDriver.GetInstance);
   FMetaData := TZOracleDatabaseMetadata.Create(Self, URL);
-  FHandle := nil;
 
   { Sets a default properties }
   if Self.Port = 0 then
       Self.Port := 1521;
-  AutoCommit := True;
-  TransactIsolationLevel := tiNone;
 
   if Info.Values[ConnProps_ServerCachedStmts] = '' then
     FStmtMode := OCI_STMT_CACHE //use by default
@@ -275,7 +272,6 @@ begin
       FStmtMode := OCI_DEFAULT;
   FStatementPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_StatementCache], 30); //default = 20
   FBlobPrefetchSize := FChunkSize;
-  Open;
 end;
 
 function TZOracleConnection.CreateCallableStatement(const SQL: string;

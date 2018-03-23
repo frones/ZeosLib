@@ -231,7 +231,6 @@ procedure TZSQLiteConnection.InternalCreate;
 begin
   FPlainDriver := TZSQLitePlainDriver(PlainDriver.GetInstance);
   FMetadata := TZSQLiteDatabaseMetadata.Create(Self, Url);
-  AutoCommit := True;
   //https://sqlite.org/pragma.html#pragma_read_uncommitted
   inherited SetTransactionIsolation(tiSerializable);
   CheckCharEncoding('UTF-8');
@@ -242,7 +241,6 @@ begin
   FTransactionStmts[traCommit].nBytes := Length(FTransactionStmts[traCommit].SQL);
   FTransactionStmts[traRollBack].SQL := 'ROLLBACK TRANSACTION';
   FTransactionStmts[traRollBack].nBytes := Length(FTransactionStmts[traRollBack].SQL);
-  Open;
 end;
 
 {**

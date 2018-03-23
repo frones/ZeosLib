@@ -145,7 +145,10 @@ type
     FServerSubVersion: Integer;
     FNoticeProcessor: TZPostgreSQLNoticeProcessor;
     FPreparedStmts: TStrings;
-    FUnpreparableStmts: TStringList;
+    //a collection of statement handles that are not used anymore. These can be
+    //safely deallocated upon the next transaction start or immediately if we
+    //are in autocommit mode. See SF#137:
+    FPreparedStatementTrashBin: TStringList;
     FClientSettingsChanged: Boolean;
     FTableInfoCache: TZPGTableInfoCache;
     FIs_bytea_output_hex: Boolean;
@@ -451,7 +454,7 @@ procedure TZPostgreSQLConnection.InternalCreate;
 begin
   FMetaData := TZPostgreSQLDatabaseMetadata.Create(Self, Url);
   FPreparedStmts := nil;
-  FUnpreparableStmts := nil;
+  FPreparedStatementTrashBin := nil;
   FTableInfoCache := nil;
 
   { Sets a default PostgreSQL port }
@@ -500,7 +503,7 @@ begin
   inherited Destroy;
   FreeAndNil(FTableInfoCache);
   FreeAndNil(FPreparedStmts);
-  FreeAndNil(FUnpreparableStmts);
+  FreeAndNil(FPreparedStatementTrashBin);
 end;
 
 {**
@@ -611,14 +614,14 @@ var
   SQL: RawByteString;
   x: Integer;
 begin
-  if Assigned(FUnpreparableStmts) then begin
-    for x := FUnpreparableStmts.Count - 1 downto 0 do begin
-      SQL := 'DEALLOCATE "' + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FUnpreparableStmts.Strings[x]) + '";';;
+  if Assigned(FPreparedStatementTrashBin) then begin
+    for x := FPreparedStatementTrashBin.Count - 1 downto 0 do begin
+      SQL := 'DEALLOCATE "' + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FPreparedStatementTrashBin.Strings[x]) + '";';;
       QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
       CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
       GetPlainDriver.PQclear(QueryHandle);
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
-      FUnpreparableStmts.Delete(x);
+      FPreparedStatementTrashBin.Delete(x);
     end;
   end;
 end;
@@ -702,8 +705,8 @@ end;
 
 procedure TZPostgreSQLConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable);
 begin
-  if Assigned(FUnpreparableStmts) then
-    FUnpreparableStmts.Clear;
+  if Assigned(FPreparedStatementTrashBin) then
+    FPreparedStatementTrashBin.Clear;
   if Assigned(FPreparedStmts) then
     FPreparedStmts.Clear;
   FHandle := nil;
@@ -715,7 +718,7 @@ var Index: Integer;
 begin
   Index := FPreparedStmts.IndexOf(Value);
   if Index > -1 then begin
-    FUnpreparableStmts.Add(FPreparedStmts.Strings[Index]);
+    FPreparedStatementTrashBin.Add(FPreparedStmts.Strings[Index]);
     FPreparedStmts.Delete(Index);
   end;
   //EH@JAN is this corret?? Flush all Prepared statements???
@@ -780,8 +783,8 @@ begin
 
     if FPreparedStmts = nil then
       FPreparedStmts := TStringList.Create;
-    if not Assigned(FUnpreparableStmts) then
-      FUnpreparableStmts := TStringList.Create;
+    if not Assigned(FPreparedStatementTrashBin) then
+      FPreparedStatementTrashBin := TStringList.Create;
     if FTableInfoCache = nil then
       FTableInfoCache := TZPGTableInfoCache.Create(ConSettings, FHandle, GetPlainDriver);
 
@@ -958,11 +961,10 @@ end;
 }
 procedure TZPostgreSQLConnection.SetAutoCommit(Value: Boolean);
 begin
-  if Value xor GetAutoCommit then begin
-    case Value of
-       true: DoCommit;
-       false: DoStartTransaction;
-    end;
+  if Value <> GetAutoCommit then begin
+	if Value
+    then DoCommit
+    else DoStartTransaction;
     inherited SetAutoCommit(Value);
   end;
 end;

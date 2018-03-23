@@ -629,8 +629,7 @@ end;
 procedure TZAbstractConnection.SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
 begin
   {date formats}
-  if DetermineFromInfo then
-  begin
+  if DetermineFromInfo then begin
     if Info.Values[ConnProps_DateWriteFormat] = '' then
       ConSettings^.WriteFormatSettings.DateFormat := 'YYYY-MM-DD'
     else
@@ -865,7 +864,6 @@ begin
   FChunkSize := StrToIntDef(Info.Values[DSProps_ChunkSize], 4096);
   // now InternalCreate will work, since it will try to Open the connection
   InternalCreate;
-  SetDateTimeFormatProperties;
 
   {$IFDEF ZEOS_TEST_ONLY}
   FTestMode := 0;
@@ -899,6 +897,7 @@ end;
 procedure TZAbstractConnection.Open;
 begin
   FClosed := False;
+  SetDateTimeFormatProperties;
 end;
 
 {**
