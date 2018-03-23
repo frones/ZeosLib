@@ -246,7 +246,7 @@ begin
 
   SetMetadata(Metadata);
   FSQL := SQL;
-  FLoaded := not (FMetadata <> nil);
+  FLoaded := not ((FMetadata <> nil) and FMetadata.GetConnection.UseMetadata);
   FTableColumns := TZHashMap.Create;
   FResultSet := ParentResultSet;
 

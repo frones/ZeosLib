@@ -213,6 +213,8 @@ begin
   AddSupportedProtocol(AddPlainDriverToCache(TZFirebird21PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZFirebird25PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZFirebird30PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZFirebird30PlainDriver.Create, 'firebird'));
+  AddSupportedProtocol(AddPlainDriverToCache(TZInterbase6PlainDriver.Create, 'interbase'));
   // embedded drivers
   AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdD15PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdD20PlainDriver.Create));
@@ -515,13 +517,6 @@ begin
   { Check connection error }
   CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcConnect);
 
-  with GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo do
-  begin
-    CollectServerInformations; //keep this one first!
-    FHostVersion := GetHostVersion;
-    FXSQLDAMaxSize := GetMaxSQLDASize;
-  end;
-
   { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
   FDialect := GetDBSQLDialect(GetPlainDriver, @FHandle, ConSettings);
 
@@ -535,6 +530,13 @@ begin
     StartTransaction;
 
   inherited Open;
+
+  with GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo do
+  begin
+    CollectServerInformations; //keep this one first!
+    FHostVersion := GetHostVersion;
+    FXSQLDAMaxSize := GetMaxSQLDASize;
+  end;
 
   {Check for ClientCodePage: if empty switch to database-defaults
     and/or check for charset 'NONE' which has a different byte-width

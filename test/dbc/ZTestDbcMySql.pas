@@ -304,18 +304,19 @@ begin
   CheckEquals(False, Connection.IsReadOnly);
 //  CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
-  CheckEquals(Ord(tiNone), Ord(Connection.GetTransactionIsolation));
+  CheckEquals(Ord(tiRepeatableRead), Ord(Connection.GetTransactionIsolation));
 
   { Checks without transactions. }
   Connection.CreateStatement;
   CheckEquals(False, Connection.IsClosed);
-  Connection.Commit;
-  Connection.Rollback;
+  //Connection.Commit;
+  //Connection.Rollback;
   Connection.Close;
   CheckEquals(True, Connection.IsClosed);
 
   { Checks with transactions. }
   Connection.SetTransactionIsolation(tiReadCommitted);
+  Connection.SetAutoCommit(False);
   Connection.CreateStatement;
   CheckEquals(False, Connection.IsClosed);
   Connection.Commit;
