@@ -69,6 +69,7 @@ type
   protected
   published
     procedure TestConnection;
+    procedure TestCommitBehavior;
     procedure TestStatement;
     procedure TestPreparedStatement;
     procedure TestStoredResultSetUpdate;
@@ -86,7 +87,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZTestConsts, ZFastCode;
+uses ZSysUtils, ZTestConsts, ZFastCode, Types, ZVariant;
 
 { TZGenericTestDbcResultSet }
 procedure TZGenericTestDbcResultSet.TestAfterLast;
@@ -1084,6 +1085,71 @@ begin
     if Assigned(Statement) then
       Statement.Close;
   end;
+end;
+
+procedure TZGenericTestDbcResultSet.TestCommitBehavior;
+var Stmt: IZStatement;
+  I: Integer;
+begin
+  CheckEquals(False, Connection.IsReadOnly);
+  CheckEquals(True, Connection.GetAutoCommit);
+  Connection.SetAutoCommit(False);
+  if Connection.GetMetadata.GetDatabaseInfo.SupportsTransactionIsolationLevel(tiNone)
+  then CheckEquals(Ord(tiNone), Ord(Connection.GetTransactionIsolation))
+  else CheckEquals(Ord(Connection.GetMetadata.GetDatabaseInfo.GetDefaultTransactionIsolation), Ord(Connection.GetTransactionIsolation));
+
+  { Checks without transactions. }
+  Stmt := Connection.CreateStatement;
+  CheckNotNull(Stmt);
+  CheckEquals(False, Connection.IsClosed);
+  for i := 0 to 20 do begin
+    Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1000, ''miab3'')');
+    Connection.Commit;
+    with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
+      Check(Next, 'wrong commit behavior');
+      Close;
+    end;
+    Stmt.ExecuteUpdate('delete from people where p_id = 1000');
+    Connection.Rollback;
+    with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
+      Check(Next, 'wrong rollback behavior');
+      Close;
+    end;
+    Stmt.ExecuteUpdate('delete from people where p_id = 1000');
+    Connection.Commit;
+    with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
+      Check(not Next, 'wrong commit behavior');
+      Close;
+    end;
+    Stmt.Close;
+  end;
+  Connection.Close;
+  CheckEquals(True, Connection.IsClosed);
+
+  { Checks with transactions. }
+  Connection.SetTransactionIsolation(tiReadCommitted);
+  Connection.SetAutoCommit(True);
+  Stmt := Connection.CreateStatement;
+  CheckNotNull(Stmt);
+  CheckEquals(False, Connection.IsClosed);
+  for i := 0 to 20 do begin
+    Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1000, ''miab3'')');
+    with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
+      Check(Next, 'wrong commit behavior');
+      Close;
+    end;
+    Stmt.ExecuteUpdate('delete from people where p_id = 1000');
+    with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
+      Check(not Next, 'wrong commit behavior');
+      Close;
+    end;
+    Stmt.Close;
+  end;
+  for i := 0 to 1000 do
+    Connection.SetAutoCommit(i mod 2 = 0);
+  Connection.Close;
+  CheckEquals(True, Connection.IsClosed);
+
 end;
 
 procedure TZGenericTestDbcResultSet.TestConcurrency;
