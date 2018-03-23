@@ -398,6 +398,12 @@ end;
 procedure TIBEventThread.RegisterEvents;
 var
   sib_event_block: Tsib_event_block;
+  {$IFDEF UNICODE}
+  // Holder for ANSI strings converted from Unicode items of FEvents.
+  // Obligatory! Otherwise pointer returned from EBP will point to
+  // invalid (released) memory.
+  EBPArray: array[1..IB_MAX_EVENT_BLOCK] of AnsiString;
+  {$ENDIF}
 
   function EBP(Index: integer): PAnsiChar;
   begin
@@ -405,12 +411,16 @@ var
     if (Index > Parent.FEvents.Count) then
       Result := nil
     else
-  {$IFDEF UNICODE}
-      Result := PAnsiChar(AnsiString(Parent.FEvents[Index - 1]));
-  {$ELSE}
-      Result := PAnsiChar(Parent.FEvents[Index - 1]);
-  {$ENDIF}
+    {$IFDEF UNICODE}
+    begin
+      EBPArray[Index] := AnsiString(Parent.FEvents[Index - 1]);
+      Result := PAnsiChar(EBPArray[Index]);
+    end;
+    {$ELSE}
+    Result := PAnsiChar(Parent.FEvents[Index - 1]);
+    {$ENDIF}
   end;
+
 begin
   EventBuffer := nil;
   ResultBuffer := nil;
