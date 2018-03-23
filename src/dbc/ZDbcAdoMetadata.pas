@@ -2805,14 +2805,12 @@ var
 begin
   if not FSupportedSchemasInitialized then
   begin
-    if not Assigned(FAdoConnection) then
-    begin
+    if not Assigned(FAdoConnection) then begin
       GetConnection.QueryInterface(IZAdoConnection, AdoConnection);
       FAdoConnection := AdoConnection.GetAdoConnection;
     end;
     (FAdoConnection as ADOConnectionConstruction).Get_Session(OleDBSession);
-    if Assigned(OleDBSession) then
-    begin
+    if Assigned(OleDBSession) then begin
       OleDBSession.QueryInterface(IDBSchemaRowset, SchemaRS);
       if Assigned(SchemaRS) then
       begin
