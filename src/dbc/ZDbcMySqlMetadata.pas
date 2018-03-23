@@ -138,8 +138,7 @@ type
     function SupportsOpenStatementsAcrossCommit: Boolean; override;
     function SupportsOpenStatementsAcrossRollback: Boolean; override;
 //    function SupportsTransactions: Boolean; override; -> Not implemented
-//    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
-//      Boolean; override; -> Not implemented
+    function SupportsTransactionIsolationLevel(const Level: TZTransactIsolationLevel): Boolean; override;
     function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
     function SupportsDataManipulationTransactionsOnly: Boolean; override;
 //    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override; -> Not implemented
@@ -600,6 +599,19 @@ begin
 end;
 
 {**
+  Does this database support the given transaction isolation level?
+  @param level the values are defined in <code>java.sql.Connection</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+  @see Connection
+}
+function TZMySQLDatabaseInfo.SupportsTransactionIsolationLevel(
+  const Level: TZTransactIsolationLevel): Boolean;
+begin
+  Result := Level in [tiReadUncommitted, tiReadCommitted,
+    tiRepeatableRead, tiSerializable]
+end;
+
+{**
   Is SQL UNION ALL supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
@@ -842,7 +854,8 @@ end;
 function TZMySQLDatabaseInfo.GetDefaultTransactionIsolation:
   TZTransactIsolationLevel;
 begin
-  Result := tiNone;
+  //https://dev.mysql.com/doc/refman/5.7/en/innodb-transaction-isolation-levels.html
+  Result := tiRepeatableRead;
 end;
 
 {**
@@ -850,8 +863,7 @@ end;
   within a transaction supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZMySQLDatabaseInfo.
-  SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
+function TZMySQLDatabaseInfo.SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
 begin
   Result := True;
 end;

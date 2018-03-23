@@ -103,6 +103,7 @@ type
     FIKnowMyDatabaseName, FMySQL_FieldType_Bit_1_IsBoolean,
     FSupportsBitType: Boolean;
     FPlainDriver: IZMySQLPlainDriver;
+    procedure InternalSetIsolationLevel(Level: TZTransactIsolationLevel);
   protected
     procedure InternalCreate; override;
   public
@@ -292,7 +293,25 @@ begin
   FIKnowMyDatabaseName := False;
   if Self.Port = 0 then
      Self.Port := MYSQL_PORT;
+  inherited SetTransactionIsolation(tiRepeatableRead);
   FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url);
+end;
+
+const
+  MySQLSessionTransactionIsolation: array[TZTransactIsolationLevel] of AnsiString = (
+    'SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ',
+    'SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED',
+    'SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
+    'SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ',
+    'SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+procedure TZMySQLConnection.InternalSetIsolationLevel(
+  Level: TZTransactIsolationLevel);
+begin
+  if GetPlainDriver.ExecRealQuery(FHandle,
+    Pointer(MySQLSessionTransactionIsolation[Level]), Length(MySQLSessionTransactionIsolation[Level])) <> 0 then
+      CheckMySQLError(GetPlainDriver, FHandle, lcExecute, MySQLSessionTransactionIsolation[Level], ConSettings);
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, MySQLSessionTransactionIsolation[Level]);
 end;
 
 function TZMySQLConnection.MySQL_FieldType_Bit_1_IsBoolean: Boolean;
@@ -324,8 +343,6 @@ end;
 procedure TZMySQLConnection.Open;
 var
   LogMessage: RawByteString;
-  OldLevel: TZTransactIsolationLevel;
-  OldAutoCommit: Boolean;
   UIntOpt: UInt;
   MyBoolOpt: Byte;
   ClientFlag : Cardinal;
@@ -506,15 +523,18 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
 
 
     { Sets transaction isolation level. }
-    OldLevel := TransactIsolationLevel;
-    TransactIsolationLevel := tiNone;
-    SetTransactionIsolation(OldLevel);
+    if not (TransactIsolationLevel in [tiNone,tiRepeatableRead]) then
+      InternalSetIsolationLevel(TransactIsolationLevel);
 
     { Sets an auto commit mode. }
-    OldAutoCommit := AutoCommit;
-    AutoCommit := True;
-    SetAutoCommit(OldAutoCommit);
+    if not GetAutoCommit then begin
+      GetPlaindriver.SetAutocommit(FHandle, GetAutoCommit);
+      CheckMySQLError(GetPlainDriver, FHandle, lcExecute, 'Native SetAutoCommit '+BoolToRawEx(AutoCommit)+'call', ConSettings);
+    end;
+
     inherited Open;
+
+
     (GetMetadata as IZMySQLDatabaseMetadata).SetDataBaseName(GetDatabaseName);
     //no real version check required -> the user can simply switch off treading
     //enum('Y','N')
@@ -673,10 +693,11 @@ end;
 }
 procedure TZMySQLConnection.Commit;
 begin
-  if (TransactIsolationLevel <> tiNone) and (AutoCommit <> True)
-    and not Closed then
-  begin
-    If not GEtPlaindriver.Commit(FHandle) then
+  if GetAutoCommit then
+    raise Exception.Create(SInvalidOpInAutoCommit);
+
+  if not Closed then begin
+    If not GetPlaindriver.Commit(FHandle) then
       CheckMySQLError(GetPlainDriver, FHandle, lcExecute, 'Native Commit call', ConSettings);
     DriverManager.LogMessage(lcExecute, ConSettings.Protocol, 'Native Commit call');
   end;
@@ -691,9 +712,10 @@ end;
 }
 procedure TZMySQLConnection.Rollback;
 begin
-  if (TransactIsolationLevel <> tiNone) and (AutoCommit <> True)
-    and not Closed then
-  begin
+  if GetAutoCommit then
+    raise Exception.Create(SInvalidOpInAutoCommit);
+
+  if not Closed then begin
     If not GetPlaindriver.Rollback(FHandle) then
       CheckMySQLError(GetPlainDriver, FHandle, lcExecute, 'Native Rollback call', ConSettings);
     DriverManager.LogMessage(lcExecute, ConSettings.Protocol, 'Native Rollback call');
@@ -745,45 +767,11 @@ end;
 }
 procedure TZMySQLConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
-var
-  SQL: RawByteString;
-  testResult: Integer;
 begin
-  if TransactIsolationLevel <> Level then
-  begin
+  if TransactIsolationLevel <> Level then begin
     inherited SetTransactionIsolation(Level);
-    testResult := 1;
     if not Closed then
-    begin
-      case TransactIsolationLevel of
-        tiNone, tiReadUncommitted:
-          begin
-            SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED';
-            testResult := GetPlainDriver.ExecRealQuery(FHandle, Pointer(SQL), Length(SQL));
-          end;
-        tiReadCommitted:
-          begin
-            SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED';
-            testResult := GetPlainDriver.ExecRealQuery(FHandle, Pointer(SQL), Length(SQL));
-          end;
-        tiRepeatableRead:
-          begin
-            SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ';
-            testResult := GetPlainDriver.ExecRealQuery(FHandle, Pointer(SQL), Length(SQL));
-          end;
-        tiSerializable:
-          begin
-            SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE';
-            testResult := GetPlainDriver.ExecRealQuery(FHandle, Pointer(SQL), Length(SQL));
-          end;
-        else
-          SQL := '';
-      end;
-      if (testResult <> 0) then
-          CheckMySQLError(GetPlainDriver, FHandle, lcExecute, SQL, ConSettings);
-      if SQL <> '' then
-        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
-    end;
+      InternalSetIsolationLevel(Level);
   end;
 end;
 
@@ -816,12 +804,9 @@ end;
 }
 procedure TZMySQLConnection.SetAutoCommit(Value: Boolean);
 begin
-  if AutoCommit <> Value then
-  begin
+  if GetAutoCommit <> Value then begin
     inherited SetAutoCommit(Value);
-
-    if not Closed then
-    begin
+    if not Closed then begin
       if not GetPlaindriver.SetAutocommit(FHandle, Value) then
         CheckMySQLError(GetPlainDriver, FHandle, lcExecute, 'Native SetAutoCommit '+BoolToRawEx(AutoCommit)+'call', ConSettings);
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'Native SetAutoCommit '+BoolToRawEx(AutoCommit)+'call');
