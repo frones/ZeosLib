@@ -709,10 +709,10 @@ begin
     //some Providers do NOT support commands, so let's check if we can use it
     OleCheck(FDBCreateSession.CreateSession(nil, IID_IDBCreateCommand, IUnknown(FDBCreateCommand)));
     FDBCreateSession := nil; //no longer required!
-    (GetMetadata.GetDatabaseInfo as IZOleDBDatabaseInfo).InitilizePropertiesFromDBInfo(fDBInitialize, fMalloc);
     //if FServerProvider = spMSSQL then
       //SetProviderProps(False); //provider properties -> don't work??
     inherited Open;
+    (GetMetadata.GetDatabaseInfo as IZOleDBDatabaseInfo).InitilizePropertiesFromDBInfo(fDBInitialize, fMalloc);
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
       'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"');
     StartTransaction;

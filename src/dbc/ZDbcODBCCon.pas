@@ -556,7 +556,8 @@ procedure TZAbstractODBCConnection.SetAutoCommit(Value: Boolean);
 const CommitMode: Array[Boolean] of Pointer = (SQL_AUTOCOMMIT_OFF, SQL_AUTOCOMMIT_ON);
 begin
   if Value <> AutoCommit then begin
-    CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC,SQL_ATTR_AUTOCOMMIT,CommitMode[Value],0));
+    if not Closed then
+      CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC,SQL_ATTR_AUTOCOMMIT,CommitMode[Value],0));
     inherited SetAutoCommit(Value);
   end;
 end;
@@ -586,7 +587,8 @@ procedure TZAbstractODBCConnection.SetReadOnly(Value: Boolean);
 const AccessMode: array[Boolean] of Pointer = (SQL_MODE_READ_WRITE, SQL_MODE_READ_ONLY);
 begin
   if Value <> ReadOnly then begin
-    CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC,SQL_ATTR_ACCESS_MODE,AccessMode[Value],0));
+    if not Closed then
+      CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC,SQL_ATTR_ACCESS_MODE,AccessMode[Value],0));
     inherited SetReadOnly(Value);
   end;
 end;
