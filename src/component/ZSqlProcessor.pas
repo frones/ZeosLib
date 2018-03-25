@@ -118,7 +118,7 @@ type
 
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
-    procedure SetStatementParams(Statement: IZPreparedStatement;
+    procedure SetStatementParams(const Statement: IZPreparedStatement;
       const ParamNames: TStringDynArray; Params: TParams); virtual;
   public
     constructor Create(AOwner: TComponent); override;
@@ -467,7 +467,7 @@ end;
   @param ParamNames an array of parameter names.
   @param Params a collection of SQL parameters.
 }
-procedure TZSQLProcessor.SetStatementParams(Statement: IZPreparedStatement;
+procedure TZSQLProcessor.SetStatementParams(const Statement: IZPreparedStatement;
   const ParamNames: TStringDynArray; Params: TParams);
 var
   I: Integer;

@@ -249,6 +249,18 @@ alter table equipment2
 alter table people
    add foreign key (p_dep_id) references department (dep_id);
 
+/*==============================================================*/
+/* Table : Guids                                                */
+/*==============================================================*/
+
+CREATE DOMAIN DOM_GUID CHAR(16) CHARACTER SET OCTETS;
+
+CREATE TABLE Guids (
+    ID               INTEGER NOT NULL,
+    GUID_DOM_FIELD   DOM_GUID,
+    GUID_TYPE_FIELD  CHAR(16) CHARACTER SET OCTETS
+);
+
 SET TERM ^ ;
 
 /*==============================================================*/
@@ -298,6 +310,20 @@ begin
   suspend;
 end
 ^ 
+
+/*==============================================================*/
+/* Stored procedure: GUIDTEST                                   */
+/*==============================================================*/
+CREATE OR ALTER PROCEDURE GUIDTEST (
+    G_IN DOM_GUID)
+RETURNS (
+    G_OUT DOM_GUID)
+AS
+begin
+  G_OUT = :G_IN;
+  suspend;
+end
+^
 
 SET TERM ; ^
 

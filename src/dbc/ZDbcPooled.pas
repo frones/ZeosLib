@@ -52,8 +52,6 @@ interface
 
 {$I ZDbc.inc}
 
-implementation
-
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs, DateUtils, SysUtils,
   SyncObjs,
@@ -129,9 +127,9 @@ type
     function GetConnection: IZConnection;
   protected // IZConnection
     FClientCodePage: String;
-    procedure RegisterStatement(const Value: IZStatement);
     procedure DeregisterStatement(const Value: IZStatement);
-    procedure CheckCharEncoding(CharSet: String;
+    procedure RegisterStatement(const Value: IZStatement);
+    procedure CheckCharEncoding(const CharSet: String;
       const DoArrange: Boolean = False);
     function GetClientCodePageInformations: PZCodePage; //EgonHugeist
     function GetClientVariantManager: IZClientVariantManager;
@@ -174,6 +172,8 @@ type
     procedure ClearWarnings;
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
+    function GetURL: String;
+
   public
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
@@ -187,6 +187,7 @@ type
     function GetTestMode : Byte;
     procedure SetTestMode(Mode: Byte);
     {$ENDIF}
+    function GetServerProvider: TZServerProvider;
   end;
 
   {$WARNINGS OFF}
@@ -209,6 +210,10 @@ type
     destructor Destroy; override;
   end;
   {$WARNINGS ON}
+
+implementation
+
+uses ZDbcProperties;
 
 { TConnectionPool }
 
@@ -464,6 +469,16 @@ begin
   FUseMetadata := Value;
 end;
 
+{**
+  get current connection URL from TZURL. Nice to clone the connection by using
+  the IZDriverManager
+  @return true if connection is read-only and false otherwise
+}
+function TZDbcPooledConnection.GetURL: String;
+begin
+  Result := GetConnection.GetURL
+end;
+
 procedure TZDbcPooledConnection.Close;
 begin
   if FConnection <> nil then
@@ -549,9 +564,14 @@ begin
   Result := GetConnection.GetParameters;
 end;
 
+function TZDbcPooledConnection.GetServerProvider: TZServerProvider;
+begin
+  Result := GetConnection.GetServerProvider;
+end;
+
 function TZDbcPooledConnection.GetTransactionIsolation: TZTransactIsolationLevel;
 begin
-  Result := GetConnection.GetTransactionIsolation;  
+  Result := GetConnection.GetTransactionIsolation;
 end;
 
 function TZDbcPooledConnection.GetWarnings: EZSQLWarning;
@@ -655,7 +675,7 @@ end;
     default. This means it ignores the choosen Client-CharacterSet and sets a
     "more" Zeos-Compatible Client-CharacterSet if known.
 }
-procedure TZDbcPooledConnection.CheckCharEncoding(CharSet: String;
+procedure TZDbcPooledConnection.CheckCharEncoding(const CharSet: String;
   const DoArrange: Boolean = False);
 begin
   Self.GetConSettings.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(CharSet, DoArrange);
@@ -807,9 +827,9 @@ begin
     //
     if ConnectionPool = nil then
     begin
-      ConnectionTimeout := StrToIntDef(TempURL.Properties.Values['ConnectionTimeout'], 0);
-      MaxConnections := StrToIntDef(TempURL.Properties.Values['MaxConnections'], 0);
-      Wait := StrToBoolDef(TempURL.Properties.Values['Wait'], True);
+      ConnectionTimeout := StrToIntDef(TempURL.Properties.Values[ConnProps_ConnectionTimeout], 0);
+      MaxConnections := StrToIntDef(TempURL.Properties.Values[ConnProps_MaxConnections], 0);
+      Wait := StrToBoolDef(TempURL.Properties.Values[ConnProps_Wait], True);
       ConnectionPool := TConnectionPool.Create(TempURL.URL, ConnectionTimeout, MaxConnections, Wait);
       PoolList.Add(ConnectionPool);
       URLList.Add(TempURL.URL);
@@ -841,9 +861,9 @@ begin
   Result := DriverManager.GetDriver(GetEmbeddedURL(URL)).GetPropertyInfo(GetEmbeddedURL(URL), Info);
   if Result = nil then
     Result := TStringList.Create;
-  Result.Values['ConnectionTimeout'] := '0';
-  Result.Values['MaxConnections'] := '0';
-  Result.Values['Wait'] := 'True';
+  Result.Values[ConnProps_ConnectionTimeout] := '0';
+  Result.Values[ConnProps_MaxConnections] := '0';
+  Result.Values[ConnProps_Wait] := 'True';
 end;
 
 function TZDbcPooledConnectionDriver.GetSubVersion: Integer;

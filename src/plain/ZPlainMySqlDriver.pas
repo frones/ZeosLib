@@ -554,7 +554,7 @@ type
 
 implementation
 
-uses SysUtils, ZPlainLoader, ZEncoding, ZFastCode
+uses SysUtils, ZPlainLoader, ZEncoding, ZFastCode, ZConnProperties
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {$IFOPT R+}
@@ -741,8 +741,8 @@ begin
                        Length(SERVER_ARGUMENTS_KEY_PREFIX))) then
         TmpList.Add(Options.ValueFromIndex[i]);
     //Check if DataDir is specified, if not, then add it to the Arguments List
-    if TmpList.Values['--datadir'] = '' then
-       TmpList.Add('--datadir='+EMBEDDED_DEFAULT_DATA_DIR);
+    if TmpList.Values[ConnProps_Datadir] = '' then
+       TmpList.Values[ConnProps_Datadir] := EMBEDDED_DEFAULT_DATA_DIR;
 
     for i := 0 to ServerArgsLen - 1 do
       {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(ServerArgs[i]);
@@ -1349,7 +1349,7 @@ procedure TZMySQLBaseDriver.SetDriverOptions(Options: TStrings);
 var
   PreferedLibrary: String;
 begin
-  PreferedLibrary := Options.Values['Library'];
+  PreferedLibrary := Options.Values[ConnProps_Library];
   if PreferedLibrary <> '' then
     Loader.AddLocation(PreferedLibrary);
   if IsEmbeddedDriver then

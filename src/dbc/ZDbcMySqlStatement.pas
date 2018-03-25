@@ -108,7 +108,7 @@ type
     FBindArray: TByteDynArray;
     FPColumnArray: ^TZMysqlColumnBuffer;
   public
-    constructor Create(PlainDriver:IZMysqlPlainDriver;
+    constructor Create(const PlainDriver:IZMysqlPlainDriver;
       const BindCount : Integer; var ColumnArray: TZMysqlColumnBuffer); virtual;
     function GetBufferAddress : Pointer;
   end;
@@ -183,7 +183,7 @@ type
     procedure BindInParameters; override;
     function CreateResultSet(const SQL: string): IZResultSet;
     procedure RegisterParamTypeAndName(const ParameterIndex:integer;
-      ParamTypeName: String; const ParamName: String; Const ColumnSize, {%H-}Precision: Integer);
+      const ParamTypeName: String; const ParamName: String; Const ColumnSize, {%H-}Precision: Integer);
   public
     constructor Create(const PlainDriver: IZMySQLPlainDriver;
       const Connection: IZConnection; const SQL: string; const Info: TStrings;
@@ -213,7 +213,7 @@ type
 implementation
 
 uses
-  Math, DateUtils, ZFastCode, ZDbcMySqlUtils, ZDbcMySqlResultSet,
+  Math, DateUtils, ZFastCode, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZDbcProperties,
   ZSysUtils, ZMessages, ZDbcCachedResultSet, ZEncoding, ZDbcResultSet
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -275,7 +275,7 @@ begin
   fMySQLConnection := Connection as IZMySQLConnection;
   fMySQL := fMySQLConnection.GetConnectionHandle;
   FPlainDriver := PlainDriver;
-  FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
+  FUseResult := StrToBoolEx(DefineStatementParameter(Self, DSProps_UseResult, 'false'));
   FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'));
   if not FUseResult then
     ResultSetType := rtScrollInsensitive;
@@ -536,11 +536,11 @@ begin
   fMySQL := FMysqlConnection.GetConnectionHandle;
   FPlainDriver := PlainDriver;
 
-  FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
+  FUseResult := StrToBoolEx(DefineStatementParameter(Self, DSProps_UseResult, 'false'));
   if not FUseResult then
     ResultSetType := rtScrollInsensitive;
-  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'));
-  FPrefetchRows := Max(1,{$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, 'prefetch_rows', '100'),100));
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, DSProps_Defaults, 'true'));
+  FPrefetchRows := Max(1,{$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_PrefetchRows, '100'),100));
 end;
 
 const FSTMT_ATTR_CURSOR_TYPE: ULong = Ord(CURSOR_TYPE_READ_ONLY);
@@ -1261,33 +1261,34 @@ begin
 end;
 
 procedure TZMySQLCallableStatement.RegisterParamTypeAndName(const ParameterIndex:integer;
-  ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
+  const ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
+var ParamTypeNameLo: String;
 begin
   FParamNames[ParameterIndex] := ConSettings^.ConvFuncs.ZStringToRaw(ParamName,
     ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-  ParamTypeName := LowerCase(ParamTypeName);
-  if ( ZFastCode.Pos('char', ParamTypeName) > 0 ) or
-     ( ZFastCode.Pos('set', ParamTypeName) > 0 ) then
+  ParamTypeNameLo := LowerCase(ParamTypeName);
+  if ( ZFastCode.Pos('char', ParamTypeNameLo) > 0 ) or
+     ( ZFastCode.Pos('set', ParamTypeNameLo) > 0 ) then
     FParamTypeNames[ParameterIndex] := 'CHAR('+ZFastCode.IntToRaw(ColumnSize)+')'
   else
-    if ( ZFastCode.Pos('set', ParamTypeName) > 0 ) then
+    if ( ZFastCode.Pos('set', ParamTypeNameLo) > 0 ) then
       FParamTypeNames[ParameterIndex] := 'CHAR('+ZFastCode.IntToRaw(ColumnSize)+')'
     else
-      if ( ZFastCode.Pos('datetime', ParamTypeName) > 0 ) or
-         ( ZFastCode.Pos('timestamp', ParamTypeName) > 0 ) then
+      if ( ZFastCode.Pos('datetime', ParamTypeNameLo) > 0 ) or
+         ( ZFastCode.Pos('timestamp', ParamTypeNameLo) > 0 ) then
         FParamTypeNames[ParameterIndex] := 'DATETIME'
       else
-        if ( ZFastCode.Pos('date', ParamTypeName) > 0 ) then
+        if ( ZFastCode.Pos('date', ParamTypeNameLo) > 0 ) then
           FParamTypeNames[ParameterIndex] := 'DATE'
         else
-          if ( ZFastCode.Pos('time', ParamTypeName) > 0 ) then
+          if ( ZFastCode.Pos('time', ParamTypeNameLo) > 0 ) then
             FParamTypeNames[ParameterIndex] := 'TIME'
           else
-            if ( ZFastCode.Pos('int', ParamTypeName) > 0 ) or
-               ( ZFastCode.Pos('year', ParamTypeName) > 0 ) then
+            if ( ZFastCode.Pos('int', ParamTypeNameLo) > 0 ) or
+               ( ZFastCode.Pos('year', ParamTypeNameLo) > 0 ) then
               FParamTypeNames[ParameterIndex] := 'SIGNED'
             else
-              if ( ZFastCode.Pos('binary', ParamTypeName) > 0 ) then
+              if ( ZFastCode.Pos('binary', ParamTypeNameLo) > 0 ) then
                 FParamTypeNames[ParameterIndex] := 'BINARY('+ZFastCode.IntToRaw(ColumnSize)+')'
               else
                 FParamTypeNames[ParameterIndex] := '';
@@ -1301,8 +1302,8 @@ begin
   fMySQL := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
-  FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
-  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'))
+  FUseResult := StrToBoolEx(DefineStatementParameter(Self, DSProps_UseResult, 'false'));
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, DSProps_Defaults, 'true'))
 end;
 
 {**
@@ -1624,7 +1625,7 @@ end;
 
 { TZMySQLAbstractBindBuffer }
 
-constructor TZMySQLAbstractBindBuffer.Create(PlainDriver: IZMysqlPlainDriver;
+constructor TZMySQLAbstractBindBuffer.Create(const PlainDriver: IZMysqlPlainDriver;
   const BindCount: Integer; var ColumnArray: TZMysqlColumnBuffer);
 begin
   inherited Create;

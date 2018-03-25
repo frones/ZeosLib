@@ -56,6 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+{$ENDIF USE_SYNCOMMONS}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
   ZClasses, ZDbcIntfs, ZDbcResultSet, ZDbcCache, ZCompatibility;
 
@@ -67,15 +70,15 @@ type
   IZCachedResolver = interface (IZInterface)
     ['{546ED716-BB88-468C-8CCE-D7111CF5E1EF}']
 
-    procedure CalculateDefaults(Sender: IZCachedResultSet;
+    procedure CalculateDefaults(const Sender: IZCachedResultSet;
       RowAccessor: TZRowAccessor);
-    procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+    procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor);
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
+    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure RefreshCurrentRow(Sender: IZCachedResultSet;RowAccessor: TZRowAccessor); //FOS+ 07112006
+    procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
   end;
 
   {** Represents a cached result set. }
@@ -83,7 +86,7 @@ type
     ['{BAF24A92-C8CE-4AB4-AEBC-3D4A9BCB0946}']
 
     function GetResolver: IZCachedResolver;
-    procedure SetResolver(Resolver: IZCachedResolver);
+    procedure SetResolver(const Resolver: IZCachedResolver);
 
     {BEGIN PATCH [1214009] Calc Defaults in TZUpdateSQL and Added Methods to GET and SET the database Native Resolver
       will help to implemented feature to Calculate default values in TZUpdateSQL
@@ -266,7 +269,7 @@ type
     //---------------------------------------------------------------------
 
     function GetResolver: IZCachedResolver;
-    procedure SetResolver(Resolver: IZCachedResolver);
+    procedure SetResolver(const Resolver: IZCachedResolver);
     {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
     function GetNativeResolver: IZCachedResolver;
     {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
@@ -280,6 +283,10 @@ type
     procedure MoveToInitialRow; virtual;
     procedure PostUpdatesCached; virtual;
     procedure DisposeCachedUpdates; virtual;
+    {$IFDEF USE_SYNCOMMONS}
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
+    {$ENDIF USE_SYNCOMMONS}
   end;
 
   TZStringFieldAssignFromResultSet = procedure(ColumnIndex: Integer) of object;
@@ -491,7 +498,7 @@ end;
   Sets a new cached updates resolver object.
   @param Resolver a cached updates resolver object.
 }
-procedure TZAbstractCachedResultSet.SetResolver(Resolver: IZCachedResolver);
+procedure TZAbstractCachedResultSet.SetResolver(const Resolver: IZCachedResolver);
 begin
   FResolver := Resolver;
 {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
@@ -2250,6 +2257,14 @@ begin
   else
     FRowAccessor.RowBuffer := nil;
 end;
+
+{$IFDEF USE_SYNCOMMONS}
+procedure TZAbstractCachedResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
+begin
+  FRowAccessor.ColumnsToJSON(JSONWriter, EndJSONObject, With_DATETIME_MAGIC, SkipNullFields)
+end;
+{$ENDIF USE_SYNCOMMONS}
 
 {**
   Compares fields from two row buffers.

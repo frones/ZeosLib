@@ -54,149 +54,19 @@ unit ZAdoToken;
 interface
 
 {$I ZParseSql.inc}
-{$IFDEF ENABLE_ADO}
 
+{$IFDEF ENABLE_ADO}
 uses
-  Classes, SysUtils, ZTokenizer, ZGenericSqlToken, ZCompatibility;
+  ZODBCToken;
 
 type
   {** Implements a quote string state object. }
-  TZAdoSQLQuoteState = class (TZQuoteState)
-  public
-    function NextToken(Stream: TStream; FirstChar: Char;
-      {%H-}Tokenizer: TZTokenizer): TZToken; override;
-
-    function EncodeString(const Value: string; QuoteChar: Char): string; override;
-    function DecodeString(const Value: string; QuoteChar: Char): string; override;
-  end;
+  TZAdoSQLQuoteState = TZODBCQuoteState;
 
   {** Implements a default tokenizer object. }
-  TZAdoSQLTokenizer = class (TZGenericSQLTokenizer)
-  protected
-    procedure CreateTokenStates; override;
-  end;
-
+  TZAdoSQLTokenizer = TZODBCTokenizer;
 {$ENDIF ENABLE_ADO}
+
 implementation
-{$IFDEF ENABLE_ADO}
 
-{$IFDEF FAST_MOVE}
-uses ZFastCode;
-{$ENDIF}
-
-{ TZAdoSQLQuoteState }
-
-{**
-  Return a quoted string token from a reader. This method
-  will collect characters until it sees a match to the
-  character that the tokenizer used to switch to this state.
-
-  @return a quoted string token from a reader
-}
-function TZAdoSQLQuoteState.NextToken(Stream: TStream; FirstChar: Char;
-  Tokenizer: TZTokenizer): TZToken;
-var
-  ReadChar: Char;
-  LastChar: Char;
-begin
-  Result.Value := '';
-  InitBuf(FirstChar);
-  LastChar := #0;
-  while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do
-  begin
-    if ((LastChar = FirstChar) and (ReadChar <> FirstChar)
-      and (FirstChar <> '[')) or ((FirstChar = '[') and (LastChar = ']')) then
-    begin
-      Stream.Seek(-SizeOf(Char), soFromCurrent);
-      Break;
-    end;
-    ToBuf(ReadChar, Result.Value);
-    if (LastChar = FirstChar) and (ReadChar = FirstChar) then
-      LastChar := #0
-    else LastChar := ReadChar;
-  end;
-  FlushBuf(Result.Value);
-
-  if (FirstChar = '"') or (FirstChar='[') then
-    Result.TokenType := ttQuotedIdentifier
-  else Result.TokenType := ttQuoted;
-end;
-
-{**
-  Encodes a string value.
-  @param Value a string value to be encoded.
-  @param QuoteChar a string quote character.
-  @returns an encoded string.
-}
-function TZAdoSQLQuoteState.EncodeString(const Value: string; QuoteChar: Char): string;
-begin
-  if QuoteChar = '[' then
-    Result := '[' + Value + ']'
-  else if CharInSet(QuoteChar, [#39, '"']) then
-    Result := QuoteChar + Value + QuoteChar
-  else Result := Value;
-end;
-
-{**
-  Decodes a string value.
-  @param Value a string value to be decoded.
-  @param QuoteChar a string quote character.
-  @returns an decoded string.
-}
-function TZAdoSQLQuoteState.DecodeString(const Value: string; QuoteChar: Char): string;
-begin
-  Result := Value;
-  if Length(Value) >= 2 then
-  begin
-    if CharInSet(QuoteChar, [#39, '"']) and (Value[1] = QuoteChar)
-      and (Value[Length(Value)] = QuoteChar) then
-    begin
-      if Length(Value) > 2 then
-        Result := AnsiDequotedStr(Value, QuoteChar)
-      else Result := '';
-    end
-    else if (QuoteChar = '[') and (Value[1] = QuoteChar)
-      and (Value[Length(Value)] = ']') then
-      Result := Copy(Value, 2, Length(Value) - 2)
-  end;
-end;
-
-
-{ TZAdoSQLTokenizer }
-
-{**
-  Constructs a default state table (as described in the class comment).
-}
-procedure TZAdoSQLTokenizer.CreateTokenStates;
-begin
-  NumberState := TZNumberState.Create;
-  QuoteState := TZAdoSQLQuoteState.Create;
-  WhitespaceState := TZWhitespaceState.Create;
-  CommentState := TZCppCommentState.Create;
-
-  SymbolState := TZGenericSQLSymbolState.Create;
-  WordState := TZGenericSQLWordState.Create;
-
-  SetCharacterState(#0, #32, WhitespaceState);
-  SetCharacterState(#33, #191, SymbolState);
-  SetCharacterState(#192, High(Char), WordState);
-
-  SetCharacterState('a', 'z', WordState);
-  SetCharacterState('A', 'Z', WordState);
-  SetCharacterState('_', '_', WordState);
-  SetCharacterState('$', '$', WordState);
-  SetCharacterState('@', '@', WordState);
-
-  SetCharacterState('0', '9', NumberState);
-  SetCharacterState('.', '.', NumberState);
-
-  SetCharacterState('"', '"', QuoteState);
-  SetCharacterState(#39, #39, QuoteState);
-  SetCharacterState('[', '[', QuoteState);
-  SetCharacterState(']', ']', QuoteState);
-
-  SetCharacterState('/', '/', CommentState);
-end;
-
-{$ENDIF ENABLE_ADO}
 end.

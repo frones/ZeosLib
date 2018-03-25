@@ -72,7 +72,7 @@ type
     property Blob: IZBlob read FBlob write FBlob;
     property Mode: TBlobStreamMode read FMode write FMode;
   public
-    constructor Create(Field: TBlobField; Blob: IZBlob; Mode: TBlobStreamMode;
+    constructor Create(Field: TBlobField; const Blob: IZBlob; Mode: TBlobStreamMode;
       ConSettings: PZConSettings);
     destructor Destroy; override;
   end;
@@ -87,7 +87,7 @@ uses ZFastCode, ZSysUtils, ZEncoding;
   Constructs this object and assignes the main properties.
   @param Blob
 }
-constructor TZBlobStream.Create(Field: TBlobField; Blob: IZBlob;
+constructor TZBlobStream.Create(Field: TBlobField; const Blob: IZBlob;
   Mode: TBlobStreamMode; ConSettings: PZConSettings);
 var
   Buffer: Pointer;

@@ -98,7 +98,6 @@ type
   private
     FCatalog: string;
     FHandle: PMySQL;
-    FMaxLobSize: ULong;
     FDatabaseName: String;
     FIKnowMyDatabaseName, FMySQL_FieldType_Bit_1_IsBoolean,
     FSupportsBitType: Boolean;
@@ -137,6 +136,7 @@ type
     function GetEscapeString(const Value: ZWideString): ZWideString; override;
     function GetEscapeString(const Value: RawByteString): RawByteString; override;
     function GetDatabaseName: String;
+    function GetServerProvider: TZServerProvider; override;
     function MySQL_FieldType_Bit_1_IsBoolean: Boolean;
     function SupportsFieldTypeBit: Boolean;
   end;
@@ -150,8 +150,8 @@ implementation
 uses
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZMessages, ZSysUtils, ZDbcMySqlStatement, ZMySqlToken, ZFastCode,
-  ZDbcMySqlUtils, ZDbcMySqlMetadata, ZMySqlAnalyser, TypInfo, Math,
-  ZEncoding;
+  ZDbcMySqlUtils, ZDbcMySqlMetadata, ZMySqlAnalyser, TypInfo,
+  ZEncoding, ZConnProperties, ZDbcProperties;
 
 var
   MySQLCriticalSection: TCriticalSection;
@@ -353,6 +353,7 @@ var
   sMy_client_Opt, sMy_client_Char_Set:String;
   ClientVersion: Integer;
   SQL: RawByteString;
+  MaxLobSize: ULong;
 label setuint;
 begin
   if not Closed then
@@ -373,20 +374,19 @@ begin
        Port := MYSQL_PORT;
 
     { Turn on compression protocol. }
-    if StrToBoolEx(Info.Values['compress']) and
-      (Info.Values['MYSQL_OPT_COMPRESS'] = '') and
-       (Info.IndexOf('MYSQL_OPT_COMPRESS') = -1) then
-      Info.Values['MYSQL_OPT_COMPRESS'] := Info.Values['compress']; //check if user allready did set the value!
+    if StrToBoolEx(Info.Values[ConnProps_Compress]) and
+      (Info.Values[GetMySQLOptionValue(MYSQL_OPT_COMPRESS)] = '') then //check if user allready did set the value!
+      Info.Values[GetMySQLOptionValue(MYSQL_OPT_COMPRESS)] := Info.Values[ConnProps_Compress];
     { Sets connection timeout. }
-    if (StrToIntDef(Info.Values['timeout'], 0) >= 0) and
-       (Info.Values['MYSQL_OPT_CONNECT_TIMEOUT'] = '') then //check if user allready did set the value!
-      Info.Values['MYSQL_OPT_CONNECT_TIMEOUT'] := Info.Values['timeout'];
+    if (StrToIntDef(Info.Values[ConnProps_Timeout], 0) >= 0) and
+       (Info.Values[GetMySQLOptionValue(MYSQL_OPT_CONNECT_TIMEOUT)] = '') then //check if user allready did set the value!
+      Info.Values[GetMySQLOptionValue(MYSQL_OPT_CONNECT_TIMEOUT)] := Info.Values[ConnProps_Timeout];
 
    (*Added lines to handle option parameters 21 november 2007 marco cotroneo*)
     ClientVersion := GetPlainDriver.GetClientVersion;
     for myopt := low(TMySQLOption) to high(TMySQLOption) do
     begin
-      sMyOpt:= GetEnumName(typeInfo(TMySQLOption), integer(myOpt));
+      sMyOpt:= GetMySQLOptionValue(myOpt);
       if ClientVersion >= TMySqlOptionMinimumVersion[myopt] then //version checked (:
         case myopt of
           {unsigned int options ...}
@@ -441,35 +441,35 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
 
     { Set ClientFlag }
     ClientFlag := 0;
-    if Not StrToBoolEx(Info.Values['dbless'])
-       then ClientFlag := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}trunc(power(2, GetEnumValue(TypeInfo(TMYSQL_CLIENT_OPTIONS),'_CLIENT_CONNECT_WITH_DB')));
+    if not StrToBoolEx(Info.Values[ConnProps_DBLess]) then
+      ClientFlag := (1 shl Integer(CLIENT_CONNECT_WITH_DB));
 
-    for my_client_Opt := low(TMYSQL_CLIENT_OPTIONS) to high(TMYSQL_CLIENT_OPTIONS) do
+    for my_client_Opt := Low(TMYSQL_CLIENT_OPTIONS) to High(TMYSQL_CLIENT_OPTIONS) do
     begin
-      sMy_client_Opt:= GetEnumName(typeInfo(TMYSQL_CLIENT_OPTIONS), integer(my_client_Opt));
+      sMy_client_Opt := GetEnumName(TypeInfo(TMYSQL_CLIENT_OPTIONS), Integer(my_client_Opt));
       if StrToBoolEx(Info.Values[sMy_client_Opt]) then
-          ClientFlag:= ClientFlag or {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}trunc(power(2, GetEnumValue(TypeInfo(TMYSQL_CLIENT_OPTIONS),sMy_client_Opt)));
+        ClientFlag := ClientFlag or (1 shl Integer(my_client_Opt));
     end;
 
   { Set SSL properties before connect}
   SslKey := nil; SslCert := nil; SslCa := nil; SslCaPath := nil; SslCypher := nil;
-  if StrToBoolEx(Info.Values['MYSQL_SSL']) then
-    begin
-       if Info.Values['MYSQL_SSL_KEY'] <> '' then
+  if StrToBoolEx(Info.Values[ConnProps_MYSQLSSL]) then
+    begin                                          
+       if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_KEY)] <> '' then
           SslKey := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-            Info.Values['MYSQL_SSL_KEY'], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-       if Info.Values['MYSQL_SSL_CERT'] <> '' then
+            Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_KEY)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+       if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CERT)] <> '' then
           SslCert := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-            Info.Values['MYSQL_SSL_CERT'], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-       if Info.Values['MYSQL_SSL_CA'] <> '' then
+            Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CERT)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+       if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CA)] <> '' then
           SslCa := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-            Info.Values['MYSQL_SSL_CA'], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-       if Info.Values['MYSQL_SSL_CAPATH'] <> '' then
+            Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CA)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+       if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CAPATH)] <> '' then
           SslCaPath := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-            Info.Values['MYSQL_SSL_CAPATH'], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-       if Info.Values['MYSQL_SSL_CYPHER'] <> '' then
+            Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CAPATH)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+       if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CIPHER)] <> '' then
           SslCypher := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-            Info.Values['MYSQL_SSL_CYPHER'], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+            Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CIPHER)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
        GetPlainDriver.SslSet(FHandle, SslKey, SslCert, SslCa, SslCaPath,
           SslCypher);
        DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
@@ -490,10 +490,10 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
     { Fix Bugs in certain Versions where real_conncet resets the Reconnect flag }
-    if (Info.Values['MYSQL_OPT_RECONNECT'] <> '') and
+    if (Info.Values[GetMySQLOptionValue(MYSQL_OPT_RECONNECT)] <> '') and
       ((ClientVersion>=50013) and (ClientVersion<50019)) or
       ((ClientVersion>=50100) and (ClientVersion<50106)) then begin
-      MyBoolOpt := Ord(StrToBoolEx(Info.Values['MYSQL_OPT_RECONNECT']));
+      MyBoolOpt := Ord(StrToBoolEx(Info.Values[GetMySQLOptionValue(MYSQL_OPT_RECONNECT)]));
       GetPlainDriver.SetOptions(FHandle, MYSQL_OPT_RECONNECT, @MyBoolOpt);
     end;
     if (FClientCodePage = '') and (sMy_client_Char_Set <> '') then
@@ -512,14 +512,13 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
       CheckCharEncoding(FClientCodePage);
     end;
 
-    FMaxLobSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values['MaxLobSize'], 0);
-    if FMaxLobSize <> 0 then begin
-      SQL := 'SET GLOBAL max_allowed_packet='+IntToRaw(FMaxLobSize);
+    MaxLobSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_MaxLobSize], 0);
+    if MaxLobSize <> 0 then begin
+      SQL := 'SET GLOBAL max_allowed_packet='+IntToRaw(MaxLobSize);
       GetPlainDriver.ExecRealQuery(FHandle, Pointer(SQL), Length(SQL));
       CheckMySQLError(GetPlainDriver, FHandle, lcExecute, SQL, ConSettings);
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
-    end else
-      FMaxLobSize := MaxBlobSize;
+    end;
 
 
     { Sets transaction isolation level. }
@@ -644,7 +643,7 @@ begin
   if IsClosed then
      Open;
   if Assigned(Info) then
-    if StrToBoolEx(Info.Values['preferprepared']) then
+    if StrToBoolEx(Info.Values[DSProps_PreferPrepared]) then
       Result := TZMySQLPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
     else
       Result := TZMySQLEmulatedPreparedStatement.Create(GetPlainDriver, Self, SQL, Info, FHandle)
@@ -859,6 +858,11 @@ begin
   if FPlainDriver = nil then
     fPlainDriver := PLainDriver as IZMySQLPlainDriver;
   Result := fPlainDriver;
+end;
+
+function TZMySQLConnection.GetServerProvider: TZServerProvider;
+begin
+  Result := spMySQL;
 end;
 
 {**

@@ -56,6 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+{$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZPlainPostgreSqlDriver, ZDbcLogging,
@@ -123,6 +126,10 @@ type
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
 
     function MoveAbsolute(Row: Integer): Boolean; override;
+    {$IFDEF USE_SYNCOMMONS}
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
+    {$ENDIF USE_SYNCOMMONS}
   end;
 
   {** Represents an interface, specific for PostgreSQL blobs. }
@@ -217,6 +224,127 @@ end;
 {$IFEND}
 
 { TZPostgreSQLResultSet }
+
+{$IFDEF USE_SYNCOMMONS}
+procedure TZPostgreSQLResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
+var
+  C, L: Cardinal;
+  P, pgBuff: PAnsiChar;
+  RNo, H, I: Integer;
+  Blob: IZBlob;
+  Failed: Boolean;
+label ProcBts;
+begin
+  RNo := RowNo - 1;
+  if JSONWriter.Expand then
+    JSONWriter.Add('{');
+  if Assigned(JSONWriter.Fields) then
+    H := High(JSONWriter.Fields) else
+    H := High(JSONWriter.ColNames);
+  for I := 0 to H do begin
+    if Pointer(JSONWriter.Fields) = nil then
+      C := I else
+      C := JSONWriter.Fields[i];
+    if FPlainDriver.GetIsNull(FQueryHandle, RNo, C) <> 0 then
+      if JSONWriter.Expand then begin
+        if (not SkipNullFields) then begin
+          JSONWriter.AddString(JSONWriter.ColNames[I]);
+          JSONWriter.AddShort('null,')
+        end;
+      end else
+        JSONWriter.AddShort('null,')
+    else begin
+      if JSONWriter.Expand then
+        JSONWriter.AddString(JSONWriter.ColNames[i]);
+      P := FPlainDriver.GetValue(FQueryHandle, RNo, C);
+      case TZColumnInfo(ColumnsInfo[c]).ColumnType of
+        stUnknown     : JSONWriter.AddShort('null');
+        stBoolean     : JSONWriter.AddShort(JSONBool[StrToBoolEx(P, True, (FpgOIDTypes[C] = 18) { char } or (FpgOIDTypes[C] = 1042)  { char/bpchar })]);
+        stByte,
+        stShort,
+        stWord,
+        stSmall,
+        stLongWord,
+        stInteger,
+        stULong,
+        stLong,
+        stFloat,
+        stDouble,
+        stBigDecimal  : JSONWriter.AddNoJSONEscape(P, ZFastCode.StrLen(P));
+        stCurrency    : JSONWriter.AddDouble(ZSysUtils.SQLStrToFloatDef(P, 0, ZFastCode.StrLen(P)));
+        stBytes,
+        stBinaryStream: if FpgOIDTypes[C] = 17{bytea} then begin
+                          pgBuff := nil;
+                          if FIs_bytea_output_hex then begin
+                            {skip trailing /x}
+                            L := (ZFastCode.StrLen(P)-2) shr 1;
+                            try
+                              GetMem(pgBuff, L);
+                              HexToBin(P+2, pgBuff, L);
+                              JSONWriter.WrBase64(pgBuff, L, True);
+                            finally
+                              FreeMem(pgBuff);
+                            end;
+                          end else if FPlainDriver.SupportsDecodeBYTEA then
+                            try
+                              pgBuff := FPlainDriver.UnescapeBytea(P, @L);
+                              JSONWriter.WrBase64(pgBuff, L, True);
+                            finally
+                              FPlainDriver.FreeMem(pgBuff);
+                            end
+                          else
+                            JSONWriter.WrBase64(P, FPlainDriver.GetLength(FQueryHandle, RNo, C), True);
+                        end else begin
+                          Blob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FHandle, RawToIntDef(P, 0), FChunk_Size);
+                          JSONWriter.WrBase64(Blob.GetBuffer, Blob.Length, True);
+                        end;
+        stGUID        : JSONWriter.AddNoJSONEscape(P);//
+        stDate        : begin
+                          JSONWriter.Add('"');
+                          JSONWriter.AddDateTime(RawSQLDateToDateTime(P, ZFastCode.StrLen(P), ConSettings^.ReadFormatSettings, Failed));
+                          JSONWriter.Add('"');
+                        end;
+        stTime        : begin
+                          JSONWriter.Add('"');
+                          JSONWriter.AddDateTime(RawSQLTimeToDateTime(P, ZFastCode.StrLen(P), ConSettings^.ReadFormatSettings, Failed));
+                          JSONWriter.Add('"');
+                        end;
+        stTimestamp   : begin
+                          JSONWriter.Add('"');
+                          JSONWriter.AddDateTime(RawSQLTimeStampToDateTime(P, ZFastCode.StrLen(P), ConSettings^.ReadFormatSettings, Failed));
+                          JSONWriter.Add('"');
+                        end;
+        stString,
+        stUnicodeString:begin
+                          JSONWriter.Add('"');
+                          if (FpgOIDTypes[C] = 18) { char } or (FpgOIDTypes[C] = 1042)  { char/bpchar } then begin
+                            L := ZFastCode.StrLen(P);
+                            if (L > 0) then while (P+L-1)^ = ' ' do dec(L);
+                            JSONWriter.AddJSONEscape(P, L);
+                          end else
+                            JSONWriter.AddJSONEscape(P);
+                          JSONWriter.Add('"');
+                        end;
+        stAsciiStream,
+        stUnicodeStream:begin
+                          JSONWriter.Add('"');
+                          JSONWriter.AddJSONEscape(P);
+                          JSONWriter.Add('"');
+                        end;
+        //stArray, stDataSet,
+      end;
+      JSONWriter.Add(',');
+    end;
+  end;
+  if EndJSONObject then
+  begin
+    JSONWriter.CancelLastComma; // cancel last ','
+    if JSONWriter.Expand then
+      JSONWriter.Add('}');
+  end;
+end;
+{$ENDIF USE_SYNCOMMONS}
 
 {**
   Constructs this object, assignes main properties and

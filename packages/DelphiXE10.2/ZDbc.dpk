@@ -78,6 +78,10 @@ contains
   ZDbcPostgreSqlUtils in '..\..\src\dbc\ZDbcPostgreSqlUtils.pas',
 {$ENDIF}
 
+{$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
+  ZDbcOleDBUtils in '..\..\src\dbc\ZDbcOleDBUtils.pas',
+{$IFEND}
+
 {$IFDEF ENABLE_OLEDB}
   ZDbcOleDB in '..\..\src\dbc\ZDbcOleDB.pas',
   ZDbcOleDBMetadata in '..\..\src\dbc\ZDbcOleDBMetadata.pas',
@@ -121,6 +125,7 @@ contains
   ZDbcPooled in '..\..\src\dbc\ZDbcPooled.pas',
 {$ENDIF}
 
+  ZDbcProperties in '..\..\src\dbc\ZDbcProperties.pas',
   ZDbcUtils in '..\..\src\dbc\ZDbcUtils.pas',
   ZDbcCachedResultSet in '..\..\src\dbc\ZDbcCachedResultSet.pas',
   ZDbcConnection in '..\..\src\dbc\ZDbcConnection.pas',

@@ -219,7 +219,7 @@ const
   department_dep_name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
   department_dep_shname_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
   department_dep_address_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  people_count_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  //people_count_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   people_p_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   people_p_begin_work_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
   people_p_resume_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
@@ -505,7 +505,6 @@ const
 var
   InStm: TMemoryStream;
   OutBytes: TBytes;
-  OutStr: AnsiString;
   i, TestSize: Integer;
   Statement: IZStatement;
   PStatement: IZPreparedStatement;
@@ -543,9 +542,6 @@ begin
     OutBytes := ResultSet.GetBytes(select_blob_values_b_blob_Index);
     CheckEquals(TestSize, Length(OutBytes), 'Wrong blob bytes length');
     CheckEqualsMem(InStm.Memory, @OutBytes[0], TestSize, 'Wrong blob content (byte array)');
-    OutStr := ResultSet.GetBinaryString(select_blob_values_b_blob_Index);
-    CheckEquals(TestSize, Length(OutStr), 'Wrong blob string length');
-    CheckEqualsMem(InStm.Memory, Pointer(OutStr), TestSize, 'Wrong blob content (string)');
   finally
     InStm.Free;
 

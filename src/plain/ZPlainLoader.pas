@@ -130,7 +130,7 @@ end;
 }
 destructor TZNativeLibraryLoader.Destroy;
 begin
-  if Loaded then
+  if Loaded then               
     FreeNativeLibrary;
   inherited Destroy;
 end;

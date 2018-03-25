@@ -98,7 +98,7 @@ uses ZTestConsts;
 { TZTestDbcMySqlCase }
 procedure TZTestDbcMySQLCase.CheckBitFields(ResultSet: IZResultSet);
 const
-  Bit_id_Index = FirstDbcIndex;
+ {Bit_id_Index = FirstDbcIndex;}
   Bit1_Index = FirstDbcIndex+1;
   Bit2_Index = FirstDbcIndex+2;
   Bit3_Index = FirstDbcIndex+3;
@@ -124,7 +124,7 @@ const
   Bit23_Index = FirstDbcIndex+23;
   Bit24_Index = FirstDbcIndex+24;
   Bit25_Index = FirstDbcIndex+25;
-  Bit26_Index = FirstDbcIndex+26;
+ {Bit26_Index = FirstDbcIndex+26;
   Bit27_Index = FirstDbcIndex+27;
   Bit28_Index = FirstDbcIndex+28;
   Bit29_Index = FirstDbcIndex+29;
@@ -137,9 +137,9 @@ const
   Bit36_Index = FirstDbcIndex+36;
   Bit37_Index = FirstDbcIndex+37;
   Bit38_Index = FirstDbcIndex+38;
-  Bit39_Index = FirstDbcIndex+39;
+  Bit39_Index = FirstDbcIndex+39;}
   Bit40_Index = FirstDbcIndex+40;
-  Bit41_Index = FirstDbcIndex+41;
+ {Bit41_Index = FirstDbcIndex+41;
   Bit42_Index = FirstDbcIndex+42;
   Bit43_Index = FirstDbcIndex+43;
   Bit44_Index = FirstDbcIndex+44;
@@ -161,7 +161,7 @@ const
   Bit60_Index = FirstDbcIndex+60;
   Bit61_Index = FirstDbcIndex+61;
   Bit62_Index = FirstDbcIndex+62;
-  Bit63_Index = FirstDbcIndex+63;
+  Bit63_Index = FirstDbcIndex+63;}
   Bit64_Index = FirstDbcIndex+64;
 begin
   CheckNotNull(ResultSet);

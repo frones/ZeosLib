@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs, TypInfo,
   ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata, ZTokenizer, ZVariant;
 
 type
@@ -160,6 +160,8 @@ function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTE
   ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
   const NeedNCharDetection: Boolean = False): TUnicodeStringDynArray;
 
+function ExtractFields(const FieldNames: string; SepChars: TSysCharSet): TStrings;
+
 {$IF defined(ENABLE_MYSQL) or defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
   const OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
@@ -196,7 +198,8 @@ procedure RaiseUnsupportedParameterTypeException(ParamType: TZSQLType);
 
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, TypInfo;
+uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken,
+  ZConnProperties, ZDbcProperties;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -274,17 +277,17 @@ begin
   { Redefines user name if not avialble in the URL}
   if UserName = '' then //Priority 1: URL.UserName
   begin
-    UserName := ResultInfo.Values['UID']; //Priority 2: Info-UID
+    UserName := ResultInfo.Values[ConnProps_UID]; //Priority 2: Info-UID
     if UserName = '' then
-      UserName := ResultInfo.Values['username']; //Priority 3: Info-username
+      UserName := ResultInfo.Values[ConnProps_Username]; //Priority 3: Info-username
   end;
 
   { Redefines user password if not avialble in the URL }
   if Password = '' then //Priority 1: URL.Password
   begin
-    Password := ResultInfo.Values['PWD']; //Priority 2: Info-PWD
+    Password := ResultInfo.Values[ConnProps_PWD]; //Priority 2: Info-PWD
     if Password = '' then
-      Password := ResultInfo.Values['password']; //Priority 3: Info-password
+      Password := ResultInfo.Values[ConnProps_Password]; //Priority 3: Info-password
   end;
 end;
 
@@ -725,6 +728,69 @@ begin
     {$ELSE}
     Add(ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings^.CTRL_CP));
     {$ENDIF}
+end;
+
+{**
+  Extracts list of fields from a string. Fields could be quoted, delimited by any of
+  the specified delimiters and any number of whitespaces. Any other symbol or
+  unexpected delimiter will raise an exception. Quoted field names will be returned
+  without quotes.
+  @param FieldNames a list of field names.
+  @param SepChars set of field name delimiters
+
+  @returns list of field names.
+}
+function ExtractFields(const FieldNames: string; SepChars: TSysCharSet): TStrings;
+var
+  TokenType: TZTokenType;
+  TokenValue: string;
+
+  procedure RaiseTokenExc;
+  begin
+    raise EZSQLException.Create(Format('Unexpected token "%s" in string "%s"', [TokenValue, FieldNames]));
+  end;
+
+var
+  Tokens: TStrings;
+  I: Integer;
+  ExpectToken: TZTokenType;
+begin
+  ExpectToken := ttWord;
+  Tokens := (TZGenericSQLTokenizer.Create as IZTokenizer).TokenizeBufferToList(FieldNames,
+    [toSkipEOF, toSkipWhitespaces, toDecodeStrings]);
+  Result := TStringList.Create;
+
+  try try
+    for I := 0 to Tokens.Count - 1 do
+    begin
+      TokenType := TZTokenType(Tokens.Objects[I]);
+      TokenValue := Tokens[I];
+      if TokenType <> ExpectToken then
+        RaiseTokenExc;
+
+      case TokenType of
+        ttWord:
+          begin
+            Result.Add(TokenValue);
+            ExpectToken := ttSymbol;
+          end;
+        ttSymbol:
+          begin
+            if not CharInSet(TokenValue[1], SepChars) then
+              RaiseTokenExc;
+            ExpectToken := ttWord;
+          end;
+        else
+          RaiseTokenExc;
+      end;
+    end;
+  except
+    FreeAndNil(Result);
+    raise;
+  end;
+  finally
+    Tokens.Free;
+  end;
 end;
 
 {$IF defined(ENABLE_MYSQL) or defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE) or defined(EANABLE_ASA)}

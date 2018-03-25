@@ -161,6 +161,8 @@ type
       ParentResultSet: TZAbstractResultSet);
     destructor Destroy; override;
 
+    function FindColumn(const ColumnName: string): Integer;
+
     function GetColumnCount: Integer; virtual;
     function IsAutoIncrement(ColumnIndex: Integer): Boolean; virtual;
     function IsCaseSensitive(ColumnIndex: Integer): Boolean; virtual;
@@ -358,6 +360,39 @@ begin
   {default value}
   if not TableColumns.IsNull(TableColColumnColDefIndex) then
     ColumnInfo.DefaultValue := TableColumns.GetString(TableColColumnColDefIndex);
+end;
+
+{**
+  Maps the given <code>Metadata</code> column name to its
+  <code>Metadata</code> column index.
+  First searches with case-sensivity then without
+
+  @param columnName the name of the column
+  @return the column index of the given column name
+}
+function TZAbstractResultSetMetadata.FindColumn(const ColumnName: string): Integer;
+var
+  I: Integer;
+  ColumnNameUpper: string;
+begin
+  { Search for case sensitive columns. }
+  for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    if GetColumnLabel(I) = ColumnName then
+    begin
+      Result := I;
+      Exit;
+    end;
+
+  { Search for case insensitive columns. }
+  ColumnNameUpper := AnsiUpperCase(ColumnName);
+  for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    if AnsiUpperCase(GetColumnLabel(I)) = ColumnNameUpper then
+    begin
+      Result := I;
+      Exit;
+    end;
+
+  Result := InvalidDbcIndex;
 end;
 
 {**

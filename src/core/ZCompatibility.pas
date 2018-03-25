@@ -463,9 +463,7 @@ var
 
 implementation
 
-{$IFDEF FAST_MOVE}
-uses ZFastCode;
-{$ENDIF}
+uses ZConnProperties {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 function TZCodePagedObject.GetConSettings: PZConSettings;
 begin
@@ -478,30 +476,30 @@ begin
   begin
     {$IFDEF UNICODE}
     ConSettings.CTRL_CP := DefaultSystemCodePage;
-    if Info.values['controls_cp'] = 'GET_ACP' then
+    if Info.Values[ConnProps_ControlsCP] = 'GET_ACP' then
       ConSettings.CPType := cGET_ACP
     else
       ConSettings.CPType := cCP_UTF16;
     ConSettings.AutoEncode := True;
     {$ELSE}
       {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING)}
-      ConSettings.AutoEncode := Info.Values['AutoEncodeStrings'] = 'ON'; //compatibitity Option for existing Applications;
+      ConSettings.AutoEncode := Info.Values[ConnProps_AutoEncodeStrings] = 'True'; //compatibitity Option for existing Applications;
       {$ELSE}
       ConSettings.AutoEncode := False;
       {$IFEND}
-    if Info.values['controls_cp'] = 'GET_ACP' then
+    if Info.Values[ConnProps_ControlsCP] = 'GET_ACP' then
     begin
       ConSettings.CPType := cGET_ACP;
       ConSettings.CTRL_CP := ZOSCodePage;
     end
     else
-      if Info.values['controls_cp'] = 'CP_UTF8' then
+      if Info.Values[ConnProps_ControlsCP] = 'CP_UTF8' then
       begin
         ConSettings.CPType := cCP_UTF8;
         ConSettings.CTRL_CP := 65001;
       end
       else
-        if Info.values['controls_cp'] = 'CP_UTF16' then
+        if Info.Values[ConnProps_ControlsCP] = 'CP_UTF16' then
         begin
           {$IFDEF WITH_WIDEFIELDS}
           ConSettings.CPType := cCP_UTF16;

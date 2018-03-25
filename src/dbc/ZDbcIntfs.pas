@@ -56,6 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
+  {$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+  {$ENDIF USE_SYNCOMMONS}
   Types, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF}, SysUtils,
   ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema,
   ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver, ZURL;
@@ -72,20 +75,29 @@ const
 
 // Exceptions
 type
+  TZExceptionSpecificData = class
+  public
+    function Clone: TZExceptionSpecificData; virtual; abstract;
+  end;
 
   {** Abstract SQL exception. }
   EZSQLThrowable = class(Exception)
   private
     FErrorCode: Integer;
     FStatusCode: String;
+  protected
+    FSpecificData: TZExceptionSpecificData;
   public
     constructor Create(const Msg: string);
     constructor CreateWithCode(const ErrorCode: Integer; const Msg: string);
     constructor CreateWithStatus(const StatusCode: String; const Msg: string);
+    constructor CreateWithCodeAndStatus(ErrorCode: Integer; const StatusCode: String; const Msg: string);
     constructor CreateClone(const E:EZSQLThrowable);
+    destructor Destroy; override;
 
     property ErrorCode: Integer read FErrorCode;
     property StatusCode: string read FStatuscode; // The "String" Errocode // FirmOS
+    property SpecificData: TZExceptionSpecificData read FSpecificData; // Engine-specific data
   end;
 
   {** Generic SQL exception. }
@@ -97,18 +109,24 @@ type
 // Data types
 type
   {** Defines supported SQL types. }
-  TZSQLType = (stUnknown, stBoolean,
-    stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
-    stFloat, stDouble, stCurrency, stBigDecimal,
-    stString, stUnicodeString,
-    stBytes, stGUID,
+  TZSQLType = (stUnknown,
+    //fixed size DataTypes first
+    stBoolean,
+    stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,  //ordinals
+    stFloat, stDouble, stCurrency, stBigDecimal, //floats
     stDate, stTime, stTimestamp,
-    stArray, stDataSet,
-    stAsciiStream, stUnicodeStream, stBinaryStream);
+    stGUID,
+    //now varying size types in equal order
+    stString, stUnicodeString, stBytes,
+    stAsciiStream, stUnicodeStream, stBinaryStream,
+    //finally the object types
+    stArray, stDataSet);
 
   {** Defines a transaction isolation level. }
   TZTransactIsolationLevel = (tiNone, tiReadUncommitted, tiReadCommitted,
     tiRepeatableRead, tiSerializable);
+
+  TZSupportedTransactIsolationLevels = set of TZTransactIsolationLevel;
 
   {** Defines a resultset fetch direction. }
   TZFetchDirection = (fdForward, fdReverse, fdUnknown);
@@ -150,6 +168,13 @@ type
   {** Defines a locate mode. }
   TZLocateUpdatesMode = (loWhereAll, loWhereChanged, loWhereKeyOnly);
 
+  {** Defines a MoreResults state }
+  TZMoreResultsIndicator = (mriUnknown, mriHasNoMoreResults, mriHasMoreResults);
+
+  TZServerProvider = (spUnknown, spMSSQL, spMSJet, spOracle, spSybase,
+    spPostgreSQL, spIB_FB, spMySQL, spNexusDB, spSQLite, spDB2, spAS400,
+    spInformix, spCUBRID, spFoxPro);
+
 // Interfaces
 type
 
@@ -180,16 +205,16 @@ type
 
     function GetDriver(const Url: string): IZDriver;
     function GetClientVersion(const Url: string): Integer;
-    procedure RegisterDriver(Driver: IZDriver);
-    procedure DeregisterDriver(Driver: IZDriver);
+    procedure RegisterDriver(const Driver: IZDriver);
+    procedure DeregisterDriver(const Driver: IZDriver);
 
     function GetDrivers: IZCollection;
 
     function GetLoginTimeout: Integer;
     procedure SetLoginTimeout(Seconds: Integer);
 
-    procedure AddLoggingListener(Listener: IZLoggingListener);
-    procedure RemoveLoggingListener(Listener: IZLoggingListener);
+    procedure AddLoggingListener(const Listener: IZLoggingListener);
+    procedure RemoveLoggingListener(const Listener: IZLoggingListener);
     function HasLoggingListener: Boolean;
 
     procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
@@ -226,6 +251,11 @@ type
     function GetSubVersion: Integer;
     function GetTokenizer: IZTokenizer;
     function GetStatementAnalyser: IZStatementAnalyser;
+  end;
+
+  IImmediatelyReleasable = interface(IZInterface)
+    ['{7AA5A5DA-5EC7-442E-85B0-CCCC71C13169}']
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable);
   end;
 
   {** Database Connection interface. }
@@ -303,6 +333,8 @@ type
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
     function GetClientVariantManager: IZClientVariantManager;
+    function GetURL: String;
+    function GetServerProvider: TZServerProvider;
 
     {$IFDEF ZEOS_TEST_ONLY}
     function GetTestMode : Byte;
@@ -368,11 +400,12 @@ type
     function GetConnection: IZConnection;
     function GetIdentifierConvertor: IZIdentifierConvertor;
 
-    procedure ClearCache;overload; 
-    procedure ClearCache(const Key: string);overload;
+    procedure ClearCache; overload;
+    procedure ClearCache(const Key: string); overload;
 
-    function AddEscapeCharToWildcards(const Pattern:string): string;
-    function NormalizePatternCase(Pattern:String): string;
+    function AddEscapeCharToWildcards(const Pattern: string): string;
+    function NormalizePatternCase(const Pattern: String): string;
+    function CloneCachedResultSet(const ResultSet: IZResultSet): IZResultSet;
   end;
 
   {**
@@ -537,6 +570,7 @@ type
     function GetSQL : String;
 
     procedure Close;
+    function IsClosed: Boolean;
 
     function GetMaxFieldSize: Integer;
     procedure SetMaxFieldSize(Value: Integer);
@@ -629,7 +663,6 @@ type
 
     procedure ClearParameters;
 
-    procedure AddBatchPrepared;
     function GetMetadata: IZResultSetMetadata;
   end;
 
@@ -681,7 +714,7 @@ type
   IZParamNamedCallableStatement = interface(IZCallableStatement)
     ['{99882891-81B2-4F3E-A3D7-35B6DCAA7136}']
     procedure RegisterParamTypeAndName(const ParameterIndex:integer;
-      ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
+      const ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
   end;
 
   {** EH: sort helper procs }
@@ -700,6 +733,7 @@ type
     procedure Close;
     procedure ResetCursor;
     function WasNull: Boolean;
+    function IsClosed: Boolean;
 
     //======================================================================
     // Methods for accessing results by column index
@@ -713,7 +747,6 @@ type
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
-    function GetBinaryString(ColumnIndex: Integer): RawByteString; deprecated;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString;
     function GetPWideChar(ColumnIndex: Integer): PWideChar; overload;
     function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
@@ -754,7 +787,6 @@ type
     function GetAnsiStringByName(const ColumnName: string): AnsiString;
     function GetUTF8StringByName(const ColumnName: string): UTF8String;
     function GetRawByteStringByName(const ColumnName: string): RawByteString;
-    function GetBinaryStringByName(const ColumnName: string): RawByteString; deprecated;
     function GetUnicodeStringByName(const ColumnName: string): ZWideString;
     function GetPWideCharByName(const ColumnName: string): PWideChar; overload;
     function GetPWideCharByName(const ColumnName: string; out Len: NativeUInt): PWideChar; overload;
@@ -930,6 +962,11 @@ type
 
     function GetStatement: IZStatement;
     function GetConSettings: PZConsettings;
+
+    {$IFDEF USE_SYNCOMMONS}
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False);
+    {$ENDIF USE_SYNCOMMONS}
   end;
 
   {** TDataSet interface}
@@ -942,6 +979,8 @@ type
   {** ResultSet metadata interface. }
   IZResultSetMetadata = interface(IZInterface)
     ['{47CA2144-2EA7-42C4-8444-F5154369B2D7}']
+
+    function FindColumn(const ColumnName: string): Integer;
 
     function GetColumnCount: Integer;
     function IsAutoIncrement(ColumnIndex: Integer): Boolean;
@@ -1056,7 +1095,7 @@ var
 
 implementation
 
-uses ZMessages,{$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF};
+uses ZMessages, ZConnProperties, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF};
 
 type
   {** Driver Manager interface. }
@@ -1082,8 +1121,8 @@ type
       const Password: string): IZConnection;
 
     function GetDriver(const Url: string): IZDriver;
-    procedure RegisterDriver(Driver: IZDriver);
-    procedure DeregisterDriver(Driver: IZDriver);
+    procedure RegisterDriver(const Driver: IZDriver);
+    procedure DeregisterDriver(const Driver: IZDriver);
 
     function GetDrivers: IZCollection;
 
@@ -1092,8 +1131,8 @@ type
     function GetLoginTimeout: Integer;
     procedure SetLoginTimeout(Value: Integer);
 
-    procedure AddLoggingListener(Listener: IZLoggingListener);
-    procedure RemoveLoggingListener(Listener: IZLoggingListener);
+    procedure AddLoggingListener(const Listener: IZLoggingListener);
+    procedure RemoveLoggingListener(const Listener: IZLoggingListener);
     function HasLoggingListener: Boolean;
 
     procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
@@ -1169,7 +1208,7 @@ end;
   Registers a driver for specific database.
   @param Driver a driver to be registered.
 }
-procedure TZDriverManager.RegisterDriver(Driver: IZDriver);
+procedure TZDriverManager.RegisterDriver(const Driver: IZDriver);
 begin
   if not FDrivers.Contains(Driver) then
     FDrivers.Add(Driver);
@@ -1179,7 +1218,7 @@ end;
   Unregisters a driver for specific database.
   @param Driver a driver to be unregistered.
 }
-procedure TZDriverManager.DeregisterDriver(Driver: IZDriver);
+procedure TZDriverManager.DeregisterDriver(const Driver: IZDriver);
 begin
   FDrivers.Remove(Driver);
 end;
@@ -1252,8 +1291,8 @@ var
 begin
   Info := TStringList.Create;
   try
-    Info.Add('username=' + User);
-    Info.Add('password=' + Password);
+    Info.Values[ConnProps_Username] := User;
+    Info.Values[ConnProps_Password] := Password;
     Result := GetConnectionWithParams(Url, Info);
   finally
     Info.Free;
@@ -1274,7 +1313,7 @@ end;
   Adds a logging listener to log SQL events.
   @param Listener a logging interface to be added.
 }
-procedure TZDriverManager.AddLoggingListener(Listener: IZLoggingListener);
+procedure TZDriverManager.AddLoggingListener(const Listener: IZLoggingListener);
 begin
   fCriticalSection.Enter;
   try
@@ -1289,7 +1328,7 @@ end;
   Removes a logging listener from the list.
   @param Listener a logging interface to be removed.
 }
-procedure TZDriverManager.RemoveLoggingListener(Listener: IZLoggingListener);
+procedure TZDriverManager.RemoveLoggingListener(const Listener: IZLoggingListener);
 begin
   fCriticalSection.Enter;
   try
@@ -1455,17 +1494,19 @@ end;
 
 { EZSQLThrowable }
 
-{**
-  Creates an exception with message string.
-  @param Msg a error description.
-}
 constructor EZSQLThrowable.CreateClone(const E: EZSQLThrowable);
 begin
   inherited Create(E.Message);
   FErrorCode:=E.ErrorCode;
   FStatusCode:=E.Statuscode;
+  if E.SpecificData <> nil then
+    FSpecificData := E.SpecificData.Clone;
 end;
 
+{**
+  Creates an exception with message string.
+  @param Msg a error description.
+}
 constructor EZSQLThrowable.Create(const Msg: string);
 begin
   inherited Create(Msg);
@@ -1484,10 +1525,35 @@ begin
   FErrorCode := ErrorCode;
 end;
 
+{**
+  Creates an exception with message string.
+  @param ErrorCode a native server error code.
+  @param StatusCode a server status code.
+  @param Msg a error description.
+}
+constructor EZSQLThrowable.CreateWithCodeAndStatus(ErrorCode: Integer;
+  const StatusCode, Msg: string);
+begin
+  inherited Create(Msg);
+  FErrorCode := ErrorCode;
+  FStatusCode := StatusCode;
+end;
+
+{**
+  Creates an exception with message string.
+  @param StatusCode a server status code.
+  @param Msg a error description.
+}
 constructor EZSQLThrowable.CreateWithStatus(const StatusCode, Msg: string);
 begin
   inherited Create(Msg);
   FStatusCode := StatusCode;
+end;
+
+destructor EZSQLThrowable.Destroy;
+begin
+  FreeAndNil(FSpecificData);
+  inherited;
 end;
 
 initialization

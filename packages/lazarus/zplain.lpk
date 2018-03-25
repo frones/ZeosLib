@@ -17,8 +17,8 @@
       </Parsing>
     </CompilerOptions>
     <Description Value="Zeos Plain Database API"/>
-    <Version Major="7" Minor="2"/>
-    <Files Count="21">
+    <Version Major="7" Minor="3"/>
+    <Files Count="23">
       <Item1>
         <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
         <UnitName Value="ZPlainDbLibDriver"/>
@@ -87,11 +87,20 @@
         <Filename Value="../../src/plain/ZOleDB.pas"/>
         <UnitName Value="ZOleDB"/>
       </Item21>
+      <Item22>
+        <Filename Value="../../src/plain/ZPlainOleDBDriver.pas"/>
+        <UnitName Value="ZPlainOleDBDriver"/>
+      </Item22>
+      <Item23>
+        <Filename Value="../../src/plain/ZPlainODBCDriver.pas"/>
+        <UnitName Value="ZPlainODBCDriver"/>
+      </Item23>
     </Files>
     <RequiredPkgs Count="3">
       <Item1>
         <PackageName Value="zcore"/>
-        <MinVersion Major="7" Minor="2" Valid="True"/>
+        <MaxVersion Major="7" Minor="3"/>
+        <MinVersion Major="7" Minor="3" Valid="True"/>
       </Item1>
       <Item2>
         <PackageName Value="LCL"/>

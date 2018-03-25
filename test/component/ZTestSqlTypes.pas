@@ -75,7 +75,7 @@ type
 
 implementation
 
-uses Classes,
+uses Classes, ZDbcIntfs,
   ZTestConsts, ZSysUtils, ZTestCase;
 
 { TZTestSQLTypesCase }
@@ -130,7 +130,9 @@ begin
   Query.FieldByName('d_id').AsInteger := TEST_ROW_ID;
 
   if StartsWith(Protocol, 'oracle') or (Protocol = 'mssql') or
-    (Protocol = 'sybase') or (Protocol = 'ado') or StartsWith(Protocol, 'FreeTDS') then
+    (Protocol = 'sybase') or StartsWith(Protocol, 'FreeTDS') or
+    ((StartsWith(Protocol, 'OleDB') or (Protocol = 'ado') or StartsWith(Protocol, 'odbc'))
+      and (Connection.DbcConnection.GetServerProvider in [spOracle, spSybase, spMSSQL])) then
   begin
     CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_date').DataType));
     CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_time').DataType))

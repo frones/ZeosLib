@@ -43,6 +43,7 @@
 {.$DEFINE GENERIC_INDEX}
 //common compilation directives
 {$DEFINE ZEOS72UP}
+{$DEFINE ZEOS73UP}
 
 // Uncomment these defines to disable some DB drivers (reduce binary size)
 {.$DEFINE ZEOS_DISABLE_MYSQL}
@@ -54,7 +55,10 @@
 {.$DEFINE ZEOS_DISABLE_ORACLE}
 {.$DEFINE ZEOS_DISABLE_ASA}
 {.$DEFINE ZEOS_DISABLE_POOLED}
+{.$DEFINE ZEOS_DISABLE_OLEDB}
+{.$DEFINE ZEOS_DISABLE_ODBC}
 
+{.$DEFINE USE_SYNCOMMONS} //enable JSON content support by using SynCommons.pas from Synopse project 
 {.$DEFINE WITH_ZSTRINGFIELDS}
 
 // In Version 6.1.5 there are several bugs with the TZSQLMetadata-Component
@@ -392,6 +396,16 @@
 // Enables ASA support in TZConnection/TZDataset
 {$IFNDEF ZEOS_DISABLE_ASA}
 {$DEFINE ENABLE_ASA}
+{$ENDIF}
+
+// Enables OleDB support in TZConnection/TZDataset
+{$IF not defined(ZEOS_DISABLE_OLEDB) and defined(MSWINDOWS)}
+  {$DEFINE ENABLE_OLEDB}
+{$IFEND}
+
+// Enables ODBC support in TZConnection/TZDataset
+{$IFNDEF ZEOS_DISABLE_ODBC}
+{$DEFINE ENABLE_ODBC}
 {$ENDIF}
 
 // Enables Pooled connection support for all enabled db drivers in TZConnection/TZDataset

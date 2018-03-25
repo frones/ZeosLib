@@ -56,8 +56,8 @@ interface
 
 uses
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
-  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility,
-  ZAbstractRODataset, ZMessages;
+  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZVariant,
+  ZAbstractRODataset, ZMessages, ZStoredProcedure;
 
 type
   {** Implements a test case for . }
@@ -101,11 +101,48 @@ type
     procedure TestDefineFields;
     procedure TestDefineSortedFields;
     procedure TestEmptyMemoAfterFullMemo;
+    procedure TestInsertReturning;
   end;
 
   TZGenericTestDataSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
   published
     procedure TestVeryLargeBlobs;
+  end;
+  {$IF not declared(TTestMethod)}
+    TTestMethod = procedure of object;
+  {$IFEND}
+
+  TZInterbaseTestGUIDS = class(TZAbstractCompSQLTestCase)
+  private
+    CurrentTest: string;
+    Query: TZQuery;
+    SP: TZStoredProc;
+    procedure SetDefaults;
+    procedure DoTest(const TestDescr: string; TestMethod: TTestMethod);
+    procedure CheckEquals(expected, actual: TFieldType; msg: string = ''); overload;
+    procedure CheckNotEquals(expected, actual: TFieldType; msg: string = ''); overload;
+  private // Internal test methods
+    procedure Test_QT_Type_Type;
+    procedure Test_QT_Type_Dom;
+    procedure Test_QT_Type_FName;
+    procedure Test_QT_GetVal;
+    procedure Test_QT_SetVal;
+    procedure Test_QT_ParamSetVal;
+    procedure Test_QSP_Type_Type;
+    procedure Test_QSP_Type_Dom;
+    procedure Test_QSP_Type_FName;
+    procedure Test_SP_ParamType_Dom;
+    procedure Test_SP_ParamType_Type;
+    procedure Test_SP_ParamType_Name;
+    procedure Test_SP_Type_Dom;
+    procedure Test_SP_Type_Type;
+    procedure Test_SP_ParamGUIDSetVal;
+    procedure Test_SP_ParamBytesSetVal;
+    procedure Test_SP_Type_Name;
+  protected
+    function GetSupportedProtocols: string; override;
+  published
+    procedure Test;
   end;
 
 implementation
@@ -115,8 +152,9 @@ uses
   Variants,
 {$ENDIF}
   {$IFDEF UNICODE}ZEncoding,{$ENDIF}
-  DateUtils, ZSysUtils, ZTestConsts, ZTestCase,
-  ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  Types, DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties,
+  ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
+  TypInfo;
 
 { TZGenericTestDataSet }
 
@@ -999,7 +1037,7 @@ begin
     CheckEquals(10, FieldByName('c_width').AsInteger);
     CheckEquals(10, FieldByName('c_height').AsInteger);
     CheckEquals(986.47, FieldByName('c_cost').AsFloat, 0.001);
-    //CheckEquals('#14#17#Tþ¨ª2', FieldByName('c_attributes').AsString);
+    //CheckEquals('#14#17#T???2', FieldByName('c_attributes').AsString);
     Close;
   end;
 
@@ -2236,10 +2274,64 @@ begin
   end;
 end;
 
+procedure TZGenericTestDataSet.TestInsertReturning;
+const
+  D_ID   = 0;
+  D_FLD1 = 1;
+  D_FLD2 = 2;
+  D_FLD3 = 3;
+  D_FLD4 = 4;
+
+  procedure CheckValues(Query: TZQuery);
+  begin
+    CheckEquals(1, Query.Fields[D_ID].AsInteger);
+    CheckEquals(123456, Query.Fields[D_FLD1].AsInteger);
+    CheckEquals(123.456, Query.Fields[D_FLD2].AsFloat, 0.001);
+    CheckEquals('xyz', Query.Fields[D_FLD3].AsString);
+    CheckEquals(EncodeDate(2003, 12, 11), Query.Fields[D_FLD4].AsDateTime, 0);
+  end;
+
+const
+  SQLDel = 'DELETE FROM DEFAULT_VALUES';
+  SQLIns = 'INSERT INTO DEFAULT_VALUES(D_ID) VALUES(1) RETURNING D_ID,D_FLD1,D_FLD2,D_FLD3,D_FLD4';
+  SQLSel = 'SELECT * FROM DEFAULT_VALUES';
+var
+  Query: TZQuery;
+begin
+  if not StartsWith(Protocol, 'firebird') then Exit;
+
+  Query := CreateQuery;
+  try
+    // Cleanup
+    Query.SQL.Text := SQLDel;
+    Query.ExecSQL;
+
+    // Exec direct query
+    Query.SQL.Text := SQLIns;
+    Query.Open;
+    CheckValues(Query);
+
+    // Cleanup
+    Query.SQL.Text := SQLDel;
+    Query.ExecSQL;
+
+    // Let the component generate a query
+    Query.Properties.Values['InsertReturningFields'] := 'D_FLD1,D_FLD2,D_FLD3,D_FLD4';
+    Query.SQL.Text := SQLSel;
+    Query.Open;
+    Query.Insert;
+    Query.Fields[D_ID].Value := 1;
+    Query.Post;
+    CheckValues(Query);
+  finally
+    Query.Free;
+  end;
+end;
+
 { TZGenericTestDataSetMBCs }
 
 procedure TZGenericTestDataSetMBCs.TestVeryLargeBlobs;
-const teststring: ZWideString = '123456ééàà';
+const teststring: ZWideString = '123456????';
 var
   Query: TZQuery;
   BinStreamE,BinStreamA,TextStream: TMemoryStream;
@@ -2376,6 +2468,7 @@ begin
   end;
 end;
 
+{ TZInterbaseTestGUIDS }
 procedure TZGenericTestDataSet.TestEmptyMemoAfterFullMemo;
 var
   Query: TZQuery;
@@ -2423,8 +2516,285 @@ begin
   end;
 end;
 
+const
+  TBL_NAME = 'Guids';
+  GUID_DOM_FIELD = 'GUID_DOM_FIELD';
+  GUID_TYPE_FIELD = 'GUID_TYPE_FIELD';
+  DOM_GUID = 'DOM_GUID';
+  PROC_NAME = 'GUIDTEST';
+  SelFromTblSQL = 'SELECT * FROM ' + TBL_NAME;
+  SelFromSPSQL = 'SELECT * FROM ' + PROC_NAME + '(NULL)';
+  GUID_VALUE_FB = '2F9C7089-3FA8-49E3-A4F8-BA16F53D5D86'; // value that is stored in FB (big-endian)
+  GUID_VALUE    = '89709C2F-A83F-E349-A4F8-BA16F53D5D86'; // value that is used in app (little-endian)
+
+var
+  GuidVal: TGUID;
+
+function TZInterbaseTestGUIDS.GetSupportedProtocols: string;
+begin
+  Result := pl_all_interbase;
+end;
+
+procedure TZInterbaseTestGUIDS.SetDefaults;
+begin
+  Connection.Disconnect;
+  Connection.Properties.Clear;
+  Query.SQL.Text := '';
+  Query.Properties.Clear;
+  Query.Params.Clear;
+  SP.StoredProcName := '';
+  SP.Params.Clear;
+end;
+
+procedure TZInterbaseTestGUIDS.DoTest(const TestDescr: string; TestMethod: TTestMethod);
+begin
+  SetDefaults;
+  CurrentTest := TestDescr;
+  TestMethod;
+end;
+
+procedure TZInterbaseTestGUIDS.Test_QT_Type_Type;
+begin
+  Connection.Properties.Values[ConnProps_SetGUIDByType] := StrTrue;
+  Query.SQL.Text := SelFromTblSQL;
+  Query.Open;
+  CheckEquals(ftGuid, Query.FieldByName(GUID_DOM_FIELD).DataType, CurrentTest + ' ' + GUID_DOM_FIELD);
+  CheckEquals(ftGuid, Query.FieldByName(GUID_TYPE_FIELD).DataType, CurrentTest + ' ' + GUID_TYPE_FIELD);
+end;
+
+procedure TZInterbaseTestGUIDS.Test_QT_Type_Dom;
+begin
+  Connection.Properties.Values[ConnProps_GUIDDomains] := DOM_GUID;
+  Query.SQL.Text := SelFromTblSQL;
+  Query.Open;
+  CheckEquals(ftGuid, Query.FieldByName(GUID_DOM_FIELD).DataType, CurrentTest + ' ' + GUID_DOM_FIELD);
+  CheckNotEquals(ftGuid, Query.FieldByName(GUID_TYPE_FIELD).DataType, CurrentTest + ' ' + GUID_TYPE_FIELD);
+end;
+
+procedure TZInterbaseTestGUIDS.Test_QT_Type_FName;
+begin
+  Connection.Properties.Values[DSProps_GUIDFields] := GUID_TYPE_FIELD;
+  Query.SQL.Text := SelFromTblSQL;
+  Query.Open;
+  CheckNotEquals(ftGuid, Query.FieldByName(GUID_DOM_FIELD).DataType, CurrentTest + ' ' + GUID_DOM_FIELD);
+  CheckEquals(ftGuid, Query.FieldByName(GUID_TYPE_FIELD).DataType, CurrentTest + ' ' + GUID_TYPE_FIELD);
+end;
+
+procedure TZInterbaseTestGUIDS.Test_QT_GetVal;
+var
+  guid: TGUID;
+begin
+  Connection.Properties.Values[ConnProps_GUIDDomains] := DOM_GUID;
+  Query.SQL.Text := SelFromTblSQL;
+  Query.Open;
+  guid := TGuidField(Query.FieldByName(GUID_DOM_FIELD)).AsGuid;
+  CheckEquals(GUIDToString(GuidVal), GUIDToString(guid), CurrentTest);
+end;
+
+procedure TZInterbaseTestGUIDS.Test_QT_SetVal;
+var
+  f: TGuidField;
+  guid: TGUID;
+begin
+  Connection.Properties.Values[ConnProps_GUIDDomains] := DOM_GUID;
+  Query.SQL.Text := SelFromTblSQL;
+  Query.Open;
+  f := TGuidField(Query.FieldByName(GUID_DOM_FIELD));
+  Query.Edit;
+  guid := f.AsGuid;
+  Inc(guid.D2);
+  f.AsGuid := guid;
+  Query.Post;
+
+  Query.Refresh;
+  guid := GuidVal;
+  Inc(guid.D2);
+  CheckEquals(GUIDToString(guid), GUIDToString(f.AsGuid), CurrentTest);
+
+  // Return old value
+  Query.Edit;
+  f.AsGuid := GuidVal;
+  Query.Post;
+end;
+
+procedure TZInterbaseTestGUIDS.Test_QT_ParamSetVal;
+begin
+  Connection.Properties.Values[ConnProps_GUIDDomains] := DOM_GUID;
+  Query.SQL.Text := 'SELECT * FROM Guids WHERE '+GUID_DOM_FIELD+'=:Guid';
+  {$IFDEF TPARAM_HAS_ASBYTES}
+  Query.Params[0].AsBytes := EncodeGUID(GuidVal).VBytes;
+  {$ELSE}
+  Query.Params[0].Value := BytesToVar(EncodeGUID(GuidVal).VBytes);
+  {$ENDIF}
+  Query.Open;
+  CheckEquals(1, Query.RecordCount, CurrentTest + ' rec count');
+  CheckEquals(GUIDToString(GuidVal), GUIDToString(TGuidField(Query.FieldByName(GUID_DOM_FIELD)).AsGuid), CurrentTest);
+end;
+
+procedure TZInterbaseTestGUIDS.Test_QSP_Type_Type;
+begin
+  Query.Properties.Values[DSProps_SetGUIDByType] := StrTrue;
+  Query.SQL.Text := SelFromSPSQL;
+  Query.Open;
+  CheckEquals(ftGuid, Query.Fields[0].DataType, CurrentTest);
+end;
+
+// ! No domain query for selects from SP's - domain assignment won't work
+procedure TZInterbaseTestGUIDS.Test_QSP_Type_Dom;
+begin
+  Connection.Properties.Values[ConnProps_GUIDDomains] := DOM_GUID;
+  Query.SQL.Text := SelFromSPSQL;
+  Query.Open;
+  CheckNotEquals(ftGuid, Query.Fields[0].DataType, CurrentTest);
+end;
+
+procedure TZInterbaseTestGUIDS.Test_QSP_Type_FName;
+begin
+  Query.Properties.Values[DSProps_GUIDFields] := 'G_OUT';
+  Query.SQL.Text := SelFromSPSQL;
+  Query.Open;
+  CheckEquals(ftGuid, Query.Fields[0].DataType, CurrentTest);
+end;
+
+procedure TZInterbaseTestGUIDS.Test_SP_ParamType_Type;
+begin
+  Connection.Properties.Values[ConnProps_SetGUIDByType] := StrTrue;
+  SP.StoredProcName := PROC_NAME;
+  SP.Active := True;
+  CheckEquals(ftGuid, SP.Params[0].DataType, CurrentTest);
+end;
+
+procedure TZInterbaseTestGUIDS.Test_SP_ParamType_Dom;
+begin
+  Connection.Properties.Values[ConnProps_GUIDDomains] := DOM_GUID;
+  SP.StoredProcName := PROC_NAME;
+  SP.Active := True;
+  CheckEquals(ftGuid, SP.Params[0].DataType, CurrentTest);
+end;
+
+procedure TZInterbaseTestGUIDS.Test_SP_ParamType_Name;
+begin
+  Connection.Properties.Values[DSProps_GUIDFields] := 'G_IN';
+  SP.StoredProcName := PROC_NAME;
+  SP.Active := True;
+  CheckEquals(ftGuid, SP.Params[0].DataType, CurrentTest);
+end;
+
+procedure TZInterbaseTestGUIDS.Test_SP_Type_Type;
+begin
+  Connection.Properties.Values[ConnProps_SetGUIDByType] := StrTrue;
+  SP.StoredProcName := PROC_NAME;
+  SP.Active := True;
+  CheckEquals(ftGuid, SP.Fields[0].DataType, CurrentTest);
+end;
+
+// ! No domain query for fields of SP's - domain assignment won't work
+procedure TZInterbaseTestGUIDS.Test_SP_Type_Dom;
+begin
+  Connection.Properties.Values[ConnProps_GUIDDomains] := DOM_GUID;
+  SP.StoredProcName := PROC_NAME;
+  SP.Active := True;
+  CheckNotEquals(ftGuid, SP.Fields[0].DataType, CurrentTest);
+end;
+
+procedure TZInterbaseTestGUIDS.Test_SP_Type_Name;
+begin
+  Connection.Properties.Values[DSProps_GUIDFields] := 'G_OUT';
+  SP.StoredProcName := PROC_NAME;
+  SP.Active := True;
+  CheckEquals(ftGuid, SP.Fields[0].DataType, CurrentTest);
+end;
+
+procedure TZInterbaseTestGUIDS.Test_SP_ParamGUIDSetVal;
+begin
+  Connection.Properties.Values[DSProps_GUIDFields] := 'G_IN,G_OUT';
+  SP.StoredProcName := PROC_NAME;
+  {$IFDEF TPARAM_HAS_ASBYTES}
+  SP.Params[0].AsBytes := EncodeGUID(GuidVal).VBytes;
+  {$ELSE}
+  SP.Params[0].Value := BytesToVar(EncodeGUID(GuidVal).VBytes);
+  {$ENDIF}
+  SP.Params[0].DataType := ftGuid;
+  SP.Active := True;
+  CheckEquals(1, SP.RecordCount, CurrentTest + ' rec count');
+  CheckEquals(GUIDToString(GuidVal), GUIDToString(TGuidField(SP.FieldByName('G_OUT')).AsGuid), CurrentTest);
+end;
+
+procedure TZInterbaseTestGUIDS.Test_SP_ParamBytesSetVal;
+begin
+  Connection.Properties.Values[DSProps_GUIDFields] := 'G_IN,G_OUT';
+  SP.StoredProcName := PROC_NAME;
+  {$IFDEF TPARAM_HAS_ASBYTES}
+  SP.Params[0].AsBytes := EncodeGUID(GuidVal).VBytes;
+  SP.Active := True;
+  CheckEquals(1, SP.RecordCount, CurrentTest + ' rec count');
+  CheckEquals(GUIDToString(GuidVal), GUIDToString(TGuidField(SP.FieldByName('G_OUT')).AsGuid), CurrentTest);
+  {$ENDIF}
+end;
+
+procedure TZInterbaseTestGUIDS.Test;
+var GuidHex: string;
+begin
+  // Init variables
+  GuidVal := StringToGUID('{'+GUID_VALUE+'}');
+  GuidHex := StringReplace(GUID_VALUE_FB, '-', '', [rfReplaceAll]);
+  // set value to DB table
+  Connection.Connect;
+  Connection.ExecuteDirect(
+    Format('DELETE FROM %s', [TBL_NAME]));
+  Connection.ExecuteDirect(
+    Format('INSERT INTO %s (ID, %s) VALUES(1, x''%s'')', [TBL_NAME, GUID_DOM_FIELD, GuidHex]));
+  Connection.Disconnect;
+
+  Query := CreateQuery;
+  SP := TZStoredProc.Create(nil);
+  SP.Connection := Connection;
+
+  // Now run tests
+  DoTest('Query from table: GUID type by type', Test_QT_Type_Type);
+  DoTest('Query from table: GUID type by domain', Test_QT_Type_Dom);
+  DoTest('Query from table: GUID type by field name', Test_QT_Type_FName);
+  DoTest('Query from table: get GUID value', Test_QT_GetVal);
+  DoTest('Query from table: set GUID value', Test_QT_SetVal);
+  DoTest('Query from table: set param GUID value', Test_QT_ParamSetVal);
+  DoTest('Query from SP: GUID type by type', Test_QSP_Type_Type);
+  DoTest('Query from SP: GUID type by domain (false)', Test_QSP_Type_Dom);
+  DoTest('Query from SP: GUID type by field name', Test_QSP_Type_FName);
+  DoTest('SP: GUID type of param by type', Test_SP_ParamType_Type);
+  DoTest('SP: GUID type of param by domain', Test_SP_ParamType_Dom);
+  DoTest('SP: GUID type of param by name', Test_SP_ParamType_Name);
+  DoTest('SP: GUID type of field by type', Test_SP_Type_Type);
+  DoTest('SP: GUID type of field by domain (false)', Test_SP_Type_Dom);
+  DoTest('SP: GUID type of field by name', Test_SP_Type_Name);
+  DoTest('SP: set param GUID value, type ftGUID', Test_SP_ParamGUIDSetVal);
+  DoTest('SP: set param GUID value, type ftBytes', Test_SP_ParamBytesSetVal);
+
+  FreeAndNil(Query);
+  FreeAndNil(SP);
+end;
+
+procedure TZInterbaseTestGUIDS.CheckEquals(expected, actual: TFieldType;
+  msg: string);
+begin
+  CheckEquals(
+    GetEnumName(TypeInfo(TFieldType), Integer(expected)),
+    GetEnumName(TypeInfo(TFieldType), Integer(actual)),
+    msg
+   );
+end;
+
+procedure TZInterbaseTestGUIDS.CheckNotEquals(expected, actual: TFieldType;
+  msg: string);
+begin
+  CheckNotEquals(
+    GetEnumName(TypeInfo(TFieldType), Integer(expected)),
+    GetEnumName(TypeInfo(TFieldType), Integer(actual)),
+    msg
+   );
+end;
+
 initialization
   RegisterTest('component',TZGenericTestDataSet.Suite);
   RegisterTest('component',TZGenericTestDataSetMBCs.Suite);
+  RegisterTest('component',TZInterbaseTestGUIDS.Suite);
 end.
-

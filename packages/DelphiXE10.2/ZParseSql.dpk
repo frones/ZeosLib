@@ -35,6 +35,10 @@ requires
 contains
 {$I ZPackages.inc} //after simplify Zeos.Inc by using {$IF CompilerVersion > x} i need to move this include AFTER contains!
 
+{$IF defined(ENABLE_ODBC) or defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
+  ZODBCToken in '..\..\src\parsesql\ZODBCToken.pas',
+{$IFEND}
+
 {$IFDEF ENABLE_ADO}
   ZAdoToken in '..\..\src\parsesql\ZAdoToken.pas',
 {$ENDIF}

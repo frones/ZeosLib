@@ -56,10 +56,14 @@ interface
 {$I ZDbc.inc}
 
 uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+{$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs,{$ENDIF}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA, ZCompatibility,
-  ZDbcResultSetMetadata, ZDbcASAUtils, ZMessages, ZPlainASAConstants;
+  ZDbcResultSetMetadata, ZDbcASAUtils, ZMessages, ZPlainASAConstants,
+  ZPLainASADriver;
 
 type
 
@@ -73,6 +77,7 @@ type
     FStmtNum: SmallInt;
     FSqlData: IZASASQLDA;
     FASAConnection: IZASAConnection;
+    FPlainDriver: TZASAPlainDriver;
   private
     procedure CheckIndex(const Index: Word);
     procedure CheckRange(const Index: Word);
@@ -108,6 +113,10 @@ type
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
 
     property SQLData: IZASASQLDA read FSQLData;
+    {$IFDEF USE_SYNCOMMONS}
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
+    {$ENDIF USE_SYNCOMMONS}
   end;
 
   TZASAParamererResultSet = Class(TZASAAbstractResultSet)
@@ -197,6 +206,130 @@ uses
 
 { TZASAResultSet }
 
+{$IFDEF USE_SYNCOMMONS}
+procedure TZASAAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
+var L: NativeUInt;
+    P: Pointer;
+    C, H, I: SmallInt;
+    Blob: IZBlob;
+begin
+  //init
+  if JSONWriter.Expand then
+    JSONWriter.Add('{');
+  if Assigned(JSONWriter.Fields) then
+    H := High(JSONWriter.Fields) else
+    H := High(JSONWriter.ColNames);
+  for I := 0 to H do begin
+    if Pointer(JSONWriter.Fields) = nil then
+      C := I else
+      C := JSONWriter.Fields[i];
+    {$R-}
+    with FSQLDA.sqlvar[C] do
+      if (sqlind <> nil) and (sqlind^ < 0) then
+        if JSONWriter.Expand then begin
+          if (not SkipNullFields) then begin
+            JSONWriter.AddString(JSONWriter.ColNames[I]);
+            JSONWriter.AddShort('null,')
+          end;
+        end else
+          JSONWriter.AddShort('null,')
+      else begin
+        if JSONWriter.Expand then
+          JSONWriter.AddString(JSONWriter.ColNames[I]);
+        case sqlType and $FFFE of
+          DT_NOTYPE           : JSONWriter.AddShort('""');
+          DT_SMALLINT         : JSONWriter.Add(PSmallint(sqldata)^);
+          DT_INT              : JSONWriter.Add(PInteger(sqldata)^);
+          //DT_DECIMAL bound to double
+          DT_FLOAT            : JSONWriter.AddSingle(PSingle(sqldata)^);
+          DT_DOUBLE           : JSONWriter.AddDouble(PDouble(sqldata)^);
+          //DT_DATE bound to TIMESTAMP_STRUCT
+          DT_STRING,
+          DT_FIXCHAR,
+          DT_VARCHAR          : begin
+                                  JSONWriter.Add('"');
+                                  if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+                                    JSONWriter.AddJSONEscape(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length)
+                                  else begin
+                                    FUniTemp := PRawToUnicode(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length, ConSettings^.ClientCodePage^.CP);
+                                    JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+                                  end;
+                                  JSONWriter.Add('"');
+                                end;
+          DT_LONGVARCHAR      : begin
+                                  JSONWriter.Add('"');
+                                  blob := TZASAClob.Create(FsqlData, C, ConSettings);
+                                  P := blob.GetPAnsiChar(zCP_UTF8);
+                                  JSONWriter.AddJSONEscape(P, blob.Length);
+                                  JSONWriter.Add('"');
+                                end;
+          DT_TIME,
+          DT_TIMESTAMP,
+          DT_TIMESTAMP_STRUCT : begin
+                                  JSONWriter.Add('"');
+                                  JSONWriter.AddDateTime(EncodeDate(
+                                    PZASASQLDateTime( sqlData).Year,
+                                    PZASASQLDateTime( sqlData).Month + 1,
+                                    PZASASQLDateTime( sqlData).Day) +
+                                    EncodeTime( PZASASQLDateTime( sqlData).Hour,
+                                    PZASASQLDateTime( sqlData).Minute,
+                                    PZASASQLDateTime( sqlData).Second,
+                                    PZASASQLDateTime( sqlData).MicroSecond div 1000));
+                                  JSONWriter.Add('"');
+                                end;
+          DT_BINARY           : JSONWriter.WrBase64(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length, True);
+          DT_LONGBINARY       : begin
+                                  P := nil;
+                                  try
+                                    FSqlData.ReadBlobToMem(C, P, L{%H-});
+                                    JSONWriter.WrBase64(P, L, True);
+                                  finally
+                                    FreeMem(P);
+                                  end;
+                                end;
+          //DT_VARIABLE: ?
+          DT_TINYINT          : JSONWriter.Add(PShortInt(sqldata)^);
+          DT_BIGINT           : JSONWriter.Add(PInt64(sqldata)^);
+          DT_UNSINT           : JSONWriter.AddU(PLongWord(sqldata)^);
+          DT_UNSSMALLINT      : JSONWriter.AddU(PWord(sqldata)^);
+          DT_UNSBIGINT        : JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PUInt64(sqldata)^));
+          DT_BIT              : JSONWriter.AddShort(JSONBool[PByte(sqldata)^ <> 0]);
+          DT_NSTRING,
+          DT_NFIXCHAR,
+          DT_NVARCHAR         : begin
+                                  JSONWriter.Add('"');
+                                  if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+                                    JSONWriter.AddJSONEscape(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length)
+                                  else begin
+                                    FUniTemp := PRawToUnicode(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length, ConSettings^.ClientCodePage^.CP);
+                                    JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+                                  end;
+                                  JSONWriter.Add('"');
+                                end;
+          DT_LONGNVARCHAR     : begin
+                                JSONWriter.Add('"');
+                                blob := TZASAClob.Create(FsqlData, C, ConSettings);
+                                P := blob.GetPAnsiChar(zCP_UTF8);
+                                JSONWriter.AddJSONEscape(P, blob.Length);
+                                JSONWriter.Add('"');
+                              end;
+          else
+            FSqlData.CreateException( Format( SErrorConvertionField,
+              [ FSqlData.GetFieldName(C), ConvertASATypeToString( sqlType)]));
+        end;
+        JSONWriter.Add(',');
+      end;
+  end;
+  if EndJSONObject then
+  begin
+    JSONWriter.CancelLastComma; // cancel last ','
+    if JSONWriter.Expand then
+      JSONWriter.Add('}');
+  end;
+end;
+{$ENDIF USE_SYNCOMMONS}
+
 {**
   Constructs this object, assignes main properties and
   opens the record set.
@@ -218,7 +351,7 @@ begin
   FCursorName := CursorName;
   FCachedBlob := CachedBlob;
   FASAConnection := Statement.GetConnection as IZASAConnection;
-
+  FPLainDriver := FASAConnection.GetPlainDriver;
   FStmtNum := StmtNum;
   ResultSetType := rtScrollSensitive;
   ResultSetConcurrency := rcUpdatable;
@@ -1314,7 +1447,7 @@ end;
 procedure TZASAAbstractResultSet.ResetCursor;
 begin
   if FCursorName <> '' then
-    FASAConnection.GetPlainDriver.db_close(FASAConnection.GetDBHandle, PAnsiChar(FCursorName));
+    FPLainDriver.dbpp_close(FASAConnection.GetDBHandle, Pointer(FCursorName));
   inherited ResetCursor;
 end;
 
@@ -1399,9 +1532,9 @@ begin
   if Closed or ((MaxRows > 0) and (Row >= MaxRows)) then
     Exit;
 
-  FASAConnection.GetPlainDriver.db_fetch( FASAConnection.GetDBHandle,
+  FPlainDriver.dbpp_fetch( FASAConnection.GetDBHandle,
     Pointer(FCursorName), CUR_ABSOLUTE, Row, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
-  ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
+  ZDbcASAUtils.CheckASAError(FPlainDriver,
     FASAConnection.GetDBHandle, lcOther, ConSettings);
 
   if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then
@@ -1440,13 +1573,12 @@ begin
   Result := False;
   if Closed or ((RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows))) then
     Exit;
-  FASAConnection.GetPlainDriver.db_fetch( FASAConnection.GetDBHandle,
+  FPlainDriver.dbpp_fetch( FASAConnection.GetDBHandle,
     Pointer(FCursorName), CUR_RELATIVE, Rows, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
-    ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
+    ZDbcASAUtils.CheckASAError(FPlainDriver,
       FASAConnection.GetDBHandle, lcOther, ConSettings, '', SQLE_CURSOR_NOT_OPEN); //handle a known null resultset issue (cursor not open)
   if FASAConnection.GetDBHandle.sqlCode = SQLE_CURSOR_NOT_OPEN then Exit;
-  if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then
-  begin
+  if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then begin
     //if ( RowNo > 0) or ( RowNo + Rows < 0) then
       RowNo := RowNo + Rows;
     Result := True;
@@ -1682,7 +1814,7 @@ procedure TZASACachedResultSet.InsertRow;
 begin
   if Assigned( FUpdateSQLData) and FInsert then
   begin
-    FASAConnection.GetPlainDriver.db_put_into( FASAConnection.GetDBHandle,
+    FPlainDriver.dbpp_put_into( FASAConnection.GetDBHandle,
       PAnsiChar(FCursorName), FUpdateSQLData.GetData, FSQLData.GetData);
     ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
       FASAConnection.GetDBHandle, lcOther, ConSettings, 'Insert row');
@@ -1696,7 +1828,7 @@ procedure TZASACachedResultSet.UpdateRow;
 begin
   if Assigned( FUpdateSQLData) and FUpdate then
   begin
-    FASAConnection.GetPlainDriver.db_update( FASAConnection.GetDBHandle,
+    FASAConnection.GetPlainDriver.dbpp_update( FASAConnection.GetDBHandle,
       PAnsiChar(FCursorName), FUpdateSQLData.GetData);
     ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
       FASAConnection.GetDBHandle, lcOther, ConSettings, 'Update row:' + IntToRaw( RowNo));
@@ -1709,8 +1841,8 @@ end;
 
 procedure TZASACachedResultSet.DeleteRow;
 begin
-  FASAConnection.GetPlainDriver.db_delete( FASAConnection.GetDBHandle,
-    PAnsiChar(FCursorName));
+  FASAConnection.GetPlainDriver.dbpp_delete( FASAConnection.GetDBHandle,
+    Pointer(FCursorName), nil, nil);
   ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
     FASAConnection.GetDBHandle, lcOther, ConSettings, 'Delete row:' + IntToRaw( RowNo));
 

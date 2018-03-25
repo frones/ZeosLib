@@ -510,7 +510,6 @@ const
   Time3_0 = RawByteString('23-59-59-999');
   Time4_0 = RawByteString('23-59/59\999');
   Time5_0 = RawByteString('235959999');
-  Time6_0 = RawByteString('23:59:59.99');
   Time7_0 = RawByteString('23595999');
   Time8_0 = RawByteString('2359599');
 
@@ -662,7 +661,6 @@ const
   TimeStamp2_3 = RawByteString('36525.999999988425926');
   TimeStamp3_3 = RawByteString('36525a.999999988425926');
   TimeStamp4_3 = RawByteString('36525.99u999988425926');
-  TimeStamp5_3 = RawByteString('a6525.99u999988425926');
 
   procedure TestRawSQLTimeStampToDateTime(Value: RawByteString;
     const Expected: TDateTime; const ExpFailed: Boolean; const DateTimeFormat: String = '');

@@ -85,6 +85,7 @@ type
   {** Implements a generic Ado Connection. }
   TZAdoConnection = class(TZAbstractConnection, IZAdoConnection)
   private
+    fServerProvider: TZServerProvider;
     procedure ReStartTransactionSupport;
   protected
     FAdoConnection: ZPlainAdo.Connection;
@@ -117,8 +118,7 @@ type
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
-    function GetWarnings: EZSQLWarning; override;
-    procedure ClearWarnings; override;
+    function GetServerProvider: TZServerProvider; override;
   end;
 
 var
@@ -128,9 +128,10 @@ var
 implementation
 
 uses
-  Variants, ActiveX, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF},
-  ZDbcUtils, ZDbcLogging, ZAdoToken, ZSysUtils, ZMessages,
-  ZDbcAdoStatement, ZDbcAdoMetadata, ZEncoding, ZDbcAdoUtils;
+  Variants, ActiveX, ZOleDB,
+  ZDbcUtils, ZDbcLogging, ZAdoToken, ZSysUtils, ZMessages, ZDbcProperties,
+  ZDbcAdoStatement, ZDbcAdoMetaData, ZEncoding,
+  ZDbcOleDBUtils, ZDbcOleDBMetadata, ZDbcAdoUtils;
 
 const                                                //adXactUnspecified
   IL: array[TZTransactIsolationLevel] of TOleEnum = (adXactChaos, adXactReadUncommitted, adXactReadCommitted, adXactRepeatableRead, adXactSerializable);
@@ -261,6 +262,7 @@ end;
 procedure TZAdoConnection.Open;
 var
   LogMessage: RawByteString;
+  ConnectStrings: TStrings;
   DBInitialize: IDBInitialize;
   Command: ZPlainAdo.Command;
   DBCreateCommand: IDBCreateCommand;
@@ -274,6 +276,11 @@ begin
       FAdoConnection.Set_Mode(adModeRead)
     else
       FAdoConnection.Set_Mode(adModeUnknown);
+
+    ConnectStrings := SplitString(DataBase, ';');
+    FServerProvider := ProviderNamePrefix2ServerProvider(ConnectStrings.Values[ConnProps_Provider]);
+    FreeAndNil(ConnectStrings);
+
     FAdoConnection.Open(WideString(Database), WideString(User), WideString(Password), -1{adConnectUnspecified});
     FAdoConnection.Set_CursorLocation(adUseClient);
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
@@ -629,24 +636,9 @@ begin
   Result := String(FAdoConnection.DefaultDatabase);
 end;
 
-{**
-  Returns the first warning reported by calls on this Connection.
-  <P><B>Note:</B> Subsequent warnings will be chained to this
-  SQLWarning.
-  @return the first SQLWarning or null
-}
-function TZAdoConnection.GetWarnings: EZSQLWarning;
+function TZAdoConnection.GetServerProvider: TZServerProvider;
 begin
-  Result := nil;
-end;
-
-{**
-  Clears all warnings reported for this <code>Connection</code> object.
-  After a call to this method, the method <code>getWarnings</code>
-    returns null until a new warning is reported for this Connection.
-}
-procedure TZAdoConnection.ClearWarnings;
-begin
+  Result := fServerProvider;
 end;
 
 initialization
@@ -657,7 +649,9 @@ finalization
   if Assigned(DriverManager) then
     DriverManager.DeregisterDriver(AdoDriver);
   AdoDriver := nil;
+//(*
 {$ELSE}
 implementation
 {$ENDIF ENABLE_ADO}
+//*)
 end.

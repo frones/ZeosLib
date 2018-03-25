@@ -133,6 +133,7 @@ type
 
   TZPostgreSQLConnection = class(TZAbstractConnection, IZPostgreSQLConnection)
   private
+    FUndefinedVarcharAsStringLength: Integer;
     FStandardConformingStrings: Boolean;
     FHandle: PZPostgreSQLConnect;
 //  Jan: Not sure wether we still need that. What was its intended use?
@@ -195,6 +196,7 @@ type
 
     procedure Open; override;
     procedure InternalClose; override;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
@@ -225,6 +227,7 @@ type
     {$IFDEF ZEOS_TEST_ONLY}
     constructor Create(const ZUrl: TZURL);
     {$ENDIF}
+    function GetServerProvider: TZServerProvider; override;
   end;
 
   {** Implements a Postgres sequence. }
@@ -246,11 +249,10 @@ implementation
 uses
   ZFastCode, ZMessages, ZSysUtils, ZDbcPostgreSqlStatement,
   ZDbcPostgreSqlUtils, ZDbcPostgreSqlMetadata, ZPostgreSqlToken,
-  ZPostgreSqlAnalyser, ZEncoding;
+  ZPostgreSqlAnalyser, ZEncoding, ZConnProperties, ZDbcProperties;
 
 const
   FON = String('ON');
-  standard_conforming_strings = 'standard_conforming_strings';
 
 procedure DefaultNoticeProcessor({%H-}arg: Pointer; message: PAnsiChar); cdecl;
 begin
@@ -469,13 +471,10 @@ begin
   inherited SetTransactionIsolation(tiReadCommitted);
 
   { Processes connection properties. }
-  if Info.Values['oidasblob'] <> '' then
-    FOidAsBlob := StrToBoolEx(Info.Values['oidasblob'])
-  else
-    FOidAsBlob := False;
-  FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values['Undefined_Varchar_AsString_Length'], 0);
-  FCheckFieldVisibility := StrToBoolEx(Info.Values['CheckFieldVisibility']);
-  FNoTableInfoCache := StrToBoolEx(Info.Values['NoTableInfoCache']);
+  FOidAsBlob := StrToBoolEx(Info.Values[DSProps_OidAsBlob]);
+  FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
+  FCheckFieldVisibility := StrToBoolEx(Info.Values[ConnProps_CheckFieldVisibility]);
+  FNoTableInfoCache := StrToBoolEx(Info.Values[ConnProps_NoTableInfoCache]);
   OnPropertiesChange(nil);
 
   FNoticeProcessor := DefaultNoticeProcessor;
@@ -500,11 +499,11 @@ end;
 }
 destructor TZPostgreSQLConnection.Destroy;
 begin
-  if FTypeList <> nil then FreeAndNil(FTypeList);
+  FreeAndNil(FTypeList);
   inherited Destroy;
-  if FTableInfoCache <> nil then FreeAndNil(FTableInfoCache);
-  if FPreparedStmts <> nil then FreeAndNil(FPreparedStmts);
-  if Assigned(FPreparedStatementTrashBin) then FreeAndNil(FPreparedStatementTrashBin);
+  FreeAndNil(FTableInfoCache);
+  FreeAndNil(FPreparedStmts);
+  FreeAndNil(FPreparedStatementTrashBin);
 end;
 
 {**
@@ -515,14 +514,14 @@ function TZPostgreSQLConnection.BuildConnectStr: AnsiString;
 var
   ConnectTimeout: Integer;
   // backslashes and single quotes must be escaped with backslashes
-  function EscapeValue(AValue: String): String;
+  function EscapeValue(const AValue: String): String;
   begin
     Result := StringReplace(AValue, '\', '\\', [rfReplaceAll]);
     Result := StringReplace(Result, '''', '\''', [rfReplaceAll]);
   end;
 
   //parameters should be separated by whitespace
-  procedure AddParamToResult(AParam, AValue: String);
+  procedure AddParamToResult(const AParam, AValue: String);
   begin
     if Result <> '' then
       Result := Result + ' ';
@@ -545,33 +544,33 @@ begin
     AddParamToResult('password', Password);
   end;
 
-  If Info.Values['sslmode'] <> '' then
+  If Info.Values[ConnProps_SSLMode] <> '' then
   begin
     // the client (>= 7.3) sets the ssl mode for this connection
     // (possible values are: require, prefer, allow, disable)
-    AddParamToResult('sslmode', Info.Values['sslmode']);
+    AddParamToResult(ConnProps_SSLMode, Info.Values[ConnProps_SSLMode]);
   end
-  else if Info.Values['requiressl'] <> '' then
+  else if Info.Values[ConnProps_RequireSSL] <> '' then
   begin
     // the client (< 7.3) sets the ssl encription for this connection
     // (possible values are: 0,1)
-    AddParamToResult('requiressl', Info.Values['requiressl']);
+    AddParamToResult(ConnProps_RequireSSL, Info.Values[ConnProps_RequireSSL]);
   end;
 
-  if Info.Values['sslcompression'] <> '' then AddParamToResult('sslcompression', Info.Values['sslcompression']);
-  if Info.Values['sslcert'] <> '' then AddParamToResult('sslcert', Info.Values['sslcert']);
-  if Info.Values['sslkey'] <> '' then AddParamToResult('sslkey', Info.Values['sslkey']);
-  if Info.Values['sslrootcert'] <> '' then AddParamToResult('sslrootcert', Info.Values['sslrootcert']);
-  if Info.Values['sslcrl'] <> '' then AddParamToResult('sslcrl', Info.Values['sslcrl']);
+  if Info.Values[ConnProps_SSLCompression] <> '' then AddParamToResult(ConnProps_SSLCompression, Info.Values[ConnProps_SSLCompression]);
+  if Info.Values[ConnProps_SSLCert] <> '' then AddParamToResult(ConnProps_SSLCert, Info.Values[ConnProps_SSLCert]);
+  if Info.Values[ConnProps_SSLKey] <> '' then AddParamToResult(ConnProps_SSLKey, Info.Values[ConnProps_SSLKey]);
+  if Info.Values[ConnProps_SSLRootcert] <> '' then AddParamToResult(ConnProps_SSLRootcert, Info.Values[ConnProps_SSLRootcert]);
+  if Info.Values[ConnProps_SSLCrl] <> '' then AddParamToResult(ConnProps_SSLCrl, Info.Values[ConnProps_SSLCrl]);
 
   { Sets a connection timeout. }
-  ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
+  ConnectTimeout := StrToIntDef(Info.Values[ConnProps_Timeout], -1);
   if ConnectTimeout >= 0 then
     AddParamToResult('connect_timeout', ZFastCode.IntToStr(ConnectTimeout));
 
   { Sets the application name }
-  if Info.Values['application_name'] <> '' then
-    AddParamToResult('application_name', Info.Values['application_name']);
+  if Info.Values[ConnProps_ApplicationName] <> '' then
+    AddParamToResult(ConnProps_ApplicationName, Info.Values[ConnProps_ApplicationName]);
 end;
 
 {**
@@ -704,6 +703,16 @@ begin
   FPreparedStmts.Add(Value);
 end;
 
+procedure TZPostgreSQLConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable);
+begin
+  if Assigned(FPreparedStatementTrashBin) then
+    FPreparedStatementTrashBin.Clear;
+  if Assigned(FPreparedStmts) then
+    FPreparedStmts.Clear;
+  FHandle := nil;
+  inherited ReleaseImmediat(Sender);
+end;
+
 procedure TZPostgreSQLConnection.UnregisterPreparedStmtName(const value: String);
 var Index: Integer;
 begin
@@ -712,7 +721,10 @@ begin
     FPreparedStatementTrashBin.Add(FPreparedStmts.Strings[Index]);
     FPreparedStmts.Delete(Index);
   end;
-  if GetAutoCommit then DeallocatePreparedStatements;
+  //EH@JAN is this corret?? Flush all Prepared statements???
+  //https://www.postgresql.org/docs/8.1/static/sql-deallocate.html
+  //Zitat: "If you do not explicitly deallocate a prepared statement, it is deallocated when the session ends."
+  //if GetAutoCommit then DeallocatePreparedStatements;
 end;
 
 function TZPostgreSQLConnection.ClientSettingsChanged: Boolean;
@@ -777,13 +789,13 @@ begin
       FTableInfoCache := TZPGTableInfoCache.Create(ConSettings, FHandle, GetPlainDriver);
 
     { sets standard_conforming_strings according to Properties if available }
-    SCS := Info.Values[standard_conforming_strings];
+    SCS := Info.Values[ConnProps_StdConformingStrings];
     if SCS <> '' then begin
-      SetServerSetting(standard_conforming_strings, {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(SCS));
+      SetServerSetting(ConnProps_StdConformingStrings, {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(SCS));
       FClientSettingsChanged := True;
       SetStandardConformingStrings(StrToBoolEx(SCS));
     end else
-      SetStandardConformingStrings(StrToBoolEx(GetServerSetting(#39+standard_conforming_strings+#39)));
+      SetStandardConformingStrings(StrToBoolEx(GetServerSetting(#39+ConnProps_StdConformingStrings+#39)));
     FIs_bytea_output_hex := UpperCase(GetServerSetting('''bytea_output''')) = 'HEX';
   finally
     if self.IsClosed and (Self.FHandle <> nil) then
@@ -1232,6 +1244,11 @@ begin
   Result := FServerMinorVersion;
 end;
 
+function TZPostgreSQLConnection.GetServerProvider: TZServerProvider;
+begin
+  Result := spPostgreSQL;
+end;
+
 {**
   Gets a server sub version.
   @return a server sub version number.
@@ -1447,7 +1464,7 @@ begin
   inherited OnPropertiesChange(Sender);
 
   { Define standard_conforming_strings setting}
-  SCS := Trim(Info.Values[standard_conforming_strings]);
+  SCS := Trim(Info.Values[ConnProps_StdConformingStrings]);
   if SCS <> '' then
     SetStandardConformingStrings(UpperCase(SCS) = FON)
   else

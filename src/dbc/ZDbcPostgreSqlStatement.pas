@@ -183,7 +183,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZSysUtils, ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils,
-  ZEncoding;
+  ZEncoding, ZDbcProperties;
 
 var PGPreparableTokens: TPreparablePrefixTokens;
 
@@ -198,17 +198,17 @@ constructor TZPostgreSQLPreparedStatement.Create(const PlainDriver: IZPostgreSQL
   const Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
-  FOidAsBlob := StrToBoolDef(Self.Info.Values['oidasblob'], False) or
+  FOidAsBlob := StrToBoolEx(Self.Info.Values[DSProps_OidAsBlob]) or
     (Connection as IZPostgreSQLConnection).IsOidAsBlob;
   FPostgreSQLConnection := Connection;
   FPlainDriver := PlainDriver;
   //ResultSetType := rtScrollInsensitive;
   FConnectionHandle := Connection.GetConnectionHandle;
   Findeterminate_datatype := False;
-  FUndefinedVarcharAsStringLength := StrToInt(ZDbcUtils.DefineStatementParameter(Self, 'Undefined_Varchar_AsString_Length' , '0'));
+  FUndefinedVarcharAsStringLength := StrToInt(ZDbcUtils.DefineStatementParameter(Self, DSProps_UndefVarcharAsStringLength, '0'));
   { see http://zeoslib.sourceforge.net/viewtopic.php?f=20&t=10695&p=30151#p30151
     the pgBouncer does not support the RealPrepareds.... }
-  FUseEmulatedStmtsOnly := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'EMULATE_PREPARES', 'FALSE'));
+  FUseEmulatedStmtsOnly := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_EmulatePrepares, 'FALSE'));
 end;
 
 procedure TZPostgreSQLPreparedStatement.AfterConstruction;
@@ -770,9 +770,9 @@ begin
   inherited Create(Connection, SQL, Info);
   ResultSetType := rtScrollInsensitive;
   FPlainDriver := (Connection as IZPostgreSQLConnection).GetPlainDriver;
-  FOidAsBlob := StrToBoolDef(Self.Info.Values['oidasblob'], False) or
+  FOidAsBlob := StrToBoolEx(Self.Info.Values[DSProps_OidAsBlob]) or
     (Connection as IZPostgreSQLConnection).IsOidAsBlob;
-  FUndefinedVarcharAsStringLength := StrToInt(ZDbcUtils.DefineStatementParameter(Self, 'Undefined_Varchar_AsString_Length' , '0'));
+  FUndefinedVarcharAsStringLength := StrToInt(ZDbcUtils.DefineStatementParameter(Self, DSProps_UndefVarcharAsStringLength , '0'));
 end;
 
 {**

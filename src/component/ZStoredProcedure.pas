@@ -75,8 +75,8 @@ type
   protected
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; override;
-    procedure SetStatementParams(Statement: IZPreparedStatement;
-      ParamNames: TStringDynArray; Params: TParams;
+    procedure SetStatementParams(const Statement: IZPreparedStatement;
+      const ParamNames: TStringDynArray; Params: TParams;
       DataLink: TDataLink); override;
     procedure InternalOpen; override;
     procedure InternalClose; override;
@@ -186,8 +186,8 @@ end;
 {$IFDEF FPC}
   {$HINTS OFF}
 {$ENDIF}
-procedure TZStoredProc.SetStatementParams(Statement: IZPreparedStatement;
-  ParamNames: TStringDynArray; Params: TParams; DataLink: TDataLink);
+procedure TZStoredProc.SetStatementParams(const Statement: IZPreparedStatement;
+  const ParamNames: TStringDynArray; Params: TParams; DataLink: TDataLink);
 var
   I: Integer;
   Param: TParam;
@@ -283,7 +283,7 @@ begin
           Param.DataType := ftWideMemo;
         end;
         {$ENDIF}
-        ftBytes, ftVarBytes:
+        ftBytes, ftVarBytes, ftGuid:
           Param.Value := FCallableStatement.GetBytes(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftDate:
           Param.AsDate := FCallableStatement.GetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});

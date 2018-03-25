@@ -96,13 +96,16 @@ type
   private
     FErrorCode: Integer;
     FStatusCode: String;
+    FSpecificData: TZExceptionSpecificData;
     procedure SetStatusCode(const Value: String);
    public
     constructor Create(const Msg: string);
     constructor CreateFromException(E: EZSQLThrowable);
+    destructor Destroy; override;
 
     property ErrorCode: Integer read FErrorCode write FErrorCode;
     property StatusCode: String read FStatusCode write SetStatusCode;
+    property SpecificData: TZExceptionSpecificData read FSpecificData;
   end;
 
   {** Dataset Linker class. }
@@ -293,7 +296,7 @@ type
     function GetIndexFieldNames : String; {bangfauzan addition}
     procedure SetIndexFieldNames(const Value : String); {bangfauzan addition}
     procedure SetOptions(Value: TZDatasetOptions);
-    procedure SetSortedFields({const} Value: string); {bangfauzan modification}
+    procedure SetSortedFields(const Value: string); {bangfauzan modification}
     procedure SetProperties(const Value: TStrings);
 
     function GetSortType : TSortType; {bangfauzan addition}
@@ -321,8 +324,8 @@ type
     function FilterRow(RowNo: NativeInt): Boolean;
     function GotoRow(RowNo: NativeInt): Boolean; // added by tohenk
     procedure RereadRows;
-    procedure SetStatementParams(Statement: IZPreparedStatement;
-      ParamNames: TStringDynArray; Params: TParams;
+    procedure SetStatementParams(const Statement: IZPreparedStatement;
+      const ParamNames: TStringDynArray; Params: TParams;
       DataLink: TDataLink); virtual;
     procedure MasterChanged(Sender: TObject);
     procedure MasterDisabled(Sender: TObject);
@@ -1352,8 +1355,8 @@ type
     FPrecision: Integer;
     procedure BcdRangeError(Value: Variant; Max, Min: string);
     procedure SetCurrency(Value: Boolean);
-    procedure SetMaxValue(Value: string);
-    procedure SetMinValue(Value: string);
+    procedure SetMaxValue(const Value: string);
+    procedure SetMinValue(const Value: string);
     procedure SetPrecision(Value: Integer);
     procedure UpdateCheckRange;
   protected
@@ -1688,8 +1691,8 @@ type
     procedure SetActive(Value: Boolean);
     function GetHandle: Pointer; virtual;
     procedure SetGroupingLevel(Value: Integer);
-    procedure SetIndexName(Value: string);
-    procedure SetExpression(Value: string);
+    procedure SetIndexName(const Value: string);
+    procedure SetExpression(const Value: string);
     procedure SetPrecision(Value: Integer);
     procedure SetCurrency(Value: Boolean);
   protected
@@ -1791,7 +1794,7 @@ var
 implementation
 
 uses ZFastCode, Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
-  ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZEncoding
+  ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZEncoding, ZDbcProperties
   {$IFNDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES}, ZAbstractDataset{$ENDIF} //see comment of Updatable property
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
@@ -1817,11 +1820,19 @@ begin
   inherited Create(E.Message);
   ErrorCode := E.ErrorCode;
   Statuscode:= E.StatusCode;
+  if E.SpecificData <> nil then
+    FSpecificData := E.SpecificData.Clone;
 end;
 
 procedure EZDatabaseError.SetStatusCode(const Value: String);
 begin
   FStatusCode := value;
+end;
+
+destructor EZDatabaseError.Destroy;
+begin
+  FreeAndNil(FSpecificData);
+  inherited;
 end;
 
 { TZDataLink }
@@ -2729,8 +2740,8 @@ end;
   @param Params a collection of SQL parameters.
   @param DataLink a datalink to get parameters.
 }
-procedure TZAbstractRODataset.SetStatementParams(Statement: IZPreparedStatement;
-  ParamNames: TStringDynArray; Params: TParams; DataLink: TDataLink);
+procedure TZAbstractRODataset.SetStatementParams(const Statement: IZPreparedStatement;
+  const ParamNames: TStringDynArray; Params: TParams; DataLink: TDataLink);
 var
   I: Integer;
   TempParam, Param: TParam;
@@ -3348,18 +3359,9 @@ begin
     if Assigned(Properties) then
       Temp.AddStrings(Properties);
     { Define TDataset specific parameters. }
-    if doCalcDefaults in FOptions then
-      Temp.Values['defaults'] := 'true'
-    else
-      Temp.Values['defaults'] := 'false';
-    if doPreferPrepared in FOptions then
-      Temp.Values['preferprepared'] := 'true'
-    else
-      Temp.Values['preferprepared'] := 'false';
-    if doCachedLobs in FOptions then
-      Temp.Values['cachedlob'] := 'true'
-    else
-      Temp.Values['cachedlob'] := 'false';
+    Temp.Values[DSProps_Defaults] := BoolStrs[doCalcDefaults in FOptions];
+    Temp.Values[DSProps_PreferPrepared] := BoolStrs[doPreferPrepared in FOptions];
+    Temp.Values[DSProps_CachedLobs] := BoolStrs[doCachedLobs in FOptions];
 
     Result := FConnection.DbcConnection.PrepareStatementWithParams(SQL, Temp);
   finally
@@ -3862,20 +3864,21 @@ end;
   Sets a new sorted fields.
   @param Value a new sorted fields.
 }
-procedure TZAbstractRODataset.SetSortedFields({const} Value: string); {bangfauzan modification}
+procedure TZAbstractRODataset.SetSortedFields(const Value: string); {bangfauzan modification}
+var aValue: string;
 begin
-  Value:=Trim(Value); {bangfauzan addition}
-  if (FSortedFields <> Value) or (FIndexFieldNames <> Value)then {bangfauzan modification}
+  aValue:=Trim(Value); {bangfauzan addition}
+  if (FSortedFields <> aValue) or (FIndexFieldNames <> aValue)then {bangfauzan modification}
   begin
-    FIndexFieldNames:=Value;
+    FIndexFieldNames:=aValue;
     FSortType := GetSortType; {bangfauzan addition}
     {removing ASC or DESC behind space}
     if (FSortType <> stIgnored) then
     begin {pawelsel modification}
-       Value:=StringReplace(Value,' Desc','',[rfReplaceAll,rfIgnoreCase]);
-       Value:=StringReplace(Value,' Asc','',[rfReplaceAll,rfIgnoreCase]);
+      aValue:=StringReplace(aValue,' Desc','',[rfReplaceAll,rfIgnoreCase]);
+      aValue:=StringReplace(aValue,' Asc','',[rfReplaceAll,rfIgnoreCase]);
     end;
-    FSortedFields := Value;
+    FSortedFields := aValue;
     if Active then
       if not ({$IFDEF FPC}Updatable{$ELSE}Self is TZAbstractDataSet{$ENDIF}) then
         InternalSort //enables clearsort which prevents rereading data
@@ -4198,8 +4201,8 @@ begin
       if ResultSet.GetRow <> RowNo then
         ResultSet.MoveAbsolute(RowNo);
 
-      if Properties.Values['KeyFields'] <> '' then
-        KeyFields := Properties.Values['KeyFields']
+      if Properties.Values[DSProps_KeyFields] <> '' then
+        KeyFields := Properties.Values[DSProps_KeyFields]
       else
         KeyFields := DefineKeyFields(Fields, Connection.DbcConnection.GetMetadata.GetIdentifierConvertor);
       FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);

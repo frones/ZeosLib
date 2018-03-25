@@ -271,7 +271,7 @@ implementation
 uses
   Math,
   ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZDbcMySql, ZCollections,
-  ZSelectSchema;
+  ZDbcProperties;
 
 { TZMySQLDatabaseInfo }
 
@@ -943,7 +943,8 @@ begin
   inherited Create(Connection, Url);
   FInfo := TStringList.Create;
   FInfo.Assign(Url.Properties);
-  FInfo.Values['UseResult'] := 'True';
+
+  FInfo.Values[DSProps_UseResult] := 'True';
   FBoolCachedResultSets := TZCollection.Create;
 end;
 
@@ -2300,10 +2301,7 @@ begin
         Result.UpdateString(CatalogNameIndex, LCatalog);
         //Result.UpdateNull(SchemaNameIndex);
         Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(ColumnIndexes[1], Len), @Len);
-        if GetInt(ColumnIndexes[2]) = 0 then
-          Result.UpdateString(IndexInfoColNonUniqueIndex, 'true')
-        else
-          Result.UpdateString(IndexInfoColNonUniqueIndex, 'false');
+        Result.UpdateString(IndexInfoColNonUniqueIndex, LowerCase(BoolStrs[GetInt(ColumnIndexes[2]) = 0]));
         //Result.UpdateNull(IndexInfoColIndexQualifierIndex);
         Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiChar(ColumnIndexes[3], Len), @Len);
         Result.UpdateByte(IndexInfoColTypeIndex, Ord(tiOther));

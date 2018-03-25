@@ -308,7 +308,7 @@ begin
   end;
 end;
 
-procedure GetDataKeyNames(Dataset: TDataset; ErrorName: string; List: TStrings);
+procedure GetDataKeyNames(Dataset: TDataset; const ErrorName: string; List: TStrings);
 var
   I: Integer;
 begin
@@ -334,7 +334,7 @@ begin
   end;
 end;
 
-procedure GetDataFieldNames(Dataset: TDataset; ErrorName: string; List: TStrings);
+procedure GetDataFieldNames(Dataset: TDataset; const ErrorName: string; List: TStrings);
 var
   I: Integer;
 begin

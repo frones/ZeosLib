@@ -127,7 +127,7 @@ type
   private
     FConSettings: PZConSettings;
     FSQLDA: PASASQLDA;
-    FPlainDriver: IZASAPlainDriver;
+    FPlainDriver: TZASAPlainDriver;
     FHandle: PZASASQLCA;
     FCursorName: PAnsiChar;
     procedure CreateException(const  Msg: string);
@@ -141,7 +141,7 @@ type
     FDeclType: array of TZASADECLTYPE;
     procedure ReadBlob(const Index: Word; var Buffer: Pointer; Length: LongWord);
   public
-    constructor Create(const PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
+    constructor Create(const PlainDriver: TZASAPlainDriver; Handle: PZASASQLCA;
       CursorName: PAnsiChar; ConSettings: PZConSettings; NumVars: Word = StdVars);
     destructor Destroy; override;
 
@@ -215,7 +215,7 @@ function ASADateTimeToSQLTimeStamp( ASADT: PZASASQLDateTime): TSQLTimeStamp;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckASAError(const PlainDriver: IZASAPlainDriver;
+procedure CheckASAError(const PlainDriver: TZASAPlainDriver;
   const Handle: PZASASQLCA; const LogCategory: TZLoggingCategory;
   const ConSettings: PZConSettings; const LogMessage: RawByteString = '';
   const SupressExceptionID: Integer = 0);
@@ -315,7 +315,7 @@ begin
   SetFieldType(FSQLDA, Index, ASAType, Len, SetDeclType);
 end;
 
-constructor TZASASQLDA.Create(const PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
+constructor TZASASQLDA.Create(const PlainDriver: TZASAPlainDriver; Handle: PZASASQLCA;
    CursorName: PAnsiChar; ConSettings: PZConSettings; NumVars: Word = StdVars);
 begin
   FPlainDriver := PlainDriver;
@@ -339,7 +339,7 @@ end;
 procedure TZASASQLDA.AllocateSQLDA( NumVars: Word);
 begin
   FreeSQLDA;
-  FSQLDA := FPlainDriver.db_alloc_sqlda( NumVars);
+  FSQLDA := FPlainDriver.alloc_sqlda( NumVars);
   if not Assigned( FSQLDA) then CreateException( 'Not enough memory for SQLDA');
   SetLength(FDeclType, FSQLDA.sqln);
 end;
@@ -431,7 +431,7 @@ begin
         FSQLDA.sqlVar[i].sqlData := nil;
       end;
     end;
-    FPlainDriver.db_free_sqlda( FSQLDA);
+    FPlainDriver.free_sqlda( FSQLDA);
     FSQLDA := nil;
   end;
   SetLength(FDeclType, 0);
@@ -979,7 +979,7 @@ begin
     end
     else
     begin
-      TempSQLDA := FPlainDriver.db_alloc_sqlda( 1);
+      TempSQLDA := FPlainDriver.alloc_sqlda( 1);
       if not Assigned( TempSQLDA) then
         CreateException( 'Not enough memory for SQLDA');
       try
@@ -1004,7 +1004,7 @@ begin
 
           while True do
           begin
-            FPlainDriver.db_get_data(FHandle, FCursorName, Index + 1, Offs, TempSQLDA);
+            FPlainDriver.dbpp_get_data(FHandle, FCursorName, Index + 1, Offs, TempSQLDA, 0);
             CheckASAError( FPlainDriver, FHandle, lcOther, FConSettings);
             if ( sqlind^ < 0 ) then
               break;
@@ -1019,12 +1019,12 @@ begin
           if Rd <> Length then
             CreateException( 'Could''nt complete BLOB-Read');
           FreeMem(sqlData);
-          FPlainDriver.db_free_sqlda( TempSQLDA);
+          FPlainDriver.free_sqlda( TempSQLDA);
           TempSQLDA := nil;
         end;
       except
         if Assigned( TempSQLDA) then
-          FPlainDriver.db_free_sqlda( TempSQLDA);
+          FPlainDriver.free_sqlda( TempSQLDA);
         raise;
       end;
     end;
@@ -1283,7 +1283,7 @@ end;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckASAError(const PlainDriver: IZASAPlainDriver;
+procedure CheckASAError(const PlainDriver: TZASAPlainDriver;
   const Handle: PZASASQLCA; const LogCategory: TZLoggingCategory;
   const ConSettings: PZConSettings; const LogMessage: RawByteString = '';
   const SupressExceptionID: Integer = 0);
@@ -1338,14 +1338,14 @@ begin
   //FSQLData.AllocateSQLDA( StdVars);
   with FASAConnection do
   begin
-    GetPlainDriver.db_describe_cursor(GetDBHandle, Pointer(Cursor), FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
+    GetPlainDriver.dbpp_describe_cursor(GetDBHandle, Pointer(Cursor), FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
     ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, FASAConnection.GetConSettings, SQL);
     if FSQLData.GetData^.sqld <= 0 then
       raise EZSQLException.Create( SCanNotRetrieveResultSetData)
     else if ( FSQLData.GetData^.sqld > FSQLData.GetData^.sqln) then
     begin
       FSQLData.AllocateSQLDA( FSQLData.GetData^.sqld);
-      GetPlainDriver.db_describe_cursor(GetDBHandle, PAnsiChar(Cursor), FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
+      GetPlainDriver.dbpp_describe_cursor(GetDBHandle, PAnsiChar(Cursor), FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
        ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, FASAConnection.GetConSettings, SQL);
     end;
     FSQLData.InitFields;
@@ -1363,14 +1363,19 @@ begin
       FSQLData.AllocateSQLDA( StdVars);
       if StmtNum^ <> 0 then
       begin
-        GetPlainDriver.db_dropstmt( GetDBHandle, nil, nil, StmtNum);
+        GetPlainDriver.dbpp_dropstmt( GetDBHandle, nil, nil, StmtNum);
         StmtNum^ := 0;
       end;
     end;
     try
-      GetPlainDriver.db_prepare_describe( GetDBHandle, nil, StmtNum, Pointer(SQL),
-        FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
-          SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
+      if Assigned(GetPlainDriver.dbpp_prepare_describe_12) then
+        GetPlainDriver.dbpp_prepare_describe_12(GetDBHandle, nil, nil, StmtNum, Pointer(SQL),
+          nil, FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
+            SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0, 0)
+      else
+        GetPlainDriver.dbpp_prepare_describe( GetDBHandle, nil, nil, StmtNum, Pointer(SQL),
+          nil, FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
+            SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
       ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
 
       FMoreResults := GetDBHandle.sqlerrd[2] = 0;
@@ -1378,20 +1383,20 @@ begin
       if FParamsSQLData.GetData^.sqld > FParamsSQLData.GetData^.sqln then
       begin
         FParamsSQLData.AllocateSQLDA( FParamsSQLData.GetData^.sqld);
-        GetPlainDriver.db_describe( GetDBHandle, nil, StmtNum,
+        GetPlainDriver.dbpp_describe( GetDBHandle, nil, nil, StmtNum,
           FParamsSQLData.GetData, SQL_DESCRIBE_INPUT);
         ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
       end;
 
       if not FMoreResults then
       begin
-        GetPlainDriver.db_describe( GetDBHandle, nil, StmtNum,
+        GetPlainDriver.dbpp_describe( GetDBHandle, nil, nil, StmtNum,
           FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
         ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
         if FSQLData.GetData^.sqld > FSQLData.GetData^.sqln then
         begin
           FSQLData.AllocateSQLDA( FSQLData.GetData^.sqld);
-          GetPlainDriver.db_describe( GetDBHandle, nil, StmtNum,
+          GetPlainDriver.dbpp_describe( GetDBHandle, nil, nil, StmtNum,
             FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
           ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
         end;
@@ -1406,7 +1411,7 @@ begin
       on E: Exception do
       begin
         if StmtNum^ <> 0 then
-          GetPlainDriver.db_dropstmt( GetDBHandle, nil, nil, StmtNum);
+          GetPlainDriver.dbpp_dropstmt( GetDBHandle, nil, nil, StmtNum);
         raise;
       end;
     end;

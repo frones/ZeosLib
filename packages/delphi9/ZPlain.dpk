@@ -36,6 +36,10 @@ contains
 
 {$I ZPackages.inc} //after simplify Zeos.Inc by using {$IF CompilerVersion > x} i need to move this include AFTER contains!
 
+{$IFDEF ENABLE_ODBC}
+  ZPlainODBCDriver in '..\..\src\plain\ZPlainODBCDriver.pas',
+{$ENDIF}
+
 {$IFDEF ENABLE_DBLIB}
   ZPlainDbLibDriver in '..\..\src\plain\ZPlainDbLibDriver.pas',
   ZPlainDbLibConstants in '..\..\src\plain\ZPlainDbLibConstants.pas',
@@ -53,6 +57,14 @@ contains
 
 {$IFDEF ENABLE_POSTGRESQL}
   ZPlainPostgreSqlDriver in '..\..\src\plain\ZPlainPostgreSqlDriver.pas',
+{$ENDIF}
+
+{$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
+  ZOleDB in '..\..\src\plain\ZOleDB.pas',
+{$IFEND}
+
+{$IFDEF ENABLE_OLEDB}
+  ZPlainOleDBDriver in '..\..\src\plain\ZPlainOleDBDriver.pas',
 {$ENDIF}
 
 {$IFDEF ENABLE_ADO}

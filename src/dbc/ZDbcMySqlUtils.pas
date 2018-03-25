@@ -151,13 +151,15 @@ function MySQLPrepareAnsiSQLParam(const Connection: IZMySQLConnection;
   const ClientVarManager: IZClientVariantManager;
   InParamType: TZSQLType; UseDefaults: Boolean): RawByteString;
 
+function GetMySQLOptionValue(Option: TMySQLOption): string;
+
 function ReverseWordBytes(Src: Pointer): Word;
 function ReverseLongWordBytes(Src: Pointer; Len: Byte): LongWord;
 function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
 
 implementation
 
-uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} Math,
+uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} Math, TypInfo,
   ZMessages, ZDbcUtils, ZFastCode, ZEncoding;
 
 threadvar
@@ -756,6 +758,11 @@ SetDefaultVal:
         RaiseUnsupportedParameterTypeException(InParamType);
     end;
   end;
+end;
+
+function GetMySQLOptionValue(Option: TMySQLOption): string;
+begin
+  Result := GetEnumName(TypeInfo(TMySQLOption), Integer(Option));
 end;
 
 procedure ReverseBytes(const Src, Dest: Pointer; Len: Byte);

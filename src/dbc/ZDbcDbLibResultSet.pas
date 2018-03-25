@@ -117,7 +117,7 @@ type
   public
     constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
 
-    procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+    procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
   end;
 
@@ -1026,7 +1026,7 @@ end;
   @param OldRowAccessor an accessor object to old column values.
   @param NewRowAccessor an accessor object to new column values.
 }
-procedure TZDBLibCachedResolver.PostUpdates(Sender: IZCachedResultSet;
+procedure TZDBLibCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
   UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
   Statement: IZStatement;

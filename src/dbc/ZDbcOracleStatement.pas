@@ -75,7 +75,7 @@ type
   private
     FHandle: POCIStmt;
     FErrorHandle: POCIError;
-    FPlainDriver: IZOraclePlainDriver;
+    FPlainDriver: TZOraclePlainDriver;
     FOracleConnection: IZOracleConnection;
     FParams: PZSQLVars;
     FRowPrefetchSize: ub4;
@@ -93,9 +93,9 @@ type
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
   public
-    constructor Create(const PlainDriver: IZOraclePlainDriver;
+    constructor Create(
       const Connection: IZConnection; const SQL: string; Info: TStrings); overload;
-    constructor Create(const PlainDriver: IZOraclePlainDriver;
+    constructor Create(
       const Connection: IZConnection; Info: TStrings); overload;
 
     procedure Prepare; override;
@@ -113,7 +113,7 @@ type
     FOutParamCount: Integer;
     FErrorHandle: POCIError;
     FParams: PZSQLVars;
-    FPlainDriver:IZOraclePlainDriver;
+    FPlainDriver: TZOraclePlainDriver;
     FHandle: POCIStmt;
     FOracleParams: TZOracleParams;
     FOracleParamsCount: Integer;
@@ -133,7 +133,7 @@ type
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); override;
     procedure RegisterParamTypeAndName(const ParameterIndex:integer;
-      ParamTypeName: String; const ParamName: String; Const {%H-}ColumnSize, {%H-}Precision: Integer);
+      const ParamTypeName: String; const ParamName: String; Const {%H-}ColumnSize, {%H-}Precision: Integer);
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -155,7 +155,7 @@ implementation
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZFastCode, ZDbcOracleResultSet,
-  ZEncoding, ZDbcUtils;
+  ZEncoding, ZDbcUtils, ZDbcProperties;
 
 { TZOraclePreparedStatement }
 
@@ -167,23 +167,23 @@ uses
   @param Handle a connection handle pointer.
 }
 constructor TZOraclePreparedStatement.Create(
-  const PlainDriver: IZOraclePlainDriver; const Connection: IZConnection;
+  const Connection: IZConnection;
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
-  FPlainDriver := PlainDriver;
+  FPlainDriver := TZOraclePlainDriver(Connection.GetIZPlainDriver.GetInstance);
   ResultSetType := rtForwardOnly;
   fOracleConnection := Connection as IZOracleConnection;
   ASQL := ConvertToOracleSQLQuery;
   FCanBindInt64 := Connection.GetClientVersion >= 11002000;
-  FRowPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'row_prefetch_size', ''), 131072);
-  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072);
+  FRowPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_RowPrefetchSize, ''), 131072);
+  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072);
 end;
 
-constructor TZOraclePreparedStatement.Create(const PlainDriver: IZOraclePlainDriver;
+constructor TZOraclePreparedStatement.Create(
   const Connection: IZConnection; Info: TStrings);
 begin
-  Create(PlainDriver, Connection, '', Info);
+  Create(Connection, '', Info);
 end;
 
 {**
@@ -222,7 +222,7 @@ function TZOraclePreparedStatement.CreateResultSet: IZResultSet;
 begin
   if FOpenResultSet = nil then
   begin
-    Result := CreateOracleResultSet(FPlainDriver, Self, SQL, FHandle, FErrorHandle, FZBufferSize);
+    Result := CreateOracleResultSet(Self, SQL, FHandle, FErrorHandle, FZBufferSize);
     FOpenResultSet := Pointer(Result);
   end
   else
@@ -280,7 +280,7 @@ begin
     SetVariableDataEntrys(CurrentBufferEntry, CurrentVar, FIteration);
     AllocDesriptors(FPlainDriver, (Connection as IZOracleConnection).GetConnectionHandle,
       CurrentVar, FIteration, True);
-    Status := FPlainDriver.BindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
+    Status := FPlainDriver.OCIBindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
       I + 1, CurrentVar^.Data, CurrentVar^.Length, CurrentVar^.TypeCode,
       CurrentVar^.oIndicatorArray, CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT);
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, ASQL, ConSettings);
@@ -329,7 +329,7 @@ begin
     PrepareOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
       ASQL, FHandle, FErrorHandle, FRowPrefetchSize, False{FServerStmtCache}, ConSettings);
     { get Statemant type }
-    FPlainDriver.AttrGet(FHandle, OCI_HTYPE_STMT, @FStatementType, nil,
+    FPlainDriver.OCIAttrGet(FHandle, OCI_HTYPE_STMT, @FStatementType, nil,
       OCI_ATTR_STMT_TYPE, FErrorHandle);
     inherited Prepare;
   end;
@@ -341,7 +341,7 @@ begin
   try
     if False and FServerStmtCache then
     CheckOracleError(FPlainDriver, FErrorHandle,
-        FplainDriver.StmtRelease(FHandle, FErrorHandle, nil, 0, RELEASE_MODE[False]),
+        FPlainDriver.OCIStmtRelease(FHandle, FErrorHandle, nil, 0, RELEASE_MODE[False]),
       lcExecute, ASQL, ConSettings)
     else
       FreeOracleStatementHandles(FPlainDriver, FHandle, FErrorHandle);
@@ -379,7 +379,7 @@ begin
   begin
     { Executes the statement and gets a result. }
     CheckOracleError(FPlainDriver, FErrorHandle,
-      FPlainDriver.StmtExecute(FOracleConnection.GetContextHandle,
+      FPlainDriver.OCIStmtExecute(FOracleConnection.GetContextHandle,
         FHandle, FErrorHandle, FIteration, 0, nil, nil, CommitMode[Connection.GetAutoCommit]),
       lcExecute, ASQL, ConSettings);
     LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
@@ -455,7 +455,7 @@ begin
     begin
       { Executes the statement and gets a result. }
       CheckOracleError(FPlainDriver, FErrorHandle,
-        FPlainDriver.StmtExecute(FOracleConnection.GetContextHandle,
+        FPlainDriver.OCIStmtExecute(FOracleConnection.GetContextHandle,
           FHandle, FErrorHandle, Max(1, Min(FIteration, ArrayCount)), 0, nil, nil, CommitMode[Connection.GetAutoCommit]),
         lcExecute, ASQL, ConSettings);
       LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
@@ -481,7 +481,7 @@ begin
         FHandle, FErrorHandle);
     PrepareOracleStatement(FPlainDriver, nil, ASQL, FHandle, FErrorHandle,
           FRowPrefetchSize, False, ConSettings);
-    FPlainDriver.AttrGet(FHandle, OCI_HTYPE_STMT, @FStatementType, nil,
+    FPlainDriver.OCIAttrGet(FHandle, OCI_HTYPE_STMT, @FStatementType, nil,
       OCI_ATTR_STMT_TYPE, FErrorHandle);
     inherited Prepare;
   end;
@@ -495,7 +495,7 @@ begin
   try
     if False{FServerStmtCache} then
       CheckOracleError(FPlainDriver, FErrorHandle,
-        FplainDriver.StmtRelease(FHandle, FErrorHandle, nil, 0, RELEASE_MODE[False]),
+        FPlainDriver.OCIStmtRelease(FHandle, FErrorHandle, nil, 0, RELEASE_MODE[False]),
       lcExecute, ASQL, ConSettings)
     else
       FreeOracleStatementHandles(FPlainDriver, FHandle, FErrorHandle);
@@ -563,7 +563,7 @@ begin
 end;
 
 procedure TZOracleCallableStatement.RegisterParamTypeAndName(const ParameterIndex: integer;
-  ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
+  const ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
 var
   iPos: Integer;
   ProcName: String;
@@ -639,7 +639,7 @@ begin
     SetVariableDataEntrys(CurrentBufferEntry, CurrentVar, FIteration);
     AllocDesriptors(FPlainDriver, (Connection as IZOracleConnection).GetConnectionHandle,
       CurrentVar, FIteration, True);
-    Status := FPlainDriver.BindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
+    Status := FPlainDriver.OCIBindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
       I + 1, CurrentVar^.Data, CurrentVar^.Length, CurrentVar^.TypeCode,
       CurrentVar^.oIndicatorArray, CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT);
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, ASQL, ConSettings);
@@ -741,11 +741,11 @@ var
           end;
         SQLT_TIMESTAMP:
           begin
-            FPlainDriver.DateTimeGetDate(
+            FPlainDriver.OCIDateTimeGetDate(
               FOracleConnection.GetConnectionHandle ,
               FErrorHandle, PPOCIDescriptor(CurrentVar^.Data)^,
               Year{%H-}, Month{%H-}, Day{%H-});
-            FPlainDriver.DateTimeGetTime(
+            FPlainDriver.OCIDateTimeGetTime(
               FOracleConnection.GetConnectionHandle ,
               FErrorHandle, PPOCIDescriptor(CurrentVar^.Data)^,
               Hour{%H-}, Min{%H-}, Sec{%H-},MSec{%H-});
@@ -865,13 +865,13 @@ begin
   inherited Create(Connection, pProcName, Info);
   FOracleConnection := Connection as IZOracleConnection;
   FOracleParamsCount := 0;
-  FPlainDriver := Connection.GetIZPlainDriver as IZOraclePlainDriver;
+  FPlainDriver := TZOraclePlainDriver(Connection.GetIZPlainDriver.GetInstance);
   ResultSetType := rtForwardOnly;
   PackageIncludedList := TStringList.Create;
   FOutParamCount := 0;
   FCanBindInt64 := Connection.GetClientVersion >= 11002000;
-  FRowPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'row_prefetch_size', ''), 131072);
-  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072);
+  FRowPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_RowPrefetchSize, ''), 131072);
+  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072);
   FIteration := 1;
 end;
 
@@ -890,7 +890,7 @@ begin
   BindInParameters;
   try
     CheckOracleError(FPlainDriver, FErrorHandle,
-      FPlainDriver.StmtExecute(FOracleConnection.GetContextHandle,
+      FPlainDriver.OCIStmtExecute(FOracleConnection.GetContextHandle,
         FHandle, FErrorHandle, FIteration, 0, nil, nil, CommitMode[Connection.GetAutoCommit]),
       lcExecute, ASQL, ConSettings);
     LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
@@ -913,11 +913,11 @@ begin
   BindInParameters;
   try
     CheckOracleError(FPlainDriver, FErrorHandle,
-      FPlainDriver.StmtExecute(FOracleConnection.GetContextHandle,
+      FPlainDriver.OCIStmtExecute(FOracleConnection.GetContextHandle,
         FHandle, FErrorHandle, FIteration, 0, nil, nil, CommitMode[Connection.GetAutoCommit]),
       lcExecute, ASQL, ConSettings);
     FetchOutParamsFromOracleVars;
-    LastResultSet := CreateOracleResultSet(FPlainDriver, Self, Self.SQL,
+    LastResultSet := CreateOracleResultSet(Self, Self.SQL,
       FHandle, FErrorHandle, FParams, FOracleParams);
     Result := LastResultSet;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);

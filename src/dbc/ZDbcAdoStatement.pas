@@ -58,9 +58,10 @@ interface
 {$IFDEF ENABLE_ADO}
 
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZCompatibility, {$IFDEF OLD_FPC}ZClasses, {$ENDIF} ZSysUtils,
-  ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils;
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
+  ZCompatibility, {$IFDEF OLD_FPC}ZClasses, {$ENDIF} ZSysUtils, ZOleDB,
+  ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils,
+  ZDbcOleDBUtils;
 
 type
   {** Implements Prepared ADO Statement. }
@@ -70,9 +71,24 @@ type
     FAdoCommand: ZPlainAdo.Command;
     FAdoConnection: IZAdoConnection;
     FIsSelectSQL: Boolean;
+    {Ole direct fast idea -> avoid External allocations and the OleVariants}
+    FZBufferSize: Integer;
+    FParameterAccessor: IAccessor;
+    FDBBindingArray: TDBBindingDynArray;
+    FDBBINDSTATUSArray: TDBBINDSTATUSDynArray;
+    FDBUPARAMS: DB_UPARAMS;
+    FRowSize: NativeUInt;
+    FArrayOffSet: DB_UPARAMS;
+    FDBParams: TDBParams;
+    FRowCount: DBROWCOUNT;
+    FParamsBuffer: TByteDynArray; //mem-leak safe! IDE cleans it allways
+    FTempLobs: TInterfacesDynArray;
+    FUseOle: Boolean;
+    procedure CalcParamSetsAndBufferSize;
   protected
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
+    procedure UnPrepareInParameters; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings); overload;
@@ -90,6 +106,9 @@ type
     function GetMoreResults(var RS: IZResultSet): Boolean; reintroduce; overload;
 
     procedure ClearParameters; override;
+
+    procedure SetDataArray(ParameterIndex: Integer; const Value;
+      const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
   end;
 
   TZAdoEmulatedPreparedStatement = class(TZEmulatedPreparedStatement_W)
@@ -139,11 +158,10 @@ type
 implementation
 
 uses
-  Variants, ComObj,
+  Variants, ComObj, Math,
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
-  ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet,
-  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages
-  {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
+  ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZFastCode,
+  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages, ZDbcProperties;
 
 { TZAdoPreparedStatement }
 
@@ -155,12 +173,16 @@ begin
   FAdoCommand.CommandText := WSQL;
   FAdoConnection := Connection as IZAdoConnection;
   FAdoCommand._Set_ActiveConnection(FAdoConnection.GetAdoConnection);
+  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //by default 128KB
+  FUseOle := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'use_ole_update_params', 'true')); //not set by default on 7.2
 end;
 
 constructor TZAdoPreparedStatement.Create(const Connection: IZConnection;
   const Info: TStrings);
 begin
   Create(Connection, '', Info);
+  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //by default 128KB
+  FUseOle := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'use_ole_update_params', ''));
 end;
 
 destructor TZAdoPreparedStatement.Destroy;
@@ -171,21 +193,84 @@ begin
   FAdoCommand := nil;
 end;
 
+procedure TZAdoPreparedStatement.CalcParamSetsAndBufferSize;
+var I: Integer;
+begin
+  if ArrayCount > 0 then
+    //indicate rows for batch executions
+    if (FRowSize > Cardinal(FZBufferSize)) or (FRowSize * Cardinal(ArrayCount) > Cardinal(FZBufferSize)) then
+      FDBParams.cParamSets := Max(1, FZBufferSize div NativeInt(FRowSize))
+    else
+      FDBParams.cParamSets := ArrayCount
+  else
+    FDBParams.cParamSets := 1; //indicate rows for single executions
+  SetLength(FParamsBuffer, FDBParams.cParamSets * FRowSize);
+  FDBParams.pData := Pointer(FParamsBuffer); //set entry pointer
+  if FDBParams.hAccessor = 0 then
+    FParameterAccessor.CreateAccessor(DBACCESSOR_PARAMETERDATA,
+      FDBUPARAMS, Pointer(FDBBindingArray), FRowSize, @FDBParams.hAccessor,
+      Pointer(FDBBINDSTATUSArray));
+  for i := 0 to Length(FTempLobs)-1 do
+    SetLength(FTempLobs[i], Max(1, ArrayCount));
+end;
+
 procedure TZAdoPreparedStatement.Prepare;
 begin
   if Not Prepared then //prevent PrepareInParameters
   begin
-    FIsSelectSQL := IsSelect(SQL);
+    if FUseOle then //note: ADO or MSSQL allow execute multiple stmts
+      //so a "insert into foo values('bar'); select scope_identity()"
+      //would return a rowset -> fall back to ADO behavior
+      FIsSelectSQL := (ZFastCode.Pos('SELECT', UpperCase(SQL)) > 0)
+    else
+      FIsSelectSQL := IsSelect(SQL);
     FAdoCommand.CommandText := WSQL;
     inherited Prepare;
-    FAdoCommand.Prepared := True;
-  end;
+    if not Assigned(FParameterAccessor) then
+      FAdoCommand.Prepared := True;
+  end
+  else
+    if Assigned(FParameterAccessor) and ((ArrayCount > 0) and
+      (FDBParams.cParamSets = 0)) or //new arrays have been set
+      ((ArrayCount = 0) and (FDBParams.cParamSets > 1)) then //or single exec follows
+      CalcParamSetsAndBufferSize
 end;
 
 procedure TZAdoPreparedStatement.PrepareInParameters;
+var
+  FNamesBuffer: PPOleStr; //we don't need this here except as param!
+  FParamInfoArray: PDBParamInfoArray;
+  FOleParamCommand: ICommandWithParameters;
+  FOlePrepareCommand: ICommandPrepare;
 begin
   if InParamCount > 0 then
-    RefreshParameters(FAdoCommand);
+  begin
+    if FUseOle and (not FIsSelectSQL) and
+       Supports((FAdoCommand as ADOCommandConstruction).OLEDBCommand as ICommand,
+        IID_ICommandWithParameters, FOleParamCommand) and
+       Supports((FAdoCommand as ADOCommandConstruction).OLEDBCommand as ICommand,
+        IID_ICommandPrepare, FOlePrepareCommand) and
+       Supports(FOleParamCommand, IID_IAccessor, FParameterAccessor) then
+    begin
+      OleDBCheck(FOlePrepareCommand.Prepare(0)); //0 indicates a non known count of execution
+      {check out the Parameter informations}
+      FNamesBuffer := nil; FParamInfoArray := nil;
+      try
+        OleDBCheck(FOleParamCommand.GetParameterInfo(FDBUPARAMS, PDBPARAMINFO(FParamInfoArray), FNamesBuffer));
+        Assert(FDBUPARAMS = Cardinal(InParamCount), SInvalidInputParameterCount);
+        SetLength(FDBBINDSTATUSArray, FDBUPARAMS);
+        FRowSize := PrepareOleParamDBBindings(FDBUPARAMS, FDBBindingArray,
+          InParamTypes, FParamInfoArray, FTempLobs);
+        CalcParamSetsAndBufferSize;
+      finally
+        if Assigned(FParamInfoArray) then ZAdoMalloc.Free(FParamInfoArray);
+        if Assigned(FNamesBuffer) then ZAdoMalloc.Free(FNamesBuffer);
+      end;
+      Assert(FDBParams.hAccessor = 1, 'Accessor handle should be unique!');
+    end
+    else
+      RefreshParameters(FAdoCommand);
+  end;
 end;
 
 procedure TZAdoPreparedStatement.BindInParameters;
@@ -196,23 +281,70 @@ begin
     Exit
   else
     if ArrayCount = 0 then
-    begin
-      for i := 0 to InParamCount-1 do
-        if ClientVarManager.IsNull(InParamValues[i]) then
-          if (InParamDefaultValues[i] <> '') and (UpperCase(InParamDefaultValues[i]) <> 'NULL') and
-            StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
-          begin
-            ClientVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
-            ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], InParamValues[i], adParamInput)
-          end
+      if Assigned(FParameterAccessor) then
+      begin
+        FRowCount := 0; //init
+        OleBindParams(FDBParams, ConSettings, FDBBindingArray,
+          InParamValues, InParamTypes, ClientVarManager);
+      end
+      else
+      begin
+        for i := 0 to InParamCount-1 do
+          if ClientVarManager.IsNull(InParamValues[i]) then
+            if (InParamDefaultValues[i] <> '') and (UpperCase(InParamDefaultValues[i]) <> 'NULL') and
+              StrToBoolEx(DefineStatementParameter(Self, DSProps_Defaults, 'true')) then
+            begin
+              ClientVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
+              ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], InParamValues[i], adParamInput)
+            end
+            else
+              ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], NullVariant, adParamInput)
           else
-            ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], NullVariant, adParamInput)
-        else
-          ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], InParamValues[i], adParamInput)
+            ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], InParamValues[i], adParamInput)
     end
     else
-      LastUpdateCount := ADOBindArrayParams(FAdoCommand, FAdoConnection, ConSettings,
-            InParamValues, adParamInput, ArrayCount);
+      if Assigned(FParameterAccessor) then
+      begin
+        FRowCount := 0; //init
+        LastUpdateCount := 0;
+        while True do
+        begin
+          if (FArrayOffSet+FDBParams.cParamSets >= Cardinal(ArrayCount)) then
+          begin
+            FDBParams.cParamSets := DBLENGTH(ArrayCount) - FArrayOffSet;
+            OleBindArrayParams(FDBParams, FArrayOffSet, FRowSize, ConSettings,
+              FDBBindingArray, ClientVarManager, InParamValues, FTempLobs);
+            FRowCount := LastUpdateCount; //restore for final execution!
+            FArrayOffSet := 0; //Reset!
+            Break
+          end
+          else
+          begin
+            OleBindArrayParams(FDBParams, FArrayOffSet, FRowSize, ConSettings,
+              FDBBindingArray, ClientVarManager, InParamValues, FTempLobs);
+            ((FAdoCommand as ADOCommandConstruction).OLEDBCommand as ICommand).Execute(
+              nil,DB_NULLGUID,FDBParams,@FRowCount,nil);
+            Inc(FArrayOffSet, FDBParams.cParamSets);
+            LastUpdateCount := LastUpdateCount + FRowCount;
+          end
+        end
+      end
+      else
+        LastUpdateCount := ADOBindArrayParams(FAdoCommand, FAdoConnection,
+          ConSettings, InParamValues, adParamInput, ArrayCount);
+end;
+
+procedure TZAdoPreparedStatement.UnPrepareInParameters;
+var
+  FAccessorRefCount: DBREFCOUNT;
+begin
+  if Assigned(FParameterAccessor) then
+  begin
+    //don't forgett to release the Accessor else we're leaking mem on Server!
+    FParameterAccessor.ReleaseAccessor(FDBParams.hAccessor, @FAccessorRefCount);
+    Assert(FAccessorRefCount = 0, 'Some more Accessors wrongly have been created!');
+    FParameterAccessor := nil;
+  end;
 end;
 
 {**
@@ -276,8 +408,18 @@ begin
   LastUpdateCount := -1;
   BindInParameters;
   try
-    AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, adExecuteNoRecords);
-    LastUpdateCount := {%H-}RC;
+    if Assigned(FParameterAccessor) then
+    begin
+      LastUpdateCount := FRowCount; //store tempory possible array bound update-counts
+      OleDBCheck(((FAdoCommand as ADOCommandConstruction).OLEDBCommand as ICommand).Execute(
+        nil, DB_NULLGUID,FDBParams,@FRowCount,nil));
+      LastUpdateCount := LastUpdateCount + FrowCount;
+    end
+    else
+    begin
+      AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, adExecuteNoRecords);
+      LastUpdateCount := {%H-}RC;
+    end;
     Result := LastUpdateCount;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
@@ -313,12 +455,24 @@ begin
       AdoRecordSet.MaxRecords := MaxRows;
       AdoRecordSet._Set_ActiveConnection(FAdoCommand.Get_ActiveConnection);
       AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
+      LastResultSet := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
+        SQL, ConSettings, ResultSetConcurrency);
     end
     else
-      AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{, adExecuteNoRecords});
-    LastResultSet := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
-      SQL, ConSettings, ResultSetConcurrency);
-    LastUpdateCount := {%H-}RC;
+      if Assigned(FParameterAccessor) then
+      begin
+        LastUpdateCount := FRowCount; //store tempory possible array bound update-counts
+        Succeeded(((FAdoCommand as ADOCommandConstruction).OLEDBCommand as ICommand).Execute(
+          nil, DB_NULLGUID,FDBParams,@FRowCount, nil));
+        LastUpdateCount := LastUpdateCount + FrowCount;
+      end
+      else
+      begin
+        AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{, adExecuteNoRecords});
+        LastResultSet := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
+          SQL, ConSettings, ResultSetConcurrency);
+        LastUpdateCount := {%H-}RC;
+      end;
     Result := Assigned(LastResultSet);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
@@ -365,13 +519,27 @@ procedure TZAdoPreparedStatement.Unprepare;
 begin
   if FAdoCommand.Prepared then
     FAdoCommand.Prepared := False;
+  if Assigned(FParameterAccessor) then
+    ((FAdoCommand as ADOCommandConstruction).OLEDBCommand as ICommandPrepare).UnPrepare;
   inherited Unprepare;
 end;
 
 procedure TZAdoPreparedStatement.ClearParameters;
 begin
   inherited ClearParameters;
-  RefreshParameters(FAdoCommand);
+  if (FParameterAccessor = nil) and Prepared then
+    RefreshParameters(FAdoCommand);
+end;
+
+procedure TZAdoPreparedStatement.SetDataArray(ParameterIndex: Integer;
+  const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
+begin
+  if ParameterIndex = FirstDbcIndex then
+  begin
+    FArrayOffSet := 0;
+    FDBParams.cParamSets := 0;
+  end;
+  inherited SetDataArray(ParameterIndex, Value, SQLType, VariantType);
 end;
 { TZAdoCallableStatement }
 
@@ -695,7 +863,7 @@ begin
       if FDBParamTypes[i] in [1,3] then //ptInput, ptInputOutput
         if ClientVarManager.IsNull(InParamValues[i]) then
           if (InParamDefaultValues[i] <> '') and (UpperCase(InParamDefaultValues[i]) <> 'NULL') and
-            StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
+            StrToBoolEx(DefineStatementParameter(Self, DSProps_Defaults, 'true')) then
           begin
             ClientVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
             ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], InParamValues[i], adParamInput)

@@ -56,6 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+{$ENDIF USE_SYNCOMMONS}
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
@@ -250,6 +253,11 @@ type
     procedure SetBlob(ColumnIndex: Integer; const Value: IZBlob);
     procedure SetDataSet(ColumnIndex: Integer; const Value: IZDataSet);
     procedure SetValue(ColumnIndex: Integer; const Value: TZVariant);
+
+    {$IFDEF USE_SYNCOMMONS}
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False);
+    {$ENDIF USE_SYNCOMMONS}
 
     property ColumnsSize: Integer read FColumnsSize;
     property RowSize: Integer read FRowSize;
@@ -1295,6 +1303,109 @@ procedure TZRowAccessor.CloneBuffer(SrcBuffer: PZRowBuffer; DestBuffer: PZRowBuf
 begin
   CopyBuffer(SrcBuffer, DestBuffer, True);
 end;
+
+{$IFDEF USE_SYNCOMMONS}
+procedure TZRowAccessor.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
+var P: Pointer;
+    I, H, C: SmallInt;
+    Blob: IZBlob;
+begin
+  if JSONWriter.Expand then
+    JSONWriter.Add('{');
+  if Assigned(JSONWriter.Fields) then
+    H := High(JSONWriter.Fields) else
+    H := High(JSONWriter.ColNames);
+  for I := 0 to H do begin
+    if Pointer(JSONWriter.Fields) = nil then
+      C := I else
+      C := JSONWriter.Fields[i];
+    if FBuffer.Columns[FColumnOffsets[C]] = bIsNull then begin
+      if JSONWriter.Expand then begin
+        if (not SkipNullFields) then begin
+          JSONWriter.AddString(JSONWriter.ColNames[I]);
+          JSONWriter.AddShort('null,')
+        end;
+      end else
+        JSONWriter.AddShort('null,');
+    end else begin
+      if JSONWriter.Expand then
+        JSONWriter.AddString(JSONWriter.ColNames[I]);
+      case FColumnTypes[C] of
+        stBoolean       : JSONWriter.AddShort(JSONBool[PWordBool(@FBuffer.Columns[FColumnOffsets[C] + 1])^]);
+        stByte          : JSONWriter.AddU(PByte(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stShort         : JSONWriter.Add(PShortInt(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stWord          : JSONWriter.AddU(PWord(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stSmall         : JSONWriter.Add(PSmallInt(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stLongWord      : JSONWriter.AddU(PCardinal(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stInteger       : JSONWriter.Add(PInteger(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stULong         : JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PUInt64(@FBuffer.Columns[FColumnOffsets[C] + 1])^));
+        stLong          : JSONWriter.Add(PInt64(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stFloat         : JSONWriter.AddSingle(PSingle(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stDouble        : JSONWriter.AddDouble(PDouble(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stCurrency      : JSONWriter.AddCurr64(PCurrency(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stBigDecimal    : JSONWriter.AddDouble(PExtended(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stString,
+        stUnicodeString : begin
+                            JSONWriter.Add('"');
+                            if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
+                               (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) then
+                              JSONWriter.AddJSONEscapeW(Pointer(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[C] + 1])^+PWideInc),
+                                PPLongWord(@FBuffer.Columns[FColumnOffsets[C] + 1])^^)
+                            else if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+                              JSONWriter.AddJSONEscape(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[C] + 1])^+PAnsiInc,
+                                PPLongWord(@FBuffer.Columns[FColumnOffsets[C] + 1])^^)
+                            else begin
+                              FUniTemp := PRawToUnicode(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[C] + 1])^+PAnsiInc,
+                                PPLongWord(@FBuffer.Columns[FColumnOffsets[C] + 1])^^, ConSettings^.ClientCodePage^.CP);
+                              JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+                            end;
+                            JSONWriter.Add('"');
+                          end;
+        stBytes         : JSONWriter.WrBase64(PPointer(@FBuffer.Columns[FColumnOffsets[C] + 1])^,
+                            PSmallInt(@FBuffer.Columns[FColumnOffsets[C] + 1 + SizeOf(Pointer)])^, True);
+        stGUID          : begin
+                            JSONWriter.Add('"');
+                            JSONWriter.Add(PGUID(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+                            JSONWriter.Add('"');
+                          end;
+        stDate,
+        stTime,
+        stTimestamp     : JSONWriter.AddDateTime(PDateTime(@FBuffer.Columns[FColumnOffsets[C] + 1]), 'T', '"');
+        stAsciiStream, stUnicodeStream:
+          begin
+            Blob := IZBlob(PPointer(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+            if Blob.IsEmpty then
+              JSONWriter.AddShort('null')
+            else begin
+              if Blob.IsClob then
+                P := Blob.GetPAnsiChar(zCP_UTF8) else
+                P := Blob.GetBuffer;
+              JSONWriter.Add('"');
+              JSONWriter.AddJSONEscape(P, Blob.Length);
+              JSONWriter.Add('"');
+            end;
+          end;
+        stBinaryStream:
+          begin
+            Blob := IZBlob(PPointer(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+            if Blob.IsEmpty then
+              JSONWriter.AddShort('null')
+            else
+              JSONWriter.WrBase64(Blob.GetBuffer, Blob.Length, True);
+          end;
+      end;
+      JSONWriter.Add(',');
+    end;
+  end;
+  if EndJSONObject then
+  begin
+    JSONWriter.CancelLastComma; // cancel last ','
+    if JSONWriter.Expand then
+      JSONWriter.Add('}');
+  end;
+end;
+{$ENDIF USE_SYNCOMMONS}
 
 {**
   Compares fields from two row buffers.

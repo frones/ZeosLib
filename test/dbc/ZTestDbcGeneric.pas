@@ -207,7 +207,8 @@ var
 begin
   if StartsWith(Protocol, 'mysql') or StartsWith(Protocol, 'sqlite') or
     StartsWith(Protocol, 'FreeTDS') or ( Protocol = 'mssql') or
-    ( Protocol = 'ado') or ( Protocol = 'sybase') or StartsWith(Protocol, 'ASA') then
+    ( Protocol = 'ado') or ( Protocol = 'sybase') or
+    StartsWith(Protocol, 'ASA') or StartsWith(Protocol, 'OleDB') then
     Exit; //not in build sripts because they depend to locale settings
 
   Metadata := Connection.GetMetadata;
@@ -217,7 +218,6 @@ begin
   Connection.CreateStatement.ExecuteUpdate(Sql);
 
   Sql := 'SELECT * FROM '+MetaData.GetIdentifierConvertor.Quote('Case_Sensitive')+' WHERE cs_id = ?';
-
   { Inserts row to "Case_Sensitive" table }
   Statement := Connection.PrepareStatement(Sql);
   CheckNotNull(Statement);
@@ -1319,7 +1319,7 @@ const
   s_nchar_Index  = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
   s_nvarchar_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
   s_bit_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  s_varbit_Index  = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  //s_varbit_Index  = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
   PStatement: IZPreparedStatement;
   Statement: IZStatement;
@@ -1339,7 +1339,8 @@ var
 begin
   Use_S_BIT := Not(StartsWith(Protocol, 'sqlite') or StartsWith(Protocol, 'ado') or
     StartsWith(Protocol, 'mssql') or StartsWith(Protocol, 'sybase') or
-    StartsWith(Protocol, 'FreeTDS') or StartsWith(Protocol, 'ASA'));
+    StartsWith(Protocol, 'FreeTDS') or StartsWith(Protocol, 'ASA') or
+    StartsWith(Protocol, 'OleDB') or StartsWith(Protocol, 'odbc'));
   if Use_S_BIT then
     PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)')
   else
@@ -1451,7 +1452,7 @@ const
   s_nchar_Index  = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
   s_nvarchar_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
   s_bit_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  s_varbit_Index  = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  //s_varbit_Index  = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
   PStatement: IZPreparedStatement;
   Statement: IZStatement;
@@ -1474,7 +1475,8 @@ begin
   Info.Add('preferprepared=True');
   Use_S_BIT := Not(StartsWith(Protocol, 'sqlite') or StartsWith(Protocol, 'ado')
     or StartsWith(Protocol, 'mssql') or StartsWith(Protocol, 'sybase') or
-    StartsWith(Protocol, 'FreeTDS') or StartsWith(Protocol, 'ASA'));
+    StartsWith(Protocol, 'FreeTDS') or StartsWith(Protocol, 'ASA') or
+    StartsWith(Protocol, 'OleDB') or StartsWith(Protocol, 'odbc'));
   if Use_S_BIT then
     PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)')
   else

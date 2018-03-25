@@ -86,6 +86,12 @@ uses
 {$IFDEF ENABLE_POOLED}
   ZDbcPooled,
 {$ENDIF}
+{$IFDEF ENABLE_OLEDB}
+  ZDbcOleDB,
+{$ENDIF}
+{$IFDEF ENABLE_ODBC}
+  ZDbcODBCCon,
+{$ENDIF}
 
   SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   ZDbcIntfs, ZCompatibility, ZURL;
@@ -221,8 +227,8 @@ type
 
     procedure RegisterDataSet(DataSet: TDataset);
     procedure UnregisterDataSet(DataSet: TDataset);
-    function ExecuteDirect(SQL:string):boolean;overload;
-    function ExecuteDirect(SQL:string; var RowsAffected:integer):boolean;overload;
+    function ExecuteDirect(const SQL: string): boolean; overload;
+    function ExecuteDirect(const SQL: string; var RowsAffected: integer): boolean; overload;
     // Modified by cipto 8/2/2007 10:16:50 AM
     procedure RegisterSequence(Sequence: TComponent);
     procedure UnregisterSequence(Sequence: TComponent);
@@ -233,7 +239,7 @@ type
     procedure GetSchemaNames(List: TStrings);
     procedure GetTableNames(const Pattern: string; List: TStrings);overload;
     procedure GetTableNames(const schemaPattern, tablePattern: string; List: TStrings);overload;
-    procedure GetTableNames(const schemaPattern, tablePattern: string; Types: TStringDynArray; List: TStrings);overload;
+    procedure GetTableNames(const schemaPattern, tablePattern: string; const Types: TStringDynArray; List: TStrings);overload;
     procedure GetColumnNames(const TablePattern, ColumnPattern: string; List: TStrings);
 
     procedure GetStoredProcNames(const Pattern: string; List: TStrings);
@@ -313,7 +319,7 @@ type
 
 implementation
 
-uses ZMessages, ZClasses, ZAbstractRODataset, ZSysUtils,
+uses ZMessages, ZClasses, ZAbstractRODataset, ZSysUtils, ZConnProperties,
       // Modified by cipto 8/2/2007 10:00:22 AM
       ZSequence, ZAbstractDataset, ZEncoding;
 
@@ -477,11 +483,11 @@ begin
     //possible! -> result of PropertyEditor if not complete yet
     //Later we should remove this if the MeataData/Plaindriver-Informations
     //where complete
-    FClientCodepage := Trim(FURL.Properties.Values['codepage'])
+    FClientCodepage := Trim(FURL.Properties.Values[ConnProps_CodePage])
   else
     Self.FClientCodepage := Value;
-  if ( Trim(FURL.Properties.Values['codepage']) <> FClientCodepage ) then
-    FURL.Properties.Values['codepage'] := FClientCodepage;
+  if ( Trim(FURL.Properties.Values[ConnProps_CodePage]) <> FClientCodepage ) then
+    FURL.Properties.Values[ConnProps_CodePage] := FClientCodepage;
 end;
 
 {**
@@ -524,65 +530,65 @@ begin
   FURL.Properties.Clear;
   if Value = nil then Exit;
 
-  if ( Trim(Value.Values['codepage']) <> '' ) then
-    FClientCodepage := Trim(Value.Values['codepage'])
+  if ( Trim(Value.Values[ConnProps_CodePage]) <> '' ) then
+    FClientCodepage := Trim(Value.Values[ConnProps_CodePage])
   else
-    Value.Values['codepage'] := FClientCodepage;
+    Value.Values[ConnProps_CodePage] := FClientCodepage;
 
   { check autoencodestrings }
   {$IF (defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)) and not defined(UNICODE)}
+  FAutoEncode := StrToBoolEx(Value.Values[ConnProps_AutoEncodeStrings]);
   if Connected then
-    DbcConnection.AutoEncodeStrings := Value.Values['AutoEncodeStrings'] = 'ON';
-  FAutoEncode := Value.Values['AutoEncodeStrings'] = 'ON';
+    DbcConnection.AutoEncodeStrings := FAutoEncode;
   {$ELSE}
     {$IFDEF UNICODE}
-    Value.Values['AutoEncodeStrings'] := 'ON';
+    Value.Values[ConnProps_AutoEncodeStrings] := 'True';
     {$ELSE}
-    Value.Values['AutoEncodeStrings'] := '';
+    Value.Values[ConnProps_AutoEncodeStrings] := '';
     {$ENDIF}
   {$IFEND}
 
-  if Value.IndexOf('controls_cp') = -1 then
+  if Value.IndexOf(ConnProps_ControlsCP) = -1 then
     {$IFDEF UNICODE}
     if ControlsCodePage = cCP_UTF16 then
-      Value.values['controls_cp'] := 'CP_UTF16'
+      Value.Values[ConnProps_ControlsCP] := 'CP_UTF16'
     else
-      Value.values['controls_cp'] := 'GET_ACP'
+      Value.Values[ConnProps_ControlsCP] := 'GET_ACP'
     {$ELSE}
     case ControlsCodePage of //automated check..
-      cCP_UTF16: Value.values['controls_cp'] := 'CP_UTF16';
-      cCP_UTF8: Value.values['controls_cp'] := 'CP_UTF8';
-      cGET_ACP: Value.values['controls_cp'] := 'GET_ACP';
+      cCP_UTF16: Value.Values[ConnProps_ControlsCP] := 'CP_UTF16';
+      cCP_UTF8: Value.Values[ConnProps_ControlsCP] := 'CP_UTF8';
+      cGET_ACP: Value.Values[ConnProps_ControlsCP] := 'GET_ACP';
     end
     {$ENDIF}
   else
     {$IFDEF UNICODE}
-    if Value.values['controls_cp'] = 'CP_UTF8' then
+    if Value.Values[ConnProps_ControlsCP] = 'CP_UTF8' then
     begin
-      Value.values['controls_cp'] := 'CP_UTF16';
+      Value.Values[ConnProps_ControlsCP] := 'CP_UTF16';
       FControlsCodePage := cCP_UTF16;
     end;
     {$ELSE}
       {$IFNDEF WITH_WIDEFIELDS} //old FPC and D7
-      if Value.values['controls_cp'] = 'CP_UTF16' then
+      if Value.Values[ConnProps_ControlsCP] = 'CP_UTF16' then
       begin
         FControlsCodePage := cGET_ACP;
-        Value.values['controls_cp'] := {$IFDEF DELPHI}'GET_ACP'{$ELSE}'CP_UTF8'{$ENDIF};
+        Value.Values[ConnProps_ControlsCP] := {$IFDEF DELPHI}'GET_ACP'{$ELSE}'CP_UTF8'{$ENDIF};
       end;
       {$ELSE}
-      if Value.values['controls_cp'] = 'GET_ACP' then
+      if Value.Values[ConnProps_ControlsCP] = 'GET_ACP' then
         FControlsCodePage := cGET_ACP
       else
-        if Value.values['controls_cp'] = 'CP_UTF8' then
+        if Value.Values[ConnProps_ControlsCP] = 'CP_UTF8' then
           FControlsCodePage := cCP_UTF8
         else
-          if Value.values['controls_cp'] = 'CP_UTF16' then
+          if Value.Values[ConnProps_ControlsCP] = 'CP_UTF16' then
             FControlsCodePage := cCP_UTF16
           else
             case ControlsCodePage of //automated check..
-              cCP_UTF16: Value.values['controls_cp'] := 'CP_UTF16';
-              cCP_UTF8: Value.values['controls_cp'] := 'CP_UTF8';
-              cGET_ACP: Value.values['controls_cp'] := 'GET_ACP';
+              cCP_UTF16: Value.Values[ConnProps_ControlsCP] := 'CP_UTF16';
+              cCP_UTF8: Value.Values[ConnProps_ControlsCP] := 'CP_UTF8';
+              cGET_ACP: Value.Values[ConnProps_ControlsCP] := 'GET_ACP';
             end;
       {$ENDIF}
     {$ENDIF}
@@ -1339,7 +1345,7 @@ end;
                                        'TEMPORARY INDEX'
   @param List a string list to fill out.
 }
-procedure TZAbstractConnection.GetTableNames(const schemaPattern, tablePattern: string; Types: TStringDynArray; List: TStrings);
+procedure TZAbstractConnection.GetTableNames(const schemaPattern, tablePattern: string; const Types: TStringDynArray; List: TStrings);
 var
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
@@ -1519,9 +1525,9 @@ begin
   {$IFNDEF UNICODE}
     {$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
     if Value then
-      FURL.Properties.Values['AutoEncodeStrings'] := 'ON'
+      FURL.Properties.Values[ConnProps_AutoEncodeStrings] := 'True'
     else
-      FURL.Properties.Values['AutoEncodeStrings'] := '';
+      FURL.Properties.Values[ConnProps_AutoEncodeStrings] := '';
 
     if Value <> FAutoEncode then
     begin
@@ -1533,7 +1539,7 @@ begin
       end;
     end;
     {$ELSE}
-    FURL.Properties.Values['AutoEncodeStrings'] := '';
+    FURL.Properties.Values[ConnProps_AutoEncodeStrings] := '';
     {$IFEND}
   {$ENDIF}
 end;
@@ -1561,17 +1567,17 @@ procedure TZAbstractConnection.SetControlsCodePage(const Value: TZControlsCodePa
     case Value of
       cCP_UTF16:
         begin
-          Properties.values['controls_cp'] := 'CP_UTF16';
+          Properties.Values[ConnProps_ControlsCP] := 'CP_UTF16';
           FControlsCodePage := Value;
         end;
       cCP_UTF8:
         begin
-          Properties.values['controls_cp'] := 'CP_UTF16';
+          Properties.Values[ConnProps_ControlsCP] := 'CP_UTF16';
           FControlsCodePage := cCP_UTF16;
         end;
       cGET_ACP:
         begin
-          Properties.values['controls_cp'] := 'GET_ACP';
+          Properties.Values[ConnProps_ControlsCP] := 'GET_ACP';
           FControlsCodePage := Value;
         end;
     end;
@@ -1580,23 +1586,23 @@ procedure TZAbstractConnection.SetControlsCodePage(const Value: TZControlsCodePa
       case Value of
         cCP_UTF16:
           begin
-            Properties.values['controls_cp'] := 'CP_UTF16';
+            Properties.Values[ConnProps_ControlsCP] := 'CP_UTF16';
             FControlsCodePage := Value;
           end;
         cCP_UTF8:
           begin
-            Properties.values['controls_cp'] := 'CP_UTF8';
+            Properties.Values[ConnProps_ControlsCP] := 'CP_UTF8';
             FControlsCodePage := Value;
           end;
         cGET_ACP:
           if ZOSCodePage = zCP_UTF8 then
           begin
-            Properties.values['controls_cp'] := 'CP_UTF8';
+            Properties.Values[ConnProps_ControlsCP] := 'CP_UTF8';
             FControlsCodePage := cCP_UTF8;
           end
           else
           begin
-            Properties.values['controls_cp'] := 'GET_ACP';
+            Properties.Values[ConnProps_ControlsCP] := 'GET_ACP';
             FControlsCodePage := Value;
           end;
       end;
@@ -1604,23 +1610,23 @@ procedure TZAbstractConnection.SetControlsCodePage(const Value: TZControlsCodePa
       case Value of
         cCP_UTF16:
           begin
-            Properties.values['controls_cp'] := 'CP_UTF8';
+            Properties.Values[ConnProps_ControlsCP] := 'CP_UTF8';
             FControlsCodePage := cCP_UTF8;
           end;
         cCP_UTF8:
           begin
-            Properties.values['controls_cp'] := 'CP_UTF8';
+            Properties.Values[ConnProps_ControlsCP] := 'CP_UTF8';
             FControlsCodePage := Value;
           end;
         cGET_ACP:
           if ZOSCodePage = zCP_UTF8 then
           begin
-            Properties.values['controls_cp'] := 'CP_UTF8';
+            Properties.Values[ConnProps_ControlsCP] := 'CP_UTF8';
             FControlsCodePage := cCP_UTF8;
           end
           else
           begin
-            Properties.values['controls_cp'] := 'GET_ACP';
+            Properties.Values[ConnProps_ControlsCP] := 'GET_ACP';
             FControlsCodePage := Value;
           end;
       end;
@@ -1675,11 +1681,11 @@ end;
   @param SQL the statement to be executed.
   Returns an indication if execution was succesfull.
 }
-function TZAbstractConnection.ExecuteDirect(SQL : String) : boolean;
+function TZAbstractConnection.ExecuteDirect(const SQL: String): boolean;
 var
   dummy : Integer;
 begin
-  result:= ExecuteDirect(SQL,dummy{%H-});
+  result:= ExecuteDirect(SQL, dummy{%H-});
 end;
 
 {**
@@ -1688,8 +1694,8 @@ end;
   @param RowsAffected the number of rows that were affected by the statement.
   Returns an indication if execution was succesfull.
 }
-function TZAbstractConnection.ExecuteDirect(SQL: string;
-  var RowsAffected: integer):boolean;
+function TZAbstractConnection.ExecuteDirect(const SQL: string;
+  var RowsAffected: integer): boolean;
 begin
   RowsAffected := -1;
   try

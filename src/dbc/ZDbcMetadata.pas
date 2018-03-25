@@ -94,11 +94,13 @@ type
     ['{D84055AC-BCD5-40CD-B408-6F11AF000C96}']
     procedure SetType(Value: TZResultSetType);
     procedure SetConcurrency(Value: TZResultSetConcurrency);
+    procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
   end;
 
   {** Implements Virtual ResultSet. }
   TZVirtualResultSet = class(TZAbstractCachedResultSet, IZVirtualResultSet)
   private
+    fConSettings: TZConSettings;
     fDoClose: Boolean;
   protected
     procedure CalculateRowDefaults({%H-}RowAccessor: TZRowAccessor); override;
@@ -111,6 +113,8 @@ type
       ConSettings: PZConSettings);
     procedure Close; override;
     destructor Destroy; override;
+  public
+    procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
   end;
 
   {** Implements Abstract Database Metadata. }
@@ -150,14 +154,14 @@ type
     function HasKey(const Key: String): Boolean;
     function ConstructVirtualResultSet(ColumnsDefs: TZMetadataColumnDefs):
       IZVirtualResultSet;
-    function CopyToVirtualResultSet(SrcResultSet: IZResultSet;
-      DestResultSet: IZVirtualResultSet): IZVirtualResultSet;
-    function CloneCachedResultSet(ResultSet: IZResultSet): IZResultSet;
-    function ConstructNameCondition(Pattern: string; Column: string): string; virtual;
-    function AddEscapeCharToWildcards(const Pattern:string): string;
+    function CopyToVirtualResultSet(const SrcResultSet: IZResultSet;
+      const DestResultSet: IZVirtualResultSet): IZVirtualResultSet;
+    function CloneCachedResultSet(const ResultSet: IZResultSet): IZResultSet;
+    function ConstructNameCondition(const Pattern: string; const Column: string): string; virtual;
+    function AddEscapeCharToWildcards(const Pattern: string): string;
     function GetWildcardsSet:TZWildcardsSet;
     procedure FillWildcards; virtual;
-    function NormalizePatternCase(Pattern: String): string;
+    function NormalizePatternCase(const Pattern: String): string;
     property Url: string read GetURLString;
     property Info: TStrings read GetInfo;
     property CachedResultSets: IZHashMap read FCachedResultSets
@@ -526,6 +530,11 @@ const
   ProcedureReserverd2Index = FirstDbcIndex + 5;
   ProcedureRemarksIndex    = FirstDbcIndex + 6;
   ProcedureTypeIndex       = FirstDbcIndex + 7;
+type
+  TProcedureMap = packed record
+    Initilized: Boolean;
+    ColIndices: array[CatalogNameIndex..ProcedureTypeIndex] of ShortInt
+  end;
 var
   ProceduresColumnsDynArray: TZMetadataColumnDefs;
 const
@@ -540,6 +549,11 @@ const
   ProcColRadixIndex         = FirstDbcIndex + 10;
   ProcColNullableIndex      = FirstDbcIndex + 11;
   ProcColRemarksIndex       = FirstDbcIndex + 12;
+type
+  TProcedureColumnsColMap = packed record
+    Initilized: Boolean;
+    ColIndices: array[CatalogNameIndex..ProcColRemarksIndex] of ShortInt;
+  end;
 var
   ProceduresColColumnsDynArray: TZMetadataColumnDefs;
 const
@@ -577,6 +591,11 @@ const
   TableColColumnWritableIndex           = FirstDbcIndex + 21;
   TableColColumnDefinitelyWritableIndex = FirstDbcIndex + 22;
   TableColColumnReadonlyIndex           = FirstDbcIndex + 23;
+type
+  TTableColColumnMap = packed record
+    Initilized: Boolean;
+    ColIndices: array[CatalogNameIndex..TableColColumnReadonlyIndex] of ShortInt;
+  end;
 var
   TableColColumnsDynArray: TZMetadataColumnDefs;
 const
@@ -584,6 +603,11 @@ const
   TableColPrivGranteeIndex     = FirstDbcIndex + 5;
   TableColPrivPrivilegeIndex   = FirstDbcIndex + 6;
   TableColPrivIsGrantableIndex = FirstDbcIndex + 7;
+type
+  TTableColPrivMap = packed record
+    Initilized: Boolean;
+    ColIndices: array[CatalogNameIndex..TableColPrivIsGrantableIndex] of ShortInt;
+  end;
 var
   TableColPrivColumnsDynArray: TZMetadataColumnDefs;
 const
@@ -591,6 +615,11 @@ const
   TablePrivGranteeIndex     = FirstDbcIndex + 4;
   TablePrivPrivilegeIndex   = FirstDbcIndex + 5;
   TablePrivIsGrantableIndex = FirstDbcIndex + 6;
+type
+  TTablePrivMap = packed record
+    Initilized: Boolean;
+    ColIndices: array[CatalogNameIndex..TablePrivIsGrantableIndex] of ShortInt;
+  end;
 var
   TablePrivColumnsDynArray: TZMetadataColumnDefs;
 const
@@ -670,6 +699,11 @@ const
   CrossRefKeyColFKNameIndex         = FirstDbcIndex + 11;
   CrossRefKeyColPKNameIndex         = FirstDbcIndex + 12;
   CrossRefKeyColDeferrabilityIndex  = FirstDbcIndex + 13;
+type
+  TCrossRefKeyCol = packed record
+    Initilized: Boolean;
+    ColIndices: array[CrossRefKeyColPKTableCatalogIndex..CrossRefKeyColDeferrabilityIndex] of ShortInt;
+  end;
 var
   CrossRefColumnsDynArray: TZMetadataColumnDefs;
 const
@@ -704,6 +738,11 @@ const
   IndexInfoColCardinalityIndex     = FirstDbcIndex + 10;
   IndexInfoColPagesIndex           = FirstDbcIndex + 11;
   IndexInfoColFilterConditionIndex = FirstDbcIndex + 12;
+type
+  TIndexInfoMap = packed record
+    Initilized: Boolean;
+    ColIndices: array[CatalogNameIndex..IndexInfoColFilterConditionIndex] of ShortInt;
+  end;
 var
   IndexInfoColumnsDynArray: TZMetadataColumnDefs;
 const
@@ -720,7 +759,7 @@ var
 
 implementation
 
-uses ZFastCode, ZVariant, ZCollections, ZMessages;
+uses ZFastCode, ZVariant, ZCollections, ZMessages, ZConnProperties;
 
 { TZAbstractDatabaseInfo }
 
@@ -754,8 +793,8 @@ constructor TZAbstractDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMeta
 begin
   inherited Create;
   FMetadata := Metadata;
-  if FMetaData.FUrl.Properties.IndexOfName('identifier_quotes') > -1 then //prevent to loose emty quotes '' !!!
-    FIdentifierQuotes := FMetaData.FUrl.Properties.Values['identifier_quotes']
+  if FMetaData.FUrl.Properties.IndexOfName(ConnProps_IdentifierQuotes) > -1 then //prevent to loose emty quotes '' !!!
+    FIdentifierQuotes := FMetaData.FUrl.Properties.Values[ConnProps_IdentifierQuotes]
   else
     if IdentifierQuotes = '' then
       FIdentifierQuotes := '"'
@@ -2396,7 +2435,7 @@ end;
   @returns a destination result set.
 }
 function TZAbstractDatabaseMetadata.CopyToVirtualResultSet(
-  SrcResultSet: IZResultSet; DestResultSet: IZVirtualResultSet):
+  const SrcResultSet: IZResultSet; const DestResultSet: IZVirtualResultSet):
   IZVirtualResultSet;
 var
   I: Integer;
@@ -2471,26 +2510,45 @@ end;
   @returns the clone of the specified resultset.
 }
 function TZAbstractDatabaseMetadata.CloneCachedResultSet(
-  ResultSet: IZResultSet): IZResultSet;
+  const ResultSet: IZResultSet): IZResultSet;
 var
   I: Integer;
   Metadata: IZResultSetMetadata;
   ColumnInfo: TZColumnInfo;
   ColumnsInfo: TObjectList;
+  ConSettings: PZConSettings;
 begin
   Result := nil;
   Metadata := ResultSet.GetMetadata;
   ColumnsInfo := TObjectList.Create(True);
+  ConSettings := IZConnection(FConnection).GetConSettings;
   try
     for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     begin
       ColumnInfo := TZColumnInfo.Create;
       with ColumnInfo do
       begin
-        ColumnLabel := Metadata.GetColumnLabel(I);
-        ColumnType := Metadata.GetColumnType(I);
-        ColumnDisplaySize := Metadata.GetPrecision(I);
-        Precision := Metadata.GetPrecision(I);
+        AutoIncrement := Metadata.IsAutoIncrement(i);
+        CaseSensitive := Metadata.IsCaseSensitive(i);
+        Searchable := Metadata.IsSearchable(i);
+        Currency := Metadata.IsCurrency(i);
+        Nullable := Metadata.IsNullable(i);
+        Signed := Metadata.IsSigned(i);
+        ColumnDisplaySize := Metadata.GetPrecision(I); //GetColumnDisplaySize(i); ??
+        //MaxLenghtBytes := Metadata.GetPrecision(i) * ConSettings^.ClientCodePage^.CharWidth;
+        ColumnLabel := Metadata.GetColumnLabel(i);
+        ColumnName := Metadata.GetColumnName(i);
+        SchemaName := Metadata.GetSchemaName(i);
+        Precision := Metadata.GetPrecision(i);
+        Scale := Metadata.GetScale(i);
+        TableName := Metadata.GetTableName(i);
+        CatalogName := Metadata.GetCatalogName(i);
+        ColumnType := Metadata.GetColumnType(i);
+        ReadOnly := Metadata.IsReadOnly(i);
+        Writable := Metadata.IsWritable(i);
+        DefinitelyWritable := Metadata.IsDefinitelyWritable(i);
+        DefaultValue := Metadata.GetDefaultValue(i);
+        ColumnCodePage := Metadata.GetColumnCodePage(i);
       end;
       ColumnsInfo.Add(ColumnInfo);
     end;
@@ -2512,8 +2570,8 @@ end;
     @parma Column a sql column name
     @return processed string for query
 }
-function TZAbstractDatabaseMetadata.ConstructNameCondition(Pattern: string;
-  Column: string): string;
+function TZAbstractDatabaseMetadata.ConstructNameCondition(const Pattern: string;
+  const Column: string): string;
 var
   WorkPattern: string;
 begin
@@ -4675,7 +4733,7 @@ begin
   end;
 end;
 
-function TZAbstractDatabaseMetadata.NormalizePatternCase(Pattern: String): string;
+function TZAbstractDatabaseMetadata.NormalizePatternCase(const Pattern: String): string;
 begin
   with FIC do
     if not IsQuoted(Pattern) then begin
@@ -5015,13 +5073,33 @@ end;
 constructor TZVirtualResultSet.CreateWithStatement(const SQL: string;
    const Statement: IZStatement; ConSettings: PZConSettings);
 begin
-  inherited CreateWithStatement(SQL, Statement, ConSettings);
+  fConSettings := ConSettings^;
+  inherited CreateWithStatement(SQL, Statement, @fConSettings);
 end;
 
 destructor TZVirtualResultSet.Destroy;
 begin
   fDoClose := True;
   inherited Destroy;
+end;
+
+{**
+  Change Order of one Rows in Resultset
+  Note: First Row = 1, to get RowNo use IZResultSet.GetRow
+  @param CurrentRowNo the curren number of row
+  @param NewRowNo the new number of row
+}
+procedure TZVirtualResultSet.ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
+var P: Pointer;
+begin
+  CurrentRowNo := CurrentRowNo -1;
+  NewRowNo := NewRowNo -1;
+  P := RowsList[CurrentRowNo];
+  RowsList.Delete(CurrentRowNo);
+  RowsList.Insert(NewRowNo, P);
+  P := InitialRowsList[CurrentRowNo];
+  InitialRowsList.Delete(CurrentRowNo);
+  InitialRowsList.Insert(NewRowNo, P);
 end;
 
 {**
@@ -5038,7 +5116,8 @@ end;
 constructor TZVirtualResultSet.CreateWithColumns(ColumnsInfo: TObjectList;
   const SQL: string; ConSettings: PZConSettings);
 begin
-  inherited CreateWithColumns(ColumnsInfo, SQL, ConSettings);
+  fConSettings := ConSettings^;
+  inherited CreateWithColumns(ColumnsInfo, SQL, @fConSettings);
 end;
 
 {**

@@ -67,7 +67,8 @@ type
 
   { TZAbstractStatement }
 
-  TZAbstractStatement = class(TZCodePagedObject, IZStatement, IZLoggingObject)
+  TZAbstractStatement = class(TZCodePagedObject, IZStatement, IZLoggingObject,
+    IImmediatelyReleasable)
   private
     fWBuffer: array[Byte] of WideChar;
     fABuffer: array[Byte] of AnsiChar;
@@ -93,7 +94,7 @@ type
     FWSQL: ZWideString;
     FaSQL: RawByteString;
     FCachedLob: Boolean;
-    procedure SetLastResultSet(const ResultSet: IZResultSet);
+    procedure SetLastResultSet(const ResultSet: IZResultSet); virtual;
   protected
     FStatementId : Integer;
     FOpenResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
@@ -153,6 +154,8 @@ type
     function GetSQL : String;
 
     procedure Close; virtual;
+    function IsClosed: Boolean;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); virtual;
 
     function GetMaxFieldSize: Integer; virtual;
     procedure SetMaxFieldSize(Value: Integer); virtual;
@@ -203,7 +206,8 @@ type
 
   { TZAbstractPreparedStatement }
 
-  TZAbstractPreparedStatement = class(TZAbstractStatement, IZPreparedStatement)
+  TZAbstractPreparedStatement = class(TZAbstractStatement, IZPreparedStatement,
+    IImmediatelyReleasable)
   private
     FInParamValues: TZVariantDynArray;
     FInParamTypes: TZSQLTypeArray;
@@ -219,6 +223,7 @@ type
     FIsPraparable: Boolean;
   protected
     function GetClientVariantManger: IZClientVariantManager;
+    function SupportsSingleColumnArrays: Boolean; virtual;
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
     procedure UnPrepareInParameters; virtual;
@@ -267,6 +272,7 @@ type
     procedure Unprepare; virtual;
     function IsPrepared: Boolean; virtual;
     property Prepared: Boolean read IsPrepared;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
@@ -306,7 +312,6 @@ type
 
     procedure ClearParameters; virtual;
 
-    procedure AddBatchPrepared; virtual;
     function GetMetaData: IZResultSetMetaData; virtual;
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
@@ -413,40 +418,6 @@ type
 
   { TZEmulatedPreparedStatement }
 
-  TZEmulatedPreparedStatement = class(TZAbstractPreparedStatement)
-  private
-    FExecStatement: IZStatement;
-    FLastStatement: IZStatement;
-    procedure SetLastStatement(const LastStatement: IZStatement);
-  protected
-    FNeedNCharDetection: Boolean;
-    property ExecStatement: IZStatement read FExecStatement write FExecStatement;
-    property LastStatement: IZStatement read FLastStatement write SetLastStatement;
-
-    function CreateExecStatement: IZStatement; virtual; abstract;
-    function PrepareWideSQLParam({%H-}ParamIndex: Integer): ZWideString; virtual;
-    function PrepareAnsiSQLParam({%H-}ParamIndex: Integer): RawByteString; virtual;
-    function GetExecStatement: IZStatement;
-    procedure TokenizeSQLQueryRaw;
-    procedure TokenizeSQLQueryUni;
-    function PrepareWideSQLQuery: ZWideString; virtual;
-    function PrepareAnsiSQLQuery: RawByteString; virtual;
-  public
-    procedure Close; override;
-
-    function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
-    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZWideString): Integer; override;
-    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
-    function Execute(const SQL: ZWideString): Boolean; override;
-    function Execute(const SQL: RawByteString): Boolean; override;
-
-    function ExecuteQueryPrepared: IZResultSet; override;
-    function ExecuteUpdatePrepared: Integer; override;
-    function ExecutePrepared: Boolean; override;
-    function CreateLogEvent(const {%H-}Category: TZLoggingCategory): TZLoggingEvent; override;
-  end;
-
   TZAbstractEmulatedPreparedStatement = class(TZAbstractPreparedStatement)
   protected
     FNeedNCharDetection: Boolean;
@@ -476,7 +447,7 @@ type
 implementation
 
 uses ZFastCode, ZSysUtils, ZMessages, ZDbcResultSet, ZCollections,
-  ZEncoding;
+  ZEncoding, ZDbcProperties;
 
 var
 {**
@@ -506,8 +477,8 @@ begin
   FInfo := TStringList.Create;
   if Info <> nil then
     FInfo.AddStrings(Info);
-  FChunkSize := StrToIntDef(DefineStatementParameter(Self, 'chunk_size', '4096'), 4096);
-  FCachedLob := StrToBoolEx(DefineStatementParameter(Self, 'cachedlob', 'false'));
+  FChunkSize := StrToIntDef(DefineStatementParameter(Self, DSProps_ChunkSize, '4096'), 4096);
+  FCachedLob := StrToBoolEx(DefineStatementParameter(Self, DSProps_CachedLobs, 'false'));
   FStatementId := Self.GetNextStatementId;
 end;
 
@@ -522,7 +493,6 @@ begin
   FConnection.DeregisterStatement(Self);
   FConnection := nil;
   FreeAndNil(FInfo);
-  FLastResultSet := nil;
   inherited Destroy;
 end;
 
@@ -624,6 +594,21 @@ end;
 procedure TZAbstractStatement.RaiseUnsupportedException;
 begin
   raise EZSQLException.Create(SUnsupportedOperation);
+end;
+
+procedure TZAbstractStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable);
+var ImmediatelyReleasable: IImmediatelyReleasable;
+begin
+  FClosed := True;
+  if (FOpenResultSet <> nil) and Supports(IZResultSet(FOpenResultSet), IImmediatelyReleasable, ImmediatelyReleasable) and
+     (ImmediatelyReleasable <> Sender) then
+    ImmediatelyReleasable.ReleaseImmediat(Sender);
+  if Assigned(FLastResultSet) and Supports(FLastResultSet, IImmediatelyReleasable, ImmediatelyReleasable) and
+     (ImmediatelyReleasable <> Sender) then
+    ImmediatelyReleasable.ReleaseImmediat(Sender);
+  if Assigned(Connection) and Supports(Connection, IImmediatelyReleasable, ImmediatelyReleasable) and
+     (ImmediatelyReleasable <> Sender) then
+    ImmediatelyReleasable.ReleaseImmediat(Sender);
 end;
 
 {**
@@ -905,6 +890,11 @@ end;
 function TZAbstractStatement.GetWarnings: EZSQLWarning;
 begin
   Result := nil;
+end;
+
+function TZAbstractStatement.IsClosed: Boolean;
+begin
+  Result := fClosed;
 end;
 
 {**
@@ -1548,6 +1538,12 @@ end;
 }
 procedure TZAbstractPreparedStatement.PrepareInParameters;
 begin
+end;
+
+procedure TZAbstractPreparedStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable);
+begin
+  FPrepared := False;
+  inherited ReleaseImmediat(Sender);
 end;
 
 {**
@@ -2279,8 +2275,8 @@ var
        (InParamValues[ParameterIndex{$IFNDEF GENERIC_INDEX} - 2{$ELSE}-1{$ENDIF}].VArray.VArray = nil))  then
       FInitialArrayCount := Len
     else
-      if Len <> FInitialArrayCount then
-        raise Exception.Create('Array count does not equal with initial count!');
+      if (not SupportsSingleColumnArrays) and (Len <> FInitialArrayCount) then
+        raise Exception.Create('Array count does not equal with initial count!')
   end;
 begin
   if Connection.GetMetadata.GetDatabaseInfo.SupportsArrayBindings then
@@ -2379,8 +2375,7 @@ end;
 
 procedure TZAbstractPreparedStatement.Unprepare;
 begin
-  if Assigned(FOpenResultSet) then
-  begin
+  if Assigned(FOpenResultSet) then begin
     IZResultSet(FOpenResultSet).Close;
     FOpenResultSet := nil;
   end;
@@ -2395,16 +2390,6 @@ end;
 function TZAbstractPreparedStatement.IsPrepared: Boolean;
 begin
   Result := FPrepared;
-end;
-
-{**
-  Adds a set of parameters to this <code>PreparedStatement</code>
-  object's batch of commands.
-  @see Statement#addBatch
-}
-procedure TZAbstractPreparedStatement.AddBatchPrepared;
-begin
-  RaiseUnsupportedException;
 end;
 
 {**
@@ -2494,6 +2479,11 @@ begin
       Unprepare;
     inherited SetWSQL(Value);
   end;
+end;
+
+function TZAbstractPreparedStatement.SupportsSingleColumnArrays: Boolean;
+begin
+  Result := False;
 end;
 
 function TZAbstractPreparedStatement.GetOmitComments: Boolean;
@@ -3275,308 +3265,6 @@ begin
   if (SQL <> ASQL) and (Prepared) then Unprepare;
   ASQL := SQL;
   Result := ExecutePrepared;
-end;
-
-{ TZEmulatedPreparedStatement }
-
-{**
-  Sets a reference to the last statement.
-  @param LastStatement the last statement interface.
-}
-procedure TZEmulatedPreparedStatement.SetLastStatement(
-  const LastStatement: IZStatement);
-begin
-  if FLastStatement <> nil then
-    FLastStatement.Close;
-  FLastStatement := LastStatement;
-end;
-
-function TZEmulatedPreparedStatement.PrepareWideSQLParam(ParamIndex: Integer): ZWideString;
-begin
-  Result := '';
-end;
-
-function TZEmulatedPreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
-begin
-  Result := '';
-end;
-
-{**
-  Creates a temporary statement which executes queries.
-  @param Info a statement parameters.
-  @return a created statement object.
-}
-function TZEmulatedPreparedStatement.GetExecStatement: IZStatement;
-begin
-  if ExecStatement = nil then
-    ExecStatement := CreateExecStatement;
-  if ExecStatement <> nil then //set new options if required
-  begin
-    ExecStatement.SetMaxFieldSize(GetMaxFieldSize);
-    ExecStatement.SetMaxRows(GetMaxRows);
-    ExecStatement.SetEscapeProcessing(EscapeProcessing);
-    ExecStatement.SetQueryTimeout(GetQueryTimeout);
-    ExecStatement.SetCursorName(CursorName);
-
-    ExecStatement.SetFetchDirection(GetFetchDirection);
-    ExecStatement.SetFetchSize(GetFetchSize);
-    ExecStatement.SetResultSetConcurrency(GetResultSetConcurrency);
-    ExecStatement.SetResultSetType(GetResultSetType);
-  end;
-  Result := ExecStatement;
-end;
-
-{**
-  Splits a SQL query into a list of sections.
-  @returns a list of splitted sections.
-}
-procedure TZEmulatedPreparedStatement.TokenizeSQLQueryRaw;
-begin
-  if Length(FCachedQueryRaw) = 0 then
-    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(
-        {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
-      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
-      GetCompareFirstKeywordStrings, @FIsPraparable, FNeedNCharDetection);
-end;
-
-{**
-  Splits a SQL query into a list of sections.
-  @returns a list of splitted sections.
-}
-procedure TZEmulatedPreparedStatement.TokenizeSQLQueryUni;
-begin
-  if Length(FCachedQueryUni) = 0 then
-    FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni(
-        {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
-      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
-      GetCompareFirstKeywordStrings, @FIsPraparable, FNeedNCharDetection);
-end;
-
-{**
-  Prepares an SQL statement and inserts all data values.
-  @return a prepared SQL statement.
-}
-function TZEmulatedPreparedStatement.PrepareWideSQLQuery: ZWideString;
-var
-  I: Integer;
-  ParamIndex: Integer;
-begin
-  ParamIndex := 0;
-  Result := '';
-  TokenizeSQLQueryUni;
-
-  for I := 0 to High(FCachedQueryUni) do
-    if FIsParamIndex[i] then begin
-      ToBuff(PrepareWideSQLParam(ParamIndex), Result);
-      Inc(ParamIndex);
-    end else
-      ToBuff(FCachedQueryUni[I], Result);
-  FlushBuff(Result);
-end;
-
-{**
-  Prepares an SQL statement and inserts all data values.
-  @return a prepared SQL statement.
-}
-function TZEmulatedPreparedStatement.PrepareAnsiSQLQuery: RawByteString;
-var
-  I: Integer;
-  ParamIndex: Integer;
-begin
-  ParamIndex := 0;
-  Result := '';
-  TokenizeSQLQueryRaw;
-
-  for I := 0 to High(FCachedQueryRaw) do
-    if IsParamIndex[i] then begin
-      ToBuff(PrepareAnsiSQLParam(ParamIndex), Result);
-      Inc(ParamIndex);
-    end else
-      ToBuff(FCachedQueryRaw[I], Result);
-  FlushBuff(Result);
-end;
-
-{**
-  Closes this statement and frees all resources.
-}
-procedure TZEmulatedPreparedStatement.Close;
-begin
-  inherited Close;
-  if LastStatement <> nil then
-  begin
-    FLastStatement.Close;
-    FLastStatement := nil;
-  end;
-end;
-
-{**
-  Executes an SQL statement that may return multiple results.
-  Under some (uncommon) situations a single SQL statement may return
-  multiple result sets and/or update counts.  Normally you can ignore
-  this unless you are (1) executing a stored procedure that you know may
-  return multiple results or (2) you are dynamically executing an
-  unknown SQL string.  The  methods <code>execute</code>,
-  <code>getMoreResults</code>, <code>getResultSet</code>,
-  and <code>getUpdateCount</code> let you navigate through multiple results.
-
-  The <code>execute</code> method executes an SQL statement and indicates the
-  form of the first result.  You can then use the methods
-  <code>getResultSet</code> or <code>getUpdateCount</code>
-  to retrieve the result, and <code>getMoreResults</code> to
-  move to any subsequent result(s).
-
-  @param sql any SQL statement
-  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
-  <code>false</code> if it is an update count or there are no more results
-}
-function TZEmulatedPreparedStatement.Execute(const SQL: ZWideString): Boolean;
-begin
-  LastStatement := GetExecStatement;
-  Result := LastStatement.Execute(SQL);
-  if Result then
-    LastResultSet := LastStatement.GetResultSet
-  else
-    LastUpdateCount := LastStatement.GetUpdateCount;
-end;
-
-{**
-  Executes an SQL statement that may return multiple results.
-  Under some (uncommon) situations a single SQL statement may return
-  multiple result sets and/or update counts.  Normally you can ignore
-  this unless you are (1) executing a stored procedure that you know may
-  return multiple results or (2) you are dynamically executing an
-  unknown SQL string.  The  methods <code>execute</code>,
-  <code>getMoreResults</code>, <code>getResultSet</code>,
-  and <code>getUpdateCount</code> let you navigate through multiple results.
-
-  The <code>execute</code> method executes an SQL statement and indicates the
-  form of the first result.  You can then use the methods
-  <code>getResultSet</code> or <code>getUpdateCount</code>
-  to retrieve the result, and <code>getMoreResults</code> to
-  move to any subsequent result(s).
-
-  @param sql any SQL statement
-  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
-  <code>false</code> if it is an update count or there are no more results
-}
-function TZEmulatedPreparedStatement.Execute(const SQL: RawByteString): Boolean;
-begin
-  LastStatement := GetExecStatement;
-  Result := LastStatement.Execute(SQL);
-  if Result then
-    LastResultSet := LastStatement.GetResultSet
-  else
-    LastUpdateCount := LastStatement.GetUpdateCount;
-end;
-
-{**
-  Executes an SQL statement that returns a single <code>ResultSet</code> object.
-  @param sql typically this is a static SQL <code>SELECT</code> statement
-  @return a <code>ResultSet</code> object that contains the data produced by the
-    given query; never <code>null</code>
-}
-function TZEmulatedPreparedStatement.ExecuteQuery(const SQL: ZWideString): IZResultSet;
-begin
-  Result := GetExecStatement.ExecuteQuery(SQL);
-end;
-
-{**
-  Executes an SQL statement that returns a single <code>ResultSet</code> object.
-  @param sql typically this is a static SQL <code>SELECT</code> statement
-  @return a <code>ResultSet</code> object that contains the data produced by the
-    given query; never <code>null</code>
-}
-function TZEmulatedPreparedStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
-begin
-  Result := GetExecStatement.ExecuteQuery(SQL);
-end;
-
-{**
-  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
-  <code>DELETE</code> statement. In addition,
-  SQL statements that return nothing, such as SQL DDL statements,
-  can be executed.
-
-  @param sql an SQL <code>INSERT</code>, <code>UPDATE</code> or
-    <code>DELETE</code> statement or an SQL statement that returns nothing
-  @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
-    or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
-}
-function TZEmulatedPreparedStatement.ExecuteUpdate(const SQL: ZWideString): Integer;
-begin
-  Result := GetExecStatement.ExecuteUpdate(SQL);
-  LastUpdateCount := Result;
-end;
-
-{**
-  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
-  <code>DELETE</code> statement. In addition,
-  SQL statements that return nothing, such as SQL DDL statements,
-  can be executed.
-
-  @param sql an SQL <code>INSERT</code>, <code>UPDATE</code> or
-    <code>DELETE</code> statement or an SQL statement that returns nothing
-  @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
-    or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
-}
-function TZEmulatedPreparedStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
-begin
-  Result := GetExecStatement.ExecuteUpdate(SQL);
-  LastUpdateCount := Result;
-end;
-
-{**
-  Executes the SQL query in this <code>PreparedStatement</code> object
-  and returns the result set generated by the query.
-
-  @return a <code>ResultSet</code> object that contains the data produced by the
-    query; never <code>null</code>
-}
-function TZEmulatedPreparedStatement.ExecutePrepared: Boolean;
-begin
-  if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then
-    Result := Execute(PrepareWideSQLQuery)
-  else
-    Result := Execute(PrepareAnsiSQLQuery);
-end;
-
-function TZEmulatedPreparedStatement.CreateLogEvent(
-  const Category: TZLoggingCategory): TZLoggingEvent;
-begin
-  Result:=nil; // All logic happens using non-prepared statements, so we don't need to log the 'empty' prepare, unprepare, ...
-end;
-
-{**
-  Executes the SQL query in this <code>PreparedStatement</code> object
-  and returns the result set generated by the query.
-
-  @return a <code>ResultSet</code> object that contains the data produced by the
-    query; never <code>null</code>
-}
-function TZEmulatedPreparedStatement.ExecuteQueryPrepared: IZResultSet;
-begin
-  if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then
-    Result := ExecuteQuery(PrepareWideSQLQuery)
-  else
-    Result := ExecuteQuery(PrepareAnsiSQLQuery)
-end;
-
-{**
-  Executes the SQL INSERT, UPDATE or DELETE statement
-  in this <code>PreparedStatement</code> object.
-  In addition,
-  SQL statements that return nothing, such as SQL DDL statements,
-  can be executed.
-
-  @return either the row count for INSERT, UPDATE or DELETE statements;
-  or 0 for SQL statements that return nothing
-}
-function TZEmulatedPreparedStatement.ExecuteUpdatePrepared: Integer;
-begin
-  if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then
-    Result := ExecuteUpdate(PrepareWideSQLQuery)
-  else
-    Result := ExecuteUpdate(PrepareAnsiSQLQuery);
 end;
 
 { TZEmulatedPreparedStatement_A }

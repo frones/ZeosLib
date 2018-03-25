@@ -111,149 +111,17 @@ type
   {** Represents a generic interface to Interbase native API. }
   IZInterbasePlainDriver = interface (IZPlainDriver)
     ['{AE2C4379-4E47-4752-BC01-D405ACC337F5}']
-
-    function GetFirebirdAPI: TZFirebird_API;
     function GetCodePageArray: TWordDynArray;
-
-    function isc_attach_database (status_vector: PISC_STATUS;
-      db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
-      parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
-    function isc_detach_database(status_vector: PISC_STATUS;
-      db_handle: PISC_DB_HANDLE): ISC_STATUS;
-    function isc_drop_database(status_vector: PISC_STATUS;
-      db_handle: PISC_DB_HANDLE): ISC_STATUS;
-    function isc_database_info(status_vector: PISC_STATUS;
-      db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PByte; result_buffer_length: Short;
-      result_buffer: PAnsiChar): ISC_STATUS;
-    function isc_array_gen_sdl(status_vector: PISC_STATUS;
-      isc_array_desc: PISC_ARRAY_DESC; isc_arg3: PShort;
-      isc_arg4: PAnsiChar; isc_arg5: PShort): ISC_STATUS;
-    function isc_array_get_slice(status_vector: PISC_STATUS;
-      db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
-      array_id: PISC_QUAD; descriptor: PISC_ARRAY_DESC;
-      dest_array: PVoid; slice_length: ISC_LONG): ISC_STATUS;
-    function isc_array_lookup_bounds(status_vector: PISC_STATUS;
-      db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
-      table_name, column_name: PAnsiChar;
-      descriptor: PISC_ARRAY_DESC): ISC_STATUS;
-    function isc_array_lookup_desc(status_vector: PISC_STATUS;
-      db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
-      table_name, column_name: PAnsiChar;
-      descriptor: PISC_ARRAY_DESC): ISC_STATUS;
-    function isc_array_set_desc(status_vector: PISC_STATUS;
-      table_name: PAnsiChar; column_name: PAnsiChar;
-      sql_dtype, sql_length, sql_dimensions: PShort;
-      descriptor: PISC_ARRAY_DESC): ISC_STATUS;
-    function isc_array_put_slice(status_vector: PISC_STATUS;
-      db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
-      array_id: PISC_QUAD; descriptor: PISC_ARRAY_DESC;
-      source_array: PVoid; slice_length: PISC_LONG): ISC_STATUS;
-    function isc_free(isc_arg1: PAnsiChar): ISC_LONG;
-    function isc_sqlcode(status_vector: PISC_STATUS): ISC_LONG;
-    procedure isc_sql_interprete(sqlcode: Short; buffer: PAnsiChar; buffer_length: Short);
-    function isc_interprete(buffer: PAnsiChar; status_vector: PPISC_STATUS): ISC_STATUS;
-    function isc_start_transaction(status_vector: PISC_STATUS;
-      tran_handle: PISC_TR_HANDLE; db_handle_count: Short;
-      db_handle: PISC_DB_HANDLE; tpb_length: Word; tpb_address: PAnsiChar): ISC_STATUS;
-    function isc_start_multiple(status_vector: PISC_STATUS;
-      tran_handle: PISC_TR_HANDLE; db_handle_count: Short;
-      teb_vector_address: PISC_TEB): ISC_STATUS;
-    function isc_rollback_transaction(status_vector: PISC_STATUS;
-      tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-    function isc_rollback_retaining(status_vector: PISC_STATUS;
-      tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-    function isc_commit_retaining(status_vector: PISC_STATUS;
-      tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-    function isc_commit_transaction(status_vector: PISC_STATUS;
-      tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-    function isc_dsql_allocate_statement(status_vector: PISC_STATUS;
-      db_handle: PISC_DB_HANDLE; stmt_handle: PISC_STMT_HANDLE): ISC_STATUS;
-    function isc_dsql_alloc_statement2(status_vector: PISC_STATUS;
-      db_handle: PISC_DB_HANDLE; stmt_handle: PISC_STMT_HANDLE): ISC_STATUS;
-    function isc_dsql_describe(status_vector: PISC_STATUS;
-      stmt_handle: PISC_STMT_HANDLE; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-    function isc_dsql_describe_bind(status_vector: PISC_STATUS;
-      stmt_handle: PISC_STMT_HANDLE; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-    function isc_dsql_execute(status_vector: PISC_STATUS;
-      tran_handle: PISC_TR_HANDLE; stmt_handle: PISC_STMT_HANDLE; dialect: Word;
-      xsqlda: PXSQLDA): ISC_STATUS;
-    function isc_dsql_execute2(status_vector: PISC_STATUS;
-      tran_handle: PISC_TR_HANDLE; stmt_handle: PISC_STMT_HANDLE; dialect: Word;
-      in_xsqlda, out_xsqlda: PXSQLDA): ISC_STATUS;
-    function isc_dsql_execute_immediate(status_vector: PISC_STATUS;
-      db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE; length: Word;
-      statement: PAnsiChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-    function isc_dsql_fetch(status_vector: PISC_STATUS;
-      stmt_handle: PISC_STMT_HANDLE; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-    function isc_dsql_free_statement(status_vector: PISC_STATUS;
-      stmt_handle: PISC_STMT_HANDLE; options: Word): ISC_STATUS;
-    function isc_dsql_prepare(status_vector: PISC_STATUS;
-      tran_handle: PISC_TR_HANDLE; stmt_handle: PISC_STMT_HANDLE;
-      length: Word; statement: PAnsiChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-    function isc_dsql_set_cursor_name(status_vector: PISC_STATUS;
-      stmt_handle: PISC_STMT_HANDLE; cursor_name: PAnsiChar; _type: Word): ISC_STATUS;
-    function isc_dsql_sql_info(status_vector: PISC_STATUS;
-      stmt_handle: PISC_STMT_HANDLE; item_length: Short; items: PAnsiChar;
-      buffer_length: Short; buffer: PAnsiChar): ISC_STATUS;
-    function isc_open_blob2(status_vector: PISC_STATUS;
-      db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
-      blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-      bpb_buffer: PAnsiChar): ISC_STATUS;
-    function isc_create_blob2(status_vector: PISC_STATUS;
-      db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
-      blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-      bpb_address: PAnsiChar): ISC_STATUS;
-    function isc_blob_info(status_vector: PISC_STATUS;
-      blob_handle: PISC_BLOB_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short; result_buffer: PAnsiChar): ISC_STATUS;
-    function isc_close_blob(status_vector: PISC_STATUS;
-      blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
-    function isc_cancel_blob(status_vector: PISC_STATUS;
-      blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
-    function isc_get_segment(status_vector: PISC_STATUS;
-      blob_handle: PISC_BLOB_HANDLE; actual_seg_length: PWord;
-      seg_buffer_length: Word; seg_buffer: PAnsiChar): ISC_STATUS;
-    function isc_put_segment(status_vector: PISC_STATUS;
-      blob_handle: PISC_BLOB_HANDLE; seg_buffer_len: Word; seg_buffer: PAnsiChar): ISC_STATUS;
-    function isc_event_block(event_buffer: PPAnsiChar; result_buffer: PPAnsiChar;
-      id_count: Word; event_list: array of PAnsiChar): ISC_LONG;
-    procedure isc_event_counts(status_vector: PISC_STATUS;
-      buffer_length: Short; event_buffer: PAnsiChar; result_buffer: PAnsiChar);
-    function isc_cancel_events(status_vector: PISC_STATUS;
-      db_handle: PISC_DB_HANDLE; event_id: PISC_LONG): ISC_STATUS;
-    function isc_que_events(status_vector: PISC_STATUS;
-      db_handle: PISC_DB_HANDLE; event_id: PISC_LONG; length: Short;
-      event_buffer: PAnsiChar; event_function: TISC_CALLBACK;
-      event_function_arg: PVoid): ISC_STATUS;
-    procedure isc_decode_date(ib_date: PISC_QUAD; tm_date: PCTimeStructure);
-    procedure isc_encode_date(tm_date: PCTimeStructure; ib_date: PISC_QUAD);
-    function isc_vax_integer(buffer: PAnsiChar; length: Short): ISC_LONG;
-    function isc_portable_integer(ptr: pbyte; length: Short): ISC_INT64;
-
-    procedure isc_decode_sql_date(ib_date: PISC_DATE; tm_date: PCTimeStructure);
-    procedure isc_decode_sql_time(ib_time: PISC_TIME; tm_date: PCTimeStructure);
-    procedure isc_decode_timestamp(ib_timestamp: PISC_TIMESTAMP;
-      tm_date: PCTimeStructure);
-    procedure isc_encode_sql_date(tm_date: PCTimeStructure;
-      ib_date: PISC_DATE);
-    procedure isc_encode_sql_time(tm_date: PCTimeStructure;
-      ib_time: PISC_TIME);
-    procedure isc_encode_timestamp(tm_date: PCTimeStructure;
-      ib_timestamp: PISC_TIMESTAMP);
   end;
 
   {** Implements a base driver for Firebird}
 
   { TZFirebirdBaseDriver }
 
-  TZFirebirdBaseDriver = class (TZAbstractPlainDriver, IZPlainDriver,
-    IZInterbasePlainDriver)
-    FIREBIRD_API : TZFIREBIRD_API;
+  TZInterbasePlainDriver = class (TZAbstractPlainDriver, IZInterbasePlainDriver)
   private
     FCodePageArray: TWordDynArray;
   protected
-
     FPreLoader : TZNativeLibraryLoader;
     procedure FillCodePageArray;
     procedure LoadCodePages; override;
@@ -268,142 +136,263 @@ type
     destructor Destroy; override;
     {$ENDIF}
 
-    function GetFirebirdAPI: TZFirebird_API;
     function GetCodePageArray: TWordDynArray;
-    function isc_attach_database (status_vector: PISC_STATUS;
+
+  public
+    { General database routines }
+
+    isc_attach_database: function(status_vector: PISC_STATUS;
       db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
       parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
-    function isc_detach_database(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_detach_database: function(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
-    function isc_drop_database(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_drop_database: function(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
-    function isc_database_info(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_database_info: function(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
       item_list_buffer: PByte; result_buffer_length: Short;
       result_buffer: PAnsiChar): ISC_STATUS;
-    function isc_transaction_info(status_vector: PISC_STATUS;
-      tr_handle: PISC_TR_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short;
-      result_buffer: PAnsiChar): ISC_STATUS;
-    function isc_array_gen_sdl(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    { Array processing routines }
+    isc_array_gen_sdl: function(status_vector: PISC_STATUS;
       isc_array_desc: PISC_ARRAY_DESC; isc_arg3: PShort;
       isc_arg4: PAnsiChar; isc_arg5: PShort): ISC_STATUS;
-    function isc_array_get_slice(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_array_get_slice: function(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
       array_id: PISC_QUAD; descriptor: PISC_ARRAY_DESC;
       dest_array: PVoid; slice_length: ISC_LONG): ISC_STATUS;
-    function isc_array_lookup_bounds(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_array_lookup_bounds: function(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
       table_name, column_name: PAnsiChar;
       descriptor: PISC_ARRAY_DESC): ISC_STATUS;
-    function isc_array_lookup_desc(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_array_lookup_desc: function(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
       table_name, column_name: PAnsiChar;
       descriptor: PISC_ARRAY_DESC): ISC_STATUS;
-    function isc_array_set_desc(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_array_set_desc: function(status_vector: PISC_STATUS;
       table_name: PAnsiChar; column_name: PAnsiChar;
       sql_dtype, sql_length, sql_dimensions: PShort;
       descriptor: PISC_ARRAY_DESC): ISC_STATUS;
-    function isc_array_put_slice(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_array_put_slice: function(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
       array_id: PISC_QUAD; descriptor: PISC_ARRAY_DESC;
       source_array: PVoid; slice_length: PISC_LONG): ISC_STATUS;
-    function isc_free(isc_arg1: PAnsiChar): ISC_LONG;
-    function isc_sqlcode(status_vector: PISC_STATUS): ISC_LONG;
-    procedure isc_sql_interprete(sqlcode: Short; buffer: PAnsiChar;
-      buffer_length: Short);
-    function isc_interprete(buffer: PAnsiChar; status_vector: PPISC_STATUS): ISC_STATUS; virtual;
-    function isc_start_transaction(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_free: function(isc_arg1: PAnsiChar): ISC_LONG;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_sqlcode: function(status_vector: PISC_STATUS): ISC_LONG;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_sql_interprete: procedure(sqlcode: Short; buffer: PAnsiChar;
+      buffer_length: Short); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_interprete: function(buffer: PAnsiChar; status_vector: PPISC_STATUS):
+      ISC_STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    fb_interpret: function(buffer: PAnsiChar;  bufsize: integer; status_vector: PPISC_STATUS):
+      ISC_STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    { Transaction support routines }
+
+    isc_start_transaction: function(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; db_handle_count: Short;
-      db_handle: PISC_DB_HANDLE; tpb_length: Word; tpb_address: PAnsiChar): ISC_STATUS;
-    function isc_start_multiple(status_vector: PISC_STATUS;
+      db_handle: PISC_DB_HANDLE; tpb_length: Word; tpb_address: PAnsiChar):
+      ISC_STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_start_multiple: function(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; db_handle_count: Short;
       teb_vector_address: PISC_TEB): ISC_STATUS;
-    function isc_rollback_transaction(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_rollback_transaction: function(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-    function isc_rollback_retaining(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_rollback_retaining: function(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-    function isc_commit_retaining(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_commit_retaining: function(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-    function isc_commit_transaction(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_commit_transaction: function(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-    function isc_dsql_allocate_statement(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_transaction_info: function(status_vector: PISC_STATUS;
+      tr_handle: PISC_TR_HANDLE; item_list_buffer_length: Short;
+      item_list_buffer: PAnsiChar; result_buffer_length: Short;
+      result_buffer: PAnsiChar): ISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    { Dynamic SQL routines }
+
+    isc_dsql_allocate_statement: function(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; stmt_handle: PISC_STMT_HANDLE): ISC_STATUS;
-    function isc_dsql_alloc_statement2(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_dsql_alloc_statement2: function(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; stmt_handle: PISC_STMT_HANDLE): ISC_STATUS;
-    function isc_dsql_describe(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_dsql_describe: function(status_vector: PISC_STATUS;
       stmt_handle: PISC_STMT_HANDLE; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-    function isc_dsql_describe_bind(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_dsql_describe_bind: function(status_vector: PISC_STATUS;
       stmt_handle: PISC_STMT_HANDLE; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-    function isc_dsql_execute(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_dsql_execute: function(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; stmt_handle: PISC_STMT_HANDLE; dialect: Word;
       xsqlda: PXSQLDA): ISC_STATUS;
-    function isc_dsql_execute2(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_dsql_execute2: function(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; stmt_handle: PISC_STMT_HANDLE; dialect: Word;
       in_xsqlda, out_xsqlda: PXSQLDA): ISC_STATUS;
-    function isc_dsql_execute_immediate(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_dsql_execute_immediate: function(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE; length: Word;
       statement: PAnsiChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-    function isc_dsql_fetch(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_dsql_fetch: function(status_vector: PISC_STATUS;
       stmt_handle: PISC_STMT_HANDLE; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-    function isc_dsql_free_statement(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_dsql_free_statement: function(status_vector: PISC_STATUS;
       stmt_handle: PISC_STMT_HANDLE; options: Word): ISC_STATUS;
-    function isc_dsql_prepare(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_dsql_prepare: function(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; stmt_handle: PISC_STMT_HANDLE;
-      length: Word; statement: PAnsiChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-    function isc_dsql_set_cursor_name(status_vector: PISC_STATUS;
+      length: Word; statement: PAnsiChar; dialect: Word; xsqlda: PXSQLDA):
+      ISC_STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_dsql_set_cursor_name: function(status_vector: PISC_STATUS;
       stmt_handle: PISC_STMT_HANDLE; cursor_name: PAnsiChar; _type: Word): ISC_STATUS;
-    function isc_dsql_sql_info(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_dsql_sql_info: function(status_vector: PISC_STATUS;
       stmt_handle: PISC_STMT_HANDLE; item_length: Short; items: PAnsiChar;
       buffer_length: Short; buffer: PAnsiChar): ISC_STATUS;
-    function isc_open_blob2(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    { Blob processing routines }
+
+    isc_open_blob2: function(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
       blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
       bpb_buffer: PAnsiChar): ISC_STATUS;
-    function isc_create_blob2(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_create_blob2: function(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
       blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
       bpb_address: PAnsiChar): ISC_STATUS;
-    function isc_blob_info(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_blob_info: function(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short; result_buffer: PAnsiChar): ISC_STATUS;
-    function isc_close_blob(status_vector: PISC_STATUS;
+      item_list_buffer: PAnsiChar; result_buffer_length: Short; result_buffer: PAnsiChar):
+      ISC_STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_close_blob: function(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
-    function isc_cancel_blob(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_cancel_blob: function(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
-    function isc_get_segment(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_get_segment: function(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE; actual_seg_length: PWord;
       seg_buffer_length: Word; seg_buffer: PAnsiChar): ISC_STATUS;
-    function isc_put_segment(status_vector: PISC_STATUS;
-      blob_handle: PISC_BLOB_HANDLE; seg_buffer_len: Word; seg_buffer: PAnsiChar): ISC_STATUS;
-    function isc_event_block(event_buffer: PPAnsiChar; result_buffer: PPAnsiChar;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_put_segment: function(status_vector: PISC_STATUS;
+      blob_handle: PISC_BLOB_HANDLE; seg_buffer_len: Word; seg_buffer: PAnsiChar):
+      ISC_STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    { Event processing routines }
+
+    isc_event_block: function(event_buffer: PPAnsiChar; result_buffer: PPAnsiChar;
       id_count: Word; event_list: array of PAnsiChar): ISC_LONG;
-    procedure isc_event_counts(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_event_counts: procedure(status_vector: PISC_STATUS;
       buffer_length: Short; event_buffer: PAnsiChar; result_buffer: PAnsiChar);
-    function isc_cancel_events(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_cancel_events: function(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; event_id: PISC_LONG): ISC_STATUS;
-    function isc_que_events(status_vector: PISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_que_events: function(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; event_id: PISC_LONG; length: Short;
       event_buffer: PAnsiChar; event_function: TISC_CALLBACK;
       event_function_arg: PVoid): ISC_STATUS;
-    procedure isc_decode_date(ib_date: PISC_QUAD; tm_date: PCTimeStructure);
-    procedure isc_encode_date(tm_date: PCTimeStructure; ib_date: PISC_QUAD);
-    procedure isc_decode_sql_date(ib_date: PISC_DATE; tm_date: PCTimeStructure);
-    procedure isc_decode_sql_time(ib_time: PISC_TIME; tm_date: PCTimeStructure);
-    procedure isc_decode_timestamp(ib_timestamp: PISC_TIMESTAMP;
-      tm_date: PCTimeStructure);
-    procedure isc_encode_sql_date(tm_date: PCTimeStructure;
-      ib_date: PISC_DATE);
-    procedure isc_encode_sql_time(tm_date: PCTimeStructure;
-      ib_time: PISC_TIME);
-    procedure isc_encode_timestamp(tm_date: PCTimeStructure;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    { Types convertion routines }
+
+    isc_decode_date: procedure(ib_date: PISC_QUAD; tm_date: PCTimeStructure);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_encode_date: procedure(tm_date: PCTimeStructure; ib_date: PISC_QUAD);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    { Interbase Version 6 routines }
+    isc_decode_sql_date: procedure(ib_date: PISC_DATE;
+      tm_date: PCTimeStructure); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_decode_sql_time: procedure(ib_time: PISC_TIME;
+      tm_date: PCTimeStructure); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_decode_timestamp: procedure(ib_timestamp: PISC_TIMESTAMP;
+      tm_date: PCTimeStructure); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_encode_sql_date: procedure(tm_date: PCTimeStructure;
+      ib_date: PISC_DATE); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_encode_sql_time: procedure(tm_date: PCTimeStructure;
+      ib_time: PISC_TIME); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_encode_timestamp: procedure(tm_date: PCTimeStructure;
       ib_timestamp: PISC_TIMESTAMP);
-    function isc_vax_integer(buffer: PAnsiChar; length: Short): ISC_LONG;
-    function isc_portable_integer(ptr: pbyte; length: Short): ISC_INT64;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_vax_integer: function(buffer: PAnsiChar; length: Short): ISC_LONG;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    isc_portable_integer: function(ptr: pbyte; length: Smallint): Int64;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
   end;
 
   {** Implements a native driver for Interbase6}
-  TZInterbase6PlainDriver = class (TZFirebirdBaseDriver)
+  TZInterbase6PlainDriver = class (TZInterbasePlainDriver)
   protected
     function Clone: IZPlainDriver; override;
   public
@@ -414,7 +403,7 @@ type
   end;
 
   {** Implements a native driver for Firebird 1.0}
-  TZFirebird10PlainDriver = class (TZFirebirdBaseDriver)
+  TZFirebird10PlainDriver = class (TZInterbasePlainDriver)
   protected
     function Clone: IZPlainDriver; override;
   public
@@ -425,7 +414,7 @@ type
   end;
 
   {** Implements a native driver for Firebird 1.5}
-  TZFirebird15PlainDriver = class (TZFirebirdBaseDriver)
+  TZFirebird15PlainDriver = class (TZInterbasePlainDriver)
   protected
     function Clone: IZPlainDriver; override;
     procedure LoadCodePages; override;
@@ -436,7 +425,7 @@ type
     function GetDescription: string; override;
   end;
 
-  TZFirebirdD15PlainDriver = class (TZFirebird15PlainDriver)
+  TZFirebirdD15PlainDriver = class (TZInterbasePlainDriver)
   protected
     function Clone: IZPlainDriver; override;
   public
@@ -447,7 +436,7 @@ type
   end;
 
   {** Implements a native driver for Firebird 2.0}
-  TZFirebird20PlainDriver = class (TZFirebirdBaseDriver)
+  TZFirebird20PlainDriver = class (TZInterbasePlainDriver)
   protected
     function Clone: IZPlainDriver; override;
     function GetUnicodeCodePageName: String; override;
@@ -473,7 +462,7 @@ type
   {** Represents class to Interbase 6+ native API. }
 
   {** Implements a native driver for Firebird 2.1}
-  TZFirebird21PlainDriver = class (TZFirebirdBaseDriver)
+  TZFirebird21PlainDriver = class (TZInterbasePlainDriver)
   protected
     function Clone: IZPlainDriver; override;
   protected
@@ -498,7 +487,7 @@ type
   end;
 
   {** Implements a native driver for Firebird 2.5}
-  TZFirebird25PlainDriver = class (TZFirebirdBaseDriver)
+  TZFirebird25PlainDriver = class (TZInterbasePlainDriver)
   protected
     function Clone: IZPlainDriver; override;
     function GetUnicodeCodePageName: String; override;
@@ -590,12 +579,12 @@ end;
 
 { IZFirebirdPlainDriver }
 
-function TZFirebirdBaseDriver.GetUnicodeCodePageName: String;
+function TZInterbasePlainDriver.GetUnicodeCodePageName: String;
 begin
   Result := 'UNICODE_FSS';
 end;
 
-procedure TZFirebirdBaseDriver.FillCodePageArray;
+procedure TZInterbasePlainDriver.FillCodePageArray;
 var I: Integer;
 begin
   SetLength(FCodePageArray, 70);
@@ -603,7 +592,7 @@ begin
     FCodePageArray[FCodePages[i].ID] := FCodePages[i].CP;
 end;
 
-procedure TZFirebirdBaseDriver.LoadCodePages;
+procedure TZInterbasePlainDriver.LoadCodePages;
 begin
   Self.AddCodePage('ASCII', CS_ASCII, ceAnsi, zCP_WIN1252); {English}
   Self.AddCodePage('BIG_5', CS_BIG_5, ceAnsi, zCP_Big5); {Chinese, Vietnamese, Korean}
@@ -633,7 +622,7 @@ begin
 end;
 
 {$IFDEF ENABLE_INTERBASE_CRYPT}
-procedure TZFirebirdBaseDriver.Initialize;
+procedure TZInterbasePlainDriver.Initialize;
 begin
   If Assigned(FPreLoader) and not FPreLoader.Loaded then
     FPreLoader.LoadNativeLibrary;
@@ -641,75 +630,75 @@ begin
 end;
 {$ENDIF}
 
-procedure TZFirebirdBaseDriver.LoadApi;
+procedure TZInterbasePlainDriver.LoadApi;
 begin
   inherited LoadApi;
   with Loader do
   begin
-    @FIREBIRD_API.isc_sqlcode         := GetAddress('isc_sqlcode');
-    @FIREBIRD_API.isc_sql_interprete  := GetAddress('isc_sql_interprete');
-    @FIREBIRD_API.isc_interprete      := GetAddress('isc_interprete');
-    @FIREBIRD_API.isc_vax_integer     := GetAddress('isc_vax_integer');
-    @FIREBIRD_API.isc_portable_integer:= GetAddress('isc_portable_integer');
+    @isc_sqlcode         := GetAddress('isc_sqlcode');
+    @isc_sql_interprete  := GetAddress('isc_sql_interprete');
+    @isc_interprete      := GetAddress('isc_interprete');
+    @isc_vax_integer     := GetAddress('isc_vax_integer');
+    @isc_portable_integer:= GetAddress('isc_portable_integer');
 
-    @FIREBIRD_API.isc_array_gen_sdl   := GetAddress( 'isc_array_gen_sdl');
-    @FIREBIRD_API.isc_array_get_slice := GetAddress( 'isc_array_get_slice');
-    @FIREBIRD_API.isc_array_lookup_bounds := GetAddress( 'isc_array_lookup_bounds');
-    @FIREBIRD_API.isc_array_lookup_desc := GetAddress( 'isc_array_lookup_desc');
-    @FIREBIRD_API.isc_array_set_desc  := GetAddress( 'isc_array_set_desc');
-    @FIREBIRD_API.isc_array_put_slice := GetAddress( 'isc_array_put_slice');
+    @isc_array_gen_sdl   := GetAddress( 'isc_array_gen_sdl');
+    @isc_array_get_slice := GetAddress( 'isc_array_get_slice');
+    @isc_array_lookup_bounds := GetAddress( 'isc_array_lookup_bounds');
+    @isc_array_lookup_desc := GetAddress( 'isc_array_lookup_desc');
+    @isc_array_set_desc  := GetAddress( 'isc_array_set_desc');
+    @isc_array_put_slice := GetAddress( 'isc_array_put_slice');
 
-    @FIREBIRD_API.isc_blob_info       := GetAddress('isc_blob_info');
-    @FIREBIRD_API.isc_open_blob2      := GetAddress('isc_open_blob2');
-    @FIREBIRD_API.isc_close_blob      := GetAddress('isc_close_blob');
-    @FIREBIRD_API.isc_cancel_blob     := GetAddress('isc_cancel_blob');
-    @FIREBIRD_API.isc_get_segment     := GetAddress('isc_get_segment');
-    @FIREBIRD_API.isc_put_segment     := GetAddress('isc_put_segment');
-    @FIREBIRD_API.isc_create_blob2    := GetAddress('isc_create_blob2');
-    @FIREBIRD_API.isc_decode_date     := GetAddress('isc_decode_date');
-    @FIREBIRD_API.isc_encode_date     := GetAddress('isc_encode_date');
-    @FIREBIRD_API.isc_dsql_free_statement := GetAddress('isc_dsql_free_statement');
-    @FIREBIRD_API.isc_dsql_execute2   := GetAddress('isc_dsql_execute2');
-    @FIREBIRD_API.isc_dsql_execute    := GetAddress('isc_dsql_execute');
-    @FIREBIRD_API.isc_dsql_set_cursor_name := GetAddress('isc_dsql_set_cursor_name');
-    @FIREBIRD_API.isc_dsql_fetch      := GetAddress('isc_dsql_fetch');
-    @FIREBIRD_API.isc_dsql_sql_info   := GetAddress('isc_dsql_sql_info');
-    @FIREBIRD_API.isc_dsql_allocate_statement := GetAddress('isc_dsql_allocate_statement');
-    @FIREBIRD_API.isc_dsql_alloc_statement2 := GetAddress('isc_dsql_alloc_statement2');
-    @FIREBIRD_API.isc_dsql_prepare    := GetAddress('isc_dsql_prepare');
-    @FIREBIRD_API.isc_dsql_describe_bind := GetAddress('isc_dsql_describe_bind');
-    @FIREBIRD_API.isc_dsql_describe   := GetAddress('isc_dsql_describe');
-    @FIREBIRD_API.isc_dsql_execute_immediate := GetAddress('isc_dsql_execute_immediate');
-    @FIREBIRD_API.isc_drop_database   := GetAddress('isc_drop_database');
-    @FIREBIRD_API.isc_detach_database := GetAddress('isc_detach_database');
-    @FIREBIRD_API.isc_attach_database := GetAddress('isc_attach_database');
-    @FIREBIRD_API.isc_database_info   := GetAddress('isc_database_info');
-    @FIREBIRD_API.isc_transaction_info   := GetAddress('isc_transaction_info');
-    @FIREBIRD_API.isc_start_multiple  := GetAddress('isc_start_multiple');
-    @FIREBIRD_API.isc_start_transaction := GetAddress('isc_start_transaction');
-    @FIREBIRD_API.isc_commit_transaction := GetAddress('isc_commit_transaction');
+    @isc_blob_info       := GetAddress('isc_blob_info');
+    @isc_open_blob2      := GetAddress('isc_open_blob2');
+    @isc_close_blob      := GetAddress('isc_close_blob');
+    @isc_cancel_blob     := GetAddress('isc_cancel_blob');
+    @isc_get_segment     := GetAddress('isc_get_segment');
+    @isc_put_segment     := GetAddress('isc_put_segment');
+    @isc_create_blob2    := GetAddress('isc_create_blob2');
+    @isc_decode_date     := GetAddress('isc_decode_date');
+    @isc_encode_date     := GetAddress('isc_encode_date');
+    @isc_dsql_free_statement := GetAddress('isc_dsql_free_statement');
+    @isc_dsql_execute2   := GetAddress('isc_dsql_execute2');
+    @isc_dsql_execute    := GetAddress('isc_dsql_execute');
+    @isc_dsql_set_cursor_name := GetAddress('isc_dsql_set_cursor_name');
+    @isc_dsql_fetch      := GetAddress('isc_dsql_fetch');
+    @isc_dsql_sql_info   := GetAddress('isc_dsql_sql_info');
+    @isc_dsql_allocate_statement := GetAddress('isc_dsql_allocate_statement');
+    @isc_dsql_alloc_statement2 := GetAddress('isc_dsql_alloc_statement2');
+    @isc_dsql_prepare    := GetAddress('isc_dsql_prepare');
+    @isc_dsql_describe_bind := GetAddress('isc_dsql_describe_bind');
+    @isc_dsql_describe   := GetAddress('isc_dsql_describe');
+    @isc_dsql_execute_immediate := GetAddress('isc_dsql_execute_immediate');
+    @isc_drop_database   := GetAddress('isc_drop_database');
+    @isc_detach_database := GetAddress('isc_detach_database');
+    @isc_attach_database := GetAddress('isc_attach_database');
+    @isc_database_info   := GetAddress('isc_database_info');
+    @isc_transaction_info   := GetAddress('isc_transaction_info');
+    @isc_start_multiple  := GetAddress('isc_start_multiple');
+    @isc_start_transaction := GetAddress('isc_start_transaction');
+    @isc_commit_transaction := GetAddress('isc_commit_transaction');
 
-    @FIREBIRD_API.isc_commit_retaining := GetAddress('isc_commit_retaining');
-    @FIREBIRD_API.isc_rollback_transaction := GetAddress('isc_rollback_transaction');
-    @FIREBIRD_API.isc_cancel_events   := GetAddress('isc_cancel_events');
-    @FIREBIRD_API.isc_que_events      := GetAddress('isc_que_events');
-    @FIREBIRD_API.isc_event_counts    := GetAddress('isc_event_counts');
-    @FIREBIRD_API.isc_event_block     := GetAddress('isc_event_block');
-    @FIREBIRD_API.isc_free            := GetAddress('isc_free');
+    @isc_commit_retaining := GetAddress('isc_commit_retaining');
+    @isc_rollback_transaction := GetAddress('isc_rollback_transaction');
+    @isc_cancel_events   := GetAddress('isc_cancel_events');
+    @isc_que_events      := GetAddress('isc_que_events');
+    @isc_event_counts    := GetAddress('isc_event_counts');
+    @isc_event_block     := GetAddress('isc_event_block');
+    @isc_free            := GetAddress('isc_free');
 
-    @FIREBIRD_API.isc_rollback_retaining := GetAddress( 'isc_rollback_retaining');
-    @FIREBIRD_API.isc_decode_sql_date := GetAddress('isc_decode_sql_date');
-    @FIREBIRD_API.isc_decode_sql_time := GetAddress('isc_decode_sql_time');
-    @FIREBIRD_API.isc_decode_timestamp := GetAddress('isc_decode_timestamp');
-    @FIREBIRD_API.isc_encode_sql_date := GetAddress('isc_encode_sql_date');
-    @FIREBIRD_API.isc_encode_sql_time := GetAddress('isc_encode_sql_time');
-    @FIREBIRD_API.isc_encode_timestamp := GetAddress('isc_encode_timestamp');
+    @isc_rollback_retaining := GetAddress( 'isc_rollback_retaining');
+    @isc_decode_sql_date := GetAddress('isc_decode_sql_date');
+    @isc_decode_sql_time := GetAddress('isc_decode_sql_time');
+    @isc_decode_timestamp := GetAddress('isc_decode_timestamp');
+    @isc_encode_sql_date := GetAddress('isc_encode_sql_date');
+    @isc_encode_sql_time := GetAddress('isc_encode_sql_time');
+    @isc_encode_timestamp := GetAddress('isc_encode_timestamp');
 
-    @FIREBIRD_API.fb_interpret        := GetAddress('fb_interpret');
+    @fb_interpret        := GetAddress('fb_interpret');
   end;
 end;
 
-constructor TZFirebirdBaseDriver.Create;
+constructor TZInterbasePlainDriver.Create;
 begin
   inherited create;
   FLoader := TZNativeLibraryLoader.Create([]);
@@ -719,426 +708,20 @@ begin
 end;
 
 {$IFDEF ENABLE_INTERBASE_CRYPT}
-destructor TZFirebirdBaseDriver.Destroy;
+destructor TZInterbasePlainDriver.Destroy;
 begin
   FPreLoader.Free;
   inherited Destroy;
 end;
 {$ENDIF}
 
-function TZFirebirdBaseDriver.GetFirebirdAPI: TZFirebird_API;
-begin
-  result := FIREBIRD_API;
-end;
-
-function TZFirebirdBaseDriver.GetCodePageArray: TWordDynArray;
+function TZInterbasePlainDriver.GetCodePageArray: TWordDynArray;
 begin
   Result := FCodePageArray;
 end;
 
-function TZFirebirdBaseDriver.isc_array_gen_sdl(status_vector: PISC_STATUS;
-  isc_array_desc: PISC_ARRAY_DESC; isc_arg3: PShort;
-  isc_arg4: PAnsiChar; isc_arg5: PShort): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_array_gen_sdl(status_vector, isc_array_desc,
-    isc_arg3, isc_arg4, isc_arg5);
-end;
-
-function TZFirebirdBaseDriver.isc_array_get_slice(status_vector: PISC_STATUS;
-  db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE; array_id: PISC_QUAD;
-  descriptor: PISC_ARRAY_DESC; dest_array: PVoid;
-  slice_length: ISC_LONG): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_array_get_slice(status_vector, db_handle,
-    trans_handle, array_id, descriptor, dest_array, slice_length);
-end;
-
-function TZFirebirdBaseDriver.isc_array_lookup_bounds(
-  status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  trans_handle: PISC_TR_HANDLE; table_name, column_name: PAnsiChar;
-  descriptor: PISC_ARRAY_DESC): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_array_lookup_bounds(status_vector, db_handle,
-    trans_handle, table_name, column_name, descriptor);
-end;
-
-function TZFirebirdBaseDriver.isc_array_lookup_desc(
-  status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  trans_handle: PISC_TR_HANDLE; table_name, column_name: PAnsiChar;
-  descriptor: PISC_ARRAY_DESC): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_array_lookup_desc(status_vector, db_handle,
-    trans_handle, table_name, column_name, descriptor);
-end;
-
-function TZFirebirdBaseDriver.isc_array_put_slice(status_vector: PISC_STATUS;
-  db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE; array_id: PISC_QUAD;
-  descriptor: PISC_ARRAY_DESC; source_array: PVoid;
-  slice_length: PISC_LONG): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_array_put_slice(status_vector, db_handle,
-    trans_handle, array_id, descriptor, source_array, slice_length);
-end;
-
-function TZFirebirdBaseDriver.isc_array_set_desc(status_vector: PISC_STATUS;
-  table_name: PAnsiChar; column_name: PAnsiChar; sql_dtype, sql_length,
-  sql_dimensions: PShort; descriptor: PISC_ARRAY_DESC): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_array_set_desc(status_vector, table_name,
-    column_name, sql_dtype, sql_length, sql_dimensions, descriptor);
-end;
-
-function TZFirebirdBaseDriver.isc_attach_database(status_vector: PISC_STATUS;
-  db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
-  parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_attach_database(status_vector, db_name_length,
-    db_name, db_handle, parm_buffer_length, parm_buffer);
-end;
-
-function TZFirebirdBaseDriver.isc_blob_info(status_vector: PISC_STATUS;
-  blob_handle: PISC_BLOB_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PAnsiChar; result_buffer_length: Short;
-  result_buffer: PAnsiChar): ISC_STATUS;
-begin
-  Result :=FIREBIRD_API.isc_blob_info(status_vector, blob_handle,
-    item_list_buffer_length, item_list_buffer, result_buffer_length,
-    result_buffer);
-end;
-
-function TZFirebirdBaseDriver.isc_cancel_blob(status_vector: PISC_STATUS;
-  blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_cancel_blob(status_vector, blob_handle);
-end;
-
-function TZFirebirdBaseDriver.isc_cancel_events(status_vector: PISC_STATUS;
-  db_handle: PISC_DB_HANDLE; event_id: PISC_LONG): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_cancel_events(status_vector, db_handle,
-    event_id);
-end;
-
-function TZFirebirdBaseDriver.isc_close_blob(status_vector: PISC_STATUS;
-  blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_close_blob(status_vector, blob_handle);
-end;
-
-function TZFirebirdBaseDriver.isc_commit_retaining(
-  status_vector: PISC_STATUS; tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_commit_retaining(status_vector, tran_handle);
-end;
-
-function TZFirebirdBaseDriver.isc_commit_transaction(
-  status_vector: PISC_STATUS; tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_commit_transaction(status_vector, tran_handle);
-end;
-
-function TZFirebirdBaseDriver.isc_create_blob2(status_vector: PISC_STATUS;
-  db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
-  blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-  bpb_address: PAnsiChar): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_create_blob2(status_vector, db_handle,
-    tran_handle, blob_handle, blob_id, bpb_length, bpb_address);
-end;
-
-function TZFirebirdBaseDriver.isc_database_info(status_vector: PISC_STATUS;
-  db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PByte; result_buffer_length: Short;
-  result_buffer: PAnsiChar): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_database_info(status_vector, db_handle,
-    item_list_buffer_length, item_list_buffer, result_buffer_length,
-    result_buffer);
-end;
-
-function TZFirebirdBaseDriver.isc_transaction_info(status_vector: PISC_STATUS;
-  tr_handle: PISC_TR_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PAnsiChar; result_buffer_length: Short;
-  result_buffer: PAnsiChar): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_transaction_info(status_vector, tr_handle,
-    item_list_buffer_length, item_list_buffer, result_buffer_length,
-    result_buffer);
-end;
-
-procedure TZFirebirdBaseDriver.isc_decode_date(ib_date: PISC_QUAD;
-  tm_date: PCTimeStructure);
-begin
-  FIREBIRD_API.isc_decode_date(ib_date, tm_date);
-end;
-
-procedure TZFirebirdBaseDriver.isc_decode_sql_date(ib_date: PISC_DATE;
-  tm_date: PCTimeStructure);
-begin
-  FIREBIRD_API.isc_decode_sql_date(ib_date, tm_date);
-end;
-
-procedure TZFirebirdBaseDriver.isc_decode_sql_time(ib_time: PISC_TIME;
-  tm_date: PCTimeStructure);
-begin
-  FIREBIRD_API.isc_decode_sql_time(ib_time, tm_date);
-end;
-
-procedure TZFirebirdBaseDriver.isc_decode_timestamp(
-  ib_timestamp: PISC_TIMESTAMP; tm_date: PCTimeStructure);
-begin
-  FIREBIRD_API.isc_decode_timestamp(ib_timestamp, tm_date);
-end;
-
-function TZFirebirdBaseDriver.isc_detach_database(status_vector: PISC_STATUS;
-  db_handle: PISC_DB_HANDLE): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_detach_database(status_vector, db_handle);
-end;
-
-function TZFirebirdBaseDriver.isc_drop_database(status_vector: PISC_STATUS;
-  db_handle: PISC_DB_HANDLE): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_drop_database(status_vector, db_handle);
-end;
-
-function TZFirebirdBaseDriver.isc_dsql_alloc_statement2(
-  status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  stmt_handle: PISC_STMT_HANDLE): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_dsql_alloc_statement2(status_vector,
-    db_handle, stmt_handle);
-end;
-
-function TZFirebirdBaseDriver.isc_dsql_allocate_statement(
-  status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  stmt_handle: PISC_STMT_HANDLE): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_dsql_allocate_statement(status_vector,
-    db_handle, stmt_handle);
-end;
-
-function TZFirebirdBaseDriver.isc_dsql_describe(status_vector: PISC_STATUS;
-  stmt_handle: PISC_STMT_HANDLE; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_dsql_describe(status_vector, stmt_handle,
-    dialect, xsqlda);
-end;
-
-function TZFirebirdBaseDriver.isc_dsql_describe_bind(
-  status_vector: PISC_STATUS; stmt_handle: PISC_STMT_HANDLE; dialect: Word;
-  xsqlda: PXSQLDA): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_dsql_describe_bind(status_vector, stmt_handle,
-    dialect, xsqlda);
-end;
-
-function TZFirebirdBaseDriver.isc_dsql_execute(status_vector: PISC_STATUS;
-  tran_handle: PISC_TR_HANDLE; stmt_handle: PISC_STMT_HANDLE; dialect: Word;
-  xsqlda: PXSQLDA): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_dsql_execute(status_vector, tran_handle,
-    stmt_handle, dialect, xsqlda);
-end;
-
-function TZFirebirdBaseDriver.isc_dsql_execute_immediate(
-  status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  tran_handle: PISC_TR_HANDLE; length: Word; statement: PAnsiChar;
-  dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_dsql_execute_immediate(status_vector,
-    db_handle, tran_handle, length, statement, dialect, xsqlda);
-end;
-
-function TZFirebirdBaseDriver.isc_dsql_execute2(status_vector: PISC_STATUS;
-  tran_handle: PISC_TR_HANDLE; stmt_handle: PISC_STMT_HANDLE;
-  dialect: Word; in_xsqlda, out_xsqlda: PXSQLDA): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_dsql_execute2(status_vector, tran_handle,
-    stmt_handle, dialect, in_xsqlda, out_xsqlda);
-end;
-
-function TZFirebirdBaseDriver.isc_dsql_fetch(status_vector: PISC_STATUS;
-  stmt_handle: PISC_STMT_HANDLE; dialect: Word;
-  xsqlda: PXSQLDA): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_dsql_fetch(status_vector, stmt_handle, dialect,
-    xsqlda);
-end;
-
-function TZFirebirdBaseDriver.isc_dsql_free_statement(
-  status_vector: PISC_STATUS; stmt_handle: PISC_STMT_HANDLE;
-  options: Word): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_dsql_free_statement(status_vector, stmt_handle,
-    options);
-end;
-
-function TZFirebirdBaseDriver.isc_dsql_prepare(
-  status_vector: PISC_STATUS; tran_handle: PISC_TR_HANDLE;
-  stmt_handle: PISC_STMT_HANDLE; length: Word; statement: PAnsiChar;
-  dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_dsql_prepare(status_vector, tran_handle,
-    stmt_handle, length, statement, dialect, xsqlda);
-end;
-
-function TZFirebirdBaseDriver.isc_dsql_set_cursor_name(
-  status_vector: PISC_STATUS; stmt_handle: PISC_STMT_HANDLE;
-  cursor_name: PAnsiChar; _type: Word): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_dsql_set_cursor_name(status_vector,
-    stmt_handle, cursor_name, _type);
-end;
-
-function TZFirebirdBaseDriver.isc_dsql_sql_info(
-  status_vector: PISC_STATUS; stmt_handle: PISC_STMT_HANDLE;
-  item_length: Short; items: PAnsiChar; buffer_length: Short;
-  buffer: PAnsiChar): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_dsql_sql_info(status_vector, stmt_handle,
-    item_length, items, buffer_length, buffer);
-end;
-
-procedure TZFirebirdBaseDriver.isc_encode_date(tm_date: PCTimeStructure;
-  ib_date: PISC_QUAD);
-begin
-  FIREBIRD_API.isc_encode_date(tm_date, ib_date);
-end;
-
-procedure TZFirebirdBaseDriver.isc_encode_sql_date(
-  tm_date: PCTimeStructure; ib_date: PISC_DATE);
-begin
-  FIREBIRD_API.isc_encode_sql_date(tm_date, ib_date);
-end;
-
-procedure TZFirebirdBaseDriver.isc_encode_sql_time(
-  tm_date: PCTimeStructure; ib_time: PISC_TIME);
-begin
-  FIREBIRD_API.isc_encode_sql_time(tm_date, ib_time);
-end;
-
-procedure TZFirebirdBaseDriver.isc_encode_timestamp(
-  tm_date: PCTimeStructure; ib_timestamp: PISC_TIMESTAMP);
-begin
-  FIREBIRD_API.isc_encode_timestamp(tm_date, ib_timestamp);
-end;
-
-function TZFirebirdBaseDriver.isc_event_block(event_buffer: PPAnsiChar;
-  result_buffer: PPAnsiChar; id_count: Word; event_list: array of PAnsiChar
-  ): ISC_LONG;
-begin
-  Result := FIREBIRD_API.isc_event_block(event_buffer, result_buffer,
-    id_count, event_list);
-end;
-
-procedure TZFirebirdBaseDriver.isc_event_counts(
-  status_vector: PISC_STATUS; buffer_length: Short; event_buffer,
-  result_buffer: PAnsiChar);
-begin
-  FIREBIRD_API.isc_event_counts(status_vector, buffer_length,
-    event_buffer, result_buffer);
-end;
-
-function TZFirebirdBaseDriver.isc_free(isc_arg1: PAnsiChar): ISC_LONG;
-begin
-  Result := FIREBIRD_API.isc_free(isc_arg1);
-end;
-
-function TZFirebirdBaseDriver.isc_get_segment(
-  status_vector: PISC_STATUS; blob_handle: PISC_BLOB_HANDLE;
-  actual_seg_length: PWord; seg_buffer_length: Word;
-  seg_buffer: PAnsiChar): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_get_segment(status_vector, blob_handle,
-    actual_seg_length, seg_buffer_length, seg_buffer);
-end;
-
-function TZFirebirdBaseDriver.isc_interprete(buffer: PAnsiChar;
-  status_vector: PPISC_STATUS): ISC_STATUS;
-begin
-  if Assigned(FIREBIRD_API.fb_interpret) then
-    Result := FIREBIRD_API.fb_interpret(buffer, IBBigLocalBufferLength, status_vector)
-  else
-    Result := FIREBIRD_API.isc_interprete(buffer, status_vector);
-end;
-
-function TZFirebirdBaseDriver.isc_open_blob2(status_vector: PISC_STATUS;
-  db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
-  blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-  bpb_buffer: PAnsiChar): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_open_blob2(status_vector, db_handle,
-    tran_handle, blob_handle, blob_id, bpb_length, bpb_buffer);
-end;
-
-function TZFirebirdBaseDriver.isc_put_segment(
-  status_vector: PISC_STATUS; blob_handle: PISC_BLOB_HANDLE;
-  seg_buffer_len: Word; seg_buffer: PAnsiChar): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_put_segment(status_vector, blob_handle,
-    seg_buffer_len, seg_buffer);
-end;
-
-function TZFirebirdBaseDriver.isc_que_events(status_vector: PISC_STATUS;
-  db_handle: PISC_DB_HANDLE; event_id: PISC_LONG; length: Short;
-  event_buffer: PAnsiChar; event_function: TISC_CALLBACK;
-  event_function_arg: PVoid): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_que_events(status_vector, db_handle,
-    event_id, length, event_buffer, event_function, event_function_arg)
-end;
-
-function TZFirebirdBaseDriver.isc_rollback_retaining(
-  status_vector: PISC_STATUS; tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_rollback_retaining(status_vector, tran_handle);
-end;
-
-procedure TZFirebirdBaseDriver.isc_sql_interprete(sqlcode: Short;  buffer: PAnsiChar; buffer_length: Short);
-begin
-  FIREBIRD_API.isc_sql_interprete(sqlcode, buffer, buffer_length);
-end;
-
-function TZFirebirdBaseDriver.isc_sqlcode(status_vector: PISC_STATUS): ISC_LONG;
-begin
-  Result := FIREBIRD_API.isc_sqlcode(status_vector);
-end;
-
-function TZFirebirdBaseDriver.isc_rollback_transaction(
-  status_vector: PISC_STATUS; tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_rollback_transaction(status_vector, tran_handle);
-end;
-
-function TZFirebirdBaseDriver.isc_start_multiple(
-  status_vector: PISC_STATUS; tran_handle: PISC_TR_HANDLE;
-  db_handle_count: Short; teb_vector_address: PISC_TEB): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_start_multiple(status_vector, tran_handle,
-    db_handle_count, teb_vector_address);
-end;
-
-function TZFirebirdBaseDriver.isc_start_transaction(
-  status_vector: PISC_STATUS; tran_handle: PISC_TR_HANDLE;
-  db_handle_count: Short; db_handle: PISC_DB_HANDLE; tpb_length: Word;
-  tpb_address: PAnsiChar): ISC_STATUS;
-begin
-  Result := FIREBIRD_API.isc_start_transaction(status_vector, tran_handle, db_handle_count, db_handle, tpb_length, tpb_address);
-end;
-
-function TZFirebirdBaseDriver.isc_vax_integer(buffer: PAnsiChar;
-  length: Short): ISC_LONG;
-begin
-  Result := FIREBIRD_API.isc_vax_integer(buffer, length);
-end;
-
-function TZFirebirdBaseDriver.isc_portable_integer(ptr: pbyte;
-  length: Short): ISC_INT64;
-begin
-  Result := FIREBIRD_API.isc_portable_integer(ptr, length);
-end;
 { TZInterbase6PlainDriver }
+
 function TZInterbase6PlainDriver.Clone: IZPlainDriver;
 begin
   Result := TZInterbase6PlainDriver.Create;

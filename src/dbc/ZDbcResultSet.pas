@@ -56,6 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons,
+{$ENDIF USE_SYNCOMMONS}
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
@@ -72,7 +75,8 @@ uses
 {$ENDIF}
 type
   {** Implements Abstract ResultSet. }
-  TZAbstractResultSet = class(TZCodePagedObject, IZResultSet)
+  TZAbstractResultSet = class(TZCodePagedObject, IZResultSet,
+    IImmediatelyReleasable)
   private
     FRowNo: Integer;
     FLastRowNo: Integer;
@@ -128,6 +132,8 @@ type
     procedure Close; virtual;
     procedure ResetCursor; virtual;
     function WasNull: Boolean; virtual;
+    function IsClosed: Boolean;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); virtual;
 
     //======================================================================
     // Methods for accessing results by column index
@@ -143,7 +149,6 @@ type
     function GetAnsiString(ColumnIndex: Integer): AnsiString; virtual;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; virtual;
     function GetRawByteString(ColumnIndex: Integer): RawByteString; virtual;
-    function GetBinaryString(ColumnIndex: Integer): RawByteString;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString; virtual;
     function GetBoolean(ColumnIndex: Integer): Boolean; virtual;
     function GetByte(ColumnIndex: Integer): Byte; virtual;
@@ -184,7 +189,6 @@ type
     function GetAnsiStringByName(const ColumnName: string): AnsiString; virtual;
     function GetUTF8StringByName(const ColumnName: string): UTF8String; virtual;
     function GetRawByteStringByName(const ColumnName: string): RawByteString; virtual;
-    function GetBinaryStringByName(const ColumnName: string): RawByteString;
     function GetUnicodeStringByName(const ColumnName: string): ZWideString; virtual;
     function GetBooleanByName(const ColumnName: string): Boolean; virtual;
     function GetByteByName(const ColumnName: string): Byte; virtual;
@@ -354,6 +358,11 @@ type
     function GetStatement: IZStatement; virtual;
 
     property ColumnsInfo: TObjectList read FColumnsInfo write FColumnsInfo;
+
+    {$IFDEF USE_SYNCOMMONS}
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); virtual;
+    {$ENDIF}
   end;
 
   {** implents a optimal Converter function for Date, Time, DateTime conversion }
@@ -514,6 +523,13 @@ type
     function Clone(Empty: Boolean = False): IZBLob; override;
     procedure FlushBuffer; virtual;
   End;
+
+{$IFDEF USE_SYNCOMMONS}
+const
+  JSONBool: array[Boolean] of ShortString = ('false', 'true');
+  ValidCenturyMagic = Word(14641); //min '19'      14385
+  ZeroTimeMagic = Int64(3472339291344613424); //00:00:00
+{$ENDIF USE_SYNCOMMONS}
 
 implementation
 
@@ -1067,20 +1083,6 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractResultSet.GetRawByteString(ColumnIndex: Integer): RawByteString;
-begin
-  Result := InternalGetString(ColumnIndex);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>String</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractResultSet.GetBinaryString(ColumnIndex: Integer): RawByteString;
 begin
   Result := InternalGetString(ColumnIndex);
 end;
@@ -1769,20 +1771,6 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>String</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractResultSet.GetBinaryStringByName(const ColumnName: string): RawByteString;
-begin
-  Result := GetBinaryString(GetColumnIndex(ColumnName));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
   a <code>WideString</code> in the Object Pascal programming language.
 
   @param columnName the SQL name of the column
@@ -2241,29 +2229,9 @@ end;
   @return the column index of the given column name
 }
 function TZAbstractResultSet.FindColumn(const ColumnName: string): Integer;
-var
-  I: Integer;
-  Metadata: TZAbstractResultSetMetadata;
 begin
   CheckClosed;
-  Metadata := TZAbstractResultSetMetadata(FMetadata);
-  Result := InvalidDbcIndex;
-
-  { Search for case sensitive columns. }
-  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-    if Metadata.GetColumnLabel(I) = ColumnName then
-    begin
-      Result := I;
-      Exit;
-    end;
-
-  { Search for case insensitive columns. }
-  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-    if AnsiUpperCase(Metadata.GetColumnLabel(I)) = AnsiUpperCase(ColumnName) then
-    begin
-      Result := I;
-      Exit;
-    end;
+  Result := TZAbstractResultSetMetadata(FMetadata).FindColumn(ColumnName);
 end;
 
 //---------------------------------------------------------------------
@@ -2281,6 +2249,11 @@ end;
 function TZAbstractResultSet.IsBeforeFirst: Boolean;
 begin
   Result := (FRowNo = 0);
+end;
+
+function TZAbstractResultSet.IsClosed: Boolean;
+begin
+  Result := fClosed;
 end;
 
 {**
@@ -3787,6 +3760,21 @@ begin
   RaiseUnsupportedException;
 end;
 
+procedure TZAbstractResultSet.ReleaseImmediat(const Sender: IImmediatelyReleasable);
+var ImmediatelyReleasable: IImmediatelyReleasable;
+begin
+  if not FClosed and Assigned(Statement){virtual RS ! } then
+  begin
+    FClosed := True;
+    FRowNo := 0;
+    FLastRowNo := 0;
+    LastWasNull := True;
+    if Supports(Statement, IImmediatelyReleasable, ImmediatelyReleasable) and
+       (ImmediatelyReleasable <> Sender) then
+      ImmediatelyReleasable.ReleaseImmediat(Sender);
+  end;
+end;
+
 {**
   Cancels the updates made to the current row in this
   <code>ResultSet</code> object.
@@ -3832,6 +3820,15 @@ end;
 procedure TZAbstractResultSet.MoveToCurrentRow;
 begin
 end;
+
+{$IFDEF USE_SYNCOMMONS}
+procedure TZAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  EndJSONObject: Boolean = True; With_DATETIME_MAGIC: Boolean = False;
+  SkipNullFields: Boolean = False);
+begin
+  raise Exception.Create(SUnsupportedOperation);
+end;
+{$ENDIF}
 
 {**
   Compares fields from two row buffers.

@@ -118,7 +118,7 @@ type
 
 implementation
 
-uses ZCompatibility, ZFastCode, ZSysUtils;
+uses ZCompatibility, ZFastCode, ZSysUtils, ZConnProperties;
 
 // escape the ';' char to #9 and LineEnding to ';'
 function Escape(const S: string): string; {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -378,26 +378,25 @@ var
 begin
   FProperties.OnChange := nil; // prevent re-entering
 
-  // Assign UserName, Password and LibLocation if they're set in Properties
-  S := ExtractValueFromProperties('UID');
-  if S <> '' then
-    UserName := S;
+    S := ExtractValueFromProperties(ConnProps_UID);
+    if S <> '' then
+      UserName := S;
 
-  S := ExtractValueFromProperties('username');
-  if S <> '' then
-    UserName := S;
+    S := ExtractValueFromProperties(ConnProps_Username);
+    if S <> '' then
+      UserName := S;
 
-  S := ExtractValueFromProperties('PWD');
-  if S <> '' then
-    Password := S;
+    S := ExtractValueFromProperties(ConnProps_PWD);
+    if S <> '' then
+      Password := S;
 
-  S := ExtractValueFromProperties('password');
-  if S <> '' then
-    Password := S;
+    S := ExtractValueFromProperties(ConnProps_Password);
+    if S <> '' then
+      Password := S;
 
-  S := ExtractValueFromProperties('LibLocation');
-  if S <> '' then
-    LibLocation := S;
+    S := ExtractValueFromProperties(ConnProps_LibLocation);
+    if S <> '' then
+      LibLocation := S;
 
   FProperties.OnChange := DoOnPropertiesChange;
 
