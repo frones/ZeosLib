@@ -11,6 +11,9 @@
 \usepackage{float}
 \usepackage{hyperref}
 \usepackage{placeins}
+\usepackage{listings}
+
+\lstset{language=Pascal,basicstyle=\footnotesize\ttfamily,breaklines=true}
 
 \setlength{\parskip}{0.2cm}
 
@@ -68,16 +71,92 @@ The following new parameters are supported:
 \item DateTimeWriteFormat
 \item DateTimeDisplayFormat
 \end{itemize}
-The ReadFormat parameters decribe the date and time formats as the database sends them to the application.
+The ReadFormat parameters decribe the date and time formats as the data\-base sends them to the application.
 The WriteFormat parameters describe the date and time formats as the application should send them to the database.
 The DisplayFormat settings are used for strings that are supplied by the application to Zeos.
+These settings can be used to solve problems on the following drivers:
+\begin{itemize}
+\item dblib (FreeTDS, mssql, sybase)
+\item postgresql
+\item mysql (depending on parameter preferprepared, used if preferprepared is not set)
+\item ado (emulated parameters, see \ref{sec:DriverSpecificChanges_Ado} \nameref{sec:DriverSpecificChanges_Ado}, Page \pageref{sec:DriverSpecificChanges_Ado})
+\end{itemize}
 
 \subsection{Batch Loading}
 \label{sec:GeneralChanges_BatchLoading}
 We added API support for batch loading of data into databases that support this feature.
-Documentation for this feature is yet to become officially available.
+Currently this feature is only available at the DBC layer.
+Assume the following example:
 
-\section{Breaking changes}
+\begin{lstlisting}
+uses Types, ZVariant, ZDbcIntfs;
+
+procedure Example.InsertBatchIntoForBar(const Connection: IZConnection);
+var
+  Value_NullArray: TBooleanDynArray;
+  ID_IntArray: TIntegerDynArray;
+  Value_StringArray: TStringDynArray;
+  I: Integer;
+  Stmt: IZPreparedStatement;
+begin
+  Connection.SetAutoCommit(False);
+  try
+    SetLength(Value_NullArray, 10);
+    SetLength(ID_IntArray, 10);
+    SetLength(Value_StringArray, 10);
+    for i := 0 to 9 do begin
+      ID_IntArray[i] := i;
+      {every other string is null in our example}
+      if i mod 2 = 0 then begin
+        Value_NullArray[i] := False;
+        Value_StringArray[i] := SysUtils.IntToStr(i);
+      end else begin
+        Value_NullArray[i] := True;
+      end;
+    end;
+    { assume the id field is not nullable, so we don't need a null indicator array }
+    Stmt := Connection.PrepareStatement(
+		  'insert into FooBar(ID, AValue), values (?,?)');
+    Stmt.SetDataArray(FirstDbcIndex, ID_IntArray, stInteger);
+    {$IFDEF UNICODE}
+    Stmt.SetDataArray(FirstDbcIndex+1, Value_StringArray, stString, ZVariant.vtUnicodeString);
+    {$ELSE}
+    Stmt.SetDataArray(FirstDbcIndex+1, Value_StringArray, stString, ZVariant.vtRawByteString);
+    {$ENDIF}
+    Stmt.SetNullArray(FirstDbcIndex+1, stBoolean, Value_NullArray);
+    I := Stmt.ExecuteUpdatePrepared;
+    Assert(i = 10, 'WrongUpdateCount');
+	  Connection.Commit;
+  except
+    Connection.Rollback
+  end;
+end;
+\end{lstlisting}
+
+First we start a new transaction using SetAutoCommit(False).
+This is for several reasons:
+\begin{itemize}
+\item we get better performance, which always should be good ;-)
+\item
+  For some databases Zeos will generate more than one insert statement.
+  If we were in autocommit mode, one wouldn't be able to roll back the complete insert if a problem arises at the end of the batch.
+\end{itemize}
+Afterwards we prepare array that contain the values to be inserted.
+In a real world example you most probably already have read them from a file.
+Since typed arrays can't contain null values, a separate array can be prepared that tells Zeos which values are to be set to null (Value\_NullArray).
+So you can pass two arrays per column: 
+One containing the actual values (ID\_IntArray, Value\_StringArray) and one containing rows that are to be set to null (Value\_NullArray).
+We don't create an ID\_NullArray because in our example we assume the the ID field is not nullable.
+Please note:
+You may not delete or modify the arrays until you have imported them because Zeos will only store pointers to the arrays and not the actual arrays.
+Finally we call ExecuteUpdatePrepared to do the actual import.
+
+Please note that we use FirstDbcIndex for generating column indexes.
+This is because Zeos can be compiled in two modes: 
+One where the column index starts with 1 and one where the colulmn index starts with 0. 
+FirstDbcIndex will be set accordingly.
+
+\section{Behaviour changes}
 \label{sec:BreakingChanges}
 \subsection{Case sensitivity of the TZMetadata object and DBC layer meta data functions}
 \label{sec:BreakingChanges_MetadataCaseSensitivity}
@@ -101,6 +180,20 @@ For more information see \url{https://www.postgresql.org/message-id/002701c49d7e
 \label{sec:BreakingChanges_FreetdsDefaultLIbraryName}
 The FreeTDS drivers now uses sybdb.dll / sybdb.so as the default library to load.
 Watch out if your program doesn't set the LibraryPath property in TZConnection.
+
+\subsection{Automatic opening of connections}
+\label{BreakingChanges_AutomaticOpeningOfConnections}
+In the past the drivers for MySQL, ADO and SQLite automatically opened a connection as soon as the connection object was created.
+This is changed.
+No driver will connect automatically anymore.
+Call the connect method to open the connection.
+This change only affects users of the DBC layer.
+
+\subsection{IZConnection.GetMetadata will automatically connect now}
+\label{BreakingChanges_IZConnectionGetMetadataAutoconnect}
+This change is on the DBC layer.
+Calling IZConnection.GetMetadata will connect to the database now in all cases.
+In previous versions of Zeos this wasn't guaranteed, leading to undefined behaviour, depending on wether the IZConnection was already connected or not.
 
 \section{Driver specific changes}
 \label{sec:DriverSpecificChanges}
@@ -126,6 +219,11 @@ Watch out if your program doesn't set the LibraryPath property in TZConnection.
   The PostgreSQL driver now supports read only transactions.
 \item
   The PostgreSQL driver now supports +Infinity, -Infinity and NaN for floating point values.
+\item
+  Using date and time format settings with PostgreSQL is now supported.
+  Since Zeos sends date and time paramaters to the server as strings, problems with formatting can arise.
+	If you have problems, try changing the date and time format settings.
+	For more information see \ref{sec:GeneralChanges_DateAndTimeFormatSettings} \nameref{sec:GeneralChanges_DateAndTimeFormatSettings}, Page \pageref{sec:GeneralChanges_DateAndTimeFormatSettings}.
 \item
   If you still use PostgreSQL 7 databases, we urge you to move on to a newer version.
 	PostgreSQL 7 is deprecated with this version and will be removed with Zeos 7.3.
@@ -166,6 +264,16 @@ Watch out if your program doesn't set the LibraryPath property in TZConnection.
 	If this parameter is enabled, enum('Y','N') will be a string field.
 	Other enums behave as before, they will be mapped to a sting filed in any case.
 	This parameter will be enabled by default in Zeos 7.3 if the server version is \textgreater= 5.0.3.
+\item
+  Using date and time format settings with MySQL is now supported.
+	This can be used if the parameter preferprepared is disabled (default setting).
+  In this mode Zeos sends date and time paramaters to the server as strings.
+	Problems with formatting can arise.
+	If you have problems, try changing the date and time format settings.
+	For more information see \ref{sec:GeneralChanges_DateAndTimeFormatSettings} \nameref{sec:GeneralChanges_DateAndTimeFormatSettings}, Page \pageref{sec:GeneralChanges_DateAndTimeFormatSettings}.
+\item
+  The MySQL driver will not automatically connect to the database when the DBC layer connection object is created anymore.
+	This only affects users of the DBC layer.
 \end{itemize}
 
 \subsection{MS SQL / SAP ASE (Sybase ASE)}
@@ -184,6 +292,11 @@ Watch out if your program doesn't set the LibraryPath property in TZConnection.
 \item 
   The FreeTDS drivers now uses sybdb.dll as the default dll to load.
 	Watch out if your program doesn't set the LibraryPath property in TZConnection.
+\item
+  Using date and time format settings with Microsoft SQL Server and SAP Adaptive Server Enterprise is now supported.
+  Since Zeos sends date and time paramaters to the server as strings, problems with formatting can arise.
+	If you have problems, try changing the date and time format settings.
+	For more information see \ref{sec:GeneralChanges_DateAndTimeFormatSettings} \nameref{sec:GeneralChanges_DateAndTimeFormatSettings}, Page \pageref{sec:GeneralChanges_DateAndTimeFormatSettings}.
 \item 
   If you still use the mssql protocol using ntwdblib.dll to connect to MS SQL Server, we urge you to move on to either use ADO or FreeTDS.
 	The mssql protocol using ntwdblib.dll is not supported by Microsoft for ages now and we will discontinue its support with Zeos 7.3.
@@ -214,6 +327,16 @@ Watch out if your program doesn't set the LibraryPath property in TZConnection.
 	Unfortunately this means Zeos doesn't know how to correctly format timestamps and similar data types to be correctly recognized by the underlying database.
 	Please use the new connection parameters ReadFormatSettings, WriteFormatSettings, DisplayFormatSettings.
 	For more information see \ref{sec:GeneralChanges_DateAndTimeFormatSettings} \nameref{sec:GeneralChanges_DateAndTimeFormatSettings}, Page \pageref{sec:GeneralChanges_DateAndTimeFormatSettings}.
+\item
+  The ADO driver will not automatically connect to the database when the DBC layer connection object is created anymore.
+	This only affects users of the DBC layer.	
+\end{itemize}
+
+\subsection{SQLite}
+\begin{itemize}
+\item
+  The SQLite driver will not automatically connect to the database when the DBC layer connection object is created anymore.
+	This only affects users of the DBC layer.
 \end{itemize}
 
 \section{Known Problems}
@@ -223,6 +346,16 @@ Watch out if your program doesn't set the LibraryPath property in TZConnection.
   Zeos currently doesn't support the BCD type columns of Delphi.
 	NUMERIC and DECIMAL columns still get mapped to floating point types.
 	This will be adressed in Zeos 7.3 because it requires a lot of changes in the Zeos core.
+\item
+  Zeos will usually agressively cache metadata of your database.
+	Because of this scenarios where your database structure is changing constantly, are not well supported.
+	You can call ZConncection.\-DbcConnection.\-GetMetadata.\-ClearCache to clear out the caches.
+	You can also disable the UseMetadata property of the TZConnection object.
+	All data sets will become readonly in that case.
+	Use TZUpdateSQL if you need them to be writable again.
+\item
+  As soon as you touch a blob field for reading, Zeos will fetch the whole blob contents from the database server.
+	This may lead to high memory consumption.
 \end{itemize}
 
 \section{The future development of Zeos}
