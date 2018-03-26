@@ -236,7 +236,7 @@ begin
       C := I else
       C := JSONWriter.Fields[i];
     with FColumns^.Variables[C] do
-    if oIndicatorArray^[FCurrentBufRowNo] < 0 then
+    if oIndicatorArray^[FCurrentRowBufIndex] < 0 then
       if JSONWriter.Expand then begin
         if (not SkipNullFields) then begin
           JSONWriter.AddString(JSONWriter.ColNames[I]);
@@ -247,16 +247,16 @@ begin
     else begin
       if JSONWriter.Expand then
         JSONWriter.AddString(JSONWriter.ColNames[I]);
-      P := {%H-}Pointer({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+      P := {%H-}Pointer({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length));
       case TypeCode of
         SQLT_INT        : JSONWriter.Add(PLongInt(P)^);
         SQLT_FLT        : JSONWriter.AddDouble(PDouble(P)^);
         SQLT_STR        : begin
                             JSONWriter.Add('"');
                             if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
-                              JSONWriter.AddJSONEscape(P, oDataSizeArray^[FCurrentBufRowNo])
+                              JSONWriter.AddJSONEscape(P, oDataSizeArray^[FCurrentRowBufIndex])
                             else begin
-                              FUniTemp := PRawToUnicode(P, oDataSizeArray^[FCurrentBufRowNo], ConSettings^.ClientCodePage^.CP);
+                              FUniTemp := PRawToUnicode(P, oDataSizeArray^[FCurrentRowBufIndex], ConSettings^.ClientCodePage^.CP);
                               JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), System.Length(FUniTemp));
                             end;
                             JSONWriter.Add('"');
