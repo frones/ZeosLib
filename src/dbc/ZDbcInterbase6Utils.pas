@@ -1646,7 +1646,7 @@ var
   TempBuffer: PAnsiChar;
   BlobInfo: TIbBlobInfo;
   BlobSize, CurPos: LongInt;
-  BytesRead, SegmentLenght: UShort;
+  BytesRead, SegmentLenght: ISC_USHORT;
   BlobHandle: TISC_BLOB_HANDLE;
   StatusVector: TARRAY_ISC_STATUS;
 begin
@@ -2555,15 +2555,14 @@ begin
   begin
     DecodeDate(Value, y, m, d);
     DecodeTime(Value, hr, min, sec, msec);
+
+    FillChar(TmpDate, SizeOf(TmpDate), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
     TmpDate.tm_year := y - 1900;
     TmpDate.tm_mon := m - 1;
     TmpDate.tm_mday := d;
     TmpDate.tm_hour := hr;
     TmpDate.tm_min := min;
     TmpDate.tm_sec := sec;
-    TmpDate.tm_wday := 0;
-    TmpDate.tm_yday := 0;
-    TmpDate.tm_isdst := 0;
 
     {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
@@ -3332,6 +3331,3 @@ begin
 end;
 
 end.
-
-
-
