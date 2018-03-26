@@ -265,6 +265,7 @@ function GetInterbase6TransactionParamNumber(const Value: String): word;
 
 { Interbase6 errors functions }
 function GetNameSqlType(Value: Word): RawByteString;
+function SuccessfulStatus(const StatusVector: TARRAY_ISC_STATUS): Boolean;
 function InterpretInterbaseStatus(const PlainDriver: TZInterbasePlainDriver;
   const StatusVector: TARRAY_ISC_STATUS;
   const ConSettings: PZConSettings) : TZIBStatusVector;
@@ -920,6 +921,17 @@ begin
 end;
 
 {**
+  Checks if Interbase status vector indicates successful operation.
+  @param StatusVector a status vector
+
+  @return flag of success
+}
+function SuccessfulStatus(const StatusVector: TARRAY_ISC_STATUS): Boolean;
+begin
+  Result := not ((StatusVector[0] = 1) and (StatusVector[1] > 0));
+end;
+
+{**
   Processes Interbase status vector and returns array of status data.
   @param PlainDriver a Interbase Plain drver
   @param StatusVector a status vector. It contain information about error
@@ -937,7 +949,7 @@ var
   StatusIdx: Integer;
   pCurrStatus: PZIBStatus;
 begin
-  if not ((StatusVector[0] = 1) and (StatusVector[1] > 0)) then Exit;
+  if SuccessfulStatus(StatusVector) then Exit;
 
   PStatusVector := @StatusVector; StatusIdx := 0;
   repeat
@@ -1017,7 +1029,7 @@ var
   InterbaseStatusVector: TZIBStatusVector;
 begin
   Result := 0;
-  if not ((StatusVector[0] = 1) and (StatusVector[1] > 0)) then Exit;
+  if SuccessfulStatus(StatusVector) then Exit;
 
   InterbaseStatusVector := InterpretInterbaseStatus(PlainDriver, StatusVector, ConSettings);
 
