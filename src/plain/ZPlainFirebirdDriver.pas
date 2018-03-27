@@ -339,10 +339,11 @@ type
     { Event processing routines }
 
     isc_event_block: function(event_buffer: PPAnsiChar; result_buffer: PPAnsiChar;
-      id_count: Word; event_list: array of PAnsiChar): ISC_LONG;
-      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+      id_count: ISC_USHORT;
+      v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15: PAnsiChar): ISC_LONG;
+      cdecl; // ! always cdecl
 
-    isc_event_counts: procedure(status_vector: PISC_STATUS;
+    isc_event_counts: procedure(event_counts: PARRAY_ISC_EVENTCOUNTS;
       buffer_length: Short; event_buffer: PAnsiChar; result_buffer: PAnsiChar);
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 

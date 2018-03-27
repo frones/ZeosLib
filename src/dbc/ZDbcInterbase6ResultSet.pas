@@ -366,7 +366,7 @@ begin
                               FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
                               JSONWriter.AddDateTime(SysUtils.EncodeDate(TempDate.tm_year + 1900,
                                 TempDate.tm_mon + 1, TempDate.tm_mday) + EncodeTime(TempDate.tm_hour,
-                              TempDate.tm_min, TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod 10000) div 10)));
+                              TempDate.tm_min, TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod ISC_TIME_SECONDS_PRECISION) div 10)));
                               JSONWriter.Add('"');
                             end;
             SQL_QUAD,
@@ -375,8 +375,7 @@ begin
                               try
                                 if SqlSubType = isc_blob_text then begin
                                   JSONWriter.Add('"');
-                                  with FIBConnection do
-                                    ReadBlobBufer(FPlainDriver, GetDBHandle, GetTrHandle,
+                                  ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FPISC_TR_HANDLE,
                                       PISC_QUAD(sqldata)^, L, P, False, ConSettings);
                                   if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
                                     JSONWriter.AddJSONEscape(P, L)
@@ -386,9 +385,8 @@ begin
                                   end;
                                   JSONWriter.Add('"');
                                 end else begin
-                                  with FIBConnection do
-                                    ReadBlobBufer(FPlainDriver, GetDBHandle, GetTrHandle,
-                                      PISC_QUAD(sqldata)^, L, P, true, ConSettings);
+                                  ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FPISC_TR_HANDLE,
+                                    PISC_QUAD(sqldata)^, L, P, true, ConSettings);
                                   JSONWriter.WrBase64(P, L, True);
                                 end;
                               finally
@@ -401,7 +399,7 @@ begin
                               JSONWriter.Add('"');
                               FPlainDriver.isc_decode_sql_time(PISC_TIME(sqldata), @TempDate);
                               JSONWriter.AddDateTime(SysUtils.EncodeTime(Word(TempDate.tm_hour), Word(TempDate.tm_min),
-                                Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod 10000) div 10)));
+                                Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod ISC_TIME_SECONDS_PRECISION) div 10)));
                               JSONWriter.Add('"');
                             end;
             SQL_TYPE_DATE : begin
@@ -1270,14 +1268,14 @@ begin
           begin
             FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
             Result := EncodeTime(TempDate.tm_hour, TempDate.tm_min,
-              TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod 10000) div 10));
+              TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod ISC_TIME_SECONDS_PRECISION) div 10));
           end;
         SQL_TYPE_DATE : Result := 0;
         SQL_TYPE_TIME :
           begin
             FPlainDriver.isc_decode_sql_time(PISC_TIME(sqldata), @TempDate);
             Result := SysUtils.EncodeTime(Word(TempDate.tm_hour), Word(TempDate.tm_min),
-              Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod 10000) div 10));
+              Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod ISC_TIME_SECONDS_PRECISION) div 10));
           end;
         SQL_TEXT, SQL_VARYING:
           begin
@@ -1333,7 +1331,7 @@ begin
             FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
             Result := SysUtils.EncodeDate(TempDate.tm_year + 1900,
               TempDate.tm_mon + 1, TempDate.tm_mday) + EncodeTime(TempDate.tm_hour,
-            TempDate.tm_min, TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod 10000) div 10));
+            TempDate.tm_min, TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod ISC_TIME_SECONDS_PRECISION) div 10));
           end;
         SQL_TYPE_DATE :
           begin
@@ -1345,7 +1343,7 @@ begin
           begin
             FPlainDriver.isc_decode_sql_time(PISC_TIME(sqldata), @TempDate);
             Result := SysUtils.EncodeTime(Word(TempDate.tm_hour), Word(TempDate.tm_min),
-              Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod 10000) div 10));
+              Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod ISC_TIME_SECONDS_PRECISION) div 10));
           end;
         SQL_TEXT, SQL_VARYING:
           begin

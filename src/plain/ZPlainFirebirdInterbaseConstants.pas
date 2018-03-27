@@ -78,6 +78,12 @@ const
   DSQL_DROP                     = 2;
   DSQL_UNPREPARE                = 4;
 
+  ISC_STATUS_LENGTH             = 20;
+
+  METADATALEN_V1                = 32; // Max length of any DB object name [v.1 - IB < 7.0, FB]
+
+  ISC_TIME_SECONDS_PRECISION       = 10000;
+  ISC_TIME_SECONDS_PRECISION_SCALE = (-4);
 
   SQLDA_VERSION1                = 1;
   SQLDA_VERSION2                = 2;
@@ -1919,23 +1925,24 @@ const
   isc_info_db_file_size          = 112;
 
 type
-  ULong                = Cardinal;
-  UChar                = AnsiChar;
-  Short                = SmallInt;
 
+  ISC_SCHAR            = AnsiChar;
+  ISC_UCHAR            = AnsiChar;
+  ISC_SHORT            = SmallInt;
+  ISC_USHORT           = Word;
   ISC_LONG             = LongInt;
-  UISC_LONG            = ULong;
+  ISC_ULONG            = Cardinal;
   ISC_INT64            = Int64;
+  ISC_UINT64           = UInt64;
   ISC_STATUS           = NativeInt;
-  UISC_STATUS          = ULong;
   PISC_LONG            = ^ISC_LONG;
-  PUISC_LONG           = ^UISC_LONG;
+  PISC_ULONG           = ^ISC_ULONG;
   PISC_STATUS          = ^ISC_STATUS;
+  PISC_UCHAR           = ^ISC_UCHAR;
   PPISC_STATUS         = ^PISC_STATUS;
-  PUISC_STATUS         = ^UISC_STATUS;
+
+  Short                = SmallInt;
   PShort               = ^Short;
-  PPAnsiChar           = ^PAnsiChar;
-  UShort               = Word;
   PVoid                = Pointer;
 
   { C Date/Time Structure }
@@ -1955,8 +1962,8 @@ type
   PTM = ^TM;
 
   TISC_VARYING = record
-    strlen:       Short;
-    str:          array[0..0] of AnsiChar; //AVZ - was AnsiChar
+    strlen:       ISC_USHORT;
+    str:          array[0..0] of ISC_UCHAR; //AVZ - was AnsiChar
   end;
   PISC_VARYING = ^TISC_VARYING;
 
@@ -1970,16 +1977,17 @@ type
   PISC_STMT_HANDLE              = ^TISC_STMT_HANDLE;
   TISC_TR_HANDLE                = LongWord;
   PISC_TR_HANDLE                = ^TISC_TR_HANDLE;
-  TISC_CALLBACK                 = procedure;
+
+  TISC_CALLBACK = procedure (UserData: PVoid; Length: ISC_USHORT; Updated: PISC_UCHAR); cdecl;
 
   { Time & Date Support }
   ISC_DATE = LongInt;
   PISC_DATE = ^ISC_DATE;
-  ISC_TIME = ULong;
+  ISC_TIME = Cardinal;
   PISC_TIME = ^ISC_TIME;
 
   TISC_TIMESTAMP = record
-    timestamp_date: ISC_DATE; 
+    timestamp_date: ISC_DATE;
     timestamp_time: ISC_TIME;
   end;
   PISC_TIMESTAMP = ^TISC_TIMESTAMP;
@@ -1987,7 +1995,7 @@ type
   { Blob id structure }
   TGDS_QUAD = record
     gds_quad_high:  ISC_LONG;
-    gds_quad_low:   UISC_LONG;
+    gds_quad_low:   ISC_ULONG;
   end;
   PGDS_QUAD            = ^TGDS_QUAD;
 
@@ -2004,8 +2012,8 @@ type
     array_desc_dtype:   Byte;
     array_desc_scale:   ShortInt;
     array_desc_length:  Word;
-    array_desc_field_name: array[0..31] of AnsiChar;
-    array_desc_relation_name: array[0..31] of AnsiChar;
+    array_desc_field_name: array[0..METADATALEN_V1-1] of ISC_SCHAR;
+    array_desc_relation_name: array[0..METADATALEN_V1-1] of ISC_SCHAR;
     array_desc_dimensions: Short;
     array_desc_flags: Short;
     array_desc_bounds: array[0..15] of TISC_ARRAY_BOUND;
@@ -2016,8 +2024,8 @@ type
     blob_desc_subtype:          Short;
     blob_desc_charset:          Short;
     blob_desc_segment_size:     Short;
-    blob_desc_field_name:       array[0..31] of UChar;
-    blob_desc_relation_name:    array[0..31] of UChar;
+    blob_desc_field_name:       array[0..METADATALEN_V1-1] of ISC_UCHAR;
+    blob_desc_relation_name:    array[0..METADATALEN_V1-1] of ISC_UCHAR;
   end;
   PISC_BLOB_DESC = ^TISC_BLOB_DESC;
 
@@ -2033,23 +2041,23 @@ type
                                    { variable }
     sqlname_length:     Short;     { length of sqlname field }
     { name of field, name length + space for NULL }
-    sqlname:            array[0..31] of AnsiChar;
+    sqlname:            array[0..METADATALEN_V1-1] of ISC_SCHAR;
     relname_length:     Short;     { length of relation name }
     { field's relation name + space for NULL }
-    relname:            array[0..31] of AnsiChar;
+    relname:            array[0..METADATALEN_V1-1] of ISC_SCHAR;
     ownname_length:     Short;     { length of owner name }
     { relation's owner name + space for NULL }
-    ownname:            array[0..31] of AnsiChar;
+    ownname:            array[0..METADATALEN_V1-1] of ISC_SCHAR;
     aliasname_length:   Short;     { length of alias name }
     { relation's alias name + space for NULL }
-    aliasname:          array[0..31] of AnsiChar;
+    aliasname:          array[0..METADATALEN_V1-1] of ISC_SCHAR;
   end;
   PXSQLVAR = ^TXSQLVAR;
 
   TXSQLDA = record
     version:            Short;     { version of this XSQLDA }
     { XSQLDA name field }
-    sqldaid:            array[0..7] of AnsiChar;
+    sqldaid:            array[0..7] of ISC_SCHAR;
     sqldabc:            ISC_LONG;  { length in bytes of SQLDA }
     sqln:               Short;     { number of fields allocated }
     sqld:               Short;     { actual number of fields }
@@ -2083,7 +2091,11 @@ type
 
   { Interbase status array }
   PARRAY_ISC_STATUS = ^TARRAY_ISC_STATUS;
-  TARRAY_ISC_STATUS = array[0..20] of ISC_STATUS;
+  TARRAY_ISC_STATUS = array[0..ISC_STATUS_LENGTH-1] of ISC_STATUS;
+
+  { Interbase event counts array }
+  PARRAY_ISC_EVENTCOUNTS = ^TARRAY_ISC_EVENTCOUNTS;
+  TARRAY_ISC_EVENTCOUNTS = array[0..ISC_STATUS_LENGTH-1] of ISC_ULONG;
 
 implementation
 

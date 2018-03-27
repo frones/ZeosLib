@@ -369,7 +369,9 @@ begin
     if Pointer(JSONWriter.Fields) = nil then
       C := I else
       C := JSONWriter.Fields[i];
-    P := FPlainDriver.GetFieldData(FRowHandle, C);
+    {$R-}
+    P := PMYSQL_ROW(FRowHandle)[C];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     if P = nil then
       if JSONWriter.Expand then begin
         if (not SkipNullFields) then begin

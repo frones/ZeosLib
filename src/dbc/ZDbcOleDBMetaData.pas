@@ -54,7 +54,7 @@ unit ZDbcOleDBMetadata;
 interface
 
 {$I ZDbc.inc}
-{$DEFINE ENABLE_OLEDB}
+{.$DEFINE ENABLE_OLEDB}
 {$IF Defined(ENABLE_OLEDB) or defined(ENABLE_ADO)}
 
 uses
