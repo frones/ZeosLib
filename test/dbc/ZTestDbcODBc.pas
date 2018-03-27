@@ -56,7 +56,7 @@ unit ZTestDbcODBc;
 interface
 {$I ZDbc.inc}
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcInterbase6, ZSqlTestCase,
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZSqlTestCase,
   ZCompatibility, DateUtils, Math, Types;
 
 type

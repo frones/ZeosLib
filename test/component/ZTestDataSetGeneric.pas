@@ -112,6 +112,7 @@ type
     TTestMethod = procedure of object;
   {$IFEND}
 
+  {$IFDEF ENABLE_INTERBASE}
   TZInterbaseTestGUIDS = class(TZAbstractCompSQLTestCase)
   private
     CurrentTest: string;
@@ -144,6 +145,7 @@ type
   published
     procedure Test;
   end;
+  {$ENDIF}
 
 implementation
 
@@ -2516,6 +2518,8 @@ begin
   end;
 end;
 
+{$IFDEF ENABLE_INTERBASE}
+
 const
   TBL_NAME = 'Guids';
   GUID_DOM_FIELD = 'GUID_DOM_FIELD';
@@ -2792,9 +2796,12 @@ begin
     msg
    );
 end;
+{$ENDIF}
 
 initialization
   RegisterTest('component',TZGenericTestDataSet.Suite);
   RegisterTest('component',TZGenericTestDataSetMBCs.Suite);
+  {$IFDEF ENABLE_INTERBASE}
   RegisterTest('component',TZInterbaseTestGUIDS.Suite);
+  {$ENDIF}
 end.
