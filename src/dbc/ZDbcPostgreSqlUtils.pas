@@ -133,7 +133,7 @@ function DecodeString(const Value: AnsiString): AnsiString;
   @param ResultHandle the Handle to the Result
 }
 function CheckPostgreSQLError(const Connection: IZConnection;
-  const PlainDriver: IZPostgreSQLPlainDriver; const Handle: PZPostgreSQLConnect;
+  const PlainDriver: TZPostgreSQLPlainDriver; const Handle: PZPostgreSQLConnect;
   const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
   const ResultHandle: PZPostgreSQLResult): String;
 
@@ -653,7 +653,7 @@ end;
   @param ResultHandle the Handle to the Result
 }
 function CheckPostgreSQLError(const Connection: IZConnection;
-  const PlainDriver: IZPostgreSQLPlainDriver; const Handle: PZPostgreSQLConnect;
+  const PlainDriver: TZPostgreSQLPlainDriver; const Handle: PZPostgreSQLConnect;
   const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
   const ResultHandle: PZPostgreSQLResult): String;
 var
@@ -678,30 +678,25 @@ var
      {$ENDIF}
    end;
 begin
-  if Assigned(Handle) then
-    ErrorMessage := PlainDriver.GetErrorMessage(Handle)
-  else
-    ErrorMessage := '';
+  if Assigned(Handle)
+  then ErrorMessage := PlainDriver.PQerrorMessage(Handle)
+  else ErrorMessage := '';
+
+  if ErrorMessage <> '' then
+    if Assigned(ResultHandle) and Assigned(PlainDriver.PQresultErrorField)
+    then Result := GetMessage(PlainDriver.PQresultErrorField(ResultHandle,Ord(PG_DIAG_SQLSTATE)))
+    else Result := '';
 
   if ErrorMessage <> '' then
   begin
-    if Assigned(ResultHandle) then
-     Result := GetMessage(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE))
-    else
-      Result := '';
-  end;
+    ConnectionLost := (PlainDriver.PQstatus(Handle) = CONNECTION_BAD);
 
-  if ErrorMessage <> '' then
-  begin
-    ConnectionLost := (PlainDriver.GetStatus(Handle) = CONNECTION_BAD);
-
-    if Assigned(Connection) then begin
+    if Assigned(Connection) and DriverManager.HasLoggingListener then
       DriverManager.LogError(LogCategory, Connection.GetConSettings^.Protocol, LogMessage,
-        0, ErrorMessage);
-    end else begin
+        0, ErrorMessage)
+    else if Assigned(DriverManager) and DriverManager.HasLoggingListener then
       DriverManager.LogError(LogCategory, 'some PostgreSQL protocol', LogMessage,
         0, ErrorMessage);
-    end;
 
     if ResultHandle <> nil then PlainDriver.PQclear(ResultHandle);
 
@@ -749,7 +744,7 @@ begin
     Result := 'NULL'
   else case InParamType of
     stBoolean:
-      Result := BoolStrsUpRaw[SoftVarManager.GetAsBoolean(Value)];
+      Result := BoolStrsUpRaw[ClientVarManager.GetAsBoolean(Value)];
     stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong,
     stFloat, stDouble, stCurrency, stBigDecimal:
       begin
@@ -797,8 +792,9 @@ begin
               if (Connection.IsOidAsBlob) or oidasblob then
               begin
                 try
-                  WriteTempBlob := TZPostgreSQLOidBlob.Create(Connection.GetPlainDriver, nil, 0,
-                    Connection.GetConnectionHandle, 0, ChunkSize);
+                  WriteTempBlob := TZPostgreSQLOidBlob.Create(
+                    TZPostgreSQLPlainDriver(Connection.GetIZPlainDriver.GetInstance),
+                    nil, 0, Connection.GetConnectionHandle, 0, ChunkSize);
                   WriteTempBlob.WriteBuffer(TempBlob.GetBuffer, TempBlob.Length);
                   Result := IntToRaw(WriteTempBlob.GetBlobOid);
                 finally
