@@ -3122,7 +3122,7 @@ begin
       RowAccessor.SetNull(ColumnIndex);
 
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, ULong(Field));
+      DataEvent(deFieldChange, NativeInt(Field));
   end
   else
     raise EZDatabaseError.Create(SRowDataIsNotAvailable);
@@ -5843,7 +5843,7 @@ begin
     if Self.FValidating then
 
     (DataSet as TZAbstractRODataset).FRowAccessor.SetString(FFieldIndex, BcdToStr(Value));
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -5852,7 +5852,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetBoolean(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -5862,7 +5862,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetTimestamp(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 //procedure TZField.SetAsSQLTimeStamp(const Value: TSQLTimeStamp); virtual;
@@ -5874,7 +5874,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetBigDecimal(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -5883,7 +5883,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetFloat(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -5892,7 +5892,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetDouble(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -5901,7 +5901,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetBigDecimal(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -5911,7 +5911,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetShort(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -5920,7 +5920,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetSmall(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -5929,7 +5929,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetInt(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -5938,7 +5938,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetLong(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -5948,7 +5948,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetByte(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -5958,7 +5958,7 @@ begin
   begin
     //reminder !!
     (DataSet as TZAbstractRODataset).FRowAccessor.SetWord(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -5968,7 +5968,7 @@ begin
   begin
     //reminder !!
     (DataSet as TZAbstractRODataset).FRowAccessor.SetUInt(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -5978,7 +5978,7 @@ begin
   begin
     //reminder !!
     (DataSet as TZAbstractRODataset).FRowAccessor.SetULong(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -5988,7 +5988,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetString(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -5997,7 +5997,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetUnicodeString(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -6006,7 +6006,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetAnsiString(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -6015,7 +6015,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetUTF8String(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -6024,7 +6024,7 @@ begin
   if IsFieldEditable then
   begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetRawByteString(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -6034,7 +6034,7 @@ begin
   begin
     //reminder !!
     (DataSet as TZAbstractRODataset).FRowAccessor.SetBytes(FFieldIndex, Value);
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -6075,7 +6075,7 @@ begin
       //varArray:
       //varByRef:
     end;
-    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
