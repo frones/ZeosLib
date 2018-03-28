@@ -230,6 +230,7 @@ function GetInterbase6TransactionParamNumber(const Value: String): word;
 
 { Interbase6 errors functions }
 function GetNameSqlType(Value: Word): RawByteString;
+function StatusSucceeded(const StatusVector: TARRAY_ISC_STATUS): Boolean;
 function CheckInterbase6Error(const PlainDriver: IZInterbasePlainDriver;
   const StatusVector: TARRAY_ISC_STATUS; const ConSettings: PZConSettings;
   const LoggingCategory: TZLoggingCategory = lcOther;
@@ -866,6 +867,17 @@ begin
 end;
 
 {**
+  Checks if Interbase status vector indicates successful operation.
+  @param StatusVector a status vector
+
+  @return flag of success
+}
+function StatusSucceeded(const StatusVector: TARRAY_ISC_STATUS): Boolean;
+begin
+  Result := not ((StatusVector[0] = 1) and (StatusVector[1] > 0));
+end;
+
+{**
   Checks for possible sql errors.
   @param PlainDriver a Interbase Plain drver
   @param StatusVector a status vector. It contain information about error
@@ -885,7 +897,7 @@ var
   aSQL: RawByteString;
 begin
   Result := 0;
-  if (StatusVector[0] = 1) and (StatusVector[1] > 0) then
+  if not StatusSucceeded(StatusVector) then 
   begin
     ErrorMessage := '';
     PStatusVector := @StatusVector;
@@ -1515,7 +1527,7 @@ var
   TempBuffer: PAnsiChar;
   BlobInfo: TIbBlobInfo;
   BlobSize, CurPos: LongInt;
-  BytesRead, SegmentLenght: UShort;
+  BytesRead, SegmentLenght: ISC_USHORT;
   BlobHandle: TISC_BLOB_HANDLE;
   StatusVector: TARRAY_ISC_STATUS;
 begin
@@ -2387,15 +2399,14 @@ begin
   begin
     DecodeDate(Value, y, m, d);
     DecodeTime(Value, hr, min, sec, msec);
+
+    FillChar(TmpDate, SizeOf(TmpDate), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
     TmpDate.tm_year := y - 1900;
     TmpDate.tm_mon := m - 1;
     TmpDate.tm_mday := d;
     TmpDate.tm_hour := hr;
     TmpDate.tm_min := min;
     TmpDate.tm_sec := sec;
-    TmpDate.tm_wday := 0;
-    TmpDate.tm_yday := 0;
-    TmpDate.tm_isdst := 0;
 
     {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
@@ -3164,6 +3175,3 @@ begin
 end;
 
 end.
-
-
-

@@ -218,7 +218,7 @@ type
       blob_handle: PISC_BLOB_HANDLE; seg_buffer_len: Word; seg_buffer: PAnsiChar): ISC_STATUS;
     function isc_event_block(event_buffer: PPAnsiChar; result_buffer: PPAnsiChar;
       id_count: Word; event_list: array of PAnsiChar): ISC_LONG;
-    procedure isc_event_counts(status_vector: PISC_STATUS;
+    procedure isc_event_counts(event_counts: PARRAY_ISC_EVENTCOUNTS;
       buffer_length: Short; event_buffer: PAnsiChar; result_buffer: PAnsiChar);
     function isc_cancel_events(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; event_id: PISC_LONG): ISC_STATUS;
@@ -378,7 +378,7 @@ type
       blob_handle: PISC_BLOB_HANDLE; seg_buffer_len: Word; seg_buffer: PAnsiChar): ISC_STATUS;
     function isc_event_block(event_buffer: PPAnsiChar; result_buffer: PPAnsiChar;
       id_count: Word; event_list: array of PAnsiChar): ISC_LONG;
-    procedure isc_event_counts(status_vector: PISC_STATUS;
+    procedure isc_event_counts(event_counts: PARRAY_ISC_EVENTCOUNTS;
       buffer_length: Short; event_buffer: PAnsiChar; result_buffer: PAnsiChar);
     function isc_cancel_events(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; event_id: PISC_LONG): ISC_STATUS;
@@ -1033,10 +1033,10 @@ begin
 end;
 
 procedure TZFirebirdBaseDriver.isc_event_counts(
-  status_vector: PISC_STATUS; buffer_length: Short; event_buffer,
+  event_counts: PARRAY_ISC_EVENTCOUNTS; buffer_length: Short; event_buffer,
   result_buffer: PAnsiChar);
 begin
-  FIREBIRD_API.isc_event_counts(status_vector, buffer_length,
+  FIREBIRD_API.isc_event_counts(event_counts, buffer_length,
     event_buffer, result_buffer);
 end;
 
