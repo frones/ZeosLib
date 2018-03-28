@@ -250,22 +250,19 @@ type
       const VariantType: TZVariantType = vtNull);
   end;
 
-function RandomString(Len: integer): RawByteString;
 function CreateIBResultSet(const SQL: string; const Statement: IZStatement;
   const NativeResultSet: IZResultSet): IZResultSet;
 
 {Interbase6 Connection Functions}
-function GenerateDPB(Info: TStrings): RawByteString; overload;
-function GenerateTPB(Params: TStrings): RawByteString; overload;
+function GenerateDPB(PlainDriver: TZInterbasePlainDriver; Info: TStrings): RawByteString;
+function GenerateTPB(PlainDriver: TZInterbasePlainDriver; Params: TStrings): RawByteString;
 function GenerateTEB(PHandle: PISC_DB_HANDLE; const TPB: RawByteString): TISC_TEB;
-function GenerateDPB(Info: TStrings; var FDPBLength, Dialect: Word): PAnsiChar; overload; deprecated;
-function GenerateTPB(Params: TStrings; var Handle: TISC_DB_HANDLE): PISC_TEB; overload; deprecated;
 function GetInterbase6DatabaseParamNumber(const Value: String): word;
 function GetInterbase6TransactionParamNumber(const Value: String): word; 
 
 { Interbase6 errors functions }
 function GetNameSqlType(Value: Word): RawByteString;
-function SuccessfulStatus(const StatusVector: TARRAY_ISC_STATUS): Boolean;
+function StatusSucceeded(const StatusVector: TARRAY_ISC_STATUS): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 function InterpretInterbaseStatus(const PlainDriver: TZInterbasePlainDriver;
   const StatusVector: TARRAY_ISC_STATUS;
   const ConSettings: PZConSettings) : TZIBStatusVector;
@@ -501,20 +498,6 @@ uses
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
-   Generate specific length random string and return it
-   @param Len a length result string
-   @return random string
-}
-function RandomString(Len: integer): RawByteString;
-begin
-  Result := '';
-  while Length(Result) < Len do
-    Result := Result + IntToRaw({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Random(High(Integer))));
-  if Length(Result) > Len then
-    Result := Copy(Result, 1, Len);
-end;
-
-{**
   Create CachedResultSet with using TZCachedResultSet and return it.
   @param SQL a sql query command
   @param Statement a zeos statement object
@@ -556,6 +539,7 @@ end;
 {**
   Build parameter block string
 
+  @param PlainDriver - a Interbase Plain drver
   @param Info - a list connection interbase parameters
   @param VersionCode - isc_dpb_version1 for TPB or isc_dpb_version3 for DPB
   @param FilterPrefix - TPBPrefix for TPB or DPBPrefix for DPB
@@ -563,7 +547,8 @@ end;
 
   @return generated string
 }
-function BuildPB(Info: TStrings; VersionCode: Byte; const FilterPrefix: string; const ParamArr: array of TZIbParam): RawByteString;
+function BuildPB(PlainDriver: TZInterbasePlainDriver; Info: TStrings; VersionCode: Byte;
+  const FilterPrefix: string; const ParamArr: array of TZIbParam): RawByteString;
 
   procedure ExtractParamNameAndValue(const S: string; out ParamName: String; out ParamValue: RawByteString);
   var
@@ -582,20 +567,36 @@ function BuildPB(Info: TStrings; VersionCode: Byte; const FilterPrefix: string; 
     end;
   end;
 
-  function NumToPB(Value: Integer): RawByteString;
+  function NumToPB(Value: Cardinal): RawByteString;
   var
+    Len: Short;
     U16: Word;
+    U32: Cardinal;
   begin
-    case Cardinal(Value) of
+    case Value of
       0..High(Byte):
-        Result := AnsiChar(#1) + AnsiChar(Value);
+        begin
+          Len := 1;
+          SetLength(Result, 1 + Len);
+          Result[1] := AnsiChar(Len);
+          PByte(@Result[2])^ := Byte(Value);
+        end;
       Succ(High(Byte))..High(Word):
         begin
-          U16 := Word(Cardinal(Value));
-          Result := AnsiChar(#2) + PAnsiChar(@U16)[0] + PAnsiChar(@U16)[1];
+          Len := 2;
+          SetLength(Result, 1 + Len);
+          Result[1] := AnsiChar(Len);
+          U16 := Word(Value);
+          PWord(@Result[2])^ := Word(PlainDriver.isc_portable_integer(@U16, Len));
         end;
       else
-        Result := AnsiChar(#4) + PAnsiChar(@Value)[0] + PAnsiChar(@Value)[1] + PAnsiChar(@Value)[2] + PAnsiChar(@Value)[3];
+        begin
+          Len := 4;
+          SetLength(Result, 1 + Len);
+          Result[1] := AnsiChar(Len);
+          U32 := Cardinal(Value);
+          PCardinal(@Result[2])^ := Cardinal(PlainDriver.isc_portable_integer(@U32, Len));
+        end;
     end;
   end;
 
@@ -638,23 +639,25 @@ end;
 {**
   Generate database connection string by connection information
 
+  @param PlainDriver - a Interbase Plain drver
   @param Info - a list connection interbase parameters
   @return a generated string
 }
-function GenerateDPB(Info: TStrings): RawByteString;
+function GenerateDPB(PlainDriver: TZInterbasePlainDriver; Info: TStrings): RawByteString;
 begin
-  Result := BuildPB(Info, isc_dpb_version1, DPBPrefix, DatabaseParams);
+  Result := BuildPB(PlainDriver, Info, isc_dpb_version1, DPBPrefix, DatabaseParams);
 end;
 
 {**
   Generate transaction string by connection information
 
+  @param PlainDriver - a Interbase Plain drver
   @param Params - a transaction parameters list
-  @return a generated string 
+  @return a generated string
 }
-function GenerateTPB(Params: TStrings): RawByteString;
+function GenerateTPB(PlainDriver: TZInterbasePlainDriver; Params: TStrings): RawByteString;
 begin
-  Result := BuildPB(Params, isc_tpb_version3, TPBPrefix, TransactionParams);
+  Result := BuildPB(PlainDriver, Params, isc_tpb_version3, TPBPrefix, TransactionParams);
 end;
 
 {**
@@ -669,50 +672,6 @@ begin
   Result.db_handle := PHandle;
   Result.tpb_length := Length(TPB);
   Result.tpb_address := Pointer(TPB);
-end;
-
-{**
-  Generate database connection string by connection information
-  The function is deprecated and shouldn't be used.
-  Use GenerateDPB(Info: TStrings) overload instead.
-
-  @param DPB - a database connection string
-  @param Dialect - a sql dialect number
-  @param Info - a list connection interbase parameters
-  @return a generated string length
-}
-function GenerateDPB(Info: TStrings; var FDPBLength, Dialect: Word): PAnsiChar;
-var
-  DPB: RawByteString;
-begin
-  DPB := GenerateDPB(Info);
-  FDPBLength := Length(DPB);
-
-  {$IFDEF UNICODE}
-  Result := AnsiStrAlloc(FDPBLength + 1);
-  {$ELSE}
-  Result := StrAlloc(FDPBLength + 1);
-  {$ENDIF}
-
-  {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(Result, DPB);
-end;
-
-{**
-  Generate transaction structuer by connection information
-  The function is deprecated and shouldn't be used.
-  Use GenerateTPB(Params: TStrings) overload and GenerateTEB instead.
-
-  @param Params - a transaction parameters list
-  @param Handle - a database connection handle
-  @return a transaction ISC structure
-}
-function GenerateTPB(Params: TStrings; var Handle: TISC_DB_HANDLE): PISC_TEB;
-var
-  TPB: RawByteString;
-begin
-  TPB := GenerateTPB(Params);
-  Result := AllocMem(SizeOf(TISC_TEB));
-  Result^ := GenerateTEB(@Handle, TPB);
 end;
 
 function GetPBNumber(const FilterPrefix, ParamName: string; const ParamArr: array of TZIbParam): Word;
@@ -926,7 +885,7 @@ end;
 
   @return flag of success
 }
-function SuccessfulStatus(const StatusVector: TARRAY_ISC_STATUS): Boolean;
+function StatusSucceeded(const StatusVector: TARRAY_ISC_STATUS): Boolean;
 begin
   Result := not ((StatusVector[0] = 1) and (StatusVector[1] > 0));
 end;
@@ -949,7 +908,7 @@ var
   StatusIdx: Integer;
   pCurrStatus: PZIBStatus;
 begin
-  if SuccessfulStatus(StatusVector) then Exit;
+  if StatusSucceeded(StatusVector) then Exit;
 
   PStatusVector := @StatusVector; StatusIdx := 0;
   repeat
@@ -1029,7 +988,7 @@ var
   InterbaseStatusVector: TZIBStatusVector;
 begin
   Result := 0;
-  if SuccessfulStatus(StatusVector) then Exit;
+  if StatusSucceeded(StatusVector) then Exit;
 
   InterbaseStatusVector := InterpretInterbaseStatus(PlainDriver, StatusVector, ConSettings);
 
