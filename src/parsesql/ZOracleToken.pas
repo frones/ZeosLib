@@ -62,19 +62,16 @@ uses
 type
 
   {** Implements a Oracle-specific number state object. }
-  TZOracleNumberState = class (TZPostgreSQLNumberState)
-  end;
+  TZOracleNumberState = TZPostgreSQLNumberState;
 
   {** Implements a Oracle-specific quote string state object. }
-  TZOracleQuoteState = class (TZGenericSQLQuoteState)
-  end;
+  TZOracleQuoteState = TZGenericSQLQuoteState;
 
   {**
     This state will either delegate to a comment-handling
     state, or return a token with just a slash in it.
   }
-  TZOracleCommentState = class (TZSybaseCommentState)
-  end;
+  TZOracleCommentState = TZSybaseCommentState;
 
   {** Implements a symbol state object. }
   TZOracleSymbolState = class (TZSymbolState)
