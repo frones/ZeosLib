@@ -74,15 +74,8 @@ type
     function DecodeString(const Value: string; QuoteChar: Char): string; override;
   end;
 
-  {**
-    This state will either delegate to a comment-handling
-    state, or return a token with just a slash in it.
-  }
-  TZSybaseCommentState = class (TZCppCommentState)
-  public
-    function NextToken(Stream: TStream; FirstChar: Char;
-      Tokenizer: TZTokenizer): TZToken; override;
-  end;
+  {** Implements a comment state object. }
+  TZSybaseCommentState = TZGenericSQLCommentState;
 
   {** Implements a symbol state object. }
   TZSybaseSymbolState = class (TZSymbolState)
@@ -104,9 +97,7 @@ type
 
 implementation
 
-{$IFDEF FAST_MOVE}
-uses ZFastCode;
-{$ENDIF}
+{$IFDEF FAST_MOVE}uses ZFastCode;{$ENDIF}
 
 { TZSybaseQuoteState }
 
@@ -183,52 +174,6 @@ begin
       and (Value[Length(Value)] = ']') then
       Result := Copy(Value, 2, Length(Value) - 2)
   end;
-end;
-
-{ TZSybaseCommentState }
-
-{**
-  Gets a Sybase specific comments like # or /* */.
-  @return either just a slash token, or the results of
-    delegating to a comment-handling state
-}
-function TZSybaseCommentState.NextToken(Stream: TStream; FirstChar: Char;
-  Tokenizer: TZTokenizer): TZToken;
-var
-  ReadChar: Char;
-  ReadNum: Integer;
-begin
-  InitBuf(FirstChar);
-  Result.Value := '';
-  Result.TokenType := ttUnknown;
-
-  if FirstChar = '-' then
-  begin
-    ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
-    if (ReadNum > 0) and (ReadChar = '-') then begin
-      Result.TokenType := ttComment;
-      ToBuf(ReadChar, Result.Value);
-      GetSingleLineComment(Stream, Result.Value);
-    end else begin
-      if ReadNum > 0 then
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-    end;
-  end else if FirstChar = '/' then begin
-    ReadNum := Stream.Read(ReadChar, SizeOf(Char));
-    if (ReadNum > 0) and (ReadChar = '*') then begin
-      Result.TokenType := ttComment;
-      ToBuf(ReadChar, Result.Value);
-      GetMultiLineComment(Stream, Result.Value);
-    end else begin
-      if ReadNum > 0 then
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-    end;
-  end;
-
-  if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil) then
-    Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer)
-  else
-    FlushBuf(Result.Value);
 end;
 
 { TZSybaseSymbolState }

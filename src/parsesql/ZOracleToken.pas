@@ -56,7 +56,7 @@ interface
 {$I ZParseSql.inc}
 
 uses
-  Classes, ZTokenizer, ZGenericSqlToken, ZSybaseToken;
+  Classes, ZTokenizer, ZGenericSqlToken;
 
 type
 
@@ -70,7 +70,7 @@ type
     This state will either delegate to a comment-handling
     state, or return a token with just a slash in it.
   }
-  TZOracleCommentState = TZSybaseCommentState;
+  TZOracleCommentState = TZGenericSQLCommentState;
 
   {** Implements a symbol state object. }
   TZOracleSymbolState = class (TZSymbolState)
