@@ -56,12 +56,12 @@ interface
 {$I ZParseSql.inc}
 
 uses
-  Classes, ZTokenizer, ZGenericSqlToken, ZPostgreSqlToken;
+  Classes, ZTokenizer, ZGenericSqlToken;
 
 type
 
   {** Implements a Interbase-specific number state object. }
-  TZInterbaseNumberState = TZPostgreSQLNumberState;
+  TZInterbaseNumberState = TZGenericSQLNoHexNumberState;
 
   {** Implements a Interbase-specific quote string state object. }
   TZInterbaseQuoteState = TZGenericSQLQuoteState;

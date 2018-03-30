@@ -56,17 +56,13 @@ interface
 {$I ZParseSql.inc}
 
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  Classes, SysUtils, {$IFDEF MSEgui}mclasses,{$ENDIF}
   ZTokenizer, ZGenericSqlToken;
 
 type
 
   {** Implements a SQLite-specific number state object. }
-  TZSQLiteNumberState = class (TZNumberState)
-  public
-    function NextToken(Stream: TStream; FirstChar: Char;
-      Tokenizer: TZTokenizer): TZToken; override;
-  end;
+  TZSQLiteNumberState = TZGenericSQLNoHexNumberState;
 
   {** Implements a SQLite-specific quote string state object. }
   TZSQLiteQuoteState = class (TZQuoteState)
@@ -109,85 +105,6 @@ type
 implementation
 
 {$IFDEF FAST_MOVE}uses ZFastCode{$ENDIF};
-
-{ TZSQLiteNumberState }
-
-{**
-  Return a number token from a reader.
-  @return a number token from a reader
-}
-function TZSQLiteNumberState.NextToken(Stream: TStream; FirstChar: Char;
-  Tokenizer: TZTokenizer): TZToken;
-var
-  TempChar: Char;
-  FloatPoint: Boolean;
-  LastChar: Char;
-
-  procedure ReadDecDigits;
-  begin
-    LastChar := #0;
-    while Stream.Read(LastChar, SizeOf(Char)) > 0 do
-    begin
-      if CharInSet(LastChar, ['0'..'9']) then begin
-        ToBuf(LastChar, Result.Value);
-        LastChar := #0;
-      end else begin
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-        Break;
-      end;
-    end;
-  end;
-
-begin
-  FloatPoint := FirstChar = '.';
-  Result.Value := '';
-  InitBuf(FirstChar);
-  Result.TokenType := ttUnknown;
-  LastChar := #0;
-
-  { Reads the first part of the number before decimal point }
-  if not FloatPoint then begin
-    ReadDecDigits;
-    FloatPoint := LastChar = '.';
-    if FloatPoint then
-    begin
-      Stream.Read(TempChar{%H-}, SizeOf(Char));
-      ToBuf(TempChar, Result.Value);
-    end;
-  end;
-
-  { Reads the second part of the number after decimal point }
-  if FloatPoint then
-    ReadDecDigits;
-
-  { Reads a power part of the number }
-  if (Ord(LastChar) or $20) = ord('e') then //CharInSet(LastChar, ['e','E']) then
-  begin
-    Stream.Read(TempChar, SizeOf(Char));
-    ToBuf(TempChar, Result.Value);
-    FloatPoint := True;
-
-    Stream.Read(TempChar, SizeOf(Char));
-    if CharInSet(TempChar, ['0'..'9','-','+']) then begin
-      ToBuf(TempChar, Result.Value);
-      ReadDecDigits;
-    end else begin
-      FlushBuf(Result.Value);
-      Result.Value := Copy(Result.Value, 1, Length(Result.Value) - 1);
-      Stream.Seek(-2*SizeOf(Char), soFromCurrent);
-    end;
-  end;
-  FlushBuf(Result.Value);
-
-  { Prepare the result }
-  if Result.Value = '.' then begin
-    if Tokenizer.SymbolState <> nil then
-      Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer);
-  end else
-    if FloatPoint then
-      Result.TokenType := ttFloat else
-      Result.TokenType := ttInteger;
-end;
 
 { TZSQLiteQuoteState }
 

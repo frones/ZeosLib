@@ -62,11 +62,7 @@ uses
 type
 
   {** Implements a Sybase-specific number state object. }
-  TZSybaseNumberState = class (TZNumberState)
-  public
-    function NextToken(Stream: TStream; FirstChar: Char;
-      Tokenizer: TZTokenizer): TZToken; override;
-  end;
+  TZSybaseNumberState = TZGenericSQLHexNumberState;
 
   {** Implements a Sybase-specific quote string state object. }
   TZSybaseQuoteState = class (TZQuoteState)
@@ -111,109 +107,6 @@ implementation
 {$IFDEF FAST_MOVE}
 uses ZFastCode;
 {$ENDIF}
-
-{ TZSybaseNumberState }
-
-{**
-  Return a number token from a reader.
-  @return a number token from a reader
-}
-function TZSybaseNumberState.NextToken(Stream: TStream; FirstChar: Char;
-  Tokenizer: TZTokenizer): TZToken;
-var
-  HexDecimal: Boolean;
-  FloatPoint: Boolean;
-  LastChar: Char;
-
-  procedure ReadHexDigits;
-  begin
-    LastChar := #0;
-    while Stream.Read(LastChar, SizeOf(Char)) > 0 do
-      if CharInSet(LastChar, ['0'..'9','a'..'f','A'..'F']) then begin
-        ToBuf(LastChar, Result.Value);
-        LastChar := #0;
-      end else begin
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-        Break;
-      end;
-  end;
-
-  procedure ReadDecDigits;
-  begin
-    LastChar := #0;
-    while Stream.Read(LastChar, SizeOf(Char)) > 0 do
-      if CharInSet(LastChar, ['0'..'9']) then begin
-        ToBuf(LastChar, Result.Value);
-        LastChar := #0;
-      end else begin
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-        Break;
-      end;
-  end;
-
-begin
-  HexDecimal := False;
-  FloatPoint := FirstChar = '.';
-  LastChar := #0;
-
-  Result.Value := '';
-  InitBuf(FirstChar);
-  Result.TokenType := ttUnknown;
-
-  { Reads the first part of the number before decimal point }
-  if not FloatPoint then
-  begin
-    ReadDecDigits;
-    FloatPoint := (LastChar = '.');
-    if FloatPoint then
-    begin
-      Stream.Read(LastChar, SizeOf(Char));
-      ToBuf(LastChar, Result.Value);
-    end;
-  end;
-
-  { Reads the second part of the number after decimal point }
-  if FloatPoint then
-    ReadDecDigits;
-
-  { Reads a power part of the number }
-  if (Ord(LastChar) or $20) = ord('e') then //CharInSet(LastChar, ['e','E']) then
-  begin
-    Stream.Read(LastChar, SizeOf(Char));
-    ToBuf(LastChar, Result.Value);
-    FloatPoint := True;
-
-    Stream.Read(LastChar, SizeOf(Char));
-    if CharInSet(LastChar, ['0'..'9','-','+']) then begin
-      ToBuf(LastChar, Result.Value);
-      ReadDecDigits;
-    end else begin
-      FlushBuf(Result.Value);
-      Result.Value := Copy(Result.Value, 1, Length(Result.Value) - 1);
-      Stream.Seek(-2*SizeOf(Char), soFromCurrent);
-    end;
-  end;
-
-  { Reads the nexdecimal number }
-  if (Result.Value = '') and (FirstChar = '0') and ((Ord(LastChar) or $20) = ord('x')) then //CharInSet(LastChar, ['x','X']) then
-  begin
-    Stream.Read(LastChar, SizeOf(Char));
-    ToBuf(LastChar, Result.Value);
-    ReadHexDigits;
-    HexDecimal := True;
-  end;
-  FlushBuf(Result.Value);
-
-  { Prepare the result }
-  if Result.Value = '.' then begin
-    if Tokenizer.SymbolState <> nil then
-      Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer);
-  end else if HexDecimal then
-    Result.TokenType := ttHexDecimal
-  else if FloatPoint then
-    Result.TokenType := ttFloat
-  else Result.TokenType := ttInteger;
-end;
 
 { TZSybaseQuoteState }
 
