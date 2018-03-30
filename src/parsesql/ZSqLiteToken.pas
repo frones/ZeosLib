@@ -56,7 +56,7 @@ interface
 {$I ZParseSql.inc}
 
 uses
-  Classes, SysUtils, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   ZTokenizer, ZGenericSqlToken;
 
 type
@@ -104,7 +104,7 @@ type
 
 implementation
 
-{$IFDEF FAST_MOVE}uses ZFastCode{$ENDIF};
+uses SysUtils, ZCompatibility{$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 { TZSQLiteQuoteState }
 

@@ -110,7 +110,7 @@ type
 
 implementation
 
-uses {$IFDEF FAST_MOVE}ZFastCode{$ENDIF};
+uses ZCompatibility{$IFDEF FAST_MOVE},ZFastCode{$ENDIF};
 
 const
   {** List of keywords. }
