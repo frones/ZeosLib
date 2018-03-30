@@ -112,7 +112,7 @@ type
   {** Implements a quote string state object.
     Quote chars:
       ' - string literals
-      " and [] - identificators
+      " and [] - identifiers
    }
   TZGenericSQLBracketQuoteState = class (TZQuoteState)
   public
@@ -453,7 +453,6 @@ begin
   else Result := Value;
 end;
 
-
 { TZGenericSQLCommentState }
 
 function TZGenericSQLCommentState.NextToken(Stream: TStream; FirstChar: Char;
@@ -466,27 +465,33 @@ begin
   Result.Value := '';
   Result.TokenType := ttUnknown;
 
-  if FirstChar = '-' then
-  begin
-    ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
-    if (ReadNum > 0) and (ReadChar = '-') then begin
-      Result.TokenType := ttComment;
-      ToBuf(ReadChar, Result.Value);
-      GetSingleLineComment(Stream, Result.Value);
-    end else begin
-      if ReadNum > 0 then
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-    end;
-  end else if FirstChar = '/' then begin
-    ReadNum := Stream.Read(ReadChar, SizeOf(Char));
-    if (ReadNum > 0) and (ReadChar = '*') then begin
-      Result.TokenType := ttComment;
-      ToBuf(ReadChar, Result.Value);
-      GetMultiLineComment(Stream, Result.Value);
-    end else begin
-      if ReadNum > 0 then
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-    end;
+  case FirstChar of
+    '-':
+      begin
+        ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
+        if ReadNum > 0 then
+          if ReadChar = '-' then
+          begin
+            Result.TokenType := ttComment;
+            ToBuf(ReadChar, Result.Value);
+            GetSingleLineComment(Stream, Result.Value);
+          end
+          else
+            Stream.Seek(-SizeOf(Char), soFromCurrent);
+      end;
+    '/':
+      begin
+        ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
+        if ReadNum > 0 then
+          if ReadChar = '*' then
+          begin
+            Result.TokenType := ttComment;
+            ToBuf(ReadChar, Result.Value);
+            GetMultiLineComment(Stream, Result.Value);
+          end
+          else
+            Stream.Seek(-SizeOf(Char), soFromCurrent);
+      end;
   end;
 
   if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil) then
@@ -515,8 +520,8 @@ begin
   LastChar := #0;
   while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do
   begin
-    if ((LastChar = FirstChar) and (ReadChar <> FirstChar)
-      and (FirstChar <> '[')) or ((FirstChar = '[') and (LastChar = ']')) then
+    if ((LastChar = FirstChar) and (ReadChar <> FirstChar) and (FirstChar <> '[')) or
+      ((FirstChar = '[') and (LastChar = ']')) then
     begin
       Stream.Seek(-SizeOf(Char), soFromCurrent);
       Break;
@@ -528,9 +533,10 @@ begin
   end;
   FlushBuf(Result.Value);
 
-  if CharInSet(FirstChar, ['"', '[']) then
-    Result.TokenType := ttWord
-  else Result.TokenType := ttQuoted;
+  case FirstChar of
+    '"', '[': Result.TokenType := ttWord
+    else      Result.TokenType := ttQuoted;
+  end;
 end;
 
 {**
@@ -541,11 +547,11 @@ end;
 }
 function TZGenericSQLBracketQuoteState.EncodeString(const Value: string; QuoteChar: Char): string;
 begin
-  if QuoteChar = '[' then
-    Result := '[' + Value + ']'
-  else if CharInSet(QuoteChar, [#39, '"']) then
-    Result := QuoteChar + Value + QuoteChar
-  else Result := Value;
+  case QuoteChar of
+    '[':      Result := '[' + Value + ']';
+    #39, '"': Result := QuoteChar + Value + QuoteChar;
+    else      Result := Value;
+  end;
 end;
 
 {**
@@ -555,20 +561,28 @@ end;
   @returns an decoded string.
 }
 function TZGenericSQLBracketQuoteState.DecodeString(const Value: string; QuoteChar: Char): string;
+var Len: Integer;
 begin
   Result := Value;
-  if Length(Value) >= 2 then
+  Len := Length(Value);
+  if Len >= 2 then
   begin
-    if CharInSet(QuoteChar, [#39, '"']) and (Value[1] = QuoteChar)
-      and (Value[Length(Value)] = QuoteChar) then
-    begin
-      if Length(Value) > 2 then
-        Result := AnsiDequotedStr(Value, QuoteChar)
-      else Result := '';
-    end
-    else if (QuoteChar = '[') and (Value[1] = QuoteChar)
-      and (Value[Length(Value)] = ']') then
-      Result := Copy(Value, 2, Length(Value) - 2)
+    case QuoteChar of
+      #39, '"':
+        if (Value[1] = QuoteChar) and (Value[Len] = QuoteChar) then
+        begin
+          if Len > 2
+            then Result := AnsiDequotedStr(Value, QuoteChar)
+            else Result := '';
+        end;
+      '[':
+        if (Value[1] = QuoteChar) and (Value[Len] = ']') then
+        begin
+          if Len > 2
+            then Result := Copy(Value, 2, Len - 2)
+            else Result := '';
+        end;
+    end;
   end;
 end;
 
