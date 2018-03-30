@@ -198,40 +198,47 @@ begin
   InitBuf(Firstchar);
   Result.Value := '';
 
-  if FirstChar = '-' then begin
-    ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
-    if (ReadNum > 0) and (ReadChar = '-') then begin
-      Result.TokenType := ttComment;
-      ToBuf(ReadChar, Result.Value);
-      GetSingleLineComment(Stream, Result.Value);
-    end else begin
-      if ReadNum > 0 then
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-    end;
-  end else if FirstChar = '#' then begin
-    Result.TokenType := ttComment;
-    GetSingleLineComment(Stream, Result.Value);
-  end else if FirstChar = '/' then begin
-    ReadNum := Stream.Read(ReadChar, SizeOf(Char));
-    if (ReadNum > 0) and (ReadChar = '*') then
-    begin
-      ToBuf(ReadChar, Result.Value);
-      ReadNum2 := Stream.Read(ReadChar, SizeOf(Char));
-      // Don't treat '/*!' comments as normal comments!!
-      if (ReadNum2 > 0) then begin
-        ToBuf(ReadChar, Result.Value);
-        if (ReadChar <> '!') then
-          Result.TokenType := ttComment
-        else
-          Result.TokenType := ttSymbol;
-        GetMultiLineComment(Stream, Result.Value);
+  case FirstChar of
+    '-':
+      begin
+        ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
+        if ReadNum > 0 then
+          if ReadChar = '-' then
+          begin
+            Result.TokenType := ttComment;
+            ToBuf(ReadChar, Result.Value);
+            GetSingleLineComment(Stream, Result.Value);
+          end
+          else
+            Stream.Seek(-SizeOf(Char), soFromCurrent);
       end;
-    end
-    else
-    begin
-      if ReadNum > 0 then
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-    end;
+    '#':
+      begin
+        Result.TokenType := ttComment;
+        GetSingleLineComment(Stream, Result.Value);
+      end;
+    '/':
+      begin
+        ReadNum := Stream.Read(ReadChar, SizeOf(Char));
+        if ReadNum > 0 then
+          if ReadChar = '*' then
+          begin
+            ToBuf(ReadChar, Result.Value);
+            ReadNum2 := Stream.Read(ReadChar, SizeOf(Char));
+            // Don't treat '/*!' comments as normal comments!!
+            if (ReadNum2 > 0) then
+            begin
+              ToBuf(ReadChar, Result.Value);
+              if (ReadChar <> '!') then
+                Result.TokenType := ttComment
+              else
+                Result.TokenType := ttSymbol;
+              GetMultiLineComment(Stream, Result.Value);
+            end;
+          end
+          else
+            Stream.Seek(-SizeOf(Char), soFromCurrent);
+      end;
   end;
 
   if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil) then
