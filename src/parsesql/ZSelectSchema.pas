@@ -55,7 +55,7 @@ interface
 
 {$I ZParseSql.inc}
 
-uses ZClasses, Contnrs, ZCompatibility
+uses ZClasses, Contnrs
   {$IFDEF WITH_SYSTEMCLASSES},System.Classes{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_INLINE}, System.Types{$ENDIF};
 

@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZSysUtils, ZTokenizer, ZGenericSqlToken, ZCompatibility;
+  ZSysUtils, ZTokenizer, ZGenericSqlToken;
 
 type
 
@@ -108,9 +108,7 @@ type
 
 implementation
 
-{$IFDEF FAST_MOVE}
-uses ZFastCode;
-{$ENDIF}
+{$IFDEF FAST_MOVE}uses ZFastCode;{$ENDIF}
 
 { TZMySQLNumberState }
 

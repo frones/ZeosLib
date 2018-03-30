@@ -122,8 +122,7 @@ type
 
 implementation
 
-uses ZCompatibility{$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
-
+{$IFDEF FAST_MOVE}uses ZFastCode;{$ENDIF}
 const
   NameQuoteChar   = Char('"');
   DollarQuoteChar = Char('$');
