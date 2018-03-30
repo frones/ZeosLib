@@ -144,7 +144,12 @@ const
   // Type: STR
   // ?
   ConnProps_Provider = 'Provider';
-  ConnProps_Initial_Catalog = 'Initial Catalog';
+{$IFEND}
+
+{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
+  // Type: BOOLEAN
+  // Use trusted connection
+  ConnProps_TrustedConnection = 'Trusted_Connection';
 {$IFEND}
 
   { Parameters specific to a single DBC }
@@ -362,18 +367,6 @@ const
 {$ENDIF}
 
 {$IFDEF ENABLE_OLEDB}
-{$ENDIF}
-
-{$IFDEF ENABLE_ODBC}
-  // Type: STR, like CP_UTF8
-  // Codepage to use (same as ConnProps_CodePage)
-  ConnProps_Charset = 'characterset';
-  // Type: BOOLEAN
-  // Use trusted connection
-  ConnProps_TrustedConnection = 'Trusted_Connection';
-  // Type: SQL_DRIVER_COMPLETE | SQL_DRIVER_PROMPT | SQL_DRIVER_COMPLETE_REQUIRED
-  // Refer to ODBC manual for details
-  ConnProps_DriverCompletion = 'DriverCompletion';
   // Type: INT
   // ?
   ConnProps_TDSPacketSize = 'tds_packed_size';
@@ -383,6 +376,18 @@ const
   // Type: STR
   // User name
   ConnProps_UserId = 'User Id';
+  // Type: STR
+  // ?
+  ConnProps_Initial_Catalog = 'Initial Catalog';
+{$ENDIF}
+
+{$IFDEF ENABLE_ODBC}
+  // Type: STR, like CP_UTF8
+  // Codepage to use (same as ConnProps_CodePage)
+  ConnProps_Charset = 'characterset';
+  // Type: SQL_DRIVER_COMPLETE | SQL_DRIVER_PROMPT | SQL_DRIVER_COMPLETE_REQUIRED
+  // Refer to ODBC manual for details
+  ConnProps_DriverCompletion = 'DriverCompletion';
 {$ENDIF}
 
 {$IFDEF ENABLE_POOLED}
