@@ -67,6 +67,8 @@ type
   {** Implements a PostgreSQL-specific quote string state object. }
   TZPostgreSQLQuoteState = class (TZMySQLQuoteState)
   private
+    { how backslashes in quoted strings are handled
+      True means backslashes are escape characters }
     FStandardConformingStrings: Boolean;
   protected
     function GetModifier(Stream: TStream; FirstChar: Char; ResetPosition: Boolean = True): String;
@@ -76,7 +78,8 @@ type
   public
     function NextToken(Stream: TStream; FirstChar: Char;
       {%H-}Tokenizer: TZTokenizer): TZToken; override;
-    procedure SetStandardConformingStrings(const Value: Boolean);
+
+    property StandardConformingStrings: Boolean read FStandardConformingStrings write FStandardConformingStrings;
   end;
 
   {**
@@ -290,15 +293,6 @@ begin
 end;
 
 {**
-  Sets how backslashes in quoted strings are handled
-  @param True means backslashes are escape characters
-}
-procedure TZPostgreSQLQuoteState.SetStandardConformingStrings(const Value:
-    Boolean);
-begin
-  FStandardConformingStrings := Value;
-end;
-
 { TZPostgreSQLCommentState }
 
 {**
@@ -413,7 +407,7 @@ end;
 procedure TZPostgreSQLTokenizer.SetStandardConformingStrings(
   const Value: Boolean);
 begin
-  (QuoteState as TZPostgreSQLQuoteState).SetStandardConformingStrings(Value);
+  (QuoteState as TZPostgreSQLQuoteState).StandardConformingStrings := Value;
 end;
 
 {**
