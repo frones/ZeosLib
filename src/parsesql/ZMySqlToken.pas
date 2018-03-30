@@ -104,9 +104,7 @@ type
 
 implementation
 
-{$IFDEF FAST_MOVE}
-uses ZFastCode;
-{$ENDIF}
+{$IFDEF FAST_MOVE}uses ZFastCode;{$ENDIF}
 
 { TZMySQLQuoteState }
 

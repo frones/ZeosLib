@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZTokenizer, ZCompatibility, ZGenericSqlToken;
+  ZTokenizer, ZGenericSqlToken;
 
 type
 

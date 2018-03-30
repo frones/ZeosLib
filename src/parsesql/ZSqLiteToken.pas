@@ -93,7 +93,7 @@ type
 
 implementation
 
-uses SysUtils, ZCompatibility{$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
+{$IFDEF FAST_MOVE}uses ZFastCode;{$ENDIF}
 
 { TZSQLiteSymbolState }
 
