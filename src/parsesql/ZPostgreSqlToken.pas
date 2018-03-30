@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZTokenizer, ZGenericSqlToken, ZSysUtils;
+  ZTokenizer, ZGenericSqlToken, ZMySqlToken;
 
 type
 
@@ -69,7 +69,7 @@ type
   end;
 
   {** Implements a PostgreSQL-specific quote string state object. }
-  TZPostgreSQLQuoteState = class (TZQuoteState)
+  TZPostgreSQLQuoteState = class (TZMySQLQuoteState)
   private
     FStandardConformingStrings: Boolean;
   protected
@@ -80,8 +80,6 @@ type
   public
     function NextToken(Stream: TStream; FirstChar: Char;
       {%H-}Tokenizer: TZTokenizer): TZToken; override;
-    function EncodeString(const Value: string; QuoteChar: Char): string; override;
-    function DecodeString(const Value: string; QuoteChar: Char): string; override;
     procedure SetStandardConformingStrings(const Value: Boolean);
   end;
 
@@ -375,40 +373,6 @@ begin
     Result.TokenType := ttQuoted;
     GetQuotedStringWithModifier(Stream, FirstChar, Result.Value);
   end;
-end;
-
-{**
-  Encodes a string value.
-  @param Value a string value to be encoded.
-  @param QuoteChar a string quote character.
-  @returns an encoded string.
-}
-function TZPostgreSQLQuoteState.EncodeString(const Value: string; QuoteChar: Char): string;
-begin
-  if CharInSet(QuoteChar, [#39, '"', '`']) then
-    Result := QuoteChar + EncodeCString(Value) + QuoteChar
-  else Result := Value;
-end;
-
-{**
-  Decodes a string value.
-  @param Value a string value to be decoded.
-  @param QuoteChar a string quote character.
-  @returns an decoded string.
-}
-function TZPostgreSQLQuoteState.DecodeString(const Value: string; QuoteChar: Char): string;
-var
-  Len: Integer;
-begin
-  Len := Length(Value);
-  if (Len >= 2) and CharInSet(QuoteChar, [#39, '"', '`'])
-    and (Value[1] = QuoteChar) and (Value[Len] = QuoteChar) then
-  begin
-    if Len > 2 then
-      Result := DecodeCString(Copy(Value, 2, Len - 2))
-    else Result := '';
-  end
-  else Result := Value;
 end;
 
 {**
