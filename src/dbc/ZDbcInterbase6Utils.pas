@@ -1364,8 +1364,7 @@ var
   Buffer: Pointer;
   Len: Integer;
   RawTemp: RawByteString;
-  CharRec: TZCharRec;
-  Value: TZVariant;
+  UniTemp: UnicodeString;
   IsNull: Boolean;
 
   { array DML bindings }
@@ -1394,7 +1393,6 @@ var
   ZBytesArray: TBytesDynArray absolute ZData;
   ZInterfaceArray: TInterfaceDynArray absolute ZData;
   ZGUIDArray: TGUIDDynArray absolute ZData;
-  label ProcString;
 begin
   ParamIndex := 0;
   for J := ArrayOffSet to ArrayOffSet+ArrayItersCount-1 do
@@ -1468,40 +1466,54 @@ begin
           stDouble: ParamSqlData.UpdateDouble(ParamIndex, ZDoubleArray[J]);
           stCurrency: ParamSqlData.UpdateBigDecimal(ParamIndex, ZCurrencyArray[J]);
           stBigDecimal: ParamSqlData.UpdateBigDecimal(ParamIndex, ZExtendedArray[J]);
-          stGUID:
-            begin
-              Value := EncodeRawByteString({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(GUIDToString(ZGUIDArray[j])));
-              goto ProcString;
-            end;
+          stGUID: if  ParamSqlData.GetIbSqlType(ParamIndex) = CS_BINARY then
+                    ParamSqlData.UpdatePAnsiChar(ParamIndex, @ZGUIDArray[j].D1, SizeOf(TGUID))
+                  else begin
+                    RawTemp := GUIDToRaw(ZGUIDArray[j]);
+                    ParamSqlData.UpdatePAnsiChar(ParamIndex, Pointer(RawTemp), Length(RawTemp));
+                  end;
           stString, stUnicodeString:
             begin
-              case InParamValues[i].VArray.VArrayVariantType of
-                vtString: Value := EncodeString(ZStringArray[j]);
-                vtAnsiString: Value := EncodeAnsiString(ZAnsiStringArray[j]);
-                vtUTF8String: Value := EncodeUTF8String(ZUTF8StringArray[j]);
-                vtRawByteString: Value := EncodeRawByteString(ZRawByteStringArray[j]);
-                vtUnicodeString: Value := EncodeUnicodeString(ZUnicodeStringArray[j]);
-                vtCharRec: Value := EncodeCharRec(ZCharRecArray[j]);
+              CP := ParamSqlData.GetIbSqlSubType(ParamIndex);  //get code page
+              if CP <> CS_BINARY then begin
+                if (CP > High(CodePageArray)) or (CP = CS_NONE)
+                then CP := ConSettings^.ClientCodePage^.CP
+                else CP := CodePageArray[CP];
+                case InParamValues[i].VArray.VArrayVariantType of
+                  vtString: RawTemp := ConSettings.ConvFuncs.ZStringToRaw(ZStringArray[j], ConSettings.CTRL_CP, CP);
+                  vtAnsiString: RawTemp := Consettings^.ConvFuncs.ZAnsiToRaw(ZAnsiStringArray[j], CP);
+                  vtUTF8String: if ZCompatibleCodePages(CP, zCP_UTF8) then begin
+                        ParamSqlData.UpdatePAnsiChar(ParamIndex, Pointer(ZUTF8StringArray[j]), Length(ZUTF8StringArray[j]));
+                        continue;
+                      end else
+                        RawTemp := Consettings^.ConvFuncs.ZUTF8ToRaw(ZUTF8StringArray[j], CP);
+                  vtRawByteString: RawTemp := ZRawByteStringArray[j];
+                  vtUnicodeString: RawTemp := ZUnicodeToRaw(ZUnicodeStringArray[j], CP);
+                  vtCharRec: if ZCompatibleCodePages(ZCharRecArray[j].CP, cp) or (ZCharRecArray[j].Len = 0) then begin
+                        ParamSqlData.UpdatePAnsiChar(ParamIndex, ZCharRecArray[j].P, ZCharRecArray[j].Len);
+                        continue;
+                      end else if ZCompatibleCodePages(ZCharRecArray[j].CP, zCP_UTF16) then
+                        RawTemp := PUnicodeToRaw(ZCharRecArray[j].P, ZCharRecArray[j].Len, CP)
+                      else begin
+                        UniTemp := PRawToUnicode(ZCharRecArray[j].P, ZCharRecArray[j].Len, ZCharRecArray[j].CP);
+                        RawTemp := ZUnicodeToRaw(UniTemp, CP)
+                      end;
+                  else
+                    raise Exception.Create('Unsupported String Variant');
+                end;
+                ParamSqlData.UpdatePAnsiChar(ParamIndex, Pointer(RawTemp), Length(RawTemp));
+              end else case InParamValues[i].VArray.VArrayVariantType of
+                {$IFNDEF UNICODE}vtString,{$ENDIF}
+                vtAnsiString, vtUTF8String, vtRawByteString:
+                    ParamSqlData.UpdatePAnsiChar(ParamIndex, Pointer(ZRawByteStringArray[j]), Length(ZRawByteStringArray[j]));
+                vtUnicodeString{$IFDEF UNICODE}, vtString{$ENDIF}:
+                  raise Exception.Create('Unsupported String Variant');
+                vtCharRec: if not ZCompatibleCodePages(ZCharRecArray[j].CP, zCP_UTF16) or (ZCharRecArray[j].Len = 0)
+                    then ParamSqlData.UpdatePAnsiChar(ParamIndex, ZCharRecArray[j].P, ZCharRecArray[j].Len)
+                    else raise Exception.Create('Unsupported String Variant');
                 else
                   raise Exception.Create('Unsupported String Variant');
               end;
-ProcString:     CP := ParamSqlData.GetIbSqlType(ParamIndex);
-              case CP of
-                SQL_TEXT, SQL_VARYING:
-                  begin
-                    CP := ParamSqlData.GetIbSqlSubType(ParamIndex);  //get code page
-                    if CP = CS_BINARY then
-                      CharRec := ClientVarManager.GetAsCharRec(Value)
-                    else
-                      if CP > High(CodePageArray) then
-                        CharRec := ClientVarManager.GetAsCharRec(Value, ConSettings^.ClientCodePage^.CP)
-                      else
-                        CharRec := ClientVarManager.GetAsCharRec(Value, CodePageArray[CP]);
-                  end
-                else
-                  CharRec := ClientVarManager.GetAsCharRec(Value);
-              end;
-              ParamSqlData.UpdatePAnsiChar(ParamIndex, CharRec.P, CharRec.Len);
             end;
           stBytes:
             ParamSqlData.UpdateBytes(ParamIndex, ZBytesArray[j]);
@@ -3099,7 +3111,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
 const
   EBStart = AnsiString('EXECUTE BLOCK(');
   EBBegin =  AnsiString(')AS BEGIN'+LineEnding);
-  EBSuspend =  AnsiString('SUSPEND;'+LineEnding); //required for RETURNING synatax
+  EBSuspend =  AnsiString('SUSPEND;'+LineEnding); //required for RETURNING syntax
   EBEnd = AnsiString('END');
   LBlockLen = Length(EBStart)+Length(EBBegin)+Length(EBEnd);
 var
