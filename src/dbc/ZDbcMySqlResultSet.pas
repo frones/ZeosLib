@@ -123,6 +123,8 @@ type
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
       With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
     {$ENDIF USE_SYNCOMMONS}
+    //EH: keep that override 4 all descendants: seek_data is dead slow in a forward only mode
+    function Next: Boolean; override;
   end;
 
   TZMySQL_Store_ResultSet = class(TZAbstractMySQLResultSet)
@@ -133,7 +135,6 @@ type
 
   TZMySQL_Use_ResultSet = class(TZAbstractMySQLResultSet)
   public
-    function Next: Boolean; override;
     procedure ResetCursor; override;
   end;
 
@@ -608,6 +609,49 @@ begin
     raise EZSQLException.Create(SRowDataIsNotAvailable);
 {$ENDIF}
   Result := (GetBuffer(ColumnIndex) = nil);
+end;
+
+{**
+  Moves the cursor down one row from its current position.
+  A <code>ResultSet</code> cursor is initially positioned
+  before the first row; the first call to the method
+  <code>next</code> makes the first row the current row; the
+  second call makes the second row the current row, and so on.
+
+  <P>If an input stream is open for the current row, a call
+  to the method <code>next</code> will
+  implicitly close it. A <code>ResultSet</code> object's
+  warning chain is cleared when a new row is read.
+
+  @return <code>true</code> if the new current row is valid;
+    <code>false</code> if there are no more rows
+}
+function TZAbstractMySQLResultSet.Next: Boolean;
+begin
+  { Checks for maximum row. }
+  Result := False;
+  if (Closed) or ((MaxRows > 0) and (RowNo >= MaxRows)) or (RowNo > LastRowNo) then
+    Exit;
+  if (FQueryHandle = nil) then begin
+    FQueryHandle := FPlainDriver.StoreResult(FHandle);
+    if Assigned(FQueryHandle) then
+      LastRowNo := FPlainDriver.GetRowCount(FQueryHandle);
+  end;
+  FRowHandle := FPlainDriver.FetchRow(FQueryHandle);
+  if FRowHandle <> nil then begin
+    RowNo := RowNo + 1;
+    if LastRowNo < RowNo then
+      LastRowNo := RowNo;
+    Result := True;
+  end else begin
+    if fServerCursor then begin
+      LastRowNo := RowNo;
+      RowNo := RowNo+1;
+    end else
+      RowNo := RowNo+1;
+    Exit;
+  end;
+  FLengthArray := FPlainDriver.FetchLengths(FQueryHandle)
 end;
 
 {**
@@ -3213,47 +3257,6 @@ begin
 End;
 
 { TZMySQL_Use_ResultSet }
-
-{**
-  Moves the cursor down one row from its current position.
-  A <code>ResultSet</code> cursor is initially positioned
-  before the first row; the first call to the method
-  <code>next</code> makes the first row the current row; the
-  second call makes the second row the current row, and so on.
-
-  <P>If an input stream is open for the current row, a call
-  to the method <code>next</code> will
-  implicitly close it. A <code>ResultSet</code> object's
-  warning chain is cleared when a new row is read.
-
-  @return <code>true</code> if the new current row is valid;
-    <code>false</code> if there are no more rows
-}
-function TZMySQL_Use_ResultSet.Next: Boolean;
-begin
-  { Checks for maximum row. }
-  Result := False;
-  if (Closed) or ((MaxRows > 0) and (RowNo >= MaxRows)) then
-    Exit;
-  if (FQueryHandle = nil) then
-    FQueryHandle := FPlainDriver.use_result(FHandle);
-  if FQueryHandle <> nil then
-    FRowHandle := FPlainDriver.FetchRow(FQueryHandle);
-  if FRowHandle <> nil then
-  begin
-    RowNo := RowNo + 1;
-    if LastRowNo < RowNo then
-      LastRowNo := RowNo;
-    Result := True;
-  end else begin
-    if RowNo <= LastRowNo then
-      RowNo := LastRowNo + 1;
-    Result := False;
-  end;
-  if Result
-  then FLengthArray := FPlainDriver.FetchLengths(FQueryHandle)
-  else FLengthArray := nil;
-end;
 
 procedure TZMySQL_Use_ResultSet.ResetCursor;
 begin
