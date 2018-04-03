@@ -1364,7 +1364,7 @@ var
   Buffer: Pointer;
   Len: Integer;
   RawTemp: RawByteString;
-  UniTemp: UnicodeString;
+  UniTemp: ZWideString;
   IsNull: Boolean;
 
   { array DML bindings }
