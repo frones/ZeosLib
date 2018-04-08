@@ -210,9 +210,6 @@ type
     IImmediatelyReleasable)
   private
     FInParamValues: TZVariantDynArray;
-    FInParamTypes: TZSQLTypeArray;
-    FInParamDefaultValues: TStringDynArray;
-    FInParamCount: Integer;
     FInitialArrayCount: ArrayLenInt;
     FPrepared : Boolean;
     FClientVariantManger: IZClientVariantManager;
@@ -220,8 +217,11 @@ type
     FCachedQueryUni: TUnicodeStringDynArray;
     FNCharDetected: TBooleanDynArray;
     FIsParamIndex: TBooleanDynArray;
-    FIsPraparable: Boolean;
+    FIsPraparable, FHasParams: Boolean;
   protected
+    FInParamTypes: TZSQLTypeArray;
+    FInParamDefaultValues: TStringDynArray;
+    FInParamCount: Integer;
     function GetClientVariantManger: IZClientVariantManager;
     function SupportsSingleColumnArrays: Boolean; virtual;
     procedure PrepareInParameters; virtual;
@@ -232,7 +232,7 @@ type
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); virtual;
     procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = '');
-    function GetInParamLogValue(Value: TZVariant): RawByteString;
+    function GetInParamLogValue(ParamIndex: Integer): RawByteString; virtual;
     function GetOmitComments: Boolean; virtual;
     function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; virtual;
 
@@ -247,6 +247,7 @@ type
     property IsParamIndex: TBooleanDynArray read FIsParamIndex;
     property IsNCharIndex: TBooleanDynArray read FNCharDetected;
     property IsPreparable: Boolean read FIsPraparable;
+    property HasParams: Boolean read FHasParams;
     property ArrayCount: ArrayLenInt read FInitialArrayCount;
     procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
@@ -274,7 +275,7 @@ type
     property Prepared: Boolean read IsPrepared;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
 
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
+    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); virtual;
 
     procedure SetNull(ParameterIndex: Integer; const SQLType: TZSQLType); virtual;
     procedure SetBoolean(ParameterIndex: Integer; const Value: Boolean); virtual;
@@ -1393,9 +1394,6 @@ begin
   inherited Create(Connection, Info);
   FClientVariantManger := Connection.GetClientVariantManager;
   {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
-  SetInParamCount(0);
-  FPrepared := False;
-  FInitialArrayCount := 0;
 end;
 
 {**
@@ -1615,8 +1613,10 @@ begin
 end;
 
 
-function TZAbstractPreparedStatement.GetInParamLogValue(Value: TZVariant): RawByteString;
+function TZAbstractPreparedStatement.GetInParamLogValue(ParamIndex: Integer): RawByteString;
+var Value: TZVariant;
 begin
+  Value := InParamValues[ParamIndex];
   With Value do
     case VType of
       vtNull : result := '(NULL)';
@@ -1649,7 +1649,8 @@ end;
 function TZAbstractPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   { Logging Execution }
-  DriverManager.LogMessage(lcExecPrepStmt,Self);
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 {$WARNINGS ON}
 {**
@@ -2351,7 +2352,8 @@ function TZAbstractPreparedStatement.ExecutePrepared: Boolean;
 begin
   Result := False;
   { Logging Execution }
-  DriverManager.LogMessage(lcExecPrepStmt,Self);
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
 procedure TZAbstractPreparedStatement.Close;
@@ -2411,12 +2413,14 @@ begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetCompareFirstKeywordStrings, @FIsPraparable);
-
+    Self.FHasParams := False;
     Result := ''; //init Result
-    for I := 0 to High(FCachedQueryRaw) do
-      Result := Result + FCachedQueryRaw[i];
-  end
-  else
+    for I := 0 to High(FCachedQueryRaw) do begin
+      ToBuff(FCachedQueryRaw[i], Result);
+      FHasParams := FHasParams or FIsParamIndex[i];
+    end;
+    FlushBuff(Result);
+  end else
     Result := Inherited GetRawEncodedSQL(SQL);
 end;
 
@@ -2451,7 +2455,7 @@ begin
         else
           begin { Prepare Log Output}
             For I := 0 to InParamCount - 1 do
-              LogString := LogString + GetInParamLogValue(InParamValues[I])+',';
+              LogString := LogString + GetInParamLogValue(I)+',';
             result := CreateStmtLogEvent(Category, Logstring);
           end;
   else

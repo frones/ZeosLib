@@ -93,7 +93,10 @@ function PostgreSQLToSQLType(const ConSettings: PZConSettings;
    @param The ZSQLType type
    @return The Postgre TypeName
 }
-function SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: Boolean): string;
+function SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: Boolean): string; overload;
+procedure SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: Boolean; out aOID: OID); overload;
+
+function GetOIDbufferSize(const aOID: OID; out ParamFormat: Integer): Integer;
 
 {**
   add by Perger -> based on SourceForge:
@@ -153,6 +156,13 @@ function GetMinorVersion(const Value: string): Word;
 function PGPrepareAnsiSQLParam(const Value: TZVariant; const ClientVarManager: IZClientVariantManager;
   const Connection: IZPostgreSQLConnection; ChunkSize: Cardinal; InParamType: TZSQLType;
   oidasblob, DateTimePrefix, QuotedNumbers: Boolean; ConSettings: PZConSettings): RawByteString;
+
+//https://www.postgresql.org/docs/9.1/static/datatype-datetime.html
+//macros time calculations of timestamp.c for int64 and double
+function time2t_in64(hour, min, sec, fsec: integer): Int64;
+function time2t_double(hour, min, sec, fsec: integer): double;
+//macros from datetime.c
+function date2j(y, m, d: Integer): Integer;
 
 implementation
 
@@ -320,6 +330,83 @@ begin
         Result := 'oid'
       else
         Result := 'bytea';
+  end;
+end;
+
+procedure SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: Boolean; out aOID: OID);
+begin
+  case SQLType of
+    stBoolean: aOID := BOOLOID;
+    stByte, stShort, stSmall: aOID := INT2OID;
+    stWord, stInteger: aOID := INT4OID;
+    stLongWord, stLong, stULong: aOID := INT8OID;
+    stFloat: aOID := FLOAT4OID;
+    stDouble, stBigDecimal: aOID := FLOAT8OID;
+    stCurrency: aOID := CASHOID;
+    stString, stUnicodeString,//: aOID := VARCHAROID;
+    stAsciiStream, stUnicodeStream: aOID := TEXTOID;
+    stDate: aOID := DATEOID;
+    stTime: aOID := TIMEOID;
+    stTimestamp: aOID := TIMESTAMPOID;
+    stGuid: aOID := OIDOID;
+    stBytes: aOID := BYTEAOID;
+    stBinaryStream:
+      if IsOidAsBlob
+      then aOID := OIDOID
+      else aOID := BYTEAOID;
+  end;
+end;
+
+function GetOIDbufferSize(const aOID: OID; out ParamFormat: Integer): Integer;
+begin
+  Result := 0; //indicate unknown size
+  ParamFormat := 0; //indicate a string format by default
+  case aOID of
+    BOOLOID: begin
+                Result := SizeOf(WordBool); //"boolean, 'true'/'false'"
+                ParamFormat := 1;
+              end;
+    BYTEAOID: ParamFormat := 1; //"variable-length string, binary values escaped"
+    INT8OID:  begin
+                Result := SizeOf(int64); //"~18 digit integer, 8-byte storage"
+                ParamFormat := 1;
+              end;
+    INT2OID:  begin
+                Result := SizeOf(SmallInt); //"~18 digit integer, 8-byte storage"
+                ParamFormat := 1;
+              end;
+    INT4OID:  begin
+                Result := SizeOf(LongInt); //"-2 billion to 2 billion integer, 4-byte storage"
+                ParamFormat := 1;
+              end;
+    OIDOID:   begin
+                Result := SizeOf(OID); //"object identifier(oid), maximum 4 billion"
+                ParamFormat := 1;
+              end;
+    FLOAT4OID:begin
+                Result := SizeOf(Single); //"single-precision floating point number, 4-byte storage"
+                ParamFormat := 1;
+              end;
+    FLOAT8OID:begin
+                Result := SizeOf(Double); //"double-precision floating point number, 8-byte storage"
+                ParamFormat := 1;
+              end;
+    CASHOID:  begin
+                Result := SizeOf(Currency); //"monetary amounts, $d,ddd.cc"
+                ParamFormat := 1;
+              end;
+    (*DATEOID: begin
+                Result := SizeOf(TDate); //"date"
+                ParamFormat := 1;
+              end;
+    TIMEOID: begin
+                Result := SizeOf(TTime); //"time of day"
+                ParamFormat := 1;
+              end;
+    TIMESTAMPOID: begin
+                Result := SizeOf(TDateTime); //"date and time"
+                ParamFormat := 1;
+              end;*)
   end;
 end;
 
@@ -821,5 +908,35 @@ begin
   end;
 end;
 
+function time2t_in64(hour, min, sec, fsec: integer): Int64;
+begin
+  Result := (((((hour * MINS_PER_HOUR) + min) * SECS_PER_MINUTE) + sec) * USECS_PER_SEC) + fsec;
+end;
+
+function time2t_double(hour, min, sec, fsec: integer): double;
+begin
+  Result := (((hour * MINS_PER_HOUR) + min) * SECS_PER_MINUTE) + sec + fsec
+end;
+
+function date2j(y, m, d: Integer): Integer;
+var
+  julian: Integer;
+  century: Integer;
+begin
+  if (m > 2) then begin
+    m := m+1;
+    y := m+4800;
+  end else begin
+    m := M + 13;
+    y := y + 4799;
+  end;
+
+  century := y div 100;
+  julian := y * 365 - 32167;
+  julian := julian + y div 4 - century + century div 4;
+  julian := julian + 7834 * m div 256 + d;
+
+  Result := julian;
+end;
 
 end.

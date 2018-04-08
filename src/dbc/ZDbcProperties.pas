@@ -227,7 +227,7 @@ const
   // Value used in 'SET standard_conforming_strings = <Value>' query on connect,
   // refer to Postgre manual for details
   ConnProps_StdConformingStrings = 'standard_conforming_strings';
-
+  ConnProps_integer_datetimes = 'integer_datetimes';
   { Parameters used for constructing ConnectStr.
     Refer to Postgre manual for types and acceptable values of these parameters }
   ConnProps_ApplicationName = 'application_name';
