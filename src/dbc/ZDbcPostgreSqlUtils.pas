@@ -158,9 +158,7 @@ function PGPrepareAnsiSQLParam(const Value: TZVariant; const ClientVarManager: I
   oidasblob, DateTimePrefix, QuotedNumbers: Boolean; ConSettings: PZConSettings): RawByteString;
 
 //https://www.postgresql.org/docs/9.1/static/datatype-datetime.html
-//macros time calculations of timestamp.c for int64 and double
-function time2t_in64(hour, min, sec, fsec: integer): Int64;
-function time2t_double(hour, min, sec, fsec: integer): double;
+
 //macros from datetime.c
 function date2j(y, m, d: Integer): Integer;
 
@@ -908,16 +906,6 @@ begin
   end;
 end;
 
-function time2t_in64(hour, min, sec, fsec: integer): Int64;
-begin
-  Result := (((((hour * MINS_PER_HOUR) + min) * SECS_PER_MINUTE) + sec) * USECS_PER_SEC) + fsec;
-end;
-
-function time2t_double(hour, min, sec, fsec: integer): double;
-begin
-  Result := (((hour * MINS_PER_HOUR) + min) * SECS_PER_MINUTE) + sec + fsec
-end;
-
 function date2j(y, m, d: Integer): Integer;
 var
   julian: Integer;
@@ -925,7 +913,7 @@ var
 begin
   if (m > 2) then begin
     m := m+1;
-    y := m+4800;
+    y := y+4800;
   end else begin
     m := M + 13;
     y := y + 4799;
@@ -934,9 +922,7 @@ begin
   century := y div 100;
   julian := y * 365 - 32167;
   julian := julian + y div 4 - century + century div 4;
-  julian := julian + 7834 * m div 256 + d;
-
-  Result := julian;
+  Result := julian + 7834 * m div 256 + d;
 end;
 
 end.

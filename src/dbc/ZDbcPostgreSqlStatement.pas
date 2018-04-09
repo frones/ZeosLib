@@ -160,6 +160,8 @@ type
     function TimeToInt64(const Value: TDateTime): Int64;
     function TimeToDouble(const Value: TDateTime): Double;
     function DateToInt(const Value: TDateTime): Integer;
+    function TimeStampToInt64(const Value: TDateTime): Int64;
+    function TimeStampToDouble(const Value: TDateTime): Double;
 
 
     function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
@@ -668,9 +670,7 @@ function TZPostgreSQLCAPIPreparedStatement.DateToInt(
 var y,m,d: Word;
 begin
   DecodeDate(Value, y,m,d);
-  //dDate = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - date2j(2000, 1, 1);
-  //wrong°°
-  Result := date2j(y,m,d) + date2j(2000,1,1);
+  Result := date2j(y,m,d) - POSTGRES_EPOCH_JDATE;
 end;
 
 function TZPostgreSQLCAPIPreparedStatement.ExecuteInternal(const SQL: RawByteString;
@@ -1054,14 +1054,14 @@ begin
   case OIDToSQLType(ParameterIndex, stTimeStamp) of
     stDate:   begin
                 PInteger(@FStatBuf[0])^ := DateToInt(Value);
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Integer));
+                BindNetworkOrderBin(ParameterIndex, stDate, @FStatBuf[0], SizeOf(Integer));
               end;
-    (*stTimeStamp: begin
+    stTimeStamp: begin
                 if FPostgreSQLConnection.integer_datetimes
-                then PInt64(@FStatBuf[0])^ := TimeToInt64(Value)+DateToInt64(Value)
-                else PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end; *)
+                then PInt64(@FStatBuf[0])^ := TimeStampToInt64(Value)
+                else PDouble(@FStatBuf[0])^ := TimeStampToDouble(Value);
+                BindNetworkOrderBin(ParameterIndex, stTimeStamp, @FStatBuf[0], 8);
+              end;
     else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTimeStamp, DateTimeToRawSQLDate(Value,
       ConSettings^.WriteFormatSettings, FUseEmulatedStmtsOnly,
         IfThen(FUseEmulatedStmtsOnly,'::date','')));
@@ -1161,7 +1161,7 @@ procedure TZPostgreSQLCAPIPreparedStatement.SetGUID(ParameterIndex: Integer;
 begin
   case OIDToSQLType(ParameterIndex, stGUID) of
     stGUID: BindBin(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stGUID, @Value.D1, SizeOf(TGUID));
-    else if FUseEmulatedStmtsOnly
+    else if not FUseEmulatedStmtsOnly
       then BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stGUID, GUIDToRaw(Value))
       else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stGUID, #39+GUIDToRaw(Value)+#39)
   end;
@@ -1368,14 +1368,14 @@ begin
                 if FPostgreSQLConnection.integer_datetimes
                 then PInt64(@FStatBuf[0])^ := TimeToInt64(Value)
                 else PDouble(@FStatBuf[0])^ := TimeToDouble(Value);
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
+                BindNetworkOrderBin(ParameterIndex, stTime, @FStatBuf[0], 8);
               end;
-    (*stTimeStamp: begin
+    stTimeStamp: begin
                 if FPostgreSQLConnection.integer_datetimes
-                then PInt64(@FStatBuf[0])^ := TimeToInt64(Value)
-                else PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end; *)
+                then PInt64(@FStatBuf[0])^ := TimeStampToInt64(Value)
+                else PDouble(@FStatBuf[0])^ := TimeStampToDouble(Value);
+                BindNetworkOrderBin(ParameterIndex, stTimeStamp, @FStatBuf[0], 8);
+              end;
     else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTime, DateTimeToRawSQLTime(Value,
       ConSettings^.WriteFormatSettings, FUseEmulatedStmtsOnly,
       IfThen(FUseEmulatedStmtsOnly, '::time', '')));
@@ -1389,19 +1389,19 @@ begin
     stTime:   begin
                 if FPostgreSQLConnection.integer_datetimes
                 then PInt64(@FStatBuf[0])^ := TimeToInt64(Value)
-                else PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
+                else PDouble(@FStatBuf[0])^ := TimeToDouble(Value);
+                BindNetworkOrderBin(ParameterIndex, stTime, @FStatBuf[0], 8);
               end;
     stDate:   begin
                 PInteger(@FStatBuf[0])^ := DateToInt(Value);
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(integer));
+                BindNetworkOrderBin(ParameterIndex, stDate, @FStatBuf[0], SizeOf(integer));
               end;
-    (*stTimeStamp: begin
+    stTimeStamp: begin
                 if FPostgreSQLConnection.integer_datetimes
-                then PInt64(@FStatBuf[0])^ := TimeToInt64(Value)+DateToInt64(Value)
-                else PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end; *)
+                then PInt64(@FStatBuf[0])^ := TimeStampToInt64(Value)
+                else PDouble(@FStatBuf[0])^ := TimeStampToDouble(Value);
+                BindNetworkOrderBin(ParameterIndex, stTimeStamp, @FStatBuf[0], 8);
+              end;
     else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTimeStamp, DateTimeToRawSQLTimeStamp(Value,
       ConSettings^.WriteFormatSettings, FUseEmulatedStmtsOnly,
         IfThen(FUseEmulatedStmtsOnly,'::timestamp','')));
@@ -1563,12 +1563,38 @@ begin
   end;
 end;
 
+function TZPostgreSQLCAPIPreparedStatement.TimeStampToDouble(
+  const Value: TDateTime): Double;
+var Year, Month, Day, Hour, Min, Sec, MSec: Word;
+  Date: Double; //overflow save multiply
+begin
+  DecodeDate(Value, Year, Month, Day);
+  Date := date2j(Year, Month, Day) - POSTGRES_EPOCH_JDATE;
+  DecodeTime(Value, Hour, Min, Sec, MSec);
+  Result := (Hour * MinsPerHour + Min) * SecsPerMin + Sec + Msec / MSecsPerSec; //time2t_in64 did not work?
+  Result := Date * SecsPerDay + Result;
+end;
+
+function TZPostgreSQLCAPIPreparedStatement.TimeStampToInt64(
+  const Value: TDateTime): Int64;
+var Year, Month, Day, Hour, Min, Sec, MSec: Word;
+  Date: Int64; //overflow save multiply
+begin
+  DecodeDate(Value, Year, Month, Day);
+  Date := date2j(Year, Month, Day) - POSTGRES_EPOCH_JDATE;
+  DecodeTime(Value, Hour, Min, Sec, MSec);
+  //timestamp do not play with microseconds!!
+  Result := ((Hour * MINS_PER_HOUR + Min) * SECS_PER_MINUTE + Sec) * MSecsPerSec + MSec;
+  Result := (Date * MSecsPerDay + Result) * MSecsPerSec;
+end;
+
 function TZPostgreSQLCAPIPreparedStatement.TimeToDouble(
   const Value: TDateTime): Double;
 var Hour, Min, Sec, MSec: Word;
 begin
   DecodeTime(Value, Hour, Min, Sec, MSec);
-  Result := time2t_double(Hour, Min, Sec, Msec);
+  //macro of datetime.c
+  Result := (((hour * MINS_PER_HOUR) + min) * SECS_PER_MINUTE) + sec + Msec
 end;
 
 function TZPostgreSQLCAPIPreparedStatement.TimeToInt64(
@@ -1576,7 +1602,8 @@ function TZPostgreSQLCAPIPreparedStatement.TimeToInt64(
 var Hour, Min, Sec, MSec: Word;
 begin
   DecodeTime(Value, Hour, Min, Sec, MSec);
-  Result := time2t_in64(Hour, Min, Sec, Msec);
+  //macro of datetime.c
+  Result := (((((hour * MINS_PER_HOUR) + min) * SECS_PER_MINUTE) + sec) * USECS_PER_SEC) + Msec
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.BindBin(ParameterIndex: Integer;
@@ -1736,6 +1763,7 @@ begin
           SQLTypeToPostgreSQL(SQLType, FOIdAsBLob, FParamOIDs[ParameterIndex]);
           Result := SQLType;
         end;
+        { these types are binary supported by now }
         BOOLOID:  Result := stBoolean;
         BYTEAOID: Result := stBytes;
         INT8OID:  Result := stLong;
@@ -1745,13 +1773,10 @@ begin
         FLOAT4OID:Result := stFloat;
         FLOAT8OID:Result := stDouble;
         CASHOID:  Result := stCurrency;
-        {* EH: weeeaaaah .....
-        https://www.postgresql.org/message-id/d34l6e%24284h%241%40news.hub.org
-        https://www.postgresql.org/docs/9.1/static/datatype-datetime.html
-        }
-//uncomment it if done        DATEOID:  Result := stDate;
+        DATEOID:  Result := stDate;
         TIMEOID:  Result := stTime;
-//uncomment it if done        TIMESTAMPOID: Result := stTimeStamp;
+        TIMESTAMPOID: Result := stTimeStamp;
+        UUIDOID:  Result := stGUID;
         else Result := stUnknown;
       end
     else begin
