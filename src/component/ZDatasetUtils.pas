@@ -702,8 +702,7 @@ begin
       Field := nil;
 
       case TokenType of
-        ttQuoted, ttQuotedIdentifier,// - shouldn't be returned as toDecodeStrings is used
-        ttWord:
+        ttQuoted, ttQuotedIdentifier, ttWord:
           Field := DataSet.FieldByName(TokenValue); // Will raise exception if field not present
         ttNumber:
           begin
@@ -1462,8 +1461,7 @@ begin
       Field := nil;
 
       case TokenType of
-        ttQuoted, ttQuotedIdentifier,
-        ttWord:
+        ttQuoted, ttQuotedIdentifier, ttWord:
           begin
             // Check if current token is a sort order marker
             // Note that ASC/DESC are valid field identifiers! So we must check

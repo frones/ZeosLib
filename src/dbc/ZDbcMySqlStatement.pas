@@ -1251,9 +1251,11 @@ begin
     CachedResultSet.SetConcurrency(rcReadOnly);
     {Need to fetch all data. The handles must be released for mutiple
       Resultsets}
-    CachedResultSet.AfterLast;//Fetch all
+    CachedResultSet.Last;//Fetch all
     CachedResultSet.BeforeFirst;//Move to first pos
-    NativeResultSet.ResetCursor; //Release the handles
+    if FQueryHandle <> nil then
+      FPlainDriver.FreeResult(FQueryHandle);
+    //NativeResultSet.ResetCursor; //Release the handles
     Result := CachedResultSet;
   end
   else

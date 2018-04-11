@@ -58,18 +58,11 @@ interface
 {$I ZParseSql.inc}
 
 uses
-  Classes, SysUtils, ZTokenizer, ZGenericSqlToken, ZCompatibility;
+  Classes, SysUtils, ZTokenizer, ZGenericSqlToken;
 
 type
   {** Implements a quote string state object. }
-  TZODBCQuoteState = class (TZQuoteState)
-  public
-    function NextToken(Stream: TStream; FirstChar: Char;
-      {%H-}Tokenizer: TZTokenizer): TZToken; override;
-
-    function EncodeString(const Value: string; QuoteChar: Char): string; override;
-    function DecodeString(const Value: string; QuoteChar: Char): string; override;
-  end;
+  TZODBCQuoteState = TZGenericSQLBracketQuoteState;
 
   {** Implements a default tokenizer object. }
   TZODBCTokenizer = class (TZGenericSQLTokenizer)
@@ -78,86 +71,6 @@ type
   end;
 
 implementation
-
-uses ZFastCode;
-
-{ TZODBCQuoteState }
-
-{**
-  Return a quoted string token from a reader. This method
-  will collect characters until it sees a match to the
-  character that the tokenizer used to switch to this state.
-
-  @return a quoted string token from a reader
-}
-function TZODBCQuoteState.NextToken(Stream: TStream; FirstChar: Char;
-  Tokenizer: TZTokenizer): TZToken;
-var
-  ReadChar: Char;
-  LastChar: Char;
-begin
-  Result.Value := '';
-  InitBuf(FirstChar);
-  LastChar := #0;
-  while Stream.Read(ReadChar, SizeOf(Char)) > 0 do
-  begin
-    if ((LastChar = FirstChar) and (ReadChar <> FirstChar)
-      and (FirstChar <> '[')) or ((FirstChar = '[') and (LastChar = ']')) then
-    begin
-      Stream.Seek(-SizeOf(Char), soFromCurrent);
-      Break;
-    end;
-    ToBuf(ReadChar, Result.Value);
-    if (LastChar = FirstChar) and (ReadChar = FirstChar) then
-      LastChar := #0
-    else LastChar := ReadChar;
-  end;
-  FlushBuf(Result.Value);
-
-  if (FirstChar = '"') or (FirstChar='[') then
-    Result.TokenType := ttQuotedIdentifier
-  else Result.TokenType := ttQuoted;
-end;
-
-{**
-  Encodes a string value.
-  @param Value a string value to be encoded.
-  @param QuoteChar a string quote character.
-  @returns an encoded string.
-}
-function TZODBCQuoteState.EncodeString(const Value: string; QuoteChar: Char): string;
-begin
-  if QuoteChar = '[' then
-    Result := '[' + Value + ']'
-  else if CharInSet(QuoteChar, [#39, '"']) then
-    Result := QuoteChar + Value + QuoteChar
-  else Result := Value;
-end;
-
-{**
-  Decodes a string value.
-  @param Value a string value to be decoded.
-  @param QuoteChar a string quote character.
-  @returns an decoded string.
-}
-function TZODBCQuoteState.DecodeString(const Value: string; QuoteChar: Char): string;
-begin
-  Result := Value;
-  if Length(Value) >= 2 then
-  begin
-    if CharInSet(QuoteChar, [#39, '"']) and (Value[1] = QuoteChar)
-      and (Value[Length(Value)] = QuoteChar) then
-    begin
-      if Length(Value) > 2 then
-        Result := AnsiDequotedStr(Value, QuoteChar)
-      else Result := '';
-    end
-    else if (QuoteChar = '[') and (Value[1] = QuoteChar)
-      and (Value[Length(Value)] = ']') then
-      Result := Copy(Value, 2, Length(Value) - 2)
-  end;
-end;
-
 
 { TZODBCTokenizer }
 

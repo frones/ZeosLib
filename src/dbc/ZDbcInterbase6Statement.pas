@@ -259,7 +259,7 @@ begin
   inherited Create(Connection, SQL, Info);
 
   FIBConnection := Connection as IZInterbase6Connection;
-  FPlainDriver := FIBConnection.GetIZPlainDriver.GetInstance as TZInterbasePlainDriver;
+  FPlainDriver := TZInterbasePlainDriver(FIBConnection.GetIZPlainDriver.GetInstance);
   FCodePageArray := FPlainDriver.GetCodePageArray;
   FCodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
   ResultSetType := rtForwardOnly;

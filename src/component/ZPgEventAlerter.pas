@@ -242,7 +242,7 @@ var
   Tmp      : array [0..255] of AnsiChar;
   Handle   : PZPostgreSQLConnect;
   ICon     : IZPostgreSQLConnection;
-  PlainDRV : IZPostgreSQLPlainDriver;
+  PlainDRV : TZPostgreSQLPlainDriver;
   Res: PGresult;
 begin
   if not Boolean(Pos('postgresql', FConnection.Protocol)) then
@@ -264,7 +264,7 @@ begin
     for I := 0 to FChildEvents.Count-1 do
   begin
     {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(Tmp, 'listen ' + AnsiString(FChildEvents.Strings[I]));
-    Res := PlainDRV.ExecuteQuery(Handle, Tmp);
+    Res := PlainDRV.PQExec(Handle, Tmp);
     if (PlainDRV.PQresultStatus(Res) <> TZPostgreSQLExecStatusType(
       PGRES_COMMAND_OK)) then
    begin
@@ -283,7 +283,7 @@ var
   tmp      : array [0..255] of AnsiChar;
   Handle   : PZPostgreSQLConnect;
   ICon     : IZPostgreSQLConnection;
-  PlainDRV : IZPostgreSQLPlainDriver;
+  PlainDRV : TZPostgreSQLPlainDriver;
   Res: PGresult;
 begin
   if not FActive then
@@ -298,7 +298,7 @@ begin
   for I := 0 to FChildEvents.Count-1 do
   begin
     {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(Tmp, 'unlisten ' + AnsiString(FChildEvents.Strings[i]));
-    Res := PlainDRV.ExecuteQuery(Handle, Tmp);
+    Res := PlainDRV.PQExec(Handle, Tmp);
     if (PlainDRV.PQresultStatus(Res) <> TZPostgreSQLExecStatusType(PGRES_COMMAND_OK)) then
     begin
       PlainDRV.PQclear(Res);
@@ -313,7 +313,7 @@ var
   Notify: PZPostgreSQLNotify;
   Handle   : PZPostgreSQLConnect;
   ICon     : IZPostgreSQLConnection;
-  PlainDRV : IZPostgreSQLPlainDriver;
+  PlainDRV : TZPostgreSQLPlainDriver;
 begin
   ICon      := (FConnection.DbcConnection as IZPostgreSQLConnection);
   Handle    := ICon.GetConnectionHandle;
@@ -330,15 +330,15 @@ begin
   end;
   PlainDRV  := ICon.GetPlainDriver;
 
-  if PlainDRV.ConsumeInput(Handle)=1 then
+  if PlainDRV.PQconsumeInput(Handle)=1 then
   begin
     while True do
     begin
-      Notify := PlainDRV.Notifies(Handle);
+      Notify := PZPostgreSQLNotify(PlainDRV.PQnotifies(Handle));
       if Notify = nil then
         Break;
       HandleNotify(Notify);
-      PlainDRV.FreeNotify(Notify);
+      PlainDRV.PQfreeNotify(PPGnotify(Notify));
     end;
   end;
 end;

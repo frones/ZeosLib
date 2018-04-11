@@ -549,594 +549,180 @@ type
   PPQArgBlock = ^PQArgBlock;
 
 {Prepared statement types}
-  TPQparamTypes = {array of }POid;
+  TPQparamTypes = array of Oid;
   TPQparamValues = array of PAnsichar;
   TPQparamLengths = array of Integer;
   TPQparamFormats = array of Integer;
 
-
-{ ************** Plain API Function types definition ************* }
-{ ===	in fe-connect.c === }
-  TPQconnectdb     = function(ConnInfo: PAnsiChar): PPGconn; cdecl; // FirmOS 8.1 OK
-  TPQsetdbLogin    = function(Host, Port, Options, Tty, Db, User, Passwd: PAnsiChar): PPGconn; cdecl; // FirmOS 8.1 OK
-//15022006 FirmOS: omitting   PQconnectStart
-//15022006 FirmOS: omitting  PQconnectPoll
-  TPQconndefaults  = function: PPQconninfoOption; cdecl;
-  TPQfinish        = procedure(Handle: PPGconn); cdecl;
-  TPQreset         = procedure(Handle: PPGconn); cdecl;
-//15022006 FirmOS: omitting PQresetStart
-//15022006 FirmOS: omitting PQresetPoll
-  TPQrequestCancel = function(Handle: PPGconn): Integer; cdecl;
-  TPQdb            = function(Handle: PPGconn): PAnsiChar; cdecl;
-  TPQuser          = function(Handle: PPGconn): PAnsiChar; cdecl;
-  TPQpass          = function(Handle: PPGconn): PAnsiChar; cdecl;
-  TPQhost          = function(Handle: PPGconn): PAnsiChar; cdecl;
-  TPQport          = function(Handle: PPGconn): PAnsiChar; cdecl;
-  TPQtty           = function(Handle: PPGconn): PAnsiChar; cdecl;
-  TPQoptions       = function(Handle: PPGconn): PAnsiChar; cdecl;
-  TPQstatus        = function(Handle: PPGconn): TZPostgreSQLConnectStatusType; cdecl;
-//TBD  PGTransactionStatusType PQtransactionStatus(const PGconn *conn);
-//15022006 FirmOS: omitting const char *PQparameterStatus(const PGconn *conn, const char *paramName);
-//15022006 FirmOS: omitting  PQprotocolVersion
-  TPQserverVersion = function(Handle: PPGconn): Integer; cdecl;
-  TPQerrorMessage  = function(Handle: PPGconn): PAnsiChar; cdecl;
-  TPQsocket        = function(Handle: PPGconn): Integer; cdecl;
-  TPQbackendPID    = function(Handle: PPGconn): Integer; cdecl;
-//15022006 FirmOS: omitting  SSL *PQgetssl(const PGconn *conn);
-  TPQtrace         = procedure(Handle: PPGconn; DebugPort: Pointer); cdecl;
-  TPQuntrace       = procedure(Handle: PPGconn); cdecl;
-  TPQsetNoticeProcessor = procedure(Handle: PPGconn; Proc: PQnoticeProcessor; Arg: Pointer); cdecl;
-
-  TPQclientEncoding = function(Handle: PPGconn): Integer; cdecl; //EgonHugeist
-{ === in fe-exec.c === }
-//* Simple synchronous query */
-  TPQexec          = function(Handle: PPGconn; Query: PAnsiChar): PPGresult; cdecl;
-  TPQexecParams    = function(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: TPQparamTypes; paramValues: PPointer;
-        paramLengths: PInteger; paramFormats: PInteger;
-        resultFormat: Integer): PPGresult; cdecl;
-  TPQprepare        = function(Handle: PPGconn; stmtName: PAnsichar;
-        query: PAnsiChar; nParams: Integer; paramTypes: PInteger): PPGresult; cdecl;
-  TPQexecPrepared   = function(Handle: PPGconn; stmtName: PAnsichar;
-        nParams: Integer; paramValues: PPointer; paramLengths: PInteger;
-        paramFormats: PInteger; resultFormat: Integer): PPGresult; cdecl;
-//* Interface for multiple-result or asynchronous queries */
-  TPQsendQuery      = function(Handle: PPGconn; query: PAnsiChar): Integer; cdecl;
-  TPQsendQueryParams= function(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: PInteger; paramValues: PPointer;
-        paramLengths: PInteger; paramFormats: PInteger;
-        resultFormat: Integer): Integer; cdecl;
-  TPQsendPrepare    = function(Handle: PPGconn; stmtName: PAnsichar;
-        query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): Integer; cdecl;
-  TPQsendQueryPrepared = function(Handle: PPGconn; stmtName: PAnsichar;
-         nParams: Integer; paramValues: PPointer; paramLengths: PInteger;
-         paramFormats: PInteger; resultFormat: Integer): Integer; cdecl;
-  TPQgetResult     = function(Handle: PPGconn): PPGresult;  cdecl;
-  TPQsetSingleRowMode = function(Handle: PPGconn): Integer; cdecl;
-//* Describe prepared statements and portals */
-  TPQdescribePrepared = function(Handle: PPGconn; const stmt: PAnsiChar): PPGresult; cdecl;
-  TPQdescribePortal = function(Handle: PPGconn; const portal: PAnsiChar): PPGresult; cdecl;
-  TPQsendDescribePrepared = function(Handle: PPGconn; const stmt: PAnsiChar): Integer; cdecl;
-  TPQsendDescribePortal = function(Handle: PPGconn; const portal: PAnsiChar): Integer; cdecl;
-
-  TPQnotifies      = function(Handle: PPGconn): PPGnotify; cdecl;
-  TPQfreeNotify    = procedure(Handle: PPGnotify);cdecl;
-  TPQisBusy        = function(Handle: PPGconn): Integer; cdecl;
-  TPQconsumeInput  = function(Handle: PPGconn): Integer; cdecl;
-  TPQgetCancel     = function(Handle: PPGconn): PGcancel; cdecl;
-  TPQfreeCancel    = procedure(Canc: PGcancel); cdecl;
-  TPQcancel        = function(Canc: PGcancel; Buffer: PChar; BufSize: Integer): Integer;
-  TPQgetline       = function(Handle: PPGconn; Str: PAnsiChar; length: Integer): Integer; cdecl;
-  TPQputline       = function(Handle: PPGconn; Str: PAnsiChar): Integer; cdecl;
-  TPQgetlineAsync  = function(Handle: PPGconn; Buffer: PAnsiChar; BufSize: Integer): Integer; cdecl;
-  TPQputnbytes     = function(Handle: PPGconn; Buffer: PAnsiChar; NBytes: Integer): Integer; cdecl;
-  TPQendcopy       = function(Handle: PPGconn): Integer; cdecl;
-  TPQfn            = function(Handle: PPGconn; fnid: Integer; result_buf, result_len: PInteger; result_is_int: Integer; args: PPQArgBlock; nargs: Integer): PPGresult; cdecl;
-  TPQresultStatus  = function(Result: PPGresult): TZPostgreSQLExecStatusType; cdecl;
-  TPQresultErrorMessage = function(Result: PPGresult): PAnsiChar; cdecl;
-  TPQresultErrorField=function(result: PPGResult; fieldcode:integer):PAnsiChar;cdecl; // postgresql 8
-  TPQntuples       = function(Result: PPGresult): Integer; cdecl;
-  TPQnfields       = function(Result: PPGresult): Integer; cdecl;
-  TPQbinaryTuples  = function(Result: PPGresult): Integer; cdecl;
-  TPQfname         = function(Result: PPGresult; field_num: Integer): PAnsiChar; cdecl;
-  TPQfnumber       = function(Result: PPGresult; field_name: PAnsiChar): Integer; cdecl;
-  TPQftable        = function(Result: PPGresult; field_num: Integer): Oid; cdecl;
-  TPQftablecol     = function(Result: PPGresult; field_num: Integer): Integer; cdecl;
-  TPQftype         = function(Result: PPGresult; field_num: Integer): Oid; cdecl;
-  TPQfsize         = function(Result: PPGresult; field_num: Integer): Integer; cdecl;
-  TPQfmod          = function(Result: PPGresult; field_num: Integer): Integer; cdecl;
-  TPQcmdStatus     = function(Result: PPGresult): PAnsiChar; cdecl;
-  TPQoidValue      = function(Result: PPGresult): Oid; cdecl;
-  TPQoidStatus     = function(Result: PPGresult): PAnsiChar; cdecl;
-  TPQcmdTuples     = function(Result: PPGresult): PAnsiChar; cdecl;
-  TPQgetvalue      = function(Result: PPGresult; tup_num, field_num: Integer): PAnsiChar; cdecl;
-  TPQgetlength     = function(Result: PPGresult; tup_num, field_num: Integer): Integer; cdecl;
-  TPQgetisnull     = function(Result: PPGresult; tup_num, field_num: Integer): Integer; cdecl;
-  TPQclear         = procedure(Result: PPGresult); cdecl;
-  TPQmakeEmptyPGresult  = function(Handle: PPGconn; status: TZPostgreSQLExecStatusType): PPGresult; cdecl;
-  //* Quoting strings before inclusion in queries. */
-  // postgresql 8
-  TPQescapeStringConn = function(Handle: PGconn; ToChar: PAnsiChar;
-    const FromChar: PAnsiChar; length: NativeUInt; error: PInteger): NativeUInt;cdecl; //7.3
-  TPQescapeLiteral    = function(Handle: PGconn; const str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl;
-  TPQescapeIdentifier = function(Handle: PGconn; const str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl; //7.3
-  TPQescapeByteaConn  = function(Handle: PPGconn;const from:PAnsiChar;from_length:longword;to_lenght:PLongword):PAnsiChar;cdecl;
-  TPQunescapeBytea    = function(const from:PAnsiChar;to_lenght:PLongword):PAnsiChar;cdecl;
-  TPQFreemem          = procedure(ptr:Pointer);cdecl;
-
-  //* These forms are deprecated! */
-  TPQescapeString     = function(ToChar: PAnsiChar; const FormChar: PAnsiChar; length: NativeUInt): NativeUInt;cdecl; //7.2
-  TPQescapeBytea      = function(const from:PAnsiChar;from_length:longword;to_lenght:PLongword):PAnsiChar;cdecl; //7.2
-
-  { === in fe-lobj.c === }
-  Tlo_open         = function(Handle: PPGconn; lobjId: Oid; mode: Integer): Integer; cdecl;
-  Tlo_close        = function(Handle: PPGconn; fd: Integer): Integer; cdecl;
-  Tlo_read         = function(Handle: PPGconn; fd: Integer; buf: PAnsiChar; len: NativeUInt): Integer; cdecl;
-  Tlo_write        = function(Handle: PPGconn; fd: Integer; buf: PAnsiChar; len: NativeUInt): Integer; cdecl;
-  Tlo_lseek        = function(Handle: PPGconn; fd, offset, whence: Integer): Integer; cdecl;
-  Tlo_creat        = function(Handle: PPGconn; mode: Integer): Oid; cdecl;
-  Tlo_tell         = function(Handle: PPGconn; fd: Integer): Integer; cdecl;
-  Tlo_unlink       = function(Handle: PPGconn; lobjId: Oid): Integer; cdecl;
-  Tlo_import       = function(Handle: PPGconn; filename: PAnsiChar): Oid; cdecl;
-  Tlo_export       = function(Handle: PPGconn; lobjId: Oid; filename: PAnsiChar): Integer; cdecl;
-
-{ ************** Collection of Plain API Function types definition ************* }
-TZPOSTGRESQL_API = record
-{ ===	in fe-connect.c === }
-  PQconnectdb:     TPQconnectdb;
-  PQsetdbLogin:    TPQsetdbLogin;
-  PQconndefaults:  TPQconndefaults;
-  PQfinish:        TPQfinish;
-  PQreset:         TPQreset;
-  PQrequestCancel: TPQrequestCancel;
-  PQdb:            TPQdb;
-  PQuser:          TPQuser;
-  PQpass:          TPQpass;
-  PQhost:          TPQhost;
-  PQport:          TPQport;
-  PQtty:           TPQtty;
-  PQoptions:       TPQoptions;
-  PQstatus:        TPQstatus;
-  PQserverVersion: TPQserverVersion;
-  PQerrorMessage:  TPQerrorMessage;
-  PQsocket:        TPQsocket;
-  PQbackendPID:    TPQbackendPID;
-  PQtrace:         TPQtrace;
-  PQuntrace:       TPQuntrace;
-  PQsetNoticeProcessor: TPQsetNoticeProcessor;
-  PQclientEncoding: TPQclientEncoding;
-{ === in fe-exec.c === }
-  PQexec:          TPQexec;
-  PQexecParams:    TPQexecParams;
-  PQprepare:       TPQprepare;
-  PQexecPrepared:  TPQexecPrepared;
-  PQsendQuery:     TPQsendQuery;
-  PQsendQueryParams: TPQsendQueryParams;
-  PQsendPrepare:   TPQsendPrepare;
-  PQsendQueryPrepared: TPQsendQueryPrepared;
-  PQgetResult:     TPQgetResult;
-  PQsetSingleRowMode: TPQsetSingleRowMode;
-  //* Describe prepared statements and portals */
-  PQdescribePrepared:     TPQdescribePrepared;
-  PQdescribePortal:       TPQdescribePortal;
-  PQsendDescribePrepared: TPQsendDescribePrepared;
-  PQsendDescribePortal:   TPQsendDescribePortal;
-  PQnotifies:      TPQnotifies;
-  PQfreeNotify:    TPQfreeNotify;
-  PQisBusy:        TPQisBusy;
-  PQconsumeInput:  TPQconsumeInput;
-  PQgetCancel:     TPQgetCancel;
-  PQfreeCancel:    TPQfreeCancel;
-  PQcancel:        TPQcancel;
-  PQgetline:       TPQgetline;
-  PQputline:       TPQputline;
-  PQgetlineAsync:  TPQgetlineAsync;
-  PQputnbytes:     TPQputnbytes;
-  PQendcopy:       TPQendcopy;
-  PQfn:            TPQfn;
-  PQresultStatus:  TPQresultStatus;
-  PQresultErrorMessage: TPQresultErrorMessage;
-  PQresultErrorField: TPQresultErrorField; // postgresql 8
-  PQntuples:       TPQntuples;
-  PQnfields:       TPQnfields;
-  PQbinaryTuples:  TPQbinaryTuples;
-  PQfname:         TPQfname;
-  PQfnumber:       TPQfnumber;
-  PQftable:        TPQftable;
-  PQftablecol:     TPQftablecol;
-  PQftype:         TPQftype;
-  PQfsize:         TPQfsize;
-  PQfmod:          TPQfmod;
-  PQcmdStatus:     TPQcmdStatus;
-  PQoidValue:      TPQoidValue;
-  PQoidStatus:     TPQoidStatus;
-  PQcmdTuples:     TPQcmdTuples;
-  PQgetvalue:      TPQgetvalue;
-  PQgetlength:     TPQgetlength;
-  PQgetisnull:     TPQgetisnull;
-  PQclear:         TPQclear;
-  PQmakeEmptyPGresult:  TPQmakeEmptyPGresult;
-
-  PQescapeStringConn: TPQescapeStringConn; //since 7.3
-  PQescapeByteaConn:  TPQescapeByteaConn; // postgresql since 7.3
-  PQFreemem:          TPQFreemem; // since postgresql 7.4
-  PQescapeString:     TPQescapeString; // since postgresql 7.4
-  PQescapeBytea:      TPQescapeBytea; // since postgresql 7.4
-  PQunescapeBytea:    TPQunescapeBytea; // since postgresql 8.3
-  PQescapeLiteral:    TPQescapeLiteral; // since postgresql 9.0
-  PQescapeIdentifier: TPQescapeIdentifier; // since postgresql 9.0
-
-{ === in fe-lobj.c === }
-  lo_open:         Tlo_open;
-  lo_close:        Tlo_close;
-  lo_read:         Tlo_read;
-  lo_write:        Tlo_write;
-  lo_lseek:        Tlo_lseek;
-  lo_creat:        Tlo_creat;
-  lo_tell:         Tlo_tell;
-  lo_unlink:       Tlo_unlink;
-  lo_import:       Tlo_import;
-  lo_export:       Tlo_export;
-end;
-
-PAPI = ^TZPOSTGRESQL_API;
 
 type
 
   {** Represents a generic interface to PostgreSQL native API. }
   IZPostgreSQLPlainDriver = interface (IZPlainDriver)
     ['{03CD6345-2D7A-4FE2-B03D-3C5656789FEB}']
-
-    function GetStandardConformingStrings: Boolean;
-
-    function EscapeBytea(Handle: PGconn; from: PAnsiChar; from_length: LongWord; to_lenght:PLongword): PAnsiChar;
-    function EscapeString(Handle: PGconn; ToChar: PAnsiChar; const FromChar: PAnsiChar;
-      length: NativeUInt; error: PInteger): NativeUInt; overload;
-    function UnescapeBytea(const from:PAnsiChar;to_lenght:PLongword):PAnsiChar;
-    procedure FreeMem(ptr:Pointer);
-
-    function SupportsEncodeBYTEA: Boolean;
-    function SupportsDecodeBYTEA: Boolean;
-    function SupportsStringEscaping(const ClientDependend: Boolean): Boolean;
-
-    function ConnectDatabase(ConnInfo: PAnsiChar): PZPostgreSQLConnect;
-    function SetDatabaseLogin(Host, Port, Options, TTY, Db, User,Passwd: PAnsiChar): PZPostgreSQLConnect;
-    function GetConnectDefaults: PZPostgreSQLConnectInfoOption;
-
-    procedure Finish(Handle: PZPostgreSQLConnect);
-    procedure Reset(Handle: PZPostgreSQLConnect);
-    function RequestCancel(Handle: PZPostgreSQLConnect): Integer;
-    function GetDatabase(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetUser(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetPassword(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetHost(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetPort(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetTTY(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetOptions(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetStatus(Handle: PZPostgreSQLConnect):TZPostgreSQLConnectStatusType;
-    function GetClientEncoding(Handle: PPGconn): Integer; //EgonHugeist
-
-    function GetErrorMessage(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetSocket(Handle: PZPostgreSQLConnect): Integer;
-    function GetBackendPID(Handle: PZPostgreSQLConnect): Integer;
-    procedure Trace(Handle: PZPostgreSQLConnect; DebugPort: Pointer);
-    procedure Untrace(Handle: PZPostgreSQLConnect);
-    procedure SetNoticeProcessor(Handle: PZPostgreSQLConnect;Proc: TZPostgreSQLNoticeProcessor; Arg: Pointer);
-
-    function ExecuteQuery(Handle: PZPostgreSQLConnect;Query: PAnsiChar): PZPostgreSQLResult;
-    function ExecParams(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
-        paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
-        resultFormat: Integer): PPGresult;
-    function Prepare(Handle: PPGconn; stmtName: PAnsichar;
-        query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): PPGresult;
-    function ExecPrepared(Handle: PPGconn; stmtName: PAnsichar;
-        nParams: Integer; paramValues: TPQparamValues; paramLengths: TPQparamLengths;
-        paramFormats: TPQparamFormats; resultFormat: Integer): PPGresult;
-    function SendQuery(Handle: PZPostgreSQLConnect; Query: PAnsiChar): Integer;
-    function SendQueryParams(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
-        paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
-        resultFormat: Integer): Integer;
-    function SendPrepare(Handle: PPGconn; stmtName: PAnsichar;
-        query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): Integer;
-    function SendQueryPrepared(Handle: PPGconn; stmtName: PAnsichar;
-         nParams: Integer; paramValues: TPQparamValues;
-         paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
-         resultFormat: Integer): Integer;
-    function PGGetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
-    //* Describe prepared statements and portals */
-    function DescribePrepared(Handle: PPGconn; const stmt: PAnsiChar): PPGresult;
-    function DescribePortal(Handle: PPGconn; const portal: PAnsiChar): PPGresult;
-    function SendDescribePrepared(Handle: PPGconn; const stmt: PAnsiChar): Integer;
-    function SendDescribePortal(Handle: PPGconn; const portal: PAnsiChar): Integer;
-    function Notifies(Handle: PZPostgreSQLConnect): PZPostgreSQLNotify;
-    procedure FreeNotify(Handle: PZPostgreSQLNotify);
-
-    function IsBusy(Handle: PZPostgreSQLConnect): Integer;
-    function ConsumeInput(Handle: PZPostgreSQLConnect): Integer;
-    function GetCancel(Handle: PZPostgreSQLConnect): PZPostgreSQLCancel;
-    procedure FreeCancel( Canc: PZPostgreSQLCancel);
-    function Cancel( Canc: PZPostgreSQLCancel; Buffer: PChar; Length: Integer): Integer;
-    function GetLine(Handle: PZPostgreSQLConnect; Str: PAnsiChar;
-      Length: Integer): Integer;
-    function PutLine(Handle: PZPostgreSQLConnect; Str: PAnsiChar): Integer;
-    function GetLineAsync(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar;
-      Length: Integer): Integer;
-
-    function PutBytes(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar;
-      Length: Integer): Integer;
-    function EndCopy(Handle: PZPostgreSQLConnect): Integer;
-    function ExecuteFunction(Handle: PZPostgreSQLConnect; fnid: Integer;
-      result_buf, result_len: PInteger; result_is_int: Integer;
-      args: PZPostgreSQLArgBlock; nargs: Integer): PZPostgreSQLResult;
-    function PQresultStatus(Res: PZPostgreSQLResult):
-      TZPostgreSQLExecStatusType;
-
-    function GetResultErrorMessage(Res: PZPostgreSQLResult): PAnsiChar;
-    function GetResultErrorField(Res: PZPostgreSQLResult; FieldCode: TZPostgreSQLFieldCode): PAnsiChar;
-
-    function GetRowCount(Res: PZPostgreSQLResult): Integer;
-    function GetFieldCount(Res: PZPostgreSQLResult): Integer;
-
-    function GetBinaryTuples(Res: PZPostgreSQLResult): Integer;
-    function PQfname(Res: PZPostgreSQLResult; FieldNum: Integer): PAnsiChar;
-    function GetFieldNumber(Res: PZPostgreSQLResult; FieldName: PAnsiChar): Integer;
-    function PQftable(Res: PZPostgreSQLResult; FieldNum: Integer) : Oid;
-    function PQftablecol(Res: PZPostgreSQLResult; FieldNum: Integer) : Integer;
-    function PQftype(Res: PZPostgreSQLResult; FieldNum: Integer): Oid;
-    function PQfsize(Res: PZPostgreSQLResult;  FieldNum: Integer): Integer;
-    function GetFieldMode(Res: PZPostgreSQLResult; FieldNum: Integer): Integer;
-    function GetCommandStatus(Res: PZPostgreSQLResult): PAnsiChar;
-    function GetOidValue(Res: PZPostgreSQLResult): Oid;
-    function GetOidStatus(Res: PZPostgreSQLResult): PAnsiChar;
-    function GetCommandTuples(Res: PZPostgreSQLResult): PAnsiChar;
-
-    function GetValue(Res: PZPostgreSQLResult;  TupNum, FieldNum: Integer): PAnsiChar;
-    function GetLength(Res: PZPostgreSQLResult; TupNum, FieldNum: Integer): Integer;
-    function GetIsNull(Res: PZPostgreSQLResult; TupNum, FieldNum: Integer): Integer;
-    procedure PQclear(Res: PZPostgreSQLResult);
-
-    function MakeEmptyResult(Handle: PZPostgreSQLConnect;
-      Status: TZPostgreSQLExecStatusType): PZPostgreSQLResult;
-
-    function OpenLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
-      Mode: Integer): Integer;
-    function CloseLargeObject(Handle: PZPostgreSQLConnect;
-      Fd: Integer): Integer;
-    function ReadLargeObject(Handle: PZPostgreSQLConnect; Fd: Integer;
-      Buffer: PAnsiChar; Length: Integer): Integer;
-    function WriteLargeObject(Handle: PZPostgreSQLConnect; Fd: Integer;
-      Buffer: PAnsiChar; Length: Integer): Integer;
-    function SeekLargeObject(Handle: PZPostgreSQLConnect;
-      Fd, Offset, Whence: Integer): Integer;
-    function CreateLargeObject(Handle: PZPostgreSQLConnect;
-      Mode: Integer): Oid;
-    function TellLargeObject(Handle: PZPostgreSQLConnect;
-      Fd: Integer): Integer;
-    function UnlinkLargeObject(Handle: PZPostgreSQLConnect;
-      ObjId: Oid): Integer;
-    function ImportLargeObject(Handle: PZPostgreSQLConnect;
-      FileName: PAnsiChar): Oid;
-    function ExportLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
-      FileName: PAnsiChar): Integer;
-    function GetPlainFunc:PAPI;
-
-    function PQsetSingleRowMode(Handle: PZPostgreSQLConnect): Integer; //PG9+
   end;
 
   {** Implements a base driver for PostgreSQL}
-  TZPostgreSQLBaseDriver = class(TZAbstractPlainDriver, IZPostgreSQLPlainDriver)
+  TZPostgreSQLPlainDriver = class(TZAbstractPlainDriver, IZPostgreSQLPlainDriver)
   protected
-    POSTGRESQL_API: TZPOSTGRESQL_API;
-    function GetStandardConformingStrings: Boolean; virtual;
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
     procedure LoadApi; override;
   public
     constructor Create;
-    function EscapeBytea(Handle: PGconn; from: PAnsiChar; from_length: LongWord; to_lenght:PLongword): PAnsiChar;
-    function EscapeString(Handle: PGconn; ToChar: PAnsiChar; const FromChar: PAnsiChar;
-      length: NativeUInt; error: PInteger): NativeUInt; overload;
-    function UnescapeBytea(const from:PAnsiChar;to_lenght:PLongword):PAnsiChar;
-    procedure FreeMem(ptr:Pointer);
-
-    function SupportsEncodeBYTEA: Boolean;
-    function SupportsDecodeBYTEA: Boolean;
-    function SupportsStringEscaping(const ClientDependend: Boolean): Boolean;
-
-    function ConnectDatabase(ConnInfo: PAnsiChar): PZPostgreSQLConnect;
-    function SetDatabaseLogin(Host, Port, Options, TTY, Db, User,
-      Passwd: PAnsiChar): PZPostgreSQLConnect;
-    function GetConnectDefaults: PZPostgreSQLConnectInfoOption;
-
-    procedure Finish(Handle: PZPostgreSQLConnect);
-    procedure Reset(Handle: PZPostgreSQLConnect);
-    function RequestCancel(Handle: PZPostgreSQLConnect): Integer;
-    function GetDatabase(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetUser(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetPassword(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetHost(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetPort(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetTTY(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetOptions(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetStatus(Handle: PZPostgreSQLConnect):
-      TZPostgreSQLConnectStatusType;
-    function GetClientEncoding(Handle: PPGconn): Integer; //EgonHugeist
-
-    function GetErrorMessage(Handle: PZPostgreSQLConnect): PAnsiChar;
-    function GetSocket(Handle: PZPostgreSQLConnect): Integer;
-    function GetBackendPID(Handle: PZPostgreSQLConnect): Integer;
-    procedure Trace(Handle: PZPostgreSQLConnect; DebugPort: Pointer);
-    procedure Untrace(Handle: PZPostgreSQLConnect);
-    procedure SetNoticeProcessor(Handle: PZPostgreSQLConnect;
-      Proc: TZPostgreSQLNoticeProcessor; Arg: Pointer);
-
-    function ExecuteQuery(Handle: PZPostgreSQLConnect;
-      Query: PAnsiChar): PZPostgreSQLResult;
-    function ExecParams(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
-        paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
-        resultFormat: Integer): PPGresult;
-    function Prepare(Handle: PPGconn; stmtName: PAnsichar;
-        query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): PPGresult;
-    function ExecPrepared(Handle: PPGconn; stmtName: PAnsichar;
-        nParams: Integer; paramValues: TPQparamValues; paramLengths: TPQparamLengths;
-        paramFormats: TPQparamFormats; resultFormat: Integer): PPGresult;
-    function SendQuery(Handle: PZPostgreSQLConnect; Query: PAnsiChar): Integer;
-    function SendQueryParams(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
-        paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
-        resultFormat: Integer): Integer;
-    function SendPrepare(Handle: PPGconn; stmtName: PAnsichar;
-        query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): Integer;
-    function SendQueryPrepared(Handle: PPGconn; stmtName: PAnsichar;
-         nParams: Integer; paramValues: TPQparamValues;
-         paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
-         resultFormat: Integer): Integer;
-    function PGGetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
-    function DescribePrepared(Handle: PPGconn; const stmt: PAnsiChar): PPGresult;
-    function DescribePortal(Handle: PPGconn; const portal: PAnsiChar): PPGresult;
-    function SendDescribePrepared(Handle: PPGconn; const stmt: PAnsiChar): Integer;
-    function SendDescribePortal(Handle: PPGconn; const portal: PAnsiChar): Integer;
-
-    function Notifies(Handle: PZPostgreSQLConnect): PZPostgreSQLNotify;
-    procedure FreeNotify(Handle: PZPostgreSQLNotify);
-
-    function IsBusy(Handle: PZPostgreSQLConnect): Integer;
-    function ConsumeInput(Handle: PZPostgreSQLConnect): Integer;
-    function GetCancel(Handle: PZPostgreSQLConnect): PZPostgreSQLCancel;
-    procedure FreeCancel( Canc: PZPostgreSQLCancel);
-    function Cancel( Canc: PZPostgreSQLCancel; Buffer: PChar; Length: Integer): Integer;
-    function GetLine(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar;
-      Length: Integer): Integer;
-    function PutLine(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar): Integer;
-    function GetLineAsync(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar;
-      Length: Integer): Integer;
-
-    function PutBytes(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar;
-      Length: Integer): Integer;
-    function EndCopy(Handle: PZPostgreSQLConnect): Integer;
-    function ExecuteFunction(Handle: PZPostgreSQLConnect; fnid: Integer;
-      result_buf, result_len: PInteger; result_is_int: Integer;
-      args: PZPostgreSQLArgBlock; nargs: Integer): PZPostgreSQLResult;
-    function PQresultStatus(Res: PZPostgreSQLResult): TZPostgreSQLExecStatusType;
-    function GetResultErrorMessage(Res: PZPostgreSQLResult): PAnsiChar;
-    function GetResultErrorField(Res: PZPostgreSQLResult;FieldCode:TZPostgreSQLFieldCode):PAnsiChar;
-
-    function GetRowCount(Res: PZPostgreSQLResult): Integer;
-    function GetFieldCount(Res: PZPostgreSQLResult): Integer;
-
-    function GetBinaryTuples(Res: PZPostgreSQLResult): Integer;
-    function PQfname(Res: PZPostgreSQLResult;
-      FieldNum: Integer): PAnsiChar;
-    function GetFieldNumber(Res: PZPostgreSQLResult;
-      FieldName: PAnsiChar): Integer;
-    function PQftable(Res: PZPostgreSQLResult; FieldNum: Integer) : Oid;
-    function PQftablecol(Res: PZPostgreSQLResult; FieldNum: Integer) : Integer;
-    function PQftype(Res: PZPostgreSQLResult;
-      FieldNum: Integer): Oid;
-    function PQfsize(Res: PZPostgreSQLResult;
-      FieldNum: Integer): Integer;
-    function GetFieldMode(Res: PZPostgreSQLResult;
-      FieldNum: Integer): Integer;
-    function GetCommandStatus(Res: PZPostgreSQLResult): PAnsiChar;
-    function GetOidValue(Res: PZPostgreSQLResult): Oid;
-    function GetOidStatus(Res: PZPostgreSQLResult): PAnsiChar;
-    function GetCommandTuples(Res: PZPostgreSQLResult): PAnsiChar;
-
-    function GetValue(Res: PZPostgreSQLResult;
-      TupNum, FieldNum: Integer): PAnsiChar;
-    function GetLength(Res: PZPostgreSQLResult;
-      TupNum, FieldNum: Integer): Integer;
-    function GetIsNull(Res: PZPostgreSQLResult;
-      TupNum, FieldNum: Integer): Integer;
-    procedure PQclear(Res: PZPostgreSQLResult);
-
-    function MakeEmptyResult(Handle: PZPostgreSQLConnect;
-      Status: TZPostgreSQLExecStatusType): PZPostgreSQLResult;
-
-    function OpenLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
-      Mode: Integer): Integer;
-    function CloseLargeObject(Handle: PZPostgreSQLConnect;
-      Fd: Integer): Integer;
-    function ReadLargeObject(Handle: PZPostgreSQLConnect; Fd: Integer;
-      Buffer: PAnsiChar; Length: Integer): Integer;
-    function WriteLargeObject(Handle: PZPostgreSQLConnect; Fd: Integer;
-      Buffer: PAnsiChar; Length: Integer): Integer;
-    function SeekLargeObject(Handle: PZPostgreSQLConnect;
-      Fd, Offset, Whence: Integer): Integer;
-    function CreateLargeObject(Handle: PZPostgreSQLConnect;
-      Mode: Integer): Oid;
-    function TellLargeObject(Handle: PZPostgreSQLConnect;
-      Fd: Integer): Integer;
-    function UnlinkLargeObject(Handle: PZPostgreSQLConnect;
-      ObjId: Oid): Integer;
-    function ImportLargeObject(Handle: PZPostgreSQLConnect;
-      FileName: PAnsiChar): Oid;
-    function ExportLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
-      FileName: PAnsiChar): Integer;
-    function GetPlainFunc:PAPI;
-    function PQsetSingleRowMode(Handle: PZPostgreSQLConnect): Integer; //PG9+
-  end;
-
-  {** Implements a driver for PostgreSQL 7.4 }
-  TZPostgreSQL7PlainDriver = class(TZPostgreSQLBaseDriver, IZPlainDriver,
-    IZPostgreSQLPlainDriver)
-  protected
     function Clone: IZPlainDriver; override;
   public
-    constructor Create;
-
     function GetProtocol: string; override;
     function GetDescription: string; override;
- end;
-
-
-  {** Implements a driver for PostgreSQL 8.1 }
-
-  { TZPostgreSQL8PlainDriver }
-
-  TZPostgreSQL8PlainDriver = class(TZPostgreSQLBaseDriver, IZPlainDriver,IZPostgreSQLPlainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-    function GetUnicodeCodePageName: String; override;
-    procedure LoadCodePages; override;
   public
-    constructor Create;
+  { ************** Plain API Function types definition ************* }
+  { ===	in fe-connect.c === }
+    PQconnectdb     : function(ConnInfo: PAnsiChar): PPGconn; cdecl; // FirmOS 8.1 OK
+    PQsetdbLogin    : function(Host, Port, Options, Tty, Db, User, Passwd: PAnsiChar): PPGconn; cdecl; // FirmOS 8.1 OK
+    PQconndefaults  : function: PPQconninfoOption; cdecl;
+    PQfinish        : procedure(Handle: PPGconn); cdecl;
+    PQreset         : procedure(Handle: PPGconn); cdecl;
+  //15022006 FirmOS: omitting PQresetStart
+  //15022006 FirmOS: omitting PQresetPoll
+    PQrequestCancel : function(Handle: PPGconn): Integer; cdecl;
+    PQdb            : function(Handle: PPGconn): PAnsiChar; cdecl;
+    PQuser          : function(Handle: PPGconn): PAnsiChar; cdecl;
+    PQpass          : function(Handle: PPGconn): PAnsiChar; cdecl;
+    PQhost          : function(Handle: PPGconn): PAnsiChar; cdecl;
+    PQport          : function(Handle: PPGconn): PAnsiChar; cdecl;
+    PQtty           : function(Handle: PPGconn): PAnsiChar; cdecl;
+    PQoptions       : function(Handle: PPGconn): PAnsiChar; cdecl;
+    PQstatus        : function(Handle: PPGconn): TZPostgreSQLConnectStatusType; cdecl;
+  //TBD  PGTransactionStatusType PQtransactionStatus(const PGconn *conn);
+  //15022006 FirmOS: omitting const char *PQparameterStatus(const PGconn *conn, const char *paramName);
+  //15022006 FirmOS: omitting  PQprotocolVersion
+    PQserverVersion : function(Handle: PPGconn): Integer; cdecl;
+    PQerrorMessage  : function(Handle: PPGconn): PAnsiChar; cdecl;
+    PQsocket        : function(Handle: PPGconn): Integer; cdecl;
+    PQbackendPID    : function(Handle: PPGconn): Integer; cdecl;
+  //15022006 FirmOS: omitting  SSL *PQgetssl(const PGconn *conn);
+    PQtrace         : procedure(Handle: PPGconn; DebugPort: Pointer); cdecl;
+    PQuntrace       : procedure(Handle: PPGconn); cdecl;
+    PQsetNoticeProcessor : procedure(Handle: PPGconn; Proc: PQnoticeProcessor; Arg: Pointer); cdecl;
 
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
+    PQclientEncoding : function(Handle: PPGconn): Integer; cdecl; //EgonHugeist
+  { === in fe-exec.c === }
+  //* Simple synchronous query */
+    PQexec          : function(Handle: PPGconn; Query: PAnsiChar): PPGresult; cdecl;
+    PQexecParams    : function(Handle: PPGconn; command: PAnsichar;
+          nParams: Integer; paramTypes: POid; paramValues: PPointer;
+          paramLengths: PInteger; paramFormats: PInteger;
+          resultFormat: Integer): PPGresult; cdecl;
+    PQprepare        : function(Handle: PPGconn; stmtName: PAnsichar;
+          query: PAnsiChar; nParams: Integer; paramTypes: PInteger): PPGresult; cdecl;
+    PQexecPrepared   : function(Handle: PPGconn; stmtName: PAnsichar;
+          nParams: Integer; paramValues: PPointer; paramLengths: PInteger;
+          paramFormats: PInteger; resultFormat: Integer): PPGresult; cdecl;
+  //* Interface for multiple-result or asynchronous queries */
+    PQsendQuery      : function(Handle: PPGconn; query: PAnsiChar): Integer; cdecl;
+    PQsendQueryParams: function(Handle: PPGconn; command: PAnsichar;
+          nParams: Integer; paramTypes: PInteger; paramValues: PPointer;
+          paramLengths: PInteger; paramFormats: PInteger;
+          resultFormat: Integer): Integer; cdecl;
+    PQsendPrepare    : function(Handle: PPGconn; stmtName: PAnsichar;
+          query: PAnsiChar; nParams: Integer; paramTypes: POid): Integer; cdecl;
+    PQsendQueryPrepared : function(Handle: PPGconn; stmtName: PAnsichar;
+           nParams: Integer; paramValues: PPointer; paramLengths: PInteger;
+           paramFormats: PInteger; resultFormat: Integer): Integer; cdecl;
+    PQgetResult     : function(Handle: PPGconn): PPGresult;  cdecl;
+    PQsetSingleRowMode : function(Handle: PPGconn): Integer; cdecl;
+  //* Describe prepared statements and portals */
+    PQdescribePrepared : function(Handle: PPGconn; const stmt: PAnsiChar): PPGresult; cdecl;
+    PQdescribePortal : function(Handle: PPGconn; const portal: PAnsiChar): PPGresult; cdecl;
+    PQsendDescribePrepared : function(Handle: PPGconn; const stmt: PAnsiChar): Integer; cdecl;
+    PQsendDescribePortal : function(Handle: PPGconn; const portal: PAnsiChar): Integer; cdecl;
 
-  { TZPostgreSQL8PlainDriver }
+    PQnotifies      : function(Handle: PPGconn): PPGnotify; cdecl;
+    PQfreeNotify    : procedure(Handle: PPGnotify);cdecl;
+    PQisBusy        : function(Handle: PPGconn): Integer; cdecl;
+    PQconsumeInput  : function(Handle: PPGconn): Integer; cdecl;
+    PQgetCancel     : function(Handle: PPGconn): PGcancel; cdecl;
+    PQfreeCancel    : procedure(Canc: PGcancel); cdecl;
+    PQcancel        : function(Canc: PGcancel; Buffer: PChar; BufSize: Integer): Integer;
+    PQgetline       : function(Handle: PPGconn; Str: PAnsiChar; length: Integer): Integer; cdecl;
+    PQputline       : function(Handle: PPGconn; Str: PAnsiChar): Integer; cdecl;
+    PQgetlineAsync  : function(Handle: PPGconn; Buffer: PAnsiChar; BufSize: Integer): Integer; cdecl;
+    PQputnbytes     : function(Handle: PPGconn; Buffer: PAnsiChar; NBytes: Integer): Integer; cdecl;
+    PQendcopy       : function(Handle: PPGconn): Integer; cdecl;
+    PQfn            : function(Handle: PPGconn; fnid: Integer; result_buf, result_len: PInteger; result_is_int: Integer; args: PPQArgBlock; nargs: Integer): PPGresult; cdecl;
+    PQresultStatus  : function(Result: PPGresult): TZPostgreSQLExecStatusType; cdecl;
+    PQresultErrorMessage : function(Result: PPGresult): PAnsiChar; cdecl;
+    PQresultErrorField:function(result: PPGResult; fieldcode:integer):PAnsiChar;cdecl; // postgresql 8
+    PQntuples       : function(Result: PPGresult): Integer; cdecl;
+    PQnfields       : function(Result: PPGresult): Integer; cdecl;
+    PQbinaryTuples  : function(Result: PPGresult): Integer; cdecl;
+    PQfname         : function(Result: PPGresult; field_num: Integer): PAnsiChar; cdecl;
+    PQfnumber       : function(Result: PPGresult; field_name: PAnsiChar): Integer; cdecl;
+    PQftable        : function(Result: PPGresult; field_num: Integer): Oid; cdecl;
+    PQftablecol     : function(Result: PPGresult; field_num: Integer): Integer; cdecl;
+    PQftype         : function(Result: PPGresult; field_num: Integer): Oid; cdecl;
+    PQfsize         : function(Result: PPGresult; field_num: Integer): Integer; cdecl;
+    PQfmod          : function(Result: PPGresult; field_num: Integer): Integer; cdecl;
+    PQcmdStatus     : function(Result: PPGresult): PAnsiChar; cdecl;
+    PQoidValue      : function(Result: PPGresult): Oid; cdecl;
+    PQoidStatus     : function(Result: PPGresult): PAnsiChar; cdecl;
+    PQcmdTuples     : function(Result: PPGresult): PAnsiChar; cdecl;
+    PQgetvalue      : function(Result: PPGresult; tup_num, field_num: Integer): PAnsiChar; cdecl;
+    PQgetlength     : function(Result: PPGresult; tup_num, field_num: Integer): Integer; cdecl;
+    PQgetisnull     : function(Result: PPGresult; tup_num, field_num: Integer): Integer; cdecl;
+    PQclear         : procedure(Result: PPGresult); cdecl;
+    PQmakeEmptyPGresult  : function(Handle: PPGconn; status: TZPostgreSQLExecStatusType): PPGresult; cdecl;
+    //* Quoting strings before inclusion in queries. */
+    // postgresql 8
+    PQescapeStringConn : function(Handle: PGconn; ToChar: PAnsiChar;
+      const FromChar: PAnsiChar; length: NativeUInt; error: PInteger): NativeUInt;cdecl; //7.3
+    PQescapeLiteral    : function(Handle: PGconn; const str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl;
+    PQescapeIdentifier : function(Handle: PGconn; const str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl; //7.3
+    PQescapeByteaConn  : function(Handle: PPGconn;const from:PAnsiChar;from_length:longword;to_lenght:PLongword):PAnsiChar;cdecl;
+    PQunescapeBytea    : function(const from:PAnsiChar;to_lenght:PLongword):PAnsiChar;cdecl;
+    PQFreemem          : procedure(ptr:Pointer);cdecl;
 
-  TZPostgreSQL9PlainDriver = class(TZPostgreSQL8PlainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-    function GetStandardConformingStrings: Boolean; override;
-    procedure LoadCodePages; override;
-  public
-    constructor Create;
+    //* These forms are deprecated! */
+    PQescapeString     : function(ToChar: PAnsiChar; const FormChar: PAnsiChar; length: NativeUInt): NativeUInt;cdecl; //7.2
+    PQescapeBytea      : function(const from:PAnsiChar;from_length:longword;to_lenght:PLongword):PAnsiChar;cdecl; //7.2
 
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
+    { === in fe-lobj.c === }
+    lo_open         : function(Handle: PPGconn; lobjId: Oid; mode: Integer): Integer; cdecl;
+    lo_close        : function(Handle: PPGconn; fd: Integer): Integer; cdecl;
+    lo_read         : function(Handle: PPGconn; fd: Integer; buf: PAnsiChar; len: NativeUInt): Integer; cdecl;
+    lo_write        : function(Handle: PPGconn; fd: Integer; buf: PAnsiChar; len: NativeUInt): Integer; cdecl;
+    lo_lseek        : function(Handle: PPGconn; fd, offset, whence: Integer): Integer; cdecl;
+    lo_creat        : function(Handle: PPGconn; mode: Integer): Oid; cdecl;
+    lo_tell         : function(Handle: PPGconn; fd: Integer): Integer; cdecl;
+    lo_unlink       : function(Handle: PPGconn; lobjId: Oid): Integer; cdecl;
+    lo_import       : function(Handle: PPGconn; filename: PAnsiChar): Oid; cdecl;
+    lo_export       : function(Handle: PPGconn; lobjId: Oid; filename: PAnsiChar): Integer; cdecl;
   end;
 
 implementation
 
-uses SysUtils, ZPlainLoader, Classes, ZEncoding
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+uses ZPlainLoader, ZEncoding;
 
-{ TZPostgreSQLBaseDriver }
+{ TZPostgreSQLPlainDriver }
 
-function TZPostgreSQLBaseDriver.GetUnicodeCodePageName: String;
+function TZPostgreSQLPlainDriver.GetDescription: string;
 begin
-  Result := 'UNICODE';
+  Result := 'Native Plain Driver for PostgreSQL';
 end;
 
-procedure TZPostgreSQLBaseDriver.LoadCodePages;
+function TZPostgreSQLPlainDriver.GetProtocol: string;
 begin
+  Result := 'postgresql';
+end;
+
+function TZPostgreSQLPlainDriver.GetUnicodeCodePageName: String;
+begin
+  Result := 'UTF8';
+end;
+
+procedure TZPostgreSQLPlainDriver.LoadCodePages;
+begin
+  { all versions }
   { MultiByte }
   AddCodePage('EUC_JP', Ord(csEUC_JP), ceAnsi, zCP_EUC_JP, '', 3); { EUC_JP 	Japanese EUC }
   AddCodePage('EUC_CN', Ord(csEUC_CN), ceAnsi, zCP_EUC_CN, '', 3); {EUC_CN 	Chinese EUC}
@@ -1167,756 +753,6 @@ begin
   AddCodePage('WIN1256', Ord(csWIN1256), ceAnsi, zCP_WIN1256);  { Windows CP1256 	Arabic }
   AddCodePage('TCVN', Ord(csTCVN), ceAnsi, zCP_WIN1258); { TCVN-5712/Windows CP1258 (Vietnamese) }
   AddCodePage('WIN874', Ord(csWIN874), ceAnsi, zCP_WIN874); { Windows CP874 (Thai) }
-end;
-
-procedure TZPostgreSQLBaseDriver.LoadApi;
-begin
-{ ************** Load adresses of API Functions ************* }
-  with Loader do
-  begin
-  { ===	in fe-connect.c === }
-    @POSTGRESQL_API.PQconnectdb    := GetAddress('PQconnectdb');
-    @POSTGRESQL_API.PQsetdbLogin   := GetAddress('PQsetdbLogin');
-    @POSTGRESQL_API.PQconndefaults := GetAddress('PQconndefaults');
-    @POSTGRESQL_API.PQfinish       := GetAddress('PQfinish');
-    @POSTGRESQL_API.PQreset        := GetAddress('PQreset');
-    @POSTGRESQL_API.PQrequestCancel := GetAddress('PQrequestCancel');
-    @POSTGRESQL_API.PQdb           := GetAddress('PQdb');
-    @POSTGRESQL_API.PQuser         := GetAddress('PQuser');
-    @POSTGRESQL_API.PQpass         := GetAddress('PQpass');
-    @POSTGRESQL_API.PQhost         := GetAddress('PQhost');
-    @POSTGRESQL_API.PQport         := GetAddress('PQport');
-    @POSTGRESQL_API.PQtty          := GetAddress('PQtty');
-    @POSTGRESQL_API.PQoptions      := GetAddress('PQoptions');
-    @POSTGRESQL_API.PQstatus       := GetAddress('PQstatus');
-    @POSTGRESQL_API.PQserverVersion:= GetAddress('PQserverVersion');
-    @POSTGRESQL_API.PQerrorMessage := GetAddress('PQerrorMessage');
-    @POSTGRESQL_API.PQsocket       := GetAddress('PQsocket');
-    @POSTGRESQL_API.PQbackendPID   := GetAddress('PQbackendPID');
-    @POSTGRESQL_API.PQtrace        := GetAddress('PQtrace');
-    @POSTGRESQL_API.PQuntrace      := GetAddress('PQuntrace');
-    @POSTGRESQL_API.PQsetNoticeProcessor := GetAddress('PQsetNoticeProcessor');
-    @POSTGRESQL_API.PQclientEncoding := GetAddress('PQclientEncoding');
-  { === in fe-exec.c === }
-    @POSTGRESQL_API.PQexec         := GetAddress('PQexec');
-    @POSTGRESQL_API.PQexecParams   := GetAddress('PQexecParams');
-    @POSTGRESQL_API.PQprepare      := GetAddress('PQprepare');
-    @POSTGRESQL_API.PQexecPrepared := GetAddress('PQexecPrepared');
-    @POSTGRESQL_API.PQsendQuery    := GetAddress('PQsendQuery');
-    @POSTGRESQL_API.PQsendQueryParams:= GetAddress('PQsendQueryParams');
-    @POSTGRESQL_API.PQsendPrepare  := GetAddress('PQsendPrepare');
-    @POSTGRESQL_API.PQsendQueryPrepared := GetAddress('PQsendQueryPrepared');
-    @POSTGRESQL_API.PQgetResult    := GetAddress('PQgetResult');
-    @POSTGRESQL_API.PQsetSingleRowMode := GetAddress('PQsetSingleRowMode'); //9+ http://www.postgresql.org/docs/9.2/static/libpq-single-row-mode.html
-
-    @POSTGRESQL_API.PQnotifies     := GetAddress('PQnotifies');
-    @POSTGRESQL_API.PQfreeNotify   := GetAddress('PQfreeNotify');
-    @POSTGRESQL_API.PQisBusy       := GetAddress('PQisBusy');
-    @POSTGRESQL_API.PQconsumeInput := GetAddress('PQconsumeInput');
-    @POSTGRESQL_API.PQgetline      := GetAddress('PQgetline');
-    @POSTGRESQL_API.PQputline      := GetAddress('PQputline');
-    @POSTGRESQL_API.PQgetlineAsync := GetAddress('PQgetlineAsync');
-    @POSTGRESQL_API.PQputnbytes    := GetAddress('PQputnbytes');
-    @POSTGRESQL_API.PQendcopy      := GetAddress('PQendcopy');
-    @POSTGRESQL_API.PQfn           := GetAddress('PQfn');
-    @POSTGRESQL_API.PQresultStatus := GetAddress('PQresultStatus');
-    @POSTGRESQL_API.PQresultErrorMessage := GetAddress('PQresultErrorMessage');
-    @POSTGRESQL_API.PQntuples      := GetAddress('PQntuples');
-    @POSTGRESQL_API.PQnfields      := GetAddress('PQnfields');
-    @POSTGRESQL_API.PQbinaryTuples := GetAddress('PQbinaryTuples');
-    @POSTGRESQL_API.PQfname        := GetAddress('PQfname');
-    @POSTGRESQL_API.PQfnumber      := GetAddress('PQfnumber');
-    @POSTGRESQL_API.PQftable       := GetAddress('PQftable');
-    @POSTGRESQL_API.PQftablecol    := GetAddress('PQftablecol');
-    @POSTGRESQL_API.PQftype        := GetAddress('PQftype');
-    @POSTGRESQL_API.PQfsize        := GetAddress('PQfsize');
-    @POSTGRESQL_API.PQfmod         := GetAddress('PQfmod');
-    @POSTGRESQL_API.PQcmdStatus    := GetAddress('PQcmdStatus');
-    @POSTGRESQL_API.PQoidValue     := GetAddress('PQoidValue');
-    @POSTGRESQL_API.PQoidStatus    := GetAddress('PQoidStatus');
-    @POSTGRESQL_API.PQcmdTuples    := GetAddress('PQcmdTuples');
-    @POSTGRESQL_API.PQgetvalue     := GetAddress('PQgetvalue');
-    @POSTGRESQL_API.PQgetlength    := GetAddress('PQgetlength');
-    @POSTGRESQL_API.PQgetisnull    := GetAddress('PQgetisnull');
-    @POSTGRESQL_API.PQclear        := GetAddress('PQclear');
-    @POSTGRESQL_API.PQmakeEmptyPGresult := GetAddress('PQmakeEmptyPGresult');
-
-  { === in fe-lobj.c === }
-    @POSTGRESQL_API.lo_open        := GetAddress('lo_open');
-    @POSTGRESQL_API.lo_close       := GetAddress('lo_close');
-    @POSTGRESQL_API.lo_read        := GetAddress('lo_read');
-    @POSTGRESQL_API.lo_write       := GetAddress('lo_write');
-    @POSTGRESQL_API.lo_lseek       := GetAddress('lo_lseek');
-    @POSTGRESQL_API.lo_creat       := GetAddress('lo_creat');
-    @POSTGRESQL_API.lo_tell        := GetAddress('lo_tell');
-    @POSTGRESQL_API.lo_unlink      := GetAddress('lo_unlink');
-    @POSTGRESQL_API.lo_import      := GetAddress('lo_import');
-    @POSTGRESQL_API.lo_export      := GetAddress('lo_export');
-    @POSTGRESQL_API.PQescapeStringConn  := GetAddress('PQescapeStringConn'); //since 7.3
-    @POSTGRESQL_API.PQescapeByteaConn   := GetAddress('PQescapeByteaConn'); // postgresql since 7.3
-    @POSTGRESQL_API.PQFreemem           := GetAddress('PQfreemem'); // since postgresql 7.4
-    @POSTGRESQL_API.PQescapeString      := GetAddress('PQescapeString'); // since postgresql 7.4
-    @POSTGRESQL_API.PQescapeBytea       := GetAddress('PQescapeBytea'); // since postgresql 7.4
-    @POSTGRESQL_API.PQunescapeBytea     := GetAddress('PQunescapeBytea'); // since postgresql 8.3
-    @POSTGRESQL_API.PQescapeLiteral     := GetAddress('PQescapeLiteral'); // since postgresql 9.0
-    @POSTGRESQL_API.PQescapeIdentifier  := GetAddress('PQescapeIdentifier'); // since postgresql 9.0
-
-    @POSTGRESQL_API.PQresultErrorField  := GetAddress('PQresultErrorField');
-    @POSTGRESQL_API.PQgetCancel         := GetAddress('PQgetCancel');
-    @POSTGRESQL_API.PQfreeCancel        := GetAddress('PQfreeCancel');
-    @POSTGRESQL_API.PQcancel            := GetAddress('PQcancel');
-  end;
-end;
-
-constructor TZPostgreSQLBaseDriver.Create;
-begin
-  inherited create;
-  FLoader := TZNativeLibraryLoader.Create([]);
-  {$IFNDEF STRICT_DLL_LOADING}
-    {$IFNDEF UNIX}
-      FLoader.AddLocation(WINDOWS_DLL_LOCATION);
-    {$ELSE}
-      FLoader.AddLocation(LINUX_DLL_LOCATION);
-    {$ENDIF}
-  {$ENDIF}
-  LoadCodePages;
-end;
-
-procedure TZPostgreSQLBaseDriver.PQclear(Res: PZPostgreSQLResult);
-begin
-  POSTGRESQL_API.PQclear(Res);
-end;
-
-function TZPostgreSQLBaseDriver.CloseLargeObject(
-  Handle: PZPostgreSQLConnect; Fd: Integer): Integer;
-begin
-  Result := POSTGRESQL_API.lo_close(Handle, Fd);
-end;
-
-function TZPostgreSQLBaseDriver.ConnectDatabase(
-  ConnInfo: PAnsiChar): PZPostgreSQLConnect;
-begin
-  Result := POSTGRESQL_API.PQconnectdb(ConnInfo);
-end;
-
-function TZPostgreSQLBaseDriver.ConsumeInput(
-  Handle: PZPostgreSQLConnect): Integer;
-begin
-  Result := POSTGRESQL_API.PQconsumeInput(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.GetCancel(Handle: PZPostgreSQLConnect): PZPostgreSQLCancel;
-begin
-  if Assigned(POSTGRESQL_API.PQgetCancel) then
-    Result := POSTGRESQL_API.PQgetCancel(Handle)
-  else
-    Result := nil;
-end;
-
-procedure TZPostgreSQLBaseDriver.FreeCancel(Canc: PZPostgreSQLCancel);
-begin
-  if Assigned(POSTGRESQL_API.PQfreeCancel) then
-    POSTGRESQL_API.PQfreeCancel( Canc);
-end;
-
-procedure TZPostgreSQLBaseDriver.FreeMem(ptr: Pointer);
-begin
-  POSTGRESQL_API.PQFreemem(ptr);
-end;
-
-function TZPostgreSQLBaseDriver.Cancel(Canc: PZPostgreSQLCancel; Buffer: PChar; Length: Integer): Integer;
-begin
-  if Assigned(POSTGRESQL_API.PQcancel) then
-    Result := POSTGRESQL_API.PQcancel( Canc, Buffer, Length)
-  else
-    Result := 0;
-end;
-
-function TZPostgreSQLBaseDriver.CreateLargeObject(
-  Handle: PZPostgreSQLConnect; Mode: Integer): Oid;
-begin
-  Result := POSTGRESQL_API.lo_creat(Handle, Mode);
-end;
-
-function TZPostgreSQLBaseDriver.SupportsEncodeBYTEA: Boolean;
-begin
-  Result := Assigned(POSTGRESQL_API.PQescapeByteaConn) or
-    Assigned(POSTGRESQL_API.PQescapeBytea);
-end;
-
-function TZPostgreSQLBaseDriver.SupportsDecodeBYTEA: Boolean;
-begin
-  Result := Assigned(POSTGRESQL_API.PQUnescapeBytea);
-end;
-
-function TZPostgreSQLBaseDriver.SupportsStringEscaping(const ClientDependend: Boolean): Boolean;
-begin
-  if ClientDependend then
-    Result := Assigned(POSTGRESQL_API.PQescapeStringConn)
-  else
-    Result := Assigned(POSTGRESQL_API.PQescapeStringConn) or
-              Assigned(POSTGRESQL_API.PQescapeString);
-end;
-
-function TZPostgreSQLBaseDriver.EndCopy( Handle: PZPostgreSQLConnect): Integer;
-begin
-  Result := POSTGRESQL_API.PQendcopy(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.ExecuteFunction(
-  Handle: PZPostgreSQLConnect; fnid: Integer; result_buf,
-  result_len: PInteger; result_is_int: Integer; args: PZPostgreSQLArgBlock;
-  nargs: Integer): PZPostgreSQLResult;
-begin
-  Result := POSTGRESQL_API.PQfn(Handle, fnid, result_buf,
-    result_len, result_is_int, PPQArgBlock(args), nargs);
-end;
-
-function TZPostgreSQLBaseDriver.ExecuteQuery(
-  Handle: PZPostgreSQLConnect; Query: PAnsiChar): PZPostgreSQLResult;
-begin
-  Result := POSTGRESQL_API.PQexec(Handle, Query);
-end;
-
-function TZPostgreSQLBaseDriver.ExecParams(Handle: PPGconn; command: PAnsichar;
-    nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
-    paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
-    resultFormat: Integer): PPGresult;
-begin
-  if Assigned(POSTGRESQL_API.PQexecParams) then
-    Result := POSTGRESQL_API.PQexecParams(Handle, command, nParams, paramtypes,
-      Pointer(paramValues), Pointer(paramLengths), Pointer(paramFormats), resultFormat)
-  else
-    Result := nil;
-end;
-
-function TZPostgreSQLBaseDriver.Prepare(Handle: PPGconn; stmtName: PAnsichar;
-    query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): PPGresult;
-begin
-  if Assigned(POSTGRESQL_API.PQprepare) then
-    Result := POSTGRESQL_API.PQprepare(Handle, stmtName, query, nParams, Pointer(paramTypes))
-  else
-    Result := nil;
-end;
-
-function TZPostgreSQLBaseDriver.ExecPrepared(Handle: PPGconn; stmtName: PAnsichar;
-    nParams: Integer; paramValues: TPQparamValues; paramLengths: TPQparamLengths;
-    paramFormats: TPQparamFormats; resultFormat: Integer): PPGresult;
-begin
-  if Assigned(POSTGRESQL_API.PQexecPrepared) then
-    Result := POSTGRESQL_API.PQexecPrepared(Handle, stmtName, nParams,
-      Pointer(paramValues), Pointer(paramLengths), Pointer(paramFormats), resultFormat)
-  else
-    Result := nil;
-end;
-
-function TZPostgreSQLBaseDriver.SendQuery(Handle: PZPostgreSQLConnect; Query: PAnsiChar): Integer;
-begin
-  Result := POSTGRESQL_API.PQsendQuery(Handle, Query);
-end;
-
-function TZPostgreSQLBaseDriver.SendQueryParams(Handle: PPGconn; command: PAnsichar;
-    nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
-    paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
-    resultFormat: Integer): Integer;
-begin
-  if Assigned(POSTGRESQL_API.PQsendQueryParams) then
-    Result := POSTGRESQL_API.PQsendQueryParams(Handle, command, nParams,
-      Pointer(paramTypes), Pointer(paramValues), Pointer(paramLengths), Pointer(paramFormats), resultFormat)
-  else
-    Result := -1;
-end;
-
-function TZPostgreSQLBaseDriver.SendPrepare(Handle: PPGconn; stmtName: PAnsichar;
-    query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): Integer;
-begin
-  if Assigned(POSTGRESQL_API.PQsendPrepare) then
-    Result := POSTGRESQL_API.PQsendPrepare(Handle, stmtName, query, nParams,
-      paramTypes)
-  else
-    Result := -1;
-end;
-
-function TZPostgreSQLBaseDriver.SendQueryPrepared(Handle: PPGconn; stmtName: PAnsichar;
-     nParams: Integer; paramValues: TPQparamValues;
-     paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
-     resultFormat: Integer): Integer;
-begin
-  if Assigned(POSTGRESQL_API.PQsendQueryPrepared) then
-    Result := POSTGRESQL_API.PQsendQueryPrepared(Handle, stmtName, nParams,
-      Pointer(paramValues), Pointer(paramLengths), Pointer(paramFormats), resultFormat)
-  else
-    Result := -1;
-end;
-
-function TZPostgreSQLBaseDriver.PGGetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
-begin
-  Result := POSTGRESQL_API.PQgetResult(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.DescribePrepared(Handle: PPGconn;
-  const stmt: PAnsiChar): PPGresult;
-begin
-  if Assigned(POSTGRESQL_API.PQdescribePrepared) then
-    Result := POSTGRESQL_API.PQdescribePrepared(Handle, stmt)
-  else
-    Result := nil;
-end;
-
-function TZPostgreSQLBaseDriver.DescribePortal(Handle: PPGconn;
-  const portal: PAnsiChar): PPGresult;
-begin
-  if Assigned(POSTGRESQL_API.PQdescribePortal) then
-    Result := POSTGRESQL_API.PQdescribePortal(Handle, portal)
-  else
-    Result := nil;
-end;
-
-function TZPostgreSQLBaseDriver.SendDescribePrepared(Handle: PPGconn;
-  const stmt: PAnsiChar): Integer;
-begin
-  if Assigned(POSTGRESQL_API.PQsendDescribePrepared) then
-    Result := POSTGRESQL_API.PQsendDescribePrepared(Handle, stmt)
-  else
-    Result := -1;
-end;
-
-function TZPostgreSQLBaseDriver.SendDescribePortal(Handle: PPGconn;
-  const portal: PAnsiChar): Integer;
-begin
-  if Assigned(POSTGRESQL_API.PQsendDescribePortal) then
-    Result := POSTGRESQL_API.PQsendDescribePortal(Handle, portal)
-  else
-    Result := -1;
-end;
-
-function TZPostgreSQLBaseDriver.ExportLargeObject(
-  Handle: PZPostgreSQLConnect; ObjId: Oid; FileName: PAnsiChar): Integer;
-begin
-  Result := POSTGRESQL_API.lo_export(Handle, ObjId, FileName);
-end;
-
-procedure TZPostgreSQLBaseDriver.Finish(Handle: PZPostgreSQLConnect);
-begin
-  POSTGRESQL_API.PQfinish(Handle);
-end;
-
-procedure TZPostgreSQLBaseDriver.FreeNotify(Handle: PZPostgreSQLNotify);
-begin
-  POSTGRESQL_API.PQfreeNotify(PPGnotify(Handle));
-end;
-
-function TZPostgreSQLBaseDriver.GetBackendPID(
-  Handle: PZPostgreSQLConnect): Integer;
-begin
-  Result := POSTGRESQL_API.PQbackendPID(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.GetBinaryTuples(
-  Res: PZPostgreSQLResult): Integer;
-begin
-  Result := POSTGRESQL_API.PQbinaryTuples(Res);
-end;
-
-function TZPostgreSQLBaseDriver.GetCommandStatus(
-  Res: PZPostgreSQLResult): PAnsiChar;
-begin
-  Result := POSTGRESQL_API.PQcmdStatus(Res);
-end;
-
-function TZPostgreSQLBaseDriver.GetCommandTuples(
-  Res: PZPostgreSQLResult): PAnsiChar;
-begin
-  Result := POSTGRESQL_API.PQcmdTuples(Res);
-end;
-
-function TZPostgreSQLBaseDriver.GetConnectDefaults:
-  PZPostgreSQLConnectInfoOption;
-begin
-  Result := PZPostgreSQLConnectInfoOption(POSTGRESQL_API.PQconndefaults);
-end;
-
-function TZPostgreSQLBaseDriver.GetDatabase(
-  Handle: PZPostgreSQLConnect): PAnsiChar;
-begin
-  Result := POSTGRESQL_API.PQdb(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.GetErrorMessage(
-  Handle: PZPostgreSQLConnect): PAnsiChar;
-begin
-  Result := POSTGRESQL_API.PQerrorMessage(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.GetFieldCount(
-  Res: PZPostgreSQLResult): Integer;
-begin
-  Result := POSTGRESQL_API.PQnfields(Res);
-end;
-
-function TZPostgreSQLBaseDriver.GetFieldMode(Res: PZPostgreSQLResult;
-  FieldNum: Integer): Integer;
-begin
-  Result := POSTGRESQL_API.PQfmod(Res, FieldNum);
-end;
-
-function TZPostgreSQLBaseDriver.PQfname(Res: PZPostgreSQLResult;
-  FieldNum: Integer): PAnsiChar;
-begin
-  Result := POSTGRESQL_API.PQfname(Res, FieldNum);
-end;
-
-function TZPostgreSQLBaseDriver.GetFieldNumber(
-  Res: PZPostgreSQLResult; FieldName: PAnsiChar): Integer;
-begin
-  Result := POSTGRESQL_API.PQfnumber(Res, FieldName);
-end;
-
-function TZPostgreSQLBaseDriver.PQftable(Res: PZPostgreSQLResult; FieldNum: Integer) : Oid;
-begin
-  Result := POSTGRESQL_API.PQftable(Res, FieldNum);
-end;
-
-function TZPostgreSQLBaseDriver.PQftablecol(Res: PZPostgreSQLResult; FieldNum: Integer) : Integer;
-begin
-  Result := POSTGRESQL_API.PQftablecol(Res, FieldNum);
-end;
-
-function TZPostgreSQLBaseDriver.PQfsize(Res: PZPostgreSQLResult;
-  FieldNum: Integer): Integer;
-begin
-  Result := POSTGRESQL_API.PQfsize(Res, FieldNum);
-end;
-
-function TZPostgreSQLBaseDriver.PQftype(Res: PZPostgreSQLResult;
-  FieldNum: Integer): Oid;
-begin
-  Result := POSTGRESQL_API.PQftype(Res, FieldNum);
-end;
-
-function TZPostgreSQLBaseDriver.GetHost(
-  Handle: PZPostgreSQLConnect): PAnsiChar;
-begin
-  Result := POSTGRESQL_API.PQhost(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.GetIsNull(Res: PZPostgreSQLResult;
-  TupNum, FieldNum: Integer): Integer;
-begin
-  Result := POSTGRESQL_API.PQgetisnull(Res, TupNum, FieldNum);
-end;
-
-function TZPostgreSQLBaseDriver.GetLength(Res: PZPostgreSQLResult;
-  TupNum, FieldNum: Integer): Integer;
-begin
-  Result := POSTGRESQL_API.PQgetlength(Res, TupNum, FieldNum);
-end;
-
-function TZPostgreSQLBaseDriver.GetLine(Handle: PZPostgreSQLConnect;
-  Buffer: PAnsiChar; Length: Integer): Integer;
-begin
-  Result := POSTGRESQL_API.PQgetline(Handle, Buffer, Length);
-end;
-
-function TZPostgreSQLBaseDriver.GetLineAsync(
-  Handle: PZPostgreSQLConnect; Buffer: PAnsiChar; Length: Integer): Integer;
-begin
-  Result := POSTGRESQL_API.PQgetlineAsync(Handle, Buffer, Length);
-end;
-
-function TZPostgreSQLBaseDriver.GetOidStatus(
-  Res: PZPostgreSQLResult): PAnsiChar;
-begin
-  Result := POSTGRESQL_API.PQoidStatus(Res);
-end;
-
-function TZPostgreSQLBaseDriver.GetOidValue(
-  Res: PZPostgreSQLResult): Oid;
-begin
-  Result := POSTGRESQL_API.PQoidValue(Res);
-end;
-
-function TZPostgreSQLBaseDriver.GetOptions(
-  Handle: PZPostgreSQLConnect): PAnsiChar;
-begin
-  Result := POSTGRESQL_API.PQoptions(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.GetPassword(
-  Handle: PZPostgreSQLConnect): PAnsiChar;
-begin
-  Result := POSTGRESQL_API.PQpass(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.GetPort(
-  Handle: PZPostgreSQLConnect): PAnsiChar;
-begin
-  Result := POSTGRESQL_API.PQport(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.GetResultErrorField(Res: PZPostgreSQLResult;  FieldCode: TZPostgreSQLFieldCode): PAnsiChar;
-begin
-  if Assigned(POSTGRESQL_API.PQresultErrorField) then
-    Result := POSTGRESQL_API.PQresultErrorField(Res, ord(FieldCode))
-  else
-    Result := '';
-end;
-
-
-function TZPostgreSQLBaseDriver.GetResultErrorMessage(
-  Res: PZPostgreSQLResult): PAnsiChar;
-begin
-  Result := POSTGRESQL_API.PQresultErrorMessage(Res);
-end;
-
-function TZPostgreSQLBaseDriver.PQresultStatus(
-  Res: PZPostgreSQLResult): TZPostgreSQLExecStatusType;
-begin
-  Result := TZPostgreSQLExecStatusType(POSTGRESQL_API.PQresultStatus(Res));
-end;
-
-function TZPostgreSQLBaseDriver.GetRowCount(
-  Res: PZPostgreSQLResult): Integer;
-begin
-  Result := POSTGRESQL_API.PQntuples(Res);
-end;
-
-function TZPostgreSQLBaseDriver.GetSocket(
-  Handle: PZPostgreSQLConnect): Integer;
-begin
-  Result := POSTGRESQL_API.PQsocket(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.GetStandardConformingStrings: Boolean;
-begin
-  Result := False;
-end;
-
-function TZPostgreSQLBaseDriver.GetStatus(
-  Handle: PZPostgreSQLConnect): TZPostgreSQLConnectStatusType;
-begin
-  Result := TZPostgreSQLConnectStatusType(POSTGRESQL_API.PQstatus(Handle));
-end;
-
-function TZPostgreSQLBaseDriver.GetClientEncoding(Handle: PPGconn): Integer; //EgonHugeist
-begin
-  Result := POSTGRESQL_API.PQclientEncoding(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.GetTTY(
-  Handle: PZPostgreSQLConnect): PAnsiChar;
-begin
-  Result := POSTGRESQL_API.PQtty(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.GetUser(
-  Handle: PZPostgreSQLConnect): PAnsiChar;
-begin
-  Result := POSTGRESQL_API.PQuser(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.GetValue(Res: PZPostgreSQLResult;
-  TupNum, FieldNum: Integer): PAnsiChar;
-begin
-  Result := POSTGRESQL_API.PQgetvalue(Res, TupNum, FieldNum);
-end;
-
-function TZPostgreSQLBaseDriver.ImportLargeObject(
-  Handle: PZPostgreSQLConnect; FileName: PAnsiChar): Oid;
-begin
-  Result := POSTGRESQL_API.lo_import(Handle, FileName);
-end;
-
-function TZPostgreSQLBaseDriver.IsBusy(
-  Handle: PZPostgreSQLConnect): Integer;
-begin
-  Result := POSTGRESQL_API.PQisBusy(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.MakeEmptyResult(
-  Handle: PZPostgreSQLConnect;
-  Status: TZPostgreSQLExecStatusType): PZPostgreSQLResult;
-begin
-  Result := POSTGRESQL_API.PQmakeEmptyPGresult(Handle,
-    TZPostgreSQLExecStatusType(Status));
-end;
-
-function TZPostgreSQLBaseDriver.Notifies(
-  Handle: PZPostgreSQLConnect): PZPostgreSQLNotify;
-begin
-  Result := PZPostgreSQLNotify(POSTGRESQL_API.PQnotifies(Handle));
-end;
-
-function TZPostgreSQLBaseDriver.OpenLargeObject(
-  Handle: PZPostgreSQLConnect; ObjId: Oid; Mode: Integer): Integer;
-begin
-  Result := POSTGRESQL_API.lo_open(Handle, ObjId, Mode);
-end;
-
-function TZPostgreSQLBaseDriver.PutBytes(Handle: PZPostgreSQLConnect;
-  Buffer: PAnsiChar; Length: Integer): Integer;
-begin
-  Result := POSTGRESQL_API.PQputnbytes(Handle, Buffer, Length);
-end;
-
-function TZPostgreSQLBaseDriver.PutLine(Handle: PZPostgreSQLConnect;
-  Buffer: PAnsiChar): Integer;
-begin
-  Result := POSTGRESQL_API.PQputline(Handle, Buffer);
-end;
-
-function TZPostgreSQLBaseDriver.ReadLargeObject(
-  Handle: PZPostgreSQLConnect; Fd: Integer; Buffer: PAnsiChar;
-  Length: Integer): Integer;
-begin
-  Result := POSTGRESQL_API.lo_read(Handle, Fd, Buffer, Length);
-end;
-
-function TZPostgreSQLBaseDriver.RequestCancel(
-  Handle: PZPostgreSQLConnect): Integer;
-begin
-  Result := POSTGRESQL_API.PQrequestCancel(Handle);
-end;
-
-procedure TZPostgreSQLBaseDriver.Reset(Handle: PZPostgreSQLConnect);
-begin
-  POSTGRESQL_API.PQreset(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.SeekLargeObject(
-  Handle: PZPostgreSQLConnect; Fd, Offset, Whence: Integer): Integer;
-begin
-  Result := POSTGRESQL_API.lo_lseek(Handle, Fd, Offset, Whence);
-end;
-
-function TZPostgreSQLBaseDriver.SetDatabaseLogin(Host, Port, Options,
-  TTY, Db, User, Passwd: PAnsiChar): PZPostgreSQLConnect;
-begin
-  Result := POSTGRESQL_API.PQsetdbLogin(Host, Port, Options, TTY, Db,
-    User, Passwd);
-end;
-
-procedure TZPostgreSQLBaseDriver.SetNoticeProcessor(
-  Handle: PZPostgreSQLConnect; Proc: TZPostgreSQLNoticeProcessor;
-  Arg: Pointer);
-begin
-  POSTGRESQL_API.PQsetNoticeProcessor(Handle, Proc, Arg);
-end;
-
-function TZPostgreSQLBaseDriver.TellLargeObject(
-  Handle: PZPostgreSQLConnect; Fd: Integer): Integer;
-begin
-  Result := POSTGRESQL_API.lo_tell(Handle, Fd);
-end;
-
-procedure TZPostgreSQLBaseDriver.Trace(Handle: PZPostgreSQLConnect;
-  DebugPort: Pointer);
-begin
-  POSTGRESQL_API.PQtrace(Handle, DebugPort);
-end;
-
-function TZPostgreSQLBaseDriver.UnescapeBytea(const from: PAnsiChar;
-  to_lenght: PLongword): PAnsiChar;
-begin
-  Result := POSTGRESQL_API.PQUnescapeBytea(from, to_lenght);
-end;
-
-function TZPostgreSQLBaseDriver.UnlinkLargeObject(
-  Handle: PZPostgreSQLConnect; ObjId: Oid): Integer;
-begin
-  Result := POSTGRESQL_API.lo_unlink(Handle, ObjId);
-end;
-
-procedure TZPostgreSQLBaseDriver.Untrace(Handle: PZPostgreSQLConnect);
-begin
-  POSTGRESQL_API.PQuntrace(Handle);
-end;
-
-function TZPostgreSQLBaseDriver.WriteLargeObject(
-  Handle: PZPostgreSQLConnect; Fd: Integer; Buffer: PAnsiChar;
-  Length: Integer): Integer;
-begin
-  Result := POSTGRESQL_API.lo_write(Handle, Fd, Buffer, Length);
-end;
-
-function TZPostgreSQLBaseDriver.GetPlainFunc():PAPI;
-begin
-  result:= @POSTGRESQL_API;
-end;
-
-function TZPostgreSQLBaseDriver.EscapeBytea(Handle: PGconn; from: PAnsiChar;
-  from_length: LongWord; to_lenght: PLongword): PAnsiChar;
-begin
-  if assigned(POSTGRESQL_API.PQescapeByteaConn) then
-    Result := POSTGRESQL_API.PQescapeByteaConn(Handle, from, from_length, to_lenght)
-  else if Assigned(POSTGRESQL_API.PQescapeBytea) then
-    Result := POSTGRESQL_API.PQescapeBytea(from,from_length,to_lenght)
-  else
-    raise Exception.Create('can''t escape bytea ');
-end;
-
-function TZPostgreSQLBaseDriver.EscapeString(Handle: PGconn; ToChar: PAnsiChar;
-  const FromChar: PAnsiChar; length: NativeUInt; error: PInteger): NativeUInt;
-begin
-  Error^ := 0;
-  if (FromChar = nil) or (Length = 0) then
-    Result := 0
-  else if Assigned(POSTGRESQL_API.PQescapeStringConn) then
-    Result := POSTGRESQL_API.PQescapeStringConn(Handle, ToChar, FromChar, Length, error)
-  else if Assigned(POSTGRESQL_API.PQescapeString) then
-    Result := POSTGRESQL_API.PQescapeString(ToChar, FromChar, Length)
-  else
-    raise Exception.Create('can''t escape the string!');
-end;
-
-function TZPostgreSQLBaseDriver.PQsetSingleRowMode(Handle: PZPostgreSQLConnect): Integer; //PG9+
-begin
-  //http://www.postgresql.org/docs/9.2/static/libpq-single-row-mode.html
-  if Assigned(POSTGRESQL_API.PQsetSingleRowMode) then
-    Result := POSTGRESQL_API.PQsetSingleRowMode(Handle)
-  else
-    Result := 0;
-end;
-
-{ TZPostgreSQL7PlainDriver }
-
-function TZPostgreSQL7PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZPostgreSQL7PlainDriver.Create;
-end;
-
-constructor TZPostgreSQL7PlainDriver.Create;
-begin
-  inherited Create;
-  {$IFNDEF UNIX}
-    FLoader.AddLocation(WINDOWS_DLL7_LOCATION);
-  {$ENDIF}
-end;
-
-function TZPostgreSQL7PlainDriver.GetProtocol: string;
-begin
-  Result := 'postgresql-7';
-end;
-
-function TZPostgreSQL7PlainDriver.GetDescription: string;
-begin
-  Result := 'Native Plain Driver for PostgreSQL 7.x';
-end;
-
-{ TZPostgreSQL8PlainDriver }
-function TZPostgreSQL8PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZPostgreSQL8PlainDriver.Create;
-end;
-
-function TZPostgreSQL8PlainDriver.GetUnicodeCodePageName: String;
-begin
-  Result := 'UTF8';
-end;
-
-procedure TZPostgreSQL8PlainDriver.LoadCodePages;
-begin
-  inherited LoadCodePages;
   { Version 8.1 }
   {MultiByte}
   ResetCodePage(Ord(csUNICODE_PODBC), 'UTF8', Ord(csUTF8), ceUTF8, zCP_UTF8, '', 4); { Unicode, 8-bit 	all }
@@ -1946,67 +782,128 @@ begin
   { Version 8.4 }
   {SingleChar}
   AddCodePage('KOI8U', Ord(csKOI8U), ceAnsi, zCP_KOI8U); { 	KOI8-U 	Cyrillic (Ukrainian) }
+  { Version 9+}
+  //ResetCodePage(Ord(csKOI8), 'KOI8R', Ord(csKOI8R)); { KOI8-R 	Cyrillic (Russian) } //No longer in use
 end;
 
-constructor TZPostgreSQL8PlainDriver.Create;
+procedure TZPostgreSQLPlainDriver.LoadApi;
 begin
-  inherited Create;
+{ ************** Load adresses of API Functions ************* }
+  with Loader do
+  begin
+  { ===	in fe-connect.c === }
+    @PQconnectdb    := GetAddress('PQconnectdb');
+    @PQsetdbLogin   := GetAddress('PQsetdbLogin');
+    @PQconndefaults := GetAddress('PQconndefaults');
+    @PQfinish       := GetAddress('PQfinish');
+    @PQreset        := GetAddress('PQreset');
+    @PQrequestCancel := GetAddress('PQrequestCancel');
+    @PQdb           := GetAddress('PQdb');
+    @PQuser         := GetAddress('PQuser');
+    @PQpass         := GetAddress('PQpass');
+    @PQhost         := GetAddress('PQhost');
+    @PQport         := GetAddress('PQport');
+    @PQtty          := GetAddress('PQtty');
+    @PQoptions      := GetAddress('PQoptions');
+    @PQstatus       := GetAddress('PQstatus');
+    @PQserverVersion:= GetAddress('PQserverVersion');
+    @PQerrorMessage := GetAddress('PQerrorMessage');
+    @PQsocket       := GetAddress('PQsocket');
+    @PQbackendPID   := GetAddress('PQbackendPID');
+    @PQtrace        := GetAddress('PQtrace');
+    @PQuntrace      := GetAddress('PQuntrace');
+    @PQsetNoticeProcessor := GetAddress('PQsetNoticeProcessor');
+    @PQclientEncoding := GetAddress('PQclientEncoding');
+  { === in fe-exec.c === }
+    @PQexec         := GetAddress('PQexec');
+    @PQexecParams   := GetAddress('PQexecParams');
+    @PQprepare      := GetAddress('PQprepare');
+    @PQexecPrepared := GetAddress('PQexecPrepared');
+    @PQsendQuery    := GetAddress('PQsendQuery');
+    @PQsendQueryParams:= GetAddress('PQsendQueryParams');
+    @PQsendPrepare  := GetAddress('PQsendPrepare');
+    @PQsendQueryPrepared := GetAddress('PQsendQueryPrepared');
+    @PQgetResult    := GetAddress('PQgetResult');
+    @PQsetSingleRowMode := GetAddress('PQsetSingleRowMode'); //9+ http://www.postgresql.org/docs/9.2/static/libpq-single-row-mode.html
+
+    @PQnotifies     := GetAddress('PQnotifies');
+    @PQfreeNotify   := GetAddress('PQfreeNotify');
+    @PQisBusy       := GetAddress('PQisBusy');
+    @PQconsumeInput := GetAddress('PQconsumeInput');
+    @PQgetline      := GetAddress('PQgetline');
+    @PQputline      := GetAddress('PQputline');
+    @PQgetlineAsync := GetAddress('PQgetlineAsync');
+    @PQputnbytes    := GetAddress('PQputnbytes');
+    @PQendcopy      := GetAddress('PQendcopy');
+    @PQfn           := GetAddress('PQfn');
+    @PQresultStatus := GetAddress('PQresultStatus');
+    @PQresultErrorMessage := GetAddress('PQresultErrorMessage');
+    @PQntuples      := GetAddress('PQntuples');
+    @PQnfields      := GetAddress('PQnfields');
+    @PQbinaryTuples := GetAddress('PQbinaryTuples');
+    @PQfname        := GetAddress('PQfname');
+    @PQfnumber      := GetAddress('PQfnumber');
+    @PQftable       := GetAddress('PQftable');
+    @PQftablecol    := GetAddress('PQftablecol');
+    @PQftype        := GetAddress('PQftype');
+    @PQfsize        := GetAddress('PQfsize');
+    @PQfmod         := GetAddress('PQfmod');
+    @PQcmdStatus    := GetAddress('PQcmdStatus');
+    @PQoidValue     := GetAddress('PQoidValue');
+    @PQoidStatus    := GetAddress('PQoidStatus');
+    @PQcmdTuples    := GetAddress('PQcmdTuples');
+    @PQgetvalue     := GetAddress('PQgetvalue');
+    @PQgetlength    := GetAddress('PQgetlength');
+    @PQgetisnull    := GetAddress('PQgetisnull');
+    @PQclear        := GetAddress('PQclear');
+    @PQmakeEmptyPGresult := GetAddress('PQmakeEmptyPGresult');
+
+  { === in fe-lobj.c === }
+    @lo_open        := GetAddress('lo_open');
+    @lo_close       := GetAddress('lo_close');
+    @lo_read        := GetAddress('lo_read');
+    @lo_write       := GetAddress('lo_write');
+    @lo_lseek       := GetAddress('lo_lseek');
+    @lo_creat       := GetAddress('lo_creat');
+    @lo_tell        := GetAddress('lo_tell');
+    @lo_unlink      := GetAddress('lo_unlink');
+    @lo_import      := GetAddress('lo_import');
+    @lo_export      := GetAddress('lo_export');
+    @PQescapeStringConn  := GetAddress('PQescapeStringConn'); //since 7.3
+    @PQescapeByteaConn   := GetAddress('PQescapeByteaConn'); // postgresql since 7.3
+    @PQFreemem           := GetAddress('PQfreemem'); // since postgresql 7.4
+    @PQescapeString      := GetAddress('PQescapeString'); // since postgresql 7.4
+    @PQescapeBytea       := GetAddress('PQescapeBytea'); // since postgresql 7.4
+    @PQunescapeBytea     := GetAddress('PQunescapeBytea'); // since postgresql 8.3
+    @PQescapeLiteral     := GetAddress('PQescapeLiteral'); // since postgresql 9.0
+    @PQescapeIdentifier  := GetAddress('PQescapeIdentifier'); // since postgresql 9.0
+
+    @PQresultErrorField  := GetAddress('PQresultErrorField');
+    @PQgetCancel         := GetAddress('PQgetCancel');
+    @PQfreeCancel        := GetAddress('PQfreeCancel');
+    @PQcancel            := GetAddress('PQcancel');
+  end;
+end;
+
+function TZPostgreSQLPlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZPostgreSQLPlainDriver.Create;
+end;
+
+constructor TZPostgreSQLPlainDriver.Create;
+begin
+  inherited create;
+  FLoader := TZNativeLibraryLoader.Create([]);
   {$IFNDEF UNIX}
+    FLoader.AddLocation(WINDOWS_DLL_LOCATION);
+    FLoader.AddLocation(WINDOWS_DLL7_LOCATION);
     FLoader.AddLocation(WINDOWS_DLL8_LOCATION);
   {$ELSE}
+    FLoader.AddLocation(LINUX_DLL_LOCATION);
     FLoader.AddLocation(LINUX_DLL82_LOCATION);
     FLoader.AddLocation(LINUX_DLL8_LOCATION);
   {$ENDIF}
-end;
-
-function TZPostgreSQL8PlainDriver.GetProtocol: string;
-begin
-  Result := 'postgresql-8';
-end;
-
-function TZPostgreSQL8PlainDriver.GetDescription: string;
-begin
-  Result := 'Native Plain Driver for PostgreSQL 8.x';
-end;
-
-{ TZPostgreSQL9PlainDriver }
-function TZPostgreSQL9PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZPostgreSQL9PlainDriver.Create;
-end;
-
-procedure TZPostgreSQL9PlainDriver.LoadCodePages;
-begin
-  inherited LoadCodePages;
-  ResetCodePage(Ord(csKOI8), 'KOI8R', Ord(csKOI8R)); { KOI8-R 	Cyrillic (Russian) } //No longer in use
-end;
-
-constructor TZPostgreSQL9PlainDriver.Create;
-begin
-  inherited Create;
-  Self.FLoader.ClearLocations;
-  {$IFNDEF STRICT_DLL_LOADING}
-    {$IFNDEF UNIX}
-      FLoader.AddLocation(WINDOWS_DLL_LOCATION);
-    {$ELSE}
-      FLoader.AddLocation(LINUX_DLL9_LOCATION);
-    {$ENDIF}
-  {$ENDIF}
-end;
-
-function TZPostgreSQL9PlainDriver.GetProtocol: string;
-begin
-  Result := 'postgresql-9';
-end;
-
-function TZPostgreSQL9PlainDriver.GetDescription: string;
-begin
-  Result := 'Native Plain Driver for PostgreSQL 9.x';
-end;
-
-function TZPostgreSQL9PlainDriver.GetStandardConformingStrings: Boolean;
-begin
-  Result := True;
+  LoadCodePages;
 end;
 
 end.

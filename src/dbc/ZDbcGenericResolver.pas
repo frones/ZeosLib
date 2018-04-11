@@ -717,7 +717,9 @@ var
   Current: TZResolverParameter;
   TableName: string;
   Temp1: string;
-  Fields: TStrings; 
+  {$IF DEFINED(DSProps_InsertReturningFields)}
+  Fields: TStrings;
+  {$IFEND}
 begin
   TableName := DefineTableName;
   DefineInsertColumns(Columns);
@@ -737,6 +739,7 @@ begin
   Result := 'INSERT INTO '+TableName+' ('+Temp1+') VALUES ('+
     DupeString('?,', Columns.Count - 1) + '?' +')';
 
+  {$IF DEFINED(DSProps_InsertReturningFields)}
   Temp1 := FStatement.GetParameters.Values[DSProps_InsertReturningFields];
   if Temp1 <> '' then
   begin
@@ -751,6 +754,7 @@ begin
     Fields.Free;
     Result := Result + ' RETURNING ' + Temp1;
   end;
+  {$IFEND}
 end;
 
 {**

@@ -61,6 +61,29 @@ uses
 
 type
 
+  {**
+    Implements a number state object.
+    Depending on the FSupportsHex flag it could read hex values.
+    It is base abstract class that shouldn't be used.
+  }
+  TZGenericBaseNumberState = class (TZNumberState)
+  private
+    FSupportsHex: Boolean;
+  public
+    function NextToken(Stream: TStream; FirstChar: Char;
+      Tokenizer: TZTokenizer): TZToken; override;
+  end;
+
+  TZGenericSQLNoHexNumberState = class (TZGenericBaseNumberState)
+  public
+    constructor Create;
+  end;
+
+  TZGenericSQLHexNumberState = class (TZGenericBaseNumberState)
+  public
+    constructor Create;
+  end;
+
   {** Implements a symbol state object. }
   TZGenericSQLSymbolState = class (TZSymbolState)
   public
@@ -86,6 +109,29 @@ type
     function DecodeString(const Value: string; QuoteChar: Char): string; override;
   end;
 
+  {** Implements a quote string state object.
+    Quote chars:
+      ' - string literals
+      " and [] - identifiers
+   }
+  TZGenericSQLBracketQuoteState = class (TZQuoteState)
+  public
+    function NextToken(Stream: TStream; FirstChar: Char;
+      Tokenizer: TZTokenizer): TZToken; override;
+
+    function EncodeString(const Value: string; QuoteChar: Char): string; override;
+    function DecodeString(const Value: string; QuoteChar: Char): string; override;
+  end;
+
+  {** Implements a comment state object.
+    Processes common SQL comments like -- and /* */
+  }
+  TZGenericSQLCommentState = class (TZCppCommentState)
+  public
+    function NextToken(Stream: TStream; FirstChar: Char;
+      Tokenizer: TZTokenizer): TZToken; override;
+  end;
+
   {** Implements a default tokenizer object. }
   TZGenericSQLTokenizer = class (TZTokenizer)
   protected
@@ -94,9 +140,147 @@ type
 
 implementation
 
-{$IFDEF FAST_MOVE}
-uses ZFastCode;
-{$ENDIF}
+{$IFDEF FAST_MOVE}uses ZFastCode;{$ENDIF}
+
+{ TZGenericBaseNumberState }
+
+function TZGenericBaseNumberState.NextToken(Stream: TStream; FirstChar: Char;
+  Tokenizer: TZTokenizer): TZToken;
+var
+  LastChar: Char;
+
+  // Uses external variables: Stream, LastChar, Result.Value
+  procedure ReadDecDigits;
+  begin
+    LastChar := #0;
+    while Stream.Read(LastChar, SizeOf(Char)) > 0 do
+      if CharInSet(LastChar, ['0'..'9']) then
+      begin
+        ToBuf(LastChar, Result.Value);
+        LastChar := #0;
+      end
+      else
+      begin
+        Stream.Seek(-SizeOf(Char), soFromCurrent);
+        Break;
+      end;
+  end;
+
+  // Uses external variables: Stream, LastChar, Result.Value
+  procedure ReadHexDigits;
+  begin
+    LastChar := #0;
+    while Stream.Read(LastChar, SizeOf(Char)) > 0 do
+      if CharInSet(LastChar, ['0'..'9','a'..'f','A'..'F']) then
+      begin
+        ToBuf(LastChar, Result.Value);
+        LastChar := #0;
+      end
+      else
+      begin
+        Stream.Seek(-SizeOf(Char), soFromCurrent);
+        Break;
+      end;
+  end;
+
+  // Uses external variables: Stream, LastChar, Result.Value
+  procedure ReadExp;
+  begin
+    Stream.Read(LastChar, SizeOf(Char));
+    ToBuf(LastChar, Result.Value);
+
+    Stream.Read(LastChar, SizeOf(Char));
+    if CharInSet(LastChar, ['0'..'9','-','+']) then
+    begin
+      ToBuf(LastChar, Result.Value);
+      ReadDecDigits;
+    end
+    else
+    begin
+      FlushBuf(Result.Value);
+      SetLength(Result.Value, Length(Result.Value) - 1);
+      Stream.Seek(-2*SizeOf(Char), soFromCurrent);
+    end;
+  end;
+
+var
+  HexDecimal: Boolean;
+  FloatPoint: Boolean;
+begin
+  HexDecimal := False;
+  FloatPoint := FirstChar = '.';
+  LastChar := #0;
+
+  Result.Value := '';
+  InitBuf(FirstChar);
+  Result.TokenType := ttUnknown;
+
+  { Reads the first part of the number before decimal point }
+  if not FloatPoint then
+  begin
+    ReadDecDigits;
+    FloatPoint := (LastChar = '.');
+    if FloatPoint then
+    begin
+      Stream.Read(LastChar, SizeOf(Char));
+      ToBuf(LastChar, Result.Value);
+    end;
+  end;
+
+  { Reads the second part of the number after decimal point }
+  if FloatPoint then
+    ReadDecDigits;
+
+  { Reads a power part of the number }
+  if (Ord(LastChar) or $20) = ord('e') then //CharInSet(LastChar, ['e','E']) then
+  begin
+    FloatPoint := True;
+    ReadExp;
+  end;
+
+  { Reads the hexadecimal number }
+  if FSupportsHex then
+  begin
+    if (Result.Value = '') and (FirstChar = '0') and
+      ((Ord(LastChar) or $20) = ord('x')) then //CharInSet(LastChar, ['x','X']) then
+    begin
+      Stream.Read(LastChar, SizeOf(Char));
+      ToBuf(LastChar, Result.Value);
+      ReadHexDigits;
+      HexDecimal := True;
+    end;
+  end;
+  FlushBuf(Result.Value);
+
+  { Prepare the result }
+  if Result.Value = '.' then
+  begin
+    if Tokenizer.SymbolState <> nil then
+      Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer);
+  end
+  else if HexDecimal then
+    Result.TokenType := ttHexDecimal
+  else if FloatPoint then
+    Result.TokenType := ttFloat
+  else
+    Result.TokenType := ttInteger;
+end;
+
+{ TZGenericSQLNoHexNumberState }
+
+constructor TZGenericSQLNoHexNumberState.Create;
+begin
+  inherited;
+  FSupportsHex := False;
+end;
+
+{ TZGenericSQLHexNumberState }
+
+constructor TZGenericSQLHexNumberState.Create;
+begin
+  inherited;
+  FSupportsHex := True;
+end;
 
 { TZGenericSQLSymbolState }
 
@@ -267,6 +451,139 @@ begin
     then Result := AnsiDequotedStr(Value, QuoteChar)
     else Result := ''
   else Result := Value;
+end;
+
+{ TZGenericSQLCommentState }
+
+function TZGenericSQLCommentState.NextToken(Stream: TStream; FirstChar: Char;
+  Tokenizer: TZTokenizer): TZToken;
+var
+  ReadChar: Char;
+  ReadNum: Integer;
+begin
+  InitBuf(FirstChar);
+  Result.Value := '';
+  Result.TokenType := ttUnknown;
+
+  case FirstChar of
+    '-':
+      begin
+        ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
+        if ReadNum > 0 then
+          if ReadChar = '-' then
+          begin
+            Result.TokenType := ttComment;
+            ToBuf(ReadChar, Result.Value);
+            GetSingleLineComment(Stream, Result.Value);
+          end
+          else
+            Stream.Seek(-SizeOf(Char), soFromCurrent);
+      end;
+    '/':
+      begin
+        ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
+        if ReadNum > 0 then
+          if ReadChar = '*' then
+          begin
+            Result.TokenType := ttComment;
+            ToBuf(ReadChar, Result.Value);
+            GetMultiLineComment(Stream, Result.Value);
+          end
+          else
+            Stream.Seek(-SizeOf(Char), soFromCurrent);
+      end;
+  end;
+
+  if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil) then
+    Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer)
+  else
+    FlushBuf(Result.Value);
+end;
+
+{ TZGenericSQLBracketQuoteState }
+
+{**
+  Return a quoted string token from a reader. This method
+  will collect characters until it sees a match to the
+  character that the tokenizer used to switch to this state.
+
+  @return a quoted string token from a reader
+}
+function TZGenericSQLBracketQuoteState.NextToken(Stream: TStream; FirstChar: Char;
+  Tokenizer: TZTokenizer): TZToken;
+var
+  ReadChar: Char;
+  LastChar: Char;
+begin
+  Result.Value := '';
+  InitBuf(FirstChar);
+  LastChar := #0;
+  while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do
+  begin
+    if ((LastChar = FirstChar) and (ReadChar <> FirstChar) and (FirstChar <> '[')) or
+      ((FirstChar = '[') and (LastChar = ']')) then
+    begin
+      Stream.Seek(-SizeOf(Char), soFromCurrent);
+      Break;
+    end;
+    ToBuf(ReadChar, Result.Value);
+    if (LastChar = FirstChar) and (ReadChar = FirstChar) then
+      LastChar := #0
+    else LastChar := ReadChar;
+  end;
+  FlushBuf(Result.Value);
+
+  case FirstChar of
+    '"', '[': Result.TokenType := ttWord
+    else      Result.TokenType := ttQuoted;
+  end;
+end;
+
+{**
+  Encodes a string value.
+  @param Value a string value to be encoded.
+  @param QuoteChar a string quote character.
+  @returns an encoded string.
+}
+function TZGenericSQLBracketQuoteState.EncodeString(const Value: string; QuoteChar: Char): string;
+begin
+  case QuoteChar of
+    '[':      Result := '[' + Value + ']';
+    #39, '"': Result := QuoteChar + Value + QuoteChar;
+    else      Result := Value;
+  end;
+end;
+
+{**
+  Decodes a string value.
+  @param Value a string value to be decoded.
+  @param QuoteChar a string quote character.
+  @returns an decoded string.
+}
+function TZGenericSQLBracketQuoteState.DecodeString(const Value: string; QuoteChar: Char): string;
+var Len: Integer;
+begin
+  Result := Value;
+  Len := Length(Value);
+  if Len >= 2 then
+  begin
+    case QuoteChar of
+      #39, '"':
+        if (Value[1] = QuoteChar) and (Value[Len] = QuoteChar) then
+        begin
+          if Len > 2
+            then Result := AnsiDequotedStr(Value, QuoteChar)
+            else Result := '';
+        end;
+      '[':
+        if (Value[1] = QuoteChar) and (Value[Len] = ']') then
+        begin
+          if Len > 2
+            then Result := Copy(Value, 2, Len - 2)
+            else Result := '';
+        end;
+    end;
+  end;
 end;
 
 { TZGenericSQLTokenizer }

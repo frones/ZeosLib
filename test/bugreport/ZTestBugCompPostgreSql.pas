@@ -1080,7 +1080,8 @@ procedure TZTestCompPostgreSQLBugReport.TestSF218_kgizmo;
 var
   TempConnection: TZConnection;
   Query: TZQuery;
-  S: String;
+const
+  TestString = 'Test string'+#10+'Test string';
 begin
   if SkipForReason(srClosedBug) then Exit;
 
@@ -1094,16 +1095,14 @@ begin
     Query.ParamByName('param').AsString := '%'; //kgizmo reports: Everything is OK with Params but I get "\n" string in the result text.
     Query.Open;
     Query.Next;
-    S := Query.Fields[0].AsString;
-    Check(s = 'Test string'+#10+'Test string', 'wrong string returned tested with pgadmin and standard_conforming_strings=OFF');
+    CheckEquals(TestString, Query.Fields[0].AsString, 'wrong string returned tested with pgadmin and standard_conforming_strings=OFF');
     Query.Close;
 
     Query.SQL.Text := 'select s_char||E''\n''||s_varchar from string_values where 1=1 and (s_varbit iLike :param)';
     Query.ParamByName('param').AsString := '%'; //kgizmo reports: Parameter not found.
     Query.Open;
     Query.Next;
-    S := Query.Fields[0].AsString;
-    Check(s = 'Test string'+#10+'Test string', 'wrong string returned tested with pgadmin and standard_conforming_strings=OFF');
+    CheckEquals(TestString, Query.Fields[0].AsString, 'wrong string returned tested with pgadmin and standard_conforming_strings=OFF');
     Query.Close;
 
     TempConnection.Disconnect;
@@ -1115,16 +1114,14 @@ begin
     Query.ParamByName('param').AsString := '%'; //kgizmo reports: Everything is OK with Params but I get "\n" string in the result text.
     Query.Open;
     Query.Next;
-    S := Query.Fields[0].AsString;
-    Check(s <> 'Test string'+#10+'Test string', 'wrong string returned tested with pgadmin and standard_conforming_strings=ON');
+    CheckEquals(TestString, Query.Fields[0].AsString, 'wrong string returned tested with pgadmin and standard_conforming_strings=ON');
     Query.Close;
 
     Query.SQL.Text := 'select s_char||E''\n''||s_varchar from string_values where 1=1 and (s_varbit iLike :param)';
     Query.ParamByName('param').AsString := '%'; //kgizmo reports: Parameter not found.
     Query.Open;
     Query.Next;
-    S := Query.Fields[0].AsString;
-    Check(s = 'Test string'+#10+'Test string', 'wrong string returned tested with pgadmin and standard_conforming_strings=OFF');
+    CheckEquals(TestString, Query.Fields[0].AsString, 'wrong string returned tested with pgadmin and standard_conforming_strings=OFF');
     Query.Close;
   finally
     Query.Free;

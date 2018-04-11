@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZDbcIntfs, ZCompatibility, ZDbcInterbase6, ZSqlTestCase;
+  ZDbcIntfs, ZCompatibility, ZSqlTestCase;
 
 type
 

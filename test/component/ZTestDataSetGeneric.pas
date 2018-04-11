@@ -102,6 +102,7 @@ type
     procedure TestDefineSortedFields;
     procedure TestEmptyMemoAfterFullMemo;
     procedure TestInsertReturning;
+    procedure TesNullUnionNull;
   end;
 
   TZGenericTestDataSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -112,6 +113,7 @@ type
     TTestMethod = procedure of object;
   {$IFEND}
 
+  {$IFDEF ENABLE_INTERBASE}
   TZInterbaseTestGUIDS = class(TZAbstractCompSQLTestCase)
   private
     CurrentTest: string;
@@ -144,6 +146,7 @@ type
   published
     procedure Test;
   end;
+  {$ENDIF}
 
 implementation
 
@@ -1785,6 +1788,21 @@ begin
   end;
 end;
 
+procedure TZGenericTestDataSet.TesNullUnionNull;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'SELECT null as col1 FROM people union SELECT null as col1 FROM people';
+    Query.Open;
+    Check(Query.Fields[0].DataType in [ftString, ftWideString, ftMemo{$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}]);
+    Query.Close;
+  finally
+    Query.Free;
+  end;
+end;
+
 procedure TZGenericTestDataSet.TestClobEmptyString;
 var
   Query: TZQuery;
@@ -2516,6 +2534,8 @@ begin
   end;
 end;
 
+{$IFDEF ENABLE_INTERBASE}
+
 const
   TBL_NAME = 'Guids';
   GUID_DOM_FIELD = 'GUID_DOM_FIELD';
@@ -2792,9 +2812,12 @@ begin
     msg
    );
 end;
+{$ENDIF}
 
 initialization
   RegisterTest('component',TZGenericTestDataSet.Suite);
   RegisterTest('component',TZGenericTestDataSetMBCs.Suite);
+  {$IFDEF ENABLE_INTERBASE}
   RegisterTest('component',TZInterbaseTestGUIDS.Suite);
+  {$ENDIF}
 end.

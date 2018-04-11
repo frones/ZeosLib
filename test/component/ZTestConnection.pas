@@ -182,18 +182,18 @@ procedure TZTestConnectionCase.TestIdentifierQuotes;
 begin
   try
     Connection.Connect;
-    Check(Connection.DbcConnection.GetMetadata.GetDatabaseInfo.GetIdentifierQuoteString <> '');
+    CheckNotEquals('', Connection.DbcConnection.GetMetadata.GetDatabaseInfo.GetIdentifierQuoteString);
     Connection.Disconnect;
 
     Connection.Properties.Add('identifier_quotes=');
     Connection.Connect;
-    Check(Connection.DbcConnection.GetMetadata.GetDatabaseInfo.GetIdentifierQuoteString = '');
+    CheckEquals('', Connection.DbcConnection.GetMetadata.GetDatabaseInfo.GetIdentifierQuoteString);
     Connection.Disconnect;
     Connection.Properties.Delete(Connection.Properties.IndexOfName('identifier_quotes'));
 
     Connection.Properties.Values['identifier_quotes'] := '{}';
     Connection.Connect;
-    Check(Connection.DbcConnection.GetMetadata.GetDatabaseInfo.GetIdentifierQuoteString = '{}');
+    CheckEquals('{}', Connection.DbcConnection.GetMetadata.GetDatabaseInfo.GetIdentifierQuoteString);
     Connection.Disconnect;
   finally
     Connection.Properties.Delete(Connection.Properties.IndexOfName('identifier_quotes'));

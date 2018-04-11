@@ -581,7 +581,7 @@ begin
     Parent.FNativeHandle, @EventID, EventBufferLen,
     EventBuffer, TISC_CALLBACK(@EventCallback), PVoid(Self));
 
-  if not SuccessfulStatus(StatusVector) then
+  if not StatusSucceeded(StatusVector) then
     if Assigned(Parent.OnError) then // only if someone handles errors
     // Very Ugly! OnError should accept Exception as parameter.
     // But we keep backward compatibility here

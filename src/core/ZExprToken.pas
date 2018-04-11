@@ -109,6 +109,7 @@ type
   end;
 
 implementation
+
 uses ZCompatibility{$IFDEF FAST_MOVE},ZFastCode{$ENDIF};
 
 const
