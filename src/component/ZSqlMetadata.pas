@@ -201,6 +201,8 @@ begin
       mdUserDefinedTypes:
         Result := Metadata.GetUDTs(FCatalog, FSchema, FTypeName, nil);
      end;
+     if Assigned(Result) then
+      Result.BeforeFirst;
   finally
     Connection.HideSQLHourGlass;
   end;
