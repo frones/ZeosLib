@@ -113,6 +113,7 @@ const
    MYSQL_NO_DATA = 100;
    MYSQL_DATA_TRUNCATED  = 101;
 
+{$MINENUMSIZE 4}
 type
   TMySqlOption = (
     MYSQL_OPT_CONNECT_TIMEOUT, MYSQL_OPT_COMPRESS, MYSQL_OPT_NAMED_PIPE,
@@ -133,7 +134,11 @@ type
     MYSQL_SERVER_PUBLIC_KEY,
     MYSQL_ENABLE_CLEARTEXT_PLUGIN,
     MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS,
-    MYSQL_OPT_SSL_ENFORCE
+    MYSQL_OPT_SSL_ENFORCE,
+
+    MYSQL_OPT_MAX_ALLOWED_PACKET, MYSQL_OPT_NET_BUFFER_LENGTH,
+    MYSQL_OPT_TLS_VERSION;
+    MYSQL_OPT_SSL_MODE
   );
 const
   TMySqlOptionMinimumVersion: array[TMySqlOption] of Integer =
@@ -176,9 +181,14 @@ const
       {MYSQL_SERVER_PUBLIC_KEY}                 50606,
       {MYSQL_ENABLE_CLEARTEXT_PLUGIN}           50607,
       {MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS}  50610,
-      {MYSQL_OPT_SSL_ENFORCE}                   50703
+      {MYSQL_OPT_SSL_ENFORCE}                   50703,
+      {MYSQL_OPT_MAX_ALLOWED_PACKET}            60111,
+      {MYSQL_OPT_NET_BUFFER_LENGTH}             60111,
+      {MYSQL_OPT_TLS_VERSION}                   60111,
+      {MYSQL_OPT_SSL_MODE}                      60111
     );
 type
+  Pmy_bool = ^my_bool;
   my_bool = byte;
 
   PUSED_MEM=^USED_MEM;
@@ -498,9 +508,9 @@ TMYSQL_CLIENT_OPTIONS =
   MYSQL_BIND60 =  record
     // 6.0.8 definition
     length:            PULong;
-    is_null:           PByte;
+    is_null:           Pmy_bool;
     buffer:            Pointer;
-    error:             PByte;
+    error:             Pmy_bool;
     row_ptr:           PByte;
     store_param_funct: Pointer;
     fetch_result:      Pointer;
@@ -511,10 +521,10 @@ TMYSQL_CLIENT_OPTIONS =
     param_number:      UInt;
     pack_length:       UInt;
     buffer_type:       TMysqlFieldTypes;
-    error_value:       Byte;
-    is_unsigned:       Byte;
-    long_data_used:    Byte;
-    is_null_value:     Byte;
+    error_value:       my_bool;
+    is_unsigned:       my_bool;
+    long_data_used:    my_bool;
+    is_null_value:     my_bool;
     extension:         Pointer;
   end;
 

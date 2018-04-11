@@ -1274,7 +1274,7 @@ begin
                      result.is_null       := {%H-}NativeUint(@(PMYSQL_BIND51(nil).is_null));
                      result.size          := Sizeof(MYSQL_BIND51);
                    end;
-    60000..60099 : begin
+    60000..69999 : begin //nothing changed until 6.1.11
                      result.buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND60(nil).buffer_type));
                      result.buffer_length := {%H-}NativeUint(@(PMYSQL_BIND60(nil).buffer_length));
                      result.is_unsigned   := {%H-}NativeUint(@(PMYSQL_BIND60(nil).is_unsigned));
