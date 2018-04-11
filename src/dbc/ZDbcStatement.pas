@@ -251,6 +251,10 @@ type
     property ArrayCount: ArrayLenInt read FInitialArrayCount;
     procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
+
+    procedure InternalSetOrdinal(ParameterIndex: Integer; SQLType: TZSQLType; const Value: Int64); virtual;
+    procedure InternalSetDouble(ParameterIndex: Integer; SQLType: TZSQLType; const Value: Double); virtual;
+    procedure InternalSetDateTime(ParameterIndex: Integer; SQLType: TZSQLType; const Value: TDateTime); virtual;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;
@@ -277,21 +281,21 @@ type
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); virtual;
 
-    procedure SetNull(ParameterIndex: Integer; const SQLType: TZSQLType); virtual;
-    procedure SetBoolean(ParameterIndex: Integer; const Value: Boolean); virtual;
-    procedure SetByte(ParameterIndex: Integer; const Value: Byte); virtual;
-    procedure SetShort(ParameterIndex: Integer; const Value: ShortInt); virtual;
-    procedure SetWord(ParameterIndex: Integer; const Value: Word); virtual;
-    procedure SetSmall(ParameterIndex: Integer; const Value: SmallInt); virtual;
-    procedure SetUInt(ParameterIndex: Integer; const Value: Cardinal); virtual;
-    procedure SetInt(ParameterIndex: Integer; const Value: Integer); virtual;
+    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType); virtual;
+    procedure SetBoolean(ParameterIndex: Integer; Value: Boolean); virtual;
+    procedure SetByte(ParameterIndex: Integer; Value: Byte); virtual;
+    procedure SetShort(ParameterIndex: Integer; Value: ShortInt); virtual;
+    procedure SetWord(ParameterIndex: Integer; Value: Word); virtual;
+    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt); virtual;
+    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal); virtual;
+    procedure SetInt(ParameterIndex: Integer; Value: Integer); virtual;
     procedure SetULong(ParameterIndex: Integer; const Value: UInt64); virtual;
     procedure SetLong(ParameterIndex: Integer; const Value: Int64); virtual;
-    procedure SetFloat(ParameterIndex: Integer; const Value: Single); virtual;
+    procedure SetFloat(ParameterIndex: Integer; Value: Single); virtual;
     procedure SetDouble(ParameterIndex: Integer; const Value: Double); virtual;
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency); virtual;
     procedure SetBigDecimal(ParameterIndex: Integer; const Value: Extended); virtual;
-    procedure SetPChar(ParameterIndex: Integer; const Value: PChar); virtual;
+    procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); virtual;
     procedure SetString(ParameterIndex: Integer; const Value: String); virtual;
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); virtual;
@@ -532,18 +536,18 @@ begin
     P := Pointer(Value);
     if L = 1 //happens very often (comma,space etc) -> no move
     then fABuffer[fABufferIndex] := P^
-    else System.Move(Pointer(Value)^, fABuffer[fABufferIndex], L);
+    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, fABuffer[fABufferIndex], L);
     Inc(fABufferIndex, L);
   end else begin
     SetLength(Result, Length(Result)+fABufferIndex+L);
     P := Pointer(Result);
     Inc(P, Length(Result)-fABufferIndex-L);
     if fABufferIndex > 0 then begin
-      System.Move(fABuffer[0], P^, fABufferIndex);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(fABuffer[0], P^, fABufferIndex);
       Inc(P, fABufferIndex);
       fABufferIndex := 0;
     end;
-    System.Move(Pointer(Value)^, P^, L);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, P^, L);
   end;
 end;
 
@@ -559,18 +563,18 @@ begin
     P := Pointer(Value);
     if L = 1 //happens very often (comma,space etc) -> no move
     then fWBuffer[fWBufferIndex] := P^
-    else System.Move(Pointer(Value)^, fWBuffer[fWBufferIndex], L shl 1);
+    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, fWBuffer[fWBufferIndex], L shl 1);
     Inc(fWBufferIndex, L);
   end else begin
     SetLength(Result, Length(Result)+fWBufferIndex+L);
     P := Pointer(Result);
     Inc(P, Length(Result)-fWBufferIndex-L);
     if fWBufferIndex > 0 then begin
-      System.Move(fWBuffer[0], P^, fWBufferIndex shl 1);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(fWBuffer[0], P^, fWBufferIndex shl 1);
       Inc(P, fWBufferIndex);
       fWBufferIndex := 0;
     end;
-    System.Move(Pointer(Value)^, P^, L shl 1);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, P^, L shl 1);
   end;
 end;
 
@@ -663,7 +667,7 @@ begin
     SetLength(Result, Length(Result)+fABufferIndex);
     P := Pointer(Result);
     Inc(P, Length(Result)-fABufferIndex);
-    System.Move(fABuffer[0], P^, fABufferIndex);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(fABuffer[0], P^, fABufferIndex);
     fABufferIndex := 0;
   end;
 end;
@@ -675,7 +679,7 @@ begin
     SetLength(Result, Length(Result)+fWBufferIndex);
     P := Pointer(Result);
     Inc(P, Length(Result)-fWBufferIndex);
-    System.Move(fWBuffer[0], P^, fWBufferIndex shl 1);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(fWBuffer[0], P^, fWBufferIndex shl 1);
     fWBufferIndex := 0;
   end;
 end;
@@ -1694,7 +1698,7 @@ end;
   @param sqlType the SQL type code defined in <code>java.sql.Types</code>
 }
 procedure TZAbstractPreparedStatement.SetNull(ParameterIndex: Integer;
-  const SQLType: TZSQLType);
+  SQLType: TZSQLType);
 begin
   SetInParam(ParameterIndex, SQLType, NullVariant);
 end;
@@ -1708,7 +1712,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetBoolean(ParameterIndex: Integer;
-  const Value: Boolean);
+  Value: Boolean);
 begin
   SetInParam(ParameterIndex, stBoolean, EncodeBoolean(Value));
 end;
@@ -1722,9 +1726,9 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetByte(ParameterIndex: Integer;
-  const Value: Byte);
+  Value: Byte);
 begin
-  SetInParam(ParameterIndex, stByte, EncodeInteger(Value));
+  InternalSetOrdinal(ParameterIndex, stByte, Value);
 end;
 
 {**
@@ -1736,9 +1740,9 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetShort(ParameterIndex: Integer;
-  const Value: ShortInt);
+  Value: ShortInt);
 begin
-  SetInParam(ParameterIndex, stShort, EncodeInteger(Value));
+  InternalSetOrdinal(ParameterIndex, stShort, Value);
 end;
 
 {**
@@ -1750,9 +1754,9 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetWord(ParameterIndex: Integer;
-  const Value: Word);
+  Value: Word);
 begin
-  SetInParam(ParameterIndex, stWord, EncodeInteger(Value));
+  InternalSetOrdinal(ParameterIndex, stWord, Value);
 end;
 
 {**
@@ -1764,9 +1768,9 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetSmall(ParameterIndex: Integer;
-  const Value: SmallInt);
+  Value: SmallInt);
 begin
-  SetInParam(ParameterIndex, stSmall, EncodeInteger(Value));
+  InternalSetOrdinal(ParameterIndex, stSmall, Value);
 end;
 
 {**
@@ -1778,9 +1782,9 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetUInt(ParameterIndex: Integer;
-  const Value: Cardinal);
+  Value: Cardinal);
 begin
-  SetInParam(ParameterIndex, stLongWord, EncodeInteger(Value));
+  InternalSetOrdinal(ParameterIndex, stLongWord, Value);
 end;
 
 {**
@@ -1792,9 +1796,9 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetInt(ParameterIndex: Integer;
-  const Value: Integer);
+  Value: Integer);
 begin
-  SetInParam(ParameterIndex, stInteger, EncodeInteger(Value));
+  InternalSetOrdinal(ParameterIndex, stInteger, Value);
 end;
 
 {**
@@ -1808,7 +1812,7 @@ end;
 procedure TZAbstractPreparedStatement.SetULong(ParameterIndex: Integer;
   const Value: UInt64);
 begin
-  SetInParam(ParameterIndex, stULong, EncodeInteger(Value));
+  SetInParam(ParameterIndex, stULong, EncodeUInteger(Value));
 end;
 
 {**
@@ -1822,7 +1826,7 @@ end;
 procedure TZAbstractPreparedStatement.SetLong(ParameterIndex: Integer;
   const Value: Int64);
 begin
-  SetInParam(ParameterIndex, stLong, EncodeInteger(Value));
+  InternalSetOrdinal(ParameterIndex, stLong, Value);
 end;
 
 {**
@@ -1834,9 +1838,9 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetFloat(ParameterIndex: Integer;
-  const Value: Single);
+  Value: Single);
 begin
-  SetInParam(ParameterIndex, stFloat, EncodeFloat(Value));
+  InternalSetDouble(ParameterIndex, stFloat, Value);
 end;
 
 {**
@@ -1850,7 +1854,7 @@ end;
 procedure TZAbstractPreparedStatement.SetDouble(ParameterIndex: Integer;
   const Value: Double);
 begin
-  SetInParam(ParameterIndex, stDouble, EncodeFloat(Value));
+  InternalSetDouble(ParameterIndex, stDouble, Value);
 end;
 
 {**
@@ -1864,7 +1868,7 @@ end;
 procedure TZAbstractPreparedStatement.SetCurrency(ParameterIndex: Integer;
   const Value: Currency);
 begin
-  SetInParam(ParameterIndex, stCurrency, EncodeFloat(Value));
+  InternalSetDouble(ParameterIndex, stCurrency, Value);
 end;
 
 {**
@@ -1878,7 +1882,7 @@ end;
 procedure TZAbstractPreparedStatement.SetBigDecimal(
   ParameterIndex: Integer; const Value: Extended);
 begin
-  SetInParam(ParameterIndex, stBigDecimal, EncodeFloat(Value));
+  InternalSetDouble(ParameterIndex, stBigDecimal, Value);
 end;
 
 {**
@@ -1893,9 +1897,13 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetPChar(ParameterIndex: Integer;
-   const Value: PChar);
+   Value: PChar);
 begin
-  SetInParam(ParameterIndex, stString, EncodeString(Value));
+  {$IFDEF UNICODE}
+  SetUnicodeString(ParameterIndex, Value);
+  {$ELSE}
+  SetRawByteString(ParameterIndex, Value);
+  {$ENDIF}
 end;
 
 {**
@@ -2075,7 +2083,7 @@ end;
 procedure TZAbstractPreparedStatement.SetDate(ParameterIndex: Integer;
   const Value: TDateTime);
 begin
-  SetInParam(ParameterIndex, stDate, EncodeDateTime(Value));
+  InternalSetDateTime(ParameterIndex, stDate, Value);
 end;
 
 {**
@@ -2089,7 +2097,7 @@ end;
 procedure TZAbstractPreparedStatement.SetTime(ParameterIndex: Integer;
   const Value: TDateTime);
 begin
-  SetInParam(ParameterIndex, stTime, EncodeDateTime(Value));
+  InternalSetDateTime(ParameterIndex, stTime, Value);
 end;
 
 {**
@@ -2103,7 +2111,7 @@ end;
 procedure TZAbstractPreparedStatement.SetTimestamp(ParameterIndex: Integer;
   const Value: TDateTime);
 begin
-  SetInParam(ParameterIndex, stTimestamp, EncodeDateTime(Value));
+  InternalSetDateTime(ParameterIndex, stTimestamp, Value);
 end;
 
 {**
@@ -2249,6 +2257,24 @@ begin
   InParamValues[ParameterIndex].VArray.VIsNullArray := Pointer(Value);
   InParamValues[ParameterIndex].VArray.VIsNullArrayType := Ord(SQLType);
   InParamValues[ParameterIndex].VArray.VIsNullArrayVariantType := VariantType;
+end;
+
+procedure TZAbstractPreparedStatement.InternalSetDouble(ParameterIndex: Integer;
+  SQLType: TZSQLType; const Value: Double);
+begin
+  SetInParam(ParameterIndex, SQLType, EncodeFloat(Value));
+end;
+
+procedure TZAbstractPreparedStatement.InternalSetOrdinal(ParameterIndex: Integer;
+  SQLType: TZSQLType; const Value: Int64);
+begin
+  SetInParam(ParameterIndex, SQLType, EncodeInteger(Value));
+end;
+
+procedure TZAbstractPreparedStatement.InternalSetDateTime(
+  ParameterIndex: Integer; SQLType: TZSQLType; const Value: TDateTime);
+begin
+  SetInParam(ParameterIndex, SQLType, EncodeDateTime(Value));
 end;
 
 {**
@@ -2447,17 +2473,19 @@ var
   I : integer;
   LogString : RawByteString;
 begin
-  LogString := '';
   case Category of
     lcBindPrepStmt:
         if InParamCount = 0 then
           result := nil
-        else
-          begin { Prepare Log Output}
-            For I := 0 to InParamCount - 1 do
-              LogString := LogString + GetInParamLogValue(I)+',';
-            result := CreateStmtLogEvent(Category, Logstring);
+        else begin { Prepare Log Output}
+          LogString := '';
+          For I := 0 to InParamCount - 1 do begin
+            ToBuff(GetInParamLogValue(I), LogString);
+            ToBuff(',', LogString);
           end;
+          FlushBuff(LogString);
+          result := CreateStmtLogEvent(Category, Logstring);
+       end;
   else
     result := inherited CreatelogEvent(Category);
   end;

@@ -626,21 +626,21 @@ type
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
-    procedure SetNull(ParameterIndex: Integer; const SQLType: TZSQLType);
-    procedure SetBoolean(ParameterIndex: Integer; const Value: Boolean);
-    procedure SetByte(ParameterIndex: Integer; const Value: Byte);
-    procedure SetShort(ParameterIndex: Integer; const Value: ShortInt);
-    procedure SetWord(ParameterIndex: Integer; const Value: Word);
-    procedure SetSmall(ParameterIndex: Integer; const Value: SmallInt);
-    procedure SetUInt(ParameterIndex: Integer; const Value: Cardinal);
-    procedure SetInt(ParameterIndex: Integer; const Value: Integer);
+    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
+    procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
+    procedure SetByte(ParameterIndex: Integer; Value: Byte);
+    procedure SetShort(ParameterIndex: Integer; Value: ShortInt);
+    procedure SetWord(ParameterIndex: Integer; Value: Word);
+    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt);
+    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal);
+    procedure SetInt(ParameterIndex: Integer; Value: Integer);
     procedure SetULong(ParameterIndex: Integer; const Value: UInt64);
     procedure SetLong(ParameterIndex: Integer; const Value: Int64);
-    procedure SetFloat(ParameterIndex: Integer; const Value: Single);
+    procedure SetFloat(ParameterIndex: Integer; Value: Single);
     procedure SetDouble(ParameterIndex: Integer; const Value: Double);
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency);
     procedure SetBigDecimal(ParameterIndex: Integer; const Value: Extended);
-    procedure SetPChar(ParameterIndex: Integer; const Value: PChar);
+    procedure SetPChar(ParameterIndex: Integer; Value: PChar);
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
     procedure SetString(ParameterIndex: Integer; const Value: String);
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); //AVZ

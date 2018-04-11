@@ -156,6 +156,10 @@ type
     Procedure BindStr(ParameterIndex: Integer; SQLType: TZSQLType; const Value: RawByteString);
     procedure BindBin(ParameterIndex: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
     procedure BindNetworkOrderBin(ParameterIndex: Integer; SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt);
+
+    procedure InternalSetOrdinal(ParameterIndex: Integer; SQLType: TZSQLType; const Value: Int64); override;
+    procedure InternalSetDouble(ParameterIndex: Integer; SQLType: TZSQLType; const Value: Double); override;
+    procedure InternalSetDateTime(ParameterIndex: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
     //date/time to posgres binary format
     function TimeToInt64(const Value: TDateTime): Int64;
     function TimeToDouble(const Value: TDateTime): Double;
@@ -172,21 +176,9 @@ type
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
 
-    procedure SetNull(ParameterIndex: Integer; const SQLType: TZSQLType); override;
-    procedure SetBoolean(ParameterIndex: Integer; const Value: Boolean); override;
-    procedure SetByte(ParameterIndex: Integer; const Value: Byte); override;
-    procedure SetShort(ParameterIndex: Integer; const Value: ShortInt); override;
-    procedure SetWord(ParameterIndex: Integer; const Value: Word); override;
-    procedure SetSmall(ParameterIndex: Integer; const Value: SmallInt); override;
-    procedure SetUInt(ParameterIndex: Integer; const Value: Cardinal); override;
-    procedure SetInt(ParameterIndex: Integer; const Value: Integer); override;
+    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType); override;
+    procedure SetBoolean(ParameterIndex: Integer; Value: Boolean); override;
     procedure SetULong(ParameterIndex: Integer; const Value: UInt64); override;
-    procedure SetLong(ParameterIndex: Integer; const Value: Int64); override;
-    procedure SetFloat(ParameterIndex: Integer; const Value: Single); override;
-    procedure SetDouble(ParameterIndex: Integer; const Value: Double); override;
-    procedure SetCurrency(ParameterIndex: Integer; const Value: Currency); override;
-    procedure SetBigDecimal(ParameterIndex: Integer; const Value: Extended); override;
-    procedure SetPChar(ParameterIndex: Integer; const Value: PChar); override;
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); override;
     procedure SetString(ParameterIndex: Integer; const Value: String); override;
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); override;
@@ -195,9 +187,6 @@ type
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); override;
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); override;
     procedure SetGUID(ParameterIndex: Integer; const Value: TGUID); override;
-    procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); override;
-    procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); override;
-    procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); override;
     procedure SetBlob(ParameterIndex: Integer; const SQLType: TZSQLType; const Value: IZBlob); override;
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant); override;
   end;
@@ -822,46 +811,6 @@ begin
   SetRawByteString(ParameterIndex, ConSettings^.ConvFuncs.ZAnsiToRaw(Value, ConSettings^.ClientCodePage.CP));
 end;
 
-procedure TZPostgreSQLCAPIPreparedStatement.SetBigDecimal(
-  ParameterIndex: Integer; const Value: Extended);
-begin
-  case OIDToSQLType(ParameterIndex, stBigDecimal) of
-    stBoolean:  begin
-                  PWordBool(@FStatBuf[0])^ := Value <> 0;
-                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
-                end;
-    stSmall:    begin
-                  PSmallInt(@FStatBuf[0])^ := Trunc(Value);
-                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
-                end;
-    stInteger:  begin
-                  PInteger(@FStatBuf[0])^ := Trunc(Value);
-                  BindNetworkOrderBin(ParameterIndex, stInteger, @FStatBuf[0], SizeOf(Integer));
-                end;
-    stLongWord: begin
-                  PLongword(@FStatBuf[0])^ := Trunc(Value);
-                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
-                end;
-    stLong:   begin
-                PInt64(@FStatBuf[0])^ := Trunc(Value);
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    stFloat:  begin
-                PSingle(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
-              end;
-    stDouble: begin
-                PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stDouble, @FStatBuf[0], SizeOf(Double));
-              end;
-    stCurrency: begin
-                PInt64(@FStatBuf[0])^ := Trunc(Value*100);
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stBigDecimal, FloatToSqlRaw(Value));
-  end;
-end;
-
 procedure TZPostgreSQLCAPIPreparedStatement.SetBlob(ParameterIndex: Integer;
   const SQLType: TZSQLType; const Value: IZBlob);
 begin
@@ -875,7 +824,7 @@ begin
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.SetBoolean(ParameterIndex: Integer;
-  const Value: Boolean);
+  Value: Boolean);
 begin
   case OIDToSQLType(ParameterIndex, stBoolean) of
     stBoolean:  begin
@@ -911,46 +860,6 @@ begin
                 BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
               end;
     else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stBoolean,ZSysUtils.BoolStrsRaw[Value]);
-  end;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetByte(ParameterIndex: Integer;
-  const Value: Byte);
-begin
-  case OIDToSQLType(ParameterIndex, stByte) of
-    stBoolean:  begin
-                  PWordBool(@FStatBuf[0])^ := Value <> 0;
-                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
-                end;
-    stSmall:    begin
-                  PSmallInt(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
-                end;
-    stInteger:  begin
-                  PInteger(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stInteger, @FStatBuf[0], SizeOf(Integer));
-                end;
-    stLongWord: begin
-                  PLongword(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
-                end;
-    stLong:   begin
-                PInt64(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    stFloat:  begin
-                PSingle(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
-              end;
-    stDouble: begin
-                PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stDouble, @FStatBuf[0], SizeOf(Double));
-              end;
-    stCurrency: begin
-                PInt64(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stByte, IntToRaw(Value));
   end;
 end;
 
@@ -1008,66 +917,6 @@ begin
  end;
 end;
 
-procedure TZPostgreSQLCAPIPreparedStatement.SetCurrency(ParameterIndex: Integer;
-  const Value: Currency);
-begin
-  case OIDToSQLType(ParameterIndex, stCurrency) of
-    stBoolean:  begin
-                  PWordBool(@FStatBuf[0])^ := Value <> 0;
-                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
-                end;
-    stSmall:    begin
-                  PSmallInt(@FStatBuf[0])^ := Trunc(Value);
-                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
-                end;
-    stInteger:  begin
-                  PInteger(@FStatBuf[0])^ := Trunc(Value);
-                  BindNetworkOrderBin(ParameterIndex, stInteger, @FStatBuf[0], SizeOf(Integer));
-                end;
-    stLongWord: begin
-                  PLongword(@FStatBuf[0])^ := Trunc(Value);
-                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
-                end;
-    stLong:   begin
-                PInt64(@FStatBuf[0])^ := Trunc(Value);
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    stFloat:  begin
-                PSingle(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
-              end;
-    stDouble: begin
-                PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stDouble, @FStatBuf[0], SizeOf(Double));
-              end;
-    stCurrency: begin
-                PInt64(@FStatBuf[0])^ := Trunc(Value*100);
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stCurrency, FloatToSqlRaw(Value));
-  end;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetDate(ParameterIndex: Integer;
-  const Value: TDateTime);
-begin
-  case OIDToSQLType(ParameterIndex, stTimeStamp) of
-    stDate:   begin
-                PInteger(@FStatBuf[0])^ := DateToInt(Value);
-                BindNetworkOrderBin(ParameterIndex, stDate, @FStatBuf[0], SizeOf(Integer));
-              end;
-    stTimeStamp: begin
-                if FPostgreSQLConnection.integer_datetimes
-                then PInt64(@FStatBuf[0])^ := TimeStampToInt64(Value)
-                else PDouble(@FStatBuf[0])^ := TimeStampToDouble(Value);
-                BindNetworkOrderBin(ParameterIndex, stTimeStamp, @FStatBuf[0], 8);
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTimeStamp, DateTimeToRawSQLDate(Value,
-      ConSettings^.WriteFormatSettings, FUseEmulatedStmtsOnly,
-        IfThen(FUseEmulatedStmtsOnly,'::date','')));
-  end;
-end;
-
 procedure TZPostgreSQLCAPIPreparedStatement.SetDefaultValue(
   ParameterIndex: Integer; const Value: string);
 begin
@@ -1077,83 +926,6 @@ begin
   if ParameterIndex > InParamCount-1
   then SetInParamCount(ParameterIndex+1);
   FDefaultValues[ParameterIndex] := ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetDouble(ParameterIndex: Integer;
-  const Value: Double);
-begin
-  case OIDToSQLType(ParameterIndex, stDouble) of
-    stBoolean:  begin
-                  PWordBool(@FStatBuf[0])^ := Value <> 0;
-                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
-                end;
-    stSmall:    begin
-                  PSmallInt(@FStatBuf[0])^ := Trunc(Value);
-                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
-                end;
-    stInteger:  begin
-                  PInteger(@FStatBuf[0])^ := Trunc(Value);
-                  BindNetworkOrderBin(ParameterIndex, stInteger, @FStatBuf[0], SizeOf(Integer));
-                end;
-    stLongWord: begin
-                  PLongword(@FStatBuf[0])^ := Trunc(Value);
-                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
-                end;
-    stLong:   begin
-                PInt64(@FStatBuf[0])^ := Trunc(Value);
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    stFloat:  begin
-                PSingle(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
-              end;
-    stDouble: begin
-                PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stDouble, @FStatBuf[0], SizeOf(Double));
-              end;
-    stCurrency: begin
-                PInt64(@FStatBuf[0])^ := Trunc(Value*100);
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stDouble, FloatToSqlRaw(Value));
-  end;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetFloat(ParameterIndex: Integer;
-  const Value: Single);
-begin
-  case OIDToSQLType(ParameterIndex, stFloat) of
-    stBoolean:  begin
-                  PWordBool(@FStatBuf[0])^ := Value <> 0;
-                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
-                end;
-    stSmall:    begin
-                  PSmallInt(@FStatBuf[0])^ := Trunc(Value);
-                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
-                end;
-    stInteger:  begin
-                  PInteger(@FStatBuf[0])^ := Trunc(Value);
-                  BindNetworkOrderBin(ParameterIndex, stInteger, @FStatBuf[0], SizeOf(Integer));
-                end;
-    stLongWord: begin
-                  PLongword(@FStatBuf[0])^ := Trunc(Value);
-                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
-                end;
-    stLong:   begin
-                PInt64(@FStatBuf[0])^ := Trunc(Value);
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    stFloat:  BindNetworkOrderBin(ParameterIndex, stFloat, @Value, SizeOf(Single));
-    stDouble: begin
-                PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stDouble, @FStatBuf[0], SizeOf(Double));
-              end;
-    stCurrency: begin
-                PInt64(@FStatBuf[0])^ := Trunc(Value*100);
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stFloat, FloatToSqlRaw(Value));
-  end;
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.SetGUID(ParameterIndex: Integer;
@@ -1177,79 +949,8 @@ begin
   else Assert(NewParamCount <= FInParamCount); //<- done by PrepareInParams
 end;
 
-procedure TZPostgreSQLCAPIPreparedStatement.SetInt(ParameterIndex: Integer;
-  const Value: Integer);
-begin
-  case OIDToSQLType(ParameterIndex, stInteger) of
-    stBoolean:  begin
-                  PWordBool(@FStatBuf[0])^ := Value <> 0;
-                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
-                end;
-    stSmall:    begin
-                  PSmallInt(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
-                end;
-    stInteger:  BindNetworkOrderBin(ParameterIndex, stInteger, @Value, SizeOf(Integer));
-    stLongWord: begin
-                  PLongword(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
-                end;
-    stLong:   begin
-                PInt64(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    stFloat:  begin
-                PSingle(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
-              end;
-    stDouble: begin
-                PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stDouble, @FStatBuf[0], SizeOf(Double));
-              end;
-    stCurrency: begin
-                PInt64(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stInteger, IntToRaw(Value));
-  end;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetLong(ParameterIndex: Integer;
-  const Value: Int64);
-begin
-  case OIDToSQLType(ParameterIndex, stLong) of
-    stBoolean:  begin
-                  PWordBool(@FStatBuf[0])^ := Value <> 0;
-                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
-                end;
-    stSmall:    begin
-                  PSmallInt(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
-                end;
-    stInteger:  begin
-                  PInteger(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stInteger, @Value, SizeOf(Integer));
-                end;
-    stLongWord: begin
-                  PLongword(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
-                end;
-    stLong,
-    StCurrency:  BindNetworkOrderBin(ParameterIndex, stLong, @Value, SizeOf(Int64));
-    stFloat:  begin
-                PSingle(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
-              end;
-    stDouble: begin
-                PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stDouble, @FStatBuf[0], SizeOf(Double));
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stLong, IntToRaw(Value));
-  end;
-end;
-
 procedure TZPostgreSQLCAPIPreparedStatement.SetNull(ParameterIndex: Integer;
-  const SQLType: TZSQLType);
+  SQLType: TZSQLType);
 begin
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
@@ -1263,16 +964,6 @@ begin
     fLobs[ParameterIndex] := nil;
 end;
 
-procedure TZPostgreSQLCAPIPreparedStatement.SetPChar(ParameterIndex: Integer;
-  const Value: PChar);
-begin
-  {$IFDEF UNICODE}
-  SetUnicodeString(ParameterIndex, Value);
-  {$ELSE}
-  SetRawByteString(ParameterIndex, Value);
-  {$ENDIF}
-end;
-
 procedure TZPostgreSQLCAPIPreparedStatement.SetRawByteString(
   ParameterIndex: Integer; const Value: RawByteString);
 begin
@@ -1281,207 +972,16 @@ begin
   else BindStr(ParameterIndex, stString, FPostgreSQLConnection.EscapeString(Pointer(Value), Length(Value), True));
 end;
 
-procedure TZPostgreSQLCAPIPreparedStatement.SetShort(ParameterIndex: Integer;
-  const Value: ShortInt);
-begin
-  case OIDToSQLType(ParameterIndex, stShort) of
-    stBoolean:  begin
-                  PWordBool(@FStatBuf[0])^ := Value <> 0;
-                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
-                end;
-    stSmall:    begin
-                  PSmallInt(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
-                end;
-    stInteger:  begin
-                  PInteger(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stInteger, @FStatBuf[0], SizeOf(Integer));
-                end;
-    stLongWord: begin
-                  PLongword(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
-                end;
-    stLong:   begin
-                PInt64(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    stFloat:  begin
-                PSingle(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
-              end;
-    stDouble: begin
-                PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stDouble, @FStatBuf[0], SizeOf(Double));
-              end;
-    stCurrency: begin
-                PInt64(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stShort, IntToRaw(Value));
-  end;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetSmall(ParameterIndex: Integer;
-  const Value: SMallInt);
-begin
-  case OIDToSQLType(ParameterIndex, stSmall) of
-    stBoolean:  begin
-                  PWordBool(@FStatBuf[0])^ := Value <> 0;
-                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
-                end;
-    stSmall:    BindNetworkOrderBin(ParameterIndex, stSmall, @Value, SizeOf(SmallInt));
-    stInteger:  begin
-                  PInteger(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stInteger, @FStatBuf[0], SizeOf(Integer));
-                end;
-    stLongWord: begin
-                  PLongword(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
-                end;
-    stLong:   begin
-                PInt64(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    stFloat:  begin
-                PSingle(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
-              end;
-    stCurrency: begin
-                PInt64(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stSmall, IntToRaw(Value));
-  end;
-end;
-
 procedure TZPostgreSQLCAPIPreparedStatement.SetString(ParameterIndex: Integer;
   const Value: String);
 begin
   SetRawByteString(ParameterIndex, ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage.CP));
 end;
 
-procedure TZPostgreSQLCAPIPreparedStatement.SetTime(ParameterIndex: Integer;
-  const Value: TDateTime);
-begin
-  case OIDToSQLType(ParameterIndex, stLongWord) of
-    stTime:   begin
-                if FPostgreSQLConnection.integer_datetimes
-                then PInt64(@FStatBuf[0])^ := TimeToInt64(Value)
-                else PDouble(@FStatBuf[0])^ := TimeToDouble(Value);
-                BindNetworkOrderBin(ParameterIndex, stTime, @FStatBuf[0], 8);
-              end;
-    stTimeStamp: begin
-                if FPostgreSQLConnection.integer_datetimes
-                then PInt64(@FStatBuf[0])^ := TimeStampToInt64(Value)
-                else PDouble(@FStatBuf[0])^ := TimeStampToDouble(Value);
-                BindNetworkOrderBin(ParameterIndex, stTimeStamp, @FStatBuf[0], 8);
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTime, DateTimeToRawSQLTime(Value,
-      ConSettings^.WriteFormatSettings, FUseEmulatedStmtsOnly,
-      IfThen(FUseEmulatedStmtsOnly, '::time', '')));
-  end;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetTimestamp(
-  ParameterIndex: Integer; const Value: TDateTime);
-begin
-  case OIDToSQLType(ParameterIndex, stTimeStamp) of
-    stTime:   begin
-                if FPostgreSQLConnection.integer_datetimes
-                then PInt64(@FStatBuf[0])^ := TimeToInt64(Value)
-                else PDouble(@FStatBuf[0])^ := TimeToDouble(Value);
-                BindNetworkOrderBin(ParameterIndex, stTime, @FStatBuf[0], 8);
-              end;
-    stDate:   begin
-                PInteger(@FStatBuf[0])^ := DateToInt(Value);
-                BindNetworkOrderBin(ParameterIndex, stDate, @FStatBuf[0], SizeOf(integer));
-              end;
-    stTimeStamp: begin
-                if FPostgreSQLConnection.integer_datetimes
-                then PInt64(@FStatBuf[0])^ := TimeStampToInt64(Value)
-                else PDouble(@FStatBuf[0])^ := TimeStampToDouble(Value);
-                BindNetworkOrderBin(ParameterIndex, stTimeStamp, @FStatBuf[0], 8);
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTimeStamp, DateTimeToRawSQLTimeStamp(Value,
-      ConSettings^.WriteFormatSettings, FUseEmulatedStmtsOnly,
-        IfThen(FUseEmulatedStmtsOnly,'::timestamp','')));
-  end;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetUInt(ParameterIndex: Integer;
-  const Value: Cardinal);
-begin
-  case OIDToSQLType(ParameterIndex, stLongWord) of
-    stBoolean:  begin
-                  PWordBool(@FStatBuf[0])^ := Value <> 0;
-                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
-                end;
-    stSmall:    begin
-                  PSmallInt(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
-                end;
-    stInteger:  begin
-                  PInteger(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stInteger, @FStatBuf[0], SizeOf(Integer));
-                end;
-    stLongWord: begin
-                  PLongword(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
-                end;
-    stLong:   begin
-                PInt64(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    stFloat:  begin
-                PSingle(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
-              end;
-    stDouble: begin
-                PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stDouble, @FStatBuf[0], SizeOf(Double));
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stLongWord, IntToRaw(Value));
-  end;
-end;
-
 procedure TZPostgreSQLCAPIPreparedStatement.SetULong(ParameterIndex: Integer;
   const Value: UInt64);
 begin
-  case OIDToSQLType(ParameterIndex, stULong) of
-    stBoolean:  begin
-                  PWordBool(@FStatBuf[0])^ := Value <> 0;
-                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
-                end;
-    stSmall:    begin
-                  PSmallInt(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
-                end;
-    stInteger:  begin
-                  PInteger(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stInteger, @FStatBuf[0], SizeOf(Integer));
-                end;
-    stLongWord: begin
-                  PLongword(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
-                end;
-    stLong:   begin
-                PInt64(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    stFloat:  begin
-                PSingle(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
-              end;
-    stDouble: begin
-                PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stDouble, @FStatBuf[0], SizeOf(Double));
-              end;
-    stCurrency: begin
-                PInt64(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stULong, IntToRaw(Value));
-  end;
+  InternalSetOrdinal(ParameterIndex, stULong, Value);
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.SetUnicodeString(
@@ -1520,46 +1020,6 @@ begin
                       end else raise EZVariantException.Create(STypesMismatch);
     vtCharRec:        SetCharRec(ParameterIndex, Value.VCharRec);
     else raise EZVariantException.Create(STypesMismatch);
-  end;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetWord(ParameterIndex: Integer;
-  const Value: Word);
-begin
-  case OIDToSQLType(ParameterIndex, stWord) of
-    stBoolean:  begin
-                  PWordBool(@FStatBuf[0])^ := Value <> 0;
-                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
-                end;
-    stSmall:    begin
-                  PSmallInt(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
-                end;
-    stInteger:  begin
-                  PInteger(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stInteger, @FStatBuf[0], SizeOf(Integer));
-                end;
-    stLongWord: begin
-                  PLongword(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
-                end;
-    stLong:   begin
-                PInt64(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    stFloat:  begin
-                PSingle(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
-              end;
-    stDouble: begin
-                PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stDouble, @FStatBuf[0], SizeOf(Double));
-              end;
-    stCurrency: begin
-                PInt64(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stWord, IntToRaw(Value));
   end;
 end;
 
@@ -1686,12 +1146,14 @@ begin
   FPQparamValues[ParameterIndex] := PStart;
   Inc(PStart, Len-1);
   { reverse host-byte order to network-byte order }
+  {$IFNDEF ENDIAN_LITTLE}
   while Len > 0 do begin
     PStart^ := Buf^;
     dec(PStart);
     Inc(Buf);
     dec(Len);
   end;
+  {$ENDIF}
 end;
 
 {**
@@ -1725,12 +1187,75 @@ begin
       Result := #39+Result+#39;
     end
   else
-    GetSQLHexAnsiString(FPQparamValues[ParamIndex], FPQparamLengths[ParamIndex], False);
+    Result := GetSQLHexAnsiString(FPQparamValues[ParamIndex], FPQparamLengths[ParamIndex], False);
 end;
 
 function TZPostgreSQLCAPIPreparedStatement.GetPrepareSQLPrefix: RawByteString;
 begin
   Result := '';
+end;
+
+procedure TZPostgreSQLCAPIPreparedStatement.InternalSetDateTime(
+  ParameterIndex: Integer; SQLType: TZSQLType; const Value: TDateTime);
+begin
+  case OIDToSQLType(ParameterIndex, SQLType) of
+    stTime:   begin
+                if FPostgreSQLConnection.integer_datetimes
+                then PInt64(@FStatBuf[0])^ := TimeToInt64(Value)
+                else PDouble(@FStatBuf[0])^ := TimeToDouble(Value);
+                BindNetworkOrderBin(ParameterIndex, stTime, @FStatBuf[0], 8);
+              end;
+    stDate:   begin
+                PInteger(@FStatBuf[0])^ := DateToInt(Value);
+                BindNetworkOrderBin(ParameterIndex, stDate, @FStatBuf[0], SizeOf(integer));
+              end;
+    stTimeStamp: begin
+                if FPostgreSQLConnection.integer_datetimes
+                then PInt64(@FStatBuf[0])^ := TimeStampToInt64(Value)
+                else PDouble(@FStatBuf[0])^ := TimeStampToDouble(Value);
+                BindNetworkOrderBin(ParameterIndex, stTimeStamp, @FStatBuf[0], 8);
+              end;
+    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTimeStamp, DateTimeToRawSQLTimeStamp(Value,
+      ConSettings^.WriteFormatSettings, FUseEmulatedStmtsOnly,
+        IfThen(FUseEmulatedStmtsOnly,'::timestamp','')));
+  end;
+end;
+
+procedure TZPostgreSQLCAPIPreparedStatement.InternalSetDouble(
+  ParameterIndex: Integer; SQLType: TZSQLType; const Value: Double);
+begin
+  case OIDToSQLType(ParameterIndex, stFloat) of
+    stBoolean:  begin
+                  PWordBool(@FStatBuf[0])^ := Value <> 0;
+                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
+                end;
+    stSmall:    begin
+                  PSmallInt(@FStatBuf[0])^ := Trunc(Value);
+                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
+                end;
+    stInteger:  begin
+                  PInteger(@FStatBuf[0])^ := Trunc(Value);
+                  BindNetworkOrderBin(ParameterIndex, stInteger, @FStatBuf[0], SizeOf(Integer));
+                end;
+    stLongWord: begin
+                  PLongword(@FStatBuf[0])^ := Trunc(Value);
+                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
+                end;
+    stLong:   begin
+                PInt64(@FStatBuf[0])^ := Trunc(Value);
+                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
+              end;
+    stFloat:  begin
+                PSingle(@FStatBuf[0])^ := Value;
+                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
+              end;
+    stDouble: BindNetworkOrderBin(ParameterIndex, stDouble, @Value, SizeOf(Double));
+    stCurrency: begin
+                PInt64(@FStatBuf[0])^ := Trunc(Value*100);
+                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
+              end;
+    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stFloat, FloatToSqlRaw(Value));
+  end;
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.InternalSetInParamCount(
@@ -1745,6 +1270,40 @@ begin
   SetLength(FDefaultValues, NewParamCount);
   SetLength(FPQparamBuffs, NewParamCount);
   FInParamCount := NewParamCount;
+end;
+
+procedure TZPostgreSQLCAPIPreparedStatement.InternalSetOrdinal(
+  ParameterIndex: Integer; SQLType: TZSQLType; const Value: Int64);
+begin
+  case OIDToSQLType(ParameterIndex, stLong) of
+    stBoolean:  begin
+                  PWordBool(@FStatBuf[0])^ := Value <> 0;
+                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
+                end;
+    stSmall:    begin
+                  PSmallInt(@FStatBuf[0])^ := Value;
+                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
+                end;
+    stInteger:  begin
+                  PInteger(@FStatBuf[0])^ := Value;
+                  BindNetworkOrderBin(ParameterIndex, stInteger, @Value, SizeOf(Integer));
+                end;
+    stLongWord: begin
+                  PLongword(@FStatBuf[0])^ := Value;
+                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
+                end;
+    stLong,
+    stCurrency:  BindNetworkOrderBin(ParameterIndex, stLong, @Value, SizeOf(Int64));
+    stFloat:  begin
+                PSingle(@FStatBuf[0])^ := Value;
+                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
+              end;
+    stDouble: begin
+                PDouble(@FStatBuf[0])^ := Value;
+                BindNetworkOrderBin(ParameterIndex, stDouble, @FStatBuf[0], SizeOf(Double));
+              end;
+    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stLong, IntToRaw(Value));
+  end;
 end;
 
 function TZPostgreSQLCAPIPreparedStatement.OIDToSQLType(
