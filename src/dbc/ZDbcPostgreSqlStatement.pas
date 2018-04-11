@@ -141,6 +141,7 @@ type
     FLobs: array of IZBLob;
     FStatBuf: array[0..7] of Byte; //just a fix buff for the network order
     fnParams: Integer;
+    fHasOIDLobs: Boolean;
     procedure InternalSetInParamCount(const NewParamCount: Integer);
   protected
     function PrepareAnsiSQLQuery: RawByteString; override;
@@ -779,6 +780,7 @@ var
   res: PZPostgreSQLResult;
   I: Integer;
 begin
+  fHasOIDLobs := False;
   if FUseEmulatedStmtsOnly then
     Exit;
   if not (Findeterminate_datatype) and HasParams then begin
@@ -821,6 +823,22 @@ begin
   SetInParamCount(ParameterIndex+1);
   FLobs[ParameterIndex] := Value;
   FInParamTypes[ParameterIndex] := SQLType;
+  if Value.IsEmpty then
+    FPQparamValues[ParameterIndex] := nil
+  else if SQLType = stBinaryStream then begin
+    fHasOIDLobs := FOidAsBlob;
+    if not fHasOIDLobs then begin
+      FPQparamValues[ParameterIndex] := Value.GetBuffer;
+      FPQparamLengths[ParameterIndex]:= Value.Length;
+      FPQparamFormats[ParameterIndex]:= ParamFormatBin;
+    end;
+  end else if Value.IsClob then begin
+    FPQparamValues[ParameterIndex] := Value.GetPAnsiChar(ConSettings^.ClientCodePage.CP);
+    FPQparamLengths[ParameterIndex]:= Value.Length;
+    FPQparamFormats[ParameterIndex]:= ParamFormatStr;
+  end else
+    BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, SQLType, GetValidatedAnsiStringFromBuffer(Value.GetBuffer,
+      Value.Length, ConSettings));
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.SetBoolean(ParameterIndex: Integer;
@@ -1091,42 +1109,21 @@ var
   I: Integer;
   WriteTempBlob: IZPostgreSQLOidBlob;
 begin
-  {EH: after implizit bindings we need to finalize the Lobs and the
-   Default values only }
-  if Assigned(Pointer(FLobs)) or Assigned(Pointer(fDefaultValues)) then
+  {EH: after implizit bindings we need to finalize the OID Lobs and the
+   default values only }
+  if fHasOIDLobs then
     for i := 0 to InParamCount -1 do begin
-      if (High(Flobs) >= i) and Assigned(Flobs[i]) then begin
-        if Flobs[i].IsEmpty then
-          FPQparamValues[i] := nil
-        else case FInParamTypes[i] of
-          stAsciiStream, stUnicodeStream:
-            if Flobs[i].IsClob then begin
-              FPQparamValues[i] := Flobs[i].GetPAnsiChar(ConSettings^.ClientCodePage.CP);
-              FPQparamLengths[i]:= Flobs[i].Length;
-              FPQparamFormats[i]:= ParamFormatStr;
-            end else begin
-              BindStr(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FInParamTypes[i], GetValidatedAnsiStringFromBuffer(Flobs[i].GetBuffer,
-                      Flobs[i].Length, ConSettings));
-            end;
-          stBinaryStream:
-            if Foidasblob then
-              try
-                WriteTempBlob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0,
-                  FConnectionHandle, 0, ChunkSize);
-                WriteTempBlob.WriteBuffer(Flobs[i].GetBuffer, Flobs[i].Length);
-                BindStr(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stBinaryStream, IntToRaw(WriteTempBlob.GetBlobOid));
-              finally
-                WriteTempBlob := nil;
-              end
-            else begin
-              FPQparamValues[i] := Flobs[i].GetBuffer;
-              FPQparamLengths[i]:= Flobs[i].Length;
-              FPQparamFormats[i]:= ParamFormatBin;
-            end;
-        end;
-      end;
-      if (FPQparamValues[I] = nil) and (High(fDefaultValues) >= i) and (fDefaultValues[i] <> '') then //null bound ?
-         BindStr(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, InParamTypes[i], fDefaultValues[i])
+      if FInParamTypes[i] = stBinaryStream then
+        try
+          WriteTempBlob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0,
+            FConnectionHandle, 0, ChunkSize);
+          WriteTempBlob.WriteBuffer(Flobs[i].GetBuffer, Flobs[i].Length);
+          BindStr(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stBinaryStream, IntToRaw(WriteTempBlob.GetBlobOid));
+        finally
+          WriteTempBlob := nil;
+        end
+      //else if (FPQparamValues[I] = nil) and (High(fDefaultValues) >= i) and (fDefaultValues[i] <> '') then //null bound ?
+        // BindStr(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, InParamTypes[i], fDefaultValues[i])
     end;
   if DriverManager.HasLoggingListener then
     inherited BindInParameters;
@@ -1164,6 +1161,7 @@ begin
   { release allocated memory }
   InternalSetInParamCount(0);
   fnParams := 0;
+  fHasOIDLobs := False;
 end;
 
 function TZPostgreSQLCAPIPreparedStatement.GetDeallocateSQL: RawByteString;
@@ -1177,8 +1175,7 @@ begin
   Result := '';
   if FPQparamValues[ParamIndex] = nil then
     Result := '(NULL)'
-  else
-  if (FPQparamFormats[ParamIndex] = ParamFormatStr) then
+  else if (FPQparamFormats[ParamIndex] = ParamFormatStr) then
     //by ref?
     if (FPQparamValues[ParamIndex] = Pointer(FPQparamBuffs[ParamIndex])) then
       Result := #39+FPQparamBuffs[ParamIndex]+#39
@@ -1215,9 +1212,17 @@ begin
                 else PDouble(@FStatBuf[0])^ := TimeStampToDouble(Value);
                 BindNetworkOrderBin(ParameterIndex, stTimeStamp, @FStatBuf[0], 8);
               end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTimeStamp, DateTimeToRawSQLTimeStamp(Value,
-      ConSettings^.WriteFormatSettings, FUseEmulatedStmtsOnly,
-        IfThen(FUseEmulatedStmtsOnly,'::timestamp','')));
+    else case SQLType of
+      stTime: BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTimeStamp, DateTimeToRawSQLTime(Value,
+        ConSettings^.WriteFormatSettings, FUseEmulatedStmtsOnly,
+          IfThen(FUseEmulatedStmtsOnly,'::time','')));
+      stDate: BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTimeStamp, DateTimeToRawSQLDate(Value,
+        ConSettings^.WriteFormatSettings, FUseEmulatedStmtsOnly,
+          IfThen(FUseEmulatedStmtsOnly,'::date','')));
+      stTimestamp: BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTimeStamp, DateTimeToRawSQLTimeStamp(Value,
+        ConSettings^.WriteFormatSettings, FUseEmulatedStmtsOnly,
+          IfThen(FUseEmulatedStmtsOnly,'::timestamp','')));
+    end;
   end;
 end;
 
