@@ -282,7 +282,7 @@ procedure TZTestSysUtilsCase.TestBreakString;
 var
   Delim, S, S1: string;
 
-  procedure Check(const Str, ExpLeft, ExpRight: string);
+  procedure CheckBreakString(const Str, ExpLeft, ExpRight: string);
   var
     Left, Right: string;
   begin
@@ -293,16 +293,16 @@ var
 
 begin
   Delim := '=';
-  Check('', '', '');
-  Check(Delim, '', '');
-  Check('aa', 'aa', '');
-  Check('aa'+Delim, 'aa', '');
-  Check('aa'+Delim+'bb', 'aa', 'bb');
-  Check('aa'+Delim+'bb'+Delim, 'aa', 'bb'+Delim);
-  Check('aa'+Delim+Delim+'bb', 'aa', Delim+'bb');
+  CheckBreakString('', '', '');
+  CheckBreakString(Delim, '', '');
+  CheckBreakString('aa', 'aa', '');
+  CheckBreakString('aa'+Delim, 'aa', '');
+  CheckBreakString('aa'+Delim+'bb', 'aa', 'bb');
+  CheckBreakString('aa'+Delim+'bb'+Delim, 'aa', 'bb'+Delim);
+  CheckBreakString('aa'+Delim+Delim+'bb', 'aa', Delim+'bb');
 
   Delim := '==';
-  Check('aa'+Delim+'bb', 'aa', 'bb');
+  CheckBreakString('aa'+Delim+'bb', 'aa', 'bb');
 
   S := 'aa'+Delim+'bb';
   BreakString(S, Delim, S1, S);

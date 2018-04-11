@@ -508,7 +508,7 @@ begin
   end;
 
   FHandle := 0;
-  DPB := GenerateDPB(Info);
+  DPB := GenerateDPB(FPlainDriver, Info);
   { Connect to Interbase6 database. }
   GetPlainDriver.isc_attach_database(@FStatusVector,
     ZFastCode.StrLen(DBName), DBName,
@@ -549,7 +549,7 @@ begin
         FCLientCodePage := GetString(CollationAndCharSetNameIndex);
         if Info.Values['ResetCodePage'] <> '' then
         begin
-          ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(FClientCodePage);
+          ConSettings^.ClientCodePage := FPlainDriver.ValidateCharEncoding(FClientCodePage);
           ResetCurrentClientCodePage(Info.Values['ResetCodePage']);
         end
         else
@@ -580,7 +580,7 @@ begin
           begin
             if Info.Values['ResetCodePage'] <> '' then
             begin
-              ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(sCS_NONE);
+              ConSettings^.ClientCodePage := FPlainDriver.ValidateCharEncoding(sCS_NONE);
               ResetCurrentClientCodePage(Info.Values['ResetCodePage']);
             end
             else
@@ -832,7 +832,7 @@ begin
 
     try
       if fTPB = '' then
-        fTPB := GenerateTPB(Params);
+        fTPB := GenerateTPB(FPlainDriver, Params);
       TEB := GenerateTEB(@FHandle, fTPB);
 
       GetPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @TEB);

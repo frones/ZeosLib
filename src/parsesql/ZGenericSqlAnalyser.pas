@@ -56,7 +56,7 @@ interface
 {$I ZParseSql.inc}
 
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs,
-  ZClasses, ZTokenizer, ZSelectSchema, ZCompatibility;
+  ZClasses, ZTokenizer, ZSelectSchema;
 
 type
 
@@ -554,7 +554,7 @@ begin
     if (CurrentType = ttWhitespace) or CurrentUpperIs_AS then
       ReadField := ReadField and (Field = '') and not CurrentUpperIs_AS
     { Reads field. }
-    else if ReadField and ((CurrentType = ttWord) or (CurrentType = ttQuotedIdentifier) or
+    else if ReadField and ((CurrentType in [ttWord, ttQuotedIdentifier]) or
       (CurrentValue = '*')) then
     begin
       Catalog := Schema;
@@ -707,7 +707,7 @@ begin
       ReadTable := ReadTable and (Table = '') and (CurrentUpper <> 'AS');
     end
     { Reads table. }
-    else if ReadTable and ((CurrentType = ttWord) or (CurrentType = ttQuotedIdentifier)) then
+    else if ReadTable and (CurrentType in [ttWord, ttQuotedIdentifier]) then
     begin
       {Catalog := Schema;
       Schema := Table;}

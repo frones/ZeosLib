@@ -62,11 +62,7 @@ uses
 type
 
   {** Implements a SQLite-specific number state object. }
-  TZSQLiteNumberState = class (TZNumberState)
-  public
-    function NextToken(Stream: TStream; FirstChar: Char;
-      Tokenizer: TZTokenizer): TZToken; override;
-  end;
+  TZSQLiteNumberState = TZGenericSQLNoHexNumberState;
 
   {** Implements a SQLite-specific quote string state object. }
   TZSQLiteQuoteState = class (TZQuoteState)
@@ -82,11 +78,7 @@ type
     This state will either delegate to a comment-handling
     state, or return a token with just a slash in it.
   }
-  TZSQLiteCommentState = class (TZCppCommentState)
-  public
-    function NextToken(Stream: TStream; FirstChar: Char;
-      Tokenizer: TZTokenizer): TZToken; override;
-  end;
+  TZSQLiteCommentState = TZGenericSQLCommentState;
 
   {** Implements a symbol state object. }
   TZSQLiteSymbolState = class (TZSymbolState)
@@ -108,86 +100,8 @@ type
 
 implementation
 
-uses SysUtils, ZCompatibility{$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
-
-{ TZSQLiteNumberState }
-
-{**
-  Return a number token from a reader.
-  @return a number token from a reader
-}
-function TZSQLiteNumberState.NextToken(Stream: TStream; FirstChar: Char;
-  Tokenizer: TZTokenizer): TZToken;
-var
-  TempChar: Char;
-  FloatPoint: Boolean;
-  LastChar: Char;
-
-  procedure ReadDecDigits;
-  begin
-    LastChar := #0;
-    while Stream.Read(LastChar, SizeOf(Char)) > 0 do
-    begin
-      if CharInSet(LastChar, ['0'..'9']) then begin
-        ToBuf(LastChar, Result.Value);
-        LastChar := #0;
-      end else begin
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-        Break;
-      end;
-    end;
-  end;
-
-begin
-  FloatPoint := FirstChar = '.';
-  Result.Value := '';
-  InitBuf(FirstChar);
-  Result.TokenType := ttUnknown;
-  LastChar := #0;
-
-  { Reads the first part of the number before decimal point }
-  if not FloatPoint then begin
-    ReadDecDigits;
-    FloatPoint := LastChar = '.';
-    if FloatPoint then
-    begin
-      Stream.Read(TempChar{%H-}, SizeOf(Char));
-      ToBuf(TempChar, Result.Value);
-    end;
-  end;
-
-  { Reads the second part of the number after decimal point }
-  if FloatPoint then
-    ReadDecDigits;
-
-  { Reads a power part of the number }
-  if (Ord(LastChar) or $20) = ord('e') then //CharInSet(LastChar, ['e','E']) then
-  begin
-    Stream.Read(TempChar, SizeOf(Char));
-    ToBuf(TempChar, Result.Value);
-    FloatPoint := True;
-
-    Stream.Read(TempChar, SizeOf(Char));
-    if CharInSet(TempChar, ['0'..'9','-','+']) then begin
-      ToBuf(TempChar, Result.Value);
-      ReadDecDigits;
-    end else begin
-      FlushBuf(Result.Value);
-      Result.Value := Copy(Result.Value, 1, Length(Result.Value) - 1);
-      Stream.Seek(-2*SizeOf(Char), soFromCurrent);
-    end;
-  end;
-  FlushBuf(Result.Value);
-
-  { Prepare the result }
-  if Result.Value = '.' then begin
-    if Tokenizer.SymbolState <> nil then
-      Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer);
-  end else
-    if FloatPoint then
-      Result.TokenType := ttFloat else
-      Result.TokenType := ttInteger;
-end;
+uses SysUtils, ZCompatibility,
+ {$IFDEF FAST_MOVE}ZFastCode;{$ENDIF}
 
 { TZSQLiteQuoteState }
 
@@ -264,53 +178,6 @@ begin
       and (Value[Length(Value)] = ']') then
       Result := Copy(Value, 2, Length(Value) - 2)
   end;
-end;
-
-{ TZSQLiteCommentState }
-
-{**
-  Gets a SQLite specific comments like # or /* */.
-  @return either just a slash token, or the results of
-    delegating to a comment-handling state
-}
-function TZSQLiteCommentState.NextToken(Stream: TStream; FirstChar: Char;
-  Tokenizer: TZTokenizer): TZToken;
-var
-  ReadChar: Char;
-  ReadNum: Integer;
-begin
-  InitBuf(FirstChar);
-  Result.Value := '';
-  Result.TokenType := ttUnknown;
-
-  if FirstChar = '-' then
-  begin
-    ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
-    if (ReadNum > 0) and (ReadChar = '-') then begin
-      Result.TokenType := ttComment;
-      ToBuf(ReadChar, Result.Value);
-      GetSingleLineComment(Stream, Result.Value);
-    end else begin
-      if ReadNum > 0 then
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-    end;
-  end else if FirstChar = '/' then begin
-    ReadNum := Stream.Read(ReadChar, SizeOf(Char));
-    if (ReadNum > 0) and (ReadChar = '*') then
-    begin
-      Result.TokenType := ttComment;
-      ToBuf(ReadChar, Result.Value);
-      GetMultiLineComment(Stream, Result.Value);
-    end else begin
-      if ReadNum > 0 then
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-    end;
-  end;
-
-  if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil) then
-    Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer)
-  else
-    FlushBuf(Result.Value);
 end;
 
 { TZSQLiteSymbolState }

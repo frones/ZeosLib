@@ -101,6 +101,7 @@ type
     procedure TestDefineFields;
     procedure TestDefineSortedFields;
     procedure TestEmptyMemoAfterFullMemo;
+    procedure TesNullUnionNull;
   end;
 
   TZGenericTestDataSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1742,6 +1743,21 @@ begin
       CheckEquals(3.14159265358979323846, FieldByName('n_dprecission').AsFloat,0.0000000000001);
       Close;
     end;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDataSet.TesNullUnionNull;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'SELECT null as col1 FROM people union SELECT null as col1 FROM people';
+    Query.Open;
+    Check(Query.Fields[0].DataType in [ftString, ftWideString, ftMemo{$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}]);
+    Query.Close;
   finally
     Query.Free;
   end;

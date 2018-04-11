@@ -160,11 +160,9 @@ function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTE
   ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
   const NeedNCharDetection: Boolean = False): TUnicodeStringDynArray;
 
-{$IF defined(ENABLE_MYSQL) or defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
   const OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
   const PAramTypes: array of ShortInt);
-{$IFEND}
 
 {**
   GetValidatedTextStream the incoming Stream for his given Memory and
@@ -727,7 +725,6 @@ begin
     {$ENDIF}
 end;
 
-{$IF defined(ENABLE_MYSQL) or defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE) or defined(EANABLE_ASA)}
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
   const OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
   const ParamTypes: array of ShortInt);
@@ -801,7 +798,6 @@ begin
   end;
   if SupportsMoveAbsolute then ResultSet.BeforeFirst;
 end;
-{$IFEND}
 
 function TestEncoding(const Bytes: TByteDynArray; const Size: Cardinal;
   const ConSettings: PZConSettings): TZCharEncoding;

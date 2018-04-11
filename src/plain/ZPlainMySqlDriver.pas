@@ -989,7 +989,7 @@ begin
   if not Assigned(Result) then raise Exception.Create('Could not finish the call to mysql_init. Not enough memory?');
   ClientInfo := GetClientInfo;
   L := ZFastCode.StrLen(ClientInfo);
-  FIsMariaDBDriver := CompareMem(ClientInfo+L-7, PAnsiChar('MariaDB'), 7);
+  FIsMariaDBDriver := Assigned(mariadb_stmt_execute_direct) or CompareMem(ClientInfo+L-7, PAnsiChar('MariaDB'), 7);
 end;
 
 function TZMySQLBaseDriver.GetLastInsertID(mysql: PMYSQL): Int64;

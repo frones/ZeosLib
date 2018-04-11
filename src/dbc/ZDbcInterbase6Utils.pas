@@ -215,16 +215,13 @@ type
       const VariantType: TZVariantType = vtNull);
   end;
 
-function RandomString(Len: integer): RawByteString;
 function CreateIBResultSet(const SQL: string; const Statement: IZStatement;
   const NativeResultSet: IZResultSet): IZResultSet;
 
 {Interbase6 Connection Functions}
-function GenerateDPB(Info: TStrings): RawByteString; overload;
-function GenerateTPB(Params: TStrings): RawByteString; overload;
+function GenerateDPB(PlainDriver: IZInterbasePlainDriver; Info: TStrings): RawByteString;
+function GenerateTPB(PlainDriver: IZInterbasePlainDriver; Params: TStrings): RawByteString;
 function GenerateTEB(PHandle: PISC_DB_HANDLE; const TPB: RawByteString): TISC_TEB;
-function GenerateDPB(Info: TStrings; var FDPBLength, Dialect: Word): PAnsiChar; overload; deprecated;
-function GenerateTPB(Params: TStrings; var Handle: TISC_DB_HANDLE): PISC_TEB; overload; deprecated;
 function GetInterbase6DatabaseParamNumber(const Value: String): word;
 function GetInterbase6TransactionParamNumber(const Value: String): word; 
 
@@ -463,20 +460,6 @@ uses
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
-   Generate specific length random string and return it
-   @param Len a length result string
-   @return random string
-}
-function RandomString(Len: integer): RawByteString;
-begin
-  Result := '';
-  while Length(Result) < Len do
-    Result := Result + IntToRaw({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Random(High(Integer))));
-  if Length(Result) > Len then
-    Result := Copy(Result, 1, Len);
-end;
-
-{**
   Create CachedResultSet with using TZCachedResultSet and return it.
   @param SQL a sql query command
   @param Statement a zeos statement object
@@ -518,6 +501,7 @@ end;
 {**
   Build parameter block string
 
+  @param PlainDriver - a Interbase Plain drver
   @param Info - a list connection interbase parameters
   @param VersionCode - isc_dpb_version1 for TPB or isc_dpb_version3 for DPB
   @param FilterPrefix - TPBPrefix for TPB or DPBPrefix for DPB
@@ -525,7 +509,8 @@ end;
 
   @return generated string
 }
-function BuildPB(Info: TStrings; VersionCode: Byte; const FilterPrefix: string; const ParamArr: array of TZIbParam): RawByteString;
+function BuildPB(PlainDriver: IZInterbasePlainDriver; Info: TStrings; VersionCode: Byte;
+  const FilterPrefix: string; const ParamArr: array of TZIbParam): RawByteString;
 
   procedure ExtractParamNameAndValue(const S: string; out ParamName: String; out ParamValue: RawByteString);
   var
@@ -544,20 +529,36 @@ function BuildPB(Info: TStrings; VersionCode: Byte; const FilterPrefix: string; 
     end;
   end;
 
-  function NumToPB(Value: Integer): RawByteString;
+  function NumToPB(Value: Cardinal): RawByteString;
   var
+    Len: Short;
     U16: Word;
+    U32: Cardinal;
   begin
-    case Cardinal(Value) of
+    case Value of
       0..High(Byte):
-        Result := AnsiChar(#1) + AnsiChar(Value);
+        begin
+          Len := 1;
+          SetLength(Result, 1 + Len);
+          Result[1] := AnsiChar(Len);
+          PByte(@Result[2])^ := Byte(Value);
+        end;
       Succ(High(Byte))..High(Word):
         begin
-          U16 := Word(Cardinal(Value));
-          Result := AnsiChar(#2) + PAnsiChar(@U16)[0] + PAnsiChar(@U16)[1];
+          Len := 2;
+          SetLength(Result, 1 + Len);
+          Result[1] := AnsiChar(Len);
+          U16 := Word(Value);
+          PWord(@Result[2])^ := Word(PlainDriver.isc_portable_integer(@U16, Len));
         end;
       else
-        Result := AnsiChar(#4) + PAnsiChar(@Value)[0] + PAnsiChar(@Value)[1] + PAnsiChar(@Value)[2] + PAnsiChar(@Value)[3];
+        begin
+          Len := 4;
+          SetLength(Result, 1 + Len);
+          Result[1] := AnsiChar(Len);
+          U32 := Cardinal(Value);
+          PCardinal(@Result[2])^ := Cardinal(PlainDriver.isc_portable_integer(@U32, Len));
+        end;
     end;
   end;
 
@@ -600,23 +601,25 @@ end;
 {**
   Generate database connection string by connection information
 
+  @param PlainDriver - a Interbase Plain drver
   @param Info - a list connection interbase parameters
   @return a generated string
 }
-function GenerateDPB(Info: TStrings): RawByteString;
+function GenerateDPB(PlainDriver: IZInterbasePlainDriver; Info: TStrings): RawByteString;
 begin
-  Result := BuildPB(Info, isc_dpb_version1, DPBPrefix, DatabaseParams);
+  Result := BuildPB(PlainDriver, Info, isc_dpb_version1, DPBPrefix, DatabaseParams);
 end;
 
 {**
   Generate transaction string by connection information
 
+  @param PlainDriver - a Interbase Plain drver
   @param Params - a transaction parameters list
-  @return a generated string 
+  @return a generated string
 }
-function GenerateTPB(Params: TStrings): RawByteString;
+function GenerateTPB(PlainDriver: IZInterbasePlainDriver; Params: TStrings): RawByteString;
 begin
-  Result := BuildPB(Params, isc_tpb_version3, TPBPrefix, TransactionParams);
+  Result := BuildPB(PlainDriver, Params, isc_tpb_version3, TPBPrefix, TransactionParams);
 end;
 
 {**
@@ -631,50 +634,6 @@ begin
   Result.db_handle := PHandle;
   Result.tpb_length := Length(TPB);
   Result.tpb_address := Pointer(TPB);
-end;
-
-{**
-  Generate database connection string by connection information
-  The function is deprecated and shouldn't be used.
-  Use GenerateDPB(Info: TStrings) overload instead.
-
-  @param DPB - a database connection string
-  @param Dialect - a sql dialect number
-  @param Info - a list connection interbase parameters
-  @return a generated string length
-}
-function GenerateDPB(Info: TStrings; var FDPBLength, Dialect: Word): PAnsiChar;
-var
-  DPB: RawByteString;
-begin
-  DPB := GenerateDPB(Info);
-  FDPBLength := Length(DPB);
-
-  {$IFDEF UNICODE}
-  Result := AnsiStrAlloc(FDPBLength + 1);
-  {$ELSE}
-  Result := StrAlloc(FDPBLength + 1);
-  {$ENDIF}
-
-  {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(Result, DPB);
-end;
-
-{**
-  Generate transaction structuer by connection information
-  The function is deprecated and shouldn't be used.
-  Use GenerateTPB(Params: TStrings) overload and GenerateTEB instead.
-
-  @param Params - a transaction parameters list
-  @param Handle - a database connection handle
-  @return a transaction ISC structure
-}
-function GenerateTPB(Params: TStrings; var Handle: TISC_DB_HANDLE): PISC_TEB;
-var
-  TPB: RawByteString;
-begin
-  TPB := GenerateTPB(Params);
-  Result := AllocMem(SizeOf(TISC_TEB));
-  Result^ := GenerateTEB(@Handle, TPB);
 end;
 
 function GetPBNumber(const FilterPrefix, ParamName: string; const ParamArr: array of TZIbParam): Word;
@@ -1274,8 +1233,7 @@ var
   Buffer: Pointer;
   Len: Integer;
   RawTemp: RawByteString;
-  CharRec: TZCharRec;
-  Value: TZVariant;
+  UniTemp: ZWideString;
   IsNull: Boolean;
 
   { array DML bindings }
@@ -1304,7 +1262,6 @@ var
   ZBytesArray: TBytesDynArray absolute ZData;
   ZInterfaceArray: TInterfaceDynArray absolute ZData;
   ZGUIDArray: TGUIDDynArray absolute ZData;
-  label ProcString;
 begin
   ParamIndex := 0;
   for J := ArrayOffSet to ArrayOffSet+ArrayItersCount-1 do
@@ -1378,40 +1335,54 @@ begin
           stDouble: ParamSqlData.UpdateDouble(ParamIndex, ZDoubleArray[J]);
           stCurrency: ParamSqlData.UpdateBigDecimal(ParamIndex, ZCurrencyArray[J]);
           stBigDecimal: ParamSqlData.UpdateBigDecimal(ParamIndex, ZExtendedArray[J]);
-          stGUID:
-            begin
-              Value := EncodeRawByteString({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(GUIDToString(ZGUIDArray[j])));
-              goto ProcString;
-            end;
+          stGUID: if  ParamSqlData.GetIbSqlType(ParamIndex) = CS_BINARY then
+                    ParamSqlData.UpdatePAnsiChar(ParamIndex, @ZGUIDArray[j].D1, SizeOf(TGUID))
+                  else begin
+                    RawTemp := GUIDToRaw(ZGUIDArray[j]);
+                    ParamSqlData.UpdatePAnsiChar(ParamIndex, Pointer(RawTemp), Length(RawTemp));
+                  end;
           stString, stUnicodeString:
             begin
-              case InParamValues[i].VArray.VArrayVariantType of
-                vtString: Value := EncodeString(ZStringArray[j]);
-                vtAnsiString: Value := EncodeAnsiString(ZAnsiStringArray[j]);
-                vtUTF8String: Value := EncodeUTF8String(ZUTF8StringArray[j]);
-                vtRawByteString: Value := EncodeRawByteString(ZRawByteStringArray[j]);
-                vtUnicodeString: Value := EncodeUnicodeString(ZUnicodeStringArray[j]);
-                vtCharRec: Value := EncodeCharRec(ZCharRecArray[j]);
+              CP := ParamSqlData.GetIbSqlSubType(ParamIndex);  //get code page
+              if CP <> CS_BINARY then begin
+                if (CP > High(CodePageArray)) or (CP = CS_NONE)
+                then CP := ConSettings^.ClientCodePage^.CP
+                else CP := CodePageArray[CP];
+                case InParamValues[i].VArray.VArrayVariantType of
+                  vtString: RawTemp := ConSettings.ConvFuncs.ZStringToRaw(ZStringArray[j], ConSettings.CTRL_CP, CP);
+                  vtAnsiString: RawTemp := Consettings^.ConvFuncs.ZAnsiToRaw(ZAnsiStringArray[j], CP);
+                  vtUTF8String: if ZCompatibleCodePages(CP, zCP_UTF8) then begin
+                        ParamSqlData.UpdatePAnsiChar(ParamIndex, Pointer(ZUTF8StringArray[j]), Length(ZUTF8StringArray[j]));
+                        continue;
+                      end else
+                        RawTemp := Consettings^.ConvFuncs.ZUTF8ToRaw(ZUTF8StringArray[j], CP);
+                  vtRawByteString: RawTemp := ZRawByteStringArray[j];
+                  vtUnicodeString: RawTemp := ZUnicodeToRaw(ZUnicodeStringArray[j], CP);
+                  vtCharRec: if ZCompatibleCodePages(ZCharRecArray[j].CP, cp) or (ZCharRecArray[j].Len = 0) then begin
+                        ParamSqlData.UpdatePAnsiChar(ParamIndex, ZCharRecArray[j].P, ZCharRecArray[j].Len);
+                        continue;
+                      end else if ZCompatibleCodePages(ZCharRecArray[j].CP, zCP_UTF16) then
+                        RawTemp := PUnicodeToRaw(ZCharRecArray[j].P, ZCharRecArray[j].Len, CP)
+                      else begin
+                        UniTemp := PRawToUnicode(ZCharRecArray[j].P, ZCharRecArray[j].Len, ZCharRecArray[j].CP);
+                        RawTemp := ZUnicodeToRaw(UniTemp, CP)
+                      end;
+                  else
+                    raise Exception.Create('Unsupported String Variant');
+                end;
+                ParamSqlData.UpdatePAnsiChar(ParamIndex, Pointer(RawTemp), Length(RawTemp));
+              end else case InParamValues[i].VArray.VArrayVariantType of
+                {$IFNDEF UNICODE}vtString,{$ENDIF}
+                vtAnsiString, vtUTF8String, vtRawByteString:
+                    ParamSqlData.UpdatePAnsiChar(ParamIndex, Pointer(ZRawByteStringArray[j]), Length(ZRawByteStringArray[j]));
+                vtUnicodeString{$IFDEF UNICODE}, vtString{$ENDIF}:
+                  raise Exception.Create('Unsupported String Variant');
+                vtCharRec: if not ZCompatibleCodePages(ZCharRecArray[j].CP, zCP_UTF16) or (ZCharRecArray[j].Len = 0)
+                    then ParamSqlData.UpdatePAnsiChar(ParamIndex, ZCharRecArray[j].P, ZCharRecArray[j].Len)
+                    else raise Exception.Create('Unsupported String Variant');
                 else
                   raise Exception.Create('Unsupported String Variant');
               end;
-ProcString:     CP := ParamSqlData.GetIbSqlType(ParamIndex);
-              case CP of
-                SQL_TEXT, SQL_VARYING:
-                  begin
-                    CP := ParamSqlData.GetIbSqlSubType(ParamIndex);  //get code page
-                    if CP = CS_BINARY then
-                      CharRec := ClientVarManager.GetAsCharRec(Value)
-                    else
-                      if CP > High(CodePageArray) then
-                        CharRec := ClientVarManager.GetAsCharRec(Value, ConSettings^.ClientCodePage^.CP)
-                      else
-                        CharRec := ClientVarManager.GetAsCharRec(Value, CodePageArray[CP]);
-                  end
-                else
-                  CharRec := ClientVarManager.GetAsCharRec(Value);
-              end;
-              ParamSqlData.UpdatePAnsiChar(ParamIndex, CharRec.P, CharRec.Len);
             end;
           stBytes:
             ParamSqlData.UpdateBytes(ParamIndex, ZBytesArray[j]);
@@ -2972,7 +2943,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
 const
   EBStart = AnsiString('EXECUTE BLOCK(');
   EBBegin =  AnsiString(')AS BEGIN'+LineEnding);
-  EBSuspend =  AnsiString('SUSPEND;'+LineEnding); //required for RETURNING synatax
+  EBSuspend =  AnsiString('SUSPEND;'+LineEnding); //required for RETURNING syntax
   EBEnd = AnsiString('end');
   LBlockLen = Length(EBStart)+Length(EBBegin)+Length(EBEnd);
 var

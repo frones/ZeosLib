@@ -735,7 +735,7 @@ begin
           SetTempState(dsInternalCalc);
           try
             for I := 0 to Fields.Count - 1 do
-              DataEvent(deFieldChange,ULong(Fields[i]));
+              DataEvent(deFieldChange, NativeInt(Fields[i]));
           finally
             RestoreState(ostate);
           end;

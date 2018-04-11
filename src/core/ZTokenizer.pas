@@ -470,7 +470,6 @@ type
 const
   EscapeMarkSequence = String('~<|');
 
-
 implementation
 
 uses
@@ -667,12 +666,12 @@ procedure TZCppCommentState.GetSingleLineComment(Stream: TStream; var Result: St
 var
   ReadChar: Char;
 begin
-  while (Stream.Read(ReadChar, SizeOf(Char)) > 0) and not ((ReadChar = #10) or (ReadChar = #13)) do
+  while (Stream.Read(ReadChar, SizeOf(Char)) > 0) and not CharInSet(ReadChar, [#10, #13]) do
     ToBuf(ReadChar, Result);
 
   // mdaems : for single line comments the line ending must be included
   // as it should never be stripped off or unified with other whitespace characters
-  if (ReadChar = #10) or (ReadChar = #13) then begin
+  if CharInSet(ReadChar, [#10, #13]) then begin
     ToBuf(ReadChar, Result);
     // ludob Linux line terminator is just LF, don't read further if we already have LF
     if (ReadChar<>#10) and (Stream.Read(ReadChar, SizeOf(Char)) > 0) then
@@ -701,29 +700,32 @@ begin
   Result.Value := '';
 
   ReadNum := Stream.Read(ReadChar, SizeOf(Char));
-  if (ReadNum > 0) and (ReadChar = '*') then begin
-    Result.TokenType := ttComment;
-    ToBuf(ReadChar, Result.Value);
-    GetMultiLineComment(Stream, Result.Value);
+  if ReadNum > 0 then
+    case ReadChar of
+      '*':
+        begin
+          Result.TokenType := ttComment;
+          ToBuf(ReadChar, Result.Value);
+          GetMultiLineComment(Stream, Result.Value);
+          FlushBuf(Result.Value);
+          Exit;
+        end;
+      '/', '-':
+        begin
+          Result.TokenType := ttComment;
+          ToBuf(ReadChar, Result.Value);
+          GetSingleLineComment(Stream, Result.Value);
+          FlushBuf(Result.Value);
+          Exit;
+        end;
+      else
+        Stream.Seek(-SizeOf(Char), soFromCurrent);
+    end;
+
+  if Tokenizer.SymbolState <> nil then
+    Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer)
+  else
     FlushBuf(Result.Value);
-  end else if (ReadNum > 0) and (ReadChar = '/') then begin
-    Result.TokenType := ttComment;
-    ToBuf(ReadChar, Result.Value);
-    GetSingleLineComment(Stream, Result.Value);
-    FlushBuf(Result.Value);
-  end else if (ReadNum > 0) and (ReadChar = '-') then begin
-    Result.TokenType := ttComment;
-    ToBuf(ReadChar, Result.Value);
-    GetSingleLineComment(Stream, Result.Value);
-    FlushBuf(Result.Value);
-  end else begin
-    if ReadNum > 0 then
-      Stream.Seek(-SizeOf(Char), soFromCurrent);
-    if Tokenizer.SymbolState <> nil then
-      Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer)
-    else
-      FlushBuf(Result.Value);
-  end;
 end;
 
 { TZCCommentState }
@@ -746,17 +748,15 @@ begin
   if FirstChar = '/' then
   begin
     ReadNum := Stream.Read(ReadChar, SizeOf(Char));
-    if (ReadNum > 0) and (ReadChar = '*') then
-    begin
-      ToBuf(ReadChar, Result.Value);
-      Result.TokenType := ttComment;
-      GetMultiLineComment(Stream, Result.Value);
-    end
-    else
-    begin
-      if ReadNum > 0 then
+    if ReadNum > 0 then
+      if ReadChar = '*' then
+      begin
+        ToBuf(ReadChar, Result.Value);
+        Result.TokenType := ttComment;
+        GetMultiLineComment(Stream, Result.Value);
+      end
+      else
         Stream.Seek(-SizeOf(Char), soFromCurrent);
-    end;
   end;
 
   if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil) then
@@ -793,7 +793,7 @@ begin
     if FChildren[I] <> nil then
       FChildren[I].Free
     else
-         Break;
+      Break;
   end;
   SetLength(FChildren, 0);
   FParent := nil;
@@ -1161,12 +1161,12 @@ end;
 }
 destructor TZTokenizer.Destroy;
 begin
-  if FCommentState <> nil then    FreeAndNil(FCommentState);
-  if FNumberState <> nil then     FreeAndNil(FNumberState);
-  if FQuoteState <> nil then      FreeAndNil(FQuoteState);
-  if FSymbolState <> nil then     FreeAndNil(FSymbolState);
-  if FWhitespaceState <> nil then FreeAndNil(FWhitespaceState);
-  if FWordState <> nil then       FreeAndNil(FWordState);
+  FreeAndNil(FCommentState);
+  FreeAndNil(FNumberState);
+  FreeAndNil(FQuoteState);
+  FreeAndNil(FSymbolState);
+  FreeAndNil(FWhitespaceState);
+  FreeAndNil(FWordState);
 
   if FStream <> nil then
   begin
