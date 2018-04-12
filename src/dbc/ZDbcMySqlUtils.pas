@@ -85,10 +85,10 @@ function ConvertMySQLHandleToSQLType(FieldHandle: PZMySQLField;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckMySQLError(const PlainDriver: IZMySQLPlainDriver;
+procedure CheckMySQLError(const PlainDriver: TZMySQLPlainDriver;
   Handle: PMySQL; LogCategory: TZLoggingCategory;
   const LogMessage: RawByteString; ConSettings: PZConSettings);
-procedure CheckMySQLPrepStmtError(const PlainDriver: IZMySQLPlainDriver;
+procedure CheckMySQLPrepStmtError(const PlainDriver: TZMySQLPlainDriver;
   Handle: PMySQL; LogCategory: TZLoggingCategory;
   const LogMessage: RawByteString; ConSettings: PZConSettings;
   ErrorIsIgnored: PBoolean = nil; IgnoreErrorCode: Integer = 0);
@@ -281,15 +281,15 @@ end;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckMySQLError(const PlainDriver: IZMySQLPlainDriver;
+procedure CheckMySQLError(const PlainDriver: TZMySQLPlainDriver;
   Handle: PMySQL; LogCategory: TZLoggingCategory;
   const LogMessage: RawByteString; ConSettings: PZConSettings);
 var
   ErrorMessage: RawByteString;
   ErrorCode: Integer;
 begin
-  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.GetLastError(Handle));
-  ErrorCode := PlainDriver.GetLastErrorCode(Handle);
+  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.mysql_error(Handle));
+  ErrorCode := PlainDriver.mysql_errno(Handle);
   if (ErrorCode <> 0) and (ErrorMessage <> '') then
   begin
     if SilentMySQLError > 0 then
@@ -303,14 +303,14 @@ begin
   end;
 end;
 
-procedure CheckMySQLPrepStmtError(const PlainDriver: IZMySQLPlainDriver;
+procedure CheckMySQLPrepStmtError(const PlainDriver: TZMySQLPlainDriver;
   Handle: PMySQL; LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
   ConSettings: PZConSettings; ErrorIsIgnored: PBoolean = nil; IgnoreErrorCode: Integer = 0);
 var
   ErrorMessage: RawByteString;
   ErrorCode: Integer;
 begin
-  ErrorCode := PlainDriver.stmt_errno(Handle);
+  ErrorCode := PlainDriver.mysql_stmt_errno(Handle);
   if Assigned(ErrorIsIgnored) then
     if (IgnoreErrorCode = ErrorCode) then
     begin
@@ -319,7 +319,7 @@ begin
     end
     else
       ErrorIsIgnored^ := False;
-  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.stmt_error(Handle));
+  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.mysql_stmt_error(Handle));
   if (ErrorCode <> 0) and (ErrorMessage <> '') then
   begin
     if SilentMySQLError > 0 then
