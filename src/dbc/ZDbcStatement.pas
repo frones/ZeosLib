@@ -91,11 +91,11 @@ type
     FInfo: TStrings;
     FChunkSize: Integer; //size of buffer chunks for large lob's related to network settings
     FClosed: Boolean;
-    FWSQL: ZWideString;
-    FaSQL: RawByteString;
     FCachedLob: Boolean;
     procedure SetLastResultSet(const ResultSet: IZResultSet); virtual;
   protected
+    FWSQL: ZWideString;
+    FaSQL: RawByteString;
     FStatementId : Integer;
     FOpenResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
     procedure ToBuff(const Value: ZWideString; var Result: ZWideString); overload;
@@ -213,12 +213,13 @@ type
     FInitialArrayCount: ArrayLenInt;
     FPrepared : Boolean;
     FClientVariantManger: IZClientVariantManager;
+  protected
     FCachedQueryRaw: TRawByteStringDynArray;
     FCachedQueryUni: TUnicodeStringDynArray;
     FNCharDetected: TBooleanDynArray;
     FIsParamIndex: TBooleanDynArray;
-    FIsPraparable, FHasParams: Boolean;
-  protected
+    FIsPraparable: Boolean;
+    FParamsCnt: Integer;
     FInParamTypes: TZSQLTypeArray;
     FInParamDefaultValues: TStringDynArray;
     FInParamCount: Integer;
@@ -247,7 +248,7 @@ type
     property IsParamIndex: TBooleanDynArray read FIsParamIndex;
     property IsNCharIndex: TBooleanDynArray read FNCharDetected;
     property IsPreparable: Boolean read FIsPraparable;
-    property HasParams: Boolean read FHasParams;
+    property CountOfQueryParams: Integer read fParamsCnt;
     property ArrayCount: ArrayLenInt read FInitialArrayCount;
     procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
@@ -2439,11 +2440,11 @@ begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetCompareFirstKeywordStrings, @FIsPraparable);
-    Self.FHasParams := False;
+    FParamsCnt := 0;
     Result := ''; //init Result
     for I := 0 to High(FCachedQueryRaw) do begin
       ToBuff(FCachedQueryRaw[i], Result);
-      FHasParams := FHasParams or FIsParamIndex[i];
+      Inc(FParamsCnt, Ord(FIsParamIndex[i]));
     end;
     FlushBuff(Result);
   end else

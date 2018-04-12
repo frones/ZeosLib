@@ -142,7 +142,7 @@ type
     FStatBuf: array[0..7] of Byte; //just a fix buff for the network order
     fnParams: Integer;
     fHasOIDLobs: Boolean;
-    procedure InternalSetInParamCount(const NewParamCount: Integer);
+    procedure InternalSetInParamCount(NewParamCount: Integer);
   protected
     function PrepareAnsiSQLQuery: RawByteString; override;
     function ExecuteInternal(const SQL: RawByteString;
@@ -190,6 +190,8 @@ type
     procedure SetGUID(ParameterIndex: Integer; const Value: TGUID); override;
     procedure SetBlob(ParameterIndex: Integer; const SQLType: TZSQLType; const Value: IZBlob); override;
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant); override;
+    procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); override;
+    procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
   end;
 
   {** EgonHugeist: Implements prepared async SQL Statement based on Protocol 3.0
@@ -783,7 +785,7 @@ begin
   fHasOIDLobs := False;
   if FUseEmulatedStmtsOnly then
     Exit;
-  if not (Findeterminate_datatype) and HasParams then begin
+  if not (Findeterminate_datatype) and (CountOfQueryParams > 0) then begin
     if Assigned(FPlainDriver.PQdescribePrepared) then begin
       res := FPlainDriver.PQdescribePrepared(FConnectionHandle, Pointer(FRawPlanname));
       try
@@ -844,41 +846,7 @@ end;
 procedure TZPostgreSQLCAPIPreparedStatement.SetBoolean(ParameterIndex: Integer;
   Value: Boolean);
 begin
-  case OIDToSQLType(ParameterIndex, stBoolean) of
-    stBoolean:  begin
-                  PWordBool(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
-                end;
-    stSmall:    begin
-                  PSmallInt(@FStatBuf[0])^ := Ord(Value);
-                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
-                end;
-    stInteger:  begin
-                  PInteger(@FStatBuf[0])^ := Ord(Value);
-                  BindNetworkOrderBin(ParameterIndex, stInteger, @FStatBuf[0], SizeOf(Integer));
-                end;
-    stLongWord: begin
-                  PLongword(@FStatBuf[0])^ := Ord(Value);
-                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
-                end;
-    stLong:   begin
-                PInt64(@FStatBuf[0])^ := Ord(Value);
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-               end;
-    stFloat:  begin
-                PSingle(@FStatBuf[0])^ := Ord(Value);
-                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
-              end;
-    stDouble: begin
-                PDouble(@FStatBuf[0])^ := Ord(Value);
-                BindNetworkOrderBin(ParameterIndex, stDouble, @FStatBuf[0], SizeOf(Double));
-              end;
-    stCurrency: begin
-                PInt64(@FStatBuf[0])^ := Ord(Value);
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stBoolean,ZSysUtils.BoolStrsRaw[Value]);
-  end;
+  InternalSetOrdinal(ParameterIndex, stBoolean, Ord(Value));
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.SetBytes(ParameterIndex: Integer;
@@ -935,6 +903,13 @@ begin
  end;
 end;
 
+procedure TZPostgreSQLCAPIPreparedStatement.SetDataArray(
+  ParameterIndex: Integer; const Value; const SQLType: TZSQLType;
+  const VariantType: TZVariantType);
+begin
+  raise EZSQLException.Create(sUnsupportedOperation);
+end;
+
 procedure TZPostgreSQLCAPIPreparedStatement.SetDefaultValue(
   ParameterIndex: Integer; const Value: string);
 begin
@@ -962,9 +937,11 @@ procedure TZPostgreSQLCAPIPreparedStatement.SetInParamCount(
 begin
   if not Prepared then
     Prepare;
-  if Findeterminate_datatype or FUseEmulatedStmtsOnly then
-    InternalSetInParamCount(NewParamCount)
-  else Assert(NewParamCount <= FInParamCount); //<- done by PrepareInParams
+  if Findeterminate_datatype or FUseEmulatedStmtsOnly then begin
+    Assert(NewParamCount <= CountOfQueryParams);
+    InternalSetInParamCount(NewParamCount);
+  end else
+    Assert(NewParamCount <= FInParamCount); //<- done by PrepareInParams
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.SetNull(ParameterIndex: Integer;
@@ -980,6 +957,13 @@ begin
   FPQparamValues[ParameterIndex] := nil;
   if (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
     fLobs[ParameterIndex] := nil;
+end;
+
+procedure TZPostgreSQLCAPIPreparedStatement.SetNullArray(
+  ParameterIndex: Integer; const SQLType: TZSQLType; const Value;
+  const VariantType: TZVariantType);
+begin
+  raise EZSQLException.Create(sUnsupportedOperation);
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.SetRawByteString(
@@ -1022,7 +1006,7 @@ begin
     vtNull:           SetNull(ParameterIndex, stString);
     vtBoolean:        SetBoolean(ParameterIndex, Value.VBoolean);
     vtInteger:        SetLong(ParameterIndex, Value.VInteger);
-    vtUInteger:       SetLong(ParameterIndex, Value.VUInteger);
+    vtUInteger:       SetULong(ParameterIndex, Value.VUInteger);
     vtFloat:          SetDouble(ParameterIndex, Value.VFloat);
     vtBytes:          SetBytes(ParameterIndex, Value.VBytes);
     vtString:         SetString(ParameterIndex, Value.VString);
@@ -1264,7 +1248,7 @@ begin
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.InternalSetInParamCount(
-  const NewParamCount: Integer);
+  NewParamCount: Integer);
 begin
   SetLength(FPQparamValues, NewParamCount);
   SetLength(FPQparamLengths, NewParamCount);
