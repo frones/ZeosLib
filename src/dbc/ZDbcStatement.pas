@@ -70,8 +70,6 @@ type
   TZAbstractStatement = class(TZCodePagedObject, IZStatement, IZLoggingObject,
     IImmediatelyReleasable)
   private
-    fWBuffer: array[Byte] of WideChar;
-    fABuffer: array[Byte] of AnsiChar;
     fABufferIndex, fWBufferIndex: Integer;
     FMaxFieldSize: Integer;
     FMaxRows: Integer;
@@ -94,6 +92,8 @@ type
     FCachedLob: Boolean;
     procedure SetLastResultSet(const ResultSet: IZResultSet); virtual;
   protected
+    fWBuffer: array[Byte] of WideChar;
+    fABuffer: array[Byte] of AnsiChar;
     FWSQL: ZWideString;
     FaSQL: RawByteString;
     FStatementId : Integer;
@@ -623,7 +623,7 @@ end;
 }
 procedure TZAbstractStatement.SetLastResultSet(const ResultSet: IZResultSet);
 begin
-  if (FLastResultSet <> nil) then
+  if (FLastResultSet <> nil) and (Pointer(ResultSet) <> Pointer(FLastResultSet)) then
     FLastResultSet.Close;
 
   FLastResultSet := ResultSet;
