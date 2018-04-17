@@ -621,6 +621,14 @@ function EncodeSQLVersioning(const MajorVersion: Integer;
 }
 function FormatSQLVersion( const SQLVersion: Integer ): String;
 
+{**
+  Appends WHERE clause condition. Returns ' and '+Condition if Condition is not empty
+  and empty string otherwise.
+  This allows short constructions like
+    'WHERE 1=1'+AppendCondition(Cond1)+AppendCondition(Cond2)...
+}
+function AppendCondition(const Condition: string): string;
+
 function ASCII7ToUnicodeString(const Src: RawByteString): ZWideString; overload;
 function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString; overload;
 function UnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
@@ -3626,6 +3634,13 @@ begin
  Result := ZFastCode.IntToStr(MajorVersion)+'.'+
            ZFastCode.IntToStr(MinorVersion)+'.'+
            ZFastCode.IntToStr(SubVersion);
+end;
+
+function AppendCondition(const Condition: string): string;
+begin
+  if Condition = ''
+    then Result := ''
+    else Result := ' AND ' + Condition;
 end;
 
 function ASCII7ToUnicodeString(const Src: RawByteString): ZWideString;
