@@ -82,6 +82,7 @@ type
     ['{8E62EA93-5A49-4F20-928A-0EA44ABCE5DB}']
 
     function IsOidAsBlob: Boolean;
+    function integer_datetimes: Boolean;
     function Is_bytea_output_hex: Boolean;
 
     function GetTypeNameByOid(Id: Oid): string;
@@ -111,7 +112,7 @@ type
 //  Jan: Not sure wether we still need that. What was its intended use?
 //    FBeginRequired: Boolean;
     FTypeList: TStrings;
-    FOidAsBlob: Boolean;
+    FOidAsBlob, Finteger_datetimes: Boolean;
     FServerMajorVersion: Integer;
     FServerMinorVersion: Integer;
     FServerSubVersion: Integer;
@@ -172,6 +173,7 @@ type
 
     function IsOidAsBlob: Boolean;
     function Is_bytea_output_hex: Boolean;
+    function integer_datetimes: Boolean;
     function CheckFieldVisibility: Boolean;
 
     function GetTypeNameByOid(Id: Oid): string;
@@ -344,6 +346,11 @@ end;
 function TZPostgreSQLConnection.GetUndefinedVarcharAsStringLength: Integer;
 begin
   Result := FUndefinedVarcharAsStringLength;
+end;
+
+function TZPostgreSQLConnection.integer_datetimes: Boolean;
+begin
+  Result := Finteger_datetimes;
 end;
 
 {**
@@ -644,6 +651,7 @@ begin
       SetStandardConformingStrings(StrToBoolEx(SCS));
     end else
       SetStandardConformingStrings(StrToBoolEx(GetServerSetting(#39+ConnProps_StdConformingStrings+#39)));
+    Finteger_datetimes := StrToBoolEx(GetServerSetting(#39+ConnProps_integer_datetimes+#39));
     FIs_bytea_output_hex := UpperCase(GetServerSetting('''bytea_output''')) = 'HEX';
   finally
     if self.IsClosed and (Self.FHandle <> nil) then
@@ -743,6 +751,7 @@ begin
     0:
   {$ENDIF}
       if GetServerMajorVersion >= 8 then
+        //Result := TZPostgteSQLAsyncCAPIPreparedStatement.Create(Self, SQL, Info)
         Result := TZPostgreSQLCAPIPreparedStatement.Create(Self, SQL, Info)
       else
         Result := TZPostgreSQLClassicPreparedStatement.Create(Self, SQL, Info);

@@ -197,6 +197,9 @@ const
   // Type: INT
   // Value used in 'SET GLOBAL max_allowed_packet' statement, refer to MySql manual for details
   ConnProps_MaxLobSize = 'MaxLobSize';
+  // Type: BOOLEAN
+  // Value used to identify BIT(1) as Boolean instead of ENUM('Y','N')
+  ConnProps_MySQL_FieldType_Bit_1_IsBoolean = 'MySQL_FieldType_Bit_1_IsBoolean';
 
   { In addition, any server parameter prefixed by value of
     ZPlainMySqlConstants.SERVER_ARGUMENTS_KEY_PREFIX constant and all members from
@@ -207,7 +210,11 @@ const
     (see comment above) }
 
   // Type: BOOLEAN
-  // Fetching rows using UseResult instead of StoreResult
+  // Fetching rows one by one using UseResult instead of StoreResult
+  // this reduces the memory-consumtion of libmysql.
+  // Note mysql is tabular streamed! ->
+  // So you can't use it within using metainformations or multiple active
+  // resultsets!
   DSProps_UseResult = 'UseResult';
   // Type: INT
   // Sets STMT_ATTR_PREFETCH_ROWS option, refer to MySql manual for details
@@ -227,7 +234,7 @@ const
   // Value used in 'SET standard_conforming_strings = <Value>' query on connect,
   // refer to Postgre manual for details
   ConnProps_StdConformingStrings = 'standard_conforming_strings';
-
+  ConnProps_integer_datetimes = 'integer_datetimes';
   { Parameters used for constructing ConnectStr.
     Refer to Postgre manual for types and acceptable values of these parameters }
   ConnProps_ApplicationName = 'application_name';

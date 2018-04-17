@@ -85,7 +85,7 @@ type
     FHandle: PMySQL;
     FQueryHandle: PZMySQLResult;
     FRowHandle: PZMySQLRow;
-    FPlainDriver: IZMySQLPlainDriver;
+    FPlainDriver: TZMySQLPlainDriver;
     FLengthArray: PMySQLLengthArray;
     FMySQLTypes: array of TMysqlFieldTypes;
     fServerCursor: Boolean;
@@ -98,7 +98,7 @@ type
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
-    constructor Create(const PlainDriver: IZMySQLPlainDriver;
+    constructor Create(const PlainDriver: TZMySQLPlainDriver;
       const Statement: IZStatement; const SQL: string; Handle: PMySQL;
       AffectedRows: PInteger);
     procedure Close; override;
@@ -143,7 +143,7 @@ type
   private
     FMysQL: PMySQL;
     FPrepStmt: PMySql_Stmt;
-    FPlainDriver: IZMySQLPlainDriver;
+    FPlainDriver: TZMySQLPlainDriver;
     FColumnArray: TZMysqlColumnBuffer;
     FBindBuffer: TZMySqlResultSetBindBuffer;
     FColBind: PDOBindRecord2;
@@ -153,7 +153,7 @@ type
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
     procedure Open; override;
   public
-    constructor Create(const PlainDriver: IZMySQLPlainDriver; const Statement: IZStatement;
+    constructor Create(const PlainDriver: TZMySQLPlainDriver; const Statement: IZStatement;
       const SQL: string; MySQL: PMySQL; MySQL_Stmt: PMySql_Stmt);
 
     procedure Close; override;
@@ -200,13 +200,14 @@ type
   {** Implements a cached resolver with MySQL specific functionality. }
   TZMySQLCachedResolver = class (TZGenericCachedResolver, IZCachedResolver)
   private
-    FHandle: PMySQL;
-    FPlainDriver: IZMySQLPlainDriver;
+    FMySQL: PMySQL;
+    FMYSQL_STMT: PMYSQL_STMT;
+    FPlainDriver: TZMySQLPlainDriver;
     FAutoColumnIndex: Integer;
-    //FStatement: IZMysqlStatement;
   public
-    constructor Create(const PlainDriver: IZMySQLPlainDriver; Handle: PMySQL;
-      const Statement: IZStatement; const Metadata: IZResultSetMetadata);
+    constructor Create(const PlainDriver: TZMySQLPlainDriver; MySQL: PMySQL;
+      MYSQL_STMT: PMYSQL_STMT; const Statement: IZStatement;
+      const Metadata: IZResultSetMetadata);
 
     function FormWhereClause(Columns: TObjectList;
       OldRowAccessor: TZRowAccessor): string; override;
@@ -224,13 +225,13 @@ type
 
   TZMySQLPreparedClob = Class(TZAbstractClob)
   public
-    constructor Create(const PlainDriver: IZMySQLPlainDriver; Bind: PDOBindRecord2;
+    constructor Create(const PlainDriver: TZMySQLPlainDriver; Bind: PDOBindRecord2;
       StmtHandle: PMySql_Stmt; ColumnIndex: Cardinal; ConSettings: PZConSettings);
   End;
 
   TZMySQLPreparedBlob = Class(TZAbstractBlob)
   public
-    constructor Create(const PlainDriver: IZMySQLPlainDriver; Bind: PDOBindRecord2;
+    constructor Create(const PlainDriver: TZMySQLPlainDriver; Bind: PDOBindRecord2;
       StmtHandle: PMySql_Stmt; ColumnIndex: Cardinal);
   End;
 
@@ -476,7 +477,7 @@ end;
   @param UseResult <code>True</code> to use results,
     <code>False</code> to store result.
 }
-constructor TZAbstractMySQLResultSet.Create(const PlainDriver: IZMySQLPlainDriver;
+constructor TZAbstractMySQLResultSet.Create(const PlainDriver: TZMySQLPlainDriver;
   const Statement: IZStatement; const SQL: string; Handle: PMySQL;
   AffectedRows: PInteger);
 begin
@@ -540,11 +541,11 @@ var
   FieldHandle: PZMySQLField;
 begin
   if fServerCursor
-  then FQueryHandle := FPlainDriver.use_result(FHandle)
+  then FQueryHandle := FPlainDriver.mysql_use_result(FHandle)
   else begin
-    FQueryHandle := FPlainDriver.StoreResult(FHandle);
+    FQueryHandle := FPlainDriver.mysql_store_result(FHandle);
     if Assigned(FQueryHandle) then
-      LastRowNo := FPlainDriver.GetRowCount(FQueryHandle)
+      LastRowNo := FPlainDriver.mysql_num_rows(FQueryHandle)
   end;
 
   if not Assigned(FQueryHandle) then
@@ -552,13 +553,13 @@ begin
 
   { Fills the column info. }
   ColumnsInfo.Clear;
-  SetLength(FMySQLTypes, FPlainDriver.num_fields(FQueryHandle));
+  SetLength(FMySQLTypes, FPlainDriver.mysql_num_fields(FQueryHandle));
   {$IFDEF USE_SYNCOMMONS}
   SetLength(fMySQLFieldFlags, Length(FMySQLTypes));
   {$ENDIF}
   for I := 0 to High(FMySQLTypes) do begin
-    FPlainDriver.SeekField(FQueryHandle, I);
-    FieldHandle := FPlainDriver.FetchField(FQueryHandle);
+    FPlainDriver.mysql_field_seek(FQueryHandle, I);
+    FieldHandle := FPlainDriver.mysql_fetch_field(FQueryHandle);
     if FieldHandle = nil then
       Break;
     FMySQLTypes[i] := PMYSQL_FIELD(FieldHandle)^._type;
@@ -633,11 +634,11 @@ begin
   if (Closed) or ((MaxRows > 0) and (RowNo >= MaxRows)) or (RowNo > LastRowNo) then
     Exit;
   if (FQueryHandle = nil) then begin
-    FQueryHandle := FPlainDriver.StoreResult(FHandle);
+    FQueryHandle := FPlainDriver.mysql_store_result(FHandle);
     if Assigned(FQueryHandle) then
-      LastRowNo := FPlainDriver.GetRowCount(FQueryHandle);
+      LastRowNo := FPlainDriver.mysql_num_rows(FQueryHandle);
   end;
-  FRowHandle := FPlainDriver.FetchRow(FQueryHandle);
+  FRowHandle := FPlainDriver.mysql_fetch_row(FQueryHandle);
   if FRowHandle <> nil then begin
     RowNo := RowNo + 1;
     if LastRowNo < RowNo then
@@ -651,7 +652,7 @@ begin
       RowNo := RowNo+1;
     Exit;
   end;
-  FLengthArray := FPlainDriver.FetchLengths(FQueryHandle)
+  FLengthArray := FPlainDriver.mysql_fetch_lengths(FQueryHandle)
 end;
 
 {**
@@ -1103,6 +1104,7 @@ end;
     <code>false</code> otherwise
 }
 function TZMySQL_Store_ResultSet.MoveAbsolute(Row: Integer): Boolean;
+var OffSet: ULongLong;  //local value required because of the subtraction
 begin
   { Checks for maximum row. }
   Result := False;
@@ -1110,9 +1112,9 @@ begin
     Exit;
 
   if (FQueryHandle = nil) then begin
-    FQueryHandle := FPlainDriver.StoreResult(FHandle);
+    FQueryHandle := FPlainDriver.mysql_store_result(FHandle);
     if Assigned(FQueryHandle) then
-      LastRowNo := FPlainDriver.GetRowCount(FQueryHandle);
+      LastRowNo := FPlainDriver.mysql_num_rows(FQueryHandle);
   end;
 
   { Process negative rows. }
@@ -1125,8 +1127,9 @@ begin
   if (Row >= 0) and (Row <= LastRowNo + 1) then begin
     RowNo := Row;
     if (Row >= 1) and (Row <= LastRowNo) then begin
-      FPlainDriver.SeekData(FQueryHandle, RowNo - 1);
-      FRowHandle := FPlainDriver.FetchRow(FQueryHandle);
+      OffSet := RowNo - 1;
+      FPlainDriver.mysql_data_seek(FQueryHandle, OffSet);
+      FRowHandle := FPlainDriver.mysql_fetch_row(FQueryHandle);
     end else
       FRowHandle := nil;
   end;
@@ -1134,7 +1137,7 @@ begin
   Result := FRowHandle <> nil;
 
   if Result
-  then FLengthArray := FPlainDriver.FetchLengths(FQueryHandle)
+  then FLengthArray := FPlainDriver.mysql_fetch_lengths(FQueryHandle)
   else FLengthArray := nil;
 end;
 
@@ -1142,7 +1145,7 @@ procedure TZMySQL_Store_ResultSet.ResetCursor;
 begin
   inherited ResetCursor;
   if FQueryHandle <> nil then
-    FPlainDriver.FreeResult(FQueryHandle);
+    FPlainDriver.mysql_free_result(FQueryHandle);
   FQueryHandle := nil;
 end;
 
@@ -1300,7 +1303,7 @@ end;
     <code>False</code> to store result.
 }
 constructor TZAbstractMySQLPreparedResultSet.Create(
-  const PlainDriver: IZMySQLPlainDriver; const Statement: IZStatement;
+  const PlainDriver: TZMySQLPlainDriver; const Statement: IZStatement;
   const SQL: string; MySQL: PMySQL; MySQL_Stmt: PMySql_Stmt);
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
@@ -1326,11 +1329,11 @@ var
   FieldCount: Integer;
   FResultMetaData : PZMySQLResult;
 begin
-  FieldCount := FPlainDriver.stmt_field_count(FPrepStmt);
+  FieldCount := FPlainDriver.mysql_stmt_field_count(FPrepStmt);
   if FieldCount = 0 then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
 
-  FResultMetaData := FPlainDriver.stmt_result_metadata(FPrepStmt);
+  FResultMetaData := FPlainDriver.mysql_stmt_result_metadata(FPrepStmt);
 
   if not Assigned(FResultMetaData) then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -1340,15 +1343,16 @@ begin
 
   if (Self is TZMySQL_Store_PreparedResultSet) then
     //Note: This slows down the performance but makes synchronized RS possible!
-    FPlainDriver.stmt_attr_set(FPrepStmt,STMT_ATTR_UPDATE_MAX_LENGTH, @one);
+    if Assigned(FPlainDriver.mysql_stmt_attr_set517UP)
+    then FPlainDriver.mysql_stmt_attr_set517UP(FPrepStmt,STMT_ATTR_UPDATE_MAX_LENGTH, @one)
+    else FPlainDriver.mysql_stmt_attr_set(FPrepStmt,STMT_ATTR_UPDATE_MAX_LENGTH, @one);
 
   { Fills the column info. }
   ColumnsInfo.Clear;
   try
-    for I := 0 to FPlainDriver.num_fields(FResultMetaData) - 1 do
-    begin
-      FPlainDriver.SeekField(FResultMetaData, I);
-      FieldHandle := FPlainDriver.FetchField(FResultMetaData);
+    for I := 0 to FPlainDriver.mysql_num_fields(FResultMetaData) - 1 do begin
+      FPlainDriver.mysql_field_seek(FResultMetaData, I);
+      FieldHandle := FPlainDriver.mysql_fetch_field(FResultMetaData);
       if FieldHandle = nil then
         Break;
 
@@ -1360,15 +1364,15 @@ begin
       FBindBuffer.AddColumn(FieldHandle);
     end;
   finally
-    FPlainDriver.FreeResult(FResultMetaData);
+    FPlainDriver.mysql_free_result(FResultMetaData);
   end;
 
-  if (FPlainDriver.stmt_bind_result(FPrepStmt,FBindBuffer.GetBufferAddress)<>0) then
+  if (FPlainDriver.mysql_stmt_bind_result(FPrepStmt,FBindBuffer.GetBufferAddress)<>0) then
     raise EZSQLException.Create(SFailedToBindResults);
   {execute after bind but before fetch!}
   //Note: This slows down the performance but makes synchronized RS possible!
-  if (Self is TZMySQL_Store_PreparedResultSet) and (FPlainDriver.stmt_store_result(FPrepStmt)=0) then
-    LastRowNo := FPlainDriver.stmt_num_rows(FPrepStmt);
+  if (Self is TZMySQL_Store_PreparedResultSet) and (FPlainDriver.mysql_stmt_store_result(FPrepStmt)=0) then
+    LastRowNo := FPlainDriver.mysql_stmt_num_rows(FPrepStmt);
 
   inherited Open;
 end;
@@ -2945,7 +2949,7 @@ begin
   if Closed or ((MaxRows > 0) and (RowNo >= MaxRows)) then
     Exit;
 
-  if FPlainDriver.stmt_fetch(FPrepStmt) in [0, MYSQL_DATA_TRUNCATED] then
+  if FPlainDriver.mysql_stmt_fetch(FPrepStmt) in [0, MYSQL_DATA_TRUNCATED] then
   begin
     RowNo := RowNo + 1;
     if LastRowNo < RowNo then
@@ -2959,26 +2963,6 @@ begin
     Result := False;
   end;
 end;
-
-{
-procedure TZAbstractMySQLPreparedResultSet.ResetCursor;
-begin
-  if Assigned(FResultMetaData) then
-  begin
-    FPlainDriver.FreeResult(FResultMetaData);
-    FResultMetaData := nil;
-  end;
-  FResultMetaData := nil;
-  if Assigned(FPrepStmt) then
-  begin
-    FPlainDriver.FreePreparedResult(FPrepStmt);
-    while(FPlainDriver.GetPreparedNextResult(FPrepStmt) = 0) do
-      FPlainDriver.FreePreparedResult(FPrepStmt);
-    FPrepStmt := nil;
-  end;
-  inherited ResetCursor;
-end;
-}
 
 { TZMySQL_Store_PreparedResultSet }
 
@@ -3026,13 +3010,11 @@ begin
        Row := 0;
   end;
 
-  if (Row >= 0) and (Row <= LastRowNo + 1) then
-  begin
+  if (Row >= 0) and (Row <= LastRowNo + 1) then begin
     RowNo := Row;
-    if (Row >= 1) and (Row <= LastRowNo) then
-    begin
-      FPlainDriver.stmt_data_seek(FPrepStmt, RowNo - 1);
-      Result := FPlainDriver.stmt_fetch(FPrepStmt) = 0;
+    if (Row >= 1) and (Row <= LastRowNo) then begin
+      FPlainDriver.mysql_stmt_data_seek(FPrepStmt, RowNo - 1);
+      Result := FPlainDriver.mysql_stmt_fetch(FPrepStmt) = 0;
     end;
   end;
 end;
@@ -3041,7 +3023,7 @@ procedure TZMySQL_Store_PreparedResultSet.ResetCursor;
 begin
   inherited ResetCursor;
   if Assigned(FPrepStmt) then
-    FPlainDriver.stmt_free_result(FPrepStmt);
+    FPlainDriver.mysql_stmt_free_result(FPrepStmt);
 end;
 
 { TZMySQL_Use_PreparedResultSet }
@@ -3051,7 +3033,7 @@ begin
   if FPrepStmt <> nil then
     {need to fetch all temporary until handle = nil else all other queries are out of sync
      see: http://dev.mysql.com/doc/refman/5.0/en/mysql-use-result.html}
-    while FPlainDriver.stmt_fetch(FPrepStmt) in [0, MYSQL_DATA_TRUNCATED] do;
+    while FPlainDriver.mysql_stmt_fetch(FPrepStmt) in [0, MYSQL_DATA_TRUNCATED] do;
   inherited ResetCursor;
 end;
 
@@ -3064,26 +3046,23 @@ end;
   @param Statement a related SQL statement object.
   @param Metadata a resultset metadata reference.
 }
-constructor TZMySQLCachedResolver.Create(const PlainDriver: IZMySQLPlainDriver;
-  Handle: PMySQL; const Statement: IZStatement; const Metadata: IZResultSetMetadata);
+constructor TZMySQLCachedResolver.Create(const PlainDriver: TZMySQLPlainDriver;
+  MySQL: PMySQL; MYSQL_STMT: PMYSQL_STMT; const Statement: IZStatement; const Metadata: IZResultSetMetadata);
 var
   I: Integer;
 begin
   inherited Create(Statement, Metadata);
   FPlainDriver := PlainDriver;
-  FHandle := Handle;
-
+  FMySQL := MySQL;
+  FMYSQL_STMT := MYSQL_STMT;
   { Defines an index of autoincrement field. }
   FAutoColumnIndex := InvalidDbcIndex;
   for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-  begin
     if Metadata.IsAutoIncrement(I) and
-      (Metadata.GetColumnType(I) in [stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong]) then
-    begin
+      (Metadata.GetColumnType(I) in [stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong]) then begin
       FAutoColumnIndex := I;
       Break;
     end;
-  end;
 end;
 
 {**
@@ -3177,19 +3156,15 @@ end;
 procedure TZMySQLCachedResolver.UpdateAutoIncrementFields(
   const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
   NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
-var
-  Plaindriver : IZMysqlPlainDriver;
+var LastWasNull: Boolean;
 begin
   inherited UpdateAutoIncrementFields(Sender, UpdateType, OldRowAccessor, NewRowAccessor, Resolver);
-  if not ((FAutoColumnIndex {$IFDEF GENERIC_INDEX}>={$ELSE}>{$ENDIF} 0) and
-          (OldRowAccessor.IsNull(FAutoColumnIndex) or (OldRowAccessor.GetValue(FAutoColumnIndex).VInteger=0))) then
-     exit;
-  Plaindriver := (Connection as IZMysqlConnection).GetPlainDriver;
-  // THIS IS WRONG, I KNOW (MDAEMS) : which function to use depends on the insert statement, not the resultset statement
-  {  IF FStatement.IsPreparedStatement  then
-    NewRowAccessor.SetLong(FAutoColumnIndex, PlainDriver.GetPreparedInsertID(FStatement.GetStmtHandle))
-  else}
-    NewRowAccessor.SetLong(FAutoColumnIndex, PlainDriver.GetLastInsertID(FHandle));
+  if ((FAutoColumnIndex {$IFDEF GENERIC_INDEX}>={$ELSE}>{$ENDIF} 0) and
+          (OldRowAccessor.IsNull(FAutoColumnIndex) or
+          (OldRowAccessor.GetLong(FAutoColumnIndex, LastWasNull)=0)))
+  then if FMYSQL_STMT <> nil
+    then NewRowAccessor.SetLong(FAutoColumnIndex, FPlainDriver.mysql_stmt_insert_id(FMYSQL_STMT))
+    else NewRowAccessor.SetLong(FAutoColumnIndex, FPlainDriver.mysql_insert_id(FMySQL));
 end;
 
 {**
@@ -3221,7 +3196,7 @@ begin
 end;
 
 { TZMySQLPreparedClob }
-constructor TZMySQLPreparedClob.Create(const PlainDriver: IZMySQLPlainDriver;
+constructor TZMySQLPreparedClob.Create(const PlainDriver: TZMySQLPlainDriver;
   Bind: PDOBindRecord2; StmtHandle: PMySql_Stmt;
   ColumnIndex: Cardinal; ConSettings: PZConSettings);
 var
@@ -3235,12 +3210,12 @@ begin
   offset := 0;
   Bind^.buffer_Length_address^ := Bind^.Length; //indicate size of Buffer
   Bind^.buffer_address^ := FBlobData;
-  PlainDriver.stmt_fetch_column(StmtHandle, bind^.mysql_bind, ColumnIndex, offset); //move data to buffer
+  PlainDriver.mysql_stmt_fetch_column(StmtHandle, bind^.mysql_bind, ColumnIndex, offset); //move data to buffer
   Bind^.buffer_address^ := nil; //set nil again
 End;
 
 { TZMySQLPreparedBlob }
-constructor TZMySQLPreparedBlob.Create(const PlainDriver: IZMySQLPlainDriver;
+constructor TZMySQLPreparedBlob.Create(const PlainDriver: TZMySQLPlainDriver;
   Bind: PDOBindRecord2; StmtHandle: PMySql_Stmt;
   ColumnIndex: Cardinal);
 var
@@ -3252,7 +3227,7 @@ begin
   offset := 0;
   Bind^.buffer_Length_address^ := Bind^.Length; //indicate size of Buffer
   Bind^.buffer_address^ := FBlobData;
-  PlainDriver.stmt_fetch_column(StmtHandle, bind^.mysql_bind, ColumnIndex, offset); //move data to buffer
+  PlainDriver.mysql_stmt_fetch_column(StmtHandle, bind^.mysql_bind, ColumnIndex, offset); //move data to buffer
   Bind^.buffer_address^ := nil; //set nil again
 End;
 
@@ -3263,7 +3238,7 @@ begin
   if FQueryHandle <> nil then
     {need to fetch all temporary until handle = nil else all other queries are out of sync
      see: http://dev.mysql.com/doc/refman/5.0/en/mysql-use-result.html}
-    while FPlainDriver.FetchRow(FQueryHandle) <> nil do;
+    while FPlainDriver.mysql_fetch_row(FQueryHandle) <> nil do;
   inherited ResetCursor;
   FQueryHandle := nil;
 end;

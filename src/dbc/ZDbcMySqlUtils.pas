@@ -85,10 +85,10 @@ function ConvertMySQLHandleToSQLType(FieldHandle: PZMySQLField;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckMySQLError(const PlainDriver: IZMySQLPlainDriver;
+procedure CheckMySQLError(const PlainDriver: TZMySQLPlainDriver;
   Handle: PMySQL; LogCategory: TZLoggingCategory;
   const LogMessage: RawByteString; ConSettings: PZConSettings);
-procedure CheckMySQLPrepStmtError(const PlainDriver: IZMySQLPlainDriver;
+procedure CheckMySQLPrepStmtError(const PlainDriver: TZMySQLPlainDriver;
   Handle: PMySQL; LogCategory: TZLoggingCategory;
   const LogMessage: RawByteString; ConSettings: PZConSettings;
   ErrorIsIgnored: PBoolean = nil; IgnoreErrorCode: Integer = 0);
@@ -156,6 +156,8 @@ function GetMySQLOptionValue(Option: TMySQLOption): string;
 function ReverseWordBytes(Src: Pointer): Word;
 function ReverseLongWordBytes(Src: Pointer; Len: Byte): LongWord;
 function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
+
+function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): TMYSQL_BINDOFFSETS;
 
 implementation
 
@@ -279,15 +281,15 @@ end;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckMySQLError(const PlainDriver: IZMySQLPlainDriver;
+procedure CheckMySQLError(const PlainDriver: TZMySQLPlainDriver;
   Handle: PMySQL; LogCategory: TZLoggingCategory;
   const LogMessage: RawByteString; ConSettings: PZConSettings);
 var
   ErrorMessage: RawByteString;
   ErrorCode: Integer;
 begin
-  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.GetLastError(Handle));
-  ErrorCode := PlainDriver.GetLastErrorCode(Handle);
+  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.mysql_error(Handle));
+  ErrorCode := PlainDriver.mysql_errno(Handle);
   if (ErrorCode <> 0) and (ErrorMessage <> '') then
   begin
     if SilentMySQLError > 0 then
@@ -301,14 +303,14 @@ begin
   end;
 end;
 
-procedure CheckMySQLPrepStmtError(const PlainDriver: IZMySQLPlainDriver;
+procedure CheckMySQLPrepStmtError(const PlainDriver: TZMySQLPlainDriver;
   Handle: PMySQL; LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
   ConSettings: PZConSettings; ErrorIsIgnored: PBoolean = nil; IgnoreErrorCode: Integer = 0);
 var
   ErrorMessage: RawByteString;
   ErrorCode: Integer;
 begin
-  ErrorCode := PlainDriver.stmt_errno(Handle);
+  ErrorCode := PlainDriver.mysql_stmt_errno(Handle);
   if Assigned(ErrorIsIgnored) then
     if (IgnoreErrorCode = ErrorCode) then
     begin
@@ -317,7 +319,7 @@ begin
     end
     else
       ErrorIsIgnored^ := False;
-  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.stmt_error(Handle));
+  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.mysql_stmt_error(Handle));
   if (ErrorCode <> 0) and (ErrorMessage <> '') then
   begin
     if SilentMySQLError > 0 then
@@ -791,6 +793,36 @@ function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
 begin
   Result := 0;
   ReverseBytes(Src, @Result, Len);
+end;
+
+function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): TMYSQL_BINDOFFSETS;
+begin
+  if (Version > 50100) or IsMariaDB {they start with 100000} then begin
+    result.buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND51(nil).buffer_type));
+    result.buffer_length := {%H-}NativeUint(@(PMYSQL_BIND51(nil).buffer_length));
+    result.is_unsigned   := {%H-}NativeUint(@(PMYSQL_BIND51(nil).is_unsigned));
+    result.buffer        := {%H-}NativeUint(@(PMYSQL_BIND51(nil).buffer));
+    result.length        := {%H-}NativeUint(@(PMYSQL_BIND51(nil).length));
+    result.is_null       := {%H-}NativeUint(@(PMYSQL_BIND51(nil).is_null));
+    result.size          := Sizeof(TMYSQL_BIND51);
+  end else if (Version >= 50000) and (Version <=50099) then begin
+    result.buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND50(nil).buffer_type));
+    result.buffer_length := {%H-}NativeUint(@(PMYSQL_BIND50(nil).buffer_length));
+    result.is_unsigned   := {%H-}NativeUint(@(PMYSQL_BIND50(nil).is_unsigned));
+    result.buffer        := {%H-}NativeUint(@(PMYSQL_BIND50(nil).buffer));
+    result.length        := {%H-}NativeUint(@(PMYSQL_BIND50(nil).length));
+    result.is_null       := {%H-}NativeUint(@(PMYSQL_BIND50(nil).is_null));
+    result.size          := Sizeof(TMYSQL_BIND50);
+  end else if (Version >= 40100) and (Version <=40199) then begin
+    result.buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND41(nil).buffer_type));
+    result.buffer_length := {%H-}NativeUint(@(PMYSQL_BIND41(nil).buffer_length));
+    result.is_unsigned   := {%H-}NativeUint(@(PMYSQL_BIND41(nil).is_unsigned));
+    result.buffer        := {%H-}NativeUint(@(PMYSQL_BIND41(nil).buffer));
+    result.length        := {%H-}NativeUint(@(PMYSQL_BIND41(nil).length));
+    result.is_null       := {%H-}NativeUint(@(PMYSQL_BIND41(nil).is_null));
+    result.size          := Sizeof(TMYSQL_BIND41);
+  end else
+    result.buffer_type:=0;
 end;
 
 end.

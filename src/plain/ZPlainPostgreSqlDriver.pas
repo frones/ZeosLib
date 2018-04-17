@@ -301,10 +301,32 @@ const
   TYPCATEGORY_BITSTRING	= 'V';		{ er ... "varbit"? }
   TYPCATEGORY_UNKNOWN	  = 'X';
 
+//some error codes
+  indeterminate_datatype: PAnsiChar = '42P18';
+//https://www.postgresql.org/docs/9.1/static/datatype-datetime.html
+
+{------------------------------------------------------------------------------------------}
+  //timestamp.h
+  POSTGRES_EPOCH_JDATE = 2451545; //* == date2j(2000, 1, 1) */
+  POSTGRES_BASE_DATE = 36526; //2000-01-01
+  JULIAN_MINYEAR = (-4713);
+  JULIAN_MINMONTH = (11);
+  JULIAN_MINDAY = (24);
+  JULIAN_MAXYEAR = (5874898);
+
+  SECS_PER_YEAR=(36525 * 864); //* avoid floating-point computation */
+  SECS_PER_DAY = 86400;
+  SECS_PER_HOUR	= 3600;
+  SECS_PER_MINUTE = 60;
+  MINS_PER_HOUR	= 60;
+
+  USECS_PER_DAY: Int64 = 86400000000;
+  USECS_PER_HOUR:	INT64 = 3600000000;
+  USECS_PER_MINUTE: Int64 = 60000000;
+  USECS_PER_SEC: Int64 = 1000000;
+
 {------------------------------------------------------------------------------------------}
 
-
-  
 type
 
 { Application-visible enum types }
@@ -518,12 +540,12 @@ type
   ----------------
 }
   PQconninfoOption = packed record
-    keyword:  PAnsiChar;	{ The keyword of the option }
-    envvar:   PAnsiChar;	{ Fallback environment variable name }
-    compiled: PAnsiChar;	{ Fallback compiled in default value  }
-    val:      PAnsiChar;	{ Options value	}
-    lab:      PAnsiChar;	{ Label for field in connect dialog }
-    disPAnsiChar: PAnsiChar;	{ Character to display for this field
+    keyword:  PAnsiChar; { The keyword of the option }
+    envvar:   PAnsiChar; { Fallback environment variable name }
+    compiled: PAnsiChar; { Fallback compiled in default value  }
+    val:      PAnsiChar; { Options value	}
+    lab:      PAnsiChar; { Label for field in connect dialog }
+    disPAnsiChar: PAnsiChar; { Character to display for this field
 			  in a connect dialog. Values are:
 			  ""	Display entered value as is
 			  "*"	Password field - hide value
@@ -542,7 +564,7 @@ type
     len:     Integer;
     isint:   Integer;
     case u: Boolean of
-      True:  (ptr: PInteger);	{ can't use void (dec compiler barfs)	 }
+      True:  (ptr: PInteger); { can't use void (dec compiler barfs)	 }
       False: (_int: Integer);
   end;
 
@@ -550,13 +572,27 @@ type
 
 {Prepared statement types}
   TPQparamTypes = array of Oid;
-  TPQparamValues = array of PAnsichar;
+  TPQparamValues = array of Pointer;
   TPQparamLengths = array of Integer;
   TPQparamFormats = array of Integer;
 
+// pg time structure from pgtime.h
+  Ppg_tm = ^Tpg_tm;
+  Tpg_tm = packed record
+    tm_sec:   integer;
+    tm_min:   integer;
+    tm_hour:  integer;
+    tm_mday:  integer;
+    tm_mon:   integer; //* origin 0, not 1 */
+    tm_year:  integer; //* relative to 1900 */
+    tm_wday:  integer;
+    tm_yday:  integer;
+    tm_isdst: integer;
+    tm_gmtoff:LongInt;
+    tm_zone: PAnsiChar;
+  end;
 
 type
-
   {** Represents a generic interface to PostgreSQL native API. }
   IZPostgreSQLPlainDriver = interface (IZPlainDriver)
     ['{03CD6345-2D7A-4FE2-B03D-3C5656789FEB}']
@@ -632,10 +668,12 @@ type
     PQgetResult     : function(Handle: PPGconn): PPGresult;  cdecl;
     PQsetSingleRowMode : function(Handle: PPGconn): Integer; cdecl;
   //* Describe prepared statements and portals */
-    PQdescribePrepared : function(Handle: PPGconn; const stmt: PAnsiChar): PPGresult; cdecl;
-    PQdescribePortal : function(Handle: PPGconn; const portal: PAnsiChar): PPGresult; cdecl;
-    PQsendDescribePrepared : function(Handle: PPGconn; const stmt: PAnsiChar): Integer; cdecl;
-    PQsendDescribePortal : function(Handle: PPGconn; const portal: PAnsiChar): Integer; cdecl;
+    PQdescribePrepared : function(Handle: PPGconn; stmt: PAnsiChar): PPGresult; cdecl;
+    PQnparams: function(res: PPGresult): Integer; cdecl;
+    PQparamtype: function(res: PPGresult; param_number: Integer): OID; cdecl;
+    PQdescribePortal : function(Handle: PPGconn; portal: PAnsiChar): PPGresult; cdecl;
+    PQsendDescribePrepared : function(Handle: PPGconn; stmt: PAnsiChar): Integer; cdecl;
+    PQsendDescribePortal : function(Handle: PPGconn; portal: PAnsiChar): Integer; cdecl;
 
     PQnotifies      : function(Handle: PPGconn): PPGnotify; cdecl;
     PQfreeNotify    : procedure(Handle: PPGnotify);cdecl;
@@ -672,13 +710,11 @@ type
     PQgetisnull     : function(Result: PPGresult; tup_num, field_num: Integer): Integer; cdecl;
     PQclear         : procedure(Result: PPGresult); cdecl;
     PQmakeEmptyPGresult  : function(Handle: PPGconn; status: TZPostgreSQLExecStatusType): PPGresult; cdecl;
-    //* Quoting strings before inclusion in queries. */
-    // postgresql 8
     PQescapeStringConn : function(Handle: PGconn; ToChar: PAnsiChar;
       const FromChar: PAnsiChar; length: NativeUInt; error: PInteger): NativeUInt;cdecl; //7.3
-    PQescapeLiteral    : function(Handle: PGconn; const str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl;
-    PQescapeIdentifier : function(Handle: PGconn; const str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl; //7.3
-    PQescapeByteaConn  : function(Handle: PPGconn;const from:PAnsiChar;from_length:longword;to_lenght:PLongword):PAnsiChar;cdecl;
+    PQescapeLiteral    : function(Handle: PGconn; str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl;
+    PQescapeIdentifier : function(Handle: PGconn; str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl; //7.3
+    PQescapeByteaConn  : function(Handle: PPGconn; from: PAnsiChar; from_length: longword; to_lenght: PLongword): PAnsiChar;cdecl;
     PQunescapeBytea    : function(const from:PAnsiChar;to_lenght:PLongword):PAnsiChar;cdecl;
     PQFreemem          : procedure(ptr:Pointer);cdecl;
 
@@ -824,6 +860,10 @@ begin
     @PQsendPrepare  := GetAddress('PQsendPrepare');
     @PQsendQueryPrepared := GetAddress('PQsendQueryPrepared');
     @PQgetResult    := GetAddress('PQgetResult');
+    @PQdescribePrepared := GetAddress('PQdescribePrepared');
+    @PQnparams      := GetAddress('PQnparams');
+    @PQparamtype    := GetAddress('PQparamtype');
+    @PQsendDescribePrepared := GetAddress('PQsendDescribePrepared');
     @PQsetSingleRowMode := GetAddress('PQsetSingleRowMode'); //9+ http://www.postgresql.org/docs/9.2/static/libpq-single-row-mode.html
 
     @PQnotifies     := GetAddress('PQnotifies');

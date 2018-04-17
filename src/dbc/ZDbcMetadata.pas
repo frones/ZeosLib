@@ -113,6 +113,7 @@ type
       ConSettings: PZConSettings);
     procedure Close; override;
     destructor Destroy; override;
+    procedure ResetCursor; override;
   public
     procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
   end;
@@ -5137,6 +5138,11 @@ end;
 procedure TZVirtualResultSet.PostRowUpdates(OldRowAccessor,
   NewRowAccessor: TZRowAccessor);
 begin
+end;
+
+procedure TZVirtualResultSet.ResetCursor;
+begin
+  BeforeFirst;
 end;
 
 { TZDefaultIdentifierConvertor }
