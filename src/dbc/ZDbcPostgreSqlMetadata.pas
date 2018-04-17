@@ -3717,9 +3717,13 @@ begin
   if IsCaseSensitive(Value) then
   begin
     QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-    Result := QuoteDelim +
-              StringReplace(Result,QuoteDelim,QuoteDelim+QuoteDelim,[rfReplaceAll]) +
-              QuoteDelim;
+    case Length(QuoteDelim) of
+      0: Result := Value;
+      1: Result := SQLQuotedStr(Value, QuoteDelim[1]);
+      2: Result := SQLQuotedStr(Value, QuoteDelim[1], QuoteDelim[2]);
+      else
+        Result := Value;
+    end;
   end;
 end;
 

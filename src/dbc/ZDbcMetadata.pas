@@ -2268,7 +2268,7 @@ begin
 end;
 
 {**
-  Decomposes a object name, AnsiQuotedStr or NullText
+  Decomposes a object name, QuotedStr or NullText
   @param S the object string
   @return a non-quoted string
 }
@@ -5335,20 +5335,17 @@ end;
 function TZDefaultIdentifierConvertor.Quote(const Value: string): string;
 var
   QuoteDelim: string;
-  Q: PChar;
 begin
   Result := Value;
   if IsCaseSensitive(Value) then begin
     QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-    Q := Pointer(QuoteDelim);
-    if Q <> nil then begin
-      Result := Q^+StringReplace(Value, Q^, Q^+Q^, [rfReplaceAll]); //escape first quote char
-      inc(q, Ord(Length(QuoteDelim) > 1));
-      if PChar(Pointer(Result))^ <> Q^ then
-        Result := StringReplace(Result, Q^, Q^+Q^, [rfReplaceAll]); //escape second quote char if different
-      Result := Result+Q^;
-    end else
-      Result := Value;
+    case Length(QuoteDelim) of
+      0: Result := Value;
+      1: Result := SQLQuotedStr(Value, QuoteDelim[1]);
+      2: Result := SQLQuotedStr(Value, QuoteDelim[1], QuoteDelim[2]);
+      else
+        Result := Value;
+    end;
   end;
 end;
 
