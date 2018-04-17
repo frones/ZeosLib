@@ -104,7 +104,7 @@ type
   TZMySQLAbstractBindBuffer = class(TZAbstractObject)
   protected
     FAddedColumnCount : Integer;
-    FBindOffsets: MYSQL_BINDOFFSETS;
+    FBindOffsets: TMYSQL_BINDOFFSETS;
     FBindArray: TByteDynArray;
     FPColumnArray: ^TZMysqlColumnBuffer;
   public
@@ -1630,7 +1630,7 @@ constructor TZMySQLAbstractBindBuffer.Create(PlainDriver: IZMysqlPlainDriver;
   const BindCount: Integer; var ColumnArray: TZMysqlColumnBuffer);
 begin
   inherited Create;
-  FBindOffsets := PlainDriver.GetBindOffsets;
+  FBindOffsets := GetBindOffsets(PlainDriver.IsMariaDBDriver, PlainDriver.GetClientVersion);
 
   if FBindOffsets.buffer_type=0 then
     raise EZSQLException.Create('Unknown dll version : '+ZFastCode.IntToStr(PlainDriver.GetClientVersion));

@@ -111,6 +111,7 @@ type
       ConSettings: PZConSettings);
     procedure Close; override;
     destructor Destroy; override;
+    procedure ResetCursor; override;
   end;
 
   {** Implements Abstract Database Metadata. }
@@ -5058,6 +5059,11 @@ end;
 procedure TZVirtualResultSet.PostRowUpdates(OldRowAccessor,
   NewRowAccessor: TZRowAccessor);
 begin
+end;
+
+procedure TZVirtualResultSet.ResetCursor;
+begin
+  BeforeFirst;
 end;
 
 { TZDefaultIdentifierConvertor }

@@ -69,8 +69,6 @@ type
 
   TZAbstractStatement = class(TZCodePagedObject, IZStatement, IZLoggingObject)
   private
-    fWBuffer: array[Byte] of WideChar;
-    fABuffer: array[Byte] of AnsiChar;
     fABufferIndex, fWBufferIndex: Integer;
     FMaxFieldSize: Integer;
     FMaxRows: Integer;
@@ -90,11 +88,13 @@ type
     FInfo: TStrings;
     FChunkSize: Integer; //size of buffer chunks for large lob's related to network settings
     FClosed: Boolean;
-    FWSQL: ZWideString;
-    FaSQL: RawByteString;
     FCachedLob: Boolean;
     procedure SetLastResultSet(const ResultSet: IZResultSet);
   protected
+    fWBuffer: array[Byte] of WideChar;
+    fABuffer: array[Byte] of AnsiChar;
+    FWSQL: ZWideString;
+    FaSQL: RawByteString;
     FStatementId : Integer;
     FOpenResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
     procedure ToBuff(const Value: ZWideString; var Result: ZWideString); overload;
@@ -632,7 +632,7 @@ end;
 }
 procedure TZAbstractStatement.SetLastResultSet(const ResultSet: IZResultSet);
 begin
-  if (FLastResultSet <> nil) then
+  if (FLastResultSet <> nil) and (Pointer(ResultSet) <> Pointer(FLastResultSet)) then
     FLastResultSet.Close;
 
   FLastResultSet := ResultSet;
