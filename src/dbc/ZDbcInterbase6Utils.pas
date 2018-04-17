@@ -189,7 +189,7 @@ type
     FDecribedLengthArray: TSmallIntDynArray;
     FDecribedScaleArray: TSmallIntDynArray;
     FDecribedTypeArray: TSmallIntDynArray;
-    procedure CheckRange(const Index: Word);
+    procedure CheckRange(const Index: Word); {$IFDEF WITH_INLINE}inline;{$ENDIF}
     procedure IbReAlloc(var P; OldSize, NewSize: Integer);
     procedure SetFieldType(const Index: Word; Size: Integer; Code: Smallint;
       Scale: Smallint);
