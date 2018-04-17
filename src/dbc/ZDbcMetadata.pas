@@ -5279,18 +5279,11 @@ end;
 function TZDefaultIdentifierConvertor.IsQuoted(const Value: string): Boolean;
 var
   QuoteDelim: string;
-  Q,P: PChar;
 begin
   QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-  Result := False;
-  if (QuoteDelim <> '') and (Value <> '') then begin
-    Q := Pointer(QuoteDelim);
-    P := Pointer(Value);
-    if Q^ = P^ then begin
-      Inc(Q, Ord(Length(QuoteDelim) > 1));
-      Result := (P+Length(Value)-1)^ = Q^;
-    end;
-  end;
+  Result := (QuoteDelim <> '') and (Value <> '') and
+            (Value[1] = QuoteDelim[1]) and
+            (Value[Length(Value)] = QuoteDelim[Length(QuoteDelim)]);
 end;
 
 {**
@@ -5301,16 +5294,15 @@ end;
 function TZDefaultIdentifierConvertor.ExtractQuote(const Value: string): string;
 var
   QuoteDelim: string;
-  Q: PChar;
 begin
   if IsQuoted(Value) then begin
     QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-    Result := Copy(Value, 2, Length(Value) - 2);
-    Q := Pointer(QuoteDelim);
-    Result := StringReplace(Result,Q^+Q^,Q^,[rfReplaceAll]); //unescape first quote char
-    inc(q);
-    if q^ <> #0 then //unescape second quote char if different
-      Result := StringReplace(Result,Q^+Q^,Q^,[rfReplaceAll]);
+    case Length(QuoteDelim) of
+      1: Result := SQLDequotedStr(Value, QuoteDelim[1]);
+      2: Result := SQLDequotedStr(Value, QuoteDelim[1], QuoteDelim[2]);
+      else
+        Result := Value;
+    end;
   end else begin
     Result := Value;
     case GetIdentifierCase(Value,True) of
