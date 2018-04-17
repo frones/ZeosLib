@@ -59,6 +59,11 @@ uses
   Variants, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   ZMessages, ZCompatibility;
 
+{$IFNDEF WITH_EARGUMENTEXCEPTION}     // EArgumentException is supported
+type
+  EArgumentException = Class(Exception);
+{$ENDIF}
+
 type
   {** Modified comaprison function. }
   TZListSortCompare = function (Item1, Item2: Pointer): Integer of object;
@@ -643,10 +648,15 @@ function GUIDToUnicode(Buffer: Pointer; Len: NativeInt): ZWideString; overload;
 procedure ValidGUIDToBinary(Src, Dest: PAnsiChar); overload;
 procedure ValidGUIDToBinary(Src: PWideChar; Dest: PAnsiChar); overload;
 
-function SQLQuotedStr(const S: ZWideString; Quote: WideChar): ZWidestring; overload;
-function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWidestring; overload;
-function SQLQuotedStr(const S: RawByteString; Quote: AnsiChar): RawByteString; overload;
+function SQLQuotedStr(const S: ZWideString; Quote: WideChar): ZWideString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWideString; overload;
+function SQLQuotedStr(const S: RawByteString; Quote: AnsiChar): RawByteString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function SQLQuotedStr(Src: PAnsiChar; Len: LengthInt; Quote: AnsiChar): RawByteString; overload;
+function SQLQuotedStr(const S: string; QuoteLeft, QuoteRight: Char): string; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function SQLQuotedStr(Src: PChar; Len: Integer; QuoteLeft, QuoteRight: Char): string; overload;
+
+function SQLDequotedStr(const S: string; QuoteChar: Char): string; overload;
+function SQLDequotedStr(const S: string; QuoteLeft, QuoteRight: Char): string; overload;
 
 implementation
 
@@ -3608,7 +3618,6 @@ end;
   @param SQLVersion an integer
   @return Formated Zeos SQL Version Value.
 }
-
 function FormatSQLVersion(const SQLVersion: Integer): string;
 var
    MajorVersion, MinorVersion, SubVersion: Integer;
@@ -3659,7 +3668,6 @@ begin
       PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
   end;
 end;
-
 
 function UnicodeStringToASCII7(const Src: PWideChar; const Len: LengthInt): RawByteString;
 var i: integer;
@@ -3883,11 +3891,6 @@ begin
   GUIDToBuffer(@GUID.D1, PAnsiChar(Pointer(Result)));
 end;
 
-{$IFNDEF WITH_EARGUMENTEXCEPTION}     // EArgumentException is supported
-type
-  EArgumentException = Class(Exception);
-{$ENDIF}
-
 //EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToRaw(const Bts: TBytes): RawByteString; overload;
 begin
@@ -4049,7 +4052,10 @@ begin
   if not ((Src^ = '}') or (Src^ = #0)) then InvalidGUID(Char(Src^));
 end;
 
-function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWidestring; overload;
+{**
+  Standard quoting: Result := Quote + Double_Quotes(Src, Quote) + Quote
+}
+function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWideString; overload;
 var
   P, Dest, PEnd, PFirst: PWideChar;
 begin
@@ -4096,7 +4102,7 @@ begin
   Dest^ := Quote;
 end;
 
-function SQLQuotedStr(const S: ZWideString; Quote: WideChar): ZWidestring;
+function SQLQuotedStr(const S: ZWideString; Quote: WideChar): ZWideString;
 begin
   Result := SQLQuotedStr(Pointer(S), Length(S), Quote);
 end;
@@ -4153,9 +4159,237 @@ begin
   Result := SQLQuotedStr(Pointer(S), Length(S), Quote);
 end;
 
+{**
+  Standard quoting with 2 quoting chars: Result := QuoteLeft + Double_Quotes(Src, QuoteLeft, QuoteRight) + QuoteRight
+  This version is a bit slower than that with one quoting char so use it only when QuoteLeft <> QuoteRight
+}
+function SQLQuotedStr(Src: PChar; Len: LengthInt; QuoteLeft, QuoteRight: Char): string;
+var
+  EscChars: LengthInt;
+  pSrc, pSrcEnd, pDest: PChar;
+begin
+  // Src must not be empty!
+  if Len = 0 then
+  begin
+    // Str = Char+Char compiles to three (!) internal functions so we've to use pointers
+    SetLength(Result, 2);
+    pDest := Pointer(Result);
+    pDest^ := QuoteLeft;
+    (pDest+1)^ := QuoteRight;
+    Exit;
+  end;
+
+  EscChars := 0;
+  pSrc := Src;
+  pSrcEnd := Src + Len - 1;
+  // Count chars that should be escaped
+  while pSrc <= pSrcEnd do
+  begin
+    if (pSrc^ = QuoteLeft) or (pSrc^ = QuoteRight) then
+      Inc(EscChars);
+    Inc(pSrc);
+  end;
+
+  pSrc := Src;
+  SetLength(Result, Len + EscChars + 2);
+  pDest := Pointer(Result);
+  pDest^ := QuoteLeft;
+  Inc(pDest);
+
+  if EscChars > 0 then
+  begin
+    while pSrc <= pSrcEnd do
+    begin
+      if (pSrc^ = QuoteLeft) or (pSrc^ = QuoteRight) then
+      begin
+        pDest^ := pSrc^;
+        (pDest+1)^ := pSrc^;
+        Inc(pDest, 2);
+      end
+      else
+      begin
+        pDest^ := pSrc^;
+        Inc(pDest);
+      end;
+      Inc(pSrc);
+    end;
+  end
+  else
+  begin
+    Move(pSrc^, pDest^, Len*SizeOf(Char));
+    Inc(pDest, Len);
+  end;
+  pDest^ := QuoteRight;
+end;
+
+function SQLQuotedStr(const S: string; QuoteLeft, QuoteRight: Char): string;
+begin
+  Result := SQLQuotedStr(Pointer(S), Length(S), QuoteLeft, QuoteRight);
+end;
+
+const
+  SUnescapedChar = 'Unescaped char in string "%s"';
+  SUnescapedCharAtEnd = 'Unescaped char at the end of the string "%s"';
+
+function SQLDequotedStr(const S: string; QuoteChar: Char): string;
+var
+  SrcLen, EscChars: LengthInt;
+  pSrcBegin, pSrcEnd, pSrc, pDest: PChar;
+begin
+  SrcLen := Length(S);
+  pSrcBegin := Pointer(S);
+  // Input must have at least 2 chars, otherwise it is considered unquoted
+  // so return as is
+  if SrcLen in [0, 1] then
+  begin
+    Result := S;
+    Exit;
+  end;
+
+  pSrcEnd := pSrcBegin + SrcLen - 1;
+  // Check if input is quoted and return input as is if not
+  if (pSrcBegin^ = QuoteChar) and (pSrcEnd^ = QuoteChar) then
+  begin
+    // just quotes
+    if SrcLen = 2 then
+    begin
+      Result := '';
+      Exit;
+    end;
+    Inc(pSrcBegin);
+    Dec(pSrcEnd);
+  end
+  else
+  begin
+    Result := S;
+    Exit;
+  end;
+
+  // Count chars that should be escaped
+  pSrc := pSrcBegin;
+  EscChars := 0;
+  while pSrc < pSrcEnd do
+  begin
+    if (pSrc^ = QuoteChar) then
+      if pSrc^ = (pSrc+1)^ then
+      begin
+        Inc(EscChars);
+        Inc(pSrc, 2);
+      end
+      else
+        raise EArgumentException.CreateFmt(SUnescapedChar, [S])
+    else
+      Inc(pSrc);
+  end;
+  // Check last char (pSrc = pSrcEnd is true here only if previous char wasn't
+  // quote or was escaped quote)
+  if (pSrc = pSrcEnd) and (pSrc^ = QuoteChar) then
+    raise EArgumentException.CreateFmt(SUnescapedCharAtEnd, [S]);
+
+  // Input contains some escaped quotes
+  if EscChars > 0 then
+  begin
+    SetLength(Result, SrcLen - EscChars - 2);
+    pSrc := pSrcBegin;
+    pDest := Pointer(Result);
+    while pSrc <= pSrcEnd do
+    begin
+      if (pSrc^ = QuoteChar) then
+        Inc(pSrc);
+      pDest^ := pSrc^;
+      Inc(pSrc);
+      Inc(pDest);
+    end;
+  end
+  else
+  // Input contains no escaped quotes
+  begin
+    SetLength(Result, SrcLen - 2); // Result Length always > 2 here!
+    Move(pSrcBegin^, Pointer(Result)^, (SrcLen - 2)*SizeOf(Char));
+  end;
+end;
+
+function SQLDequotedStr(const S: string; QuoteLeft, QuoteRight: Char): string;
+var
+  SrcLen, EscChars: LengthInt;
+  pSrcBegin, pSrcEnd, pSrc, pDest: PChar;
+begin
+  SrcLen := Length(S);
+  pSrcBegin := Pointer(S);
+  // Input must have at least 2 chars, otherwise it is considered unquoted
+  // so return as is
+  if SrcLen in [0, 1] then
+  begin
+    Result := S;
+    Exit;
+  end;
+
+  pSrcEnd := pSrcBegin + SrcLen - 1;
+  // Check if input is quoted and return input as is if not
+  if (pSrcBegin^ = QuoteLeft) and (pSrcEnd^ = QuoteRight) then
+  begin
+    // just quotes
+    if SrcLen = 2 then
+    begin
+      Result := '';
+      Exit;
+    end;
+    Inc(pSrcBegin);
+    Dec(pSrcEnd);
+  end
+  else
+  begin
+    Result := S;
+    Exit;
+  end;
+
+  // Count chars that should be escaped
+  pSrc := pSrcBegin;
+  EscChars := 0;
+  while pSrc < pSrcEnd do
+  begin
+    if (pSrc^ = QuoteLeft) or (pSrc^ = QuoteRight) then
+      if pSrc^ = (pSrc+1)^ then
+      begin
+        Inc(EscChars);
+        Inc(pSrc, 2);
+      end
+      else
+        raise EArgumentException.CreateFmt(SUnescapedChar, [S])
+    else
+      Inc(pSrc);
+  end;
+  // Check last char (pSrc = pSrcEnd is true here only if previous char wasn't
+  // quote or was escaped quote)
+  if (pSrc = pSrcEnd) and ((pSrc^ = QuoteLeft) or (pSrc^ = QuoteRight)) then
+    raise EArgumentException.CreateFmt(SUnescapedCharAtEnd, [S]);
+
+  // Input contains some escaped quotes
+  if EscChars > 0 then
+  begin
+    SetLength(Result, SrcLen - EscChars - 2);
+    pSrc := pSrcBegin;
+    pDest := Pointer(Result);
+    while pSrc <= pSrcEnd do
+    begin
+      if (pSrc^ = QuoteLeft) or (pSrc^ = QuoteRight) then
+        Inc(pSrc);
+      pDest^ := pSrc^;
+      Inc(pSrc);
+      Inc(pDest);
+    end;
+  end
+  else
+  // Input contains no escaped quotes
+  begin
+    SetLength(Result, SrcLen - 2); // Result Length always > 2 here!
+    Move(pSrcBegin^, Pointer(Result)^, (SrcLen - 2)*SizeOf(Char));
+  end;
+end;
+
 initialization
 
-HexFiller;  //build up lookup table
+  HexFiller;  //build up lookup table
   {$IFDEF WITH_FORMATSETTINGS}
   FSSqlFloat := FormatSettings;
   {$ELSE}
