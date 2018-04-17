@@ -1623,11 +1623,7 @@ begin
 
     TableTypes := '';
     for I := 0 to Length(Types) - 1 do
-    begin
-      if Length(TableTypes) > 0 then
-        TableTypes := TableTypes + ',';
-      TableTypes := TableTypes + SQLQuotedStr(Types[I], '''');
-    end;
+      AppendSepString(TableTypes, SQLQuotedStr(Types[I], ''''), ',');
     if TableTypes = '' then
       TableTypes := 'null'
     else TableTypes := SQLQuotedStr(TableTypes, '"');
@@ -2737,11 +2733,7 @@ begin
 
   TableTypes := '';
   for I := 0 to Length(Types) - 1 do
-  begin
-    if TableTypes <> '' then
-      TableTypes := TableTypes + ',';
-    TableTypes := TableTypes + SQLQuotedStr(Types[I], '''');
-  end;
+    AppendSepString(TableTypes, SQLQuotedStr(Types[I], ''''), ',');
 
   StatementResult := GetStatement.ExecuteQuery(Format('exec sp_jdbc_tables %s, %s, %s, %s',
     [ComposeObjectString(TableNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog), ComposeObjectString(TableTypes)]));
@@ -3735,11 +3727,7 @@ begin
 
   UDTypes := '';
   for I := 0 to Length(Types) - 1 do
-  begin
-    if Length(UDTypes) > 0 then
-      UDTypes := UDTypes + ',';
-    UDTypes := UDTypes + SQLQuotedStr(ZFastCode.IntToStr(Types[I]), '''');
-  end;
+    AppendSepString(UDTypes, SQLQuotedStr(ZFastCode.IntToStr(Types[I]), ''''), ',');
 
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_getudts %s, %s, %s, %s',
