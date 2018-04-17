@@ -523,7 +523,13 @@ const
   CharacterSetSizeIndex = FirstDbcIndex + 7;
 var
   TriggersColumnsDynArray: TZMetadataColumnDefs;
-  TriggersColColumnsDynArray: TZMetadataColumnDefs;
+const
+  TrgColTriggerNameIndex     = FirstDbcIndex + 2;
+  TrgColRelationNameIndex    = FirstDbcIndex + 3;
+  TrgColTriggerTypeIndex     = FirstDbcIndex + 4;
+  TrgColTriggerInactiveIndex = FirstDbcIndex + 5;
+  TrgColTriggerSourceIndex   = FirstDbcIndex + 6;
+  TrgColDescriptionIndex     = FirstDbcIndex + 7;
 const
   ProcedureNameIndex       = FirstDbcIndex + 2;
   ProcedureOverloadIndex   = FirstDbcIndex + 3;
@@ -782,13 +788,6 @@ end;
     A JDBC Compliant<sup><font size=-2>TM</font></sup>
     driver always uses a double quote character.
 }
-function TZAbstractDatabaseInfo.CompareStr(Item1, Item2: Pointer): Integer;
-begin
-  if NativeUInt(Item1) = NativeUInt(Item2)
-  then Result := 0
-  else Result := AnsiCompareStr(String(Item1), String(Item2));
-end;
-
 constructor TZAbstractDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata;
   const IdentifierQuotes: String);
 begin
@@ -810,6 +809,13 @@ destructor TZAbstractDatabaseInfo.Destroy;
 begin
   FMetadata := nil;
   inherited;
+end;
+
+function TZAbstractDatabaseInfo.CompareStr(Item1, Item2: Pointer): Integer;
+begin
+  if NativeUInt(Item1) = NativeUInt(Item2)
+  then Result := 0
+  else Result := AnsiCompareStr(String(Item1), String(Item2));
 end;
 
 //----------------------------------------------------------------------
