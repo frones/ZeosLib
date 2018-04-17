@@ -320,9 +320,6 @@ as
   select eq_name FROM equipment ORDER BY eq_name
 go
 
-/*==============================================================*/
-/* Stored procedure: abtest                                     */
-/*==============================================================*/
 SET ANSI_NULLS ON 
 go
 
@@ -334,6 +331,9 @@ START WITH 90000250
 INCREMENT BY 1
 go
 
+/*==============================================================*/
+/* Stored procedure: abtest                                     */
+/*==============================================================*/
 CREATE PROCEDURE [ABTEST]
 	@p1 int,
 	@p2 int,
