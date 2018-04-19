@@ -108,7 +108,8 @@ type
     FWhereAll: Boolean;
     FUpdateAll: Boolean;
 
-    FUpdateStatements : TZHashMap;
+    FStatements : TZHashMap;
+
   protected
     InsertStatement   : IZPreparedStatement;
     UpdateStatement   : IZPreparedStatement;
@@ -154,9 +155,9 @@ type
     function FormWhereClause(Columns: TObjectList;
       OldRowAccessor: TZRowAccessor): string; virtual;
     function FormInsertStatement(Columns: TObjectList;
-      {%H-}NewRowAccessor: TZRowAccessor): string;
+      {%H-}NewRowAccessor: TZRowAccessor): string; virtual;
     function FormUpdateStatement(Columns: TObjectList;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor): string;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor): string; virtual;
     function FormDeleteStatement(Columns: TObjectList;
       OldRowAccessor: TZRowAccessor): string;
     function FormCalculateStatement(Columns: TObjectList): string; virtual;
@@ -231,7 +232,7 @@ begin
     DSProps_Where, 'keyonly')) = 'ALL';
 
   InsertStatement := nil;
-  FUpdateStatements := TZHashMap.Create;
+  FStatements := TZHashMap.Create;
   DeleteStatement := nil;
 
 end;
@@ -252,7 +253,7 @@ begin
   FreeAndNil(FUpdateParams);
   FreeAndNil(FDeleteParams);
 
-  FreeAndNil(FUpdateStatements);
+  FreeAndNil(FStatements);
   inherited Destroy;
 end;
 
@@ -382,8 +383,7 @@ begin
   { Defines parameters for UpdateAll mode. }
   if UpdateAll then
   begin
-    for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-    begin
+    for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
       if (Metadata.GetTableName(I) <> '') and (Metadata.GetColumnName(I) <> '')
         and Metadata.IsWritable(I) then
       begin
@@ -392,10 +392,7 @@ begin
       end;
     end;
     CopyResolveParameters(UpdateColumns, Columns);
-  end
-  { Defines parameters for UpdateChanged mode. }
-  else
-  begin
+  end else begin{ Defines parameters for UpdateChanged mode. }
     SetLength(ColumnIndices, 1);
     SetLength(CompareFuncs, 1);
     for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
@@ -605,8 +602,9 @@ begin
 
     if FCalcDefaults then
       Statement.SetDefaultValue(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetDefaultValue(ColumnIndex));
-
-    case Metadata.GetColumnType(ColumnIndex) of
+    if RowAccessor.IsNull(ColumnIndex) then
+      Statement.SetNull(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetColumnType(ColumnIndex))
+    else case Metadata.GetColumnType(ColumnIndex) of
       stBoolean:
         Statement.SetBoolean(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           RowAccessor.GetBoolean(ColumnIndex, WasNull));
@@ -663,8 +661,6 @@ begin
          Statement.SetBlob(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stBinaryStream,
            RowAccessor.GetBlob(ColumnIndex, WasNull));
     end;
-    if WasNull then
-      Statement.SetNull(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetColumnType(ColumnIndex))
   end;
 end;
 
@@ -723,15 +719,13 @@ var
 begin
   TableName := DefineTableName;
   DefineInsertColumns(Columns);
-  if Columns.Count = 0 then
-  begin
+  if Columns.Count = 0 then begin
     Result := '';
     Exit;
   end;
 
   Temp1 := '';
-  for I := 0 to Columns.Count - 1 do
-  begin
+  for I := 0 to Columns.Count - 1 do begin
     Current := TZResolverParameter(Columns[I]);
     AppendSepString(Temp1, IdentifierConvertor.Quote(Current.ColumnName), ',');
   end;
@@ -741,8 +735,7 @@ begin
 
   {$IF DEFINED(DSProps_InsertReturningFields)}
   Temp1 := FStatement.GetParameters.Values[DSProps_InsertReturningFields];
-  if Temp1 <> '' then
-  begin
+  if Temp1 <> '' then begin
     Fields := ExtractFields(Temp1, [',', ';']);
     Temp1 := '';
     for I := 0 to Fields.Count - 1 do
@@ -869,20 +862,16 @@ begin
       end;
     utDeleted:
       begin
-        if DeleteStatement = nil then
+        SQL := FormDeleteStatement(FDeleteParams, OldRowAccessor);
+        if SQL = '' then Exit;
+        TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
+        DeleteStatement := FStatements.Get(TempKey) as IZPreparedStatement;
+        If DeleteStatement = nil then
         begin
-          SQL := FormDeleteStatement(FDeleteParams, OldRowAccessor);
-          If Assigned(DeleteStatement) and (SQL <> DeleteStatement.GetSQL) then
-            DeleteStatement := nil;
-          If not Assigned(DeleteStatement) then
-            DeleteStatement := CreateResolverStatement(SQL);
-          Statement := DeleteStatement;
-        end
-        else
-        begin
-          Statement := DeleteStatement;
-          SQL := DeleteStatement.GetSQL;
+          DeleteStatement := CreateResolverStatement(SQL);
+          FStatements.Put(TempKey, DeleteStatement);
         end;
+        Statement := DeleteStatement;
         SQLParams := FDeleteParams;
       end;
     utModified:
@@ -893,11 +882,11 @@ begin
         SQL := FormUpdateStatement(FUpdateParams, OldRowAccessor, NewRowAccessor);
         If SQL = '' then exit;// no fields have been changed
         TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
-        UpdateStatement := FUpdateStatements.Get(TempKey) as IZPreparedStatement;
+        UpdateStatement := FStatements.Get(TempKey) as IZPreparedStatement;
         If UpdateStatement = nil then
         begin
           UpdateStatement := CreateResolverStatement(SQL);
-          FUpdateStatements.Put(TempKey, UpdateStatement);
+          FStatements.Put(TempKey, UpdateStatement);
         end;
         Statement := UpdateStatement;
         SQLParams := FUpdateParams;
