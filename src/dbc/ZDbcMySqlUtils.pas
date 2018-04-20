@@ -421,16 +421,23 @@ var
   var tmp: ZWideString;
   {$ENDIF}
   begin
-    {$IFDEF UNICODE}
-    Result := PRawToUnicode(Buf, Len, ConSettings^.ClientCodePage^.CP);
-    {$ELSE}
-    if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
-    then System.SetString(Result, Buf, Len)
+    if (Buf = nil) or (Buf^ = #0) then
+      Result := ''
     else begin
-      tmp := PRawToUnicode(Buf, len, ConSettings^.ClientCodePage^.CP);
-      Result := ZUnicodeToString(tmp, ConSettings^.CTRL_CP);
+      //EH: mariadb up to 10.3 and old MySQL versions seems to be buggy here so this workaround was made
+      //Note the issues happen only if no gui is used?! What? True so it seems to be a performance issue?
+      Len := ZFastCode.StrLen(Buf);
+      {$IFDEF UNICODE}
+      Result := PRawToUnicode(Buf, Len, ConSettings^.ClientCodePage^.CP);
+      {$ELSE}
+      if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
+      then System.SetString(Result, Buf, Len)
+      else begin
+        tmp := PRawToUnicode(Buf, len, ConSettings^.ClientCodePage^.CP);
+        Result := ZUnicodeToString(tmp, ConSettings^.CTRL_CP);
+      end;
+      {$ENDIF}
     end;
-    {$ENDIF}
   end;
 begin
   if Assigned(FieldHandle) then
