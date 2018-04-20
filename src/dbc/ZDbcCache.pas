@@ -1023,11 +1023,11 @@ begin
       stLongWord: Result := PCardinal(Data)^;
       stInteger: Result := PInteger(Data)^;
       stULong: Result := PUInt64(Data)^;
-      stLong: Result := PInt64(Data)^;
-      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
-      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
-      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
-      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^);
+      stLong: Result := Integer(PInt64(Data)^);
+      stFloat: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^));
+      stDouble: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^));
+      stCurrency: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^));
+      stBigDecimal: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^));
       stString, stUnicodeString: if fRaw
         then Result := RawToIntDef(PPAnsiChar(Data)^+PAnsiInc, 0)
         else Result := UnicodeToIntDef(ZPPWideChar(Data)^+PWideInc, 0);
@@ -1944,7 +1944,7 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: FRawTemp := BoolStrsRaw[PWordBool(Data)^];
+    stBoolean: FRawTemp := BoolStrsRaw[Boolean(PWordBool(Data)^)];
       stByte: FRawTemp := IntToRaw(PByte(Data)^);
       stShort: FRawTemp := IntToRaw(PShortInt(Data)^);
       stWord: FRawTemp := IntToRaw(PWord(Data)^);
@@ -2017,7 +2017,7 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: Result := BoolStrs[PWordBool(Data)^];
+      stBoolean: Result := BoolStrs[Boolean(PWordBool(Data)^)];
       stByte: Result := ZFastCode.IntToStr(PByte(Data)^);
       stShort: Result := ZFastCode.IntToStr(PShortInt(Data)^);
       stWord: Result := ZFastCode.IntToStr(PWord(Data)^);
@@ -2098,7 +2098,7 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: Result := BoolStrsRaw[PWordBool(Data)^];
+      stBoolean: Result := BoolStrsRaw[Boolean(PWordBool(Data)^)];
       stByte: Result := IntToRaw(PByte(Data)^);
       stShort: Result := IntToRaw(PShortInt(Data)^);
       stWord: Result := IntToRaw(PWord(Data)^);
@@ -2166,7 +2166,7 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: Result := BoolStrsRaw[PWordBool(Data)^];
+      stBoolean: Result := BoolStrsRaw[Boolean(PWordBool(Data)^)];
       stByte: Result := IntToRaw(PByte(Data)^);
       stShort: Result := IntToRaw(PShortInt(Data)^);
       stWord: Result := IntToRaw(PWord(Data)^);
@@ -2240,7 +2240,7 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean:  Result := BoolStrsRaw[PWordBool(Data)^];
+      stBoolean:  Result := BoolStrsRaw[Boolean(PWordBool(Data)^)];
       stByte: Result := IntToRaw(PByte(Data)^);
       stShort: Result := IntToRaw(PShortInt(Data)^);
       stWord: Result := IntToRaw(PWord(Data)^);
@@ -2308,7 +2308,7 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean:  FUniTemp := BoolStrsW[PWordBool(Data)^];
+      stBoolean:  FUniTemp := BoolStrsW[Boolean(PWordBool(Data)^)];
       stByte: FUniTemp := IntToUnicode(PByte(Data)^);
       stShort: FUniTemp := IntToUnicode(PShortInt(Data)^);
       stWord: FUniTemp := IntToUnicode(PWord(Data)^);
@@ -2382,7 +2382,7 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: Result := BoolStrsW[PWordBool(Data)^];
+      stBoolean: Result := BoolStrsW[Boolean(PWordBool(Data)^)];
       stByte: Result := IntToUnicode(PByte(Data)^);
       stShort: Result := IntToUnicode(PShortInt(Data)^);
       stWord: Result := IntToUnicode(PWord(Data)^);
@@ -2492,7 +2492,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Result := InternalGetInt(ColumnIndex, IsNull);
+  Result := Byte(InternalGetInt(ColumnIndex, IsNull));
 end;
 
 {**
@@ -2509,7 +2509,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := InternalGetInt(ColumnIndex, IsNull);
+  Result := ShortInt(InternalGetInt(ColumnIndex, IsNull));
 end;
 
 {**
@@ -2526,7 +2526,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stWord);
 {$ENDIF}
-  Result := InternalGetInt(ColumnIndex, IsNull);
+  Result := Word(InternalGetInt(ColumnIndex, IsNull));
 end;
 {**
   Gets the value of the designated column in the current row
@@ -2542,7 +2542,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stSmall);
 {$ENDIF}
-  Result := InternalGetInt(ColumnIndex, IsNull);
+  Result := SmallInt(InternalGetInt(ColumnIndex, IsNull));
 end;
 
 {**
@@ -2559,7 +2559,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLongWord);
 {$ENDIF}
-  Result := InternalGetULong(ColumnIndex, IsNull);
+  Result := Cardinal(InternalGetULong(ColumnIndex, IsNull));
 end;
 
 {**
