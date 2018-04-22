@@ -1405,6 +1405,7 @@ type
 //Map CoClass to its default interface
 
 //from oledb.h
+  ULONG = LongWord;
   // Length of a non-character object, size
   PDBLENGTH = ^DBLENGTH;
   DBLENGTH = NativeUInt; //ULONGLONG

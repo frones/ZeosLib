@@ -523,7 +523,13 @@ const
   CharacterSetSizeIndex = FirstDbcIndex + 7;
 var
   TriggersColumnsDynArray: TZMetadataColumnDefs;
-  TriggersColColumnsDynArray: TZMetadataColumnDefs;
+const
+  TrgColTriggerNameIndex     = FirstDbcIndex + 2;
+  TrgColRelationNameIndex    = FirstDbcIndex + 3;
+  TrgColTriggerTypeIndex     = FirstDbcIndex + 4;
+  TrgColTriggerInactiveIndex = FirstDbcIndex + 5;
+  TrgColTriggerSourceIndex   = FirstDbcIndex + 6;
+  TrgColDescriptionIndex     = FirstDbcIndex + 7;
 const
   ProcedureNameIndex       = FirstDbcIndex + 2;
   ProcedureOverloadIndex   = FirstDbcIndex + 3;
@@ -782,13 +788,6 @@ end;
     A JDBC Compliant<sup><font size=-2>TM</font></sup>
     driver always uses a double quote character.
 }
-function TZAbstractDatabaseInfo.CompareStr(Item1, Item2: Pointer): Integer;
-begin
-  if NativeUInt(Item1) = NativeUInt(Item2)
-  then Result := 0
-  else Result := AnsiCompareStr(String(Item1), String(Item2));
-end;
-
 constructor TZAbstractDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata;
   const IdentifierQuotes: String);
 begin
@@ -810,6 +809,13 @@ destructor TZAbstractDatabaseInfo.Destroy;
 begin
   FMetadata := nil;
   inherited;
+end;
+
+function TZAbstractDatabaseInfo.CompareStr(Item1, Item2: Pointer): Integer;
+begin
+  if NativeUInt(Item1) = NativeUInt(Item2)
+  then Result := 0
+  else Result := AnsiCompareStr(String(Item1), String(Item2));
 end;
 
 //----------------------------------------------------------------------
@@ -2268,7 +2274,7 @@ begin
 end;
 
 {**
-  Decomposes a object name, AnsiQuotedStr or NullText
+  Decomposes a object name, QuotedStr or NullText
   @param S the object string
   @return a non-quoted string
 }
@@ -5279,18 +5285,11 @@ end;
 function TZDefaultIdentifierConvertor.IsQuoted(const Value: string): Boolean;
 var
   QuoteDelim: string;
-  Q,P: PChar;
 begin
   QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-  Result := False;
-  if (QuoteDelim <> '') and (Value <> '') then begin
-    Q := Pointer(QuoteDelim);
-    P := Pointer(Value);
-    if Q^ = P^ then begin
-      Inc(Q, Ord(Length(QuoteDelim) > 1));
-      Result := (P+Length(Value)-1)^ = Q^;
-    end;
-  end;
+  Result := (QuoteDelim <> '') and (Value <> '') and
+            (Value[1] = QuoteDelim[1]) and
+            (Value[Length(Value)] = QuoteDelim[Length(QuoteDelim)]);
 end;
 
 {**
@@ -5301,16 +5300,15 @@ end;
 function TZDefaultIdentifierConvertor.ExtractQuote(const Value: string): string;
 var
   QuoteDelim: string;
-  Q: PChar;
 begin
   if IsQuoted(Value) then begin
     QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-    Result := Copy(Value, 2, Length(Value) - 2);
-    Q := Pointer(QuoteDelim);
-    Result := StringReplace(Result,Q^+Q^,Q^,[rfReplaceAll]); //unescape first quote char
-    inc(q);
-    if q^ <> #0 then //unescape second quote char if different
-      Result := StringReplace(Result,Q^+Q^,Q^,[rfReplaceAll]);
+    case Length(QuoteDelim) of
+      1: Result := SQLDequotedStr(Value, QuoteDelim[1]);
+      2: Result := SQLDequotedStr(Value, QuoteDelim[1], QuoteDelim[2]);
+      else
+        Result := Value;
+    end;
   end else begin
     Result := Value;
     case GetIdentifierCase(Value,True) of
@@ -5335,20 +5333,17 @@ end;
 function TZDefaultIdentifierConvertor.Quote(const Value: string): string;
 var
   QuoteDelim: string;
-  Q: PChar;
 begin
   Result := Value;
   if IsCaseSensitive(Value) then begin
     QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-    Q := Pointer(QuoteDelim);
-    if Q <> nil then begin
-      Result := Q^+StringReplace(Value, Q^, Q^+Q^, [rfReplaceAll]); //escape first quote char
-      inc(q, Ord(Length(QuoteDelim) > 1));
-      if PChar(Pointer(Result))^ <> Q^ then
-        Result := StringReplace(Result, Q^, Q^+Q^, [rfReplaceAll]); //escape second quote char if different
-      Result := Result+Q^;
-    end else
-      Result := Value;
+    case Length(QuoteDelim) of
+      0: Result := Value;
+      1: Result := SQLQuotedStr(Value, QuoteDelim[1]);
+      2: Result := SQLQuotedStr(Value, QuoteDelim[1], QuoteDelim[2]);
+      else
+        Result := Value;
+    end;
   end;
 end;
 

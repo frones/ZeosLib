@@ -501,7 +501,8 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     if (FClientCodePage = '') and (sMy_client_Char_Set <> '') then
       FClientCodePage := sMy_client_Char_Set;
 
-    if (FClientCodePage <> sMy_client_Char_Set) then begin
+    //EH: MariaDB needs a explizit set of charset to be synced on Client<>Server!
+    if (FClientCodePage <> sMy_client_Char_Set) or (FPlainDriver.IsMariaDBDriver and (FClientCodePage <> '')) then begin
       //http://dev.mysql.com/doc/refman/5.7/en/mysql-set-character-set.html
       //take care mysql_real_escape_string works like expected!
       SQL := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FClientCodePage);
