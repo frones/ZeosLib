@@ -129,7 +129,8 @@ type
     FColumnArray: TZMysqlColumnBuffer;
     FParamBindBuffer: TZMySQLParamBindBuffer;
     FPrefetchRows: Ulong; //Number of rows to fetch from server at a time when using a cursor.
-    FResultsCount: Integer;
+    FResultsCount, FClientVersion: Integer;
+    FBindOffset: TMYSQL_BINDOFFSETS;
     function CreateResultSet(const SQL: string): IZResultSet;
     procedure FlushPendingResults;
     function GetFieldType(SQLType: TZSQLType; Var Signed: Boolean;
@@ -211,12 +212,13 @@ var
   MySQL50PreparableTokens: TPreparablePrefixTokens;
   MySQL5015PreparableTokens: TPreparablePrefixTokens;
   MySQL5023PreparableTokens: TPreparablePrefixTokens;
-  MySQL51PreparableTokens: TPreparablePrefixTokens absolute MySQL5015PreparableTokens; //equals
-  MySQL5110PreparableTokens: TPreparablePrefixTokens absolute MySQL5023PreparableTokens; //equals
   MySQL5112PreparableTokens: TPreparablePrefixTokens;
-  MySQL55PreparableTokens: TPreparablePrefixTokens absolute MySQL5112PreparableTokens; //equals
-  MySQL56PreparableTokens: TPreparablePrefixTokens absolute MySQL55PreparableTokens; //equals
   MySQL568PreparableTokens: TPreparablePrefixTokens;
+  MySQLSimpleDMLTokens: TPreparablePrefixTokens;
+  MySQLSimpleDMLAndSelectTokens: TPreparablePrefixTokens;
+{$IFOPT R+}
+  {$DEFINE RangeCheckEnabled}
+{$ENDIF}
 
 { TZMySQLEmulatedPreparedStatement }
 
@@ -480,32 +482,26 @@ end;
 constructor TZMySQLPreparedStatement.Create(
   const Connection: IZMySQLConnection;
   const SQL: string; Info: TStrings);
-var ClientVersion: Integer;
 begin
   FPlainDriver := TZMySQLPlainDriver(Connection.GetIZPlainDriver.GetInstance);
-  ClientVersion := FPLainDriver.mysql_get_client_version;
-  if ClientVersion < 40100 then
-    FPreparablePrefixTokens := nil
-  else if ClientVersion < 50000 then
-    FPreparablePrefixTokens := MySQL41PreparableTokens
-  else if ClientVersion < 50015 then
-    FPreparablePrefixTokens := MySQL50PreparableTokens
-  else if ClientVersion < 50023 then
-    FPreparablePrefixTokens := MySQL5015PreparableTokens
-  else if ClientVersion < 50100 then
-    FPreparablePrefixTokens := MySQL5023PreparableTokens
-  else if ClientVersion < 50110 then
-    FPreparablePrefixTokens := MySQL51PreparableTokens
-  else if ClientVersion < 50112 then
-    FPreparablePrefixTokens := MySQL5110PreparableTokens
-  else if ClientVersion < 50500 then
+  FClientVersion := FPLainDriver.mysql_get_client_version;
+  FBindOffset := GetBindOffsets(FPlainDriver.IsMariaDBDriver, FClientVersion);
+  if StrToBoolEx(DefineStatementParameter(Connection, Info, 'DML_PrepareOnly', {$IFDEF USE_SYNCOMMONS}'true'{$ELSE}'false'{$ENDIF})) then
+    FPreparablePrefixTokens := MySQLSimpleDMLTokens
+  else if StrToBoolEx(DefineStatementParameter(Connection, Info, 'SelectAndDML_PrepareOnly', 'True')) then
+    FPreparablePrefixTokens := MySQLSimpleDMLAndSelectTokens
+  else if FPLainDriver.IsMariaDBDriver or (FClientVersion >= 50608) then
+    FPreparablePrefixTokens := MySQL568PreparableTokens
+  else if (FClientVersion >= 50112) then
     FPreparablePrefixTokens := MySQL5112PreparableTokens
-  else if ClientVersion < 50600 then
-    FPreparablePrefixTokens := MySQL55PreparableTokens
-  else if ClientVersion < 50608 then
-    FPreparablePrefixTokens := MySQL56PreparableTokens
-  else
-    FPreparablePrefixTokens := MySQL568PreparableTokens;
+  else if (FClientVersion >= 50023) then
+    FPreparablePrefixTokens := MySQL5023PreparableTokens
+  else if (FClientVersion >= 50015) then
+    FPreparablePrefixTokens := MySQL5015PreparableTokens
+  else if (FClientVersion >= 50000) then
+    FPreparablePrefixTokens := MySQL50PreparableTokens
+  else if (FClientVersion >= 40100) then
+    FPreparablePrefixTokens := MySQL41PreparableTokens;
 
   inherited Create(Connection, SQL, Info);
   FMySQLConnection := Connection;
@@ -2050,4 +2046,15 @@ MySQL568PreparableTokens[28].MatchingGroup := 'SLAVE';
 MySQL568PreparableTokens[29].MatchingGroup := 'UNINSTALL';
   SetLength(MySQL568PreparableTokens[29].ChildMatches, 1);
   MySQL568PreparableTokens[29].ChildMatches[0] := 'PLUGIN';
+
+SetLength(MySQLSimpleDMLTokens, 3);
+MySQLSimpleDMLTokens[0].MatchingGroup := 'INSERT';
+MySQLSimpleDMLTokens[1].MatchingGroup := 'UPDATE';
+MySQLSimpleDMLTokens[2].MatchingGroup := 'DELETE';
+SetLength(MySQLSimpleDMLAndSelectTokens, 4);
+MySQLSimpleDMLAndSelectTokens[0].MatchingGroup := 'INSERT';
+MySQLSimpleDMLAndSelectTokens[1].MatchingGroup := 'UPDATE';
+MySQLSimpleDMLAndSelectTokens[2].MatchingGroup := 'DELETE';
+MySQLSimpleDMLAndSelectTokens[3].MatchingGroup := 'SELECT';
+
 end.
