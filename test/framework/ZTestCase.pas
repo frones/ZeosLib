@@ -66,7 +66,8 @@ uses
 
 type
   {$IFDEF FPC}
-  CTZAbstractTestCase=Class of TZAbstractTestCase;
+  CTZAbstractTestCase = Class of TZAbstractTestCase;
+  TTestMethod  = procedure of object;
   {$ENDIF}
 
   TDatePart = (dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec, dpMSec);
@@ -672,9 +673,17 @@ end;
 procedure TZAbstractTestCase.CheckException(AMethod: TTestMethod;
   AExceptionClass: TClass; const ExcMsg, Msg: string);
 begin
+  {$IFDEF FPC}
+  CheckAssertCalled := True;
+  {$ELSE}
   FCheckCalled := True;
+  {$ENDIF}
   try
+    {$IFDEF FPC}
+    AMethod;
+    {$ELSE}
     Invoke(AMethod);
+    {$ENDIF}
   except
     on E: Exception do
     begin
@@ -683,11 +692,11 @@ begin
         raise;
       // raised exception other than expected class
       if not e.ClassType.InheritsFrom(AExceptionClass) then
-        FailNotEquals(AExceptionClass.ClassName, e.ClassName, msg, ReturnAddress);
+        FailNotEquals(AExceptionClass.ClassName, e.ClassName, msg, {$IFDEF FPC}CallerAddr{$ELSE}ReturnAddress{$ENDIF});
       // raised exception with message other than expected
       if ExcMsg <> '' then
         if E.Message <> ExcMsg then
-          FailNotEquals(ExcMsg, E.Message, msg, ReturnAddress);
+          FailNotEquals(ExcMsg, E.Message, msg, {$IFDEF FPC}CallerAddr{$ELSE}ReturnAddress{$ENDIF});
       Exit; // OK
     end;
   end;
