@@ -1671,7 +1671,6 @@ begin
       begin
         bind^.buffer_type := FIELD_TYPE_STRING;
         bind^.Length := MYSQL_FIELD^.length+Byte(Ord(not bind^.Binary));
-        bind^.Length := (((bind^.Length -1) shr 3)+1) shl 3; //8Byte Aligned
       end;
     FIELD_TYPE_NEWDECIMAL,
     FIELD_TYPE_DECIMAL:
