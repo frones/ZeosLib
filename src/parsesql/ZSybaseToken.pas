@@ -98,7 +98,7 @@ type
 implementation
 
 uses ZCompatibility
-{$IFDEF FAST_MOVE},ZFastCode;{$ENDIF}
+{$IFDEF FAST_MOVE},ZFastCode{$ENDIF};
 
 { TZSybaseQuoteState }
 

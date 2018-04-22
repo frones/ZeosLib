@@ -64,6 +64,10 @@ type
   {$UNDEF WITH_UNICODEFROMLOCALECHARS}
   {** Implements a test case for Utilities. }
   TZTestSysUtilsCase = class(TZGenericTestCase)
+  private
+    FQuote: string;
+    FSrc: string;
+    procedure RunDequotedStr;
   published
     procedure TestBufferToStr;
     procedure TestFirstDelimiter;
@@ -78,6 +82,8 @@ type
     procedure TestAppendSepString;
     procedure TestBreakString;
     procedure TestMatch;
+    procedure TestQuotedStr;
+    procedure TestDequotedStr;
     procedure TestRawSQLDateToDateTime;
     procedure TestRawSQLTimeToDateTime;
     procedure TestRawSQLTimeStampToDateTime;
@@ -421,6 +427,96 @@ begin
   CheckEquals(True, IsMatch('*qwe*', 'qwe'));
   CheckEquals(False, IsMatch('*qwe*', 'xyz'));
   CheckEquals(True, IsMatch('*qwe*', 'xyzqweabc'));
+end;
+
+procedure TZTestSysUtilsCase.TestQuotedStr;
+const
+  // Quote; Unquoted; Quoted
+  TestCases_SglQuote: array[0..2] of array[0..2] of string =
+  (
+    ('"', '', '""'),
+//    ('"', '"', '""""'),
+    ('"', 'no quote', '"no quote"'),
+    ('"', 'single "quote', '"single ""quote"')
+  );
+
+  TestCases_DblQuote: array[0..7] of array[0..2] of string =
+  (
+    ('""', '', '""'),
+    ('""', '"', '""""'),
+    ('""', 'no quote', '"no quote"'),
+    ('""', 'single "quote', '"single ""quote"'),
+    ('[]', '', '[]'),
+    ('[]', 'no quote', '[no quote]'),
+    ('[]', 'single [quote', '[single [[quote]'),
+    ('[]', 'double [1] quote', '[double [[1]] quote]')
+  );
+
+var i: Integer;
+begin
+  for i := Low(TestCases_SglQuote) to High(TestCases_SglQuote) do
+    CheckEquals(TestCases_SglQuote[i][2], SQLQuotedStr(TestCases_SglQuote[i][1], TestCases_SglQuote[i][0][1]));
+  for i := Low(TestCases_DblQuote) to High(TestCases_DblQuote) do
+    CheckEquals(TestCases_DblQuote[i][2], SQLQuotedStr(TestCases_DblQuote[i][1], TestCases_DblQuote[i][0][1], TestCases_DblQuote[i][0][2]));
+end;
+
+procedure TZTestSysUtilsCase.RunDequotedStr;
+begin
+  case Length(FQuote) of
+    1: SQLDequotedStr(FSrc, FQuote[1]);
+    2: SQLDequotedStr(FSrc, FQuote[1], FQuote[2]);
+    else Fail('Unexpected Quote length');
+  end;
+end;
+
+procedure TZTestSysUtilsCase.TestDequotedStr;
+const
+  // Quote; Unquoted; Quoted
+  TestCases_SglQuote: array[0..5] of array[0..2] of string =
+  (
+    ('"', '', '""'),
+    ('"', '"', '""""'),
+    ('"', 'no quote', 'no quote'),
+    ('"', 'no "quote', 'no "quote'),
+    ('"', 'no quote', '"no quote"'),
+    ('"', 'single "quote', '"single ""quote"')
+  );
+
+  TestCases_DblQuote: array[0..9] of array[0..2] of string =
+  (
+    ('""', '', '""'),
+    ('""', '"', '"'),
+    ('""', 'no quote', 'no quote'),
+    ('""', 'no "quote', 'no "quote'),
+    ('""', 'no quote', '"no quote"'),
+    ('""', 'single "quote', '"single ""quote"'),
+    ('[]', '', '[]'),
+    ('[]', 'no quote', '[no quote]'),
+    ('[]', 'single [quote', '[single [[quote]'),
+    ('[]', 'double [1] quote', '[double [[1]] quote]')
+  );
+
+  TestCases_WillRaise: array[0..3] of array[0..1] of string =
+  (
+    ('"',  '"single "quote"'),
+    ('""', '"single "quote"'),
+    ('[]', '[s]]'),
+    ('[]', '[]]')
+  );
+
+var i: Integer;
+begin
+  for i := Low(TestCases_SglQuote) to High(TestCases_SglQuote) do
+    CheckEquals(TestCases_SglQuote[i][1], SQLDequotedStr(TestCases_SglQuote[i][2], TestCases_SglQuote[i][0][1]));
+  for i := Low(TestCases_DblQuote) to High(TestCases_DblQuote) do
+    CheckEquals(TestCases_DblQuote[i][1], SQLDequotedStr(TestCases_DblQuote[i][2], TestCases_DblQuote[i][0][1], TestCases_DblQuote[i][0][2]));
+
+  for i := Low(TestCases_WillRaise) to High(TestCases_WillRaise) do
+  begin
+    FQuote := TestCases_WillRaise[i][0];
+    FSrc := TestCases_WillRaise[i][1];
+    CheckException(RunDequotedStr, EArgumentException, '', 'Source: <'+FSrc+'>');
+  end;
 end;
 
 procedure TZTestSysUtilsCase.TestRawSQLDateToDateTime;

@@ -66,7 +66,8 @@ uses
 
 type
   {$IFDEF FPC}
-  CTZAbstractTestCase=Class of TZAbstractTestCase;
+  CTZAbstractTestCase = Class of TZAbstractTestCase;
+  TTestMethod  = procedure of object;
   {$ENDIF}
 
   TDatePart = (dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec, dpMSec);
@@ -163,6 +164,8 @@ type
     {$ENDIF}
     procedure CheckEqualsDate(const Expected, Actual: TDateTime;
       Parts: TDateParts = []; const Msg: string = '');
+    procedure CheckException(AMethod: TTestMethod; AExceptionClass: TClass;
+      const ExcMsg: string = ''; const Msg: string = ''); overload;
     { Measurement methods. }
     function GetTickCount: Cardinal;
   public
@@ -665,6 +668,40 @@ begin
   if dpMin in Parts then CheckEquals(EMin, AMin, s + '(DateTime.Min)');
   if dpSec in Parts then CheckEquals(ESec, ASec, s + '(DateTime.Sec)');
   if dpMSec in Parts then CheckEquals(EMSec, AMSec, s + '(DateTime.MSec)');
+end;
+
+procedure TZAbstractTestCase.CheckException(AMethod: TTestMethod;
+  AExceptionClass: TClass; const ExcMsg, Msg: string);
+begin
+  {$IFDEF FPC}
+  CheckAssertCalled := True;
+  {$ELSE}
+  FCheckCalled := True;
+  {$ENDIF}
+  try
+    {$IFDEF FPC}
+    AMethod;
+    {$ELSE}
+    Invoke(AMethod);
+    {$ENDIF}
+  except
+    on E: Exception do
+    begin
+      // exception raised but not expected at all
+      if not Assigned(AExceptionClass) then
+        raise;
+      // raised exception other than expected class
+      if not e.ClassType.InheritsFrom(AExceptionClass) then
+        FailNotEquals(AExceptionClass.ClassName, e.ClassName, msg, {$IFDEF FPC}CallerAddr{$ELSE}ReturnAddress{$ENDIF});
+      // raised exception with message other than expected
+      if ExcMsg <> '' then
+        if E.Message <> ExcMsg then
+          FailNotEquals(ExcMsg, E.Message, msg, {$IFDEF FPC}CallerAddr{$ELSE}ReturnAddress{$ENDIF});
+      Exit; // OK
+    end;
+  end;
+  Fail(Format('Expected exception "%s" but there was none. %s',
+              [AExceptionClass.ClassName, Msg]));
 end;
 
 {**

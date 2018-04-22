@@ -306,7 +306,6 @@ type
     function UncachedGetTypeInfo: IZResultSet; override;
     function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
-    function RemoveQuotesFromIdentifier(const Identifier: String): String;
   end;
 
 implementation
@@ -1219,11 +1218,11 @@ begin
 end;
 
 {**
-  Composes a object name, AnsiQuotedStr or NullText
+  Composes a object name, SQLQuotedStror NullText
   @param S the object string
   @param NullText the "NULL"-Text default: 'null'
   @param QuoteChar the QuoteChar default: '
-  @return 'null' if S is '' or S if s is already Quoted or AnsiQuotedStr(S, #39)
+  @return 'null' if S is '' or S if s is already Quoted or SQLQuotedStr(S, #39)
 }
 function TZDbLibBaseDatabaseMetadata.ComposeObjectString(const S: String;
   Const NullText: String = 'null'; QuoteChar: Char = #39): String;
@@ -1233,21 +1232,21 @@ begin
   else begin
     Result := ConvertEscapes(S);
     if not IC.IsQuoted(Result) then
-      Result := AnsiQuotedStr(Result, QuoteChar);
+      Result := SQLQuotedStr(Result, QuoteChar);
   end;
 end;
 
 {**
-  Decomposes a object name, AnsiQuotedStr or NullText
+  Decomposes a object name, SQLQuotedStr or NullText
   @param S the object string
-  @return 'null' if S is '' or S if s is already Quoted or AnsiQuotedStr(S, #39)
+  @return 'null' if S is '' or S if s is already Quoted or SQLQuotedStr(S, #39)
 }
 function TZDbLibBaseDatabaseMetadata.DecomposeObjectString(const S: String): String;
 begin
   if S = '' then
     Result := 'null'
   else
-    Result := AnsiQuotedStr(Inherited DecomposeObjectString(S), #39);
+    Result := SQLQuotedStr(Inherited DecomposeObjectString(S), #39);
 end;
 
 function TZDbLibBaseDatabaseMetadata.ConvertEscapes(const Pattern: String): String;
@@ -1623,14 +1622,10 @@ begin
 
     TableTypes := '';
     for I := 0 to Length(Types) - 1 do
-    begin
-      if Length(TableTypes) > 0 then
-        TableTypes := TableTypes + ',';
-      TableTypes := TableTypes + AnsiQuotedStr(Types[I], '''');
-    end;
+      AppendSepString(TableTypes, SQLQuotedStr(Types[I], ''''), ',');
     if TableTypes = '' then
       TableTypes := 'null'
-    else TableTypes := AnsiQuotedStr(TableTypes, '"');
+    else TableTypes := SQLQuotedStr(TableTypes, '"');
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_tables %s, %s, %s, %s',
@@ -2670,7 +2665,7 @@ begin
   with GetStatement.ExecuteQuery(
     Format('select c.* from syscolumns c inner join sysobjects o on'
     + ' (o.id = c.id) where o.name = %s and c.number = %s order by colid',
-    [AnsiQuotedStr(ProcNamePart, ''''), NumberPart])) do
+    [SQLQuotedStr(ProcNamePart, ''''), NumberPart])) do
   begin
     Result.Next;//Skip return parameter
     while Next do
@@ -2737,11 +2732,7 @@ begin
 
   TableTypes := '';
   for I := 0 to Length(Types) - 1 do
-  begin
-    if TableTypes <> '' then
-      TableTypes := TableTypes + ',';
-    TableTypes := TableTypes + AnsiQuotedStr(Types[I], '''');
-  end;
+    AppendSepString(TableTypes, SQLQuotedStr(Types[I], ''''), ',');
 
   StatementResult := GetStatement.ExecuteQuery(Format('exec sp_jdbc_tables %s, %s, %s, %s',
     [ComposeObjectString(TableNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog), ComposeObjectString(TableTypes)]));
@@ -2905,10 +2896,11 @@ var
   TempCatalog, TempSchema, TempTable, TempColumn: String;
 begin
   Result := inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
-  TempCatalog := RemoveQuotesFromIdentifier(Catalog);
-  TempSchema := RemoveQuotesFromIdentifier(SchemaPattern);
-  TempTable := RemoveQuotesFromIdentifier(TableNamePattern);
-  TempColumn := RemoveQuotesFromIdentifier(ColumnNamePattern);
+
+  TempCatalog := IC.ExtractQuote(Catalog);
+  TempSchema := IC.ExtractQuote(SchemaPattern);
+  TempTable := IC.ExtractQuote(TableNamePattern);
+  TempColumn := IC.ExtractQuote(ColumnNamePattern);
 
   with GetStatement.ExecuteQuery('exec '+GetSP_Prefix(Catalog, SchemaPattern)+
     'sp_jdbc_columns '+ComposeObjectString(TempTable)+', '+
@@ -3139,26 +3131,6 @@ begin
 end;
 
 {**
-  Removes Quotes from Identifier Names if they are passed with quotes.
-
-  @param Identifier The Identifier where the quotes are to be removed
-  @return The identifier without quotes
-}
-function TZSybaseDatabaseMetadata.RemoveQuotesFromIdentifier(const Identifier: String): String;
-var
-  QuoteStr: String;
-begin
-  QuoteStr := GetDatabaseInfo.GetIdentifierQuoteString;
-  if Length(Identifier) > 0 then begin
-    if (Identifier[1] = QuoteStr) and (Identifier[Length(Identifier)] = QuoteStr)
-    then Result := Copy(Identifier, 2, length(Identifier) - 2)
-    else Result := Identifier;
-  end else begin
-    Result := Identifier;
-  end;
-end;
-
-{**
   Gets a description of a table's primary key columns.  They
   are ordered by COLUMN_NAME.
 
@@ -3186,9 +3158,9 @@ var
   TempCatalog, TempSchema, TempTable: String;
 begin
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
-  TempCatalog := RemoveQuotesFromIdentifier(Catalog);
-  TempSchema := RemoveQuotesFromIdentifier(Schema);
-  TempTable := RemoveQuotesFromIdentifier(Table);
+  TempCatalog := IC.ExtractQuote(Catalog);
+  TempSchema := IC.ExtractQuote(Schema);
+  TempTable := IC.ExtractQuote(Table);
 
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_primarykey %s, %s, %s',
@@ -3660,8 +3632,8 @@ var
 begin
   Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
-  Is_Unique := AnsiQuotedStr(BoolStrInts[Unique], '''');
-  Accuracy := AnsiQuotedStr(BoolStrInts[Approximate], '''');
+  Is_Unique := SQLQuotedStr(BoolStrInts[Unique], '''');
+  Accuracy := SQLQuotedStr(BoolStrInts[Approximate], '''');
 
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_getindexinfo %s, %s, %s, %s, %s',
@@ -3735,11 +3707,7 @@ begin
 
   UDTypes := '';
   for I := 0 to Length(Types) - 1 do
-  begin
-    if Length(UDTypes) > 0 then
-      UDTypes := UDTypes + ',';
-    UDTypes := UDTypes + AnsiQuotedStr(ZFastCode.IntToStr(Types[I]), '''');
-  end;
+    AppendSepString(UDTypes, SQLQuotedStr(ZFastCode.IntToStr(Types[I]), ''''), ',');
 
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_getudts %s, %s, %s, %s',

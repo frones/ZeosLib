@@ -678,7 +678,7 @@ var
   Tmp: RawByteString;
 begin
   Tmp := 'SELECT DATABASEPROPERTYEX('+
-    {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(ConSettings^.Database, #39)+
+    SQLQuotedStr(ConSettings^.Database, #39)+
     ', ''Collation'') as DatabaseCollation';
   if (GetPlainDriver.dbcmd(FHandle, Pointer(Tmp)) <> DBSUCCEED) or
      (GetPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED) or
@@ -708,8 +708,7 @@ var
 begin
   Result := High(Word);
   Tmp := 'SELECT COLLATIONPROPERTY('+
-    {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(
-      {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Collation), #39)+
+    SQLQuotedStr({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Collation), #39)+
     ', ''Codepage'') as Codepage';
   if (GetPlainDriver.dbcmd(FHandle, Pointer(Tmp)) <> DBSUCCEED) or
      (GetPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED) or

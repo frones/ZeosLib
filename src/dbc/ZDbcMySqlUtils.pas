@@ -75,7 +75,7 @@ type
   @param FieldFlags field flags.
   @return a SQL undepended type.
 }
-function ConvertMySQLHandleToSQLType(FieldHandle: PZMySQLField;
+function ConvertMySQLHandleToSQLType(MYSQL_FIELD: PMYSQL_FIELD;
   CtrlsCPType: TZControlsCodePage; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TZSQLType;
 
 {**
@@ -130,7 +130,7 @@ function EncodeMySQLVersioning(const MajorVersion: Integer;
 }
 function ConvertMySQLVersionToSQLVersion( const MySQLVersion: Integer ): Integer;
 
-function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord): LongWord;
+function getMySQLFieldSize (field_type: TMysqlFieldType; field_size: LongWord): LongWord;
 
 {**
   Returns a valid TZColumnInfo from a FieldHandle
@@ -138,7 +138,7 @@ function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord):
   @param FieldHandle the handle of the fetched field
   @returns a new TZColumnInfo
 }
-function GetMySQLColumnInfoFromFieldHandle(FieldHandle: PZMySQLField;
+function GetMySQLColumnInfoFromFieldHandle(MYSQL_FIELD: PMYSQL_FIELD;
   ConSettings: PZConSettings; MySQL_FieldType_Bit_1_IsBoolean: boolean): TZColumnInfo;
 
 procedure ConvertMySQLColumnInfoFromString(var TypeName: RawByteString;
@@ -182,39 +182,39 @@ end;
   @param FieldFlags a field flags.
   @return a SQL undepended type.
 }
-function ConvertMySQLHandleToSQLType(FieldHandle: PZMySQLField;
+function ConvertMySQLHandleToSQLType(MYSQL_FIELD: PMYSQL_FIELD;
   CtrlsCPType: TZControlsCodePage; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TZSQLType;
 begin
-    case PMYSQL_FIELD(FieldHandle)^._type of
+    case MYSQL_FIELD^._type of
     FIELD_TYPE_TINY:
-      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0
+      if MYSQL_FIELD^.flags and UNSIGNED_FLAG = 0
       then Result := stShort
       else Result := stByte;
     FIELD_TYPE_YEAR:
       Result := stWord;
     FIELD_TYPE_SHORT:
-      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0
+      if MYSQL_FIELD^.flags and UNSIGNED_FLAG = 0
       then Result := stSmall
       else Result := stWord;
     FIELD_TYPE_INT24, FIELD_TYPE_LONG:
-      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0
+      if MYSQL_FIELD^.flags and UNSIGNED_FLAG = 0
       then Result := stInteger
       else Result := stLongWord;
     FIELD_TYPE_LONGLONG:
-      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0
+      if MYSQL_FIELD^.flags and UNSIGNED_FLAG = 0
       then Result := stLong
       else Result := stULong;
     FIELD_TYPE_FLOAT:
       Result := stDouble;//stFloat;
     FIELD_TYPE_DECIMAL, FIELD_TYPE_NEWDECIMAL: {ADDED FIELD_TYPE_NEWDECIMAL by fduenas 20-06-2006}
-      if PMYSQL_FIELD(FieldHandle)^.decimals = 0 then
-        if PMYSQL_FIELD(FieldHandle)^.length < 11 then
-          if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0 then
+      if MYSQL_FIELD^.decimals = 0 then
+        if MYSQL_FIELD^.length < 11 then
+          if MYSQL_FIELD^.flags and UNSIGNED_FLAG = 0 then
             Result := stInteger
           else
             Result := stLongWord
         else
-          if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0 then
+          if MYSQL_FIELD^.flags and UNSIGNED_FLAG = 0 then
              Result := stLong
           else
             Result := stULong
@@ -230,8 +230,8 @@ begin
       Result := stTimestamp;
     FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
-      if //((PMYSQL_FIELD(FieldHandle).flags and BINARY_FLAG) = 0)
-         (PMYSQL_FIELD(FieldHandle)^.charsetnr <> 63{binary}) then
+      if //((MYSQL_FIELD.flags and BINARY_FLAG) = 0)
+         (MYSQL_FIELD^.charsetnr <> 63{binary}) then
         If ( CtrlsCPType = cCP_UTF16) then
           Result := stUnicodeStream
         else
@@ -239,7 +239,7 @@ begin
       else
         Result := stBinaryStream;
     FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.1/en/bit-type.html
-      case PMYSQL_FIELD(FieldHandle)^.length of
+      case MYSQL_FIELD^.length of
         1: if MySQL_FieldType_Bit_1_IsBoolean
            then Result := stBoolean
            else result := stByte;
@@ -251,8 +251,8 @@ begin
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
-      if (PMYSQL_FIELD(FieldHandle)^.Length = 0) or //handle null columns: select null union null
-         (PMYSQL_FIELD(FieldHandle)^.charsetnr <> 63{binary}) then
+      if (MYSQL_FIELD^.Length = 0) or //handle null columns: select null union null
+         (MYSQL_FIELD^.charsetnr <> 63{binary}) then
         if ( CtrlsCPType = cCP_UTF16)
         then Result := stUnicodeString
         else Result := stString
@@ -383,7 +383,7 @@ begin
  Result := EncodeSQLVersioning(MajorVersion,MinorVersion,SubVersion);
 end;
 
-function getMySQLFieldSize(field_type: TMysqlFieldTypes; field_size: LongWord): LongWord;
+function getMySQLFieldSize(field_type: TMysqlFieldType; field_size: LongWord): LongWord;
 begin
   case field_type of
     FIELD_TYPE_ENUM:        Result := 1;
@@ -410,7 +410,7 @@ end;
   @param FieldHandle the handle of the fetched field
   @returns a new TZColumnInfo
 }
-function GetMySQLColumnInfoFromFieldHandle(FieldHandle: PZMySQLField;
+function GetMySQLColumnInfoFromFieldHandle(MYSQL_FIELD: PMYSQL_FIELD;
   ConSettings: PZConSettings; MySQL_FieldType_Bit_1_IsBoolean:boolean): TZColumnInfo;
 var
   FieldLength: ULong;
@@ -419,37 +419,44 @@ var
   var tmp: ZWideString;
   {$ENDIF}
   begin
-    {$IFDEF UNICODE}
-    Result := PRawToUnicode(Buf, Len, ConSettings^.ClientCodePage^.CP);
-    {$ELSE}
-    if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
-    then System.SetString(Result, Buf, Len)
+    if (Buf = nil) or (Buf^ = #0) then
+      Result := ''
     else begin
-      tmp := PRawToUnicode(Buf, len, ConSettings^.ClientCodePage^.CP);
-      Result := ZUnicodeToString(tmp, ConSettings^.CTRL_CP);
+      //EH: mariadb up to 10.3 and old MySQL versions seems to be buggy here so this workaround was made
+      //Note the issues happen only if no gui is used?! What? True so it seems to be a performance issue?
+      Len := ZFastCode.StrLen(Buf);
+      {$IFDEF UNICODE}
+      Result := PRawToUnicode(Buf, Len, ConSettings^.ClientCodePage^.CP);
+      {$ELSE}
+      if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
+      then System.SetString(Result, Buf, Len)
+      else begin
+        tmp := PRawToUnicode(Buf, len, ConSettings^.ClientCodePage^.CP);
+        Result := ZUnicodeToString(tmp, ConSettings^.CTRL_CP);
+      end;
+      {$ENDIF}
     end;
-    {$ENDIF}
   end;
 begin
-  if Assigned(FieldHandle) then
+  if Assigned(MYSQL_FIELD) then
   begin
     Result := TZColumnInfo.Create;
-    Result.ColumnLabel := ValueToString(PMYSQL_FIELD(FieldHandle)^.name,
-      PMYSQL_FIELD(FieldHandle)^.name_length);
-    Result.TableName := ValueToString(PMYSQL_FIELD(FieldHandle)^.org_table,
-      PMYSQL_FIELD(FieldHandle)^.org_table_length);
+    Result.ColumnLabel := ValueToString(MYSQL_FIELD^.name,
+      MYSQL_FIELD^.name_length);
+    Result.TableName := ValueToString(MYSQL_FIELD^.org_table,
+      MYSQL_FIELD^.org_table_length);
     if Result.TableName <> '' then begin
-      Result.ColumnName := ValueToString(PMYSQL_FIELD(FieldHandle)^.org_name,
-        PMYSQL_FIELD(FieldHandle)^.org_name_length);
+      Result.ColumnName := ValueToString(MYSQL_FIELD^.org_name,
+        MYSQL_FIELD^.org_name_length);
       {JDBC maps the MySQL MYSQK_FIELD.db to Catalog:
        see: https://stackoverflow.com/questions/7942520/relationship-between-catalog-schema-user-and-database-instance}
-      Result.CatalogName := ValueToString(PMYSQL_FIELD(FieldHandle)^.db,
-        PMYSQL_FIELD(FieldHandle)^.db_length);
+      Result.CatalogName := ValueToString(MYSQL_FIELD^.db,
+        MYSQL_FIELD^.db_length);
     end;
-    Result.ReadOnly := (PMYSQL_FIELD(FieldHandle)^.org_table = nil) or (PMYSQL_FIELD(FieldHandle)^.org_name = nil);
+    Result.ReadOnly := (MYSQL_FIELD^.org_table = nil) or (MYSQL_FIELD^.org_name = nil);
     Result.Writable := not Result.ReadOnly;
-    Result.ColumnType := ConvertMySQLHandleToSQLType(FieldHandle, ConSettings.CPType, MySQL_FieldType_Bit_1_IsBoolean);
-    FieldLength := PMYSQL_FIELD(FieldHandle)^.length;
+    Result.ColumnType := ConvertMySQLHandleToSQLType(MYSQL_FIELD, ConSettings.CPType, MySQL_FieldType_Bit_1_IsBoolean);
+    FieldLength := MYSQL_FIELD^.length;
     //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
 
     if Result.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
@@ -459,7 +466,7 @@ begin
 
     if Result.ColumnType in [stString, stUnicodeString] then begin
        Result.CharOctedLength := FieldLength;
-       case PMYSQL_FIELD(FieldHandle)^.charsetnr of
+       case MYSQL_FIELD^.charsetnr of
         1, 84, {Big5}
         95, 96, {cp932 japanese}
         19, 85, {euckr}
@@ -509,13 +516,13 @@ begin
         end;
       end
     end else
-      Result.Precision := Integer(FieldLength)*Ord(not (PMYSQL_FIELD(FieldHandle)^._type in
+      Result.Precision := Integer(FieldLength)*Ord(not (MYSQL_FIELD^._type in
         [FIELD_TYPE_BLOB, FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB]));
-    Result.Scale := PMYSQL_FIELD(FieldHandle)^.decimals;
-    Result.AutoIncrement := (AUTO_INCREMENT_FLAG and PMYSQL_FIELD(FieldHandle)^.flags <> 0);// or
-      //(TIMESTAMP_FLAG and PMYSQL_FIELD(FieldHandle)^.flags <> 0);
-    Result.Signed := (UNSIGNED_FLAG and PMYSQL_FIELD(FieldHandle)^.flags) = 0;
-    if NOT_NULL_FLAG and PMYSQL_FIELD(FieldHandle)^.flags <> 0 then
+    Result.Scale := MYSQL_FIELD^.decimals;
+    Result.AutoIncrement := (AUTO_INCREMENT_FLAG and MYSQL_FIELD^.flags <> 0);// or
+      //(TIMESTAMP_FLAG and MYSQL_FIELD^.flags <> 0);
+    Result.Signed := (UNSIGNED_FLAG and MYSQL_FIELD^.flags) = 0;
+    if NOT_NULL_FLAG and MYSQL_FIELD^.flags <> 0 then
       Result.Nullable := ntNoNulls
     else
       Result.Nullable := ntNullable;

@@ -4029,7 +4029,7 @@ end;
 
 function TZAbstractBlob.{%H-}GetRawByteString: RawByteString;
 begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+  ZSetString(FBlobData, FBlobSize, Result);
 end;
 
 procedure TZAbstractBlob.SetRawByteString(Const Value: RawByteString; const CodePage: Word);

@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZTokenizer, ZCompatibility;
+  ZSysUtils, ZTokenizer, ZCompatibility;
 
 type
 
@@ -413,7 +413,7 @@ function TZGenericSQLQuoteState.EncodeString(const Value: string;
   QuoteChar: Char): string;
 begin
   if Ord(QuoteChar) in [Ord(#39), Ord('"'), Ord('`')]
-  then Result := AnsiQuotedStr(Value, QuoteChar)
+  then Result := SQLQuotedStr(Value, QuoteChar)
   else Result := Value;
 end;
 

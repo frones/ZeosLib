@@ -100,8 +100,8 @@ type
 
 implementation
 
-uses SysUtils, ZCompatibility,
- {$IFDEF FAST_MOVE}ZFastCode;{$ENDIF}
+uses SysUtils, ZCompatibility
+ {$IFDEF FAST_MOVE},ZFastCode{$ENDIF};
 
 { TZSQLiteQuoteState }
 

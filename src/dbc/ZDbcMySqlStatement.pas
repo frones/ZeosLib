@@ -122,7 +122,7 @@ type
   {** Encapsulates a MySQL bind buffer for updates. }
   TZMySQLParamBindBuffer = class(TZMySQLAbstractBindBuffer)
   public
-    procedure AddColumn(buffertype: TMysqlFieldTypes; field_length: integer;
+    procedure AddColumn(buffertype: TMysqlFieldType; field_length: integer;
       is_signed: Boolean);
   end;
   {** Implements Prepared SQL Statement. }
@@ -143,7 +143,7 @@ type
     function CreateResultSet(const SQL: string): IZResultSet;
     procedure FlushPendingResults;
     function GetFieldType(SQLType: TZSQLType; Var Signed: Boolean;
-      MySQL_FieldType_Bit_1_IsBoolean: Boolean): TMysqlFieldTypes;
+      MySQL_FieldType_Bit_1_IsBoolean: Boolean): TMysqlFieldType;
   protected
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
@@ -664,7 +664,7 @@ end;
 procedure TZMysqlPreparedStatement.PrepareInParameters;
 var
   I: Integer;
-  MySQLType: TMysqlFieldTypes;
+  MySQLType: TMysqlFieldType;
   Signed: Boolean;
 begin
   { Initialize Bind Array and Column Array }
@@ -950,7 +950,7 @@ begin
 end;
 
 function TZMysqlPreparedStatement.getFieldType(SQLType: TZSQLType;
-  Var Signed: Boolean; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TMysqlFieldTypes;
+  Var Signed: Boolean; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TMysqlFieldType;
 begin
   Signed := SQLType in [stShort, stSmall, stInteger, stLong];
   case SQLType of
@@ -1690,7 +1690,6 @@ begin
       begin
         bind^.buffer_type := FIELD_TYPE_STRING;
         bind^.Length := MYSQL_FIELD^.length+Byte(Ord(not bind^.Binary));
-        bind^.Length := (((bind^.Length -1) shr 3)+1) shl 3; //8Byte Aligned
       end;
     FIELD_TYPE_NEWDECIMAL,
     FIELD_TYPE_DECIMAL:
@@ -1722,7 +1721,7 @@ end;
 
 { TZMySQLParamBindBuffer }
 
-procedure TZMySQLParamBindBuffer.AddColumn(buffertype: TMysqlFieldTypes;
+procedure TZMySQLParamBindBuffer.AddColumn(buffertype: TMysqlFieldType;
   field_length: integer; is_signed: Boolean);
 var
   ColOffset:NativeUInt;

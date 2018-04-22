@@ -62,6 +62,7 @@ interface
 {$I ZPlain.inc}
 
 //{$A-} //pack the records!   EH: nope this is wrong!
+{$Z+} //enum to DWORD
 uses
    ZCompatibility;
 
@@ -188,6 +189,13 @@ const
       {MYSQL_OPT_SSL_MODE}                      60111
     );
 type
+  // EgonHugeist: Use always a 4Byte unsigned Integer for Windows otherwise MySQL64 has problems on Win64!
+  // don't know anything about reported issues on other OS's
+  ULong                 = {$IFDEF MSWINDOWS}LongWord{$ELSE}NativeUInt{$ENDIF};
+  ULongLong             = UInt64;
+  PULong                = ^ULong;
+  PULongLong            = ^ULongLong;
+
   Pmy_bool = ^my_bool;
   my_bool = byte;
 
@@ -278,13 +286,12 @@ type
 
   PZMySQLResult = Pointer;
   PZMySQLRow = Pointer;
-  PZMySQLField = Pointer;
   PZMySQLRowOffset = Pointer;
   PZMysqlBindArray = Pointer;
 
 { Enum Field Types }
-  PMysqlFieldTypes = ^TMysqlFieldTypes;
-  TMysqlFieldTypes = (
+  PMysqlFieldType = ^TMysqlFieldType;
+  TMysqlFieldType = (
     FIELD_TYPE_DECIMAL   = 0,
     FIELD_TYPE_TINY      = 1,
     FIELD_TYPE_SHORT     = 2,
@@ -322,9 +329,18 @@ type
   TMysqlStmtAttrType = (
     STMT_ATTR_UPDATE_MAX_LENGTH,
     STMT_ATTR_CURSOR_TYPE,
-    STMT_ATTR_PREFETCH_ROWS
+    STMT_ATTR_PREFETCH_ROWS,
+    { mariadb 10.2.7up}
+    STMT_ATTR_PREBIND_PARAMS=200,
+    STMT_ATTR_ARRAY_SIZE,
+    STMT_ATTR_ROW_SIZE
   );
 
+  //http://eclipseclp.org/doc/bips/lib/dbi/cursor_next_execute-3.html
+  //"Only one active cursor of type no_cursor is allowed per session,
+  //and this active cursor must be closed before another query can be issued to the DBMS server.
+  //read_only cursor does not have this restriction,
+  //and several such cursors can be active at the same time "
   Tenum_cursor_type = (
     CURSOR_TYPE_NO_CURSOR   = 0,
     CURSOR_TYPE_READ_ONLY   = 1,
@@ -411,14 +427,14 @@ TMYSQL_CLIENT_OPTIONS =
     data:       Pointer;
   end;
 
-  PMYSQL_FIELD = ^MYSQL_FIELD;
-  MYSQL_FIELD = record
+  PMYSQL_FIELD = ^TMYSQL_FIELD;
+  TMYSQL_FIELD = record
     name:             PAnsiChar;   // Name of column
     org_name:         PAnsiChar;   // Original column name, if an alias
     table:            PAnsiChar;   // Table of column if column was a field
     org_table:        PAnsiChar;   // Org table name if table was an alias
     db:               PAnsiChar;   // Database for table
-    catalog:	        PAnsiChar;   // Catalog for table
+    catalog:          PAnsiChar;   // Catalog for table
     def:              PAnsiChar;   // Default value (set by mysql_list_fields)
     length:           ULong; // Width of column
     max_length:       ULong; // Max width of selected set
@@ -432,7 +448,7 @@ TMYSQL_CLIENT_OPTIONS =
     flags:            UInt; // Div flags
     decimals:         UInt; // Number of decimals in field
     charsetnr:        UInt; // Character set
-    _type:            TMysqlFieldTypes; // Type of field. Se mysql_com.h for types
+    _type:            TMysqlFieldType; // Type of field. Se mysql_com.h for types
   end;
 
   PMYSQL_BIND41 = ^TMYSQL_BIND41;
@@ -441,7 +457,7 @@ TMYSQL_CLIENT_OPTIONS =
     length:           PULong;
     is_null:          PByte;
     buffer:           Pointer;
-    buffer_type:      TMysqlFieldTypes;
+    buffer_type:      TMysqlFieldType;
     buffer_length:    ULong;
     //internal fields
     inter_buffer:     PByte;
@@ -464,7 +480,7 @@ TMYSQL_CLIENT_OPTIONS =
     is_null:           PByte;
     buffer:            Pointer;
     error:             PByte;
-    buffer_type:       TMysqlFieldTypes;
+    buffer_type:       TMysqlFieldType;
     buffer_length:     ULong;
     row_ptr:           PByte;
     offset:            ULong;
@@ -488,6 +504,13 @@ TMYSQL_CLIENT_OPTIONS =
     buffer:            Pointer;
     error:             Pmy_bool;
     row_ptr:           PByte;
+//^^^^^^^^^^^^^^^^^^^^^^^^^^
+//EH: maria db 10.2.7up: instead of rw_ptr the field is called "u"
+//  union {
+//    unsigned char *row_ptr;        /* for the current data position */
+//    char *indicator;               /* indicator variable */
+//} u;
+//but largest item is still a pointer!
     store_param_funct: Pointer;
     fetch_result:      Pointer;
     skip_result:       Pointer;
@@ -496,7 +519,7 @@ TMYSQL_CLIENT_OPTIONS =
     length_value:      ULong;
     param_number:      UInt;
     pack_length:       UInt;
-    buffer_type:       TMysqlFieldTypes;
+    buffer_type:       TMysqlFieldType;
     error_value:       my_bool;
     is_unsigned:       my_bool;
     long_data_used:    my_bool;
@@ -515,13 +538,30 @@ TMYSQL_CLIENT_OPTIONS =
     size          :integer;    //size of MYSQL_BINDxx
   end;
 
+  PULongArray = ^TULongArray;
+  TULongArray = array[0..High(Byte)] of Ulong; //http://dev.mysql.com/doc/refman/4.1/en/column-count-limit.html
+
+  Pmy_bool_array = ^Tmy_bool_array;
+  Tmy_bool_array = array[0..High(Byte)] of my_bool; //just 4 debugging
+
+  Tmysql_indicator_type =(
+    STMT_INDICATOR_NTS=-1,      //String is null terminated
+    STMT_INDICATOR_NONE=0,      //No semantics
+    STMT_INDICATOR_NULL=1,      //NULL value
+    STMT_INDICATOR_DEFAULT=2,   //Use columns default value
+    STMT_INDICATOR_IGNORE=3,    //Skip update of column
+    STMT_INDICATOR_IGNORE_ROW=4 //Skip update of row
+  );
+  Pmysql_indicator_types = ^Tmysql_indicator_types;
+  Tmysql_indicator_types = array[0..High(Byte)] of Tmysql_indicator_type;
+
   PDOBindRecord2 = ^TDOBindRecord2;
   TDOBindRecord2 = record
     buffer:                 Array of Byte; //data place holder
     buffer_address:         PPointer; //we don't need reserved mem in all case, but we need to set the address
     buffer_length_address:  PULong; //set buffer_Length on the fly e.g. lob reading!
-    buffer_type:            TMysqlFieldTypes; //save exact type
-    buffer_type_address:    PMysqlFieldTypes;
+    buffer_type:            TMysqlFieldType; //save exact type
+    buffer_type_address:    PMysqlFieldType;
     length:                 ULong; //current length of our or retrieved data
     is_null:                Byte; //null indicator
     binary:                 Boolean; //binary field or not? Just for reading!
@@ -529,6 +569,7 @@ TMYSQL_CLIENT_OPTIONS =
     mysql_bind:             Pointer; //Save exact address of bind for lob reading
   end;
 
+  PPMYSQL = ^PMYSQL;
   PMYSQL  = pointer;
 
   PMY_CHARSET_INFO = ^MY_CHARSET_INFO;
@@ -552,10 +593,8 @@ TMYSQL_CLIENT_OPTIONS =
     MY_ST_PREPARE,
     MY_ST_EXECUTE);
 
+  PPMYSQL_STMT = ^PMYSQL_STMT;
   PMYSQL_STMT = Pointer;
-
-  PMySQLLengthArray = ^TMySQLLengthArray;
-  TMySQLLengthArray = array[0..0] of Ulong; //http://dev.mysql.com/doc/refman/4.1/en/column-count-limit.html
 
 { ****************** Plain API Types definition ***************** }
 

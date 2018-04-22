@@ -123,10 +123,10 @@ type
     // eof
     function GetLastErrorCode(mysql: PMYSQL): Integer;
     function GetLastError(mysql: PMYSQL): PAnsiChar;
-    function FetchField(Res: PZMySQLResult): PZMySQLField;
+    function FetchField(Res: PZMySQLResult): PMYSQL_FIELD;
     // fetch_field_direct
     // fetch_fields
-    function FetchLengths(Res: PZMySQLResult): PMySQLLengthArray;
+    function FetchLengths(Res: PZMySQLResult): PULongArray;
     function FetchRow(Res: PZMySQLResult): PZMySQLRow;
     function SeekField(Res: PZMySQLResult; Offset: Cardinal): Cardinal;
     // field_tell
@@ -252,7 +252,7 @@ type
     mysql_fetch_field:            function(Result: PMYSQL_RES): PMYSQL_FIELD; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_fetch_field_direct:     function(Result: PMYSQL_RES; FieldNo: UInt): PMYSQL_FIELD; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_fetch_fields:           function(Result: PMYSQL_RES): PMYSQL_FIELD; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-    mysql_fetch_lengths:          function(Result: PMYSQL_RES): PMySQLLengthArray; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_fetch_lengths:          function(Result: PMYSQL_RES): PULongArray; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_fetch_row:              function(Result: PMYSQL_RES): PMYSQL_ROW; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_field_seek:             function(Result: PMYSQL_RES; Offset: MYSQL_FIELD_OFFSET): MYSQL_FIELD_OFFSET; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_field_tell:             function(Result: PMYSQL_RES): MYSQL_FIELD_OFFSET; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
@@ -465,8 +465,8 @@ type
     function set_character_set(mysql: PMYSQL; const csname: PAnsiChar): Integer; // set_character_set Returns 0 if valid
 
     function FetchRow(Res: PZMySQLResult): PZMySQLRow;
-    function FetchLengths(Res: PZMySQLResult): PMySQLLengthArray;
-    function FetchField(Res: PZMySQLResult): PZMySQLField;
+    function FetchLengths(Res: PZMySQLResult): PULongArray;
+    function FetchField(Res: PZMySQLResult): PMYSQL_FIELD;
 
     procedure SeekData(Res: PZMySQLResult; Offset: Cardinal);
     function SeekRow(Res: PZMySQLResult; Row: PZMySQLRowOffset):
@@ -846,12 +846,12 @@ begin
   Result := mysql_real_query(mysql, Query, Length);
 end;
 
-function TZMySQLPlainDriver.FetchField(Res: PZMySQLResult): PZMySQLField;
+function TZMySQLPlainDriver.FetchField(Res: PZMySQLResult): PMYSQL_FIELD;
 begin
   Result := mysql_fetch_field(Res);
 end;
 
-function TZMySQLPlainDriver.FetchLengths(Res: PZMySQLResult): PMySQLLengthArray;
+function TZMySQLPlainDriver.FetchLengths(Res: PZMySQLResult): PULongArray;
 begin
   Result := mysql_fetch_lengths(Res);
 end;

@@ -64,6 +64,7 @@ uses
   {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, ActiveX;
 
 type
+  ULONG = LongWord;
   IZOleDBDatabaseInfo = interface(IZDatabaseInfo)
     ['{FCAE90AA-B0B6-49A2-AB74-33E604FF8804}']
     procedure InitilizePropertiesFromDBInfo(const DBInitialize: IDBInitialize; const Malloc: IMalloc);

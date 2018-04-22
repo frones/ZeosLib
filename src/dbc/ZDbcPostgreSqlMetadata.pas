@@ -3664,18 +3664,18 @@ function TZPostgreSQLIdentifierConvertor.ExtractQuote(
 var
   QuoteDelim: string;
 begin
-  QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-  Result := Value;
-  if (QuoteDelim <> '') and (Value <> '') then
-    if (Value[1]=QuoteDelim[1]) and
-      (Value[Length(Value)]=QuoteDelim[1]) then
-    begin
-      Result:=copy(Value,2,length(Value)-2);
-      Result:=StringReplace(Result,QuoteDelim+QuoteDelim,QuoteDelim,[rfReplaceAll]);
-    end
-    else
-      Result := AnsiLowerCase(Value);
-
+  if IsQuoted(Value) then
+  begin
+    QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
+    case Length(QuoteDelim) of
+      1: Result := SQLDequotedStr(Value, QuoteDelim[1]);
+      2: Result := SQLDequotedStr(Value, QuoteDelim[1], QuoteDelim[2]);
+      else
+        Result := Value;
+    end;
+  end
+  else
+    Result := AnsiLowerCase(Value);
 end;
 
 function TZPostgreSQLIdentifierConvertor.IsQuoted(const Value: string): Boolean;
@@ -3684,8 +3684,8 @@ var
 begin
   QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
   Result := (QuoteDelim <> '') and (Value <> '') and
-            (Value[1]=QuoteDelim[1]) and
-            (Value[Length(Value)]=QuoteDelim[1]);
+            (Value[1] = QuoteDelim[1]) and
+            (Value[Length(Value)] = QuoteDelim[Length(QuoteDelim)]);
 end;
 
 function TZPostgreSQLIdentifierConvertor.IsSpecialCase(
@@ -3717,9 +3717,13 @@ begin
   if IsCaseSensitive(Value) then
   begin
     QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-    Result := QuoteDelim +
-              StringReplace(Result,QuoteDelim,QuoteDelim+QuoteDelim,[rfReplaceAll]) +
-              QuoteDelim;
+    case Length(QuoteDelim) of
+      0: Result := Value;
+      1: Result := SQLQuotedStr(Value, QuoteDelim[1]);
+      2: Result := SQLQuotedStr(Value, QuoteDelim[1], QuoteDelim[2]);
+      else
+        Result := Value;
+    end;
   end;
 end;
 
