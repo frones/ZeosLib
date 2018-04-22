@@ -1638,6 +1638,7 @@ begin
   Bind := @FPColumnArray^[FAddedColumnCount];
   bind^.buffer_type := MYSQL_FIELD^._type; //safe initialtype
   bind^.binary := (MYSQL_FIELD^.charsetnr = 63);
+  bind^.decimals := MYSQL_FIELD^.decimals;
   case MYSQL_FIELD^._type of
     FIELD_TYPE_BIT: case MYSQL_FIELD^.length of
                       0..8  : bind^.Length := SizeOf(Byte);
@@ -1658,8 +1659,14 @@ begin
         bind^.Length := 4;
         bind^.buffer_type := FIELD_TYPE_LONG;
       end;
-    FIELD_TYPE_FLOAT:       bind^.Length := 4;
-    FIELD_TYPE_DOUBLE:      bind^.Length := 8;
+    FIELD_TYPE_FLOAT,
+    FIELD_TYPE_DOUBLE:    if MYSQL_FIELD^.length < 12 then begin
+                            bind^.Length := 4;
+                            bind^.buffer_type := FIELD_TYPE_FLOAT;
+                          end else begin
+                            bind^.Length := 8;
+                            bind^.buffer_type := FIELD_TYPE_DOUBLE;
+                          end;
     FIELD_TYPE_BLOB,
     FIELD_TYPE_TINY_BLOB,
     FIELD_TYPE_MEDIUM_BLOB,

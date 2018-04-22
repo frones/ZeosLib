@@ -2469,8 +2469,12 @@ begin
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
-      FIELD_TYPE_FLOAT:     Result := PSingle(FColBind^.buffer)^;
-      FIELD_TYPE_DOUBLE:    Result := PDouble(FColBind^.buffer)^;
+      FIELD_TYPE_FLOAT:     if FColBind^.decimals < 20
+                            then Result := RoundTo(PSingle(FColBind^.buffer)^, FColBind^.decimals*-1)
+                            else Result := PSingle(FColBind^.buffer)^;
+      FIELD_TYPE_DOUBLE:    if FColBind^.decimals < 20
+                            then Result := RoundTo(PDouble(FColBind^.buffer)^, FColBind^.decimals*-1)
+                            else Result := PDouble(FColBind^.buffer)^;
       FIELD_TYPE_NULL:      Result := 0;
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := 0;
@@ -2537,8 +2541,12 @@ begin
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
-      FIELD_TYPE_FLOAT:     Result := PSingle(FColBind^.buffer)^;
-      FIELD_TYPE_DOUBLE:    Result := PDouble(FColBind^.buffer)^;
+      FIELD_TYPE_FLOAT:     if FColBind^.decimals < 20
+                            then Result := RoundTo(PSingle(FColBind^.buffer)^, FColBind^.decimals*-1)
+                            else Result := PSingle(FColBind^.buffer)^;
+      FIELD_TYPE_DOUBLE:    if FColBind^.decimals < 20
+                            then Result := RoundTo(PDouble(FColBind^.buffer)^, FColBind^.decimals*-1)
+                            else Result := PDouble(FColBind^.buffer)^;
       FIELD_TYPE_NULL:      Result := 0;
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := 0;
