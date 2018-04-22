@@ -126,8 +126,12 @@ procedure CopyColumnsInfo(FromList: TObjectList; ToList: TObjectList);
   @param Default a parameter default value.
   @return a parameter value or default if nothing was found.
 }
-function DefineStatementParameter(const Statement: IZStatement; const ParamName: string;
-  const Default: string): string;
+function DefineStatementParameter(const Statement: IZStatement;
+  const ParamName: string; const Default: string): string; overload;
+  
+function DefineStatementParameter(const Connection: IZConnection;
+  const StmtInfo: TStrings; const ParamName: string;
+  const Default: string): string; overload;
 
 {**
   ToLikeString returns the given string or if the string is empty it returns '%'
@@ -433,6 +437,19 @@ begin
   Result := Statement.GetParameters.Values[ParamName];
   if Result = '' then
     Result := Statement.GetConnection.GetParameters.Values[ParamName];
+  if Result = '' then
+    Result := Default;
+end;
+
+function DefineStatementParameter(const Connection: IZConnection;
+  const StmtInfo: TStrings; const ParamName: string;
+  const Default: string): string;
+begin
+  Result := '';
+  if StmtInfo <> nil then
+    Result := StmtInfo.Values[ParamName];
+  if (Result = '') then
+    Result := Connection.GetParameters.Values[ParamName];
   if Result = '' then
     Result := Default;
 end;
