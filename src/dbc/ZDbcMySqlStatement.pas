@@ -309,7 +309,6 @@ end;
 function TZMySQLEmulatedPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 var RSQL: RawByteString;
 begin
-  Result := nil;
   PrepareOpenResultSetForReUse;
   Prepare;
   RSQL := ComposeRawSQLQuery;
@@ -969,7 +968,6 @@ end;
 }
 function TZMySQLPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
-  Result := nil;
   PrepareOpenResultSetForReUse;
   Prepare;
   BindInParameters;
