@@ -86,8 +86,8 @@ type
     FQueryHandle: PZMySQLResult;
     FRowHandle: PZMySQLRow;
     FPlainDriver: TZMySQLPlainDriver;
-    FLengthArray: PMySQLLengthArray;
-    FMySQLTypes: array of TMysqlFieldTypes;
+    FLengthArray: PULongArray;
+    FMySQLTypes: array of TMysqlFieldType;
     fServerCursor: Boolean;
     {$IFDEF USE_SYNCOMMONS}
     fMySQLFieldFlags: array of UInt;
@@ -538,7 +538,7 @@ end;
 procedure TZAbstractMySQLResultSet.Open;
 var
   I: Integer;
-  FieldHandle: PZMySQLField;
+  FieldHandle: PMYSQL_FIELD;
 begin
   if fServerCursor
   then FQueryHandle := FPlainDriver.mysql_use_result(FHandle)
@@ -1325,7 +1325,7 @@ const one: byte = 1;
 var
   I: Integer;
   ColumnInfo: TZColumnInfo;
-  FieldHandle: PZMySQLField;
+  FieldHandle: PMYSQL_FIELD;
   FieldCount: Integer;
   FResultMetaData : PZMySQLResult;
 begin
