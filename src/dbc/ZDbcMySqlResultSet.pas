@@ -1341,6 +1341,9 @@ begin
   { Initialize Bind Array and Column Array }
   FBindBuffer := TZMySqlResultSetBindBuffer.Create(FPlainDriver,FieldCount,FColumnArray);
 
+  { EH: no we skip that! We use the refetch logic of
+  https://bugs.mysql.com/file.php?id=12361&bug_id=33086
+
   if (Self is TZMySQL_Store_PreparedResultSet) then
     //Note: This slows down the performance but makes synchronized RS possible!
     if Assigned(FPlainDriver.mysql_stmt_attr_set517UP)
