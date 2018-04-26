@@ -213,13 +213,14 @@ type
     FInitialArrayCount: ArrayLenInt;
     FPrepared : Boolean;
     FClientVariantManger: IZClientVariantManager;
+    FMinExecCount2Prepare, FExecCount: Integer;
+    FSupportsDMLBatchArrays: Boolean;
   protected
     FCachedQueryRaw: TRawByteStringDynArray;
     FCachedQueryUni: TUnicodeStringDynArray;
     FNCharDetected: TBooleanDynArray;
     FIsParamIndex: TBooleanDynArray;
-    FIsPraparable: Boolean;
-    FParamsCnt: Integer;
+    FTokenMatchIndex, FParamsCnt: Integer;
     FInParamTypes: TZSQLTypeArray;
     FInParamDefaultValues: TStringDynArray;
     FInParamCount: Integer;
@@ -247,9 +248,12 @@ type
     property CachedQueryUni: TUnicodeStringDynArray read FCachedQueryUni;
     property IsParamIndex: TBooleanDynArray read FIsParamIndex;
     property IsNCharIndex: TBooleanDynArray read FNCharDetected;
-    property IsPreparable: Boolean read FIsPraparable;
+    property TokenMatchIndex: Integer read FTokenMatchIndex;
     property CountOfQueryParams: Integer read fParamsCnt;
     property ArrayCount: ArrayLenInt read FInitialArrayCount;
+    property ExecutionCount: Integer read FExecCount;
+    property MinExecCount2Prepare: Integer read FMinExecCount2Prepare;
+    property SupportsDMLBatchArrays: Boolean read FSupportsDMLBatchArrays;
     procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
 
@@ -440,6 +444,60 @@ type
     procedure TokenizeSQLQueryUni;
     function GetParamAsString(ParamIndex: Integer): ZWideString; virtual; abstract;
     function ComposeWideSQLQuery: ZWideString;
+  end;
+
+  TImplizitBindRealAndEmulationStatement_A = class(TZEmulatedPreparedStatement_A)
+  protected
+    FEmulatePrepare, FSupportsDMLBatchArrays: Boolean;
+    FParamEmulatedValues: TRawByteStringDynArray;
+    FDefaultValues: TRawByteStringDynArray;
+    fParamLobs: array of IZBlob;
+    FGUIDAsString: Boolean;
+    FBatchArrays: array of TZArray;
+  protected
+    procedure BindNull(Index: Integer; SQLType: TZSQLType); virtual; abstract;
+    procedure BindRawStr(Index: Integer; SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt); overload; virtual; abstract;
+    procedure BindRawStr(Index: Integer; SQLType: TZSQLType; const Buf: RawByteString); overload; virtual; 
+    procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); virtual; abstract;
+    procedure BindBigOrdinal(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Signed: Boolean); virtual; abstract;
+    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Buf: Double); virtual; abstract;
+    procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Buf: TDateTime); virtual; abstract;
+
+    procedure InternalSetInParamCount(NewParamCount: Integer); virtual;
+
+    function EscapeString(Buf: Pointer; Len: LengthInt): RawByteString; virtual; abstract;
+    function EscapeBinary(Buf: Pointer; Len: LengthInt): RawByteString; virtual; abstract;
+    function GetBoundValueAsLogValue(ParameterIndex: Integer): RawByteString; virtual; abstract;
+  protected
+    constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
+    procedure SetInParamCount(const NewParamCount: Integer); override;
+    procedure PrepareInParameters; override;
+    procedure UnPrepareInParameters; override;
+    function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
+    procedure InternalSetOrdinal(ParameterIndex: Integer; SQLType: TZSQLType; const Value: Int64); override;
+    procedure InternalSetDouble(ParameterIndex: Integer; SQLType: TZSQLType; const Value: Double); override;
+    procedure InternalSetDateTime(ParameterIndex: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
+    function GetParamAsString(ParamIndex: Integer): RawByteString; override;
+  public
+    procedure ClearParameters; override;
+
+    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
+
+    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType); override;
+    procedure SetULong(ParameterIndex: Integer; const Value: UInt64); override;
+    procedure SetBoolean(ParameterIndex: Integer; Value: Boolean); override;
+    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); override;
+    procedure SetString(ParameterIndex: Integer; const Value: String); override;
+    procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); override;
+    procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); override;
+    procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); override;
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); override;
+    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); override;
+    procedure SetGUID(ParameterIndex: Integer; const Value: TGUID); override;
+    procedure SetBlob(ParameterIndex: Integer; const SQLType: TZSQLType; const Value: IZBlob); override;
+    procedure SetValue(ParameterIndex: Integer; const Value: TZVariant); override;
+    procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); override;
+    procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
   end;
 
 implementation
@@ -1390,6 +1448,8 @@ constructor TZAbstractPreparedStatement.Create(const Connection: IZConnection;
 begin
   inherited Create(Connection, Info);
   FClientVariantManger := Connection.GetClientVariantManager;
+  FSupportsDMLBatchArrays := Connection.GetMetadata.GetDatabaseInfo.SupportsBatchUpdates;
+  FMinExecCount2Prepare := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_MinExecCnt2Prepare, '4'), 4);
   {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
 end;
 
@@ -1648,6 +1708,7 @@ begin
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
+  Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
 end;
 {$WARNINGS ON}
 {**
@@ -1665,6 +1726,7 @@ function TZAbstractPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   { Logging Execution }
   DriverManager.LogMessage(lcExecPrepStmt,Self);
+  Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
 end;
 {$WARNINGS ON}
 {**
@@ -2240,16 +2302,19 @@ end;
 procedure TZAbstractPreparedStatement.SetNullArray(ParameterIndex: Integer;
   const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
 begin
-  if InParamCount < ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF} then
-    raise Exception.Create('Set Array-Value first');
-  {$IFNDEF GENERIC_INDEX}
-  ParameterIndex := ParameterIndex -1;
-  {$ENDIF}
-  if InParamValues[ParameterIndex].VType <> vtArray then
-    raise Exception.Create('No Array bound before!');
-  InParamValues[ParameterIndex].VArray.VIsNullArray := Pointer(Value);
-  InParamValues[ParameterIndex].VArray.VIsNullArrayType := Ord(SQLType);
-  InParamValues[ParameterIndex].VArray.VIsNullArrayVariantType := VariantType;
+  if FSupportsDMLBatchArrays then begin
+    if InParamCount < ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF} then
+      raise Exception.Create('Set Array-Value first');
+    {$IFNDEF GENERIC_INDEX}
+    ParameterIndex := ParameterIndex -1;
+    {$ENDIF}
+    if InParamValues[ParameterIndex].VType <> vtArray then
+      raise Exception.Create('No Array bound before!');
+    InParamValues[ParameterIndex].VArray.VIsNullArray := Pointer(Value);
+    InParamValues[ParameterIndex].VArray.VIsNullArrayType := Ord(SQLType);
+    InParamValues[ParameterIndex].VArray.VIsNullArrayVariantType := VariantType;
+  end else
+    raise EZSQLException.Create(SUnsupportedOperation);
 end;
 
 procedure TZAbstractPreparedStatement.InternalSetDouble(ParameterIndex: Integer;
@@ -2299,8 +2364,7 @@ var
         raise Exception.Create('Array count does not equal with initial count!')
   end;
 begin
-  if Connection.GetMetadata.GetDatabaseInfo.SupportsArrayBindings then
-  begin
+  if FSupportsDMLBatchArrays then begin
     if ZArray <> nil then
       case SQLType of
         stUnknown: raise Exception.Create('Invalid SQLType for Array binding!');
@@ -2333,9 +2397,8 @@ begin
     V.VArray.VIsNullArrayType := 0;
     V.VArray.VIsNullArrayVariantType := vtNull;
     SetInParam(ParameterIndex, SQLType, V);
-  end
-  else
-    raise EZSQLException.Create('ArrayBindings are not supported!');
+  end else
+    raise EZSQLException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -2373,6 +2436,7 @@ begin
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
+  Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
 end;
 
 procedure TZAbstractPreparedStatement.Close;
@@ -2403,6 +2467,7 @@ begin
   LastResultSet := nil;
   UnPrepareInParameters;
   FPrepared := False;
+  FExecCount := 0;
   Self.FInitialArrayCount := 0;
   SetLength(FCachedQueryRaw, 0);
   SetLength(FCachedQueryUni, 0);
@@ -2431,7 +2496,7 @@ begin
   begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
-      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetCompareFirstKeywordStrings, @FIsPraparable);
+      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetCompareFirstKeywordStrings, FTokenMatchIndex);
     FParamsCnt := 0;
     Result := ''; //init Result
     for I := 0 to High(FCachedQueryRaw) do begin
@@ -2450,7 +2515,7 @@ begin
   begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
-      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetCompareFirstKeywordStrings, @FIsPraparable);
+      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetCompareFirstKeywordStrings, FTokenMatchIndex);
 
     Result := ''; //init Result
     for I := 0 to High(FCachedQueryUni) do
@@ -3322,7 +3387,7 @@ begin
     FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(
         {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
-      GetCompareFirstKeywordStrings, @FIsPraparable, FNeedNCharDetection);
+      GetCompareFirstKeywordStrings, FTokenMatchIndex, FNeedNCharDetection);
 end;
 
 { TZEmulatedPreparedStatement_W }
@@ -3354,7 +3419,357 @@ begin
     FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni(
         {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
-      GetCompareFirstKeywordStrings, @FIsPraparable, FNeedNCharDetection);
+      GetCompareFirstKeywordStrings, FTokenMatchIndex, FNeedNCharDetection);
+end;
+
+{ TImplizitBindRealAndEmulationStatement_A }
+
+procedure TImplizitBindRealAndEmulationStatement_A.BindRawStr(
+  Index: Integer; SQLType: TZSQLType; const Buf: RawByteString);
+begin
+  BindRawStr(Index, SQLType, Pointer(Buf), Length(Buf));
+end;
+
+{**
+  Clears the current parameter values immediately.
+  <P>In general, parameter values remain in force for repeated use of a
+  statement. Setting a parameter value automatically clears its
+  previous value.  However, in some cases it is useful to immediately
+  release the resources used by the current parameter values; this can
+  be done by calling the method <code>clearParameters</code>.
+}
+procedure TImplizitBindRealAndEmulationStatement_A.ClearParameters;
+begin
+  //by default do nothing here
+end;
+
+constructor TImplizitBindRealAndEmulationStatement_A.Create(
+  const Connection: IZConnection; const SQL: string; Info: TStrings);
+begin
+  inherited Create(Connection, SQL, Info);
+end;
+
+function TImplizitBindRealAndEmulationStatement_A.GetInParamLogValue(
+  ParamIndex: Integer): RawByteString;
+begin
+  if FEmulatePrepare 
+  then Result := FParamEmulatedValues[ParamIndex]
+  else  Result := GetBoundValueAsLogValue(ParamIndex);
+end;
+
+function TImplizitBindRealAndEmulationStatement_A.GetParamAsString(
+  ParamIndex: Integer): RawByteString;
+begin
+  Result := FParamEmulatedValues[ParamIndex];
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.InternalSetDateTime(
+  ParameterIndex: Integer; SQLType: TZSQLType; const Value: TDateTime);
+begin
+  {$IFNDEF GENERIC_INDEX}
+  ParameterIndex := ParameterIndex - 1;
+  {$ENDIF}
+  if ParameterIndex+1 >= InParamCount then
+  SetInParamCount(ParameterIndex+1);
+
+  BindDateTime(ParameterIndex, SQLType, Value);
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.InternalSetDouble(
+  ParameterIndex: Integer; SQLType: TZSQLType; const Value: Double);
+begin
+  {$IFNDEF GENERIC_INDEX}
+  ParameterIndex := ParameterIndex - 1;
+  {$ENDIF}
+  if ParameterIndex+1 >= InParamCount then
+  SetInParamCount(ParameterIndex+1);
+
+  BindDouble(ParameterIndex, SQLType, Value);
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.InternalSetInParamCount(
+  NewParamCount: Integer);
+begin
+  SetLength(FParamEmulatedValues, NewParamCount);
+  SetLength(FInParamTypes, NewParamCount);
+  SetLength(FParamLobs, NewParamCount);
+  SetLength(FDefaultValues, NewParamCount);
+  if FSupportsDMLBatchArrays then
+    SetLength(FBatchArrays, NewParamCount);
+  FInParamCount := NewParamCount;
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.InternalSetOrdinal(
+  ParameterIndex: Integer; SQLType: TZSQLType; const Value: Int64);
+begin
+  {$IFNDEF GENERIC_INDEX}
+  ParameterIndex := ParameterIndex - 1;
+  {$ENDIF}
+  if ParameterIndex+1 >= InParamCount then
+  SetInParamCount(ParameterIndex+1);
+
+  BindBigOrdinal(ParameterIndex, SQLType, @Value, True);
+  FInParamTypes[ParameterIndex] := SQLType;
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.PrepareInParameters;
+begin
+  InternalSetInParamCount(CountOfQueryParams);
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetAnsiString(
+  ParameterIndex: Integer; const Value: AnsiString);
+begin
+  SetRawByteString(ParameterIndex, ConSettings^.ConvFuncs.ZAnsiToRaw(Value, ConSettings^.ClientCodePage.CP));
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetBlob(
+  ParameterIndex: Integer; const SQLType: TZSQLType; const Value: IZBlob);
+var RawTemp: RawByteString;
+begin
+  {$IFNDEF GENERIC_INDEX}
+  ParameterIndex := ParameterIndex - 1;
+  {$ENDIF}
+  if ParameterIndex+1 >= InParamCount then
+  SetInParamCount(ParameterIndex+1);
+  FParamLobs[ParameterIndex] := Value;
+  if Value.IsEmpty then
+    if FEmulatePrepare
+    then FParamEmulatedValues[ParameterIndex] := 'null'
+    else BindNull(ParameterIndex, SQLType)
+  else if SQLType = stBinaryStream then
+    if FEmulatePrepare
+    then FParamEmulatedValues[ParameterIndex] := EscapeBinary(Value.GetBuffer, Value.Length)
+    else BindBinary(ParameterIndex, stBinaryStream, Value.GetBuffer, Value.Length)
+  else if Value.IsCLob then begin
+    Value.GetPAnsiChar(ConSettings^.ClientCodePage.CP);
+    if FEmulatePrepare
+    then FParamEmulatedValues[ParameterIndex] := EscapeString(Value.GetBuffer, Value.Length)
+    else BindRawStr(ParameterIndex, SQLType, Value.GetBuffer, Value.Length);
+  end else begin
+    RawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
+    if FEmulatePrepare
+    then FParamEmulatedValues[ParameterIndex] := EscapeString(Pointer(RawTemp), Length(RawTemp))
+    else BindRawStr(ParameterIndex, SQLType, RawTemp);
+  end;
+  FInParamTypes[ParameterIndex] := SQLType;
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetBoolean(
+  ParameterIndex: Integer; Value: Boolean);
+begin
+  InternalSetOrdinal(ParameterIndex, stBoolean, Ord(Value));
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetBytes(
+  ParameterIndex: Integer; const Value: TBytes);
+begin
+  {$IFNDEF GENERIC_INDEX}
+  ParameterIndex := ParameterIndex - 1;
+  {$ENDIF}
+  if ParameterIndex > InParamCount-1
+  then SetInParamCount(ParameterIndex+1);
+
+  BindBinary(ParameterIndex, stBytes, Pointer(Value), Length(Value));
+  FInParamTypes[ParameterIndex] := stBytes;
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetCharRec(
+  ParameterIndex: Integer; const Value: TZCharRec);
+var UniTemp: ZWideString;
+begin
+  {$IFNDEF GENERIC_INDEX}
+  ParameterIndex := ParameterIndex - 1;
+  {$ENDIF}
+  if ParameterIndex > InParamCount-1
+  then SetInParamCount(ParameterIndex+1);
+
+  if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, Value.CP) then
+    if FEmulatePrepare
+    then FParamEmulatedValues[ParameterIndex] := EscapeString(Value.P, Value.Len)
+    else BindRawStr(ParameterIndex, stString, Value.P, Value.Len)
+  else if ZCompatibleCodePages(zCP_UTF16, Value.CP) then
+    SetRawByteString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PUnicodeToRaw(Value.P, Value.Len, ConSettings^.ClientCodePage^.CP))
+  else begin
+    UniTemp := PRawToUnicode(Value.P, Value.Len, Value.CP);
+    SetRawByteString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PUnicodeToRaw(Pointer(UniTemp), Length(UniTemp), ConSettings^.ClientCodePage^.CP))
+  end;
+  FInParamTypes[ParameterIndex] := stString;
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetDataArray(
+  ParameterIndex: Integer; const Value; const SQLType: TZSQLType;
+  const VariantType: TZVariantType);
+var
+  ZArray: PZArray;
+begin
+  if FSupportsDMLBatchArrays then begin
+    {$IFNDEF GENERIC_INDEX}
+    ParameterIndex := ParameterIndex - 1;
+    {$ENDIF}
+    if ParameterIndex > InParamCount-1
+    then SetInParamCount(ParameterIndex+1);
+
+    ZArray := @FBatchArrays[ParameterIndex];
+    ZArray^.VIsNullArray := Pointer(Value);
+    ZArray^.VIsNullArrayType := ord(SQLType);
+    ZArray^.VIsNullArrayVariantType := VariantType;
+    FInParamTypes[ParameterIndex] := stArray;
+  end else
+    raise EZSQLException.Create(sUnsupportedOperation);
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetDefaultValue(
+  ParameterIndex: Integer; const Value: string);
+begin
+  {$IFNDEF GENERIC_INDEX}
+  ParameterIndex := ParameterIndex - 1;
+  {$ENDIF}
+  if ParameterIndex > InParamCount-1
+  then SetInParamCount(ParameterIndex+1);
+  FDefaultValues[ParameterIndex] := ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetGUID(
+  ParameterIndex: Integer; const Value: TGUID);
+begin
+  {$IFNDEF GENERIC_INDEX}
+  ParameterIndex := ParameterIndex - 1;
+  {$ENDIF}
+  if ParameterIndex > InParamCount-1
+  then SetInParamCount(ParameterIndex+1);
+
+  if FGUIDAsString
+  then BindRawStr(ParameterIndex, stGUID, GUIDToRaw(Value))
+  else BindBinary(ParameterIndex, stGUID, @Value.D1, SizeOf(TGUID));
+  FInParamTypes[ParameterIndex] := stGUID;
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetInParamCount(
+  const NewParamCount: Integer);
+begin
+  if not Prepared then
+    Prepare;
+  if FEmulatePrepare
+  then Assert(NewParamCount <= CountOfQueryParams)
+  else Assert(NewParamCount <= FInParamCount); //<- done by PrepareInParams
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetNull(
+  ParameterIndex: Integer; SQLType: TZSQLType);
+begin
+  {$IFNDEF GENERIC_INDEX}
+  ParameterIndex := ParameterIndex - 1;
+  {$ENDIF}
+  if ParameterIndex > InParamCount-1
+  then SetInParamCount(ParameterIndex+1);
+
+  if FEmulatePrepare
+  then FParamEmulatedValues[ParameterIndex] := 'null'
+  else BindNull(ParameterIndex, SQLType);
+  if (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
+    fParamLobs[ParameterIndex] := nil;
+  FInParamTypes[ParameterIndex] := SQLType;
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetNullArray(
+  ParameterIndex: Integer; const SQLType: TZSQLType; const Value;
+  const VariantType: TZVariantType);
+var
+  ZArray: PZArray;
+begin
+  if FSupportsDMLBatchArrays then begin
+    {$IFNDEF GENERIC_INDEX}
+    ParameterIndex := ParameterIndex - 1;
+    {$ENDIF}
+    if ParameterIndex > InParamCount-1
+    then SetInParamCount(ParameterIndex+1);
+
+    ZArray := @FBatchArrays[ParameterIndex];
+    ZArray^.VArray := Pointer(Value);
+    ZArray^.VArrayType := ord(SQLType);
+    ZArray^.VArrayVariantType := VariantType;
+    FInParamTypes[ParameterIndex] := stArray;
+  end else
+    raise EZSQLException.Create(sUnsupportedOperation);
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetRawByteString(
+  ParameterIndex: Integer; const Value: RawByteString);
+begin
+  {$IFNDEF GENERIC_INDEX}
+  ParameterIndex := ParameterIndex - 1;
+  {$ENDIF}
+  if ParameterIndex+1 > InParamCount then
+  SetInParamCount(ParameterIndex+1);
+
+  if not FEmulatePrepare
+  then BindRawStr(ParameterIndex, stString, Value)
+  else FParamEmulatedValues[ParameterIndex] := EscapeString(Pointer(Value), Length(Value));
+  FInParamTypes[ParameterIndex] := stString;
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetString(
+  ParameterIndex: Integer; const Value: String);
+begin
+  SetRawByteString(ParameterIndex, ConSettings.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings.ClientCodePage.CP));
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetULong(
+  ParameterIndex: Integer; const Value: UInt64);
+begin
+  {$IFNDEF GENERIC_INDEX}
+  ParameterIndex := ParameterIndex - 1;
+  {$ENDIF}
+  if ParameterIndex+1 >= InParamCount then
+  SetInParamCount(ParameterIndex+1);
+
+  BindBigOrdinal(ParameterIndex, stUlong, @Value, False);
+  FInParamTypes[ParameterIndex] := stULong;
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetUnicodeString(
+  ParameterIndex: Integer; const Value: ZWideString);
+begin
+  SetRawByteString(ParameterIndex, ZUnicodeToRaw(Value, ConSettings^.ClientCodePage.CP));
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetUTF8String(
+  ParameterIndex: Integer; const Value: UTF8String);
+begin
+  SetRawByteString(ParameterIndex, ConSettings^.ConvFuncs.ZUTF8ToRaw(Value, ConSettings^.ClientCodePage.CP));
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.SetValue(
+  ParameterIndex: Integer; const Value: TZVariant);
+var lob: IZBlob;
+begin
+  case Value.VType of
+    vtNull:           SetNull(ParameterIndex, stString);
+    vtBoolean:        SetBoolean(ParameterIndex, Value.VBoolean);
+    vtInteger:        SetLong(ParameterIndex, Value.VInteger);
+    vtUInteger:       SetULong(ParameterIndex, Value.VUInteger);
+    vtFloat:          SetDouble(ParameterIndex, Value.VFloat);
+    vtBytes:          SetBytes(ParameterIndex, Value.VBytes);
+    vtString:         SetString(ParameterIndex, Value.VString);
+    vtAnsiString:     SetAnsiString(ParameterIndex, Value.VAnsiString);
+    vtUTF8String:     SetUTF8String(ParameterIndex, Value.VUTF8String);
+    vtRawByteString:  SetRawByteString(ParameterIndex, Value.VRawByteString);
+    vtUnicodeString:  SetUnicodeString(ParameterIndex, Value.VUnicodeString);
+    vtDateTime:       SetTimeStamp(ParameterIndex, Value.VDateTime);
+    vtInterface:      If Supports(Value.VInterface, IZBlob, lob) then begin
+                        if lob.IsClob
+                        then SetBlob(ParameterIndex, stAsciiStream, lob)
+                        else SetBlob(ParameterIndex, stBinaryStream, lob);
+                      end else raise EZVariantException.Create(STypesMismatch);
+    vtCharRec:        SetCharRec(ParameterIndex, Value.VCharRec);
+    else raise EZVariantException.Create(STypesMismatch);
+  end;
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.UnPrepareInParameters;
+begin
+  InternalSetInParamCount(0);
 end;
 
 end.

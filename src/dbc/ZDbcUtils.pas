@@ -156,12 +156,12 @@ function WideStringStream(const AString: WideString): TStream;
 
 function TokenizeSQLQueryRaw(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
-  ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
+  ComparePrefixTokens: TPreparablePrefixTokens; var TokenMatchIndex: Integer;
   const NeedNCharDetection: Boolean = False): TRawByteStringDynArray;
 
 function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
-  ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
+  ComparePrefixTokens: TPreparablePrefixTokens; var TokenMatchIndex: Integer;
   const NeedNCharDetection: Boolean = False): TUnicodeStringDynArray;
 
 function ExtractFields(const FieldNames: string; SepChars: TSysCharSet): TStrings;
@@ -544,7 +544,7 @@ end;
 }
 function TokenizeSQLQueryRaw(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
-  ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
+  ComparePrefixTokens: TPreparablePrefixTokens; var TokenMatchIndex: Integer;
   const NeedNCharDetection: Boolean = False): TRawByteStringDynArray;
 var
   I, C, N: Integer;
@@ -576,7 +576,7 @@ begin
     SQL := '';
     NextIsNChar := False;
     N := -1;
-    CompareSuccess^ := False;
+    TokenMatchIndex := -1;
     for I := 0 to High(Tokens) do
     begin
       {check if we've a preparable statement. If ComparePrefixTokens = nil then
@@ -588,7 +588,7 @@ begin
             if ComparePrefixTokens[C].MatchingGroup = UpperCase(Tokens[I].Value) then
             begin
               if Length(ComparePrefixTokens[C].ChildMatches) = 0 then
-                CompareSuccess^ := True
+                TokenMatchIndex := C
               else
                 N := C; //save group
               Break;
@@ -601,7 +601,7 @@ begin
           for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
             if ComparePrefixTokens[N].ChildMatches[C] = UpperCase(Tokens[I].Value) then
             begin
-              CompareSuccess^ := True;
+              TokenMatchIndex := N;
               Break;
             end;
           ComparePrefixTokens := nil; //stop compare sequence
@@ -644,7 +644,7 @@ end;
 }
 function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
-  ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
+  ComparePrefixTokens: TPreparablePrefixTokens; var TokenMatchIndex: Integer;
   const NeedNCharDetection: Boolean = False): TUnicodeStringDynArray;
 var
   I, C, N: Integer;
@@ -687,7 +687,7 @@ begin
             if ComparePrefixTokens[C].MatchingGroup = UpperCase(Tokens[I].Value) then
             begin
               if Length(ComparePrefixTokens[C].ChildMatches) = 0 then
-                CompareSuccess^ := True
+                TokenMatchIndex := C
               else
                 N := C; //save group
               Break;
@@ -700,7 +700,7 @@ begin
           for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
             if ComparePrefixTokens[N].ChildMatches[C] = UpperCase(Tokens[I].Value) then
             begin
-              CompareSuccess^ := True;
+              TokenMatchIndex := N;
               Break;
             end;
           ComparePrefixTokens := nil; //stop compare sequence
