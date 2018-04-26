@@ -338,6 +338,7 @@ const
   ConnProps_Synchronous = 'synchronous';
   ConnProps_LockingMode = 'locking_mode';
   ConnProps_ForeignKeys = 'foreign_keys';
+  ConnProps_journal_mode = 'journal_mode';
 
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
