@@ -567,6 +567,7 @@ TMYSQL_CLIENT_OPTIONS =
     binary:                 Boolean; //binary field or not? Just for reading!
     is_signed:              Boolean; //signed ordinals or not? Just for reading!
     mysql_bind:             Pointer; //Save exact address of bind for lob reading
+    decimals:               Integer;
   end;
 
   PPMYSQL = ^PMYSQL;

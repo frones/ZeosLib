@@ -660,8 +660,9 @@ function SQLQuotedStr(const S: ZWideString; Quote: WideChar): ZWideString; overl
 function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWideString; overload;
 function SQLQuotedStr(const S: RawByteString; Quote: AnsiChar): RawByteString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function SQLQuotedStr(Src: PAnsiChar; Len: LengthInt; Quote: AnsiChar): RawByteString; overload;
+
 function SQLQuotedStr(const S: string; QuoteLeft, QuoteRight: Char): string; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
-function SQLQuotedStr(Src: PChar; Len: Integer; QuoteLeft, QuoteRight: Char): string; overload;
+function SQLQuotedStr(Src: PChar; Len: LengthInt; QuoteLeft, QuoteRight: Char): string; overload;
 
 function SQLDequotedStr(const S: string; QuoteChar: Char): string; overload;
 function SQLDequotedStr(const S: string; QuoteLeft, QuoteRight: Char): string; overload;

@@ -1061,6 +1061,9 @@ begin
   { Initialize Bind Array and Column Array }
   FBindBuffer := TZMySqlResultSetBindBuffer.Create(FPlainDriver,FieldCount,FColumnArray);
 
+  { EH: no we skip that! We use the refetch logic of
+  https://bugs.mysql.com/file.php?id=12361&bug_id=33086
+
   if (Self is TZMySQL_Store_PreparedResultSet) then
     //Note: This slows down the performance but makes synchronized RS possible!
     FPlainDriver.stmt_attr_set(FPrepStmt,STMT_ATTR_UPDATE_MAX_LENGTH, @one);
@@ -2188,8 +2191,12 @@ begin
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
-      FIELD_TYPE_FLOAT:     Result := PSingle(FColBind^.buffer)^;
-      FIELD_TYPE_DOUBLE:    Result := PDouble(FColBind^.buffer)^;
+      FIELD_TYPE_FLOAT:     if FColBind^.decimals < 20
+                            then Result := RoundTo(PSingle(FColBind^.buffer)^, FColBind^.decimals*-1)
+                            else Result := PSingle(FColBind^.buffer)^;
+      FIELD_TYPE_DOUBLE:    if FColBind^.decimals < 20
+                            then Result := RoundTo(PDouble(FColBind^.buffer)^, FColBind^.decimals*-1)
+                            else Result := PDouble(FColBind^.buffer)^;
       FIELD_TYPE_NULL:      Result := 0;
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := 0;
@@ -2256,8 +2263,12 @@ begin
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
-      FIELD_TYPE_FLOAT:     Result := PSingle(FColBind^.buffer)^;
-      FIELD_TYPE_DOUBLE:    Result := PDouble(FColBind^.buffer)^;
+      FIELD_TYPE_FLOAT:     if FColBind^.decimals < 20
+                            then Result := RoundTo(PSingle(FColBind^.buffer)^, FColBind^.decimals*-1)
+                            else Result := PSingle(FColBind^.buffer)^;
+      FIELD_TYPE_DOUBLE:    if FColBind^.decimals < 20
+                            then Result := RoundTo(PDouble(FColBind^.buffer)^, FColBind^.decimals*-1)
+                            else Result := PDouble(FColBind^.buffer)^;
       FIELD_TYPE_NULL:      Result := 0;
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := 0;
