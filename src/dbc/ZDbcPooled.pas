@@ -177,10 +177,19 @@ type
   public
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
+
     function GetBinaryEscapeString(const Value: RawByteString): String; overload;
     function GetBinaryEscapeString(const Value: TBytes): String; overload;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: RawByteString); overload; virtual;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: ZWideString); overload; virtual;
+
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; var Result: RawByteString); overload;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; RawCP: Word; var Result: ZWideString); overload;
+    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; RawCP: Word; var Result: RawByteString); overload;
+    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; var Result: ZWideString); overload;
+
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
     {$IFDEF ZEOS_TEST_ONLY}
@@ -700,14 +709,6 @@ begin
   FAutoEncodeStrings := Value;
 end;
 
-{**
-  EgonHugeist:
-  Returns the BinaryString in a Tokenizer-detectable kind
-  If the Tokenizer don't need to predetect it Result = BinaryString
-  @param Value represents the Binary-String
-  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
-  @result the detectable Binary String
-}
 function TZDbcPooledConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   Result := GetConnection.GetBinaryEscapeString(Value);
@@ -766,6 +767,42 @@ end;
 function TZDbcPooledConnection.GetClientVariantManager: IZClientVariantManager;
 begin
   Result := GetConnection.GetClientVariantManager;
+end;
+
+procedure TZDbcPooledConnection.GetBinaryEscapeString(Buf: Pointer;
+  Len: LengthInt; var Result: RawByteString);
+begin
+  GetConnection.GetBinaryEscapeString(Buf, Len, Result)
+end;
+
+procedure TZDbcPooledConnection.GetBinaryEscapeString(Buf: Pointer;
+  Len: LengthInt; var Result: ZWideString);
+begin
+  GetConnection.GetBinaryEscapeString(Buf, Len, Result)
+end;
+
+procedure TZDbcPooledConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
+  RawCP: Word; var Result: ZWideString);
+begin
+  GetConnection.GetEscapeString(Buf, Len, RawCP, Result)
+end;
+
+procedure TZDbcPooledConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
+  var Result: RawByteString);
+begin
+  GetConnection.GetEscapeString(Buf, Len, Result)
+end;
+
+procedure TZDbcPooledConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
+  var Result: ZWideString);
+begin
+  GetConnection.GetEscapeString(Buf, Len, Result)
+end;
+
+procedure TZDbcPooledConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
+  RawCP: Word; var Result: RawByteString);
+begin
+  GetConnection.GetEscapeString(Buf, Len, RawCP, Result)
 end;
 
 { TZDbcPooledConnectionDriver }

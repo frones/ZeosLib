@@ -190,8 +190,6 @@ type
     procedure SetGUID(ParameterIndex: Integer; const Value: TGUID); override;
     procedure SetBlob(ParameterIndex: Integer; const SQLType: TZSQLType; const Value: IZBlob); override;
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant); override;
-    procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); override;
-    procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
   end;
 
   {** EgonHugeist: Implements prepared async SQL Statement based on Protocol 3.0
@@ -500,7 +498,7 @@ begin
       end else
         ToBuff(CachedQueryRaw[i], fParamSQL);
     FlushBuff(fParamSQL);
-    if (not FUseEmulatedStmtsOnly) and IsPreparable then //detected after tokenizing the query
+    if (not FUseEmulatedStmtsOnly) and (TokenMatchIndex <> -1) then //detected after tokenizing the query
       QueryHandle := ExecuteInternal(fParamSQL + GetPrepareSQLPrefix, eicPrepStmt)
     else
       Findeterminate_datatype := True;
@@ -903,13 +901,6 @@ begin
  end;
 end;
 
-procedure TZPostgreSQLCAPIPreparedStatement.SetDataArray(
-  ParameterIndex: Integer; const Value; const SQLType: TZSQLType;
-  const VariantType: TZVariantType);
-begin
-  raise EZSQLException.Create(sUnsupportedOperation);
-end;
-
 procedure TZPostgreSQLCAPIPreparedStatement.SetDefaultValue(
   ParameterIndex: Integer; const Value: string);
 begin
@@ -957,13 +948,6 @@ begin
   FPQparamValues[ParameterIndex] := nil;
   if (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
     fLobs[ParameterIndex] := nil;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetNullArray(
-  ParameterIndex: Integer; const SQLType: TZSQLType; const Value;
-  const VariantType: TZVariantType);
-begin
-  raise EZSQLException.Create(sUnsupportedOperation);
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.SetRawByteString(

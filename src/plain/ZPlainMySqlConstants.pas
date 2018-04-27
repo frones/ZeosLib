@@ -535,14 +535,17 @@ TMYSQL_CLIENT_OPTIONS =
     buffer        :NativeUint;
     length        :NativeUint;
     is_null       :NativeUint;
-    size          :integer;    //size of MYSQL_BINDxx
+    Indicator     :NativeUint;
+    size          :word;    //size of MYSQL_BINDxx
   end;
 
   PULongArray = ^TULongArray;
   TULongArray = array[0..High(Byte)] of Ulong; //http://dev.mysql.com/doc/refman/4.1/en/column-count-limit.html
+  TULongDynArray = array of ULong;
 
   Pmy_bool_array = ^Tmy_bool_array;
   Tmy_bool_array = array[0..High(Byte)] of my_bool; //just 4 debugging
+  Tmy_boolDynArray = array of My_Bool;
 
   Tmysql_indicator_type =(
     STMT_INDICATOR_NTS=-1,      //String is null terminated
@@ -554,20 +557,27 @@ TMYSQL_CLIENT_OPTIONS =
   );
   Pmysql_indicator_types = ^Tmysql_indicator_types;
   Tmysql_indicator_types = array[0..High(Byte)] of Tmysql_indicator_type;
+  Tmysql_indicatorDynArray = array of Tmysql_indicator_type;
 
-  PDOBindRecord2 = ^TDOBindRecord2;
-  TDOBindRecord2 = record
-    buffer:                 Array of Byte; //data place holder
-    buffer_address:         PPointer; //we don't need reserved mem in all case, but we need to set the address
-    buffer_length_address:  PULong; //set buffer_Length on the fly e.g. lob reading!
-    buffer_type:            TMysqlFieldType; //save exact type
+  PMYSQL_aligned_BIND = ^TMYSQL_aligned_BIND;
+  TMYSQL_aligned_BIND = record
+    buffer:                 array of Byte; //data place holder
+    buffer_address:         PPointer; //we don't need reserved mem at all, but we need to set the address
     buffer_type_address:    PMysqlFieldType;
-    length:                 ULong; //current length of our or retrieved data
-    is_null:                Byte; //null indicator
+    buffer_length_address:  PULong; //address of result buffer length
+    length:                 TULongDynArray; //current length of our or bound data
+    is_null:                Tmy_boolDynArray; //null indicators -> sadly mariadb doesn't use a array as stmt indicator
+    is_unsigned_address:    Pmy_bool; //signed ordinals or not?
+    indicator:              Tmysql_indicatorDynArray; //stmt indicators for bulk bulk ops -> mariadb addresses to "u"
+    decimals:               Integer; //count of decimal digits for rounding the doubles
     binary:                 Boolean; //binary field or not? Just for reading!
-    is_signed:              Boolean; //signed ordinals or not? Just for reading!
-    mysql_bind:             Pointer; //Save exact address of bind for lob reading
+    mysql_bind:             Pointer; //Save exact address of bind for lob reading /is used also on writting 4 the lob-buffer-address
+    Iterations:             ULong; //save count of array-Bindings to prevent reallocs for Length and Is_Null-Arrays
+    Bind_Buffer_Length:     ULong;
   end;
+  PMYSQL_aligned_BINDs = ^TMYSQL_aligned_BINDs;
+  TMYSQL_aligned_BINDs = array[0..High(Byte)] of TMYSQL_aligned_BIND; //just 4 debugging
+  TMYSQL_aligned_BINDDynArray = array of TMYSQL_aligned_BIND;
 
   PPMYSQL = ^PMYSQL;
   PMYSQL  = pointer;

@@ -210,12 +210,12 @@ type
     mysql_warning_count:          function(mysql: PMYSQL): UInt; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     {BELOW are new PREPARED STATEMENTS}
     mysql_stmt_affected_rows:     function(stmt: PMYSQL_STMT): ULongLong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-    mysql_stmt_attr_get:          function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType; arg: PAnsiChar): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-    mysql_stmt_attr_set517UP:     function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType; const arg: Pointer): my_bool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-    mysql_stmt_attr_set:          function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType; const arg: Pointer): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-    mysql_stmt_bind_param:        function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-    mysql_stmt_bind_result:       function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-    mysql_stmt_close:             function(stmt: PMYSQL_STMT): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_attr_get:          function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType; attr: Pointer): my_bool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_attr_set517UP:     function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType; const attr: Pointer): my_bool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_attr_set:          function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType; const attr: Pointer): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_bind_param:        function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}): my_bool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_bind_result:       function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}): my_bool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_close:             function(stmt: PMYSQL_STMT): my_bool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_data_seek:         procedure(stmt: PMYSQL_STMT; offset: ULongLong); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_errno:             function(stmt: PMYSQL_STMT): UInt; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_error:             function(stmt: PMYSQL_STMT): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
@@ -223,7 +223,7 @@ type
     mysql_stmt_fetch:             function(stmt: PMYSQL_STMT): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_fetch_column:      function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}; column: UInt; offset: ULong): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_field_count:       function(stmt: PMYSQL_STMT): UInt; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-    mysql_stmt_free_result:       function(stmt: PMYSQL_STMT): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_free_result:       function(stmt: PMYSQL_STMT): my_bool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_init:              function(mysql: PMYSQL): PMYSQL_STMT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_insert_id:         function(stmt: PMYSQL_STMT): ULongLong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_next_result:       function(stmt: PMYSQL_STMT): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
@@ -231,13 +231,14 @@ type
     mysql_stmt_param_count:       function(stmt: PMYSQL_STMT): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_param_metadata:    function(stmt: PMYSQL_STMT): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_prepare:           function(stmt: PMYSQL_STMT; const query: PAnsiChar; length: ULong): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-    mysql_stmt_reset:             function(stmt: PMYSQL_STMT): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_reset:             function(stmt: PMYSQL_STMT): my_bool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_result_metadata:   function(stmt: PMYSQL_STMT): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     //mysql_stmt_row_seek:          function(stmt: PMYSQL_STMT; offset: PMYSQL_ROWS): PMYSQL_ROWS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     //mysql_stmt_row_tell:          function(stmt: PMYSQL_STMT): PMYSQL_ROWS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-    mysql_stmt_send_long_data:    function(stmt: PMYSQL_STMT; parameter_number: UInt; const data: PAnsiChar; length: ULong): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_send_long_data:    function(stmt: PMYSQL_STMT; param_number: UInt; const data: PAnsiChar; length: ULong): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_sqlstate:          function(stmt: PMYSQL_STMT): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_store_result:      function(stmt: PMYSQL_STMT): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_more_results:      function(stmt: PMYSQL_STMT): my_bool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     mariadb_stmt_execute_direct:  function(stmt: PMYSQL_STMT; query: PAnsiChar; Length: ULong): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   protected
@@ -462,6 +463,7 @@ begin
   @mysql_stmt_send_long_data    := GetAddress('mysql_stmt_send_long_data');
   @mysql_stmt_sqlstate          := GetAddress('mysql_stmt_sqlstate');
   @mysql_stmt_store_result      := GetAddress('mysql_stmt_store_result');
+  @mysql_stmt_more_results      := GetAddress('mysql_stmt_more_results');
   //@mysql_get_character_set_info := GetAddress('mysql_get_character_set_info');
   @mysql_stmt_next_result       := GetAddress('mysql_stmt_next_result');
   end;

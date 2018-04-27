@@ -331,6 +331,8 @@ begin
   if TmpInt >= 0 then
     FPlainDriver.sqlite3_busy_timeout(FHandle, TmpInt);
 
+  inherited Open;
+
   Stmt := TZSQLiteStatement.Create(Self, Info, FHandle);
   { pimp performance }
   Stmt.ExecuteUpdate('PRAGMA cache_size = '+IntToRaw(StrToIntDef(Info.Values[ConnProps_CacheSize], 10000)));
@@ -345,23 +347,18 @@ begin
   if Info.Values[ConnProps_LockingMode] <> '' then
     Stmt.ExecuteUpdate('PRAGMA locking_mode = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values[ConnProps_LockingMode]));
 
-  try
-    if ( FClientCodePage <> '' ) and (FClientCodePage <> 'UTF-8') then
-      Stmt.ExecuteUpdate('PRAGMA encoding = '''+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FClientCodePage)+'''');
+  if Info.Values[ConnProps_journal_mode] <> '' then
+    Stmt.ExecuteUpdate('PRAGMA journal_mode = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values[ConnProps_journal_mode]));
 
-    Stmt.ExecuteUpdate('PRAGMA show_datatypes = ON');
+  if ( FClientCodePage <> '' ) and (FClientCodePage <> 'UTF-8') then
+    Stmt.ExecuteUpdate('PRAGMA encoding = '''+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FClientCodePage)+'''');
 
-    if Info.Values[ConnProps_ForeignKeys] <> '' then
-      Stmt.ExecuteUpdate('PRAGMA foreign_keys = '+BoolStrIntsRaw[StrToBoolEx(Info.Values[ConnProps_ForeignKeys])] );
-    if not GetAutoCommit then
-      ExecTransactionStmt(traBegin);
-  except
-    FPlainDriver.sqlite3_close(FHandle);
-    FHandle := nil;
-    raise;
-  end;
+  Stmt.ExecuteUpdate('PRAGMA show_datatypes = ON');
 
-  inherited Open;
+  if Info.Values[ConnProps_ForeignKeys] <> '' then
+    Stmt.ExecuteUpdate('PRAGMA foreign_keys = '+BoolStrIntsRaw[StrToBoolEx(Info.Values[ConnProps_ForeignKeys])] );
+  if not GetAutoCommit then
+    ExecTransactionStmt(traBegin);
 end;
 
 {**

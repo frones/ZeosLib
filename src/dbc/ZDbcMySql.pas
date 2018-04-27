@@ -85,7 +85,6 @@ type
   IZMySQLConnection = interface (IZConnection)
     ['{68E33DD3-4CDC-4BFC-8A28-E9F2EE94E457}']
     function GetConnectionHandle: PMySQL;
-    function EscapeString(From: PAnsiChar; Len: ULong; Quoted: Boolean): RawByteString; overload;
     function GetDatabaseName: String;
     function MySQL_FieldType_Bit_1_IsBoolean: Boolean;
     function SupportsFieldTypeBit: Boolean;
@@ -114,8 +113,6 @@ type
     procedure Rollback; override;
 
     function PingServer: Integer; override;
-    function EscapeString(const Value: RawByteString): RawByteString; overload; override;
-    function EscapeString(From: PAnsiChar; Len: ULong; Quoted: Boolean): RawByteString; overload;
 
     procedure Open; override;
     procedure InternalClose; override;
@@ -130,8 +127,8 @@ type
     function GetHostVersion: Integer; override;
     {END ADDED by fduenas 15-06-2006}
     function GetConnectionHandle: PMySQL;
-    function GetEscapeString(const Value: ZWideString): ZWideString; override;
-    function GetEscapeString(const Value: RawByteString): RawByteString; override;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; var Result: RawByteString); override;
+
     function GetDatabaseName: String;
     function GetServerProvider: TZServerProvider; override;
     function MySQL_FieldType_Bit_1_IsBoolean: Boolean;
@@ -310,31 +307,6 @@ end;
 function TZMySQLConnection.MySQL_FieldType_Bit_1_IsBoolean: Boolean;
 begin
   Result := FMySQL_FieldType_Bit_1_IsBoolean;
-end;
-
-function TZMySQLConnection.EscapeString(From: PAnsiChar;
-  Len: ULong; Quoted: Boolean): RawByteString;
-var
-  Buf: array[0..2048] of AnsiChar;
-  P: PAnsichar;
-  EscapedLen: ULong;
-begin
-  if ((Len+Byte(Ord(Quoted))) shl 1) > (SizeOf(Buf)-1) then begin
-    SetLength(Result, (Len+Byte(Ord(Quoted))) shl 1);
-    P := Pointer(Result);
-  end else
-    P := @Buf[0];
-  if Quoted then
-    P^ := #39;
-
-  if FHandle = nil
-  then EscapedLen := FPlainDriver.mysql_escape_string(P+Ord(Quoted), From, Len)
-  else EscapedLen := FPlainDriver.mysql_real_escape_string(FHandle, P+Ord(Quoted), From, Len);
-  if Quoted then
-    (P+EscapedLen+(Byte(Ord(Quoted))))^ := #39;
-  if P = @Buf[0]
-  then ZSetString(@Buf[0], EscapedLen+(Byte(Ord(Quoted) shl 1)), Result)
-  else SetLength(Result, EscapedLen+(Byte(Ord(Quoted)) shl 1));
 end;
 
 {**
@@ -580,16 +552,6 @@ begin
 end;
 
 {**
-  Escape a string so it's acceptable for the Connection's server.
-  @param value string that should be escaped
-  @return Escaped string
-}
-function TZMySQLConnection.EscapeString(const Value: RawByteString): RawByteString;
-begin
-  Result := EscapeString(Pointer(Value), Length(Value), True);
-end;
-
-{**
   Creates a <code>Statement</code> object for sending
   SQL statements to the database.
   SQL statements without parameters are normally
@@ -608,7 +570,7 @@ function TZMySQLConnection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
      Open;
-  Result := TZMySQLEmulatedPreparedStatement.Create(Self, '', Info);
+  Result := TZMySQLPreparedStatement.Create(Self, '', Info);
 end;
 
 {**
@@ -644,9 +606,7 @@ function TZMySQLConnection.CreatePreparedStatement(const SQL: string;
 begin
   if IsClosed then
      Open;
-  if Assigned(Info) and StrToBoolEx(Info.Values[DSProps_PreferPrepared])
-  then Result := TZMySQLPreparedStatement.Create(Self, SQL, Info)
-  else Result := TZMySQLEmulatedPreparedStatement.Create(Self, SQL, Info);
+  Result := TZMySQLPreparedStatement.Create(Self, SQL, Info)
 end;
 
 {**
@@ -853,26 +813,6 @@ begin
   Result := spMySQL;
 end;
 
-{**
-  EgonHugeist:
-  Returns the BinaryString in a Tokenizer-detectable kind
-  If the Tokenizer don't need to predetect it Result := BinaryString
-  @param Value represents the Binary-String
-  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
-  @result the detectable Binary String
-}
-function TZMySQLConnection.GetEscapeString(const Value: ZWideString): ZWideString;
-var tmp: RawByteString;
-begin
-  tmp := GetEscapeString(PUnicodeToRaw(Pointer(Value), Length(Value), ConSettings^.ClientCodePage^.CP));
-  Result := PRawToUnicode(Pointer(tmp), Length(tmp), ConSettings^.ClientCodePage^.CP);
-end;
-
-function TZMySQLConnection.GetEscapeString(const Value: RawByteString): RawByteString;
-begin
-  Result := inherited GetEscapeString(EscapeString(Pointer(Value), Length(Value), True));
-end;
-
 function TZMySQLConnection.GetDatabaseName: String;
 var
   ResultSet: IZResultSet;
@@ -883,7 +823,30 @@ begin
     then FDatabaseName := ResultSet.GetStringByName('DATABASE');
     FIKnowMyDatabaseName := True;
   end;
+  ResultSet := nil;
   Result := FDatabaseName;
+end;
+
+procedure TZMySQLConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
+  var Result: RawByteString);
+var
+  StatBuf: array[0..2048] of AnsiChar;
+  P: PAnsichar;
+  EscapedLen: ULong;
+begin
+  if ((Len+1) shl 1) > (SizeOf(Buf)-1) then begin
+    SetLength(Result, (Len+1) shl 1);
+    P := Pointer(Result);
+  end else
+    P := @StatBuf[0];
+  P^ := #39;
+  if FHandle = nil
+  then EscapedLen := FPlainDriver.mysql_escape_string(P+1, Buf, Len)
+  else EscapedLen := FPlainDriver.mysql_real_escape_string(FHandle, P+1, Buf, Len);
+  (P+EscapedLen+1)^ := #39;
+  if P = @StatBuf[0]
+  then ZSetString(@StatBuf[0], EscapedLen+2, Result)
+  else SetLength(Result, EscapedLen+2);
 end;
 
 initialization

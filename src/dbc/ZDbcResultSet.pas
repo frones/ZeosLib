@@ -880,8 +880,10 @@ begin
   FClosed := True;
   ResetCursor;
   FColumnsInfo.Clear;
-  if (FStatement <> nil) then FStatement.FreeOpenResultSetReference;
-  FStatement := nil;
+  if (FStatement <> nil) then begin
+    FStatement.FreeOpenResultSetReference;
+    FStatement := nil;
+  end;
 end;
 
 {**

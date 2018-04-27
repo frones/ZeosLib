@@ -90,8 +90,15 @@ const
   // Same as TZDatasetOptions.doCachedLobs in Dataset.Options property
   DSProps_CachedLobs = 'CachedLob';
   // Type: INT
-  // Same as Statement.ChunkSize, size of internal buffer
-  DSProps_ChunkSize = 'chunk_size';
+  // Same as Statement.ChunkSize, size of chunks for retrieving/sending long data
+  // depends to your network speed
+  DSProps_ChunkSize = 'chunk_size'; //default is a very low value of 4KB
+  // Type: INT
+  // how many executions must be done to realy prepare the statement?
+  // JDBC does prepare on after 4 executions.
+  // A negative value means never prepare.
+  // actually just not used
+  DSProps_MinExecCntBeforePrepare = 'MinExecCountBeforePrepare';
 
   { Parameters for datasets }
 
@@ -331,6 +338,7 @@ const
   ConnProps_Synchronous = 'synchronous';
   ConnProps_LockingMode = 'locking_mode';
   ConnProps_ForeignKeys = 'foreign_keys';
+  ConnProps_journal_mode = 'journal_mode';
 
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
