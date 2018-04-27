@@ -1111,7 +1111,7 @@ begin
   FPQparamValues[ParameterIndex] := PStart;
   Inc(PStart, Len-1);
   { reverse host-byte order to network-byte order }
-  {$IFNDEF ENDIAN_LITTLE}
+  {$IFNDEF ENDIAN_BIG}
   while Len > 0 do begin
     PStart^ := Buf^;
     dec(PStart);

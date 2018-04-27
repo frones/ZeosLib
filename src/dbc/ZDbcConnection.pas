@@ -1559,12 +1559,12 @@ end;
 
 function TZAbstractConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
-  GetBinaryEscapeString(Pointer(Value), Length(Value), Result);
+  GetBinaryEscapeString(Pointer(Value), Length(Value), {$IFNDEF UNICODE}RawByteString{$ELSE}ZWideString{$ENDIF}(Result));
 end;
 
 function TZAbstractConnection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
-  GetBinaryEscapeString(Pointer(Value), Length(Value), Result);
+  GetBinaryEscapeString(Pointer(Value), Length(Value), {$IFNDEF UNICODE}RawByteString{$ELSE}ZWideString{$ENDIF}(Result));
 end;
 
 function TZAbstractConnection.GetEscapeString(const Value: ZWideString): ZWideString;
