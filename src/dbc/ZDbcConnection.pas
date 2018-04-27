@@ -243,8 +243,18 @@ type
     procedure ClearWarnings; virtual;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; virtual;
     function GetBinaryEscapeString(const Value: TBytes): String; overload; virtual;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: RawByteString); overload; virtual;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: ZWideString); overload; virtual;
+
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
+    function GetEscapeString(Buf: PAnsichar; Len: LengthInt): RawByteString; overload; virtual;
+
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; var Result: RawByteString); overload; virtual;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; RawCP: Word; var Result: ZWideString); overload; virtual;
+    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; RawCP: Word; var Result: RawByteString); overload; virtual;
+    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; var Result: ZWideString); overload; virtual;
+
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
     function GetServerProvider: TZServerProvider; virtual;
@@ -747,6 +757,26 @@ begin
   Result := ConSettings.ClientCodePage^.Encoding;
 end;
 
+function TZAbstractConnection.GetEscapeString(Buf: PAnsichar;
+  Len: LengthInt): RawByteString;
+begin
+  Result := SQLQuotedStr(Buf, Len, #39);
+end;
+
+procedure TZAbstractConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
+  var Result: RawByteString);
+begin
+  GetEscapeString(Buf, Len, Result);
+end;
+
+procedure TZAbstractConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
+  RawCP: Word; var Result: ZWideString);
+var RawTmp: RawByteString;
+begin
+  GetEscapeString(Buf, Len, RawTmp);
+  Result := ZRawToUnicode(RawTmp, RawCP);
+end;
+
 function TZAbstractConnection.GetClientVariantManager: IZClientVariantManager;
 begin
   Result := TZClientVariantManager.Create(ConSettings);
@@ -754,7 +784,7 @@ end;
 
 {**
   EgonHugeist: Check if the given Charset for Compiler/Database-Support!!
-    Not supported means if there is a pissible String-DataLoss.
+    Not supported means if there is a possible String-DataLoss.
     So it raises an Exception if case of settings. This handling
     is an improofment to inform Zeos-Users about the troubles the given
     CharacterSet may have.
@@ -791,6 +821,18 @@ begin
   {$ELSE}
   Result := ConSettings.AutoEncode;
   {$ENDIF}
+end;
+
+procedure TZAbstractConnection.GetBinaryEscapeString(Buf: Pointer;
+  Len: LengthInt; var Result: ZWideString);
+begin
+  Result := GetSQLHexWideString(Buf, Len);
+end;
+
+procedure TZAbstractConnection.GetBinaryEscapeString(Buf: Pointer;
+  Len: LengthInt; var Result: RawByteString);
+begin
+  Result := GetSQLHexAnsiString(Buf, Len);
 end;
 
 procedure TZAbstractConnection.SetAutoEncodeStrings(const Value: Boolean);
@@ -1515,46 +1557,28 @@ begin
 end;
 {$ENDIF}
 
-{**
-  Returns the BinaryString in a Tokenizer-detectable kind
-  If the Tokenizer don't need to pre-detect it Result = BinaryString
-  @param Value represents the Binary-String
-  @result the detectable Binary String
-}
 function TZAbstractConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
-  Result := {$IFDEF UNICODE}GetSQLHexWideString{$ELSE}GetSQLHexAnsiString{$ENDIF}(PAnsiChar(Value), Length(Value));
+  GetBinaryEscapeString(Pointer(Value), Length(Value), Result);
 end;
 
-{**
-  Returns the BinaryString in a Tokenizer-detectable kind
-  If the Tokenizer don't need to pre-detect it Result = BinaryString
-  @param Value represents the Byte-Array
-  @result the detectable Binary String
-}
 function TZAbstractConnection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
-  Result := {$IFDEF UNICODE}GetSQLHexWideString{$ELSE}GetSQLHexAnsiString{$ENDIF}(PAnsiChar(Value), Length(Value));
+  GetBinaryEscapeString(Pointer(Value), Length(Value), Result);
 end;
 
 function TZAbstractConnection.GetEscapeString(const Value: ZWideString): ZWideString;
-var P: PWideChar;
 begin
-  P := Pointer(Value);
-  if (P <> nil) and (Length(Value)>1) and (P^=WideChar(#39)) and ((P+Length(Value)-1)^=WideChar(#39)) then
-    Result := Value
-  else
-    Result := SQLQuotedStr(Value, #39);
+  GetEscapeString(Pointer(Value), Length(Value), Result);
 end;
 
 function TZAbstractConnection.GetEscapeString(const Value: RawByteString): RawByteString;
 var P: PAnsiChar;
 begin
   P := Pointer(Value);
-  if (P <> nil) and (Length(Value)>1) and (P^=#39) and ((P+Length(Value)-1)^=#39) then
-    Result := Value
-  else
-    Result := SQLQuotedStr(Value, #39);
+  if (P <> nil) and (Length(Value)>1) and (P^=#39) and ((P+Length(Value)-1)^=#39)
+  then Result := Value
+  else GetEscapeString(P, Length(Value), Result);
 end;
 
 {**
@@ -1716,6 +1740,26 @@ end;
 procedure TZAbstractSequence.SetName(const Value: string);
 begin
   FName := Value;
+end;
+
+procedure TZAbstractConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
+  RawCP: Word; var Result: RawByteString);
+var RawTemp: RawByteString;
+begin
+  RawTemp := PUnicodeToRaw(Buf, Len, RawCP);
+  GetEscapeString(Pointer(RawTemp), Length(RawTemp), Result);
+end;
+
+procedure TZAbstractConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
+  var Result: ZWideString);
+var RawTemp: RawByteString;
+begin
+  if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then
+    Result := SQLQuotedStr(Buf, Len, WideChar(#39))
+  else begin
+    RawTemp := PUnicodeToRaw(Buf, Len, ConSettings^.ClientCodePage^.CP);
+    GetEscapeString(Pointer(RawTemp), Length(RawTemp), ConSettings^.ClientCodePage^.CP, Result);
+  end;
 end;
 
 end.

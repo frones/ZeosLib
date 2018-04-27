@@ -98,7 +98,7 @@ const
   // JDBC does prepare on after 4 executions.
   // A negative value means never prepare.
   // actually just not used
-  DSProps_MinExecCnt2Prepare = 'MinExecCountToPrepare';
+  DSProps_MinExecCntBeforePrepare = 'MinExecCountBeforePrepare';
 
   { Parameters for datasets }
 

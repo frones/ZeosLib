@@ -159,6 +159,10 @@ function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
 
 function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): TMYSQL_BINDOFFSETS;
 
+procedure ReAllocMySQLBindBuffer(var DataBuffer: TBytes;
+  var MYSQL_aligned_BINDs: TMYSQL_aligned_BINDDynArray; BindCount, BindIterations: ULong;
+  const BindOffsets: TMYSQL_BINDOFFSETS);
+
 implementation
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} Math, TypInfo,
@@ -206,24 +210,29 @@ begin
       if MYSQL_FIELD^.flags and UNSIGNED_FLAG = 0
       then Result := stLong
       else Result := stULong;
-    FIELD_TYPE_FLOAT:
-      Result := stDouble;//stFloat;
+    FIELD_TYPE_FLOAT, FIELD_TYPE_DOUBLE:
+      Result := stDouble;
     FIELD_TYPE_DECIMAL, FIELD_TYPE_NEWDECIMAL: {ADDED FIELD_TYPE_NEWDECIMAL by fduenas 20-06-2006}
       if MYSQL_FIELD^.decimals = 0 then
-        if MYSQL_FIELD^.length < 11 then
-          if MYSQL_FIELD^.flags and UNSIGNED_FLAG = 0 then
+        if MYSQL_FIELD^.flags and UNSIGNED_FLAG = 0 then begin
+          if MYSQL_FIELD^.length <= 2 then
+            Result := stShort
+          else if MYSQL_FIELD^.length <= 4 then
+            Result := stSmall
+          else if MYSQL_FIELD^.length <= 9 then
             Result := stInteger
-          else
+          else Result := stLong;
+        end else begin
+          if MYSQL_FIELD^.length <= 3 then
+            Result := stByte
+          else if MYSQL_FIELD^.length <= 5 then
+            Result := stWord
+          else if MYSQL_FIELD^.length <= 10 then
             Result := stLongWord
-        else
-          if MYSQL_FIELD^.flags and UNSIGNED_FLAG = 0 then
-             Result := stLong
-          else
-            Result := stULong
+          else Result := stULong;
+        end
       else
         Result := stDouble;
-    FIELD_TYPE_DOUBLE:
-      Result := stDouble;
     FIELD_TYPE_DATE, FIELD_TYPE_NEWDATE:
       Result := stDate;
     FIELD_TYPE_TIME:
@@ -412,7 +421,7 @@ end;
   @param FieldHandle the handle of the fetched field
   @returns a new TZColumnInfo
 }
-function GetMySQLColumnInfoFromFieldHandle(MYSQL_FIELD: PMYSQL_FIELD;
+function GetMySQLColumnInfoFromFieldHandle(MYSQL_FIELD: PMYSQL_Field;
   ConSettings: PZConSettings; MySQL_FieldType_Bit_1_IsBoolean:boolean): TZColumnInfo;
 var
   FieldLength: ULong;
@@ -737,7 +746,7 @@ SetDefaultVal:
       stString, stUnicodeString: begin
           ClientVarManager.Assign(Value, TempVar);
           CharRec := ClientVarManager.GetAsCharRec(TempVar, Connection.GetConSettings^.ClientCodePage^.CP);
-          Result := Connection.EscapeString(CharRec.P, CharRec.Len, True);
+          Connection.GetEscapeString(CharRec.P, CharRec.Len, Result);
         end;
       stDate:
         Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
@@ -756,7 +765,7 @@ SetDefaultVal:
             then Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length)
             else if TempBlob.IsClob then begin
               CharRec.P := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
-              Result := Connection.EscapeString(CharRec.P, TempBlob.Length, True);
+              Connection.GetEscapeString(CharRec.P, TempBlob.Length, Result);
             end else
               Result := Connection.EscapeString(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                 TempBlob.Length, ConSettings))
@@ -804,6 +813,7 @@ end;
 
 function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): TMYSQL_BINDOFFSETS;
 begin
+  result.Indicator := 0;
   if (Version > 50100) or IsMariaDB {they start with 100000} then begin
     result.buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND51(nil).buffer_type));
     result.buffer_length := {%H-}NativeUint(@(PMYSQL_BIND51(nil).buffer_length));
@@ -811,6 +821,8 @@ begin
     result.buffer        := {%H-}NativeUint(@(PMYSQL_BIND51(nil).buffer));
     result.length        := {%H-}NativeUint(@(PMYSQL_BIND51(nil).length));
     result.is_null       := {%H-}NativeUint(@(PMYSQL_BIND51(nil).is_null));
+    if IsMariaDB and (Version >= 107020) then
+      result.Indicator     := {%H-}NativeUint(@(PMYSQL_BIND51(nil).row_ptr));
     result.size          := Sizeof(TMYSQL_BIND51);
   end else if (Version >= 50000) and (Version <=50099) then begin
     result.buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND50(nil).buffer_type));
@@ -830,6 +842,39 @@ begin
     result.size          := Sizeof(TMYSQL_BIND41);
   end else
     result.buffer_type:=0;
+end;
+
+procedure ReAllocMySQLBindBuffer(var DataBuffer: TBytes;
+  var MYSQL_aligned_BINDs: TMYSQL_aligned_BINDDynArray; BindCount, BindIterations: ULong;
+  const BindOffsets: TMYSQL_BINDOFFSETS);
+var
+  ColOffset: NativeUInt;
+  Bind: PMYSQL_aligned_BIND;
+  I: ULong;
+begin
+  SetLength(MYSQL_aligned_BINDs, BindCount);
+  SetLength(DataBuffer, BindCount*BindOffsets.Size);
+  if BindCount > 0 then
+    for i := 0 to BindCount -1 do begin
+      Bind := @MYSQL_aligned_BINDs[I];
+      ColOffset := NativeUInt(I*BindOffsets.size);
+      { save mysql bind offset fo mysql_stmt_fetch_column }
+      Bind^.mysql_bind := Pointer(NativeUInt(DataBuffer)+ColOffset);
+      { save aligned addresses }
+      bind^.buffer_address := Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.buffer);
+      Bind^.buffer_type_address := Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.buffer_type);
+      Bind^.is_unsigned_address := Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.is_unsigned);
+      Bind^.buffer_length_address := Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.buffer_length);
+      SetLength(Bind^.length, BindIterations);
+      PPointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.length)^ := Pointer(Bind^.length);
+      SetLength(Bind^.is_null, BindIterations);
+      PPointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.is_null)^ := Pointer(Bind^.is_null);
+      if BindOffsets.Indicator > 0 then begin
+        SetLength(Bind^.indicator, BindIterations);
+        PPointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.Indicator)^ := Pointer(Bind^.indicator);
+      end else if BindIterations > 1 then
+        raise EZSQLException.Create('Array bindings are not supported!');
+    end;
 end;
 
 end.
