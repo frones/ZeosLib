@@ -1109,14 +1109,16 @@ begin
   FPQparamLengths[ParameterIndex] := Len;
   PStart := Pointer(FPQparamBuffs[ParameterIndex]);
   FPQparamValues[ParameterIndex] := PStart;
-  Inc(PStart, Len-1);
   { reverse host-byte order to network-byte order }
   {$IFNDEF ENDIAN_BIG}
-  while Len > 0 do begin
-    PStart^ := Buf^;
-    dec(PStart);
-    Inc(Buf);
-    dec(Len);
+  Inc(PStart, Len-1);
+  if Len > 1 then begin
+    while Len > 0 do begin
+      PStart^ := Buf^;
+      dec(PStart);
+      Inc(Buf);
+      dec(Len);
+    end
   end;
   {$ENDIF}
 end;
@@ -1199,8 +1201,8 @@ procedure TZPostgreSQLCAPIPreparedStatement.InternalSetDouble(
 begin
   case OIDToSQLType(ParameterIndex, stFloat) of
     stBoolean:  begin
-                  PWordBool(@FStatBuf[0])^ := Value <> 0;
-                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
+                  PByte(@FStatBuf[0])^ := Ord(Value <> 0);
+                  BindBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(Byte));
                 end;
     stSmall:    begin
                   PSmallInt(@FStatBuf[0])^ := Trunc(Value);
@@ -1250,8 +1252,8 @@ procedure TZPostgreSQLCAPIPreparedStatement.InternalSetOrdinal(
 begin
   case OIDToSQLType(ParameterIndex, stLong) of
     stBoolean:  begin
-                  PWordBool(@FStatBuf[0])^ := Value <> 0;
-                  BindNetworkOrderBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(WordBool));
+                  PByte(@FStatBuf[0])^ := Ord(Value <> 0);
+                  BindBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(Byte));
                 end;
     stSmall:    begin
                   PSmallInt(@FStatBuf[0])^ := Value;
