@@ -93,7 +93,11 @@ type
 
   {** Implements a symbol state object. }
   TZPostgreSQLSymbolState = class (TZSymbolState)
+  private
+    fNumberState: TZNumberState;
   public
+    function NextToken(Stream: TStream; FirstChar: Char;
+      Tokenizer: TZTokenizer): TZToken; override;
     constructor Create;
   end;
 
@@ -336,6 +340,7 @@ begin
   Add('~*');
   Add('!~');
   Add('!~*');
+  fNumberState := TZNumberState.Create;
 end;
 
 { TZPostgreSQLWordState }
@@ -390,10 +395,36 @@ begin
 
   SetCharacterState(NameQuoteChar, NameQuoteChar, QuoteState);
   SetCharacterState(SingleQuoteChar, SingleQuoteChar, QuoteState);
-  SetCharacterState(DollarQuoteChar, DollarQuoteChar, QuoteState);
+ // SetCharacterState(DollarQuoteChar, DollarQuoteChar, QuoteState);
+  //SetCharacterState(DollarQuoteChar, DollarQuoteChar, WordState);
 
   SetCharacterState('/', '/', CommentState);
   SetCharacterState('-', '-', CommentState);
+end;
+
+function TZPostgreSQLSymbolState.NextToken(Stream: TStream; FirstChar: Char;
+  Tokenizer: TZTokenizer): TZToken;
+var
+  NumRead: Integer;
+  NextChar: Char;
+  NumToken: TZToken;
+begin
+  Result := inherited NextToken(Stream, FirstChar, Tokenizer);
+  //detecting Postgre Parameters as one ttWordState:
+  if (Result.Value = '$') then begin
+    NumRead := Stream.Read(NextChar, SizeOf(Char));
+    if (NumRead > 0) then begin
+      if ((Ord(NextChar) >= Ord('0')) and (Ord(NextChar) <= Ord('9'))) then begin
+        NumToken := fNumberState.NextToken(Stream, NextChar, Tokenizer);
+        if NumToken.TokenType = ttInteger then begin
+          Result.TokenType := ttWord;
+          Result.Value := Result.Value+NumToken.Value;
+          Exit;
+        end;
+      end;
+      Stream.Seek(-SizeOf(Char), soFromCurrent);
+    end;
+  end;
 end;
 
 end.

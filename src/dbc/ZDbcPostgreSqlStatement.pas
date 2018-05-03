@@ -173,6 +173,7 @@ type
     function OIDToSQLType({$IFNDEF GENERIC_INDEX}var {$ENDIF}ParameterIndex: Integer;
       SQLType: TZSQLType): TZSQLType;
   public
+    function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
     procedure ClearParameters; override;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
@@ -247,7 +248,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZSysUtils, ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils,
-  ZEncoding, ZDbcProperties;
+  ZEncoding, ZDbcProperties, ZTokenizer;
 
 
 var
@@ -1160,6 +1161,83 @@ end;
 function TZPostgreSQLCAPIPreparedStatement.GetPrepareSQLPrefix: RawByteString;
 begin
   Result := '';
+end;
+
+function TZPostgreSQLCAPIPreparedStatement.GetRawEncodedSQL(
+  const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
+var
+  I, C, N: Integer;
+  Temp: RawByteString;
+  Tokens: TZTokenDynArray;
+  ComparePrefixTokens: TPreparablePrefixTokens;
+  P: PChar;
+  procedure Add(const Value: RawByteString; const Param: Boolean = False);
+  begin
+    SetLength(FCachedQueryRaw, Length(FCachedQueryRaw)+1);
+    FCachedQueryRaw[High(FCachedQueryRaw)] := Value;
+    SetLength(FIsParamIndex, Length(FCachedQueryRaw));
+    FIsParamIndex[High(FIsParamIndex)] := Param;
+    ToBuff(Value, Result);
+  end;
+begin
+  Result := '';
+  if (Length(FCachedQueryRaw) = 0) and (SQL <> '') then begin
+    {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
+    if ((ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('?', SQL) > 0) or
+        (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('$', SQL) > 0)) then begin
+      Tokens := Connection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]);
+      ComparePrefixTokens := PGPreparableTokens;
+      Temp := '';
+      N := -1;
+      FTokenMatchIndex := -1;
+      FParamsCnt := 0;
+      for I := 0 to High(Tokens) do begin
+        {check if we've a preparable statement. If ComparePrefixTokens = nil then
+          comparing is not required or already done }
+        if Assigned(ComparePrefixTokens) and (Tokens[I].TokenType = ttWord) then
+          if N = -1 then begin
+            for C := 0 to high(ComparePrefixTokens) do
+              if ComparePrefixTokens[C].MatchingGroup = UpperCase(Tokens[I].Value) then begin
+                if Length(ComparePrefixTokens[C].ChildMatches) = 0 then begin
+                  FTokenMatchIndex := C;
+                  ComparePrefixTokens := nil;
+                end else
+                  N := C; //save group
+                Break;
+              end;
+            if N = -1 then //no sub-tokens ?
+              ComparePrefixTokens := nil; //stop compare sequence
+          end else begin //we already got a group
+            FTokenMatchIndex := -1;
+            for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
+              if ComparePrefixTokens[N].ChildMatches[C] = UpperCase(Tokens[I].Value) then begin
+                FTokenMatchIndex := N;
+                Break;
+              end;
+            ComparePrefixTokens := nil; //stop compare sequence
+          end;
+        P := Pointer(Tokens[I].Value);
+        if (P^ = '?') or ((Tokens[I].TokenType = ttWord) and (P^ = '$') and
+           ({$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P+1, -1) <> -1)) then begin
+          Add(Temp);
+          Add({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[I].Value), True);
+          Temp := '';
+          Inc(FParamsCnt);
+        end else case (Tokens[i].TokenType) of
+          ttQuoted, ttComment,
+          ttWord, ttQuotedIdentifier, ttKeyword:
+            Temp := Temp + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i].Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
+          else
+            Temp := Temp + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[i].Value);
+        end;
+      end;
+      if (Temp <> '') then
+        Add(Temp);
+    end else
+      Add(ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+    FlushBuff(Result);
+  end else
+    Result := ASQL;
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.InternalSetDateTime(
