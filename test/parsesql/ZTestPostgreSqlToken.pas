@@ -141,8 +141,8 @@ begin
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1,
     [toSkipEOF, toSkipWhitespaces]), TokenTypes1On, TokenValues1On);
 
-  CheckTokens(Tokenizer.TokenizeBuffer(TokenString2,
-    [toSkipEOF, toSkipWhitespaces]), TokenTypes2, TokenValues2);
+//  CheckTokens(Tokenizer.TokenizeBuffer(TokenString2,
+//    [toSkipEOF, toSkipWhitespaces]), TokenTypes2, TokenValues2);
 
 //  CheckTokens(Tokenizer.TokenizeBuffer(TokenString3,
 //    [toSkipEOF, toSkipWhitespaces]), TokenTypes3, TokenValues3);
