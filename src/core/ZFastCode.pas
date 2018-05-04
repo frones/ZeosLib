@@ -332,12 +332,12 @@ procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar; const De
 procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar; const Default: Currency; var Result: Currency); overload;
 procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar; const Default: Double; var Result: Double); overload;
 procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar; const Default: Single; var Result: Single); overload;
-function ValRawExt(const S: PByteArray; const DecimalSep: AnsiChar; var code: Integer): Extended;
-function ValRawDbl(const S: PByteArray; const DecimalSep: AnsiChar; var code: Integer): Double;
-function ValRawSin(const S: PByteArray; const DecimalSep: AnsiChar; var code: Integer): Single;
+function ValRawExt(const S: PByteArray; const DecimalSep: AnsiChar; out code: Integer): Extended;
+function ValRawDbl(const S: PByteArray; const DecimalSep: AnsiChar; out code: Integer): Double;
+function ValRawSin(const S: PByteArray; const DecimalSep: AnsiChar; out code: Integer): Single;
 
-function ValRawInt(const s: RawByteString; var code: Integer): Integer; overload;
-function ValRawInt(s: PAnsiChar; var code: Integer): Integer; overload;
+function ValRawInt(const s: RawByteString; out code: Integer): Integer; overload;
+function ValRawInt(s: PAnsiChar; out code: Integer): Integer; overload;
 
 function UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar): Extended; overload;
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
@@ -353,9 +353,9 @@ procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; cons
 procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Currency; var Result: Currency); overload;
 procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Double; var Result: Double); overload;
 procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Single; var Result: Single); overload;
-function ValUnicodeExt(const s: PWordArray; const DecimalSep: WideChar; var code: Integer): Extended;
-function ValUnicodeDbl(const s: PWordArray; const DecimalSep: WideChar; var code: Integer): Double;
-function ValUnicodeSin(const s: PWordArray; const DecimalSep: WideChar; var code: Integer): Single;
+function ValUnicodeExt(const s: PWordArray; const DecimalSep: WideChar; out code: Integer): Extended;
+function ValUnicodeDbl(const s: PWordArray; const DecimalSep: WideChar; out code: Integer): Double;
+function ValUnicodeSin(const s: PWordArray; const DecimalSep: WideChar; out code: Integer): Single;
 
 {Faster Floating functions ..}
 
@@ -3996,7 +3996,7 @@ end;
 {$WARNINGS ON}
 
 {$IF defined(WIN32) and not defined(FPC)}
-function ValLong_JOH_IA32_8_a(const s: PAnsiChar; var code: Integer): Longint;
+function ValLong_JOH_IA32_8_a(const s: PAnsiChar; out code: Integer): Longint;
 //fast asm by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //EgonHugeist: Changed in S type from String to PAnsiChar
@@ -4121,7 +4121,7 @@ asm
 end;
 {$ELSE}
 {$WARNINGS OFF} {Prevent False Compiler Warning on Digit not being Initialized}
-function ValLong_JOH_PAS_4_b(const S: PAnsiChar; var code: Integer): Longint;
+function ValLong_JOH_PAS_4_b(const S: PAnsiChar; out code: Integer): Longint;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 var
@@ -4228,7 +4228,7 @@ begin
 end;
 
 {$WARNINGS OFF} //value digits might not be initialized
-function ValLong_JOH_PAS_4_b_unicode(const S: PWideChar; var code: Integer): Longint;
+function ValLong_JOH_PAS_4_b_unicode(const S: PWideChar; out code: Integer): Longint;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //modified for unicode chars
@@ -4255,7 +4255,7 @@ begin
   end;
   if W^ = Ord('$') then begin
     inc(P);
-    Flags := Flags or 4; {Hex := True}
+    Flags := Flags or Byte(4); {Hex := True}
   end else begin
     if W^ = Ord('0') then begin
       inc(P);
@@ -4329,8 +4329,8 @@ begin
 end;
 
 {$WARNINGS OFF} //value digits might not be initialized
-function ValInt64_JOH_PAS_8_a_raw(const s: PAnsiChar; var code: Integer): Int64;
-//function ValInt64_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Int64;
+function ValInt64_JOH_PAS_8_a_raw(const s: PAnsiChar; out code: Integer): Int64;
+//function ValInt64_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Int64;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //modified by EgonHugeist for faster conversion and PAnsiChar
@@ -4353,7 +4353,7 @@ begin
   while P^ = ' ' do
     Inc(P);
   if P^ in ['+', '-'] then begin
-    Flags := Flags or (Ord(S^) - Ord('+')); {Set/Reset Neg}
+    Flags := Flags or Byte((Ord(S^) - Ord('+'))); {Set/Reset Neg}
     inc(P);
   end;
   if P^ = '$' then begin
@@ -4432,8 +4432,8 @@ end;
 {$WARNINGS ON}
 
 {$WARNINGS OFF} //value digits might not be initialized
-function ValUInt64_JOH_PAS_8_a_raw(const s: PAnsiChar; var code: Integer): UInt64;
-//function ValInt64_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Int64;
+function ValUInt64_JOH_PAS_8_a_raw(const s: PAnsiChar; out code: Integer): UInt64;
+//function ValInt64_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Int64;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //modified by EgonHugeist for faster conversion, PAnsiChar, UInt64
@@ -4547,8 +4547,8 @@ end;
 {$WARNINGS ON}
 
 {$WARNINGS OFF} //value digits might not be initialized
-function ValUInt64_JOH_PAS_8_a_Unicode(const s: PWideChar; var code: Integer): UInt64;
-//function ValInt64_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Int64;
+function ValUInt64_JOH_PAS_8_a_Unicode(const s: PWideChar; out code: Integer): UInt64;
+//function ValInt64_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Int64;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //modified by EgonHugeist for faster conversion, PAnsiChar, UInt64
@@ -4643,7 +4643,7 @@ end;
 {$WARNINGS ON}
 
 {$IF defined(WIN32) and not defined(FPC)}
-function ValInt64_JOH_IA32_8_a(const s: PAnsiChar; var code: Integer): Int64;
+function ValInt64_JOH_IA32_8_a(const s: PAnsiChar; out code: Integer): Int64;
 asm
   test  eax, eax
   jz    @@Null
@@ -4874,8 +4874,8 @@ begin
 end;
 
 {$WARNINGS OFF} //value digits might not be initialized
-function ValInt64_JOH_PAS_8_a_unicode(const s: PWideChar; var code: Integer): Int64;
-//function ValInt64_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Int64;
+function ValInt64_JOH_PAS_8_a_unicode(const s: PWideChar; out code: Integer): Int64;
+//function ValInt64_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Int64;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //modified by EgonHugeist for faster conversion and PWideChar
@@ -5307,8 +5307,8 @@ begin
 end;
 {$ENDIF WITH_PUREPASCAL_INTPOWER}
 
-function ValRawExt(const S: PByteArray; const DecimalSep: AnsiChar; var code: Integer): Extended;
-//function ValExt_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Extended;
+function ValRawExt(const S: PByteArray; const DecimalSep: AnsiChar; out code: Integer): Extended;
+//function ValExt_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Extended;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //modified for varying DecimalSeperator
@@ -5389,8 +5389,8 @@ begin
     code := 0;
 end;
 
-function ValRawDbl(const s: PByteArray; const DecimalSep: AnsiChar; var code: Integer): Double;
-//function ValExt_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Extended;
+function ValRawDbl(const s: PByteArray; const DecimalSep: AnsiChar; out code: Integer): Double;
+//function ValExt_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Extended;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //modified for varying DecimalSeperator
@@ -5471,8 +5471,8 @@ begin
     code := 0;
 end;
 
-function ValRawSin(const S: PByteArray; const DecimalSep: AnsiChar; var code: Integer): Single;
-//function ValExt_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Extended;
+function ValRawSin(const S: PByteArray; const DecimalSep: AnsiChar; out code: Integer): Single;
+//function ValExt_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Extended;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //modified for varying DecimalSeperator
@@ -5553,7 +5553,7 @@ begin
     code := 0;
 end;
 
-function ValRawInt(const s: RawByteString; var code: Integer): Integer;
+function ValRawInt(const s: RawByteString; out code: Integer): Integer;
 begin
   {$IF defined(WIN32) and not defined(FPC)}
   Result := ValLong_JOH_IA32_8_a(Pointer(s), Code);
@@ -5562,7 +5562,7 @@ begin
   {$IFEND}
 end;
 
-function ValRawInt(s: PAnsiChar; var code: Integer): Integer;
+function ValRawInt(s: PAnsiChar; out code: Integer): Integer;
 begin
   {$IF defined(WIN32) and not defined(FPC)}
   Result := ValLong_JOH_IA32_8_a(s, Code);
@@ -5661,8 +5661,8 @@ begin
 end;
 
 {$WARNINGS OFF} //suppress a wrong warning!!
-function ValUnicodeExt(const s: PWordArray; const DecimalSep: WideChar; var code: Integer): Extended;
-//function ValExt_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Extended;
+function ValUnicodeExt(const s: PWordArray; const DecimalSep: WideChar; out code: Integer): Extended;
+//function ValExt_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Extended;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //modified for varying DecimalSeperator and Fast conversion for FPC too (PWideChar is dead slow)
@@ -5749,8 +5749,8 @@ begin
     code := 0;
 end;
 
-function ValUnicodeDbl(const s: PWordArray; const DecimalSep: WideChar; var code: Integer): Double;
-//function ValExt_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Extended;
+function ValUnicodeDbl(const s: PWordArray; const DecimalSep: WideChar; out code: Integer): Double;
+//function ValExt_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Extended;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //modified for varying DecimalSeperator and Fast conversion for FPC too (PWideChar is dead slow)
@@ -5837,8 +5837,8 @@ begin
     code := 0;
 end;
 
-function ValUnicodeSin(const s: PWordArray; const DecimalSep: WideChar; var code: Integer): Single;
-//function ValExt_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Extended;
+function ValUnicodeSin(const s: PWordArray; const DecimalSep: WideChar; out code: Integer): Single;
+//function ValExt_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Extended;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //modified for varying DecimalSeperator
