@@ -2335,7 +2335,7 @@ begin
     {$ENDIF}
     if InParamValues[ParameterIndex].VType <> vtArray then
       raise Exception.Create('No Array bound before!');
-    ValidateArraySizeAndType(Pointer(Value), SQLType, VariantType, ParameterIndex{$IFDEF GENERIC_INDEX}-1{$ENDIF});
+    ValidateArraySizeAndType(Pointer(Value), SQLType, VariantType, ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
     InParamValues[ParameterIndex].VArray.VIsNullArray := Pointer(Value);
     InParamValues[ParameterIndex].VArray.VIsNullArrayType := Ord(SQLType);
     InParamValues[ParameterIndex].VArray.VIsNullArrayVariantType := VariantType;
@@ -2377,7 +2377,7 @@ var
   V: TZVariant;
 begin
   if FSupportsDMLBatchArrays then begin
-    ValidateArraySizeAndType(Pointer(Value), SQLType, VariantType, ParameterIndex{$IFDEF GENERIC_INDEX}-1{$ENDIF});
+    ValidateArraySizeAndType(Pointer(Value), SQLType, VariantType, ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
     V.VType := vtArray;
     V.VArray.VArray := Pointer(Value);
     V.VArray.VArrayVariantType := VariantType;
