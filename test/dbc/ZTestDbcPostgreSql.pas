@@ -76,11 +76,12 @@ type
     procedure TestDefaultValues;
     procedure TestEnumValues;
     procedure TestGUIDs;
+    procedure TestBatchBindings;
   end;
 
 implementation
 
-uses SysUtils, ZTestConsts, ZSysUtils;
+uses SysUtils, ZTestConsts, ZSysUtils, Types, ZVariant;
 
 { TZTestDbcPostgreSQLCase }
 
@@ -161,6 +162,32 @@ begin
   Connection.Close;
 end;
 
+procedure TZTestDbcPostgreSQLCase.TestBatchBindings;
+var
+  IntArray: TIntegerDynArray;
+  StrArray: TStringDynArray;
+  I: Integer;
+  SQL: String;
+  Stmt: IZPreparedStatement;
+begin
+  SetLength(IntArray, 10);
+  SetLength(StrArray, 10);
+  for I := 0 to High(IntArray) do begin
+    IntArray[i] := TEST_ROW_ID+i;
+    StrArray[i] := IntToStr(IntArray[i]);
+  end;
+  SQL := 'insert into blob_values(b_id, b_text) values (?,?)';
+  Stmt := Connection.PrepareStatement(SQL);
+  Stmt.SetDataArray(FirstDbcIndex, IntArray, stInteger);
+  Stmt.SetDataArray(FirstDbcIndex+1, StrArray, stString, ZVariant.vtString);
+  Stmt.ExecuteUpdatePrepared;
+  SQL := 'update blob_values set b_text = ? where b_id = ?';
+  Stmt := Connection.PrepareStatement(SQL);
+  Stmt.SetDataArray(FirstDbcIndex, IntArray, stInteger);
+  Stmt.SetDataArray(FirstDbcIndex, StrArray, stString, vtString);
+  Stmt.ExecuteUpdatePrepared;
+end;
+
 procedure TZTestDbcPostgreSQLCase.TestBlobs;
 const
   b_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
@@ -193,7 +220,7 @@ begin
   ImageStream.LoadFromFile('../../../database/images/zapotec.bmp');
 
   PreparedStatement := Connection.PrepareStatement(
-    'INSERT INTO blob_values (b_id,b_text,b_image) VALUES(?,?,?)');
+    'INSERT INTO blob_values (b_id,b_text,b_image) VALUES($1,$2,$3)');
   PreparedStatement.SetInt(b_id_index, TEST_ROW_ID);
   PreparedStatement.SetAsciiStream(b_text_index, TextStream);
   PreparedStatement.SetBinaryStream(b_image_index, ImageStream);

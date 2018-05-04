@@ -161,7 +161,7 @@ type
     FMYSQL_aligned_BINDs: TMYSQL_aligned_BINDDynArray; //offset descriptor structures
     FSmallLobBuffer: array[Byte] of Byte; //for tiny reads of unbound col-buffers
     procedure InitColumnBinds(Bind: PMYSQL_aligned_BIND; MYSQL_FIELD: PMYSQL_FIELD;
-      ColumnIndex: Integer; Const BindOffsets: TMYSQL_BINDOFFSETS);
+      ColumnIndex: Integer; BindOffsets: PMYSQL_BINDOFFSETS);
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
     procedure Open; override;
@@ -255,7 +255,7 @@ implementation
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZFastCode, ZSysUtils, ZMessages, ZEncoding,
-  ZDbcMySqlUtils, ZDbcMysql, ZDbcUtils, ZDbcMetadata, ZDbcLogging;
+  ZDbcMySqlUtils, ZDbcUtils, ZDbcMetadata, ZDbcLogging;
 
 {$IFOPT R+}
   {$DEFINE RangeCheckEnabled}
@@ -1358,14 +1358,13 @@ end;
   Opens this recordset.
 }
 procedure TZAbstractMySQLPreparedResultSet.Open;
-const one: byte = 1;
 var
   I: Integer;
   ColumnInfo: TZColumnInfo;
   FieldHandle: PMYSQL_FIELD;
   FieldCount: Integer;
   FResultMetaData : PZMySQLResult;
-  BindOffsets: TMYSQL_BINDOFFSETS;
+  BindOffsets: PMYSQL_BINDOFFSETS;
 begin
   FieldCount := FPlainDriver.mysql_stmt_field_count(FPrepStmt);
   if FieldCount = 0 then
@@ -1570,7 +1569,7 @@ begin
 end;
 
 procedure TZAbstractMySQLPreparedResultSet.InitColumnBinds(Bind: PMYSQL_aligned_BIND;
-  MYSQL_FIELD: PMYSQL_FIELD; ColumnIndex: Integer; const BindOffsets: TMYSQL_BINDOFFSETS);
+  MYSQL_FIELD: PMYSQL_FIELD; ColumnIndex: Integer; BindOffsets: PMYSQL_BINDOFFSETS);
 begin
   Bind^.is_unsigned_address^ := Ord(MYSQL_FIELD.flags and UNSIGNED_FLAG <> 0);
   bind^.buffer_type_address^ := MYSQL_FIELD^._type; //safe initialtype
