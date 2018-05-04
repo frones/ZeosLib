@@ -126,6 +126,7 @@ type
     function GetMoreResults: Boolean; override;
     function GetUpdateCount: Integer; override;
 
+    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType); override;
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); override;
@@ -790,6 +791,17 @@ begin
   else Assert(NewParamCount <= FInParamCount); //<- done by PrepareInParams
 end;
 
+procedure TZMySQLPreparedStatement.SetNull(ParameterIndex: Integer;
+  SQLType: TZSQLType);
+begin
+  inherited SetNull(ParameterIndex, SQLType);
+  {$IFNDEF GENERIC_INDEX}
+  ParameterIndex := ParameterIndex - 1;
+  {$ENDIF}
+  if FEmulatePrepare and FUseDefaults and (FDefaultValues[ParameterIndex] <> '') then
+    FParamEmulatedValues[ParameterIndex] := FDefaultValues[ParameterIndex];
+end;
+
 procedure TZMySQLPreparedStatement.SetNullArray(ParameterIndex: Integer;
   const SQLType: TZSQLType; const Value; const VariantType: TZVariantType);
 var
@@ -914,7 +926,7 @@ begin
       checkMySQLPrepStmtError (FPlainDriver, FMYSQL_STMT, lcPrepStmt,
         ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
         ConSettings^.ClientCodePage^.CP), ConSettings);
-    FBindAgain := False;
+      FBindAgain := False;
   end;
   inherited BindInParameters;
   { now finlize chunked data }
