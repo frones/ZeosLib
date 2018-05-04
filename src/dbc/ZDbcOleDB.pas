@@ -228,7 +228,7 @@ begin
   CheckCharEncoding('CP_UTF16');
   fTransaction := nil;
   Inherited SetAutoCommit(True);
-  Open;
+  //Open;
 end;
 
 {**
