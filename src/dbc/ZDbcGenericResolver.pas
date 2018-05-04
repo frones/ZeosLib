@@ -109,7 +109,6 @@ type
     FUpdateAll: Boolean;
 
     FStatements : TZHashMap;
-
   protected
     InsertStatement   : IZPreparedStatement;
     UpdateStatement   : IZPreparedStatement;
@@ -862,17 +861,26 @@ begin
       end;
     utDeleted:
       begin
-        SQL := FormDeleteStatement(FDeleteParams, OldRowAccessor);
-        if SQL = '' then Exit;
-        TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
-        DeleteStatement := FStatements.Get(TempKey) as IZPreparedStatement;
-        If DeleteStatement = nil then
-        begin
-          DeleteStatement := CreateResolverStatement(SQL);
-          FStatements.Put(TempKey, DeleteStatement);
+        if not FWhereAll then begin
+          If DeleteStatement = nil then begin
+            SQL := FormDeleteStatement(FDeleteParams, OldRowAccessor);
+            DeleteStatement := CreateResolverStatement(SQL);
+          end;
+          Statement := DeleteStatement;
+          SQLParams := FDeleteParams;
+        end else begin
+          FDeleteParams.Clear;  //EH: where columns propably are cached after 1. call
+          SQL := FormDeleteStatement(FDeleteParams, OldRowAccessor);
+          if SQL = '' then Exit;
+          TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
+          Statement := FStatements.Get(TempKey) as IZPreparedStatement;
+          If Statement = nil then
+          begin
+            Statement := CreateResolverStatement(SQL);
+            FStatements.Put(TempKey, Statement);
+          end;
+          SQLParams := FDeleteParams;
         end;
-        Statement := DeleteStatement;
-        SQLParams := FDeleteParams;
       end;
     utModified:
       begin
