@@ -1109,14 +1109,6 @@ begin
     TempConnection.Properties.Add('standard_conforming_strings=ON');
     TempConnection.Connect;
 
-    Query.Connection := TempConnection;
-    Query.SQL.Text := 'select s_char||''\n''||s_varchar from string_values where 1=1 and (s_varbit iLike :param)';
-    Query.ParamByName('param').AsString := '%'; //kgizmo reports: Everything is OK with Params but I get "\n" string in the result text.
-    Query.Open;
-    Query.Next;
-    CheckEquals(TestString, Query.Fields[0].AsString, 'wrong string returned tested with pgadmin and standard_conforming_strings=ON');
-    Query.Close;
-
     Query.SQL.Text := 'select s_char||E''\n''||s_varchar from string_values where 1=1 and (s_varbit iLike :param)';
     Query.ParamByName('param').AsString := '%'; //kgizmo reports: Parameter not found.
     Query.Open;
