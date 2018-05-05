@@ -81,6 +81,7 @@ type
     procedure TestStringToSignedIntegerConversions;
     procedure TestStringToUnsignedIntegerConversions;
     procedure TestAfterLast;
+    procedure TestQuestionMarks;
   end;
 
   TZGenericTestDbcArrayBindings = class(TZAbstractDbcSQLTestCase)
@@ -630,6 +631,23 @@ begin
   end;
 end;
 
+//see: http://zeoslib.sourceforge.net/viewtopic.php?f=38&p=95669#p95669
+procedure TZGenericTestDbcResultSet.TestQuestionMarks;
+var Stmt: IZPreparedStatement;
+begin
+  Stmt := Connection.PrepareStatement(
+    '/*?? do we find these ?question-marks? as parameter ? */'+
+    'select * from people where p_id > ?'+LineEnding+
+    '/* ? and those marks? Are they ignored too?'+LineEnding+
+    '? Are they ignored on a multi-line comment as well?*/'+LineEnding+
+    '-- ? and those marks? Are they ignored too? On a single line comment?');
+  Stmt.SetInt(FirstDbcIndex, 1);
+  with stmt.ExecuteQueryPrepared do begin
+    Next;
+    Close;
+  end;
+  Stmt.Close;
+end;
 
 {**
   Checks functionality execute statement
