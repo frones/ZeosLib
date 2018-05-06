@@ -133,7 +133,7 @@ type
     function GetServerProvider: TZServerProvider; override;
     function MySQL_FieldType_Bit_1_IsBoolean: Boolean;
     function SupportsFieldTypeBit: Boolean;
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable);
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
   end;
 
 var
@@ -300,7 +300,7 @@ procedure TZMySQLConnection.InternalSetIsolationLevel(
 begin
   if FPlainDriver.mysql_real_query(FHandle,
     Pointer(MySQLSessionTransactionIsolation[Level]), Length(MySQLSessionTransactionIsolation[Level])) <> 0 then
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, MySQLSessionTransactionIsolation[Level], Self);
+      CheckMySQLError(FPlainDriver, FHandle, nil, lcExecute, MySQLSessionTransactionIsolation[Level], Self);
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, MySQLSessionTransactionIsolation[Level]);
 end;
@@ -456,7 +456,7 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
                               PAnsiChar(ConSettings^.User), PAnsiChar(AnsiString(Password)),
                               PAnsiChar(ConSettings^.Database), Port, nil,
                               ClientFlag) = nil then begin
-      CheckMySQLError(FPlainDriver, FHandle, lcConnect, LogMessage, Self);
+      CheckMySQLError(FPlainDriver, FHandle, nil, lcConnect, LogMessage, Self);
       DriverManager.LogError(lcConnect, ConSettings^.Protocol, LogMessage,
         0, ConSettings.ConvFuncs.ZStringToRaw(SUnknownError,
           ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
@@ -483,7 +483,7 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
             (FPlainDriver.mysql_set_character_set(FHandle, Pointer(SQL)) <> 0) then begin //failed? might be possible the function does not exists
         SQL := 'SET NAMES '+SQL;
         if FPlainDriver.mysql_real_query(FHandle, Pointer(SQL), Length(SQL)) <> 0 then
-          CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL, Self);
+          CheckMySQLError(FPlainDriver, FHandle, nil, lcExecute, SQL, Self);
         if DriverManager.HasLoggingListener then
           DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
       end;
@@ -494,7 +494,7 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     if MaxLobSize <> 0 then begin
       SQL := 'SET GLOBAL max_allowed_packet='+IntToRaw(MaxLobSize);
       if FPlainDriver.mysql_real_query(FHandle, Pointer(SQL), Length(SQL)) <> 0 then
-        CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL, Self);
+        CheckMySQLError(FPlainDriver, FHandle, nil, lcExecute, SQL, Self);
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     end;
@@ -507,7 +507,7 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     { Sets an auto commit mode. }
     if not GetAutoCommit then
       if FPlainDriver.mysql_autocommit(FHandle, Ord(False)) <> 0 then
-        CheckMySQLError(FPlainDriver, FHandle, lcExecute, 'Native SetAutoCommit '+BoolToRawEx(AutoCommit)+'call', Self);
+        CheckMySQLError(FPlainDriver, FHandle, nil, lcExecute, 'Native SetAutoCommit '+BoolToRawEx(AutoCommit)+'call', Self);
 
     inherited Open;
 
@@ -656,7 +656,7 @@ begin
 
   if not Closed then begin
     If FPlainDriver.mysql_commit(FHandle) <> 0 then
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, 'Native Commit call', Self);
+      CheckMySQLError(FPlainDriver, FHandle, nil, lcExecute, 'Native Commit call', Self);
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecute, ConSettings.Protocol, 'Native Commit call');
   end;
@@ -683,7 +683,7 @@ begin
 
   if not Closed then begin
     If FPlainDriver.mysql_rollback(FHandle) <> 0 then
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, 'Native Rollback call', Self);
+      CheckMySQLError(FPlainDriver, FHandle, nil, lcExecute, 'Native Rollback call', Self);
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecute, ConSettings.Protocol, 'Native Rollback call');
   end;
@@ -774,7 +774,7 @@ begin
     inherited SetAutoCommit(Value);
     if not Closed then begin
       if FPlainDriver.mysql_autocommit(FHandle, Ord(Value)) <> 0 then
-        CheckMySQLError(FPlainDriver, FHandle, lcExecute, 'Native SetAutoCommit '+BoolToRawEx(AutoCommit)+'call', Self);
+        CheckMySQLError(FPlainDriver, FHandle, nil, lcExecute, 'Native SetAutoCommit '+BoolToRawEx(AutoCommit)+'call', Self);
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'Native SetAutoCommit '+BoolToRawEx(AutoCommit)+'call');
     end;

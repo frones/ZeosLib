@@ -253,7 +253,7 @@ begin
   if ArrayCount > 0 then begin
     array_size := 0;
     if FPlainDriver.mysql_stmt_attr_set517up(FMYSQL_STMT, STMT_ATTR_ARRAY_SIZE, @array_size) <> 0 then
-      checkMySQLPrepStmtError (FPlainDriver, FMYSQL_STMT, lcPrepStmt,
+      checkMySQLError (FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcPrepStmt,
         ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
         ConSettings^.ClientCodePage^.CP), Self);
   end;
@@ -316,7 +316,7 @@ begin
     //cancel all pending results:
     //https://mariadb.com/kb/en/library/mysql_stmt_close/
     if FPlainDriver.mysql_stmt_close(FMYSQL_STMT) <> 0 then
-      CheckMySQLPrepStmtError(FPlainDriver, FMYSQL_STMT, lcUnprepStmt,
+      checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcUnprepStmt,
         ConvertZMsgToRaw(cSUnknownError,
         ZMessages.cCodePage, ConSettings^.ClientCodePage^.CP), Self);
     FMYSQL_STMT := nil;
@@ -350,7 +350,7 @@ begin
   if FEmulatePrepare or not FStmtIsExecuted then begin
     if Assigned(FPlainDriver.mysql_next_result) and Assigned(FPMYSQL^) then begin
       if FPlainDriver.mysql_next_result(FPMYSQL^) > 0
-      then CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ASQL, Self);
+      then CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, ASQL, Self);
 
       FResultsCount := 0; //Reset -> user is expecting more resultsets
       LastResultSet := nil;
@@ -365,7 +365,7 @@ begin
     if Assigned(FPlainDriver.mysql_stmt_next_result) and Assigned(FMYSQL_STMT) then begin
       Status := FPlainDriver.mysql_stmt_next_result(FMYSQL_STMT);
       if Status > 0
-      then checkMySQLPrepStmtError(FPlainDriver, FMYSQL_STMT, lcExecute, ASQL, Self);
+      then checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecute, ASQL, Self);
       //FResultsCount := 0; //Reset -> user is expecting more resultsets
       LastResultSet := nil;
       LastUpdateCount := -1;
@@ -930,12 +930,12 @@ begin
       //set array_size first: https://mariadb.com/kb/en/library/bulk-insert-column-wise-binding/
       array_size := ArrayCount;
       if FPlainDriver.mysql_stmt_attr_set517up(FMYSQL_STMT, STMT_ATTR_ARRAY_SIZE, @array_size) <> 0 then
-        checkMySQLPrepStmtError (FPlainDriver, FMYSQL_STMT, lcPrepStmt,
+        checkMySQLError (FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcPrepStmt,
           ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
           ConSettings^.ClientCodePage^.CP), Self);
     end;
     if (FPlainDriver.mysql_stmt_bind_param(FMYSQL_STMT, Pointer(FMYSQL_BINDs)) <> 0) then
-      checkMySQLPrepStmtError (FPlainDriver, FMYSQL_STMT, lcPrepStmt,
+      checkMySQLError (FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcPrepStmt,
         ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
         ConSettings^.ClientCodePage^.CP), Self);
       FBindAgain := False;
@@ -956,7 +956,7 @@ begin
           if OffSet+PieceSize > Len then
             PieceSize := Len - OffSet;
           if (FPlainDriver.mysql_stmt_send_long_data(FMYSQL_STMT, I, P, PieceSize) <> 0) then begin
-            checkMySQLPrepStmtError (FPlainDriver, FMYSQL_STMT, lcPrepStmt,
+            checkMySQLError (FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcPrepStmt,
               ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
               ConSettings^.ClientCodePage^.CP), Self);
             exit;
@@ -1077,7 +1077,7 @@ begin
       else Result := CreateResultSet(SQL);
       FOpenResultSet := Pointer(Result);
     end else
-      CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, RSQL, Self);
+      CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, RSQL, Self);
   end else if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
     FStmtIsExecuted := True;
     if FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) = 0 then
@@ -1087,7 +1087,7 @@ begin
     else Result := CreateResultSet(SQL);
     FOpenResultSet := Pointer(Result);
   end else
-    checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
+    checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
       ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
       ConSettings^.ClientCodePage^.CP), Self);
   inherited ExecuteQueryPrepared;
@@ -1125,7 +1125,7 @@ begin
       end else { Process regular query }
         Result := FPlainDriver.mysql_affected_rows(FPMYSQL^);
     end else
-      CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, RSQL, Self);
+      CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, RSQL, Self);
   end else begin
     if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
       FStmtIsExecuted := True;
@@ -1137,7 +1137,7 @@ begin
       end else { Process regular query }
         Result := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT);
     end else
-      checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
+      checkMySQLError(FPlainDriver,FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
         ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
           ConSettings^.ClientCodePage^.CP),Self);
   end;
@@ -1162,7 +1162,7 @@ begin
           Inc(FResultsCount);
         end;
       end else if Status > 0 then begin
-        CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ASQL, Self);
+        CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, ASQL, Self);
         Break;
       end;
     end
@@ -1174,12 +1174,12 @@ begin
       else if (Status = 0) {and (FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) > 0)} then begin
         //horray we can't store the result -> https://dev.mysql.com/doc/refman/5.7/en/mysql-stmt-store-result.html
         if FPlainDriver.mysql_stmt_free_result(FMYSQL_STMT) <> 0 then //MySQL allows this Mariadb is viny nilly now
-          checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
+          checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
           ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
             ConSettings^.ClientCodePage^.CP), Self);
         Inc(FResultsCount);
       end else if Status > 0 then begin
-        checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
+        checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
           ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
             ConSettings^.ClientCodePage^.CP), Self);
         Break;
@@ -1188,7 +1188,7 @@ begin
     end;
     {EH: can't see any advantages...
     if FPlainDriver.mysql_stmt_reset(FMYSQL_STMT) <> 0 then
-      checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
+      checkMySQLError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
         ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
           ConSettings^.ClientCodePage^.CP), ConSettings);}
   end;
@@ -1214,14 +1214,14 @@ begin
       if FPlainDriver.mysql_field_count(FPMYSQL^) > 0
       then LastResultSet := CreateResultSet(SQL)
       else LastUpdateCount := FPlainDriver.mysql_affected_rows(FPMYSQL^)
-    end else CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, RSQL, Self);
+    end else CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, RSQL, Self);
   end else begin
     if FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0 then begin
       FStmtIsExecuted := True;
       if FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) > 0
       then LastResultSet := CreateResultSet(SQL)
       else LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
-    end else checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
+    end else checkMySQLError(FPlainDriver,FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
         ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
           ConSettings^.ClientCodePage^.CP), Self);
   end;
@@ -1441,7 +1441,7 @@ begin
       DefaultValues := FDefaultValues; //copy -> we'll need to dequote them
     //UnprepareInparameters;
     if (FPlainDriver.mysql_stmt_prepare(FMYSQL_STMT, Pointer(ASQL), length(ASQL)) <> 0) then
-      CheckMySQLPrepStmtError(FPlainDriver, FMYSQL_STMT, lcPrepStmt,
+      checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcPrepStmt,
         ConvertZMsgToRaw(SFailedtoPrepareStmt,
         ZMessages.cCodePage, ConSettings^.ClientCodePage^.CP), Self);
     //see user comment: http://dev.mysql.com/doc/refman/5.0/en/mysql-stmt-fetch.html
@@ -1685,7 +1685,7 @@ begin
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcBindPrepStmt, ConSettings^.Protocol, ExecQuery)
     end else
-      CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ExecQuery, Self);
+      CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, ExecQuery, Self);
 end;
 
 {**
@@ -1790,13 +1790,13 @@ begin
         if FPlainDriver.mysql_more_results(FPMYSQL^) = 1 then
           FResultSets.Add(CreateResultSet(Self.SQL))
         else break;
-      CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ASQL, Self);
+      CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, ASQL, Self);
     end;
     FActiveResultset := FResultSets.Count-1;
     Result := IZResultSet(FResultSets[FActiveResultset]);
   end
   else
-    CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ASQL, Self);
+    CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, ASQL, Self);
 end;
 
 {**
@@ -1829,7 +1829,7 @@ begin
             inc(Result, LastUpdateCount); //LastUpdateCount will be returned from ResultSet.Open
           end
           else break;
-        CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ASQL, Self);
+        CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, ASQL, Self);
       end
       else
         Result := LastUpdateCount;
@@ -1840,7 +1840,7 @@ begin
       Result := FPlainDriver.mysql_affected_rows(FPMYSQL^);
   end
   else
-    CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ASQL, Self);
+    CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, ASQL, Self);
   LastUpdateCount := Result;
 end;
 
@@ -1878,7 +1878,7 @@ begin
     end else { Processes regular query. }
       LastUpdateCount := FPlainDriver.mysql_affected_rows(FPMYSQL^);
   end else
-    CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ASQL, Self);
+    CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, ASQL, Self);
 end;
 
 {**

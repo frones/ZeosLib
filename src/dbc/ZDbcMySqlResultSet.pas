@@ -3158,7 +3158,7 @@ begin
       LastRowNo := RowNo;
     Result := True;
   end else if FFetchStatus = STMT_FETCH_ERROR then
-    checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcOther, '', Self)
+    checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcOther, '', Self)
   else if FFetchStatus = MYSQL_NO_DATA then begin
     if RowNo <= LastRowNo then
       RowNo := LastRowNo + 1;
@@ -3232,7 +3232,7 @@ procedure TZMySQL_Store_PreparedResultSet.ResetCursor;
 begin
   if Assigned(FMYSQL_STMT) then
     if FPlainDriver.mysql_stmt_free_result(FMYSQL_STMT) <> 0 then
-      checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcOther, '', Self);
+      checkMySQLError(FPlainDriver,FPMYSQL^, FMYSQL_STMT, lcOther, '', Self);
   inherited ResetCursor;
 end;
 
@@ -3420,7 +3420,7 @@ begin
   Bind^.buffer_address^ := nil; //set nil again
   Bind^.buffer_Length_address^ := 0;
   if Status = 1 then
-    checkMySQLPrepStmtError(PlainDriver,StmtHandle^, lcOther, '', Sender);
+    checkMySQLError(PlainDriver, nil, StmtHandle^, lcOther, '', Sender);
   (PAnsiChar(FBlobData)+FBlobSize-1)^ := #0;
 End;
 
@@ -3442,7 +3442,7 @@ begin
   Bind^.buffer_address^ := nil; //set nil again
   Bind^.buffer_Length_address^ := 0;
   if Status = 1 then
-    checkMySQLPrepStmtError(PlainDriver,StmtHandle, lcOther, '', Sender);
+    checkMySQLError(PlainDriver, nil, StmtHandle, lcOther, '', Sender);
 End;
 
 { TZMySQL_Use_ResultSet }
