@@ -256,6 +256,7 @@ type
   IImmediatelyReleasable = interface(IZInterface)
     ['{7AA5A5DA-5EC7-442E-85B0-CCCC71C13169}']
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable);
+    function GetConSettings: PZConSettings;
   end;
 
   {** Database Connection interface. }

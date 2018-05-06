@@ -87,11 +87,11 @@ function ConvertMySQLHandleToSQLType(MYSQL_FIELD: PMYSQL_FIELD;
 }
 procedure CheckMySQLError(const PlainDriver: TZMySQLPlainDriver;
   Handle: PMySQL; LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; ConSettings: PZConSettings);
+  const LogMessage: RawByteString; const ImmediatelyReleasable: IImmediatelyReleasable);
+
 procedure CheckMySQLPrepStmtError(const PlainDriver: TZMySQLPlainDriver;
-  Handle: PMySQL; LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; ConSettings: PZConSettings;
-  ErrorIsIgnored: PBoolean = nil; IgnoreErrorCode: Integer = 0);
+  Handle: PMYSQL_STMT; LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; const ImmediatelyReleasable: IImmediatelyReleasable);
 
 procedure EnterSilentMySQLError;
 procedure LeaveSilentMySQLError;
@@ -292,16 +292,22 @@ end;
 }
 procedure CheckMySQLError(const PlainDriver: TZMySQLPlainDriver;
   Handle: PMySQL; LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; ConSettings: PZConSettings);
+  const LogMessage: RawByteString; const ImmediatelyReleasable: IImmediatelyReleasable);
 var
   ErrorMessage: RawByteString;
   ErrorCode: Integer;
+  ConSettings: PZconSettings;
 begin
   ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.mysql_error(Handle));
   ErrorCode := PlainDriver.mysql_errno(Handle);
-  if (ErrorCode <> 0) and (ErrorMessage <> '') then
-  begin
-    if SilentMySQLError > 0 then
+  ConSettings := ImmediatelyReleasable.GetConSettings;
+  if (ErrorCode <> 0) then begin
+    if ErrorMessage = '' then
+      ErrorMessage := 'unknown error';
+    { handle connection loss }
+    if (ErrorCode = CR_SERVER_GONE_ERROR) or (ErrorCode = CR_SERVER_LOST) then
+      ImmediatelyReleasable.ReleaseImmediat(ImmediatelyReleasable)
+    else if SilentMySQLError > 0 then
       raise EZMySQLSilentException.CreateFmt(SSQLError1, [ErrorMessage]);
 
     DriverManager.LogError(LogCategory, ConSettings.Protocol, LogMessage,
@@ -313,25 +319,23 @@ begin
 end;
 
 procedure CheckMySQLPrepStmtError(const PlainDriver: TZMySQLPlainDriver;
-  Handle: PMySQL; LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  ConSettings: PZConSettings; ErrorIsIgnored: PBoolean = nil; IgnoreErrorCode: Integer = 0);
+  Handle: PMYSQL_STMT; LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
+  const ImmediatelyReleasable: IImmediatelyReleasable);
 var
   ErrorMessage: RawByteString;
   ErrorCode: Integer;
+  ConSettings: PZConSettings;
 begin
   ErrorCode := PlainDriver.mysql_stmt_errno(Handle);
-  if Assigned(ErrorIsIgnored) then
-    if (IgnoreErrorCode = ErrorCode) then
-    begin
-      ErrorIsIgnored^ := True;
-      Exit;
-    end
-    else
-      ErrorIsIgnored^ := False;
   ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.mysql_stmt_error(Handle));
-  if (ErrorCode <> 0) and (ErrorMessage <> '') then
+  if (ErrorCode <> 0) then
   begin
-    if SilentMySQLError > 0 then
+    if (ErrorMessage = '') then
+      ErrorMessage := 'unknown error';
+    ConSettings := ImmediatelyReleasable.GetConSettings;
+    if (ErrorCode = CR_SERVER_GONE_ERROR) or (ErrorCode = CR_SERVER_LOST) then
+      ImmediatelyReleasable.ReleaseImmediat(ImmediatelyReleasable)
+    else if SilentMySQLError > 0 then
       raise EZMySQLSilentException.CreateFmt(SSQLError1, [ErrorMessage]);
 
     DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,

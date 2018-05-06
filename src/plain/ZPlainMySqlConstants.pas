@@ -573,7 +573,7 @@ TMYSQL_CLIENT_OPTIONS =
   end;
 
   PULongArray = ^TULongArray;
-  TULongArray = array[0..High(Byte)] of Ulong; //http://dev.mysql.com/doc/refman/4.1/en/column-count-limit.html
+  TULongArray = array[0..4095] of Ulong; //https://dev.mysql.com/doc/refman/8.0/en/column-count-limit.html
   TULongDynArray = array of ULong;
 
   Pmy_bool_array = ^Tmy_bool_array;
@@ -659,6 +659,9 @@ const
 
 const
     MaxBlobSize = 1000000;
+//some error codes:
+  CR_SERVER_GONE_ERROR = 2006;
+  CR_SERVER_LOST = 2013;
 
 implementation
 

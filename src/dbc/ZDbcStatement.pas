@@ -482,6 +482,7 @@ type
     function GetParamAsString(ParamIndex: Integer): RawByteString; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
 
     procedure ClearParameters; override;
 
@@ -1602,6 +1603,7 @@ end;
 procedure TZAbstractPreparedStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable);
 begin
   FPrepared := False;
+  FExecCount := 0;
   inherited ReleaseImmediat(Sender);
 end;
 
@@ -3517,6 +3519,13 @@ end;
 procedure TImplizitBindRealAndEmulationStatement_A.PrepareInParameters;
 begin
   InternalSetInParamCount(CountOfQueryParams);
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable);
+begin
+  FEmulatePrepare := True;
+  inherited ReleaseImmediat(Sender);
 end;
 
 procedure TImplizitBindRealAndEmulationStatement_A.SetAnsiString(

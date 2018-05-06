@@ -65,7 +65,7 @@ type
   {** Implements Prepared MySQL Statement. }
   TZMySQLPreparedStatement = class(TImplizitBindRealAndEmulationStatement_A)
   private
-    fMySQL: PMySQL; //the connection handle
+    FPMYSQL: PPMYSQL; //the connection handle
     FMySQLConnection: IZMySQLConnection;
     FMYSQL_STMT: PMYSQL_STMT; //a allocated stmt handle
     FPlainDriver: TZMySQLPlainDriver;
@@ -115,6 +115,8 @@ type
       const SQL: string; Info: TStrings);
     destructor Destroy; override;
   public
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
+
     procedure Prepare; override;
     procedure Unprepare; override;
     procedure ClearParameters; override;
@@ -137,7 +139,7 @@ type
     IZParamNamedCallableStatement)
   private
     FPlainDriver: TZMysqlPlainDriver;
-    fMySQL: PMySQL;
+    FPMYSQL: PPMYSQL;
     FQueryHandle: PZMySQLResult;
     FUseResult: Boolean;
     FParamNames: array [0..1024] of RawByteString;
@@ -253,7 +255,7 @@ begin
     if FPlainDriver.mysql_stmt_attr_set517up(FMYSQL_STMT, STMT_ATTR_ARRAY_SIZE, @array_size) <> 0 then
       checkMySQLPrepStmtError (FPlainDriver, FMYSQL_STMT, lcPrepStmt,
         ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
-        ConSettings^.ClientCodePage^.CP), ConSettings);
+        ConSettings^.ClientCodePage^.CP), Self);
   end;
   inherited ClearParameters;
 end;
@@ -279,7 +281,7 @@ begin
   else FPreparablePrefixTokens := MySQL41PreparableTokens;
 
   FMySQLConnection := Connection;
-  fMySQL := Connection.GetConnectionHandle;
+  FPMYSQL := Connection.GetConnectionHandle;
 
   inherited Create(Connection, SQL, Info);
 
@@ -316,7 +318,7 @@ begin
     if FPlainDriver.mysql_stmt_close(FMYSQL_STMT) <> 0 then
       CheckMySQLPrepStmtError(FPlainDriver, FMYSQL_STMT, lcUnprepStmt,
         ConvertZMsgToRaw(cSUnknownError,
-        ZMessages.cCodePage, ConSettings^.ClientCodePage^.CP), ConSettings);
+        ZMessages.cCodePage, ConSettings^.ClientCodePage^.CP), Self);
     FMYSQL_STMT := nil;
     FStmtIsExecuted := False;
   end;
@@ -346,24 +348,24 @@ begin
   if (FOpenResultSet <> nil)
   then IZResultSet(FOpenResultSet).Close;
   if FEmulatePrepare or not FStmtIsExecuted then begin
-    if Assigned(FPlainDriver.mysql_next_result) and Assigned(fMySQL) then begin
-      if FPlainDriver.mysql_next_result(fMySQL) > 0
-      then CheckMySQLError(FPlainDriver, fMySQL, lcExecute, ASQL, ConSettings);
+    if Assigned(FPlainDriver.mysql_next_result) and Assigned(FPMYSQL^) then begin
+      if FPlainDriver.mysql_next_result(FPMYSQL^) > 0
+      then CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ASQL, Self);
 
       FResultsCount := 0; //Reset -> user is expecting more resultsets
       LastResultSet := nil;
       LastUpdateCount := -1;
-      if FPlainDriver.mysql_field_count(fMySQL) > 0 then begin
+      if FPlainDriver.mysql_field_count(FPMYSQL^) > 0 then begin
         Result := True;
         LastResultSet := CreateResultSet(Self.SQL);
       end else
-        LastUpdateCount := FPlainDriver.mysql_affected_rows(fMySQL);
+        LastUpdateCount := FPlainDriver.mysql_affected_rows(FPMYSQL^);
     end;
   end else begin
     if Assigned(FPlainDriver.mysql_stmt_next_result) and Assigned(FMYSQL_STMT) then begin
       Status := FPlainDriver.mysql_stmt_next_result(FMYSQL_STMT);
       if Status > 0
-      then checkMySQLPrepStmtError(FPlainDriver, FMYSQL_STMT, lcExecute, ASQL, ConSettings);
+      then checkMySQLPrepStmtError(FPlainDriver, FMYSQL_STMT, lcExecute, ASQL, Self);
       //FResultsCount := 0; //Reset -> user is expecting more resultsets
       LastResultSet := nil;
       LastUpdateCount := -1;
@@ -398,20 +400,20 @@ begin
   end else begin
     if FEmulatePrepare or (FMYSQL_STMT = nil) then
       if FUseResult //server cursor?
-      then NativeResultSet := TZMySQL_Use_ResultSet.Create(FPlainDriver, Self, SQL, fMySQL, nil, FOpenCursorCallback)
-      else NativeResultSet := TZMySQL_Store_ResultSet.Create(FPlainDriver, Self, SQL, fMySQL, nil, FOpenCursorCallback)
+      then NativeResultSet := TZMySQL_Use_ResultSet.Create(FPlainDriver, Self, SQL, FPMYSQL, nil, FOpenCursorCallback)
+      else NativeResultSet := TZMySQL_Store_ResultSet.Create(FPlainDriver, Self, SQL, FPMYSQL, nil, FOpenCursorCallback)
     else if FUseResult //server cursor?
-      then NativeResultSet := TZMySQL_Use_PreparedResultSet.Create(FPlainDriver, Self, SQL, fMySQL, @FMYSQL_STMT, FOpenCursorCallback)
-      else NativeResultSet := TZMySQL_Store_PreparedResultSet.Create(FPlainDriver, Self, SQL, fMySQL, @FMYSQL_STMT, FOpenCursorCallback);
+      then NativeResultSet := TZMySQL_Use_PreparedResultSet.Create(FPlainDriver, Self, SQL, FPMYSQL, @FMYSQL_STMT, FOpenCursorCallback)
+      else NativeResultSet := TZMySQL_Store_PreparedResultSet.Create(FPlainDriver, Self, SQL, FPMYSQL, @FMYSQL_STMT, FOpenCursorCallback);
 
     if (GetResultSetConcurrency = rcUpdatable) or
        ((GetResultSetType = rtScrollInsensitive) and FUseResult) then begin
       if (GetResultSetConcurrency = rcUpdatable) then
         if FEmulatePrepare
         then CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver,
-          fMySQL, nil, Self, NativeResultSet.GetMetaData)
+          FPMYSQL, nil, Self, NativeResultSet.GetMetaData)
         else CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver,
-          fMySQL, FMYSQL_STMT, Self, NativeResultSet.GetMetaData)
+          FPMYSQL, FMYSQL_STMT, Self, NativeResultSet.GetMetaData)
       else CachedResolver := nil;
       CachedResultSet := TZCachedResultSet.CreateWithColumns(NativeResultSet.ColumnsInfo,
         NativeResultSet, SQL, CachedResolver, ConSettings);
@@ -470,6 +472,16 @@ begin
   if Assigned(FOpenResultSet) and FCloseLastRS
   then IZResultSet(FOpenResultSet).Close
   else inherited PrepareOpenResultSetForReUse;
+end;
+
+procedure TZMySQLPreparedStatement.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable);
+begin
+  FPMYSQL^ := nil;
+  FMYSQL_STMT := nil;
+  FBindAgain := True;
+  FStmtIsExecuted := False;
+  inherited ReleaseImmediat(Sender);
 end;
 
 const EnumBool: array[Boolean] of PAnsiChar = ('N','Y');
@@ -920,12 +932,12 @@ begin
       if FPlainDriver.mysql_stmt_attr_set517up(FMYSQL_STMT, STMT_ATTR_ARRAY_SIZE, @array_size) <> 0 then
         checkMySQLPrepStmtError (FPlainDriver, FMYSQL_STMT, lcPrepStmt,
           ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
-          ConSettings^.ClientCodePage^.CP), ConSettings);
+          ConSettings^.ClientCodePage^.CP), Self);
     end;
     if (FPlainDriver.mysql_stmt_bind_param(FMYSQL_STMT, Pointer(FMYSQL_BINDs)) <> 0) then
       checkMySQLPrepStmtError (FPlainDriver, FMYSQL_STMT, lcPrepStmt,
         ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
-        ConSettings^.ClientCodePage^.CP), ConSettings);
+        ConSettings^.ClientCodePage^.CP), Self);
       FBindAgain := False;
   end;
   inherited BindInParameters;
@@ -946,7 +958,7 @@ begin
           if (FPlainDriver.mysql_stmt_send_long_data(FMYSQL_STMT, I, P, PieceSize) <> 0) then begin
             checkMySQLPrepStmtError (FPlainDriver, FMYSQL_STMT, lcPrepStmt,
               ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
-              ConSettings^.ClientCodePage^.CP), ConSettings);
+              ConSettings^.ClientCodePage^.CP), Self);
             exit;
           end else Inc(P, PieceSize);
           Inc(OffSet, PieceSize);
@@ -1057,15 +1069,15 @@ begin
   BindInParameters;
   if FEmulatePrepare or (FMYSQL_STMT = nil) then begin
     RSQL := ComposeRawSQLQuery;
-    if FPlainDriver.mysql_real_query(fMySQL, Pointer(RSQL), Length(RSQL)) = 0 then begin
-      if FPlainDriver.mysql_field_count(fMySQL) = 0 then
+    if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then begin
+      if FPlainDriver.mysql_field_count(FPMYSQL^) = 0 then
         if GetMoreResults
         then Result := LastResultSet
         else raise EZSQLException.Create(SCanNotOpenResultSet)
       else Result := CreateResultSet(SQL);
       FOpenResultSet := Pointer(Result);
     end else
-      CheckMySQLError(FPlainDriver, fMySQL, lcExecute, RSQL, ConSettings);
+      CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, RSQL, Self);
   end else if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
     FStmtIsExecuted := True;
     if FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) = 0 then
@@ -1077,7 +1089,7 @@ begin
   end else
     checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
       ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-      ConSettings^.ClientCodePage^.CP), ConSettings);
+      ConSettings^.ClientCodePage^.CP), Self);
   inherited ExecuteQueryPrepared;
   InternalRealPrepare;
 end;
@@ -1104,16 +1116,16 @@ begin
   Result := -1;
   if FEmulatePrepare or (FMYSQL_STMT = nil) then begin
     RSQL := ComposeRawSQLQuery;
-    if FPlainDriver.mysql_real_query(fMySQL, Pointer(RSQL), Length(RSQL)) = 0 then begin
+    if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then begin
       { Process queries with result sets }
-      if FPlainDriver.mysql_field_count(fMySQL) > 0 then begin
-        QueryHandle := FPlainDriver.mysql_store_result(fMySQL);
+      if FPlainDriver.mysql_field_count(FPMYSQL^) > 0 then begin
+        QueryHandle := FPlainDriver.mysql_store_result(FPMYSQL^);
         Result := FPlainDriver.mysql_num_rows(QueryHandle);
         FPlainDriver.mysql_free_result(QueryHandle);
       end else { Process regular query }
-        Result := FPlainDriver.mysql_affected_rows(fMySQL);
+        Result := FPlainDriver.mysql_affected_rows(FPMYSQL^);
     end else
-      CheckMySQLError(FPlainDriver, fMySQL, lcExecute, RSQL, ConSettings);
+      CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, RSQL, Self);
   end else begin
     if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
       FStmtIsExecuted := True;
@@ -1127,8 +1139,7 @@ begin
     end else
       checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
         ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-          ConSettings^.ClientCodePage^.CP),
-        ConSettings);
+          ConSettings^.ClientCodePage^.CP),Self);
   end;
   Inherited ExecuteUpdatePrepared;
   InternalRealPrepare;
@@ -1139,19 +1150,19 @@ var
   FQueryHandle: PZMySQLResult;
   Status: Integer;
 begin
-  if FEmulatePrepare or not FStmtIsExecuted then
+  if (FEmulatePrepare or not FStmtIsExecuted) and (FPMYSQL^ <> nil) then
     while true do begin
-      Status := FPlainDriver.mysql_next_result(fMySQL);
+      Status := FPlainDriver.mysql_next_result(FPMYSQL^);
       if Status = -1 then
         Break
-      else if (Status = 0) {and (FPlainDriver.mysql_field_count(fMySQL) > 0)} then begin
-        FQueryHandle := FPlainDriver.mysql_store_result(fMySQL);
+      else if (Status = 0) {and (FPlainDriver.mysql_field_count(FPMYSQL) > 0)} then begin
+        FQueryHandle := FPlainDriver.mysql_store_result(FPMYSQL^);
         if FQueryHandle <> nil then begin
           FPlainDriver.mysql_free_result(FQueryHandle);
           Inc(FResultsCount);
         end;
       end else if Status > 0 then begin
-        CheckMySQLError(FPlainDriver, fMySQL, lcExecute, ASQL, ConSettings);
+        CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ASQL, Self);
         Break;
       end;
     end
@@ -1165,12 +1176,12 @@ begin
         if FPlainDriver.mysql_stmt_free_result(FMYSQL_STMT) <> 0 then //MySQL allows this Mariadb is viny nilly now
           checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
           ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-            ConSettings^.ClientCodePage^.CP), ConSettings);
+            ConSettings^.ClientCodePage^.CP), Self);
         Inc(FResultsCount);
       end else if Status > 0 then begin
         checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
           ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-            ConSettings^.ClientCodePage^.CP), ConSettings);
+            ConSettings^.ClientCodePage^.CP), Self);
         Break;
       end;
 
@@ -1199,11 +1210,11 @@ begin
   BindInParameters;
   if FEmulatePrepare or (FMYSQL_STMT = nil) then begin
     RSQL := ComposeRawSQLQuery;
-    if FPlainDriver.mysql_real_query(fMySQL, Pointer(RSQL), Length(RSQL)) = 0 then begin
-      if FPlainDriver.mysql_field_count(fMySQL) > 0
+    if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then begin
+      if FPlainDriver.mysql_field_count(FPMYSQL^) > 0
       then LastResultSet := CreateResultSet(SQL)
-      else LastUpdateCount := FPlainDriver.mysql_affected_rows(fMySQL)
-    end else CheckMySQLError(FPlainDriver, fMySQL, lcExecute, RSQL, ConSettings);
+      else LastUpdateCount := FPlainDriver.mysql_affected_rows(FPMYSQL^)
+    end else CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, RSQL, Self);
   end else begin
     if FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0 then begin
       FStmtIsExecuted := True;
@@ -1212,7 +1223,7 @@ begin
       else LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
     end else checkMySQLPrepStmtError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
         ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-          ConSettings^.ClientCodePage^.CP), ConSettings);
+          ConSettings^.ClientCodePage^.CP), Self);
   end;
   Result := Assigned(LastResultSet);
   inherited ExecutePrepared;
@@ -1232,8 +1243,8 @@ function TZMySQLPreparedStatement.GetUpdateCount: Integer;
 begin
   Result := inherited GetUpdateCount;
   if FEmulatePrepare or not FStmtIsExecuted then begin
-    if (Result = -1) and Assigned(fMySQL) and (FPlainDriver.mysql_field_count(fMySQL) = 0) then begin
-      LastUpdateCount := FPlainDriver.mysql_affected_rows(fMySQL);
+    if (Result = -1) and Assigned(FPMYSQL^) and (FPlainDriver.mysql_field_count(FPMYSQL^) = 0) then begin
+      LastUpdateCount := FPlainDriver.mysql_affected_rows(FPMYSQL^);
       Result := LastUpdateCount;
     end
   end else begin
@@ -1419,10 +1430,10 @@ begin
   if ((not FInitial_emulate_prepare) or (ArrayCount > 0 )) and (FMYSQL_STMT = nil) and (TokenMatchIndex <> -1) and
      ((ArrayCount > 0 ) or (ExecutionCount = MinExecCount2Prepare)) then begin
     //we can not prepare the stmt as long results are in queue
-    if (FPlainDriver.mysql_more_results(fMySQL) = 1) then
+    if (FPlainDriver.mysql_more_results(FPMYSQL^) = 1) then
       Exit;
     if (FMYSQL_STMT = nil) then
-      FMYSQL_STMT := FPlainDriver.mysql_stmt_init(fMySQL);
+      FMYSQL_STMT := FPlainDriver.mysql_stmt_init(FPMYSQL^);
     FBindAgain := True;
     FStmtIsExecuted := False;
     FCloseLastRS := True;
@@ -1432,7 +1443,7 @@ begin
     if (FPlainDriver.mysql_stmt_prepare(FMYSQL_STMT, Pointer(ASQL), length(ASQL)) <> 0) then
       CheckMySQLPrepStmtError(FPlainDriver, FMYSQL_STMT, lcPrepStmt,
         ConvertZMsgToRaw(SFailedtoPrepareStmt,
-        ZMessages.cCodePage, ConSettings^.ClientCodePage^.CP), ConSettings);
+        ZMessages.cCodePage, ConSettings^.ClientCodePage^.CP), Self);
     //see user comment: http://dev.mysql.com/doc/refman/5.0/en/mysql-stmt-fetch.html
     //"If you want work with more than one statement simultaneously, anidated select,
     //for example, you must declare CURSOR_TYPE_READ_ONLY the statement after just prepared this.!"
@@ -1670,11 +1681,11 @@ begin
       Inc(i);
     end;
   if not (ExecQuery = '') then
-    if FPlainDriver.mysql_real_query(Self.fMySQL, Pointer(ExecQuery), Length(ExecQuery)) = 0 then begin
+    if FPlainDriver.mysql_real_query(Self.FPMYSQL^, Pointer(ExecQuery), Length(ExecQuery)) = 0 then begin
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcBindPrepStmt, ConSettings^.Protocol, ExecQuery)
     end else
-      CheckMySQLError(FPlainDriver, fMySQL, lcExecute, ExecQuery, ConSettings);
+      CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ExecQuery, Self);
 end;
 
 {**
@@ -1687,12 +1698,12 @@ var
   NativeResultSet: TZMySQL_Store_ResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
-  NativeResultSet := TZMySQL_Store_ResultSet.Create(FPlainDriver, Self, SQL, fMySQL,
+  NativeResultSet := TZMySQL_Store_ResultSet.Create(FPlainDriver, Self, SQL, FPMYSQL,
     @LastUpdateCount, FOpenCursorCallback);
   if (GetResultSetConcurrency <> rcReadOnly) or (FUseResult
     and (GetResultSetType <> rtForwardOnly)) or (not IsFunction) then
   begin
-    CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, fMySQL, nil,
+    CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, FPMYSQL, nil,
       Self,
       NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
@@ -1749,7 +1760,7 @@ constructor TZMySQLCallableStatement.Create(const Connection: IZMySQLConnection;
   const SQL: string; const Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
-  fMySQL := Connection.GetConnectionHandle;
+  FPMYSQL := Connection.GetConnectionHandle;
   FPlainDriver := TZMySQLPlainDriver(Connection.GetIZPlainDriver.GetInstance);
   ResultSetType := rtScrollInsensitive;
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, DSProps_UseResult, 'false'));
@@ -1766,26 +1777,26 @@ function TZMySQLCallableStatement.ExecuteQuery(const SQL: RawByteString): IZResu
 begin
   Result := nil;
   ASQL := SQL;
-  if FPlainDriver.mysql_real_query(fMySQL, Pointer(ASQL), Length(ASQL)) = 0 then begin
+  if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(ASQL), Length(ASQL)) = 0 then begin
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-    if FPlainDriver.mysql_field_count(fMySQL) = 0 then
+    if FPlainDriver.mysql_field_count(FPMYSQL^) = 0 then
       raise EZSQLException.Create(SCanNotOpenResultSet);
     if IsFunction then
       ClearResultSets;
     FResultSets.Add(CreateResultSet(Self.SQL));
-    if FPlainDriver.mysql_more_results(fMySQL) = 1 then begin
-      while FPlainDriver.mysql_next_result(fMySQL) = 0 do
-        if FPlainDriver.mysql_more_results(fMySQL) = 1 then
+    if FPlainDriver.mysql_more_results(FPMYSQL^) = 1 then begin
+      while FPlainDriver.mysql_next_result(FPMYSQL^) = 0 do
+        if FPlainDriver.mysql_more_results(FPMYSQL^) = 1 then
           FResultSets.Add(CreateResultSet(Self.SQL))
         else break;
-      CheckMySQLError(FPlainDriver, fMySQL, lcExecute, ASQL, ConSettings);
+      CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ASQL, Self);
     end;
     FActiveResultset := FResultSets.Count-1;
     Result := IZResultSet(FResultSets[FActiveResultset]);
   end
   else
-    CheckMySQLError(FPlainDriver, fMySQL, lcExecute, ASQL, ConSettings);
+    CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ASQL, Self);
 end;
 
 {**
@@ -1803,22 +1814,22 @@ function TZMySQLCallableStatement.ExecuteUpdate(const SQL: RawByteString): Integ
 begin
   Result := -1;
   ASQL := SQL;
-  if FPlainDriver.mysql_real_query(fMySQL, Pointer(ASQL), Length(ASQL)) = 0 then
+  if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(ASQL), Length(ASQL)) = 0 then
   begin
     { Process queries with result sets }
-    if FPlainDriver.mysql_field_count(fMySQL) > 0 then begin
+    if FPlainDriver.mysql_field_count(FPMYSQL^) > 0 then begin
       ClearResultSets;
       FActiveResultset := 0;
       FResultSets.Add(CreateResultSet(Self.SQL));
-      if FPlainDriver.mysql_more_results(fMySQL) = 1 then begin
+      if FPlainDriver.mysql_more_results(FPMYSQL^) = 1 then begin
         Result := LastUpdateCount;
-        while FPlainDriver.mysql_next_result(fMySQL) = 0 do
-          if FPlainDriver.mysql_more_results(fMySQL) = 1 then begin
+        while FPlainDriver.mysql_next_result(FPMYSQL^) = 0 do
+          if FPlainDriver.mysql_more_results(FPMYSQL^) = 1 then begin
             FResultSets.Add(CreateResultSet(Self.SQL));
             inc(Result, LastUpdateCount); //LastUpdateCount will be returned from ResultSet.Open
           end
           else break;
-        CheckMySQLError(FPlainDriver, fMySQL, lcExecute, ASQL, ConSettings);
+        CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ASQL, Self);
       end
       else
         Result := LastUpdateCount;
@@ -1826,10 +1837,10 @@ begin
       LastResultSet := IZResultSet(FResultSets[FActiveResultset]);
     end
     else { Process regular query }
-      Result := FPlainDriver.mysql_affected_rows(fMySQL);
+      Result := FPlainDriver.mysql_affected_rows(FPMYSQL^);
   end
   else
-    CheckMySQLError(FPlainDriver, fMySQL, lcExecute, ASQL, ConSettings);
+    CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ASQL, Self);
   LastUpdateCount := Result;
 end;
 
@@ -1857,17 +1868,17 @@ function TZMySQLCallableStatement.Execute(const SQL: RawByteString): Boolean;
 begin
   Result := False;
   ASQL := SQL;
-  if FPlainDriver.mysql_real_query(fMySQL, Pointer(ASQL), Length(ASQL)) = 0 then begin
+  if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(ASQL), Length(ASQL)) = 0 then begin
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     { Process queries with result sets }
-    if FPlainDriver.mysql_field_count(fMySQL) > 0 then begin
+    if FPlainDriver.mysql_field_count(FPMYSQL^) > 0 then begin
       Result := True;
       LastResultSet := CreateResultSet(Self.SQL);
     end else { Processes regular query. }
-      LastUpdateCount := FPlainDriver.mysql_affected_rows(fMySQL);
+      LastUpdateCount := FPlainDriver.mysql_affected_rows(FPMYSQL^);
   end else
-    CheckMySQLError(FPlainDriver, fMySQL, lcExecute, ASQL, ConSettings);
+    CheckMySQLError(FPlainDriver, FPMYSQL^, lcExecute, ASQL, Self);
 end;
 
 {**
