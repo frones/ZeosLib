@@ -125,7 +125,6 @@ type
     procedure Unprepare; override;
     procedure Close; override;
 
-    procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); override;
     procedure SetDataArray(ParameterIndex: Integer; const Value;
       const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
 
@@ -154,6 +153,10 @@ implementation
 uses Math, DateUtils,
   ZSysUtils, ZMessages, ZEncoding, ZDbcUtils, ZDbcResultSet, ZFastCode, ZDbcLogging,
   ZDbcODBCUtils, ZDbcODBCResultSet, ZDbcCachedResultSet, ZDbcGenericResolver;
+
+{$IFOPT R+}
+  {$DEFINE RangeCheckEnabled}
+{$ENDIF}
 
 const
   NullInd: array[Boolean] of SQLLEN = (SQL_NO_NULLS, SQL_NULL_DATA);
@@ -691,9 +694,83 @@ begin
             end;
             Param.ValueCount := fCurrentIterations;
             if Assigned(Value.VArray.VIsNullArray) then
-              for J := fArrayOffSet to fCurrentIterations -1 do begin
-                PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TBooleanDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]];
-                Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+              case TZSQLType(Value.VArray.VIsNullArrayType) of
+                stBoolean: for J := fArrayOffSet to fCurrentIterations -1 do begin
+                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TBooleanDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]];
+                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                  end;
+                stByte: for J := fArrayOffSet to fCurrentIterations -1 do begin
+                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TByteDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
+                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                  end;
+                stShort: for J := fArrayOffSet to fCurrentIterations -1 do begin
+                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TShortIntDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
+                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                  end;
+                stWord: for J := fArrayOffSet to fCurrentIterations -1 do begin
+                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TWordDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
+                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                  end;
+                stSmall: for J := fArrayOffSet to fCurrentIterations -1 do begin
+                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TSmallIntDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
+                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                  end;
+                stInteger: for J := fArrayOffSet to fCurrentIterations -1 do begin
+                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TIntegerDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
+                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                  end;
+                stLongWord: for J := fArrayOffSet to fCurrentIterations -1 do begin
+                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TLongwordDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
+                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                  end;
+                stLong: for J := fArrayOffSet to fCurrentIterations -1 do begin
+                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TInt64DynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
+                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                  end;
+                stULong: for J := fArrayOffSet to fCurrentIterations -1 do begin
+                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TUInt64DynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
+                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                  end;
+                stFloat: for J := fArrayOffSet to fCurrentIterations -1 do begin
+                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TSingleDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
+                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                  end;
+                stDouble: for J := fArrayOffSet to fCurrentIterations -1 do begin
+                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TDoubleDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
+                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                  end;
+                stBigDecimal: for J := fArrayOffSet to fCurrentIterations -1 do begin
+                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TExtendedDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
+                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                  end;
+                stTime, stDate, stTimeStamp: for J := fArrayOffSet to fCurrentIterations -1 do begin
+                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TDateTimeDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
+                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                  end;
+                stString, stUnicodeString:
+                    case Value.VArray.VIsNullArrayVariantType of
+                      {$IFNDEF UNICODE} vtString, {$ENDIF}
+                      vtAnsiString, vtUTF8String, vtRawByteString:
+                        for J := fArrayOffSet to fCurrentIterations -1 do begin
+                          PSQLLEN(StrLen_or_IndPtr)^ := NullInd[StrToBoolEx(TRawByteStringDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet])];
+                          Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                        end;
+                      {$IFDEF UNICODE} vtString, {$ENDIF}
+                      vtUnicodeString:
+                        for J := fArrayOffSet to fCurrentIterations -1 do begin
+                          PSQLLEN(StrLen_or_IndPtr)^ := NullInd[StrToBoolEx(TUnicodeStringDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet])];
+                          Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                        end;
+                      vtCharRec:
+                        for J := fArrayOffSet to fCurrentIterations -1 do begin
+                          if ZCompatibleCodePages(TZCharRecDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet].CP, zCP_UTF16)
+                          then PSQLLEN(StrLen_or_IndPtr)^ := NullInd[StrToBoolEx(PWideChar(TZCharRecDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet].P))]
+                          else PSQLLEN(StrLen_or_IndPtr)^ := NullInd[StrToBoolEx(PAnsiChar(TZCharRecDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet].P))];
+                          Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
+                        end;
+                      else
+                        raise EZSQLException.Create(sUnsupportedOperation);
+                    end;
               end
             else if Assigned(Value.VArray.VArray) then
               FillChar(StrLen_or_IndPtr^, fCurrentIterations*SizeOf(SQLLEN), #0) { fast not null indcator.. }
@@ -1885,7 +1962,9 @@ begin
     if RetCode <> SQL_NEED_DATA then break;
     Assert(Assigned(ValuePtr), 'wrong descriptor token');
     PRowIndex := {%H-}Pointer({%H-}NativeUInt(ValuePtr)+LobArrayIndexOffSet);
-    TempBlob := PLobArray(PPointer(ValuePtr)^)[PRowIndex^] as IZBlob; //note ValuePtr is a user defined token we also could use the columnNumber on binding the column -> this is faster
+    {$R-}
+    TempBlob := PLobArray(PPointer(ValuePtr)^)^[PRowIndex^] as IZBlob; //note ValuePtr is a user defined token we also could use the columnNumber on binding the column -> this is faster
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     if (TempBlob = nil) or TempBlob.IsEmpty then begin
       CheckStmtError(fPlainDriver.PutData(fHSTMT, nil, SQL_NULL_DATA)); //set to null
     end else begin
@@ -2018,15 +2097,6 @@ procedure TZAbstractODBCStatement.SetMoreResultsIndicator(
   Value: TZMoreResultsIndicator);
 begin
   fMoreResultsIndicator := Value;
-end;
-
-procedure TZAbstractODBCStatement.SetNullArray(ParameterIndex: Integer;
-  const SQLType: TZSQLType; const Value; const VariantType: TZVariantType);
-begin
-  if Assigned(Pointer(Value)) and (SQLType <> stBoolean) then
-    raise EZSQLException.Create('Unsupported Null-Indicator Array: supported is stBoolean')
-  else
-    inherited SetNullArray(ParameterIndex, SQLType, Value, VariantType);
 end;
 
 function TZAbstractODBCStatement.SupportsSingleColumnArrays: Boolean;

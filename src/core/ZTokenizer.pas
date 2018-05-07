@@ -1344,8 +1344,7 @@ begin
         and (toUnifyNumbers in Options) then
         Token.TokenType := ttNumber;
       { If an integer is immediately followed by a string they should be seen as one string}
-      if ((Token.TokenType = ttWord)and(LastTokenType = ttInteger)) then
-      begin
+      if (Token.TokenType = ttWord) and (LastTokenType = ttInteger) then begin
         Token.Value := Result[Result.Count-1] + Token.Value;
         Result.Delete(Result.Count-1);
       end;

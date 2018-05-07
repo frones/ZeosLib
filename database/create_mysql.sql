@@ -216,7 +216,7 @@ primary key (cs_id)
 /*==============================================================*/
 create table high_load (
 hl_id		      INTEGER NOT NULL,
-stBoolean             ENUM('Y','N'),
+stBoolean             BIT(1),
 stByte                TINYINT UNSIGNED,
 stShort               SMALLINT,
 stInteger             INTEGER,

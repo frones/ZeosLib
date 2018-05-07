@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZSqlTestCase,
-  ZCompatibility;
+  ZCompatibility, Types;
 
 type
   {** Implements a test case for . }
@@ -65,8 +65,6 @@ type
   { TZGenericTestDbcResultSet }
 
   TZGenericTestDbcResultSet = class(TZAbstractDbcSQLTestCase)
-  private
-  protected
   published
     procedure TestConnection;
     procedure TestCommitBehavior;
@@ -83,11 +81,54 @@ type
     procedure TestStringToSignedIntegerConversions;
     procedure TestStringToUnsignedIntegerConversions;
     procedure TestAfterLast;
+    procedure TestQuestionMarks;
+  end;
+
+  TZGenericTestDbcArrayBindings = class(TZAbstractDbcSQLTestCase)
+  private
+    hl_idArray: TIntegerDynArray;
+    stBooleanArray: TBooleanDynArray;
+    stByteArray: TByteDynArray;
+    stShortArray: TShortIntDynArray;
+    stLongArray: TInt64DynArray;
+    stIntegerArray: TIntegerDynArray;
+    stFloatArray: TSingleDynArray;
+    stDoubleArray: TDoubleDynArray;
+    stBigDecimalArray: TExtendedDynArray;
+    stStringArray: TRawByteStringDynArray;
+    stUnicodeStringArray: TUnicodeStringDynArray;
+    stBytesArray: TBytesDynArray;
+    stDateArray: TDateTimeDynArray;
+    stTimeArray: TDateTimeDynArray;
+    stTimeStampArray: TDateTimeDynArray;
+    stGUIDArray: TGUIDDynArray;
+    stAsciiStreamArray: TZCharRecDynArray;
+    stUnicodeStreamArray: TUTF8StringDynArray;
+    stBinaryStreamArray: TInterfaceDynArray;
+    stBooleanNullArray: array of TBooleanDynArray;
+    stByteNullArray: array of TByteDynArray;
+    stShortNullArray: array of TShortIntDynArray;
+    stWordNullArray: array of TWordDynArray;
+    stSmallNullArray: array of TSmallIntDynArray;
+    stLongWordNullArray: array of TLongWordDynArray;
+    stIntegerNullArray: array of TIntegerDynArray;
+    stULongNullArray: array of TUInt64DynArray;
+    stLongNullArray: array of TInt64DynArray;
+    stFloatNullArray: array of TSingleDynArray;
+    stDoubleNullArray: array of TDoubleDynArray;
+    stCurrencyNullArray: array of TCurrencyDynArray;
+    stBigDecimalNullArray: array of TExtendedDynArray;
+    stStringNullArray: array of TRawByteStringDynArray;
+    stUnicodeStringNullArray: array of TUnicodeStringDynArray;
+    procedure InternalTestArrayBinding(PStatement: IZPreparedStatement;
+      FirstID, ArrayLen, LastFieldIndex: Integer);
+  published
+    procedure TestArrayBindings;
   end;
 
 implementation
 
-uses ZSysUtils, ZTestConsts, ZFastCode, Types, ZVariant;
+uses ZSysUtils, ZTestConsts, ZFastCode, ZVariant, ZDbcResultSet, StrUtils;
 
 { TZGenericTestDbcResultSet }
 procedure TZGenericTestDbcResultSet.TestAfterLast;
@@ -590,6 +631,23 @@ begin
   end;
 end;
 
+//see: http://zeoslib.sourceforge.net/viewtopic.php?f=38&p=95669#p95669
+procedure TZGenericTestDbcResultSet.TestQuestionMarks;
+var Stmt: IZPreparedStatement;
+begin
+  Stmt := Connection.PrepareStatement(
+    '/*?? do we find these ?question-marks? as parameter ? */'+
+    'select * from people where p_id > ?'+LineEnding+
+    '/* ? and those marks? Are they ignored too?'+LineEnding+
+    '? Are they ignored on a multi-line comment as well?*/'+LineEnding+
+    '-- ? and those marks? Are they ignored too? On a single line comment?');
+  Stmt.SetInt(FirstDbcIndex, 1);
+  with stmt.ExecuteQueryPrepared do begin
+    Next;
+    Close;
+  end;
+  Stmt.Close;
+end;
 
 {**
   Checks functionality execute statement
@@ -1585,7 +1643,327 @@ begin
   end;
 end;
 
+{ TZGenericTestDbcArrayBindings }
+
+const
+  hl_id_Index           = FirstDbcIndex;
+  stBooleanArray_Index  = FirstDbcIndex+1;
+  stByte_Index          = FirstDbcIndex+2;
+  stShort_Index         = FirstDbcIndex+3;
+  stInteger_Index       = FirstDbcIndex+4;
+  stLong_Index          = FirstDbcIndex+5;
+  stFloat_Index         = FirstDbcIndex+6;
+  stDouble_Index        = FirstDbcIndex+7;
+  stBigDecimal_Index    = FirstDbcIndex+8;
+  stString_Index        = FirstDbcIndex+9;
+  stUnicode_Index       = FirstDbcIndex+10;
+  stBytes_Index         = FirstDbcIndex+11;
+  stDate_Index          = FirstDbcIndex+12;
+  stTime_Index          = FirstDbcIndex+13;
+  stTimeStamp_Index     = FirstDbcIndex+14;
+  stGUID_Index          = FirstDbcIndex+15;
+  stAsciiStream_Index   = FirstDbcIndex+16;
+  stUnicodeStream_Index = FirstDbcIndex+17;
+  stBinaryStream_Index  = FirstDbcIndex+18;
+{$WARNINGS OFF}
+procedure TZGenericTestDbcArrayBindings.InternalTestArrayBinding(
+  PStatement: IZPreparedStatement; FirstID, ArrayLen, LastFieldIndex: Integer);
+var
+  I, J: Integer;
+
+  procedure PrepareSomeData;
+  var I: Integer;
+  begin
+    SetLength(hl_idArray, ArrayLen);
+    SetLength(stBooleanArray, ArrayLen);
+    SetLength(stByteArray, ArrayLen);
+    SetLength(stShortArray, ArrayLen);
+    SetLength(stLongArray, ArrayLen);
+    SetLength(stIntegerArray, ArrayLen);
+    SetLength(stFloatArray, ArrayLen);
+    SetLength(stDoubleArray, ArrayLen);
+    SetLength(stBigDecimalArray, ArrayLen);
+    SetLength(stStringArray, ArrayLen);
+    SetLength(stUnicodeStringArray, ArrayLen);
+    SetLength(stBytesArray, ArrayLen);
+    SetLength(stDateArray, ArrayLen);
+    SetLength(stTimeArray, ArrayLen);
+    SetLength(stTimeStampArray, ArrayLen);
+    SetLength(stGUIDArray, ArrayLen);
+    SetLength(stAsciiStreamArray, ArrayLen);
+    SetLength(stUnicodeStreamArray, ArrayLen);
+    SetLength(stBinaryStreamArray, ArrayLen);
+    for i := 0 to ArrayLen-1 do
+    begin
+      hl_idArray[i] := FirstID+I;
+      stBooleanArray[i] := Boolean(Random(1));
+      stByteArray[i] := Random(255);
+      stShortArray[i] := I;
+      stLongArray[I] := I;
+      stIntegerArray[I] := I;
+      stFloatArray[i] := RandomFloat(-5000, 5000);
+      stDoubleArray[i] := RandomFloat(-5000, 5000);
+      stBigDecimalArray[i] := RandomFloat(-5000, 5000);
+      stStringArray[i] := RandomStr(Random(99)+1);
+      stUnicodeStringArray[i] := RandomStr(Random(254+1));
+      stBytesArray[i] := RandomBts(ArrayLen);
+      stDateArray[i] := Trunc(Now);
+      stTimeArray[i] := Frac(Now);
+      stTimeStampArray[i] := Now;
+      stGUIDArray[i] := RandomGUID;
+      stAsciiStreamArray[i].Len := Length(stStringArray[i]);
+      stAsciiStreamArray[i].P := Pointer(stStringArray[i]);
+      stAsciiStreamArray[i].CP := Connection.GetConSettings^.ClientCodePage^.CP; {safe we're passing ASCII7 only to the raws}
+      stUnicodeStreamArray[i] := RandomStr(MaxPerformanceLobSize);
+      stBinaryStreamArray[i] := TZAbstractBlob.Create;
+      (stBinaryStreamArray[i] as IZBlob).SetBytes(RandomBts(MaxPerformanceLobSize));
+    end;
+  end;
+begin
+  CheckNotNull(PStatement);
+  PrepareSomeData;
+  PStatement.SetDataArray(hl_id_Index, hl_idArray, stInteger);
+  if LastFieldIndex >= stBooleanArray_Index then
+    PStatement.SetDataArray(stBooleanArray_Index, stBooleanArray, stBoolean);
+  if LastFieldIndex >= stByte_Index then
+    PStatement.SetDataArray(stByte_Index, stByteArray, stByte);
+  if LastFieldIndex >= stShort_Index then
+    PStatement.SetDataArray(stShort_Index, stShortArray, stShort);
+  if LastFieldIndex >= stInteger_Index then
+    PStatement.SetDataArray(stInteger_Index, stIntegerArray, stInteger);
+  if LastFieldIndex >= stLong_Index then
+    PStatement.SetDataArray(stLong_Index, stLongArray, stLong);
+  if LastFieldIndex >= stFloat_Index then
+    PStatement.SetDataArray(stFloat_Index, stFloatArray, stFloat);
+  if LastFieldIndex >= stDouble_Index then
+    PStatement.SetDataArray(stDouble_Index, stDoubleArray, stDouble);
+  if LastFieldIndex >= stBigDecimal_Index then
+    PStatement.SetDataArray(stBigDecimal_Index, stBigDecimalArray, stBigDecimal);
+  if LastFieldIndex >= stString_Index then
+    PStatement.SetDataArray(stString_Index, stStringArray, stString, vtRawByteString);
+  if LastFieldIndex >= stUnicode_Index then
+    PStatement.SetDataArray(stUnicode_Index, stUnicodeStringArray, stUnicodeString, vtUnicodeString);
+  if LastFieldIndex >= stBytes_Index then
+    PStatement.SetDataArray(stBytes_Index, stBytesArray, stBytes);
+  if LastFieldIndex >= stDate_Index then
+    PStatement.SetDataArray(stDate_Index, stDateArray, stDate);
+  if LastFieldIndex >= stTime_Index then
+    PStatement.SetDataArray(stTime_Index, stTimeArray, stTime);
+  if LastFieldIndex >= stTimeStamp_Index then
+    PStatement.SetDataArray(stTimeStamp_Index, stTimeStampArray, stTimeStamp);
+  if LastFieldIndex >= stGUID_Index then
+    PStatement.SetDataArray(stGUID_Index, stGUIDArray, stGUID);
+  if LastFieldIndex >= stAsciiStream_Index then
+    PStatement.SetDataArray(stAsciiStream_Index, stAsciiStreamArray, stString, vtCharRec);
+  if LastFieldIndex >= stUnicodeStream_Index then
+    PStatement.SetDataArray(stUnicodeStream_Index, stUnicodeStreamArray, stString, vtUTF8String);
+  if LastFieldIndex >= stBinaryStream_Index then
+    PStatement.SetDataArray(stBinaryStream_Index, stBinaryStreamArray, stBinaryStream);
+
+  for i := stBooleanArray_Index to LastFieldIndex do begin
+    Randomize;
+    case TZSQLType(Random(14)+1) of
+      stBoolean:
+        begin
+          SetLength(stBooleanNullArray, Length(stBooleanNullArray) +1);
+          SetLength(stBooleanNullArray[High(stBooleanNullArray)], ArrayLen);
+          for J := 0 to ArrayLen-1 do
+            stBooleanNullArray[High(stBooleanNullArray)][J] := Boolean(Random(1));
+          PStatement.SetNullArray(I, stBoolean, stBooleanNullArray[High(stBooleanNullArray)]);
+        end;
+      stByte:
+        begin
+          SetLength(stByteNullArray, Length(stByteNullArray)+1);
+          SetLength(stByteNullArray[High(stByteNullArray)], ArrayLen);
+          for J := 0 to ArrayLen-1 do
+            stByteNullArray[High(stByteNullArray)][J] := Random(2);
+          PStatement.SetNullArray(I, stByte, stByteNullArray[High(stByteNullArray)]);
+        end;
+      stShort:
+        begin
+          SetLength(stShortNullArray, Length(stShortNullArray)+1);
+          SetLength(stShortNullArray[High(stShortNullArray)], ArrayLen);
+          for J := 0 to ArrayLen-1 do
+            stShortNullArray[High(stShortNullArray)][J] := Random(2);
+          PStatement.SetNullArray(I, stShort, stShortNullArray[High(stShortNullArray)]);
+        end;
+      stWord:
+        begin
+          SetLength(stWordNullArray, Length(stWordNullArray)+1);
+          SetLength(stWordNullArray[High(stWordNullArray)], ArrayLen);
+          for J := 0 to ArrayLen-1 do
+            stWordNullArray[High(stWordNullArray)][J] := Random(2);
+          PStatement.SetNullArray(I, stWord, stWordNullArray[High(stWordNullArray)]);
+        end;
+      stSmall:
+        begin
+          SetLength(stSmallNullArray, Length(stSmallNullArray)+1);
+          SetLength(stSmallNullArray[High(stSmallNullArray)], ArrayLen);
+          for J := 0 to ArrayLen-1 do
+            stSmallNullArray[High(stSmallNullArray)][J] := -Random(2);
+          PStatement.SetNullArray(I, stSmall, stSmallNullArray[High(stSmallNullArray)]);
+        end;
+      stLongWord:
+        begin
+          SetLength(stLongWordNullArray, Length(stLongWordNullArray)+1);
+          SetLength(stLongWordNullArray[High(stLongWordNullArray)], ArrayLen);
+          for J := 0 to ArrayLen-1 do
+            stLongWordNullArray[High(stLongWordNullArray)][J] := Random(2);
+          PStatement.SetNullArray(I, stLongWord, stLongWordNullArray[High(stLongWordNullArray)]);
+        end;
+      stInteger:
+        begin
+          SetLength(stIntegerNullArray, Length(stIntegerNullArray)+1);
+          SetLength(stIntegerNullArray[High(stIntegerNullArray)], ArrayLen);
+          for J := 0 to ArrayLen-1 do
+            stIntegerNullArray[High(stIntegerNullArray)][J] := Random(2);
+          PStatement.SetNullArray(I, stInteger, stIntegerNullArray[High(stIntegerNullArray)]);
+        end;
+      stULong:
+        begin
+          SetLength(stULongNullArray, Length(stULongNullArray)+1);
+          SetLength(stULongNullArray[High(stULongNullArray)], ArrayLen);
+          for J := 0 to ArrayLen-1 do
+            stULongNullArray[High(stULongNullArray)][J] := Random(2);
+          PStatement.SetNullArray(I, stULong, stULongNullArray[High(stULongNullArray)]);
+        end;
+      stLong:
+        begin
+          SetLength(stLongNullArray, Length(stLongNullArray) +1);
+          SetLength(stLongNullArray[High(stLongNullArray)], ArrayLen);
+          for J := 0 to ArrayLen-1 do
+            stLongNullArray[High(stLongNullArray)][J] := Random(2)-1;
+          PStatement.SetNullArray(I, stLong, stLongNullArray[High(stLongNullArray)]);
+        end;
+      stFloat:
+        begin
+          SetLength(stFloatNullArray, Length(stFloatNullArray)+1);
+          SetLength(stFloatNullArray[High(stFloatNullArray)], ArrayLen);
+          for J := 0 to ArrayLen-1 do
+            stFloatNullArray[High(stFloatNullArray)][J] := Random(2)-1;
+          PStatement.SetNullArray(I, stFloat, stFloatNullArray[High(stFloatNullArray)]);
+        end;
+      stDouble:
+        begin
+          SetLength(stDoubleNullArray, Length(stDoubleNullArray)+1);
+          SetLength(stDoubleNullArray[high(stDoubleNullArray)], ArrayLen);
+          for J := 0 to ArrayLen-1 do
+            stDoubleNullArray[high(stDoubleNullArray)][J] := Random(2)-1;
+          PStatement.SetNullArray(I, stDouble, stDoubleNullArray[high(stDoubleNullArray)]);
+        end;
+      stCurrency:
+        begin
+          SetLength(stCurrencyNullArray, Length(stCurrencyNullArray)+1);
+          SetLength(stCurrencyNullArray[High(stCurrencyNullArray)], ArrayLen);
+          for J := 0 to ArrayLen-1 do
+            stCurrencyNullArray[High(stCurrencyNullArray)][J] := Random(2)-1;
+          PStatement.SetNullArray(I, stCurrency, stCurrencyNullArray[High(stCurrencyNullArray)]);
+        end;
+      stBigDecimal:
+        begin
+          SetLength(stBigDecimalNullArray, Length(stBigDecimalNullArray)+1);
+          SetLength(stBigDecimalNullArray[High(stBigDecimalNullArray)], ArrayLen);
+          for J := 0 to ArrayLen-1 do
+            stBigDecimalNullArray[High(stBigDecimalNullArray)][J] := Random(2)-1;
+          PStatement.SetNullArray(I, stBigDecimal, stBigDecimalNullArray[High(stBigDecimalNullArray)]);
+        end;
+      stUnicodeString:
+        begin
+          SetLength(stUnicodeStringNullArray, Length(stUnicodeStringNullArray)+1);
+          SetLength(stUnicodeStringNullArray[High(stUnicodeStringNullArray)], ArrayLen);
+          for J := 0 to ArrayLen-1 do
+            if Random(2) = 0 then
+              stUnicodeStringNullArray[High(stUnicodeStringNullArray)][J] := 'FALSE'
+            else
+              stUnicodeStringNullArray[High(stUnicodeStringNullArray)][J] := 'TRUE';
+          PStatement.SetNullArray(I, stUnicodeString, stUnicodeStringNullArray[High(stUnicodeStringNullArray)], vtUnicodeString);
+        end;
+      else
+        begin
+          SetLength(stStringNullArray, Length(stStringNullArray)+1);
+          SetLength(stStringNullArray[High(stStringNullArray)], ArrayLen);
+          for J := 0 to ArrayLen-1 do
+            if Random(2) = 0 then
+              stStringNullArray[High(stStringNullArray)][J] := 'FALSE'
+            else
+              stStringNullArray[High(stStringNullArray)][J] := 'TRUE';
+          PStatement.SetNullArray(I, stString, stStringNullArray[High(stStringNullArray)], vtRawByteString);
+        end;
+    end;
+  end;
+  PStatement.ExecuteUpdatePrepared;
+end;
+{$WARNINGS ON} //implizit string conversion of...
+
+const
+  LastFieldIndices: array[0..2] of Integer = (stBigDecimal_Index, stAsciiStream_Index, stBinaryStream_Index);
+  HighLoadFields: array[hl_id_Index..stBinaryStream_Index] of String = (
+    'hl_id', 'stBoolean', 'stByte', 'stShort', 'stInteger', 'stLong', ''+
+      'stFloat', 'stDouble', 'stBigDecimal', 'stString', 'stUnicodeString', 'stBytes',
+      'stDate', 'stTime', 'stTimestamp', 'stGUID', 'stAsciiStream', 'stUnicodeStream',
+      'stBinaryStream');
+procedure TZGenericTestDbcArrayBindings.TestArrayBindings;
+var
+  PStatement: IZPreparedStatement;
+  I, j: Integer;
+  SQL: String;
+begin
+  if Connection.GetMetadata.GetDatabaseInfo.SupportsArrayBindings then begin
+    for i := low(LastFieldIndices) to high(LastFieldIndices) do begin
+      Connection.CreateStatement.ExecuteUpdate('delete from high_load');
+      SQL := 'insert into high_load(';
+      for j := hl_id_Index to LastFieldIndices[i] do
+        SQL := SQL+HighLoadFields[j]+',';
+      SQL[Length(SQL)] := ')';
+      SQL := SQL + ' values ('+DupeString('?,', LastFieldIndices[i]{$IFDEF GENERIC_INDEX}+1{$ENDIF});
+      SQL[Length(SQL)] := ')';
+      PStatement := Connection.PrepareStatement(SQL);
+      CheckNotNull(PStatement);
+      InternalTestArrayBinding(PStatement, 0, 50, LastFieldIndices[i]);
+      InternalTestArrayBinding(PStatement, 50, 20, LastFieldIndices[i]);
+      InternalTestArrayBinding(PStatement, 70, 10, LastFieldIndices[i]);
+      PStatement.ClearParameters;
+      PStatement.SetInt(hl_id_Index, 81);
+      PStatement.SetBoolean(stBooleanArray_Index, stBooleanArray[Random(9)]);
+      PStatement.SetByte(stByte_Index, stByteArray[Random(9)]);
+      PStatement.SetShort(stShort_Index, stShortArray[Random(9)]);
+      PStatement.SetInt(stInteger_Index, stIntegerArray[Random(9)]);
+      PStatement.SetLong(stLong_Index, stLongArray[Random(9)]);
+      PStatement.SetFloat(stFloat_Index, stFloatArray[Random(9)]);
+      PStatement.SetDouble(stDouble_Index, stDoubleArray[Random(9)]);
+      PStatement.SetBigDecimal(stBigDecimal_Index, stBigDecimalArray[Random(9)]);
+      if LastFieldIndices[i] > stBigDecimal_Index then begin
+        PStatement.SetRawByteString(stString_Index, stStringArray[Random(9)]);
+        PStatement.SetUnicodeString(stUnicode_Index, stUnicodeStringArray[Random(9)]);
+        PStatement.SetBytes(stBytes_Index, stBytesArray[Random(9)]);
+        if LastFieldIndices[i] > stBytes_Index then begin
+          PStatement.SetDate(stDate_Index, stDateArray[Random(9)]);
+          PStatement.SetTime(stTime_Index, stTimeArray[Random(9)]);
+          PStatement.SetTimestamp(stTimeStamp_Index, stTimeStampArray[Random(9)]);
+          if LastFieldIndices[i] > stTimeStamp_Index then begin
+            PStatement.SetNull(stGUID_Index, stString);
+            PStatement.SetCharRec(stAsciiStream_Index, stAsciiStreamArray[Random(9)]);
+            if LastFieldIndices[i] > stAsciiStream_Index then begin
+              PStatement.SetUTF8String(stUnicodeStream_Index, stUnicodeStreamArray[Random(9)]);
+              PStatement.SetBlob(stBinaryStream_Index, stBinaryStream, stBinaryStreamArray[Random(9)] as IZBlob);
+            end;
+          end;
+        end;
+      end;
+      PStatement.ExecuteUpdatePrepared;
+      PStatement.ClearParameters;
+      with PStatement.ExecuteQuery('select Count(*) from high_load') do
+      begin
+        Next;
+        CheckEquals(81, GetInt(FirstDbcIndex), 'Blokinsertiation Count');
+      end;
+    end;
+  end else
+    Check(True);
+end;
+
 initialization
   RegisterTest('dbc',TZGenericTestDbcResultSet.Suite);
+  RegisterTest('dbc',TZGenericTestDbcArrayBindings.Suite);
 end.
 

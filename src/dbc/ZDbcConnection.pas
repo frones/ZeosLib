@@ -722,6 +722,7 @@ var I: Integer;
   ImmediatelyReleasable: IImmediatelyReleasable;
 begin
   fClosed := True;
+  FAutoCommit := True;
   for I := fRegisteredStatements.Count-1 downto 0 do
     If Supports(IZStatement(fRegisteredStatements[I]), IImmediatelyReleasable, ImmediatelyReleasable)
       and (Sender <> ImmediatelyReleasable) then

@@ -605,7 +605,7 @@ begin
   OracleConnection := Connection as IZOracleConnection;
   ClientVarManager := Connection.GetClientVariantManager;
   ConSettings := Connection.GetConSettings;
-  if Iteration = 1 then
+  if (Iteration = 1) and (Value.VType <> vtArray) then
   { single row execution }
   begin
     if ClientVarManager.IsNull(Value) then
@@ -1021,9 +1021,9 @@ var
   J: LongWord;
 begin
   for i := 0 to Variables^.AllocNum -1 do
+    {$R-}
     if (Variables^.Variables[i].DescriptorType > 0) and (Length(Variables^.Variables[i].Lobs) > 0) then
-      for j := 0 to Iteration -1 do
-        {$R-}
+      for j := 0 to High(Variables^.Variables[i].Lobs) do
         Variables^.Variables[i].Lobs[j] := nil;
         {$IFDEF RangeCheck} {$R+} {$ENDIF}
 end;

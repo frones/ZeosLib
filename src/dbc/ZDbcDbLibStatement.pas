@@ -651,13 +651,12 @@ begin
           if IsNCharIndex[i] then
           begin
             Params[I].CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], zCP_UTF8);
-            FPlainDriver.dbRpcParam(FHandle, nil, RetParam, Ord(tdsChar),
+            FPlainDriver.dbRpcParam(FHandle, nil, RetParam, Ord(tdsVarchar),
               -1, Max(1, Params[I].CharRec.Len), Params[I].CharRec.P);
-          end
-          else
+          end else
           begin
             Params[I].CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP);
-            FPlainDriver.dbRpcParam(FHandle, nil, RetParam, Ord(tdsChar),
+            FPlainDriver.dbRpcParam(FHandle, nil, RetParam, Ord(tdsVarchar),
               -1, Max(1, Params[I].CharRec.Len), Params[I].CharRec.P);
           end;
         stDate:

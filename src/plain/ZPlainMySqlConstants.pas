@@ -64,7 +64,7 @@ interface
 //{$A-} //pack the records!   EH: nope this is wrong!
 {$Z+} //enum to DWORD
 uses
-   ZCompatibility;
+   ZCompatibility, Types;
 
 const
 { General Declarations }
@@ -451,11 +451,22 @@ TMYSQL_CLIENT_OPTIONS =
     _type:            TMysqlFieldType; // Type of field. Se mysql_com.h for types
   end;
 
-  PMYSQL_BIND41 = ^TMYSQL_BIND41;
-  TMYSQL_BIND41 =  record
+  PMYSQL_BIND041 = ^MYSQL_BIND041;
+  MYSQL_BIND041 = record
+    length: PLongWord;              // output length pointer
+    is_null: Pmy_bool;              // Pointer to null indicators
+    buffer: PByte;                  // buffer to get/put data
+    buffer_type: TMysqlFieldType;  // buffer type
+    buffer_length: LongWord;        // buffer length
+    param_number: LongWord;         // For null count and error messages
+    long_data_used: my_bool;        // If used with mysql_send_long_data
+  end;
+
+  PMYSQL_BIND411 = ^TMYSQL_BIND411;
+  TMYSQL_BIND411 =  record
     // 4.1.22 definition
     length:           PULong;
-    is_null:          PByte;
+    is_null:          Pmy_bool;
     buffer:           Pointer;
     buffer_type:      TMysqlFieldType;
     buffer_length:    ULong;
@@ -465,19 +476,19 @@ TMYSQL_CLIENT_OPTIONS =
     internal_length:  ULong;
     param_number:     UInt;
     pack_length:      UInt;
-    is_unsigned:      Byte;
-    long_data_used:   Byte;
-    internal_is_null: Byte;
+    is_unsigned:      my_bool;
+    long_data_used:   my_bool;
+    internal_is_null: my_bool;
     store_param_func: Pointer;
     fetch_result:     Pointer;
     skip_result:      Pointer;
   end;
 
-  PMYSQL_BIND50 = ^TMYSQL_BIND50;
-  TMYSQL_BIND50 =  record
+  PMYSQL_BIND506 = ^TMYSQL_BIND506;
+  TMYSQL_BIND506 =  record
     // 5.0.67 up definition
     length:            PULong;
-    is_null:           PByte;
+    is_null:           Pmy_bool;
     buffer:            Pointer;
     error:             PByte;
     buffer_type:       TMysqlFieldType;
@@ -485,12 +496,12 @@ TMYSQL_CLIENT_OPTIONS =
     row_ptr:           PByte;
     offset:            ULong;
     length_value:      ULong;
-    param_number:      UInt;
-    pack_length:       UInt;
-    error_value:       Byte;
-    is_unsigned:       Byte;
-    long_data_used:    Byte;
-    is_null_value:     Byte;
+    param_number:      ULong;
+    pack_length:       ULong;
+    error_value:       my_bool;
+    is_unsigned:       my_bool;
+    long_data_used:    my_bool;
+    is_null_value:     my_bool;
     store_param_funct: Pointer;
     fetch_result:      Pointer;
     skip_result:       Pointer;
@@ -504,13 +515,34 @@ TMYSQL_CLIENT_OPTIONS =
     buffer:            Pointer;
     error:             Pmy_bool;
     row_ptr:           PByte;
-//^^^^^^^^^^^^^^^^^^^^^^^^^^
-//EH: maria db 10.2.7up: instead of rw_ptr the field is called "u"
-//  union {
-//    unsigned char *row_ptr;        /* for the current data position */
-//    char *indicator;               /* indicator variable */
-//} u;
-//but largest item is still a pointer!
+    store_param_funct: Pointer;
+    fetch_result:      Pointer;
+    skip_result:       Pointer;
+    buffer_length:     ULong;
+    offset:            ULong;
+    length_value:      ULong;
+    param_number:      UInt;
+    pack_length:       UInt;
+    buffer_type:       TMysqlFieldType;
+    error_value:       my_bool;
+    is_unsigned:       my_bool;
+    long_data_used:    my_bool;
+    is_null_value:     my_bool;
+    extension:         Pointer;
+  end;
+
+  PMARIADB_BIND1027 = ^TMARIADB_BIND1027;
+  TMARIADB_BIND1027 =  record
+    // MariaDB 10.2.7 up
+    length:            PULong;
+    is_null:           Pmy_bool;
+    buffer:            Pointer;
+    error:             Pmy_bool;
+    u:                 record
+                          case Boolean of
+                          False: (row_ptr: PByte);
+                          True: (indicator: PShortInt);
+                        end;
     store_param_funct: Pointer;
     fetch_result:      Pointer;
     skip_result:       Pointer;
@@ -528,6 +560,7 @@ TMYSQL_CLIENT_OPTIONS =
   end;
 
   // offsets to used MYSQL_BINDxx members. Filled by GetBindOffsets
+  PMYSQL_BINDOFFSETS = ^TMYSQL_BINDOFFSETS;
   TMYSQL_BINDOFFSETS = record
     buffer_type   :NativeUint;
     buffer_length :NativeUint;
@@ -540,7 +573,7 @@ TMYSQL_CLIENT_OPTIONS =
   end;
 
   PULongArray = ^TULongArray;
-  TULongArray = array[0..High(Byte)] of Ulong; //http://dev.mysql.com/doc/refman/4.1/en/column-count-limit.html
+  TULongArray = array[0..4095] of Ulong; //https://dev.mysql.com/doc/refman/8.0/en/column-count-limit.html
   TULongDynArray = array of ULong;
 
   Pmy_bool_array = ^Tmy_bool_array;
@@ -565,10 +598,13 @@ TMYSQL_CLIENT_OPTIONS =
     buffer_address:         PPointer; //we don't need reserved mem at all, but we need to set the address
     buffer_type_address:    PMysqlFieldType;
     buffer_length_address:  PULong; //address of result buffer length
+    length_address:         PPointer;
     length:                 TULongDynArray; //current length of our or bound data
     is_null:                Tmy_boolDynArray; //null indicators -> sadly mariadb doesn't use a array as stmt indicator
     is_unsigned_address:    Pmy_bool; //signed ordinals or not?
-    indicator:              Tmysql_indicatorDynArray; //stmt indicators for bulk bulk ops -> mariadb addresses to "u"
+    //https://mariadb.com/kb/en/library/bulk-insert-column-wise-binding/
+    indicators:             TShortIntDynArray; //stmt indicators for bulk bulk ops -> mariadb addresses to "u" and does not use the C-enum
+    indicator_address:      PPointer;
     decimals:               Integer; //count of decimal digits for rounding the doubles
     binary:                 Boolean; //binary field or not? Just for reading!
     mysql_bind:             Pointer; //Save exact address of bind for lob reading /is used also on writting 4 the lob-buffer-address
@@ -623,6 +659,9 @@ const
 
 const
     MaxBlobSize = 1000000;
+//some error codes:
+  CR_SERVER_GONE_ERROR = 2006;
+  CR_SERVER_LOST = 2013;
 
 implementation
 

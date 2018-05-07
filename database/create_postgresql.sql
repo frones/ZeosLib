@@ -231,6 +231,7 @@ stBinaryStream        BYTEA,
 primary key (hl_id)
 );
 
+DELIMITER //
 /*==============================================================*/
 /* Stored procedure: procedure1                                 */
 /*==============================================================*/
@@ -238,6 +239,7 @@ primary key (hl_id)
 CREATE FUNCTION procedure1(INT4) RETURNS integer
     AS 'SELECT 1 AS RESULT;'
     LANGUAGE SQL;
+//
 
 /*==============================================================*/
 /* Stored procedure: procedure2                                 */
@@ -251,6 +253,7 @@ BEGIN
         RETURN ref;
 END;
 ' LANGUAGE 'plpgsql';
+//
 
 /*==============================================================*/
 /* Stored procedure: ABTEST                                     */
@@ -271,6 +274,7 @@ BEGIN
 END;
 $body$
 LANGUAGE 'plpgsql';
+//
 
 /*==============================================================*/
 /* Stored procedure: proc_nonames                               */
@@ -284,6 +288,7 @@ CREATE FUNCTION proc_nonames (
 RETURNS integer AS
 'SELECT $1 + $2'
 LANGUAGE 'sql';
+//
 
 /*==============================================================*/
 /* Stored procedure: proc_onename                               */
@@ -297,6 +302,7 @@ CREATE FUNCTION proc_onename (
 RETURNS integer AS
 'SELECT $1 + $2'
 LANGUAGE 'sql';
+//
 
 /*==============================================================*/
 /* Stored procedure: proc_noout                                 */
@@ -309,6 +315,7 @@ CREATE FUNCTION proc_noout (
 RETURNS integer AS
 'SELECT $1 + $2'
 LANGUAGE 'sql';
+//
 
 /*==============================================================*/
 /* Stored procedure: proc_mixedorder                             */
@@ -321,12 +328,14 @@ CREATE FUNCTION proc_mixedorder (
 ) AS
 'SELECT $1 + $2, $1 * $2'
 LANGUAGE 'sql';
+//
 
 /*==============================================================*/
 /* Stored procedure: proc_composite                             */
 /*==============================================================*/
 
 CREATE TYPE compositetype AS (f1 integer, f2 integer);
+//
 
 CREATE FUNCTION proc_composite (
   p1 integer,
@@ -335,6 +344,7 @@ CREATE FUNCTION proc_composite (
 RETURNS compositetype AS
 'SELECT cast(($1, $2) as compositetype)'
 LANGUAGE 'sql';
+//
 
 /*==============================================================*/
 /* Stored procedure: proc_set                                   */
@@ -344,6 +354,9 @@ CREATE FUNCTION proc_set ()
 RETURNS SETOF VARCHAR AS
 'SELECT eq_name FROM equipment'
 LANGUAGE 'sql';
+//
+
+DELIMITER ;
 
 /*==============================================================*/
 /* Grant privileges to columns                                  */

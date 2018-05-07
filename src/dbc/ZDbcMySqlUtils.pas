@@ -81,17 +81,14 @@ function ConvertMySQLHandleToSQLType(MYSQL_FIELD: PMYSQL_FIELD;
 {**
   Checks for possible sql errors.
   @param PlainDriver a MySQL plain driver.
-  @param Handle a MySQL connection handle.
+  @param MYSQL_STMT a MySQL statement handle.
+  @param MYSQL a MySQL connection handle.
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
 procedure CheckMySQLError(const PlainDriver: TZMySQLPlainDriver;
-  Handle: PMySQL; LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; ConSettings: PZConSettings);
-procedure CheckMySQLPrepStmtError(const PlainDriver: TZMySQLPlainDriver;
-  Handle: PMySQL; LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; ConSettings: PZConSettings;
-  ErrorIsIgnored: PBoolean = nil; IgnoreErrorCode: Integer = 0);
+  MYSQL: PMYSQL; MYSQL_STMT: PMYSQL_STMT; LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; const ImmediatelyReleasable: IImmediatelyReleasable);
 
 procedure EnterSilentMySQLError;
 procedure LeaveSilentMySQLError;
@@ -157,11 +154,11 @@ function ReverseWordBytes(Src: Pointer): Word;
 function ReverseLongWordBytes(Src: Pointer; Len: Byte): LongWord;
 function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
 
-function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): TMYSQL_BINDOFFSETS;
+function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_BINDOFFSETS;
 
 procedure ReAllocMySQLBindBuffer(var DataBuffer: TBytes;
   var MYSQL_aligned_BINDs: TMYSQL_aligned_BINDDynArray; BindCount, BindIterations: ULong;
-  const BindOffsets: TMYSQL_BINDOFFSETS);
+  BindOffsets: PMYSQL_BINDOFFSETS);
 
 implementation
 
@@ -283,62 +280,41 @@ begin
    end;
 end;
 
-{**
-  Checks for possible sql errors.
-  @param PlainDriver a MySQL plain driver.
-  @param Handle a MySQL connection handle.
-  @param LogCategory a logging category.
-  @param LogMessage a logging message.
-}
 procedure CheckMySQLError(const PlainDriver: TZMySQLPlainDriver;
-  Handle: PMySQL; LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; ConSettings: PZConSettings);
+  MYSQL: PMYSQL; MYSQL_STMT: PMYSQL_STMT; LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; const ImmediatelyReleasable: IImmediatelyReleasable);
 var
   ErrorMessage: RawByteString;
   ErrorCode: Integer;
+  ConSettings: PZConSettings;
 begin
-  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.mysql_error(Handle));
-  ErrorCode := PlainDriver.mysql_errno(Handle);
-  if (ErrorCode <> 0) and (ErrorMessage <> '') then
-  begin
-    if SilentMySQLError > 0 then
-      raise EZMySQLSilentException.CreateFmt(SSQLError1, [ErrorMessage]);
-
-    DriverManager.LogError(LogCategory, ConSettings.Protocol, LogMessage,
-      ErrorCode, ErrorMessage);
-    raise EZSQLException.CreateWithCode(ErrorCode,
-      Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
-        ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
+  if Assigned(MYSQL_STMT) then begin
+    ErrorCode := PlainDriver.mysql_stmt_errno(MYSQL_STMT);
+    ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.mysql_stmt_error(MYSQL_STMT));
+  end else begin
+    ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.mysql_error(MYSQL));
+    ErrorCode := PlainDriver.mysql_errno(MYSQL);
   end;
-end;
-
-procedure CheckMySQLPrepStmtError(const PlainDriver: TZMySQLPlainDriver;
-  Handle: PMySQL; LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  ConSettings: PZConSettings; ErrorIsIgnored: PBoolean = nil; IgnoreErrorCode: Integer = 0);
-var
-  ErrorMessage: RawByteString;
-  ErrorCode: Integer;
-begin
-  ErrorCode := PlainDriver.mysql_stmt_errno(Handle);
-  if Assigned(ErrorIsIgnored) then
-    if (IgnoreErrorCode = ErrorCode) then
-    begin
-      ErrorIsIgnored^ := True;
-      Exit;
-    end
-    else
-      ErrorIsIgnored^ := False;
-  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.mysql_stmt_error(Handle));
-  if (ErrorCode <> 0) and (ErrorMessage <> '') then
+  if (ErrorCode <> 0) then
   begin
-    if SilentMySQLError > 0 then
-      raise EZMySQLSilentException.CreateFmt(SSQLError1, [ErrorMessage]);
-
-    DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
-      ErrorCode, ErrorMessage);
-    raise EZSQLException.CreateWithCode(ErrorCode,
+    if (ErrorMessage = '') then
+      ErrorMessage := 'unknown error';
+    ConSettings := ImmediatelyReleasable.GetConSettings;
+    if (ErrorCode = CR_SERVER_GONE_ERROR) or (ErrorCode = CR_SERVER_LOST) then begin
+      ImmediatelyReleasable.ReleaseImmediat(ImmediatelyReleasable);
+      EZSQLConnectionLost.CreateWithCode(ErrorCode,
       Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
         ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
+    end else begin
+      if SilentMySQLError > 0 then
+        raise EZMySQLSilentException.CreateFmt(SSQLError1, [ErrorMessage]);
+
+      DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
+        ErrorCode, ErrorMessage);
+      raise EZSQLException.CreateWithCode(ErrorCode,
+        Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
+          ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
+    end;
   end;
 end;
 
@@ -811,42 +787,28 @@ begin
   ReverseBytes(Src, @Result, Len);
 end;
 
-function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): TMYSQL_BINDOFFSETS;
+var
+  MARIADB_BIND1027_Offset: TMYSQL_BINDOFFSETS;
+  MYSQL_BIND51_Offset: TMYSQL_BINDOFFSETS;
+  MYSQL_BIND506_Offset: TMYSQL_BINDOFFSETS;
+  MYSQL_BIND411_Offset: TMYSQL_BINDOFFSETS;
+
+function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_BINDOFFSETS;
 begin
-  result.Indicator := 0;
-  if (Version > 50100) or IsMariaDB {they start with 100000} then begin
-    result.buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND51(nil).buffer_type));
-    result.buffer_length := {%H-}NativeUint(@(PMYSQL_BIND51(nil).buffer_length));
-    result.is_unsigned   := {%H-}NativeUint(@(PMYSQL_BIND51(nil).is_unsigned));
-    result.buffer        := {%H-}NativeUint(@(PMYSQL_BIND51(nil).buffer));
-    result.length        := {%H-}NativeUint(@(PMYSQL_BIND51(nil).length));
-    result.is_null       := {%H-}NativeUint(@(PMYSQL_BIND51(nil).is_null));
-    if IsMariaDB and (Version >= 107020) then
-      result.Indicator     := {%H-}NativeUint(@(PMYSQL_BIND51(nil).row_ptr));
-    result.size          := Sizeof(TMYSQL_BIND51);
-  end else if (Version >= 50000) and (Version <=50099) then begin
-    result.buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND50(nil).buffer_type));
-    result.buffer_length := {%H-}NativeUint(@(PMYSQL_BIND50(nil).buffer_length));
-    result.is_unsigned   := {%H-}NativeUint(@(PMYSQL_BIND50(nil).is_unsigned));
-    result.buffer        := {%H-}NativeUint(@(PMYSQL_BIND50(nil).buffer));
-    result.length        := {%H-}NativeUint(@(PMYSQL_BIND50(nil).length));
-    result.is_null       := {%H-}NativeUint(@(PMYSQL_BIND50(nil).is_null));
-    result.size          := Sizeof(TMYSQL_BIND50);
-  end else if (Version >= 40100) and (Version <=40199) then begin
-    result.buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND41(nil).buffer_type));
-    result.buffer_length := {%H-}NativeUint(@(PMYSQL_BIND41(nil).buffer_length));
-    result.is_unsigned   := {%H-}NativeUint(@(PMYSQL_BIND41(nil).is_unsigned));
-    result.buffer        := {%H-}NativeUint(@(PMYSQL_BIND41(nil).buffer));
-    result.length        := {%H-}NativeUint(@(PMYSQL_BIND41(nil).length));
-    result.is_null       := {%H-}NativeUint(@(PMYSQL_BIND41(nil).is_null));
-    result.size          := Sizeof(TMYSQL_BIND41);
-  end else
-    result.buffer_type:=0;
+  if IsMariaDB and (Version >= 100207) then
+    result := @MARIADB_BIND1027_Offset
+  else if (Version >= 50100) or IsMariaDB {they start with 100000} then
+    result := @MYSQL_BIND51_Offset
+  else if (Version >= 50006) then
+    Result := @MYSQL_BIND506_Offset
+  else if (Version >= 40101) then
+    Result := @MYSQL_BIND411_Offset
+  else Result := nil
 end;
 
 procedure ReAllocMySQLBindBuffer(var DataBuffer: TBytes;
   var MYSQL_aligned_BINDs: TMYSQL_aligned_BINDDynArray; BindCount, BindIterations: ULong;
-  const BindOffsets: TMYSQL_BINDOFFSETS);
+  BindOffsets: PMYSQL_BINDOFFSETS);
 var
   ColOffset: NativeUInt;
   Bind: PMYSQL_aligned_BIND;
@@ -859,22 +821,66 @@ begin
       Bind := @MYSQL_aligned_BINDs[I];
       ColOffset := NativeUInt(I*BindOffsets.size);
       { save mysql bind offset fo mysql_stmt_fetch_column }
-      Bind^.mysql_bind := Pointer(NativeUInt(DataBuffer)+ColOffset);
+      Bind^.mysql_bind := {%H-}Pointer(NativeUInt(DataBuffer)+ColOffset);
       { save aligned addresses }
-      bind^.buffer_address := Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.buffer);
-      Bind^.buffer_type_address := Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.buffer_type);
-      Bind^.is_unsigned_address := Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.is_unsigned);
-      Bind^.buffer_length_address := Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.buffer_length);
+      bind^.buffer_address := {%H-}Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.buffer);
+      Bind^.buffer_type_address := {%H-}Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.buffer_type);
+      Bind^.is_unsigned_address := {%H-}Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.is_unsigned);
+      Bind^.buffer_length_address := {%H-}Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.buffer_length);
+      Bind^.length_address := {%H-}Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.length);
       SetLength(Bind^.length, BindIterations);
-      PPointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.length)^ := Pointer(Bind^.length);
+      Bind^.length_address^ := Pointer(Bind^.length);
       SetLength(Bind^.is_null, BindIterations);
-      PPointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.is_null)^ := Pointer(Bind^.is_null);
+      {%H-}PPointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.is_null)^ := Pointer(Bind^.is_null);
       if BindOffsets.Indicator > 0 then begin
-        SetLength(Bind^.indicator, BindIterations);
-        PPointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.Indicator)^ := Pointer(Bind^.indicator);
+        SetLength(Bind^.indicators, BindIterations);
+        Bind^.indicator_address := {%H-}Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.Indicator);
+        Bind^.indicator_address^ := Pointer(Bind^.indicators);
       end else if BindIterations > 1 then
         raise EZSQLException.Create('Array bindings are not supported!');
     end;
 end;
+
+initialization
+  with MARIADB_BIND1027_Offset do begin
+    buffer_type   := {%H-}NativeUint(@(PMARIADB_BIND1027(nil).buffer_type));
+    buffer_length := {%H-}NativeUint(@(PMARIADB_BIND1027(nil).buffer_length));
+    is_unsigned   := {%H-}NativeUint(@(PMARIADB_BIND1027(nil).is_unsigned));
+    buffer        := {%H-}NativeUint(@(PMARIADB_BIND1027(nil).buffer));
+    length        := {%H-}NativeUint(@(PMARIADB_BIND1027(nil).length));
+    is_null       := {%H-}NativeUint(@(PMARIADB_BIND1027(nil).is_null));
+    Indicator     := {%H-}NativeUint(@(PMARIADB_BIND1027(nil).u.indicator));
+    size          := Sizeof(TMARIADB_BIND1027);
+  end;
+  with MYSQL_BIND51_Offset do begin
+    buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND51(nil).buffer_type));
+    buffer_length := {%H-}NativeUint(@(PMYSQL_BIND51(nil).buffer_length));
+    is_unsigned   := {%H-}NativeUint(@(PMYSQL_BIND51(nil).is_unsigned));
+    buffer        := {%H-}NativeUint(@(PMYSQL_BIND51(nil).buffer));
+    length        := {%H-}NativeUint(@(PMYSQL_BIND51(nil).length));
+    is_null       := {%H-}NativeUint(@(PMYSQL_BIND51(nil).is_null));
+    Indicator     := 0;
+    size          := Sizeof(TMYSQL_BIND51);
+  end;
+  with MYSQL_BIND506_Offset do begin
+    buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND506(nil).buffer_type));
+    buffer_length := {%H-}NativeUint(@(PMYSQL_BIND506(nil).buffer_length));
+    is_unsigned   := {%H-}NativeUint(@(PMYSQL_BIND506(nil).is_unsigned));
+    buffer        := {%H-}NativeUint(@(PMYSQL_BIND506(nil).buffer));
+    length        := {%H-}NativeUint(@(PMYSQL_BIND506(nil).length));
+    is_null       := {%H-}NativeUint(@(PMYSQL_BIND506(nil).is_null));
+    Indicator     := 0;
+    size          := Sizeof(PMYSQL_BIND506);
+  end;
+  with MYSQL_BIND411_Offset do begin
+    buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND411(nil).buffer_type));
+    buffer_length := {%H-}NativeUint(@(PMYSQL_BIND411(nil).buffer_length));
+    is_unsigned   := {%H-}NativeUint(@(PMYSQL_BIND411(nil).is_unsigned));
+    buffer        := {%H-}NativeUint(@(PMYSQL_BIND411(nil).buffer));
+    length        := {%H-}NativeUint(@(PMYSQL_BIND411(nil).length));
+    is_null       := {%H-}NativeUint(@(PMYSQL_BIND411(nil).is_null));
+    Indicator     := 0;
+    size          := Sizeof(TMYSQL_BIND411);
+  end;
 
 end.

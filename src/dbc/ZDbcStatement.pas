@@ -229,6 +229,8 @@ type
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
     procedure UnPrepareInParameters; virtual;
+    procedure ValidateArraySizeAndType(const Value: Pointer; SQLType: TZSQLType;
+      VariantType: TZVariantType; ParamIndex: Integer);
 
     procedure SetInParamCount(const NewParamCount: Integer); virtual;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
@@ -448,7 +450,7 @@ type
 
   TImplizitBindRealAndEmulationStatement_A = class(TZEmulatedPreparedStatement_A)
   protected
-    FEmulatePrepare, FSupportsDMLBatchArrays: Boolean;
+    FEmulatePrepare: Boolean;
     FParamEmulatedValues: TRawByteStringDynArray;
     FDefaultValues: TRawByteStringDynArray;
     fParamLobs: array of IZBlob;
@@ -470,7 +472,6 @@ type
 
     procedure InternalSetInParamCount(NewParamCount: Integer); virtual;
   protected
-    constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
     procedure SetInParamCount(const NewParamCount: Integer); override;
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -480,6 +481,9 @@ type
     procedure InternalSetDateTime(ParameterIndex: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
     function GetParamAsString(ParamIndex: Integer): RawByteString; override;
   public
+    constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
+
     procedure ClearParameters; override;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
@@ -970,8 +974,7 @@ var
   SQLTokens: TZTokenDynArray;
   i: Integer;
 begin
-  if ConSettings^.AutoEncode then
-  begin
+  if ConSettings^.AutoEncode then begin
     Result := ''; //init for FPC
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
@@ -1449,7 +1452,7 @@ constructor TZAbstractPreparedStatement.Create(const Connection: IZConnection;
 begin
   inherited Create(Connection, Info);
   FClientVariantManger := Connection.GetClientVariantManager;
-  FSupportsDMLBatchArrays := Connection.GetMetadata.GetDatabaseInfo.SupportsBatchUpdates;
+  FSupportsDMLBatchArrays := Connection.GetMetadata.GetDatabaseInfo.SupportsArrayBindings;
   //JDBC prepares after 4th execution
   FMinExecCount2Prepare := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_MinExecCntBeforePrepare, '2'), 2);
   {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
@@ -1600,6 +1603,7 @@ end;
 procedure TZAbstractPreparedStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable);
 begin
   FPrepared := False;
+  FExecCount := 0;
   inherited ReleaseImmediat(Sender);
 end;
 
@@ -1616,6 +1620,27 @@ end;
 }
 procedure TZAbstractPreparedStatement.UnPrepareInParameters;
 begin
+end;
+
+procedure TZAbstractPreparedStatement.ValidateArraySizeAndType(const Value: Pointer;
+  SQLType: TZSQLType; VariantType: TZVariantType; ParamIndex: Integer);
+var Len: ArrayLenInt;
+begin
+  if Value = nil then Exit;
+  case SQLType of
+    stUnknown: raise Exception.Create('Invalid SQLType for Array binding!');
+    stString: if not (VariantType in [vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec]) then
+          raise Exception.Create('Invalid Variant-Type for String-Array binding!');
+    stUnicodeString: if not (VariantType in [vtUnicodeString, vtCharRec]) then
+          raise Exception.Create('Invalid Variant-Type for String-Array binding!');
+    stArray, stDataSet:
+          raise Exception.Create(sUnsupportedOperation);
+  end;
+  Len := {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
+  if (ParamIndex = 0) then
+    FInitialArrayCount := Len
+  else if (FInitialArrayCount <> 0) and (Len <> FInitialArrayCount) and (SQLType <> stDataSet) then
+    raise Exception.Create('Array count does not equal with initial count!')
 end;
 
 {**
@@ -2312,6 +2337,7 @@ begin
     {$ENDIF}
     if InParamValues[ParameterIndex].VType <> vtArray then
       raise Exception.Create('No Array bound before!');
+    ValidateArraySizeAndType(Pointer(Value), SQLType, VariantType, ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
     InParamValues[ParameterIndex].VArray.VIsNullArray := Pointer(Value);
     InParamValues[ParameterIndex].VArray.VIsNullArrayType := Ord(SQLType);
     InParamValues[ParameterIndex].VArray.VIsNullArrayVariantType := VariantType;
@@ -2351,46 +2377,9 @@ procedure TZAbstractPreparedStatement.SetDataArray(ParameterIndex: Integer;
   const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
 var
   V: TZVariant;
-  {using mem entry of ZData is faster then casting and save imbelievable many codelines for all possible types!}
-  ZArray: Pointer absolute Value;
-
-  procedure AssertLength;
-  var Len: ArrayLenInt;
-  begin
-    Len := {%H-}PArrayLenInt({%H-}NativeUInt(ZArray) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
-    if (ParameterIndex = FirstDbcIndex) or ((ParameterIndex > FirstDbcIndex) and
-       (InParamValues[ParameterIndex{$IFNDEF GENERIC_INDEX} - 2{$ELSE}-1{$ENDIF}].VArray.VArray = nil))  then
-      FInitialArrayCount := Len
-    else
-      if (not SupportsSingleColumnArrays) and (Len <> FInitialArrayCount) then
-        raise Exception.Create('Array count does not equal with initial count!')
-  end;
 begin
   if FSupportsDMLBatchArrays then begin
-    if ZArray <> nil then
-      case SQLType of
-        stUnknown: raise Exception.Create('Invalid SQLType for Array binding!');
-        stBoolean, stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong,
-        stLong, stFloat, stDouble, stCurrency, stBigDecimal, stBytes, stGUID, stDate,
-        stTime, stTimestamp, stAsciiStream, stUnicodeStream, stBinaryStream:
-          AssertLength;
-        stString:
-          case VariantType of
-            vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
-              AssertLength
-            else
-              raise Exception.Create('Invalid Variant-Type for String-Array binding!');
-          end;
-        stUnicodeString:
-          case VariantType of
-            vtUnicodeString, vtCharRec:
-              AssertLength
-            else
-              raise Exception.Create('Invalid Variant-Type for String-Array binding!');
-          end;
-        stArray:          raise Exception.Create('Invalid SQL-Type for Array binding!');
-        stDataSet: ;
-      end;
+    ValidateArraySizeAndType(Pointer(Value), SQLType, VariantType, ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
     V.VType := vtArray;
     V.VArray.VArray := Pointer(Value);
     V.VArray.VArrayVariantType := VariantType;
@@ -3443,6 +3432,7 @@ end;
 procedure TImplizitBindRealAndEmulationStatement_A.ClearParameters;
 begin
   //by default do nothing here
+  FInitialArrayCount := 0;
 end;
 
 constructor TImplizitBindRealAndEmulationStatement_A.Create(
@@ -3529,6 +3519,13 @@ end;
 procedure TImplizitBindRealAndEmulationStatement_A.PrepareInParameters;
 begin
   InternalSetInParamCount(CountOfQueryParams);
+end;
+
+procedure TImplizitBindRealAndEmulationStatement_A.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable);
+begin
+  FEmulatePrepare := True;
+  inherited ReleaseImmediat(Sender);
 end;
 
 procedure TImplizitBindRealAndEmulationStatement_A.SetAnsiString(
@@ -3623,6 +3620,7 @@ begin
     {$IFNDEF GENERIC_INDEX}
     ParameterIndex := ParameterIndex - 1;
     {$ENDIF}
+    ValidateArraySizeAndType(Pointer(Value), SQLType, VariantType, ParameterIndex);
     if ParameterIndex > InParamCount-1
     then SetInParamCount(ParameterIndex+1);
 
@@ -3630,7 +3628,7 @@ begin
     ZArray^.VIsNullArray := Pointer(Value);
     ZArray^.VIsNullArrayType := ord(SQLType);
     ZArray^.VIsNullArrayVariantType := VariantType;
-    FInParamTypes[ParameterIndex] := stArray;
+//    FInParamTypes[ParameterIndex] := stArray;
   end else
     raise EZSQLException.Create(sUnsupportedOperation);
 end;
@@ -3698,6 +3696,7 @@ begin
     {$IFNDEF GENERIC_INDEX}
     ParameterIndex := ParameterIndex - 1;
     {$ENDIF}
+    ValidateArraySizeAndType(Pointer(Value), SQLType, VariantType, ParameterIndex);
     if ParameterIndex > InParamCount-1
     then SetInParamCount(ParameterIndex+1);
 

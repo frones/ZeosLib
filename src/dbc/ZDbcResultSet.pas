@@ -493,6 +493,7 @@ type
     {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
     procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal; const CodePage: Word); override;
     {$ENDIF}
+    function GetConSetting: PZConSettings;
 
     function Clone(Empty: Boolean = False): IZBLob; override;
     function IsClob: Boolean; override;
@@ -4594,6 +4595,11 @@ begin
       Result := AnsiString(UniTemp);
       InternalSetAnsiString(Result);
     end;
+end;
+
+function TZAbstractCLob.GetConSetting: PZConSettings;
+begin
+  Result := FConSettings;
 end;
 
 procedure TZAbstractCLob.SetAnsiString(Const Value: AnsiString);

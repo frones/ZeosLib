@@ -109,7 +109,6 @@ type
     FUpdateAll: Boolean;
 
     FStatements : TZHashMap;
-
   protected
     InsertStatement   : IZPreparedStatement;
     UpdateStatement   : IZPreparedStatement;
@@ -847,32 +846,36 @@ begin
   case UpdateType of
     utInserted:
       begin
-        if InsertStatement = nil then
-        begin
+        if InsertStatement = nil then begin
           SQL := FormInsertStatement(FInsertParams, NewRowAccessor);
           InsertStatement := CreateResolverStatement(SQL);
           Statement := InsertStatement;
-        end
-        else
-        begin
-          Statement := InsertStatement;
-          SQL := InsertStatement.GetSQL;
         end;
+        Statement := InsertStatement;
         SQLParams := FInsertParams;
       end;
     utDeleted:
       begin
-        SQL := FormDeleteStatement(FDeleteParams, OldRowAccessor);
-        if SQL = '' then Exit;
-        TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
-        DeleteStatement := FStatements.Get(TempKey) as IZPreparedStatement;
-        If DeleteStatement = nil then
-        begin
-          DeleteStatement := CreateResolverStatement(SQL);
-          FStatements.Put(TempKey, DeleteStatement);
+        if not FWhereAll then begin
+          If DeleteStatement = nil then begin
+            SQL := FormDeleteStatement(FDeleteParams, OldRowAccessor);
+            DeleteStatement := CreateResolverStatement(SQL);
+          end;
+          Statement := DeleteStatement;
+          SQLParams := FDeleteParams;
+        end else begin
+          FDeleteParams.Clear;  //EH: where columns propably are cached after 1. call
+          SQL := FormDeleteStatement(FDeleteParams, OldRowAccessor);
+          if SQL = '' then Exit;
+          TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
+          Statement := FStatements.Get(TempKey) as IZPreparedStatement;
+          If Statement = nil then
+          begin
+            Statement := CreateResolverStatement(SQL);
+            FStatements.Put(TempKey, Statement);
+          end;
+          SQLParams := FDeleteParams;
         end;
-        Statement := DeleteStatement;
-        SQLParams := FDeleteParams;
       end;
     utModified:
       begin
@@ -883,8 +886,7 @@ begin
         If SQL = '' then exit;// no fields have been changed
         TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
         UpdateStatement := FStatements.Get(TempKey) as IZPreparedStatement;
-        If UpdateStatement = nil then
-        begin
+        If UpdateStatement = nil then begin
           UpdateStatement := CreateResolverStatement(SQL);
           FStatements.Put(TempKey, UpdateStatement);
         end;
@@ -895,19 +897,16 @@ begin
       Exit;
   end;
 
-  if SQL <> '' then
-  begin
-    FillStatement(Statement, SQLParams, OldRowAccessor, NewRowAccessor);
-    // if Property ValidateUpdateCount isn't set : assume it's true
-    S := Sender.GetStatement.GetParameters.Values[DSProps_ValidateUpdateCount];
-    lValidateUpdateCount := (S = '') or StrToBoolEx(S);
+  FillStatement(Statement, SQLParams, OldRowAccessor, NewRowAccessor);
+  // if Property ValidateUpdateCount isn't set : assume it's true
+  S := Sender.GetStatement.GetParameters.Values[DSProps_ValidateUpdateCount];
+  lValidateUpdateCount := (S = '') or StrToBoolEx(S);
 
-    lUpdateCount := Statement.ExecuteUpdatePrepared;
-    {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
-    if  (lValidateUpdateCount) and (lUpdateCount <> 1   ) then
-      raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
-    {$ENDIF}
-  end;
+  lUpdateCount := Statement.ExecuteUpdatePrepared;
+  {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
+  if  (lValidateUpdateCount) and (lUpdateCount <> 1   ) then
+    raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
+  {$ENDIF}
 end;
 
 procedure TZGenericCachedResolver.RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);

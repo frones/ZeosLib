@@ -909,7 +909,7 @@ var
   pCurrStatus: PZIBStatus;
 begin
   if StatusSucceeded(StatusVector) then Exit;
-
+  Result := nil;
   PStatusVector := @StatusVector; StatusIdx := 0;
   repeat
     SetLength(Result, Length(Result) + 1);
@@ -942,12 +942,12 @@ begin
       isc_arg_interpreted,
       isc_arg_sql_state:
         begin
-          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, RawByteString(PAnsiChar(StatusVector[StatusIdx + 1])));
+          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, RawByteString({%H-}PAnsiChar(StatusVector[StatusIdx + 1])));
           Inc(StatusIdx, 2);
         end;
       isc_arg_cstring: // length and pointer to string
         begin
-          ZSetString(PAnsiChar(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1], s);
+          ZSetString({%H-}PAnsiChar(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1], s);
           pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, s);
           Inc(StatusIdx, 3);
         end;

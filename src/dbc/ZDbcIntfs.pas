@@ -103,6 +103,9 @@ type
   {** Generic SQL exception. }
   EZSQLException = class(EZSQLThrowable);
 
+  {** Generic connection lost exception. }
+  EZSQLConnectionLost = class(EZSQLException);
+
   {** Generic SQL warning. }
   EZSQLWarning = class(EZSQLThrowable);
 
@@ -256,6 +259,7 @@ type
   IImmediatelyReleasable = interface(IZInterface)
     ['{7AA5A5DA-5EC7-442E-85B0-CCCC71C13169}']
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable);
+    function GetConSettings: PZConSettings;
   end;
 
   {** Database Connection interface. }
@@ -1065,6 +1069,8 @@ type
     procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal; const CodePage: Word); overload;
     {$ENDIF}
   end;
+  IZLobDynArray = array of IZBLob;
+
   IZUnCachedLob = interface(IZBlob)
     ['{194F1179-9FFC-4032-B983-5EB3DD2E8B16}']
     procedure FlushBuffer;

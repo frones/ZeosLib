@@ -66,6 +66,9 @@ type
   // technobot 2008-06-26 - methods moved as is from TZMySQLDatabaseMetadata:
   {** Implements MySQL Database Information. }
   TZMySQLDatabaseInfo = class(TZAbstractDatabaseInfo)
+  private
+    fClientVersion: Integer;
+    fIsMariaDB: Boolean;
   protected
     procedure GetVersion(var MajorVersion, MinorVersion: integer);
   public
@@ -144,7 +147,7 @@ type
 //    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override; -> Not implemented
 //    function SupportsResultSetConcurrency(_Type: TZResultSetType;
 //      Concurrency: TZResultSetConcurrency): Boolean; override; -> Not implemented
-//    function SupportsBatchUpdates: Boolean; override; -> Not implemented
+    function SupportsArrayBindings: Boolean; override;
     function SupportsMilliSeconds: Boolean; override;
 
     // maxima:
@@ -215,7 +218,9 @@ type
     FInfo: TStrings;
     FMySQL_FieldType_Bit_1_IsBoolean: Boolean;
     FBoolCachedResultSets: IZCollection;
+    Flower_case_table_names: SmallInt;
   protected
+    function lower_case_table_names: Boolean;
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-26
 
     procedure GetCatalogAndNamePattern(const Catalog, SchemaPattern,
@@ -270,8 +275,8 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
-  ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZDbcMySql, ZCollections,
-  ZDbcProperties;
+  ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZCollections,
+  ZDbcProperties, ZPlainMySqlDriver;
 
 { TZMySQLDatabaseInfo }
 
@@ -564,6 +569,16 @@ end;
 function TZMySQLDatabaseInfo.GetCatalogTerm: string;
 begin
   Result := 'Database';
+end;
+
+function TZMySQLDatabaseInfo.SupportsArrayBindings: Boolean;
+begin
+  if fClientVersion = 0 then
+    with TZMySQLPlainDriver(Metadata.GetConnection.GetIZPlainDriver.GetInstance) do begin
+    fClientVersion := mysql_get_client_version;
+    fIsMariaDB := IsMariaDBDriver;
+  end;
+  Result := fIsMariaDB and (fClientVersion >= 100207);
 end;
 
 {**
@@ -946,6 +961,7 @@ begin
 
   FInfo.Values[DSProps_UseResult] := 'True';
   FBoolCachedResultSets := TZCollection.Create;
+  Flower_case_table_names := -1;
 end;
 
 {**
@@ -984,6 +1000,17 @@ begin
     OutNamePattern := '%'
   else
     OutNamePattern := NormalizePatternCase(NamePattern);
+end;
+
+function TZMySQLDatabaseMetadata.lower_case_table_names: Boolean;
+begin
+  if Flower_case_table_names = -1 then
+    with GetConnection.CreateStatement.ExecuteQuery('show variables like ''lower_case_table_names''') do begin
+      Next;
+      Flower_case_table_names := GetByte(FirstDBCIndex);
+      Close;
+    end;
+  Result := not (Flower_case_table_names > 0);
 end;
 
 procedure TZMySQLDatabaseMetadata.SetDataBaseName(const Value: String);
@@ -1046,6 +1073,8 @@ begin
 
     GetCatalogAndNamePattern(Catalog, SchemaPattern, TableNamePattern,
       LCatalog, LTableNamePattern);
+    if lower_case_table_names then
+      LTableNamePattern := LowerCase(LTableNamePattern);
 
     with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
       Format('SHOW TABLES FROM %s LIKE ''%s''',
