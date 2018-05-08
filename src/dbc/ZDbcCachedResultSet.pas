@@ -581,7 +581,7 @@ begin
       NewRowAccessor.RowBuffer := PZRowBuffer(FCurrentRowsList[0]);
 
       { Updates default field values. }
-      if NewRowAccessor.RowBuffer.UpdateType = utInserted then
+      if NewRowAccessor.RowBuffer.UpdateType in [utInserted, utModified] then
         CalculateRowDefaults(NewRowAccessor);
 
       { Posts row updates and processes the exceptions. }
@@ -622,7 +622,7 @@ begin
       Inc(i);
 
       { Updates default field values. }
-      if NewRowAccessor.RowBuffer.UpdateType = utInserted then
+      if NewRowAccessor.RowBuffer.UpdateType in [utInserted, utModified] then
         CalculateRowDefaults(NewRowAccessor);
 
       { Posts row updates. }
