@@ -1391,25 +1391,19 @@ begin
   FieldCount := FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT);
   if FieldCount = 0 then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
-
   FResultMetaData := FPlainDriver.mysql_stmt_result_metadata(FMYSQL_STMT);
-
   if not Assigned(FResultMetaData) then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
-
   FBindOffsets := GetBindOffsets(FPlainDriver.IsMariaDBDriver, FPlainDriver.mysql_get_client_version);
-
   if FBindOffsets.buffer_type=0 then
     raise EZSQLException.Create('Unknown dll version : '+ZFastCode.IntToStr(FPlainDriver.mysql_get_client_version));
-
-
   { We use the refetch logic of
   https://bugs.mysql.com/file.php?id=12361&bug_id=33086 }
+  AllocMySQLBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets,
+    FPlainDriver.mysql_num_fields(FResultMetaData), 1);
 
   { Fills the column info. }
   try
-    AllocMySQLBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets,
-      FPlainDriver.mysql_num_fields(FResultMetaData), 1);
     for I := 0 to FPlainDriver.mysql_num_fields(FResultMetaData) - 1 do begin
       FPlainDriver.mysql_field_seek(FResultMetaData, I);
       FieldHandle := FPlainDriver.mysql_fetch_field(FResultMetaData);
@@ -1420,9 +1414,10 @@ begin
         ConSettings, fServerCursor);
 
       ColumnsInfo.Add(ColumnInfo);
-      {$R-}
-      InitColumnBinds(@FMYSQL_aligned_BINDs[I], FieldHandle, i, FBindOffSets);
-      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      if FMYSQL_STMT <> nil then
+        {$R-}
+        InitColumnBinds(@FMYSQL_aligned_BINDs[I], FieldHandle, i, FBindOffSets);
+        {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     end;
   finally
     FPlainDriver.mysql_free_result(FResultMetaData);

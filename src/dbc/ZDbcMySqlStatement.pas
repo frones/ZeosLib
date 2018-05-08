@@ -62,6 +62,7 @@ uses
 
 type
   TOpenCursorCallback = procedure of Object;
+  THandleStatus = (hsUnknown, hsAllocated, hsExecutedPrepared, hsExecutedOnce, hsReset);
   {** Implements Prepared MySQL Statement. }
   TZMySQLPreparedStatement = class(TImplizitBindRealAndEmulationStatement_A)
   private
@@ -86,10 +87,12 @@ type
     FMYSQL_BINDs: Pointer; //a buffer for N-params * mysql_bind-record size which are changing from version to version
     FMYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; //offset structure to set all the mysql info's aligned to it's field-structures
     FOpenCursorCallback: TOpenCursorCallback;
+//    FHandleStatus: THandleStatus; //indicate status of MYSQL_STMT handle
     function CreateResultSet(const SQL: string): IZResultSet;
     procedure InitBuffer(SQLType: TZSQLType; Bind: PMYSQL_aligned_BIND; ActualLength: LengthInt = 0);
     procedure FlushPendingResults;
     procedure InternalRealPrepare;
+    function CheckPrepareSwitchMode: Boolean;
   protected
     procedure PrepareOpenResultSetForReUse; override;
     procedure PrepareLastResultSetForReUse; override;
@@ -252,6 +255,20 @@ begin
   else Result := BoolStrIntsRaw[Value]
 end;
 
+function TZMySQLPreparedStatement.CheckPrepareSwitchMode: Boolean;
+begin
+  Result := ((not FInitial_emulate_prepare) or (ArrayCount > 0 )) and (FMYSQL_STMT = nil) and (TokenMatchIndex <> -1) and
+     ((ArrayCount > 0 ) or (ExecutionCount = MinExecCount2Prepare));
+  if Result then begin
+    FEmulatePrepare := False;
+    if (FInParamCount > 0) then
+      InternalSetInParamCount(FInParamCount);
+    FCloseLastRS := True;
+    if FResultsCount = 1 then
+      FResultsCount := 0;
+  end;
+end;
+
 procedure TZMySQLPreparedStatement.ClearParameters;
 var array_size: UInt;
 begin
@@ -306,10 +323,10 @@ end;
 procedure TZMySQLPreparedStatement.Prepare;
 begin
   FlushPendingResults;
-  if not Prepared then begin
-    InternalRealPrepare;
+  if not Prepared then
     inherited Prepare;
-  end;
+  if CheckPrepareSwitchMode then
+    InternalRealPrepare;
 end;
 
 procedure TZMySQLPreparedStatement.Unprepare;
@@ -1091,7 +1108,7 @@ begin
       ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
       ConSettings^.ClientCodePage^.CP), Self);
   inherited ExecuteQueryPrepared;
-  InternalRealPrepare;
+  CheckPrepareSwitchMode;
 end;
 
 {**
@@ -1142,7 +1159,7 @@ begin
           ConSettings^.ClientCodePage^.CP),Self);
   end;
   Inherited ExecuteUpdatePrepared;
-  InternalRealPrepare;
+  CheckPrepareSwitchMode;
 end;
 
 procedure TZMySQLPreparedStatement.FlushPendingResults;
@@ -1227,7 +1244,7 @@ begin
   end;
   Result := Assigned(LastResultSet);
   inherited ExecutePrepared;
-  InternalRealPrepare;
+  CheckPrepareSwitchMode;
 end;
 
 {**
@@ -1407,59 +1424,53 @@ var
   I: Integer;
   P: PansiChar;
 begin
-  if ((not FInitial_emulate_prepare) or (ArrayCount > 0 )) and (FMYSQL_STMT = nil) and (TokenMatchIndex <> -1) and
-     ((ArrayCount > 0 ) or (ExecutionCount = MinExecCount2Prepare)) then begin
-    //we can not prepare the stmt as long results are in queue
-    if (FPlainDriver.mysql_more_results(FPMYSQL^) = 1) then
-      Exit;
-    if (FMYSQL_STMT = nil) then
-      FMYSQL_STMT := FPlainDriver.mysql_stmt_init(FPMYSQL^);
-    FBindAgain := True;
-    FStmtIsExecuted := False;
-    FCloseLastRS := True;
-    if FHasDefaultValues then
-      DefaultValues := FDefaultValues; //copy by ref -> we'll need to dequote them
-    //UnprepareInparameters;
-    if (FPlainDriver.mysql_stmt_prepare(FMYSQL_STMT, Pointer(ASQL), length(ASQL)) <> 0) then
-      checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcPrepStmt,
-        ConvertZMsgToRaw(SFailedtoPrepareStmt,
-        ZMessages.cCodePage, ConSettings^.ClientCodePage^.CP), Self);
-    //see user comment: http://dev.mysql.com/doc/refman/5.0/en/mysql-stmt-fetch.html
-    //"If you want work with more than one statement simultaneously, anidated select,
-    //for example, you must declare CURSOR_TYPE_READ_ONLY the statement after just prepared this.!"
-    if FUseResult and (FPreparablePrefixTokens[TokenMatchIndex].MatchingGroup = 'SELECT') or
-       (FPreparablePrefixTokens[TokenMatchIndex].MatchingGroup = 'CALL') then
-      //EH: This can be set only if results are expected else server is hanging on execute
-      if (FClientVersion >= 50020 ) then //supported since 5.0.2
-        if Assigned(FPlainDriver.mysql_stmt_attr_set517UP) //we need this to be able to use more than !one! stmt -> keep cached
-        then FPlainDriver.mysql_stmt_attr_set517UP(FMYSQL_STMT, STMT_ATTR_CURSOR_TYPE, @CURSOR_TYPE_READ_ONLY)
-        else FPlainDriver.mysql_stmt_attr_set(FMYSQL_STMT, STMT_ATTR_CURSOR_TYPE, @CURSOR_TYPE_READ_ONLY);
-    if FClientVersion >= 50060 then //supported since 5.0.6
-      //try achieve best performnce. No idea how to calculate it
-      if Assigned(FPlainDriver.mysql_stmt_attr_set517UP) and (FPrefetchRows <> 1)
-      then FPlainDriver.mysql_stmt_attr_set517UP(FMYSQL_STMT, STMT_ATTR_PREFETCH_ROWS, @FPrefetchRows)
-      else FPlainDriver.mysql_stmt_attr_set(FMYSQL_STMT, STMT_ATTR_PREFETCH_ROWS, @FPrefetchRows);
-    FEmulatePrepare := False;
-    PrepareInParameters;
-    if FHasDefaultValues then
-      for I := 0 to High(DefaultValues) do begin
-        P := Pointer(DefaultValues[i]);
-        if (P<>nil) and (P^ = #39) and ((P+Length(DefaultValues[i])-1)^=#39)
-        then FDefaultValues[i] := Copy(DefaultValues[i], 2, Length(DefaultValues[i])-2)
-        else FDefaultValues[i] := DefaultValues[i];
-      end;
-  end;
+  //we can not prepare the stmt as long results are in queue
+  {if (FPlainDriver.mysql_more_results(FPMYSQL^) = 1) then
+    Exit;}
+  if (FMYSQL_STMT = nil) then
+    FMYSQL_STMT := FPlainDriver.mysql_stmt_init(FPMYSQL^);
+  FBindAgain := True;
+  FStmtIsExecuted := False;
+  if FHasDefaultValues then
+    DefaultValues := FDefaultValues; //copy by ref -> we'll need to dequote them
+  if (FPlainDriver.mysql_stmt_prepare(FMYSQL_STMT, Pointer(ASQL), length(ASQL)) <> 0) then
+    checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcPrepStmt,
+      ConvertZMsgToRaw(SFailedtoPrepareStmt,
+      ZMessages.cCodePage, ConSettings^.ClientCodePage^.CP), Self);
+  //see user comment: http://dev.mysql.com/doc/refman/5.0/en/mysql-stmt-fetch.html
+  //"If you want work with more than one statement simultaneously, anidated select,
+  //for example, you must declare CURSOR_TYPE_READ_ONLY the statement after just prepared this.!"
+  if FUseResult and (FPreparablePrefixTokens[TokenMatchIndex].MatchingGroup = 'SELECT') or
+     (FPreparablePrefixTokens[TokenMatchIndex].MatchingGroup = 'CALL') then
+    //EH: This can be set only if results are expected else server is hanging on execute
+    if (FClientVersion >= 50020 ) then //supported since 5.0.2
+      if Assigned(FPlainDriver.mysql_stmt_attr_set517UP) //we need this to be able to use more than !one! stmt -> keep cached
+      then FPlainDriver.mysql_stmt_attr_set517UP(FMYSQL_STMT, STMT_ATTR_CURSOR_TYPE, @CURSOR_TYPE_READ_ONLY)
+      else FPlainDriver.mysql_stmt_attr_set(FMYSQL_STMT, STMT_ATTR_CURSOR_TYPE, @CURSOR_TYPE_READ_ONLY);
+  if FClientVersion >= 50060 then //supported since 5.0.6
+    //try achieve best performnce. No idea how to calculate it
+    if Assigned(FPlainDriver.mysql_stmt_attr_set517UP) and (FPrefetchRows <> 1)
+    then FPlainDriver.mysql_stmt_attr_set517UP(FMYSQL_STMT, STMT_ATTR_PREFETCH_ROWS, @FPrefetchRows)
+    else FPlainDriver.mysql_stmt_attr_set(FMYSQL_STMT, STMT_ATTR_PREFETCH_ROWS, @FPrefetchRows);
+  FEmulatePrepare := False;
+  FCloseLastRS := False;
+  if FHasDefaultValues then
+    for I := 0 to High(DefaultValues) do begin
+      P := Pointer(DefaultValues[i]);
+      if (P<>nil) and (P^ = #39) and ((P+Length(DefaultValues[i])-1)^=#39)
+      then FDefaultValues[i] := Copy(DefaultValues[i], 2, Length(DefaultValues[i])-2)
+      else FDefaultValues[i] := DefaultValues[i];
+    end;
 end;
 
 procedure TZMySQLPreparedStatement.InternalSetInParamCount(NewParamCount: Integer);
 begin
   if not FEmulatePrepare then begin
-    if InParamCount > 0 then
+    if (NewParamCount <> InParamCount) and (InParamCount > 0) then
       FreeMySQLBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffSet, InParamCount);
-    if NewParamCount > 0 then
+    if ((NewParamCount <> InParamCount) or (FMYSQL_BINDs = nil)) and (NewParamCount > 0) then
       AllocMySQLBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffSet, NewParamCount, 1);
   end;
-
   inherited InternalSetInParamCount(NewParamCount);
   if not FEmulatePrepare and (NewParamCount > 0) then
     FillChar(Pointer(FInParamTypes)^, SizeOf(TZSQLType)*NewParamCount, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
@@ -2079,8 +2090,8 @@ initialization
 SetLength(MySQL41PreparableTokens, 5);
 MySQL41PreparableTokens[0].MatchingGroup := 'DELETE';
 MySQL41PreparableTokens[1].MatchingGroup := 'INSERT';
-MySQL41PreparableTokens[2].MatchingGroup := 'SELECT';
-MySQL41PreparableTokens[3].MatchingGroup := 'UPDATE';
+MySQL41PreparableTokens[2].MatchingGroup := 'UPDATE';
+MySQL41PreparableTokens[3].MatchingGroup := 'SELECT';
 (*EH commented all -> usually most of them are called once
 SetLength(MySQL41PreparableTokens, 13);
 MySQL41PreparableTokens[0].MatchingGroup := 'ALTER';
@@ -2390,10 +2401,10 @@ MySQL568PreparableTokens[29].MatchingGroup := 'UNINSTALL';
   MySQL568PreparableTokens[29].ChildMatches[0] := 'PLUGIN'; *)
 
 SetLength(MySQL568PreparableTokens, 5);
-MySQL568PreparableTokens[0].MatchingGroup := 'CALL';
 MySQL568PreparableTokens[1].MatchingGroup := 'DELETE';
-MySQL568PreparableTokens[2].MatchingGroup := 'INSERT';
-MySQL568PreparableTokens[3].MatchingGroup := 'SELECT';
-MySQL568PreparableTokens[4].MatchingGroup := 'UPDATE';
+MySQL568PreparableTokens[1].MatchingGroup := 'INSERT';
+MySQL568PreparableTokens[2].MatchingGroup := 'UPDATE';
+MySQL568PreparableTokens[3].MatchingGroup := 'CALL';
+MySQL568PreparableTokens[4].MatchingGroup := 'SELECT';
 
 end.
