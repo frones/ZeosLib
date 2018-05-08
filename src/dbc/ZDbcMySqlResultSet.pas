@@ -158,9 +158,10 @@ type
     FTempBlob: IZBlob;
     fServerCursor: Boolean;
     FFetchStatus: Integer; //if FFetchStatus = MYSQL_DATA_TRUNCATED we need to read lob's with mysql_stmt_fetch_column
-    FColBuffer: TBytes; //the buffer mysql writes in
-    FMYSQL_aligned_BINDs: TMYSQL_aligned_BINDDynArray; //offset descriptor structures
+    FColBuffer: Pointer; //the buffer mysql writes in
+    FMYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; //offset descriptor structures
     FSmallLobBuffer: array[Byte] of Byte; //for tiny reads of unbound col-buffers
+    FBindOffSets: PMYSQL_BINDOFFSETS;
     procedure InitColumnBinds(Bind: PMYSQL_aligned_BIND; MYSQL_FIELD: PMYSQL_FIELD;
       ColumnIndex: Integer; BindOffsets: PMYSQL_BINDOFFSETS);
   protected
@@ -170,6 +171,7 @@ type
     constructor Create(const PlainDriver: TZMySQLPlainDriver; const Statement: IZStatement;
       const SQL: string; MySQL: PPMySQL; MySQL_Stmt: PPMYSQL_STMT;
       out OpenCursorCallback: TOpenCursorCallback);
+    procedure Close; override;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
@@ -1302,7 +1304,7 @@ begin
                       else if Length[0] < SizeOf(FSmallLobBuffer) then begin
                         buffer_address^ := @FSmallLobBuffer[0];
                         buffer_Length_address^ := SizeOf(FSmallLobBuffer);
-                        FPlainDriver.mysql_stmt_fetch_column(FPrepStmt, mysql_bind, C, 0);
+                        FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, mysql_bind, C, 0);
                         buffer_address^ := nil;
                         if binary then
                           JSONWriter.WrBase64(@FSmallLobBuffer[0], Length[0], True)
@@ -1313,12 +1315,12 @@ begin
                         end;
                       end else if binary then begin
                         Blob := TZMySQLPreparedBlob.Create(FplainDriver,
-                          Bind, FPrepStmt, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, ConSettings);
+                          Bind, FPMYSQL^, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Self);
                         JSONWriter.WrBase64(Blob.GetBuffer, Blob.Length, True)
                       end else begin
                         JSONWriter.Add('"');
                         Blob := TZMySQLPreparedClob.Create(FplainDriver,
-                          Bind, FPrepStmt, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, ConSettings);
+                          Bind, FPMYSQL^, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Self);
                         P := Blob.GetPAnsiChar(zCP_UTF8);
                         JSONWriter.AddJSONEscape(P, Blob.Length);
                         JSONWriter.Add('"');
@@ -1336,6 +1338,17 @@ begin
   end;
 end;
 {$ENDIF USE_SYNCOMMONS}
+
+procedure TZAbstractMySQLPreparedResultSet.Close;
+var ColCount: Integer;
+begin
+  ColCount := ColumnsInfo.Count;
+  try
+    inherited Close;
+  finally
+    FreeMySQLBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, ColCount);
+  end;
+end;
 
 {**
   Constructs this object, assignes main properties and
@@ -1374,7 +1387,6 @@ var
   FieldHandle: PMYSQL_FIELD;
   FieldCount: Integer;
   FResultMetaData : PZMySQLResult;
-  BindOffsets: PMYSQL_BINDOFFSETS;
 begin
   FieldCount := FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT);
   if FieldCount = 0 then
@@ -1385,9 +1397,9 @@ begin
   if not Assigned(FResultMetaData) then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
 
-  BindOffsets := GetBindOffsets(FPlainDriver.IsMariaDBDriver, FPlainDriver.mysql_get_client_version);
+  FBindOffsets := GetBindOffsets(FPlainDriver.IsMariaDBDriver, FPlainDriver.mysql_get_client_version);
 
-  if BindOffsets.buffer_type=0 then
+  if FBindOffsets.buffer_type=0 then
     raise EZSQLException.Create('Unknown dll version : '+ZFastCode.IntToStr(FPlainDriver.mysql_get_client_version));
 
 
@@ -1396,8 +1408,8 @@ begin
 
   { Fills the column info. }
   try
-    ReAllocMySQLBindBuffer(FColBuffer, FMYSQL_aligned_BINDs,
-      FPlainDriver.mysql_num_fields(FResultMetaData), 1, BindOffsets);
+    AllocMySQLBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets,
+      FPlainDriver.mysql_num_fields(FResultMetaData), 1);
     for I := 0 to FPlainDriver.mysql_num_fields(FResultMetaData) - 1 do begin
       FPlainDriver.mysql_field_seek(FResultMetaData, I);
       FieldHandle := FPlainDriver.mysql_fetch_field(FResultMetaData);
@@ -1409,7 +1421,7 @@ begin
 
       ColumnsInfo.Add(ColumnInfo);
       {$R-}
-      InitColumnBinds(@FMYSQL_aligned_BINDs[I], FieldHandle, i, BindOffSets);
+      InitColumnBinds(@FMYSQL_aligned_BINDs[I], FieldHandle, i, FBindOffSets);
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     end;
   finally
@@ -1422,7 +1434,7 @@ end;
 
 procedure TZAbstractMySQLPreparedResultSet.OpenCursor;
 begin
-  if FPMYSQL_STMT <> nil then
+  if (FPMYSQL_STMT <> nil) and (FPMYSQL_STMT^ <> nil) then
     FMYSQL_STMT := FPMYSQL_STMT^;
   if (FPlainDriver.mysql_stmt_bind_result(FMYSQL_STMT,FColBuffer)<>0) then
     raise EZSQLException.Create(SFailedToBindResults);
@@ -1661,8 +1673,8 @@ begin
   end;
   if bind^.Length[0] = 0
   then Bind^.Buffer := nil
-  else SetLength(Bind^.Buffer, bind^.Length[0]+Byte(Ord(bind^.buffer_type_address^ = FIELD_TYPE_STRING)));
-  Bind^.buffer_address^ := Pointer(Bind^.buffer);
+  else GetMem(Bind^.Buffer, bind^.Length[0]+Byte(Ord(bind^.buffer_type_address^ = FIELD_TYPE_STRING)));
+  Bind^.buffer_address^ := Bind^.buffer;
   Bind^.buffer_length_address^ := bind^.Length[0];
 end;
 

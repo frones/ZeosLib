@@ -188,6 +188,14 @@ const
       {MYSQL_OPT_TLS_VERSION}                   60111,
       {MYSQL_OPT_SSL_MODE}                      60111
     );
+
+  STMT_INDICATOR_NTS=-1;      //String is null terminated
+  STMT_INDICATOR_NONE=0;      //No semantics
+  STMT_INDICATOR_NULL=1;      //NULL value
+  STMT_INDICATOR_DEFAULT=2;   //Use columns default value
+  STMT_INDICATOR_IGNORE=3;    //Skip update of column
+  STMT_INDICATOR_IGNORE_ROW=4; //Skip update of row
+
 type
   // EgonHugeist: Use always a 4Byte unsigned Integer for Windows otherwise MySQL64 has problems on Win64!
   // don't know anything about reported issues on other OS's
@@ -336,17 +344,6 @@ type
     STMT_ATTR_ROW_SIZE
   );
 
-  //http://eclipseclp.org/doc/bips/lib/dbi/cursor_next_execute-3.html
-  //"Only one active cursor of type no_cursor is allowed per session,
-  //and this active cursor must be closed before another query can be issued to the DBMS server.
-  //read_only cursor does not have this restriction,
-  //and several such cursors can be active at the same time "
-  Tenum_cursor_type = (
-    CURSOR_TYPE_NO_CURSOR   = 0,
-    CURSOR_TYPE_READ_ONLY   = 1,
-    CURSOR_TYPE_FOR_UPDATE  = 2,
-    CURSOR_TYPE_SCROLLABLE  = 4
-  );
   TMysqlShutdownLevel = (
     SHUTDOWN_DEFAULT = 0,
     SHUTDOWN_WAIT_CONNECTIONS = MYSQL_SHUTDOWN_KILLABLE_CONNECT,
@@ -574,46 +571,34 @@ TMYSQL_CLIENT_OPTIONS =
 
   PULongArray = ^TULongArray;
   TULongArray = array[0..4095] of Ulong; //https://dev.mysql.com/doc/refman/8.0/en/column-count-limit.html
-  TULongDynArray = array of ULong;
 
   Pmy_bool_array = ^Tmy_bool_array;
   Tmy_bool_array = array[0..High(Byte)] of my_bool; //just 4 debugging
-  Tmy_boolDynArray = array of My_Bool;
 
-  Tmysql_indicator_type =(
-    STMT_INDICATOR_NTS=-1,      //String is null terminated
-    STMT_INDICATOR_NONE=0,      //No semantics
-    STMT_INDICATOR_NULL=1,      //NULL value
-    STMT_INDICATOR_DEFAULT=2,   //Use columns default value
-    STMT_INDICATOR_IGNORE=3,    //Skip update of column
-    STMT_INDICATOR_IGNORE_ROW=4 //Skip update of row
-  );
+  TIndicator = ShortInt;
   Pmysql_indicator_types = ^Tmysql_indicator_types;
-  Tmysql_indicator_types = array[0..High(Byte)] of Tmysql_indicator_type;
-  Tmysql_indicatorDynArray = array of Tmysql_indicator_type;
+  Tmysql_indicator_types = array[0..High(Byte)] of TIndicator;
 
   PMYSQL_aligned_BIND = ^TMYSQL_aligned_BIND;
   TMYSQL_aligned_BIND = record
-    buffer:                 array of Byte; //data place holder
+    buffer:                 Pointer; //data place holder
     buffer_address:         PPointer; //we don't need reserved mem at all, but we need to set the address
     buffer_type_address:    PMysqlFieldType;
     buffer_length_address:  PULong; //address of result buffer length
     length_address:         PPointer;
-    length:                 TULongDynArray; //current length of our or bound data
-    is_null:                Tmy_boolDynArray; //null indicators -> sadly mariadb doesn't use a array as stmt indicator
+    length:                 PULongArray; //current length of our or bound data
+    is_null:                Pmy_bool_array; //null indicators -> sadly mariadb doesn't use a array as stmt indicator
     is_unsigned_address:    Pmy_bool; //signed ordinals or not?
     //https://mariadb.com/kb/en/library/bulk-insert-column-wise-binding/
-    indicators:             TShortIntDynArray; //stmt indicators for bulk bulk ops -> mariadb addresses to "u" and does not use the C-enum
+    indicators:             Pmysql_indicator_types; //stmt indicators for bulk bulk ops -> mariadb addresses to "u" and does not use the C-enum
     indicator_address:      PPointer;
     decimals:               Integer; //count of decimal digits for rounding the doubles
     binary:                 Boolean; //binary field or not? Just for reading!
     mysql_bind:             Pointer; //Save exact address of bind for lob reading /is used also on writting 4 the lob-buffer-address
     Iterations:             ULong; //save count of array-Bindings to prevent reallocs for Length and Is_Null-Arrays
-    Bind_Buffer_Length:     ULong;
   end;
   PMYSQL_aligned_BINDs = ^TMYSQL_aligned_BINDs;
   TMYSQL_aligned_BINDs = array[0..High(Byte)] of TMYSQL_aligned_BIND; //just 4 debugging
-  TMYSQL_aligned_BINDDynArray = array of TMYSQL_aligned_BIND;
 
   PPMYSQL = ^PMYSQL;
   PMYSQL  = pointer;
@@ -663,6 +648,16 @@ const
   CR_SERVER_GONE_ERROR = 2006;
   CR_SERVER_LOST = 2013;
 
+  //http://eclipseclp.org/doc/bips/lib/dbi/cursor_next_execute-3.html
+  //"Only one active cursor of type no_cursor is allowed per session,
+  //and this active cursor must be closed before another query can be issued to the DBMS server.
+  //read_only cursor does not have this restriction,
+  //and several such cursors can be active at the same time "
+
+  CURSOR_TYPE_NO_CURSOR:  ULong = 0;
+  CURSOR_TYPE_READ_ONLY:  ULong = 1;
+  CURSOR_TYPE_FOR_UPDATE: ULong = 2;
+  CURSOR_TYPE_SCROLLABLE: ULong = 4;
 implementation
 
 
