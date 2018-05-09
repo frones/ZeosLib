@@ -2401,7 +2401,7 @@ MySQL568PreparableTokens[29].MatchingGroup := 'UNINSTALL';
   MySQL568PreparableTokens[29].ChildMatches[0] := 'PLUGIN'; *)
 
 SetLength(MySQL568PreparableTokens, 5);
-MySQL568PreparableTokens[1].MatchingGroup := 'DELETE';
+MySQL568PreparableTokens[0].MatchingGroup := 'DELETE';
 MySQL568PreparableTokens[1].MatchingGroup := 'INSERT';
 MySQL568PreparableTokens[2].MatchingGroup := 'UPDATE';
 MySQL568PreparableTokens[3].MatchingGroup := 'CALL';
