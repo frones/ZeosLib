@@ -737,6 +737,12 @@ type
   TComparisonKind = (ckAscending{greater than}, ckDescending{less than}, ckEquals);
   TComparisonKindArray = Array of TComparisonKind;
 
+  {$IFDEF USE_SYNCOMMONS}
+  TZJSONComposeOption = (jcoEndJSONObject, jcoDATETIME_MAGIC, jcoMongoISODate,
+    jcoMilliseconds, jcsSkipNulls);
+  TZJSONComposeOptions = set of TZJSONComposeOption;
+  {$ENDIF USE_SYNCOMMONS}
+
   {** Rows returned by SQL query. }
   IZResultSet = interface(IZInterface)
     ['{8F4C4D10-2425-409E-96A9-7142007CC1B2}']
@@ -976,8 +982,9 @@ type
     function GetConSettings: PZConsettings;
 
     {$IFDEF USE_SYNCOMMONS}
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); overload;
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
-      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False);
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); overload; //deprecated;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
