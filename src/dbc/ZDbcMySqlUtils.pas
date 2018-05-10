@@ -828,7 +828,7 @@ begin
     {$R-}
     Bind := @MYSQL_aligned_BINDs[I];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    FillChar(Bind^, SizeOf(TMYSQL_aligned_BIND), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+//    FillChar(Bind^, SizeOf(TMYSQL_aligned_BIND), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
     ColOffset := NativeUInt(I*BindOffsets.size);
     { save mysql bind offset fo mysql_stmt_fetch_column }
     Bind^.mysql_bind := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset);
@@ -839,13 +839,16 @@ begin
     Bind^.buffer_length_address := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.buffer_length);
     Bind^.length_address := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.length);
     GetMem(Bind^.length, Iterations*SizeOf(ULong));
+    FillChar(Bind^.length^, Iterations*SizeOf(ULong), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
     Bind^.length_address^ := Pointer(Bind^.length);
     GetMem(Bind^.is_null, Iterations*SizeOf(my_bool));
+    FillChar(Bind^.is_null^, Iterations*SizeOf(my_bool), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
     {%H-}PPointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.is_null)^ := Pointer(Bind^.is_null);
     if (BindOffsets.Indicator > 0) then begin
       Bind^.indicator_address := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.Indicator);
       if Iterations > 0 then begin
         GetMem(Bind^.indicators, Iterations*SizeOf(TIndicator));
+        FillChar(Bind^.indicators^, Iterations*SizeOf(TIndicator), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
         Bind^.indicator_address^ := Pointer(Bind^.indicators);
       end;
     end else if Iterations > 1 then

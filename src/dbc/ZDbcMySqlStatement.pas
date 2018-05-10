@@ -1316,9 +1316,9 @@ begin
     stUnicodeString,
     stBytes:        begin
                       if ActualLength = 0 then
-                        ActualLength := 16;
+                        ActualLength := 8;
                       //ludob: mysql adds terminating #0 on top of data. Avoid buffer overrun.
-                      BuffSize := Max(16, ((ActualLength shr 4)+1) shl 4); //16byte aligned including space for trailing #0
+                      BuffSize := Max(8, (((ActualLength-1) shr 3)+1) shl 3); //8 byte aligned including space for trailing #0
                       if SQLType <> stBytes
                       then Bind^.buffer_type_address^ := FIELD_TYPE_STRING
                       else Bind^.buffer_type_address^ := FIELD_TYPE_TINY_BLOB;
