@@ -828,7 +828,6 @@ begin
     {$R-}
     Bind := @MYSQL_aligned_BINDs[I];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-//    FillChar(Bind^, SizeOf(TMYSQL_aligned_BIND), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
     ColOffset := NativeUInt(I*BindOffsets.size);
     { save mysql bind offset fo mysql_stmt_fetch_column }
     Bind^.mysql_bind := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset);
@@ -865,16 +864,17 @@ var
 begin
   FreeMem(BindBuffer);
   BindBuffer := nil;
-  if (MYSQL_aligned_BINDs <> nil) and (BoundCount > 0) then begin
-    for i := BoundCount-1 downto 0 do begin
-      {$R-}
-      Bind := @MYSQL_aligned_BINDs[I];
-      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-      FreeMem(Bind^.buffer);
-      FreeMem(Bind^.length);
-      FreeMem(Bind^.indicators);
-      FreeMem(Bind^.is_null);
-    end;
+  if (MYSQL_aligned_BINDs <> nil) then begin
+    if (BoundCount > 0) then
+      for i := BoundCount-1 downto 0 do begin
+        {$R-}
+        Bind := @MYSQL_aligned_BINDs[I];
+        {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+        FreeMem(Bind^.buffer);
+        FreeMem(Bind^.length);
+        FreeMem(Bind^.indicators);
+        FreeMem(Bind^.is_null);
+      end;
     FreeMem(MYSQL_aligned_BINDs);
     MYSQL_aligned_BINDs := nil;
   end;

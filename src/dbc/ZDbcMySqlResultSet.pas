@@ -86,6 +86,7 @@ type
   {** Implements MySQL ResultSet. }
   TZAbstractMySQLResultSet = class(TZAbstractResultSet)
   private //common
+    FFieldCount: ULong;
     FPMYSQL: PPMYSQL; //address of the MYSQL connection handle
     FMYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; //offset descriptor structures
     procedure InitColumnBinds(Bind: PMYSQL_aligned_BIND; MYSQL_FIELD: PMYSQL_FIELD;
@@ -113,6 +114,7 @@ type
       const Statement: IZStatement; const SQL: string;
       PMYSQL: PPMYSQL; PMYSQL_STMT: PPMYSQL_STMT; AffectedRows: PInteger;
       out OpenCursorCallback: TOpenCursorCallback);
+    destructor Destroy; override;
     procedure Close; override;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
 
@@ -579,11 +581,14 @@ begin
     Statement.GetConnection.GetMetadata, SQL, Self),
       Statement.GetConnection.GetConSettings);
   fServerCursor := Self is TZMySQL_Use_ResultSet;
+  FColBuffer := nil;
+  FMYSQL_aligned_BINDs := nil;
   FPMYSQL := PMYSQL;
   FPMYSQL_STMT := PMYSQL_STMT;
   FMYSQL_STMT  := FPMYSQL_STMT^;
   FQueryHandle := nil;
   FRowHandle := nil;
+  FFieldCount := 0;
   FPlainDriver := PlainDriver;
   ResultSetConcurrency := rcReadOnly;
   OpenCursorCallback := OpenCursor;
@@ -594,6 +599,12 @@ begin
     AffectedRows^ := LastRowNo;
 end;
 
+destructor TZAbstractMySQLResultSet.Destroy;
+begin
+  inherited Destroy;
+  FreeMySQLBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, FFieldCount);
+end;
+
 {**
   Opens this recordset.
 }
@@ -602,7 +613,6 @@ var
   I: Integer;
   FieldHandle: PMYSQL_FIELD;
   QueryHandle: PZMySQLResult;
-  FieldCount: ULong;
 begin
   if FPMYSQL_STMT^ = nil then begin
     OpenCursor;
@@ -617,14 +627,14 @@ begin
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   { Fills the column info. }
   ColumnsInfo.Clear;
-  FieldCount := FPlainDriver.mysql_num_fields(QueryHandle);
+  FFieldCount := FPlainDriver.mysql_num_fields(QueryHandle);
 
   { We use the refetch logic of
     https://bugs.mysql.com/file.php?id=12361&bug_id=33086 }
   AllocMySQLBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets,
-    FieldCount, 1);
+    FFieldCount, 1);
 
-  for I := 0 to FieldCount -1 do begin
+  for I := 0 to FFieldCount -1 do begin
     FPlainDriver.mysql_field_seek(QueryHandle, I);
     FieldHandle := FPlainDriver.mysql_fetch_field(QueryHandle);
     if FieldHandle = nil then
@@ -710,15 +720,13 @@ end;
   is also automatically closed when it is garbage collected.
 }
 procedure TZAbstractMySQLResultSet.Close;
-var ColCount: Integer;
 begin
-  ColCount := ColumnsInfo.Count;
   try
     inherited Close;
   finally
     FQueryHandle := nil;
     FRowHandle := nil;
-    FreeMySQLBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, ColCount);
+    FMYSQL_STMT := nil;
   end;
 end;
 
