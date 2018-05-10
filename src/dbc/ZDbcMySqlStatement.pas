@@ -77,7 +77,6 @@ type
     FBindAgain, //if types or pointer locations do change(realloc f.e.) we need to bind again -> this is dead slow with mysql
     FChunkedData, //just skip the binding loop for sending long data
     FHasDefaultValues, //are default values given?
-    FCloseLastRS, //if mode emulate to real happens we need to close the last RS
     FStmtIsExecuted: Boolean; //identify state of stmt handle for flushing pending results?
     FPreparablePrefixTokens: TPreparablePrefixTokens;
     FBindOffset: PMYSQL_BINDOFFSETS;
@@ -94,8 +93,6 @@ type
     procedure InternalRealPrepare;
     function CheckPrepareSwitchMode: Boolean;
   protected
-    procedure PrepareOpenResultSetForReUse; override;
-    procedure PrepareLastResultSetForReUse; override;
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -148,6 +145,7 @@ type
   private
     FPlainDriver: TZMysqlPlainDriver;
     FPMYSQL: PPMYSQL;
+    FMYSQL_STMT: PMYSQL_STMT; //allways nil by now
     FQueryHandle: PZMySQLResult;
     FUseResult: Boolean;
     FParamNames: array [0..1024] of RawByteString;
@@ -263,9 +261,6 @@ begin
     FEmulatePrepare := False;
     if (FInParamCount > 0) then
       InternalSetInParamCount(FInParamCount);
-    FCloseLastRS := True;
-    if FResultsCount = 1 then
-      FResultsCount := 0;
   end;
 end;
 
@@ -344,7 +339,6 @@ begin
     FStmtIsExecuted := False;
   end;
   FEmulatePrepare := FInitial_emulate_prepare;
-  FCloseLastRS := False;
 end;
 
 {**
@@ -419,13 +413,9 @@ begin
       Result.BeforeFirst;
     end;
   end else begin
-    if FEmulatePrepare or (FMYSQL_STMT = nil) then
-      if FUseResult //server cursor?
-      then NativeResultSet := TZMySQL_Use_ResultSet.Create(FPlainDriver, Self, SQL, FPMYSQL, nil, FOpenCursorCallback)
-      else NativeResultSet := TZMySQL_Store_ResultSet.Create(FPlainDriver, Self, SQL, FPMYSQL, nil, FOpenCursorCallback)
-    else if FUseResult //server cursor?
-      then NativeResultSet := TZMySQL_Use_PreparedResultSet.Create(FPlainDriver, Self, SQL, FPMYSQL, @FMYSQL_STMT, FOpenCursorCallback)
-      else NativeResultSet := TZMySQL_Store_PreparedResultSet.Create(FPlainDriver, Self, SQL, FPMYSQL, @FMYSQL_STMT, FOpenCursorCallback);
+    if FUseResult //server cursor?
+    then NativeResultSet := TZMySQL_Use_ResultSet.Create(FPlainDriver, Self, SQL, FPMYSQL, @FMYSQL_STMT, nil, FOpenCursorCallback)
+    else NativeResultSet := TZMySQL_Store_ResultSet.Create(FPlainDriver, Self, SQL, FPMYSQL, @FMYSQL_STMT, nil, FOpenCursorCallback);
 
     if (GetResultSetConcurrency = rcUpdatable) or
        ((GetResultSetType = rtScrollInsensitive) and FUseResult) then begin
@@ -477,22 +467,6 @@ begin
   if not FEmulatePrepare and (FMYSQL_STMT<> nil) then
     if Cardinal(CountOfQueryParams) <> FPlainDriver.mysql_stmt_param_count(FMYSQL_STMT) then
       raise EZSQLException.Create(SInvalidInputParameterCount);
-end;
-
-procedure TZMySQLPreparedStatement.PrepareLastResultSetForReUse;
-begin
-  //test for mode switch!
-  if Assigned(LastResultSet) and FCloseLastRS
-  then LastResultSet := nil
-  else inherited PrepareLastResultSetForReUse;
-end;
-
-procedure TZMySQLPreparedStatement.PrepareOpenResultSetForReUse;
-begin
-  //test for mode switch!
-  if Assigned(FOpenResultSet) and FCloseLastRS
-  then IZResultSet(FOpenResultSet).Close
-  else inherited PrepareOpenResultSetForReUse;
 end;
 
 procedure TZMySQLPreparedStatement.ReleaseImmediat(
@@ -1453,7 +1427,6 @@ begin
     then FPlainDriver.mysql_stmt_attr_set517UP(FMYSQL_STMT, STMT_ATTR_PREFETCH_ROWS, @FPrefetchRows)
     else FPlainDriver.mysql_stmt_attr_set(FMYSQL_STMT, STMT_ATTR_PREFETCH_ROWS, @FPrefetchRows);
   FEmulatePrepare := False;
-  FCloseLastRS := False;
   if FHasDefaultValues then
     for I := 0 to High(DefaultValues) do begin
       P := Pointer(DefaultValues[i]);
@@ -1688,7 +1661,7 @@ var
   NativeResultSet: TZMySQL_Store_ResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
-  NativeResultSet := TZMySQL_Store_ResultSet.Create(FPlainDriver, Self, SQL, FPMYSQL,
+  NativeResultSet := TZMySQL_Store_ResultSet.Create(FPlainDriver, Self, SQL, FPMYSQL, @FMYSQL_STMT,
     @LastUpdateCount, FOpenCursorCallback);
   if (GetResultSetConcurrency <> rcReadOnly) or (FUseResult
     and (GetResultSetType <> rtForwardOnly)) or (not IsFunction) then
@@ -2092,6 +2065,14 @@ MySQL41PreparableTokens[0].MatchingGroup := 'DELETE';
 MySQL41PreparableTokens[1].MatchingGroup := 'INSERT';
 MySQL41PreparableTokens[2].MatchingGroup := 'UPDATE';
 MySQL41PreparableTokens[3].MatchingGroup := 'SELECT';
+
+SetLength(MySQL568PreparableTokens, 5);
+MySQL568PreparableTokens[0].MatchingGroup := 'DELETE';
+MySQL568PreparableTokens[1].MatchingGroup := 'INSERT';
+MySQL568PreparableTokens[2].MatchingGroup := 'UPDATE';
+MySQL568PreparableTokens[3].MatchingGroup := 'CALL';
+MySQL568PreparableTokens[4].MatchingGroup := 'SELECT';
+
 (*EH commented all -> usually most of them are called once
 SetLength(MySQL41PreparableTokens, 13);
 MySQL41PreparableTokens[0].MatchingGroup := 'ALTER';
@@ -2399,12 +2380,5 @@ MySQL568PreparableTokens[28].MatchingGroup := 'SLAVE';
 MySQL568PreparableTokens[29].MatchingGroup := 'UNINSTALL';
   SetLength(MySQL568PreparableTokens[29].ChildMatches, 1);
   MySQL568PreparableTokens[29].ChildMatches[0] := 'PLUGIN'; *)
-
-SetLength(MySQL568PreparableTokens, 5);
-MySQL568PreparableTokens[0].MatchingGroup := 'DELETE';
-MySQL568PreparableTokens[1].MatchingGroup := 'INSERT';
-MySQL568PreparableTokens[2].MatchingGroup := 'UPDATE';
-MySQL568PreparableTokens[3].MatchingGroup := 'CALL';
-MySQL568PreparableTokens[4].MatchingGroup := 'SELECT';
 
 end.
