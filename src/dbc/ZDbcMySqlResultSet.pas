@@ -438,9 +438,10 @@ begin
                           end
                         else if Bind^.Length[0] < SizeOf(FSmallLobBuffer) then begin
                           Bind^.buffer_address^ := @FSmallLobBuffer[0];
-                          Bind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer);
+                          Bind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer)-1; //mysql sets $0 on to of data and corrupts our mem
                           FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, Bind^.mysql_bind, C, 0);
                           Bind^.buffer_address^ := nil;
+                          Bind^.buffer_Length_address^ := 0;
                           if Bind^.binary then
                             JSONWriter.WrBase64(@FSmallLobBuffer[0], Bind^.Length[0], True)
                           else begin
@@ -607,7 +608,6 @@ begin
     OpenCursor;
     QueryHandle := FQueryHandle;
   end else begin
-    FMYSQL_STMT := FPMYSQL_STMT^;
     if FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) > 0
     then QueryHandle := FPlainDriver.mysql_stmt_result_metadata(FMYSQL_STMT)
     else QueryHandle := nil;
@@ -630,13 +630,16 @@ begin
     if FieldHandle = nil then
       Break;
     {$R-}
-    InitColumnBinds(@FMYSQL_aligned_BINDs[I], FieldHandle, i, Ord(FPMYSQL_STMT^ <> nil));
+    InitColumnBinds(@FMYSQL_aligned_BINDs[I], FieldHandle, i, Ord(fBindBufferAllocated));
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FieldHandle, ConSettings,
       fServerCursor));
   end;
-  if FPMYSQL_STMT^ <> nil then
+
+  if fBindBufferAllocated then begin
+    FPlainDriver.mysql_free_result(QueryHandle);
     OpenCursor;
+  end;
   inherited Open;
 end;
 
@@ -645,7 +648,7 @@ var
   I: Integer;
   Bind: PMYSQL_aligned_BIND;
 begin
-  if (FPMYSQL_STMT <> nil) and (FPMYSQL_STMT^ <> nil) then
+  if (FMYSQL_STMT = nil) and (FPMYSQL_STMT <> nil) and (FPMYSQL_STMT^ <> nil) then
     FMYSQL_STMT := FPMYSQL_STMT^;
   if FMYSQL_STMT <> nil then begin
     if not fBindBufferAllocated then begin
@@ -654,7 +657,7 @@ begin
         Bind := @FMYSQL_aligned_BINDs[I];
         {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
         if Bind^.buffer_length_address^ > 0 then begin
-          GetMem(Bind^.buffer, Bind^.buffer_length_address^);
+          GetMem(Bind^.Buffer, (((bind^.buffer_length_address^-Byte(Ord(bind^.buffer_type_address^ <> FIELD_TYPE_STRING))) shr 3)+1) shl 3); //8Byte aligned
           Bind^.buffer_address^ := Bind^.buffer;
         end;
       end;
@@ -896,9 +899,10 @@ begin
         FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
             if ColBind^.Length[0] < SizeOf(FSmallLobBuffer) then begin
               ColBind^.buffer_address^ := @FSmallLobBuffer[0];
-              ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer);
+              ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer)-1; //mysql sets $0 on to of data and corrupts our mem
               FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
               ColBind^.buffer_address^ := nil;
+              ColBind^.buffer_Length_address^ := 0;
               Result := @FSmallLobBuffer[0];
               Len := ColBind^.Length[0];
               Exit;
@@ -1016,7 +1020,7 @@ begin
   end;
   if (bind^.Length[0] = 0) or (Iters = 0)
   then Bind^.Buffer := nil
-  else GetMem(Bind^.Buffer, bind^.Length[0]+Byte(Ord(bind^.buffer_type_address^ = FIELD_TYPE_STRING)));
+  else GetMem(Bind^.Buffer, (((bind^.Length[0]-Byte(Ord(bind^.buffer_type_address^ <> FIELD_TYPE_STRING))) shr 3)+1) shl 3); //8Byte aligned
   Bind^.buffer_address^ := Bind^.buffer;
   Bind^.buffer_length_address^ := bind^.Length[0];
 end;
@@ -1117,9 +1121,10 @@ begin
           if (Pointer(ColBind^.buffer) = nil) then
             if ColBind^.Length[0]  < SizeOf(FSmallLobBuffer) then begin
               Colbind^.buffer_address^ := @FSmallLobBuffer[0];
-              ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer);
+              ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
               FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, Colbind^.mysql_bind, ColumnIndex, 0);
               Colbind^.buffer_address^ := nil;
+              ColBind^.buffer_Length_address^ := 0;
               ZSetString(PAnsiChar(@FSmallLobBuffer[0]), ColBind^.Length[0] , Result);
             end else
               Result := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetRawByteString
@@ -1212,9 +1217,10 @@ begin
              (ColBind^.Length[0]  < 12{Max Int32 Length = 11} ) then
           begin
             ColBind^.buffer_address^ := @FSmallLobBuffer[0];
-            ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer);
+            ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
             FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
+            ColBind^.buffer_Length_address^ := 0;
             Result := StrToBoolEx(PAnsiChar(@FSmallLobBuffer[0]));
           end;
       end
@@ -1304,9 +1310,10 @@ begin
           if not ColBind^.binary and ( ColBind^.Length[0]  > 0 ) and
              (ColBind^.Length[0]  < 13{Max Int32 Length = 11+#0} ) then begin
             ColBind^.buffer_address^ := @FSmallLobBuffer[0];
-            ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer);
+            ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
             FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
+            ColBind^.buffer_Length_address^ := 0;
             Result := RawToIntDef(@FSmallLobBuffer[0], 0);
           end;
       end
@@ -1392,9 +1399,10 @@ begin
              (ColBind^.Length[0]  < 22{Max Int64 Length = 20+#0}) then
           begin
             ColBind^.buffer_address^ := @FSmallLobBuffer[0];
-            ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer);
+            ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
             FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
+            ColBind^.buffer_Length_address^ := 0;
             Result := RawToInt64Def(@FSmallLobBuffer[0], 0);
           end;
       end
@@ -1479,9 +1487,10 @@ begin
            (ColBind^.Length[0]  < 22{Max UInt64 Length = 20+#0} ) then
           begin
             ColBind^.buffer_address^ := @FSmallLobBuffer[0];
-            ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer);
+            ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
             FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
+            ColBind^.buffer_Length_address^ := 0;
             Result := RawToUInt64Def(@FSmallLobBuffer[0], 0);
           end;
       end
@@ -1577,9 +1586,10 @@ begin
           if ( ColBind^.Length[0]  > 0 ) and
              (ColBind^.Length[0]  < 30{Max Extended Length = 28 ??} ) then begin
             ColBind^.buffer_address^ := @FSmallLobBuffer[0];
-            ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer);
+            ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
             FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
+            ColBind^.buffer_Length_address^ := 0;
             RawToFloatDef(PAnsichar(@FSmallLobBuffer[0]), '.', 0, Result);
           end;
       end
@@ -1648,9 +1658,10 @@ begin
         FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
           if ColBind^.Length[0] < SizeOf(FSmallLobBuffer) then begin
             ColBind^.buffer_address^ := @FSmallLobBuffer[0];
-            ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer);
+            ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
             FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
+            ColBind^.buffer_Length_address^ := 0;
             Result := BufferToBytes(@FSmallLobBuffer[0], ColBind^.Length[0] );
           end else
             Result := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetBytes;
