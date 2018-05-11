@@ -360,7 +360,7 @@ type
     property ColumnsInfo: TObjectList read FColumnsInfo write FColumnsInfo;
 
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]); overload; virtual;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); overload; virtual;
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
       With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); overload; virtual;// deprecated;
     {$ENDIF}

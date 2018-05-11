@@ -94,7 +94,7 @@ type
     fpcColumns: DBORDINAL;
     fTempBlob: IZBlob;
     {$IFDEF USE_SYNCOMMONS}
-    FTinyBuffer: array[Byte] of Byte;
+    FTinyBuffer: array[0..30] of Byte;
     {$ENDIF}
   private
     FData: Pointer;
@@ -133,7 +133,7 @@ type
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
 
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -197,7 +197,7 @@ var
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]);
+  JSONComposeOptions: TZJSONComposeOptions);
 var I, C, L, H: Integer;
     P: PAnsiChar;
     Len: NativeUInt;
@@ -346,9 +346,7 @@ begin
                               JSONWriter.Add('"');
                             TimeToIso8601PChar(@FTinyBuffer[0], True, PDBTime(FData)^.hour,
                               PDBTime(FData)^.minute, PDBTime(FData)^.second, 0, 'T', False);
-                            if jcoMilliseconds in JSONComposeOptions
-                            then JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],12)
-                            else JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8);
+                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z)"')
                             else JSONWriter.Add('"');
@@ -367,9 +365,7 @@ begin
                               MS := (PDBTimeStamp(FData)^.fraction * Byte(ord(jcoMilliseconds in JSONComposeOptions))) div 1000000;
                               TimeToIso8601PChar(@FTinyBuffer[10], True, PDBTimeStamp(FData)^.Hour,
                                 PDBTimeStamp(FData)^.Minute, PDBTimeStamp(FData)^.Second, MS, 'T', jcoMilliseconds in JSONComposeOptions);
-                              if jcoMilliseconds in JSONComposeOptions
-                              then JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],23)
-                              else JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19);
+                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                               if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('Z")')
                               else JSONWriter.Add('"');

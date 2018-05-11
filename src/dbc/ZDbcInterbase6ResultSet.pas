@@ -85,6 +85,9 @@ type
     FCodePageArray: TWordDynArray;
     FStmtType: TZIbSqlStatementType;
     FGUIDProps: TZInterbase6StatementGUIDProps;
+    {$IFDEF USE_SYNCOMMONS}
+    FTinyBuffer: array[0..30] of Byte;
+    {$ENDIF}
     function GetIbSqlSubType(const Index: Word): Smallint; {$IF defined(WITH_INLINE) and not (defined(WITH_URW1135_ISSUE) or defined(WITH_URW1111_ISSUE))} inline; {$IFEND}
     function GetQuad(ColumnIndex: Integer): TISC_QUAD;
   protected
@@ -119,8 +122,7 @@ type
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
 
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
-      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); override;
     {$ENDIF USE_SYNCOMMONS}
     function Next: Boolean; override;
   end;
@@ -282,7 +284,7 @@ end;
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZInterbase6XSQLDAResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
+  JSONComposeOptions: TZJSONComposeOptions);
 var L, H, I: Integer;
     P: Pointer;
     C, SQLCode: SmallInt;
@@ -301,7 +303,7 @@ begin
     with FXSQLDA.sqlvar[C] do
       if (sqlind <> nil) and (sqlind^ = ISC_NULL) then
         if JSONWriter.Expand then begin
-          if (not SkipNullFields) then begin
+          if not (jcsSkipNulls in JSONComposeOptions) then begin
             JSONWriter.AddString(JSONWriter.ColNames[I]);
             JSONWriter.AddShort('null,')
           end;
@@ -361,12 +363,23 @@ begin
             SQL_LONG      : JSONWriter.Add(PInteger(sqldata)^);
             SQL_SHORT     : JSONWriter.Add(PSmallint(sqldata)^);
             SQL_TIMESTAMP : begin
-                              JSONWriter.Add('"');
+                              if jcoMongoISODate in JSONComposeOptions then
+                                JSONWriter.AddShort('ISODate("')
+                              else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              else
+                                JSONWriter.Add('"');
                               FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
-                              JSONWriter.AddDateTime(SysUtils.EncodeDate(TempDate.tm_year + 1900,
-                                TempDate.tm_mon + 1, TempDate.tm_mday) + EncodeTime(TempDate.tm_hour,
-                              TempDate.tm_min, TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod ISC_TIME_SECONDS_PRECISION) div 10)));
-                              JSONWriter.Add('"');
+                              if TempDate.tm_year < 1900 then
+                                JSONWriter.Add('-');
+                              DateToIso8601PChar(@FTinyBuffer[0], True, Abs(TempDate.tm_year + 1900),
+                                TempDate.tm_mon + 1, TempDate.tm_mday);
+                              TimeToIso8601PChar(@FTinyBuffer[10], True, TempDate.tm_hour,
+                              TempDate.tm_min, TempDate.tm_sec, PISC_TIMESTAMP(sqldata).timestamp_time mod ISC_TIME_SECONDS_PRECISION div 10, 'T', jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                              if jcoMongoISODate in JSONComposeOptions
+                              then JSONWriter.AddShort('Z")')
+                              else JSONWriter.Add('"');
                             end;
             SQL_QUAD,
             SQL_BLOB      : begin
@@ -395,18 +408,37 @@ begin
             SQL_D_FLOAT   : JSONWriter.AddSingle(PSingle(sqldata)^);
             SQL_ARRAY     : JSONWriter.AddShort('"Array"');
             SQL_TYPE_TIME : begin
-                              JSONWriter.Add('"');
+                              if jcoMongoISODate in JSONComposeOptions then
+                                JSONWriter.AddShort('ISODate("0000-00-00')
+                              else if jcoDATETIME_MAGIC in JSONComposeOptions then begin
+                                JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              end else
+                                JSONWriter.Add('"');
                               FPlainDriver.isc_decode_sql_time(PISC_TIME(sqldata), @TempDate);
-                              JSONWriter.AddDateTime(SysUtils.EncodeTime(Word(TempDate.tm_hour), Word(TempDate.tm_min),
-                                Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod ISC_TIME_SECONDS_PRECISION) div 10)));
-                              JSONWriter.Add('"');
+
+                              TimeToIso8601PChar(@FTinyBuffer[0], True, Word(TempDate.tm_hour), Word(TempDate.tm_min),
+                                Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod ISC_TIME_SECONDS_PRECISION) div 10), 'T', jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                              if jcoMongoISODate in JSONComposeOptions
+                              then JSONWriter.AddShort('Z)"')
+                              else JSONWriter.Add('"');
                             end;
             SQL_TYPE_DATE : begin
-                              JSONWriter.Add('"');
+                              if jcoMongoISODate in JSONComposeOptions then
+                                JSONWriter.AddShort('ISODate("')
+                              else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              else
+                                JSONWriter.Add('"');
                               FPlainDriver.isc_decode_sql_date(PISC_DATE(sqldata), @TempDate);
-                              JSONWriter.AddDateTime(SysUtils.EncodeDate(Word(TempDate.tm_year + 1900),
-                                Word(TempDate.tm_mon + 1), Word(TempDate.tm_mday)));
-                              JSONWriter.Add('"');
+                              if TempDate.tm_year < 1900 then
+                                JSONWriter.Add('-');
+                              DateToIso8601PChar(@FTinyBuffer[0], True, Abs(TempDate.tm_year + 1900),
+                                TempDate.tm_mon + 1, TempDate.tm_mday);
+                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                              if jcoMongoISODate in JSONComposeOptions
+                              then JSONWriter.AddShort('Z")')
+                              else JSONWriter.Add('"');
                             end;
             SQL_INT64     : JSONWriter.Add(PInt64(sqldata)^);
             SQL_BOOLEAN   : JSONWriter.AddShort(JSONBool[PSmallint(sqldata)^ <> 0]);
@@ -419,8 +451,7 @@ begin
       end;
     {$IFOPT D+} {$R+} {$ENDIF}
   end;
-  if EndJSONObject then
-  begin
+  if jcoEndJSONObject in JSONComposeOptions then begin
     JSONWriter.CancelLastComma; // cancel last ','
     if JSONWriter.Expand then
       JSONWriter.Add('}');
