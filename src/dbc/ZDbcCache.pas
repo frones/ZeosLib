@@ -255,8 +255,7 @@ type
     procedure SetValue(ColumnIndex: Integer; const Value: TZVariant);
 
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
-      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False);
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
     {$ENDIF USE_SYNCOMMONS}
 
     property ColumnsSize: Integer read FColumnsSize;
@@ -1306,7 +1305,7 @@ end;
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZRowAccessor.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
+  JSONComposeOptions: TZJSONComposeOptions);
 var P: Pointer;
     I, H, C: SmallInt;
     Blob: IZBlob;
@@ -1322,7 +1321,7 @@ begin
       C := JSONWriter.Fields[i];
     if FBuffer.Columns[FColumnOffsets[C]] = bIsNull then begin
       if JSONWriter.Expand then begin
-        if (not SkipNullFields) then begin
+        if not (jcsSkipNulls in JSONComposeOptions) then begin
           JSONWriter.AddString(JSONWriter.ColNames[I]);
           JSONWriter.AddShort('null,')
         end;
@@ -1369,9 +1368,29 @@ begin
                             JSONWriter.Add(PGUID(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
                             JSONWriter.Add('"');
                           end;
+        stTime          : if (jcoMongoISODate in JSONComposeOptions) and (FColumnTypes[C] <> stTime) then begin
+                            JSONWriter.AddShort('ISODate("0000-00-00');
+                            JSONWriter.AddDateTime(PDateTime(@FBuffer.Columns[FColumnOffsets[C] + 1])^, jcoMilliseconds in JSONComposeOptions);
+                            JSONWriter.AddShort('Z")')
+                          end else begin
+                            if jcoDATETIME_MAGIC in JSONComposeOptions
+                            then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                            else JSONWriter.Add('"');
+                            JSONWriter.AddDateTime(PDateTime(@FBuffer.Columns[FColumnOffsets[C] + 1])^, jcoMilliseconds in JSONComposeOptions);
+                            JSONWriter.Add('"');
+                          end;
         stDate,
-        stTime,
-        stTimestamp     : JSONWriter.AddDateTime(PDateTime(@FBuffer.Columns[FColumnOffsets[C] + 1]), 'T', '"');
+        stTimestamp     : if (jcoMongoISODate in JSONComposeOptions) and (FColumnTypes[C] <> stTime) then begin
+                            JSONWriter.AddShort('ISODate("');
+                            JSONWriter.AddDateTime(PDateTime(@FBuffer.Columns[FColumnOffsets[C] + 1])^, jcoMilliseconds in JSONComposeOptions);
+                            JSONWriter.AddShort('Z")')
+                          end else begin
+                            if jcoDATETIME_MAGIC in JSONComposeOptions
+                            then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                            else JSONWriter.Add('"');
+                            JSONWriter.AddDateTime(PDateTime(@FBuffer.Columns[FColumnOffsets[C] + 1])^, jcoMilliseconds in JSONComposeOptions);
+                            JSONWriter.Add('"');
+                          end;
         stAsciiStream, stUnicodeStream:
           begin
             Blob := IZBlob(PPointer(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
@@ -1398,8 +1417,7 @@ begin
       JSONWriter.Add(',');
     end;
   end;
-  if EndJSONObject then
-  begin
+  if jcoEndJSONObject in JSONComposeOptions then begin
     JSONWriter.CancelLastComma; // cancel last ','
     if JSONWriter.Expand then
       JSONWriter.Add('}');
