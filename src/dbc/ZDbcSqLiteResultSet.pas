@@ -79,23 +79,27 @@ type
     function IsNullable(Column: Integer): TZColumnNullableType; override;
   end;
 
+  TResetCallBack = procedure of Object;
   {** Implements SQLite ResultSet. }
   TZSQLiteResultSet = class(TZAbstractResultSet)
   private
-    FErrorCode: Integer;
-    FHandle: Psqlite;
-    FStmtHandle: Psqlite_vm;
+    FStmtErrorCode: PInteger;
+    FPsqlite: PPsqlite;
+    FPsqlite3_stmt: PPsqlite3_stmt;
+    Fsqlite3_stmt: Psqlite3_stmt;
     FColumnCount: Integer;
     FPlainDriver: TZSQLitePlainDriver;
     FFirstRow: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
+    FResetCallBack: TResetCallBack;
   protected
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(const Statement: IZStatement;
-      const SQL: string; const Handle: Psqlite; const StmtHandle: Psqlite_vm;
-      const UndefinedVarcharAsStringLength: Integer);
+      const SQL: string; Psqlite: PPsqlite; Psqlite3_stmt: PPsqlite3_stmt;
+      PErrorCode: PInteger; UndefinedVarcharAsStringLength: Integer;
+      ResetCallBack: TResetCallback);
 
     procedure ResetCursor; override;
 
@@ -267,7 +271,7 @@ begin
     if Pointer(JSONWriter.Fields) = nil then
       C := I else
       C := JSONWriter.Fields[i];
-    ColType := FPlainDriver.sqlite3_column_type(FStmtHandle, C);
+    ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, C);
     if ColType = SQLITE_NULL then
       if JSONWriter.Expand then begin
         if not (jcsSkipNulls in JSONComposeOptions) then begin
@@ -280,20 +284,20 @@ begin
       if JSONWriter.Expand then
         JSONWriter.AddString(JSONWriter.ColNames[i]);
       case ColType of
-        SQLITE_BLOB: JSONWriter.WrBase64(FPlainDriver.sqlite3_column_blob(FStmtHandle,C),
-                        FPlainDriver.sqlite3_column_bytes(FStmtHandle, C), True);
+        SQLITE_BLOB: JSONWriter.WrBase64(FPlainDriver.sqlite3_column_blob(Fsqlite3_stmt,C),
+                        FPlainDriver.sqlite3_column_bytes(Fsqlite3_stmt, C), True);
         SQLITE_INTEGER:
           case TZColumnInfo(ColumnsInfo[c]).ColumnType of
-            stBoolean: JSONWriter.AddShort(JSONBool[FPlainDriver.sqlite3_column_int64(FStmtHandle, C) <> 0]);
+            stBoolean: JSONWriter.AddShort(JSONBool[FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, C) <> 0]);
             {stTime, stDate, stTimeStamp:
               todo: add implementation for unix timestamp
-              JSONWriter.Add(FPlainDriver.sqlite3_column_int64(FStmtHandle, C));}
+              JSONWriter.Add(FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, C));}
             else
-              JSONWriter.Add(FPlainDriver.sqlite3_column_int64(FStmtHandle, C));
+              JSONWriter.Add(FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, C));
           end;
         SQLITE_FLOAT:
           case TZColumnInfo(ColumnsInfo[c]).ColumnType of
-            stBoolean: JSONWriter.AddShort(JSONBool[FPlainDriver.sqlite3_column_double(FStmtHandle, C) <> 0]);
+            stBoolean: JSONWriter.AddShort(JSONBool[FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, C) <> 0]);
             stTime: begin
                 if jcoMongoISODate in JSONComposeOptions then
                   JSONWriter.AddShort('ISODate("0000-00-00')
@@ -301,7 +305,7 @@ begin
                   JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                 else
                   JSONWriter.Add('"');
-                JSONWriter.AddDateTime(Frac(FPlainDriver.sqlite3_column_double(FStmtHandle, C)+JulianEpoch), jcoMilliseconds in JSONComposeOptions);
+                JSONWriter.AddDateTime(Frac(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, C)+JulianEpoch), jcoMilliseconds in JSONComposeOptions);
                 JSONWriter.Add('"');
               end;
             stDate: begin
@@ -311,7 +315,7 @@ begin
                   JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                 else
                   JSONWriter.Add('"');
-                JSONWriter.AddDateTime(Int(FPlainDriver.sqlite3_column_double(FStmtHandle, C)+JulianEpoch));
+                JSONWriter.AddDateTime(Int(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, C)+JulianEpoch));
                 JSONWriter.Add('"');
               end;
             stTimeStamp: begin
@@ -321,14 +325,14 @@ begin
                   JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                 else
                   JSONWriter.Add('"');
-                JSONWriter.AddDateTime(FPlainDriver.sqlite3_column_double(FStmtHandle, C)+JulianEpoch, jcoMilliseconds in JSONComposeOptions);
+                JSONWriter.AddDateTime(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, C)+JulianEpoch, jcoMilliseconds in JSONComposeOptions);
                 JSONWriter.Add('"');
               end;
             else
-              JSONWriter.AddDouble(FPlainDriver.sqlite3_column_double(FStmtHandle, C));
+              JSONWriter.AddDouble(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, C));
           end;
         SQLITE3_TEXT: begin
-            P := FPlainDriver.sqlite3_column_text(FStmtHandle, C);
+            P := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, C);
             case TZColumnInfo(ColumnsInfo[c]).ColumnType of
               stBoolean: JSONWriter.AddShort(JSONBool[StrToBoolEx(P)]);
               stTime: begin
@@ -395,20 +399,25 @@ end;
   @param UseResult <code>True</code> to use results,
     <code>False</code> to store result.
 }
-constructor TZSQLiteResultSet.Create(
-  const Statement: IZStatement; const SQL: string; const Handle: Psqlite;
-  const StmtHandle: Psqlite_vm; const UndefinedVarcharAsStringLength: Integer);
+constructor TZSQLiteResultSet.Create(const Statement: IZStatement;
+  const SQL: string; Psqlite: PPsqlite; Psqlite3_stmt: PPsqlite3_stmt;
+  PErrorCode: PInteger; UndefinedVarcharAsStringLength: Integer;
+  ResetCallBack: TResetCallback);
 begin
   inherited Create(Statement, SQL, TZSQLiteResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self),
     Statement.GetConnection.GetConSettings);
 
-  FHandle := Handle;
-  FStmtHandle := StmtHandle;
+  FPsqlite := FPsqlite;
+  FPsqlite3_stmt := Psqlite3_stmt;
+  Fsqlite3_stmt := Psqlite3_stmt^;
+  FStmtErrorCode := PErrorCode;
+
   FPlainDriver := TZSQLitePlainDriver(Statement.GetConnection.GetIZPlainDriver.GetInstance);
   ResultSetConcurrency := rcReadOnly;
   FUndefinedVarcharAsStringLength := UndefinedVarcharAsStringLength;
   FFirstRow := True;
+  FResetCallBack := ResetCallBack;
 
   Open;
 end;
@@ -446,10 +455,10 @@ begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
 
-  FColumnCount := FPlainDriver.sqlite3_column_count(FStmtHandle);
+  FColumnCount := FPlainDriver.sqlite3_column_count(Fsqlite3_stmt);
 
   LastRowNo := 0;
-  //MaxRows := FPlainDriver.data_count(FStmtHandle) +1; {first ResultSetRow = 1}
+  //MaxRows := FPlainDriver.data_count(Fsqlite3_stmt) +1; {first ResultSetRow = 1}
 
   { Fills the column info. }
   ColumnsInfo.Clear;
@@ -458,16 +467,16 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do begin
       if Assigned(FPlainDriver.sqlite3_column_origin_name) then
-        ColumnName := ColAttributeToStr(FPlainDriver.sqlite3_column_origin_name(FStmtHandle, i));
-      ColumnLabel := ColAttributeToStr(FPlainDriver.sqlite3_column_name(FStmtHandle, i));
+        ColumnName := ColAttributeToStr(FPlainDriver.sqlite3_column_origin_name(Fsqlite3_stmt, i));
+      ColumnLabel := ColAttributeToStr(FPlainDriver.sqlite3_column_name(Fsqlite3_stmt, i));
       if Assigned(FPlainDriver.sqlite3_column_table_name) then
-        TableName := ColAttributeToStr(FPlainDriver.sqlite3_column_table_name(FStmtHandle, i));
+        TableName := ColAttributeToStr(FPlainDriver.sqlite3_column_table_name(Fsqlite3_stmt, i));
       if Assigned(FPlainDriver.sqlite3_column_database_name) then
-        SchemaName := ColAttributeToStr(FPlainDriver.sqlite3_column_database_name(FStmtHandle, i));
+        SchemaName := ColAttributeToStr(FPlainDriver.sqlite3_column_database_name(Fsqlite3_stmt, i));
       ReadOnly := TableName <> '';
-      P := FPlainDriver.sqlite3_column_decltype(FStmtHandle, i);
+      P := FPlainDriver.sqlite3_column_decltype(Fsqlite3_stmt, i);
       if P = nil then
-        tmp := NativeSQLite3Types[FUndefinedVarcharAsStringLength = 0][FPlainDriver.sqlite3_column_type(FStmtHandle, i)]
+        tmp := NativeSQLite3Types[FUndefinedVarcharAsStringLength = 0][FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, i)]
       else
         ZSetString(P, ZFastCode.StrLen(P), tmp);
       ColumnType := ConvertSQLiteTypeToSQLType(tmp, FUndefinedVarcharAsStringLength,
@@ -509,11 +518,9 @@ end;
 procedure TZSQLiteResultSet.ResetCursor;
 begin
   FFirstRow := True;
-  if Assigned(FStmtHandle) then
-  begin
-    CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.sqlite3_reset(FStmtHandle),
-      lcOther, 'Reset Prepared Stmt', ConSettings);
-    FStmtHandle := nil;
+  if Fsqlite3_stmt <> nil then begin
+    FResetCallBack;
+    Fsqlite3_stmt := nil;
   end;
   inherited ResetCursor;
 end;
@@ -528,7 +535,7 @@ end;
 }
 function TZSQLiteResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
-  Result := FPlainDriver.sqlite3_column_type(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) = SQLITE_NULL;
+  Result := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) = SQLITE_NULL;
 end;
 
 {**
@@ -547,7 +554,7 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  ColType := FPlainDriver.sqlite3_column_type(FStmtHandle, ColumnIndex);
+  ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex);
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
   begin
@@ -557,13 +564,13 @@ begin
   else
     if ColType <> SQLITE_BLOB then
     begin
-      Result := FPlainDriver.sqlite3_column_text(FStmtHandle, ColumnIndex);
+      Result := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
       Len := ZFastCode.StrLen(Result);
     end
     else
     begin
-      Result := FPlainDriver.sqlite3_column_blob(FStmtHandle, ColumnIndex);
-      Len := FPlainDriver.sqlite3_column_bytes(FStmtHandle, ColumnIndex);
+      Result := FPlainDriver.sqlite3_column_blob(Fsqlite3_stmt, ColumnIndex);
+      Len := FPlainDriver.sqlite3_column_bytes(Fsqlite3_stmt, ColumnIndex);
     end;
 end;
 
@@ -578,7 +585,7 @@ end;
 }
 function TZSQLiteResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
 begin
-  Result := FPlainDriver.sqlite3_column_text(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
+  Result := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
   LastWasNull := Result = nil;
 end;
 
@@ -595,7 +602,7 @@ function TZSQLiteResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var P: PAnsiChar;
   Len: NativeUint;
 begin //rewritten because of performance reasons to avoid localized the RBS before
-  LastWasNull := FPlainDriver.sqlite3_column_type(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) = SQLITE_NULL;
   if LastWasNull then
     Result := ''
   else
@@ -626,7 +633,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  Buffer := FPlainDriver.sqlite3_column_text(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
+  Buffer := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
   LastWasNull := Buffer = nil;
   if LastWasNull then
     Result := ''
@@ -653,7 +660,7 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  ColType := FPlainDriver.sqlite3_column_type(FStmtHandle, ColumnIndex);
+  ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
@@ -661,11 +668,11 @@ begin
   else
     case ColType of
       SQLITE_INTEGER:
-        Result := FPlainDriver.sqlite3_column_int(FStmtHandle, ColumnIndex) <> 0;
+        Result := FPlainDriver.sqlite3_column_int(Fsqlite3_stmt, ColumnIndex) <> 0;
       SQLITE_FLOAT:
-        Result := FPlainDriver.sqlite3_column_double(FStmtHandle, ColumnIndex) <> 0;
+        Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex) <> 0;
       SQLITE3_TEXT:
-        Result := StrToBoolEx(FPlainDriver.sqlite3_column_text(FStmtHandle, ColumnIndex), True, False);
+        Result := StrToBoolEx(FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex), True, False);
       else
         Result := False; {SQLITE_BLOB}
     end;
@@ -690,18 +697,18 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  ColType := FPlainDriver.sqlite3_column_type(FStmtHandle, ColumnIndex);
+  ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex);
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
     case ColType of
       SQLITE_INTEGER:
-        Result := FPlainDriver.sqlite3_column_int(FStmtHandle, ColumnIndex);
+        Result := FPlainDriver.sqlite3_column_int(Fsqlite3_stmt, ColumnIndex);
       SQLITE_FLOAT:
-        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(FPlainDriver.sqlite3_column_double(FStmtHandle, ColumnIndex));
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex));
       SQLITE3_TEXT:
-        Result := RawToIntDef(FPlainDriver.sqlite3_column_text(FStmtHandle, ColumnIndex), 0);
+        Result := RawToIntDef(FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex), 0);
       else
         Result := 0; {SQLITE_BLOB}
     end;
@@ -726,18 +733,18 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  ColType := FPlainDriver.sqlite3_column_type(FStmtHandle, ColumnIndex);
+  ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex);
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
     case ColType of
       SQLITE_INTEGER:
-        Result := FPlainDriver.sqlite3_column_int64(FStmtHandle, ColumnIndex);
+        Result := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex);
       SQLITE_FLOAT:
-        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(FPlainDriver.sqlite3_column_double(FStmtHandle, ColumnIndex));
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex));
       SQLITE3_TEXT:
-        Result := RawToInt64Def(FPlainDriver.sqlite3_column_text(FStmtHandle, ColumnIndex), 0);
+        Result := RawToInt64Def(FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex), 0);
       else
         Result := 0; {SQLITE_BLOB}
     end;
@@ -762,18 +769,18 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  ColType := FPlainDriver.sqlite3_column_type(FStmtHandle, ColumnIndex);
+  ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex);
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
     case ColType of
       SQLITE_INTEGER:
-        Result := FPlainDriver.sqlite3_column_int64(FStmtHandle, ColumnIndex);
+        Result := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex);
       SQLITE_FLOAT:
-        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(FPlainDriver.sqlite3_column_double(FStmtHandle, ColumnIndex));
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex));
       SQLITE3_TEXT:
-        Result := RawToUInt64Def(FPlainDriver.sqlite3_column_text(FStmtHandle, ColumnIndex), 0);
+        Result := RawToUInt64Def(FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex), 0);
       else
         Result := 0;
     end;
@@ -795,13 +802,13 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  LastWasNull := FPlainDriver.sqlite3_column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
     { sqlite does the conversion if required
       http://www.sqlite.org/c3ref/column_blob.html }
-     Result := FPlainDriver.sqlite3_column_double(FStmtHandle, ColumnIndex);
+     Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex);
 end;
 
 {**
@@ -822,13 +829,13 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
 
-  LastWasNull := FPlainDriver.sqlite3_column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
     { sqlite does the conversion if required
       http://www.sqlite.org/c3ref/column_blob.html }
-     Result := FPlainDriver.sqlite3_column_double(FStmtHandle, ColumnIndex);
+     Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex);
 end;
 
 {**
@@ -850,13 +857,13 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
 
-  LastWasNull := FPlainDriver.sqlite3_column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
     { sqlite does the conversion if required
       http://www.sqlite.org/c3ref/column_blob.html }
-     Result := FPlainDriver.sqlite3_column_double(FStmtHandle, ColumnIndex);
+     Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex);
 end;
 
 {**
@@ -878,11 +885,11 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
 
-  LastWasNull := FPlainDriver.sqlite3_column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := nil
   else
-    Result :=  BufferToBytes(FPlainDriver.sqlite3_column_blob(FStmtHandle, ColumnIndex), FPlainDriver.sqlite3_column_bytes(FStmtHandle, ColumnIndex));
+    Result :=  BufferToBytes(FPlainDriver.sqlite3_column_blob(Fsqlite3_stmt, ColumnIndex), FPlainDriver.sqlite3_column_bytes(Fsqlite3_stmt, ColumnIndex));
 end;
 
 {**
@@ -907,7 +914,7 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  ColType := FPlainDriver.sqlite3_column_type(FStmtHandle, ColumnIndex);
+  ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
@@ -915,10 +922,10 @@ begin
   else
     case ColType of
       SQLITE_INTEGER, SQLITE_FLOAT:
-        Result := FPlainDriver.sqlite3_column_double(FStmtHandle, ColumnIndex)+JulianEpoch;
+        Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex)+JulianEpoch;
       else
       begin
-        Buffer := FPlainDriver.sqlite3_column_text(FStmtHandle, ColumnIndex);
+        Buffer := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
         Len := ZFastCode.StrLen(Buffer);
 
         if (Len = ConSettings^.ReadFormatSettings.DateFormatLen) then
@@ -953,7 +960,7 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  ColType := FPlainDriver.sqlite3_column_type(FStmtHandle, ColumnIndex);
+  ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
@@ -961,10 +968,10 @@ begin
   else
     case ColType of
       SQLITE_INTEGER, SQLITE_FLOAT:
-        Result := FPlainDriver.sqlite3_column_double(FStmtHandle, ColumnIndex)+JulianEpoch;
+        Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex)+JulianEpoch;
       else
       begin
-        Buffer := FPlainDriver.sqlite3_column_text(FStmtHandle, ColumnIndex);
+        Buffer := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
         Len := ZFastCode.StrLen(Buffer);
 
         if ((Buffer)+2)^ = ':' then //possible date if Len = 10 then
@@ -999,7 +1006,7 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  ColType := FPlainDriver.sqlite3_column_type(FStmtHandle, ColumnIndex);
+  ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
@@ -1008,10 +1015,10 @@ begin
     case ColType of
       SQLITE_INTEGER,
       SQLITE_FLOAT:
-        Result := FPlainDriver.sqlite3_column_double(FStmtHandle, ColumnIndex)+JulianEpoch;
+        Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex)+JulianEpoch;
       else
       begin
-        Buffer := FPlainDriver.sqlite3_column_text(FStmtHandle, ColumnIndex);
+        Buffer := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
         Result := RawSQLTimeStampToDateTime(Buffer, ZFastCode.StrLen(Buffer), ConSettings^.ReadFormatSettings, Failed{%H-});
       end;
       LastWasNull := Result = 0;
@@ -1039,15 +1046,15 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  ColType := FPlainDriver.sqlite3_column_type(FStmtHandle, ColumnIndex);
+  ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
   if not LastWasNull then
     if ColType = SQLITE_BLOB then
-      Result := TZAbstractBlob.CreateWithData(FPlainDriver.sqlite3_column_blob(FStmtHandle,ColumnIndex),
-        FPlainDriver.sqlite3_column_bytes(FStmtHandle, ColumnIndex))
+      Result := TZAbstractBlob.CreateWithData(FPlainDriver.sqlite3_column_blob(Fsqlite3_stmt,ColumnIndex),
+        FPlainDriver.sqlite3_column_bytes(Fsqlite3_stmt, ColumnIndex))
     else begin
-      Buffer := FPlainDriver.sqlite3_column_text(FStmtHandle, ColumnIndex);
+      Buffer := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
       Result := TZAbstractClob.CreateWithData( Buffer,
         ZFastCode.StrLen(Buffer), zCP_UTF8, ConSettings);
     end;
@@ -1069,53 +1076,43 @@ end;
     <code>false</code> if there are no more rows
 }
 function TZSQLiteResultSet.Next: Boolean;
-label ResetHndl;
+var ErrorCode: Integer;
 begin
   { Checks for maximum row. }
   Result := False;
   if Closed then exit;
-  if FFirstRow then
-    FErrorCode := (Statement as IZSQLitePreparedStatement).GetLastErrorCodeAndHandle(FStmtHandle);
-  if ((MaxRows > 0) and (RowNo >= MaxRows)) or (FErrorCode = SQLITE_DONE) then //previously set by stmt or Next
-  begin
-    { Free handle when EOF. }
-ResetHndl:
-    CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.sqlite3_reset(FStmtHandle),
-      lcOther, 'sqlite3_reset', ConSettings);
-    FErrorCode := SQLITE_DONE;
-    Exit;
+  if FFirstRow then begin
+    ErrorCode := FStmtErrorCode^;
+    Fsqlite3_stmt := FPsqlite3_stmt^;
+  end else begin
+    if ((MaxRows > 0) and (RowNo >= MaxRows)) or (RowNo > LastRowNo) then //previously set by stmt or Next
+      Exit;
+    ErrorCode := FPlainDriver.sqlite3_Step(Fsqlite3_stmt);
+    if not (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
+      CheckSQLiteError(FPlainDriver, Fsqlite3_stmt, ErrorCode, lcOther, 'FETCH', ConSettings);
   end;
 
-  if (FStmtHandle <> nil ) and not FFirstRow then
-  begin
-    FErrorCode := FPlainDriver.sqlite3_Step(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcOther, 'FETCH', ConSettings);
-  end;
-
-  if FFirstRow then //avoid incrementing issue on fetching since the first row is allready fetched by stmt
-  begin
+  if FFirstRow then begin//avoid incrementing issue on fetching since the first row is allready fetched by stmt
     FFirstRow := False;
-    Result := (FErrorCode = SQLITE_ROW);
+    Result := (ErrorCode = SQLITE_ROW);
     RowNo := 1;
-  end
-  else
-    if (FErrorCode = SQLITE_ROW) then
-    begin
-      RowNo := RowNo + 1;
-      if LastRowNo < RowNo then
-        LastRowNo := RowNo;
-      Result := True;
-    end
-    else
-    begin
-      if RowNo <= LastRowNo then
-        RowNo := LastRowNo + 1;
-      Result := False;
-    end;
+    LastRowNo := Ord(Result);
+  end else if (ErrorCode = SQLITE_ROW) then begin
+    RowNo := RowNo + 1;
+    if LastRowNo < RowNo then
+      LastRowNo := RowNo;
+    Result := True;
+  end else begin
+    if RowNo <= LastRowNo then
+      RowNo := LastRowNo + 1;
+    Result := False;
+  end;
 
   { Free handle when EOF. }
-  if not Result then
-    goto ResetHndl;
+  if not Result and Assigned(Fsqlite3_stmt) then begin
+    FResetCallBack;
+    Fsqlite3_stmt := nil;
+  end;
 end;
 
 { TZSQLiteCachedResolver }

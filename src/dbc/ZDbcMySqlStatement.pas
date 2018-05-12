@@ -100,16 +100,15 @@ type
     procedure SetInParamCount(const NewParamCount: Integer); override;
     procedure InternalSetInParamCount(NewParamCount: Integer); override;
     function GetBoundValueAsLogValue(ParamIndex: Integer): RawByteString; override;
-    function DateTimeAsString(const Value: TDateTime; SQLType: TZSQLType): RawByteString; override;
     function BoolAsString(Value: Boolean): RawByteString; override;
 
-    procedure BindSignedOrdinal(ParameterIndex: Integer; SQLType: TZSQLType; const Value: Int64); override;
-    procedure BindUnsignedOrdinal(ParameterIndex: Integer; SQLType: TZSQLType; const Value: UInt64); override;
-    procedure BindDouble(ParameterIndex: Integer; SQLType: TZSQLType; const Value: Double); override;
-    procedure BindDateTime(ParameterIndex: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
-    procedure BindNull(ParameterIndex: Integer; SQLType: TZSQLType); override;
-    procedure BindRawStr(ParameterIndex: Integer; SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt); override;
-    procedure BindBinary(ParameterIndex: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
+    procedure BindSignedOrdinal(ParameterIndex: Integer; var SQLType: TZSQLType; const Value: Int64); override;
+    procedure BindUnsignedOrdinal(ParameterIndex: Integer; var SQLType: TZSQLType; const Value: UInt64); override;
+    procedure BindDouble(ParameterIndex: Integer; var SQLType: TZSQLType; const Value: Double); override;
+    procedure BindDateTime(ParameterIndex: Integer; var SQLType: TZSQLType; const Value: TDateTime); override;
+    procedure BindNull(ParameterIndex: Integer; var SQLType: TZSQLType); override;
+    procedure BindRawStr(ParameterIndex: Integer; var SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt); override;
+    procedure BindBinary(ParameterIndex: Integer; var SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
   public
     constructor Create(const Connection: IZMySQLConnection;
       const SQL: string; Info: TStrings);
@@ -208,22 +207,23 @@ var
 { TZMySQLPreparedStatement }
 
 procedure TZMySQLPreparedStatement.BindNull(ParameterIndex: Integer;
-  SQLType: TZSQLType);
+  var SQLType: TZSQLType);
 var
   Bind: PMYSQL_aligned_BIND;
 begin
   {$R-}
   Bind := @FMYSQL_aligned_BINDs[ParameterIndex];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  if FUseDefaults and (FDefaultValues[ParameterIndex] <> '') then
-    BindRawStr(ParameterIndex, stString, Pointer(FDefaultValues[ParameterIndex]), Length(FDefaultValues[ParameterIndex]))
-  else if FInParamTypes[ParameterIndex] <> SQLType then
+  if FUseDefaults and (FDefaultValues[ParameterIndex] <> '') then begin
+    SQLType := stString;
+    BindRawStr(ParameterIndex, SQLType, Pointer(FDefaultValues[ParameterIndex]), Length(FDefaultValues[ParameterIndex]))
+  end else if FInParamTypes[ParameterIndex] <> SQLType then
     InitBuffer(SQLType, Bind, Length(FDefaultValues[ParameterIndex]));
   Bind^.is_null[0] := 1
 end;
 
 procedure TZMySQLPreparedStatement.BindRawStr(ParameterIndex: Integer;
-  SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt);
+  var SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt);
 var
   Bind: PMYSQL_aligned_BIND;
 begin
@@ -440,16 +440,6 @@ begin
     FOpenResultSet := Pointer(Result);
     Inc(FResultsCount);
   end;
-end;
-
-function TZMySQLPreparedStatement.DateTimeAsString(const Value: TDateTime;
-  SQLType: TZSQLType): RawByteString;
-begin
-  case SQLType of
-    stDate: Result := DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, True);
-    stTime: Result := DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, True);
-    else    Result := DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, True);
-  end
 end;
 
 destructor TZMySQLPreparedStatement.Destroy;
@@ -886,7 +876,7 @@ begin
 end;
 
 procedure TZMySQLPreparedStatement.BindBinary(ParameterIndex: Integer;
-  SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
+  var SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
 var
   Bind: PMYSQL_aligned_BIND;
 begin
@@ -1354,7 +1344,7 @@ begin
 end;
 
 procedure TZMySQLPreparedStatement.BindDateTime(ParameterIndex: Integer;
-  SQLType: TZSQLType; const Value: TDateTime);
+  var SQLType: TZSQLType; const Value: TDateTime);
 var
   Bind: PMYSQL_aligned_BIND;
   P: PMYSQL_TIME;
@@ -1379,7 +1369,7 @@ begin
 end;
 
 procedure TZMySQLPreparedStatement.BindDouble(ParameterIndex: Integer;
-  SQLType: TZSQLType; const Value: Double);
+  var SQLType: TZSQLType; const Value: Double);
 var
   Bind: PMYSQL_aligned_BIND;
 begin
@@ -1450,7 +1440,7 @@ begin
 end;
 
 procedure TZMySQLPreparedStatement.BindSignedOrdinal(ParameterIndex: Integer;
-  SQLType: TZSQLType; const Value: Int64);
+  var SQLType: TZSQLType; const Value: Int64);
 var
   Bind: PMYSQL_aligned_BIND;
 begin
@@ -1481,7 +1471,7 @@ begin
 end;
 
 procedure TZMySQLPreparedStatement.BindUnsignedOrdinal(ParameterIndex: Integer;
-  SQLType: TZSQLType; const Value: UInt64);
+  var SQLType: TZSQLType; const Value: UInt64);
 var
   Bind: PMYSQL_aligned_BIND;
 begin

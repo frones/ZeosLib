@@ -879,12 +879,14 @@ end;
 }
 procedure TZAbstractResultSet.Close;
 begin
-  FClosed := True;
-  ResetCursor;
-  FColumnsInfo.Clear;
-  if (FStatement <> nil) then begin
-    FStatement.FreeOpenResultSetReference;
-    FStatement := nil;
+  if not Closed then begin
+    FClosed := True;
+    ResetCursor;
+    FColumnsInfo.Clear;
+    if (FStatement <> nil) then begin
+      FStatement.FreeOpenResultSetReference(Self);
+      FStatement := nil;
+    end;
   end;
 end;
 

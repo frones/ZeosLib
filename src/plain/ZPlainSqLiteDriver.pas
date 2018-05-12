@@ -155,9 +155,10 @@ const
   SQLITE_NULL    = 5;
 
 type
+  PPsqlite = ^Psqlite;
   Psqlite = Pointer;
   Psqlite_func = Pointer;
-  Psqlite_vm = Pointer;
+  PPsqlite3_stmt = ^Psqlite3_stmt;
   Psqlite3_stmt = Pointer;
   Psqlite3_value = Pointer;
 
@@ -238,9 +239,9 @@ type
     sqlite3_data_count: function (pStmt: Psqlite3_stmt): Integer; cdecl;
 
     sqlite3_bind_blob: function(pStmt: Psqlite3_stmt; ParamIndex: Integer; const Buffer: Pointer; N: Integer; ValDestructor: Tsqlite3_destructor_type): Integer; cdecl;
-    sqlite3_bind_double: function(pStmt: Psqlite3_stmt; ParamIndex: Integer; Value: Double): Integer; cdecl;
+    sqlite3_bind_double: function(pStmt: Psqlite3_stmt; ParamIndex: Integer; const Value: Double): Integer; cdecl;
     sqlite3_bind_int: function(pStmt: Psqlite3_stmt; ParamIndex: Integer; Value: Integer): Integer; cdecl;
-    sqlite3_bind_int64: function(pStmt: Psqlite3_stmt; ParamIndex: Integer; Value: Int64): Integer; cdecl;
+    sqlite3_bind_int64: function(pStmt: Psqlite3_stmt; ParamIndex: Integer; const Value: Int64): Integer; cdecl;
     sqlite3_bind_null: function(pStmt: Psqlite3_stmt; ParamIndex: Integer): Integer; cdecl;
     sqlite3_bind_text: function(pStmt: Psqlite3_stmt; ParamIndex: Integer; const Text: PAnsiChar; N: Integer; ValDestructor: Tsqlite3_destructor_type): Integer; cdecl;
     sqlite3_bind_value: function(pStmt: Psqlite3_stmt; ParamIndex: Integer; const Value: Psqlite3_value): Integer; cdecl;

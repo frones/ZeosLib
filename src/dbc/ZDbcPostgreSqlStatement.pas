@@ -189,7 +189,7 @@ type
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); override;
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); override;
     procedure SetGUID(ParameterIndex: Integer; const Value: TGUID); override;
-    procedure SetBlob(ParameterIndex: Integer; const SQLType: TZSQLType; const Value: IZBlob); override;
+    procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant); override;
   end;
 
@@ -892,7 +892,7 @@ begin
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.SetBlob(ParameterIndex: Integer;
-  const SQLType: TZSQLType; const Value: IZBlob);
+  SQLType: TZSQLType; const Value: IZBlob);
 begin
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
