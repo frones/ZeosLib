@@ -231,6 +231,7 @@ begin
   { Checks the removed row. }
   ResultSet := Statement.ExecuteQuery('SELECT * FROM department ' + WhereClause);
   CheckEquals(False, ResultSet.Next);
+  ResultSet.Close;
 end;
 {$ENDIF}
 
