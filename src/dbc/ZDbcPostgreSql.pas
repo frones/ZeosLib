@@ -93,8 +93,7 @@ type
     function EncodeBinary(Buf: Pointer; Len: Integer; Quoted: Boolean): RawByteString; overload;
     function EncodeBinary(const Value: TBytes; Quoted: Boolean): RawByteString; overload;
     function EscapeString(const FromChar: PAnsiChar; len: NativeUInt; Quoted: Boolean): RawByteString; overload;
-    procedure RegisterPreparedStmtName(const value: String);
-    procedure UnregisterPreparedStmtName(const value: String);
+    procedure RegisterTrashPreparedStmtName(const value: String);
     function ClientSettingsChanged: Boolean;
     function GetUndefinedVarcharAsStringLength: Integer;
     function CheckFieldVisibility: Boolean;
@@ -117,7 +116,6 @@ type
     FServerMinorVersion: Integer;
     FServerSubVersion: Integer;
     FNoticeProcessor: TZPostgreSQLNoticeProcessor;
-    FPreparedStmts: TStrings;
     //a collection of statement handles that are not used anymore. These can be
     //safely deallocated upon the next transaction start or immediately if we
     //are in autocommit mode. See SF#137:
@@ -142,8 +140,7 @@ type
     function EncodeBinary(const Value: TBytes; Quoted: Boolean): RawByteString; overload;
     function EncodeBinary(Buf: Pointer; Len: Integer; Quoted: Boolean): RawByteString; overload;
     function EscapeString(const FromChar: PAnsiChar; len: NativeUInt; Quoted: Boolean): RawByteString; overload;
-    procedure RegisterPreparedStmtName(const value: String);
-    procedure UnregisterPreparedStmtName(const value: String);
+    procedure RegisterTrashPreparedStmtName(const value: String);
     function ClientSettingsChanged: Boolean;
   public
     destructor Destroy; override;
@@ -192,7 +189,9 @@ type
     function EscapeString(const Value: RawByteString): RawByteString; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: RawByteString); override;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; override;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; var Result: RawByteString); override;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; override;
     function GetServerSetting(const AName: RawByteString): string;
     procedure SetServerSetting(const AName, AValue: RawbyteString);
@@ -317,7 +316,6 @@ procedure TZPostgreSQLConnection.InternalCreate;
 begin
   FMetaData := TZPostgreSQLDatabaseMetadata.Create(Self, Url);
   FPlainDriver := TZPostgreSQLPlainDriver(PlainDriver.GetInstance);
-  FPreparedStmts := nil;
   FPreparedStatementTrashBin := nil;
   { Sets a default PostgreSQL port }
   if Self.Port = 0 then
@@ -360,7 +358,6 @@ destructor TZPostgreSQLConnection.Destroy;
 begin
   FreeAndNil(FTypeList);
   inherited Destroy;
-  FreeAndNil(FPreparedStmts);
   FreeAndNil(FPreparedStatementTrashBin);
 end;
 
@@ -546,6 +543,7 @@ function TZPostgreSQLConnection.EncodeBinary(const Value: TBytes; Quoted: Boolea
 begin
   Result := EncodeBinary(Pointer(Value), Length(Value), Quoted);
 end;
+
 {**
   Encodes a Binary-AnsiString to a PostgreSQL format
   @param Value the Binary String
@@ -556,33 +554,18 @@ begin
   Result := EncodeBinary(Pointer(Value), Length(Value), Quoted);
 end;
 
-procedure TZPostgreSQLConnection.RegisterPreparedStmtName(const value: String);
-begin
-  FPreparedStmts.Add(Value);
-end;
-
 procedure TZPostgreSQLConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable);
 begin
   if Assigned(FPreparedStatementTrashBin) then
     FPreparedStatementTrashBin.Clear;
-  if Assigned(FPreparedStmts) then
-    FPreparedStmts.Clear;
   FHandle := nil;
   inherited ReleaseImmediat(Sender);
 end;
 
-procedure TZPostgreSQLConnection.UnregisterPreparedStmtName(const value: String);
-var Index: Integer;
+procedure TZPostgreSQLConnection.RegisterTrashPreparedStmtName(const value: String);
 begin
-  Index := FPreparedStmts.IndexOf(Value);
-  if Index > -1 then begin
-    FPreparedStatementTrashBin.Add(FPreparedStmts.Strings[Index]);
-    FPreparedStmts.Delete(Index);
-  end;
-  //EH@JAN is this corret?? Flush all Prepared statements???
-  //https://www.postgresql.org/docs/8.1/static/sql-deallocate.html
-  //Zitat: "If you do not explicitly deallocate a prepared statement, it is deallocated when the session ends."
-  //if GetAutoCommit then DeallocatePreparedStatements;
+  if FPreparedStatementTrashBin.IndexOf(Value) = -1 then
+    FPreparedStatementTrashBin.Add(Value);
 end;
 
 function TZPostgreSQLConnection.ClientSettingsChanged: Boolean;
@@ -638,9 +621,7 @@ begin
       FClientSettingsChanged := True;
     end;
 
-    if FPreparedStmts = nil then
-      FPreparedStmts := TStringList.Create;
-    if not Assigned(FPreparedStatementTrashBin) then
+    if FPreparedStatementTrashBin = nil then
       FPreparedStatementTrashBin := TStringList.Create;
 
     { sets standard_conforming_strings according to Properties if available }
@@ -975,6 +956,12 @@ begin
   end;
 end;
 
+procedure TZPostgreSQLConnection.GetBinaryEscapeString(Buf: Pointer;
+  Len: LengthInt; var Result: RawByteString);
+begin
+  Result := Self.EncodeBinary(Buf, Len, True)
+end;
+
 {**
   Gets a reference to PostgreSQL connection handle.
   @return a reference to PostgreSQL connection handle.
@@ -982,6 +969,12 @@ end;
 function TZPostgreSQLConnection.GetConnectionHandle: PZPostgreSQLConnect;
 begin
   Result := FHandle;
+end;
+
+procedure TZPostgreSQLConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
+  var Result: RawByteString);
+begin
+  Result := EscapeString(Buf, Len, True)
 end;
 
 {**

@@ -1447,8 +1447,7 @@ begin
     if not Assigned(FQueryHandle) then begin
       FQueryHandle := (Statement as IZPGSQLPreparedStatement).GetLastQueryHandle;
       if FPlainDriver.PQsetSingleRowMode(FPGconn) <> Ord(PGRES_COMMAND_OK) then
-        CheckPostgreSQLError((GetStatement.GetConnection as IZPostgreSQLConnection),
-          FplainDriver, FPGconn, lcOther, 'open recordset', FQueryHandle);
+        CheckPostgreSQLError(Self, FplainDriver, FPGconn, lcOther, 'open recordset', FQueryHandle);
     end else
       FplainDriver.PQclear(FQueryHandle)
 end;
@@ -1461,8 +1460,7 @@ begin
   if ResultSetType <> rtForwardOnly then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
   if FPlainDriver.PQsetSingleRowMode(FPGconn) <> Ord(PGRES_COMMAND_OK) then
-    CheckPostgreSQLError((GetStatement.GetConnection as IZPostgreSQLConnection),
-      FplainDriver, FPGconn, lcOther, 'open recordset', FQueryHandle);
+    CheckPostgreSQLError(Self, FplainDriver, FPGconn, lcOther, 'open recordset', FQueryHandle);
   inherited Open;
 end;
 
