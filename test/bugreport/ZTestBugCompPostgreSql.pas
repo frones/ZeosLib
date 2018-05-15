@@ -903,15 +903,26 @@ end;
  for indeterminable parameters types. handle_indeterminate_datatype should fix it}
 procedure TZTestCompPostgreSQLBugReport.TestUnknowParam;
 var Query: TZQuery;
+  I: Integer;
+  NowDate: TDateTime;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Connection.Connect;
   try
-    Query.SQL.Text := 'select :p1 as Param1, :p2 as param2';
-    Query.Open;
-    Query.Close;
+    NowDate := Now;
+    Query.SQL.Text := 'select :p1 as Param1, :p2 as param2, :p3 as param3, :p4 as param4';
+    Query.Params[1].AsTime := NowDate;
+    Query.Params[2].AsDate := NowDate;
+    Query.Params[3].AsDateTime := NowDate;
+    for i := 0 to 5 do begin
+      Query.Open;
+      //Check(Query.Fields[1].AsDateTime = Frac(NowDate), 'time value passed by unknown param');
+      //Check(Query.Fields[2].AsDateTime = Int(NowDate), 'date value passed by unknown param');
+      //Check(Query.Fields[2].AsDateTime = NowDate, 'timestamp value passed by unknown param');
+      Query.Close;
+    end;
   finally
     Query.Free;
   end;
