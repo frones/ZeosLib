@@ -625,7 +625,7 @@ type
 
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
-    procedure FreeOpenResultSetReference;
+    procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
   end;
 
   {** Prepared SQL statement interface. }
@@ -667,8 +667,7 @@ type
     procedure SetAsciiStream(ParameterIndex: Integer; const Value: TStream);
     procedure SetUnicodeStream(ParameterIndex: Integer; const Value: TStream);
     procedure SetBinaryStream(ParameterIndex: Integer; const Value: TStream);
-    procedure SetBlob(ParameterIndex: Integer; const SQLType: TZSQLType;
-      const Value: IZBlob);
+    procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob);
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant);
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
@@ -736,6 +735,12 @@ type
   {** Defines Column-Comparison kinds }
   TComparisonKind = (ckAscending{greater than}, ckDescending{less than}, ckEquals);
   TComparisonKindArray = Array of TComparisonKind;
+
+  {$IFDEF USE_SYNCOMMONS}
+  TZJSONComposeOption = (jcoEndJSONObject, jcoDATETIME_MAGIC, jcoMongoISODate,
+    jcoMilliseconds, jcsSkipNulls);
+  TZJSONComposeOptions = set of TZJSONComposeOption;
+  {$ENDIF USE_SYNCOMMONS}
 
   {** Rows returned by SQL query. }
   IZResultSet = interface(IZInterface)
@@ -976,8 +981,9 @@ type
     function GetConSettings: PZConsettings;
 
     {$IFDEF USE_SYNCOMMONS}
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); overload;
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
-      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False);
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); overload; //deprecated;
     {$ENDIF USE_SYNCOMMONS}
   end;
 

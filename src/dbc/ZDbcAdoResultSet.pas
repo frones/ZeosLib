@@ -115,8 +115,7 @@ type
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
-      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -141,7 +140,7 @@ uses
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZAdoResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
+  JSONComposeOptions: TZJSONComposeOptions);
 var Len, C, H, I: Integer;
     P: PWideChar;
 begin
@@ -156,7 +155,7 @@ begin
       C := JSONWriter.Fields[i];
     if TVarData(FAdoRecordSet.Fields.Item[C].Value).VType in [varNull, varEmpty] then begin
       if JSONWriter.Expand then begin
-        if (not SkipNullFields) then begin
+        if not (jcsSkipNulls in JSONComposeOptions) then begin
           JSONWriter.AddString(JSONWriter.ColNames[I]);
           JSONWriter.AddShort('null,')
         end;
@@ -184,15 +183,30 @@ begin
         adCurrency:         JSONWriter.AddCurr64(TVarData(FAdoRecordSet.Fields.Item[C].Value).VCurrency);
         adBoolean:          JSONWriter.AddShort(JSONBool[TVarData(FAdoRecordSet.Fields.Item[C].Value).VBoolean]);
         adGUID:             JSONWriter.AddNoJSONEscapeW(Pointer(TVarData(FAdoRecordSet.Fields.Item[C].Value).VOleStr), 38);
+        adDBTime:           if (jcoMongoISODate in JSONComposeOptions) and (FAdoRecordSet.Fields.Item[C].Type_ <> adDBTime) then begin
+                              JSONWriter.AddShort('ISODate("0000-00-00');
+                              JSONWriter.AddDateTime(TVarData(FAdoRecordSet.Fields.Item[C].Value).VDate, jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddShort('Z")');
+                            end else begin
+                              if jcoDATETIME_MAGIC in JSONComposeOptions
+                              then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              else JSONWriter.Add('"');
+                              JSONWriter.AddDateTime(TVarData(FAdoRecordSet.Fields.Item[C].Value).VDate, jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.Add('"');
+                            end;
         adDate,
         adDBDate,
-        adDBTime,
-        adDBTimeStamp:
-          begin
-            JSONWriter.Add('"');
-            JSONWriter.AddDateTime(TVarData(FAdoRecordSet.Fields.Item[C].Value).VDate);
-            JSONWriter.Add('"');
-          end;
+        adDBTimeStamp:      if (jcoMongoISODate in JSONComposeOptions) and (FAdoRecordSet.Fields.Item[C].Type_ <> adDBTime) then begin
+                              JSONWriter.AddShort('ISODate("');
+                              JSONWriter.AddDateTime(TVarData(FAdoRecordSet.Fields.Item[C].Value).VDate, jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddShort('Z")');
+                            end else begin
+                              if jcoDATETIME_MAGIC in JSONComposeOptions
+                              then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              else JSONWriter.Add('"');
+                              JSONWriter.AddDateTime(TVarData(FAdoRecordSet.Fields.Item[C].Value).VDate, jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.Add('"');
+                            end;
         adChar:
           begin
             JSONWriter.Add('"');
@@ -231,8 +245,7 @@ begin
       JSONWriter.Add(',');
     end;
   end;
-  if EndJSONObject then
-  begin
+  if jcoEndJSONObject in JSONComposeOptions then begin
     JSONWriter.CancelLastComma; // cancel last ','
     if JSONWriter.Expand then
       JSONWriter.Add('}');

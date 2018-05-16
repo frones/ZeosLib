@@ -220,7 +220,7 @@ type
   public
     procedure SetBuffer(const Buffer: String);
     function Read(var Buffer; Count: Longint): Longint; override;
-    function Write(const Buffer; Count: Longint): Longint; override;
+    function Write(const {%H-}Buffer; {%H-}Count: Longint): Longint; override;
     function Seek(Offset: Longint; Origin: Word): Longint; override;
     function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; override;
   End;

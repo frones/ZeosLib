@@ -78,6 +78,9 @@ type
     FSqlData: IZASASQLDA;
     FASAConnection: IZASAConnection;
     FPlainDriver: TZASAPlainDriver;
+    {$IFDEF USE_SYNCOMMONS}
+    FTinyBuffer: array[0..30] of Byte;
+    {$ENDIF}
   private
     procedure CheckIndex(const Index: Word);
     procedure CheckRange(const Index: Word);
@@ -114,8 +117,7 @@ type
 
     property SQLData: IZASASQLDA read FSQLData;
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
-      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -208,7 +210,7 @@ uses
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZASAAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
+  JSONComposeOptions: TZJSONComposeOptions);
 var L: NativeUInt;
     P: Pointer;
     C, H, I: SmallInt;
@@ -228,7 +230,7 @@ begin
     with FSQLDA.sqlvar[C] do
       if (sqlind <> nil) and (sqlind^ < 0) then
         if JSONWriter.Expand then begin
-          if (not SkipNullFields) then begin
+          if not (jcsSkipNulls in JSONComposeOptions) then begin
             JSONWriter.AddString(JSONWriter.ColNames[I]);
             JSONWriter.AddShort('null,')
           end;
@@ -267,16 +269,29 @@ begin
           DT_TIME,
           DT_TIMESTAMP,
           DT_TIMESTAMP_STRUCT : begin
-                                  JSONWriter.Add('"');
-                                  JSONWriter.AddDateTime(EncodeDate(
-                                    PZASASQLDateTime( sqlData).Year,
-                                    PZASASQLDateTime( sqlData).Month + 1,
-                                    PZASASQLDateTime( sqlData).Day) +
-                                    EncodeTime( PZASASQLDateTime( sqlData).Hour,
-                                    PZASASQLDateTime( sqlData).Minute,
-                                    PZASASQLDateTime( sqlData).Second,
-                                    PZASASQLDateTime( sqlData).MicroSecond div 1000));
-                                  JSONWriter.Add('"');
+                                  if jcoMongoISODate in JSONComposeOptions then
+                                    JSONWriter.AddShort('ISODate("')
+                                  else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                    JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                  else
+                                    JSONWriter.Add('"');
+                                  if PZASASQLDateTime( sqlData).Year < 0 then
+                                    JSONWriter.Add('-');
+                                  if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stTime) then begin
+                                    DateToIso8601PChar(@FTinyBuffer[0], True, Abs(PZASASQLDateTime( sqlData).Year),
+                                    PZASASQLDateTime( sqlData).Month + 1, PZASASQLDateTime( sqlData).Day);
+                                    JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                                  end else if jcoMongoISODate in JSONComposeOptions then
+                                    JSONWriter.AddShort('0000-00-00');
+                                  if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stDate) then begin
+                                    TimeToIso8601PChar(@FTinyBuffer[0], True, PZASASQLDateTime( sqlData).Hour,
+                                    PZASASQLDateTime( sqlData).Minute, PZASASQLDateTime( sqlData).Second,
+                                    PZASASQLDateTime( sqlData).MicroSecond div 1000, 'T', jcoMilliseconds in JSONComposeOptions);
+                                    JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                                  end;
+                                  if jcoMongoISODate in JSONComposeOptions
+                                  then JSONWriter.AddShort('Z)"')
+                                  else JSONWriter.Add('"');
                                 end;
           DT_BINARY           : JSONWriter.WrBase64(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length, True);
           DT_LONGBINARY       : begin
@@ -321,8 +336,7 @@ begin
         JSONWriter.Add(',');
       end;
   end;
-  if EndJSONObject then
-  begin
+  if jcoEndJSONObject in JSONComposeOptions then begin
     JSONWriter.CancelLastComma; // cancel last ','
     if JSONWriter.Expand then
       JSONWriter.Add('}');

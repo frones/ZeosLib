@@ -1484,6 +1484,7 @@ begin
                   vtAnsiString: RawTemp := Consettings^.ConvFuncs.ZAnsiToRaw(ZAnsiStringArray[j], CP);
                   vtUTF8String: if ZCompatibleCodePages(CP, zCP_UTF8) then begin
                         ParamSqlData.UpdatePAnsiChar(ParamIndex, Pointer(ZUTF8StringArray[j]), Length(ZUTF8StringArray[j]));
+                        Inc(ParamIndex);
                         continue;
                       end else
                         RawTemp := Consettings^.ConvFuncs.ZUTF8ToRaw(ZUTF8StringArray[j], CP);
@@ -1491,6 +1492,7 @@ begin
                   vtUnicodeString: RawTemp := ZUnicodeToRaw(ZUnicodeStringArray[j], CP);
                   vtCharRec: if ZCompatibleCodePages(ZCharRecArray[j].CP, cp) or (ZCharRecArray[j].Len = 0) then begin
                         ParamSqlData.UpdatePAnsiChar(ParamIndex, ZCharRecArray[j].P, ZCharRecArray[j].Len);
+                        Inc(ParamIndex);
                         continue;
                       end else if ZCompatibleCodePages(ZCharRecArray[j].CP, zCP_UTF16) then
                         RawTemp := PUnicodeToRaw(ZCharRecArray[j].P, ZCharRecArray[j].Len, CP)

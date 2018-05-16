@@ -93,6 +93,9 @@ type
     FLobColsIndex: TIntegerDynArray;
     fpcColumns: DBORDINAL;
     fTempBlob: IZBlob;
+    {$IFDEF USE_SYNCOMMONS}
+    FTinyBuffer: array[0..30] of Byte;
+    {$ENDIF}
   private
     FData: Pointer;
     FLength: DBLENGTH;
@@ -130,8 +133,7 @@ type
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
 
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
-      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -195,11 +197,12 @@ var
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
+  JSONComposeOptions: TZJSONComposeOptions);
 var I, C, L, H: Integer;
     P: PAnsiChar;
     Len: NativeUInt;
     blob: IZBlob;
+    MS: Word;
 begin
   //init
   if JSONWriter.Expand then
@@ -213,7 +216,7 @@ begin
       C := JSONWriter.Fields[i];
     if IsNull(C+FirstDbcIndex) then
       if JSONWriter.Expand then begin
-        if (not SkipNullFields) then begin
+        if not (jcsSkipNulls in JSONComposeOptions) then begin
           JSONWriter.AddString(JSONWriter.ColNames[I]);
           JSONWriter.AddShort('null,')
         end;
@@ -316,44 +319,66 @@ begin
             JSONWriter.AddJSONEscapeW(PPointer(FData)^, FLength shr 1);
             JSONWriter.Add('"');
           end;
-        //DBTYPE_NUMERIC	= 131;
-        //DBTYPE_UDT	= 132;
+        //DBTYPE_NUMERIC  = 131;
+        //DBTYPE_UDT = 132;
         DBTYPE_DBDATE:    begin
-                            JSONWriter.Add('"');
-                            if With_DATETIME_MAGIC then
-                              JSONWriter.AddNoJSONEscapeUTF8(SynCommons.DateTimeToSQL(EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month, PDBDate(FData)^.day)))
+                            if jcoMongoISODate in JSONComposeOptions then
+                              JSONWriter.AddShort('ISODate("')
+                            else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                             else
-                              JSONWriter.AddDateTime(EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month, PDBDate(FData)^.day));
                               JSONWriter.Add('"');
-                            end;
+                            if PDBDate(FData)^.year < 0 then
+                              JSONWriter.Add('-');
+                            DateToIso8601PChar(@FTinyBuffer[0], True, Abs(PDBDate(FData)^.year),
+                              PDBDate(FData)^.month, PDBDate(FData)^.day);
+                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                            if jcoMongoISODate in JSONComposeOptions
+                            then JSONWriter.AddShort('Z")')
+                            else JSONWriter.Add('"');
+                          end;
         DBTYPE_DBTIME:    begin
-                            JSONWriter.Add('"');
-                            if With_DATETIME_MAGIC then
-                              JSONWriter.AddNoJSONEscapeUTF8( SynCommons.DateTimeToSQL(EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute, PDBTime(FData)^.second, 0)))
-                            else
-                              JSONWriter.AddDateTime(EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute, PDBTime(FData)^.second, 0));
-                            JSONWriter.Add('"');
+                            if jcoMongoISODate in JSONComposeOptions then
+                              JSONWriter.AddShort('ISODate("0000-00-00')
+                            else if jcoDATETIME_MAGIC in JSONComposeOptions then begin
+                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                            end else
+                              JSONWriter.Add('"');
+                            TimeToIso8601PChar(@FTinyBuffer[0], True, PDBTime(FData)^.hour,
+                              PDBTime(FData)^.minute, PDBTime(FData)^.second, 0, 'T', False);
+                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            if jcoMongoISODate in JSONComposeOptions
+                            then JSONWriter.AddShort('Z)"')
+                            else JSONWriter.Add('"');
                           end;
         DBTYPE_DBTIMESTAMP: begin
-                              JSONWriter.Add('"');
-                              if With_DATETIME_MAGIC then
-                                JSONWriter.AddNoJSONEscapeUTF8(SynCommons.DateTimeToSQL(EncodeDate(Abs(PDBTimeStamp(FData)^.year), PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day)+
-                                  EncodeTime(PDBTimeStamp(FData)^.hour, PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second, 0)))
-                                else
-                                  JSONWriter.AddDateTime((EncodeDate(Abs(PDBTimeStamp(FData)^.year), PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day)+
-                                    EncodeTime(PDBTimeStamp(FData)^.hour, PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second, 0)));
-                              JSONWriter.Add('"');
+                              if jcoMongoISODate in JSONComposeOptions then
+                                JSONWriter.AddShort('ISODate("')
+                              else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              else
+                                JSONWriter.Add('"');
+                              if PDBTimeStamp(FData)^.year < 0 then
+                                JSONWriter.Add('-');
+                              DateToIso8601PChar(@FTinyBuffer[0], True, Abs(PDBTimeStamp(FData)^.Year),
+                                 PDBTimeStamp(FData)^.Month, PDBTimeStamp(FData)^.Day);
+                              MS := (PDBTimeStamp(FData)^.fraction * Byte(ord(jcoMilliseconds in JSONComposeOptions))) div 1000000;
+                              TimeToIso8601PChar(@FTinyBuffer[10], True, PDBTimeStamp(FData)^.Hour,
+                                PDBTimeStamp(FData)^.Minute, PDBTimeStamp(FData)^.Second, MS, 'T', jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                              if jcoMongoISODate in JSONComposeOptions
+                              then JSONWriter.AddShort('Z")')
+                              else JSONWriter.Add('"');
                             end;
         DBTYPE_HCHAPTER:  JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PCHAPTER(FData)^));
-        //DBTYPE_FILETIME	= 64;
-        //DBTYPE_PROPVARIANT	= 138;
-        //DBTYPE_VARNUMERIC	= 139;
+        //DBTYPE_FILETIME = 64;
+        //DBTYPE_PROPVARIANT = 138;
+        //DBTYPE_VARNUMERIC = 139;
       end;
       JSONWriter.Add(',');
     end;
   end;
-  if EndJSONObject then
-  begin
+  if jcoEndJSONObject in JSONComposeOptions then begin
     JSONWriter.CancelLastComma; // cancel last ','
     if JSONWriter.Expand then
       JSONWriter.Add('}');

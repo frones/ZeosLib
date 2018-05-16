@@ -571,6 +571,7 @@ function TZMySQLConnection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
      Open;
+  //Result := TZMySQLStatement.Create(Self, Info);
   Result := TZMySQLPreparedStatement.Create(Self, '', Info);
 end;
 

@@ -156,9 +156,13 @@ function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
 
 function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_BINDOFFSETS;
 
-procedure ReAllocMySQLBindBuffer(var DataBuffer: TBytes;
-  var MYSQL_aligned_BINDs: TMYSQL_aligned_BINDDynArray; BindCount, BindIterations: ULong;
-  BindOffsets: PMYSQL_BINDOFFSETS);
+procedure AllocMySQLBindBuffer(var BindBuffer: Pointer;
+  var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BindOffsets: PMYSQL_BINDOFFSETS;
+  BindCount, Iterations: ULong);
+
+procedure FreeMySQLBindBuffer(var BindBuffer: Pointer;
+  var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BindOffsets: PMYSQL_BINDOFFSETS;
+  BoundCount: ULong);
 
 implementation
 
@@ -806,39 +810,74 @@ begin
   else Result := nil
 end;
 
-procedure ReAllocMySQLBindBuffer(var DataBuffer: TBytes;
-  var MYSQL_aligned_BINDs: TMYSQL_aligned_BINDDynArray; BindCount, BindIterations: ULong;
-  BindOffsets: PMYSQL_BINDOFFSETS);
+procedure AllocMySQLBindBuffer(var BindBuffer: Pointer;
+  var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BindOffsets: PMYSQL_BINDOFFSETS;
+  BindCount, Iterations: ULong);
 var
   ColOffset: NativeUInt;
   Bind: PMYSQL_aligned_BIND;
-  I: ULong;
+  I: Integer;
 begin
-  SetLength(MYSQL_aligned_BINDs, BindCount);
-  SetLength(DataBuffer, BindCount*BindOffsets.Size);
-  if BindCount > 0 then
-    for i := 0 to BindCount -1 do begin
-      Bind := @MYSQL_aligned_BINDs[I];
-      ColOffset := NativeUInt(I*BindOffsets.size);
-      { save mysql bind offset fo mysql_stmt_fetch_column }
-      Bind^.mysql_bind := {%H-}Pointer(NativeUInt(DataBuffer)+ColOffset);
-      { save aligned addresses }
-      bind^.buffer_address := {%H-}Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.buffer);
-      Bind^.buffer_type_address := {%H-}Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.buffer_type);
-      Bind^.is_unsigned_address := {%H-}Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.is_unsigned);
-      Bind^.buffer_length_address := {%H-}Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.buffer_length);
-      Bind^.length_address := {%H-}Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.length);
-      SetLength(Bind^.length, BindIterations);
-      Bind^.length_address^ := Pointer(Bind^.length);
-      SetLength(Bind^.is_null, BindIterations);
-      {%H-}PPointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.is_null)^ := Pointer(Bind^.is_null);
-      if BindOffsets.Indicator > 0 then begin
-        SetLength(Bind^.indicators, BindIterations);
-        Bind^.indicator_address := {%H-}Pointer(NativeUInt(DataBuffer)+ColOffset+BindOffsets.Indicator);
+  if BindCount = 0 then
+    Exit;
+  GetMem(BindBuffer, BindCount*BindOffsets.Size);
+  FillChar(BindBuffer^, BindCount*BindOffsets.Size, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+  GetMem(MYSQL_aligned_BINDs, BindCount*SizeOf(TMYSQL_aligned_BIND));
+  FillChar(MYSQL_aligned_BINDs^, BindCount*SizeOf(TMYSQL_aligned_BIND), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+  for i := 0 to BindCount-1 do begin
+    {$R-}
+    Bind := @MYSQL_aligned_BINDs[I];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    ColOffset := NativeUInt(I*BindOffsets.size);
+    { save mysql bind offset fo mysql_stmt_fetch_column }
+    Bind^.mysql_bind := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset);
+    { save aligned addresses }
+    bind^.buffer_address := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.buffer);
+    Bind^.buffer_type_address := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.buffer_type);
+    Bind^.is_unsigned_address := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.is_unsigned);
+    Bind^.buffer_length_address := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.buffer_length);
+    Bind^.length_address := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.length);
+    GetMem(Bind^.length, Iterations*SizeOf(ULong));
+    FillChar(Bind^.length^, Iterations*SizeOf(ULong), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+    Bind^.length_address^ := Pointer(Bind^.length);
+    GetMem(Bind^.is_null, Iterations*SizeOf(my_bool));
+    FillChar(Bind^.is_null^, Iterations*SizeOf(my_bool), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+    {%H-}PPointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.is_null)^ := Pointer(Bind^.is_null);
+    if (BindOffsets.Indicator > 0) then begin
+      Bind^.indicator_address := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.Indicator);
+      if Iterations > 0 then begin
+        GetMem(Bind^.indicators, Iterations*SizeOf(TIndicator));
+        FillChar(Bind^.indicators^, Iterations*SizeOf(TIndicator), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
         Bind^.indicator_address^ := Pointer(Bind^.indicators);
-      end else if BindIterations > 1 then
-        raise EZSQLException.Create('Array bindings are not supported!');
-    end;
+      end;
+    end else if Iterations > 1 then
+      raise EZSQLException.Create('Array bindings are not supported!');
+  end;
+end;
+
+procedure FreeMySQLBindBuffer(var BindBuffer: Pointer;
+  var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BindOffsets: PMYSQL_BINDOFFSETS;
+  BoundCount: ULong);
+var
+  Bind: PMYSQL_aligned_BIND;
+  I: Integer;
+begin
+  FreeMem(BindBuffer);
+  BindBuffer := nil;
+  if (MYSQL_aligned_BINDs <> nil) then begin
+    if (BoundCount > 0) then
+      for i := BoundCount-1 downto 0 do begin
+        {$R-}
+        Bind := @MYSQL_aligned_BINDs[I];
+        {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+        FreeMem(Bind^.buffer);
+        FreeMem(Bind^.length);
+        FreeMem(Bind^.indicators);
+        FreeMem(Bind^.is_null);
+      end;
+    FreeMem(MYSQL_aligned_BINDs);
+    MYSQL_aligned_BINDs := nil;
+  end;
 end;
 
 initialization

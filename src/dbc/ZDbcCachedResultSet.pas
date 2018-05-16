@@ -284,8 +284,7 @@ type
     procedure PostUpdatesCached; virtual;
     procedure DisposeCachedUpdates; virtual;
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
-      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject, jcoDATETIME_MAGIC]); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -2260,9 +2259,9 @@ end;
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZAbstractCachedResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
+  JSONComposeOptions: TZJSONComposeOptions);
 begin
-  FRowAccessor.ColumnsToJSON(JSONWriter, EndJSONObject, With_DATETIME_MAGIC, SkipNullFields)
+  FRowAccessor.ColumnsToJSON(JSONWriter, JSONComposeOptions)
 end;
 {$ENDIF USE_SYNCOMMONS}
 

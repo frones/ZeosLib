@@ -127,8 +127,7 @@ type
 
     function MoveAbsolute(Row: Integer): Boolean; override;
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
-      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -242,8 +241,8 @@ end;
 { TZAbstractPostgreSQLStringResultSet }
 
 {$IFDEF USE_SYNCOMMONS}
-procedure TZAbstractPostgreSQLStringResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
+procedure TZAbstractPostgreSQLStringResultSet.ColumnsToJSON(
+  JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
 var
   C, L: Cardinal;
   P, pgBuff: PAnsiChar;
@@ -264,7 +263,7 @@ begin
       C := JSONWriter.Fields[i];
     if FPlainDriver.PQgetisnull(FQueryHandle, RNo, C) <> 0 then
       if JSONWriter.Expand then begin
-        if (not SkipNullFields) then begin
+        if not (jcsSkipNulls in JSONComposeOptions) then begin
           JSONWriter.AddString(JSONWriter.ColNames[I]);
           JSONWriter.AddShort('null,')
         end;
@@ -315,20 +314,51 @@ begin
                           Blob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FPGconn, RawToIntDef(P, 0), FChunk_Size);
                           JSONWriter.WrBase64(Blob.GetBuffer, Blob.Length, True);
                         end;
-        stGUID        : JSONWriter.AddNoJSONEscape(P);//
-        stDate        : begin
+        stGUID        : begin
                           JSONWriter.Add('"');
-                          JSONWriter.AddDateTime(RawSQLDateToDateTime(P, ZFastCode.StrLen(P), ConSettings^.ReadFormatSettings, Failed));
-                          JSONWriter.Add('"');
-                        end;
-        stTime        : begin
-                          JSONWriter.Add('"');
-                          JSONWriter.AddDateTime(RawSQLTimeToDateTime(P, ZFastCode.StrLen(P), ConSettings^.ReadFormatSettings, Failed));
+                          JSONWriter.AddNoJSONEscape(P);//
                           JSONWriter.Add('"');
                         end;
-        stTimestamp   : begin
+        stDate        : if jcoMongoISODate in JSONComposeOptions then begin
+                          JSONWriter.AddShort('ISODate("');
+                          JSONWriter.AddNoJSONEscape(P, 10);
+                          JSONWriter.AddShort('Z)"');
+                        end else begin
+                          if jcoDATETIME_MAGIC in JSONComposeOptions
+                          then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                          else JSONWriter.Add('"');
+                          JSONWriter.AddNoJSONEscape(P, 10);
                           JSONWriter.Add('"');
-                          JSONWriter.AddDateTime(RawSQLTimeStampToDateTime(P, ZFastCode.StrLen(P), ConSettings^.ReadFormatSettings, Failed));
+                        end;
+        stTime        : if jcoMongoISODate in JSONComposeOptions then begin
+                          JSONWriter.AddShort('ISODate("0000-00-00T');
+                          JSONWriter.AddNoJSONEscape(P, 8); //mongo has no milliseconds
+                          JSONWriter.AddShort('Z)"');
+                        end else begin
+                          if jcoDATETIME_MAGIC in JSONComposeOptions
+                          then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                          else JSONWriter.Add('"');
+                          JSONWriter.AddShort('T');
+                          if ((P+8)^ <> '.') or not (jcoMilliseconds in JSONComposeOptions) //time zone ?
+                          then JSONWriter.AddNoJSONEscape(P, 8)
+                          else JSONWriter.AddNoJSONEscape(P, 12);
+                          JSONWriter.Add('"');
+                        end;
+        stTimestamp   : if jcoMongoISODate in JSONComposeOptions then begin
+                          JSONWriter.AddShort('ISODate("');
+                          JSONWriter.AddNoJSONEscape(P, 10);
+                          JSONWriter.Add('T');
+                          JSONWriter.AddNoJSONEscape(P+11, 8);//mongo has no milliseconds
+                          JSONWriter.AddShort('Z)"');
+                        end else begin
+                          if jcoDATETIME_MAGIC in JSONComposeOptions
+                          then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                          else JSONWriter.Add('"');
+                          JSONWriter.AddNoJSONEscape(P, 10);
+                          JSONWriter.Add('T');
+                          if ((P+19)^ <> '.') or not (jcoMilliseconds in JSONComposeOptions)
+                          then JSONWriter.AddNoJSONEscape(P+11, 8)
+                          else JSONWriter.AddNoJSONEscape(P+11, 12);
                           JSONWriter.Add('"');
                         end;
         stString,
@@ -353,8 +383,7 @@ begin
       JSONWriter.Add(',');
     end;
   end;
-  if EndJSONObject then
-  begin
+  if jcoEndJSONObject in JSONComposeOptions then begin
     JSONWriter.CancelLastComma; // cancel last ','
     if JSONWriter.Expand then
       JSONWriter.Add('}');

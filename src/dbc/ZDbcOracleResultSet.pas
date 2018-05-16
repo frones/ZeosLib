@@ -88,6 +88,9 @@ type
     FCurrentRowBufIndex: LongWord; //The current row in buffer! NOT the current row of RS
     FZBufferSize: Integer; //max size for multiple rows. If Row > Value ignore it!
     FRowsBuffer: TByteDynArray; //Buffer for multiple rows if possible which is reallocated or freed by IDE -> mem leak save!
+    {$IFDEF USE_SYNCOMMONS}
+    FTinyBuffer: array[0..30] of Byte;
+    {$ENDIF}
     function GetSQLVarHolder(ColumnIndex: Integer): PZSQLVar; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     function GetAsDateTimeValue(const SQLVarHolder: PZSQLVar): TDateTime; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     function GetFinalObject(Obj: POCIObject): POCIObject;
@@ -117,8 +120,7 @@ type
     function GetDataSet(ColumnIndex: Integer): IZDataSet; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
-      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); override;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -219,11 +221,16 @@ uses
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZOracleAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
+  JSONComposeOptions: TZJSONComposeOptions);
 var Len: Integer;
     P: PAnsiChar;
     C, H, I: SmallInt;
     Blob: IZBlob;
+ // yr, mnth, dy, hr, mm, ss, fsec: sb4;
+  Month, Day: Byte;
+  Hour, Minute, Second: Byte;
+  Year: SmallInt;
+  Millis: Integer;
 begin
   //init
   if JSONWriter.Expand then
@@ -238,7 +245,7 @@ begin
     with FColumns^.Variables[C] do
     if oIndicatorArray^[FCurrentRowBufIndex] < 0 then
       if JSONWriter.Expand then begin
-        if (not SkipNullFields) then begin
+        if not (jcsSkipNulls in JSONComposeOptions) then begin
           JSONWriter.AddString(JSONWriter.ColNames[I]);
           JSONWriter.AddShort('null,')
         end;
@@ -277,8 +284,57 @@ begin
         SQLT_LVB,
         SQLT_LVC,
         SQLT_BIN        : JSONWriter.WrBase64(P+SizeOf(Integer), PInteger(P)^, True);
-        SQLT_DAT,
-        SQLT_TIMESTAMP,
+        SQLT_DAT        : begin
+                            if jcoMongoISODate in JSONComposeOptions then
+                              JSONWriter.AddShort('ISODate("')
+                            else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                            else
+                              JSONWriter.Add('"');
+                            if POraDate(P)^.Cent < 100 then
+                              JSONWriter.Add('-');
+                            if ColType <> stTime then begin
+                              DateToIso8601PChar(@FTinyBuffer[0], True, (POraDate(P)^.Cent-100)*100+POraDate(P)^.Year-100,
+                                POraDate(P)^.month, POraDate(P)^.day);
+                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                            end else if jcoMongoISODate in JSONComposeOptions then
+                              JSONWriter.AddShort('0000-00-00');
+                            if (ColType <> stDate) then begin
+                              TimeToIso8601PChar(@FTinyBuffer[0], True, POraDate(P)^.Hour-1,
+                                POraDate(P)^.Min-1,POraDate(P)^.Sec-1, 0, 'T', jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            end;
+                            if jcoMongoISODate in JSONComposeOptions
+                            then JSONWriter.AddShort('Z)"')
+                            else JSONWriter.Add('"');
+                          end;
+        SQLT_TIMESTAMP: begin
+                          if jcoMongoISODate in JSONComposeOptions then
+                            JSONWriter.AddShort('ISODate("')
+                          else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                            JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                          else
+                            JSONWriter.Add('"');
+                          if (ColType <> stTime) and (FPlainDriver.OCIDateTimeGetDate(FConnectionHandle,
+                             FErrorHandle, PPOCIDescriptor(P)^, Year{%H-}, Month{%H-}, Day{%H-}) = OCI_SUCCESS) and
+                             (not ((Year=1) and (Month=1) and (Day=1))) then begin
+                          // attention : this code handles all timestamps on 01/01/0001 as a pure time value
+                          // reason : oracle doesn't have a pure time datatype so all time comparisons compare
+                          //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
+                            DateToIso8601PChar(@FTinyBuffer[0], True, Abs(Year), Month, Day);
+                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                          end else if jcoMongoISODate in JSONComposeOptions then
+                            JSONWriter.AddShort('0000-00-00');
+                          if (ColType <> stDate) and (FPlainDriver.OCIDateTimeGetTime(FConnectionHandle,
+                             FErrorHandle, {%H-}PPOCIDescriptor(P)^, Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-}) = OCI_SUCCESS) then begin
+                            TimeToIso8601PChar(@FTinyBuffer[0], True, Hour, Minute, Second,
+                              Millis div 1000000, 'T', jcoMilliseconds in JSONComposeOptions);
+                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                          end;
+                          if jcoMongoISODate in JSONComposeOptions
+                          then JSONWriter.AddShort('Z)"')
+                          else JSONWriter.Add('"');
+                        end;
         SQLT_INTERVAL_DS,
         SQLT_INTERVAL_YM: begin
                             JSONWriter.Add('"');
@@ -304,8 +360,7 @@ begin
       JSONWriter.Add(',');
     end;
   end;
-  if EndJSONObject then
-  begin
+  if jcoEndJSONObject in JSONComposeOptions then begin
     JSONWriter.CancelLastComma; // cancel last ','
     if JSONWriter.Expand then
       JSONWriter.Add('}');

@@ -104,7 +104,7 @@ type
     procedure FlushBuff(var Result: RawByteString); overload;
     procedure PrepareOpenResultSetForReUse; virtual;
     procedure PrepareLastResultSetForReUse; virtual;
-    procedure FreeOpenResultSetReference;
+    procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
     procedure SetASQL(const Value: RawByteString); virtual;
     procedure SetWSQL(const Value: ZWideString); virtual;
     class function GetNextStatementId : integer;
@@ -317,7 +317,7 @@ type
     procedure SetAsciiStream(ParameterIndex: Integer; const Value: TStream); virtual;
     procedure SetUnicodeStream(ParameterIndex: Integer; const Value: TStream); virtual;
     procedure SetBinaryStream(ParameterIndex: Integer; const Value: TStream); virtual;
-    procedure SetBlob(ParameterIndex: Integer; const SQLType: TZSQLType; const Value: IZBlob); virtual;
+    procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob); virtual;
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant); virtual;
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); virtual;
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); virtual;
@@ -457,17 +457,17 @@ type
     FGUIDAsString: Boolean;
     FBatchArrays: array of TZArray;
   protected
-    procedure BindNull(Index: Integer; SQLType: TZSQLType); virtual; abstract;
-    procedure BindRawStr(Index: Integer; SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt); overload; virtual; abstract;
-    procedure BindRawStr(Index: Integer; SQLType: TZSQLType; const Buf: RawByteString); overload; virtual;
-    procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); virtual; abstract;
-    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); virtual; abstract;
-    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); virtual; abstract;
-    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Buf: Double); virtual; abstract;
-    procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Buf: TDateTime); virtual; abstract;
+    procedure BindNull(Index: Integer; var SQLType: TZSQLType); virtual; abstract;
+    procedure BindRawStr(Index: Integer; var SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt); overload; virtual; abstract;
+    procedure BindRawStr(Index: Integer; var SQLType: TZSQLType; const Buf: RawByteString); overload; virtual;
+    procedure BindBinary(Index: Integer; var SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); virtual; abstract;
+    procedure BindSignedOrdinal(Index: Integer; var SQLType: TZSQLType; const Value: Int64); virtual; abstract;
+    procedure BindUnsignedOrdinal(Index: Integer; var SQLType: TZSQLType; const Value: UInt64); virtual; abstract;
+    procedure BindDouble(Index: Integer; var SQLType: TZSQLType; const Value: Double); virtual; abstract;
+    procedure BindDateTime(Index: Integer; var SQLType: TZSQLType; const Value: TDateTime); virtual; abstract;
 
     function GetBoundValueAsLogValue(ParameterIndex: Integer): RawByteString; virtual; abstract;
-    function DateTimeAsString(const Value: TDateTime; SQLType: TZSQLType): RawByteString; virtual; abstract;
+    function DateTimeAsString(const Value: TDateTime; SQLType: TZSQLType): RawByteString; virtual;
     function BoolAsString(Value: Boolean): RawByteString; virtual; abstract;
 
     procedure InternalSetInParamCount(NewParamCount: Integer); virtual;
@@ -499,7 +499,7 @@ type
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); override;
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); override;
     procedure SetGUID(ParameterIndex: Integer; const Value: TGUID); override;
-    procedure SetBlob(ParameterIndex: Integer; const SQLType: TZSQLType; const Value: IZBlob); override;
+    procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant); override;
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); override;
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
@@ -687,33 +687,29 @@ end;
 procedure TZAbstractStatement.PrepareOpenResultSetForReUse;
 begin
   if Assigned(FOpenResultSet) then
-    if not Assigned(IZResultSet(FOpenResultSet).GetMetaData) then //is there another way to test if open?
+    if IZResultSet(FOpenResultSet).IsClosed then
       FOpenResultSet := nil
-    else
-      if (IZResultSet(FOpenResultSet).GetConcurrency = GetResultSetConcurrency) and
-         (IZResultSet(FOpenResultSet).GetFetchDirection = GetFetchDirection) then
-        IZResultSet(FOpenResultSet).ResetCursor
-      else
-      begin
-        IZResultSet(FOpenResultSet).Close;
-        FOpenResultSet := nil;
-      end;
+    else if (IZResultSet(FOpenResultSet).GetConcurrency = GetResultSetConcurrency) and
+            (IZResultSet(FOpenResultSet).GetFetchDirection = GetFetchDirection) then
+      IZResultSet(FOpenResultSet).ResetCursor
+    else begin
+      IZResultSet(FOpenResultSet).Close;
+      FOpenResultSet := nil;
+    end;
 end;
 
 procedure TZAbstractStatement.PrepareLastResultSetForReUse;
 begin
   if Assigned(FLastResultSet) then
-    if not Assigned(FLastResultSet.GetMetaData) then //is there another way to test if open?
+    if FLastResultSet.IsClosed then //is there another way to test if open?
       FLastResultSet := nil
-    else
-      if (FLastResultSet.GetConcurrency = GetResultSetConcurrency) and
-         (FLastResultSet.GetFetchDirection = GetFetchDirection) then
-        FLastResultSet.ResetCursor
-      else
-      begin
-        FLastResultSet.Close;
-        FLastResultSet := nil;
-      end;
+    else if (FLastResultSet.GetConcurrency = GetResultSetConcurrency) and
+            (FLastResultSet.GetFetchDirection = GetFetchDirection) then
+      FLastResultSet.ResetCursor
+    else begin
+      FLastResultSet.Close;
+      FLastResultSet := nil;
+    end;
 end;
 
 procedure TZAbstractStatement.FlushBuff(var Result: RawByteString);
@@ -740,9 +736,12 @@ begin
   end;
 end;
 
-procedure TZAbstractStatement.FreeOpenResultSetReference;
+procedure TZAbstractStatement.FreeOpenResultSetReference(const ResultSet: IZResultSet);
 begin
-  FOpenResultSet := nil;
+  if FOpenResultSet = Pointer(ResultSet) then
+    FOpenResultSet := nil;
+  if FLastResultSet = FLastResultSet then
+    FLastResultSet := nil;
 end;
 
 class function TZAbstractStatement.GetNextStatementId: integer;
@@ -2276,7 +2275,7 @@ end;
   @param Value the java blob object.
 }
 procedure TZAbstractPreparedStatement.SetBlob(ParameterIndex: Integer;
-  const SQLType: TZSQLType; const Value: IZBlob);
+  SQLType: TZSQLType; const Value: IZBlob);
 begin
   if not (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
     raise EZSQLException.Create(SWrongTypeForBlobParameter);
@@ -3416,7 +3415,7 @@ end;
 { TImplizitBindRealAndEmulationStatement_A }
 
 procedure TImplizitBindRealAndEmulationStatement_A.BindRawStr(
-  Index: Integer; SQLType: TZSQLType; const Buf: RawByteString);
+  Index: Integer; var SQLType: TZSQLType; const Buf: RawByteString);
 begin
   BindRawStr(Index, SQLType, Pointer(Buf), Length(Buf));
 end;
@@ -3439,6 +3438,16 @@ constructor TImplizitBindRealAndEmulationStatement_A.Create(
   const Connection: IZConnection; const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
+end;
+
+function TImplizitBindRealAndEmulationStatement_A.DateTimeAsString(
+  const Value: TDateTime; SQLType: TZSQLType): RawByteString;
+begin
+  case SQLType of
+    stDate: Result := DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, True);
+    stTime: Result := DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, True);
+    else    Result := DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, True);
+  end
 end;
 
 function TImplizitBindRealAndEmulationStatement_A.GetInParamLogValue(
@@ -3535,7 +3544,7 @@ begin
 end;
 
 procedure TImplizitBindRealAndEmulationStatement_A.SetBlob(
-  ParameterIndex: Integer; const SQLType: TZSQLType; const Value: IZBlob);
+  ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob);
 var RawTemp: RawByteString;
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -3551,7 +3560,7 @@ begin
   else if SQLType = stBinaryStream then
     if FEmulatePrepare
     then Connection.GetBinaryEscapeString(Value.GetBuffer, Value.Length, FParamEmulatedValues[ParameterIndex])
-    else BindBinary(ParameterIndex, stBinaryStream, Value.GetBuffer, Value.Length)
+    else BindBinary(ParameterIndex, SQLType, Value.GetBuffer, Value.Length)
   else if Value.IsCLob then begin
     Value.GetPAnsiChar(ConSettings^.ClientCodePage.CP);
     if FEmulatePrepare
@@ -3574,6 +3583,7 @@ end;
 
 procedure TImplizitBindRealAndEmulationStatement_A.SetBytes(
   ParameterIndex: Integer; const Value: TBytes);
+var SQLType: TZSQLType;
 begin
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
@@ -3581,15 +3591,17 @@ begin
   if ParameterIndex > InParamCount-1
   then SetInParamCount(ParameterIndex+1);
 
+  SQLType := stBytes;
   if FEmulatePrepare
   then Connection.GetBinaryEscapeString(Pointer(Value), Length(Value), FParamEmulatedValues[ParameterIndex])
-  else BindBinary(ParameterIndex, stBytes, Pointer(Value), Length(Value));
-  FInParamTypes[ParameterIndex] := stBytes;
+  else BindBinary(ParameterIndex, SQLType, Pointer(Value), Length(Value));
+  FInParamTypes[ParameterIndex] := SQLType;
 end;
 
 procedure TImplizitBindRealAndEmulationStatement_A.SetCharRec(
   ParameterIndex: Integer; const Value: TZCharRec);
 var UniTemp: ZWideString;
+  SQLType: TZSQLType;
 begin
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
@@ -3597,17 +3609,18 @@ begin
   if ParameterIndex > InParamCount-1
   then SetInParamCount(ParameterIndex+1);
 
+  SQLType := stString;
   if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, Value.CP) then
     if FEmulatePrepare
     then Connection.GetEscapeString(Value.P, Value.Len, FParamEmulatedValues[ParameterIndex])
-    else BindRawStr(ParameterIndex, stString, Value.P, Value.Len)
+    else BindRawStr(ParameterIndex, SQLType, Value.P, Value.Len)
   else if ZCompatibleCodePages(zCP_UTF16, Value.CP) then
     SetRawByteString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PUnicodeToRaw(Value.P, Value.Len, ConSettings^.ClientCodePage^.CP))
   else begin
     UniTemp := PRawToUnicode(Value.P, Value.Len, Value.CP);
     SetRawByteString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PUnicodeToRaw(Pointer(UniTemp), Length(UniTemp), ConSettings^.ClientCodePage^.CP))
   end;
-  FInParamTypes[ParameterIndex] := stString;
+  FInParamTypes[ParameterIndex] := SQLType;
 end;
 
 procedure TImplizitBindRealAndEmulationStatement_A.SetDataArray(
@@ -3646,6 +3659,7 @@ end;
 
 procedure TImplizitBindRealAndEmulationStatement_A.SetGUID(
   ParameterIndex: Integer; const Value: TGUID);
+var SQLType: TZSQLType;
 begin
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
@@ -3653,10 +3667,11 @@ begin
   if ParameterIndex > InParamCount-1
   then SetInParamCount(ParameterIndex+1);
 
+  SQLType := stGUID;
   if FGUIDAsString
-  then BindRawStr(ParameterIndex, stGUID, GUIDToRaw(Value))
-  else BindBinary(ParameterIndex, stGUID, @Value.D1, SizeOf(TGUID));
-  FInParamTypes[ParameterIndex] := stGUID;
+  then BindRawStr(ParameterIndex, SQLType, GUIDToRaw(Value))
+  else BindBinary(ParameterIndex, SQLType, @Value.D1, SizeOf(TGUID));
+  FInParamTypes[ParameterIndex] := SQLType;
 end;
 
 procedure TImplizitBindRealAndEmulationStatement_A.SetInParamCount(
@@ -3711,6 +3726,7 @@ end;
 
 procedure TImplizitBindRealAndEmulationStatement_A.SetRawByteString(
   ParameterIndex: Integer; const Value: RawByteString);
+var SQLType: TZSQLType;
 begin
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
@@ -3718,10 +3734,11 @@ begin
   if ParameterIndex+1 > InParamCount then
   SetInParamCount(ParameterIndex+1);
 
+  SQLType := stString;
   if not FEmulatePrepare
-  then BindRawStr(ParameterIndex, stString, Value)
+  then BindRawStr(ParameterIndex, SQLType, Value)
   else Connection.GetEscapeString(Pointer(Value), Length(Value), FParamEmulatedValues[ParameterIndex]);
-  FInParamTypes[ParameterIndex] := stString;
+  FInParamTypes[ParameterIndex] := SQLType;
 end;
 
 procedure TImplizitBindRealAndEmulationStatement_A.SetString(
@@ -3732,15 +3749,16 @@ end;
 
 procedure TImplizitBindRealAndEmulationStatement_A.SetULong(
   ParameterIndex: Integer; const Value: UInt64);
+var SQLType: TZSQLType;
 begin
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
   {$ENDIF}
   if ParameterIndex+1 >= InParamCount then
   SetInParamCount(ParameterIndex+1);
-
-  BindUnsignedOrdinal(ParameterIndex, stUlong, Value);
-  FInParamTypes[ParameterIndex] := stULong;
+  SQLType := stUlong;
+  BindUnsignedOrdinal(ParameterIndex, SQLType, Value);
+  FInParamTypes[ParameterIndex] := SQLType;
 end;
 
 procedure TImplizitBindRealAndEmulationStatement_A.SetUnicodeString(

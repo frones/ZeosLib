@@ -59,47 +59,60 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFDEF WITH_WIDESTRUTILS}WideStrUtils, {$ENDIF}
   ZDbcIntfs, ZDbcStatement, ZPlainSqLiteDriver, ZCompatibility, ZDbcLogging,
-  ZVariant;
+  ZVariant, Types;
 
 type
-  {** SQLite Prepared SQL statement interface. }
-  IZSQLitePreparedStatement = interface(IZPreparedStatement)
-    ['{1C71D4D9-45D5-468F-A6D2-D7D29EB29A89}']
-    function GetLastErrorCodeAndHandle(var StmtHandle: Psqlite3_stmt): Integer;
-  end;
-
   {** Implements CAPI Prepared SQL Statement. }
-  TZSQLiteCAPIPreparedStatement = class(TZAbstractPreparedStatement,
-    IZSQLitePreparedStatement)
+  TZSQLiteCAPIPreparedStatement = class(TImplizitBindRealAndEmulationStatement_A)
   private
     FErrorCode: Integer;
     FHandle: Psqlite;
     FStmtHandle: Psqlite3_stmt;
     FPlainDriver: TZSQLitePlainDriver;
-    FBindDoubleDateTimeValues: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
-    fBindOrdinalBoolValues: Boolean;
+    FBindDoubleDateTimeValues, //are DoubleValues used as Date+/time values?
+    FBindOrdinalBoolValues, //do we bind 0/1 as Boolean?
+    FHasLoggingListener: Boolean;
+    FBindLater, //Late bindings?
+    FLateBound: Boolean; //LateBound done reset is'nt called -> continue LateBindings
+    FByRefBound: TPointerDynArray;
+    FByRefLength: TIntegerDynArray;
     function CreateResultSet: IZResultSet;
   protected
+    procedure ResetCallBack;
+  protected
+    procedure InternalSetInParamCount(NewParamCount: Integer); override;
     function GetLastErrorCodeAndHandle(var StmtHandle: Psqlite3_stmt): Integer;
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
+  protected
+    procedure BindNull(Index: Integer; var SQLType: TZSQLType); override;
+    procedure BindBinary(Index: Integer; var SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
+    procedure BindUnsignedOrdinal(Index: Integer; var SQLType: TZSQLType; const Value: UInt64); override;
+    procedure BindSignedOrdinal(Index: Integer; var SQLType: TZSQLType; const Value: Int64); override;
+    procedure BindDouble(Index: Integer; var SQLType: TZSQLType; const Value: Double); override;
+    procedure BindDateTime(Index: Integer; var SQLType: TZSQLType; const Value: TDateTime); override;
+    procedure BindRawStr(Index: Integer; var SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt); override;
+    procedure BindRawStr(Index: Integer; var SQLType: TZSQLType; const Buf: RawByteString); override;
+
+    function GetBoundValueAsLogValue(Index: Integer): RawByteString; override;
+    function BoolAsString(Value: Boolean): RawByteString; override;
   public
-    constructor Create(
-      const Connection: IZConnection; const SQL: string; const Info: TStrings;
+    constructor Create(const Connection: IZConnection;
+      const SQL: string; const Info: TStrings; const Handle: Psqlite); overload;
+    constructor Create(const Connection: IZConnection; const Info: TStrings;
       const Handle: Psqlite); overload;
-    constructor Create(
-      const Connection: IZConnection; const Info: TStrings; const Handle: Psqlite); overload;
 
     procedure Prepare; override;
     procedure Unprepare; override;
-    procedure Close; override;
+
     procedure Cancel; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
   end;
+
   TZSQLiteStatement = class(TZSQLiteCAPIPreparedStatement);
 
 
@@ -108,7 +121,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS} AnsiStrings,{$ENDIF} ZDbcSqLiteUtils,
   ZDbcSqLiteResultSet, ZSysUtils, ZEncoding, ZMessages, ZDbcCachedResultSet,
-  ZDbcUtils, ZDbcProperties;
+  ZDbcUtils, ZDbcProperties, ZFastCode;
 
 (* out of use now...
 procedure BindingDestructor(Value: PAnsiChar); cdecl;
@@ -118,11 +131,35 @@ end;*)
 
 { TZSQLiteCAPIPreparedStatement }
 
+function TZSQLiteCAPIPreparedStatement.GetBoundValueAsLogValue(
+  Index: Integer): RawByteString;
+var P: Pointer;
+begin
+  P := FByRefBound[Index];
+  if P = nil then
+    Result := 'null'
+  else case FInParamTypes[Index] of
+    stLong:     Result := IntToRaw(PInt64(P)^);
+    stString:   Result := SQLQuotedStr(PAnsichar(P), FByRefLength[Index], #39);
+    stDouble:   Result := FloatToRaw(PDouble(P)^);
+    stBytes:    Result := GetSQLHexAnsiString(P, FByRefLength[Index], False);
+  end;
+end;
+
 function TZSQLiteCAPIPreparedStatement.GetLastErrorCodeAndHandle(
   var StmtHandle: Psqlite3_stmt): Integer;
 begin
   Result := FErrorCode;
   StmtHandle := FStmtHandle;
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.InternalSetInParamCount(
+  NewParamCount: Integer);
+begin
+  inherited InternalSetInParamCount(NewParamCount);
+  SetLength(FByRefBound, NewParamCount);
+  SetLength(FByRefLength, NewParamCount);
+  FBindLater := False;
 end;
 
 function TZSQLiteCAPIPreparedStatement.CreateResultSet: IZResultSet;
@@ -132,8 +169,8 @@ var
   CachedResultSet: TZCachedResultSet;
 begin
   { Creates a native result set. }
-  NativeResultSet := TZSQLiteResultSet.Create(Self, Self.SQL, FHandle,
-    FStmtHandle, FUndefinedVarcharAsStringLength);
+  NativeResultSet := TZSQLiteResultSet.Create(Self, Self.SQL, @FHandle,
+    @FStmtHandle, @FErrorCode, FUndefinedVarcharAsStringLength, ResetCallBack);
   NativeResultSet.SetConcurrency(rcReadOnly);
 
   if (GetResultSetConcurrency = rcUpdatable)
@@ -157,130 +194,114 @@ end;
 
 procedure TZSQLiteCAPIPreparedStatement.PrepareInParameters;
 begin
-  if FPlainDriver.sqlite3_bind_parameter_count(FStmtHandle) <> InParamCount then
-    raise Exception.Create('Invalid InParamCount');
+  InternalSetInParamCount(FPlainDriver.sqlite3_bind_parameter_count(FStmtHandle));
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.ResetCallBack;
+var ErrorCode: Integer;
+begin
+  if Assigned(FStmtHandle) then begin
+    ErrorCode := FPlainDriver.sqlite3_reset(FStmtHandle); //reset handle now!
+    if ErrorCode <> SQLITE_OK then
+      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcExecute, 'sqlite3_reset', ConSettings);
+  end;
+  if not FLateBound then
+    FBindLater := False;
 end;
 
 const
   BoolArray: array[Boolean] of PAnsiChar = ('N', 'Y');
 
+procedure TZSQLiteCAPIPreparedStatement.BindBinary(Index: Integer;
+  var SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
+var ErrorCode: Integer;
+begin
+  if SQLType in [stGUID, stBytes] then begin
+    ZSetString(Buf, Len, FParamEmulatedValues[Index]);
+    Buf := Pointer(FParamEmulatedValues[Index]);
+  end;
+  SQLType := stBytes;
+  if not FBindLater then begin
+    {we don't need to bind again if pointers are unchanged changed!}
+    //if (Buf <> FByRefBound[Index]) or (Len <> FByRefLength[Index]) then begin
+      ErrorCode := FPlainDriver.sqlite3_bind_blob(FStmtHandle, Index +1, Buf, Len, nil);
+      if ErrorCode <> SQLITE_OK then
+        CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+    //end;
+  end else
+    FLateBound := True;
+  FByRefBound[Index] := Buf;
+  FByRefLength[Index] := Len;
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.BindDateTime(Index: Integer;
+  var SQLType: TZSQLType; const Value: TDateTime);
+begin
+  if FBindDoubleDateTimeValues then
+    BindDouble(Index, SQLType, Value-JulianEpoch)
+  else begin
+    if SQLType = stDate then
+      if Length(FParamEmulatedValues[Index]) <> ConSettings^.WriteFormatSettings.DateFormatLen
+      then FParamEmulatedValues[Index] := DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, False)
+      else DateTimeToRawSQLDate(Value, Pointer(FParamEmulatedValues[Index]), ConSettings^.WriteFormatSettings, False)
+    else if SQLType = stTime then
+      if Length(FParamEmulatedValues[Index]) <> ConSettings^.WriteFormatSettings.DateFormatLen
+      then FParamEmulatedValues[Index] := DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, False)
+      else DateTimeToRawSQLTime(Value, Pointer(FParamEmulatedValues[Index]), ConSettings^.WriteFormatSettings, False)
+    else
+      if Length(FParamEmulatedValues[Index]) <> ConSettings^.WriteFormatSettings.DateTimeFormatLen
+      then FParamEmulatedValues[Index] := DateTimeToRawSQLTimestamp(Value, ConSettings^.WriteFormatSettings, False)
+      else DateTimeToRawSQLTimestamp(Value, Pointer(FParamEmulatedValues[Index]), ConSettings^.WriteFormatSettings, False);
+    BindRawStr(Index, SQLType, Pointer(FParamEmulatedValues[Index]), Length(FParamEmulatedValues[Index]));
+  end;
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.BindDouble(Index: Integer;
+  var SQLType: TZSQLType; const Value: Double);
+var ErrorCode: Integer;
+begin
+  SQLType := stDouble;
+  if FBindLater or FHasLoggingListener then begin
+    ZSetString(@Value, SizeOf(Double), FParamEmulatedValues[Index]);
+    FByRefBound[Index] := Pointer(FParamEmulatedValues[Index]);
+  end;
+  if not FBindLater then begin
+    ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, Index +1, Value);
+    if ErrorCode <> SQLITE_OK then
+      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+  end else
+    FLateBound := True;
+end;
+
 procedure TZSQLiteCAPIPreparedStatement.BindInParameters;
 var
-  TempBlob: IZBlob;
-  I: Integer;
-  Buffer: PAnsiChar;
-  CharRec: TZCharRec;
+  I, Errorcode: Integer;
+  P: Pointer;
 begin
-  FErrorcode := FPlainDriver.sqlite3_clear_bindings(FStmtHandle);
-  CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
-  for i := 1 to InParamCount do
-  begin
-    if ClientVarManager.IsNull(InParamValues[i-1])  then
-      FErrorcode := FPlainDriver.sqlite3_bind_null(FStmtHandle, I)
-    else
-    begin
-      case InParamTypes[I-1] of
-        stBoolean:
-          if fBindOrdinalBoolValues then
-            FErrorcode := FPlainDriver.sqlite3_bind_int(FStmtHandle, i,
-              Ord(ClientVarManager.GetAsBoolean(InParamValues[i-1])))
-          else
-            FErrorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, i,
-              BoolArray[ClientVarManager.GetAsBoolean(InParamValues[i-1])], 1, nil);
-        stByte, stShort, stWord, stSmall, stInteger:
-          FErrorcode := FPlainDriver.sqlite3_bind_int(FStmtHandle, i,
-            ClientVarManager.GetAsInteger(InParamValues[i-1]));
-        stLongWord, stLong, stUlong:
-          FErrorcode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, i,
-            ClientVarManager.GetAsInteger(InParamValues[i-1]));
-        stFloat, stDouble, stCurrency, stBigDecimal:
-          FErrorcode := FPlainDriver.sqlite3_bind_double(FStmtHandle, i,
-            ClientVarManager.GetAsFloat(InParamValues[i-1]));
-        stBytes:
-          begin
-            InParamValues[i-1].VBytes := SoftVarManager.GetAsBytes(InParamValues[i-1]);
-            FErrorcode := FPlainDriver.sqlite3_bind_blob(FStmtHandle, i,
-              @InParamValues[i-1].VBytes[0], Length(InParamValues[i-1].VBytes), nil);
+  if InParamCount > 0 then begin
+    if FBindLater then begin
+      for i := 0 to InParamCount-1 do begin
+        P := FByRefBound[I];
+        if P = nil then
+          Errorcode := FPlainDriver.sqlite3_bind_null(FStmtHandle, I +1)
+        else case FInParamTypes[I] of
+          stString:   Errorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, I +1, P, FByRefLength[I], nil);
+          stLong:     Errorcode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, I +1, PInt64(P)^);
+          stDouble:   Errorcode := FPlainDriver.sqlite3_bind_Double(FStmtHandle, I +1, PDouble(P)^);
+          stBytes:    Errorcode := FPlainDriver.sqlite3_bind_blob(FStmtHandle, I +1, P, FByRefLength[I], nil);
+          else begin
+            ErrorCode := SQLITE_ERROR; //satisfy comiler
+            RaiseUnsupportedParameterTypeException(InParamTypes[I]);
           end;
-        stString, stUnicodeString:
-          begin
-            CharRec := ClientVarManager.GetAsCharRec(InParamValues[i-1], zCP_UTF8);
-            FErrorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, i,
-              CharRec.P, CharRec.Len, nil);
-          end;
-        stDate:
-          if FBindDoubleDateTimeValues then
-            FErrorcode := FPlainDriver.sqlite3_bind_double(FStmtHandle, i,
-                ClientVarManager.GetAsDateTime(InParamValues[i-1])-JulianEpoch)
-          else
-          begin
-            InParamValues[i-1].VRawByteString := DateTimeToRawSQLDate(
-              ClientVarManager.GetAsDateTime(InParamValues[i-1]),
-                ConSettings^.WriteFormatSettings, False);
-            FErrorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, i,
-              Pointer(InParamValues[i-1].VRawByteString),
-              ConSettings^.WriteFormatSettings.DateFormatLen, nil);
-          end;
-        stTime:
-          if FBindDoubleDateTimeValues then
-            FErrorcode := FPlainDriver.sqlite3_bind_double(FStmtHandle, i,
-                ClientVarManager.GetAsDateTime(InParamValues[i-1])-JulianEpoch)
-          else
-          begin
-            InParamValues[i-1].VRawByteString := DateTimeToRawSQLTime(
-              ClientVarManager.GetAsDateTime(InParamValues[i-1]),
-                ConSettings^.WriteFormatSettings, False);
-            FErrorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, i,
-              Pointer(InParamValues[i-1].VRawByteString),
-              ConSettings^.WriteFormatSettings.TimeFormatLen, nil);
-          end;
-        stTimestamp:
-          if FBindDoubleDateTimeValues then
-            FErrorcode := FPlainDriver.sqlite3_bind_double(FStmtHandle, i,
-                ClientVarManager.GetAsDateTime(InParamValues[i-1])-JulianEpoch)
-          else
-          begin
-            InParamValues[i-1].VRawByteString := DateTimeToRawSQLTimeStamp(
-              ClientVarManager.GetAsDateTime(InParamValues[i-1]),
-                ConSettings^.WriteFormatSettings, False);
-            FErrorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, i,
-              Pointer(InParamValues[i-1].VRawByteString),
-              ConSettings^.WriteFormatSettings.DateTimeFormatLen, nil);
-          end;
-        stAsciiStream, stUnicodeStream, stBinaryStream:
-          begin
-            TempBlob := ClientVarManager.GetAsInterface(InParamValues[i-1]) as IZBlob;
-            if not TempBlob.IsEmpty then
-              if InParamTypes[I-1] = stBinaryStream then
-              begin
-                FErrorcode := FPlainDriver.sqlite3_bind_blob(FStmtHandle, i,
-                  TempBlob.GetBuffer, TempBlob.Length, nil)
-              end
-              else
-                if TempBlob.IsClob then
-                begin
-                  Buffer := TempBlob.GetPAnsiChar(zCP_UTF8);
-                  FErrorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, i,
-                    Buffer, TempBlob.Length, nil);
-                end
-                else
-                begin
-                  InParamValues[I-1].VRawByteString := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings);
-                  FErrorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, i,
-                    Pointer(InParamValues[I-1].VRawByteString),
-                    Length(InParamValues[I-1].VRawByteString), nil);
-                end
-            else
-              FErrorcode := FPlainDriver.sqlite3_bind_null(FStmtHandle, I);
-          end;
-        else
-          RaiseUnsupportedParameterTypeException(InParamTypes[I-1]);
+        end;
+        if ErrorCode <> SQLITE_OK then
+          CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
       end;
-    end;
-    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+    end else
+      FLateBound := False;
+    if FHasLoggingListener then
+      inherited BindInParameters;
   end;
-  inherited BindInParameters;
 end;
 
 constructor TZSQLiteCAPIPreparedStatement.Create(
@@ -295,6 +316,8 @@ begin
   FBindDoubleDateTimeValues :=  StrToBoolEx(DefineStatementParameter(Self, DSProps_BindDoubleDateTimeValues, 'false'));
   FUndefinedVarcharAsStringLength := StrToIntDef(DefineStatementParameter(Self, DSProps_UndefVarcharAsStringLength, '0'), 0);
   fBindOrdinalBoolValues := StrToBoolEx(DefineStatementParameter(Self, DSProps_BindOrdinalBoolValues, 'false'));
+  FHasLoggingListener := DriverManager.HasLoggingListener;
+  FEmulatePrepare := False;
 end;
 
 constructor TZSQLiteCAPIPreparedStatement.Create(
@@ -306,21 +329,102 @@ end;
 procedure TZSQLiteCAPIPreparedStatement.Prepare;
 var pzTail: PAnsiChar;
 begin
-  if not Prepared then
-  begin
+  if not Prepared then begin
     FErrorCode := FPlainDriver.sqlite3_prepare_v2(FHandle, Pointer(ASQL), Length(ASQL), FStmtHandle, pzTail);
-    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcPrepStmt, ASQL, ConSettings);
+    if FErrorCode <> SQLITE_OK then
+      CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcPrepStmt, ASQL, ConSettings);
     inherited Prepare;
   end;
 end;
 
 procedure TZSQLiteCAPIPreparedStatement.Unprepare;
+var ErrorCode: Integer;
 begin
   { EH: do not change this sequence!: first close possbile opened resultset}
   inherited UnPrepare;
-  CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.sqlite3_finalize(FStmtHandle),
-    lcUnprepStmt, 'Unprepare SQLite Statement', ConSettings);
-  FStmtHandle := nil; //Keep track we do not try to finalize the handle again on destroy or so
+  if Assigned(FStmtHandle) then begin
+    ErrorCode := FPlainDriver.sqlite3_finalize(FStmtHandle);
+    if ErrorCode <> SQLITE_OK then
+      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode,
+        lcUnprepStmt, 'sqlite3_finalize', ConSettings);
+    FStmtHandle := nil; //Keep track we do not try to finalize the handle again on destroy or so
+  end;
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.BindNull(Index: Integer;
+  var SQLType: TZSQLType);
+var ErrorCode: Integer;
+begin
+  FByRefBound[Index] := nil;
+  if not FBindLater then begin
+    ErrorCode := FPlainDriver.sqlite3_bind_null(FStmtHandle, Index +1);
+    if ErrorCode <> SQLITE_OK then
+      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+  end else
+    FLateBound := True;
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.BindRawStr(Index: Integer;
+  var SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt);
+var ErrorCode: Integer;
+begin
+  SQLType := stString;
+  if not FBindLater then begin
+    if Buf = nil then
+      Buf := PEmptyAnsiString;
+    {we don't need to bind again if pointers are unchanged!}
+    //if (Buf <> FByRefBound[Index]) or (Len <> FByRefLength[Index]) then begin
+      ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, Buf, Len, nil);
+      if ErrorCode <> SQLITE_OK then
+        CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+    //end;
+  end else
+    FLateBound := True;
+  FByRefBound[Index] := Buf;
+  FByRefLength[Index] := Len;
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.BindRawStr(Index: Integer;
+  var SQLType: TZSQLType; const Buf: RawByteString);
+begin
+  FParamEmulatedValues[Index] := Buf; //keep alive
+  BindRawStr(Index, SQLType, Pointer(Buf), Length(Buf));
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.BindSignedOrdinal(
+  Index: Integer; var SQLType: TZSQLType; const Value: Int64);
+var ErrorCode: Integer;
+begin
+  SQLType := stLong;
+  if FBindLater or FHasLoggingListener then begin
+    ZSetString(@Value, SizeOf(Int64), FParamEmulatedValues[Index]);
+    FByRefBound[Index] := Pointer(FParamEmulatedValues[Index]);
+  end;
+  if not FBindLater then begin
+    ErrorCode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, Index +1, Value);
+    if ErrorCode <> SQLITE_OK then
+      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+  end else
+    FLateBound := True;
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.BindUnsignedOrdinal(
+  Index: Integer; var SQLType: TZSQLType; const Value: UInt64);
+begin
+  BindSignedOrdinal(Index, SQLType, Int64(Value));
+end;
+
+const DeprecatedBoolRaw: array[Boolean] of AnsiString = ('N','Y');
+const IntBoolRaw: array[Boolean] of AnsiString = ('0','1');
+function TZSQLiteCAPIPreparedStatement.BoolAsString(
+  Value: Boolean): RawByteString;
+begin
+  if fBindOrdinalBoolValues
+  then Result := IntBoolRaw[Value]
+  //EH: i know this is plain wrong:
+  //http://www.sqlite.org/datatype3.html
+  //but zeos binds this since i know zeos
+  else Result := DeprecatedBoolRaw[Value];
 end;
 
 {**
@@ -335,27 +439,6 @@ begin
 end;
 
 {**
-  Releases this <code>Statement</code> object's database
-  and JDBC resources immediately instead of waiting for
-  this to happen when it is automatically closed.
-  It is generally good practice to release resources as soon as
-  you are finished with them to avoid tying up database
-  resources.
-  <P><B>Note:</B> A <code>Statement</code> object is automatically closed when it is
-  garbage collected. When a <code>Statement</code> object is closed, its current
-  <code>ResultSet</code> object, if one exists, is also closed.
-}
-procedure TZSQLiteCAPIPreparedStatement.Close;
-begin
-  inherited Close; //first close LastResultSet before finalize. Otherwise -> Library routine called out of sequence.
-  { we need this here too: TZTestDbcSQLiteCase.TestResultSet would raise an Error on Connection.Close if Stmt isn't freed!}
-  if Assigned(FStmtHandle) then
-    CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.sqlite3_finalize(FStmtHandle),
-      lcUnprepStmt, 'Unprepare SQLite Statement', ConSettings);
-  FStmtHandle := nil; //Keep track we do not try to finalize the handle again on destroy or so
-end;
-
-{**
   Executes the SQL query in this <code>PreparedStatement</code> object
   and returns the result set generated by the query.
 
@@ -364,26 +447,25 @@ end;
 }
 function TZSQLiteCAPIPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
-  Prepare;
   PrepareOpenResultSetForReUse;
+  Prepare;
   BindInParameters;
-
+  FBindLater := False;
   FErrorCode := FPlainDriver.sqlite3_step(FStmtHandle); //exec prepared
-  CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcOther,
-    ConSettings^.ConvFuncs.ZStringToRaw(SCanNotRetrieveResultsetData,
-    ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP), ConSettings);
-  if FPlainDriver.sqlite3_column_count(FStmtHandle) = 0 then
-  begin
-    FPlainDriver.sqlite3_reset(FStmtHandle); //reset handle now!
+  if not (FErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
+    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcExecPrepStmt, ASQL, ConSettings);
+  if (FErrorCode <> SQLITE_ROW) and (FPlainDriver.sqlite3_column_count(FStmtHandle) = 0) then begin
+    FErrorCode := FPlainDriver.sqlite3_reset(FStmtHandle);
+    if FErrorCode <> SQLITE_OK then
+      CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcOther, ASQL, ConSettings); //exec prepared
     Result := nil;
-  end
-  else //expect a resultset
-    if Assigned(FOpenResultSet) then
-      Result := IZResultSet(FOpenResultSet) //return allready reseted RS
-    else
-      Result := CreateResultSet; //resultset executes reset stmt-handle
-
-  inherited ExecuteQueryPrepared; //Log values
+  end else if Assigned(FOpenResultSet) //expect a resultset
+    then Result := IZResultSet(FOpenResultSet) //return allready reseted RS
+    else Result := CreateResultSet; //resultset executes reset stmt-handle
+  if FHasLoggingListener then
+    inherited ExecuteQueryPrepared; //Log values
+  FBindLater := Assigned(Result);
+  FHasLoggingListener := DriverManager.HasLoggingListener;
 end;
 
 {**
@@ -397,20 +479,31 @@ end;
   or 0 for SQL statements that return nothing
 }
 function TZSQLiteCAPIPreparedStatement.ExecuteUpdatePrepared: Integer;
+var ErrorCode: Integer;
 begin
   Prepare;
   BindInParameters;
 
-  Result := 0;
-  try
-    CheckSQLiteError(FPlainDriver, FHandle, fPlainDriver.sqlite3_step(FStmtHandle),
-      lcExecPrepStmt, ASQL, ConSettings); //exec prepared
+  Result := -1;
+  FBindLater := False;
+  ErrorCode := fPlainDriver.sqlite3_step(FStmtHandle);
+  if (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then begin
     Result := FPlainDriver.sqlite3_Changes(FHandle);
-    inherited ExecuteUpdatePrepared; //log values
-  finally
-    FPlainDriver.sqlite3_reset(FStmtHandle); //reset handle allways without check else -> leaking mem
+    if FHasLoggingListener then
+      inherited ExecuteUpdatePrepared; //log values
+    ErrorCode := FPlainDriver.sqlite3_reset(FStmtHandle);
+    if ErrorCode <> SQLITE_OK then
+      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcExecPrepStmt, ASQL, ConSettings); //exec prepared
     LastUpdateCount := Result;
-  end;
+    FHasLoggingListener := DriverManager.HasLoggingListener;
+  end else
+    try
+      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcExecPrepStmt, ASQL, ConSettings); //exec prepared
+    finally
+      FPlainDriver.sqlite3_reset(FStmtHandle); //reset handle allways without check else -> leaking mem
+      LastUpdateCount := Result;
+      FHasLoggingListener := DriverManager.HasLoggingListener;
+    end;
 end;
 
 {**
@@ -423,29 +516,29 @@ end;
 }
 function TZSQLiteCAPIPreparedStatement.ExecutePrepared: Boolean;
 begin
-  Prepare;
   PrepareLastResultSetForReUse;
+  Prepare;
   BindInParameters;
 
+  FBindLater := False;
   FErrorCode := FPlainDriver.sqlite3_step(FStmtHandle);
-  CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcExecPrepStmt, 'Step', ConSettings);
-
+  if not (FErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
+    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcExecPrepStmt, 'Step', ConSettings);
   { Process queries with result sets }
-  if FPlainDriver.sqlite3_column_count(FStmtHandle) <> 0 then
-  begin
+  if (FErrorCode = SQLITE_ROW) or (FPlainDriver.sqlite3_column_count(FStmtHandle) <> 0) then begin
     Result := True;
-    if not Assigned(LastResultSet) then
-      LastResultSet := CreateResultSet;
-  end
-  { Processes regular query. }
-  else
-  begin
+    LastResultSet := CreateResultSet;
+  end else begin { Processes regular query. }
     Result := False;
     LastUpdateCount := FPlainDriver.sqlite3_Changes(FHandle);
     FErrorCode := FPlainDriver.sqlite3_reset(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcOther, 'Reset', ConSettings);
+    LastResultSet := nil;
+    if FErrorCode <> SQLITE_OK then
+      CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcOther, 'Reset', ConSettings);
   end;
-  inherited ExecutePrepared;
+  if FHasLoggingListener then
+    inherited ExecutePrepared;
+  FHasLoggingListener := DriverManager.HasLoggingListener;
 end;
 
 end.

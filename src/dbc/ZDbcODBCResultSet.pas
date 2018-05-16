@@ -93,6 +93,9 @@ type
     fRowBlobs: array of IZBlob; //row wise storage of unbound lobs
     fSQL_GETDATA_EXTENSIONS: SQLUINTEGER;
     fFirstGetDataIndex: Integer;
+    {$IFDEF USE_SYNCOMMONS}
+    FTinyBuffer: array[0..30] of Byte;
+    {$ENDIF}
     procedure LoadUnBoundColumns;
   protected
     procedure CheckStmtError(RETCODE: SQLRETURN);
@@ -138,8 +141,7 @@ type
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
-      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); override;
     {$ENDIF USE_SYNCOMMONS}
   End;
 
@@ -239,7 +241,7 @@ end;
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TAbstractODBCResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
+  JSONComposeOptions: TZJSONComposeOptions);
 var C, H, I: Integer;
     P: Pointer;
 begin
@@ -255,7 +257,7 @@ begin
       C := JSONWriter.Fields[i];
     if IsNull(C+FirstDbcIndex) then
       if JSONWriter.Expand then begin
-        if (not SkipNullFields) then begin
+        if not (jcsSkipNulls in JSONComposeOptions) then begin
           JSONWriter.AddString(JSONWriter.ColNames[I]);
           JSONWriter.AddShort('null,')
         end;
@@ -285,28 +287,57 @@ begin
                         JSONWriter.Add('"');
                       end;
         stTime:       begin
-                        JSONWriter.Add('"');
+                        if jcoMongoISODate in JSONComposeOptions then
+                          JSONWriter.AddShort('ISODate("0000-00-00')
+                        else if jcoDATETIME_MAGIC in JSONComposeOptions then begin
+                          JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                        end else
+                          JSONWriter.Add('"');
                         if fODBC_CTypes[C] = SQL_C_BINARY then
-                          JSONWriter.AddDateTime(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
-                            PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
+                          TimeToIso8601PChar(@FTinyBuffer[0], True, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                            PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
+                            PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000, 'T', jcoMilliseconds in JSONComposeOptions)
                         else
-                          JSONWriter.AddDateTime(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-                            PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
-                        JSONWriter.Add('"');
+                          TimeToIso8601PChar(@FTinyBuffer[0], True, PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                            PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0, 'T', jcoMilliseconds in JSONComposeOptions);
+                        JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                        if jcoMongoISODate in JSONComposeOptions
+                        then JSONWriter.AddShort('Z)"')
+                        else JSONWriter.Add('"');
                       end;
         stDate:       begin
-                        JSONWriter.Add('"');
-                        JSONWriter.AddDateTime(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
-                          PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day));
-                        JSONWriter.Add('"');
+                        if jcoMongoISODate in JSONComposeOptions then
+                          JSONWriter.AddShort('ISODate("')
+                        else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                          JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                        else
+                          JSONWriter.Add('"');
+                        if PSQL_DATE_STRUCT(fColDataPtr)^.year < 0 then
+                          JSONWriter.Add('-');
+                        DateToIso8601PChar(@FTinyBuffer[0], True, Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
+                          PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day);
+                        JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                        if jcoMongoISODate in JSONComposeOptions
+                        then JSONWriter.AddShort('Z")')
+                        else JSONWriter.Add('"');
                       end;
         stTimeStamp:  begin
-                        JSONWriter.Add('"');
-                        JSONWriter.AddDateTime(EncodeDate(Abs(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year),
-                          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.day)+
-                          EncodeTime(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute,
-                          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction));
-                        JSONWriter.Add('"');
+                        if jcoMongoISODate in JSONComposeOptions then
+                          JSONWriter.AddShort('ISODate("')
+                        else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                          JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                        else
+                          JSONWriter.Add('"');
+                        if PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year < 0 then
+                          JSONWriter.Add('-');
+                        DateToIso8601PChar(@FTinyBuffer[0], True, Abs(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year),
+                          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.day);
+                        TimeToIso8601PChar(@FTinyBuffer[10], True, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute,
+                          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction, 'T', jcoMilliseconds in JSONComposeOptions);
+                        JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                        if jcoMongoISODate in JSONComposeOptions
+                        then JSONWriter.AddShort('Z")')
+                        else JSONWriter.Add('"');
                       end;
         stString, stUnicodeString: begin
             JSONWriter.Add('"');
@@ -340,13 +371,12 @@ begin
         stBinaryStream:
           JSONWriter.WrBase64(fRowBlobs[C].GetBuffer, fRowBlobs[C].Length, True);
         else //stArray, stDataSet:
-          ;
+          JSONWriter.AddShort('null,') ;
       end;
       JSONWriter.Add(',');
     end;
   end;
-  if EndJSONObject then
-  begin
+  if jcoEndJSONObject in JSONComposeOptions then begin
     JSONWriter.CancelLastComma; // cancel last ','
     if JSONWriter.Expand then
       JSONWriter.Add('}');

@@ -651,6 +651,9 @@ begin
       SetStandardConformingStrings(StrToBoolEx(SCS));
     end else
       SetStandardConformingStrings(StrToBoolEx(GetServerSetting(#39+ConnProps_StdConformingStrings+#39)));
+    {$IFDEF USE_SYNCOMMONS}
+    SetServerSetting('DateStyle', 'ISO');
+    {$ENDIF}
     Finteger_datetimes := StrToBoolEx(GetServerSetting(#39+ConnProps_integer_datetimes+#39));
     FIs_bytea_output_hex := UpperCase(GetServerSetting('''bytea_output''')) = 'HEX';
   finally
