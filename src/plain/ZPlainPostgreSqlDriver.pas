@@ -364,7 +364,11 @@ type
     PGRES_NONFATAL_ERROR, { notice or warning message }
     PGRES_FATAL_ERROR,    { query failed }
     PGRES_COPY_BOTH,		  { Copy In/Out data transfer in progress }
-    PGRES_SINGLE_TUPLE    { since 9.2 single tuple from larger resultset }
+    PGRES_SINGLE_TUPLE,   { since 9.2 single tuple from larger resultset }
+    //pg 9.6 pipelined batch of https://github.com/2ndQuadrant/postgres/tree/dev/libpq-async-batch
+    //see: https://www.postgresql.org/message-id/flat/CAMsr+YFUjJytRyV4J-16bEoiZyH=4nj+sQ7JP9ajwz=B4dMMZw@mail.gmail.com#CAMsr+YFUjJytRyV4J-16bEoiZyH=4nj+sQ7JP9ajwz=B4dMMZw@mail.gmail.com
+    PGRES_BATCH_END,      { end of a batch of commands }
+    PGRES_BATCH_ABORTED   { Command didn't run because of an abort earlier in a batch }
   );
 
 { PGnotify represents the occurrence of a NOTIFY message.
@@ -734,6 +738,17 @@ type
     lo_unlink       : function(Handle: PGconn; lobjId: Oid): Integer; cdecl;
     lo_import       : function(Handle: PGconn; filename: PAnsiChar): Oid; cdecl;
     lo_export       : function(Handle: PGconn; lobjId: Oid; filename: PAnsiChar): Integer; cdecl;
+
+    //pg 9.6 pipelined batch of https://github.com/2ndQuadrant/postgres/tree/dev/libpq-async-batch
+    //see: https://www.postgresql.org/message-id/flat/CAMsr+YFUjJytRyV4J-16bEoiZyH=4nj+sQ7JP9ajwz=B4dMMZw@mail.gmail.com#CAMsr+YFUjJytRyV4J-16bEoiZyH=4nj+sQ7JP9ajwz=B4dMMZw@mail.gmail.com
+    //* Routines for batch mode management */
+    PQisInBatchMode : function(conn: PGconn): Integer; cdecl;
+    PQbatchIsAborted: function(conn: PGconn): Integer; cdecl;
+    PQqueriesInBatch: function(conn: PGconn): Integer; cdecl;
+    PQbeginBatchMode: function(conn: PGconn): Integer; cdecl;
+    PQendBatchMode  : function(conn: PGconn): Integer; cdecl;
+    PQsendEndBatch  : function(conn: PGconn): Integer; cdecl;
+    PQgetNextQuery  : function(conn: PGconn): Integer; cdecl;
   end;
 
 implementation
@@ -923,6 +938,14 @@ begin
     @PQgetCancel         := GetAddress('PQgetCancel');
     @PQfreeCancel        := GetAddress('PQfreeCancel');
     @PQcancel            := GetAddress('PQcancel');
+
+    @PQisInBatchMode     := GetAddress('PQisInBatchMode');
+    @PQbatchIsAborted    := GetAddress('PQbatchIsAborted');
+    @PQqueriesInBatch    := GetAddress('PQqueriesInBatch');
+    @PQbeginBatchMode    := GetAddress('PQbeginBatchMode');
+    @PQendBatchMode      := GetAddress('PQendBatchMode');
+    @PQsendEndBatch      := GetAddress('PQsendEndBatch');
+    @PQgetNextQuery      := GetAddress('PQgetNextQuery');
   end;
 end;
 

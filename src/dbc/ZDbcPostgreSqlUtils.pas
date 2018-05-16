@@ -133,10 +133,12 @@ function DecodeString(const Value: AnsiString): AnsiString;
   @param LogMessage a logging message.
   @param ResultHandle the Handle to the Result
 }
-procedure CheckPostgreSQLError(const Sender: IImmediatelyReleasable;
-  const PlainDriver: TZPostgreSQLPlainDriver; const Handle: PZPostgreSQLConnect;
-  const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  const ResultHandle: PZPostgreSQLResult);
+procedure HandlePostgreSQLError(const Sender: IImmediatelyReleasable;
+  const PlainDriver: TZPostgreSQLPlainDriver; conn: PGconn;
+  LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
+  ResultHandle: PZPostgreSQLResult);
+
+function PGSucceeded(ErrorMessage: PAnsiChar): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 {**
    Resolve problem with minor version in PostgreSql bettas
@@ -731,43 +733,53 @@ end;
   //FirmOS 22.02.06
   @param ResultHandle the Handle to the Result
 }
-procedure CheckPostgreSQLError(const Sender: IImmediatelyReleasable;
-  const PlainDriver: TZPostgreSQLPlainDriver; const Handle: PZPostgreSQLConnect;
-  const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  const ResultHandle: PZPostgreSQLResult);
+procedure HandlePostgreSQLError(const Sender: IImmediatelyReleasable;
+  const PlainDriver: TZPostgreSQLPlainDriver; conn: PGconn;
+  LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
+  ResultHandle: PZPostgreSQLResult);
 var
-   ErrorMessage, resultErrorField: PAnsiChar;
+   resultErrorField: PAnsiChar;
+   ErrorMessage: PAnsiChar;
    ConSettings: PZConSettings;
+   aMessage, aErrorStatus: String;
 begin
-  if Assigned(Handle)
-  then ErrorMessage := PlainDriver.PQerrorMessage(Handle)
-  else ErrorMessage := nil;
+  ErrorMessage := PlainDriver.PQerrorMessage(conn);
+  if PGSucceeded(ErrorMessage) then Exit;
 
-  if (ErrorMessage <> nil) and (ErrorMessage^ <> #0) then begin
-    if Assigned(ResultHandle) and Assigned(PlainDriver.PQresultErrorField)
-    then resultErrorField := PlainDriver.PQresultErrorField(ResultHandle,Ord(PG_DIAG_SQLSTATE))
-    else resultErrorField := nil;
+  if Assigned(ResultHandle) and Assigned(PlainDriver.PQresultErrorField) {since 7.4}
+  then resultErrorField := PlainDriver.PQresultErrorField(ResultHandle,Ord(PG_DIAG_SQLSTATE))
+  else resultErrorField := nil;
 
+  if Assigned(Sender) then begin
     ConSettings := Sender.GetConSettings;
-
+    aMessage := Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
+        ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]);
+    aErrorStatus := ConSettings^.ConvFuncs.ZRawToString(resultErrorField,
+          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
     if DriverManager.HasLoggingListener then
       DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
         0, ErrorMessage);
-
-    if ResultHandle <> nil then
-      PlainDriver.PQclear(ResultHandle);
-    if PlainDriver.PQstatus(Handle) = CONNECTION_BAD then begin
-      Sender.ReleaseImmediat(Sender);
-      EZSQLConnectionLost.CreateWithCodeAndStatus(Ord(CONNECTION_BAD), ConSettings^.ConvFuncs.ZRawToString(
-        resultErrorField, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP),
-      Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
-        ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
-    end else
-      raise EZSQLException.CreateWithCodeAndStatus(Ord(CONNECTION_BAD), ConSettings^.ConvFuncs.ZRawToString(
-        resultErrorField, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP),
-        Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
-        ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
+  end else begin
+    aMessage := Format(SSQLError1, [String(ErrorMessage)]);
+    aErrorStatus := String(resultErrorField);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogError(LogCategory, 'postresql', LogMessage, 0, ErrorMessage);
   end;
+
+
+  if ResultHandle <> nil then
+    PlainDriver.PQclear(ResultHandle);
+  if PlainDriver.PQstatus(conn) = CONNECTION_BAD then begin
+    if Assigned(Sender) then
+      Sender.ReleaseImmediat(Sender);
+    EZSQLConnectionLost.CreateWithCodeAndStatus(Ord(CONNECTION_BAD), aErrorStatus, aMessage);
+  end else
+    raise EZSQLException.CreateWithStatus(aErrorStatus, aMessage);
+end;
+
+function PGSucceeded(ErrorMessage: PAnsiChar): Boolean;
+begin
+  Result := (ErrorMessage = nil) or (ErrorMessage^ = #0);
 end;
 
 {**
@@ -1013,55 +1025,6 @@ procedure PG2DateTime(value: Double; out Year, Month, Day, Hour, Min, Sec: Word;
 var
   date: Double;
   time: Double;
-(*
-//*
-//*	Round off to MAX_TIMESTAMP_PRECISION decimal places.
-//*	Note: this is also used for rounding off intervals.
-//*/
-const TS_PREC_INV = 1000000.0;
-function TSROUND(j: Double): Double;
-begin
-  Result := (int(((double) (j)) * TS_PREC_INV) / TS_PREC_INV)
-end;
-
-label recalc_d, recalc_t;
-begin
-  {$IFNDEF ENDIAN_BIG}
-  Reverse8Bytes(@date);
-  {$ENDIF}
-  date := date / SECS_PER_DAY;
-  time := date / SECS_PER_DAY;
-  if time < 0 then begin
-    time := time + SECS_PER_DAY;
-    date := date -1;
-  end;
-
-  //* add offset to go from J2000 back to standard Julian date */
-   date := date + POSTGRES_EPOCH_JDATE;
-recalc_d:
-  //* Julian day routine does not work for negative Julian days */
-    if (date < 0) or (Trunc(date) > MaxInt) then begin
-    Year := 0; Month := 0; Day := 0; Hour := 0; Min := 0; Sec := 0; fSec := 0;
-    Exit;
-  end;
-  j2date(Integer(Trunc(date)), Year, Month, Day);
-recalc_t:
-  dt2time(time, Hour, Min, Sec, fsec);
-
-	//*fsec = TSROUND(*fsec);
-	//* roundoff may need to propagate to higher-order fields */#
-	if (*fsec >= 1.0)
-	{
-		time = ceil(time);
-		if (time >= (double) SECS_PER_DAY)
-		{
-			time = 0;
-			date += 1;
-			goto recalc_d;
-		}
-		goto recalc_t;
-	}
-*)
 begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);

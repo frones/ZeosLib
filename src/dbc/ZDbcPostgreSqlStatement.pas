@@ -846,7 +846,7 @@ begin
         if (PError <> nil) and (PError^ <> #0) then
           { check for indermine datatype error}
           if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) <> 0) then
-            CheckPostgreSQLError(Self, FPlainDriver, FConnectionHandle, lcExecPrepStmt, ASQL, Result)
+            HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle, lcExecPrepStmt, ASQL, Result)
           else begin
             FPlainDriver.PQclear(Result);
             Result := nil;
@@ -881,8 +881,9 @@ begin
           FlushBuff(TmpSQL);
         if Assigned(FConnectionHandle) then
           Result := FPlainDriver.PQExec(FConnectionHandle, Pointer(TmpSQL));
-          CheckPostgreSQLError(Self, FPlainDriver, FConnectionHandle,
-            lcUnprepStmt, ExecSQL, Result);
+          if not PGSucceeded(FPlainDriver.PQerrorMessage(FConnectionHandle)) then
+            HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle,
+              lcUnprepStmt, ExecSQL, Result);
       end;
     eicPrepStmtV3:
       begin
@@ -894,7 +895,7 @@ begin
         if (PError <> nil) and (PError^ <> #0) then
           { check for indermine datatype error}
           if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) <> 0) then
-            CheckPostgreSQLError(Self, FPlainDriver, FConnectionHandle,
+            HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle,
               lcExecPrepStmt, ASQL, Result)
           else begin
             FPlainDriver.PQclear(Result);
@@ -912,13 +913,15 @@ begin
         Result := FPlainDriver.PQexecPrepared(FConnectionHandle,
           Pointer(FRawPlanName), InParamCount, Pointer(FPQparamValues),
           Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat);
-        CheckPostgreSQLError(Self, FPlainDriver, FConnectionHandle,
-          lcExecPrepStmt, ASQL, Result);
+        if not PGSucceeded(FPlainDriver.PQerrorMessage(FConnectionHandle)) then
+          HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle,
+            lcExecPrepStmt, ASQL, Result);
       end;
-    eicExecPrepStmtV3_Async: if FPlainDriver.PQsendQueryPrepared(FConnectionHandle,
+    eicExecPrepStmtV3_Async:
+        if FPlainDriver.PQsendQueryPrepared(FConnectionHandle,
            Pointer(FRawPlanName), InParamCount, Pointer(FPQparamValues),
            Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat) <> Ord(PGRES_COMMAND_OK) then
-          CheckPostgreSQLError(Self, FPlainDriver, FConnectionHandle,
+          HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle,
             lcExecPrepStmt, ASQL, Result)
         else if FServerCursor then
           FPlainDriver.PQsetSingleRowMode(FConnectionHandle);
@@ -930,7 +933,7 @@ begin
         if (PError <> nil) and (PError^ <> #0) then
           { check for current transaction is aborted error}
           if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, current_transaction_is_aborted, 5) <> 0) then
-            CheckPostgreSQLError(Self, FPlainDriver, FConnectionHandle, lcExecPrepStmt, ASQL, Result)
+            HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle, lcExecPrepStmt, ASQL, Result)
           else
             FPostgreSQLConnection.RegisterTrashPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName))
         else if Result <> nil then begin
@@ -969,26 +972,28 @@ retryExecute:
           end;
         end else
           Result := FPlainDriver.PQExec(FConnectionHandle, Pointer(FASQL));
-        CheckPostgreSQLError(Self, FPlainDriver, FConnectionHandle,
-          lcUnprepStmt, ASQL, Result);
+        if not PGSucceeded(FPlainDriver.PQerrorMessage(FConnectionHandle)) then
+          HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle,
+            lcUnprepStmt, ASQL, Result);
       end;
-    eicExeParamV3_Async: if FplainDriver.PQsendQueryParams(FConnectionHandle,
-          Pointer(FASQL), InParamCount, Pointer(fParamOIDs), Pointer(FPQparamValues),
-          Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat) <> Ord(PGRES_COMMAND_OK) then
-          CheckPostgreSQLError(Self, FPlainDriver, FConnectionHandle,
-            lcExecPrepStmt, ASQL, Result)
+    eicExeParamV3_Async:
+        if FplainDriver.PQsendQueryParams(FConnectionHandle,
+           Pointer(FASQL), InParamCount, Pointer(fParamOIDs), Pointer(FPQparamValues),
+           Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat) <> Ord(PGRES_COMMAND_OK) then
+           HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle, lcExecPrepStmt, ASQL, Result)
         else if FServerCursor then
           FPlainDriver.PQsetSingleRowMode(FConnectionHandle);
     eicPrepStmtV3_Async:
       if not FPlainDriver.PQsendPrepare(FConnectionHandle, Pointer(FRawPlanName),
          Pointer(FASQL), InParamCount, Pointer(fParamOIDs)) = Ord(PGRES_COMMAND_OK) then
-        CheckPostgreSQLError(Self, FPlainDriver, FConnectionHandle,
+        HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle,
           lcExecPrepStmt, ASQL, nil);
     else
       begin
         Result := FPlainDriver.PQExec(FConnectionHandle, Pointer(SQL));
-        CheckPostgreSQLError(Self, FPlainDriver, FConnectionHandle,
-          lcExecute, ASQL, Result);
+        if not PGSucceeded(FPlainDriver.PQerrorMessage(FConnectionHandle)) then
+          HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle,
+            lcExecute, ASQL, Result);
       end;
   end;
 end;
@@ -1188,10 +1193,10 @@ var
 begin
   Result := nil;
   ASQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
-  QueryHandle := FPlainDriver.PQExec(FConnectionHandle,
-    PAnsiChar(ASQL));
-  CheckPostgreSQLError(Self, FPlainDriver, FConnectionHandle, lcExecute,
-    ASQL, QueryHandle);
+  QueryHandle := FPlainDriver.PQExec(FConnectionHandle, PAnsiChar(ASQL));
+  if not PGSucceeded(FPlainDriver.PQerrorMessage(FConnectionHandle)) then
+    HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle, lcExecute,
+      ASQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   if QueryHandle <> nil then
   begin
@@ -1285,10 +1290,10 @@ var
 begin
   Result := -1;
   ASQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
-  QueryHandle := FPlainDriver.PQExec(FConnectionHandle,
-    PAnsiChar(ASQL));
-  CheckPostgreSQLError(Self, FPlainDriver, FConnectionHandle, lcExecute,
-    ASQL, QueryHandle);
+  QueryHandle := FPlainDriver.PQExec(FConnectionHandle, PAnsiChar(ASQL));
+  if not PGSucceeded(FPlainDriver.PQerrorMessage(FConnectionHandle)) then
+    HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle, lcExecute,
+      ASQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
 
   if QueryHandle <> nil then

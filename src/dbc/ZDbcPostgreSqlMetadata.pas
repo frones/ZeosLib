@@ -87,6 +87,8 @@ type
   // technobot 2008-06-27 - methods moved as is from TZPostgreSQLDatabaseMetadata:
   {** Implements PostgreSQL Database Information. }
   TZPostgreSQLDatabaseInfo = class(TZAbstractDatabaseInfo, IZPostgreSQLDatabaseInfo)
+  private
+    fSupportsDMLBatches: Boolean;
   protected
     function GetMaxIndexKeys: Integer;
     function GetMaxNameLength: Integer;
@@ -173,6 +175,7 @@ type
     function SupportsResultSetConcurrency(const _Type: TZResultSetType;
       const Concurrency: TZResultSetConcurrency): Boolean; override;
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
+    function SupportsArrayBindings: Boolean; override;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; override;
@@ -316,8 +319,11 @@ uses
   @param Metadata the interface of the correpsonding database metadata object
 }
 constructor TZPostgreSQLDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
+var PlainDriver: TZPostgreSQLPlainDriver;
 begin
-  inherited;
+  inherited Create(Metadata);
+  PlainDriver := TZPostgreSQLPlainDriver(Metadata.GetConnection.GetIZPlainDriver.GetInstance);
+  fSupportsDMLBatches := Assigned(PlainDriver.PQbeginBatchMode) and Assigned(PlainDriver.PQendBatchMode);
 end;
 
 {**
@@ -753,6 +759,11 @@ end;
   Can a catalog name be used in a data manipulation statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
+function TZPostgreSQLDatabaseInfo.SupportsArrayBindings: Boolean;
+begin
+  Result := fSupportsDMLBatches;
+end;
+
 function TZPostgreSQLDatabaseInfo.SupportsCatalogsInDataManipulation: Boolean;
 begin
   Result := False;

@@ -1167,7 +1167,8 @@ begin
   if not Updated and (FBlobOid > 0) then
   begin
     BlobHandle := FPlainDriver.lo_open(FHandle, FBlobOid, INV_READ);
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Read Large Object',nil);
+    if not PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then
+      HandlePostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Read Large Object',nil);
     if BlobHandle >= 0 then
     begin
       Buffer := AllocMem(FChunk_Size+1);
@@ -1210,15 +1211,16 @@ begin
   end;
 
   { Creates a new large object. }
-  if FBlobOid = 0 then
-  begin
+  if FBlobOid = 0 then begin
     FBlobOid := FPlainDriver.lo_creat(FHandle, INV_WRITE);
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Create Large Object',nil);
+    if not PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then
+      HandlePostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Create Large Object',nil);
   end;
 
   { Opens and writes a large object. }
   BlobHandle := FPlainDriver.lo_open(FHandle, FBlobOid, INV_WRITE);
-  CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Open Large Object',nil);
+  if not PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then
+    HandlePostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Open Large Object',nil);
 
   Position := 0;
   while Position < Len do
@@ -1229,12 +1231,14 @@ begin
       Size := FChunk_Size;
     FPlainDriver.lo_write(FHandle, BlobHandle,
       {%H-}Pointer({%H-}NativeUInt(Buffer) + NativeUInt(Position)), Size);
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Write Large Object',nil);
+      if not PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then
+        HandlePostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Write Large Object',nil);
     Inc(Position, Size);
   end;
 
   FPlainDriver.lo_close(FHandle, BlobHandle);
-  CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Close Large Object',nil);
+  if not PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then
+    HandlePostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Close Large Object',nil);
 end;
 {**
   Clones this blob object.
@@ -1447,7 +1451,7 @@ begin
     if not Assigned(FQueryHandle) then begin
       FQueryHandle := (Statement as IZPGSQLPreparedStatement).GetLastQueryHandle;
       if FPlainDriver.PQsetSingleRowMode(FPGconn) <> Ord(PGRES_COMMAND_OK) then
-        CheckPostgreSQLError(Self, FplainDriver, FPGconn, lcOther, 'open recordset', FQueryHandle);
+        HandlePostgreSQLError(Self, FplainDriver, FPGconn, lcOther, 'open recordset', FQueryHandle);
     end else
       FplainDriver.PQclear(FQueryHandle)
 end;
@@ -1460,7 +1464,7 @@ begin
   if ResultSetType <> rtForwardOnly then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
   if FPlainDriver.PQsetSingleRowMode(FPGconn) <> Ord(PGRES_COMMAND_OK) then
-    CheckPostgreSQLError(Self, FplainDriver, FPGconn, lcOther, 'open recordset', FQueryHandle);
+    HandlePostgreSQLError(Self, FplainDriver, FPGconn, lcOther, 'open recordset', FQueryHandle);
   inherited Open;
 end;
 
