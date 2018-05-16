@@ -224,6 +224,9 @@ uses
 
 const
   FON = String('ON');
+  cBegin: AnsiString = 'BEGIN';
+  cCommit: AnsiString = 'COMMIT';
+  cRollback: AnsiString = 'ROLLBACK';
 
 procedure DefaultNoticeProcessor({%H-}arg: Pointer; message: PAnsiChar); cdecl;
 begin
@@ -493,23 +496,19 @@ end;
 procedure TZPostgreSQLConnection.DoStartTransaction;
 var
   QueryHandle: PZPostgreSQLResult;
-  SQL: RawByteString;
 begin
 //  Jan: Not sure wether we still need that. What was its intended use?
 //  if FBeginRequired then begin
-  SQL := 'BEGIN';
-  QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(SQL));
+  QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(cBegin));
   if PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then begin
     FPlainDriver.PQclear(QueryHandle);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, cBegin);
   end else
-    HandlePostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
+    HandlePostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, cBegin, QueryHandle);
 //  end;
 end;
 
-const
-  cCommit: AnsiString = 'COMMIT';
-  cRollback: AnsiString = 'ROLLBACK';
 {**
   Commits an explicit transaction.
 }
