@@ -772,8 +772,8 @@ begin
   if PlainDriver.PQstatus(conn) = CONNECTION_BAD then begin
     if Assigned(Sender) then
       Sender.ReleaseImmediat(Sender);
-    EZSQLConnectionLost.CreateWithCodeAndStatus(Ord(CONNECTION_BAD), aErrorStatus, aMessage);
-  end else
+    raise EZSQLConnectionLost.CreateWithCodeAndStatus(Ord(CONNECTION_BAD), aErrorStatus, aMessage);
+  end else if LogCategory <> lcUnprepStmt then //silence -> https://sourceforge.net/p/zeoslib/tickets/246/
     raise EZSQLException.CreateWithStatus(aErrorStatus, aMessage);
 end;
 

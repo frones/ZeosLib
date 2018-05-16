@@ -481,9 +481,9 @@ begin
         if PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then begin
           FPlainDriver.PQclear(QueryHandle);
           if DriverManager.HasLoggingListener then
-            DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+            DriverManager.LogMessage(lcUnprepStmt, ConSettings^.Protocol, SQL);
         end else
-          HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle)
+          HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcUnprepStmt, SQL,QueryHandle)
       end;
     finally
       FPreparedStatementTrashBin.Clear;
@@ -503,9 +503,9 @@ begin
   if PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then begin
     FPlainDriver.PQclear(QueryHandle);
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, cBegin);
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, cBegin);
   end else
-    HandlePostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, cBegin, QueryHandle);
+    HandlePostgreSQLError(Self, GetPlainDriver, FHandle, lcTransaction, cBegin, QueryHandle);
 //  end;
 end;
 
@@ -521,9 +521,9 @@ begin
     if PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then begin
       FPlainDriver.PQclear(QueryHandle);
       if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, cCommit);
+        DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, cCommit);
     end else
-      HandlePostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute,
+      HandlePostgreSQLError(Self, GetPlainDriver, FHandle, lcTransaction,
         cCommit,QueryHandle);
   end;
 end;
@@ -540,9 +540,9 @@ begin
     if PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then begin
       FPlainDriver.PQclear(QueryHandle);
       if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, cRollback);
+        DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, cRollback);
     end else
-      HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcExecute,
+      HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcTransaction,
         cRollback,QueryHandle);
   end;
 end;
@@ -669,7 +669,7 @@ begin
     QueryHandle := FPlainDriver.PQexec(FHandle, PAnsiChar(SQL));
     if PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then begin
       FPlainDriver.PQclear(QueryHandle);
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
       DoStartTransaction;
     end else
       HandlePostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
@@ -902,9 +902,9 @@ begin
   begin
     SQL := 'ROLLBACK PREPARED '''+copy(RawByteString(transactionid),1,200)+'''';
     QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(SQL));
-    HandlePostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
+    HandlePostgreSQLError(nil, GetPlainDriver, FHandle, lcTransaction, SQL,QueryHandle);
     FPlainDriver.PQclear(QueryHandle);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
   end;
 end;
 
@@ -965,9 +965,9 @@ begin
     end;
 
     QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(SQL));
-    HandlePostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL ,QueryHandle);
+    HandlePostgreSQLError(nil, GetPlainDriver, FHandle, lcTransaction, SQL ,QueryHandle);
     FPlainDriver.PQclear(QueryHandle);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
 
     inherited SetTransactionIsolation(Level);
   end;
