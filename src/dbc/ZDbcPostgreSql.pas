@@ -469,19 +469,22 @@ var
   SQL: RawByteString;
   x: Integer;
 begin
-  if Assigned(FPreparedStatementTrashBin) then begin
-    for x := FPreparedStatementTrashBin.Count - 1 downto 0 do begin
-      SQL := 'DEALLOCATE "' + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FPreparedStatementTrashBin.Strings[x]) + '";';;
-      QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(SQL));
-      FPreparedStatementTrashBin.Delete(x);
-      if PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then begin
-        FPlainDriver.PQclear(QueryHandle);
-        if DriverManager.HasLoggingListener then
-          DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
-      end else
-        HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle)
+  if Assigned(FPreparedStatementTrashBin) and (FHandle <> nil) and (FPreparedStatementTrashBin.Count > 0) then
+    try
+      for x := FPreparedStatementTrashBin.Count - 1 downto 0 do begin
+        SQL := 'DEALLOCATE "' + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FPreparedStatementTrashBin.Strings[x]) + '";';;
+        QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(SQL));
+        FPreparedStatementTrashBin.Delete(x);
+        if PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then begin
+          FPlainDriver.PQclear(QueryHandle);
+          if DriverManager.HasLoggingListener then
+            DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+        end else
+          HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle)
+      end;
+    finally
+      FPreparedStatementTrashBin.Clear;
     end;
-  end;
 end;
 
 {**
@@ -921,14 +924,18 @@ var
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
-
-  if not GetAutoCommit then DoCommit;
-
-  DeallocatePreparedStatements;
-  FPlainDriver.PQFinish(FHandle);
-  FHandle := nil;
-  LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
-  DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+  try //see https://sourceforge.net/p/zeoslib/tickets/246/
+    if not GetAutoCommit then DoCommit;
+  Except; end;
+  try
+    DeallocatePreparedStatements;
+  finally
+    if FHandle <> nil then
+      FPlainDriver.PQFinish(FHandle);
+    FHandle := nil;
+    LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
+    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+  end;
 end;
 
 {**
