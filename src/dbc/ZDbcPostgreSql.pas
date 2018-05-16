@@ -1176,8 +1176,7 @@ var
   isset: boolean;
 begin
   Result := PING_ERROR_ZEOSCONNCLOSED;
-  if Not Closed and (FHandle = nil) then
-  begin
+  if Not Closed and (FHandle <> nil) then begin
     res := FPlainDriver.PQExec(FHandle,'');
     isset := assigned(res);
     GetPlainDriver.PQclear(res);
