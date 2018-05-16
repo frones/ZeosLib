@@ -858,9 +858,12 @@ begin
   if not Closed then begin
     SQL := 'COMMIT PREPARED '''+copy(RawByteString(transactionid),1,200)+'''';
     QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(SQL));
-    HandlePostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
-    FPlainDriver.PQclear(QueryHandle);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+    if PGSucceeded(FPlainDriver.PQerrorMessage(fHandle)) then begin
+      FPlainDriver.PQclear(QueryHandle);
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
+    end else
+      HandlePostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
   end;
 end;
 
@@ -898,13 +901,14 @@ begin
   if not GetAutoCommit
   then raise Exception.Create('Rolling back a prepared transaction is not supported while an explicit transaction is running.');
 
-  if not Closed then
-  begin
+  if not Closed then begin
     SQL := 'ROLLBACK PREPARED '''+copy(RawByteString(transactionid),1,200)+'''';
     QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(SQL));
-    HandlePostgreSQLError(nil, GetPlainDriver, FHandle, lcTransaction, SQL,QueryHandle);
-    FPlainDriver.PQclear(QueryHandle);
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
+    if PGSucceeded(FPlainDriver.PQerrorMessage(fHandle)) then begin
+      FPlainDriver.PQclear(QueryHandle);
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
+    end else
+      HandlePostgreSQLError(Self, GetPlainDriver, FHandle, lcTransaction, SQL,QueryHandle);
   end;
 end;
 
@@ -965,10 +969,12 @@ begin
     end;
 
     QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(SQL));
-    HandlePostgreSQLError(nil, GetPlainDriver, FHandle, lcTransaction, SQL ,QueryHandle);
-    FPlainDriver.PQclear(QueryHandle);
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
-
+    if PGSucceeded(FPlainDriver.PQerrorMessage(fHandle)) then begin
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
+      FPlainDriver.PQclear(QueryHandle);
+    end else
+      HandlePostgreSQLError(self, GetPlainDriver, FHandle, lcExecute, SQL ,QueryHandle);
     inherited SetTransactionIsolation(Level);
   end;
 end;
@@ -1031,36 +1037,39 @@ begin
              ' WHERE (typtype = ''b'' and oid < 10000) OR typtype = ''p'' OR typtype = ''e'' OR typbasetype<>0 ORDER BY oid';
 
     QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(SQL));
-    HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+    if PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then begin
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 
-    FTypeList := TStringList.Create;
-    for I := 0 to FPlainDriver.PQntuples(QueryHandle)-1 do begin
-      TypeCode := RawToIntDef(FPlainDriver.PQgetvalue(QueryHandle, I, 0), 0);
-      P := FPlainDriver.PQgetvalue(QueryHandle, I, 3);
-      if (PByte(P)^ or $20) = ord('e') //lower 'E'
-      then TypeName := 'enum'
-      else begin
-        P := FPlainDriver.PQgetvalue(QueryHandle, I, 1);
-        {$IFDEF UNICODE}
-        TypeName := ZSysUtils.ASCII7ToUnicodeString(P, ZFastCode.StrLen(P));
-        {$ELSE}
-        ZSetString(P, ZFastCode.StrLen(P), TypeName);
-        {$ENDIF}
-      end;
-      if LastVersion
-      then BaseTypeCode := 0
-      else BaseTypeCode := RawToIntDef(FPlainDriver.PQgetvalue(QueryHandle, I, 2), 0);
+      FTypeList := TStringList.Create;
+      for I := 0 to FPlainDriver.PQntuples(QueryHandle)-1 do begin
+        TypeCode := RawToIntDef(FPlainDriver.PQgetvalue(QueryHandle, I, 0), 0);
+        P := FPlainDriver.PQgetvalue(QueryHandle, I, 3);
+        if (PByte(P)^ or $20) = ord('e') //lower 'E'
+        then TypeName := 'enum'
+        else begin
+          P := FPlainDriver.PQgetvalue(QueryHandle, I, 1);
+          {$IFDEF UNICODE}
+          TypeName := ZSysUtils.ASCII7ToUnicodeString(P, ZFastCode.StrLen(P));
+          {$ELSE}
+          ZSetString(P, ZFastCode.StrLen(P), TypeName);
+          {$ENDIF}
+        end;
+        if LastVersion
+        then BaseTypeCode := 0
+        else BaseTypeCode := RawToIntDef(FPlainDriver.PQgetvalue(QueryHandle, I, 2), 0);
 
-      if BaseTypeCode <> 0 then begin
-        Index := FTypeList.IndexOfObject(TObject(BaseTypeCode));
-        if Index >= 0
-        then TypeName := FTypeList[Index]
-        else TypeName := '';
+        if BaseTypeCode <> 0 then begin
+          Index := FTypeList.IndexOfObject(TObject(BaseTypeCode));
+          if Index >= 0
+          then TypeName := FTypeList[Index]
+          else TypeName := '';
+        end;
+        FTypeList.AddObject(TypeName, TObject(TypeCode));
       end;
-      FTypeList.AddObject(TypeName, TObject(TypeCode));
-    end;
-    GetPlainDriver.PQclear(QueryHandle);
+      GetPlainDriver.PQclear(QueryHandle);
+    end else
+      HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
   end;
 
   I := FTypeList.IndexOfObject(TObject(Id));
@@ -1135,38 +1144,40 @@ begin
     Open;
   SQL := 'SELECT version()';
   QueryHandle := FPlainDriver.PQExec(FHandle, Pointer(SQL));
-  HandlePostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
-  P := FPlainDriver.PQgetvalue(QueryHandle, 0, 0);
-  {$IFDEF UNICODE}
-  Temp := ZSysUtils.ASCII7ToUnicodeString(P, ZFastCode.StrLen(P));
-  {$ELSE}
-  ZSetString(P, ZFastCode.StrLen(P), Temp);
-  {$ENDIF}
-  FPlainDriver.PQclear(QueryHandle);
+  if PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then begin
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+    P := FPlainDriver.PQgetvalue(QueryHandle, 0, 0);
+    {$IFDEF UNICODE}
+    Temp := ZSysUtils.ASCII7ToUnicodeString(P, ZFastCode.StrLen(P));
+    {$ELSE}
+    ZSetString(P, ZFastCode.StrLen(P), Temp);
+    {$ENDIF}
+    FPlainDriver.PQclear(QueryHandle);
 
-  List := TStringList.Create;
-  try
-    { Splits string by space }
-    PutSplitString(List, Temp, ' ');
-    { first - PostgreSQL, second X.Y.Z}
-    Temp := List.Strings[1];
-    { Splits string by dot }
-    PutSplitString(List, Temp, '.');
+    List := TStringList.Create;
+    try
+      { Splits string by space }
+      PutSplitString(List, Temp, ' ');
+      { first - PostgreSQL, second X.Y.Z}
+      Temp := List.Strings[1];
+      { Splits string by dot }
+      PutSplitString(List, Temp, '.');
 
-    FServerMajorVersion := StrToIntDef(List.Strings[0], 0);
-    if List.Count > 1 then
-      FServerMinorVersion := GetMinorVersion(List.Strings[1])
-    else
-      FServerMinorVersion := 0;
-    if List.Count > 2 then
-      FServerSubVersion := GetMinorVersion(List.Strings[2])
-    else
-      FServerSubVersion := 0;
-  finally
-    List.Free;
-  end;
+      FServerMajorVersion := StrToIntDef(List.Strings[0], 0);
+      if List.Count > 1 then
+        FServerMinorVersion := GetMinorVersion(List.Strings[1])
+      else
+        FServerMinorVersion := 0;
+      if List.Count > 2 then
+        FServerSubVersion := GetMinorVersion(List.Strings[2])
+      else
+        FServerSubVersion := 0;
+    finally
+      List.Free;
+    end;
+  end else
+    HandlePostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
 end;
 
 {** 
@@ -1228,11 +1239,12 @@ begin
         false:
           SQL := SQL + RawByteString('READ WRITE');
       end;
-
       QueryHandle := FPlainDriver.PQExec(FHandle, Pointer(SQL));
-      HandlePostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL ,QueryHandle);
-      FPlainDriver.PQclear(QueryHandle);
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+      if PGSucceeded(FPlainDriver.PQerrorMessage(fHandle)) then begin
+        FPlainDriver.PQclear(QueryHandle);
+        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+      end else
+        HandlePostgreSQLError(self, GetPlainDriver, FHandle, lcExecute, SQL ,QueryHandle);
     end;
   end;
 
