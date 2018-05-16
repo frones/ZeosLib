@@ -816,9 +816,11 @@ end;
 procedure TZPostgreSQLConnection.SetAutoCommit(Value: Boolean);
 begin
   if Value <> GetAutoCommit then begin
-	if Value
-    then DoCommit
-    else DoStartTransaction;
+    if not Closed then
+      if Value then
+        DoCommit
+      else
+        DoStartTransaction;
     inherited SetAutoCommit(Value);
   end;
 end;
@@ -956,25 +958,27 @@ var
   SQL: RawByteString;
 begin
   if Level <> GetTransactionIsolation then begin
-    SQL := RawByteString('SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL ');
-    case level of
-      tiNone, tiReadUncommitted, tiReadCommitted:
-        SQL := SQL + RawByteString('READ COMMITTED');
-      tiRepeatableRead:
-        if (GetServerMajorVersion >= 8)
-        then SQL := SQL + RawByteString('REPEATABLE READ')
-        else SQL := SQL + RawByteString('SERIALIZABLE');
-      tiSerializable:
-        SQL := SQL + RawByteString('SERIALIZABLE');
-    end;
+    if not IsClosed then begin
+      SQL := RawByteString('SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL ');
+      case level of
+        tiNone, tiReadUncommitted, tiReadCommitted:
+          SQL := SQL + RawByteString('READ COMMITTED');
+        tiRepeatableRead:
+          if (GetServerMajorVersion >= 8)
+          then SQL := SQL + RawByteString('REPEATABLE READ')
+          else SQL := SQL + RawByteString('SERIALIZABLE');
+        tiSerializable:
+          SQL := SQL + RawByteString('SERIALIZABLE');
+      end;
 
-    QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(SQL));
-    if PGSucceeded(FPlainDriver.PQerrorMessage(fHandle)) then begin
-      if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
-      FPlainDriver.PQclear(QueryHandle);
-    end else
-      HandlePostgreSQLError(self, GetPlainDriver, FHandle, lcExecute, SQL ,QueryHandle);
+      QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(SQL));
+      if PGSucceeded(FPlainDriver.PQerrorMessage(fHandle)) then begin
+        if DriverManager.HasLoggingListener then
+          DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
+        FPlainDriver.PQclear(QueryHandle);
+      end else
+        HandlePostgreSQLError(self, GetPlainDriver, FHandle, lcExecute, SQL ,QueryHandle);
+    end;
     inherited SetTransactionIsolation(Level);
   end;
 end;
