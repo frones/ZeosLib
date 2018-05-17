@@ -3638,9 +3638,9 @@ begin
     then SetInParamCount(ParameterIndex+1);
 
     ZArray := @FBatchArrays[ParameterIndex];
-    ZArray^.VIsNullArray := Pointer(Value);
-    ZArray^.VIsNullArrayType := ord(SQLType);
-    ZArray^.VIsNullArrayVariantType := VariantType;
+    ZArray^.VArray := Pointer(Value);
+    ZArray^.VArrayType := ord(SQLType);
+    ZArray^.VArrayVariantType := VariantType;
 //    FInParamTypes[ParameterIndex] := stArray;
   end else
     raise EZSQLException.Create(sUnsupportedOperation);
@@ -3716,9 +3716,9 @@ begin
     then SetInParamCount(ParameterIndex+1);
 
     ZArray := @FBatchArrays[ParameterIndex];
-    ZArray^.VArray := Pointer(Value);
-    ZArray^.VArrayType := ord(SQLType);
-    ZArray^.VArrayVariantType := VariantType;
+    ZArray^.VIsNullArray := Pointer(Value);
+    ZArray^.VIsNullArrayType := ord(SQLType);
+    ZArray^.VIsNullArrayVariantType := VariantType;
     FInParamTypes[ParameterIndex] := stArray;
   end else
     raise EZSQLException.Create(sUnsupportedOperation);
