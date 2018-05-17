@@ -341,7 +341,9 @@ begin
                   end;
       stCurrency: begin
                     AllocBuf(Index, SizeOf(Currency), ParamFormatBin);
-                    Currency2PG(Value, FPQparamValues[Index]);
+                    if FParamOIDs[index] = CASHOID
+                    then Currency2PG(Value, FPQparamValues[Index])
+                    else Double2PG(Value, FPQparamValues[Index]);
                   end;
       else BindRawStr(Index, SQLType, FloatToSqlRaw(Value));
     end;
@@ -669,6 +671,15 @@ begin
     InternalSetInParamCount(CountOfQueryParams)
   else if (fRawPlanName <> '') and not (Findeterminate_datatype) and (CountOfQueryParams > 0) then begin
     if Assigned(FPlainDriver.PQdescribePrepared) then begin
+      //we use the describe only if minimum one INVALIDOID was given else our bindings have been excepted by the server
+      {nParams := -1;
+      for i := low(FParamOIDs) to high(FParamOIDs) do
+        if FParamOIDs[I] = INVALIDOID then begin
+          nParams := I;
+          Break;
+        end;
+      if nParams = -1 then
+        Exit; //no describe required }
       res := FPlainDriver.PQdescribePrepared(FConnectionHandle, Pointer(FRawPlanname));
       try
         nParams := FplainDriver.PQnparams(res);
@@ -679,26 +690,27 @@ begin
             InternalSetInParamCount(nParams);
           for i := 0 to InParamCount-1 do begin
             aOID := FplainDriver.PQparamtype(res, i);
-            if (aOID <> FParamOIDs[i]) and not (FPQparamValues[I] = nil) then begin
+            if (aOID <> FParamOIDs[i]) then begin
               //bind bin again or switch to string format if we do not support the PG Types -> else Error
               FParamOIDs[i] := aOID;
-              case InParamTypes[i] of
-                stBoolean:  BindSignedOrdinal(i, InParamTypes[i], PByte(FPQparamValues[i])^);
-                stSmall:    BindSignedOrdinal(i, InParamTypes[i], PG2SmallInt(FPQparamValues[i]));
-                stInteger:  BindSignedOrdinal(i, InParamTypes[i], PG2Integer(FPQparamValues[i]));
-                stLongWord: BindSignedOrdinal(i, InParamTypes[i], PG2LongWord(FPQparamValues[i]));
-                stLong:     BindSignedOrdinal(i, InParamTypes[i], PG2Int64(FPQparamValues[i]));
-                stCurrency: BindDouble(i, InParamTypes[i], PG2Currency(FPQparamValues[i]));
-                stFloat:    BindDouble(i, InParamTypes[i], PG2Single(FPQparamValues[i]));
-                stDouble:   BindDouble(i, InParamTypes[i], PG2Double(FPQparamValues[i]));
-                stTime:     if Finteger_datetimes
-                            then BindDateTime(i, InParamTypes[i], PG2Time(PInt64(FPQparamValues[i])^))
-                            else BindDateTime(i, InParamTypes[i], PG2Time(PDouble(FPQparamValues[i])^));
-                stDate:     BindDateTime(i, InParamTypes[i], PG2Date(PInteger(FPQparamValues[i])^));
-                stTimeStamp:if Finteger_datetimes
-                            then BindDateTime(i, InParamTypes[i], PG2DateTime(PInt64(FPQparamValues[i])^))
-                            else BindDateTime(i, InParamTypes[i], PG2DateTime(PDouble(FPQparamValues[i])^));
-              end;
+              if (FPQparamValues[I] <> nil) then
+                case InParamTypes[i] of
+                  stBoolean:  BindSignedOrdinal(i, InParamTypes[i], PByte(FPQparamValues[i])^);
+                  stSmall:    BindSignedOrdinal(i, InParamTypes[i], PG2SmallInt(FPQparamValues[i]));
+                  stInteger:  BindSignedOrdinal(i, InParamTypes[i], PG2Integer(FPQparamValues[i]));
+                  stLongWord: BindSignedOrdinal(i, InParamTypes[i], PG2LongWord(FPQparamValues[i]));
+                  stLong:     BindSignedOrdinal(i, InParamTypes[i], PG2Int64(FPQparamValues[i]));
+                  stCurrency: BindDouble(i, InParamTypes[i], PG2Currency(FPQparamValues[i]));
+                  stFloat:    BindDouble(i, InParamTypes[i], PG2Single(FPQparamValues[i]));
+                  stDouble:   BindDouble(i, InParamTypes[i], PG2Double(FPQparamValues[i]));
+                  stTime:     if Finteger_datetimes
+                              then BindDateTime(i, InParamTypes[i], PG2Time(PInt64(FPQparamValues[i])^))
+                              else BindDateTime(i, InParamTypes[i], PG2Time(PDouble(FPQparamValues[i])^));
+                  stDate:     BindDateTime(i, InParamTypes[i], PG2Date(PInteger(FPQparamValues[i])^));
+                  stTimeStamp:if Finteger_datetimes
+                              then BindDateTime(i, InParamTypes[i], PG2DateTime(PInt64(FPQparamValues[i])^))
+                              else BindDateTime(i, InParamTypes[i], PG2DateTime(PDouble(FPQparamValues[i])^));
+                end;
             end;
           end;
         end;
@@ -886,7 +898,7 @@ begin
     eicPrepStmtV3:
       begin
         Result := FPlainDriver.PQprepare(FConnectionHandle, Pointer(FRawPlanName),
-          Pointer(SQL), InParamCount, Pointer(fParamOIDs));
+          Pointer(SQL), InParamCount, nil{Pointer(fParamOIDs)});
         if Assigned(FPlainDriver.PQresultErrorField)
         then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
         else PError := FPLainDriver.PQerrorMessage(FConnectionHandle);
@@ -897,8 +909,7 @@ begin
               lcPrepStmt, ASQL, Result)
           else begin
             FPlainDriver.PQclear(Result);
-            Findeterminate_datatype := True;
-            Exit;
+            Findeterminate_datatype := True
           end
         else begin
           FPlainDriver.PQclear(Result);

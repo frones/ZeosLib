@@ -188,6 +188,9 @@ function PG2Date(Value: Integer): TDateTime;
 function PG2SmallInt(P: Pointer): SmallInt; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
+function PG2Word(P: Pointer): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Word2PG(Value: Word; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
 function PG2Integer(P: Pointer): Integer; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Integer2PG(Value: Integer; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
@@ -389,7 +392,7 @@ begin
     stLongWord, stLong, stULong: aOID := INT8OID;
     stFloat: aOID := FLOAT4OID;
     stDouble, stBigDecimal: aOID := FLOAT8OID;
-    stCurrency: aOID := CASHOID;
+    stCurrency: aOID := FLOAT8OID;//CASHOID;  the pg money has a scale of 2 while we've a scale of 4
     stString, stUnicodeString,//: aOID := VARCHAROID;
     stAsciiStream, stUnicodeStream: aOID := TEXTOID;
     stDate: aOID := DATEOID;
@@ -1185,6 +1188,18 @@ end;
 procedure SmallInt2PG(Value: SmallInt; Buf: Pointer);
 begin
   PSmallInt(Buf)^ := Value;
+  {$IFNDEF ENDIAN_BIG}Reverse2Bytes(Buf){$ENDIF}
+end;
+
+function PG2Word(P: Pointer): Word;
+begin
+  Result := PWord(P)^;
+  {$IFNDEF ENDIAN_BIG}Reverse2Bytes(@Result){$ENDIF}
+end;
+
+procedure Word2PG(Value: Word; Buf: Pointer);
+begin
+  PWord(Buf)^ := Value;
   {$IFNDEF ENDIAN_BIG}Reverse2Bytes(Buf){$ENDIF}
 end;
 
