@@ -1446,6 +1446,15 @@ begin
     end;
     Close;
   end;
+  if Result.IsBeforeFirst then begin
+    Result.MoveToInsertRow;
+    if Schema <> '' then
+      Result.UpdateString(CatalogNameIndex, Schema);
+    Result.UpdateString(TableNameIndex, Table);
+    Result.UpdateRawByteString(PrimaryKeyColumnNameIndex, 'rowid');
+    Result.UpdateInt(PrimaryKeyKeySeqIndex, 0);
+    Result.InsertRow;
+  end;
 end;
 
 {**
