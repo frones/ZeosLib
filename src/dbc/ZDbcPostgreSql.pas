@@ -87,7 +87,7 @@ type
 
     function GetTypeNameByOid(Id: Oid): string;
     function GetPlainDriver: TZPostgreSQLPlainDriver;
-    function GetConnectionHandle: PZPostgreSQLConnect;
+    function GetConnectionHandle: TPGconn;
     function GetServerMajorVersion: Integer;
     function GetServerMinorVersion: Integer;
     function EncodeBinary(Buf: Pointer; Len: Integer; Quoted: Boolean): RawByteString; overload;
@@ -107,7 +107,7 @@ type
   private
     FUndefinedVarcharAsStringLength: Integer;
     FStandardConformingStrings: Boolean;
-    FHandle: PZPostgreSQLConnect;
+    FHandle: TPGconn;
 //  Jan: Not sure wether we still need that. What was its intended use?
 //    FBeginRequired: Boolean;
     FTypeList: TStrings;
@@ -175,7 +175,7 @@ type
 
     function GetTypeNameByOid(Id: Oid): string;
     function GetPlainDriver: TZPostgreSQLPlainDriver;
-    function GetConnectionHandle: PZPostgreSQLConnect;
+    function GetConnectionHandle: TPGconn;
 
     function GetHostVersion: Integer; override;
     function GetServerMajorVersion: Integer;
@@ -468,7 +468,7 @@ end;
 }
 procedure TZPostgreSQLConnection.DeallocatePreparedStatements;
 var
-  QueryHandle: PZPostgreSQLResult;
+  QueryHandle: PPGresult;
   SQL: RawByteString;
   x: Integer;
 begin
@@ -495,7 +495,7 @@ end;
 }
 procedure TZPostgreSQLConnection.DoStartTransaction;
 var
-  QueryHandle: PZPostgreSQLResult;
+  QueryHandle: PPGresult;
 begin
 //  Jan: Not sure wether we still need that. What was its intended use?
 //  if FBeginRequired then begin
@@ -514,7 +514,7 @@ end;
 }
 procedure TZPostgreSQLConnection.DoCommit;
 var
-  QueryHandle: PZPostgreSQLResult;
+  QueryHandle: PPGresult;
 begin
   if not Closed then begin
     QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(cCommit));
@@ -533,7 +533,7 @@ end;
 }
 procedure TZPostgreSQLConnection.DoRollback;
 var
-  QueryHandle: PZPostgreSQLResult;
+  QueryHandle: PPGresult;
 begin
   if not Closed then begin
     QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(cRollback));
@@ -660,7 +660,7 @@ end;
 
 procedure TZPostgreSQLConnection.PrepareTransaction(const transactionid: string);
 var
-   QueryHandle: PZPostgreSQLResult;
+   QueryHandle: PPGresult;
    SQL: RawByteString;
 begin
   if not Closed then begin
@@ -851,7 +851,7 @@ end;
 }
 procedure TZPostgreSQLConnection.CommitPrepared(const transactionid: string);
 var
-  QueryHandle: PZPostgreSQLResult;
+  QueryHandle: PPGresult;
   SQL: RawByteString;
 begin
   if GetAutoCommit
@@ -897,7 +897,7 @@ end;
 }
 procedure TZPostgreSQLConnection.RollbackPrepared(const transactionid: string);
 var
-   QueryHandle: PZPostgreSQLResult;
+   QueryHandle: PPGresult;
    SQL: RawByteString;
 begin
   if not GetAutoCommit
@@ -926,12 +926,33 @@ end;
 procedure TZPostgreSQLConnection.InternalClose;
 var
   LogMessage: RawbyteString;
+  QueryHandle: PPGresult;
+  PError: PAnsiChar;
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
-  try //see https://sourceforge.net/p/zeoslib/tickets/246/
-    if not GetAutoCommit then DoCommit;
-  Except; end;
+  //see https://sourceforge.net/p/zeoslib/tickets/246/
+  if not GetAutoCommit then begin //try to commit
+    QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(cCommit));
+    if PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then begin
+      FPlainDriver.PQclear(QueryHandle);
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, cCommit);
+    end else begin
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, cCommit);
+      if Assigned(FPlainDriver.PQresultErrorField) and Assigned(QueryHandle)
+      then PError := FPlainDriver.PQresultErrorField(QueryHandle,Ord(PG_DIAG_SQLSTATE))
+      else PError := FPLainDriver.PQerrorMessage(FHandle);
+      //transaction aborted and in postre zombi status? If so a rollback is required
+      if (ZSysUtils.ZMemLComp(PError, current_transaction_is_aborted, 5) = 0) then begin
+        FPlainDriver.PQclear(QueryHandle);
+        QueryHandle := FPlainDriver.PQexec(FHandle, Pointer(cRollback));
+      end;
+      if QueryHandle <> nil then
+        FPlainDriver.PQclear(QueryHandle); //raise no exception
+    end;
+  end;
   try
     DeallocatePreparedStatements;
   finally
@@ -954,7 +975,7 @@ end;
 procedure TZPostgreSQLConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 var
-  QueryHandle: PZPostgreSQLResult;
+  QueryHandle: PPGresult;
   SQL: RawByteString;
 begin
   if Level <> GetTransactionIsolation then begin
@@ -993,7 +1014,7 @@ end;
   Gets a reference to PostgreSQL connection handle.
   @return a reference to PostgreSQL connection handle.
 }
-function TZPostgreSQLConnection.GetConnectionHandle: PZPostgreSQLConnect;
+function TZPostgreSQLConnection.GetConnectionHandle: TPGconn;
 begin
   Result := FHandle;
 end;
@@ -1021,7 +1042,7 @@ end;
 function TZPostgreSQLConnection.GetTypeNameByOid(Id: Oid): string;
 var
   I, Index: Integer;
-  QueryHandle: PZPostgreSQLResult;
+  QueryHandle: PPGresult;
   SQL: RawByteString;
   TypeCode, BaseTypeCode: Integer;
   TypeName: string;
@@ -1140,7 +1161,7 @@ procedure TZPostgreSQLConnection.LoadServerVersion;
 var
   Temp: string;
   List: TStrings;
-  QueryHandle: PZPostgreSQLResult;
+  QueryHandle: PPGresult;
   SQL: RawByteString;
   P: PAnsichar;
 begin
@@ -1193,7 +1214,7 @@ function TZPostgreSQLConnection.PingServer: Integer;
 const 
   PING_ERROR_ZEOSCONNCLOSED = -1;
 var
-  res: PZPostgreSQLResult;
+  res: PPGresult;
   isset: boolean;
 begin
   Result := PING_ERROR_ZEOSCONNCLOSED;
@@ -1232,7 +1253,7 @@ end;
 procedure TZPostgreSQLConnection.SetReadOnly(Value: Boolean);
 var
   SQL: RawByteString;
-  QueryHandle: PZPostgreSQLResult;
+  QueryHandle: PPGresult;
 begin
   if (GetServerMajorVersion > 7) or ((GetServerMajorVersion = 7) and (GetServerMinorVersion >= 4)) then begin
     if Value <> isReadOnly then begin
@@ -1325,7 +1346,7 @@ end;
 function TZPostgreSQLConnection.GetServerSetting(const AName: RawByteString): string;
 var
   SQL: RawByteString;
-  QueryHandle: PZPostgreSQLResult;
+  QueryHandle: PPGresult;
   P: PAnsichar;
 begin
   SQL := 'select setting from pg_settings where name = '+AName;
@@ -1367,7 +1388,7 @@ procedure TZPostgreSQLConnection.SetServerSetting(const AName,
   AValue: RawbyteString);
 var
   SQL: RawByteString;
-  QueryHandle: PZPostgreSQLResult;
+  QueryHandle: PPGresult;
 begin
   SQL := 'SET '+AName+' = '+AValue;
   QueryHandle := FPlainDriver.PQExec(FHandle, Pointer(SQL));

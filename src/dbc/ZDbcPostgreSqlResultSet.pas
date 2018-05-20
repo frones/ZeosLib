@@ -86,8 +86,8 @@ type
   private
     //FUUIDOIDBuf: array[0..38] of Ansichar; //include trailing #0
     FUUIDOIDOutBuff: TBytes;
-    FPGconn: PZPostgreSQLConnect;
-    FQueryHandle: PZPostgreSQLResult;
+    FPGconn: TPGconn;
+    FQueryHandle: PPGresult;
     FPlainDriver: TZPostgreSQLPlainDriver;
     FChunk_Size: Integer;
     FIs_bytea_output_hex: Boolean;
@@ -103,7 +103,7 @@ type
     function PGRowNo: Integer; virtual; abstract;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
-      Handle: PZPostgreSQLConnect; QueryHandle: PZPostgreSQLResult;
+      Handle: TPGconn; QueryHandle: PPGresult;
       const CachedLob: Boolean; const Chunk_Size, UndefinedVarcharAsStringLength: Integer);
 
     procedure ResetCursor; override;
@@ -158,13 +158,13 @@ type
   {** Implements external blob wrapper object for PostgreSQL. }
   TZPostgreSQLOidBlob = class(TZAbstractUnCachedBlob, IZPostgreSQLOidBlob, IZUnCachedLob)
   private
-    FHandle: PZPostgreSQLConnect;
+    FHandle: TPGconn;
     FBlobOid: Oid;
     FPlainDriver: TZPostgreSQLPlainDriver;
     FChunk_Size: Integer;
   public
     constructor Create(const PlainDriver: TZPostgreSQLPlainDriver; const
-      Data: Pointer; const Size: Integer; const Handle: PZPostgreSQLConnect;
+      Data: Pointer; const Size: Integer; const Handle: TPGconn;
       const BlobOid: Oid; const Chunk_Size: Integer);
 
     function GetBlobOid: Oid;
@@ -400,8 +400,8 @@ end;
   @param Handle a PostgreSQL specific query handle.
 }
 constructor TZAbstractPostgreSQLStringResultSet.Create(const Statement: IZStatement;
-  const SQL: string; Handle: PZPostgreSQLConnect;
-  QueryHandle: PZPostgreSQLResult; const CachedLob: Boolean;
+  const SQL: string; Handle: TPGconn;
+  QueryHandle: PPGresult; const CachedLob: Boolean;
   const Chunk_Size, UndefinedVarcharAsStringLength: Integer);
 begin
   inherited Create(Statement, SQL,
@@ -1135,7 +1135,7 @@ end;
   @param Handle a PostgreSQL connection reference.
 }
 constructor TZPostgreSQLOidBlob.Create(const PlainDriver: TZPostgreSQLPlainDriver;
-  const Data: Pointer; const Size: Integer; const Handle: PZPostgreSQLConnect;
+  const Data: Pointer; const Size: Integer; const Handle: TPGconn;
   const BlobOid: Oid; const Chunk_Size: Integer);
 begin
   inherited CreateWithData(Data, Size);

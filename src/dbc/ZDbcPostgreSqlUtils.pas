@@ -134,9 +134,9 @@ function DecodeString(const Value: AnsiString): AnsiString;
   @param ResultHandle the Handle to the Result
 }
 procedure HandlePostgreSQLError(const Sender: IImmediatelyReleasable;
-  const PlainDriver: TZPostgreSQLPlainDriver; conn: PGconn;
+  const PlainDriver: TZPostgreSQLPlainDriver; conn: TPGconn;
   LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  ResultHandle: PZPostgreSQLResult);
+  ResultHandle: PPGresult);
 
 function PGSucceeded(ErrorMessage: PAnsiChar): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
@@ -211,12 +211,33 @@ procedure Double2PG(const Value: Double; Buf: Pointer); {$IFDEF WITH_INLINE}inli
 
 procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
 
+//ported macros from array.h
 
+function  GET_ARR_NDIM(a: Pointer): Integer;
+procedure SET_ARR_NDIM(a: Pointer; Value: Int32);
+function  GET_ARR_HASNULL(a: Pointer): Boolean;
+procedure SET_ARR_HASNULL(a: Pointer; Value: Boolean);
+function  GET_ARR_ELEMTYPE(a: Pointer): OID;
+procedure SET_ARR_ELEMTYPE(a: Pointer; Value: OID);
+function  ARR_DIMS(a: Pointer): PInteger;
+function  ARR_LBOUND(a: Pointer): PInteger;
+function  ARR_NULLBITMAP(a: Pointer): PByte;
+
+(**
+  Returns the actual array data offset.
+*)
+function  ARR_DATA_OFFSET(a: Pointer): NativeUInt;
+
+(**
+  Returns a pointer to the actual array data.
+*)
+function  ARR_DATA_PTR(a: Pointer): Pointer;
+
+function GET_ARR_SIZE(Dims, ElementSize: Integer; Nullable: Boolean): Integer;
 
 implementation
 
-uses Math,
-  ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcUtils, ZSysUtils;
+uses Math, ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcUtils, ZSysUtils;
 
 {**
    Return ZSQLType from PostgreSQL type name
@@ -398,7 +419,7 @@ begin
     stDate: aOID := DATEOID;
     stTime: aOID := TIMEOID;
     stTimestamp: aOID := TIMESTAMPOID;
-    stGuid: aOID := OIDOID;
+    stGuid: aOID := UUIDOID;
     stBytes: aOID := BYTEAOID;
     stBinaryStream:
       if IsOidAsBlob
@@ -737,9 +758,9 @@ end;
   @param ResultHandle the Handle to the Result
 }
 procedure HandlePostgreSQLError(const Sender: IImmediatelyReleasable;
-  const PlainDriver: TZPostgreSQLPlainDriver; conn: PGconn;
+  const PlainDriver: TZPostgreSQLPlainDriver; conn: TPGconn;
   LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  ResultHandle: PZPostgreSQLResult);
+  ResultHandle: PPGresult);
 var
    resultErrorField: PAnsiChar;
    ErrorMessage: PAnsiChar;
@@ -768,7 +789,6 @@ begin
     if DriverManager.HasLoggingListener then
       DriverManager.LogError(LogCategory, 'postresql', LogMessage, 0, ErrorMessage);
   end;
-
 
   if ResultHandle <> nil then
     PlainDriver.PQclear(ResultHandle);
@@ -1274,6 +1294,74 @@ procedure Double2PG(const Value: Double; Buf: Pointer);
 begin
   PDouble(Buf)^ := Value;
   {$IFNDEF ENDIAN_BIG}Reverse8Bytes(Buf){$ENDIF}
+end;
+
+function GET_ARR_NDIM(a: Pointer): Integer;
+begin
+  Result := PG2Integer(@PArrayType(a).ndim);
+end;
+
+procedure SET_ARR_NDIM(a: Pointer; Value: Integer);
+begin
+  Integer2PG(Value, @PArrayType(a).ndim);
+end;
+
+function  GET_ARR_HASNULL(a: Pointer): Boolean;
+begin
+  Result := PG2Integer(@PArrayType(a).dataoffset) <> 0;
+end;
+
+procedure SET_ARR_HASNULL(a: Pointer; Value: Boolean);
+begin
+  Integer2PG(Ord(Value), @PArrayType(a).dataoffset);
+end;
+
+function GET_ARR_ELEMTYPE(a: Pointer): OID;
+begin
+  Result := PG2LongWord(@PArrayType(a).elemtype);
+end;
+
+procedure SET_ARR_ELEMTYPE(a: Pointer; Value: OID);
+begin
+  LongWord2PG(Ord(Value), @PArrayType(a).elemtype);
+end;
+
+function ARR_DIMS(a: Pointer): PInteger;
+begin
+  Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType)));
+end;
+
+function  ARR_LBOUND(a: Pointer): PInteger;
+begin
+  Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType))+(SizeOf(Integer)*Cardinal(GET_ARR_NDIM(a))));
+end;
+
+function GET_ARR_SIZE(Dims, ElementSize: Integer; Nullable: Boolean): Integer;
+begin
+  Result := SizeOf(TArrayType)+((SizeOf(Integer)*2){dimensions and lower_bnds}*Dims)+(ElementSize*Dims)+Ord(Nullable)*Dims
+end;
+
+function  ARR_NULLBITMAP(a: Pointer): PByte;
+begin
+  Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType))+(2*(SizeOf(Integer)*Cardinal(GET_ARR_NDIM(a)*PG2Integer(ARR_DIMS(a))))));
+end;
+
+(**
+  Returns the actual array data offset.
+*)
+function  ARR_DATA_OFFSET(a: Pointer): NativeUInt;
+begin
+  Result := sizeof(TArrayType)+((Cardinal(GET_ARR_NDIM(a))*SizeOf(integer)*2{dimensions and lower_bnds} ));
+  if GET_ARR_HASNULL(a) then
+    Result := Result + SizeOf(Byte) * (Cardinal(GET_ARR_NDIM(a)*PG2Integer(ARR_DIMS(a))));
+end;
+
+(**
+  Returns a pointer to the actual array data.
+*)
+function  ARR_DATA_PTR(a: Pointer): Pointer;
+begin
+  Result := Pointer(NativeUInt(a)+ARR_DATA_OFFSET(a));
 end;
 
 end.
