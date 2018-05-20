@@ -97,7 +97,7 @@ const
   // how many executions must be done to realy prepare the statement?
   // JDBC does prepare on after 4 executions.
   // A negative value means never prepare.
-  // actually just not used
+  // actually used on MySQL and PostresSQL only
   DSProps_MinExecCntBeforePrepare = 'MinExecCountBeforePrepare';
 
   { Parameters for datasets }
@@ -262,6 +262,11 @@ const
   // Type: BOOLEAN
   // Is Oid type treated as Large Object handle (blob) or as a regular integer
   DSProps_OidAsBlob = 'OidAsBlob';
+  // Type: BOOLEAN
+  DSProps_ExexAsync = 'execute_async';
+  // Type: BOOLEAN
+  // fetch row by row from Server -> do not cache the results in libpq
+  DSProps_SingleRowMode = 'SingleRowMode';
 {$ENDIF}
 
 {$IFDEF ENABLE_INTERBASE}

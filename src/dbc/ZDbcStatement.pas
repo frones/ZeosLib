@@ -213,7 +213,7 @@ type
     FInitialArrayCount: ArrayLenInt;
     FPrepared : Boolean;
     FClientVariantManger: IZClientVariantManager;
-    FMinExecCount2Prepare, FExecCount: Integer;
+    FExecCount: Integer;
     FSupportsDMLBatchArrays: Boolean;
   protected
     FCachedQueryRaw: TRawByteStringDynArray;
@@ -223,7 +223,7 @@ type
     FTokenMatchIndex, FParamsCnt: Integer;
     FInParamTypes: TZSQLTypeArray;
     FInParamDefaultValues: TStringDynArray;
-    FInParamCount: Integer;
+    FMinExecCount2Prepare, FInParamCount: Integer;
     function GetClientVariantManger: IZClientVariantManager;
     function SupportsSingleColumnArrays: Boolean; virtual;
     procedure PrepareInParameters; virtual;
@@ -450,8 +450,8 @@ type
 
   TImplizitBindRealAndEmulationStatement_A = class(TZEmulatedPreparedStatement_A)
   protected
-    FEmulatePrepare: Boolean;
-    FParamEmulatedValues: TRawByteStringDynArray;
+    FEmulatedParams: Boolean;
+    FParamValues: TRawByteStringDynArray;
     FDefaultValues: TRawByteStringDynArray;
     fParamLobs: array of IZBlob;
     FGUIDAsString: Boolean;
@@ -3453,15 +3453,15 @@ end;
 function TImplizitBindRealAndEmulationStatement_A.GetInParamLogValue(
   ParamIndex: Integer): RawByteString;
 begin
-  if FEmulatePrepare 
-  then Result := FParamEmulatedValues[ParamIndex]
+  if FEmulatedParams
+  then Result := FParamValues[ParamIndex]
   else  Result := GetBoundValueAsLogValue(ParamIndex);
 end;
 
 function TImplizitBindRealAndEmulationStatement_A.GetParamAsString(
   ParamIndex: Integer): RawByteString;
 begin
-  Result := FParamEmulatedValues[ParamIndex];
+  Result := FParamValues[ParamIndex];
 end;
 
 procedure TImplizitBindRealAndEmulationStatement_A.InternalSetDateTime(
@@ -3470,11 +3470,11 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
   {$ENDIF}
-  if ParameterIndex+1 >= InParamCount then
+  if ParameterIndex+1 > InParamCount then
   SetInParamCount(ParameterIndex+1);
 
-  if FEmulatePrepare
-  then FParamEmulatedValues[ParameterIndex] := DateTimeAsString(Value, SQLType)
+  if FEmulatedParams
+  then FParamValues[ParameterIndex] := DateTimeAsString(Value, SQLType)
   else BindDateTime(ParameterIndex, SQLType, Value);
   FInParamTypes[ParameterIndex] := SQLType;
 end;
@@ -3485,11 +3485,11 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
   {$ENDIF}
-  if ParameterIndex+1 >= InParamCount then
+  if ParameterIndex+1 > InParamCount then
   SetInParamCount(ParameterIndex+1);
 
-  if FEmulatePrepare
-  then FParamEmulatedValues[ParameterIndex] := FloatToSqlRaw(Value)
+  if FEmulatedParams
+  then FParamValues[ParameterIndex] := FloatToSqlRaw(Value)
   else BindDouble(ParameterIndex, SQLType, Value);
   FInParamTypes[ParameterIndex] := SQLType;
 end;
@@ -3498,7 +3498,7 @@ procedure TImplizitBindRealAndEmulationStatement_A.InternalSetInParamCount(
   NewParamCount: Integer);
 begin
   if NewParamCount <> FInParamCount then begin
-    SetLength(FParamEmulatedValues, NewParamCount);
+    SetLength(FParamValues, NewParamCount);
     SetLength(FInParamTypes, NewParamCount);
     SetLength(FParamLobs, NewParamCount);
     SetLength(FDefaultValues, NewParamCount);
@@ -3514,13 +3514,13 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
   {$ENDIF}
-  if ParameterIndex+1 >= InParamCount then
+  if ParameterIndex+1 > InParamCount then
   SetInParamCount(ParameterIndex+1);
 
-  if FEmulatePrepare then
+  if FEmulatedParams then
     if (SQLType = stBoolean)
-    then FParamEmulatedValues[ParameterIndex] := BoolAsString(Value <> 0)
-    else FParamEmulatedValues[ParameterIndex] := IntToRaw(Value)
+    then FParamValues[ParameterIndex] := BoolAsString(Value <> 0)
+    else FParamValues[ParameterIndex] := IntToRaw(Value)
   else BindSignedOrdinal(ParameterIndex, SQLType, Value);
   FInParamTypes[ParameterIndex] := SQLType;
 end;
@@ -3533,7 +3533,7 @@ end;
 procedure TImplizitBindRealAndEmulationStatement_A.ReleaseImmediat(
   const Sender: IImmediatelyReleasable);
 begin
-  FEmulatePrepare := True;
+  FEmulatedParams := True;
   inherited ReleaseImmediat(Sender);
 end;
 
@@ -3550,26 +3550,26 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
   {$ENDIF}
-  if ParameterIndex+1 >= InParamCount then
+  if ParameterIndex+1 > InParamCount then
   SetInParamCount(ParameterIndex+1);
   FParamLobs[ParameterIndex] := Value;
   if Value.IsEmpty then
-    if FEmulatePrepare
-    then FParamEmulatedValues[ParameterIndex] := 'null'
+    if FEmulatedParams
+    then FParamValues[ParameterIndex] := 'null'
     else BindNull(ParameterIndex, SQLType)
   else if SQLType = stBinaryStream then
-    if FEmulatePrepare
-    then Connection.GetBinaryEscapeString(Value.GetBuffer, Value.Length, FParamEmulatedValues[ParameterIndex])
+    if FEmulatedParams
+    then Connection.GetBinaryEscapeString(Value.GetBuffer, Value.Length, FParamValues[ParameterIndex])
     else BindBinary(ParameterIndex, SQLType, Value.GetBuffer, Value.Length)
   else if Value.IsCLob then begin
     Value.GetPAnsiChar(ConSettings^.ClientCodePage.CP);
-    if FEmulatePrepare
-    then Connection.GetEscapeString(Value.GetBuffer, Value.Length, FParamEmulatedValues[ParameterIndex])
+    if FEmulatedParams
+    then Connection.GetEscapeString(Value.GetBuffer, Value.Length, FParamValues[ParameterIndex])
     else BindRawStr(ParameterIndex, SQLType, Value.GetBuffer, Value.Length);
   end else begin
     RawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
-    if FEmulatePrepare
-    then Connection.GetEscapeString(Pointer(RawTemp), Length(RawTemp), FParamEmulatedValues[ParameterIndex])
+    if FEmulatedParams
+    then Connection.GetEscapeString(Pointer(RawTemp), Length(RawTemp), FParamValues[ParameterIndex])
     else BindRawStr(ParameterIndex, SQLType, RawTemp);
   end;
   FInParamTypes[ParameterIndex] := SQLType;
@@ -3592,8 +3592,8 @@ begin
   then SetInParamCount(ParameterIndex+1);
 
   SQLType := stBytes;
-  if FEmulatePrepare
-  then Connection.GetBinaryEscapeString(Pointer(Value), Length(Value), FParamEmulatedValues[ParameterIndex])
+  if FEmulatedParams
+  then Connection.GetBinaryEscapeString(Pointer(Value), Length(Value), FParamValues[ParameterIndex])
   else BindBinary(ParameterIndex, SQLType, Pointer(Value), Length(Value));
   FInParamTypes[ParameterIndex] := SQLType;
 end;
@@ -3611,8 +3611,8 @@ begin
 
   SQLType := stString;
   if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, Value.CP) then
-    if FEmulatePrepare
-    then Connection.GetEscapeString(Value.P, Value.Len, FParamEmulatedValues[ParameterIndex])
+    if FEmulatedParams
+    then Connection.GetEscapeString(Value.P, Value.Len, FParamValues[ParameterIndex])
     else BindRawStr(ParameterIndex, SQLType, Value.P, Value.Len)
   else if ZCompatibleCodePages(zCP_UTF16, Value.CP) then
     SetRawByteString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PUnicodeToRaw(Value.P, Value.Len, ConSettings^.ClientCodePage^.CP))
@@ -3638,9 +3638,9 @@ begin
     then SetInParamCount(ParameterIndex+1);
 
     ZArray := @FBatchArrays[ParameterIndex];
-    ZArray^.VIsNullArray := Pointer(Value);
-    ZArray^.VIsNullArrayType := ord(SQLType);
-    ZArray^.VIsNullArrayVariantType := VariantType;
+    ZArray^.VArray := Pointer(Value);
+    ZArray^.VArrayType := ord(SQLType);
+    ZArray^.VArrayVariantType := VariantType;
 //    FInParamTypes[ParameterIndex] := stArray;
   end else
     raise EZSQLException.Create(sUnsupportedOperation);
@@ -3679,7 +3679,7 @@ procedure TImplizitBindRealAndEmulationStatement_A.SetInParamCount(
 begin
   if not Prepared then
     Prepare;
-  if FEmulatePrepare
+  if FEmulatedParams
   then Assert(NewParamCount <= CountOfQueryParams)
   else Assert(NewParamCount <= FInParamCount); //<- done by PrepareInParams
 end;
@@ -3693,8 +3693,8 @@ begin
   if ParameterIndex > InParamCount-1
   then SetInParamCount(ParameterIndex+1);
 
-  if FEmulatePrepare
-  then FParamEmulatedValues[ParameterIndex] := 'null'
+  if FEmulatedParams
+  then FParamValues[ParameterIndex] := 'null'
   else BindNull(ParameterIndex, SQLType);
   if (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
     fParamLobs[ParameterIndex] := nil;
@@ -3716,9 +3716,9 @@ begin
     then SetInParamCount(ParameterIndex+1);
 
     ZArray := @FBatchArrays[ParameterIndex];
-    ZArray^.VArray := Pointer(Value);
-    ZArray^.VArrayType := ord(SQLType);
-    ZArray^.VArrayVariantType := VariantType;
+    ZArray^.VIsNullArray := Pointer(Value);
+    ZArray^.VIsNullArrayType := ord(SQLType);
+    ZArray^.VIsNullArrayVariantType := VariantType;
     FInParamTypes[ParameterIndex] := stArray;
   end else
     raise EZSQLException.Create(sUnsupportedOperation);
@@ -3735,9 +3735,9 @@ begin
   SetInParamCount(ParameterIndex+1);
 
   SQLType := stString;
-  if not FEmulatePrepare
+  if not FEmulatedParams
   then BindRawStr(ParameterIndex, SQLType, Value)
-  else Connection.GetEscapeString(Pointer(Value), Length(Value), FParamEmulatedValues[ParameterIndex]);
+  else Connection.GetEscapeString(Pointer(Value), Length(Value), FParamValues[ParameterIndex]);
   FInParamTypes[ParameterIndex] := SQLType;
 end;
 
@@ -3754,7 +3754,7 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
   {$ENDIF}
-  if ParameterIndex+1 >= InParamCount then
+  if ParameterIndex+1 > InParamCount then
   SetInParamCount(ParameterIndex+1);
   SQLType := stUlong;
   BindUnsignedOrdinal(ParameterIndex, SQLType, Value);

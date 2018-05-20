@@ -77,7 +77,7 @@ type
     FBindAgain, //if types or pointer locations do change(realloc f.e.) we need to bind again -> this is dead slow with mysql
     FChunkedData, //just skip the binding loop for sending long data
     FHasDefaultValues, //are default values given?
-    FStmtIsExecuted: Boolean; //identify state of stmt handle for flushing pending results?
+    FStmtHandleIsExecuted: Boolean; //identify state of stmt handle for flushing pending results?
     FPreparablePrefixTokens: TPreparablePrefixTokens;
     FBindOffset: PMYSQL_BINDOFFSETS;
     FPrefetchRows: Ulong; //Number of rows to fetch from server at a time when using a cursor.
@@ -258,7 +258,7 @@ begin
   Result := ((not FInitial_emulate_prepare) or (ArrayCount > 0 )) and (FMYSQL_STMT = nil) and (TokenMatchIndex <> -1) and
      ((ArrayCount > 0 ) or (ExecutionCount = MinExecCount2Prepare));
   if Result then begin
-    FEmulatePrepare := False;
+    FEmulatedParams := False;
     if (FInParamCount > 0) then
       InternalSetInParamCount(FInParamCount);
   end;
@@ -310,7 +310,7 @@ begin
 
   FInitial_emulate_prepare := (FBindOffset.buffer_type=0) or (MinExecCount2Prepare < 0) or
     StrToBoolEx(DefineStatementParameter(Self, DSProps_EmulatePrepares, 'false'));
-  FEmulatePrepare := True;
+  FEmulatedParams := True;
   FMySQL_FieldType_Bit_1_IsBoolean := FMySQLConnection.MySQL_FieldType_Bit_1_IsBoolean;
   FGUIDAsString := True;
 end;
@@ -328,7 +328,7 @@ procedure TZMySQLPreparedStatement.Unprepare;
 begin
   inherited Unprepare;
   FlushPendingResults;
-  if not FEmulatePrepare and (FMYSQL_STMT <> nil) then begin
+  if not FEmulatedParams and (FMYSQL_STMT <> nil) then begin
     //cancel all pending results:
     //https://mariadb.com/kb/en/library/mysql_stmt_close/
     if FPlainDriver.mysql_stmt_close(FMYSQL_STMT) <> 0 then
@@ -336,9 +336,9 @@ begin
         ConvertZMsgToRaw(cSUnknownError,
         ZMessages.cCodePage, ConSettings^.ClientCodePage^.CP), Self);
     FMYSQL_STMT := nil;
-    FStmtIsExecuted := False;
+    FStmtHandleIsExecuted := False;
   end;
-  FEmulatePrepare := FInitial_emulate_prepare;
+  FEmulatedParams := FInitial_emulate_prepare;
 end;
 
 {**
@@ -362,7 +362,7 @@ begin
   Result := False;
   if (FOpenResultSet <> nil)
   then IZResultSet(FOpenResultSet).Close;
-  if FEmulatePrepare or not FStmtIsExecuted then begin
+  if FEmulatedParams or not FStmtHandleIsExecuted then begin
     if Assigned(FPlainDriver.mysql_next_result) and Assigned(FPMYSQL^) then begin
       if FPlainDriver.mysql_next_result(FPMYSQL^) > 0
       then CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, ASQL, Self);
@@ -420,7 +420,7 @@ begin
     if (GetResultSetConcurrency = rcUpdatable) or
        ((GetResultSetType = rtScrollInsensitive) and FUseResult) then begin
       if (GetResultSetConcurrency = rcUpdatable) then
-        if FEmulatePrepare
+        if FEmulatedParams
         then CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver,
           FPMYSQL, nil, Self, NativeResultSet.GetMetaData)
         else CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver,
@@ -454,7 +454,7 @@ end;
 procedure TZMysqlPreparedStatement.PrepareInParameters;
 begin
   InternalSetInParamCount(CountOfQueryParams);
-  if not FEmulatePrepare and (FMYSQL_STMT<> nil) then
+  if not FEmulatedParams and (FMYSQL_STMT<> nil) then
     if Cardinal(CountOfQueryParams) <> FPlainDriver.mysql_stmt_param_count(FMYSQL_STMT) then
       raise EZSQLException.Create(SInvalidInputParameterCount);
 end;
@@ -465,7 +465,7 @@ begin
   FPMYSQL^ := nil;
   FMYSQL_STMT := nil;
   FBindAgain := True;
-  FStmtIsExecuted := False;
+  FStmtHandleIsExecuted := False;
   inherited ReleaseImmediat(Sender);
 end;
 
@@ -766,7 +766,7 @@ procedure TZMySQLPreparedStatement.SetDefaultValue(ParameterIndex: Integer;
   const Value: string);
 begin
   FHasDefaultValues := True;
-  if not FEmulatePrepare and (Value <> '') and
+  if not FEmulatedParams and (Value <> '') and
     StartsWith(Value, #39) and
     EndsWith(Value, #39)
   then inherited SetDefaultValue(ParameterIndex, Copy(Value, 2, Length(Value)-2))
@@ -778,7 +778,7 @@ procedure TZMySQLPreparedStatement.SetInParamCount(
 begin
   if not Prepared then
     Prepare;
-  if FEmulatePrepare
+  if FEmulatedParams
   then Assert(NewParamCount <= CountOfQueryParams)
   else Assert(NewParamCount <= FInParamCount); //<- done by PrepareInParams
 end;
@@ -790,8 +790,8 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
   {$ENDIF}
-  if FEmulatePrepare and FUseDefaults and (FDefaultValues[ParameterIndex] <> '') then
-    FParamEmulatedValues[ParameterIndex] := FDefaultValues[ParameterIndex];
+  if FEmulatedParams and FUseDefaults and (FDefaultValues[ParameterIndex] <> '') then
+    FParamValues[ParameterIndex] := FDefaultValues[ParameterIndex];
 end;
 
 procedure TZMySQLPreparedStatement.SetNullArray(ParameterIndex: Integer;
@@ -906,7 +906,7 @@ var
   OffSet, PieceSize: LongWord;
   array_size: UInt;
 begin
-  if not FEmulatePrepare and FBindAgain and (FInParamCount > 0) and (FMYSQL_STMT <> nil) then begin
+  if not FEmulatedParams and FBindAgain and (FInParamCount > 0) and (FMYSQL_STMT <> nil) then begin
     if (ArrayCount > 0) then begin
       //set array_size first: https://mariadb.com/kb/en/library/bulk-insert-column-wise-binding/
       array_size := ArrayCount;
@@ -923,7 +923,7 @@ begin
   end;
   inherited BindInParameters;
   { now finlize chunked data }
-  if not FEmulatePrepare and FChunkedData then
+  if not FEmulatedParams and FChunkedData then
     // Send large data chunked
     for I := 0 to InParamCount - 1 do begin
       Bind := @FMYSQL_aligned_BINDs[I];
@@ -1048,7 +1048,7 @@ begin
   PrepareOpenResultSetForReUse;
   Prepare;
   BindInParameters;
-  if FEmulatePrepare or (FMYSQL_STMT = nil) then begin
+  if FEmulatedParams or (FMYSQL_STMT = nil) then begin
     RSQL := ComposeRawSQLQuery;
     if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then begin
       if FPlainDriver.mysql_field_count(FPMYSQL^) = 0 then
@@ -1060,7 +1060,7 @@ begin
     end else
       CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, RSQL, Self);
   end else if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
-    FStmtIsExecuted := True;
+    FStmtHandleIsExecuted := True;
     if FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) = 0 then
       if GetMoreResults
       then Result := LastResultSet
@@ -1095,7 +1095,7 @@ begin
   Prepare;
   BindInParameters;
   Result := -1;
-  if FEmulatePrepare or (FMYSQL_STMT = nil) then begin
+  if FEmulatedParams or (FMYSQL_STMT = nil) then begin
     RSQL := ComposeRawSQLQuery;
     if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then begin
       { Process queries with result sets }
@@ -1109,7 +1109,7 @@ begin
       CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, RSQL, Self);
   end else begin
     if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
-      FStmtIsExecuted := True;
+      FStmtHandleIsExecuted := True;
       { Process queries with result sets }
       if FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) > 0 then begin
         FPlainDriver.mysql_stmt_store_result(FMYSQL_STMT);
@@ -1131,7 +1131,7 @@ var
   FQueryHandle: PZMySQLResult;
   Status: Integer;
 begin
-  if (FEmulatePrepare or not FStmtIsExecuted) and (FPMYSQL^ <> nil) then
+  if (FEmulatedParams or not FStmtHandleIsExecuted) and (FPMYSQL^ <> nil) then
     while true do begin
       Status := FPlainDriver.mysql_next_result(FPMYSQL^);
       if Status = -1 then
@@ -1147,7 +1147,7 @@ begin
         Break;
       end;
     end
-  else if (FMYSQL_STMT <> nil) and FStmtIsExecuted then begin
+  else if (FMYSQL_STMT <> nil) and FStmtHandleIsExecuted then begin
     while true do begin
       Status := FPlainDriver.mysql_stmt_next_result(FMYSQL_STMT);
       if Status = -1 then
@@ -1189,7 +1189,7 @@ begin
   PrepareLastResultSetForReUse;
   Prepare;
   BindInParameters;
-  if FEmulatePrepare or (FMYSQL_STMT = nil) then begin
+  if FEmulatedParams or (FMYSQL_STMT = nil) then begin
     RSQL := ComposeRawSQLQuery;
     if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then begin
       if FPlainDriver.mysql_field_count(FPMYSQL^) > 0
@@ -1198,7 +1198,7 @@ begin
     end else CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, RSQL, Self);
   end else begin
     if FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0 then begin
-      FStmtIsExecuted := True;
+      FStmtHandleIsExecuted := True;
       if FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) > 0
       then LastResultSet := CreateResultSet(SQL)
       else LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
@@ -1223,7 +1223,7 @@ end;
 function TZMySQLPreparedStatement.GetUpdateCount: Integer;
 begin
   Result := inherited GetUpdateCount;
-  if FEmulatePrepare or not FStmtIsExecuted then begin
+  if FEmulatedParams or not FStmtHandleIsExecuted then begin
     if (Result = -1) and Assigned(FPMYSQL^) and (FPlainDriver.mysql_field_count(FPMYSQL^) = 0) then begin
       LastUpdateCount := FPlainDriver.mysql_affected_rows(FPMYSQL^);
       Result := LastUpdateCount;
@@ -1394,7 +1394,7 @@ begin
   if (FMYSQL_STMT = nil) then
     FMYSQL_STMT := FPlainDriver.mysql_stmt_init(FPMYSQL^);
   FBindAgain := True;
-  FStmtIsExecuted := False;
+  FStmtHandleIsExecuted := False;
   if FHasDefaultValues then
     DefaultValues := FDefaultValues; //copy by ref -> we'll need to dequote them
   if (FPlainDriver.mysql_stmt_prepare(FMYSQL_STMT, Pointer(ASQL), length(ASQL)) <> 0) then
@@ -1416,7 +1416,7 @@ begin
     if Assigned(FPlainDriver.mysql_stmt_attr_set517UP) and (FPrefetchRows <> 1)
     then FPlainDriver.mysql_stmt_attr_set517UP(FMYSQL_STMT, STMT_ATTR_PREFETCH_ROWS, @FPrefetchRows)
     else FPlainDriver.mysql_stmt_attr_set(FMYSQL_STMT, STMT_ATTR_PREFETCH_ROWS, @FPrefetchRows);
-  FEmulatePrepare := False;
+  FEmulatedParams := False;
   if FHasDefaultValues then
     for I := 0 to High(DefaultValues) do begin
       P := Pointer(DefaultValues[i]);
@@ -1428,14 +1428,14 @@ end;
 
 procedure TZMySQLPreparedStatement.InternalSetInParamCount(NewParamCount: Integer);
 begin
-  if not FEmulatePrepare then begin
+  if not FEmulatedParams then begin
     if (NewParamCount <> InParamCount) and (InParamCount > 0) then
       FreeMySQLBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffSet, InParamCount);
     if ((NewParamCount <> InParamCount) or (FMYSQL_BINDs = nil)) and (NewParamCount > 0) then
       AllocMySQLBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffSet, NewParamCount, 1);
   end;
   inherited InternalSetInParamCount(NewParamCount);
-  if not FEmulatePrepare and (NewParamCount > 0) then
+  if not FEmulatedParams and (NewParamCount > 0) then
     FillChar(Pointer(FInParamTypes)^, SizeOf(TZSQLType)*NewParamCount, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
 end;
 
@@ -2041,7 +2041,7 @@ constructor TZMySQLStatement.Create(const Connection: IZMySQLConnection;
   Info: TStrings);
 begin
   inherited Create(Connection, '', Info);
-  FEmulatePrepare := True;
+  FEmulatedParams := True;
   FInitial_emulate_prepare := True;
 end;
 

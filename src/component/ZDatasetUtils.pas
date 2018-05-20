@@ -417,7 +417,7 @@ begin
       Result := stTimestamp;
     ftMemo:
       Result := stAsciiStream;
-    ftBlob:
+    ftBlob, ftGraphic:
       Result := stBinaryStream;
     ftWideString:
       Result := stUnicodeString;
@@ -547,7 +547,7 @@ begin
         RowAccessor.SetTime(FieldIndex, ResultSet.GetTime(ColumnIndex));
       ftDateTime:
         RowAccessor.SetTimestamp(FieldIndex, ResultSet.GetTimestamp(ColumnIndex));
-      ftMemo, ftBlob {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}:
+      ftMemo, ftBlob, ftGraphic {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}:
         RowAccessor.SetBlob(FieldIndex, ResultSet.GetBlob(ColumnIndex));
       {$IFDEF WITH_FTDATASETSUPPORT}
       ftDataSet:
@@ -650,7 +650,7 @@ begin
       {$IFDEF WITH_WIDEMEMO}
       ftWideMemo,
       {$ENDIF}
-      ftMemo, ftBlob:
+      ftMemo, ftBlob, ftGraphic:
         begin
           Blob := RowAccessor.GetBlob(FieldIndex, WasNull);
           WasNull := (Blob = nil) or (Blob.IsEmpty); //need a check for IsEmpty too
@@ -796,7 +796,7 @@ begin
           ResultValues[I] := EncodeDateTime(ResultSet.GetTimestamp(ColumnIndex));
         ftWidestring{$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}:
           ResultValues[I] := EncodeUnicodeString(ResultSet.GetUnicodeString(ColumnIndex));
-        ftBytes, ftBlob:
+        ftBytes, ftBlob, ftGraphic:
           ResultValues[I] := EncodeBytes(ResultSet.GetBytes(ColumnIndex));
         else
           ResultValues[I] := EncodeString(ResultSet.GetString(ColumnIndex));
@@ -1283,7 +1283,7 @@ begin
   for I := 0 to Fields.Count - 1 do
   begin
     if (Fields[I].FieldKind = fkData)
-      and not (Fields[I].DataType in [ftBlob, ftMemo, ftBytes {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}]) then
+      and not (Fields[I].DataType in [ftBlob, ftGraphic, ftMemo, ftBytes {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}]) then
       AppendSepString(Result, IdConverter.Quote(Fields[I].FieldName), ',');
   end;
 end;

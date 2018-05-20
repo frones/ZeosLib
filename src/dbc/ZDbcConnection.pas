@@ -767,7 +767,7 @@ end;
 procedure TZAbstractConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
   var Result: RawByteString);
 begin
-  GetEscapeString(Buf, Len, Result);
+  Result := SQLQuotedStr(Buf, Len, #39);
 end;
 
 procedure TZAbstractConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;

@@ -62,40 +62,81 @@ uses
   ZDbcPostgreSql, ZDbcUtils;
 
 type
-  TEICategory = (eicExecute, eicExeParam, eicPrepStmt, eicExecPrepStmt, eicUnprepStmt);
-
-  { TZPostgreSQLPreparedStatement }
-
+  TEICategory = (
+    eicExecute, eicExeParamV3, eicExeParamV3_Async,
+    eicPrepStmtV2, eicPrepStmtV3, eicPrepStmtV3_Async,
+    eicExecPrepStmtV2, eicExecPrepStmtV3, eicExecPrepStmtV3_Async,
+    eicUnprepStmtV2, eicUnprepStmtV3, eicUnprepStmtV3_Async);
+  TPGExecMode = (pgemV2, pgemV3, pgemV3_Async);
+const
+  TEIPQExecuteModes: array[TPGExecMode] of TEICategory = (
+    eicExecute, eicExeParamV3, eicExeParamV3_Async);
+  TEIPQPrepareModes: array[TPGExecMode] of TEICategory = (
+    eicPrepStmtV2, eicPrepStmtV3, eicPrepStmtV3_Async);
+  TEIPQExecPreparedModes: array[TPGExecMode] of TEICategory = (
+    eicExecPrepStmtV2, eicExecPrepStmtV3, eicExecPrepStmtV3_Async);
+  TEIPQUnPrepareModes: array[TPGExecMode] of TEICategory = (
+    eicUnprepStmtV2, eicUnprepStmtV3, eicUnprepStmtV3_Async);
+type
   {** PostgreSQL Prepared SQL statement interface. }
   IZPGSQLPreparedStatement = interface(IZPreparedStatement)
     ['{EED35CAA-8F36-4639-8B67-32DF237E8F6F}']
     function GetLastQueryHandle: PZPostgreSQLResult;
   end;
 
-  TZPostgreSQLPreparedStatement = class(TZAbstractPreparedStatement,
+  TZPostgreSQLPreparedStatement = class(TImplizitBindRealAndEmulationStatement_A,
     IZPGSQLPreparedStatement)
   private
-    FRawPlanName: RawByteString;
     FPostgreSQLConnection: IZPostgreSQLConnection;
-    FPlainDriver: TZPostgreSQLPlainDriver;
-    QueryHandle: PZPostgreSQLResult;
-    FOidAsBlob: Boolean;
-    FConnectionHandle: PZPostgreSQLConnect;
-    Findeterminate_datatype, fServerCursor: Boolean;
-    FUseEmulatedStmtsOnly: Boolean;
-    FUndefinedVarcharAsStringLength: Integer;
-    fPrepareCnt: Cardinal;
-    fParamSQL: RawByteString;
-    Finteger_datetimes: Boolean;
+    FPlainDriver: TZPostgreSQLPlainDriver; //PG API
+    FConnectionHandle: PZPostgreSQLConnect; //the Connection-Handle
+    QueryHandle: PZPostgreSQLResult; //Current query handle we'd obtained
+    FRawPlanName: RawByteString; //a name we use to prepare (oddly PG still has no handle instead)
+    FOidAsBlob: Boolean; //are blob's threaded as oid-lobs?
+    Findeterminate_datatype, //did PG Fail to determine the datatypes? (mostly just because of bd queries)
+    fAsyncQueries, //get the GetMoreResults logic with multiple results or SingleRowMode running
+    fServerCursor, //PQsingleRowMode? is implizit the Async api
+    fPQParamsFoundInQuery, //did the user compose it's query with the non standart §n marks already? -> skip replacing the question marks
+    FUseEmulatedStmtsOnly: Boolean; //no Prepareds?
+    FUndefinedVarcharAsStringLength: Integer; //compatibility: in earlier version of Zeos the fieldlength for VARCHAR without given length was 255 now we assume text instead
+    fPrepareCnt: Cardinal; //we have no stmt handle! The same object might be reused with another SQL
+                           //and the previous used planname did run into the oddly broken transaction issue of pg
+                           //we need a secondary uniqueness idea for the planname as a fallback
+    Finteger_datetimes: Boolean;  //what's the binary format to bind datetimes? Integer or Double
+    FPQparamValues: TPQparamValues; //usually just for binary bindings used PG up until today loves the StrLen() instead of given lengtes for the strings (they can't store #0 bytes)
+    FPQparamLengths: TPQparamLengths; //EH: i know PG ignores this for str vals but we'll keep it for by ref logging or pqexecparams
+    FPQparamFormats: TPQparamFormats; //indicate binary or string format for the bindings
+    FParamOIDs: TPQparamTypes; //the Parameter OID's
+    FPGExecMode: TPGExecMode; //the protocol mode + user wanted mode with minimum version of protocol V3
+    FPQResultFormat: Integer; //which format will the tubles have binary or string? note if any unsupported oid  given we use string format only as a fallback
+    function CheckPrepareSwitchMode: Boolean;
+    procedure InternalRealPrepare;
+    procedure AllocBuf(Index: Integer; Len: LengthInt; ParamFormat: Integer);
+    function OIDToSQLType(Index: Integer; SQLType: TZSQLType): TZSQLType;
   protected
-    procedure FlushPendingResults; virtual;
+    procedure BindNull(Index: Integer; var SQLType: TZSQLType); override;
+    procedure BindRawStr(Index: Integer; var SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt); override;
+    procedure BindRawStr(Index: Integer; var SQLType: TZSQLType; const Buf: RawByteString); override;
+    procedure BindBinary(Index: Integer; var SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
+    procedure BindSignedOrdinal(Index: Integer; var SQLType: TZSQLType; const Value: Int64); override;
+    procedure BindUnsignedOrdinal(Index: Integer; var SQLType: TZSQLType; const Value: UInt64); override;
+    procedure BindDouble(Index: Integer; var SQLType: TZSQLType; const Value: Double); override;
+    procedure BindDateTime(Index: Integer; var SQLType: TZSQLType; const Value: TDateTime); override;
+
+    function GetBoundValueAsLogValue(Index: Integer): RawByteString; override;
+    function DateTimeAsString(const Value: TDateTime; SQLType: TZSQLType): RawByteString; override;
+    function BoolAsString(Value: Boolean): RawByteString; override;
+  protected
+    procedure InternalSetInParamCount(NewParamCount: Integer); override;
+    procedure FlushPendingResults;
     function CreateResultSet(QueryHandle: PZPostgreSQLResult; ServerCursor: Boolean): IZResultSet;
     function ExecuteInternal(const SQL: RawByteString;
-      Category: TEICategory): PZPostgreSQLResult; virtual; abstract;
-    function PrepareAnsiSQLQuery: RawByteString; virtual;
-    function GetDeallocateSQL: RawByteString; virtual; abstract;
-    function GetPrepareSQLPrefix: RawByteString; virtual; abstract;
+      Category: TEICategory): PZPostgreSQLResult; virtual;
     function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; override;
+  public
+    procedure PrepareInParameters; override;
+    procedure UnPrepareInParameters; override;
+    procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
   public
     constructor Create(const Connection: IZPostgreSQLConnection;
       const SQL: string; Info: TStrings); overload;
@@ -111,106 +152,12 @@ type
 
     procedure Prepare; override;
     procedure Unprepare; override;
+
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
   end;
 
-  {** EgonHugeist: Implements Prepared SQL Statement with AnsiString usage }
-  TZPostgreSQLClassicPreparedStatement = class(TZPostgreSQLPreparedStatement)
-  private
-    FExecSQL: RawByteString;
-    function GetAnsiSQLQuery: RawByteString;
-  protected
-    function ExecuteInternal(const SQL: RawByteString;
-      Category: TEICategory): PZPostgreSQLResult; override;
-    function PrepareAnsiSQLParam(ParamIndex: Integer; Escaped: Boolean): RawByteString;
-    procedure BindInParameters; override;
-    function GetDeallocateSQL: RawByteString; override;
-    function GetPrepareSQLPrefix: RawByteString; override;
-  end;
-
-  {** EgonHugeist: Implements Prepared SQL Statement based on Protocol 3.0
-    ServerVersion 7.4Up and ClientVersion 8.0Up. with C++API usage
-    And First with full overrides for all Setters to skip the
-    TZVariant-bottleneck}
-  TZPostgreSQLCAPIPreparedStatement = class(TZPostgreSQLPreparedStatement)
-  private
-    FPQparamValues: TPQparamValues;
-    FPQparamLengths: TPQparamLengths; //EH: i know PG ignores this for str vals but we'll keep it for by ref logging or pqexecparams
-    FPQparamFormats: TPQparamFormats;
-    FPQparamBuffs: TRawByteStringDynArray;
-    FDefaultValues: TRawByteStringDynArray;
-    FParamOIDs: TPQparamTypes;
-    FLobs: array of IZBLob;
-    FStatBuf: array[0..7] of Byte; //just a fix buff for the network order
-    fnParams: Integer;
-    fHasOIDLobs: Boolean;
-    procedure InternalSetInParamCount(NewParamCount: Integer);
-  protected
-    function PrepareAnsiSQLQuery: RawByteString; override;
-    function ExecuteInternal(const SQL: RawByteString;
-      Category: TEICategory): PZPostgreSQLResult; override;
-    procedure PrepareInParameters; override;
-    procedure BindInParameters; override;
-    procedure UnPrepareInParameters; override;
-    function GetDeallocateSQL: RawByteString; override;
-    function GetPrepareSQLPrefix: RawByteString; override;
-    procedure SetInParamCount(const NewParamCount: Integer); override;
-
-    Procedure BindStr(ParameterIndex: Integer; SQLType: TZSQLType; const Value: RawByteString);
-    procedure BindBin(ParameterIndex: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
-    procedure BindNetworkOrderBin(ParameterIndex: Integer; SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt);
-
-    procedure InternalSetOrdinal(ParameterIndex: Integer; SQLType: TZSQLType; const Value: Int64); override;
-    procedure InternalSetDouble(ParameterIndex: Integer; SQLType: TZSQLType; const Value: Double); override;
-    procedure InternalSetDateTime(ParameterIndex: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
-    //date/time to posgres binary format
-    function TimeToInt64(const Value: TDateTime): Int64;
-    function TimeToDouble(const Value: TDateTime): Double;
-    function DateToInt(const Value: TDateTime): Integer;
-    function TimeStampToInt64(const Value: TDateTime): Int64;
-    function TimeStampToDouble(const Value: TDateTime): Double;
-
-
-    function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
-    function OIDToSQLType({$IFNDEF GENERIC_INDEX}var {$ENDIF}ParameterIndex: Integer;
-      SQLType: TZSQLType): TZSQLType;
-  public
-    procedure ClearParameters; override;
-
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
-
-    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType); override;
-    procedure SetBoolean(ParameterIndex: Integer; Value: Boolean); override;
-    procedure SetULong(ParameterIndex: Integer; const Value: UInt64); override;
-    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); override;
-    procedure SetString(ParameterIndex: Integer; const Value: String); override;
-    procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); override;
-    procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); override;
-    procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); override;
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); override;
-    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); override;
-    procedure SetGUID(ParameterIndex: Integer; const Value: TGUID); override;
-    procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
-    procedure SetValue(ParameterIndex: Integer; const Value: TZVariant); override;
-  end;
-
-  {** EgonHugeist: Implements prepared async SQL Statement based on Protocol 3.0
-    ServerVersion 8.3Up and ClientVersion 8.0Up. with C++API usage}
-  TZPostgteSQLAsyncCAPIPreparedStatement = class(TZPostgreSQLCAPIPreparedStatement)
-  protected
-    procedure FlushPendingResults; override;
-    function ExecuteInternal(const SQL: RawByteString;
-      Category: TEICategory): PZPostgreSQLResult; override;
-  protected
-    procedure UnPrepareInParameters; override;
-  public
-    procedure Prepare; override;
-    procedure Unprepare; override;
-  end;
-
-  {** Implements Standard Postgresql Statement.
-      Only for compatibility with old dbc-based code
-      Uses the 'Classic' prepared statement to be sure it still works with old postgres servers
-  }
+  TZPostgreSQLClassicPreparedStatement = class(TZPostgreSQLPreparedStatement);
+  TZPostgreSQLCAPIPreparedStatement = class(TZPostgreSQLPreparedStatement);
   TZPostgreSQLStatement = class(TZPostgreSQLClassicPreparedStatement);
 
   {** Implements callable Postgresql Statement. }
@@ -257,13 +204,6 @@ const
   ParamFormatBin = 1;
   ParamFormatStr = 0;
 
-function IfThen(Condition: Boolean; const TrueVal, FalseVal: RawByteString): RawByteString; overload;
-begin
-  if Condition
-  then Result := TrueVal
-  else Result := FalseVal;
-end;
-
 { TZPostgreSQLPreparedStatement }
 
 {**
@@ -287,8 +227,250 @@ begin
   FUseEmulatedStmtsOnly := not Assigned(FplainDriver.PQexecParams) or not Assigned(FplainDriver.PQexecPrepared) or
     StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_EmulatePrepares, 'FALSE'));
   Finteger_datetimes := Connection.integer_datetimes;
-
+  FPQResultFormat := ParamFormatStr;
   fPrepareCnt := 0;
+  if FUseEmulatedStmtsOnly then
+    FMinExecCount2Prepare := -1;
+  if Connection.GetServerMajorVersion >= 8 then begin
+    FEmulatedParams := False; //indicate we bind to buffers and use PQexecParams
+    fAsyncQueries := False;(* not ready yet! StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_ExexAsync, 'FALSE'))
+      and Assigned(FplainDriver.PQsendQuery) and Assigned(FplainDriver.PQsendQueryParams) and
+      Assigned(FplainDriver.PQsendQueryPrepared);*)
+    if fAsyncQueries
+    then FPGExecMode := pgemV3_Async
+    else FPGExecMode := pgemV3;
+    fServerCursor := fAsyncQueries and StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_SingleRowMode, 'FALSE'))
+  end else
+    FEmulatedParams := True;
+end;
+
+procedure TZPostgreSQLPreparedStatement.AllocBuf(Index: Integer;
+  Len: LengthInt; ParamFormat: Integer);
+begin
+  FPQparamLengths[Index] := Len;
+  if Length(FParamValues[Index]) < Len then
+    ZSetString(nil, Len, FParamValues[Index]);
+  FPQparamValues[Index] := Pointer(FParamValues[Index]);
+  FPQparamFormats[Index] := ParamFormat;
+end;
+
+procedure TZPostgreSQLPreparedStatement.BindBinary(Index: Integer;
+  var SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
+begin
+  if fPGExecMode <> pgemV2 then begin
+    FPQparamLengths[Index] := Len;
+    FPQparamFormats[Index] := ParamFormatBin;
+    if SQLType = stBinaryStream then
+      FPQparamValues[Index] := Buf
+    else if Len > 0 then begin
+      if Length(FParamValues[Index]) < Len
+      then ZSetString(Buf, Len, FParamValues[Index])
+      else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, Pointer(FParamValues[Index])^, Len);
+      FPQparamValues[Index] := Pointer(FParamValues[Index]);
+    end else
+      FPQparamValues[Index] := PEmptyAnsiString;
+  end else
+    Connection.GetBinaryEscapeString(Buf, Len, FParamValues[Index]);
+end;
+
+procedure TZPostgreSQLPreparedStatement.BindDateTime(Index: Integer;
+  var SQLType: TZSQLType; const Value: TDateTime);
+begin
+  if fPGExecMode <> pgemV2 then begin
+    SQLType := OIDToSQLType(Index, SQLType);
+    case OIDToSQLType(Index, SQLType) of
+      stTime:     begin
+                    AllocBuf(Index, 8, ParamFormatBin);
+                    if Finteger_datetimes
+                    then Time2PG(Value, PInt64(FPQparamValues[Index])^)
+                    else Time2PG(Value, PDouble(FPQparamValues[Index])^);
+                  end;
+      stDate:     begin
+                    AllocBuf(Index, SizeOf(Integer), ParamFormatBin);
+                    Date2PG(Value, PInteger(FPQparamValues[Index])^);
+                  end;
+      stTimeStamp:begin
+                    AllocBuf(Index, 8, ParamFormatBin);
+                    if Finteger_datetimes
+                    then DateTime2PG(Value, PInt64(FPQparamValues[Index])^)
+                    else DateTime2PG(Value, PDouble(FPQparamValues[Index])^);
+                  end;
+      else case SQLType of
+        stTime: BindRawStr(Index, SQLType, DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, False));
+        stDate: BindRawStr(Index, SQLType, DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, False));
+        stTimeStamp: BindRawStr(Index, SQLType, DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, False));
+      end;
+    end;
+  end else
+    FParamValues[Index] := inherited DateTimeAsString(Value, SQLType);
+end;
+
+procedure TZPostgreSQLPreparedStatement.BindDouble(Index: Integer;
+  var SQLType: TZSQLType; const Value: Double);
+begin
+  if fPGExecMode <> pgemV2 then begin
+    SQLType := OIDToSQLType(Index, SQLType);
+    case SQLType of
+      stBoolean:  begin
+                    AllocBuf(Index, SizeOf(Byte), ParamFormatBin);
+                    PByte(FPQparamValues[Index])^ := Ord(Value <> 0);
+                  end;
+      stSmall:    begin
+                    AllocBuf(Index, SizeOf(SmallInt), ParamFormatBin);
+                    SmallInt2PG(SmallInt(Trunc(Value)), FPQparamValues[Index]);
+                  end;
+      stInteger:  begin
+                    AllocBuf(Index, SizeOf(Integer), ParamFormatBin);
+                    Integer2PG(Integer(Trunc(Value)), FPQparamValues[Index]);
+                  end;
+      stLongWord: begin
+                    AllocBuf(Index, SizeOf(LongWord), ParamFormatBin);
+                    LongWord2PG(LongWord(Trunc(Value)), FPQparamValues[Index]);
+                  end;
+      stLong:     begin
+                    AllocBuf(Index, SizeOf(Int64), ParamFormatBin);
+                    Int642PG(Trunc(Value), FPQparamValues[Index]);
+                  end;
+      stFloat:    begin
+                    AllocBuf(Index, SizeOf(Single), ParamFormatBin);
+                    Single2PG(Value, FPQparamValues[Index]);
+                  end;
+      stDouble:   begin
+                    AllocBuf(Index, SizeOf(Double), ParamFormatBin);
+                    Double2PG(Value, FPQparamValues[Index]);
+                  end;
+      stCurrency: begin
+                    AllocBuf(Index, SizeOf(Currency), ParamFormatBin);
+                    if FParamOIDs[index] = CASHOID
+                    then Currency2PG(Value, FPQparamValues[Index])
+                    else Double2PG(Value, FPQparamValues[Index]);
+                  end;
+      else BindRawStr(Index, SQLType, FloatToSqlRaw(Value));
+    end;
+  end else
+    FParamValues[Index] := #39+FloatToSqlRaw(Value)+#39;
+end;
+
+procedure TZPostgreSQLPreparedStatement.BindNull(Index: Integer;
+  var SQLType: TZSQLType);
+begin
+  SQLType := OIDToSQLType(Index, SQLType);
+  if fPGExecMode <> pgemV2 then begin
+//  if (FRawPlanName <> '') and not indeterminate_datatype and FInParamTypes[Index] <> SQLType and BindBinary then
+    FPQparamFormats[Index] := ParamFormatStr;
+    (*case FParamOIDs[Index] of
+      BOOLOID:  FPQparamLengths[Index] := 1;
+      BYTEAOID: FPQparamLengths[Index] := 0;
+      INT8OID:  FPQparamLengths[Index] := 8;
+      INT2OID:  FPQparamLengths[Index] := 2;
+      INT4OID:  FPQparamLengths[Index] := 4;
+      OIDOID:   FPQparamLengths[Index] := 4;
+      FLOAT4OID:FPQparamLengths[Index] := 4;
+      FLOAT8OID:FPQparamLengths[Index] := 8;
+      CASHOID:  FPQparamLengths[Index] := 8;
+      DATEOID:  FPQparamLengths[Index] := 4;
+      TIMEOID:  FPQparamLengths[Index] := 8;
+      TIMESTAMPOID: FPQparamLengths[Index] := 8;
+      else FPQparamFormats[Index] := ParamFormatStr;
+    end; *)
+    FPQparamValues[Index] := nil
+  end else FParamValues[Index] := 'null';
+end;
+
+procedure TZPostgreSQLPreparedStatement.BindRawStr(Index: Integer;
+  var SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt);
+begin
+  if fPGExecMode <> pgemV2 then begin
+    SQLType := OIDToSQLType(Index, SQLType);
+    FPQparamLengths[Index] := Len;
+    FPQparamFormats[Index] := ParamFormatStr;
+    if SQLType in [stAsciiStream, stUnicodeStream] then
+      FPQparamValues[Index] := Buf
+    else if Len > 0 then begin
+      ZSetString(Buf, Len, FParamValues[Index]);
+      FPQparamValues[Index] := Pointer(FParamValues[Index]);
+    end else
+      FPQparamValues[Index] := PEmptyAnsiString;
+  end else
+    Connection.GetEscapeString(Buf, Len, FParamValues[Index]);
+end;
+
+procedure TZPostgreSQLPreparedStatement.BindRawStr(Index: Integer;
+  var SQLType: TZSQLType; const Buf: RawByteString);
+begin
+  if fPGExecMode <> pgemV2 then begin
+    FPQparamLengths[Index] := Length(Buf);
+    FParamValues[Index] := Buf;
+    if FPQparamLengths[Index] = 0
+    then FPQparamValues[Index] := PEmptyAnsiString
+    else FPQparamValues[Index] := Pointer(FParamValues[Index]);
+    FPQparamFormats[Index] := ParamFormatStr;
+  end else
+    Connection.GetEscapeString(Pointer(Buf), Length(Buf), FParamValues[Index]);
+end;
+
+procedure TZPostgreSQLPreparedStatement.BindSignedOrdinal(Index: Integer;
+  var SQLType: TZSQLType; const Value: Int64);
+begin
+  if fPGExecMode <> pgemV2 then begin
+    SQLType := OIDToSQLType(Index, SQLType);
+    case SQLType of
+      stBoolean:  begin
+                    AllocBuf(Index, SizeOf(Byte), ParamFormatBin);
+                    PByte(FPQparamValues[Index])^ := Ord(Value <> 0);
+                  end;
+      stSmall:    begin
+                    AllocBuf(Index, SizeOf(SmallInt), ParamFormatBin);
+                    SmallInt2PG(SmallInt(Value), FPQparamValues[Index]);
+                  end;
+      stInteger:  begin
+                    AllocBuf(Index, SizeOf(Integer), ParamFormatBin);
+                    Integer2PG(Integer(Value), FPQparamValues[Index]);
+                  end;
+      stBinaryStream, //oidlobs
+      stLongWord: begin
+                    AllocBuf(Index, SizeOf(LongWord), ParamFormatBin);
+                    LongWord2PG(LongWord(Value), FPQparamValues[Index]);
+                  end;
+      stLong,
+      stCurrency: begin
+                    AllocBuf(Index, SizeOf(Int64), ParamFormatBin);
+                    Int642PG(Value, FPQparamValues[Index]);
+                  end;
+      stFloat:    begin
+                    AllocBuf(Index, SizeOf(Single), ParamFormatBin);
+                    Single2PG(Value, FPQparamValues[Index]);
+                  end;
+      stDouble:   begin
+                    AllocBuf(Index, SizeOf(Double), ParamFormatBin);
+                    Double2PG(Value, FPQparamValues[Index]);
+                  end;
+      else BindRawStr(Index, SQLType, IntToRaw(Value));
+    end;
+  end else
+    FParamValues[Index] := #39+IntToRaw(Value)+#39;
+end;
+
+procedure TZPostgreSQLPreparedStatement.BindUnsignedOrdinal(Index: Integer;
+  var SQLType: TZSQLType; const Value: UInt64);
+begin
+  BindSignedOrdinal(Index, SQLType, Int64(Value));
+end;
+
+function TZPostgreSQLPreparedStatement.BoolAsString(
+  Value: Boolean): RawByteString;
+begin
+  Result := BoolStrIntsRaw[Value];
+end;
+
+function TZPostgreSQLPreparedStatement.CheckPrepareSwitchMode: Boolean;
+begin
+  Result := ((not FUseEmulatedStmtsOnly) or (ArrayCount > 0 )) and (FRawPlanName = '') and (TokenMatchIndex <> -1) and
+     ((ArrayCount > 0 ) or (ExecutionCount = MinExecCount2Prepare));
+  if Result then
+    FEmulatedParams := False
+  else if (TokenMatchIndex = -1) and (FRawPlanName = '') then
+    FEmulatedParams := fPGExecMode <> pgemV2; //we do not have a PQExecParams
 end;
 
 constructor TZPostgreSQLPreparedStatement.Create(
@@ -322,61 +504,121 @@ begin
   Result := '';
   if (Length(FCachedQueryRaw) = 0) and (SQL <> '') then begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
-    if ((ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('?', SQL) > 0) or
-        (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('$', SQL) > 0)) then begin
-      Tokens := Connection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]);
-      ComparePrefixTokens := PGPreparableTokens;
-      Temp := '';
-      N := -1;
-      FTokenMatchIndex := -1;
-      FParamsCnt := 0;
-      for I := 0 to High(Tokens) do begin
-        {check if we've a preparable statement. If ComparePrefixTokens = nil then
-          comparing is not required or already done }
-        if Assigned(ComparePrefixTokens) and (Tokens[I].TokenType = ttWord) then
-          if N = -1 then begin
-            for C := 0 to high(ComparePrefixTokens) do
-              if ComparePrefixTokens[C].MatchingGroup = UpperCase(Tokens[I].Value) then begin
-                if Length(ComparePrefixTokens[C].ChildMatches) = 0 then begin
-                  FTokenMatchIndex := C;
-                  ComparePrefixTokens := nil;
-                end else
-                  N := C; //save group
-                Break;
-              end;
-            if N = -1 then //no sub-tokens ?
-              ComparePrefixTokens := nil; //stop compare sequence
-          end else begin //we already got a group
-            FTokenMatchIndex := -1;
-            for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
-              if ComparePrefixTokens[N].ChildMatches[C] = UpperCase(Tokens[I].Value) then begin
-                FTokenMatchIndex := N;
-                Break;
-              end;
+    Tokens := Connection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]);
+    ComparePrefixTokens := PGPreparableTokens;
+    Temp := '';
+    N := -1;
+    FTokenMatchIndex := -1;
+    FParamsCnt := 0;
+    for I := 0 to High(Tokens) do begin
+      {check if we've a preparable statement. If ComparePrefixTokens = nil then
+        comparing is not required or already done }
+      if Assigned(ComparePrefixTokens) and (Tokens[I].TokenType = ttWord) then
+        if N = -1 then begin
+          for C := 0 to high(ComparePrefixTokens) do
+            if ComparePrefixTokens[C].MatchingGroup = UpperCase(Tokens[I].Value) then begin
+              if Length(ComparePrefixTokens[C].ChildMatches) = 0 then begin
+                FTokenMatchIndex := C;
+                ComparePrefixTokens := nil;
+              end else
+                N := C; //save group
+              Break;
+            end;
+          if N = -1 then //no sub-tokens ?
             ComparePrefixTokens := nil; //stop compare sequence
-          end;
-        P := Pointer(Tokens[I].Value);
-        if (P^ = '?') or ((Tokens[I].TokenType = ttWord) and (P^ = '$') and
-           ({$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P+1, -1) <> -1)) then begin
-          Add(Temp);
-          Add({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[I].Value), True);
-          Temp := '';
-          Inc(FParamsCnt);
-        end else case (Tokens[i].TokenType) of
-          ttQuoted, ttComment,
-          ttWord, ttQuotedIdentifier, ttKeyword:
-            Temp := Temp + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i].Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
-          else
-            Temp := Temp + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[i].Value);
+        end else begin //we already got a group
+          FTokenMatchIndex := -1;
+          for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
+            if ComparePrefixTokens[N].ChildMatches[C] = UpperCase(Tokens[I].Value) then begin
+              FTokenMatchIndex := N;
+              Break;
+            end;
+          ComparePrefixTokens := nil; //stop compare sequence
         end;
-      end;
-      if (Temp <> '') then
+      P := Pointer(Tokens[I].Value);
+      if (P^ = '?') or ((Tokens[I].TokenType = ttWord) and (P^ = '$') and
+         ({$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P+1, -1) <> -1)) then begin
         Add(Temp);
-    end else
-      Add(ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+        Add({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[I].Value), True);
+        Temp := '';
+        Inc(FParamsCnt);
+        fPQParamsFoundInQuery := (P^ <> '?') and (fPQParamsFoundInQuery or (P^ = '$'));
+      end else case (Tokens[i].TokenType) of
+        ttQuoted, ttComment,
+        ttWord, ttQuotedIdentifier, ttKeyword:
+          Temp := Temp + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i].Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
+        else
+          Temp := Temp + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[i].Value);
+      end;
+    end;
+    if (Temp <> '') then
+      Add(Temp);
     FlushBuff(Result);
   end else
     Result := ASQL;
+end;
+
+procedure TZPostgreSQLPreparedStatement.InternalRealPrepare;
+begin
+  FRawPlanName := IntToRaw(FStatementId)+IntToRaw({%H-}NativeUInt(FConnectionHandle))+IntToRaw(fPrepareCnt);
+  QueryHandle := ExecuteInternal(fASQL, TEIPQPrepareModes[fPGExecMode])
+end;
+
+procedure TZPostgreSQLPreparedStatement.InternalSetInParamCount(
+  NewParamCount: Integer);
+var
+  N, I: Integer;
+begin
+  if (not fPQParamsFoundInQuery or FEmulatedParams) and (Length(CachedQueryRaw) > 1) then begin
+    fASQL := '';
+    N := 0;
+    for I := 0 to High(CachedQueryRaw) do
+      if IsParamIndex[i] then begin
+        Inc(N);
+        ToBuff('$', fASQL);
+        ToBuff(IntToRaw(N), fASQL);
+      end else
+        ToBuff(CachedQueryRaw[i], fASQL);
+    FlushBuff(fASQL);
+  end;
+  if (fPGExecMode <> pgemV2) and (NewParamCount <> FinParamCount) then begin
+    SetLength(FParamOIDs, NewParamCount);
+    SetLength(FPQparamValues, NewParamCount);
+    SetLength(FPQparamLengths, NewParamCount);
+    SetLength(FPQparamFormats, NewParamCount);
+  end;
+  inherited InternalSetInParamCount(NewParamCount);
+end;
+
+function TZPostgreSQLPreparedStatement.OIDToSQLType(Index: Integer;
+  SQLType: TZSQLType): TZSQLType;
+begin
+  if (fPGExecMode = pgemV2) then
+    Result := SQLType
+  else case FParamOIDs[Index] of
+    INVALIDOID: begin
+      SQLTypeToPostgreSQL(SQLType, FOIdAsBLob, FParamOIDs[Index]);
+      Result := SQLType;
+    end;
+    { these types are binary supported by now }
+    BOOLOID:  Result := stBoolean;
+    BYTEAOID: Result := stBytes;
+    INT8OID:  Result := stLong;
+    INT2OID:  Result := stSmall;
+    INT4OID:  Result := stInteger;
+    OIDOID:   Result := stLongWord;
+    FLOAT4OID:Result := stFloat;
+    FLOAT8OID:Result := stDouble;
+    CASHOID:  Result := stCurrency;
+    DATEOID:  Result := stDate;
+    TIMEOID:  Result := stTime;
+    TIMESTAMPOID: Result := stTimeStamp;
+    UUIDOID:  Result := stGUID;
+    else if SQLType in [stString, stUnicodeString, stAsciistream, stUnicodeStream, stBinaryStream] then
+      Result := SQLType
+    else
+      Result := stUnknown; //indicate unsupport the types as Fallback to String format
+  end;
 end;
 
 function TZPostgreSQLPreparedStatement.CreateResultSet(
@@ -403,33 +645,114 @@ begin
   end
   else
     Result := NativeResultSet;
-  if Result <> nil then
-    FOpenResultSet := Pointer(Result);
+  FOpenResultSet := Pointer(Result);
+end;
+
+function TZPostgreSQLPreparedStatement.DateTimeAsString(const Value: TDateTime;
+  SQLType: TZSQLType): RawByteString;
+begin
+  case SQLType of
+    stTime: Result := DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, True,'::time');
+    stDate: Result := DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, true,'::date');
+    stTimestamp: Result := DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, True, '::timestamp');
+  end;
 end;
 
 {**
-  Prepares an SQL statement and inserts all data values.
-  @return a RawByteString SQL statement.
+  Prepares eventual structures for binding input parameters.
 }
-function TZPostgreSQLPreparedStatement.PrepareAnsiSQLQuery: RawByteString;
+procedure TZPostgreSQLPreparedStatement.PrepareInParameters;
 var
-  I: Integer;
-  ParamIndex: Integer;
+  res: PZPostgreSQLResult;
+  nParams, I: Integer;
+  aOID: OID;
 begin
-  ParamIndex := 0;
-  Result := '';
-  for I := 0 to High(CachedQueryRaw) do
-    if IsParamIndex[I] then begin
-      if ParamIndex > InParamCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} then
-        raise EZSQLException.Create(SInvalidInputParameterCount)
-      else
-        ToBuff(PGPrepareAnsiSQLParam(InParamValues[ParamIndex],
-        ClientVarManager, FPostgreSQLConnection, ChunkSize,
-          InParamTypes[ParamIndex], FOidAsBlob, True, False, ConSettings), Result);
-      Inc(ParamIndex);
+  if FEmulatedParams or (fRawPlanName = '') or (fPGExecMode = pgemV2) then
+    InternalSetInParamCount(CountOfQueryParams)
+  else if (fRawPlanName <> '') and not (Findeterminate_datatype) and (CountOfQueryParams > 0) then begin
+    if Assigned(FPlainDriver.PQdescribePrepared) then begin
+      //we use the describe only if minimum one INVALIDOID was given else our bindings have been excepted by the server
+      {nParams := -1;
+      for i := low(FParamOIDs) to high(FParamOIDs) do
+        if FParamOIDs[I] = INVALIDOID then begin
+          nParams := I;
+          Break;
+        end;
+      if nParams = -1 then
+        Exit; //no describe required }
+      res := FPlainDriver.PQdescribePrepared(FConnectionHandle, Pointer(FRawPlanname));
+      try
+        nParams := FplainDriver.PQnparams(res);
+        if (InParamCount > 0) and (nParams <> InParamCount) then
+          raise EZSQLException.Create(SInvalidInputParameterCount)
+        else begin
+          if (InParamCount = 0) and (nParams > 0) then
+            InternalSetInParamCount(nParams);
+          for i := 0 to InParamCount-1 do begin
+            aOID := FplainDriver.PQparamtype(res, i);
+            if (aOID <> FParamOIDs[i]) then begin
+              //bind bin again or switch to string format if we do not support the PG Types -> else Error
+              FParamOIDs[i] := aOID;
+              if (FPQparamValues[I] <> nil) then
+                case InParamTypes[i] of
+                  stBoolean:  BindSignedOrdinal(i, InParamTypes[i], PByte(FPQparamValues[i])^);
+                  stSmall:    BindSignedOrdinal(i, InParamTypes[i], PG2SmallInt(FPQparamValues[i]));
+                  stInteger:  BindSignedOrdinal(i, InParamTypes[i], PG2Integer(FPQparamValues[i]));
+                  stLongWord: BindSignedOrdinal(i, InParamTypes[i], PG2LongWord(FPQparamValues[i]));
+                  stLong:     BindSignedOrdinal(i, InParamTypes[i], PG2Int64(FPQparamValues[i]));
+                  stCurrency: BindDouble(i, InParamTypes[i], PG2Currency(FPQparamValues[i]));
+                  stFloat:    BindDouble(i, InParamTypes[i], PG2Single(FPQparamValues[i]));
+                  stDouble:   BindDouble(i, InParamTypes[i], PG2Double(FPQparamValues[i]));
+                  stTime:     if Finteger_datetimes
+                              then BindDateTime(i, InParamTypes[i], PG2Time(PInt64(FPQparamValues[i])^))
+                              else BindDateTime(i, InParamTypes[i], PG2Time(PDouble(FPQparamValues[i])^));
+                  stDate:     BindDateTime(i, InParamTypes[i], PG2Date(PInteger(FPQparamValues[i])^));
+                  stTimeStamp:if Finteger_datetimes
+                              then BindDateTime(i, InParamTypes[i], PG2DateTime(PInt64(FPQparamValues[i])^))
+                              else BindDateTime(i, InParamTypes[i], PG2DateTime(PDouble(FPQparamValues[i])^));
+                end;
+            end;
+          end;
+        end;
+      finally
+        FPlainDriver.PQclear(res);
+      end;
     end else
-      ToBuff(CachedQueryRaw[i], Result);
-  FlushBuff(Result);
+      for i := 0 to InParamCount-1 do
+        SQLTypeToPostgreSQL(InParamTypes[i], fOIDAsBlob, FParamOIDs[i]);
+  end;
+end;
+
+procedure TZPostgreSQLPreparedStatement.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable);
+begin
+  inherited ReleaseImmediat(Sender);
+  FConnectionHandle := nil;
+  QueryHandle := nil;
+  FRawPlanName := '';
+  fPrepareCnt := 0;
+  InternalSetInParamCount(0);
+end;
+
+procedure TZPostgreSQLPreparedStatement.SetBlob(ParameterIndex: Integer;
+  SQLType: TZSQLType; const Value: IZBlob);
+var
+  WriteTempBlob: IZPostgreSQLOidBlob;
+begin
+  if Value.IsEmpty or not (FoidAsBlob and (SQLType = stBinaryStream)) then
+    inherited SetBlob(ParameterIndex, SQLType, Value)
+  else
+    try
+      WriteTempBlob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0,
+        FConnectionHandle, 0, ChunkSize);
+      WriteTempBlob.WriteBuffer(Value.GetBuffer, Value.Length);
+      if FEmulatedParams
+      then SetRawByteString(ParameterIndex, IntToRaw(WriteTempBlob.GetBlobOid))
+      else InternalSetOrdinal(ParameterIndex, stBinaryStream, WriteTempBlob.GetBlobOid);
+      fParamLobs[ParameterIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}] := Value; //else leaking mem we've no var to flush
+    finally
+      WriteTempBlob := nil;
+    end;
 end;
 
 {**
@@ -441,27 +764,23 @@ end;
 }
 function TZPostgreSQLPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
-  Result := nil;
-  Prepare;
   PrepareOpenResultSetForReUse;
-  if Prepared then
-    if FUseEmulatedStmtsOnly or (Findeterminate_datatype and not Assigned(FplainDriver.PQexecParams)) then
-      QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, eicExecute)
-    else begin
-      BindInParameters;
-      if not Findeterminate_datatype
-      then QueryHandle := ExecuteInternal(ASQL, eicExecPrepStmt)
-      else QueryHandle := ExecuteInternal(fParamSQL, eicExeParam);
-    end
-  else QueryHandle := ExecuteInternal(ASQL, eicExecute);
+  Prepare;
+  BindInParameters;
+  if (fPGExecMode = pgemV2) and ((FRawPlanName = '') or (Findeterminate_datatype)) then
+    QueryHandle := ExecuteInternal(ComposeRawSQLQuery, TEIPQExecuteModes[FPGExecMode])
+  else if Findeterminate_datatype or (FRawPlanName = '') then
+    QueryHandle := ExecuteInternal(ASQL, TEIPQExecuteModes[FPGExecMode])
+  else
+    QueryHandle := ExecuteInternal(ASQL, TEIPQExecPreparedModes[FPGExecMode]);
   if QueryHandle <> nil then
-    if Assigned(FOpenResultSet) then
-      Result := IZResultSet(FOpenResultSet)
-    else
-      Result := CreateResultSet(QueryHandle, fServerCursor)
+    if Assigned(FOpenResultSet)
+    then Result := IZResultSet(FOpenResultSet)
+    else Result := CreateResultSet(QueryHandle, fServerCursor)
   else
     Result := nil;
   inherited ExecuteQueryPrepared;
+  CheckPrepareSwitchMode;
 end;
 
 {**
@@ -478,17 +797,13 @@ function TZPostgreSQLPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   Result := -1;
   Prepare;
-  if Prepared then
-    if FUseEmulatedStmtsOnly or (Findeterminate_datatype and not Assigned(FplainDriver.PQexecParams)) then
-      QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, eicExecute)
-    else begin
-      BindInParameters;
-      if not Findeterminate_datatype
-      then QueryHandle := ExecuteInternal(ASQL, eicExecPrepStmt)
-      else QueryHandle := ExecuteInternal(fParamSQL, eicExeParam);
-    end
-  else QueryHandle := ExecuteInternal(ASQL, eicExecute);
-
+  BindInParameters;
+  if (fPGExecMode = pgemV2) and ((FRawPlanName = '') or (Findeterminate_datatype)) then
+    QueryHandle := ExecuteInternal(ComposeRawSQLQuery, TEIPQExecuteModes[FPGExecMode])
+  else if Findeterminate_datatype or (FRawPlanName = '') then
+    QueryHandle := ExecuteInternal(ASQL, TEIPQExecuteModes[FPGExecMode])
+  else
+    QueryHandle := ExecuteInternal(ASQL, TEIPQExecPreparedModes[FPGExecMode]);
   if QueryHandle <> nil then begin
     Result := RawToIntDef(FPlainDriver.PQcmdTuples(QueryHandle), 0);
     FPlainDriver.PQclear(QueryHandle);
@@ -496,11 +811,18 @@ begin
   end;
 
   inherited ExecuteUpdatePrepared;
+  CheckPrepareSwitchMode;
 end;
 
 procedure TZPostgreSQLPreparedStatement.FlushPendingResults;
+var PQRes: PZPostgreSQLResult;
 begin
-
+  while True do begin
+    PQRes := FPlainDriver.PQgetResult(FConnectionHandle);
+    if PQRes = nil
+    then break
+    else FplainDriver.PQclear(PQRes);
+  end;
 end;
 
 {**
@@ -511,22 +833,192 @@ end;
   and <code>executeUpdate</code>.
   @see Statement#execute
 }
+function TZPostgreSQLPreparedStatement.ExecuteInternal(const SQL: RawByteString;
+  Category: TEICategory): PZPostgreSQLResult;
+var
+  PError: PAnsiChar;
+  ExecSQL: RawByteString;
+  I, N: Integer;
+  TmpSQL: RawByteString;
+label retryExecute;
+begin
+  Result := nil;
+  if not Assigned(FConnectionHandle) then
+    Exit;
+  case Category of
+    eicPrepStmtV2:
+      begin
+        TmpSQL := 'PREPARE "'+FRawPlanName+'" AS '+SQL;
+        Result := FPlainDriver.PQExec(FConnectionHandle, Pointer(TmpSQL));
+        if Assigned(FPlainDriver.PQresultErrorField)
+        then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
+        else PError := FPLainDriver.PQerrorMessage(FConnectionHandle);
+        if (PError <> nil) and (PError^ <> #0) then
+          { check for indermine datatype error}
+          if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) <> 0) then
+            HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle, lcPrepStmt, ASQL, Result)
+          else begin
+            FPlainDriver.PQclear(Result);
+            Result := nil;
+            Findeterminate_datatype := True;
+            FEmulatedParams := True;
+            //EH: grumple switch back to emulations and fix the bound values:
+            for i := 0 to High(FInParamTypes) do begin
+              if FParamValues[i] <> 'null' then
+              case FInParamTypes[i] of
+                stTime: FParamValues[i] := FParamValues[i]+'::time';
+                stDate: FParamValues[i] := FParamValues[i]+'::date';
+                stTimeStamp: FParamValues[i] := FParamValues[i]+'::timestamp';
+              end;
+            end;
+          end;
+      end;
+    eicExecPrepStmtV2:
+      begin
+        TmpSQL := '';
+        ToBuff('EXECUTE "', TmpSQL);
+        ToBuff(FRawPlanName, TmpSQL);
+        ToBuff('"', TmpSQL);
+        if InParamCount > 0 then begin
+          ToBuff('(', TmpSQL);
+          for i := 0 to InParamCount -1 do begin
+            ToBuff(FParamValues[i], TmpSQL);
+            ToBuff(',', TmpSQL);
+          end;
+          FlushBuff(TmpSQL);
+          TmpSQL[Length(TmpSQL)] := ')' //cancel last comma
+        end else
+          FlushBuff(TmpSQL);
+        if Assigned(FConnectionHandle) then
+          Result := FPlainDriver.PQExec(FConnectionHandle, Pointer(TmpSQL));
+          if not PGSucceeded(FPlainDriver.PQerrorMessage(FConnectionHandle)) then
+            HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle,
+              lcExecPrepStmt, ExecSQL, Result);
+      end;
+    eicPrepStmtV3:
+      begin
+        Result := FPlainDriver.PQprepare(FConnectionHandle, Pointer(FRawPlanName),
+          Pointer(SQL), InParamCount, nil{Pointer(fParamOIDs)});
+        if Assigned(FPlainDriver.PQresultErrorField)
+        then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
+        else PError := FPLainDriver.PQerrorMessage(FConnectionHandle);
+        if (PError <> nil) and (PError^ <> #0) then
+          { check for indermine datatype error}
+          if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) <> 0) then
+            HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle,
+              lcPrepStmt, ASQL, Result)
+          else begin
+            FPlainDriver.PQclear(Result);
+            Findeterminate_datatype := True
+          end
+        else begin
+          FPlainDriver.PQclear(Result);
+          Result := nil;
+          PrepareInParameters;
+        end;
+      end;
+    eicExecPrepStmtV3:
+      begin
+        Result := FPlainDriver.PQexecPrepared(FConnectionHandle,
+          Pointer(FRawPlanName), InParamCount, Pointer(FPQparamValues),
+          Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat);
+        if not PGSucceeded(FPlainDriver.PQerrorMessage(FConnectionHandle)) then
+          HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle,
+            lcExecPrepStmt, ASQL, Result);
+      end;
+    eicExecPrepStmtV3_Async:
+        if FPlainDriver.PQsendQueryPrepared(FConnectionHandle,
+           Pointer(FRawPlanName), InParamCount, Pointer(FPQparamValues),
+           Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat) <> Ord(PGRES_COMMAND_OK) then
+          HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle,
+            lcExecPrepStmt, ASQL, Result)
+        else if FServerCursor then
+          FPlainDriver.PQsetSingleRowMode(FConnectionHandle);
+    eicUnprepStmtV2, eicUnprepStmtV3, eicUnprepStmtV3_Async: begin
+        Result := FPlainDriver.PQExec(FConnectionHandle, Pointer(SQL));
+        if Assigned(FPlainDriver.PQresultErrorField)
+        then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
+        else PError := FPLainDriver.PQerrorMessage(FConnectionHandle);
+        if (PError <> nil) and (PError^ <> #0) then
+          { check for current transaction is aborted error}
+          if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, current_transaction_is_aborted, 5) <> 0) then
+            HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle, lcUnprepStmt, ASQL, Result)
+          else
+            FPostgreSQLConnection.RegisterTrashPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName))
+        else if Result <> nil then begin
+          FPlainDriver.PQclear(Result);
+          Result := nil;
+        end;
+      end;
+    eicExeParamV3: begin
+        if (InParamCount > 0) then begin
+          if not Findeterminate_datatype then begin
+            Result := FPlainDriver.PQexecParams(FConnectionHandle, Pointer(FASQL),
+              InParamCount, Pointer(fParamOIDs), Pointer(FPQparamValues),
+              Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat);
+            if Assigned(FPlainDriver.PQresultErrorField)
+            then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
+            else PError := FPLainDriver.PQerrorMessage(FConnectionHandle);
+            if (PError <> nil) and (PError^ <> #0) then
+              { check for indermine datatype error}
+              if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) = 0) then begin
+                FPlainDriver.PQclear(Result);
+                Findeterminate_datatype := True;
+                goto retryExecute;
+              end;
+          end else begin
+retryExecute:
+            TmpSQL := '';
+            N := 0;
+            for I := 0 to High(FCachedQueryRaw) do
+              if FIsParamIndex[i] then begin
+                ToBuff(GetBoundValueAsLogValue(n), TmpSQL);
+                Inc(N);
+              end else
+                ToBuff(FCachedQueryRaw[i], TmpSQL);
+              FlushBuff(TmpSQL);
+            Result := FPlainDriver.PQExec(FConnectionHandle, Pointer(TmpSQL));
+          end;
+        end else
+          Result := FPlainDriver.PQExec(FConnectionHandle, Pointer(FASQL));
+        if not PGSucceeded(FPlainDriver.PQerrorMessage(FConnectionHandle)) then
+          HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle,
+            lcExecute, ASQL, Result);
+      end;
+    eicExeParamV3_Async:
+        if FplainDriver.PQsendQueryParams(FConnectionHandle,
+           Pointer(FASQL), InParamCount, Pointer(fParamOIDs), Pointer(FPQparamValues),
+           Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat) <> Ord(PGRES_COMMAND_OK) then
+           HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle, lcExecute, ASQL, Result)
+        else if FServerCursor then
+          FPlainDriver.PQsetSingleRowMode(FConnectionHandle);
+    eicPrepStmtV3_Async:
+      if not FPlainDriver.PQsendPrepare(FConnectionHandle, Pointer(FRawPlanName),
+         Pointer(FASQL), InParamCount, Pointer(fParamOIDs)) = Ord(PGRES_COMMAND_OK) then
+        HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle,
+          lcExecute, ASQL, nil);
+    else
+      begin
+        Result := FPlainDriver.PQExec(FConnectionHandle, Pointer(SQL));
+        if not PGSucceeded(FPlainDriver.PQerrorMessage(FConnectionHandle)) then
+          HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle,
+            lcExecute, ASQL, Result);
+      end;
+  end;
+end;
+
 function TZPostgreSQLPreparedStatement.ExecutePrepared: Boolean;
 var
   ResultStatus: TZPostgreSQLExecStatusType;
 begin
   Prepare;
   PrepareLastResultSetForReUse;
-  if Prepared then
-    if FUseEmulatedStmtsOnly or (Findeterminate_datatype and not Assigned(FplainDriver.PQexecParams)) then
-      QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, eicExecute)
-    else begin
-      BindInParameters;
-      if not Findeterminate_datatype
-      then QueryHandle := ExecuteInternal(ASQL, eicExecPrepStmt)
-      else QueryHandle := ExecuteInternal(fParamSQL, eicExeParam);
-    end
-  else QueryHandle := ExecuteInternal(ASQL, eicExecute);
+  if (fPGExecMode = pgemV2) and ((FRawPlanName = '') or (Findeterminate_datatype)) then
+    QueryHandle := ExecuteInternal(ComposeRawSQLQuery, TEIPQExecuteModes[FPGExecMode])
+  else if Findeterminate_datatype or (FRawPlanName = '') then
+    QueryHandle := ExecuteInternal(ASQL, TEIPQExecuteModes[FPGExecMode])
+  else
+    QueryHandle := ExecuteInternal(ASQL, TEIPQExecPreparedModes[FPGExecMode]);
 
   { Process queries with result sets }
   ResultStatus := FPlainDriver.PQresultStatus(QueryHandle);
@@ -554,34 +1046,52 @@ begin
   end;
 
   inherited ExecutePrepared;
+  CheckPrepareSwitchMode;
 end;
 
 procedure TZPostgreSQLPreparedStatement.Prepare;
-var
-  N, I: Integer;
 begin
-  if not Prepared then
-  begin
+  if fPGExecMode = pgemV3_Async then
+    FlushPendingResults;
+  if not Prepared then begin
     Inc(fPrepareCnt);
-    FRawPlanName := IntToRaw(FStatementId)+IntToRaw({%H-}NativeUInt(FConnectionHandle))+IntToRaw(fPrepareCnt);
-    fParamSQL := '';
-    ToBuff(GetPrepareSQLPrefix, fParamSQL);
-    N := 0;
-    for I := 0 to High(CachedQueryRaw) do
-      if IsParamIndex[i] then
-      begin
-        Inc(N);
-        ToBuff('$', fParamSQL);
-        ToBuff(IntToRaw(N), fParamSQL);
-      end else
-        ToBuff(CachedQueryRaw[i], fParamSQL);
-    FlushBuff(fParamSQL);
-    if (not FUseEmulatedStmtsOnly) and (TokenMatchIndex <> -1) then //detected after tokenizing the query
-      QueryHandle := ExecuteInternal(fParamSQL + GetPrepareSQLPrefix, eicPrepStmt)
-    else
-      Findeterminate_datatype := True;
     inherited Prepare; //we need this step always for Set(A/W)SQL overloads if SQL changes
   end;
+  if CheckPrepareSwitchMode then
+    InternalRealPrepare;
+end;
+
+function TZPostgreSQLPreparedStatement.GetBoundValueAsLogValue(
+  Index: Integer): RawByteString;
+begin
+  if fPGExecMode <> pgemV2 then begin
+    Result := '';
+    if FPQparamValues[Index] = nil then
+      Result := 'NULL'
+    else if (FPQparamFormats[Index] = ParamFormatStr) then
+      Connection.GetEscapeString(PAnsichar(FPQparamValues[Index]), FPQparamLengths[Index], Result)
+    else case InParamTypes[Index] of
+      stBoolean:    Result := ZSysUtils.BoolStrIntsRaw[PByte(FPQparamValues[Index])^ <> 0];
+      stSmall:      Result := IntToRaw(PG2SmallInt(FPQparamValues[Index]));
+      stInteger:    Result := IntToRaw(PG2Integer(FPQparamValues[Index]));
+      stLongWord:   Result := IntToRaw(PG2LongWord(FPQparamValues[Index]));
+      stLong:       Result := IntToRaw(PG2LongWord(FPQparamValues[Index]));
+      stFloat:      Result := FloatToRaw(PG2Single(FPQparamValues[Index]));
+      stDouble:     Result := FloatToRaw(PG2Double(FPQparamValues[Index]));
+      stCurrency:   Result := FloatToRaw(PG2Currency(FPQparamValues[Index]));
+      stGUID:       Result := GUIDToRaw(PGUID(FPQparamValues[Index])^);
+      stTime:       if Finteger_datetimes
+                    then Result := DateTimeToRawSQLTime(PG2Time(PInt64(FPQparamValues[Index])^), ConSettings^.WriteFormatSettings, True)
+                    else Result := DateTimeToRawSQLTime(PG2Time(PDouble(FPQparamValues[Index])^), ConSettings^.WriteFormatSettings, True);
+      stDate:       Result := DateTimeToRawSQLDate(PG2Date(PInteger(FPQparamValues[Index])^), ConSettings^.WriteFormatSettings, true);
+      stTimestamp:  if Finteger_datetimes
+                    then Result := DateTimeToRawSQLTimeStamp(PG2DateTime(PInt64(FPQparamValues[Index])^), ConSettings^.WriteFormatSettings, True)
+                    else Result := DateTimeToRawSQLTimeStamp(PG2DateTime(PDouble(FPQparamValues[Index])^), ConSettings^.WriteFormatSettings, True);
+      else
+        Connection.GetBinaryEscapeString(FPQparamValues[Index], FPQparamLengths[Index], Result);
+    end;
+  end else
+    Result := FParamValues[Index];
 end;
 
 function TZPostgreSQLPreparedStatement.GetCompareFirstKeywordStrings: TPreparablePrefixTokens;
@@ -593,809 +1103,23 @@ end;
 
 procedure TZPostgreSQLPreparedStatement.Unprepare;
 begin
-  if Prepared and Assigned(FPostgreSQLConnection.GetConnectionHandle) then begin
-    if not Findeterminate_datatype
-    then FPostgreSQLConnection.UnregisterPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
-  end;
+  if fPGExecMode = pgemV3_Async then
+    FlushPendingResults;
+  if Prepared and Assigned(FPostgreSQLConnection.GetConnectionHandle) and (FRawPlanName <> '') and not Findeterminate_datatype then
+    ExecuteInternal('DEALLOCATE "'+FRawPlanName+'"', TEIPQUnPrepareModes[FPGExecMode]);
   inherited Unprepare;
-end;
-
-{ TZPostgreSQLClassicPreparedStatement }
-
-function TZPostgreSQLClassicPreparedStatement.GetAnsiSQLQuery: RawByteString;
-var
-  I: Integer;
-  ParamIndex: Integer;
-begin
-  ParamIndex := 0;
-  Result := '';
-  for I := 0 to High(CachedQueryRaw) do
-    if IsParamIndex[I] then
-    begin
-      Result := Result + PrepareAnsiSQLParam(ParamIndex, True);
-      Inc(ParamIndex);
-    end
-    else
-      Result := Result + CachedQueryRaw[i];
-end;
-
-function TZPostgreSQLClassicPreparedStatement.ExecuteInternal(const SQL: RawByteString;
-  Category: TEICategory): PZPostgreSQLResult;
-begin
-  case Category of
-    eicPrepStmt:
-      begin
-        Result := FPlainDriver.PQExec(FConnectionHandle, Pointer(SQL));
-        try
-          Findeterminate_datatype := (CheckPostgreSQLError(Connection, FPlainDriver,
-            FConnectionHandle, lcPrepStmt, ASQL, Result) = '42P18');
-        except
-          Unprepare; //free cached query tokens
-          raise;     // handle exception
-        end;
-        if not Findeterminate_datatype then
-        begin
-          FPlainDriver.PQclear(Result);
-          FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
-        end;
-      end;
-    eicExecPrepStmt:
-      begin
-        Result := FPlainDriver.PQExec(FConnectionHandle, Pointer(FExecSQL));
-        CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-          lcUnprepStmt, ASQL, Result);
-      end;
-    eicUnprepStmt:
-      if Assigned(FConnectionHandle) then
-      begin
-        Result := FPlainDriver.PQExec(FConnectionHandle, Pointer(SQL));
-        CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-          lcUnprepStmt, ASQL, Result);
-      end
-      else Result := nil;
-    else
-      begin
-        Result := FPlainDriver.PQExec(FConnectionHandle, Pointer(SQL));
-        CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-          lcExecute, ASQL, Result);
-      end;
-  end;
-end;
-
-function TZPostgreSQLClassicPreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer;
-  Escaped: Boolean): RawByteString;
-begin
-  if InParamCount <= ParamIndex then
-    raise EZSQLException.Create(SInvalidInputParameterCount);
-
-  Result := PGPrepareAnsiSQLParam(InParamValues[ParamIndex], ClientVarManager,
-    (Connection as IZPostgreSQLConnection), ChunkSize, InParamTypes[ParamIndex],
-      FOidAsBlob, Escaped, True, ConSettings);
-end;
-
-{**
-  Binds the input parameters
-}
-procedure TZPostgreSQLClassicPreparedStatement.BindInParameters;
-var
-  I: Integer;
-begin
-  if InParamCount > 0 then
-    if Prepared then
-    begin
-      FExecSQL := 'EXECUTE "'+FRawPlanName+'"(';
-      for i := 0 to InParamCount -1 do
-        if I = 0 then
-          FExecSQL := FExecSQL+PrepareAnsiSQLParam(i, False)
-        else
-          FExecSQL := FExecSQL+','+PrepareAnsiSQLParam(i, False);
-      FExecSQL := FExecSQL+');';
-    end
-    else
-      FExecSQL := GetAnsiSQLQuery
-  else
-    FExecSQL := ASQL;
-  inherited BindInParameters;
-end;
-
-function TZPostgreSQLClassicPreparedStatement.GetDeallocateSQL: RawByteString;
-begin
-  Result := 'DEALLOCATE "'+FRawPlanName+'"';
-end;
-
-function TZPostgreSQLClassicPreparedStatement.GetPrepareSQLPrefix: RawByteString;
-begin
-  Result := 'PREPARE "'+FRawPlanName+'" AS ';
-end;
-
-{ TZPostgreSQLCAPIPreparedStatement }
-
-procedure TZPostgreSQLCAPIPreparedStatement.BindStr(ParameterIndex: Integer;
-  SQLType: TZSQLType; Const Value: RawByteString);
-begin
-  {$IFNDEF GENERIC_INDEX}
-  ParameterIndex := ParameterIndex - 1;
-  {$ENDIF}
-  if ParameterIndex+1 >= InParamCount
-  then SetInParamCount(ParameterIndex+1);
-
-  FInParamTypes[ParameterIndex] := SQLType;
-  FPQparamBuffs[ParameterIndex] := Value;
-  FPQparamLengths[ParameterIndex] := Length(Value); //EH: i know PG ignores this..
-  if Value <> ''
-  then FPQparamValues[ParameterIndex] := Pointer(FPQparamBuffs[ParameterIndex])
-  else FPQparamValues[ParameterIndex] := PEmptyAnsiString;
-  FPQparamFormats[ParameterIndex] := ParamFormatStr;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.ClearParameters;
-begin
-  //Do nothing here
-end;
-
-function TZPostgreSQLCAPIPreparedStatement.DateToInt(
-  const Value: TDateTime): Integer;
-var y,m,d: Word;
-begin
-  DecodeDate(Value, y,m,d);
-  Result := date2j(y,m,d) - POSTGRES_EPOCH_JDATE;
-end;
-
-function TZPostgreSQLCAPIPreparedStatement.ExecuteInternal(const SQL: RawByteString;
-  Category: TEICategory): PZPostgreSQLResult;
-var
-  PError: PAnsiChar;
-begin
-  case Category of
-    eicPrepStmt:
-      begin
-        Result := FPlainDriver.PQprepare(FConnectionHandle, Pointer(FRawPlanName),
-          Pointer(SQL), InParamCount, Pointer(fParamOIDs));
-        if Assigned(FPlainDriver.PQresultErrorField)
-        then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
-        else PError := FPLainDriver.PQerrorMessage(FConnectionHandle);
-        if (PError <> nil) and (PError^ <> #0) then
-          { check for indermine datatype error}
-          if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) <> 0) then
-            CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-              lcExecPrepStmt, ASQL, Result)
-          else begin
-            Findeterminate_datatype := True;
-            Exit;
-          end
-        else begin
-          FPlainDriver.PQclear(Result);
-          Result := nil;
-        end;
-        FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
-      end;
-    eicExecPrepStmt:
-      begin
-        Result := FPlainDriver.PQexecPrepared(FConnectionHandle,
-          Pointer(FRawPlanName), InParamCount, Pointer(FPQparamValues),
-          Pointer(FPQparamLengths), Pointer(FPQparamFormats), 0);
-        CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-          lcExecPrepStmt, ASQL, Result);
-      end;
-    eicUnprepStmt:
-      if Assigned(FConnectionHandle) then
-        begin
-          Result := FPlainDriver.PQExec(FConnectionHandle, Pointer(SQL));
-          CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-            lcUnprepStmt, ASQL, Result);
-        end
-      else Result := nil;
-    eicExeParam: begin
-        Result := FPlainDriver.PQexecParams(FConnectionHandle, Pointer(fParamSQL),
-          InParamCount, Pointer(fParamOIDs), Pointer(FPQparamValues),
-          Pointer(FPQparamLengths), Pointer(FPQparamFormats), 0);
-        CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-          lcUnprepStmt, ASQL, Result);
-      end;
-    else
-      begin
-        Result := FPlainDriver.PQExec(FConnectionHandle, Pointer(SQL));
-        CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-          lcExecute, ASQL, Result);
-      end;
-  end;
-end;
-
-function TZPostgreSQLCAPIPreparedStatement.PrepareAnsiSQLQuery: RawByteString;
-var
-  I: Integer;
-  ParamIndex: Integer;
-  WriteTempBlob: IZPostgreSQLOidBlob;
-begin
-  ParamIndex := 0;
-  Result := '';
-  for I := 0 to High(CachedQueryRaw) do
-    if IsParamIndex[I] then begin
-      if ParamIndex > InParamCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} then
-        raise EZSQLException.Create(SInvalidInputParameterCount)
-      else case InParamTypes[ParamIndex] of
-        stUnknown: ToBuff('null', Result);
-        stAsciiStream, stUnicodeStream:
-          if (FLobs[ParamIndex] = nil) or FLobs[ParamIndex].IsEmpty then
-            ToBuff('null', Result)
-          else if FLobs[ParamIndex].IsClob then begin
-            FPQparamValues[ParamIndex] := FLobs[ParamIndex].GetPAnsiChar(ConSettings^.ClientCodePage.CP);
-            ToBuff(FPostgreSQLConnection.EscapeString(FPQparamValues[ParamIndex], FLobs[ParamIndex].Length, True), Result);
-          end else
-            ToBuff(FPostgreSQLConnection.EscapeString(GetValidatedAnsiStringFromBuffer(FLobs[ParamIndex].GetBuffer,
-                  FLobs[ParamIndex].Length, ConSettings)), Result);
-        stBinaryStream:
-            if (FLobs[ParamIndex] = nil) or FLobs[ParamIndex].IsEmpty
-            then ToBuff('null', Result)
-            else if FOIDAsBlob then
-              try
-                WriteTempBlob := TZPostgreSQLOidBlob.Create(
-                  TZPostgreSQLPlainDriver(Connection.GetIZPlainDriver.GetInstance),
-                  nil, 0, Self.FConnectionHandle, 0, ChunkSize);
-                WriteTempBlob.WriteBuffer(FLobs[ParamIndex].GetBuffer, FLobs[ParamIndex].Length);
-                ToBuff(IntToRaw(WriteTempBlob.GetBlobOid), Result);
-              finally
-                WriteTempBlob := nil;
-              end
-            else ToBuff(FPostgreSQLConnection.EncodeBinary(FLobs[ParamIndex].GetBuffer, FLobs[ParamIndex].Length, True), Result);
-        else if FPQparamValues[ParamIndex] = nil then
-          if FDefaultValues[ParamIndex] = ''
-          then ToBuff('null', Result)
-          else ToBuff(FDefaultValues[ParamIndex], Result)
-        else ToBuff(FPQparamBuffs[ParamIndex], Result); //normal case already escaped in any kind
-      end;
-      Inc(ParamIndex);
-    end else
-      ToBuff(CachedQueryRaw[I], Result);
-  FlushBuff(Result);
-end;
-
-{**
-  Prepares eventual structures for binding input parameters.
-}
-procedure TZPostgreSQLCAPIPreparedStatement.PrepareInParameters;
-var
-  res: PZPostgreSQLResult;
-  I: Integer;
-begin
-  fHasOIDLobs := False;
-  if FUseEmulatedStmtsOnly then
-    Exit;
-  if not (Findeterminate_datatype) and (CountOfQueryParams > 0) then begin
-    if Assigned(FPlainDriver.PQdescribePrepared) then begin
-      res := FPlainDriver.PQdescribePrepared(FConnectionHandle, Pointer(FRawPlanname));
-      try
-        fnParams := FplainDriver.PQnparams(res);
-        if (InParamCount > 0) and (fnParams <> InParamCount) then
-          raise EZSQLException.Create(SInvalidInputParameterCount)
-        else begin
-          if (InParamCount = 0) and (fnParams > 0) then
-            InternalSetInParamCount(fnParams);
-          for i := 0 to InParamCount-1 do
-            FParamOIDs[i] := FplainDriver.PQparamtype(res, i);
-        end;
-      finally
-        FPlainDriver.PQclear(res);
-      end;
-    end else
-      for i := 0 to InParamCount-1 do
-        SQLTypeToPostgreSQL(InParamTypes[i], fOIDAsBlob, FParamOIDs[i]);
-    //for i := 0 to InParamCount -1 do
-      //SetLength(FPQparamBuffs[i], Max(Length(FPQparamBuffs[i]),GetOIDbufferSize(FparamOIDs[i], FPQparamFormats[i])));
-  end;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetAnsiString(
-  ParameterIndex: Integer; const Value: AnsiString);
-begin
-  SetRawByteString(ParameterIndex, ConSettings^.ConvFuncs.ZAnsiToRaw(Value, ConSettings^.ClientCodePage.CP));
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetBlob(ParameterIndex: Integer;
-  SQLType: TZSQLType; const Value: IZBlob);
-begin
-  {$IFNDEF GENERIC_INDEX}
-  ParameterIndex := ParameterIndex - 1;
-  {$ENDIF}
-  if ParameterIndex+1 >= InParamCount then
-  SetInParamCount(ParameterIndex+1);
-  FLobs[ParameterIndex] := Value;
-  FInParamTypes[ParameterIndex] := SQLType;
-  if Value.IsEmpty then
-    FPQparamValues[ParameterIndex] := nil
-  else if SQLType = stBinaryStream then begin
-    fHasOIDLobs := FOidAsBlob;
-    if not fHasOIDLobs then begin
-      FPQparamValues[ParameterIndex] := Value.GetBuffer;
-      FPQparamLengths[ParameterIndex]:= Value.Length;
-      FPQparamFormats[ParameterIndex]:= ParamFormatBin;
-    end;
-  end else if Value.IsClob then begin
-    FPQparamValues[ParameterIndex] := Value.GetPAnsiChar(ConSettings^.ClientCodePage.CP);
-    FPQparamLengths[ParameterIndex]:= Value.Length;
-    FPQparamFormats[ParameterIndex]:= ParamFormatStr;
-  end else
-    BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, SQLType, GetValidatedAnsiStringFromBuffer(Value.GetBuffer,
-      Value.Length, ConSettings));
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetBoolean(ParameterIndex: Integer;
-  Value: Boolean);
-begin
-  InternalSetOrdinal(ParameterIndex, stBoolean, Ord(Value));
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetBytes(ParameterIndex: Integer;
-  const Value: TBytes);
-begin
-  if (OIDToSQLType(ParameterIndex, stGUID) = stGUID) and (Length(Value) = 16)
-  then if not FUseEmulatedStmtsOnly
-    then BindBin(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stGUID, Pointer(Value), Length(Value))
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stGUID, #39+GUIDToRaw(Value)+#39)
-  else if not FUseEmulatedStmtsOnly
-    then BindBin(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stBytes, Pointer(Value), Length(Value))
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stBytes, FPostgreSQLConnection.EncodeBinary(Value, True));
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetCharRec(ParameterIndex: Integer;
-  const Value: TZCharRec);
-var UniTemp: ZWideString;
-begin
-  {$IFNDEF GENERIC_INDEX}
-  ParameterIndex := ParameterIndex - 1;
-  {$ENDIF}
-  if ParameterIndex > InParamCount-1
-  then SetInParamCount(ParameterIndex+1);
-
-  FInParamTypes[ParameterIndex] := stString;
-  if (Value.Len = 0) then begin
-    if not FUseEmulatedStmtsOnly
-    then begin
-      FPQparamValues[ParameterIndex] := PEmptyAnsiString;
-      FPQparamLengths[ParameterIndex] := 0;
-    end else FPQparamBuffs[ParameterIndex] := #39#39;
-  end else if ZCompatibleCodePages(Value.CP, ConSettings^.ClientCodePage.CP) then
-    if not FUseEmulatedStmtsOnly then begin
-      FPQparamValues[ParameterIndex] := Value.P;
-      FPQparamLengths[ParameterIndex] := Value.Len;
-    end else
-      FPQparamBuffs[ParameterIndex] := FPostgreSQLConnection.EscapeString(Value.P, Value.Len, True)
-  else begin
-    if ZCompatibleCodePages(Value.CP, zCP_UTF16) then begin
-      FInParamTypes[ParameterIndex] := stUnicodeString;
-      FPQparamBuffs[ParameterIndex] := PUnicodeToRaw(Value.P, Value.Len, ConSettings^.ClientCodePage.CP)
-    end else begin
-      UniTemp := PRawToUnicode(Value.P, Value.Len, Value.CP);
-      FPQparamBuffs[ParameterIndex] := ZUnicodeToRaw(UniTemp, ConSettings^.ClientCodePage.CP)
-    end;
-    if not FUseEmulatedStmtsOnly then begin
-      FPQparamLengths[ParameterIndex] := Length(FPQparamBuffs[ParameterIndex]);
-      FPQparamValues[ParameterIndex] := Pointer(FPQparamBuffs[ParameterIndex]);
-    end else FPQparamBuffs[ParameterIndex] := FPostgreSQLConnection.EscapeString(FPQparamValues[ParameterIndex], FPQparamLengths[ParameterIndex], True);
-  end;
- if FUseEmulatedStmtsOnly then begin //indicate not null
-   FPQparamLengths[ParameterIndex] := Length(FPQparamBuffs[ParameterIndex]);
-   FPQparamValues[ParameterIndex] := Pointer(FPQparamBuffs[ParameterIndex]);
- end;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetDefaultValue(
-  ParameterIndex: Integer; const Value: string);
-begin
-  {$IFNDEF GENERIC_INDEX}
-  ParameterIndex := ParameterIndex - 1;
-  {$ENDIF}
-  if ParameterIndex > InParamCount-1
-  then SetInParamCount(ParameterIndex+1);
-  FDefaultValues[ParameterIndex] := ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetGUID(ParameterIndex: Integer;
-  const Value: TGUID);
-begin
-  case OIDToSQLType(ParameterIndex, stGUID) of
-    stGUID: BindBin(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stGUID, @Value.D1, SizeOf(TGUID));
-    else if not FUseEmulatedStmtsOnly
-      then BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stGUID, GUIDToRaw(Value))
-      else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stGUID, #39+GUIDToRaw(Value)+#39)
-  end;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetInParamCount(
-  const NewParamCount: Integer);
-begin
-  if not Prepared then
-    Prepare;
-  if Findeterminate_datatype or FUseEmulatedStmtsOnly then begin
-    Assert(NewParamCount <= CountOfQueryParams);
-    InternalSetInParamCount(NewParamCount);
-  end else
-    Assert(NewParamCount <= FInParamCount); //<- done by PrepareInParams
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetNull(ParameterIndex: Integer;
-  SQLType: TZSQLType);
-begin
-  {$IFNDEF GENERIC_INDEX}
-  ParameterIndex := ParameterIndex - 1;
-  {$ENDIF}
-  if ParameterIndex > InParamCount-1
-  then SetInParamCount(ParameterIndex+1);
-
-  FInParamTypes[ParameterIndex] := SQLType;
-  FPQparamValues[ParameterIndex] := nil;
-  if (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
-    fLobs[ParameterIndex] := nil;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetRawByteString(
-  ParameterIndex: Integer; const Value: RawByteString);
-begin
-  if not FUseEmulatedStmtsOnly
-  then BindStr(ParameterIndex, stString, Value)
-  else BindStr(ParameterIndex, stString, FPostgreSQLConnection.EscapeString(Pointer(Value), Length(Value), True));
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetString(ParameterIndex: Integer;
-  const Value: String);
-begin
-  SetRawByteString(ParameterIndex, ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage.CP));
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetULong(ParameterIndex: Integer;
-  const Value: UInt64);
-begin
-  InternalSetOrdinal(ParameterIndex, stULong, Value);
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetUnicodeString(
-  ParameterIndex: Integer; const Value: ZWideString);
-begin
-  SetRawByteString(ParameterIndex, ZUnicodeToRaw(Value, ConSettings^.ClientCodePage.CP));
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetUTF8String(
-  ParameterIndex: Integer; const Value: UTF8String);
-begin
-  SetRawByteString(ParameterIndex, ConSettings^.ConvFuncs.ZUTF8ToRaw(Value, ConSettings^.ClientCodePage.CP));
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.SetValue(ParameterIndex: Integer;
-  const Value: TZVariant);
-var lob: IZBlob;
-begin
-  case Value.VType of
-    vtNull:           SetNull(ParameterIndex, stString);
-    vtBoolean:        SetBoolean(ParameterIndex, Value.VBoolean);
-    vtInteger:        SetLong(ParameterIndex, Value.VInteger);
-    vtUInteger:       SetULong(ParameterIndex, Value.VUInteger);
-    vtFloat:          SetDouble(ParameterIndex, Value.VFloat);
-    vtBytes:          SetBytes(ParameterIndex, Value.VBytes);
-    vtString:         SetString(ParameterIndex, Value.VString);
-    vtAnsiString:     SetAnsiString(ParameterIndex, Value.VAnsiString);
-    vtUTF8String:     SetUTF8String(ParameterIndex, Value.VUTF8String);
-    vtRawByteString:  SetRawByteString(ParameterIndex, Value.VRawByteString);
-    vtUnicodeString:  SetUnicodeString(ParameterIndex, Value.VUnicodeString);
-    vtDateTime:       SetTimeStamp(ParameterIndex, Value.VDateTime);
-    vtInterface:      If Supports(Value.VInterface, IZBlob, lob) then begin
-                        if lob.IsClob
-                        then SetBlob(ParameterIndex, stAsciiStream, lob)
-                        else SetBlob(ParameterIndex, stBinaryStream, lob);
-                      end else raise EZVariantException.Create(STypesMismatch);
-    vtCharRec:        SetCharRec(ParameterIndex, Value.VCharRec);
-    else raise EZVariantException.Create(STypesMismatch);
-  end;
-end;
-
-function TZPostgreSQLCAPIPreparedStatement.TimeStampToDouble(
-  const Value: TDateTime): Double;
-var Year, Month, Day, Hour, Min, Sec, MSec: Word;
-  Date: Double; //overflow save multiply
-begin
-  DecodeDate(Value, Year, Month, Day);
-  Date := date2j(Year, Month, Day) - POSTGRES_EPOCH_JDATE;
-  DecodeTime(Value, Hour, Min, Sec, MSec);
-  Result := (Hour * MinsPerHour + Min) * SecsPerMin + Sec + Msec / MSecsPerSec; //time2t_in64 did not work?
-  Result := Date * SecsPerDay + Result;
-end;
-
-function TZPostgreSQLCAPIPreparedStatement.TimeStampToInt64(
-  const Value: TDateTime): Int64;
-var Year, Month, Day, Hour, Min, Sec, MSec: Word;
-  Date: Int64; //overflow save multiply
-begin
-  DecodeDate(Value, Year, Month, Day);
-  Date := date2j(Year, Month, Day) - POSTGRES_EPOCH_JDATE;
-  DecodeTime(Value, Hour, Min, Sec, MSec);
-  //timestamp do not play with microseconds!!
-  Result := ((Hour * MINS_PER_HOUR + Min) * SECS_PER_MINUTE + Sec) * MSecsPerSec + MSec;
-  Result := (Date * MSecsPerDay + Result) * MSecsPerSec;
-end;
-
-function TZPostgreSQLCAPIPreparedStatement.TimeToDouble(
-  const Value: TDateTime): Double;
-var Hour, Min, Sec, MSec: Word;
-begin
-  DecodeTime(Value, Hour, Min, Sec, MSec);
-  //macro of datetime.c
-  Result := (((hour * MINS_PER_HOUR) + min) * SECS_PER_MINUTE) + sec + Msec
-end;
-
-function TZPostgreSQLCAPIPreparedStatement.TimeToInt64(
-  const Value: TDateTime): Int64;
-var Hour, Min, Sec, MSec: Word;
-begin
-  DecodeTime(Value, Hour, Min, Sec, MSec);
-  //macro of datetime.c
-  Result := (((((hour * MINS_PER_HOUR) + min) * SECS_PER_MINUTE) + sec) * USECS_PER_SEC) + Msec
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.BindBin(ParameterIndex: Integer;
-  SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
-begin
-  {$IFNDEF GENERIC_INDEX}
-  ParameterIndex := ParameterIndex - 1;
-  {$ENDIF}
-  if ParameterIndex+1 >= InParamCount then
-  SetInParamCount(ParameterIndex+1);
-  FInParamTypes[ParameterIndex] := SQLType;
-  ZSetString(Buf, Len,FPQparamBuffs[ParameterIndex]);
-  FPQparamFormats[ParameterIndex] := ParamFormatBin;
-  FPQparamLengths[ParameterIndex] := Len;
-  if Len > 0
-  then FPQparamValues[ParameterIndex] := Pointer(FPQparamBuffs[ParameterIndex])
-  else FPQparamValues[ParameterIndex] := PEmptyAnsiString;
-end;
-
-{**
-  Binds the input parameters
-}
-procedure TZPostgreSQLCAPIPreparedStatement.BindInParameters;
-var
-  I: Integer;
-  WriteTempBlob: IZPostgreSQLOidBlob;
-begin
-  {EH: after implizit bindings we need to finalize the OID Lobs and the
-   default values only }
-  if fHasOIDLobs then
-    for i := 0 to InParamCount -1 do begin
-      if FInParamTypes[i] = stBinaryStream then
-        try
-          WriteTempBlob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0,
-            FConnectionHandle, 0, ChunkSize);
-          WriteTempBlob.WriteBuffer(Flobs[i].GetBuffer, Flobs[i].Length);
-          BindStr(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stBinaryStream, IntToRaw(WriteTempBlob.GetBlobOid));
-        finally
-          WriteTempBlob := nil;
-        end
-      //else if (FPQparamValues[I] = nil) and (High(fDefaultValues) >= i) and (fDefaultValues[i] <> '') then //null bound ?
-        // BindStr(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, InParamTypes[i], fDefaultValues[i])
-    end;
-  if DriverManager.HasLoggingListener then
-    inherited BindInParameters;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.BindNetworkOrderBin(
-  ParameterIndex: Integer; SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt);
-var PStart: PAnsiChar;
-begin
-  if ParameterIndex+1 >= FInParamCount then
-  SetInParamCount(ParameterIndex+1);
-  if Length(FPQparamBuffs[ParameterIndex]) < Len then
-    SetLength(FPQparamBuffs[ParameterIndex], Len);
-  FPQparamFormats[ParameterIndex] := ParamFormatBin;
-  FPQparamLengths[ParameterIndex] := Len;
-  PStart := Pointer(FPQparamBuffs[ParameterIndex]);
-  FPQparamValues[ParameterIndex] := PStart;
-  { reverse host-byte order to network-byte order }
-  {$IFNDEF ENDIAN_BIG}
-  Inc(PStart, Len-1);
-  if Len > 1 then begin
-    while Len > 0 do begin
-      PStart^ := Buf^;
-      dec(PStart);
-      Inc(Buf);
-      dec(Len);
-    end
-  end;
-  {$ENDIF}
+  Findeterminate_datatype := False;
+  FRawPlanName := '';
 end;
 
 {**
   Removes eventual structures for binding input parameters.
 }
-procedure TZPostgreSQLCAPIPreparedStatement.UnPrepareInParameters;
+procedure TZPostgreSQLPreparedStatement.UnPrepareInParameters;
 begin
   { release allocated memory }
   InternalSetInParamCount(0);
-  fnParams := 0;
-  fHasOIDLobs := False;
-end;
-
-function TZPostgreSQLCAPIPreparedStatement.GetDeallocateSQL: RawByteString;
-begin
-  Result := 'DEALLOCATE "'+FRawPlanName+'";';
-end;
-
-function TZPostgreSQLCAPIPreparedStatement.GetInParamLogValue(
-  ParamIndex: Integer): RawByteString;
-begin
-  Result := '';
-  if FPQparamValues[ParamIndex] = nil then
-    Result := '(NULL)'
-  else if (FPQparamFormats[ParamIndex] = ParamFormatStr) then
-    //by ref?
-    if (FPQparamValues[ParamIndex] = Pointer(FPQparamBuffs[ParamIndex])) then
-      Result := #39+FPQparamBuffs[ParamIndex]+#39
-    else begin
-      ZSetString(FPQparamValues[ParamIndex], FPQparamLengths[ParamIndex], Result);
-      Result := #39+Result+#39;
-    end
-  else
-    Result := GetSQLHexAnsiString(FPQparamValues[ParamIndex], FPQparamLengths[ParamIndex], False);
-end;
-
-function TZPostgreSQLCAPIPreparedStatement.GetPrepareSQLPrefix: RawByteString;
-begin
-  Result := '';
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.InternalSetDateTime(
-  ParameterIndex: Integer; SQLType: TZSQLType; const Value: TDateTime);
-begin
-  case OIDToSQLType(ParameterIndex, SQLType) of
-    stTime:   begin
-                if FPostgreSQLConnection.integer_datetimes
-                then PInt64(@FStatBuf[0])^ := TimeToInt64(Value)
-                else PDouble(@FStatBuf[0])^ := TimeToDouble(Value);
-                BindNetworkOrderBin(ParameterIndex, stTime, @FStatBuf[0], 8);
-              end;
-    stDate:   begin
-                PInteger(@FStatBuf[0])^ := DateToInt(Value);
-                BindNetworkOrderBin(ParameterIndex, stDate, @FStatBuf[0], SizeOf(integer));
-              end;
-    stTimeStamp: begin
-                if FPostgreSQLConnection.integer_datetimes
-                then PInt64(@FStatBuf[0])^ := TimeStampToInt64(Value)
-                else PDouble(@FStatBuf[0])^ := TimeStampToDouble(Value);
-                BindNetworkOrderBin(ParameterIndex, stTimeStamp, @FStatBuf[0], 8);
-              end;
-    else case SQLType of
-      stTime: BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTimeStamp, DateTimeToRawSQLTime(Value,
-        ConSettings^.WriteFormatSettings, FUseEmulatedStmtsOnly,
-          IfThen(FUseEmulatedStmtsOnly,'::time','')));
-      stDate: BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTimeStamp, DateTimeToRawSQLDate(Value,
-        ConSettings^.WriteFormatSettings, FUseEmulatedStmtsOnly,
-          IfThen(FUseEmulatedStmtsOnly,'::date','')));
-      stTimestamp: BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTimeStamp, DateTimeToRawSQLTimeStamp(Value,
-        ConSettings^.WriteFormatSettings, FUseEmulatedStmtsOnly,
-          IfThen(FUseEmulatedStmtsOnly,'::timestamp','')));
-    end;
-  end;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.InternalSetDouble(
-  ParameterIndex: Integer; SQLType: TZSQLType; const Value: Double);
-begin
-  case OIDToSQLType(ParameterIndex, stFloat) of
-    stBoolean:  begin
-                  PByte(@FStatBuf[0])^ := Ord(Value <> 0);
-                  BindBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(Byte));
-                end;
-    stSmall:    begin
-                  PSmallInt(@FStatBuf[0])^ := Trunc(Value);
-                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
-                end;
-    stInteger:  begin
-                  PInteger(@FStatBuf[0])^ := Trunc(Value);
-                  BindNetworkOrderBin(ParameterIndex, stInteger, @FStatBuf[0], SizeOf(Integer));
-                end;
-    stLongWord: begin
-                  PLongword(@FStatBuf[0])^ := Trunc(Value);
-                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
-                end;
-    stLong:   begin
-                PInt64(@FStatBuf[0])^ := Trunc(Value);
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    stFloat:  begin
-                PSingle(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
-              end;
-    stDouble: BindNetworkOrderBin(ParameterIndex, stDouble, @Value, SizeOf(Double));
-    stCurrency: begin
-                PInt64(@FStatBuf[0])^ := Trunc(Value*100);
-                BindNetworkOrderBin(ParameterIndex, stLong, @FStatBuf[0], SizeOf(Int64));
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stFloat, FloatToSqlRaw(Value));
-  end;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.InternalSetInParamCount(
-  NewParamCount: Integer);
-begin
-  SetLength(FPQparamValues, NewParamCount);
-  SetLength(FPQparamLengths, NewParamCount);
-  SetLength(FPQparamFormats, NewParamCount);
-  SetLength(FParamOIDs, NewParamCount);
-  SetLength(FInParamTypes, NewParamCount);
-  SetLength(FLobs, NewParamCount);
-  SetLength(FDefaultValues, NewParamCount);
-  SetLength(FPQparamBuffs, NewParamCount);
-  FInParamCount := NewParamCount;
-end;
-
-procedure TZPostgreSQLCAPIPreparedStatement.InternalSetOrdinal(
-  ParameterIndex: Integer; SQLType: TZSQLType; const Value: Int64);
-begin
-  case OIDToSQLType(ParameterIndex, stLong) of
-    stBoolean:  begin
-                  PByte(@FStatBuf[0])^ := Ord(Value <> 0);
-                  BindBin(ParameterIndex, stBoolean, @FStatBuf[0], SizeOf(Byte));
-                end;
-    stSmall:    begin
-                  PSmallInt(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stSmall, @FStatBuf[0], SizeOf(SmallInt));
-                end;
-    stInteger:  begin
-                  PInteger(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stInteger, @Value, SizeOf(Integer));
-                end;
-    stLongWord: begin
-                  PLongword(@FStatBuf[0])^ := Value;
-                  BindNetworkOrderBin(ParameterIndex, stLongWord, @FStatBuf[0], SizeOf(Longword));
-                end;
-    stLong,
-    stCurrency:  BindNetworkOrderBin(ParameterIndex, stLong, @Value, SizeOf(Int64));
-    stFloat:  begin
-                PSingle(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stFloat, @FStatBuf[0], SizeOf(Single));
-              end;
-    stDouble: begin
-                PDouble(@FStatBuf[0])^ := Value;
-                BindNetworkOrderBin(ParameterIndex, stDouble, @FStatBuf[0], SizeOf(Double));
-              end;
-    else BindStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stLong, IntToRaw(Value));
-  end;
-end;
-
-function TZPostgreSQLCAPIPreparedStatement.OIDToSQLType(
-  {$IFNDEF GENERIC_INDEX}var {$ENDIF} ParameterIndex: Integer;
-  SQLType: TZSQLType): TZSQLType;
-begin
-  {$IFNDEF GENERIC_INDEX}
-  ParameterIndex := ParameterIndex - 1;
-  {$ENDIF}
-  if ParameterIndex > High(FParamOIDs) then
-    SetInParamCount(ParameterIndex+1);
-  if not FUseEmulatedStmtsOnly then
-    if not Findeterminate_datatype then
-      case FParamOIDs[ParameterIndex] of
-        INVALIDOID: begin
-          SQLTypeToPostgreSQL(SQLType, FOIdAsBLob, FParamOIDs[ParameterIndex]);
-          Result := SQLType;
-        end;
-        { these types are binary supported by now }
-        BOOLOID:  Result := stBoolean;
-        BYTEAOID: Result := stBytes;
-        INT8OID:  Result := stLong;
-        INT2OID:  Result := stSmall;
-        INT4OID:  Result := stInteger;
-        OIDOID:   Result := stLongWord;
-        FLOAT4OID:Result := stFloat;
-        FLOAT8OID:Result := stDouble;
-        CASHOID:  Result := stCurrency;
-        DATEOID:  Result := stDate;
-        TIMEOID:  Result := stTime;
-        TIMESTAMPOID: Result := stTimeStamp;
-        UUIDOID:  Result := stGUID;
-        else Result := stUnknown;
-      end
-    else begin
-      SQLTypeToPostgreSQL(SQLType, FOIdAsBLob, FParamOIDs[ParameterIndex]);
-      Result := SQLType;
-    end
-  else Result := stUnknown;
+  Findeterminate_datatype := False;
 end;
 
 { TZPostgreSQLCallableStatement }
@@ -1478,10 +1202,10 @@ var
 begin
   Result := nil;
   ASQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
-  QueryHandle := FPlainDriver.PQExec(FConnectionHandle,
-    PAnsiChar(ASQL));
-  CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle, lcExecute,
-    ASQL, QueryHandle);
+  QueryHandle := FPlainDriver.PQExec(FConnectionHandle, PAnsiChar(ASQL));
+  if not PGSucceeded(FPlainDriver.PQerrorMessage(FConnectionHandle)) then
+    HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle, lcExecute,
+      ASQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   if QueryHandle <> nil then
   begin
@@ -1575,10 +1299,10 @@ var
 begin
   Result := -1;
   ASQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
-  QueryHandle := FPlainDriver.PQExec(FConnectionHandle,
-    PAnsiChar(ASQL));
-  CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle, lcExecute,
-    ASQL, QueryHandle);
+  QueryHandle := FPlainDriver.PQExec(FConnectionHandle, PAnsiChar(ASQL));
+  if not PGSucceeded(FPlainDriver.PQerrorMessage(FConnectionHandle)) then
+    HandlePostgreSQLError(Self, FPlainDriver, FConnectionHandle, lcExecute,
+      ASQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
 
   if QueryHandle <> nil then
@@ -1642,102 +1366,6 @@ begin
     and Metadata.IsSearchable(ColumnIndex)
     and not (Metadata.GetColumnType(ColumnIndex)
     in [stUnknown, stBinaryStream, stUnicodeStream]);
-end;
-
-{ TZPostgteSQLAsyncCAPIPreparedStatement }
-
-function TZPostgteSQLAsyncCAPIPreparedStatement.ExecuteInternal(
-  const SQL: RawByteString; Category: TEICategory): PZPostgreSQLResult;
-var
-  PError: PAnsichar;
-  I: Integer;
-label retry;
-begin
-  Result := nil;
-  case Category of
-    eicPrepStmt: begin
-retry:
-        Result := FPlainDriver.PQprepare(FConnectionHandle, Pointer(FRawPlanName),
-          Pointer(SQL), InParamCount, Pointer(fParamOIDs));
-        PError := FPlainDriver.PQerrorMessage(FConnectionHandle);
-        if (PError <> nil) and (PError^ <> #0) and (Pointer(fParamOIDs) = nil) then
-          { check for indermine datatype error}
-          if ZSysUtils.ZMemLComp(PError, PAnsichar('42P18'), 5) <> 0 then
-            CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-              lcExecPrepStmt, ASQL, Result)
-          else begin
-            FPlainDriver.PQclear(Result);
-            { todo:
-              help postgre by setting types to the parameter markers like :$1::timestamp
-              or predetermine the postgre OID's see Tip of:
-              https://www.postgresql.org/docs/9.1/static/libpq-exec.html }
-            if (Pointer(fParamOIDs) = nil) then begin
-              SetLength(FParamOIDs, InParamCount);
-              for i := 0 to InParamCount -1 do
-                SQLTypeToPostgreSQL(InParamTypes[i], FOidAsBlob, FParamOIDs[i]);
-              goto retry;
-            end else
-              Findeterminate_datatype := True;
-          end
-        else begin
-          FPlainDriver.PQclear(Result);
-          Result := nil;
-        end;
-      end;
-    eicExecPrepStmt:
-      if FPlainDriver.PQsendQueryPrepared(FConnectionHandle,
-        Pointer(FRawPlanName), InParamCount, Pointer(FPQparamValues),
-        Pointer(FPQparamLengths), Pointer(FPQparamFormats), 0) = Ord(PGRES_COMMAND_OK) then begin
-        if FServerCursor then
-          FPlainDriver.PQsetSingleRowMode(FConnectionHandle);
-        Result := FPlainDriver.PQgetResult(FConnectionHandle);
-      end else
-        CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-          lcExecPrepStmt, ASQL, nil);
-    eicUnprepStmt:
-      if FPlainDriver.PQSendQuery(FConnectionHandle, Pointer(SQL)) = Ord(PGRES_COMMAND_OK)
-      then Result := FPlainDriver.PQgetResult(FConnectionHandle)
-      else CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-          lcUnprepStmt, ASQL, nil);
-    else if FPlainDriver.PQSendQuery(FConnectionHandle, Pointer(SQL)) = Ord(PGRES_COMMAND_OK) then begin
-      if FServerCursor then
-        FPlainDriver.PQsetSingleRowMode(FConnectionHandle);
-      Result := FPlainDriver.PQgetResult(FConnectionHandle); //just get first result all other are pending
-      CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-        lcExecute, ASQL, Result);
-    end else
-      CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-        lcExecute, ASQL, nil);
-  end;
-end;
-
-procedure TZPostgteSQLAsyncCAPIPreparedStatement.FlushPendingResults;
-var PQRes: PZPostgreSQLResult;
-begin
-  while True do begin
-    PQRes := FPlainDriver.PQgetResult(FConnectionHandle);
-    if PQRes = nil
-    then break
-    else FplainDriver.PQclear(PQRes);
-  end;
-end;
-
-procedure TZPostgteSQLAsyncCAPIPreparedStatement.Prepare;
-begin
-  FlushPendingResults;
-  inherited Prepare;
-end;
-
-procedure TZPostgteSQLAsyncCAPIPreparedStatement.Unprepare;
-begin
-  inherited UnPrepare;
-  FlushPendingResults;
-end;
-
-procedure TZPostgteSQLAsyncCAPIPreparedStatement.UnPrepareInParameters;
-begin
-  inherited UnPrepareInParameters;
-  SetLength(FParamOIDs, 0);
 end;
 
 initialization

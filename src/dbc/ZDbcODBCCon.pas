@@ -159,7 +159,8 @@ implementation
 uses
   {$IFDEF MSWINDOWS}Windows,{$ENDIF}
   ZODBCToken, ZDbcODBCUtils, ZDbcODBCMetadata, ZDbcODBCStatement, ZDbcUtils,
-  ZPlainDriver, ZSysUtils, ZEncoding, ZFastCode, ZConnProperties, ZDbcProperties;
+  ZPlainDriver, ZSysUtils, ZEncoding, ZFastCode, ZConnProperties, ZDbcProperties,
+  ZMessages;
 
 { TZODBCDriver }
 
@@ -264,6 +265,8 @@ end;
 }
 procedure TZAbstractODBCConnection.Commit;
 begin
+  if GetAutoCommit then
+    raise Exception.Create(SInvalidOpInAutoCommit);
   if (not AutoCommit) and (not Closed) then
     CheckDbcError(fPlainDriver.EndTran(SQL_HANDLE_DBC,fHDBC,SQL_COMMIT));
 end;
@@ -508,6 +511,10 @@ begin
   inherited Open;
   inherited SetTransactionIsolation(GetMetaData.GetDatabaseInfo.GetDefaultTransactionIsolation);
   inherited SetReadOnly(GetMetaData.GetDatabaseInfo.IsReadOnly);
+  if not GetAutoCommit then begin
+    inherited SetAutoCommit(True);
+    SetAutoCommit(False);
+  end;
   fRetaining := GetMetaData.GetDatabaseInfo.SupportsOpenCursorsAcrossCommit and
                 GetMetaData.GetDatabaseInfo.SupportsOpenCursorsAcrossRollback;
   tmp := UpperCase(GetMetaData.GetDatabaseInfo.GetDriverName);
@@ -528,6 +535,8 @@ end;
 }
 procedure TZAbstractODBCConnection.Rollback;
 begin
+  if GetAutoCommit then
+    raise Exception.Create(SInvalidOpInAutoCommit);
   if (not AutoCommit) and (not Closed) then
     CheckDbcError(fPlainDriver.EndTran(SQL_HANDLE_DBC,fHDBC,SQL_ROLLBACK));
 end;

@@ -96,8 +96,6 @@ function PostgreSQLToSQLType(const ConSettings: PZConSettings;
 function SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: Boolean): string; overload;
 procedure SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: Boolean; out aOID: OID); overload;
 
-function GetOIDbufferSize(const aOID: OID; out ParamFormat: Integer): Integer;
-
 {**
   add by Perger -> based on SourceForge:
   [ 1520587 ] Fix for 1484704: bytea corrupted on post when not using utf8,
@@ -135,11 +133,12 @@ function DecodeString(const Value: AnsiString): AnsiString;
   @param LogMessage a logging message.
   @param ResultHandle the Handle to the Result
 }
-function CheckPostgreSQLError(const Connection: IZConnection;
-  const PlainDriver: TZPostgreSQLPlainDriver; const Handle: PZPostgreSQLConnect;
-  const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  const ResultHandle: PZPostgreSQLResult): String;
+procedure HandlePostgreSQLError(const Sender: IImmediatelyReleasable;
+  const PlainDriver: TZPostgreSQLPlainDriver; conn: PGconn;
+  LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
+  ResultHandle: PZPostgreSQLResult);
 
+function PGSucceeded(ErrorMessage: PAnsiChar): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 {**
    Resolve problem with minor version in PostgreSql bettas
@@ -161,10 +160,63 @@ function PGPrepareAnsiSQLParam(const Value: TZVariant; const ClientVarManager: I
 
 //macros from datetime.c
 function date2j(y, m, d: Integer): Integer;
+procedure j2date(jd: Integer; out AYear, AMonth, ADay: Word);
+procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out fsec: LongWord); overload;
+procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out fsec: LongWord); overload;
+
+procedure DateTime2PG(const Value: TDateTime; out Result: Int64); overload;
+procedure DateTime2PG(const Value: TDateTime; out Result: Double); overload;
+
+procedure Date2PG(const Value: TDateTime; out Result: Integer);
+
+procedure Time2PG(const Value: TDateTime; out Result: Int64); overload;
+procedure Time2PG(const Value: TDateTime; out Result: Double); overload;
+
+function PG2DateTime(Value: Double): TDateTime; overload;
+procedure PG2DateTime(Value: Double; out Year, Month, Day, Hour, Min, Sec: Word;
+  out fsec: LongWord); overload;
+
+function PG2DateTime(Value: Int64): TDateTime; overload;
+procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
+  out fsec: LongWord); overload;
+
+function PG2Time(Value: Double): TDateTime; overload;
+function PG2Time(Value: Int64): TDateTime; overload;
+
+function PG2Date(Value: Integer): TDateTime;
+
+function PG2SmallInt(P: Pointer): SmallInt; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+function PG2Word(P: Pointer): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Word2PG(Value: Word; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+function PG2Integer(P: Pointer): Integer; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Integer2PG(Value: Integer; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+function PG2LongWord(P: Pointer): LongWord; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure LongWord2PG(Value: LongWord; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+function PG2Int64(P: Pointer): Int64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+function PG2Currency(P: Pointer): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Currency2PG(const Value: Currency; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+function PG2Single(P: Pointer): Single; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Single2PG(Value: Single; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+function PG2Double(P: Pointer): Double; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Double2PG(const Value: Double; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
+
+
 
 implementation
 
-uses ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcUtils, ZSysUtils;
+uses Math,
+  ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcUtils, ZSysUtils;
 
 {**
    Return ZSQLType from PostgreSQL type name
@@ -340,7 +392,7 @@ begin
     stLongWord, stLong, stULong: aOID := INT8OID;
     stFloat: aOID := FLOAT4OID;
     stDouble, stBigDecimal: aOID := FLOAT8OID;
-    stCurrency: aOID := CASHOID;
+    stCurrency: aOID := FLOAT8OID;//CASHOID;  the pg money has a scale of 2 while we've a scale of 4
     stString, stUnicodeString,//: aOID := VARCHAROID;
     stAsciiStream, stUnicodeStream: aOID := TEXTOID;
     stDate: aOID := DATEOID;
@@ -352,59 +404,6 @@ begin
       if IsOidAsBlob
       then aOID := OIDOID
       else aOID := BYTEAOID;
-  end;
-end;
-
-function GetOIDbufferSize(const aOID: OID; out ParamFormat: Integer): Integer;
-begin
-  Result := 0; //indicate unknown size
-  ParamFormat := 0; //indicate a string format by default
-  case aOID of
-    BOOLOID: begin
-                Result := SizeOf(WordBool); //"boolean, 'true'/'false'"
-                ParamFormat := 1;
-              end;
-    BYTEAOID: ParamFormat := 1; //"variable-length string, binary values escaped"
-    INT8OID:  begin
-                Result := SizeOf(int64); //"~18 digit integer, 8-byte storage"
-                ParamFormat := 1;
-              end;
-    INT2OID:  begin
-                Result := SizeOf(SmallInt); //"~18 digit integer, 8-byte storage"
-                ParamFormat := 1;
-              end;
-    INT4OID:  begin
-                Result := SizeOf(LongInt); //"-2 billion to 2 billion integer, 4-byte storage"
-                ParamFormat := 1;
-              end;
-    OIDOID:   begin
-                Result := SizeOf(OID); //"object identifier(oid), maximum 4 billion"
-                ParamFormat := 1;
-              end;
-    FLOAT4OID:begin
-                Result := SizeOf(Single); //"single-precision floating point number, 4-byte storage"
-                ParamFormat := 1;
-              end;
-    FLOAT8OID:begin
-                Result := SizeOf(Double); //"double-precision floating point number, 8-byte storage"
-                ParamFormat := 1;
-              end;
-    CASHOID:  begin
-                Result := SizeOf(Currency); //"monetary amounts, $d,ddd.cc"
-                ParamFormat := 1;
-              end;
-    (*DATEOID: begin
-                Result := SizeOf(TDate); //"date"
-                ParamFormat := 1;
-              end;
-    TIMEOID: begin
-                Result := SizeOf(TTime); //"time of day"
-                ParamFormat := 1;
-              end;
-    TIMESTAMPOID: begin
-                Result := SizeOf(TDateTime); //"date and time"
-                ParamFormat := 1;
-              end;*)
   end;
 end;
 
@@ -737,58 +736,53 @@ end;
   //FirmOS 22.02.06
   @param ResultHandle the Handle to the Result
 }
-function CheckPostgreSQLError(const Connection: IZConnection;
-  const PlainDriver: TZPostgreSQLPlainDriver; const Handle: PZPostgreSQLConnect;
-  const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  const ResultHandle: PZPostgreSQLResult): String;
+procedure HandlePostgreSQLError(const Sender: IImmediatelyReleasable;
+  const PlainDriver: TZPostgreSQLPlainDriver; conn: PGconn;
+  LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
+  ResultHandle: PZPostgreSQLResult);
 var
-   ErrorMessage: RawbyteString;
-//FirmOS
-   ConnectionLost: boolean;
-
-   function GetMessage(const AMessage: RawByteString): String;
-   begin
-    if Assigned(Connection) then
-      Result := Trim(Connection.GetConSettings^.ConvFuncs.ZRawToString(AMessage,
-        Connection.GetConSettings^.ClientCodePage^.CP, Connection.GetConSettings^.CTRL_CP))
-    else
-      {$IFDEF UNICODE}
-      Result := Trim(UTF8ToString(AMessage));
-      {$ELSE}
-        {$IFDEF DELPHI}
-        Result := Trim(Utf8ToAnsi(AMessage));
-        {$ELSE}
-        Result := Trim(AMessage);
-        {$ENDIF}
-     {$ENDIF}
-   end;
+   resultErrorField: PAnsiChar;
+   ErrorMessage: PAnsiChar;
+   ConSettings: PZConSettings;
+   aMessage, aErrorStatus: String;
 begin
-  if Assigned(Handle)
-  then ErrorMessage := PlainDriver.PQerrorMessage(Handle)
-  else ErrorMessage := '';
+  ErrorMessage := PlainDriver.PQerrorMessage(conn);
+  if PGSucceeded(ErrorMessage) then Exit;
 
-  if ErrorMessage <> '' then
-    if Assigned(ResultHandle) and Assigned(PlainDriver.PQresultErrorField)
-    then Result := GetMessage(PlainDriver.PQresultErrorField(ResultHandle,Ord(PG_DIAG_SQLSTATE)))
-    else Result := '';
+  if Assigned(ResultHandle) and Assigned(PlainDriver.PQresultErrorField) {since 7.4}
+  then resultErrorField := PlainDriver.PQresultErrorField(ResultHandle,Ord(PG_DIAG_SQLSTATE))
+  else resultErrorField := nil;
 
-  if ErrorMessage <> '' then
-  begin
-    ConnectionLost := (PlainDriver.PQstatus(Handle) = CONNECTION_BAD);
-
-    if Assigned(Connection) and DriverManager.HasLoggingListener then
-      DriverManager.LogError(LogCategory, Connection.GetConSettings^.Protocol, LogMessage,
-        0, ErrorMessage)
-    else if Assigned(DriverManager) and DriverManager.HasLoggingListener then
-      DriverManager.LogError(LogCategory, 'some PostgreSQL protocol', LogMessage,
+  if Assigned(Sender) then begin
+    ConSettings := Sender.GetConSettings;
+    aMessage := Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
+        ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]);
+    aErrorStatus := ConSettings^.ConvFuncs.ZRawToString(resultErrorField,
+          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
         0, ErrorMessage);
-
-    if ResultHandle <> nil then PlainDriver.PQclear(ResultHandle);
-
-    if not ( ConnectionLost and ( LogCategory = lcUnprepStmt ) ) then
-      if not (Result = '42P18') then
-        raise EZSQLException.CreateWithStatus(Result,Format(SSQLError1, [GetMessage(ErrorMessage)]));
+  end else begin
+    aMessage := Format(SSQLError1, [String(ErrorMessage)]);
+    aErrorStatus := String(resultErrorField);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogError(LogCategory, 'postresql', LogMessage, 0, ErrorMessage);
   end;
+
+
+  if ResultHandle <> nil then
+    PlainDriver.PQclear(ResultHandle);
+  if PlainDriver.PQstatus(conn) = CONNECTION_BAD then begin
+    if Assigned(Sender) then
+      Sender.ReleaseImmediat(Sender);
+    raise EZSQLConnectionLost.CreateWithCodeAndStatus(Ord(CONNECTION_BAD), aErrorStatus, aMessage);
+  end else if LogCategory <> lcUnprepStmt then //silence -> https://sourceforge.net/p/zeoslib/tickets/246/
+    raise EZSQLException.CreateWithStatus(aErrorStatus, aMessage);
+end;
+
+function PGSucceeded(ErrorMessage: PAnsiChar): Boolean;
+begin
+  Result := (ErrorMessage = nil) or (ErrorMessage^ = #0);
 end;
 
 {**
@@ -923,6 +917,363 @@ begin
   julian := y * 365 - 32167;
   julian := julian + y div 4 - century + century div 4;
   Result := julian + 7834 * m div 256 + d;
+end;
+
+procedure j2date(jd: Integer; out AYear, AMonth, ADay: Word);
+var
+  julian, quad, extra: LongWord;
+  y: Integer;
+begin
+  julian := jd;
+  julian := julian + 32044;
+  quad := julian div 146097;
+  extra := (julian - quad * 146097) * 4 + 3;
+  julian := julian + 60 + quad * 3 + extra div 146097;
+  quad := julian div 1461;
+  julian := julian - quad * 1461;
+  y := julian * 4 div 1461;
+  if y <> 0 then
+    julian := (julian + 305) mod 365
+  else
+    julian := (julian + 306) mod 366;
+  julian := julian + 123;
+  y := y + Integer(quad * 4);
+  AYear := y - 4800;
+  quad := julian * 2141 div 65536;
+  ADay := julian - 7834 * quad div 256;
+  AMonth := (quad + 10) mod 12{MONTHS_PER_YEAR} + 1;
+end;
+
+{$IFNDEF ENDIAN_BIG}
+procedure Reverse2Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+var W: Byte;
+begin
+  W := PByte(P)^;
+  PByteArray(P)[0] := PByteArray(P)[1];
+  PByteArray(P)[1] := W;
+end;
+{$ENDIF}
+
+{$IFNDEF ENDIAN_BIG}
+procedure Reverse4Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+var W: Word;
+begin
+  W := PWord(P)^;
+  PByteArray(P)[0] := PByteArray(P)[3];
+  PByteArray(P)[1] := PByteArray(P)[2];
+  PByteArray(P)[2] := PByteArray(@W)[1];
+  PByteArray(P)[3] := PByteArray(@W)[0];
+end;
+{$ENDIF}
+
+{$IFNDEF ENDIAN_BIG}
+procedure Reverse8Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+var W: LongWord;
+begin
+  W := PLongWord(P)^;
+  PByteArray(P)[0] := PByteArray(P)[7];
+  PByteArray(P)[1] := PByteArray(P)[6];
+  PByteArray(P)[2] := PByteArray(P)[5];
+  PByteArray(P)[3] := PByteArray(P)[4];
+  PByteArray(P)[4] := PByteArray(@W)[3];
+  PByteArray(P)[5] := PByteArray(@W)[2];
+  PByteArray(P)[6] := PByteArray(@W)[1];
+  PByteArray(P)[7] := PByteArray(@W)[0];
+end;
+{$ENDIF}
+
+procedure DateTime2PG(const Value: TDateTime; out Result: Int64);
+var Year, Month, Day, Hour, Min, Sec, MSec: Word;
+  Date: Int64; //overflow save multiply
+begin
+  DecodeDate(Value, Year, Month, Day);
+  Date := date2j(Year, Month, Day) - POSTGRES_EPOCH_JDATE;
+  DecodeTime(Value, Hour, Min, Sec, MSec);
+  //timestamps do not play with microseconds!!
+  Result := ((Hour * MINS_PER_HOUR + Min) * SECS_PER_MINUTE + Sec) * MSecsPerSec + MSec;
+  Result := (Date * MSecsPerDay + Result) * MSecsPerSec;
+  {$IFNDEF ENDIAN_BIG}
+  Reverse8Bytes(@Result);
+  {$ENDIF}
+end;
+
+procedure DateTime2PG(const Value: TDateTime; out Result: Double);
+var Year, Month, Day, Hour, Min, Sec, MSec: Word;
+  Date: Double; //overflow save multiply
+begin
+  DecodeDate(Value, Year, Month, Day);
+  Date := date2j(Year, Month, Day) - POSTGRES_EPOCH_JDATE;
+  DecodeTime(Value, Hour, Min, Sec, MSec);
+  Result := (Hour * MinsPerHour + Min) * SecsPerMin + Sec + Msec / MSecsPerSec;
+  Result := Date * SECS_PER_DAY + Result;
+  {$IFNDEF ENDIAN_BIG}
+  Reverse8Bytes(@Result);
+  {$ENDIF}
+end;
+
+function PG2DateTime(Value: Double): TDateTime;
+var date: TDateTime;
+  Year, Month, Day, Hour, Min, Sec: Word;
+  fsec: LongWord;
+begin
+  PG2DateTime(Value, Year, Month, Day, Hour, Min, Sec, fsec);
+  TryEncodeDate(Year, Month, Day, date);
+  dt2time(Value, Hour, Min, Sec, fsec);
+  TryEncodeTime(Hour, Min, Sec, fsec, Result);
+  Result := date + Result;
+end;
+
+procedure PG2DateTime(value: Double; out Year, Month, Day, Hour, Min, Sec: Word;
+  out fsec: LongWord);
+var
+  date: Double;
+  time: Double;
+begin
+  {$IFNDEF ENDIAN_BIG}
+  Reverse8Bytes(@Value);
+  {$ENDIF}
+  time := value;
+  if Time < 0
+  then date := Ceil(time / SecsPerDay)
+  else date := Floor(time / SecsPerDay);
+  if date <> 0 then
+    Time := Time - Round(date * SecsPerDay);
+  if Time < 0 then begin
+    Time := Time + SecsPerDay;
+    date := date - 1;
+  end;
+  date := date + POSTGRES_EPOCH_JDATE;
+  j2date(Integer(Trunc(date)), Year, Month, Day);
+  dt2time(Time, Hour, Min, Sec, fsec);
+end;
+
+function PG2DateTime(Value: Int64): TDateTime;
+var date: TDateTime;
+  Year, Month, Day, Hour, Min, Sec: Word;
+  fsec: LongWord;
+begin
+  PG2DateTime(Value, Year, Month, Day, Hour, Min, Sec, fsec);
+  if not TryEncodeDate(Year, Month, Day, date) then
+    Date := 0;
+  if not TryEncodeTime(Hour, Min, Sec, fsec div MSecsPerSec, Result) then
+    Result := 0;
+  Result := date + Result;
+end;
+
+procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
+  out fsec: LongWord);
+var date: Int64;
+begin
+  {$IFNDEF ENDIAN_BIG}
+  Reverse8Bytes(@Value);
+  {$ENDIF}
+  date := Value div USECS_PER_DAY;
+  Value := Value mod USECS_PER_DAY;
+  if Value < 0 then begin
+    Value := Value + USECS_PER_DAY;
+    date := date - 1;
+  end;
+  date := date + POSTGRES_EPOCH_JDATE;
+  j2date(date, Year, Month, Day);
+  dt2time(Value, Hour, Min, Sec, fsec);
+end;
+
+procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out fsec: LongWord);
+begin
+  Hour := jd div USECS_PER_HOUR;
+  jd := jd - Int64(Hour) * Int64(USECS_PER_HOUR);
+  Min := jd div USECS_PER_MINUTE;
+  jd := jd - Int64(Min) * Int64(USECS_PER_MINUTE);
+  Sec := jd div USECS_PER_SEC;
+  Fsec := jd - (Int64(Sec) * Int64(USECS_PER_SEC));
+end;
+
+procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out fsec: LongWord);
+begin
+  Hour := Trunc(jd / SECS_PER_HOUR);
+  jd := jd - Hour * SECS_PER_HOUR;
+  Min := Trunc(jd / SECS_PER_MINUTE);
+  jd := jd - Min * SECS_PER_MINUTE;
+  Sec := Trunc(jd);
+  Fsec := Trunc(jd - Sec);
+end;
+
+procedure Time2PG(const Value: TDateTime; out Result: Int64);
+var Hour, Min, Sec, MSec: Word;
+begin
+  DecodeTime(Value, Hour, Min, Sec, MSec);
+  Result := (((((hour * MINS_PER_HOUR) + min) * SECS_PER_MINUTE) + sec) * USECS_PER_SEC) + Msec;
+  {$IFNDEF ENDIAN_BIG}
+  Reverse8Bytes(@Result);
+  {$ENDIF}
+end;
+
+procedure Time2PG(const Value: TDateTime; out Result: Double);
+var Hour, Min, Sec, MSec: Word;
+begin
+  DecodeTime(Value, Hour, Min, Sec, MSec);
+  //macro of datetime.c
+  Result := (((hour * MINS_PER_HOUR) + min) * SECS_PER_MINUTE) + sec + Msec;
+  {$IFNDEF ENDIAN_BIG}
+  Reverse8Bytes(@Result);
+  {$ENDIF}
+end;
+
+function PG2Time(Value: Double): TDateTime;
+var Hour, Min, Sec: Word; fsec: LongWord;
+begin
+  {$IFNDEF ENDIAN_BIG}
+  Reverse8Bytes(@Value);
+  {$ENDIF}
+  dt2Time(Value, Hour, Min, Sec, fsec);
+  if not TryEncodeTime(Hour, Min, Sec, Fsec, Result) then
+    Result := 0;
+end;
+
+function PG2Time(Value: Int64): TDateTime;
+var Hour, Min, Sec: Word; fsec: LongWord;
+begin
+  {$IFNDEF ENDIAN_BIG}
+  Reverse8Bytes(@Value);
+  {$ENDIF}
+  dt2Time(Value, Hour, Min, Sec, fsec);
+  if not TryEncodeTime(Hour, Min, Sec, Fsec, Result) then
+    Result := 0;
+end;
+
+procedure Date2PG(const Value: TDateTime; out Result: Integer);
+var y,m,d: Word;
+begin
+  DecodeDate(Value, y,m,d);
+  Result := date2j(y,m,d) - POSTGRES_EPOCH_JDATE;
+  {$IFNDEF ENDIAN_BIG}
+  Reverse4Bytes(@Result);
+  {$ENDIF}
+end;
+
+function PG2Date(Value: Integer): TDateTime;
+var
+  Year, Month, Day: Word;
+begin
+  {$IFNDEF ENDIAN_BIG}
+  Reverse4Bytes(@Value);
+  {$ENDIF}
+  j2date(Value+POSTGRES_EPOCH_JDATE, Year, Month, Day);
+  if not TryEncodeDate(Year, Month, Day, Result) then
+    Result := 0;
+end;
+
+procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
+begin
+  { adjust byte order of host to network  }
+  {$IFNDEF ENDIAN_BIG}
+  Dest := Dest+Len-1;
+  while Len > 0 do begin
+    Dest^ := Src^;
+    dec(Dest);
+    Inc(Src);
+    dec(Len);
+  end;
+  {$ELSE}
+  Move(Src^, Dest^, Len);
+  {$ENDIF}
+end;
+
+function PG2SmallInt(P: Pointer): SmallInt;
+begin
+  Result := PSmallInt(P)^;
+  {$IFNDEF ENDIAN_BIG}Reverse2Bytes(@Result){$ENDIF}
+end;
+
+procedure SmallInt2PG(Value: SmallInt; Buf: Pointer);
+begin
+  PSmallInt(Buf)^ := Value;
+  {$IFNDEF ENDIAN_BIG}Reverse2Bytes(Buf){$ENDIF}
+end;
+
+function PG2Word(P: Pointer): Word;
+begin
+  Result := PWord(P)^;
+  {$IFNDEF ENDIAN_BIG}Reverse2Bytes(@Result){$ENDIF}
+end;
+
+procedure Word2PG(Value: Word; Buf: Pointer);
+begin
+  PWord(Buf)^ := Value;
+  {$IFNDEF ENDIAN_BIG}Reverse2Bytes(Buf){$ENDIF}
+end;
+
+function PG2Integer(P: Pointer): Integer;
+begin
+  Result := PInteger(P)^;
+  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(@Result){$ENDIF}
+end;
+
+procedure Integer2PG(Value: Integer; Buf: Pointer);
+begin
+  PInteger(Buf)^ := Value;
+  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(Buf){$ENDIF}
+end;
+
+function PG2LongWord(P: Pointer): LongWord;
+begin
+  Result := PLongWord(P)^;
+  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(@Result){$ENDIF}
+end;
+
+procedure LongWord2PG(Value: LongWord; Buf: Pointer);
+begin
+  PLongWord(Buf)^ := Value;
+  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(Buf){$ENDIF}
+end;
+
+function PG2Int64(P: Pointer): Int64;
+begin
+  Result := PInt64(P)^;
+  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(@Result){$ENDIF}
+end;
+
+procedure Int642PG(const Value: Int64; Buf: Pointer);
+begin
+  PInt64(Buf)^ := Value;
+  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(Buf){$ENDIF}
+end;
+
+function PG2Currency(P: Pointer): Currency;
+begin
+  PInt64(@Result)^ := PInt64(P)^; //move first
+  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(@Result);{$ENDIF}
+  Result := PInt64(@Result)^/100;
+end;
+
+procedure Currency2PG(const Value: Currency; Buf: Pointer);
+begin
+  PInt64(Buf)^ := Trunc(Value*100);
+  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(Buf){$ENDIF}
+end;
+
+function PG2Single(P: Pointer): Single;
+begin
+  Result := PSingle(P)^;
+  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(@Result){$ENDIF}
+end;
+
+procedure Single2PG(Value: Single; Buf: Pointer);
+begin
+  PSingle(Buf)^ := Value;
+  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(Buf){$ENDIF}
+end;
+
+function PG2Double(P: Pointer): Double;
+begin
+  Result := PDouble(P)^;
+  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(@Result){$ENDIF}
+end;
+
+procedure Double2PG(const Value: Double; Buf: Pointer);
+begin
+  PDouble(Buf)^ := Value;
+  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(Buf){$ENDIF}
 end;
 
 end.

@@ -164,71 +164,77 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcUpdatable);
+  try
+    Sql := 'DELETE FROM people where p_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
+    Connection.CreateStatement.ExecuteUpdate(Sql);
+    Sql := 'DELETE FROM equipment where eq_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
+    Connection.CreateStatement.ExecuteUpdate(Sql);
 
-  Sql := 'DELETE FROM people where p_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
-  Connection.CreateStatement.ExecuteUpdate(Sql);
-  Sql := 'DELETE FROM equipment where eq_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
-  Connection.CreateStatement.ExecuteUpdate(Sql);
+    { Tests the equipment table }
+    Sql := 'SELECT a.eq_id as id, a.eq_name as name, a.eq_type as type1,'
+      + ' a.eq_cost + 10 as cost FROM equipment a where a.eq_id = '
+      + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
+    { Inserts test record to equipment }
+    ResultSet := Statement.ExecuteQuery(Sql);
+    CheckNotNull(ResultSet);
+    PrintResultSet(ResultSet, True, '1. ' + Sql);
+    with ResultSet do
+    begin
+      MoveToInsertRow;
+      UpdateIntByName('id', TEST_ROW_ID);
+      UpdateNullByName('name');
+      UpdateNullByName('type1');
+      UpdateNullByName('cost');
+      InsertRow;
+      Close;
+    end;
+    ResultSet := nil;
 
-  { Tests the equipment table }
-  Sql := 'SELECT a.eq_id as id, a.eq_name as name, a.eq_type as type1,'
-    + ' a.eq_cost + 10 as cost FROM equipment a where a.eq_id = '
-    + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
-  { Inserts test record to equipment }
-  ResultSet := Statement.ExecuteQuery(Sql);
-  CheckNotNull(ResultSet);
-  PrintResultSet(ResultSet, True, '1. ' + Sql);
-  with ResultSet do
-  begin
-    MoveToInsertRow;
-    UpdateIntByName('id', TEST_ROW_ID);
-    UpdateNullByName('name');
-    UpdateNullByName('type1');
-    UpdateNullByName('cost');
-    InsertRow;
-    Close;
+    { Updates row for equipment}
+    ResultSet := Statement.ExecuteQuery(Sql);
+    CheckNotNull(ResultSet);
+    PrintResultSet(ResultSet, True, '2. ' + Sql);
+    with ResultSet do
+    begin
+      Check(Next);
+      CheckEquals(TEST_ROW_ID, GetIntByName('id'));
+      CheckEquals(True, IsNullByName('name'));
+      CheckEquals(True, IsNullByName('type1'));
+      CheckEquals(True, IsNullByName('cost'));
+
+      UpdateStringByName('name', 'The some thing');
+      UpdateIntByName('type1', 1);
+      UpdateDoubleByName('cost', 12345.678);
+      UpdateRow;
+      Close;
+    end;
+
+    { Checks previous updated row}
+    ResultSet := Statement.ExecuteQuery(Sql);
+    CheckNotNull(ResultSet);
+    PrintResultSet(ResultSet, True, '3. ' + Sql);
+    with ResultSet do
+    begin
+      Check(Next);
+      CheckEquals('The some thing', GetStringByName('name'));
+      CheckEquals(1, GetIntByName('type1'));
+  // Column cost is calculated is can't be updated
+  //    CheckEquals(12355.678, GetFloatByName('cost'), 0.01);
+      DeleteRow;
+      Close;
+    end;
+
+    { Checks what record deleted }
+    ResultSet := Statement.ExecuteQuery(Sql);
+    CheckNotNull(ResultSet);
+    PrintResultSet(ResultSet, True, '4. ' + Sql);
+    CheckEquals(False, ResultSet.Next);
+  finally
+    Sql := 'DELETE FROM people where p_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
+    Connection.CreateStatement.ExecuteUpdate(Sql);
+    Sql := 'DELETE FROM equipment where eq_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
+    Connection.CreateStatement.ExecuteUpdate(Sql);
   end;
-  ResultSet := nil;
-
-  { Updates row for equipment}
-  ResultSet := Statement.ExecuteQuery(Sql);
-  CheckNotNull(ResultSet);
-  PrintResultSet(ResultSet, True, '2. ' + Sql);
-  with ResultSet do
-  begin
-    Check(Next);
-    CheckEquals(TEST_ROW_ID, GetIntByName('id'));
-    CheckEquals(True, IsNullByName('name'));
-    CheckEquals(True, IsNullByName('type1'));
-    CheckEquals(True, IsNullByName('cost'));
-
-    UpdateStringByName('name', 'The some thing');
-    UpdateIntByName('type1', 1);
-    UpdateDoubleByName('cost', 12345.678);
-    UpdateRow;
-    Close;
-  end;
-
-  { Checks previous updated row}
-  ResultSet := Statement.ExecuteQuery(Sql);
-  CheckNotNull(ResultSet);
-  PrintResultSet(ResultSet, True, '3. ' + Sql);
-  with ResultSet do
-  begin
-    Check(Next);
-    CheckEquals('The some thing', GetStringByName('name'));
-    CheckEquals(1, GetIntByName('type1'));
-// Column cost is calculated is can't be updated
-//    CheckEquals(12355.678, GetFloatByName('cost'), 0.01);
-    DeleteRow;
-    Close;
-  end;
-
-  { Checks what record deleted }
-  ResultSet := Statement.ExecuteQuery(Sql);
-  CheckNotNull(ResultSet);
-  PrintResultSet(ResultSet, True, '4. ' + Sql);
-  CheckEquals(False, ResultSet.Next);
 end;
 
 {**
@@ -570,7 +576,10 @@ begin
       StrStream.LoadFromFile('../../../database/text/lgpl.txt');
       StrStream.Size := 1024;
       SetAsciiStream(Insert_p_resume_Index, StrStream);
-
+      if StartsWith(Protocol, 'postgres') then //PQExecParams can't convert str to smallint
+        SetNull(Insert_p_redundant_Index, stSmall)
+      else
+        SetNull(Insert_p_redundant_Index, stString);
       SetNull(Insert_p_redundant_Index, stString);
       CheckEquals(False, ExecutePrepared);
       CheckEquals(1, GetUpdateCount);

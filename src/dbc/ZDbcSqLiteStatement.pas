@@ -217,8 +217,8 @@ procedure TZSQLiteCAPIPreparedStatement.BindBinary(Index: Integer;
 var ErrorCode: Integer;
 begin
   if SQLType in [stGUID, stBytes] then begin
-    ZSetString(Buf, Len, FParamEmulatedValues[Index]);
-    Buf := Pointer(FParamEmulatedValues[Index]);
+    ZSetString(Buf, Len, FParamValues[Index]);
+    Buf := Pointer(FParamValues[Index]);
   end;
   SQLType := stBytes;
   if not FBindLater then begin
@@ -241,18 +241,18 @@ begin
     BindDouble(Index, SQLType, Value-JulianEpoch)
   else begin
     if SQLType = stDate then
-      if Length(FParamEmulatedValues[Index]) <> ConSettings^.WriteFormatSettings.DateFormatLen
-      then FParamEmulatedValues[Index] := DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, False)
-      else DateTimeToRawSQLDate(Value, Pointer(FParamEmulatedValues[Index]), ConSettings^.WriteFormatSettings, False)
+      if Length(FParamValues[Index]) <> ConSettings^.WriteFormatSettings.DateFormatLen
+      then FParamValues[Index] := DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, False)
+      else DateTimeToRawSQLDate(Value, Pointer(FParamValues[Index]), ConSettings^.WriteFormatSettings, False)
     else if SQLType = stTime then
-      if Length(FParamEmulatedValues[Index]) <> ConSettings^.WriteFormatSettings.DateFormatLen
-      then FParamEmulatedValues[Index] := DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, False)
-      else DateTimeToRawSQLTime(Value, Pointer(FParamEmulatedValues[Index]), ConSettings^.WriteFormatSettings, False)
+      if Length(FParamValues[Index]) <> ConSettings^.WriteFormatSettings.DateFormatLen
+      then FParamValues[Index] := DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, False)
+      else DateTimeToRawSQLTime(Value, Pointer(FParamValues[Index]), ConSettings^.WriteFormatSettings, False)
     else
-      if Length(FParamEmulatedValues[Index]) <> ConSettings^.WriteFormatSettings.DateTimeFormatLen
-      then FParamEmulatedValues[Index] := DateTimeToRawSQLTimestamp(Value, ConSettings^.WriteFormatSettings, False)
-      else DateTimeToRawSQLTimestamp(Value, Pointer(FParamEmulatedValues[Index]), ConSettings^.WriteFormatSettings, False);
-    BindRawStr(Index, SQLType, Pointer(FParamEmulatedValues[Index]), Length(FParamEmulatedValues[Index]));
+      if Length(FParamValues[Index]) <> ConSettings^.WriteFormatSettings.DateTimeFormatLen
+      then FParamValues[Index] := DateTimeToRawSQLTimestamp(Value, ConSettings^.WriteFormatSettings, False)
+      else DateTimeToRawSQLTimestamp(Value, Pointer(FParamValues[Index]), ConSettings^.WriteFormatSettings, False);
+    BindRawStr(Index, SQLType, Pointer(FParamValues[Index]), Length(FParamValues[Index]));
   end;
 end;
 
@@ -262,8 +262,8 @@ var ErrorCode: Integer;
 begin
   SQLType := stDouble;
   if FBindLater or FHasLoggingListener then begin
-    ZSetString(@Value, SizeOf(Double), FParamEmulatedValues[Index]);
-    FByRefBound[Index] := Pointer(FParamEmulatedValues[Index]);
+    ZSetString(@Value, SizeOf(Double), FParamValues[Index]);
+    FByRefBound[Index] := Pointer(FParamValues[Index]);
   end;
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, Index +1, Value);
@@ -317,7 +317,7 @@ begin
   FUndefinedVarcharAsStringLength := StrToIntDef(DefineStatementParameter(Self, DSProps_UndefVarcharAsStringLength, '0'), 0);
   fBindOrdinalBoolValues := StrToBoolEx(DefineStatementParameter(Self, DSProps_BindOrdinalBoolValues, 'false'));
   FHasLoggingListener := DriverManager.HasLoggingListener;
-  FEmulatePrepare := False;
+  FEmulatedParams := False;
 end;
 
 constructor TZSQLiteCAPIPreparedStatement.Create(
@@ -370,7 +370,7 @@ var ErrorCode: Integer;
 begin
   SQLType := stString;
   if not FBindLater then begin
-    if Buf = nil then
+    if (Buf = nil) or (Len = 0) then
       Buf := PEmptyAnsiString;
     {we don't need to bind again if pointers are unchanged!}
     //if (Buf <> FByRefBound[Index]) or (Len <> FByRefLength[Index]) then begin
@@ -387,7 +387,7 @@ end;
 procedure TZSQLiteCAPIPreparedStatement.BindRawStr(Index: Integer;
   var SQLType: TZSQLType; const Buf: RawByteString);
 begin
-  FParamEmulatedValues[Index] := Buf; //keep alive
+  FParamValues[Index] := Buf; //keep alive
   BindRawStr(Index, SQLType, Pointer(Buf), Length(Buf));
 end;
 
@@ -397,8 +397,8 @@ var ErrorCode: Integer;
 begin
   SQLType := stLong;
   if FBindLater or FHasLoggingListener then begin
-    ZSetString(@Value, SizeOf(Int64), FParamEmulatedValues[Index]);
-    FByRefBound[Index] := Pointer(FParamEmulatedValues[Index]);
+    ZSetString(@Value, SizeOf(Int64), FParamValues[Index]);
+    FByRefBound[Index] := Pointer(FParamValues[Index]);
   end;
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, Index +1, Value);

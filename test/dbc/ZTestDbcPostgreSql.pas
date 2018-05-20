@@ -76,7 +76,6 @@ type
     procedure TestDefaultValues;
     procedure TestEnumValues;
     procedure TestGUIDs;
-    procedure TestBatchBindings;
   end;
 
 implementation
@@ -160,32 +159,6 @@ begin
 
   Statement.Close;
   Connection.Close;
-end;
-
-procedure TZTestDbcPostgreSQLCase.TestBatchBindings;
-var
-  IntArray: TIntegerDynArray;
-  StrArray: TStringDynArray;
-  I: Integer;
-  SQL: String;
-  Stmt: IZPreparedStatement;
-begin
-  SetLength(IntArray, 10);
-  SetLength(StrArray, 10);
-  for I := 0 to High(IntArray) do begin
-    IntArray[i] := TEST_ROW_ID+i;
-    StrArray[i] := IntToStr(IntArray[i]);
-  end;
-  SQL := 'insert into blob_values(b_id, b_text) values (?,?)';
-  Stmt := Connection.PrepareStatement(SQL);
-  Stmt.SetDataArray(FirstDbcIndex, IntArray, stInteger);
-  Stmt.SetDataArray(FirstDbcIndex+1, StrArray, stString, ZVariant.vtString);
-  Stmt.ExecuteUpdatePrepared;
-  SQL := 'update blob_values set b_text = ? where b_id = ?';
-  Stmt := Connection.PrepareStatement(SQL);
-  Stmt.SetDataArray(FirstDbcIndex, IntArray, stInteger);
-  Stmt.SetDataArray(FirstDbcIndex, StrArray, stString, vtString);
-  Stmt.ExecuteUpdatePrepared;
 end;
 
 procedure TZTestDbcPostgreSQLCase.TestBlobs;
