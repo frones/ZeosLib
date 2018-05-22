@@ -241,6 +241,9 @@ type
       ib_time: PISC_TIME);
     procedure isc_encode_timestamp(tm_date: PCTimeStructure;
       ib_timestamp: PISC_TIMESTAMP);
+    function isc_get_client_version: String;
+    function isc_get_client_major_version: Integer;
+    function isc_get_client_minor_version: Integer;
   end;
 
   {** Implements a base driver for Firebird}
@@ -400,6 +403,9 @@ type
       ib_timestamp: PISC_TIMESTAMP);
     function isc_vax_integer(buffer: PAnsiChar; length: Short): ISC_LONG;
     function isc_portable_integer(ptr: pbyte; length: Short): ISC_INT64;
+    function isc_get_client_version: String;
+    function isc_get_client_major_version: Integer;
+    function isc_get_client_minor_version: Integer;
   end;
 
   {** Implements a native driver for Interbase6}
@@ -706,6 +712,9 @@ begin
     @FIREBIRD_API.isc_encode_timestamp := GetAddress('isc_encode_timestamp');
 
     @FIREBIRD_API.fb_interpret        := GetAddress('fb_interpret');
+    @FIREBIRD_API.isc_get_client_version := GetAddress('isc_get_client_version');
+    @FIREBIRD_API.isc_get_client_major_version := GetAddress('isc_get_client_major_version');
+    @FIREBIRD_API.isc_get_client_minor_version := GetAddress('isc_get_client_minor_version');
   end;
 end;
 
@@ -1138,7 +1147,37 @@ function TZFirebirdBaseDriver.isc_portable_integer(ptr: pbyte;
 begin
   Result := FIREBIRD_API.isc_portable_integer(ptr, length);
 end;
+
+function TZFirebirdBaseDriver.isc_get_client_version: String;
+var
+  Version: AnsiString;
+begin
+  if Assigned(FIREBIRD_API.isc_get_client_version) then begin
+    Version := StringOfChar(' ', 50);
+    FIREBIRD_API.isc_get_client_version(@Version[1]);
+    Version := trim(Version);
+    Result := Version;
+  end else begin
+    Result := 'unknown';
+  end;
+end;
+
+function TZFirebirdBaseDriver.isc_get_client_major_version: Integer;
+begin
+  if Assigned(FIREBIRD_API.isc_get_client_major_version) and Assigned(FIREBIRD_API.isc_get_client_minor_version)
+  then Result := FIREBIRD_API.isc_get_client_major_version()
+  else Result := 0;
+end;
+
+function TZFirebirdBaseDriver.isc_get_client_minor_version: Integer;
+begin
+  if Assigned(FIREBIRD_API.isc_get_client_major_version) and Assigned(FIREBIRD_API.isc_get_client_minor_version)
+  then Result := FIREBIRD_API.isc_get_client_minor_version()
+  else Result := 0;
+end;
+
 { TZInterbase6PlainDriver }
+
 function TZInterbase6PlainDriver.Clone: IZPlainDriver;
 begin
   Result := TZInterbase6PlainDriver.Create;

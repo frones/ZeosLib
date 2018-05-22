@@ -2349,6 +2349,14 @@ type
   Tisc_portable_integer = function(ptr: pbyte; length: Smallint): Int64;
     {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
+  { client version information routines - available since FB 1.5 / Interbase 7}
+  Tisc_get_client_version = procedure(version: PAnsiChar);
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  Tisc_get_client_major_version = function(): NativeInt;
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  Tisc_get_client_minor_version = function(): NativeInt;
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
 { ************** Collection of Plain API Function types definition ************* }
 TZFirebird_API = record
   { General database routines }
@@ -2422,6 +2430,11 @@ TZFirebird_API = record
 
   isc_encode_timestamp: Tisc_encode_timestamp;
   isc_decode_timestamp: Tisc_decode_timestamp;
+
+  {client version information routines}
+  isc_get_client_version: Tisc_get_client_version;
+  isc_get_client_major_version: Tisc_get_client_major_version;
+  isc_get_client_minor_version: Tisc_get_client_minor_version;
 end;
 
 implementation

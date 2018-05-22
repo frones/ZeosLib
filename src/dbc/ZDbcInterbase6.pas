@@ -140,6 +140,7 @@ type
 
     function GetBinaryEscapeString(const Value: RawByteString): String; override;
     function GetBinaryEscapeString(const Value: TBytes): String; override;
+    function GetClientVersion: Integer; Override;
   end;
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
@@ -963,6 +964,39 @@ begin
     inherited SetReadOnly(Value);
     //restart automatically happens on GetTrHandle
   end;
+end;
+
+function TZInterbase6Connection.GetClientVersion: Integer;
+var
+  Major, Minor: Integer;
+  VersionStr: String;
+  FbPos: Integer;
+  DotPos: Integer;
+begin
+  Major := 0;
+  Minor := 0;
+
+  if copy(LowerCase(URL.Protocol), 1, 8) = 'firebird' then begin
+    VersionStr := LowerCase(GetPlainDriver.isc_get_client_version);
+    FbPos := System.Pos('firebird', VersionStr);
+    if FbPos > 0 then begin
+      Delete(VersionStr, 1, FbPos + 8);
+      DotPos := System.Pos('.', VersionStr);
+      if DotPos > 0 then begin
+        Major := StrToIntDef(Copy(VersionStr, 1, DotPos - 1), -1);
+        Minor := StrToIntDef(Copy(VersionStr, DotPos + 1, length(VersionStr)), -1);
+        if (Major = -1) or (Minor = -1) then begin
+          Major := 0;
+          Minor := 0;
+        end;
+      end;
+    end;
+  end else begin
+    Major := GetPlainDriver.isc_get_client_major_version;
+    Minor := GetPlainDriver.isc_get_client_major_version;
+  end;
+
+  Result := Major * 1000000 + Minor * 1000;
 end;
 
 { TZInterbase6CachedResolver }
