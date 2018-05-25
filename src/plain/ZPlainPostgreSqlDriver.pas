@@ -423,6 +423,12 @@ type
   PZPostgreSQLCancel = Pointer;
   POid = ^Oid;
   Oid = Cardinal;
+  {$IF not declared(Int32)}
+  Int32 = LongInt;
+  {$IFEND}
+  {$IF not declared(PInt32)}
+  PInt32 = ^Int32;
+  {$IFEND}
 
 TZPgCharactersetType = (
 	csSQL_ASCII = 0,	{ SQL/ASCII }
