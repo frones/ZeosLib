@@ -545,7 +545,7 @@ type
 
 implementation
 
-uses SysUtils, ZEncoding{$IFDEF UNICODE},ZSysUtils{$ENDIF};
+uses SysUtils, ZEncoding, ZFastCode{$IFDEF UNICODE},ZSysUtils{$ENDIF};
 
 function XSQLDA_LENGTH(Value: LongInt): LongInt;
 begin
@@ -744,9 +744,9 @@ begin
   if Assigned(isc_get_client_version) then begin
     isc_get_client_version(@Buff[0]);
     {$IFDEF UNICODE}
-    Result := ZSysUtils.ASCII7ToUnicodeString(@Buff[0], StrLen(PAnsiChar(@Buff[0])));
+    Result := ZSysUtils.ASCII7ToUnicodeString(@Buff[0], ZFastCode.StrLen(PAnsiChar(@Buff[0])));
     {$ELSE}
-    SetString(Result, PAnsiChar(@Buff[0]), StrLen(PAnsiChar(@Buff[0])));
+    SetString(Result, PAnsiChar(@Buff[0]), ZFastCode.StrLen(PAnsiChar(@Buff[0])));
     {$ENDIF}
   end else begin
     Result := 'unknown';
