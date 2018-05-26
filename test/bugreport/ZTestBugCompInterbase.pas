@@ -90,6 +90,7 @@ type
     procedure Test_Ticket63;
     procedure Test_Ticket67;
     procedure Test_Ticket228;
+    procedure Test_SF249;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -858,6 +859,25 @@ begin
     CheckEquals(1, Query.RecordCount, 'the RecordCount');
     CheckEquals(11, Query.Fields[0].AsInteger, 'the returned value');
   finally
+    Query.Free;
+  end;
+end;
+
+procedure ZTestCompInterbaseBugReport.Test_SF249;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'SELECT RDB$RELATION_NAME' +
+      ' FROM RDB$RELATIONS' +
+      ' WHERE RDB$SYSTEM_FLAG=0;';
+    Query.SQL.Text := 'select * from RDB$DATABASE where :TESTPARM=''''';
+    Query.ParamByName('TESTPARM').AsString := 'xyz';
+    Query.Open;
+    CheckEquals(0, Query.RecordCount, 'where clause evaulates to true although it shouldn''t: where :TESTPARM = ''''; testparm = ''xyz''');
+  finally
+    Query.Close;
     Query.Free;
   end;
 end;
