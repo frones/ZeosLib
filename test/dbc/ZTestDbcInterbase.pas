@@ -78,6 +78,7 @@ type
     procedure TestMsec;
     procedure TestEmptyStrings;
     procedure TestInsertReturning;
+    procedure TestClientVersionNumber;
   end;
 
 implementation
@@ -672,6 +673,15 @@ begin
   ResultSet.Close;
 
   Statement.Close;
+end;
+
+procedure TZTestDbcInterbaseCase.TestClientVersionNumber;
+var
+  Version: Integer;
+begin
+  Version := Connection.GetClientVersion;
+
+  CheckNotEquals(0, Version, 'Expected a client library version of anything but 0.');
 end;
 
 initialization

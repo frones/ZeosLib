@@ -160,6 +160,15 @@ type
       result_buffer: PAnsiChar): ISC_STATUS;
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
+    isc_get_client_version: procedure(version: PAnsiChar);
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_get_client_major_version: function(): NativeInt;
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_get_client_minor_version: function(): NativeInt;
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
     { Array processing routines }
     isc_array_gen_sdl: function(status_vector: PISC_STATUS;
       isc_array_desc: PISC_ARRAY_DESC; isc_arg3: PShort;
@@ -390,6 +399,9 @@ type
     isc_portable_integer: function(ptr: pbyte; length: Smallint): Int64;
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
+    function ZGetClientVersion: String;
+    function ZGetClientMajorVersion: Integer;
+    function ZGetClientMinorVersion: Integer;
   end;
 
   {** Implements a native driver for Interbase6}
@@ -696,6 +708,10 @@ begin
     @isc_encode_timestamp := GetAddress('isc_encode_timestamp');
 
     @fb_interpret        := GetAddress('fb_interpret');
+
+    @isc_get_client_version := GetAddress('isc_get_client_version');
+    @isc_get_client_major_version := GetAddress('isc_get_client_major_version');
+    @isc_get_client_minor_version := GetAddress('isc_get_client_minor_version');
   end;
 end;
 
@@ -719,6 +735,34 @@ end;
 function TZInterbasePlainDriver.GetCodePageArray: TWordDynArray;
 begin
   Result := FCodePageArray;
+end;
+
+function TZInterbasePlainDriver.ZGetClientVersion: String;
+var
+  Version: AnsiString;
+begin
+  if Assigned(isc_get_client_version) then begin
+    Version := StringOfChar(' ', 50);
+    isc_get_client_version(@Version[1]);
+    Version := trim(Version);
+    Result := Version;
+  end else begin
+    Result := 'unknown';
+  end;
+end;
+
+function TZInterbasePlainDriver.ZGetClientMajorVersion: Integer;
+begin
+  if Assigned(isc_get_client_major_version)
+  then Result := isc_get_client_major_version()
+  else Result := 0;
+end;
+
+function TZInterbasePlainDriver.ZGetClientMinorVersion: Integer;
+begin
+  if Assigned(isc_get_client_major_version)
+  then Result := isc_get_client_minor_version()
+  else Result := 0;
 end;
 
 { TZInterbase6PlainDriver }
