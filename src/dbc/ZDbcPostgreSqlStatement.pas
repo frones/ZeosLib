@@ -131,7 +131,7 @@ type
   protected
     procedure BindNull(Index: Integer; var SQLType: TZSQLType); override;
     procedure BindRawStr(Index: Integer; var SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt); override;
-    procedure BindRawStr(Index: Integer; var SQLType: TZSQLType; const Buf: RawByteString); override;
+    procedure BindRawStr(Index: Integer; var {%H-}SQLType: TZSQLType; const Buf: RawByteString); override;
     procedure BindBinary(Index: Integer; var SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
     procedure BindSignedOrdinal(Index: Integer; var SQLType: TZSQLType; const Value: Int64); override;
     procedure BindUnsignedOrdinal(Index: Integer; var SQLType: TZSQLType; const Value: UInt64); override;
@@ -144,7 +144,7 @@ type
   protected
     procedure InternalSetInParamCount(NewParamCount: Integer); override;
     procedure FlushPendingResults;
-    function CreateResultSet(QueryHandle: PPGresult; ServerCursor: Boolean): IZResultSet;
+    function CreateResultSet(QueryHandle: PPGresult; {%H-}ServerCursor: Boolean): IZResultSet;
     function ExecuteInternal(const SQL: RawByteString;
       Category: TEICategory): PPGresult; virtual;
     function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; override;
