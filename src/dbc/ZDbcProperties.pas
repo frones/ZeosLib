@@ -292,6 +292,11 @@ const
   // Type: STR, like Domain1[, Domain2, ...] (separators: "," or ";")
   // List of domains; if defined, fields of that domains will get GUID type
   ConnProps_GUIDDomains = 'GUIDDomains';
+  // Type: enum, <INET | WNET | XNET | LOCAL>
+  // can be used to define the firebird protocol to be used
+  // for FB 3.0 this will enable the construction of url style connection strings
+  // see firebird 3.0 release notes
+  ConnProps_FBProtocol = 'fb_protocol';
 
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
