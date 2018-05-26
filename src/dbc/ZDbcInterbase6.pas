@@ -509,8 +509,6 @@ var
   FbPos: Integer;
   DotPos: Integer;
 begin
-  Major := 0;
-  Minor := 0;
   Release := 0;
 
   VersionStr := FPlainDriver.ZGetClientVersion;
@@ -551,11 +549,6 @@ end;
   @return this clients's full version number
 }
 function TZInterbase6Connection.GetClientVersion: Integer;
-var
-  Major, Minor, Release: Integer;
-  VersionStr: String;
-  FbPos: Integer;
-  DotPos: Integer;
 begin
   if FClientVersion = -1 then DetermineClientTypeAndVersion;
   Result := FClientVersion;
