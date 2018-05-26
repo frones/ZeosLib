@@ -495,7 +495,11 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime;
 }
 function DateTimeToRawSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
+  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString; overload;
+
+procedure DateTimeToRawSQLTime(const Value: TDateTime; Buffer: PAnsichar;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = ''); overload;
 
 {**
   Converts DateTime value into a WideString/UnicodeString with format pattern
@@ -2892,63 +2896,69 @@ end;
   @param TimeFormat the result format.
   @return a formated RawByteString with Time-Format pattern.
 }
-{$WARNINGS OFF} //suppress D2007 Waring for undefined result
+{$WARNINGS OFF} //suppress D2007 Warning for undefined result
 function DateTimeToRawSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
+begin
+  ZSetString(nil, ConFormatSettings.TimeFormatLen+(Ord(Quoted) shl 1)+Length(Suffix), Result);
+  DateTimeToRawSQLTime(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
+end;
+
+procedure DateTimeToRawSQLTime(const Value: TDateTime; Buffer: PAnsichar;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = ''); overload;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
   TimeFormat: PChar;
-  PA: PAnsiChar;
   ZSet: Boolean;
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.TimeFormatLen, Result{%H-});
   ZSet := False;
-  PA := Pointer(Result);
-  Inc(PA, Ord(Quoted));
+  if Quoted then begin
+    Buffer^ := #39;
+    Inc(Buffer, Ord(Quoted));
+  end;
 
   I := ConFormatSettings.TimeFormatLen-1;
   TimeFormat := Pointer(ConFormatSettings.TimeFormat);
   while I > 0 do
     case (TimeFormat+i)^ of
-      'H', 'h':
-        begin
-          (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AHour];
+      'H', 'h': begin
+          (PWord(@PByteArray(Buffer)[i-1]))^ := TwoDigitLookupW[AHour];
           Dec(I, 2);
         end;
-      'N', 'n':
-        begin
-          (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AMinute];
+      'N', 'n': begin
+          (PWord(@PByteArray(Buffer)[i-1]))^ := TwoDigitLookupW[AMinute];
           Dec(I, 2);
         end;
-      'S', 's':
-        begin
-          (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[ASecond];
+      'S', 's': begin
+          (PWord(@PByteArray(Buffer)[i-1]))^ := TwoDigitLookupW[ASecond];
           Dec(I, 2);
         end;
-      'Z', 'z':
-        begin
+      'Z', 'z': begin
           Dec(I);
           if ZSet then
             Continue
-          else
-          begin
-            (PWord(@PByteArray(PA)[i]))^ := TwoDigitLookupW[AMilliSecond mod 100];
-            (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AMilliSecond div 10];
+          else begin
+            (PWord(@PByteArray(Buffer)[i]))^ := TwoDigitLookupW[AMilliSecond mod 100];
+            (PWord(@PByteArray(Buffer)[i-1]))^ := TwoDigitLookupW[AMilliSecond div 10];
             ZSet := True;
           end;
         end;
-      else
-      begin
-        PByte(PA+i)^ := Ord((TimeFormat+i)^);
+      else begin
+        PByte(Buffer+i)^ := Ord((TimeFormat+i)^);
         Dec(i);
       end;
     end;
+  if Quoted then
+    (Buffer+ConFormatSettings.TimeFormatLen)^ := #39;
+  if Suffix <> '' then //move suffix after leading quote
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^,
+      (Buffer+ConFormatSettings.TimeFormatLen+Ord(Quoted))^, Length(Suffix));
 end;
-
 {**
   Converts DateTime value into a WideString/UnicodeString with format pattern
   @param Value a TDateTime value.

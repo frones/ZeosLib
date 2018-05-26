@@ -99,6 +99,7 @@ type
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; override;
     constructor Create;
+    destructor Destroy; override;
   end;
 
   {** Implements a word state object. }
@@ -400,6 +401,12 @@ begin
 
   SetCharacterState('/', '/', CommentState);
   SetCharacterState('-', '-', CommentState);
+end;
+
+destructor TZPostgreSQLSymbolState.Destroy;
+begin
+  FreeAndNil(FNumberState);
+  inherited;
 end;
 
 function TZPostgreSQLSymbolState.NextToken(Stream: TStream; FirstChar: Char;

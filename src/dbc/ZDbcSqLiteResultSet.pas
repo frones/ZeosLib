@@ -318,7 +318,7 @@ begin
       ColumnName := ColAttributeToStr(FPlainDriver.column_origin_name(FStmtHandle, i));
       ColumnLabel := ColAttributeToStr(FPlainDriver.column_name(FStmtHandle, i));
       TableName := ColAttributeToStr(FPlainDriver.column_table_name(FStmtHandle, i));
-      SchemaName := ColAttributeToStr(FPlainDriver.column_database_name(FStmtHandle, i));
+      CatalogName := ColAttributeToStr(FPlainDriver.column_database_name(FStmtHandle, i));
       ReadOnly := TableName <> '';
       P := FPlainDriver.column_decltype(FStmtHandle, i);
       if P = nil then

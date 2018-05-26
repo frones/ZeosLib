@@ -1041,7 +1041,6 @@ end;
   Opens this recordset.
 }
 procedure TZAbstractMySQLPreparedResultSet.Open;
-const one: byte = 1;
 var
   I: Integer;
   ColumnInfo: TZColumnInfo;
@@ -2913,17 +2912,18 @@ procedure TZMySQLCachedResolver.UpdateAutoIncrementFields(
   NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
 var
   Plaindriver : IZMysqlPlainDriver;
+  LastWasNull: Boolean;
 begin
   inherited UpdateAutoIncrementFields(Sender, UpdateType, OldRowAccessor, NewRowAccessor, Resolver);
   if not ((FAutoColumnIndex {$IFDEF GENERIC_INDEX}>={$ELSE}>{$ENDIF} 0) and
-          (OldRowAccessor.IsNull(FAutoColumnIndex) or (OldRowAccessor.GetValue(FAutoColumnIndex).VInteger=0))) then
+          (OldRowAccessor.IsNull(FAutoColumnIndex) or (OldRowAccessor.GetULong(FAutoColumnIndex, LastWasNull)=0))) then
      exit;
   Plaindriver := (Connection as IZMysqlConnection).GetPlainDriver;
   // THIS IS WRONG, I KNOW (MDAEMS) : which function to use depends on the insert statement, not the resultset statement
   {  IF FStatement.IsPreparedStatement  then
-    NewRowAccessor.SetLong(FAutoColumnIndex, PlainDriver.GetPreparedInsertID(FStatement.GetStmtHandle))
+    NewRowAccessor.SetULong(FAutoColumnIndex, PlainDriver.GetPreparedInsertID(FStatement.GetStmtHandle))
   else}
-    NewRowAccessor.SetLong(FAutoColumnIndex, PlainDriver.GetLastInsertID(FHandle));
+    NewRowAccessor.SetULong(FAutoColumnIndex, PlainDriver.GetLastInsertID(FHandle));
 end;
 
 {**

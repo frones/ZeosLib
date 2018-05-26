@@ -301,6 +301,9 @@ const
   TYPCATEGORY_BITSTRING	= 'V';		{ er ... "varbit"? }
   TYPCATEGORY_UNKNOWN	  = 'X';
 
+//some error codes
+  indeterminate_datatype: PAnsiChar = '42P18';
+  current_transaction_is_aborted: PAnsiChar = '25P02';
 {------------------------------------------------------------------------------------------}
 
 

@@ -549,7 +549,7 @@ type
 
 implementation
 
-uses SysUtils, ZEncoding;
+uses SysUtils, ZEncoding{$IFDEF UNICODE},ZSysUtils{$ENDIF};
 
 function XSQLDA_LENGTH(Value: LongInt): LongInt;
 begin
@@ -1150,13 +1150,15 @@ end;
 
 function TZFirebirdBaseDriver.isc_get_client_version: String;
 var
-  Version: AnsiString;
+  Buff: array[0..50] of AnsiChar;
 begin
   if Assigned(FIREBIRD_API.isc_get_client_version) then begin
-    Version := StringOfChar(' ', 50);
-    FIREBIRD_API.isc_get_client_version(@Version[1]);
-    Version := trim(Version);
-    Result := Version;
+    FIREBIRD_API.isc_get_client_version(@Buff[0]);
+    {$IFDEF UNICODE}
+    Result := ZSysUtils.ASCII7ToUnicodeString(@Buff[0], StrLen(PAnsiChar(@Buff[0])));
+    {$ELSE}
+    SetString(Result, PAnsiChar(@Buff[0]), StrLen(PAnsiChar(@Buff[0])));
+    {$ENDIF}
   end else begin
     Result := 'unknown';
   end;

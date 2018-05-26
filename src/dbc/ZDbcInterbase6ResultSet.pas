@@ -64,7 +64,6 @@ uses
   ZDbcInterbase6Utils, ZSelectSchema;
 
 type
-
   {** Implements Interbase ResultSet. }
   TZInterbase6XSQLDAResultSet = class(TZAbstractResultSet)
   private
@@ -154,11 +153,11 @@ type
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
     procedure LoadColumns; override;
   public
-    function GetCatalogName(ColumnIndex: Integer): string; override;
+    function GetCatalogName({%H-}ColumnIndex: Integer): string; override;
     function GetColumnName(ColumnIndex: Integer): string; override;
-    function GetSchemaName(ColumnIndex: Integer): string; override;
+    function GetSchemaName({%H-}ColumnIndex: Integer): string; override;
     function GetTableName(ColumnIndex: Integer): string; override;
-    function IsAutoIncrement(ColumnIndex: Integer): Boolean; override;
+    function IsAutoIncrement({%H-}ColumnIndex: Integer): Boolean; override;
   End;
 
 implementation
