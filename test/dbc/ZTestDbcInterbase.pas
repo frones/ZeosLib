@@ -115,6 +115,7 @@ type
     procedure TestMsec;
     procedure TestEmptyStrings;
     procedure TestArrayBindings;
+	procedure TestClientVersionNumber;
   end;
 
 implementation
@@ -999,6 +1000,15 @@ begin
   end;
 end;
 {$WARNINGS ON} //implizit string conversion of...
+
+procedure TZTestDbcInterbaseCase.TestClientVersionNumber;
+var
+  Version: Integer;
+begin
+  Version := Connection.GetClientVersion;
+
+  CheckNotEquals(0, Version, 'Expected a client library version of anything but 0.');
+end;
 
 initialization
   RegisterTest('dbc',TZTestDbcInterbaseCase.Suite);
