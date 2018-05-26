@@ -139,11 +139,14 @@ type
     FHardCommit: boolean;
     FHostVersion: Integer;
     FClientVersion: Integer;
+    FIsFirebirdLib: Boolean; // never use this directly, always use IsFirbirdLib
+    FIsInterbaseLib: Boolean; // never use this directly, always use IsInterbaseLib
     FXSQLDAMaxSize: LongWord;
     FTPB: RawByteString; //cache the TPB String for hard commits else we're permanently build the str from Props
     FPlainDriver: TZInterbasePlainDriver;
     FGUIDProps: TZInterbase6ConnectionGUIDProps;
     procedure CloseTransaction;
+    procedure DetermineClientTypeAndVersion;
   protected
     procedure InternalCreate; override;
     procedure OnPropertiesChange(Sender: TObject); override;
@@ -154,6 +157,8 @@ type
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     function GetHostVersion: Integer; override;
     function GetClientVersion: Integer; override;
+    function IsFirebirdLib: Boolean;
+    function IsInterbaseLib: Boolean;
     function GetDBHandle: PISC_DB_HANDLE;
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
@@ -320,6 +325,8 @@ begin
   FGUIDProps := TZInterbase6ConnectionGUIDProps.Create;
   inherited;
   FClientVersion := -1;
+  FIsFirebirdLib := false;
+  FIsInterbaseLib := false;
 end;
 
 destructor TZInterbase6Connection.Destroy;
@@ -491,6 +498,50 @@ begin
 end;
 
 {**
+  Determines the Client Library vendor and version. Works for Firebird 1.5+ and
+  Interbase 7+
+}
+procedure TZInterbase6Connection.DetermineClientTypeAndVersion;
+var
+  Major, Minor, Release: Integer;
+  VersionStr: String;
+  FbPos: Integer;
+  DotPos: Integer;
+begin
+  Major := 0;
+  Minor := 0;
+  Release := 0;
+
+  VersionStr := FPlainDriver.ZGetClientVersion;
+  FbPos := System.Pos('firebird', LowerCase(VersionStr));
+  if FbPos > 0 then begin
+    FIsFirebirdLib := true;
+    // remove the fake Major version number
+    DotPos := System.Pos('.', VersionStr);
+    Delete(VersionStr, 1, DotPos);
+    // remove the fake Minor version number
+    DotPos := System.Pos('.', VersionStr);
+    Delete(VersionStr, 1, DotPos);
+    // get the release number
+    DotPos := System.Pos('.', VersionStr);
+    Release := StrToIntDef(Copy(VersionStr, 1, DotPos - 1), 0);
+    // remove the Firebird brand including the space
+    FbPos := System.Pos('firebird', LowerCase(VersionStr));
+    Delete(VersionStr, 1, FbPos + 8);
+    // get the major and minor version numbers
+    DotPos := System.Pos('.', VersionStr);
+    Major := StrToIntDef(Copy(VersionStr, 1, DotPos - 1), 0);
+    Minor := StrToIntDef(Copy(VersionStr, DotPos + 1, length(VersionStr)), 0);
+  end else begin
+    Major := FPlainDriver.ZGetClientMajorVersion;
+    Minor := FPlainDriver.ZGetClientMinorVersion;
+    FIsInterbaseLib := Major <> 0;
+  end;
+
+  FClientVersion := Major * 1000000 + Minor * 1000 + Release;
+end;
+
+{**
   Gets the client's full version number. Initially this should be 0.
   The format of the version returned must be XYYYZZZ where
    X   = Major version
@@ -505,39 +556,30 @@ var
   FbPos: Integer;
   DotPos: Integer;
 begin
-  if FClientVersion = -1 then begin
-    Major := 0;
-    Minor := 0;
-
-
-    VersionStr := FPlainDriver.ZGetClientVersion;
-    FbPos := System.Pos('firebird', LowerCase(VersionStr));
-    if FbPos > 0 then begin
-      // remove the fake Major version number
-      DotPos := System.Pos('.', VersionStr);
-      Delete(VersionStr, 1, DotPos);
-      // remove the fake Minor version number
-      DotPos := System.Pos('.', VersionStr);
-      Delete(VersionStr, 1, DotPos);
-      // get the release number
-      DotPos := System.Pos('.', VersionStr);
-      Release := StrToIntDef(Copy(VersionStr, 1, DotPos - 1), 0);
-      // remove the Firebird brand including the space
-      FbPos := System.Pos('firebird', LowerCase(VersionStr));
-      Delete(VersionStr, 1, FbPos + 8);
-      // get the major and minor version numbers
-      DotPos := System.Pos('.', VersionStr);
-      Major := StrToIntDef(Copy(VersionStr, 1, DotPos - 1), 0);
-      Minor := StrToIntDef(Copy(VersionStr, DotPos + 1, length(VersionStr)), 0);
-    end else begin
-      Major := FPlainDriver.ZGetClientMajorVersion;
-      Minor := FPlainDriver.ZGetClientMinorVersion;
-    end;
-
-    FClientVersion := Major * 1000000 + Minor * 1000 + Release;
-  end;
-
+  if FClientVersion = -1 then DetermineClientTypeAndVersion;
   Result := FClientVersion;
+end;
+
+{**
+  Determines wether the client library is Firebird. Works for Firebird 1.5+
+  Note that this Function cannot reliably determine wether you are on interbase.
+  Use IsInterbaseLib for that.
+}
+function TZInterbase6Connection.IsFirebirdLib: Boolean;
+begin
+  if FClientVersion = -1 then DetermineClientTypeAndVersion;
+  Result := FIsFirebirdLib;
+end;
+
+{**
+  Determines wether the client library is Firebird. Works for Interbase 7.0+
+  Note that this Function cannot reliably determine wether you are on interbase.
+  Use IsInterbaseLib for that.
+}
+function TZInterbase6Connection.IsInterbaseLib: Boolean;
+begin
+  if FClientVersion = -1 then DetermineClientTypeAndVersion;
+  Result := FIsInterbaseLib;
 end;
 
 {**
