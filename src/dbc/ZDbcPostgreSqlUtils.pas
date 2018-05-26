@@ -51,7 +51,9 @@
 {********************************************************@}
 
 unit ZDbcPostgreSqlUtils;
-
+{$IFDEF FPC}
+{$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 interface
 
 {$I ZDbc.inc}
@@ -185,7 +187,7 @@ function PG2Time(Value: Int64): TDateTime; overload;
 
 function PG2Date(Value: Integer): TDateTime;
 
-function PG2SmallInt(P: Pointer): SmallInt; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PG2SmallInt(P: Pointer): SmallInt; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function PG2Word(P: Pointer): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -1269,7 +1271,7 @@ function PG2Currency(P: Pointer): Currency;
 begin
   PInt64(@Result)^ := PInt64(P)^; //move first
   {$IFNDEF ENDIAN_BIG}Reverse8Bytes(@Result);{$ENDIF}
-  Result := PInt64(@Result)^/100;
+  Result {%H-}:= PInt64(@Result)^/100;
 end;
 
 procedure Currency2PG(const Value: Currency; Buf: Pointer);
