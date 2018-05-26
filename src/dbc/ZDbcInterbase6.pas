@@ -142,6 +142,7 @@ type
 
     function PingServer: Integer; override;
 
+    function ConstructConnectionString: String;
     procedure Open; override;
     procedure InternalClose; override;
 
@@ -443,8 +444,6 @@ var
   FbPos: Integer;
   DotPos: Integer;
 begin
-  Major := 0;
-  Minor := 0;
   Release := 0;
 
   VersionStr := GetPlainDriver.isc_get_client_version;
@@ -485,11 +484,6 @@ end;
   @return this clients's full version number
 }
 function TZInterbase6Connection.GetClientVersion: Integer;
-var
-  Major, Minor, Release: Integer;
-  VersionStr: String;
-  FbPos: Integer;
-  DotPos: Integer;
 begin
   if FClientVersion = -1 then DetermineClientTypeAndVersion;
   Result := FClientVersion;
@@ -564,6 +558,66 @@ begin
 end;
 
 {**
+  Constructs the connection string for the current connection
+}
+function TZInterbase6Connection.ConstructConnectionString: String;
+var
+  Protocol: String;
+  ConnectionString: String;
+begin
+  Protocol := LowerCase(Info.Values['fb_protocol']);
+
+  if ((Protocol = 'inet') or (Protocol = 'wnet') or (Protocol = 'xnet') or (Protocol = 'local')) and IsFirebirdLib then begin
+    if GetClientVersion >= 3000000 then begin
+      if protocol = 'inet' then begin
+        if Port <> 3050
+        then ConnectionString := 'inet://' + HostName + ':' + ZFastCode.IntToStr(Port) + '/' + Database
+        else ConnectionString := 'inet://' + HostName + '/' + Database;
+      end else if Protocol = 'wnet' then begin
+        if HostName <> ''
+        then ConnectionString := 'wnet://' + HostName + '/' + Database
+        else ConnectionString := 'wnet://' + Database
+      end else if Protocol = 'xnet' then begin
+        ConnectionString := 'xnet://' + Database;
+      end else begin
+        ConnectionString := Database;
+      end;
+    end else begin
+      if protocol = 'inet' then begin
+        if HostName = ''
+        then ConnectionString := 'localhost'
+        else ConnectionString := HostName;
+        if Port <> 3050 then begin
+          ConnectionString := ConnectionString + '/' + ZFastCode.IntToStr(Port);
+        end;
+        ConnectionString := ConnectionString + ':';
+        ConnectionString := ConnectionString + Database;
+      end else if Protocol = 'wnet' then begin
+        if HostName = ''
+        then ConnectionString := '\\localhost'
+        else ConnectionString := '\\' + HostName;
+        if Port <> 3050 then begin
+          ConnectionString := ConnectionString + '@' + ZFastCode.IntToStr(Port);
+        end;
+        ConnectionString := ConnectionString + '\' + Database;
+      end else begin
+        ConnectionString := Database;
+      end;
+    end;
+  end else begin
+    if HostName <> '' then
+      if Port <> 3050 then
+        ConnectionString := HostName + '/' + ZFastCode.IntToStr(Port) + ':' + Database
+      else
+        ConnectionString := HostName + ':' + Database
+    else
+      ConnectionString := Database;
+  end;
+
+  Result := ConnectionString;
+end;
+
+{**
   Opens a connection to database server with specified parameters.
 }
 procedure TZInterbase6Connection.Open;
@@ -572,6 +626,7 @@ var
   DPB: RawByteString;
   DBName: array[0..512] of AnsiChar;
   NewDB: RawByteString;
+  ConnectionString: String;
 begin
   if not Closed then
     Exit;
@@ -581,15 +636,8 @@ begin
   if ConSettings^.ClientCodePage = nil then
     CheckCharEncoding(FClientCodePage, True);
 
-  if HostName <> '' then
-    if Port <> 3050 then
-      {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.ConvFuncs.ZStringToRaw((HostName + '/' + ZFastCode.IntToStr(Port) + ':' + Database),
-            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP))
-    else
-      {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.ConvFuncs.ZStringToRaw((HostName + ':' + Database),
-            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP))
-  else
-    {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.Database);
+  ConnectionString := ConstructConnectionString;
+  {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.ConvFuncs.ZStringToRaw(ConnectionString, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
 
   { Create new db if needed }
   if Info.Values['createNewDatabase'] <> '' then
