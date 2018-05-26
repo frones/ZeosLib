@@ -545,7 +545,7 @@ type
 
 implementation
 
-uses SysUtils, ZEncoding;
+uses SysUtils, ZEncoding{$IFDEF UNICODE},ZSysUtils{$ENDIF};
 
 function XSQLDA_LENGTH(Value: LongInt): LongInt;
 begin
@@ -739,13 +739,15 @@ end;
 
 function TZInterbasePlainDriver.ZGetClientVersion: String;
 var
-  Version: AnsiString;
+  Buff: array[0..50] of AnsiChar;
 begin
   if Assigned(isc_get_client_version) then begin
-    Version := StringOfChar(' ', 50);
-    isc_get_client_version(@Version[1]);
-    Version := trim(Version);
-    Result := Version;
+    isc_get_client_version(@Buff[0]);
+    {$IFDEF UNICODE}
+    Result := ZSysUtils.ASCII7ToUnicodeString(@Buff[0], StrLen(PAnsiChar(@Buff[0])));
+    {$ELSE}
+    SetString(Result, PAnsiChar(@Buff[0]), StrLen(PAnsiChar(@Buff[0])));
+    {$ENDIF}
   end else begin
     Result := 'unknown';
   end;
