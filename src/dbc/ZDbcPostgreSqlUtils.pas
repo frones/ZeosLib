@@ -211,29 +211,19 @@ procedure Double2PG(const Value: Double; Buf: Pointer); {$IFDEF WITH_INLINE}inli
 
 procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
 
+
 //ported macros from array.h
-
-function  GET_ARR_NDIM(a: Pointer): Integer;
-procedure SET_ARR_NDIM(a: Pointer; Value: Int32);
-function  GET_ARR_HASNULL(a: Pointer): Boolean;
-procedure SET_ARR_HASNULL(a: Pointer; Value: Boolean);
-function  GET_ARR_ELEMTYPE(a: Pointer): OID;
-procedure SET_ARR_ELEMTYPE(a: Pointer; Value: OID);
-function  ARR_DIMS(a: Pointer): PInteger;
-function  ARR_LBOUND(a: Pointer): PInteger;
-function  ARR_NULLBITMAP(a: Pointer): PByte;
-
-(**
-  Returns the actual array data offset.
-*)
-function  ARR_DATA_OFFSET(a: Pointer): NativeUInt;
-
-(**
-  Returns a pointer to the actual array data.
-*)
-function  ARR_DATA_PTR(a: Pointer): Pointer;
-
-function GET_ARR_SIZE(Dims, ElementSize: Integer; Nullable: Boolean): Integer;
+function ARR_NDIM(a: PArrayType): PInteger;
+function ARR_HASNULL(a: PArrayType): Boolean;
+function ARR_ELEMTYPE(a: PArrayType): POID;
+function ARR_DIMS(a: PArrayType): PInteger;
+function ARR_LBOUND(a: PArrayType): PInteger;
+function ARR_NULLBITMAP(a: PArrayType): PByte;
+function ARR_OVERHEAD_NONULLS(ndims: Integer): Integer;
+function ARR_OVERHEAD_WITHNULLS(ndims, nitems: Integer): Integer;
+function ARR_DATA_OFFSET(a: PArrayType): Int32;
+function ARR_DATA_PTR(a: PArrayType): Pointer;
+function MAXALIGN(nbytes: Integer): Integer;
 
 implementation
 
@@ -762,7 +752,8 @@ procedure HandlePostgreSQLError(const Sender: IImmediatelyReleasable;
   LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
   ResultHandle: PPGresult);
 var
-   resultErrorField: PAnsiChar;
+   resultErrorFields: array[TZPostgreSQLFieldCode] of PAnsiChar;
+   I: TZPostgreSQLFieldCode;
    ErrorMessage: PAnsiChar;
    ConSettings: PZConSettings;
    aMessage, aErrorStatus: String;
@@ -770,22 +761,37 @@ begin
   ErrorMessage := PlainDriver.PQerrorMessage(conn);
   if PGSucceeded(ErrorMessage) then Exit;
 
-  if Assigned(ResultHandle) and Assigned(PlainDriver.PQresultErrorField) {since 7.4}
-  then resultErrorField := PlainDriver.PQresultErrorField(ResultHandle,Ord(PG_DIAG_SQLSTATE))
-  else resultErrorField := nil;
+  for i := low(TZPostgreSQLFieldCode) to high(TZPostgreSQLFieldCode) do
+    if Assigned(ResultHandle) and Assigned(PlainDriver.PQresultErrorField) {since 7.4}
+    then resultErrorFields[i] := PlainDriver.PQresultErrorField(ResultHandle,TPG_DIAG_ErrorFieldCodes[i])
+    else resultErrorFields[i] := nil;
 
   if Assigned(Sender) then begin
     ConSettings := Sender.GetConSettings;
-    aMessage := Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
-        ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]);
-    aErrorStatus := ConSettings^.ConvFuncs.ZRawToString(resultErrorField,
+    aMessage := '';
+    for i := low(TZPostgreSQLFieldCode) to high(TZPostgreSQLFieldCode) do
+       if resultErrorFields[i] <> nil then
+        aMessage := aMessage + TPG_DIAG_ErrorFieldPrevixes[i]+Trim(ConSettings^.ConvFuncs.ZRawToString(resultErrorFields[i],
+          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP));
+    if aMessage <> ''
+    then aMessage := Format(SSQLError1, [aMessage])
+    else aMessage := Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
+          ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]);
+    aErrorStatus := ConSettings^.ConvFuncs.ZRawToString(resultErrorFields[pgdiagSQLSTATE],
           ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+
     if DriverManager.HasLoggingListener then
       DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
         0, ErrorMessage);
   end else begin
-    aMessage := Format(SSQLError1, [String(ErrorMessage)]);
-    aErrorStatus := String(resultErrorField);
+    aMessage := '';
+    for i := low(TZPostgreSQLFieldCode) to high(TZPostgreSQLFieldCode) do
+       if resultErrorFields[i] <> nil then
+        aMessage := aMessage + TPG_DIAG_ErrorFieldPrevixes[i]+Trim(String(resultErrorFields[i]));
+    if aMessage <> ''
+    then aMessage := Format(SSQLError1, [aMessage])
+    else aMessage := Format(SSQLError1, [String(ErrorMessage)]);
+    aErrorStatus := String(resultErrorFields[pgdiagSQLSTATE]);
     if DriverManager.HasLoggingListener then
       DriverManager.LogError(LogCategory, 'postresql', LogMessage, 0, ErrorMessage);
   end;
@@ -1296,72 +1302,76 @@ begin
   {$IFNDEF ENDIAN_BIG}Reverse8Bytes(Buf){$ENDIF}
 end;
 
-function GET_ARR_NDIM(a: Pointer): Integer;
+function  ARR_NDIM(a: PArrayType): PInteger;
 begin
-  Result := PG2Integer(@PArrayType(a).ndim);
+  Result := @PArrayType(a).ndim;
 end;
 
-procedure SET_ARR_NDIM(a: Pointer; Value: Integer);
+function  ARR_HASNULL(a: PArrayType): Boolean;
 begin
-  Integer2PG(Value, @PArrayType(a).ndim);
+  Result := PArrayType(a).flags <> 0;
 end;
 
-function  GET_ARR_HASNULL(a: Pointer): Boolean;
+function  ARR_ELEMTYPE(a: PArrayType): POID;
 begin
-  Result := PG2Integer(@PArrayType(a).dataoffset) <> 0;
+  Result := @PArrayType(a).elemtype;
 end;
 
-procedure SET_ARR_HASNULL(a: Pointer; Value: Boolean);
-begin
-  Integer2PG(Ord(Value), @PArrayType(a).dataoffset);
-end;
-
-function GET_ARR_ELEMTYPE(a: Pointer): OID;
-begin
-  Result := PG2LongWord(@PArrayType(a).elemtype);
-end;
-
-procedure SET_ARR_ELEMTYPE(a: Pointer; Value: OID);
-begin
-  LongWord2PG(Ord(Value), @PArrayType(a).elemtype);
-end;
-
-function ARR_DIMS(a: Pointer): PInteger;
+function  ARR_DIMS(a: PArrayType): PInteger;
 begin
   Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType)));
 end;
 
-function  ARR_LBOUND(a: Pointer): PInteger;
+function  ARR_LBOUND(a: PArrayType): PInteger;
 begin
-  Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType))+(SizeOf(Integer)*Cardinal(GET_ARR_NDIM(a))));
+  Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType))+(SizeOf(Integer)*Cardinal(PG2Integer(ARR_NDIM(a)))));
 end;
 
-function GET_ARR_SIZE(Dims, ElementSize: Integer; Nullable: Boolean): Integer;
+function  ARR_NULLBITMAP(a: PArrayType): PByte;
 begin
-  Result := SizeOf(TArrayType)+((SizeOf(Integer)*2){dimensions and lower_bnds}*Dims)+(ElementSize*Dims)+Ord(Nullable)*Dims
-end;
-
-function  ARR_NULLBITMAP(a: Pointer): PByte;
-begin
-  Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType))+(2*(SizeOf(Integer)*Cardinal(GET_ARR_NDIM(a)*PG2Integer(ARR_DIMS(a))))));
+  if ARR_HASNULL(a) then
+    Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType))+
+      (2*(SizeOf(Integer)*Cardinal(PG2Integer(ARR_NDIM(a))))))
+  else
+    Result := nil;
 end;
 
 (**
   Returns the actual array data offset.
 *)
-function  ARR_DATA_OFFSET(a: Pointer): NativeUInt;
+function  ARR_DATA_OFFSET(a: PArrayType): Int32;
 begin
-  Result := sizeof(TArrayType)+((Cardinal(GET_ARR_NDIM(a))*SizeOf(integer)*2{dimensions and lower_bnds} ));
-  if GET_ARR_HASNULL(a) then
-    Result := Result + SizeOf(Byte) * (Cardinal(GET_ARR_NDIM(a)*PG2Integer(ARR_DIMS(a))));
+  if ARR_HASNULL(a)
+  then Result := PG2Integer(@PArrayType(a).flags)
+  else Result := ARR_OVERHEAD_NONULLS(PG2Integer(ARR_NDIM(a)));
+end;
+
+function MaxAlign(nbytes: Integer): Integer;
+begin
+ // Result := (((nbytes-1) shr 2)+1) shl 2;//4 byte (int32) aligned //nope this only makes the server
+ Result := nbytes;
+end;
+
+function ARR_OVERHEAD_NONULLS(ndims: Integer): Integer;
+begin
+  Result := MAXALIGN(sizeof(TArrayType) + 2 * sizeof(integer) * (ndims))
+end;
+
+(**
+  The total array header size (in bytes) for an array with the specified
+  number of dimensions and total number of items.
+*)
+function ARR_OVERHEAD_WITHNULLS(ndims, nitems: Integer): Integer;
+begin
+  Result := MAXALIGN(sizeof(TArrayType) + 2 * sizeof(integer) * (ndims) + ((nitems + 7) shr 3 {div 8}))
 end;
 
 (**
   Returns a pointer to the actual array data.
 *)
-function  ARR_DATA_PTR(a: Pointer): Pointer;
+function  ARR_DATA_PTR(a: PArrayType): Pointer;
 begin
-  Result := Pointer(NativeUInt(a)+ARR_DATA_OFFSET(a));
+  Result := Pointer(NativeUInt(a)+NativeUInt(ARR_DATA_OFFSET(a)));
 end;
 
 end.

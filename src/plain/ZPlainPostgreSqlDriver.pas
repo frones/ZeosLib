@@ -335,40 +335,51 @@ type
     CONNECTION_OK,
     CONNECTION_BAD
   );
+  TZPostgreSQLFieldCode = (pgdiagSEVERITY,
+    pgdiagSQLSTATE, pgdiagMESSAGE_PRIMARY, pgdiagMESSAGE_DETAIL,
+    pgdiagMESSAGE_HINT, pgdiagSTATEMENT_POSITION, pgdiagINTERNAL_POSITION,
+    pgdiagINTERNAL_QUERY, pgdiagCONTEXT
+    {$IFDEF DEBUG},pgdiagSOURCE_FILE, pgdiagSOURCE_LINE, pgdiagSOURCE_FUNCTION{$ENDIF});
+const
+  PG_DIAG_SEVERITY=ord('S');
+  PG_DIAG_SQLSTATE=ord('C');
+  PG_DIAG_MESSAGE_PRIMARY=ord('M');
+  PG_DIAG_MESSAGE_DETAIL=ord('D');
+  PG_DIAG_MESSAGE_HINT=ord('H');
+  PG_DIAG_STATEMENT_POSITION=ord('P');
+  PG_DIAG_INTERNAL_POSITION=ord('p');
+  PG_DIAG_INTERNAL_QUERY=ord('q');
+  PG_DIAG_CONTEXT=ord('W');
+  PG_DIAG_SOURCE_FILE=ord('F');
+  PG_DIAG_SOURCE_LINE=ord('L');
+  PG_DIAG_SOURCE_FUNCTION=ord('R');
 
-  TZPostgreSQLFieldCode=( // FirmOS
-            PG_DIAG_SEVERITY=ord('S'),
-            PG_DIAG_SQLSTATE=ord('C'){%H-},
-            PG_DIAG_MESSAGE_PRIMARY=ord('M'),
-            PG_DIAG_MESSAGE_DETAIL=ord('D'),
-            PG_DIAG_MESSAGE_HINT=ord('H'),
-            PG_DIAG_STATEMENT_POSITION=ord('P'),
-            PG_DIAG_INTERNAL_POSITION=ord('p'),
-            PG_DIAG_INTERNAL_QUERY=ord('q'),
-            PG_DIAG_CONTEXT=ord('W'),
-            PG_DIAG_SOURCE_FILE=ord('F'),
-            PG_DIAG_SOURCE_LINE=ord('L'),
-            PG_DIAG_SOURCE_FUNCTION=ord('R')
-            );
+  TPG_DIAG_ErrorFieldCodes: array[TZPostgreSQLFieldCode] of Integer = (PG_DIAG_SEVERITY,
+    PG_DIAG_SQLSTATE, PG_DIAG_MESSAGE_PRIMARY, PG_DIAG_MESSAGE_DETAIL,
+    PG_DIAG_MESSAGE_HINT, PG_DIAG_STATEMENT_POSITION, PG_DIAG_INTERNAL_POSITION,
+    PG_DIAG_INTERNAL_QUERY, PG_DIAG_CONTEXT{$IFDEF DEBUG}, PG_DIAG_SOURCE_FILE,
+    PG_DIAG_SOURCE_LINE, PG_DIAG_SOURCE_FUNCTION{$ENDIF});
+  TPG_DIAG_ErrorFieldPrevixes: Array[TZPostgreSQLFieldCode] of String = (
+    '', ' ', LineEnding, LineEnding+'detail: ', '', LineEnding+'position: ', ' ',
+    ' ', ' '{$IFDEF DEBUG}, LineEnding+'source file: ',
+    LineEnding+'line: ', lineEnding+'funtion: '{$ENDIF}
+  );
 
+type
   TZPostgreSQLExecStatusType = (
     PGRES_EMPTY_QUERY,
-    PGRES_COMMAND_OK,		  { a query command that doesn't return
+    PGRES_COMMAND_OK,     { a query command that doesn't return
                             anything was executed properly by the backend }
-    PGRES_TUPLES_OK,		  { a query command that returns tuples
-				                    was executed properly by the backend,
-				                    PGresult contains the result tuples }
-    PGRES_COPY_OUT,		    { Copy Out data transfer in progress }
-    PGRES_COPY_IN,		    { Copy In data transfer in progress }
+    PGRES_TUPLES_OK,      { a query command that returns tuples
+                            was executed properly by the backend,
+                            PGresult contains the result tuples }
+    PGRES_COPY_OUT,       { Copy Out data transfer in progress }
+    PGRES_COPY_IN,        { Copy In data transfer in progress }
     PGRES_BAD_RESPONSE,	  { an unexpected response was recv'd from the backend }
     PGRES_NONFATAL_ERROR, { notice or warning message }
     PGRES_FATAL_ERROR,    { query failed }
-    PGRES_COPY_BOTH,		  { Copy In/Out data transfer in progress }
-    PGRES_SINGLE_TUPLE,   { since 9.2 single tuple from larger resultset }
-    //pg 9.6 pipelined batch of https://github.com/2ndQuadrant/postgres/tree/dev/libpq-async-batch
-    //see: https://www.postgresql.org/message-id/flat/CAMsr+YFUjJytRyV4J-16bEoiZyH=4nj+sQ7JP9ajwz=B4dMMZw@mail.gmail.com#CAMsr+YFUjJytRyV4J-16bEoiZyH=4nj+sQ7JP9ajwz=B4dMMZw@mail.gmail.com
-    PGRES_BATCH_END,      { end of a batch of commands }
-    PGRES_BATCH_ABORTED   { Command didn't run because of an abort earlier in a batch }
+    PGRES_COPY_BOTH,      { Copy In/Out data transfer in progress }
+    PGRES_SINGLE_TUPLE    { since 9.2 single tuple from larger resultset }
   );
 
 { PGnotify represents the occurrence of a NOTIFY message.
@@ -552,15 +563,14 @@ type
     keyword:  PAnsiChar; { The keyword of the option }
     envvar:   PAnsiChar; { Fallback environment variable name }
     compiled: PAnsiChar; { Fallback compiled in default value  }
-    val:      PAnsiChar; { Options value	}
+    val:      PAnsiChar; { Options value}
     lab:      PAnsiChar; { Label for field in connect dialog }
     disPAnsiChar: PAnsiChar; { Character to display for this field
-			  in a connect dialog. Values are:
-			  ""	Display entered value as is
-			  "*"	Password field - hide value
-			  "D"	Debug options - don't
-			  create a field by default }
-    dispsize: Integer;	{ Field size in characters for dialog }
+                               in a connect dialog. Values are:
+                               ""  Display entered value as is
+                               "*" Password field - hide value
+                               "D" Debug options - don't create a field by default }
+    dispsize: Integer; { Field size in characters for dialog }
   end;
 
   PPQConninfoOption = ^PQconninfoOption;
@@ -584,19 +594,20 @@ type
   TPQparamValues = array of Pointer;
   TPQparamLengths = array of Integer;
   TPQparamFormats = array of Integer;
-//array.h
 
+//array.h
   PArrayType = ^TArrayType;
   TArrayType = packed record
+    //https://reviewable.io/reviews/cockroachdb/cockroach/13636#-KdAI6xOLxF4N43uWbYp
     //https://stackoverflow.com/questions/4016412/postgresqls-libpq-encoding-for-binary-transport-of-array-data
     //comment of user: "When using libpq, omit the vl_len_ portion"
-    vl_len_:    int32;   //* varlena header (do not touch directly!) */
+    //vl_len_:    int32;   //* varlena header (do not touch directly!) */
     ndim:       integer; //* # of dimensions */
-    dataoffset: int32;//* offset to data, or 0 if no bitmap */
+    flags:      int32;//* offset to data, or 0 if no bitmap */
     elemtype:   Oid;    //* element type OID */
   end;
 //    dimensions: TIntegerArray; //length of each array axis (C array of int)
-//    lower_bnds: TIntegerArray; //lower boundary of each dimension (C array of int)
+//    lower_bnds: TIntegerArray; //lower boundary of each dimension (C array of int)  this is ignored on param send
 //    null_bitmap: TIntegerArray //bitmap showing locations of nulls (OPTIONAL)
 //    actual_data: whatever is the stored data
 type
