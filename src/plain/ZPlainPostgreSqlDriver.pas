@@ -335,40 +335,51 @@ type
     CONNECTION_OK,
     CONNECTION_BAD
   );
+  TZPostgreSQLFieldCode = (pgdiagSEVERITY,
+    pgdiagSQLSTATE, pgdiagMESSAGE_PRIMARY, pgdiagMESSAGE_DETAIL,
+    pgdiagMESSAGE_HINT, pgdiagSTATEMENT_POSITION, pgdiagINTERNAL_POSITION,
+    pgdiagINTERNAL_QUERY, pgdiagCONTEXT
+    {$IFDEF DEBUG},pgdiagSOURCE_FILE, pgdiagSOURCE_LINE, pgdiagSOURCE_FUNCTION{$ENDIF});
+const
+  PG_DIAG_SEVERITY=ord('S');
+  PG_DIAG_SQLSTATE=ord('C');
+  PG_DIAG_MESSAGE_PRIMARY=ord('M');
+  PG_DIAG_MESSAGE_DETAIL=ord('D');
+  PG_DIAG_MESSAGE_HINT=ord('H');
+  PG_DIAG_STATEMENT_POSITION=ord('P');
+  PG_DIAG_INTERNAL_POSITION=ord('p');
+  PG_DIAG_INTERNAL_QUERY=ord('q');
+  PG_DIAG_CONTEXT=ord('W');
+  PG_DIAG_SOURCE_FILE=ord('F');
+  PG_DIAG_SOURCE_LINE=ord('L');
+  PG_DIAG_SOURCE_FUNCTION=ord('R');
 
-  TZPostgreSQLFieldCode=( // FirmOS
-            PG_DIAG_SEVERITY=ord('S'),
-            PG_DIAG_SQLSTATE=ord('C'){%H-},
-            PG_DIAG_MESSAGE_PRIMARY=ord('M'),
-            PG_DIAG_MESSAGE_DETAIL=ord('D'),
-            PG_DIAG_MESSAGE_HINT=ord('H'),
-            PG_DIAG_STATEMENT_POSITION=ord('P'),
-            PG_DIAG_INTERNAL_POSITION=ord('p'),
-            PG_DIAG_INTERNAL_QUERY=ord('q'),
-            PG_DIAG_CONTEXT=ord('W'),
-            PG_DIAG_SOURCE_FILE=ord('F'),
-            PG_DIAG_SOURCE_LINE=ord('L'),
-            PG_DIAG_SOURCE_FUNCTION=ord('R')
-            );
+  TPG_DIAG_ErrorFieldCodes: array[TZPostgreSQLFieldCode] of Integer = (PG_DIAG_SEVERITY,
+    PG_DIAG_SQLSTATE, PG_DIAG_MESSAGE_PRIMARY, PG_DIAG_MESSAGE_DETAIL,
+    PG_DIAG_MESSAGE_HINT, PG_DIAG_STATEMENT_POSITION, PG_DIAG_INTERNAL_POSITION,
+    PG_DIAG_INTERNAL_QUERY, PG_DIAG_CONTEXT{$IFDEF DEBUG}, PG_DIAG_SOURCE_FILE,
+    PG_DIAG_SOURCE_LINE, PG_DIAG_SOURCE_FUNCTION{$ENDIF});
+  TPG_DIAG_ErrorFieldPrevixes: Array[TZPostgreSQLFieldCode] of String = (
+    '', ' ', LineEnding, LineEnding+'detail: ', '', LineEnding+'position: ', ' ',
+    ' ', ' '{$IFDEF DEBUG}, LineEnding+'source file: ',
+    LineEnding+'line: ', lineEnding+'funtion: '{$ENDIF}
+  );
 
+type
   TZPostgreSQLExecStatusType = (
     PGRES_EMPTY_QUERY,
-    PGRES_COMMAND_OK,		  { a query command that doesn't return
+    PGRES_COMMAND_OK,     { a query command that doesn't return
                             anything was executed properly by the backend }
-    PGRES_TUPLES_OK,		  { a query command that returns tuples
-				                    was executed properly by the backend,
-				                    PGresult contains the result tuples }
-    PGRES_COPY_OUT,		    { Copy Out data transfer in progress }
-    PGRES_COPY_IN,		    { Copy In data transfer in progress }
+    PGRES_TUPLES_OK,      { a query command that returns tuples
+                            was executed properly by the backend,
+                            PGresult contains the result tuples }
+    PGRES_COPY_OUT,       { Copy Out data transfer in progress }
+    PGRES_COPY_IN,        { Copy In data transfer in progress }
     PGRES_BAD_RESPONSE,	  { an unexpected response was recv'd from the backend }
     PGRES_NONFATAL_ERROR, { notice or warning message }
     PGRES_FATAL_ERROR,    { query failed }
-    PGRES_COPY_BOTH,		  { Copy In/Out data transfer in progress }
-    PGRES_SINGLE_TUPLE,   { since 9.2 single tuple from larger resultset }
-    //pg 9.6 pipelined batch of https://github.com/2ndQuadrant/postgres/tree/dev/libpq-async-batch
-    //see: https://www.postgresql.org/message-id/flat/CAMsr+YFUjJytRyV4J-16bEoiZyH=4nj+sQ7JP9ajwz=B4dMMZw@mail.gmail.com#CAMsr+YFUjJytRyV4J-16bEoiZyH=4nj+sQ7JP9ajwz=B4dMMZw@mail.gmail.com
-    PGRES_BATCH_END,      { end of a batch of commands }
-    PGRES_BATCH_ABORTED   { Command didn't run because of an abort earlier in a batch }
+    PGRES_COPY_BOTH,      { Copy In/Out data transfer in progress }
+    PGRES_SINGLE_TUPLE    { since 9.2 single tuple from larger resultset }
   );
 
 { PGnotify represents the occurrence of a NOTIFY message.
@@ -420,11 +431,15 @@ type
 
   PZPostgreSQLArgBlock = ^TZPostgreSQLArgBlock;
 
-  PZPostgreSQLConnect = Pointer;
-  PZPostgreSQLResult = Pointer;
   PZPostgreSQLCancel = Pointer;
   POid = ^Oid;
   Oid = Cardinal;
+  {$IF not declared(Int32)}
+  Int32 = LongInt;
+  {$IFEND}
+  {$IF not declared(PInt32)}
+  PInt32 = ^Int32;
+  {$IFEND}
 
 TZPgCharactersetType = (
 	csSQL_ASCII = 0,	{ SQL/ASCII }
@@ -483,11 +498,11 @@ type
 { String descriptions of the ExecStatusTypes }
   pgresStatus = array[$00..$ff] of PAnsiChar;
 
-{ PGconn encapsulates a connection to the backend.
+{ TPGconn encapsulates a connection to the backend.
   The contents of this struct are not supposed to be known to applications.
 }
-  PPGconn = ^PGconn;
-  PGconn = Pointer;
+  PPGconn = ^TPGconn;
+  TPGconn = Pointer;
 
 { PGresult encapsulates the result of a query (or more precisely, of a single
   SQL command --- a query string given to PQsendQuery can contain multiple
@@ -548,15 +563,14 @@ type
     keyword:  PAnsiChar; { The keyword of the option }
     envvar:   PAnsiChar; { Fallback environment variable name }
     compiled: PAnsiChar; { Fallback compiled in default value  }
-    val:      PAnsiChar; { Options value	}
+    val:      PAnsiChar; { Options value}
     lab:      PAnsiChar; { Label for field in connect dialog }
     disPAnsiChar: PAnsiChar; { Character to display for this field
-			  in a connect dialog. Values are:
-			  ""	Display entered value as is
-			  "*"	Password field - hide value
-			  "D"	Debug options - don't
-			  create a field by default }
-    dispsize: Integer;	{ Field size in characters for dialog }
+                               in a connect dialog. Values are:
+                               ""  Display entered value as is
+                               "*" Password field - hide value
+                               "D" Debug options - don't create a field by default }
+    dispsize: Integer; { Field size in characters for dialog }
   end;
 
   PPQConninfoOption = ^PQconninfoOption;
@@ -581,22 +595,21 @@ type
   TPQparamLengths = array of Integer;
   TPQparamFormats = array of Integer;
 
-// pg time structure from pgtime.h
-  Ppg_tm = ^Tpg_tm;
-  Tpg_tm = packed record
-    tm_sec:   integer;
-    tm_min:   integer;
-    tm_hour:  integer;
-    tm_mday:  integer;
-    tm_mon:   integer; //* origin 0, not 1 */
-    tm_year:  integer; //* relative to 1900 */
-    tm_wday:  integer;
-    tm_yday:  integer;
-    tm_isdst: integer;
-    tm_gmtoff:LongInt;
-    tm_zone: PAnsiChar;
+//array.h
+  PArrayType = ^TArrayType;
+  TArrayType = packed record
+    //https://reviewable.io/reviews/cockroachdb/cockroach/13636#-KdAI6xOLxF4N43uWbYp
+    //https://stackoverflow.com/questions/4016412/postgresqls-libpq-encoding-for-binary-transport-of-array-data
+    //comment of user: "When using libpq, omit the vl_len_ portion"
+    //vl_len_:    int32;   //* varlena header (do not touch directly!) */
+    ndim:       integer; //* # of dimensions */
+    flags:      int32;//* offset to data, or 0 if no bitmap */
+    elemtype:   Oid;    //* element type OID */
   end;
-
+//    dimensions: TIntegerArray; //length of each array axis (C array of int)
+//    lower_bnds: TIntegerArray; //lower boundary of each dimension (C array of int)  this is ignored on param send
+//    null_bitmap: TIntegerArray //bitmap showing locations of nulls (OPTIONAL)
+//    actual_data: whatever is the stored data
 type
   {** Represents a generic interface to PostgreSQL native API. }
   IZPostgreSQLPlainDriver = interface (IZPlainDriver)
@@ -618,81 +631,83 @@ type
   public
   { ************** Plain API Function types definition ************* }
   { ===	in fe-connect.c === }
-    PQconnectdb     : function(ConnInfo: PAnsiChar): PGconn; cdecl; // FirmOS 8.1 OK
-    PQsetdbLogin    : function(Host, Port, Options, Tty, Db, User, Passwd: PAnsiChar): PGconn; cdecl; // FirmOS 8.1 OK
+    PQconnectdb     : function(ConnInfo: PAnsiChar): TPGconn; cdecl; // FirmOS 8.1 OK
+    PQsetdbLogin    : function(Host, Port, Options, Tty, Db, User, Passwd: PAnsiChar): TPGconn; cdecl; // FirmOS 8.1 OK
     PQconndefaults  : function: PPQconninfoOption; cdecl;
-    PQfinish        : procedure(Handle: PGconn); cdecl;
-    PQreset         : procedure(Handle: PGconn); cdecl;
+    PQfinish        : procedure(Handle: TPGconn); cdecl;
+    PQreset         : procedure(Handle: TPGconn); cdecl;
   //15022006 FirmOS: omitting PQresetStart
   //15022006 FirmOS: omitting PQresetPoll
-    PQrequestCancel : function(Handle: PGconn): Integer; cdecl;
-    PQdb            : function(Handle: PGconn): PAnsiChar; cdecl;
-    PQuser          : function(Handle: PGconn): PAnsiChar; cdecl;
-    PQpass          : function(Handle: PGconn): PAnsiChar; cdecl;
-    PQhost          : function(Handle: PGconn): PAnsiChar; cdecl;
-    PQport          : function(Handle: PGconn): PAnsiChar; cdecl;
-    PQtty           : function(Handle: PGconn): PAnsiChar; cdecl;
-    PQoptions       : function(Handle: PGconn): PAnsiChar; cdecl;
-    PQstatus        : function(Handle: PGconn): TZPostgreSQLConnectStatusType; cdecl;
-  //TBD  PGTransactionStatusType PQtransactionStatus(const PGconn *conn);
-  //15022006 FirmOS: omitting const char *PQparameterStatus(const PGconn *conn, const char *paramName);
+    PQrequestCancel : function(Handle: TPGconn): Integer; cdecl;
+    PQdb            : function(Handle: TPGconn): PAnsiChar; cdecl;
+    PQuser          : function(Handle: TPGconn): PAnsiChar; cdecl;
+    PQpass          : function(Handle: TPGconn): PAnsiChar; cdecl;
+    PQhost          : function(Handle: TPGconn): PAnsiChar; cdecl;
+    PQport          : function(Handle: TPGconn): PAnsiChar; cdecl;
+    PQtty           : function(Handle: TPGconn): PAnsiChar; cdecl;
+    PQoptions       : function(Handle: TPGconn): PAnsiChar; cdecl;
+    PQstatus        : function(Handle: TPGconn): TZPostgreSQLConnectStatusType; cdecl;
+  //TBD  PGTransactionStatusType PQtransactionStatus(const TPGconn *conn);
+  //15022006 FirmOS: omitting const char *PQparameterStatus(const TPGconn *conn, const char *paramName);
   //15022006 FirmOS: omitting  PQprotocolVersion
-    PQserverVersion : function(Handle: PGconn): Integer; cdecl;
-    PQerrorMessage  : function(Handle: PGconn): PAnsiChar; cdecl;
-    PQsocket        : function(Handle: PGconn): Integer; cdecl;
-    PQbackendPID    : function(Handle: PGconn): Integer; cdecl;
-  //15022006 FirmOS: omitting  SSL *PQgetssl(const PGconn *conn);
-    PQtrace         : procedure(Handle: PGconn; DebugPort: Pointer); cdecl;
-    PQuntrace       : procedure(Handle: PGconn); cdecl;
-    PQsetNoticeProcessor : procedure(Handle: PGconn; Proc: PQnoticeProcessor; Arg: Pointer); cdecl;
+    PQserverVersion : function(Handle: TPGconn): Integer; cdecl;
+    PQerrorMessage  : function(Handle: TPGconn): PAnsiChar; cdecl;
+    PQsocket        : function(Handle: TPGconn): Integer; cdecl;
+    PQbackendPID    : function(Handle: TPGconn): Integer; cdecl;
+  //15022006 FirmOS: omitting  SSL *PQgetssl(const TPGconn *conn);
+    PQtrace         : procedure(Handle: TPGconn; DebugPort: Pointer); cdecl;
+    PQuntrace       : procedure(Handle: TPGconn); cdecl;
+    PQsetNoticeProcessor : procedure(Handle: TPGconn; Proc: PQnoticeProcessor; Arg: Pointer); cdecl;
 
-    PQclientEncoding : function(Handle: PGconn): Integer; cdecl; //EgonHugeist
+    PQclientEncoding : function(Handle: TPGconn): Integer; cdecl; //EgonHugeist
   { === in fe-exec.c === }
   //* Simple synchronous query */
-    PQexec          : function(Handle: PGconn; Query: PAnsiChar): PPGresult; cdecl;
-    PQexecParams    : function(Handle: PGconn; command: PAnsichar;
+    PQexec          : function(Handle: TPGconn; Query: PAnsiChar): PPGresult; cdecl;
+    PQexecParams    : function(Handle: TPGconn; command: PAnsichar;
           nParams: Integer; paramTypes: POid; paramValues: PPointer;
           paramLengths: PInteger; paramFormats: PInteger;
           resultFormat: Integer): PPGresult; cdecl;
-    PQprepare        : function(Handle: PGconn; stmtName: PAnsichar;
+    PQprepare        : function(Handle: TPGconn; stmtName: PAnsichar;
           query: PAnsiChar; nParams: Integer; paramTypes: PInteger): PPGresult; cdecl;
-    PQexecPrepared   : function(Handle: PGconn; stmtName: PAnsichar;
+    PQexecPrepared   : function(Handle: TPGconn; stmtName: PAnsichar;
           nParams: Integer; paramValues: PPointer; paramLengths: PInteger;
           paramFormats: PInteger; resultFormat: Integer): PPGresult; cdecl;
   //* Interface for multiple-result or asynchronous queries */
-    PQsendQuery      : function(Handle: PGconn; query: PAnsiChar): Integer; cdecl;
-    PQsendQueryParams: function(Handle: PGconn; command: PAnsichar;
+    PQsendQuery      : function(Handle: TPGconn; query: PAnsiChar): Integer; cdecl;
+    PQsendQueryParams: function(Handle: TPGconn; command: PAnsichar;
           nParams: Integer; paramTypes: PInteger; paramValues: PPointer;
           paramLengths: PInteger; paramFormats: PInteger;
           resultFormat: Integer): Integer; cdecl;
-    PQsendPrepare    : function(Handle: PGconn; stmtName: PAnsichar;
+    PQsendPrepare    : function(Handle: TPGconn; stmtName: PAnsichar;
           query: PAnsiChar; nParams: Integer; paramTypes: POid): Integer; cdecl;
-    PQsendQueryPrepared : function(Handle: PGconn; stmtName: PAnsichar;
+    PQsendQueryPrepared : function(Handle: TPGconn; stmtName: PAnsichar;
            nParams: Integer; paramValues: PPointer; paramLengths: PInteger;
            paramFormats: PInteger; resultFormat: Integer): Integer; cdecl;
-    PQgetResult     : function(Handle: PGconn): PPGresult;  cdecl;
-    PQsetSingleRowMode : function(Handle: PGconn): Integer; cdecl;
+    PQgetResult     : function(Handle: TPGconn): PPGresult;  cdecl;
+    PQsetSingleRowMode : function(Handle: TPGconn): Integer; cdecl;
   //* Describe prepared statements and portals */
-    PQdescribePrepared : function(Handle: PGconn; stmt: PAnsiChar): PPGresult; cdecl;
+    PQdescribePrepared : function(Handle: TPGconn; stmt: PAnsiChar): PPGresult; cdecl;
     PQnparams: function(res: PPGresult): Integer; cdecl;
     PQparamtype: function(res: PPGresult; param_number: Integer): OID; cdecl;
-    PQdescribePortal : function(Handle: PGconn; portal: PAnsiChar): PPGresult; cdecl;
-    PQsendDescribePrepared : function(Handle: PGconn; stmt: PAnsiChar): Integer; cdecl;
-    PQsendDescribePortal : function(Handle: PGconn; portal: PAnsiChar): Integer; cdecl;
+    PQdescribePortal : function(Handle: TPGconn; portal: PAnsiChar): PPGresult; cdecl;
+    PQsendDescribePrepared : function(Handle: TPGconn; stmt: PAnsiChar): Integer; cdecl;
+    PQsendDescribePortal : function(Handle: TPGconn; portal: PAnsiChar): Integer; cdecl;
 
-    PQnotifies      : function(Handle: PGconn): PPGnotify; cdecl;
+    PQsetnonblocking : function(Handle: TPGconn; arg: Integer): Integer; cdecl;
+
+    PQnotifies      : function(Handle: TPGconn): PPGnotify; cdecl;
     PQfreeNotify    : procedure(Handle: PPGnotify);cdecl;
-    PQisBusy        : function(Handle: PGconn): Integer; cdecl;
-    PQconsumeInput  : function(Handle: PGconn): Integer; cdecl;
-    PQgetCancel     : function(Handle: PGconn): PGcancel; cdecl;
+    PQisBusy        : function(Handle: TPGconn): Integer; cdecl;
+    PQconsumeInput  : function(Handle: TPGconn): Integer; cdecl;
+    PQgetCancel     : function(Handle: TPGconn): PGcancel; cdecl;
     PQfreeCancel    : procedure(Canc: PGcancel); cdecl;
     PQcancel        : function(Canc: PGcancel; Buffer: PChar; BufSize: Integer): Integer;
-    PQgetline       : function(Handle: PGconn; Str: PAnsiChar; length: Integer): Integer; cdecl;
-    PQputline       : function(Handle: PGconn; Str: PAnsiChar): Integer; cdecl;
-    PQgetlineAsync  : function(Handle: PGconn; Buffer: PAnsiChar; BufSize: Integer): Integer; cdecl;
-    PQputnbytes     : function(Handle: PGconn; Buffer: PAnsiChar; NBytes: Integer): Integer; cdecl;
-    PQendcopy       : function(Handle: PGconn): Integer; cdecl;
-    PQfn            : function(Handle: PGconn; fnid: Integer; result_buf, result_len: PInteger; result_is_int: Integer; args: PPQArgBlock; nargs: Integer): PPGresult; cdecl;
+    PQgetline       : function(Handle: TPGconn; Str: PAnsiChar; length: Integer): Integer; cdecl;
+    PQputline       : function(Handle: TPGconn; Str: PAnsiChar): Integer; cdecl;
+    PQgetlineAsync  : function(Handle: TPGconn; Buffer: PAnsiChar; BufSize: Integer): Integer; cdecl;
+    PQputnbytes     : function(Handle: TPGconn; Buffer: PAnsiChar; NBytes: Integer): Integer; cdecl;
+    PQendcopy       : function(Handle: TPGconn): Integer; cdecl;
+    PQfn            : function(Handle: TPGconn; fnid: Integer; result_buf, result_len: PInteger; result_is_int: Integer; args: PPQArgBlock; nargs: Integer): PPGresult; cdecl;
     PQresultStatus  : function(Result: PPGresult): TZPostgreSQLExecStatusType; cdecl;
     PQresultErrorMessage : function(Result: PPGresult): PAnsiChar; cdecl;
     PQresultErrorField:function(result: PPGResult; fieldcode:integer):PAnsiChar;cdecl; // postgresql 8
@@ -714,12 +729,12 @@ type
     PQgetlength     : function(Result: PPGresult; tup_num, field_num: Integer): Integer; cdecl;
     PQgetisnull     : function(Result: PPGresult; tup_num, field_num: Integer): Integer; cdecl;
     PQclear         : procedure(Result: PPGresult); cdecl;
-    PQmakeEmptyPGresult  : function(Handle: PGconn; status: TZPostgreSQLExecStatusType): PPGresult; cdecl;
-    PQescapeStringConn : function(Handle: PGconn; ToChar: PAnsiChar;
+    PQmakeEmptyPGresult  : function(Handle: TPGconn; status: TZPostgreSQLExecStatusType): PPGresult; cdecl;
+    PQescapeStringConn : function(Handle: TPGconn; ToChar: PAnsiChar;
       const FromChar: PAnsiChar; length: NativeUInt; error: PInteger): NativeUInt;cdecl; //7.3
-    PQescapeLiteral    : function(Handle: PGconn; str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl;
-    PQescapeIdentifier : function(Handle: PGconn; str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl; //7.3
-    PQescapeByteaConn  : function(Handle: PGconn; from: PAnsiChar; from_length: longword; to_lenght: PLongword): PAnsiChar;cdecl;
+    PQescapeLiteral    : function(Handle: TPGconn; str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl;
+    PQescapeIdentifier : function(Handle: TPGconn; str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl; //7.3
+    PQescapeByteaConn  : function(Handle: TPGconn; from: PAnsiChar; from_length: longword; to_lenght: PLongword): PAnsiChar;cdecl;
     PQunescapeBytea    : function(const from:PAnsiChar;to_lenght:PLongword):PAnsiChar;cdecl;
     PQFreemem          : procedure(ptr:Pointer);cdecl;
 
@@ -728,27 +743,16 @@ type
     PQescapeBytea      : function(const from:PAnsiChar;from_length:longword;to_lenght:PLongword):PAnsiChar;cdecl; //7.2
 
     { === in fe-lobj.c === }
-    lo_open         : function(Handle: PGconn; lobjId: Oid; mode: Integer): Integer; cdecl;
-    lo_close        : function(Handle: PGconn; fd: Integer): Integer; cdecl;
-    lo_read         : function(Handle: PGconn; fd: Integer; buf: PAnsiChar; len: NativeUInt): Integer; cdecl;
-    lo_write        : function(Handle: PGconn; fd: Integer; buf: PAnsiChar; len: NativeUInt): Integer; cdecl;
-    lo_lseek        : function(Handle: PGconn; fd, offset, whence: Integer): Integer; cdecl;
-    lo_creat        : function(Handle: PGconn; mode: Integer): Oid; cdecl;
-    lo_tell         : function(Handle: PGconn; fd: Integer): Integer; cdecl;
-    lo_unlink       : function(Handle: PGconn; lobjId: Oid): Integer; cdecl;
-    lo_import       : function(Handle: PGconn; filename: PAnsiChar): Oid; cdecl;
-    lo_export       : function(Handle: PGconn; lobjId: Oid; filename: PAnsiChar): Integer; cdecl;
-
-    //pg 9.6 pipelined batch of https://github.com/2ndQuadrant/postgres/tree/dev/libpq-async-batch
-    //see: https://www.postgresql.org/message-id/flat/CAMsr+YFUjJytRyV4J-16bEoiZyH=4nj+sQ7JP9ajwz=B4dMMZw@mail.gmail.com#CAMsr+YFUjJytRyV4J-16bEoiZyH=4nj+sQ7JP9ajwz=B4dMMZw@mail.gmail.com
-    //* Routines for batch mode management */
-    PQisInBatchMode : function(conn: PGconn): Integer; cdecl;
-    PQbatchIsAborted: function(conn: PGconn): Integer; cdecl;
-    PQqueriesInBatch: function(conn: PGconn): Integer; cdecl;
-    PQbeginBatchMode: function(conn: PGconn): Integer; cdecl;
-    PQendBatchMode  : function(conn: PGconn): Integer; cdecl;
-    PQsendEndBatch  : function(conn: PGconn): Integer; cdecl;
-    PQgetNextQuery  : function(conn: PGconn): Integer; cdecl;
+    lo_open         : function(Handle: TPGconn; lobjId: Oid; mode: Integer): Integer; cdecl;
+    lo_close        : function(Handle: TPGconn; fd: Integer): Integer; cdecl;
+    lo_read         : function(Handle: TPGconn; fd: Integer; buf: PAnsiChar; len: NativeUInt): Integer; cdecl;
+    lo_write        : function(Handle: TPGconn; fd: Integer; buf: PAnsiChar; len: NativeUInt): Integer; cdecl;
+    lo_lseek        : function(Handle: TPGconn; fd, offset, whence: Integer): Integer; cdecl;
+    lo_creat        : function(Handle: TPGconn; mode: Integer): Oid; cdecl;
+    lo_tell         : function(Handle: TPGconn; fd: Integer): Integer; cdecl;
+    lo_unlink       : function(Handle: TPGconn; lobjId: Oid): Integer; cdecl;
+    lo_import       : function(Handle: TPGconn; filename: PAnsiChar): Oid; cdecl;
+    lo_export       : function(Handle: TPGconn; lobjId: Oid; filename: PAnsiChar): Integer; cdecl;
   end;
 
 implementation
@@ -881,6 +885,7 @@ begin
     @PQparamtype    := GetAddress('PQparamtype');
     @PQsendDescribePrepared := GetAddress('PQsendDescribePrepared');
     @PQsetSingleRowMode := GetAddress('PQsetSingleRowMode'); //9+ http://www.postgresql.org/docs/9.2/static/libpq-single-row-mode.html
+    @PQsetnonblocking := GetAddress('PQsetnonblocking');
 
     @PQnotifies     := GetAddress('PQnotifies');
     @PQfreeNotify   := GetAddress('PQfreeNotify');
@@ -938,14 +943,6 @@ begin
     @PQgetCancel         := GetAddress('PQgetCancel');
     @PQfreeCancel        := GetAddress('PQfreeCancel');
     @PQcancel            := GetAddress('PQcancel');
-
-    @PQisInBatchMode     := GetAddress('PQisInBatchMode');
-    @PQbatchIsAborted    := GetAddress('PQbatchIsAborted');
-    @PQqueriesInBatch    := GetAddress('PQqueriesInBatch');
-    @PQbeginBatchMode    := GetAddress('PQbeginBatchMode');
-    @PQendBatchMode      := GetAddress('PQendBatchMode');
-    @PQsendEndBatch      := GetAddress('PQsendEndBatch');
-    @PQgetNextQuery      := GetAddress('PQgetNextQuery');
   end;
 end;
 

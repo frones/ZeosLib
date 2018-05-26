@@ -198,6 +198,8 @@ function ZSQLTypeToBuffSize(SQLType: TZSQLType): Integer;
 
 procedure RaiseUnsupportedParameterTypeException(ParamType: TZSQLType);
 
+function IsNullFromArray(ZArray: PZArray; Index: Cardinal): Boolean;
+
 implementation
 
 uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken,
@@ -1086,6 +1088,57 @@ var
 begin
   TypeName := GetEnumName(TypeInfo(TZSQLType), Ord(ParamType));
   raise EZSQLException.Create(SUnsupportedParameterType + ': ' + TypeName);
+end;
+
+function IsNullFromArray(ZArray: PZArray; Index: Cardinal): Boolean;
+begin
+  Result := False;
+  if (ZArray <> nil) and (ZArray^.VIsNullArray <> nil)  then
+    case TZSQLType(ZArray.VIsNullArrayType) of
+        stBoolean: IsNullFromArray := TBooleanDynArray(ZArray^.VIsNullArray)[Index];
+        stByte: IsNullFromArray := TByteDynArray(ZArray^.VIsNullArray)[Index] <> 0;
+        stShort: IsNullFromArray := TShortIntDynArray(ZArray^.VIsNullArray)[Index] <> 0;
+        stWord: IsNullFromArray := TWordDynArray(ZArray^.VIsNullArray)[Index] <> 0;
+        stSmall: IsNullFromArray := TSmallIntDynArray(ZArray^.VIsNullArray)[Index] <> 0;
+        stLongWord: IsNullFromArray := TLongWordDynArray(ZArray^.VIsNullArray)[Index] <> 0;
+        stInteger: IsNullFromArray := TIntegerDynArray(ZArray^.VIsNullArray)[Index] <> 0;
+        stLong: IsNullFromArray := TInt64DynArray(ZArray^.VIsNullArray)[Index] <> 0;
+        stULong: IsNullFromArray := TUInt64DynArray(ZArray^.VIsNullArray)[Index] <> 0;
+        stFloat: IsNullFromArray := TSingleDynArray(ZArray^.VIsNullArray)[Index] <> 0;
+        stDouble: IsNullFromArray := TDoubleDynArray(ZArray^.VIsNullArray)[Index] <> 0;
+        stCurrency: IsNullFromArray := TCurrencyDynArray(ZArray^.VIsNullArray)[Index] <> 0;
+        stBigDecimal: IsNullFromArray := TExtendedDynArray(ZArray^.VIsNullArray)[Index] <> 0;
+        stString, stUnicodeString:
+            case ZArray^.VIsNullArrayVariantType of
+              {$IFNDEF UNIOCDE}
+              vtString,
+              {$ENDIF}
+              vtAnsiString,
+              vtUTF8String,
+              vtRawByteString: IsNullFromArray := StrToBoolEx(TRawByteStringDynArray(ZArray^.VIsNullArray)[Index]);
+              {$IFDEF UNIOCDE}
+              vtString,
+              {$ENDIF}
+              vtUnicodeString: IsNullFromArray := StrToBoolEx(TUnicodeStringDynArray(ZArray^.VIsNullArray)[Index]);
+              vtCharRec:
+                if ZCompatibleCodePages(TZCharRecDynArray(ZArray^.VIsNullArray)[Index].CP, zCP_UTF16)
+                then IsNullFromArray := StrToBoolEx(PWideChar(TZCharRecDynArray(ZArray^.VIsNullArray)[Index].P))
+                else IsNullFromArray := StrToBoolEx(PAnsiChar(TZCharRecDynArray(ZArray^.VIsNullArray)[Index].P));
+              vtNull: IsNullFromArray := True;
+              else
+                raise Exception.Create('Unsupported String Variant');
+            end;
+        stBytes:
+          IsNullFromArray := TBytesDynArray(ZArray^.VIsNullArray)[Index] = nil;
+        stDate, stTime, stTimestamp:
+          IsNullFromArray := TDateTimeDynArray(ZArray^.VIsNullArray)[Index] <> 0;
+        stAsciiStream,
+        stUnicodeStream,
+        stBinaryStream:
+          IsNullFromArray := TInterfaceDynArray(ZArray^.VIsNullArray)[Index] = nil;
+        else
+          raise EZSQLException.Create(SUnsupportedParameterType);
+      end
 end;
 
 end.

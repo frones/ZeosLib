@@ -89,8 +89,7 @@ type
     FFieldCount: ULong;
     FPMYSQL: PPMYSQL; //address of the MYSQL connection handle
     FMYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; //offset descriptor structures
-    procedure InitColumnBinds(Bind: PMYSQL_aligned_BIND; MYSQL_FIELD: PMYSQL_FIELD;
-      ColumnIndex: Integer; Iters: Word);
+    procedure InitColumnBinds(Bind: PMYSQL_aligned_BIND; MYSQL_FIELD: PMYSQL_FIELD; Iters: Word);
   private //connection resultset
     FQueryHandle: PZMySQLResult; //a query handle
     FRowHandle: PZMySQLRow; //current row handle
@@ -178,8 +177,8 @@ type
     function FormCalculateStatement(Columns: TObjectList): string; override;
     // <-- ms
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); override;
+    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; {%H-}UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor; const {%H-}Resolver: IZCachedResolver); override;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
   end;
 
@@ -576,6 +575,7 @@ constructor TZAbstractMySQLResultSet.Create(const PlainDriver: TZMySQLPlainDrive
   const Statement: IZStatement; const SQL: string;
   PMYSQL: PPMYSQL; PMYSQL_STMT: PPMYSQL_STMT; AffectedRows: PInteger;
   out OpenCursorCallback: TOpenCursorCallback);
+var ClientVersion: ULong;
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self),
@@ -593,7 +593,8 @@ begin
   ResultSetConcurrency := rcReadOnly;
   OpenCursorCallback := OpenCursor;
   //hooking very old versions -> we use this struct for some more logic
-  FBindOffsets := GetBindOffsets(FPlainDriver.IsMariaDBDriver, Max(40101, FPlainDriver.mysql_get_client_version));
+  ClientVersion := FPlainDriver.mysql_get_client_version;
+  FBindOffsets := GetBindOffsets(FPlainDriver.IsMariaDBDriver, Max(40101, ClientVersion));
   Open;
   if Assigned(AffectedRows) then
     AffectedRows^ := LastRowNo;
@@ -640,7 +641,7 @@ begin
     if FieldHandle = nil then
       Break;
     {$R-}
-    InitColumnBinds(@FMYSQL_aligned_BINDs[I], FieldHandle, i, Ord(fBindBufferAllocated));
+    InitColumnBinds(@FMYSQL_aligned_BINDs[I], FieldHandle, Ord(fBindBufferAllocated));
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FieldHandle, ConSettings,
       fServerCursor));
@@ -953,7 +954,7 @@ begin
 end;
 
 procedure TZAbstractMySQLResultSet.InitColumnBinds(Bind: PMYSQL_aligned_BIND;
-  MYSQL_FIELD: PMYSQL_FIELD; ColumnIndex: Integer; Iters: Word);
+  MYSQL_FIELD: PMYSQL_FIELD; Iters: Word);
 begin
   Bind^.is_unsigned_address^ := Ord(MYSQL_FIELD.flags and UNSIGNED_FLAG <> 0);
   bind^.buffer_type_address^ := MYSQL_FIELD^._type; //safe initialtype
@@ -2241,10 +2242,10 @@ var LastWasNull: Boolean;
 begin
   if ((FAutoColumnIndex {$IFDEF GENERIC_INDEX}>={$ELSE}>{$ENDIF} 0) and
           (OldRowAccessor.IsNull(FAutoColumnIndex) or
-          (OldRowAccessor.GetLong(FAutoColumnIndex, LastWasNull)=0)))
+          (OldRowAccessor.GetULong(FAutoColumnIndex, LastWasNull{%H-})=0)))
   then {if FMYSQL_STMT <> nil
-    then NewRowAccessor.SetLong(FAutoColumnIndex, FPlainDriver.mysql_stmt_insert_id(FMYSQL_STMT^))  //EH: why does it not work!?
-    else }NewRowAccessor.SetLong(FAutoColumnIndex, FPlainDriver.mysql_insert_id(FPMYSQL^)); //and this also works with the prepareds??!
+    then NewRowAccessor.SetULong(FAutoColumnIndex, FPlainDriver.mysql_stmt_insert_id(FMYSQL_STMT^))  //EH: why does it not work!?
+    else }NewRowAccessor.SetULong(FAutoColumnIndex, FPlainDriver.mysql_insert_id(FPMYSQL^)); //and this also works with the prepareds??!
 end;
 
 { TZMySQLPreparedClob }

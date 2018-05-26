@@ -138,6 +138,7 @@ type
     FStatusVector: TARRAY_ISC_STATUS;
     FHardCommit: boolean;
     FHostVersion: Integer;
+    FClientVersion: Integer;
     FXSQLDAMaxSize: LongWord;
     FTPB: RawByteString; //cache the TPB String for hard commits else we're permanently build the str from Props
     FPlainDriver: TZInterbasePlainDriver;
@@ -152,6 +153,7 @@ type
     procedure StartTransaction;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     function GetHostVersion: Integer; override;
+    function GetClientVersion: Integer; override;
     function GetDBHandle: PISC_DB_HANDLE;
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
@@ -317,6 +319,7 @@ begin
   // TZAbstractConnection.Create > Url.OnPropertiesChange
   FGUIDProps := TZInterbase6ConnectionGUIDProps.Create;
   inherited;
+  FClientVersion := -1;
 end;
 
 destructor TZInterbase6Connection.Destroy;
@@ -485,6 +488,56 @@ end;
 function TZInterbase6Connection.GetHostVersion: Integer;
 begin
   Result := FHostVersion;
+end;
+
+{**
+  Gets the client's full version number. Initially this should be 0.
+  The format of the version returned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this clients's full version number
+}
+function TZInterbase6Connection.GetClientVersion: Integer;
+var
+  Major, Minor, Release: Integer;
+  VersionStr: String;
+  FbPos: Integer;
+  DotPos: Integer;
+begin
+  if FClientVersion = -1 then begin
+    Major := 0;
+    Minor := 0;
+
+
+    VersionStr := FPlainDriver.ZGetClientVersion;
+    FbPos := System.Pos('firebird', LowerCase(VersionStr));
+    if FbPos > 0 then begin
+      // remove the fake Major version number
+      DotPos := System.Pos('.', VersionStr);
+      Delete(VersionStr, 1, DotPos);
+      // remove the fake Minor version number
+      DotPos := System.Pos('.', VersionStr);
+      Delete(VersionStr, 1, DotPos);
+      // get the release number
+      DotPos := System.Pos('.', VersionStr);
+      Release := StrToIntDef(Copy(VersionStr, 1, DotPos - 1), 0);
+      // remove the Firebird brand including the space
+      FbPos := System.Pos('firebird', LowerCase(VersionStr));
+      Delete(VersionStr, 1, FbPos + 8);
+      // get the major and minor version numbers
+      DotPos := System.Pos('.', VersionStr);
+      Major := StrToIntDef(Copy(VersionStr, 1, DotPos - 1), 0);
+      Minor := StrToIntDef(Copy(VersionStr, DotPos + 1, length(VersionStr)), 0);
+    end else begin
+      Major := FPlainDriver.ZGetClientMajorVersion;
+      Minor := FPlainDriver.ZGetClientMinorVersion;
+    end;
+
+    FClientVersion := Major * 1000000 + Minor * 1000 + Release;
+  end;
+
+  Result := FClientVersion;
 end;
 
 {**

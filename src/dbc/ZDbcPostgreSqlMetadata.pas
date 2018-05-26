@@ -323,7 +323,7 @@ var PlainDriver: TZPostgreSQLPlainDriver;
 begin
   inherited Create(Metadata);
   PlainDriver := TZPostgreSQLPlainDriver(Metadata.GetConnection.GetIZPlainDriver.GetInstance);
-  fSupportsDMLBatches := Assigned(PlainDriver.PQbeginBatchMode) and Assigned(PlainDriver.PQendBatchMode);
+  fSupportsDMLBatches := Assigned(PlainDriver.PQexecParams) and Assigned(PlainDriver.PQexecPrepared);
 end;
 
 {**

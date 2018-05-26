@@ -472,7 +472,7 @@ begin
       if Assigned(FPlainDriver.sqlite3_column_table_name) then
         TableName := ColAttributeToStr(FPlainDriver.sqlite3_column_table_name(Fsqlite3_stmt, i));
       if Assigned(FPlainDriver.sqlite3_column_database_name) then
-        SchemaName := ColAttributeToStr(FPlainDriver.sqlite3_column_database_name(Fsqlite3_stmt, i));
+        CatalogName := ColAttributeToStr(FPlainDriver.sqlite3_column_database_name(Fsqlite3_stmt, i));
       ReadOnly := TableName <> '';
       P := FPlainDriver.sqlite3_column_decltype(Fsqlite3_stmt, i);
       if P = nil then

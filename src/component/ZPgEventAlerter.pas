@@ -240,7 +240,7 @@ procedure TZPgEventAlerter.OpenNotify;
 var
   I        : Integer;
   Tmp      : array [0..255] of AnsiChar;
-  Handle   : PZPostgreSQLConnect;
+  Handle   : TPGconn;
   ICon     : IZPostgreSQLConnection;
   PlainDRV : TZPostgreSQLPlainDriver;
   Res: PGresult;
@@ -281,7 +281,7 @@ procedure TZPgEventAlerter.CloseNotify;
 var
   I        : Integer;
   tmp      : array [0..255] of AnsiChar;
-  Handle   : PZPostgreSQLConnect;
+  Handle   : TPGconn;
   ICon     : IZPostgreSQLConnection;
   PlainDRV : TZPostgreSQLPlainDriver;
   Res: PGresult;
@@ -311,7 +311,7 @@ end;
 procedure TZPgEventAlerter.CheckEvents;
 var
   Notify: PZPostgreSQLNotify;
-  Handle   : PZPostgreSQLConnect;
+  Handle   : TPGconn;
   ICon     : IZPostgreSQLConnection;
   PlainDRV : TZPostgreSQLPlainDriver;
 begin

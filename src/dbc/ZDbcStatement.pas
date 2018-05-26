@@ -660,16 +660,18 @@ end;
 procedure TZAbstractStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable);
 var ImmediatelyReleasable: IImmediatelyReleasable;
 begin
-  FClosed := True;
-  if (FOpenResultSet <> nil) and Supports(IZResultSet(FOpenResultSet), IImmediatelyReleasable, ImmediatelyReleasable) and
-     (ImmediatelyReleasable <> Sender) then
-    ImmediatelyReleasable.ReleaseImmediat(Sender);
-  if Assigned(FLastResultSet) and Supports(FLastResultSet, IImmediatelyReleasable, ImmediatelyReleasable) and
-     (ImmediatelyReleasable <> Sender) then
-    ImmediatelyReleasable.ReleaseImmediat(Sender);
-  if Assigned(Connection) and Supports(Connection, IImmediatelyReleasable, ImmediatelyReleasable) and
-     (ImmediatelyReleasable <> Sender) then
-    ImmediatelyReleasable.ReleaseImmediat(Sender);
+  if not FClosed then begin
+    FClosed := True;
+    if (FOpenResultSet <> nil) and Supports(IZResultSet(FOpenResultSet), IImmediatelyReleasable, ImmediatelyReleasable) and
+       (ImmediatelyReleasable <> Sender) then
+      ImmediatelyReleasable.ReleaseImmediat(Sender);
+    if Assigned(FLastResultSet) and Supports(FLastResultSet, IImmediatelyReleasable, ImmediatelyReleasable) and
+       (ImmediatelyReleasable <> Sender) then
+      ImmediatelyReleasable.ReleaseImmediat(Sender);
+    if Assigned(Connection) and Supports(Connection, IImmediatelyReleasable, ImmediatelyReleasable) and
+       (ImmediatelyReleasable <> Sender) then
+      ImmediatelyReleasable.ReleaseImmediat(Sender);
+  end;
 end;
 
 {**
