@@ -631,8 +631,8 @@ var
 begin
   Protocol := LowerCase(Info.Values[ConnProps_FBProtocol]);
 
-  if ((Protocol = 'inet') or (Protocol = 'wnet') or (Protocol = 'xnet') or (Protocol = 'local')) and IsFirebirdLib then begin
-    if GetClientVersion >= 3000000 then begin
+  if ((Protocol = 'inet') or (Protocol = 'wnet') or (Protocol = 'xnet') or (Protocol = 'local')) then begin
+    if (GetClientVersion >= 3000000) and IsFirebirdLib then begin
       if protocol = 'inet' then begin
         if Port <> 3050
         then ConnectionString := 'inet://' + HostName + ':' + ZFastCode.IntToStr(Port) + '/' + Database
@@ -658,7 +658,7 @@ begin
         ConnectionString := ConnectionString + Database;
       end else if Protocol = 'wnet' then begin
         if HostName = ''
-        then ConnectionString := '\\localhost'
+        then ConnectionString := '\\.'
         else ConnectionString := '\\' + HostName;
         if Port <> 3050 then begin
           ConnectionString := ConnectionString + '@' + ZFastCode.IntToStr(Port);
