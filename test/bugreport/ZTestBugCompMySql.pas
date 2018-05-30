@@ -1846,7 +1846,11 @@ begin
       Query.Append;
       Query.Fields[1].AsString := 'aaa';
       Query.Post;
+      {$IFDEF WITH_ASLARGEINT}
       Check(Query.Fields[0].AsLargeInt <> 0, 'autoincrement af unsigned bigint is not retrieved');
+      {$ELSE}
+      Check(Query.Fields[0].AsInteger <> 0, 'autoincrement af unsigned bigint is not retrieved');
+      {$ENDIF}
     end;
     Query.Close;
   finally
