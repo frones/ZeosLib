@@ -698,7 +698,7 @@ begin
     for I := 0 to Tokens.Count - 1 do
     begin
       TokenType := Tokens[I]^.TokenType;
-      TokenValue := Tokens.ToString(I);
+      TokenValue := Tokens.AsString(I);
       Field := nil;
 
       case TokenType of
@@ -1457,7 +1457,7 @@ begin
     for I := 0 to Tokens.Count - 1 do
     begin
       TokenType := Tokens[I]^.TokenType;
-      TokenValue := Tokens.ToString(I);
+      TokenValue := Tokens.AsString(I);
       Field := nil;
 
       case TokenType of

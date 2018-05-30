@@ -985,10 +985,10 @@ begin
         case SQLTokens[i].TokenType of
           ttQuoted, ttComment,
           ttWord, ttQuotedIdentifier, ttKeyword:
-            ToBuff(ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens.ToString(i),
+            ToBuff(ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens.AsString(i),
               ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP), Result);
           else
-            ToBuff({$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(SQLTokens.ToString(i)), Result);
+            ToBuff({$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(SQLTokens.AsString(i)), Result);
         end;
       end;
     finally
@@ -1017,7 +1017,7 @@ begin
     try
       for i := 0 to SQLTokens.Count -1 do begin //Assembles the Query
         {$IFDEF UNICODE}
-        ToBuff(SQLTokens.ToString(i), Result);
+        ToBuff(SQLTokens.AsString(i), Result);
         {$ELSE !UNICODE}
         ToBuff(SQLTokens[i].Value, FASQL);
         case (SQLTokens[i].TokenType) of
@@ -1025,7 +1025,7 @@ begin
           ttWord, ttQuotedIdentifier, ttKeyword:
             ToBuff(ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP), Result);
           else
-            ToBuff(ASCII7ToUnicodeString(SQLTokens.ToString(i)), Result);
+            ToBuff(ASCII7ToUnicodeString(SQLTokens.AsString(i)), Result);
         end;
         {$ENDIF UNICODE}
       end;

@@ -532,7 +532,7 @@ begin
         if Assigned(ComparePrefixTokens) and (Tokens[I].TokenType = ttWord) then
           if N = -1 then begin
             for C := 0 to high(ComparePrefixTokens) do
-              if Tokens.Equals(i, ComparePrefixTokens[C].MatchingGroup, tcUpper) then begin
+              if Tokens.IsEqual(i, ComparePrefixTokens[C].MatchingGroup, tcUpper) then begin
                 if Length(ComparePrefixTokens[C].ChildMatches) = 0 then begin
                   FTokenMatchIndex := C;
                   ComparePrefixTokens := nil;
@@ -545,7 +545,7 @@ begin
           end else begin //we already got a group
             FTokenMatchIndex := -1;
             for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
-              if Tokens.Equals(i, ComparePrefixTokens[N].ChildMatches[C], tcUpper) then begin
+              if Tokens.IsEqual(i, ComparePrefixTokens[N].ChildMatches[C], tcUpper) then begin
                 FTokenMatchIndex := N;
                 Break;
               end;

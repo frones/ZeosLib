@@ -586,7 +586,7 @@ begin
           if N = -1 then
           begin
             for C := 0 to high(ComparePrefixTokens) do
-              if Tokens.Equals(I, ComparePrefixTokens[C].MatchingGroup,  tcUpper) then begin
+              if Tokens.IsEqual(I, ComparePrefixTokens[C].MatchingGroup,  tcUpper) then begin
                 if Length(ComparePrefixTokens[C].ChildMatches) = 0 then
                   TokenMatchIndex := C
                 else
@@ -599,22 +599,22 @@ begin
           else
           begin //we already got a group
             for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
-              if Tokens.Equals(I, ComparePrefixTokens[N].ChildMatches[C], tcUpper) then begin
+              if Tokens.IsEqual(I, ComparePrefixTokens[N].ChildMatches[C], tcUpper) then begin
                 TokenMatchIndex := N;
                 Break;
               end;
             ComparePrefixTokens := nil; //stop compare sequence
           end;
         SQL := SQL + Tokens[I].Value;
-        if ParamFound and Tokens.Equals(I, Char('?')) then
+        if ParamFound and Tokens.IsEqual(I, Char('?')) then
         begin
           Add(Temp);
           Add('?', True);
           Temp := '';
         end
         else
-          if ParamFound and NeedNCharDetection and Tokens.Equals(I, Char('N')) and
-            (Tokens.Count > i) and Tokens.Equals(i+1, Char('?')) then
+          if ParamFound and NeedNCharDetection and Tokens.IsEqual(I, Char('N')) and
+            (Tokens.Count > i) and Tokens.IsEqual(i+1, Char('?')) then
           begin
             Add(Temp);
             Add('N');
@@ -684,7 +684,7 @@ begin
         if (Tokens[I].TokenType = ttWord) and Assigned(ComparePrefixTokens) then
           if N = -1 then begin
             for C := 0 to high(ComparePrefixTokens) do
-              if Tokens.Equals(I, ComparePrefixTokens[C].MatchingGroup, tcUpper) then begin
+              if Tokens.IsEqual(I, ComparePrefixTokens[C].MatchingGroup, tcUpper) then begin
                 if Length(ComparePrefixTokens[C].ChildMatches) = 0 then
                   TokenMatchIndex := C
                 else
@@ -695,7 +695,7 @@ begin
               ComparePrefixTokens := nil; //stop compare sequence
           end else begin //we already got a group
             for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
-              if Tokens.Equals(I, ComparePrefixTokens[N].ChildMatches[C], tcUpper) then
+              if Tokens.IsEqual(I, ComparePrefixTokens[N].ChildMatches[C], tcUpper) then
               begin
                 TokenMatchIndex := N;
                 Break;
@@ -703,15 +703,15 @@ begin
             ComparePrefixTokens := nil; //stop compare sequence
           end;
         SQL := SQL + Tokens[I].Value;
-        if ParamFound and Tokens.Equals(I, Char('?')) then
+        if ParamFound and Tokens.IsEqual(I, Char('?')) then
         begin
           Add(Temp);
           Add('?', True);
           Temp := '';
         end
         else
-          if ParamFound and NeedNCharDetection and Tokens.Equals(I, Char('N')) and
-            (Tokens.Count > i) and Tokens.Equals(I+1, Char('?')) then
+          if ParamFound and NeedNCharDetection and Tokens.IsEqual(I, Char('N')) and
+            (Tokens.Count > i) and Tokens.IsEqual(I+1, Char('?')) then
           begin
             Add(Temp);
             Add('N');
@@ -779,7 +779,7 @@ begin
   try
     for I := 0 to Tokens.Count - 1 do begin
       TokenType := Tokens[I]^.TokenType;
-      TokenValue := Tokens.ToString(I);
+      TokenValue := Tokens.AsString(I);
       if TokenType <> ExpectToken then
         RaiseTokenExc;
 

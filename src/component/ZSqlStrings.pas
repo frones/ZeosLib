@@ -358,7 +358,7 @@ var
   procedure NextToken;
   begin
     TokenType := Tokens[TokenIndex]^.TokenType;
-    TokenValue := Tokens.ToString(TokenIndex);
+    TokenValue := Tokens.AsString(TokenIndex);
     Inc(TokenIndex);
   end;
 

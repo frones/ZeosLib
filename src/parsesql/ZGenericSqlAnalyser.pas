@@ -252,7 +252,7 @@ begin
       Break;
     if Keyword <> '' then
       Keyword := Keyword + '*';
-    Keyword := Keyword + AnsiUpperCase(Tokens.ToString(TokenIndex));
+    Keyword := Keyword + AnsiUpperCase(Tokens.AsString(TokenIndex));
     Inc(WordCount);
     if Keywords.IndexOf(Keyword) >= 0 then begin
       Result := True;
@@ -349,9 +349,9 @@ begin
       BracketCount := 0;
       repeat
         Elements.Add(Tokens[TokenIndex]^);
-        if Tokens.ToString(TokenIndex) = '(' then
+        if Tokens.AsString(TokenIndex) = '(' then
           Inc(BracketCount)
-        else if Tokens.ToString(TokenIndex) = ')' then
+        else if Tokens.AsString(TokenIndex) = ')' then
           Dec(BracketCount);
         Inc(TokenIndex);
       until (BracketCount <= 0) or (TokenIndex >= Tokens.Count);
@@ -366,7 +366,7 @@ end;
 }
 function TZGenericStatementAnalyser.ComposeTokens(Tokens: TZTokenList): string;
 begin
-  Tokens.ToString(Result);
+  Result := Tokens.AsString;
 end;
 
 {**
@@ -395,7 +395,7 @@ var
   BracketCount: Integer;
 begin
   { Checks for the start bracket. }
-  if (TokenIndex < Tokens.Count) and not Tokens.Equals(TokenIndex, Char('(')) then begin
+  if (TokenIndex < Tokens.Count) and not Tokens.IsEqual(TokenIndex, Char('(')) then begin
     Result := False;
     Exit;
   end;
@@ -405,9 +405,9 @@ begin
   BracketCount := 1;
   Inc(TokenIndex);
   while (TokenIndex < Tokens.Count) and (BracketCount > 0) do begin
-    if Tokens.Equals(TokenIndex, Char('(')) then
+    if Tokens.IsEqual(TokenIndex, Char('(')) then
       Inc(BracketCount)
-    else if Tokens.Equals(TokenIndex, Char(')')) then
+    else if Tokens.IsEqual(TokenIndex, Char(')')) then
       Dec(BracketCount);
     Inc(TokenIndex);
   end;
@@ -426,7 +426,7 @@ begin
   Result := False;
   while TokenIndex < Tokens.Count do begin
     if not (Tokens[TokenIndex]^.TokenType in [ttWhitespace, ttComment])
-       and (Options.IndexOf(Tokens.ToString(TokenIndex, tcUpper)) < 0) then
+       and (Options.IndexOf(Tokens.AsString(TokenIndex, tcUpper)) < 0) then
       Break;
     Inc(TokenIndex);
     Result := True;
@@ -479,7 +479,7 @@ var
     //Check to right side to avoid wrong alias detection
     while SelectTokens.Count > TokenIndex +i do
     begin
-      CurrentValue := SelectTokens.ToString(TokenIndex+i);
+      CurrentValue := SelectTokens.AsString(TokenIndex+i);
       CurrentType  := SelectTokens[TokenIndex+i]^.TokenType;
       if CurrentType in [ttWhiteSpace, ttSymbol] then begin
         if (CurrentValue = ',') then begin
@@ -509,7 +509,7 @@ begin
   ClearElements;
   while TokenIndex < SelectTokens.Count do
   begin
-    CurrentValue := SelectTokens.ToString(TokenIndex);
+    CurrentValue := SelectTokens.AsString(TokenIndex);
     CurrentUpper := AnsiUpperCase(CurrentValue);
     CurrentType := SelectTokens[TokenIndex]^.TokenType;
 
@@ -548,7 +548,7 @@ begin
       HadWhitespace := False;
       while (TokenIndex < SelectTokens.Count) and (CurrentValue <> ',') do
       begin
-        CurrentValue := SelectTokens.ToString(TokenIndex);
+        CurrentValue := SelectTokens.AsString(TokenIndex);
         if CurrentValue = '(' then begin
           SkipBracketTokens(SelectTokens, TokenIndex);
           LastWasBracketSection := True;
@@ -619,7 +619,7 @@ begin
   ClearElements;
   while TokenIndex < FromTokens.Count do
   begin
-    CurrentValue := FromTokens.ToString(TokenIndex);
+    CurrentValue := FromTokens.AsString(TokenIndex);
     CurrentUpper := AnsiUpperCase(CurrentValue);
     CurrentType := FromTokens[TokenIndex]^.TokenType;
 
@@ -634,7 +634,7 @@ begin
     end else if FromClauses.IndexOf(CurrentUpper) >= 0 then
     begin
       Inc(TokenIndex);
-      CurrentValue := FromTokens.ToString(TokenIndex);
+      CurrentValue := FromTokens.AsString(TokenIndex);
       CurrentUpper := AnsiUpperCase(CurrentValue);
       while (TokenIndex < FromTokens.Count)
         and (FromJoins.IndexOf(CurrentUpper) < 0) and (CurrentUpper <> ',') do
@@ -643,7 +643,7 @@ begin
         then SkipBracketTokens(FromTokens, TokenIndex)
         else Inc(TokenIndex);
         if TokenIndex < FromTokens.Count then begin
-          CurrentValue := FromTokens.ToString(TokenIndex);
+          CurrentValue := FromTokens.AsString(TokenIndex);
           CurrentUpper := AnsiUpperCase(CurrentValue);
           CurrentType := FromTokens[TokenIndex]^.TokenType;
         end;
@@ -652,7 +652,7 @@ begin
       // Otherwise the next table is skipped
       if FromJoins.IndexOf(CurrentUpper) >= 0 then begin
         Dec(TokenIndex);
-        CurrentValue := FromTokens.ToString(TokenIndex);
+        CurrentValue := FromTokens.AsString(TokenIndex);
         CurrentUpper := AnsiUpperCase(CurrentValue);
       end;
     end

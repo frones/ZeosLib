@@ -129,15 +129,15 @@ type
     function IndexOf(const Item: TZToken): Integer; overload;
     function IndexOf(Item: PZToken): Integer; overload;
 
-    procedure ToString(out Result: String); reintroduce; overload;
-    function ToString(Index: Integer; TokenCase: TZTokenCase = tcSensitive): String; reintroduce; overload;
-    function ToFloat(Index: Integer): Extended;
-    function ToInt64(Index: Integer): Int64;
+    function AsString: String; overload;
+    function AsString(Index: Integer; TokenCase: TZTokenCase = tcSensitive): String; overload;
+    function AsFloat(Index: Integer): Extended;
+    function AsInt64(Index: Integer): Int64;
 
-    function Equals(Index: Integer; const Value: Char): Boolean; reintroduce; overload;
-    function Equals(Index: Integer; const Value: String; TokenCase: TZTokenCase = tcSensitive): Boolean; reintroduce; overload;
-    function Equals(Index: Integer; TokenType: TZTokenType; const Value: String;
-      TokenCase: TZTokenCase = tcSensitive): Boolean; reintroduce; overload;
+    function IsEqual(Index: Integer; const Value: Char): Boolean; overload;
+    function IsEqual(Index: Integer; const Value: String; TokenCase: TZTokenCase = tcSensitive): Boolean; overload;
+    function IsEqual(Index: Integer; TokenType: TZTokenType; const Value: String;
+      TokenCase: TZTokenCase = tcSensitive): Boolean; overload;
 
     procedure Clear;
     procedure Assign(Source: TZTokenList);
@@ -1575,7 +1575,7 @@ begin
   inherited;
 end;
 
-function TZTokenList.Equals(Index: Integer; const Value: String;
+function TZTokenList.IsEqual(Index: Integer; const Value: String;
   TokenCase: TZTokenCase = tcSensitive): Boolean;
 begin
   case TokenCase of
@@ -1585,7 +1585,7 @@ begin
   end;
 end;
 
-function TZTokenList.Equals(Index: Integer; TokenType: TZTokenType;
+function TZTokenList.IsEqual(Index: Integer; TokenType: TZTokenType;
   const Value: String; TokenCase: TZTokenCase): Boolean;
 var Token: PZToken;
 begin
@@ -1616,7 +1616,7 @@ begin
   {$ENDIF}
 end;
 
-function TZTokenList.Equals(Index: Integer; const Value: Char): Boolean;
+function TZTokenList.IsEqual(Index: Integer; const Value: Char): Boolean;
 var Token: PZToken;
 begin
   Token := GetToken(Index);
@@ -1778,17 +1778,30 @@ begin
   FCount := NewCount;
 end;
 
-function TZTokenList.ToFloat(Index: Integer): Extended;
+{**
+  convert a Token to a floating-point value
+  @param Index of element.
+}
+function TZTokenList.AsFloat(Index: Integer): Extended;
 begin
   Result := SQLStrToFloat(GetToken(Index)^.Value);
 end;
 
-function TZTokenList.ToInt64(Index: Integer): Int64;
+{**
+  convert a Token to a Int64 value
+  @param Index of element.
+}
+function TZTokenList.AsInt64(Index: Integer): Int64;
 begin
   Result := StrToInt64(GetToken(Index)^.Value);
 end;
 
-function TZTokenList.ToString(Index: Integer; TokenCase: TZTokenCase): String;
+{**
+  convert a Token to a string
+  @param Index of element.
+  @param TokenCase the result case of the token.
+}
+function TZTokenList.AsString(Index: Integer; TokenCase: TZTokenCase): String;
 begin
   case TokenCase of
     tcLower:      Result := LowerCase(GetToken(Index)^.Value);
@@ -1799,9 +1812,9 @@ end;
 
 {**
   compose all Tokens to a string
-  @param NewCount a new element count.
+  @result composed string from tokens.
 }
-procedure TZTokenList.ToString(out Result: String);
+function TZTokenList.AsString: String;
 var
   i: Integer;
   Len: LengthInt;

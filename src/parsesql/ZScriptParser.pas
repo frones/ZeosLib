@@ -219,7 +219,7 @@ var
 
   procedure SetNextToken;
   begin
-    TokenValue := Tokens.ToString(TokenIndex);
+    TokenValue := Tokens.AsString(TokenIndex);
     TokenType := Tokens[TokenIndex]^.TokenType;
     Inc(TokenIndex);
   end;
@@ -282,7 +282,7 @@ begin
               begin
                 Delimiter := '';
                 Temp := TokenValue; {process the DELIMITER}
-                Temp := Temp + Tokens.ToString(TokenIndex); {process the first ' ' char}
+                Temp := Temp + Tokens.AsString(TokenIndex); {process the first ' ' char}
                 Inc(TokenIndex);
                 while TokenType <> ttWhitespace do begin
                   SetNextToken;
@@ -372,7 +372,7 @@ begin
             // next(!) token is also ttWhitespace or delimiter
             // (TokenIndex was already incremented!)
             if (Tokenindex < Tokens.Count-1) then
-              if (Tokens[TokenIndex]^.TokenType = ttWhitespace) or Tokens.Equals(TokenIndex, Delimiter) then
+              if (Tokens[TokenIndex]^.TokenType = ttWhitespace) or Tokens.IsEqual(TokenIndex, Delimiter) then
                 TokenValue := '';
           end else // SQL is empty
             TokenValue := '';

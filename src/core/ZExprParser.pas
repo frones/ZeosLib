@@ -313,7 +313,7 @@ begin
       case Tokens[TokenIndex]^.TokenType of
         ttKeyword:
           begin
-            Temp := Tokens.ToString(TokenIndex, tcUpper);
+            Temp := Tokens.AsString(TokenIndex, tcUpper);
             if Temp = 'TRUE' then begin
               TokenType := ttConstant;
               TokenValue:= EncodeBoolean(True);
@@ -331,7 +331,7 @@ begin
         ttWord:
           begin
             TokenType := ttVariable;
-            Temp := Tokens.ToString(TokenIndex);
+            Temp := Tokens.AsString(TokenIndex);
             if FVariables.IndexOf(Temp) < 0 then
               FVariables.Add(Temp);
             TokenValue:= EncodeString(Temp);
@@ -339,21 +339,21 @@ begin
         ttInteger:
           begin
             TokenType := ttConstant;
-            TokenValue:= EncodeInteger(Tokens.ToInt64(TokenIndex));
+            TokenValue:= EncodeInteger(Tokens.AsInt64(TokenIndex));
           end;
         ttFloat:
           begin
             TokenType := ttConstant;
-            TokenValue:= EncodeFloat(Tokens.ToFloat(TokenIndex));
+            TokenValue:= EncodeFloat(Tokens.AsFloat(TokenIndex));
           end;
         ttQuoted:
           begin
             TokenType := ttConstant;
-            TokenValue:= EncodeString(Tokens.ToString(TokenIndex));
+            TokenValue:= EncodeString(Tokens.AsString(TokenIndex));
           end;
         ttSymbol:
           begin
-            Temp := Tokens.ToString(TokenIndex);
+            Temp := Tokens.AsString(TokenIndex);
             for I := Low(OperatorTokens) to High(OperatorTokens) do
               if Temp = OperatorTokens[I] then begin
                 TokenType := OperatorCodes[I];
@@ -363,7 +363,7 @@ begin
         ttTime,ttDate,ttDateTime:
           begin
             TokenType := ttConstant;
-            Temp := Tokens.ToString(TokenIndex);
+            Temp := Tokens.AsString(TokenIndex);
             TokenValue:= EncodeDateTime(StrToDateTime(Temp));
             TokenValue.VString := Temp; //this conversion is not 100%safe so'll keep the native value by using advantages of the ZVariant
           end;
