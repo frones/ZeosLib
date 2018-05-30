@@ -177,7 +177,7 @@ end;
 }
 procedure TZTestStatementAnalyser.TestSplitting;
 var
-  Tokens: TStrings;
+  Tokens: TZTokenList;
   Sections: TObjectList;
   Section: TZStatementSection;
 begin
@@ -229,7 +229,7 @@ end;
 }
 procedure TZTestStatementAnalyser.TestComposing;
 var
-  Tokens: TStrings;
+  Tokens: TZTokenList;
   Sections: TObjectList;
 begin
   Tokens := FAnalyser.TokenizeQuery(FTokenizer, 'select * from Table order by Id',
@@ -262,7 +262,7 @@ end;
 procedure TZTestStatementAnalyser.RunPerformanceTest(Query: string);
 var
   StartTicks: Cardinal;
-  Tokens: TStrings;
+  Tokens: TZTokenList;
   SelectSchema: IZSelectSchema;
 begin
   { Runs tokenizing test. }

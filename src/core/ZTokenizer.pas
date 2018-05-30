@@ -84,13 +84,68 @@ type
     token is a receptacle, and relies on a tokenizer to decide
     precisely how to divide a string into tokens.
   }
+  PZToken = ^TZToken;
   TZToken = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
+    {$IFDEF TOKEN_PCHAR_KUNGFU}
+    BOT, //Begin of token value
+    EOT: //End   of token value
+    PChar; //Len = ((EOT-BOT) div SizeOf(Char)) +1
+    {$ELSE}
     Value: string;
+    {$ENDIF}
     TokenType: TZTokenType;
   end;
 
   {** Defines a dynamic array of tokens. }
   TZTokenDynArray = array of TZToken;
+
+  PZTokenArray = ^TZTokenArray;
+  {** Defines a static array of tokens. }
+  TZTokenArray = array[0..{$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF} - 1] of PZToken;
+
+  TZTokenCase = (tcSensitive, tcLower, tcUpper);
+  TZTokenList = class
+    FTokens: PZTokenArray;
+    FCount: Integer;
+    FCapacity: Integer;
+  protected
+    procedure Grow;
+    procedure SetCapacity(NewCapacity: Integer);
+    procedure SetCount(NewCount: Integer);
+    class procedure Error(const Msg: string; Data: Integer);
+  public
+    constructor Create;
+    destructor Destroy; override;
+  public
+    function Add(const Item: TZToken): Integer;
+    procedure Insert(Index: Integer; const Item: TZToken);
+    procedure Delete(Index: Integer);
+
+    procedure Put(Index: Integer; const Item: TZToken);
+    function Get(Index: Integer): TZToken;
+
+    function GetToken(Index: Integer): PZToken;
+
+    function IndexOf(const Item: TZToken): Integer; overload;
+    function IndexOf(Item: PZToken): Integer; overload;
+
+    procedure ToString(out Result: String); reintroduce; overload;
+    function ToString(Index: Integer; TokenCase: TZTokenCase = tcSensitive): String; reintroduce; overload;
+    function ToFloat(Index: Integer): Extended;
+    function ToInt64(Index: Integer): Int64;
+
+    function Equals(Index: Integer; const Value: Char): Boolean; reintroduce; overload;
+    function Equals(Index: Integer; const Value: String; TokenCase: TZTokenCase = tcSensitive): Boolean; reintroduce; overload;
+    function Equals(Index: Integer; TokenType: TZTokenType; const Value: String;
+      TokenCase: TZTokenCase = tcSensitive): Boolean; reintroduce; overload;
+
+    procedure Clear;
+    procedure Assign(Source: TZTokenList);
+
+    property Count: Integer read FCount;
+    property Items[Index: Integer]: TZToken read Get write Put;
+    property Tokens[Index: Integer]: PZToken read GetToken; default;
+  end;
 
   // Forward declaration
   TZTokenizer = class;
@@ -107,6 +162,7 @@ type
     tokenizer argument.
   }
   TZTokenizerState = class (TObject)
+  {$IFNDEF TOKEN_PCHAR_KUNGFU}
   private
     fCurrentBufIndex: Byte;
     fBuf: Array[Byte] of Char;
@@ -118,6 +174,10 @@ type
     procedure ToBuf(C: Char; var Value: String); {$IFDEF WITH_INLINE}inline;{$ENDIF}
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; virtual; abstract;
+  {$ELSE}
+    function NextToken(var FirstChar: PChar; const EOS: PChar;
+      Tokenizer: TZTokenizer): TZToken; virtual; abstract;
+  {$ENDIF}
   end;
 
   {**
@@ -400,15 +460,11 @@ type
   IZTokenizer = interface (IZInterface)
     ['{C7CF190B-C45B-4AB4-A406-5999643DF6A0}']
 
-    function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions):
-      TStrings;
-    function TokenizeStreamToList(Stream: TStream; Options: TZTokenOptions):
-      TStrings;
+    function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions): TZTokenList;
+    function TokenizeStreamToList(Stream: TStream; Options: TZTokenOptions): TZTokenList;
 
-    function TokenizeBuffer(const Buffer: string; Options: TZTokenOptions):
-      TZTokenDynArray;
-    function TokenizeStream(Stream: TStream; Options: TZTokenOptions):
-      TZTokenDynArray;
+    function TokenizeBuffer(const Buffer: string; Options: TZTokenOptions): TZTokenDynArray; deprecated;
+    function TokenizeStream(Stream: TStream; Options: TZTokenOptions): TZTokenDynArray; deprecated;
 
     function GetCommentState: TZCommentState;
     function GetNumberState: TZNumberState;
@@ -438,10 +494,8 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions):
-      TStrings;
-    function TokenizeStreamToList(Stream: TStream; Options: TZTokenOptions):
-      TStrings;
+    function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions): TZTokenList;
+    function TokenizeStreamToList(Stream: TStream; Options: TZTokenOptions): TZTokenList;
 
     function TokenizeBuffer(const Buffer: string; Options: TZTokenOptions):
       TZTokenDynArray;
@@ -473,7 +527,7 @@ const
 implementation
 
 uses
-  ZFastCode, Math, StrUtils, ZSysUtils;
+  ZFastCode, Math, StrUtils, ZSysUtils, ZMessages;
 
 {$IFDEF FPC}
   {$HINTS OFF}
@@ -1259,7 +1313,7 @@ end;
     Objects are token types.
 }
 function TZTokenizer.TokenizeBufferToList(const Buffer: string;
-  Options: TZTokenOptions): TStrings;
+  Options: TZTokenOptions): TZTokenList;
 begin
   //FStream.SetPointer(Pointer(Buffer), Length(Buffer) * SizeOf(Char)); //instead of alloc+moving mem
   FStream.SetBuffer(Buffer);
@@ -1276,17 +1330,13 @@ function TZTokenizer.TokenizeStream(Stream: TStream;
   Options: TZTokenOptions): TZTokenDynArray;
 var
   I: Integer;
-  List: TStrings;
+  List: TZTokenList;
 begin
   List := TokenizeStreamToList(Stream, Options);
   try
     SetLength(Result, List.Count);
     for I := 0  to List.Count - 1 do
-    begin
-      Result[I].Value := List[I];
-      Result[I].TokenType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
-        List.Objects[I]{$IFDEF FPC}){$ENDIF});
-    end;
+      Result[I] := List[I]^;
   finally
     List.Free;
   end;
@@ -1300,14 +1350,14 @@ end;
     Objects are token types.
 }
 function TZTokenizer.TokenizeStreamToList(Stream: TStream;
-  Options: TZTokenOptions): TStrings;
+  Options: TZTokenOptions): TZTokenList;
 var
   FirstChar: Char;
   Token: TZToken;
   LastTokenType: TZTokenType;
   State: TZTokenizerState;
 begin
-  Result := TStringList.Create;
+  Result := TZTokenList.Create;
   LastTokenType := ttUnknown;
 
   while Stream.Read(FirstChar, SizeOf(Char)) > 0 do
@@ -1345,20 +1395,26 @@ begin
         Token.TokenType := ttNumber;
       { If an integer is immediately followed by a string they should be seen as one string}
       if (Token.TokenType = ttWord) and (LastTokenType = ttInteger) then begin
-        Token.Value := Result[Result.Count-1] + Token.Value;
+        Token.Value := Result[Result.Count-1]^.Value + Token.Value;
         Result.Delete(Result.Count-1);
       end;
       { Add a read token. }
       LastTokenType := Token.TokenType;
-      Result.AddObject(Token.Value, TObject(Ord(Token.TokenType)));
+      Result.Add(Token);
     end
     { Skips unknown chars if option set. }
-    else if not (toSkipUnknown in Options) then
-      Result.AddObject(FirstChar, TObject(Ord(ttUnknown)));
+    else if not (toSkipUnknown in Options) then begin
+      Token.Value := FirstChar;
+      Token.TokenType := ttUnknown;
+      Result.Add(Token);
+    end;
   end;
   { Adds an EOF if option is not set. }
-  if not (toSkipEOF in Options) then
-    Result.AddObject('', TObject(Ord(ttEOF)));
+  if not (toSkipEOF in Options) then begin
+    Token.Value := '';
+    Token.TokenType := ttEOF;
+    Result.Add(Token);
+  end;
   //FStream.Position := 0; //allways seek back to beginning else D7/FPC crashs
 end;
 
@@ -1448,6 +1504,320 @@ begin
   end else begin
     FlushBuf(Value);
     InitBuf(C);
+  end;
+end;
+
+{ TZTokenList }
+
+{**
+  Adds a new token at the and of this collection.
+  @param Item an object to be added.
+  @return a position of the added object.
+}
+function TZTokenList.Add(const Item: TZToken): Integer;
+begin
+  Result := FCount;
+  Insert(Result, Item);
+end;
+
+{**
+  Assignes source elements to this collection.
+}
+procedure TZTokenList.Assign(Source: TZTokenList);
+var i: Integer;
+begin
+  SetCount(Source.Count);
+  for I := 0 to Source.Count -1 do
+    Put(i, Source[i]^);
+end;
+
+{**
+  Clears the content of this collection.
+}
+procedure TZTokenList.Clear;
+begin
+  SetCount(0);
+  SetCapacity(0);
+end;
+
+{**
+  Creates this collection and assignes main properties.
+}
+constructor TZTokenList.Create;
+begin
+  SetCapacity(32);
+end;
+
+{**
+  Deletes an object from the specified position.
+}
+procedure TZTokenList.Delete(Index: Integer);
+begin
+{$IFOPT R+}
+  if (Index < 0) or (Index >= FCount) then
+    Error(SListIndexError, Index);
+{$ENDIF}
+  Dispose(FTokens^[Index]);
+  Dec(FCount);
+  if Index < FCount then begin
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FTokens^[Index + 1], FTokens^[Index],
+      (FCount - Index) * SizeOf(PZToken));
+    FTokens^[FCount] := nil;
+  end;
+end;
+
+{**
+  Destroys this object and frees the memory.
+}
+destructor TZTokenList.Destroy;
+begin
+  Clear;
+  inherited;
+end;
+
+function TZTokenList.Equals(Index: Integer; const Value: String;
+  TokenCase: TZTokenCase = tcSensitive): Boolean;
+begin
+  case TokenCase of
+    tcLower:      Result := LowerCase(GetToken(Index)^.Value) = Value;
+    tcUpper:      Result := UpperCase(GetToken(Index)^.Value) = Value;
+    else Result := GetToken(Index)^.Value = Value;
+  end;
+end;
+
+function TZTokenList.Equals(Index: Integer; TokenType: TZTokenType;
+  const Value: String; TokenCase: TZTokenCase): Boolean;
+var Token: PZToken;
+begin
+  Token := GetToken(Index);
+  Result := False;
+  if Token.TokenType = TokenType then
+    case TokenCase of
+      tcLower:      Result := LowerCase(GetToken(Index)^.Value) = Value;
+      tcUpper:      Result := UpperCase(GetToken(Index)^.Value) = Value;
+      else Result := GetToken(Index)^.Value = Value;
+    end;
+
+end;
+
+class procedure TZTokenList.Error(const Msg: string; Data: Integer);
+{$IFNDEF FPC}
+  function ReturnAddr: Pointer;
+  asm
+          MOV     EAX,[EBP+4]
+  end;
+{$ENDIF}
+
+begin
+  {$IFDEF FPC}
+  raise EListError.CreateFmt(Msg,[Data]) at get_caller_addr(get_frame);
+  {$ELSE}
+  raise EListError.CreateFmt(Msg, [Data]) at ReturnAddr;
+  {$ENDIF}
+end;
+
+function TZTokenList.Equals(Index: Integer; const Value: Char): Boolean;
+var Token: PZToken;
+begin
+  Token := GetToken(Index);
+  Result := (Length(Token^.Value) = 1) and (Token^.Value[1] = Value);
+end;
+
+{**
+  Gets a collection element from the specified position.
+  @param Index a position index of the element.
+  @return a requested element.
+}
+function TZTokenList.Get(Index: Integer): TZToken;
+begin
+  Result := GetToken(Index)^;
+end;
+
+{**
+  Gets a collection element from the specified position.
+  @param Index a position index of the element.
+  @return a requested element.
+}
+function TZTokenList.GetToken(Index: Integer): PZToken;
+begin
+{$IFOPT R+}
+  if (Index < 0) or (Index >= FCount) then
+    Error(SListIndexError, Index);
+{$ENDIF}
+  Result := FTokens^[Index];
+end;
+
+{**
+  Increases an element count.
+}
+procedure TZTokenList.Grow;
+var
+  Delta: Integer;
+begin
+  if FCapacity > 64 then
+    Delta := FCapacity div 4
+  else if FCapacity > 8 then
+    Delta := 16
+  else
+    Delta := 4;
+  SetCapacity(FCapacity + Delta);
+end;
+
+{**
+  Defines an index of the specified object inside this colleciton.
+  @param Item an Token-record to be found.
+  @return an object position index or -1 if it was not found.
+}
+function TZTokenList.IndexOf(const Item: TZToken): Integer;
+var
+  I: Integer;
+begin
+  Result := -1;
+  if (FCount = 0) then
+    Exit;
+
+  for I := 0 to FCount - 1 do
+    if CompareMem(FTokens^[i], @Item, SizeOf(TZToken)) then begin
+      Result := I;
+      Break;
+    end;
+end;
+
+{**
+  Defines an index of the specified object inside this colleciton.
+  @param Item an Token-memory to be found.
+  @return an object position index or -1 if it was not found.
+}
+function TZTokenList.IndexOf(Item: PZToken): Integer;
+var
+  I: Integer;
+begin
+  Result := -1;
+  if (FCount = 0) or (Item = nil) then
+    Exit;
+
+  for I := 0 to FCount - 1 do
+    if FTokens^[i] = Item then begin
+      Result := I;
+      Break;
+    end;
+  if Result = -1 then
+    Result := IndexOf(Item^);
+end;
+
+{**
+  Inserts an object into specified position.
+  @param Index a position index.
+  @param Item an object to be inserted.
+}
+procedure TZTokenList.Insert(Index: Integer; const Item: TZToken);
+begin
+{$IFOPT R+}
+  if (Index < 0) or (Index > FCount) then
+    Error(SListIndexError, Index);
+{$ENDIF}
+  if FCount = FCapacity then
+    Grow;
+  if Index < FCount then begin
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FTokens^[Index], FTokens^[Index + 1],
+      (FCount - Index) * SizeOf(PZToken));
+    Pointer(FTokens^[Index]) := nil;
+  end;
+  New(FTokens^[Index]);
+  FTokens^[Index]^ := Item;
+  Inc(FCount);
+end;
+
+procedure TZTokenList.Put(Index: Integer; const Item: TZToken);
+begin
+{$IFOPT R+}
+  if (Index < 0) or (Index >= FCount) then
+    Error(SListIndexError, Index);
+{$ENDIF}
+  FTokens^[Index]^ := Item;
+end;
+
+{**
+  Sets a new list capacity.
+  @param NewCapacity a new list capacity.
+}
+procedure TZTokenList.SetCapacity(NewCapacity: Integer);
+begin
+{$IFOPT R+}
+  if (NewCapacity < FCount) or (NewCapacity > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
+    Error(SListCapacityError, NewCapacity);
+{$ENDIF}
+  if NewCapacity <> FCapacity then begin
+    ReallocMem(FTokens, NewCapacity * SizeOf(PZToken));
+    if NewCapacity > FCapacity then
+      System.FillChar(FTokens^[FCount], (NewCapacity - FCapacity) *
+            SizeOf(PZToken), 0);
+    FCapacity := NewCapacity;
+  end;
+end;
+
+{**
+  Sets a new element count.
+  @param NewCount a new element count.
+}
+procedure TZTokenList.SetCount(NewCount: Integer);
+var
+  I: Integer;
+begin
+{$IFOPT R+}
+  if (NewCount < 0) or (NewCount > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
+    Error(SListCountError, NewCount);
+{$ENDIF}
+  if NewCount > FCapacity then
+    SetCapacity(NewCount);
+  if NewCount < FCount then
+    for I := FCount - 1 downto NewCount do begin
+      Dispose(FTokens^[I]);
+      FTokens^[I] := nil;
+    end;
+  FCount := NewCount;
+end;
+
+function TZTokenList.ToFloat(Index: Integer): Extended;
+begin
+  Result := SQLStrToFloat(GetToken(Index)^.Value);
+end;
+
+function TZTokenList.ToInt64(Index: Integer): Int64;
+begin
+  Result := StrToInt64(GetToken(Index)^.Value);
+end;
+
+function TZTokenList.ToString(Index: Integer; TokenCase: TZTokenCase): String;
+begin
+  case TokenCase of
+    tcLower:      Result := LowerCase(GetToken(Index)^.Value);
+    tcUpper:      Result := UpperCase(GetToken(Index)^.Value);
+    else          Result := GetToken(Index)^.Value;
+  end;
+end;
+
+{**
+  compose all Tokens to a string
+  @param NewCount a new element count.
+}
+procedure TZTokenList.ToString(out Result: String);
+var
+  i: Integer;
+  Len: LengthInt;
+  P: PChar;
+begin
+  Len := 0;
+  for i := 0 to FCount - 1 do
+    Inc(Len, Length(FTokens^[I]^.Value));
+  SetLength(Result, Len);
+  P := Pointer(Result);
+  for i := 0 to FCount - 1 do begin
+    Len := Length(FTokens^[I]^.Value);
+    if Len > 0 then begin
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(FTokens^[I]^.Value)^, P^, Len * SizeOf(Char));
+      Inc(P, Len);
+    end;
   end;
 end;
 

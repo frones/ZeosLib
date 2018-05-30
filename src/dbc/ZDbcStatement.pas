@@ -972,25 +972,29 @@ end;
 
 function TZAbstractStatement.GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
 var
-  SQLTokens: TZTokenDynArray;
+  SQLTokens: TZTokenList;
   i: Integer;
 begin
   if ConSettings^.AutoEncode then begin
     Result := ''; //init for FPC
-    SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
-    {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
-    for i := Low(SQLTokens) to high(SQLTokens) do begin //Assembles the Query
-      {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} + SQLTokens[i].Value;
-      case SQLTokens[i].TokenType of
-        ttQuoted, ttComment,
-        ttWord, ttQuotedIdentifier, ttKeyword:
-          ToBuff(ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens[i].Value,
-            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP), Result);
-        else
-          ToBuff({$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(SQLTokens[i].Value), Result);
+    SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]); //Disassembles the Query
+    try
+      {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
+      for i := 0 to SQLTokens.Count-1 do begin //Assembles the Query
+        {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} + SQLTokens[i].Value;
+        case SQLTokens[i].TokenType of
+          ttQuoted, ttComment,
+          ttWord, ttQuotedIdentifier, ttKeyword:
+            ToBuff(ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens.ToString(i),
+              ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP), Result);
+          else
+            ToBuff({$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(SQLTokens.ToString(i)), Result);
+        end;
       end;
+    finally
+      FlushBuff(Result);
+      SQLTokens.Free;
     end;
-    FlushBuff(Result);
   end else begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     {$IFDEF UNICODE}
@@ -1003,32 +1007,36 @@ end;
 
 function TZAbstractStatement.GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString;
 var
-  SQLTokens: TZTokenDynArray;
+  SQLTokens: TZTokenList;
   i: Integer;
 begin
   if ConSettings^.AutoEncode then begin
     Result := ''; //init
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
-    SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
-    for i := Low(SQLTokens) to high(SQLTokens) do begin //Assembles the Query
-      {$IFDEF UNICODE}
-      ToBuff(SQLTokens[i].Value, Result);
-      {$ELSE !UNICODE}
-      ToBuff(SQLTokens[i].Value, FASQL);
-      case (SQLTokens[i].TokenType) of
-        ttQuoted, ttComment,
-        ttWord, ttQuotedIdentifier, ttKeyword:
-          ToBuff(ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP), Result);
-        else
-          ToBuff(ASCII7ToUnicodeString(SQLTokens[i].Value), Result);
+    SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]); //Disassembles the Query
+    try
+      for i := 0 to SQLTokens.Count -1 do begin //Assembles the Query
+        {$IFDEF UNICODE}
+        ToBuff(SQLTokens.ToString(i), Result);
+        {$ELSE !UNICODE}
+        ToBuff(SQLTokens[i].Value, FASQL);
+        case (SQLTokens[i].TokenType) of
+          ttQuoted, ttComment,
+          ttWord, ttQuotedIdentifier, ttKeyword:
+            ToBuff(ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP), Result);
+          else
+            ToBuff(ASCII7ToUnicodeString(SQLTokens.ToString(i)), Result);
+        end;
+        {$ENDIF UNICODE}
       end;
-      {$ENDIF UNICODE}
+    finally
+      FlushBuff(Result);
+      FWSQL := Result;
+      {$IFNDEF UNICODE}
+      FlushBuff(FASQL);
+      {$ENDIF}
+      SQLTokens.Free;
     end;
-    FlushBuff(Result);
-    FWSQL := Result;
-    {$IFNDEF UNICODE}
-    FlushBuff(FASQL);
-    {$ENDIF}
   end
   else
   begin

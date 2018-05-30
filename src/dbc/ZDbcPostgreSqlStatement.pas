@@ -504,7 +504,7 @@ function TZPostgreSQLPreparedStatement.GetRawEncodedSQL(
 var
   I, C, N: Integer;
   Temp: RawByteString;
-  Tokens: TZTokenDynArray;
+  Tokens: TZTokenList;
   ComparePrefixTokens: TPreparablePrefixTokens;
   P: PChar;
   procedure Add(const Value: RawByteString; const Param: Boolean = False);
@@ -519,56 +519,60 @@ begin
   Result := '';
   if (Length(FCachedQueryRaw) = 0) and (SQL <> '') then begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
-    Tokens := Connection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]);
-    ComparePrefixTokens := PGPreparableTokens;
-    Temp := '';
-    N := -1;
-    FTokenMatchIndex := -1;
-    FParamsCnt := 0;
-    for I := 0 to High(Tokens) do begin
-      {check if we've a preparable statement. If ComparePrefixTokens = nil then
-        comparing is not required or already done }
-      if Assigned(ComparePrefixTokens) and (Tokens[I].TokenType = ttWord) then
-        if N = -1 then begin
-          for C := 0 to high(ComparePrefixTokens) do
-            if ComparePrefixTokens[C].MatchingGroup = UpperCase(Tokens[I].Value) then begin
-              if Length(ComparePrefixTokens[C].ChildMatches) = 0 then begin
-                FTokenMatchIndex := C;
-                ComparePrefixTokens := nil;
-              end else
-                N := C; //save group
-              Break;
-            end;
-          if N = -1 then //no sub-tokens ?
+    Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
+    try
+      ComparePrefixTokens := PGPreparableTokens;
+      Temp := '';
+      N := -1;
+      FTokenMatchIndex := -1;
+      FParamsCnt := 0;
+      for I := 0 to Tokens.Count -1 do begin
+        {check if we've a preparable statement. If ComparePrefixTokens = nil then
+          comparing is not required or already done }
+        if Assigned(ComparePrefixTokens) and (Tokens[I].TokenType = ttWord) then
+          if N = -1 then begin
+            for C := 0 to high(ComparePrefixTokens) do
+              if Tokens.Equals(i, ComparePrefixTokens[C].MatchingGroup, tcUpper) then begin
+                if Length(ComparePrefixTokens[C].ChildMatches) = 0 then begin
+                  FTokenMatchIndex := C;
+                  ComparePrefixTokens := nil;
+                end else
+                  N := C; //save group
+                Break;
+              end;
+            if N = -1 then //no sub-tokens ?
+              ComparePrefixTokens := nil; //stop compare sequence
+          end else begin //we already got a group
+            FTokenMatchIndex := -1;
+            for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
+              if Tokens.Equals(i, ComparePrefixTokens[N].ChildMatches[C], tcUpper) then begin
+                FTokenMatchIndex := N;
+                Break;
+              end;
             ComparePrefixTokens := nil; //stop compare sequence
-        end else begin //we already got a group
-          FTokenMatchIndex := -1;
-          for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
-            if ComparePrefixTokens[N].ChildMatches[C] = UpperCase(Tokens[I].Value) then begin
-              FTokenMatchIndex := N;
-              Break;
-            end;
-          ComparePrefixTokens := nil; //stop compare sequence
+          end;
+        P := Pointer(Tokens[I].Value);
+        if (P^ = '?') or ((Tokens[I].TokenType = ttWord) and (P^ = '$') and
+           ({$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P+1, -1) <> -1)) then begin
+          Add(Temp);
+          Add({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[I].Value), True);
+          Temp := '';
+          Inc(FParamsCnt);
+          fPQParamsFoundInQuery := (P^ <> '?') and (fPQParamsFoundInQuery or (P^ = '$'));
+        end else case (Tokens[i].TokenType) of
+          ttQuoted, ttComment,
+          ttWord, ttQuotedIdentifier, ttKeyword:
+            Temp := Temp + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i].Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
+          else
+            Temp := Temp + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[i].Value);
         end;
-      P := Pointer(Tokens[I].Value);
-      if (P^ = '?') or ((Tokens[I].TokenType = ttWord) and (P^ = '$') and
-         ({$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P+1, -1) <> -1)) then begin
-        Add(Temp);
-        Add({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[I].Value), True);
-        Temp := '';
-        Inc(FParamsCnt);
-        fPQParamsFoundInQuery := (P^ <> '?') and (fPQParamsFoundInQuery or (P^ = '$'));
-      end else case (Tokens[i].TokenType) of
-        ttQuoted, ttComment,
-        ttWord, ttQuotedIdentifier, ttKeyword:
-          Temp := Temp + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i].Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
-        else
-          Temp := Temp + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[i].Value);
       end;
+      if (Temp <> '') then
+        Add(Temp);
+    finally
+      FlushBuff(Result);
+      Tokens.Free;
     end;
-    if (Temp <> '') then
-      Add(Temp);
-    FlushBuff(Result);
   end else
     Result := ASQL;
 end;

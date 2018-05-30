@@ -297,7 +297,7 @@ var
   I: Integer;
   TokenIndex: Integer;
   Temp: string;
-  Tokens: TStrings;
+  Tokens: TZTokenList;
   TokenType: TZExpressionTokenType;
   TokenValue: TZVariant;
 begin
@@ -310,37 +310,28 @@ begin
     begin
       TokenType := ttUnknown;
       TokenValue := NullVariant;
-      case TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
-        Tokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF}) of
+      case Tokens[TokenIndex]^.TokenType of
         ttKeyword:
           begin
-            Temp := UpperCase(Tokens[TokenIndex]);
-            if Temp = 'TRUE' then
-            begin
+            Temp := Tokens.ToString(TokenIndex, tcUpper);
+            if Temp = 'TRUE' then begin
               TokenType := ttConstant;
               TokenValue:= EncodeBoolean(True);
-            end
-            else if Temp = 'FALSE' then
-            begin
+            end else if Temp = 'FALSE' then begin
               TokenType := ttConstant;
               TokenValue:= EncodeBoolean(False);
-            end
-            else
-            begin
+            end else
               for I := Low(OperatorTokens) to High(OperatorTokens) do
-              begin
                 if OperatorTokens[I] = Temp then
                 begin
                   TokenType := OperatorCodes[I];
                   Break;
                 end;
-              end;
-            end;
           end;
         ttWord:
           begin
             TokenType := ttVariable;
-            Temp := Tokens[TokenIndex];
+            Temp := Tokens.ToString(TokenIndex);
             if FVariables.IndexOf(Temp) < 0 then
               FVariables.Add(Temp);
             TokenValue:= EncodeString(Temp);
@@ -348,35 +339,33 @@ begin
         ttInteger:
           begin
             TokenType := ttConstant;
-            TokenValue:= EncodeInteger(StrToInt64(Tokens[TokenIndex]));
+            TokenValue:= EncodeInteger(Tokens.ToInt64(TokenIndex));
           end;
         ttFloat:
           begin
             TokenType := ttConstant;
-            TokenValue:= EncodeFloat(SQLStrToFloat(Tokens[TokenIndex]));
+            TokenValue:= EncodeFloat(Tokens.ToFloat(TokenIndex));
           end;
         ttQuoted:
           begin
             TokenType := ttConstant;
-            TokenValue:= EncodeString(Tokens[TokenIndex]);
+            TokenValue:= EncodeString(Tokens.ToString(TokenIndex));
           end;
         ttSymbol:
           begin
-            Temp := Tokens[TokenIndex];
+            Temp := Tokens.ToString(TokenIndex);
             for I := Low(OperatorTokens) to High(OperatorTokens) do
-            begin
-              if Temp = OperatorTokens[I] then
-              begin
+              if Temp = OperatorTokens[I] then begin
                 TokenType := OperatorCodes[I];
                 Break;
               end;
-            end;
           end;
         ttTime,ttDate,ttDateTime:
           begin
             TokenType := ttConstant;
-            TokenValue:= EncodeDateTime(StrToDateTime(Tokens[TokenIndex]));
-            TokenValue.VString := Tokens[TokenIndex]; //this conversion is not 100%safe so'll keep the native value by using advantages of the ZVariant
+            Temp := Tokens.ToString(TokenIndex);
+            TokenValue:= EncodeDateTime(StrToDateTime(Temp));
+            TokenValue.VString := Temp; //this conversion is not 100%safe so'll keep the native value by using advantages of the ZVariant
           end;
       end;
 
