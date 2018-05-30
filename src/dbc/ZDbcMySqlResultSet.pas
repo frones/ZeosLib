@@ -603,7 +603,7 @@ end;
 destructor TZAbstractMySQLResultSet.Destroy;
 begin
   inherited Destroy;
-  FreeMySQLBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, FFieldCount);
+  FreeMySQLBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FFieldCount);
 end;
 
 {**
