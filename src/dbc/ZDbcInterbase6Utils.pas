@@ -189,7 +189,6 @@ type
     FDecribedLengthArray: TSmallIntDynArray;
     FDecribedScaleArray: TSmallIntDynArray;
     FDecribedTypeArray: TSmallIntDynArray;
-    FAllocatedMemArray: TIntegerDynArray;
     procedure CheckRange(const Index: Word); {$IFDEF WITH_INLINE}inline;{$ENDIF}
     procedure IbReAlloc(var P; OldSize, NewSize: Integer);
     procedure SetFieldType(const Index: Word; Size: Integer; Code: Smallint;
@@ -1912,8 +1911,7 @@ begin
     FDecribedLengthArray[i] := SqlVar.sqllen;
     FDecribedScaleArray[i] := SqlVar.sqlscale;
     FDecribedTypeArray[i] := SqlVar.sqltype;
-    FAllocatedMemArray[i] := Max(1, SqlVar.sqllen+(2*Ord(SqlVar.sqltype and (not 1) = SQL_VARYING)));
-    ReallocMem(SqlVar.sqldata, FAllocatedMemArray[i]);
+    ReallocMem(SqlVar.sqldata, Max(1, SqlVar.sqllen+(2*Ord(SqlVar.sqltype and (not 1) = SQL_VARYING))));
     if Parameters then begin
       //This code used when allocated sqlind parameter for Param SQLDA
       SqlVar.sqltype := SqlVar.sqltype or 1;
@@ -2250,10 +2248,7 @@ begin
       sqlscale := Scale;
     sqllen := Size;
     if (Size > 0) then begin
-      if FAllocatedMemArray[Index] < Size then begin
-        IbReAlloc(sqldata, 0, Size);
-        FAllocatedMemArray[Index] := Size;
-      end
+      IbReAlloc(sqldata, 0, Size);
     end else begin
       FreeMem(sqldata);
       sqldata := nil;
@@ -2305,7 +2300,6 @@ begin
   SetLength(FDecribedLengthArray, FXSQLDA.sqld);
   SetLength(FDecribedScaleArray, FXSQLDA.sqld);
   SetLength(FDecribedTypeArray, FXSQLDA.sqld);
-  SetLength(FAllocatedMemArray, FXSQLDA.sqld);
 end;
 
 { TParamsSQLDA }
@@ -2335,23 +2329,20 @@ begin
     case Code of
       SQL_TEXT:
         begin
-          if Len > FAllocatedMemArray[Index] then begin
-            ReAllocMem(sqldata, Len);
-            FAllocatedMemArray[Index] := Len;
-          end;
-          sqllen := Len;
-          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, sqldata^, sqllen);
+          if Len > FDecribedLengthArray[Index] then
+            raise EZSQLException.Create(SPattern2Long);
+            //ReallocMem(sqldata, Len);
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, sqldata^, len);
+          sqllen := len;
         end;
       SQL_VARYING:
         begin
-          if Len+SizeOf(Short) > FAllocatedMemArray[Index] then begin
-            ReAllocMem(sqldata, Len+SizeOf(Short));
-            FAllocatedMemArray[Index] := Len+SizeOf(Short);
-            sqllen := Len+SizeOf(Short);
-          end;
-          PISC_VARYING(sqldata).strlen :=  Len;
-          sqllen := Len+SizeOf(Short);
+          if Len > FDecribedLengthArray[Index] then
+            //raise EZSQLException.Create(SPattern2Long);
+            ReallocMem(sqldata, Len+SizeOf(Short));
+          PISC_VARYING(sqldata).strlen := Len;
           {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PISC_VARYING(sqldata).str, Len);
+          sqllen := Len+SizeOf(Short);
         end;
     end;
   {$IFOPT D+}
