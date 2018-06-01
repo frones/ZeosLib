@@ -432,3 +432,13 @@ CREATE TABLE `TableMS56OBER9357` (
 `infofield` varchar(10) default NULL,
 PRIMARY KEY (`keyfield`,`dtfield`)
 );
+
+/*==============================================================*/
+/* Tables for Ticket#240                                        */
+/*==============================================================*/
+CREATE TABLE TableTicket240 (
+  id_test BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  field_1 varchar(255) DEFAULT NULL,
+  PRIMARY KEY (id_test)
+);
+

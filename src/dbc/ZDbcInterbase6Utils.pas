@@ -154,6 +154,7 @@ type
     FDecribedLengthArray: TSmallIntDynArray;
     FDecribedScaleArray: TSmallIntDynArray;
     FDecribedTypeArray: TSmallIntDynArray;
+    FAllocatedMemArray: TIntegerDynArray;
     procedure CheckRange(const Index: Word); {$IFDEF WITH_INLINE}inline;{$ENDIF}
     procedure IbReAlloc(var P; OldSize, NewSize: Integer);
     procedure SetFieldType(const Index: Word; Size: Integer; Code: Smallint;
@@ -191,8 +192,7 @@ type
   TZParamsSQLDA = class (TZSQLDA, IZParamsSQLDA)
   private
     procedure EncodeString(const Code: Smallint; const Index: Word; const Str: RawByteString);
-    procedure EncodePData(const Code: Smallint; const Index: Word;
-      const Value: PAnsiChar; const Len: LengthInt);
+    procedure EncodePData(Code: Smallint; Index: Word; Value: PAnsiChar; Len: LengthInt);
     procedure UpdateDateTime(const Index: Integer; Value: TDateTime);
   public
     procedure WriteLobBuffer(const Index: Integer; const Buffer: Pointer; const Len: Integer);
@@ -1739,35 +1739,22 @@ var
   SqlVar: PXSQLVAR;
 begin
   {$R-}
-  for I := 0 to FXSQLDA.sqld - 1 do
-  begin
+  for I := 0 to FXSQLDA.sqld - 1 do begin
     SqlVar := @FXSQLDA.SqlVar[I];
     FDecribedLengthArray[i] := SqlVar.sqllen;
     FDecribedScaleArray[i] := SqlVar.sqlscale;
     FDecribedTypeArray[i] := SqlVar.sqltype;
-    case SqlVar.sqltype and (not 1) of
-      SQL_BOOLEAN_FB, SQL_BOOLEAN, SQL_TEXT, SQL_TYPE_DATE, SQL_TYPE_TIME, SQL_DATE,
-      SQL_BLOB, SQL_ARRAY, SQL_QUAD, SQL_SHORT,
-      SQL_LONG, SQL_INT64, SQL_DOUBLE, SQL_FLOAT, SQL_D_FLOAT:
-        IbReAlloc(SqlVar.sqldata, 0, Max(1, SqlVar.sqllen));
-      SQL_VARYING:
-        IbReAlloc(SqlVar.sqldata, 0, SqlVar.sqllen + 2)
-    end;
-
-    if Parameters then
-    begin
+    FAllocatedMemArray[i] := Max(1, SqlVar.sqllen+(2*Ord(SqlVar.sqltype and (not 1) = SQL_VARYING)));
+    ReallocMem(SqlVar.sqldata, FAllocatedMemArray[i]);
+    if Parameters then begin
       //This code used when allocated sqlind parameter for Param SQLDA
       SqlVar.sqltype := SqlVar.sqltype or 1;
       IbReAlloc(SqlVar.sqlind, 0, SizeOf(Short))
-    end
-    else
-    begin
+    end else
       //This code used when allocated sqlind parameter for Result SQLDA
-      if (SqlVar.sqltype and 1) <> 0 then
-        ReallocMem(SqlVar.sqlind, SizeOf(Short))
-      else
-        SqlVar.sqlind := nil;
-    end;
+      if (SqlVar.sqltype and 1) <> 0
+      then ReallocMem(SqlVar.sqlind, SizeOf(Short))
+      else SqlVar.sqlind := nil;
   end;
   {$IFOPT D+}
 {$R+}
@@ -2094,10 +2081,12 @@ begin
     if Scale <= 0 then
       sqlscale := Scale;
     sqllen := Size;
-    if (Size > 0) then
-      IbReAlloc(sqldata, 0, Size)
-    else
-    begin
+    if (Size > 0) then begin
+      if FAllocatedMemArray[Index] < Size then begin
+        IbReAlloc(sqldata, 0, Size);
+        FAllocatedMemArray[Index] := Size;
+      end
+    end else begin
       FreeMem(sqldata);
       sqldata := nil;
     end;
@@ -2148,6 +2137,7 @@ begin
   SetLength(FDecribedLengthArray, FXSQLDA.sqld);
   SetLength(FDecribedScaleArray, FXSQLDA.sqld);
   SetLength(FDecribedTypeArray, FXSQLDA.sqld);
+  SetLength(FAllocatedMemArray, FXSQLDA.sqld);
 end;
 
 { TParamsSQLDA }
@@ -2168,8 +2158,8 @@ begin
     EncodePData(Code, Index, Pointer(Str), {%H-}PLengthInt(NativeUInt(Str) - StringLenOffSet)^);
 end;
 
-procedure TZParamsSQLDA.EncodePData(const Code: Smallint; const Index: Word;
-  const Value: PAnsiChar; const Len: LengthInt);
+procedure TZParamsSQLDA.EncodePData(Code: Smallint; Index: Word;
+  Value: PAnsiChar; Len: LengthInt);
 begin
   {$R-}
   //EH: Hint it seems we don't need a #0 term here, sqlen is the indicator
@@ -2177,16 +2167,23 @@ begin
     case Code of
       SQL_TEXT:
         begin
-          sqllen := Min(Len, FDecribedLengthArray[Index]);
-          if Len > 0 then
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, sqldata^, sqllen);
+          if Len > FAllocatedMemArray[Index] then begin
+            ReAllocMem(sqldata, Len);
+            FAllocatedMemArray[Index] := Len;
+          end;
+          sqllen := Len;
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, sqldata^, sqllen);
         end;
       SQL_VARYING:
         begin
-          PISC_VARYING(sqldata).strlen :=  Min(Len, FDecribedLengthArray[Index]);
+          if Len+SizeOf(Short) > FAllocatedMemArray[Index] then begin
+            ReAllocMem(sqldata, Len+SizeOf(Short));
+            FAllocatedMemArray[Index] := Len+SizeOf(Short);
+            sqllen := Len+SizeOf(Short);
+          end;
+          PISC_VARYING(sqldata).strlen :=  Len;
           sqllen := Len+SizeOf(Short);
-          if sqllen > 0 then
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PISC_VARYING(sqldata).str, Len);
         end;
     end;
   {$IFOPT D+}
@@ -2213,8 +2210,7 @@ begin
 
     SQLCode := (sqltype and not(1));
 
-    if (sqlscale < 0)  then
-    begin //http://code.google.com/p/fbclient/wiki/DatatypeMapping
+    if (sqlscale < 0)  then //http://code.google.com/p/fbclient/wiki/DatatypeMapping
       case SQLCode of
         SQL_SHORT  : PSmallInt(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RoundTo(Value * IBScaleDivisor[sqlscale], 0));
         SQL_LONG   : PInteger(sqldata)^  := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RoundTo(Value * IBScaleDivisor[sqlscale], 0));
@@ -2223,8 +2219,7 @@ begin
         SQL_DOUBLE : PDouble(sqldata)^   := Value;
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
-      end;
-    end
+      end
     else
       case SQLCode of
         SQL_D_FLOAT,
@@ -2263,7 +2258,6 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2658,17 +2652,8 @@ begin
 
     SQLCode := (sqltype and not(1));
     case SQLCode of
-      SQL_TEXT      :
-        begin
-          sqllen := Min(Len, FDecribedLengthArray[Index]);
-          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, sqldata^, sqllen);
-        end;
-      SQL_VARYING   :
-        begin
-          PISC_VARYING(sqldata).strlen :=  Min(Len, FDecribedLengthArray[Index]);
-          sqllen := Len+SizeOf(Short);
-          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
-        end;
+      SQL_TEXT      : EncodePData(SQLCode, Index, Value, Len);
+      SQL_VARYING   : EncodePData(SQLCode, Index, Value, Len);
       SQL_LONG      : PInteger (sqldata)^ := RawToIntDef(Value, 0);
       SQL_SHORT     : PSmallint (sqldata)^ := RawToIntDef(Value, 0);
       SQL_BOOLEAN   : PWordBool(sqldata)^ := StrToBoolEx(Value);
