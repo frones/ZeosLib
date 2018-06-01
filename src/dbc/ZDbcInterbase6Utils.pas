@@ -2330,7 +2330,7 @@ begin
       SQL_TEXT:
         begin
           if Len > FDecribedLengthArray[Index] then
-            raise EZSQLException.Create(SPattern2Long);
+            raise EZSQLException.Create(Format(SParamValueExceeded, [Index]));
             //ReallocMem(sqldata, Len);
           {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, sqldata^, len);
           sqllen := len;
