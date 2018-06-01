@@ -68,12 +68,12 @@ uses
 const
   { protocol lists }
   pl_mysql_client_server = 'mysql,mysql-4.1,mysql-5,MariaDB-5';
-  pl_mysql_embedded = 'mysqld-4.1,mysqld-5';
+  pl_mysql_embedded = 'mysqld-4.1,mysqld-5,mysqld';
   pl_all_mysql = pl_mysql_client_server + ','+ pl_mysql_embedded;
   pl_all_postgresql = 'postgresql,postgresql-7,postgresql-8,postgresql-9';
   pl_all_sqlite = 'sqlite,sqlite-3';
-  pl_interbase_client_server = 'interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebird-2.5,firebird-3.0';
-  pl_interbase_embedded = 'firebirdd-1.5,firebirdd-2.0,firebirdd-2.1,firebirdd-2.5,firebirdd-3.0';
+  pl_interbase_client_server = 'interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebird-2.5,firebird-3.0,firebird,interbase';
+  pl_interbase_embedded = 'firebirdd-1.5,firebirdd-2.0,firebirdd-2.1,firebirdd-2.5,firebirdd-3.0,firebird,interbase';
   pl_all_interbase = pl_interbase_client_server + ',' + pl_interbase_embedded;
   pl_all_oracle = 'oracle,oracle-9i';
 

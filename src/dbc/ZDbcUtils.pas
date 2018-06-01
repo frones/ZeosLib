@@ -552,7 +552,7 @@ var
   I, C, N: Integer;
   Temp: RawByteString;
   NextIsNChar, ParamFound: Boolean;
-  Tokens: TZTokenDynArray;
+  Tokens: TZTokenList;
 
   procedure Add(const Value: RawByteString; const Param: Boolean = False);
   begin
@@ -571,70 +571,70 @@ var
   end;
 begin
   ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('?', SQL) > 0);
-  if ParamFound or ConSettings^.AutoEncode or Assigned(ComparePrefixTokens) then
-  begin
-    Tokens := Tokenizer.TokenizeBuffer(SQL, [toSkipEOF]);
-    Temp := '';
-    SQL := '';
-    NextIsNChar := False;
-    N := -1;
-    TokenMatchIndex := -1;
-    for I := 0 to High(Tokens) do
-    begin
-      {check if we've a preparable statement. If ComparePrefixTokens = nil then
-        comparing is not required or already done }
-      if (Tokens[I].TokenType = ttWord) and Assigned(ComparePrefixTokens) then
-        if N = -1 then
-        begin
-          for C := 0 to high(ComparePrefixTokens) do
-            if ComparePrefixTokens[C].MatchingGroup = UpperCase(Tokens[I].Value) then
-            begin
-              if Length(ComparePrefixTokens[C].ChildMatches) = 0 then
-                TokenMatchIndex := C
-              else
-                N := C; //save group
-              Break;
-            end;
-          if N = -1 then //no sub-tokens ?
+  if ParamFound or ConSettings^.AutoEncode or Assigned(ComparePrefixTokens) then begin
+    Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
+    try
+      Temp := '';
+      SQL := '';
+      NextIsNChar := False;
+      N := -1;
+      TokenMatchIndex := -1;
+      for I := 0 to Tokens.Count -1 do begin
+        {check if we've a preparable statement. If ComparePrefixTokens = nil then
+          comparing is not required or already done }
+        if (Tokens[I].TokenType = ttWord) and Assigned(ComparePrefixTokens) then
+          if N = -1 then
+          begin
+            for C := 0 to high(ComparePrefixTokens) do
+              if Tokens.IsEqual(I, ComparePrefixTokens[C].MatchingGroup,  tcUpper) then begin
+                if Length(ComparePrefixTokens[C].ChildMatches) = 0 then
+                  TokenMatchIndex := C
+                else
+                  N := C; //save group
+                Break;
+              end;
+            if N = -1 then //no sub-tokens ?
+              ComparePrefixTokens := nil; //stop compare sequence
+          end
+          else
+          begin //we already got a group
+            for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
+              if Tokens.IsEqual(I, ComparePrefixTokens[N].ChildMatches[C], tcUpper) then begin
+                TokenMatchIndex := N;
+                Break;
+              end;
             ComparePrefixTokens := nil; //stop compare sequence
-        end
-        else
-        begin //we already got a group
-          for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
-            if ComparePrefixTokens[N].ChildMatches[C] = UpperCase(Tokens[I].Value) then
-            begin
-              TokenMatchIndex := N;
-              Break;
-            end;
-          ComparePrefixTokens := nil; //stop compare sequence
-        end;
-      SQL := SQL + Tokens[I].Value;
-      if ParamFound and (Tokens[I].Value = '?') then
-      begin
-        Add(Temp);
-        Add('?', True);
-        Temp := '';
-      end
-      else
-        if ParamFound and NeedNCharDetection and (Tokens[I].Value = 'N') and
-          (Length(Tokens) > i) and (Tokens[i+1].Value = '?') then
+          end;
+        SQL := SQL + Tokens[I].Value;
+        if ParamFound and Tokens.IsEqual(I, Char('?')) then
         begin
           Add(Temp);
-          Add('N');
+          Add('?', True);
           Temp := '';
-          NextIsNChar := True;
         end
         else
-          case (Tokens[i].TokenType) of
-            ttQuoted, ttComment,
-            ttWord, ttQuotedIdentifier, ttKeyword:
-              Temp := Temp + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i].Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
-            else
-              Temp := Temp + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[i].Value);
-          end;
+          if ParamFound and NeedNCharDetection and Tokens.IsEqual(I, Char('N')) and
+            (Tokens.Count > i) and Tokens.IsEqual(i+1, Char('?')) then
+          begin
+            Add(Temp);
+            Add('N');
+            Temp := '';
+            NextIsNChar := True;
+          end
+          else
+            case (Tokens[i].TokenType) of
+              ttQuoted, ttComment,
+              ttWord, ttQuotedIdentifier, ttKeyword:
+                Temp := Temp + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i].Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
+              else
+                Temp := Temp + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[i].Value);
+            end;
+      end;
+      if (Temp <> '') then
+        Add(Temp);
+    finally
+      Tokens.Free;
     end;
-    if (Temp <> '') then
-      Add(Temp);
   end
   else
     Add(ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
@@ -650,7 +650,7 @@ function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTE
   const NeedNCharDetection: Boolean = False): TUnicodeStringDynArray;
 var
   I, C, N: Integer;
-  Tokens: TZTokenDynArray;
+  Tokens: TZTokenList;
   Temp: ZWideString;
   NextIsNChar, ParamFound: Boolean;
   procedure Add(const Value: ZWideString; Const Param: Boolean = False);
@@ -672,72 +672,70 @@ begin
   ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0);
   if ParamFound or ConSettings^.AutoEncode or Assigned(ComparePrefixTokens) then
   begin
-    Tokens := Tokenizer.TokenizeBuffer(SQL, [toSkipEOF]);
-
-    Temp := '';
-    SQL := '';
-    NextIsNChar := False;
-    N := -1;
-    for I := 0 to High(Tokens) do
-    begin
-      {check if we've a preparable statement. If ComparePrefixTokens = nil then
-        comparing is not required or already done }
-      if (Tokens[I].TokenType = ttWord) and Assigned(ComparePrefixTokens) then
-        if N = -1 then
-        begin
-          for C := 0 to high(ComparePrefixTokens) do
-            if ComparePrefixTokens[C].MatchingGroup = UpperCase(Tokens[I].Value) then
-            begin
-              if Length(ComparePrefixTokens[C].ChildMatches) = 0 then
-                TokenMatchIndex := C
-              else
-                N := C; //save group
-              Break;
-            end;
-          if N = -1 then //no sub-tokens ?
+    Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
+    try
+      Temp := '';
+      SQL := '';
+      NextIsNChar := False;
+      N := -1;
+      for I := 0 to Tokens.Count -1 do begin
+        {check if we've a preparable statement. If ComparePrefixTokens = nil then
+          comparing is not required or already done }
+        if (Tokens[I].TokenType = ttWord) and Assigned(ComparePrefixTokens) then
+          if N = -1 then begin
+            for C := 0 to high(ComparePrefixTokens) do
+              if Tokens.IsEqual(I, ComparePrefixTokens[C].MatchingGroup, tcUpper) then begin
+                if Length(ComparePrefixTokens[C].ChildMatches) = 0 then
+                  TokenMatchIndex := C
+                else
+                  N := C; //save group
+                Break;
+              end;
+            if N = -1 then //no sub-tokens ?
+              ComparePrefixTokens := nil; //stop compare sequence
+          end else begin //we already got a group
+            for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
+              if Tokens.IsEqual(I, ComparePrefixTokens[N].ChildMatches[C], tcUpper) then
+              begin
+                TokenMatchIndex := N;
+                Break;
+              end;
             ComparePrefixTokens := nil; //stop compare sequence
-        end
-        else
-        begin //we already got a group
-          for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
-            if ComparePrefixTokens[N].ChildMatches[C] = UpperCase(Tokens[I].Value) then
-            begin
-              TokenMatchIndex := N;
-              Break;
-            end;
-          ComparePrefixTokens := nil; //stop compare sequence
-        end;
-      SQL := SQL + Tokens[I].Value;
-      if ParamFound and (Tokens[I].Value = '?') then
-      begin
-        Add(Temp);
-        Add('?', True);
-        Temp := '';
-      end
-      else
-        if ParamFound and NeedNCharDetection and (Tokens[I].Value = 'N') and
-          (Length(Tokens) > i) and (Tokens[i+1].Value = '?') then
+          end;
+        SQL := SQL + Tokens[I].Value;
+        if ParamFound and Tokens.IsEqual(I, Char('?')) then
         begin
           Add(Temp);
-          Add('N');
+          Add('?', True);
           Temp := '';
-          NextIsNChar := True;
         end
         else
-          {$IFDEF UNICODE}
-          Temp := Temp + Tokens[i].Value;
-          {$ELSE}
-          case (Tokens[i].TokenType) of
-            ttQuoted, ttComment,
-            ttWord, ttQuotedIdentifier, ttKeyword:
-              Temp := Temp + ConSettings^.ConvFuncs.ZStringToUnicode(Tokens[i].Value, ConSettings^.CTRL_CP)
-            else
-              Temp := Temp + ASCII7ToUnicodeString(Tokens[i].Value);
-          end;
-          {$ENDIF}
+          if ParamFound and NeedNCharDetection and Tokens.IsEqual(I, Char('N')) and
+            (Tokens.Count > i) and Tokens.IsEqual(I+1, Char('?')) then
+          begin
+            Add(Temp);
+            Add('N');
+            Temp := '';
+            NextIsNChar := True;
+          end
+          else
+            {$IFDEF UNICODE}
+            Temp := Temp + Tokens[i].Value;
+            {$ELSE}
+            case (Tokens[i].TokenType) of
+              ttQuoted, ttComment,
+              ttWord, ttQuotedIdentifier, ttKeyword:
+                Temp := Temp + ConSettings^.ConvFuncs.ZStringToUnicode(Tokens[i].Value, ConSettings^.CTRL_CP)
+              else
+                Temp := Temp + ASCII7ToUnicodeString(Tokens[i].Value);
+            end;
+            {$ENDIF}
+      end;
+      if (Temp <> '') then
+        Add(Temp);
+    finally
+      Tokens.Free;
     end;
-    if (Temp <> '') then
-      Add(Temp);
   end
   else
     {$IFDEF UNICODE}
@@ -764,11 +762,12 @@ var
 
   procedure RaiseTokenExc;
   begin
+    FreeAndNil(Result);
     raise EZSQLException.Create(Format('Unexpected token "%s" in string "%s"', [TokenValue, FieldNames]));
   end;
 
 var
-  Tokens: TStrings;
+  Tokens: TZTokenList;
   I: Integer;
   ExpectToken: TZTokenType;
 begin
@@ -777,11 +776,10 @@ begin
     [toSkipEOF, toSkipWhitespaces, toDecodeStrings]);
   Result := TStringList.Create;
 
-  try try
-    for I := 0 to Tokens.Count - 1 do
-    begin
-      TokenType := TZTokenType(Tokens.Objects[I]);
-      TokenValue := Tokens[I];
+  try
+    for I := 0 to Tokens.Count - 1 do begin
+      TokenType := Tokens[I]^.TokenType;
+      TokenValue := Tokens.AsString(I);
       if TokenType <> ExpectToken then
         RaiseTokenExc;
 
@@ -801,10 +799,6 @@ begin
           RaiseTokenExc;
       end;
     end;
-  except
-    FreeAndNil(Result);
-    raise;
-  end;
   finally
     Tokens.Free;
   end;

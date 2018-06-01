@@ -1430,7 +1430,7 @@ procedure TZMySQLPreparedStatement.InternalSetInParamCount(NewParamCount: Intege
 begin
   if not FEmulatedParams then begin
     if (NewParamCount <> InParamCount) and (InParamCount > 0) then
-      FreeMySQLBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffSet, InParamCount);
+      FreeMySQLBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, InParamCount);
     if ((NewParamCount <> InParamCount) or (FMYSQL_BINDs = nil)) and (NewParamCount > 0) then
       AllocMySQLBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffSet, NewParamCount, 1);
   end;

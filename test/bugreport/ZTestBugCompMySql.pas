@@ -114,6 +114,7 @@ type
     procedure TestTicket186_MultipleResults;
     procedure TestBin_Collation;
     procedure TestEvalue2Params;
+    procedure TestTicked240;
   end;
 
 implementation
@@ -1826,6 +1827,39 @@ begin
     CheckEquals(2, Query.RecordCount);
   finally
     Query.Free;
+  end;
+end;
+
+procedure TZTestCompMySQLBugReport.TestTicked240;
+var
+  Query: TZQuery;
+  I: Integer;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.CachedUpdates := False;
+    Query.SQL.Text := 'select * from TableTicket240';
+    Query.Open;
+    for i := 0 to 9 do begin
+      Query.Append;
+      Query.Fields[1].AsString := 'aaa';
+      Query.Post;
+      {$IFDEF WITH_ASLARGEINT}
+      Check(Query.Fields[0].AsLargeInt <> 0, 'autoincrement af unsigned bigint is not retrieved');
+      {$ELSE}
+      Check(Query.Fields[0].AsInteger <> 0, 'autoincrement af unsigned bigint is not retrieved');
+      {$ENDIF}
+    end;
+    Query.Close;
+  finally
+    try
+      Query.SQL.Text := 'delete from TableTicket240';
+      Query.ExecSQL;
+    finally
+      Query.Free;
+    end;
   end;
 end;
 

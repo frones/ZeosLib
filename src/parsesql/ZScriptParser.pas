@@ -198,7 +198,7 @@ end;
 procedure TZSQLScriptParser.ParseText(const Text: string);
 const SetTerm = String('SET TERM ');
 var
-  Tokens: TStrings;
+  Tokens: TZTokenList;
   TokenType: TZTokenType;
   TokenValue: string;
   TokenIndex, iPos: Integer;
@@ -213,17 +213,14 @@ var
   begin
     Result := 0;
     for I := 1 to Length(Str) do
-    begin
       if Str[I] = Chr then
         Inc(Result);
-    end;
   end;
 
   procedure SetNextToken;
   begin
-    TokenValue := Tokens[TokenIndex];
-    TokenType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
-      Tokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
+    TokenValue := Tokens.AsString(TokenIndex);
+    TokenType := Tokens[TokenIndex]^.TokenType;
     Inc(TokenIndex);
   end;
 
@@ -231,8 +228,8 @@ begin
   if Tokenizer = nil then
     raise Exception.Create(STokenizerIsNotDefined);
 
-  if CleanupStatements then
-    Tokens := Tokenizer.TokenizeBufferToList(Text, [toSkipComments])
+  if CleanupStatements
+  then Tokens := Tokenizer.TokenizeBufferToList(Text, [toSkipComments])
   else Tokens := Tokenizer.TokenizeBufferToList(Text, []);
 
   if ( (DelimiterType = dtDelimiter) or
@@ -246,11 +243,9 @@ begin
   TokenIndex := 0;
   SQL := FUncompletedStatement;
   if SQL <> '' then
-  begin
-    if CleanupStatements then
-      SQL := SQL + ' '
+    if CleanupStatements
+    then SQL := SQL + ' '
     else SQL := SQL + #10;
-  end;
   FUncompletedStatement := '';
   FStatements.Clear;
   try
@@ -263,21 +258,17 @@ begin
         dtEmptyLine:
           begin
             EndOfStatement := False;
-            if TokenType = ttWhitespace then
-            begin
+            if TokenType = ttWhitespace then begin
               Temp := TokenValue;
-              while (CountChars(Temp, #10) < 2) and (TokenType = ttWhitespace) do
-              begin
+              while (CountChars(Temp, #10) < 2) and (TokenType = ttWhitespace) do begin
                 SetNextToken;
                 if TokenType = ttWhitespace then
                   Temp := Temp + TokenValue;
               end;
               EndOfStatement := (TokenType = ttWhitespace) or EndsWith(Sql, #10);
               if not EndOfStatement then
-              begin
                 if SQL <> '' then
                   SQL := Trim(SQL) + ' ';
-              end;
             end;
           end;
         dtDelimiter,
@@ -291,10 +282,9 @@ begin
               begin
                 Delimiter := '';
                 Temp := TokenValue; {process the DELIMITER}
-                Temp := Temp + Tokens[TokenIndex]; {process the first ' ' char}
+                Temp := Temp + Tokens.AsString(TokenIndex); {process the first ' ' char}
                 Inc(TokenIndex);
-                while TokenType <> ttWhitespace do
-                begin
+                while TokenType <> ttWhitespace do begin
                   SetNextToken;
                   if not (TokenType in [ttWhitespace, ttEOF]) then
                     Delimiter := Delimiter + TokenValue; //get the new delimiter
@@ -342,45 +332,35 @@ begin
           SQL := Trim(SQL);
         if SQL <> '' then
         begin
-          if not CleanupStatements then
-            Temp := Trim(SQL)
+          if not CleanupStatements
+          then Temp := Trim(SQL)
           else Temp := SQL;
           if (DelimiterType = dtSetTerm) and StartsWith(UpperCase(Temp), SetTerm) then
               Delimiter := Copy(Temp, 10, Length(Temp) - 9)
-            else
-              if (DelimiterType = dtSetTerm) and ( ZFastCode.Pos(SetTerm, UpperCase(Temp)) > 0) then
-              begin
-                iPos := ZFastCode.Pos(SetTerm, UpperCase(Temp))+8;
-                Delimiter := Copy(Temp, iPos+1, Length(Temp) - iPos);
-                LastComment := TrimRight(Copy(Temp, 1, iPos-9));
-              end
-              else
-                if (DelimiterType = dtDelimiter)
-                  and StartsWith(UpperCase(Temp), 'DELIMITER ') then
-                  Delimiter := Copy(Temp, 11, Length(Temp) - 10)
-                else
-                begin
-                  if (DelimiterType = dtEmptyLine) and EndsWith(SQL, ';') then
-                    SQL := Copy(SQL, 1, Length(SQL) - 1);
-                  if LastComment <> '' then
-                    SQL := LastComment+#13#10+SQL;
-                  if CleanupStatements then
-                    SQL := Trim(SQL);
-                  FStatements.Add(SQL);
-                  LastComment := '';
-                end;
+          else if (DelimiterType = dtSetTerm) and ( ZFastCode.Pos(SetTerm, UpperCase(Temp)) > 0) then begin
+            iPos := ZFastCode.Pos(SetTerm, UpperCase(Temp))+8;
+            Delimiter := Copy(Temp, iPos+1, Length(Temp) - iPos);
+            LastComment := TrimRight(Copy(Temp, 1, iPos-9));
+          end else if (DelimiterType = dtDelimiter) and StartsWith(UpperCase(Temp), 'DELIMITER ') then
+            Delimiter := Copy(Temp, 11, Length(Temp) - 10)
+          else begin
+            if (DelimiterType = dtEmptyLine) and EndsWith(SQL, ';') then
+              SQL := Copy(SQL, 1, Length(SQL) - 1);
+            if LastComment <> '' then
+              SQL := LastComment+#13#10+SQL;
+            if CleanupStatements then
+              SQL := Trim(SQL);
+            FStatements.Add(SQL);
+            LastComment := '';
+          end;
         end;
         SQL := '';
-      end
       { Adds a whitespace token. }
-      else if CleanupStatements and (TokenType = ttWhitespace) then
-      begin
+      end else if CleanupStatements and (TokenType = ttWhitespace) then begin
         if SQL <> '' then
           SQL := Trim(SQL) + ' ';
-      end
       { Adds a default token. }
-      else
-      begin
+      end else begin
         // --> ms, 20/10/2005
         // TokenValue is not a ttWhitespace (#32)
         if (TokenType = ttWhitespace) and (TokenValue > '') then begin
@@ -391,14 +371,10 @@ begin
               TokenValue := '';
             // next(!) token is also ttWhitespace or delimiter
             // (TokenIndex was already incremented!)
-            if (Tokenindex < Tokens.count-1) then
-              if ((TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
-                Tokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF}) = ttWhitespace) or
-                (Tokens[TokenIndex] = Delimiter))  then
+            if (Tokenindex < Tokens.Count-1) then
+              if (Tokens[TokenIndex]^.TokenType = ttWhitespace) or Tokens.IsEqual(TokenIndex, Delimiter) then
                 TokenValue := '';
-          end
-          // SQL is empty
-          else
+          end else // SQL is empty
             TokenValue := '';
         end;
         if ((SQL = '') and (trim(TokenValue) = '')) then

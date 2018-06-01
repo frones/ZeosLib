@@ -345,7 +345,7 @@ end;
 }
 procedure TZSQLStrings.RebuildAll;
 var
-  Tokens: TStrings;
+  Tokens: TZTokenList;
   TokenValue: string;
   TokenType: TZTokenType;
   TokenIndex: Integer;
@@ -357,9 +357,8 @@ var
 
   procedure NextToken;
   begin
-    TokenType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
-      Tokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
-    TokenValue := Tokens[TokenIndex];
+    TokenType := Tokens[TokenIndex]^.TokenType;
+    TokenValue := Tokens.AsString(TokenIndex);
     Inc(TokenIndex);
   end;
 

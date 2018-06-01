@@ -51,7 +51,9 @@
 {********************************************************@}
 
 unit ZDbcMySqlUtils;
-
+{$IFDEF FPC}
+{$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 interface
 
 {$I ZDbc.inc}
@@ -161,8 +163,7 @@ procedure AllocMySQLBindBuffer(var BindBuffer: Pointer;
   BindCount, Iterations: ULong);
 
 procedure FreeMySQLBindBuffer(var BindBuffer: Pointer;
-  var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BindOffsets: PMYSQL_BINDOFFSETS;
-  BoundCount: ULong);
+  var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BoundCount: ULong);
 
 implementation
 
@@ -855,8 +856,7 @@ begin
 end;
 
 procedure FreeMySQLBindBuffer(var BindBuffer: Pointer;
-  var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BindOffsets: PMYSQL_BINDOFFSETS;
-  BoundCount: ULong);
+  var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BoundCount: ULong);
 var
   Bind: PMYSQL_aligned_BIND;
   I: Integer;

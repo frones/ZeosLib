@@ -4295,7 +4295,7 @@ begin
   pSrcBegin := Pointer(S);
   // Input must have at least 2 chars, otherwise it is considered unquoted
   // so return as is
-  if SrcLen in [0, 1] then
+  if SrcLen <= 1 then
   begin
     Result := S;
     Exit;
@@ -4373,7 +4373,7 @@ begin
   pSrcBegin := Pointer(S);
   // Input must have at least 2 chars, otherwise it is considered unquoted
   // so return as is
-  if SrcLen in [0, 1] then
+  if SrcLen <= 1 then
   begin
     Result := S;
     Exit;

@@ -2861,7 +2861,15 @@ begin
     RowAccessor.RowBuffer^.Index := RowNo;
     FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
     FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
-    GetCalcFields({$IFDEF WITH_GETCALCFIELDS_TRECBUF}NativeInt{$ENDIF}(Buffer));
+    {$IFDEF WITH_TRECORDBUFFER}
+      {$IFDEF WITH_GETCALCFIELDS_TRECBUF}
+      GetCalcFields(TRecBuf(Buffer));
+      {$ELSE}
+      GetCalcFields(TRecordBuffer(Buffer));
+      {$ENDIF}
+    {$ELSE}
+    GetCalcFields(PChar(Buffer));
+    {$ENDIF}
   end;
 
   if (Result = grError) and DoCheck then

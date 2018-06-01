@@ -682,7 +682,7 @@ function DefineFields(DataSet: TDataset; const FieldNames: string;
   out OnlyDataFields: Boolean; const Tokenizer: IZTokenizer): TObjectDynArray;
 var
   I, TokenValueInt: Integer;
-  Tokens: TStrings;
+  Tokens: TZTokenList;
   TokenType: TZTokenType;
   TokenValue: string;
   Field: TField;
@@ -697,8 +697,8 @@ begin
   try
     for I := 0 to Tokens.Count - 1 do
     begin
-      TokenType := TZTokenType({$IFDEF oldFPC}Pointer{$ENDIF}(Tokens.Objects[I]));
-      TokenValue := Tokens[I];
+      TokenType := Tokens[I]^.TokenType;
+      TokenValue := Tokens.AsString(I);
       Field := nil;
 
       case TokenType of
@@ -1438,7 +1438,7 @@ procedure DefineSortedFields(DataSet: TDataset;
   out CompareKinds: TComparisonKindArray; out OnlyDataFields: Boolean);
 var
   I, TokenValueInt: Integer;
-  Tokens: TStrings;
+  Tokens: TZTokenList;
   TokenType: TZTokenType;
   TokenValue: string;
   Field: TField;
@@ -1456,8 +1456,8 @@ begin
   try
     for I := 0 to Tokens.Count - 1 do
     begin
-      TokenType := TZTokenType({$IFDEF oldFPC}Pointer{$ENDIF}(Tokens.Objects[I]));
-      TokenValue := Tokens[I];
+      TokenType := Tokens[I]^.TokenType;
+      TokenValue := Tokens.AsString(I);
       Field := nil;
 
       case TokenType of
