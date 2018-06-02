@@ -185,6 +185,11 @@ begin
   begin
     {create the parameter bind structure}
     FParamSQLData := TZParamsSQLDA.Create(FPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
+    if FParamSQLData.GetData^.sqln < InParamCount then begin
+      FParamSQLData.GetData^.sqld := InParamCount;
+      FParamSQLData.AllocateSQLDA;
+    end;
+
     {check dynamic sql}
     FPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, GetDialect, FParamSQLData.GetData);
     ZDbcInterbase6Utils.CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings, lcExecute, ASQL);
