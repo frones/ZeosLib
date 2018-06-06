@@ -830,8 +830,9 @@ begin
     if ResultSet.Next
     then FDatabaseName := ResultSet.GetStringByName('DATABASE');
     FIKnowMyDatabaseName := True;
+    ResultSet.Close;
+    ResultSet := nil;
   end;
-  ResultSet := nil;
   Result := FDatabaseName;
 end;
 
