@@ -368,6 +368,7 @@ function Trunc(const X: Single): Int64; overload;
 function Pos(const SubStr: RawByteString; const Str: RawByteString): Integer; overload;
 function PosEx(const SubStr, S: RawByteString; Offset: Integer = 1): Integer;
 function Pos(const SubStr, Str: ZWideString): Integer; overload;
+
 implementation
 
 uses

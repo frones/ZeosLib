@@ -67,6 +67,9 @@ uses
 
 type
   {** Implements SQLite ResultSet Metadata. }
+
+  { TZSQLiteResultSetMetadata }
+
   TZSQLiteResultSetMetadata = class(TZAbstractResultSetMetadata)
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
@@ -149,7 +152,7 @@ implementation
 
 uses
   ZMessages, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode,
-  ZVariant, ZDbcSqLiteStatement, ZDbcMetadata
+  ZVariant, ZDbcMetadata
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
@@ -170,7 +173,7 @@ end;
 }
 function TZSQLiteResultSetMetadata.GetCatalogName(ColumnIndex: Integer): string;
 begin
-  Result := ''; //not supported by SQLite
+  Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).CatalogName;
 end;
 
 {**
@@ -408,7 +411,7 @@ begin
     Statement.GetConnection.GetMetadata, SQL, Self),
     Statement.GetConnection.GetConSettings);
 
-  FPsqlite := FPsqlite;
+  FPsqlite := Psqlite;
   FPsqlite3_stmt := Psqlite3_stmt;
   Fsqlite3_stmt := Psqlite3_stmt^;
   FStmtErrorCode := PErrorCode;

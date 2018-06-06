@@ -213,14 +213,14 @@ begin
       begin
         if ArrayCount > FPreparedRowsOfArray then
           Prepare; {rebuild new block and bind ramaing params*iters}
-        BindSQLDAInParameters(ClientVarManager, InParamValues,
+        BindSQLDAInParameters(InParamValues,
           InParamCount, FParamSQLData, GetConnection.GetConSettings,
           FCodePageArray, FArrayOffSet, FPreparedRowsOfArray);
         Break
       end
       else
       begin
-        BindSQLDAInParameters(ClientVarManager, InParamValues,
+        BindSQLDAInParameters(InParamValues,
           InParamCount, FParamSQLData, GetConnection.GetConSettings,
           FCodePageArray, FArrayOffSet, FPreparedRowsOfArray);
         Inc(FArrayOffSet, FPreparedRowsOfArray);

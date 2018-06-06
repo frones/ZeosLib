@@ -129,7 +129,7 @@ type
   {** Implements Interbase6 Database Connection. }
 
   { TZInterbase6Connection }
-
+  {$WARNINGS OFF} //suppress deprecated warning
   TZInterbase6Connection = class(TZAbstractConnection, IZInterbase6Connection)
   private
     FDialect: Word;
@@ -191,6 +191,7 @@ type
     function GetBinaryEscapeString(const Value: TBytes): String; override;
     function GetServerProvider: TZServerProvider; override;
   end;
+  {$WARNINGS ON} //suppress deprecated warning
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
   TZInterbase6CachedResolver = class(TZGenericCachedResolver)
@@ -319,6 +320,7 @@ end;
 
 { TZInterbase6Connection }
 
+{$WARNINGS OFF} //suppress deprecated warning
 constructor TZInterbase6Connection.Create(const ZUrl: TZURL);
 begin
   // ! Create the object before parent's constructor because it is used in
@@ -329,6 +331,7 @@ begin
   FIsFirebirdLib := false;
   FIsInterbaseLib := false;
 end;
+{$WARNINGS ON}
 
 destructor TZInterbase6Connection.Destroy;
 begin

@@ -204,7 +204,7 @@ procedure LoadOracleVar(const PlainDriver: TZOraclePlainDriver;
   @param Variables Oracle variable holders or array of TDesciptorRec.
   @param ArrayCount count of bound arrays
 }
-procedure UnloadOracleVars(var Variables: PZSQLVars; const Iteration: Integer);
+procedure UnloadOracleVars(var Variables: PZSQLVars);
 
 {**
   Convert string Oracle field type to SQLType
@@ -253,7 +253,7 @@ function CreateOracleResultSet(
 }
 procedure AllocateOracleStatementHandles(const PlainDriver: TZOraclePlainDriver;
   const Connection: IZConnection; var Handle: POCIStmt; var ErrorHandle: POCIError;
-  UserServerCachedStmt: Boolean = False);
+  {%H-}UserServerCachedStmt: Boolean = False);
 
 {**
   Frees from memory Oracle handlers for Statement object.
@@ -1015,7 +1015,7 @@ end;
   Unloads Oracle variables binded to SQL statement with data.
   @param Variables Oracle variable holders.
 }
-procedure UnloadOracleVars(var Variables: PZSQLVars; const Iteration: Integer);
+procedure UnloadOracleVars(var Variables: PZSQLVars);
 var
   I: Integer;
   J: LongWord;

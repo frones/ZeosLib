@@ -387,7 +387,7 @@ begin
   inherited ExecutePrepared;
 
   { Unloads binded variables with values. }
-  UnloadOracleVars(FParams, FIteration)
+  UnloadOracleVars(FParams)
   { Autocommit statement. done by ExecuteOracleStatement}
 end;
 
@@ -410,7 +410,7 @@ begin
   inherited ExecuteQueryPrepared;
 
   { Unloads binded variables with values. }
-  UnloadOracleVars(FParams, FIteration)
+  UnloadOracleVars(FParams)
 end;
 
 {**
@@ -464,7 +464,7 @@ begin
     inherited ExecuteUpdatePrepared;
   finally
     { Unloads binded variables with values. }
-    UnloadOracleVars(FParams, FIteration)
+    UnloadOracleVars(FParams)
   end;
 
   { Autocommit statement. done by ExecuteOracleStatement}
@@ -898,7 +898,7 @@ begin
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   finally
     { Unloads binded variables with values. }
-    UnloadOracleVars(FParams, FIteration)
+    UnloadOracleVars(FParams)
   end;
 
   { Autocommit statement. done by ExecuteOracleStatement}
@@ -923,7 +923,7 @@ begin
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   finally
     { Unloads binded variables with values. }
-    UnloadOracleVars(FParams, FIteration);
+    UnloadOracleVars(FParams);
   end;
 end;
 

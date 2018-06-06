@@ -85,6 +85,7 @@ type
   private
     FParams: TParams;
     FScript: TZSQLStrings;
+
     FScriptParser: TZSQLScriptParser;
     FConnection: TZAbstractConnection;
     FBeforeExecute: TZProcessorNotifyEvent;

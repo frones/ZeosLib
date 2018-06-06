@@ -97,7 +97,7 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
-    function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; override;
+    function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
     procedure SetInParamCount(const NewParamCount: Integer); override;
     procedure InternalSetInParamCount(NewParamCount: Integer); override;
     function GetBoundValueAsLogValue(ParamIndex: Integer): RawByteString; override;
@@ -957,9 +957,9 @@ begin
   FChunkedData := False;
 end;
 
-function TZMysqlPreparedStatement.GetCompareFirstKeywordStrings: TPreparablePrefixTokens;
+function TZMysqlPreparedStatement.GetCompareFirstKeywordStrings: PPreparablePrefixTokens;
 begin
-  Result := FPreparablePrefixTokens;
+  Result := @FPreparablePrefixTokens;
 end;
 
 function TZMySQLPreparedStatement.GetBoundValueAsLogValue(

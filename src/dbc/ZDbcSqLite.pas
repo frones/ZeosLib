@@ -392,7 +392,7 @@ begin
   with FTransactionStmts[Action] do begin
     if Stmt = nil then
       CheckSQLiteError(FPlainDriver, FHandle,
-        FPlainDriver.sqlite3_Prepare_v2(FHandle, Pointer(SQL), nBytes, Stmt, pzTail),
+        FPlainDriver.sqlite3_Prepare_v2(FHandle, Pointer(SQL), nBytes, Stmt, pzTail{%H-}),
           lcExecute, SQL, ConSettings);
     try
       CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.sqlite3_step(Stmt),

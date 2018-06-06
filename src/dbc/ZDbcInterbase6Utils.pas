@@ -245,7 +245,7 @@ type
     procedure UpdateTime(const Index: Integer; const Value: TDateTime);
     procedure UpdateTimestamp(const Index: Integer; const Value: TDateTime);
     procedure UpdateQuad(const Index: Word; const Value: TISC_QUAD);
-    procedure UpdateArray(const Index: Word; const Value; const SQLType: TZSQLType;
+    procedure UpdateArray(const Index: Word; const {%H-}Value; const {%H-}SQLType: TZSQLType;
       const VariantType: TZVariantType = vtNull);
   end;
 
@@ -300,9 +300,8 @@ procedure PrepareResultSqlData(const PlainDriver: TZInterbasePlainDriver;
 procedure PrepareParameters(const PlainDriver: TZInterbasePlainDriver;
   const SQL: RawByteString; const Dialect: Word; var StmtHandle: TISC_STMT_HANDLE;
   const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings);
-procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
-  const InParamValues: TZVariantDynArray;  const InParamCount: Integer;
-  const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings;
+procedure BindSQLDAInParameters(const InParamValues: TZVariantDynArray;
+  const InParamCount: Integer; const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings;
   const CodePageArray: TWordDynArray; ArrayOffSet, ArrayItersCount: Integer); overload;
 procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
   const InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
@@ -1167,7 +1166,7 @@ begin
   if OutBuffer[Len] <> AnsiChar(isc_info_end) then
     Exit;
 
-  FillChar(Counts, SizeOf(Counts), #0);
+  FillChar(Counts{%H-}, SizeOf(Counts), #0);
   while pBuf - pBufStart <= Len do
   begin
     Item := Byte(pBuf^);
@@ -1353,7 +1352,7 @@ begin
   {$ENDIF}
 end;
 
-procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
+procedure BindSQLDAInParameters(
   const InParamValues: TZVariantDynArray;  const InParamCount: Integer;
   const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings;
   const CodePageArray: TWordDynArray; ArrayOffSet, ArrayItersCount: Integer);
@@ -2526,7 +2525,7 @@ begin
     DecodeDate(Value, y, m, d);
     DecodeTime(Value, hr, min, sec, msec);
 
-    FillChar(TmpDate, SizeOf(TmpDate), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+    FillChar(TmpDate{%H-}, SizeOf(TmpDate), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
     TmpDate.tm_year := y - 1900;
     TmpDate.tm_mon := m - 1;
     TmpDate.tm_mday := d;

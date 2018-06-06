@@ -137,7 +137,6 @@ begin
 //  CheckTokens(Tokenizer.TokenizeBuffer(TokenString146,
 //    [toSkipEOF, toSkipWhitespaces]), TokenTypes146Off, TokenValues146Off);
 
-  (Tokenizer as TZPostgreSQLTokenizer).SetStandardConformingStrings(True);
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1,
     [toSkipEOF, toSkipWhitespaces]), TokenTypes1On, TokenValues1On);
 

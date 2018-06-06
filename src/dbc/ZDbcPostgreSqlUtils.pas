@@ -120,13 +120,6 @@ function PGEscapeString(SrcBuffer: PAnsiChar; SrcLength: Integer;
     ConSettings: PZConSettings; Quoted: Boolean): RawByteString;
 
 {**
-  Converts an string from escape PostgreSQL format.
-  @param Value a string in PostgreSQL escape format.
-  @return a regular string.
-}
-function DecodeString(const Value: AnsiString): AnsiString;
-
-{**
   Checks for possible sql errors.
   @param Connection a reference to database connection to execute Rollback.
   @param PlainDriver a PostgreSQL plain driver.
@@ -689,54 +682,6 @@ begin
   end;
   if Quoted then
     DestBuffer^ := '''';
-end;
-
-{**
-  Converts an string from escape PostgreSQL format.
-  @param Value a string in PostgreSQL escape format.
-  @return a regular string.
-}
-function DecodeString(const Value: AnsiString): AnsiString;
-var
-  SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PAnsiChar;
-begin
-  SrcLength := Length(Value);
-  SrcBuffer := PAnsiChar(Value);
-  SetLength(Result, SrcLength);
-  DestLength := 0;
-  DestBuffer := PAnsiChar(Result);
-
-  while SrcLength > 0 do
-  begin
-    if SrcBuffer^ = '\' then
-    begin
-      Inc(SrcBuffer);
-      if CharInSet(SrcBuffer^, ['\', '''']) then
-      begin
-        DestBuffer^ := SrcBuffer^;
-        Inc(SrcBuffer);
-        Dec(SrcLength, 2);
-      end
-      else
-      begin
-        DestBuffer^ := AnsiChar(((Byte(SrcBuffer[0]) - Ord('0')) shl 6)
-          or ((Byte(SrcBuffer[1]) - Ord('0')) shl 3)
-          or ((Byte(SrcBuffer[2]) - Ord('0'))));
-        Inc(SrcBuffer, 3);
-        Dec(SrcLength, 4);
-      end;
-    end
-    else
-    begin
-      DestBuffer^ := SrcBuffer^;
-      Inc(SrcBuffer);
-      Dec(SrcLength);
-    end;
-    Inc(DestBuffer);
-    Inc(DestLength);
-  end;
-  SetLength(Result, DestLength);
 end;
 
 {**

@@ -86,7 +86,7 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
   protected
-    procedure BindNull(Index: Integer; var SQLType: TZSQLType); override;
+    procedure BindNull(Index: Integer; var {%H-}SQLType: TZSQLType); override;
     procedure BindBinary(Index: Integer; var SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
     procedure BindUnsignedOrdinal(Index: Integer; var SQLType: TZSQLType; const Value: UInt64); override;
     procedure BindSignedOrdinal(Index: Integer; var SQLType: TZSQLType; const Value: Int64); override;
@@ -209,9 +209,6 @@ begin
     FBindLater := False;
 end;
 
-const
-  BoolArray: array[Boolean] of PAnsiChar = ('N', 'Y');
-
 procedure TZSQLiteCAPIPreparedStatement.BindBinary(Index: Integer;
   var SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
 var ErrorCode: Integer;
@@ -330,7 +327,7 @@ procedure TZSQLiteCAPIPreparedStatement.Prepare;
 var pzTail: PAnsiChar;
 begin
   if not Prepared then begin
-    FErrorCode := FPlainDriver.sqlite3_prepare_v2(FHandle, Pointer(ASQL), Length(ASQL), FStmtHandle, pzTail);
+    FErrorCode := FPlainDriver.sqlite3_prepare_v2(FHandle, Pointer(ASQL), Length(ASQL), FStmtHandle, pzTail{%H-});
     if FErrorCode <> SQLITE_OK then
       CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcPrepStmt, ASQL, ConSettings);
     inherited Prepare;

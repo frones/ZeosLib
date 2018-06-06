@@ -1847,7 +1847,10 @@ begin
       Query.Fields[1].AsString := 'aaa';
       Query.Post;
       {$IFDEF WITH_ASLARGEINT}
-      Check(Query.Fields[0].AsLargeInt <> 0, 'autoincrement af unsigned bigint is not retrieved');
+      if Query.Fields[0] Is TLargeIntField then
+        Check(TLargeIntField(Query.Fields[0]).AsLargeInt <> 0, 'autoincrement af unsigned bigint is not retrieved')
+      else
+      Check(Query.Fields[0].AsInteger <> 0, 'autoincrement af unsigned bigint is not retrieved');
       {$ELSE}
       Check(Query.Fields[0].AsInteger <> 0, 'autoincrement af unsigned bigint is not retrieved');
       {$ENDIF}
@@ -1865,15 +1868,12 @@ end;
 
 procedure TZTestCompMySQLBugReport.TestTicket186_MultipleResults;
 var
-  Query: TZQuery;
+  Query: TZReadOnlyQuery;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
-  Query := CreateQuery;
+  Query := CreateReadOnlyQuery;
   try
-    Query.Properties.Values['ValidateUpdateCount'] := 'False';
-    Query.CachedUpdates := False;
-
     { Remove previously created record }
     Query.SQL.Text := 'CALL ThreeResultSets()';
     Query.ExecSQL;

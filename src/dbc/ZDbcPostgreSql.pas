@@ -1410,7 +1410,6 @@ end;
 procedure TZPostgreSQLConnection.SetStandardConformingStrings(const Value: Boolean);
 begin
   FStandardConformingStrings := Value;
-  ( Self.GetDriver.GetTokenizer as IZPostgreSQLTokenizer ).SetStandardConformingStrings(FStandardConformingStrings);
 end;
 
 

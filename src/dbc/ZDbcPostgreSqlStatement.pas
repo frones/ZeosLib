@@ -147,7 +147,7 @@ type
     function CreateResultSet(QueryHandle: PPGresult; {%H-}ServerCursor: Boolean): IZResultSet;
     function ExecuteInternal(const SQL: RawByteString;
       Category: TEICategory): PPGresult; virtual;
-    function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; override;
+    function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
   public
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -502,11 +502,14 @@ end;
 function TZPostgreSQLPreparedStatement.GetRawEncodedSQL(
   const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
 var
-  I, C, N: Integer;
-  Temp: RawByteString;
+  I, C, N, FirstComposePos: Integer;
   Tokens: TZTokenList;
+  Token: PZToken;
+  {$IFNDEF UNICODE}
+  tmp: RawByteString;
+  List: TStrings;
+  {$ENDIF}
   ComparePrefixTokens: TPreparablePrefixTokens;
-  P: PChar;
   procedure Add(const Value: RawByteString; const Param: Boolean = False);
   begin
     SetLength(FCachedQueryRaw, Length(FCachedQueryRaw)+1);
@@ -515,24 +518,40 @@ var
     FIsParamIndex[High(FIsParamIndex)] := Param;
     ToBuff(Value, Result);
   end;
+  function IsNumeric(P, PEnd: PChar): Boolean;
+  begin
+    Result := P<= PEnd;
+    repeat
+      Result := Result and ((Ord(P^) >= Ord('0')) and (Ord(P^) <= Ord('9')));
+      if not Result
+      then Break
+      else Inc(P);
+    until P > PEnd;
+  end;
 begin
   Result := '';
   if (Length(FCachedQueryRaw) = 0) and (SQL <> '') then begin
-    {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
+    //{$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
+    {$IFNDEF UNICODE}
+    if ConSettings.AutoEncode
+    then List := TStringList.Create
+    else List := nil; //satisfy comiler
+    {$ENDIF}
     try
       ComparePrefixTokens := PGPreparableTokens;
-      Temp := '';
       N := -1;
       FTokenMatchIndex := -1;
       FParamsCnt := 0;
+      FirstComposePos := 0;
       for I := 0 to Tokens.Count -1 do begin
+        Token := Tokens[I];
         {check if we've a preparable statement. If ComparePrefixTokens = nil then
           comparing is not required or already done }
-        if Assigned(ComparePrefixTokens) and (Tokens[I].TokenType = ttWord) then
+        if Assigned(ComparePrefixTokens) and (Token.TokenType = ttWord) then
           if N = -1 then begin
             for C := 0 to high(ComparePrefixTokens) do
-              if Tokens.IsEqual(i, ComparePrefixTokens[C].MatchingGroup, tcUpper) then begin
+              if Tokens.IsEqual(i, ComparePrefixTokens[C].MatchingGroup, tcInsensitive) then begin
                 if Length(ComparePrefixTokens[C].ChildMatches) = 0 then begin
                   FTokenMatchIndex := C;
                   ComparePrefixTokens := nil;
@@ -545,33 +564,51 @@ begin
           end else begin //we already got a group
             FTokenMatchIndex := -1;
             for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
-              if Tokens.IsEqual(i, ComparePrefixTokens[N].ChildMatches[C], tcUpper) then begin
+              if Tokens.IsEqual(i, ComparePrefixTokens[N].ChildMatches[C], tcInsensitive) then begin
                 FTokenMatchIndex := N;
                 Break;
               end;
             ComparePrefixTokens := nil; //stop compare sequence
           end;
-        P := Pointer(Tokens[I].Value);
-        if (P^ = '?') or ((Tokens[I].TokenType = ttWord) and (P^ = '$') and
-           ({$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P+1, -1) <> -1)) then begin
-          Add(Temp);
-          Add({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[I].Value), True);
-          Temp := '';
+        if ((Token.P^ = '?') and (Token.L = 1)) or
+           ((Token.TokenType = ttWord) and (Token.P^ = '$') and
+            IsNumeric(Token.P+1, Token.P+Token.L-1)) then begin
+          {$IFDEF UNICODE}
+          Add(ZUnicodeToRaw(Tokens.AsString(FirstComposePos, I-1), ConSettings^.ClientCodePage^.CP));
+          if (Token.P^ = '?')
+          then Add('?', True)
+          else Add(UnicodeStringToAscii7(Token.P, Token.L), True);
+          {$ELSE}
+          Add(Tokens.AsString(FirstComposePos, I-1));
+          if (Token.P^ = '?')
+          then Add('?', True)
+          else Add(TokenAsString(Token^), True);
+          {$ENDIF}
           Inc(FParamsCnt);
-          fPQParamsFoundInQuery := (P^ <> '?') and (fPQParamsFoundInQuery or (P^ = '$'));
-        end else case (Tokens[i].TokenType) of
-          ttQuoted, ttComment,
-          ttWord, ttQuotedIdentifier, ttKeyword:
-            Temp := Temp + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i].Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
-          else
-            Temp := Temp + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[i].Value);
-        end;
+          fPQParamsFoundInQuery := (Token.P^ <> '?') and (fPQParamsFoundInQuery or (Token.P^ = '$'));
+          FirstComposePos := i + 1;
+        end {$IFNDEF UNICODE}
+        else if ConSettings.AutoEncode then
+          case (Token.TokenType) of
+            ttQuoted, ttComment,
+            ttWord, ttQuotedIdentifier, ttKeyword: begin
+              tmp := ConSettings^.ConvFuncs.ZStringToRaw(TokenAsString(Token^), ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+              Token^.P := Pointer(tmp);
+              Token^.L := Length(tmp);
+              List.Add(tmp); //keep alive
+            end;
+        end
+        {$ENDIF};
       end;
-      if (Temp <> '') then
-        Add(Temp);
+      if (FirstComposePos <= Tokens.Count-1) then
+        Add(ConSettings^.ConvFuncs.ZStringToRaw(Tokens.AsString(FirstComposePos, Tokens.Count -1), ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
     finally
       FlushBuff(Result);
       Tokens.Free;
+      {$IFNDEF UNICODE}
+      if ConSettings.AutoEncode then
+        List.Free;
+      {$ENDIF}
     end;
   end else
     Result := ASQL;
@@ -1731,11 +1768,11 @@ begin
     Result := FParamValues[Index];
 end;
 
-function TZPostgreSQLPreparedStatement.GetCompareFirstKeywordStrings: TPreparablePrefixTokens;
+function TZPostgreSQLPreparedStatement.GetCompareFirstKeywordStrings: PPreparablePrefixTokens;
 begin
 { RealPrepared stmts:
   http://www.postgresql.org/docs/9.1/static/sql-prepare.html }
-  Result := PGPreparableTokens;
+  Result := @PGPreparableTokens;
 end;
 
 procedure TZPostgreSQLPreparedStatement.Unprepare;
