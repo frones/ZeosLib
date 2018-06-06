@@ -515,12 +515,12 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     //no real version check required -> the user can simply switch off treading
     //enum('Y','N')
     FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(Info.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean]);
-    (GetMetadata as IZMySQLDatabaseMetadata).SetMySQL_FieldType_Bit_1_IsBoolean(FMySQL_FieldType_Bit_1_IsBoolean);
     FSupportsBitType := (
-      (    FPlainDriver.IsMariaDBDriver and ((ClientVersion >= 100109) and (GetHostVersion >= EncodeSQLVersioning(10,0,0)))) or
-      (not FPlainDriver.IsMariaDBDriver and ((ClientVersion >=  50003) and (GetHostVersion >= EncodeSQLVersioning(5,0,3)))));
+      (    FPlainDriver.IsMariaDBDriver and (ClientVersion >= 100109) ) or
+      (not FPlainDriver.IsMariaDBDriver and (ClientVersion >=  50003) ) ) and (GetHostVersion >= EncodeSQLVersioning(5,0,3));
     //if not explizit !un!set -> assume as default since Zeos 7.3
     FMySQL_FieldType_Bit_1_IsBoolean := FMySQL_FieldType_Bit_1_IsBoolean or (FSupportsBitType and (Info.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean] = ''));
+    (GetMetadata as IZMySQLDatabaseMetadata).SetMySQL_FieldType_Bit_1_IsBoolean(FMySQL_FieldType_Bit_1_IsBoolean);
   except
     FPlainDriver.mysql_close(FHandle);
     FHandle := nil;
