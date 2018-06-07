@@ -182,10 +182,9 @@ type
     Can allocate memory for sqlda structure get basic information }
   TZSQLDA = class (TZCodePagedObject, IZSQLDA)
   private
-    FHandle: PISC_DB_HANDLE;
-    FTransactionHandle: PISC_TR_HANDLE;
     FXSQLDA: PXSQLDA;
     FPlainDriver: TZInterbasePlainDriver;
+    FConnection: IZConnection;
     FDecribedLengthArray: TSmallIntDynArray;
     FDecribedScaleArray: TSmallIntDynArray;
     FDecribedTypeArray: TSmallIntDynArray;
@@ -194,9 +193,7 @@ type
     procedure SetFieldType(const Index: Word; Size: Integer; Code: Smallint;
       Scale: Smallint);
   public
-    constructor Create(const PlainDriver: IZInterbasePlainDriver;
-      Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
-      ConSettings: PZConSettings);
+    constructor Create(const Connection: IZConnection);
     destructor Destroy; override;
     procedure InitFields(Parameters: boolean);
     procedure AllocateSQLDA;
@@ -1367,30 +1364,6 @@ var
 
   { array DML bindings }
   ZData: Pointer; //array entry
-  {using mem entry of ZData is faster then casting}
-  ZBooleanArray: TBooleanDynArray absolute ZData;
-  ZByteArray: TByteDynArray absolute ZData;
-  ZShortIntArray: TShortIntDynArray absolute ZData;
-  ZWordArray: TWordDynArray absolute ZData;
-  ZSmallIntArray: TSmallIntDynArray absolute ZData;
-  ZLongWordArray: TLongWordDynArray absolute ZData;
-  ZIntegerArray: TIntegerDynArray absolute ZData;
-  ZInt64Array: TInt64DynArray absolute ZData;
-  ZUInt64Array: TUInt64DynArray absolute ZData;
-  ZSingleArray: TSingleDynArray absolute ZData;
-  ZDoubleArray: TDoubleDynArray absolute ZData;
-  ZCurrencyArray: TCurrencyDynArray absolute ZData;
-  ZExtendedArray: TExtendedDynArray absolute ZData;
-  ZDateTimeArray: TDateTimeDynArray absolute ZData;
-  ZRawByteStringArray: TRawByteStringDynArray absolute ZData;
-  ZAnsiStringArray: TAnsiStringDynArray absolute ZData;
-  ZUTF8StringArray: TUTF8StringDynArray absolute ZData;
-  ZStringArray: TStringDynArray absolute ZData;
-  ZUnicodeStringArray: TUnicodeStringDynArray absolute ZData;
-  ZCharRecArray: TZCharRecDynArray absolute ZData;
-  ZBytesArray: TBytesDynArray absolute ZData;
-  ZInterfaceArray: TInterfaceDynArray absolute ZData;
-  ZGUIDArray: TGUIDDynArray absolute ZData;
 begin
   ParamIndex := 0;
   for J := ArrayOffSet to ArrayOffSet+ArrayItersCount-1 do
@@ -1401,47 +1374,47 @@ begin
         IsNull := False
       else
         case TZSQLType(InParamValues[I].VArray.VIsNullArrayType) of
-          stBoolean: IsNull := ZBooleanArray[J];
-          stByte: IsNull := ZByteArray[J] <> 0;
-          stShort: IsNull := ZShortIntArray[J] <> 0;
-          stWord: IsNull := ZWordArray[J] <> 0;
-          stSmall: IsNull := ZSmallIntArray[J] <> 0;
-          stLongWord: IsNull := ZLongWordArray[J] <> 0;
-          stInteger: IsNull := ZIntegerArray[J] <> 0;
-          stLong: IsNull := ZInt64Array[J] <> 0;
-          stULong: IsNull := ZUInt64Array[J] <> 0;
-          stFloat: IsNull := ZSingleArray[J] <> 0;
-          stDouble: IsNull := ZDoubleArray[J] <> 0;
-          stCurrency: IsNull := ZCurrencyArray[J] <> 0;
-          stBigDecimal: IsNull := ZExtendedArray[J] <> 0;
+          stBoolean: IsNull := TBooleanDynArray(ZData)[J];
+          stByte: IsNull := TByteDynArray(ZData)[J] <> 0;
+          stShort: IsNull := TShortIntDynArray(ZData)[J] <> 0;
+          stWord: IsNull := TWordDynArray(ZData)[J] <> 0;
+          stSmall: IsNull := TSmallIntDynArray(ZData)[J] <> 0;
+          stLongWord: IsNull := TLongWordDynArray(ZData)[J] <> 0;
+          stInteger: IsNull := TIntegerDynArray(ZData)[J] <> 0;
+          stLong: IsNull := TInt64DynArray(ZData)[J] <> 0;
+          stULong: IsNull := TUInt64DynArray(ZData)[J] <> 0;
+          stFloat: IsNull := TSingleDynArray(ZData)[J] <> 0;
+          stDouble: IsNull := TDoubleDynArray(ZData)[J] <> 0;
+          stCurrency: IsNull := TCurrencyDynArray(ZData)[J] <> 0;
+          stBigDecimal: IsNull := TExtendedDynArray(ZData)[J] <> 0;
           stGUID:
             IsNull := True;
           stString, stUnicodeString:
             begin
               case InParamValues[i].VArray.VIsNullArrayVariantType of
-                vtString: IsNull := StrToBoolEx(ZStringArray[j]);
-                vtAnsiString: IsNull := StrToBoolEx(ZAnsiStringArray[j]);
-                vtUTF8String: IsNull := StrToBoolEx(ZUTF8StringArray[j]);
-                vtRawByteString: IsNull := StrToBoolEx(ZRawByteStringArray[j]);
-                vtUnicodeString: IsNull := StrToBoolEx(ZUnicodeStringArray[j]);
+                vtString: IsNull := StrToBoolEx(TStringDynArray(ZData)[j]);
+                vtAnsiString: IsNull := StrToBoolEx(TAnsiStringDynArray(ZData)[j]);
+                vtUTF8String: IsNull := StrToBoolEx(TUTF8StringDynArray(ZData)[j]);
+                vtRawByteString: IsNull := StrToBoolEx(TRawByteStringDynArray(ZData)[j]);
+                vtUnicodeString: IsNull := StrToBoolEx(TUnicodeStringDynArray(ZData)[j]);
                 vtCharRec:
-                  if ZCompatibleCodePages(ZCharRecArray[j].CP, zCP_UTF16) then
-                    IsNull := StrToBoolEx(PWideChar(ZCharRecArray[j].P))
+                  if ZCompatibleCodePages(TZCharRecDynArray(ZData)[j].CP, zCP_UTF16) then
+                    IsNull := StrToBoolEx(PWideChar(TZCharRecDynArray(ZData)[j].P))
                   else
-                    IsNull := StrToBoolEx(PAnsiChar(ZCharRecArray[j].P));
+                    IsNull := StrToBoolEx(PAnsiChar(TZCharRecDynArray(ZData)[j].P));
                 vtNull: IsNull := True;
                 else
                   raise Exception.Create('Unsupported String Variant');
               end;
             end;
           stBytes:
-            IsNull := ZBytesArray[j] = nil;
+            IsNull := TBytesDynArray(ZData)[j] = nil;
           stDate, stTime, stTimestamp:
-            IsNull := ZDateTimeArray[j] <> 0;
+            IsNull := TDateTimeDynArray(ZData)[j] <> 0;
           stAsciiStream,
           stUnicodeStream,
           stBinaryStream:
-            IsNull := ZInterfaceArray[j] = nil;
+            IsNull := TInterfaceDynArray(ZData)[j] = nil;
           else
             raise EZIBConvertError.Create(SUnsupportedParameterType);
         end;
@@ -1451,23 +1424,23 @@ begin
         ParamSqlData.UpdateNull(ParamIndex, True)
       else
         case TZSQLType(InParamValues[I].VArray.VArrayType) of
-          stBoolean: ParamSqlData.UpdateBoolean(ParamIndex, ZBooleanArray[J]);
-          stByte: ParamSqlData.UpdateSmall(ParamIndex, ZByteArray[J]);
-          stShort: ParamSqlData.UpdateSmall(ParamIndex, ZShortIntArray[J]);
-          stWord: ParamSqlData.UpdateInt(ParamIndex, ZWordArray[J]);
-          stSmall: ParamSqlData.UpdateSmall(ParamIndex, ZSmallIntArray[J]);
-          stLongWord: ParamSqlData.UpdateLong(ParamIndex, ZLongWordArray[J]);
-          stInteger: ParamSqlData.UpdateInt(ParamIndex, ZIntegerArray[J]);
-          stLong: ParamSqlData.UpdateLong(ParamIndex, ZInt64Array[J]);
-          stULong: ParamSqlData.UpdateLong(ParamIndex, ZUInt64Array[J]);
-          stFloat: ParamSqlData.UpdateFloat(ParamIndex, ZSingleArray[J]);
-          stDouble: ParamSqlData.UpdateDouble(ParamIndex, ZDoubleArray[J]);
-          stCurrency: ParamSqlData.UpdateBigDecimal(ParamIndex, ZCurrencyArray[J]);
-          stBigDecimal: ParamSqlData.UpdateBigDecimal(ParamIndex, ZExtendedArray[J]);
+          stBoolean: ParamSqlData.UpdateBoolean(ParamIndex, TBooleanDynArray(ZData)[J]);
+          stByte: ParamSqlData.UpdateSmall(ParamIndex, TByteDynArray(ZData)[J]);
+          stShort: ParamSqlData.UpdateSmall(ParamIndex, TShortIntDynArray(ZData)[J]);
+          stWord: ParamSqlData.UpdateInt(ParamIndex, TWordDynArray(ZData)[J]);
+          stSmall: ParamSqlData.UpdateSmall(ParamIndex, TSmallIntDynArray(ZData)[J]);
+          stLongWord: ParamSqlData.UpdateLong(ParamIndex, TLongWordDynArray(ZData)[J]);
+          stInteger: ParamSqlData.UpdateInt(ParamIndex, TIntegerDynArray(ZData)[J]);
+          stLong: ParamSqlData.UpdateLong(ParamIndex, TInt64DynArray(ZData)[J]);
+          stULong: ParamSqlData.UpdateLong(ParamIndex, TUInt64DynArray(ZData)[J]);
+          stFloat: ParamSqlData.UpdateFloat(ParamIndex, TSingleDynArray(ZData)[J]);
+          stDouble: ParamSqlData.UpdateDouble(ParamIndex, TDoubleDynArray(ZData)[J]);
+          stCurrency: ParamSqlData.UpdateBigDecimal(ParamIndex, TCurrencyDynArray(ZData)[J]);
+          stBigDecimal: ParamSqlData.UpdateBigDecimal(ParamIndex, TExtendedDynArray(ZData)[J]);
           stGUID: if  ParamSqlData.GetIbSqlType(ParamIndex) = CS_BINARY then
-                    ParamSqlData.UpdatePAnsiChar(ParamIndex, @ZGUIDArray[j].D1, SizeOf(TGUID))
+                    ParamSqlData.UpdatePAnsiChar(ParamIndex, @TGUIDDynArray(ZData)[j].D1, SizeOf(TGUID))
                   else begin
-                    RawTemp := GUIDToRaw(ZGUIDArray[j]);
+                    RawTemp := GUIDToRaw(TGUIDDynArray(ZData)[j]);
                     ParamSqlData.UpdatePAnsiChar(ParamIndex, Pointer(RawTemp), Length(RawTemp));
                   end;
           stString, stUnicodeString:
@@ -1478,24 +1451,24 @@ begin
                 then CP := ConSettings^.ClientCodePage^.CP
                 else CP := CodePageArray[CP];
                 case InParamValues[i].VArray.VArrayVariantType of
-                  vtString: RawTemp := ConSettings.ConvFuncs.ZStringToRaw(ZStringArray[j], ConSettings.CTRL_CP, CP);
-                  vtAnsiString: RawTemp := Consettings^.ConvFuncs.ZAnsiToRaw(ZAnsiStringArray[j], CP);
+                  vtString: RawTemp := ConSettings.ConvFuncs.ZStringToRaw(TStringDynArray(ZData)[j], ConSettings.CTRL_CP, CP);
+                  vtAnsiString: RawTemp := Consettings^.ConvFuncs.ZAnsiToRaw(TAnsiStringDynArray(ZData)[j], CP);
                   vtUTF8String: if ZCompatibleCodePages(CP, zCP_UTF8) then begin
-                        ParamSqlData.UpdatePAnsiChar(ParamIndex, Pointer(ZUTF8StringArray[j]), Length(ZUTF8StringArray[j]));
+                        ParamSqlData.UpdatePAnsiChar(ParamIndex, Pointer(TUTF8StringDynArray(ZData)[j]), Length(TUTF8StringDynArray(ZData)[j]));
                         Inc(ParamIndex);
                         continue;
                       end else
-                        RawTemp := Consettings^.ConvFuncs.ZUTF8ToRaw(ZUTF8StringArray[j], CP);
-                  vtRawByteString: RawTemp := ZRawByteStringArray[j];
-                  vtUnicodeString: RawTemp := ZUnicodeToRaw(ZUnicodeStringArray[j], CP);
-                  vtCharRec: if ZCompatibleCodePages(ZCharRecArray[j].CP, cp) or (ZCharRecArray[j].Len = 0) then begin
-                        ParamSqlData.UpdatePAnsiChar(ParamIndex, ZCharRecArray[j].P, ZCharRecArray[j].Len);
+                        RawTemp := Consettings^.ConvFuncs.ZUTF8ToRaw(TUTF8StringDynArray(ZData)[j], CP);
+                  vtRawByteString: RawTemp := TRawByteStringDynArray(ZData)[j];
+                  vtUnicodeString: RawTemp := ZUnicodeToRaw(TUnicodeStringDynArray(ZData)[j], CP);
+                  vtCharRec: if ZCompatibleCodePages(TZCharRecDynArray(ZData)[j].CP, cp) or (TZCharRecDynArray(ZData)[j].Len = 0) then begin
+                        ParamSqlData.UpdatePAnsiChar(ParamIndex, TZCharRecDynArray(ZData)[j].P, TZCharRecDynArray(ZData)[j].Len);
                         Inc(ParamIndex);
                         continue;
-                      end else if ZCompatibleCodePages(ZCharRecArray[j].CP, zCP_UTF16) then
-                        RawTemp := PUnicodeToRaw(ZCharRecArray[j].P, ZCharRecArray[j].Len, CP)
+                      end else if ZCompatibleCodePages(TZCharRecDynArray(ZData)[j].CP, zCP_UTF16) then
+                        RawTemp := PUnicodeToRaw(TZCharRecDynArray(ZData)[j].P, TZCharRecDynArray(ZData)[j].Len, CP)
                       else begin
-                        UniTemp := PRawToUnicode(ZCharRecArray[j].P, ZCharRecArray[j].Len, ZCharRecArray[j].CP);
+                        UniTemp := PRawToUnicode(TZCharRecDynArray(ZData)[j].P, TZCharRecDynArray(ZData)[j].Len, TZCharRecDynArray(ZData)[j].CP);
                         RawTemp := ZUnicodeToRaw(UniTemp, CP)
                       end;
                   else
@@ -1505,29 +1478,29 @@ begin
               end else case InParamValues[i].VArray.VArrayVariantType of
                 {$IFNDEF UNICODE}vtString,{$ENDIF}
                 vtAnsiString, vtUTF8String, vtRawByteString:
-                    ParamSqlData.UpdatePAnsiChar(ParamIndex, Pointer(ZRawByteStringArray[j]), Length(ZRawByteStringArray[j]));
+                    ParamSqlData.UpdatePAnsiChar(ParamIndex, Pointer(TRawByteStringDynArray(ZData)[j]), Length(TRawByteStringDynArray(ZData)[j]));
                 vtUnicodeString{$IFDEF UNICODE}, vtString{$ENDIF}:
                   raise Exception.Create('Unsupported String Variant');
-                vtCharRec: if not ZCompatibleCodePages(ZCharRecArray[j].CP, zCP_UTF16) or (ZCharRecArray[j].Len = 0)
-                    then ParamSqlData.UpdatePAnsiChar(ParamIndex, ZCharRecArray[j].P, ZCharRecArray[j].Len)
+                vtCharRec: if not ZCompatibleCodePages(TZCharRecDynArray(ZData)[j].CP, zCP_UTF16) or (TZCharRecDynArray(ZData)[j].Len = 0)
+                    then ParamSqlData.UpdatePAnsiChar(ParamIndex, TZCharRecDynArray(ZData)[j].P, TZCharRecDynArray(ZData)[j].Len)
                     else raise Exception.Create('Unsupported String Variant');
                 else
                   raise Exception.Create('Unsupported String Variant');
               end;
             end;
           stBytes:
-            ParamSqlData.UpdateBytes(ParamIndex, ZBytesArray[j]);
+            ParamSqlData.UpdateBytes(ParamIndex, TBytesDynArray(ZData)[j]);
           stDate:
-            ParamSqlData.UpdateDate(ParamIndex, ZDateTimeArray[j]);
+            ParamSqlData.UpdateDate(ParamIndex, TDateTimeDynArray(ZData)[j]);
           stTime:
-            ParamSqlData.UpdateTime(ParamIndex, ZDateTimeArray[j]);
+            ParamSqlData.UpdateTime(ParamIndex, TDateTimeDynArray(ZData)[j]);
           stTimestamp:
-            ParamSqlData.UpdateTimestamp(ParamIndex, ZDateTimeArray[j]);
+            ParamSqlData.UpdateTimestamp(ParamIndex, TDateTimeDynArray(ZData)[j]);
           stAsciiStream,
           stUnicodeStream,
           stBinaryStream:
             begin
-              TempBlob := ZInterfaceArray[j] as IZBlob;
+              TempBlob := TInterfaceDynArray(ZData)[j] as IZBlob;
               if not TempBlob.IsEmpty then
               begin
                 if (ParamSqlData.GetFieldSqlType(ParamIndex) in [stUnicodeStream, stAsciiStream] ) then
@@ -1869,14 +1842,11 @@ begin
 end;
 
 { TSQLDA }
-constructor TZSQLDA.Create(const PlainDriver: IZInterbasePlainDriver;
-  Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
-  ConSettings: PZConSettings);
+constructor TZSQLDA.Create(const Connection: IZConnection);
 begin
-  Self.ConSettings := ConSettings;
-  FPlainDriver := TZInterbasePlainDriver(PlainDriver.GetInstance);
-  FHandle := Handle;
-  FTransactionHandle := TransactionHandle;
+  FConnection := Connection;
+  Self.ConSettings := Connection.GetConSettings;
+  FPlainDriver := TZInterbasePlainDriver(Connection.GetIZPlainDriver.GetInstance);
 
   GetMem(FXSQLDA, XSQLDA_LENGTH(0));
   FillChar(FXSQLDA^, XSQLDA_LENGTH(0), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
@@ -3053,7 +3023,8 @@ begin
   BlobHandle := 0;
 
   { create blob handle }
-  FPlainDriver.isc_create_blob2(@StatusVector, FHandle, FTransactionHandle,
+  with (FConnection as IZInterbase6Connection) do
+  FPlainDriver.isc_create_blob2(@StatusVector, GetDBHandle, GetTrHandle,
     @BlobHandle, @BlobId, 0, nil);
   CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings);
 
@@ -3209,7 +3180,6 @@ begin
   FullHeaderLen := 0;
   StmtMem := 0;
   ReturningFound := False;
-  NewParamCount := 0;
   for J := 0 to RemainingArrayRows -1 do
   begin
     ParamIndex := 0;
@@ -3240,12 +3210,11 @@ begin
     Inc(SingleStmtLength, 1{;}+Length(LineEnding));
     Inc(StmtLength, HeaderLen+SingleStmtLength);
     Inc(FullHeaderLen, HeaderLen);
-    Inc(NewParamCount, InParamCount);
     //we run into XSQLDA !update! count limit of 255 see:
     //http://tracker.firebirdsql.org/browse/CORE-3027?page=com.atlassian.jira.plugin.system.issuetabpanels%3Aall-tabpanel
     if (LongWord(StmtLength+LBlockLen) > 32*1024{32KB limited Also with FB3}) or
        (LongWord(StmtMem + MemPerRow) > XSQLDAMaxSize) or
-      ((InitialStatementType <> stInsert) and (NewParamCount > 255)) then
+      ((InitialStatementType <> stInsert) and (PreparedRowsOfArray > 255)) then
     begin
       StmtLength := LastStmLen;
       Dec(FullHeaderLen, HeaderLen);
