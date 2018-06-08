@@ -338,7 +338,6 @@ begin
   {$IFDEF UNICODE}
   FControlsCodePage := cCP_UTF16;
   {$ELSE}
-    FAutoEncode := true;
     {$IFDEF FPC}
     FControlsCodePage := cCP_UTF8;
     {$ELSE}

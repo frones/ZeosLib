@@ -683,8 +683,7 @@ function DefineFields(DataSet: TDataset; const FieldNames: string;
 var
   I, TokenValueInt: Integer;
   Tokens: TZTokenList;
-  TokenType: TZTokenType;
-  TokenValue: string;
+  Token: PZToken;
   Field: TField;
   FieldCount: Integer;
 begin
@@ -692,31 +691,30 @@ begin
   FieldCount := 0;
   SetLength(Result, FieldCount);
   Tokens := Tokenizer.TokenizeBufferToList(FieldNames,
-    [toSkipEOF, toSkipWhitespaces, toUnifyNumbers, toDecodeStrings]);
+    [toSkipEOF, toSkipWhitespaces, toUnifyNumbers]);
 
   try
     for I := 0 to Tokens.Count - 1 do
     begin
-      TokenType := Tokens[I]^.TokenType;
-      TokenValue := Tokens.AsString(I);
+      Token := Tokens[I];
       Field := nil;
 
-      case TokenType of
+      case Token.TokenType of
         ttQuoted, ttQuotedIdentifier, ttWord:
-          Field := DataSet.FieldByName(TokenValue); // Will raise exception if field not present
+          Field := DataSet.FieldByName(Tokenizer.GetQuoteState.DecodeToken(Token^, Token.P^)); // Will raise exception if field not present
         ttNumber:
           begin
-            TokenValueInt := StrToInt(TokenValue);
+            TokenValueInt := StrToInt(TokenAsString(Token^));
             // Tokenizer always returns numbers > 0
             if TokenValueInt >= Dataset.Fields.Count then
               raise EZDatabaseError.CreateFmt(SFieldNotFound2, [TokenValueInt]);
             Field := Dataset.Fields[TokenValueInt];
           end;
         ttSymbol:
-          if (TokenValue <> ',') and (TokenValue <> ';') then
-            raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [TokenValue]);
+          if not (Tokens.IsEqual(i, Char(',')) or Tokens.IsEqual(i, Char(';'))) then
+            raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [TokenAsString(Token^)]);
         else
-          raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [TokenValue]);
+          raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [TokenAsString(Token^)]);
       end;
 
       if Field <> nil then
@@ -1439,8 +1437,6 @@ procedure DefineSortedFields(DataSet: TDataset;
 var
   I, TokenValueInt: Integer;
   Tokens: TZTokenList;
-  TokenType: TZTokenType;
-  TokenValue: string;
   Field: TField;
   FieldCount: Integer;
   PrevTokenWasField: Boolean;
@@ -1451,16 +1447,14 @@ begin
   SetLength(FieldRefs, FieldCount);
   SetLength(CompareKinds, FieldCount);
   Tokens := CommonTokenizer.TokenizeBufferToList(SortedFields,
-    [toSkipEOF, toSkipWhitespaces, toUnifyNumbers, toDecodeStrings]);
+    [toSkipEOF, toSkipWhitespaces, toUnifyNumbers]);
 
   try
     for I := 0 to Tokens.Count - 1 do
     begin
-      TokenType := Tokens[I]^.TokenType;
-      TokenValue := Tokens.AsString(I);
       Field := nil;
 
-      case TokenType of
+      case Tokens[i].TokenType of
         ttQuoted, ttQuotedIdentifier, ttWord:
           begin
             // Check if current token is a sort order marker
@@ -1471,30 +1465,30 @@ begin
             // Could this be a sort order marker?
             if PrevTokenWasField then
             begin
-              if SameText(TokenValue, 'DESC') then
+              if Tokens.IsEqual(i, 'DESC', tcInsensitive) then
                 CompareKinds[FieldCount - 1] := ckDescending
-              else if SameText(TokenValue, 'ASC') then
+              else if Tokens.IsEqual(i, 'ASC', tcInsensitive) then
                 CompareKinds[FieldCount - 1] := ckAscending
               else
-                raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [TokenValue]);
+                raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [Tokens.AsString(I)]);
             end
             else
             // No, this is a field
-              Field := DataSet.FieldByName(TokenValue);  // Will raise exception if field not present
+              Field := DataSet.FieldByName(CommonTokenizer.GetQuoteState.DecodeToken(Tokens[i]^, Tokens[i].P^));  // Will raise exception if field not present
           end;
         ttNumber:
           begin
-            TokenValueInt := StrToInt(TokenValue);
+            TokenValueInt := StrToInt(Tokens.AsString(I));
             // Tokenizer always returns numbers > 0
             if TokenValueInt >= Dataset.Fields.Count then
               raise EZDatabaseError.CreateFmt(SFieldNotFound2, [TokenValueInt]);
             Field := Dataset.Fields[TokenValueInt];
           end;
         ttSymbol:
-          if (TokenValue <> ',') and (TokenValue <> ';') then
-            raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [TokenValue]);
+          if not (Tokens.IsEqual(i, Char(',')) or Tokens.IsEqual(i, Char(';'))) then
+            raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [Tokens.AsString(I)]);
         else
-          raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [TokenValue]);
+          raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [Tokens.AsString(I)]);
       end;
 
       PrevTokenWasField := (Field <> nil);

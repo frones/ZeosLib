@@ -61,6 +61,7 @@ uses
   ZPlainMySqlConstants, ZCompatibility, ZDbcLogging, ZDbcUtils;
 
 type
+  TMySQLPreparable = (myDelete, myInsert, myUpdate, mySelect, myCall);
   TOpenCursorCallback = procedure of Object;
   THandleStatus = (hsUnknown, hsAllocated, hsExecutedPrepared, hsExecutedOnce, hsReset);
   {** Implements Prepared MySQL Statement. }
@@ -96,7 +97,7 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
-    function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; override;
+    function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
     procedure SetInParamCount(const NewParamCount: Integer); override;
     procedure InternalSetInParamCount(NewParamCount: Integer); override;
     function GetBoundValueAsLogValue(ParamIndex: Integer): RawByteString; override;
@@ -291,9 +292,9 @@ begin
   FPlainDriver := TZMySQLPlainDriver(Connection.GetIZPlainDriver.GetInstance);
   FClientVersion := FPLainDriver.mysql_get_client_version;
   FBindOffset := GetBindOffsets(FPlainDriver.IsMariaDBDriver, FClientVersion);
-  //EH: i've noticed unkown exceptions while flushing pending result with the call stmts
-  //-> declared as not usable
-  if not FPLainDriver.IsMariaDBDriver and (FClientVersion >= 50608)
+
+  if (FPLainDriver.IsMariaDBDriver and (FClientVersion >= 100000)) or
+     (not FPLainDriver.IsMariaDBDriver and (FClientVersion >= 50608))
   then FPreparablePrefixTokens := MySQL568PreparableTokens
   else FPreparablePrefixTokens := MySQL41PreparableTokens;
 
@@ -956,9 +957,9 @@ begin
   FChunkedData := False;
 end;
 
-function TZMysqlPreparedStatement.GetCompareFirstKeywordStrings: TPreparablePrefixTokens;
+function TZMysqlPreparedStatement.GetCompareFirstKeywordStrings: PPreparablePrefixTokens;
 begin
-  Result := FPreparablePrefixTokens;
+  Result := @FPreparablePrefixTokens;
 end;
 
 function TZMySQLPreparedStatement.GetBoundValueAsLogValue(
@@ -1059,18 +1060,22 @@ begin
       FOpenResultSet := Pointer(Result);
     end else
       CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, RSQL, Self);
-  end else if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
-    FStmtHandleIsExecuted := True;
-    if FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) = 0 then
-      if GetMoreResults
-      then Result := LastResultSet
-      else raise EZSQLException.Create(SCanNotOpenResultSet)
-    else Result := CreateResultSet(SQL);
-    FOpenResultSet := Pointer(Result);
-  end else
-    checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
-      ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-      ConSettings^.ClientCodePage^.CP), Self);
+  end else begin
+    if FplainDriver.IsMariaDBDriver and (FTokenMatchIndex = Ord(myCall)) then
+       FPlainDriver.mysql_stmt_reset(FMYSQL_STMT); //EH: no idea why but maria db hangs if we do not reset the stmt ):
+    if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
+      FStmtHandleIsExecuted := True;
+      if FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) = 0 then
+        if GetMoreResults
+        then Result := LastResultSet
+        else raise EZSQLException.Create(SCanNotOpenResultSet)
+      else Result := CreateResultSet(SQL);
+      FOpenResultSet := Pointer(Result);
+    end else
+      checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
+        ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
+        ConSettings^.ClientCodePage^.CP), Self);
+  end;
   inherited ExecuteQueryPrepared;
   CheckPrepareSwitchMode;
 end;
@@ -1388,9 +1393,6 @@ var
   I: Integer;
   P: PansiChar;
 begin
-  //we can not prepare the stmt as long results are in queue
-  {if (FPlainDriver.mysql_more_results(FPMYSQL^) = 1) then
-    Exit;}
   if (FMYSQL_STMT = nil) then
     FMYSQL_STMT := FPlainDriver.mysql_stmt_init(FPMYSQL^);
   FBindAgain := True;
@@ -1404,8 +1406,7 @@ begin
   //see user comment: http://dev.mysql.com/doc/refman/5.0/en/mysql-stmt-fetch.html
   //"If you want work with more than one statement simultaneously, anidated select,
   //for example, you must declare CURSOR_TYPE_READ_ONLY the statement after just prepared this.!"
-  if FUseResult and (FPreparablePrefixTokens[TokenMatchIndex].MatchingGroup = 'SELECT') or
-     (FPreparablePrefixTokens[TokenMatchIndex].MatchingGroup = 'CALL') then
+  if FUseResult and ((TokenMatchIndex = Ord(mySelect)) or (TokenMatchIndex = Ord(myCall)) ) then
     //EH: This can be set only if results are expected else server is hanging on execute
     if (FClientVersion >= 50020 ) then //supported since 5.0.2
       if Assigned(FPlainDriver.mysql_stmt_attr_set517UP) //we need this to be able to use more than !one! stmt -> keep cached
@@ -2050,18 +2051,18 @@ initialization
 { preparable statements: }
 
 { http://dev.mysql.com/doc/refman/4.1/en/sql-syntax-prepared-statements.html }
-SetLength(MySQL41PreparableTokens, 5);
+SetLength(MySQL41PreparableTokens, Ord(mySelect)+1);
 MySQL41PreparableTokens[0].MatchingGroup := 'DELETE';
 MySQL41PreparableTokens[1].MatchingGroup := 'INSERT';
 MySQL41PreparableTokens[2].MatchingGroup := 'UPDATE';
 MySQL41PreparableTokens[3].MatchingGroup := 'SELECT';
 
-SetLength(MySQL568PreparableTokens, 5);
-MySQL568PreparableTokens[0].MatchingGroup := 'DELETE';
-MySQL568PreparableTokens[1].MatchingGroup := 'INSERT';
-MySQL568PreparableTokens[2].MatchingGroup := 'UPDATE';
-MySQL568PreparableTokens[3].MatchingGroup := 'CALL';
-MySQL568PreparableTokens[4].MatchingGroup := 'SELECT';
+SetLength(MySQL568PreparableTokens, Ord(myCall)+1);
+MySQL568PreparableTokens[Ord(myDelete)].MatchingGroup := 'DELETE';
+MySQL568PreparableTokens[Ord(myInsert)].MatchingGroup := 'INSERT';
+MySQL568PreparableTokens[Ord(myUpdate)].MatchingGroup := 'UPDATE';
+MySQL568PreparableTokens[Ord(mySelect)].MatchingGroup := 'SELECT';
+MySQL568PreparableTokens[Ord(myCall)].MatchingGroup := 'CALL';
 
 (*EH commented all -> usually most of them are called once
 SetLength(MySQL41PreparableTokens, 13);

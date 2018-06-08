@@ -558,7 +558,14 @@ function EncodeCString(const Value: string): string;
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeCString(const Value: string): string;
+function DecodeCString(const Value: ZWideString): ZWideString; overload;
+function DecodeCString(const Value: RawByteString): RawByteString; overload;
+
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; var Result: ZWideString); overload;
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; var Result: RawByteString); overload;
+
+function DecodeCString(SrcLength: LengthInt; SrcBuffer, DestBuffer: PWideChar): LengthInt; overload;
+function DecodeCString(SrcLength: LengthInt; SrcBuffer, DestBuffer: PAnsiChar): LengthInt; overload;
 
 {**
   Replace chars in the string
@@ -677,7 +684,11 @@ function SQLQuotedStr(const S: string; QuoteLeft, QuoteRight: Char): string; ove
 function SQLQuotedStr(Src: PChar; Len: LengthInt; QuoteLeft, QuoteRight: Char): string; overload;
 
 function SQLDequotedStr(const S: string; QuoteChar: Char): string; overload;
+function SQLDequotedStr(Src: PChar; Len: LengthInt; QuoteChar: Char): string; overload;
 function SQLDequotedStr(const S: string; QuoteLeft, QuoteRight: Char): string; overload;
+
+function SameText(Val1, Val2: PAnsiChar; Len: LengthInt): Boolean; overload;
+function SameText(Val1, Val2: PWideChar; Len: LengthInt): Boolean; overload;
 
 implementation
 
@@ -3459,29 +3470,22 @@ begin
 end;
 
 {**
-  Converts an string from escape PostgreSQL format.
-  @param Value a string in PostgreSQL escape format.
-  @return a regular string.
+  Converts a buffer from escape PostgreSQL format.
+  @param SrcLength the souce buffer length.
+  @param SrcBuffer the souce buffer.
+  @param SrcBuffer the destination buffer we write in.
+  @return Length of dest chars.
 }
-function DecodeCString(const Value: string): string;
-var
-  SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PChar;
+function DecodeCString(SrcLength: LengthInt; SrcBuffer, DestBuffer: PWideChar): LengthInt; overload;
 begin
-  SrcLength := Length(Value);
-  SrcBuffer := Pointer(Value);
-  SetLength(Result, SrcLength);
-  DestLength := 0;
-  DestBuffer := Pointer(Result);
-
-
+  Result := 0;
   while SrcLength > 0 do begin
     if SrcBuffer^ = '\' then begin
       Inc(SrcBuffer);
       case SrcBuffer^ of
         '0'..'9':
           begin
-            DestBuffer^ := Chr(((Byte(SrcBuffer[0]) - Ord('0')) shl 6)
+            DestBuffer^ := WideChar(((Byte(SrcBuffer[0]) - Ord('0')) shl 6)
               or ((Byte(SrcBuffer[1]) - Ord('0')) shl 3)
               or ((Byte(SrcBuffer[2]) - Ord('0'))));
             Inc(SrcBuffer, 3);
@@ -3506,9 +3510,80 @@ begin
       Dec(SrcLength);
     end;
     Inc(DestBuffer);
-    Inc(DestLength);
+    Inc(Result);
   end;
-  SetLength(Result, DestLength);
+end;
+
+function DecodeCString(SrcLength: LengthInt; SrcBuffer, DestBuffer: PAnsiChar): LengthInt; overload;
+begin
+  Result := 0;
+  while SrcLength > 0 do begin
+    if SrcBuffer^ = '\' then begin
+      Inc(SrcBuffer);
+      case SrcBuffer^ of
+        '0'..'9':
+          begin
+            DestBuffer^ := AnsiChar(((Byte(SrcBuffer[0]) - Ord('0')) shl 6)
+              or ((Byte(SrcBuffer[1]) - Ord('0')) shl 3)
+              or ((Byte(SrcBuffer[2]) - Ord('0'))));
+            Inc(SrcBuffer, 3);
+            Dec(SrcLength, 4);
+          end
+        else
+          begin
+            case SrcBuffer^ of
+              'r': DestBuffer^ := #13;
+              'n': DestBuffer^ := #10;
+              't': DestBuffer^ := #9;
+              else
+                DestBuffer^ := SrcBuffer^;
+            end;
+            Inc(SrcBuffer);
+            Dec(SrcLength, 2);
+          end
+      end;
+    end else begin
+      DestBuffer^ := SrcBuffer^;
+      Inc(SrcBuffer);
+      Dec(SrcLength);
+    end;
+    Inc(DestBuffer);
+    Inc(Result);
+  end;
+end;
+
+{**
+  Converts a string from escape PostgreSQL format.
+  @param SrcLength the souce buffer length.
+  @param SrcBuffer the souce buffer.
+  @return a regular string.
+}
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; var Result: ZWideString);
+begin
+  SetLength(Result, SrcLength);
+  SetLength(Result, DecodeCString(SrcLength, SrcBuffer, Pointer(Result)));
+end;
+
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; var Result: RawByteString);
+begin
+  SetLength(Result, SrcLength);
+  SetLength(Result, DecodeCString(SrcLength, SrcBuffer, Pointer(Result)));
+end;
+
+
+{**
+  Converts a string from escape PostgreSQL format.
+  @param Value a string in PostgreSQL escape format.
+  @return a regular string.
+}
+function DecodeCString(const Value: RawByteString): RawByteString;
+begin
+  DecodeCString(Length(Value), Pointer(Value), Result);
+end;
+
+function DecodeCString(const Value: ZWideString): ZWideString;
+begin
+  DecodeCString(Length(Value), Pointer(Value), Result);
 end;
 
 
@@ -4288,25 +4363,44 @@ const
 
 function SQLDequotedStr(const S: string; QuoteChar: Char): string;
 var
-  SrcLen, EscChars: LengthInt;
+  L: LengthInt;
+  P: PChar;
+begin
+  L := Length(S);
+  if L <= 1 then
+    Result := S
+  else begin
+    P := Pointer(S);
+    if L = 2 then
+      if (P^ = QuoteChar) and ((P+1)^ = QuoteChar) then // just quotes
+        Result := ''
+      else
+        Result := S
+    else
+      Result := SQLDequotedStr(P, L, QuoteChar);
+  end;
+end;
+
+function SQLDequotedStr(Src: PChar; Len: LengthInt; QuoteChar: Char): string;
+var
+  EscChars: LengthInt;
   pSrcBegin, pSrcEnd, pSrc, pDest: PChar;
 begin
-  SrcLen := Length(S);
-  pSrcBegin := Pointer(S);
+  pSrcBegin := Pointer(Src);
   // Input must have at least 2 chars, otherwise it is considered unquoted
   // so return as is
-  if SrcLen <= 1 then
+  if Len <= 1 then
   begin
-    Result := S;
+    SetString(Result, Src, Len);
     Exit;
   end;
 
-  pSrcEnd := pSrcBegin + SrcLen - 1;
+  pSrcEnd := pSrcBegin + Len - 1;
   // Check if input is quoted and return input as is if not
   if (pSrcBegin^ = QuoteChar) and (pSrcEnd^ = QuoteChar) then
   begin
     // just quotes
-    if SrcLen = 2 then
+    if Len = 2 then
     begin
       Result := '';
       Exit;
@@ -4316,7 +4410,7 @@ begin
   end
   else
   begin
-    Result := S;
+    SetString(Result, Src, Len);
     Exit;
   end;
 
@@ -4332,19 +4426,19 @@ begin
         Inc(pSrc, 2);
       end
       else
-        raise EArgumentException.CreateFmt(SUnescapedChar, [S])
+        raise EArgumentException.CreateFmt(SUnescapedChar, [Src])
     else
       Inc(pSrc);
   end;
   // Check last char (pSrc = pSrcEnd is true here only if previous char wasn't
   // quote or was escaped quote)
   if (pSrc = pSrcEnd) and (pSrc^ = QuoteChar) then
-    raise EArgumentException.CreateFmt(SUnescapedCharAtEnd, [S]);
+    raise EArgumentException.CreateFmt(SUnescapedCharAtEnd, [Src]);
 
   // Input contains some escaped quotes
   if EscChars > 0 then
   begin
-    SetLength(Result, SrcLen - EscChars - 2);
+    SetLength(Result, Len - EscChars - 2);
     pSrc := pSrcBegin;
     pDest := Pointer(Result);
     while pSrc <= pSrcEnd do
@@ -4359,8 +4453,8 @@ begin
   else
   // Input contains no escaped quotes
   begin
-    SetLength(Result, SrcLen - 2); // Result Length always > 2 here!
-    Move(pSrcBegin^, Pointer(Result)^, (SrcLen - 2)*SizeOf(Char));
+    SetLength(Result, Len - 2); // Result Length always > 2 here!
+    Move(pSrcBegin^, Pointer(Result)^, (Len - 2)*SizeOf(Char));
   end;
 end;
 
@@ -4441,6 +4535,81 @@ begin
     Move(pSrcBegin^, Pointer(Result)^, (SrcLen - 2)*SizeOf(Char));
   end;
 end;
+
+{$UNDEF SaveQ} {$IFOPT Q+} {$Q-} {$DEFINE SaveQ} {$ENDIF}
+{$UNDEF SaveR} {$IFOPT R+} {$R-} {$DEFINE SaveR} {$ENDIF}
+function SameText(Val1, Val2: PAnsiChar; Len: LengthInt): Boolean;
+var  PEnd: PAnsiChar;
+  B: Byte;
+begin
+  Result := (Len = 0) or (Val1 = Val2);
+  if Result then
+    Exit;
+  PEnd := Val1 + Len -4;
+  while Val1 < PEnd do begin//compare 4 Bytes per loop
+    if (PCardinal(Val1)^ <> PCardinal(Val2)^) then //equal?
+      if PCardinal(Val1)^ and $80808080<>0 then begin //no Ascii quad?
+        for B := 0 to 3 do
+          if PByteArray(Val1)[B] <> PByteArray(Val2)[B] then
+            if (PByteArray(Val1)[B] or $80 <> 0) or (PByteArray(Val2)[B] or $80 <> 0) then //one of both not in ascii range?
+              Exit
+            else if (PByteArray(Val1)[B] or $20) <> (PByteArray(Val2)[B] or $20) then
+              Exit;
+      end else if PCardinal(Val1)^ or $20202020 <> PCardinal(Val2)^ or $20202020 then
+          Exit;
+    Inc(Val1, 4);
+    Inc(Val2, 4);
+  end;
+  Inc(PEnd, 4);
+  while Val1 < PEnd do begin
+    if (PByte(Val1)^ <> PByte(Val2)^) then //equal binary?
+      if (PByte(Val1)^ and $80 <> 0) or (PByte(Val2)^ and $80 <> 0) then //no Ascii byte?
+        Exit
+      else if PByte(Val1)^ or $20 <> PByte(Val2)^ or $20 then
+        Exit;
+    Inc(Val1);
+    Inc(Val2);
+  end;
+  Result := True;
+end;
+
+function SameText(Val1, Val2: PWideChar; Len: LengthInt): Boolean;
+var  PEnd: PWideChar;
+  B: Boolean;
+begin
+  Result := (Len = 0) or (Val1 = Val2);
+  if Result then
+    Exit;
+  PEnd := Val1 + Len -2;
+  while Val1 < PEnd do begin//compare 4 Bytes per loop
+    if (PCardinal(Val1)^ <> PCardinal(Val2)^) then //equal binary?
+      if PCardinal(Val1)^ and $00800080<>0 then begin//no Ascii pair?
+        for B := False to True do
+          if PWordArray(Val1)[Ord(B)] <> PWordArray(Val2)[Ord(B)] then
+            if (PWordArray(Val1)[Ord(B)] or $0080 <> 0) or (PWordArray(Val2)[Ord(B)] or $0080 <> 0) then //one of both not in ascii range?
+              Exit
+            else if (PWordArray(Val1)[Ord(B)] or $0020) <> (PWordArray(Val2)[Ord(B)] or $0020) then
+              Exit;
+      end else if PCardinal(Val1)^ or $00200020 <> PCardinal(Val2)^ or $00200020 then
+        Exit;
+    Inc(Val1, 2);
+    Inc(Val2, 2);
+  end;
+  Inc(PEnd, 2);
+  while Val1 < PEnd do begin
+    if (PWord(Val1)^ <> PWord(Val2)^) then //equal?
+      if (PWord(Val1)^ and $0080 <> 0) or (PWord(Val2)^ and $0080 <> 0) then //no Ascii char?
+        Exit
+      else if PWord(Val1)^ or $0020 <> PWord(Val2)^ or $0020 then
+        Exit;
+    Inc(Val1);
+    Inc(Val2);
+  end;
+  Result := True;
+end;
+{$IFDEF SaveQ} {$Q+} {$UNDEF SaveQ} {$ENDIF}
+{$IFDEF SaveR} {$R+} {$UNDEF SaveR} {$ENDIF}
+
 
 initialization
 

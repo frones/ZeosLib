@@ -60,7 +60,6 @@ uses
    ZClasses, ZCompatibility;
 
 type
-
   {**
     Objects of this class represent a type of token,
     such as "number", "symbol" or "word".
@@ -73,7 +72,7 @@ type
     Defines options for tokenizing strings.
   }
   TZTokenOption = (toSkipUnknown, toSkipWhitespaces, toSkipComments,
-    toSkipEOF, toUnifyWhitespaces, toUnifyNumbers, toDecodeStrings);
+    toSkipEOF, toUnifyWhitespaces, toUnifyNumbers);
   TZTokenOptions = set of TZTokenOption;
 
   {**
@@ -86,13 +85,8 @@ type
   }
   PZToken = ^TZToken;
   TZToken = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
-    {$IFDEF TOKEN_PCHAR_KUNGFU}
-    BOT, //Begin of token value
-    EOT: //End   of token value
-    PChar; //Len = ((EOT-BOT) div SizeOf(Char)) +1
-    {$ELSE}
-    Value: string;
-    {$ENDIF}
+    P: PChar; //Begin of token value
+    L: LengthInt; //Lengt of Token
     TokenType: TZTokenType;
   end;
 
@@ -103,7 +97,7 @@ type
   {** Defines a static array of tokens. }
   TZTokenArray = array[0..{$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF} - 1] of PZToken;
 
-  TZTokenCase = (tcSensitive, tcLower, tcUpper);
+  TZTokenCase = (tcSensitive, tcInsensitive);
   TZTokenList = class
     FTokens: PZTokenArray;
     FCount: Integer;
@@ -130,7 +124,8 @@ type
     function IndexOf(Item: PZToken): Integer; overload;
 
     function AsString: String; overload;
-    function AsString(Index: Integer; TokenCase: TZTokenCase = tcSensitive): String; overload;
+    function AsString(Index: Integer): String; overload;
+    function AsString(iStart, iEnd: Integer): String; overload;
     function AsFloat(Index: Integer): Extended;
     function AsInt64(Index: Integer): Int64;
 
@@ -162,22 +157,8 @@ type
     tokenizer argument.
   }
   TZTokenizerState = class (TObject)
-  {$IFNDEF TOKEN_PCHAR_KUNGFU}
-  private
-    fCurrentBufIndex: Byte;
-    fBuf: Array[Byte] of Char;
-  protected
-  public
-    procedure InitBuf(FirstChar: Char); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-    procedure ClearBuf; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-    procedure FlushBuf(var Value: String); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-    procedure ToBuf(C: Char; var Value: String); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-    function NextToken(Stream: TStream; FirstChar: Char;
+    function NextToken(var SPos: PChar; const NTerm: PChar;
       Tokenizer: TZTokenizer): TZToken; virtual; abstract;
-  {$ELSE}
-    function NextToken(var FirstChar: PChar; const EOS: PChar;
-      Tokenizer: TZTokenizer): TZToken; virtual; abstract;
-  {$ENDIF}
   end;
 
   {**
@@ -187,8 +168,11 @@ type
     point and another string of digits may follow these digits.
   }
   TZNumberState = class (TZTokenizerState)
+  protected
+    function ReadDecDigits(var SPos: PChar; const NTerm: PChar): Boolean;
+    function ReadHexDigits(var SPos: PChar; const NTerm: PChar): Boolean;
   public
-    function NextToken(Stream: TStream; FirstChar: Char;
+    function NextToken(var SPos: PChar; const NTerm: PChar;
       Tokenizer: TZTokenizer): TZToken; override;
   end;
 
@@ -203,11 +187,11 @@ type
   }
   TZQuoteState = class (TZTokenizerState)
   public
-    function NextToken(Stream: TStream; FirstChar: Char;
-      Tokenizer: TZTokenizer): TZToken; override;
-
+    function NextToken(var SPos: PChar; const NTerm: PChar;
+      {%H-}Tokenizer: TZTokenizer): TZToken; override;
     function EncodeString(const Value: string; QuoteChar: Char): string; virtual;
-    function DecodeString(const Value: string; QuoteChar: Char): string; virtual;
+    function DecodeString(const Value: string; QuoteChar: Char): string; virtual; deprecated;
+    function DecodeToken(const Value: TZToken; QuoteChar: Char): string; virtual;
   end;
 
   {**
@@ -215,8 +199,8 @@ type
   }
   TZCommentState = class (TZTokenizerState)
   public
-    function NextToken(Stream: TStream; FirstChar: Char;
-      Tokenizer: TZTokenizer): TZToken; override;
+    function NextToken(var SPos: PChar; const NTerm: PChar;
+      {%H-}Tokenizer: TZTokenizer): TZToken; override;
   end;
 
   {**
@@ -225,10 +209,10 @@ type
   }
   TZCppCommentState = class (TZCommentState)
   protected
-    procedure GetMultiLineComment(Stream: TStream; var Result: String); virtual;
-    procedure GetSingleLineComment(Stream: TStream; var Result: String); virtual;
+    procedure GetMultiLineComment(var SPos: PChar; const NTerm: PChar); virtual;
+    procedure GetSingleLineComment(var SPos: PChar; const NTerm: PChar); virtual;
   public
-    function NextToken(Stream: TStream; FirstChar: Char;
+    function NextToken(var SPos: PChar; const NTerm: PChar;
       Tokenizer: TZTokenizer): TZToken; override;
   end;
 
@@ -238,7 +222,7 @@ type
   }
   TZCCommentState = class (TZCppCommentState)
   public
-    function NextToken(Stream: TStream; FirstChar: Char;
+    function NextToken(var SPos: PChar; const NTerm: PChar;
       Tokenizer: TZTokenizer): TZToken; override;
   end;
 
@@ -293,11 +277,11 @@ type
     FParent: TZSymbolNode;
   protected
     procedure AddDescendantLine(const Value: string);
-    function DeepestRead(Stream: TStream): TZSymbolNode;
+    function DeepestRead(var SPos: PChar; const NTerm: PChar): TZSymbolNode;
+    function UnreadToValid(var SPos: PChar; const NTerm: PChar): TZSymbolNode;
     function EnsureChildWithChar(Value: Char): TZSymbolNode;
     function FindChildWithChar(Value: Char): TZSymbolNode; virtual;
     function FindDescendant(const Value: string): TZSymbolNode;
-    function UnreadToValid(Stream: TStream): TZSymbolNode;
 
     property Children: TZSymbolNodeArray read FChildren write FChildren;
     property Character: Char read FCharacter write FCharacter;
@@ -323,7 +307,7 @@ type
 
     procedure Add(const Value: string);
     function Ancestry: string; override;
-    function NextSymbol(Stream: TStream; FirstChar: Char): string;
+    function NextSymbol(var SPos: PChar; const NTerm: PChar): PChar;
   end;
 
   {**
@@ -358,9 +342,9 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-
-    function NextToken(Stream: TStream; FirstChar: Char;
-      Tokenizer: TZTokenizer): TZToken; override;
+  public
+    function NextToken(var SPos: PChar; const NTerm: PChar;
+      {%H-}Tokenizer: TZTokenizer): TZToken; override;
     procedure Add(const Value: string); virtual;
   end;
 
@@ -374,9 +358,9 @@ type
     FWhitespaceChars: array[0..ord(high(char))] of Boolean;
   public
     constructor Create;
-
-    function NextToken(Stream: TStream; FirstChar: Char;
-      Tokenizer: TZTokenizer): TZToken; override;
+  public
+    function NextToken(var SPos: PChar; const NTerm: PChar;
+      {%H-}Tokenizer: TZTokenizer): TZToken; override;
     procedure SetWhitespaceChars(FromChar: Char; ToChar: Char; Enable: Boolean);
   end;
 
@@ -408,9 +392,9 @@ type
     FWordChars: array[0..ord(high(char))] of Boolean;
   public
     constructor Create;
-
-    function NextToken(Stream: TStream; FirstChar: Char;
-      Tokenizer: TZTokenizer): TZToken; override;
+  public
+    function NextToken(var SPos: PChar; const NTerm: PChar;
+      {%H-}Tokenizer: TZTokenizer): TZToken; override;
     procedure SetWordChars(FromChar: Char; ToChar: Char; Enable: Boolean);
   end;
 
@@ -460,7 +444,8 @@ type
   IZTokenizer = interface (IZInterface)
     ['{C7CF190B-C45B-4AB4-A406-5999643DF6A0}']
 
-    function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions): TZTokenList;
+    function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions): TZTokenList; overload;
+    function TokenizeBufferToList(Buffer, NTerm: PChar; Options: TZTokenOptions): TZTokenList; overload;
     function TokenizeStreamToList(Stream: TStream; Options: TZTokenOptions): TZTokenList;
 
     function TokenizeBuffer(const Buffer: string; Options: TZTokenOptions): TZTokenDynArray; deprecated;
@@ -487,14 +472,15 @@ type
     FSymbolState: TZSymbolState;
     FWhitespaceState: TZWhitespaceState;
     FWordState: TZWordState;
-    FStream: TTokenizerStream;
+    FBuffer: String;
   protected
     procedure CreateTokenStates; virtual;
   public
     constructor Create;
     destructor Destroy; override;
 
-    function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions): TZTokenList;
+    function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions): TZTokenList; overload;
+    function TokenizeBufferToList(Buffer, EOS: PChar; Options: TZTokenOptions): TZTokenList; overload;
     function TokenizeStreamToList(Stream: TStream; Options: TZTokenOptions): TZTokenList;
 
     function TokenizeBuffer(const Buffer: string; Options: TZTokenOptions):
@@ -521,17 +507,21 @@ type
     property WordState: TZWordState read FWordState write FWordState;
   end;
 
+function TokenAsString(const Value: TZToken): String;
+
 const
-  EscapeMarkSequence = String('~<|');
+  pSpace: PChar = ' ';
+  pQuestionMark: PChar = '?';
 
 implementation
 
 uses
-  ZFastCode, Math, StrUtils, ZSysUtils, ZMessages;
+  ZFastCode, Math, ZSysUtils, ZMessages;
 
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
+function TokenAsString(const Value: TZToken): String;
+begin
+  SetString(Result, Value.P, Value.L);
+end;
 
 { TZNumberState }
 
@@ -539,77 +529,61 @@ uses
   Return a number token from a reader.
   @return a number token from a reader
 }
-function TZNumberState.NextToken(Stream: TStream; FirstChar: Char;
+function TZNumberState.ReadDecDigits(var SPos: PChar; const NTerm: PChar): Boolean;
+begin
+  Result := False;
+  while (SPos < NTerm) and (Ord(SPos^) >= Ord('0')) and (Ord(SPos^) <= Ord('9')) do begin
+    Inc(SPos);
+    Result := True;
+  end;
+end;
+
+function TZNumberState.ReadHexDigits(var SPos: PChar; const NTerm: PChar): Boolean;
+begin
+  Result := False;
+  while (SPos < NTerm) and (((Ord(SPos^) >= Ord('0')) and (Ord(SPos^) <= Ord('9'))) or
+       ((Ord(SPos^) or $20 >= Ord('a')) and (Ord(SPos^) or $20 <= Ord('f')))) do begin//lower case version
+    Inc(SPos);
+    Result := True;
+  end;
+end;
+
+function TZNumberState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
 var
-  ReadNum: Integer;
-  AbsorbedLeadingMinus: Boolean;
   AbsorbedDot: Boolean;
   GotAdigit: Boolean;
-
-  procedure AbsorbDigits;
-  begin
-    while (Ord(FirstChar) >= Ord('0')) and (Ord(FirstChar) <= Ord('9')) do begin
-      ToBuf(FirstChar, Result.Value);
-      GotAdigit := True;
-      ReadNum := Stream.Read(FirstChar, SizeOf(Char));
-      if (ReadNum = 0) then
-        Break;
-    end;
-  end;
-
 begin
   { Initializes the process. }
-  ReadNum := 0;
-  AbsorbedLeadingMinus := False;
   AbsorbedDot := False;
-  GotAdigit := False;
 
   Result.TokenType := ttUnknown;
-  Result.Value := '';
+  Result.P := SPos;
 
   { Parses left part of the number. }
-  if FirstChar = '-' then
-  begin
-    InitBuf(FirstChar);
-    ReadNum := Stream.Read(FirstChar, SizeOf(Char));
-    AbsorbedLeadingMinus := True;
-  end else ClearBuf;
-  AbsorbDigits;
+  if (SPos^ = '-') or (SPos^ = '+') then
+    Inc(SPos);
+  GotAdigit := ReadDecDigits(SPos, NTerm);
 
   { Parses right part of the number. }
-  if FirstChar = '.' then
-  begin
+  if SPos^ = '.' then begin
     AbsorbedDot := True;
-    ToBuf(FirstChar, Result.Value);
-    ReadNum := Stream.Read(FirstChar, SizeOf(Char));
-    if ReadNum > 0 then
-      AbsorbDigits;
+    Inc(SPos);
+    GotAdigit := ReadDecDigits(SPos, NTerm);
   end;
-  FlushBuf(Result.Value);
 
-  { Pushback wrong symbols. }
-  Stream.Seek(-ReadNum, soFromCurrent);
+  Dec(SPos); //push back wrong result
 
   { Gets a token result. }
-  if not GotAdigit then
-  begin
-    if AbsorbedLeadingMinus and AbsorbedDot then begin
-      Stream.Seek(-SizeOf(Char), soFromCurrent);
-      if Tokenizer.SymbolState <> nil then
-        Result := Tokenizer.SymbolState.NextToken(Stream, '-', Tokenizer);
-    end else if AbsorbedLeadingMinus then begin
-      if Tokenizer.SymbolState <> nil then
-      Result := Tokenizer.SymbolState.NextToken(Stream, '-', Tokenizer)
-    end else if AbsorbedDot then begin
-      if Tokenizer.SymbolState <> nil then
-        Result := Tokenizer.SymbolState.NextToken(Stream, '.', Tokenizer);
-    end;
+  if not GotAdigit then begin
+    SPos := Result.P;
+    if Tokenizer.SymbolState <> nil then
+      Result := Tokenizer.SymbolState.NextToken(SPos, NTerm, Tokenizer);
   end else begin
-    if AbsorbedDot then
-      Result.TokenType := ttFloat
-    else
-      Result.TokenType := ttInteger;
+    if AbsorbedDot
+    then Result.TokenType := ttFloat
+    else Result.TokenType := ttInteger;
+    Result.L := SPos-Result.P+1;
   end;
 end;
 
@@ -622,21 +596,30 @@ end;
 
   @return a quoted string token from a reader
 }
-function TZQuoteState.NextToken(Stream: TStream; FirstChar: Char;
+function TZQuoteState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
-var
-  TempChar: Char;
 begin
-  InitBuf(FirstChar);
-  Result.Value := '';
-  repeat
-    if Stream.Read(TempChar, SizeOf(Char)) = 0 then
-      TempChar := FirstChar;
-    ToBuf(TempChar, Result.Value);
-  until TempChar = FirstChar;
-  FlushBuf(Result.Value);
-
+  Result.P := SPos;
+  while SPos < NTerm do begin
+    Inc(SPos);
+    if SPos^ = Result.P^ then
+      Break;
+  end;
+  Result.L := SPos-Result.P+1;
   Result.TokenType := ttQuoted;
+end;
+
+{**
+  Decodes a string value.
+  @param Value a token value to be decoded.
+  @param QuoteChar a string quote character.
+  @returns an decoded string.
+}
+function TZQuoteState.DecodeToken(const Value: TZToken; QuoteChar: Char): string;
+begin
+  if (Value.L >= 2) and (Value.P^ = QuoteChar) and ((Value.P+Value.L-1)^ = QuoteChar)
+  then SetString(Result, Value.P+1, Value.L-2)
+  else SetString(Result, Value.P, Value.L)
 end;
 
 {**
@@ -656,14 +639,15 @@ end;
   @param QuoteChar a string quote character.
   @returns an decoded string.
 }
+{$WARNINGS OFF} //suppress deprecated waring
 function TZQuoteState.DecodeString(const Value: string; QuoteChar: Char): string;
+var Token: TZToken;
 begin
-  if (Length(Value) >= 2) and (Value[1] = QuoteChar)
-    and (Value[Length(Value)] = Value[1]) then
-    Result := Copy(Value, 2, Length(Value) - 2)
-  else
-    Result := Value;
+  Token.P := Pointer(Value);
+  Token.L := Length(Value);
+  DecodeToken(Token, QuoteChar);
 end;
+{$WARNINGS ON}
 
 { TZCommentState }
 
@@ -674,20 +658,18 @@ end;
   @return either just a slash token, or the results of
     delegating to a comment-handling state
 }
-function TZCommentState.NextToken(Stream: TStream; FirstChar: Char;
+function TZCommentState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
-var
-  ReadChar: Char;
 begin
-  InitBuf(FirstChar);
-  Result.Value := '';
-  while (Stream.Read(ReadChar, SizeOf(Char)) > 0) and not CharInSet(ReadChar, [#10, #13]) do
-    ToBuf(ReadChar, Result.Value);
-  FlushBuf(Result.Value);
+  Result.P := SPos;
 
-  if CharInSet(ReadChar, [#10, #13]) then
-    Stream.Seek(-SizeOf(Char), soFromCurrent);
+  while (SPos < NTerm) and not (Ord(SPos^) in [Ord(#10), Ord(#13)]) do
+    Inc(SPos);
 
+  if (Ord(SPos^) in [Ord(#10), Ord(#13)]) then
+    Dec(SPos);
+
+  Result.L := SPos-Result.P+1;
   Result.TokenType := ttComment;
 end;
 
@@ -698,17 +680,16 @@ end;
   then return the tokenizer's next token.
   @return the tokenizer's next token
 }
-procedure TZCppCommentState.GetMultiLineComment(Stream: TStream; var Result: String);
+procedure TZCppCommentState.GetMultiLineComment(var SPos: PChar; const NTerm: PChar);
 var
-  ReadChar, LastChar: Char;
+  LastChar: Char;
 begin
-  LastChar := #0;
-  while Stream.Read(ReadChar, SizeOf(Char)) > 0 do
-  begin
-    ToBuf(ReadChar, Result);
-    if (LastChar = '*') and (ReadChar = '/') then
+  LastChar := SPos^;
+  while SPos < NTerm do begin
+    Inc(SPos);
+    if (LastChar = '*') and (SPos^ = '/') then
       Break;
-    LastChar := ReadChar;
+    LastChar := SPos^;
   end;
 end;
 
@@ -716,24 +697,13 @@ end;
   Ignore everything up to an end-of-line and return the tokenizer's next token.
   @return the tokenizer's next token
 }
-procedure TZCppCommentState.GetSingleLineComment(Stream: TStream; var Result: String);
-var
-  ReadChar: Char;
+procedure TZCppCommentState.GetSingleLineComment(var SPos: PChar; const NTerm: PChar);
 begin
-  while (Stream.Read(ReadChar, SizeOf(Char)) > 0) and not CharInSet(ReadChar, [#10, #13]) do
-    ToBuf(ReadChar, Result);
-
   // mdaems : for single line comments the line ending must be included
   // as it should never be stripped off or unified with other whitespace characters
-  if CharInSet(ReadChar, [#10, #13]) then begin
-    ToBuf(ReadChar, Result);
-    // ludob Linux line terminator is just LF, don't read further if we already have LF
-    if (ReadChar<>#10) and (Stream.Read(ReadChar, SizeOf(Char)) > 0) then
-      if (ReadChar = #10) or (ReadChar = #13) then
-        ToBuf(ReadChar, Result)
-      else
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-  end;
+  // ludob Linux line terminator is just LF, don't read further if we already have LF
+  while (SPos < NTerm) and (Ord(SPos^) <> Ord(#10)) do
+    Inc(SPos);
 end;
 
 {**
@@ -743,43 +713,36 @@ end;
   @return either just a slash token, or the results of
     delegating to a comment-handling state
 }
-function TZCppCommentState.NextToken(Stream: TStream; FirstChar: Char;
+function TZCppCommentState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
-var
-  ReadChar: Char;
-  ReadNum: Integer;
 begin
   Result.TokenType := ttUnknown;
-  InitBuf(FirstChar);
-  Result.Value := '';
+  Result.P := SPos;
 
-  ReadNum := Stream.Read(ReadChar, SizeOf(Char));
-  if ReadNum > 0 then
-    case ReadChar of
+  Inc(SPos);
+  if SPos < NTerm then
+    case SPos^ of
       '*':
         begin
           Result.TokenType := ttComment;
-          ToBuf(ReadChar, Result.Value);
-          GetMultiLineComment(Stream, Result.Value);
-          FlushBuf(Result.Value);
+          GetMultiLineComment(SPos, NTerm);
+          Result.L := SPos-Result.P+1;
           Exit;
         end;
       '/', '-':
         begin
           Result.TokenType := ttComment;
-          ToBuf(ReadChar, Result.Value);
-          GetSingleLineComment(Stream, Result.Value);
-          FlushBuf(Result.Value);
+          GetSingleLineComment(SPos, NTerm);
+          Result.L := SPos-Result.P+1;
           Exit;
         end;
       else
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
+        Dec(SPos);
     end;
 
-  if Tokenizer.SymbolState <> nil then
-    Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer)
-  else
-    FlushBuf(Result.Value);
+  if Tokenizer.SymbolState <> nil
+  then Result := Tokenizer.SymbolState.NextToken(SPos, NTerm, Tokenizer)
+  else Result.L := SPos-Result.P+1;
 end;
 
 { TZCCommentState }
@@ -789,34 +752,25 @@ end;
   @return either just a slash token, or the results of
     delegating to a comment-handling state
 }
-function TZCCommentState.NextToken(Stream: TStream; FirstChar: Char;
-  Tokenizer: TZTokenizer): TZToken;
-var
-  ReadChar: Char;
-  ReadNum: Integer;
+function TZCCommentState.NextToken(var SPos: PChar; const NTerm: PChar;
+   Tokenizer: TZTokenizer): TZToken;
 begin
   Result.TokenType := ttUnknown;
-  InitBuf(FirstChar);
-  Result.Value := '';
+  Result.P := SPos;
 
-  if FirstChar = '/' then
-  begin
-    ReadNum := Stream.Read(ReadChar, SizeOf(Char));
-    if ReadNum > 0 then
-      if ReadChar = '*' then
-      begin
-        ToBuf(ReadChar, Result.Value);
+  if SPos^ = '/' then
+    if SPos < NTerm then begin
+      Inc(SPos);
+      if SPos^ = '*' then begin
         Result.TokenType := ttComment;
-        GetMultiLineComment(Stream, Result.Value);
-      end
-      else
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-  end;
+        GetMultiLineComment(SPos, NTerm);
+      end else
+        Dec(SPos);
+    end;
 
-  if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil) then
-    Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer)
-  else
-    FlushBuf(Result.Value);
+  if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil)
+  then Result := Tokenizer.SymbolState.NextToken(SPos, NTerm, Tokenizer)
+  else Result.L := SPos-Result.P+1;
 end;
 
 { TZSymbolNode }
@@ -880,25 +834,20 @@ end;
 {**
   Find the descendant that takes as many characters as possible from the input.
 }
-function TZSymbolNode.DeepestRead(Stream: TStream): TZSymbolNode;
+function TZSymbolNode.DeepestRead(var SPos: PChar; const NTerm: PChar): TZSymbolNode;
 var
-  TempChar: Char;
   Node: TZSymbolNode;
-  ReadNum: Integer;
 begin
-  ReadNum := Stream.Read(TempChar, SizeOf(Char));
-  if ReadNum > 0 then
-    Node := FindChildWithChar(TempChar)
-  else
-    Node := nil;
+  Inc(SPos);
+  if (SPos < NTerm)
+  then Node := FindChildWithChar(SPos^)
+  else Node := nil;
 
-  if Node = nil then
-  begin
-    Stream.Seek(-ReadNum, soFromCurrent);
+  if Node = nil then begin
+    Dec(SPos);
     Result := Self;
-  end
-  else
-    Result := Node.DeepestRead(Stream);
+  end else
+    Result := Node.DeepestRead(SPos, NTerm);
 end;
 
 {**
@@ -909,13 +858,11 @@ var
   N: Integer;
 begin
   Result := FindChildWithChar(Value);
-  if Result = nil then
-  begin
+  if Result = nil then begin
     N := 0;
     while (FChildren[N] <> nil) and (N <= 255) do
       Inc(N);
-    if N <= 255 then
-    begin
+    if N <= 255 then begin
       Result := TZSymbolNode.Create(Self, Value);
       FChildren[N] := Result;
     end;
@@ -931,11 +878,9 @@ var
   Current: TZSymbolNode;
 begin
   Result := nil;
-  for I := 0 to 255 do
-  begin
+  for I := 0 to 255 do begin
     Current := Children[I];
-    if (Current = nil) or (Current.Character = Value) then
-    begin
+    if (Current = nil) or (Current.Character = Value) then begin
       Result := Current;
       Break;
     end;
@@ -963,14 +908,12 @@ end;
   ancestry represents a complete symbol. If this node is
   not valid, put back the character and ask the parent to unwind.
 }
-function TZSymbolNode.UnreadToValid(Stream: TStream): TZSymbolNode;
+function TZSymbolNode.UnreadToValid(var SPos: PChar; const NTerm: PChar): TZSymbolNode;
 begin
-  if not FValid then
-  begin
-    Stream.Seek(-(SizeOf(Char)), soFromCurrent);
-    Result := FParent.UnreadToValid(Stream);
-  end
-  else
+  if not FValid then begin
+    Dec(SPos);
+    Result := FParent.UnreadToValid(SPos, NTerm);
+  end else
     Result := Self;
 end;
 
@@ -1036,14 +979,14 @@ end;
     read from the reader
   @return a symbol string from a reader
 }
-function TZSymbolRootNode.NextSymbol(Stream: TStream; FirstChar: Char): string;
+function TZSymbolRootNode.NextSymbol(var SPos: PChar; const NTerm: PChar): PChar;
 var
   Node: TZSymbolNode;
 begin
-  Node := FindChildWithChar(FirstChar);
-  Node := Node.DeepestRead(Stream);
-  Node := Node.UnreadToValid(Stream);
-  Result := Node.Ancestry;
+  Node := FindChildWithChar(SPos^);
+  Node := Node.DeepestRead(SPos, NTerm);
+  Node.UnreadToValid(SPos, NTerm);
+  Result := SPos;
 end;
 
 { TZSymbolState }
@@ -1079,11 +1022,12 @@ end;
   Return a symbol token from a reader.
   @return a symbol token from a reader
 }
-function TZSymbolState.NextToken(Stream: TStream; FirstChar: Char;
+function TZSymbolState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
 begin
   Result.TokenType := ttSymbol;
-  Result.Value := FSymbols.NextSymbol(Stream, FirstChar);
+  Result.P := SPos;
+  Result.L := FSymbols.NextSymbol(SPos, NTerm)-Result.P+1;
 end;
 
 { TZWhitespaceState }
@@ -1103,24 +1047,18 @@ end;
   the tokenizer's next token.
   @return the tokenizer's next token
 }
-function TZWhitespaceState.NextToken(Stream: TStream; FirstChar: Char;
+function TZWhitespaceState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
-var
-  ReadNum: Integer;
-  ReadChar: Char;
 begin
-  InitBuf(FirstChar);
-  Result.Value := '';
-  repeat
-    ReadNum := Stream.Read(ReadChar, SizeOf(Char));
-    if (ReadNum = 0) or not FWhitespaceChars[Ord(ReadChar)] then
+  Result.P := SPos;
+  while SPos < NTerm do begin
+    Inc(SPos);
+    if (SPos = NTerm) or not FWhitespaceChars[Ord(SPos^)] then
       Break;
-    ToBuf(ReadChar, Result.Value);
-  until False;
-  FlushBuf(Result.Value);
+  end;
 
-  if ReadNum > 0 then
-    Stream.Seek(-SizeOf(Char), soFromCurrent);
+  Dec(SPos);
+  Result.L := SPos - Result.P +1;
   Result.TokenType := ttWhitespace;
 end;
 
@@ -1161,24 +1099,18 @@ end;
   Return a word token from a reader.
   @return a word token from a reader
 }
-function TZWordState.NextToken(Stream: TStream; FirstChar: Char;
+function TZWordState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
-var
-  TempChar: Char;
-  ReadNum: Integer;
 begin
-  InitBuf(FirstChar);
-  Result.Value := '';
+  Result.P := SPos;
   repeat
-    ReadNum := Stream.Read(TempChar, SizeOf(Char));
-    if (ReadNum = 0) or not FWordChars[Ord(TempChar)] then
+    Inc(SPos);
+    if (SPos = NTerm) or not FWordChars[Ord(SPos^)] then
       Break;
-    ToBuf(TempChar, Result.Value);
   until False;
-  FlushBuf(Result.Value);
 
-  if ReadNum > 0 then
-    Stream.Seek(-SizeOf(Char), soFromCurrent);
+  Dec(SPos);
+  Result.L := SPos - Result.P +1;
   Result.TokenType := ttWord;
 end;
 
@@ -1206,7 +1138,6 @@ end;
 }
 constructor TZTokenizer.Create;
 begin
-  FStream := TTokenizerStream.Create;
   CreateTokenStates;
 end;
 
@@ -1221,12 +1152,6 @@ begin
   FreeAndNil(FSymbolState);
   FreeAndNil(FWhitespaceState);
   FreeAndNil(FWordState);
-
-  if FStream <> nil then
-  begin
-    //FStream.SetPointer(nil, 0); //take care we nil the pointer else we're trying to release memory the Stream doesn't own
-    FreeAndNil(FStream);
-  end;
 
   inherited Destroy;
 end;
@@ -1299,10 +1224,19 @@ end;
 }
 function TZTokenizer.TokenizeBuffer(const Buffer: string;
   Options: TZTokenOptions): TZTokenDynArray;
+var
+  List: TZTokenList;
+  I: Integer;
 begin
-  //FStream.SetPointer(Pointer(Buffer), Length(Buffer) * SizeOf(Char)); //instead of alloc+moving mem
-  FStream.SetBuffer(Buffer);
-  Result := TokenizeStream(FStream, Options);
+  FBuffer := Buffer;
+  List := Self.TokenizeBufferToList(FBuffer, Options);
+  try
+    SetLength(Result, List.Count);
+    for I := 0  to List.Count - 1 do
+      Result[I] := List[I]^;
+  finally
+    List.Free;
+  end;
 end;
 
 {**
@@ -1314,10 +1248,85 @@ end;
 }
 function TZTokenizer.TokenizeBufferToList(const Buffer: string;
   Options: TZTokenOptions): TZTokenList;
+var
+  P: PChar;
 begin
-  //FStream.SetPointer(Pointer(Buffer), Length(Buffer) * SizeOf(Char)); //instead of alloc+moving mem
-  FStream.SetBuffer(Buffer);
-  Result := TokenizeStreamToList(FStream, Options);
+  FBuffer := Buffer;
+  P := Pointer(FBuffer);
+  Result := TokenizeBufferToList(P, p+Length(Buffer), Options);
+end;
+
+{**
+  Tokenizes a string buffer into a list of tokens.
+  @param Buffer a string buffer to be tokenized.
+  @param EOS the end of the buffer. Usually the trailing #0 term.
+  @param Options a set of tokenizer options.
+  @returns a token list where Items are tokens and
+    Objects are token types.
+}
+function TZTokenizer.TokenizeBufferToList(Buffer, EOS: PChar;
+  Options: TZTokenOptions): TZTokenList;
+var
+  Token: TZToken;
+  LastTokenType: TZTokenType;
+  State: TZTokenizerState;
+label EOL; //End Of Loop
+begin
+  Result := TZTokenList.Create;
+  LastTokenType := ttUnknown;
+
+  while Buffer < EOS do begin
+    State := FCharacterStates[Ord(Buffer^)];
+    if State <> nil then
+    begin
+      Token := State.NextToken(Buffer, EOS, Self);
+      { Decode strings.
+      if (State is TZQuoteState) and (toDecodeStrings in Options) then begin
+        Token.Value := (State as TZQuoteState).DecodeString(TokenAsString(Token), Token.P^);
+        Token.P := Pointer(Token.Value);
+        Token.L := Length(Token.Value);
+      end;
+      { Skips comments if option set. }
+      if (Token.TokenType = ttComment) and (toSkipComments in Options) then
+        Goto EOL;
+      { Skips whitespaces if option set. }
+      if (Token.TokenType = ttWhitespace) and (toSkipWhitespaces in Options) then
+        goto EOL;
+      { Unifies whitespaces if option set. }
+      if (Token.TokenType = ttWhitespace) and (toUnifyWhitespaces in Options) then begin
+        if LastTokenType = ttWhitespace then goto EOL;
+        if (Token.P^ <> ' ') then
+          Token.P := pSpace;
+        Token.L := 1;
+      end;
+      { Unifies numbers if option set. }
+      if (Token.TokenType in [ttInteger, ttFloat, ttHexDecimal]) and (toUnifyNumbers in Options) then
+        Token.TokenType := ttNumber;
+      { If an integer is immediately followed by a string they should be seen as one string}
+      if (Token.TokenType = ttWord) and (LastTokenType = ttInteger) then begin
+        Token.P := Result[Result.Count-1]^.P;
+        Token.L := Token.L + Result[Result.Count-1]^.L;
+        Result.Delete(Result.Count-1);
+      end;
+      { Add a read token. }
+      LastTokenType := Token.TokenType;
+      Result.Add(Token);
+    { Skips unknown chars if option set. }
+    end else if not (toSkipUnknown in Options) then begin
+      Token.P := Buffer;
+      Token.L := 0;
+      Token.TokenType := ttUnknown;
+      Result.Add(Token);
+    end;
+EOL:Inc(Buffer);
+  end;
+  { Adds an EOF if option is not set. }
+  if not (toSkipEOF in Options) then begin
+    Token.P := EOS;
+    Token.L := 0;
+    Token.TokenType := ttEOF;
+    Result.Add(Token);
+  end;
 end;
 
 {**
@@ -1351,71 +1360,9 @@ end;
 }
 function TZTokenizer.TokenizeStreamToList(Stream: TStream;
   Options: TZTokenOptions): TZTokenList;
-var
-  FirstChar: Char;
-  Token: TZToken;
-  LastTokenType: TZTokenType;
-  State: TZTokenizerState;
 begin
-  Result := TZTokenList.Create;
-  LastTokenType := ttUnknown;
-
-  while Stream.Read(FirstChar, SizeOf(Char)) > 0 do
-  begin
-    State := FCharacterStates[Ord(FirstChar)];
-    if State <> nil then
-    begin
-      Token := State.NextToken(Stream, FirstChar, Self);
-      { Decode strings. }
-      if (State is TZQuoteState)
-        and (toDecodeStrings in Options) then
-      begin
-        Token.Value := (State as TZQuoteState).DecodeString(
-          Token.Value, FirstChar);
-      end;
-      { Skips comments if option set. }
-      if (Token.TokenType = ttComment)
-        and (toSkipComments in Options) then
-        Continue;
-      { Skips whitespaces if option set. }
-      if (Token.TokenType = ttWhitespace)
-        and (toSkipWhitespaces in Options) then
-        Continue;
-      { Unifies whitespaces if option set. }
-      if (Token.TokenType = ttWhitespace)
-        and (toUnifyWhitespaces in Options) then
-      begin
-        if LastTokenType = ttWhitespace then
-          Continue;
-        Token.Value := ' ';
-      end;
-      { Unifies numbers if option set. }
-      if (Token.TokenType in [ttInteger, ttFloat, ttHexDecimal])
-        and (toUnifyNumbers in Options) then
-        Token.TokenType := ttNumber;
-      { If an integer is immediately followed by a string they should be seen as one string}
-      if (Token.TokenType = ttWord) and (LastTokenType = ttInteger) then begin
-        Token.Value := Result[Result.Count-1]^.Value + Token.Value;
-        Result.Delete(Result.Count-1);
-      end;
-      { Add a read token. }
-      LastTokenType := Token.TokenType;
-      Result.Add(Token);
-    end
-    { Skips unknown chars if option set. }
-    else if not (toSkipUnknown in Options) then begin
-      Token.Value := FirstChar;
-      Token.TokenType := ttUnknown;
-      Result.Add(Token);
-    end;
-  end;
-  { Adds an EOF if option is not set. }
-  if not (toSkipEOF in Options) then begin
-    Token.Value := '';
-    Token.TokenType := ttEOF;
-    Result.Add(Token);
-  end;
-  //FStream.Position := 0; //allways seek back to beginning else D7/FPC crashs
+  Result := TokenizeBufferToList(PChar(TMemoryStream(Stream).Memory),
+    PChar(TMemoryStream(Stream).Memory)+(Stream.Size div SizeOf(Char)), Options);
 end;
 
 {**
@@ -1472,41 +1419,6 @@ begin
   Result := WordState;
 end;
 
-{ TZTokenizerState }
-
-procedure TZTokenizerState.ClearBuf;
-begin
-  fCurrentBufIndex := 0;
-end;
-
-procedure TZTokenizerState.FlushBuf(var Value: String);
-var I: Integer;
-begin
-  if fCurrentBufIndex > 0 then begin
-    I := Length(Value);
-    SetLength(Value, i+fCurrentBufIndex);
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(fBuf[0], Value[I+1], fCurrentBufIndex * SizeOf(Char));
-    fCurrentBufIndex := 0;
-  end;
-end;
-
-procedure TZTokenizerState.InitBuf(FirstChar: Char);
-begin
-  fBuf[0] := FirstChar;
-  fCurrentBufIndex := 1;
-end;
-
-procedure TZTokenizerState.ToBuf(C: Char; var Value: String);
-begin
-  if fCurrentBufIndex < High(Byte) then begin
-    fBuf[fCurrentBufIndex] := C;
-    Inc(fCurrentBufIndex);
-  end else begin
-    FlushBuf(Value);
-    InitBuf(C);
-  end;
-end;
-
 { TZTokenList }
 
 {**
@@ -1529,6 +1441,24 @@ begin
   SetCount(Source.Count);
   for I := 0 to Source.Count -1 do
     Put(i, Source[i]^);
+end;
+
+function TZTokenList.AsString(iStart, iEnd: Integer): String;
+var
+  i: Integer;
+  Len: LengthInt;
+  P: PChar;
+begin
+  Len := 0;
+  for i := iStart to iEnd do
+    Inc(Len, FTokens^[I]^.L);
+  SetLength(Result, Len);
+  P := Pointer(Result);
+  for i := iStart to iEnd do begin
+    Len := FTokens^[I]^.L;
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FTokens^[I]^.P^, P^, Len * SizeOf(Char));
+    Inc(P, Len);
+  end;
 end;
 
 {**
@@ -1557,7 +1487,7 @@ begin
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
 {$ENDIF}
-  Dispose(FTokens^[Index]);
+  FreeMem(FTokens^[Index]);
   Dec(FCount);
   if Index < FCount then begin
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FTokens^[Index + 1], FTokens^[Index],
@@ -1577,27 +1507,26 @@ end;
 
 function TZTokenList.IsEqual(Index: Integer; const Value: String;
   TokenCase: TZTokenCase = tcSensitive): Boolean;
+var
+  Token: PZToken;
+  P: PChar;
 begin
-  case TokenCase of
-    tcLower:      Result := LowerCase(GetToken(Index)^.Value) = Value;
-    tcUpper:      Result := UpperCase(GetToken(Index)^.Value) = Value;
-    else Result := GetToken(Index)^.Value = Value;
+  Token := GetToken(Index);
+  Result := False;
+  if Length(Value) = Token.L then begin
+    P := Pointer(Value);
+    if TokenCase = tcSensitive
+    then Result := CompareMem(Token.P, P, Token.L*SizeOf(Char))
+    else Result := SameText(Token.P, P, Token.L);
   end;
 end;
 
 function TZTokenList.IsEqual(Index: Integer; TokenType: TZTokenType;
   const Value: String; TokenCase: TZTokenCase): Boolean;
-var Token: PZToken;
 begin
-  Token := GetToken(Index);
-  Result := False;
-  if Token.TokenType = TokenType then
-    case TokenCase of
-      tcLower:      Result := LowerCase(GetToken(Index)^.Value) = Value;
-      tcUpper:      Result := UpperCase(GetToken(Index)^.Value) = Value;
-      else Result := GetToken(Index)^.Value = Value;
-    end;
-
+  if GetToken(Index)^.TokenType = TokenType
+  then Result := IsEqual(Index, Value, TokenCase)
+  else Result := False;
 end;
 
 class procedure TZTokenList.Error(const Msg: string; Data: Integer);
@@ -1620,7 +1549,7 @@ function TZTokenList.IsEqual(Index: Integer; const Value: Char): Boolean;
 var Token: PZToken;
 begin
   Token := GetToken(Index);
-  Result := (Length(Token^.Value) = 1) and (Token^.Value[1] = Value);
+  Result := (Token^.L = 1) and (Token^.P^ = Value);
 end;
 
 {**
@@ -1699,10 +1628,9 @@ begin
   for I := 0 to FCount - 1 do
     if FTokens^[i] = Item then begin
       Result := I;
-      Break;
+      Exit;
     end;
-  if Result = -1 then
-    Result := IndexOf(Item^);
+  Result := IndexOf(Item^);
 end;
 
 {**
@@ -1723,7 +1651,7 @@ begin
       (FCount - Index) * SizeOf(PZToken));
     Pointer(FTokens^[Index]) := nil;
   end;
-  New(FTokens^[Index]);
+  GetMem(FTokens^[Index], SizeOf(TZToken));
   FTokens^[Index]^ := Item;
   Inc(FCount);
 end;
@@ -1772,7 +1700,7 @@ begin
     SetCapacity(NewCount);
   if NewCount < FCount then
     for I := FCount - 1 downto NewCount do begin
-      Dispose(FTokens^[I]);
+      FreeMem(FTokens^[I]);
       FTokens^[I] := nil;
     end;
   FCount := NewCount;
@@ -1783,8 +1711,19 @@ end;
   @param Index of element.
 }
 function TZTokenList.AsFloat(Index: Integer): Extended;
+var
+  Token: PZToken;
+  C: Char;
 begin
-  Result := SQLStrToFloat(GetToken(Index)^.Value);
+  Token := GetToken(Index);
+  C := (Token.P+Token.L)^;
+  Result := 0;
+  (Token.P+Token.L)^ := #0;
+  try
+    SQLStrToFloatDef(Token.P, 0, Result, Token.L);
+  finally
+    (Token.P+Token.L)^ := C;
+  end;
 end;
 
 {**
@@ -1792,8 +1731,22 @@ end;
   @param Index of element.
 }
 function TZTokenList.AsInt64(Index: Integer): Int64;
+var
+  Token: PZToken;
+  C: Char;
 begin
-  Result := StrToInt64(GetToken(Index)^.Value);
+  Token := GetToken(Index);
+  C := (Token.P+Token.L)^;
+  (Token.P+Token.L)^ := #0;
+  try
+  {$IFDEF UNICODE}
+    Result := UnicodeToInt64Def(Token.P, 0);
+  {$ELSE}
+    Result := RawToInt64Def(Token.P, 0);
+  {$ENDIF}
+  finally
+    (Token.P+Token.L)^ := C;
+  end;
 end;
 
 {**
@@ -1801,13 +1754,12 @@ end;
   @param Index of element.
   @param TokenCase the result case of the token.
 }
-function TZTokenList.AsString(Index: Integer; TokenCase: TZTokenCase): String;
+function TZTokenList.AsString(Index: Integer): String;
+var
+  Token: PZToken;
 begin
-  case TokenCase of
-    tcLower:      Result := LowerCase(GetToken(Index)^.Value);
-    tcUpper:      Result := UpperCase(GetToken(Index)^.Value);
-    else          Result := GetToken(Index)^.Value;
-  end;
+  Token := GetToken(Index);
+  SetString(Result, Token.P, Token.L);
 end;
 
 {**
@@ -1822,17 +1774,17 @@ var
 begin
   Len := 0;
   for i := 0 to FCount - 1 do
-    Inc(Len, Length(FTokens^[I]^.Value));
+    Inc(Len, FTokens^[I]^.L);
   SetLength(Result, Len);
   P := Pointer(Result);
   for i := 0 to FCount - 1 do begin
-    Len := Length(FTokens^[I]^.Value);
-    if Len > 0 then begin
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(FTokens^[I]^.Value)^, P^, Len * SizeOf(Char));
-      Inc(P, Len);
-    end;
+    Len := FTokens^[I]^.L;
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FTokens^[I]^.P^, P^, Len * SizeOf(Char));
+    Inc(P, Len);
   end;
 end;
 
 end.
+
+
 

@@ -426,7 +426,7 @@ begin
   Result := False;
   while TokenIndex < Tokens.Count do begin
     if not (Tokens[TokenIndex]^.TokenType in [ttWhitespace, ttComment])
-       and (Options.IndexOf(Tokens.AsString(TokenIndex, tcUpper)) < 0) then
+       and (Options.IndexOf(UpperCase(Tokens.AsString(TokenIndex))) < 0) then
       Break;
     Inc(TokenIndex);
     Result := True;

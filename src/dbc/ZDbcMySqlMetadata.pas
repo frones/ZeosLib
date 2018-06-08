@@ -1010,7 +1010,7 @@ begin
       Flower_case_table_names := GetByte(FirstDBCIndex);
       Close;
     end;
-  Result := not (Flower_case_table_names > 0);
+  Result := Flower_case_table_names > 0;
 end;
 
 procedure TZMySQLDatabaseMetadata.SetDataBaseName(const Value: String);

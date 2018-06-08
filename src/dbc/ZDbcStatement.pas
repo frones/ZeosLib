@@ -238,7 +238,7 @@ type
     procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = '');
     function GetInParamLogValue(ParamIndex: Integer): RawByteString; virtual;
     function GetOmitComments: Boolean; virtual;
-    function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; virtual;
+    function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; virtual;
 
     property InParamValues: TZVariantDynArray read FInParamValues write FInParamValues;
     property InParamTypes: TZSQLTypeArray read FInParamTypes write FInParamTypes;
@@ -566,12 +566,8 @@ begin
   if FWSQL <> Value then
     {$IFDEF UNICODE}
     if not (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then
-      FASQL := GetRawEncodedSQL(Value)
-    else
-      if ConSettings^.AutoEncode then
-        FWSQL := GetUnicodeEncodedSQL(Value)
-      else
-        FWSQL := Value;
+      FASQL := GetRawEncodedSQL(Value);
+    FWSQL := Value;
     {$ELSE !UNICODE}
     begin
       FaSQL := ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP); //required for the resultsets
@@ -981,7 +977,7 @@ begin
     try
       {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
       for i := 0 to SQLTokens.Count-1 do begin //Assembles the Query
-        {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} + SQLTokens[i].Value;
+   //     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} + SQLTokens[i].Value;
         case SQLTokens[i].TokenType of
           ttQuoted, ttComment,
           ttWord, ttQuotedIdentifier, ttKeyword:
@@ -1006,20 +1002,19 @@ begin
 end;
 
 function TZAbstractStatement.GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString;
+{$IFDEF UNICODE}
+begin
+  Result := SQL;
+{$ELSE}
 var
   SQLTokens: TZTokenList;
   i: Integer;
 begin
   if ConSettings^.AutoEncode then begin
     Result := ''; //init
-    {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]); //Disassembles the Query
     try
       for i := 0 to SQLTokens.Count -1 do begin //Assembles the Query
-        {$IFDEF UNICODE}
-        ToBuff(SQLTokens.AsString(i), Result);
-        {$ELSE !UNICODE}
-        ToBuff(SQLTokens[i].Value, FASQL);
         case (SQLTokens[i].TokenType) of
           ttQuoted, ttComment,
           ttWord, ttQuotedIdentifier, ttKeyword:
@@ -1027,26 +1022,14 @@ begin
           else
             ToBuff(ASCII7ToUnicodeString(SQLTokens.AsString(i)), Result);
         end;
-        {$ENDIF UNICODE}
       end;
     finally
       FlushBuff(Result);
-      FWSQL := Result;
-      {$IFNDEF UNICODE}
-      FlushBuff(FASQL);
-      {$ENDIF}
       SQLTokens.Free;
     end;
-  end
-  else
-  begin
-    {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
-    {$IFDEF UNICODE}
-    Result := SQL;
-    {$ELSE !UNICODE}
+  end else
     Result := ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP);
-    {$ENDIF UNICODE}
-  end;
+{$ENDIF}
 end;
 
 function TZAbstractStatement.CreateStmtLogEvent(Category: TZLoggingCategory;
@@ -2492,10 +2475,8 @@ end;
 function TZAbstractPreparedStatement.GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
 var I: Integer;
 begin
-  if Length(FCachedQueryRaw) = 0 then
-  begin
-    {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
-    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
+  if Length(FCachedQueryRaw) = 0 then begin
+    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SQL, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetCompareFirstKeywordStrings, FTokenMatchIndex);
     FParamsCnt := 0;
     Result := ''; //init Result
@@ -2511,17 +2492,17 @@ end;
 function TZAbstractPreparedStatement.GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString;
 var I: Integer;
 begin
-  if Length(FCachedQueryUni) = 0 then
-  begin
-    {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
-    FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
+  if Length(FCachedQueryUni) = 0 then begin
+    FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni(SQL, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetCompareFirstKeywordStrings, FTokenMatchIndex);
 
     Result := ''; //init Result
-    for I := 0 to High(FCachedQueryUni) do
-      Result := Result + FCachedQueryUni[i];
-  end
-  else
+    for I := 0 to High(FCachedQueryUni) do begin
+      ToBuff(FCachedQueryUni[i], Result);
+      Inc(FParamsCnt, Ord(FIsParamIndex[i]));
+    end;
+    FlushBuff(Result);
+  end else
     Result := inherited GetUnicodeEncodedSQL(SQL);
 end;
 
@@ -2581,7 +2562,7 @@ begin
   Result := False;
 end;
 
-function TZAbstractPreparedStatement.GetCompareFirstKeywordStrings: TPreparablePrefixTokens;
+function TZAbstractPreparedStatement.GetCompareFirstKeywordStrings: PPreparablePrefixTokens;
 begin
   Result := nil;
 end;

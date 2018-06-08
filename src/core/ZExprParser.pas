@@ -302,7 +302,7 @@ var
   TokenValue: TZVariant;
 begin
   Tokens := FTokenizer.TokenizeBufferToList(FExpression,
-    [toSkipWhitespaces, toSkipComments, toSkipEOF, toDecodeStrings]);
+    [toSkipWhitespaces, toSkipComments, toSkipEOF]);
   try
     TokenIndex := 0;
 
@@ -313,17 +313,15 @@ begin
       case Tokens[TokenIndex]^.TokenType of
         ttKeyword:
           begin
-            Temp := Tokens.AsString(TokenIndex, tcUpper);
-            if Temp = 'TRUE' then begin
+            if Tokens.IsEqual(TokenIndex, 'TRUE', tcInsensitive) then begin
               TokenType := ttConstant;
               TokenValue:= EncodeBoolean(True);
-            end else if Temp = 'FALSE' then begin
+            end else if Tokens.IsEqual(TokenIndex, 'FALSE', tcInsensitive) then begin
               TokenType := ttConstant;
               TokenValue:= EncodeBoolean(False);
             end else
               for I := Low(OperatorTokens) to High(OperatorTokens) do
-                if OperatorTokens[I] = Temp then
-                begin
+                if Tokens.IsEqual(TokenIndex, OperatorTokens[I], tcInsensitive) then begin
                   TokenType := OperatorCodes[I];
                   Break;
                 end;
@@ -331,7 +329,7 @@ begin
         ttWord:
           begin
             TokenType := ttVariable;
-            Temp := Tokens.AsString(TokenIndex);
+            Temp := Tokenizer.GetQuoteState.DecodeToken(Tokens[TokenIndex]^, Tokens[TokenIndex]^.P^);
             if FVariables.IndexOf(Temp) < 0 then
               FVariables.Add(Temp);
             TokenValue:= EncodeString(Temp);
@@ -349,21 +347,18 @@ begin
         ttQuoted:
           begin
             TokenType := ttConstant;
-            TokenValue:= EncodeString(Tokens.AsString(TokenIndex));
+            TokenValue:= EncodeString(Tokenizer.GetQuoteState.DecodeToken(Tokens[TokenIndex]^, Tokens[TokenIndex]^.P^));
           end;
         ttSymbol:
-          begin
-            Temp := Tokens.AsString(TokenIndex);
             for I := Low(OperatorTokens) to High(OperatorTokens) do
-              if Temp = OperatorTokens[I] then begin
+              if Tokens.IsEqual(TokenIndex, OperatorTokens[I], tcInsensitive) then begin
                 TokenType := OperatorCodes[I];
                 Break;
               end;
-          end;
         ttTime,ttDate,ttDateTime:
           begin
             TokenType := ttConstant;
-            Temp := Tokens.AsString(TokenIndex);
+            Temp := Tokenizer.GetQuoteState.DecodeToken(Tokens[TokenIndex]^, Tokens[TokenIndex]^.P^);
             TokenValue:= EncodeDateTime(StrToDateTime(Temp));
             TokenValue.VString := Temp; //this conversion is not 100%safe so'll keep the native value by using advantages of the ZVariant
           end;

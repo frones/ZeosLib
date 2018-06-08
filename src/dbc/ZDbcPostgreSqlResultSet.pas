@@ -931,7 +931,7 @@ begin
         RawToIntDef(FPlainDriver.PQgetvalue(FQueryHandle, RowNo - 1, ColumnIndex), 0), FChunk_Size);
       Result := TempLob.GetBytes
     end else
-      Result := StrToBytes(DecodeString(InternalGetString(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}))); // Marsupilami79: InternalGetString is doing the same index decrement, as it is done here, so we need to increment it again before we call it here.
+      Result := StrToBytes(DecodeCString(InternalGetString(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}))); // Marsupilami79: InternalGetString is doing the same index decrement, as it is done here, so we need to increment it again before we call it here.
   end else Result := nil;
 end;
 

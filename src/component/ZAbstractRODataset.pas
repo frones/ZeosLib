@@ -50,7 +50,9 @@
 {********************************************************@}
 
 unit ZAbstractRODataset;
-
+{$IFDEF FPC}
+{$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 interface
 
 {$I ZComponent.inc}
@@ -429,7 +431,7 @@ type
     function CreateNestedDataSet({%H-}DataSetField: TDataSetField): TDataSet; {$IFDEF WITH_FTDATASETSUPPORT}override;{$ENDIF}
     procedure CloseBlob({%H-}Field: TField); override;
 
-    procedure CheckFieldCompatibility(Field: TField; FieldDef: TFieldDef); {$IFDEF WITH_CHECKFIELDCOMPATIBILITY} override;{$ENDIF}
+    procedure CheckFieldCompatibility(Field: TField; {%H-}FieldDef: TFieldDef); {$IFDEF WITH_CHECKFIELDCOMPATIBILITY} override;{$ENDIF}
     procedure CreateFields; override;
 
 {$IFDEF WITH_TRECORDBUFFER}
@@ -4204,7 +4206,7 @@ begin
   begin
     if CurrentRow > 0 then
     begin
-      RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
+      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
       if ResultSet.GetRow <> RowNo then
         ResultSet.MoveAbsolute(RowNo);
 
@@ -4876,7 +4878,7 @@ var
   RowNo: NativeInt;
 begin
   { Gets the first row. }
-  RowNo := NativeInt(Item1);
+  RowNo := {%H-}NativeInt(Item1);
   ResultSet.MoveAbsolute(RowNo);
   RowAccessor.RowBuffer := FSortRowBuffer1;
   RowAccessor.RowBuffer^.Index := RowNo;
@@ -5737,7 +5739,7 @@ function TZField.GetAsGUID: TGUID;
 var IsNull: Boolean;
   Bytes: TBytes;
 begin
-  FillChar(Result, SizeOf(Result), #0);
+  FillChar(Result{%H-}, SizeOf(Result), #0);
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
   begin
     Bytes := (DataSet as TZAbstractRODataset).FRowAccessor.GetBytes(FFieldIndex, IsNull{%H-});

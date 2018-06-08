@@ -224,12 +224,12 @@ type
       const Table: string; const ColumnNamePattern: string): IZResultSet; override;
     function UncachedGetPrimaryKeys(const {%H-}Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
-    function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
+    function UncachedGetImportedKeys(const {%H-}Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
-    function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
+    function UncachedGetExportedKeys(const {%H-}Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
-    function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
-      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
+    function UncachedGetCrossReference(const {%H-}PrimaryCatalog: string; const PrimarySchema: string;
+      const PrimaryTable: string; const {%H-}ForeignCatalog: string; const ForeignSchema: string;
       const ForeignTable: string): IZResultSet; override;
     function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
       Unique: Boolean; Approximate: Boolean): IZResultSet; override;
@@ -1350,7 +1350,7 @@ var
     Result.InsertRow;
   end;
 
-  function GetColumnSQL(const PosChar: String; const Package: String = ''): String;
+  function GetColumnSQL(const PosChar: String): String;
   var
     OwnerCondition, PackageNameCondition, PackageAsProcCondition, PackageProcNameCondition: string;
 

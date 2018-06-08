@@ -106,7 +106,7 @@ type
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
       const RowSet: IRowSet; ZBufferSize, ChunkSize: Integer; InMemoryDataLobs: Boolean;
-      const EnhancedColInfo: Boolean = True);
+      const {%H-}EnhancedColInfo: Boolean = True);
     procedure ResetCursor; override;
     function Next: Boolean; override;
     function IsNull(ColumnIndex: Integer): Boolean; override;

@@ -121,6 +121,8 @@ type
   TZInterbasePlainDriver = class (TZAbstractPlainDriver, IZInterbasePlainDriver)
   private
     FCodePageArray: TWordDynArray;
+    fisc_get_client_version: procedure(version: PAnsiChar);
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   protected
     FPreLoader : TZNativeLibraryLoader;
     procedure FillCodePageArray;
@@ -154,14 +156,15 @@ type
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
+    isc_create_database: function(status_vector: PISC_STATUS; db_name_len: Smallint;
+      db_name: PAnsiChar; handle: PISC_DB_HANDLE; dpb_len: Smallint; dpb: PAnsiChar;
+      db_type: Smallint{UNUSED}): ISC_STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
     isc_database_info: function(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
       item_list_buffer: PByte; result_buffer_length: Short;
       result_buffer: PAnsiChar): ISC_STATUS;
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-
-    isc_get_client_version: procedure(version: PAnsiChar);
-    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     isc_get_client_major_version: function(): NativeInt;
     {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
@@ -399,9 +402,7 @@ type
     isc_portable_integer: function(ptr: pbyte; length: Smallint): Int64;
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
-    function ZGetClientVersion: String;
-    function ZGetClientMajorVersion: Integer;
-    function ZGetClientMinorVersion: Integer;
+    function isc_get_client_version: String;
   end;
 
   {** Implements a native driver for Interbase6}
@@ -686,6 +687,7 @@ begin
     @isc_detach_database := GetAddress('isc_detach_database');
     @isc_attach_database := GetAddress('isc_attach_database');
     @isc_database_info   := GetAddress('isc_database_info');
+    @isc_create_database := GetAddress('isc_create_database');
     @isc_transaction_info   := GetAddress('isc_transaction_info');
     @isc_start_multiple  := GetAddress('isc_start_multiple');
     @isc_start_transaction := GetAddress('isc_start_transaction');
@@ -709,7 +711,7 @@ begin
 
     @fb_interpret        := GetAddress('fb_interpret');
 
-    @isc_get_client_version := GetAddress('isc_get_client_version');
+    @fisc_get_client_version := GetAddress('isc_get_client_version');
     @isc_get_client_major_version := GetAddress('isc_get_client_major_version');
     @isc_get_client_minor_version := GetAddress('isc_get_client_minor_version');
   end;
@@ -737,12 +739,12 @@ begin
   Result := FCodePageArray;
 end;
 
-function TZInterbasePlainDriver.ZGetClientVersion: String;
+function TZInterbasePlainDriver.isc_get_client_version: String;
 var
   Buff: array[0..50] of AnsiChar;
 begin
-  if Assigned(isc_get_client_version) then begin
-    isc_get_client_version(@Buff[0]);
+  if Assigned(fisc_get_client_version) then begin
+    fisc_get_client_version(@Buff[0]);
     {$IFDEF UNICODE}
     Result := ZSysUtils.ASCII7ToUnicodeString(@Buff[0], ZFastCode.StrLen(PAnsiChar(@Buff[0])));
     {$ELSE}
@@ -751,20 +753,6 @@ begin
   end else begin
     Result := 'unknown';
   end;
-end;
-
-function TZInterbasePlainDriver.ZGetClientMajorVersion: Integer;
-begin
-  if Assigned(isc_get_client_major_version)
-  then Result := isc_get_client_major_version()
-  else Result := 0;
-end;
-
-function TZInterbasePlainDriver.ZGetClientMinorVersion: Integer;
-begin
-  if Assigned(isc_get_client_major_version)
-  then Result := isc_get_client_minor_version()
-  else Result := 0;
 end;
 
 { TZInterbase6PlainDriver }
