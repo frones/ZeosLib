@@ -147,6 +147,7 @@ type
     FGUIDProps: TZInterbase6ConnectionGUIDProps;
     procedure CloseTransaction;
     procedure DetermineClientTypeAndVersion;
+    procedure AssignISC_Parameters;
   protected
     procedure InternalCreate; override;
     procedure OnPropertiesChange(Sender: TObject); override;
@@ -339,6 +340,55 @@ begin
   inherited;
 end;
 
+procedure TZInterbase6Connection.AssignISC_Parameters;
+var
+  RoleName: string;
+  ConnectTimeout : integer;
+  WireCompression: Boolean;
+begin
+  { set default sql dialect it can be overriden }
+  FDialect := StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT);
+
+  Info.BeginUpdate; // Do not call OnPropertiesChange every time a property changes
+  { Processes connection properties. }
+  if Info.Values['isc_dpb_username'] = '' then
+    Info.Values['isc_dpb_username'] := Url.UserName;
+  if Info.Values['isc_dpb_password'] = '' then
+    Info.Values['isc_dpb_password'] := Url.Password;
+
+  if FClientCodePage = '' then //was set on inherited Create(...)
+    if Info.Values['isc_dpb_lc_ctype'] <> '' then //Check if Dev set's it manually
+    begin
+      FClientCodePage := Info.Values['isc_dpb_lc_ctype'];
+      CheckCharEncoding(FClientCodePage, True);
+    end;
+  Info.Values['isc_dpb_lc_ctype'] := FClientCodePage;
+
+  RoleName := Trim(Info.Values[ConnProps_Rolename]);
+  if RoleName <> '' then
+    Info.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
+
+  ConnectTimeout := StrToIntDef(Info.Values[ConnProps_Timeout], -1);
+  if ConnectTimeout >= 0 then
+    Info.Values['isc_dpb_connect_timeout'] := ZFastCode.IntToStr(ConnectTimeout);
+
+  WireCompression := StrToBoolEx(Info.Values[ConnProps_WireCompression]);
+  if WireCompression then
+    Info.Values['isc_dpb_config'] :=
+      Info.Values['isc_dpb_config'] + LineEnding + 'WireCompression=true';
+  Info.EndUpdate;
+
+  if Info.IndexOf('isc_dpb_sql_dialect') = -1 then
+    Info.Values['isc_dpb_sql_dialect'] := IntToStr(SQL_DIALECT_CURRENT);
+
+  if (GetClientVersion >= 2005000) and IsFirebirdLib then begin
+    if (Info.IndexOf('isc_dpb_utf8_filename') = -1) and ((FClientCodePage = 'UTF8') or (FClientCodePage = 'UNICODE_FSS')) then
+      Info.Add('isc_dpb_utf8_filename');
+  end else
+    if (Info.IndexOf('isc_dpb_utf8_filename') <> -1) then
+      Info.Delete(Info.IndexOf('isc_dpb_utf8_filename'));
+end;
+
 procedure TZInterbase6Connection.CloseTransaction;
 begin
   if FTrHandle <> 0 then begin
@@ -408,45 +458,12 @@ end;
   Constructs this object and assignes the main properties.
 }
 procedure TZInterbase6Connection.InternalCreate;
-var
-  RoleName: string;
-  ConnectTimeout : integer;
-  WireCompression: Boolean;
 begin
   FPlainDriver := TZInterbasePlainDriver(PlainDriver.GetInstance);
   FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
 
   { set default sql dialect it can be overriden }
   FDialect := StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT);
-
-  FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
-
-  Info.BeginUpdate; // Do not call OnPropertiesChange every time a property changes
-  { Processes connection properties. }
-  Info.Values['isc_dpb_username'] := Url.UserName;
-  Info.Values['isc_dpb_password'] := Url.Password;
-
-  if FClientCodePage = '' then //was set on inherited Create(...)
-    if Info.Values['isc_dpb_lc_ctype'] <> '' then //Check if Dev set's it manually
-    begin
-      FClientCodePage := Info.Values['isc_dpb_lc_ctype'];
-      CheckCharEncoding(FClientCodePage, True);
-    end;
-  Info.Values['isc_dpb_lc_ctype'] := FClientCodePage;
-
-  RoleName := Trim(Info.Values[ConnProps_Rolename]);
-  if RoleName <> '' then
-    Info.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
-
-  ConnectTimeout := StrToIntDef(Info.Values[ConnProps_Timeout], -1);
-  if ConnectTimeout >= 0 then
-    Info.Values['isc_dpb_connect_timeout'] := ZFastCode.IntToStr(ConnectTimeout);
-
-  WireCompression := StrToBoolEx(Info.Values[ConnProps_WireCompression]);
-  if WireCompression then
-    Info.Values['isc_dpb_config'] :=
-      Info.Values['isc_dpb_config'] + LineEnding + 'WireCompression=true';
-  Info.EndUpdate;
 
   FXSQLDAMaxSize := 64*1024; //64KB by default
   FHandle := 0;
@@ -693,6 +710,16 @@ var
   DBName: array[0..512] of AnsiChar;
   NewDB: RawByteString;
   ConnectionString: String;
+  procedure PrepareDPB;
+  begin
+    if (Info.IndexOf('isc_dpb_utf8_filename') = -1) then begin
+      {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.ConvFuncs.ZStringToRaw(ConnectionString, ConSettings^.CTRL_CP, ZOSCodePage));
+      DPB := GenerateDPB(FPlainDriver, Info, ConSettings, zCP_UTF8);
+    end else begin
+      {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.ConvFuncs.ZStringToRaw(ConnectionString, ConSettings^.CTRL_CP, zCP_UTF8));
+      DPB := GenerateDPB(FPlainDriver, Info, ConSettings, zOSCodePage);
+    end;
+  end;
 begin
   if not Closed then
     Exit;
@@ -702,29 +729,22 @@ begin
   if ConSettings^.ClientCodePage = nil then
     CheckCharEncoding(FClientCodePage, True);
 
+  AssignISC_Parameters;
   ConnectionString := ConstructConnectionString;
-  {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.ConvFuncs.ZStringToRaw(ConnectionString, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
 
   FHandle := 0;
   { Create new db if needed }
   if Info.Values[ConnProps_CreateNewDatabase] <> '' then begin
-    NewDB := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[ConnProps_CreateNewDatabase],
-      ConSettings^.CTRL_CP, zCP_UTF8);
-    if {$IFNDEF USE_SYNCOMMONS}False and {$ENDIF}(GetClientVersion >= 2005000) and IsFirebirdLib then begin
-      if (Info.Values['isc_dpb_lc_ctype'] = '') and (FCLientCodePage <> '') then
-         Info.Values['isc_dpb_lc_ctype'] := FCLientCodePage;
-      if Info.IndexOf('isc_dpb_sql_dialect') = -1 then
-        Info.Values['isc_dpb_sql_dialect'] := IntToStr(SQL_DIALECT_CURRENT);
-      if Info.IndexOf('isc_dpb_utf8_filename') = -1 then
-        Info.Add('isc_dpb_utf8_filename');
+    if (GetClientVersion >= 2005000) and IsFirebirdLib then begin
       if (Info.Values['isc_dpb_lc_ctype'] <> '') and (Info.Values['isc_dpb_set_db_charset'] = '') then
         Info.Values['isc_dpb_set_db_charset'] := Info.Values['isc_dpb_lc_ctype'];
-      DPB := GenerateDPB(FPlainDriver, Info);
-
+      PrepareDPB;
       if FPlainDriver.isc_create_database(@FStatusVector, SmallInt(StrLen(DBName)),
           @DBName[0], @FHandle, Smallint(Length(DPB)),Pointer(DPB), 0) <> 0 then
         CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcConnect);
     end else begin
+      NewDB := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[ConnProps_CreateNewDatabase],
+        ConSettings^.CTRL_CP, zOSCodePage);
       CreateNewDatabase(NewDB);
       { Logging connection action }
       DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
@@ -734,7 +754,7 @@ begin
     end;
   end;
   if FHandle = 0 then begin
-    DPB := GenerateDPB(FPlainDriver, Info);
+    PrepareDPB;
     { Connect to Interbase6 database. }
     FPlainDriver.isc_attach_database(@FStatusVector,
       ZFastCode.StrLen(DBName), DBName,
@@ -742,16 +762,17 @@ begin
 
     { Check connection error }
     CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcConnect);
+
+    { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
+    FDialect := GetDBSQLDialect(FPlainDriver, @FHandle, ConSettings);
+    { Logging connection action }
+    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+      'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"');
   end;
 
-  { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
-  FDialect := GetDBSQLDialect(FPlainDriver, @FHandle, ConSettings);
-
-  { Logging connection action }
-  DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-    'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"');
-
   inherited SetAutoCommit(GetAutoCommit or (Info.IndexOf('isc_tpb_autocommit') <> -1));
+
+  FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
   { Start transaction }
   if not FHardCommit then
     StartTransaction;
@@ -1059,7 +1080,7 @@ begin
 
     try
       if fTPB = '' then
-        fTPB := GenerateTPB(FPlainDriver, Params);
+        fTPB := GenerateTPB(FPlainDriver, Params, ConSettings, ConSettings^.ClientCodePage^.CP);
       TEB := GenerateTEB(@FHandle, fTPB);
 
       FPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @TEB);
@@ -1102,14 +1123,14 @@ procedure TZInterbase6Connection.CreateNewDatabase(const SQL: RawByteString);
 var
   TrHandle: TISC_TR_HANDLE;
 begin
-  TrHandle := 0;
   FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle, @TrHandle,
-    0, PAnsiChar(sql), FDialect, nil);
+    Length(SQL), Pointer(sql), FDialect, nil);
   CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcExecute, SQL);
   //disconnect from the newly created database because the connection character set is NONE,
   //which usually nobody wants
   FPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
   CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcExecute, SQL);
+  TrHandle := 0;
 end;
 
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;

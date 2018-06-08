@@ -250,8 +250,10 @@ function CreateIBResultSet(const SQL: string; const Statement: IZStatement;
   const NativeResultSet: IZResultSet): IZResultSet;
 
 {Interbase6 Connection Functions}
-function GenerateDPB(PlainDriver: TZInterbasePlainDriver; Info: TStrings): RawByteString;
-function GenerateTPB(PlainDriver: TZInterbasePlainDriver; Params: TStrings): RawByteString;
+function GenerateDPB(PlainDriver: TZInterbasePlainDriver; Info: TStrings;
+  ConSettings: PZConSettings; CP: Word): RawByteString;
+function GenerateTPB(PlainDriver: TZInterbasePlainDriver; Params: TStrings;
+  ConSettings: PZConSettings; CP: Word): RawByteString;
 function GenerateTEB(PHandle: PISC_DB_HANDLE; const TPB: RawByteString): TISC_TEB;
 function GetInterbase6DatabaseParamNumber(const Value: String): word;
 function GetInterbase6TransactionParamNumber(const Value: String): word; 
@@ -543,9 +545,10 @@ end;
   @return generated string
 }
 function BuildPB(PlainDriver: TZInterbasePlainDriver; Info: TStrings; VersionCode: Byte;
-  const FilterPrefix: string; const ParamArr: array of TZIbParam): RawByteString;
+  const FilterPrefix: string; const ParamArr: array of TZIbParam;
+  ConSettings: PZConSettings; CP: Word): RawByteString;
 
-  procedure ExtractParamNameAndValue(const S: string; out ParamName: String; out ParamValue: RawByteString);
+  procedure ExtractParamNameAndValue(const S: string; out ParamName: String; out ParamValue: String);
   var
     Pos: Integer;
   begin
@@ -558,7 +561,7 @@ function BuildPB(PlainDriver: TZInterbasePlainDriver; Info: TStrings; VersionCod
     else
     begin
       ParamName := Trim(LowerCase(Copy(S, 1, Pos - 1)));
-      ParamValue := Trim(RawByteString(Copy(S, Pos + 1, MaxInt)));
+      ParamValue := Trim(Copy(S, Pos + 1, MaxInt));
     end;
   end;
 
@@ -598,7 +601,8 @@ function BuildPB(PlainDriver: TZInterbasePlainDriver; Info: TStrings; VersionCod
 var
   I, IntValue: Integer;
   ParamName: String;
-  ParamValue: RawByteString;
+  ParamValue: String;
+  tmp: RawByteString;
   PParam: PZIbParam;
 begin
   Result := AnsiChar(VersionCode);
@@ -622,12 +626,13 @@ begin
 
       pvtNum:
         begin
-          IntValue := ZFastCode.RawToInt(ParamValue);
+          IntValue := StrToInt(ParamValue);
           Result := Result + AnsiChar(PParam.Number) + NumToPB(IntValue);
         end;
-
-      pvtString:
-        Result := Result + AnsiChar(PParam.Number) + AnsiChar(Length(ParamValue)) + ParamValue;
+      pvtString: begin
+          tmp := ConSettings.ConvFuncs.ZStringToRaw(ParamValue, ConSettings^.CTRL_CP, CP);
+          Result := Result + AnsiChar(PParam.Number) + AnsiChar(Length(tmp)) + tmp;
+        end;
     end;
   end;
 end;
@@ -639,9 +644,10 @@ end;
   @param Info - a list connection interbase parameters
   @return a generated string
 }
-function GenerateDPB(PlainDriver: TZInterbasePlainDriver; Info: TStrings): RawByteString;
+function GenerateDPB(PlainDriver: TZInterbasePlainDriver; Info: TStrings;
+  ConSettings: PZConSettings; CP: Word): RawByteString;
 begin
-  Result := BuildPB(PlainDriver, Info, isc_dpb_version1, DPBPrefix, DatabaseParams);
+  Result := BuildPB(PlainDriver, Info, isc_dpb_version1, DPBPrefix, DatabaseParams, ConSettings, CP);
 end;
 
 {**
@@ -651,9 +657,10 @@ end;
   @param Params - a transaction parameters list
   @return a generated string
 }
-function GenerateTPB(PlainDriver: TZInterbasePlainDriver; Params: TStrings): RawByteString;
+function GenerateTPB(PlainDriver: TZInterbasePlainDriver; Params: TStrings;
+  ConSettings: PZConSettings; CP: Word): RawByteString;
 begin
-  Result := BuildPB(PlainDriver, Params, isc_tpb_version3, TPBPrefix, TransactionParams);
+  Result := BuildPB(PlainDriver, Params, isc_tpb_version3, TPBPrefix, TransactionParams, ConSettings, CP);
 end;
 
 {**
