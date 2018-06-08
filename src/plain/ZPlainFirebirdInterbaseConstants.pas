@@ -1758,7 +1758,8 @@ const
   isc_tpb_commit_time            = 13;
   isc_tpb_ignore_limbo           = 14;
   isc_tpb_read_committed         = 15;
-  isc_tpb_autocommit             = 16; //EH: Please do not use this JDBC option!
+  //http://firebird-devel.narkive.com/TPNAp4sB/semantics-of-isc-tpb-autocommit
+  isc_tpb_autocommit             = 16; //EH: Please do not use this borland option!
                                        //It kills the performance. Let Zeos do the Job by settting AutoCommit = True
                                        //see ZDbcInterbase.pas e.g. StartTransaction
   isc_tpb_rec_version            = 17;

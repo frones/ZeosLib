@@ -613,9 +613,10 @@ begin
       raise EZSQLException.CreateFmt('Unknown PB parameter "%s"', [ParamName]);
 
     case PParam.ValueType of
-      pvtNone:
-        Result := Result + AnsiChar(PParam.Number);
-
+      pvtNone: if VersionCode = isc_tpb_version3 then
+                Result := Result + AnsiChar(PParam.Number)
+               else
+                Result := Result + AnsiChar(PParam.Number) + AnsiChar(#0);
       pvtByteZ:
         Result := Result + AnsiChar(PParam.Number) + AnsiChar(#1) + AnsiChar(#0);
 
