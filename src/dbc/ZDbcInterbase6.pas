@@ -104,8 +104,9 @@ type
     FIsFirebirdLib: Boolean; // never use this directly, always use IsFirbirdLib
     FIsInterbaseLib: Boolean; // never use this directly, always use IsInterbaseLib
     FXSQLDAMaxSize: LongWord;
-    fTPB: RawByteString; //cache the TPB String for hard commits else we're permanently build the str from Props
     FPlainDriver: IZInterbasePlainDriver;
+    FTPBs: array[Boolean,TZTransactIsolationLevel] of RawByteString;
+    FTEBs: array[Boolean,TZTransactIsolationLevel] of TISC_TEB;
     procedure CloseTransaction;
     procedure DetermineClientTypeAndVersion;
     procedure AssignISC_Parameters;
@@ -317,6 +318,7 @@ begin
   end else
     if (Info.IndexOf('isc_dpb_utf8_filename') <> -1) then
       Info.Delete(Info.IndexOf('isc_dpb_utf8_filename'));
+  Info.EndUpdate;
 end;
 
 procedure TZInterbase6Connection.CloseTransaction;
@@ -333,7 +335,6 @@ begin
     end;
     FTrHandle := 0;
     CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcDisconnect);
-    fTPB := '';
   end;
 end;
 
@@ -405,11 +406,21 @@ begin
 end;
 
 procedure TZInterbase6Connection.OnPropertiesChange(Sender: TObject);
+var
+  B: Boolean;
+  TIL: TZTransactIsolationLevel;
 begin
   if StrToBoolEx(Info.Values['hard_commit']) <> FHardCommit then begin
     CloseTransaction;
     FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
   end;
+  for b := false to true do
+    for til := low(TZTransactIsolationLevel) to high(TZTransactIsolationLevel) do begin
+      FTPBs[b][TIL] := '';
+      FTEBs[b][TIL].tpb_length := 0;
+      FTEBs[b][TIL].tpb_address := nil;
+    end;
+
 end;
 
 {**
@@ -944,7 +955,6 @@ type
   end;
 var
   Params: TStrings;
-  TEB: TISC_TEB;
   OverwritableParams: TOverwritableParamValues;
 begin
   if FHandle <> 0 then begin
@@ -954,7 +964,7 @@ begin
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
       FTrHandle := 0;
     end;
-    if fTPB = '' then begin
+    if fTPBs[AutoCommit][TransactIsolationLevel] = '' then begin
       Params := TStringList.Create;
       OverwritableParams[parRW] := tpb_Access[ReadOnly];
       OverwritableParams[parAutoCommit] := tpb_AutoCommit[AutoCommit];
@@ -1007,11 +1017,12 @@ begin
       Params := nil;
 
     try
-      if fTPB = '' then
-        fTPB := GenerateTPB(FPlainDriver, Params, ConSettings, ConSettings^.ClientCodePage^.CP);
-      TEB := GenerateTEB(@FHandle, fTPB);
+      if fTPBs[AutoCommit][TransactIsolationLevel] = '' then begin
+        fTPBs[AutoCommit][TransactIsolationLevel] := GenerateTPB(FPlainDriver, Params, ConSettings, ConSettings^.ClientCodePage^.CP);
+        GenerateTEB(@FHandle, fTPBs[AutoCommit][TransactIsolationLevel], fTEBs[AutoCommit][TransactIsolationLevel]);
+      end;
 
-      GetPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @TEB);
+      GetPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @fTEBs[AutoCommit][TransactIsolationLevel]);
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
         'TRANSACTION STARTED.');

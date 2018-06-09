@@ -219,7 +219,7 @@ function GenerateDPB(PlainDriver: IZInterbasePlainDriver; Info: TStrings;
   ConSettings: PZConSettings; CP: Word): RawByteString;
 function GenerateTPB(PlainDriver: IZInterbasePlainDriver; Params: TStrings;
   ConSettings: PZConSettings; CP: Word): RawByteString;
-function GenerateTEB(PHandle: PISC_DB_HANDLE; const TPB: RawByteString): TISC_TEB;
+procedure GenerateTEB(PHandle: PISC_DB_HANDLE; const TPB: RawByteString; var TEB: TISC_TEB);
 function GetInterbase6DatabaseParamNumber(const Value: String): word;
 function GetInterbase6TransactionParamNumber(const Value: String): word; 
 
@@ -631,13 +631,13 @@ end;
 
   @param PHandle - pointer to database connection handle
   @param TPB - transaction parameter string
-  @return a transaction ISC structure
+  @param TEB a transaction ISC structure
 }
-function GenerateTEB(PHandle: PISC_DB_HANDLE; const TPB: RawByteString): TISC_TEB;
+procedure GenerateTEB(PHandle: PISC_DB_HANDLE; const TPB: RawByteString; var TEB: TISC_TEB);
 begin
-  Result.db_handle := PHandle;
-  Result.tpb_length := Length(TPB);
-  Result.tpb_address := Pointer(TPB);
+  TEB.db_handle := PHandle;
+  TEB.tpb_length := Length(TPB);
+  TEB.tpb_address := Pointer(TPB);
 end;
 
 function GetPBNumber(const FilterPrefix, ParamName: string; const ParamArr: array of TZIbParam): Word;
