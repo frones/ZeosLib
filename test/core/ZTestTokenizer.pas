@@ -130,7 +130,7 @@ begin
   for I := 0 to High(Tokens) do
   begin
     CheckEquals(Ord(TokenTypes[I]), Ord(Tokens[I].TokenType));
-    CheckEquals(TokenValues[I], Tokens[I].Value);
+    CheckEquals(TokenValues[I], TokenAsString(Tokens[I]));
   end;
 end;
 
