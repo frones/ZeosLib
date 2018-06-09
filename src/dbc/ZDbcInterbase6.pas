@@ -379,7 +379,7 @@ begin
   Info.EndUpdate;
 
   if Info.IndexOf('isc_dpb_sql_dialect') = -1 then
-    Info.Values['isc_dpb_sql_dialect'] := IntToStr(SQL_DIALECT_CURRENT);
+    Info.Values['isc_dpb_sql_dialect'] := IntToStr(FDialect);
 
   if (GetClientVersion >= 2005000) and IsFirebirdLib then begin
     if (Info.IndexOf('isc_dpb_utf8_filename') = -1) and ((FClientCodePage = 'UTF8') or (FClientCodePage = 'UNICODE_FSS')) then
@@ -387,6 +387,7 @@ begin
   end else
     if (Info.IndexOf('isc_dpb_utf8_filename') <> -1) then
       Info.Delete(Info.IndexOf('isc_dpb_utf8_filename'));
+  Info.EndUpdate;
 end;
 
 procedure TZInterbase6Connection.CloseTransaction;
