@@ -1758,7 +1758,8 @@ const
   isc_tpb_commit_time            = 13;
   isc_tpb_ignore_limbo           = 14;
   isc_tpb_read_committed         = 15;
-  isc_tpb_autocommit             = 16; //EH: Please do not use this JDBC option!
+  //http://firebird-devel.narkive.com/TPNAp4sB/semantics-of-isc-tpb-autocommit
+  isc_tpb_autocommit             = 16; //EH: Please do not use this borland option!
                                        //It kills the performance. Let Zeos do the Job by settting AutoCommit = True
                                        //see ZDbcInterbase.pas e.g. StartTransaction
   isc_tpb_rec_version            = 17;
@@ -2114,6 +2115,10 @@ type
     db_handle: PISC_DB_HANDLE): ISC_STATUS;
     {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
+  Tisc_create_database = function(status_vector: PISC_STATUS; db_name_len: Smallint;
+    db_name: PAnsiChar; handle: PISC_DB_HANDLE; dpb_len: Smallint; dpb: PAnsiChar;
+    db_type: Smallint{UNUSED}): ISC_STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
   Tisc_database_info = function(status_vector: PISC_STATUS;
     db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
     item_list_buffer: PByte; result_buffer_length: Short;
@@ -2363,6 +2368,7 @@ TZFirebird_API = record
   isc_attach_database:  Tisc_attach_database;
   isc_detach_database:  Tisc_detach_database;
   isc_drop_database:    Tisc_drop_database;
+  isc_create_database:  Tisc_create_database;
   isc_database_info:    Tisc_database_info;
   isc_free:             Tisc_free;
   isc_sqlcode:          Tisc_sqlcode;

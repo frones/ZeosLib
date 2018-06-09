@@ -122,6 +122,9 @@ type
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
     function isc_drop_database(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
+    function isc_create_database(status_vector: PISC_STATUS; db_name_len: Smallint;
+      db_name: PAnsiChar; handle: PISC_DB_HANDLE; dpb_len: Smallint; dpb: PAnsiChar;
+      db_type: Smallint{UNUSED}): ISC_STATUS;
     function isc_database_info(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
       item_list_buffer: PByte; result_buffer_length: Short;
@@ -280,6 +283,11 @@ type
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
     function isc_drop_database(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
+
+    function isc_create_database(status_vector: PISC_STATUS; db_name_len: Smallint;
+      db_name: PAnsiChar; handle: PISC_DB_HANDLE; dpb_len: Smallint; dpb: PAnsiChar;
+      db_type: Smallint{UNUSED}): ISC_STATUS;
+
     function isc_database_info(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
       item_list_buffer: PByte; result_buffer_length: Short;
@@ -687,6 +695,8 @@ begin
     @FIREBIRD_API.isc_dsql_describe   := GetAddress('isc_dsql_describe');
     @FIREBIRD_API.isc_dsql_execute_immediate := GetAddress('isc_dsql_execute_immediate');
     @FIREBIRD_API.isc_drop_database   := GetAddress('isc_drop_database');
+    @FIREBIRD_API.isc_create_database := GetAddress('isc_create_database');
+
     @FIREBIRD_API.isc_detach_database := GetAddress('isc_detach_database');
     @FIREBIRD_API.isc_attach_database := GetAddress('isc_attach_database');
     @FIREBIRD_API.isc_database_info   := GetAddress('isc_database_info');
@@ -853,6 +863,14 @@ function TZFirebirdBaseDriver.isc_create_blob2(status_vector: PISC_STATUS;
 begin
   Result := FIREBIRD_API.isc_create_blob2(status_vector, db_handle,
     tran_handle, blob_handle, blob_id, bpb_length, bpb_address);
+end;
+
+function TZFirebirdBaseDriver.isc_create_database(status_vector: PISC_STATUS;
+  db_name_len: Smallint; db_name: PAnsiChar; handle: PISC_DB_HANDLE;
+  dpb_len: Smallint; dpb: PAnsiChar; db_type: Smallint): ISC_STATUS;
+begin
+  Result := FIREBIRD_API.isc_create_database(status_vector, db_name_len,
+    db_name, handle, dpb_len, dpb, db_type);
 end;
 
 function TZFirebirdBaseDriver.isc_database_info(status_vector: PISC_STATUS;

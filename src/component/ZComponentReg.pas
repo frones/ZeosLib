@@ -80,6 +80,7 @@ uses
   DesignIntf,
   SysUtils,                                     // **** Pitfiend addition, required to be able to put info in the delphi ide splash screen and about box 
   ToolsAPI,                                     //
+  Windows,
 {$ENDIF}
 {$ENDIF}
   Classes, ZConnection, ZAbstractConnection, ZDataset, ZSqlUpdate, ZSqlProcessor,
@@ -97,6 +98,7 @@ procedure Register;
 {$IF DECLARED(IOTAAboutBoxServices)}            //   this allow to put a nice and pro entry in the delphi ide splash screen and about box
 var                                             //
   AboutSvcs: IOTAAboutBoxServices;              //
+  hImage   : THandle;
 {$IFEND}                                        //
 {$ENDIF}                                        // **** Pitfiend addition end
 begin
@@ -113,7 +115,15 @@ begin
 {$IFNDEF FPC}                                   // **** Pitfiend addition start
 {$IF DECLARED(IOTAAboutBoxServices)}
     if Assigned(SplashScreenServices) then
-       SplashScreenServices.AddPluginBitmap('ZEOSLib Open Source Database Objects', 0); // to have a nice icon, a .res file must be included, then replace 0 by loadbitmap(HInstance, 'RESOURCENAME') 
+    begin
+      hImage := LoadBitmap(HInstance, 'ZEOSLIBSPLASH');
+      SplashScreenServices.AddPluginBitmap(
+        'ZEOSLib Open Source Database Objects',
+        hImage, // to have a nice icon, a .res file must be included, then replace 0 by loadbitmap(HInstance, 'RESOURCENAME')
+        False,  // IsUnRegistered
+        'GNU Lesser General Public License v2.1', // GNU LGPL
+        'v' + ZEOS_VERSION);   // SKUName: Version information.
+    end;
     if (BorlandIDEServices<>nil) and supports(BorlandIDEServices, IOTAAboutBoxServices, AboutSvcs) then
        AboutSvcs.AddPluginInfo('ZEOSLib', 'ZEOSLib'+sLineBreak+'OpenSource database components collection'+sLineBreak+sLineBreak+'Forum:http://zeoslib.sourceforge.net', 0, False, 'OpenSource'); // replace 0 by loadbitmap(HInstance, 'RESOURCENAME')
 {$IFEND}

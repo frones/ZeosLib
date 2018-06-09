@@ -50,7 +50,9 @@
 {********************************************************@}
 
 unit ZAbstractRODataset;
-
+{$IFDEF FPC}
+{$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 interface
 
 {$I ZComponent.inc}
