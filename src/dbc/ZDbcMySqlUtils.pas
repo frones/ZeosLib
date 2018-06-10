@@ -769,7 +769,7 @@ var b: Byte;
   P: PAnsiChar;
 begin
   P := PAnsiChar(Src)+Len-1;
-  for b := Len downto 0 do
+  for b := Len-1 downto 0 do
     (PAnsiChar(Dest)+B)^ := (P-B)^;
 end;
 
