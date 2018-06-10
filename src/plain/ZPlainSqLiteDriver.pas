@@ -260,8 +260,11 @@ type
 
     sqlite3_exec: function(db: Psqlite; const sql: PAnsiChar; sqlite_callback: Tsqlite_callback;
       arg: Pointer; var errmsg: PAnsiChar): Integer; cdecl;
+
     sqlite3_errmsg: function(db: Psqlite): PAnsiChar; cdecl;
     sqlite3_errstr: function(code: Integer): PAnsiChar; cdecl;
+    sqlite3_extended_errcode: function(db: Psqlite): integer; cdecl;
+
     sqlite3_last_insert_rowid: function(db: Psqlite): Int64; cdecl;
     sqlite3_changes: function(db: Psqlite): Integer; cdecl;
     sqlite3_interrupt: procedure(db: Psqlite); cdecl;
@@ -390,8 +393,11 @@ begin
   @sqlite3_exec                   := GetAddress('sqlite3_exec');
   @sqlite3_last_insert_rowid      := GetAddress('sqlite3_last_insert_rowid');
   @sqlite3_changes                := GetAddress('sqlite3_changes');
+
   @sqlite3_errmsg                 := GetAddress('sqlite3_errmsg');
   @sqlite3_errstr                 := GetAddress('sqlite3_errstr');
+  @sqlite3_extended_errcode       := GetAddress('sqlite3_extended_errcode');
+
   @sqlite3_interrupt              := GetAddress('sqlite3_interrupt');
   @sqlite3_complete               := GetAddress('sqlite3_complete');
   @sqlite3_busy_handler           := GetAddress('sqlite3_busy_handler');

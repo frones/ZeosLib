@@ -221,46 +221,53 @@ procedure CheckSQLiteError(const PlainDriver: TZSQLitePlainDriver;
   Handle: PSqlite; ErrorCode: Integer; LogCategory: TZLoggingCategory;
   const LogMessage: RawByteString; ConSettings: PZConSettings);
 var
-  Error: RawByteString;
+  ErrorStr, ErrorMsg: RawByteString;
 begin
   if not (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then begin
+    ErrorMsg := '';
+    if Assigned(PlainDriver.sqlite3_extended_errcode) then
+      ErrorCode := PlainDriver.sqlite3_extended_errcode(Handle);
     if ( Handle <> nil ) and ( Assigned(PlainDriver.sqlite3_errstr) ) then
-      Error := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PLainDriver.sqlite3_errstr(ErrorCode));
-    if Error = '' then
+      ErrorStr := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PLainDriver.sqlite3_errstr(ErrorCode));
+    if ErrorStr = '' then
       case ErrorCode of
-        SQLITE_OK:          Error := 'not an error';
-        SQLITE_ERROR:       Error := 'SQL logic error or missing database';
-        SQLITE_INTERNAL:    Error := 'internal SQLite implementation flaw';
-        SQLITE_PERM:        Error := 'access permission denied';
-        SQLITE_ABORT:       Error := 'callback requested query abort';
-        SQLITE_BUSY:        Error := 'database is locked';
-        SQLITE_LOCKED:      Error := 'database table is locked';
-        SQLITE_NOMEM:       Error := 'out of memory';
-        SQLITE_READONLY:    Error := 'attempt to write a readonly database';
-        SQLITE_INTERRUPT:   Error := 'interrupted';
-        SQLITE_IOERR:       Error := 'disk I/O error';
-        SQLITE_CORRUPT:     Error := 'database disk image is malformed';
-        SQLITE_NOTFOUND:    Error := 'table or record not found';
-        SQLITE_FULL:        Error := 'database is full';
-        SQLITE_CANTOPEN:    Error := 'unable to open database file';
-        SQLITE_PROTOCOL:    Error := 'database locking protocol failure';
-        SQLITE_EMPTY:       Error := 'table contains no data';
-        SQLITE_SCHEMA:      Error := 'database schema has changed';
-        SQLITE_TOOBIG:      Error := 'too much data for one table row';
-        SQLITE_CONSTRAINT:  Error := 'constraint failed';
-        SQLITE_MISMATCH:    Error := 'datatype mismatch';
-        SQLITE_MISUSE:      Error := 'library routine called out of sequence';
-        SQLITE_NOLFS:       Error := 'kernel lacks large file support';
-        SQLITE_AUTH:        Error := 'authorization denied';
-        SQLITE_FORMAT:      Error := 'auxiliary database format error';
-        SQLITE_RANGE:       Error := 'bind index out of range';
-        SQLITE_NOTADB:      Error := 'file is encrypted or is not a database';
-        else                Error := 'unknown error';
-      end;
+        SQLITE_OK:          ErrorStr := 'not an error';
+        SQLITE_ERROR:       ErrorStr := 'SQL logic error or missing database';
+        SQLITE_INTERNAL:    ErrorStr := 'internal SQLite implementation flaw';
+        SQLITE_PERM:        ErrorStr := 'access permission denied';
+        SQLITE_ABORT:       ErrorStr := 'callback requested query abort';
+        SQLITE_BUSY:        ErrorStr := 'database is locked';
+        SQLITE_LOCKED:      ErrorStr := 'database table is locked';
+        SQLITE_NOMEM:       ErrorStr := 'out of memory';
+        SQLITE_READONLY:    ErrorStr := 'attempt to write a readonly database';
+        SQLITE_INTERRUPT:   ErrorStr := 'interrupted';
+        SQLITE_IOERR:       ErrorStr := 'disk I/O error';
+        SQLITE_CORRUPT:     ErrorStr := 'database disk image is malformed';
+        SQLITE_NOTFOUND:    ErrorStr := 'table or record not found';
+        SQLITE_FULL:        ErrorStr := 'database is full';
+        SQLITE_CANTOPEN:    ErrorStr := 'unable to open database file';
+        SQLITE_PROTOCOL:    ErrorStr := 'database locking protocol failure';
+        SQLITE_EMPTY:       ErrorStr := 'table contains no data';
+        SQLITE_SCHEMA:      ErrorStr := 'database schema has changed';
+        SQLITE_TOOBIG:      ErrorStr := 'too much data for one table row';
+        SQLITE_CONSTRAINT:  ErrorStr := 'constraint failed';
+        SQLITE_MISMATCH:    ErrorStr := 'datatype mismatch';
+        SQLITE_MISUSE:      ErrorStr := 'library routine called out of sequence';
+        SQLITE_NOLFS:       ErrorStr := 'kernel lacks large file support';
+        SQLITE_AUTH:        ErrorStr := 'authorization denied';
+        SQLITE_FORMAT:      ErrorStr := 'auxiliary database format error';
+        SQLITE_RANGE:       ErrorStr := 'bind index out of range';
+        SQLITE_NOTADB:      ErrorStr := 'file is encrypted or is not a database';
+        else                ErrorStr := 'unknown error';
+      end
+    else if ( Handle <> nil ) and ( Assigned(PlainDriver.sqlite3_errmsg) ) then
+      ErrorMsg := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PLainDriver.sqlite3_errmsg(Handle));
+    if ErrorMsg <> '' then
+      ErrorStr := 'Error: '+ErrorStr+LineEnding+'Message: '+ErrorMsg;
     DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
-      ErrorCode, Error);
+      ErrorCode, ErrorStr);
     raise EZSQLException.CreateWithCode(ErrorCode, Format(SSQLError1,
-      [ConSettings.ConvFuncs.ZRawToString(Error, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
+      [ConSettings.ConvFuncs.ZRawToString(ErrorStr, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
   end;
 end;
 
