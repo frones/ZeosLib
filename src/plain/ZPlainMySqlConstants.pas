@@ -587,7 +587,7 @@ TMYSQL_CLIENT_OPTIONS =
     buffer_length_address:  PULong; //address of result buffer length
     length_address:         PPointer;
     length:                 PULongArray; //current length of our or bound data
-    is_null:                Pmy_bool_array; //null indicators -> sadly mariadb doesn't use a array as stmt indicator
+    is_null:                my_bool; //null indicators -> sadly mariadb doesn't use a array as stmt indicator
     is_unsigned_address:    Pmy_bool; //signed ordinals or not?
     //https://mariadb.com/kb/en/library/bulk-insert-column-wise-binding/
     indicators:             Pmysql_indicator_types; //stmt indicators for bulk bulk ops -> mariadb addresses to "u" and does not use the C-enum

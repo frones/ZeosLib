@@ -232,7 +232,7 @@ type
     procedure ValidateArraySizeAndType(const Value: Pointer; SQLType: TZSQLType;
       VariantType: TZVariantType; ParamIndex: Integer);
 
-    procedure SetInParamCount(const NewParamCount: Integer); virtual;
+    procedure SetInParamCount(NewParamCount: Integer); virtual;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); virtual;
     procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = '');
@@ -472,7 +472,7 @@ type
 
     procedure InternalSetInParamCount(NewParamCount: Integer); virtual;
   protected
-    procedure SetInParamCount(const NewParamCount: Integer); override;
+    procedure SetInParamCount(NewParamCount: Integer); override;
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
     function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
@@ -1639,7 +1639,7 @@ end;
   Sets a new parameter count and initializes the buffers.
   @param NewParamCount a new parameters count.
 }
-procedure TZAbstractPreparedStatement.SetInParamCount(const NewParamCount: Integer);
+procedure TZAbstractPreparedStatement.SetInParamCount(NewParamCount: Integer);
 var
   I: Integer;
 begin
@@ -3666,7 +3666,7 @@ begin
 end;
 
 procedure TImplizitBindRealAndEmulationStatement_A.SetInParamCount(
-  const NewParamCount: Integer);
+  NewParamCount: Integer);
 begin
   if not Prepared then
     Prepare;

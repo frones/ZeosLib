@@ -105,7 +105,7 @@ type
     //procedure FetchRowCount; virtual;
 
   protected
-    procedure SetInParamCount(const NewParamCount: Integer); override;
+    procedure SetInParamCount(NewParamCount: Integer); override;
   public
     constructor Create(const Connection: IZConnection; const ProcName: string; Info: TStrings);
     procedure Close; override;
@@ -895,7 +895,7 @@ begin
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'EXEC '+ ASQL);
 end;
 
-procedure TZDBLibCallableStatement.SetInParamCount(const NewParamCount: Integer);
+procedure TZDBLibCallableStatement.SetInParamCount(NewParamCount: Integer);
 begin
   inherited SetInParamCount(NewParamCount);
 

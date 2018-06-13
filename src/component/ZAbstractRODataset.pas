@@ -3000,7 +3000,7 @@ begin
             if Result then
               PAnsiChar(Buffer)^ := #0
             else
-              GUIDToBuffer(P, PAnsiChar(Buffer), True);
+              GUIDToBuffer(P, PAnsiChar(Buffer), True, True);
           end;
         {$ENDIF}
         {$IFDEF WITH_FTDATASETSUPPORT}

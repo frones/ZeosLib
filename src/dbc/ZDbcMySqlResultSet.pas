@@ -336,7 +336,7 @@ begin
       C := JSONWriter.Fields[i];
     Bind := @FMYSQL_aligned_BINDs[C];
     if fBindBufferAllocated then begin
-      if Bind^.is_null[0] = 1 then
+      if Bind^.is_null = 1 then
         if JSONWriter.Expand then begin
           if not (jcsSkipNulls in JSONComposeOptions) then begin
             JSONWriter.AddString(JSONWriter.ColNames[I]);
@@ -603,7 +603,7 @@ end;
 destructor TZAbstractMySQLResultSet.Destroy;
 begin
   inherited Destroy;
-  FreeMySQLBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FFieldCount);
+  ReallocBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, FFieldCount, 0, 1);
 end;
 
 {**
@@ -632,7 +632,7 @@ begin
 
   { We use the refetch logic of
     https://bugs.mysql.com/file.php?id=12361&bug_id=33086 }
-  AllocMySQLBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets,
+  ReallocBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, 0,
     FFieldCount, 1);
 
   for I := 0 to FFieldCount -1 do begin
@@ -749,7 +749,7 @@ begin
   {$ENDIF}
   if fBindBufferAllocated
   {$R-}
-  then Result := FMYSQL_aligned_BINDs[ColumnIndex].is_null[0] = 1
+  then Result := FMYSQL_aligned_BINDs[ColumnIndex].is_null = 1
   else Result := (FRowHandle = nil) or (PMYSQL_ROW(FRowHandle)[ColumnIndex] = nil);
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   LastWasNull := Result;
@@ -835,7 +835,7 @@ begin
     {$R-}
     ColBind := @FMYSQL_aligned_BINDs[ColumnIndex];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    LastWasNull := ColBind^.is_null[0] =1;
+    LastWasNull := ColBind^.is_null =1;
     if LastWasNull then begin
       Result := nil;
       Len := 0;
@@ -1029,7 +1029,7 @@ begin
   end;
   if (bind^.Length[0] = 0) or (Iters = 0)
   then Bind^.Buffer := nil
-  else GetMem(Bind^.Buffer, (((bind^.Length[0]-Byte(Ord(bind^.buffer_type_address^ <> FIELD_TYPE_STRING))) shr 3)+1) shl 3); //8Byte aligned
+  else GetMem(Bind^.Buffer, (((bind^.Length[0]+Byte(Ord(bind^.buffer_type_address^ = FIELD_TYPE_STRING))) shr 3)+1) shl 3); //8Byte aligned
   Bind^.buffer_address^ := Bind^.buffer;
   Bind^.buffer_length_address^ := bind^.Length[0];
 end;
@@ -1057,7 +1057,7 @@ begin
   ColBind := @FMYSQL_aligned_BINDs[ColumnIndex];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   if fBindBufferAllocated then begin
-    LastWasNull := ColBind^.is_null[0] =1;
+    LastWasNull := ColBind^.is_null =1;
     if not LastWasNull then
       case ColBind^.buffer_type_address^ of
         FIELD_TYPE_TINY:
@@ -1180,7 +1180,7 @@ begin
   ColBind := @FMYSQL_aligned_BINDs[ColumnIndex];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   if fBindBufferAllocated then begin
-    LastWasNull := ColBind^.is_null[0] =1;
+    LastWasNull := ColBind^.is_null =1;
     if not LastWasNull then
       //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
       Case ColBind^.buffer_type_address^ of
@@ -1281,7 +1281,7 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   Result := 0;
   if fBindBufferAllocated then begin
-    LastWasNull := ColBind^.is_null[0] =1;
+    LastWasNull := ColBind^.is_null =1;
     if not LastWasNull then
       //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
       Case ColBind^.buffer_type_address^ of
@@ -1372,7 +1372,7 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   Result := 0;
   if fBindBufferAllocated then begin
-    LastWasNull := ColBind^.is_null[0] =1;
+    LastWasNull := ColBind^.is_null =1;
     if not LastWasNull then
       //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
       Case ColBind^.buffer_type_address^ of
@@ -1460,7 +1460,7 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   Result := 0;
   if fBindBufferAllocated then begin
-    LastWasNull := ColBind^.is_null[0] =1;
+    LastWasNull := ColBind^.is_null =1;
     if not LastWasNull then
       //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
       Case ColBind^.buffer_type_address^ of
@@ -1562,7 +1562,7 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   Result := 0;
   if fBindBufferAllocated then begin
-    LastWasNull := ColBind^.is_null[0] =1;
+    LastWasNull := ColBind^.is_null =1;
     if not LastWasNull then
       //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
       Case ColBind^.buffer_type_address^ of
@@ -1655,7 +1655,7 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   Result := nil;
   if fBindBufferAllocated then begin
-    LastWasNull := ColBind^.is_null[0] =1;
+    LastWasNull := ColBind^.is_null =1;
     if not LastWasNull then
       //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
       Case ColBind^.buffer_type_address^ of
@@ -1715,7 +1715,7 @@ begin
     {$R-}
     ColBind := @FMYSQL_aligned_BINDs[ColumnIndex];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    LastWasNull := ColBind^.is_null[0] =1;
+    LastWasNull := ColBind^.is_null =1;
     if not LastWasNull then
       //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
       Case ColBind^.buffer_type_address^ of
@@ -1795,7 +1795,7 @@ begin
     {$R-}
     ColBind := @FMYSQL_aligned_BINDs[ColumnIndex];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    LastWasNull := ColBind^.is_null[0] =1;
+    LastWasNull := ColBind^.is_null =1;
     if not LastWasNull then
       //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
       Case ColBind^.buffer_type_address^ of
@@ -1874,7 +1874,7 @@ begin
     {$R-}
     ColBind := @FMYSQL_aligned_BINDs[ColumnIndex];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    LastWasNull := ColBind^.is_null[0] =1;
+    LastWasNull := ColBind^.is_null =1;
     if not LastWasNull then
       //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
       Case ColBind^.buffer_type_address^ of
@@ -1966,7 +1966,7 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   Result := nil;
   if fBindBufferAllocated then begin
-    LastWasNull := ColBind^.is_null[0] = 1;
+    LastWasNull := ColBind^.is_null = 1;
     if not LastWasNull then
       if ColBind^.buffer_address^ = nil then
         if ColBind^.binary
