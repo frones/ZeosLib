@@ -102,11 +102,13 @@ type
     FTokens: PZTokenArray;
     FCount: Integer;
     FCapacity: Integer;
-  protected
+  private
     procedure Grow;
     procedure SetCapacity(NewCapacity: Integer);
     procedure SetCount(NewCount: Integer);
+    {$IFOPT R+}
     class procedure Error(const Msg: string; Data: Integer);
+    {$ENDIF}
   public
     constructor Create;
     destructor Destroy; override;
@@ -1529,6 +1531,7 @@ begin
   else Result := False;
 end;
 
+{$IFOPT R+}
 class procedure TZTokenList.Error(const Msg: string; Data: Integer);
 {$IFNDEF FPC}
   function ReturnAddr: Pointer;
@@ -1544,6 +1547,7 @@ begin
   raise EListError.CreateFmt(Msg, [Data]) at ReturnAddr;
   {$ENDIF}
 end;
+{$ENDIF}
 
 function TZTokenList.IsEqual(Index: Integer; const Value: Char): Boolean;
 var Token: PZToken;
