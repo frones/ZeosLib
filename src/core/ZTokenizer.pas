@@ -1715,11 +1715,11 @@ end;
   @param Index of element.
 }
 function TZTokenList.AsFloat(Index: Integer): Extended;
-var
+{var
   Token: PZToken;
-  C: Char;
+  C: Char;}
 begin
-  Token := GetToken(Index);
+  {Token := GetToken(Index);
   C := (Token.P+Token.L)^;
   Result := 0;
   (Token.P+Token.L)^ := #0;
@@ -1727,7 +1727,8 @@ begin
     SQLStrToFloatDef(Token.P, 0, Result, Token.L);
   finally
     (Token.P+Token.L)^ := C;
-  end;
+  end;     }
+  Result := SQLStrToFloat(AsString(Index));
 end;
 
 {**
@@ -1735,11 +1736,11 @@ end;
   @param Index of element.
 }
 function TZTokenList.AsInt64(Index: Integer): Int64;
-var
+{var
   Token: PZToken;
-  C: Char;
+  C: Char;}
 begin
-  Token := GetToken(Index);
+  (*Token := GetToken(Index);
   C := (Token.P+Token.L)^;
   (Token.P+Token.L)^ := #0;
   try
@@ -1750,7 +1751,8 @@ begin
   {$ENDIF}
   finally
     (Token.P+Token.L)^ := C;
-  end;
+  end;*)
+  Result := StrToInt64(AsString(Index));
 end;
 
 {**
