@@ -715,12 +715,10 @@ begin
   if not FClosed then
       Close;
 
-  if FMetadata <> nil then
-    FMetadata.Free;
-  FMetadata := nil;
+  FreeAndNil(FMetadata);
   FStatement := nil;
 
-  FColumnsInfo.Free;
+  FreeAndNil(FColumnsInfo);
   inherited Destroy;
 end;
 

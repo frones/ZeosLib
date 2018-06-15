@@ -636,7 +636,7 @@ begin
   begin
     {$IFDEF UNICODE}
     FASQL := Value;
-    FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP); //required for the resultsets
+    FWSQL := ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP); //required for the resultsets
     {$ELSE !UNICODE}
     FASQL := GetRawEncodedSQL(Value);
     if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then
@@ -738,7 +738,7 @@ procedure TZAbstractStatement.FreeOpenResultSetReference(const ResultSet: IZResu
 begin
   if FOpenResultSet = Pointer(ResultSet) then
     FOpenResultSet := nil;
-  if FLastResultSet = FLastResultSet then
+  if FLastResultSet = ResultSet then
     FLastResultSet := nil;
 end;
 
@@ -2114,7 +2114,6 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-
 procedure TZAbstractPreparedStatement.SetUnicodeString(ParameterIndex: Integer;
   const Value: ZWideString);
 begin
@@ -3752,6 +3751,17 @@ begin
   FInParamTypes[ParameterIndex] := SQLType;
 end;
 
+{**
+  Sets the designated parameter to a Object Pascal <code>WideString</code>
+  value. The driver converts this
+  to an SQL <code>VARCHAR</code> or <code>LONGVARCHAR</code> value
+  (depending on the argument's
+  size relative to the driver's limits on <code>VARCHAR</code> values)
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TImplizitBindRealAndEmulationStatement_A.SetUnicodeString(
   ParameterIndex: Integer; const Value: ZWideString);
 begin
