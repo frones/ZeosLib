@@ -158,12 +158,9 @@ function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
 
 function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_BINDOFFSETS;
 
-procedure AllocMySQLBindBuffer(var BindBuffer: Pointer;
+procedure ReallocBindBuffer(var BindBuffer: Pointer;
   var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BindOffsets: PMYSQL_BINDOFFSETS;
-  BindCount, Iterations: ULong);
-
-procedure FreeMySQLBindBuffer(var BindBuffer: Pointer;
-  var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BoundCount: ULong);
+  OldCount, NewCount: Integer; Iterations: ULong);
 
 implementation
 
@@ -769,7 +766,7 @@ var b: Byte;
   P: PAnsiChar;
 begin
   P := PAnsiChar(Src)+Len-1;
-  for b := Len downto 0 do
+  for b := Len-1 downto 0 do
     (PAnsiChar(Dest)+B)^ := (P-B)^;
 end;
 
@@ -810,113 +807,99 @@ begin
   else Result := nil
 end;
 
-procedure AllocMySQLBindBuffer(var BindBuffer: Pointer;
+procedure ReallocBindBuffer(var BindBuffer: Pointer;
   var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BindOffsets: PMYSQL_BINDOFFSETS;
-  BindCount, Iterations: ULong);
+  OldCount, NewCount: Integer; Iterations: ULong);
 var
+  I: Integer;
+  Bind: PMYSQL_aligned_BIND;
   ColOffset: NativeUInt;
-  Bind: PMYSQL_aligned_BIND;
-  I: Integer;
 begin
-  if BindCount = 0 then
-    Exit;
-  GetMem(BindBuffer, BindCount*BindOffsets.Size);
-  FillChar(BindBuffer^, BindCount*BindOffsets.Size, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-  GetMem(MYSQL_aligned_BINDs, BindCount*SizeOf(TMYSQL_aligned_BIND));
-  FillChar(MYSQL_aligned_BINDs^, BindCount*SizeOf(TMYSQL_aligned_BIND), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-  for i := 0 to BindCount-1 do begin
-    {$R-}
-    Bind := @MYSQL_aligned_BINDs[I];
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    ColOffset := NativeUInt(I*BindOffsets.size);
-    { save mysql bind offset fo mysql_stmt_fetch_column }
-    Bind^.mysql_bind := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset);
-    { save aligned addresses }
-    bind^.buffer_address := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.buffer);
-    Bind^.buffer_type_address := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.buffer_type);
-    Bind^.is_unsigned_address := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.is_unsigned);
-    Bind^.buffer_length_address := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.buffer_length);
-    Bind^.length_address := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.length);
-    GetMem(Bind^.length, Iterations*SizeOf(ULong));
-    FillChar(Bind^.length^, Iterations*SizeOf(ULong), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-    Bind^.length_address^ := Pointer(Bind^.length);
-    GetMem(Bind^.is_null, Iterations*SizeOf(my_bool));
-    FillChar(Bind^.is_null^, Iterations*SizeOf(my_bool), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-    {%H-}PPointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.is_null)^ := Pointer(Bind^.is_null);
-    if (BindOffsets.Indicator > 0) then begin
-      Bind^.indicator_address := {%H-}Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.Indicator);
-      if Iterations > 0 then begin
-        GetMem(Bind^.indicators, Iterations*SizeOf(TIndicator));
-        FillChar(Bind^.indicators^, Iterations*SizeOf(TIndicator), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-        Bind^.indicator_address^ := Pointer(Bind^.indicators);
-      end;
-    end else if Iterations > 1 then
-      raise EZSQLException.Create('Array bindings are not supported!');
-  end;
-end;
-
-procedure FreeMySQLBindBuffer(var BindBuffer: Pointer;
-  var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BoundCount: ULong);
-var
-  Bind: PMYSQL_aligned_BIND;
-  I: Integer;
-begin
-  FreeMem(BindBuffer);
-  BindBuffer := nil;
-  if (MYSQL_aligned_BINDs <> nil) then begin
-    if (BoundCount > 0) then
-      for i := BoundCount-1 downto 0 do begin
-        {$R-}
-        Bind := @MYSQL_aligned_BINDs[I];
-        {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-        FreeMem(Bind^.buffer);
-        FreeMem(Bind^.length);
-        FreeMem(Bind^.indicators);
-        FreeMem(Bind^.is_null);
-      end;
-    FreeMem(MYSQL_aligned_BINDs);
-    MYSQL_aligned_BINDs := nil;
+  {first clean mem of binds we don't need any more}
+  if MYSQL_aligned_BINDs <> nil then
+    for i := OldCount-1 downto NewCount do begin
+      {$R-}
+      Bind := @MYSQL_aligned_BINDs[I];
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      FreeMem(Bind^.buffer);
+      FreeMem(Bind^.length);
+      FreeMem(Bind^.indicators);
+    end;
+  ReallocMem(BindBuffer, NewCount*BindOffsets.Size);
+  ReallocMem(MYSQL_aligned_BINDs, NewCount*SizeOf(TMYSQL_aligned_BIND));
+  if MYSQL_aligned_BINDs <> nil then begin
+    FillChar((PAnsichar(BindBuffer)+(OldCount*BindOffsets.Size))^,
+      ((NewCount-OldCount)*BindOffsets.Size), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+    FillChar((PAnsiChar(MYSQL_aligned_BINDs)+(OldCount*SizeOf(TMYSQL_aligned_BIND)))^,
+      (NewCount-OldCount)*SizeOf(TMYSQL_aligned_BIND), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+    for i := OldCount to NewCount-1 do begin
+      {$R-}
+      Bind := @MYSQL_aligned_BINDs[I];
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      ColOffset := NativeUInt(I*BindOffsets.size);
+      { save mysql bind offset fo mysql_stmt_fetch_column }
+      Bind^.mysql_bind := Pointer(NativeUInt(BindBuffer)+ColOffset);
+      { save aligned addresses }
+      bind^.buffer_address := Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.buffer);
+      Bind^.buffer_type_address := Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.buffer_type);
+      Bind^.is_unsigned_address := Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.is_unsigned);
+      Bind^.buffer_length_address := Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.buffer_length);
+      Bind^.length_address := Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.length);
+      GetMem(Bind^.length, Iterations*SizeOf(ULong));
+      FillChar(Bind^.length^, Iterations*SizeOf(ULong), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+      Bind^.length_address^ := Bind^.length;
+      PPointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.is_null)^ := @Bind^.is_null;
+      if (BindOffsets.Indicator > 0) then begin
+        Bind^.indicator_address := Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.Indicator);
+        if Iterations > 0 then begin
+          GetMem(Bind^.indicators, Iterations*SizeOf(TIndicator));
+          FillChar(Bind^.indicators^, Iterations*SizeOf(TIndicator), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+          Bind^.indicator_address^ := Pointer(Bind^.indicators);
+        end;
+      end else if Iterations > 1 then
+        raise EZSQLException.Create('Array bindings are not supported!');
+    end;
   end;
 end;
 
 initialization
   with MARIADB_BIND1027_Offset do begin
-    buffer_type   := {%H-}NativeUint(@(PMARIADB_BIND1027(nil).buffer_type));
-    buffer_length := {%H-}NativeUint(@(PMARIADB_BIND1027(nil).buffer_length));
-    is_unsigned   := {%H-}NativeUint(@(PMARIADB_BIND1027(nil).is_unsigned));
-    buffer        := {%H-}NativeUint(@(PMARIADB_BIND1027(nil).buffer));
-    length        := {%H-}NativeUint(@(PMARIADB_BIND1027(nil).length));
-    is_null       := {%H-}NativeUint(@(PMARIADB_BIND1027(nil).is_null));
-    Indicator     := {%H-}NativeUint(@(PMARIADB_BIND1027(nil).u.indicator));
+    buffer_type   := NativeUint(@(PMARIADB_BIND1027(nil).buffer_type));
+    buffer_length := NativeUint(@(PMARIADB_BIND1027(nil).buffer_length));
+    is_unsigned   := NativeUint(@(PMARIADB_BIND1027(nil).is_unsigned));
+    buffer        := NativeUint(@(PMARIADB_BIND1027(nil).buffer));
+    length        := NativeUint(@(PMARIADB_BIND1027(nil).length));
+    is_null       := NativeUint(@(PMARIADB_BIND1027(nil).is_null));
+    Indicator     := NativeUint(@(PMARIADB_BIND1027(nil).u.indicator));
     size          := Sizeof(TMARIADB_BIND1027);
   end;
   with MYSQL_BIND51_Offset do begin
-    buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND51(nil).buffer_type));
-    buffer_length := {%H-}NativeUint(@(PMYSQL_BIND51(nil).buffer_length));
-    is_unsigned   := {%H-}NativeUint(@(PMYSQL_BIND51(nil).is_unsigned));
-    buffer        := {%H-}NativeUint(@(PMYSQL_BIND51(nil).buffer));
-    length        := {%H-}NativeUint(@(PMYSQL_BIND51(nil).length));
-    is_null       := {%H-}NativeUint(@(PMYSQL_BIND51(nil).is_null));
+    buffer_type   := NativeUint(@(PMYSQL_BIND51(nil).buffer_type));
+    buffer_length := NativeUint(@(PMYSQL_BIND51(nil).buffer_length));
+    is_unsigned   := NativeUint(@(PMYSQL_BIND51(nil).is_unsigned));
+    buffer        := NativeUint(@(PMYSQL_BIND51(nil).buffer));
+    length        := NativeUint(@(PMYSQL_BIND51(nil).length));
+    is_null       := NativeUint(@(PMYSQL_BIND51(nil).is_null));
     Indicator     := 0;
     size          := Sizeof(TMYSQL_BIND51);
   end;
   with MYSQL_BIND506_Offset do begin
-    buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND506(nil).buffer_type));
-    buffer_length := {%H-}NativeUint(@(PMYSQL_BIND506(nil).buffer_length));
-    is_unsigned   := {%H-}NativeUint(@(PMYSQL_BIND506(nil).is_unsigned));
-    buffer        := {%H-}NativeUint(@(PMYSQL_BIND506(nil).buffer));
-    length        := {%H-}NativeUint(@(PMYSQL_BIND506(nil).length));
-    is_null       := {%H-}NativeUint(@(PMYSQL_BIND506(nil).is_null));
+    buffer_type   := NativeUint(@(PMYSQL_BIND506(nil).buffer_type));
+    buffer_length := NativeUint(@(PMYSQL_BIND506(nil).buffer_length));
+    is_unsigned   := NativeUint(@(PMYSQL_BIND506(nil).is_unsigned));
+    buffer        := NativeUint(@(PMYSQL_BIND506(nil).buffer));
+    length        := NativeUint(@(PMYSQL_BIND506(nil).length));
+    is_null       := NativeUint(@(PMYSQL_BIND506(nil).is_null));
     Indicator     := 0;
-    size          := Sizeof(PMYSQL_BIND506);
+    size          := Sizeof(TMYSQL_BIND506);
   end;
   with MYSQL_BIND411_Offset do begin
-    buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND411(nil).buffer_type));
-    buffer_length := {%H-}NativeUint(@(PMYSQL_BIND411(nil).buffer_length));
-    is_unsigned   := {%H-}NativeUint(@(PMYSQL_BIND411(nil).is_unsigned));
-    buffer        := {%H-}NativeUint(@(PMYSQL_BIND411(nil).buffer));
-    length        := {%H-}NativeUint(@(PMYSQL_BIND411(nil).length));
-    is_null       := {%H-}NativeUint(@(PMYSQL_BIND411(nil).is_null));
+    buffer_type   := NativeUint(@(PMYSQL_BIND411(nil).buffer_type));
+    buffer_length := NativeUint(@(PMYSQL_BIND411(nil).buffer_length));
+    is_unsigned   := NativeUint(@(PMYSQL_BIND411(nil).is_unsigned));
+    buffer        := NativeUint(@(PMYSQL_BIND411(nil).buffer));
+    length        := NativeUint(@(PMYSQL_BIND411(nil).length));
+    is_null       := NativeUint(@(PMYSQL_BIND411(nil).is_null));
     Indicator     := 0;
     size          := Sizeof(TMYSQL_BIND411);
   end;

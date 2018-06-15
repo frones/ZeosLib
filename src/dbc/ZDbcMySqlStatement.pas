@@ -98,7 +98,7 @@ type
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
-    procedure SetInParamCount(const NewParamCount: Integer); override;
+    procedure SetInParamCount(NewParamCount: Integer); override;
     procedure InternalSetInParamCount(NewParamCount: Integer); override;
     function GetBoundValueAsLogValue(ParamIndex: Integer): RawByteString; override;
     function BoolAsString(Value: Boolean): RawByteString; override;
@@ -220,7 +220,7 @@ begin
     BindRawStr(ParameterIndex, SQLType, Pointer(FDefaultValues[ParameterIndex]), Length(FDefaultValues[ParameterIndex]))
   end else if FInParamTypes[ParameterIndex] <> SQLType then
     InitBuffer(SQLType, Bind, Length(FDefaultValues[ParameterIndex]));
-  Bind^.is_null[0] := 1
+  Bind^.is_null := 1
 end;
 
 procedure TZMySQLPreparedStatement.BindRawStr(ParameterIndex: Integer;
@@ -243,7 +243,7 @@ begin
     FChunkedData := True;
     Bind^.Length[0] := 0;
   end;
-  Bind^.is_null[0] := 0;
+  Bind^.is_null := 0;
 end;
 
 const EnumQuotedBool: array[Boolean] of AnsiString = (#39'N'#39, #39'Y'#39);
@@ -608,14 +608,14 @@ begin
         ReAllocMem(Bind^.length, ArrayCount*SizeOf(ULong));
         Bind^.length_address^ := Bind^.length;
         if FGUIDAsString then begin
-          ReAllocMem(Bind^.buffer, SizeOf(Pointer)*ArrayCount + (39*ArrayCount));
+          ReAllocMem(Bind^.buffer, SizeOf(Pointer)*ArrayCount + (37*ArrayCount));
           Bind^.buffer_type_address^ := FIELD_TYPE_STRING;
           P := PAnsiChar(Bind^.buffer)+ SizeOf(Pointer)*ArrayCount;
           for i := 0 to ArrayCount -1 do begin
-            Bind^.length[i] := 38;
-            GUIDToBuffer(@TGUIDDynArray(Value)[i].D1, P, True);
+            Bind^.length[i] := 36;
+            GUIDToBuffer(@TGUIDDynArray(Value)[i].D1, P, False, True);
             PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := P; //write address
-            Inc(P, 39);
+            Inc(P, 37);
           end;
         end else begin
           ReAllocMem(Bind^.buffer, SizeOf(Pointer)*ArrayCount);
@@ -775,13 +775,10 @@ begin
 end;
 
 procedure TZMySQLPreparedStatement.SetInParamCount(
-  const NewParamCount: Integer);
+  NewParamCount: Integer);
 begin
   if not Prepared then
     Prepare;
-  if FEmulatedParams
-  then Assert(NewParamCount <= CountOfQueryParams)
-  else Assert(NewParamCount <= FInParamCount); //<- done by PrepareInParams
 end;
 
 procedure TZMySQLPreparedStatement.SetNull(ParameterIndex: Integer;
@@ -895,7 +892,7 @@ begin
     FChunkedData := True;
     Bind^.Length[0] := 0;
   end;
-  Bind^.is_null[0] := 0;
+  Bind^.is_null := 0;
 end;
 
 procedure TZMysqlPreparedStatement.BindInParameters;
@@ -928,7 +925,7 @@ begin
     // Send large data chunked
     for I := 0 to InParamCount - 1 do begin
       Bind := @FMYSQL_aligned_BINDs[I];
-      if (Bind^.is_null[0] = 0) and (Bind^.buffer = nil) and (Assigned(FParamLobs[I])) then begin
+      if (Bind^.is_null = 0) and (Bind^.buffer = nil) and (Assigned(FParamLobs[I])) then begin
         P := FParamLobs[I].GetBuffer;
         Len := FParamLobs[I].Length;
         OffSet := 0;
@@ -1330,7 +1327,7 @@ begin
     else raise EZSQLException.Create(sUnsupportedOperation);
   end;
   if BuffSize > 0 then
-    ReAllocMem(Bind.buffer, BuffSize+Ord(Bind^.buffer_type_address^ = FIELD_TYPE_STRING))
+    ReAllocMem(Bind.buffer, BuffSize+Ord(Bind^.buffer_type_address^ in [FIELD_TYPE_STRING, FIELD_TYPE_BLOB,FIELD_TYPE_BLOB] ))
   else if Bind.buffer <> nil then begin
     FreeMem(Bind.buffer);
     Bind.buffer := nil;
@@ -1340,7 +1337,7 @@ begin
   Bind^.Iterations := 1;
   fBindAgain := True;
   if (SQLType in [stDate, stTime, stTimeStamp]) and not (Bind^.buffer_type_address^ = FIELD_TYPE_STRING) then begin
-    FillChar(Pointer(Bind^.buffer)^, SizeOf(TMYSQL_TIME), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+    FillChar(Bind^.buffer^, SizeOf(TMYSQL_TIME), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
     if SQLType = stTime then
       PMYSQL_TIME(Bind^.buffer)^.time_type := MYSQL_TIMESTAMP_TIME
     else if SQLType = stTimeStamp then
@@ -1370,7 +1367,7 @@ begin
       PWord(@P^.hour)^, PWord(@P^.minute)^, PWord(@P^.second)^, PWord(@P^.second_part)^);
     P^.second_part := P^.second_part*1000;
   end;
-  Bind^.is_null[0] := 0;
+  Bind^.is_null := 0;
 end;
 
 procedure TZMySQLPreparedStatement.BindDouble(ParameterIndex: Integer;
@@ -1384,7 +1381,7 @@ begin
   if FInParamTypes[ParameterIndex] <> SQLType then
     InitBuffer(SQLType, Bind);
   PDouble(bind^.buffer)^ := Value;
-  Bind^.is_null[0] := 0;
+  Bind^.is_null := 0;
 end;
 
 procedure TZMySQLPreparedStatement.InternalRealPrepare;
@@ -1429,12 +1426,10 @@ end;
 
 procedure TZMySQLPreparedStatement.InternalSetInParamCount(NewParamCount: Integer);
 begin
-  if not FEmulatedParams then begin
-    if (NewParamCount <> InParamCount) and (InParamCount > 0) then
-      FreeMySQLBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, InParamCount);
-    if ((NewParamCount <> InParamCount) or (FMYSQL_BINDs = nil)) and (NewParamCount > 0) then
-      AllocMySQLBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffSet, NewParamCount, 1);
-  end;
+  if not FEmulatedParams then
+    if (NewParamCount <> InParamCount) or ((NewParamCount > 0) and (FMYSQL_aligned_BINDs = nil)) then
+      ReallocBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffset,
+        InParamCount*Ord(FMYSQL_aligned_BINDs<>nil), NewParamCount, 1);
   inherited InternalSetInParamCount(NewParamCount);
   if not FEmulatedParams and (NewParamCount > 0) then
     FillChar(Pointer(FInParamTypes)^, SizeOf(TZSQLType)*NewParamCount, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
@@ -1468,7 +1463,7 @@ begin
                           PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
                         end;
   end;
-  Bind^.is_null[0] := 0;
+  Bind^.is_null := 0;
 end;
 
 procedure TZMySQLPreparedStatement.BindUnsignedOrdinal(ParameterIndex: Integer;
@@ -1499,7 +1494,7 @@ begin
                           PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
                         end;
   end;
-  Bind^.is_null[0] := 0;
+  Bind^.is_null := 0;
 end;
 
 { TZMySQLCallableStatement }

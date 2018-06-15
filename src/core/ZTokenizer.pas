@@ -102,11 +102,13 @@ type
     FTokens: PZTokenArray;
     FCount: Integer;
     FCapacity: Integer;
-  protected
+  private
     procedure Grow;
     procedure SetCapacity(NewCapacity: Integer);
     procedure SetCount(NewCount: Integer);
+    {$IFOPT R+}
     class procedure Error(const Msg: string; Data: Integer);
+    {$ENDIF}
   public
     constructor Create;
     destructor Destroy; override;
@@ -1529,6 +1531,7 @@ begin
   else Result := False;
 end;
 
+{$IFOPT R+}
 class procedure TZTokenList.Error(const Msg: string; Data: Integer);
 {$IFNDEF FPC}
   function ReturnAddr: Pointer;
@@ -1544,6 +1547,7 @@ begin
   raise EListError.CreateFmt(Msg, [Data]) at ReturnAddr;
   {$ENDIF}
 end;
+{$ENDIF}
 
 function TZTokenList.IsEqual(Index: Integer; const Value: Char): Boolean;
 var Token: PZToken;
@@ -1711,11 +1715,11 @@ end;
   @param Index of element.
 }
 function TZTokenList.AsFloat(Index: Integer): Extended;
-var
+{var
   Token: PZToken;
-  C: Char;
+  C: Char;}
 begin
-  Token := GetToken(Index);
+  {Token := GetToken(Index);
   C := (Token.P+Token.L)^;
   Result := 0;
   (Token.P+Token.L)^ := #0;
@@ -1723,7 +1727,8 @@ begin
     SQLStrToFloatDef(Token.P, 0, Result, Token.L);
   finally
     (Token.P+Token.L)^ := C;
-  end;
+  end;     }
+  Result := SQLStrToFloat(AsString(Index));
 end;
 
 {**
@@ -1731,11 +1736,11 @@ end;
   @param Index of element.
 }
 function TZTokenList.AsInt64(Index: Integer): Int64;
-var
+{var
   Token: PZToken;
-  C: Char;
+  C: Char;}
 begin
-  Token := GetToken(Index);
+  (*Token := GetToken(Index);
   C := (Token.P+Token.L)^;
   (Token.P+Token.L)^ := #0;
   try
@@ -1746,7 +1751,8 @@ begin
   {$ENDIF}
   finally
     (Token.P+Token.L)^ := C;
-  end;
+  end;*)
+  Result := StrToInt64(AsString(Index));
 end;
 
 {**
