@@ -64,13 +64,6 @@ uses
   ZCompatibility, ZVariant;
 
 {**
-  Indicate what field type is a number (integer, float and etc.)
-  @param  the SQLType field type value
-  @result true if field type number
-}
-function IsNumber(Value: TZSQLType): Boolean;
-
-{**
    Return ZSQLType from PostgreSQL type name
    @param Connection a connection to PostgreSQL
    @param The TypeName is PostgreSQL type name
@@ -392,6 +385,7 @@ end;
 procedure SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: Boolean; out aOID: OID);
 begin
   case SQLType of
+    stUnknown: aOID := VOIDOID;
     stBoolean: aOID := BOOLOID;
     stByte, stShort, stSmall: aOID := INT2OID;
     stWord, stInteger: aOID := INT4OID;
@@ -411,17 +405,6 @@ begin
       then aOID := OIDOID
       else aOID := BYTEAOID;
   end;
-end;
-
-{**
-  Indicate what field type is a number (integer, float and etc.)
-  @param  the SQLType field type value
-  @result true if field type number
-}
-function IsNumber(Value: TZSQLType): Boolean;
-begin
-  Result := Value in [stByte, stSmall, stInteger, stLong,
-    stFloat, stDouble, stBigDecimal];
 end;
 
 {**

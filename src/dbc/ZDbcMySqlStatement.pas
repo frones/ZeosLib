@@ -65,7 +65,7 @@ type
   TOpenCursorCallback = procedure of Object;
   THandleStatus = (hsUnknown, hsAllocated, hsExecutedPrepared, hsExecutedOnce, hsReset);
   {** Implements Prepared MySQL Statement. }
-  TZMySQLPreparedStatement = class(TImplizitBindRealAndEmulationStatement_A)
+  TZMySQLPreparedStatement = class(TZRawParamDetectPreparedStatement)
   private
     FPMYSQL: PPMYSQL; //the connection handle
     FMySQLConnection: IZMySQLConnection;
@@ -87,33 +87,38 @@ type
     FMYSQL_BINDs: Pointer; //a buffer for N-params * mysql_bind-record size which are changing from version to version
     FMYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; //offset structure to set all the mysql info's aligned to it's field-structures
     FOpenCursorCallback: TOpenCursorCallback;
+    FEmulatedValues: TRawByteStringDynArray;
+    FEmulatedParams: Boolean;
 //    FHandleStatus: THandleStatus; //indicate status of MYSQL_STMT handle
     function CreateResultSet(const SQL: string): IZResultSet;
     procedure InitBuffer(SQLType: TZSQLType; Bind: PMYSQL_aligned_BIND; ActualLength: LengthInt = 0);
     procedure FlushPendingResults;
     procedure InternalRealPrepare;
     function CheckPrepareSwitchMode: Boolean;
+    function ComposeRawSQLQuery: RawByteString;
   protected
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
-    procedure SetInParamCount(NewParamCount: Integer); override;
-    procedure InternalSetInParamCount(NewParamCount: Integer); override;
-    function GetBoundValueAsLogValue(ParamIndex: Integer): RawByteString; override;
-    function BoolAsString(Value: Boolean): RawByteString; override;
+    procedure InternalSetInParamCount(NewParamCount: Integer);
+    function GetInParamLogValue(Index: Integer): RawByteString; override;
+    procedure CheckParameterIndex(Value: Integer); override;
+    procedure SetBindCapacity(Capacity: Integer); override;
 
-    procedure BindSignedOrdinal(ParameterIndex: Integer; var SQLType: TZSQLType; const Value: Int64); override;
-    procedure BindUnsignedOrdinal(ParameterIndex: Integer; var SQLType: TZSQLType; const Value: UInt64); override;
-    procedure BindDouble(ParameterIndex: Integer; var SQLType: TZSQLType; const Value: Double); override;
-    procedure BindDateTime(ParameterIndex: Integer; var SQLType: TZSQLType; const Value: TDateTime); override;
-    procedure BindNull(ParameterIndex: Integer; var SQLType: TZSQLType); override;
-    procedure BindRawStr(ParameterIndex: Integer; var SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt); override;
-    procedure BindBinary(ParameterIndex: Integer; var SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
+    procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; IO: TZParamType); override;
+    procedure BindBoolean(Index: Integer; Value: Boolean; IO: TZParamType); override;
+    procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime; IO: TZParamType); override;
+    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double; IO: TZParamType); override;
+    procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob; IO: TZParamType); override;
+    procedure BindNull(Index: Integer; SQLType: TZSQLType; IO: TZParamType); override;
+    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64; IO: TZParamType); override;
+    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64; IO: TZParamType); override;
+    procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt; IO: TZParamType); override;
+    procedure BindRawStr(Index: Integer; const Value: RawByteString; IO: TZParamType); override;
   public
     constructor Create(const Connection: IZMySQLConnection;
       const SQL: string; Info: TStrings);
-    destructor Destroy; override;
   public
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
 
@@ -128,7 +133,6 @@ type
     function GetMoreResults: Boolean; override;
     function GetUpdateCount: Integer; override;
 
-    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType); override;
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); override;
@@ -204,54 +208,95 @@ var
 {$IFOPT R+}
   {$DEFINE RangeCheckEnabled}
 {$ENDIF}
+const EnumQuotedBool: array[Boolean] of AnsiString = (#39'N'#39, #39'Y'#39);
+const EnumBool: array[Boolean] of AnsiString = ('N','Y');
 
 { TZMySQLPreparedStatement }
 
-procedure TZMySQLPreparedStatement.BindNull(ParameterIndex: Integer;
-  var SQLType: TZSQLType);
+procedure TZMySQLPreparedStatement.BindNull(Index: Integer;
+  SQLType: TZSQLType; IO: TZParamType);
 var
   Bind: PMYSQL_aligned_BIND;
 begin
-  {$R-}
-  Bind := @FMYSQL_aligned_BINDs[ParameterIndex];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  if FUseDefaults and (FDefaultValues[ParameterIndex] <> '') then begin
-    SQLType := stString;
-    BindRawStr(ParameterIndex, SQLType, Pointer(FDefaultValues[ParameterIndex]), Length(FDefaultValues[ParameterIndex]))
-  end else if FInParamTypes[ParameterIndex] <> SQLType then
-    InitBuffer(SQLType, Bind, Length(FDefaultValues[ParameterIndex]));
-  Bind^.is_null := 1
+  if FEmulatedParams then begin
+    if FTokenMatchIndex <> -1
+    then inherited BindNull(Index, SQLType, IO)
+    else CheckParameterIndex(Index);
+    if FUseDefaults and (FInParamDefaultValues[Index] <> '')
+    then FEmulatedValues[Index] := FInParamDefaultValues[Index]
+    else FEmulatedValues[Index] := 'null'
+  end else begin
+    CheckParameterIndex(Index);
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if FUseDefaults and (FInParamDefaultValues[Index] <> '') then
+      BindRawStr(Index, Pointer(FInParamDefaultValues[Index]), Length(FInParamDefaultValues[Index]), IO)
+    else if BindList.SQLTypes[Index] <> SQLType then
+      InitBuffer(SQLType, Bind, 0);
+    Bind^.is_null := 1;
+    BindList.SetNull(Index, SQLType, IO);
+  end;
 end;
 
-procedure TZMySQLPreparedStatement.BindRawStr(ParameterIndex: Integer;
-  var SQLType: TZSQLType; Buf: PAnsiChar; Len: LengthInt);
+procedure TZMySQLPreparedStatement.BindRawStr(Index: Integer;
+  const Value: RawByteString; IO: TZParamType);
+var
+  Bind: PMYSQL_aligned_BIND;
+  Len: LengthInt;
+begin
+  Len := Length(Value);
+  if FEmulatedParams then begin
+    if FTokenMatchIndex <> -1 then
+      inherited BindRawStr(Index, Value, IO);
+    Connection.GetEscapeString(Pointer(Value), Len, FEmulatedValues[Index]);
+  end else begin
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (BindList.SQLTypes[Index] <> stString) or (Bind.buffer_length_address^ < Cardinal(Len+1)) then
+      InitBuffer(stString, Bind, Len);
+    if Len = 0
+    then PAnsiChar(Bind^.buffer)^ := #0
+    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Bind^.buffer)^, Len+1);
+    Bind^.Length[0] := Len;
+    Bind^.is_null := 0;
+    BindList.SetNull(Index, stString, IO);
+  end;
+end;
+
+procedure TZMySQLPreparedStatement.BindRawStr(Index: Integer;
+  Buf: PAnsiChar; Len: LengthInt; IO: TZParamType);
 var
   Bind: PMYSQL_aligned_BIND;
 begin
-  {$R-}
-  Bind := @FMYSQL_aligned_BINDs[ParameterIndex];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  if (FInParamTypes[ParameterIndex] <> SQLType) or
-     (Bind.buffer_length_address^ < Cardinal(Len+1)*Byte(Ord(not (SQLType in [stAsciiStream, stUnicodeStream])))) then
-    InitBuffer(SQLType, Bind, Len);
-  if not (SQLType in [stAsciiStream, stUnicodeStream]) then begin
+  if FEmulatedParams then begin
+    if FTokenMatchIndex <> -1 then
+      inherited BindRawStr(Index, Buf, Len, IO);
+    Connection.GetEscapeString(Buf, Len, FEmulatedValues[Index]);
+  end else begin
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (BindList.SQLTypes[Index] <> stString) or (Bind.buffer_length_address^ < Cardinal(Len+1)) then
+      InitBuffer(stString, Bind, Len);
     if Len = 0
     then PAnsiChar(Bind^.buffer)^ := #0
     else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, Pointer(Bind^.buffer)^, Len+1);
     Bind^.Length[0] := Len;
-  end else begin
-    FChunkedData := True;
-    Bind^.Length[0] := 0;
+    Bind^.is_null := 0;
+    BindList.SetNull(Index, stString, IO);
   end;
-  Bind^.is_null := 0;
 end;
 
-const EnumQuotedBool: array[Boolean] of AnsiString = (#39'N'#39, #39'Y'#39);
-function TZMySQLPreparedStatement.BoolAsString(Value: Boolean): RawByteString;
+procedure TZMySQLPreparedStatement.CheckParameterIndex(Value: Integer);
 begin
-  if not FMySQL_FieldType_Bit_1_IsBoolean
-  then Result := EnumQuotedBool[Value]
-  else Result := BoolStrIntsRaw[Value]
+  //if not Prepared then
+    //Prepare;
+  if (BindList.Capacity < Value+1) then
+    if FMYSQL_STMT <> nil
+    then raise EZSQLException.Create(SInvalidInputParameterCount)
+    else inherited CheckParameterIndex(Value);
 end;
 
 function TZMySQLPreparedStatement.CheckPrepareSwitchMode: Boolean;
@@ -260,13 +305,15 @@ begin
      ((ArrayCount > 0 ) or (ExecutionCount = MinExecCount2Prepare));
   if Result then begin
     FEmulatedParams := False;
-    if (FInParamCount > 0) then
-      InternalSetInParamCount(FInParamCount);
+    if (BindList.Count > 0) then
+      InternalSetInParamCount(BindList.Count);
   end;
 end;
 
 procedure TZMySQLPreparedStatement.ClearParameters;
-var array_size: UInt;
+var
+  array_size: UInt;
+  I: Integer;
 begin
   if ArrayCount > 0 then begin
     array_size := 0;
@@ -274,8 +321,26 @@ begin
       checkMySQLError (FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcPrepStmt,
         ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
         ConSettings^.ClientCodePage^.CP), Self);
+    for i := 0 to BindList.Count -1 do
+      BindNull(i, TZSQLType(BindList.Arrays[i].VArrayType), zptInput);
   end;
   inherited ClearParameters;
+end;
+
+function TZMySQLPreparedStatement.ComposeRawSQLQuery: RawByteString;
+var
+  I: Integer;
+  ParamIndex: Integer;
+begin
+  ParamIndex := 0;
+  Result := '';
+  for I := 0 to High(FCachedQueryRaw) do
+    if IsParamIndex[i] then begin
+      ToBuff(FEmulatedValues[ParamIndex], Result);
+      Inc(ParamIndex);
+    end else
+      ToBuff(FCachedQueryRaw[I], Result);
+  FlushBuff(Result);
 end;
 
 {**
@@ -443,21 +508,11 @@ begin
   end;
 end;
 
-destructor TZMySQLPreparedStatement.Destroy;
-begin
-  try
-    inherited Destroy;
-  finally
-    UnPrepareInParameters; //safe call to don't leak mem
-  end;
-end;
-
 procedure TZMysqlPreparedStatement.PrepareInParameters;
 begin
-  InternalSetInParamCount(CountOfQueryParams);
-  if not FEmulatedParams and (FMYSQL_STMT<> nil) then
-    if Cardinal(CountOfQueryParams) <> FPlainDriver.mysql_stmt_param_count(FMYSQL_STMT) then
-      raise EZSQLException.Create(SInvalidInputParameterCount);
+  if not FEmulatedParams and (FMYSQL_STMT<> nil)
+  then SetParamCount(FPlainDriver.mysql_stmt_param_count(FMYSQL_STMT))
+  else InternalSetInParamCount(BindList.Capacity);
 end;
 
 procedure TZMySQLPreparedStatement.ReleaseImmediat(
@@ -470,7 +525,18 @@ begin
   inherited ReleaseImmediat(Sender);
 end;
 
-const EnumBool: array[Boolean] of PAnsiChar = ('N','Y');
+procedure TZMySQLPreparedStatement.SetBindCapacity(Capacity: Integer);
+var OldCapacity: Integer;
+begin
+  OldCapacity := Bindlist.Capacity;
+  inherited SetBindCapacity(Capacity);
+  if OldCapacity <> BindList.Capacity then
+    if (FMYSQL_STMT = nil)
+    then SetLength(FEmulatedValues, BindList.Capacity)
+    else ReallocBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffset,
+        OldCapacity, BindList.Capacity, 1);
+end;
+
 procedure TZMySQLPreparedStatement.SetDataArray(ParameterIndex: Integer;
   const Value; const SQLType: TZSQLType; const VariantType: TZVariantType);
 var BufferSize: ULong;
@@ -489,13 +555,13 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
   {$ENDIF}
-  {$R-}
-  Bind := @FMYSQL_aligned_BINDs[ParameterIndex];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   if (FMYSQL_STMT = nil) then
     InternalRealPrepare;
   if (FMYSQL_STMT = nil) then
     raise EZSQLException.Create(SFailedtoPrepareStmt);
+  {$R-}
+  Bind := @FMYSQL_aligned_BINDs[ParameterIndex];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   ClientCP := ConSettings^.ClientCodePage.CP;
   ClientStrings := nil;
   FBindAgain := True;
@@ -765,31 +831,12 @@ end;
 
 procedure TZMySQLPreparedStatement.SetDefaultValue(ParameterIndex: Integer;
   const Value: string);
+var P: PChar;
 begin
-  FHasDefaultValues := True;
-  if not FEmulatedParams and (Value <> '') and
-    StartsWith(Value, #39) and
-    EndsWith(Value, #39)
-  then inherited SetDefaultValue(ParameterIndex, Copy(Value, 2, Length(Value)-2))
-  else inherited SetDefaultValue(ParameterIndex, Value)
-end;
-
-procedure TZMySQLPreparedStatement.SetInParamCount(
-  NewParamCount: Integer);
-begin
-  if not Prepared then
-    Prepare;
-end;
-
-procedure TZMySQLPreparedStatement.SetNull(ParameterIndex: Integer;
-  SQLType: TZSQLType);
-begin
-  inherited SetNull(ParameterIndex, SQLType);
-  {$IFNDEF GENERIC_INDEX}
-  ParameterIndex := ParameterIndex - 1;
-  {$ENDIF}
-  if FEmulatedParams and FUseDefaults and (FDefaultValues[ParameterIndex] <> '') then
-    FParamValues[ParameterIndex] := FDefaultValues[ParameterIndex];
+  P := Pointer(Value);
+  if (P = nil) or FEmulatedParams or not ((P^ = #39) and ((P+Length(Value)-1)^ = #39))
+  then inherited SetDefaultValue(ParameterIndex, Value)
+  else inherited SetDefaultValue(ParameterIndex, Copy(Value, 2, Length(Value)-2));
 end;
 
 procedure TZMySQLPreparedStatement.SetNullArray(ParameterIndex: Integer;
@@ -873,26 +920,37 @@ begin
   Bind^.Iterations := ArrayCount;
 end;
 
-procedure TZMySQLPreparedStatement.BindBinary(ParameterIndex: Integer;
-  var SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
+procedure TZMySQLPreparedStatement.BindBinary(Index: Integer;
+  SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; IO: TZParamType);
 var
   Bind: PMYSQL_aligned_BIND;
 begin
-  {$R-}
-  Bind := @FMYSQL_aligned_BINDs[ParameterIndex];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  if (FInParamTypes[ParameterIndex] <> SQLType) or (Bind^.buffer_length_address^ < Cardinal(Len+1)*Byte(Ord(SQLType <> stBinaryStream))) then
-    InitBuffer(SQLType, Bind, Len);
-  if SQLType <> stBinaryStream then begin
-    if Len = 0
-    then PansiChar(Bind^.buffer)^ := #0
-    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, Pointer(Bind^.buffer)^, Len);
-    Bind^.Length[0] := Len;
+  if (SQLType = stGUID) and FGUIDAsString then
+    BindRawStr(Index, GUIDToRaw(Buf, Len, False), IO)
+  else if FEmulatedParams then begin
+    if FTokenMatchIndex <> -1
+    then inherited BindBinary(Index, SQLType, Buf, Len, IO)
+    else CheckParameterIndex(Index);
+    Connection.GetBinaryEscapeString(Buf, Len, FEmulatedValues[Index])
   end else begin
-    FChunkedData := True;
-    Bind^.Length[0] := 0;
+    CheckParameterIndex(Index);
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (BindList.SQLTypes[Index] <> SQLType) or (Bind^.buffer_length_address^ < Cardinal(Len+1)*Byte(Ord(SQLType <> stBinaryStream))) then
+      InitBuffer(SQLType, Bind, Len);
+    if SQLType <> stBinaryStream then begin
+      if Len = 0
+      then PansiChar(Bind^.buffer)^ := #0
+      else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, Pointer(Bind^.buffer)^, Len);
+      Bind^.Length[0] := Len;
+    end else begin
+      FChunkedData := True;
+      Bind^.Length[0] := 0;
+    end;
+    Bind^.is_null := 0;
+    BindList.SetNull(Index, SQLType, IO);
   end;
-  Bind^.is_null := 0;
 end;
 
 procedure TZMysqlPreparedStatement.BindInParameters;
@@ -904,7 +962,7 @@ var
   OffSet, PieceSize: LongWord;
   array_size: UInt;
 begin
-  if not FEmulatedParams and FBindAgain and (FInParamCount > 0) and (FMYSQL_STMT <> nil) then begin
+  if not FEmulatedParams and FBindAgain and (BindList.Count > 0) and (FMYSQL_STMT <> nil) then begin
     if (ArrayCount > 0) then begin
       //set array_size first: https://mariadb.com/kb/en/library/bulk-insert-column-wise-binding/
       array_size := ArrayCount;
@@ -923,11 +981,11 @@ begin
   { now finlize chunked data }
   if not FEmulatedParams and FChunkedData then
     // Send large data chunked
-    for I := 0 to InParamCount - 1 do begin
+    for I := 0 to BindList.Count - 1 do begin
       Bind := @FMYSQL_aligned_BINDs[I];
-      if (Bind^.is_null = 0) and (Bind^.buffer = nil) and (Assigned(FParamLobs[I])) then begin
-        P := FParamLobs[I].GetBuffer;
-        Len := FParamLobs[I].Length;
+      if (Bind^.is_null = 0) and (Bind^.buffer = nil) and (BindList[i].BindType = zbtLob) then begin
+        P := IZBlob(BindList[I].Value).GetBuffer;
+        Len := IZBlob(BindList[I].Value).Length;
         OffSet := 0;
         PieceSize := ChunkSize;
         while (OffSet < Len) or (Len = 0) do
@@ -947,9 +1005,24 @@ begin
     end;
 end;
 
+procedure TZMySQLPreparedStatement.BindLob(Index: Integer; SQLType: TZSQLType;
+  const Value: IZBlob; IO: TZParamType);
+begin
+  inherited BindLob(Index, SQLType, Value, IO); //refcounts
+  if (Value = nil) or (Value.IsEmpty) then
+    BindNull(Index, SQLType, IO)
+  else if FEmulatedParams then begin
+    if SQLType = stBinaryStream
+    then Connection.GetBinaryEscapeString(Value.GetBuffer, Value.Length, FEmulatedValues[Index])
+    else Connection.GetEscapeString(Value.GetBuffer, Value.Length, FEmulatedValues[Index])
+  end else
+    FChunkedData := True;
+end;
+
 procedure TZMySQLPreparedStatement.UnPrepareInParameters;
 begin
   InternalSetInParamCount(0);
+  inherited UnPrepareInParameters;
   FBindAgain := True;
   FChunkedData := False;
 end;
@@ -959,76 +1032,80 @@ begin
   Result := @FPreparablePrefixTokens;
 end;
 
-function TZMySQLPreparedStatement.GetBoundValueAsLogValue(
-  ParamIndex: Integer): RawByteString;
+function TZMySQLPreparedStatement.GetInParamLogValue(
+  Index: Integer): RawByteString;
 var
   Bind: PMYSQL_aligned_BIND;
   TmpDateTime, TmpDateTime2: TDateTime;
 begin
-  {$R-}
-  Bind := @FMYSQL_aligned_BINDs[ParamIndex];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  case Bind^.buffer_type_address^ of
-    FIELD_TYPE_TINY:
-      if Bind^.is_unsigned_address^ = 0
-      then Result := IntToRaw(PShortInt(Bind^.buffer_address^)^)
-      else Result := IntToRaw(PByte(Bind^.buffer_address^)^);
-    FIELD_TYPE_SHORT:
-      if Bind^.is_unsigned_address^ = 0
-      then Result := IntToRaw(PSmallInt(Bind^.buffer_address^)^)
-      else Result := IntToRaw(PWord(Bind^.buffer_address^)^);
-    FIELD_TYPE_LONG:
-      if Bind^.is_unsigned_address^ = 0
-      then Result := IntToRaw(PLongInt(Bind^.buffer_address^)^)
-      else Result := IntToRaw(PLongWord(Bind^.buffer_address^)^);
-    FIELD_TYPE_FLOAT:
-      Result := FloatToSQLRaw(PSingle(Bind^.buffer_address^)^);
-    FIELD_TYPE_DOUBLE:
-      Result := FloatToSQLRaw(PDouble(Bind^.buffer_address^)^);
-    FIELD_TYPE_NULL:
-      Result := 'null';
-    FIELD_TYPE_TIMESTAMP:
-      begin
-        if not sysUtils.TryEncodeDate(
-          PMYSQL_TIME(Bind^.buffer_address^)^.Year,
-          PMYSQL_TIME(Bind^.buffer_address^)^.Month,
-          PMYSQL_TIME(Bind^.buffer_address^)^.Day, TmpDateTime) then
-            TmpDateTime := encodeDate(1900, 1, 1);
-        if not sysUtils.TryEncodeTime(
-          PMYSQL_TIME(Bind^.buffer_address^)^.Hour,
-          PMYSQL_TIME(Bind^.buffer_address^)^.Minute,
-          PMYSQL_TIME(Bind^.buffer_address^)^.Second,
-          0{PMYSQL_TIME(Bind^.buffer_address^)^.second_part} , TmpDateTime2 ) then
-            TmpDateTime2 := 0;
-        Result := DateTimeToRawSQLTimeStamp(TmpDateTime+TmpDateTime2, ConSettings^.ReadFormatSettings, False);
-      end;
-    FIELD_TYPE_LONGLONG:
-      if Bind^.is_unsigned_address^ = 0
-      then Result := IntToRaw(PInt64(Bind^.buffer_address^)^)
-      else Result := IntToRaw(PUInt64(Bind^.buffer_address^)^);
-    FIELD_TYPE_DATE: begin
-        if not sysUtils.TryEncodeDate(
-          PMYSQL_TIME(Bind^.buffer_address^)^.Year,
-          PMYSQL_TIME(Bind^.buffer_address^)^.Month,
-          PMYSQL_TIME(Bind^.buffer_address^)^.Day, TmpDateTime) then
-            TmpDateTime := encodeDate(1900, 1, 1);
-        Result := DateTimeToRawSQLDate(TmpDateTime, ConSettings^.ReadFormatSettings, False);
-      end;
-    FIELD_TYPE_TIME: begin
-        if not sysUtils.TryEncodeTime(
-          PMYSQL_TIME(Bind^.buffer_address^)^.Hour,
-          PMYSQL_TIME(Bind^.buffer_address^)^.Minute,
-          PMYSQL_TIME(Bind^.buffer_address^)^.Second,
-          0{PMYSQL_TIME(Bind^.buffer_address^)^.second_part}, TmpDateTime) then
-            TmpDateTime := 0;
-        Result := DateTimeToRawSQLTime(TmpDateTime, ConSettings^.ReadFormatSettings, False);
-      end;
-    FIELD_TYPE_YEAR:
-      Result := IntToRaw(PWord(Bind^.buffer_address^)^);
-    FIELD_TYPE_STRING:
-        Result := SQLQuotedStr(PAnsiChar(Bind^.buffer), Bind^.length[0], #39);
-    FIELD_TYPE_TINY_BLOB,
-    FIELD_TYPE_BLOB: Result := '(Blob)'
+  if FEmulatedParams then
+    Result := FEmulatedValues[Index]
+  else begin
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    case Bind^.buffer_type_address^ of
+      FIELD_TYPE_TINY:
+        if Bind^.is_unsigned_address^ = 0
+        then Result := IntToRaw(PShortInt(Bind^.buffer_address^)^)
+        else Result := IntToRaw(PByte(Bind^.buffer_address^)^);
+      FIELD_TYPE_SHORT:
+        if Bind^.is_unsigned_address^ = 0
+        then Result := IntToRaw(PSmallInt(Bind^.buffer_address^)^)
+        else Result := IntToRaw(PWord(Bind^.buffer_address^)^);
+      FIELD_TYPE_LONG:
+        if Bind^.is_unsigned_address^ = 0
+        then Result := IntToRaw(PLongInt(Bind^.buffer_address^)^)
+        else Result := IntToRaw(PLongWord(Bind^.buffer_address^)^);
+      FIELD_TYPE_FLOAT:
+        Result := FloatToSQLRaw(PSingle(Bind^.buffer_address^)^);
+      FIELD_TYPE_DOUBLE:
+        Result := FloatToSQLRaw(PDouble(Bind^.buffer_address^)^);
+      FIELD_TYPE_NULL:
+        Result := 'null';
+      FIELD_TYPE_TIMESTAMP:
+        begin
+          if not sysUtils.TryEncodeDate(
+            PMYSQL_TIME(Bind^.buffer_address^)^.Year,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Month,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Day, TmpDateTime) then
+              TmpDateTime := encodeDate(1900, 1, 1);
+          if not sysUtils.TryEncodeTime(
+            PMYSQL_TIME(Bind^.buffer_address^)^.Hour,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Minute,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Second,
+            0{PMYSQL_TIME(Bind^.buffer_address^)^.second_part} , TmpDateTime2 ) then
+              TmpDateTime2 := 0;
+          Result := DateTimeToRawSQLTimeStamp(TmpDateTime+TmpDateTime2, ConSettings^.ReadFormatSettings, True);
+        end;
+      FIELD_TYPE_LONGLONG:
+        if Bind^.is_unsigned_address^ = 0
+        then Result := IntToRaw(PInt64(Bind^.buffer_address^)^)
+        else Result := IntToRaw(PUInt64(Bind^.buffer_address^)^);
+      FIELD_TYPE_DATE: begin
+          if not sysUtils.TryEncodeDate(
+            PMYSQL_TIME(Bind^.buffer_address^)^.Year,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Month,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Day, TmpDateTime) then
+              TmpDateTime := encodeDate(1900, 1, 1);
+          Result := DateTimeToRawSQLDate(TmpDateTime, ConSettings^.ReadFormatSettings, True);
+        end;
+      FIELD_TYPE_TIME: begin
+          if not sysUtils.TryEncodeTime(
+            PMYSQL_TIME(Bind^.buffer_address^)^.Hour,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Minute,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Second,
+            0{PMYSQL_TIME(Bind^.buffer_address^)^.second_part}, TmpDateTime) then
+              TmpDateTime := 0;
+          Result := DateTimeToRawSQLTime(TmpDateTime, ConSettings^.ReadFormatSettings, True);
+        end;
+      FIELD_TYPE_YEAR:
+        Result := IntToRaw(PWord(Bind^.buffer_address^)^);
+      FIELD_TYPE_STRING:
+          Result := SQLQuotedStr(PAnsiChar(Bind^.buffer), Bind^.length[0], #39);
+      FIELD_TYPE_TINY_BLOB,
+      FIELD_TYPE_BLOB: Result := '(Blob)'
+    end;
   end;
 end;
 
@@ -1150,7 +1227,12 @@ begin
       end;
     end
   else if (FMYSQL_STMT <> nil) and FStmtHandleIsExecuted then begin
-    while true do begin
+    Status := FPlainDriver.mysql_stmt_reset(FMYSQL_STMT);
+    if Status <> 0 then
+        checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
+          ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
+            ConSettings^.ClientCodePage^.CP), Self);
+    (*while true do begin
       Status := FPlainDriver.mysql_stmt_next_result(FMYSQL_STMT);
       if Status = -1 then
         Break
@@ -1173,7 +1255,7 @@ begin
     if FPlainDriver.mysql_stmt_reset(FMYSQL_STMT) <> 0 then
       checkMySQLError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
         ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-          ConSettings^.ClientCodePage^.CP), ConSettings);}
+          ConSettings^.ClientCodePage^.CP), ConSettings);*)
   end;
 end;
 
@@ -1245,9 +1327,10 @@ begin
   case SQLType of
     stBoolean:      begin
                       BuffSize := 1;
-                      if fMySQL_FieldType_Bit_1_IsBoolean
-                      then Bind^.buffer_type_address^ := FIELD_TYPE_TINY
-                      else Bind^.buffer_type_address^ := FIELD_TYPE_STRING;
+                      if fMySQL_FieldType_Bit_1_IsBoolean then begin
+                        Bind^.buffer_type_address^ := FIELD_TYPE_TINY;
+                        Bind^.is_unsigned_address^ := 1;
+                      end else Bind^.buffer_type_address^ := FIELD_TYPE_STRING;
                     end;
     stByte,
     stShort:        begin
@@ -1345,48 +1428,161 @@ begin
   end;
 end;
 
-procedure TZMySQLPreparedStatement.BindDateTime(ParameterIndex: Integer;
-  var SQLType: TZSQLType; const Value: TDateTime);
+procedure TZMySQLPreparedStatement.BindBoolean(Index: Integer; Value: Boolean;
+  IO: TZParamType);
+begin
+  if FMySQL_FieldType_Bit_1_IsBoolean
+  then BindSignedOrdinal(Index, stBoolean, Ord(Value), IO)
+  else BindRawStr(Index, EnumBool[Value], IO);
+end;
+
+procedure TZMySQLPreparedStatement.BindDateTime(Index: Integer;
+  SQLType: TZSQLType; const Value: TDateTime; IO: TZParamType);
 var
   Bind: PMYSQL_aligned_BIND;
   P: PMYSQL_TIME;
 begin
-  {$R-}
-  Bind := @FMYSQL_aligned_BINDs[ParameterIndex];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  if FInParamTypes[ParameterIndex] <> SQLType then
-    InitBuffer(SQLType, Bind);
-  P := Pointer(bind^.buffer);
-  P^.neg := Ord(Value < 0);
-  if P^.time_type = MYSQL_TIMESTAMP_DATE then
-    DecodeDate(Value, PWord(@P^.Year)^, PWord(@P^.Month)^, PWord(@P^.Day)^)
-  else begin
-    if P^.time_type = MYSQL_TIMESTAMP_TIME
-    then DecodeTime(Value, PWord(@P^.hour)^, PWord(@P^.minute)^, PWord(@P^.second)^, PWord(@P^.second_part)^)
-    else DecodeDateTime(Value, PWord(@P^.Year)^, PWord(@P^.Month)^, PWord(@P^.Day)^,
-      PWord(@P^.hour)^, PWord(@P^.minute)^, PWord(@P^.second)^, PWord(@P^.second_part)^);
-    P^.second_part := P^.second_part*1000;
+  if FEmulatedParams then begin
+    if FTokenMatchIndex <> -1 then
+      inherited BindDateTime(Index, SQLType, Value, IO);
+    case SQLType of
+      stDate: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.DateFormatLen
+              then FEmulatedValues[Index] := DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, True)
+              else DateTimeToRawSQLDate(Value, PAnsiChar(Pointer(FEmulatedValues[Index]))+1, ConSettings^.WriteFormatSettings, True);
+      stTime: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.TimeFormatLen
+              then FEmulatedValues[Index] := DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, True)
+              else DateTimeToRawSQLTime(Value, PAnsiChar(Pointer(FEmulatedValues[Index]))+1, ConSettings^.WriteFormatSettings, True);
+      stTimestamp: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.DateTimeFormatLen
+              then FEmulatedValues[Index] := DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, True)
+              else DateTimeToRawSQLTimeStamp(Value, PAnsiChar(Pointer(FEmulatedValues[Index]))+1, ConSettings^.WriteFormatSettings, True);
+    end;
+  end else begin
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if BindList.SQLTypes[Index] <> SQLType then
+      InitBuffer(SQLType, Bind);
+    P := Pointer(bind^.buffer);
+    P^.neg := Ord(Value < 0);
+    if P^.time_type = MYSQL_TIMESTAMP_DATE then
+      DecodeDate(Value, PWord(@P^.Year)^, PWord(@P^.Month)^, PWord(@P^.Day)^)
+    else begin
+      if P^.time_type = MYSQL_TIMESTAMP_TIME
+      then DecodeTime(Value, PWord(@P^.hour)^, PWord(@P^.minute)^, PWord(@P^.second)^, PWord(@P^.second_part)^)
+      else DecodeDateTime(Value, PWord(@P^.Year)^, PWord(@P^.Month)^, PWord(@P^.Day)^,
+        PWord(@P^.hour)^, PWord(@P^.minute)^, PWord(@P^.second)^, PWord(@P^.second_part)^);
+      P^.second_part := P^.second_part*1000;
+    end;
+    Bind^.is_null := 0;
+    BindList.SetNull(Index, SQLType, IO);
   end;
-  Bind^.is_null := 0;
 end;
 
-procedure TZMySQLPreparedStatement.BindDouble(ParameterIndex: Integer;
-  var SQLType: TZSQLType; const Value: Double);
+procedure TZMySQLPreparedStatement.BindDouble(Index: Integer;
+  SQLType: TZSQLType; const Value: Double; IO: TZParamType);
 var
   Bind: PMYSQL_aligned_BIND;
 begin
-  {$R-}
-  Bind := @FMYSQL_aligned_BINDs[ParameterIndex];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  if FInParamTypes[ParameterIndex] <> SQLType then
-    InitBuffer(SQLType, Bind);
-  PDouble(bind^.buffer)^ := Value;
-  Bind^.is_null := 0;
+  if FEmulatedParams then begin
+    if FTokenMatchIndex <> -1
+    then inherited BindDouble(Index, SQLType, Value, IO)
+    else CheckParameterIndex(Index);
+    FEmulatedValues[Index] := FloatToSQLRaw(Value);
+  end else begin
+    CheckParameterIndex(Index);
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if BindList.SQLTypes[Index] <> SQLType then
+      InitBuffer(SQLType, Bind);
+    PDouble(bind^.buffer)^ := Value;
+    Bind^.is_null := 0;
+    BindList.SetNull(Index, SQLType, IO);
+  end;
+end;
+
+procedure TZMySQLPreparedStatement.BindSignedOrdinal(Index: Integer;
+  SQLType: TZSQLType; const Value: Int64; IO: TZParamType);
+var
+  Bind: PMYSQL_aligned_BIND;
+begin
+  if FEmulatedParams then begin
+    if FTokenMatchIndex <> -1
+    then inherited BindSignedOrdinal(Index, SQLType, Value, IO)
+    else CheckParameterIndex(Index);
+    FEmulatedValues[Index] := IntToRaw(Value);
+  end else begin
+    CheckParameterIndex(Index);
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if BindList.SQLTypes[Index] <> SQLType then
+      InitBuffer(SQLType, Bind);
+    case Bind^.buffer_type_address^ of
+      FIELD_TYPE_TINY:      if Bind^.is_unsigned_address^ = 0
+                            then PShortInt(Bind^.buffer)^ := ShortInt(Value)
+                            else PByte(Bind^.buffer)^ := Byte(Value);
+      FIELD_TYPE_SHORT:     if Bind^.is_unsigned_address^ = 0
+                            then PSmallInt(Bind^.buffer)^ := SmallInt(Value)
+                            else PWord(Bind^.buffer)^ := Word(Value);
+      FIELD_TYPE_LONG:      if Bind^.is_unsigned_address^ = 0
+                            then PLongInt(Bind^.buffer)^ := LongInt(Value)
+                            else PLongWord(Bind^.buffer)^ := LongWord(Value);
+      FIELD_TYPE_LONGLONG:  if Bind^.is_unsigned_address^ = 0
+                            then PInt64(Bind^.buffer)^ := Value
+                            else PUInt64(Bind^.buffer)^ := Value;
+      FIELD_TYPE_STRING:  begin //can happen only if stBoolean and not MySQL_FieldType_Bit_1_IsBoolean
+                            Bind^.Length[0] := 1;
+                            PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
+                          end;
+    end;
+    Bind^.is_null := 0;
+    BindList.SetNull(Index, SQLType, IO);
+  end;
+end;
+
+procedure TZMySQLPreparedStatement.BindUnsignedOrdinal(Index: Integer;
+  SQLType: TZSQLType; const Value: UInt64; IO: TZParamType);
+var
+  Bind: PMYSQL_aligned_BIND;
+begin
+  if FEmulatedParams then begin
+    if FTokenMatchIndex <> -1
+    then inherited BindSignedOrdinal(Index, SQLType, Value, IO)
+    else CheckParameterIndex(Index);
+    FEmulatedValues[Index] := IntToRaw(Value);
+  end else begin
+    CheckParameterIndex(Index);
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if BindList.SQLTypes[Index] <> SQLType then
+      InitBuffer(SQLType, Bind);
+    case Bind^.buffer_type_address^ of
+      FIELD_TYPE_TINY:      if Bind^.is_unsigned_address^ = 0
+                            then PShortInt(Bind^.buffer)^ := ShortInt(Value)
+                            else PByte(Bind^.buffer)^ := Byte(Value);
+      FIELD_TYPE_SHORT:     if Bind^.is_unsigned_address^ = 0
+                            then PSmallInt(Bind^.buffer)^ := SmallInt(Value)
+                            else PWord(Bind^.buffer)^ := Word(Value);
+      FIELD_TYPE_LONG:      if Bind^.is_unsigned_address^ = 0
+                            then PLongInt(Bind^.buffer)^ := LongInt(Value)
+                            else PLongWord(Bind^.buffer)^ := LongWord(Value);
+      FIELD_TYPE_LONGLONG:  if Bind^.is_unsigned_address^ = 0
+                            then PInt64(Bind^.buffer)^ := Value
+                            else PUInt64(Bind^.buffer)^ := Value;
+      FIELD_TYPE_STRING:  begin //can happen only if stBoolean and not MySQL_FieldType_Bit_1_IsBoolean
+                            Bind^.Length[0] := 1;
+                            PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
+                          end;
+    end;
+    Bind^.is_null := 0;
+    BindList.SetNull(Index, SQLType, IO);
+  end;
 end;
 
 procedure TZMySQLPreparedStatement.InternalRealPrepare;
 var
-  DefaultValues: TRawByteStringDynArray;
   I: Integer;
   P: PansiChar;
 begin
@@ -1394,8 +1590,6 @@ begin
     FMYSQL_STMT := FPlainDriver.mysql_stmt_init(FPMYSQL^);
   FBindAgain := True;
   FStmtHandleIsExecuted := False;
-  if FHasDefaultValues then
-    DefaultValues := FDefaultValues; //copy by ref -> we'll need to dequote them
   if (FPlainDriver.mysql_stmt_prepare(FMYSQL_STMT, Pointer(ASQL), length(ASQL)) <> 0) then
     checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcPrepStmt,
       ConvertZMsgToRaw(SFailedtoPrepareStmt,
@@ -1416,86 +1610,51 @@ begin
     else FPlainDriver.mysql_stmt_attr_set(FMYSQL_STMT, STMT_ATTR_PREFETCH_ROWS, @FPrefetchRows);
   FEmulatedParams := False;
   if FHasDefaultValues then
-    for I := 0 to High(DefaultValues) do begin
-      P := Pointer(DefaultValues[i]);
-      if (P<>nil) and (P^ = #39) and ((P+Length(DefaultValues[i])-1)^=#39)
-      then FDefaultValues[i] := Copy(DefaultValues[i], 2, Length(DefaultValues[i])-2)
-      else FDefaultValues[i] := DefaultValues[i];
+    for I := 0 to High(FInParamDefaultValues) do begin
+      P := Pointer(FInParamDefaultValues[i]);
+      if (P<>nil) and (P^ = #39) and ((P+Length(FInParamDefaultValues[i])-1)^=#39)
+      then FInParamDefaultValues[i] := Copy(FInParamDefaultValues[i], 2, Length(FInParamDefaultValues[i])-2)
+      else FInParamDefaultValues[i] := FInParamDefaultValues[i];
     end;
+  SetLength(FEmulatedValues, 0);
+  if (BindList.Capacity > 0) and (FMYSQL_BINDs = nil) then
+    InternalSetInParamCount(BindList.Capacity);
 end;
 
 procedure TZMySQLPreparedStatement.InternalSetInParamCount(NewParamCount: Integer);
+var I: Integer;
+  V: TZVariant;
+  SQLType: TZSQLType;
 begin
   if not FEmulatedParams then
-    if (NewParamCount <> InParamCount) or ((NewParamCount > 0) and (FMYSQL_aligned_BINDs = nil)) then
+    if (FMYSQL_BINDs <> nil) and (NewParamCount <> BindList.Count) or ((NewParamCount > 0) and (FMYSQL_aligned_BINDs = nil)) then begin
       ReallocBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffset,
-        InParamCount*Ord(FMYSQL_aligned_BINDs<>nil), NewParamCount, 1);
-  inherited InternalSetInParamCount(NewParamCount);
-  if not FEmulatedParams and (NewParamCount > 0) then
-    FillChar(Pointer(FInParamTypes)^, SizeOf(TZSQLType)*NewParamCount, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+        BindList.Count*Ord(FMYSQL_aligned_BINDs<>nil), NewParamCount, 1);
+      //init buffers and move data to buffer
+      if NewParamCount > 0 then
+        for i := 0 to BindList.Count -1 do begin
+          if BindList.BindTypes[i] in [zbtNull, zbtLob, zbtArray] then begin
+            if BindList.BindTypes[i] = zbtLob then
+              FChunkedData := True;
+            continue;
+          end;
+          V := BindList.Variants[I];
+          SQLType := BindList.SQLTypes[I];
+          BindList.SetNull(I, stUnknown, BindList.ParamTypes[i]);
+          case V.VType of
+            vtBoolean:  BindBoolean(I, v.VBoolean, BindList.ParamTypes[i]);
+            vtBytes:    BindBinary(I, SQLType, Pointer(V.VBytes), Length(V.VBytes), BindList.ParamTypes[i]);
+            vtInteger:  BindSignedOrdinal(i, SQLType, V.VInteger, BindList.ParamTypes[i]);
+            vtUInteger: BindUnSignedOrdinal(i, SQLType, V.VUInteger, BindList.ParamTypes[i]);
+            vtFloat:    BindDouble(i, SQLType, V.VFloat, BindList.ParamTypes[i]);
+            vtDateTime: BindDatetime(i, SQLType, V.VDateTime, BindList.ParamTypes[i]);
+            vtRawByteString: BindRawStr(i, V.VRawByteString, BindList.ParamTypes[i]);
+            vtCharRec:  BindRawStr(i, V.VCharRec.P, V.VCharRec.Len, BindList.ParamTypes[i]);
+          end;
+        end;
+    end;
 end;
 
-procedure TZMySQLPreparedStatement.BindSignedOrdinal(ParameterIndex: Integer;
-  var SQLType: TZSQLType; const Value: Int64);
-var
-  Bind: PMYSQL_aligned_BIND;
-begin
-  {$R-}
-  Bind := @FMYSQL_aligned_BINDs[ParameterIndex];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  if FInParamTypes[ParameterIndex] <> SQLType then
-    InitBuffer(SQLType, Bind);
-  case Bind^.buffer_type_address^ of
-    FIELD_TYPE_TINY:      if Bind^.is_unsigned_address^ = 0
-                          then PShortInt(Bind^.buffer)^ := ShortInt(Value)
-                          else PByte(Bind^.buffer)^ := Byte(Value);
-    FIELD_TYPE_SHORT:     if Bind^.is_unsigned_address^ = 0
-                          then PSmallInt(Bind^.buffer)^ := SmallInt(Value)
-                          else PWord(Bind^.buffer)^ := Word(Value);
-    FIELD_TYPE_LONG:      if Bind^.is_unsigned_address^ = 0
-                          then PLongInt(Bind^.buffer)^ := LongInt(Value)
-                          else PLongWord(Bind^.buffer)^ := LongWord(Value);
-    FIELD_TYPE_LONGLONG:  if Bind^.is_unsigned_address^ = 0
-                          then PInt64(Bind^.buffer)^ := Value
-                          else PUInt64(Bind^.buffer)^ := Value;
-    FIELD_TYPE_STRING:  begin //can happen only if stBoolean and not MySQL_FieldType_Bit_1_IsBoolean
-                          Bind^.Length[0] := 1;
-                          PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
-                        end;
-  end;
-  Bind^.is_null := 0;
-end;
-
-procedure TZMySQLPreparedStatement.BindUnsignedOrdinal(ParameterIndex: Integer;
-  var SQLType: TZSQLType; const Value: UInt64);
-var
-  Bind: PMYSQL_aligned_BIND;
-begin
-  {$R-}
-  Bind := @FMYSQL_aligned_BINDs[ParameterIndex];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  if FInParamTypes[ParameterIndex] <> SQLType then
-    InitBuffer(SQLType, Bind);
-  case Bind^.buffer_type_address^ of
-    FIELD_TYPE_TINY:      if Bind^.is_unsigned_address^ = 0
-                          then PShortInt(Bind^.buffer)^ := ShortInt(Value)
-                          else PByte(Bind^.buffer)^ := Byte(Value);
-    FIELD_TYPE_SHORT:     if Bind^.is_unsigned_address^ = 0
-                          then PSmallInt(Bind^.buffer)^ := SmallInt(Value)
-                          else PWord(Bind^.buffer)^ := Word(Value);
-    FIELD_TYPE_LONG:      if Bind^.is_unsigned_address^ = 0
-                          then PLongInt(Bind^.buffer)^ := LongInt(Value)
-                          else PLongWord(Bind^.buffer)^ := LongWord(Value);
-    FIELD_TYPE_LONGLONG:  if Bind^.is_unsigned_address^ = 0
-                          then PInt64(Bind^.buffer)^ := Value
-                          else PUInt64(Bind^.buffer)^ := Value;
-    FIELD_TYPE_STRING:  begin //can happen only if stBoolean and not MySQL_FieldType_Bit_1_IsBoolean
-                          Bind^.Length[0] := 1;
-                          PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
-                        end;
-  end;
-  Bind^.is_null := 0;
-end;
 
 { TZMySQLCallableStatement }
 
@@ -2038,6 +2197,7 @@ constructor TZMySQLStatement.Create(const Connection: IZMySQLConnection;
 begin
   inherited Create(Connection, '', Info);
   FEmulatedParams := True;
+  FMinExecCount2Prepare := -1;
   FInitial_emulate_prepare := True;
 end;
 

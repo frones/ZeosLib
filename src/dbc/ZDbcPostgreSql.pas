@@ -695,18 +695,7 @@ function TZPostgreSQLConnection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
     Open;
-  {$IFDEF ZEOS_TEST_ONLY}
-  Case GetTestMode of
-    0:
-  {$ENDIF}
-      if GetServerMajorVersion >= 8 then
-        Result := TZPostgreSQLCAPIPreparedStatement.Create(Self, '', Info)
-      else
-        Result := TZPostgreSQLClassicPreparedStatement.Create(Self, '', Info);
-  {$IFDEF ZEOS_TEST_ONLY}
-    1: Result := TZPostgreSQLClassicPreparedStatement.Create(Self, '', Info);
-  end;
-  {$ENDIF}
+  Result := TZPostgreSQLStatement.Create(Self, Info);
 end;
 
 {**
@@ -742,20 +731,10 @@ function TZPostgreSQLConnection.CreatePreparedStatement(
 begin
   if IsClosed then
      Open;
-
-  {$IFDEF ZEOS_TEST_ONLY}
-  Case GetTestMode of
-    0:
-  {$ENDIF}
-      if GetServerMajorVersion >= 8 then
-        //Result := TZPostgteSQLAsyncCAPIPreparedStatement.Create(Self, SQL, Info)
-        Result := TZPostgreSQLCAPIPreparedStatement.Create(Self, SQL, Info)
-      else
-        Result := TZPostgreSQLClassicPreparedStatement.Create(Self, SQL, Info);
-  {$IFDEF ZEOS_TEST_ONLY}
-    1: Result := TZPostgreSQLClassicPreparedStatement.Create(Self, SQL, Info);
-  end;
-  {$ENDIF}
+  if GetServerMajorVersion >= 3 then
+  Result := TZPostgreSQLPreparedStatementV3.Create(Self, SQL, Info)
+  else
+    Result := TZPostgreSQLPreparedStatementV3.Create(Self, SQL, Info)
 end;
 
 

@@ -1029,7 +1029,7 @@ begin
   end;
   if (bind^.Length[0] = 0) or (Iters = 0)
   then Bind^.Buffer := nil
-  else GetMem(Bind^.Buffer, (((bind^.Length[0]+Byte(Ord(bind^.buffer_type_address^ = FIELD_TYPE_STRING))) shr 3)+1) shl 3); //8Byte aligned
+  else GetMem(Bind^.Buffer, ((((bind^.Length^[0]+Byte(Ord(bind^.buffer_type_address^ = FIELD_TYPE_STRING))) shr 3)+1) shl 3) ); //8Byte aligned
   Bind^.buffer_address^ := Bind^.buffer;
   Bind^.buffer_length_address^ := bind^.Length[0];
 end;
