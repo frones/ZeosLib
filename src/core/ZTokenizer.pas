@@ -56,6 +56,10 @@ interface
 {$I ZCore.inc}
 {$Z-}
 
+{$IFOPT R+}
+  {$DEFINE RangeCheckEnabled}
+{$ENDIF}
+
 uses
    Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
    ZClasses, ZCompatibility;
@@ -517,10 +521,6 @@ implementation
 
 uses
   ZFastCode, Math, ZSysUtils, ZMessages;
-
-{$IFOPT R+}
-  {$DEFINE RangeCheckEnabled}
-{$ENDIF}
 
 function TokenAsString(const Value: TZToken): String;
 begin
@@ -1645,7 +1645,9 @@ begin
   if NewCapacity <> FCapacity then begin
     ReallocMem(FTokens, NewCapacity * SizeOf(TZToken));
     if NewCapacity > FCapacity then
+  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
       FillChar(FTokens^[FCount], (NewCapacity - FCapacity) * SizeOf(TZToken), #0);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     FCapacity := NewCapacity;
   end;
 end;

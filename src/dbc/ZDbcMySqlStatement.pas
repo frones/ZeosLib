@@ -65,7 +65,7 @@ type
   TOpenCursorCallback = procedure of Object;
   THandleStatus = (hsUnknown, hsAllocated, hsExecutedPrepared, hsExecutedOnce, hsReset);
   {** Implements Prepared MySQL Statement. }
-  TZMySQLPreparedStatement = class(TZRawParamDetectPreparedStatement)
+  TZAbstractMySQLPreparedStatement = class(TZRawParamDetectPreparedStatement)
   private
     FPMYSQL: PPMYSQL; //the connection handle
     FMySQLConnection: IZMySQLConnection;
@@ -138,7 +138,9 @@ type
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); override;
   end;
 
-  TZMySQLStatement = class(TZMySQLPreparedStatement)
+  TZMySQLPreparedStatement = class(TZAbstractMySQLPreparedStatement, IZPreparedStatement);
+
+  TZMySQLStatement = class(TZAbstractMySQLPreparedStatement, IZStatement)
   public
     constructor Create(const Connection: IZMySQLConnection; Info: TStrings);
   end;
@@ -211,9 +213,9 @@ var
 const EnumQuotedBool: array[Boolean] of AnsiString = (#39'N'#39, #39'Y'#39);
 const EnumBool: array[Boolean] of AnsiString = ('N','Y');
 
-{ TZMySQLPreparedStatement }
+{ TZAbstractMySQLPreparedStatement }
 
-procedure TZMySQLPreparedStatement.BindNull(Index: Integer;
+procedure TZAbstractMySQLPreparedStatement.BindNull(Index: Integer;
   SQLType: TZSQLType; IO: TZParamType);
 var
   Bind: PMYSQL_aligned_BIND;
@@ -239,7 +241,7 @@ begin
   end;
 end;
 
-procedure TZMySQLPreparedStatement.BindRawStr(Index: Integer;
+procedure TZAbstractMySQLPreparedStatement.BindRawStr(Index: Integer;
   const Value: RawByteString; IO: TZParamType);
 var
   Bind: PMYSQL_aligned_BIND;
@@ -265,7 +267,7 @@ begin
   end;
 end;
 
-procedure TZMySQLPreparedStatement.BindRawStr(Index: Integer;
+procedure TZAbstractMySQLPreparedStatement.BindRawStr(Index: Integer;
   Buf: PAnsiChar; Len: LengthInt; IO: TZParamType);
 var
   Bind: PMYSQL_aligned_BIND;
@@ -289,7 +291,7 @@ begin
   end;
 end;
 
-procedure TZMySQLPreparedStatement.CheckParameterIndex(Value: Integer);
+procedure TZAbstractMySQLPreparedStatement.CheckParameterIndex(Value: Integer);
 begin
   //if not Prepared then
     //Prepare;
@@ -299,7 +301,7 @@ begin
     else inherited CheckParameterIndex(Value);
 end;
 
-function TZMySQLPreparedStatement.CheckPrepareSwitchMode: Boolean;
+function TZAbstractMySQLPreparedStatement.CheckPrepareSwitchMode: Boolean;
 begin
   Result := ((not FInitial_emulate_prepare) or (ArrayCount > 0 )) and (FMYSQL_STMT = nil) and (TokenMatchIndex <> -1) and
      ((ArrayCount > 0 ) or (ExecutionCount = MinExecCount2Prepare));
@@ -310,7 +312,7 @@ begin
   end;
 end;
 
-procedure TZMySQLPreparedStatement.ClearParameters;
+procedure TZAbstractMySQLPreparedStatement.ClearParameters;
 var
   array_size: UInt;
   I: Integer;
@@ -327,7 +329,7 @@ begin
   inherited ClearParameters;
 end;
 
-function TZMySQLPreparedStatement.ComposeRawSQLQuery: RawByteString;
+function TZAbstractMySQLPreparedStatement.ComposeRawSQLQuery: RawByteString;
 var
   I: Integer;
   ParamIndex: Integer;
@@ -350,7 +352,7 @@ end;
   @param SQL a command to execute.
   @param Info a statement parameters.
 }
-constructor TZMySQLPreparedStatement.Create(
+constructor TZAbstractMySQLPreparedStatement.Create(
   const Connection: IZMySQLConnection;
   const SQL: string; Info: TStrings);
 begin
@@ -381,7 +383,7 @@ begin
   FGUIDAsString := True;
 end;
 
-procedure TZMySQLPreparedStatement.Prepare;
+procedure TZAbstractMySQLPreparedStatement.Prepare;
 begin
   FlushPendingResults;
   if not Prepared then
@@ -390,7 +392,7 @@ begin
     InternalRealPrepare;
 end;
 
-procedure TZMySQLPreparedStatement.Unprepare;
+procedure TZAbstractMySQLPreparedStatement.Unprepare;
 begin
   inherited Unprepare;
   FlushPendingResults;
@@ -422,7 +424,7 @@ end;
    <code>false</code> if it is an update count or there are no more results
  @see #execute
 }
-function TZMySQLPreparedStatement.GetMoreResults: Boolean;
+function TZAbstractMySQLPreparedStatement.GetMoreResults: Boolean;
 var status: Integer;
 begin
   Result := False;
@@ -464,7 +466,7 @@ end;
   Creates a result set based on the current settings.
   @return a created result set object.
 }
-function TZMySQLPreparedStatement.CreateResultSet(const SQL: string): IZResultSet;
+function TZAbstractMySQLPreparedStatement.CreateResultSet(const SQL: string): IZResultSet;
 var
   CachedResolver: TZMySQLCachedResolver;
   NativeResultSet: TZAbstractResultSet;
@@ -508,14 +510,14 @@ begin
   end;
 end;
 
-procedure TZMysqlPreparedStatement.PrepareInParameters;
+procedure TZAbstractMySQLPreparedStatement.PrepareInParameters;
 begin
   if not FEmulatedParams and (FMYSQL_STMT<> nil)
   then SetParamCount(FPlainDriver.mysql_stmt_param_count(FMYSQL_STMT))
   else InternalSetInParamCount(BindList.Capacity);
 end;
 
-procedure TZMySQLPreparedStatement.ReleaseImmediat(
+procedure TZAbstractMySQLPreparedStatement.ReleaseImmediat(
   const Sender: IImmediatelyReleasable);
 begin
   FPMYSQL^ := nil;
@@ -525,7 +527,7 @@ begin
   inherited ReleaseImmediat(Sender);
 end;
 
-procedure TZMySQLPreparedStatement.SetBindCapacity(Capacity: Integer);
+procedure TZAbstractMySQLPreparedStatement.SetBindCapacity(Capacity: Integer);
 var OldCapacity: Integer;
 begin
   OldCapacity := Bindlist.Capacity;
@@ -537,7 +539,7 @@ begin
         OldCapacity, BindList.Capacity, 1);
 end;
 
-procedure TZMySQLPreparedStatement.SetDataArray(ParameterIndex: Integer;
+procedure TZAbstractMySQLPreparedStatement.SetDataArray(ParameterIndex: Integer;
   const Value; const SQLType: TZSQLType; const VariantType: TZVariantType);
 var BufferSize: ULong;
   ClientStrings: TRawByteStringDynArray;
@@ -829,7 +831,7 @@ move_from_temp:
   Bind^.Iterations := ArrayCount;
 end;
 
-procedure TZMySQLPreparedStatement.SetDefaultValue(ParameterIndex: Integer;
+procedure TZAbstractMySQLPreparedStatement.SetDefaultValue(ParameterIndex: Integer;
   const Value: string);
 var P: PChar;
 begin
@@ -839,7 +841,7 @@ begin
   else inherited SetDefaultValue(ParameterIndex, Copy(Value, 2, Length(Value)-2));
 end;
 
-procedure TZMySQLPreparedStatement.SetNullArray(ParameterIndex: Integer;
+procedure TZAbstractMySQLPreparedStatement.SetNullArray(ParameterIndex: Integer;
   const SQLType: TZSQLType; const Value; const VariantType: TZVariantType);
 var
   Bind: PMYSQL_aligned_BIND;
@@ -920,7 +922,7 @@ begin
   Bind^.Iterations := ArrayCount;
 end;
 
-procedure TZMySQLPreparedStatement.BindBinary(Index: Integer;
+procedure TZAbstractMySQLPreparedStatement.BindBinary(Index: Integer;
   SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; IO: TZParamType);
 var
   Bind: PMYSQL_aligned_BIND;
@@ -953,7 +955,7 @@ begin
   end;
 end;
 
-procedure TZMysqlPreparedStatement.BindInParameters;
+procedure TZAbstractMySQLPreparedStatement.BindInParameters;
 var
   P: PAnsiChar;
   Len: NativeUInt;
@@ -1005,7 +1007,7 @@ begin
     end;
 end;
 
-procedure TZMySQLPreparedStatement.BindLob(Index: Integer; SQLType: TZSQLType;
+procedure TZAbstractMySQLPreparedStatement.BindLob(Index: Integer; SQLType: TZSQLType;
   const Value: IZBlob; IO: TZParamType);
 begin
   inherited BindLob(Index, SQLType, Value, IO); //refcounts
@@ -1019,7 +1021,7 @@ begin
     FChunkedData := True;
 end;
 
-procedure TZMySQLPreparedStatement.UnPrepareInParameters;
+procedure TZAbstractMySQLPreparedStatement.UnPrepareInParameters;
 begin
   InternalSetInParamCount(0);
   inherited UnPrepareInParameters;
@@ -1027,12 +1029,12 @@ begin
   FChunkedData := False;
 end;
 
-function TZMysqlPreparedStatement.GetCompareFirstKeywordStrings: PPreparablePrefixTokens;
+function TZAbstractMySQLPreparedStatement.GetCompareFirstKeywordStrings: PPreparablePrefixTokens;
 begin
   Result := @FPreparablePrefixTokens;
 end;
 
-function TZMySQLPreparedStatement.GetInParamLogValue(
+function TZAbstractMySQLPreparedStatement.GetInParamLogValue(
   Index: Integer): RawByteString;
 var
   Bind: PMYSQL_aligned_BIND;
@@ -1116,7 +1118,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     query; never <code>null</code>
 }
-function TZMySQLPreparedStatement.ExecuteQueryPrepared: IZResultSet;
+function TZAbstractMySQLPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 var
   RSQL: RawByteString;
 begin
@@ -1164,7 +1166,7 @@ end;
   @return either the row count for INSERT, UPDATE or DELETE statements;
   or 0 for SQL statements that return nothing
 }
-function TZMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
+function TZAbstractMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
 var
   QueryHandle: PZMySQLResult;
   RSQL: RawByteString;
@@ -1205,7 +1207,7 @@ begin
   CheckPrepareSwitchMode;
 end;
 
-procedure TZMySQLPreparedStatement.FlushPendingResults;
+procedure TZAbstractMySQLPreparedStatement.FlushPendingResults;
 var
   FQueryHandle: PZMySQLResult;
   Status: Integer;
@@ -1267,7 +1269,7 @@ end;
   and <code>executeUpdate</code>.
   @see Statement#execute
 }
-function TZMySQLPreparedStatement.ExecutePrepared: Boolean;
+function TZAbstractMySQLPreparedStatement.ExecutePrepared: Boolean;
 var RSQL: RawByteString;
 begin
   PrepareLastResultSetForReUse;
@@ -1304,7 +1306,7 @@ end;
     <code>ResultSet</code> object or there are no more results
   @see #execute
 }
-function TZMySQLPreparedStatement.GetUpdateCount: Integer;
+function TZAbstractMySQLPreparedStatement.GetUpdateCount: Integer;
 begin
   Result := inherited GetUpdateCount;
   if FEmulatedParams or not FStmtHandleIsExecuted then begin
@@ -1320,7 +1322,7 @@ begin
   end;
 end;
 
-procedure TZMySQLPreparedStatement.InitBuffer(SQLType: TZSQLType;
+procedure TZAbstractMySQLPreparedStatement.InitBuffer(SQLType: TZSQLType;
   Bind: PMYSQL_aligned_BIND; ActualLength: LengthInt = 0);
 var BuffSize: Integer;
 begin
@@ -1428,7 +1430,7 @@ begin
   end;
 end;
 
-procedure TZMySQLPreparedStatement.BindBoolean(Index: Integer; Value: Boolean;
+procedure TZAbstractMySQLPreparedStatement.BindBoolean(Index: Integer; Value: Boolean;
   IO: TZParamType);
 begin
   if FMySQL_FieldType_Bit_1_IsBoolean
@@ -1436,7 +1438,7 @@ begin
   else BindRawStr(Index, EnumBool[Value], IO);
 end;
 
-procedure TZMySQLPreparedStatement.BindDateTime(Index: Integer;
+procedure TZAbstractMySQLPreparedStatement.BindDateTime(Index: Integer;
   SQLType: TZSQLType; const Value: TDateTime; IO: TZParamType);
 var
   Bind: PMYSQL_aligned_BIND;
@@ -1478,7 +1480,7 @@ begin
   end;
 end;
 
-procedure TZMySQLPreparedStatement.BindDouble(Index: Integer;
+procedure TZAbstractMySQLPreparedStatement.BindDouble(Index: Integer;
   SQLType: TZSQLType; const Value: Double; IO: TZParamType);
 var
   Bind: PMYSQL_aligned_BIND;
@@ -1501,7 +1503,7 @@ begin
   end;
 end;
 
-procedure TZMySQLPreparedStatement.BindSignedOrdinal(Index: Integer;
+procedure TZAbstractMySQLPreparedStatement.BindSignedOrdinal(Index: Integer;
   SQLType: TZSQLType; const Value: Int64; IO: TZParamType);
 var
   Bind: PMYSQL_aligned_BIND;
@@ -1541,7 +1543,7 @@ begin
   end;
 end;
 
-procedure TZMySQLPreparedStatement.BindUnsignedOrdinal(Index: Integer;
+procedure TZAbstractMySQLPreparedStatement.BindUnsignedOrdinal(Index: Integer;
   SQLType: TZSQLType; const Value: UInt64; IO: TZParamType);
 var
   Bind: PMYSQL_aligned_BIND;
@@ -1581,7 +1583,7 @@ begin
   end;
 end;
 
-procedure TZMySQLPreparedStatement.InternalRealPrepare;
+procedure TZAbstractMySQLPreparedStatement.InternalRealPrepare;
 var
   I: Integer;
   P: PansiChar;
@@ -1621,7 +1623,7 @@ begin
     InternalSetInParamCount(BindList.Capacity);
 end;
 
-procedure TZMySQLPreparedStatement.InternalSetInParamCount(NewParamCount: Integer);
+procedure TZAbstractMySQLPreparedStatement.InternalSetInParamCount(NewParamCount: Integer);
 var I: Integer;
   V: TZVariant;
   SQLType: TZSQLType;

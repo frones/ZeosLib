@@ -124,7 +124,7 @@ function PGEscapeString(SrcBuffer: PAnsiChar; SrcLength: Integer;
 procedure HandlePostgreSQLError(const Sender: IImmediatelyReleasable;
   const PlainDriver: TZPostgreSQLPlainDriver; conn: TPGconn;
   LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  ResultHandle: PPGresult);
+  ResultHandle: TPGresult);
 
 function PGSucceeded(ErrorMessage: PAnsiChar): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
@@ -680,7 +680,7 @@ end;
 procedure HandlePostgreSQLError(const Sender: IImmediatelyReleasable;
   const PlainDriver: TZPostgreSQLPlainDriver; conn: TPGconn;
   LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  ResultHandle: PPGresult);
+  ResultHandle: TPGresult);
 var
    resultErrorFields: array[TZPostgreSQLFieldCode] of PAnsiChar;
    I: TZPostgreSQLFieldCode;
@@ -829,7 +829,7 @@ begin
                 try
                   WriteTempBlob := TZPostgreSQLOidBlob.Create(
                     TZPostgreSQLPlainDriver(Connection.GetIZPlainDriver.GetInstance),
-                    nil, 0, Connection.GetConnectionHandle, 0, ChunkSize);
+                    nil, 0, Connection.GetPGconnAddress^, 0, ChunkSize);
                   WriteTempBlob.WriteBuffer(TempBlob.GetBuffer, TempBlob.Length);
                   Result := IntToRaw(WriteTempBlob.GetBlobOid);
                 finally

@@ -63,7 +63,7 @@ uses
 
 type
   {** Implements CAPI Prepared SQL Statement. }
-  TZSQLiteCAPIPreparedStatement = class(TZRawPreparedStatement)
+  TZAbstractSQLiteCAPIPreparedStatement = class(TZRawPreparedStatement)
   private
     FErrorCode: Integer;
     FHandle: Psqlite;
@@ -96,9 +96,7 @@ type
     procedure BindRawStr(Index: Integer; const Value: RawByteString; IO: TZParamType);override;
   public
     constructor Create(const Connection: IZConnection;
-      const SQL: string; const Info: TStrings; const Handle: Psqlite); overload;
-    constructor Create(const Connection: IZConnection; const Info: TStrings;
-      const Handle: Psqlite); overload;
+      const SQL: string; const Info: TStrings; const Handle: Psqlite);
 
     procedure Prepare; override;
     procedure Unprepare; override;
@@ -110,7 +108,13 @@ type
     function ExecutePrepared: Boolean; override;
   end;
 
-  TZSQLiteStatement = class(TZSQLiteCAPIPreparedStatement);
+  TZSQLiteCAPIPreparedStatement = class(TZAbstractSQLiteCAPIPreparedStatement, IZPreparedStatement);
+
+  TZSQLiteStatement = class(TZAbstractSQLiteCAPIPreparedStatement, IZStatement)
+  public
+    constructor Create(const Connection: IZConnection; const Info: TStrings;
+      const Handle: Psqlite); overload;
+  end;
 
 
 implementation
@@ -129,16 +133,16 @@ begin
   {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(Value);
 end;*)
 
-{ TZSQLiteCAPIPreparedStatement }
+{ TZAbstractSQLiteCAPIPreparedStatement }
 
-function TZSQLiteCAPIPreparedStatement.GetLastErrorCodeAndHandle(
+function TZAbstractSQLiteCAPIPreparedStatement.GetLastErrorCodeAndHandle(
   var StmtHandle: Psqlite3_stmt): Integer;
 begin
   Result := FErrorCode;
   StmtHandle := FStmtHandle;
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.CheckParameterIndex(Index: Integer);
+procedure TZAbstractSQLiteCAPIPreparedStatement.CheckParameterIndex(Index: Integer);
 begin
   if not Prepared then begin
     Prepare;
@@ -148,7 +152,7 @@ begin
     raise EZSQLException.Create(SInvalidInputParameterCount);
 end;
 
-function TZSQLiteCAPIPreparedStatement.CreateResultSet: IZResultSet;
+function TZAbstractSQLiteCAPIPreparedStatement.CreateResultSet: IZResultSet;
 var
   CachedResolver: TZSQLiteCachedResolver;
   NativeResultSet: TZSQLiteResultSet;
@@ -178,12 +182,12 @@ begin
     //we need this reference to close the SQLite resultset and reset the stmt handle.
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.PrepareInParameters;
+procedure TZAbstractSQLiteCAPIPreparedStatement.PrepareInParameters;
 begin
   SetParamCount(FPlainDriver.sqlite3_bind_parameter_count(FStmtHandle));
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.ResetCallBack;
+procedure TZAbstractSQLiteCAPIPreparedStatement.ResetCallBack;
 var ErrorCode: Integer;
 begin
   if Assigned(FStmtHandle) then begin
@@ -195,7 +199,7 @@ begin
     FBindLater := False;
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.BindBinary(Index: Integer;
+procedure TZAbstractSQLiteCAPIPreparedStatement.BindBinary(Index: Integer;
   SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; IO: TZParamType);
 var ErrorCode: Integer;
 begin
@@ -208,7 +212,7 @@ begin
     FLateBound := True;
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.BindBoolean(Index: Integer;
+procedure TZAbstractSQLiteCAPIPreparedStatement.BindBoolean(Index: Integer;
   Value: Boolean; IO: TZParamType);
 begin
   if fBindOrdinalBoolValues
@@ -216,7 +220,7 @@ begin
   else BindRawStr(Index, DeprecatedBoolRaw[Value], zptInput);
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.BindDateTime(Index: Integer;
+procedure TZAbstractSQLiteCAPIPreparedStatement.BindDateTime(Index: Integer;
   SQLType: TZSQLType; const Value: TDateTime; IO: TZParamType);
 var
   BindVal: PZBindValue;
@@ -248,7 +252,7 @@ begin
   end;
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.BindDouble(Index: Integer;
+procedure TZAbstractSQLiteCAPIPreparedStatement.BindDouble(Index: Integer;
   SQLType: TZSQLType; const Value: Double; IO: TZParamType);
 var ErrorCode: Integer;
 begin
@@ -263,7 +267,7 @@ begin
     FLateBound := True;
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.BindInParameters;
+procedure TZAbstractSQLiteCAPIPreparedStatement.BindInParameters;
 var
   I, Errorcode: Integer;
   BindVal: PZBindValue;
@@ -299,7 +303,7 @@ begin
     inherited BindInParameters;
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.BindLob(Index: Integer;
+procedure TZAbstractSQLiteCAPIPreparedStatement.BindLob(Index: Integer;
   SQLType: TZSQLType; const Value: IZBlob; IO: TZParamType);
 var ErrorCode: Integer;
 begin
@@ -315,7 +319,14 @@ begin
   end;
 end;
 
-constructor TZSQLiteCAPIPreparedStatement.Create(
+{**
+  Constructs this object and assigns main properties.
+  @param Connection a database connection object.
+  @param Sql a prepared Sql statement.
+  @param Info a statement parameters.
+  @param Handle the sqlite connection handle
+}
+constructor TZAbstractSQLiteCAPIPreparedStatement.Create(
   const Connection: IZConnection;
   const SQL: string; const Info: TStrings; const Handle: Psqlite);
 begin
@@ -330,13 +341,11 @@ begin
   FHasLoggingListener := DriverManager.HasLoggingListener;
 end;
 
-constructor TZSQLiteCAPIPreparedStatement.Create(
-  const Connection: IZConnection; const Info: TStrings; const Handle: Psqlite);
-begin
-  Create(Connection, '', Info, Handle);
-end;
-
-procedure TZSQLiteCAPIPreparedStatement.Prepare;
+{**
+  prepares the statement on the server if minimum execution
+  count have been reached
+}
+procedure TZAbstractSQLiteCAPIPreparedStatement.Prepare;
 var pzTail: PAnsiChar;
 begin
   if not Prepared then begin
@@ -347,7 +356,10 @@ begin
   end;
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.Unprepare;
+{**
+  unprepares the statement, deallocates all bindings and handles
+}
+procedure TZAbstractSQLiteCAPIPreparedStatement.Unprepare;
 var ErrorCode: Integer;
 begin
   { EH: do not change this sequence!: first close possbile opened resultset}
@@ -361,7 +373,7 @@ begin
   end;
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.BindNull(Index: Integer;
+procedure TZAbstractSQLiteCAPIPreparedStatement.BindNull(Index: Integer;
   SQLType: TZSQLType; IO: TZParamType);
 var ErrorCode: Integer;
 begin
@@ -374,7 +386,7 @@ begin
     FLateBound := True;
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.BindRawStr(Index: Integer;
+procedure TZAbstractSQLiteCAPIPreparedStatement.BindRawStr(Index: Integer;
   Buf: PAnsiChar; Len: LengthInt; IO: TZParamType);
 var ErrorCode: Integer;
 begin
@@ -391,7 +403,7 @@ begin
     FLateBound := True;
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.BindRawStr(Index: Integer;
+procedure TZAbstractSQLiteCAPIPreparedStatement.BindRawStr(Index: Integer;
   const Value: RawByteString; IO: TZParamType);
 var ErrorCode: Integer;
 begin
@@ -406,7 +418,7 @@ begin
     FLateBound := True;
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.BindSignedOrdinal(Index: Integer;
+procedure TZAbstractSQLiteCAPIPreparedStatement.BindSignedOrdinal(Index: Integer;
   SQLType: TZSQLType; const Value: Int64; IO: TZParamType);
 var ErrorCode: Integer;
 begin
@@ -421,7 +433,7 @@ begin
     FLateBound := True;
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.BindUnsignedOrdinal(Index: Integer;
+procedure TZAbstractSQLiteCAPIPreparedStatement.BindUnsignedOrdinal(Index: Integer;
   SQLType: TZSQLType; const Value: UInt64; IO: TZParamType);
 begin
   BindSignedOrdinal(Index, stLong, Int64(Value), IO);
@@ -433,7 +445,7 @@ end;
   This method can be used by one thread to cancel a statement that
   is being executed by another thread.
 }
-procedure TZSQLiteCAPIPreparedStatement.Cancel;
+procedure TZAbstractSQLiteCAPIPreparedStatement.Cancel;
 begin
   FPlainDriver.sqlite3_interrupt(FHandle);
 end;
@@ -445,7 +457,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     query; never <code>null</code>
 }
-function TZSQLiteCAPIPreparedStatement.ExecuteQueryPrepared: IZResultSet;
+function TZAbstractSQLiteCAPIPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   PrepareOpenResultSetForReUse;
   Prepare;
@@ -478,7 +490,7 @@ end;
   @return either the row count for INSERT, UPDATE or DELETE statements;
   or 0 for SQL statements that return nothing
 }
-function TZSQLiteCAPIPreparedStatement.ExecuteUpdatePrepared: Integer;
+function TZAbstractSQLiteCAPIPreparedStatement.ExecuteUpdatePrepared: Integer;
 var ErrorCode: Integer;
 begin
   Prepare;
@@ -514,7 +526,7 @@ end;
   and <code>executeUpdate</code>.
   @see Statement#execute
 }
-function TZSQLiteCAPIPreparedStatement.ExecutePrepared: Boolean;
+function TZAbstractSQLiteCAPIPreparedStatement.ExecutePrepared: Boolean;
 begin
   PrepareLastResultSetForReUse;
   Prepare;
@@ -539,6 +551,20 @@ begin
   if FHasLoggingListener then
     inherited ExecutePrepared;
   FHasLoggingListener := DriverManager.HasLoggingListener;
+end;
+
+{ TZSQLiteStatement }
+
+{**
+  Constructs this object and assigns main properties.
+  @param Connection a database connection object.
+  @param Info a statement parameters.
+  @param Handle the sqlite connection handle
+}
+constructor TZSQLiteStatement.Create(const Connection: IZConnection;
+  const Info: TStrings; const Handle: Psqlite);
+begin
+  inherited Create(Connection, '', Info, Handle);
 end;
 
 end.

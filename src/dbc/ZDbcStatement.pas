@@ -289,8 +289,7 @@ type
 
   { TZAbstractPreparedStatement }
 
-  TZAbstractPreparedStatement2 = class(TZAbstractStatement, IZPreparedStatement,
-    IImmediatelyReleasable)
+  TZAbstractPreparedStatement2 = class(TZAbstractStatement, IImmediatelyReleasable)
   private
     FInitialArrayCount: ArrayLenInt;
     FPrepared : Boolean;
@@ -584,7 +583,6 @@ type
 
     procedure ClearParameters; virtual;
 
-    function GetMetaData: IZResultSetMetaData; virtual;
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
     function CreateLogEvent(const Category: TZLoggingCategory): TZLoggingEvent; override;
@@ -2664,17 +2662,6 @@ end;
 function TZAbstractPreparedStatement.IsPrepared: Boolean;
 begin
   Result := FPrepared;
-end;
-
-{**
-  Gets the number, types and properties of a <code>ResultSet</code>
-  object's columns.
-  @return the description of a <code>ResultSet</code> object's columns
-}
-function TZAbstractPreparedStatement.GetMetaData: IZResultSetMetaData;
-begin
-  Result := nil;
-  RaiseUnsupportedException;
 end;
 
 function TZAbstractPreparedStatement.GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
