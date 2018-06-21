@@ -303,7 +303,7 @@ begin
     IBConnection := Metadata.GetConnection as IZInterbase6Connection;
     PlainDriver := TZInterbasePlainDriver(IBConnection.GetIZPlainDriver.GetInstance);
     FServerVersion := GetISC_StringInfo(PlainDriver,
-      IBConnection.GetDBHandle, isc_info_version, IBConnection.GetConSettings);
+      IBConnection.GetDBHandle, isc_info_version, IBConnection as IImmediatelyReleasable);
     FIsFireBird := ZFastCode.Pos('Firebird', FServerVersion) > 0;
     FProductVersion := Copy(FServerVersion, ZFastCode.Pos(DBProvider[FIsFireBird],
       FServerVersion)+8+Ord(not FIsFireBird)+1, Length(FServerVersion));

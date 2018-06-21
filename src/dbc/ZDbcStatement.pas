@@ -5006,16 +5006,15 @@ procedure TZRawPreparedStatement.BindLob(Index: Integer; SQLType: TZSQLType;
   const Value: IZBlob; IO: TZParamType);
 var RawTemp: RawByteString;
 begin
+  inherited BindLob(Index, SQLType, Value, IO);
   if (Value <> nil) and (SQLType in [stAsciiStream, stUnicodeStream]) then
-    if Value.IsClob then begin
-      Value.GetPAnsiChar(ConSettings^.ClientCodePage.CP);
-      inherited BindLob(Index, SQLType, Value, IO);
-    end else begin
+    if Value.IsClob then
+      Value.GetPAnsiChar(ConSettings^.ClientCodePage.CP)
+    else begin
       RawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
       inherited BindLob(Index, stAsciiStream, TZAbstractCLob.CreateWithData(Pointer(RawTemp),
         Length(RawTemp), ConSettings^.ClientCodePage.CP, ConSettings), IO);
-    end
-  else inherited BindLob(Index, SQLType, Value, IO)
+    end;
 end;
 
 procedure TZRawPreparedStatement.BindRawStr(Index: Integer;
