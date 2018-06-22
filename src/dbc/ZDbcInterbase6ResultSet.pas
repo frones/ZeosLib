@@ -387,7 +387,7 @@ begin
                                 if SqlSubType = isc_blob_text then begin
                                   JSONWriter.Add('"');
                                   ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FPISC_TR_HANDLE,
-                                      PISC_QUAD(sqldata)^, L, P, False, ConSettings);
+                                      PISC_QUAD(sqldata)^, L, P, False, Self);
                                   if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
                                     JSONWriter.AddJSONEscape(P, L)
                                   else begin
@@ -397,7 +397,7 @@ begin
                                   JSONWriter.Add('"');
                                 end else begin
                                   ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FPISC_TR_HANDLE,
-                                    PISC_QUAD(sqldata)^, L, P, true, ConSettings);
+                                    PISC_QUAD(sqldata)^, L, P, true, Self);
                                   JSONWriter.WrBase64(P, L, True);
                                 end;
                               finally

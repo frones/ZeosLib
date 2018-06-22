@@ -311,7 +311,7 @@ begin
                           else
                             JSONWriter.WrBase64(P, FPlainDriver.PQgetlength(Fres, RNo, C), True);
                         end else begin
-                          Blob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, Fconn, RawToIntDef(P, 0), FChunk_Size);
+                          Blob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^, RawToIntDef(P, 0), FChunk_Size);
                           JSONWriter.WrBase64(Blob.GetBuffer, Blob.Length, True);
                         end;
         stGUID        : begin
