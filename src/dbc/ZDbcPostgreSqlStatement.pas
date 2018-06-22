@@ -83,7 +83,7 @@ type
     Fres: TPGresult; //Current query handle we'd obtained
     FRawPlanName: RawByteString; //a name we use to prepare (oddly PG still has no handle instead)
     FOidAsBlob: Boolean; //are blob's threaded as oid-lobs?
-    Findeterminate_datatype, //did PG Fail to determine the datatypes? (mostly just because of bd queries)
+    Findeterminate_datatype, //did PG Fail to determine the datatypes? (mostly just because of bad queries)
     fAsyncQueries, //get the GetMoreResults logic with multiple results or SingleRowMode running
     fServerCursor, //PQsingleRowMode? is implizit the Async api
     FUseEmulatedStmtsOnly: Boolean; //no Prepareds?
@@ -1601,7 +1601,8 @@ begin
   fPrepareCnt := 0;
   SetParamCount(0);
   for ArrayDMLType := low(TArrayDMLType) to high(ArrayDMLType) do
-    (FPGArrayDMLStmts[ArrayDMLType].Intf as IImmediatelyReleasable).ReleaseImmediat(Sender);
+    if Assigned(FPGArrayDMLStmts[ArrayDMLType].Intf) then
+      (FPGArrayDMLStmts[ArrayDMLType].Intf as IImmediatelyReleasable).ReleaseImmediat(Sender);
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.Unprepare;
