@@ -609,7 +609,7 @@ begin
   begin
     {$IFDEF UNICODE}
     FASQL := Value;
-    FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP); //required for the resultsets
+    FWSQL := ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP); //required for the resultsets
     {$ELSE !UNICODE}
     FASQL := GetRawEncodedSQL(Value);
     if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then
@@ -2035,7 +2035,6 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-
 procedure TZAbstractPreparedStatement.SetUnicodeString(ParameterIndex: Integer;
   const Value: ZWideString);
 begin

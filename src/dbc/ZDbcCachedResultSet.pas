@@ -766,6 +766,8 @@ procedure TZAbstractCachedResultSet.Close;
 var
   I: Integer;
 begin
+  if Closed then
+     Exit;
   inherited Close;
 
   if Assigned(FRowAccessor) then
@@ -2430,10 +2432,12 @@ end;
 procedure TZCachedResultSet.Close;
 begin
   inherited Close;
-  ColumnsInfo.Clear;
-  If Assigned(FResultset) then
+  if Assigned(ColumnsInfo) then //close may release the object -> a destroy will be called -> the list does'nt exist anymore
+    ColumnsInfo.Clear;
+  If Assigned(FResultset) then begin
     FResultset.Close;
-  FResultSet := nil;
+    FResultSet := nil;
+  end;
 end;
 
 constructor TZCachedResultSet.CreateWithColumns(const ColumnsInfo: TObjectList;

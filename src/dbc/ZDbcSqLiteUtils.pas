@@ -80,7 +80,8 @@ function ConvertSQLiteTypeToSQLType(var TypeName: RawByteString;
 }
 procedure CheckSQLiteError(const PlainDriver: IZSQLitePlainDriver;
   Handle: PSqlite; ErrorCode: Integer; LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; ConSettings: PZConSettings);
+  const LogMessage: RawByteString; ConSettings: PZConSettings;
+  ExtendedErrorMessage: Boolean);
 
 {**
   Decodes a SQLite Version Value and Encodes it to a Zeos SQL Version format:
@@ -219,18 +220,22 @@ end;
 }
 procedure CheckSQLiteError(const PlainDriver: IZSQLitePlainDriver;
   Handle: PSqlite; ErrorCode: Integer; LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; ConSettings: PZConSettings);
+  const LogMessage: RawByteString; ConSettings: PZConSettings;
+  ExtendedErrorMessage: Boolean);
 var
-  Error: RawByteString;
+  ErrorStr, ErrorMsg: RawByteString;
 begin
-  if not (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
-  begin
-    if Error = '' then
-      Error := PlainDriver.ErrorString(Handle, ErrorCode);
+  if not (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then begin
+    ErrorMsg := '';
+    ErrorStr := PLainDriver.ErrorString(Handle, ErrorCode);
+    if ExtendedErrorMessage then
+      ErrorMsg := PLainDriver.ErrorMessage(Handle);
+    if ErrorMsg <> '' then
+      ErrorStr := 'Error: '+ErrorStr+LineEnding+'Message: '+ErrorMsg;
     DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
-      ErrorCode, Error);
+      ErrorCode, ErrorStr);
     raise EZSQLException.CreateWithCode(ErrorCode, Format(SSQLError1,
-      [ConSettings.ConvFuncs.ZRawToString(Error, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
+      [ConSettings.ConvFuncs.ZRawToString(ErrorStr, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
   end;
 end;
 

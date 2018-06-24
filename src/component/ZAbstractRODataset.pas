@@ -3194,6 +3194,7 @@ procedure TZAbstractRODataset.FreeRecordBuffer(var Buffer: PChar);
 {$ENDIF}
 begin
   RowAccessor.DisposeBuffer(PZRowBuffer(Buffer));
+  Buffer := nil;
 end;
 
 {**

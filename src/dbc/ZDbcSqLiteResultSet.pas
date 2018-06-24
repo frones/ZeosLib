@@ -86,13 +86,14 @@ type
     FPlainDriver: IZSQLitePlainDriver;
     FFirstRow: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
+    FExtendedErrorMessage: Boolean;
   protected
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(const PlainDriver: IZSQLitePlainDriver; const Statement: IZStatement;
       const SQL: string; const Handle: Psqlite; const StmtHandle: Psqlite_vm;
-      const UndefinedVarcharAsStringLength: Integer);
+      const UndefinedVarcharAsStringLength: Integer; ExtendedErrorMessage: Boolean);
 
     procedure ResetCursor; override;
 
@@ -255,7 +256,8 @@ end;
 }
 constructor TZSQLiteResultSet.Create(const PlainDriver: IZSQLitePlainDriver;
   const Statement: IZStatement; const SQL: string; const Handle: Psqlite;
-  const StmtHandle: Psqlite_vm; const UndefinedVarcharAsStringLength: Integer);
+  const StmtHandle: Psqlite_vm; const UndefinedVarcharAsStringLength: Integer;
+  ExtendedErrorMessage: Boolean);
 begin
   inherited Create(Statement, SQL, TZSQLiteResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self),
@@ -267,6 +269,7 @@ begin
   ResultSetConcurrency := rcReadOnly;
   FUndefinedVarcharAsStringLength := UndefinedVarcharAsStringLength;
   FFirstRow := True;
+  FExtendedErrorMessage := ExtendedErrorMessage;
 
   Open;
 end;
@@ -367,7 +370,7 @@ begin
   if Assigned(FStmtHandle) then
   begin
     CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.reset(FStmtHandle),
-      lcOther, 'Reset Prepared Stmt', ConSettings);
+      lcOther, 'Reset Prepared Stmt', ConSettings, FExtendedErrorMessage);
     FStmtHandle := nil;
   end;
   inherited ResetCursor;
@@ -936,7 +939,7 @@ begin
     { Free handle when EOF. }
 ResetHndl:
     CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.reset(FStmtHandle),
-      lcOther, 'sqlite3_reset', ConSettings);
+      lcOther, 'sqlite3_reset', ConSettings, FExtendedErrorMessage);
     FErrorCode := SQLITE_DONE;
     Exit;
   end;
@@ -944,7 +947,7 @@ ResetHndl:
   if (FStmtHandle <> nil ) and not FFirstRow then
   begin
     FErrorCode := FPlainDriver.Step(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcOther, 'FETCH', ConSettings);
+    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcOther, 'FETCH', ConSettings, FExtendedErrorMessage);
   end;
 
   if FFirstRow then //avoid incrementing issue on fetching since the first row is allready fetched by stmt

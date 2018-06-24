@@ -82,6 +82,7 @@ type
     function GetPlainDriver: IZSQLitePlainDriver;
     function GetConnectionHandle: Psqlite;
     function GetUndefinedVarcharAsStringLength: Integer;
+    function ExtendedErrorMessage: Boolean;
   end;
 
   {** Implements SQLite Database Connection. }
@@ -99,11 +100,13 @@ type
     FHandle: Psqlite;
     FPlainDriver: IZSQLitePlainDriver;
     FTransactionStmts: array[TSQLite3TransactionAction] of TSQLite3TransactionStmt;
+    FExtendedErrorMessage: Boolean;
     procedure ExecTransactionStmt(Action: TSQLite3TransactionAction);
   protected
     procedure InternalCreate; override;
     procedure StartTransactionSupport;
     function GetUndefinedVarcharAsStringLength: Integer;
+    function ExtendedErrorMessage: Boolean;
   public
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
@@ -239,6 +242,7 @@ begin
   FTransactionStmts[traCommit].nBytes := Length(FTransactionStmts[traCommit].SQL);
   FTransactionStmts[traRollBack].SQL := 'ROLLBACK TRANSACTION';
   FTransactionStmts[traRollBack].nBytes := Length(FTransactionStmts[traRollBack].SQL);
+  FExtendedErrorMessage := StrToBoolDef(Info.Values['ExtendedErrorMessage'], False);
 end;
 
 {**
@@ -295,7 +299,7 @@ begin
   FHandle := GetPlainDriver.Open(Pointer(SQL));
   if FHandle = nil then
     CheckSQLiteError(GetPlainDriver, FHandle, SQLITE_ERROR,
-      lcConnect, LogMessage, ConSettings);
+      lcConnect, LogMessage, ConSettings, FExtendedErrorMessage);
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
   { Turn on encryption if requested }
@@ -304,7 +308,7 @@ begin
     SQL := {$IFDEF UNICODE}UTF8String{$ENDIF}(Password);
     CheckSQLiteError(GetPlainDriver, FHandle,
       GetPlainDriver.Key(FHandle, Pointer(SQL), Length(SQL)),
-      lcConnect, 'SQLite.Key', ConSettings);
+      lcConnect, 'SQLite.Key', ConSettings, FExtendedErrorMessage);
   end;
 
   { Set busy timeout if requested }
@@ -377,16 +381,21 @@ begin
     if Stmt = nil then
       CheckSQLiteError(GetPlainDriver, FHandle,
         GetPlainDriver.Prepare(FHandle, Pointer(SQL), nBytes, Stmt, pzTail),
-          lcExecute, SQL, ConSettings);
+          lcExecute, SQL, ConSettings, FExtendedErrorMessage);
     try
       CheckSQLiteError(GetPlainDriver, FHandle, GetPlainDriver.Step(Stmt),
-        lcExecute, SQL, ConSettings);
+        lcExecute, SQL, ConSettings, FExtendedErrorMessage);
     finally
       if Assigned(DriverManager) and DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
       FPlainDriver.reset(Stmt);
     end;
   end;
+end;
+
+function TZSQLiteConnection.ExtendedErrorMessage: Boolean;
+begin
+  Result := FExtendedErrorMessage;
 end;
 
 {**
@@ -499,7 +508,7 @@ begin
   ErrorCode := GetPlainDriver.Close(FHandle);
   FHandle := nil;
   CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode,
-    lcOther, LogMessage, ConSettings);
+    lcOther, LogMessage, ConSettings, FExtendedErrorMessage);
   if Assigned(DriverManager) and DriverManager.HasLoggingListener then //thread save
     DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
 end;

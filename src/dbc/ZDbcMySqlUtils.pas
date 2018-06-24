@@ -771,9 +771,8 @@ procedure ReverseBytes(const Src, Dest: Pointer; Len: Byte);
 var b: Byte;
   P: PAnsiChar;
 begin
-  Len := Len -1;
-  P := PAnsiChar(Src)+Len;
-  for b := Len downto 0 do
+  P := PAnsiChar(Src)+Len-1;
+  for b := Len-1 downto 0 do
     (PAnsiChar(Dest)+B)^ := (P-B)^;
 end;
 

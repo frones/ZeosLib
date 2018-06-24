@@ -127,6 +127,7 @@ const
   {$ENDIF}
   ArrayLenOffSet              = SizeOf(ArrayLenInt);
 type
+  PZCharRec = ^TZCharRec;
   TZCharRec = Record
     Len: Cardinal; //Length of String
     P: Pointer;    //Allocated Mem of String including #0 terminator
@@ -206,6 +207,9 @@ type
 
   {$IF not declared(TBooleanDynArray)}
   TBooleanDynArray        = array of Boolean;
+  {$IFEND}
+  {$IF not declared(PBooleanDynArray)}
+  PBooleanDynArray        = ^TBooleanDynArray;
   {$IFEND}
   {$IF not declared(TByteDynArray)}
   TByteDynArray           = array of Byte;
