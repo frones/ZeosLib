@@ -862,7 +862,7 @@ begin
   FClosed := True;
   ResetCursor;
   FColumnsInfo.Clear;
-  if (FStatement <> nil) then FStatement.FreeOpenResultSetReference;
+  if (FStatement <> nil) then FStatement.FreeOpenResultSetReference(Self);
   FStatement := nil;
 end;
 

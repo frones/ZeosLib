@@ -579,7 +579,7 @@ type
 
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
-    procedure FreeOpenResultSetReference;
+    procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
   end;
 
   {** Prepared SQL statement interface. }

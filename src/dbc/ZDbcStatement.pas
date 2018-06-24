@@ -103,7 +103,7 @@ type
     procedure FlushBuff(var Result: RawByteString); overload;
     procedure PrepareOpenResultSetForReUse; virtual;
     procedure PrepareLastResultSetForReUse; virtual;
-    procedure FreeOpenResultSetReference;
+    procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
     procedure SetASQL(const Value: RawByteString); virtual;
     procedure SetWSQL(const Value: ZWideString); virtual;
     class function GetNextStatementId : integer;
@@ -694,9 +694,12 @@ begin
   end;
 end;
 
-procedure TZAbstractStatement.FreeOpenResultSetReference;
+procedure TZAbstractStatement.FreeOpenResultSetReference(const ResultSet: IZResultSet);
 begin
-  FOpenResultSet := nil;
+  if FOpenResultSet = Pointer(ResultSet) then
+    FOpenResultSet := nil;
+  if FLastResultSet = ResultSet then
+    FLastResultSet := nil;
 end;
 
 class function TZAbstractStatement.GetNextStatementId: integer;
