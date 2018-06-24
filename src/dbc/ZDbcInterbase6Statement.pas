@@ -84,7 +84,7 @@ type
     FTypeTokens: TRawByteStringDynArray;
     FBatchStmts: array[Boolean, stInsert..stDelete] of TZIBStmt;
     FMaxRowsPerBatch, FMemPerRow: Integer;
-    function ExecuteInternal: Integer;
+    function ExecuteInternal: ISC_STATUS;
     function ExceuteBatch: Integer;
   protected
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; IO: TZParamType); override;
@@ -263,7 +263,7 @@ procedure TZAbstractInterbase6PreparedStatement.BindBinary(Index: Integer;
   SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; IO: TZParamType);
 var RawTemp: RawByteString;
 begin
-  CheckParameterIndex(Index);
+  inherited BindNull(Index, SQLType, IO); //check index, mark io and type
   if (SQLType = stGUID) and (FParamSQLData.GetFieldSqlType(Index) in [stString, stUnicodeString]) then begin
     RawTemp := GUIDToRaw(PGUID(Buf)^, False); //see https://firebirdsql.org/refdocs/langrefupd25-intfunc-uuid_to_char.html
     FParamSQLData.UpdatePAnsiChar(Index, Pointer(RawTemp), 36);
@@ -274,14 +274,14 @@ end;
 procedure TZAbstractInterbase6PreparedStatement.BindBoolean(Index: Integer;
   Value: Boolean; IO: TZParamType);
 begin
-  CheckParameterIndex(Index);
+  inherited BindNull(Index, stBoolean, IO); //check index, mark io and type
   FParamSQLData.UpdateBoolean(Index, Value);
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.BindDateTime(Index: Integer;
   SQLType: TZSQLType; const Value: TDateTime; IO: TZParamType);
 begin
-  CheckParameterIndex(Index);
+  inherited BindNull(Index, SQLType, IO); //check index, mark io and type
   case SQLType of
     stDate: FParamSQLData.UpdateDate(Index, Value);
     stTime: FParamSQLData.UpdateTime(Index, Value);
@@ -292,7 +292,7 @@ end;
 procedure TZAbstractInterbase6PreparedStatement.BindDouble(Index: Integer;
   SQLType: TZSQLType; const Value: Double; IO: TZParamType);
 begin
-  CheckParameterIndex(Index);
+  inherited BindNull(Index, SQLType, IO); //check index, mark io and type
   FParamSQLData.UpdateDouble(Index, Value);
 end;
 
@@ -336,7 +336,7 @@ end;
 procedure TZAbstractInterbase6PreparedStatement.BindLob(Index: Integer;
   SQLType: TZSQLType; const Value: IZBlob; IO: TZParamType);
 begin
-  CheckParameterIndex(Index);
+  CheckParameterIndex(Index); //guarantie FParamSQLData is assigned
   inherited BindLob(Index, FParamSQLData.GetFieldSqlType(Index), Value, IO);
   if (BindList[index].Value = nil)
   then FParamSQLData.UpdateNull(Index, True)
@@ -346,14 +346,14 @@ end;
 procedure TZAbstractInterbase6PreparedStatement.BindNull(Index: Integer;
   SQLType: TZSQLType; IO: TZParamType);
 begin
-  CheckParameterIndex(Index);
+  inherited BindNull(Index, SQLType, IO); //check index, mark io and type
   FParamSQLData.UpdateNull(Index, True);
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.BindRawStr(Index: Integer;
   const Value: RawByteString; IO: TZParamType);
 begin
-  CheckParameterIndex(Index);
+  inherited BindNull(Index, stString, IO); //check index, mark io and type
   if Value = ''
   then FParamSQLData.UpdatePAnsiChar(Index, PEmptyAnsiString, 0)
   else FParamSQLData.UpdatePAnsiChar(Index, Pointer(Value), Length(Value));
@@ -362,7 +362,7 @@ end;
 procedure TZAbstractInterbase6PreparedStatement.BindRawStr(Index: Integer;
   Buf: PAnsiChar; Len: LengthInt; IO: TZParamType);
 begin
-  CheckParameterIndex(Index);
+  inherited BindNull(Index, stString, IO); //check index, mark io and type
   if Buf = nil
   then FParamSQLData.UpdatePAnsiChar(Index, PEmptyAnsiString, 0)
   else FParamSQLData.UpdatePAnsiChar(Index, Buf, Len);
@@ -371,14 +371,14 @@ end;
 procedure TZAbstractInterbase6PreparedStatement.BindSignedOrdinal(
   Index: Integer; SQLType: TZSQLType; const Value: Int64; IO: TZParamType);
 begin
-  CheckParameterIndex(Index);
+  inherited BindNull(Index, SQLType, IO); //check index, mark io and type
   FParamSQLData.UpdateLong(Index, Value);
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.BindUnsignedOrdinal(
   Index: Integer; SQLType: TZSQLType; const Value: UInt64; IO: TZParamType);
 begin
-  CheckParameterIndex(Index);
+  inherited BindNull(Index, SQLType, IO); //check index, mark io and type
   FParamSQLData.UpdateLong(Index, Int64(Value));
 end;
 
@@ -387,7 +387,7 @@ procedure TZAbstractInterbase6PreparedStatement.CheckParameterIndex(
 begin
   if not Prepared then
     Prepare;
-  if Value +1 > BindList.Count then
+  if (Value<0) or (Value+1 > BindList.Count) then
     raise EZSQLException.Create(SInvalidInputParameterCount)
 end;
 
