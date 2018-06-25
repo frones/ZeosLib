@@ -1359,7 +1359,7 @@ begin
 end;
 
 function TZAbstractPostgreSQLPreparedStatementV3.GetRawEncodedSQL(
-  const SQL: String): RawByteString;
+  const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
 var
   I, C, N, FirstComposePos, ParamsCnt: Integer;
   Tokens: TZTokenList;
