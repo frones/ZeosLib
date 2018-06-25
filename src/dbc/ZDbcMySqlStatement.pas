@@ -1412,7 +1412,7 @@ begin
     else raise EZSQLException.Create(sUnsupportedOperation);
   end;
   if BuffSize > 0 then
-    ReAllocMem(Bind.buffer, BuffSize+Ord(Bind^.buffer_type_address^ in [FIELD_TYPE_STRING, FIELD_TYPE_BLOB,FIELD_TYPE_BLOB] ))
+    ReAllocMem(Bind.buffer, BuffSize+Ord(Bind^.buffer_type_address^ in [FIELD_TYPE_STRING, FIELD_TYPE_BLOB,FIELD_TYPE_TINY_BLOB] ))
   else if Bind.buffer <> nil then begin
     FreeMem(Bind.buffer);
     Bind.buffer := nil;
