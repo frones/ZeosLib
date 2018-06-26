@@ -155,14 +155,14 @@ function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False):
 function WideStringStream(const AString: WideString): TStream;
 
 function TokenizeSQLQueryRaw(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
-  const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
-  ComparePrefixTokens: PPreparablePrefixTokens; var TokenMatchIndex: Integer;
-  const NeedNCharDetection: Boolean = False): TRawByteStringDynArray;
+  const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
+  IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
+  var TokenMatchIndex: Integer): TRawByteStringDynArray;
 
 function TokenizeSQLQueryUni(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
-  const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
-  ComparePrefixTokens: PPreparablePrefixTokens; var TokenMatchIndex: Integer;
-  const NeedNCharDetection: Boolean = False): TUnicodeStringDynArray;
+  const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
+  IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
+  var TokenMatchIndex: Integer): TUnicodeStringDynArray;
 
 function ExtractFields(const FieldNames: string; SepChars: TSysCharSet): TStrings;
 
@@ -545,9 +545,9 @@ end;
   @returns a list of splitted sections.
 }
 function TokenizeSQLQueryRaw(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
-  const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
-  ComparePrefixTokens: PPreparablePrefixTokens; var TokenMatchIndex: Integer;
-  const NeedNCharDetection: Boolean = False): TRawByteStringDynArray;
+  const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
+  IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
+  var TokenMatchIndex: Integer): TRawByteStringDynArray;
 var
   I, C, N, FirstComposePos: Integer;
   NextIsNChar, ParamFound: Boolean;
@@ -563,13 +563,15 @@ var
     Result[High(Result)] := Value;
     SetLength(IsParamIndex, Length(Result));
     IsParamIndex[High(IsParamIndex)] := Param;
-    SetLength(IsNCharIndex, Length(Result));
-    if Param and NextIsNChar then
-    begin
-      IsNCharIndex[High(IsNCharIndex)] := True;
-      NextIsNChar := False;
-    end else
-      IsNCharIndex[High(IsNCharIndex)] := False;
+    if IsNCharIndex <> nil then begin
+      SetLength(IsNCharIndex^, Length(Result));
+      if Param and NextIsNChar then
+      begin
+        IsNCharIndex^[High(IsNCharIndex^)] := True;
+        NextIsNChar := False;
+      end else
+        IsNCharIndex^[High(IsNCharIndex^)] := False;
+    end;
   end;
 begin
   ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('?', SQL) > 0);
@@ -615,7 +617,7 @@ begin
           {$ENDIF}
           Add('?', True);
           FirstComposePos := i +1;
-        end else if ParamFound and NeedNCharDetection and Tokens.IsEqual(I, Char('N')) and
+        end else if ParamFound and (IsNCharIndex<> nil) and Tokens.IsEqual(I, Char('N')) and
             (Tokens.Count > i) and Tokens.IsEqual(i+1, Char('?')) then
           NextIsNChar := True
         {$IFNDEF UNICODE}
@@ -650,9 +652,9 @@ end;
   @returns a list of splitted sections.
 }
 function TokenizeSQLQueryUni(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
-  const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
-  ComparePrefixTokens: PPreparablePrefixTokens; var TokenMatchIndex: Integer;
-  const NeedNCharDetection: Boolean = False): TUnicodeStringDynArray;
+  const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
+  IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
+  var TokenMatchIndex: Integer): TUnicodeStringDynArray;
 var
   I, C, N: Integer;
   Tokens: TZTokenList;
@@ -664,14 +666,16 @@ var
     Result[High(Result)] := Value;
     SetLength(IsParamIndex, Length(Result));
     IsParamIndex[High(IsParamIndex)] := Param;
-    SetLength(IsNCharIndex, Length(Result));
-    if Param and NextIsNChar then
-    begin
-      IsNCharIndex[High(IsNCharIndex)] := True;
-      NextIsNChar := False;
-    end
-    else
-      IsNCharIndex[High(IsNCharIndex)] := False;
+    if IsNCharIndex <> nil then begin
+      SetLength(IsNCharIndex^, Length(Result));
+      if Param and NextIsNChar then
+      begin
+        IsNCharIndex^[High(IsNCharIndex^)] := True;
+        NextIsNChar := False;
+      end
+      else
+        IsNCharIndex^[High(IsNCharIndex^)] := False;
+    end;
   end;
 begin
   ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0);
@@ -714,7 +718,7 @@ begin
           Temp := '';
         end
         else
-          if ParamFound and NeedNCharDetection and Tokens.IsEqual(I, Char('N')) and
+          if ParamFound and (IsNCharIndex <> nil) and Tokens.IsEqual(I, Char('N')) and
             (Tokens.Count > i) and Tokens.IsEqual(I+1, Char('?')) then
           begin
             Add(Temp);

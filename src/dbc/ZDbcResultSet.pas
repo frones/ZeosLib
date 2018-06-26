@@ -714,11 +714,11 @@ destructor TZAbstractResultSet.Destroy;
 begin
   if not FClosed then
       Close;
-
-  FreeAndNil(FMetadata);
+  if Assigned(FMetadata) then
+    FreeAndNil(FMetadata);
   FStatement := nil;
-
-  FreeAndNil(FColumnsInfo);
+  if Assigned(FColumnsInfo) then
+    FreeAndNil(FColumnsInfo);
   inherited Destroy;
 end;
 
@@ -880,7 +880,8 @@ begin
   if not Closed then begin
     FClosed := True;
     ResetCursor;
-    FColumnsInfo.Clear;
+    if FColumnsInfo <> nil then
+      FColumnsInfo.Clear;
     if (FStatement <> nil) then begin
       FStatement.FreeOpenResultSetReference(Self);
       FStatement := nil;

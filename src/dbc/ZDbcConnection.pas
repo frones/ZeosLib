@@ -258,11 +258,7 @@ type
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
     function GetServerProvider: TZServerProvider; virtual;
-    {$IFDEF ZEOS_TEST_ONLY}
-    function GetTestMode : Byte;
-    procedure SetTestMode(Mode: Byte);
-    {$ENDIF}
-end;
+  end;
 
   {** Implements Abstract Database notification. }
   TZAbstractNotification = class(TInterfacedObject, IZNotification)
@@ -1545,18 +1541,6 @@ procedure TZAbstractConnection.SetUseMetadata(Value: Boolean);
 begin
   FUseMetadata := Value;
 end;
-
-{$IFDEF ZEOS_TEST_ONLY}
-function TZAbstractConnection.GetTestMode: Byte;
-begin
-  Result := FTestMode;
-end;
-
-procedure TZAbstractConnection.SetTestMode(Mode: Byte);
-begin
-  FTestMode := Mode;
-end;
-{$ENDIF}
 
 function TZAbstractConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin

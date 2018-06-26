@@ -64,13 +64,6 @@ uses
   ZCompatibility, ZVariant;
 
 {**
-  Indicate what field type is a number (integer, float and etc.)
-  @param  the SQLType field type value
-  @result true if field type number
-}
-function IsNumber(Value: TZSQLType): Boolean;
-
-{**
    Return ZSQLType from PostgreSQL type name
    @param Connection a connection to PostgreSQL
    @param The TypeName is PostgreSQL type name
@@ -131,7 +124,7 @@ function PGEscapeString(SrcBuffer: PAnsiChar; SrcLength: Integer;
 procedure HandlePostgreSQLError(const Sender: IImmediatelyReleasable;
   const PlainDriver: TZPostgreSQLPlainDriver; conn: TPGconn;
   LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  ResultHandle: PPGresult);
+  ResultHandle: TPGresult);
 
 function PGSucceeded(ErrorMessage: PAnsiChar): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
@@ -392,6 +385,7 @@ end;
 procedure SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: Boolean; out aOID: OID);
 begin
   case SQLType of
+    stUnknown: aOID := VOIDOID;
     stBoolean: aOID := BOOLOID;
     stByte, stShort, stSmall: aOID := INT2OID;
     stWord, stInteger: aOID := INT4OID;
@@ -411,17 +405,6 @@ begin
       then aOID := OIDOID
       else aOID := BYTEAOID;
   end;
-end;
-
-{**
-  Indicate what field type is a number (integer, float and etc.)
-  @param  the SQLType field type value
-  @result true if field type number
-}
-function IsNumber(Value: TZSQLType): Boolean;
-begin
-  Result := Value in [stByte, stSmall, stInteger, stLong,
-    stFloat, stDouble, stBigDecimal];
 end;
 
 {**
@@ -697,7 +680,7 @@ end;
 procedure HandlePostgreSQLError(const Sender: IImmediatelyReleasable;
   const PlainDriver: TZPostgreSQLPlainDriver; conn: TPGconn;
   LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  ResultHandle: PPGresult);
+  ResultHandle: TPGresult);
 var
    resultErrorFields: array[TZPostgreSQLFieldCode] of PAnsiChar;
    I: TZPostgreSQLFieldCode;
@@ -846,7 +829,7 @@ begin
                 try
                   WriteTempBlob := TZPostgreSQLOidBlob.Create(
                     TZPostgreSQLPlainDriver(Connection.GetIZPlainDriver.GetInstance),
-                    nil, 0, Connection.GetConnectionHandle, 0, ChunkSize);
+                    nil, 0, Connection.GetPGconnAddress^, 0, ChunkSize);
                   WriteTempBlob.WriteBuffer(TempBlob.GetBuffer, TempBlob.Length);
                   Result := IntToRaw(WriteTempBlob.GetBlobOid);
                 finally

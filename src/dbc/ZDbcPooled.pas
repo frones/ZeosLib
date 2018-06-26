@@ -121,9 +121,6 @@ type
     FConnectionPool: TConnectionPool;
     FAutoEncodeStrings: Boolean;
     FUseMetadata: Boolean;
-    {$IFDEF ZEOS_TEST_ONLY}
-    FTestMode: Byte;
-    {$ENDIF}
     function GetConnection: IZConnection;
   protected // IZConnection
     FClientCodePage: String;
@@ -433,9 +430,6 @@ end;
 constructor TZDbcPooledConnection.Create(const ConnectionPool: TConnectionPool);
 begin
   FConnectionPool := ConnectionPool;
-  {$IFDEF ZEOS_TEST_ONLY}
-  FTestMode := 0;
-  {$ENDIF}
 end;
 
 procedure TZDbcPooledConnection.DeregisterStatement(const Value: IZStatement);
@@ -738,18 +732,6 @@ function TZDbcPooledConnection.GetConSettings: PZConSettings;
 begin
   Result := @ConSettings;
 end;
-
-{$IFDEF ZEOS_TEST_ONLY}
-function TZDbcPooledConnection.GetTestMode: Byte;
-begin
-  Result := FTestMode;
-end;
-
-procedure TZDbcPooledConnection.SetTestMode(Mode: Byte);
-begin
-  FTestMode := Mode;
-end;
-{$ENDIF}
 
 {**
   Result 100% Compiler-Compatible

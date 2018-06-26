@@ -54,6 +54,7 @@ unit ZDbcIntfs;
 interface
 
 {$I ZDbc.inc}
+{$Z-}
 
 uses
   {$IFDEF USE_SYNCOMMONS}
@@ -347,11 +348,6 @@ type
     function GetClientVariantManager: IZClientVariantManager;
     function GetURL: String;
     function GetServerProvider: TZServerProvider;
-
-    {$IFDEF ZEOS_TEST_ONLY}
-    function GetTestMode : Byte;
-    procedure SetTestMode(Mode: Byte);
-    {$ENDIF}
   end;
 
   {** Database metadata interface. }
@@ -673,8 +669,6 @@ type
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
 
     procedure ClearParameters;
-
-    function GetMetadata: IZResultSetMetadata;
   end;
 
   {** Callable SQL statement interface. }

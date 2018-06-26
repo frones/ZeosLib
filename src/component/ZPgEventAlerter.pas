@@ -243,7 +243,7 @@ var
   Handle   : TPGconn;
   ICon     : IZPostgreSQLConnection;
   PlainDRV : TZPostgreSQLPlainDriver;
-  Res: PGresult;
+  Res: TPGresult;
 begin
   if not Boolean(Pos('postgresql', FConnection.Protocol)) then
     raise EZDatabaseError.Create('Ivalid connection protocol. Need <postgres>, get ' +
@@ -257,7 +257,7 @@ begin
   if not FConnection.Connected then
     Exit;
   ICon     := (FConnection.DbcConnection as IZPostgreSQLConnection);
-  Handle   := ICon.GetConnectionHandle;
+  Handle   := ICon.GetPGconnAddress^;
   PlainDRV := ICon.GetPlainDriver;
   if Handle = nil then
     Exit;
@@ -284,14 +284,14 @@ var
   Handle   : TPGconn;
   ICon     : IZPostgreSQLConnection;
   PlainDRV : TZPostgreSQLPlainDriver;
-  Res: PGresult;
+  Res: TPGresult;
 begin
   if not FActive then
     Exit;
   FActive        := False;
   FTimer.Enabled := False;
   ICon           := (FConnection.DbcConnection as IZPostgreSQLConnection);
-  Handle         := ICon.GetConnectionHandle;
+  Handle         := ICon.GetPGconnAddress^;
   PlainDRV       := ICon.GetPlainDriver;
   if Handle = nil then
     Exit;
@@ -316,7 +316,7 @@ var
   PlainDRV : TZPostgreSQLPlainDriver;
 begin
   ICon      := (FConnection.DbcConnection as IZPostgreSQLConnection);
-  Handle    := ICon.GetConnectionHandle;
+  Handle    := ICon.GetPGconnAddress^;
   if Handle=nil then
   begin
     FTimer.Enabled := False;

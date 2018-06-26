@@ -304,7 +304,7 @@ begin
     ConSettings := ImmediatelyReleasable.GetConSettings;
     if (ErrorCode = CR_SERVER_GONE_ERROR) or (ErrorCode = CR_SERVER_LOST) then begin
       ImmediatelyReleasable.ReleaseImmediat(ImmediatelyReleasable);
-      EZSQLConnectionLost.CreateWithCode(ErrorCode,
+      raise EZSQLConnectionLost.CreateWithCode(ErrorCode,
       Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
         ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
     end else begin

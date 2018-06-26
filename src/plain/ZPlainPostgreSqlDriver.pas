@@ -509,8 +509,8 @@ type
   commands and thus return multiple PGresult objects).
   The contents of this struct are not supposed to be known to applications.
 }
-  PGresult = Pointer;
-  PPGresult = Pointer;
+  PPGresult = ^TPGresult;
+  TPGresult = Pointer;
   PGCancel = Pointer;
 
 { PGnotify represents the occurrence of a NOTIFY message.
@@ -634,107 +634,107 @@ type
     PQconnectdb     : function(ConnInfo: PAnsiChar): TPGconn; cdecl; // FirmOS 8.1 OK
     PQsetdbLogin    : function(Host, Port, Options, Tty, Db, User, Passwd: PAnsiChar): TPGconn; cdecl; // FirmOS 8.1 OK
     PQconndefaults  : function: PPQconninfoOption; cdecl;
-    PQfinish        : procedure(Handle: TPGconn); cdecl;
-    PQreset         : procedure(Handle: TPGconn); cdecl;
+    PQfinish        : procedure(conn: TPGconn); cdecl;
+    PQreset         : procedure(conn: TPGconn); cdecl;
   //15022006 FirmOS: omitting PQresetStart
   //15022006 FirmOS: omitting PQresetPoll
-    PQrequestCancel : function(Handle: TPGconn): Integer; cdecl;
-    PQdb            : function(Handle: TPGconn): PAnsiChar; cdecl;
-    PQuser          : function(Handle: TPGconn): PAnsiChar; cdecl;
-    PQpass          : function(Handle: TPGconn): PAnsiChar; cdecl;
-    PQhost          : function(Handle: TPGconn): PAnsiChar; cdecl;
-    PQport          : function(Handle: TPGconn): PAnsiChar; cdecl;
-    PQtty           : function(Handle: TPGconn): PAnsiChar; cdecl;
-    PQoptions       : function(Handle: TPGconn): PAnsiChar; cdecl;
-    PQstatus        : function(Handle: TPGconn): TZPostgreSQLConnectStatusType; cdecl;
+    PQrequestCancel : function(conn: TPGconn): Integer; cdecl;
+    PQdb            : function(conn: TPGconn): PAnsiChar; cdecl;
+    PQuser          : function(conn: TPGconn): PAnsiChar; cdecl;
+    PQpass          : function(conn: TPGconn): PAnsiChar; cdecl;
+    PQhost          : function(conn: TPGconn): PAnsiChar; cdecl;
+    PQport          : function(conn: TPGconn): PAnsiChar; cdecl;
+    PQtty           : function(conn: TPGconn): PAnsiChar; cdecl;
+    PQoptions       : function(conn: TPGconn): PAnsiChar; cdecl;
+    PQstatus        : function(conn: TPGconn): TZPostgreSQLConnectStatusType; cdecl;
   //TBD  PGTransactionStatusType PQtransactionStatus(const TPGconn *conn);
   //15022006 FirmOS: omitting const char *PQparameterStatus(const TPGconn *conn, const char *paramName);
   //15022006 FirmOS: omitting  PQprotocolVersion
-    PQserverVersion : function(Handle: TPGconn): Integer; cdecl;
-    PQerrorMessage  : function(Handle: TPGconn): PAnsiChar; cdecl;
-    PQsocket        : function(Handle: TPGconn): Integer; cdecl;
-    PQbackendPID    : function(Handle: TPGconn): Integer; cdecl;
+    PQserverVersion : function(conn: TPGconn): Integer; cdecl;
+    PQerrorMessage  : function(conn: TPGconn): PAnsiChar; cdecl;
+    PQsocket        : function(conn: TPGconn): Integer; cdecl;
+    PQbackendPID    : function(conn: TPGconn): Integer; cdecl;
   //15022006 FirmOS: omitting  SSL *PQgetssl(const TPGconn *conn);
-    PQtrace         : procedure(Handle: TPGconn; DebugPort: Pointer); cdecl;
-    PQuntrace       : procedure(Handle: TPGconn); cdecl;
-    PQsetNoticeProcessor : procedure(Handle: TPGconn; Proc: PQnoticeProcessor; Arg: Pointer); cdecl;
+    PQtrace         : procedure(conn: TPGconn; DebugPort: Pointer); cdecl;
+    PQuntrace       : procedure(conn: TPGconn); cdecl;
+    PQsetNoticeProcessor : procedure(conn: TPGconn; Proc: PQnoticeProcessor; Arg: Pointer); cdecl;
 
-    PQclientEncoding : function(Handle: TPGconn): Integer; cdecl; //EgonHugeist
+    PQclientEncoding : function(conn: TPGconn): Integer; cdecl; //EgonHugeist
   { === in fe-exec.c === }
   //* Simple synchronous query */
-    PQexec          : function(Handle: TPGconn; Query: PAnsiChar): PPGresult; cdecl;
-    PQexecParams    : function(Handle: TPGconn; command: PAnsichar;
+    PQexec          : function(conn: TPGconn; Query: PAnsiChar): TPGresult; cdecl;
+    PQexecParams    : function(conn: TPGconn; command: PAnsichar;
           nParams: Integer; paramTypes: POid; paramValues: PPointer;
           paramLengths: PInteger; paramFormats: PInteger;
-          resultFormat: Integer): PPGresult; cdecl;
-    PQprepare        : function(Handle: TPGconn; stmtName: PAnsichar;
-          query: PAnsiChar; nParams: Integer; paramTypes: PInteger): PPGresult; cdecl;
-    PQexecPrepared   : function(Handle: TPGconn; stmtName: PAnsichar;
+          resultFormat: Integer): TPGresult; cdecl;
+    PQprepare        : function(conn: TPGconn; stmtName: PAnsichar;
+          query: PAnsiChar; nParams: Integer; paramTypes: PInteger): TPGresult; cdecl;
+    PQexecPrepared   : function(conn: TPGconn; stmtName: PAnsichar;
           nParams: Integer; paramValues: PPointer; paramLengths: PInteger;
-          paramFormats: PInteger; resultFormat: Integer): PPGresult; cdecl;
+          paramFormats: PInteger; resultFormat: Integer): TPGresult; cdecl;
   //* Interface for multiple-result or asynchronous queries */
-    PQsendQuery      : function(Handle: TPGconn; query: PAnsiChar): Integer; cdecl;
-    PQsendQueryParams: function(Handle: TPGconn; command: PAnsichar;
+    PQsendQuery      : function(conn: TPGconn; query: PAnsiChar): Integer; cdecl;
+    PQsendQueryParams: function(conn: TPGconn; command: PAnsichar;
           nParams: Integer; paramTypes: PInteger; paramValues: PPointer;
           paramLengths: PInteger; paramFormats: PInteger;
           resultFormat: Integer): Integer; cdecl;
-    PQsendPrepare    : function(Handle: TPGconn; stmtName: PAnsichar;
+    PQsendPrepare    : function(conn: TPGconn; stmtName: PAnsichar;
           query: PAnsiChar; nParams: Integer; paramTypes: POid): Integer; cdecl;
-    PQsendQueryPrepared : function(Handle: TPGconn; stmtName: PAnsichar;
+    PQsendQueryPrepared : function(conn: TPGconn; stmtName: PAnsichar;
            nParams: Integer; paramValues: PPointer; paramLengths: PInteger;
            paramFormats: PInteger; resultFormat: Integer): Integer; cdecl;
-    PQgetResult     : function(Handle: TPGconn): PPGresult;  cdecl;
-    PQsetSingleRowMode : function(Handle: TPGconn): Integer; cdecl;
+    PQgetResult     : function(conn: TPGconn): TPGresult;  cdecl;
+    PQsetSingleRowMode : function(conn: TPGconn): Integer; cdecl;
   //* Describe prepared statements and portals */
-    PQdescribePrepared : function(Handle: TPGconn; stmt: PAnsiChar): PPGresult; cdecl;
-    PQnparams: function(res: PPGresult): Integer; cdecl;
-    PQparamtype: function(res: PPGresult; param_number: Integer): OID; cdecl;
-    PQdescribePortal : function(Handle: TPGconn; portal: PAnsiChar): PPGresult; cdecl;
-    PQsendDescribePrepared : function(Handle: TPGconn; stmt: PAnsiChar): Integer; cdecl;
-    PQsendDescribePortal : function(Handle: TPGconn; portal: PAnsiChar): Integer; cdecl;
+    PQdescribePrepared : function(conn: TPGconn; stmt: PAnsiChar): TPGresult; cdecl;
+    PQnparams: function(res: TPGresult): Integer; cdecl;
+    PQparamtype: function(res: TPGresult; param_number: Integer): OID; cdecl;
+    PQdescribePortal : function(conn: TPGconn; portal: PAnsiChar): TPGresult; cdecl;
+    PQsendDescribePrepared : function(conn: TPGconn; stmt: PAnsiChar): Integer; cdecl;
+    PQsendDescribePortal : function(conn: TPGconn; portal: PAnsiChar): Integer; cdecl;
 
-    PQsetnonblocking : function(Handle: TPGconn; arg: Integer): Integer; cdecl;
+    PQsetnonblocking : function(conn: TPGconn; arg: Integer): Integer; cdecl;
 
-    PQnotifies      : function(Handle: TPGconn): PPGnotify; cdecl;
+    PQnotifies      : function(conn: TPGconn): PPGnotify; cdecl;
     PQfreeNotify    : procedure(Handle: PPGnotify);cdecl;
-    PQisBusy        : function(Handle: TPGconn): Integer; cdecl;
-    PQconsumeInput  : function(Handle: TPGconn): Integer; cdecl;
-    PQgetCancel     : function(Handle: TPGconn): PGcancel; cdecl;
+    PQisBusy        : function(conn: TPGconn): Integer; cdecl;
+    PQconsumeInput  : function(conn: TPGconn): Integer; cdecl;
+    PQgetCancel     : function(conn: TPGconn): PGcancel; cdecl;
     PQfreeCancel    : procedure(Canc: PGcancel); cdecl;
     PQcancel        : function(Canc: PGcancel; Buffer: PChar; BufSize: Integer): Integer;
-    PQgetline       : function(Handle: TPGconn; Str: PAnsiChar; length: Integer): Integer; cdecl;
-    PQputline       : function(Handle: TPGconn; Str: PAnsiChar): Integer; cdecl;
-    PQgetlineAsync  : function(Handle: TPGconn; Buffer: PAnsiChar; BufSize: Integer): Integer; cdecl;
-    PQputnbytes     : function(Handle: TPGconn; Buffer: PAnsiChar; NBytes: Integer): Integer; cdecl;
-    PQendcopy       : function(Handle: TPGconn): Integer; cdecl;
-    PQfn            : function(Handle: TPGconn; fnid: Integer; result_buf, result_len: PInteger; result_is_int: Integer; args: PPQArgBlock; nargs: Integer): PPGresult; cdecl;
-    PQresultStatus  : function(Result: PPGresult): TZPostgreSQLExecStatusType; cdecl;
-    PQresultErrorMessage : function(Result: PPGresult): PAnsiChar; cdecl;
-    PQresultErrorField:function(result: PPGResult; fieldcode:integer):PAnsiChar;cdecl; // postgresql 8
-    PQntuples       : function(Result: PPGresult): Integer; cdecl;
-    PQnfields       : function(Result: PPGresult): Integer; cdecl;
-    PQbinaryTuples  : function(Result: PPGresult): Integer; cdecl;
-    PQfname         : function(Result: PPGresult; field_num: Integer): PAnsiChar; cdecl;
-    PQfnumber       : function(Result: PPGresult; field_name: PAnsiChar): Integer; cdecl;
-    PQftable        : function(Result: PPGresult; field_num: Integer): Oid; cdecl;
-    PQftablecol     : function(Result: PPGresult; field_num: Integer): Integer; cdecl;
-    PQftype         : function(Result: PPGresult; field_num: Integer): Oid; cdecl;
-    PQfsize         : function(Result: PPGresult; field_num: Integer): Integer; cdecl;
-    PQfmod          : function(Result: PPGresult; field_num: Integer): Integer; cdecl;
-    PQcmdStatus     : function(Result: PPGresult): PAnsiChar; cdecl;
-    PQoidValue      : function(Result: PPGresult): Oid; cdecl;
-    PQoidStatus     : function(Result: PPGresult): PAnsiChar; cdecl;
-    PQcmdTuples     : function(Result: PPGresult): PAnsiChar; cdecl;
-    PQgetvalue      : function(Result: PPGresult; tup_num, field_num: Integer): PAnsiChar; cdecl;
-    PQgetlength     : function(Result: PPGresult; tup_num, field_num: Integer): Integer; cdecl;
-    PQgetisnull     : function(Result: PPGresult; tup_num, field_num: Integer): Integer; cdecl;
-    PQclear         : procedure(Result: PPGresult); cdecl;
-    PQmakeEmptyPGresult  : function(Handle: TPGconn; status: TZPostgreSQLExecStatusType): PPGresult; cdecl;
-    PQescapeStringConn : function(Handle: TPGconn; ToChar: PAnsiChar;
+    PQgetline       : function(conn: TPGconn; Str: PAnsiChar; length: Integer): Integer; cdecl;
+    PQputline       : function(conn: TPGconn; Str: PAnsiChar): Integer; cdecl;
+    PQgetlineAsync  : function(conn: TPGconn; Buffer: PAnsiChar; BufSize: Integer): Integer; cdecl;
+    PQputnbytes     : function(conn: TPGconn; Buffer: PAnsiChar; NBytes: Integer): Integer; cdecl;
+    PQendcopy       : function(conn: TPGconn): Integer; cdecl;
+    PQfn            : function(conn: TPGconn; fnid: Integer; result_buf, result_len: PInteger; result_is_int: Integer; args: PPQArgBlock; nargs: Integer): TPGresult; cdecl;
+    PQresultStatus  : function(res: TPGresult): TZPostgreSQLExecStatusType; cdecl;
+    PQresultErrorMessage : function(res: TPGresult): PAnsiChar; cdecl;
+    PQresultErrorField:function(res: TPGresult; fieldcode:integer):PAnsiChar;cdecl; // postgresql 8
+    PQntuples       : function(res: TPGresult): Integer; cdecl;
+    PQnfields       : function(res: TPGresult): Integer; cdecl;
+    PQbinaryTuples  : function(res: TPGresult): Integer; cdecl;
+    PQfname         : function(res: TPGresult; field_num: Integer): PAnsiChar; cdecl;
+    PQfnumber       : function(res: TPGresult; field_name: PAnsiChar): Integer; cdecl;
+    PQftable        : function(res: TPGresult; field_num: Integer): Oid; cdecl;
+    PQftablecol     : function(res: TPGresult; field_num: Integer): Integer; cdecl;
+    PQftype         : function(res: TPGresult; field_num: Integer): Oid; cdecl;
+    PQfsize         : function(res: TPGresult; field_num: Integer): Integer; cdecl;
+    PQfmod          : function(res: TPGresult; field_num: Integer): Integer; cdecl;
+    PQcmdStatus     : function(res: TPGresult): PAnsiChar; cdecl;
+    PQoidValue      : function(res: TPGresult): Oid; cdecl;
+    PQoidStatus     : function(res: TPGresult): PAnsiChar; cdecl;
+    PQcmdTuples     : function(res: TPGresult): PAnsiChar; cdecl;
+    PQgetvalue      : function(res: TPGresult; tup_num, field_num: Integer): PAnsiChar; cdecl;
+    PQgetlength     : function(res: TPGresult; tup_num, field_num: Integer): Integer; cdecl;
+    PQgetisnull     : function(res: TPGresult; tup_num, field_num: Integer): Integer; cdecl;
+    PQclear         : procedure(res: TPGresult); cdecl;
+    PQmakeEmptyPGresult  : function(conn: TPGconn; status: TZPostgreSQLExecStatusType): TPGresult; cdecl;
+    PQescapeStringConn : function(conn: TPGconn; ToChar: PAnsiChar;
       const FromChar: PAnsiChar; length: NativeUInt; error: PInteger): NativeUInt;cdecl; //7.3
-    PQescapeLiteral    : function(Handle: TPGconn; str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl;
-    PQescapeIdentifier : function(Handle: TPGconn; str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl; //7.3
-    PQescapeByteaConn  : function(Handle: TPGconn; from: PAnsiChar; from_length: longword; to_lenght: PLongword): PAnsiChar;cdecl;
+    PQescapeLiteral    : function(conn: TPGconn; str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl;
+    PQescapeIdentifier : function(conn: TPGconn; str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl; //7.3
+    PQescapeByteaConn  : function(conn: TPGconn; from: PAnsiChar; from_length: longword; to_lenght: PLongword): PAnsiChar;cdecl;
     PQunescapeBytea    : function(const from:PAnsiChar;to_lenght:PLongword):PAnsiChar;cdecl;
     PQFreemem          : procedure(ptr:Pointer);cdecl;
 
@@ -743,16 +743,16 @@ type
     PQescapeBytea      : function(const from:PAnsiChar;from_length:longword;to_lenght:PLongword):PAnsiChar;cdecl; //7.2
 
     { === in fe-lobj.c === }
-    lo_open         : function(Handle: TPGconn; lobjId: Oid; mode: Integer): Integer; cdecl;
-    lo_close        : function(Handle: TPGconn; fd: Integer): Integer; cdecl;
-    lo_read         : function(Handle: TPGconn; fd: Integer; buf: PAnsiChar; len: NativeUInt): Integer; cdecl;
-    lo_write        : function(Handle: TPGconn; fd: Integer; buf: PAnsiChar; len: NativeUInt): Integer; cdecl;
-    lo_lseek        : function(Handle: TPGconn; fd, offset, whence: Integer): Integer; cdecl;
-    lo_creat        : function(Handle: TPGconn; mode: Integer): Oid; cdecl;
-    lo_tell         : function(Handle: TPGconn; fd: Integer): Integer; cdecl;
-    lo_unlink       : function(Handle: TPGconn; lobjId: Oid): Integer; cdecl;
-    lo_import       : function(Handle: TPGconn; filename: PAnsiChar): Oid; cdecl;
-    lo_export       : function(Handle: TPGconn; lobjId: Oid; filename: PAnsiChar): Integer; cdecl;
+    lo_open         : function(conn: TPGconn; lobjId: Oid; mode: Integer): Integer; cdecl;
+    lo_close        : function(conn: TPGconn; fd: Integer): Integer; cdecl;
+    lo_read         : function(conn: TPGconn; fd: Integer; buf: PAnsiChar; len: NativeUInt): Integer; cdecl;
+    lo_write        : function(conn: TPGconn; fd: Integer; buf: PAnsiChar; len: NativeUInt): Integer; cdecl;
+    lo_lseek        : function(conn: TPGconn; fd, offset, whence: Integer): Integer; cdecl;
+    lo_creat        : function(conn: TPGconn; mode: Integer): Oid; cdecl;
+    lo_tell         : function(conn: TPGconn; fd: Integer): Integer; cdecl;
+    lo_unlink       : function(conn: TPGconn; lobjId: Oid): Integer; cdecl;
+    lo_import       : function(conn: TPGconn; filename: PAnsiChar): Oid; cdecl;
+    lo_export       : function(conn: TPGconn; lobjId: Oid; filename: PAnsiChar): Integer; cdecl;
   end;
 
 implementation
