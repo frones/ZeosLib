@@ -5069,7 +5069,8 @@ end;
 
 procedure TZVirtualResultSet.ResetCursor;
 begin
-  BeforeFirst;
+  if not fDoClose then
+    BeforeFirst;
 end;
 
 { TZDefaultIdentifierConvertor }
