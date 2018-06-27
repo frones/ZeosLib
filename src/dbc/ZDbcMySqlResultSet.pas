@@ -232,7 +232,7 @@ constructor TZMySQLResultSetMetadata.Create(const Metadata: IZDatabaseMetadata;
   const SQL: string; ParentResultSet: TZAbstractResultSet);
 begin
   inherited Create(Metadata, SQL, ParentResultSet);
-  FHas_ExtendedColumnInfos := TZMySQLPlainDriver(MetaData.GetConnection.GetIZPlainDriver.GetInstance).mysql_get_client_version >= 40000;
+  FHas_ExtendedColumnInfos := TZMySQLPlainDriver(MetaData.GetConnection.GetIZPlainDriver.GetInstance).mysql_get_client_version > 40000;
 end;
 
 {**
