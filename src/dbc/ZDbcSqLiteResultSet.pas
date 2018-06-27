@@ -172,9 +172,10 @@ begin
 end;
 
 {**
-  Gets the designated column's table's catalog name.
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @return column name or "" if not applicable
+  Constructs this object and assignes the main properties.
+  @param Metadata a database metadata object.
+  @param SQL an SQL query statement.
+  @param ColumnsInfo a collection of columns info.
 }
 constructor TZSQLiteResultSetMetadata.Create(const Metadata: IZDatabaseMetadata;
   const SQL: string; ParentResultSet: TZAbstractResultSet);
@@ -185,6 +186,11 @@ begin
   FHas_ExtendedColumnInfos := Assigned(PD.sqlite3_column_table_name);
 end;
 
+{**
+  Gets the designated column's table's catalog name.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return column name or "" if not applicable
+}
 function TZSQLiteResultSetMetadata.GetCatalogName(ColumnIndex: Integer): string;
 begin
   Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).CatalogName;
@@ -197,6 +203,8 @@ end;
 }
 function TZSQLiteResultSetMetadata.GetColumnName(ColumnIndex: Integer): string;
 begin
+  if not FHas_ExtendedColumnInfos and not Loaded
+  then LoadColumns;
   Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnName;
 end;
 
@@ -217,6 +225,8 @@ end;
 }
 function TZSQLiteResultSetMetadata.GetTableName(ColumnIndex: Integer): string;
 begin
+  if not FHas_ExtendedColumnInfos and not Loaded
+  then LoadColumns;
   Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).TableName;
 end;
 
