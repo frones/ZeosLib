@@ -363,13 +363,6 @@ end;
 }
 destructor TZAbstractCachedResultSet.Destroy;
 begin
-  FreeAndNil(FRowsList);
-  FreeAndNil(FInitialRowsList);
-  FreeAndNil(FCurrentRowsList);
-
-  FreeAndNil(FRowAccessor);
-  FreeAndNil(FOldRowAccessor);
-  FreeAndNil(FNewRowAccessor);
   FResolver := nil;
   {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   FNativeResolver := nil;
@@ -795,6 +788,14 @@ begin
     FRowAccessor.DisposeBuffer(FInsertedRow);
     FInsertedRow := nil;
     FSelectedRow := nil;
+
+    FreeAndNil(FRowsList);
+    FreeAndNil(FInitialRowsList);
+    FreeAndNil(FCurrentRowsList);
+
+    FreeAndNil(FRowAccessor);
+    FreeAndNil(FOldRowAccessor);
+    FreeAndNil(FNewRowAccessor);
   end;
 end;
 
