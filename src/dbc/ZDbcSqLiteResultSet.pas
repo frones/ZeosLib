@@ -71,9 +71,14 @@ type
   { TZSQLiteResultSetMetadata }
 
   TZSQLiteResultSetMetadata = class(TZAbstractResultSetMetadata)
+  private
+    FHas_ExtendedColumnInfos: Boolean;
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
     procedure LoadColumns; override;
+  public
+    constructor Create(const Metadata: IZDatabaseMetadata; const SQL: string;
+      ParentResultSet: TZAbstractResultSet);
   public
     function GetCatalogName(ColumnIndex: Integer): string; override;
     function GetColumnName(ColumnIndex: Integer): string; override;
@@ -171,6 +176,15 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return column name or "" if not applicable
 }
+constructor TZSQLiteResultSetMetadata.Create(const Metadata: IZDatabaseMetadata;
+  const SQL: string; ParentResultSet: TZAbstractResultSet);
+var PD: TZSQLitePlainDriver;
+begin
+  inherited Create(Metadata, SQL, ParentResultSet);
+  PD := TZSQLitePlainDriver(MetaData.GetConnection.GetIZPlainDriver.GetInstance);
+  FHas_ExtendedColumnInfos := Assigned(PD.sqlite3_column_table_name);
+end;
+
 function TZSQLiteResultSetMetadata.GetCatalogName(ColumnIndex: Integer): string;
 begin
   Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).CatalogName;
@@ -225,17 +239,14 @@ end;
   Initializes columns with additional data.
 }
 procedure TZSQLiteResultSetMetadata.LoadColumns;
-{$IFNDEF ZEOS_TEST_ONLY}
 var
   Current: TZColumnInfo;
   I: Integer;
   TableColumns: IZResultSet;
-{$ENDIF}
 begin
-  {$IFDEF ZEOS_TEST_ONLY}
-  inherited LoadColumns;
-  {$ELSE}
-  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
+  if not FHas_ExtendedColumnInfos
+  then inherited LoadColumns
+  else if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
     for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
       Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
       ClearColumn(Current);
@@ -252,7 +263,6 @@ begin
       end;
     end;
   Loaded := True;
-  {$ENDIF}
 end;
 
 { TZSQLiteResultSet }
