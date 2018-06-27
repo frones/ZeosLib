@@ -513,7 +513,7 @@ var
   FAccessorRefCount: DBREFCOUNT;
   i: Integer;
 begin
-  if not Closed then
+  if not Closed then begin
     try
       ReleaseFetchedRows;
       {first release Accessor rows}
@@ -529,8 +529,9 @@ begin
       FCurrentBufRowNo := 0;
       FRowsObtained := 0;
     end;
-  FRowSet := nil;//handle 'Object is in use Exception'
-  inherited ResetCursor;
+    FRowSet := nil;//handle 'Object is in use Exception'
+    inherited ResetCursor;
+  end;
 end;
 
 {**
