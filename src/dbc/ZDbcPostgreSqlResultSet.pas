@@ -572,8 +572,10 @@ end;
 }
 procedure TZAbstractPostgreSQLStringResultSet.ResetCursor;
 begin
-  ClearPGResult;
-  inherited ResetCursor;
+  if not Closed then begin
+    ClearPGResult;
+    inherited ResetCursor;
+  end;
 end;
 {**
   Indicates if the value of the designated column in the current row

@@ -520,12 +520,14 @@ end;
 }
 procedure TZSQLiteResultSet.ResetCursor;
 begin
-  FFirstRow := True;
-  if Fsqlite3_stmt <> nil then begin
-    FResetCallBack;
-    Fsqlite3_stmt := nil;
+  if not Closed then begin
+    FFirstRow := True;
+    if Fsqlite3_stmt <> nil then begin
+      FResetCallBack;
+      Fsqlite3_stmt := nil;
+    end;
+    inherited ResetCursor;
   end;
-  inherited ResetCursor;
 end;
 
 {**

@@ -606,7 +606,7 @@ end;
 destructor TZAbstractMySQLResultSet.Destroy;
 begin
   inherited Destroy;
-  ReallocBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, FFieldCount, 0, 1);
+  ReallocBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, FFieldCount, 0, Ord(fBindBufferAllocated));
 end;
 
 {**
@@ -698,20 +698,21 @@ end;
 procedure TZAbstractMySQLResultSet.ResetCursor;
 var Handle: Pointer;
 begin
-  if fBindBufferAllocated then begin
-    Handle := FMYSQL_STMT;
-    FMYSQL_STMT := nil;
-    //test if more results are pendding
-    if (Handle <> nil) and not FPlainDriver.IsMariaDBDriver and (Assigned(FPlainDriver.mysql_stmt_more_results) and (FPlainDriver.mysql_stmt_more_results(FPMYSQL_STMT^) = 1))
-    then Close
-    else inherited ResetCursor;
-  end else begin
-    Handle := FQueryHandle;
-    FQueryHandle := nil;
-    if (Handle <> nil) and (FPlainDriver.mysql_more_results(FPMYSQL^) = 1)
-    then Close
-    else inherited ResetCursor;
-  end;
+  if not Closed then
+    if fBindBufferAllocated then begin
+      Handle := FMYSQL_STMT;
+      FMYSQL_STMT := nil;
+      //test if more results are pendding
+      if (Handle <> nil) and not FPlainDriver.IsMariaDBDriver and (Assigned(FPlainDriver.mysql_stmt_more_results) and (FPlainDriver.mysql_stmt_more_results(FPMYSQL_STMT^) = 1))
+      then Close
+      else inherited ResetCursor;
+    end else begin
+      Handle := FQueryHandle;
+      FQueryHandle := nil;
+      if (Handle <> nil) and (FPlainDriver.mysql_more_results(FPMYSQL^) = 1)
+      then Close
+      else inherited ResetCursor;
+    end;
 end;
 
 {**
@@ -2095,13 +2096,15 @@ end;
 
 procedure TZMySQL_Store_ResultSet.ResetCursor;
 begin
-  if fBindBufferAllocated then begin
-    if Assigned(FMYSQL_STMT) then
-      if FPlainDriver.mysql_stmt_free_result(FMYSQL_STMT) <> 0 then
-        checkMySQLError(FPlainDriver,FPMYSQL^, FMYSQL_STMT, lcOther, '', Self);
-  end else if FQueryHandle <> nil then
-    FPlainDriver.mysql_free_result(FQueryHandle);
-  inherited ResetCursor;
+  if not Closed then begin
+    if fBindBufferAllocated then begin
+      if Assigned(FMYSQL_STMT) then
+        if FPlainDriver.mysql_stmt_free_result(FMYSQL_STMT) <> 0 then
+          checkMySQLError(FPlainDriver,FPMYSQL^, FMYSQL_STMT, lcOther, '', Self);
+    end else if FQueryHandle <> nil then
+      FPlainDriver.mysql_free_result(FQueryHandle);
+    inherited ResetCursor;
+  end;
 end;
 
 { TZMySQLCachedResolver }
@@ -2313,14 +2316,16 @@ end;
 
 procedure TZMySQL_Use_ResultSet.ResetCursor;
 begin
-  if fBindBufferAllocated then begin
-    if FMYSQL_STMT <> nil then
-      while FPlainDriver.mysql_stmt_fetch(FMYSQL_STMT) in [0, MYSQL_DATA_TRUNCATED] do;
-  end else if FQueryHandle <> nil then
-    {need to fetch all temporary until handle = nil else all other queries are out of sync
-     see: http://dev.mysql.com/doc/refman/5.0/en/mysql-use-result.html}
-    while FPlainDriver.mysql_fetch_row(FQueryHandle) <> nil do;
-  inherited ResetCursor;
+  if not Closed then begin
+    if fBindBufferAllocated then begin
+      if FMYSQL_STMT <> nil then
+        while FPlainDriver.mysql_stmt_fetch(FMYSQL_STMT) in [0, MYSQL_DATA_TRUNCATED] do;
+    end else if FQueryHandle <> nil then
+      {need to fetch all temporary until handle = nil else all other queries are out of sync
+       see: http://dev.mysql.com/doc/refman/5.0/en/mysql-use-result.html}
+      while FPlainDriver.mysql_fetch_row(FQueryHandle) <> nil do;
+    inherited ResetCursor;
+  end;
 end;
 
 end.

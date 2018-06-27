@@ -363,6 +363,13 @@ end;
 }
 destructor TZAbstractCachedResultSet.Destroy;
 begin
+  FreeAndNil(FRowsList);
+  FreeAndNil(FInitialRowsList);
+  FreeAndNil(FCurrentRowsList);
+
+  FreeAndNil(FRowAccessor);
+  FreeAndNil(FOldRowAccessor);
+  FreeAndNil(FNewRowAccessor);
   FResolver := nil;
   {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   FNativeResolver := nil;
@@ -788,14 +795,6 @@ begin
     FRowAccessor.DisposeBuffer(FInsertedRow);
     FInsertedRow := nil;
     FSelectedRow := nil;
-
-    FreeAndNil(FRowsList);
-    FreeAndNil(FInitialRowsList);
-    FreeAndNil(FCurrentRowsList);
-
-    FreeAndNil(FRowAccessor);
-    FreeAndNil(FOldRowAccessor);
-    FreeAndNil(FNewRowAccessor);
   end;
 end;
 
@@ -803,17 +802,19 @@ procedure TZAbstractCachedResultSet.ResetCursor;
 var
   I: Integer;
 begin
-  if Assigned(FRowAccessor) then
-  begin
-    for I := 0 to FRowsList.Count - 1 do
-      FRowAccessor.DisposeBuffer(PZRowBuffer(FRowsList[I]));
-    for I := 0 to FInitialRowsList.Count - 1 do
-      FRowAccessor.DisposeBuffer(PZRowBuffer(FInitialRowsList[I]));
-    FRowsList.Clear;
-    FInitialRowsList.Clear;
-    FCurrentRowsList.Clear;
+  if not Closed then begin
+    if Assigned(FRowAccessor) then
+    begin
+      for I := 0 to FRowsList.Count - 1 do
+        FRowAccessor.DisposeBuffer(PZRowBuffer(FRowsList[I]));
+      for I := 0 to FInitialRowsList.Count - 1 do
+        FRowAccessor.DisposeBuffer(PZRowBuffer(FInitialRowsList[I]));
+      FRowsList.Clear;
+      FInitialRowsList.Clear;
+      FCurrentRowsList.Clear;
+    end;
+    inherited ResetCursor;
   end;
-  inherited ResetCursor;
 end;
 
 //======================================================================
@@ -2475,9 +2476,11 @@ end;
 
 procedure TZCachedResultSet.ResetCursor;
 begin
-  If Assigned(FResultset) then
-    FResultset.ResetCursor;
-  inherited ResetCursor;
+  if not Closed then begin
+    If Assigned(FResultset) then
+      FResultset.ResetCursor;
+    inherited ResetCursor;
+  end;
 end;
 {**
   Retrieves the  number, types and properties of

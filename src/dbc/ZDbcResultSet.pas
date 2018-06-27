@@ -850,16 +850,15 @@ end;
 }
 procedure TZAbstractResultSet.ResetCursor;
 begin
-  if not FClosed and Assigned(Statement){virtual RS ! } then
-  begin
+  if not FClosed and Assigned(Statement){virtual RS ! } then begin
     FFetchSize := Statement.GetFetchSize;
     FPostUpdates := Statement.GetPostUpdates;
     FLocateUpdates := Statement.GetLocateUpdates;
     FMaxRows := Statement.GetMaxRows;
+    FRowNo := 0;
+    FLastRowNo := 0;
+    LastWasNull := True;
   end;
-  FRowNo := 0;
-  FLastRowNo := 0;
-  LastWasNull := True;
 end;
 
 {**
@@ -878,8 +877,8 @@ end;
 procedure TZAbstractResultSet.Close;
 begin
   if not Closed then begin
-    FClosed := True;
     ResetCursor;
+    FClosed := True;
     if FColumnsInfo <> nil then
       FColumnsInfo.Clear;
     if (FStatement <> nil) then begin

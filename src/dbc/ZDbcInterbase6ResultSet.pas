@@ -1940,10 +1940,12 @@ end;
 
 procedure TZInterbase6XSQLDAResultSet.ResetCursor;
 begin
-  FFetchStat := 0;
-  if (FStmtHandle <> 0) and not IsAfterLast{already done} then
-    FreeStatement(FPlainDriver, FStmtHandle, DSQL_CLOSE); //close handle but not free it
-  inherited ResetCursor;
+  if not Closed then begin
+    FFetchStat := 0;
+    if (FStmtHandle <> 0) and not IsAfterLast{already done} then
+      FreeStatement(FPlainDriver, FStmtHandle, DSQL_CLOSE); //close handle but not free it
+    inherited ResetCursor;
+  end;
 end;
 
 { TZInterbase6UnCachedBlob }
