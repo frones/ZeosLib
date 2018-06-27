@@ -1229,12 +1229,13 @@ begin
       end;
     end
   else if (FMYSQL_STMT <> nil) and FStmtHandleIsExecuted then begin
-    Status := FPlainDriver.mysql_stmt_reset(FMYSQL_STMT);
-    if Status <> 0 then
+    if FPlainDriver.IsMariaDBDriver then begin  //mysql raises a out of sync here, even if docs saying they clear all pending results
+      Status := FPlainDriver.mysql_stmt_reset(FMYSQL_STMT);
+      if Status <> 0 then
         checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
           ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
             ConSettings^.ClientCodePage^.CP), Self);
-    (*while true do begin
+    end else while true do begin //so we need to do the job by hand now
       Status := FPlainDriver.mysql_stmt_next_result(FMYSQL_STMT);
       if Status = -1 then
         Break
@@ -1251,13 +1252,7 @@ begin
             ConSettings^.ClientCodePage^.CP), Self);
         Break;
       end;
-
     end;
-    {EH: can't see any advantages...
-    if FPlainDriver.mysql_stmt_reset(FMYSQL_STMT) <> 0 then
-      checkMySQLError(FPlainDriver,FMYSQL_STMT, lcExecPrepStmt,
-        ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-          ConSettings^.ClientCodePage^.CP), ConSettings);*)
   end;
 end;
 

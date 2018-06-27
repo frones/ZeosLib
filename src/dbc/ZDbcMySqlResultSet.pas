@@ -53,7 +53,9 @@
   http://blog.ulf-wendel.de/2008/pdo_mysqlnd-prepared-statements-again/}
 
 unit ZDbcMySqlResultSet;
-
+{$IFDEF FPC}
+{$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 interface
 
 {$I ZDbc.inc}
@@ -89,7 +91,8 @@ type
     FFieldCount: ULong;
     FPMYSQL: PPMYSQL; //address of the MYSQL connection handle
     FMYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; //offset descriptor structures
-    procedure InitColumnBinds(Bind: PMYSQL_aligned_BIND; MYSQL_FIELD: PMYSQL_FIELD; Iters: Word);
+    procedure InitColumnBinds(Bind: PMYSQL_aligned_BIND; MYSQL_FIELD: PMYSQL_FIELD;
+      FieldOffsets: PMYSQL_FIELDOFFSETS; Iters: Integer);
   private //connection resultset
     FQueryHandle: PZMySQLResult; //a query handle
     FRowHandle: PZMySQLRow; //current row handle
@@ -199,7 +202,7 @@ implementation
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZFastCode, ZSysUtils, ZMessages, ZEncoding,
-  ZDbcMySqlUtils, ZDbcUtils, ZDbcMetadata, ZDbcLogging;
+  ZDbcMySqlUtils, ZDbcMySQL, ZDbcUtils, ZDbcMetadata, ZDbcLogging;
 
 {$IFOPT R+}
   {$DEFINE RangeCheckEnabled}
@@ -614,7 +617,11 @@ var
   I: Integer;
   FieldHandle: PMYSQL_FIELD;
   QueryHandle: PZMySQLResult;
+  FieldOffsets: PMYSQL_FIELDOFFSETS;
+  MySQL_FieldType_Bit_1_IsBoolean: Boolean;
 begin
+  FieldOffsets := GetFieldOffsets(FPlainDriver.mysql_get_client_version);
+  MySQL_FieldType_Bit_1_IsBoolean := (GetStatement.GetConnection as IZMySQLConnection).MySQL_FieldType_Bit_1_IsBoolean;
   if FPMYSQL_STMT^ = nil then begin
     OpenCursor;
     QueryHandle := FQueryHandle;
@@ -641,10 +648,10 @@ begin
     if FieldHandle = nil then
       Break;
     {$R-}
-    InitColumnBinds(@FMYSQL_aligned_BINDs[I], FieldHandle, Ord(fBindBufferAllocated));
+    InitColumnBinds(@FMYSQL_aligned_BINDs[I], FieldHandle, FieldOffsets, Ord(fBindBufferAllocated));
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FieldHandle, ConSettings,
-      fServerCursor));
+    ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FieldHandle, FieldOffsets,
+      ConSettings, MySQL_FieldType_Bit_1_IsBoolean));
   end;
 
   if fBindBufferAllocated then begin
@@ -954,14 +961,16 @@ begin
 end;
 
 procedure TZAbstractMySQLResultSet.InitColumnBinds(Bind: PMYSQL_aligned_BIND;
-  MYSQL_FIELD: PMYSQL_FIELD; Iters: Word);
+  MYSQL_FIELD: PMYSQL_FIELD; FieldOffsets: PMYSQL_FIELDOFFSETS; Iters: Integer);
 begin
-  Bind^.is_unsigned_address^ := Ord(MYSQL_FIELD.flags and UNSIGNED_FLAG <> 0);
-  bind^.buffer_type_address^ := MYSQL_FIELD^._type; //safe initialtype
-  bind^.binary := (MYSQL_FIELD^.charsetnr = 63);
+  Bind^.is_unsigned_address^ := Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0);
+  bind^.buffer_type_address^ := PMysqlFieldType(NativeUInt(MYSQL_FIELD)+FieldOffsets._type)^; //safe initialtype
+  if FieldOffsets.charsetnr > 0
+  then bind^.binary := (PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^ = 63)
+  else bind^.binary := (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG <> 0);
 
-  case MYSQL_FIELD^._type of
-    FIELD_TYPE_BIT: case MYSQL_FIELD^.length of
+  case bind^.buffer_type_address^ of
+    FIELD_TYPE_BIT: case PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ of
                       0..8  : Bind^.Length[0] := SizeOf(Byte);
                       9..16 : Bind^.Length[0] := SizeOf(Word);
                       17..32: Bind^.Length[0] := SizeOf(LongWord);
@@ -980,14 +989,14 @@ begin
         bind^.buffer_type_address^ := FIELD_TYPE_LONG;
       end;
     FIELD_TYPE_FLOAT, FIELD_TYPE_DOUBLE: begin
-        if MYSQL_FIELD^.length = 12 then begin
+        if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ = 12 then begin
           Bind^.Length[0] := SizeOf(Single);
           bind^.buffer_type_address^ := FIELD_TYPE_FLOAT
         end else begin
           Bind^.Length[0] := SizeOf(Double);
           bind^.buffer_type_address^ := FIELD_TYPE_DOUBLE;
         end;
-        bind^.decimals := MYSQL_FIELD^.decimals;
+        bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
       end;
     FIELD_TYPE_BLOB,
     FIELD_TYPE_TINY_BLOB,
@@ -999,18 +1008,18 @@ begin
     FIELD_TYPE_STRING,
     FIELD_TYPE_ENUM, FIELD_TYPE_SET: begin
         bind^.buffer_type_address^ := FIELD_TYPE_STRING;
-        Bind^.Length[0] := MYSQL_FIELD^.length;//+Byte(Ord(not bind^.binary));
+        Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;//+Byte(Ord(not bind^.binary));
       end;
     FIELD_TYPE_NEWDECIMAL,
     FIELD_TYPE_DECIMAL:
-      if MYSQL_FIELD^.decimals = 0 then begin
-        if MYSQL_FIELD^.length <= Byte(2+(Ord(MYSQL_FIELD^.flags and UNSIGNED_FLAG <> 0))) then begin
+      if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^ = 0 then begin
+        if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(2+(Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
           bind^.buffer_type_address^ := FIELD_TYPE_TINY;
           Bind^.Length[0] := 1;
-        end else if MYSQL_FIELD^.length <= Byte(4+(Ord(MYSQL_FIELD^.flags and UNSIGNED_FLAG <> 0))) then begin
+        end else if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(4+(Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
           Bind^.Length[0] := 2;
           bind^.buffer_type_address^ := FIELD_TYPE_SHORT;
-        end else if MYSQL_FIELD^.length <= Byte(9+(Ord(MYSQL_FIELD^.flags and UNSIGNED_FLAG <> 0))) then begin
+        end else if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(9+(Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
           bind^.buffer_type_address^ := FIELD_TYPE_LONG;
           Bind^.Length[0] := 4;
         end else begin
@@ -1020,11 +1029,11 @@ begin
       end else begin //force binary conversion to double values!
         bind^.buffer_type_address^ := FIELD_TYPE_DOUBLE;
         Bind^.Length[0] := 8;
-        bind^.decimals := MYSQL_FIELD^.decimals;
+        bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
       end;
     FIELD_TYPE_NULL: Bind^.Length[0] := 8;
     else
-      Bind^.Length[0] := (((MYSQL_FIELD^.length) shr 3)+1) shl 3; //8Byte Aligned
+      Bind^.Length[0] := (((PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^) shr 3)+1) shl 3; //8Byte Aligned
     //Length := MYSQL_FIELD^.length;
   end;
   if (bind^.Length[0] = 0) or (Iters = 0)
