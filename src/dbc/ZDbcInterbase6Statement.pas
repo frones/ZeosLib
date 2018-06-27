@@ -87,18 +87,20 @@ type
     function ExecuteInternal: ISC_STATUS;
     function ExceuteBatch: Integer;
   protected
-    procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; IO: TZParamType); override;
-    procedure BindBoolean(Index: Integer; Value: Boolean; IO: TZParamType); override;
-    procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime; IO: TZParamType); override;
-    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double; IO: TZParamType); override;
-    procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob; IO: TZParamType); override;
-    procedure BindNull(Index: Integer; SQLType: TZSQLType; IO: TZParamType); override;
-    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64; IO: TZParamType); override;
-    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64; IO: TZParamType); override;
-    procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt; IO: TZParamType); override;
-    procedure BindRawStr(Index: Integer; const Value: RawByteString; IO: TZParamType);override;
+    procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
+    procedure BindBoolean(Index: Integer; Value: Boolean); override;
+    procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
+    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double); override;
+    procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
+    procedure BindNull(Index: Integer; SQLType: TZSQLType); override;
+    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); override;
+    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); override;
+    procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
+    procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
     procedure CheckParameterIndex(Value: Integer); override;
     function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
+
+
   protected
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
@@ -260,10 +262,10 @@ begin
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.BindBinary(Index: Integer;
-  SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; IO: TZParamType);
+  SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
 var RawTemp: RawByteString;
 begin
-  inherited BindNull(Index, SQLType, IO); //check index, mark io and type
+  CheckParameterIndex(Index); //check index, mark io and type
   if (SQLType = stGUID) and (FParamSQLData.GetFieldSqlType(Index) in [stString, stUnicodeString]) then begin
     RawTemp := GUIDToRaw(PGUID(Buf)^, False); //see https://firebirdsql.org/refdocs/langrefupd25-intfunc-uuid_to_char.html
     FParamSQLData.UpdatePAnsiChar(Index, Pointer(RawTemp), 36);
@@ -272,16 +274,16 @@ begin
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.BindBoolean(Index: Integer;
-  Value: Boolean; IO: TZParamType);
+  Value: Boolean);
 begin
-  inherited BindNull(Index, stBoolean, IO); //check index, mark io and type
+  CheckParameterIndex(Index); //check index, mark io and type
   FParamSQLData.UpdateBoolean(Index, Value);
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.BindDateTime(Index: Integer;
-  SQLType: TZSQLType; const Value: TDateTime; IO: TZParamType);
+  SQLType: TZSQLType; const Value: TDateTime);
 begin
-  inherited BindNull(Index, SQLType, IO); //check index, mark io and type
+  CheckParameterIndex(Index); //check index, mark io and type
   case SQLType of
     stDate: FParamSQLData.UpdateDate(Index, Value);
     stTime: FParamSQLData.UpdateTime(Index, Value);
@@ -290,9 +292,9 @@ begin
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.BindDouble(Index: Integer;
-  SQLType: TZSQLType; const Value: Double; IO: TZParamType);
+  SQLType: TZSQLType; const Value: Double);
 begin
-  inherited BindNull(Index, SQLType, IO); //check index, mark io and type
+  CheckParameterIndex(Index); //check index, mark io and type
   FParamSQLData.UpdateDouble(Index, Value);
 end;
 
@@ -334,51 +336,51 @@ begin
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.BindLob(Index: Integer;
-  SQLType: TZSQLType; const Value: IZBlob; IO: TZParamType);
+  SQLType: TZSQLType; const Value: IZBlob);
 begin
-  CheckParameterIndex(Index); //guarantie FParamSQLData is assigned
-  inherited BindLob(Index, FParamSQLData.GetFieldSqlType(Index), Value, IO);
+  CheckParameterIndex(Index); //check index, mark io and type
+  inherited BindLob(Index, FParamSQLData.GetFieldSqlType(Index), Value);
   if (BindList[index].Value = nil)
   then FParamSQLData.UpdateNull(Index, True)
   else FParamSQLData.WriteLobBuffer(Index, IZBlob(BindList[index].Value).GetBuffer, IZBlob(BindList[index].Value).Length);
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.BindNull(Index: Integer;
-  SQLType: TZSQLType; IO: TZParamType);
+  SQLType: TZSQLType);
 begin
-  inherited BindNull(Index, SQLType, IO); //check index, mark io and type
+  CheckParameterIndex(Index); //check index, mark io and type
   FParamSQLData.UpdateNull(Index, True);
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.BindRawStr(Index: Integer;
-  const Value: RawByteString; IO: TZParamType);
+  const Value: RawByteString);
 begin
-  inherited BindNull(Index, stString, IO); //check index, mark io and type
+  CheckParameterIndex(Index); //check index, mark io and type
   if Value = ''
   then FParamSQLData.UpdatePAnsiChar(Index, PEmptyAnsiString, 0)
   else FParamSQLData.UpdatePAnsiChar(Index, Pointer(Value), Length(Value));
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.BindRawStr(Index: Integer;
-  Buf: PAnsiChar; Len: LengthInt; IO: TZParamType);
+  Buf: PAnsiChar; Len: LengthInt);
 begin
-  inherited BindNull(Index, stString, IO); //check index, mark io and type
+  CheckParameterIndex(Index); //check index, mark io and type
   if Buf = nil
   then FParamSQLData.UpdatePAnsiChar(Index, PEmptyAnsiString, 0)
   else FParamSQLData.UpdatePAnsiChar(Index, Buf, Len);
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.BindSignedOrdinal(
-  Index: Integer; SQLType: TZSQLType; const Value: Int64; IO: TZParamType);
+  Index: Integer; SQLType: TZSQLType; const Value: Int64);
 begin
-  inherited BindNull(Index, SQLType, IO); //check index, mark io and type
+  CheckParameterIndex(Index); //check index, mark io and type
   FParamSQLData.UpdateLong(Index, Value);
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.BindUnsignedOrdinal(
-  Index: Integer; SQLType: TZSQLType; const Value: UInt64; IO: TZParamType);
+  Index: Integer; SQLType: TZSQLType; const Value: UInt64);
 begin
-  inherited BindNull(Index, SQLType, IO); //check index, mark io and type
+  CheckParameterIndex(Index); //check index, mark io and type
   FParamSQLData.UpdateLong(Index, Int64(Value));
 end;
 

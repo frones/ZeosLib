@@ -105,16 +105,16 @@ type
     procedure LinkParam2PG(Index: Integer; Buf: Pointer; Len: LengthInt; ParamFormat: Integer);
   protected
     procedure SetBindCapacity(Capacity: Integer); override;
-    procedure BindNull(Index: Integer; SQLType: TZSQLType; IO: TZParamType); override;
-    procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; IO: TZParamType); override;
-    procedure BindBoolean(Index: Integer; Value: Boolean; IO: TZParamType); override;
-    procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime; IO: TZParamType); override;
-    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double; IO: TZParamType); override;
-    procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob; IO: TZParamType); override;
-    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64; IO: TZParamType); override;
-    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64; IO: TZParamType); override;
-    procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt; IO: TZParamType); override;
-    procedure BindRawStr(Index: Integer; const Value: RawByteString; IO: TZParamType);override;
+    procedure BindNull(Index: Integer; SQLType: TZSQLType); override;
+    procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
+    procedure BindBoolean(Index: Integer; Value: Boolean); override;
+    procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
+    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double); override;
+    procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
+    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); override;
+    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); override;
+    procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
+    procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
     procedure CheckParameterIndex(Value: Integer); override;
   protected
     procedure FlushPendingResults;
@@ -207,26 +207,26 @@ const
 { TZAbstractPostgreSQLPreparedStatementV3 }
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.BindBinary(Index: Integer;
-  SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; IO: TZParamType);
+  SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
 begin
-  inherited BindBinary(Index, SQLType, Buf, Len, IO);
+  inherited BindBinary(Index, SQLType, Buf, Len);
   LinkParam2PG(Index, Buf, Len, ParamFormatBin);
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.BindBoolean(Index: Integer;
-  Value: Boolean; IO: TZParamType);
+  Value: Boolean);
 begin
   if OIDToSQLType(Index, stBoolean) = stBoolean then begin
-    inherited BindBoolean(Index, Value, IO);
+    inherited BindBoolean(Index, Value);
     LinkParam2PG(Index, @BindList[Index].Value, SizeOf(Byte), ParamFormatBin);
     PByte(FPQparamValues[Index])^ := Ord(Value);
-  end else BindSignedOrdinal(Index, BindList.SQLTypes[Index], Ord(Value), IO);
+  end else BindSignedOrdinal(Index, BindList.SQLTypes[Index], Ord(Value));
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.BindDateTime(Index: Integer;
-  SQLType: TZSQLType; const Value: TDateTime; IO: TZParamType);
+  SQLType: TZSQLType; const Value: TDateTime);
 begin
-  inherited BindDateTime(Index, OIDToSQLType(Index, SQLType), Value, IO);
+  inherited BindDateTime(Index, OIDToSQLType(Index, SQLType), Value);
   case BindList.SQLTypes[Index] of
     stTime:     begin
                   LinkParam2PG(Index, BindList._8Bytes[Index], 8, ParamFormatBin);
@@ -245,17 +245,17 @@ begin
                   else DateTime2PG(Value, PDouble(FPQparamValues[Index])^);
                 end;
     else case SQLType of
-      stTime: BindRawStr(Index, DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, False), IO);
-      stDate: BindRawStr(Index, DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, False), IO);
-      stTimeStamp: BindRawStr(Index, DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, False), IO);
+      stTime: BindRawStr(Index, DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, False));
+      stDate: BindRawStr(Index, DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, False));
+      stTimeStamp: BindRawStr(Index, DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, False));
     end;
   end;
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.BindDouble(Index: Integer;
-  SQLType: TZSQLType; const Value: Double; IO: TZParamType);
+  SQLType: TZSQLType; const Value: Double);
 begin
-  inherited BindDouble(Index, OIDToSQLType(Index, SQLType), Value, IO);
+  inherited BindDouble(Index, OIDToSQLType(Index, SQLType), Value);
   case BindList.SQLTypes[Index] of
     stBoolean:  begin
                   LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Byte), ParamFormatBin);
@@ -291,22 +291,22 @@ begin
                   then Currency2PG(Value, FPQparamValues[Index])
                   else Double2PG(Value, FPQparamValues[Index]);
                 end;
-    else BindRawStr(Index, FloatToSqlRaw(Value), IO);
+    else BindRawStr(Index, FloatToSqlRaw(Value));
   end;
 
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.BindLob(Index: Integer;
-  SQLType: TZSQLType; const Value: IZBlob; IO: TZParamType);
+  SQLType: TZSQLType; const Value: IZBlob);
 var
   WriteTempBlob: IZPostgreSQLOidBlob;
 begin
-  inherited BindLob(Index, SQLType, Value, IO); //keep alive and play with refcounts
+  inherited BindLob(Index, SQLType, Value); //keep alive and play with refcounts
   if (Value <> nil) and not Value.IsEmpty then
     if ((SQLType = stBinaryStream) and FOidAsBlob) then begin
       WriteTempBlob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^, 0, ChunkSize);
       WriteTempBlob.WriteBuffer(Value.GetBuffer, Value.Length);
-      BindSignedOrdinal(Index, SQLType, WriteTempBlob.GetBlobOid, IO);
+      BindSignedOrdinal(Index, SQLType, WriteTempBlob.GetBlobOid);
       WriteTempBlob := nil;
     end else begin
       FPQparamValues[Index] := Value.GetBuffer;
@@ -318,33 +318,33 @@ begin
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.BindNull(Index: Integer;
-  SQLType: TZSQLType; IO: TZParamType);
+  SQLType: TZSQLType);
 begin
-  inherited BindNull(Index, OIDToSQLType(Index, SQLType), IO);
+  inherited BindNull(Index, OIDToSQLType(Index, SQLType));
   FPQparamFormats[Index] := ParamFormatStr;
   FPQparamValues[Index] := nil
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.BindRawStr(Index: Integer;
-  Buf: PAnsiChar; Len: LengthInt; IO: TZParamType);
+  Buf: PAnsiChar; Len: LengthInt);
 begin
-  inherited BindRawStr(Index, Buf, Len, IO);
+  inherited BindRawStr(Index, Buf, Len);
   LinkParam2PG(Index, Buf, Len, ParamFormatStr);
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.BindRawStr(Index: Integer;
-  const Value: RawByteString; IO: TZParamType);
+  const Value: RawByteString);
 begin
-  inherited BindRawStr(Index, Value, IO); //localize
+  inherited BindRawStr(Index, Value); //localize
   LinkParam2PG(Index, Pointer(Value), Length(Value), ParamFormatStr);
   if Pointer(Value) = nil then
     FPQparamValues[Index] := PEmptyAnsiString;
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.BindSignedOrdinal(Index: Integer;
-  SQLType: TZSQLType; const Value: Int64; IO: TZParamType);
+  SQLType: TZSQLType; const Value: Int64);
 begin
-  inherited BindSignedOrdinal(Index, OIDToSQLType(Index, SQLType), Value, IO);
+  inherited BindSignedOrdinal(Index, OIDToSQLType(Index, SQLType), Value);
   case BindList.SQLTypes[Index] of
     stBoolean:  begin
                   LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Byte), ParamFormatBin);
@@ -376,14 +376,14 @@ begin
                   LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Double), ParamFormatBin);
                   Double2PG(Value, FPQparamValues[Index]);
                 end;
-    else BindRawStr(Index, IntToRaw(Value), IO);
+    else BindRawStr(Index, IntToRaw(Value));
   end;
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.BindUnsignedOrdinal(Index: Integer;
-  SQLType: TZSQLType; const Value: UInt64; IO: TZParamType);
+  SQLType: TZSQLType; const Value: UInt64);
 begin
-  BindSignedOrdinal(Index, SQLType, Int64(Value), IO);
+  BindSignedOrdinal(Index, SQLType, Int64(Value));
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.CheckParameterIndex(Value: Integer);
@@ -1564,21 +1564,21 @@ begin
             FPQParamOIDs[i] := aOID;
             if (FPQparamValues[I] <> nil) then
               case BindList.SQLTypes[i] of
-                stBoolean:  BindBoolean(i, Boolean(PByte(FPQparamValues[i])^), BindList.ParamTypes[i]);
-                stSmall:    BindSignedOrdinal(i, BindList.SQLTypes[i], PG2SmallInt(FPQparamValues[i]), BindList.ParamTypes[i]);
-                stInteger:  BindSignedOrdinal(i, BindList.SQLTypes[i], PG2Integer(FPQparamValues[i]), BindList.ParamTypes[i]);
-                stLongWord: BindSignedOrdinal(i, BindList.SQLTypes[i], PG2LongWord(FPQparamValues[i]), BindList.ParamTypes[i]);
-                stLong:     BindSignedOrdinal(i, BindList.SQLTypes[i], PG2Int64(FPQparamValues[i]), BindList.ParamTypes[i]);
-                stCurrency: BindDouble(i, BindList.SQLTypes[i], PG2Currency(FPQparamValues[i]), BindList.ParamTypes[i]);
-                stFloat:    BindDouble(i, BindList.SQLTypes[i], PG2Single(FPQparamValues[i]), BindList.ParamTypes[i]);
-                stDouble:   BindDouble(i, BindList.SQLTypes[i], PG2Double(FPQparamValues[i]), BindList.ParamTypes[i]);
+                stBoolean:  BindBoolean(i, Boolean(PByte(FPQparamValues[i])^));
+                stSmall:    BindSignedOrdinal(i, BindList.SQLTypes[i], PG2SmallInt(FPQparamValues[i]));
+                stInteger:  BindSignedOrdinal(i, BindList.SQLTypes[i], PG2Integer(FPQparamValues[i]));
+                stLongWord: BindSignedOrdinal(i, BindList.SQLTypes[i], PG2LongWord(FPQparamValues[i]));
+                stLong:     BindSignedOrdinal(i, BindList.SQLTypes[i], PG2Int64(FPQparamValues[i]));
+                stCurrency: BindDouble(i, BindList.SQLTypes[i], PG2Currency(FPQparamValues[i]));
+                stFloat:    BindDouble(i, BindList.SQLTypes[i], PG2Single(FPQparamValues[i]));
+                stDouble:   BindDouble(i, BindList.SQLTypes[i], PG2Double(FPQparamValues[i]));
                 stTime:     if Finteger_datetimes
-                            then BindDateTime(i, BindList.SQLTypes[i], PG2Time(PInt64(FPQparamValues[i])^), BindList.ParamTypes[i])
-                            else BindDateTime(i, BindList.SQLTypes[i], PG2Time(PDouble(FPQparamValues[i])^), BindList.ParamTypes[i]);
-                stDate:     BindDateTime(i, BindList.SQLTypes[i], PG2Date(PInteger(FPQparamValues[i])^), BindList.ParamTypes[i]);
+                            then BindDateTime(i, BindList.SQLTypes[i], PG2Time(PInt64(FPQparamValues[i])^))
+                            else BindDateTime(i, BindList.SQLTypes[i], PG2Time(PDouble(FPQparamValues[i])^));
+                stDate:     BindDateTime(i, BindList.SQLTypes[i], PG2Date(PInteger(FPQparamValues[i])^));
                 stTimeStamp:if Finteger_datetimes
-                            then BindDateTime(i, BindList.SQLTypes[i], PG2DateTime(PInt64(FPQparamValues[i])^), BindList.ParamTypes[i])
-                            else BindDateTime(i, BindList.SQLTypes[i], PG2DateTime(PDouble(FPQparamValues[i])^), BindList.ParamTypes[i]);
+                            then BindDateTime(i, BindList.SQLTypes[i], PG2DateTime(PInt64(FPQparamValues[i])^))
+                            else BindDateTime(i, BindList.SQLTypes[i], PG2DateTime(PDouble(FPQparamValues[i])^));
               end;
           end;
         end;

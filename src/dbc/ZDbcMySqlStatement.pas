@@ -106,16 +106,16 @@ type
     procedure CheckParameterIndex(Value: Integer); override;
     procedure SetBindCapacity(Capacity: Integer); override;
 
-    procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; IO: TZParamType); override;
-    procedure BindBoolean(Index: Integer; Value: Boolean; IO: TZParamType); override;
-    procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime; IO: TZParamType); override;
-    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double; IO: TZParamType); override;
-    procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob; IO: TZParamType); override;
-    procedure BindNull(Index: Integer; SQLType: TZSQLType; IO: TZParamType); override;
-    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64; IO: TZParamType); override;
-    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64; IO: TZParamType); override;
-    procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt; IO: TZParamType); override;
-    procedure BindRawStr(Index: Integer; const Value: RawByteString; IO: TZParamType); override;
+    procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
+    procedure BindBoolean(Index: Integer; Value: Boolean); override;
+    procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
+    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double); override;
+    procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
+    procedure BindNull(Index: Integer; SQLType: TZSQLType); override;
+    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); override;
+    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); override;
+    procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
+    procedure BindRawStr(Index: Integer; const Value: RawByteString); override;
   public
     constructor Create(const Connection: IZMySQLConnection;
       const SQL: string; Info: TStrings);
@@ -216,13 +216,13 @@ const EnumBool: array[Boolean] of AnsiString = ('N','Y');
 { TZAbstractMySQLPreparedStatement }
 
 procedure TZAbstractMySQLPreparedStatement.BindNull(Index: Integer;
-  SQLType: TZSQLType; IO: TZParamType);
+  SQLType: TZSQLType);
 var
   Bind: PMYSQL_aligned_BIND;
 begin
   if FEmulatedParams then begin
     if FTokenMatchIndex <> -1
-    then inherited BindNull(Index, SQLType, IO)
+    then inherited BindNull(Index, SQLType)
     else CheckParameterIndex(Index);
     if FUseDefaults and (FInParamDefaultValues[Index] <> '')
     then FEmulatedValues[Index] := FInParamDefaultValues[Index]
@@ -233,16 +233,16 @@ begin
     Bind := @FMYSQL_aligned_BINDs[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     if FUseDefaults and (FInParamDefaultValues[Index] <> '') then
-      BindRawStr(Index, Pointer(FInParamDefaultValues[Index]), Length(FInParamDefaultValues[Index]), IO)
+      BindRawStr(Index, Pointer(FInParamDefaultValues[Index]), Length(FInParamDefaultValues[Index]))
     else if BindList.SQLTypes[Index] <> SQLType then
       InitBuffer(SQLType, Bind, 0);
     Bind^.is_null := 1;
-    BindList.SetNull(Index, SQLType, IO);
+    BindList.SetNull(Index, SQLType);
   end;
 end;
 
 procedure TZAbstractMySQLPreparedStatement.BindRawStr(Index: Integer;
-  const Value: RawByteString; IO: TZParamType);
+  const Value: RawByteString);
 var
   Bind: PMYSQL_aligned_BIND;
   Len: LengthInt;
@@ -250,7 +250,7 @@ begin
   Len := Length(Value);
   if FEmulatedParams then begin
     if FTokenMatchIndex <> -1 then
-      inherited BindRawStr(Index, Value, IO);
+      inherited BindRawStr(Index, Value);
     Connection.GetEscapeString(Pointer(Value), Len, FEmulatedValues[Index]);
   end else begin
     {$R-}
@@ -263,18 +263,18 @@ begin
     else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Bind^.buffer)^, Len+1);
     Bind^.Length[0] := Len;
     Bind^.is_null := 0;
-    BindList.SetNull(Index, stString, IO);
+    BindList.SetNull(Index, stString);
   end;
 end;
 
 procedure TZAbstractMySQLPreparedStatement.BindRawStr(Index: Integer;
-  Buf: PAnsiChar; Len: LengthInt; IO: TZParamType);
+  Buf: PAnsiChar; Len: LengthInt);
 var
   Bind: PMYSQL_aligned_BIND;
 begin
   if FEmulatedParams then begin
     if FTokenMatchIndex <> -1 then
-      inherited BindRawStr(Index, Buf, Len, IO);
+      inherited BindRawStr(Index, Buf, Len);
     Connection.GetEscapeString(Buf, Len, FEmulatedValues[Index]);
   end else begin
     {$R-}
@@ -287,7 +287,7 @@ begin
     else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, Pointer(Bind^.buffer)^, Len+1);
     Bind^.Length[0] := Len;
     Bind^.is_null := 0;
-    BindList.SetNull(Index, stString, IO);
+    BindList.SetNull(Index, stString);
   end;
 end;
 
@@ -324,7 +324,7 @@ begin
         ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
         ConSettings^.ClientCodePage^.CP), Self);
     for i := 0 to BindList.Count -1 do
-      BindNull(i, TZSQLType(BindList.Arrays[i].VArrayType), zptInput);
+      BindNull(i, TZSQLType(BindList.Arrays[i].VArrayType));
   end;
   inherited ClearParameters;
 end;
@@ -923,15 +923,15 @@ begin
 end;
 
 procedure TZAbstractMySQLPreparedStatement.BindBinary(Index: Integer;
-  SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; IO: TZParamType);
+  SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
 var
   Bind: PMYSQL_aligned_BIND;
 begin
   if (SQLType = stGUID) and FGUIDAsString then
-    BindRawStr(Index, GUIDToRaw(Buf, Len, False), IO)
+    BindRawStr(Index, GUIDToRaw(Buf, Len, False))
   else if FEmulatedParams then begin
     if FTokenMatchIndex <> -1
-    then inherited BindBinary(Index, SQLType, Buf, Len, IO)
+    then inherited BindBinary(Index, SQLType, Buf, Len)
     else CheckParameterIndex(Index);
     Connection.GetBinaryEscapeString(Buf, Len, FEmulatedValues[Index])
   end else begin
@@ -951,7 +951,7 @@ begin
       Bind^.Length[0] := 0;
     end;
     Bind^.is_null := 0;
-    BindList.SetNull(Index, SQLType, IO);
+    BindList.SetNull(Index, SQLType);
   end;
 end;
 
@@ -1008,11 +1008,11 @@ begin
 end;
 
 procedure TZAbstractMySQLPreparedStatement.BindLob(Index: Integer; SQLType: TZSQLType;
-  const Value: IZBlob; IO: TZParamType);
+  const Value: IZBlob);
 begin
-  inherited BindLob(Index, SQLType, Value, IO); //refcounts
+  inherited BindLob(Index, SQLType, Value); //refcounts
   if (Value = nil) or (Value.IsEmpty) then
-    BindNull(Index, SQLType, IO)
+    BindNull(Index, SQLType)
   else if FEmulatedParams then begin
     if SQLType = stBinaryStream
     then Connection.GetBinaryEscapeString(Value.GetBuffer, Value.Length, FEmulatedValues[Index])
@@ -1425,23 +1425,22 @@ begin
   end;
 end;
 
-procedure TZAbstractMySQLPreparedStatement.BindBoolean(Index: Integer; Value: Boolean;
-  IO: TZParamType);
+procedure TZAbstractMySQLPreparedStatement.BindBoolean(Index: Integer; Value: Boolean);
 begin
   if FMySQL_FieldType_Bit_1_IsBoolean
-  then BindSignedOrdinal(Index, stBoolean, Ord(Value), IO)
-  else BindRawStr(Index, EnumBool[Value], IO);
+  then BindSignedOrdinal(Index, stBoolean, Ord(Value))
+  else BindRawStr(Index, EnumBool[Value]);
 end;
 
 procedure TZAbstractMySQLPreparedStatement.BindDateTime(Index: Integer;
-  SQLType: TZSQLType; const Value: TDateTime; IO: TZParamType);
+  SQLType: TZSQLType; const Value: TDateTime);
 var
   Bind: PMYSQL_aligned_BIND;
   P: PMYSQL_TIME;
 begin
   if FEmulatedParams then begin
     if FTokenMatchIndex <> -1 then
-      inherited BindDateTime(Index, SQLType, Value, IO);
+      inherited BindDateTime(Index, SQLType, Value);
     case SQLType of
       stDate: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.DateFormatLen
               then FEmulatedValues[Index] := DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, True)
@@ -1471,18 +1470,18 @@ begin
       P^.second_part := P^.second_part*1000;
     end;
     Bind^.is_null := 0;
-    BindList.SetNull(Index, SQLType, IO);
+    BindList.SetNull(Index, SQLType);
   end;
 end;
 
 procedure TZAbstractMySQLPreparedStatement.BindDouble(Index: Integer;
-  SQLType: TZSQLType; const Value: Double; IO: TZParamType);
+  SQLType: TZSQLType; const Value: Double);
 var
   Bind: PMYSQL_aligned_BIND;
 begin
   if FEmulatedParams then begin
     if FTokenMatchIndex <> -1
-    then inherited BindDouble(Index, SQLType, Value, IO)
+    then inherited BindDouble(Index, SQLType, Value)
     else CheckParameterIndex(Index);
     FEmulatedValues[Index] := FloatToSQLRaw(Value);
   end else begin
@@ -1494,18 +1493,18 @@ begin
       InitBuffer(SQLType, Bind);
     PDouble(bind^.buffer)^ := Value;
     Bind^.is_null := 0;
-    BindList.SetNull(Index, SQLType, IO);
+    BindList.SetNull(Index, SQLType);
   end;
 end;
 
 procedure TZAbstractMySQLPreparedStatement.BindSignedOrdinal(Index: Integer;
-  SQLType: TZSQLType; const Value: Int64; IO: TZParamType);
+  SQLType: TZSQLType; const Value: Int64);
 var
   Bind: PMYSQL_aligned_BIND;
 begin
   if FEmulatedParams then begin
     if FTokenMatchIndex <> -1
-    then inherited BindSignedOrdinal(Index, SQLType, Value, IO)
+    then inherited BindSignedOrdinal(Index, SQLType, Value)
     else CheckParameterIndex(Index);
     FEmulatedValues[Index] := IntToRaw(Value);
   end else begin
@@ -1534,18 +1533,18 @@ begin
                           end;
     end;
     Bind^.is_null := 0;
-    BindList.SetNull(Index, SQLType, IO);
+    BindList.SetNull(Index, SQLType);
   end;
 end;
 
 procedure TZAbstractMySQLPreparedStatement.BindUnsignedOrdinal(Index: Integer;
-  SQLType: TZSQLType; const Value: UInt64; IO: TZParamType);
+  SQLType: TZSQLType; const Value: UInt64);
 var
   Bind: PMYSQL_aligned_BIND;
 begin
   if FEmulatedParams then begin
     if FTokenMatchIndex <> -1
-    then inherited BindSignedOrdinal(Index, SQLType, Value, IO)
+    then inherited BindSignedOrdinal(Index, SQLType, Value)
     else CheckParameterIndex(Index);
     FEmulatedValues[Index] := IntToRaw(Value);
   end else begin
@@ -1574,7 +1573,7 @@ begin
                           end;
     end;
     Bind^.is_null := 0;
-    BindList.SetNull(Index, SQLType, IO);
+    BindList.SetNull(Index, SQLType);
   end;
 end;
 
@@ -1637,16 +1636,16 @@ begin
           end;
           V := BindList.Variants[I];
           SQLType := BindList.SQLTypes[I];
-          BindList.SetNull(I, stUnknown, BindList.ParamTypes[i]);
+          BindList.SetNull(I, stUnknown);
           case V.VType of
-            vtBoolean:  BindBoolean(I, v.VBoolean, BindList.ParamTypes[i]);
-            vtBytes:    BindBinary(I, SQLType, Pointer(V.VBytes), Length(V.VBytes), BindList.ParamTypes[i]);
-            vtInteger:  BindSignedOrdinal(i, SQLType, V.VInteger, BindList.ParamTypes[i]);
-            vtUInteger: BindUnSignedOrdinal(i, SQLType, V.VUInteger, BindList.ParamTypes[i]);
-            vtFloat:    BindDouble(i, SQLType, V.VFloat, BindList.ParamTypes[i]);
-            vtDateTime: BindDatetime(i, SQLType, V.VDateTime, BindList.ParamTypes[i]);
-            vtRawByteString: BindRawStr(i, V.VRawByteString, BindList.ParamTypes[i]);
-            vtCharRec:  BindRawStr(i, V.VCharRec.P, V.VCharRec.Len, BindList.ParamTypes[i]);
+            vtBoolean:  BindBoolean(I, v.VBoolean);
+            vtBytes:    BindBinary(I, SQLType, Pointer(V.VBytes), Length(V.VBytes));
+            vtInteger:  BindSignedOrdinal(i, SQLType, V.VInteger);
+            vtUInteger: BindUnSignedOrdinal(i, SQLType, V.VUInteger);
+            vtFloat:    BindDouble(i, SQLType, V.VFloat);
+            vtDateTime: BindDatetime(i, SQLType, V.VDateTime);
+            vtRawByteString: BindRawStr(i, V.VRawByteString);
+            vtCharRec:  BindRawStr(i, V.VCharRec.P, V.VCharRec.Len);
           end;
         end;
     end;
