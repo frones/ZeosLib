@@ -718,14 +718,10 @@ TMYSQL_CLIENT_OPTIONS =
   PPMYSQL_STMT = ^PMYSQL_STMT;
   PMYSQL_STMT = Pointer;
 
-{ ****************** Plain API Types definition ***************** }
-
+  TMySQLForks = (fMySQL, fMariaDB, fSphinx, fPercona, fDrizzle, WebScaleSQL, OurDelta);
 
 const
-  EMBEDDED_DEFAULT_DATA_DIR = {$IFDEF WIN32}
-                               '.\data\'
-                              {$ELSE} './data/'
-                              {$ENDIF};
+  EMBEDDED_DEFAULT_DATA_DIR = {$IFDEF WINDOWS}'.\data\'{$ELSE}'./data/'{$ENDIF};
   SERVER_ARGUMENTS_KEY_PREFIX = 'ServerArgument';
   SERVER_GROUPS : array [0..2] of PAnsiChar = ('embedded'#0, 'server'#0, nil);
 
@@ -734,7 +730,7 @@ const
                                             '--set-variable=key_buffer_size=32M'#0);
 
 const
-    MaxBlobSize = 1000000;
+  MaxBlobSize = 1000000;
 //some error codes:
   CR_SERVER_GONE_ERROR = 2006;
   CR_SERVER_LOST = 2013;
@@ -749,6 +745,21 @@ const
   CURSOR_TYPE_READ_ONLY:  ULong = 1;
   CURSOR_TYPE_FOR_UPDATE: ULong = 2;
   CURSOR_TYPE_SCROLLABLE: ULong = 4;
+
+{** offet of MYSSQL.server_status field:
+  The struct of the record tends to change to often and we don't need all the
+  definitions
+
+  Value := NativeUInt(@(MYSQLx(Nil).server_status
+}
+  MYSQL5up_server_status_offset: NativeUInt = 748;
+  MYSQL41_server_status_offset: NativeUInt = 436;
+  MYSQL323_server_status_offset: NativeUInt = 328;
+
+  //mysql_com.h
+  SERVER_PS_OUT_PARAMS = LongWord(4096); //To mark ResultSet containing output parameter values.
+  SERVER_MORE_RESULTS_EXIST = LongWord(8); //Multi query - next query exists
+
 implementation
 
 
