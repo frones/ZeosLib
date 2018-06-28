@@ -493,8 +493,14 @@ function TZAbstractDriver.GetPlainDriver(const Url: TZURL;
   const InitDriver: Boolean): IZPlainDriver;
 begin
   Result := GetPlainDriverFromCache(Url.Protocol, Url.LibLocation);
-  if Assigned(Result) and InitDriver then
-    Result.Initialize(Url.LibLocation);
+  if Assigned(Result) and InitDriver then begin
+    GlobalCriticalSection.Enter;
+    try
+      Result.Initialize(Url.LibLocation);
+    finally
+      GlobalCriticalSection.Leave;
+    end;
+  end;
 end;
 
 {**

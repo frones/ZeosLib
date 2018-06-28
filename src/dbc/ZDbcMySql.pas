@@ -143,13 +143,9 @@ var
 implementation
 
 uses
-  {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZMessages, ZSysUtils, ZDbcMySqlStatement, ZMySqlToken, ZFastCode,
   ZDbcMySqlUtils, ZDbcMySqlMetadata, ZMySqlAnalyser, TypInfo,
   ZEncoding, ZConnProperties, ZDbcProperties;
-
-var
-  MySQLCriticalSection: TCriticalSection;
 
 { TZMySQLDriver }
 
@@ -189,13 +185,7 @@ end;
 {$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
 function TZMySQLDriver.Connect(const Url: TZURL): IZConnection;
 begin
-  Result := nil; //init
-  MySQLCriticalSection.Enter;
-  try
-    Result := TZMySQLConnection.Create(Url);
-  finally
-    MySQLCriticalSection.Leave;
-  end;
+  Result := TZMySQLConnection.Create(Url);
 end;
 {$WARNINGS ON} //suppress the deprecatad warning of calling create from internal
 
@@ -333,7 +323,12 @@ begin
     Exit;
 
   LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
-  FHandle := FPlainDriver.Init(FHandle);
+  GlobalCriticalSection.Enter;
+  try
+    FHandle := FPlainDriver.Init(FHandle); //is not threadsave!
+  finally
+    GlobalCriticalSection.Leave;
+  end;
   {EgonHugeist: get current characterset first }
   if Assigned(FPlainDriver.mysql_character_set_name) then begin
     sMy_client_Char_Set := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FPlainDriver.mysql_character_set_name(FHandle));
@@ -861,11 +856,9 @@ end;
 initialization
   MySQLDriver := TZMySQLDriver.Create;
   DriverManager.RegisterDriver(MySQLDriver);
-  MySQLCriticalSection := TCriticalSection.Create;
 finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(MySQLDriver);
   MySQLDriver := nil;
-  FreeAndNil(MySQLCriticalSection);
 end.
 

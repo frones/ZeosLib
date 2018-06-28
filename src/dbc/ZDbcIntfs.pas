@@ -61,6 +61,7 @@ uses
   SynCommons,
   {$ENDIF USE_SYNCOMMONS}
   Types, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF}, SysUtils,
+  {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema,
   ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver, ZURL;
 
@@ -745,7 +746,6 @@ type
   {** Callable SQL statement interface. }
   IZCallableStatement = interface(IZPreparedStatement)
     ['{E6FA6C18-C764-4C05-8FCB-0582BDD1EF40}']
-    function IsFunction: Boolean;
     { Multiple ResultSet support API }
     function GetFirstResultSet: IZResultSet;
     function GetPreviousResultSet: IZResultSet;
@@ -1177,10 +1177,11 @@ type
 var
   {** The common driver manager object. }
   DriverManager: IZDriverManager;
+  GlobalCriticalSection: TCriticalSection;
 
 implementation
 
-uses ZMessages, ZConnProperties, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF};
+uses ZMessages, ZConnProperties;
 
 type
   {** Driver Manager interface. }
@@ -1193,7 +1194,6 @@ type
     FLoginTimeout: Integer;
     FLoggingListeners: IZCollection;
     FHasLoggingListener: Boolean;
-    FCriticalSection: TCriticalSection;
     FURL: TZURL;
     procedure LogEvent(const Event: TZLoggingEvent);
   public
@@ -1247,7 +1247,6 @@ begin
   FLoggingListeners := TZCollection.Create;
   FHasLoggingListener := False;
   FURL := TZURL.Create;
-  fCriticalSection := TCriticalSection.Create;
 end;
 
 {**
@@ -1258,7 +1257,6 @@ begin
   FreeAndNil(FURL);
   FDrivers := nil;
   FLoggingListeners := nil;
-  FreeAndNil(fCriticalSection);
   inherited Destroy;
 end;
 
@@ -1400,12 +1398,12 @@ end;
 }
 procedure TZDriverManager.AddLoggingListener(const Listener: IZLoggingListener);
 begin
-  fCriticalSection.Enter;
+  GlobalCriticalSection.Enter;
   try
     FLoggingListeners.Add(Listener);
     FHasLoggingListener := True;
   finally
-    fCriticalSection.Leave;
+    GlobalCriticalSection.Leave;
   end;
 end;
 
@@ -1415,12 +1413,12 @@ end;
 }
 procedure TZDriverManager.RemoveLoggingListener(const Listener: IZLoggingListener);
 begin
-  fCriticalSection.Enter;
+  GlobalCriticalSection.Enter;
   try
     FLoggingListeners.Remove(Listener);
     FHasLoggingListener := (FLoggingListeners.Count>0);
   finally
-    fCriticalSection.Leave;
+    GlobalCriticalSection.Leave;
   end;
 end;
 
@@ -1468,7 +1466,7 @@ var
 begin
   if not FHasLoggingListener then
     Exit;
-  fCriticalSection.Enter;
+  GlobalCriticalSection.Enter;
   try
     for I := 0 to FLoggingListeners.Count - 1 do
     begin
@@ -1479,7 +1477,7 @@ begin
       end;
     end;
   finally
-    fCriticalSection.Leave;
+    GlobalCriticalSection.Leave;
   end;
 end;
 
@@ -1643,7 +1641,9 @@ end;
 
 initialization
   DriverManager := TZDriverManager.Create;
+  GlobalCriticalSection := TCriticalSection.Create;
 finalization
   DriverManager := nil;
+  FreeAndNil(GlobalCriticalSection);
 end.
 
