@@ -723,7 +723,7 @@ begin
       Handle := FMYSQL_STMT;
       FMYSQL_STMT := nil;
       //test if more results are pendding
-      if (Handle <> nil) and not FPlainDriver.IsMariaDBDriver and (Assigned(FPlainDriver.mysql_stmt_more_results) and (FPlainDriver.mysql_stmt_more_results(FPMYSQL_STMT^) = 1))
+      if (Handle <> nil) and {not FPlainDriver.IsMariaDBDriver and} (Assigned(FPlainDriver.mysql_stmt_more_results) and (FPlainDriver.mysql_stmt_more_results(FPMYSQL_STMT^) = 1))
       then Close
       else inherited ResetCursor;
     end else begin

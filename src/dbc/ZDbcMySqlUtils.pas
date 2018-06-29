@@ -413,9 +413,6 @@ var
     if (Buf = nil) or (Buf^ = #0) then
       Result := ''
     else begin
-      //EH: mariadb up to 10.3 and old MySQL versions seems to be buggy here so this workaround was made
-      //Note the issues happen only if no gui is used?! What? True so it seems to be a performance issue?
-      //Len := ZFastCode.StrLen(Buf);
       {$IFDEF UNICODE}
       Result := PRawToUnicode(Buf, Len, ConSettings^.ClientCodePage^.CP);
       {$ELSE}
@@ -432,22 +429,24 @@ begin
   if Assigned(MYSQL_FIELD) then
   begin
     Result := TZColumnInfo.Create;
-    if FieldOffsets.name_length > 0
+    //note calling a SP with multiple results -> mySQL&mariaDB returning wrong lengthes!
+    //see test bugreport.TZTestCompMySQLBugReport.TestTicket186_MultipleResults
+    //so we're calling strlen in all cases to have a common behavior!
+    {if FieldOffsets.name > 0
     then Result.ColumnLabel := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+FieldOffsets.name)^, PUint(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.name_length))^)
-    else Result.ColumnLabel := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+FieldOffsets.name)^, StrLen(PPAnsichar(NativeUInt(MYSQL_FIELD)+FieldOffsets.name)^));
-    if FieldOffsets.org_table > 0 then
-      if (FieldOffsets.org_table_length > 0)
-      then Result.TableName := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_table))^, PUint(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_table_length))^)
-      else Result.TableName := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_table))^, StrLen(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_table))^));
+    else} Result.ColumnLabel := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+FieldOffsets.name)^, StrLen(PPAnsichar(NativeUInt(MYSQL_FIELD)+FieldOffsets.name)^));
+    if (FieldOffsets.org_table > 0)
+    then {Result.TableName := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_table))^, PUint(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_table_length))^)
+    else }Result.TableName := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_table))^, StrLen(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_table))^));
     if (Result.TableName <> '') then begin
-      if FieldOffsets.org_name_length > 0
-      then Result.ColumnName := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_name))^, PUint(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_name_length))^)
-      else Result.ColumnName := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_name))^, StrLen(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_name))^));
+      if FieldOffsets.org_name > 0
+      then {Result.ColumnName := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_name))^, PUint(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_name_length))^)
+      else} Result.ColumnName := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_name))^, StrLen(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_name))^));
       {JDBC maps the MySQL MYSQK_FIELD.db to Catalog:
        see: https://stackoverflow.com/questions/7942520/relationship-between-catalog-schema-user-and-database-instance}
       if FieldOffsets.db_length > 0
-      then Result.CatalogName := ValueToString(PPAnsichar(NativeUInt(PAnsichar(MYSQL_FIELD)+FieldOffsets.db))^, PUint(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.db_length))^)
-      else Result.CatalogName := ValueToString(PPAnsichar(NativeUInt(PAnsichar(MYSQL_FIELD)+FieldOffsets.db))^, StrLen(PPAnsichar(NativeUInt(PAnsichar(MYSQL_FIELD)+FieldOffsets.db))^));
+      then {Result.CatalogName := ValueToString(PPAnsichar(NativeUInt(PAnsichar(MYSQL_FIELD)+FieldOffsets.db))^, PUint(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.db_length))^)
+      else }Result.CatalogName := ValueToString(PPAnsichar(NativeUInt(PAnsichar(MYSQL_FIELD)+FieldOffsets.db))^, StrLen(PPAnsichar(NativeUInt(PAnsichar(MYSQL_FIELD)+FieldOffsets.db))^));
     end;
     Result.ReadOnly := (FieldOffsets.org_table <0) or (Result.TableName = '') or (Result.ColumnName = '');
     Result.Writable := not Result.ReadOnly;
