@@ -1692,12 +1692,10 @@ function TZMySQLCallableStatement.GetOutParamSQL: RawByteString;
     Result := '';
     I := 0;
     while True do
-      if (FDBParamTypes[i] = 0) or ( I = Length(FDBParamTypes)) then
+      if ( I = Length(FDBParamTypes)) or (FDBParamTypes[i] = 0) then
         break
-      else
-      begin
-        if FDBParamTypes[i] in [2, 3, 4] then
-        begin
+      else begin
+        if FDBParamTypes[i] in [2, 3, 4] then begin
           if Result <> '' then
             Result := Result + ',';
           if FParamTypeNames[i] = '' then
@@ -1817,8 +1815,8 @@ begin
       Resultsets}
     CachedResultSet.Last;//Fetch all
     CachedResultSet.BeforeFirst;//Move to first pos
-    if FQueryHandle <> nil then
-      FPlainDriver.mysql_free_result(FQueryHandle);
+    //if FQueryHandle <> nil then
+      //FPlainDriver.mysql_free_result(FQueryHandle);
     //NativeResultSet.ResetCursor; //Release the handles
     Result := CachedResultSet;
   end
