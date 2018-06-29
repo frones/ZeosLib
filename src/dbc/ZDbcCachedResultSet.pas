@@ -2366,7 +2366,7 @@ begin
         stSmall: RowAccessor.SetSmall(I, ResultSet.GetSmall(I));
         stLongWord: RowAccessor.SetUInt(I, ResultSet.GetUInt(I));
         stInteger: RowAccessor.SetInt(I, ResultSet.GetInt(I));
-        stULong: RowAccessor.SetLong(I, ResultSet.GetULong(I));
+        stULong: RowAccessor.SetULong(I, ResultSet.GetULong(I));
         stLong: RowAccessor.SetLong(I, ResultSet.GetLong(I));
         stFloat: RowAccessor.SetFloat(I, ResultSet.GetFloat(I));
         stDouble: RowAccessor.SetDouble(I, ResultSet.GetDouble(I));
@@ -2447,12 +2447,14 @@ end;
 }
 procedure TZCachedResultSet.Close;
 begin
-  inherited Close;
-  if Assigned(ColumnsInfo) then //close may release the object -> a destroy will be called -> the list does'nt exist anymore
-    ColumnsInfo.Clear;
-  If Assigned(FResultset) then begin
-    FResultset.Close;
-    FResultSet := nil;
+  if not Closed then begin
+    inherited Close;
+    if Assigned(ColumnsInfo) then //close may release the object -> a destroy will be called -> the list does'nt exist anymore
+      ColumnsInfo.Clear;
+    If Assigned(FResultset) then begin
+      FResultset.Close;
+      FResultSet := nil;
+    end;
   end;
 end;
 
