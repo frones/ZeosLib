@@ -424,8 +424,10 @@ TMYSQL_CLIENT_OPTIONS =
     data:       Pointer;
   end;
 
-  PMYSQL_FIELD = ^TMYSQL_FIELD;
-  TMYSQL_FIELD = record
+  PMYSQL_FIELD = Pointer;
+
+  PMYSQL_FIELD51 = ^TMYSQL_FIELD51;
+  TMYSQL_FIELD51 = record
     name:             PAnsiChar;   // Name of column
     org_name:         PAnsiChar;   // Original column name, if an alias
     table:            PAnsiChar;   // Table of column if column was a field
@@ -446,6 +448,95 @@ TMYSQL_CLIENT_OPTIONS =
     decimals:         UInt; // Number of decimals in field
     charsetnr:        UInt; // Character set
     _type:            TMysqlFieldType; // Type of field. Se mysql_com.h for types
+    extension:        Pointer //added in 4.1
+  end;
+
+  PMYSQL_FIELD41 = ^MYSQL_FIELD41;
+  MYSQL_FIELD41 = record
+    name:             PAnsiChar; // Name of column
+    org_name:         PAnsiChar; // Original column name, if an alias
+    table:            PAnsiChar; // Table of column if column was a field
+    org_table:        PAnsiChar; // Org table name if table was an alias
+    db:               PAnsiChar; // Database for table
+    catalog:          PAnsiChar; // Catalog for table
+    def:              PAnsiChar; // Default value (set by mysql_list_fields)
+    length:           ULong; // Width of column
+    max_length:       ULong; // Max width of selected set
+    name_length:      UInt;
+    org_name_length:  UInt;
+    table_length:     UInt;
+    org_table_length: UInt;
+    db_length:        UInt;
+    catalog_length:   UInt;
+    def_length:       UInt;
+    flags:            UInt; // Div flags
+    decimals:         UInt; // Number of decimals in field
+    charsetnr:        UInt; // Character set
+    _type:            TMysqlFieldType;     // Type of field. Se enum_field_types.
+  end;
+  PMYSQL_FIELD401 = ^MYSQL_FIELD401;
+  MYSQL_FIELD401 = record
+    name:             PAnsiChar; // Name of column
+    org_name:         PAnsiChar; // Original column name, if an alias
+    table:            PAnsiChar; // Table of column if column was a field
+    org_table:        PAnsiChar; // Org table name if table was an alias
+    db:               PAnsiChar; // Database for table
+    def:              PAnsiChar; // Default value (set by mysql_list_fields)
+    length:           ULong; // Width of column
+    max_length:       ULong; // Max width of selected set
+    name_length:      UInt;
+    org_name_length:  UInt;
+    table_length:     UInt;
+    org_table_length: UInt;
+    db_length:        UInt;
+    def_length:       UInt;
+    flags:            UInt; // Div flags
+    decimals:         UInt; // Number of decimals in field
+    charsetnr:        UInt; // Character set
+    _type:            TMysqlFieldType;     // Type of field. Se mysql_com.h for types
+  end;
+  PMYSQL_FIELD40 = ^MYSQL_FIELD40;
+  MYSQL_FIELD40 = record
+    name:             PAnsiChar; // Name of column
+    table:            PAnsiChar; // Table of column if column was a field
+    org_table:        PAnsiChar; // Org table name if table was an alias
+    db:               PAnsiChar; // Database for table
+    def:              PAnsiChar; // Default value (set by mysql_list_fields)
+    length:           ULong; // Width of column
+    max_length:       ULong; // Max width of selected set
+    flags:            UInt; // Div flags
+    decimals:         UInt; // Number of decimals in field
+    _type:            TMysqlFieldType;     // Type of field. Se mysql_com.h for types
+  end;
+  PMYSQL_FIELD32 = ^MYSQL_FIELD32;
+  MYSQL_FIELD32 = record
+    name:             PAnsiChar; // Name of column
+    table:            PAnsiChar; // Table of column if column was a field
+    def:              PAnsiChar; // Default value (set by mysql_list_fields)
+    _type:            TMysqlFieldType;     // Type of field. Se mysql_com.h for types
+    length:           UInt; // Width of column
+    max_length:       UInt; // Max width of selected set
+    flags:            UInt; // Div flags
+    decimals:         UInt; // Number of decimals in field
+  end;
+
+  // offsets to used MYSQL_FIELDxx members.
+  // a negative entry means the field does not exits in the record
+  PMYSQL_FIELDOFFSETS = ^TMYSQL_FIELDOFFSETS;
+  TMYSQL_FIELDOFFSETS = record
+    name            : NativeUInt;
+    name_length     : NativeInt;
+    org_table       : NativeInt;
+    org_table_length: NativeInt;
+    org_name        : NativeInt;
+    org_name_length : NativeInt;
+    db              : NativeInt;
+    db_length       : NativeInt;
+    charsetnr       : NativeInt;
+    _type           : NativeUInt;
+    flags           : NativeUInt;
+    length          : NativeUInt;
+    decimals        : NativeUInt;
   end;
 
   PMYSQL_BIND041 = ^MYSQL_BIND041;
@@ -627,14 +718,10 @@ TMYSQL_CLIENT_OPTIONS =
   PPMYSQL_STMT = ^PMYSQL_STMT;
   PMYSQL_STMT = Pointer;
 
-{ ****************** Plain API Types definition ***************** }
-
+  TMySQLForks = (fMySQL, fMariaDB, fSphinx, fPercona, fDrizzle, WebScaleSQL, OurDelta);
 
 const
-  EMBEDDED_DEFAULT_DATA_DIR = {$IFDEF WIN32}
-                               '.\data\'
-                              {$ELSE} './data/'
-                              {$ENDIF};
+  EMBEDDED_DEFAULT_DATA_DIR = {$IFDEF WINDOWS}'.\data\'{$ELSE}'./data/'{$ENDIF};
   SERVER_ARGUMENTS_KEY_PREFIX = 'ServerArgument';
   SERVER_GROUPS : array [0..2] of PAnsiChar = ('embedded'#0, 'server'#0, nil);
 
@@ -643,7 +730,7 @@ const
                                             '--set-variable=key_buffer_size=32M'#0);
 
 const
-    MaxBlobSize = 1000000;
+  MaxBlobSize = 1000000;
 //some error codes:
   CR_SERVER_GONE_ERROR = 2006;
   CR_SERVER_LOST = 2013;
@@ -658,6 +745,21 @@ const
   CURSOR_TYPE_READ_ONLY:  ULong = 1;
   CURSOR_TYPE_FOR_UPDATE: ULong = 2;
   CURSOR_TYPE_SCROLLABLE: ULong = 4;
+
+{** offet of MYSSQL.server_status field:
+  The struct of the record tends to change to often and we don't need all the
+  definitions
+
+  Value := NativeUInt(@(MYSQLx(Nil).server_status
+}
+  MYSQL5up_server_status_offset: NativeUInt = 748;
+  MYSQL41_server_status_offset: NativeUInt = 436;
+  MYSQL323_server_status_offset: NativeUInt = 328;
+
+  //mysql_com.h
+  SERVER_PS_OUT_PARAMS = LongWord(4096); //To mark ResultSet containing output parameter values.
+  SERVER_MORE_RESULTS_EXIST = LongWord(8); //Multi query - next query exists
+
 implementation
 
 

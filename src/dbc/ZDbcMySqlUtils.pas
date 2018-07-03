@@ -77,7 +77,7 @@ type
   @param FieldFlags field flags.
   @return a SQL undepended type.
 }
-function ConvertMySQLHandleToSQLType(MYSQL_FIELD: PMYSQL_FIELD;
+function ConvertMySQLHandleToSQLType(MYSQL_FIELD: PMYSQL_FIELD; FieldOffsets: PMYSQL_FIELDOFFSETS;
   CtrlsCPType: TZControlsCodePage; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TZSQLType;
 
 {**
@@ -137,7 +137,7 @@ function getMySQLFieldSize (field_type: TMysqlFieldType; field_size: LongWord): 
   @param FieldHandle the handle of the fetched field
   @returns a new TZColumnInfo
 }
-function GetMySQLColumnInfoFromFieldHandle(MYSQL_FIELD: PMYSQL_FIELD;
+function GetMySQLColumnInfoFromFieldHandle(MYSQL_FIELD: PMYSQL_FIELD; FieldOffsets: PMYSQL_FIELDOFFSETS;
   ConSettings: PZConSettings; MySQL_FieldType_Bit_1_IsBoolean: boolean): TZColumnInfo;
 
 procedure ConvertMySQLColumnInfoFromString(var TypeName: RawByteString;
@@ -157,6 +157,7 @@ function ReverseLongWordBytes(Src: Pointer; Len: Byte): LongWord;
 function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
 
 function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_BINDOFFSETS;
+function GetFieldOffsets(Version: Integer): PMYSQL_FIELDOFFSETS;
 
 procedure ReallocBindBuffer(var BindBuffer: Pointer;
   var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BindOffsets: PMYSQL_BINDOFFSETS;
@@ -187,46 +188,46 @@ end;
   @param FieldFlags a field flags.
   @return a SQL undepended type.
 }
-function ConvertMySQLHandleToSQLType(MYSQL_FIELD: PMYSQL_FIELD;
+function ConvertMySQLHandleToSQLType(MYSQL_FIELD: PMYSQL_FIELD; FieldOffsets: PMYSQL_FIELDOFFSETS;
   CtrlsCPType: TZControlsCodePage; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TZSQLType;
 begin
-    case MYSQL_FIELD^._type of
+  case PMysqlFieldType(NativeUInt(MYSQL_FIELD)+FieldOffsets._type)^ of
     FIELD_TYPE_TINY:
-      if MYSQL_FIELD^.flags and UNSIGNED_FLAG = 0
+      if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG = 0
       then Result := stShort
       else Result := stByte;
     FIELD_TYPE_YEAR:
       Result := stWord;
     FIELD_TYPE_SHORT:
-      if MYSQL_FIELD^.flags and UNSIGNED_FLAG = 0
+      if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG = 0
       then Result := stSmall
       else Result := stWord;
     FIELD_TYPE_INT24, FIELD_TYPE_LONG:
-      if MYSQL_FIELD^.flags and UNSIGNED_FLAG = 0
+      if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG = 0
       then Result := stInteger
       else Result := stLongWord;
     FIELD_TYPE_LONGLONG:
-      if MYSQL_FIELD^.flags and UNSIGNED_FLAG = 0
+      if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG = 0
       then Result := stLong
       else Result := stULong;
     FIELD_TYPE_FLOAT, FIELD_TYPE_DOUBLE:
       Result := stDouble;
     FIELD_TYPE_DECIMAL, FIELD_TYPE_NEWDECIMAL: {ADDED FIELD_TYPE_NEWDECIMAL by fduenas 20-06-2006}
-      if MYSQL_FIELD^.decimals = 0 then
-        if MYSQL_FIELD^.flags and UNSIGNED_FLAG = 0 then begin
-          if MYSQL_FIELD^.length <= 2 then
+      if (FieldOffsets.decimals > 0) and (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^ = 0) then
+        if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG = 0 then begin
+          if PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= 2 then
             Result := stShort
-          else if MYSQL_FIELD^.length <= 4 then
+          else if PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= 4 then
             Result := stSmall
-          else if MYSQL_FIELD^.length <= 9 then
+          else if PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= 9 then
             Result := stInteger
           else Result := stLong;
         end else begin
-          if MYSQL_FIELD^.length <= 3 then
+          if PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= 3 then
             Result := stByte
-          else if MYSQL_FIELD^.length <= 5 then
+          else if PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= 5 then
             Result := stWord
-          else if MYSQL_FIELD^.length <= 10 then
+          else if PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= 10 then
             Result := stLongWord
           else Result := stULong;
         end
@@ -240,16 +241,14 @@ begin
       Result := stTimestamp;
     FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
-      if //((MYSQL_FIELD.flags and BINARY_FLAG) = 0)
-         (MYSQL_FIELD^.charsetnr <> 63{binary}) then
-        If ( CtrlsCPType = cCP_UTF16) then
-          Result := stUnicodeStream
-        else
-          Result := stAsciiStream
-      else
-        Result := stBinaryStream;
+      if ((FieldOffsets.charsetnr > 0) and (PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^ <> 63{binary})) or
+         ((FieldOffsets.charsetnr < 0) and (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG = 0)) then
+        If ( CtrlsCPType = cCP_UTF16)
+        then Result := stUnicodeStream
+        else Result := stAsciiStream
+      else Result := stBinaryStream;
     FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.1/en/bit-type.html
-      case MYSQL_FIELD^.length of
+      case PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ of
         1: if MySQL_FieldType_Bit_1_IsBoolean
            then Result := stBoolean
            else result := stByte;
@@ -261,8 +260,9 @@ begin
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
-      if (MYSQL_FIELD^.Length = 0) or //handle null columns: select null union null
-         (MYSQL_FIELD^.charsetnr <> 63{binary}) then
+      if (PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ = 0) or //handle null columns: select null union null
+          ((FieldOffsets.charsetnr > 0) and (PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^ <> 63{binary})) or
+          ((FieldOffsets.charsetnr < 0) and (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG = 0)) then
         if ( CtrlsCPType = cCP_UTF16)
         then Result := stUnicodeString
         else Result := stString
@@ -400,9 +400,11 @@ end;
   @returns a new TZColumnInfo
 }
 function GetMySQLColumnInfoFromFieldHandle(MYSQL_FIELD: PMYSQL_Field;
-  ConSettings: PZConSettings; MySQL_FieldType_Bit_1_IsBoolean:boolean): TZColumnInfo;
+  FieldOffsets: PMYSQL_FIELDOFFSETS; ConSettings: PZConSettings;
+  MySQL_FieldType_Bit_1_IsBoolean:boolean): TZColumnInfo;
 var
   FieldLength: ULong;
+  CS: Word;
   function ValueToString(Buf: PAnsiChar; Len: Cardinal): String;
   {$IFNDEF UNICODE}
   var tmp: ZWideString;
@@ -411,9 +413,6 @@ var
     if (Buf = nil) or (Buf^ = #0) then
       Result := ''
     else begin
-      //EH: mariadb up to 10.3 and old MySQL versions seems to be buggy here so this workaround was made
-      //Note the issues happen only if no gui is used?! What? True so it seems to be a performance issue?
-      Len := ZFastCode.StrLen(Buf);
       {$IFDEF UNICODE}
       Result := PRawToUnicode(Buf, Len, ConSettings^.ClientCodePage^.CP);
       {$ELSE}
@@ -430,22 +429,29 @@ begin
   if Assigned(MYSQL_FIELD) then
   begin
     Result := TZColumnInfo.Create;
-    Result.ColumnLabel := ValueToString(MYSQL_FIELD^.name,
-      MYSQL_FIELD^.name_length);
-    Result.TableName := ValueToString(MYSQL_FIELD^.org_table,
-      MYSQL_FIELD^.org_table_length);
-    if Result.TableName <> '' then begin
-      Result.ColumnName := ValueToString(MYSQL_FIELD^.org_name,
-        MYSQL_FIELD^.org_name_length);
+    //note calling a SP with multiple results -> mySQL&mariaDB returning wrong lengthes!
+    //see test bugreport.TZTestCompMySQLBugReport.TestTicket186_MultipleResults
+    //so we're calling strlen in all cases to have a common behavior!
+    {if FieldOffsets.name > 0
+    then Result.ColumnLabel := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+FieldOffsets.name)^, PUint(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.name_length))^)
+    else} Result.ColumnLabel := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+FieldOffsets.name)^, StrLen(PPAnsichar(NativeUInt(MYSQL_FIELD)+FieldOffsets.name)^));
+    if (FieldOffsets.org_table > 0)
+    then {Result.TableName := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_table))^, PUint(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_table_length))^)
+    else }Result.TableName := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_table))^, StrLen(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_table))^));
+    if (Result.TableName <> '') then begin
+      if FieldOffsets.org_name > 0
+      then {Result.ColumnName := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_name))^, PUint(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_name_length))^)
+      else} Result.ColumnName := ValueToString(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_name))^, StrLen(PPAnsichar(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.org_name))^));
       {JDBC maps the MySQL MYSQK_FIELD.db to Catalog:
        see: https://stackoverflow.com/questions/7942520/relationship-between-catalog-schema-user-and-database-instance}
-      Result.CatalogName := ValueToString(MYSQL_FIELD^.db,
-        MYSQL_FIELD^.db_length);
+      if FieldOffsets.db_length > 0
+      then {Result.CatalogName := ValueToString(PPAnsichar(NativeUInt(PAnsichar(MYSQL_FIELD)+FieldOffsets.db))^, PUint(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.db_length))^)
+      else }Result.CatalogName := ValueToString(PPAnsichar(NativeUInt(PAnsichar(MYSQL_FIELD)+FieldOffsets.db))^, StrLen(PPAnsichar(NativeUInt(PAnsichar(MYSQL_FIELD)+FieldOffsets.db))^));
     end;
-    Result.ReadOnly := (MYSQL_FIELD^.org_table = nil) or (MYSQL_FIELD^.org_name = nil);
+    Result.ReadOnly := (FieldOffsets.org_table <0) or (Result.TableName = '') or (Result.ColumnName = '');
     Result.Writable := not Result.ReadOnly;
-    Result.ColumnType := ConvertMySQLHandleToSQLType(MYSQL_FIELD, ConSettings.CPType, MySQL_FieldType_Bit_1_IsBoolean);
-    FieldLength := MYSQL_FIELD^.length;
+    Result.ColumnType := ConvertMySQLHandleToSQLType(MYSQL_FIELD, FieldOffsets, ConSettings.CPType, MySQL_FieldType_Bit_1_IsBoolean);
+    FieldLength := PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;
     //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
 
     if Result.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
@@ -455,7 +461,10 @@ begin
 
     if Result.ColumnType in [stString, stUnicodeString] then begin
        Result.CharOctedLength := FieldLength;
-       case MYSQL_FIELD^.charsetnr of
+       if FieldOffsets.charsetnr > 0
+       then CS := PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^
+       else CS := ConSettings^.ClientCodePage^.ID;
+       case CS of
         1, 84, {Big5}
         95, 96, {cp932 japanese}
         19, 85, {euckr}
@@ -466,10 +475,9 @@ begin
           begin
             Result.ColumnDisplaySize := (FieldLength div 4);
             Result.Precision := Result.ColumnDisplaySize;
-            if Result.ColumnType = stString then
-              Result.CharOctedLength := FieldLength
-            else
-              Result.CharOctedLength := FieldLength shr 1;
+            if Result.ColumnType = stString
+            then Result.CharOctedLength := FieldLength
+            else Result.CharOctedLength := FieldLength shr 1;
           end;
         33, 83, 192..215, { utf8 }
         97, 98, { eucjpms}
@@ -477,10 +485,9 @@ begin
           begin
             Result.ColumnDisplaySize := (FieldLength div 3);
             Result.Precision := Result.ColumnDisplaySize;
-            if Result.ColumnType = stString then
-              Result.CharOctedLength := FieldLength
-            else
-              Result.CharOctedLength := Result.ColumnDisplaySize shl 1;
+            if Result.ColumnType = stString
+            then Result.CharOctedLength := FieldLength
+            else Result.CharOctedLength := Result.ColumnDisplaySize shl 1;
           end;
         54, 55, 101..124, {utf16}
         56, 62, {utf16le}
@@ -489,32 +496,28 @@ begin
           begin
             Result.ColumnDisplaySize := (FieldLength div 4);
             Result.Precision := Result.ColumnDisplaySize;
-            if Result.ColumnType = stString then
-              Result.CharOctedLength := FieldLength
-            else
-              Result.CharOctedLength := FieldLength shr 1;
+            if Result.ColumnType = stString
+            then Result.CharOctedLength := FieldLength
+            else Result.CharOctedLength := FieldLength shr 1;
           end;
-        else //1-Byte charsets
-        begin
+        else begin //1-Byte charsets
           Result.ColumnDisplaySize := FieldLength;
           Result.Precision := FieldLength;
-          if Result.ColumnType = stString then
-            Result.CharOctedLength := FieldLength
-          else
-            Result.CharOctedLength := FieldLength shl 1;
+          if Result.ColumnType = stString
+          then Result.CharOctedLength := FieldLength
+          else Result.CharOctedLength := FieldLength shl 1;
         end;
       end
     end else
-      Result.Precision := Integer(FieldLength)*Ord(not (MYSQL_FIELD^._type in
+      Result.Precision := Integer(FieldLength)*Ord(not (PMysqlFieldType(NativeUInt(MYSQL_FIELD)+FieldOffsets._type)^ in
         [FIELD_TYPE_BLOB, FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB]));
-    Result.Scale := MYSQL_FIELD^.decimals;
-    Result.AutoIncrement := (AUTO_INCREMENT_FLAG and MYSQL_FIELD^.flags <> 0);// or
-      //(TIMESTAMP_FLAG and MYSQL_FIELD^.flags <> 0);
-    Result.Signed := (UNSIGNED_FLAG and MYSQL_FIELD^.flags) = 0;
-    if NOT_NULL_FLAG and MYSQL_FIELD^.flags <> 0 then
-      Result.Nullable := ntNoNulls
-    else
-      Result.Nullable := ntNullable;
+    Result.Scale := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
+    Result.AutoIncrement := (AUTO_INCREMENT_FLAG and PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ <> 0);// or
+      //(TIMESTAMP_FLAG and MYSQL_FIELD.flags <> 0);
+    Result.Signed := (UNSIGNED_FLAG and PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^) = 0;
+    if NOT_NULL_FLAG and PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ <> 0
+    then Result.Nullable := ntNoNulls
+    else Result.Nullable := ntNullable;
     // Properties not set via query results here will be fetched from table metadata.
   end
   else
@@ -782,17 +785,25 @@ begin
   ReverseBytes(Src, @Result, Len);
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
 begin
   Result := 0;
   ReverseBytes(Src, @Result, Len);
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 var
   MARIADB_BIND1027_Offset: TMYSQL_BINDOFFSETS;
   MYSQL_BIND51_Offset: TMYSQL_BINDOFFSETS;
   MYSQL_BIND506_Offset: TMYSQL_BINDOFFSETS;
   MYSQL_BIND411_Offset: TMYSQL_BINDOFFSETS;
+
+  MYSQL_FIELD51_Offset: TMYSQL_FIELDOFFSETS;
+  MYSQL_FIELD41_Offset: TMYSQL_FIELDOFFSETS;
+  MYSQL_FIELD401_Offset: TMYSQL_FIELDOFFSETS;
+  MYSQL_FIELD4_Offset: TMYSQL_FIELDOFFSETS;
+  MYSQL_FIELD32_Offset: TMYSQL_FIELDOFFSETS;
 
 function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_BINDOFFSETS;
 begin
@@ -805,6 +816,19 @@ begin
   else if (Version >= 40101) then
     Result := @MYSQL_BIND411_Offset
   else Result := nil
+end;
+
+function GetFieldOffsets(Version: Integer): PMYSQL_FIELDOFFSETS;
+begin
+  if (Version >= 50100) then
+    result := @MYSQL_FIELD51_Offset
+  else if (Version >= 40100) then
+    Result := @MYSQL_FIELD41_Offset
+  else if (Version >= 40001) then
+    Result := @MYSQL_FIELD401_Offset
+  else if (Version >= 40000) then
+    Result := @MYSQL_FIELD4_Offset
+  else Result := @MYSQL_FIELD32_Offset
 end;
 
 procedure ReallocBindBuffer(var BindBuffer: Pointer;
@@ -821,9 +845,10 @@ begin
       {$R-}
       Bind := @MYSQL_aligned_BINDs[I];
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-      FreeMem(Bind^.buffer);
-      FreeMem(Bind^.length);
-      FreeMem(Bind^.indicators);
+      if Bind^.buffer <> nil then
+        FreeMem(Bind^.buffer);
+      if Bind^.Length <> nil then
+        FreeMem(Bind^.length);
     end;
   ReallocMem(BindBuffer, NewCount*BindOffsets.Size);
   ReallocMem(MYSQL_aligned_BINDs, NewCount*SizeOf(TMYSQL_aligned_BIND));
@@ -851,11 +876,6 @@ begin
       PPointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.is_null)^ := @Bind^.is_null;
       if (BindOffsets.Indicator > 0) then begin
         Bind^.indicator_address := Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.Indicator);
-        if Iterations > 0 then begin
-          GetMem(Bind^.indicators, Iterations*SizeOf(TIndicator));
-          FillChar(Bind^.indicators^, Iterations*SizeOf(TIndicator), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-          Bind^.indicator_address^ := Pointer(Bind^.indicators);
-        end;
       end else if Iterations > 1 then
         raise EZSQLException.Create('Array bindings are not supported!');
     end;
@@ -894,14 +914,90 @@ initialization
     size          := Sizeof(TMYSQL_BIND506);
   end;
   with MYSQL_BIND411_Offset do begin
-    buffer_type   := NativeUint(@(PMYSQL_BIND411(nil).buffer_type));
-    buffer_length := NativeUint(@(PMYSQL_BIND411(nil).buffer_length));
-    is_unsigned   := NativeUint(@(PMYSQL_BIND411(nil).is_unsigned));
-    buffer        := NativeUint(@(PMYSQL_BIND411(nil).buffer));
-    length        := NativeUint(@(PMYSQL_BIND411(nil).length));
-    is_null       := NativeUint(@(PMYSQL_BIND411(nil).is_null));
+    buffer_type   := NativeUInt(@(PMYSQL_BIND411(nil).buffer_type));
+    buffer_length := NativeUInt(@(PMYSQL_BIND411(nil).buffer_length));
+    is_unsigned   := NativeUInt(@(PMYSQL_BIND411(nil).is_unsigned));
+    buffer        := NativeUInt(@(PMYSQL_BIND411(nil).buffer));
+    length        := NativeUInt(@(PMYSQL_BIND411(nil).length));
+    is_null       := NativeUInt(@(PMYSQL_BIND411(nil).is_null));
     Indicator     := 0;
     size          := Sizeof(TMYSQL_BIND411);
+  end;
+
+  with MYSQL_FIELD51_Offset do begin
+    name            := NativeUInt(@(PMYSQL_FIELD51(nil).name));
+    name_length     := NativeUInt(@(PMYSQL_FIELD51(nil).name_length));
+    org_table       := NativeUInt(@(PMYSQL_FIELD51(nil).org_table));
+    org_table_length:= NativeUInt(@(PMYSQL_FIELD51(nil).org_table_length));
+    org_name        := NativeUInt(@(PMYSQL_FIELD51(nil).org_name));
+    org_name_length := NativeUInt(@(PMYSQL_FIELD51(nil).org_name_length));
+    db              := NativeUInt(@(PMYSQL_FIELD51(nil).db));
+    db_length       := NativeUInt(@(PMYSQL_FIELD51(nil).db_length));
+    charsetnr       := NativeUInt(@(PMYSQL_FIELD51(nil).charsetnr));
+    _type           := NativeUInt(@(PMYSQL_FIELD51(nil)._type));
+    flags           := NativeUInt(@(PMYSQL_FIELD51(nil).flags));
+    length          := NativeUInt(@(PMYSQL_FIELD51(nil).length));
+    decimals        := NativeUInt(@(PMYSQL_FIELD51(nil).decimals));
+  end;
+  with MYSQL_FIELD41_Offset do begin
+    name            := NativeUInt(@(PMYSQL_FIELD41(nil).name));
+    name_length     := NativeUInt(@(PMYSQL_FIELD41(nil).name_length));
+    org_table       := NativeUInt(@(PMYSQL_FIELD41(nil).org_table));
+    org_table_length:= NativeUInt(@(PMYSQL_FIELD41(nil).org_table_length));
+    org_name        := NativeUInt(@(PMYSQL_FIELD41(nil).org_name));
+    org_name_length := NativeUInt(@(PMYSQL_FIELD41(nil).org_name_length));
+    db              := NativeUInt(@(PMYSQL_FIELD41(nil).db));
+    db_length       := NativeUInt(@(PMYSQL_FIELD41(nil).db_length));
+    charsetnr       := NativeUInt(@(PMYSQL_FIELD41(nil).charsetnr));
+    _type           := NativeUInt(@(PMYSQL_FIELD41(nil)._type));
+    flags           := NativeUInt(@(PMYSQL_FIELD41(nil).flags));
+    length          := NativeUInt(@(PMYSQL_FIELD41(nil).length));
+    decimals        := NativeUInt(@(PMYSQL_FIELD41(nil).decimals));
+  end;
+  with MYSQL_FIELD401_Offset do begin
+    name            := NativeUInt(@(PMYSQL_FIELD401(nil).name));
+    name_length     := NativeUInt(@(PMYSQL_FIELD401(nil).name_length));
+    org_table       := NativeUInt(@(PMYSQL_FIELD401(nil).org_table));
+    org_table_length:= NativeUInt(@(PMYSQL_FIELD401(nil).org_table_length));
+    org_name        := NativeUInt(@(PMYSQL_FIELD401(nil).org_name));
+    org_name_length := NativeUInt(@(PMYSQL_FIELD401(nil).org_name_length));
+    db              := NativeUInt(@(PMYSQL_FIELD401(nil).db));
+    db_length       := NativeUInt(@(PMYSQL_FIELD401(nil).db_length));
+    charsetnr       := NativeUInt(@(PMYSQL_FIELD401(nil).charsetnr));
+    _type           := NativeUInt(@(PMYSQL_FIELD401(nil)._type));
+    flags           := NativeUInt(@(PMYSQL_FIELD401(nil).flags));
+    length          := NativeUInt(@(PMYSQL_FIELD401(nil).length));
+    decimals        := NativeUInt(@(PMYSQL_FIELD401(nil).decimals));
+  end;
+  with MYSQL_FIELD4_Offset do begin
+    name            := NativeUInt(@(PMYSQL_FIELD40(nil).name));
+    name_length     := -1;
+    org_table       := NativeUInt(@(PMYSQL_FIELD40(nil).org_table));
+    org_table_length:= -1;
+    org_name        := -1;
+    org_name_length := -1;
+    db              := NativeUInt(@(PMYSQL_FIELD40(nil).db));
+    db_length       := -1;
+    charsetnr       := -1;
+    _type           := NativeUInt(@(PMYSQL_FIELD40(nil)._type));
+    flags           := NativeUInt(@(PMYSQL_FIELD40(nil).flags));
+    length          := NativeUInt(@(PMYSQL_FIELD40(nil).length));
+    decimals        := NativeUInt(@(PMYSQL_FIELD40(nil).decimals));
+  end;
+  with MYSQL_FIELD32_Offset do begin
+    name            := NativeUInt(@(PMYSQL_FIELD32(nil).name));
+    name_length     := -1;
+    org_table       := -1;
+    org_table_length:= -1;
+    org_name        := -1;
+    org_name_length := -1;
+    db              := -1;
+    db_length       := -1;
+    charsetnr       := -1;
+    _type           := NativeUInt(@(PMYSQL_FIELD32(nil)._type));
+    flags           := NativeUInt(@(PMYSQL_FIELD32(nil).flags));
+    length          := NativeUInt(@(PMYSQL_FIELD32(nil).length));
+    decimals        := NativeUInt(@(PMYSQL_FIELD32(nil).decimals));
   end;
 
 end.

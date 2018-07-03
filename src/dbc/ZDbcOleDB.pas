@@ -407,7 +407,7 @@ begin
       if not Assigned(fTransaction) and
          Succeeded(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction)) then
       begin
-        fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
+        OleDbCheck(fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel));
         DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'Restart Transaction support');
       end;
 end;

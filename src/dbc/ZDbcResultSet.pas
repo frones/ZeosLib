@@ -850,16 +850,15 @@ end;
 }
 procedure TZAbstractResultSet.ResetCursor;
 begin
-  if not FClosed and Assigned(Statement){virtual RS ! } then
-  begin
+  if not FClosed and Assigned(Statement){virtual RS ! } then begin
     FFetchSize := Statement.GetFetchSize;
     FPostUpdates := Statement.GetPostUpdates;
     FLocateUpdates := Statement.GetLocateUpdates;
     FMaxRows := Statement.GetMaxRows;
+    FRowNo := 0;
+    FLastRowNo := 0;
+    LastWasNull := True;
   end;
-  FRowNo := 0;
-  FLastRowNo := 0;
-  LastWasNull := True;
 end;
 
 {**
@@ -878,8 +877,8 @@ end;
 procedure TZAbstractResultSet.Close;
 begin
   if not Closed then begin
-    FClosed := True;
     ResetCursor;
+    FClosed := True;
     if FColumnsInfo <> nil then
       FColumnsInfo.Clear;
     if (FStatement <> nil) then begin
@@ -1238,6 +1237,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZAbstractResultSet.GetULong(ColumnIndex: Integer): UInt64;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1245,6 +1245,7 @@ begin
 {$ENDIF}
   Result := 0;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Gets the value of the designated column in the current row

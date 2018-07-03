@@ -53,7 +53,9 @@
   http://blog.ulf-wendel.de/2008/pdo_mysqlnd-prepared-statements-again/}
 
 unit ZDbcMySqlResultSet;
-
+{$IFDEF FPC}
+{$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 interface
 
 {$I ZDbc.inc}
@@ -71,9 +73,14 @@ uses
 type
   {** Implements MySQL ResultSet Metadata. }
   TZMySQLResultSetMetadata = class(TZAbstractResultSetMetadata)
+  private
+    FHas_ExtendedColumnInfos: Boolean;
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
     procedure LoadColumns; override;
+  public
+    constructor Create(const Metadata: IZDatabaseMetadata; const SQL: string;
+      ParentResultSet: TZAbstractResultSet);
   public
     function GetCatalogName(ColumnIndex: Integer): string; override;
     function GetColumnName(ColumnIndex: Integer): string; override;
@@ -89,7 +96,8 @@ type
     FFieldCount: ULong;
     FPMYSQL: PPMYSQL; //address of the MYSQL connection handle
     FMYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; //offset descriptor structures
-    procedure InitColumnBinds(Bind: PMYSQL_aligned_BIND; MYSQL_FIELD: PMYSQL_FIELD; Iters: Word);
+    procedure InitColumnBinds(Bind: PMYSQL_aligned_BIND; MYSQL_FIELD: PMYSQL_FIELD;
+      FieldOffsets: PMYSQL_FIELDOFFSETS; Iters: Integer);
   private //connection resultset
     FQueryHandle: PZMySQLResult; //a query handle
     FRowHandle: PZMySQLRow; //current row handle
@@ -199,7 +207,7 @@ implementation
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZFastCode, ZSysUtils, ZMessages, ZEncoding,
-  ZDbcMySqlUtils, ZDbcUtils, ZDbcMetadata, ZDbcLogging;
+  ZDbcMySqlUtils, ZDbcMySQL, ZDbcUtils, ZDbcMetadata, ZDbcLogging;
 
 {$IFOPT R+}
   {$DEFINE RangeCheckEnabled}
@@ -215,12 +223,27 @@ begin
 end;
 
 {**
+  Constructs this object and assignes the main properties.
+  @param Metadata a database metadata object.
+  @param SQL an SQL query statement.
+  @param ColumnsInfo a collection of columns info.
+}
+constructor TZMySQLResultSetMetadata.Create(const Metadata: IZDatabaseMetadata;
+  const SQL: string; ParentResultSet: TZAbstractResultSet);
+begin
+  inherited Create(Metadata, SQL, ParentResultSet);
+  FHas_ExtendedColumnInfos := TZMySQLPlainDriver(MetaData.GetConnection.GetIZPlainDriver.GetInstance).mysql_get_client_version > 40000;
+end;
+
+{**
   Gets the designated column's table's catalog name.
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return column name or "" if not applicable
 }
 function TZMySQLResultSetMetadata.GetCatalogName(ColumnIndex: Integer): string;
 begin
+  if not FHas_ExtendedColumnInfos and not Loaded
+  then LoadColumns;
   Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).CatalogName;
 end;
 
@@ -231,6 +254,8 @@ end;
 }
 function TZMySQLResultSetMetadata.GetColumnName(ColumnIndex: Integer): string;
 begin
+  if not FHas_ExtendedColumnInfos and not Loaded
+  then LoadColumns;
   Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnName;
 end;
 
@@ -263,6 +288,8 @@ end;
 }
 function TZMySQLResultSetMetadata.GetTableName(ColumnIndex: Integer): string;
 begin
+  if not FHas_ExtendedColumnInfos and not Loaded
+  then LoadColumns;
   Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).TableName;
 end;
 
@@ -281,17 +308,14 @@ end;
   Initializes columns with additional data.
 }
 procedure TZMySQLResultSetMetadata.LoadColumns;
-{$IFNDEF ZEOS_TEST_ONLY}
 var
   Current: TZColumnInfo;
   I: Integer;
   TableColumns: IZResultSet;
-{$ENDIF}
 begin
-  {$IFDEF ZEOS_TEST_ONLY}
-  inherited LoadColumns;
-  {$ELSE}
-  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
+  if not FHas_ExtendedColumnInfos then
+    inherited LoadColumns
+  else if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
     for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
       Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
       ClearColumn(Current);
@@ -308,7 +332,6 @@ begin
       end;
     end;
   Loaded := True;
-  {$ENDIF}
 end;
 
 { TZAbstractMySQLResultSet }
@@ -602,8 +625,8 @@ end;
 
 destructor TZAbstractMySQLResultSet.Destroy;
 begin
+  ReallocBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, FFieldCount, 0, Ord(fBindBufferAllocated));
   inherited Destroy;
-  ReallocBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, FFieldCount, 0, 1);
 end;
 
 {**
@@ -614,7 +637,11 @@ var
   I: Integer;
   FieldHandle: PMYSQL_FIELD;
   QueryHandle: PZMySQLResult;
+  FieldOffsets: PMYSQL_FIELDOFFSETS;
+  MySQL_FieldType_Bit_1_IsBoolean: Boolean;
 begin
+  FieldOffsets := GetFieldOffsets(FPlainDriver.mysql_get_client_version);
+  MySQL_FieldType_Bit_1_IsBoolean := (GetStatement.GetConnection as IZMySQLConnection).MySQL_FieldType_Bit_1_IsBoolean;
   if FPMYSQL_STMT^ = nil then begin
     OpenCursor;
     QueryHandle := FQueryHandle;
@@ -641,10 +668,10 @@ begin
     if FieldHandle = nil then
       Break;
     {$R-}
-    InitColumnBinds(@FMYSQL_aligned_BINDs[I], FieldHandle, Ord(fBindBufferAllocated));
+    InitColumnBinds(@FMYSQL_aligned_BINDs[I], FieldHandle, FieldOffsets, Ord(fBindBufferAllocated));
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FieldHandle, ConSettings,
-      fServerCursor));
+    ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FieldHandle, FieldOffsets,
+      ConSettings, MySQL_FieldType_Bit_1_IsBoolean));
   end;
 
   if fBindBufferAllocated then begin
@@ -691,20 +718,21 @@ end;
 procedure TZAbstractMySQLResultSet.ResetCursor;
 var Handle: Pointer;
 begin
-  if fBindBufferAllocated then begin
-    Handle := FMYSQL_STMT;
-    FMYSQL_STMT := nil;
-    //test if more results are pendding
-    if (Handle <> nil) and not FPlainDriver.IsMariaDBDriver and (Assigned(FPlainDriver.mysql_stmt_more_results) and (FPlainDriver.mysql_stmt_more_results(FPMYSQL_STMT^) = 1))
-    then Close
-    else inherited ResetCursor;
-  end else begin
-    Handle := FQueryHandle;
-    FQueryHandle := nil;
-    if (Handle <> nil) and (FPlainDriver.mysql_more_results(FPMYSQL^) = 1)
-    then Close
-    else inherited ResetCursor;
-  end;
+  if not Closed then
+    if fBindBufferAllocated then begin
+      Handle := FMYSQL_STMT;
+      FMYSQL_STMT := nil;
+      //test if more results are pendding
+      if (Handle <> nil) and {not FPlainDriver.IsMariaDBDriver and} (Assigned(FPlainDriver.mysql_stmt_more_results) and (FPlainDriver.mysql_stmt_more_results(FPMYSQL_STMT^) = 1))
+      then Close
+      else inherited ResetCursor;
+    end else begin
+      Handle := FQueryHandle;
+      FQueryHandle := nil;
+      if (Handle <> nil) and (FPlainDriver.mysql_more_results(FPMYSQL^) = 1)
+      then Close
+      else inherited ResetCursor;
+    end;
 end;
 
 {**
@@ -954,14 +982,16 @@ begin
 end;
 
 procedure TZAbstractMySQLResultSet.InitColumnBinds(Bind: PMYSQL_aligned_BIND;
-  MYSQL_FIELD: PMYSQL_FIELD; Iters: Word);
+  MYSQL_FIELD: PMYSQL_FIELD; FieldOffsets: PMYSQL_FIELDOFFSETS; Iters: Integer);
 begin
-  Bind^.is_unsigned_address^ := Ord(MYSQL_FIELD.flags and UNSIGNED_FLAG <> 0);
-  bind^.buffer_type_address^ := MYSQL_FIELD^._type; //safe initialtype
-  bind^.binary := (MYSQL_FIELD^.charsetnr = 63);
+  Bind^.is_unsigned_address^ := Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0);
+  bind^.buffer_type_address^ := PMysqlFieldType(NativeUInt(MYSQL_FIELD)+FieldOffsets._type)^; //safe initialtype
+  if FieldOffsets.charsetnr > 0
+  then bind^.binary := (PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^ = 63)
+  else bind^.binary := (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG <> 0);
 
-  case MYSQL_FIELD^._type of
-    FIELD_TYPE_BIT: case MYSQL_FIELD^.length of
+  case bind^.buffer_type_address^ of
+    FIELD_TYPE_BIT: case PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ of
                       0..8  : Bind^.Length[0] := SizeOf(Byte);
                       9..16 : Bind^.Length[0] := SizeOf(Word);
                       17..32: Bind^.Length[0] := SizeOf(LongWord);
@@ -980,14 +1010,14 @@ begin
         bind^.buffer_type_address^ := FIELD_TYPE_LONG;
       end;
     FIELD_TYPE_FLOAT, FIELD_TYPE_DOUBLE: begin
-        if MYSQL_FIELD^.length = 12 then begin
+        if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ = 12 then begin
           Bind^.Length[0] := SizeOf(Single);
           bind^.buffer_type_address^ := FIELD_TYPE_FLOAT
         end else begin
           Bind^.Length[0] := SizeOf(Double);
           bind^.buffer_type_address^ := FIELD_TYPE_DOUBLE;
         end;
-        bind^.decimals := MYSQL_FIELD^.decimals;
+        bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
       end;
     FIELD_TYPE_BLOB,
     FIELD_TYPE_TINY_BLOB,
@@ -999,18 +1029,18 @@ begin
     FIELD_TYPE_STRING,
     FIELD_TYPE_ENUM, FIELD_TYPE_SET: begin
         bind^.buffer_type_address^ := FIELD_TYPE_STRING;
-        Bind^.Length[0] := MYSQL_FIELD^.length;//+Byte(Ord(not bind^.binary));
+        Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;//+Byte(Ord(not bind^.binary));
       end;
     FIELD_TYPE_NEWDECIMAL,
     FIELD_TYPE_DECIMAL:
-      if MYSQL_FIELD^.decimals = 0 then begin
-        if MYSQL_FIELD^.length <= Byte(2+(Ord(MYSQL_FIELD^.flags and UNSIGNED_FLAG <> 0))) then begin
+      if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^ = 0 then begin
+        if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(2+(Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
           bind^.buffer_type_address^ := FIELD_TYPE_TINY;
           Bind^.Length[0] := 1;
-        end else if MYSQL_FIELD^.length <= Byte(4+(Ord(MYSQL_FIELD^.flags and UNSIGNED_FLAG <> 0))) then begin
+        end else if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(4+(Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
           Bind^.Length[0] := 2;
           bind^.buffer_type_address^ := FIELD_TYPE_SHORT;
-        end else if MYSQL_FIELD^.length <= Byte(9+(Ord(MYSQL_FIELD^.flags and UNSIGNED_FLAG <> 0))) then begin
+        end else if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(9+(Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
           bind^.buffer_type_address^ := FIELD_TYPE_LONG;
           Bind^.Length[0] := 4;
         end else begin
@@ -1020,11 +1050,11 @@ begin
       end else begin //force binary conversion to double values!
         bind^.buffer_type_address^ := FIELD_TYPE_DOUBLE;
         Bind^.Length[0] := 8;
-        bind^.decimals := MYSQL_FIELD^.decimals;
+        bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
       end;
     FIELD_TYPE_NULL: Bind^.Length[0] := 8;
     else
-      Bind^.Length[0] := (((MYSQL_FIELD^.length) shr 3)+1) shl 3; //8Byte Aligned
+      Bind^.Length[0] := (((PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^) shr 3)+1) shl 3; //8Byte Aligned
     //Length := MYSQL_FIELD^.length;
   end;
   if (bind^.Length[0] = 0) or (Iters = 0)
@@ -1443,6 +1473,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZAbstractMySQLResultSet.GetULong(ColumnIndex: Integer): UInt64;
 var
   Buffer: PAnsiChar;
@@ -1450,14 +1481,14 @@ var
   ColBind: PMYSQL_aligned_BIND;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stLong);
+  CheckColumnConvertion(ColumnIndex, stULong);
 {$ENDIF}
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex-1;
   {$ENDIF}
   {$R-}
   ColBind := @FMYSQL_aligned_BINDs[ColumnIndex];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
   Result := 0;
   if fBindBufferAllocated then begin
     LastWasNull := ColBind^.is_null =1;
@@ -1507,7 +1538,7 @@ begin
     {$R-}
     Buffer := PMYSQL_ROW(FRowHandle)[ColumnIndex];
     Len := FLengthArray^[ColumnIndex];
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     LastWasNull := Buffer = nil;
     if not LastWasNull then
       if ColBind.buffer_type_address^ = FIELD_TYPE_BIT then
@@ -1521,6 +1552,7 @@ begin
       else Result := RawToUInt64Def(Buffer, 0);
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Gets the value of the designated column in the current row
@@ -2022,6 +2054,7 @@ end;
   @return <code>true</code> if the cursor is on the result set;
     <code>false</code> otherwise
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZMySQL_Store_ResultSet.MoveAbsolute(Row: Integer): Boolean;
 var OffSet: ULongLong;  //local value required because of the subtraction
 begin
@@ -2067,6 +2100,7 @@ begin
     end;
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 procedure TZMySQL_Store_ResultSet.OpenCursor;
 begin
@@ -2086,13 +2120,15 @@ end;
 
 procedure TZMySQL_Store_ResultSet.ResetCursor;
 begin
-  if fBindBufferAllocated then begin
-    if Assigned(FMYSQL_STMT) then
-      if FPlainDriver.mysql_stmt_free_result(FMYSQL_STMT) <> 0 then
-        checkMySQLError(FPlainDriver,FPMYSQL^, FMYSQL_STMT, lcOther, '', Self);
-  end else if FQueryHandle <> nil then
-    FPlainDriver.mysql_free_result(FQueryHandle);
-  inherited ResetCursor;
+  if not Closed then begin
+    if fBindBufferAllocated then begin
+      if Assigned(FMYSQL_STMT) then
+        if FPlainDriver.mysql_stmt_free_result(FMYSQL_STMT) <> 0 then
+          checkMySQLError(FPlainDriver,FPMYSQL^, FMYSQL_STMT, lcOther, '', Self);
+    end else if FQueryHandle <> nil then
+      FPlainDriver.mysql_free_result(FQueryHandle);
+    inherited ResetCursor;
+  end;
 end;
 
 { TZMySQLCachedResolver }
@@ -2304,14 +2340,16 @@ end;
 
 procedure TZMySQL_Use_ResultSet.ResetCursor;
 begin
-  if fBindBufferAllocated then begin
-    if FMYSQL_STMT <> nil then
-      while FPlainDriver.mysql_stmt_fetch(FMYSQL_STMT) in [0, MYSQL_DATA_TRUNCATED] do;
-  end else if FQueryHandle <> nil then
-    {need to fetch all temporary until handle = nil else all other queries are out of sync
-     see: http://dev.mysql.com/doc/refman/5.0/en/mysql-use-result.html}
-    while FPlainDriver.mysql_fetch_row(FQueryHandle) <> nil do;
-  inherited ResetCursor;
+  if not Closed then begin
+    if fBindBufferAllocated then begin
+      if FMYSQL_STMT <> nil then
+        while FPlainDriver.mysql_stmt_fetch(FMYSQL_STMT) in [0, MYSQL_DATA_TRUNCATED] do;
+    end else if FQueryHandle <> nil then
+      {need to fetch all temporary until handle = nil else all other queries are out of sync
+       see: http://dev.mysql.com/doc/refman/5.0/en/mysql-use-result.html}
+      while FPlainDriver.mysql_fetch_row(FQueryHandle) <> nil do;
+    inherited ResetCursor;
+  end;
 end;
 
 end.

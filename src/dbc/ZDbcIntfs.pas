@@ -61,6 +61,7 @@ uses
   SynCommons,
   {$ENDIF USE_SYNCOMMONS}
   Types, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF}, SysUtils,
+  {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema,
   ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver, ZURL;
 
@@ -671,10 +672,80 @@ type
     procedure ClearParameters;
   end;
 
+  { TZBCD }
+  TZBcd  = packed record
+    Precision: Byte;                        { 1..64 }
+    SignSpecialPlaces: Byte;                { Sign:1, Special:1, Places:6 }
+    Fraction: packed array [0..31] of Byte; { BCD Nibbles, 00..99 per Byte, high Nibble 1st }
+  end;
+
+  { TZSQLTimeStamp }
+  TZTimeStamp = packed record
+    Year: Word;
+    Month: Word;
+    Day: Word;
+    Hour: Word;
+    Minute: Word;
+    Second: Word;
+    Fractions: LongWord;
+  end;
+  TZParamType = (zptUnknown, zptInput, zptOutput, zptInputOutput, zptResult);
+
+  IZPreparedStatement2 = interface(IZStatement)
+    ['{369619C5-B0C4-4F57-B43E-F86A27F8A98C}']
+    function ExecuteQueryPrepared: IZResultSet; overload;
+    procedure ExecuteQueryPrepared(var Result: IZResultSet); overload; //faster version -> by ref
+    function ExecuteUpdatePrepared: Integer;
+    function ExecutePrepared: Boolean;
+
+    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
+
+    procedure SetBigDecimal(ParameterIndex: Integer; const Value: TZBCD);
+    procedure SetBinary(ParameterIndex: Integer; SQLType: TZSQLType; Value: Pointer; Len: PLengthInt; ByRef: Boolean);
+    procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
+    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes);
+    procedure SetCurrency(ParameterIndex: Integer; const Value: Currency);
+    procedure SetPChar(ParameterIndex: Integer; const Value: TZCharRec; ByRef: Boolean);
+    procedure SetDateTime(ParameterIndex: Integer; SQLType: TZSQLType; const Value: TDateTime);
+    procedure SetDouble(ParameterIndex: Integer; SQLType: TZSQLType; const Value: Double);
+    procedure SetLob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob);
+    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
+    procedure SetOrdinal(ParameterIndex: Integer; SQLType: TZSQLType; const Value: Int64); overload;
+    procedure SetOrdinal(ParameterIndex: Integer; SQLType: TZSQLType; const Value: UInt64);overload;
+    procedure SetRawByteString(ParameterIndex: Integer; SQLType: TZSQLType; const Value: RawByteString; CodePage: Word);
+    procedure SetTimeStamp(ParameterIndex: Integer; SQLType: TZSQLType; const Value: TZTimeStamp);
+    procedure SetUnicodeString(ParameterIndex: Integer; SQLType: TZSQLType; const Value: ZWideString);
+    procedure SetValue(ParameterIndex: Integer; const Value: TZVariant);
+
+    procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
+    procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
+
+    function IsNull(ParameterIndex: Integer): Boolean;
+    procedure GetBigDecimal(ParameterIndex: Integer; var Result: TZBCD);
+    procedure GetBoolean(ParameterIndex: Integer; out Result: Boolean);
+    procedure GetBytes(ParameterIndex: Integer; out Buf: Pointer; out Len: LengthInt);
+    procedure GetCurrency(ParameterIndex: Integer; var Result: Currency);
+    procedure GetPChar(ParameterIndex: Integer; var Result: TZCharRec);
+    procedure GetDateTime(ParameterIndex: Integer; var Result: TDateTime);
+    procedure GetDouble(ParameterIndex: Integer; var Result: Double);
+    procedure GetLob(ParameterIndex: Integer; var Result: IZBlob);
+    procedure GetNull(ParameterIndex: Integer; var Result: Boolean);
+    procedure GetOrdinal(ParameterIndex: Integer; var Result: Int64); overload;
+    procedure GetOrdinal(ParameterIndex: Integer; var Result: UInt64);overload;
+    procedure GetRawByteString(ParameterIndex: Integer; var Result: RawByteString; CodePage: Word);
+    procedure GetTimeStamp(ParameterIndex: Integer; var Value: TZTimeStamp);
+    procedure GetUnicodeString(ParameterIndex: Integer; var Result: ZWideString);
+    procedure GetValue(ParameterIndex: Integer; var Result: TZVariant);
+
+    procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
+      ParamType: TZParamType; ParamSize: LengthInt = -1);
+
+    procedure ClearParameters;
+  end;
+
   {** Callable SQL statement interface. }
   IZCallableStatement = interface(IZPreparedStatement)
     ['{E6FA6C18-C764-4C05-8FCB-0582BDD1EF40}']
-    function IsFunction: Boolean;
     { Multiple ResultSet support API }
     function GetFirstResultSet: IZResultSet;
     function GetPreviousResultSet: IZResultSet;
@@ -1106,10 +1177,11 @@ type
 var
   {** The common driver manager object. }
   DriverManager: IZDriverManager;
+  GlobalCriticalSection: TCriticalSection;
 
 implementation
 
-uses ZMessages, ZConnProperties, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF};
+uses ZMessages, ZConnProperties;
 
 type
   {** Driver Manager interface. }
@@ -1122,7 +1194,6 @@ type
     FLoginTimeout: Integer;
     FLoggingListeners: IZCollection;
     FHasLoggingListener: Boolean;
-    FCriticalSection: TCriticalSection;
     FURL: TZURL;
     procedure LogEvent(const Event: TZLoggingEvent);
   public
@@ -1176,7 +1247,6 @@ begin
   FLoggingListeners := TZCollection.Create;
   FHasLoggingListener := False;
   FURL := TZURL.Create;
-  fCriticalSection := TCriticalSection.Create;
 end;
 
 {**
@@ -1187,7 +1257,6 @@ begin
   FreeAndNil(FURL);
   FDrivers := nil;
   FLoggingListeners := nil;
-  FreeAndNil(fCriticalSection);
   inherited Destroy;
 end;
 
@@ -1329,12 +1398,12 @@ end;
 }
 procedure TZDriverManager.AddLoggingListener(const Listener: IZLoggingListener);
 begin
-  fCriticalSection.Enter;
+  GlobalCriticalSection.Enter;
   try
     FLoggingListeners.Add(Listener);
     FHasLoggingListener := True;
   finally
-    fCriticalSection.Leave;
+    GlobalCriticalSection.Leave;
   end;
 end;
 
@@ -1344,12 +1413,12 @@ end;
 }
 procedure TZDriverManager.RemoveLoggingListener(const Listener: IZLoggingListener);
 begin
-  fCriticalSection.Enter;
+  GlobalCriticalSection.Enter;
   try
     FLoggingListeners.Remove(Listener);
     FHasLoggingListener := (FLoggingListeners.Count>0);
   finally
-    fCriticalSection.Leave;
+    GlobalCriticalSection.Leave;
   end;
 end;
 
@@ -1397,7 +1466,7 @@ var
 begin
   if not FHasLoggingListener then
     Exit;
-  fCriticalSection.Enter;
+  GlobalCriticalSection.Enter;
   try
     for I := 0 to FLoggingListeners.Count - 1 do
     begin
@@ -1408,7 +1477,7 @@ begin
       end;
     end;
   finally
-    fCriticalSection.Leave;
+    GlobalCriticalSection.Leave;
   end;
 end;
 
@@ -1572,7 +1641,9 @@ end;
 
 initialization
   DriverManager := TZDriverManager.Create;
+  GlobalCriticalSection := TCriticalSection.Create;
 finalization
   DriverManager := nil;
+  FreeAndNil(GlobalCriticalSection);
 end.
 

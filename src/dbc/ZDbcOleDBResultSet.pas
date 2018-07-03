@@ -513,7 +513,7 @@ var
   FAccessorRefCount: DBREFCOUNT;
   i: Integer;
 begin
-  if not Closed then
+  if not Closed then begin
     try
       ReleaseFetchedRows;
       {first release Accessor rows}
@@ -529,8 +529,9 @@ begin
       FCurrentBufRowNo := 0;
       FRowsObtained := 0;
     end;
-  FRowSet := nil;//handle 'Object is in use Exception'
-  inherited ResetCursor;
+    FRowSet := nil;//handle 'Object is in use Exception'
+    inherited ResetCursor;
+  end;
 end;
 
 {**
@@ -1625,6 +1626,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZOleDBResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
 begin
   Result := 0;
@@ -1672,6 +1674,7 @@ begin
       //DBTYPE_VARNUMERIC = 139;
     end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 
 function TZOleDBResultSet.GetULong(ColumnIndex: Integer): UInt64;
 begin

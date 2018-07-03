@@ -365,6 +365,7 @@ begin
    Check(not IsNull(stAsciiStreamIndex), 'Not Null aciistream column');
    Check(not IsNull(stUnicodeStreamIndex), 'Not Null unicodestream column');
    Check(not IsNull(stAsciiStreamIndex), 'Not Null binarystream column');
+   Check(not IsNull(stBinaryStreamIndex), 'Not Null binarystream column');
 
    try
      SetNull(stBooleanIndex);
@@ -463,16 +464,11 @@ begin
    end;
    Check(IsNull(stAsciiStreamIndex), 'Null unicodestream column');
    try
-   SetNull(stAsciiStreamIndex);
-   except
-     Fail('Incorrect bytestream method behavior');
-   end;
-   Check(IsNull(stAsciiStreamIndex), 'Null bytestream column');
-   try
-     SetBinaryStream(stAsciiStreamIndex, FBinaryStream);
+    SetNull(stBinaryStreamIndex);
    except
      Fail('Incorrect SetBinaryStream method behavior');
    end;
+   Check(IsNull(stBinaryStreamIndex), 'Null bytestream column');
   end;
 end;
 

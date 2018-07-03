@@ -3059,7 +3059,7 @@ const
 var
   IndexName, ArrayName: RawByteString;
   I, j, BindCount, ParamIndex, ParamNameLen, SingleStmtLength, LastStmLen,
-  HeaderLen, FullHeaderLen, StmtLength, StmtMem, NewParamCount:  Integer;
+  HeaderLen, FullHeaderLen, StmtLength, StmtMem:  Integer;
   CodePageInfo: PZCodePage;
   PStmts, PResult: PAnsiChar;
   ReturningFound: Boolean;

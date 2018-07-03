@@ -280,6 +280,10 @@ implementation
 {$IFOPT R+}
   {$DEFINE RangeCheckEnabled}
 {$ENDIF}
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}
+  {$R-}
+  {$UNDEF RangeCheckEnabled}
+{$IFEND}
 
 uses ZFastcode, Math, ZMessages, ZSysUtils, ZDbcUtils, ZEncoding
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};

@@ -311,12 +311,12 @@ begin
   CheckConvertionTrue(stString,stBigDecimal);
   CheckConvertionTrue(stString,stString);
   CheckConvertionTrue(stString,stBytes);
-  CheckConvertionFalse(stString,stAsciiStream);
+  CheckConvertionTrue(stString,stAsciiStream);
   CheckConvertionFalse(stString,stBinaryStream);
   CheckConvertionTrue(stString,stDate);
   CheckConvertionTrue(stString,stTime);
   CheckConvertionTrue(stString,stTimestamp);
-  CheckConvertionFalse(stString,stUnicodeStream);
+  CheckConvertionTrue(stString,stUnicodeStream);
   {check Bytes convertion}
   CheckConvertionFalse(stBytes,stBoolean);
   CheckConvertionFalse(stBytes,stByte);
@@ -405,7 +405,7 @@ begin
   CheckConvertionFalse(stAsciiStream,stDate);
   CheckConvertionFalse(stAsciiStream,stTime);
   CheckConvertionFalse(stAsciiStream,stTimestamp);
-  CheckConvertionFalse(stAsciiStream, stUnicodeStream);
+  CheckConvertionTrue(stAsciiStream, stUnicodeStream);
   {check BinaryStream convertion}
   CheckConvertionFalse(stBinaryStream,stBoolean);
   CheckConvertionFalse(stBinaryStream,stByte);
@@ -454,7 +454,7 @@ begin
   CheckConvertionFalse(stUnicodeStream,stBigDecimal);
   CheckConvertionTrue(stUnicodeStream,stString);
   CheckConvertionTrue(stUnicodeStream,stBytes);
-  CheckConvertionFalse(stUnicodeStream,stAsciiStream);
+  CheckConvertionTrue(stUnicodeStream,stAsciiStream);
   CheckConvertionFalse(stUnicodeStream,stBinaryStream);
   CheckConvertionFalse(stUnicodeStream,stDate);
   CheckConvertionFalse(stUnicodeStream,stTime);

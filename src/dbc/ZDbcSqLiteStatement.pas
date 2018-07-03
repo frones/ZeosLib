@@ -84,16 +84,16 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
   protected
-    procedure BindNull(Index: Integer; SQLType: TZSQLType; IO: TZParamType); override;
-    procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; IO: TZParamType); override;
-    procedure BindBoolean(Index: Integer; Value: Boolean; IO: TZParamType); override;
-    procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime; IO: TZParamType); override;
-    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double; IO: TZParamType); override;
-    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64; IO: TZParamType); override;
-    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64; IO: TZParamType); override;
-    procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob; IO: TZParamType); override;
-    procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt; IO: TZParamType); override;
-    procedure BindRawStr(Index: Integer; const Value: RawByteString; IO: TZParamType);override;
+    procedure BindNull(Index: Integer; SQLType: TZSQLType); override;
+    procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
+    procedure BindBoolean(Index: Integer; Value: Boolean); override;
+    procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
+    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double); override;
+    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); override;
+    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); override;
+    procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
+    procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
+    procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
   public
     constructor Create(const Connection: IZConnection;
       const SQL: string; const Info: TStrings; const Handle: Psqlite);
@@ -200,10 +200,10 @@ begin
 end;
 
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindBinary(Index: Integer;
-  SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; IO: TZParamType);
+  SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
 var ErrorCode: Integer;
 begin
-  inherited BindBinary(Index, SQLType, Buf, Len, IO);
+  inherited BindBinary(Index, SQLType, Buf, Len);
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_blob(FStmtHandle, Index +1, Buf, Len, nil);
     if ErrorCode <> SQLITE_OK then
@@ -213,35 +213,35 @@ begin
 end;
 
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindBoolean(Index: Integer;
-  Value: Boolean; IO: TZParamType);
+  Value: Boolean);
 begin
   if fBindOrdinalBoolValues
-  then BindSignedOrdinal(Index, stLong, Ord(Value), zptInput)
-  else BindRawStr(Index, DeprecatedBoolRaw[Value], zptInput);
+  then BindSignedOrdinal(Index, stLong, Ord(Value))
+  else BindRawStr(Index, DeprecatedBoolRaw[Value]);
 end;
 
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindDateTime(Index: Integer;
-  SQLType: TZSQLType; const Value: TDateTime; IO: TZParamType);
+  SQLType: TZSQLType; const Value: TDateTime);
 var
   BindVal: PZBindValue;
   ErrorCode: Integer;
 begin
   if FBindDoubleDateTimeValues then
-    BindDouble(Index, SQLType, Value-JulianEpoch, IO)
+    BindDouble(Index, SQLType, Value-JulianEpoch)
   else begin
     CheckParameterIndex(Index);
     BindVal := BindList[Index];
     if SQLType = stDate then
       if (BindVal.BindType <> zbtRawString) or (Length(RawByteString(BindVal.Value)) <> ConSettings^.WriteFormatSettings.DateFormatLen)
-      then Bindlist.Put(Index, stString, DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, False), zCP_UTF8, IO)
+      then Bindlist.Put(Index, stString, DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, False), zCP_UTF8)
       else DateTimeToRawSQLDate(Value, BindVal.Value, ConSettings^.WriteFormatSettings, False)
     else if SQLType = stTime then
       if (BindVal.BindType <> zbtRawString) or (Length(RawByteString(BindVal.Value)) <> ConSettings^.WriteFormatSettings.TimeFormatLen)
-      then Bindlist.Put(Index, stString, DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, False), zCP_UTF8, IO)
+      then Bindlist.Put(Index, stString, DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, False), zCP_UTF8)
       else DateTimeToRawSQLTime(Value, BindVal.Value, ConSettings^.WriteFormatSettings, False)
     else
       if (BindVal.BindType <> zbtRawString) or (Length(RawByteString(BindVal.Value)) <> ConSettings^.WriteFormatSettings.DateTimeFormatLen)
-      then Bindlist.Put(Index, stString, DateTimeToRawSQLTimestamp(Value, ConSettings^.WriteFormatSettings, False), zCP_UTF8, IO)
+      then Bindlist.Put(Index, stString, DateTimeToRawSQLTimestamp(Value, ConSettings^.WriteFormatSettings, False), zCP_UTF8)
       else DateTimeToRawSQLTimestamp(Value, BindVal.Value, ConSettings^.WriteFormatSettings, False);
     if not FBindLater then begin
       ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, BindVal.Value,
@@ -253,11 +253,11 @@ begin
 end;
 
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindDouble(Index: Integer;
-  SQLType: TZSQLType; const Value: Double; IO: TZParamType);
+  SQLType: TZSQLType; const Value: Double);
 var ErrorCode: Integer;
 begin
   if FBindLater or FHasLoggingListener
-  then inherited BindDouble(Index, stDouble, Value, IO)
+  then inherited BindDouble(Index, stDouble, Value)
   else CheckParameterIndex(Index);
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, Index +1, Value);
@@ -304,7 +304,7 @@ begin
 end;
 
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindLob(Index: Integer;
-  SQLType: TZSQLType; const Value: IZBlob; IO: TZParamType);
+  SQLType: TZSQLType; const Value: IZBlob);
 var ErrorCode: Integer;
 begin
   inherited; //localize lob and make clob conversion if reqired
@@ -374,7 +374,7 @@ begin
 end;
 
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindNull(Index: Integer;
-  SQLType: TZSQLType; IO: TZParamType);
+  SQLType: TZSQLType);
 var ErrorCode: Integer;
 begin
   inherited;
@@ -387,11 +387,11 @@ begin
 end;
 
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindRawStr(Index: Integer;
-  Buf: PAnsiChar; Len: LengthInt; IO: TZParamType);
+  Buf: PAnsiChar; Len: LengthInt);
 var ErrorCode: Integer;
 begin
   if FBindLater or FHasLoggingListener
-  then inherited BindRawStr(Index, Buf, Len, IO)
+  then inherited BindRawStr(Index, Buf, Len)
   else CheckParameterIndex(Index);
   if not FBindLater then begin
     if (Buf = nil) then
@@ -404,10 +404,10 @@ begin
 end;
 
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindRawStr(Index: Integer;
-  const Value: RawByteString; IO: TZParamType);
+  const Value: RawByteString);
 var ErrorCode: Integer;
 begin
-  inherited BindRawStr(Index, Value, IO); //localize -> no val destructor
+  inherited BindRawStr(Index, Value); //localize -> no val destructor
   if not FBindLater then begin
     if (Pointer(Value) = nil)
     then ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, PEmptyAnsiString, 0, nil)
@@ -419,11 +419,11 @@ begin
 end;
 
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindSignedOrdinal(Index: Integer;
-  SQLType: TZSQLType; const Value: Int64; IO: TZParamType);
+  SQLType: TZSQLType; const Value: Int64);
 var ErrorCode: Integer;
 begin
   if FBindLater or FHasLoggingListener
-  then inherited BindSignedOrdinal(Index, stLong, Value, IO)
+  then inherited BindSignedOrdinal(Index, stLong, Value)
   else CheckParameterIndex(Index);
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, Index +1, Value);
@@ -434,9 +434,9 @@ begin
 end;
 
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindUnsignedOrdinal(Index: Integer;
-  SQLType: TZSQLType; const Value: UInt64; IO: TZParamType);
+  SQLType: TZSQLType; const Value: UInt64);
 begin
-  BindSignedOrdinal(Index, stLong, Int64(Value), IO);
+  BindSignedOrdinal(Index, stLong, Int64(Value));
 end;
 
 {**

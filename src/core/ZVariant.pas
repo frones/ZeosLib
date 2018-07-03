@@ -504,6 +504,10 @@ uses
   Variants, Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZMessages, ZEncoding, ZFastCode, ZSysUtils;
 
+{$IFDEF WITH_UINT64_C1118_ERROR}
+{$R-}
+{$ENDIF}
+
 { TZDefaultVariantManager }
 
 {**
