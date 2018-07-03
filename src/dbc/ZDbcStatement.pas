@@ -4007,7 +4007,7 @@ var
   I: Integer;
 begin
 {$IFOPT R+}
-  if (NewCapacity < FCount) or (NewCapacity > High(Word)) then
+  if (NewCapacity < 0) or (NewCapacity > High(Word)) then
     Error(SListCapacityError, NewCapacity);
 {$ENDIF}
   if NewCapacity < FCount then begin
