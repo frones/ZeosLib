@@ -1341,8 +1341,8 @@ begin
                   then Result := DateTimeToRawSQLTime(PG2Time(PInt64(BindValue.Value)^), ConSettings^.WriteFormatSettings, True, '::time')
                   else Result := DateTimeToRawSQLTime(PG2Time(PDouble(BindValue.Value)^), ConSettings^.WriteFormatSettings, True, '::time');
         TIMESTAMPOID: if Finteger_datetimes
-                  then Result := DateTimeToRawSQLTimeStamp(PG2Time(PInt64(BindValue.Value)^), ConSettings^.WriteFormatSettings, True, '::timestamp')
-                  else Result := DateTimeToRawSQLTimeStamp(PG2Time(PDouble(BindValue.Value)^), ConSettings^.WriteFormatSettings, True, '::timestamp');
+                  then Result := DateTimeToRawSQLTimeStamp(PG2DateTime(PInt64(BindValue.Value)^), ConSettings^.WriteFormatSettings, True, '::timestamp')
+                  else Result := DateTimeToRawSQLTimeStamp(PG2DateTime(PDouble(BindValue.Value)^), ConSettings^.WriteFormatSettings, True, '::timestamp');
       end;
     zbtRawString: Connection.GetEscapeString(PAnsiChar(BindValue.Value), Length(RawByteString(BindValue.Value)), Result);
     zbtCharByRef: Connection.GetEscapeString(PAnsiChar(PZCharRec(BindValue.Value)^.P), PZCharRec(BindValue.Value)^.Len, Result);
