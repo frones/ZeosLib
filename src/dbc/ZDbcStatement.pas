@@ -213,7 +213,6 @@ type
     BindType:   TZBindType;
     ParamType:  TZParamType;
     SQLType:    TZSQLType;
-    ParamSize:  LengthInt;
   end;
   PZBufRec = ^TZBufRec;
   TZBufRec = record
@@ -248,7 +247,6 @@ type
     function GetVariant(Index: Integer): TZVariant;
     function GetArray(Index: Integer): PZArray; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     function Get8Byte(Index: Integer): P8Bytes; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-    function GetSize(Index: Integer): LengthInt; {$IFDEF WITH_INLINE}inline;{$ENDIF}
   public
     constructor Create(ConSettings: PZConSettings);
     destructor Destroy; override;
@@ -282,7 +280,6 @@ type
     property BindTypes[Index: Integer]: TZBindType read GetBindType;
     property Arrays[Index: Integer]: PZArray read GetArray;
     property _8Bytes[Index: Integer]: P8Bytes read Get8Byte;
-    property Sizes[Index: Integer]: LengthInt read GetSize;
   end;
 
   {** Implements Abstract Prepared SQL Statement. }
@@ -3782,17 +3779,6 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
-function TZBindList.GetSize(Index: Integer): LengthInt;
-begin
-{$IFOPT R+}
-  if (Index < 0) or (Index >= FCount) then
-    Error(SListIndexError, Index);
-{$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
-  Result := FValues^[Index].ParamSize
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
 function TZBindList.GetSQLType(Index: Integer): TZSQLType;
 begin
 {$IFOPT R+}
@@ -4717,7 +4703,6 @@ begin
   BindValue := BindList[ParameterIndex];
   BindValue^.ParamType := ParamType;
   BindValue^.SQLType   := SQLType;
-  BindValue^.ParamSize := ParamSize;
 end;
 
 procedure TZAbstractPreparedStatement2.ReleaseImmediat(
