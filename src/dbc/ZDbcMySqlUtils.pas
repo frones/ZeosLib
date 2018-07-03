@@ -785,11 +785,13 @@ begin
   ReverseBytes(Src, @Result, Len);
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
 begin
   Result := 0;
   ReverseBytes(Src, @Result, Len);
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 var
   MARIADB_BIND1027_Offset: TMYSQL_BINDOFFSETS;
@@ -843,9 +845,10 @@ begin
       {$R-}
       Bind := @MYSQL_aligned_BINDs[I];
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-      FreeMem(Bind^.buffer);
-      FreeMem(Bind^.length);
-      FreeMem(Bind^.indicators);
+      if Bind^.buffer <> nil then
+        FreeMem(Bind^.buffer);
+      if Bind^.Length <> nil then
+        FreeMem(Bind^.length);
     end;
   ReallocMem(BindBuffer, NewCount*BindOffsets.Size);
   ReallocMem(MYSQL_aligned_BINDs, NewCount*SizeOf(TMYSQL_aligned_BIND));
@@ -873,11 +876,6 @@ begin
       PPointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.is_null)^ := @Bind^.is_null;
       if (BindOffsets.Indicator > 0) then begin
         Bind^.indicator_address := Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.Indicator);
-        if Iterations > 0 then begin
-          GetMem(Bind^.indicators, Iterations*SizeOf(TIndicator));
-          FillChar(Bind^.indicators^, Iterations*SizeOf(TIndicator), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-          Bind^.indicator_address^ := Pointer(Bind^.indicators);
-        end;
       end else if Iterations > 1 then
         raise EZSQLException.Create('Array bindings are not supported!');
     end;

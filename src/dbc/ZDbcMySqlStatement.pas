@@ -319,6 +319,12 @@ var
 begin
   if ArrayCount > 0 then begin
     array_size := 0;
+    for i := 0 to BindList.Count -1 do begin
+      {$R-}
+      FreeMem(FMYSQL_aligned_BINDs^[i].indicators);
+      FMYSQL_aligned_BINDs^[i].indicators := nil;
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    end;
     if FPlainDriver.mysql_stmt_attr_set517up(FMYSQL_STMT, STMT_ATTR_ARRAY_SIZE, @array_size) <> 0 then
       checkMySQLError (FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcPrepStmt,
         ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
@@ -393,19 +399,37 @@ begin
 end;
 
 procedure TZAbstractMySQLPreparedStatement.Unprepare;
+var status: Integer;
+  ParamCount: Integer;
 begin
+  ParamCount := BindList.Count;
   inherited Unprepare;
   FlushPendingResults;
   if not FEmulatedParams and (FMYSQL_STMT <> nil) then begin
+    (*if FStmtHandleIsExecuted then begin
+      Status := FPlainDriver.mysql_stmt_reset(FMYSQL_STMT);
+      if Status <> 0 then
+        checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
+          ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
+            ConSettings^.ClientCodePage^.CP), Self);
+    end;*)
     //cancel all pending results:
     //https://mariadb.com/kb/en/library/mysql_stmt_close/
-    if FPlainDriver.mysql_stmt_close(FMYSQL_STMT) <> 0 then
-      checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcUnprepStmt,
+    status := FPlainDriver.mysql_stmt_close(FMYSQL_STMT);
+    try
+      if status <> 0 then checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcUnprepStmt,
         ConvertZMsgToRaw(cSUnknownError,
         ZMessages.cCodePage, ConSettings^.ClientCodePage^.CP), Self);
-    FMYSQL_STMT := nil;
-    FStmtHandleIsExecuted := False;
-  end;
+    finally
+      FMYSQL_STMT := nil;
+      FStmtHandleIsExecuted := False;
+      if ParamCount > 0 then
+        ReallocBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffset,
+          ParamCount*Ord(FMYSQL_aligned_BINDs<>nil), 0, 1);
+    end;
+  end else if (ParamCount > 0) and (FMYSQL_BINDs <> nil) then //switch mode did alloc mem
+    ReallocBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffset,
+      ParamCount*Ord(FMYSQL_aligned_BINDs<>nil), 0, 1);
   FEmulatedParams := FInitial_emulate_prepare;
 end;
 
@@ -1023,7 +1047,6 @@ end;
 
 procedure TZAbstractMySQLPreparedStatement.UnPrepareInParameters;
 begin
-  InternalSetInParamCount(0);
   inherited UnPrepareInParameters;
   FBindAgain := True;
   FChunkedData := False;
@@ -1229,13 +1252,13 @@ begin
       end;
     end
   else if (FMYSQL_STMT <> nil) and FStmtHandleIsExecuted then begin
-    if FPlainDriver.IsMariaDBDriver then begin  //mysql raises a out of sync here, even if docs saying they clear all pending results
+    (*if FPlainDriver.IsMariaDBDriver then begin  //mysql raises a out of sync here, even if docs saying they clear all pending results
       Status := FPlainDriver.mysql_stmt_reset(FMYSQL_STMT);
       if Status <> 0 then
         checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
           ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
             ConSettings^.ClientCodePage^.CP), Self);
-    end else while true do begin //so we need to do the job by hand now
+    end else *)while true do begin //so we need to do the job by hand now
       Status := FPlainDriver.mysql_stmt_next_result(FMYSQL_STMT);
       if Status = -1 then
         Break
@@ -1526,7 +1549,9 @@ begin
                             else PLongWord(Bind^.buffer)^ := LongWord(Value);
       FIELD_TYPE_LONGLONG:  if Bind^.is_unsigned_address^ = 0
                             then PInt64(Bind^.buffer)^ := Value
-                            else PUInt64(Bind^.buffer)^ := Value;
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+                      else PUInt64(Bind^.buffer)^ := Value;
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       FIELD_TYPE_STRING:  begin //can happen only if stBoolean and not MySQL_FieldType_Bit_1_IsBoolean
                             Bind^.Length[0] := 1;
                             PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
@@ -1537,6 +1562,7 @@ begin
   end;
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure TZAbstractMySQLPreparedStatement.BindUnsignedOrdinal(Index: Integer;
   SQLType: TZSQLType; const Value: UInt64);
 var
@@ -1576,6 +1602,7 @@ begin
     BindList.SetNull(Index, SQLType);
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 procedure TZAbstractMySQLPreparedStatement.InternalRealPrepare;
 var
