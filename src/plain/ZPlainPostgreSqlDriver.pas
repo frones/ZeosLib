@@ -442,60 +442,58 @@ type
   {$IFEND}
 
 TZPgCharactersetType = (
-	csSQL_ASCII = 0,	{ SQL/ASCII }
-	csEUC_JP,	{ EUC for Japanese }
-	csEUC_CN,	{ EUC for Chinese }
-	csEUC_KR,	{ EUC for Korean }
-	csEUC_TW,	{ EUC for Taiwan }
-  csEUC_JIS_2004, {Extended UNIX Code-JP, JIS X 0213 	Japanese}
-	csUTF8,		{ Unicode UTF-8 }
-	csMULE_INTERNAL,	{ Mule internal code }
-	csLATIN1,	{ ISO-8859 Latin 1 }
-	csLATIN2,	{ ISO-8859 Latin 2 }
-	csLATIN3,	{ ISO-8859 Latin 3 }
-	csLATIN4,	{ ISO-8859 Latin 4 }
-	csLATIN5,	{ ISO-8859 Latin 5 }
-	csLATIN6,	{ ISO-8859 Latin 6 }
-	csLATIN7,	{ ISO-8859 Latin 7 }
-	csLATIN8,	{ ISO-8859 Latin 8 }
-	csLATIN9,	{ ISO-8859 Latin 9 }
-	csLATIN10,	{ ISO-8859 Latin 10 }
-	csWIN1256,	{ Arabic Windows }
-	csWIN1258,	{ Vietnamese Windows }
-	csWIN866,	{ Alternativny Variant (MS-DOS CP866) }
-	csWIN874,	{ Thai Windows }
-  csKOI8, {KOI8-R(U) 	Cyrillic}
-	csKOI8R,	{ KOI8-R 	Cyrillic (Russian) }
-	csWIN1251,	{ windows-1251 }
-  csWIN1252, {Windows CP1252 	Western European}
-	csISO_8859_5,	{ ISO-8859-5 }
-	csISO_8859_6,	{ ISO-8859-6 }
-	csISO_8859_7,	{ ISO-8859-7 }
-	csISO_8859_8,	{ ISO-8859-8 }
-  csWIN1250, { Windows CP1250 	Central European }
-  csWIN1253, { Windows CP1253 	Greek }
-  csWIN1254, { Windows CP1254 	Turkish }
-  csWIN1255, { Windows CP1255 	Hebrew }
-  csWIN1257, { Windows CP1257 	Baltic }
-	csKOI8U,	{ KOI8-R 	Cyrillic (Ukrainian) }
-	csSJIS,		{ Shift JIS 	Japanese }
-	csBIG5,		{ Big Five 	Traditional Chinese }
-	csGBK,		{ Extended National Standard 	Simplified Chinese }
-	csUHC,		{ Unified Hangul Code 	Korean }
-	csGB18030,	{ National Standard 	Chinese }
-	csJOHAB,  {JOHAB 	Korean (Hangul)}
-  csSHIFT_JIS_2004, {Shift JIS, JIS X 0213 	Japanese}
-	csUNICODE_PODBC,{ UNICODE ( < Ver8.1). Can't call it UNICODE as that's already used }
-	csTCVN,		{ TCVN ( < Ver8.1) }
-	csALT,		{ ALT ( < Var8.1) }
-	csWIN,		{ WIN ( < Ver8.1) }
-	csOTHER
+  csSQL_ASCII,     { SQL/ASCII }
+  csEUC_JP,        { EUC for Japanese }
+  csEUC_CN,        { EUC for Chinese }
+  csEUC_KR,        { EUC for Korean }
+  csEUC_TW,        { EUC for Taiwan }
+  csEUC_JIS_2004,  { Extended UNIX Code-JP, JIS X 0213 Japanese }
+  csUTF8,          { Unicode UTF-8 }
+  csMULE_INTERNAL, { Mule internal code }
+  csLATIN1,        { ISO-8859 Latin 1 }
+  csLATIN2,        { ISO-8859 Latin 2 }
+  csLATIN3,        { ISO-8859 Latin 3 }
+  csLATIN4,        { ISO-8859 Latin 4 }
+  csLATIN5,        { ISO-8859 Latin 5 }
+  csLATIN6,        { ISO-8859 Latin 6 }
+  csLATIN7,        { ISO-8859 Latin 7 }
+  csLATIN8,        { ISO-8859 Latin 8 }
+  csLATIN9,        { ISO-8859 Latin 9 }
+  csLATIN10,       { ISO-8859 Latin 10 }
+  csWIN1256,       { Arabic Windows }
+  csWIN1258,       { Vietnamese Windows }
+  csWIN866,        { Alternativny Variant (MS-DOS CP866) }
+  csWIN874,        { Thai Windows }
+  csKOI8,          { KOI8-R(U) Cyrillic }
+  csKOI8R,         { KOI8-R Cyrillic (Russian) }
+  csWIN1251,       { windows-1251 }
+  csWIN1252,       { Windows CP1252 Western European }
+  csISO_8859_5,    { ISO-8859-5 }
+  csISO_8859_6,    { ISO-8859-6 }
+  csISO_8859_7,    { ISO-8859-7 }
+  csISO_8859_8,    { ISO-8859-8 }
+  csWIN1250,       { Windows CP1250 Central European }
+  csWIN1253,       { Windows CP1253 Greek }
+  csWIN1254,       { Windows CP1254 Turkish }
+  csWIN1255,       { Windows CP1255 Hebrew }
+  csWIN1257,       { Windows CP1257 Baltic }
+  csKOI8U,         { KOI8-R Cyrillic (Ukrainian) }
+  csSJIS,          { Shift JIS Japanese }
+  csBIG5,          { Big Five Traditional Chinese }
+  csGBK,           { Extended National Standard Simplified Chinese }
+  csUHC,           { Unified Hangul Code Korean }
+  csGB18030,       { National Standard Chinese }
+  csJOHAB,         { JOHAB Korean (Hangul) }
+  csSHIFT_JIS_2004,{ Shift JIS, JIS X 0213 Japanese }
+  csUNICODE_PODBC, { UNICODE ( < Ver8.1). Can't call it UNICODE as that's already used }
+  csTCVN,          { TCVN ( < Ver8.1) }
+  csALT,           { ALT ( < Var8.1) }
+  csWIN,           { WIN ( < Ver8.1) }
+  csOTHER
 );
 //pgtypes_numeric.h
-  PNumericDigit = ^TNumericDigit;
   TNumericDigit = Byte;
-
-  TNumericDigits = array[Word] of TNumericDigit; //no fix size -> aligned against scale or digits
+  TNumericDigits = array[0..999] of TNumericDigit; //no fix size -> aligned against scale or digits
 
   TNumeric = record
     ndigits:      integer; //* number of digits in digits[] - can be 0! */
