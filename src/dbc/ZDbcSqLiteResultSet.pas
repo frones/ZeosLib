@@ -784,6 +784,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZSQLiteResultSet.GetULong(ColumnIndex: Integer): UInt64;
 var
   ColType: Integer;
@@ -810,6 +811,7 @@ begin
         Result := 0;
     end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as

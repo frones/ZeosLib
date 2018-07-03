@@ -625,8 +625,8 @@ end;
 
 destructor TZAbstractMySQLResultSet.Destroy;
 begin
-  inherited Destroy;
   ReallocBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, FFieldCount, 0, Ord(fBindBufferAllocated));
+  inherited Destroy;
 end;
 
 {**
@@ -1473,6 +1473,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZAbstractMySQLResultSet.GetULong(ColumnIndex: Integer): UInt64;
 var
   Buffer: PAnsiChar;
@@ -1480,14 +1481,14 @@ var
   ColBind: PMYSQL_aligned_BIND;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stLong);
+  CheckColumnConvertion(ColumnIndex, stULong);
 {$ENDIF}
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex-1;
   {$ENDIF}
   {$R-}
   ColBind := @FMYSQL_aligned_BINDs[ColumnIndex];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
   Result := 0;
   if fBindBufferAllocated then begin
     LastWasNull := ColBind^.is_null =1;
@@ -1537,7 +1538,7 @@ begin
     {$R-}
     Buffer := PMYSQL_ROW(FRowHandle)[ColumnIndex];
     Len := FLengthArray^[ColumnIndex];
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     LastWasNull := Buffer = nil;
     if not LastWasNull then
       if ColBind.buffer_type_address^ = FIELD_TYPE_BIT then
@@ -1551,6 +1552,7 @@ begin
       else Result := RawToUInt64Def(Buffer, 0);
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Gets the value of the designated column in the current row
@@ -2052,6 +2054,7 @@ end;
   @return <code>true</code> if the cursor is on the result set;
     <code>false</code> otherwise
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZMySQL_Store_ResultSet.MoveAbsolute(Row: Integer): Boolean;
 var OffSet: ULongLong;  //local value required because of the subtraction
 begin
@@ -2097,6 +2100,7 @@ begin
     end;
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 procedure TZMySQL_Store_ResultSet.OpenCursor;
 begin
