@@ -491,6 +491,33 @@ TZPgCharactersetType = (
 	csWIN,		{ WIN ( < Ver8.1) }
 	csOTHER
 );
+//pgtypes_numeric.h
+  PNumericDigit = ^TNumericDigit;
+  TNumericDigit = Byte;
+
+  TNumericDigits = array[Word] of TNumericDigit; //no fix size -> aligned against scale or digits
+
+  TNumeric = record
+    ndigits:      integer; //* number of digits in digits[] - can be 0! */
+    weight:       integer; //* weight of first digit */
+    rscale:       integer; //* result scale */
+    dscale:       integer; //* display scale */
+    sign:         integer; //* NUMERIC_POS, NUMERIC_NEG, or NUMERIC_NAN */
+    buf:          ^TNumericDigits;  //* start of alloc'd space for digits[] */
+    digits:       ^TNumericDigits;  //* decimal digits */
+  end;
+const
+  DECSIZE = 30;
+type
+  TDecimal = record
+    ndigits:      integer; //* number of digits in digits[] - can be 0! */
+    weight:       integer; //* weight of first digit */
+    rscale:       integer; //* result scale */
+    dscale:       integer; //* display scale */
+    sign:         integer; //* NUMERIC_POS, NUMERIC_NEG, or NUMERIC_NAN */
+    digits:       Array[0..DECSIZE-1] of TNumericDigit;  //* decimal digits */
+  end;
+
 
 { ****************** Plain API Types definition ***************** }
 
