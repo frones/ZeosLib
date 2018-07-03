@@ -661,6 +661,7 @@ begin
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select relacl from pg_class;');
   ///
+  ResultSet.Next;
   ResultSet.GetBlob(relacl_index);
   Statement.Close;
 end;
