@@ -3054,8 +3054,8 @@ type
     // GetOptionsObject :
     procedure GetOptionsObject(out ppOptions: ITransactionOptions);stdcall;
     // StartTransaction :
-    procedure StartTransaction(isoLevel:ISOLEVEL;isoFlags:ULONG;
-      pOtherOptions:ITransactionOptions; pulTransactionLevel: PULONG);stdcall;
+    function StartTransaction(isoLevel:ISOLEVEL;isoFlags:ULONG;
+      pOtherOptions:ITransactionOptions; pulTransactionLevel: PULONG): HRESULT;stdcall;
   end;
 
 // ITransactionOptions :
