@@ -293,7 +293,6 @@
 {$ENDIF}
 
 {$IFDEF NEXTGEN}
-  {$DEFINE MISS_RBS_SETSTRING_OVERLOAD}
   {$UNDEF WITH_ASANSISTRING}
   {$UNDEF WITH_UNITANSISTRINGS}
   {$UNDEF HAS_PANSICHAR}
@@ -308,8 +307,12 @@
 // Debug/release compiler options
 {$D+}
 
-//force 4 byte enumerations. We are interfacing with c libraries !!
-{$Z+}
+
+{$Z+} //force 4 byte enumerations. We are interfacing with c libraries !!
+{$B-} //Boolean short-circuit evaluation
+{$H+} //set LongStrings ON
+{$T-} //Type-checked pointers OFF
+{$X+} //Extended syntax ON
 
 {$IFOPT D-}
 {$DEFINE BINARY_RELEASE}
@@ -344,7 +347,11 @@
 
 // Range check mode and UInt64 can't live together on D7 so turn it off for all Zeos units
 {$IFDEF WITH_UINT64_C1118_ERROR}
-{$R-}
+{.$R-}
+{$ENDIF}
+
+{$IFOPT R+}
+  {$DEFINE RangeCheckEnabled}
 {$ENDIF}
 
 // Disables checking code.

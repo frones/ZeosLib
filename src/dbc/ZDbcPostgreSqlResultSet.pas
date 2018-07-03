@@ -424,8 +424,10 @@ end;
 }
 procedure TZPostgreSQLResultSet.ResetCursor;
 begin
-  ClearPGResult;
-  inherited ResetCursor;
+  if not Closed then begin
+    ClearPGResult;
+    inherited ResetCursor;
+  end;
 end;
 {**
   Indicates if the value of the designated column in the current row
@@ -651,6 +653,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZPostgreSQLResultSet.GetULong(ColumnIndex: Integer): UInt64;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -665,6 +668,7 @@ begin
   else
     Result := RawToUInt64Def(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0);
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Gets the value of the designated column in the current row

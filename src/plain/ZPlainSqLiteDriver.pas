@@ -201,6 +201,7 @@ type
     function ErrorMessage(db: Psqlite): RawByteString;
     procedure Interrupt(db: Psqlite);
     function Complete(const sql: PAnsiChar): Integer;
+    function Has_sqlite3_column_table_name: Boolean;
 
     procedure BusyHandler(db: Psqlite; callback: Tsqlite_busy_callback;
       ptr: Pointer);
@@ -424,6 +425,7 @@ type
 
     procedure FreeMem(ptr: Pointer);
     function LibVersion: PAnsiChar;
+    function Has_sqlite3_column_table_name: Boolean;
 
     function FunctionType({%H-}db: Psqlite; const {%H-}zName: PAnsiChar;
       {%H-}datatype: Integer): Integer;
@@ -523,6 +525,11 @@ uses ZPlainLoader, ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 function TZSQLiteBaseDriver.GetUnicodeCodePageName: String;
 begin
   Result := 'UTF-8'
+end;
+
+function TZSQLiteBaseDriver.Has_sqlite3_column_table_name: Boolean;
+begin
+  Result := Assigned(sqlite3_column_table_name);
 end;
 
 procedure TZSQLiteBaseDriver.LoadCodePages;  //Egonhugeist

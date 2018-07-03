@@ -148,13 +148,9 @@ var
 implementation
 
 uses
-  {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZMessages, ZSysUtils, ZDbcMySqlStatement, ZMySqlToken, ZFastCode,
   ZDbcMySqlUtils, ZDbcMySqlMetadata, ZMySqlAnalyser, TypInfo, Math,
   ZEncoding;
-
-var
-  MySQLCriticalSection: TCriticalSection;
 
 { TZMySQLDriver }
 
@@ -199,13 +195,7 @@ end;
 {$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
 function TZMySQLDriver.Connect(const Url: TZURL): IZConnection;
 begin
-  Result := nil; //init
-  MySQLCriticalSection.Enter;
-  try
-    Result := TZMySQLConnection.Create(Url);
-  finally
-    MySQLCriticalSection.Leave;
-  end;
+  Result := TZMySQLConnection.Create(Url);
 end;
 {$WARNINGS ON} //suppress the deprecatad warning of calling create from internal
 
@@ -359,7 +349,12 @@ begin
     Exit;
 
   LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
-  FHandle := GetPlainDriver.Init(FHandle);
+  GlobalCriticalSection.Enter;
+  try
+    FHandle := GetPlainDriver.Init(FHandle); //is not threadsave!
+  finally
+    GlobalCriticalSection.Leave;
+  end;
   {EgonHugeist: get current characterset first }
   sMy_client_Char_Set := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(GetPlainDriver.character_set_name(FHandle));
   if (sMy_client_Char_Set <> '') {mysql 4down doesn't have this function } and
@@ -534,9 +529,6 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     end;
 
     inherited Open;
-
-
-    (GetMetadata as IZMySQLDatabaseMetadata).SetDataBaseName(GetDatabaseName);
     //no real version check required -> the user can simply switch off treading
     //enum('Y','N')
     FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(Info.Values['MySQL_FieldType_Bit_1_IsBoolean']);
@@ -544,6 +536,8 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     FSupportsBitType := (
       (    GetPlainDriver.IsMariaDBDriver and (ClientVersion >= 100109) ) or
       (not GetPlainDriver.IsMariaDBDriver and (ClientVersion >=  50003) ) ) and (GetHostVersion >= EncodeSQLVersioning(5,0,3));
+
+    (GetMetadata as IZMySQLDatabaseMetadata).SetDataBaseName(GetDatabaseName);
   except
     GetPlainDriver.Close(FHandle);
     FHandle := nil;
@@ -900,11 +894,9 @@ end;
 initialization
   MySQLDriver := TZMySQLDriver.Create;
   DriverManager.RegisterDriver(MySQLDriver);
-  MySQLCriticalSection := TCriticalSection.Create;
 finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(MySQLDriver);
   MySQLDriver := nil;
-  FreeAndNil(MySQLCriticalSection);
 end.
 

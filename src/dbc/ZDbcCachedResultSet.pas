@@ -797,17 +797,19 @@ procedure TZAbstractCachedResultSet.ResetCursor;
 var
   I: Integer;
 begin
-  if Assigned(FRowAccessor) then
-  begin
-    for I := 0 to FRowsList.Count - 1 do
-      FRowAccessor.DisposeBuffer(PZRowBuffer(FRowsList[I]));
-    for I := 0 to FInitialRowsList.Count - 1 do
-      FRowAccessor.DisposeBuffer(PZRowBuffer(FInitialRowsList[I]));
-    FRowsList.Clear;
-    FInitialRowsList.Clear;
-    FCurrentRowsList.Clear;
+  if not Closed then begin
+    if Assigned(FRowAccessor) then
+    begin
+      for I := 0 to FRowsList.Count - 1 do
+        FRowAccessor.DisposeBuffer(PZRowBuffer(FRowsList[I]));
+      for I := 0 to FInitialRowsList.Count - 1 do
+        FRowAccessor.DisposeBuffer(PZRowBuffer(FInitialRowsList[I]));
+      FRowsList.Clear;
+      FInitialRowsList.Clear;
+      FCurrentRowsList.Clear;
+    end;
+    inherited ResetCursor;
   end;
-  inherited ResetCursor;
 end;
 
 //======================================================================
@@ -2350,7 +2352,7 @@ begin
         stSmall: RowAccessor.SetSmall(I, ResultSet.GetSmall(I));
         stLongWord: RowAccessor.SetUInt(I, ResultSet.GetUInt(I));
         stInteger: RowAccessor.SetInt(I, ResultSet.GetInt(I));
-        stULong: RowAccessor.SetLong(I, ResultSet.GetULong(I));
+        stULong: RowAccessor.SetULong(I, ResultSet.GetULong(I));
         stLong: RowAccessor.SetLong(I, ResultSet.GetLong(I));
         stFloat: RowAccessor.SetFloat(I, ResultSet.GetFloat(I));
         stDouble: RowAccessor.SetDouble(I, ResultSet.GetDouble(I));
@@ -2431,12 +2433,14 @@ end;
 }
 procedure TZCachedResultSet.Close;
 begin
-  inherited Close;
-  if Assigned(ColumnsInfo) then //close may release the object -> a destroy will be called -> the list does'nt exist anymore
-    ColumnsInfo.Clear;
-  If Assigned(FResultset) then begin
-    FResultset.Close;
-    FResultSet := nil;
+  if not Closed then begin
+    inherited Close;
+    if Assigned(ColumnsInfo) then //close may release the object -> a destroy will be called -> the list does'nt exist anymore
+      ColumnsInfo.Clear;
+    If Assigned(FResultset) then begin
+      FResultset.Close;
+      FResultSet := nil;
+    end;
   end;
 end;
 
@@ -2461,9 +2465,11 @@ end;
 
 procedure TZCachedResultSet.ResetCursor;
 begin
-  If Assigned(FResultset) then
-    FResultset.ResetCursor;
-  inherited ResetCursor;
+  if not Closed then begin
+    If Assigned(FResultset) then
+      FResultset.ResetCursor;
+    inherited ResetCursor;
+  end;
 end;
 {**
   Retrieves the  number, types and properties of

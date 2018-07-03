@@ -1008,8 +1008,13 @@ type
     constructor Create(AOwner: TComponent); override;
     property Value: UInt64 read GetAsUInt64 write SetAsUInt64;
   published
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}
+    property MaxValue: UInt64 read FMaxValue write SetMaxValue;
+    property MinValue: UInt64 read FMinValue write SetMinValue;
+    {$ELSE}
     property MaxValue: UInt64 read FMaxValue write SetMaxValue default 0;
     property MinValue: UInt64 read FMinValue write SetMinValue default 0;
+    {$IFEND}
   end;
 
 (*{ TAutoIncField }
@@ -3948,11 +3953,10 @@ end;
 }
 procedure TZAbstractRODataset.InternalUnPrepare;
 begin
-  if Statement <> nil then
-    begin
-      Statement.Close;
-      Statement := nil;
-    end;
+  if Statement <> nil then begin
+    Statement.Close;
+    Statement := nil;
+  end;
 end;
 
 {**
@@ -4076,12 +4080,9 @@ end;
   @param Buffer a pointer to the record buffer.
   @return a bookmark flag from the specified record.
 }
-
 {$IFDEF WITH_TRECORDBUFFER}
-
 function TZAbstractRODataset.GetBookmarkFlag(Buffer: TRecordBuffer): TBookmarkFlag;
 {$ELSE}
-
 function TZAbstractRODataset.GetBookmarkFlag(Buffer: PChar): TBookmarkFlag;
 {$ENDIF}
 begin
@@ -5678,6 +5679,7 @@ begin
     Result := 0;
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZField.GetAsUInt64: UInt64;
 var IsNull: Boolean;
 begin
@@ -5686,6 +5688,7 @@ begin
   else
     Result := 0;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 { string types }
 function TZField.GetAsString: string;
@@ -6119,6 +6122,7 @@ begin
   end;
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZNumericField.ConvertUnSigned(const Value; const ValueType: TZSQLType): UInt64;
 begin
   case ValueType of
@@ -6141,6 +6145,7 @@ begin
       raise EZSQLException.Create(Format(SConvertionIsNotPossible, [FFieldIndex, '','']));
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 function TZNumericField.ConvertExtended(const Value; const ValueType: TZSQLType): Extended;
 begin

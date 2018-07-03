@@ -326,6 +326,8 @@ begin
       Result := InitialType in [stString, stUnicodeString, stTime, stTimestamp, stDouble];
     stBinaryStream:
       Result := (InitialType in [stBinaryStream, stBytes]) and (InitialType <> stUnknown);
+    stAsciiStream, stUnicodeStream:
+      Result := (InitialType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]) and (InitialType <> stUnknown);
     else
       Result := (ResultType = InitialType) and (InitialType <> stUnknown);
   end;

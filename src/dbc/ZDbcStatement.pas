@@ -698,8 +698,11 @@ procedure TZAbstractStatement.FreeOpenResultSetReference(const ResultSet: IZResu
 begin
   if FOpenResultSet = Pointer(ResultSet) then
     FOpenResultSet := nil;
-  if FLastResultSet = ResultSet then
-    FLastResultSet := nil;
+  //note: if refcount of FLastResultSet = 1 and the call to FreeOpenResultSetReference by IZResultSet.Close is done
+  //the object has been destroyed while we're still closing the resultset.
+  //Each further code sequence in IZResultSet.Close is invalid then!
+  //if Pointer(FLastResultSet) = Pointer(ResultSet) then
+    //FLastResultSet := nil;
 end;
 
 class function TZAbstractStatement.GetNextStatementId: integer;
@@ -3613,6 +3616,7 @@ begin
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
       GetCompareFirstKeywordStrings, @FIsPraparable, FNeedNCharDetection);
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 { TZEmulatedPreparedStatement_W }
 

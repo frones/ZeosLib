@@ -50,7 +50,9 @@
 {********************************************************@}
 
 unit ZDbcMySqlResultSet;
-
+{$IFDEF FPC}
+{$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 interface
 
 {$I ZDbc.inc}
@@ -64,9 +66,14 @@ uses
 type
   {** Implements MySQL ResultSet Metadata. }
   TZMySQLResultSetMetadata = class(TZAbstractResultSetMetadata)
+  private
+    FHas_ExtendedColumnInfos: Boolean;
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
     procedure LoadColumns; override;
+  public
+    constructor Create(const Metadata: IZDatabaseMetadata; const SQL: string;
+      ParentResultSet: TZAbstractResultSet);
   public
     function GetCatalogName(ColumnIndex: Integer): string; override;
     function GetColumnName(ColumnIndex: Integer): string; override;
@@ -224,7 +231,7 @@ implementation
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZFastCode, ZSysUtils, ZMessages, ZEncoding,
-  ZDbcMySqlUtils, ZDbcMysql, ZDbcUtils, ZDbcMetadata;
+  ZDbcMySqlUtils, ZDbcMySQL, ZDbcUtils, ZDbcMetadata, ZDbcLogging;
 
 {$IFOPT R+}
   {$DEFINE RangeCheckEnabled}
@@ -240,12 +247,27 @@ begin
 end;
 
 {**
+  Constructs this object and assignes the main properties.
+  @param Metadata a database metadata object.
+  @param SQL an SQL query statement.
+  @param ColumnsInfo a collection of columns info.
+}
+constructor TZMySQLResultSetMetadata.Create(const Metadata: IZDatabaseMetadata;
+  const SQL: string; ParentResultSet: TZAbstractResultSet);
+begin
+  inherited Create(Metadata, SQL, ParentResultSet);
+  FHas_ExtendedColumnInfos := (MetaData.GetConnection.GetIZPlainDriver as IZMySQLPlainDriver).GetClientVersion > 40000;
+end;
+
+{**
   Gets the designated column's table's catalog name.
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return column name or "" if not applicable
 }
 function TZMySQLResultSetMetadata.GetCatalogName(ColumnIndex: Integer): string;
 begin
+  if not FHas_ExtendedColumnInfos and not Loaded
+  then LoadColumns;
   Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).CatalogName;
 end;
 
@@ -256,6 +278,8 @@ end;
 }
 function TZMySQLResultSetMetadata.GetColumnName(ColumnIndex: Integer): string;
 begin
+  if not FHas_ExtendedColumnInfos and not Loaded
+  then LoadColumns;
   Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnName;
 end;
 
@@ -288,6 +312,8 @@ end;
 }
 function TZMySQLResultSetMetadata.GetTableName(ColumnIndex: Integer): string;
 begin
+  if not FHas_ExtendedColumnInfos and not Loaded
+  then LoadColumns;
   Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).TableName;
 end;
 
@@ -306,17 +332,14 @@ end;
   Initializes columns with additional data.
 }
 procedure TZMySQLResultSetMetadata.LoadColumns;
-{$IFNDEF ZEOS_TEST_ONLY}
 var
   Current: TZColumnInfo;
   I: Integer;
   TableColumns: IZResultSet;
-{$ENDIF}
 begin
-  {$IFDEF ZEOS_TEST_ONLY}
-  inherited LoadColumns;
-  {$ELSE}
-  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
+  if not FHas_ExtendedColumnInfos then
+    inherited LoadColumns
+  else if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
     for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
       Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
       ClearColumn(Current);
@@ -333,7 +356,6 @@ begin
       end;
     end;
   Loaded := True;
-  {$ENDIF}
 end;
 
 { TZAbstractMySQLResultSet }
@@ -409,7 +431,10 @@ procedure TZAbstractMySQLResultSet.Open;
 var
   I: Integer;
   FieldHandle: PMYSQL_FIELD;
+  FieldOffsets: PMYSQL_FIELDOFFSETS;
+  MySQL_FieldType_Bit_1_IsBoolean: Boolean;
 begin
+  FieldOffsets := GetFieldOffsets(FPlainDriver.GetClientVersion);
   if fServerCursor
   then FQueryHandle := FPlainDriver.use_result(FHandle)
   else begin
@@ -417,7 +442,7 @@ begin
     if Assigned(FQueryHandle) then
       LastRowNo := FPlainDriver.GetRowCount(FQueryHandle)
   end;
-
+  MySQL_FieldType_Bit_1_IsBoolean := (GetStatement.GetConnection as IZMySQLConnection).MySQL_FieldType_Bit_1_IsBoolean;
   if not Assigned(FQueryHandle) then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
 
@@ -427,12 +452,12 @@ begin
   for I := 0 to High(FMySQLTypes) do begin
     FPlainDriver.SeekField(FQueryHandle, I);
     FieldHandle := FPlainDriver.FetchField(FQueryHandle);
-    FMySQLTypes[i] := PMYSQL_FIELD(FieldHandle)^._type;
+    FMySQLTypes[i] := PMysqlFieldType(NativeUInt(FieldHandle)+FieldOffSets._type)^;
     if FieldHandle = nil then
       Break;
 
-    ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FieldHandle, ConSettings,
-      fServerCursor));
+    ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FieldHandle, FieldOffsets,
+      ConSettings, MySQL_FieldType_Bit_1_IsBoolean));
   end;
 
   inherited Open;
@@ -686,13 +711,14 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZAbstractMySQLResultSet.GetULong(ColumnIndex: Integer): UInt64;
 var
   Buffer: PAnsiChar;
   Len: ULong;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stLong);
+  CheckColumnConvertion(ColumnIndex, stULong);
 {$ENDIF}
   Buffer := GetBuffer(ColumnIndex);
 
@@ -712,6 +738,7 @@ begin
   end else
     Result := RawToUInt64Def(Buffer, 0);
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Gets the value of the designated column in the current row
@@ -967,6 +994,7 @@ end;
   @return <code>true</code> if the cursor is on the result set;
     <code>false</code> otherwise
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZMySQL_Store_ResultSet.MoveAbsolute(Row: Integer): Boolean;
 begin
   { Checks for maximum row. }
@@ -1047,6 +1075,7 @@ var
   FieldHandle: PMYSQL_FIELD;
   FieldCount: Integer;
   FResultMetaData : PZMySQLResult;
+  FIELDOFFSETS: PMYSQL_FIELDOFFSETS;
 begin
   FieldCount := FPlainDriver.stmt_field_count(FPrepStmt);
   if FieldCount = 0 then
@@ -1059,7 +1088,7 @@ begin
 
   { Initialize Bind Array and Column Array }
   FBindBuffer := TZMySqlResultSetBindBuffer.Create(FPlainDriver,FieldCount,FColumnArray);
-
+  FIELDOFFSETS := GetFieldOffsets(FPlainDriver.GetClientVersion);
   { EH: no we skip that! We use the refetch logic of
   https://bugs.mysql.com/file.php?id=12361&bug_id=33086
 
@@ -1077,12 +1106,12 @@ begin
       if FieldHandle = nil then
         Break;
 
-      ColumnInfo := GetMySQLColumnInfoFromFieldHandle(FieldHandle,
+      ColumnInfo := GetMySQLColumnInfoFromFieldHandle(FieldHandle, FIELDOFFSETS,
         ConSettings, fServerCursor);
 
       ColumnsInfo.Add(ColumnInfo);
 
-      FBindBuffer.AddColumn(FieldHandle);
+      FBindBuffer.AddColumn(FieldHandle, FIELDOFFSETS);
     end;
   finally
     FPlainDriver.FreeResult(FResultMetaData);
@@ -1097,6 +1126,7 @@ begin
 
   inherited Open;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Releases this <code>ResultSet</code> object's database and

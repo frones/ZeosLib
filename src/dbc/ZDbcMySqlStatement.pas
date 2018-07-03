@@ -116,7 +116,7 @@ type
   {** Encapsulates a MySQL bind buffer for ResultSets. }
   TZMySQLResultSetBindBuffer = class(TZMySQLAbstractBindBuffer)
   public
-    procedure AddColumn(MYSQL_FIELD: PMYSQL_FIELD);
+    procedure AddColumn(MYSQL_FIELD: PMYSQL_FIELD; FieldOffSets: PMYSQL_FIELDOFFSETS);
   end;
 
   {** Encapsulates a MySQL bind buffer for updates. }
@@ -1128,12 +1128,10 @@ function TZMySQLCallableStatement.GetOutParamSQL: RawByteString;
     Result := '';
     I := 0;
     while True do
-      if (FDBParamTypes[i] = 0) or ( I = Length(FDBParamTypes)) then
+      if ( I = Length(FDBParamTypes)) or (FDBParamTypes[i] = 0) then
         break
-      else
-      begin
-        if FDBParamTypes[i] in [2, 3, 4] then
-        begin
+      else begin
+        if FDBParamTypes[i] in [2, 3, 4] then begin
           if Result <> '' then
             Result := Result + ',';
           if FParamTypeNames[i] = '' then
@@ -1251,8 +1249,8 @@ begin
       Resultsets}
     CachedResultSet.Last;//Fetch all
     CachedResultSet.BeforeFirst;//Move to first pos
-    if FQueryHandle <> nil then
-      FPlainDriver.FreeResult(FQueryHandle);
+    //if FQueryHandle <> nil then
+      //FPlainDriver.FreeResult(FQueryHandle);
     //NativeResultSet.ResetCursor; //Release the handles
     Result := CachedResultSet;
   end
@@ -1647,17 +1645,21 @@ end;
 
 { TZMySQLResultSetBindBuffer }
 
-procedure TZMySQLResultSetBindBuffer.AddColumn(MYSQL_FIELD: PMYSQL_FIELD);
+procedure TZMySQLResultSetBindBuffer.AddColumn(MYSQL_FIELD: PMYSQL_FIELD;
+  FieldOffSets: PMYSQL_FIELDOFFSETS);
 var
   ColOffset: NativeUInt;
   Bind: PDOBindRecord2;
 begin
   Bind := @FPColumnArray^[FAddedColumnCount];
-  bind^.buffer_type := MYSQL_FIELD^._type; //safe initialtype
-  bind^.binary := (MYSQL_FIELD^.flags and BINARY_FLAG) <> 0;
-  bind^.decimals := MYSQL_FIELD^.decimals;
-  case MYSQL_FIELD^._type of
-    FIELD_TYPE_BIT: case MYSQL_FIELD^.length of
+  bind^.buffer_type := PMysqlFieldType(NativeUInt(MYSQL_FIELD)+FieldOffSets._type)^; //safe initialtype
+  if FieldOffSets.charsetnr > 0
+  then bind^.binary := PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffSets.charsetnr))^ = 63
+  else bind^.binary := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffSets.flags)^ and BINARY_FLAG <> 0;
+
+  bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffSets.decimals)^;
+  case bind^.buffer_type of
+    FIELD_TYPE_BIT: case PULong(NativeUInt(MYSQL_FIELD)+FieldOffSets.length)^ of
                       0..8  : bind^.Length := SizeOf(Byte);
                       9..16 : bind^.Length := SizeOf(Word);
                       17..32: bind^.Length := SizeOf(LongWord);
@@ -1677,7 +1679,7 @@ begin
         bind^.buffer_type := FIELD_TYPE_LONG;
       end;
     FIELD_TYPE_FLOAT,
-    FIELD_TYPE_DOUBLE:    if MYSQL_FIELD^.length < 12 then begin
+    FIELD_TYPE_DOUBLE:    if PULong(NativeUInt(MYSQL_FIELD)+FieldOffSets.length)^ < 12 then begin
                             bind^.Length := 4;
                             bind^.buffer_type := FIELD_TYPE_FLOAT;
                           end else begin
@@ -1694,7 +1696,7 @@ begin
     FIELD_TYPE_STRING:
       begin
         bind^.buffer_type := FIELD_TYPE_STRING;
-        bind^.Length := MYSQL_FIELD^.length+Byte(Ord(not bind^.Binary));
+        bind^.Length := PULong(NativeUInt(MYSQL_FIELD)+FieldOffSets.length)^+Byte(Ord(not bind^.Binary));
       end;
     FIELD_TYPE_NEWDECIMAL,
     FIELD_TYPE_DECIMAL:
@@ -1703,7 +1705,7 @@ begin
         bind^.Length := 8;
       end;
   else
-    bind^.Length := (((MYSQL_FIELD^.length -1) shr 3)+1) shl 3; //8Byte Aligned
+    bind^.Length := (((PULong(NativeUInt(MYSQL_FIELD)+FieldOffSets.length)^ -1) shr 3)+1) shl 3; //8Byte Aligned
     //Length := MYSQL_FIELD^.length;
   end;
   SetLength(Bind^.Buffer, bind^.Length+LongWord(Ord(
@@ -1713,7 +1715,7 @@ begin
   bind^.buffer_address := @FbindArray[ColOffset+FBindOffsets.buffer]; //save address
   Bind^.buffer_Length_address := @FbindArray[ColOffset+FBindOffsets.buffer_length]; //save address
   Bind^.buffer_type_address := @FbindArray[ColOffset+FBindOffsets.buffer_type];
-  Bind^.is_signed := MYSQL_FIELD.flags and UNSIGNED_FLAG = 0;
+  Bind^.is_signed := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffSets.flags)^ and UNSIGNED_FLAG = 0;
   Bind^.buffer_type_address^ := bind^.buffer_type;
 
   PULong(Bind^.buffer_Length_address)^ := Bind^.length;
