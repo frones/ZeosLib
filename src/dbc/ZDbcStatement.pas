@@ -338,7 +338,7 @@ type
     procedure GetOrdinal(Index: Integer; out Result: Int64); overload; virtual;
     procedure GetOrdinal(Index: Integer; out Result: UInt64); overload; virtual;
     procedure GetDouble(Index: Integer; out Result: Double); overload; virtual;
-    procedure GetBigDecimal(Index: Integer; var Result: TZBCD); overload; virtual;
+    procedure GetBigDecimal(Index: Integer; var {%H-}Result: TZBCD); overload; virtual;
     procedure GetBytes(Index: Integer; out nBytes: LengthInt; out Result: Pointer); overload; virtual;
     procedure GetDateTime(Index: Integer; out Result: TDateTime); overload; virtual;
     procedure GetLob(Index: Integer; var Result: IZBlob); overload; virtual;
@@ -403,7 +403,7 @@ type
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); virtual;
 
     procedure RegisterParameter(ParameterIndex: Integer;
-      SQLType: TZSQLType; ParamType: TZParamType; ParamSize: LengthInt = -1);
+      SQLType: TZSQLType; ParamType: TZParamType; {%H-}ParamSize: LengthInt = -1);
 
     function IsNull(ParameterIndex: Integer): Boolean; overload;virtual;
     function GetPChar(ParameterIndex: Integer): PChar; virtual; abstract;
@@ -429,7 +429,7 @@ type
     function GetDate(ParameterIndex: Integer): TDateTime; virtual;
     function GetTime(ParameterIndex: Integer): TDateTime; virtual;
     function GetTimestamp(ParameterIndex: Integer): TDateTime; virtual;
-    function GetValue(ParameterIndex: Integer): TZVariant; virtual;
+    function GetValue({%H-}ParameterIndex: Integer): TZVariant; virtual;
 
     procedure ClearParameters; virtual;
 
@@ -3959,7 +3959,7 @@ end;
 
 procedure TZBindList.Put(Index: Integer; Value: Boolean);
 begin
-  NativeInt(AquireBuffer(Index, stBoolean, zbtPointer).Value) := Ord(Value);
+  {%H-}NativeUInt(AquireBuffer(Index, stBoolean, zbtPointer).Value) := Ord(Value);
 end;
 
 procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType; _8Byte: P8Bytes);
@@ -4634,7 +4634,7 @@ end;
 function TZAbstractPreparedStatement2.GetValue(
   ParameterIndex: Integer): TZVariant;
 begin
-
+  Result := NullVariant;
 end;
 
 function TZAbstractPreparedStatement2.GetWord(ParameterIndex: Integer): Word;
@@ -5304,7 +5304,7 @@ function TZRawPreparedStatement.GetAnsiString(
 var P: PAnsiChar;
   L: LengthInt;
 begin
-  GetPAnsichar(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, L, P);
+  GetPAnsichar(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, L, P{%H-});
   if ZCompatibleCodePages(zOSCodePage, ConSettings^.ClientCodePage.CP) then
     ZSetString(P, L, Result)
   else begin
@@ -5342,7 +5342,7 @@ begin
   FUniTemp := PRawToUnicode(P, L, ConSettings^.ClientCodePage.CP);
   Result := Pointer(FUniTemp);
   {$ELSE}
-  GetPAnsichar(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, L, Result);
+  GetPAnsichar(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, L, Result{%H-});
   {$ENDIF}
 end;
 
@@ -5351,7 +5351,7 @@ function TZRawPreparedStatement.GetRawByteString(
 var P: PAnsiChar;
   L: LengthInt;
 begin
-  GetPAnsichar(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, L, P);
+  GetPAnsichar(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, L, P{%H-});
   ZSetString(P, L, Result);
 end;
 
@@ -5359,7 +5359,7 @@ function TZRawPreparedStatement.GetString(ParameterIndex: Integer): String;
 var P: PAnsiChar;
   L: LengthInt;
 begin
-  GetPAnsichar(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, L, P);
+  GetPAnsichar(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, L, P{%H-});
   {$IFDEF UNICODE}
   Result := PRawToUnicode(P, L, ConSettings^.ClientCodePage.CP);
   {$ELSE}
@@ -5372,7 +5372,7 @@ function TZRawPreparedStatement.GetUnicodeString(
 var P: PAnsiChar;
   L: LengthInt;
 begin
-  GetPAnsichar(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, L, P);
+  GetPAnsichar(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, L, P{%H-});
   Result := PRawToUnicode(P, L, ConSettings^.ClientCodePage.CP);
 end;
 
@@ -5381,7 +5381,7 @@ function TZRawPreparedStatement.GetUTF8String(
 var P: PAnsiChar;
   L: LengthInt;
 begin
-  GetPAnsichar(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, L, P);
+  GetPAnsichar(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, L, P{%H-});
   if ZCompatibleCodePages(zCP_UTF8, ConSettings^.ClientCodePage.CP) then
     ZSetString(P, L, Result)
   else begin
