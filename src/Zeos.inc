@@ -297,7 +297,6 @@
 {$ENDIF}
 
 {$IFDEF NEXTGEN}
-  {$DEFINE MISS_RBS_SETSTRING_OVERLOAD}
   {$UNDEF WITH_ASANSISTRING}
   {$UNDEF WITH_UNITANSISTRINGS}
   {$UNDEF HAS_PANSICHAR}
@@ -352,7 +351,11 @@
 
 // Range check mode and UInt64 can't live together on D7 so turn it off for all Zeos units
 {$IFDEF WITH_UINT64_C1118_ERROR}
-{$R-}
+{.$R-}
+{$ENDIF}
+
+{$IFOPT R+}
+  {$DEFINE RangeCheckEnabled}
 {$ENDIF}
 
 // Disables checking code.
