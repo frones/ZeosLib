@@ -1675,6 +1675,7 @@ const
   stUnicodeStream_Index = FirstDbcIndex+17;
   stBinaryStream_Index  = FirstDbcIndex+18;
 {$WARNINGS OFF}
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure TZGenericTestDbcArrayBindings.InternalTestArrayBinding(
   PStatement: IZPreparedStatement; FirstID, ArrayLen, LastFieldIndex: Integer);
 var
@@ -1902,6 +1903,7 @@ begin
   end;
   PStatement.ExecuteUpdatePrepared;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 {$WARNINGS ON} //implizit string conversion of...
 
 const
