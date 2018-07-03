@@ -819,7 +819,9 @@ begin
       stSmall:      Result := PSmallInt(fColDataPtr)^;
       stLongWord:   Result := PLongWord(fColDataPtr)^;
       stInteger:    Result := PInteger(fColDataPtr)^;
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
       stULong:      Result := PUInt64(fColDataPtr)^;
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := Trunc(PSingle(fColDataPtr)^);
       stDouble,
@@ -842,11 +844,13 @@ begin
           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction));
       stString, stUnicodeString: begin
           InternalDecTrailingSpaces(ColumnIndex);
-          if fIsUnicodeDriver then
+        {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+        if fIsUnicodeDriver then
             Result := UnicodeToUInt64Def(PWideChar(fColDataPtr), 0)
           else
             Result := RawToUInt64Def(PAnsiChar(fColDataPtr), 0);
         end;
+        {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       //stAsciiStream, stUnicodeStream, stBinaryStream:
     end;
   end;
@@ -1101,6 +1105,7 @@ begin
   end;
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TAbstractODBCResultSet.GetULong(ColumnIndex: Integer): UInt64;
 begin
   Result := 0;
@@ -1148,6 +1153,7 @@ begin
     end;
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 function TAbstractODBCResultSet.GetUnicodeString(
   ColumnIndex: Integer): ZWideString;

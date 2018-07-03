@@ -938,6 +938,7 @@ begin
   end;
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure OleBindArrayParams(const DBParams: TDBParams; ArrayOffSet: DB_UPARAMS;
   RowSize: NativeUInt; ConSettings: PZConSettings;
   const DBBindingArray: TDBBindingDynArray; const ClientVarManager: IZClientVariantManager;
@@ -2028,6 +2029,7 @@ begin
     Inc(BuffOffSet, RowSize);
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 {$HINTS ON}
 
 procedure SetOleCommandProperties(const Command: ICommandText; TimeOut: SmallInt;

@@ -390,6 +390,7 @@ begin
   end;
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure TZAbstractODBCStatement.InternalBindParams;
 var
   I, J: SQLUSMALLINT;
@@ -1944,6 +1945,7 @@ begin
         CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_PARAMSET_SIZE, {%H-}Pointer(NativeUInt(fCurrentIterations)), 0));
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 procedure TZAbstractODBCStatement.InternalExecute;
 var
