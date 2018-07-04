@@ -156,7 +156,6 @@ constructor TZMySQLDriver.Create;
 begin
   inherited Create;
   AddSupportedProtocol(AddPlainDriverToCache(TZMySQLPlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZMySQLEmbeddedPlainDriver.Create));
 end;
 
 {**
