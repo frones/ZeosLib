@@ -179,7 +179,6 @@ uses
 constructor TZOracleDriver.Create;
 begin
   inherited Create;
-  AddSupportedProtocol(AddPlainDriverToCache(TZOraclePlainDriver.Create, 'oracle'));
   AddSupportedProtocol(AddPlainDriverToCache(TZOraclePlainDriver.Create));
 end;
 
