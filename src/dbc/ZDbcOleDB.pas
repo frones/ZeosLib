@@ -55,7 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
-{.$DEFINE ENABLE_OLEDB}
+{$DEFINE ENABLE_OLEDB}
 {$IFDEF ENABLE_OLEDB}
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
@@ -85,7 +85,7 @@ type
   end;
 
   {** Implements a generic OleDB Connection. }
-  TZOleDBConnection = class(TZAbstractConnection, IZOleDBConnection)
+  TZOleDBConnection = class(TZAbstractDbcConnection, IZOleDBConnection)
   private
     FMalloc: IMalloc;
     FDBInitialize: IDBInitialize;

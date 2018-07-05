@@ -1012,7 +1012,7 @@ begin
     DriverManager.LogError(LoggingCategory, ConSettings^.Protocol,
       ConvertStringToConnRaw(ConSettings, ErrorMessage), ErrorCode,
       ConvertStringToConnRaw(ConSettings, ErrorSqlMessage));
-    if ErrorCode in [{isc_network_error..isc_net_write_err,} isc_lost_db_connection] then begin
+    if ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection then begin
       ImmediatelyReleasable.ReleaseImmediat(ImmediatelyReleasable);
       raise EZSQLConnectionLost.CreateWithCode(ErrorCode,
       Format(SSQLError1, [sSQL]));

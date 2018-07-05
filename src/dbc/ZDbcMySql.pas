@@ -91,7 +91,7 @@ type
   end;
 
   {** Implements MySQL Database Connection. }
-  TZMySQLConnection = class(TZAbstractConnection, IZMySQLConnection)
+  TZMySQLConnection = class(TZAbstractDbcConnection, IZMySQLConnection)
   private
     FCatalog: string;
     FHandle: PMySQL;

@@ -874,9 +874,9 @@ begin
       FillChar(Bind^.length^, Iterations*SizeOf(ULong), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
       Bind^.length_address^ := Bind^.length;
       PPointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.is_null)^ := @Bind^.is_null;
-      if (BindOffsets.Indicator > 0) then begin
-        Bind^.indicator_address := Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.Indicator);
-      end else if Iterations > 1 then
+      if (BindOffsets.Indicator > 0)
+      then Bind^.indicator_address := Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.Indicator)
+      else if Iterations > 1 then
         raise EZSQLException.Create('Array bindings are not supported!');
     end;
   end;

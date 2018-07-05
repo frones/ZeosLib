@@ -98,6 +98,7 @@ type
     FPQParamOIDs: TPQparamTypes; //the Parameter OID's
     FPQResultFormat: Integer; //which format will the tubles have binary or string? note if any unsupported oid  given we use string format only as a fallback
     FPGArrayDMLStmts: array[TArrayDMLType] of TPGArrayDMLStmt;
+    FParamNames: TRawByteStringDynArray;
     function CheckPrepareSwitchMode: Boolean;
     procedure InternalRealPrepare;
     function OIDToSQLType(Index: Integer; SQLType: TZSQLType): TZSQLType;
@@ -105,6 +106,7 @@ type
     procedure LinkParam2PG(Index: Integer; Buf: Pointer; Len: LengthInt; ParamFormat: Integer);
   protected
     procedure SetBindCapacity(Capacity: Integer); override;
+
     procedure BindNull(Index: Integer; SQLType: TZSQLType); override;
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
     procedure BindBoolean(Index: Integer; Value: Boolean); override;
@@ -115,6 +117,7 @@ type
     procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
+
     procedure CheckParameterIndex(Value: Integer); override;
   protected
     procedure FlushPendingResults;
@@ -124,6 +127,8 @@ type
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
     function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
   public
+    procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
+      ParamType: TZParamType; const Name: String = ''; {%H-}PrecisionOrSize: LengthInt = 0; {%H-}Scale: LengthInt = 0); override;
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
   public
@@ -1589,6 +1594,22 @@ begin
       for i := 0 to BindList.Count-1 do
         SQLTypeToPostgreSQL(BindList.SQLTypes[i], fOIDAsBlob, FPQParamOIDs[i]);
   end;
+end;
+
+procedure TZAbstractPostgreSQLPreparedStatementV3.RegisterParameter(
+  ParameterIndex: Integer; SQLType: TZSQLType; ParamType: TZParamType;
+  const Name: String; PrecisionOrSize, Scale: LengthInt);
+begin
+  inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name, PrecisionOrSize, Scale);
+  if Name = '' then
+    exit;
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  SetLength(FParamNames, BindList.Capacity);
+  {$IFDEF UNICODE}
+  FParamNames[ParameterIndex] := ZUnicodeToRaw(Name, ConSettings.ClientCodePage^.CP);
+  {$ELSE}
+  FParamNames[ParameterIndex] := ConSettings.ConvFuncs.ZStringToRaw(Name, ConSettings.CTRL_CP, ConSettings.ClientCodePage^.CP);
+  {$ENDIF}
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.ReleaseImmediat(

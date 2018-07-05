@@ -83,7 +83,7 @@ type
   end;
 
   {** Implements a generic Ado Connection. }
-  TZAdoConnection = class(TZAbstractConnection, IZAdoConnection)
+  TZAdoConnection = class(TZAbstractDbcConnection, IZAdoConnection)
   private
     fServerProvider: TZServerProvider;
     procedure ReStartTransactionSupport;

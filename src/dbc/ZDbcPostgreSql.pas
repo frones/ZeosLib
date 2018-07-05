@@ -103,7 +103,7 @@ type
 
   { TZPostgreSQLConnection }
 
-  TZPostgreSQLConnection = class(TZAbstractConnection, IZPostgreSQLConnection)
+  TZPostgreSQLConnection = class(TZAbstractDbcConnection, IZPostgreSQLConnection)
   private
     FUndefinedVarcharAsStringLength: Integer;
     FStandardConformingStrings: Boolean;

@@ -130,7 +130,7 @@ type
 
   { TZInterbase6Connection }
   {$WARNINGS OFF} //suppress deprecated warning
-  TZInterbase6Connection = class(TZAbstractConnection, IZInterbase6Connection)
+  TZInterbase6Connection = class(TZAbstractDbcConnection, IZInterbase6Connection)
   private
     FDialect: Word;
     FHandle: TISC_DB_HANDLE;
@@ -315,7 +315,7 @@ end;
 constructor TZInterbase6Connection.Create(const ZUrl: TZURL);
 begin
   // ! Create the object before parent's constructor because it is used in
-  // TZAbstractConnection.Create > Url.OnPropertiesChange
+  // TZAbstractDbcConnection.Create > Url.OnPropertiesChange
   FGUIDProps := TZInterbase6ConnectionGUIDProps.Create;
   inherited;
   FClientVersion := -1;

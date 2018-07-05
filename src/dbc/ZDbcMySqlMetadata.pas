@@ -263,7 +263,7 @@ type
       TableNamePattern, ColumnNamePattern: string): IZResultSet; override; //EgonHugeist
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   public
-    constructor Create(Connection: TZAbstractConnection; const Url: TZURL); override;
+    constructor Create(Connection: TZAbstractDbcConnection; const Url: TZURL); override;
     destructor Destroy; override;
   public
     procedure SetMySQL_FieldType_Bit_1_IsBoolean(Value: Boolean);
@@ -952,7 +952,7 @@ begin
   inherited ClearCache;
 end;
 
-constructor TZMySQLDatabaseMetadata.Create(Connection: TZAbstractConnection;
+constructor TZMySQLDatabaseMetadata.Create(Connection: TZAbstractDbcConnection;
   const Url: TZURL);
 begin
   inherited Create(Connection, Url);

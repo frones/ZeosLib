@@ -1243,7 +1243,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stULong);
 {$ENDIF}
-  Result := 0;
+  Result := GetLong(ColumnIndex);
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 

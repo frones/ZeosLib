@@ -110,7 +110,6 @@ type
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
-    function GetULong(ColumnIndex: Integer): UInt64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetCurrency(ColumnIndex: Integer): Currency; override;
@@ -1098,86 +1097,6 @@ begin
           SQL_BLOB:
             if sqlsubtype = 1 then
               Result := RawToInt64Def(GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetRawByteString, 0)
-            else
-              goto Fail;
-        else
-          Fail:
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
-        end;
-    end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
-  end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>long</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZInterbase6XSQLDAResultSet.GetULong(ColumnIndex: Integer): UInt64;
-label Fail;
-var
-  SQLCode: SmallInt;
-  P: PAnsiChar;
-  Len: NativeUInt;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stULong);
-{$ENDIF}
-  LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-    {$IFDEF WITH_UINT64_C1118_ERROR}
-    Result := UInt64(0) //need that type cast for D7 else "internal error C1118"
-    {$ELSE}
-    Result := 0
-    {$ENDIF}
-  else
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex -1;
-    {$ENDIF}
-    {$R-}
-    with FXSQLDA.sqlvar[ColumnIndex] do
-    begin
-      SQLCode := (sqltype and not(1));
-      if (sqlscale < 0)  then
-      begin
-        case SQLCode of
-          SQL_SHORT  : Result := PSmallInt(sqldata)^ div IBScaleDivisor[sqlscale];
-          SQL_LONG   : Result := PInteger(sqldata)^  div IBScaleDivisor[sqlscale];
-          SQL_INT64,
-          SQL_QUAD   : Result := PInt64(sqldata)^    div IBScaleDivisor[sqlscale];
-          SQL_DOUBLE : Result := Trunc(PDouble(sqldata)^);
-        else
-          goto Fail;
-        end;
-      end
-      else
-        case SQLCode of
-          SQL_DOUBLE    : Result := Trunc(PDouble(sqldata)^);
-          SQL_LONG      : Result := PInteger(sqldata)^;
-          SQL_D_FLOAT,
-          SQL_FLOAT     : Result := Trunc(PSingle(sqldata)^);
-          SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
-          SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
-          SQL_SHORT     : Result := PSmallint(sqldata)^;
-          SQL_INT64     : Result := PInt64(sqldata)^;
-          SQL_TEXT,
-          SQL_VARYING   :
-            begin
-              GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
-              Result := RawToUInt64Def(P, 0);
-            end;
-          SQL_BLOB:
-            if sqlsubtype = 1 then
-              Result := RawToUInt64Def(GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetRawByteString, 0)
             else
               goto Fail;
         else

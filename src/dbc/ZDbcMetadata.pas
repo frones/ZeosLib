@@ -212,7 +212,7 @@ type
     function UncachedGetUDTs(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
       const {%H-}TypeNamePattern: string; const {%H-}Types: TIntegerDynArray): IZResultSet; virtual;
   public
-    constructor Create(Connection: TZAbstractConnection; const Url: TZURL); virtual;
+    constructor Create(Connection: TZAbstractDbcConnection; const Url: TZURL); virtual;
     destructor Destroy; override;
 
     function GetURL: string; virtual;
@@ -2160,7 +2160,7 @@ end;
   @param Connection a database connection object.
   @param Url a database connection url class.
 }
-constructor TZAbstractDatabaseMetadata.Create(Connection: TZAbstractConnection;
+constructor TZAbstractDatabaseMetadata.Create(Connection: TZAbstractDbcConnection;
   const Url: TZURL);
 begin
   inherited Create(Connection as IZConnection);

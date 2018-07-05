@@ -82,7 +82,7 @@ type
     function ODBCVersion: SQLUSMALLINT;
   End;
 
-  TZAbstractODBCConnection = class(TZAbstractConnection, IZODBCConnection)
+  TZAbstractODBCConnection = class(TZAbstractDbcConnection, IZODBCConnection)
   private
     fPlainDriver: IODBC3BasePlainDriver;
     fHDBC: SQLHDBC;

@@ -91,7 +91,7 @@ type
   end;
 
   {** Implements Oracle Database Connection. }
-  TZOracleConnection = class(TZAbstractConnection, IZOracleConnection)
+  TZOracleConnection = class(TZAbstractDbcConnection, IZOracleConnection)
   private
     FCatalog: string;
     FHandle: POCIEnv;

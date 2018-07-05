@@ -239,7 +239,7 @@ type
     function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
   public
-    constructor Create(Connection: TZAbstractConnection; const Url: TZURL; var ConnectionHandle: SQLHDBC); reintroduce; virtual;
+    constructor Create(Connection: TZAbstractDbcConnection; const Url: TZURL; var ConnectionHandle: SQLHDBC); reintroduce; virtual;
   end;
 
   {** Implements ODBC Metadata. }
@@ -271,7 +271,7 @@ type
       const ProcedureNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
     function UncachedGetTypeInfo: IZResultSet; override;
   public
-    constructor Create(Connection: TZAbstractConnection; const Url: TZURL; var ConnectionHandle: SQLHDBC); override;
+    constructor Create(Connection: TZAbstractDbcConnection; const Url: TZURL; var ConnectionHandle: SQLHDBC); override;
   end;
 
   {** Implements ODBC Metadata. }
@@ -303,7 +303,7 @@ type
       const ProcedureNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
     function UncachedGetTypeInfo: IZResultSet; override;
   public
-    constructor Create(Connection: TZAbstractConnection; const Url: TZURL; var ConnectionHandle: SQLHDBC); override;
+    constructor Create(Connection: TZAbstractDbcConnection; const Url: TZURL; var ConnectionHandle: SQLHDBC); override;
   end;
 implementation
 
@@ -1574,7 +1574,7 @@ end;
   internally by the constructor.
   @return the database information object interface
 }
-constructor TODBCDatabaseMetadataW.Create(Connection: TZAbstractConnection;
+constructor TODBCDatabaseMetadataW.Create(Connection: TZAbstractDbcConnection;
   const Url: TZURL; var ConnectionHandle: SQLHDBC);
 begin
   inherited Create(Connection, URL, ConnectionHandle);
@@ -2522,7 +2522,7 @@ end;
   internally by the constructor.
   @return the database information object interface
 }
-constructor TODBCDatabaseMetadataA.Create(Connection: TZAbstractConnection;
+constructor TODBCDatabaseMetadataA.Create(Connection: TZAbstractDbcConnection;
   const Url: TZURL; var ConnectionHandle: SQLHDBC);
 begin
   inherited Create(Connection, URL, ConnectionHandle);
@@ -3539,7 +3539,7 @@ end;
   @see #getExportedKeys
 }
 constructor TAbstractODBCDatabaseMetadata.Create(
-  Connection: TZAbstractConnection; const Url: TZURL; var ConnectionHandle: SQLHDBC);
+  Connection: TZAbstractDbcConnection; const Url: TZURL; var ConnectionHandle: SQLHDBC);
 begin
   fPHDBC := @ConnectionHandle;
   inherited Create(Connection, URL);
