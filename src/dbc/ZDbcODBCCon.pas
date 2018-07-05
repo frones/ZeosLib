@@ -501,7 +501,7 @@ begin
       Pointer(tmp), Length(tmp), Pointer(OutConnectString),
       Length(OutConnectString), @aLen, DriverCompletion));
     SetLength(OutConnectString, aLen);
-    CheckDbcError(fPlainDriver.GetInfo(fHDBC, SQL_PARAM_ARRAY_ROW_COUNTS, @InfoValue, SizeOf(SQLUINTEGER), nil));
+    CheckDbcError(fPlainDriver.GetInfo(fHDBC, SQL_PARAM_ARRAY_SELECTS, @InfoValue, SizeOf(SQLUINTEGER), nil));
     fArraySelectSupported := InfoValue = SQL_PAS_BATCH;
     CheckDbcError(fPlainDriver.GetInfo(fHDBC, SQL_PARAM_ARRAY_ROW_COUNTS, @InfoValue, SizeOf(SQLUINTEGER), nil));
     fArrayRowSupported := InfoValue = SQL_PARC_BATCH;
