@@ -192,6 +192,8 @@ type
     function GetBinaryEscapeString(const Value: RawByteString): String; override;
     function GetBinaryEscapeString(const Value: TBytes): String; override;
     function GetServerProvider: TZServerProvider; override;
+
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
   end;
   {$WARNINGS ON} //suppress deprecated warning
 
@@ -921,6 +923,20 @@ begin
   if IsClosed then
     Open;
   Result := TZInterbase6CallableStatement.Create(Self, SQL, Info);
+end;
+
+{**
+  release all handles immeditaely on connection loss
+  @param Sender the caller where the connection loss did happen first
+    also to be used as comparsion with other IImmediatelyReleasable objects
+    to avoid circular calls
+}
+procedure TZInterbase6Connection.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable);
+begin
+  FHandle := 0;
+  FTrHandle := 0;
+  inherited ReleaseImmediat(Sender);
 end;
 
 {**
