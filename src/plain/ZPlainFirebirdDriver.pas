@@ -599,7 +599,7 @@ begin
   {$IFDEF ENABLE_INTERBASE_CRYPT}
   FPreLoader := TZNativeLibraryLoader.Create([LINUX_IB_CRYPT_LOCATION]);
   {$ENDIF}
-  {$IFDEF WINDOWS}
+  {$IFDEF MSWINDOWS}
   FLoader.AddLocation(WINDOWSIB6_DLL_LOCATION);
   FLoader.AddLocation(WINDOWS_DLL_LOCATION);
   FLoader.AddLocation(WINDOWS2_DLL_LOCATION);

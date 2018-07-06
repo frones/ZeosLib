@@ -66,7 +66,7 @@ uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
 const
   MARIADB_LOCATION = 'libmariadb'+ SharedSuffix;
   DLL_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix;
-{$IFDEF WINDOWS}
+{$IFDEF MSWINDOWS}
   WINDOWS_DLL_LOCATION = 'libmysql.dll';
   WINDOWS_DLL41_LOCATION = 'libmysql41.dll';
   WINDOWS_DLL41_LOCATION_EMBEDDED = 'libmysqld41.dll';
@@ -495,7 +495,7 @@ begin
   FLoader := TZNativeLibraryLoader.Create([]);
   FLoader.AddLocation(MARIADB_LOCATION);
   FLoader.AddLocation(DLL_LOCATION_EMBEDDED);
-{$IFDEF WINDOWS}
+{$IFDEF MSWINDOWS}
   FLoader.AddLocation(WINDOWS_DLL_LOCATION);
   FLoader.AddLocation(WINDOWS_DLL41_LOCATION);
   FLoader.AddLocation(WINDOWS_DLL41_LOCATION_EMBEDDED);
