@@ -64,6 +64,7 @@ type
   {** Implements Prepared SQL Statement for Interbase or FireBird. }
   TZInterbase6PreparedStatement = class;
 
+  {** record for holding batch dml stmts }
   TZIBStmt = record
     Obj: TZInterbase6PreparedStatement;
     Intf: IZPreparedStatement;
@@ -73,14 +74,14 @@ type
   { TZAbstractInterbase6PreparedStatement }
   TZAbstractInterbase6PreparedStatement = class(TZRawParamDetectPreparedStatement)
   private
-    FParamSQLData: IZParamsSQLDA;
-    FResultXSQLDA: IZSQLDA;
-    FIBConnection: IZInterbase6Connection;
-    FPlainDriver: TZInterbasePlainDriver;
-    FCodePageArray: TWordDynArray;
-    FStatusVector: TARRAY_ISC_STATUS;
-    FStmtHandle: TISC_STMT_HANDLE;
-    FStatementType: TZIbSqlStatementType;
+    FParamSQLData: IZParamsSQLDA;//the in param Interface
+    FResultXSQLDA: IZSQLDA; //the out param or resultset Interface
+    FIBConnection: IZInterbase6Connection; //the IB/FB connection interface
+    FPlainDriver: TZInterbasePlainDriver; //the api holder object of the provider
+    FCodePageArray: TWordDynArray; //an array of codepages
+    FStatusVector: TARRAY_ISC_STATUS; //the errorcode vector
+    FStmtHandle: TISC_STMT_HANDLE; //the smt handle
+    FStatementType: TZIbSqlStatementType; //the stmt type
     FTypeTokens: TRawByteStringDynArray;
     FBatchStmts: array[Boolean, stInsert..stDelete] of TZIBStmt;
     FMaxRowsPerBatch, FMemPerRow: Integer;
@@ -97,13 +98,11 @@ type
     procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
+
     procedure CheckParameterIndex(Value: Integer); override;
     function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
-
-
   protected
     procedure PrepareInParameters; override;
-    procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
@@ -237,8 +236,7 @@ begin
     BindList.SetCount(FParamSQLData.GetData^.sqld); //alloc space for lobs and arrays
 
     { Resize XSQLDA structure if required }
-    if FParamSQLData.GetData^.sqld <> FParamSQLData.GetData^.sqln then
-    begin
+    if FParamSQLData.GetData^.sqld <> FParamSQLData.GetData^.sqln then begin
       FParamSQLData.AllocateSQLDA;
       if FPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, GetDialect,FParamSQLData.GetData) <> 0 then
         ZDbcInterbase6Utils.CheckInterbase6Error(FPlainDriver, StatusVector, Self, lcExecute, ASQL);
@@ -296,15 +294,6 @@ procedure TZAbstractInterbase6PreparedStatement.BindDouble(Index: Integer;
 begin
   CheckParameterIndex(Index); //check index, mark io and type
   FParamSQLData.UpdateDouble(Index, Value);
-end;
-
-procedure TZAbstractInterbase6PreparedStatement.BindInParameters;
-begin
-  //if ArrayCount = 0 then
-    (*BindSQLDAInParameters( ClientVarManager, InParamValues,
-      InParamTypes, InParamCount, FParamSQLData, GetConnection.GetConSettings,
-        FCodePageArray);*)
-  inherited BindInParameters;
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.UnPrepareInParameters;
@@ -603,7 +592,7 @@ begin
     if FStatementType =  stExecProc
     then Result := FPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle,
       @FStmtHandle, GetDialect, FParamSQLData.GetData, FResultXSQLDA.GetData) //expecting out params
-   else Result := FPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
+    else Result := FPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
       @FStmtHandle, GetDialect, FParamSQLData.GetData);
    if Result <> 0 then
       ZDbcInterbase6Utils.CheckInterbase6Error(FPlainDriver,

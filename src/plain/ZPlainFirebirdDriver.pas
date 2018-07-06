@@ -121,8 +121,6 @@ type
   TZInterbasePlainDriver = class (TZAbstractPlainDriver, IZInterbasePlainDriver)
   private
     FCodePageArray: TWordDynArray;
-    fisc_get_client_version: procedure(version: PAnsiChar);
-    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   protected
     FPreLoader : TZNativeLibraryLoader;
     procedure FillCodePageArray;
@@ -140,6 +138,11 @@ type
 
     function GetCodePageArray: TWordDynArray;
 
+  protected
+    function Clone: IZPlainDriver; override;
+  public
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
   public
     { General database routines }
 
@@ -402,139 +405,12 @@ type
     isc_portable_integer: function(ptr: pbyte; length: Smallint): Int64;
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
-    function isc_get_client_version: String;
+    isc_get_client_version: procedure(version: PAnsiChar);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   end;
 
-  {** Implements a native driver for Interbase6}
-  TZInterbase6PlainDriver = class (TZInterbasePlainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-  public
-    constructor Create;
-
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
-
-  {** Implements a native driver for Firebird 1.0}
-  TZFirebird10PlainDriver = class (TZInterbasePlainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-  public
-    constructor Create;
-
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
-
-  {** Implements a native driver for Firebird 1.5}
-  TZFirebird15PlainDriver = class (TZInterbasePlainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-    procedure LoadCodePages; override;
-  public
-    constructor Create;
-
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
-
-  TZFirebirdD15PlainDriver = class (TZInterbasePlainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-  public
-    constructor Create;
-
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
-
-  {** Implements a native driver for Firebird 2.0}
-  TZFirebird20PlainDriver = class (TZInterbasePlainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-    function GetUnicodeCodePageName: String; override;
-    procedure LoadCodePages; override;
-  public
-    constructor Create;
-
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
-
-  {** Implements a native driver for Firebird 2.0 Embedded}
-  TZFirebirdD20PlainDriver = class (TZFirebird20PlainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-  public
-    constructor Create;
-
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
-
-  {** Represents class to Interbase 6+ native API. }
-
-  {** Implements a native driver for Firebird 2.1}
-  TZFirebird21PlainDriver = class (TZInterbasePlainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-  protected
-    function GetUnicodeCodePageName: String; override;
-    procedure LoadCodePages; override;
-  public
-    constructor Create;
-
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
-
-  {** Implements a native driver for Firebird 2.1 Embedded}
-  TZFirebirdD21PlainDriver = class (TZFirebird21PlainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-  public
-    constructor Create;
-
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
-
-  {** Implements a native driver for Firebird 2.5}
-  TZFirebird25PlainDriver = class (TZInterbasePlainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-    function GetUnicodeCodePageName: String; override;
-    procedure LoadCodePages; override;
-  public
-    constructor Create;
-
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
-
-  {** Implements a native driver for Firebird 2.5 Embedded}
-  TZFirebirdD25PlainDriver = class (TZFirebird25PlainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-  public
-    constructor Create;
-
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
-
-  {** Implements a native driver for Firebird 3.0}
-  TZFirebird30PlainDriver = class (TZFirebird25PlainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-  public
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
-
-  {** Implements a native driver for Firebird 3.0 Embedded}
-  TZFirebirdD30PlainDriver = class (TZFirebirdD25PlainDriver)
+  {** Implements a native driver for Firebird }
+  TZFirebirdPlainDriver = class (TZInterbasePlainDriver)
   protected
     function Clone: IZPlainDriver; override;
   public
@@ -553,49 +429,11 @@ begin
   Result := SizeOf(TXSQLDA) + ((Value - 1) * SizeOf(TXSQLVAR));
 end;
 
-procedure AddFireBird15CodePages(PlainDriver: TZAbstractPlainDriver);
-begin
-  PlainDriver.AddCodePage('DOS737', CS_DOS737, ceAnsi, zCP_DOS737); {Greek}
-  PlainDriver.AddCodePage('DOS775', CS_DOS775, ceAnsi, zCP_DOS775); {Baltic}
-  PlainDriver.AddCodePage('DOS858', CS_DOS858, ceAnsi, zCP_DOS858); {Latin I + Euro symbol}
-  PlainDriver.AddCodePage('DOS862', CS_DOS862, ceAnsi, zCP_DOS862); {Hebrew}
-  PlainDriver.AddCodePage('DOS864', CS_DOS864, ceAnsi, zCP_DOS864); {Arabic}
-  PlainDriver.AddCodePage('DOS866', CS_DOS866, ceAnsi, zCP_DOS866); {Russian}
-  PlainDriver.AddCodePage('DOS869', CS_DOS869, ceAnsi, zCP_DOS869); {Modern Greek}
-  PlainDriver.AddCodePage('ISO8859_2', CS_ISO8859_2, ceAnsi, zCP_L2_ISO_8859_2); {Latin 2 —  Latin3 — Southern European (Maltese, Esperanto)}
-  PlainDriver.AddCodePage('ISO8859_3', CS_ISO8859_3, ceAnsi, zCP_L3_ISO_8859_3); {Latin 1}
-  PlainDriver.AddCodePage('ISO8859_4', CS_ISO8859_4, ceAnsi, zCP_L4_ISO_8859_4); {Latin 4 — Northern European (Estonian, Latvian, Lithuanian, Greenlandic, Lappish)}
-  PlainDriver.AddCodePage('ISO8859_5', CS_ISO8859_5, ceAnsi, zCP_L5_ISO_8859_5); {Cyrillic (Russian)}
-  PlainDriver.AddCodePage('ISO8859_6', CS_ISO8859_6, ceAnsi, zCP_L6_ISO_8859_6); {Arabic}
-  PlainDriver.AddCodePage('ISO8859_7', CS_ISO8859_7, ceAnsi, zCP_L7_ISO_8859_7); {Greek}
-  PlainDriver.AddCodePage('ISO8859_8', CS_ISO8859_8, ceAnsi, zCP_L8_ISO_8859_8); {Hebrew}
-  PlainDriver.AddCodePage('ISO8859_9', CS_ISO8859_9, ceAnsi, zCP_L5_ISO_8859_9); {Latin 5}
-  PlainDriver.AddCodePage('ISO8859_13', CS_ISO8859_13, ceAnsi, zCP_L7_ISO_8859_13); {Latin 7 — Baltic Rim}
-  PlainDriver.AddCodePage('WIN1255', CS_WIN1255, ceAnsi, zCP_WIN1255); {ANSI Hebrew}
-  PlainDriver.AddCodePage('WIN1256', CS_WIN1256, ceAnsi, zCP_WIN1256); {ANSI Arabic}
-  PlainDriver.AddCodePage('WIN1257', CS_WIN1257, ceAnsi, zCP_WIN1257); {ANSI Baltic}
-end;
-
-procedure AddFireBird2CodePages(PlainDriver: TZAbstractPlainDriver);
-begin
-  PlainDriver.AddCodePage('WIN1258', CS_WIN1258, ceAnsi, zCP_WIN1258); {Vietnamese}
-  PlainDriver.AddCodePage('KOI8R', CS_KOI8R, ceAnsi, zCP_KOI8R); {Russian}
-  PlainDriver.AddCodePage('KOI8U', CS_KOI8U, ceAnsi, zCP_KOI8U); {Ukrainian}
-  PlainDriver.AddCodePage('UTF8', CS_UTF8, ceUTF8, zCP_UTF8, '', 4); {All}
-end;
-
-procedure AddFireBird21CodePages(PlainDriver: TZAbstractPlainDriver);
-begin
-  PlainDriver.AddCodePage('CP943C', CS_CP943C, ceAnsi, 943, '', 2); {Japanese}
-  PlainDriver.AddCodePage('GBK', CS_GBK, ceAnsi, zCP_GB2312, '', 2); {Chinese}
-  PlainDriver.AddCodePage('TIS620', CS_TIS620, ceAnsi, zCP_WIN874); {Thai}
-end;
-
 { IZFirebirdPlainDriver }
 
 function TZInterbasePlainDriver.GetUnicodeCodePageName: String;
 begin
-  Result := 'UNICODE_FSS';
+  Result := 'UTF8';
 end;
 
 procedure TZInterbasePlainDriver.FillCodePageArray;
@@ -608,31 +446,63 @@ end;
 
 procedure TZInterbasePlainDriver.LoadCodePages;
 begin
-  Self.AddCodePage('ASCII', CS_ASCII, ceAnsi, zCP_WIN1252); {English}
-  Self.AddCodePage('BIG_5', CS_BIG_5, ceAnsi, zCP_Big5); {Chinese, Vietnamese, Korean}
-  Self.AddCodePage('CYRL', CS_CYRL, ceAnsi, zCP_WIN1251, '', 2);  {Russian}
-  Self.AddCodePage('DOS437', CS_DOS437, ceAnsi, zCP_DOS437); {English (USA)}
-  Self.AddCodePage('DOS850', CS_DOS850, ceAnsi, zCP_DOS850); {Latin I (no Euro symbol)}
-  Self.AddCodePage('DOS852', CS_DOS852, ceAnsi, {$IFDEF MSWINDOWS}zCP_L2_ISO_8859_2{$ELSE}zCP_DOS852{$ENDIF}); {Latin II} //need a crack for windows. Don't know why but it seems Win converts cp852 false see: http://zeoslib.sourceforge.net/viewtopic.php?f=38&t=4779&sid=a143d302f1f967b844bea2bee9eb39b8
-  Self.AddCodePage('DOS857', CS_DOS857, ceAnsi, zCP_DOS857); {Turkish}
-  Self.AddCodePage('DOS860', CS_DOS860, ceAnsi, zCP_DOS860); {Portuguese}
-  Self.AddCodePage('DOS861', CS_DOS861, ceAnsi, zCP_DOS861); {Icelandic}
-  Self.AddCodePage('DOS863', CS_DOS863, ceAnsi, zCP_DOS863); {French (Canada)}
-  Self.AddCodePage('DOS865', CS_DOS865, ceAnsi, zCP_DOS865); {Nordic}
-  Self.AddCodePage('EUCJ_0208', CS_EUCJ_0208, ceAnsi, zCP_EUC_JP, '', 2); {EUC Japanese}
-  Self.AddCodePage('GB_2312', CS_GB_2312, ceAnsi, zCP_GB2312, '', 2); {Simplified Chinese (Hong Kong, PRC)}
-  Self.AddCodePage('ISO8859_1', CS_ISO8859_1, ceAnsi, zCP_L1_ISO_8859_1); {Latin 1}
-  Self.AddCodePage('KSC_5601', CS_KSC_5601, ceAnsi, zCP_EUCKR, '', 2); {Korean (Unified Hangeul)}
-  Self.AddCodePage('NEXT', CS_NEXT);  {apple NeXTSTEP encoding}
-  Self.AddCodePage('NONE', CS_NONE, ceAnsi, ZOSCodePage, '', 1, False); {Codepage-neutral. Uppercasing limited to ASCII codes 97-122}
-  Self.AddCodePage('OCTETS', CS_BINARY, ceAnsi, $fffd); {Binary character}
-  Self.AddCodePage('SJIS_0208', CS_SJIS_0208, ceAnsi, zCP_SHIFTJS, '', 2); {Japanese} //fixed: https://sourceforge.net/p/zeoslib/tickets/115/
-  Self.AddCodePage('UNICODE_FSS', CS_UNICODE_FSS, ceUTF8, zCP_UTF8, '', 3); {UNICODE}
-  Self.AddCodePage('WIN1250', CS_WIN1250, ceAnsi, zCP_WIN1250); {ANSI — Central European}
-  Self.AddCodePage('WIN1251', CS_WIN1251, ceAnsi, zCP_WIN1251); {ANSI — Cyrillic}
-  Self.AddCodePage('WIN1252', CS_WIN1252, ceAnsi, zCP_WIN1252); {ANSI — Latin I}
-  Self.AddCodePage('WIN1253', CS_WIN1253, ceAnsi, zCP_WIN1253); {ANSI Greek}
-  Self.AddCodePage('WIN1254', CS_WIN1254, ceAnsi, zCP_WIN1254); {ANSI Turkish}
+  AddCodePage('ASCII', CS_ASCII, ceAnsi, zCP_WIN1252); {English}
+  AddCodePage('BIG_5', CS_BIG_5, ceAnsi, zCP_Big5); {Chinese, Vietnamese, Korean}
+  AddCodePage('CYRL', CS_CYRL, ceAnsi, zCP_WIN1251, '', 2);  {Russian}
+  AddCodePage('DOS437', CS_DOS437, ceAnsi, zCP_DOS437); {English (USA)}
+  AddCodePage('DOS850', CS_DOS850, ceAnsi, zCP_DOS850); {Latin I (no Euro symbol)}
+  AddCodePage('DOS852', CS_DOS852, ceAnsi, {$IFDEF MSWINDOWS}zCP_L2_ISO_8859_2{$ELSE}zCP_DOS852{$ENDIF}); {Latin II} //need a crack for windows. Don't know why but it seems Win converts cp852 false see: http://zeoslib.sourceforge.net/viewtopic.php?f=38&t=4779&sid=a143d302f1f967b844bea2bee9eb39b8
+  AddCodePage('DOS857', CS_DOS857, ceAnsi, zCP_DOS857); {Turkish}
+  AddCodePage('DOS860', CS_DOS860, ceAnsi, zCP_DOS860); {Portuguese}
+  AddCodePage('DOS861', CS_DOS861, ceAnsi, zCP_DOS861); {Icelandic}
+  AddCodePage('DOS863', CS_DOS863, ceAnsi, zCP_DOS863); {French (Canada)}
+  AddCodePage('DOS865', CS_DOS865, ceAnsi, zCP_DOS865); {Nordic}
+  AddCodePage('EUCJ_0208', CS_EUCJ_0208, ceAnsi, zCP_EUC_JP, '', 2); {EUC Japanese}
+  AddCodePage('GB_2312', CS_GB_2312, ceAnsi, zCP_GB2312, '', 2); {Simplified Chinese (Hong Kong, PRC)}
+  AddCodePage('ISO8859_1', CS_ISO8859_1, ceAnsi, zCP_L1_ISO_8859_1); {Latin 1}
+  AddCodePage('KSC_5601', CS_KSC_5601, ceAnsi, zCP_EUCKR, '', 2); {Korean (Unified Hangeul)}
+  AddCodePage('NEXT', CS_NEXT);  {apple NeXTSTEP encoding}
+  AddCodePage('NONE', CS_NONE, ceAnsi, ZOSCodePage, '', 1, False); {Codepage-neutral. Uppercasing limited to ASCII codes 97-122}
+  AddCodePage('OCTETS', CS_BINARY, ceAnsi, $fffd); {Binary character}
+  AddCodePage('SJIS_0208', CS_SJIS_0208, ceAnsi, zCP_SHIFTJS, '', 2); {Japanese} //fixed: https://sourceforge.net/p/zeoslib/tickets/115/
+  AddCodePage('UNICODE_FSS', CS_UNICODE_FSS, ceUTF8, zCP_UTF8, '', 3); {UNICODE}
+  AddCodePage('WIN1250', CS_WIN1250, ceAnsi, zCP_WIN1250); {ANSI — Central European}
+  AddCodePage('WIN1251', CS_WIN1251, ceAnsi, zCP_WIN1251); {ANSI — Cyrillic}
+  AddCodePage('WIN1252', CS_WIN1252, ceAnsi, zCP_WIN1252); {ANSI — Latin I}
+  AddCodePage('WIN1253', CS_WIN1253, ceAnsi, zCP_WIN1253); {ANSI Greek}
+  AddCodePage('WIN1254', CS_WIN1254, ceAnsi, zCP_WIN1254); {ANSI Turkish}
+  //FB 1.5
+  AddCodePage('DOS737', CS_DOS737, ceAnsi, zCP_DOS737); {Greek}
+  AddCodePage('DOS775', CS_DOS775, ceAnsi, zCP_DOS775); {Baltic}
+  AddCodePage('DOS858', CS_DOS858, ceAnsi, zCP_DOS858); {Latin I + Euro symbol}
+  AddCodePage('DOS862', CS_DOS862, ceAnsi, zCP_DOS862); {Hebrew}
+  AddCodePage('DOS864', CS_DOS864, ceAnsi, zCP_DOS864); {Arabic}
+  AddCodePage('DOS866', CS_DOS866, ceAnsi, zCP_DOS866); {Russian}
+  AddCodePage('DOS869', CS_DOS869, ceAnsi, zCP_DOS869); {Modern Greek}
+  AddCodePage('ISO8859_2', CS_ISO8859_2, ceAnsi, zCP_L2_ISO_8859_2); {Latin 2 —  Latin3 — Southern European (Maltese, Esperanto)}
+  AddCodePage('ISO8859_3', CS_ISO8859_3, ceAnsi, zCP_L3_ISO_8859_3); {Latin 1}
+  AddCodePage('ISO8859_4', CS_ISO8859_4, ceAnsi, zCP_L4_ISO_8859_4); {Latin 4 — Northern European (Estonian, Latvian, Lithuanian, Greenlandic, Lappish)}
+  AddCodePage('ISO8859_5', CS_ISO8859_5, ceAnsi, zCP_L5_ISO_8859_5); {Cyrillic (Russian)}
+  AddCodePage('ISO8859_6', CS_ISO8859_6, ceAnsi, zCP_L6_ISO_8859_6); {Arabic}
+  AddCodePage('ISO8859_7', CS_ISO8859_7, ceAnsi, zCP_L7_ISO_8859_7); {Greek}
+  AddCodePage('ISO8859_8', CS_ISO8859_8, ceAnsi, zCP_L8_ISO_8859_8); {Hebrew}
+  AddCodePage('ISO8859_9', CS_ISO8859_9, ceAnsi, zCP_L5_ISO_8859_9); {Latin 5}
+  AddCodePage('ISO8859_13', CS_ISO8859_13, ceAnsi, zCP_L7_ISO_8859_13); {Latin 7 — Baltic Rim}
+  AddCodePage('WIN1255', CS_WIN1255, ceAnsi, zCP_WIN1255); {ANSI Hebrew}
+  AddCodePage('WIN1256', CS_WIN1256, ceAnsi, zCP_WIN1256); {ANSI Arabic}
+  AddCodePage('WIN1257', CS_WIN1257, ceAnsi, zCP_WIN1257); {ANSI Baltic}
+  //FB 2.0
+  AddCodePage('WIN1258', CS_WIN1258, ceAnsi, zCP_WIN1258); {Vietnamese}
+  AddCodePage('KOI8R', CS_KOI8R, ceAnsi, zCP_KOI8R); {Russian}
+  AddCodePage('KOI8U', CS_KOI8U, ceAnsi, zCP_KOI8U); {Ukrainian}
+  AddCodePage('UTF8', CS_UTF8, ceUTF8, zCP_UTF8, '', 4); {All}
+  //FB 2.1
+  AddCodePage('CP943C', CS_CP943C, ceAnsi, 943, '', 2); {Japanese}
+  AddCodePage('GBK', CS_GBK, ceAnsi, zCP_GB2312, '', 2); {Chinese}
+  AddCodePage('TIS620', CS_TIS620, ceAnsi, zCP_WIN874); {Thai}
+  //FB 2.5
+  ResetCodePage(CS_BIG_5, 'BIG_5', CS_BIG_5, ceAnsi, zCP_BIG5, '', 2); {Chinese, Vietnamese, Korean} //Changed Bytes
+  AddCodePage('GB18030', CS_GB18030, ceAnsi, zCP_GB18030, '', 4); {Chinese}
 end;
 
 {$IFDEF ENABLE_INTERBASE_CRYPT}
@@ -711,10 +581,15 @@ begin
 
     @fb_interpret        := GetAddress('fb_interpret');
 
-    @fisc_get_client_version := GetAddress('isc_get_client_version');
+    @isc_get_client_version := GetAddress('isc_get_client_version');
     @isc_get_client_major_version := GetAddress('isc_get_client_major_version');
     @isc_get_client_minor_version := GetAddress('isc_get_client_minor_version');
   end;
+end;
+
+function TZInterbasePlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZInterbasePlainDriver.Create;
 end;
 
 constructor TZInterbasePlainDriver.Create;
@@ -724,6 +599,42 @@ begin
   {$IFDEF ENABLE_INTERBASE_CRYPT}
   FPreLoader := TZNativeLibraryLoader.Create([LINUX_IB_CRYPT_LOCATION]);
   {$ENDIF}
+  {$IFDEF MSWINDOWS}
+  FLoader.AddLocation(WINDOWSIB6_DLL_LOCATION);
+  FLoader.AddLocation(WINDOWS_DLL_LOCATION);
+  FLoader.AddLocation(WINDOWS2_DLL_LOCATION);
+  FLoader.AddLocation(WINDOWS2_DLL_LOCATION_EMBEDDED);
+  FLoader.AddLocation(WINDOWS15_DLL_LOCATION);
+  FLoader.AddLocation(WINDOWS15_DLL_LOCATION_EMBEDDED);
+  FLoader.AddLocation(WINDOWS20_DLL_LOCATION);
+  FLoader.AddLocation(WINDOWS20_DLL_LOCATION_EMBEDDED);
+  FLoader.AddLocation(WINDOWS21_DLL_LOCATION);
+  FLoader.AddLocation(WINDOWS21_DLL_LOCATION_EMBEDDED);
+  FLoader.AddLocation(WINDOWS25_DLL_LOCATION);
+  FLoader.AddLocation(WINDOWS25_DLL_LOCATION_EMBEDDED);
+  {$ELSE}
+  FLoader.AddLocation(LINUXIB6_DLL_LOCATION);
+  FLoader.AddLocation(LINUX_DLL_LOCATION);
+  FLoader.AddLocation(LINUX_IB_CRYPT_LOCATION);
+  FLoader.AddLocation(LINUX2_DLL_LOCATION);
+  FLoader.AddLocation(LINUX2_DLL_LOCATION_EMBEDDED);
+  FLoader.AddLocation(LINUX2_IB_CRYPT_LOCATION);
+  FLoader.AddLocation(LINUX15_DLL_LOCATION);
+  FLoader.AddLocation(LINUX15_IB_CRYPT_LOCATION);
+  FLoader.AddLocation(LINUX15_DLL_LOCATION_EMBEDDED);
+  FLoader.AddLocation(LINUX2_DLL_LOCATION2);
+  FLoader.AddLocation(LINUX20_DLL_LOCATION);
+  FLoader.AddLocation(LINUX20_DLL_LOCATION_EMBEDDED);
+  FLoader.AddLocation(LINUX20_IB_CRYPT_LOCATION);
+  FLoader.AddLocation(LINUX21_DLL_LOCATION);
+  FLoader.AddLocation(LINUX21_DLL_LOCATION_EMBEDDED);
+  FLoader.AddLocation(LINUX21_IB_CRYPT_LOCATION);
+  FLoader.AddLocation(LINUX25_DLL_LOCATION);
+  FLoader.AddLocation(LINUX25_DLL_LOCATION_EMBEDDED);
+  FLoader.AddLocation(LINUX25_IB_CRYPT_LOCATION);
+  {$ENDIF}
+  LoadCodePages;
+  FillCodePageArray;
 end;
 
 {$IFDEF ENABLE_INTERBASE_CRYPT}
@@ -739,456 +650,31 @@ begin
   Result := FCodePageArray;
 end;
 
-function TZInterbasePlainDriver.isc_get_client_version: String;
-var
-  Buff: array[0..50] of AnsiChar;
+function TZInterbasePlainDriver.GetDescription: string;
 begin
-  if Assigned(fisc_get_client_version) then begin
-    fisc_get_client_version(@Buff[0]);
-    {$IFDEF UNICODE}
-    Result := ZSysUtils.ASCII7ToUnicodeString(@Buff[0], ZFastCode.StrLen(PAnsiChar(@Buff[0])));
-    {$ELSE}
-    SetString(Result, PAnsiChar(@Buff[0]), ZFastCode.StrLen(PAnsiChar(@Buff[0])));
-    {$ENDIF}
-  end else begin
-    Result := 'unknown';
-  end;
+  Result := 'Native Plain Driver for Interbase';
 end;
 
-{ TZInterbase6PlainDriver }
-
-function TZInterbase6PlainDriver.Clone: IZPlainDriver;
+function TZInterbasePlainDriver.GetProtocol: string;
 begin
-  Result := TZInterbase6PlainDriver.Create;
+  Result := 'interbase';
 end;
 
-constructor TZInterbase6PlainDriver.Create;
+{ TZFirebirdPlainDriver }
+
+function TZFirebirdPlainDriver.Clone: IZPlainDriver;
 begin
-   inherited create;
-  {$IFNDEF UNIX}
-    FLoader.AddLocation(WINDOWSIB6_DLL_LOCATION);
-  {$ELSE}
-    FLoader.AddLocation(LINUXIB6_DLL_LOCATION);
-    {$IFDEF ENABLE_INTERBASE_CRYPT}
-    FPreLoader.AddLocation(LINUX_IB_CRYPT_LOCATION);
-    {$ENDIF}
-  {$ENDIF}
-  Self.LoadCodePages;
-  FillCodePageArray;
+  Result := TZFirebirdPlainDriver.Create;
 end;
 
-function TZInterbase6PlainDriver.GetDescription: string;
+function TZFirebirdPlainDriver.GetDescription: string;
 begin
-  Result := 'Native Plain Driver for Interbase 6';
+  Result := 'Native Plain Driver for Firebird';
 end;
 
-function TZInterbase6PlainDriver.GetProtocol: string;
+function TZFirebirdPlainDriver.GetProtocol: string;
 begin
-  Result := 'interbase-6';
-end;
-
-function TZFirebird10PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFirebird10PlainDriver.Create;
-end;
-
-constructor TZFirebird10PlainDriver.Create;
-begin
-   inherited create;
-  {$IFNDEF UNIX}
-    FLoader.AddLocation(WINDOWS_DLL_LOCATION);
-  {$ELSE}
-    FLoader.AddLocation(LINUX_DLL_LOCATION);
-    {$IFDEF ENABLE_INTERBASE_CRYPT}
-    FPreLoader.AddLocation(LINUX_IB_CRYPT_LOCATION);
-    {$ENDIF}
-  {$ENDIF}
-  Self.LoadCodePages;
-  FillCodePageArray;
-end;
-
-function TZFirebird10PlainDriver.GetDescription: string;
-begin
-  Result := 'Native Plain Driver for Firebird 1.0';
-end;
-
-function TZFirebird10PlainDriver.GetProtocol: string;
-begin
-  Result := 'firebird-1.0';
-end;
-
-{ IZFirebird15PlainDriver }
-
-function TZFirebird15PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFirebird15PlainDriver.Create;
-end;
-
-procedure TZFirebird15PlainDriver.LoadCodePages;
-begin
-  inherited;
-  AddFireBird15CodePages(Self);
-end;
-
-constructor TZFirebird15PlainDriver.Create;
-begin
-   inherited create;
-  {$IFNDEF UNIX}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(WINDOWS2_DLL_LOCATION);
-    {$ENDIF}
-    FLoader.AddLocation(WINDOWS15_DLL_LOCATION);
-  {$ELSE}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(LINUX2_DLL_LOCATION);
-    {$ENDIF}
-    FLoader.AddLocation(LINUX15_DLL_LOCATION);
-    {$IFDEF ENABLE_INTERBASE_CRYPT}
-      {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-        FPreLoader.AddLocation(LINUX2_IB_CRYPT_LOCATION);
-      {$ENDIF}
-      FPreLoader.AddLocation(LINUX15_IB_CRYPT_LOCATION);
-    {$ENDIF}
-  {$ENDIF}
-  Self.LoadCodePages;
-  FillCodePageArray;
-end;
-
-function TZFirebird15PlainDriver.GetDescription: string;
-begin
-  Result := 'Native Plain Driver for Firebird 1.5';
-end;
-
-function TZFirebird15PlainDriver.GetProtocol: string;
-begin
-  Result := 'firebird-1.5';
-end;
-
-{ IZFirebird15PlainDriver }
-
-function TZFirebirdD15PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFirebirdD15PlainDriver.Create;
-end;
-
-constructor TZFirebirdD15PlainDriver.Create;
-begin
-   inherited create;
-  {$IFNDEF UNIX}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(WINDOWS2_DLL_LOCATION_EMBEDDED);
-    {$ENDIF}
-    FLoader.AddLocation(WINDOWS15_DLL_LOCATION_EMBEDDED);
-  {$ELSE}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(LINUX2_DLL_LOCATION_EMBEDDED);
-    {$ENDIF}
-    FLoader.AddLocation(LINUX15_DLL_LOCATION_EMBEDDED);
-    {$ENDIF}
-end;
-
-function TZFirebirdD15PlainDriver.GetProtocol: string;
-begin
-  Result := 'firebirdd-1.5';
-end;
-
-function TZFirebirdD15PlainDriver.GetDescription: string;
-begin
-  Result := 'Native Plain Driver for Firebird Embedded 1.5';
-end;
-
-{ IZFirebird20PlainDriver }
-
-function TZFirebird20PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFirebird20PlainDriver.Create;
-end;
-
-function TZFirebird20PlainDriver.GetUnicodeCodePageName: String;
-begin
-  Result := 'UTF8';
-end;
-
-procedure TZFirebird20PlainDriver.LoadCodePages;
-begin
-  inherited LoadCodePages;
-  AddFireBird15CodePages(Self);
-  AddFireBird2CodePages(Self);
-end;
-
-constructor TZFirebird20PlainDriver.Create;
-begin
-   inherited create;
-  {$IFNDEF UNIX}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(WINDOWS2_DLL_LOCATION);
-    {$ENDIF}
-    FLoader.AddLocation(WINDOWS20_DLL_LOCATION);
-  {$ELSE}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(LINUX2_DLL_LOCATION);
-    {$ENDIF}
-    FLoader.AddLocation(LINUX20_DLL_LOCATION);
-    FLoader.AddLocation(LINUX2_DLL_LOCATION2);
-    {$IFDEF ENABLE_INTERBASE_CRYPT}
-      {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-        FPreLoader.AddLocation(LINUX2_IB_CRYPT_LOCATION);
-      {$ENDIF}
-      FPreLoader.AddLocation(LINUX20_IB_CRYPT_LOCATION);
-    {$ENDIF}
-  {$ENDIF}
-  Self.LoadCodePages;
-  FillCodePageArray;
-end;
-
-function TZFirebird20PlainDriver.GetDescription: string;
-begin
-  Result := 'Native Plain Driver for Firebird 2.0';
-end;
-
-function TZFirebird20PlainDriver.GetProtocol: string;
-begin
-  Result := 'firebird-2.0';
-end;
-
-{ IZFirebirdD20PlainDriver }
-function TZFirebirdD20PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFirebirdD20PlainDriver.Create;
-end;
-
-constructor TZFirebirdD20PlainDriver.Create;
-begin
-   inherited create;
-  {$IFNDEF UNIX}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(WINDOWS2_DLL_LOCATION_EMBEDDED);
-    {$ENDIF}
-    FLoader.AddLocation(WINDOWS20_DLL_LOCATION_EMBEDDED);
-  {$ELSE}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(LINUX2_DLL_LOCATION_EMBEDDED);
-    {$ENDIF}
-    FLoader.AddLocation(LINUX20_DLL_LOCATION_EMBEDDED);
-    {$ENDIF}
-end;
-
-function TZFirebirdD20PlainDriver.GetProtocol: string;
-begin
-  Result := 'firebirdd-2.0';
-end;
-
-function TZFirebirdD20PlainDriver.GetDescription: string;
-begin
-  Result := 'Native Plain Driver for Firebird Embedded 2.0';
-end;
-
-{ IZFirebird21PlainDriver }
-
-function TZFirebird21PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFirebird21PlainDriver.Create;
-end;
-
-function TZFirebird21PlainDriver.GetUnicodeCodePageName: String;
-begin
-  Result := 'UTF8';
-end;
-
-procedure TZFirebird21PlainDriver.LoadCodePages;
-begin
-  inherited;
-  AddFireBird15CodePages(Self);
-  AddFireBird2CodePages(Self);
-  AddFireBird21CodePages(Self);
-end;
-
-constructor TZFirebird21PlainDriver.Create;
-begin
-   inherited create;
-  {$IFNDEF UNIX}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(WINDOWS2_DLL_LOCATION);
-    {$ENDIF}
-    FLoader.AddLocation(WINDOWS21_DLL_LOCATION);
-  {$ELSE}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(LINUX2_DLL_LOCATION);
-    {$ENDIF}
-    FLoader.AddLocation(LINUX21_DLL_LOCATION);
-    FLoader.AddLocation(LINUX2_DLL_LOCATION2);
-    {$IFDEF ENABLE_INTERBASE_CRYPT}
-      {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-        FPreLoader.AddLocation(LINUX2_IB_CRYPT_LOCATION);
-      {$ENDIF}
-      FPreLoader.AddLocation(LINUX21_IB_CRYPT_LOCATION);
-    {$ENDIF}
-  {$ENDIF}
-  Self.LoadCodePages;
-  FillCodePageArray;
-end;
-
-
-function TZFirebird21PlainDriver.GetDescription: string;
-begin
-  Result := 'Native Plain Driver for Firebird 2.1';
-end;
-
-function TZFirebird21PlainDriver.GetProtocol: string;
-begin
-  Result := 'firebird-2.1';
-end;
-
-{ IZFirebirdD21PlainDriver }
-function TZFirebirdD21PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFirebirdD21PlainDriver.Create;
-end;
-
-constructor TZFirebirdD21PlainDriver.Create;
-begin
-   inherited create;
-  {$IFNDEF UNIX}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(WINDOWS2_DLL_LOCATION_EMBEDDED);
-    {$ENDIF}
-    FLoader.AddLocation(WINDOWS21_DLL_LOCATION_EMBEDDED);
-  {$ELSE}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(LINUX2_DLL_LOCATION_EMBEDDED);
-    {$ENDIF}
-    FLoader.AddLocation(LINUX21_DLL_LOCATION_EMBEDDED);
-    {$ENDIF}
-end;
-
-function TZFirebirdD21PlainDriver.GetProtocol: string;
-begin
-  Result := 'firebirdd-2.1';
-end;
-
-function TZFirebirdD21PlainDriver.GetDescription: string;
-begin
-  Result := 'Native Plain Driver for Firebird Embedded 2.1';
-end;
-
-{ TZFirebird25PlainDriver }
-function TZFirebird25PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFirebird25PlainDriver.Create;
-end;
-
-function TZFirebird25PlainDriver.GetUnicodeCodePageName: String;
-begin
-  Result := 'UTF8';
-end;
-
-procedure TZFirebird25PlainDriver.LoadCodePages;
-begin
-  inherited;
-  AddFireBird15CodePages(Self);
-  AddFireBird2CodePages(Self);
-  AddFireBird21CodePages(Self);
-  ResetCodePage(CS_BIG_5, 'BIG_5', CS_BIG_5, ceAnsi, zCP_BIG5, '', 2); {Chinese, Vietnamese, Korean} //Changed Bytes
-  Self.AddCodePage('GB18030', CS_GB18030, ceAnsi, zCP_GB18030, '', 4); {Chinese}
-end;
-
-constructor TZFirebird25PlainDriver.Create;
-begin
-  inherited create;
-  {$IFNDEF UNIX}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(WINDOWS2_DLL_LOCATION);
-    {$ENDIF}
-    FLoader.AddLocation(WINDOWS25_DLL_LOCATION);
-  {$ELSE}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(LINUX2_DLL_LOCATION);
-    {$ENDIF}
-    FLoader.AddLocation(LINUX25_DLL_LOCATION);
-    FLoader.AddLocation(LINUX2_DLL_LOCATION2);
-    {$IFDEF ENABLE_INTERBASE_CRYPT}
-      {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-        FPreLoader.AddLocation(LINUX2_IB_CRYPT_LOCATION);
-      {$ENDIF}
-      FPreLoader.AddLocation(LINUX25_IB_CRYPT_LOCATION);
-    {$ENDIF}
-  {$ENDIF}
-  Self.LoadCodePages;
-  FillCodePageArray;
-end;
-
-function TZFirebird25PlainDriver.GetProtocol: string;
-begin
-  Result := 'firebird-2.5';
-end;
-
-function TZFirebird25PlainDriver.GetDescription: string;
-begin
-  Result := 'Native Plain Driver for Firebird 2.5';
-end;
-
-{ TZFirebird30PlainDriver }
-function TZFirebird30PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFirebird30PlainDriver.Create;
-end;
-
-function TZFirebird30PlainDriver.GetProtocol: string;
-begin
-  Result := 'firebird-3.0';
-end;
-
-function TZFirebird30PlainDriver.GetDescription: string;
-begin
-  Result := 'Native Plain Driver for Firebird 3.0';
-end;
-
-{ TZFirebirdD25PlainDriver }
-function TZFirebirdD25PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFirebirdD25PlainDriver.Create;
-end;
-
-constructor TZFirebirdD25PlainDriver.Create;
-begin
-   inherited create;
-  {$IFNDEF UNIX}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(WINDOWS2_DLL_LOCATION_EMBEDDED);
-    {$ENDIF}
-    FLoader.AddLocation(WINDOWS25_DLL_LOCATION_EMBEDDED);
-  {$ELSE}
-    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
-      FLoader.AddLocation(LINUX2_DLL_LOCATION_EMBEDDED);
-    {$ENDIF}
-    FLoader.AddLocation(LINUX25_DLL_LOCATION_EMBEDDED);
-    {$ENDIF}
-end;
-
-function TZFirebirdD25PlainDriver.GetProtocol: string;
-begin
-  Result := 'firebirdd-2.5';
-end;
-
-function TZFirebirdD25PlainDriver.GetDescription: string;
-begin
-  Result := 'Native Plain Driver for Firebird Embedded 2.5';
-end;
-
-{ TZFirebirdD30PlainDriver }
-function TZFirebirdD30PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFirebirdD30PlainDriver.Create;
-end;
-
-function TZFirebirdD30PlainDriver.GetProtocol: string;
-begin
-  Result := 'firebirdd-3.0';
-end;
-
-function TZFirebirdD30PlainDriver.GetDescription: string;
-begin
-  Result := 'Native Plain Driver for Firebird Embedded 3.0';
+  Result := 'firebird';
 end;
 
 end.

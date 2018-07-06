@@ -1012,7 +1012,7 @@ begin
     DriverManager.LogError(LoggingCategory, ConSettings^.Protocol,
       ConvertStringToConnRaw(ConSettings, ErrorMessage), ErrorCode,
       ConvertStringToConnRaw(ConSettings, ErrorSqlMessage));
-    if ErrorCode = DISCONNECT_ERROR then begin
+    if ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection then begin
       ImmediatelyReleasable.ReleaseImmediat(ImmediatelyReleasable);
       raise EZSQLConnectionLost.CreateWithCode(ErrorCode,
       Format(SSQLError1, [sSQL]));
@@ -1078,7 +1078,7 @@ begin
   if PlainDriver.isc_dsql_describe(@StatusVector, @StmtHandle, Dialect, SqlData.GetData) <> 0 then
     CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable, lcExecute, SQL);
 
-  if SqlData.GetData^.sqld > SqlData.GetData^.sqln then
+  if SqlData.GetData^.sqld <> SqlData.GetData^.sqln then
   begin
     SqlData.AllocateSQLDA;
     if PlainDriver.isc_dsql_describe(@StatusVector, @StmtHandle, Dialect, SqlData.GetData) <> 0 then
@@ -1423,16 +1423,12 @@ begin
           stBinaryStream:
             begin
               TempBlob := TInterfaceDynArray(ZData)[j] as IZBlob;
-              if not TempBlob.IsEmpty then
-              begin
+              if not TempBlob.IsEmpty then begin
                 if (ParamSqlData.GetFieldSqlType(ParamIndex) in [stUnicodeStream, stAsciiStream] ) then
-                  if TempBlob.IsClob then
-                  begin
+                  if TempBlob.IsClob then begin
                     Buffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
                     Len := TempBlob.Length;
-                  end
-                  else
-                  begin
+                  end else begin
                     RawTemp := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
                     Len := Length(RawTemp);
                     if Len = 0 then
@@ -1440,8 +1436,7 @@ begin
                     else
                       Buffer := Pointer(RawTemp);
                   end
-                else
-                begin
+                else begin
                   Buffer := TempBlob.GetBuffer;
                   Len := TempBlob.Length;
                 end;

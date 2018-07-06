@@ -104,9 +104,9 @@ type
 
   {** Implements Abstract Database Connection. }
 
-  { TZAbstractConnection }
+  { TZAbstractDbcConnection }
 
-  TZAbstractConnection = class(TZCodePagedObject, IZConnection,
+  TZAbstractDbcConnection = class(TZCodePagedObject, IZConnection,
     IImmediatelyReleasable)
   private
     FDriver: IZDriver;
@@ -579,69 +579,69 @@ begin
   Result := 0;
 end;
 
-{ TZAbstractConnection }
+{ TZAbstractDbcConnection }
 
-function TZAbstractConnection.GetHostName: string;
+function TZAbstractDbcConnection.GetHostName: string;
 begin
   Result := FURL.HostName;
 end;
 
-procedure TZAbstractConnection.SetHostName(const Value: String);
+procedure TZAbstractDbcConnection.SetHostName(const Value: String);
 begin
   FURL.HostName := Value;
 end;
 
-function TZAbstractConnection.GetPort: Integer;
+function TZAbstractDbcConnection.GetPort: Integer;
 begin
   Result := FURL.Port;
 end;
 
-function TZAbstractConnection.GetServerProvider: TZServerProvider;
+function TZAbstractDbcConnection.GetServerProvider: TZServerProvider;
 begin
   Result := spUnknown;
 end;
 
-procedure TZAbstractConnection.SetConnPort(const Value: Integer);
+procedure TZAbstractDbcConnection.SetConnPort(const Value: Integer);
 begin
   FURL.Port := Value;
 end;
 
-function TZAbstractConnection.GetDatabase: string;
+function TZAbstractDbcConnection.GetDatabase: string;
 begin
   Result := FURL.Database;
 end;
 
-procedure TZAbstractConnection.SetDatabase(const Value: String);
+procedure TZAbstractDbcConnection.SetDatabase(const Value: String);
 begin
   FURL.Database := Value;
 end;
 
-function TZAbstractConnection.GetUser: string;
+function TZAbstractDbcConnection.GetUser: string;
 begin
   Result := FURL.UserName;
 end;
 
-procedure TZAbstractConnection.SetUser(const Value: String);
+procedure TZAbstractDbcConnection.SetUser(const Value: String);
 begin
   FURL.UserName := Value;
 end;
 
-function TZAbstractConnection.GetPassword: string;
+function TZAbstractDbcConnection.GetPassword: string;
 begin
   Result := FURL.Password;
 end;
 
-procedure TZAbstractConnection.SetPassword(const Value: String);
+procedure TZAbstractDbcConnection.SetPassword(const Value: String);
 begin
   FURL.Password := Value;
 end;
 
-function TZAbstractConnection.GetInfo: TStrings;
+function TZAbstractDbcConnection.GetInfo: TStrings;
 begin
   Result := FURL.Properties;
 end;
 
-procedure TZAbstractConnection.SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
+procedure TZAbstractDbcConnection.SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
 begin
   {date formats}
   if DetermineFromInfo then begin
@@ -712,14 +712,14 @@ begin
   ConSettings^.DisplayFormatSettings.DateTimeFormatLen := Length(ConSettings^.DisplayFormatSettings.DateTimeFormat);
 end;
 
-procedure TZAbstractConnection.RegisterStatement(
+procedure TZAbstractDbcConnection.RegisterStatement(
   const Value: IZStatement);
 begin
   if fRegisteredStatements.IndexOf(Pointer(Value)) = -1 then
     fRegisteredStatements.Add(Pointer(Value))
 end;
 
-procedure TZAbstractConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable);
+procedure TZAbstractDbcConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable);
 var I: Integer;
   ImmediatelyReleasable: IImmediatelyReleasable;
 begin
@@ -731,7 +731,7 @@ begin
       ImmediatelyReleasable.ReleaseImmediat(Sender);
 end;
 
-procedure TZAbstractConnection.ResetCurrentClientCodePage(const Name: String);
+procedure TZAbstractDbcConnection.ResetCurrentClientCodePage(const Name: String);
 var NewCP, tmp: PZCodePage;
 begin
   FDisposeCodePage := True;
@@ -755,24 +755,24 @@ begin
   FClientVarManager := TZClientVariantManager.Create(ConSettings);
 end;
 
-function TZAbstractConnection.GetEncoding: TZCharEncoding;
+function TZAbstractDbcConnection.GetEncoding: TZCharEncoding;
 begin
   Result := ConSettings.ClientCodePage^.Encoding;
 end;
 
-function TZAbstractConnection.GetEscapeString(Buf: PAnsichar;
+function TZAbstractDbcConnection.GetEscapeString(Buf: PAnsichar;
   Len: LengthInt): RawByteString;
 begin
   Result := SQLQuotedStr(Buf, Len, #39);
 end;
 
-procedure TZAbstractConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
+procedure TZAbstractDbcConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
   var Result: RawByteString);
 begin
   Result := SQLQuotedStr(Buf, Len, #39);
 end;
 
-procedure TZAbstractConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
+procedure TZAbstractDbcConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
   RawCP: Word; var Result: ZWideString);
 var RawTmp: RawByteString;
 begin
@@ -780,7 +780,7 @@ begin
   Result := ZRawToUnicode(RawTmp, RawCP);
 end;
 
-function TZAbstractConnection.GetClientVariantManager: IZClientVariantManager;
+function TZAbstractDbcConnection.GetClientVariantManager: IZClientVariantManager;
 begin
   Result := TZClientVariantManager.Create(ConSettings);
 end;
@@ -796,7 +796,7 @@ end;
     default. This means it ignores the choosen Client-CharacterSet and sets a
     "more" Zeos-Compatible Client-CharacterSet if known.
 }
-procedure TZAbstractConnection.CheckCharEncoding(const CharSet: String;
+procedure TZAbstractDbcConnection.CheckCharEncoding(const CharSet: String;
   const DoArrange: Boolean = False);
 begin
   ConSettings.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(CharSet, DoArrange);
@@ -817,7 +817,7 @@ end;
     So we do not need to do the SQLString + UTF8Encode(Edit1.Test) for example.
   @result if AutoEncodeStrings should be used
 }
-function TZAbstractConnection.GetAutoEncodeStrings: Boolean;
+function TZAbstractDbcConnection.GetAutoEncodeStrings: Boolean;
 begin
   {$IFDEF UNICODE}
   Result := True;
@@ -826,19 +826,19 @@ begin
   {$ENDIF}
 end;
 
-procedure TZAbstractConnection.GetBinaryEscapeString(Buf: Pointer;
+procedure TZAbstractDbcConnection.GetBinaryEscapeString(Buf: Pointer;
   Len: LengthInt; var Result: ZWideString);
 begin
   Result := GetSQLHexWideString(Buf, Len);
 end;
 
-procedure TZAbstractConnection.GetBinaryEscapeString(Buf: Pointer;
+procedure TZAbstractDbcConnection.GetBinaryEscapeString(Buf: Pointer;
   Len: LengthInt; var Result: RawByteString);
 begin
   Result := GetSQLHexAnsiString(Buf, Len);
 end;
 
-procedure TZAbstractConnection.SetAutoEncodeStrings(const Value: Boolean);
+procedure TZAbstractDbcConnection.SetAutoEncodeStrings(const Value: Boolean);
 begin
   {$IFNDEF UNICODE}
   ConSettings.AutoEncode := Value;
@@ -862,7 +862,7 @@ end;
   @param Info a string list with extra connection parameters.
 }
 {$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
-constructor TZAbstractConnection.Create(const Driver: IZDriver; const Url: string;
+constructor TZAbstractDbcConnection.Create(const Driver: IZDriver; const Url: string;
   const PlainDriver: IZPlainDriver;
   const HostName: string; Port: Integer; const Database: string;
   const User: string; const Password: string; Info: TStrings);
@@ -880,7 +880,7 @@ end;
   @param Url a connection ZURL-class which exports all connection parameters.
 }
 {$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
-constructor TZAbstractConnection.Create(const ZUrl: TZURL);
+constructor TZAbstractDbcConnection.Create(const ZUrl: TZURL);
 begin
   FClosed := True;
   FDisposeCodePage := False;
@@ -922,7 +922,7 @@ end;
 {**
   Destroys this object and cleanups the memory.
 }
-destructor TZAbstractConnection.Destroy;
+destructor TZAbstractDbcConnection.Destroy;
 begin
   if not FClosed then
     Close;
@@ -942,7 +942,7 @@ end;
 {**
   Opens a connection to database server with specified parameters.
 }
-procedure TZAbstractConnection.Open;
+procedure TZAbstractDbcConnection.Open;
 begin
   FClosed := False;
   SetDateTimeFormatProperties;
@@ -951,7 +951,7 @@ end;
 {**
   Raises unsupported operation exception.
 }
-procedure TZAbstractConnection.RaiseUnsupportedException;
+procedure TZAbstractDbcConnection.RaiseUnsupportedException;
 begin
   raise EZSQLException.Create(SUnsupportedOperation);
 end;
@@ -969,7 +969,7 @@ end;
 
   @return a new Statement object
 }
-function TZAbstractConnection.CreateStatement: IZStatement;
+function TZAbstractDbcConnection.CreateStatement: IZStatement;
 begin
   Result := CreateStatementWithParams(nil);
 end;
@@ -988,7 +988,7 @@ end;
   @param Info a statement parameters.
   @return a new Statement object
 }
-function TZAbstractConnection.CreateStatementWithParams(Info: TStrings):
+function TZAbstractDbcConnection.CreateStatementWithParams(Info: TStrings):
   IZStatement;
 var UsedInfo: TStrings;
 begin
@@ -1009,7 +1009,7 @@ end;
   @param Info a statement parameters.
   @returns a created statement.
 }
-function TZAbstractConnection.CreateRegularStatement(
+function TZAbstractDbcConnection.CreateRegularStatement(
   Info: TStrings): IZStatement;
 begin
   Result := nil;
@@ -1043,7 +1043,7 @@ end;
   @return a new PreparedStatement object containing the
     pre-compiled statement
 }
-function TZAbstractConnection.PrepareStatement(const SQL: string): IZPreparedStatement;
+function TZAbstractDbcConnection.PrepareStatement(const SQL: string): IZPreparedStatement;
 begin
   Result := CreatePreparedStatement(SQL, nil);
 end;
@@ -1058,7 +1058,7 @@ end;
   @return a new PreparedStatement object containing the
     pre-compiled statement
 }
-function TZAbstractConnection.PrepareStatementWithParams(const SQL: string;
+function TZAbstractDbcConnection.PrepareStatementWithParams(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 var UsedInfo: TStrings;
 begin
@@ -1073,7 +1073,7 @@ begin
   if UsedInfo <> Info then UsedInfo.Free;
 end;
 
-procedure TZAbstractConnection.PrepareTransaction(const transactionid: string);
+procedure TZAbstractDbcConnection.PrepareTransaction(const transactionid: string);
 begin
   RaiseUnsupportedException;
 end;
@@ -1084,7 +1084,7 @@ end;
   @param Info a statement parameters.
   @returns a created statement.
 }
-function TZAbstractConnection.CreatePreparedStatement(const SQL: string;
+function TZAbstractDbcConnection.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
   Result := nil;
@@ -1117,7 +1117,7 @@ end;
     pre-compiled SQL statement
 }
 
-function TZAbstractConnection.PrepareCall(
+function TZAbstractDbcConnection.PrepareCall(
   const SQL: string): IZCallableStatement;
 begin
   Result := CreateCallableStatement(SQL, nil);
@@ -1137,7 +1137,7 @@ end;
   @return a new CallableStatement object containing the
     pre-compiled SQL statement
 }
-function TZAbstractConnection.PrepareCallWithParams(const SQL: string;
+function TZAbstractDbcConnection.PrepareCallWithParams(const SQL: string;
   Info: TStrings): IZCallableStatement;
 var UsedInfo: TStrings;
 begin
@@ -1158,7 +1158,7 @@ end;
   @param Info a statement parameters.
   @returns a created statement.
 }
-function TZAbstractConnection.CreateCallableStatement(const SQL: string;
+function TZAbstractDbcConnection.CreateCallableStatement(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
   Result := nil;
@@ -1170,7 +1170,7 @@ end;
   @param Event an event name.
   @returns a created notification object.
 }
-function TZAbstractConnection.CreateNotification(const Event: string): IZNotification;
+function TZAbstractDbcConnection.CreateNotification(const Event: string): IZNotification;
 begin
   Result := nil;
   RaiseUnsupportedException;
@@ -1182,7 +1182,7 @@ end;
   @param BlockSize a number of unique keys requested in one trip to SQL server.
   @returns a created sequence object.
 }
-function TZAbstractConnection.CreateSequence(const Sequence: string;
+function TZAbstractDbcConnection.CreateSequence(const Sequence: string;
   BlockSize: Integer): IZSequence;
 begin
   Result := nil;
@@ -1199,7 +1199,7 @@ end;
     parameter placeholders
   @return the native form of this statement
 }
-function TZAbstractConnection.NativeSQL(const SQL: string): string;
+function TZAbstractDbcConnection.NativeSQL(const SQL: string): string;
 begin
   Result := SQL;
 end;
@@ -1224,7 +1224,7 @@ end;
 
   @param autoCommit true enables auto-commit; false disables auto-commit.
 }
-procedure TZAbstractConnection.SetAutoCommit(Value: Boolean);
+procedure TZAbstractDbcConnection.SetAutoCommit(Value: Boolean);
 begin
   FAutoCommit := Value;
 end;
@@ -1234,7 +1234,7 @@ end;
   @return the current state of auto-commit mode
   @see #setAutoCommit
 }
-function TZAbstractConnection.GetAutoCommit: Boolean;
+function TZAbstractDbcConnection.GetAutoCommit: Boolean;
 begin
   Result := FAutoCommit;
 end;
@@ -1246,12 +1246,12 @@ end;
   used only when auto-commit mode has been disabled.
   @see #setAutoCommit
 }
-procedure TZAbstractConnection.Commit;
+procedure TZAbstractDbcConnection.Commit;
 begin
   RaiseUnsupportedException;
 end;
 
-procedure TZAbstractConnection.CommitPrepared(const transactionid: string);
+procedure TZAbstractDbcConnection.CommitPrepared(const transactionid: string);
 begin
   RaiseUnsupportedException;
 end;
@@ -1263,12 +1263,12 @@ end;
   commit has been disabled.
   @see #setAutoCommit
 }
-procedure TZAbstractConnection.Rollback;
+procedure TZAbstractDbcConnection.Rollback;
 begin
   RaiseUnsupportedException;
 end;
 
-procedure TZAbstractConnection.RollbackPrepared(const transactionid: string);
+procedure TZAbstractDbcConnection.RollbackPrepared(const transactionid: string);
 begin
   RaiseUnsupportedException;
 end;
@@ -1278,7 +1278,7 @@ end;
   the connection is resumed.
   @return 0 if succesfull or error code if any error occurs
 }
-function TZAbstractConnection.PingServer: Integer;
+function TZAbstractDbcConnection.PingServer: Integer;
 begin
   Result := 1;
   RaiseUnsupportedException;
@@ -1289,7 +1289,7 @@ end;
   @param value string that should be escaped
   @return Escaped string
 }
-function TZAbstractConnection.EscapeString(const Value : RawByteString) : RawByteString;
+function TZAbstractDbcConnection.EscapeString(const Value : RawByteString) : RawByteString;
 begin
   Result := AnsiString(EncodeCString(String(Value)));
 end;
@@ -1304,7 +1304,7 @@ end;
   Connection.
 }
 
-procedure TZAbstractConnection.Close;
+procedure TZAbstractDbcConnection.Close;
 var RefCountAdded: Boolean;
 begin
   //while killing pending statements which keep the Connection.RefCount greater than 0
@@ -1333,7 +1333,7 @@ begin
   end;
 end;
 
-procedure TZAbstractConnection.CloseRegisteredStatements;
+procedure TZAbstractDbcConnection.CloseRegisteredStatements;
 var I: Integer;
 begin
   for i := fRegisteredStatements.Count-1 downto 0 do begin
@@ -1347,7 +1347,7 @@ end;
   Tests to see if a Connection is closed.
   @return true if the connection is closed; false if it's still open
 }
-function TZAbstractConnection.IsClosed: Boolean;
+function TZAbstractDbcConnection.IsClosed: Boolean;
 begin
   Result := FClosed;
 end;
@@ -1356,7 +1356,7 @@ end;
   Gets the parent ZDBC driver.
   @returns the parent ZDBC driver interface.
 }
-function TZAbstractConnection.GetDriver: IZDriver;
+function TZAbstractDbcConnection.GetDriver: IZDriver;
 begin
   Result := FDriver;
 end;
@@ -1365,7 +1365,7 @@ end;
   Gets the plain driver.
   @returns the plain driver interface.
 }
-function TZAbstractConnection.GetIZPlainDriver: IZPlainDriver;
+function TZAbstractDbcConnection.GetIZPlainDriver: IZPlainDriver;
 begin
   result := FIZPlainDriver;
 end;
@@ -1380,7 +1380,7 @@ end;
 
   @return a DatabaseMetaData object for this Connection
 }
-function TZAbstractConnection.GetMetadata: IZDatabaseMetadata;
+function TZAbstractDbcConnection.GetMetadata: IZDatabaseMetadata;
 begin
   if Closed then
     Open;
@@ -1391,7 +1391,7 @@ end;
   Gets a connection parameters.
   @returns a list with connection parameters.
 }
-function TZAbstractConnection.GetParameters: TStrings;
+function TZAbstractDbcConnection.GetParameters: TStrings;
 begin
   Result := Info;
 end;
@@ -1404,7 +1404,7 @@ end;
    ZZZ = Sub version
   @return this clients's full version number
 }
-function TZAbstractConnection.GetClientVersion: Integer;
+function TZAbstractDbcConnection.GetClientVersion: Integer;
 begin
  Result := 0;
 end;
@@ -1417,12 +1417,12 @@ end;
    ZZZ = Sub version
   @return this server's full version number
 }
-function TZAbstractConnection.GetHostVersion: Integer;
+function TZAbstractDbcConnection.GetHostVersion: Integer;
 begin
  Result := 0;
 end;
 
-function TZAbstractConnection.GetDescription: String;
+function TZAbstractDbcConnection.GetDescription: String;
 begin
   Result := PlainDriver.GetDescription;
 end;
@@ -1439,7 +1439,7 @@ end;
   @param readOnly true enables read-only mode; false disables
     read-only mode.
 }
-procedure TZAbstractConnection.SetReadOnly(Value: Boolean);
+procedure TZAbstractDbcConnection.SetReadOnly(Value: Boolean);
 begin
   FReadOnly := Value;
 end;
@@ -1448,7 +1448,7 @@ end;
   Tests to see if the connection is in read-only mode.
   @return true if connection is read-only and false otherwise
 }
-function TZAbstractConnection.IsReadOnly: Boolean;
+function TZAbstractDbcConnection.IsReadOnly: Boolean;
 begin
   Result := FReadOnly;
 end;
@@ -1458,7 +1458,7 @@ end;
   the IZDriverManager
   @return true if connection is read-only and false otherwise
 }
-function TZAbstractConnection.GetURL: String;
+function TZAbstractDbcConnection.GetURL: String;
 begin
   Result := FURL.URL
 end;
@@ -1469,7 +1469,7 @@ end;
   If the driver does not support catalogs, it will
   silently ignore this request.
 }
-procedure TZAbstractConnection.SetCatalog(const Catalog: string);
+procedure TZAbstractDbcConnection.SetCatalog(const Catalog: string);
 begin
 end;
 
@@ -1477,7 +1477,7 @@ end;
   Returns the Connection's current catalog name.
   @return the current catalog name or null
 }
-function TZAbstractConnection.GetCatalog: string;
+function TZAbstractDbcConnection.GetCatalog: string;
 begin
   Result := '';
 end;
@@ -1494,7 +1494,7 @@ end;
     exception of TRANSACTION_NONE; some databases may not support other values
   @see DatabaseMetaData#supportsTransactionIsolationLevel
 }
-procedure TZAbstractConnection.SetTransactionIsolation(
+procedure TZAbstractDbcConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 begin
   FTransactIsolationLevel := Level;
@@ -1504,7 +1504,7 @@ end;
   Gets this Connection's current transaction isolation level.
   @return the current TRANSACTION_* mode value
 }
-function TZAbstractConnection.GetTransactionIsolation: TZTransactIsolationLevel;
+function TZAbstractDbcConnection.GetTransactionIsolation: TZTransactIsolationLevel;
 begin
   Result := FTransactIsolationLevel;
 end;
@@ -1515,7 +1515,7 @@ end;
   SQLWarning.
   @return the first SQLWarning or null
 }
-function TZAbstractConnection.GetWarnings: EZSQLWarning;
+function TZAbstractDbcConnection.GetWarnings: EZSQLWarning;
 begin
   Result := nil;
 end;
@@ -1525,11 +1525,11 @@ end;
   After a call to this method, the method <code>getWarnings</code>
     returns null until a new warning is reported for this Connection.
 }
-procedure TZAbstractConnection.ClearWarnings;
+procedure TZAbstractDbcConnection.ClearWarnings;
 begin
 end;
 
-procedure TZAbstractConnection.DeregisterStatement(
+procedure TZAbstractDbcConnection.DeregisterStatement(
   const Value: IZStatement);
 var
   I: Integer;
@@ -1538,32 +1538,32 @@ begin
   if I > -1 then fRegisteredStatements.Delete(I);
 end;
 
-function TZAbstractConnection.UseMetadata: boolean;
+function TZAbstractDbcConnection.UseMetadata: boolean;
 begin
   result := FUseMetadata;
 end;
 
-procedure TZAbstractConnection.SetUseMetadata(Value: Boolean);
+procedure TZAbstractDbcConnection.SetUseMetadata(Value: Boolean);
 begin
   FUseMetadata := Value;
 end;
 
-function TZAbstractConnection.GetBinaryEscapeString(const Value: RawByteString): String;
+function TZAbstractDbcConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   GetBinaryEscapeString(Pointer(Value), Length(Value), {$IFNDEF UNICODE}RawByteString{$ELSE}ZWideString{$ENDIF}(Result));
 end;
 
-function TZAbstractConnection.GetBinaryEscapeString(const Value: TBytes): String;
+function TZAbstractDbcConnection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   GetBinaryEscapeString(Pointer(Value), Length(Value), {$IFNDEF UNICODE}RawByteString{$ELSE}ZWideString{$ENDIF}(Result));
 end;
 
-function TZAbstractConnection.GetEscapeString(const Value: ZWideString): ZWideString;
+function TZAbstractDbcConnection.GetEscapeString(const Value: ZWideString): ZWideString;
 begin
   GetEscapeString(Pointer(Value), Length(Value), Result);
 end;
 
-function TZAbstractConnection.GetEscapeString(const Value: RawByteString): RawByteString;
+function TZAbstractDbcConnection.GetEscapeString(const Value: RawByteString): RawByteString;
 var P: PAnsiChar;
 begin
   P := Pointer(Value);
@@ -1580,12 +1580,12 @@ end;
   @param ClientCharacterSet the CharacterSet which has to be checked
   @result PZCodePage see ZCompatible.pas
 }
-function TZAbstractConnection.GetClientCodePageInformations: PZCodePage; //EgonHugeist
+function TZAbstractDbcConnection.GetClientCodePageInformations: PZCodePage; //EgonHugeist
 begin
   Result := ConSettings.ClientCodePage
 end;
 
-procedure TZAbstractConnection.OnPropertiesChange(Sender: TObject);
+procedure TZAbstractDbcConnection.OnPropertiesChange(Sender: TObject);
 begin
   // do nothing in base class
 end;
@@ -1733,7 +1733,7 @@ begin
   FName := Value;
 end;
 
-procedure TZAbstractConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
+procedure TZAbstractDbcConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
   RawCP: Word; var Result: RawByteString);
 var RawTemp: RawByteString;
 begin
@@ -1741,7 +1741,7 @@ begin
   GetEscapeString(Pointer(RawTemp), Length(RawTemp), Result);
 end;
 
-procedure TZAbstractConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
+procedure TZAbstractDbcConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
   var Result: ZWideString);
 var RawTemp: RawByteString;
 begin

@@ -92,7 +92,7 @@ type
     SQL: RawByteString;
     nBytes: Integer;
   end;
-  TZSQLiteConnection = class(TZAbstractConnection, IZSQLiteConnection)
+  TZSQLiteConnection = class(TZAbstractDbcConnection, IZSQLiteConnection)
   private
     FUndefinedVarcharAsStringLength: Integer;
     FCatalog: string;

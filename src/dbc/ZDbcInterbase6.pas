@@ -130,7 +130,7 @@ type
 
   { TZInterbase6Connection }
   {$WARNINGS OFF} //suppress deprecated warning
-  TZInterbase6Connection = class(TZAbstractConnection, IZInterbase6Connection)
+  TZInterbase6Connection = class(TZAbstractDbcConnection, IZInterbase6Connection)
   private
     FDialect: Word;
     FHandle: TISC_DB_HANDLE;
@@ -192,6 +192,8 @@ type
     function GetBinaryEscapeString(const Value: RawByteString): String; override;
     function GetBinaryEscapeString(const Value: TBytes): String; override;
     function GetServerProvider: TZServerProvider; override;
+
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
   end;
   {$WARNINGS ON} //suppress deprecated warning
 
@@ -267,21 +269,8 @@ end;
 constructor TZInterbase6Driver.Create;
 begin
   inherited Create;
-  AddSupportedProtocol(AddPlainDriverToCache(TZInterbase6PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFirebird10PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFirebird15PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFirebird20PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFirebird21PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFirebird25PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFirebird30PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFirebird30PlainDriver.Create, 'firebird'));
-  AddSupportedProtocol(AddPlainDriverToCache(TZInterbase6PlainDriver.Create, 'interbase'));
-  // embedded drivers
-  AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdD15PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdD20PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdD21PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdD25PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdD30PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZInterbasePlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdPlainDriver.Create));
 end;
 
 {**
@@ -326,7 +315,7 @@ end;
 constructor TZInterbase6Connection.Create(const ZUrl: TZURL);
 begin
   // ! Create the object before parent's constructor because it is used in
-  // TZAbstractConnection.Create > Url.OnPropertiesChange
+  // TZAbstractDbcConnection.Create > Url.OnPropertiesChange
   FGUIDProps := TZInterbase6ConnectionGUIDProps.Create;
   inherited;
   FClientVersion := -1;
@@ -538,10 +527,19 @@ var
   VersionStr: String;
   FbPos: Integer;
   DotPos: Integer;
+  Buff: array[0..50] of AnsiChar;
 begin
   Release := 0;
 
-  VersionStr := FPlainDriver.isc_get_client_version;
+  if Assigned(FplainDriver.isc_get_client_version) then begin
+    FplainDriver.isc_get_client_version(@Buff[0]);
+    {$IFDEF UNICODE}
+    VersionStr := ZSysUtils.ASCII7ToUnicodeString(@Buff[0], ZFastCode.StrLen(PAnsiChar(@Buff[0])));
+    {$ELSE}
+    SetString(VersionStr, PAnsiChar(@Buff[0]), ZFastCode.StrLen(PAnsiChar(@Buff[0])));
+    {$ENDIF}
+  end else
+    VersionStr := '';
   FbPos := System.Pos('firebird', LowerCase(VersionStr));
   if FbPos > 0 then begin
     FIsFirebirdLib := true;
@@ -925,6 +923,20 @@ begin
   if IsClosed then
     Open;
   Result := TZInterbase6CallableStatement.Create(Self, SQL, Info);
+end;
+
+{**
+  release all handles immeditaely on connection loss
+  @param Sender the caller where the connection loss did happen first
+    also to be used as comparsion with other IImmediatelyReleasable objects
+    to avoid circular calls
+}
+procedure TZInterbase6Connection.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable);
+begin
+  FHandle := 0;
+  FTrHandle := 0;
+  inherited ReleaseImmediat(Sender);
 end;
 
 {**

@@ -248,7 +248,7 @@ type
     function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
-    constructor Create(Connection: TZAbstractConnection; const Url: TZURL); override;
+    constructor Create(Connection: TZAbstractDbcConnection; const Url: TZURL); override;
   end;
 
 implementation
@@ -1231,7 +1231,7 @@ end;
   @param Url a database connection url string.
   @param Info an extra connection properties.
 }
-constructor TZASADatabaseMetadata.Create(Connection: TZAbstractConnection;
+constructor TZASADatabaseMetadata.Create(Connection: TZAbstractDbcConnection;
   const Url: TZURL);
 begin
   inherited Create(Connection, Url);

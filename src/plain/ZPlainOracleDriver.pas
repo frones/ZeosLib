@@ -416,12 +416,12 @@ end;
 
 function TZOraclePlainDriver.GetProtocol: string;
 begin
-  Result := 'oracle-9i';
+  Result := 'oracle';
 end;
 
 function TZOraclePlainDriver.GetDescription: string;
 begin
-  Result := 'Native Plain Driver for Oracle 9i';
+  Result := 'Native Plain Driver for Oracle';
 end;
 
 end.

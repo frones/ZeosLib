@@ -700,42 +700,41 @@ type
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
-    procedure SetBigDecimal(ParameterIndex: Integer; const Value: TZBCD);
-    procedure SetBinary(ParameterIndex: Integer; SQLType: TZSQLType; Value: Pointer; Len: PLengthInt; ByRef: Boolean);
-    procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
-    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes);
-    procedure SetCurrency(ParameterIndex: Integer; const Value: Currency);
-    procedure SetPChar(ParameterIndex: Integer; const Value: TZCharRec; ByRef: Boolean);
-    procedure SetDateTime(ParameterIndex: Integer; SQLType: TZSQLType; const Value: TDateTime);
-    procedure SetDouble(ParameterIndex: Integer; SQLType: TZSQLType; const Value: Double);
-    procedure SetLob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob);
-    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
-    procedure SetOrdinal(ParameterIndex: Integer; SQLType: TZSQLType; const Value: Int64); overload;
-    procedure SetOrdinal(ParameterIndex: Integer; SQLType: TZSQLType; const Value: UInt64);overload;
-    procedure SetRawByteString(ParameterIndex: Integer; SQLType: TZSQLType; const Value: RawByteString; CodePage: Word);
-    procedure SetTimeStamp(ParameterIndex: Integer; SQLType: TZSQLType; const Value: TZTimeStamp);
-    procedure SetUnicodeString(ParameterIndex: Integer; SQLType: TZSQLType; const Value: ZWideString);
-    procedure SetValue(ParameterIndex: Integer; const Value: TZVariant);
+    procedure SetBigDecimal(Index: Integer; const Value: TZBCD);
+    procedure SetBinary(Index: Integer; SQLType: TZSQLType; Value: Pointer; Len: PLengthInt; ByRef: Boolean);
+    procedure SetBoolean(Index: Integer; Value: Boolean);
+    procedure SetBytes(Index: Integer; const Value: TBytes);
+    procedure SetCurrency(Index: Integer; const Value: Currency);
+    procedure SetPChar(Index: Integer; const Value: TZCharRec; ByRef: Boolean);
+    procedure SetDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime);
+    procedure SetDouble(Index: Integer; SQLType: TZSQLType; const Value: Double);
+    procedure SetLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob);
+    procedure SetNull(Index: Integer; SQLType: TZSQLType);
+    procedure SetOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); overload;
+    procedure SetOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64);overload;
+    procedure SetRawByteString(Index: Integer; SQLType: TZSQLType; const Value: RawByteString; CodePage: Word);
+    procedure SetTimeStamp(Index: Integer; SQLType: TZSQLType; const Value: TZTimeStamp);
+    procedure SetUnicodeString(Index: Integer; SQLType: TZSQLType; const Value: ZWideString);
+    procedure SetValue(Index: Integer; const Value: TZVariant);
 
-    procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
-    procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
+    procedure SetNullArray(Index: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
+    procedure SetDataArray(Index: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
 
-    function IsNull(ParameterIndex: Integer): Boolean;
-    procedure GetBigDecimal(ParameterIndex: Integer; var Result: TZBCD);
-    procedure GetBoolean(ParameterIndex: Integer; out Result: Boolean);
-    procedure GetBytes(ParameterIndex: Integer; out Buf: Pointer; out Len: LengthInt);
-    procedure GetCurrency(ParameterIndex: Integer; var Result: Currency);
-    procedure GetPChar(ParameterIndex: Integer; var Result: TZCharRec);
-    procedure GetDateTime(ParameterIndex: Integer; var Result: TDateTime);
-    procedure GetDouble(ParameterIndex: Integer; var Result: Double);
-    procedure GetLob(ParameterIndex: Integer; var Result: IZBlob);
-    procedure GetNull(ParameterIndex: Integer; var Result: Boolean);
-    procedure GetOrdinal(ParameterIndex: Integer; var Result: Int64); overload;
-    procedure GetOrdinal(ParameterIndex: Integer; var Result: UInt64);overload;
-    procedure GetRawByteString(ParameterIndex: Integer; var Result: RawByteString; CodePage: Word);
-    procedure GetTimeStamp(ParameterIndex: Integer; var Value: TZTimeStamp);
-    procedure GetUnicodeString(ParameterIndex: Integer; var Result: ZWideString);
-    procedure GetValue(ParameterIndex: Integer; var Result: TZVariant);
+    function IsNull(Index: Integer): Boolean;
+    procedure GetBigDecimal(Index: Integer; var Result: TZBCD);
+    procedure GetBoolean(Index: Integer; var Result: Boolean);
+    procedure GetBytes(Index: Integer; var Buf: Pointer; var Len: LengthInt);
+    procedure GetCurrency(Index: Integer; var Result: Currency);
+    procedure GetPChar(Index: Integer; var Buf: Pointer; var Len: LengthInt; CodePage: Word);
+    procedure GetDateTime(Index: Integer; var Result: TDateTime);
+    procedure GetDouble(Index: Integer; var Result: Double);
+    procedure GetLob(Index: Integer; var Result: IZBlob);
+    procedure GetOrdinal(Index: Integer; var Result: Int64); overload;
+    procedure GetOrdinal(Index: Integer; var Result: UInt64); overload;
+    procedure GetRawByteString(Index: Integer; var Result: RawByteString; CodePage: Word);
+    procedure GetTimeStamp(Index: Integer; var Value: TZTimeStamp);
+    procedure GetUnicodeString(Index: Integer; var Result: ZWideString);
+    procedure GetValue(Index: Integer; var Result: TZVariant);
 
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
       ParamType: TZParamType; ParamSize: LengthInt = -1);
@@ -758,6 +757,8 @@ type
 
     procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer);
     procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer);
+//    procedure RegisterParameter(ParameterIndex: Integer;
+  //    SQLType: TZSQLType; ParamType: TZParamType; ParamSize: LengthInt = -1);
     function WasNull: Boolean;
 
     function IsNull(ParameterIndex: Integer): Boolean;
@@ -783,7 +784,7 @@ type
     function GetBytes(ParameterIndex: Integer): TBytes;
     function GetDate(ParameterIndex: Integer): TDateTime;
     function GetTime(ParameterIndex: Integer): TDateTime;
-    function GetTimestamp(ParameterIndex: Integer): TDateTime;
+    function GetTimeStamp(ParameterIndex: Integer): TDateTime;
     function GetValue(ParameterIndex: Integer): TZVariant;
   end;
 

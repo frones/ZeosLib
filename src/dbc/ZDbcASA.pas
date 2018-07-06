@@ -83,7 +83,7 @@ type
   end;
 
   {** Implements ASA Database Connection. }
-  TZASAConnection = class(TZAbstractConnection, IZASAConnection)
+  TZASAConnection = class(TZAbstractDbcConnection, IZASAConnection)
   private
     FSQLCA: TZASASQLCA;
     FHandle: PZASASQLCA;

@@ -65,11 +65,9 @@ uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
 
 const
   MARIADB_LOCATION = 'libmariadb'+ SharedSuffix;
-{$IFNDEF UNIX}
-  {$IFNDEF MYSQL_STRICT_DLL_LOADING}
+  DLL_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix;
+{$IFDEF MSWINDOWS}
   WINDOWS_DLL_LOCATION = 'libmysql.dll';
-  WINDOWS_DLL_LOCATION_EMBEDDED = 'libmysqld.dll';
-  {$ENDIF}
   WINDOWS_DLL41_LOCATION = 'libmysql41.dll';
   WINDOWS_DLL41_LOCATION_EMBEDDED = 'libmysqld41.dll';
   WINDOWS_DLL50_LOCATION = 'libmysql50.dll';
@@ -83,10 +81,7 @@ const
   WINDOWS_DLL57_LOCATION = 'libmysql57.dll';
   WINDOWS_DLL57_LOCATION_EMBEDDED = 'libmysqld57.dll';
 {$ELSE}
-  {$IFNDEF MYSQL_STRICT_DLL_LOADING}
   LINUX_DLL_LOCATION = 'libmysqlclient'+SharedSuffix;
-  LINUX_DLL_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix;
-  {$ENDIF}
   LINUX_DLL41_LOCATION = 'libmysqlclient'+SharedSuffix+'.14';
   LINUX_DLL41_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix+'.14';
   LINUX_DLL50_LOCATION = 'libmysqlclient'+SharedSuffix+'.15';
@@ -244,7 +239,6 @@ type
   protected
     ServerArgs: array of PAnsiChar;
     ServerArgsLen: Integer;
-    IsEmbeddedDriver: Boolean;
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
     procedure LoadApi; override;
@@ -259,17 +253,6 @@ type
 
     procedure SetDriverOptions(Options: TStrings); virtual; // changed by tohenk, 2009-10-11
   public
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
-
-  { TZMySQLEmbeddedPlainDriver }
-
-  TZMySQLEmbeddedPlainDriver = class (TZMySQLPlainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-  public
-    constructor Create;
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
@@ -510,28 +493,39 @@ constructor TZMySQLPlainDriver.Create;
 begin
   inherited create;
   FLoader := TZNativeLibraryLoader.Create([]);
-  {$IFNDEF UNIX}
-    FLoader.AddLocation(WINDOWS_DLL_LOCATION);
-    FLoader.AddLocation(MARIADB_LOCATION);
-    FLoader.AddLocation(WINDOWS_DLL41_LOCATION);
-    FLoader.AddLocation(WINDOWS_DLL50_LOCATION);
-    FLoader.AddLocation(WINDOWS_DLL51_LOCATION);
-    FLoader.AddLocation(WINDOWS_DLL55_LOCATION);
-    FLoader.AddLocation(WINDOWS_DLL56_LOCATION);
-    FLoader.AddLocation(WINDOWS_DLL57_LOCATION);
-  {$ELSE}
-    FLoader.AddLocation(LINUX_DLL_LOCATION);
-    FLoader.AddLocation(MARIADB_LOCATION);
-    FLoader.AddLocation(LINUX_DLL41_LOCATION);
-    FLoader.AddLocation(LINUX_DLL50_LOCATION);
-    FLoader.AddLocation(LINUX_DLL51_LOCATION);
-    FLoader.AddLocation(LINUX_DLL55_LOCATION);
-    FLoader.AddLocation(LINUX_DLL56_LOCATION);
-    FLoader.AddLocation(LINUX_DLL56_LOCATION);
-  {$ENDIF}
+  FLoader.AddLocation(MARIADB_LOCATION);
+  FLoader.AddLocation(DLL_LOCATION_EMBEDDED);
+{$IFDEF MSWINDOWS}
+  FLoader.AddLocation(WINDOWS_DLL_LOCATION);
+  FLoader.AddLocation(WINDOWS_DLL41_LOCATION);
+  FLoader.AddLocation(WINDOWS_DLL41_LOCATION_EMBEDDED);
+  FLoader.AddLocation(WINDOWS_DLL50_LOCATION);
+  FLoader.AddLocation(WINDOWS_DLL50_LOCATION_EMBEDDED);
+  FLoader.AddLocation(WINDOWS_DLL51_LOCATION);
+  FLoader.AddLocation(WINDOWS_DLL51_LOCATION_EMBEDDED);
+  FLoader.AddLocation(WINDOWS_DLL55_LOCATION);
+  FLoader.AddLocation(WINDOWS_DLL55_LOCATION_EMBEDDED);
+  FLoader.AddLocation(WINDOWS_DLL56_LOCATION);
+  FLoader.AddLocation(WINDOWS_DLL56_LOCATION_EMBEDDED);
+  FLoader.AddLocation(WINDOWS_DLL57_LOCATION);
+  FLoader.AddLocation(WINDOWS_DLL57_LOCATION_EMBEDDED);
+{$ELSE}
+  FLoader.AddLocation(LINUX_DLL_LOCATION);
+  FLoader.AddLocation(LINUX_DLL41_LOCATION);
+  FLoader.AddLocation(LINUX_DLL41_LOCATION_EMBEDDED);
+  FLoader.AddLocation(LINUX_DLL50_LOCATION);
+  FLoader.AddLocation(LINUX_DLL50_LOCATION_EMBEDDED);
+  FLoader.AddLocation(LINUX_DLL51_LOCATION);
+  FLoader.AddLocation(LINUX_DLL51_LOCATION_EMBEDDED);
+  FLoader.AddLocation(LINUX_DLL55_LOCATION);
+  FLoader.AddLocation(LINUX_DLL55_LOCATION_EMBEDDED);
+  FLoader.AddLocation(LINUX_DLL56_LOCATION);
+  FLoader.AddLocation(LINUX_DLL56_LOCATION_EMBEDDED);
+  FLoader.AddLocation(LINUX_DLL57_LOCATION);
+  FLoader.AddLocation(LINUX_DLL57_LOCATION_EMBEDDED);
+{$ENDIF}
   ServerArgsLen := 0;
   SetLength(ServerArgs, ServerArgsLen);
-  IsEmbeddedDriver := False;
   LoadCodePages;
 end;
 
@@ -584,49 +578,8 @@ begin
   PreferedLibrary := Options.Values[ConnProps_Library];
   if PreferedLibrary <> '' then
     Loader.AddLocation(PreferedLibrary);
-  if IsEmbeddedDriver then
+  if Assigned(mysql_library_init) and Assigned(mysql_library_end) then
     BuildServerArguments(Options);
-end;
-
-{ TZMySQLEmbeddedPlainDriver }
-
-function TZMySQLEmbeddedPlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZMySQLEmbeddedPlainDriver.Create;
-end;
-
-constructor TZMySQLEmbeddedPlainDriver.Create;
-begin
-  inherited Create;
-  FLoader.ClearLocations;
-  {$IFNDEF UNIX}
-    FLoader.AddLocation(WINDOWS_DLL_LOCATION_EMBEDDED);
-    FLoader.AddLocation(WINDOWS_DLL41_LOCATION_EMBEDDED);
-    FLoader.AddLocation(WINDOWS_DLL50_LOCATION_EMBEDDED);
-    FLoader.AddLocation(WINDOWS_DLL51_LOCATION_EMBEDDED);
-    FLoader.AddLocation(WINDOWS_DLL55_LOCATION_EMBEDDED);
-    FLoader.AddLocation(WINDOWS_DLL56_LOCATION_EMBEDDED);
-    FLoader.AddLocation(WINDOWS_DLL57_LOCATION_EMBEDDED);
-  {$ELSE}
-    FLoader.AddLocation(LINUX_DLL_LOCATION_EMBEDDED);
-    FLoader.AddLocation(LINUX_DLL41_LOCATION_EMBEDDED);
-    FLoader.AddLocation(LINUX_DLL50_LOCATION_EMBEDDED);
-    FLoader.AddLocation(LINUX_DLL51_LOCATION_EMBEDDED);
-    FLoader.AddLocation(LINUX_DLL55_LOCATION_EMBEDDED);
-    FLoader.AddLocation(LINUX_DLL56_LOCATION_EMBEDDED);
-    FLoader.AddLocation(LINUX_DLL57_LOCATION_EMBEDDED);
-  {$ENDIF}
-  IsEmbeddedDriver := True;
-end;
-
-function TZMySQLEmbeddedPlainDriver.GetDescription: string;
-begin
-  Result := 'Native Plain Driver for Embedded MySQL or MariaDB';
-end;
-
-function TZMySQLEmbeddedPlainDriver.GetProtocol: string;
-begin
-  Result := 'mysqld'
 end;
 
 end.

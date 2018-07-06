@@ -91,7 +91,7 @@ type
   end;
 
   {** Implements Oracle Database Connection. }
-  TZOracleConnection = class(TZAbstractConnection, IZOracleConnection)
+  TZOracleConnection = class(TZAbstractDbcConnection, IZOracleConnection)
   private
     FCatalog: string;
     FHandle: POCIEnv;
@@ -179,7 +179,6 @@ uses
 constructor TZOracleDriver.Create;
 begin
   inherited Create;
-  AddSupportedProtocol(AddPlainDriverToCache(TZOraclePlainDriver.Create, 'oracle'));
   AddSupportedProtocol(AddPlainDriverToCache(TZOraclePlainDriver.Create));
 end;
 

@@ -299,7 +299,7 @@ type
     function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
-    constructor Create(Connection: TZAbstractConnection; const Url: TZURL); override;
+    constructor Create(Connection: TZAbstractDbcConnection; const Url: TZURL); override;
   end;
   {$ENDIF ENABLE_OLEDB}
 
@@ -1496,7 +1496,7 @@ end;
   internally by the constructor.
   @return the database information object interface
 }
-constructor TOleDBDatabaseMetadata.Create(Connection: TZAbstractConnection;
+constructor TOleDBDatabaseMetadata.Create(Connection: TZAbstractDbcConnection;
   const Url: TZURL);
 begin
   inherited Create(Connection, URL);

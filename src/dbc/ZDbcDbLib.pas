@@ -96,7 +96,7 @@ type
   end;
 
   {** Implements a generic DBLib Connection. }
-  TZDBLibConnection = class(TZAbstractConnection, IZDBLibConnection)
+  TZDBLibConnection = class(TZAbstractDbcConnection, IZDBLibConnection)
   private
     FProvider: TDBLibProvider;
     FFreeTDS: Boolean;
