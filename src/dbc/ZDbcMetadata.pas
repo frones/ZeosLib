@@ -5128,12 +5128,14 @@ begin
 
   if TestKeyWords and not (Result in [icNone, icSpecial]) then begin
     { Checks for reserved keywords. }
-    if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers and (Result <> icUpper)
-    then S := UpperCase(Value)
-    else s := LowerCase(Value);
+    if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers and (Result <> icUpper) then
+      S := UpperCase(Value)
+    else if Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers and (Result <> icLower) then
+      s := LowerCase(Value)
+    else S := Value;
     P1 := Pointer(S);
     KeyWords := Metadata.GetDatabaseInfo.GetIdentifierQuoteKeywordsSorted; //they are Ascending sorted
-    for i := low(KeyWords) to high(KeyWords) do begin
+    for i := low(KeyWords) to high(KeyWords) do
       if S = KeyWords[I] then begin
         Result := icSpecial;
         Break;
@@ -5142,9 +5144,7 @@ begin
         if (Ord(P1^) < Ord(P2^)) then //break the loop if firstchar is greater than..
           Break;
       end;
-    end;
   end;
-
 end;
 
 function TZDefaultIdentifierConvertor.GetMetaData;
@@ -5260,7 +5260,6 @@ begin
   if IsCaseSensitive(Value) then begin
     QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
     case Length(QuoteDelim) of
-      0: Result := Value;
       1: Result := SQLQuotedStr(Value, QuoteDelim[1]);
       2: Result := SQLQuotedStr(Value, QuoteDelim[1], QuoteDelim[2]);
       else
