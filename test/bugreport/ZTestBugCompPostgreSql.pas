@@ -105,6 +105,7 @@ type
     procedure TestSF218_royo;
     procedure TestSF218_kgizmo;
     procedure TestSF224;
+    procedure TestSF266;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1208,6 +1209,34 @@ begin
     end;
   finally
     FreeAndNil(TempConnection);
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF266;
+var
+  Query: TZQuery;
+begin
+  try
+    Connection.Connect;
+    Query := TZQuery.Create(nil);
+    Query.Connection := Connection;
+    Query.SQL.Append('CREATE OR REPLACE FUNCTION pc_chartoint(chartoconvert character varying)');
+    Query.SQL.Append('  RETURNS integer AS');
+    Query.SQL.Append('$BODY$');
+    Query.SQL.Append('SELECT CASE WHEN trim($1) SIMILAR TO ''[0-9]+''');
+    Query.SQL.Append('        THEN CAST(trim($1) AS integer)');
+    Query.SQL.Append('    ELSE NULL END;');
+    Query.SQL.Append('');
+    Query.SQL.Append('$BODY$');
+    Query.SQL.Append('  LANGUAGE ''sql'' IMMUTABLE STRICT;');
+    Query.SQL.Append('');
+    Query.SQL.Append('INSERT INTO blob_values(b_id, b_text) values (261,'''');');
+    Query.ExecSQL;
+    Connection.ExecuteDirect('delete from blob_values where b_id = 261');
+    Connection.ExecuteDirect('drop function pc_chartoint(chartoconvert character varying)');
+  finally
+    if Assigned(Query) then FreeAndNil(Query);
+    Connection.Disconnect;
   end;
 end;
 
