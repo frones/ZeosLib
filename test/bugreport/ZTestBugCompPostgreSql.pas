@@ -1232,7 +1232,7 @@ begin
     Query.SQL.Append('');
     Query.SQL.Append('INSERT INTO blob_values(b_id, b_text) values (261,'''');');
     Query.ExecSQL;
-    Connection.ExecuteDirect('drop function pc_chartoint');
+    Connection.ExecuteDirect('drop function pc_chartoint(chartoconvert character varying)');
     Connection.ExecuteDirect('delete from blob_values where b_id = 261');
   finally
     if Assigned(Query) then FreeAndNil(Query);
