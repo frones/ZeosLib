@@ -564,122 +564,139 @@ var
   P: Pointer;
   Stream: TStream;
   Temp: OleVariant;
+  RC: OleVariant;
 begin
-  ExecutePrepared;
+  if Not Prepared then Prepare;
+  BindInParameters;
+  AdoRecordSet := CoRecordSet.Create;
+  AdoRecordSet.MaxRecords := MaxRows;
+  AdoRecordSet._Set_ActiveConnection(FAdoCommand.Get_ActiveConnection);
+  AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
+  Result := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self, SQL, ConSettings, ResultSetConcurrency);
+  LastUpdateCount := RC;
+  if Result <> nil then
+    Exit;
+ // AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{, adExecuteNoRecords});
+ // LastUpdateCount := RC;
+  
   SetLength(IndexAlign, 0);
   ColumnsInfo := TObjectList.Create(True);
   Stream := nil;
-  try
-    for I := 0 to FAdoCommand.Parameters.Count -1 do
-      if FAdoCommand.Parameters.Item[i].Direction in [adParamOutput,
-        adParamInputOutput, adParamReturnValue] then
-    begin
-      SetLength(IndexAlign, Length(IndexAlign)+1);
-      ColumnInfo := TZColumnInfo.Create;
-      with ColumnInfo do
+  if LastResultSet <> nil then begin
+    Result := LastResultSet;
+    LastResultSet := nil;
+  end else
+    try
+      for I := 0 to FAdoCommand.Parameters.Count -1 do
+        if FAdoCommand.Parameters.Item[i].Direction in [adParamOutput,
+          adParamInputOutput, adParamReturnValue] then
       begin
-        {$IFNDEF UNICODE}
-        ColumnLabel := PUnicodeToString(Pointer(FAdoCommand.Parameters.Item[i].Name), Length(FAdoCommand.Parameters.Item[i].Name), ConSettings^.CTRL_CP);
-        {$ELSE}
-        ColumnLabel := FAdoCommand.Parameters.Item[i].Name;
-        {$ENDIF}
-        ColumnType := ConvertAdoToSqlType(FAdoCommand.Parameters.Item[I].Type_, ConSettings.CPType);
-        ColumnDisplaySize := FAdoCommand.Parameters.Item[I].Precision;
-        Precision := FAdoCommand.Parameters.Item[I].Precision;
-        IndexAlign[High(IndexAlign)] := I;
+        SetLength(IndexAlign, Length(IndexAlign)+1);
+        ColumnInfo := TZColumnInfo.Create;
+        with ColumnInfo do
+        begin
+          {$IFNDEF UNICODE}
+          ColumnLabel := PUnicodeToString(Pointer(FAdoCommand.Parameters.Item[i].Name), Length(FAdoCommand.Parameters.Item[i].Name), ConSettings^.CTRL_CP);
+          {$ELSE}
+          ColumnLabel := FAdoCommand.Parameters.Item[i].Name;
+          {$ENDIF}
+          ColumnType := ConvertAdoToSqlType(FAdoCommand.Parameters.Item[I].Type_, ConSettings.CPType);
+          ColumnDisplaySize := FAdoCommand.Parameters.Item[I].Precision;
+          Precision := FAdoCommand.Parameters.Item[I].Precision;
+          IndexAlign[High(IndexAlign)] := I;
+        end;
+        ColumnsInfo.Add(ColumnInfo);
       end;
-      ColumnsInfo.Add(ColumnInfo);
-    end;
 
-    RS := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', ConSettings);
-    with RS do
-    begin
-      SetType(rtScrollInsensitive);
-      SetConcurrency(rcReadOnly);
-      RS.MoveToInsertRow;
-      for i := FirstDbcIndex to ColumnsInfo.Count{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+      RS := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', ConSettings);
+      with RS do
       begin
-        Temp := FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value;
-        case TZColumnInfo(ColumnsInfo[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
-          stBoolean:
-            RS.UpdateBoolean(i, Temp);
-          stByte:
-            RS.UpdateByte(i, Temp);
-          stShort:
-            RS.UpdateShort(i, Temp);
-          stWord:
-            RS.UpdateWord(i, Temp);
-          stSmall:
-            RS.UpdateSmall(i, Temp);
-          stLongWord:
-            RS.UpdateUInt(i, Temp);
-          stInteger:
-            RS.UpdateInt(i, Temp);
-          stULong:
-            RS.UpdateULong(i, Temp);
-          stLong:
-            RS.UpdateLong(i, Temp);
-          stFloat, stDouble, stBigDecimal:
-            RS.UpdateFloat(i, Temp);
-          stString:
-            RS.UpdateString(i, Temp);
-          stAsciiStream:
-            begin
-              Stream := TStringStream.Create(AnsiString(Temp));
-              RS.UpdateAsciiStream(I, Stream);
-              Stream.Free;
-            end;
-          stUnicodeString:
-            RS.UpdateUnicodeString(i, Temp);
-          stUnicodeStream:
-            begin
-              Stream := WideStringStream(WideString(Temp));
-              RS.UpdateUnicodeStream(I, Stream);
-              FreeAndNil(Stream);
-            end;
-          stBytes:
-            RS.UpdateBytes(i, Temp);
-          stDate:
-            RS.UpdateDate(i, Temp);
-          stTime:
-            RS.UpdateTime(i, Temp);
-          stTimestamp:
-            RS.UpdateTimestamp(i, Temp);
-          stBinaryStream:
-            begin
-              if VarIsStr(Temp) then
+        SetType(rtScrollInsensitive);
+        SetConcurrency(rcReadOnly);
+        RS.MoveToInsertRow;
+        for i := FirstDbcIndex to ColumnsInfo.Count{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+        begin
+          Temp := FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value;
+          case TZColumnInfo(ColumnsInfo[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
+            stBoolean:
+              RS.UpdateBoolean(i, Temp);
+            stByte:
+              RS.UpdateByte(i, Temp);
+            stShort:
+              RS.UpdateShort(i, Temp);
+            stWord:
+              RS.UpdateWord(i, Temp);
+            stSmall:
+              RS.UpdateSmall(i, Temp);
+            stLongWord:
+              RS.UpdateUInt(i, Temp);
+            stInteger:
+              RS.UpdateInt(i, Temp);
+            stULong:
+              RS.UpdateULong(i, Temp);
+            stLong:
+              RS.UpdateLong(i, Temp);
+            stFloat, stDouble, stBigDecimal:
+              RS.UpdateFloat(i, Temp);
+            stString:
+              RS.UpdateString(i, Temp);
+            stAsciiStream:
               begin
                 Stream := TStringStream.Create(AnsiString(Temp));
-                RS.UpdateBinaryStream(I, Stream);
+                RS.UpdateAsciiStream(I, Stream);
+                Stream.Free;
+              end;
+            stUnicodeString:
+              RS.UpdateUnicodeString(i, Temp);
+            stUnicodeStream:
+              begin
+                Stream := WideStringStream(WideString(Temp));
+                RS.UpdateUnicodeStream(I, Stream);
                 FreeAndNil(Stream);
-              end
-              else
-                if VarIsArray(Temp) then
+              end;
+            stBytes:
+              RS.UpdateBytes(i, Temp);
+            stDate:
+              RS.UpdateDate(i, Temp);
+            stTime:
+              RS.UpdateTime(i, Temp);
+            stTimestamp:
+              RS.UpdateTimestamp(i, Temp);
+            stBinaryStream:
+              begin
+                if VarIsStr(Temp) then
                 begin
-                  P := VarArrayLock(Temp);
-                  try
-                    Stream := TMemoryStream.Create;
-                    Stream.Size {%H-}:= VarArrayHighBound(Temp, 1)+1;
-                    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, TMemoryStream(Stream).Memory^, Stream.Size);
-                    RS.UpdateBinaryStream(I, Stream);
-                    FreeAndNil(Stream);
-                  finally
-                    VarArrayUnLock(Temp);
+                  Stream := TStringStream.Create(AnsiString(Temp));
+                  RS.UpdateBinaryStream(I, Stream);
+                  FreeAndNil(Stream);
+                end
+                else
+                  if VarIsArray(Temp) then
+                  begin
+                    P := VarArrayLock(Temp);
+                    try
+                      Stream := TMemoryStream.Create;
+                      Stream.Size {%H-}:= VarArrayHighBound(Temp, 1)+1;
+                      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, TMemoryStream(Stream).Memory^, Stream.Size);
+                      RS.UpdateBinaryStream(I, Stream);
+                      FreeAndNil(Stream);
+                    finally
+                      VarArrayUnLock(Temp);
+                    end;
                   end;
-                end;
-            end
-          else
-            RS.UpdateNull(i);
+              end
+            else
+              RS.UpdateNull(i);
+          end;
         end;
+        RS.InsertRow;
       end;
-      RS.InsertRow;
+      Result := RS;
+    finally
+      ColumnsInfo.Free;
+      if Stream <> nil then
+        Stream.Free;
     end;
-    Result := RS;
-  finally
-    ColumnsInfo.Free;
-    if Stream <> nil then
-      Stream.Free;
-  end;
 end;
 
 {**
@@ -846,9 +863,24 @@ begin
 end;
 
 procedure TZAdoCallableStatement.PrepareInParameters;
+var I: Integer;
 begin
-  if InParamCount > 0 then
+  if InParamCount > 0 then begin
     RefreshParameters(FAdoCommand, @FDirectionTypes);
+    if Length(FDBParamTypes) <> FAdoCommand.Parameters.Count then begin
+      SetLength(FDBParamTypes, FAdoCommand.Parameters.Count);
+      SetLength(FDirectionTypes, Length(FDBParamTypes));
+      for i := 0 to high(FDBParamTypes) do begin
+        FDirectionTypes[i] := FAdoCommand.Parameters[i].Direction;
+        case FDirectionTypes[i] of
+          adParamInput: FDBParamTypes[i] := 1;
+          adParamOutput: FDBParamTypes[i] := 2;
+          adParamInputOutput: FDBParamTypes[i] := 3;
+          adParamReturnValue: FDBParamTypes[i] := 4;
+        end;
+      end;
+    end;
+  end;
   FAdoCommand.Prepared := True;
 end;
 
