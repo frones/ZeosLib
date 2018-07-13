@@ -127,6 +127,12 @@ const
     ttQuoted, ttQuoted, ttQuoted, ttQuoted, ttWord, ttQuoted);
   TokenValues3: array[0..5] of string = (
     'E''eee''', 'B''bbb''', 'X''xxx''', 'U&''uuu''', 'U$', '''zzz''');
+
+  TokenString4: string = '$body$ $1,$2 $body$ $$ $1,$2 $$';
+  TokenTypes4: array[0..1] of TZTokenType = (ttQuoted, ttQuoted);
+  TokenValues4: array[0..1] of string = (
+    '$body$ $1,$2 $body$', '$$ $1,$2 $$');
+
 begin
   //test seems to be plain wrong: https://sourceforge.net/p/zeoslib/tickets/214/
 //  (Tokenizer as TZPostgreSQLTokenizer).SetStandardConformingStrings(False);
@@ -140,11 +146,14 @@ begin
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1,
     [toSkipEOF, toSkipWhitespaces]), TokenTypes1On, TokenValues1On);
 
-//  CheckTokens(Tokenizer.TokenizeBuffer(TokenString2,
-//    [toSkipEOF, toSkipWhitespaces]), TokenTypes2, TokenValues2);
+  CheckTokens(Tokenizer.TokenizeBuffer(TokenString2,
+    [toSkipEOF, toSkipWhitespaces]), TokenTypes2, TokenValues2);
 
 //  CheckTokens(Tokenizer.TokenizeBuffer(TokenString3,
 //    [toSkipEOF, toSkipWhitespaces]), TokenTypes3, TokenValues3);
+
+  CheckTokens(Tokenizer.TokenizeBuffer(TokenString4,
+    [toSkipEOF, toSkipWhitespaces]), TokenTypes4, TokenValues4);
 end;
 
 {**
