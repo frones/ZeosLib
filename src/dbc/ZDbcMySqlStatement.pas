@@ -210,7 +210,6 @@ var
 {$IFOPT R+}
   {$DEFINE RangeCheckEnabled}
 {$ENDIF}
-const EnumQuotedBool: array[Boolean] of AnsiString = (#39'N'#39, #39'Y'#39);
 const EnumBool: array[Boolean] of AnsiString = ('N','Y');
 
 { TZAbstractMySQLPreparedStatement }

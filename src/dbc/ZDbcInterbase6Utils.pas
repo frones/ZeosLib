@@ -246,7 +246,7 @@ type
     procedure UpdateTimestamp(const Index: Integer; const Value: TDateTime);
     procedure UpdateQuad(const Index: Word; const Value: TISC_QUAD);
     procedure UpdateArray(const Index: Word; const {%H-}Value; const {%H-}SQLType: TZSQLType;
-      const VariantType: TZVariantType = vtNull);
+      const {%H-}VariantType: TZVariantType = vtNull);
     function GetAsLogValue(Index: Word): RawByteString;
   end;
 

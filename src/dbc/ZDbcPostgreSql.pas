@@ -359,7 +359,8 @@ end;
 }
 destructor TZPostgreSQLConnection.Destroy;
 begin
-  FreeAndNil(FTypeList);
+  if FTypeList <> nil then
+    FreeAndNil(FTypeList);
   inherited Destroy;
   FreeAndNil(FPreparedStatementTrashBin);
 end;

@@ -2809,7 +2809,7 @@ function DateTimeToRawSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
 begin
-  ZSetString(nil, ConFormatSettings.DateFormatLen+(Ord(Quoted) shl 1)+Length(Suffix), Result);
+  ZSetString(nil, ConFormatSettings.DateFormatLen+Byte((Ord(Quoted) shl 1))+Cardinal(Length(Suffix)), Result);
   DateTimeToRawSQLDate(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
 end;
 
@@ -2927,7 +2927,7 @@ function DateTimeToRawSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
 begin
-  ZSetString(nil, ConFormatSettings.TimeFormatLen+(Ord(Quoted) shl 1)+Length(Suffix), Result);
+  ZSetString(nil, ConFormatSettings.TimeFormatLen+Byte((Ord(Quoted) shl 1))+Cardinal(Length(Suffix)), Result);
   DateTimeToRawSQLTime(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
 end;
 
@@ -3058,7 +3058,7 @@ function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
 begin
-  ZSetString(nil, ConFormatSettings.DateTimeFormatLen+(Ord(Quoted) shl 1)+Length(Suffix), Result);
+  ZSetString(nil, ConFormatSettings.DateTimeFormatLen+Byte((Ord(Quoted) shl 1))+Cardinal(Length(Suffix)), Result);
   DateTimeToRawSQLTimeStamp(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
 end;
 

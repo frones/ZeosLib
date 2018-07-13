@@ -133,7 +133,7 @@ type
     procedure GetPChar(Index: Integer; out Buf: Pointer; out Len: LengthInt; CodePage: Word); override;
   protected
     procedure FlushPendingResults;
-    function CreateResultSet(ServerCursor: Boolean): IZResultSet;
+    function CreateResultSet({%H-}ServerCursor: Boolean): IZResultSet;
     function ExecuteInternal(const SQL: RawByteString;
       Category: TPQV3ExecCatagory): TPGresult; virtual;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;

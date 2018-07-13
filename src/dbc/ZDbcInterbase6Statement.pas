@@ -91,10 +91,10 @@ type
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
     procedure BindBoolean(Index: Integer; Value: Boolean); override;
     procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
-    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double); override;
-    procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
-    procedure BindNull(Index: Integer; SQLType: TZSQLType); override;
-    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); override;
+    procedure BindDouble(Index: Integer; {%H-}SQLType: TZSQLType; const Value: Double); override;
+    procedure BindLob(Index: Integer; {%H-}SQLType: TZSQLType; const Value: IZBlob); override;
+    procedure BindNull(Index: Integer; {%H-}SQLType: TZSQLType); override;
+    procedure BindSignedOrdinal(Index: Integer; {%H-}SQLType: TZSQLType; const Value: Int64); override;
     procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
@@ -142,8 +142,7 @@ type
 
 implementation
 
-uses Math, ZSysUtils, ZDbcUtils, ZFastCode, ZEncoding,
-  ZDbcInterbase6ResultSet, ZDbcProperties;
+uses ZSysUtils, ZFastCode, ZEncoding, ZDbcInterbase6ResultSet;
 
 { TZAbstractInterbase6PreparedStatement }
 
@@ -722,7 +721,7 @@ function TZInterbase6CallableStatement.CreateExecutionStatement(
 var
   P: PChar;
   I: Integer;
-  SQL: String;
+  SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
 begin
   SQL := '';
   if mode = zcekParams

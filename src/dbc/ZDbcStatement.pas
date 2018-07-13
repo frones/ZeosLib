@@ -6344,7 +6344,7 @@ begin
     UniTemp := ConSettings^.ConvFuncs.ZStringToUnicode(Value, ConSettings^.CTRL_CP);
     BindList.Put(ParameterIndex, stString, UniTemp);
   end else if ConSettings.AutoEncode then
-    BindList.Put(ParameterIndex, stString, ConSettings.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, ConSettings^.ClientCodePage^.CP))
+    BindList.Put(ParameterIndex, stString, ConSettings.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, ConSettings^.ClientCodePage^.CP), ConSettings^.ClientCodePage^.CP)
   else
     BindList.Put(ParameterIndex, stString, RawByteString(Value), ConSettings^.ClientCodePage^.CP);
   {$ENDIF}
