@@ -394,6 +394,7 @@ begin
                 FParams);
               Statement.ExecuteUpdatePrepared;
             end;
+          Statement.Close; //see test Test1049821: if LastResultSet is assigned
           Statement := nil;
         except
           on E: Exception do
