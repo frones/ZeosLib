@@ -585,7 +585,6 @@ type
     procedure SetMaxFieldSize(Value: Integer);
     function GetMaxRows: Integer;
     procedure SetMaxRows(Value: Integer);
-    procedure SetEscapeProcessing(Value: Boolean);
     function GetQueryTimeout: Integer;
     procedure SetQueryTimeout(Value: Integer);
     procedure Cancel;
@@ -690,61 +689,93 @@ type
     Fractions: LongWord;
   end;
   TZParamType = (zptUnknown, zptInput, zptOutput, zptInputOutput, zptResult);
+  TZParamTypeDynArray = array of TZParamType;
 
-  IZPreparedStatement2 = interface(IZStatement)
-    ['{369619C5-B0C4-4F57-B43E-F86A27F8A98C}']
-    function ExecuteQueryPrepared: IZResultSet; overload;
-    procedure ExecuteQueryPrepared(var Result: IZResultSet); overload; //faster version -> by ref
+  {** Callable SQL statement interface. }
+  IZCallableStatement = interface(IZPreparedStatement)
+    ['{E6FA6C18-C764-4C05-8FCB-0582BDD1EF40}']
+    {IZStatement}
+    procedure Close;
+    function IsClosed: Boolean;
+
+    function GetMaxFieldSize: Integer;
+    procedure SetMaxFieldSize(Value: Integer);
+    function GetMaxRows: Integer;
+    procedure SetMaxRows(Value: Integer);
+    function GetQueryTimeout: Integer;
+    procedure SetQueryTimeout(Value: Integer);
+    procedure Cancel;
+    procedure SetCursorName(const Value: AnsiString);
+
+    function GetResultSet: IZResultSet;
+    function GetUpdateCount: Integer;
+    function GetMoreResults: Boolean;
+
+    procedure SetFetchDirection(Value: TZFetchDirection);
+    function GetFetchDirection: TZFetchDirection;
+    procedure SetFetchSize(Value: Integer);
+    function GetFetchSize: Integer;
+
+    procedure SetResultSetConcurrency(Value: TZResultSetConcurrency);
+    function GetResultSetConcurrency: TZResultSetConcurrency;
+    procedure SetResultSetType(Value: TZResultSetType);
+    function GetResultSetType: TZResultSetType;
+
+    procedure SetPostUpdates(Value: TZPostUpdatesMode);
+    function GetPostUpdates: TZPostUpdatesMode;
+    procedure SetLocateUpdates(Value: TZLocateUpdatesMode);
+    function GetLocateUpdates: TZLocateUpdatesMode;
+
+    function GetConnection: IZConnection;
+    function GetParameters: TStrings;
+    function GetChunkSize: Integer;
+
+    function GetWarnings: EZSQLWarning;
+    procedure ClearWarnings;
+    procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
+    {IZPreparedStatement}
+    function ExecuteQueryPrepared: IZResultSet;
     function ExecuteUpdatePrepared: Integer;
     function ExecutePrepared: Boolean;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
-    procedure SetBigDecimal(Index: Integer; const Value: TZBCD);
-    procedure SetBinary(Index: Integer; SQLType: TZSQLType; Value: Pointer; Len: PLengthInt; ByRef: Boolean);
-    procedure SetBoolean(Index: Integer; Value: Boolean);
-    procedure SetBytes(Index: Integer; const Value: TBytes);
-    procedure SetCurrency(Index: Integer; const Value: Currency);
-    procedure SetPChar(Index: Integer; const Value: TZCharRec; ByRef: Boolean);
-    procedure SetDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime);
-    procedure SetDouble(Index: Integer; SQLType: TZSQLType; const Value: Double);
-    procedure SetLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob);
-    procedure SetNull(Index: Integer; SQLType: TZSQLType);
-    procedure SetOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); overload;
-    procedure SetOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64);overload;
-    procedure SetRawByteString(Index: Integer; SQLType: TZSQLType; const Value: RawByteString; CodePage: Word);
-    procedure SetTimeStamp(Index: Integer; SQLType: TZSQLType; const Value: TZTimeStamp);
-    procedure SetUnicodeString(Index: Integer; SQLType: TZSQLType; const Value: ZWideString);
-    procedure SetValue(Index: Integer; const Value: TZVariant);
-
-    procedure SetNullArray(Index: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
-    procedure SetDataArray(Index: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
-
-    function IsNull(Index: Integer): Boolean;
-    procedure GetBigDecimal(Index: Integer; var Result: TZBCD);
-    procedure GetBoolean(Index: Integer; var Result: Boolean);
-    procedure GetBytes(Index: Integer; var Buf: Pointer; var Len: LengthInt);
-    procedure GetCurrency(Index: Integer; var Result: Currency);
-    procedure GetPChar(Index: Integer; var Buf: Pointer; var Len: LengthInt; CodePage: Word);
-    procedure GetDateTime(Index: Integer; var Result: TDateTime);
-    procedure GetDouble(Index: Integer; var Result: Double);
-    procedure GetLob(Index: Integer; var Result: IZBlob);
-    procedure GetOrdinal(Index: Integer; var Result: Int64); overload;
-    procedure GetOrdinal(Index: Integer; var Result: UInt64); overload;
-    procedure GetRawByteString(Index: Integer; var Result: RawByteString; CodePage: Word);
-    procedure GetTimeStamp(Index: Integer; var Value: TZTimeStamp);
-    procedure GetUnicodeString(Index: Integer; var Result: ZWideString);
-    procedure GetValue(Index: Integer; var Result: TZVariant);
-
-    procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
-      ParamType: TZParamType; ParamSize: LengthInt = -1);
+    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
+    procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
+    procedure SetByte(ParameterIndex: Integer; Value: Byte);
+    procedure SetShort(ParameterIndex: Integer; Value: ShortInt);
+    procedure SetWord(ParameterIndex: Integer; Value: Word);
+    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt);
+    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal);
+    procedure SetInt(ParameterIndex: Integer; Value: Integer);
+    procedure SetULong(ParameterIndex: Integer; const Value: UInt64);
+    procedure SetLong(ParameterIndex: Integer; const Value: Int64);
+    procedure SetFloat(ParameterIndex: Integer; Value: Single);
+    procedure SetDouble(ParameterIndex: Integer; const Value: Double);
+    procedure SetCurrency(ParameterIndex: Integer; const Value: Currency);
+    procedure SetBigDecimal(ParameterIndex: Integer; const Value: Extended);
+    procedure SetPChar(ParameterIndex: Integer; Value: PChar);
+    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
+    procedure SetString(ParameterIndex: Integer; const Value: String);
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); //AVZ
+    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes);
+    procedure SetGuid(ParameterIndex: Integer; const Value: TGUID);
+    procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString);
+    procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String);
+    procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString);
+    procedure SetDate(ParameterIndex: Integer; const Value: TDateTime);
+    procedure SetTime(ParameterIndex: Integer; const Value: TDateTime);
+    procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime);
+    procedure SetAsciiStream(ParameterIndex: Integer; const Value: TStream);
+    procedure SetUnicodeStream(ParameterIndex: Integer; const Value: TStream);
+    procedure SetBinaryStream(ParameterIndex: Integer; const Value: TStream);
+    procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob);
+    procedure SetValue(ParameterIndex: Integer; const Value: TZVariant);
+    procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
+    procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
 
     procedure ClearParameters;
-  end;
 
-  {** Callable SQL statement interface. }
-  IZCallableStatement = interface(IZPreparedStatement)
-    ['{E6FA6C18-C764-4C05-8FCB-0582BDD1EF40}']
     { Multiple ResultSet support API }
     function GetFirstResultSet: IZResultSet;
     function GetPreviousResultSet: IZResultSet;
@@ -755,12 +786,13 @@ type
     function GetResultSetByIndex(const Index: Integer): IZResultSet;
     function GetResultSetCount: Integer;
 
-    procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer);
-    procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer);
-//    procedure RegisterParameter(ParameterIndex: Integer;
-  //    SQLType: TZSQLType; ParamType: TZParamType; ParamSize: LengthInt = -1);
-    function WasNull: Boolean;
+    procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer); //deprecated;
+    procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer); //deprecated;
 
+(*    procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
+      ParamType: TZParamType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
+      {%H-}Scale: LengthInt = 0);
+*)
     function IsNull(ParameterIndex: Integer): Boolean;
     function GetPChar(ParameterIndex: Integer): PChar;
     function GetString(ParameterIndex: Integer): String;

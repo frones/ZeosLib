@@ -792,7 +792,7 @@ var
     Result := '';
     for I := 0 to Count - 1 do
     begin
-      if ( FDBParamTypes[I] = 4 ) then //ptResult
+      if ( FDBParamTypes[I] = zptResult ) then
       begin
         sFunc := ' :'+FOracleParams[0].pName+' := ';
         continue;

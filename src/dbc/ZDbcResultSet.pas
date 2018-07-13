@@ -1243,7 +1243,11 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stULong);
 {$ENDIF}
-  Result := GetLong(ColumnIndex);
+  if TZColumnInfo(FColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType in [stString, stUnicodeString,stAsciiStream,stUnicodeStream] then
+    if ConSettings^.ClientCodePage.Encoding = ceUTF16
+    then Result := UnicodeToUInt64Def(GetPWideChar(ColumnIndex), 0)
+    else Result := RawToUInt64Def(GetPAnsiChar(ColumnIndex), 0)
+  else Result := GetLong(ColumnIndex);
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 

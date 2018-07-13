@@ -765,13 +765,13 @@ begin
     SetLength(FDirectionTypes, ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
 
   case Self.FDBParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
-    1: //ptInput
+    zptInput:
       FDirectionTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := adParamInput;
-    2: //ptOut
+    zptOutput:
       FDirectionTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := adParamOutput;
-    3: //ptInputOutput
+    zptInputOutput:
       FDirectionTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := adParamInputOutput;
-    4: //ptResult
+    zptResult:
       FDirectionTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := adParamReturnValue;
     else
       //ptUnknown
@@ -873,10 +873,10 @@ begin
       for i := 0 to high(FDBParamTypes) do begin
         FDirectionTypes[i] := FAdoCommand.Parameters[i].Direction;
         case FDirectionTypes[i] of
-          adParamInput: FDBParamTypes[i] := 1;
-          adParamOutput: FDBParamTypes[i] := 2;
-          adParamInputOutput: FDBParamTypes[i] := 3;
-          adParamReturnValue: FDBParamTypes[i] := 4;
+          adParamInput: FDBParamTypes[i] := zptInput;
+          adParamOutput: FDBParamTypes[i] := zptOutPut;
+          adParamInputOutput: FDBParamTypes[i] := zptInputOutput;
+          adParamReturnValue: FDBParamTypes[i] := zptResult;
         end;
       end;
     end;
@@ -892,7 +892,7 @@ begin
     Exit
   else
     for i := 0 to InParamCount-1 do
-      if FDBParamTypes[i] in [1,3] then //ptInput, ptInputOutput
+      if FDBParamTypes[i] in [zptInput, zptInputOutput] then
         if ClientVarManager.IsNull(InParamValues[i]) then
           if (InParamDefaultValues[i] <> '') and (UpperCase(InParamDefaultValues[i]) <> 'NULL') and
             StrToBoolEx(DefineStatementParameter(Self, DSProps_Defaults, 'true')) then
