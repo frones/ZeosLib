@@ -733,7 +733,7 @@ begin
   if IsClosed then
      Open;
   if GetServerMajorVersion >= 3 then
-  Result := TZPostgreSQLPreparedStatementV3.Create(Self, SQL, Info)
+    Result := TZPostgreSQLPreparedStatementV3.Create(Self, SQL, Info)
   else
     Result := TZPostgreSQLPreparedStatementV3.Create(Self, SQL, Info)
 end;

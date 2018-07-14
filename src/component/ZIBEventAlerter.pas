@@ -116,7 +116,7 @@ type
 implementation
 
 uses
-  SyncObjs;
+  SyncObjs, ZClasses;
 
 const
   IB_MAX_EVENT_BLOCK = 15;   // maximum events handled per block by InterBase

@@ -185,7 +185,7 @@ implementation
 
 uses
   Variants, Math, ComObj,
-  ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode;
+  ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode, ZClasses;
 
 {$IFOPT R+}
   {$DEFINE WITH_RANGE_CHECK}

@@ -228,7 +228,7 @@ implementation
 
 uses ZFastCode, ZDbcInterbase6Statement, ZDbcInterbase6Metadata, ZEncoding,
   ZInterbaseToken, ZInterbaseAnalyser, ZDbcMetadata, ZMessages,
-  ZConnProperties, ZDbcProperties
+  ZConnProperties, ZDbcProperties, ZClasses
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZInterbase6Driver }

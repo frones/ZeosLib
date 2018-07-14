@@ -122,7 +122,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS} AnsiStrings,{$ENDIF} ZDbcSqLiteUtils,
   ZDbcSqLiteResultSet, ZSysUtils, ZEncoding, ZMessages, ZDbcCachedResultSet,
-  ZDbcUtils, ZDbcProperties, ZFastCode;
+  ZDbcUtils, ZDbcProperties, ZFastCode, ZClasses;
 
 const DeprecatedBoolRaw: array[Boolean] of AnsiString = ('N','Y');
 

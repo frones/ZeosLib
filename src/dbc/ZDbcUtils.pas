@@ -203,7 +203,7 @@ function IsNullFromArray(ZArray: PZArray; Index: Cardinal): Boolean;
 implementation
 
 uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken,
-  ZConnProperties, ZDbcProperties;
+  ZConnProperties, ZDbcProperties, ZClasses;
 
 {**
   Resolves a connection protocol and raises an exception with protocol

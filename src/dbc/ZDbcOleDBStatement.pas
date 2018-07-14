@@ -136,7 +136,7 @@ implementation
 uses
   Variants, ComObj, Math,
   ZDbcOleDB, ZDbcOleDBResultSet, ZEncoding, ZDbcLogging,
-  ZFastCode, ZDbcMetadata, ZDbcUtils, ZMessages;
+  ZFastCode, ZDbcMetadata, ZDbcUtils, ZMessages, ZClasses;
 
 { TZOleDBPreparedStatement }
 

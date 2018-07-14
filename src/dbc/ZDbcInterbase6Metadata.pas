@@ -280,7 +280,7 @@ type
 
 implementation
 
-uses ZMessages, ZDbcInterbase6Utils, ZPlainFirebirdInterbaseConstants,
+uses ZMessages, ZDbcInterbase6Utils, ZPlainFirebirdInterbaseConstants, ZClasses,
   ZFastCode, ZSelectSchema;
 
 const

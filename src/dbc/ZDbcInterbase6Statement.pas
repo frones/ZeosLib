@@ -142,7 +142,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZFastCode, ZEncoding, ZDbcInterbase6ResultSet;
+uses ZSysUtils, ZFastCode, ZEncoding, ZDbcInterbase6ResultSet, ZClasses;
 
 { TZAbstractInterbase6PreparedStatement }
 

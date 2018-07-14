@@ -152,7 +152,7 @@ implementation
 
 uses Math, DateUtils,
   ZSysUtils, ZMessages, ZEncoding, ZDbcUtils, ZDbcResultSet, ZFastCode, ZDbcLogging,
-  ZDbcODBCUtils, ZDbcODBCResultSet, ZDbcCachedResultSet, ZDbcGenericResolver;
+  ZDbcODBCUtils, ZDbcODBCResultSet, ZDbcCachedResultSet, ZDbcGenericResolver, ZClasses;
 
 {$IFOPT R+}
   {$DEFINE RangeCheckEnabled}

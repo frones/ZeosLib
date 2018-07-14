@@ -195,7 +195,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZSysUtils, ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils,
-  ZEncoding, ZDbcProperties, ZTokenizer, Types, ZDbcResultSet;
+  ZEncoding, ZDbcProperties, ZTokenizer, Types, ZDbcResultSet, ZClasses;
 
 
 var

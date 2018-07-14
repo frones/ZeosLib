@@ -152,7 +152,7 @@ implementation
 uses
   ComObj, Variants, Math,
   ZSysUtils, ZDbcAdoResultSet, ZDbcCachedResultSet, ZDbcResultSet, ZDbcUtils,
-  ZMessages, ZEncoding, ZFastCode;
+  ZMessages, ZEncoding, ZFastCode, ZClasses;
 
 {**
   Converts an ADO native types into string related.

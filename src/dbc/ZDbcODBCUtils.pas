@@ -97,7 +97,7 @@ const
 
 implementation
 
-uses ZEncoding, ZSysUtils, ZMessages, ZDbcLogging, ZURL;
+uses ZEncoding, ZSysUtils, ZMessages, ZDbcLogging, ZURL, ZClasses;
 
 function SQL_SUCCEDED(RETCODE: SQLRETURN): Boolean;
 begin

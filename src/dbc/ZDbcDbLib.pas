@@ -155,7 +155,7 @@ uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZConnProperties, ZDbcProperties,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZSysUtils, ZMessages, ZDbcUtils, ZDbcDbLibStatement, ZEncoding, ZFastCode,
-  ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser{$IFDEF OLDFPC}, ZClasses{$ENDIF};
+  ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser, ZClasses;
 
 var
   DBLIBCriticalSection: TCriticalSection;

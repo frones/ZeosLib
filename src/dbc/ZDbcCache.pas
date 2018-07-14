@@ -285,7 +285,7 @@ implementation
   {$UNDEF RangeCheckEnabled}
 {$IFEND}
 
-uses ZFastcode, Math, ZMessages, ZSysUtils, ZDbcUtils, ZEncoding
+uses ZFastcode, Math, ZMessages, ZSysUtils, ZDbcUtils, ZEncoding, ZClasses
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 const

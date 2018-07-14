@@ -206,7 +206,7 @@ function MAXALIGN(nbytes: Integer): Integer;
 
 implementation
 
-uses Math, ZFastCode, ZMessages, ZSysUtils;
+uses Math, ZFastCode, ZMessages, ZSysUtils, ZClasses;
 
 {**
    Return ZSQLType from PostgreSQL type name
