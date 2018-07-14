@@ -138,8 +138,6 @@ type
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
-    function GetWarnings: EZSQLWarning; override;
-    procedure ClearWarnings; override;
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
     function GetServerAnsiCodePage: Word;
@@ -862,41 +860,6 @@ function TZDBLibConnection.GetCatalog: string;
 begin
   Result := String(GetPlainDriver.dbName(FHandle));
   CheckDBLibError(lcOther, 'GETCATALOG');
-end;
-
-{**
-  Returns the first warning reported by calls on this Connection.
-  <P><B>Note:</B> Subsequent warnings will be chained to this
-  SQLWarning.
-  @return the first SQLWarning or null
-}
-function TZDBLibConnection.GetWarnings: EZSQLWarning;
-begin
-  Result := nil;
-end;
-
-{**
-  Clears all warnings reported for this <code>Connection</code> object.
-  After a call to this method, the method <code>getWarnings</code>
-    returns null until a new warning is reported for this Connection.
-}
-procedure TZDBLibConnection.ClearWarnings;
-var
-  LogMessage: RawByteString;
-begin
-  if Closed then
-    Exit;
-
-  if not GetPlainDriver.dbDead(FHandle) then
-    InternalExecuteStatement('if @@trancount > 0 rollback');
-
-  LogMessage := 'CLOSE CONNECTION TO "'+RawByteString(HostName)+'" DATABASE "'+ConSettings^.Database+'"';
-  if GetPlainDriver.dbclose(FHandle) <> DBSUCCEED then
-    CheckDBLibError(lcDisConnect, LogMessage);
-  DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
-
-  FHandle := nil;
-  inherited;
 end;
 
 function TZDBLibConnection.GetBinaryEscapeString(const Value: TBytes): String;
