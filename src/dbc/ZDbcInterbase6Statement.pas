@@ -98,19 +98,10 @@ type
     procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
-  public //getters
-    function IsNull(Index: Integer): Boolean; override;
-    procedure GetBoolean(Index: Integer; out Result: Boolean); override;
-    procedure GetOrdinal(Index: Integer; out Result: Int64); override;
-    procedure GetCurrency(Index: Integer; out Result: Currency); override;
-    procedure GetDouble(Index: Integer; out Result: Double); override;
-    procedure GetBytes(Index: Integer; out Buf: Pointer; out Len: LengthInt); override;
-    procedure GetDateTime(Index: Integer; var Result: TDateTime); override;
-    procedure GetLob(Index: Integer; var Result: IZBlob); override;
-    procedure GetPChar(Index: Integer; out Buf: Pointer; out Len: LengthInt; CodePage: Word); override;
   protected
     procedure CheckParameterIndex(Value: Integer); override;
     function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
+    function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; override;
   protected
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -247,6 +238,13 @@ begin
       if Assigned(FBatchStmts[b][StatementType].Obj) then
         FBatchStmts[b][StatementType].Obj.ReleaseImmediat(Sender);
   inherited ReleaseImmediat(Sender);
+end;
+
+function TZAbstractInterbase6PreparedStatement.AlignParamterIndex2ResultSetIndex(
+  Value: Integer): Integer;
+begin
+  Result := inherited AlignParamterIndex2ResultSetIndex(Value);
+  Result := Result{$IFNDEF GENERIC_INDEX}+1{$ENDIF} - FParamSQLData.GetFieldCount
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.BindBinary(Index: Integer;
@@ -570,139 +568,11 @@ begin
   inherited ExecuteUpdatePrepared;
 end;
 
-procedure TZAbstractInterbase6PreparedStatement.GetBoolean(Index: Integer;
-  out Result: Boolean);
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Result := IZResultSet(FOpenResultSet).GetBoolean(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF} - FParamSQLData.GetFieldCount)
-  end else inherited GetBoolean(Index, Result);
-end;
-
-procedure TZAbstractInterbase6PreparedStatement.GetBytes(Index: Integer;
-  out Buf: Pointer; out Len: LengthInt);
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    {$IFDEF RangeCheckEnabled}{$R-}{$ENDIF}
-    with FResultXSQLDA.GetData.sqlvar[Index - FParamSQLData.GetFieldCount] do
-      case (sqltype and not(1)) of
-        SQL_TEXT: begin
-            Buf := sqldata;
-            Len := sqllen;
-          end;
-        SQL_VARYING: begin
-            Buf := @PISC_VARYING(sqldata).str[0];
-            Len := PISC_VARYING(sqldata).strlen;
-          end;
-        else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FResultXSQLDA.GetFieldAliasName(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF} - FParamSQLData.GetFieldCount),
-              GetNameSqlType(sqltype and not(1))]));
-      end
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  end else inherited GetBytes(Index, Buf, Len);
-end;
-
-procedure TZAbstractInterbase6PreparedStatement.GetCurrency(Index: Integer;
-  out Result: Currency);
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Result := IZResultSet(FOpenResultSet).GetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF} - FParamSQLData.GetFieldCount)
-  end else inherited GetCurrency(Index, Result);
-end;
-
-procedure TZAbstractInterbase6PreparedStatement.GetDateTime(Index: Integer;
-  var Result: TDateTime);
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Result := IZResultSet(FOpenResultSet).GetTimestamp(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF} - FParamSQLData.GetFieldCount)
-  end else RaiseUnsupportedException;
-end;
-
-procedure TZAbstractInterbase6PreparedStatement.GetDouble(Index: Integer;
-  out Result: Double);
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Result := IZResultSet(FOpenResultSet).GetDouble(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF} - FParamSQLData.GetFieldCount)
-  end else inherited GetDouble(Index, Result);
-end;
-
 function TZAbstractInterbase6PreparedStatement.GetInParamLogValue(
   ParamIndex: Integer): RawByteString;
 begin
-  Result := FParamSQLData.GetAsLogValue(ParamIndex);
-end;
-
-procedure TZAbstractInterbase6PreparedStatement.GetLob(Index: Integer;
-  var Result: IZBlob);
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Result := IZResultSet(FOpenResultSet).GetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF} - FParamSQLData.GetFieldCount)
-  end else inherited GetLob(Index, Result);
-end;
-
-procedure TZAbstractInterbase6PreparedStatement.GetOrdinal(Index: Integer;
-  out Result: Int64);
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Result := IZResultSet(FOpenResultSet).GetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF} - FParamSQLData.GetFieldCount)
-  end else inherited GetOrdinal(Index, Result);
-end;
-
-procedure TZAbstractInterbase6PreparedStatement.GetPChar(Index: Integer;
-  out Buf: Pointer; out Len: LengthInt; CodePage: Word);
-var L: NativeUInt;
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Buf := IZResultSet(FOpenResultSet).GetPAnsiChar(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF} - FParamSQLData.GetFieldCount, L);
-    Len := L;
-    if CodePage <> ConSettings^.ClientCodePage^.CP then begin
-      FUniTemp := PRawToUnicode(Buf, Len, ConSettings^.ClientCodePage^.CP);
-      if CodePage = zCP_UTF16 then begin
-        Buf := Pointer(FUniTemp);
-        Len := Length(FUniTemp);
-      end else begin
-        FRawTemp := ZUnicodeToRaw(FUniTemp, CodePage);
-        Buf := Pointer(FRawTemp);
-        Len := Length(FRawTemp);
-      end;
-    end;
-  end else
-    inherited GetPChar(Index, Buf, Len, CodePage);
-end;
-
-function TZAbstractInterbase6PreparedStatement.IsNull(
-  Index: Integer): Boolean;
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Result := IZResultSet(FOpenResultSet).IsNull(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF} - FParamSQLData.GetFieldCount)
-  end else Result := inherited IsNull(Index);
+  CheckParameterIndex(ParamIndex);
+  Result := FParamSQLData.GetAsLogValue(ParamIndex)
 end;
 
 { TZInterbase6Statement }

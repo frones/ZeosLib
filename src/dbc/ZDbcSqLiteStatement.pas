@@ -83,6 +83,7 @@ type
     function GetLastErrorCodeAndHandle(var StmtHandle: Psqlite3_stmt): Integer;
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
+    function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; override;
   protected
     procedure BindNull(Index: Integer; SQLType: TZSQLType); override;
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
@@ -196,6 +197,13 @@ begin
   end;
   if not FLateBound then
     FBindLater := False;
+end;
+
+function TZAbstractSQLiteCAPIPreparedStatement.AlignParamterIndex2ResultSetIndex(
+  Value: Integer): Integer;
+begin
+  Result := Value;
+  RaiseUnsupportedException;
 end;
 
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindBinary(Index: Integer;

@@ -120,17 +120,7 @@ type
     procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
 
     procedure CheckParameterIndex(Value: Integer); override;
-    function ParamterIndex2ResultSetIndex(Value: Integer): Integer;
-  public //getters
-    function IsNull(Index: Integer): Boolean; override;
-    procedure GetBoolean(Index: Integer; out Result: Boolean); override;
-    procedure GetOrdinal(Index: Integer; out Result: Int64); override;
-    procedure GetCurrency(Index: Integer; out Result: Currency); override;
-    procedure GetDouble(Index: Integer; out Result: Double); override;
-    procedure GetBytes(Index: Integer; out Buf: Pointer; out Len: LengthInt); override;
-    procedure GetDateTime(Index: Integer; var Result: TDateTime); override;
-    procedure GetLob(Index: Integer; var Result: IZBlob); override;
-    procedure GetPChar(Index: Integer; out Buf: Pointer; out Len: LengthInt; CodePage: Word); override;
+    function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; override;
   protected
     procedure FlushPendingResults;
     function CreateResultSet({%H-}ServerCursor: Boolean): IZResultSet;
@@ -1302,68 +1292,11 @@ begin
   end;
 end;
 
-procedure TZAbstractPostgreSQLPreparedStatementV3.GetBoolean(Index: Integer;
-  out Result: Boolean);
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Result := IZResultSet(FOpenResultSet).GetBoolean(ParamterIndex2ResultSetIndex(Index))
-  end else inherited GetBoolean(Index, Result);
-end;
-
-procedure TZAbstractPostgreSQLPreparedStatementV3.GetBytes(Index: Integer;
-  out Buf: Pointer; out Len: LengthInt);
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    BindList.Put(Index, stBytes, IZResultSet(FOpenResultSet).GetBytes(ParamterIndex2ResultSetIndex(Index)));
-    Buf := BindList[index].Value;
-    Len := Length(TBytes(BindList[index].Value));
-  end else inherited GetBytes(Index, Buf, Len);
-end;
-
 function TZAbstractPostgreSQLPreparedStatementV3.GetCompareFirstKeywordStrings: PPreparablePrefixTokens;
 begin
 { RealPrepared stmts:
   http://www.postgresql.org/docs/9.1/static/sql-prepare.html }
   Result := @PGPreparableTokens;
-end;
-
-procedure TZAbstractPostgreSQLPreparedStatementV3.GetCurrency(Index: Integer;
-  out Result: Currency);
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Result := IZResultSet(FOpenResultSet).GetCurrency(ParamterIndex2ResultSetIndex(Index))
-  end else inherited GetCurrency(Index, Result);
-end;
-
-procedure TZAbstractPostgreSQLPreparedStatementV3.GetDateTime(Index: Integer;
-  var Result: TDateTime);
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Result := IZResultSet(FOpenResultSet).GetTimeStamp(ParamterIndex2ResultSetIndex(Index));
-  end else inherited GetDateTime(Index, Result);
-end;
-
-procedure TZAbstractPostgreSQLPreparedStatementV3.GetDouble(Index: Integer;
-  out Result: Double);
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Result := IZResultSet(FOpenResultSet).GetDouble(ParamterIndex2ResultSetIndex(Index))
-  end else inherited GetDouble(Index, Result);
 end;
 
 function TZAbstractPostgreSQLPreparedStatementV3.GetInParamLogValue(
@@ -1403,53 +1336,6 @@ begin
     //zbtBCD: Result := '';
     else Result := '';
   end;
-end;
-
-procedure TZAbstractPostgreSQLPreparedStatementV3.GetLob(Index: Integer;
-  var Result: IZBlob);
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Result := IZResultSet(FOpenResultSet).GetBlob(ParamterIndex2ResultSetIndex(Index));
-  end else inherited GetLob(Index, Result);
-end;
-
-procedure TZAbstractPostgreSQLPreparedStatementV3.GetOrdinal(Index: Integer;
-  out Result: Int64);
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Result := IZResultSet(FOpenResultSet).GetLong(ParamterIndex2ResultSetIndex(Index))
-  end else inherited GetOrdinal(Index, Result);
-end;
-
-procedure TZAbstractPostgreSQLPreparedStatementV3.GetPChar(Index: Integer;
-  out Buf: Pointer; out Len: LengthInt; CodePage: Word);
-var L: NativeUInt;
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Buf := IZResultSet(FOpenResultSet).GetPAnsiChar(ParamterIndex2ResultSetIndex(Index), L);
-    Len := L;
-    if CodePage <> ConSettings^.ClientCodePage^.CP then begin
-      FUniTemp := PRawToUnicode(Buf, Len, ConSettings^.ClientCodePage^.CP);
-      if CodePage = zCP_UTF16 then begin
-        Buf := Pointer(FUniTemp);
-        Len := Length(FUniTemp);
-      end else begin
-        FRawTemp := ZUnicodeToRaw(FUniTemp, CodePage);
-        Buf := Pointer(FRawTemp);
-        Len := Length(FRawTemp);
-      end;
-    end;
-  end else
-    inherited GetPChar(Index, Buf, Len, CodePage);
 end;
 
 function TZAbstractPostgreSQLPreparedStatementV3.GetRawEncodedSQL(
@@ -1572,17 +1458,6 @@ begin
   Fres := ExecuteInternal(fASQL, pqPrepare)
 end;
 
-function TZAbstractPostgreSQLPreparedStatementV3.IsNull(
-  Index: Integer): Boolean;
-begin
-  CheckParameterIndex(Index);
-  if (BindList[Index].ParamType in [zptOutput..zptResult]) and Assigned(FOpenResultSet) then begin
-    if IZResultSet(FOpenResultSet).IsBeforeFirst then
-      IZResultSet(FOpenResultSet).Next;
-    Result := IZResultSet(FOpenResultSet).IsNull(ParamterIndex2ResultSetIndex(Index))
-  end else Result := inherited IsNull(Index);
-end;
-
 procedure TZAbstractPostgreSQLPreparedStatementV3.SetBindCapacity(Capacity: Integer);
 begin
   inherited SetBindCapacity(Capacity);
@@ -1632,11 +1507,11 @@ begin
   end;
 end;
 
-function TZAbstractPostgreSQLPreparedStatementV3.ParamterIndex2ResultSetIndex(
+function TZAbstractPostgreSQLPreparedStatementV3.AlignParamterIndex2ResultSetIndex(
   Value: Integer): Integer;
 var I: Integer;
 begin
-  Result := Value;
+  Result := inherited AlignParamterIndex2ResultSetIndex(Value);
   for i := Value downto 0 do
     if BindList.ParamTypes[i] in [zptUnknown, zptInput] then
       Dec(Result);
