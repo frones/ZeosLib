@@ -307,9 +307,9 @@ implementation
 
 uses
   Variants, ZGenericSqlToken, ZFastCode,
-  {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
-  {$IFDEF ENABLE_OLEDB} //Exclude for ADO
-  ZDbcOleDB, ZDbcOleDBUtils, ZDbcOleDBResultSet, ZDbcOleDBStatement
+  {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj{$else}ComObj{$endif},
+  ZDbcOleDBUtils{$IFDEF ENABLE_OLEDB} //Exclude for ADO
+  ,ZDbcOleDB, ZDbcOleDBResultSet, ZDbcOleDBStatement
   {$ENDIF};
 
 const bYesNo: Array[Boolean] of ZWideString = ('NO','YES');
