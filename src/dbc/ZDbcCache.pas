@@ -1335,7 +1335,7 @@ begin
       if JSONWriter.Expand then
         JSONWriter.AddString(JSONWriter.ColNames[I]);
       case FColumnTypes[C] of
-        stBoolean       : JSONWriter.AddShort(JSONBool[PWordBool(@FBuffer.Columns[FColumnOffsets[C] + 1])^]);
+        stBoolean       : JSONWriter.AddShort(JSONBool[PWord(@FBuffer.Columns[FColumnOffsets[C] + 1])^ <> 0]);
         stByte          : JSONWriter.AddU(PByte(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
         stShort         : JSONWriter.Add(PShortInt(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
         stWord          : JSONWriter.AddU(PWord(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
