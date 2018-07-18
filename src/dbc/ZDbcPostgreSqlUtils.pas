@@ -376,7 +376,7 @@ end;
 procedure SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: Boolean; out aOID: OID);
 begin
   case SQLType of
-    stUnknown: aOID := VOIDOID;
+    stUnknown: aOID := INVALIDOID;
     stBoolean: aOID := BOOLOID;
     stByte, stShort, stSmall: aOID := INT2OID;
     stWord, stInteger: aOID := INT4OID;
