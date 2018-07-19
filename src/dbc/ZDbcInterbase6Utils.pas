@@ -58,7 +58,7 @@ uses
   SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Types,
   ZDbcIntfs, ZDbcStatement, ZPlainFirebirdDriver, ZCompatibility,
   ZPlainFirebirdInterbaseConstants, ZDbcCachedResultSet, ZDbcLogging, ZMessages,
-  ZVariant;
+  ZVariant, ZClasses;
 
 type
   { Interbase Statement Type }
@@ -246,7 +246,7 @@ type
     procedure UpdateTimestamp(const Index: Integer; const Value: TDateTime);
     procedure UpdateQuad(const Index: Word; const Value: TISC_QUAD);
     procedure UpdateArray(const Index: Word; const {%H-}Value; const {%H-}SQLType: TZSQLType;
-      const VariantType: TZVariantType = vtNull);
+      const {%H-}VariantType: TZVariantType = vtNull);
     function GetAsLogValue(Index: Word): RawByteString;
   end;
 
@@ -302,11 +302,7 @@ procedure PrepareResultSqlData(const PlainDriver: TZInterbasePlainDriver;
   const ImmediatelyReleasable: IImmediatelyReleasable); overload;
 procedure BindSQLDAInParameters(BindList: TZBindList; const ParamSqlData: IZParamsSQLDA;
   const ConSettings: PZConSettings; const CodePageArray: TWordDynArray;
-  ArrayOffSet, ArrayItersCount: Integer); overload;
-procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
-  const InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
-  const InParamCount: Integer; const ParamSqlData: IZParamsSQLDA;
-  const ConSettings: PZConSettings; const CodePageArray: TWordDynArray); overload;
+  ArrayOffSet, ArrayItersCount: Integer);
 procedure FreeStatement(const PlainDriver: TZInterbasePlainDriver;
   StatementHandle: TISC_STMT_HANDLE; Options : Word);
 function GetStatementType(const PlainDriver: TZInterbasePlainDriver;
@@ -1208,117 +1204,6 @@ begin
     else
       Result := -1;
   end;
-end;
-
-procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
-  const InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
-  const InParamCount: Integer; const ParamSqlData: IZParamsSQLDA;
-  const ConSettings: PZConSettings; const CodePageArray: TWordDynArray);
-var
-  I, CP: Integer;
-  TempBlob: IZBlob;
-  Buffer: Pointer;
-  Len: Integer;
-  RawTemp: RawByteString;
-  CharRec: TZCharRec;
-begin
-  {$R-}
-  if InParamCount <> ParamSqlData.GetFieldCount then
-    raise EZSQLException.Create(SInvalidInputParameterCount);
-  for I := 0 to ParamSqlData.GetFieldCount - 1 do
-  begin
-    ParamSqlData.UpdateNull(I, SoftVarManager.IsNull(InParamValues[I]));
-    if SoftVarManager.IsNull(InParamValues[I])then Continue;
-    if ParamSqlData.GetIbSqlType(I) = SQL_NULL then Continue;
-    case InParamTypes[I] of
-      stBoolean:
-        ParamSqlData.UpdateBoolean(I,
-          ClientVarManager.GetAsBoolean(InParamValues[I]));
-      stByte, stShort, stSmall:
-        ParamSqlData.UpdateSmall(I,
-          ClientVarManager.GetAsInteger(InParamValues[I]));
-      stWord, stInteger:
-        ParamSqlData.UpdateInt(I,
-          ClientVarManager.GetAsInteger(InParamValues[I]));
-      stLongWord, stLong, stULong:
-        ParamSqlData.UpdateLong(I,
-          ClientVarManager.GetAsInteger(InParamValues[I]));
-      stFloat:
-        ParamSqlData.UpdateFloat(I,
-          ClientVarManager.GetAsFloat(InParamValues[I]));
-      stDouble:
-        ParamSqlData.UpdateDouble(I,
-          ClientVarManager.GetAsFloat(InParamValues[I]));
-      stBigDecimal, stCurrency:
-        ParamSqlData.UpdateBigDecimal(I,
-          ClientVarManager.GetAsFloat(InParamValues[I]));
-      stGUID, stString, stUnicodeString:
-        begin
-          CP := ParamSqlData.GetIbSqlType(I);
-          case CP of
-            SQL_TEXT, SQL_VARYING:
-              begin
-                CP := ParamSqlData.GetIbSqlSubType(I);  //get code page
-                if CP > High(CodePageArray) then
-                  CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP)
-                else
-                  CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], CodePageArray[CP]);
-              end;
-            else
-              CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP)
-          end;
-          ParamSqlData.UpdatePAnsiChar(I, CharRec.P, CharRec.Len);
-        end;
-      stBytes:
-        ParamSqlData.UpdateBytes(I,
-          ClientVarManager.GetAsBytes(InParamValues[I]));
-      stDate:
-        ParamSqlData.UpdateDate(I,
-          ClientVarManager.GetAsDateTime(InParamValues[I]));
-      stTime:
-        ParamSqlData.UpdateTime(I,
-          ClientVarManager.GetAsDateTime(InParamValues[I]));
-      stTimestamp:
-        ParamSqlData.UpdateTimestamp(I,
-          ClientVarManager.GetAsDateTime(InParamValues[I]));
-      stAsciiStream,
-      stUnicodeStream,
-      stBinaryStream:
-        begin
-          TempBlob := SoftVarManager.GetAsInterface(InParamValues[I]) as IZBlob;
-          if not TempBlob.IsEmpty then
-          begin
-            if (ParamSqlData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream] ) then
-              if TempBlob.IsClob then
-              begin
-                Buffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
-                Len := TempBlob.Length;
-              end
-              else
-              begin
-                RawTemp := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
-                Len := Length(RawTemp);
-                if Len = 0 then
-                  Buffer := PEmptyAnsiString
-                else
-                  Buffer := @RawTemp[1];
-              end
-            else
-            begin
-              Buffer := TempBlob.GetBuffer;
-              Len := TempBlob.Length;
-            end;
-            if Buffer <> nil then
-              ParamSqlData.WriteLobBuffer(i, Buffer, Len);
-          end else
-            ParamSqlData.UpdateNull(I, True);
-        end
-      else
-        raise EZIBConvertError.Create(SUnsupportedParameterType);
-    end;
-  end;
-   {$IFOPT D+}
-  {$ENDIF}
 end;
 
 procedure BindSQLDAInParameters(BindList: TZBindList;

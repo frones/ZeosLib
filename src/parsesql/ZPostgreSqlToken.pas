@@ -206,20 +206,49 @@ function TZPostgreSQLSymbolState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
 var
   NumToken: TZToken;
+  DollarCount, BodyTagLen: Integer;
+  TempTag: PChar;
 begin
   Result := inherited NextToken(SPos, NTerm, Tokenizer);
   //detecting Postgre Parameters as one ttWordState:
-  if (Result.P^ = '$') and (SPos < NTerm) and
-     ((Ord((SPos+1)^) >= Ord('0')) and (Ord((SPos+1)^) <= Ord('9'))) then begin
-    Inc(SPos);
-    if Tokenizer.NumberState <> nil then
-    NumToken := Tokenizer.NumberState.NextToken(SPos, NTerm, Tokenizer);
-    if NumToken.TokenType = ttInteger then begin
-      Result.TokenType := ttWord;
-      Result.L := Result.L+NumToken.L;
-      Exit;
-    end else
-      SPos := Result.P + Result.L-1;
+  if (Result.P^ = '$') and (SPos < NTerm) then begin
+    if ((Ord((SPos+1)^) >= Ord('0')) and (Ord((SPos+1)^) <= Ord('9'))) then begin
+      Inc(SPos);
+      if Tokenizer.NumberState <> nil then
+      NumToken := Tokenizer.NumberState.NextToken(SPos, NTerm, Tokenizer);
+      if (NumToken.TokenType = ttInteger) and ((SPos+1)^ <> '$') then begin
+        Result.TokenType := ttWord;
+        Result.L := Result.L+NumToken.L;
+        Exit;
+      end;
+    end;
+    //detect body tags as ttQuoted
+    //eg. $body$ .... $body$ or $$ .... $$
+    DollarCount := 1;
+    BodyTagLen := 1;
+    TempTag := nil;
+    while (SPos < NTerm) do begin
+      Inc(SPos);
+      //if Ord(SPos^) <= Ord(' ') then
+        //Break;
+      if SPos^ = '$' then begin
+        Inc(DollarCount);
+        if DollarCount = 2 then
+          BodyTagLen := SPos-Result.P
+        else if DollarCount = 3 then
+          TempTag := Spos
+        else if (DollarCount = 4) then
+          if ((Spos - TempTag) = BodyTagLen) and CompareMem(Result.P, TempTag, BodyTagLen*SizeOf(Char)) then begin
+            Result.L := (Spos - Result.P)+1;
+            Result.TokenType := ttQuoted;
+            Exit;
+          end else begin //$body$ .... $1, $2  .... $body$
+            DollarCount := 3;
+            TempTag := Spos;
+          end;
+      end;
+    end;
+    SPos := Result.P + Result.L-1;
   end;
 end;
 

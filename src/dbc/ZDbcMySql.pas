@@ -145,7 +145,7 @@ implementation
 uses
   ZMessages, ZSysUtils, ZDbcMySqlStatement, ZMySqlToken, ZFastCode,
   ZDbcMySqlUtils, ZDbcMySqlMetadata, ZMySqlAnalyser, TypInfo,
-  ZEncoding, ZConnProperties, ZDbcProperties;
+  ZEncoding, ZConnProperties, ZDbcProperties, ZClasses;
 
 { TZMySQLDriver }
 
@@ -417,7 +417,7 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     begin
       sMy_client_Opt := GetEnumName(TypeInfo(TMYSQL_CLIENT_OPTIONS), Integer(my_client_Opt));
       if StrToBoolEx(Info.Values[sMy_client_Opt]) then
-        ClientFlag := ClientFlag or (1 shl Integer(my_client_Opt));
+        ClientFlag := ClientFlag or Cardinal(1 shl Integer(my_client_Opt));
     end;
 
   { Set SSL properties before connect}

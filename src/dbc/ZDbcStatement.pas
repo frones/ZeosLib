@@ -93,16 +93,14 @@ type
     FCachedLob: Boolean;
     procedure SetLastResultSet(const ResultSet: IZResultSet); virtual;
   protected
+    FRefCountAdded: Boolean; //while closing / unpreparing we need to indicate if closing LastResultSet will detroy this object
+    //FLastResultSetRefCountAdded: Boolean; //did we do a _addref to the weak pointer referenced LastResulSet?
     fWBuffer: array[Byte] of WideChar;
     fABuffer: array[Byte] of AnsiChar;
     FWSQL: ZWideString;
     FaSQL: RawByteString;
     FStatementId : Integer;
     FOpenResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
-    procedure ToBuff(const Value: ZWideString; var Result: ZWideString); overload;
-    procedure ToBuff(const Value: RawByteString; var Result: RawByteString); overload;
-    procedure FlushBuff(var Result: ZWideString); overload;
-    procedure FlushBuff(var Result: RawByteString); overload;
     procedure PrepareOpenResultSetForReUse; virtual;
     procedure PrepareLastResultSetForReUse; virtual;
     procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
@@ -141,7 +139,12 @@ type
     function CreateStmtLogEvent(Category: TZLoggingCategory;
       const Msg: RawByteString=''): TZLoggingEvent;
   public
-    constructor Create(const Connection: IZConnection; Info: TStrings);
+    procedure ToBuff(const Value: ZWideString; var Result: ZWideString); overload;
+    procedure ToBuff(const Value: RawByteString; var Result: RawByteString); overload;
+    procedure FlushBuff(var Result: ZWideString); overload;
+    procedure FlushBuff(var Result: RawByteString); overload;
+  public
+    constructor Create(const Connection: IZConnection; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
     destructor Destroy; override;
 
     function ExecuteQuery(const SQL: ZWideString): IZResultSet; overload; virtual;
@@ -162,7 +165,6 @@ type
     procedure SetMaxFieldSize(Value: Integer); virtual;
     function GetMaxRows: Integer; virtual;
     procedure SetMaxRows(Value: Integer); virtual;
-    procedure SetEscapeProcessing(Value: Boolean); virtual;
     function GetQueryTimeout: Integer; virtual;
     procedure SetQueryTimeout(Value: Integer); virtual;
     procedure Cancel; virtual;
@@ -228,6 +230,7 @@ type
   {** Defines a static array of bind values. }
   TZTParamValueArray = array[0..High(Word)] of TZBindValue;
 
+  TZAbstractPreparedStatement2 = class; //forward
   TZBindList = class
   private
     FValues: PZTParamValueArray;
@@ -240,9 +243,9 @@ type
     {$ENDIF}
     function AquireBuffer(Index: Integer; SQLType: TZSQLType; BindType: TZBindType): PZBindValue; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     procedure SetCapacity(NewCapacity: Integer);
-    function Get(Index: Integer): PZBindValue; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
+    function Get(Index: Integer): PZBindValue; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     function GetBindType(Index: Integer): TZBindType; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-    function GetSQLType(Index: Integer): TZSQLType; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
+    function GetSQLType(Index: Integer): TZSQLType; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     function GetType(Index: Integer): TZParamType; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     function GetVariant(Index: Integer): TZVariant;
     function GetArray(Index: Integer): PZArray; {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -270,6 +273,9 @@ type
     procedure SetCount(NewCount: Integer);
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
     procedure FlushAll;
+
+    procedure BindValuesToStatement(Stmt: TZAbstractPreparedStatement2; SupportsBidirectionalParms: Boolean);
+    function HasOutParams: Boolean;
   public
     property Count: Integer read FCount write SetCount;
     property Capacity: Integer read FCapacity write SetCapacity;
@@ -285,7 +291,7 @@ type
   {** Implements Abstract Prepared SQL Statement. }
 
   { TZAbstractPreparedStatement }
-
+  {$WARNINGS OFF}
   TZAbstractPreparedStatement2 = class(TZAbstractStatement, IImmediatelyReleasable)
   private
     FInitialArrayCount: ArrayLenInt;
@@ -294,10 +300,13 @@ type
     FSupportsDMLBatchArrays: Boolean;
     FBindList: TZBindList;
   protected
+    FUniTemp: ZWideString;
+    FRawTemp: RawByteString;
     FTokenMatchIndex, //did we match a token to indicate if Prepare makes sense?
     FCountOfQueryParams, //how many params did we found to prepvent mem-reallocs?
     FMinExecCount2Prepare: Integer; //how many executions must be done to fall into a real prepared mode?
     FGUIDAsString: Boolean; //How should a GUID value be treaded?
+    FHasInOutParams: Boolean; //are Input/output params registered?
     property TokenMatchIndex: Integer read FTokenMatchIndex;
     procedure CheckParameterIndex(Value: Integer); virtual;
     procedure PrepareInParameters; virtual;
@@ -313,6 +322,8 @@ type
     procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = '');
     function GetInParamLogValue(ParamIndex: Integer): RawByteString; virtual;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; virtual;
+    function SupportsBidirectionalParms: Boolean; virtual;
+    function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; virtual;
   protected //Properties
     property ArrayCount: ArrayLenInt read FInitialArrayCount;
     property ExecutionCount: Integer read FExecCount;
@@ -332,19 +343,8 @@ type
     procedure BindNull(Index: Integer; SQLType: TZSQLType); virtual;
     procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); virtual;
     procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); virtual;
-
-    procedure GetOrdinal(Index: Integer; out Result: Int64); overload; virtual;
-    procedure GetOrdinal(Index: Integer; out Result: UInt64); overload; virtual;
-    procedure GetCurrency(Index: Integer; out Result: Currency); overload; virtual;
-    procedure GetDouble(Index: Integer; out Result: Double); overload; virtual;
-    procedure GetBigDecimal(Index: Integer; var Result: TZBCD); overload; virtual;
-    procedure GetBytes(Index: Integer; out Buf: Pointer; out Len: LengthInt); overload; virtual;
-    procedure GetDateTime(Index: Integer; var Result: TDateTime); virtual;
-    procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); overload; virtual;
-    procedure GetLob(Index: Integer; var Result: IZBlob); virtual;
-    procedure GetPChar(Index: Integer; out Buf: Pointer; out Len: LengthInt; CodePage: Word); overload; virtual;
   public
-    constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
+    constructor Create(const Connection: IZConnection; const SQL: string; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
     destructor Destroy; override;
 
     function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
@@ -407,31 +407,18 @@ type
       ParamType: TZParamType; const Name: String = ''; {%H-}PrecisionOrSize: LengthInt = 0;
       {%H-}Scale: LengthInt = 0); virtual;
 
-    function IsNull({%H-}ParameterIndex: Integer): Boolean; virtual;
-    function GetPChar(ParameterIndex: Integer): PChar; overload;
-    function GetString(ParameterIndex: Integer): String;
-    function GetAnsiString(ParameterIndex: Integer): AnsiString;
-    function GetUTF8String(ParameterIndex: Integer): UTF8String;
-    function GetRawByteString(ParameterIndex: Integer): RawByteString;
-    function GetUnicodeString(ParameterIndex: Integer): ZWideString;
-    function GetBoolean(ParameterIndex: Integer): Boolean; overload; virtual;
-    function GetByte(ParameterIndex: Integer): Byte; virtual;
-    function GetShort(ParameterIndex: Integer): ShortInt; virtual;
-    function GetWord(ParameterIndex: Integer): Word; virtual;
-    function GetSmall(ParameterIndex: Integer): SmallInt; virtual;
-    function GetUInt(ParameterIndex: Integer): Cardinal; virtual;
-    function GetInt(ParameterIndex: Integer): Integer; virtual;
-    function GetULong(ParameterIndex: Integer): UInt64; virtual;
-    function GetLong(ParameterIndex: Integer): Int64; virtual;
-    function GetFloat(ParameterIndex: Integer): Single; virtual;
-    function GetDouble(ParameterIndex: Integer): Double; overload; virtual;
-    function GetCurrency(ParameterIndex: Integer): Currency; overload;
-    function GetBigDecimal(ParameterIndex: Integer): Extended; overload; virtual;
-    function GetBytes(ParameterIndex: Integer): TBytes; overload; virtual;
-    function GetDate(ParameterIndex: Integer): TDateTime; virtual;
-    function GetTime(ParameterIndex: Integer): TDateTime; virtual;
-    function GetTimestamp(ParameterIndex: Integer): TDateTime; overload; virtual;
-    function GetValue(ParameterIndex: Integer): TZVariant; virtual;
+    function IsNull({%H-}Index: Integer): Boolean; virtual;
+    procedure GetBoolean(Index: Integer; out Result: Boolean); overload; virtual;
+    procedure GetOrdinal(Index: Integer; out Result: Int64); overload; virtual;
+    procedure GetOrdinal(Index: Integer; out Result: UInt64); overload; virtual;
+    procedure GetCurrency(Index: Integer; out Result: Currency); overload; virtual;
+    procedure GetDouble(Index: Integer; out Result: Double); overload; virtual;
+    procedure GetBigDecimal(Index: Integer; var Result: TZBCD); overload; virtual;
+    procedure GetBytes(Index: Integer; out Buf: Pointer; out Len: LengthInt); overload; virtual;
+    procedure GetDateTime(Index: Integer; var Result: TDateTime); virtual;
+    procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); overload; virtual;
+    procedure GetLob(Index: Integer; var Result: IZBlob); virtual;
+    procedure GetPChar(Index: Integer; out Buf: Pointer; out Len: LengthInt; CodePage: Word); overload; virtual;
 
     procedure ClearParameters; virtual;
 
@@ -440,6 +427,7 @@ type
     procedure SetResultSetConcurrency(Value: TZResultSetConcurrency); override;
     procedure SetResultSetType(Value: TZResultSetType); override;
   end;
+  {$WARNINGS ON}
 
   TZRawPreparedStatement = class(TZAbstractPreparedStatement2)
   protected
@@ -497,6 +485,89 @@ type
   public
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
     procedure Unprepare; override;
+  end;
+
+  TZCallExecKind = (zcekParams, zcekSelect);
+
+  TZAbstractCallableStatement2 = class(TZAbstractPreparedStatement2)
+  private
+    FStoredProcName: String;
+    FCallExecKind: TZCallExecKind;
+  protected
+    FExecStatements: array[TZCallExecKind] of TZAbstractPreparedStatement2;
+    function CreateExecutionStatement(Mode: TZCallExecKind; const StoredProcName: String): TZAbstractPreparedStatement2; virtual; abstract;
+    procedure BindInParameters; override;
+    procedure PrepareInParameters; override;
+  public //value getter
+    function IsNull({%H-}ParameterIndex: Integer): Boolean; override;
+    function GetPChar(ParameterIndex: Integer): PChar; overload;
+    function GetString(ParameterIndex: Integer): String;
+    function GetAnsiString(ParameterIndex: Integer): AnsiString;
+    function GetUTF8String(ParameterIndex: Integer): UTF8String;
+    function GetRawByteString(ParameterIndex: Integer): RawByteString;
+    function GetUnicodeString(ParameterIndex: Integer): ZWideString;
+    function GetBoolean(ParameterIndex: Integer): Boolean; overload;
+    function GetByte(ParameterIndex: Integer): Byte;
+    function GetShort(ParameterIndex: Integer): ShortInt;
+    function GetWord(ParameterIndex: Integer): Word;
+    function GetSmall(ParameterIndex: Integer): SmallInt;
+    function GetUInt(ParameterIndex: Integer): Cardinal;
+    function GetInt(ParameterIndex: Integer): Integer;
+    function GetULong(ParameterIndex: Integer): UInt64;
+    function GetLong(ParameterIndex: Integer): Int64;
+    function GetFloat(ParameterIndex: Integer): Single;
+    function GetDouble(ParameterIndex: Integer): Double; overload;
+    function GetCurrency(ParameterIndex: Integer): Currency; overload;
+    function GetBigDecimal(ParameterIndex: Integer): Extended; overload;
+    function GetBytes(ParameterIndex: Integer): TBytes; overload;
+    function GetDate(ParameterIndex: Integer): TDateTime;
+    function GetTime(ParameterIndex: Integer): TDateTime;
+    function GetTimestamp(ParameterIndex: Integer): TDateTime; overload;
+    function GetValue(ParameterIndex: Integer): TZVariant;
+  public
+    function GetResultSet: IZResultSet; override;
+    function GetUpdateCount: Integer; override;
+    function GetMoreResults: Boolean; override;
+  public
+    procedure SetDefaultValue(ParameterIndex: Integer; const Value: String); override;
+    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); override;
+    procedure SetString(ParameterIndex: Integer; const Value: String); override;
+    procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); override;
+    procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); override;
+    procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); override;
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); override;
+  public //additional IZCallableStatement api
+    function GetFirstResultSet: IZResultSet; virtual;
+    function GetPreviousResultSet: IZResultSet; virtual;
+    function GetNextResultSet: IZResultSet; virtual;
+    function GetLastResultSet: IZResultSet; virtual;
+    function BOR: Boolean; virtual;
+    function EOR: Boolean; virtual;
+    function GetResultSetByIndex(const {%H-}Index: Integer): IZResultSet; virtual;
+    function GetResultSetCount: Integer; virtual;
+
+    procedure RegisterOutParameter(ParameterIndex: Integer;
+      SQLType: Integer); virtual;
+    procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer); virtual;
+  public
+    procedure Prepare; override;
+    procedure Unprepare; override;
+  public
+    function ExecuteQueryPrepared: IZResultSet; override;
+    function ExecuteUpdatePrepared: Integer; override;
+    function ExecutePrepared: Boolean; override;
+
+    function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: ZWideString): Integer; override;
+    function Execute(const SQL: ZWideString): Boolean; override;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
+    function Execute(const SQL: RawByteString): Boolean; override;
+
+    constructor Create(const Connection: IZConnection; const StoredProcOrFuncIdentifier: string;
+      {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
+
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
   end;
 
   {** Implements Abstract Prepared SQL Statement. }
@@ -630,6 +701,7 @@ type
   end;
 
   {** Implements Abstract Callable SQL statement. }
+  {$WARNINGS OFF}
   TZAbstractCallableStatement = class(TZAbstractPreparedStatement,
     IZCallableStatement)
   private
@@ -645,7 +717,7 @@ type
   protected
     FResultSets: IZCollection;
     FActiveResultset: Integer;
-    FDBParamTypes: array of ShortInt;
+    FDBParamTypes: TZParamTypeDynArray;
     procedure ClearResultSets; virtual;
     procedure TrimInParameters; virtual;
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
@@ -677,9 +749,13 @@ type
     function GetResultSetCount: Integer; virtual;
 
     procedure RegisterOutParameter(ParameterIndex: Integer;
-      SQLType: Integer); virtual;
+      SQLType: Integer); virtual;// deprecated;
     procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer);virtual;
-    function WasNull: Boolean; virtual;
+    function WasNull: Boolean; virtual;// deprecated;
+
+    procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
+      ParamType: TZParamType; const Name: String = ''; {%H-}PrecisionOrSize: LengthInt = 0;
+      {%H-}Scale: LengthInt = 0); virtual;
 
     function IsNull(ParameterIndex: Integer): Boolean; virtual;
     function GetPChar(ParameterIndex: Integer): PChar; virtual;
@@ -707,6 +783,7 @@ type
     function GetTimestamp(ParameterIndex: Integer): TDateTime; virtual;
     function GetValue(ParameterIndex: Integer): TZVariant; virtual;
   end;
+  {$WARNINGS ON}
 
   {** Implements a real Prepared Callable SQL Statement. }
   TZAbstractPreparedCallableStatement = CLass(TZAbstractCallableStatement)
@@ -766,7 +843,8 @@ var
   @param Connection a database connection object.
   @param Info a statement parameters;
 }
-constructor TZAbstractStatement.Create(const Connection: IZConnection; Info: TStrings);
+constructor TZAbstractStatement.Create(const Connection: IZConnection;
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
 begin
   { Sets the default properties. }
   inherited Create;
@@ -1061,11 +1139,19 @@ end;
 }
 procedure TZAbstractStatement.Close;
 begin
-  if LastResultSet <> nil then begin
+  FClosed := True;
+  if FRefCountAdded and Assigned(FLastResultSet) then begin
     LastResultSet.Close;
     LastResultSet := nil;
-  end;
-  FClosed := True;
+  end else
+    if not FRefCountAdded and Assigned(FLastResultSet) and (RefCount = 1) then
+    try
+      _AddRef;
+      LastResultSet.Close;
+      LastResultSet := nil;
+    finally
+      _Release; // possible running into destructor now
+    end;
 end;
 
 {**
@@ -1123,22 +1209,6 @@ end;
 procedure TZAbstractStatement.SetMaxRows(Value: Integer);
 begin
   FMaxRows := Value;
-end;
-
-{**
-  Sets escape processing on or off.
-  If escape scanning is on (the default), the driver will do
-  escape substitution before sending the SQL to the database.
-
-  Note: Since prepared statements have usually been parsed prior
-  to making this call, disabling escape processing for prepared
-  statements will have no effect.
-
-  @param enable <code>true</code> to enable; <code>false</code> to disable
-}
-procedure TZAbstractStatement.SetEscapeProcessing(Value: Boolean);
-begin
-  FEscapeProcessing := Value;
 end;
 
 {**
@@ -2668,9 +2738,20 @@ end;
 
 procedure TZAbstractPreparedStatement.Close;
 begin
-  if Prepared then
-    Unprepare;
-  inherited Close;
+  if (RefCount = 1) and Assigned(FOpenResultSet) or Assigned(FLastResultSet) then begin
+    FRefCountAdded := True;
+    _AddRef;
+  end;
+  try
+    if Prepared then
+      Unprepare;
+    inherited Close;
+  finally
+    if FRefCountAdded then begin
+      FRefCountAdded := False;
+      _Release;
+    end;
+  end;
 end;
 
 function TZAbstractPreparedStatement.GetSQL: String;
@@ -2861,7 +2942,7 @@ begin
   begin
     if ( InParamTypes[I] = ZDbcIntfs.stUnknown ) then
       Continue;
-    if (FDBParamTypes[i] in [2, 4]) then //[ptResult, ptOutput]
+    if (FDBParamTypes[i] in [zptResult, zptOutput]) then
       continue; //EgonHugeist: Ignore known OutParams! else StatmentInparamCount <> expect ProcedureParamCount
     ParamTypes[ParamCount] := InParamTypes[I];
     ParamValues[ParamCount] := InParamValues[I];
@@ -3042,23 +3123,44 @@ end;
   or <code>DECIMAL</code>, the version of
   <code>registerOutParameter</code> that accepts a scale value should be used.
 }
+{$WARNINGS OFF}
 procedure TZAbstractCallableStatement.RegisterOutParameter(ParameterIndex,
   SQLType: Integer);
 begin
   SetOutParamCount(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
   OutParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TZSQLType(SQLType);
 end;
+{$WARNINGS ON}
 
+procedure TZAbstractCallableStatement.RegisterParameter(ParameterIndex: Integer;
+  SQLType: TZSQLType; ParamType: TZParamType; const Name: String = '';
+  {%H-}PrecisionOrSize: LengthInt = 0; {%H-}Scale: LengthInt = 0);
+begin
+  if ParamType in [zptOutput..zptResult] then begin
+    SetOutParamCount(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
+    OutParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := SQLType;
+  end;
+
+  if ({$IFDEF GENERIC_INDEX}High{$ELSE}Length{$ENDIF}(FDBParamTypes) < ParameterIndex) then
+    SetLength(FDBParamTypes, ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
+
+  FDBParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := ParamType;
+  if not FIsFunction then FIsFunction := ParamType = zptResult;
+  if not FHasOutParameter then FHasOutParameter := ParamType in [zptOutput, zptInputOutput];
+end;
+
+{$WARNINGS OFF}
 procedure TZAbstractCallableStatement.RegisterParamType(ParameterIndex,
   ParamType: Integer);
 begin
   if ({$IFDEF GENERIC_INDEX}High{$ELSE}Length{$ENDIF}(FDBParamTypes) < ParameterIndex) then
     SetLength(FDBParamTypes, ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
 
-  FDBParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := ParamType;
+  FDBParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TZParamType(ParamType);
   if not FIsFunction then FIsFunction := ParamType = 4; //ptResult
   if not FHasOutParameter then FHasOutParameter := ParamType in [2,3]; //ptOutput, ptInputOutput
 end;
+{$WARNINGS ON}
 
 {**
   Gets a output parameter value by it's index.
@@ -3638,6 +3740,59 @@ end;
 
 { TZBindList }
 
+procedure TZBindList.BindValuesToStatement(Stmt: TZAbstractPreparedStatement2;
+  SupportsBidirectionalParms: Boolean);
+var
+  i,j: Integer;
+  BindValue: PZBindValue;
+begin
+  J := -1;
+  for i := 0 to FCount -1 do begin
+    BindValue := Get(I);
+    if not (BindValue.ParamType in [zptOutput,zptResult]) then begin
+      if SupportsBidirectionalParms
+      then J := i
+      else Inc(J);
+      case BindValue.BindType of
+        zbtNull: Stmt.BindNull(J, BindValue.SQLType);
+        zbt8Byte: case BindValue.SQLType of
+                    stByte, stWord, stLongWord, stULong:
+                      Stmt.BindUnsignedOrdinal(J, BindValue.SQLType, PUInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
+                    stShort, stSmall, stInteger, stLong:
+                      Stmt.BindSignedOrdinal(J, BindValue.SQLType, PInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
+                    stFloat, stDouble, stCurrency:
+                      Stmt.BindDouble(J, BindValue.SQLType, PDouble({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
+                    //stCurrency:
+                      //Stmt.BindCurrency(J, BindValue.SQLType, PDouble({$IFNDEF CPU64}@{$ENDIF}BindValue.Value)^);
+                    stTime, stDate, stTimeStamp:
+                      Stmt.BindDateTime(J, BindValue.SQLType, PDateTime({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
+                    //else RaiseUnsupportedException
+                  end;
+        zbtRawString: Stmt.SetRawByteString(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RawByteString(BindValue.Value));
+        zbtUTF8String: Stmt.SetUTF8String(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, UTF8String(BindValue.Value));
+        {$IFNDEF NEXTGEN}
+        zbtAnsiString: Stmt.SetAnsiString(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, AnsiString(BindValue.Value));
+        {$ENDIF}
+        zbtUniString: Stmt.SetUnicodeString(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, ZWideString(BindValue.Value));
+        zbtCharByRef: Stmt.SetCharRec(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PZCharRec(BindValue.Value)^);
+        zbtBinByRef:  Stmt.BindBinary(J, BindValue.SQLType, PZBufRec(BindValue.Value).Buf, PZBufRec(BindValue.Value).Len);
+        zbtGUID:      Stmt.BindBinary(J, stGUID, BindValue.Value, 16);
+        zbtBytes:     Stmt.BindBinary(J, stBytes, BindValue.Value, Length(TBytes(BindValue.Value)));
+        zbtArray:     begin
+                        Stmt.SetDataArray(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PZArray(BindValue.Value).VArray,
+                          TZSQLType(PZArray(BindValue.Value).VArrayType), PZArray(BindValue.Value).VArrayVariantType);
+                        if PZArray(BindValue.Value).VIsNullArray <> nil then
+                          Stmt.SetNullArray(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TZSQLType(PZArray(BindValue.Value).VIsNullArrayType),
+                            PZArray(BindValue.Value).VIsNullArray, PZArray(BindValue.Value).VIsNullArrayVariantType);
+                      end;
+        zbtLob:       Stmt.BindLob(J, BindValue.SQLType, IZBlob(BindValue.Value));
+        zbtPointer:   Stmt.BindBoolean(J, BindValue.Value <> nil);
+        //zbtBCD, zbtTimeStamp:;
+      end;
+    end;
+  end;
+end;
+
 procedure TZBindList.Clear;
 begin
   SetCount(0);
@@ -3845,6 +4000,17 @@ begin
   SetCapacity(FCapacity + Delta);
 end;
 
+function TZBindList.HasOutParams: Boolean;
+var I: Integer;
+begin
+  Result := False;
+  for i := 0 to FCount -1 do
+    if FValues^[I].ParamType in [zptOutput..zptResult] then begin
+      Result := True;
+      Break;
+    end;
+end;
+
 function TZBindList.AquireBuffer(Index: Integer; SQLType: TZSQLType;
   BindType: TZBindType): PZBindValue;
 begin
@@ -3999,7 +4165,7 @@ begin
   if NewCapacity <> FCapacity then begin
     ReallocMem(FValues, NewCapacity * SizeOf(TZBindValue));
     if NewCapacity > FCapacity then
-      FillChar(FValues^[FCount], (NewCapacity - FCapacity) * SizeOf(TZBindValue), #0);
+      FillChar(FValues^[FCapacity], (NewCapacity - FCapacity) * SizeOf(TZBindValue), #0);
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     FCapacity := NewCapacity;
   end;
@@ -4041,6 +4207,17 @@ end;
 {**
   Binds a binary value
 }
+function TZAbstractPreparedStatement2.AlignParamterIndex2ResultSetIndex(
+  Value: Integer): Integer;
+begin
+  Result := Value;
+  CheckParameterIndex(Value);
+  if (FOpenResultSet = nil) or not (BindList.ParamTypes[Value] in [zptOutput..zptResult])
+  then raise EZSQLException.Create(SCanNotRetrieveResultSetData);
+  if IZResultSet(FOpenResultSet).IsBeforeFirst then
+    IZResultSet(FOpenResultSet).Next;
+end;
+
 procedure TZAbstractPreparedStatement2.BindArray(Index: Integer;
   const Value: TZArray);
 begin
@@ -4173,9 +4350,20 @@ end;
 }
 procedure TZAbstractPreparedStatement2.Close;
 begin
-  if Prepared then
-    Unprepare;
-  inherited Close;
+  if (RefCount = 1) and Assigned(FOpenResultSet) or Assigned(FLastResultSet) then begin
+    FRefCountAdded := True;
+    _AddRef;
+  end;
+  try
+    if Prepared then
+      Unprepare;
+    inherited Close;
+  finally
+    if FRefCountAdded then begin
+      FRefCountAdded := False;
+      _Release;
+    end;
+  end;
 end;
 
 {**
@@ -4185,7 +4373,7 @@ end;
   @param Info a statement parameters.
 }
 constructor TZAbstractPreparedStatement2.Create(const Connection: IZConnection;
-  const SQL: string; Info: TStrings);
+  const SQL: string; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
 begin
   inherited Create(Connection, Info);
   FSupportsDMLBatchArrays := Connection.GetMetadata.GetDatabaseInfo.SupportsArrayBindings;
@@ -4405,13 +4593,26 @@ end;
 procedure TZAbstractPreparedStatement2.GetBigDecimal(Index: Integer;
   var Result: TZBCD);
 begin
-  CheckParameterIndex(Index);
+  AlignParamterIndex2ResultSetIndex(Index);
+  RaiseUnsupportedException
 end;
 
+{**
+  Gets the value of a JDBC <code>BINARY</code> or <code>VARBINARY</code>
+  parameter as an array of <code>byte</code> values in the Java
+  programming language.
+  @param Index the first parameter is 1, the second is 2, and so on
+  @return the parameter value. If the value is SQL <code>NULL</code>,
+  the result is <code>null</code>.
+}
 procedure TZAbstractPreparedStatement2.GetBytes(Index: Integer;
   out Buf: Pointer; out Len: LengthInt);
+var I: Integer;
 begin
-  RaiseUnsupportedException
+  I := AlignParamterIndex2ResultSetIndex(Index);
+  BindList.Put(I, stBytes, IZResultSet(FOpenResultSet).GetBytes(I));
+  Buf := BindList[Index].Value;
+  Len := Length(TBytes(BindList[Index].Value));
 end;
 
 function TZAbstractPreparedStatement2.GetCompareFirstKeywordStrings: PPreparablePrefixTokens;
@@ -4421,39 +4622,32 @@ end;
 
 procedure TZAbstractPreparedStatement2.GetCurrency(Index: Integer;
   out Result: Currency);
+var I: Integer;
 begin
-  RaiseUnsupportedException;
-end;
-
-function TZAbstractPreparedStatement2.GetCurrency(
-  ParameterIndex: Integer): Currency;
-begin
-  GetCurrency(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Result);
-end;
-
-function TZAbstractPreparedStatement2.GetDate(
-  ParameterIndex: Integer): TDateTime;
-begin
-  GetDatetime(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Result);
-  Result := Int(Result);
+  I := AlignParamterIndex2ResultSetIndex(Index);
+  Result := IZResultSet(FOpenResultSet).GetCurrency(I);
+  if BindList.ParamTypes[Index] = zptInputOutput then
+    BindList.Put(Index, BindList.SQLTypes[Index], @Result);
 end;
 
 procedure TZAbstractPreparedStatement2.GetDateTime(Index: Integer;
   var Result: TDateTime);
+var I: Integer;
 begin
-  RaiseUnsupportedException
-end;
-
-function TZAbstractPreparedStatement2.GetDouble(
-  ParameterIndex: Integer): Double;
-begin
-  GetDouble(ParameterIndex, Result);
+  I := AlignParamterIndex2ResultSetIndex(Index);
+  Result := IZResultSet(FOpenResultSet).GetTimestamp(I);
+  if BindList.ParamTypes[Index] = zptInputOutput then
+    BindList.Put(Index, BindList.SQLTypes[Index], @Result);
 end;
 
 procedure TZAbstractPreparedStatement2.GetDouble(Index: Integer;
   out Result: Double);
+var I: Integer;
 begin
-  RaiseUnsupportedException;
+  I := AlignParamterIndex2ResultSetIndex(Index);
+  Result := IZResultSet(FOpenResultSet).GetDouble(I);
+  if BindList.ParamTypes[Index] = zptInputOutput then
+    BindList.Put(Index, BindList.SQLTypes[Index], @Result);
 end;
 
 function TZAbstractPreparedStatement2.GetInParamLogValue(
@@ -4485,127 +4679,83 @@ begin
     end;
 end;
 
-function TZAbstractPreparedStatement2.GetInt(ParameterIndex: Integer): Integer;
-var I: Int64;
-begin
-  GetOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, I);
-  Result := Integer(I);
-end;
+{**
+  Returns the value of the designated column in the current row
+  of this <code>ResultSet</code> object as a <code>lob</code> object
+  in the Java programming language.
 
+  @param Index the first parameter is 0, the second is 1, ...
+  @return a <code>lob</code> object representing the SQL <code>B/C-LOB</code> value in
+    the specified column
+}
 procedure TZAbstractPreparedStatement2.GetLob(Index: Integer;
   var Result: IZBlob);
+var I: Integer;
 begin
-  Result := nil;
-  RaiseUnsupportedException;
-end;
-
-function TZAbstractPreparedStatement2.GetLong(ParameterIndex: Integer): Int64;
-begin
-  GetOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Result);
+  I := AlignParamterIndex2ResultSetIndex(Index);
+  Result := IZResultSet(FOpenResultSet).GetBlob(I);
+  if BindList.ParamTypes[Index] = zptInputOutput then
+    BindList.Put(Index, BindList.SQLTypes[Index], Result);
 end;
 
 procedure TZAbstractPreparedStatement2.GetOrdinal(Index: Integer;
   out Result: UInt64);
+var I: Integer;
 begin
-  RaiseUnsupportedException;
+  I := AlignParamterIndex2ResultSetIndex(Index);
+  Result := IZResultSet(FOpenResultSet).GetULong(I);
+  if BindList.ParamTypes[Index] = zptInputOutput then
+    BindList.Put(Index, BindList.SQLTypes[Index], @Result);
 end;
 
 procedure TZAbstractPreparedStatement2.GetPChar(Index: Integer;
   out Buf: Pointer; out Len: LengthInt; CodePage: Word);
+var I: Integer;
+  L: NativeUInt;
 begin
-  RaiseUnsupportedException;
-end;
-
-function TZAbstractPreparedStatement2.GetPChar(ParameterIndex: Integer): PChar;
-var
-  Len: LengthInt;
-begin
-  {$IFDEF UNICODE}
-  GetPChar(ParameterIndex, Pointer(Result), Len, zCP_UTF16);
-  {$ELSE}
-  GetPChar(ParameterIndex, Pointer(Result), Len, ConSettings.CTRL_CP)
-  {$ENDIF}
-end;
-
-function TZAbstractPreparedStatement2.GetRawByteString(
-  ParameterIndex: Integer): RawByteString;
-var
-  P: Pointer;
-  L: LengthInt;
-begin
-  GetPChar(PArameterIndex, P, L, ConSettings^.ClientCodePage.CP);
-  ZSetString(P, L, Result);
+  I := AlignParamterIndex2ResultSetIndex(Index);
+  if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
+      not ConSettings.ClientCodePage.IsStringFieldCPConsistent or
+      (CodePage <> ConSettings^.ClientCodePage^.CP) then begin
+    Buf := IZResultSet(FOpenResultSet).GetPWideChar(i, L);
+    if CodePage = zCP_UTF16 then
+      Len := L
+    else begin
+      FRawTemp := PUnicodeToRaw(Buf, L, CodePage);
+      Buf := Pointer(FRawTemp);
+      Len := Length(FRawTemp);
+    end;
+  end else begin
+    Buf := IZResultSet(FOpenResultSet).GetPAnsiChar(i, L);
+    Len := L
+  end;
 end;
 
 procedure TZAbstractPreparedStatement2.GetOrdinal(Index: Integer;
   out Result: Int64);
+var I: Integer;
 begin
-  CheckParameterIndex(Index);
-  Result := PInt64(BindList._8Bytes[Index])^;
+  I := AlignParamterIndex2ResultSetIndex(Index);
+  Result := IZResultSet(FOpenResultSet).GetLong(I);
+  if BindList.ParamTypes[Index] = zptInputOutput then
+    BindList.Put(Index, BindList.SQLTypes[Index], @Result);
 end;
 
-function TZAbstractPreparedStatement2.GetAnsiString(
-  ParameterIndex: Integer): AnsiString;
-var
-  P: Pointer;
-  L: LengthInt;
+{**
+  Gets the value of a JDBC <code>BIT</code> parameter as a <code>boolean</code>
+  in the Java programming language.
+  @param Index the first parameter is 0, the second is 1, and so on
+  @return the parameter value.  If the value is SQL <code>NULL</code>, the result
+  is <code>false</code>.
+}
+procedure TZAbstractPreparedStatement2.GetBoolean(Index: Integer;
+  out Result: Boolean);
+var I: Integer;
 begin
-  GetPChar(PArameterIndex, P, L, zOSCodePage);
-  ZSetString(P, L, Result);
-end;
-
-function TZAbstractPreparedStatement2.GetBigDecimal(
-  ParameterIndex: Integer): Extended;
-var D: Double;
-begin
-  GetDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, D);
-  Result := D;
-end;
-
-function TZAbstractPreparedStatement2.GetBoolean(
-  ParameterIndex: Integer): Boolean;
-begin
-  Result := False;
-  RaiseUnsupportedException;
-end;
-
-function TZAbstractPreparedStatement2.GetByte(ParameterIndex: Integer): Byte;
-var U: UInt64;
-begin
-  GetOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, U);
-  Result := Byte(U);
-end;
-
-function TZAbstractPreparedStatement2.GetBytes(ParameterIndex: Integer): TBytes;
-var
-  P: Pointer;
-  L: LengthInt;
-begin
-  GetBytes(PArameterIndex, P, L);
-  Result := BufferToBytes(P,L);
-end;
-
-function TZAbstractPreparedStatement2.GetFloat(ParameterIndex: Integer): Single;
-var D: Double;
-begin
-  GetDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, D);
-  Result := D;
-end;
-
-function TZAbstractPreparedStatement2.GetShort(
-  ParameterIndex: Integer): ShortInt;
-var I: Int64;
-begin
-  GetOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, I);
-  Result := ShortInt(I);
-end;
-
-function TZAbstractPreparedStatement2.GetSmall(
-  ParameterIndex: Integer): SmallInt;
-var I: Int64;
-begin
-  GetOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, I);
-  Result := SmallInt(I);
+  I := AlignParamterIndex2ResultSetIndex(Index);
+  Result := IZResultSet(FOpenResultSet).GetBoolean(I);
+  if BindList.ParamTypes[Index] = zptInputOutput then
+    BindList.Put(Index, Result);
 end;
 
 {**
@@ -4616,84 +4766,25 @@ begin
   Result := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF};
 end;
 
-function TZAbstractPreparedStatement2.GetString(
-  ParameterIndex: Integer): String;
-var
-  P: Pointer;
-  L: LengthInt;
-begin
-  GetPChar(PArameterIndex, P, L, zCP_UTF8);
-  ZSetString(P, L, Result);
-end;
-
-function TZAbstractPreparedStatement2.GetTime(
-  ParameterIndex: Integer): TDateTime;
-begin
-  GetDatetime(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Result);
-  Result := Frac(Result);
-end;
-
 procedure TZAbstractPreparedStatement2.GetTimeStamp(Index: Integer;
   var Result: TZTimeStamp);
 begin
+  AlignParamterIndex2ResultSetIndex(Index);
   RaiseUnsupportedException
 end;
 
-function TZAbstractPreparedStatement2.GetTimestamp(
-  ParameterIndex: Integer): TDateTime;
+{**
+  Indicates whether or not the specified OUT parameter read had the value of
+  SQL <code>NULL</code>.
+  @param Index the first parameter is 0, the second is 1, ...
+  @return <code>true</code> if the parameter read was SQL
+  <code>NULL</code>; <code>false</code> otherwise
+}
+function TZAbstractPreparedStatement2.IsNull(Index: Integer): Boolean;
 begin
-  GetDatetime(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Result);
-end;
-
-function TZAbstractPreparedStatement2.GetUInt(
-  ParameterIndex: Integer): Cardinal;
-var U: UInt64;
-begin
-  GetOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, U);
-  Result := Cardinal(U);
-end;
-
-function TZAbstractPreparedStatement2.GetULong(ParameterIndex: Integer): UInt64;
-begin
-  GetOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Result);
-end;
-
-function TZAbstractPreparedStatement2.GetUnicodeString(
-  ParameterIndex: Integer): ZWideString;
-var P: Pointer;
-  L: LengthInt;
-begin
-  GetPChar(ParameterIndex, P,L, zCP_UTF16);
-  System.SetString(Result, PWideChar(P), L);
-end;
-
-function TZAbstractPreparedStatement2.GetUTF8String(
-  ParameterIndex: Integer): UTF8String;
-var
-  P: Pointer;
-  L: LengthInt;
-begin
-  GetPChar(PArameterIndex, P, L, zCP_UTF8);
-  ZSetString(P, L, Result);
-end;
-
-function TZAbstractPreparedStatement2.GetValue(
-  ParameterIndex: Integer): TZVariant;
-begin
-  RaiseUnsupportedException;
-end;
-
-function TZAbstractPreparedStatement2.GetWord(ParameterIndex: Integer): Word;
-var U: UInt64;
-begin
-  GetOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, U{%H-});
-  Result := Word(U);
-end;
-
-function TZAbstractPreparedStatement2.IsNull(ParameterIndex: Integer): Boolean;
-begin
-  Result := True;
-  RaiseUnsupportedException;
+  Result := IZResultSet(FOpenResultSet).IsNull(AlignParamterIndex2ResultSetIndex(Index));
+  if BindList.ParamTypes[Index] = zptInputOutput then
+    BindList.SetNull(Index, BindList.SQLTypes[Index]);
 end;
 
 function TZAbstractPreparedStatement2.IsPrepared: Boolean;
@@ -4760,10 +4851,12 @@ procedure TZAbstractPreparedStatement2.RegisterParameter(ParameterIndex: Integer
 var BindValue: PZBindValue;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
-  CheckParameterIndex(ParameterIndex);
+  if BindList.Count < ParameterIndex+1 then
+    BindList.SetCount(ParameterIndex+1);
   BindValue := BindList[ParameterIndex];
   BindValue^.ParamType := ParamType;
   BindValue^.SQLType   := SQLType;
+  FHasInOutParams := FHasInOutParams or (ParamType = zptInputOutput)
 end;
 
 procedure TZAbstractPreparedStatement2.ReleaseImmediat(
@@ -5281,6 +5374,11 @@ begin
   end;
 end;
 
+function TZAbstractPreparedStatement2.SupportsBidirectionalParms: Boolean;
+begin
+  Result := False;
+end;
+
 {**
   unprepares the statement, deallocates all bindings and handles
 }
@@ -5289,7 +5387,6 @@ begin
   if Assigned(FOpenResultSet) then begin
     if Pointer(FLastResultSet) <> FOpenResultSet then
       IZResultSet(FOpenResultSet).Close;
-    //FOpenResultSet := nil;
   end;
   if Assigned(FLastResultSet) then begin
     FLastResultSet.Close;
@@ -5298,6 +5395,7 @@ begin
   UnPrepareInParameters;
   FPrepared := False;
   FExecCount := 0;
+  FHasInOutParams := False;
   FInitialArrayCount := 0;
 end;
 
@@ -5728,6 +5826,697 @@ procedure TZUCS2ParamDetectPreparedStatement.Unprepare;
 begin
   inherited UnPrepare;
   SetLength(FCachedQueryUni, 0);
+end;
+
+{ TZAbstractCallableStatement2 }
+
+{**
+  Binds the input parameters
+}
+procedure TZAbstractCallableStatement2.BindInParameters;
+begin
+  Bindlist.BindValuesToStatement(FExecStatements[FCallExecKind], SupportsBidirectionalParms);
+end;
+
+{**
+  First ResultSet?
+  @result <code>True</code> if first ResultSet
+}
+function TZAbstractCallableStatement2.BOR: Boolean;
+begin
+  Result := False;
+end;
+
+constructor TZAbstractCallableStatement2.Create(const Connection: IZConnection;
+  const StoredProcOrFuncIdentifier: string; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
+begin
+  inherited Create(Connection, '', Info);
+  FStoredProcName := StoredProcOrFuncIdentifier;
+end;
+
+{**
+  Last ResultSet?
+  @result <code>True</code> if so
+}
+function TZAbstractCallableStatement2.EOR: Boolean;
+begin
+  Result := False;
+end;
+
+function TZAbstractCallableStatement2.Execute(const SQL: ZWideString): Boolean;
+begin
+  Result := False;
+  RaiseUnsupportedException;
+end;
+
+function TZAbstractCallableStatement2.Execute(
+  const SQL: RawByteString): Boolean;
+begin
+  Result := False;
+  RaiseUnsupportedException;
+end;
+
+function TZAbstractCallableStatement2.ExecutePrepared: Boolean;
+begin
+  FCallExecKind := zcekSelect;
+  Prepare;
+  BindInParameters;
+  Result := FExecStatements[FCallExecKind].ExecutePrepared;
+end;
+
+function TZAbstractCallableStatement2.ExecuteQuery(
+  const SQL: RawByteString): IZResultSet;
+begin
+  Result := nil;
+  RaiseUnsupportedException;
+end;
+
+function TZAbstractCallableStatement2.ExecuteQuery(
+  const SQL: ZWideString): IZResultSet;
+begin
+  Result := nil;
+  RaiseUnsupportedException;
+end;
+
+function TZAbstractCallableStatement2.ExecuteQueryPrepared: IZResultSet;
+begin
+  FCallExecKind := zcekSelect;
+  Prepare;
+  BindInParameters;
+  Result := FExecStatements[FCallExecKind].ExecuteQueryPrepared;
+end;
+
+function TZAbstractCallableStatement2.ExecuteUpdate(
+  const SQL: RawByteString): Integer;
+begin
+  Result := -1;
+  RaiseUnsupportedException;
+end;
+
+function TZAbstractCallableStatement2.ExecuteUpdate(
+  const SQL: ZWideString): Integer;
+begin
+  Result := -1;
+  RaiseUnsupportedException;
+end;
+
+function TZAbstractCallableStatement2.ExecuteUpdatePrepared: Integer;
+begin
+  FCallExecKind := zcekParams;
+  Prepare;
+  BindInParameters;
+  Result := FExecStatements[FCallExecKind].ExecuteUpdatePrepared;
+end;
+
+function TZAbstractCallableStatement2.GetAnsiString(
+  ParameterIndex: Integer): AnsiString;
+var
+  P: PAnsiChar;
+  L: LengthInt;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Pointer(P), L, zOSCodePage);
+  ZSetString(P, L, Result);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stString, Result, zOSCodePage)
+end;
+
+function TZAbstractCallableStatement2.GetBigDecimal(
+  ParameterIndex: Integer): Extended;
+var D: Double;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetDouble(ParameterIndex, D);
+  Result := D;
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stDouble, P8Bytes(@D));
+end;
+
+function TZAbstractCallableStatement2.GetBoolean(
+  ParameterIndex: Integer): Boolean;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetBoolean(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Result);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, Result);
+end;
+
+function TZAbstractCallableStatement2.GetByte(ParameterIndex: Integer): Byte;
+var U: UInt64;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetOrdinal(ParameterIndex, U);
+  Result := Byte(U);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stByte, P8Bytes(@U));
+end;
+
+function TZAbstractCallableStatement2.GetBytes(ParameterIndex: Integer): TBytes;
+var
+  P: Pointer;
+  L: LengthInt;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetBytes(ParameterIndex, P, L);
+  Result := BufferToBytes(P, L);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stBytes, Pointer(Result), L);
+end;
+
+function TZAbstractCallableStatement2.GetCurrency(
+  ParameterIndex: Integer): Currency;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetCurrency(ParameterIndex, Result);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stCurrency, P8Bytes(@Result));
+end;
+
+function TZAbstractCallableStatement2.GetDate(
+  ParameterIndex: Integer): TDateTime;
+var DT: TDateTime;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetDateTime(ParameterIndex, DT);
+  Result := Int(DT);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stDate, P8Bytes(@DT));
+end;
+
+function TZAbstractCallableStatement2.GetDouble(
+  ParameterIndex: Integer): Double;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetDouble(ParameterIndex, Result);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stDouble, P8Bytes(@Result));
+end;
+
+{**
+  Get the first resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZAbstractCallableStatement2.GetFirstResultSet: IZResultSet;
+begin
+  Result := nil;
+end;
+
+function TZAbstractCallableStatement2.GetFloat(ParameterIndex: Integer): Single;
+var D: Double;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetDouble(ParameterIndex, D);
+  Result := D;
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stDouble, P8Bytes(@D));
+end;
+
+function TZAbstractCallableStatement2.GetInt(ParameterIndex: Integer): Integer;
+var I: Int64;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetOrdinal(ParameterIndex, I);
+  Result := Integer(I);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stInteger, P8Bytes(@I));
+end;
+
+{**
+  Get the last resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZAbstractCallableStatement2.GetLastResultSet: IZResultSet;
+begin
+  Result := nil;
+end;
+
+function TZAbstractCallableStatement2.GetLong(ParameterIndex: Integer): Int64;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetOrdinal(ParameterIndex, Result);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stByte, P8Bytes(@Result));
+end;
+
+function TZAbstractCallableStatement2.GetMoreResults: Boolean;
+begin
+  Result := FExecStatements[FCallExecKind].GetMoreResults
+end;
+
+{**
+  Get the next resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZAbstractCallableStatement2.GetNextResultSet: IZResultSet;
+begin
+  Result := nil;
+end;
+
+{**
+  Retrieves the value of a JDBC <code>CHAR</code>, <code>VARCHAR</code>,
+  or <code>LONGVARCHAR</code> parameter as a <code>String</code> in
+  the Java programming language.
+  <p>
+  For the fixed-length type JDBC <code>CHAR</code>,
+  the <code>String</code> object
+  returned has exactly the same value the JDBC
+  <code>CHAR</code> value had in the
+  database, including any padding added by the database.
+  @param parameterIndex the first parameter is 1, the second is 2,
+  and so on
+  @return the parameter value. If the value is SQL <code>NULL</code>, the result
+  is <code>null</code>.
+  @exception SQLException if a database access error occurs
+}
+function TZAbstractCallableStatement2.GetPChar(ParameterIndex: Integer): PChar;
+var
+  L: LengthInt;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  {$IFDEF UNICODE}
+  FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Pointer(Result), L, zCP_UTF16);
+  {$ELSE}
+  FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Pointer(Result), L, ConSettings.CTRL_CP);
+  {$ENDIF}
+end;
+
+{**
+  Get the previous resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZAbstractCallableStatement2.GetPreviousResultSet: IZResultSet;
+begin
+  Result := nil;
+end;
+
+{**
+  Retrieves the value of a JDBC <code>CHAR</code>, <code>VARCHAR</code>,
+  or <code>LONGVARCHAR</code> parameter as a <code>String</code> in
+  the Java programming language.
+  <p>
+  For the fixed-length type JDBC <code>CHAR</code>,
+  the <code>RawByteString</code> object
+  returned has exactly the same value the JDBC
+  <code>CHAR</code> value had in the
+  database, including any padding added by the database.
+  @param parameterIndex the first parameter is 1, the second is 2,
+  and so on
+  @return the parameter value. If the value is SQL <code>NULL</code>, the result
+  is <code>null</code>.
+  @exception SQLException if a database access error occurs
+}
+function TZAbstractCallableStatement2.GetRawByteString(
+  ParameterIndex: Integer): RawByteString;
+var
+  P: PAnsiChar;
+  L: LengthInt;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Pointer(P), L, ConSettings^.ClientCodePage.CP);
+  ZSetString(P, L, Result);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stString, Result, ConSettings^.ClientCodePage.CP)
+end;
+
+function TZAbstractCallableStatement2.GetResultSet: IZResultSet;
+begin
+  Result := FExecStatements[FCallExecKind].GetResultSet;
+end;
+
+{**
+  Retrieves a ResultSet by his index.
+  @param Index the index of the Resultset
+  @result <code>IZResultSet</code> of the Index or nil.
+}
+function TZAbstractCallableStatement2.GetResultSetByIndex(
+  const Index: Integer): IZResultSet;
+begin
+  Result := nil;
+end;
+
+{**
+  Returns the Count of retrived ResultSets.
+  @result <code>Integer</code> Count
+}
+function TZAbstractCallableStatement2.GetResultSetCount: Integer;
+begin
+  Result := 0;
+end;
+
+function TZAbstractCallableStatement2.GetShort(
+  ParameterIndex: Integer): ShortInt;
+var I: Int64;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetOrdinal(ParameterIndex, I);
+  Result := ShortInt(I);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stShort, P8Bytes(@I));
+end;
+
+function TZAbstractCallableStatement2.GetSmall(
+  ParameterIndex: Integer): SmallInt;
+var I: Int64;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetOrdinal(ParameterIndex, I);
+  Result := SmallInt(I);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stSmall, P8Bytes(@I));
+end;
+
+{**
+  Retrieves the value of a JDBC <code>CHAR</code>, <code>VARCHAR</code>,
+  or <code>LONGVARCHAR</code> parameter as a <code>String</code> in
+  the Java programming language.
+  <p>
+  For the fixed-length type JDBC <code>CHAR</code>,
+  the <code>String</code> object
+  returned has exactly the same value the JDBC
+  <code>CHAR</code> value had in the
+  database, including any padding added by the database.
+  @param parameterIndex the first parameter is 1, the second is 2,
+  and so on
+  @return the parameter value. If the value is SQL <code>NULL</code>, the result
+  is <code>null</code>.
+  @exception SQLException if a database access error occurs
+}
+function TZAbstractCallableStatement2.GetString(
+  ParameterIndex: Integer): String;
+var
+  P: PChar;
+  L: LengthInt;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  {$IFDEF UNICODE}
+  FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Pointer(P), L, zCP_UTF16);
+  {$ELSE}
+  if ConSettings.AutoEncode
+  then FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Pointer(P), L, ConSettings.CTRL_CP)
+  else FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Pointer(P), L, ConSettings.ClientCodePage.CP);
+  {$ENDIF}
+  System.SetString(Result, P, L);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    {$IFDEF UNICODE}
+    BindList.Put(ParameterIndex, stString, Result);
+    {$ELSE}
+    if ConSettings.AutoEncode
+    then BindList.Put(ParameterIndex, stString, Result, ConSettings.CTRL_CP)
+    else BindList.Put(ParameterIndex, stString, Result, ConSettings.ClientCodePage.CP);
+    {$ENDIF}
+end;
+
+{**
+  Get the value of a JDBC <code>TIME</code> parameter as a
+  <code>java.sql.Time</code> object.
+  @param parameterIndex the first parameter is 1, the second is 2,
+  and so on
+  @return the parameter value.  If the value is SQL <code>NULL</code>, the result
+  is <code>null</code>.
+}
+function TZAbstractCallableStatement2.GetTime(
+  ParameterIndex: Integer): TDateTime;
+var DT: TDateTime;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetDateTime(ParameterIndex, DT);
+  Result := Frac(DT);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stTime, P8Bytes(@DT));
+end;
+
+function TZAbstractCallableStatement2.GetTimestamp(
+  ParameterIndex: Integer): TDateTime;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetDateTime(ParameterIndex, Result);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stTimeStamp, P8Bytes(@Result));
+end;
+
+function TZAbstractCallableStatement2.GetUInt(
+  ParameterIndex: Integer): Cardinal;
+var U: UInt64;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetOrdinal(ParameterIndex, U);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stULong, P8Bytes(@Result));
+  Result := Cardinal(U);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stLongWord, P8Bytes(@U));
+end;
+
+function TZAbstractCallableStatement2.GetULong(ParameterIndex: Integer): UInt64;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stULong, P8Bytes(@Result));
+end;
+
+function TZAbstractCallableStatement2.GetUnicodeString(
+  ParameterIndex: Integer): ZWideString;
+var
+  P: PWideChar;
+  L: LengthInt;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Pointer(P), L, zCP_UTF16);
+  System.SetString(Result, P, L);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stString, Result);
+end;
+
+function TZAbstractCallableStatement2.GetUpdateCount: Integer;
+begin
+  Result := FExecStatements[FCallExecKind].GetUpdateCount
+end;
+
+function TZAbstractCallableStatement2.GetUTF8String(
+  ParameterIndex: Integer): UTF8String;
+var
+  P: PAnsiChar;
+  L: LengthInt;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Pointer(P), L, zCP_UTF8);
+  ZSetString(P, L, Result);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stString, Result, zCP_UTF8);
+end;
+
+function TZAbstractCallableStatement2.GetValue(
+  ParameterIndex: Integer): TZVariant;
+var
+  L: LengthInt;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  Result := NullVariant;
+  if not FExecStatements[FCallExecKind].IsNull(ParameterIndex) then
+    case BindList.SQLTypes[ParameterIndex] of
+      stBoolean: begin
+          FExecStatements[FCallExecKind].GetBoolean(ParameterIndex, Result.VBoolean);
+          Result.VType := vtBoolean;
+        end;
+      stByte..stInteger, stLong: begin
+          FExecStatements[FCallExecKind].GetOrdinal(ParameterIndex, Result.VInteger);
+          Result.VType := vtInteger;
+        end;
+      stULong: begin
+          FExecStatements[FCallExecKind].GetOrdinal(ParameterIndex, Result.VUInteger);
+          Result.VType := vtUInteger;
+        end;
+      stFloat, stDouble, stBigDecimal: begin
+          FExecStatements[FCallExecKind].GetDouble(ParameterIndex, PDouble(@Result.VDateTime)^);
+          Result := EncodeFloat(PDouble(@Result.VDateTime)^);
+        end;
+      stCurrency: begin
+          FExecStatements[FCallExecKind].GetCurrency(ParameterIndex, PCurrency(@Result.VInteger)^);
+          Result := EncodeFloat(PCurrency(@Result.VInteger)^);
+        end;
+      stTime,stDate,stTimeStamp: begin
+          FExecStatements[FCallExecKind].GetDateTime(ParameterIndex, Result.VDateTime);
+          Result.VType := vtDateTime;
+        end;
+      stGUID: begin
+          FExecStatements[FCallExecKind].GetBytes(ParameterIndex, Result.VPointer, L);
+          Result := EncodeGUID(PGUID(Result.VPointer)^);
+        end;
+      stBytes: begin
+          FExecStatements[FCallExecKind].GetBytes(ParameterIndex, Result.VPointer, L);
+          Result := EncodeBytes(BufferToBytes(Result.VPointer, L));
+        end;
+      stString, stUnicodeString: begin
+          if ConSettings^.AutoEncode then begin
+            FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Result.VPointer, L, ConSettings^.CTRL_CP);
+            Result.VType := vtString;
+            System.SetString(Result.VString, PChar(Result.VPointer), L);
+          end else if (ConSettings.ClientCodePage^.Encoding = ceUTF16) or (not ConSettings.ClientCodePage^.IsStringFieldCPConsistent) then begin
+            FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Result.VPointer, L, zCP_UTF16);
+            Result.VType := vtUnicodeString;
+            System.SetString(Result.VUnicodeString, PWideChar(Result.VPointer), L);
+          end else begin
+            FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Result.VPointer, L, ConSettings^.ClientCodePage^.CP);
+            Result.VType := vtRawByteString;
+            ZSetString(PAnsiChar(Result.VPointer), L, Result.VRawByteString);
+          end;
+        end;
+      stAsciiStream, stUnicodeStream, stBinaryStream: begin
+          FExecStatements[FCallExecKind].GetLob(ParameterIndex, PIZLob(@Result.VInterface)^);
+          Result := EncodeInterface(PIZLob(@Result.VInterface)^);
+        end;
+    end;
+end;
+
+function TZAbstractCallableStatement2.GetWord(ParameterIndex: Integer): Word;
+var U: UInt64;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  FExecStatements[FCallExecKind].GetOrdinal(ParameterIndex, U);
+  Result := Word(U);
+  if BindList.ParamTypes[ParameterIndex] = zptInputOutPut then
+    BindList.Put(ParameterIndex, stWord, P8Bytes(@U));
+end;
+
+function TZAbstractCallableStatement2.IsNull(ParameterIndex: Integer): Boolean;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  Result := FExecStatements[FCallExecKind].IsNull(ParameterIndex);
+  if Result and (BindList.ParamTypes[ParameterIndex] = zptInputOutPut) then
+    BindList.SetNull(ParameterIndex, BindList.SQLTypes[ParameterIndex]);
+end;
+
+procedure TZAbstractCallableStatement2.Prepare;
+begin
+  if FExecStatements[FCallExecKind] = nil then begin
+    FExecStatements[FCallExecKind] := CreateExecutionStatement(FCallExecKind, FStoredProcName);
+    FExecStatements[FCallExecKind]._AddRef;
+    FExecStatements[FCallExecKind].SetResultSetType(GetResultSetType);
+  end;
+  inherited Prepare;
+end;
+
+{**
+  Prepares eventual structures for binding input parameters.
+}
+procedure TZAbstractCallableStatement2.PrepareInParameters;
+var I: Integer;
+begin
+  for i := BindList.Count -1 downto 0 do
+    FExecStatements[FCallExecKind].RegisterParameter(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+      BindList.SQLTypes[i], BindList.ParamTypes[i]);
+end;
+
+procedure TZAbstractCallableStatement2.RegisterOutParameter(ParameterIndex,
+  SQLType: Integer);
+begin
+  if BindList.Count < ParameterIndex {$IFDEF GENERIC_INDEX}+1{$ENDIF}
+  then RegisterParameter(ParameterIndex, TZSQLType(SQLType), zptUnknown)
+  else RegisterParameter(ParameterIndex, TZSQLType(SQLType), BindList[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].ParamType)
+end;
+
+procedure TZAbstractCallableStatement2.RegisterParamType(ParameterIndex,
+  ParamType: Integer);
+begin
+  if BindList.Count < ParameterIndex {$IFDEF GENERIC_INDEX}+1{$ENDIF}
+  then RegisterParameter(ParameterIndex, stUnknown, TZParamType(ParamType))
+  else RegisterParameter(ParameterIndex, BindList[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].SQLType, TZParamType(ParamType))
+end;
+
+procedure TZAbstractCallableStatement2.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable);
+var CallExecKind: TZCallExecKind;
+begin
+  for CallExecKind := low(TZCallExecKind) to high(TZCallExecKind) do
+    if Assigned(FExecStatements[CallExecKind]) then
+      FExecStatements[CallExecKind].ReleaseImmediat(Sender);
+  inherited ReleaseImmediat(Sender);
+end;
+
+procedure TZAbstractCallableStatement2.SetAnsiString(ParameterIndex: Integer;
+  const Value: AnsiString);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stString, Value, zOSCodePage);
+end;
+
+procedure TZAbstractCallableStatement2.SetCharRec(ParameterIndex: Integer;
+  const Value: TZCharRec);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stString, Value.P, Value.Len, Value.CP);
+end;
+
+{**
+  Sets the designated parameter the default SQL value.
+  <P><B>Note:</B> You must specify the default value.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param Value the default value normally defined in the field's DML SQL statement
+}
+procedure TZAbstractCallableStatement2.SetDefaultValue(ParameterIndex: Integer;
+  const Value: String);
+begin
+  //it's a nop
+end;
+
+procedure TZAbstractCallableStatement2.SetRawByteString(ParameterIndex: Integer;
+  const Value: RawByteString);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stString, Value, ConSettings^.ClientCodePage^.CP);
+end;
+
+procedure TZAbstractCallableStatement2.SetString(ParameterIndex: Integer;
+  const Value: String);
+{$IFNDEF UNICODE}
+var UniTemp: ZWideString;
+{$ENDIF}
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  {$IFDEF UNICODE}
+  BindList.Put(ParameterIndex, stString, Value);
+  {$ELSE}
+  if (ConSettings^.ClientCodePage.Encoding = ceUTF16) or not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then begin
+    UniTemp := ConSettings^.ConvFuncs.ZStringToUnicode(Value, ConSettings^.CTRL_CP);
+    BindList.Put(ParameterIndex, stString, UniTemp);
+  end else if ConSettings.AutoEncode then
+    BindList.Put(ParameterIndex, stString, ConSettings.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, ConSettings^.ClientCodePage^.CP), ConSettings^.ClientCodePage^.CP)
+  else
+    BindList.Put(ParameterIndex, stString, RawByteString(Value), ConSettings^.ClientCodePage^.CP);
+  {$ENDIF}
+end;
+
+procedure TZAbstractCallableStatement2.SetUnicodeString(ParameterIndex: Integer;
+  const Value: ZWideString);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stString, Value);
+end;
+
+procedure TZAbstractCallableStatement2.SetUTF8String(ParameterIndex: Integer;
+  const Value: UTF8String);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stString, Value, zCP_UTF8);
+end;
+
+procedure TZAbstractCallableStatement2.Unprepare;
+var CallExecKind: TZCallExecKind;
+begin
+  for CallExecKind := Low(TZCallExecKind) to High(TZCallExecKind) do
+    if FExecStatements[CallExecKind] <> nil then begin
+      FExecStatements[CallExecKind].Close;
+      FExecStatements[CallExecKind]._Release;
+      FExecStatements[CallExecKind] := nil
+    end;
+  inherited Unprepare;
 end;
 
 end.

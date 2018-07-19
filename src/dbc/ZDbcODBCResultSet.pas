@@ -205,7 +205,7 @@ const
 implementation
 
 uses Math,
-  ZMessages, ZDbcODBCUtils, ZEncoding, ZDbcODBCStatement, ZDbcProperties;
+  ZMessages, ZDbcODBCUtils, ZEncoding, ZDbcODBCStatement, ZDbcProperties, ZClasses;
 
 { TAbstractODBCResultSet }
 

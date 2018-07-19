@@ -83,14 +83,15 @@ type
     function GetLastErrorCodeAndHandle(var StmtHandle: Psqlite3_stmt): Integer;
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
+    function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; override;
   protected
     procedure BindNull(Index: Integer; SQLType: TZSQLType); override;
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
     procedure BindBoolean(Index: Integer; Value: Boolean); override;
     procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
-    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double); override;
-    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); override;
-    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); override;
+    procedure BindDouble(Index: Integer; {%H-}SQLType: TZSQLType; const Value: Double); override;
+    procedure BindUnsignedOrdinal(Index: Integer; {%H-}SQLType: TZSQLType; const Value: UInt64); override;
+    procedure BindSignedOrdinal(Index: Integer; {%H-}SQLType: TZSQLType; const Value: Int64); override;
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
@@ -122,10 +123,9 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS} AnsiStrings,{$ENDIF} ZDbcSqLiteUtils,
   ZDbcSqLiteResultSet, ZSysUtils, ZEncoding, ZMessages, ZDbcCachedResultSet,
-  ZDbcUtils, ZDbcProperties, ZFastCode;
+  ZDbcUtils, ZDbcProperties, ZFastCode, ZClasses;
 
 const DeprecatedBoolRaw: array[Boolean] of AnsiString = ('N','Y');
-const IntBoolRaw: array[Boolean] of AnsiString = ('0','1');
 
 (* out of use now...
 procedure BindingDestructor(Value: PAnsiChar); cdecl;
@@ -197,6 +197,13 @@ begin
   end;
   if not FLateBound then
     FBindLater := False;
+end;
+
+function TZAbstractSQLiteCAPIPreparedStatement.AlignParamterIndex2ResultSetIndex(
+  Value: Integer): Integer;
+begin
+  Result := Value;
+  RaiseUnsupportedException;
 end;
 
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindBinary(Index: Integer;

@@ -310,8 +310,9 @@ end;
 procedure TZStoredProc.InternalOpen;
 begin
   inherited InternalOpen;
-
   RetrieveParamValues;
+  if Resultset.GetType <> rtForwardOnly then
+    Resultset.BeforeFirst;
 end;
 
 {**

@@ -244,7 +244,7 @@ type
 implementation
 
 uses
-  ZDbcUtils, ZDbcSqLite, ZFastCode, ZSelectSchema;
+  ZDbcUtils, ZDbcSqLite, ZFastCode, ZSelectSchema, ZClasses;
 
 { TZSQLiteDatabaseInfo }
 

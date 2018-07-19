@@ -130,7 +130,7 @@ implementation
 
 uses
   ZFastCode, ZDbcASAMetadata, ZDbcASAStatement, ZDbcASAUtils, ZSybaseToken,
-  ZSybaseAnalyser, ZDbcLogging, ZSysUtils, ZDbcProperties
+  ZSybaseAnalyser, ZDbcLogging, ZSysUtils, ZDbcProperties, ZClasses
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZASADriver }

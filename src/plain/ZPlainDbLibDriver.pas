@@ -517,7 +517,7 @@ var
 
 implementation
 
-uses SysUtils, ZPlainLoader, ZEncoding, {$IFDEF FPC}DOS{$ELSE}Windows{$ENDIF};
+uses SysUtils, ZPlainLoader, ZEncoding, ZClasses, {$IFDEF FPC}DOS{$ELSE}Windows{$ENDIF};
 
 procedure AddSybaseCodePages(PlainDriver: TZAbstractPlainDriver);
 begin
@@ -709,7 +709,7 @@ begin
       Inc(I);
   end;
   if S <> '' then
-    raise Exception.Create(S);
+    raise EZSQLException.Create(S);
 end;
 
 function TZDBLibAbstractPlainDriver.GetVariables: TDBVariables;

@@ -28,6 +28,6 @@ drop table IF EXISTS not_null_values;
 drop table IF EXISTS cargo;
 drop table IF EXISTS high_load;
 drop table IF EXISTS `Spaced Names`;
-drop table IF EXISTS TEST_BIT_FIELDs;
+drop table IF EXISTS TEST_BIT_FIELDS;
 drop table IF EXISTS TEST_MYSQL_BOOLEANS;
 

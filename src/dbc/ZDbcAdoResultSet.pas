@@ -136,7 +136,7 @@ implementation
 
 uses
   Variants, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF},
-  ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode;
+  ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZClasses;
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZAdoResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;

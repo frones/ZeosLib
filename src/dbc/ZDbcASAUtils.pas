@@ -239,7 +239,7 @@ function RandomString( Len: integer): string;
 implementation
 
 uses Variants, Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  ZFastCode, ZMessages, ZDbcCachedResultSet, ZEncoding, ZDbcUtils;
+  ZFastCode, ZMessages, ZDbcCachedResultSet, ZEncoding, ZDbcUtils, ZClasses;
 
 { TZASASQLDA }
 

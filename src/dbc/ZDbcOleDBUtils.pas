@@ -123,7 +123,8 @@ implementation
 uses
   {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
   ActiveX, Windows, Math, TypInfo,
-  ZEncoding, ZDbcLogging, ZDbcUtils, ZDbcResultSet, ZFastCode, ZSysUtils, ZMessages;
+  ZEncoding, ZDbcLogging, ZDbcUtils, ZDbcResultSet, ZFastCode, ZSysUtils, ZMessages,
+  ZClasses;
 
 function ConvertSQLTypeToOleDBType(SQLType: TZSQLType): DBTYPEENUM;
 begin

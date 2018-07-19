@@ -58,7 +58,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcConnection, ZTokenizer, ZGenericSqlAnalyser,
-  ZURL, ZCompatibility, ZPlainODBCDriver;
+  ZURL, ZCompatibility, ZPlainODBCDriver, ZClasses;
 
 
 type

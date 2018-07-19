@@ -170,7 +170,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  ZEncoding, ZFastCode, ZSysUtils, ZDbcMetadata;
+  ZEncoding, ZFastCode, ZSysUtils, ZDbcMetadata, ZClasses;
 
 procedure GetPCharFromTextVar(SQLCode: SmallInt; sqldata: Pointer; sqllen: Short; out P: PAnsiChar; out Len: NativeUInt); {$IF defined(WITH_INLINE)} inline; {$IFEND}
 begin
@@ -1722,6 +1722,7 @@ begin
     end else begin
       FFetchStat := 1;
       Result := True;
+      RowNo := 1;
     end;
   end;
 end;

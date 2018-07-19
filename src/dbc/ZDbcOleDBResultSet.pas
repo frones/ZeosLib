@@ -185,7 +185,7 @@ implementation
 
 uses
   Variants, Math, ComObj,
-  ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode;
+  ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode, ZClasses;
 
 {$IFOPT R+}
   {$DEFINE WITH_RANGE_CHECK}
@@ -2253,7 +2253,7 @@ begin
     if (Statement.GetResultSetConcurrency = rcUpdatable) or
        (Statement.GetResultSetType <> rtForwardOnly) then
     begin
-      if Statement.GetConnection.GetServerProvider = spMSSQL then
+      if (Statement.GetConnection.GetServerProvider = spMSSQL) and (Statement.GetResultSetConcurrency = rcUpdatable) then
         CachedResolver := TZOleDBMSSQLCachedResolver.Create(Statement, NativeResultSet.GetMetaData)
       else
         CachedResolver := TZGenericCachedResolver.Create(Statement, NativeResultSet.GetMetaData);

@@ -157,7 +157,7 @@ implementation
 
 uses
   ZMessages, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode,
-  ZVariant, ZDbcMetadata
+  ZVariant, ZDbcMetadata, ZClasses
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**

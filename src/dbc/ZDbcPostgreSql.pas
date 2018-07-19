@@ -359,7 +359,8 @@ end;
 }
 destructor TZPostgreSQLConnection.Destroy;
 begin
-  FreeAndNil(FTypeList);
+  if FTypeList <> nil then
+    FreeAndNil(FTypeList);
   inherited Destroy;
   FreeAndNil(FPreparedStatementTrashBin);
 end;
@@ -732,7 +733,7 @@ begin
   if IsClosed then
      Open;
   if GetServerMajorVersion >= 3 then
-  Result := TZPostgreSQLPreparedStatementV3.Create(Self, SQL, Info)
+    Result := TZPostgreSQLPreparedStatementV3.Create(Self, SQL, Info)
   else
     Result := TZPostgreSQLPreparedStatementV3.Create(Self, SQL, Info)
 end;

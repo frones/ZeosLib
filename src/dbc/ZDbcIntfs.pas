@@ -75,42 +75,6 @@ const
   TypeSearchable           = 3;
   ProcedureReturnsResult   = 2;
 
-// Exceptions
-type
-  TZExceptionSpecificData = class
-  public
-    function Clone: TZExceptionSpecificData; virtual; abstract;
-  end;
-
-  {** Abstract SQL exception. }
-  EZSQLThrowable = class(Exception)
-  private
-    FErrorCode: Integer;
-    FStatusCode: String;
-  protected
-    FSpecificData: TZExceptionSpecificData;
-  public
-    constructor Create(const Msg: string);
-    constructor CreateWithCode(const ErrorCode: Integer; const Msg: string);
-    constructor CreateWithStatus(const StatusCode: String; const Msg: string);
-    constructor CreateWithCodeAndStatus(ErrorCode: Integer; const StatusCode: String; const Msg: string);
-    constructor CreateClone(const E:EZSQLThrowable);
-    destructor Destroy; override;
-
-    property ErrorCode: Integer read FErrorCode;
-    property StatusCode: string read FStatuscode; // The "String" Errocode // FirmOS
-    property SpecificData: TZExceptionSpecificData read FSpecificData; // Engine-specific data
-  end;
-
-  {** Generic SQL exception. }
-  EZSQLException = class(EZSQLThrowable);
-
-  {** Generic connection lost exception. }
-  EZSQLConnectionLost = class(EZSQLException);
-
-  {** Generic SQL warning. }
-  EZSQLWarning = class(EZSQLThrowable);
-
 // Data types
 type
   {** Defines supported SQL types. }
@@ -585,7 +549,6 @@ type
     procedure SetMaxFieldSize(Value: Integer);
     function GetMaxRows: Integer;
     procedure SetMaxRows(Value: Integer);
-    procedure SetEscapeProcessing(Value: Boolean);
     function GetQueryTimeout: Integer;
     procedure SetQueryTimeout(Value: Integer);
     procedure Cancel;
@@ -690,57 +653,7 @@ type
     Fractions: LongWord;
   end;
   TZParamType = (zptUnknown, zptInput, zptOutput, zptInputOutput, zptResult);
-
-  IZPreparedStatement2 = interface(IZStatement)
-    ['{369619C5-B0C4-4F57-B43E-F86A27F8A98C}']
-    function ExecuteQueryPrepared: IZResultSet; overload;
-    procedure ExecuteQueryPrepared(var Result: IZResultSet); overload; //faster version -> by ref
-    function ExecuteUpdatePrepared: Integer;
-    function ExecutePrepared: Boolean;
-
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
-
-    procedure SetBigDecimal(Index: Integer; const Value: TZBCD);
-    procedure SetBinary(Index: Integer; SQLType: TZSQLType; Value: Pointer; Len: PLengthInt; ByRef: Boolean);
-    procedure SetBoolean(Index: Integer; Value: Boolean);
-    procedure SetBytes(Index: Integer; const Value: TBytes);
-    procedure SetCurrency(Index: Integer; const Value: Currency);
-    procedure SetPChar(Index: Integer; const Value: TZCharRec; ByRef: Boolean);
-    procedure SetDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime);
-    procedure SetDouble(Index: Integer; SQLType: TZSQLType; const Value: Double);
-    procedure SetLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob);
-    procedure SetNull(Index: Integer; SQLType: TZSQLType);
-    procedure SetOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); overload;
-    procedure SetOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64);overload;
-    procedure SetRawByteString(Index: Integer; SQLType: TZSQLType; const Value: RawByteString; CodePage: Word);
-    procedure SetTimeStamp(Index: Integer; SQLType: TZSQLType; const Value: TZTimeStamp);
-    procedure SetUnicodeString(Index: Integer; SQLType: TZSQLType; const Value: ZWideString);
-    procedure SetValue(Index: Integer; const Value: TZVariant);
-
-    procedure SetNullArray(Index: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
-    procedure SetDataArray(Index: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
-
-    function IsNull(Index: Integer): Boolean;
-    procedure GetBigDecimal(Index: Integer; var Result: TZBCD);
-    procedure GetBoolean(Index: Integer; var Result: Boolean);
-    procedure GetBytes(Index: Integer; var Buf: Pointer; var Len: LengthInt);
-    procedure GetCurrency(Index: Integer; var Result: Currency);
-    procedure GetPChar(Index: Integer; var Buf: Pointer; var Len: LengthInt; CodePage: Word);
-    procedure GetDateTime(Index: Integer; var Result: TDateTime);
-    procedure GetDouble(Index: Integer; var Result: Double);
-    procedure GetLob(Index: Integer; var Result: IZBlob);
-    procedure GetOrdinal(Index: Integer; var Result: Int64); overload;
-    procedure GetOrdinal(Index: Integer; var Result: UInt64); overload;
-    procedure GetRawByteString(Index: Integer; var Result: RawByteString; CodePage: Word);
-    procedure GetTimeStamp(Index: Integer; var Value: TZTimeStamp);
-    procedure GetUnicodeString(Index: Integer; var Result: ZWideString);
-    procedure GetValue(Index: Integer; var Result: TZVariant);
-
-    procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
-      ParamType: TZParamType; ParamSize: LengthInt = -1);
-
-    procedure ClearParameters;
-  end;
+  TZParamTypeDynArray = array of TZParamType;
 
   {** Callable SQL statement interface. }
   IZCallableStatement = interface(IZPreparedStatement)
@@ -755,12 +668,13 @@ type
     function GetResultSetByIndex(const Index: Integer): IZResultSet;
     function GetResultSetCount: Integer;
 
-    procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer);
-    procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer);
-//    procedure RegisterParameter(ParameterIndex: Integer;
-  //    SQLType: TZSQLType; ParamType: TZParamType; ParamSize: LengthInt = -1);
-    function WasNull: Boolean;
+    procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer); //deprecated;
+    procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer); //deprecated;
 
+(*    procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
+      ParamType: TZParamType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
+      {%H-}Scale: LengthInt = 0);
+*)
     function IsNull(ParameterIndex: Integer): Boolean;
     function GetPChar(ParameterIndex: Integer): PChar;
     function GetString(ParameterIndex: Integer): String;
@@ -1574,70 +1488,6 @@ procedure TZDriverManager.ResolveDatabaseUrl(const Url: string; out Database: st
 begin
   FURL.URL := Url;
   DataBase := FURL.Database;
-end;
-
-{ EZSQLThrowable }
-
-constructor EZSQLThrowable.CreateClone(const E: EZSQLThrowable);
-begin
-  inherited Create(E.Message);
-  FErrorCode:=E.ErrorCode;
-  FStatusCode:=E.Statuscode;
-  if E.SpecificData <> nil then
-    FSpecificData := E.SpecificData.Clone;
-end;
-
-{**
-  Creates an exception with message string.
-  @param Msg a error description.
-}
-constructor EZSQLThrowable.Create(const Msg: string);
-begin
-  inherited Create(Msg);
-  FErrorCode := -1;
-end;
-
-{**
-  Creates an exception with message string.
-  @param Msg a error description.
-  @param ErrorCode a native server error code.
-}
-constructor EZSQLThrowable.CreateWithCode(const ErrorCode: Integer;
-  const Msg: string);
-begin
-  inherited Create(Msg);
-  FErrorCode := ErrorCode;
-end;
-
-{**
-  Creates an exception with message string.
-  @param ErrorCode a native server error code.
-  @param StatusCode a server status code.
-  @param Msg a error description.
-}
-constructor EZSQLThrowable.CreateWithCodeAndStatus(ErrorCode: Integer;
-  const StatusCode, Msg: string);
-begin
-  inherited Create(Msg);
-  FErrorCode := ErrorCode;
-  FStatusCode := StatusCode;
-end;
-
-{**
-  Creates an exception with message string.
-  @param StatusCode a server status code.
-  @param Msg a error description.
-}
-constructor EZSQLThrowable.CreateWithStatus(const StatusCode, Msg: string);
-begin
-  inherited Create(Msg);
-  FStatusCode := StatusCode;
-end;
-
-destructor EZSQLThrowable.Destroy;
-begin
-  FreeAndNil(FSpecificData);
-  inherited;
 end;
 
 initialization

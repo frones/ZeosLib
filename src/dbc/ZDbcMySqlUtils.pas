@@ -166,7 +166,7 @@ procedure ReallocBindBuffer(var BindBuffer: Pointer;
 implementation
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} Math, TypInfo,
-  ZMessages, ZDbcUtils, ZFastCode, ZEncoding;
+  ZMessages, ZDbcUtils, ZFastCode, ZEncoding, ZClasses;
 
 threadvar
   SilentMySQLError: Integer;

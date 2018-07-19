@@ -55,7 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
-{$DEFINE ENABLE_OLEDB}
+{.$DEFINE ENABLE_OLEDB}
 {$IFDEF ENABLE_OLEDB}
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
@@ -389,6 +389,7 @@ var
   rgDBPROPSET_DBPROPSET_SESSION: TDBProp;
   prgPropertySets: TDBPROPSET;
   SessionProperties: ISessionProperties;
+  Res: HResult;
 begin
   if (not Closed) and Self.GetMetadata.GetDatabaseInfo.SupportsTransactionIsolationLevel(TransactIsolationLevel) then
     if AutoCommit then begin
@@ -407,8 +408,14 @@ begin
       if not Assigned(fTransaction) and
          Succeeded(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction)) then
       begin
-        OleDbCheck(fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel));
-        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'Restart Transaction support');
+        Res := fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
+        if DriverMAnager.HasLoggingListener then
+          DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'Restart Transaction support');
+        if not Succeeded(Res) then begin
+          Dec(FpulTransactionLevel);
+          fTransaction := nil;
+          OleDBCheck(Res);
+        end;
       end;
 end;
 
@@ -597,6 +604,8 @@ end;
 }
 procedure TZOleDBConnection.Commit;
 begin
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'COMMIT');
   if assigned(fTransaction) then
   begin
     OleDbCheck(fTransaction.Commit(FRetaining,XACTTC_SYNC,0));
@@ -607,7 +616,6 @@ begin
       StartTransaction;
     end;
   end;
-  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'COMMIT');
 end;
 
 {**
@@ -619,6 +627,8 @@ end;
 }
 procedure TZOleDBConnection.Rollback;
 begin
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'ROLLBACK');
   if (FpulTransactionLevel > 0) and assigned(fTransaction) then
   begin
     OleDbCheck(fTransaction.Abort(nil, FRetaining, False));
@@ -629,7 +639,6 @@ begin
       StartTransaction;
     end;
   end;
-  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'ROLLBACK');
 end;
 
 function TZOleDBConnection.OleDbGetDBPropValue(APropID: DBPROPID): Integer;
