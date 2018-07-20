@@ -74,7 +74,10 @@ type
   protected
     function GetSupportedProtocols: string; override;
   private
+    TestSF274_GotNotified: Boolean;
     procedure InternalTestSF224(const Query: TZReadOnlyQuery);
+    procedure TestSF274_OnNotify(Sender: TObject; Event: string;
+        ProcessID: Integer; Payload: string);
   published
     procedure Test707339;
     procedure Test707337;
@@ -106,6 +109,7 @@ type
     procedure TestSF218_kgizmo;
     procedure TestSF224;
     procedure TestSF266;
+    procedure TestSF274;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -119,7 +123,7 @@ type
   end;
 implementation
 
-uses ZSysUtils, ZTestCase;
+uses ZSysUtils, ZTestCase, ZPGEventAlerter, DateUtils, Forms;
 
 { TZTestCompPostgreSQLBugReport }
 
@@ -1238,6 +1242,39 @@ begin
     if Assigned(Query) then FreeAndNil(Query);
     Connection.Disconnect;
   end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF274;
+var
+  Listener: TZPgEventAlerter;
+  EndTime: TDateTime;
+begin
+  TestSF274_GotNotified := false;
+  try
+    Listener := TZPgEventAlerter.Create(nil);
+    Listener.Events.Add('zeostest');
+    Listener.Connection := Connection;
+    Listener.OnNotify := TestSF274_OnNotify;
+    Connection.Connect;
+    Listener.Active := True;
+    EndTime := IncSecond(Now, 2);
+    Connection.ExecuteDirect('NOTIFY zeostest');
+    while (not TestSF274_GotNotified) and (EndTime > Now) do begin
+      Application.ProcessMessages;
+      Sleep(0);
+    end;
+    Listener.Active := false;
+    Check(TestSF274_GotNotified, 'Didn''t get PostgreSQL notification.');
+  finally
+    Connection.Disconnect;
+    if Assigned(Listener) then FreeAndNil(Listener);
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF274_OnNotify(Sender: TObject; Event: string;
+        ProcessID: Integer; Payload: string);
+begin
+  TestSF274_GotNotified := true;
 end;
 
 initialization
