@@ -9,7 +9,7 @@
         <AppType>Console</AppType>
         <FrameworkType>None</FrameworkType>
         <Basis>True</Basis>
-        <Platform Condition="'$(Platform)'==''">Win64</Platform>
+        <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <TargetedPlatforms>3</TargetedPlatforms>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">

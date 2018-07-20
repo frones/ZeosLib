@@ -390,7 +390,7 @@ type
 }
   TZPostgreSQLNotify = packed record
     relname: PAnsiChar;   { name of relation containing data }
-    be_pid:  Integer; { process id of backend }
+    be_pid:  {$IFDEF HAVE_TRUE_NATIVE_TYPES}NativeInt{$ELSE}Integer{$ENDIF}; { process id of backend }
     payload: PAnsiChar; {additional data in notify}
   end;
 
