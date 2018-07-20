@@ -338,7 +338,7 @@ begin
       if Notify = nil then
         Break;
       HandleNotify(Notify);
-      PlainDRV.PQfreeNotify(PPGnotify(Notify));
+      PlainDRV.PQFreemem(Notify);
     end;
   end;
 end;
