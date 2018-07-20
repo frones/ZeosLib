@@ -1515,7 +1515,6 @@ begin
   for i := Value downto 0 do
     if BindList.ParamTypes[i] in [zptUnknown, zptInput] then
       Dec(Result);
-  {$IFNDEF GENERIC_INDEX}Result := Result+1{$ENDIF};
 end;
 
 {**

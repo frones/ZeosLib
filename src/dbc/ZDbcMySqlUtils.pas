@@ -241,7 +241,7 @@ begin
       Result := stTimestamp;
     FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
-      if ((FieldOffsets.charsetnr > 0) and (PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^ <> 63{binary})) or
+      if ((FieldOffsets.charsetnr > 0) and ((PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^ <> 63{binary}) or (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG = 0))) or
          ((FieldOffsets.charsetnr < 0) and (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG = 0)) then
         If ( CtrlsCPType = cCP_UTF16)
         then Result := stUnicodeStream
@@ -261,7 +261,7 @@ begin
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
       if (PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ = 0) or //handle null columns: select null union null
-          ((FieldOffsets.charsetnr > 0) and (PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^ <> 63{binary})) or
+        ((FieldOffsets.charsetnr > 0) and ((PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^ <> 63{binary}) or (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG = 0))) or
           ((FieldOffsets.charsetnr < 0) and (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG = 0)) then
         if ( CtrlsCPType = cCP_UTF16)
         then Result := stUnicodeString
@@ -873,7 +873,8 @@ begin
       GetMem(Bind^.length, Iterations*SizeOf(ULong));
       FillChar(Bind^.length^, Iterations*SizeOf(ULong), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
       Bind^.length_address^ := Bind^.length;
-      PPointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.is_null)^ := @Bind^.is_null;
+      Bind^.is_null_address := @Bind^.is_null;
+      PPointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.is_null)^ := Bind^.is_null_address;
       if (BindOffsets.Indicator > 0)
       then Bind^.indicator_address := Pointer(NativeUInt(BindBuffer)+ColOffset+BindOffsets.Indicator)
       else if Iterations > 1 then

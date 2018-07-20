@@ -145,7 +145,8 @@ implementation
 uses
   ZMessages, ZSysUtils, ZDbcMySqlStatement, ZMySqlToken, ZFastCode,
   ZDbcMySqlUtils, ZDbcMySqlMetadata, ZMySqlAnalyser, TypInfo,
-  ZEncoding, ZConnProperties, ZDbcProperties, ZClasses;
+  ZEncoding, ZConnProperties, ZDbcProperties, ZClasses,
+  {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF};
 
 { TZMySQLDriver }
 

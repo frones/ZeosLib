@@ -310,7 +310,7 @@ type
 implementation
 
 uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZEncoding, ZConnProperties,
-  ZDbcProperties
+  ZDbcProperties, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZAbstractDriver }

@@ -678,7 +678,8 @@ TMYSQL_CLIENT_OPTIONS =
     buffer_length_address:  PULong; //address of result buffer length
     length_address:         PPointer;
     length:                 PULongArray; //current length of our or bound data
-    is_null:                my_bool; //null indicators -> sadly mariadb doesn't use a array as stmt indicator
+    is_null_address:        Pmy_bool; //adress of is_null -> the field should be used
+    is_null:                my_bool; //null indicator -> do not attach directly -> out params are referenced to stmt bindings
     is_unsigned_address:    Pmy_bool; //signed ordinals or not?
     //https://mariadb.com/kb/en/library/bulk-insert-column-wise-binding/
     indicators:             Pmysql_indicator_types; //stmt indicators for bulk bulk ops -> mariadb addresses to "u" and does not use the C-enum
@@ -734,6 +735,8 @@ const
 //some error codes:
   CR_SERVER_GONE_ERROR = 2006;
   CR_SERVER_LOST = 2013;
+  CR_INVALID_PARAMETER_NO = 2034;
+  CR_NO_DATA = 2051;
 
   //http://eclipseclp.org/doc/bips/lib/dbi/cursor_next_execute-3.html
   //"Only one active cursor of type no_cursor is allowed per session,

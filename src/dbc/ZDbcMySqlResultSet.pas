@@ -849,6 +849,7 @@ function TZAbstractMySQLResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: Na
 var
   TmpDateTime, TmpDateTime2: TDateTime;
   ColBind: PMYSQL_aligned_BIND;
+  Status: Integer;
 begin
   {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -937,10 +938,14 @@ begin
             if ColBind^.Length[0] < SizeOf(FSmallLobBuffer) then begin
               ColBind^.buffer_address^ := @FSmallLobBuffer[0];
               ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer)-1; //mysql sets $0 on to of data and corrupts our mem
-              FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
+              Status := FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
               ColBind^.buffer_address^ := nil;
               ColBind^.buffer_Length_address^ := 0;
               Result := @FSmallLobBuffer[0];
+              if Status <> 0 then
+                if Status = STMT_FETCH_ERROR
+                then raise EZSQLException.Create('Fetch error')
+                else checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcOther, 'mysql_stmt_fetch_column', Self);
               Len := ColBind^.Length[0];
               Exit;
             end else begin
@@ -987,7 +992,7 @@ begin
   Bind^.is_unsigned_address^ := Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0);
   bind^.buffer_type_address^ := PMysqlFieldType(NativeUInt(MYSQL_FIELD)+FieldOffsets._type)^; //safe initialtype
   if FieldOffsets.charsetnr > 0
-  then bind^.binary := (PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^ = 63)
+  then bind^.binary := (PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^ = 63) and (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG <> 0)
   else bind^.binary := (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG <> 0);
 
   case bind^.buffer_type_address^ of
