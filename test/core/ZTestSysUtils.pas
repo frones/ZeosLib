@@ -133,7 +133,7 @@ implementation
 
 uses ZEncoding {$IFDEF BENCHMARK},ZFastCode, Types, Classes{$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}, Windows{$IFEND}{$ENDIF};
 
-{$IFDEF FPC}{$IF FPC_FULLVERSION < 30000}
+{$IFDEF FPC}{$IFNDEF DEFINE FPC3_0UP}
 {These functions help FPC 2.6 to decide wether to call the PChar or PWideChar version of these functions later on}
 function SQLStrToFloatDef(Value: RawByteString; const Def: Extended; Len: Integer = 0): Extended; overload;
 begin
@@ -144,7 +144,7 @@ function SQLStrToFloatDef(Value: ZWideString; const Def: Extended; Len: Integer 
 begin
   SQLStrToFloatDef(PWideChar(Value), Def, Len);
 end;
-{$ENDIF}{$IFEND}
+{$ENDIF}{$ENDIF}
 
 { TZTestSysUtilsCase }
 
