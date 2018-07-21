@@ -322,7 +322,13 @@ const
 
 implementation
 
-uses {$IFDEF WITH_FTGUID}ComObj, ActiveX,{$ENDIF} Math,
+uses
+  {$IF DEFINED (FPC) and DEFINED(WINDOWS) and DEFINED(WITH_FTGUID)}
+    ComObj, ActiveX,
+  {$ELSE}
+    {$IFDEF WITH_FTGUID}ComObj, ActiveX,{$ENDIF}
+  {$ENDIF}
+  Math,
   ZSysUtils, ZEncoding, ZTestConsts, ZTestConfig, ZSqlProcessor, ZURL, ZAbstractRODataset;
 
 function PropPos(const PropDynArray: TStringDynArray; const AProp: String): Integer; overload;
