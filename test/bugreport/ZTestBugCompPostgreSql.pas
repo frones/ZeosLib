@@ -123,7 +123,7 @@ type
   end;
 implementation
 
-uses ZSysUtils, ZTestCase, ZPGEventAlerter, DateUtils, Forms;
+uses ZSysUtils, ZTestCase, ZPgEventAlerter, DateUtils, Forms;
 
 { TZTestCompPostgreSQLBugReport }
 

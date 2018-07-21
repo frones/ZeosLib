@@ -323,11 +323,13 @@ const
 implementation
 
 uses
-  {$IF DEFINED (FPC) and DEFINED(WINDOWS) and DEFINED(WITH_FTGUID)}
+  {$IFDEF FPC}
+    {$IF DEFINED(WINDOWS) and DEFINED(WITH_FTGUID)}
     ComObj, ActiveX,
+    {$ENDIF}
   {$ELSE}
     {$IFDEF WITH_FTGUID}ComObj, ActiveX,{$ENDIF}
-  {$ENDIF}
+  {$IFEND}
   Math,
   ZSysUtils, ZEncoding, ZTestConsts, ZTestConfig, ZSqlProcessor, ZURL, ZAbstractRODataset;
 
@@ -838,7 +840,7 @@ var GUID: TGUID;
 {$ENDIF}
 begin
   {$IFDEF WITH_FTGUID}
-  if CoCreateGuid(GUID) = S_OK then
+  if CreateGuid(GUID) = S_OK then
     Result := GUIDToString(GUID)
   else
   {$ENDIF}
@@ -852,7 +854,7 @@ var GUID: TGUID;
 begin
   SetLength(Result, 16);
   {$IFDEF WITH_FTGUID}
-  if CoCreateGuid(GUID) = S_OK then
+  if CreateGuid(GUID) = S_OK then
     System.Move(Pointer(@GUID)^, Pointer(Result)^, 16)
   else
   {$ENDIF}
@@ -869,7 +871,7 @@ begin
   Bts := RandomGUIDBytes;
   Result := GUID;
   {$ELSE}
-  CoCreateGuid(Result);
+  CreateGuid(Result);
   {$ENDIF}
 end;
 
