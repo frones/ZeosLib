@@ -323,13 +323,6 @@ const
 implementation
 
 uses
-  {$IFDEF FPC}
-    {$IF DEFINED(WINDOWS) and DEFINED(WITH_FTGUID)}
-    ComObj, ActiveX,
-    {$ENDIF}
-  {$ELSE}
-    {$IFDEF WITH_FTGUID}ComObj, ActiveX,{$ENDIF}
-  {$IFEND}
   Math,
   ZSysUtils, ZEncoding, ZTestConsts, ZTestConfig, ZSqlProcessor, ZURL, ZAbstractRODataset;
 
