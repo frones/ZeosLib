@@ -674,7 +674,9 @@ procedure TZAbstractTestCase.CheckException(AMethod: TTestMethod;
   AExceptionClass: TClass; const ExcMsg, Msg: string);
 begin
   {$IFDEF FPC}
-  CheckAssertCalled := True;
+    {$IF FPC_FULLVERSION >= 30000}
+    CheckAssertCalled := True;
+    {$IFEND}
   {$ELSE}
   FCheckCalled := True;
   {$ENDIF}
