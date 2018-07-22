@@ -381,12 +381,13 @@ begin
   if not FileExists(ConfigFileName)
   then raise Exception.Create('Config file doesn''t exist!');
 
+  ConfigFileName := ExpandFileName(ConfigFileName);
   FConfigFile := TIniFile.Create(ConfigFileName);
   ScriptPath := FConfigFile.ReadString('common', 'common.scriptpath', '');
 
   if ScriptPath <> '' then begin
     if DirectoryExists(ScriptPath)
-    then FScriptPath := ScriptPath
+    then FScriptPath := ExpandFileName(ScriptPath)
     else if DirectoryExists(ExtractFilePath(ParamStr(0)) + ScriptPath)
       then FScriptPath := ExtractFilePath(ParamStr(0)) + ScriptPath
       else if DirectoryExists(ExtractFilePath(ConfigFileName) + ScriptPath)
