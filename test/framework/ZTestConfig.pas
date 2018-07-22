@@ -481,7 +481,7 @@ begin
   CommandLineSwitches.batch := Application.HasOption('b', 'batch');
   CommandLineSwitches.xml := Application.HasOption('x', 'xml');
   if CommandLineSwitches.xml then
-    CommandLineSwitches.XmlFile := Application.GetOptionValue('xml');
+    CommandLineSwitches.XmlFileName := Application.GetOptionValue('xml');
   CommandLineSwitches.norebuild := Application.HasOption('n', 'norebuild');
   CommandLineSwitches.memcheck := Application.HasOption('memcheck');
   if CommandLineSwitches.memcheck then
