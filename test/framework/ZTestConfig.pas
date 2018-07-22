@@ -209,9 +209,9 @@ type
     memcheck:        boolean;
     memcheck_file:   String;
     suiteitems:      TStringDynArray;
+    suitename:       String;
     sqlmonitor:      boolean;
     sqlmonitorfile:  String;
-
   end;
 var
   CommandLineSwitches: TCommandLineSwitches;
@@ -494,6 +494,8 @@ begin
   CommandLineSwitches.sqlmonitor := Application.HasOption('m','monitor');
   If CommandLineSwitches.sqlmonitor then
     CommandLineSwitches.sqlmonitorfile := Application.GetOptionValue('m', 'monitor');
+  if Application.HasOption('suitename') then
+    CommandLineSwitches.suitename := Application.GetOptionValue('m', 'monitor');
   {$ELSE}
   CommandLineSwitches.help := (FindCmdLineSwitch('H',true) or FindCmdLineSwitch('Help',true));
   CommandLineSwitches.list := (FindCmdLineSwitch('L',true) or FindCmdLineSwitch('List',true));
@@ -515,6 +517,8 @@ begin
   CommandLineSwitches.sqlmonitor := (FindCmdLineSwitch('M',true) or FindCmdLineSwitch('Monitor',true));
   If CommandLineSwitches.sqlmonitor then
     CommandLineSwitches.sqlmonitorfile := GetCommandLineSwitchValue('M' ,'Monitor');
+  if FindCmdLineSwitch('SuiteName',true) then
+    CommandLineSwitches.suitename := GetCommandLineSwitchValue('' ,'SuiteName');
   {$ENDIF}
 end;
 
@@ -527,6 +531,8 @@ end;
 function CreateTestSuite:ITestSuite;
 var
   I, J: integer;
+  RealSuiteName: String;
+
   procedure CheckTestRegistry (test:ITest; ATestName:string);
   var s, c : string;
       I, p : integer;
@@ -563,7 +569,8 @@ var
 begin
   If CommandLineSwitches.Suite then
     begin
-      Result := TTestSuite.Create('Suite');
+      if CommandLineSwitches.suitename = '' then RealSuiteName := 'Suite' else RealSuiteName := CommandLineSwitches.suitename;
+      Result := TTestSuite.Create(RealSuiteName);
       for J := 0 to High(CommandLineSwitches.suiteitems) do
         for I := 0 to RegisteredTests.Tests.count-1 do
           CheckTestRegistry (ITest(RegisteredTests.Tests[I]), CommandLineSwitches.suiteitems[J]);
