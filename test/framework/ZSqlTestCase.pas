@@ -1374,7 +1374,7 @@ begin
     FSQLProcessor.OnError := RaiseError
   else FSQLProcessor.OnError := SuppressError;
 
-  ScriptPath := TestConfig.ConfigFilePath;
+  ScriptPath := TestConfig.ScriptPath;
 
   for I := 0 to High(FileNames) do
   begin

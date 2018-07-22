@@ -173,9 +173,9 @@ type
     FEnableMemCheck: Boolean;
     FMemCheckLogFile: string;
     FMemCheckShowResult: Boolean;
+    FScriptPath: string;
 
     function GetConfigFileName: string;
-    function GetConfigFilePath: string;
   public
     destructor Destroy; override;
 
@@ -187,8 +187,8 @@ type
 
     property ConfigFile: TIniFile read FConfigFile;
     property ConfigFileName: string read FConfigFileName;
-    property ConfigFilePath: string read GetConfigFilePath;
     property ConfigLoaded: Boolean read FConfigLoaded;
+    property ScriptPath: String read FScriptPath;
 
     property EnableMemCheck: Boolean read FEnableMemCheck;
     property MemCheckLogFile: string read FMemCheckLogFile;
@@ -363,28 +363,41 @@ begin
     Result := ExtractFileDir(ParamStr(0)) + PATH_DELIMITER + Path;
 
   FConfigFileName := Result;
-end;
-
-{**
-  Gets a fully qualified path of the configuration file.
-  @return a fully qualified path of the configuration file.
-}
-function TZTestConfiguration.GetConfigFilePath: string;
-begin
-  if FConfigFileName = '' then
-    FConfigFileName := GetConfigFileName;
-  Result := ExtractFilePath(FConfigFileName);
+  Writeln('Config File Name: ' + Result);
 end;
 
 {**
   Loads a configuration from the configuration file.
 }
 procedure TZTestConfiguration.LoadConfig;
+var
+  ConfigFileName: String;
+  ScriptPath: String;
 begin
   { Reads a configuration file from the disk. }
   if Assigned(FConfigFile) then
     FConfigFile.Free;
-  FConfigFile := TIniFile.Create(GetConfigFileName);
+  ConfigFileName := GetConfigFileName;
+  if not FileExists(ConfigFileName)
+  then raise Exception.Create('Config file doesn''t exist!');
+
+  FConfigFile := TIniFile.Create(ConfigFileName);
+  ScriptPath := FConfigFile.ReadString('common', 'common.scriptpath', '');
+
+  if ScriptPath <> '' then begin
+    if DirectoryExists(ScriptPath)
+    then FScriptPath := ScriptPath
+    else if DirectoryExists(ExtractFilePath(ParamStr(0)) + ScriptPath)
+      then FScriptPath := ExtractFilePath(ParamStr(0)) + ScriptPath
+      else if DirectoryExists(ExtractFilePath(ConfigFileName) + ScriptPath)
+        then FScriptPath := ExtractFilePath(ConfigFileName) + ScriptPath
+        else FScriptPath := ExtractFilePath(FConfigFileName);
+  end else begin
+    FScriptPath := ExtractFilePath(FConfigFileName);
+  end;
+
+  if FScriptPath[Length(FScriptPath)] <> PathDelim
+    then FScriptPath := FScriptPath + PathDelim;
 
   { Reads default properties. }
   FEnableMemCheck := StrToBoolEx(ReadProperty(COMMON_GROUP,
