@@ -489,9 +489,9 @@ begin
 
   try
     { load data to the stream }
-    BinStream.LoadFromFile('../../../database/images/dogs.jpg');
+    BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
     BinStream.Size := 1024;
-    StrStream.LoadFromFile('../../../database/text/lgpl.txt');
+    StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
     StrStream.Size := 1024;
     { post empty row }
     Query.SQL.Text := 'SELECT * FROM BLOB_VALUES';

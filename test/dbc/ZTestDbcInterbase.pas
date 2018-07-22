@@ -220,7 +220,7 @@ begin
   TempStream := nil;
   TextStream := TStringStream.Create('ABCDEFG');
   ImageStream := TMemoryStream.Create;
-  ImageStream.LoadFromFile('../../../database/images/zapotec.bmp');
+  ImageStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/zapotec.bmp');
   try
     PreparedStatement := Connection.PrepareStatement(
       'INSERT INTO BLOB_VALUES (B_ID, B_TEXT, B_IMAGE) VALUES(?,?,?)');
@@ -279,7 +279,7 @@ begin
 
   TextStream := TStringStream.Create('ABCDEFG');
   ImageStream := TMemoryStream.Create;
-  ImageStream.LoadFromFile('../../../database/images/zapotec.bmp');
+  ImageStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/zapotec.bmp');
 
   PreparedStatement := Connection.PrepareStatement(
     'INSERT INTO BLOB_VALUES (B_ID, B_TEXT, B_IMAGE) VALUES(?,?,?)');
@@ -305,7 +305,7 @@ begin
   ImageStream.Free;
   TextStream := TStringStream.Create('GFEDCBA');
   ImageStream := TMemoryStream.Create;
-  ImageStream.LoadFromFile('../../../database/images/dogs.jpg');
+  ImageStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
 
   PreparedStatement := Connection.PrepareStatement(
     'UPDATE BLOB_VALUES SET B_TEXT =?,B_IMAGE=? WHERE B_ID=?');

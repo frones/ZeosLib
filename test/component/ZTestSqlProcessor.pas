@@ -368,7 +368,7 @@ const
     '/*==============================================================*/');
 begin
   FProcessor.DelimiterType := dtSetTerm;
-  Fprocessor.LoadFromFile('..\..\..\database\text\TestSQLProcessor3Stmts.sql');
+  Fprocessor.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/TestSQLProcessor3Stmts.sql');
   Fprocessor.Parse;
   CheckEquals(3, FProcessor.StatementCount);
   CheckEquals(stmt1,FProcessor.Statements[0]);

@@ -262,11 +262,11 @@ begin
   TextStream := TMemoryStream.Create();
   BinaryStream := TMemoryStream.Create();
   try
-    TextStream.LoadFromFile('../../../database/text/gnu.txt');
+    TextStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/gnu.txt');
     TextStream.Position := 0;
     TextStream.Size := 1024;
 
-    BinaryStream.LoadFromFile('../../../database/images/coffee.bmp');
+    BinaryStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/coffee.bmp');
     BinaryStream.Position := 0;
     BinaryStream.Size := 1024;
 
