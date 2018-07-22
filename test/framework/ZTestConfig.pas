@@ -396,8 +396,9 @@ begin
     FScriptPath := ExtractFilePath(FConfigFileName);
   end;
 
-  if FScriptPath[Length(FScriptPath)] <> PathDelim
-    then FScriptPath := FScriptPath + PathDelim;
+  if FScriptPath <> ''
+    then if FScriptPath[Length(FScriptPath)] <> PathDelim
+      then FScriptPath := FScriptPath + PathDelim;
 
   { Reads default properties. }
   FEnableMemCheck := StrToBoolEx(ReadProperty(COMMON_GROUP,
