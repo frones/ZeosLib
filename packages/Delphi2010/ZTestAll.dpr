@@ -67,6 +67,7 @@ uses
   ZTestComponents in '..\..\test\component\ZTestComponents.pas',
   ZTestBugreports in '..\..\test\bugreport\ZTestBugreports.pas',
   ZTestPerformance in '..\..\test\performance\ZTestPerformance.pas',
+  XMLTestRunner2 in '..\..\test\external\XMLTestRunner2.pas',
   XMLTestRunner2 in '..\..\test\external\XMLTestRunner2.pas';
 
 begin
@@ -81,7 +82,7 @@ begin
   If CommandLineSwitches.batch then
     TextTestRunner.RunTest(CreateTestSuite).Free
   else if CommandLineSwitches.xml then
-    XMLTestRunner2.RunTest(CreateTestSuite).Free   
+    XMLTestRunner2.RunTest(CreateTestSuite, CommandLineSwitches.xmlfilename).Free
   else
     GUITestRunner.RunTest(CreateTestSuite);
 end.
