@@ -67,7 +67,6 @@ uses
   ZTestComponents in '..\..\test\component\ZTestComponents.pas',
   ZTestBugreports in '..\..\test\bugreport\ZTestBugreports.pas',
   ZTestPerformance in '..\..\test\performance\ZTestPerformance.pas',
-  XMLTestRunner2 in '..\..\test\external\XMLTestRunner2.pas',
   XMLTestRunner2 in '..\..\test\external\XMLTestRunner2.pas';
 
 begin
