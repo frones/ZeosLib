@@ -1310,7 +1310,7 @@ end;
 {$IFDEF USE_SYNCOMMONS}
 procedure TZRowAccessor.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
-var P: Pointer;
+var Data: PPointer;
     I, H, C: SmallInt;
     Blob: IZBlob;
 begin
@@ -1323,7 +1323,10 @@ begin
     if Pointer(JSONWriter.Fields) = nil then
       C := I else
       C := JSONWriter.Fields[i];
+    {$R-}
+    Data := @FBuffer.Columns[FColumnOffsets[C] + 1];
     if FBuffer.Columns[FColumnOffsets[C]] = bIsNull then begin
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
       if JSONWriter.Expand then begin
         if not (jcsSkipNulls in JSONComposeOptions) then begin
           JSONWriter.AddString(JSONWriter.ColNames[I]);
@@ -1335,83 +1338,84 @@ begin
       if JSONWriter.Expand then
         JSONWriter.AddString(JSONWriter.ColNames[I]);
       case FColumnTypes[C] of
-        stBoolean       : JSONWriter.AddShort(JSONBool[PWord(@FBuffer.Columns[FColumnOffsets[C] + 1])^ <> 0]);
-        stByte          : JSONWriter.AddU(PByte(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
-        stShort         : JSONWriter.Add(PShortInt(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
-        stWord          : JSONWriter.AddU(PWord(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
-        stSmall         : JSONWriter.Add(PSmallInt(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
-        stLongWord      : JSONWriter.AddU(PCardinal(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
-        stInteger       : JSONWriter.Add(PInteger(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
-        stULong         : JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PUInt64(@FBuffer.Columns[FColumnOffsets[C] + 1])^));
-        stLong          : JSONWriter.Add(PInt64(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
-        stFloat         : JSONWriter.AddSingle(PSingle(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
-        stDouble        : JSONWriter.AddDouble(PDouble(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
-        stCurrency      : JSONWriter.AddCurr64(PCurrency(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
-        stBigDecimal    : JSONWriter.AddDouble(PExtended(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+        stBoolean       : JSONWriter.AddShort(JSONBool[PWord(Data)^ <> 0]);
+        stByte          : JSONWriter.AddU(PByte(Data)^);
+        stShort         : JSONWriter.Add(PShortInt(Data)^);
+        stWord          : JSONWriter.AddU(PWord(Data)^);
+        stSmall         : JSONWriter.Add(PSmallInt(Data)^);
+        stLongWord      : JSONWriter.AddU(PCardinal(Data)^);
+        stInteger       : JSONWriter.Add(PInteger(Data)^);
+        stULong         : JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PUInt64(Data)^));
+        stLong          : JSONWriter.Add(PInt64(Data)^);
+        stFloat         : JSONWriter.AddSingle(PSingle(Data)^);
+        stDouble        : JSONWriter.AddDouble(PDouble(Data)^);
+        stCurrency      : JSONWriter.AddCurr64(PCurrency(Data)^);
+        stBigDecimal    : JSONWriter.AddDouble(PExtended(Data)^);
         stString,
         stUnicodeString : begin
                             JSONWriter.Add('"');
-                            if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
-                               (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) then
-                              JSONWriter.AddJSONEscapeW(Pointer(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[C] + 1])^+PWideInc),
-                                PPLongWord(@FBuffer.Columns[FColumnOffsets[C] + 1])^^)
-                            else if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
-                              JSONWriter.AddJSONEscape(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[C] + 1])^+PAnsiInc,
-                                PPLongWord(@FBuffer.Columns[FColumnOffsets[C] + 1])^^)
-                            else begin
-                              FUniTemp := PRawToUnicode(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[C] + 1])^+PAnsiInc,
-                                PPLongWord(@FBuffer.Columns[FColumnOffsets[C] + 1])^^, ConSettings^.ClientCodePage^.CP);
-                              JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+                            if (Data^ <> nil) then begin
+                              if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
+                                 (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) then
+                                JSONWriter.AddJSONEscapeW(Pointer(ZPPWideChar(Data)^+PWideInc),
+                                  PPLongWord(Data)^^)
+                              else if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+                                JSONWriter.AddJSONEscape(PPAnsiChar(Data)^+PAnsiInc,
+                                  PPLongWord(Data)^^)
+                              else begin
+                                FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
+                                  PPLongWord(Data)^^, ConSettings^.ClientCodePage^.CP);
+                                JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+                              end;
                             end;
                             JSONWriter.Add('"');
                           end;
-        stBytes         : JSONWriter.WrBase64(PPointer(@FBuffer.Columns[FColumnOffsets[C] + 1])^,
-                            PSmallInt(@FBuffer.Columns[FColumnOffsets[C] + 1 + SizeOf(Pointer)])^, True);
+        stBytes         : JSONWriter.WrBase64(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^, True);
         stGUID          : begin
                             JSONWriter.Add('"');
-                            JSONWriter.Add(PGUID(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+                            JSONWriter.Add(PGUID(Data)^);
                             JSONWriter.Add('"');
                           end;
-        stTime          : if (jcoMongoISODate in JSONComposeOptions) and (FColumnTypes[C] <> stTime) then begin
+        stTime          : if (jcoMongoISODate in JSONComposeOptions) then begin
                             JSONWriter.AddShort('ISODate("0000-00-00');
-                            JSONWriter.AddDateTime(PDateTime(@FBuffer.Columns[FColumnOffsets[C] + 1])^, jcoMilliseconds in JSONComposeOptions);
+                            JSONWriter.AddDateTime(PDateTime(Data)^, jcoMilliseconds in JSONComposeOptions);
                             JSONWriter.AddShort('Z")')
                           end else begin
                             if jcoDATETIME_MAGIC in JSONComposeOptions
                             then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                             else JSONWriter.Add('"');
-                            JSONWriter.AddDateTime(PDateTime(@FBuffer.Columns[FColumnOffsets[C] + 1])^, jcoMilliseconds in JSONComposeOptions);
+                            JSONWriter.AddDateTime(PDateTime(Data)^, jcoMilliseconds in JSONComposeOptions);
                             JSONWriter.Add('"');
                           end;
         stDate,
-        stTimestamp     : if (jcoMongoISODate in JSONComposeOptions) and (FColumnTypes[C] <> stTime) then begin
+        stTimestamp     : if (jcoMongoISODate in JSONComposeOptions) then begin
                             JSONWriter.AddShort('ISODate("');
-                            JSONWriter.AddDateTime(PDateTime(@FBuffer.Columns[FColumnOffsets[C] + 1])^, jcoMilliseconds in JSONComposeOptions);
+                            JSONWriter.AddDateTime(PDateTime(Data)^, jcoMilliseconds in JSONComposeOptions);
                             JSONWriter.AddShort('Z")')
                           end else begin
                             if jcoDATETIME_MAGIC in JSONComposeOptions
                             then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                             else JSONWriter.Add('"');
-                            JSONWriter.AddDateTime(PDateTime(@FBuffer.Columns[FColumnOffsets[C] + 1])^, jcoMilliseconds in JSONComposeOptions);
+                            JSONWriter.AddDateTime(PDateTime(Data)^, jcoMilliseconds in JSONComposeOptions);
                             JSONWriter.Add('"');
                           end;
         stAsciiStream, stUnicodeStream:
           begin
-            Blob := IZBlob(PPointer(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+            Blob := IZBlob(Data^);
             if Blob.IsEmpty then
               JSONWriter.AddShort('null')
             else begin
               if Blob.IsClob then
-                P := Blob.GetPAnsiChar(zCP_UTF8) else
-                P := Blob.GetBuffer;
+                PAnsiChar(Data) := Blob.GetPAnsiChar(zCP_UTF8) else
+                Data := Blob.GetBuffer;
               JSONWriter.Add('"');
-              JSONWriter.AddJSONEscape(P, Blob.Length);
+              JSONWriter.AddJSONEscape(Data, Blob.Length);
               JSONWriter.Add('"');
             end;
           end;
         stBinaryStream:
           begin
-            Blob := IZBlob(PPointer(@FBuffer.Columns[FColumnOffsets[C] + 1])^);
+            Blob := IZBlob(PPointer(Data)^);
             if Blob.IsEmpty then
               JSONWriter.AddShort('null')
             else
