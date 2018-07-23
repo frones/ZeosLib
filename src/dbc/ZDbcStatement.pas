@@ -6368,6 +6368,9 @@ function TZAbstractCallableStatement2.GetValue(
   ParameterIndex: Integer): TZVariant;
 var
   L: LengthInt;
+  {$IFDEF BCC32_vtDateTime_ERROR}
+  DT: TDateTime;
+  {$ENDIF}
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   Result := NullVariant;
@@ -6394,7 +6397,12 @@ begin
           Result := EncodeFloat(PCurrency(@Result.VInteger)^);
         end;
       stTime,stDate,stTimeStamp: begin
+          {$IFDEF BCC32_vtDateTime_ERROR}
+          FExecStatements[FCallExecKind].GetDateTime(ParameterIndex, DT);
+          Result.VDateTime := DT;
+          {$ELSE}
           FExecStatements[FCallExecKind].GetDateTime(ParameterIndex, Result.VDateTime);
+          {$ENDIF}
           Result.VType := vtDateTime;
         end;
       stGUID: begin
