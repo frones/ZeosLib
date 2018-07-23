@@ -238,7 +238,7 @@ go
 /*==============================================================*/
 /* Table : default_values2                                       */
 /*==============================================================*/
-create table default_values(
+create table default_values2(
    d_id                           int 	      not null,
    d_fld1                         float       default 123.456,
    d_fld2                         int 	      default 123456,
