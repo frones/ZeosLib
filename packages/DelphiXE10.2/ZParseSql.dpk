@@ -25,7 +25,7 @@ package ZParseSql;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'Zeos SQL Parsing Classes and Interfaces'}
-{$LIBSUFFIX '250'}
+{$LIBSUFFIX '320'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
 
