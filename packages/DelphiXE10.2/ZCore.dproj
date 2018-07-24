@@ -7,7 +7,7 @@
         <TargetedPlatforms>1</TargetedPlatforms>
         <AppType>Package</AppType>
         <FrameworkType>None</FrameworkType>
-        <ProjectVersion>18.3</ProjectVersion>
+        <ProjectVersion>18.4</ProjectVersion>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
@@ -48,7 +48,7 @@
         <GenPackage>true</GenPackage>
         <DCC_S>false</DCC_S>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.0.0;Comments=;CFBundleName=</VerInfo_Keys>
-        <DllSuffix>320</DllSuffix>
+        <DllSuffix>250</DllSuffix>
         <DCC_E>false</DCC_E>
         <DCC_N>false</DCC_N>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
@@ -95,6 +95,7 @@
         <DCCReference Include="..\..\src\core\ZClasses.pas"/>
         <DCCReference Include="..\..\src\core\ZMessages.pas"/>
         <DCCReference Include="..\..\src\core\ZURL.pas"/>
+        <DCCReference Include="..\..\src\core\ZConnProperties.pas"/>
         <DCCReference Include="..\..\src\core\ZFunctions.pas"/>
         <DCCReference Include="..\..\src\core\ZFunctionsConvert.pas"/>
         <DCCReference Include="..\..\src\core\ZFunctionsDateTime.pas"/>

@@ -25,7 +25,7 @@ package ZCore;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'Zeos Core Classes and Interfaces'}
-{$LIBSUFFIX '320'}
+{$LIBSUFFIX '250'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
 
