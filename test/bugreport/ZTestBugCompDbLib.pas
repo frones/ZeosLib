@@ -121,6 +121,7 @@ begin
     Query.ExecSQL;
     Query.SQL.Text := 'select n_id, s_nchar, s_nvarchar, s_char, s_varchar from national_char_values';
     Query.Open;
+    CheckEquals(5, Query.FieldCount, 'The SQL >' + Query.SQL.Text + '< returned less fields than were expected.');
     {$IFNDEF UNICODE}
     if Connection.ControlsCodePage = cCP_UTF8 then
     begin
