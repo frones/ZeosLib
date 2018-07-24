@@ -260,6 +260,13 @@
                               {$UNDEF WITH_DBTABLES} //M.A. In Delphi XE7 no BDE
                               {$IF CompilerVersion >= 29} //Delphi XE8+
                                 {$IF CompilerVersion >= 30} //Delphi Seattle+
+                                  {$IF CompilerVersion >= 31} //Delphi Berlin+
+                                    {$IF CompilerVersion >= 32} //Delphi Tokyo+
+                                      {$DEFINE WITH_SYSTEM_WIN_COMOBJ} //unit ComObj is renamed to System.Win.ComObj 
+                                    {$ELSE !CompilerVersion >= 32} //Delphi Berlin+
+                                    {$IFEND CompilerVersion >= 32}
+                                  {$ELSE !CompilerVersion >= 31} //Delphi Seattle+
+                                  {$IFEND CompilerVersion >= 31}
                                 {$ELSE !CompilerVersion >= 30} //Delphi XE8
                                 {$IFEND CompilerVersion >= 30}
                               {$ELSE !CompilerVersion >= 29} //Delphi XE7

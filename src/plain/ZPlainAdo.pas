@@ -1713,7 +1713,7 @@ type
 implementation
 {$IFDEF ENABLE_ADO}
 
-uses ComObj;
+uses {$IFDEF WITH_SYSTEM_WIN_COMOBJ}System.Win.ComObj{$ELSE}ComObj{$ENDIF};
 
 class function CoConnection.Create: Connection15;
 begin
