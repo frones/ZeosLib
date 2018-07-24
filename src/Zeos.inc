@@ -263,6 +263,7 @@
                                   {$IF CompilerVersion >= 31} //Delphi Berlin+
                                     {$IF CompilerVersion >= 32} //Delphi Tokyo+
                                       {$DEFINE WITH_SYSTEM_WIN_COMOBJ} //unit ComObj is renamed to System.Win.ComObj 
+                                      {$DEFINE WITH_VIRTUAL_TFIELD_GETASGUID} //TField as now a virtual GetAsGUID function 
                                     {$ELSE !CompilerVersion >= 32} //Delphi Berlin+
                                     {$IFEND CompilerVersion >= 32}
                                   {$ELSE !CompilerVersion >= 31} //Delphi Seattle+

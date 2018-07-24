@@ -679,7 +679,7 @@ type
     function GetAsUTF8String: UTF8String;
     function GetAsRawByteString: RawByteString;
     { record/array types }
-    function GetAsGUID: TGUID;
+    function GetAsGUID: TGUID; {$WITH_VIRTUAL_TFIELD_GETASGUID} override; {$ENDIF}
     function GetAsBytes: TBytes; {$IFDEF TFIELD_HAS_ASBYTES}override;{$ENDIF}
     function GetAsVariant: Variant; override;
     //function GetCanModify: Boolean; virtual;
