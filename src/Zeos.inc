@@ -264,6 +264,7 @@
                                     {$IF CompilerVersion >= 32} //Delphi Tokyo+
                                       {$DEFINE WITH_SYSTEM_WIN_COMOBJ} //unit ComObj is renamed to System.Win.ComObj 
                                       {$DEFINE WITH_VIRTUAL_TFIELD_GETASGUID} //TField as now a virtual GetAsGUID function 
+                                      {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead
                                     {$ELSE !CompilerVersion >= 32} //Delphi Berlin+
                                     {$IFEND CompilerVersion >= 32}
                                   {$ELSE !CompilerVersion >= 31} //Delphi Seattle+
