@@ -482,8 +482,15 @@ var
   QuoteChar: Char;
 begin
   QuoteChar := '''';
+  TableName := 'TABLE';
+  CheckEquals(QuotedStr(TableName), SQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
+  //CheckEquals(QuotedStr(TableName), FailingSQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
+  TableName := 'TA''BLE';
+  CheckEquals(QuotedStr(TableName), SQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
+  //CheckEquals(QuotedStr(TableName), FailingSQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
   TableName := '''TABLE''';
-  CheckEquals('''''TABLE''''', FailingSQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
+  CheckEquals(QuotedStr(TableName), SQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
+  //CheckEquals(QuotedStr(TableName), FailingSQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
 end;
 
 procedure TZTestSysUtilsCase.RunDequotedStr;
