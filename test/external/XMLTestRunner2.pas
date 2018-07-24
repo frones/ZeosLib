@@ -123,9 +123,10 @@ end;
 }
 procedure TXMLTestListener.writeReport(str : String);
 begin
-   if TTextRec(FOutputFile).Mode = fmOutput then
-      writeln(FOutputFile, str)
-   else
+   if TTextRec(FOutputFile).Mode = fmOutput then begin
+      writeln(FOutputFile, str);
+      Flush(FOutputFile)
+   end else
       writeln(str);
 end;
 
@@ -168,10 +169,14 @@ end;
 
 procedure TXMLTestListener.StartTest(test: ITest);
 begin
+  if test.CountTestCases <= 1
+  then Write(test.Name + '...');
 end;
 
 procedure TXMLTestListener.EndTest(test: ITest);
 begin
+  if test.CountTestCases <= 1
+  then Writeln(' finished');
 end;
 
 procedure TXMLTestListener.TestingStarts;

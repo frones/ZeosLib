@@ -66,6 +66,7 @@ type
   private
     FUpdateCounter: Integer;
     FErrorCounter: Integer;
+    procedure TestSF279CalcFields(DataSet: TDataSet);
   public
     procedure DataSetCalcFields(Dataset: TDataSet);
     procedure DataSetBeforeScroll({%H-}Dataset: TDataSet);
@@ -119,6 +120,7 @@ type
     procedure TestTicket228;
     procedure TestSF270_1;
     procedure TestSF270_2;
+    procedure TestSF279;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -1849,6 +1851,49 @@ begin
   finally
     Query.Free;
     if Assigned(UpdateSQL) then FreeAndNil(UpdateSQL);
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF279CalcFields(DataSet: TDataSet);
+begin
+  DataSet.FieldByName('calculated').AsString :=
+    DataSet.FieldByName('dep_name').AsString +
+    ' ' +
+    DataSet.FieldByName('dep_address').AsString;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF279;
+const
+  FieldName = 'calculated';
+var
+  Query: TZQuery;
+  CalcField: TStringField;
+  FieldDef: TFieldDef;
+  X: Integer;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from department';
+    Query.FieldDefs.Clear;
+    Query.Fields.Clear;
+    Query.FieldDefs.Update;
+    FieldDef := Query.FieldDefs.AddFieldDef;
+    FieldDef.DataType := ftString;
+    FieldDef.Size := 280;
+    FieldDef.Name := FieldName;
+    for x := 0 to Query.FieldDefs.Count - 1
+    do Query.FieldDefs.Items[x].CreateField(Query);
+    Query.FieldByName(FieldName).FieldKind := fkCalculated;
+    Query.OnCalcFields := TestSF279CalcFields;
+    Query.Open;
+    try
+      Query.Filter := 'calculated LIKE ' + QuotedStr('*Krasnodar*');
+      Query.Filtered := True;
+    finally
+      Query.Close;
+    end;
+  finally
+    FreeAndNil(Query);
   end;
 end;
 
