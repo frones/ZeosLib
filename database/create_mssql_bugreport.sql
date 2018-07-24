@@ -30,7 +30,7 @@ GO
 /*==============================================================*/
 /* Tables Manntis#54                                            */
 /*==============================================================*/
-CREATE TABLE Mantis54 (
+CREATE TABLE mantis54 (
     Key1 int NOT NULL ,
     BI bigint NULL ,
     F float NULL
