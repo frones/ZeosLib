@@ -60,7 +60,7 @@ uses
   {$IFDEF USE_SYNCOMMONS}
   SynCommons,
   {$ENDIF USE_SYNCOMMONS}
-  Types, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF}, SysUtils,
+  Types, Classes, SysUtils,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema,
   ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver, ZURL;
@@ -970,7 +970,7 @@ type
   {** TDataSet interface}
   IZDataSet = interface(IZInterface)
     ['{DBC24011-EF26-4FD8-AC8B-C3E01619494A}']
-    function GetDataSet: TDataSet;
+    //function GetDataSet: TDataSet;
     function IsEmpty: Boolean;
   end;
 
