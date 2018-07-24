@@ -246,7 +246,7 @@ create table default_values2(
    d_fld4                     	  varchar(10) default 'xyz',
    d_fld5                     	  datetime    default '2003-12-11 23:12:11',
    d_fld6                     	  datetime    default '23:12:11',
-   constraint PK_DEFAULT_VALUES primary key (d_id)
+   constraint PK_DEFAULT_VALUES2 primary key (d_id)
 )
 go
 
