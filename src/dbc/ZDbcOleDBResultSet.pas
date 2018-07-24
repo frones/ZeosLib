@@ -184,7 +184,7 @@ implementation
 {$ENDIF}
 
 uses
-  Variants, Math, ComObj,
+  Variants, Math, System.Win.ComObj,
   ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode, ZClasses;
 
 {$IFOPT R+}
