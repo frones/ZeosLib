@@ -1924,7 +1924,7 @@ begin
       ConSettings := Connection.DbcConnection.GetConSettings;
       //bugreport of mrLion
 
-      SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
+      SQL.Text := 'INSERT INTO people(p_id, p_name, p_resume)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
       ParamByName('P_NAME').AsString := GetDBTestString(Str3, ConSettings);
