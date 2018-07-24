@@ -123,7 +123,7 @@ type
   end;
 implementation
 
-uses ZSysUtils, ZTestCase, ZPgEventAlerter, DateUtils, Forms;
+uses ZSysUtils, ZTestCase, ZPgEventAlerter, DateUtils, {$IFDEF WITH_VCL_PREFIX}Vcl.Forms{$ELSE}Forms{$ENDIF};
 
 { TZTestCompPostgreSQLBugReport }
 
