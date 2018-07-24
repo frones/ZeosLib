@@ -93,6 +93,7 @@ type
   {** Implements MySQL ResultSet. }
   TZAbstractMySQLResultSet = class(TZAbstractResultSet)
   private //common
+    FFirstRowFetched: boolean; //we can't seek to a negative index -> hook BeforeFirst state
     FFieldCount: ULong;
     FPMYSQL: PPMYSQL; //address of the MYSQL connection handle
     FMYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; //offset descriptor structures
@@ -805,7 +806,10 @@ begin
   if (Closed) or (fBindBufferAllocated and not Assigned(FMYSQL_STMT)) or
      ((MaxRows > 0) and (RowNo >= MaxRows)) or (RowNo > LastRowNo) then
     Exit;
-  if fBindBufferAllocated then begin
+  if (RowNo = 0) and FFirstRowFetched then begin //if moveAbsolute(0) was called
+    Result := True;
+    FFirstRowFetched := False;
+  end else if fBindBufferAllocated then begin
     FFetchStatus := FPlainDriver.mysql_stmt_fetch(FMYSQL_STMT);
     if FFetchStatus in [STMT_FETCH_OK, MYSQL_DATA_TRUNCATED] then
       Result := True
@@ -929,13 +933,17 @@ begin
         FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
         FIELD_TYPE_ENUM, FIELD_TYPE_SET, FIELD_TYPE_STRING:
           begin
-            Result := Pointer(ColBind^.buffer);
+            Result := ColBind^.buffer;
             Len := ColBind^.length[0];
             Exit;
           end;
         FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
         FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
-            if ColBind^.Length[0] < SizeOf(FSmallLobBuffer) then begin
+            if ColBind.buffer <> nil then begin
+              Result := ColBind^.buffer;
+              Len := ColBind^.length[0];
+              Exit;
+            end else if ColBind^.Length[0] < SizeOf(FSmallLobBuffer) then begin
               ColBind^.buffer_address^ := @FSmallLobBuffer[0];
               ColBind^.buffer_Length_address^ := SizeOf(FSmallLobBuffer)-1; //mysql sets $0 on to of data and corrupts our mem
               Status := FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
@@ -2061,7 +2069,20 @@ end;
 }
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZMySQL_Store_ResultSet.MoveAbsolute(Row: Integer): Boolean;
-var OffSet: ULongLong;  //local value required because of the subtraction
+  function Seek(const RowIndex: ULongLong): Boolean;
+  begin
+    if fBindBufferAllocated then begin
+      FPlainDriver.mysql_stmt_data_seek(FMYSQL_STMT, RowIndex);
+      Result := FPlainDriver.mysql_stmt_fetch(FMYSQL_STMT) = 0;
+    end else begin
+      FPlainDriver.mysql_data_seek(FQueryHandle, RowIndex);
+      FRowHandle := FPlainDriver.mysql_fetch_row(FQueryHandle);
+      Result := FRowHandle <> nil;
+      if Result
+      then FLengthArray := FPlainDriver.mysql_fetch_lengths(FQueryHandle)
+      else FLengthArray := nil;
+    end;
+  end;
 begin
   { Checks for maximum row. }
   Result := False;
@@ -2082,26 +2103,23 @@ begin
   end;
 
   if (Row >= 0) and (Row <= LastRowNo + 1) then begin
-    RowNo := Row;
-    if (Row >= 1) and (Row <= LastRowNo) then begin
-      OffSet := RowNo - 1;
-      if fBindBufferAllocated then begin
-        FPlainDriver.mysql_stmt_data_seek(FMYSQL_STMT, RowNo - 1);
-        Result := FPlainDriver.mysql_stmt_fetch(FMYSQL_STMT) = 0;
-      end else begin
-        FPlainDriver.mysql_data_seek(FQueryHandle, OffSet);
-        FRowHandle := FPlainDriver.mysql_fetch_row(FQueryHandle);
-        Result := FRowHandle <> nil;
-        if Result
-        then FLengthArray := FPlainDriver.mysql_fetch_lengths(FQueryHandle)
-        else FLengthArray := nil;
-      end;
+    if (Row = 0) and (Row < LastRowNo) then begin//handle beforefirst state
+      if RowNo > 1
+      then Result := Seek(0) //seek back to first position
+      else Result := True;   //we're on first pos already
+      FFirstRowFetched := RowNo > 0; //indicate the FirstRow is obtained already
+      RowNo := 0; //set BeforeFirst state
     end else begin
-      if not fBindBufferAllocated then begin
-        FRowHandle := nil;
-        FLengthArray := nil;
+      RowNo := Row;
+      if (Row >= 1) and (Row <= LastRowNo) then
+        Result := Seek(RowNo - 1)
+      else begin
+        if not fBindBufferAllocated then begin
+          FRowHandle := nil;
+          FLengthArray := nil;
+        end;
+        Result := False;
       end;
-      Result := False;
     end;
   end;
 end;
