@@ -530,6 +530,7 @@ TMYSQL_CLIENT_OPTIONS =
     org_table_length: NativeInt;
     org_name        : NativeInt;
     org_name_length : NativeInt;
+    max_length      : NativeUInt;
     db              : NativeInt;
     db_length       : NativeInt;
     charsetnr       : NativeInt;
@@ -755,15 +756,15 @@ const
 
   Value := NativeUInt(@(MYSQLx(Nil).server_status
 }
-  MYSQL5up_server_status_offset: NativeUInt = 748;
-  MYSQL41_server_status_offset: NativeUInt = 436;
-  MYSQL323_server_status_offset: NativeUInt = 328;
+
+  MYSQL5up_server_status_offset: NativeUInt = {$IFDEF CPU64}852{$ELSE}748{$ENDIF};
+  MYSQL41_server_status_offset: NativeUInt = {$IFDEF CPU64}540{$ELSE}436{$ENDIF};
+  MYSQL323_server_status_offset: NativeUInt = {$IFDEF CPU64}396{$ELSE}328{$ENDIF};
 
   //mysql_com.h
   SERVER_PS_OUT_PARAMS = LongWord(4096); //To mark ResultSet containing output parameter values.
   SERVER_MORE_RESULTS_EXIST = LongWord(8); //Multi query - next query exists
 
 implementation
-
 
 end.
