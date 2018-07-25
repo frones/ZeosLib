@@ -45,7 +45,7 @@ go
 create table national_char_values (
 n_id                 int                  not null,
 s_nchar              unichar(255)         null,
-s_nvarchar           nvarchar(255)        null,
+s_nvarchar           univarchar(255)      null,
 b_ntext              unitext              null,
 s_char               char(255)            null,
 s_varchar            varchar(255)         null,
