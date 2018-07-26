@@ -1368,6 +1368,7 @@ procedure TZSupplementarySQLTestCase.ExecuteScripts(
 var
   I: Integer;
   ScriptPath: string;
+  ScriptName: String;
 begin
   { Sets the right error event handler. }
   if RaiseException then
@@ -1380,7 +1381,9 @@ begin
   begin
     FSQLProcessor.Script.Clear;
     try
-      FSQLProcessor.Script.LoadFromFile(ScriptPath + FileNames[I]);
+      ScriptName := ScriptPath + FileNames[I];
+      Writeln('Executing ' + ScriptName);
+      FSQLProcessor.Script.LoadFromFile(ScriptName);
       // To avoid parameter handling while rebuild! Parameters must not be handled!
       FSQLProcessor.ParamCheck := false;
     except
