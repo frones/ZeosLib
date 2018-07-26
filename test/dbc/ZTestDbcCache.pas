@@ -605,10 +605,7 @@ begin
       Stream := GetAsciiStream(stAsciiStreamIndex, WasNull{%H-});
       CheckNotNull(Stream, 'AsciiStream');
       Check(CompareStreams(Stream, FAsciiStream), 'AsciiStream');
-      Stream.Position := 0;
-      ReadNum := Stream.Read(BufferChar{%H-}, 101);
       Stream.Free;
-      CheckEquals(String(FAsciiStreamData), BufferToStr(BufferChar, ReadNum));
     except
       Fail('Incorrect GetAsciiStream method behavior');
     end;
