@@ -480,6 +480,7 @@ END; //
 
 CREATE FUNCTION FuncReturnInteger(`p_in` INT) RETURNS INTEGER
     DETERMINISTIC
+	NO SQL
 BEGIN
   DECLARE `Temp` INTEGER;
   set Temp = `p_in` + 10;
@@ -489,7 +490,9 @@ END;//
 CREATE PROCEDURE `MultipleVaryingResultSets`(
   IN p_in INT,
   OUT p_out INT,
-  INOUT p_inout INT)
+  INOUT p_inout INT
+)
+	READS SQL DATA
 BEGIN
   SELECT p_in, p_out, p_inout;
   SET p_in = 100, p_out = 200, p_inout = 300;
@@ -499,34 +502,35 @@ BEGIN
 END;//
 
 CREATE PROCEDURE SingleResultSet()
-    READS SQL
+	READS SQL DATA
 BEGIN
   SELECT * FROM PEOPLE;
 END;//
 
 CREATE PROCEDURE ALL_PARAMS_IN(
   IN p_id INT,
-  IN p_name varchar(40))
-    READS SQL  
+  IN p_name varchar(40)
+)
+	READS SQL DATA
 BEGIN
   SELECT * from people where people.p_id=p_id or people.p_name=p_name; 
 END;//
 
 CREATE FUNCTION SIMPLE_FUNC() RETURNS INTEGER
-    READS SQL
+	READS SQL DATA
 BEGIN
   RETURN 10;
 END;//
 
 CREATE PROCEDURE TwoResultSets()
-    READS SQL
+	READS SQL DATA
 BEGIN
   SELECT * FROM PEOPLE;
   SELECT * FROM string_values;
 END;//
 
 CREATE PROCEDURE ThreeResultSets()
-    READS SQL
+	READS SQL DATA
 BEGIN
   SELECT * FROM PEOPLE;
   SELECT * FROM string_values;
