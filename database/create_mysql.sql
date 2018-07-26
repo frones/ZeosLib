@@ -479,6 +479,7 @@ BEGIN
 END; //
 
 CREATE FUNCTION FuncReturnInteger(`p_in` INT) RETURNS INTEGER
+    DETERMINISTIC
 BEGIN
   DECLARE `Temp` INTEGER;
   set Temp = `p_in` + 10;
@@ -498,6 +499,7 @@ BEGIN
 END;//
 
 CREATE PROCEDURE SingleResultSet()
+    READS SQL
 BEGIN
   SELECT * FROM PEOPLE;
 END;//
@@ -505,22 +507,26 @@ END;//
 CREATE PROCEDURE ALL_PARAMS_IN(
   IN p_id INT,
   IN p_name varchar(40))
+    READS SQL  
 BEGIN
   SELECT * from people where people.p_id=p_id or people.p_name=p_name; 
 END;//
 
 CREATE FUNCTION SIMPLE_FUNC() RETURNS INTEGER
+    READS SQL
 BEGIN
   RETURN 10;
 END;//
 
 CREATE PROCEDURE TwoResultSets()
+    READS SQL
 BEGIN
   SELECT * FROM PEOPLE;
   SELECT * FROM string_values;
 END;//
 
 CREATE PROCEDURE ThreeResultSets()
+    READS SQL
 BEGIN
   SELECT * FROM PEOPLE;
   SELECT * FROM string_values;
