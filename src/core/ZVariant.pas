@@ -1036,7 +1036,7 @@ DoWideCompare:
           Result := 0;
       end;
     vtPointer:
-      Result := sign({%H-}NativeUInt(Value1.VPointer) - GetAsUInteger(Value2));
+      Result := sign(Int64({%H-}NativeUInt(Value1.VPointer) - GetAsUInteger(Value2)));
     else
       Result := 0;
   end;
