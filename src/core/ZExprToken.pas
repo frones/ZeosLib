@@ -234,7 +234,7 @@ end;
 function TZExpressionQuoteState.EncodeString(const Value: string;
   QuoteChar: Char): string;
 begin
-  if CharInSet(QuoteChar, ['''', '"']) then
+  if (Ord(QuoteChar) in [Ord(''''), Ord('"')]) then
     Result := QuoteChar + EncodeCString(Value) + QuoteChar
   else
     Result := Value;

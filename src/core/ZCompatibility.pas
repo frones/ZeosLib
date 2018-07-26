@@ -111,6 +111,13 @@ type
   ArrayLenInt           = NativeInt;
   PArrayLenInt          = ^ArrayLenInt;
 
+  {$IF not declared(AnsiChar) and defined(NEXTGEN)}
+  AnsiChar = Byte;
+  {$IFEND}
+  {$IF not declared(PAnsiChar) and defined(NEXTGEN)}
+  PAnsiChar = PByte;
+  {$IFEND}
+
 const
   {$IFDEF FPC}
   { ustrings.inc/astrings.inc:
@@ -164,7 +171,13 @@ const
   Brackets = ['(',')','[',']','{','}'];
   StdWordDelims = [#0..' ',',','.',';','/','\',':','''','"','`'] + Brackets;
 
+
+
+{$IFDEF WITH_TSYSCHARSET_DEPRECATED}
+function AnsiProperCase(const S: string; const WordDelims: String): string;
+{$ELSE}
 function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
+{$ENDIF}
 
 {$ENDIF}
 
@@ -256,7 +269,7 @@ type
   {$IF not declared(TUTF8StringDynArray)}
   TUTF8StringDynArray     = array of UTF8String;
   {$IFEND}
-  {$IF not declared(TAnsiStringDynArray)}
+  {$IF not declared(TAnsiStringDynArray) and not defined(NEXTGEN)}
   TAnsiStringDynArray     = array of AnsiString;
   {$IFEND}
   {$IF not declared(TRawByteStringDynArray)}
@@ -284,18 +297,20 @@ type
 type
   {declare move or converter functions for the String Types}
   TPRawToUTF8 = function(const Src: PAnsiChar; Len: NativeUInt; const RawCP: Word): UTF8String;
+  {$IFNDEF NEXTGEN}
   TZAnsiToRaw = function (const Src: AnsiString; const RawCP: Word): RawByteString;
   TZRawToAnsi = function (const Src: RawByteString; const RawCP: Word): AnsiString;
   TZAnsiToUTF8 = function (const Src: AnsiString): UTF8String;
   TZUTF8ToAnsi = function (const Src: UTF8String): AnsiString;
+  TZAnsiToString = function (const Src: AnsiString; const StringCP: Word): String;
+  TZStringToAnsi = function (const Src: String; const StringCP: Word): AnsiString;
+  {$ENDIF NEXTGEN}
   TZRawToUTF8 = function (const Src: RawByteString; const CP: Word): UTF8String;
   TZUTF8ToRaw = function (const Src: UTF8String; const CP: Word): RawByteString;
   TZRawToString = function (const Src: RawByteString; const RawCP, StringCP: Word): String;
   TZStringToRaw = function (const Src: String; const StringCP, RawCP: Word): RawByteString;
   TZUTF8ToString = function (const Src: UTF8String; const StringCP: Word): String;
   TZStringToUTF8 = function (const Src: String; const StringCP: Word): UTF8String;
-  TZAnsiToString = function (const Src: AnsiString; const StringCP: Word): String;
-  TZStringToAnsi = function (const Src: String; const StringCP: Word): AnsiString;
   TZRawToUnicode = function (const S: RawByteString; const CP: Word): ZWideString;
   TZUnicodeToRaw = function (const US: ZWideString; CP: Word): RawByteString;
   TZUnicodeToString = function (const Src: ZWideString; const StringCP: Word): String;
@@ -327,18 +342,20 @@ type
   end;
 
   TConvertEncodingFunctions = record
+    {$IFNDEF NEXTGEN}
     ZAnsiToUTF8: TZAnsiToUTF8;
     ZUTF8ToAnsi: TZUTF8ToAnsi;
+    ZRawToAnsi: TZRawToAnsi;
+    ZAnsiToString: TZAnsiToString;
+    ZStringToAnsi: TZStringToAnsi;
+    ZAnsiToRaw: TZAnsiToRaw;
+    {$ENDIF}
     ZUTF8ToString: TZUTF8ToString;
     ZStringToUTF8: TZStringToUTF8;
-    ZAnsiToRaw: TZAnsiToRaw;
-    ZRawToAnsi: TZRawToAnsi;
     ZRawToUTF8: TZRawToUTF8;
     ZUTF8ToRaw: TZUTF8ToRaw;
     ZStringToRaw: TZStringToRaw;
     ZRawToString: TZRawToString;
-    ZAnsiToString: TZAnsiToString;
-    ZStringToAnsi: TZStringToAnsi;
     ZUnicodeToRaw: TZUnicodeToRaw;
     ZRawToUnicode: TZRawToUnicode;
     ZUnicodeToString: TZUnicodeToString;
@@ -404,7 +421,9 @@ function UTF8ToString(const s: RawByteString): ZWideString;
 function Hash(const S : RawByteString) : LongWord; overload;
 function Hash(const Key : ZWideString) : Cardinal; overload;
 
+{$IFNDEF NEXTGEN}
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: {$IFDEF UNICODE}AnsiString{$ELSE}String{$ENDIF}); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+{$ENDIF}
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 procedure ZSetString(Src: PAnsiChar; const Len: LengthInt; var Dest: ZWideString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$IFDEF WITH_RAWBYTESTRING}
@@ -454,14 +473,20 @@ var
 
 const
   PEmptyUnicodeString: PWideChar = '';
+{$IFDEF NO_ANSISTRING}
+var
+  PEmptyAnsiString: PAnsiChar absolute PEmptyUnicodeString;
+{$ELSE}
   PEmptyAnsiString: PAnsiChar = '';
-
+{$ENDIF}
 var
   ZOSCodePage: Word;
 
 implementation
 
 uses ZConnProperties {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
+
+const bZero = Byte(0);
 
 function TZCodePagedObject.GetConSettings: PZConSettings;
 begin
@@ -676,7 +701,11 @@ end;
 {$ENDIF}
 
 {$IFNDEF FPC}
+{$IFDEF WITH_TSYSCHARSET_DEPRECATED}
+function AnsiProperCase(const S: string; const WordDelims: String): string;
+{$ELSE}
 function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
+{$ENDIF}
 var
   P,PE : PChar;
 begin
@@ -685,11 +714,19 @@ begin
   PE:=P+Length(Result);
   while (P<PE) do
     begin
+{$IFDEF WITH_TSYSCHARSET_DEPRECATED}
+    while (P<PE) and (WordDelims.CountChar(P^) > 0) do
+{$ELSE}
     while (P<PE) and CharInSet(P^, WordDelims) do
+{$ENDIF}
       inc(P);
     if (P<PE) then
       P^:=UpCase(P^);
+{$IFDEF WITH_TSYSCHARSET_DEPRECATED}
+    while (P<PE) and not (WordDelims.CountChar(P^) > 0) do
+{$ELSE}
     while (P<PE) and not (CharInSet(P^, WordDelims)) do
+{$ENDIF}
       inc(P);
     end;
 end;
@@ -721,6 +758,7 @@ end;
 {$UNDEF ZUTF8ToString}
 {$ENDIF}
 
+{$IFNDEF NO_ANSISTRING}
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: {$IFDEF UNICODE}AnsiString{$ELSE}String{$ENDIF});
 begin
   if ( Len = 0 ) then
@@ -741,6 +779,7 @@ begin
       SetString(Dest, Src, Len);
     {$ENDIF}
 end;
+{$ENDIF}
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String);
 begin

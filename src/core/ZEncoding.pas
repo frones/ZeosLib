@@ -222,10 +222,15 @@ function ZConvertRaw20866ToUTF8(const Src: RawByteString; const CP: Word): UTF8S
 function ZConvertUTF8ToRaw20866(Const Src: UTF8String; const CP: Word): RawByteString;
 {$ENDIF}
 function ZConvertPRawToUTF8(const Src: PAnsiChar; Len: NativeUInt; const RawCP: Word): UTF8String;
+{$IFNDEF NO_ANSISTRING}
 function ZConvertAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString;
 function ZConvertRawToAnsi(const Src: RawByteString; const RawCP: Word): AnsiString;
 function ZConvertAnsiToUTF8(const Src: AnsiString): UTF8String;
 function ZConvertUTF8ToAnsi(const Src: UTF8String): AnsiString;
+function ZConvertStringToAnsi(const Src: String; const StringCP: Word): AnsiString;
+function ZConvertStringToAnsiWithAutoEncode(const Src: String; const {%H-}StringCP: Word): AnsiString;
+function ZConvertAnsiToString(const Src: AnsiString; const StringCP: Word): String;
+{$ENDIF NO_ANSISTRING}
 function ZConvertRawToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
 function ZConvertUTF8ToRaw(Const Src: UTF8String; const CP: Word): RawByteString;
 function ZConvertRawToString(const Src: RawByteString; const RawCP, StringCP: Word): String;
@@ -234,9 +239,6 @@ function ZConvertStringToRawWithAutoEncode(const Src: String; const StringCP, Ra
 function ZConvertUTF8ToString(const Src: UTF8String; const StringCP: Word): String;
 function ZConvertStringToUTF8(const Src: String; const StringCP: Word): UTF8String;
 function ZConvertStringToUTF8WithAutoEncode(const Src: String; const StringCP: Word): UTF8String;
-function ZConvertStringToAnsi(const Src: String; const StringCP: Word): AnsiString;
-function ZConvertStringToAnsiWithAutoEncode(const Src: String; const {%H-}StringCP: Word): AnsiString;
-function ZConvertAnsiToString(const Src: AnsiString; const StringCP: Word): String;
 function ZConvertUnicodeToString(const Src: ZWideString; const StringCP: Word): String;
 function ZConvertUnicodeToString_CPUTF8(const Src: ZWideString; const {%H-}StringCP: Word): String;
 function ZConvertStringToUnicode(const Src: String; const StringCP: Word): ZWideString;
@@ -244,14 +246,16 @@ function ZConvertString_CPUTF8ToUnicode(const Src: String; const {%H-}StringCP: 
 function ZConvertStringToUnicodeWithAutoEncode(const Src: String; const StringCP: Word): ZWideString;
 {move functions for the String types}
 function ZMovePRawToUTF8(const Src: PAnsiChar; Len: NativeUInt; const {%H-}RawCP: Word): UTF8String;
+{$IFNDEF NO_ANSISTRING}
 function ZMoveAnsiToRaw(const Src: AnsiString; const {%H-}RawCP: Word): RawByteString;
 function ZMoveRawToAnsi(const Src: RawByteString; const {%H-}RawCP: Word): AnsiString;
 function ZMoveAnsiToUTF8(const Src: AnsiString): UTF8String;
 function ZMoveUTF8ToAnsi(const Src: UTF8String): AnsiString;
-function ZMoveRawToUTF8(const Src: RawByteString; const {%H-}CP: Word): UTF8String;
-function ZMoveUTF8ToRaw(Const Src: UTF8String; const {%H-}CP: Word): RawByteString;
 function ZMoveStringToAnsi(Const Src: String; const {%H-}StringCP: Word): AnsiString;
 function ZMoveAnsiToString(const Src: AnsiString; const {%H-}StringCP: Word): String;
+{$ENDIF}
+function ZMoveRawToUTF8(const Src: RawByteString; const {%H-}CP: Word): UTF8String;
+function ZMoveUTF8ToRaw(Const Src: UTF8String; const {%H-}CP: Word): RawByteString;
 function ZMoveRawToString(const Src: RawByteString; const {%H-}RawCP, {%H-}StringCP: Word): String;
 function ZMoveStringToRaw(const Src: String; const {%H-}StringCP, {%H-}RawCP: Word): RawByteString;
 function ZMoveUTF8ToString(const Src: UTF8String; {%H-}StringCP: Word): String;
@@ -1554,12 +1558,12 @@ var
 begin
   if Dest = nil then Exit;
   if (SourceBytes = 0) or (Source = nil) then
-    Dest^ := #0
+    PByte(Dest)^ := Ord(#0)
   else if ZCompatibleCodePages(SrcCP, DestCP) then begin
     len := Min(SourceBytes, DestBytes);
     if Source <> Dest then
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Source^, Dest^, len);
-    (Dest+Len)^ := #0
+    PByte(Dest+Len)^ := Ord(#0)
   end else if SourceBytes <= dsMaxWStringSize then begin //can we use a static buf? -> avoid memrealloc for the buffer
     len := PRaw2PUnicodeBuf(Source, @wBuf[0], sourceBytes, SrcCP);
     PUnicode2PRawBuf(@wBuf[0], Dest, len, DestBytes, DestCP);
@@ -1734,7 +1738,7 @@ A2U:
           end;
         if (Source < PEnd) and (BufCodePoints > 0) then begin//convert remaining characters with codepage agnostic
           {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-          Inc(Dest, UnicodeFromLocaleChars(CP, 0, Source, SourceBytes, Dest, BufCodePoints));
+          Inc(Dest, UnicodeFromLocaleChars(CP, 0, Pointer(Source), SourceBytes, Dest, BufCodePoints));
           {$ELSE}
             {$IFDEF MSWINDOWS}
             Inc(Dest, MultiByteToWideChar(CP, 0, Source, SourceBytes, Dest, BufCodePoints)); //Convert Ansi to Wide with supported Chars
@@ -1885,7 +1889,7 @@ begin
                   CP := ZOSCodePage; //still a random success here!
             end;
           {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-          BufCodePoints := UnicodeFromLocaleChars(CP, 0, Source, wlen, Dest, wlen);
+          BufCodePoints := UnicodeFromLocaleChars(CP, 0, Pointer(Source), wlen, Dest, wlen);
           {$ELSE}
             {$IFDEF MSWINDOWS}
             BufCodePoints := MultiByteToWideChar(CP, 0, Source, wlen, Dest, wlen); //Convert Ansi to Wide with supported Chars
@@ -2093,17 +2097,17 @@ begin
   if (Dest = nil) or (SrcCodePoints = 0) then begin
     Result := 0-Ord(Dest = nil);
     if Dest <> nil then
-      Dest^ := #0;
+      PByte(Dest)^ := Ord(#0);
   end else begin
     if CP = zCP_NONE then
       CP := ZOSCodePage; //random success
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
       {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-      Result := LocaleCharsFromUnicode(CP, 0, Source, SrcCodePoints, Dest, MaxDestBytes, NIL, NIL);
+      Result := LocaleCharsFromUnicode(CP, 0, Source, SrcCodePoints, Pointer(Dest), MaxDestBytes, NIL, NIL);
       {$ELSE}
       Result := WideCharToMultiByte(CP, 0, Source, SrcCodePoints, Dest, MaxDestBytes, NIL, NIL);
       {$ENDIF}
-      (Dest+Result)^ := #0;
+      PByte(Dest+Result)^ := Ord(0);
     {$ELSE} //FPC non Windows
       if ZCompatibleCodePages(CP, zCP_UTF8) then //FPC has a build in function here just for UTF16 to UTF8
         Result := UnicodeToUtf8(Dest, MaxDestBytes, Source, SrcCodePoints)
@@ -2560,6 +2564,7 @@ begin
   end;
 end;
 
+{$IFNDEF NO_ANSISTRING}
 function ZConvertAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString;
 var US: ZWideString; //COM based. So localize the String to avoid Buffer overrun
 begin
@@ -2607,6 +2612,7 @@ begin
     Result := ZUnicodeToRaw(US, ZOSCodePage);
   end;
 end;
+{$ENDIF}
 
 function ZConvertRawToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
 var
@@ -2885,6 +2891,7 @@ begin
   {$ENDIF}
 end;
 
+{$IFNDEF NO_ANSISTRING}
 function ZConvertStringToAnsi(const Src: String;
   const StringCP: Word): AnsiString;
 {$IFNDEF UNICODE}
@@ -2954,6 +2961,7 @@ begin
     end;
     {$ENDIF}
 end;
+{$ENDIF}
 
 function ZConvertUnicodeToString(const Src: ZWideString;
   const StringCP: Word): String;
@@ -3039,6 +3047,7 @@ begin
   ZSetString(Src, Len, Result{%H-});
 end;
 
+{$IFNDEF NO_ANSISTRING}
 function ZMoveAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString;
 begin
   {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
@@ -3074,6 +3083,7 @@ begin
   Result := Src;
   {$ENDIF}
 end;
+{$ENDIF}
 
 function ZMoveRawToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
 begin
@@ -3093,6 +3103,7 @@ begin
   {$ENDIF}
 end;
 
+{$IFNDEF NO_ANSISTRING}
 function ZMoveStringToAnsi(Const Src: String; const StringCP: Word): AnsiString;
 begin
   {$IFDEF UNICODE}
@@ -3118,7 +3129,7 @@ begin
     {$ENDIF}
   {$ENDIF}
 end;
-
+{$ENDIF}
 
 function ZMoveRawToString(const Src: RawByteString;
   const RawCP, StringCP: Word): String;
@@ -3180,6 +3191,7 @@ begin
 
   //Let's start with the AnsiTo/From types..
   // Ansi to/from UTF8String
+  {$IFNDEF NO_ANSISTRING}
   if ZCompatibleCodePages(ZOSCodePage, zCP_UTF8) then
   begin
     ConSettings^.ConvFuncs.ZAnsiToUTF8 := @ZMoveAnsiToUTF8;
@@ -3208,7 +3220,7 @@ begin
     else
       ConSettings^.ConvFuncs.ZStringToAnsi := @ZConvertStringToAnsi;
   end;
-
+  {$ENDIF}
   { PRaw to UTTF8 string}
   if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, zCP_UTF8) and
     ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
@@ -3328,6 +3340,7 @@ begin
     end;
 
     // raw to/from ansi
+    {$IFNDEF NO_ANSISTRING}
     if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ZOSCodePage) then
     begin
       ConSettings^.ConvFuncs.ZAnsiToRaw := @ZMoveAnsiToRaw;
@@ -3338,7 +3351,7 @@ begin
       ConSettings^.ConvFuncs.ZAnsiToRaw := @ZConvertAnsiToRaw;
       ConSettings^.ConvFuncs.ZRawToAnsi := @ZConvertRawToAnsi;
     end;
-
+    {$ENDIF}
     // raw to/from unicode
     if ConSettings^.ClientCodePage^.CP = zCP_NONE then
     begin
@@ -3420,8 +3433,10 @@ begin
   begin
     ConSettings^.ConvFuncs.ZUTF8ToString := @ZConvertUTF8ToString;
     ConSettings^.ConvFuncs.ZStringToUTF8 := @ZConvertStringToUTF8WithAutoEncode;
+    {$IFNDEF NO_ANSISTRING}
     ConSettings^.ConvFuncs.ZAnsiToRaw := @ZConvertAnsiToRaw;
     ConSettings^.ConvFuncs.ZRawToAnsi := @ZConvertRawToAnsi;
+    {$ENDIF}
     ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRawToUTF8;
     ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw;
     Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode;
