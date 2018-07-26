@@ -215,6 +215,7 @@ type
     FResultSet: IZResultSet;
 
     FRefreshInProgress: Boolean;
+    FFieldDefsInitialized: boolean;
 
     FDataLink: TDataLink;
     FMasterLink: TMasterDataLink;
@@ -3355,6 +3356,7 @@ begin
       end;
       UnPrepare;
     end;
+    FFieldDefsInitialized := True;
   end;
 end;
 
@@ -3458,7 +3460,7 @@ begin
       end;
 
     { Initializes field and index defs. }
-    if not FRefreshInProgress then
+    if (not FRefreshInProgress) and (not FFieldDefsInitialized) then
       InternalInitFieldDefs;
 
     {$IFDEF WITH_LIFECYCLES}
@@ -3968,6 +3970,7 @@ begin
     Statement.Close;
     Statement := nil;
   end;
+  FFieldDefsInitialized := False;
 end;
 
 {**
