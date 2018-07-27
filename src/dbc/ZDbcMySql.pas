@@ -151,7 +151,7 @@ uses
   ZMessages, ZSysUtils, ZDbcMySqlStatement, ZMySqlToken, ZFastCode,
   ZDbcMySqlUtils, ZDbcMySqlMetadata, ZMySqlAnalyser, TypInfo, Math,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
-  ZEncoding;
+  ZEncoding, ZClasses;
 
 { TZMySQLDriver }
 

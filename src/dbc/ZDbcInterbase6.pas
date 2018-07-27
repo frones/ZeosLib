@@ -175,7 +175,7 @@ var
 implementation
 
 uses ZFastCode, ZDbcInterbase6Statement, ZDbcInterbase6Metadata, ZEncoding,
-  ZInterbaseToken, ZInterbaseAnalyser, ZDbcMetadata, ZMessages
+  ZInterbaseToken, ZInterbaseAnalyser, ZDbcMetadata, ZMessages, ZClasses
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZInterbase6Driver }

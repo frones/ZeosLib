@@ -71,30 +71,6 @@ const
   TypeSearchable           = 3;
   ProcedureReturnsResult   = 2;
 
-// Exceptions
-type
-
-  {** Abstract SQL exception. }
-  EZSQLThrowable = class(Exception)
-  private
-    FErrorCode: Integer;
-    FStatusCode: String;
-  public
-    constructor Create(const Msg: string);
-    constructor CreateWithCode(const ErrorCode: Integer; const Msg: string);
-    constructor CreateWithStatus(const StatusCode: String; const Msg: string);
-    constructor CreateClone(const E:EZSQLThrowable);
-
-    property ErrorCode: Integer read FErrorCode;
-    property StatusCode: string read FStatuscode; // The "String" Errocode // FirmOS
-  end;
-
-  {** Generic SQL exception. }
-  EZSQLException = class(EZSQLThrowable);
-
-  {** Generic SQL warning. }
-  EZSQLWarning = class(EZSQLThrowable);
-
 // Data types
 type
   {** Defines supported SQL types. }
@@ -1449,43 +1425,6 @@ procedure TZDriverManager.ResolveDatabaseUrl(const Url: string; out Database: st
 begin
   FURL.URL := Url;
   DataBase := FURL.Database;
-end;
-
-{ EZSQLThrowable }
-
-{**
-  Creates an exception with message string.
-  @param Msg a error description.
-}
-constructor EZSQLThrowable.CreateClone(const E: EZSQLThrowable);
-begin
-  inherited Create(E.Message);
-  FErrorCode:=E.ErrorCode;
-  FStatusCode:=E.Statuscode;
-end;
-
-constructor EZSQLThrowable.Create(const Msg: string);
-begin
-  inherited Create(Msg);
-  FErrorCode := -1;
-end;
-
-{**
-  Creates an exception with message string.
-  @param Msg a error description.
-  @param ErrorCode a native server error code.
-}
-constructor EZSQLThrowable.CreateWithCode(const ErrorCode: Integer;
-  const Msg: string);
-begin
-  inherited Create(Msg);
-  FErrorCode := ErrorCode;
-end;
-
-constructor EZSQLThrowable.CreateWithStatus(const StatusCode, Msg: string);
-begin
-  inherited Create(Msg);
-  FStatusCode := StatusCode;
 end;
 
 initialization

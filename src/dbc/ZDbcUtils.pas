@@ -198,7 +198,7 @@ procedure RaiseUnsupportedParameterTypeException(ParamType: TZSQLType);
 
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, TypInfo;
+uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, TypInfo,ZClasses;
 
 {**
   Resolves a connection protocol and raises an exception with protocol

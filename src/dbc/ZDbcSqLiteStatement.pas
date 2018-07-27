@@ -109,7 +109,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS} AnsiStrings,{$ENDIF} ZDbcSqLiteUtils,
   ZDbcSqLiteResultSet, ZSysUtils, ZEncoding, ZMessages, ZDbcCachedResultSet,
-  ZDbcUtils;
+  ZDbcUtils, ZClasses;
 
 (* out of use now...
 procedure BindingDestructor(Value: PAnsiChar); cdecl;

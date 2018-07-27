@@ -177,7 +177,7 @@ type
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils
+uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZClasses
   {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 { TZResolverParameter }

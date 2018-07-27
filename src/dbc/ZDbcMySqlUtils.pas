@@ -161,7 +161,7 @@ function GetFieldOffsets(Version: Integer): PMYSQL_FIELDOFFSETS;
 implementation
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} Math,
-  ZMessages, ZDbcUtils, ZFastCode, ZEncoding;
+  ZMessages, ZDbcUtils, ZFastCode, ZEncoding, ZClasses;
 
 threadvar
   SilentMySQLError: Integer;

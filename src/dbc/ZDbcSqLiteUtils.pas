@@ -96,7 +96,7 @@ function ConvertSQLiteVersionToSQLVersion(SQLiteVersion: PAnsiChar ): Integer;
 implementation
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  ZMessages, ZFastCode;
+  ZMessages, ZFastCode, ZClasses;
 
 {**
   Convert string SQLite field type to SQLType

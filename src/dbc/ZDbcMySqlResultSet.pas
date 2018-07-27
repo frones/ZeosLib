@@ -230,7 +230,7 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
-  ZFastCode, ZSysUtils, ZMessages, ZEncoding,
+  ZFastCode, ZSysUtils, ZMessages, ZEncoding, ZClasses,
   ZDbcMySqlUtils, ZDbcMySQL, ZDbcUtils, ZDbcMetadata, ZDbcLogging;
 
 {$IFOPT R+}

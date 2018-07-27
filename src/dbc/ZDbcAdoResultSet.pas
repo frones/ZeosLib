@@ -130,7 +130,7 @@ implementation
 
 uses
   Variants, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF},
-  ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode;
+  ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZClasses;
 
 {**
   Creates this object and assignes the main properties.

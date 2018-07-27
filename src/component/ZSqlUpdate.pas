@@ -222,7 +222,7 @@ type
 implementation
 
 uses ZGenericSqlToken, ZDatasetUtils, ZAbstractRODataset,ZAbstractDataset,
-  ZSysUtils, ZDbcUtils, ZMessages, ZCompatibility;
+  ZSysUtils, ZDbcUtils, ZMessages, ZCompatibility, ZClasses;
 
 { TZUpdateSQL }
 

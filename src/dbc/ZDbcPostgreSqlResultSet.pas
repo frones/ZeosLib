@@ -169,7 +169,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} Math,
   ZMessages, ZEncoding, ZFastCode, ZDbcPostgreSqlMetadata, ZDbcMetadata,
-  ZDbcPostgreSql, ZDbcPostgreSqlUtils, ZDbcPostgreSqlStatement;
+  ZDbcPostgreSql, ZDbcPostgreSqlUtils, ZDbcPostgreSqlStatement, ZClasses;
 
 
 // added for suporting Infinity, -Infinity and NaN.

@@ -124,6 +124,8 @@ type
 
 implementation
 
+uses ZClasses;
+
 const
   stBooleanIndex        = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   stByteIndex           = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};

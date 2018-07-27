@@ -204,7 +204,7 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZFastCode,
-  ZMessages, ZEncoding;
+  ZMessages, ZEncoding, ZClasses;
 
 { TZOracleAbstractResultSet }
 

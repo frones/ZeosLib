@@ -197,7 +197,7 @@ type
 
 implementation
 
-uses Math, ZMessages, ZDatasetUtils;
+uses Math, ZMessages, ZDatasetUtils, ZClasses;
 
 { TZAbstractDataset }
 

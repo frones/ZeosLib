@@ -137,7 +137,7 @@ type
 implementation
 
 uses ZSysUtils, ZDbcUtils, ZFastCode, ZPlainFirebirdDriver,
-  ZDbcInterbase6ResultSet;
+  ZDbcInterbase6ResultSet, ZClasses;
 
 { TZInterbase6PreparedStatement }
 

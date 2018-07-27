@@ -184,7 +184,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZSysUtils, ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils,
-  ZEncoding, ZTokenizer;
+  ZEncoding, ZTokenizer, ZClasses;
 
 var PGPreparableTokens: TPreparablePrefixTokens;
 

@@ -117,7 +117,6 @@ type
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
-    function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
   end;
 
@@ -627,17 +626,6 @@ end;
 function TZAdoConnection.GetCatalog: string;
 begin
   Result := String(FAdoConnection.DefaultDatabase);
-end;
-
-{**
-  Returns the first warning reported by calls on this Connection.
-  <P><B>Note:</B> Subsequent warnings will be chained to this
-  SQLWarning.
-  @return the first SQLWarning or null
-}
-function TZAdoConnection.GetWarnings: EZSQLWarning;
-begin
-  Result := nil;
 end;
 
 {**
