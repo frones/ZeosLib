@@ -31,8 +31,7 @@ package ZPlain;
 
 requires
   ZCore,
-  rtl,
-  vcl;
+  rtl;
 
 contains
 {$I ZPackages.inc} //after simplify Zeos.Inc by using {$IF CompilerVersion > x} i need to move this include AFTER contains!

@@ -92,18 +92,18 @@ type
     property Loaded: Boolean read FLoaded write FLoaded;
     property Handle: THandle { M.A. LongWord} read FHandle write FHandle;
     property CurrentLocation: String read FCurrentLocation write FCurrentLocation;
-    function GetAddress(ProcName: PAnsiChar): Pointer;
+    function GetAddress(ProcName: {$IFDEF NEXTGEN}PWideChar{$ELSE}PAnsiChar{$ENDIF}): Pointer;
   end;
 
 implementation
 
 uses SysUtils, 
-{$IFNDEF UNIX} 
-  Windows, 
-{$ELSE} 
-  {$IFNDEF FPC} 
-    libc, 
-  {$ENDIF} 
+{$IFDEF MSWINDOWS}
+  Windows,
+(*{$ELSE}
+  {$IFNDEF FPC}
+    libc,
+  {$ENDIF} *)
 {$ENDIF}
   ZMessages;
 
@@ -261,7 +261,7 @@ end;
   @param ProcName a name of the procedure.
   @return a procedure address.
 }
-function TZNativeLibraryLoader.GetAddress(ProcName: PAnsiChar): Pointer;
+function TZNativeLibraryLoader.GetAddress(ProcName: {$IFDEF NEXTGEN}PWideChar{$ELSE}PAnsiChar{$ENDIF}): Pointer;
 begin
   Result := GetProcAddress(Handle, ProcName);
 end;
