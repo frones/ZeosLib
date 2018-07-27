@@ -272,18 +272,18 @@ end;
 }
 class procedure TZCollection.Error(const Msg: string; Data: Integer);
 
-{$IFNDEF FPC}
+{$IF not defined(FPC) and not defined(NEXTGEN)}
   function ReturnAddr: Pointer;
   asm
           MOV     EAX,[EBP+4]
   end;
-{$ENDIF}
+{$IFEND}
 
 begin
   {$IFDEF FPC}
   raise EListError.CreateFmt(Msg,[Data]) at get_caller_addr(get_frame);
   {$ELSE}
-  raise EListError.CreateFmt(Msg, [Data]) at ReturnAddr;
+  raise EListError.CreateFmt(Msg, [Data]) at {$IFDEF NEXTGEN}ReturnAddress{$ELSE}ReturnAddr{$ENDIF};
   {$ENDIF}
 end;
 

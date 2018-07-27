@@ -627,11 +627,11 @@ var
 begin
   InitBuf(FirstChar);
   Result.Value := '';
-  while (Stream.Read(ReadChar, SizeOf(Char)) > 0) and not CharInSet(ReadChar, [#10, #13]) do
+  while (Stream.Read(ReadChar, SizeOf(Char)) > 0) and not (Ord(ReadChar) in [Ord(#10), Ord(#13)]) do
     ToBuf(ReadChar, Result.Value);
   FlushBuf(Result.Value);
 
-  if CharInSet(ReadChar, [#10, #13]) then
+  if (Ord(ReadChar) in [Ord(#10), Ord(#13)]) then
     Stream.Seek(-SizeOf(Char), soFromCurrent);
 
   Result.TokenType := ttComment;
@@ -666,12 +666,12 @@ procedure TZCppCommentState.GetSingleLineComment(Stream: TStream; var Result: St
 var
   ReadChar: Char;
 begin
-  while (Stream.Read(ReadChar, SizeOf(Char)) > 0) and not CharInSet(ReadChar, [#10, #13]) do
+  while (Stream.Read(ReadChar, SizeOf(Char)) > 0) and not (Ord(ReadChar) in [Ord(#10), Ord(#13)]) do
     ToBuf(ReadChar, Result);
 
   // mdaems : for single line comments the line ending must be included
   // as it should never be stripped off or unified with other whitespace characters
-  if CharInSet(ReadChar, [#10, #13]) then begin
+  if (Ord(ReadChar) in [Ord(#10), Ord(#13)]) then begin
     ToBuf(ReadChar, Result);
     // ludob Linux line terminator is just LF, don't read further if we already have LF
     if (ReadChar<>#10) and (Stream.Read(ReadChar, SizeOf(Char)) > 0) then

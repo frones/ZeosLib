@@ -146,7 +146,7 @@ var
     LastChar := #0;
     while Stream.Read(LastChar, SizeOf(Char)) > 0 do
     begin
-      if CharInSet(LastChar, ['0'..'9']) then
+      if ((Ord(LastChar) >= Ord('0')) and (Ord(LastChar) <= Ord('9'))) then
       begin
         Result := Result + LastChar;
         LastChar := #0;
@@ -182,14 +182,14 @@ begin
     Result.Value := Result.Value + ReadDecDigits;
 
   { Reads a power part of the number }
-  if CharInSet(LastChar, ['e', 'E']) then
+  if (Ord(LastChar) in [Ord('e'), Ord('E')]) then
   begin
     Stream.Read(TempChar, SizeOf(Char));
     Result.Value := Result.Value + TempChar;
     FloatPoint := True;
 
     Stream.Read(TempChar, SizeOf(Char));
-    if CharInSet(TempChar, ['0'..'9', '-', '+']) then
+    if Ord(TempChar) in [Ord('0')..Ord('9'), Ord('-'), Ord('+')] then
       Result.Value := Result.Value + TempChar + ReadDecDigits
     else
     begin
@@ -261,7 +261,7 @@ end;
 function TZExpressionQuoteState.EncodeString(const Value: string;
   QuoteChar: Char): string;
 begin
-  if CharInSet(QuoteChar, ['''', '"']) then
+  if (Ord(QuoteChar) in [Ord(''''), Ord('"')]) then
     Result := QuoteChar + EncodeCString(Value) + QuoteChar
   else
     Result := Value;
@@ -276,7 +276,7 @@ end;
 function TZExpressionQuoteState.DecodeString(const Value: string;
   QuoteChar: Char): string;
 begin
-  if (Length(Value) >= 2) and CharInSet(QuoteChar, ['''', '"'])
+  if (Length(Value) >= 2) and (Ord(QuoteChar) in [Ord(''''), Ord('"')])
      and (Value[1] = QuoteChar) and (Value[Length(Value)] = QuoteChar) then
     Result := DecodeCString(Copy(Value, 2, Length(Value) - 2))
    else

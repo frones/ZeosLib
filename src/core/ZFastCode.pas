@@ -66,7 +66,11 @@ interface
     ZCompatibility, SysUtils;
 
 const
+  {$IFDEF NEXTGEN}
+  TwoDigitLookupUni : packed array[0..99] of array[1..2] of WideChar =
+  {$ELSE}
   TwoDigitLookupRaw : packed array[0..99] of array[1..2] of AnsiChar =
+  {$ENDIF}
     ('00','01','02','03','04','05','06','07','08','09',
      '10','11','12','13','14','15','16','17','18','19',
      '20','21','22','23','24','25','26','27','28','29',
@@ -83,10 +87,10 @@ const
   TStrRecordSize = {$IFDEF WITH_RAWBYTESTRING}12{$ELSE}8{$ENDIF};
 
 var
-  TwoDigitLookupW : packed array[0..99] of Word absolute TwoDigitLookupRaw;
+  TwoDigitLookupW : packed array[0..99] of Word {$IFNDEF NEXTGEN}absolute TwoDigitLookupRaw{$ENDIF};
 
 var
-  TwoDigitLookupLW : packed array[0..99] of LongWord;
+  TwoDigitLookupLW : packed array[0..99] of LongWord{$IFDEF NEXTGEN}absolute TwoDigitLookupUni{$ENDIF};
 
 {$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN) or defined(USE_FAST_CHARPOS)}
   {$D-} {Prevent Steppping into Move Code} //EH: moved after FastCode.inc is loaded to prevent debugging
@@ -372,7 +376,7 @@ implementation
 
 uses
   {$IFDEF MSWINDOWS}Windows, {$ENDIF}
-  {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings, {$ENDIF}
+  {$IF defined(WITH_STRLEN_DEPRECATED) and defined(WITH_UNITANSISTRINGS)}AnsiStrings, {$IFEND}
   SysConst{$IFNDEF WITH_PUREPASCAL_INTPOWER}, Math{$ENDIF};
 
 {$IF defined(PatchSystemMove) or defined(FAST_MOVE)} //set in Zeos.inc
@@ -3837,21 +3841,21 @@ asm
     Neg   := False;
     Hex   := False;
     Valid := False;
-    while P^ = ' ' do
+    while Ord(P^) = Ord(' ') do
       Inc(P);
-    if P^ in ['+', '-'] then
+    if Ord(P^) in [Ord('+'), Ord('-')] then
       begin
-        Neg := (P^ = '-');
+        Neg := (Ord(P^) = Ord('-'));
         inc(P);
       end;
-    if P^ = '$' then
+    if Ord(P^) = Ord('$') then
       begin
         Hex := True;
         inc(P);
       end
     else
       begin
-        if P^ = '0' then
+        if Ord(P^) = Ord('0') then
           begin
             Valid := True;
             inc(P);
@@ -3868,10 +3872,10 @@ asm
         Valid := False;
         while True do
           begin
-            case P^ of
-              '0'..'9': Digit := Ord(P^) - Ord('0');
-              'a'..'f': Digit := Ord(P^) - AdjustLowercase;
-              'A'..'F': Digit := Ord(P^) - AdjustUppercase;
+            case Ord(P^) of
+              Ord('0')..Ord('9'): Digit := Ord(P^) - Ord('0');
+              Ord('a')..Ord('f'): Digit := Ord(P^) - AdjustLowercase;
+              Ord('A')..Ord('F'): Digit := Ord(P^) - AdjustUppercase;
               else      Break;
             end;
             if Cardinal(Result) > MaxInt div 8 then
@@ -3885,7 +3889,7 @@ asm
       begin
         while True do
           begin
-            if not (P^ in ['0'..'9']) then
+            if not (Ord(P^) in [Ord('0')..Ord('9')]) then
               Break;
             if Result > (MaxInt div 10) then
               Break;
@@ -3902,7 +3906,7 @@ asm
       end;
     if Neg then
       Result := -Result;
-    if (not Valid) or (P^ <> #0) then
+    if (not Valid) or (Ord(P^) <> Ord(#0)) then
       raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
 {$IFEND}
 end;
@@ -4124,6 +4128,7 @@ end;
 function ValLong_JOH_PAS_4_b(const S: PAnsiChar; out code: Integer): Longint;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//EH: changed to NEXGEN save PByte support
 var
   Digit: Integer;
   Flags: Byte; {Bit 0 = Valid, Bit 1 = Negative, Bit 2 = Hex}
@@ -4137,17 +4142,17 @@ begin
     Exit;
   end;
   Flags := 0;
-  while P^ = ' ' do
+  while Ord(P^) = Ord(' ') do
     Inc(P);
-  if P^ in ['+', '-'] then begin
+  if Ord(P^) in [Ord('+'), Ord('-')] then begin
     Flags := Flags or (Ord(S^) - Ord('+')); {Set/Reset Neg}
     inc(P);
   end;
-  if P^ = '$' then begin
+  if Ord(P^) = Ord('$') then begin
     inc(P);
     Flags := Flags or 4; {Hex := True}
   end else begin
-    if P^ = '0' then begin
+    if Ord(P^) = Ord('0') then begin
       Flags := Flags or 1; {Valid := True}
       inc(P);
     end;
@@ -4160,10 +4165,10 @@ begin
   if (Flags and 4) <> 0 then begin
     Flags := Flags and (not 1); {Valid := False}
     while True do begin
-      case P^ of
-        '0'..'9': Digit := Ord(P^) - Ord('0');
-        'a'..'f': Digit := Ord(P^) - Ord('a') + 10;
-        'A'..'F': Digit := Ord(P^) - Ord('A') + 10;
+      case Ord(P^) of
+        Ord('0')..Ord('9'): Digit := Ord(P^) - Ord('0');
+        Ord('a')..Ord('f'): Digit := Ord(P^) - Ord('a') + 10;
+        Ord('A')..Ord('F'): Digit := Ord(P^) - Ord('A') + 10;
         else Break;
       end;
       if (Result < 0) or (Result > $0FFFFFFF) then
@@ -4174,7 +4179,7 @@ begin
     end;
   end else begin
     while True do begin
-      if not (P^ in ['0'..'9']) then
+      if not (Ord(P^) in [Ord('0')..Ord('9')]) then
         break;
       if Result > (MaxInt div 10) then
         break;
@@ -4191,7 +4196,7 @@ begin
   end;
   if ((Flags and 2) <> 0) then {Neg=True}
     Result := -Result;
-  if ((Flags and 1) <> 0) and (P^ = #0) then
+  if ((Flags and 1) <> 0) and (Ord(P^) = Ord(#0)) then
     Code := 0 {Valid=True and End Reached}
   else
     Code := P-S+1;
@@ -4223,7 +4228,7 @@ begin
   Result := ValLong_JOH_PAS_4_b(S, E{%H-});
   {$IFEND}
   if E > 0 then
-    if not ((E > 0) and Assigned(S) and ((S+E-1)^=' ')) then
+    if not ((E > 0) and Assigned(S) and (Ord((S+E-1)^)=Ord(' '))) then
       Result := Default;
 end;
 
@@ -4333,7 +4338,7 @@ function ValInt64_JOH_PAS_8_a_raw(const s: PAnsiChar; out code: Integer): Int64;
 //function ValInt64_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Int64;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
-//modified by EgonHugeist for faster conversion and PAnsiChar
+//modified by EgonHugeist for faster conversion and PAnsiChar/PByte
 const
   AdjustLowercase = Ord('a') - 10;
   AdjustUppercase = Ord('A') - 10;
@@ -4344,23 +4349,23 @@ var
 begin
   Result := 0;
   Code   := 0;
-  if (S = nil) or (S^ = #0) then begin
+  if (S = nil) or (Ord(S^) = Ord(#0)) then begin
     inc(Code);
     Exit;
   end;
   Flags := 0;
   P := S;
-  while P^ = ' ' do
+  while Ord(P^) = Ord(' ') do
     Inc(P);
-  if P^ in ['+', '-'] then begin
+  if Ord(P^) in [Ord('+'), Ord('-')] then begin
     Flags := Flags or Byte((Ord(S^) - Ord('+'))); {Set/Reset Neg}
     inc(P);
   end;
-  if P^ = '$' then begin
+  if Ord(P^) = Ord('$') then begin
     inc(P);
     Flags := Flags or 4; {Hex := True}
   end else begin
-    if P^ = '0' then begin
+    if Ord(P^) = Ord('0') then begin
       Flags := Flags or 1; {Valid := True}
       inc(P);
     end;
@@ -4373,10 +4378,10 @@ begin
     Flags := Flags and (not 1); {Valid := False}
     while true do
       begin
-        case P^ of
-          '0'..'9': Digit := Ord(P^) - Ord('0');
-          'a'..'f': Digit := Ord(P^) - AdjustLowercase;
-          'A'..'F': Digit := Ord(P^) - AdjustUppercase;
+        case Ord(P^) of
+          Ord('0')..Ord('9'): Digit := Ord(P^) - Ord('0');
+          Ord('a')..Ord('f'): Digit := Ord(P^) - AdjustLowercase;
+          Ord('A')..Ord('F'): Digit := Ord(P^) - AdjustUppercase;
           else      Break;
         end;
         if UInt64(Result) > (HighInt64 shr 3) then
@@ -4394,9 +4399,9 @@ begin
       end;
   end else begin
     while true do begin
-      if ( not (P^ in ['0'..'9']) ) or
+      if ( not (Ord(P^) in [Ord('0')..Ord('9')]) ) or
          ( UInt64(Result) > (HighInt64 div 10)) then begin
-        inc(P, Ord(P^ <> #0));
+        inc(P, Ord(Ord(P^) <> Ord(#0)));
         break;
       end;
       if UInt64(Result) < (MaxInt div 10)-9 then begin {Use Integer Math instead of Int64}
@@ -4424,7 +4429,7 @@ begin
   end;
   if ((Flags and 2) <> 0) then {Neg=True}
     Result := -Result;
-  if ((Flags and 1) <> 0) and (P^ = #0) then
+  if ((Flags and 1) <> 0) and (Ord(P^) = Ord(#0)) then
     Code := 0 {Valid=True and End Reached}
   else
     Code := P-S+1;
@@ -4447,17 +4452,17 @@ var
 begin
   Result := 0;
   Code   := 0;
-  if (S = nil) or (S^ = #0) then
+  if (S = nil) or (Ord(S^) = Ord(#0)) then
     begin
       inc(Code);
       Exit;
     end;
   Flags := 0;
   P := S;
-  while P^ = ' ' do
+  while Ord(P^) = Ord(' ') do
     Inc(P);
-  if P^ in ['+', '-'] then
-    if P^ = '-' then //can't be negative
+  if Ord(P^) in [Ord('+'), Ord('-')] then
+    if Ord(P^) = Ord('-') then //can't be negative
     begin
       Code := P-S;
       Exit;
@@ -4467,14 +4472,14 @@ begin
       Flags := Flags or (Ord(S^) - Ord('+')); {Set/Reset Neg}
       inc(P);
     end;
-  if P^ = '$' then
+  if Ord(P^) = Ord('$') then
     begin
       inc(P);
       Flags := Flags or 4; {Hex := True}
     end
   else
     begin
-      if P^ = '0' then
+      if Ord(P^) = Ord('0') then
         begin
           Flags := Flags or 1; {Valid := True}
           inc(P);
@@ -4490,10 +4495,10 @@ begin
       Flags := Flags and (not 1); {Valid := False}
       while true do
         begin
-          case P^ of
-            '0'..'9': Digit := Ord(P^) - Ord('0');
-            'a'..'f': Digit := Ord(P^) - AdjustLowercase;
-            'A'..'F': Digit := Ord(P^) - AdjustUppercase;
+          case Ord(P^) of
+            Ord('0')..Ord('9'): Digit := Ord(P^) - Ord('0');
+            Ord('a')..Ord('f'): Digit := Ord(P^) - AdjustLowercase;
+            Ord('A')..Ord('F'): Digit := Ord(P^) - AdjustUppercase;
             else      Break;
           end;
           if UInt64(Result) > (High(UInt64) shr 3) then
@@ -4514,7 +4519,7 @@ begin
     begin
       while true do
         begin
-          if ( not (P^ in ['0'..'9']) ) or ( (Ord(P^) > Ord('5')) and (Result = (High(UInt64) div 10)) ) then //prevent overflow
+          if ( not (Ord(P^) in [Ord('0')..Ord('9')]) ) or ( (Ord(P^) > Ord('5')) and (Result = (High(UInt64) div 10)) ) then //prevent overflow
             if (Ord(P^) > Ord('5')) and ( Result = (High(UInt64) div 10)) then
               begin //overflow
                 Code := P-S+1;
@@ -4522,7 +4527,7 @@ begin
               end
               else
               begin
-                inc(P, Ord(P^ <> #0));
+                inc(P, Ord(Ord(P^) <> Ord(#0)));
                 break;
               end;
           if UInt64(Result) < (MaxInt div 10)-9 then
@@ -4539,7 +4544,7 @@ begin
     end;
   if ((Flags and 2) <> 0) then {Neg=True}
     Result := -Result;
-  if ((Flags and 1) <> 0) and (P^ = #0) then
+  if ((Flags and 1) <> 0) and (Ord(P^) = Ord(#0)) then
     Code := 0 {Valid=True and End Reached}
   else
     Code := P-S+1;
@@ -4840,7 +4845,7 @@ begin
   Result := ValInt64_JOH_PAS_8_a_raw(S, E{%H-});
   {$IFEND}
   if E > 0 then
-    if not ((E > 0) and Assigned(S) and ((S+E-1)^=' ')) then
+    if not ((E > 0) and Assigned(S) and (Ord((S+E-1)^)=Ord(' '))) then
       Result := Default;
 end;
 
@@ -4850,7 +4855,7 @@ var
 begin
   Result := ValUInt64_JOH_PAS_8_a_raw(S, E{%H-});
   if E > 0 then
-    if not ((E > 0) and Assigned(S) and ((S+E-1)^=' ')) then
+    if not ((E > 0) and Assigned(S) and (Ord((S+E-1)^)=Ord(' '))) then
       Result := Default;
 end;
 
@@ -6184,6 +6189,54 @@ asm
 @@3:
   mov   eax, 3
 end;
+{$ELSE}
+{$IFDEF PUREPASCAL}
+//Author:            John O'Harrow
+//Optimized for:     Pure-Pascal
+
+//changed to PByte support:
+function StrLen_JOH_PAS_3_a(const Str: PAnsiChar): Cardinal;
+var
+  P, PStr: PAnsiChar;
+  I, J: Integer;
+begin
+  if (Str = nil) or (Ord(Str^) = Ord(#0)) then
+    begin
+      Result := 0; Exit;
+    end;
+  if Ord((Str+1)^) = Ord(#0) then
+    begin
+      Result := 1; Exit;
+    end;
+  if Ord((Str+2)^) = Ord(#0) then
+    begin
+      Result := 2; Exit;
+    end;
+  if Ord((Str+3)^) = Ord(#0) then
+    begin
+      Result := 3; Exit;
+    end;
+ P := Pointer(Str);
+ PStr := P;
+ P := Pointer(NativeInt(P) and -4);
+ repeat
+   Inc(P, 4);
+   I := PInteger(P)^;
+   J := I - $01010101;
+   I := not(I);
+   I := I and J;
+ until (I and $80808080) <> 0;
+ Result := P - PStr;
+ if I and $80 = 0 then
+   if I and $8000 <> 0 then
+     Inc(Result)
+   else
+     if I and $800000 <> 0 then
+       Inc(Result, 2)
+     else
+       Inc(Result, 3)
+end;
+  {$ENDIF PUREPASCAL}
 {$ENDIF USE_FAST_STRLEN}
 
 {$IFDEF USE_FAST_CHARPOS}
@@ -7690,6 +7743,20 @@ begin
 end;
 {$IFEND}
 
+{$IFDEF NEXTGEN}
+procedure FillTwoDigitLoopW;
+var
+  I: Integer;
+  W: Array[0..1] of Byte;
+begin
+  for i := 0 to 99 do
+  begin
+    W[0] := Ord(TwoDigitLookupUni[I][1]);
+    W[1] := Ord(TwoDigitLookupUni[I][2]);
+    TwoDigitLookupW[I] := PWord(@W)^;
+  end;
+end;
+{$ELSE}
 procedure FillTwoDigitLoopLW;
 var
   I: Integer;
@@ -7702,10 +7769,15 @@ begin
     TwoDigitLookupLW[I] := PLongWord(@W)^;
   end;
 end;
+{$ENDIF}
 
 initialization
 
+{$IFDEF NEXTGEN}
+FillTwoDigitLoopW;
+{$ELSE}
 FillTwoDigitLoopLW;
+{$ENDIF}
 
 {$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN) or defined(USE_FAST_CHARPOS) or defined(FAST_MOVE)}
   GetCPUInfo;
@@ -7760,7 +7832,11 @@ FillTwoDigitLoopLW;
   {$IFDEF WITH_STRLEN_DEPRECATED}
     StrLen := AnsiStrings.StrLen;
   {$ELSE}
+    {$IFDEF NEXTGEN}
+    StrLen := StrLen_JOH_PAS_3_a;
+    {$ELSE}
     StrLen := {$IFDEF FPC}System.{$ELSE}SysUtils.{$ENDIF}StrLen;
+    {$ENDIF}
   {$ENDIF WITH_STRLEN_DEPRECATED}
 {$ENDIF USE_FAST_STRLEN}
 

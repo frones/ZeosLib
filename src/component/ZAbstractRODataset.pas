@@ -212,6 +212,7 @@ type
     FResultSet: IZResultSet;
 
     FRefreshInProgress: Boolean;
+    FFieldDefsInitialized: boolean;
 
     FDataLink: TDataLink;
     FMasterLink: TMasterDataLink;
@@ -3344,6 +3345,7 @@ begin
       end;
       UnPrepare;
     end;
+    FFieldDefsInitialized := True;
   end;
 end;
 
@@ -3456,7 +3458,7 @@ begin
       end;
 
     { Initializes field and index defs. }
-    if not FRefreshInProgress then
+    if (not FRefreshInProgress) and (not FFieldDefsInitialized) then
       InternalInitFieldDefs;
 
     {$IFDEF WITH_LIFECYCLES}
@@ -3965,6 +3967,7 @@ begin
     Statement.Close;
     Statement := nil;
   end;
+  FFieldDefsInitialized := False;
 end;
 
 {**
@@ -4778,6 +4781,7 @@ begin
     if not ResultSet.IsBeforeFirst then
       ResultSet.BeforeFirst; //need this. All from dataset buffered resultsets are EOR
     FUseCurrentStatment := True; //hint for InternalOpen
+    FFieldDefsInitialized := False;
     OpenCursor{$IFDEF FPC}(False){$ENDIF}; //Calls InternalOpen in his sequence so InternalOpen must be prepared
     OpenCursorComplete; //set DataSet to dsActive
     FUseCurrentStatment := False; //reset hint for InternalOpen

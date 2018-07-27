@@ -171,7 +171,7 @@ end;
 procedure TZFunctionsList.RegenerateKey(const aPosition : Integer);
 
 begin
-  SetKey(Hash({$IFDEF UNICODE}AnsiString{$ENDIF}((FFunctions[aPosition] as IZFunction).Name)), aPosition);
+  SetKey(Hash({$IFDEF UNICODE}RawByteString{$ENDIF}((FFunctions[aPosition] as IZFunction).Name)), aPosition);
 end;
 
 {**
@@ -219,7 +219,7 @@ var
 
 begin
   aName := Uppercase(Name);
-  Result := FindByKeyAndName(Hash({$IFDEF UNICODE}AnsiString{$ENDIF}(aName)), aName);
+  Result := FindByKeyAndName(Hash({$IFDEF UNICODE}RawByteString{$ENDIF}(aName)), aName);
 end;
 
 {**
@@ -233,7 +233,7 @@ var
   aName: string;
 begin
   aName := Uppercase(Func.Name);
-  aKey  := Hash({$IFDEF UNICODE}AnsiString{$ENDIF}(aName));
+  aKey  := Hash({$IFDEF UNICODE}RawByteString{$ENDIF}(aName));
   Index := FindByKeyAndName(aKey, aName);
   if Index < 0 then
   begin

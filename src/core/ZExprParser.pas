@@ -55,7 +55,8 @@ interface
 
 {$I ZCore.inc}
 
-uses SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs,
+uses SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  {$IFDEF NEXTGEN}System.Generics.Collections{$ELSE}Contnrs{$ENDIF},
   ZCompatibility, ZVariant, ZTokenizer;
 
 type
@@ -88,9 +89,9 @@ type
   private
     FTokenizer: IZTokenizer;
     FExpression: string;
-    FInitialTokens: TObjectList;
+    FInitialTokens: TObjectList{$IFDEF NEXTGEN}<TZExpressionToken>{$ENDIF};
     FTokenIndex: Integer;
-    FResultTokens: TObjectList;
+    FResultTokens: TObjectList{$IFDEF NEXTGEN}<TZExpressionToken>{$ENDIF};
     FVariables: TStrings;
 
     function HasMoreTokens: Boolean;
@@ -118,7 +119,7 @@ type
 
     property Tokenizer: IZTokenizer read FTokenizer write FTokenizer;
     property Expression: string read FExpression write Parse;
-    property ResultTokens: TObjectList read FResultTokens;
+    property ResultTokens: TObjectList{$IFDEF NEXTGEN}<TZExpressionToken>{$ENDIF} read FResultTokens;
     property Variables: TStrings read FVariables;
   end;
 
@@ -166,9 +167,9 @@ constructor TZExpressionParser.Create(const Tokenizer: IZTokenizer);
 begin
   FTokenizer := Tokenizer;
   FExpression := '';
-  FInitialTokens := TObjectList.Create;
+  FInitialTokens := TObjectList{$IFDEF NEXTGEN}<TZExpressionToken>{$ENDIF}.Create;
   FTokenIndex := 0;
-  FResultTokens := TObjectList.Create;
+  FResultTokens := TObjectList{$IFDEF NEXTGEN}<TZExpressionToken>{$ENDIF}.Create;
   FVariables := TStringList.Create;
 end;
 
@@ -272,14 +273,11 @@ var
   Temp: TZExpressionToken;
 begin
   Result := False;
-  for I := Low(TokenTypes) to High(TokenTypes) do
-  begin
-    if (FTokenIndex + I) < FInitialTokens.Count then
-    begin
+  for I := Low(TokenTypes) to High(TokenTypes) do begin
+    if (FTokenIndex + I) < FInitialTokens.Count then begin
       Temp := TZExpressionToken(FInitialTokens[FTokenIndex + I]);
       Result := Temp.TokenType = TokenTypes[I];
-      end
-      else
+    end else
       Result := False;
 
     if not Result then
