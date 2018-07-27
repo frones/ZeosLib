@@ -101,6 +101,10 @@
        {$DEFINE HAVE_TBYTES}         // TBytes is declared only in FPC 2.6.2 instead of 2.6.0 as declared...
     {$ENDIF}
 
+    {$IF FPC_FULLVERSION>=30000}
+       {$DEFINE FPC3_0UP}
+    {$ENDIF}
+
     {$IFDEF LCL}
       {$DEFINE WITH_LCONVENCODING} //Only available for Lazarus
     {$ENDIF}

@@ -182,6 +182,10 @@ implementation
 
 uses ZEncoding;
 
+//type
+//  CyrillicString = type Ansistring(1251);
+//  WesternString = type Ansistring(1252);
+
 var
   TestVar1, TestVar2: TZVariant;
   TestConSettings: PZConSettings;
@@ -1080,7 +1084,6 @@ initialization
   UTF8Var := EncodeUTF8String({$IFDEF WITH_RAWBYTESTRING}UTF8String(s){$ELSE}UTF8Encode(S){$ENDIF});
   Raw_CPUTF8_Var := EncodeRawByteString(UTF8Encode(S));
   Raw_CP1252_Var := EncodeRawByteString(ZUnicodeToRaw(S, zCP_WIN1252));
-
 
 finalization
   Dispose(TestConSettings^.ClientCodePage);
