@@ -154,7 +154,8 @@ var
 implementation
 
 uses
-  ComObj, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, Variants, Types, Math,
+  {$IFDEF WITH_SYSTEM_WIN_COMOBJ}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
+  {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, Variants, Types, Math,
   ZSysUtils, ZDbcAdoResultSet, ZDbcCachedResultSet, ZDbcResultSet, ZDbcUtils,
   ZMessages, ZEncoding, ZFastCode, ZClasses;
 

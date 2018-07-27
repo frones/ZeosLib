@@ -65,7 +65,7 @@ unit ZPgEventAlerter;
 interface
 {$I ZComponent.inc}
 uses
-  SysUtils, Classes, ExtCtrls,
+  SysUtils, Classes, {$IFDEF WITH_VCL_PREFIX}Vcl.ExtCtrls{$ELSE}ExtCtrls{$ENDIF},
   ZDbcPostgreSql, ZPlainPostgreSqlDriver, ZConnection, ZAbstractRODataset;
 
 type
@@ -338,7 +338,7 @@ begin
       if Notify = nil then
         Break;
       HandleNotify(Notify);
-      PlainDRV.FreeNotify(Notify);
+      PlainDRV.FreeMem(Notify);
     end;
   end;
 end;

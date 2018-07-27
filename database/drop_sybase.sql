@@ -60,7 +60,7 @@ if exists (select 1
             from  sysobjects
            where  id = object_id('default_values2')
             and   type = 'U')
-   drop table default_values
+   drop table default_values2
 go
 /*
 drop procedure abtest

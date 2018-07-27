@@ -7,7 +7,7 @@
         <TargetedPlatforms>1</TargetedPlatforms>
         <AppType>Package</AppType>
         <FrameworkType>None</FrameworkType>
-        <ProjectVersion>18.3</ProjectVersion>
+        <ProjectVersion>18.4</ProjectVersion>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
@@ -95,6 +95,7 @@
         <DCCReference Include="..\..\src\core\ZClasses.pas"/>
         <DCCReference Include="..\..\src\core\ZMessages.pas"/>
         <DCCReference Include="..\..\src\core\ZURL.pas"/>
+        <DCCReference Include="..\..\src\core\ZConnProperties.pas"/>
         <DCCReference Include="..\..\src\core\ZFunctions.pas"/>
         <DCCReference Include="..\..\src\core\ZFunctionsConvert.pas"/>
         <DCCReference Include="..\..\src\core\ZFunctionsDateTime.pas"/>
@@ -128,6 +129,7 @@
             </Delphi.Personality>
             <Platforms>
                 <Platform value="Win32">True</Platform>
+                <Platform value="Win64">True</Platform>
             </Platforms>
         </BorlandProject>
         <ProjectFileVersion>12</ProjectFileVersion>

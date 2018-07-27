@@ -676,7 +676,7 @@ type
     function GetAsUTF8String: UTF8String;
     function GetAsRawByteString: RawByteString;
     { record/array types }
-    function GetAsGUID: TGUID;
+    function GetAsGuid: TGUID; {$IFDEF WITH_VIRTUAL_TFIELD_GETASGUID} override; {$ENDIF}
     function GetAsBytes: TBytes; {$IFDEF TFIELD_HAS_ASBYTES}override;{$ENDIF}
     function GetAsVariant: Variant; override;
     //function GetCanModify: Boolean; virtual;
@@ -3459,7 +3459,11 @@ begin
     if not FRefreshInProgress then
       InternalInitFieldDefs;
 
+    {$IFDEF WITH_LIFECYCLES}
+    if ((FieldOptions.AutoCreateMode <> acExclusive) or not (lcPersistent in Fields.LifeCycles)) and not FRefreshInProgress then
+    {$ELSE}
     if DefaultFields and not FRefreshInProgress then
+    {$ENDIF}
     begin
       CreateFields;
       if not (doNoAlignDisplayWidth in FOptions) then
@@ -3544,7 +3548,11 @@ begin
     RowAccessor := nil;
 
     { Destroy default fields }
+    {$IFDEF WITH_LIFECYCLES}
+    if ((FieldOptions.AutoCreateMode <> acExclusive) or not (lcPersistent in Fields.LifeCycles)) then
+    {$ELSE}
     if DefaultFields then
+    {$ENDIF}
       DestroyFields;
 
     FieldsLookupTable := nil;
@@ -5736,7 +5744,7 @@ begin
     Result := '';
 end;
 
-function TZField.GetAsGUID: TGUID;
+function TZField.GetAsGuid: TGUID;
 var IsNull: Boolean;
   Bytes: TBytes;
 begin

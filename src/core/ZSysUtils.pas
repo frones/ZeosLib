@@ -665,6 +665,9 @@ function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWideStr
 function SQLQuotedStr(const S: RawByteString; Quote: AnsiChar): RawByteString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function SQLQuotedStr(Src: PAnsiChar; Len: LengthInt; Quote: AnsiChar): RawByteString; overload;
 
+// added because I am sure, EgonHugeist wants this back (see SF#277):
+//function FailingSQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWideString; overload;
+
 function SQLQuotedStr(const S: string; QuoteLeft, QuoteRight: Char): string; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function SQLQuotedStr(Src: PChar; Len: LengthInt; QuoteLeft, QuoteRight: Char): string; overload;
 
@@ -4082,6 +4085,7 @@ end;
   Standard quoting: Result := Quote + Double_Quotes(Src, Quote) + Quote
 }
 function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWideString; overload;
+//function FailingSQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWideString; overload;
 var
   P, Dest, PEnd, PFirst: PWideChar;
 begin
@@ -4090,9 +4094,11 @@ begin
   PEnd := P + Len;
   PFirst := nil;
   while P < PEnd do begin
-    Inc({%H-}NativeUInt(Dest), Ord(P^=Quote));
-    if Dest = nil then
-      PFirst := P;
+    if (P^=Quote) then begin
+      if Dest = nil then
+        PFirst := P;
+      Inc({%H-}NativeUInt(Dest));
+    end;
     Inc(P);
   end;
   if Dest = nil then begin
@@ -4111,11 +4117,11 @@ begin
   Dest := Pointer(Result);
   Dest^ := Quote;
   Inc(Dest);
-  P := PFirst+1;
+  P := PFirst;
   repeat
     Inc(P);
     Move(Src^, Dest^, (P - Src) shl 1);
-    Inc(Dest, P - Src);
+    Inc(Dest, (P - Src));
     Dest^ := Quote;
     Inc(Dest);
     Src := P;
@@ -4128,6 +4134,21 @@ begin
   Dest^ := Quote;
 end;
 
+(*
+// replacement implementation of SQLQuotedStr because the above implementation doesn't work in some cases.
+function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWideString; overload;
+var
+  x: integer;
+begin
+  Result := '';
+  SetLength(Result, Len);
+  Move(Src^, Result[1], Len * 2);
+  for x := Length(Result) downto 1 do begin
+    if Result[x] = Quote then Insert(Quote, Result, x);
+  end;
+  Result := Quote + Result + Quote;
+end;
+*)
 function SQLQuotedStr(const S: ZWideString; Quote: WideChar): ZWideString;
 begin
   Result := SQLQuotedStr(Pointer(S), Length(S), Quote);
@@ -4142,9 +4163,11 @@ begin
   PEnd := P + Len;
   PFirst := nil;
   while P < PEnd do begin
-    Inc({%H-}NativeUInt(Dest), Ord(P^=Quote));
-    if Dest = nil then
-      PFirst := P;
+    if (P^=Quote) then begin
+      if Dest = nil then
+        PFirst := P;
+      Inc({%H-}NativeUInt(Dest));
+    end;
     Inc(P);
   end;
   if Dest = nil then begin
@@ -4163,7 +4186,7 @@ begin
   Dest := Pointer(Result);
   Dest^ := Quote;
   Inc(Dest);
-  P := PFirst+1;
+  P := PFirst;
   repeat
     Inc(P);
     Move(Src^, Dest^, (P - Src));

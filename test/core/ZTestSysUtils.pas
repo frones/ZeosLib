@@ -83,6 +83,7 @@ type
     procedure TestBreakString;
     procedure TestMatch;
     procedure TestQuotedStr;
+    procedure TestQuotedStr2;
     procedure TestDequotedStr;
     procedure TestRawSQLDateToDateTime;
     procedure TestRawSQLTimeToDateTime;
@@ -471,6 +472,25 @@ begin
     CheckEquals(TestCases_SglQuote[i][2], SQLQuotedStr(TestCases_SglQuote[i][1], TestCases_SglQuote[i][0][1]));
   for i := Low(TestCases_DblQuote) to High(TestCases_DblQuote) do
     CheckEquals(TestCases_DblQuote[i][2], SQLQuotedStr(TestCases_DblQuote[i][1], TestCases_DblQuote[i][0][1], TestCases_DblQuote[i][0][2]));
+end;
+
+// in the sybase driver this leads to an exception
+// see SF#277
+procedure TZTestSysUtilsCase.TestQuotedStr2;
+var
+  TableName: String;
+  QuoteChar: Char;
+begin
+  QuoteChar := '''';
+  TableName := 'TABLE';
+  CheckEquals(QuotedStr(TableName), SQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
+  //CheckEquals(QuotedStr(TableName), FailingSQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
+  TableName := 'TA''BLE';
+  CheckEquals(QuotedStr(TableName), SQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
+  //CheckEquals(QuotedStr(TableName), FailingSQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
+  TableName := '''TABLE''';
+  CheckEquals(QuotedStr(TableName), SQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
+  //CheckEquals(QuotedStr(TableName), FailingSQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
 end;
 
 procedure TZTestSysUtilsCase.RunDequotedStr;

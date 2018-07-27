@@ -238,7 +238,7 @@ go
 /*==============================================================*/
 /* Table : default_values2                                       */
 /*==============================================================*/
-create table default_values(
+create table default_values2(
    d_id                           int 	      not null,
    d_fld1                         float       default 123.456,
    d_fld2                         int 	      default 123456,
@@ -246,7 +246,7 @@ create table default_values(
    d_fld4                     	  varchar(10) default 'xyz',
    d_fld5                     	  datetime    default '2003-12-11 23:12:11',
    d_fld6                     	  datetime    default '23:12:11',
-   constraint PK_DEFAULT_VALUES primary key (d_id)
+   constraint PK_DEFAULT_VALUES2 primary key (d_id)
 )
 go
 
@@ -359,8 +359,8 @@ create table string_values (
 s_id                 int                  not null,
 s_char               char(255)            null,
 s_varchar            varchar(255)         null,
-s_nchar              char(255)            null,
-s_nvarchar           varchar(255)         null,
+s_nchar              unichar(255)            null,
+s_nvarchar           unichar(255)         null,
 s_bit                binary(255)          null,
 s_varbit             varbinary(1024)      null,
 primary key  (s_id)

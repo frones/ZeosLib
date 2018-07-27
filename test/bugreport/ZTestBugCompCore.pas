@@ -66,6 +66,7 @@ type
   private
     FUpdateCounter: Integer;
     FErrorCounter: Integer;
+    procedure TestSF279CalcFields(DataSet: TDataSet);
   public
     procedure DataSetCalcFields(Dataset: TDataSet);
     procedure DataSetBeforeScroll({%H-}Dataset: TDataSet);
@@ -119,6 +120,7 @@ type
     procedure TestTicket228;
     procedure TestSF270_1;
     procedure TestSF270_2;
+    procedure TestSF279;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -1852,6 +1854,49 @@ begin
   end;
 end;
 
+procedure ZTestCompCoreBugReport.TestSF279CalcFields(DataSet: TDataSet);
+begin
+  DataSet.FieldByName('calculated').AsString :=
+    DataSet.FieldByName('dep_name').AsString +
+    ' ' +
+    DataSet.FieldByName('dep_address').AsString;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF279;
+const
+  FieldName = 'calculated';
+var
+  Query: TZQuery;
+  CalcField: TStringField;
+  FieldDef: TFieldDef;
+  X: Integer;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from department';
+    Query.FieldDefs.Clear;
+    Query.Fields.Clear;
+    Query.FieldDefs.Update;
+    FieldDef := Query.FieldDefs.AddFieldDef;
+    FieldDef.DataType := ftString;
+    FieldDef.Size := 280;
+    FieldDef.Name := FieldName;
+    for x := 0 to Query.FieldDefs.Count - 1
+    do Query.FieldDefs.Items[x].CreateField(Query);
+    Query.FieldByName(FieldName).FieldKind := fkCalculated;
+    Query.OnCalcFields := TestSF279CalcFields;
+    Query.Open;
+    try
+      Query.Filter := 'calculated LIKE ' + QuotedStr('*Krasnodar*');
+      Query.Filtered := True;
+    finally
+      Query.Close;
+    end;
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
 const {Test Strings}
   Str1: ZWideString = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
   Str2: ZWideString = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
@@ -1879,7 +1924,7 @@ begin
       ConSettings := Connection.DbcConnection.GetConSettings;
       //bugreport of mrLion
 
-      SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
+      SQL.Text := 'INSERT INTO people(p_id, p_name, p_resume)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
       ParamByName('P_NAME').AsString := GetDBTestString(Str3, ConSettings);
