@@ -2063,7 +2063,7 @@ end;
 
 function CheckNumberRange(Value: AnsiChar; out Failed: Boolean): Byte; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 begin
-  Failed := not (Ord(Value) >= Ord('0')) and (Ord(Value) <= Ord('9'));
+  Failed := not ((Ord(Value) >= Ord('0')) and (Ord(Value) <= Ord('9')));
   if Failed then
     Result := 0
   else
