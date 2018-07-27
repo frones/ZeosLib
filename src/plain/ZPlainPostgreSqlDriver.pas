@@ -390,7 +390,7 @@ type
 }
   TZPostgreSQLNotify = packed record
     relname: PAnsiChar;   { name of relation containing data }
-    be_pid:  Integer; { process id of backend }
+    be_pid:  NativeInt; { process id of backend }
     payload: PAnsiChar; {additional data in notify}
   end;
 
@@ -539,19 +539,6 @@ type
   PPGresult = ^TPGresult;
   TPGresult = Pointer;
   PGCancel = Pointer;
-
-{ PGnotify represents the occurrence of a NOTIFY message.
-  Ideally this would be an opaque typedef, but it's so simple that it's
-  unlikely to change.
-  NOTE: in Postgres 6.4 and later, the be_pid is the notifying backend's,
-  whereas in earlier versions it was always your own backend's PID.
-}
-  PGnotify = packed record
-    relname: array [0..NAMEDATALEN-1] of AnsiChar; { name of relation containing data }
-    be_pid:  Integer;			      { process id of backend }
-  end;
-
-  PPGnotify = ^PGnotify;
 
 { PQnoticeProcessor is the function type for the notice-message callback. }
 
@@ -722,8 +709,7 @@ type
 
     PQsetnonblocking : function(conn: TPGconn; arg: Integer): Integer; cdecl;
 
-    PQnotifies      : function(conn: TPGconn): PPGnotify; cdecl;
-    PQfreeNotify    : procedure(Handle: PPGnotify);cdecl;
+    PQnotifies      : function(conn: TPGconn): PZPostgreSQLNotify; cdecl;
     PQisBusy        : function(conn: TPGconn): Integer; cdecl;
     PQconsumeInput  : function(conn: TPGconn): Integer; cdecl;
     PQgetCancel     : function(conn: TPGconn): PGcancel; cdecl;
@@ -915,7 +901,6 @@ begin
     @PQsetnonblocking := GetAddress('PQsetnonblocking');
 
     @PQnotifies     := GetAddress('PQnotifies');
-    @PQfreeNotify   := GetAddress('PQfreeNotify');
     @PQisBusy       := GetAddress('PQisBusy');
     @PQconsumeInput := GetAddress('PQconsumeInput');
     @PQgetline      := GetAddress('PQgetline');

@@ -322,7 +322,8 @@ const
 
 implementation
 
-uses {$IFDEF WITH_FTGUID}ComObj, ActiveX,{$ENDIF} Math,
+uses
+  Math,
   ZSysUtils, ZEncoding, ZTestConsts, ZTestConfig, ZSqlProcessor, ZURL, ZAbstractRODataset;
 
 function PropPos(const PropDynArray: TStringDynArray; const AProp: String): Integer; overload;
@@ -832,7 +833,7 @@ var GUID: TGUID;
 {$ENDIF}
 begin
   {$IFDEF WITH_FTGUID}
-  if CoCreateGuid(GUID) = S_OK then
+  if CreateGuid(GUID) = S_OK then
     Result := GUIDToString(GUID)
   else
   {$ENDIF}
@@ -846,7 +847,7 @@ var GUID: TGUID;
 begin
   SetLength(Result, 16);
   {$IFDEF WITH_FTGUID}
-  if CoCreateGuid(GUID) = S_OK then
+  if CreateGuid(GUID) = S_OK then
     System.Move(Pointer(@GUID)^, Pointer(Result)^, 16)
   else
   {$ENDIF}
@@ -863,7 +864,7 @@ begin
   Bts := RandomGUIDBytes;
   Result := GUID;
   {$ELSE}
-  CoCreateGuid(Result);
+  CreateGuid(Result);
   {$ENDIF}
 end;
 
@@ -1367,19 +1368,22 @@ procedure TZSupplementarySQLTestCase.ExecuteScripts(
 var
   I: Integer;
   ScriptPath: string;
+  ScriptName: String;
 begin
   { Sets the right error event handler. }
   if RaiseException then
     FSQLProcessor.OnError := RaiseError
   else FSQLProcessor.OnError := SuppressError;
 
-  ScriptPath := TestConfig.ConfigFilePath;
+  ScriptPath := TestConfig.ScriptPath;
 
   for I := 0 to High(FileNames) do
   begin
     FSQLProcessor.Script.Clear;
     try
-      FSQLProcessor.Script.LoadFromFile(ScriptPath + FileNames[I]);
+      ScriptName := ScriptPath + FileNames[I];
+      Writeln('Executing ' + ScriptName);
+      FSQLProcessor.Script.LoadFromFile(ScriptName);
       // To avoid parameter handling while rebuild! Parameters must not be handled!
       FSQLProcessor.ParamCheck := false;
     except

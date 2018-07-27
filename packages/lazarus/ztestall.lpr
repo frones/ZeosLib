@@ -3,9 +3,6 @@ program ztestall;
 {$mode objfpc}{$H+}
 
 uses
-  {$IF FPC_FULLVERSION<30000} //use compiler option -gh instead
-  heaptrc,
-  {$IFEND}
   custapp, sysutils,
   Interfaces, Forms, GuiTestRunner, LResources,
   Classes, consoletestrunner, fpcunit, fpcunitreport, testregistry,

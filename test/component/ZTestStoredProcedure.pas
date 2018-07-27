@@ -1011,7 +1011,9 @@ begin
   CheckEquals(1, StoredProc.Fields.Count);
 
   CheckEquals('10', StoredProc.Fields[0].DisplayName);
-  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
+  // behavior inconsistency between mysql and mariadb:
+  // mysql maps const ordinals to Largeint, mariadb to integer(if in range)
+//  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
   CheckEquals(10, StoredProc.Fields[0].AsInteger);
 
   CheckEquals(False, StoredProc.EOR);
@@ -1072,7 +1074,9 @@ begin
   CheckEquals(1, StoredProc.Fields.Count);
 
   CheckEquals('10', StoredProc.Fields[0].DisplayName);
-  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
+  // behavior inconsistency between mysql and mariadb:
+  // mysql maps const ordinals to Largeint, mariadb to integer(if in range)
+  //CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
   CheckEquals(10, StoredProc.Fields[0].AsInteger);
 
 end;

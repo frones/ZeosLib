@@ -147,7 +147,6 @@ var
 begin
   AC := Connection.GetAutoCommit;
   Connection.SetAutoCommit(False);
-  Result := 0;
   try
     ArrayOffSet := 0;
     FIBConnection.GetTrHandle; //restart transaction if required
@@ -157,7 +156,7 @@ begin
           BindSQLDAInParameters(BindList, FBatchStmts[True][FStatementType].Obj.FParamSQLData,
             GetConnection.GetConSettings, FCodePageArray, ArrayOffSet,
             FBatchStmts[True][FStatementType].PreparedRowsOfArray);
-          Result := FBatchStmts[True][FStatementType].Obj.ExecuteInternal;
+          FBatchStmts[True][FStatementType].Obj.ExecuteInternal;
           Inc(ArrayOffSet, FBatchStmts[True][FStatementType].PreparedRowsOfArray);
         end;
       BindSQLDAInParameters(BindList, FBatchStmts[False][FStatementType].Obj.FParamSQLData,
@@ -244,7 +243,7 @@ function TZAbstractInterbase6PreparedStatement.AlignParamterIndex2ResultSetIndex
   Value: Integer): Integer;
 begin
   Result := inherited AlignParamterIndex2ResultSetIndex(Value);
-  Result := Result{$IFNDEF GENERIC_INDEX}+1{$ENDIF} - FParamSQLData.GetFieldCount
+  Result := Result - FParamSQLData.GetFieldCount
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.BindBinary(Index: Integer;

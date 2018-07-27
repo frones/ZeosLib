@@ -182,13 +182,19 @@ implementation
 
 uses ZEncoding;
 
+//type
+//  CyrillicString = type Ansistring(1251);
+//  WesternString = type Ansistring(1252);
+
 var
   TestVar1, TestVar2: TZVariant;
   TestConSettings: PZConSettings;
 
 const
-  //S: ZWideString = 'üהצßגבא';
-  S: ZwideString = #$0061#$0062#$0063#$0430#$0431#$0432#$00FC#$00E4#$00F6;
+  //S: ZWideString = 'üהצßגבא';                                 // Hiergeist old
+  //S: ZwideString = #$0061#$0062#$0063#$0430#$0431#$0432#$00FC#$00E4#$00F6; // Fr0sT
+  S: ZWideString = AnsiString(#$FC#$E4#$F6#$DF#$E2#$E1#$E0);  // Marsupilami
+  //S: ZwideString = #$00FC#$00E4#$00F6#$00DF#$00E2#$00E1#$00E0;  // Hiergeist
 
 { TZTestVariantCase }
 
@@ -1080,7 +1086,6 @@ initialization
   UTF8Var := EncodeUTF8String({$IFDEF WITH_RAWBYTESTRING}UTF8String(s){$ELSE}UTF8Encode(S){$ENDIF});
   Raw_CPUTF8_Var := EncodeRawByteString(UTF8Encode(S));
   Raw_CP1252_Var := EncodeRawByteString(ZUnicodeToRaw(S, zCP_WIN1252));
-
 
 finalization
   Dispose(TestConSettings^.ClientCodePage);

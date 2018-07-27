@@ -232,10 +232,10 @@ begin
   Statement.ExecuteUpdate(Sql);
 
   StrStream := TMemoryStream.Create;
-  StrStream.LoadFromFile('../../../database/text/lgpl.txt');
+  StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
   StrStream.Size := 1024;
   BinStream := TMemoryStream.Create;
-  BinStream.LoadFromFile('../../../database/images/dogs.jpg');
+  BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
   BinStream.Size := 1024;
 
   StrStream1 := nil;
@@ -377,7 +377,7 @@ begin
 
   TextStream := TStringStream.Create('ABCDEFG');
   ImageStream := TMemoryStream.Create;
-  ImageStream.LoadFromFile('../../../database/images/horse.jpg');
+  ImageStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/horse.jpg');
 
   try
     PreparedStatement := Connection.PrepareStatement(

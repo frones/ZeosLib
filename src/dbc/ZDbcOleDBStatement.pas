@@ -134,7 +134,8 @@ type
 implementation
 
 uses
-  Variants, ComObj, Math,
+  Variants, Math,
+  {$IFDEF WITH_SYSTEM_WIN_COMOBJ}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZDbcOleDB, ZDbcOleDBResultSet, ZEncoding, ZDbcLogging,
   ZFastCode, ZDbcMetadata, ZDbcUtils, ZMessages, ZClasses;
 

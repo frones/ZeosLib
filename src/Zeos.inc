@@ -76,12 +76,13 @@
 {$DEFINE ENGLISH} //see \core\ZMessages.pas
 
 {$DEFINE MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD} //Compiler can't determine overload for NativeUInt(64-Bit)
-{$DEFINE HAS_PANSICHAR} //Compiler supports PAnsiChar
-{$DEFINE HAS_ANSICHAR} //Compiler supports AnsiChar
  // Compilation directives for Lazarus/FPC
 {$IFDEF FPC}
   {$I ZeosLazarus.inc}
 {$ELSE}
+  {$IF CompilerVersion >= 31}
+    {$LEGACYIFEND ON}
+  {$IFEND}
   {$DEFINE DELPHI}
   // Defines that go for ALL still supported Delphi's   (usually means they were under ifndef fpc)
   {$DEFINE WITH_DBTABLES}                 //Have the BDE DBTables Unit
@@ -165,7 +166,7 @@
               {$UNDEF WITH_IPROVIDERSUPPORT2}           //TDataSet IProviderSupport2 has been removed again
               {$UNDEF WITH_DEPRECATED_EXTRACTFIELDNAME} //DB.pas proc ExtractFieldName String overload is no more deprecated -> Unicode}
               {$UNDEF BCC32_vtDateTime_ERROR}           //resolved by ide
-              {$UNDEF USE_FAST_CHARPOS}                 // Since Unidode this function is useless
+              {$UNDEF USE_FAST_CHARPOS}                 // Since Unicode this function is useless
 
               {$DEFINE WITH_TBOOKMARK}                  // Have TBookmark
               {$DEFINE WITH_TRECORDBUFFER}              // Abstract buffer type (pansichar or pbyte)
@@ -217,6 +218,11 @@
                         {$UNDEF PatchSystemMove}  //FastCode-Project Move currently not ported to other plattforms
                       {$ENDIF}
                     {$ENDIF}
+                    {$IFDEF NEXTGEN}
+                      {$UNDEF WITH_UNITANSISTRINGS} //the unit is not available for NEXTGEN
+                      {$UNDEF WITH_ASANSISTRING}    //nextgen does not support the raw AnsiString(GET_ACP) any more
+                      {$DEFINE MISS_RBS_SETSTRING_OVERLOAD} //system.SetString is not available for raw strings or i (EH) have no clue how to use it
+                    {$ENDIF}
                     {$DEFINE WITH_SYSTEMCLASSES}          //Need System.Classes
                     {$DEFINE WITH_MAXLISTSIZE_DEPRECATED} //Since XE2 64Bit Integer = Int64 this value is deprecated
                     {$DEFINE WITH_VCL_PREFIX}             //component units require Vcl prefix
@@ -236,21 +242,23 @@
                       {$IF CompilerVersion >= 25} //Delphi XE4+
                         {$DEFINE WITH_VAR_TVALUEBUFFER}	        //GetFieldata overloads using !var! Buffer: TValueBuffer
                         {$DEFINE WITH_BUFFERS_IS_TRECBUF}       //Buffers[index] is TRecBuf type NativeInt
-                        {$DEFINE WITH_ANSISTRINGPOS_DEPRECATED} //AnsiStringPos deprecated moved to AnsiStrings
-                        {$DEFINE WITH_STRLEN_DEPRECATED}        //StrLen deprecated moved to AnsiStrings
-                        {$DEFINE WITH_TOBJECTLIST_INLINE}       //TObjectList.Remove, add ... are inlined 	need System.Types
-                        {$DEFINE WITH_ANSISTRCOMP_DEPRECATED}   //AnsiStrComp is deprecated moved to AnsiStrings
-                        {$DEFINE WITH_ANSISTRLCOMP_DEPRECATED}  //AnsiStrLComp is deprecated moved to AnsiStrings
-                        {$DEFINE WITH_STRDISPOSE_DEPRECATED}    //StrDispose is deprecated moved to AnsiStrings
-                        {$DEFINE WITH_STRNEW_DEPRECATED}        //StrNew is deprecated moved to AnsiStrings
-                        {$DEFINE WITH_STRCOPY_DEPRECATED}       //StrCopy is deprecated moved to AnsiStrings
-                        {$DEFINE WITH_STRPCOPY_DEPRECATED}      //StrPCopy is deprecated moved to AnsiStrings
-                        {$DEFINE WITH_STRPLCOPY_DEPRECATED}     //StrPLCopy is deprecated moved to AnsiStrings
-                        {$DEFINE WITH_STRLCOPY_DEPRECATED}      //StrLCopy is deprecated moved to AnsiStrings
-                        {$DEFINE WITH_STRLICOPY_DEPRECATED}     //StrLICopy is deprecated moved to AnsiStrings
-                        {$DEFINE WITH_STRLICOMP_DEPRECATED}     //StrLIComp is deprecated moved to AnsiStrings
-                        {$DEFINE WITH_GETCALCFIELDS_TRECBUF}    //GetCalcFields expected no TRecordBuffer use TRecBuf type NativeInt instead
-                        {$DEFINE WITH_FLOATTOTEXT_DEPRECATED}   //FloatToText(PAnsi...) is deprecated moved to AnsiStrings
+                        {$IFNDEF NEXTGEN}
+                          {$DEFINE WITH_ANSISTRINGPOS_DEPRECATED} //AnsiStringPos deprecated moved to AnsiStrings
+                          {$DEFINE WITH_STRLEN_DEPRECATED}        //StrLen deprecated moved to AnsiStrings
+                          {$DEFINE WITH_TOBJECTLIST_INLINE}       //TObjectList.Remove, add ... are inlined 	need System.Types
+                          {$DEFINE WITH_ANSISTRCOMP_DEPRECATED}   //AnsiStrComp is deprecated moved to AnsiStrings
+                          {$DEFINE WITH_ANSISTRLCOMP_DEPRECATED}  //AnsiStrLComp is deprecated moved to AnsiStrings
+                          {$DEFINE WITH_STRDISPOSE_DEPRECATED}    //StrDispose is deprecated moved to AnsiStrings
+                          {$DEFINE WITH_STRNEW_DEPRECATED}        //StrNew is deprecated moved to AnsiStrings
+                          {$DEFINE WITH_STRCOPY_DEPRECATED}       //StrCopy is deprecated moved to AnsiStrings
+                          {$DEFINE WITH_STRPCOPY_DEPRECATED}      //StrPCopy is deprecated moved to AnsiStrings
+                          {$DEFINE WITH_STRPLCOPY_DEPRECATED}     //StrPLCopy is deprecated moved to AnsiStrings
+                          {$DEFINE WITH_STRLCOPY_DEPRECATED}      //StrLCopy is deprecated moved to AnsiStrings
+                          {$DEFINE WITH_STRLICOPY_DEPRECATED}     //StrLICopy is deprecated moved to AnsiStrings
+                          {$DEFINE WITH_STRLICOMP_DEPRECATED}     //StrLIComp is deprecated moved to AnsiStrings
+                          {$DEFINE WITH_GETCALCFIELDS_TRECBUF}    //GetCalcFields expected no TRecordBuffer use TRecBuf type NativeInt instead
+                          {$DEFINE WITH_FLOATTOTEXT_DEPRECATED}   //FloatToText(PAnsi...) is deprecated moved to AnsiStrings
+                        {$ENDIF}
                         {$IF CompilerVersion >= 26} //Delphi XE5+
                           {$DEFINE WITH_IPROVIDERSUPPORT_NG}    //supports IProviderSupportNG / IProviderSupport is deprecated
                           {$DEFINE TFIELD_HAS_ASLONGWORD}       //TField has supports virtual AsLongWord Gettet & Setter
@@ -260,6 +268,20 @@
                               {$UNDEF WITH_DBTABLES} //M.A. In Delphi XE7 no BDE
                               {$IF CompilerVersion >= 29} //Delphi XE8+
                                 {$IF CompilerVersion >= 30} //Delphi Seattle+
+                                  {$IF CompilerVersion >= 31} //Delphi Berlin+
+                                    {$IFDEF NEXTGEN}
+                                      {$DEFINE NO_ANSISTRING}
+                                      {$DEFINE WITH_SYSTEM_PREFIX}
+                                      {$DEFINE WITH_TSYSCHARSET_DEPRECATED}
+                                    {$ENDIF}   
+                                    {$IF CompilerVersion >= 32} //Delphi Tokyo+
+                                      {$DEFINE WITH_SYSTEM_WIN_COMOBJ} //unit ComObj is renamed to System.Win.ComObj 
+                                      {$DEFINE WITH_VIRTUAL_TFIELD_GETASGUID} //TField as now a virtual GetAsGUID function 
+                                      {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead
+                                    {$ELSE !CompilerVersion >= 32} //Delphi Berlin+
+                                    {$IFEND CompilerVersion >= 32}
+                                  {$ELSE !CompilerVersion >= 31} //Delphi Seattle+
+                                  {$IFEND CompilerVersion >= 31}
                                 {$ELSE !CompilerVersion >= 30} //Delphi XE8
                                 {$IFEND CompilerVersion >= 30}
                               {$ELSE !CompilerVersion >= 29} //Delphi XE7
@@ -299,8 +321,6 @@
 {$IFDEF NEXTGEN}
   {$UNDEF WITH_ASANSISTRING}
   {$UNDEF WITH_UNITANSISTRINGS}
-  {$UNDEF HAS_PANSICHAR}
-  {$UNDEF HAS_ANSICHAR}
 {$ENDIF}
 
 {$IFDEF LINUX}

@@ -83,6 +83,7 @@ type
     procedure TestBreakString;
     procedure TestMatch;
     procedure TestQuotedStr;
+    procedure TestQuotedStr2;
     procedure TestDequotedStr;
     procedure TestRawSQLDateToDateTime;
     procedure TestRawSQLTimeToDateTime;
@@ -132,6 +133,19 @@ type
 implementation
 
 uses ZEncoding {$IFDEF BENCHMARK},ZFastCode, Types, Classes{$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}, Windows{$IFEND}{$ENDIF};
+
+{$IFDEF FPC}{$IFNDEF DEFINE FPC3_0UP}
+{These functions help FPC 2.6 to decide wether to call the PChar or PWideChar version of these functions later on}
+function SQLStrToFloatDef(Value: RawByteString; const Def: Extended; Len: Integer = 0): Extended; overload;
+begin
+  SQLStrToFloatDef(PChar(Value), Def, Len);
+end;
+
+function SQLStrToFloatDef(Value: ZWideString; const Def: Extended; Len: Integer = 0): Extended; overload;
+begin
+  SQLStrToFloatDef(PWideChar(Value), Def, Len);
+end;
+{$ENDIF}{$ENDIF}
 
 { TZTestSysUtilsCase }
 
@@ -458,6 +472,25 @@ begin
     CheckEquals(TestCases_SglQuote[i][2], SQLQuotedStr(TestCases_SglQuote[i][1], TestCases_SglQuote[i][0][1]));
   for i := Low(TestCases_DblQuote) to High(TestCases_DblQuote) do
     CheckEquals(TestCases_DblQuote[i][2], SQLQuotedStr(TestCases_DblQuote[i][1], TestCases_DblQuote[i][0][1], TestCases_DblQuote[i][0][2]));
+end;
+
+// in the sybase driver this leads to an exception
+// see SF#277
+procedure TZTestSysUtilsCase.TestQuotedStr2;
+var
+  TableName: String;
+  QuoteChar: Char;
+begin
+  QuoteChar := '''';
+  TableName := 'TABLE';
+  CheckEquals(QuotedStr(TableName), SQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
+  //CheckEquals(QuotedStr(TableName), FailingSQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
+  TableName := 'TA''BLE';
+  CheckEquals(QuotedStr(TableName), SQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
+  //CheckEquals(QuotedStr(TableName), FailingSQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
+  TableName := '''TABLE''';
+  CheckEquals(QuotedStr(TableName), SQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
+  //CheckEquals(QuotedStr(TableName), FailingSQLQuotedStr(Pointer(TableName), Length(TableName), QuoteChar));
 end;
 
 procedure TZTestSysUtilsCase.RunDequotedStr;

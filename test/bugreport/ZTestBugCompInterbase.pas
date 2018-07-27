@@ -489,9 +489,9 @@ begin
 
   try
     { load data to the stream }
-    BinStream.LoadFromFile('../../../database/images/dogs.jpg');
+    BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
     BinStream.Size := 1024;
-    StrStream.LoadFromFile('../../../database/text/lgpl.txt');
+    StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
     StrStream.Size := 1024;
     { post empty row }
     Query.SQL.Text := 'SELECT * FROM BLOB_VALUES';
@@ -866,6 +866,7 @@ end;
 procedure ZTestCompInterbaseBugReport.Test_SF249;
 var
   Query: TZQuery;
+  Succeeded: Boolean;
 begin
   Query := CreateQuery;
   try
@@ -874,8 +875,13 @@ begin
       ' WHERE RDB$SYSTEM_FLAG=0;';
     Query.SQL.Text := 'select * from RDB$DATABASE where :TESTPARM=''''';
     Query.ParamByName('TESTPARM').AsString := 'xyz';
-    Query.Open;
-    CheckEquals(0, Query.RecordCount, 'where clause evaulates to true although it shouldn''t: where :TESTPARM = ''''; testparm = ''xyz''');
+    Succeeded := False;
+    try
+      Query.Open;
+    except
+      Succeeded := True;
+    end;
+    Check(Succeeded, 'where clause evaulates to true although it shouldn''t: where :TESTPARM = ''''; testparm = ''xyz''');
   finally
     Query.Close;
     Query.Free;

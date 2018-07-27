@@ -530,6 +530,7 @@ TMYSQL_CLIENT_OPTIONS =
     org_table_length: NativeInt;
     org_name        : NativeInt;
     org_name_length : NativeInt;
+    max_length      : NativeUInt;
     db              : NativeInt;
     db_length       : NativeInt;
     charsetnr       : NativeInt;
@@ -678,7 +679,8 @@ TMYSQL_CLIENT_OPTIONS =
     buffer_length_address:  PULong; //address of result buffer length
     length_address:         PPointer;
     length:                 PULongArray; //current length of our or bound data
-    is_null:                my_bool; //null indicators -> sadly mariadb doesn't use a array as stmt indicator
+    is_null_address:        Pmy_bool; //adress of is_null -> the field should be used
+    is_null:                my_bool; //null indicator -> do not attach directly -> out params are referenced to stmt bindings
     is_unsigned_address:    Pmy_bool; //signed ordinals or not?
     //https://mariadb.com/kb/en/library/bulk-insert-column-wise-binding/
     indicators:             Pmysql_indicator_types; //stmt indicators for bulk bulk ops -> mariadb addresses to "u" and does not use the C-enum
@@ -734,6 +736,8 @@ const
 //some error codes:
   CR_SERVER_GONE_ERROR = 2006;
   CR_SERVER_LOST = 2013;
+  CR_INVALID_PARAMETER_NO = 2034;
+  CR_NO_DATA = 2051;
 
   //http://eclipseclp.org/doc/bips/lib/dbi/cursor_next_execute-3.html
   //"Only one active cursor of type no_cursor is allowed per session,
@@ -752,15 +756,15 @@ const
 
   Value := NativeUInt(@(MYSQLx(Nil).server_status
 }
-  MYSQL5up_server_status_offset: NativeUInt = 748;
-  MYSQL41_server_status_offset: NativeUInt = 436;
-  MYSQL323_server_status_offset: NativeUInt = 328;
+
+  MYSQL5up_server_status_offset: NativeUInt = {$IFDEF CPU64}852{$ELSE}748{$ENDIF};
+  MYSQL41_server_status_offset: NativeUInt = {$IFDEF CPU64}540{$ELSE}436{$ENDIF};
+  MYSQL323_server_status_offset: NativeUInt = {$IFDEF CPU64}396{$ELSE}328{$ENDIF};
 
   //mysql_com.h
   SERVER_PS_OUT_PARAMS = LongWord(4096); //To mark ResultSet containing output parameter values.
   SERVER_MORE_RESULTS_EXIST = LongWord(8); //Multi query - next query exists
 
 implementation
-
 
 end.

@@ -184,7 +184,7 @@ implementation
 {$ENDIF}
 
 uses
-  Variants, Math, ComObj,
+  Variants, Math, {$IFDEF WITH_SYSTEM_WIN_COMOBJ}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode, ZClasses;
 
 {$IFOPT R+}
