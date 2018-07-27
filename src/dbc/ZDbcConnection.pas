@@ -300,7 +300,8 @@ end;
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZEncoding
+uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZEncoding,
+  {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZAbstractDriver }

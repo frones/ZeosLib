@@ -72,7 +72,6 @@ type
     FStandardConformingStrings: Boolean;
   protected
     function GetModifier(Stream: TStream; FirstChar: Char; ResetPosition: Boolean = True): String;
-    procedure GetDollarQuotedString(Stream: TStream; QuoteChar: Char; var Result: String);
     procedure GetQuotedString(Stream: TStream; QuoteChar: Char; EscapeSyntax: Boolean; var Result: String);
     procedure GetQuotedStringWithModifier(Stream: TStream; FirstChar: Char; var Result: String);
   public
@@ -127,7 +126,6 @@ uses ZCompatibility{$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 const
   NameQuoteChar   = Char('"');
-  DollarQuoteChar = Char('$');
   SingleQuoteChar = Char('''');
 
 { TZPostgreSQLQuoteState }
@@ -161,51 +159,6 @@ begin
         Stream.Seek(-ReadNum, soFromCurrent);
     end;
   end;
-end;
-
-{**
-  Returns a quoted string token from a reader. This method
-  will get Tag from first char to QuoteChar and will collect
-  characters until reaches same Tag.
-
-  @return a quoted string token from a reader
-}
-procedure TZPostgreSQLQuoteState.GetDollarQuotedString(Stream: TStream;
-  QuoteChar: Char; var Result: String);
-var
-  ReadChar: Char;
-  Tag, TempTag: string;
-  TagState: integer;
-begin
-  Result := '';
-  InitBuf(QuoteChar);
-  TagState := 0;
-  while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do
-  begin
-    if (ReadChar = QuoteChar) then
-    begin
-      if (TagState = 0) then begin
-        TagState := 1;
-        FlushBuf(Result);
-        Tag := Result;
-      end else if (TagState = 1) then
-      begin
-        TagState := 2;
-        TempTag := '';
-      end else if (TagState = 2) then
-        if TempTag = Tag then
-          TagState := 3
-        else
-          TempTag := '';
-    end;
-    ToBuf(ReadChar, Result);
-
-    if TagState = 2 then
-      TempTag := TempTag + ReadChar
-    else if TagState = 3 then
-      Break;
-  end;
-  FlushBuf(Result);
 end;
 
 {**
@@ -285,9 +238,6 @@ begin
   if FirstChar = NameQuoteChar then begin
     Result.TokenType := ttWord;
     GetQuotedString(Stream, FirstChar, False, Result.Value);
-  end else if FirstChar = DollarQuoteChar then begin
-    Result.TokenType := ttQuoted;
-    GetDollarQuotedString(Stream, FirstChar, Result.Value);
   end else begin
     Result.TokenType := ttQuoted;
     GetQuotedStringWithModifier(Stream, FirstChar, Result.Value);
@@ -413,16 +363,18 @@ function TZPostgreSQLSymbolState.NextToken(Stream: TStream; FirstChar: Char;
   Tokenizer: TZTokenizer): TZToken;
 var
   NumRead: Integer;
-  NextChar: Char;
+  ReadChar: Char;
   NumToken: TZToken;
+  Tag, TempTag: string;
+  TagState: integer;
 begin
   Result := inherited NextToken(Stream, FirstChar, Tokenizer);
   //detecting Postgre Parameters as one ttWordState:
   if (Result.Value = '$') then begin
-    NumRead := Stream.Read(NextChar, SizeOf(Char));
+    NumRead := Stream.Read(ReadChar{%H-}, SizeOf(Char));
     if (NumRead > 0) then begin
-      if ((Ord(NextChar) >= Ord('0')) and (Ord(NextChar) <= Ord('9'))) then begin
-        NumToken := fNumberState.NextToken(Stream, NextChar, Tokenizer);
+      if ((Ord(ReadChar) >= Ord('0')) and (Ord(ReadChar) <= Ord('9'))) then begin
+        NumToken := fNumberState.NextToken(Stream, ReadChar, Tokenizer);
         if NumToken.TokenType = ttInteger then begin
           Result.TokenType := ttWord;
           Result.Value := Result.Value+NumToken.Value;
@@ -430,6 +382,38 @@ begin
         end;
       end;
       Stream.Seek(-SizeOf(Char), soFromCurrent);
+      //detect body tags as ttQuoted
+      //eg. $body$ .... $body$ or $$ .... $$
+      Result.TokenType := ttQuoted;
+      TagState := 0;
+      InitBuf(FirstChar);
+      Result.Value := '';
+      while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do
+      begin
+        if (ReadChar = '$') then
+        begin
+          if (TagState = 0) then begin
+            TagState := 1;
+            FlushBuf(Result.Value);
+            Tag := Result.Value;
+          end else if (TagState = 1) then
+          begin
+            TagState := 2;
+            TempTag := '';
+          end else if (TagState = 2) then
+            if TempTag = Tag then
+              TagState := 3
+            else
+              TempTag := '';
+        end;
+        ToBuf(ReadChar, Result.Value);
+
+        if TagState = 2 then
+          TempTag := TempTag + ReadChar
+        else if TagState = 3 then
+          Break;
+      end;
+      FlushBuf(Result.Value);
     end;
   end;
 end;

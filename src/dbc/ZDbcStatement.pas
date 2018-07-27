@@ -91,6 +91,8 @@ type
     FCachedLob: Boolean;
     procedure SetLastResultSet(const ResultSet: IZResultSet);
   protected
+    FRefCountAdded: Boolean; //while closing / unpreparing we need to indicate if closing LastResultSet will detroy this object
+    //FLastResultSetRefCountAdded: Boolean; //did we do a _addref to the weak pointer referenced LastResulSet?
     fWBuffer: array[Byte] of WideChar;
     fABuffer: array[Byte] of AnsiChar;
     FWSQL: ZWideString;
@@ -778,12 +780,19 @@ end;
 }
 procedure TZAbstractStatement.Close;
 begin
-  if LastResultSet <> nil then
-  begin
+  FClosed := True;
+  if FRefCountAdded and Assigned(FLastResultSet) then begin
     LastResultSet.Close;
     LastResultSet := nil;
-  end;
-  FClosed := True;
+  end else
+    if not FRefCountAdded and Assigned(FLastResultSet) and (RefCount = 1) then
+    try
+      _AddRef;
+      LastResultSet.Close;
+      LastResultSet := nil;
+    finally
+      _Release; // possible running into destructor now
+    end;
 end;
 
 {**
@@ -2365,9 +2374,20 @@ end;
 
 procedure TZAbstractPreparedStatement.Close;
 begin
-  if Prepared then
-    Unprepare;
-  inherited Close;
+  if (RefCount = 1) and Assigned(FOpenResultSet) or Assigned(FLastResultSet) then begin
+    FRefCountAdded := True;
+    _AddRef;
+  end;
+  try
+    if Prepared then
+      Unprepare;
+    inherited Close;
+  finally
+    if FRefCountAdded then begin
+      FRefCountAdded := False;
+      _Release;
+    end;
+  end;
 end;
 
 function TZAbstractPreparedStatement.GetSQL: String;

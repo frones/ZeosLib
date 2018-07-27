@@ -136,7 +136,7 @@ type
 
 implementation
 
-uses Math, ZSysUtils, ZDbcUtils, ZFastCode, ZPlainFirebirdDriver,
+uses ZSysUtils, ZDbcUtils, ZFastCode, ZPlainFirebirdDriver,
   ZDbcInterbase6ResultSet;
 
 { TZInterbase6PreparedStatement }
@@ -158,7 +158,7 @@ begin
           BindSQLDAInParameters(GetClientVariantManger, InParamValues,
             InParamCount, FBatchStmts[True][FStatementType].Obj.FParamSQLData, GetConnection.GetConSettings,
             FCodePageArray, ArrayOffSet, FBatchStmts[True][FStatementType].PreparedRowsOfArray);
-          Result := FBatchStmts[True][FStatementType].Obj.ExecuteInternal;
+          FBatchStmts[True][FStatementType].Obj.ExecuteInternal;
           Inc(ArrayOffSet, FBatchStmts[True][FStatementType].PreparedRowsOfArray);
         end;
       BindSQLDAInParameters(GetClientVariantManger, InParamValues,

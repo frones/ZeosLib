@@ -877,7 +877,7 @@ procedure RefreshParameters(const AdoCommand: ZPlainAdo.Command;
         { We can't use the instance of the parameter in the ADO collection because
           it will be freed when the connection is closed even though we have a
           reference to it.  So instead we create our own and copy the settings }
-          if Assigned(DirectionTypes) then
+          if Assigned(DirectionTypes) and (Length(DirectionTypes^) > I) then
             Parameter := CreateParameter(Name, Type_, DirectionTypes^[i], Size, EmptyParam)
           else
             Parameter := CreateParameter(Name, Type_, Direction, Size, EmptyParam);

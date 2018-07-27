@@ -5130,7 +5130,7 @@ begin
     { Checks for reserved keywords. }
     if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers and (Result <> icUpper) then
       S := UpperCase(Value)
-    else if Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers and (Result <> icLower) then
+    else if not Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers and (Result <> icLower) then
       s := LowerCase(Value)
     else S := Value;
     P1 := Pointer(S);

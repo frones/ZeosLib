@@ -1615,6 +1615,7 @@ begin
     end else begin
       FFetchStat := 1;
       Result := True;
+      RowNo := 1;
     end;
   end;
 end;
