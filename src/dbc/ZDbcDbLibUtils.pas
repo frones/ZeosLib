@@ -380,7 +380,7 @@ begin
               if ConSettings^.ClientCodePage.IsStringFieldCPConsistent then begin
                 TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage.CP);
                 ZSetString(TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage.CP), TempBlob.Length, Raw);
-                Result := AnsiStrings.AnsiQuotedStr(Raw, '''')
+                Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(Raw, '''')
               end else if NChar then
               {$IFDEF WITH_UNITANSISTRINGS}
                 Result := AnsiStrings.AnsiQuotedStr(TempBlob.GetPAnsiChar(zCP_UTF8), '''')
