@@ -251,6 +251,10 @@ type
 //      const SequenceNamePattern: string): IZResultSet; override; -> Not implemented
     function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet; override;
+    function GetProceduresFromInformationSchema (const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string): IZResultSet; virtual;
+    function GetProceduresFromProcTable (const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string): IZResultSet; virtual;
     function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string; const ColumnNamePattern: string):
       IZResultSet; override;
@@ -2382,31 +2386,89 @@ end;
 function TZMySQLDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 var
-  SQL: string;
-  ProcedureNameCondition, SchemaCondition: string;
+  ResultSet: IZResultSet;
+  HasProcTable: boolean;
 begin
-  If Catalog = '' then
-    If SchemaPattern <> ''
-    then SchemaCondition := ConstructNameCondition(SchemaPattern,'p.db')
-    else SchemaCondition := ConstructNameCondition(FDatabase,'p.db')
-  else
-    SchemaCondition := ConstructNameCondition(Catalog,'p.db');
-  ProcedureNameCondition := ConstructNameCondition(ProcedureNamePattern,'p.name');
-  If SchemaCondition <> '' then
-    SchemaCondition := ' and ' + SchemaCondition;
-  If ProcedureNameCondition <> '' then
-    ProcedureNameCondition := ' and ' + ProcedureNameCondition;
+  // I do check the server version because I don't know how to check for the server type.
+  // MariaDB 10 supports the information_schema too, so we can use it there too.
+  HasProcTable := GetConnection.GetHostVersion >= EncodeSQLVersioning(8,0,0);
 
-  SQL := 'SELECT NULL AS PROCEDURE_CAT, p.db AS PROCEDURE_SCHEM, '+
-      'p.name AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2, '+
-      'NULL AS RESERVED3, p.comment AS REMARKS, '+
-      ZFastCode.IntToStr(Ord(ProcedureReturnsResult))+' AS PROCEDURE_TYPE  from  mysql.proc p '+
-      'WHERE 1=1' + SchemaCondition + ProcedureNameCondition+
-      ' ORDER BY p.db, p.name';
-    Result := CopyToVirtualResultSet(
-    GetConnection.CreateStatement.ExecuteQuery(SQL),
-    ConstructVirtualResultSet(ProceduresColumnsDynArray));
+  if HasProcTable
+  then ResultSet := GetProceduresFromProcTable(Catalog, SchemaPattern, ProcedureNamePattern)
+  else ResultSet := GetProceduresFromInformationSchema(Catalog, SchemaPattern, ProcedureNamePattern);
+
+  Result := CopyToVirtualResultSet(ResultSet, ConstructVirtualResultSet(ProceduresColumnsDynArray));
 end;
+
+function TZMySQLDatabaseMetadata.GetProceduresFromInformationSchema (const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string): IZResultSet;
+var
+  SQL: string;
+  ProcedureNameCondition, CatalogCondition: string;
+begin
+  If Catalog <> ''
+  then CatalogCondition := ConstructNameCondition(Catalog, 'r.db')
+  else If SchemaPattern <> ''
+    then CatalogCondition := ConstructNameCondition(SchemaPattern, 'r.db')
+    else CatalogCondition := ConstructNameCondition(FDatabase, 'r.db');
+  If CatalogCondition <> ''
+  then CatalogCondition := ' and ' + CatalogCondition;
+
+  ProcedureNameCondition := ConstructNameCondition(ProcedureNamePattern, 'r.routine_name');
+  If ProcedureNameCondition <> ''
+  then ProcedureNameCondition := ' and ' + ProcedureNameCondition;
+
+  SQL := 'select '
+       + '  routine_catalog as PROCEDURE_CAT, '
+       + '  routine_schema as PROCEDURE_SCHEM, '
+       + '  routine_name as PROCEDURE_NAME, '
+       + '  null as RESERVED1, '
+       + '  null as RESERVED2, '
+       + '  null as RESERVED3, '
+       + '  ROUTINE_COMMENT as REMARKS, '
+       + '  case ROUTINE_TYPE when ''FUNCTION'' then 2 when ''PROCEDURE'' then 1 else 0 end as PROCEDURE_TYPE, '
+       + '  SPECIFIC_NAME '
+       + 'from information_schema.routines '
+       + 'where 1=1' + CatalogCondition + ProcedureNameCondition + ' '
+       + ' ORDER BY p.db, p.name';
+
+  Result := GetConnection.CreateStatement.ExecuteQuery(SQL);
+end;
+
+function TZMySQLDatabaseMetadata.GetProceduresFromProcTable (const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string): IZResultSet;
+var
+  SQL: string;
+  ProcedureNameCondition, CatalogCondition: string;
+begin
+  If Catalog <> ''
+  then CatalogCondition := ConstructNameCondition(Catalog, 'p.db')
+  else If SchemaPattern <> ''
+    then CatalogCondition := ConstructNameCondition(SchemaPattern, 'p.db')
+    else CatalogCondition := ConstructNameCondition(FDatabase, 'p.db');
+  If CatalogCondition <> ''
+  then CatalogCondition := ' and ' + CatalogCondition;
+
+  ProcedureNameCondition := ConstructNameCondition(ProcedureNamePattern,'p.name');
+  If ProcedureNameCondition <> ''
+  then ProcedureNameCondition := ' and ' + ProcedureNameCondition;
+
+  SQL := 'SELECT '
+       + '  p.db AS PROCEDURE_CAT, '
+       + '  NULL AS PROCEDURE_SCHEM, '
+       + '  p.name AS PROCEDURE_NAME, '
+       + '  NULL AS RESERVED1, '
+       + '  NULL AS RESERVED2, '
+       + '  NULL AS RESERVED3, '
+       + '  p.comment AS REMARKS, '
+       + '  case p.type when ''FUNCTION'' then 2 when ''PROCEDURE'' then 1 else 0 end as PROCEDURE_TYPE '
+       + 'FROM mysql.proc p '
+       + 'WHERE 1=1' + CatalogCondition + ProcedureNameCondition + ' '
+       + 'ORDER BY p.db, p.name';
+
+  Result := GetConnection.CreateStatement.ExecuteQuery(SQL);
+end;
+
 
 {**
   Gets a description of a catalog's stored procedure parameters
