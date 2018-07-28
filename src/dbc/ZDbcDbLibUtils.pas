@@ -402,7 +402,7 @@ begin
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                     TempBlob.Length, ConSettings), '''');
               {$ELSE}
-                Result := AnsiQuotedStr(StringReplace(
+                Result := AnsiQuotedStr(
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                     TempBlob.Length, ConSettings, zCP_UTF8), '''')
               else
