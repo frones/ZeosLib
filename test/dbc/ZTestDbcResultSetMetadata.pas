@@ -317,7 +317,7 @@ begin
   TestAll;
 
   ResultSet := Statement.ExecuteQuery('SELECT dep_id AS DEP_NAME, dep_name AS DEP_ID,'
-    + ' dep_shname as DEP_ADDRESS, 2+2 AS DEP_ADDRESS FROM department WHERE DEP_ID < 100');
+    + ' dep_shname as DEP_ADDRESS, 2+2 AS DEP_ADDRESS FROM department WHERE dep_id < 100');
   Metadata := ResultSet.GetMetadata;
   TestAll;
 end;
