@@ -200,7 +200,6 @@ procedure TZOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var I, C, L, H: Integer;
     P: PAnsiChar;
-    Len: NativeUInt;
     blob: IZBlob;
     MS: Word;
 begin

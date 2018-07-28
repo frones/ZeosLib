@@ -281,7 +281,7 @@ end;
 procedure TZSQLiteResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var
-  C, H, I, ColType, L: Integer;
+  C, H, I, ColType: Integer;
   P: PAnsiChar;
 label ProcBts;
 begin

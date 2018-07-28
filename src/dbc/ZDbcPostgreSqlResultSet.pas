@@ -248,7 +248,6 @@ var
   P, pgBuff: PAnsiChar;
   RNo, H, I: Integer;
   Blob: IZBlob;
-  Failed: Boolean;
 label ProcBts;
 begin
   RNo := RowNo - 1;
