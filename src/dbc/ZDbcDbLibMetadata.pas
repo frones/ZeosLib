@@ -402,7 +402,7 @@ end;
 }
 function TZDbLibDatabaseInfo.StoresLowerCaseIdentifiers: Boolean;
 begin
-  Result := fCaseIdentifiers <> icSpecial;
+  Result := false;
 end;
 
 {**
