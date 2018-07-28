@@ -289,7 +289,7 @@ var
     CheckEquals(4, Metadata.GetColumnCount);
 
     CheckColumnMetadata(Metadata, DEP_ID_Index, GetColumnLabeName(DEP_ID_Index, 'DEP_NAME'),
-      GetFieldNameFromUnQuoted('DEP_ID'), GetIdentifierName('department'), True, True);
+      GetFieldNameFromUnQuoted('dep_id'), GetIdentifierName('department'), True, True);
 
     if StartsWith(Protocol, 'postgre')
     then CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match')
@@ -298,11 +298,11 @@ var
     else CheckEquals(Ord(stSmall), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match');
 
     CheckColumnMetadata(Metadata, DEP_NAME_Index, GetColumnLabeName(DEP_NAME_Index, 'DEP_ID'),
-      GetFieldNameFromUnQuoted('DEP_NAME'), GetIdentifierName('department'), False, True);
+      GetFieldNameFromUnQuoted('dep_name'), GetIdentifierName('department'), False, True);
     Check(Metadata.GetColumnType(DEP_NAME_Index) in [stString, stUnicodeString], 'ColumnType does not match');
 
     CheckColumnMetadata(Metadata, DEP_SHNAME_Index, GetColumnLabeName(DEP_SHNAME_Index, 'DEP_ADDRESS') ,
-      GetFieldNameFromUnQuoted('DEP_SHNAME'), GetIdentifierName('department'), False, True);
+      GetFieldNameFromUnQuoted('dep_shname'), GetIdentifierName('department'), False, True);
     Check(Metadata.GetColumnType(DEP_SHNAME_Index) in [stString, stUnicodeString], 'ColumnType does not match');
 
     CheckColumnMetadata(Metadata, DEP_ADDRESS_Index, GetColumnLabeName(DEP_ADDRESS_Index, 'DEP_ADDRESS_1'), '', '',
@@ -312,7 +312,7 @@ begin
   Statement := Connection.CreateStatement;
 
   ResultSet := Statement.ExecuteQuery('SELECT T.dep_id AS DEP_NAME, T.dep_name AS DEP_ID,'
-    + ' T.dep_shname as DEP_ADDRESS, 2+2 AS dep_address FROM department T WHERE T.dep_id < 100');
+    + ' T.dep_shname as DEP_ADDRESS, 2+2 AS DEP_ADDRESS FROM department T WHERE T.dep_id < 100');
   Metadata := ResultSet.GetMetadata;
   TestAll;
 
