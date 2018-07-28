@@ -1463,10 +1463,10 @@ begin
   Query := CreateQuery;
   try
     Query.Connection := Connection;
-    Query.SQL.Text := 'DELETE FROM ' + DatabaseName + '.table740899';
+    Query.SQL.Text := 'DELETE FROM `' + DatabaseName + '`.table740899';
     Query.ExecSQL;
 
-    Query.SQL.Text := 'SELECT * FROM ' + DatabaseName + '.table740899';
+    Query.SQL.Text := 'SELECT * FROM `' + DatabaseName + '`.table740899';
     // Query.RequestLive := True;
     Query.Open;
 
@@ -1493,7 +1493,7 @@ begin
 
     Query.Close;
 
-    Query.SQL.Text := 'DELETE FROM ' + DatabaseName + '.table740899';
+    Query.SQL.Text := 'DELETE FROM `' + DatabaseName + '`.table740899';
     Query.ExecSQL;
   finally
     Query.Free;

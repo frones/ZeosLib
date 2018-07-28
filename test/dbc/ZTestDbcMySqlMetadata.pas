@@ -195,7 +195,7 @@ begin
   CheckEquals(TableColPrivPrivilegeIndex, ResultSet.FindColumn('PRIVILEGE'));
   CheckEquals(TableColPrivIsGrantableIndex, ResultSet.FindColumn('IS_GRANTABLE'));
 
-  CheckEquals(True, ResultSet.Next);
+  Check(ResultSet.Next, 'expected do find a first record in the returned metadata.');
   CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
@@ -205,7 +205,7 @@ begin
   CheckEquals('Update', ResultSet.GetStringByName('PRIVILEGE'));
   CheckEquals('', ResultSet.GetStringByName('IS_GRANTABLE'));
 
-  CheckEquals(True, ResultSet.Next);
+  Check(ResultSet.Next, 'expected do find a second record in the returned metadata.');
   CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
@@ -375,7 +375,7 @@ begin
   CheckEquals(TablePrivPrivilegeIndex, ResultSet.FindColumn('PRIVILEGE'));
   CheckEquals(TablePrivIsGrantableIndex, ResultSet.FindColumn('IS_GRANTABLE'));
 
-  Check(ResultSet.Next);
+  Check(ResultSet.Next, 'expected to find a first record in the returned metadata.');
   CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
