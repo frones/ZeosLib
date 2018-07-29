@@ -2932,7 +2932,7 @@ begin
        + '  NUMERIC_PRECISION, '
        + '  CHARACTER_MAXIMUM_LENGTH '
        + 'from information_schema.PARAMETERS P '
-       + 'where not PARAMETER_MODE is null ' + SchemaCondition + ProcedureNameCondition + ' '
+       + 'where (P.ORDINAL_POSITION > 0) ' + SchemaCondition + ProcedureNameCondition + ' ' //position 0 is reserved for function results
        + 'ORDER BY P.SPECIFIC_SCHEMA, P.SPECIFIC_NAME, P.ORDINAL_POSITION) '
 
        + 'union all '
@@ -2954,7 +2954,7 @@ begin
        + '  NUMERIC_PRECISION, '
        + '  CHARACTER_MAXIMUM_LENGTH '
        + 'from information_schema.PARAMETERS P '
-       + 'where PARAMETER_MODE is null' + SchemaCondition + ProcedureNameCondition + ' '
+       + 'where (P.ORDINAL_POSITION = 0)' + SchemaCondition + ProcedureNameCondition + ' ' //position 0 is reserved for function results
        + 'ORDER BY P.SPECIFIC_SCHEMA, P.SPECIFIC_NAME, P.ORDINAL_POSITION)';
 
   with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL) do begin
