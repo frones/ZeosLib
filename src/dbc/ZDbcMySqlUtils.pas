@@ -158,6 +158,7 @@ function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
 
 function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_BINDOFFSETS;
 function GetFieldOffsets(Version: Integer): PMYSQL_FIELDOFFSETS;
+function GetServerStatusOffset(Version: Integer): NativeUInt;
 
 procedure ReallocBindBuffer(var BindBuffer: Pointer;
   var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BindOffsets: PMYSQL_BINDOFFSETS;
@@ -831,6 +832,16 @@ begin
   else Result := @MYSQL_FIELD32_Offset
 end;
 
+function GetServerStatusOffset(Version: Integer): NativeUInt;
+begin
+  if (Version >= 50000) then
+    result := MYSQL5up_server_status_offset
+  else if (Version >= 40100) then
+    Result := MYSQL41_server_status_offset
+  else
+    Result := MYSQL323_server_status_offset
+end;
+
 procedure ReallocBindBuffer(var BindBuffer: Pointer;
   var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BindOffsets: PMYSQL_BINDOFFSETS;
   OldCount, NewCount: Integer; Iterations: ULong);
@@ -939,6 +950,7 @@ initialization
     flags           := NativeUInt(@(PMYSQL_FIELD51(nil).flags));
     length          := NativeUInt(@(PMYSQL_FIELD51(nil).length));
     decimals        := NativeUInt(@(PMYSQL_FIELD51(nil).decimals));
+    max_length      := NativeUInt(@(PMYSQL_FIELD51(nil).max_length));
   end;
   with MYSQL_FIELD41_Offset do begin
     name            := NativeUInt(@(PMYSQL_FIELD41(nil).name));
@@ -954,6 +966,7 @@ initialization
     flags           := NativeUInt(@(PMYSQL_FIELD41(nil).flags));
     length          := NativeUInt(@(PMYSQL_FIELD41(nil).length));
     decimals        := NativeUInt(@(PMYSQL_FIELD41(nil).decimals));
+    max_length      := NativeUInt(@(PMYSQL_FIELD41(nil).max_length));
   end;
   with MYSQL_FIELD401_Offset do begin
     name            := NativeUInt(@(PMYSQL_FIELD401(nil).name));
@@ -969,6 +982,7 @@ initialization
     flags           := NativeUInt(@(PMYSQL_FIELD401(nil).flags));
     length          := NativeUInt(@(PMYSQL_FIELD401(nil).length));
     decimals        := NativeUInt(@(PMYSQL_FIELD401(nil).decimals));
+    max_length      := NativeUInt(@(PMYSQL_FIELD401(nil).max_length));
   end;
   with MYSQL_FIELD4_Offset do begin
     name            := NativeUInt(@(PMYSQL_FIELD40(nil).name));
@@ -984,6 +998,7 @@ initialization
     flags           := NativeUInt(@(PMYSQL_FIELD40(nil).flags));
     length          := NativeUInt(@(PMYSQL_FIELD40(nil).length));
     decimals        := NativeUInt(@(PMYSQL_FIELD40(nil).decimals));
+    max_length      := NativeUInt(@(PMYSQL_FIELD40(nil).max_length));
   end;
   with MYSQL_FIELD32_Offset do begin
     name            := NativeUInt(@(PMYSQL_FIELD32(nil).name));
@@ -999,6 +1014,7 @@ initialization
     flags           := NativeUInt(@(PMYSQL_FIELD32(nil).flags));
     length          := NativeUInt(@(PMYSQL_FIELD32(nil).length));
     decimals        := NativeUInt(@(PMYSQL_FIELD32(nil).decimals));
+    max_length      := NativeUInt(@(PMYSQL_FIELD32(nil).max_length));
   end;
 
 end.
