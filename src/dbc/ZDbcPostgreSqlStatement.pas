@@ -168,7 +168,7 @@ type
       Info: TStrings); overload;
   end;
 
-  TZPostgreSQLCallableStatement = class(TZAbstractCallableStatement2, IZCallableStatement)
+  TZPostgreSQLCallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
   protected
     function CreateExecutionStatement(Mode: TZCallExecKind; const
       StoredProcName: String): TZAbstractPreparedStatement2; override;
@@ -1702,30 +1702,26 @@ var
   I, J: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
 begin
-  if (Mode = zcekParams) and Assigned(FExecStatements[zcekSelect]) then
-    Result := FExecStatements[zcekSelect]
-  else if (Mode = zcekSelect) and Assigned(FExecStatements[zcekParams]) then
-    Result := FExecStatements[zcekParams]
-  else begin
-    SQL := '';
-    ToBuff('SELECT * FROM ',SQL);
-    ToBuff(StoredProcName, SQL);
-    ToBuff('(', SQL);
-    J := 1;
-    for I := 0 to BindList.Capacity -1 do
-      if not (BindList.ParamTypes[I] in [zptOutput,zptResult]) then begin
-        ToBuff('$', SQL);
-        ToBuff(ZFastCode.IntToStr(J), SQL);
-        ToBuff(',', SQL);
-        Inc(J);
-      end;
-    FlushBuff(SQL);
-    P := Pointer(SQL);
-    if (BindList.Capacity > 0) and ((P+Length(SQL)-1)^ = ',')
-    then (P+Length(SQL)-1)^ := ')' //cancel last comma
-    else SQL := SQL + ')';
-    Result := TZPostgreSQLPreparedStatementV3.Create(Connection as IZPostgreSQLConnection, SQL, Info);
-  end;
+  SQL := '';
+  ToBuff('SELECT * FROM ',SQL);
+  ToBuff(StoredProcName, SQL);
+  ToBuff('(', SQL);
+  J := 1;
+  for I := 0 to BindList.Capacity -1 do
+    if not (BindList.ParamTypes[I] in [zptOutput,zptResult]) then begin
+      ToBuff('$', SQL);
+      ToBuff(ZFastCode.IntToStr(J), SQL);
+      ToBuff(',', SQL);
+      Inc(J);
+    end;
+  FlushBuff(SQL);
+  P := Pointer(SQL);
+  if (BindList.Capacity > 0) and ((P+Length(SQL)-1)^ = ',')
+  then (P+Length(SQL)-1)^ := ')' //cancel last comma
+  else SQL := SQL + ')';
+  Result := TZPostgreSQLPreparedStatementV3.Create(Connection as IZPostgreSQLConnection, SQL, Info);
+  FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
+  TZPostgreSQLPreparedStatementV3(Result)._AddRef;
 end;
 
 initialization

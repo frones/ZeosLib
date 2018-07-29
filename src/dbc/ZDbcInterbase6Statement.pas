@@ -125,7 +125,7 @@ type
     constructor Create(const Connection: IZConnection; Info: TStrings);
   end;
 
-  TZInterbase6CallableStatement = class(TZAbstractCallableStatement2, IZCallableStatement)
+  TZInterbase6CallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
   protected
     function CreateExecutionStatement(Mode: TZCallExecKind; const
       StoredProcName: String): TZAbstractPreparedStatement2; override;
