@@ -113,7 +113,7 @@ function PrepareSQLParameter(const Value: TZVariant; ParamType: TZSQLType;
 
 implementation
 
-uses ZSysUtils, ZEncoding, ZDbcUtils, ZClasses, Dialogs
+uses ZSysUtils, ZEncoding, ZDbcUtils, ZClasses
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
