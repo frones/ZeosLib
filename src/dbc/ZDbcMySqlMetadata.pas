@@ -2935,7 +2935,7 @@ begin
        + 'where (P.ORDINAL_POSITION > 0) ' + SchemaCondition + ProcedureNameCondition + ' ' //position 0 is reserved for function results
        + 'ORDER BY P.SPECIFIC_SCHEMA, P.SPECIFIC_NAME, P.ORDINAL_POSITION) '
 
-       + 'union all '
+       + 'union all ' // the union all and all this stuff is necessary because the rest of the code expects the return value of functions to be the last parameter.
 
        + '(select '
        + '  SPECIFIC_CATALOG as PROCEDURE_CAT, '
@@ -3204,6 +3204,10 @@ begin
   end;
 end;
 
+{**
+  Tries to detect wether the Server is MAriaDB or MySQL. The result can be
+  queried with the methods isMariaDB and isMySQL.
+}
 procedure TZMySQLDatabaseMetadata.detectServerType;
 var
   VersionString: String;
@@ -3239,12 +3243,20 @@ begin
   end;
 end;
 
+{**
+  Tells us wether we can be certain that the connected server implementation is MySQL
+  @return <code>Boolean</code> - True if we are connected to MySQL
+}
 function TZMySQLDatabaseMetadata.isMySQL: Boolean;
 begin
   if not FKnowServerType then detectServerType;
   result := FIsMySQL;
 end;
 
+{**
+  Tells us wether we can be certain that the connected server implementation is MariaDB
+  @return <code>Boolean</code> - True if we are connected to MariaDB
+}
 function TZMySQLDatabaseMetadata.isMariaDB: Boolean;
 begin
   if not FKnowServerType then detectServerType;
