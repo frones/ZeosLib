@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2015/01/23 18:41:14.715.bdsproj,C:\Users\Marcelo\Documents\Borland Studio Projects\Package1.bdsproj=C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZCore.bdsproj</Transaction>
+    <Transaction>2015/01/23 18:55:55.805.bdsproj,C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZCore.bdsproj=C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZParseSql.bdsproj</Transaction>
+    <Transaction>2015/01/23 18:56:11.972.bdsproj,C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZParseSql.bdsproj=C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZCore.bdsproj</Transaction>
+    <Transaction>2015/01/25 12:24:00.556.bdsproj,C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZCore.bdsproj=C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZCore100.bdsproj</Transaction>
+  </Transactions>
+</BorlandProject>

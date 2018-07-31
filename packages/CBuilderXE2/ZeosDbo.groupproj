@@ -1,0 +1,84 @@
+﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+		<PropertyGroup>
+			<ProjectGuid>{5BD6F2D1-9836-4603-824F-1880E8F469A7}</ProjectGuid>
+		</PropertyGroup>
+		<ItemGroup>
+			<Projects Include="ZCore160.cbproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="ZParseSql160.cbproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="ZPlain160.cbproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="ZDbc160.cbproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="ZComponent160.cbproj">
+				<Dependencies/>
+			</Projects>
+		</ItemGroup>
+		<ProjectExtensions>
+			<Borland.Personality>Default.Personality.12</Borland.Personality>
+			<Borland.ProjectType/>
+			<BorlandProject>
+				<Default.Personality/>
+			</BorlandProject>
+		</ProjectExtensions>
+		<Target Name="ZCore160">
+			<MSBuild Projects="ZCore160.cbproj"/>
+		</Target>
+		<Target Name="ZCore160:Clean">
+			<MSBuild Targets="Clean" Projects="ZCore160.cbproj"/>
+		</Target>
+		<Target Name="ZCore160:Make">
+			<MSBuild Targets="Make" Projects="ZCore160.cbproj"/>
+		</Target>
+		<Target Name="ZParseSql160">
+			<MSBuild Projects="ZParseSql160.cbproj"/>
+		</Target>
+		<Target Name="ZParseSql160:Clean">
+			<MSBuild Targets="Clean" Projects="ZParseSql160.cbproj"/>
+		</Target>
+		<Target Name="ZParseSql160:Make">
+			<MSBuild Targets="Make" Projects="ZParseSql160.cbproj"/>
+		</Target>
+		<Target Name="ZPlain160">
+			<MSBuild Projects="ZPlain160.cbproj"/>
+		</Target>
+		<Target Name="ZPlain160:Clean">
+			<MSBuild Targets="Clean" Projects="ZPlain160.cbproj"/>
+		</Target>
+		<Target Name="ZPlain160:Make">
+			<MSBuild Targets="Make" Projects="ZPlain160.cbproj"/>
+		</Target>
+		<Target Name="ZDbc160">
+			<MSBuild Projects="ZDbc160.cbproj"/>
+		</Target>
+		<Target Name="ZDbc160:Clean">
+			<MSBuild Targets="Clean" Projects="ZDbc160.cbproj"/>
+		</Target>
+		<Target Name="ZDbc160:Make">
+			<MSBuild Targets="Make" Projects="ZDbc160.cbproj"/>
+		</Target>
+		<Target Name="ZComponent160">
+			<MSBuild Projects="ZComponent160.cbproj"/>
+		</Target>
+		<Target Name="ZComponent160:Clean">
+			<MSBuild Targets="Clean" Projects="ZComponent160.cbproj"/>
+		</Target>
+		<Target Name="ZComponent160:Make">
+			<MSBuild Targets="Make" Projects="ZComponent160.cbproj"/>
+		</Target>
+		<Target Name="Build">
+			<CallTarget Targets="ZCore160;ZParseSql160;ZPlain160;ZDbc160;ZComponent160"/>
+		</Target>
+		<Target Name="Clean">
+			<CallTarget Targets="ZCore160:Clean;ZParseSql160:Clean;ZPlain160:Clean;ZDbc160:Clean;ZComponent160:Clean"/>
+		</Target>
+		<Target Name="Make">
+			<CallTarget Targets="ZCore160:Make;ZParseSql160:Make;ZPlain160:Make;ZDbc160:Make;ZComponent160:Make"/>
+		</Target>
+		<Import Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')" Project="$(BDS)\Bin\CodeGear.Group.Targets"/>
+	</Project>

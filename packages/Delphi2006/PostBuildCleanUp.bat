@@ -1,0 +1,3 @@
+del .\build\*.dcu
+
+::pause

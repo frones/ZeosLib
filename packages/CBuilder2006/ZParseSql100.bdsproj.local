@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2015/01/23 18:41:14.715.bdsproj,C:\Users\Marcelo\Documents\Borland Studio Projects\Package1.bdsproj=C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZCore.bdsproj</Transaction>
+    <Transaction>2015/01/23 18:55:55.805.bdsproj,C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZCore.bdsproj=C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZParseSql.bdsproj</Transaction>
+    <Transaction>2015/01/23 18:56:41.547.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZClasses.pas=</Transaction>
+    <Transaction>2015/01/23 18:56:44.883.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZCollections.pas=</Transaction>
+    <Transaction>2015/01/23 18:56:47.962.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZCompatibility.pas=</Transaction>
+    <Transaction>2015/01/23 18:56:50.849.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZEncoding.pas=</Transaction>
+    <Transaction>2015/01/23 18:56:53.819.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZExpression.pas=</Transaction>
+    <Transaction>2015/01/23 18:56:56.848.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZExprParser.pas=</Transaction>
+    <Transaction>2015/01/23 18:56:59.664.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZExprToken.pas=</Transaction>
+    <Transaction>2015/01/23 18:57:03.045.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZFunctions.pas=</Transaction>
+    <Transaction>2015/01/23 18:57:06.424.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZFunctionsConvert.pas=</Transaction>
+    <Transaction>2015/01/23 18:57:09.376.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZFunctionsDateTime.pas=</Transaction>
+    <Transaction>2015/01/23 18:57:12.054.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZFunctionsMath.pas=</Transaction>
+    <Transaction>2015/01/23 18:57:15.047.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZFunctionsOther.pas=</Transaction>
+    <Transaction>2015/01/23 18:57:18.045.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZFunctionsStrings.pas=</Transaction>
+    <Transaction>2015/01/23 18:57:20.659.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZMatchPattern.pas=</Transaction>
+    <Transaction>2015/01/23 18:57:24.099.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZMessages.pas=</Transaction>
+    <Transaction>2015/01/23 18:57:26.859.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZSysUtils.pas=</Transaction>
+    <Transaction>2015/01/23 18:57:29.942.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZTokenizer.pas=</Transaction>
+    <Transaction>2015/01/23 18:57:36.778.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZURL.pas=</Transaction>
+    <Transaction>2015/01/23 18:57:39.017.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZVariables.pas=</Transaction>
+    <Transaction>2015/01/23 18:57:41.392.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\core\ZVariant.pas=</Transaction>
+    <Transaction>2015/01/23 19:00:20.263.bdsproj,C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZParseSql.bdsproj=C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZPlain.bdsproj</Transaction>
+    <Transaction>2015/01/23 19:00:30.826.bdsproj,C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZPlain.bdsproj=C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZParseSql.bdsproj</Transaction>
+    <Transaction>2015/01/23 19:31:39.063.bdsproj,C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZParseSql.bdsproj=C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZDbc.bdsproj</Transaction>
+    <Transaction>2015/01/23 19:31:48.695.bdsproj,C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZDbc.bdsproj=C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZParseSql.bdsproj</Transaction>
+    <Transaction>2015/01/25 10:26:14.369.bpi,C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\Lib\ZCore.bpi=</Transaction>
+    <Transaction>2015/01/25 12:24:07.225.bdsproj,C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZParseSql.bdsproj=C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\ZParseSql100.bdsproj</Transaction>
+    <Transaction>2015/02/05 21:21:00.126.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\parsesql\ZMySqlAnalyser.pas=</Transaction>
+    <Transaction>2015/02/05 21:21:06.128.pas,C:\Program Files\BCBCompNew\ZeosDBO\src\parsesql\ZMySqlToken.pas=</Transaction>
+    <Transaction>2015/02/05 21:40:04.187.bpi,Lib\ZCore100.bpi=</Transaction>
+    <Transaction>2015/02/05 21:41:42.827.bpi,C:\Program Files\BCBCompNew\ZeosDBO\packages\CBuilder2006\Lib\ZCore100.bpi=</Transaction>
+  </Transactions>
+</BorlandProject>
