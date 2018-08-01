@@ -982,6 +982,8 @@ begin
   finally
     Collection.Free;
   end;
+
+  BlankCheck;
 end;
 
 {**

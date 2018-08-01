@@ -76,7 +76,6 @@ type
     FRepeatCount: Cardinal;
     FLoadLobs: Boolean;
     FSkipFlag: Boolean;
-    FSkipPerformance: Boolean;
     FSkipPerformanceTransactionMode: Boolean;
     FPerformanceTable: String;
     FPerformancePrimaryKey: String;
@@ -95,7 +94,6 @@ type
     procedure LoadConfiguration; override;
     procedure SetUp; override;
     function GetImplementedAPI: string; virtual; abstract;
-    function SkipForReason(Reasons: ZSkipReasons): Boolean; override;
 
     procedure Print(const Msg: string); override;
     procedure PrintLn(const Msg: string); override;
@@ -314,7 +312,6 @@ begin
   { Reads other configuration parameters. }
   FRecordCount := StrToIntDef(ReadGroupProperty('records', ''), 1000);
   FRepeatCount := StrToIntDef(ReadGroupProperty('repeat', ''), 1);
-  FSkipPerformance := StrToBoolEx(ReadInheritProperty(SKIP_PERFORMANCE_KEY, TRUE_VALUE));
   FSkipPerformanceTransactionMode := StrToBoolEx(ReadInheritProperty(SKIP_PERFORMANCE_TRANS_KEY, FALSE_VALUE));
   FPerformanceTable := ReadInheritProperty(PERFORMANCE_TABLE_NAME_KEY, PERFORMANCE_TABLE_NAME);
   FPerformancePrimaryKey := ReadInheritProperty(PERFORMANCE_PRIMARYKEY_KEY, PERFORMANCE_PRIMARY_KEY);
@@ -326,11 +323,6 @@ begin
   inherited SetUp;
   if not (ConnectionConfig.PerformanceFieldPropertiesDetermined) then
     DetermineFieldsProperties(ConnectionConfig);
-end;
-
-function TZPerformanceSQLTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
-begin
-  Result := (FSkipPerformance and (srNoPerformance in Reasons));
 end;
 
 {**
@@ -528,6 +520,8 @@ var
   StartTicks: Cardinal;
   StopTicks: Cardinal;
 begin
+  BlankCheck;
+
   { Filter tests by selected API and test name. }
   if FSelectedAPIs.IndexOf(GetImplementedAPI) < 0 then
     Exit;

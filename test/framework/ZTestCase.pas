@@ -88,6 +88,7 @@ type
     FSuppressTestOutput: Boolean;
     FSkipClosed: Boolean;
     FSkipNonZeos: Boolean;
+    FSkipPerformance: Boolean;
   protected
     {$IFDEF FPC}
     frefcount : longint;
@@ -292,7 +293,8 @@ end;
 function TZAbstractTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
 begin
   Result := (FSkipClosed and (srClosedBug in Reasons)) or
-            (FSkipNonZeos and (srNonZeos in Reasons));
+            (FSkipNonZeos and (srNonZeos in Reasons)) or
+            (FSkipPerformance and (srNoPerformance in Reasons));
   if Result then
     BlankCheck; // avoids an empty test fail
 end;
@@ -339,10 +341,10 @@ begin
   else FDecimalSeparator :=  DEFAULT_DECIMAL_SEPARATOR;
   {$IFDEF WITH_FORMATSETTINGS}Formatsettings.{$ELSE}SysUtils.{$ENDIF}DecimalSeparator := FDecimalSeparator;
 
-  { Defines a 'suppress test output' setting. }
   FSuppressTestOutput := StrToBoolEx(ReadInheritProperty(SUPPRESS_TEST_OUTPUT_KEY, TRUE_VALUE));
   FSkipClosed := StrToBoolEx(ReadInheritProperty(SKIP_CLOSED_KEY, FALSE_VALUE));
   FSkipNonZeos := StrToBoolEx(ReadInheritProperty(SKIP_NON_ZEOS_ISSUES_KEY, FALSE_VALUE));
+  FSkipPerformance := StrToBoolEx(ReadInheritProperty(SKIP_PERFORMANCE_KEY, TRUE_VALUE));
 end;
 
 {**

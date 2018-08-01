@@ -663,6 +663,8 @@ var
   end;
 
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
   { Tests speed of repeatable calculations with variables. }
   Expression := TZExpression.Create;
   Stack := TZExecutionStack.Create;
@@ -730,6 +732,8 @@ begin
     Stack.Clear;
   end;
   Stack.Free;
+
+  BlankCheck;
 end;
 
 initialization

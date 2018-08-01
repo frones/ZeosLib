@@ -164,6 +164,8 @@ var
   TestStr: string;
   StartTicks: Cardinal;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
   TestStr := 'INSERT INTO Table (Fld1, Fld2) VALUES (12345678,'
     + ' ''abcdefghijklm'')';
 
@@ -172,6 +174,8 @@ begin
     Tokenizer.TokenizeBufferToList(TestStr, []).Free;
 
   PrintLn('Tokenizing performance = ' + IntToStr(GetTickCount - StartTicks));
+
+  BlankCheck;
 end;
 
 { TZTestTokenizer }
