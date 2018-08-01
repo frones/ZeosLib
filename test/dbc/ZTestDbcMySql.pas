@@ -193,8 +193,8 @@ begin
     CheckEquals(8388607, ResultSet.GetUInt(Bit23_Index), 'Bit23_Index');
     CheckEquals(16777215, ResultSet.GetUInt(Bit24_Index), 'Bit24_Index');
     CheckEquals(33554431, ResultSet.GetUInt(Bit25_Index), 'Bit25_Index');
-    CheckEquals($FFFFFFFFFF, ResultSet.GetULong(Bit40_Index), 'TEST_BIT_FIELDS');
-    CheckEquals($FFFFFFFFFFFFFFFF, ResultSet.GetULong(Bit64_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(UInt64($FFFFFFFFFF), ResultSet.GetULong(Bit40_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(UInt64($FFFFFFFFFFFFFFFF), ResultSet.GetULong(Bit64_Index), 'TEST_BIT_FIELDS');
   finally
     ResultSet.Close;
   end;

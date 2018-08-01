@@ -85,7 +85,7 @@ type
 
 implementation
 
-uses Types, ZTestConsts, ZTestCase, ZDbcResultSet, ZVariant;
+uses ZTestConsts, ZTestCase, ZVariant;
 
 { TZTestDbcOracleCase }
 

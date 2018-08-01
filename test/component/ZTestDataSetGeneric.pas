@@ -159,7 +159,7 @@ uses
   Variants,
 {$ENDIF}
   {$IFDEF UNICODE}ZEncoding,{$ENDIF}
-  Types, DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties,
+  DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties,
   ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
   TypInfo;
 

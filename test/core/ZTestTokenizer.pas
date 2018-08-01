@@ -59,7 +59,7 @@ interface
 
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Classes,
-  ZClasses, SysUtils, ZCompatibility, ZTokenizer, ZTestCase;
+  SysUtils, ZCompatibility, ZTokenizer, ZTestCase;
 
 type
   {** Implements an abstract test case for tokenizers. }

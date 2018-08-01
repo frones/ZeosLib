@@ -80,7 +80,7 @@ type
 
 implementation
 
-uses SysUtils, ZTestConsts, ZSysUtils, Types, ZVariant;
+uses SysUtils, ZTestConsts, ZSysUtils, ZVariant;
 
 { TZTestDbcPostgreSQLCase }
 
@@ -375,7 +375,7 @@ begin
     {$IFDEF UNICODE}
     S := ZSysUtils.GUIDToUnicode(ResultSet.GetBytes(ext_id_index));
     {$ELSE}
-    S := ZSysUtils.GUIDToUnicode(ResultSet.GetBytes(ext_id_index));
+    S := ZSysUtils.GUIDToRaw(ResultSet.GetBytes(ext_id_index));
     {$ENDIF}
     CheckEquals('{BAD51CFF-F21F-40E8-A9EA-838977A681BE}', s, 'UUID different');
     S := ResultSet.GetString(ext_id_index);

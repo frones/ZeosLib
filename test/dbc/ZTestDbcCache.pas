@@ -595,8 +595,6 @@ end;
 procedure TZTestRowAccessorCase.TestRowAccessorAsciiStream;
 var
   Stream: TStream;
-  ReadNum: Integer;
-  BufferChar: array[0..100] of AnsiChar;
   WasNull: Boolean;
 begin
   with RowAccessor do

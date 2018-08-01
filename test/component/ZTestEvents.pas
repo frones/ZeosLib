@@ -57,7 +57,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, SysUtils,
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
   Classes,
   {$IFDEF ENABLE_INTERBASE}
   ZIBEventAlerter,

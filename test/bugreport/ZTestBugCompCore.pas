@@ -1869,7 +1869,6 @@ const
   FieldName = 'calculated';
 var
   Query: TZQuery;
-  CalcField: TStringField;
   FieldDef: TFieldDef;
   X: Integer;
 begin

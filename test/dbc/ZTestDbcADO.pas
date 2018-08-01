@@ -57,7 +57,7 @@ interface
 {$I ZDbc.inc}
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZSqlTestCase,
-  ZCompatibility, DateUtils, Math, Types;
+  ZCompatibility, DateUtils;
 
 type
 
@@ -72,7 +72,7 @@ type
 
 implementation
 
-uses SysUtils, ZTestCase, ZDbcResultSet, ZVariant;
+uses SysUtils, ZTestCase, ZVariant;
 
 { TZTestDbcADOCase }
 

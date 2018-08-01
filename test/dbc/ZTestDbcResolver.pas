@@ -56,7 +56,7 @@ unit ZTestDbcResolver;
 interface
 {$I ZDbc.inc}
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils,
-  ZDbcIntfs, ZClasses, ZCompatibility, ZSqlTestCase;
+  ZDbcIntfs, ZCompatibility, ZSqlTestCase;
 
 type
 

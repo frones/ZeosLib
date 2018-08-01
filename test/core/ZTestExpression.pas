@@ -85,7 +85,7 @@ type
 
 implementation
 
-uses Math, DateUtils, ZVariant, ZCompatibility;
+uses DateUtils, ZVariant, ZCompatibility;
 
 const
   RUN_COUNT = 100000;
@@ -96,11 +96,11 @@ const
   Runs a test for arrays processing.
 }
 procedure TZTestExpressionCase.TestArrays;
-var
-  Expression: IZExpression;
+//var
+//  Expression: IZExpression;
 begin
-  Expression := TZExpression.Create;
-(*
+(*  Expression := TZExpression.Create;
+
   Variant[] values1 = new Variant[10];
   Integer[] values2 = new Integer[10];
   for (int i = 0; i < 10; i++) {
