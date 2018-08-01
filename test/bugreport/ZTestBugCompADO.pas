@@ -88,7 +88,7 @@ end;
 {$IFDEF FPC}
 procedure ZTestCompADOBugReport.EmptyTest;
 begin
-  Check(True);
+  BlankCheck;
 end;
 {$ELSE}
 

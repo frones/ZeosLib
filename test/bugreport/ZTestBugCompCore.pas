@@ -313,12 +313,7 @@ begin
   try
     Processor.Connection := Connection;
     Processor.Script.Text := 'AAAAAAAAAAAA BBBBBBBBBBBBBBB CCCCCCCCCCCCCC';
-    try
-      Processor.Execute;
-      Fail('SQL Processor must throw exception on invalid script.');
-    except
-      Check(True);
-    end;
+    CheckException(Processor.Execute, Exception, '', 'SQL Processor must throw exception on invalid script.');
   finally
     Processor.Free;
   end;
@@ -515,10 +510,13 @@ begin
       CheckEquals(TEST_ROW_ID - 1, Query.FieldByName('p_id').AsInteger);
       Query.Post;
       Fail('Wrong behaviour with duplicated key.');
-    except
-      CheckEquals(TEST_ROW_ID - 1, Query.FieldByName('p_id').AsInteger);
-      Query.Cancel;
-      CheckEquals(TEST_ROW_ID, Query.FieldByName('p_id').AsInteger);
+    except on E: Exception do
+      begin
+        CheckNotTestFailure(E);
+        CheckEquals(TEST_ROW_ID - 1, Query.FieldByName('p_id').AsInteger);
+        Query.Cancel;
+        CheckEquals(TEST_ROW_ID, Query.FieldByName('p_id').AsInteger);
+      end;
     end;
 
     { Remove newly created record }
@@ -561,7 +559,8 @@ begin
     try
       Query.Fields[0].AsInteger := 0;
       Fail('Wrong SetField behaviour');
-    except
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
 
     Query.Close;
@@ -573,7 +572,8 @@ begin
     try
       Query.Fields[0].AsInteger := 0;
       Fail('Wrong SetField behaviour');
-    except
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
 
     Query.Close;
@@ -1126,8 +1126,8 @@ begin
     except
       on E: Exception do
       begin
-        if StartsWith(E.Message, 'Access violation') then
-          Fail('Exception shouldn''t be an Access Violation');
+        Check(not (E is EAccessViolation), 'Exception shouldn''t be an Access Violation');
+        CheckNotTestFailure(E);
       end;
     end;
   finally
@@ -1155,8 +1155,8 @@ begin
     except
       on E: Exception do
       begin
-        if StartsWith(E.Message, 'Access violation') then
-          Fail('Query.Open for DML statement shouldn''t throw Access Violation');
+        Check(not (E is EAccessViolation), 'Query.Open for DML statement shouldn''t throw Access Violation');
+        CheckNotTestFailure(E);
       end;
     end;
   finally
@@ -1360,8 +1360,8 @@ begin
     try
       Query.Post;
       Fail('Wrong Error Processing');
-    except on E: EAbort do
-      // Ignore.
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
     Check(FErrorCounter > 0);
     Query.Cancel;
@@ -1370,8 +1370,8 @@ begin
     try
       Query.Delete;
       Fail('Wrong Error Processing');
-    except on E: EAbort do
-      // Ignore.
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
     Check(FErrorCounter > 0);
 
@@ -1380,8 +1380,8 @@ begin
     try
       Query.Post;
       Fail('Wrong Error Processing');
-    except on E: EAbort do
-      // Ignore.
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
     Check(FErrorCounter > 0);
     Query.Cancel;
@@ -1397,8 +1397,8 @@ begin
     try
       Query.CommitUpdates;
       Fail('Wrong Error Processing');
-    except on E: EAbort do
-      // Ignore.
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
     Check(FErrorCounter > 0);
     Query.CancelUpdates;
@@ -1554,6 +1554,7 @@ begin
     except
       on E: Exception do
       begin
+        CheckNotTestFailure(E);
         Check(E is EDatabaseError);
       end;
     end;
@@ -1719,8 +1720,8 @@ begin
   try
     Connection.StartTransaction;
     Fail('StartTransaction should be allowed only in AutoCommit mode');
-  except
-    // Ignore.
+  except on E: Exception do
+    CheckNotTestFailure(E);
   end;
   Connection.Disconnect;
 end;
@@ -2020,7 +2021,7 @@ begin
         //CheckEquals(1, RowsAffected);
       except
         on E:Exception do
-            Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
+          Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
       end;
     end;
   finally

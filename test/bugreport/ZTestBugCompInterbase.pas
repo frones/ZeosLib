@@ -131,8 +131,8 @@ begin
   try
     Connection.StartTransaction;
     Fail('StartTransaction should be allowed only in AutoCommit mode');
-  except
-    // Ignore.
+  except on E: Exception do
+    CheckNotTestFailure(E);
   end;
   Connection.Disconnect;
 end;
@@ -992,9 +992,7 @@ begin
         CheckEquals(1, RowsAffected);
       except
         on E:Exception do
-        begin
           Fail('Param().LoadFromStream(StringStream, ftBlob): '+E.Message);
-        end;
       end;
     end;
   finally
@@ -1051,7 +1049,7 @@ begin
         CheckEquals(1, RowsAffected);
       except
         on E:Exception do
-            Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
+          Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
       end;
     end;
   finally

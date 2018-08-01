@@ -576,7 +576,8 @@ begin
       Expression := 'B + 321';
       Evaluate;
       Fail('Wrong behaviour with unknown variable.');
-    except
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
 
     Expression := 'A + B';

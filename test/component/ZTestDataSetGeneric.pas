@@ -106,7 +106,7 @@ type
     procedure TestDefineSortedFields;
     procedure TestEmptyMemoAfterFullMemo;
     procedure TestInsertReturning;
-    procedure TesNullUnionNull;
+    procedure TestNullUnionNull;
   end;
 
   TZGenericTestDataSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -213,8 +213,8 @@ begin
       try
         Connection.GetCatalogNames(MetadataList);
         Fail('On closed connection call should throw exception');
-      except
-        // Ignore.
+      except on E: Exception do
+        CheckNotTestFailure(E);
       end;
 
       Connection.Connect;
@@ -1462,15 +1462,15 @@ begin
     try
       Query.Open;
       Fail('Wrong open behaviour without SmartOpen.');
-    except
-      // Ignore.
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
 
     try
       Query.Active := True;
       Fail('Wrong open behaviour without SmartOpen.');
-    except
-      // Ignore.
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
 
     Query.Options := Query.Options + [doSmartOpen];
@@ -1536,8 +1536,8 @@ begin
     try
       Query.Prepare;
       Fail('Wrong prepare behaviour.');
-    except
-      // Ignore.
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
     Check(Not Query.Prepared);
     Query.Active := False;
@@ -1797,7 +1797,7 @@ begin
   end;
 end;
 
-procedure TZGenericTestDataSet.TesNullUnionNull;
+procedure TZGenericTestDataSet.TestNullUnionNull;
 var
   Query: TZQuery;
 begin
@@ -1805,7 +1805,7 @@ begin
   try
     Query.SQL.Text := 'SELECT null as col1 FROM people union SELECT null as col1 FROM people';
     Query.Open; //just take care we can open a cursor
-    Check(True);
+    BlankCheck;
     Query.Close;
   finally
     Query.Free;

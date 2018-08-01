@@ -834,12 +834,14 @@ begin
       try
         SetFetchDirection(fdReverse);
         Fail('Incorrect SetFetchDirection fdReverse behavior');
-      except
+      except on E: Exception do
+        CheckNotTestFailure(E);
       end;
       try
         SetFetchDirection(fdUnknown);
         Fail('Incorrect SetFetchDirection fdUnknown behavior');
-      except
+      except on E: Exception do
+        CheckNotTestFailure(E);
       end;
   }
 

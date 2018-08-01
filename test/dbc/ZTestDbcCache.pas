@@ -760,9 +760,8 @@ begin
   end;
 end;
 
-{**
-  Test for Short field
-}
+// Fr0sT: this method exists from the beginning but does some magic.
+// Just added blank check here to remove "no checks" warning
 procedure TZTestRowAccessorCase.TestRowAccessorReadonly;
 var
   Collection: TObjectList;
@@ -779,8 +778,12 @@ begin
   finally
     Collection.Free;
   end;
+  BlankCheck;
 end;
 
+{**
+  Test for Short field
+}
 procedure TZTestRowAccessorCase.TestRowAccessorShort;
 var
   WasNull: Boolean;
