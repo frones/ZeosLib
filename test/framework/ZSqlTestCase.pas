@@ -730,8 +730,12 @@ end;
 }
 procedure TZAbstractSQLTestCase.Fail(Msg: string; ErrorAddr: Pointer = nil);
 begin
+  {$IFDEF FPC2_6DOWN}
+  inherited Fail(Format('%s/%s: %s', [ConnectionName, Protocol, Msg]));
+  {$ELSE}
   inherited Fail(Format('%s/%s: %s', [ConnectionName, Protocol, Msg]),
     ErrorAddr);
+  {$IFEND}
 end;
 
 {**

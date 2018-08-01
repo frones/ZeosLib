@@ -217,7 +217,7 @@ end;
 {$IF NOT DECLARED(CallerAddr)} // for older FPC versions < 3.1
 const
   CallerAddr = nil;
-{$ENDIF}
+{$IFEND}
 
 function ByteAt(p: pointer; const Offset: integer): byte;
 begin
@@ -275,7 +275,11 @@ procedure TZAbstractTestCase.CheckEqualsMem(Expected, Actual: Pointer; Size: Lon
 begin
   BlankCheck;
   if not CompareMem(expected, actual, size) then
+    {$IFDEF FPC2_6DOWN}
+    Fail(GetMemDiffStr(expected, actual, size, msg));
+    {$ELSE}
     Fail(GetMemDiffStr(expected, actual, size, msg), CallerAddr);
+    {$ENDIF}
 end;
 
 constructor TZAbstractTestCase.Create;
@@ -567,7 +571,11 @@ end;
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: WideString;
   const Msg: string);
 begin
+  {$IFDEF FPC2_6DOWN}
+  AssertTrue(ComparisonMsg(Expected, Actual), Expected = Actual);
+  {$ELSE}
   AssertTrue(ComparisonMsg(Msg, Expected, Actual), Expected = Actual, CallerAddr);
+  {$ENDIF}
 end;
 
 procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: WideString;
@@ -580,7 +588,11 @@ end;
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: UInt64;
   const Msg: string);
 begin
+  {$IFDEF FPC2_6DOWN}
+  AssertTrue(ComparisonMsg(IntToStr(Expected), IntToStr(Actual)), Expected = Actual);
+  {$ELSE}
   AssertTrue(ComparisonMsg(Msg, IntToStr(Expected), IntToStr(Actual)), Expected = Actual, CallerAddr);
+  {$ENDIF}
 end;
 
 procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: UInt64;
@@ -656,7 +668,11 @@ procedure TZAbstractTestCase.CheckException(AMethod: TTestMethod;
   AExceptionClass: ExceptClass; const ExpectExcMsg, Msg: string);
 begin
   {$IFDEF FPC}
-  AssertException(Msg, AExceptionClass, AMethod, ExpectExcMsg, 0, nil);
+    {$IFDEF FPC2_6DOWN}
+    AssertException(Msg, AExceptionClass, AMethod);
+    {$ELSE}
+    AssertException(Msg, AExceptionClass, AMethod, ExpectExcMsg, 0, nil);
+    {$ENDIF}
   {$ELSE}
   if ExpectExcMsg = '' then
     inherited CheckException(AMethod, AExceptionClass, Msg)
