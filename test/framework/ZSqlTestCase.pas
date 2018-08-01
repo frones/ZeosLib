@@ -735,7 +735,7 @@ begin
   {$ELSE}
   inherited Fail(Format('%s/%s: %s', [ConnectionName, Protocol, Msg]),
     ErrorAddr);
-  {$IFEND}
+  {$ENDIF}
 end;
 
 {**
