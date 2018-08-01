@@ -2547,7 +2547,6 @@ function TZMySQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: stri
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
-  ResultSet: IZResultSet;
   RequiresInformationSchema: boolean;
 begin
   // I do check the server version because I don't know how to check for the server type.
@@ -2777,7 +2776,6 @@ var
   SQL: string;
   ProcedureNameCondition, SchemaCondition: string;
   ZType, ZPrecision, ZScale: Integer;
-  Statement: IZStatement;
 
   procedure MysqlTypeToZeos(TypeName: String; const MysqlPrecision, MySqlScale, MysqlCharLength: integer; out ZType, ZPrecision, ZScale: Integer);
   begin
