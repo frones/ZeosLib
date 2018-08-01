@@ -410,7 +410,7 @@ begin
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                     TempBlob.Length, ConSettings), '''');
               {$ENDIF}
-            if Pos(#0, Result) > 1
+            if Pos(RawByteString(#0), Result) > 1
             then raise EZSQLException.Create('Character 0x00 is not allowed in Strings with Text and NText fields and this driver.');
           end;
         end
