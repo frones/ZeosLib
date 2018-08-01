@@ -215,7 +215,7 @@ type
     FResultSet: IZResultSet;
 
     FRefreshInProgress: Boolean;
-    FFieldDefsInitialized: boolean;
+    {FFieldDefsInitialized: boolean;}  // commented out because this causes SF#286
 
     FDataLink: TDataLink;
     FMasterLink: TMasterDataLink;
@@ -3356,7 +3356,7 @@ begin
       end;
       UnPrepare;
     end;
-    FFieldDefsInitialized := True;
+    {FFieldDefsInitialized := True;}  // commented out because this caises SF#286
   end;
 end;
 
@@ -3460,7 +3460,7 @@ begin
       end;
 
     { Initializes field and index defs. }
-    if (not FRefreshInProgress) and (not FFieldDefsInitialized) then
+    if (not FRefreshInProgress) {and (not FFieldDefsInitialized)} then  // commented out because this causes SF#286
       InternalInitFieldDefs;
 
     {$IFDEF WITH_LIFECYCLES}
@@ -3970,7 +3970,7 @@ begin
     Statement.Close;
     Statement := nil;
   end;
-  FFieldDefsInitialized := False;
+  {FFieldDefsInitialized := False;} // commented out because this causes SF#286
 end;
 
 {**
@@ -4784,7 +4784,7 @@ begin
     if not ResultSet.IsBeforeFirst then
       ResultSet.BeforeFirst; //need this. All from dataset buffered resultsets are EOR
     FUseCurrentStatment := True; //hint for InternalOpen
-    FFieldDefsInitialized := False;
+    {FFieldDefsInitialized := False;}  // commented out because it causes SF#286
     OpenCursor{$IFDEF FPC}(False){$ENDIF}; //Calls InternalOpen in his sequence so InternalOpen must be prepared
     OpenCursorComplete; //set DataSet to dsActive
     FUseCurrentStatment := False; //reset hint for InternalOpen
