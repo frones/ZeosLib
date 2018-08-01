@@ -291,6 +291,8 @@ begin
     Query.SQL.Text := 'DELETE FROM people WHERE p_id=:id';
     Query.ParamByName('id').AsInteger := TEST_ROW_ID;
     Query.ExecSQL;
+
+    Check(True);
   finally
     TextStream.Free;
     BinaryStream.Free;
@@ -728,6 +730,8 @@ begin
     RefreshQuery.Refresh;
     RefreshQuery.Last;
     RefreshQuery.Close;
+
+    Check(True);
   finally
     Query.Free;
     RefreshQuery.Free;
@@ -752,6 +756,8 @@ begin
 
   Connection.Free;
   Query.Free;
+
+  Check(True);
 end;
 
 {**
@@ -776,6 +782,8 @@ begin
     Connection.Disconnect;
     Connection.Connect;
     Query.ExecSQL;
+
+    Check(True);
   finally
     Connection.Free;
     Query.Free;
@@ -803,6 +811,8 @@ begin
 
     SQLProcessor.Script.Text := 'update people set p_dep_id=p_dep_id where 1=0';
     SQLProcessor.Execute;
+
+    Check(True);
   finally
     Connection.Free;
     SQLProcessor.Free;
@@ -1066,6 +1076,8 @@ begin
   try
     Query.UpdateObject := UpdateSQL;
     Query.UpdateObject := nil;
+
+    Check(True);
   finally
     UpdateSQL.Free;
     Query.Free;
@@ -1102,6 +1114,8 @@ begin
 
     Query.First;
     Query.Locate('p_name', 'xyz', [loCaseInsensitive]);
+
+    Check(True);
   finally
     Query.Free;
   end;
@@ -1648,6 +1662,8 @@ begin
     Metadata.Active := True;
     Metadata.Active := False;
     Metadata.Active := True;
+
+    Check(True);
   finally
     Metadata.Free;
   end;

@@ -432,6 +432,7 @@ begin
   Connection.Disconnect;
   Connection.AutoCommit := False;
   Connection.Connect;
+  Check(True);
 end;
 
 {**
@@ -584,6 +585,8 @@ begin
   finally
     Query.Free;
   end;
+
+  Check(True);
 end;
 
 {**
@@ -793,6 +796,8 @@ begin
   finally
     Query.Free;
   end;
+
+  Check(True);
 end;
 
 {
