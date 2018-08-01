@@ -58,7 +58,8 @@ interface
 {$I ZCore.inc}
 
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZSysUtils, SysUtils, ZSqlTestCase, ZCompatibility;
+  StrUtils, Classes, SysUtils, DateUtils,
+  ZSysUtils, ZTestCase, ZSqlTestCase, ZCompatibility;
 
 type
 
@@ -80,6 +81,16 @@ type
     procedure TestTree;
   end;
 
+  TZTestFramework = class(TZAbstractTestCase)
+  protected
+    ExcClass: ExceptClass;
+    ExcMessage: string;
+    procedure RaiseExc;
+  published
+    procedure TestCheckEqual;
+    procedure TestExceptions;
+  end;
+
 implementation
 
 
@@ -90,7 +101,7 @@ implementation
 }
 procedure TZTestPortableSQLTestCase.TestOne;
 begin
-  Check(True);
+  BlankCheck;
   PrintLn('*** Test # 1 ***');
   PrintLn('Active Protocol: ' + Protocol);
   PrintLn('HostName: ' + HostName + ' Port: ' + IntToStr(Port)
@@ -106,7 +117,7 @@ end;
 }
 procedure TZTestPortableSQLTestCase.TestTwo;
 begin
-  Check(True);
+  BlankCheck;
   PrintLn('*** Test # 2 ***');
   PrintLn('Active Protocol: ' + Protocol);
   PrintLn('HostName: ' + HostName + ' Port: ' + IntToStr(Port)
@@ -122,7 +133,7 @@ end;
 }
 procedure TZTestPortableSQLTestCase.TestTree;
 begin
-  Check(True);
+  BlankCheck;
   PrintLn('*** Test # 3 ***');
   PrintLn('Active Protocol: ' + Protocol);
   PrintLn('HostName: ' + HostName + ' Port: ' + IntToStr(Port)
@@ -149,7 +160,7 @@ end;
 }
 procedure TZTestSpecificSQLTestCase.TestOne;
 begin
-  Check(True);
+  BlankCheck;
   PrintLn('### Test # 1 ###');
   PrintLn('Active Protocol: ' + Protocol);
   PrintLn('HostName: ' + HostName + ' Port: ' + IntToStr(Port)
@@ -165,7 +176,7 @@ end;
 }
 procedure TZTestSpecificSQLTestCase.TestTwo;
 begin
-  Check(True);
+  BlankCheck;
   PrintLn('### Test # 2 ###');
   PrintLn('Active Protocol: ' + Protocol);
   PrintLn('HostName: ' + HostName + ' Port: ' + IntToStr(Port)
@@ -181,7 +192,7 @@ end;
 }
 procedure TZTestSpecificSQLTestCase.TestTree;
 begin
-  Check(True);
+  BlankCheck;
   PrintLn('### Test # 3 ###');
   PrintLn('Active Protocol: ' + Protocol);
   PrintLn('HostName: ' + HostName + ' Port: ' + IntToStr(Port)
@@ -192,7 +203,195 @@ begin
   PrintLn;
 end;
 
+{ TZTestFramework }
+
+const
+  SExpectedTestFailFmt = 'Expected test fail, got %s with message "%s"';
+  SFailExpected = 'Test fail expected but wasn''t raised';
+
+procedure TZTestFramework.TestCheckEqual;
+
+  function Bytes(const Arr: array of Byte): TBytes;
+  begin
+    SetLength(Result, Length(Arr));
+    if Length(Arr) > 0 then
+      Move(Arr[0], Pointer(Result)^, Length(Arr));
+  end;
+
+  procedure CheckArraysSucceed(const Arr1, Arr2: array of Byte; const Msg: string);
+  begin
+    CheckEquals(Bytes(Arr1), Bytes(Arr2), 'Arrays succeed. ' + Msg);
+  end;
+
+  procedure CheckArraysFail(const Arr1, Arr2: array of Byte; const Msg: string);
+  begin
+    try
+      CheckEquals(Bytes(Arr1), Bytes(Arr2), 'Arrays fail. ' + Msg);
+    except on E: Exception do
+      begin
+        PrintLn(Format(SExpectedTestFailFmt, [E.ClassName, E.Message]));
+        Exit;
+      end;
+    end;
+    Fail( IfThen(Msg <> '', Msg + ', ') + SFailExpected);
+  end;
+
+  function Stream(const Arr: array of Byte): TMemoryStream;
+  begin
+    Result := nil;
+    if Length(Arr) = 0 then Exit;
+    Result := TMemoryStream.Create;
+    Result.WriteBuffer(Arr[0], Length(Arr));
+  end;
+
+  procedure CheckStreamsSucceed(const Arr1, Arr2: array of Byte; const Msg: string);
+  var Stm1, Stm2: TMemoryStream;
+  begin
+    Stm1 := Stream(Arr1);
+    Stm2 := Stream(Arr2);
+    CheckEquals(Stm1, Stm2, 'Streams succeed. ' + Msg);
+    Stm1.Free;
+    Stm2.Free;
+  end;
+
+  procedure CheckStreamsFail(const Arr1, Arr2: array of Byte; const Msg: string);
+  var Stm1, Stm2: TMemoryStream;
+  begin
+    Stm1 := Stream(Arr1);
+    Stm2 := Stream(Arr2);
+    try
+      CheckEquals(Stm1, Stm2, 'Streams fail. ' + Msg);
+    except on E: Exception do
+      begin
+        PrintLn(Format(SExpectedTestFailFmt, [E.ClassName, E.Message]));
+        Stm1.Free;
+        Stm2.Free;
+        Exit;
+      end;
+    end;
+    Stm1.Free;
+    Stm2.Free;
+    Fail( IfThen(Msg <> '', Msg + ', ') + SFailExpected);
+  end;
+
+  procedure CheckDatesFail(Dt1, Dt2: TDateTime; const Msg: string);
+  begin
+    try
+      CheckEqualsDate(Dt1, Dt2, [], 'Dates fail. ' + Msg);
+    except on E: Exception do
+      begin
+        PrintLn(Format(SExpectedTestFailFmt, [E.ClassName, E.Message]));
+        Exit;
+      end;
+    end;
+    Fail( IfThen(Msg <> '', Msg + ', ') + SFailExpected);
+  end;
+
+var
+  DtAct, DtExp: TDateTime;
+begin
+  PrintLn('### TestChecks ###');
+
+  // Arrays
+  CheckArraysSucceed([], [], 'empty');
+  CheckArraysSucceed([1,2], [1,2], 'not empty');
+  CheckArraysFail([], [1,2], 'empty and not empty');
+  CheckArraysFail([1,3], [1,2], 'diff not empty');
+
+  // Streams
+  CheckStreamsSucceed([], [], 'empty');
+  CheckStreamsSucceed([1,2], [1,2], 'not empty');
+  CheckStreamsFail([], [1,2], 'empty and not empty');
+  CheckStreamsFail([1,2], [], 'not empty and empty');
+  CheckStreamsFail([1,3], [1,2], 'diff not empty');
+  CheckStreamsFail([1,2,3], [1,2], 'diff sizes not empty');
+
+  // Date
+  DtExp := EncodeDateTime(2000, 1, 1, 1, 1, 1, 1);
+  DtAct := DtExp;
+
+  CheckEqualsDate(DtExp, DtAct, [], 'equal');
+  CheckDatesFail(DtExp, RecodeYear(DtAct, 2001), 'not equal Y');
+  CheckDatesFail(DtExp, RecodeMonth(DtAct, 2), 'not equal M');
+  CheckDatesFail(DtExp, RecodeDay(DtAct, 2), 'not equal D');
+  CheckDatesFail(DtExp, RecodeHour(DtAct, 2), 'not equal H');
+  CheckDatesFail(DtExp, RecodeMinute(DtAct, 2), 'not equal M');
+  CheckDatesFail(DtExp, RecodeSecond(DtAct, 2), 'not equal S');
+  CheckDatesFail(DtExp, RecodeMilliSecond(DtAct, 2), 'not equal Ms');
+end;
+
+procedure TZTestFramework.RaiseExc;
+begin
+  if Assigned(ExcClass) then
+    raise ExcClass.Create(ExcMessage);
+end;
+
+procedure TZTestFramework.TestExceptions;
+
+  procedure ExceptionSuccess(AExceptClass: ExceptClass; const ExpectExcMsg, Msg: string);
+  begin
+    ExcClass := AExceptClass;
+    ExcMessage := ExpectExcMsg;
+    CheckException(RaiseExc, ExcClass, ExpectExcMsg, 'Exception success. ' + Msg);
+  end;
+
+  procedure ExceptionFail(AExceptClass: ExceptClass; const ExpectExcMsg, Msg: string);
+  begin
+    ExcClass := EAbstractError;
+    ExcMessage := 'exc message';
+    try
+      CheckException(RaiseExc, AExceptClass, ExpectExcMsg, 'Exception fail. ' + Msg);
+    except on E: Exception do
+      begin
+        PrintLn(Format(SExpectedTestFailFmt, [E.ClassName, E.Message]));
+        Exit;
+      end;
+    end;
+    Fail( IfThen(Msg <> '', Msg + ', ') + SFailExpected);
+  end;
+
+begin
+  PrintLn('### TestExceptions ###');
+
+  // Exception in method - Success
+  ExceptionSuccess(EAbstractError, '', 'exception by class');
+  ExceptionSuccess(EAbstractError, 'exc message', 'exception by message');
+
+  // Exception in method - Fail
+  ExceptionFail(nil, '', 'no exception');
+  ExceptionFail(EAbort, '', 'exception by class');
+  ExceptionFail(EAbstractError, 'other exc message', 'exception by message');
+
+  // Exception in code - Success
+  try
+    RaiseExc; // will raise
+    Fail('');
+  except on E: Exception do
+    CheckNotTestFailure(E, 'exception raised in code');
+  end;
+
+  // Exception in code - Fail
+  ExcClass := nil;
+  try
+    RaiseExc; // will NOT raise
+    Fail('');
+  except on E: Exception do
+    begin
+      try
+        CheckNotTestFailure(E, 'exception not raised in code');
+      except on E: Exception do
+        begin
+          PrintLn(Format(SExpectedTestFailFmt, [E.ClassName, E.Message]));
+          Exit;
+        end;
+      end; // try
+      Fail(SFailExpected);
+    end;
+  end;
+end;
+
 initialization
   RegisterTest('core',TZTestPortableSQLTestCase.Suite);
   RegisterTest('core',TZTestSpecificSQLTestCase.Suite);
+  RegisterTest('core',TZTestFramework.Suite);
 end.

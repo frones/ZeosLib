@@ -324,7 +324,7 @@ implementation
 
 uses
   Math,
-  ZSysUtils, ZEncoding, ZTestConsts, ZTestConfig, ZSqlProcessor, ZURL, ZAbstractRODataset;
+  ZSysUtils, ZEncoding, ZTestConfig, ZSqlProcessor, ZURL, ZAbstractRODataset;
 
 function PropPos(const PropDynArray: TStringDynArray; const AProp: String): Integer; overload;
 var

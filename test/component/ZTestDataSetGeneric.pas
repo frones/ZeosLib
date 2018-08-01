@@ -2187,7 +2187,7 @@ procedure TZGenericTestDataSet.TestDefineFields;
       CheckSame(Expect[i], Fields[i], 'FieldList "' + FieldList + '" - item #' + IntToStr(i));
   end;
 
-  procedure CheckExceptionRaised(const FieldList: string; Expect: TClass; const ExpectMsg: string = '');
+  procedure CheckExceptionRaised(const FieldList: string; Expect: ExceptClass; const ExpectMsg: string = '');
   begin
     FFieldList := FieldList;
     CheckException(RunDefineFields, Expect, ExpectMsg, 'FieldList "' + FieldList + '"');
@@ -2241,7 +2241,7 @@ procedure TZGenericTestDataSet.TestDefineSortedFields;
     end;
   end;
 
-  procedure CheckExceptionRaised(const FieldList: string; Expect: TClass; const ExpectMsg: string = '');
+  procedure CheckExceptionRaised(const FieldList: string; Expect: ExceptClass; const ExpectMsg: string = '');
   begin
     FFieldList := FieldList;
     CheckException(RunDefineSortedFields, Expect, ExpectMsg, 'FieldList "' + FieldList + '"');

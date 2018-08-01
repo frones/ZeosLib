@@ -97,8 +97,8 @@ type
     function GetImplementedAPI: string; virtual; abstract;
     function SkipForReason(Reasons: ZSkipReasons): Boolean; override;
 
-    procedure Print(_Message: string); override;
-    procedure PrintLn(_Message: string); override;
+    procedure Print(const Msg: string); override;
+    procedure PrintLn(const Msg: string); override;
 
     { Informational methods. }
     function GetRecordCount: Integer;
@@ -337,20 +337,20 @@ end;
   Print a string message.
   @param Message a message string.
 }
-procedure TZPerformanceSQLTestCase.Print(_Message: string);
+procedure TZPerformanceSQLTestCase.Print(const Msg: string);
 begin
 //  Status(_Message);
-  System.Write(_Message);
+  System.Write(Msg);
 end;
 
 {**
   Print a string message on a new line.
   @param Message a message string.
 }
-procedure TZPerformanceSQLTestCase.PrintLn(_Message: string);
+procedure TZPerformanceSQLTestCase.PrintLn(const Msg: string);
 begin
 //  Status(_Message)
-  System.Writeln(_Message);
+  System.Writeln(Msg);
 end;
 
 {**
