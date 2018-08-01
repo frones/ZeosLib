@@ -1888,6 +1888,7 @@ begin
     Query.FieldByName(FieldName).FieldKind := fkCalculated;
     Query.OnCalcFields := TestSF279CalcFields;
     Query.Open;
+    Check(Assigned(Query.FindField(FieldName)), 'Checking, if the calculated field really exists.');
     try
       Query.Filter := 'calculated LIKE ' + QuotedStr('*Krasnodar*');
       Query.Filtered := True;
