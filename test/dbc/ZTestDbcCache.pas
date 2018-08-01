@@ -134,24 +134,47 @@ implementation
 uses ZTestConsts;
 
 const
-  stBooleanIndex        = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  stByteIndex           = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  stShortIndex          = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  stSmallIndex          = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  stIntegerIndex        = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  stLongIndex           = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  stFloatIndex          = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
-  stDoubleIndex         = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
-  stBigDecimalIndex     = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
-  stStringIndex         = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
-  stBytesIndex          = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
-  stDateIndex           = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
-  stTimeIndex           = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
-  stTimestampIndex      = {$IFDEF GENERIC_INDEX}13{$ELSE}14{$ENDIF};
-  stAsciiStreamIndex    = {$IFDEF GENERIC_INDEX}14{$ELSE}15{$ENDIF};
-  stUnicodeStreamIndex  = {$IFDEF GENERIC_INDEX}15{$ELSE}16{$ENDIF};
-  stBinaryStreamIndex   = {$IFDEF GENERIC_INDEX}16{$ELSE}17{$ENDIF};
+  stBooleanIndex        = FirstDbcIndex + 0;
+  stByteIndex           = FirstDbcIndex + 1;
+  stShortIndex          = FirstDbcIndex + 2;
+  stSmallIndex          = FirstDbcIndex + 3;
+  stIntegerIndex        = FirstDbcIndex + 4;
+  stLongIndex           = FirstDbcIndex + 5;
+  stFloatIndex          = FirstDbcIndex + 6;
+  stDoubleIndex         = FirstDbcIndex + 7;
+  stBigDecimalIndex     = FirstDbcIndex + 8;
+  stStringIndex         = FirstDbcIndex + 9;
+  stBytesIndex          = FirstDbcIndex + 10;
+  stDateIndex           = FirstDbcIndex + 11;
+  stTimeIndex           = FirstDbcIndex + 12;
+  stTimestampIndex      = FirstDbcIndex + 13;
+  stAsciiStreamIndex    = FirstDbcIndex + 14; // stream indexes
+  stUnicodeStreamIndex  = FirstDbcIndex + 15; //   must be kept
+  stBinaryStreamIndex   = FirstDbcIndex + 16; //   together
 
+  FirstIndex = stBooleanIndex;
+  LastIndex = stBinaryStreamIndex;
+
+  FieldTypes: array[FirstIndex..LastIndex] of string =
+  (
+    'Boolean',
+    'Byte',
+    'Short',
+    'Small',
+    'Integer',
+    'Long',
+    'Float',
+    'Double',
+    'BigDecimal',
+    'String',
+    'Bytes',
+    'Date',
+    'Time',
+    'Timestamp',
+    'AsciiStream',
+    'UnicodeStream',
+    'BinaryStream'
+  );
 
 { TZTestRowAccessorCase }
 
@@ -186,7 +209,7 @@ begin
   Result.Nullable := Nullable;
   Result.Signed := True;
   Result.ColumnDisplaySize := 32;
-  Result.ColumnLabel := 'Test Labe'+IntToStr(Index);
+  Result.ColumnLabel := 'Test Label'+IntToStr(Index);
   Result.ColumnName := 'TestName'+IntToStr(Index);
   Result.SchemaName := 'TestSchemaName';
   case ColumnType of
@@ -321,155 +344,38 @@ procedure TZTestRowAccessorCase.TestRowAccesorBlob;
 var
   Blob: IZBlob;
   WasNull: Boolean;
+  Index: Integer;
 begin
   with RowAccessor do
-  begin
-   Blob := GetBlob(stAsciiStreamIndex, WasNull{%H-});
-   CheckNotNull(Blob, 'Not Null blob from asciistream field');
-   Check(not Blob.IsEmpty, 'Blob from asciistream empty');
-   Blob := nil;
-
-   Blob := GetBlob(stUnicodeStreamIndex, WasNull);
-   CheckNotNull(Blob, 'Not Null blob from unicodestream field');
-   Check(not Blob.IsEmpty, 'Blob from unicodestream empty');
-   Blob := nil;
-
-   Blob := GetBlob(stAsciiStreamIndex, WasNull);
-   CheckNotNull(Blob, 'Not Null blob from binarystream field');
-   Check(not Blob.IsEmpty, 'Blob from binarystream empty');
-   Blob := nil;
-  end;
+    for Index := stAsciiStreamIndex to stBinaryStreamIndex do
+    begin
+      Blob := GetBlob(Index, WasNull{%H-});
+      CheckNotNull(Blob, 'Not Null blob from ' + FieldTypes[Index] + ' field');
+      Check(not Blob.IsEmpty, 'Blob from ' + FieldTypes[Index] + ' empty');
+      Blob := nil;
+    end;
 end;
 
 {**
   Test for setup to null fields and check it on correspondence to null
 }
 procedure TZTestRowAccessorCase.TestRowAccesorNull;
+var
+  Index: Integer;
 begin
   with RowAccessor do
-  begin
-   Check(not IsNull(stBooleanIndex), 'Not Null boolen column');
-   Check(not IsNull(stByteIndex), 'Not Null byte column');
-   Check(not IsNull(stShortIndex), 'Not Null short column');
-   Check(not IsNull(stSmallIndex), 'Not Null small column');
-   Check(not IsNull(stIntegerIndex), 'Not Null integer column');
-   Check(not IsNull(stLongIndex), 'Not Null longint column');
-   Check(not IsNull(stFloatIndex), 'Not Null float column');
-   Check(not IsNull(stDoubleIndex), 'Not Null double column');
-   Check(not IsNull(stBigDecimalIndex), 'Not Null bigdecimal column');
-   Check(not IsNull(stStringIndex), 'Not Null srting column');
-   Check(not IsNull(stBytesIndex), 'Not Null bytearray column');
-   Check(not IsNull(stDateIndex), 'Not Null date column');
-   Check(not IsNull(stTimeIndex), 'Not Null time column');
-   Check(not IsNull(stTimestampIndex), 'Not Null timestamp column');
-   Check(not IsNull(stAsciiStreamIndex), 'Not Null aciistream column');
-   Check(not IsNull(stUnicodeStreamIndex), 'Not Null unicodestream column');
-   Check(not IsNull(stAsciiStreamIndex), 'Not Null binarystream column');
-   Check(not IsNull(stBinaryStreamIndex), 'Not Null binarystream column');
+    for Index := FirstIndex to LastIndex do
+    begin
+      Check(not IsNull(Index), 'Not Null ' + FieldTypes[Index] + ' column');
 
-   try
-     SetNull(stBooleanIndex);
-   except
-     Fail('Incorrect boolean method behavior');
-   end;
-   Check(IsNull(stBooleanIndex), 'Null boolean column');
-   try
-     SetNull(stByteIndex);
-   except
-     Fail('Incorrect byte method behavior');
-   end;
-   Check(IsNull(stByteIndex), 'Null byte column');
-   try
-     SetNull(stShortIndex);
-   except
-     Fail('Incorrect short method behavior');
-   end;
-   Check(IsNull(stShortIndex), 'Null short column');
-   try
-     SetNull(stSmallIndex);
-   except
-     Fail('Incorrect small method behavior');
-   end;
-   Check(IsNull(stSmallIndex), 'Null small column');
-   try
-     SetNull(stIntegerIndex);
-   except
-     Fail('Incorrect integer method behavior');
-   end;
-   Check(IsNull(stIntegerIndex), 'Null integer column');
-   try
-     SetNull(stLongIndex);
-   except
-     Fail('Incorrect longint method behavior');
-   end;
-   Check(IsNull(stLongIndex), 'Null longint column');
-   try
-     SetNull(stFloatIndex);
-   except
-     Fail('Incorrect float method behavior');
-   end;
-   Check(IsNull(stFloatIndex), 'Null float column');
-   try
-     SetNull(stDoubleIndex);
-   except
-     Fail('Incorrect double method behavior');
-   end;
-   Check(IsNull(stDoubleIndex), 'Null double column');
-   try
-     SetNull(stStringIndex);
-   except
-     Fail('Incorrect bigdecimal method behavior');
-   end;
-   Check(IsNull(stStringIndex), 'Null bigdecimal column');
-   try
-     SetNull(stBytesIndex);
-   except
-     Fail('Incorrect string method behavior');
-   end;
-   Check(IsNull(stBytesIndex), 'Null string column');
-   try
-     SetNull(stDateIndex);
-   except
-   Fail('Incorrect bytearray method behavior');
-   end;
-   Check(IsNull(stDateIndex), 'Null bytearray column');
-   try
-     SetNull(stTimeIndex);
-   except
-     Fail('Incorrect date method behavior');
-   end;
-   Check(IsNull(stTimeIndex), 'Null date column');
-   try
-     SetNull(stTimestampIndex);
-   except
-   Fail('Incorrect time method behavior');
-   end;
-   Check(IsNull(stTimestampIndex), 'Null time column');
-   try
-     SetNull(stAsciiStreamIndex);
-   except
-     Fail('Incorrect timestamp method behavior');
-   end;
-   Check(IsNull(stAsciiStreamIndex), 'Null timestamp column');
-   try
-     SetNull(stUnicodeStreamIndex);
-   except
-     Fail('Incorrect asciisreeam method behavior');
-   end;
-   Check(IsNull(stUnicodeStreamIndex), 'Null asciisreeam column');
-   try
-     SetNull(stAsciiStreamIndex);
-   except
-     Fail('Incorrect unicodestream method behavior');
-   end;
-   Check(IsNull(stAsciiStreamIndex), 'Null unicodestream column');
-   try
-    SetNull(stBinaryStreamIndex);
-   except
-     Fail('Incorrect SetBinaryStream method behavior');
-   end;
-   Check(IsNull(stBinaryStreamIndex), 'Null bytestream column');
-  end;
+      try
+        SetNull(Index);
+      except
+        Fail('Incorrect ' + FieldTypes[Index] + ' method behavior');
+      end;
+
+      Check(IsNull(Index), 'Null ' + FieldTypes[Index] + ' column');
+    end;
 end;
 
 {**
@@ -525,7 +431,7 @@ begin
     try
       RowAccessor.ClearBuffer(RowBuffer1);
     except
-       Fail('Incorrect CopyTo method behavior');
+      Fail('Incorrect ClearBuffer method behavior');
     end;
     Check(Assigned(RowBuffer1),'Clear. The RowBuffer1 assigned )');
     CheckNotEquals(stStringIndex, RowBuffer1^.Index, 'Clear. The RowBuffer1 Index');
@@ -538,7 +444,7 @@ begin
     try
       RowAccessor.MoveTo(RowBuffer1);
     except
-      Fail('Incorrect CopyTo method behavior');
+      Fail('Incorrect MoveTo method behavior');
     end;
     Check(Assigned(RowBuffer1), 'MoveTo. The RowBuffer1 assigned');
     Check(Assigned(RowBuffer1),'MoveTo. The RowBuffer1 assigned )');
@@ -558,7 +464,7 @@ begin
     try
       RowAccessor.CopyFrom(RowBuffer2);
     except
-      Fail('Incorrect CopyTo method behavior');
+      Fail('Incorrect CopyFrom method behavior');
     end;
     CheckEquals(100, RowBuffer^.Index, 'CopyFrom. The RowBuffer2 Index');
     CheckEquals(ord(utModified), ord(RowBuffer^.UpdateType),
@@ -1007,94 +913,37 @@ end;
   Fill fields by it values
 }
 procedure TZTestRowAccessorCase.FillRowAccessor(RowAccessor: TZRowAccessor);
+var
+  Index: Integer;
 begin
   with RowAccessor do
   begin
-    try
-      SetBoolean(stBooleanIndex, true);
-      Check(not IsNull(stBooleanIndex));
-    except
-      Fail('Incorrect SetBoolean method behavior');
-    end;
-    try
-      SetByte(stByteIndex, FByte);
-    except
-      Fail('Incorrect SetByte method behavior');
-    end;
-    try
-      SetShort(stShortIndex, FShort);
-    except
-      Fail('Incorrect SetShort method behavior');
-    end;
-    try
-      SetSmall(stSmallIndex, FSmall);
-    except
-      Fail('Incorrect SetSmall method behavior');
-    end;
-    try
-      SetInt(stIntegerIndex, FInt);
-    except
-      Fail('Incorrect SetInt method behavior');
-    end;
-    try
-      SetLong(stLongIndex, FLong);
-    except
-      Fail('Incorrect SetLong method behavior');
-    end;
-    try
-      SetFloat(stFloatIndex, FFloat);
-    except
-      Fail('Incorrect SetFloat method behavior');
-    end;
-    try
-      SetDouble(stDoubleIndex, FDouble);
-    except
-      Fail('Incorrect SetDouble method behavior');
-    end;
-    try
-      SetBigDecimal(stBigDecimalIndex, FBigDecimal);
-    except
-      Fail('Incorrect SetBigDecimal method behavior');
-    end;
-    try
-      SetString(stStringIndex, FString);
-    except
-      Fail('Incorrect SetString method behavior');
-    end;
-    try
-      SetBytes(stBytesIndex, FByteArray);
-    except
-      Fail('Incorrect SetBytes method behavior');
-    end;
-    try
-      SetDate(stDateIndex, FDate);
-    except
-      Fail('Incorrect SetDate method behavior');
-    end;
-    try
-      SetTime(stTimeIndex, FTime);
-    except
-      Fail('Incorrect SetTime method behavior');
-    end;
-    try
-      SetTimestamp(stTimestampIndex, FTimeStamp);
-    except
-      Fail('Incorrect SetTimestamp method behavior');
-    end;
-    try
-      SetAsciiStream(stAsciiStreamIndex, FAsciiStream);
-    except
-      Fail('Incorrect SetAsciiStream method behavior');
-    end;
-    try
-      SetUnicodeStream(stUnicodeStreamIndex, FUnicodeStream);
-    except
-      Fail('Incorrect SetUnicodeStream method behavior');
-    end;
-    try
-      SetBinaryStream(stBinaryStreamIndex, FBinaryStream);
-    except
-      Fail('Incorrect SetBinaryStream method behavior');
+    for Index := FirstIndex to LastIndex do
+    begin
+      try
+        case Index of
+          stBooleanIndex:       SetBoolean(Index, True);
+          stByteIndex:          SetByte(Index, FByte);
+          stShortIndex:         SetShort(Index, FShort);
+          stSmallIndex:         SetSmall(Index, FSmall);
+          stIntegerIndex:       SetInt(Index, FInt);
+          stLongIndex:          SetLong(Index, FLong);
+          stFloatIndex:         SetFloat(Index, FFloat);
+          stDoubleIndex:        SetDouble(Index, FDouble);
+          stBigDecimalIndex:    SetBigDecimal(Index, FBigDecimal);
+          stStringIndex:        SetString(Index, FString);
+          stBytesIndex:         SetBytes(Index, FByteArray);
+          stDateIndex:          SetDate(Index, FDate);
+          stTimeIndex:          SetTime(Index, FTime);
+          stTimestampIndex:     SetTimestamp(Index, FTimeStamp);
+          stAsciiStreamIndex:   SetAsciiStream(Index, FAsciiStream);
+          stUnicodeStreamIndex: SetUnicodeStream(Index, FUnicodeStream);
+          stBinaryStreamIndex:  SetBinaryStream(Index, FBinaryStream);
+        end;
+        Check(not IsNull(Index));
+      except
+        Fail('Incorrect Set' + FieldTypes[Index] + ' method behavior');
+      end;
     end;
     RowBuffer^.Index := stStringIndex;
     RowBuffer^.UpdateType := utInserted;
