@@ -63,7 +63,7 @@ uses
     DBCtrls,
     {$ENDIF}
   {$ENDIF}
-  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset,
+  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZAbstractRODataset,
   ZConnection, ZDbcIntfs, ZSqlTestCase, ZSqlUpdate,
   ZCompatibility, SysUtils, ZTestConsts, ZSqlProcessor, ZSqlMetadata;
 
@@ -75,7 +75,7 @@ type
     function GetSupportedProtocols: string; override;
   private
     TestSF274_GotNotified: Boolean;
-    procedure InternalTestSF224(const Query: TZReadOnlyQuery);
+    procedure InternalTestSF224(Query: TZAbstractRODataset);
     procedure TestSF274_OnNotify(Sender: TObject; Event: string;
         ProcessID: Integer; Payload: string);
   published
@@ -743,26 +743,32 @@ end;
   Test the bug report #1043252.
   "No Argument for format %s" exception.
 }
+
+type
+  TZAbstractRODatasetHack = class(TZAbstractRODataset)
+  end;
+
 procedure TZTestCompPostgreSQLBugReport.InternalTestSF224(
-  const Query: TZReadOnlyQuery);
+  Query: TZAbstractRODataset);
 var S: String;
 begin
+  with TZAbstractRODatasetHack(Query) do
   try
-    Query.Connection := Connection;
-    Query.SQL.Text := 'select * from guid_test';
-    Query.Open;
-    Check(Query.Fields[1].DataType = ftGUID);
-    S := Query.Fields[1].AsString;
+    Connection := Connection;
+    SQL.Text := 'select * from guid_test';
+    Open;
+    Check(Fields[1].DataType = ftGUID);
+    S := Fields[1].AsString;
     CheckEquals('{BAD51CFF-F21F-40E8-A9EA-838977A681BE}', s, 'UUID different');
-    Query.Close;
-    Query.SQL.Text := 'select * from guid_test where guid = :x';
-    Query.ParamByName('x').AsString := '{BAD51CFF-F21F-40E8-A9EA-838977A681BE}';
-    Query.Open;
-    Check(Query.Fields[1].DataType = ftGUID);
-    S := Query.Fields[1].AsString;
+    Close;
+    SQL.Text := 'select * from guid_test where guid = :x';
+    ParamByName('x').AsString := '{BAD51CFF-F21F-40E8-A9EA-838977A681BE}';
+    Open;
+    Check(Fields[1].DataType = ftGUID);
+    S := Fields[1].AsString;
     CheckEquals('{BAD51CFF-F21F-40E8-A9EA-838977A681BE}', s, 'UUID not found');
   finally
-    Query.Free;
+    Free;
   end;
 end;
 
@@ -1177,10 +1183,10 @@ begin
     Exit;
   Query := TZQuery.Create(nil);
   Query.ReadOnly := True;
-  InternalTestSF224(TZReadOnlyQuery(Query));
+  InternalTestSF224(Query);
   Query := TZQuery.Create(nil);
   Query.ReadOnly := False;
-  InternalTestSF224(TZReadOnlyQuery(Query));
+  InternalTestSF224(Query);
   ROQuery := TZReadOnlyQuery.Create(nil);
   InternalTestSF224(ROQuery);
   ROQuery := TZReadOnlyQuery.Create(nil);

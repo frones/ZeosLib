@@ -71,7 +71,7 @@ type
     procedure RunDefineFields;
     procedure RunDefineSortedFields;
     procedure TestReadCachedLobs(const BinLob: String; aOptions: TZDataSetOptions;
-      BinStreamE: TMemoryStream; Query: TZReadOnlyQuery);
+      BinStreamE: TMemoryStream; Query: TZAbstractRODataset);
   protected
     procedure TestQueryGeneric(Query: TDataset);
     procedure TestFilterGeneric(Query: TDataset);
@@ -605,14 +605,19 @@ end;
 {**
   Check functionality of TZReadOnlyQuery
 }
+
+type
+  TZAbstractRODatasetHack = class(TZAbstractRODataset)
+  end;
+
 procedure TZGenericTestDataSet.TestReadCachedLobs(const BinLob: String;
-  aOptions: TZDataSetOptions; BinStreamE: TMemoryStream; Query: TZReadOnlyQuery);
+  aOptions: TZDataSetOptions; BinStreamE: TMemoryStream; Query: TZAbstractRODataset);
 var
   BinStreamA: TMemoryStream;
 begin
   BinStreamA := nil;
   try
-    with Query do
+    with TZAbstractRODatasetHack(Query) do
     begin
       Options := aOptions;
       SQL.Text := 'SELECT * FROM blob_values where b_id >= '+ IntToStr(TEST_ROW_ID-1);
@@ -1705,10 +1710,10 @@ begin
       CheckEquals(1, RowsAffected);
 
     end;
-    TestReadCachedLobs(BinLob, aOptions, BinStreamE, TZReadOnlyQuery(Query));
+    TestReadCachedLobs(BinLob, aOptions, BinStreamE, Query);
     TestReadCachedLobs(BinLob, aOptions, BinStreamE, ROQuery);
     Include(aOptions, doCachedLobs);
-    TestReadCachedLobs(BinLob, aOptions, BinStreamE, TZReadOnlyQuery(Query));
+    TestReadCachedLobs(BinLob, aOptions, BinStreamE, Query);
     TestReadCachedLobs(BinLob, aOptions, BinStreamE, ROQuery);
   finally
     if assigned(BinStreamE) then
