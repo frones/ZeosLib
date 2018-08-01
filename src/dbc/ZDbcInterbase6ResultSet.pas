@@ -170,7 +170,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  ZEncoding, ZFastCode, ZSysUtils, ZDbcMetadata, ZClasses;
+  ZEncoding, ZFastCode, ZSysUtils, ZDbcMetadata, ZClasses, DateUtils;
 
 procedure GetPCharFromTextVar(SQLCode: SmallInt; sqldata: Pointer; sqllen: Short; out P: PAnsiChar; out Len: NativeUInt); {$IF defined(WITH_INLINE)} inline; {$IFEND}
 begin
@@ -1266,10 +1266,11 @@ begin
       case SQLCode of
         SQL_TIMESTAMP :
           begin
-            FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
-            Result := SysUtils.EncodeDate(TempDate.tm_year + 1900,
-              TempDate.tm_mon + 1, TempDate.tm_mday) + EncodeTime(TempDate.tm_hour,
-            TempDate.tm_min, TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod ISC_TIME_SECONDS_PRECISION) div 10));
+           P := SQLData;
+            FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(p), @TempDate);
+            Result := DateUtils.EncodeDateTime(TempDate.tm_year + 1900,
+              TempDate.tm_mon + 1, TempDate.tm_mday,TempDate.tm_hour,
+              TempDate.tm_min, TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod ISC_TIME_SECONDS_PRECISION) div 10));
           end;
         SQL_TYPE_DATE :
           begin

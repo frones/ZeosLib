@@ -893,9 +893,6 @@ const
   FormatStr = '';
 var
   Query: TZQuery;
-  Succeeded: Boolean;
-  DateValue1: TDateTime;
-  DateValue2: TDateTime;
   FormatSettings: TFormatSettings;
 begin
   FormatSettings.DateSeparator := '-';
@@ -929,9 +926,13 @@ begin
     CheckEquals(DateStr2, DateTimeToStr(Query.FieldByName('d_datetime').AsDateTime, FormatSettings), 'Checking, if the first timestamp field has the expected value.');
     CheckEquals(DateStr2, DateTimeToStr(Query.FieldByName('d_timestamp').AsDateTime, FormatSettings), 'Checking, if the second timestamp field has the expected value.');
   finally
-    Query.Close;
-    Query.Free;
-    //Connection.ExecuteDirect('delete from date_values where d_id in (1001, 1002)');
+    try
+      Query.SQL.Text := 'delete from date_values where d_id in (1001, 1002)';
+      Query.ExecSQL;
+    finally
+      Query.Close;
+      Query.Free;
+    end;
   end;
 end;
 
