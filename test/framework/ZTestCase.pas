@@ -214,6 +214,11 @@ end;
 
 {$IFDEF FPC} // copy from DUnit
 
+{$IF NOT DECLARED(CallerAddr)} // for older FPC versions < 3.1
+const
+  CallerAddr = nil;
+{$ENDIF}
+
 function ByteAt(p: pointer; const Offset: integer): byte;
 begin
   Result:={%H-}pByte(NativeUint(p){%H-}+Offset)^;

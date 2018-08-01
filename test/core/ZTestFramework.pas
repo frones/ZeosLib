@@ -358,7 +358,6 @@ begin
   ExceptionSuccess(EAbstractError, 'exc message', 'exception by message');
 
   // Exception in method - Fail
-  ExceptionFail(nil, '', 'no exception');
   ExceptionFail(EAbort, '', 'exception by class');
   ExceptionFail(EAbstractError, 'other exc message', 'exception by message');
 
