@@ -99,10 +99,7 @@ type
       Writable: Boolean): TZColumnInfo;
     function GetColumnsInfoCollection: TObjectList;
     function GetRowAccessor: TZRowAccessor;
-    function CompareArrays(Array1, Array2: TBytes): Boolean;
     procedure FillRowAccessor(RowAccessor: TZRowAccessor);
-    function CompareStreams(Stream1: TStream; Stream2: TStream): Boolean; overload;
-
     property RowAccessor: TZRowAccessor read FRowAccessor write FRowAccessor;
   published
     procedure TestFillRowAccessor;
@@ -177,24 +174,6 @@ const
   );
 
 { TZTestRowAccessorCase }
-
-{**
-  Compares two byte arrays
-  @param Array1 the first array to compare.
-  @param Array2 the second array to compare.
-  @return <code>True</code> if arrays are equal.
-}
-function TZTestRowAccessorCase.CompareArrays(Array1, Array2: TBytes):
-  Boolean;
-var
-  I: Integer;
-begin
-  Result := False;
-  if High(Array2) <> High(Array1) then Exit;
-  for I := 0 to High(Array1) do
-    if Array1[I] <> Array2[I] then Exit;
-  Result := True;
-end;
 
 function TZTestRowAccessorCase.GetColumnsInfo(Index: Integer;
   ColumnType: TZSqlType; Nullable: TZColumnNullableType; ReadOnly: Boolean;
@@ -507,8 +486,7 @@ begin
   begin
     try
       Stream := GetAsciiStream(stAsciiStreamIndex, WasNull{%H-});
-      CheckNotNull(Stream, 'AsciiStream');
-      Check(CompareStreams(Stream, FAsciiStream), 'AsciiStream');
+      CheckEquals(Stream, FAsciiStream, 'AsciiStream');
       Stream.Free;
     except
       Fail('Incorrect GetAsciiStream method behavior');
@@ -555,12 +533,12 @@ begin
     try
       Stream := GetBinaryStream(stBinaryStreamIndex, WasNull{%H-});
       CheckNotNull(Stream, 'BinaryStream');
-      Check(CompareStreams(Stream, FBinaryStream), 'BinaryStream');
+      CheckEquals(Stream, FBinaryStream, 'BinaryStream');
       Stream.Position := 0;
       ReadNum := Stream.Read(Buffer{%H-}, BINARY_BUFFER_SIZE);
       Stream.Free;
       CheckEquals(ReadNum, BINARY_BUFFER_SIZE);
-      Check(CompareMem(@Buffer, FBinaryStreamData, BINARY_BUFFER_SIZE));
+      CheckEqualsMem(@Buffer, FBinaryStreamData, BINARY_BUFFER_SIZE);
     except
       Fail('Incorrect GetBinaryStream method behavior');
     end;
@@ -635,12 +613,7 @@ begin
     CheckNotEquals(0, High(ByteArray));
     CheckEquals(ArrayToString(FByteArray), GetString(stBytesIndex, WasNull),
       'strings from bytearray equals');
-
-    if High(ByteArray) <> High(FByteArray) then
-      Fail('Size two array diffrent');
-    for I := 0 to High(ByteArray) do
-      if ByteArray[I] <> FByteArray[I] then
-        Fail('Array have different values');
+    CheckEquals(FByteArray, ByteArray);
   end;
 end;
 
@@ -653,9 +626,9 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(FDate, AnsiSqlDateToDateTime(GetString(stDateIndex, WasNull{%H-})), 0);
-    CheckEquals(FDate, GetDate(stDateIndex, WasNull), 0);
-    CheckEquals(FDate, GetTimestamp(stDateIndex, WasNull), 0);
+    CheckEqualsDate(FDate, AnsiSqlDateToDateTime(GetString(stDateIndex, WasNull{%H-})));
+    CheckEqualsDate(FDate, GetDate(stDateIndex, WasNull));
+    CheckEqualsDate(FDate, GetTimestamp(stDateIndex, WasNull));
   end;
 end;
 
@@ -862,9 +835,9 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(FTime, AnsiSqlDateToDateTime(GetString(stTimeIndex, WasNull{%H-})), 3, 'GetString');
-    CheckEquals(FTime, GetTime(stTimeIndex, WasNull), 3, 'Getime');
-//    CheckEquals(FTime, GetTimestamp(stTimeIndex, WasNull), 3, 'GetTimestamp');
+    CheckEqualsDate(FTime, AnsiSqlDateToDateTime(GetString(stTimeIndex, WasNull{%H-})), [], 'GetString');
+    CheckEqualsDate(FTime, GetTime(stTimeIndex, WasNull), [], 'Getime');
+//    CheckEqualsDate(FTime, GetTimestamp(stTimeIndex, WasNull), [], 'GetTimestamp');
   end;
 end;
 
@@ -879,8 +852,8 @@ begin
   begin
     CheckEquals(FormatDateTime('yyyy-mm-dd hh:mm:ss', FTimeStamp),
         GetString(stTimestampIndex, WasNull{%H-}), 'GetString');
-//!!! Rwrite    CheckEquals(DateOf(FTimeStamp), GetDate(stTimestampIndex, WasNull), 3, 'GetDate');
-    CheckEquals(FTimeStamp, GetTimestamp(stTimestampIndex, WasNull), 3, 'GetTimestamp');
+//!!! Rwrite    CheckEquals(DateOf(FTimeStamp), GetDate(stTimestampIndex, WasNull), [], 'GetDate');
+    CheckEqualsDate(FTimeStamp, GetTimestamp(stTimestampIndex, WasNull), [], 'GetTimestamp');
   end;
 end;
 
@@ -900,7 +873,7 @@ begin
     try
       Stream := GetUnicodeStream(stUnicodeStreamIndex, WasNull{%H-});
       CheckNotNull(Stream, 'UnicodeStream');
-      Check(CompareStreams(Stream, FUnicodeStream), 'UnicodeStream');
+      CheckEquals(Stream, FUnicodeStream, 'UnicodeStream');
       Stream.Position := 0;
       ReadNum := Stream.Read(BufferWideChar{%H-}, 100);
       Stream.Free;
@@ -952,25 +925,6 @@ begin
     RowBuffer^.UpdateType := utInserted;
     RowBuffer^.BookmarkFlag := 1;
   end;
-end;
-
-function TZTestRowAccessorCase.CompareStreams(Stream1, Stream2: TStream):
-  Boolean;
-var
-  Buffer1, Buffer2: array[0..1024] of Char;
-  ReadNum1, ReadNum2: Integer;
-begin
-  CheckNotNull(Stream1, 'Stream #1 is null');
-  CheckNotNull(Stream2, 'Stream #2 is null');
-  CheckEquals(Stream1.Size, Stream2.Size, 'Stream sizes are not equal');
-
-  Stream1.Position := 0;
-  ReadNum1 := Stream1.Read(Buffer1{%H-}, 1024);
-  Stream2.Position := 0;
-  ReadNum2 := Stream2.Read(Buffer2{%H-}, 1024);
-
-  CheckEquals(ReadNum1, ReadNum2, 'Read sizes are not equal.');
-  Result := CompareMem(@Buffer1, @Buffer2, ReadNum1);
 end;
 
 initialization
