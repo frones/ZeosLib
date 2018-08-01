@@ -104,7 +104,7 @@
 
     {$IF FPC_FULLVERSION>=30000}
        {$DEFINE FPC3_0UP}
-       {$UNDEF FPC_2_6DOWN}
+       {$UNDEF FPC2_6DOWN}
     {$ENDIF}
 
     {$IFDEF LCL}
