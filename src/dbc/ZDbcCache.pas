@@ -2094,9 +2094,10 @@ begin
                 {$ENDIF}
               else Result := '';
       stGUID: Result := {$IFDEF UNICODE}GUIDToUnicode{$ELSE}GUIDToRaw{$ENDIF}(Data, 16);
-      stDate: Result := FormatDateTime('yyyy-mm-dd', PDateTime(Data)^);
-      stTime: Result := FormatDateTime('hh:mm:ss', PDateTime(Data)^);
-      stTimestamp: Result := FormatDateTime('yyyy-mm-dd hh:mm:ss', PDateTime(Data)^);
+      stDate: Result := DateTimeToSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
+      stTime: Result := DateTimeToSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
+      stTimestamp: Result := DateTimeToSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
+
       else Result := '';
     end;
     IsNull := False;
@@ -4448,7 +4449,8 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stDate, stTimestamp: PDateTime(Data)^ := Int(Value);
-    stString, stUnicodeString: SetString(ColumnIndex, FormatDateTime('yyyy-mm-dd', Value));
+    stString, stUnicodeString: SetString(ColumnIndex,
+      DateTimeToSQLDate(Value, ConSettings^.WriteFormatSettings, False));
   end;
 end;
 
@@ -4474,8 +4476,8 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stTime, stTimestamp: PDateTime(Data)^ := Frac(Value);
-    stString, stUnicodeString:
-      SetString(ColumnIndex, FormatDateTime('hh:nn:ss', Value));
+    stString, stUnicodeString: SetString(ColumnIndex,
+      DateTimeToSQLTime(Value, ConSettings^.WriteFormatSettings, False));
   end;
 end;
 
@@ -4504,8 +4506,8 @@ begin
     stDate: PDateTime(Data)^ := Int(Value);
     stTime: PDateTime(Data)^ := Frac(Value);
     stTimestamp: PDateTime(Data)^ := Value;
-    stString, stUnicodeString:
-      SetString(ColumnIndex, FormatDateTime('yyyy-mm-dd hh:nn:ss', Value));
+    stString, stUnicodeString: SetString(ColumnIndex,
+      DateTimeToSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, False));
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
