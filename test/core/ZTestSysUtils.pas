@@ -799,7 +799,7 @@ const
   begin
     ZFormatSettings.DateTimeFormat := DateTimeFormat;
     ZFormatSettings.DateTimeFormatLen := Length(DateTimeFormat);
-    CheckEquals(Expected, ZSysUtils.RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), 'Expected Date');
+    CheckEqualsDate(Expected, ZSysUtils.RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), [], 'Expected Date');
     CheckEquals(ExpFailed, Failed, 'Fail value');
   end;
 
