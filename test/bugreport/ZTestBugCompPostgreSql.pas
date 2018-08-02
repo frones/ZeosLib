@@ -754,7 +754,6 @@ var S: String;
 begin
   with TZAbstractRODatasetHack(Query) do
   try
-    Connection := Connection;
     SQL.Text := 'select * from guid_test';
     Open;
     Check(Fields[1].DataType = ftGUID);
@@ -1183,14 +1182,18 @@ begin
     Exit;
   Query := TZQuery.Create(nil);
   Query.ReadOnly := True;
+  Query.Connection := Connection;
   InternalTestSF224(Query);
   Query := TZQuery.Create(nil);
   Query.ReadOnly := False;
+  Query.Connection := Connection;
   InternalTestSF224(Query);
   ROQuery := TZReadOnlyQuery.Create(nil);
+  ROQuery.Connection := Connection;
   InternalTestSF224(ROQuery);
   ROQuery := TZReadOnlyQuery.Create(nil);
   ROQuery.IsUniDirectional := True;
+  ROQuery.Connection := Connection;
   InternalTestSF224(ROQuery);
 end;
 
