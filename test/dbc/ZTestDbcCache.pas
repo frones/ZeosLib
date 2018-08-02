@@ -835,8 +835,8 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEqualsDate(FTime, AnsiSqlDateToDateTime(GetString(stTimeIndex, WasNull{%H-})), [], 'GetString');
-    CheckEqualsDate(FTime, GetTime(stTimeIndex, WasNull), [], 'Getime');
+    CheckEqualsDate(FTime, AnsiSqlDateToDateTime(GetString(stTimeIndex, WasNull{%H-})), [dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec], 'GetString');
+    CheckEqualsDate(FTime, GetTime(stTimeIndex, WasNull), [dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec], 'Getime');
 //    CheckEqualsDate(FTime, GetTimestamp(stTimeIndex, WasNull), [], 'GetTimestamp');
   end;
 end;
