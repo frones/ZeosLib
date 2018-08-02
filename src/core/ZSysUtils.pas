@@ -1783,7 +1783,7 @@ end;
 function FloatToSQLStr(Value: Extended): string;
 begin
   Result := FloatToStr(Value, FSSqlFloat);
-  end;
+end;
 
 function SQLStrToFloat(const Str: String): Extended;
 begin
@@ -2079,7 +2079,7 @@ begin
     Result := Ord(Value) - Ord('0');
 end;
 
-function CheckNumberRange(Value: AnsiChar): Boolean; overload; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function CheckNumberRange(Value: AnsiChar): Boolean; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 begin
   Result := ((Ord(Value) >= Ord('0')) and (Ord(Value) <= Ord('9')));
 end;
@@ -2801,6 +2801,7 @@ begin
     if SLen > 0 then
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^, (P+Len)^, Slen);
 end;
+
 {**
   Converts DateTime value to a rawbyteString
   @param Value a TDateTime value.
@@ -2809,7 +2810,7 @@ end;
 }
 function DateTimeToRawSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
+  const Quoted: Boolean; const Suffix: RawByteString): RawByteString;
 begin
   ZSetString(nil, ConFormatSettings.DateFormatLen+Byte((Ord(Quoted) shl 1))+Cardinal(Length(Suffix)), Result);
   DateTimeToRawSQLDate(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
@@ -2817,7 +2818,7 @@ end;
 
 procedure DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = '');
+  const Quoted: Boolean; const Suffix: RawByteString);
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2863,6 +2864,7 @@ begin
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^,
       (Buf+ConFormatSettings.DateFormatLen+Ord(Quoted))^, Length(Suffix));
 end;
+
 {**
   Converts DateTime value to a rawbyteString
   @param Value a TDateTime value.
@@ -2871,7 +2873,7 @@ end;
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
+  const Quoted: Boolean; const Suffix: ZWideString): ZWideString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2927,7 +2929,7 @@ end;
 {$WARNINGS OFF} //suppress D2007 Warning for undefined result
 function DateTimeToRawSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
+  const Quoted: Boolean; const Suffix: RawByteString): RawByteString;
 begin
   ZSetString(nil, ConFormatSettings.TimeFormatLen+Byte((Ord(Quoted) shl 1))+Cardinal(Length(Suffix)), Result);
   DateTimeToRawSQLTime(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
@@ -2935,7 +2937,7 @@ end;
 
 procedure DateTimeToRawSQLTime(const Value: TDateTime; Buffer: PAnsichar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = ''); overload;
+  const Quoted: Boolean; const Suffix: RawByteString); overload;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2987,6 +2989,7 @@ begin
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^,
       (Buffer+ConFormatSettings.TimeFormatLen+Ord(Quoted))^, Length(Suffix));
 end;
+
 {**
   Converts DateTime value into a WideString/UnicodeString with format pattern
   @param Value a TDateTime value.
@@ -2995,7 +2998,7 @@ end;
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
+  const Quoted: Boolean; const Suffix: ZWideString): ZWideString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -4035,14 +4038,14 @@ begin
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
-function GUIDToRaw(const GUID: TGUID; WithBrackets: Boolean = True): RawByteString; overload;
+function GUIDToRaw(const GUID: TGUID; WithBrackets: Boolean): RawByteString;
 begin
   ZSetString(nil, 38, Result{%H-});
   GUIDToBuffer(@GUID.D1, PAnsiChar(Pointer(Result)), WithBrackets, False);
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
-function GUIDToRaw(const Bts: TBytes; WithBrackets: Boolean = True): RawByteString; overload;
+function GUIDToRaw(const Bts: TBytes; WithBrackets: Boolean): RawByteString;
 begin
   if Length(Bts) <> 16 then
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
@@ -4051,7 +4054,7 @@ begin
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
-function GUIDToRaw(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): RawByteString; overload;
+function GUIDToRaw(Buffer: Pointer; Len: Byte; WithBrackets: Boolean): RawByteString;
 begin
   if (Buffer = Nil) or (Len <> 16) then
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
@@ -4060,14 +4063,14 @@ begin
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
-function GUIDToUnicode(const GUID: TGUID; WithBrackets: Boolean = True): ZWideString; overload;
+function GUIDToUnicode(const GUID: TGUID; WithBrackets: Boolean): ZWideString;
 begin
   ZSetString(nil, 38, Result{%H-});
   GUIDToBuffer(@GUID.D1, PWideChar(Pointer(Result)), WithBrackets, False);
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
-function GUIDToUnicode(const Bts: TBytes; WithBrackets: Boolean = True): ZWideString; overload;
+function GUIDToUnicode(const Bts: TBytes; WithBrackets: Boolean): ZWideString;
 begin
   if Length(Bts) <> 16 then
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
@@ -4076,7 +4079,7 @@ begin
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
-function GUIDToUnicode(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): ZWideString; overload;
+function GUIDToUnicode(Buffer: Pointer; Len: Byte; WithBrackets: Boolean): ZWideString;
 begin
   if (Buffer = Nil) or (Len <> 16) then
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
