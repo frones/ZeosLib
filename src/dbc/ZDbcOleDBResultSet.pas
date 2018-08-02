@@ -699,7 +699,7 @@ begin
         {$ENDIF}
       DBTYPE_IDISPATCH: Result := '';
       DBTYPE_ERROR:     Result := ZFastCode.IntToStr(PLongInt(FData)^);
-      DBTYPE_BOOL:      Result := {$IFDEF UNICODE}BoolToUnicodeEx{$ELSE}BoolToRawEx{$ENDIF}(PWordBool(FData)^);
+      DBTYPE_BOOL:      Result := BoolToStrEx(PWordBool(FData)^);
       DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       DBTYPE_IUNKNOWN:  Result := '';
       //DBTYPE_DECIMAL	= 14;
@@ -709,7 +709,7 @@ begin
       DBTYPE_UI4:       Result := ZFastCode.IntToStr(PLongWord(FData)^);
       DBTYPE_I8:        Result := ZFastCode.IntToStr(PInt64(FData)^);
       DBTYPE_UI8:       Result := ZFastCode.IntToStr(PUInt64(FData)^);
-      DBTYPE_GUID:      Result := {$IFDEF UNICODE}GuidToUnicode{$ELSE}GuidToRaw{$ENDIF}(PGUID(FData)^);
+      DBTYPE_GUID:      Result := GUIDToStr(PGUID(FData)^);
       DBTYPE_BYTES, DBTYPE_BYTES or DBTYPE_BYREF:   Result := '';
       DBTYPE_STR:
         if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
@@ -1158,7 +1158,7 @@ begin
       DBTYPE_UI4:       FUniTemp := ZFastCode.IntToUnicode(PLongWord(FData)^);
       DBTYPE_I8:        FUniTemp := ZFastCode.IntToUnicode(PInt64(FData)^);
       DBTYPE_UI8:       FUniTemp := ZFastCode.IntToUnicode(PUInt64(FData)^);
-      DBTYPE_GUID:      FUniTemp := GuidToUnicode(PGUID(FData)^);
+      DBTYPE_GUID:      FUniTemp := GUIDToUnicode(PGUID(FData)^);
       DBTYPE_STR:
         if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
           FUniTemp := GetBlob(ColumnIndex).GetUnicodeString
@@ -1272,7 +1272,7 @@ begin
       DBTYPE_UI4:       Result := ZFastCode.IntToUnicode(PLongWord(FData)^);
       DBTYPE_I8:        Result := ZFastCode.IntToUnicode(PInt64(FData)^);
       DBTYPE_UI8:       Result := ZFastCode.IntToUnicode(PUInt64(FData)^);
-      DBTYPE_GUID:      Result := GuidToUnicode(PGUID(FData)^);
+      DBTYPE_GUID:      Result := GUIDToUnicode(PGUID(FData)^);
       DBTYPE_BYTES, DBTYPE_BYTES or DBTYPE_BYREF:   Result := '';
       DBTYPE_STR:
         if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then

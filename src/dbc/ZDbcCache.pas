@@ -2002,7 +2002,7 @@ begin
                   Exit;
                 end else
                   FRawTemp := '';
-      stGUID: FRawTemp := GUIDToRaw(Data, 16);
+      stGUID: FRawTemp := GUIDToRaw(PGUID(Data)^);
       stDate: FRawTemp := DateTimeToRawSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
       stTime: FRawTemp := DateTimeToRawSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
       stTimestamp: FRawTemp := DateTimeToRawSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
@@ -2093,7 +2093,7 @@ begin
                 System.SetString(Result, PAnsiChar(Data^), PWord(PAnsiChar(Data)+SizeOf(Pointer))^)
                 {$ENDIF}
               else Result := '';
-      stGUID: Result := {$IFDEF UNICODE}GUIDToUnicode{$ELSE}GUIDToRaw{$ENDIF}(Data, 16);
+      stGUID: Result := GUIDToStr(PGUID(Data)^);
       stDate: Result := DateTimeToSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
       stTime: Result := DateTimeToSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
       stTimestamp: Result := DateTimeToSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
@@ -2153,7 +2153,7 @@ begin
       stBytes: if Data^ <> nil
                 then ZSetString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^, Result)
                 else Result := '';
-      stGUID: Result := GUIDToRaw(Data, 16);
+      stGUID: Result := GUIDToRaw(PGUID(Data)^);
       stDate: Result := DateTimeToRawSQLDate(PDateTime(Data)^,
         ConSettings^.DisplayFormatSettings, False);
       stTime: Result := DateTimeToRawSQLTime(PDateTime(Data)^,
@@ -2209,7 +2209,7 @@ begin
       stBytes: if Data <> nil
                 then ZSetString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^, Result)
                 else Result := '';
-      stGUID: Result := GUIDToRaw(Data, 16);
+      stGUID: Result := GUIDToRaw(PGUID(Data)^);
       stString, stUnicodeString:
         if (Data^ = nil)
         then Result := ''
@@ -2294,7 +2294,7 @@ begin
       stBytes: if Data <> nil
                 then ZSetString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^, Result)
                 else Result := '';
-      stGUID: Result := GUIDToRaw(Data, 16);
+      stGUID: Result := GUIDToRaw(PGUID(Data)^);
       stDate: Result := DateTimeToRawSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
       stTime: Result := DateTimeToRawSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
       stTimestamp: Result := DateTimeToRawSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
@@ -2373,7 +2373,7 @@ begin
       stBytes: if Data^ <> nil
                 then FUniTemp := ASCII7ToUnicodeString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^)
                 else FUniTemp := '';
-      stGUID: FUniTemp := GUIDToUnicode(Data, 16);
+      stGUID: FUniTemp := GUIDToUnicode(PGUID(Data)^);
       stDate: FUniTemp := DateTimeToUnicodeSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
       stTime: FUniTemp := DateTimeToUnicodeSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
       stTimestamp: FUniTemp := DateTimeToUnicodeSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
@@ -2438,7 +2438,7 @@ begin
       stBytes: if Data^ <> nil
                 then Result := ASCII7ToUnicodeString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^)
                 else Result := '';
-      stGUID: Result := GUIDToUnicode(Data, 16);
+      stGUID: Result := GUIDToUnicode(PGUID(Data)^);
       stDate: Result := DateTimeToUnicodeSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
       stTime: Result := DateTimeToUnicodeSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
       stTimestamp: Result := DateTimeToUnicodeSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);

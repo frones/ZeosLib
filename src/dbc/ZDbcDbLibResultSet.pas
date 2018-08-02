@@ -370,7 +370,7 @@ begin
     else
     if DT = tdsUnique then
     begin
-      FRawTemp := GUIDToRaw(Result, 16);
+      FRawTemp := GUIDToRaw(PGUID(Result)^);
       Result := Pointer(FRawTemp);
       Len := 38;
     end
@@ -452,7 +452,7 @@ begin
         end
     end else
     if DT = tdsUnique then
-      Result := GUIDToUnicode(P, 16)
+      Result := GUIDToUnicode(PGUID(P)^)
     else if (DT = tdsImage) then
       ZSetString(P, Len, Result)
     else
@@ -512,7 +512,7 @@ begin
       end;
     end else
     if DT = tdsUnique then
-      FRawTemp := GUIDToRaw(Data, 16)
+      FRawTemp := GUIDToRaw(PGUID(Data)^)
     else
     if (DT = tdsImage) then
       ZSetString(Data, DL, Result)

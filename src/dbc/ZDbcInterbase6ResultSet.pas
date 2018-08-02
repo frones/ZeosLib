@@ -1567,8 +1567,8 @@ begin
           SQL_LONG      : Result := ZFastCode.IntToStr(PInteger(sqldata)^);
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := FloatToStr(PSingle(sqldata)^);
-          SQL_BOOLEAN   : Result := {$IFDEF UNICODE}BoolToUnicodeEx{$ELSE}BoolToRawEx{$ENDIF}(PSmallint(sqldata)^ <> 0);
-          SQL_BOOLEAN_FB: Result := {$IFDEF UNICODE}BoolToUnicodeEx{$ELSE}BoolToRawEx{$ENDIF}(PByte(sqldata)^ <> 0);
+          SQL_BOOLEAN   : Result := BoolToStrEx(PSmallint(sqldata)^ <> 0);
+          SQL_BOOLEAN_FB: Result := BoolToStrEx(PByte(sqldata)^ <> 0);
           SQL_SHORT     : Result := ZFastCode.IntToStr(PSmallint(sqldata)^);
           SQL_INT64     : Result := ZFastCode.IntToStr(PInt64(sqldata)^);
           SQL_TEXT,

@@ -706,7 +706,7 @@ begin
             begin
               P.Type_ := adGUID;
               P.Size := 38;
-              P.Value := {$IFNDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(GUIDToString(ZGUIDArray[j]));
+              P.Value := GUIDToUnicode(ZGUIDArray[j]);
             end;
           stString, stUnicodeString:
             begin

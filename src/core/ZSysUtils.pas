@@ -263,6 +263,13 @@ function BoolToUnicodeEx(Value: Boolean): ZWideString; {$IFDEF WITH_INLINE} inli
 }
 function BoolToRawEx(Value: Boolean): RawByteString; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
+{**
+  Converts a boolean into native string value.
+  @param Bool a boolean value.
+  @return <code>"True"</code> or <code>"False"</code>
+}
+function BoolToStrEx(Value: Boolean): string; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+
 {$IFDEF ENABLE_POSTGRESQL}
 {**
   Checks if the specified string can represent an IP address.
@@ -698,6 +705,10 @@ function GUIDToRaw(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): Ra
 function GUIDToUnicode(const GUID: TGUID; WithBrackets: Boolean = True): ZWideString; overload;
 function GUIDToUnicode(const Bts: TBytes; WithBrackets: Boolean = True): ZWideString; overload;
 function GUIDToUnicode(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): ZWideString; overload;
+
+function GUIDToStr(const GUID: TGUID; WithBrackets: Boolean = True): string; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GUIDToStr(const Bts: TBytes; WithBrackets: Boolean = True): string; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GUIDToStr(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): string; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 procedure ValidGUIDToBinary(Src, Dest: PAnsiChar); overload;
 procedure ValidGUIDToBinary(Src: PWideChar; Dest: PAnsiChar); overload;
@@ -1628,6 +1639,16 @@ end;
 function BoolToRawEx(Value: Boolean): RawByteString;
 begin
   Result := BoolStrsRaw[Value];
+end;
+
+{**
+  Converts a boolean into native string value.
+  @param Bool a boolean value.
+  @return <code>"True"</code> or <code>"False"</code>
+}
+function BoolToStrEx(Value: Boolean): string;
+begin
+  Result := BoolStrs[Value];
 end;
 
 {$IFDEF ENABLE_POSTGRESQL}
@@ -4136,6 +4157,21 @@ begin
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
   ZSetString(nil, 38, Result{%H-});
   GUIDToBuffer(Buffer, PWideChar(Pointer(Result)), WithBrackets, False);
+end;
+
+function GUIDToStr(const GUID: TGUID; WithBrackets: Boolean): string;
+begin
+  Result := {$IFDEF UNICODE} GUIDToUnicode {$ELSE} GUIDToRaw {$ENDIF} (GUID, WithBrackets);
+end;
+
+function GUIDToStr(const Bts: TBytes; WithBrackets: Boolean): string;
+begin
+  Result := {$IFDEF UNICODE} GUIDToUnicode {$ELSE} GUIDToRaw {$ENDIF} (Bts, WithBrackets);
+end;
+
+function GUIDToStr(Buffer: Pointer; Len: Byte; WithBrackets: Boolean): string;
+begin
+  Result := {$IFDEF UNICODE} GUIDToUnicode {$ELSE} GUIDToRaw {$ENDIF} (Buffer, Len, WithBrackets);
 end;
 
 procedure InvalidGUID(C: Char);
