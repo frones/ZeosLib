@@ -227,7 +227,7 @@ type
   private
     procedure EncodeString(const Code: Smallint; const Index: Word; const Str: RawByteString);
     procedure EncodePData(Code: Smallint; Index: Word; Value: PAnsiChar; Len: LengthInt);
-    procedure UpdateDateTime(const Index: Integer; Value: TDateTime);
+    procedure UpdateDateTime(const Index: Integer; const Value: TDateTime);
   public
     procedure WriteLobBuffer(const Index: Integer; const Buffer: Pointer; const Len: Integer);
 
@@ -484,6 +484,13 @@ const
     // FB20+
     (Name: 'isc_tpb_lock_timeout';     ValueType: pvtNum;     Number: isc_tpb_lock_timeout)
   );
+
+//ported  from NoThrowTimeStamp.cpp
+
+procedure isc_decode_time(ntime: ISC_TIME; out hours, minutes, seconds: Word; out fractions: LongWord);
+procedure isc_encode_time(var ntime: ISC_TIME; hours, minutes, seconds: Word; fractions: LongWord);
+procedure isc_decode_date(nday: ISC_DATE; out year, month, day: Word);
+procedure isc_encode_date(out nday: ISC_DATE; year, month, day: Word);
 
 implementation
 
@@ -2355,40 +2362,31 @@ end;
    @param Value the source value
 }
 procedure TZParamsSQLDA.UpdateDateTime(const Index: Integer;
-  Value: TDateTime);
+  const Value: TDateTime);
 var
-  y, m, d: word;
-  hr, min, sec, msec: word;
   SQLCode: SmallInt;
-  TmpDate: TCTimeStructure;
+  TmpDate: TZTimeStamp;//TCTimeStructure;
+  P : Pointer;
 begin
   CheckRange(Index);
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
-    DecodeDate(Value, y, m, d);
-    DecodeTime(Value, hr, min, sec, msec);
-
-    FillChar(TmpDate{%H-}, SizeOf(TmpDate), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-    TmpDate.tm_year := y - 1900;
-    TmpDate.tm_mon := m - 1;
-    TmpDate.tm_mday := d;
-    TmpDate.tm_hour := hr;
-    TmpDate.tm_min := min;
-    TmpDate.tm_sec := sec;
+    DecodeDate(Value, TmpDate.Year, TmpDate.Month, TmpDate.Day);
+    TmpDate.Fractions := 0; //init
+    DecodeTime(Value, TmpDate.Hour, TmpDate.Minute, TmpDate.Second, PWord(@TmpDate.Fractions)^);
+    TmpDate.Fractions := TmpDate.Fractions*10;
 
     {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
+    P := sqldata;
     case SQLCode of
-      SQL_TYPE_DATE : FPlainDriver.isc_encode_sql_date(@TmpDate, PISC_DATE(sqldata));
-      SQL_TYPE_TIME : begin
-                        FPlainDriver.isc_encode_sql_time(@TmpDate, PISC_TIME(sqldata));
-                        PISC_TIME(sqldata)^ := PISC_TIME(sqldata)^ {%H-}+ msec*10;
-                      end;
+      SQL_TYPE_DATE : isc_encode_date(PISC_DATE(P)^, TmpDate.Year, TmpDate.Month, TmpDate.Day);
+      SQL_TYPE_TIME : isc_encode_time(PISC_TIME(sqldata)^, TmpDate.Hour, TmpDate.Minute, TmpDate.Second, TmpDate.Fractions);
       SQL_TIMESTAMP : begin
-                        FPlainDriver.isc_encode_timestamp(@TmpDate,PISC_TIMESTAMP(sqldata));
-                        PISC_TIMESTAMP(sqldata).timestamp_time :=PISC_TIMESTAMP(sqldata).timestamp_time {%H-}+ msec*10;
+                        isc_encode_date(PISC_TIMESTAMP(sqldata).timestamp_date, TmpDate.Year, TmpDate.Month, TmpDate.Day);
+                        isc_encode_time(PISC_TIMESTAMP(sqldata).timestamp_time, TmpDate.Hour, TmpDate.Minute, TmpDate.Second, TmpDate.Fractions);
                       end;
       else
         raise EZIBConvertError.Create(SInvalidState);
@@ -3131,6 +3129,76 @@ begin
     Put([EBSuspend], PStmts);
   Put([EBEnd], PStmts);
   Inc(PreparedRowsOfArray);
+end;
+
+procedure isc_decode_time(ntime: ISC_TIME; out hours, minutes, seconds: Word; out fractions: LongWord);
+begin
+  hours := ntime div (3600 * ISC_TIME_SECONDS_PRECISION);
+  ntime := ntime mod (3600 * ISC_TIME_SECONDS_PRECISION);
+  minutes := ntime div (60 * ISC_TIME_SECONDS_PRECISION);
+  ntime := ntime mod (60 * ISC_TIME_SECONDS_PRECISION);
+  seconds := ntime div ISC_TIME_SECONDS_PRECISION;
+  fractions := ntime mod ISC_TIME_SECONDS_PRECISION;
+end;
+
+procedure isc_encode_time(var ntime: ISC_TIME; hours, minutes, seconds: Word; fractions: LongWord);
+begin
+  ntime := ((hours * 60 + minutes) * 60 + seconds) * ISC_TIME_SECONDS_PRECISION + fractions;
+end;
+
+const
+  //see https://stackoverflow.com/questions/5248827/convert-datetime-to-julian-date-in-c-sharp-tooadate-safe
+  JD_Offset             = 1721119; //This is the Julian Date of March 2nd, 1 BC. Since we moved the 'start' of the calendar from January to March, we use this as our offset
+  JDZeroFromGMT         = 2400001; //Julian Date Zero (from noon GMT)
+  IB_BaseDateToDay0Diff  = (JDZeroFromGMT-JD_Offset); //number of days from 0/0/0000 to IB/FB base date
+  Day0ToIB_BaseDateDiff  = (JD_Offset-JDZeroFromGMT); //number of days from IB/FB base date to 0/0/0000
+  DaysOf4YearCycle      = 1461;
+  DaysOf400YearsCycle   = 146097; //400 years contain 146097 https://wiki.osdev.org/Julian_Day_Number
+  Aug8th                = 153; //8. August
+
+//This formula is taken from the 1939 edition of Funk & Wagnall's College Standard Dictionary (entry for the word "calendar").
+//so there is no IB/FB "hokuspokus" to play with encode/decode
+procedure isc_decode_date(nday: ISC_DATE; out year, month, day: Word);
+var century: integer;
+begin
+  nday := nday + IB_BaseDateToDay0Diff;
+  century := (4 * nday - 1) div DaysOf400YearsCycle;
+  nday := 4 * nday - 1 - DaysOf400YearsCycle * century;
+  day := nday div 4;
+
+  nday := (4 * day + 3) div DaysOf4YearCycle;
+  day  := 4 * day + 3 - DaysOf4YearCycle * nday;
+  day := (day + 4) div 4;
+
+  month := (5 * day - 3) div Aug8th;
+  day := 5 * day - 3 - Aug8th * month;
+  day := (day + 5) div 5;
+
+  year := 100 * century + nday;
+
+  if (month < 10) then
+    month := month +3
+  else begin
+    month := month-9;
+    year := year +1;
+  end;
+end;
+
+procedure isc_encode_date(out nday: ISC_DATE; year, month, day: word);
+var century, year_anno: Integer;
+begin
+  if (month > 2) then
+    month := month -3
+  else begin
+    month := month + 9;
+    year := year -1;
+  end;
+
+  century := year div 100;
+  year_anno := year - 100 * century;
+  nday := ((Int64(DaysOf400YearsCycle * century)) div 4 +
+           (DaysOf4YearCycle * year_anno) div 4 +
+           (Aug8th * month + 2) div 5 + day + Day0ToIB_BaseDateDiff);
 end;
 
 end.
