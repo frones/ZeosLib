@@ -84,6 +84,8 @@ const
   BoolStrs: array[Boolean] of string = (StrFalse, StrTrue);
   BoolStrsRaw: array[Boolean] of RawByteString = (RawByteString(StrFalse), RawByteString(StrTrue));
   BoolStrsW: array[Boolean] of ZWideString = (ZWideString(StrFalse), ZWideString(StrTrue));
+  SQLDateTimeFmt = 'yyyy-mm-dd hh:nn:ss';
+  SQLDateTimeFmtMSecs = 'yyyy-mm-dd hh:nn:ss.zzz';
 
 var
   TwoDigitLookupHexW: packed array[Byte] of Word;
@@ -496,6 +498,13 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 
 {**
+  Converts DateTime value to native string
+}
+function DateTimeToSQLDate(const Value: TDateTime;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: string = ''): string; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+
+{**
   Converts DateTime value into a RawByteString with format pattern
   @param Value a TDateTime value.
   @param TimeFormat the result format.
@@ -520,6 +529,13 @@ function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 
 {**
+  Converts DateTime value to native string
+}
+function DateTimeToSQLTime(const Value: TDateTime;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: string = ''): string; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+
+{**
   Converts DateTime value to a RawByteString
   @param Value a TDateTime value.
   @param TimeStampFormat the result format.
@@ -542,6 +558,13 @@ procedure DateTimeToRawSQLTimeStamp(const Value: TDateTime; Buf: PAnsiChar;
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
+
+{**
+  Converts DateTime value to native string
+}
+function DateTimeToSQLTimeStamp(const Value: TDateTime;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: string = ''): string; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 {**
   Converts TDateTime to Ansi SQL Date/Time
@@ -2921,6 +2944,16 @@ begin
 end;
 
 {**
+  Converts DateTime value to native string
+}
+function DateTimeToSQLDate(const Value: TDateTime;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: string): string;
+begin
+  Result := {$IFDEF UNICODE} DateTimeToUnicodeSQLDate {$ELSE} DateTimeToRawSQLDate {$ENDIF} (Value, ConFormatSettings, Quoted, Suffix);
+end;
+
+{**
   Converts DateTime value into a RawByteString with format pattern
   @param Value a TDateTime value.
   @param TimeFormat the result format.
@@ -3052,6 +3085,15 @@ begin
     end;
 end;
 
+{**
+  Converts DateTime value to native string
+}
+function DateTimeToSQLTime(const Value: TDateTime;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: string): string;
+begin
+  Result := {$IFDEF UNICODE} DateTimeToUnicodeSQLTime {$ELSE} DateTimeToRawSQLTime {$ENDIF} (Value, ConFormatSettings, Quoted, Suffix);
+end;
 
 {**
   Converts DateTime value to a RawByteString
@@ -3236,6 +3278,15 @@ begin
 end;
 {$WARNINGS ON} //suppress D2007 Warning for undefined result
 
+{**
+  Converts DateTime value to native string
+}
+function DateTimeToSQLTimeStamp(const Value: TDateTime;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: string): string;
+begin
+  Result := {$IFDEF UNICODE} DateTimeToUnicodeSQLTimeStamp {$ELSE} DateTimeToRawSQLTimeStamp {$ENDIF} (Value, ConFormatSettings, Quoted, Suffix);
+end;
 
 {**
   Converts TDateTime to Ansi SQL Date/Time
@@ -3250,12 +3301,12 @@ begin
   begin
     DecodeTime(Value,a,a,a,MSec);
     if MSec=0 then
-      Result := FormatDateTime('yyyy-mm-dd hh:nn:ss', Value)
+      Result := FormatDateTime(SQLDateTimeFmt, Value)
     else
-      Result := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Value);
+      Result := FormatDateTime(SQLDateTimeFmtMSecs, Value);
   end
   else
-    Result := FormatDateTime('yyyy-mm-dd hh:nn:ss', Value);
+    Result := FormatDateTime(SQLDateTimeFmt, Value);
 end;
 
 { TZSortedList }
