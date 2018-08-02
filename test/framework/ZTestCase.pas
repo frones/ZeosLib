@@ -631,8 +631,6 @@ end;
 
 procedure TZAbstractTestCase.CheckEqualsDate(const Expected, Actual: TDateTime;
   Parts: TDateParts; const Msg: string);
-const
-  fmt = 'YYYY-MM-DD HH:NN:SS.ZZZ';
 var
   EYear, EMonth, EDay, EHour, EMin, ESec, EMSec: Word;
   AYear, AMonth, ADay, AHour, AMin, ASec, AMSec: Word;
@@ -640,7 +638,7 @@ var
 begin
   if Parts = [] then
     Parts := [dpYear..dpMSec];
-  s := NotEqualsErrorMessage(FormatDateTime(fmt, Expected), FormatDateTime(fmt, Actual), Msg);
+  s := NotEqualsErrorMessage(FormatDateTime(DefDateTimeFormatMsecs, Expected), FormatDateTime(DefDateTimeFormatMsecs, Actual), Msg);
   DecodeDate(Expected, EYear, EMonth, EDay);
   DecodeTime(Expected, EHour, EMin, ESec, EMSec);
   DecodeDate(Actual, AYear, AMonth, ADay);

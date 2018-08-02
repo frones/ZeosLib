@@ -603,7 +603,6 @@ procedure TZTestRowAccessorCase.TestRowAccessorBytes;
   end;
 
 var
-  I: Integer;
   ByteArray: TBytes;
   WasNull: Boolean;
 begin
@@ -626,9 +625,10 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEqualsDate(FDate, AnsiSqlDateToDateTime(GetString(stDateIndex, WasNull{%H-})));
-    CheckEqualsDate(FDate, GetDate(stDateIndex, WasNull));
-    CheckEqualsDate(FDate, GetTimestamp(stDateIndex, WasNull));
+    CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.DateFormat, FDate),
+      GetString(stDateIndex, WasNull{%H-}), 'GetString');
+    CheckEqualsDate(FDate, GetDate(stDateIndex, WasNull), [], 'GetDate');
+    CheckEqualsDate(FDate, GetTimestamp(stDateIndex, WasNull), [], 'GetTimestamp');
   end;
 end;
 
@@ -835,9 +835,10 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEqualsDate(FTime, AnsiSqlDateToDateTime(GetString(stTimeIndex, WasNull{%H-})), [dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec], 'GetString');
-    CheckEqualsDate(FTime, GetTime(stTimeIndex, WasNull), [dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec], 'Getime');
-//    CheckEqualsDate(FTime, GetTimestamp(stTimeIndex, WasNull), [], 'GetTimestamp');
+    CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.TimeFormat, FTime),
+      GetString(stTimeIndex, WasNull{%H-}), 'GetString');
+    CheckEqualsDate(FTime, GetTime(stTimeIndex, WasNull), [], 'GetTime');
+    CheckEqualsDate(FTime, GetTimestamp(stTimeIndex, WasNull), [], 'GetTimestamp');
   end;
 end;
 
@@ -850,9 +851,10 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(FormatDateTime('yyyy-mm-dd hh:mm:ss', FTimeStamp),
-        GetString(stTimestampIndex, WasNull{%H-}), 'GetString');
-//!!! Rwrite    CheckEquals(DateOf(FTimeStamp), GetDate(stTimestampIndex, WasNull), [], 'GetDate');
+    CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.DateTimeFormat, FTimeStamp),
+      GetString(stTimestampIndex, WasNull{%H-}), 'GetString');
+    CheckEqualsDate(FTimeStamp, GetDate(stTimestampIndex, WasNull), [dpYear..dpDay], 'GetDate');
+    CheckEqualsDate(FTimeStamp, GetTime(stTimestampIndex, WasNull), [dpHour..dpMSec], 'GetTime');
     CheckEqualsDate(FTimeStamp, GetTimestamp(stTimestampIndex, WasNull), [], 'GetTimestamp');
   end;
 end;
