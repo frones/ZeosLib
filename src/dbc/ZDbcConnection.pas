@@ -64,7 +64,7 @@ uses
 {$IFDEF WITH_LCONVENCODING}
   LConvEncoding,
 {$ENDIF}
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, StrUtils,
   ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility, ZGenericSqlToken,
   ZGenericSqlAnalyser, ZPlainDriver, ZURL, ZCollections, ZVariant;
 
@@ -641,62 +641,56 @@ begin
   Result := FURL.Properties;
 end;
 
-procedure TZAbstractDbcConnection.SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
+procedure TZAbstractDbcConnection.SetDateTimeFormatProperties(DetermineFromInfo: Boolean);
+
+  procedure SetNotEmptyFormat(const FmtFromValues, FmtDefault: string; out ResultFmt: string);
+  begin
+    if FmtFromValues = '' then
+      ResultFmt := FmtDefault
+    else
+      ResultFmt := UpperCase(FmtFromValues);
+  end;
+
 begin
-  {date formats}
   if DetermineFromInfo then begin
-    if Info.Values[ConnProps_DateWriteFormat] = '' then
-      ConSettings^.WriteFormatSettings.DateFormat := 'YYYY-MM-DD'
-    else
-      ConSettings^.WriteFormatSettings.DateFormat := UpperCase(Info.Values[ConnProps_DateWriteFormat]);
+    {date formats}
+    SetNotEmptyFormat(Info.Values[ConnProps_DateWriteFormat],
+      DefDateFormatYMD,
+      ConSettings^.WriteFormatSettings.DateFormat);
 
-    if Info.Values[ConnProps_DateReadFormat] = '' then
-      ConSettings^.ReadFormatSettings.DateFormat := 'YYYY-MM-DD'
-    else
-      ConSettings^.ReadFormatSettings.DateFormat := UpperCase(Info.Values[ConnProps_DateReadFormat]);
+    SetNotEmptyFormat(Info.Values[ConnProps_DateReadFormat],
+      DefDateFormatYMD,
+      ConSettings^.ReadFormatSettings.DateFormat);
 
-    if Info.Values[ConnProps_DateDisplayFormat] = '' then
-      ConSettings^.DisplayFormatSettings.DateFormat := ({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat)
-    else
-      ConSettings^.DisplayFormatSettings.DateFormat := UpperCase(Info.Values[ConnProps_DateDisplayFormat]);
+    SetNotEmptyFormat(Info.Values[ConnProps_DateDisplayFormat],
+      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat,
+      ConSettings^.DisplayFormatSettings.DateFormat);
 
     {time formats}
-    if Info.Values[ConnProps_TimeWriteFormat] = '' then
-      if GetMetaData.GetDatabaseInfo.SupportsMilliseconds then
-        ConSettings^.WriteFormatSettings.TimeFormat := 'HH:NN:SS.ZZZ'
-      else
-        ConSettings^.WriteFormatSettings.TimeFormat := 'HH:NN:SS'
-    else
-      ConSettings^.WriteFormatSettings.TimeFormat := UpperCase(Info.Values[ConnProps_TimeWriteFormat]);
+    SetNotEmptyFormat(Info.Values[ConnProps_TimeWriteFormat],
+      IfThen(GetMetaData.GetDatabaseInfo.SupportsMilliseconds, DefTimeFormatMsecs, DefTimeFormat),
+      ConSettings^.WriteFormatSettings.TimeFormat);
 
-    if Info.Values[ConnProps_TimeReadFormat] = '' then
-      if GetMetaData.GetDatabaseInfo.SupportsMilliseconds then
-        ConSettings^.ReadFormatSettings.TimeFormat := 'HH:NN:SS.ZZZ'
-      else
-        ConSettings^.ReadFormatSettings.TimeFormat := 'HH:NN:SS'
-    else
-      ConSettings^.ReadFormatSettings.TimeFormat := UpperCase(Info.Values[ConnProps_TimeReadFormat]);
+    SetNotEmptyFormat(Info.Values[ConnProps_TimeReadFormat],
+      IfThen(GetMetaData.GetDatabaseInfo.SupportsMilliseconds, DefTimeFormatMsecs, DefTimeFormat),
+      ConSettings^.ReadFormatSettings.TimeFormat);
 
-    if Info.Values[ConnProps_TimeDisplayFormat] = '' then
-      ConSettings^.DisplayFormatSettings.TimeFormat := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat
-    else
-      ConSettings^.DisplayFormatSettings.TimeFormat := UpperCase(Info.Values[ConnProps_TimeDisplayFormat]);
+    SetNotEmptyFormat(Info.Values[ConnProps_TimeDisplayFormat],
+      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat,
+      ConSettings^.DisplayFormatSettings.TimeFormat);
 
-    {timestamp format}
-    if Info.Values[ConnProps_DateTimeWriteFormat] = '' then
-      ConSettings^.WriteFormatSettings.DateTimeFormat := ConSettings^.WriteFormatSettings.DateFormat+' '+ConSettings^.WriteFormatSettings.TimeFormat
-    else
-      ConSettings^.WriteFormatSettings.DateTimeFormat := Info.Values[ConnProps_DateTimeWriteFormat];
+    {timestamp formats}
+    SetNotEmptyFormat(Info.Values[ConnProps_DateTimeWriteFormat],
+      ConSettings^.WriteFormatSettings.DateFormat+' '+ConSettings^.WriteFormatSettings.TimeFormat,
+      ConSettings^.WriteFormatSettings.DateTimeFormat);
 
-    if Info.Values[ConnProps_DateTimeReadFormat] = '' then
-      ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat
-    else
-      ConSettings^.ReadFormatSettings.DateTimeFormat := UpperCase(Info.Values[ConnProps_DateTimeReadFormat]);
+    SetNotEmptyFormat(Info.Values[ConnProps_DateTimeReadFormat],
+      ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat,
+      ConSettings^.ReadFormatSettings.DateTimeFormat);
 
-    if Info.Values[ConnProps_DateTimeDisplayFormat] = '' then
-      ConSettings^.DisplayFormatSettings.DateTimeFormat := ConSettings^.DisplayFormatSettings.DateFormat+' '+ConSettings^.DisplayFormatSettings.TimeFormat
-    else
-      ConSettings^.DisplayFormatSettings.DateTimeFormat := UpperCase(Info.Values[ConnProps_DateTimeDisplayFormat]);
+    SetNotEmptyFormat(Info.Values[ConnProps_DateTimeDisplayFormat],
+      ConSettings^.DisplayFormatSettings.DateFormat+' '+ConSettings^.DisplayFormatSettings.TimeFormat,
+      ConSettings^.DisplayFormatSettings.DateTimeFormat);
   end;
 
   ConSettings^.WriteFormatSettings.DateFormatLen := Length(ConSettings^.WriteFormatSettings.DateFormat);
