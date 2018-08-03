@@ -1225,6 +1225,8 @@ end;
     query; never <code>null</code>
 }
 function TZAbstractPostgreSQLPreparedStatementV3.ExecuteQueryPrepared: IZResultSet;
+var
+  Status: TZPostgreSQLExecStatusType;
 begin
   PrepareOpenResultSetForReUse;
   Prepare;
@@ -1232,7 +1234,8 @@ begin
   if Findeterminate_datatype or (FRawPlanName = '')
   then Fres := ExecuteInternal(ASQL, pqExecute)
   else Fres := ExecuteInternal(ASQL, pqExecPrepared);
-  if Fres <> nil then
+  Status := FPlainDriver.PQresultStatus(Fres);
+  if (Fres <> nil) and (Status = PGRES_TUPLES_OK) then
     if Assigned(FOpenResultSet)
     then Result := IZResultSet(FOpenResultSet)
     else Result := CreateResultSet(fServerCursor)
