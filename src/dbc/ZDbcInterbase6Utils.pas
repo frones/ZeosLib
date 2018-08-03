@@ -316,11 +316,11 @@ function ConvertInterbase6ToSqlType(const SqlType, SqlSubType, Scale: Integer;
 
 { interbase blob routines }
 procedure GetBlobInfo(const PlainDriver: TZInterbasePlainDriver;
-  const BlobHandle: TISC_BLOB_HANDLE; var BlobInfo: TIbBlobInfo;
+  const BlobHandle: TISC_BLOB_HANDLE; out BlobInfo: TIbBlobInfo;
   const ImmediatelyReleasable: IImmediatelyReleasable);
 procedure ReadBlobBufer(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const TransactionHandle: PISC_TR_HANDLE;
-  const BlobId: TISC_QUAD; var Size: Integer; var Buffer: Pointer;
+  const BlobId: TISC_QUAD; out Size: Integer; out Buffer: Pointer;
   const Binary: Boolean; const ImmediatelyReleasable: IImmediatelyReleasable);
 
 function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
@@ -1349,7 +1349,7 @@ end;
    @param BlobInfo the blob information structure
 }
 procedure GetBlobInfo(const PlainDriver: TZInterbasePlainDriver;
-  const BlobHandle: TISC_BLOB_HANDLE; var BlobInfo: TIbBlobInfo;
+  const BlobHandle: TISC_BLOB_HANDLE; out BlobInfo: TIbBlobInfo;
   const ImmediatelyReleasable: IImmediatelyReleasable);
 var
   Items: array[0..3] of AnsiChar;
@@ -1366,6 +1366,8 @@ begin
   if PlainDriver.isc_blob_info(@StatusVector, @BlobHandle, 4, @items[0],
       SizeOf(Results), @Results[0]) <> 0 then
     CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
+
+  FillChar(BlobInfo, SizeOf(BlobInfo), 0);
 
   pBufStart := @Results[0];
   pBuf := pBufStart;
@@ -1405,13 +1407,13 @@ end;
 }
 procedure ReadBlobBufer(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const TransactionHandle: PISC_TR_HANDLE;
-  const BlobId: TISC_QUAD; var Size: Integer; var Buffer: Pointer;
+  const BlobId: TISC_QUAD; out Size: Integer; out Buffer: Pointer;
   const Binary: Boolean; const ImmediatelyReleasable: IImmediatelyReleasable);
 var
   TempBuffer: PAnsiChar;
   BlobInfo: TIbBlobInfo;
-  BlobSize, CurPos: LongInt;
-  BytesRead, SegmentLenght: ISC_USHORT;
+  CurPos: LongInt;
+  BytesRead, SegLen: ISC_USHORT;
   BlobHandle: TISC_BLOB_HANDLE;
   StatusVector: TARRAY_ISC_STATUS;
 begin
@@ -1426,27 +1428,24 @@ begin
 
   { get blob info }
   GetBlobInfo(PlainDriver, BlobHandle, BlobInfo{%H-}, ImmediatelyReleasable);
-  BlobSize := BlobInfo.TotalSize;
-  Size := BlobSize;
-
-  SegmentLenght := BlobInfo.MaxSegmentSize;
+  Size := BlobInfo.TotalSize;
+  SegLen := BlobInfo.MaxSegmentSize;
 
   { Allocates a blob buffer }
-  Buffer := AllocMem(BlobSize+Ord(not Binary)); //left space for leading #0 terminator
+  Buffer := AllocMem(BlobInfo.TotalSize+Ord(not Binary)); //left space for leading #0 terminator
 
   TempBuffer := Buffer;
 
   { Copies data to blob buffer }
-  while CurPos < BlobSize do begin
-    if (CurPos + SegmentLenght > BlobSize) then
-      SegmentLenght := BlobSize - CurPos;
+  while CurPos < BlobInfo.TotalSize do begin
+    if (CurPos + SegLen > BlobInfo.TotalSize) then
+      SegLen := BlobInfo.TotalSize - CurPos;
     if not(PlainDriver.isc_get_segment(@StatusVector, @BlobHandle,
-           @BytesRead, SegmentLenght, TempBuffer) = 0) or
+           @BytesRead, SegLen, TempBuffer) = 0) or
           (StatusVector[1] <> isc_segment) then
       CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
     Inc(CurPos, BytesRead);
     Inc(TempBuffer, BytesRead);
-    BytesRead := 0;
   end;
   if not Binary then
     (PAnsiChar(Buffer)+Size)^ := #0;
@@ -2891,6 +2890,7 @@ var
   BlobHandle: TISC_BLOB_HANDLE;
   StatusVector: TARRAY_ISC_STATUS;
   CurPos, SegLen: Integer;
+  TempBuffer: PAnsiChar;
 begin
   BlobHandle := 0;
 
@@ -2901,15 +2901,16 @@ begin
     CheckInterbase6Error(FPlainDriver, StatusVector, Self);
 
   { put data to blob }
+  TempBuffer := Buffer;
   CurPos := 0;
   SegLen := DefaultBlobSegmentSize;
   while (CurPos < Len) do begin
     if (CurPos + SegLen > Len) then
       SegLen := Len - CurPos;
-    if FPlainDriver.isc_put_segment(@StatusVector, @BlobHandle, SegLen,
-      {%H-}Pointer({%H-}NativeUInt(Buffer)+NativeUInt(CurPos))) <> 0 then
+    if FPlainDriver.isc_put_segment(@StatusVector, @BlobHandle, SegLen, TempBuffer) <> 0 then
       CheckInterbase6Error(FPlainDriver, StatusVector, Self);
     Inc(CurPos, SegLen);
+    Inc(TempBuffer, SegLen);
   end;
 
   { close blob handle }
