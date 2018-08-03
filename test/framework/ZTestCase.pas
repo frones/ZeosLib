@@ -145,6 +145,7 @@ type
       const Msg: string = ''); overload;
     {$IFDEF FPC}
     procedure CheckEqualsMem(Expected, Actual: Pointer; Size: Longword; const Msg: string = '');
+    procedure CheckNotEqualsMem(Expected, Actual: Pointer; Size: Longword; const Msg: string = '');
     procedure CheckEquals(Expected, Actual: WideString;
       const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: WideString;
@@ -195,12 +196,16 @@ uses
   ZSysUtils, ZTestConfig, ZEncoding;
 
 const
+  SStringLengthsDiffer = 'string lengths differ';
+  SStringDataDiffer = 'string data differ';
   SArrayLengthsDiffer = 'array lengths differ';
   SArrayDataDiffer = 'array data differ';
   SStreamSizesDiffer = 'stream sizes differ';
   SStreamDataDiffer = 'stream data differ';
   SExpectedException = 'expected exception but TestFailure raised';
-{$IFNDEF FPC}
+{$IFDEF FPC}
+  SIdenticalContent = 'memory content was identical';
+{$ELSE}
   SNoException = 'no exception';
   SExceptionMsgDiffer = 'exception messages differ';
 {$ENDIF}
@@ -273,13 +278,22 @@ end;
 // copy from DUnit
 procedure TZAbstractTestCase.CheckEqualsMem(Expected, Actual: Pointer; Size: Longword; const Msg: string);
 begin
-  BlankCheck;
   if not CompareMem(expected, actual, size) then
     {$IFDEF FPC2_6DOWN}
-    Fail(GetMemDiffStr(expected, actual, size, msg));
+    Fail(GetMemDiffStr(expected, actual, size, msg))
     {$ELSE}
-    Fail(GetMemDiffStr(expected, actual, size, msg), CallerAddr);
+    Fail(GetMemDiffStr(expected, actual, size, msg), CallerAddr)
     {$ENDIF}
+  else
+    Check(True);
+end;
+
+procedure TZAbstractTestCase.CheckNotEqualsMem(Expected, Actual: Pointer; Size: Longword; const Msg: string);
+begin
+  if CompareMem(expected, actual, size) then
+    Fail(AddToMsg(Msg, sIdenticalContent), CallerAddr)
+  else
+    Check(True);
 end;
 
 constructor TZAbstractTestCase.Create;
@@ -521,12 +535,12 @@ end;
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: TStream;
   const Msg: string);
 var
-  EBuf, ABuf: PByteArray;
+  EBuf, ABuf: TBytes;
   Size, ERead, ARead: Integer;
 begin
   if Expected = Actual then
   begin
-    BlankCheck;
+    Check(True);
     Exit;
   end;
   if not Assigned(Actual) and Assigned(Expected) then
@@ -535,35 +549,38 @@ begin
     Fail(NotEqualsErrorMessage('NIL', 'Not NIL', Msg));
   CheckEquals(Expected.Size, Actual.Size, AddToMsg(Msg, SStreamSizesDiffer));
   Size := Expected.Size;
-  GetMem(EBuf, Size);
-  GetMem(ABuf, Size);
-  try
-    Expected.Position := 0;
-    Actual.Position := 0;
-    ERead := Expected.Read(EBuf^, Size);
-    ARead := Actual.Read(ABuf^, Size);
-    CheckEquals(ERead, ARead, AddToMsg(Msg, SStreamSizesDiffer));
-    CheckEqualsMem(EBuf, ABuf, Size, AddToMsg(Msg, SStreamDataDiffer));
-  finally
-    FreeMem(EBuf);
-    FreeMem(ABuf);
-  end;
+  SetLength(EBuf, Size);
+  SetLength(ABuf, Size);
+  Expected.Position := 0;
+  Actual.Position := 0;
+  ERead := Expected.Read(Pointer(EBuf)^, Size);
+  ARead := Actual.Read(Pointer(ABuf)^, Size);
+  Expected.Position := 0;
+  Actual.Position := 0;
+  CheckEquals(ERead, ARead, AddToMsg(Msg, SStreamSizesDiffer));
+  CheckEqualsMem(EBuf, ABuf, Size, AddToMsg(Msg, SStreamDataDiffer));
 end;
 
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: PAnsiChar;
   const Msg: string);
+var LenE, LenA: Integer;
 begin
-  Check(MemLCompAnsi(Expected, Actual, Max(
-  {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Expected),
-  {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Actual))), Msg);
+  LenE := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Expected);
+  LenA := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Actual);
+  CheckEquals(LenE, LenA, AddToMsg(Msg, SStringLengthsDiffer));
+  CheckEqualsMem(Expected, Actual, LenE, AddToMsg(Msg, SStringDataDiffer));
 end;
 
 procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: PAnsiChar;
   const Msg: string);
+var LenE, LenA: Integer;
 begin
-  Check(not MemLCompAnsi(Expected, Actual, Max(
-    {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Expected),
-    {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Actual))), Msg);
+  LenE := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Expected);
+  LenA := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Actual);
+  if LenE = LenA then
+    CheckNotEqualsMem(Expected, Actual, LenE, Msg)
+  else
+    Check(True);
 end;
 
 {$IFDEF FPC}
@@ -582,7 +599,9 @@ procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: WideString;
   const Msg: string);
 begin
   if (Expected = Actual) then
-    Fail(Msg + ComparisonMsg(Expected, Actual, False));
+    Fail(Msg + ComparisonMsg(Expected, Actual, False))
+  else
+    Check(True);
 end;
 
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: UInt64;
@@ -599,7 +618,9 @@ procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: UInt64;
   const Msg: string);
 begin
   if (Expected = Actual) then
-    Fail(Msg + ComparisonMsg(IntToStr(Expected), IntToStr(Actual), False));
+    Fail(Msg + ComparisonMsg(IntToStr(Expected), IntToStr(Actual), False))
+  else
+    Check(True);
 end;
 
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Int64;
@@ -612,7 +633,9 @@ procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: Int64;
   const Msg: string);
 begin
   if (Expected = Actual) then
-    Fail(Msg + ComparisonMsg(IntToStr(Expected), IntToStr(Actual), False));
+    Fail(Msg + ComparisonMsg(IntToStr(Expected), IntToStr(Actual), False))
+  else
+    Check(True);
 end;
 {$ENDIF}
 
