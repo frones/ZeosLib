@@ -328,7 +328,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   const InParamCount, RemainingArrayRows: Integer;
   const CurrentSQLTokens: TRawByteStringDynArray;
   const PlainDriver: TZInterbasePlainDriver;
-  var MemPerRow, PreparedRowsOfArray: Integer;
+  var MemPerRow, PreparedRowsOfArray, MaxRowsPerBatch: Integer;
   var TypeTokens: TRawByteStringDynArray;
   InitialStatementType: TZIbSqlStatementType;
   const XSQLDAMaxSize: LongWord): RawByteString;
@@ -2924,7 +2924,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   const InParamCount, RemainingArrayRows: Integer;
   const CurrentSQLTokens: TRawByteStringDynArray;
   const PlainDriver: TZInterbasePlainDriver;
-  var MemPerRow, PreparedRowsOfArray: Integer;
+  var MemPerRow, PreparedRowsOfArray,MaxRowsPerBatch: Integer;
   var TypeTokens: TRawByteStringDynArray;
   InitialStatementType: TZIbSqlStatementType;
   const XSQLDAMaxSize: LongWord): RawByteString;
@@ -2937,9 +2937,9 @@ const
 var
   IndexName, ArrayName: RawByteString;
   I, j, BindCount, ParamIndex, ParamNameLen, SingleStmtLength, LastStmLen,
-  HeaderLen, FullHeaderLen, StmtLength, StmtMem:  Integer;
+  HeaderLen, FullHeaderLen, StmtLength:  Integer;
   CodePageInfo: PZCodePage;
-  PStmts, PResult: PAnsiChar;
+  PStmts, PResult, P: PAnsiChar;
   ReturningFound: Boolean;
 
   procedure Put(const Args: array of RawByteString; var Dest: PAnsiChar);
@@ -2952,11 +2952,15 @@ var
     end;
   end;
   procedure AddParam(const Args: array of RawByteString; var Dest: RawByteString);
-  var I: Integer;
+  var I, L: Integer;
+    P: PAnsiChar;
   begin
-    Dest := '';
+    Dest := ''; L := 0;
     for I := low(Args) to high(Args) do //Calc String Length
-      Dest := Dest + Args[i];
+      Inc(L ,Length(Args[i]));
+    SetLength(Dest, L);
+    P := Pointer(Dest);
+    Put(Args, P);
   end;
   function GetIntDigits(Value: Integer): Integer;
   begin
@@ -2997,129 +3001,119 @@ begin
             ') CHARACTER SET ', {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CodePageInfo.Name), ' = ?' ], TypeTokens[ParamIndex]);
           end;
         SQL_DOUBLE, SQL_D_FLOAT:
-           AddParam([' DOUBLE PRECISION = ?'], TypeTokens[ParamIndex]);
+           AddParam([' DOUBLE PRECISION=?'], TypeTokens[ParamIndex]);
         SQL_FLOAT:
-           AddParam([' FLOAT = ?'],TypeTokens[ParamIndex]);
+           AddParam([' FLOAT=?'],TypeTokens[ParamIndex]);
         SQL_LONG:
           if ParamsSQLDA.GetFieldScale(ParamIndex) = 0 then
-            AddParam([' INTEGER = ?'],TypeTokens[ParamIndex])
+            AddParam([' INTEGER=?'],TypeTokens[ParamIndex])
           else
             if ParamsSQLDA.GetIbSqlSubType(ParamIndex) = RDB_NUMBERS_NUMERIC then
-              AddParam([' NUMERIC(9,', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),') = ?'], TypeTokens[ParamIndex])
+              AddParam([' NUMERIC(9,', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),')=?'], TypeTokens[ParamIndex])
             else
-              AddParam([' DECIMAL(9', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)), ',', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),') = ?'],TypeTokens[ParamIndex]);
+              AddParam([' DECIMAL(9', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)), ',', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),')=?'],TypeTokens[ParamIndex]);
         SQL_SHORT:
           if ParamsSQLDA.GetFieldScale(ParamIndex) = 0 then
-            AddParam([' SMALLINT = ?'],TypeTokens[ParamIndex])
+            AddParam([' SMALLINT=?'],TypeTokens[ParamIndex])
           else
             if ParamsSQLDA.GetIbSqlSubType(ParamIndex) = RDB_NUMBERS_NUMERIC then
-              AddParam([' NUMERIC(4,', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),') = ?'],TypeTokens[ParamIndex])
+              AddParam([' NUMERIC(4,', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),')=?'],TypeTokens[ParamIndex])
             else
-              AddParam([' DECIMAL(4', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)), ',', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),') = ?'],TypeTokens[ParamIndex]);
+              AddParam([' DECIMAL(4', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)), ',', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),')=?'],TypeTokens[ParamIndex]);
         SQL_TIMESTAMP:
-           AddParam([' TIMESTAMP = ?'],TypeTokens[ParamIndex]);
+           AddParam([' TIMESTAMP=?'],TypeTokens[ParamIndex]);
         SQL_BLOB:
           if ParamsSQLDA.GetIbSqlSubType(ParamIndex) = isc_blob_text then
-            AddParam([' BLOB  SUB_TYPE TEXT = ?'],TypeTokens[ParamIndex])
+            AddParam([' BLOB SUB_TYPE TEXT=?'],TypeTokens[ParamIndex])
           else
-            AddParam([' BLOB = ?'],TypeTokens[ParamIndex]);
+            AddParam([' BLOB=?'],TypeTokens[ParamIndex]);
         //SQL_ARRAY                      = 540;
         //SQL_QUAD                       = 550;
         SQL_TYPE_TIME:
-           AddParam([' TIME = ?'],TypeTokens[ParamIndex]);
+           AddParam([' TIME=?'],TypeTokens[ParamIndex]);
         SQL_TYPE_DATE:
-           AddParam([' DATE = ?'],TypeTokens[ParamIndex]);
+           AddParam([' DATE=?'],TypeTokens[ParamIndex]);
         SQL_INT64: // IB7
           if ParamsSQLDA.GetFieldScale(ParamIndex) = 0 then
-            AddParam([' BIGINT = ?'],TypeTokens[ParamIndex])
+            AddParam([' BIGINT=?'],TypeTokens[ParamIndex])
           else
             if ParamsSQLDA.GetIbSqlSubType(ParamIndex) = RDB_NUMBERS_NUMERIC then
-              AddParam([' NUMERIC(18,', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),') = ?'],TypeTokens[ParamIndex])
+              AddParam([' NUMERIC(18,', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),')=?'],TypeTokens[ParamIndex])
             else
-              AddParam([' DECIMAL(18,', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),') = ?'],TypeTokens[ParamIndex]);
+              AddParam([' DECIMAL(18,', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),')=?'],TypeTokens[ParamIndex]);
         SQL_BOOLEAN, SQL_BOOLEAN_FB{FB30}:
-           AddParam([' BOOLEAN = ?'],TypeTokens[ParamIndex]);
+           AddParam([' BOOLEAN=?'],TypeTokens[ParamIndex]);
         SQL_NULL{FB25}:
-           AddParam([' CHAR(1) = ?'],TypeTokens[ParamIndex]);
+           AddParam([' CHAR(1)=?'],TypeTokens[ParamIndex]);
       end;
       Inc(MemPerRow, ParamsSQLDA.GetFieldLength(ParamIndex) +
-        2*Ord((ParamsSQLDA.GetIbSqlType(ParamIndex) and not (1)) = SQL_VARYING));
+        2*Ord((ParamsSQLDA.GetIbSqlType(ParamIndex) and not 1) = SQL_VARYING));
     end;
     Inc(MemPerRow, XSQLDA_LENGTH(InParamCount));
   end;
   {now let's calc length of stmt to know if we can bound all array data or if we need some more calls}
   StmtLength := 0;
   FullHeaderLen := 0;
-  StmtMem := 0;
   ReturningFound := False;
+  PreparedRowsOfArray := 0;
+
   for J := 0 to RemainingArrayRows -1 do
   begin
     ParamIndex := 0;
     SingleStmtLength := 0;
     LastStmLen := StmtLength;
     HeaderLen := 0;
-    for i := low(CurrentSQLTokens) to high(CurrentSQLTokens) do
-    begin
-      if IsParamIndexArray[i] then //calc Parameters size
-      begin
+    for i := low(CurrentSQLTokens) to high(CurrentSQLTokens) do begin
+      if IsParamIndexArray[i] then begin //calc Parameters size
         ParamNameLen := {P}1+GetIntDigits(ParamIndex)+1{_}+GetIntDigits(j);
         {inc header}
         Inc(HeaderLen, ParamNameLen+ {%H-}PLengthInt(NativeUInt(TypeTokens[ParamIndex]) - StringLenOffSet)^+Ord(not ((ParamIndex = 0) and (J=0))){,});
         {inc stmt}
         Inc(SingleStmtLength, 1+{:}ParamNameLen);
         Inc(ParamIndex);
-      end
-      else
-      begin
+      end else begin
         Inc(SingleStmtLength, {%H-}PLengthInt(NativeUInt(CurrentSQLTokens[i]) - StringLenOffSet)^);
-        if not ReturningFound and (CurrentSQLTokens[i][1] in ['R', 'r']) then
-        begin
+        P := Pointer(CurrentSQLTokens[i]);
+        if not ReturningFound and (Ord(P^) in [Ord('R'), Ord('r')]) then begin
           ReturningFound := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(CurrentSQLTokens[i]) = 'RETURNING';
           Inc(StmtLength, Ord(ReturningFound)*Length(EBSuspend));
         end;
       end;
     end;
     Inc(SingleStmtLength, 1{;}+Length(LineEnding));
+    if MaxRowsPerBatch = 0 then //calc maximum batch count if not set already
+      MaxRowsPerBatch := Min((XSQLDAMaxSize div Cardinal(MemPerRow)),     {memory limit of XSQLDA structs}
+        (((32*1024)-LBlockLen) div Cardinal(HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
     Inc(StmtLength, HeaderLen+SingleStmtLength);
     Inc(FullHeaderLen, HeaderLen);
     //we run into XSQLDA !update! count limit of 255 see:
     //http://tracker.firebirdsql.org/browse/CORE-3027?page=com.atlassian.jira.plugin.system.issuetabpanels%3Aall-tabpanel
-    if (LongWord(StmtLength+LBlockLen) > 32*1024{32KB limited Also with FB3}) or
-       (LongWord(StmtMem + MemPerRow) > XSQLDAMaxSize) or
-      ((InitialStatementType <> stInsert) and (PreparedRowsOfArray > 255)) then
-    begin
+    if (PreparedRowsOfArray = MaxRowsPerBatch-1) or
+       ((InitialStatementType <> stInsert) and (PreparedRowsOfArray > 255)) then begin
       StmtLength := LastStmLen;
       Dec(FullHeaderLen, HeaderLen);
       Break;
-    end
-    else
-    begin
+    end else
       PreparedRowsOfArray := J;
-      Inc(StmtMem, MemPerRow);
-    end;
   end;
+
   {EH: now move our data to result ! ONE ALLOC ! of result (: }
   SetLength(Result, StmtLength+LBlockLen);
   PResult := Pointer(Result);
   Put([EBStart], PResult);
   PStmts := PResult + FullHeaderLen+Length(EBBegin);
-  for J := 0 to PreparedRowsOfArray do
-  begin
+  for J := 0 to PreparedRowsOfArray do begin
     ParamIndex := 0;
-    for i := low(CurrentSQLTokens) to high(CurrentSQLTokens) do
-    begin
-      if IsParamIndexArray[i] then
-      begin
+    for i := low(CurrentSQLTokens) to high(CurrentSQLTokens) do begin
+      if IsParamIndexArray[i] then begin
         IndexName := IntToRaw(ParamIndex);
         ArrayName := IntToRaw(J);
         Put([':P', IndexName, '_', ArrayName], PStmts);
-        if (ParamIndex = 0) and (J=0) then
-          Put(['P', IndexName, '_', ArrayName, TypeTokens[ParamIndex]], PResult)
-        else
-          Put([',P', IndexName, '_', ArrayName, TypeTokens[ParamIndex]], PResult);
+        if (ParamIndex = 0) and (J=0)
+        then Put(['P', IndexName, '_', ArrayName, TypeTokens[ParamIndex]], PResult)
+        else Put([',P', IndexName, '_', ArrayName, TypeTokens[ParamIndex]], PResult);
         Inc(ParamIndex);
-      end
-      else
+      end else
         Put([CurrentSQLTokens[i]], PStmts);
     end;
     Put([';',LineEnding], PStmts);
