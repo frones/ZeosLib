@@ -1907,7 +1907,7 @@ begin
       {$ENDIF}
       ftBlob, ftGraphic:
         begin
-          Stream := TStringStream.Create(Param.AsBlob);
+          Stream := TBytesStream.Create({$IFDEF FPC}BytesOf{$ENDIF}(Param.AsBlob));
           try
             Statement.SetBinaryStream(Index, Stream);
           finally
