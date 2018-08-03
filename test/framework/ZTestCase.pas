@@ -291,7 +291,11 @@ end;
 procedure TZAbstractTestCase.CheckNotEqualsMem(Expected, Actual: Pointer; Size: Longword; const Msg: string);
 begin
   if CompareMem(expected, actual, size) then
+    {$IFDEF FPC2_6DOWN}
+    Fail(AddToMsg(Msg, sIdenticalContent))
+    {$ELSE}
     Fail(AddToMsg(Msg, sIdenticalContent), CallerAddr)
+    {$ENDIF}
   else
     Check(True);
 end;

@@ -441,6 +441,10 @@ function Min(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}
 function Max(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
+{$IFDEF FPC2_6DOWN}
+function BytesOf(InStr: AnsiString): TBytes;
+{$ENDIF}
+
 var
   ClientCodePageDummy: TZCodepage =
     (Name: ''; ID: 0; CharWidth: 1; Encoding: ceAnsi;
@@ -891,6 +895,17 @@ begin
     Result := A
   else
     Result := B;
+end;
+{$ENDIF}
+
+{$IFDEF FPC2_6DOWN}
+function BytesOf(InStr: AnsiString): TBytes;
+var
+  Len: SizeInt;
+begin
+  Len := Length(Instr);
+  SetLength(Result, Len);
+  if Len > 0 then Move(InStr[1], Result[0], Len);
 end;
 {$ENDIF}
 
