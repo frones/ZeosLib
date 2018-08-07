@@ -1367,7 +1367,7 @@ begin
       SizeOf(Results), @Results[0]) <> 0 then
     CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
 
-  FillChar(BlobInfo, SizeOf(BlobInfo), 0);
+  FillChar(BlobInfo, SizeOf(BlobInfo), #0);
 
   pBufStart := @Results[0];
   pBuf := pBufStart;
