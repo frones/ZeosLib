@@ -17,7 +17,7 @@
       </Parsing>
     </CompilerOptions>
     <Description Value="Zeos Plain Database API"/>
-    <Version Major="7" Minor="2" Release="4"/>
+    <Version Major="7" Minor="2" Release="5"/>
     <Files Count="21">
       <Item1>
         <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
