@@ -774,8 +774,9 @@ function Trim(const Value: RawByteString): RawByteString; overload;
 function Trim(const Value: ZWideString): ZWideString; overload;
 {$ENDIF}
 
-
+{$IFDEF NO_RAW_HEXTOBIN}
 function HexToBin(Hex: PAnsiChar; Bin: PByte; BinBytes: Integer): Boolean;
+{$ENDIF}
 
 implementation
 
@@ -4278,6 +4279,7 @@ begin
   end;
 end;
 
+{$IFDEF NO_RAW_HEXTOBIN}
   /// a conversion table from hexa chars into binary data
   // - returns 255 for any character out of 0..9,A..Z,a..z range
   // - used e.g. by HexToBin() function
@@ -4297,7 +4299,7 @@ type
 // - using this function with Bin^ as an integer value will decode in big-endian
 // order (most-signignifican byte first)
 *}
-function HexToBin(Hex: PAnsiChar; Bin: PByte; BinBytes: Integer): boolean; overload;
+function HexToBin(Hex: PAnsiChar; Bin: PByte; BinBytes: Integer): Boolean; overload;
 var I: Integer;
     B,C: NativeUInt;//PtrUInt;
     tab: {$ifdef CPUX86}TNormTableByte absolute ConvertHexToBin{$else}PNormTableByte{$endif};
@@ -4328,10 +4330,11 @@ begin
     end;
   result := true; // conversion OK
 end;
+{$ENDIF}
 
 procedure HexFiller;
 var
-  I, v: Byte;
+  I{$IFDEF NO_RAW_HEXTOBIN}, v{$ENDIF}: Byte;
   Hex: String;
 begin
   for i := Low(Byte) to High(Byte) do
@@ -4345,6 +4348,7 @@ begin
     TwoDigitLookupHexLW[i] := PCardinal(Pointer(ZWideString(Hex)))^;
     {$ENDIF}
   end;
+  {$IFDEF NO_RAW_HEXTOBIN}
   //copy from Arnaud Bouchez syncommons.pas
   Fillchar(ConvertHexToBin[0],SizeOf(ConvertHexToBin),255); // all to 255
   V := 0;
@@ -4357,7 +4361,7 @@ begin
     ConvertHexToBin[i+(ord('a')-ord('A'))] := v;
     inc(v);
   end;
-
+  {$ENDIF}
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's

@@ -221,10 +221,11 @@
                         {$DEFINE NO_INLINE_SIZE_CHECK} 
                         {$DEFINE NO_ANSISTRING}
                         {$DEFINE NO_PANSICHAR}
-                        {$DEFINE NO_ANSICHAR}  
+                        {$DEFINE NO_ANSICHAR}
+                        {$DEFINE NO_RAW_HEXTOBIN} //raw/pAnsichar version of HexToBin does not exits  
                         {$DEFINE MISS_RBS_SETSTRING_OVERLOAD} //system.SetString is not available for raw strings or i (EH) have no clue how to use it
                         {$DEFINE NO_UNIT_CONTNRS} //unit Contnrs (TObjectList) doesn't exist any mory 
-						{$DEFINE WITH_USC2_ANSICOMPARESTR_ONLY} //nextgen doesn't have a raw ansicomnparestr function
+                        {$DEFINE WITH_USC2_ANSICOMPARESTR_ONLY} //nextgen doesn't have a raw ansicomnparestr function
                         {$IF CompilerVersion <= 30}
                           {$DEFINE NO_UTF8STRING}
                           {$UNDEF WITH_RAWBYTESTRING}
@@ -244,15 +245,16 @@
                     {$DEFINE HAVE_TRUE_NATIVE_TYPES}      //since XE2 NativeInt, NativeUint are fixed and behave like FPC SizeInt, PtrInt (4/8Byte)
                     {$DEFINE WITH_FASTCODE_INTTOSTR}      //Since XE2 the full purepascal IntToStr func is included
                     {$DEFINE WITH_PUREPASCAL_INTPOWER}    //Since XE2 a buggy pure pascal version of Math.IntPower was introduced
-
                     {$IF CompilerVersion >= 24} //Delphi XE3+
                       {$UNDEF WIDE_DATASET}                   //TWideDataset and TDataSet are merged together: https://forums.embarcadero.com/thread.jspa?messageID=499588
+                      {$DEFINE NO_POINTER_InternalAddRecord} //since XE3 TDataSet.InternalAddRecord uses the TRecordBuffer
                       {$DEFINE WITH_TVALUEBUFFER}             //SetFieldData/GetFieldData and Parameters using TValueBuffer instead of Pointer
                       {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
                       {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
                       {$DEFINE WITH_GENERIC_TLISTTFIELD}      //GetFieldList() uses the generic TList<TField>
 
                       {$IF CompilerVersion >= 25} //Delphi XE4+
+                        {$UNDEF NO_POINTER_InternalAddRecord}
                         {$DEFINE WITH_VAR_TVALUEBUFFER}	        //GetFieldata overloads using !var! Buffer: TValueBuffer
                         {$DEFINE WITH_BUFFERS_IS_TRECBUF}       //Buffers[index] is TRecBuf type NativeInt
                         {$DEFINE WITH_GETCALCFIELDS_TRECBUF}    //GetCalcFields expected no TRecordBuffer use TRecBuf type NativeInt instead
