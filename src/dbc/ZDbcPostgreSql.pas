@@ -128,7 +128,7 @@ type
   protected
     procedure InternalCreate; override;
     function GetUndefinedVarcharAsStringLength: Integer;
-    function BuildConnectStr: AnsiString;
+    function BuildConnectStr: RawByteString;
     procedure DeallocatePreparedStatements;
     procedure DoStartTransaction;
     procedure DoCommit;
@@ -220,13 +220,14 @@ implementation
 uses
   ZFastCode, ZMessages, ZSysUtils, ZDbcPostgreSqlStatement,
   ZDbcPostgreSqlUtils, ZDbcPostgreSqlMetadata, ZPostgreSqlToken,
-  ZPostgreSqlAnalyser, ZEncoding, ZConnProperties, ZDbcProperties;
+  ZPostgreSqlAnalyser, ZEncoding, ZConnProperties, ZDbcProperties,
+  ZDbcUtils;
 
 const
   FON = String('ON');
-  cBegin: AnsiString = 'BEGIN';
-  cCommit: AnsiString = 'COMMIT';
-  cRollback: AnsiString = 'ROLLBACK';
+  cBegin: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF} = 'BEGIN';
+  cCommit: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF} = 'COMMIT';
+  cRollback: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF} = 'ROLLBACK';
 
 procedure DefaultNoticeProcessor({%H-}arg: Pointer; message: PAnsiChar); cdecl;
 begin
@@ -369,27 +370,27 @@ end;
   Builds a connection string for PostgreSQL.
   @return a built connection string.
 }
-function TZPostgreSQLConnection.BuildConnectStr: AnsiString;
+function TZPostgreSQLConnection.BuildConnectStr: RawByteString;
 var
-  ConnectTimeout: Integer;
-  // backslashes and single quotes must be escaped with backslashes
-  function EscapeValue(const AValue: String): String;
-  begin
-    Result := StringReplace(AValue, '\', '\\', [rfReplaceAll]);
-    Result := StringReplace(Result, '''', '\''', [rfReplaceAll]);
-  end;
-
+  ConnectTimeout, Cnt: Integer;
+  Buf: TRawBuff;
   //parameters should be separated by whitespace
-  procedure AddParamToResult(const AParam, AValue: String);
+  procedure AddParamToResult(const AParam: RawByteString;
+    const AValue: String);
   begin
-    if Result <> '' then
-      Result := Result + ' ';
-
-    Result := Result + AnsiString(AParam+'='+QuotedStr(EscapeValue(AValue)));
+    if Cnt > 0 then
+      ToBuff(AnsiChar(' '),Buf, Result);
+    ToBuff(AParam, Buf, Result);
+    ToBuff(AnsiChar('='),Buf, Result);
+    // backslashes and single quotes must be escaped with backslashes
+    ToBuff(SQLQuotedStr(EncodeCString({$IFDEF UNICODE}RawByteString{$ENDIF}(AValue)), AnsiChar(#39)),Buf, Result);
+    Inc(Cnt);
   end;
 begin
   //Init the result to empty string.
   Result := '';
+  Cnt := 0;
+  Buf.Pos := 0;
   //Entering parameters from the ZConnection
   If IsIpAddr(HostName) then
     AddParamToResult('hostaddr', HostName)
@@ -403,18 +404,14 @@ begin
     AddParamToResult('password', Password);
   end;
 
-  If Info.Values[ConnProps_SSLMode] <> '' then
-  begin
+  If Info.Values[ConnProps_SSLMode] <> ''
     // the client (>= 7.3) sets the ssl mode for this connection
     // (possible values are: require, prefer, allow, disable)
-    AddParamToResult(ConnProps_SSLMode, Info.Values[ConnProps_SSLMode]);
-  end
-  else if Info.Values[ConnProps_RequireSSL] <> '' then
-  begin
+  then AddParamToResult(ConnProps_SSLMode, Info.Values[ConnProps_SSLMode])
+  else if Info.Values[ConnProps_RequireSSL] <> ''
     // the client (< 7.3) sets the ssl encription for this connection
     // (possible values are: 0,1)
-    AddParamToResult(ConnProps_RequireSSL, Info.Values[ConnProps_RequireSSL]);
-  end;
+  then AddParamToResult(ConnProps_RequireSSL, Info.Values[ConnProps_RequireSSL]);
 
   if Info.Values[ConnProps_SSLCompression] <> '' then AddParamToResult(ConnProps_SSLCompression, Info.Values[ConnProps_SSLCompression]);
   if Info.Values[ConnProps_SSLCert] <> '' then AddParamToResult(ConnProps_SSLCert, Info.Values[ConnProps_SSLCert]);
@@ -430,6 +427,7 @@ begin
   { Sets the application name }
   if Info.Values[ConnProps_ApplicationName] <> '' then
     AddParamToResult(ConnProps_ApplicationName, Info.Values[ConnProps_ApplicationName]);
+  FlushBuff(Buf, Result);
 end;
 
 {**

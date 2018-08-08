@@ -917,6 +917,7 @@ unnest(array[$1..$100]::int8[])
                           goto FromRaw;
                         end;
             {$ENDIF}
+            {$IFNDEF NO_ANSISTRING}
             vtAnsiString: begin
                             if not ZCompatibleCodePages(CP, ZOSCodePage) then begin
                               SetLength(FTempRaws, ArrayCount);
@@ -926,6 +927,8 @@ unnest(array[$1..$100]::int8[])
                             end;
                             goto FromRaw;
                           end;
+            {$ENDIF}
+            {$IFNDEF NO_UTF8STRING}
             vtUTF8String: begin
                             if not ZCompatibleCodePages(CP, zCP_UTF8) then begin
                               SetLength(FTempRaws, ArrayCount);
@@ -935,6 +938,7 @@ unnest(array[$1..$100]::int8[])
                             end;
                             goto FromRaw;
                           end;
+            {$ENDIF}
             vtRawByteString:begin
 FromRaw:                    N := 0;
                             for j := 0 to ArrayCount -1 do
