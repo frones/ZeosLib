@@ -224,7 +224,7 @@ function GetCachedResultSet(const SQL: string;
   const Statement: IZStatement; const NativeResultSet: IZResultSet): IZResultSet;
 
 procedure DescribeCursor(const FASAConnection: IZASAConnection; const FSQLData: IZASASQLDA;
-  const Cursor: AnsiString; const SQL: RawByteString);
+  const Cursor: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SQL: RawByteString);
 
 procedure ASAPrepare(const FASAConnection: IZASAConnection; const FSQLData, FParamsSQLData: IZASASQLDA;
    const SQL: RawByteString; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
@@ -283,7 +283,7 @@ begin
       PZASABlobStruct( sqlData).array_len := Len;
       PZASABlobStruct( sqlData).stored_len := 0;
       PZASABlobStruct( sqlData).untrunc_len := 0;
-      PZASABlobStruct( sqlData).arr[0] := #0;
+      PZASABlobStruct( sqlData).arr[0] := AnsiChar(#0);
       Inc( Len, SizeOf( TZASABlobStruct));
     end
     else
@@ -506,12 +506,17 @@ end;
    @return the index field
 }
 function TZASASQLDA.GetFieldIndex(const Name: String): Word;
+var FieldName: String;
+  P1, P2: PChar;
 begin
-  for Result := 0 to FSQLDA.sqld - 1 do
-    if FSQLDA.sqlvar[Result].sqlname.length = Length(name) then
-      if {$IFDEF WITH_STRLICOMP_DEPRECATED}AnsiStrings.{$ENDIF}StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(FConSettings^.ConvFuncs.ZStringToRaw(Name,
-            FConSettings^.CTRL_CP, FConSettings^.ClientCodePage^.CP)), Length(name)) = 0 then
-            Exit;
+  for Result := 0 to FSQLDA.sqld - 1 do begin
+    FieldName := GetFieldName(Result);
+    P1 := Pointer(Name);
+    P2 := Pointer(FieldName);
+    if Length(FieldName) = Length(name) then
+      if StrLIComp(P1, P2, Length(name)) = 0 then
+        Exit;
+  end;
   CreateException( Format( SFieldNotFound1, [name]));
   Result := 0; // satisfy compiler
 end;
@@ -785,7 +790,7 @@ begin
       SetFieldType( Index, DT_VARCHAR or 1, MinBLOBSize - 1);
       PZASASQLSTRING( sqlData).length := {%H-}Min(Len, sqllen-3);
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PZASASQLSTRING( sqlData).data[0], PZASASQLSTRING( sqlData).length);
-      (PAnsiChar(@PZASASQLSTRING( sqlData).data[0])+PZASASQLSTRING( sqlData).length)^ := #0;
+      AnsiChar((PAnsiChar(@PZASASQLSTRING( sqlData).data[0])+PZASASQLSTRING( sqlData).length)^) := AnsiChar(#0);
     end
     else
     begin
@@ -996,7 +1001,7 @@ begin
               sqlType := DT_FIXCHAR;
           end;
           sqlname.length := 0;
-          sqlname.data[0] := #0;
+          sqlname.data[0] := AnsiChar(#0);
           TempSQLDA.sqld := TempSQLDA.sqln;
 
           Offs := 0;
@@ -1290,10 +1295,12 @@ procedure CheckASAError(const PlainDriver: TZASAPlainDriver;
 var
   ErrorBuf: array[0..1024] of AnsiChar;
   ErrorMessage: RawByteString;
+  P: PAnsiChar;
 begin
   if Handle.SqlCode < SQLE_NOERROR then
   begin
-    ErrorMessage := PlainDriver.sqlError_Message( Handle, ErrorBuf, SizeOf( ErrorBuf));
+    P := PlainDriver.sqlError_Message( Handle, @ErrorBuf[0], SizeOf( ErrorBuf));
+    ZSetString(P, StrLen(P), ErrorMessage);
     //SyntaxError Position in SQLCount
     if not (SupressExceptionID = Handle.SqlCode ) then
     begin
@@ -1333,7 +1340,7 @@ begin
 end;
 
 procedure DescribeCursor(const FASAConnection: IZASAConnection; const FSQLData: IZASASQLDA;
-  const Cursor: AnsiString; const SQL: RawByteString);
+  const Cursor: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SQL: RawByteString);
 begin
   //FSQLData.AllocateSQLDA( StdVars);
   with FASAConnection do
@@ -1426,6 +1433,9 @@ var
   TempBlob: IZBlob;
   TempStream: TStream;
   CharRec: TZCharRec;
+  {$IFDEF NO_ANSISTRING}
+  Raw: RawByteString;
+  {$ENDIF}
 begin
   if InParamCount <> ParamSqlData.GetFieldCount then
     raise EZSQLException.Create( SInvalidInputParameterCount);
@@ -1485,8 +1495,17 @@ begin
                 if TempBlob.IsClob then
                   TempStream := TempBlob.GetRawByteStream
                 else
+                {$IFDEF NO_ANSISTRING}
+                begin
+                  Raw := GetValidatedAnsiStringFromBuffer(
+                    TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+                  TempStream := TMemoryStream.Create;
+                  TempStream.Write(Pointer(Raw), Length(Raw){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
+                end
+                {$ELSE}
                   TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(
                     TempBlob.GetBuffer, TempBlob.Length, ConSettings))
+                {$ENDIF}
               else
                 TempStream := TempBlob.GetStream;
               if Assigned(TempStream) then
