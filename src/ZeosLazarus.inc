@@ -41,6 +41,8 @@
 {********************************************************@}
 // Compilation directives for Lazarus
 
+{$WARN 4055 off : Conversion between ordinals and pointers is not portable} //suppress compiler buggy warning -> our Native(U)Int is Pointer size aligned
+
 {$DEFINE PUREPASCAL}
 
 {$DEFINE MISS_VARIANTCLEAR}           //oleaut32 external function VariantClear is missing
