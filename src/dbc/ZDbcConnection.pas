@@ -64,7 +64,8 @@ uses
 {$IFDEF WITH_LCONVENCODING}
   LConvEncoding,
 {$ENDIF}
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, StrUtils,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
   ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility, ZGenericSqlToken,
   ZGenericSqlAnalyser, ZPlainDriver, ZURL, ZCollections, ZVariant;
 
@@ -119,7 +120,7 @@ type
     FURL: TZURL;
     FUseMetadata: Boolean;
     FClientVarManager: IZClientVariantManager;
-    fRegisteredStatements: TList; //weak reference to pending stmts
+    fRegisteredStatements: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}; //weak reference to pending stmts
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetPort: Integer;
@@ -241,7 +242,9 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
+    {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; virtual;
+    {$ENDIF}
     function GetBinaryEscapeString(const Value: TBytes): String; overload; virtual;
     procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: RawByteString); overload; virtual;
     procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: ZWideString); overload; virtual;
@@ -309,9 +312,11 @@ type
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZEncoding, ZConnProperties,
+uses ZMessages,{$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}
+  ZDbcMetadata, ZDbcUtils, ZEncoding, ZConnProperties, StrUtils,
   ZDbcProperties, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
+  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 { TZAbstractDriver }
 
@@ -757,13 +762,13 @@ end;
 function TZAbstractDbcConnection.GetEscapeString(Buf: PAnsichar;
   Len: LengthInt): RawByteString;
 begin
-  Result := SQLQuotedStr(Buf, Len, #39);
+  Result := SQLQuotedStr(Buf, Len, AnsiChar(#39));
 end;
 
 procedure TZAbstractDbcConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
   var Result: RawByteString);
 begin
-  Result := SQLQuotedStr(Buf, Len, #39);
+  Result := SQLQuotedStr(Buf, Len, AnsiChar(#39));
 end;
 
 procedure TZAbstractDbcConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
@@ -885,7 +890,7 @@ begin
   FDriverManager := DriverManager; //just keep refcount high
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
-  fRegisteredStatements := TList.Create;
+  fRegisteredStatements := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   FURL.OnPropertiesChange := OnPropertiesChange;
   FURL.URL := ZUrl.URL;
 
@@ -1285,7 +1290,7 @@ end;
 }
 function TZAbstractDbcConnection.EscapeString(const Value : RawByteString) : RawByteString;
 begin
-  Result := AnsiString(EncodeCString(String(Value)));
+  Result := EncodeCString(Value);
 end;
 
 {**
@@ -1542,10 +1547,12 @@ begin
   FUseMetadata := Value;
 end;
 
+{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
 function TZAbstractDbcConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   GetBinaryEscapeString(Pointer(Value), Length(Value), {$IFNDEF UNICODE}RawByteString{$ELSE}ZWideString{$ENDIF}(Result));
 end;
+{$ENDIF}
 
 function TZAbstractDbcConnection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
@@ -1561,7 +1568,7 @@ function TZAbstractDbcConnection.GetEscapeString(const Value: RawByteString): Ra
 var P: PAnsiChar;
 begin
   P := Pointer(Value);
-  if (P <> nil) and (Length(Value)>1) and (P^=#39) and ((P+Length(Value)-1)^=#39)
+  if (P <> nil) and (Length(Value)>1) and (AnsiChar(P^)=AnsiChar(#39)) and (AnsiChar((P+Length(Value)-1)^)=AnsiChar(#39))
   then Result := Value
   else GetEscapeString(P, Length(Value), Result);
 end;
