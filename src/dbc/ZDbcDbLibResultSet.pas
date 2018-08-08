@@ -175,6 +175,16 @@ label AssignGeneric;
     ColumnInfo.AutoIncrement := ColInfo.Identity;
     ColumnInfo.Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong];
   end;
+  function ValueToString(P: PAnsiChar): String;
+  begin
+    {$IFDEF UNICODE}
+    ColumnInfo.ColumnName := PRawToUnicode(P, ZFastCode.StrLen(P), ConSettings^.ClientCodePage^.CP);
+    {$ELSE}
+    ZSetString(P, ZFastCode.StrLen(P), Result);
+    Result := ConSettings^.ConvFuncs.ZRawToString(tdsColInfo.ActualName,
+          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+    {$ENDIF}
+  end;
 begin
 //Check if the current statement can return rows
   if FPlainDriver.dbCmdRow(FHandle) <> DBSUCCEED then
@@ -193,80 +203,39 @@ begin
       FillChar(tdsColInfo.Name[0], tdsColInfo.SizeOfStruct- SizeOf(DBInt), #0);
       if FPlainDriver.dbcolinfo(FHandle, CI_REGULAR, I, 0, @tdsColInfo) <> DBSUCCEED then //might be possible for computed or cursor columns
         goto AssignGeneric;
-      {$IFDEF UNICODE}
-      ColumnInfo.ColumnName := PRawToUnicode(@tdsColInfo.Name[0],
-        ZFastCode.StrLen(tdsColInfo.Name), ConSettings^.ClientCodePage^.CP);
-      {$ELSE}
-      ColumnInfo.ColumnName := ConSettings^.ConvFuncs.ZRawToString(tdsColInfo.Name,
-        ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-      {$ENDIF}
-      if tdsColInfo.ActualName[0] = #0 then
+      ColumnInfo.ColumnName := ValueToString(@tdsColInfo.Name[0]);
+      if Byte(tdsColInfo.ActualName[0]) = Ord(#0) then
         ColumnInfo.ColumnLabel := ColumnInfo.ColumnName
       else
-      {$IFDEF UNICODE}
-        ColumnInfo.ColumnLabel := PRawToUnicode(@tdsColInfo.ActualName[0],
-          ZFastCode.StrLen(tdsColInfo.ActualName), ConSettings^.ClientCodePage^.CP);
-      {$ELSE}
-        ColumnInfo.ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(tdsColInfo.ActualName,
-          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-      {$ENDIF}
-      if tdsColInfo.TableName[0] <> #0 then
-      {$IFDEF UNICODE}
-        ColumnInfo.TableName := PRawToUnicode(@tdsColInfo.TableName[0],
-          ZFastCode.StrLen(tdsColInfo.TableName), ConSettings^.ClientCodePage^.CP);
-      {$ELSE}
-        ColumnInfo.TableName := ConSettings^.ConvFuncs.ZRawToString(tdsColInfo.TableName,
-          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-      {$ENDIF}
+        ColumnInfo.ColumnLabel := ValueToString(@tdsColInfo.ActualName[0]);
+      if Byte(tdsColInfo.TableName[0]) <> Ord(#0) then
+        ColumnInfo.TableName := ValueToString(@tdsColInfo.TableName[0]);
       AssignGenericColumnInfoFromZDBCOL(I-1, tdsColInfo.ColInfo);
+    end else if FDBLibConnection.GetProvider = dpMsSQL then begin
+      ColInfo.SizeOfStruct := SizeOf(DBCOL); //before execute dbcolinfo we need to set the record size -> 122 Byte or we fail
+      if FPlainDriver.dbcolinfo(FHandle, CI_REGULAR, I, 0, @ColInfo) <> DBSUCCEED then //might be possible for computed or cursor columns
+        goto AssignGeneric;
+      ColumnInfo.ColumnName := ValueToString(@ColInfo.Name[0]);
+      if Byte(ColInfo.ActualName[0]) = Ord(#0) then
+        ColumnInfo.ColumnLabel := ColumnInfo.ColumnName
+      else
+        ColumnInfo.ColumnLabel := ValueToString(@ColInfo.ActualName[0]);
+      if (Byte(ColInfo.TableName[0]) <> Ord(#0)) then
+        ColumnInfo.TableName := ValueToString(@ColInfo.TableName[0]);
+      AssignGenericColumnInfoFromZDBCOL(I-1, ColInfo.ColInfo);
     end
     else
-      if FDBLibConnection.GetProvider = dpMsSQL then
-      begin
-        ColInfo.SizeOfStruct := SizeOf(DBCOL); //before execute dbcolinfo we need to set the record size -> 122 Byte or we fail
-        if FPlainDriver.dbcolinfo(FHandle, CI_REGULAR, I, 0, @ColInfo) <> DBSUCCEED then //might be possible for computed or cursor columns
-          goto AssignGeneric;
-        {$IFDEF UNICODE}
-        ColumnInfo.ColumnName := PRawToUnicode(@ColInfo.Name[0],
-          ZFastCode.StrLen(ColInfo.Name), ConSettings^.ClientCodePage^.CP);
-        {$ELSE}
-        ColumnInfo.ColumnName := ConSettings^.ConvFuncs.ZRawToString(ColInfo.Name,
-          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-        {$ENDIF}
-        if ColInfo.ActualName[0] = #0 then
-          ColumnInfo.ColumnLabel := ColumnInfo.ColumnName
-        else
-        {$IFDEF UNICODE}
-          ColumnInfo.ColumnLabel := PRawToUnicode(@ColInfo.ActualName[0],
-            ZFastCode.StrLen(ColInfo.ActualName), ConSettings^.ClientCodePage^.CP);
-        {$ELSE}
-          ColumnInfo.ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(ColInfo.ActualName,
-            ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-        {$ENDIF}
-        if (ColInfo.TableName[0] <> #0) then
-        {$IFDEF UNICODE}
-          ColumnInfo.TableName := PRawToUnicode(@ColInfo.TableName[0],
-            ZFastCode.StrLen(ColInfo.TableName), ConSettings^.ClientCodePage^.CP);
-        {$ELSE}
-          ColumnInfo.TableName := ConSettings^.ConvFuncs.ZRawToString(ColInfo.TableName,
-            ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-        {$ENDIF}
-        AssignGenericColumnInfoFromZDBCOL(I-1, ColInfo.ColInfo);
-      end
-      else
-      begin
+    begin
 AssignGeneric:  {this is the old way we did determine the ColumnInformations}
-        ColumnInfo.ColumnName := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.dbColSource(FHandle, I),
-          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-        ColumnInfo.ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.dbColName(FHandle, I),
-          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-        DBLibColTypeCache[I-1] := TTDSType(FPlainDriver.dbColtype(FHandle, I));
-        ColumnInfo.ColumnType := ConvertTDSTypeToSqlType(DBLibColTypeCache[I-1], ConSettings.CPType);
-        ColumnInfo.Currency := DBLibColTypeCache[I-1] in [tdsMoney, tdsMoney4, tdsMoneyN];
-        ColumnInfo.Precision := FPlainDriver.dbCollen(FHandle, I);
-        ColumnInfo.Scale := 0;
-        ColumnInfo.Signed := not (DBLibColTypeCache[I-1] = tdsInt1);
-      end;
+      ColumnInfo.ColumnName := ValueToString(FPlainDriver.dbColSource(FHandle, I));
+      ColumnInfo.ColumnLabel := ValueToString(FPlainDriver.dbColName(FHandle, I));
+      DBLibColTypeCache[I-1] := TTDSType(FPlainDriver.dbColtype(FHandle, I));
+      ColumnInfo.ColumnType := ConvertTDSTypeToSqlType(DBLibColTypeCache[I-1], ConSettings.CPType);
+      ColumnInfo.Currency := DBLibColTypeCache[I-1] in [tdsMoney, tdsMoney4, tdsMoneyN];
+      ColumnInfo.Precision := FPlainDriver.dbCollen(FHandle, I);
+      ColumnInfo.Scale := 0;
+      ColumnInfo.Signed := not (DBLibColTypeCache[I-1] = tdsInt1);
+    end;
     if (ColumnInfo.ColumnType in [stString, stUnicodeString]) then begin
       if (ConSettings.ClientCodepage^.IsStringFieldCPConsistent) then
         ColumnInfo.ColumnCodePage := ConSettings^.ClientCodePage^.CP
@@ -358,7 +327,7 @@ begin
     if (DT = tdsChar) or (DT = tdsText) then
     begin
       Len := NativeUInt(FPlainDriver.dbDatLen(FHandle, ColumnIndex));
-      while (Len > 0) and ((Result+Len -1)^ = ' ') do Dec(Len);
+      while (Len > 0) and (AnsiChar((Result+Len -1)^) = AnsiChar(' ')) do Dec(Len);
       if TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage = zCP_NONE then
         case ZDetectUTF8Encoding(Result, Len) of
           etUTF8: TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage := zCP_UTF8;
@@ -383,7 +352,7 @@ begin
       SetLength(FRawTemp, 4001);
       Len := FPlainDriver.dbconvert(FHandle, Ord(DT), Pointer(Result),
         Len, Ord(tdsChar), Pointer(FRawTemp), 4001);
-      while (Len > 0) and ((Result+Len -1)^ = ' ') do Dec(Len);
+      while (Len > 0) and (AnsiChar((Result+Len -1)^) = AnsiChar(' ')) do Dec(Len);
       Result := Pointer(FRawTemp);
     end;
   FDBLibConnection.CheckDBLibError(lcOther, 'GetPAnsiChar');
@@ -422,7 +391,7 @@ begin
   else
     if (DT = tdsChar) or (DT = tdsText) then
     begin
-      while (Len > 0) and ((P+Len -1)^ = ' ') do Dec(Len);
+      while (Len > 0) and (AnsiChar((P+Len -1)^) = AnsiChar(' ')) do Dec(Len);
       if Len = 0 then
         Result := ''
       else
@@ -503,7 +472,7 @@ begin
     Result := '';
     if (DT = tdsChar) or (DT = tdsText) then
     begin
-      while (DL > 0) and ({%H-}PAnsiChar({%H-}NativeUint(Data) + NativeUint(DL - 1))^ = ' ') do
+      while (DL > 0) and (AnsiChar((PAnsiChar(Data)-DL - 1)^) = AnsiChar(' ')) do
               Dec(DL);
       if DL > 0 then
       begin
@@ -879,7 +848,7 @@ begin
       else
         Result := PDBDATETIME(Data)^.dtdays + 2 + (PDBDATETIME(Data)^.dttime / 25920000)
     else if (DT in [tdsNText, tdsNVarChar, tdsText, tdsVarchar, tdsChar]) then
-      if (PAnsiChar(Data)+2)^ = ':' then
+      if AnsiChar((PAnsiChar(Data)+2)^) = AnsiChar(':') then
         Result := RawSQLTimeToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed{%H-})
       else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Word(DL)) <= 4 then
           Result := RawSQLTimeStampToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
@@ -935,7 +904,7 @@ begin
         Result := TZAbstractBlob.CreateWithData(Data, DL);
       stAsciiStream, stUnicodeStream:
         begin
-          if (DL = 1) and (PAnsiChar(Data)^ = ' ') then DL := 0; //improve empty lobs, where len = 1 but string should be ''
+          if (DL = 1) and (AnsiChar(PAnsiChar(Data)^) = AnsiChar(' ')) then DL := 0; //improve empty lobs, where len = 1 but string should be ''
           Result := TZAbstractClob.CreateWithData(Data, DL,
             FDBLibConnection.GetServerAnsiCodePage, ConSettings);
         end;
