@@ -279,7 +279,8 @@ begin
 end;
 
 const
-  MySQLSessionTransactionIsolation: array[TZTransactIsolationLevel] of AnsiString = (
+  MySQLSessionTransactionIsolation: array[TZTransactIsolationLevel] of
+    {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF} = (
     'SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ',
     'SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED',
     'SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
@@ -331,7 +332,12 @@ begin
   end;
   {EgonHugeist: get current characterset first }
   if Assigned(FPlainDriver.mysql_character_set_name) then begin
-    sMy_client_Char_Set := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FPlainDriver.mysql_character_set_name(FHandle));
+    SslCa := FPlainDriver.mysql_character_set_name(FHandle);
+    {$IFDEF UNICODE}
+    sMy_client_Char_Set := ASCII7ToUnicodeString(SslCa, StrLen(SslCa));
+    {$ELSE}
+    System.SetString(sMy_client_Char_Set, SslCa, StrLen(SslCa));
+    {$ENDIF}
     if (sMy_client_Char_Set <> '') {mysql 4down doesn't have this function } and
      (sMy_client_Char_Set <> FClientCodePage) then begin
       ConSettings^.ClientCodePage := FPlainDriver.ValidateCharEncoding(sMy_client_Char_Set);
@@ -447,8 +453,13 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     end;
 
     { Connect to MySQL database. }
-    if FPlainDriver.mysql_real_connect(FHandle, PAnsiChar(AnsiString(HostName)),
-                              PAnsiChar(ConSettings^.User), PAnsiChar(AnsiString(Password)),
+    {$IFDEF UNICODE}
+    if FPlainDriver.mysql_real_connect(FHandle, PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)),
+                              PAnsiChar(ConSettings^.User), PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(Password, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)),
+    {$ELSE}
+    if FPlainDriver.mysql_real_connect(FHandle, PAnsiChar(HostName),
+                              PAnsiChar(ConSettings^.User), PAnsiChar(Password),
+    {$ENDIF}
                               PAnsiChar(ConSettings^.Database), Port, nil,
                               ClientFlag) = nil then begin
       CheckMySQLError(FPlainDriver, FHandle, nil, lcConnect, LogMessage, Self);
@@ -843,11 +854,11 @@ begin
     P := Pointer(Result);
   end else
     P := @StatBuf[0];
-  P^ := #39;
+  PByte(P)^ := Ord(#39);
   if FHandle = nil
   then EscapedLen := FPlainDriver.mysql_escape_string(P+1, Buf, Len)
   else EscapedLen := FPlainDriver.mysql_real_escape_string(FHandle, P+1, Buf, Len);
-  (P+EscapedLen+1)^ := #39;
+  PByte(P+EscapedLen+1)^ := Ord(#39);
   if P = @StatBuf[0]
   then ZSetString(@StatBuf[0], EscapedLen+2, Result)
   else SetLength(Result, EscapedLen+2);
