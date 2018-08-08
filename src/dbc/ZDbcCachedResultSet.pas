@@ -59,7 +59,9 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons,
 {$ENDIF USE_SYNCOMMONS}
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
+  {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
   ZClasses, ZDbcIntfs, ZDbcResultSet, ZDbcCache, ZCompatibility;
 
 type
@@ -112,9 +114,9 @@ type
   TZAbstractCachedResultSet = class (TZAbstractResultSet, IZCachedResultSet)
   private
     FCachedUpdates: Boolean;
-    FRowsList: TList;
-    FInitialRowsList: TList;
-    FCurrentRowsList: TList;
+    FRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
+    FInitialRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
+    FCurrentRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FSelectedRow: PZRowBuffer;
     FUpdatedRow: PZRowBuffer;
     FInsertedRow: PZRowBuffer;
@@ -135,15 +137,15 @@ type
     procedure CalculateRowDefaults(RowAccessor: TZRowAccessor); virtual;
     procedure PostRowUpdates(OldRowAccessor,
       NewRowAccessor: TZRowAccessor); virtual;
-    function LocateRow(RowsList: TList; RowIndex: Integer): Integer;
+    function LocateRow(RowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}; RowIndex: Integer): Integer;
     function AppendRow(Row: PZRowBuffer): PZRowBuffer;
     procedure PrepareRowForUpdates;
 
     property CachedUpdates: Boolean read FCachedUpdates write FCachedUpdates;
-    property RowsList: TList read FRowsList write FRowsList;
-    property InitialRowsList: TList read FInitialRowsList
+    property RowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF} read FRowsList write FRowsList;
+    property InitialRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF} read FInitialRowsList
       write FInitialRowsList;
-    property CurrentRowsList: TList read FCurrentRowsList
+    property CurrentRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF} read FCurrentRowsList
       write FCurrentRowsList;
     property SelectedRow: PZRowBuffer read FSelectedRow write FSelectedRow;
     property UpdatedRow: PZRowBuffer read FUpdatedRow write FUpdatedRow;
@@ -177,8 +179,12 @@ type
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; override;
     function GetString(ColumnIndex: Integer): String; override;
+    {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ColumnIndex: Integer): AnsiString; override;
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
+    {$ENDIF}
     function GetRawByteString(ColumnIndex: Integer): RawByteString; override;
     function GetUnicodeString(ColumnIndex: Integer): ZWidestring; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
@@ -235,8 +241,12 @@ type
     procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar); override;
     procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; Len: PNativeUint); override;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); override;
+    {$IFNDEF NO_ANSISTRING}
     procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString); override;
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String); override;
+    {$ENDIF}
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString); override;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString); override;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes); override;
@@ -406,7 +416,7 @@ end;
   @param Index a row index.
   @return a found row buffer of <code>null</code> otherwise.
 }
-function TZAbstractCachedResultSet.LocateRow(RowsList: TList;
+function TZAbstractCachedResultSet.LocateRow(RowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
   RowIndex: Integer): Integer;
 var
   I: Integer;
@@ -735,9 +745,9 @@ begin
   if not Closed then
     raise EZSQLException.Create(SResultsetIsAlreadyOpened);
 
-  FRowsList := TList.Create;
-  FInitialRowsList := TList.Create;
-  FCurrentRowsList := TList.Create;
+  FRowsList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
+  FInitialRowsList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
+  FCurrentRowsList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
 
   FRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
   FOldRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
@@ -909,6 +919,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFNDEF NO_ANSISTRING}
 function TZAbstractCachedResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -916,6 +927,7 @@ begin
 {$ENDIF}
   Result := FRowAccessor.GetAnsiString(ColumnIndex, LastWasNull);
 end;
+{$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -926,6 +938,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFNDEF NO_UTF8STRING}
 function TZAbstractCachedResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -933,6 +946,7 @@ begin
 {$ENDIF}
   Result := FRowAccessor.GetUTF8String(ColumnIndex, LastWasNull);
 end;
+{$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -1714,6 +1728,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
+{$IFNDEF NO_ANSISTRING}
 procedure TZAbstractCachedResultSet.UpdateAnsiString(ColumnIndex: Integer;
   const Value: AnsiString);
 begin
@@ -1723,6 +1738,7 @@ begin
   PrepareRowForUpdates;
   FRowAccessor.SetAnsiString(ColumnIndex, Value);
 end;
+{$ENDIF}
 
 {**
   Updates the designated column with a <code>UTF8String</code> value.
@@ -1734,6 +1750,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
+{$IFNDEF NO_UTF8STRING}
 procedure TZAbstractCachedResultSet.UpdateUTF8String(ColumnIndex: Integer;
   const Value: UTF8String);
 begin
@@ -1743,6 +1760,7 @@ begin
   PrepareRowForUpdates;
   FRowAccessor.SetUTF8String(ColumnIndex, Value);
 end;
+{$ENDIF}
 
 {**
   Updates the designated column with a <code>RawByteString</code> value.
