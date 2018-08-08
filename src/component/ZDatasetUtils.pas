@@ -294,7 +294,7 @@ implementation
 
 uses
   ZFastCode, ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset,
-  ZDbcUtils, ZSysUtils;
+  ZDbcUtils, ZSysUtils, ZDbcResultSet;
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -1790,8 +1790,10 @@ procedure SetStatementParam(Index: Integer;
 var
   Stream: TStream;
   TempBytes: TBytes;
-  {$IFDEF TPARAM_HAS_ASBYTES}Bts: TBytes;{$ENDIF}
-  {$IFDEF WITHOUT_VARBYTESASSTRING}V: Variant;{$ENDIF}
+  BlobData: TBlobData;
+  {$IFDEF WITH_WIDEMEMO}P: Pointer;
+  UniTemp: ZWideString;
+  {$ENDIF}
 begin
   if Param.IsNull then
     Statement.SetNull(Index, ConvertDatasetToDbcType(Param.DataType))
@@ -1841,19 +1843,15 @@ begin
       ftBytes, ftVarBytes:
         begin
           {$IFDEF TPARAM_HAS_ASBYTES}
-          Bts := Param.AsBytes;
-          SetLength(TempBytes, Length(Bts));
-          if Length(Bts) > 0 then
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Bts)^, Pointer(TempBytes)^, Length(Bts));
+          Statement.SetBytes(Index, Param.AsBytes);
           {$ELSE}
             {$IFDEF WITHOUT_VARBYTESASSTRING}
-            V := Param.Value;
-            TempBytes := V;
+            TempBytes := VarToBytes(Param.Value);
             {$ELSE}
             TempBytes := StrToBytes(Param.AsString);
             {$ENDIF}
+            Statement.SetBytes(Index, TempBytes);
           {$ENDIF}
-          Statement.SetBytes(Index, TempBytes);
         end;
       {$IFDEF WITH_FTGUID}
       // As of now (on Delphi 10.2) TParam has no support of ftGuid data type.
@@ -1897,22 +1895,17 @@ begin
       {$IFDEF WITH_WIDEMEMO}
       ftWideMemo:
         begin
-          Stream := WideStringStream(Param.AsWideString);
-          try
-            Statement.SetUnicodeStream(Index, Stream);
-           finally
-             Stream.Free;
-           end;
+          UniTemp := Param.AsWideString;
+          P :=  Pointer(UniTemp);
+          if P = nil then
+            P := PEmptyUnicodeString;
+          Statement.SetBlob(Index, stUnicodeStream, TZAbstractClob.CreateWithData(PWideChar(P), Length(UniTemp), Statement.GetConnection.GetConSettings));
         end;
       {$ENDIF}
       ftBlob, ftGraphic:
         begin
-          Stream := TBytesStream.Create({$IFDEF FPC}BytesOf{$ENDIF}(Param.AsBlob));
-          try
-            Statement.SetBinaryStream(Index, Stream);
-          finally
-            Stream.Free;
-          end;
+          BlobData := Param.AsBlob;
+          Statement.SetBlob(Index, stBinaryStream, TZAbstractBlob.CreateWithData(Pointer(BlobData), Length(BlobData)));
         end;
       else
         raise EZDatabaseError.Create(SUnKnownParamDataType + ' ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(Param.DataType)));
