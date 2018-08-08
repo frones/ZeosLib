@@ -587,8 +587,10 @@ begin
   SqlError.Severity := Severity;
   SqlError.DbErr := DbErr;
   SqlError.OsErr := OsErr;
-  ZSetString(DbErrStr, StrLen(DbErrStr), SqlError.DbErrStr);
-  ZSetString(OsErrStr, StrLen(OsErrStr), SqlError.OsErrStr);
+  if DbErrStr <> nil then
+    ZSetString(DbErrStr, StrLen(DbErrStr), SqlError.DbErrStr);
+  if OsErrStr <> nil then
+    ZSetString(OsErrStr, StrLen(OsErrStr), SqlError.OsErrStr);
   SQLErrors.Add(SqlError);
 
   Result := INT_CANCEL;
@@ -606,9 +608,12 @@ begin
   SQLMessage.MsgNo := MsgNo;
   SQLMessage.MsgState := MsgState;
   SQLMessage.Severity := Severity;
-  ZSetString(MsgText, StrLen(MsgText), SQLMessage.MsgText);
-  ZSetString(SrvName, StrLen(SrvName), SQLMessage.SrvName);
-  ZSetString(ProcName, StrLen(ProcName), SQLMessage.ProcName);
+  if MsgText <> nil then
+    ZSetString(MsgText, StrLen(MsgText), SQLMessage.MsgText);
+  if SrvName <> nil then
+    ZSetString(SrvName, StrLen(SrvName), SQLMessage.SrvName);
+  if ProcName <> nil then
+    ZSetString(ProcName, StrLen(ProcName), SQLMessage.ProcName);
   SQLMessage.Line := Line;
   SQLMessages.Add(SQLMessage);
 
@@ -626,8 +631,10 @@ begin
   SqlError.Severity := Severity;
   SqlError.DbErr := DbErr;
   SqlError.OsErr := OsErr;
-  ZSetString(DbErrStr, StrLen(DbErrStr),SqlError.DbErrStr);
-  ZSetString(OsErrStr, StrLen(OsErrStr),SqlError.OsErrStr);
+  if DbErrStr <> nil then
+    ZSetString(DbErrStr, StrLen(DbErrStr),SqlError.DbErrStr);
+  if OsErrStr <> nil then
+    ZSetString(OsErrStr, StrLen(OsErrStr),SqlError.OsErrStr);
   SQLErrors.Add(SqlError);
 
   Result := INT_CANCEL;
@@ -644,9 +651,12 @@ begin
   SQLMessage.MsgNo := MsgNo;
   SQLMessage.MsgState := MsgState;
   SQLMessage.Severity := Severity;
-  ZSetString(MsgText, StrLen(MsgText), SQLMessage.MsgText);
-  ZSetString(SrvName, StrLen(SrvName), SQLMessage.SrvName);
-  ZSetString(ProcName, StrLen(ProcName), SQLMessage.ProcName);
+  if MsgText <> nil then
+    ZSetString(MsgText, StrLen(MsgText), SQLMessage.MsgText);
+  if SrvName <> nil then
+    ZSetString(SrvName, StrLen(SrvName), SQLMessage.SrvName);
+  if ProcName <> nil then
+    ZSetString(ProcName, StrLen(ProcName), SQLMessage.ProcName);
   SQLMessage.Line := Line;
   SQLMessages.Add(SQLMessage);
 
