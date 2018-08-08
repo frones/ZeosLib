@@ -180,11 +180,11 @@ begin
         P := sqldata;
         // Trim only trailing spaces. TrimRight also removes other characters)
         Len := sqllen;
-        if Len > 0 then while (P + Len - 1)^ = ' ' do Dec(Len);
+        if Len > 0 then while AnsiChar((P + Len - 1)^) = AnsiChar(' ') do Dec(Len);
       end;
     SQL_VARYING:
       begin
-        P := PISC_VARYING(sqldata).str;
+        P := @PISC_VARYING(sqldata).str[0];
         Len := PISC_VARYING(sqldata).strlen;
       end;
     else // should not happen
@@ -1227,7 +1227,7 @@ begin
         SQL_TEXT, SQL_VARYING:
           begin
             GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
-            if (P+2)^ = ':' then //possible date if Len = 10 then
+            if AnsiChar((P+2)^) = AnsiChar(':') then //possible date if Len = 10 then
               Result := RawSQLTimeToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
               Result := Frac(RawSQLTimeStampToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed));
@@ -1301,7 +1301,7 @@ begin
         SQL_TEXT, SQL_VARYING:
           begin
             GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
-            if (P+2)^ = ':' then
+            if AnsiChar((P+2)^) = AnsiChar(':') then
               Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
               if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
@@ -1807,8 +1807,9 @@ begin
       ColumnInfo := TZColumnInfo.Create;
       with ColumnInfo do
       begin
-        ColumnName := FIZSQLDA.GetFieldSqlName(I);
         TableName := FIZSQLDA.GetFieldRelationName(I);
+        if TableName <> '' then
+          ColumnName := FIZSQLDA.GetFieldSqlName(I);
         ColumnLabel := FIZSQLDA.GetFieldAliasName(I);
         FieldSqlType := FIZSQLDA.GetFieldSqlType(I);
         DataLen := FIZSQLDA.GetIbSqlLen(I);
@@ -1925,7 +1926,7 @@ begin
   InternalClear;
   ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FIBConnection.GetTrHandle,
     FBlobId, Size{%H-}, Buffer{%H-}, False, FIBConnection as IImmediatelyReleasable);
-  (PAnsiChar(Buffer)+NativeUInt(Size))^ := #0; //add #0 terminator
+  AnsiChar((PAnsiChar(Buffer)+NativeUInt(Size))^) := AnsiChar(#0); //add #0 terminator
   FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
   FBlobSize := Size+1;
   BlobData := Buffer;
