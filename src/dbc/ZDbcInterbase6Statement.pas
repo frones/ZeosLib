@@ -144,6 +144,7 @@ var
   AC: Boolean;
   ArrayOffSet: Integer;
 begin
+  Result := 0;
   AC := Connection.GetAutoCommit;
   if AC then
     Connection.SetAutoCommit(False);
