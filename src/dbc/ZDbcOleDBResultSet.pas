@@ -60,7 +60,7 @@ interface
 
 uses
 {$IFDEF USE_SYNCOMMONS}
-  SynCommons,
+  SynCommons, SynTable,
   {$ENDIF}
 {$IFNDEF FPC}
   DateUtils,

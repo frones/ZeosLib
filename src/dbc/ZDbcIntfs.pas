@@ -58,7 +58,7 @@ interface
 
 uses
   {$IFDEF USE_SYNCOMMONS}
-  SynCommons,
+  SynCommons, SynTable,
   {$ENDIF USE_SYNCOMMONS}
   Types, Classes, SysUtils,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
