@@ -65,7 +65,8 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons,
 {$ENDIF USE_SYNCOMMONS}
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, Contnrs,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
+  {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF},
   ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
   ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement,
   ZPlainMySqlDriver, ZPlainMySqlConstants, ZSelectSchema;
@@ -208,12 +209,8 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
-  ZFastCode, ZSysUtils, ZMessages, ZEncoding, ZClasses,
+  ZFastCode, ZSysUtils, ZMessages, ZEncoding, {$IFNDEF NO_UNIT_CONTNRS}ZClasses,{$ENDIF}
   ZDbcMySqlUtils, ZDbcMySQL, ZDbcUtils, ZDbcMetadata, ZDbcLogging;
-
-{$IFOPT R+}
-  {$DEFINE RangeCheckEnabled}
-{$ENDIF}
 
 { TZMySQLResultSetMetadata }
 
@@ -1656,7 +1653,7 @@ begin
             FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
             ColBind^.buffer_Length_address^ := 0;
-            RawToFloatDef(PAnsichar(@FSmallLobBuffer[0]), '.', 0, Result);
+            RawToFloatDef(PAnsichar(@FSmallLobBuffer[0]), {$IFDEF NO_ANSICHAR}Ord{$ENDIF}('.'), 0, Result);
           end;
       end
   end else begin
@@ -1875,7 +1872,7 @@ begin
           else Result := PUInt64(ColBind^.buffer)^;
         FIELD_TYPE_YEAR: TryEncodeDate(PWord(ColBind^.buffer)^, 1,1, Result);
         FIELD_TYPE_STRING: begin
-            if (PAnsiChar(ColBind^.buffer)+2)^ = ':' then //possible date if Len = 10 then
+            if PByte(PAnsiChar(ColBind^.buffer)+2)^ = Ord(':') then //possible date if Len = 10 then
               Result := RawSQLTimeToDateTime(PAnsiChar(ColBind^.buffer),
                 ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed{%H-})
             else
@@ -1891,7 +1888,7 @@ begin
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     LastWasNull := Buffer = nil;
     if not LastWasNull then begin
-      if (Buffer+2)^ = ':' then //possible date if Len = 10 then
+      if PByte(Buffer+2)^ = Ord(':') then //possible date if Len = 10 then
         Result := RawSQLTimeToDateTime(Buffer,Len, ConSettings^.ReadFormatSettings, Failed{%H-})
       else
         Result := Frac(RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
@@ -1969,7 +1966,7 @@ begin
           else Result := PUInt64(ColBind^.buffer)^;
         FIELD_TYPE_YEAR: TryEncodeDate(PWord(ColBind^.buffer)^, 1,1, Result);
         FIELD_TYPE_STRING: begin
-            if (PAnsiChar(ColBind^.buffer)+2)^ = ':' then
+            if PByte(PAnsiChar(ColBind^.buffer)+2)^ = Ord(':') then
               Result := RawSQLTimeToDateTime(PAnsiChar(ColBind^.buffer),
                 ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed{%H-})
             else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - ColBind^.Length[0] ) <= 4 then
@@ -1986,7 +1983,7 @@ begin
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     LastWasNull := Buffer = nil;
     if not LastWasNull then
-      if (Buffer+2)^ = ':' then
+      if PByte(Buffer+2)^ = Ord(':') then
         Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
       else
         if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
@@ -2342,7 +2339,7 @@ begin
   Bind^.buffer_Length_address^ := 0;
   if Status = 1 then
     checkMySQLError(PlainDriver, nil, StmtHandle^, lcOther, '', Sender);
-  (PAnsiChar(FBlobData)+FBlobSize-1)^ := #0;
+  PByte(PAnsiChar(FBlobData)+FBlobSize-1)^ := Ord(#0);
 End;
 
 { TZMySQLPreparedBlob }

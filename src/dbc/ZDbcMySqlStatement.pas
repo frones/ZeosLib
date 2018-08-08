@@ -226,10 +226,8 @@ var
 //  MySQL5023PreparableTokens: TPreparablePrefixTokens;
 //  MySQL5112PreparableTokens: TPreparablePrefixTokens;
   MySQL568PreparableTokens: TPreparablePrefixTokens;
-{$IFOPT R+}
-  {$DEFINE RangeCheckEnabled}
-{$ENDIF}
-const EnumBool: array[Boolean] of AnsiString = ('N','Y');
+
+const EnumBool: array[Boolean] of {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF} = ('N','Y');
 
 { TZAbstractMySQLPreparedStatement }
 
@@ -265,7 +263,7 @@ var
   Bind: PMYSQL_aligned_BIND;
   Len: LengthInt;
 begin
-  Len := Length(Value);
+  Len := Length(Value){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
   if FEmulatedParams then begin
     if FTokenMatchIndex <> -1 then
       inherited BindRawStr(Index, Value);
@@ -277,7 +275,7 @@ begin
     if (BindList.SQLTypes[Index] <> stString) or (Bind.buffer_length_address^ < Cardinal(Len+1)) then
       InitBuffer(stString, Bind, Len);
     if Len = 0
-    then PAnsiChar(Bind^.buffer)^ := #0
+    then PByte(Bind^.buffer)^ := Ord(#0)
     else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Bind^.buffer)^, Len+1);
     Bind^.Length[0] := Len;
     Bind^.is_null_address^ := 0;
@@ -301,7 +299,7 @@ begin
     if (BindList.SQLTypes[Index] <> stString) or (Bind.buffer_length_address^ < Cardinal(Len+1)) then
       InitBuffer(stString, Bind, Len);
     if Len = 0
-    then PAnsiChar(Bind^.buffer)^ := #0
+    then PByte(Bind^.buffer)^ := Ord(#0)
     else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, Pointer(Bind^.buffer)^, Len+1);
     Bind^.Length[0] := Len;
     Bind^.is_null_address^ := 0;
@@ -780,7 +778,8 @@ begin
               end;
               goto move_from_temp;
             end;
-         {$ENDIF}
+          {$ENDIF}
+          {$IFNDEF NO_ANSISTRING}
           vtAnsiString:
             if ZCompatibleCodePages(ZOSCodePage, ClientCP)
             then goto set_raw
@@ -792,6 +791,8 @@ begin
               end;
               goto move_from_temp;
             end;
+          {$ENDIF}
+          {$IFNDEF NO_UTF8STRING}
           vtUTF8String:
             if ZCompatibleCodePages(zCP_UTF8, ClientCP)
             then goto set_raw
@@ -803,6 +804,7 @@ begin
               end;
               goto move_from_temp;
             end;
+          {$ENDIF}
           vtRawByteString:begin
 set_raw:      //MySQL uses array of PAnsichar so we are using our buffer as pointer array
               ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*ArrayCount);
@@ -830,7 +832,7 @@ move_from_temp:
                 Bind^.length[i] := Length(ClientStrings[i]);
                 if Bind^.length[i] > 0
                 then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(ClientStrings[i])^, P^, Bind^.length[i]+1)  //write buffer
-                else P^ := #0;
+                else Byte(P^) := Ord(#0);
                 PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := P;
                 Inc(P, Bind^.length[i]+1);
               end;
@@ -971,7 +973,9 @@ begin
     stString, stUnicodeString:
                     case VariantType of
                       {$IFNDEF UNICODE} vtString, {$ENDIF}
-                      vtAnsiString, vtUTF8String, vtRawByteString:
+                      {$IFNDEF NO_ANSISTRING}vtAnsiString, {$ENDIF}
+                      {$IFNDEF NO_UTF8STRING}vtUTF8String, {$ENDIF}
+                      vtRawByteString:
                         for i := 0 to ArrayCount -1 do
                           SetIndicator(StrToBoolEx(TRawByteStringDynArray(Value)[i]), Bind, I);
                       {$IFDEF UNICODE} vtString, {$ENDIF}
@@ -1021,7 +1025,7 @@ begin
       InitBuffer(SQLType, Bind, Len);
     if SQLType <> stBinaryStream then begin
       if Len = 0
-      then PansiChar(Bind^.buffer)^ := #0
+      then PByte(Bind^.buffer)^ := Ord(#0)
       else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, Pointer(Bind^.buffer)^, Len);
       Bind^.Length[0] := Len;
     end else begin
@@ -1182,7 +1186,7 @@ begin
       FIELD_TYPE_YEAR:
         Result := IntToRaw(PWord(Bind^.buffer_address^)^);
       FIELD_TYPE_STRING:
-          Result := SQLQuotedStr(PAnsiChar(Bind^.buffer), Bind^.length[0], #39);
+          Result := SQLQuotedStr(PAnsiChar(Bind^.buffer), Bind^.length[0], {$IFDEF NO_ANSICHAR}Ord{$ENDIF}(#39));
       FIELD_TYPE_TINY_BLOB,
       FIELD_TYPE_BLOB: Result := '(Blob)'
     end;
@@ -1707,7 +1711,7 @@ begin
   if FHasDefaultValues then
     for I := 0 to High(FInParamDefaultValues) do begin
       P := Pointer(FInParamDefaultValues[i]);
-      if (P<>nil) and (P^ = #39) and ((P+Length(FInParamDefaultValues[i])-1)^=#39)
+      if (P<>nil) and (PByte(P)^ = Ord(#39)) and (PByte(P+Length(FInParamDefaultValues[i])-1)^=Ord(#39))
       then FInParamDefaultValues[i] := Copy(FInParamDefaultValues[i], 2, Length(FInParamDefaultValues[i])-2)
       else FInParamDefaultValues[i] := FInParamDefaultValues[i];
     end;
