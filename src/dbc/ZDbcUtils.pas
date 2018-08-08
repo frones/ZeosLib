@@ -600,8 +600,9 @@ begin
   if ParamFound {$IFNDEF UNICODE}or ConSettings^.AutoEncode {$ENDIF}or Assigned(ComparePrefixTokens) then begin
     Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     {$IFNDEF UNICODE}
-    if ConSettings^.AutoEncode then
-      List := TStringList.Create;
+    if ConSettings^.AutoEncode
+    then List := TStringList.Create
+    else List := nil; //satisfy compiler
     {$ENDIF}
     try
       NextIsNChar := False;
