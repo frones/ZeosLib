@@ -178,7 +178,7 @@ label AssignGeneric;
   function ValueToString(P: PAnsiChar): String;
   begin
     {$IFDEF UNICODE}
-    ColumnInfo.ColumnName := PRawToUnicode(P, ZFastCode.StrLen(P), ConSettings^.ClientCodePage^.CP);
+    Result := PRawToUnicode(P, ZFastCode.StrLen(P), ConSettings^.ClientCodePage^.CP);
     {$ELSE}
     ZSetString(P, ZFastCode.StrLen(P), Result);
     Result := ConSettings^.ConvFuncs.ZRawToString(tdsColInfo.ActualName,
