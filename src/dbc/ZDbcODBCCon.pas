@@ -160,7 +160,7 @@ uses
   {$IFDEF MSWINDOWS}Windows,{$ENDIF}
   ZODBCToken, ZDbcODBCUtils, ZDbcODBCMetadata, ZDbcODBCStatement, ZDbcUtils,
   ZPlainDriver, ZSysUtils, ZEncoding, ZFastCode, ZConnProperties, ZDbcProperties,
-  ZMessages;
+  ZMessages {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 { TZODBCDriver }
 

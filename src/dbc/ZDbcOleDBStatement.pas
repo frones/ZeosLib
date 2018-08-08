@@ -553,7 +553,7 @@ begin
         FRowSet := nil;
         Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
           IID_IRowset, @FRowsAffected, @FRowSet);
-      until (FRowSet = nil) or (Status = DB_S_NORESULT);
+      until (Status = DB_S_NORESULT);
       FMultipleResults := nil;
       (FCommand as ICommandPrepare).UnPrepare;
       FCommand := nil;
