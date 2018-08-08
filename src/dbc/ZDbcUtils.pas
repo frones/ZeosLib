@@ -55,7 +55,8 @@ interface
 
 {$I ZDbc.inc}
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs, TypInfo,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF}, TypInfo,
   ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata, ZTokenizer, ZVariant;
 
 type
@@ -65,6 +66,16 @@ type
   end;
   PPreparablePrefixTokens = ^TPreparablePrefixTokens;
   TPreparablePrefixTokens = array of TPreparablePrefixToken;
+
+  TRawBuff = record
+    Pos: Word;
+    Buf: array[Byte] of AnsiChar;
+  end;
+
+  TUCS2Buff = record
+    Pos: Word;
+    Buf: array[Byte] of WideChar;
+  end;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -152,7 +163,7 @@ function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = Fal
 function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): RawByteString;
 function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
 
-function WideStringStream(const AString: WideString): TStream;
+function WideStringStream(const AString: ZWideString): TStream;
 
 function TokenizeSQLQueryRaw(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
@@ -200,10 +211,19 @@ procedure RaiseUnsupportedParameterTypeException(ParamType: TZSQLType);
 
 function IsNullFromArray(ZArray: PZArray; Index: Cardinal): Boolean;
 
+procedure ToBuff(const Value: RawByteString; var Buf: TRawBuff; var Result: RawByteString); overload;
+procedure ToBuff(Value: Pointer; L: LengthInt; var Buf: TRawBuff; var Result: RawByteString); overload;
+procedure ToBuff(Value: AnsiChar; var Buf: TRawBuff; var Result: RawByteString); overload;
+procedure ToBuff(const Value: ZWideString; var Buf: TUCS2Buff; var Result: ZWideString); overload;
+procedure ToBuff(Value: WideChar; var Buf: TUCS2Buff; var Result: ZWideString); overload;
+
+procedure FlushBuff(var Buf: TRawBuff; var Result: RawByteString); overload;
+procedure FlushBuff(var Buf: TUCS2Buff; var Result: ZWideString); overload;
+
 implementation
 
 uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken,
-  ZConnProperties, ZDbcProperties, ZClasses;
+  ZConnProperties, ZDbcProperties {$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -486,20 +506,20 @@ begin
   ZSetString(nil, ((Len+1) shl 1)+Ord(not Odbc), Result{%H-});
   if ODBC then begin
     P := Pointer(Result);
-    P^ := '0';
-    (P+1)^ := 'x';
+    Word(P^) := Ord('0');
+    Word((P+1)^) := Ord('x');
     Inc(P, 2);
     if (Value <> nil) and (Len > 0)then
       ZBinToHex(Value, P, Len);
   end else begin
     P := Pointer(Result);
-    P^ := 'x';
-    (P+1)^ := #39;
+    Word(P^) := Ord('x');
+    Word((P+1)^) := Ord(#39);
     Inc(P,2);
     if (Value <> nil) and (Len > 0)then
       ZBinToHex(Value, P, Len);
     Inc(P, Len shl 1); //shl 1 = * 2 but faster
-    P^ := #39;
+    Word(P^) := Word(#39);
   end;
 end;
 
@@ -509,20 +529,20 @@ begin
   ZSetString(nil, ((Len+1) shl 1)+Ord(not Odbc), Result{%H-});
   if ODBC then begin
     P := Pointer(Result);
-    P^ := '0';
-    (P+1)^ := 'x';
+    Byte(P^) := Ord('0');
+    Byte((P+1)^) := Ord('x');
     Inc(P, 2);
     if (Value <> nil) and (Len > 0)then
       ZBinToHex(Value, P, Len);
   end else begin
     P := Pointer(Result);
-    P^ := 'x';
-    (P+1)^ := #39;
+    Byte(P^) := Ord('x');
+    Byte((P+1)^) :=Ord(#39);
     Inc(P,2);
     if (Value <> nil) and (Len > 0)then
       ZBinToHex(Value, P, Len);
     Inc(P, Len shl 1); //shl 1 = * 2 but faster
-    P^ := #39;
+    Byte(P^) := Ord(#39);
   end;
 end;
 
@@ -535,7 +555,7 @@ begin
   {$ENDIF}
 end;
 
-function WideStringStream(const AString: WideString): TStream;
+function WideStringStream(const AString: ZWideString): TStream;
 begin
   Result := TMemoryStream.Create;
   Result.Write(PWideChar(AString)^, Length(AString)*2);
@@ -617,7 +637,11 @@ begin
           {$ELSE}
           Add(Tokens.AsString(FirstComposePos, I-1));
           {$ENDIF}
+          {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+          Add(ZUnicodeToRaw(Tokens.AsString(I, I), ConSettings^.ClientCodePage^.CP));
+          {$ELSE}
           Add('?', True);
+          {$ENDIF}
           FirstComposePos := i +1;
         end else if ParamFound and (IsNCharIndex<> nil) and Tokens.IsEqual(I, Char('N')) and
             (Tokens.Count > i) and Tokens.IsEqual(i+1, Char('?')) then
@@ -929,7 +953,7 @@ var
   Encoding: TZCharEncoding;
 begin
   if Size = 0 then
-    Result := ''
+    Result := EmptyRaw
   else
   begin
     SetLength(Bytes, Size +2);
@@ -955,7 +979,7 @@ begin
               US := PRawToUnicode(Buffer, Size, ZOSCodePage)
           else
             US := PRawToUnicode(Buffer, Size, ConSettings.CTRL_CP);
-          Result := UTF8Encode(US);
+          Result := ZUnicodeToRaw(US, zCP_UTF8);
         end;
       ceUTF8:
         if (ConSettings.ClientCodePage.Encoding in [ceAnsi, ceUTF16]) then begin//ansi expected
@@ -979,10 +1003,10 @@ begin
             Result := ZUnicodeToRaw(US, ConSettings.ClientCodePage.CP)
             {$ENDIF}
           else
-            Result := UTF8Encode(US);
+            Result := ZUnicodeToRaw(US, zCP_UTF8);
         end;
       else
-        Result := '';
+        Result := EmptyRaw;
     end;
   end;
 end;
@@ -1011,7 +1035,7 @@ begin
       Result := ZUnicodeToRaw(ZRawToUnicode(Ansi, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP)
       {$ENDIF}
   else
-    Result := ''; // not done yet  and not needed. Makes the compiler happy
+    Result := EmptyRaw; // not done yet  and not needed. Makes the compiler happy
 end;
 
 {**
@@ -1112,8 +1136,12 @@ begin
               {$IFNDEF UNIOCDE}
               vtString,
               {$ENDIF}
+              {$IFNDEF NO_ANSISTRING}
               vtAnsiString,
+              {$ENDIF}
+              {$IFNDEF NO_UTF8STRING}
               vtUTF8String,
+              {$ENDIF}
               vtRawByteString: IsNullFromArray := StrToBoolEx(TRawByteStringDynArray(ZArray^.VIsNullArray)[Index]);
               {$IFDEF UNIOCDE}
               vtString,
@@ -1138,6 +1166,169 @@ begin
         else
           raise EZSQLException.Create(SUnsupportedParameterType);
       end
+end;
+
+procedure ToBuff(const Value: RawByteString; var Buf: TRawBuff; var Result: RawByteString); overload;
+var
+  P: PAnsiChar;
+  L, LRes: LengthInt;
+begin
+  L := Length(Value){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+  if L <= 0 then Exit;
+  if L <= (SizeOf(Buf.Buf)-Buf.Pos) then begin
+    P := Pointer(Value);
+    if L = 1 //happens very often (comma,space etc) -> worth it the check
+    then Buf.Buf[Buf.Pos] := AnsiChar(P^)
+    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Buf.Buf[Buf.Pos], L);
+    Inc(Buf.Pos, L);
+  end else begin
+    LRes := Length(Result)+Buf.Pos+L;
+    SetLength(Result, LRes{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+    {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+    PByte(P+LRes)^ := Ord(#0);
+    {$ENDIF}
+    P := Pointer(Result);
+    Inc(P, LRes-Buf.Pos-L);
+    if Buf.Pos > 0 then begin
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos);
+      Inc(P, Buf.Pos);
+      Buf.Pos := 0;
+    end;
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, P^, L);
+  end;
+end;
+
+procedure ToBuff(Value: Pointer; L: LengthInt; var Buf: TRawBuff; var Result: RawByteString); overload;
+var
+  P: PAnsiChar;
+  LRes: LengthInt;
+begin
+  if L <= 0 then Exit;
+  if L <= (SizeOf(Buf.Buf)-Buf.Pos) then begin
+    P := Pointer(Value);
+    if L = 1 //happens very often (comma,space etc) -> worth it the check
+    then Buf.Buf[Buf.Pos] := AnsiChar(P^)
+    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Buf.Buf[Buf.Pos], L);
+    Inc(Buf.Pos, L);
+  end else begin
+    LRes := Length(Result)+Buf.Pos+L;
+    SetLength(Result, LRes{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+    {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+    PByte(P+LRes)^ := Ord(#0);
+    {$ENDIF}
+    P := Pointer(Result);
+    Inc(P, LRes-Buf.Pos-L);
+    if Buf.Pos > 0 then begin
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos);
+      Inc(P, Buf.Pos);
+      Buf.Pos := 0;
+    end;
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, P^, L);
+  end;
+end;
+
+procedure ToBuff(Value: AnsiChar; var Buf: TRawBuff; var Result: RawByteString); overload;
+var
+  P: PAnsiChar;
+  L: LengthInt;
+begin
+  if Buf.Pos <= (SizeOf(Buf.Buf)) then begin
+    Buf.Buf[Buf.Pos] := Value;
+    Inc(Buf.Pos);
+  end else begin
+    L := Length(Result)+Buf.Pos+1;
+    SetLength(Result, L{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+    P := Pointer(Result);
+    {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+    PByte(P+L)^ := Ord(#0);
+    {$ENDIF}
+    Inc(P, Length(Result)-Buf.Pos-1);
+    if Buf.Pos > 0 then begin
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos);
+      Inc(P, Buf.Pos);
+      Buf.Pos := 0;
+    end;
+    AnsiChar(P^) := Value;
+  end;
+end;
+
+procedure ToBuff(const Value: ZWideString; var Buf: TUCS2Buff; var Result: ZWideString); overload;
+var
+  P: PWideChar;
+  L: LengthInt;
+begin
+  L := Length(Value);
+  if L <= 0 then Exit;
+  if L <= ((SizeOf(Buf.Buf) shr 1)-Buf.Pos) then begin
+    P := Pointer(Value);
+    if L = 1 //happens very often (comma,space etc) -> worth it the check
+    then Buf.Buf[Buf.Pos] := P^
+    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Buf.Buf[Buf.Pos], L shl 1);
+    Inc(Buf.Pos, L);
+  end else begin
+    SetLength(Result, Length(Result)+Buf.Pos+L);
+    P := Pointer(Result);
+    Inc(P, Length(Result)-Buf.Pos-L);
+    if Buf.Pos > 0 then begin
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos shl 1);
+      Inc(P, Buf.Pos);
+      Buf.Pos := 0;
+    end;
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, P^, L shl 1);
+  end;
+end;
+
+procedure ToBuff(Value: WideChar; var Buf: TUCS2Buff; var Result: ZWideString); overload;
+var
+  P: PWideChar;
+  L: LengthInt;
+begin
+  if (Buf.Pos <= (SizeOf(Buf.Buf) shr 1)) then begin
+    Buf.Buf[Buf.Pos] := Value;
+    Inc(Buf.Pos);
+  end else begin
+    L := Length(Result)+Buf.Pos+1;
+    SetLength(Result, L);
+    P := Pointer(Result);
+    Inc(P, L-Buf.Pos-1);
+    if Buf.Pos > 0 then begin
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos shl 1);
+      Inc(P, Buf.Pos);
+      Buf.Pos := 0;
+    end;
+    P^ := Value;
+  end;
+end;
+
+procedure FlushBuff(var Buf: TRawBuff; var Result: RawByteString); overload;
+var P: PAnsiChar;
+  L: LengthInt;
+begin
+  if Buf.Pos > 0 then begin
+    L := Length(Result)+Buf.Pos;
+    SetLength(Result, L{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+    P := Pointer(Result);
+    {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+    PByte(P+L)^ := Ord(#0);
+    {$ENDIF}
+    Inc(P, L-Buf.Pos);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos);
+    Buf.Pos := 0;
+  end;
+end;
+
+procedure FlushBuff(var Buf: TUCS2Buff; var Result: ZWideString); overload;
+var P: PWideChar;
+  L: LengthInt;
+begin
+  if Buf.Pos > 0 then begin
+    L := Length(Result)+Buf.Pos;
+    SetLength(Result, L);
+    P := Pointer(Result);
+    Inc(P, L-Buf.Pos);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos shl 1);
+    Buf.Pos := 0;
+  end;
 end;
 
 end.
