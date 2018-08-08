@@ -124,7 +124,7 @@ type
   TZASAParamererResultSet = Class(TZASAAbstractResultSet)
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
-      var StmtNum: SmallInt; const CursorName: RawByteString; const SqlData: IZASASQLDA;
+      var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SqlData: IZASASQLDA;
       CachedBlob: boolean);
     function Next: Boolean; override;
   end;
@@ -1470,7 +1470,7 @@ end;
 { TZASAParamererResultSet }
 
 constructor TZASAParamererResultSet.Create(const Statement: IZStatement;
-  const SQL: string; var StmtNum: SmallInt; const CursorName: AnsiString;
+  const SQL: string; var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
   const SqlData: IZASASQLDA; CachedBlob: boolean);
 begin
   inherited Create(Statement, SQL, StmtNum, CursorName, SqlData, CachedBlob);
@@ -1646,7 +1646,7 @@ end;
 
 { TZASACachedResultSet }
 constructor TZASACachedResultSet.Create(const Statement: IZStatement; const SQL: string;
-  var StmtNum: SmallInt; const CursorName: AnsiString; const SqlData: IZASASQLDA;
+  var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SqlData: IZASASQLDA;
   CachedBlob: boolean);
 begin
   inherited Create(Statement, SQL, StmtNum, CursorName, SqlData, CachedBlob);

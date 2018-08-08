@@ -84,7 +84,6 @@ type
     FResultSetType: TZResultSetType;
     FPostUpdates: TZPostUpdatesMode;
     FLocateUpdates: TZLocateUpdatesMode;
-    FCursorName: AnsiString;
     FBatchQueries: TStrings;
     FConnection: IZConnection;
     FInfo: TStrings;
@@ -93,6 +92,7 @@ type
     FCachedLob: Boolean;
     procedure SetLastResultSet(const ResultSet: IZResultSet); virtual;
   protected
+    FCursorName: RawByteString;
     FRefCountAdded: Boolean; //while closing / unpreparing we need to indicate if closing LastResultSet will detroy this object
     //FLastResultSetRefCountAdded: Boolean; //did we do a _addref to the weak pointer referenced LastResulSet?
     fWBuffer: array[Byte] of WideChar;
@@ -125,7 +125,7 @@ type
       read FResultSetConcurrency write FResultSetConcurrency;
     property ResultSetType: TZResultSetType
       read FResultSetType write FResultSetType;
-    property CursorName: AnsiString read FCursorName write FCursorName;
+    property CursorName: RawByteString read FCursorName write FCursorName;
     property BatchQueries: TStrings read FBatchQueries;
     property Connection: IZConnection read FConnection;
     property Info: TStrings read FInfo;
@@ -137,7 +137,7 @@ type
     property ChunkSize: Integer read FChunkSize;
     property CachedLob: Boolean read FCachedLob;
     function CreateStmtLogEvent(Category: TZLoggingCategory;
-      const Msg: RawByteString=''): TZLoggingEvent;
+      const Msg: RawByteString=EmptyRaw): TZLoggingEvent;
   public
     procedure ToBuff(const Value: ZWideString; var Result: ZWideString); overload;
     procedure ToBuff(const Value: RawByteString; var Result: RawByteString); overload;
@@ -168,7 +168,7 @@ type
     function GetQueryTimeout: Integer; virtual;
     procedure SetQueryTimeout(Value: Integer); virtual;
     procedure Cancel; virtual;
-    procedure SetCursorName(const Value: AnsiString); virtual;
+    procedure SetCursorName(const Value: String); virtual;
 
     function GetResultSet: IZResultSet; virtual;
     function GetUpdateCount: Integer; virtual;
@@ -320,7 +320,7 @@ type
     procedure SetParamCount(NewParamCount: Integer); virtual;
     procedure SetBindCapacity(Capacity: Integer); virtual;
 
-    procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = '');
+    procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = EmptyRaw);
     function GetInParamLogValue(ParamIndex: Integer): RawByteString; virtual;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; virtual;
     function SupportsBidirectionalParms: Boolean; virtual;
@@ -386,10 +386,12 @@ type
     procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); virtual; abstract;
     procedure SetString(ParameterIndex: Integer; const Value: String); virtual; abstract;
-    {$IFNDEF NEXTGEN}
+    {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); virtual; abstract;
-    {$ENDIF NEXTGEN}
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); virtual; abstract;
+    {$ENDIF}
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); virtual; abstract;
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);  virtual; abstract;
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); virtual;
@@ -445,10 +447,12 @@ type
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); override;
     procedure SetString(ParameterIndex: Integer; const Value: String); override;
-    {$IFNDEF NEXTGEN}
+    {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); override;
-    {$ENDIF NEXTGEN}
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); override;
+    {$ENDIF}
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); override;
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); override;
   end;
@@ -475,10 +479,12 @@ type
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); override;
     procedure SetString(ParameterIndex: Integer; const Value: String); override;
-    {$IFNDEF NEXTGEN}
+    {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); override;
-    {$ENDIF NEXTGEN}
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); override;
+    {$ENDIF}
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); override;
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); override;
   end;
@@ -598,18 +604,22 @@ type
   public //setters
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); override;
     procedure SetString(ParameterIndex: Integer; const Value: String); override;
-    {$IFNDEF NEXTGEN}
+    {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); override;
-    {$ENDIF NEXTGEN}
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); override;
+    {$ENDIF}
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); override;
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); override;
   public //getters
     function GetString(ParameterIndex: Integer): String;
-    {$IFNDEF NEXTGEN}
+    {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ParameterIndex: Integer): AnsiString;
-    {$ENDIF NEXTGEN}
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     function GetUTF8String(ParameterIndex: Integer): UTF8String;
+    {$ENDIF}
     function GetRawByteString(ParameterIndex: Integer): RawByteString;
     function GetUnicodeString(ParameterIndex: Integer): ZWideString;
   end;
@@ -646,7 +656,7 @@ type
     procedure SetInParamCount(NewParamCount: Integer); virtual;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); virtual;
-    procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = '');
+    procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = EmptyRaw);
     function GetInParamLogValue(ParamIndex: Integer): RawByteString; virtual;
     function GetOmitComments: Boolean; virtual;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; virtual;
@@ -716,10 +726,12 @@ type
     procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); virtual;
     procedure SetString(ParameterIndex: Integer; const Value: String); virtual;
-    {$IFNDEF NEXTGEN}
+    {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); virtual;
-    {$ENDIF NEXTGEN}
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); virtual;
+    {$ENDIF}
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); virtual;
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);  virtual; //AVZ
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); virtual;
@@ -805,10 +817,12 @@ type
     function IsNull(ParameterIndex: Integer): Boolean; virtual;
     function GetPChar(ParameterIndex: Integer): PChar; virtual;
     function GetString(ParameterIndex: Integer): String; virtual;
-    {$IFNDEF NEXTGEN}
+    {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ParameterIndex: Integer): AnsiString; virtual;
-    {$ENDIF NEXTGEN}
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     function GetUTF8String(ParameterIndex: Integer): UTF8String; virtual;
+    {$ENDIF}
     function GetRawByteString(ParameterIndex: Integer): RawByteString; virtual;
     function GetUnicodeString(ParameterIndex: Integer): ZWideString; virtual;
     function GetBoolean(ParameterIndex: Integer): Boolean; virtual;
@@ -871,11 +885,8 @@ type
 implementation
 
 uses ZFastCode, ZSysUtils, ZMessages, ZDbcResultSet, ZCollections,
-  ZEncoding, ZDbcProperties;
+  ZEncoding, ZDbcProperties{$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
-{$IFOPT R+}
-  {$DEFINE RangeCheckEnabled}
-{$ENDIF}
 var
 {**
   Holds the value of the last assigned statement ID.
@@ -953,7 +964,7 @@ begin
   if L <= (SizeOf(fABuffer)-fABufferIndex) then begin
     P := Pointer(Value);
     if L = 1 //happens very often (comma,space etc) -> no move
-    then fABuffer[fABufferIndex] := P^
+    then fABuffer[fABufferIndex] := AnsiChar(P^)
     else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, fABuffer[fABufferIndex], L);
     Inc(fABufferIndex, L);
   end else begin
@@ -1332,7 +1343,7 @@ var
   i: Integer;
 begin
   if ConSettings^.AutoEncode then begin
-    Result := ''; //init for FPC
+    Result := EmptyRaw; //init for FPC
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]); //Disassembles the Query
     try
       {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
@@ -1393,12 +1404,12 @@ begin
 end;
 
 function TZAbstractStatement.CreateStmtLogEvent(Category: TZLoggingCategory;
-  const Msg: RawByteString = ''): TZLoggingEvent;
+  const Msg: RawByteString = EmptyRaw): TZLoggingEvent;
 begin
-  if msg <> '' then
-    result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId)+' : '+ Msg, 0, '')
+  if msg <> EmptyRaw then
+    result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId)+' : '+ Msg, 0, EmptyRaw)
   else
-    result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId), 0, '');
+    result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId), 0, EmptyRaw);
 end;
 
 function TZAbstractStatement.CreateLogEvent(
@@ -1433,9 +1444,9 @@ end;
 
   @param name the new cursor name, which must be unique within a connection
 }
-procedure TZAbstractStatement.SetCursorName(const Value: AnsiString);
+procedure TZAbstractStatement.SetCursorName(const Value: String);
 begin
-  FCursorName := Value;
+  FCursorName := ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
 end;
 
 {**
@@ -1981,7 +1992,8 @@ begin
   if Value = nil then Exit;
   case SQLType of
     stUnknown: raise Exception.Create('Invalid SQLType for Array binding!');
-    stString: if not (VariantType in [vtString, {$IFNDEF NEXTGEN}vtAnsiString,{$ENDIF}vtUTF8String, vtRawByteString, vtCharRec]) then
+    stString: if not (VariantType in [vtString, {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF} vtRawByteString, vtCharRec]) then
           raise Exception.Create('Invalid Variant-Type for String-Array binding!');
     stUnicodeString: if not (VariantType in [vtUnicodeString, vtCharRec]) then
           raise Exception.Create('Invalid Variant-Type for String-Array binding!');
@@ -2039,10 +2051,10 @@ end;
   @param Msg a description message.
 }
 procedure TZAbstractPreparedStatement.LogPrepStmtMessage(Category: TZLoggingCategory;
-  const Msg: RawByteString = '');
+  const Msg: RawByteString = EmptyRaw);
 begin
   if DriverManager.HasLoggingListener then
-    if msg <> '' then
+    if msg <> EmptyRaw then
       DriverManager.LogMessage(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId)+' : '+Msg)
     else
       DriverManager.LogMessage(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId));
@@ -2061,10 +2073,12 @@ begin
       vtInteger : result := IntToRaw(VInteger);
       vtFloat : result := FloatToRaw(VFloat);
       vtString,
-      {$IFNDEF NEXTGEN}
+      {$IFNDEF NO_ANSISTRING}
       vtAnsiString,
       {$ENDIF}
+      {$IFNDEF NO_UTF8STRING}
       vtUTF8String,
+      {$ENDIF}
       vtRawByteString,
       vtUnicodeString,
       vtCharRec: result := #39 + ClientVarManager.GetAsRawByteString(Value) + #39;
@@ -2387,13 +2401,13 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-{$IFNDEF NEXTGEN}
+{$IFNDEF NO_ANSISTRING}
 procedure TZAbstractPreparedStatement.SetAnsiString(ParameterIndex: Integer;
    const Value: AnsiString);
 begin
   SetInParam(ParameterIndex, stString, EncodeAnsiString(Value));
 end;
-{$ENDIF NEXTGEN}
+{$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>UTF8String</code> value.
@@ -2406,12 +2420,13 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFNDEF NO_UTF8STRING}
 procedure TZAbstractPreparedStatement.SetUTF8String(ParameterIndex: Integer;
    const Value: UTF8String);
 begin
   SetInParam(ParameterIndex, stString, EncodeUTF8String(Value));
 end;
-
+{$ENDIF}
 {**
   Sets the designated parameter to a Java <code>RawByteString</code> value.
   The driver dosn't converts this
@@ -2842,7 +2857,7 @@ begin
     FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SQL, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, @FNCharDetected, GetCompareFirstKeywordStrings, FTokenMatchIndex);
     FParamsCnt := 0;
-    Result := ''; //init Result
+    Result := EmptyRaw; //init Result
     for I := 0 to High(FCachedQueryRaw) do begin
       ToBuff(FCachedQueryRaw[i], Result);
       Inc(FParamsCnt, Ord(FIsParamIndex[i]));
@@ -2945,7 +2960,7 @@ begin
   FSQL := SQL;
   FOutParamCount := 0;
   SetOutParamCount(0);
-  FProcSql := ''; //Init -> FPC
+  FProcSql := EmptyRaw; //Init -> FPC
   FLastWasNull := True;
   FResultSets := TZCollection.Create;
   FIsFunction := False;
@@ -3342,10 +3357,12 @@ end;
   is <code>null</code>.
   @exception SQLException if a database access error occurs
 }
+{$IFNDEF NO_UTF8STRING}
 function TZAbstractCallableStatement.GetUTF8String(ParameterIndex: Integer): UTF8String;
 begin
   Result := ClientVarManager.GetAsUTF8String(GetOutParam(ParameterIndex));
 end;
+{$ENDIF}
 
 {**
   Retrieves the value of a JDBC <code>CHAR</code>, <code>VARCHAR</code>,
@@ -3637,7 +3654,7 @@ procedure TZAbstractPreparedCallableStatement.SetProcSQL(const Value: RawByteStr
 begin
   if Value <> ProcSQL then Unprepare;
   inherited SetProcSQL(Value);
-  if (Value <> '') and ( not Prepared ) then Prepare;
+  if (Value <> EmptyRaw) and ( not Prepared ) then Prepare;
 end;
 
 {**
@@ -3819,8 +3836,10 @@ begin
                     //else RaiseUnsupportedException
                   end;
         zbtRawString: Stmt.SetRawByteString(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RawByteString(BindValue.Value));
+        {$IFNDEF NO_UTF8STRING}
         zbtUTF8String: Stmt.SetUTF8String(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, UTF8String(BindValue.Value));
-        {$IFNDEF NEXTGEN}
+        {$ENDIF}
+        {$IFNDEF NO_ANSISTRING}
         zbtAnsiString: Stmt.SetAnsiString(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, AnsiString(BindValue.Value));
         {$ENDIF}
         zbtUniString: Stmt.SetUnicodeString(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, ZWideString(BindValue.Value));
@@ -3856,8 +3875,10 @@ begin
   if BindValue.Value <> nil then
     case BindValue.BindType of
       zbtRawString,
-      zbtUTF8String{$IFNDEF NEXTGEN},
-      zbtAnsiString{$ENDIF}:RawByteString(BindValue.Value) := ''; //dec refcnt
+      zbtUTF8String
+      {$IFNDEF NO_ANSISTRING}
+      ,zbtAnsiString{$ENDIF}:
+        RawByteString(BindValue.Value) := ''; //dec refcnt
       zbtUniString: ZWideString(BindValue.Value) := '';
       zbtBytes:     TBytes(BindValue.Value) := nil;
       zbtLob:       IZBlob(BindValue.Value) := nil;
@@ -4019,10 +4040,12 @@ begin
                   Result := EncodeDateTime(PDateTime({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
               end;
     zbtRawString: Result := EncodeRawByteString(RawByteString(BindValue.Value));
+    {$IFNDEF NO_UTF8STRING}
     zbtUTF8String:Result := EncodeUTF8String(UTF8String(BindValue.Value));
-    {$IFNDEF NEXTGEN}
+    {$ENDIF}
+    {$IFNDEF NO_ANSISTRING}
     zbtAnsiString:Result := EncodeAnsiString(AnsiString(BindValue.Value));
-    {$ENDIF NEXTGEN}
+    {$ENDIF}
     zbtUniString: Result := EncodeUnicodeString(ZWideString(BindValue.Value));
     zbtCharByRef: Result := EncodeCharRec(PZCharRec(BindValue.Value)^);
     zbtBinByRef:  Result := EncodeBytes(BufferToBytes(PZBufRec(BindValue.Value)^.Buf, PZBufRec(BindValue.Value)^.Len));
@@ -4146,14 +4169,18 @@ procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType;
   const Value: RawByteString; CP: Word);
 var BindValue: PZBindValue;
 begin
+  {$IFNDEF NO_UTF8STRING}
   if CP = zCP_UTF8 then
     BindValue := AquireBuffer(Index, SQLType, zbtUTF8String)
-  else {$IFNDEF NEXTGEN}if CP = FConSettings.ClientCodePage^.CP then{$ENDIF}
+  else {$IFNDEF NO_ANSISTRING}if CP = FConSettings.ClientCodePage^.CP then{$ENDIF}
+  {$ENDIF}
     BindValue := AquireBuffer(Index, SQLType, zbtRawString)
-  {$IFNDEF NEXTGEN}
+  {$IFNDEF NO_ANSISTRING}
   else
     BindValue := AquireBuffer(Index, SQLType, zbtAnsiString);
-  {$ENDIF NEXTGEN}
+  {$ELSE}
+  ;
+  {$ENDIF}
 
   {note: usually !if! we've a codepage aware str we could check and fix the
     codepage. but if we do this we need a unique str. So copy by ref is faster
@@ -4738,8 +4765,12 @@ begin
       vtUInteger : result := IntToRaw(VUInteger);
       vtFloat : result := FloatToRaw(VFloat);
       {$IFNDEF UNICODE}vtString,{$ENDIF}
-      {$IFNDEF NEXTGEN}vtAnsiString,{$ENDIF}
+      {$IFNDEF NO_ANSISTRING}
+      vtAnsiString,
+      {$ENDIF}
+      {$IFNDEF NO_UTF8STRING}
       vtUTF8String,
+      {$ENDIF}
       vtRawByteString: Result := Connection.GetEscapeString(VRawByteString);
       {$IFDEF UNICODE}vtString,{$ENDIF}
       vtUnicodeString: Result := Connection.GetEscapeString(ZUnicodeToRaw(VUnicodeString, ConSettings^.ClientCodePage^.CP));
@@ -5436,10 +5467,12 @@ begin
     vtFloat: BindDouble(ParameterIndex, stDouble, Value.VFloat);
     vtUnicodeString: SetUnicodeString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value.VUnicodeString);
     vtRawByteString: SetRawByteString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value.VRawByteString);
-    {$IFNDEF NEXTGEN}
+    {$IFNDEF NO_ANSISTRING}
     vtAnsiString:    SetAnsiString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value.VAnsiString);
-    {$ENDIF NEXTGEN}
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     vtUTF8String:    SetUTF8String(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value.VUTF8String);
+    {$ENDIF}
     vtCharRec:       SetCharRec(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value.VCharRec);
     vtDateTime:      BindDateTime(ParameterIndex, stTimeStamp, Value.VDateTime);
     vtBytes:         BindBinary(ParameterIndex, stBytes, Pointer(Value.VBytes), Length(Value.VBytes));
@@ -5522,7 +5555,10 @@ begin
   if Value = nil then Exit;
   case SQLType of
     stUnknown: raise Exception.Create('Invalid SQLType for Array binding!');
-    stString: if not (VariantType in [vtString, {$IFNDEF NEXTGEN}vtAnsiString, {$ENDIF}vtUTF8String, vtRawByteString, vtCharRec]) then
+    stString: if not (VariantType in [vtString,
+      {$IFNDEF NO_ANSISTRING}vtAnsiString, {$ENDIF}
+      {$IFNDEF NO_UTF8STRING}vtUTF8String, {$ENDIF}
+      vtRawByteString, vtCharRec]) then
           raise Exception.Create('Invalid Variant-Type for String-Array binding!');
     stUnicodeString: if not (VariantType in [vtUnicodeString, vtCharRec]) then
           raise Exception.Create('Invalid Variant-Type for String-Array binding!');
@@ -5717,6 +5753,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFNDEF NO_UTF8STRING}
 procedure TZRawPreparedStatement.SetUTF8String(ParameterIndex: Integer;
   const Value: UTF8String);
 begin
@@ -5725,6 +5762,7 @@ begin
   else BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF},
     ConSettings^.ConvFuncs.ZUTF8ToRaw(Value, ConSettings.ClientcodePage.CP));
 end;
+{$ENDIF}
 
 { TZUCS2PreparedStatement }
 
@@ -5871,15 +5909,16 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFNDEF NO_UTF8STRING}
 procedure TZUCS2PreparedStatement.SetUTF8String(ParameterIndex: Integer;
   const Value: UTF8String);
 begin
   BindUniStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF},
     PRawToUnicode(Pointer(Value), Length(Value), zCP_UTF8))
 end;
+{$ENDIF}
 
 { TZRawParamDetectPreparedStatement }
-
 function TZRawParamDetectPreparedStatement.GetRawEncodedSQL(const SQL:
   {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
 var I: Integer;
@@ -6904,6 +6943,7 @@ end;
   is <code>null</code>.
   @exception SQLException if a database access error occurs
 }
+{$IFNDEF NO_UTF8STRING}
 function TZAbstractCallableStatement_A.GetUTF8String(
   ParameterIndex: Integer): UTF8String;
 var
@@ -6926,7 +6966,9 @@ begin
     Result := ZUnicodeToRaw(FUniTemp, ZOSCodePage);
   end;
 end;
+{$ENDIF}
 
+{$IFNDEF NO_ANSISTRING}
 procedure TZAbstractCallableStatement_A.SetAnsiString(ParameterIndex: Integer;
   const Value: AnsiString);
 begin
@@ -6934,6 +6976,7 @@ begin
   then BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value)
   else BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, ConSettings^.ConvFuncs.ZAnsiToRaw(Value, ConSettings^.ClientCodePage.CP));
 end;
+{$ENDIF}
 
 procedure TZAbstractCallableStatement_A.SetCharRec(ParameterIndex: Integer;
   const Value: TZCharRec);
@@ -6968,6 +7011,7 @@ begin
   BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, ZUnicodeToRaw(Value, ConSettings^.ClientCodePage.CP));
 end;
 
+{$IFNDEF NO_UTF8STRING}
 procedure TZAbstractCallableStatement_A.SetUTF8String(ParameterIndex: Integer;
   const Value: UTF8String);
 begin
@@ -6975,6 +7019,7 @@ begin
   then BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value)
   else BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, ConSettings^.ConvFuncs.ZUTF8ToRaw(Value, ConSettings^.ClientCodePage.CP));
 end;
+{$ENDIF}
 
 end.
 
