@@ -62,8 +62,9 @@ uses
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
-  {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZDbcIntfs, ZDbcResultSet,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
+  {$IF defined(OLDFPC) or defined(NO_UNIT_CONTNRS)}ZClasses,{$IFEND} ZDbcIntfs, ZDbcResultSet,
   ZDbcResultSetMetadata, ZVariant, ZCompatibility;
 
 type
@@ -185,8 +186,12 @@ type
     function GetPAnsiChar(ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PAnsiChar;
     function GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
     function GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
+    {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     function GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
+    {$ENDIF}
     function GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
     function GetPWideChar(ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PWideChar;
     function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): ZWideString;
@@ -238,8 +243,12 @@ type
     procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); overload;
     procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar); overload; virtual;
     procedure SetPWideChar(ColumnIndex: Integer; Value: PWideChar; Len: PNativeUInt);
+    {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(ColumnIndex: Integer; const Value: AnsiString); virtual;
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     procedure SetUTF8String(ColumnIndex: Integer; const Value: UTF8String); virtual;
+    {$ENDIF}
     procedure SetRawByteString(ColumnIndex: Integer; const Value: RawByteString); virtual;
     procedure SetUnicodeString(ColumnIndex: Integer; const Value: ZWideString); virtual;
     procedure SetBytes(ColumnIndex: Integer; const Value: TBytes); overload; virtual;
@@ -277,15 +286,13 @@ implementation
 {$IFOPT Q+}
   {$DEFINE OverFlowCheckEnabled}
 {$ENDIF}
-{$IFOPT R+}
-  {$DEFINE RangeCheckEnabled}
-{$ENDIF}
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}
   {$R-}
   {$UNDEF RangeCheckEnabled}
 {$IFEND}
 
-uses ZFastcode, Math, ZMessages, ZSysUtils, ZDbcUtils, ZEncoding, ZClasses
+uses ZFastcode, Math, ZMessages, ZSysUtils, ZDbcUtils, ZEncoding
+  {$IF not defined(OLDFPC) and not defined(NO_UNIT_CONTNRS)}, ZClasses{$IFEND}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 const
@@ -628,7 +635,7 @@ begin
                            PAnsiChar(Pointer(V2)^)+PAnsiInc,
                            PLongWord(Pointer(V1)^)^);
 end;
-
+{$IFNDEF WITH_USC2_ANSICOMPARESTR_ONLY}
 function CompareNativeRaw_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   if (Null1 and Null2) or (
@@ -643,8 +650,8 @@ begin
       PAnsiChar(Pointer(V1)^)+PAnsiInc, PLongWord(Pointer(V1)^)^,
       PAnsiChar(Pointer(V2)^)+PAnsiInc, PLongWord(Pointer(V2)^)^) - 2;{CSTR_EQUAL}
     {$ELSE}
-     Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
-        AnsiStrComp(PPAnsiChar(V1)^+PAnsiInc, PPAnsiChar(V2)^+PAnsiInc)
+    Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
+      AnsiStrComp(PPAnsiChar(V1)^+PAnsiInc, PPAnsiChar(V2)^+PAnsiInc)
     {$ENDIF}
 end;
 
@@ -652,6 +659,7 @@ function CompareNativeRaw_Desc(const Null1, Null2: Boolean; const V1, V2): Integ
 begin
   Result := -CompareNativeRaw_Asc(Null1, Null2, V1, V2);
 end;
+{$ENDIF}
 
 function CompareUnicodeFromUTF8_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
@@ -666,7 +674,11 @@ begin
   else begin
     S1 := PRawToUnicode(PAnsiChar(Pointer(V1)^)+PAnsiInc, PLongWord(Pointer(V1)^)^, zCP_UTF8);
     S2 := PRawToUnicode(PAnsiChar(Pointer(V2)^)+PAnsiInc, PLongWord(Pointer(V2)^)^, zCP_UTF8);
+    {$IFDEF UNICODE}
+    Result := AnsiCompareStr(S1, S2);
+    {$ELSE}
     Result := WideCompareStr(S1, S2);
+    {$ENDIF}
   end;
 end;
 
@@ -697,7 +709,11 @@ begin
     {$ELSE}
     System.SetString(S1, PWideChar(Pointer(V1)^)+PWideInc, PCardinal(Pointer(V1)^)^);
     System.SetString(S2, PWideChar(Pointer(V2)^)+PWideInc, PCardinal(Pointer(V2)^)^);
+    {$IFDEF UNICODE}
+    Result := AnsiCompareStr(S1, S2);
+    {$ELSE}
     Result := WideCompareStr(S1, S2);
+    {$ENDIF}
     {$ENDIF}
   end;
 end;
@@ -736,7 +752,11 @@ begin
   else if (BlobEmpty1) then Result := 1
   else if (BlobEmpty2) then Result := -1
   else
+    {$IFDEF WITH_USC2_ANSICOMPARESTR_ONLY}
+    Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
+    {$ELSE}
     Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString);
+    {$ENDIF}
 end;
 
 function CompareNativeCLob_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -756,7 +776,11 @@ begin
   if BlobEmpty1 and BlobEmpty2 then Result := 0
   else if (BlobEmpty1 <> BlobEmpty2) then Result := 1
   else if Blob1.IsUpdated or Blob2.IsUpdated then
+    {$IFDEF WITH_USC2_ANSICOMPARESTR_ONLY}
+    Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString)
+    {$ELSE}
     Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
+    {$ENDIF}
   else Result := 0;
 end;
 
@@ -785,11 +809,15 @@ begin
         ValuePtr1, Blob1.Length, ValuePtr2, Blob2.Length) - 2{CSTR_EQUAL};
       if GetLastError <> 0 then RaiseLastOSError;
       {$ELSE}
-      Result := WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
+        {$IFDEF UNICODE}
+        Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
+        {$ELSE}
+        Result := WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
+        {$ENDIF}
       {$ENDIF}
     end
   else
-      Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
+    Result := ZMemLComp(Blob1.GetBuffer, Blob2.GetBuffer, Max(Blob1.Length, Blob2.Length));
 end;
 
 function CompareUnicodeCLob_Desc(const {%H-}Null1, Null2: Boolean; const V1, V2): Integer;
@@ -817,9 +845,13 @@ begin
       if Blob1.Length <> Blob2.Length then
         Result := 1 else
         Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length  shl 1);
+    end else begin
+      ValuePtr1 := Blob1.GetBuffer;
+      ValuePtr2 := Blob2.GetBuffer;
+      if Blob1.Length <> Blob2.Length then
+        Result := 1 else
+        Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length);
     end
-    else
-      Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
   else Result := 0;
 end;
 
@@ -1237,7 +1269,7 @@ begin
       ReallocMem(C^, Len+SizeOf(LongWord)+SizeOf(AnsiChar)); //including #0 terminator
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, (C^+PAnsiInc)^, Len);
       PLongWord(C^)^ := Len;
-      (C^+PAnsiInc+Len)^ := AnsiChar(#0); //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
+      AnsiChar((C^+PAnsiInc+Len)^) := AnsiChar(#0); //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
     end else if C^ <> nil then begin
       FreeMem(C^);
       C^ := nil;
@@ -1576,15 +1608,23 @@ begin
       if fRaw then
         case CompareKind of
           ckAscending:
+            {$IFNDEF WITH_USC2_ANSICOMPARESTR_ONLY}
             if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
               Result := CompareUnicodeFromUTF8_Asc
             else
               Result := CompareNativeRaw_Asc;
+            {$ELSE}
+            Result := CompareUnicodeFromUTF8_Asc;
+            {$ENDIF}
           ckDescending:
+            {$IFNDEF WITH_USC2_ANSICOMPARESTR_ONLY}
             if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
               Result := CompareUnicodeFromUTF8_Desc
             else
               Result := CompareNativeRaw_Desc;
+            {$ELSE}
+            Result := CompareUnicodeFromUTF8_Desc;
+            {$ENDIF}
           ckEquals:     Result := CompareRaw_Equals;
         end
       else
@@ -2001,7 +2041,7 @@ begin
                   Result := Data^;
                   Exit;
                 end else
-                  FRawTemp := '';
+                  FRawTemp := EmptyRaw;
       stGUID: FRawTemp := GUIDToRaw(PGUID(Data)^);
       stDate: FRawTemp := DateTimeToRawSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
       stTime: FRawTemp := DateTimeToRawSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
@@ -2019,9 +2059,9 @@ begin
           end;
           Exit;
         end else
-          FRawTemp := '';
+          FRawTemp := EmptyRaw;
       else
-        FRawTemp := '';
+        FRawTemp := EmptyRaw;
     end;
     Len := Length(FRawTemp);
     if Len = 0
@@ -2116,6 +2156,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFNDEF NO_ANSISTRING}
 function TZRowAccessor.GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
 var
   Data: PPointer;
@@ -2175,6 +2216,7 @@ begin
     IsNull := True;
   end;
 end;
+{$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -2185,6 +2227,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFNDEF NO_UTF8STRING}
 function TZRowAccessor.GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
 var Data: PPointer;
 begin
@@ -2249,6 +2292,7 @@ begin
     IsNull := True;
   end;
 end;
+{$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -2282,7 +2326,7 @@ begin
       stBigDecimal: Result := FloatToSqlRaw(PExtended(Data)^);
       stString, stUnicodeString:
         if (Data^ = nil)
-        then Result := ''
+        then Result := EmptyRaw
         else if fRaw
           {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
           then ZSetString(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^, Result)
@@ -2293,7 +2337,7 @@ begin
           PPLongWord(Data)^^, ConSettings^.ClientCodePage^.CP);
       stBytes: if Data <> nil
                 then ZSetString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^, Result)
-                else Result := '';
+                else Result := EmptyRaw;
       stGUID: Result := GUIDToRaw(PGUID(Data)^);
       stDate: Result := DateTimeToRawSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
       stTime: Result := DateTimeToRawSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
@@ -2303,13 +2347,13 @@ begin
           if PIZLob(Data)^.IsClob
           then Result := PIZLob(Data)^.GetRawByteString
           else Result := PIZLob(Data)^.GetString
-        else Result := '';
+        else Result := EmptyRaw;
       else
-        Result := '';
+        Result := EmptyRaw;
     end;
     IsNull := False;
   end else begin
-    Result := '';
+    Result := EmptyRaw;
     IsNull := True;
   end;
 end;
@@ -2917,7 +2961,7 @@ begin
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stBytes:
-        Result := BufferToBytes(PPointer(Data)^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^);
+        Result := BufferToBytes(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^);
       stBinaryStream, stAsciiStream, stUnicodeStream:
         if (Data^ <> nil) and not PIZlob(Data^)^.IsEmpty
           then Result := PIZlob(Data^)^.GetBytes
@@ -4183,6 +4227,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
+{$IFNDEF NO_ANSISTRING}
 procedure TZRowAccessor.SetAnsiString(ColumnIndex: Integer; const Value: AnsiString);
 begin
   if fRaw then
@@ -4192,6 +4237,7 @@ begin
     SetUnicodeString(ColumnIndex, fUniTemp);
   end;
 end;
+{$ENDIF}
 
 {**
   Sets the designated column with a <code>UTF8String</code> value.
@@ -4203,6 +4249,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
+{$IFNDEF NO_UTF8STRING}
 procedure TZRowAccessor.SetUTF8String(ColumnIndex: Integer; const Value: UTF8String);
 begin
   if fRaw then
@@ -4212,6 +4259,7 @@ begin
     SetUnicodeString(ColumnIndex, fUniTemp);
   end;
 end;
+{$ENDIF}
 
 {**
   Sets the designated column with a <code>RawByteString</code> value.
@@ -4714,8 +4762,12 @@ begin
     vtFloat: SetBigDecimal(ColumnIndex, Value.VFloat);
     vtBytes: SetBytes(ColumnIndex, Value.VBytes);
     vtString: SetString(ColumnIndex, Value.VString);
+    {$IFNDEF NO_ANSISTRING}
     vtAnsiString: SetAnsiString(ColumnIndex, Value.VAnsiString);
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     vtUTF8String: SetUTF8String(ColumnIndex, Value.VUTF8String);
+    {$ENDIF}
     vtRawByteString: SetRawByteString(ColumnIndex, Value.VRawByteString);
     vtUnicodeString: SetUnicodeString(ColumnIndex, Value.VUnicodeString);
     vtDateTime: SetTimestamp(ColumnIndex, Value.VDateTime);
