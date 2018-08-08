@@ -57,7 +57,6 @@ interface
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFDEF WITH_WIDESTRUTILS}WideStrUtils, {$ENDIF}
   ZDbcIntfs, ZDbcStatement, ZPlainSqLiteDriver, ZCompatibility, ZDbcLogging,
   ZVariant, Types;
 
@@ -125,7 +124,7 @@ uses
   ZDbcSqLiteResultSet, ZSysUtils, ZEncoding, ZMessages, ZDbcCachedResultSet,
   ZDbcUtils, ZDbcProperties, ZFastCode, ZClasses;
 
-const DeprecatedBoolRaw: array[Boolean] of AnsiString = ('N','Y');
+const DeprecatedBoolRaw: array[Boolean] of {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF} = ('N','Y');
 
 (* out of use now...
 procedure BindingDestructor(Value: PAnsiChar); cdecl;
