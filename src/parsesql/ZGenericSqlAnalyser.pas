@@ -55,7 +55,8 @@ interface
 
 {$I ZParseSql.inc}
 
-uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs,
+uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   ZClasses, ZTokenizer, ZSelectSchema;
 
 type
@@ -66,7 +67,8 @@ type
     FName: string;
     FTokens: TZTokenList;
   public
-    constructor Create(const Name: string; Tokens: TZTokenList);
+    constructor Create(const Name: string; {$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      Tokens: TZTokenList);
     destructor Destroy; override;
 
     function Clone: TZStatementSection;
@@ -81,12 +83,12 @@ type
 
     function TokenizeQuery(const Tokenizer: IZTokenizer; const SQL: string;
       Cleanup: Boolean): TZTokenList;
-    function SplitSections(Tokens: TZTokenList): TObjectList;
+    function SplitSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList): TObjectList;
 
-    function ComposeTokens(Tokens: TZTokenList): string;
-    function ComposeSections(Sections: TObjectList): string;
+    function ComposeTokens({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList): string;
+    function ComposeSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}Sections: TObjectList): string;
 
-    function DefineSelectSchemaFromSections(
+    function DefineSelectSchemaFromSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}
       Sections: TObjectList): IZSelectSchema;
     function DefineSelectSchemaFromQuery(const Tokenizer: IZTokenizer;
       const SQL: string): IZSelectSchema;
@@ -101,8 +103,9 @@ type
     FFromClauses: TStrings;
   protected
     function ArrayToStrings(const Value: array of string): TStrings;
-    function CheckForKeyword(Tokens: TZTokenList; TokenIndex: Integer;
-      Keywords: TStrings; var Keyword: string; var WordCount: Integer): Boolean;
+    function CheckForKeyword({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList;
+      TokenIndex: Integer; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Keywords: TStrings;
+      var Keyword: string; var WordCount: Integer): Boolean;
     function FindSectionTokens(Sections: TObjectList; const Name: string): TZTokenList;
 
     procedure FillFieldRefs(const SelectSchema: IZSelectSchema; SelectTokens: TZTokenList);
@@ -122,12 +125,12 @@ type
 
     function TokenizeQuery(const Tokenizer: IZTokenizer; const SQL: string;
       Cleanup: Boolean): TZTokenList;
-    function SplitSections(Tokens: TZTokenList): TObjectList;
+    function SplitSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList): TObjectList;
 
-    function ComposeTokens(Tokens: TZTokenList): string;
-    function ComposeSections(Sections: TObjectList): string;
+    function ComposeTokens({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList): string;
+    function ComposeSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}Sections: TObjectList): string;
 
-    function DefineSelectSchemaFromSections(
+    function DefineSelectSchemaFromSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}
       Sections: TObjectList): IZSelectSchema;
     function DefineSelectSchemaFromQuery(const Tokenizer: IZTokenizer;
       const SQL: string): IZSelectSchema;
@@ -142,7 +145,8 @@ uses SysUtils, ZSysUtils;
 {**
   Create SQL statement section object.
 }
-constructor TZStatementSection.Create(const Name: string; Tokens: TZTokenList);
+constructor TZStatementSection.Create(const Name: string;
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList);
 begin
   FName := Name;
   FTokens := Tokens;
@@ -153,7 +157,7 @@ end;
 }
 destructor TZStatementSection.Destroy;
 begin
-  FTokens.Free;
+  FreeAndNil(FTokens);
   inherited Destroy;
 end;
 
@@ -205,10 +209,10 @@ end;
 }
 destructor TZGenericStatementAnalyser.Destroy;
 begin
-  FSectionNames.Free;
-  FSelectOptions.Free;
-  FFromJoins.Free;
-  FFromClauses.Free;
+  FreeAndNil(FSectionNames);
+  FreeAndNil(FSelectOptions);
+  FreeAndNil(FFromJoins);
+  FreeAndNil(FFromClauses);
   inherited Destroy;
 end;
 
@@ -235,9 +239,9 @@ end;
   @param Keyword an out parameter with found keyword.
   @param WordCount a count of words in the found keyword.
 }
-function TZGenericStatementAnalyser.CheckForKeyword(Tokens: TZTokenList;
-  TokenIndex: Integer; Keywords: TStrings; var Keyword: string;
-  var WordCount: Integer): Boolean;
+function TZGenericStatementAnalyser.CheckForKeyword({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList;
+  TokenIndex: Integer; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Keywords: TStrings;
+  var Keyword: string; var WordCount: Integer): Boolean;
 var
   I: Integer;
 begin
@@ -319,7 +323,8 @@ end;
     a list of tokens in the section. It initial list is not started
     with a section name the first section is unnamed ('').
 }
-function TZGenericStatementAnalyser.SplitSections(Tokens: TZTokenList): TObjectList;
+function TZGenericStatementAnalyser.SplitSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+  Tokens: TZTokenList): TObjectList;
 var
   I: Integer;
   Keyword: string;
@@ -364,7 +369,8 @@ end;
   @param Tokens a list of tokens.
   @returns a composes string.
 }
-function TZGenericStatementAnalyser.ComposeTokens(Tokens: TZTokenList): string;
+function TZGenericStatementAnalyser.ComposeTokens({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+  Tokens: TZTokenList): string;
 begin
   Result := Tokens.AsString;
 end;
@@ -374,7 +380,8 @@ end;
   @param Tokens a list of statement sections.
   @returns a composes string.
 }
-function TZGenericStatementAnalyser.ComposeSections(Sections: TObjectList): string;
+function TZGenericStatementAnalyser.ComposeSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+  Sections: TObjectList): string;
 var
   I: Integer;
 begin
@@ -695,7 +702,7 @@ end;
   @return a select statement schema.
 }
 function TZGenericStatementAnalyser.DefineSelectSchemaFromSections(
-  Sections: TObjectList): IZSelectSchema;
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}Sections: TObjectList): IZSelectSchema;
 var
   SelectTokens: TZTokenList;
   FromTokens: TZTokenList;

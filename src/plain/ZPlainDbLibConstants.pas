@@ -64,7 +64,7 @@ const
 { General  #define }
   TIMEOUT_IGNORE        = Cardinal(-1);
   TIMEOUT_INFINITE      = 0;
-  TIMEOUT_MAXIMUM       = 1200; { 20 minutes maximum timeout value }
+  TIMEOUT_MAXIMUM       = 1200*1000; { 20 minutes maximum timeout value in ms}
 
 { Used for ServerType in dbgetprocinfo }
   SERVTYPE_UNKNOWN      = 0;
@@ -1053,8 +1053,8 @@ type
     Severity: DBINT;
     DbErr: DBINT;
     OsErr: DBINT;
-    DbErrStr: AnsiString;
-    OsErrStr: AnsiString;
+    DbErrStr: RawByteString;
+    OsErrStr: RawByteString;
   end;
 
   PDBLibMessage = ^TDBLibMessage;
@@ -1063,9 +1063,9 @@ type
     MsgNo: DBINT;
     MsgState: DBINT;
     Severity: DBINT;
-    MsgText: AnsiString;
-    SrvName: AnsiString;
-    ProcName: AnsiString;
+    MsgText: RawByteString;
+    SrvName: RawByteString;
+    ProcName: RawByteString;
     Line: DBUSMALLINT;
   end;
 

@@ -68,21 +68,51 @@ type
   {** Modified comparison function. }
   TZListSortCompare = function (Item1, Item2: Pointer): Integer of object;
 
-  {$IFDEF NEXTGEN}{$WARNINGS OFF}{$ENDIF}//TList, Sort is deprecated
   {** Modified list of pointers. }
-  TZSortedList = class (TList)
+  TZSortedList = class({$IFDEF TLIST_IS_DEPRECATED}TObject{$ELSE}TList{$ENDIF})
+  {$IFDEF TLIST_IS_DEPRECATED}
+  private
+    FList: TPointerList;
+    FCount: Integer;
+    FCapacity: Integer;
+  protected
+    function Get(Index: Integer): Pointer;
+    procedure Grow; virtual;
+    procedure Put(Index: Integer; Item: Pointer);
+    procedure SetCapacity(NewCapacity: Integer);
+    procedure SetCount(NewCount: Integer);
   public
+    class procedure Error(const Msg: string; Data: NativeInt); overload; virtual;
+    class procedure Error(Msg: PResStringRec; Data: NativeInt); overload;
+  public
+    destructor Destroy; override;
+    function Add(Item: Pointer): Integer;
+    procedure Clear; virtual;
+    procedure Delete(Index: Integer);
+    procedure Exchange(Index1, Index2: Integer);
+    function Extract(Item: Pointer): Pointer; inline;
+    function First: Pointer; inline;
+    function IndexOf(Item: Pointer): Integer;
+    procedure Insert(Index: Integer; Item: Pointer);
+    function Last: Pointer;
+    function Remove(Item: Pointer): Integer; inline;
+    property Count: Integer read FCount write SetCount;
+    property Items[Index: Integer]: Pointer read Get write Put; default;
+    property List: TPointerList read FList;
+    property Capacity: Integer read FCapacity write SetCapacity;
+  {$ENDIF}
     procedure Sort(Compare: TZListSortCompare);
   end;
-  {$IFDEF NEXTGEN}{$WARNINGS ON}{$ENDIF}//TList is deprecated
 
 const
   StrFalse = 'False';
   StrTrue = 'True';
   BoolStrInts: array[Boolean] of string = ('0', '1');
+  {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
   BoolStrIntsRaw: array[Boolean] of RawByteString = ('0', '1');
-  BoolStrs: array[Boolean] of string = (StrFalse, StrTrue);
   BoolStrsRaw: array[Boolean] of RawByteString = (RawByteString(StrFalse), RawByteString(StrTrue));
+  {$ENDIF}
+  BoolStrs: array[Boolean] of string = (StrFalse, StrTrue);
   BoolStrsW: array[Boolean] of ZWideString = (ZWideString(StrFalse), ZWideString(StrTrue));
   SQLDateTimeFmt = 'yyyy-mm-dd hh:nn:ss';
   SQLDateTimeFmtMSecs = 'yyyy-mm-dd hh:nn:ss.zzz';
@@ -90,6 +120,10 @@ const
 var
   TwoDigitLookupHexW: packed array[Byte] of Word;
   TwoDigitLookupHexLW: packed array[Byte] of LongWord;
+  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING} //can not be initialized ...
+  BoolStrIntsRaw: array[Boolean] of RawByteString;
+  BoolStrsRaw: array[Boolean] of RawByteString;
+  {$ENDIF}
 
 {**
   Determines a position of a first delimiter.
@@ -365,33 +399,35 @@ function BytesToStr(const Value: TBytes): RawByteString;
   @param Value a AnsiString to be converted.
   @return a converted array of bytes.
 }
-{$IFNDEF NEXTGEN}
+{$IFNDEF NO_ANSISTRING}
 function StrToBytes(const Value: AnsiString): TBytes; overload;
-{$ENDIF NEXTGEN}
+{$ENDIF}
 
-{$IFDEF WITH_RAWBYTESTRING}
 {**
   Converts a UTF8String into an array of bytes.
   @param Value a UTF8String to be converted.
   @return a converted array of bytes.
 }
+{$IF defined(WITH_RAWBYTESTRING) and not defined(NO_UTF8STRING)}
 function StrToBytes(const Value: UTF8String): TBytes; overload;
+{$IFEND}
 {**
   Converts a UTF8String into an array of bytes.
   @param Value a UTF8String to be converted.
   @return a converted array of bytes.
 }
+{$IF defined(WITH_RAWBYTESTRING) and not defined(WITH_TBYTES_AS_RAWBYTESTRING)}
 function StrToBytes(const Value: RawByteString): TBytes; overload;
+{$IFEND}
+
 {**
   Converts a RawByteString into an array of bytes.
   @param Value a RawByteString to be converted.
   @return a converted array of bytes.
 }
-{$ENDIF}
-
-{$IFNDEF NEXTGEN}
+{$IFDEF MSWINDOWS}
 function StrToBytes(const Value: WideString): TBytes; overload;
-{$ENDIF NEXTGEN}
+{$ENDIF}
 
 {**
   Converts a String into an array of bytes.
@@ -487,11 +523,11 @@ function UnicodeSQLTimeStampToDateTime(Value: PWideChar; const ValLen: Cardinal;
 }
 function DateTimeToRawSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString; overload;
+  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString; overload;
 
 procedure DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = ''); overload;
+  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw); overload;
 
 {**
   Converts DateTime value to a WideString/UnicodeString
@@ -519,11 +555,11 @@ function DateTimeToSQLDate(const Value: TDateTime;
 }
 function DateTimeToRawSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString; overload;
+  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString; overload;
 
 procedure DateTimeToRawSQLTime(const Value: TDateTime; Buffer: PAnsichar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = ''); overload;
+  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw); overload;
 
 {**
   Converts DateTime value into a WideString/UnicodeString with format pattern
@@ -550,11 +586,11 @@ function DateTimeToSQLTime(const Value: TDateTime;
 }
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString; overload;
+  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString; overload;
 
 procedure DateTimeToRawSQLTimeStamp(const Value: TDateTime; Buf: PAnsiChar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = ''); overload;
+  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw); overload;
 
 {**
   Converts DateTime value to a WideString/UnicodeString
@@ -585,8 +621,8 @@ function DateTimeToAnsiSQLDate(Value: TDateTime; WithMMSec: Boolean = False): st
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
 }
-function EncodeCString(const Value: string): string;
-
+function EncodeCString(const Value: ZWideString): ZWideString; overload;
+function EncodeCString(const Value: RawByteString): RawByteString; overload;
 {**
   Converts an string from escape PostgreSQL format.
   @param Value a string in PostgreSQL escape format.
@@ -718,9 +754,6 @@ function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWideStr
 function SQLQuotedStr(const S: RawByteString; Quote: AnsiChar): RawByteString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function SQLQuotedStr(Src: PAnsiChar; Len: LengthInt; Quote: AnsiChar): RawByteString; overload;
 
-// added because I am sure, EgonHugeist wants this back (see SF#277):
-//function FailingSQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWideString; overload;
-
 function SQLQuotedStr(const S: string; QuoteLeft, QuoteRight: Char): string; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function SQLQuotedStr(Src: PChar; Len: LengthInt; QuoteLeft, QuoteRight: Char): string; overload;
 
@@ -731,10 +764,24 @@ function SQLDequotedStr(const S: string; QuoteLeft, QuoteRight: Char): string; o
 function SameText(Val1, Val2: PAnsiChar; Len: LengthInt): Boolean; overload;
 function SameText(Val1, Val2: PWideChar; Len: LengthInt): Boolean; overload;
 
+function Trim(P: PAnsiChar; L: LengthInt): RawByteString; overload;
+function Trim(P: PAnsiChar): RawByteString; overload;
+function Trim(P: PWideChar; L: LengthInt): ZWideString; overload;
+{$IF defined(UNICODE) and not defined(WITH_UNITANSISTRINGS)}
+function Trim(const Value: RawByteString): RawByteString; overload;
+{$IFEND}
+{$IFNDEF UNICODE}
+function Trim(const Value: ZWideString): ZWideString; overload;
+{$ENDIF}
+
+
+function HexToBin(Hex: PAnsiChar; Bin: PByte; BinBytes: Integer): Boolean;
+
 implementation
 
-uses DateUtils, StrUtils, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  {$IFDEF WITH_RTLCONSTS_SInvalidGuidArray}RTLConsts,{$ENDIF}SysConst,
+uses DateUtils, StrUtils, SysConst,
+  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
+  {$IF defined(WITH_RTLCONSTS_SInvalidGuidArray) or defined(TLIST_IS_DEPRECATED)}RTLConsts,{$IFEND}
   ZFastCode;
 
 var
@@ -872,7 +919,7 @@ var
   LenSubStr: Integer;
 begin
   LenSubStr := Length(SubStr);
-  if SubStr = '' then
+  if SubStr = EmptyRaw then
     Result := True
    else
     if LenSubStr <= Length(Str) then
@@ -937,7 +984,7 @@ var
   LenSubStr: Integer;
   LenStr: Integer;
 begin
-  if SubStr = '' then
+  if SubStr = EmptyRaw then
     Result := False // act like Delphi's AnsiEndsStr()
   else
   begin
@@ -1044,10 +1091,10 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValRawExt(Pointer(Value), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, InvalidPos{%H-});
+    Result := ValRawExt(Pointer(Value), AnsiChar('.'), InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
       if (Ord((Value+InvalidPos-1)^) = Ord(',')) and (Ord((Value+Len*Ord(Len>0)-1)^) in [Ord('0')..Ord('9')]) then  //nope no money. Just a comma instead of dot.
-        RawToFloatDef(Value, {$IFDEF NEXTGEN}Ord(','){$ELSE}','{$ENDIF}, Def, Result)
+        RawToFloatDef(Value, AnsiChar(','), Def, Result)
       else
       begin
         if Len = 0 then
@@ -1060,7 +1107,7 @@ begin
         end else
           PBuf := @StatBuf[0];
         if CurrToRawBuff(Value, PBuf, Len) then
-          RawToFloatDef(PAnsiChar(PBuf), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, Def, Result)
+          RawToFloatDef(PAnsiChar(PBuf), AnsiChar('.'), Def, Result)
         else
           Result := Def;
       end;
@@ -1078,10 +1125,10 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValRawDbl(Pointer(Value), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, InvalidPos{%H-});
+    Result := ValRawDbl(Pointer(Value), AnsiChar('.'), InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
       if (Ord((Value+InvalidPos-1)^) = Ord(',')) and (Ord((Value+Len*Ord(Len>0)-1)^) in [Ord('0')..Ord('9')]) then  //nope no money. Just a comma instead of dot.
-        RawToFloatDef(Value, {$IFDEF NEXTGEN}Ord(','){$ELSE}','{$ENDIF}, Def, Result)
+        RawToFloatDef(Value, AnsiChar(','), Def, Result)
       else
       begin
         if Len = 0 then
@@ -1094,7 +1141,7 @@ begin
         end else
           PBuf := @StatBuf[0];
         if CurrToRawBuff(Value, PBuf, Len) then
-          RawToFloatDef(PAnsiChar(PBuf), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, Def, Result)
+          RawToFloatDef(PAnsiChar(PBuf), AnsiChar('.'), Def, Result)
         else
           Result := Def;
       end;
@@ -1113,10 +1160,10 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValRawDbl(Pointer(Value), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, InvalidPos{%H-});
+    Result := ValRawDbl(Pointer(Value), AnsiChar('.'), InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
       if (Ord((Value+InvalidPos-1)^) = Ord(',')) and (Ord((Value+Len*Ord(Len>0)-1)^) in [Ord('0')..Ord('9')]) then  //nope no money. Just a comma instead of dot.
-        RawToFloatDef(Value, {$IFDEF NEXTGEN}Ord(','){$ELSE}','{$ENDIF}, Def, Result)
+        RawToFloatDef(Value, AnsiChar(','), Def, Result)
       else
       begin
         if Len = 0 then
@@ -1129,7 +1176,7 @@ begin
         end else
           PBuf := @StatBuf[0];
         if CurrToRawBuff(Value, PBuf, Len) then
-          RawToFloatDef(PAnsiChar(PBuf), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, Def, Result)
+          RawToFloatDef(PAnsiChar(PBuf), AnsiChar('.'), Def, Result)
         else
           Result := Def;
       end;
@@ -1148,10 +1195,10 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValRawSin(Pointer(Value), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, InvalidPos{%H-});
+    Result := ValRawSin(Pointer(Value), AnsiChar('.'), InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
       if (Ord((Value+InvalidPos-1)^) = Ord(',')) and (Ord((Value+Len*Ord(Len>0)-1)^) in [Ord('0')..Ord('9')]) then  //nope no money. Just a comma instead of dot.
-        RawToFloatDef(Value, {$IFDEF NEXTGEN}Ord(','){$ELSE}','{$ENDIF}, Def, Result)
+        RawToFloatDef(Value, AnsiChar(','), Def, Result)
       else
       begin
         if Len = 0 then
@@ -1164,7 +1211,7 @@ begin
         end else
           PBuf := @StatBuf[0];
         if CurrToRawBuff(Value, PBuf, Len) then
-          RawToFloatDef(PAnsiChar(PBuf), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, Def, Result)
+          RawToFloatDef(PAnsiChar(PBuf), AnsiChar('.'), Def, Result)
         else
           Result := Def;
       end;
@@ -1902,17 +1949,21 @@ end;
   @return a converted AnsiString.
 }
 function BytesToStr(const Value: TBytes): RawByteString;
-{$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+{$IF defined(MISS_RBS_SETSTRING_OVERLOAD) and not defined(WITH_TBYTES_AS_RAWBYTESTRING)}
 var L: Integer;
-{$ENDIF}
+{$IFEND}
 begin
-  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-  Result := '';
-  L := Length(Value);
-  SetLength(Result, L);
-  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Result)^, L);
+  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  Result := Value;
   {$ELSE}
-  SetString(Result, PAnsiChar(@Value[0]), Length(Value))
+    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+    Result := EmptyRaw;
+    L := Length(Value);
+    SetLength(Result, L);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Result)^, L);
+    {$ELSE}
+    SetString(Result, PAnsiChar(@Value[0]), Length(Value))
+    {$ENDIF}
   {$ENDIF}
 end;
 
@@ -1921,7 +1972,7 @@ end;
   @param Value a AnsiString to be converted.
   @return a converted array of bytes.
 }
-{$IFNDEF NEXTGEN}
+{$IFNDEF NO_ANSISTRING}
 function StrToBytes(const Value: AnsiString): TBytes;
 var L: Integer;
 begin
@@ -1929,14 +1980,14 @@ begin
   SetLength(Result, L);
   {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Result)^, L*SizeOf(AnsiChar));
 end;
-{$ENDIF NEXTGEN}
+{$ENDIF}
 
-{$IFDEF WITH_RAWBYTESTRING}
 {**
   Converts a UTF8String into an array of bytes.
   @param Value a UTF8String to be converted.
   @return a converted array of bytes.
 }
+{$IF defined(WITH_RAWBYTESTRING) and not defined(NO_UTF8STRING)}
 function StrToBytes(const Value: UTF8String): TBytes;
 var L: Integer;
 begin
@@ -1945,12 +1996,14 @@ begin
   if Value <> '' then
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value[1], Result[0], L)
 end;
+{$IFEND}
 
 {**
   Converts a RawByteString into an array of bytes.
   @param Value a RawByteString to be converted.
   @return a converted array of bytes.
 }
+{$IF defined(WITH_RAWBYTESTRING) and not defined(WITH_TBYTES_AS_RAWBYTESTRING)}
 function StrToBytes(const Value: RawByteString): TBytes;
 var L: Integer;
 begin
@@ -1959,13 +2012,13 @@ begin
   if Value <> '' then
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Result)^, L);
 end;
-{$ENDIF}
+{$IFEND}
 {**
   Converts a WideString into an array of bytes.
   @param Value a String to be converted.
   @return a converted array of bytes.
 }
-{$IFNDEF NEXTGEN}
+{$IFDEF MSWINDOWS}
 function StrToBytes(const Value: WideString): TBytes;
 var
   L: Integer;
@@ -1981,7 +2034,7 @@ begin
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(RBS)^, Pointer(Result)^, L)
   end;
 end;
-{$ENDIF NEXTGEN}
+{$ENDIF}
 
 {**
   Converts a String into an array of bytes.
@@ -2161,17 +2214,17 @@ var
         case DateFormat^ of
           'Y', 'y':
             begin
-              Year := Year * 10 + CheckNumberRange(Value^, Failed);
+              Year := Year * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
               if Failed then Exit;
             end;
           'M', 'm':
             begin
-              Month := Month * 10 + CheckNumberRange(Value^, Failed);
+              Month := Month * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
               if Failed then Exit;
             end;
           'D', 'd':
             begin
-              Day := Day * 10 + CheckNumberRange(Value^, Failed);
+              Day := Day * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
               if Failed then Exit;
             end;
         end;
@@ -2201,31 +2254,31 @@ var
       YPos := 0; MPos := 0; DateLenCount := 0;
       while ( DateLenCount < ValLen ) and (not (Ord((Value+DateLenCount)^) in [Ord('-'),Ord('/'),Ord('\'),Ord('.')]) ) do
       begin
-        Year := Year * 10 + CheckNumberRange((Value+DateLenCount)^, Failed);
+        Year := Year * 10 + CheckNumberRange(AnsiChar((Value+DateLenCount)^), Failed);
         if Failed then Exit;
         Inc(DateLenCount);
         Inc(YPos);
       end;
-      while ( DateLenCount < ValLen ) and (not CheckNumberRange((Value+DateLenCount)^)) do
+      while ( DateLenCount < ValLen ) and (not CheckNumberRange(AnsiChar((Value+DateLenCount)^))) do
         Inc(DateLenCount);
       while ( DateLenCount < ValLen ) and (not (Ord((Value+DateLenCount)^) in [Ord('-'),Ord('/'),Ord('\')]) ) do
       begin
-        Month := Month * 10 + CheckNumberRange((Value+DateLenCount)^, Failed);
+        Month := Month * 10 + CheckNumberRange(AnsiChar((Value+DateLenCount)^), Failed);
         if Failed then Exit;
         Inc(DateLenCount);
         Inc(MPos);
       end;
-      while ( DateLenCount < ValLen ) and (not CheckNumberRange((Value+DateLenCount)^)) do
+      while ( DateLenCount < ValLen ) and (not CheckNumberRange(AnsiChar((Value+DateLenCount)^))) do
         Inc(DateLenCount);
       while ( DateLenCount < ValLen ) and (not (Ord((Value+DateLenCount)^) in [Ord('-'),Ord('/'),Ord('\')]) ) do
       begin
-        Day := Day * 10 + CheckNumberRange((Value+DateLenCount)^, Failed);
+        Day := Day * 10 + CheckNumberRange(AnsiChar((Value+DateLenCount)^), Failed);
         if Failed then Exit
         else Inc(DateLenCount);
       end;
       if MPos > 2 then //float ValueTmp
       begin
-        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Pointer(Value), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, Code{%H-}));
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Pointer(Value), AnsiChar('.'), Code{%H-}));
         Failed := Code <> 0;
         if Failed then  Exit;
       end;
@@ -2247,7 +2300,7 @@ var
           end
           else
           begin
-            Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Pointer(Value), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, Code));
+            Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Pointer(Value), AnsiChar('.'), Code));
             if Code <> 0 then
               Result := 0;
             Exit;
@@ -2257,7 +2310,7 @@ var
         try
           Result := EncodeDate(Year, Month, Day);
         except
-          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Pointer(Value), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, Code));
+          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Pointer(Value), AnsiChar('.'), Code));
           Failed := Code <> 0;
           if Failed then Result := 0;
         end;
@@ -2321,22 +2374,22 @@ var
           case TimeFormat^ of
             'H', 'h':
               begin
-                Hour := Hour * 10 + CheckNumberRange(Value^, Failed);
+                Hour := Hour * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
                 if Failed then Exit;
               end;
             'N', 'n':
               begin
-                Minute := Minute * 10 + CheckNumberRange(Value^, Failed);
+                Minute := Minute * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
                 if Failed then Exit;
               end;
             'S', 's':
               begin
-                Sec := Sec * 10 + CheckNumberRange(Value^, Failed);
+                Sec := Sec * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
                 if Failed then Exit;
               end;
             'Z', 'z':
               begin
-                MSec := MSec * 10 + CheckNumberRange(Value^, Failed);
+                MSec := MSec * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
                 if Failed then Exit;
               end;
           end;
@@ -2366,37 +2419,37 @@ var
       TimeLenCount := 0; HPos := 0; NPos := 0;
       while ( TimeLenCount < ValLen ) and (not (Ord((Value+TimeLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.')]) ) do
       begin
-        Hour := Hour * 10 + CheckNumberRange((Value+TimeLenCount)^, Failed);
+        Hour := Hour * 10 + CheckNumberRange(AnsiChar((Value+TimeLenCount)^), Failed);
         if Failed then Exit;
         Inc(HPos); Inc(TimeLenCount);
       end;
-      while ( TimeLenCount < ValLen ) and (not CheckNumberRange((Value+TimeLenCount)^)) do
+      while ( TimeLenCount < ValLen ) and (not CheckNumberRange(AnsiChar((Value+TimeLenCount)^))) do
         Inc(TimeLenCount);
       while ( TimeLenCount < ValLen ) and (not (Ord((Value+TimeLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.')]) ) do
       begin
-        Minute := Minute * 10 + CheckNumberRange((Value+TimeLenCount)^, Failed);
+        Minute := Minute * 10 + CheckNumberRange(AnsiChar((Value+TimeLenCount)^), Failed);
         if Failed then Exit;
         Inc(NPos); Inc(TimeLenCount);
       end;
-      while ( TimeLenCount < ValLen ) and (not CheckNumberRange((Value+TimeLenCount)^)) do
+      while ( TimeLenCount < ValLen ) and (not CheckNumberRange(AnsiChar((Value+TimeLenCount)^))) do
         Inc(TimeLenCount);
       while ( TimeLenCount < ValLen ) and (not (Ord((Value+TimeLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.')]) ) do
       begin
-        Sec := Sec * 10 + CheckNumberRange((Value+TimeLenCount)^, Failed);
+        Sec := Sec * 10 + CheckNumberRange(AnsiChar((Value+TimeLenCount)^), Failed);
         if Failed then Exit;
         Inc(TimeLenCount);
       end;
-      while ( TimeLenCount < ValLen ) and (not CheckNumberRange((Value+TimeLenCount)^) ) do
+      while ( TimeLenCount < ValLen ) and (not CheckNumberRange(AnsiChar((Value+TimeLenCount)^)) ) do
         Inc(TimeLenCount);
       while ( TimeLenCount < ValLen ) and (not (Ord((Value+TimeLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.')]) ) do
       begin
-        MSec := MSec * 10 + CheckNumberRange((Value+TimeLenCount)^, Failed);
+        MSec := MSec * 10 + CheckNumberRange(AnsiChar((Value+TimeLenCount)^), Failed);
         if Failed then Exit;
         Inc(TimeLenCount);
       end;
       if NPos > 2 then //float value
       begin
-        Result := Frac(ValRawExt(Pointer(Value), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, Code));
+        Result := Frac(ValRawExt(Pointer(Value), {$IFDEF NO_ANSICHAR}Ord{$ENDIF}('.'), Code));
         Failed := Code <> 0;
         if Failed then
           Result := 0;
@@ -2433,7 +2486,7 @@ var
             end
             else
             begin
-              Result := Frac(ValRawExt(Pointer(Value), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, Code));
+              Result := Frac(ValRawExt(Pointer(Value), AnsiChar('.'), Code));
               Failed := Code <> 0;
               if Failed then Result := 0;
               Exit;
@@ -2442,7 +2495,7 @@ var
       try
         Result := EncodeTime(Hour, Minute, Sec, MSec);
       except
-        Result := Frac(ValRawExt(Pointer(Value), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, Code));
+        Result := Frac(ValRawExt(Pointer(Value), AnsiChar('.'), Code));
         Failed := Code <> 0;
         if Failed then Result := 0;
       end;
@@ -2531,37 +2584,37 @@ var
           case TimeStampFormat^ of
             'Y', 'y':
               begin
-                Year := Year * 10 + CheckNumberRange(Value^, Failed);
+                Year := Year * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
                 if Failed then Exit;
               end;
             'M', 'm':
               begin
-                Month := Month * 10 + CheckNumberRange(Value^, Failed);
+                Month := Month * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
                 if Failed then Exit;
               end;
             'D', 'd':
               begin
-                Day := Day * 10 + CheckNumberRange(Value^, Failed);
+                Day := Day * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
                 if Failed then Exit;
               end;
             'H', 'h':
               begin
-                Hour := Hour * 10 + CheckNumberRange(Value^, Failed);
+                Hour := Hour * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
                 if Failed then Exit;
               end;
             'N', 'n':
               begin
-                Minute := Minute * 10 + CheckNumberRange(Value^, Failed);
+                Minute := Minute * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
                 if Failed then Exit;
               end;
             'S', 's':
               begin
-                Sec := Sec * 10 + CheckNumberRange(Value^, Failed);
+                Sec := Sec * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
                 if Failed then Exit;
               end;
             'Z', 'z':
               begin
-                MSec := MSec * 10 + CheckNumberRange(Value^, Failed);
+                MSec := MSec * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
                 if Failed then
                 begin
                   Failed := not (Ord(Value^) = Ord('+')); //postgres 2013-10-23 12:31:52.48+02 f.e.
@@ -2596,7 +2649,7 @@ var
       { read date}
       while ( TimeStampLenCount < ValLen ) and (not (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) ) do
       begin
-        Year := Year * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+        Year := Year * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
         if Failed then Exit;
         Inc(YPos); Inc(TimeStampLenCount);
       end;
@@ -2612,7 +2665,7 @@ var
         Inc(TimeStampLenCount);
       while ( TimeStampLenCount < ValLen ) and (not (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) ) do
       begin
-        Month := Month * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+        Month := Month * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
         if Failed then Exit;
         Inc(TimeStampLenCount);
         Inc(MPos);
@@ -2621,7 +2674,7 @@ var
         Inc(TimeStampLenCount);
       while ( TimeStampLenCount < ValLen ) and (not (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) ) do
       begin
-        Day := Day * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+        Day := Day * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
         if Failed then Exit;
         Inc(TimeStampLenCount);
       end;
@@ -2635,14 +2688,14 @@ var
       begin
         if HPos = 2 then //hour can't have 3 digits, date was aligned previously instead of time  > let's fix it
         begin
-          MSec := Hour * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+          MSec := Hour * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
           if Failed then Exit;
           Sec := Day; Day := 0;
           Minute := Month; Month := 0;
           Hour := Year; Year := 0;
           exit;
         end;
-        Hour := Hour * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+        Hour := Hour * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
         if Failed then Exit;
         Inc(HPos); Inc(TimeStampLenCount);
       end;
@@ -2650,7 +2703,7 @@ var
         Inc(TimeStampLenCount);
       while ( TimeStampLenCount < ValLen ) and (not (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) ) do
       begin
-        Minute := Minute * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+        Minute := Minute * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
         if Failed then Exit;
         Inc(TimeStampLenCount);
       end;
@@ -2658,7 +2711,7 @@ var
         Inc(TimeStampLenCount);
       while ( TimeStampLenCount < ValLen ) and (not (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) ) do
       begin
-        Sec := Sec * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+        Sec := Sec * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
         if Failed then Exit;
         Inc(TimeStampLenCount);
       end;
@@ -2666,7 +2719,7 @@ var
         Inc(TimeStampLenCount);
       while ( TimeStampLenCount < ValLen ) and (not (Ord(Value^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) ) do
       begin
-        MSec := MSec * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+        MSec := MSec * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
         if Failed then Exit;
         Inc(TimeStampLenCount);
       end;
@@ -2688,7 +2741,7 @@ var
 
       if (MPos > 2) and ( DotCount = 1) then //float value
       begin
-        Result := ValRawExt(Pointer(Value), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, Code{%H-});
+        Result := ValRawExt(Pointer(Value), AnsiChar('.'), Code{%H-});
         Failed := Code <> 0;
         if Failed then
           Result := 0;
@@ -2765,7 +2818,7 @@ var
           else
             if (DotCount = 1) or (DotCount = 0 ) then
             begin
-              Result := ValRawExt(Pointer(Value), {$IFDEF NEXTGEN}Ord('.'){$ELSE}'.'{$ENDIF}, Code);
+              Result := ValRawExt(Pointer(Value), AnsiChar('.'), Code);
               Failed := ( Code <> 0 );
               if Failed then Result := 0;
               Exit;
@@ -2854,7 +2907,7 @@ end;
 }
 function DateTimeToRawSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString): RawByteString;
+  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
 begin
   ZSetString(nil, ConFormatSettings.DateFormatLen+Byte((Ord(Quoted) shl 1))+Cardinal(Length(Suffix)), Result);
   DateTimeToRawSQLDate(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
@@ -2862,7 +2915,7 @@ end;
 
 procedure DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString);
+  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw);
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2904,7 +2957,7 @@ begin
   end;
   if Quoted then
     PByte(Buf+ConFormatSettings.DateFormatLen)^ := Ord(#39);
-  if Suffix <> '' then //move suffix after leading quote
+  if Suffix <> EmptyRaw then //move suffix after leading quote
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^,
       (Buf+ConFormatSettings.DateFormatLen+Ord(Quoted))^, Length(Suffix));
 end;
@@ -2983,7 +3036,7 @@ end;
 {$WARNINGS OFF} //suppress D2007 Warning for undefined result
 function DateTimeToRawSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString): RawByteString;
+  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
 begin
   ZSetString(nil, ConFormatSettings.TimeFormatLen+Byte((Ord(Quoted) shl 1))+Cardinal(Length(Suffix)), Result);
   DateTimeToRawSQLTime(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
@@ -2991,7 +3044,7 @@ end;
 
 procedure DateTimeToRawSQLTime(const Value: TDateTime; Buffer: PAnsichar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString); overload;
+  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw); overload;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -3039,7 +3092,7 @@ begin
     end;
   if Quoted then
     PByte(Buffer+ConFormatSettings.TimeFormatLen)^ := Ord(#39);
-  if Suffix <> '' then //move suffix after leading quote
+  if Suffix <> EmptyRaw then //move suffix after leading quote
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^,
       (Buffer+ConFormatSettings.TimeFormatLen+Ord(Quoted))^, Length(Suffix));
 end;
@@ -3124,7 +3177,7 @@ end;
 }
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = ''): RawByteString;
+  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
 begin
   ZSetString(nil, ConFormatSettings.DateTimeFormatLen+Byte((Ord(Quoted) shl 1))+Cardinal(Length(Suffix)), Result);
   DateTimeToRawSQLTimeStamp(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
@@ -3132,7 +3185,7 @@ end;
 
 procedure DateTimeToRawSQLTimeStamp(const Value: TDateTime; Buf: PAnsiChar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = '');
+  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw);
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -3209,7 +3262,7 @@ begin
     end;
   if Quoted then
     PByte(Buf+ConFormatSettings.DateTimeFormatLen)^ := Ord(#39);
-  if Suffix <> '' then //move suffix after leading quote
+  if Suffix <> EmptyRaw then //move suffix after leading quote
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^,
       (Buf+ConFormatSettings.DateTimeFormatLen+Ord(Quoted))^, Length(Suffix));
 end;
@@ -3476,11 +3529,181 @@ end;
 {$IFDEF SaveQ} {$Q+} {$UNDEF SaveQ} {$ENDIF}
 {$IFDEF SaveR} {$R+} {$UNDEF SaveR} {$ENDIF}
 
+{$IFDEF TLIST_IS_DEPRECATED}
+function TZSortedList.Add(Item: Pointer): Integer;
+begin
+  Result := FCount;
+  if Result = FCapacity then
+    Grow;
+  FList[Result] := Item;
+  Inc(FCount);
+end;
+
+procedure TZSortedList.Clear;
+begin
+  SetCount(0);
+  SetCapacity(0);
+end;
+
+procedure TZSortedList.Delete(Index: Integer);
+begin
+  if (Index < 0) or (Index >= FCount) then
+    Error(@SListIndexError, Index);
+  Dec(FCount);
+  if Index < FCount then
+    System.Move(FList[Index + 1], FList[Index],
+      (FCount - Index) * SizeOf(Pointer));
+end;
+
+destructor TZSortedList.Destroy;
+begin
+  Clear;
+  inherited;
+end;
+
+class procedure TZSortedList.Error(Msg: PResStringRec; Data: NativeInt);
+begin
+  raise EListError.CreateFmt(LoadResString(Msg), [Data]) at ReturnAddress;
+end;
+
+class procedure TZSortedList.Error(const Msg: string; Data: NativeInt);
+begin
+  raise EListError.CreateFmt(Msg, [Data]) at ReturnAddress;
+end;
+
+procedure TZSortedList.Exchange(Index1, Index2: Integer);
+var
+  Item: Pointer;
+begin
+  if (Index1 < 0) or (Index1 >= FCount) then
+    Error(@SListIndexError, Index1);
+  if (Index2 < 0) or (Index2 >= FCount) then
+    Error(@SListIndexError, Index2);
+  Item := FList[Index1];
+  FList[Index1] := FList[Index2];
+  FList[Index2] := Item;
+end;
+
+function TZSortedList.Extract(Item: Pointer): Pointer;
+var
+  I: Integer;
+begin
+  Result := nil;
+  I := IndexOf(Item);
+  if I >= 0 then begin
+    Result := Item;
+    FList[I] := nil;
+    Delete(I);
+  end;
+end;
+
+function TZSortedList.First: Pointer;
+begin
+  Result := Get(0);
+end;
+
+function TZSortedList.Get(Index: Integer): Pointer;
+begin
+  if Cardinal(Index) >= Cardinal(FCount) then
+    Error(@SListIndexError, Index);
+  Result := FList[Index];
+end;
+
+procedure TZSortedList.Grow;
+var
+  Delta: Integer;
+begin
+  if FCapacity > 64 then
+    Delta := FCapacity div 4
+  else
+    if FCapacity > 8 then
+      Delta := 16
+    else
+      Delta := 4;
+  SetCapacity(FCapacity + Delta);
+end;
+
+function TZSortedList.IndexOf(Item: Pointer): Integer;
+var
+  P: PAnsiChar;
+begin
+  P := Pointer(FList);
+  for Result := 0 to FCount - 1 do begin
+    if PPointer(P)^ = Item then
+      Exit;
+    Inc(P, SizeOf(Pointer));
+  end;
+  Result := -1;
+end;
+
+procedure TZSortedList.Insert(Index: Integer; Item: Pointer);
+begin
+  if (Index < 0) or (Index > FCount) then
+    Error(@SListIndexError, Index);
+  if FCount = FCapacity then
+    Grow;
+  if Index < FCount then
+    System.Move(FList[Index], FList[Index + 1],
+      (FCount - Index) * SizeOf(Pointer));
+  FList[Index] := Item;
+  Inc(FCount);
+end;
+
+function TZSortedList.Last: Pointer;
+begin
+  if FCount > 0 then
+    Result := FList[Count - 1]
+  else
+  begin
+    Error(@SListIndexError, 0);
+    Result := nil;
+  end;
+end;
+
+procedure TZSortedList.Put(Index: Integer; Item: Pointer);
+begin
+  if (Index < 0) or (Index >= FCount) then
+    Error(@SListIndexError, Index);
+  if Item <> FList[Index] then begin
+    FList[Index] := Item;
+  end;
+end;
+
+function TZSortedList.Remove(Item: Pointer): Integer;
+begin
+  Result := IndexOf(Item);
+  if Result >= 0 then
+    Delete(Result);
+end;
+
+procedure TZSortedList.SetCapacity(NewCapacity: Integer);
+begin
+  if NewCapacity < FCount then
+    Error(@SListCapacityError, NewCapacity);
+  if NewCapacity <> FCapacity then
+  begin
+    SetLength(FList, NewCapacity);
+    FCapacity := NewCapacity;
+  end;
+end;
+
+procedure TZSortedList.SetCount(NewCount: Integer);
+begin
+  if NewCount < 0 then
+    Error(@SListCountError, NewCount);
+  if NewCount <> FCount then begin
+    if NewCount > FCapacity then
+      SetCapacity(NewCount);
+    if NewCount > FCount then
+      FillChar(FList[FCount], (NewCount - FCount) * SizeOf(Pointer), 0);
+    FCount := NewCount;
+  end;
+end;
+{$ENDIF TLIST_IS_DEPRECATED}
 {**
   Performs sorting for this list.
   @param Compare a comparison function.
 }
-{$IFDEF NEXTGEN}{$WARNINGS OFF}{$ENDIF}//List, Count is deprecated
 procedure TZSortedList.Sort(Compare: TZListSortCompare);
 begin
   {$IFDEF TLIST_ISNOT_PPOINTERLIST}
@@ -3489,34 +3712,36 @@ begin
   HybridSortSha_0AA(List, Count, Compare);
   {$ENDIF}
 end;
-{$IFDEF NEXTGEN}{$WARNINGS ON}{$ENDIF}//List, Count is deprecated
 
 {**
   Converts an string into escape PostgreSQL format.
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
 }
-function EncodeCString(const Value: string): string;
+function EncodeCString(const Value: ZWideString): ZWideString;
 var
   I: Integer;
   SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PChar;
+  SrcBuffer, DestBuffer: PWideChar;
 begin
   SrcLength := Length(Value);
   SrcBuffer := Pointer(Value);
   DestLength := 0;
   for I := 1 to SrcLength do
   begin
-    if SrcBuffer^ = #0 then
-       Inc(DestLength, 4)
-    else
-      case SrcBuffer^ of
-        '"', '''', '\':
-         Inc(DestLength, 2)
-        else
-         Inc(DestLength);
-      end;
+    if SrcBuffer^ = #0
+    then Inc(DestLength, 4)
+    else case PWord(SrcBuffer)^ of
+      Ord('"'), Ord(''''), Ord('\'):
+       Inc(DestLength, 2)
+      else
+       Inc(DestLength);
+    end;
     Inc(SrcBuffer);
+  end;
+  if SrcLength = DestLength then begin
+    Result := Value;
+    Exit;
   end;
 
   SrcBuffer := Pointer(Value);
@@ -3524,22 +3749,72 @@ begin
   DestBuffer := Pointer(Result);
 
   for I := 1 to SrcLength do begin
-    case SrcBuffer^ of
-      #0: begin
-          DestBuffer[0] := '\';
-          DestBuffer[1] := Chr(Ord('0') + (Byte(SrcBuffer^) shr 6));
-          DestBuffer[2] := Chr(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
-          DestBuffer[3] := Chr(Ord('0') + (Byte(SrcBuffer^) and $07));
+    case PWord(SrcBuffer)^ of
+      Ord(#0): begin
+          PWord(DestBuffer)^ := Ord('\');
+          PWord(DestBuffer+1)^ := Ord('0') + (Byte(PWord(SrcBuffer)^) shr 6);
+          PWord(DestBuffer+2)^ := Ord('0') + ((Byte(PWord(SrcBuffer)^) shr 3) and $07);
+          PWord(DestBuffer+3)^ := Ord('0') + (Byte(PWord(SrcBuffer)^) and $07);
           Inc(DestBuffer, 4);
         end;
-      '"', '''', '\':
-        begin
-          DestBuffer[0] := '\';
-          DestBuffer[1] := SrcBuffer^;
+      Ord('"'), Ord(''''), Ord('\'): begin
+          PWord(DestBuffer)^ := Ord('\');
+          PWord(DestBuffer+1)^ := Ord(SrcBuffer^);
           Inc(DestBuffer, 2);
         end;
+      else begin
+          DestBuffer^ := SrcBuffer^;
+          Inc(DestBuffer);
+        end;
+    end;
+    Inc(SrcBuffer);
+  end;
+end;
+
+function EncodeCString(const Value: RawByteString): RawByteString;
+var
+  I: Integer;
+  SrcLength, DestLength: Integer;
+  SrcBuffer, DestBuffer: PAnsiChar;
+begin
+  SrcLength := Length(Value);
+  SrcBuffer := Pointer(Value);
+  DestLength := 0;
+  for I := 1 to SrcLength do begin
+    if PByte(SrcBuffer)^ = Ord(#0)
+    then Inc(DestLength, 4)
+    else case PByte(SrcBuffer)^ of
+      Ord('"'), Ord(''''), Ord('\'):
+       Inc(DestLength, 2)
       else
-        begin
+       Inc(DestLength);
+    end;
+    Inc(SrcBuffer);
+  end;
+  if SrcLength = DestLength then begin
+    Result := Value;
+    Exit;
+  end;
+
+  SrcBuffer := Pointer(Value);
+  SetLength(Result, DestLength);
+  DestBuffer := Pointer(Result);
+
+  for I := 1 to SrcLength do begin
+    case PByte(SrcBuffer)^ of
+      Ord(#0): begin
+          PByte(DestBuffer)^ := Ord('\');
+          PByte(DestBuffer+1)^ := Ord('0') + (PByte(SrcBuffer)^ shr 6);
+          PByte(DestBuffer+2)^ := Ord('0') + ((PByte(SrcBuffer)^ shr 3) and $07);
+          PByte(DestBuffer+3)^ := Ord('0') + (PByte(SrcBuffer)^ and $07);
+          Inc(DestBuffer, 4);
+        end;
+      Ord('"'), Ord(''''), Ord('\'): begin
+          PByte(DestBuffer)^ := Ord('\');
+          PByte(DestBuffer+1)^ := Ord(SrcBuffer^);
+          Inc(DestBuffer, 2);
+        end;
+      else begin
           DestBuffer^ := SrcBuffer^;
           Inc(DestBuffer);
         end;
@@ -3602,7 +3877,7 @@ begin
       case Ord(SrcBuffer^) of
         Ord('0')..Ord('9'):
           begin
-            DestBuffer^ := AnsiChar(((Byte(SrcBuffer[0]) - Ord('0')) shl 6)
+            AnsiChar(DestBuffer^) := AnsiChar(((Byte(SrcBuffer[0]) - Ord('0')) shl 6)
               or ((Byte(SrcBuffer[1]) - Ord('0')) shl 3)
               or ((Byte(SrcBuffer[2]) - Ord('0'))));
             Inc(SrcBuffer, 3);
@@ -3859,7 +4134,7 @@ var i, l: integer;
 begin
   L := System.Length(Src); //temp l speeds x2
   if L = 0 then
-    Result := ''
+    Result := EmptyRaw
   else
   begin
     if (Pointer(Result) = nil) or //empty ?
@@ -3867,7 +4142,7 @@ begin
       (LengthInt(l) <> {%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^) then { length as expected ? }
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
     begin
-      Result := ''; //speeds up SetLength x2
+      Result := EmptyRaw; //speeds up SetLength x2
       SetLength(Result, l);
     end;
     {$ELSE}
@@ -3882,7 +4157,7 @@ function UnicodeStringToASCII7(const Src: PWideChar; const Len: LengthInt): RawB
 var i: integer;
 begin
   if (Src = nil) or (Len = 0) then
-    Result := ''
+    Result := EmptyRaw
   else
   begin
     if (Pointer(Result) = nil) or //empty ?
@@ -3890,7 +4165,7 @@ begin
       (LengthInt(len) <> {%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^) then { length as expected ? }
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
     begin
-      Result := ''; //speeds up SetLength x2
+      Result := EmptyRaw; //speeds up SetLength x2
       SetLength(Result, len);
     end;
     {$ELSE}
@@ -4003,9 +4278,60 @@ begin
   end;
 end;
 
+  /// a conversion table from hexa chars into binary data
+  // - returns 255 for any character out of 0..9,A..Z,a..z range
+  // - used e.g. by HexToBin() function
+  // - is defined globally, since may be used from an inlined function
+var
+  ConvertHexToBin: array[byte] of byte;
+type
+  PNormTableByte = ^TNormTableByte;
+  TNormTableByte = packed array[byte] of byte;
+
+{**
+ fast conversion from hexa chars into binary data from Arnaud Bouchez
+// - BinBytes contain the bytes count to be converted: Hex^ must contain
+//  at least BinBytes*2 chars to be converted, and Bin^ enough space
+// - if Bin=nil, no output data is written, but the Hex^ format is checked
+// - return false if any invalid (non hexa) char is found in Hex^
+// - using this function with Bin^ as an integer value will decode in big-endian
+// order (most-signignifican byte first)
+*}
+function HexToBin(Hex: PAnsiChar; Bin: PByte; BinBytes: Integer): boolean; overload;
+var I: Integer;
+    B,C: NativeUInt;//PtrUInt;
+    tab: {$ifdef CPUX86}TNormTableByte absolute ConvertHexToBin{$else}PNormTableByte{$endif};
+begin
+  result := false; // return false if any invalid char
+  if Hex=nil then
+    exit;
+  {$ifndef CPUX86}tab := @ConvertHexToBin;{$endif} // faster on PIC an x86_64
+  if Bin<>nil then
+    for I := 1 to BinBytes do begin
+      B := tab[Ord(Hex^)];
+      inc(Hex);
+      if B>15 then exit;
+      B := B shl 4;
+      C := tab[Ord(Hex^)];
+      inc(Hex);
+      if C>15 then exit;
+      Bin^ := B+C;
+      inc(Bin);
+    end else
+    for I := 1 to BinBytes do begin // Bin=nil -> validate Hex^ input
+      B := tab[Ord(Hex^)];
+      inc(Hex);
+      if B>15 then exit;
+      C := tab[Ord(Hex^)];
+      inc(Hex);
+      if C>15 then exit;
+    end;
+  result := true; // conversion OK
+end;
+
 procedure HexFiller;
 var
-  I: Byte;
+  I, v: Byte;
   Hex: String;
 begin
   for i := Low(Byte) to High(Byte) do
@@ -4019,6 +4345,19 @@ begin
     TwoDigitLookupHexLW[i] := PCardinal(Pointer(ZWideString(Hex)))^;
     {$ENDIF}
   end;
+  //copy from Arnaud Bouchez syncommons.pas
+  Fillchar(ConvertHexToBin[0],SizeOf(ConvertHexToBin),255); // all to 255
+  V := 0;
+  for i := ord('0') to ord('9') do begin
+    ConvertHexToBin[i] := v;
+    inc(v);
+  end;
+  for i := ord('A') to ord('F') do begin
+    ConvertHexToBin[i] := v;
+    ConvertHexToBin[i+(ord('a')-ord('A'))] := v;
+    inc(v);
+  end;
+
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
@@ -4202,7 +4541,7 @@ procedure ValidGUIDToBinary(Src, Dest: PAnsiChar);
 
   function HexByte(p: PAnsiChar): Byte;
   begin
-    Result := Byte((HexChar(p^) shl 4) + HexChar((p+1)^));
+    Result := Byte((HexChar(AnsiChar(p^)) shl 4) + HexChar(AnsiChar((p+1)^)));
   end;
 var
   i: Integer;
@@ -4296,7 +4635,6 @@ end;
   Standard quoting: Result := Quote + Double_Quotes(Src, Quote) + Quote
 }
 function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWideString; overload;
-//function FailingSQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWideString; overload;
 var
   P, Dest, PEnd, PFirst: PWideChar;
 begin
@@ -4374,7 +4712,7 @@ begin
   PEnd := P + Len;
   PFirst := nil;
   while P < PEnd do begin
-    if (P^=Quote) then begin
+    if (AnsiChar(P^)=Quote) then begin
       if Dest = nil then
         PFirst := P;
       Inc({%H-}NativeUInt(Dest));
@@ -4384,34 +4722,34 @@ begin
   if Dest = nil then begin
     System.SetLength(Result, Len+2);
     Dest := Pointer(Result);
-    Dest^ := Quote;
+    AnsiChar(Dest^) := Quote;
     if Len > 0 then begin
       System.Move(Src^, (Dest+1)^, Len);
       Inc(Dest, Len+1);
     end else
       Inc(Dest);
-    Dest^ := Quote;
+    AnsiChar(Dest^) := Quote;
     Exit;
   end;
   SetLength(Result, Len + {%H-}NativeInt(Dest) + 2);
   Dest := Pointer(Result);
-  Dest^ := Quote;
+  AnsiChar(Dest^) := Quote;
   Inc(Dest);
   P := PFirst;
   repeat
     Inc(P);
     Move(Src^, Dest^, (P - Src));
     Inc(Dest, P - Src);
-    Dest^ := Quote;
+    AnsiChar(Dest^) := Quote;
     Inc(Dest);
     Src := P;
-    while (P<PEnd) do if P^=Quote
+    while (P<PEnd) do if AnsiChar(P^)=Quote
       then Break
       else Inc(P);
   until P = PEnd;
   Move(Src^, Dest^, (PEnd - Src));
   Inc(Dest, PEnd - Src);
-  Dest^ := Quote;
+  AnsiChar(Dest^) := Quote;
 end;
 
 function SQLQuotedStr(const S: RawByteString; Quote: AnsiChar): RawByteString;
@@ -4740,10 +5078,96 @@ end;
 {$IFDEF SaveQ} {$Q+} {$UNDEF SaveQ} {$ENDIF}
 {$IFDEF SaveR} {$R+} {$UNDEF SaveR} {$ENDIF}
 
+function Trim(P: PAnsiChar; L: LengthInt): RawByteString;
+var PEnd: PAnsiChar;
+begin
+  PEnd := P + L -1;
+  while (P <= PEnd) and (Ord(P^   ) <= Ord(' ')) do
+    Inc(P);
+  while (PEnd >= P) and (Ord(PEnd^) <= Ord(' ')) do
+    Dec(PEnd);
+  ZSetString(P, PEnd-P+1, Result);
+end;
+
+function Trim(P: PAnsiChar): RawByteString;
+begin
+  Result := Trim(P, StrLen(P));
+end;
+
+function Trim(P: PWideChar; L: LengthInt): ZWideString; overload;
+var PEnd: PWideChar;
+begin
+  PEnd := P + L -1;
+  while (P <= PEnd) and (Ord(P^   ) <= Ord(' ')) do
+    Inc(P);
+  while (PEnd >= P) and (Ord(PEnd^) <= Ord(' ')) do
+    Dec(PEnd);
+  System.SetString(Result, P, PEnd-P+1);
+end;
+
+{$IF defined(UNICODE) and not defined(WITH_UNITANSISTRINGS)}
+function Trim(const Value: RawByteString): RawByteString;
+var P, PEnd: PAnsiChar;
+begin
+  if Pointer(Value) = nil then begin
+    Result := Value;
+    Exit;
+  end;
+  P := Pointer(Value);
+  PEnd := P + Length(Value) -1;
+  if (Ord(P^) > Ord(' ')) and (Ord(PEnd^) > Ord(' ')) then
+    Result := Value
+  else begin
+    while (P <= PEnd) and (Ord(P^   ) <= Ord(' ')) do
+      Inc(P);
+    while (PEnd >= P) and (Ord(PEnd^) <= Ord(' ')) do
+      Dec(PEnd);
+    ZSetString(P, PEnd-P+1, Result);
+  end;
+end;
+{$IFEND}
+
+{$IFNDEF UNICODE}
+function Trim(const Value: ZWideString): ZWideString; overload;
+var
+  P, PEnd: PWideChar;
+begin
+  if Pointer(Value) = nil then begin
+    Result := '';
+    Exit;
+  end;
+  P := Pointer(Value);
+  PEnd := P + Length(Value) -1;
+  if (Ord(P^) > Ord(' ')) and (Ord(PEnd^) > Ord(' ')) then
+    Result := Value
+  else begin
+    while (P <= PEnd) and (Ord(P^   ) <= Ord(' ')) do
+      Inc(P);
+    while (PEnd >= P) and (Ord(PEnd^) <= Ord(' ')) do
+      Dec(PEnd);
+    System.SetString(Result, P, PEnd-P+1);
+  end;
+end;
+
+{$ENDIF}
+
+{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+procedure BoolConstFiller;
+var B: Boolean;
+begin
+  for B := False to True do begin
+    BoolStrIntsRaw[B] := UnicodeStringToASCII7(BoolStrInts[B]);
+    BoolStrsRaw[B] := UnicodeStringToASCII7(BoolStrsW[B]);
+  end;
+end;
+{$ENDIF}
 
 initialization
 
   HexFiller;  //build up lookup table
+{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  BoolConstFiller; //build bool consts
+{$ENDIF}
   {$IFDEF WITH_FORMATSETTINGS}
   FSSqlFloat := FormatSettings;
   {$ELSE}

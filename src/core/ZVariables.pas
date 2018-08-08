@@ -55,7 +55,7 @@ interface
 
 {$I ZCore.inc}
 
-uses SysUtils, Classes, {$IFDEF NEXTGEN}System.Generics.Collections{$ELSE}Contnrs{$ENDIF},
+uses SysUtils, Classes, {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF},
   ZCompatibility, ZVariant, ZExpression;
 
 type
@@ -74,7 +74,7 @@ type
   {** Implements a variables list. }
   TZVariablesList = class (TInterfacedObject, IZVariablesList)
   private
-    FVariables: TObjectList{$IFDEF NEXTGEN}<TZVariable>{$ENDIF};
+    FVariables: TObjectList;
   public
     constructor Create;
     destructor Destroy; override;
@@ -118,7 +118,7 @@ end;
 }
 constructor TZVariablesList.Create;
 begin
-  FVariables := TObjectList{$IFDEF NEXTGEN}<TZVariable>{$ENDIF}.Create(True);
+  FVariables := TObjectList.Create(True);
 end;
 
 {**

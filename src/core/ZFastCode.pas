@@ -2503,7 +2503,7 @@ function IntToRaw(Value: Byte; Const Negative: Boolean = False): RawByteString;
 var
   Digits         : Integer;
   P              : PByte;
-  NewLen, {%H-}OldLen : Integer;
+  NewLen{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}{%H-},OldLen{$ENDIF}: Integer;
 begin
   if Value >= 100 then
     Digits := 3
@@ -2513,6 +2513,7 @@ begin
     else
       Digits := 1;
   NewLen  := Digits + Ord(Negative);
+  {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
   if Pointer(Result{%H-}) = nil then
     SetLength(Result, NewLen)
   else
@@ -2527,6 +2528,10 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
+  {$ELSE}
+  SetLength(Result, NewLen+1);
+  (PByte(Result)+NewLen)^ := 0;
+  {$ENDIF WITH_TBYTES_AS_RAWBYTESTRING}
   P := Pointer(Result);
   P^ := Byte('-');
   Inc(P, Ord(Negative));
@@ -2565,7 +2570,7 @@ var
   J, K           : Word;
   Digits         : Integer;
   P              : PByte;
-  NewLen, {%H-}OldLen: Integer;
+  NewLen{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING},{%H-}OldLen{$ENDIF}: Integer;
 begin
   if Value >= 10000 then
     Digits := 5
@@ -2575,7 +2580,8 @@ begin
     else
       Digits := 1 + Ord(Value >= 10);
   NewLen  := Digits + Ord(Negative);
-  if Result {%H-}= '' then
+  {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  if Result = '' then
     SetLength(Result, NewLen)
   else
   begin
@@ -2589,6 +2595,10 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
+  {$ELSE WITH_TBYTES_AS_RAWBYTESTRING}
+  SetLength(Result, NewLen+1);
+  (PByte(Result)+NewLen)^ := 0;
+  {$ENDIF WITH_TBYTES_AS_RAWBYTESTRING}
   P := Pointer(Result);
   P^ := Byte('-');
   Inc(P, Ord(Negative));
@@ -2619,7 +2629,7 @@ var
   J, K           : Cardinal;
   Digits         : Integer;
   P              : PByte;
-  NewLen, {%H-}OldLen: Integer;
+  NewLen{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING},{%H-}OldLen{$ENDIF}: Integer;
 begin
   if Value >= 10000 then
     if Value >= 1000000 then
@@ -2635,6 +2645,7 @@ begin
     else
       Digits := 1 + Ord(Value >= 10);
   NewLen  := Digits + Ord(Negative);
+  {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
   if Result {%H-}= '' then
     SetLength(Result, NewLen)
   else
@@ -2649,6 +2660,10 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
+  {$ELSE WITH_TBYTES_AS_RAWBYTESTRING}
+  SetLength(Result, NewLen+1);
+  (PByte(Result)+NewLen)^ := 0;
+  {$ENDIF WITH_TBYTES_AS_RAWBYTESTRING}
   P := Pointer(Result);
   P^ := Byte('-');
   Inc(P, Ord(Negative));
@@ -3057,7 +3072,7 @@ var
   I32, J32, K32, L32 : Cardinal;
   Digits             : Byte;
   P                  : PByte;
-  NewLen, {%H-}OldLen     : Integer;
+  NewLen{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING},{%H-}OldLen{$ENDIF}: Integer;
 begin
   if (Negative and (Value <= High(Integer))) or
      (not Negative and (Value <= High(Cardinal))) then
@@ -3093,6 +3108,7 @@ begin
       else
         Digits := 10;
   NewLen  := Digits + Ord(Negative);
+  {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
   if Result = '' then
     SetLength(Result, NewLen)
   else
@@ -3107,6 +3123,10 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
+  {$ELSE WITH_TBYTES_AS_RAWBYTESTRING}
+  SetLength(Result, NewLen+1);
+  (PByte(Result)+NewLen)^ := 0;
+  {$ENDIF WITH_TBYTES_AS_RAWBYTESTRING}
   P := Pointer(Result);
   P^ := Byte('-');
   Inc(P, Ord(Negative));
@@ -4206,17 +4226,8 @@ end;
 {$IFEND}
 
 function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer;
-var
-  E: Integer;
 begin
-  {$IF defined(WIN32) and not defined(FPC)}
-  Result := ValLong_JOH_IA32_8_a(Pointer(S), E);
-  {$ELSE}
-  Result := ValLong_JOH_PAS_4_b(Pointer(S), E{%H-});
-  {$IFEND}
-  if E > 0 then
-    if not ((E > 0) and Assigned(Pointer(S)) and ((S[E])=' ')) then
-      Result := Default;
+  Result := RawToIntDef(Pointer(S), Default);
 end;
 
 function RawToIntDef(const S: PAnsiChar; const Default: Integer) : Integer;
@@ -4229,7 +4240,7 @@ begin
   Result := ValLong_JOH_PAS_4_b(S, E{%H-});
   {$IFEND}
   if E > 0 then
-    if not ((E > 0) and Assigned(S) and (Ord((S+E-1)^)=Ord(' '))) then
+    if not ((E > 0) and Assigned(S) and (AnsiChar((S+E-1)^)=AnsiChar(' '))) then
       Result := Default;
 end;
 
@@ -4810,17 +4821,8 @@ end;
 {$IFEND}
 
 function RawToInt64Def(const S: RawByteString; const Default: Int64) : Int64;
-var
-  E: Integer;
 begin
-  {$IF defined(WIN32) and not defined(FPC)}
-  Result := ValInt64_JOH_IA32_8_a(Pointer(s), E);
-  {$ELSE}
-  Result := ValInt64_JOH_PAS_8_a_raw(Pointer(S), E{%H-});
-  {$IFEND}
-  if E > 0 then
-    if not ((E > 0) and Assigned(Pointer(S)) and ((S[E])=' ')) then
-      Result := Default;
+  Result := RawToInt64Def(Pointer(S), Default);
 end;
 
 function RawToInt64(const Value: RawByteString) : Int64;
@@ -4870,13 +4872,8 @@ begin
 end;
 
 function RawToUInt64Def(const S: RawByteString; const Default: UInt64) : UInt64;
-var
-  E: Integer;
 begin
-  Result := ValUInt64_JOH_PAS_8_a_raw(Pointer(S), E{%H-});
-  if E > 0 then
-    if not ((E > 0) and Assigned(Pointer(S)) and ((S[E])=' ')) then
-      Result := Default;
+  Result := RawToUInt64Def(Pointer(S), Default);
 end;
 
 {$WARNINGS OFF} //value digits might not be initialized
@@ -6878,9 +6875,13 @@ begin;
     Result:=0;
     exit;
     end;
-
+  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  len := Length(Str)-1;
+  lenSub := Length(SubStr)-1;
+  {$else}
   len:=PLengthInt(p-StringLenOffSet)^;
   lenSub:=PLengthInt(pSub-StringLenOffSet)^;
+  {$ENDIF}
   if (len<lenSub) or (lenSub<=0) then begin;
     Result:=0;
     exit;
@@ -6892,12 +6893,12 @@ begin;
   pSub:=pSub+lenSub;
   pStart:=p;
 
-  ch:=pSub[0];
+  ch:=AnsiChar(pSub[0]);
 
   if lenSub=0 then begin;
     repeat;
-      if ch=p[0] then goto Ret0;
-      if ch=p[1] then goto Ret1;
+      if ch=AnsiChar(p[0]) then goto Ret0;
+      if ch=AnsiChar(p[1]) then goto Ret1;
       p:=p+2;
       until p>=pStop;
     Result:=0;
@@ -6906,7 +6907,7 @@ begin;
 
   lenSub:=-lenSub;
   repeat;
-    if ch=p[0] then begin;
+    if ch=AnsiChar(p[0]) then begin;
       len:=lenSub;
       repeat;
         if pword(psub+len)^<>pword(p+len)^ then goto Next0;
@@ -6915,7 +6916,7 @@ begin;
       goto Ret0;
 Next0:end;
 
-    if ch=p[1] then begin;
+    if ch=AnsiChar(p[1]) then begin;
       len:=lenSub;
       repeat;
         if pword(@psub[len])^<>pword(@p[len+1])^ then goto Next1;
@@ -6998,8 +6999,13 @@ begin;
     Result := 0;
     goto Exit;
   end;
+  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  len:=Length(s)-1;
+  lenSub:=Length(SubStr)-2;
+  {$ELSE}
   len:=PLengthInt(p-StringLenOffSet)^;
   lenSub:=PLengthInt(pSub-StringLenOffSet)^-1;
+  {$ENDIF}
   if (len<lenSub+LengthInt(Offset)) or (lenSub<0) then begin
     Result := 0;
     goto Exit;
@@ -7009,20 +7015,20 @@ begin;
   pSub := pSub+lenSub;
   pStart := p;
   p := p+Offset+3;
-  ch := pSub[0];
+  ch := AnsiChar(pSub[0]);
   lenSub := -lenSub;
   if p<pStop then goto Loop4;
   p := p-4;
   goto Loop0;
 Loop4:
-  if ch=p[-4] then goto Test4;
-  if ch=p[-3] then goto Test3;
-  if ch=p[-2] then goto Test2;
-  if ch=p[-1] then goto Test1;
+  if ch=AnsiChar(p[-4]) then goto Test4;
+  if ch=AnsiChar(p[-3]) then goto Test3;
+  if ch=AnsiChar(p[-2]) then goto Test2;
+  if ch=AnsiChar(p[-1]) then goto Test1;
 Loop0:
-  if ch=p[0] then goto Test0;
+  if ch=AnsiChar(p[0]) then goto Test0;
 AfterTest0:
-  if ch=p[1] then goto TestT;
+  if ch=AnsiChar(p[1]) then goto TestT;
 AfterTestT:
   p := p+6;
   if p<pStop then goto Loop4;
