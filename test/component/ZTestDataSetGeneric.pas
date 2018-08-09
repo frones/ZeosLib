@@ -71,7 +71,7 @@ type
     procedure RunDefineFields;
     procedure RunDefineSortedFields;
     procedure TestReadCachedLobs(const BinLob: String; aOptions: TZDataSetOptions;
-      BinStreamE: TMemoryStream; Query: TZReadOnlyQuery);
+      BinStreamE: TMemoryStream; Query: TZAbstractRODataset);
   protected
     procedure TestQueryGeneric(Query: TDataset);
     procedure TestFilterGeneric(Query: TDataset);
@@ -105,7 +105,7 @@ type
     procedure TestDefineFields;
     procedure TestDefineSortedFields;
     procedure TestEmptyMemoAfterFullMemo;
-    procedure TesNullUnionNull;
+    procedure TestNullUnionNull;
   end;
 
   TZGenericTestDataSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -121,7 +121,8 @@ uses
 {$ENDIF}
   {$IFDEF UNICODE}ZEncoding,{$ENDIF}
   DateUtils, ZSysUtils, ZTestConsts, ZTestCase,
-  ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
+  TypInfo;
 
 { TZGenericTestDataSet }
 
@@ -173,8 +174,8 @@ begin
       try
         Connection.GetCatalogNames(MetadataList);
         Fail('On closed connection call should throw exception');
-      except
-        // Ignore.
+      except on E: Exception do
+        CheckNotTestFailure(E);
       end;
 
       Connection.Connect;
@@ -565,14 +566,19 @@ end;
 {**
   Check functionality of TZReadOnlyQuery
 }
+
+type
+  TZAbstractRODatasetHack = class(TZAbstractRODataset)
+  end;
+
 procedure TZGenericTestDataSet.TestReadCachedLobs(const BinLob: String;
-  aOptions: TZDataSetOptions; BinStreamE: TMemoryStream; Query: TZReadOnlyQuery);
+  aOptions: TZDataSetOptions; BinStreamE: TMemoryStream; Query: TZAbstractRODataset);
 var
   BinStreamA: TMemoryStream;
 begin
   BinStreamA := nil;
   try
-    with Query do
+    with TZAbstractRODatasetHack(Query) do
     begin
       Options := aOptions;
       SQL.Text := 'SELECT * FROM blob_values where b_id >= '+ IntToStr(TEST_ROW_ID-1);
@@ -1417,15 +1423,15 @@ begin
     try
       Query.Open;
       Fail('Wrong open behaviour without SmartOpen.');
-    except
-      // Ignore.
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
 
     try
       Query.Active := True;
       Fail('Wrong open behaviour without SmartOpen.');
-    except
-      // Ignore.
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
 
     Query.Options := Query.Options + [doSmartOpen];
@@ -1491,8 +1497,8 @@ begin
     try
       Query.Prepare;
       Fail('Wrong prepare behaviour.');
-    except
-      // Ignore.
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
     Check(Not Query.Prepared);
     Query.Active := False;
@@ -1665,10 +1671,10 @@ begin
       CheckEquals(1, RowsAffected);
 
     end;
-    TestReadCachedLobs(BinLob, aOptions, BinStreamE, TZReadOnlyQuery(Query));
+    TestReadCachedLobs(BinLob, aOptions, BinStreamE, Query);
     TestReadCachedLobs(BinLob, aOptions, BinStreamE, ROQuery);
     Include(aOptions, doCachedLobs);
-    TestReadCachedLobs(BinLob, aOptions, BinStreamE, TZReadOnlyQuery(Query));
+    TestReadCachedLobs(BinLob, aOptions, BinStreamE, Query);
     TestReadCachedLobs(BinLob, aOptions, BinStreamE, ROQuery);
   finally
     if assigned(BinStreamE) then
@@ -1752,7 +1758,7 @@ begin
   end;
 end;
 
-procedure TZGenericTestDataSet.TesNullUnionNull;
+procedure TZGenericTestDataSet.TestNullUnionNull;
 var
   Query: TZQuery;
 begin
@@ -1760,7 +1766,7 @@ begin
   try
     Query.SQL.Text := 'SELECT null as col1 FROM people union SELECT null as col1 FROM people';
     Query.Open; //just take care we can open a cursor
-    Check(True);
+    BlankCheck;
     Query.Close;
   finally
     Query.Free;
@@ -2142,7 +2148,7 @@ procedure TZGenericTestDataSet.TestDefineFields;
       CheckSame(Expect[i], Fields[i], 'FieldList "' + FieldList + '" - item #' + IntToStr(i));
   end;
 
-  procedure CheckExceptionRaised(const FieldList: string; Expect: TClass; const ExpectMsg: string = '');
+  procedure CheckExceptionRaised(const FieldList: string; Expect: ExceptClass; const ExpectMsg: string = '');
   begin
     FFieldList := FieldList;
     CheckException(RunDefineFields, Expect, ExpectMsg, 'FieldList "' + FieldList + '"');
@@ -2196,7 +2202,7 @@ procedure TZGenericTestDataSet.TestDefineSortedFields;
     end;
   end;
 
-  procedure CheckExceptionRaised(const FieldList: string; Expect: TClass; const ExpectMsg: string = '');
+  procedure CheckExceptionRaised(const FieldList: string; Expect: ExceptClass; const ExpectMsg: string = '');
   begin
     FFieldList := FieldList;
     CheckException(RunDefineSortedFields, Expect, ExpectMsg, 'FieldList "' + FieldList + '"');

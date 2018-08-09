@@ -127,23 +127,27 @@ implementation
 uses ZClasses;
 
 const
-  stBooleanIndex        = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  stByteIndex           = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  stShortIndex          = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  stSmallIndex          = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  stIntegerIndex        = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  stLongIndex           = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  stFloatIndex          = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
-  stDoubleIndex         = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
-  stBigDecimalIndex     = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
-  stStringIndex         = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
-  stBytesIndex          = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
-  stDateIndex           = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
-  stTimeIndex           = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
-  stTimestampIndex      = {$IFDEF GENERIC_INDEX}13{$ELSE}14{$ENDIF};
-  stAsciiStreamIndex    = {$IFDEF GENERIC_INDEX}14{$ELSE}15{$ENDIF};
-  stUnicodeStreamIndex  = {$IFDEF GENERIC_INDEX}15{$ELSE}16{$ENDIF};
-  stBinaryStreamIndex   = {$IFDEF GENERIC_INDEX}16{$ELSE}17{$ENDIF};
+  stBooleanIndex        = FirstDbcIndex + 0;
+  stByteIndex           = FirstDbcIndex + 1;
+  stShortIndex          = FirstDbcIndex + 2;
+  stSmallIndex          = FirstDbcIndex + 3;
+  stIntegerIndex        = FirstDbcIndex + 4;
+  stLongIndex           = FirstDbcIndex + 5;
+  stFloatIndex          = FirstDbcIndex + 6;
+  stDoubleIndex         = FirstDbcIndex + 7;
+  stBigDecimalIndex     = FirstDbcIndex + 8;
+  stStringIndex         = FirstDbcIndex + 9;
+  stBytesIndex          = FirstDbcIndex + 10;
+  stDateIndex           = FirstDbcIndex + 11;
+  stTimeIndex           = FirstDbcIndex + 12;
+  stTimestampIndex      = FirstDbcIndex + 13;
+  stAsciiStreamIndex    = FirstDbcIndex + 14;
+  stUnicodeStreamIndex  = FirstDbcIndex + 15;
+  stBinaryStreamIndex   = FirstDbcIndex + 16;
+
+  FirstIndex = stBooleanIndex;
+  LastIndex = stBinaryStreamIndex;
+
 { TZTestCachedResultSetCase }
 
 {**
@@ -790,8 +794,8 @@ begin
       First;
       while Next do
       begin
-        for i := FirstDbcIndex to {$IFDEF GENERIC_INDEX}16{$ELSE}17{$ENDIF} do
-         Check(IsNull(I), 'The field '+IntToStr(I)+' did not still equals null');
+        for i := FirstIndex to LastIndex do
+          Check(IsNull(I), 'The field '+IntToStr(I)+' did not still equals null');
       end;
     end;
     FResultSet := nil;
@@ -830,12 +834,14 @@ begin
       try
         SetFetchDirection(fdReverse);
         Fail('Incorrect SetFetchDirection fdReverse behavior');
-      except
+      except on E: Exception do
+        CheckNotTestFailure(E);
       end;
       try
         SetFetchDirection(fdUnknown);
         Fail('Incorrect SetFetchDirection fdUnknown behavior');
-      except
+      except on E: Exception do
+        CheckNotTestFailure(E);
       end;
   }
 
@@ -976,6 +982,8 @@ begin
   finally
     Collection.Free;
   end;
+
+  BlankCheck;
 end;
 
 {**

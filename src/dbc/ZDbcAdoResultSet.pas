@@ -413,7 +413,7 @@ begin
       adSingle:           Result := {$IFDEF UNICODE}FloatToSQLUnicode{$ELSE}FloatToSQLRaw{$ENDIF}(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSingle);
       adDouble:           Result := {$IFDEF UNICODE}FloatToSQLUnicode{$ELSE}FloatToSQLRaw{$ENDIF}(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDouble);
       adCurrency:         Result := CurrToStr(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency);
-      adBoolean: Result := {$IFDEF UNICODE}BoolToUnicodeEx{$ELSE}BoolToRawEx{$ENDIF}(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean);
+      adBoolean: Result := BoolToStrEx(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean);
       adGUID:
         {$IFDEF UNICODE}
         System.SetString(Result, TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, 38);

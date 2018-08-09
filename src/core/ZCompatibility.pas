@@ -165,13 +165,19 @@ var
   DBScreen: IDBScreen;
 {$ENDIF}
 
+const
+  DefDateFormatDMY = 'DD-MM-YYYY';
+  DefDateFormatYMD = 'YYYY-MM-DD';
+  DefTimeFormat = 'HH:NN:SS';
+  DefTimeFormatMsecs = 'HH:NN:SS.ZZZ';
+  DefDateTimeFormat = DefDateFormatDMY + ' ' + DefTimeFormat;
+  DefDateTimeFormatMsecs = DefDateFormatDMY + ' ' + DefTimeFormatMsecs;
+
 {$IFNDEF FPC} //delphi and windows
 const
   LineEnding = #13#10;
   Brackets = ['(',')','[',']','{','}'];
   StdWordDelims = [#0..' ',',','.',';','/','\',':','''','"','`'] + Brackets;
-
-
 
 {$IFDEF WITH_TSYSCHARSET_DEPRECATED}
 function AnsiProperCase(const S: string; const WordDelims: String): string;
@@ -445,26 +451,26 @@ var
       CPType: {$IFDEF DELPHI}{$IFDEF UNICODE}cCP_UTF16{$ELSE}cGET_ACP{$ENDIF}{$ELSE}cCP_UTF8{$ENDIF};
       ClientCodePage: {%H-}@ClientCodePageDummy;
       DisplayFormatSettings:
-        (DateFormat: 'DD-MM-YYYY';
-          DateFormatLen: 10;
-          TimeFormat: 'HH:NN:SS.ZZZ';
-          TimeFormatLen: 12;
-          DateTimeFormat: 'DD-MM-YYYY HH:NN:SS';
-          DateTimeFormatLen: 23);
+          (DateFormat: DefDateFormatDMY;
+          DateFormatLen: Length(DefDateFormatDMY);
+          TimeFormat: DefTimeFormatMsecs;
+          TimeFormatLen: Length(DefTimeFormatMsecs);
+          DateTimeFormat: DefDateTimeFormat;
+          DateTimeFormatLen: Length(DefDateTimeFormat));
       ReadFormatSettings:
-          (DateFormat: 'DD-MM-YYYY';
-          DateFormatLen: 10;
-          TimeFormat: 'HH:NN:SS.ZZZ';
-          TimeFormatLen: 12;
-          DateTimeFormat: 'DD-MM-YYYY HH:NN:SS.ZZZ';
-          DateTimeFormatLen: 23);
+          (DateFormat: DefDateFormatDMY;
+          DateFormatLen: Length(DefDateFormatDMY);
+          TimeFormat: DefTimeFormatMsecs;
+          TimeFormatLen: Length(DefTimeFormatMsecs);
+          DateTimeFormat: DefDateTimeFormatMsecs;
+          DateTimeFormatLen: Length(DefDateTimeFormatMsecs));
       WriteFormatSettings:
-          (DateFormat: 'DD-MM-YYYY';
-          DateFormatLen: 10;
-          TimeFormat: 'HH:NN:SS.ZZZ';
-          TimeFormatLen: 12;
-          DateTimeFormat: 'DD-MM-YYYY HH:NN:SS.ZZZ';
-          DateTimeFormatLen: 23);
+          (DateFormat: DefDateFormatDMY;
+          DateFormatLen: Length(DefDateFormatDMY);
+          TimeFormat: DefTimeFormatMsecs;
+          TimeFormatLen: Length(DefTimeFormatMsecs);
+          DateTimeFormat: DefDateTimeFormatMsecs;
+          DateTimeFormatLen: Length(DefDateTimeFormatMsecs));
       {$IFDEF WITH_LCONVENCODING}
       PlainConvertFunc: @NoConvert;
       DbcConvertFunc: @NoConvert;

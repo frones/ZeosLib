@@ -167,13 +167,13 @@ begin
   CheckEquals('NEW_ADDRESS', SQLStrings.ParamNames[2]);
   CheckEquals('NEW_NAME', SQLStrings.ParamNames[3]);
 
-  Try
+  try
     // Failure expected when ParamChar isn't seen as a Symbol by the Tokenizer
     // U is interpreted as the start of a normal word by all tokenizers
     SQLStrings.ParamChar := 'U';
     Fail('Wrong behaviour when setting ParamChar to U');
-    except
-      // Ignore.
+  except on E: Exception do
+    CheckNotTestFailure(E);
   end;
 end;
 

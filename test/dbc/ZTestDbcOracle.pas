@@ -141,8 +141,8 @@ begin
   try
     Statement.ExecuteUpdate('SELECT * FROM equipment');
     Fail('Incorrect ExecuteUpdate behaviour');
-  except
-    // Ignore.
+  except on E: Exception do
+    CheckNotTestFailure(E);
   end;
 
   Check(not Statement.Execute('UPDATE equipment SET eq_name=eq_name'));
@@ -620,7 +620,8 @@ begin
   try
     PStatement.ExecuteUpdatePrepared;
     Fail('Primary key violation expected');
-  except
+  except on E: Exception do
+    CheckNotTestFailure(E);
   end;
   // rerun with new value (and check, that prev error dont corrupt PStatement)
   try

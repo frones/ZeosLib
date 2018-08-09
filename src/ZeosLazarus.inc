@@ -95,6 +95,7 @@
        {$DEFINE PWIDECHAR_IS_PUNICODECHAR}
        {$DEFINE WITH_FTGUID} //TStringField descendant TGuidField is supported 
        {$DEFINE FPC2_6UP}
+       {$DEFINE FPC2_6DOWN}
     {$IFEND}
 
     {$IF FPC_FULLVERSION>=20602}
@@ -103,6 +104,7 @@
 
     {$IF FPC_FULLVERSION>=30000}
        {$DEFINE FPC3_0UP}
+       {$UNDEF FPC2_6DOWN}
     {$ENDIF}
 
     {$IFDEF LCL}

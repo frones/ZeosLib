@@ -131,8 +131,8 @@ begin
   try
     Connection.StartTransaction;
     Fail('StartTransaction should be allowed only in AutoCommit mode');
-  except
-    // Ignore.
+  except on E: Exception do
+    CheckNotTestFailure(E);
   end;
   Connection.Disconnect;
 end;
@@ -432,6 +432,7 @@ begin
   Connection.Disconnect;
   Connection.AutoCommit := False;
   Connection.Connect;
+  Check(True);
 end;
 
 {**
@@ -584,6 +585,8 @@ begin
   finally
     Query.Free;
   end;
+
+  Check(True);
 end;
 
 {**
@@ -793,6 +796,8 @@ begin
   finally
     Query.Free;
   end;
+
+  Check(True);
 end;
 
 {
@@ -893,9 +898,6 @@ const
   FormatStr = '';
 var
   Query: TZQuery;
-  Succeeded: Boolean;
-  DateValue1: TDateTime;
-  DateValue2: TDateTime;
   FormatSettings: TFormatSettings;
 begin
   FormatSettings.DateSeparator := '-';
@@ -929,9 +931,13 @@ begin
     CheckEquals(DateStr2, DateTimeToStr(Query.FieldByName('d_datetime').AsDateTime, FormatSettings), 'Checking, if the first timestamp field has the expected value.');
     CheckEquals(DateStr2, DateTimeToStr(Query.FieldByName('d_timestamp').AsDateTime, FormatSettings), 'Checking, if the second timestamp field has the expected value.');
   finally
-    Query.Close;
-    Query.Free;
-    //Connection.ExecuteDirect('delete from date_values where d_id in (1001, 1002)');
+    try
+      Query.SQL.Text := 'delete from date_values where d_id in (1001, 1002)';
+      Query.ExecSQL;
+    finally
+      Query.Close;
+      Query.Free;
+    end;
   end;
 end;
 
@@ -992,9 +998,7 @@ begin
         CheckEquals(1, RowsAffected);
       except
         on E:Exception do
-        begin
           Fail('Param().LoadFromStream(StringStream, ftBlob): '+E.Message);
-        end;
       end;
     end;
   finally
@@ -1051,7 +1055,7 @@ begin
         CheckEquals(1, RowsAffected);
       except
         on E:Exception do
-            Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
+          Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
       end;
     end;
   finally

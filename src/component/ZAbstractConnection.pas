@@ -221,8 +221,8 @@ type
 
     procedure RegisterDataSet(DataSet: TDataset);
     procedure UnregisterDataSet(DataSet: TDataset);
-    function ExecuteDirect(SQL:string):boolean;overload;
-    function ExecuteDirect(SQL:string; var RowsAffected:integer):boolean;overload;
+    function ExecuteDirect(const SQL: string): boolean; overload;
+    function ExecuteDirect(const SQL: string; out RowsAffected: integer): boolean; overload;
     // Modified by cipto 8/2/2007 10:16:50 AM
     procedure RegisterSequence(Sequence: TComponent);
     procedure UnregisterSequence(Sequence: TComponent);
@@ -1676,7 +1676,7 @@ end;
   @param SQL the statement to be executed.
   Returns an indication if execution was succesfull.
 }
-function TZAbstractConnection.ExecuteDirect(SQL : String) : boolean;
+function TZAbstractConnection.ExecuteDirect(const SQL : String) : boolean;
 var
   dummy : Integer;
 begin
@@ -1689,8 +1689,8 @@ end;
   @param RowsAffected the number of rows that were affected by the statement.
   Returns an indication if execution was succesfull.
 }
-function TZAbstractConnection.ExecuteDirect(SQL: string;
-  var RowsAffected: integer):boolean;
+function TZAbstractConnection.ExecuteDirect(const SQL: string;
+  out RowsAffected: integer): boolean;
 begin
   RowsAffected := -1;
   try

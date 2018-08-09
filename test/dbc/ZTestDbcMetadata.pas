@@ -95,7 +95,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZTestConsts, ZDbcMetadata;
+uses ZSysUtils, ZDbcMetadata;
 
 { TZGenericTestDbcMetadata }
 

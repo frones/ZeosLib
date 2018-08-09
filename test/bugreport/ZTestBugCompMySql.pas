@@ -1352,7 +1352,8 @@ begin
       Query.ExecSQL;
 
       Fail('Wrong exception handling in MySQL');
-    except
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
   finally
     Query.Free;

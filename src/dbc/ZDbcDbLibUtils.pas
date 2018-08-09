@@ -375,7 +375,7 @@ begin
         begin
           if ParamType = stBinaryStream then
             Result := GetSQLHexAnsiString(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, True)
-          else
+          else begin
             if TempBlob.IsClob then
               if ConSettings^.ClientCodePage.IsStringFieldCPConsistent then begin
                 TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage.CP);
@@ -404,7 +404,7 @@ begin
               else
                 Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings), #0, '', [rfReplaceAll]), '''')
+                    TempBlob.Length, ConSettings), #0, '', [rfReplaceAll]), '''');
               {$ELSE}
                 Result := AnsiQuotedStr(StringReplace(
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
@@ -412,8 +412,11 @@ begin
               else
                 Result := AnsiQuotedStr(StringReplace(
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings), #0, '', [rfReplaceAll]), '''')
+                    TempBlob.Length, ConSettings), #0, '', [rfReplaceAll]), '''');
               {$ENDIF}
+            if Pos(AnsiChar(#0), Result) > 1
+            then raise EZSQLException.Create('Character 0x00 is not allowed in Strings with Text and NText fields and this driver.');
+          end;
         end
         else
           Result := 'NULL';

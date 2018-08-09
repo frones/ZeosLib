@@ -7,7 +7,7 @@ interface
 uses
   ZTestSqlTypes, ZTestSqlStrings, ZTestSqlProcessor,
   ZTestSqlMetadata, ZTestSorting, ZTestMasterDetail, ZTestExecuteSql,
-  ZTestDataSetGeneric, ZTestData, ZTestConnection, ZTestStoredProcedure,
+  ZTestDataSetGeneric, ZTestConnection, ZTestStoredProcedure,
   ZTestEvents
   ;
 implementation

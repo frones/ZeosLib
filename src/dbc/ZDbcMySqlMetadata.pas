@@ -2863,7 +2863,7 @@ var
       ZScale := -1;
     end else if TypeName = 'varbinary' then begin
       ZType := 20;
-      ZPrecision := -1;
+      ZPrecision := MysqlCharLength;
       ZScale := -1;
     end else if TypeName = 'set' then begin
       ZType := 19;

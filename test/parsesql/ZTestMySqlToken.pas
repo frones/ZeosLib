@@ -55,7 +55,7 @@ unit ZTestMySqlToken;
 
 interface
 {$I ZParseSql.inc}
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase, ZClasses, ZTokenizer, ZMySqlToken,
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase, ZTokenizer, ZMySqlToken,
   ZTestTokenizer;
 
 type

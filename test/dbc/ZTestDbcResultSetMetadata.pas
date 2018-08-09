@@ -56,7 +56,7 @@ unit ZTestDbcResultSetMetadata;
 interface
 {$I ZDbc.inc}
 uses Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZSqlTestCase, ZDbcIntfs, ZClasses;
+  ZSqlTestCase, ZDbcIntfs;
 
 type
 
@@ -264,7 +264,6 @@ const
   DEP_NAME_Index      = FirstDbcIndex +1;
   DEP_SHNAME_Index    = FirstDbcIndex +2;
   DEP_ADDRESS_Index   = FirstDbcIndex +3;
-  DEP_ADDRESS_1_Index = FirstDbcIndex +4;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;

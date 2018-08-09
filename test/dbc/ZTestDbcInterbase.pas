@@ -120,7 +120,7 @@ type
 
 implementation
 
-uses SysUtils, ZTestConsts, ZTestCase, ZDbcResultSet, ZVariant, ZMessages;
+uses SysUtils, ZTestConsts, ZTestCase, ZDbcResultSet, ZVariant, ZMessages, DB;
 
 { TZTestDbcInterbaseCase }
 
@@ -889,7 +889,18 @@ begin
   CallableStatement.Close;
 end;
 
-procedure TZTestDbcInterbaseCase.TestMsec; 
+type
+    TZTimeStamp = record
+    Year: Word;
+    Month: Word;
+    Day: Word;
+    Hour: Word;
+    Minute: Word;
+    Second: Word;
+    Fractions: Cardinal;
+  end;
+
+procedure TZTestDbcInterbaseCase.TestMsec;
 const
   D_ID = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   D_DATE = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
@@ -901,6 +912,13 @@ var
   ResultSet: IZResultSet;
   ThisTime : TDateTime;
   oldTimeFormat: string;
+  TS1, TS2: TZTimeStamp;
+  procedure ToTS(const InValue: TDateTime; var ToVal:TZTimeStamp);
+  begin
+    ToVal.Fractions := 0;
+    DecodeDateTime(InValue, ToVal.Year, ToVal.Month, ToVal.Day, ToVal.Hour,
+      ToVal.Minute, ToVal.Second, PWord(@ToVal.Fractions)^);
+  end;
 begin
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
@@ -911,7 +929,7 @@ begin
   CheckNotNull(ResultSet);
   OldTimeFormat := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat := 'hh:mm:ss.zzz';
-  ThisTime := now;
+  ThisTime := DateUtils.EncodeDateTime(18,8,2, 13, 13, 13, 999);
   ResultSet.MoveToInsertRow;
   ResultSet.UpdateInt(D_ID, 4);
   ResultSet.UpdateDate(D_DATE,ThisTime);
@@ -922,7 +940,10 @@ begin
   ResultSet.Last;
   Check(ResultSet.GetInt(D_ID) <> 0);
   CheckEquals(Trunc(ThisTime), ResultSet.GetDate(D_DATE),'Failure field 2');
-  CheckEquals(RoundTo(Frac(ThisTime),-10), RoundTo(ResultSet.GetTime(D_TIME),-10),'Failure field 3');
+  ToTS(Frac(ThisTime), TS1);
+  ToTS(ResultSet.GetTime(D_TIME), Ts2);
+  CheckEquals(EncodeTime(ts1.Hour, ts1.Minute, ts1.Second, 0), EncodeTime(ts2.Hour, ts2.Minute, ts2.Second, 0), 'time without fractions');
+  CheckEquals(ts1.Fractions, ts2.Fractions, 'fractions');
   CheckEquals(ThisTime, ResultSet.GetTimeStamp(D_DATETIME),'Failure field 4');
   CheckEquals(ThisTime, ResultSet.GetTimeStamp(D_TIMESTAMP),'Failure field 5');
   ResultSet.DeleteRow;

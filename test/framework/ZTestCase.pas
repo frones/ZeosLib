@@ -61,13 +61,13 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, SysUtils,
-    ZCompatibility;
+  Classes, {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, SysUtils, StrUtils,
+  ZCompatibility;
 
 type
   {$IFDEF FPC}
   CTZAbstractTestCase = Class of TZAbstractTestCase;
-  TTestMethod  = procedure of object;
+  TTestMethod  = TRunMethod;
   {$ENDIF}
 
   TDatePart = (dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec, dpMSec);
@@ -88,11 +88,11 @@ type
     FSuppressTestOutput: Boolean;
     FSkipClosed: Boolean;
     FSkipNonZeos: Boolean;
+    FSkipPerformance: Boolean;
   protected
     {$IFDEF FPC}
     frefcount : longint;
     { implement methods of IUnknown }
-    procedure RunTest; override;
     {$IFDEF FPC2_5UP}
     function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} iid : tguid; out obj) : HResult;{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}; virtual;
     function _AddRef : longint;{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF};
@@ -102,7 +102,7 @@ type
     function _AddRef : longint;stdcall;
     function _Release : longint;stdcall;
     {$ENDIF}
-    procedure CheckEqualsMem(expected, actual: pointer; size:longword; msg:string='');
+    function GetMemDiffStr(Expected, Actual: Pointer; Size: Longword; const Msg: string = ''): string;
     {$ENDIF}
     property DecimalSeparator: Char read FDecimalSeparator
       write FDecimalSeparator;
@@ -121,19 +121,19 @@ type
     {$IFDEF WITH_CLASS_VARS}class{$ENDIF} function ReadInheritProperty(const Key, Default: string): string;
 
     { Visual output methods. }
-    procedure Print(_Message: string); virtual;
-    procedure PrintLn(_Message: string = ''); virtual;
+    procedure Print(const Msg: string); virtual;
+    procedure PrintLn(const Msg: string = ''); virtual;
 
     { Additional checking methods. }
     procedure CheckEquals(const Expected: RawByteString; ActualValue: PAnsiChar;
-      ActualLen: PNativeUInt; _Message: string = ''); overload;
-    procedure CheckEquals(Array1, Array2: TBytes;
-      _Message: string = ''); overload;
+      ActualLen: PNativeUInt; const Msg: string = ''); overload;
+    procedure CheckEquals(const Expected, Actual: TBytes;
+      const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: String; ConSettings: PZConSettings;
-      _Message: string = ''); overload;
+      const Msg: string = ''); overload;
     {$IFNDEF UNICODE}
     procedure CheckEquals(Expected: ZWideString; Actual: String; ConSettings: PZConSettings;
-      _Message: string = ''); overload;
+      const Msg: string = ''); overload;
     {$ENDIF UNICODE}
     procedure CheckEquals(OrgStr: ZWideString; ActualLobStream: TStream; ConSettings: PZConSettings;
       const Msg: string = ''); overload;
@@ -144,6 +144,7 @@ type
     procedure CheckNotEquals(Expected, Actual: PAnsiChar;
       const Msg: string = ''); overload;
     {$IFDEF FPC}
+    procedure CheckEqualsMem(Expected, Actual: Pointer; Size: Longword; const Msg: string = '');
     procedure CheckEquals(Expected, Actual: WideString;
       const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: WideString;
@@ -152,20 +153,17 @@ type
       const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: UInt64;
       const Msg: string = ''); overload;
-    {$ELSE}
-    procedure CheckEquals(Expected, Actual: Word;
+    procedure CheckEquals(Expected, Actual: Int64;
       const Msg: string = ''); overload;
-    procedure CheckEquals(Expected, Actual: Byte;
-      const Msg: string = ''); overload;
-    procedure CheckNotEquals(Expected, Actual: Word;
-      const Msg: string = ''); overload;
-    procedure CheckNotEquals(Expected, Actual: Byte;
+    procedure CheckNotEquals(Expected, Actual: Int64;
       const Msg: string = ''); overload;
     {$ENDIF}
     procedure CheckEqualsDate(const Expected, Actual: TDateTime;
       Parts: TDateParts = []; const Msg: string = '');
-    procedure CheckException(AMethod: TTestMethod; AExceptionClass: TClass;
-      const ExcMsg: string = ''; const Msg: string = ''); overload;
+    procedure CheckException(AMethod: TTestMethod; AExceptionClass: ExceptClass;
+      const ExpectExcMsg: string = ''; const Msg: string = ''); overload;
+    procedure CheckNotTestFailure(E: Exception; const Msg: string = '');
+    procedure BlankCheck;
     { Measurement methods. }
     function GetTickCount: Cardinal;
   public
@@ -173,16 +171,15 @@ type
     destructor Destroy; override;
     {$IFDEF FPC}
     constructor Create; override; overload;
-    function GetName: string;
-    procedure Fail(msg: string; errorAddr: Pointer = nil);
-    procedure CheckNotNull(obj: IUnknown; msg: string = ''); overload; virtual;
-    procedure CheckNull(obj: IUnknown; msg: string = ''); overload; virtual;
     class function Suite : CTZAbstractTestCase;
+    property GetName: string read GetTestName;
     {$ENDIF}
   end;
 
   {** Implements a generic test case. }
   TZGenericTestCase = class (TZAbstractTestCase);
+
+function AddToMsg(const Msg, Add: string): string;
 
 implementation
 
@@ -195,13 +192,33 @@ uses
 {$IFDEF WITH_STRLEN_DEPRECATED}
   AnsiStrings,
 {$ENDIF}
-  ZSysUtils, ZTestConfig, Math, ZEncoding;
+  ZSysUtils, ZTestConfig, ZEncoding;
 
-{$IFDEF FPC}
-function CallerAddr: Pointer;
+const
+  SArrayLengthsDiffer = 'array lengths differ';
+  SArrayDataDiffer = 'array data differ';
+  SStreamSizesDiffer = 'stream sizes differ';
+  SStreamDataDiffer = 'stream data differ';
+  SExpectedException = 'expected exception but TestFailure raised';
+{$IFNDEF FPC}
+  SNoException = 'no exception';
+  SExceptionMsgDiffer = 'exception messages differ';
+{$ENDIF}
+
+function AddToMsg(const Msg, Add: string): string;
 begin
-  Result := nil;
+  if Msg <> ''
+    then Result := Msg + ', ' + Add
+    else Result := Add;
 end;
+
+{$IFDEF FPC} // copy from DUnit
+
+{$IF NOT DECLARED(CallerAddr)} // for older FPC versions < 3.1
+const
+  CallerAddr = nil;
+{$IFEND}
+
 function ByteAt(p: pointer; const Offset: integer): byte;
 begin
   Result:={%H-}pByte(NativeUint(p){%H-}+Offset)^;
@@ -224,28 +241,11 @@ begin
       break;
     end;
 end;
-
-function GetMemDiffStr(expected, actual: pointer; size:longword; msg:string):string;
-var
-  db1, db2: byte;
-  Offset: integer;
-begin
-  Offset:=FirstByteDiff(expected,actual,size,db1,db2);
-  Result:=Format('%s expected: <%s> but was: <%s>',[msg,IntToHex(db1,2),IntToHex(db2,2)]);
-  Result:=Result+' at Offset = '+IntToHex(Offset,4)+'h';
-end;
 {$ENDIF}
 
 { TZAbstractTestCase }
 
 {$IFDEF FPC}
-procedure TZAbstractTestCase.RunTest;
-begin
-  //WriteLn(GetTestName);
-  inherited RunTest;
-end;
-
-
 function TZAbstractTestCase.QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult;
 begin
   if getinterface(iid,obj) then
@@ -265,40 +265,21 @@ begin
   if _Release=0 then self.destroy;
 end;
 
-function TZAbstractTestCase.GetName: string;
-begin
-   Result := GetTestName;
-end;
-
-procedure TZAbstractTestCase.Fail(msg: string; errorAddr: Pointer = nil);
-begin
-  if errorAddr = nil then
-    raise EAssertionFailedError.Create(msg) at CallerAddr
-  else
-    raise EAssertionFailedError.Create(msg) at errorAddr;
-end;
-
 class function TZAbstractTestCase.Suite: CTZAbstractTestCase;
 begin
-  result := Self;
+  Result := Self;
 end;
 
-procedure TZAbstractTestCase.CheckNotNull(obj: IUnknown; msg: string);
+// copy from DUnit
+procedure TZAbstractTestCase.CheckEqualsMem(Expected, Actual: Pointer; Size: Longword; const Msg: string);
 begin
-     if obj = nil then
-      Fail(msg, CallerAddr);
-end;
-
-procedure TZAbstractTestCase.CheckNull(obj: IUnknown; msg: string);
-begin
-    if obj <>  nil then
-      Fail(msg, CallerAddr);
-end;
-
-procedure TZAbstractTestCase.CheckEqualsMem(expected, actual: pointer; size:longword; msg:string='');
-begin
+  BlankCheck;
   if not CompareMem(expected, actual, size) then
+    {$IFDEF FPC2_6DOWN}
+    Fail(GetMemDiffStr(expected, actual, size, msg));
+    {$ELSE}
     Fail(GetMemDiffStr(expected, actual, size, msg), CallerAddr);
+    {$ENDIF}
 end;
 
 constructor TZAbstractTestCase.Create;
@@ -306,13 +287,25 @@ begin
   inherited Create;
   LoadConfiguration;
 end;
+
+function TZAbstractTestCase.GetMemDiffStr(Expected, Actual: Pointer; Size: Longword; const Msg: string): string;
+var
+  db1, db2: byte;
+  Offset: integer;
+begin
+  Offset:=FirstByteDiff(expected,actual,size,db1,db2);
+  Result:=NotEqualsErrorMessage(IntToHex(db1,2),IntToHex(db2,2),msg);
+  Result:=Result+' at Offset = '+IntToHex(Offset,4)+'h';
+end;
 {$ENDIF}
 
 function TZAbstractTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
 begin
-  Check(True); //avoids a Emty test fail
   Result := (FSkipClosed and (srClosedBug in Reasons)) or
-            (FSkipNonZeos and (srNonZeos in Reasons));
+            (FSkipNonZeos and (srNonZeos in Reasons)) or
+            (FSkipPerformance and (srNoPerformance in Reasons));
+  if Result then
+    BlankCheck; // avoids an empty test fail
 end;
 
 function TZAbstractTestCase.SkipForReason(Reason: ZSkipReason): Boolean;
@@ -357,10 +350,10 @@ begin
   else FDecimalSeparator :=  DEFAULT_DECIMAL_SEPARATOR;
   {$IFDEF WITH_FORMATSETTINGS}Formatsettings.{$ELSE}SysUtils.{$ENDIF}DecimalSeparator := FDecimalSeparator;
 
-  { Defines a 'suppress test output' setting. }
   FSuppressTestOutput := StrToBoolEx(ReadInheritProperty(SUPPRESS_TEST_OUTPUT_KEY, TRUE_VALUE));
   FSkipClosed := StrToBoolEx(ReadInheritProperty(SKIP_CLOSED_KEY, FALSE_VALUE));
   FSkipNonZeos := StrToBoolEx(ReadInheritProperty(SKIP_NON_ZEOS_ISSUES_KEY, FALSE_VALUE));
+  FSkipPerformance := StrToBoolEx(ReadInheritProperty(SKIP_PERFORMANCE_KEY, TRUE_VALUE));
 end;
 
 {**
@@ -417,11 +410,11 @@ end;
   @param the pointer to Length of second value
 }
 procedure TZAbstractTestCase.CheckEquals(const Expected: RawByteString;
-  ActualValue: PAnsiChar; ActualLen: PNativeUInt; _Message: string = '');
+  ActualValue: PAnsiChar; ActualLen: PNativeUInt; const Msg: string);
 var Actual: RawByteString;
 begin
   ZSetString(ActualValue, ActualLen^, Actual);
-  CheckEquals(Expected, Actual, _Message);
+  CheckEquals(Expected, Actual, Msg);
 end;
 
 {**
@@ -429,21 +422,11 @@ end;
   @param the first array for compare
   @param the secon array for compare
 }
-procedure TZAbstractTestCase.CheckEquals(Array1, Array2: TBytes;
-  _Message: string = '');
-var
-  Size1, Size2: Integer;
-  P1, P2: Pointer;
+procedure TZAbstractTestCase.CheckEquals(const Expected, Actual: TBytes;
+  const Msg: string);
 begin
-  Size1 := Length(Array1);
-  Size2 := Length(Array2);
-  if Size1 <> Size2 then
-    FailNotEquals(IntToStr(Size1), IntToStr(Size1), _Message, CallerAddr);
-
-  P1 := Addr(Array1);
-  P2 := Addr(Array2);
-  if CompareMem(P1, P2, High(Array1)) then
-    Fail('Arrays not equal.' +  _Message)
+  CheckEquals(Length(Expected), Length(Actual), AddToMsg(Msg, SArrayLengthsDiffer));
+  CheckEqualsMem(Expected, Actual, Length(Actual), AddToMsg(Msg, SArrayDataDiffer) );
 end;
 
 {**
@@ -454,7 +437,7 @@ end;
    @param ConSettings the Connection given settings
 }
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: String; ConSettings: PZConSettings;
-  _Message: string = '');
+  const Msg: string);
 {$IFNDEF UNICODE}
 var Temp: String;
 {$ENDIF}
@@ -490,7 +473,7 @@ begin
         else
           Temp := Expected;
   {$ENDIF}
-  CheckEquals({$IFNDEF UNICODE}Temp{$ELSE}Expected{$ENDIF}, Actual, _Message)
+  CheckEquals({$IFNDEF UNICODE}Temp{$ELSE}Expected{$ENDIF}, Actual, Msg)
 end;
 
 {**
@@ -501,7 +484,7 @@ end;
    @param ConSettings the Connection given settings
 }
 procedure TZAbstractTestCase.CheckEquals(OrgStr: ZWideString; ActualLobStream: TStream;
-  ConSettings: PZConSettings; const Msg: string = '');
+  ConSettings: PZConSettings; const Msg: string);
 var
   StrStream: TMemoryStream;
   procedure SetAnsiStream(Value: RawByteString);
@@ -536,19 +519,22 @@ end;
    @param Actual the second stream for compare
 }
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: TStream;
-  const Msg: string = '');
+  const Msg: string);
 var
   EBuf, ABuf: PByteArray;
   Size, ERead, ARead: Integer;
 begin
-  if Expected = Actual then Exit;
+  if Expected = Actual then
+  begin
+    BlankCheck;
+    Exit;
+  end;
   if not Assigned(Actual) and Assigned(Expected) then
-    Fail('Expected stream, but NIL receved.' + Msg);
+    Fail(NotEqualsErrorMessage('Not NIL', 'NIL', Msg));
   if Assigned(Actual) and not Assigned(Expected) then
-    Fail('Expected NIL stream, but real stream receved.' + Msg);
+    Fail(NotEqualsErrorMessage('NIL', 'Not NIL', Msg));
+  CheckEquals(Expected.Size, Actual.Size, AddToMsg(Msg, SStreamSizesDiffer));
   Size := Expected.Size;
-  if Size <> Actual.Size then
-    Fail(Format('Different stream size. Expected: %d. Actual: %d.', [Size, Actual.Size]) + Msg);
   GetMem(EBuf, Size);
   GetMem(ABuf, Size);
   try
@@ -556,8 +542,8 @@ begin
     Actual.Position := 0;
     ERead := Expected.Read(EBuf^, Size);
     ARead := Actual.Read(ABuf^, Size);
-    CheckEquals(ERead, ARead, Format('Stream read different. Expected: %d. Actual: %d.', [ERead, ARead]) + Msg);
-    CheckEqualsMem(EBuf, ABuf, Size, 'Stream data different.' + Msg);
+    CheckEquals(ERead, ARead, AddToMsg(Msg, SStreamSizesDiffer));
+    CheckEqualsMem(EBuf, ABuf, Size, AddToMsg(Msg, SStreamDataDiffer));
   finally
     FreeMem(EBuf);
     FreeMem(ABuf);
@@ -565,7 +551,7 @@ begin
 end;
 
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: PAnsiChar;
-  const Msg: string = '');
+  const Msg: string);
 begin
   Check(MemLCompAnsi(Expected, Actual, Max(
   {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Expected),
@@ -573,7 +559,7 @@ begin
 end;
 
 procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: PAnsiChar;
-  const Msg: string = '');
+  const Msg: string);
 begin
   Check(not MemLCompAnsi(Expected, Actual, Max(
     {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Expected),
@@ -581,73 +567,70 @@ begin
 end;
 
 {$IFDEF FPC}
+// Made in accordance with DUnitCompatibleInterface.inc
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: WideString;
-  const Msg: string = '');
+  const Msg: string);
 begin
-  Check(Expected = Actual, Msg);
+  {$IFDEF FPC2_6DOWN}
+  AssertTrue(ComparisonMsg(Expected, Actual), Expected = Actual);
+  {$ELSE}
+  AssertTrue(ComparisonMsg(Msg, Expected, Actual), Expected = Actual, CallerAddr);
+  {$ENDIF}
 end;
 
 procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: WideString;
-  const Msg: string = '');
+  const Msg: string);
 begin
-  Check(Expected <> Actual, Msg);
+  if (Expected = Actual) then
+    Fail(Msg + ComparisonMsg(Expected, Actual, False));
 end;
 
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: UInt64;
-  const Msg: string = ''); overload;
+  const Msg: string);
 begin
-  Check(Expected = Actual, Msg);
+  {$IFDEF FPC2_6DOWN}
+  AssertTrue(ComparisonMsg(IntToStr(Expected), IntToStr(Actual)), Expected = Actual);
+  {$ELSE}
+  AssertTrue(ComparisonMsg(Msg, IntToStr(Expected), IntToStr(Actual)), Expected = Actual, CallerAddr);
+  {$ENDIF}
 end;
 
 procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: UInt64;
-  const Msg: string = ''); overload;
+  const Msg: string);
 begin
-  Check(Expected <> Actual, Msg);
+  if (Expected = Actual) then
+    Fail(Msg + ComparisonMsg(IntToStr(Expected), IntToStr(Actual), False));
 end;
 
-{$ELSE}
-procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Word;
-  const Msg: string = '');
+procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Int64;
+  const Msg: string);
 begin
-  CheckEquals(Cardinal(Expected), Cardinal(Actual), Msg);
+  AssertEquals(Msg, Expected, Actual);
 end;
 
-procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Byte;
-  const Msg: string = '');
+procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: Int64;
+  const Msg: string);
 begin
-  CheckEquals(Cardinal(Expected), Cardinal(Actual), Msg);
-end;
-
-procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: Word;
-  const Msg: string = '');
-begin
-  CheckNotEquals(Cardinal(Expected), Cardinal(Actual), Msg);
-end;
-
-procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: Byte;
-  const Msg: string = '');
-begin
-  CheckNotEquals(Cardinal(Expected), Cardinal(Actual), Msg);
+  if (Expected = Actual) then
+    Fail(Msg + ComparisonMsg(IntToStr(Expected), IntToStr(Actual), False));
 end;
 {$ENDIF}
 
 {$IFNDEF UNICODE}
 procedure TZAbstractTestCase.CheckEquals(Expected: ZWideString; Actual: String;
-  ConSettings: PZConSettings; _Message: string);
+  ConSettings: PZConSettings; const Msg: string);
 begin
   if ConSettings^.AutoEncode or (ConSettings^.ClientcodePage^.Encoding = ceUTF16) or
      (not ConSettings^.ClientcodePage^.IsStringFieldCPConsistent) or
      (ConSettings^.CPType = cCP_UTF16) then
-    CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.CTRL_CP), _Message)
+    CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.CTRL_CP), Msg)
   else
-    CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.ClientcodePage^.CP), _Message);
+    CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.ClientcodePage^.CP), Msg);
 end;
 {$ENDIF UNICODE}
 
 procedure TZAbstractTestCase.CheckEqualsDate(const Expected, Actual: TDateTime;
   Parts: TDateParts; const Msg: string);
-const
-  fmt = 'YYYY-MM-DD HH:NN:SS.ZZZ';
 var
   EYear, EMonth, EDay, EHour, EMin, ESec, EMSec: Word;
   AYear, AMonth, ADay, AHour, AMin, ASec, AMSec: Word;
@@ -655,75 +638,121 @@ var
 begin
   if Parts = [] then
     Parts := [dpYear..dpMSec];
-  s := Msg + Format(' DateTime: Expected: %s, Actual: %s - ',
-    [FormatDateTime(fmt, Expected), FormatDateTime(fmt, Actual)]);
+  s := NotEqualsErrorMessage(FormatDateTime(DefDateTimeFormatMsecs, Expected), FormatDateTime(DefDateTimeFormatMsecs, Actual), Msg);
   DecodeDate(Expected, EYear, EMonth, EDay);
   DecodeTime(Expected, EHour, EMin, ESec, EMSec);
   DecodeDate(Actual, AYear, AMonth, ADay);
   DecodeTime(Actual, AHour, AMin, ASec, AMSec);
-  if dpYear in Parts then CheckEquals(EYear, AYear, s + '(DateTime.Year)');
-  if dpMonth in Parts then CheckEquals(EMonth, AMonth, s + '(DateTime.Month)');
-  if dpDay in Parts then CheckEquals(EDay, ADay, s + '(DateTime.Day)');
-  if dpHour in Parts then CheckEquals(EHour, AHour, s + '(DateTime.Hour)');
-  if dpMin in Parts then CheckEquals(EMin, AMin, s + '(DateTime.Min)');
-  if dpSec in Parts then CheckEquals(ESec, ASec, s + '(DateTime.Sec)');
-  if dpMSec in Parts then CheckEquals(EMSec, AMSec, s + '(DateTime.MSec)');
+  if dpYear in Parts then CheckEquals(EYear, AYear, s);
+  if dpMonth in Parts then CheckEquals(EMonth, AMonth, s);
+  if dpDay in Parts then CheckEquals(EDay, ADay, s);
+  if dpHour in Parts then CheckEquals(EHour, AHour, s);
+  if dpMin in Parts then CheckEquals(EMin, AMin, s);
+  if dpSec in Parts then CheckEquals(ESec, ASec, s);
+  if dpMSec in Parts then CheckEquals(EMSec, AMSec, s);
 end;
 
+{**
+   Checks if a method raises expected exception. Unlike TAbstractTest.CheckException,
+   additionally checks for exception message.
+   @param AMethod method to call
+   @param AExceptionClass class of expected exception. If no exception expected,
+     set this to nil. Then the function will fail if AMethod raises any exception.
+   @param ExcMsg message of expected exception. If empty, exception message won't
+     be checked.
+   @param Msg message
+}
 procedure TZAbstractTestCase.CheckException(AMethod: TTestMethod;
-  AExceptionClass: TClass; const ExcMsg, Msg: string);
+  AExceptionClass: ExceptClass; const ExpectExcMsg, Msg: string);
 begin
   {$IFDEF FPC}
-    {$IFDEF FPC3_0UP}
-    CheckAssertCalled := True;
+    {$IFDEF FPC2_6DOWN}
+    AssertException(Msg, AExceptionClass, AMethod);
+    {$ELSE}
+    AssertException(Msg, AExceptionClass, AMethod, ExpectExcMsg, 0, nil);
     {$ENDIF}
   {$ELSE}
-  FCheckCalled := True;
-  {$ENDIF}
-  try
-    {$IFDEF FPC}
-    AMethod;
-    {$ELSE}
-    Invoke(AMethod);
-    {$ENDIF}
-  except
-    on E: Exception do
-    begin
-      // exception raised but not expected at all
-      if not Assigned(AExceptionClass) then
-        raise;
-      // raised exception other than expected class
-      if not e.ClassType.InheritsFrom(AExceptionClass) then
-        FailNotEquals(AExceptionClass.ClassName, e.ClassName, msg, {$IFDEF FPC}CallerAddr{$ELSE}ReturnAddress{$ENDIF});
-      // raised exception with message other than expected
-      if ExcMsg <> '' then
-        if E.Message <> ExcMsg then
-          FailNotEquals(ExcMsg, E.Message, msg, {$IFDEF FPC}CallerAddr{$ELSE}ReturnAddress{$ENDIF});
-      Exit; // OK
-    end;
+  if ExpectExcMsg = '' then
+    inherited CheckException(AMethod, AExceptionClass, Msg)
+  else
+  begin
+    // run inherited method with AExceptionClass = nil - this will invoke
+    // AMethod and passthrough any exception it could raise.
+    try
+      inherited CheckException(AMethod, nil);
+    except on E: Exception do
+      begin
+        // exception raised but not expected at all
+        if not Assigned(AExceptionClass) then
+          raise;
+        // exception raised is of other class than expected
+        if not E.ClassType.InheritsFrom(AExceptionClass) then
+          FailNotEquals(AExceptionClass.ClassName, E.ClassName, Msg, ReturnAddress);
+        // exception raised with message other than expected
+        CheckEquals(E.Message, ExpectExcMsg, AddToMsg(Msg, SExceptionMsgDiffer));
+        Exit; // OK
+      end;
+    end; // try
+    Fail(NotEqualsErrorMessage(AExceptionClass.ClassName, SNoException, Msg));
   end;
-  Fail(Format('Expected exception "%s" but there was none. %s',
-              [AExceptionClass.ClassName, Msg]));
+  {$ENDIF}
+end;
+
+{**
+  Checks that exception wasn't raised by Fail method. This allows to check against
+  expected exception, like
+    try
+      DoSmthThatRaisesException;
+      Fail('');
+    except on E: Exception do
+      CheckNotTestFailure(E, 'DoSmthThatRaisesException method');
+    end;
+
+    - or -
+
+    try
+      DoSmthThatRaisesException;
+      Fail('DoSmthThatRaisesException method');
+    except on E: Exception do
+      CheckNotTestFailure(E);
+    end;
+
+  @param Exception an exception raised
+  @param Msg message. If empty, E.Message will be used
+}
+procedure TZAbstractTestCase.CheckNotTestFailure(E: Exception; const Msg: string);
+begin
+  Check(not (E is {$IFDEF FPC} EAssertionFailedError {$ELSE} ETestFailure {$ENDIF}),
+        AddToMsg( IfThen(Msg <> '', Msg, E.Message), SExpectedException ) );
+end;
+
+{**
+   Just a check that always succeeds. Use it to avoid "test has no assertions"
+   error in places where none of Check* methods is used.
+}
+procedure TZAbstractTestCase.BlankCheck;
+begin
+  Check(True);
 end;
 
 {**
   Prints a debug message to standard output.
   @param Message a message string to be printed.
 }
-procedure TZAbstractTestCase.Print(_Message: string);
+procedure TZAbstractTestCase.Print(const Msg: string);
 begin
   if not SuppressTestOutput then
-    System.Write(_Message);
+    System.Write(Msg);
 end;
 
 {**
   Prints a debug message ends with EOL to standard output.
   @param Message a message string to be printed.
 }
-procedure TZAbstractTestCase.PrintLn(_Message: string);
+procedure TZAbstractTestCase.PrintLn(const Msg: string);
 begin
   if not SuppressTestOutput then
-    System.WriteLn(_Message);
+    System.WriteLn(Msg);
 end;
 
 {**

@@ -91,7 +91,7 @@ end;
 procedure ZTestCompASABugReport.EmptyTest;
 begin
   //drop me if bugs are reported
-  Check(True);
+  BlankCheck;
 end;
 
 initialization

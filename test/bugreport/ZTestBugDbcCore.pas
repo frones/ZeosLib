@@ -72,7 +72,7 @@ implementation
 { TZTestDbcCoreBugReport }
 procedure TZTestDbcCoreBugReport.EmptyTest;
 begin
-  Check(True);
+  BlankCheck;
 end;
 
 initialization

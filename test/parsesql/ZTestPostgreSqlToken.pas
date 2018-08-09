@@ -105,13 +105,13 @@ end;
 }
 procedure TZTestPostgreSQLTokenizer.TestQuoteState;
 const
-  TokenString146: string = 'nazwa1 = ''\'''',';
-  TokenValues146Off: array[0..3] of string = ('nazwa1', '=', '''\''''',',');
-  TokenTypes146Off: array[0..3] of TZTokenType = (ttWord, ttSymbol, ttQuoted, ttSymbol);
+  //TokenString146: string = 'nazwa1 = ''\'''',';
+  //TokenValues146Off: array[0..3] of string = ('nazwa1', '=', '''\''''',',');
+  //TokenTypes146Off: array[0..3] of TZTokenType = (ttWord, ttSymbol, ttQuoted, ttSymbol);
 
   TokenString1: string = '"a\""\''aa" ''c\'' ''c''''c''';
-  TokenTypes1Off: array[0..1] of TZTokenType = (ttWord, ttQuoted);
-  TokenValues1Off: array[0..1] of string = ('"a\""\''aa"', '''c\'' ''c''''c''');
+  //TokenTypes1Off: array[0..1] of TZTokenType = (ttWord, ttQuoted);
+  //TokenValues1Off: array[0..1] of string = ('"a\""\''aa"', '''c\'' ''c''''c''');
 
   TokenTypes1On: array[0..2] of TZTokenType = (ttWord, ttQuoted, ttQuoted);
   TokenValues1On: array[0..2] of string = ('"a\""\''aa"', '''c\''', '''c''''c''');
@@ -122,11 +122,11 @@ const
   TokenValues2: array[0..2] of string = (
     '$aaa$bbb$$ccc$aaa$', 'ddd$', '$$eee$$');
 
-  TokenString3: string = 'E''eee'' B''bbb'' X''xxx'' U&''uuu'' U$''zzz''';
-  TokenTypes3: array[0..5] of TZTokenType = (
-    ttQuoted, ttQuoted, ttQuoted, ttQuoted, ttWord, ttQuoted);
-  TokenValues3: array[0..5] of string = (
-    'E''eee''', 'B''bbb''', 'X''xxx''', 'U&''uuu''', 'U$', '''zzz''');
+  //TokenString3: string = 'E''eee'' B''bbb'' X''xxx'' U&''uuu'' U$''zzz''';
+  //TokenTypes3: array[0..5] of TZTokenType = (
+  //  ttQuoted, ttQuoted, ttQuoted, ttQuoted, ttWord, ttQuoted);
+  //TokenValues3: array[0..5] of string = (
+  //  'E''eee''', 'B''bbb''', 'X''xxx''', 'U&''uuu''', 'U$', '''zzz''');
 
   TokenString4: string = '$body$ $1,$2 $body$ $$ $1,$2 $$';
   TokenTypes4: array[0..1] of TZTokenType = (ttQuoted, ttQuoted);

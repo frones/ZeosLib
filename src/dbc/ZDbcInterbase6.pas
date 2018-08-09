@@ -370,19 +370,19 @@ begin
   if GetAutoCommit
   then raise EZSQLException.Create(SInvalidOpInAutoCommit);
   if not (FTrHandle = 0)  then
-    if FHardCommit then begin
+    //if FHardCommit then begin
       GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
       // Jan Baumgarten: Added error checking here because setting the transaction
       // handle to 0 before we have checked for an error is simply wrong.
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
       FTrHandle := 0; //normaly not required! Old server code?
-    end else begin
+    {end else begin
       GetPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
       DriverManager.LogMessage(lcTransaction,
         ConSettings^.Protocol, 'TRANSACTION COMMIT');
-    end;
+    end;}
 end;
 
 {**
@@ -866,16 +866,16 @@ begin
   if GetAutoCommit
   then raise EZSQLException.Create(cSInvalidOpInAutoCommit);
   if FTrHandle <> 0 then begin
-    if FHardCommit then begin
+    //if FHardCommit then begin
       GetPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
       FTrHandle := 0;
-    end else begin
+    {end else begin
       GetPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle);
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
-    end;
+    end;}
   end;
 end;
 
