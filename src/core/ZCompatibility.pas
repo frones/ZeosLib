@@ -446,9 +446,7 @@ procedure ZSetString(Src: PAnsiChar; const Len: LengthInt; var Dest: ZWideString
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$IFEND}
 
-{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
 function RawConcat(const Vals: array of RawByteString): RawByteString;
-{$ENDIF}
 
 {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}
 function Min(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
@@ -909,7 +907,6 @@ begin
 end;
 {$ENDIF}
 
-{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
 function RawConcat(const Vals: array of RawByteString): RawByteString;
 var
   I: Integer;
@@ -919,18 +916,17 @@ begin
   L := 0;
   for I := Low(Vals) to High(Vals) do
     if Pointer(Vals[i]) <> nil then
-      Inc(L, Length(Vals[i])-1);
-  SetLength(Result, L+1);
+      Inc(L, Length(Vals[i]){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
+  SetLength(Result, L{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
   P := Pointer(Result);
   AnsiChar((P+L)^) := AnsiChar(#0);
   for I := Low(Vals) to High(Vals) do
     if Pointer(Vals[i]) <> nil then begin
-      L := Length(Vals[i])-1;
+      L := Length(Vals[i]){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
       System.Move(Pointer(Vals[i])^, P^, L);
       Inc(P, L);
     end;
 end;
-{$ENDIF}
 
 {$IFDEF FPC2_6DOWN}
 function BytesOf(InStr: AnsiString): TBytes;
