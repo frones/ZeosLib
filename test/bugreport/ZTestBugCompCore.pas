@@ -121,6 +121,8 @@ type
     procedure TestSF270_1;
     procedure TestSF270_2;
     procedure TestSF279;
+    procedure TestSF286_getBigger;
+    procedure TestSF286_getSmaller;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -137,7 +139,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  SysUtils, ZSysUtils, ZTestConsts, ZTestCase;
+  SysUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcMetadata;
 
 { ZTestCompCoreBugReport }
 
@@ -289,6 +291,8 @@ begin
     Query.SQL.Text := 'DELETE FROM people WHERE p_id=:id';
     Query.ParamByName('id').AsInteger := TEST_ROW_ID;
     Query.ExecSQL;
+
+    Check(True);
   finally
     TextStream.Free;
     BinaryStream.Free;
@@ -311,12 +315,7 @@ begin
   try
     Processor.Connection := Connection;
     Processor.Script.Text := 'AAAAAAAAAAAA BBBBBBBBBBBBBBB CCCCCCCCCCCCCC';
-    try
-      Processor.Execute;
-      Fail('SQL Processor must throw exception on invalid script.');
-    except
-      Check(True);
-    end;
+    CheckException(Processor.Execute, Exception, '', 'SQL Processor must throw exception on invalid script.');
   finally
     Processor.Free;
   end;
@@ -513,10 +512,13 @@ begin
       CheckEquals(TEST_ROW_ID - 1, Query.FieldByName('p_id').AsInteger);
       Query.Post;
       Fail('Wrong behaviour with duplicated key.');
-    except
-      CheckEquals(TEST_ROW_ID - 1, Query.FieldByName('p_id').AsInteger);
-      Query.Cancel;
-      CheckEquals(TEST_ROW_ID, Query.FieldByName('p_id').AsInteger);
+    except on E: Exception do
+      begin
+        CheckNotTestFailure(E);
+        CheckEquals(TEST_ROW_ID - 1, Query.FieldByName('p_id').AsInteger);
+        Query.Cancel;
+        CheckEquals(TEST_ROW_ID, Query.FieldByName('p_id').AsInteger);
+      end;
     end;
 
     { Remove newly created record }
@@ -559,7 +561,8 @@ begin
     try
       Query.Fields[0].AsInteger := 0;
       Fail('Wrong SetField behaviour');
-    except
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
 
     Query.Close;
@@ -571,7 +574,8 @@ begin
     try
       Query.Fields[0].AsInteger := 0;
       Fail('Wrong SetField behaviour');
-    except
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
 
     Query.Close;
@@ -726,6 +730,8 @@ begin
     RefreshQuery.Refresh;
     RefreshQuery.Last;
     RefreshQuery.Close;
+
+    Check(True);
   finally
     Query.Free;
     RefreshQuery.Free;
@@ -750,6 +756,8 @@ begin
 
   Connection.Free;
   Query.Free;
+
+  Check(True);
 end;
 
 {**
@@ -774,6 +782,8 @@ begin
     Connection.Disconnect;
     Connection.Connect;
     Query.ExecSQL;
+
+    Check(True);
   finally
     Connection.Free;
     Query.Free;
@@ -801,6 +811,8 @@ begin
 
     SQLProcessor.Script.Text := 'update people set p_dep_id=p_dep_id where 1=0';
     SQLProcessor.Execute;
+
+    Check(True);
   finally
     Connection.Free;
     SQLProcessor.Free;
@@ -1064,6 +1076,8 @@ begin
   try
     Query.UpdateObject := UpdateSQL;
     Query.UpdateObject := nil;
+
+    Check(True);
   finally
     UpdateSQL.Free;
     Query.Free;
@@ -1100,6 +1114,8 @@ begin
 
     Query.First;
     Query.Locate('p_name', 'xyz', [loCaseInsensitive]);
+
+    Check(True);
   finally
     Query.Free;
   end;
@@ -1124,8 +1140,8 @@ begin
     except
       on E: Exception do
       begin
-        if StartsWith(E.Message, 'Access violation') then
-          Fail('Exception shouldn''t be an Access Violation');
+        Check(not (E is EAccessViolation), 'Exception shouldn''t be an Access Violation');
+        CheckNotTestFailure(E);
       end;
     end;
   finally
@@ -1153,8 +1169,8 @@ begin
     except
       on E: Exception do
       begin
-        if StartsWith(E.Message, 'Access violation') then
-          Fail('Query.Open for DML statement shouldn''t throw Access Violation');
+        Check(not (E is EAccessViolation), 'Query.Open for DML statement shouldn''t throw Access Violation');
+        CheckNotTestFailure(E);
       end;
     end;
   finally
@@ -1358,8 +1374,8 @@ begin
     try
       Query.Post;
       Fail('Wrong Error Processing');
-    except on E: EAbort do
-      // Ignore.
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
     Check(FErrorCounter > 0);
     Query.Cancel;
@@ -1368,8 +1384,8 @@ begin
     try
       Query.Delete;
       Fail('Wrong Error Processing');
-    except on E: EAbort do
-      // Ignore.
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
     Check(FErrorCounter > 0);
 
@@ -1378,8 +1394,8 @@ begin
     try
       Query.Post;
       Fail('Wrong Error Processing');
-    except on E: EAbort do
-      // Ignore.
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
     Check(FErrorCounter > 0);
     Query.Cancel;
@@ -1395,8 +1411,8 @@ begin
     try
       Query.CommitUpdates;
       Fail('Wrong Error Processing');
-    except on E: EAbort do
-      // Ignore.
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
     Check(FErrorCounter > 0);
     Query.CancelUpdates;
@@ -1552,6 +1568,7 @@ begin
     except
       on E: Exception do
       begin
+        CheckNotTestFailure(E);
         Check(E is EDatabaseError);
       end;
     end;
@@ -1645,6 +1662,8 @@ begin
     Metadata.Active := True;
     Metadata.Active := False;
     Metadata.Active := True;
+
+    Check(True);
   finally
     Metadata.Free;
   end;
@@ -1717,8 +1736,8 @@ begin
   try
     Connection.StartTransaction;
     Fail('StartTransaction should be allowed only in AutoCommit mode');
-  except
-    // Ignore.
+  except on E: Exception do
+    CheckNotTestFailure(E);
   end;
   Connection.Disconnect;
 end;
@@ -1867,7 +1886,6 @@ const
   FieldName = 'calculated';
 var
   Query: TZQuery;
-  CalcField: TStringField;
   FieldDef: TFieldDef;
   X: Integer;
 begin
@@ -1886,6 +1904,7 @@ begin
     Query.FieldByName(FieldName).FieldKind := fkCalculated;
     Query.OnCalcFields := TestSF279CalcFields;
     Query.Open;
+    Check(Assigned(Query.FindField(FieldName)), 'Checking, if the calculated field really exists.');
     try
       Query.Filter := 'calculated LIKE ' + QuotedStr('*Krasnodar*');
       Query.Filtered := True;
@@ -1896,6 +1915,70 @@ begin
     FreeAndNil(Query);
   end;
 end;
+
+procedure ZTestCompCoreBugReport.TestSF286_getBigger;
+var
+ x: Integer;
+ y: Integer;
+ Metadata: TZSQLMetadata;
+begin
+  Metadata := TZSQLMetadata.Create(nil);
+  try
+    Metadata.Connection := Connection;
+    // this part never should fail.
+    Metadata.MetadataType := mdTables;
+    Metadata.Open;
+    CheckEquals(Length(TableColumnsDynArray), Metadata.FieldCount, 'Checking if Metadata object has the correct count of columns for mdTables.');
+    y := Low(TableColumnsDynArray);
+    for x := Low(TableColumnsDynArray) to High(TableColumnsDynArray)
+    do CheckEquals(TableColumnsDynArray[x].Name, Metadata.Fields[x-y].FieldName, 'Checking if field name is as expected for mdTables.');
+    Metadata.Close;
+
+    // here it fails if we have a bug.
+    Metadata.MetadataType := mdColumns;
+    Metadata.Open;
+    CheckEquals(Length(TableColColumnsDynArray), Metadata.FieldCount, 'Checking if Metadata object has the correct count of columns for mdTables.');
+    y := Low(TableColColumnsDynArray);
+    for x := Low(TableColColumnsDynArray) to High(TableColColumnsDynArray)
+    do CheckEquals(TableColColumnsDynArray[x].Name, Metadata.Fields[x-y].FieldName, 'Checking if field name is as expected for mdColumns.');
+    Metadata.Close;
+  finally
+    FreeAndNil(Metadata);
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF286_getSmaller;
+var
+ x: Integer;
+ y: Integer;
+ Metadata: TZSQLMetadata;
+begin
+  Metadata := TZSQLMetadata.Create(nil);
+  try
+    Metadata.Connection := Connection;
+    // this part never should fail.
+    Metadata.MetadataType := mdColumns;
+    Metadata.Open;
+    CheckEquals(Length(TableColColumnsDynArray), Metadata.FieldCount, 'Checking if Metadata object has the correct count of columns for mdTables.');
+    y := Low(TableColColumnsDynArray);
+    for x := Low(TableColColumnsDynArray) to High(TableColColumnsDynArray)
+    do CheckEquals(TableColColumnsDynArray[x].Name, Metadata.Fields[x-y].FieldName, 'Checking if field name is as expected for mdColumns.');
+    Metadata.Close;
+
+    // here it fails if we have a bug.
+    Metadata.MetadataType := mdTables;
+    Metadata.Open;
+    CheckEquals(Length(TableColumnsDynArray), Metadata.FieldCount, 'Checking if Metadata object has the correct count of columns for mdTables.');
+    y := Low(TableColumnsDynArray);
+    for x := Low(TableColumnsDynArray) to High(TableColumnsDynArray)
+    do CheckEquals(TableColumnsDynArray[x].Name, Metadata.Fields[x-y].FieldName, 'Checking if field name is as expected for mdTables.');
+    Metadata.Close;
+  finally
+    FreeAndNil(Metadata);
+  end;
+end;
+
+
 
 const {Test Strings}
   Str1: ZWideString = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
@@ -1954,7 +2037,7 @@ begin
         //CheckEquals(1, RowsAffected);
       except
         on E:Exception do
-            Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
+          Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
       end;
     end;
   finally

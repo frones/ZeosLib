@@ -113,7 +113,7 @@ function PrepareSQLParameter(const Value: TZVariant; ParamType: TZSQLType;
 
 implementation
 
-uses ZSysUtils, ZEncoding, ZDbcUtils, ZClasses
+uses ZSysUtils, ZEncoding, ZDbcUtils, ZClasses, ZFastCode
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
@@ -339,8 +339,8 @@ begin
       Result := ClientVarManager.GetAsRawByteString(Value);
     stString, stUnicodeString:
       if NChar
-      then Result := ZSysUtils.SQLQuotedStr(ClientVarManager.GetAsRawByteString(Value, zCP_UTF8), #39)
-      else Result := ZSysUtils.SQLQuotedStr(ClientVarManager.GetAsRawByteString(Value), #39);
+      then Result := ZSysUtils.SQLQuotedStr(ClientVarManager.GetAsRawByteString(Value, zCP_UTF8),AnsiChar(#39))
+      else Result := ZSysUtils.SQLQuotedStr(ClientVarManager.GetAsRawByteString(Value), AnsiChar(#39));
     stBytes:
       begin
         TempBytes := ClientVarManager.GetAsBytes(Value);
@@ -374,43 +374,25 @@ begin
         begin
           if ParamType = stBinaryStream then
             Result := GetSQLHexAnsiString(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, True)
-          else
-            if TempBlob.IsClob then
+          else begin
+            if TempBlob.IsClob then begin
+              if NChar
+              then TempBlob.GetPAnsiChar(zCP_UTF8)
+              else TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage.CP);
+              Result := SQLQuotedStr(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, AnsiChar(#39))
+            end else
               if NChar then
-              {$IFDEF WITH_UNITANSISTRINGS}
-                Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
-                  TempBlob.GetPAnsiChar(zCP_UTF8), #0, '', [rfReplaceAll]), '''')
-              else
-                Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
-                  TempBlob.GetAnsiString, #0, '', [rfReplaceAll]), '''')
-              {$ELSE}
-                Result := AnsiQuotedStr(StringReplace(
-                  TempBlob.GetPAnsiChar(zCP_UTF8), #0, '', [rfReplaceAll]), '''')
-              else
-                Result := AnsiQuotedStr(StringReplace(
-                  TempBlob.GetAnsiString, #0, '', [rfReplaceAll]), '''')
-              {$ENDIF}
-            else
-              if NChar then
-              {$IFDEF WITH_UNITANSISTRINGS}
-                Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
+                Result := SQLQuotedStr(
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings, zCP_UTF8), #0, '', [rfReplaceAll]), '''')
+                    TempBlob.Length, ConSettings, zCP_UTF8), AnsiChar(#39))
               else
-                Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
+                Result := SQLQuotedStr(
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings), #0, '', [rfReplaceAll]), '''')
-              {$ELSE}
-                Result := AnsiQuotedStr(StringReplace(
-                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings, zCP_UTF8), #0, '', [rfReplaceAll]), '''')
-              else
-                Result := AnsiQuotedStr(StringReplace(
-                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings), #0, '', [rfReplaceAll]), '''')
-              {$ENDIF}
-        end
-        else
+                    TempBlob.Length, ConSettings), AnsiChar(#39));
+            if ZFastCode.Pos(RawByteString(#0), Result) > 1
+            then raise EZSQLException.Create('Character 0x00 is not allowed in Strings with Text and NText fields and this driver.');
+          end;
+        end else
           Result := 'NULL';
         TempBlob := nil;
       end;

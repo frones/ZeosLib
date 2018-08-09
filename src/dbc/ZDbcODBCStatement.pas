@@ -419,9 +419,13 @@ var
   ZExtendedArray: TExtendedDynArray absolute ZData;
   ZDateTimeArray: TDateTimeDynArray absolute ZData;
   ZRawByteStringArray: TRawByteStringDynArray absolute ZData;
+  {$IFNDEF NO_ANSISTRING}
   ZAnsiStringArray: TAnsiStringDynArray absolute ZData;
+  {$ENDIF}
   ZUTF8StringArray: TUTF8StringDynArray absolute ZData;
+  {$IFNDEF NO_UTF8STRING}
   ZStringArray: TStringDynArray absolute ZData;
+  {$ENDIF}
   ZUnicodeStringArray: TUnicodeStringDynArray absolute ZData;
   ZCharRecArray: TZCharRecDynArray absolute ZData;
   ZBytesArray: TBytesDynArray absolute ZData;
@@ -588,7 +592,7 @@ var
     PSQLLEN(StrLen_or_IndPtr)^ := Min(Param.BufferSize-2, Len shl 1);
     if Assigned(P) then
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
-    (PWideChar(ParameterDataPtr)+(PSQLLEN(StrLen_or_IndPtr)^ shr 1))^ := #0;
+    PWord(PWideChar(ParameterDataPtr)+(PSQLLEN(StrLen_or_IndPtr)^ shr 1))^ := Ord(#0);
     Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
     Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
   end;
@@ -601,7 +605,7 @@ var
     PSQLLEN(StrLen_or_IndPtr)^ := Min(Param.BufferSize-1, Len);
     if Assigned(P) then
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
-    (PAnsiChar(ParameterDataPtr)+PSQLLEN(StrLen_or_IndPtr)^)^ := #0;
+    PByte(PAnsiChar(ParameterDataPtr)+PSQLLEN(StrLen_or_IndPtr)^)^ := Ord(#0);
     Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
     Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
   end;
@@ -750,8 +754,10 @@ begin
                   end;
                 stString, stUnicodeString:
                     case Value.VArray.VIsNullArrayVariantType of
-                      {$IFNDEF UNICODE} vtString, {$ENDIF}
-                      vtAnsiString, vtUTF8String, vtRawByteString:
+                      {$IFNDEF UNICODE}vtString, {$ENDIF}
+                      {$IFNDEF NO_ANSISTRING}vtAnsiString, {$ENDIF}
+                      {$IFNDEF NO_UTF8STRING}vtUTF8String, {$ENDIF}
+                      vtRawByteString:
                         for J := fArrayOffSet to fCurrentIterations -1 do begin
                           PSQLLEN(StrLen_or_IndPtr)^ := NullInd[StrToBoolEx(TRawByteStringDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet])];
                           Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
@@ -811,11 +817,9 @@ begin
                   //stGUID:
                   stString, stUnicodeString:
                     case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtAnsiString,
-                      vtUTF8String,
+                      {$IFNDEF UNICODE} vtString,{$ENDIF}
+                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
                       vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(StrToBoolEx(ZRawByteStringArray[J+fArrayOffSet])));
                       {$IFDEF UNICODE}
                       vtString,
@@ -858,11 +862,9 @@ begin
                   //stGUID:
                   stString, stUnicodeString:
                     case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtAnsiString,
-                      vtUTF8String,
+                      {$IFNDEF UNICODE} vtString,{$ENDIF}
+                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
                       vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(RawToIntDef(ZRawByteStringArray[J+fArrayOffSet], 0));
                       {$IFDEF UNICODE}
                       vtString,
@@ -905,11 +907,9 @@ begin
                   //stGUID:
                   stString, stUnicodeString:
                     case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtAnsiString,
-                      vtUTF8String,
+                      {$IFNDEF UNICODE} vtString,{$ENDIF}
+                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
                       vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetShort(RawToIntDef(ZRawByteStringArray[J+fArrayOffSet], 0));
                       {$IFDEF UNICODE}
                       vtString,
@@ -952,15 +952,11 @@ begin
                   //stGUID:
                   stString, stUnicodeString:
                     case InParamValues[i].VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtAnsiString,
-                      vtUTF8String,
+                      {$IFNDEF UNICODE} vtString, {$ENDIF}
+                      {$IFNDEF NO_ANSISTRING} vtAnsiString, {$ENDIF}
+                      {$IFNDEF NO_UTF8STRING} vtUTF8String, {$ENDIF}
                       vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetWord(RawToIntDef(ZRawByteStringArray[J+fArrayOffSet], 0));
-                      {$IFDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
+                      {$IFDEF UNICODE} vtString, {$ENDIF}
                       vtUnicodeString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetWord(UnicodeToIntDef(ZUnicodeStringArray[J+fArrayOffSet], 0));
                       vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then
                                           if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
@@ -999,11 +995,9 @@ begin
                   //stGUID:
                   stString, stUnicodeString:
                     case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtAnsiString,
-                      vtUTF8String,
+                      {$IFNDEF UNICODE} vtString,{$ENDIF}
+                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
                       vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetSmall(RawToIntDef(ZRawByteStringArray[J+fArrayOffSet], 0));
                       {$IFDEF UNICODE}
                       vtString,
@@ -1046,11 +1040,9 @@ begin
                   //stGUID:
                   stString, stUnicodeString:
                     case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtAnsiString,
-                      vtUTF8String,
+                      {$IFNDEF UNICODE} vtString,{$ENDIF}
+                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
                       vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetCardinal(RawToUInt64Def(ZRawByteStringArray[J+fArrayOffSet], 0));
                       {$IFDEF UNICODE}
                       vtString,
@@ -1093,11 +1085,9 @@ begin
                   //stGUID:
                   stString, stUnicodeString:
                     case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtAnsiString,
-                      vtUTF8String,
+                      {$IFNDEF UNICODE} vtString,{$ENDIF}
+                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
                       vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetInteger(RawToIntDef(ZRawByteStringArray[J+fArrayOffSet], 0));
                       {$IFDEF UNICODE}
                       vtString,
@@ -1140,11 +1130,9 @@ begin
                   //stGUID:
                   stString, stUnicodeString:
                     case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtAnsiString,
-                      vtUTF8String,
+                      {$IFNDEF UNICODE} vtString,{$ENDIF}
+                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
                       vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetUInt64(RawToUInt64Def(ZRawByteStringArray[J+fArrayOffSet], 0));
                       {$IFDEF UNICODE}
                       vtString,
@@ -1187,11 +1175,9 @@ begin
                   //stGUID:
                   stString, stUnicodeString:
                     case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtAnsiString,
-                      vtUTF8String,
+                      {$IFNDEF UNICODE} vtString,{$ENDIF}
+                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
                       vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetUInt64(RawToInt64Def(ZRawByteStringArray[J+fArrayOffSet], 0));
                       {$IFDEF UNICODE}
                       vtString,
@@ -1233,8 +1219,9 @@ begin
                   //stGUID:
                   stString, stUnicodeString:
                     case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE}vtString, {$ENDIF}
-                      vtAnsiString, vtUTF8String,
+                      {$IFNDEF UNICODE} vtString,{$ENDIF}
+                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
                       vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(PAnsiChar(Pointer(ZRawByteStringArray[J+fArrayOffSet])), Length(ZRawByteStringArray[J+fArrayOffSet]));
                       {$IFDEF UNICODE}vtString, {$ENDIF}
                       vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(PWideChar(Pointer(ZUnicodeStringArray[J+fArrayOffSet])), Length(ZUnicodeStringArray[J+fArrayOffSet]));
@@ -1274,8 +1261,9 @@ begin
                   //stGUID:
                   stString, stUnicodeString:
                     case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE}vtString,{$ENDIF}
-                      vtAnsiString, vtUTF8String,
+                      {$IFNDEF UNICODE} vtString,{$ENDIF}
+                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
                       vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(PAnsiChar(Pointer(ZRawByteStringArray[J+fArrayOffSet])), Length(ZRawByteStringArray[J+fArrayOffSet]));
                       {$IFDEF UNICODE}vtString,{$ENDIF}
                       vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(PWidechar(Pointer(ZUnicodeStringArray[J+fArrayOffSet])), Length(ZUnicodeStringArray[J+fArrayOffSet]));
@@ -1307,11 +1295,9 @@ begin
                     stGUID:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetBinary(@ZGUIDArray[J+fArrayOffSet].D1, 16);
                     stString, stUnicodeString: begin
                         case InParamValues[i].VArray.VArrayVariantType of
-                          {$IFNDEF UNICODE}
-                          vtString,
-                          {$ENDIF}
-                          vtAnsiString,
-                          vtUTF8String,
+                          {$IFNDEF UNICODE} vtString,{$ENDIF}
+                          {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+                          {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
                           vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then begin
                                               GUID := StringToGUID({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(ZRawByteStringArray[J+fArrayOffSet]));
                                               SetBinary(@GUID.D1, 16);
@@ -1344,11 +1330,9 @@ begin
                   stGUID:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetBinary(@ZGUIDArray[J+fArrayOffSet].D1, Min(16, Param.BufferSize));
                   stString:
                       case InParamValues[i].VArray.VArrayVariantType of
-                        {$IFNDEF UNICODE}
-                        vtString,
-                        {$ENDIF}
-                        vtAnsiString,
-                        vtUTF8String,
+                        {$IFNDEF UNICODE} vtString,{$ENDIF}
+                        {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+                        {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
                         vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetBinary(Pointer(ZRawByteStringArray[J+fArrayOffSet]), Min(Length(ZRawByteStringArray[J+fArrayOffSet]), Param.BufferSize));
                         {$IFDEF UNICODE}
                         vtString,
@@ -1386,11 +1370,9 @@ begin
                     stBigDecimal: for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ZExtendedArray[J+fArrayOffSet]);
                     stString, stUnicodeString:
                       case InParamValues[i].VArray.VArrayVariantType of
-                        {$IFNDEF UNICODE}
-                        vtString,
-                        {$ENDIF}
-                        vtAnsiString,
-                        vtUTF8String,
+                        {$IFNDEF UNICODE} vtString,{$ENDIF}
+                        {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+                        {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
                         vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ClientVarManager.GetAsDateTime(EncodeRawByteString(ZRawByteStringArray[J+fArrayOffSet])));
                         {$IFDEF UNICODE}
                         vtString,
@@ -1424,11 +1406,9 @@ begin
                     stBigDecimal: for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ZExtendedArray[J+fArrayOffSet]);
                     stString, stUnicodeString:
                       case InParamValues[i].VArray.VArrayVariantType of
-                        {$IFNDEF UNICODE}
-                        vtString,
-                        {$ENDIF}
-                        vtAnsiString,
-                        vtUTF8String,
+                        {$IFNDEF UNICODE} vtString,{$ENDIF}
+                        {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+                        {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
                         vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ClientVarManager.GetAsDateTime(EncodeRawByteString(ZRawByteStringArray[J+fArrayOffSet])));
                         {$IFDEF UNICODE}
                         vtString,
@@ -1462,11 +1442,9 @@ begin
                     stBigDecimal: for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ZExtendedArray[J+fArrayOffSet]);
                     stString, stUnicodeString:
                       case InParamValues[i].VArray.VArrayVariantType of
-                        {$IFNDEF UNICODE}
-                        vtString,
-                        {$ENDIF}
-                        vtAnsiString,
-                        vtUTF8String,
+                        {$IFNDEF UNICODE} vtString,{$ENDIF}
+                        {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+                        {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
                         vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ClientVarManager.GetAsDateTime(EncodeRawByteString(ZRawByteStringArray[J+fArrayOffSet])));
                         {$IFDEF UNICODE}
                         vtString,
@@ -1510,7 +1488,10 @@ begin
                           {$ELSE}
                           for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(ConSettings^.ConvFuncs.ZStringToUnicode(ZStringArray[J+fArrayOffSet], ConSettings^.CTRL_CP));
                           {$ENDIF}
+                        {$IFNDEF NO_ANSISTRING}
                         vtAnsiString:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(PRawToUnicode(Pointer(ZAnsiStringArray[J+fArrayOffSet]), Length(ZAnsiStringArray[J+fArrayOffSet]), ZOSCodePage));
+                        {$ENDIF}
+                        {$IFNDEF NO_UTF8STRING}
                         vtUTF8String:     for J := 0 to fCurrentIterations -1 do if IsNotNull then
                           if Assigned(Pointer(ZUTF8StringArray[J+fArrayOffSet])) and (Length(ZUTF8StringArray[J+fArrayOffSet]) <= Param.ColumnSize) then begin
                             PSQLLEN(StrLen_or_IndPtr)^ := UTF8ToWideChar(Pointer(ZUTF8StringArray[J+fArrayOffSet]), Length(ZUTF8StringArray[J+fArrayOffSet]), ParameterDataPtr) shl 1;
@@ -1519,6 +1500,7 @@ begin
                             Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
                           end else
                             SetUnicode(PRawToUnicode(Pointer(ZUTF8StringArray[J+fArrayOffSet]), Length(ZUTF8StringArray[J+fArrayOffSet]), zCP_UTF8));
+                        {$ENDIF}
                         vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(ConSettings.ConvFuncs.ZRawToUnicode(ZRawByteStringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
                         vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(ZUnicodeStringArray[J+fArrayOffSet]);
                         vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then
@@ -1565,8 +1547,12 @@ begin
                     stString, stUnicodeString:
                       case InParamValues[i].VArray.VArrayVariantType of
                         vtString:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[J+fArrayOffSet], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+                        {$IFNDEF NO_ANSISTRING}
                         vtAnsiString:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[J+fArrayOffSet], ZOSCodePage, ConSettings^.ClientCodePage^.CP));
+                        {$ENDIF}
+                        {$IFNDEF NO_UTF8STRING}
                         vtUTF8String:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ConSettings^.ConvFuncs.ZUTF8ToRaw(ZUTF8StringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
+                        {$ENDIF}
                         vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ZRawByteStringArray[J+fArrayOffSet]);
                         vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ConSettings^.ConvFuncs.ZUnicodeToRaw(ZUnicodeStringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
                         vtCharRec: for J := 0 to fCurrentIterations -1 do if IsNotNull then
@@ -1630,8 +1616,12 @@ begin
                           {$ELSE}
                           for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(ConSettings^.ConvFuncs.ZStringToUnicode(ZStringArray[J+fArrayOffSet], ConSettings^.CTRL_CP));
                           {$ENDIF}
+                        {$IFNDEF NO_ANSISTRING}
                         vtAnsiString:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(PRawToUnicode(Pointer(ZAnsiStringArray[J+fArrayOffSet]), Length(ZAnsiStringArray[J+fArrayOffSet]), ZOSCodePage));
+                        {$ENDIF}
+                        {$IFNDEF NO_UTF8STRING}
                         vtUTF8String:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(PRawToUnicode(Pointer(ZUTF8StringArray[J+fArrayOffSet]), Length(ZUTF8StringArray[J+fArrayOffSet]), zCP_UTF8));
+                        {$ENDIF}
                         vtRawByteString:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(ConSettings.ConvFuncs.ZRawToUnicode(ZRawByteStringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
                         vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(ZUnicodeStringArray[J+fArrayOffSet]);
                         vtCharRec:        for J := 0 to fCurrentIterations -1 do if LobIsNotNull then
@@ -1678,8 +1668,12 @@ begin
                     stString, stUnicodeString:
                       case InParamValues[i].VArray.VArrayVariantType of
                         vtString:         for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[J+fArrayOffSet], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+                        {$IFNDEF NO_ANSISTRING}
                         vtAnsiString:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[J+fArrayOffSet], ZOSCodePage, ConSettings^.ClientCodePage^.CP));
+                        {$ENDIF}
+                        {$IFNDEF NO_UTF8STRING}
                         vtUTF8String:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ConSettings^.ConvFuncs.ZUTF8ToRaw(ZUTF8StringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
+                        {$ENDIF}
                         vtRawByteString:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ZRawByteStringArray[J+fArrayOffSet]);
                         vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ConSettings^.ConvFuncs.ZUnicodeToRaw(ZUnicodeStringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
                         vtCharRec: for J := 0 to fCurrentIterations -1 do if LobIsNotNull then
@@ -1808,8 +1802,8 @@ begin
                     Param.CurrParamDataPtr := CharRec.P
                   else
                     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(CharRec.P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
-                  if not ((PAnsiChar(Param.CurrParamDataPtr)+PSQLLEN(StrLen_or_IndPtr)^)^ = #0) then
-                    (PAnsiChar(Param.CurrParamDataPtr)+PSQLLEN(StrLen_or_IndPtr)^)^ := #0; //terminate the String if a truncation happens
+                  if not (PByte(PAnsiChar(Param.CurrParamDataPtr)+PSQLLEN(StrLen_or_IndPtr)^)^ = Ord(#0)) then
+                    PByte(PAnsiChar(Param.CurrParamDataPtr)+PSQLLEN(StrLen_or_IndPtr)^)^ := Ord(#0); //terminate the String if a truncation happens
                 end;
                 Inc(PAnsiChar(ParameterDataPtr), Param.BufferSize);
               end;

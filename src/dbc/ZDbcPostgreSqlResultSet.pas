@@ -57,7 +57,7 @@ interface
 
 uses
 {$IFDEF USE_SYNCOMMONS}
-  SynCommons,
+  SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -248,7 +248,6 @@ var
   P, pgBuff: PAnsiChar;
   RNo, H, I: Integer;
   Blob: IZBlob;
-  Failed: Boolean;
 label ProcBts;
 begin
   RNo := RowNo - 1;

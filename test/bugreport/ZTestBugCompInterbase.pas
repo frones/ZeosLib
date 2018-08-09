@@ -91,6 +91,7 @@ type
     procedure Test_Ticket67;
     procedure Test_Ticket228;
     procedure Test_SF249;
+    procedure Test_SF287;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -130,8 +131,8 @@ begin
   try
     Connection.StartTransaction;
     Fail('StartTransaction should be allowed only in AutoCommit mode');
-  except
-    // Ignore.
+  except on E: Exception do
+    CheckNotTestFailure(E);
   end;
   Connection.Disconnect;
 end;
@@ -431,6 +432,7 @@ begin
   Connection.Disconnect;
   Connection.AutoCommit := False;
   Connection.Connect;
+  Check(True);
 end;
 
 {**
@@ -583,6 +585,8 @@ begin
   finally
     Query.Free;
   end;
+
+  Check(True);
 end;
 
 {**
@@ -792,6 +796,8 @@ begin
   finally
     Query.Free;
   end;
+
+  Check(True);
 end;
 
 {
@@ -870,9 +876,6 @@ var
 begin
   Query := CreateQuery;
   try
-    Query.SQL.Text := 'SELECT RDB$RELATION_NAME' +
-      ' FROM RDB$RELATIONS' +
-      ' WHERE RDB$SYSTEM_FLAG=0;';
     Query.SQL.Text := 'select * from RDB$DATABASE where :TESTPARM=''''';
     Query.ParamByName('TESTPARM').AsString := 'xyz';
     Succeeded := False;
@@ -885,6 +888,56 @@ begin
   finally
     Query.Close;
     Query.Free;
+  end;
+end;
+
+procedure ZTestCompInterbaseBugReport.Test_SF287;
+const
+  DateStr1 = '0018-07-02 19:00:00';
+  DateStr2 = '0018-07-01 05:00:00';
+  FormatStr = '';
+var
+  Query: TZQuery;
+  FormatSettings: TFormatSettings;
+begin
+  FormatSettings.DateSeparator := '-';
+  FormatSettings.TimeSeparator := ':';
+  FormatSettings.ShortDateFormat := 'yyyy/mm/dd';
+  FormatSettings.LongDateFormat := FormatSettings.ShortDateFormat;
+  FormatSettings.ShortTimeFormat := 'hh:nn:ss';
+  FormatSettings.LongTimeFormat := FormatSettings.ShortTimeFormat;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'insert into date_values (d_id, d_datetime, d_timestamp) values (:id, cast(cast(:date1 as varchar(50)) as timestamp), :date2)';
+    Query.ParamByName('id').AsString := '1001';
+    Query.ParamByName('date1').AsString := DateStr1;
+    Query.ParamByName('date2').AsDateTime := StrToDateTime(DateStr1, FormatSettings);
+    Query.ExecSQL;
+
+    Query.SQL.Text := 'insert into date_values (d_id, d_datetime, d_timestamp) values (:id, cast(cast(:date1 as varchar(50)) as timestamp), :date2)';
+    Query.ParamByName('id').AsString := '1002';
+    Query.ParamByName('date1').AsString := DateStr2;
+    Query.ParamByName('date2').AsDateTime := StrToDateTime(DateStr2, FormatSettings);
+    Query.ExecSQL;
+
+    Query.SQL.Text := 'select * from date_values where d_id in (1001, 1002) order by d_id';
+    Query.Open;
+    CheckEquals(2, Query.RecordCount, 'Checking if the query returned two records.');
+    Query.First;
+    CheckEquals(DateStr1, DateTimeToStr(Query.FieldByName('d_datetime').AsDateTime, FormatSettings), 'Checking, if the first timestamp field has the expected value.');
+    CheckEquals(DateStr1, DateTimeToStr(Query.FieldByName('d_timestamp').AsDateTime, FormatSettings), 'Checking, if the second field is as expected.');
+    Query.Next;
+    CheckEquals(DateStr2, DateTimeToStr(Query.FieldByName('d_datetime').AsDateTime, FormatSettings), 'Checking, if the first timestamp field has the expected value.');
+    CheckEquals(DateStr2, DateTimeToStr(Query.FieldByName('d_timestamp').AsDateTime, FormatSettings), 'Checking, if the second timestamp field has the expected value.');
+  finally
+    try
+      Query.SQL.Text := 'delete from date_values where d_id in (1001, 1002)';
+      Query.ExecSQL;
+    finally
+      Query.Close;
+      Query.Free;
+    end;
   end;
 end;
 
@@ -945,9 +998,7 @@ begin
         CheckEquals(1, RowsAffected);
       except
         on E:Exception do
-        begin
           Fail('Param().LoadFromStream(StringStream, ftBlob): '+E.Message);
-        end;
       end;
     end;
   finally
@@ -1004,7 +1055,7 @@ begin
         CheckEquals(1, RowsAffected);
       except
         on E:Exception do
-            Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
+          Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
       end;
     end;
   finally

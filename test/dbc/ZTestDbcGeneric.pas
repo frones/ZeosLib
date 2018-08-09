@@ -139,7 +139,7 @@ begin
   Statement := Connection.CreateStatement;
   Resultset := Statement.ExecuteQuery('select * from people');
   try
-    while ResultSet.Next do Check(True);
+    while ResultSet.Next do;
     Check(ResultSet.IsAfterLast, 'Missing afterlast logic');
   finally
     ResultSet.Close;
@@ -1970,7 +1970,7 @@ begin
       end;
     end;
   end else
-    Check(True);
+    BlankCheck;
 end;
 
 initialization

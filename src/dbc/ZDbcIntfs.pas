@@ -58,7 +58,7 @@ interface
 
 uses
   {$IFDEF USE_SYNCOMMONS}
-  SynCommons,
+  SynCommons, SynTable,
   {$ENDIF USE_SYNCOMMONS}
   Types, Classes, SysUtils,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
@@ -292,7 +292,9 @@ type
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
 
+    {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
     function GetBinaryEscapeString(const Value: RawByteString): String; overload;
+    {$ENDIF}
     function GetBinaryEscapeString(const Value: TBytes): String; overload;
     procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: RawByteString); overload;
     procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: ZWideString); overload;
@@ -552,7 +554,7 @@ type
     function GetQueryTimeout: Integer;
     procedure SetQueryTimeout(Value: Integer);
     procedure Cancel;
-    procedure SetCursorName(const Value: AnsiString);
+    procedure SetCursorName(const Value: String);
 
     function GetResultSet: IZResultSet;
     function GetUpdateCount: Integer;
@@ -618,8 +620,12 @@ type
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); //AVZ
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes);
     procedure SetGuid(ParameterIndex: Integer; const Value: TGUID);
+    {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString);
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String);
+    {$ENDIF}
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString);
     procedure SetDate(ParameterIndex: Integer; const Value: TDateTime);
     procedure SetTime(ParameterIndex: Integer; const Value: TDateTime);
@@ -678,8 +684,12 @@ type
     function IsNull(ParameterIndex: Integer): Boolean;
     function GetPChar(ParameterIndex: Integer): PChar;
     function GetString(ParameterIndex: Integer): String;
+    {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ParameterIndex: Integer): AnsiString;
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     function GetUTF8String(ParameterIndex: Integer): UTF8String;
+    {$ENDIF}
     function GetRawByteString(ParameterIndex: Integer): RawByteString;
     function GetUnicodeString(ParameterIndex: Integer): ZWideString;
     function GetBoolean(ParameterIndex: Integer): Boolean;
@@ -741,8 +751,12 @@ type
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; overload;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
     function GetString(ColumnIndex: Integer): String;
+    {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
+    {$ENDIF}
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString;
     function GetPWideChar(ColumnIndex: Integer): PWideChar; overload;
@@ -781,8 +795,12 @@ type
     function GetPAnsiCharByName(const ColumnName: string): PAnsiChar; overload;
     function GetPAnsiCharByName(const ColumnName: string; out Len: NativeUInt): PAnsiChar; overload;
     function GetStringByName(const ColumnName: string): String;
+    {$IFNDEF NO_ANSISTRING}
     function GetAnsiStringByName(const ColumnName: string): AnsiString;
+    {$ENDIF}
+    {$IFDEF WITH UTF8STRING}
     function GetUTF8StringByName(const ColumnName: string): UTF8String;
+    {$ENDIF}
     function GetRawByteStringByName(const ColumnName: string): RawByteString;
     function GetUnicodeStringByName(const ColumnName: string): ZWideString;
     function GetPWideCharByName(const ColumnName: string): PWideChar; overload;
@@ -818,7 +836,7 @@ type
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
 
-    function GetCursorName: AnsiString;
+    function GetCursorName: String;
     function GetMetadata: IZResultSetMetadata;
     function FindColumn(const ColumnName: string): Integer;
 
@@ -883,8 +901,12 @@ type
     procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar); overload;
     procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; Len: PNativeUInt); overload;
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
+    {$IFNDEF NO_ANSISTRING}
     procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString);
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String);
+    {$ENDIF}
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
     procedure UpdateBinaryString(ColumnIndex: Integer; const Value: RawByteString); deprecated;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
@@ -924,8 +946,12 @@ type
     procedure UpdatePWideCharByName(const ColumnName: string; Value: PWideChar); overload;
     procedure UpdatePWideCharByName(const ColumnName: string; Value: PWideChar; Len: PNativeUInt); overload;
     procedure UpdateStringByName(const ColumnName: string; const Value: String);
+    {$IFNDEF NO_ANSISTRING}
     procedure UpdateAnsiStringByName(const ColumnName: string; const Value: AnsiString);
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     procedure UpdateUTF8StringByName(const ColumnName: string; const Value: UTF8String);
+    {$ENDIF}
     procedure UpdateRawByteStringByName(const ColumnName: string; const Value: RawByteString);
     procedure UpdateBinaryStringByName(const ColumnName: string; const Value: RawByteString); deprecated;
     procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: ZWideString);
@@ -1034,10 +1060,14 @@ type
     {Clob operations}
     function GetRawByteString: RawByteString;
     procedure SetRawByteString(Const Value: RawByteString; const CodePage: Word);
+    {$IFNDEF NO_ANSISTRING}
     function GetAnsiString: AnsiString;
     procedure SetAnsiString(Const Value: AnsiString);
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     function GetUTF8String: UTF8String;
     procedure SetUTF8String(Const Value: UTF8String);
+    {$ENDIF}
     procedure SetUnicodeString(const Value: ZWideString);
     function GetUnicodeString: ZWideString;
     procedure SetStream(const Value: TStream; const CodePage: Word); overload;
@@ -1362,7 +1392,11 @@ begin
   try
     LogEvent(Event);
   finally
-    Event.Destroy;
+    {$IFDEF AUTOREFCOUNT}
+    Event := nil;
+    {$ELSE}
+    Event.Free;
+    {$ENDIF}
   end;
 end;
 
@@ -1407,7 +1441,7 @@ procedure TZDriverManager.LogMessage(Category: TZLoggingCategory;
 begin
   if not FHasLoggingListener then
       Exit;
-  LogError(Category, Protocol, Msg, 0, '');
+  LogError(Category, Protocol, Msg, 0, EmptyRaw);
 end;
 
 procedure TZDriverManager.LogMessage(const Category: TZLoggingCategory;

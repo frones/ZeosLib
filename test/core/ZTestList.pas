@@ -86,6 +86,8 @@ var
   Buffer: Pointer;
   StartTicks: Cardinal;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
   StartTicks := GetTickCount;
   Buffer := AllocMem(ITEM_COUNT * ITEM_SIZE);
   PrintLn(Format('Creating buffer, Time: %d', [GetTickCount - StartTicks]));
@@ -93,6 +95,8 @@ begin
   StartTicks := GetTickCount;
   FreeMem(Buffer, ITEM_COUNT * ITEM_SIZE);
   PrintLn(Format('Removing buffer, Time: %d', [GetTickCount - StartTicks]));
+
+  BlankCheck;
 end;
 
 {**
@@ -105,6 +109,8 @@ var
   StartTicks: Cardinal;
   List: TList;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
   List := TList.Create;
 
   { Fills the list }
@@ -129,6 +135,8 @@ begin
     [GetTickCount - StartTicks]));
 
   List.Free;
+
+  BlankCheck;
 end;
 
 initialization

@@ -491,10 +491,7 @@ var
 begin
   msg := String(StrPas(FPlainDriver.GetErrorMessage(FHandle)));
 
-  if Trim(msg) = '' then
-    Result := False
-  else
-    Result := True
+  Result := (Trim(msg) <> '');
 end;
 
 {**
@@ -748,7 +745,7 @@ var
   ErrorMessage, ErrorSqlMessage: string;
   ErrorCode: LongInt;
 begin
-  if (FStatusVector[0] = 1) and (FStatusVector[1] > 0) then
+  if not StatusSucceeded(FStatusVector) then
   begin
     PStatusVector := @FStatusVector;
     PlainDriver.isc_interprete(Msg, @PStatusVector);

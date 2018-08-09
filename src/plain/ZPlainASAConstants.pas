@@ -45,6 +45,9 @@ unit ZPlainASAConstants;
 interface
 
 {$I ZPlain.inc}
+{$IFDEF NO_ANSICHAR}
+uses ZCompatibility;
+{$ENDIF}
 
 {$J+}
 
@@ -789,15 +792,15 @@ type
 
   PZASASQLDateTime = ^TZASASQLDateTime;
   TZASASQLDateTime = packed record
-    Year             : SmallInt;  //* e.g. 1992	 *//
-    Month            : Byte;      //* 0-11	 *//
-    Day_of_Week      : Byte;      //* 0-6  0=Sunday, 1=Monday, ... *//
-    Day_of_Year      : SmallInt;  //* 0-365		           *//
-    Day              : Byte;      //* 1-31			   *//
-    Hour             : Byte;      //* 0-23			   *//
-    Minute           : Byte;      //* 0-59			   *//
-    Second           : Byte;      //* 0-59			   *//
-    MicroSecond      : LongInt;   //* 0-999999			   *//
+    Year             : SmallInt;  //* e.g. 1992
+    Month            : Byte;      //* 0-11
+    Day_of_Week      : Byte;      //* 0-6  0=Sunday, 1=Monday, ...
+    Day_of_Year      : SmallInt;  //* 0-365
+    Day              : Byte;      //* 1-31
+    Hour             : Byte;      //* 0-23
+    Minute           : Byte;      //* 0-59
+    Second           : Byte;      //* 0-59
+    MicroSecond      : LongInt;   //* 0-999999
   end;
 
   PZASABlobStruct = ^TZASABlobStruct;

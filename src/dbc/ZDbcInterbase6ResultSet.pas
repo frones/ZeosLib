@@ -57,7 +57,7 @@ interface
 
 uses
 {$IFDEF USE_SYNCOMMONS}
-  SynCommons,
+  SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -170,7 +170,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  ZEncoding, ZFastCode, ZSysUtils, ZDbcMetadata, ZClasses;
+  ZEncoding, ZFastCode, ZSysUtils, ZDbcMetadata, ZClasses, DateUtils;
 
 procedure GetPCharFromTextVar(SQLCode: SmallInt; sqldata: Pointer; sqllen: Short; out P: PAnsiChar; out Len: NativeUInt); {$IF defined(WITH_INLINE)} inline; {$IFEND}
 begin
@@ -180,11 +180,11 @@ begin
         P := sqldata;
         // Trim only trailing spaces. TrimRight also removes other characters)
         Len := sqllen;
-        if Len > 0 then while (P + Len - 1)^ = ' ' do Dec(Len);
+        if Len > 0 then while AnsiChar((P + Len - 1)^) = AnsiChar(' ') do Dec(Len);
       end;
     SQL_VARYING:
       begin
-        P := PISC_VARYING(sqldata).str;
+        P := @PISC_VARYING(sqldata).str[0];
         Len := PISC_VARYING(sqldata).strlen;
       end;
     else // should not happen
@@ -278,7 +278,7 @@ procedure TZInterbase6XSQLDAResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
 var L, H, I: Integer;
     P: Pointer;
     C, SQLCode: SmallInt;
-    TempDate: TCTimeStructure;
+    TempDate: TZTimeStamp;//TCTimeStructure;
 begin
   if JSONWriter.Expand then
     JSONWriter.Add('{');
@@ -359,13 +359,13 @@ begin
                                 JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               else
                                 JSONWriter.Add('"');
-                              FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
-                              if TempDate.tm_year < 1900 then
-                                JSONWriter.Add('-');
-                              DateToIso8601PChar(@FTinyBuffer[0], True, Abs(TempDate.tm_year + 1900),
-                                TempDate.tm_mon + 1, TempDate.tm_mday);
-                              TimeToIso8601PChar(@FTinyBuffer[10], True, TempDate.tm_hour,
-                              TempDate.tm_min, TempDate.tm_sec, PISC_TIMESTAMP(sqldata).timestamp_time mod ISC_TIME_SECONDS_PRECISION div 10, 'T', jcoMilliseconds in JSONComposeOptions);
+                              isc_decode_date(PISC_TIMESTAMP(sqldata).timestamp_date,
+                                TempDate.Year, TempDate.Month, Tempdate.Day);
+                              DateToIso8601PChar(@FTinyBuffer[0], True, TempDate.Year, TempDate.Month, TempDate.Day);
+                              isc_decode_time(PISC_TIMESTAMP(sqldata).timestamp_time,
+                                TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
+                              TimeToIso8601PChar(@FTinyBuffer[10], True, TempDate.Hour, TempDate.Minute,
+                                TempDate.Second, TempDate.Fractions div 10, 'T', jcoMilliseconds in JSONComposeOptions);
                               JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                               if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('Z")')
@@ -404,10 +404,10 @@ begin
                                 JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               end else
                                 JSONWriter.Add('"');
-                              FPlainDriver.isc_decode_sql_time(PISC_TIME(sqldata), @TempDate);
-
-                              TimeToIso8601PChar(@FTinyBuffer[0], True, Word(TempDate.tm_hour), Word(TempDate.tm_min),
-                                Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod ISC_TIME_SECONDS_PRECISION) div 10), 'T', jcoMilliseconds in JSONComposeOptions);
+                              isc_decode_time(PISC_TIME(sqldata)^, TempDate.Hour,
+                                TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
+                              TimeToIso8601PChar(@FTinyBuffer[0], True, TempDate.Hour, TempDate.Minute,
+                                TempDate.Second,  TempDate.Fractions div 10, 'T', jcoMilliseconds in JSONComposeOptions);
                               JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                               if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('Z)"')
@@ -420,11 +420,8 @@ begin
                                 JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               else
                                 JSONWriter.Add('"');
-                              FPlainDriver.isc_decode_sql_date(PISC_DATE(sqldata), @TempDate);
-                              if TempDate.tm_year < 1900 then
-                                JSONWriter.Add('-');
-                              DateToIso8601PChar(@FTinyBuffer[0], True, Abs(TempDate.tm_year + 1900),
-                                TempDate.tm_mon + 1, TempDate.tm_mday);
+                              isc_decode_date(PISC_DATE(sqldata)^, TempDate.Year, TempDate.Month, Tempdate.Day);
+                              DateToIso8601PChar(@FTinyBuffer[0], True, TempDate.Year, TempDate.Month, Tempdate.Day);
                               JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
                               if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('Z")')
@@ -692,7 +689,7 @@ end;
 }
 function TZInterbase6XSQLDAResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var
-  TempDate: TCTimeStructure;
+  TempDate: TZTimeStamp;//TCTimeStructure;
   Len: NativeUInt;
   P: PAnsiChar;
   Failed: Boolean;
@@ -713,26 +710,30 @@ begin
       case SQLCode of
         SQL_TIMESTAMP :
           begin
-            FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
+            isc_decode_date(PISC_TIMESTAMP(sqldata).timestamp_date,
+              TempDate.Year, TempDate.Month, Tempdate.Day);
+            Result := SysUtils.EncodeDate(TempDate.Year, TempDate.Month, TempDate.Day);
+            {FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
             Result := SysUtils.EncodeDate(TempDate.tm_year + 1900,
-              TempDate.tm_mon + 1, TempDate.tm_mday);
+              TempDate.tm_mon + 1, TempDate.tm_mday);}
           end;
         SQL_TYPE_DATE :
           begin
-            FPlainDriver.isc_decode_sql_date(PISC_DATE(sqldata), @TempDate);
+            isc_decode_date(PISC_DATE(sqldata)^, TempDate.Year, TempDate.Month, Tempdate.Day);
+            Result := SysUtils.EncodeDate(TempDate.Year, TempDate.Month, TempDate.Day);
+            {FPlainDriver.isc_decode_sql_date(PISC_DATE(sqldata), @TempDate);
             Result := SysUtils.EncodeDate(Word(TempDate.tm_year + 1900),
-              Word(TempDate.tm_mon + 1), Word(TempDate.tm_mday));
+              Word(TempDate.tm_mon + 1), Word(TempDate.tm_mday));}
           end;
         SQL_TYPE_TIME : Result := 0;
         SQL_TEXT,
         SQL_VARYING:
           begin
             GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
-            if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
-              Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
-            else
-              Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-                RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed));
+            if Len = ConSettings^.ReadFormatSettings.DateFormatLen
+            then Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            else Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
+              RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed));
             LastWasNull := Result = 0;
           end;
         else
@@ -1183,7 +1184,7 @@ end;
 }
 function TZInterbase6XSQLDAResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
-  TempDate: TCTimeStructure;
+  TempDate: TZTimeStamp;//TCTimeStructure;
   Failed: Boolean;
   P: PAnsiChar;
   Len: NativeUInt;
@@ -1204,21 +1205,29 @@ begin
       case SQLCode of
         SQL_TIMESTAMP :
           begin
-            FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
+            isc_decode_time(PISC_TIMESTAMP(sqldata).timestamp_time,
+              TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
+            Result := EncodeTime(TempDate.Hour, TempDate.Minute,
+              TempDate.Second, TempDate.Fractions div 10);
+            {FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
             Result := EncodeTime(TempDate.tm_hour, TempDate.tm_min,
-              TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod ISC_TIME_SECONDS_PRECISION) div 10));
+              TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod ISC_TIME_SECONDS_PRECISION) div 10));}
           end;
         SQL_TYPE_DATE : Result := 0;
         SQL_TYPE_TIME :
           begin
-            FPlainDriver.isc_decode_sql_time(PISC_TIME(sqldata), @TempDate);
+            isc_decode_time(PISC_TIME(sqldata)^,
+              TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
+            Result := EncodeTime(TempDate.Hour, TempDate.Minute,
+              TempDate.Second, TempDate.Fractions div 10);
+            {FPlainDriver.isc_decode_sql_time(PISC_TIME(sqldata), @TempDate);
             Result := SysUtils.EncodeTime(Word(TempDate.tm_hour), Word(TempDate.tm_min),
-              Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod ISC_TIME_SECONDS_PRECISION) div 10));
+              Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod ISC_TIME_SECONDS_PRECISION) div 10));}
           end;
         SQL_TEXT, SQL_VARYING:
           begin
             GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
-            if (P+2)^ = ':' then //possible date if Len = 10 then
+            if AnsiChar((P+2)^) = AnsiChar(':') then //possible date if Len = 10 then
               Result := RawSQLTimeToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
               Result := Frac(RawSQLTimeStampToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed));
@@ -1249,7 +1258,7 @@ var
   P: PAnsiChar;
   Len: NativeUInt;
   SQLCode: SmallInt;
-  TempDate: TCTimeStructure;
+  TempDate: TZTimeStamp; //TCTimeStructure;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
@@ -1266,27 +1275,33 @@ begin
       case SQLCode of
         SQL_TIMESTAMP :
           begin
-            FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
-            Result := SysUtils.EncodeDate(TempDate.tm_year + 1900,
-              TempDate.tm_mon + 1, TempDate.tm_mday) + EncodeTime(TempDate.tm_hour,
-            TempDate.tm_min, TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod ISC_TIME_SECONDS_PRECISION) div 10));
+            isc_decode_date(PISC_TIMESTAMP(sqldata).timestamp_date,
+              TempDate.Year, TempDate.Month, Tempdate.Day);
+            isc_decode_time(PISC_TIMESTAMP(sqldata).timestamp_time,
+              TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
+            //FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
+            Result := DateUtils.EncodeDateTime(TempDate.Year, TempDate.Month, TempDate.Day,TempDate.Hour,
+              TempDate.Minute, TempDate.Second, TempDate.Fractions div 10);
           end;
         SQL_TYPE_DATE :
           begin
-            FPlainDriver.isc_decode_sql_date(PISC_DATE(sqldata), @TempDate);
-            Result := SysUtils.EncodeDate(Word(TempDate.tm_year + 1900),
-              Word(TempDate.tm_mon + 1), Word(TempDate.tm_mday));
+            isc_decode_date(PISC_TIMESTAMP(sqldata).timestamp_date,
+              TempDate.Year, TempDate.Month, Tempdate.Day);
+            //FPlainDriver.isc_decode_sql_date(PISC_DATE(sqldata), @TempDate);
+            Result := SysUtils.EncodeDate(TempDate.Year,TempDate.Month, TempDate.Day);
           end;
         SQL_TYPE_TIME :
           begin
-            FPlainDriver.isc_decode_sql_time(PISC_TIME(sqldata), @TempDate);
-            Result := SysUtils.EncodeTime(Word(TempDate.tm_hour), Word(TempDate.tm_min),
-              Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod ISC_TIME_SECONDS_PRECISION) div 10));
+            //FPlainDriver.isc_decode_sql_time(PISC_TIME(sqldata), @TempDate);
+            isc_decode_time(PISC_TIMESTAMP(sqldata).timestamp_time,
+              TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
+            Result := SysUtils.EncodeTime(TempDate.Hour, TempDate.Minute,
+              TempDate.Second, TempDate.Fractions div 10);
           end;
         SQL_TEXT, SQL_VARYING:
           begin
             GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
-            if (P+2)^ = ':' then
+            if AnsiChar((P+2)^) = AnsiChar(':') then
               Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
               if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
@@ -1566,8 +1581,8 @@ begin
           SQL_LONG      : Result := ZFastCode.IntToStr(PInteger(sqldata)^);
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := FloatToStr(PSingle(sqldata)^);
-          SQL_BOOLEAN   : Result := {$IFDEF UNICODE}BoolToUnicodeEx{$ELSE}BoolToRawEx{$ENDIF}(PSmallint(sqldata)^ <> 0);
-          SQL_BOOLEAN_FB: Result := {$IFDEF UNICODE}BoolToUnicodeEx{$ELSE}BoolToRawEx{$ENDIF}(PByte(sqldata)^ <> 0);
+          SQL_BOOLEAN   : Result := BoolToStrEx(PSmallint(sqldata)^ <> 0);
+          SQL_BOOLEAN_FB: Result := BoolToStrEx(PByte(sqldata)^ <> 0);
           SQL_SHORT     : Result := ZFastCode.IntToStr(PSmallint(sqldata)^);
           SQL_INT64     : Result := ZFastCode.IntToStr(PInt64(sqldata)^);
           SQL_TEXT,
@@ -1792,8 +1807,9 @@ begin
       ColumnInfo := TZColumnInfo.Create;
       with ColumnInfo do
       begin
-        ColumnName := FIZSQLDA.GetFieldSqlName(I);
         TableName := FIZSQLDA.GetFieldRelationName(I);
+        if TableName <> '' then
+          ColumnName := FIZSQLDA.GetFieldSqlName(I);
         ColumnLabel := FIZSQLDA.GetFieldAliasName(I);
         FieldSqlType := FIZSQLDA.GetFieldSqlType(I);
         DataLen := FIZSQLDA.GetIbSqlLen(I);
@@ -1910,7 +1926,7 @@ begin
   InternalClear;
   ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FIBConnection.GetTrHandle,
     FBlobId, Size{%H-}, Buffer{%H-}, False, FIBConnection as IImmediatelyReleasable);
-  (PAnsiChar(Buffer)+NativeUInt(Size))^ := #0; //add #0 terminator
+  AnsiChar((PAnsiChar(Buffer)+NativeUInt(Size))^) := AnsiChar(#0); //add #0 terminator
   FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
   FBlobSize := Size+1;
   BlobData := Buffer;

@@ -55,7 +55,7 @@ unit ZTestDbcUtils;
 
 interface
 {$I ZDbc.inc}
-uses {$IFDEF FPC}testregistry,fpcunit{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcConnection, SysUtils, ZCompatibility;
+uses {$IFDEF FPC}testregistry,fpcunit{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, SysUtils, ZCompatibility;
 
 type
 

@@ -56,10 +56,6 @@ interface
 {$I ZCore.inc}
 {$Z-}
 
-{$IFOPT R+}
-  {$DEFINE RangeCheckEnabled}
-{$ENDIF}
-
 uses
    Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
    ZClasses, ZCompatibility;

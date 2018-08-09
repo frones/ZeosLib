@@ -575,8 +575,12 @@ var
   ZExtendedArray: TExtendedDynArray absolute ZData;
   ZDateTimeArray: TDateTimeDynArray absolute ZData;
   ZRawByteStringArray: TRawByteStringDynArray absolute ZData;
+  {$IFNDEF NO_ANSISTRING}
   ZAnsiStringArray: TAnsiStringDynArray absolute ZData;
+  {$ENDIF}
+  {$IFNDEF NO_UTF8STRING}
   ZUTF8StringArray: TUTF8StringDynArray absolute ZData;
+  {$ENDIF}
   ZStringArray: TStringDynArray absolute ZData;
   ZUnicodeStringArray: TUnicodeStringDynArray absolute ZData;
   ZCharRecArray: TZCharRecDynArray absolute ZData;
@@ -830,6 +834,7 @@ begin
                   Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
                   MoveString(Pointer(AnsiTemp), I);
                 end;
+            {$IFNDEF NO_ANSISTRING}
             vtAnsiString:
               for i := 0 to Iteration -1 do
                 if (Variable^.oIndicatorArray^[I] = -1) or (Pointer(ZAnsiStringArray[I]) = nil) then //Length = 0
@@ -840,6 +845,8 @@ begin
                   Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
                   MoveString(Pointer(AnsiTemp), I);
                 end;
+            {$ENDIF}
+            {$IFNDEF NO_UTF8STRING}
             vtUTF8String:
               if ZCompatibleCodePages(zCP_UTF8, ConSettings^.ClientCodePage^.CP) then
                 for i := 0 to Iteration -1 do
@@ -860,6 +867,7 @@ begin
                     Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
                     MoveString(Pointer(AnsiTemp), I);
                   end;
+            {$ENDIF}
             vtRawByteString:
               for i := 0 to Iteration -1 do
                 if (Variable^.oIndicatorArray^[I] = -1) or (Pointer(ZRawByteStringArray[I]) = nil) then //Length = 0
@@ -946,7 +954,7 @@ begin
           for i := 0 to Iteration -1 do
             if (Variable^.oIndicatorArray^[I] = 0) then
             begin
-              AnsiTemp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(GuidToString(ZGUIDArray[I]));
+              AnsiTemp := GUIDToRaw(ZGUIDArray[I]);
               Variable^.oDataSizeArray^[i] := 39;
               {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(AnsiTemp)^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*39)^, 39);
             end;
@@ -1103,10 +1111,10 @@ procedure CheckOracleError(const PlainDriver: TZOraclePlainDriver;
   const ConSettings: PZConSettings);
 var
   ErrorMessage: RawByteString;
-  ErrorBuffer: array[0..255] of AnsiChar;
+  ErrorBuffer: TRawBuff;
   ErrorCode: SB4;
 begin
-  ErrorMessage := '';
+  ErrorBuffer.Pos := 0;
   ErrorCode := Status;
 
   case Status of
@@ -1114,21 +1122,20 @@ begin
       Exit;
     OCI_SUCCESS_WITH_INFO:
       begin
-        PlainDriver.OCIErrorGet(ErrorHandle, 1, nil, ErrorCode, ErrorBuffer, 255,
-          OCI_HTYPE_ERROR);
-        ErrorMessage := 'OCI_SUCCESS_WITH_INFO: ' + RawByteString(ErrorBuffer);
+        PlainDriver.OCIErrorGet(ErrorHandle, 1, nil, ErrorCode, @ErrorBuffer.Buf[0], SizeOf(ErrorBuffer.Buf)-1, OCI_HTYPE_ERROR);
+        ErrorBuffer.Pos := StrLen(@ErrorBuffer.Buf[0])+1;
+        ErrorMessage := 'OCI_SUCCESS_WITH_INFO: ';
       end;
-    OCI_NEED_DATA:
-      ErrorMessage := 'OCI_NEED_DATA';
-    OCI_NO_DATA:
-      ErrorMessage := 'OCI_NO_DATA';
+    OCI_NEED_DATA:  ErrorMessage := 'OCI_NEED_DATA';
+    OCI_NO_DATA:    ErrorMessage := 'OCI_NO_DATA';
     OCI_ERROR:
       begin
-        if PlainDriver.OCIErrorGet(ErrorHandle, 1, nil, ErrorCode, ErrorBuffer, 255,
-          OCI_HTYPE_ERROR) = 100 then
-          ErrorMessage := 'OCI_ERROR: Unkown(OCI_NO_DATA)'
-        else
-          ErrorMessage := 'OCI_ERROR: ' + RawByteString(ErrorBuffer);
+        if PlainDriver.OCIErrorGet(ErrorHandle, 1, nil, ErrorCode, @ErrorBuffer.Buf[0], SizeOf(ErrorBuffer.Buf)-1, OCI_HTYPE_ERROR) = 100
+        then ErrorMessage := 'OCI_ERROR: Unkown(OCI_NO_DATA)'
+        else begin
+          ErrorMessage := 'OCI_ERROR: ';
+          ErrorBuffer.Pos := StrLen(@ErrorBuffer.Buf[0])+1;
+        end;
       end;
     OCI_INVALID_HANDLE:
       ErrorMessage := 'OCI_INVALID_HANDLE';
@@ -1136,9 +1143,11 @@ begin
       ErrorMessage := 'OCI_STILL_EXECUTING';
     OCI_CONTINUE:
       ErrorMessage := 'OCI_CONTINUE';
+    else ErrorMessage := '';
   end;
+  FlushBuff(ErrorBuffer, ErrorMessage);
 
-  if (Status <> OCI_SUCCESS) and (Status <> OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
+  if (Status <> OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
   begin
     if Assigned(DriverManager) then //Thread-Safe patch
       DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,

@@ -516,6 +516,8 @@ var
   Query: string;
   StartTicks: Cardinal;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
   StartTicks := GetTickCount;
   for I := 1 to 1000 do
   begin
@@ -531,6 +533,8 @@ begin
   end;
   PrintLn(Format('Subtest: "Overall Performance (3)", Time: %d',
     [GetTickCount - StartTicks]));
+
+  BlankCheck;
 end;
 
 {$IFDEF ENABLE_DBLIB}

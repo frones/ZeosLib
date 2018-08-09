@@ -138,12 +138,12 @@ uses ZEncoding {$IFDEF BENCHMARK},ZFastCode, Types, Classes{$IF defined(MSWINDOW
 {These functions help FPC 2.6 to decide wether to call the PChar or PWideChar version of these functions later on}
 function SQLStrToFloatDef(Value: RawByteString; const Def: Extended; Len: Integer = 0): Extended; overload;
 begin
-  SQLStrToFloatDef(PChar(Value), Def, Len);
+  Result := SQLStrToFloatDef(PChar(Value), Def, Len);
 end;
 
 function SQLStrToFloatDef(Value: ZWideString; const Def: Extended; Len: Integer = 0): Extended; overload;
 begin
-  SQLStrToFloatDef(PWideChar(Value), Def, Len);
+  Result := SQLStrToFloatDef(PWideChar(Value), Def, Len);
 end;
 {$ENDIF}{$ENDIF}
 
@@ -799,7 +799,7 @@ const
   begin
     ZFormatSettings.DateTimeFormat := DateTimeFormat;
     ZFormatSettings.DateTimeFormatLen := Length(DateTimeFormat);
-    CheckEquals(Expected, ZSysUtils.RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), 'Expected Date');
+    CheckEqualsDate(Expected, ZSysUtils.RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), [], 'Expected Date');
     CheckEquals(ExpFailed, Failed, 'Fail value');
   end;
 

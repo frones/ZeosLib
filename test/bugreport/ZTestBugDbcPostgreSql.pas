@@ -587,8 +587,8 @@ begin
   try
     Statement.ExecuteQuery('select * from people where xp_id=1');
     Fail('Incorrect syntax error processing');
-  except
-    // Ignore.
+  except on E: Exception do
+    CheckNotTestFailure(E);
   end;
 
   Statement.ExecuteQuery('select * from people where p_id=1');

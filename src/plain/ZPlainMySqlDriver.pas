@@ -238,11 +238,11 @@ type
     mariadb_stmt_execute_direct:  function(stmt: PMYSQL_STMT; query: PAnsiChar; Length: ULong): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   protected
     ServerArgs: array of PAnsiChar;
-    ServerArgsLen: Integer;
+    ServerArgsRaw: array of RawByteString;
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
     procedure LoadApi; override;
-    procedure BuildServerArguments(Options: TStrings);
+    procedure BuildServerArguments(const Options: TStrings);
     function Clone: IZPlainDriver; override;
   public
     constructor Create;
@@ -452,7 +452,7 @@ begin
   end;
 end;
 
-procedure TZMySQLPlainDriver.BuildServerArguments(Options: TStrings);
+procedure TZMySQLPlainDriver.BuildServerArguments(const Options: TStrings);
 var
   TmpList: TStringList;
   i: Integer;
@@ -469,18 +469,22 @@ begin
     if TmpList.Values[ConnProps_Datadir] = '' then
        TmpList.Values[ConnProps_Datadir] := EMBEDDED_DEFAULT_DATA_DIR;
 
-    for i := 0 to ServerArgsLen - 1 do
-      {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(ServerArgs[i]);
-    ServerArgsLen := TmpList.Count;
-    SetLength(ServerArgs, ServerArgsLen);
-    for i := 0 to ServerArgsLen - 1 do
+    SetLength(ServerArgs, TmpList.Count);
+    SetLength(ServerArgsRaw, TmpList.Count);
+    for i := 0 to TmpList.Count - 1 do begin
       {$IFDEF UNICODE}
-      ServerArgs[i] := {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(AnsiString(TmpList[i])));
+      ServerArgsRaw[i] := ZUnicodeToRaw(TmpList[i], ZOSCodePage);
       {$ELSE}
-      ServerArgs[i] := StrNew(PAnsiChar(TmpList[i]));
+      ServerArgsRaw[i] := TmpList[i];
       {$ENDIF}
+      ServerArgs[i] :=  Pointer(TmpList[i]);
+    end;
   finally
+    {$IFDEF AUTOREFCOUNT}
+    TmpList := nil;
+    {$ELSE}
     TmpList.Free;
+    {$ENDIF}
   end;
 end;
 
@@ -524,17 +528,13 @@ begin
   FLoader.AddLocation(LINUX_DLL57_LOCATION);
   FLoader.AddLocation(LINUX_DLL57_LOCATION_EMBEDDED);
 {$ENDIF}
-  ServerArgsLen := 0;
-  SetLength(ServerArgs, ServerArgsLen);
   LoadCodePages;
 end;
 
 destructor TZMySQLPlainDriver.Destroy;
-var
-  i : integer;
 begin
-  for i := 0 to ServerArgsLen - 1 do
-    {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(ServerArgs[i]);
+  SetLength(ServerArgs, 0);
+  SetLength(ServerArgsRaw, 0);
 
   if (FLoader.Loaded) then
     if Assigned(mysql_library_end) then
@@ -556,16 +556,17 @@ var
   ErrorNo: Integer;
 begin
   if (Assigned(mysql_server_init) or Assigned(mysql_library_init)){ and (ServerArgsLen > 0) }then begin
-    if Assigned(mysql_library_init) then
-      //http://dev.mysql.com/doc/refman/5.7/en/mysql-library-init.html
-      ErrorNo := mysql_library_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS) //<<<-- Isn't threadsafe
-    else
-      //http://dev.mysql.com/doc/refman/5.7/en/mysql-server-init.html
-      ErrorNo := mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS); //<<<-- Isn't threadsafe
-    if ErrorNo <> 0 then raise Exception.Create('Could not initialize the MySQL / MariaDB client library. Error No: ' + ZFastCode.IntToStr(ErrorNo));  // The manual says nothing else can be called until this call succeeds. So lets just throw the error number...
+    ErrorNo := Length(ServerArgs);
+    if Assigned(mysql_library_init) then //http://dev.mysql.com/doc/refman/5.7/en/mysql-library-init.html
+      ErrorNo := mysql_library_init(ErrorNo, ServerArgs, @SERVER_GROUPS) //<<<-- Isn't threadsafe
+    else //http://dev.mysql.com/doc/refman/5.7/en/mysql-server-init.html
+      ErrorNo := mysql_server_init(ErrorNo, ServerArgs, @SERVER_GROUPS); //<<<-- Isn't threadsafe
+    if ErrorNo <> 0 then
+      raise Exception.Create('Could not initialize the MySQL / MariaDB client library. Error No: ' + ZFastCode.IntToStr(ErrorNo));  // The manual says nothing else can be called until this call succeeds. So lets just throw the error number...
   end;
   Result := mysql_init(mysql);
-  if not Assigned(Result) then raise Exception.Create('Could not finish the call to mysql_init. Not enough memory?');
+  if not Assigned(Result) then
+    raise Exception.Create('Could not finish the call to mysql_init. Not enough memory?');
   ClientInfo := mysql_get_client_info;
   L := ZFastCode.StrLen(ClientInfo);
   FIsMariaDBDriver := Assigned(mariadb_stmt_execute_direct) or CompareMem(ClientInfo+L-7, PAnsiChar('MariaDB'), 7);

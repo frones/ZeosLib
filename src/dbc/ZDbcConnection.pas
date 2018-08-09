@@ -65,6 +65,7 @@ uses
   LConvEncoding,
 {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
   ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility, ZGenericSqlToken,
   ZGenericSqlAnalyser, ZPlainDriver, ZURL, ZCollections, ZVariant;
 
@@ -119,7 +120,7 @@ type
     FURL: TZURL;
     FUseMetadata: Boolean;
     FClientVarManager: IZClientVariantManager;
-    fRegisteredStatements: TList; //weak reference to pending stmts
+    fRegisteredStatements: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}; //weak reference to pending stmts
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetPort: Integer;
@@ -241,7 +242,9 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
+    {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; virtual;
+    {$ENDIF}
     function GetBinaryEscapeString(const Value: TBytes): String; overload; virtual;
     procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: RawByteString); overload; virtual;
     procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: ZWideString); overload; virtual;
@@ -309,9 +312,11 @@ type
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZEncoding, ZConnProperties,
+uses ZMessages,{$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}
+  ZDbcMetadata, ZDbcUtils, ZEncoding, ZConnProperties, StrUtils,
   ZDbcProperties, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
+  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 { TZAbstractDriver }
 
@@ -641,62 +646,56 @@ begin
   Result := FURL.Properties;
 end;
 
-procedure TZAbstractDbcConnection.SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
+procedure TZAbstractDbcConnection.SetDateTimeFormatProperties(DetermineFromInfo: Boolean);
+
+  procedure SetNotEmptyFormat(const FmtFromValues, FmtDefault: string; out ResultFmt: string);
+  begin
+    if FmtFromValues = '' then
+      ResultFmt := FmtDefault
+    else
+      ResultFmt := UpperCase(FmtFromValues);
+  end;
+
 begin
-  {date formats}
   if DetermineFromInfo then begin
-    if Info.Values[ConnProps_DateWriteFormat] = '' then
-      ConSettings^.WriteFormatSettings.DateFormat := 'YYYY-MM-DD'
-    else
-      ConSettings^.WriteFormatSettings.DateFormat := UpperCase(Info.Values[ConnProps_DateWriteFormat]);
+    {date formats}
+    SetNotEmptyFormat(Info.Values[ConnProps_DateWriteFormat],
+      DefDateFormatYMD,
+      ConSettings^.WriteFormatSettings.DateFormat);
 
-    if Info.Values[ConnProps_DateReadFormat] = '' then
-      ConSettings^.ReadFormatSettings.DateFormat := 'YYYY-MM-DD'
-    else
-      ConSettings^.ReadFormatSettings.DateFormat := UpperCase(Info.Values[ConnProps_DateReadFormat]);
+    SetNotEmptyFormat(Info.Values[ConnProps_DateReadFormat],
+      DefDateFormatYMD,
+      ConSettings^.ReadFormatSettings.DateFormat);
 
-    if Info.Values[ConnProps_DateDisplayFormat] = '' then
-      ConSettings^.DisplayFormatSettings.DateFormat := ({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat)
-    else
-      ConSettings^.DisplayFormatSettings.DateFormat := UpperCase(Info.Values[ConnProps_DateDisplayFormat]);
+    SetNotEmptyFormat(Info.Values[ConnProps_DateDisplayFormat],
+      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat,
+      ConSettings^.DisplayFormatSettings.DateFormat);
 
     {time formats}
-    if Info.Values[ConnProps_TimeWriteFormat] = '' then
-      if GetMetaData.GetDatabaseInfo.SupportsMilliseconds then
-        ConSettings^.WriteFormatSettings.TimeFormat := 'HH:NN:SS.ZZZ'
-      else
-        ConSettings^.WriteFormatSettings.TimeFormat := 'HH:NN:SS'
-    else
-      ConSettings^.WriteFormatSettings.TimeFormat := UpperCase(Info.Values[ConnProps_TimeWriteFormat]);
+    SetNotEmptyFormat(Info.Values[ConnProps_TimeWriteFormat],
+      IfThen(GetMetaData.GetDatabaseInfo.SupportsMilliseconds, DefTimeFormatMsecs, DefTimeFormat),
+      ConSettings^.WriteFormatSettings.TimeFormat);
 
-    if Info.Values[ConnProps_TimeReadFormat] = '' then
-      if GetMetaData.GetDatabaseInfo.SupportsMilliseconds then
-        ConSettings^.ReadFormatSettings.TimeFormat := 'HH:NN:SS.ZZZ'
-      else
-        ConSettings^.ReadFormatSettings.TimeFormat := 'HH:NN:SS'
-    else
-      ConSettings^.ReadFormatSettings.TimeFormat := UpperCase(Info.Values[ConnProps_TimeReadFormat]);
+    SetNotEmptyFormat(Info.Values[ConnProps_TimeReadFormat],
+      IfThen(GetMetaData.GetDatabaseInfo.SupportsMilliseconds, DefTimeFormatMsecs, DefTimeFormat),
+      ConSettings^.ReadFormatSettings.TimeFormat);
 
-    if Info.Values[ConnProps_TimeDisplayFormat] = '' then
-      ConSettings^.DisplayFormatSettings.TimeFormat := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat
-    else
-      ConSettings^.DisplayFormatSettings.TimeFormat := UpperCase(Info.Values[ConnProps_TimeDisplayFormat]);
+    SetNotEmptyFormat(Info.Values[ConnProps_TimeDisplayFormat],
+      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat,
+      ConSettings^.DisplayFormatSettings.TimeFormat);
 
-    {timestamp format}
-    if Info.Values[ConnProps_DateTimeWriteFormat] = '' then
-      ConSettings^.WriteFormatSettings.DateTimeFormat := ConSettings^.WriteFormatSettings.DateFormat+' '+ConSettings^.WriteFormatSettings.TimeFormat
-    else
-      ConSettings^.WriteFormatSettings.DateTimeFormat := Info.Values[ConnProps_DateTimeWriteFormat];
+    {timestamp formats}
+    SetNotEmptyFormat(Info.Values[ConnProps_DateTimeWriteFormat],
+      ConSettings^.WriteFormatSettings.DateFormat+' '+ConSettings^.WriteFormatSettings.TimeFormat,
+      ConSettings^.WriteFormatSettings.DateTimeFormat);
 
-    if Info.Values[ConnProps_DateTimeReadFormat] = '' then
-      ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat
-    else
-      ConSettings^.ReadFormatSettings.DateTimeFormat := UpperCase(Info.Values[ConnProps_DateTimeReadFormat]);
+    SetNotEmptyFormat(Info.Values[ConnProps_DateTimeReadFormat],
+      ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat,
+      ConSettings^.ReadFormatSettings.DateTimeFormat);
 
-    if Info.Values[ConnProps_DateTimeDisplayFormat] = '' then
-      ConSettings^.DisplayFormatSettings.DateTimeFormat := ConSettings^.DisplayFormatSettings.DateFormat+' '+ConSettings^.DisplayFormatSettings.TimeFormat
-    else
-      ConSettings^.DisplayFormatSettings.DateTimeFormat := UpperCase(Info.Values[ConnProps_DateTimeDisplayFormat]);
+    SetNotEmptyFormat(Info.Values[ConnProps_DateTimeDisplayFormat],
+      ConSettings^.DisplayFormatSettings.DateFormat+' '+ConSettings^.DisplayFormatSettings.TimeFormat,
+      ConSettings^.DisplayFormatSettings.DateTimeFormat);
   end;
 
   ConSettings^.WriteFormatSettings.DateFormatLen := Length(ConSettings^.WriteFormatSettings.DateFormat);
@@ -763,13 +762,13 @@ end;
 function TZAbstractDbcConnection.GetEscapeString(Buf: PAnsichar;
   Len: LengthInt): RawByteString;
 begin
-  Result := SQLQuotedStr(Buf, Len, #39);
+  Result := SQLQuotedStr(Buf, Len, AnsiChar(#39));
 end;
 
 procedure TZAbstractDbcConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
   var Result: RawByteString);
 begin
-  Result := SQLQuotedStr(Buf, Len, #39);
+  Result := SQLQuotedStr(Buf, Len, AnsiChar(#39));
 end;
 
 procedure TZAbstractDbcConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
@@ -891,7 +890,7 @@ begin
   FDriverManager := DriverManager; //just keep refcount high
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
-  fRegisteredStatements := TList.Create;
+  fRegisteredStatements := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   FURL.OnPropertiesChange := OnPropertiesChange;
   FURL.URL := ZUrl.URL;
 
@@ -1291,7 +1290,7 @@ end;
 }
 function TZAbstractDbcConnection.EscapeString(const Value : RawByteString) : RawByteString;
 begin
-  Result := AnsiString(EncodeCString(String(Value)));
+  Result := EncodeCString(Value);
 end;
 
 {**
@@ -1548,10 +1547,12 @@ begin
   FUseMetadata := Value;
 end;
 
+{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
 function TZAbstractDbcConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   GetBinaryEscapeString(Pointer(Value), Length(Value), {$IFNDEF UNICODE}RawByteString{$ELSE}ZWideString{$ENDIF}(Result));
 end;
+{$ENDIF}
 
 function TZAbstractDbcConnection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
@@ -1567,7 +1568,7 @@ function TZAbstractDbcConnection.GetEscapeString(const Value: RawByteString): Ra
 var P: PAnsiChar;
 begin
   P := Pointer(Value);
-  if (P <> nil) and (Length(Value)>1) and (P^=#39) and ((P+Length(Value)-1)^=#39)
+  if (P <> nil) and (Length(Value)>1) and (AnsiChar(P^)=AnsiChar(#39)) and (AnsiChar((P+Length(Value)-1)^)=AnsiChar(#39))
   then Result := Value
   else GetEscapeString(P, Length(Value), Result);
 end;

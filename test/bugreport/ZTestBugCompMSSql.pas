@@ -343,7 +343,7 @@ var
 begin
   Query := CreateQuery;
   try
-    Query.SQL.Text := 'select * from information_schema.tables';
+    Query.SQL.Text := 'select * from INFORMATION_SCHEMA.TABLES';
     Query.Open;
     Check(Query.Active);
   finally

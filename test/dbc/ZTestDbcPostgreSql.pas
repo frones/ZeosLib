@@ -80,7 +80,7 @@ type
 
 implementation
 
-uses SysUtils, ZTestConsts, ZSysUtils, Types, ZVariant;
+uses SysUtils, ZTestConsts, ZSysUtils, ZVariant;
 
 { TZTestDbcPostgreSQLCase }
 
@@ -372,11 +372,7 @@ begin
     ResultSet.First;
 
     // Compare initial inserted value vs database read value from table
-    {$IFDEF UNICODE}
-    S := ZSysUtils.GUIDToUnicode(ResultSet.GetBytes(ext_id_index));
-    {$ELSE}
-    S := ZSysUtils.GUIDToUnicode(ResultSet.GetBytes(ext_id_index));
-    {$ENDIF}
+    S := ZSysUtils.GUIDToStr(ResultSet.GetBytes(ext_id_index));
     CheckEquals('{BAD51CFF-F21F-40E8-A9EA-838977A681BE}', s, 'UUID different');
     S := ResultSet.GetString(ext_id_index);
     //it's offical documented what PG returns:

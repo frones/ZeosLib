@@ -56,7 +56,8 @@ interface
 {$I ZCore.inc}
 
 uses
-  SysUtils, Classes;
+  SysUtils, Classes
+  {$IFDEF NO_UNIT_CONTNRS},System.Generics.Collections{$ENDIF};
 
 const
   ZEOS_MAJOR_VERSION = 7;
@@ -260,6 +261,10 @@ type
 
   {** Generic SQL warning. }
   EZSQLWarning = class(EZSQLThrowable);
+
+  {$IFDEF NO_UNIT_CONTNRS}
+  TObjectList = class(TObjectList<TObject>);
+  {$ENDIF}
 
 implementation
 

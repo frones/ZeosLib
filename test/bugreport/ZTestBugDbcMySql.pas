@@ -56,7 +56,7 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
   ZDbcIntfs, ZCompatibility, ZDbcMySql, ZSqlTestCase;
 
 type
@@ -322,8 +322,8 @@ begin
   try
     DriverManager.GetConnection('zdbc:mysql://xxx:12345/db');
     Fail('Incorrect processing of wrong connection URL.');
-  except
-    // Ignore.
+  except on E: Exception do
+    CheckNotTestFailure(E);
   end;
 end;
 

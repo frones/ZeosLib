@@ -97,7 +97,8 @@ const
 
 implementation
 
-uses ZEncoding, ZSysUtils, ZMessages, ZDbcLogging, ZURL, ZClasses;
+uses ZEncoding, ZSysUtils, ZMessages, ZDbcLogging, ZURL, ZClasses
+ {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 function SQL_SUCCEDED(RETCODE: SQLRETURN): Boolean;
 begin
@@ -178,15 +179,14 @@ begin
         ErrorStringA := '';
         while PlainA.GetDiagRec(HandleType,Handle,RecNum, @SqlstateA[0],
           @NativeError,@MessageText[0],SQL_MAX_MESSAGE_LENGTH,@TextLength) and (not 1)=0 do begin
-          while (TextLength>0) and ((PAnsiChar(@MessageText[0])+TextLength-1)^ <=' ') do //trim trailing lineending and spaces
+          while (TextLength>0) and (PByte(PAnsiChar(@MessageText[0])+TextLength-1)^ <= Ord(' ')) do //trim trailing lineending and spaces
             dec(TextLength);
           if RecNum = 1 then begin
             FirstNativeError := NativeError;
-            if TextLength = 0 then
-              FirstMsgA := 'Unidentified error'
-            else
-              SetString(FirstMsgA, PAnsiChar(@MessageText[0]), TextLength);
-            SetString(FirstNErrA, PAnsiChar(@SqlstateA[0]), 5);
+            if TextLength = 0
+            then FirstMsgA := 'Unidentified error'
+            else ZSetString(PAnsiChar(@MessageText[0]), TextLength, FirstMsgA);
+            ZSetString(PAnsiChar(@SqlstateA[0]), 5, FirstNErrA);
             ErrorStringA := FirstNErrA+'['+IntToRaw(NativeError)+']:'+FirstMsgA;
           end else begin
             NErrA := IntToRaw(NativeError);

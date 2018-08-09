@@ -324,7 +324,7 @@ implementation
 
 uses
   Math,
-  ZSysUtils, ZEncoding, ZTestConsts, ZTestConfig, ZSqlProcessor, ZURL, ZAbstractRODataset;
+  ZSysUtils, ZEncoding, ZTestConfig, ZSqlProcessor, ZURL, ZAbstractRODataset;
 
 function PropPos(const PropDynArray: TStringDynArray; const AProp: String): Integer; overload;
 var
@@ -730,8 +730,12 @@ end;
 }
 procedure TZAbstractSQLTestCase.Fail(Msg: string; ErrorAddr: Pointer = nil);
 begin
+  {$IFDEF FPC2_6DOWN}
+  inherited Fail(Format('%s/%s: %s', [ConnectionName, Protocol, Msg]));
+  {$ELSE}
   inherited Fail(Format('%s/%s: %s', [ConnectionName, Protocol, Msg]),
     ErrorAddr);
+  {$ENDIF}
 end;
 
 {**

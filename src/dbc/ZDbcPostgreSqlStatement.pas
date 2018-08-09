@@ -168,7 +168,7 @@ type
       Info: TStrings); overload;
   end;
 
-  TZPostgreSQLCallableStatement = class(TZAbstractCallableStatement2, IZCallableStatement)
+  TZPostgreSQLCallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
   protected
     function CreateExecutionStatement(Mode: TZCallExecKind; const
       StoredProcName: String): TZAbstractPreparedStatement2; override;
@@ -917,6 +917,7 @@ unnest(array[$1..$100]::int8[])
                           goto FromRaw;
                         end;
             {$ENDIF}
+            {$IFNDEF NO_ANSISTRING}
             vtAnsiString: begin
                             if not ZCompatibleCodePages(CP, ZOSCodePage) then begin
                               SetLength(FTempRaws, ArrayCount);
@@ -926,6 +927,8 @@ unnest(array[$1..$100]::int8[])
                             end;
                             goto FromRaw;
                           end;
+            {$ENDIF}
+            {$IFNDEF NO_UTF8STRING}
             vtUTF8String: begin
                             if not ZCompatibleCodePages(CP, zCP_UTF8) then begin
                               SetLength(FTempRaws, ArrayCount);
@@ -935,6 +938,7 @@ unnest(array[$1..$100]::int8[])
                             end;
                             goto FromRaw;
                           end;
+            {$ENDIF}
             vtRawByteString:begin
 FromRaw:                    N := 0;
                             for j := 0 to ArrayCount -1 do
@@ -1225,6 +1229,8 @@ end;
     query; never <code>null</code>
 }
 function TZAbstractPostgreSQLPreparedStatementV3.ExecuteQueryPrepared: IZResultSet;
+var
+  Status: TZPostgreSQLExecStatusType;
 begin
   PrepareOpenResultSetForReUse;
   Prepare;
@@ -1232,7 +1238,8 @@ begin
   if Findeterminate_datatype or (FRawPlanName = '')
   then Fres := ExecuteInternal(ASQL, pqExecute)
   else Fres := ExecuteInternal(ASQL, pqExecPrepared);
-  if Fres <> nil then
+  Status := FPlainDriver.PQresultStatus(Fres);
+  if (Fres <> nil) and (Status = PGRES_TUPLES_OK) then
     if Assigned(FOpenResultSet)
     then Result := IZResultSet(FOpenResultSet)
     else Result := CreateResultSet(fServerCursor)
@@ -1702,30 +1709,26 @@ var
   I, J: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
 begin
-  if (Mode = zcekParams) and Assigned(FExecStatements[zcekSelect]) then
-    Result := FExecStatements[zcekSelect]
-  else if (Mode = zcekSelect) and Assigned(FExecStatements[zcekParams]) then
-    Result := FExecStatements[zcekParams]
-  else begin
-    SQL := '';
-    ToBuff('SELECT * FROM ',SQL);
-    ToBuff(StoredProcName, SQL);
-    ToBuff('(', SQL);
-    J := 1;
-    for I := 0 to BindList.Capacity -1 do
-      if not (BindList.ParamTypes[I] in [zptOutput,zptResult]) then begin
-        ToBuff('$', SQL);
-        ToBuff(ZFastCode.IntToStr(J), SQL);
-        ToBuff(',', SQL);
-        Inc(J);
-      end;
-    FlushBuff(SQL);
-    P := Pointer(SQL);
-    if (BindList.Capacity > 0) and ((P+Length(SQL)-1)^ = ',')
-    then (P+Length(SQL)-1)^ := ')' //cancel last comma
-    else SQL := SQL + ')';
-    Result := TZPostgreSQLPreparedStatementV3.Create(Connection as IZPostgreSQLConnection, SQL, Info);
-  end;
+  SQL := '';
+  ToBuff('SELECT * FROM ',SQL);
+  ToBuff(StoredProcName, SQL);
+  ToBuff('(', SQL);
+  J := 1;
+  for I := 0 to BindList.Capacity -1 do
+    if not (BindList.ParamTypes[I] in [zptOutput,zptResult]) then begin
+      ToBuff('$', SQL);
+      ToBuff(ZFastCode.IntToStr(J), SQL);
+      ToBuff(',', SQL);
+      Inc(J);
+    end;
+  FlushBuff(SQL);
+  P := Pointer(SQL);
+  if (BindList.Capacity > 0) and ((P+Length(SQL)-1)^ = ',')
+  then (P+Length(SQL)-1)^ := ')' //cancel last comma
+  else SQL := SQL + ')';
+  Result := TZPostgreSQLPreparedStatementV3.Create(Connection as IZPostgreSQLConnection, SQL, Info);
+  FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
+  TZPostgreSQLPreparedStatementV3(Result)._AddRef;
 end;
 
 initialization

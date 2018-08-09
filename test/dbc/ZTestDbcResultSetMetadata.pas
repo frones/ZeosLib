@@ -56,7 +56,7 @@ unit ZTestDbcResultSetMetadata;
 interface
 {$I ZDbc.inc}
 uses Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZSqlTestCase, ZDbcIntfs, ZClasses;
+  ZSqlTestCase, ZDbcIntfs;
 
 type
 
@@ -264,7 +264,6 @@ const
   DEP_NAME_Index      = FirstDbcIndex +1;
   DEP_SHNAME_Index    = FirstDbcIndex +2;
   DEP_ADDRESS_Index   = FirstDbcIndex +3;
-  DEP_ADDRESS_1_Index = FirstDbcIndex +4;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -289,7 +288,7 @@ var
     CheckEquals(4, Metadata.GetColumnCount);
 
     CheckColumnMetadata(Metadata, DEP_ID_Index, GetColumnLabeName(DEP_ID_Index, 'DEP_NAME'),
-      GetFieldNameFromUnQuoted('DEP_ID'), GetIdentifierName('DEPARTMENT'), True, True);
+      GetFieldNameFromUnQuoted('dep_id'), GetIdentifierName('department'), True, True);
 
     if StartsWith(Protocol, 'postgre')
     then CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match')
@@ -298,11 +297,11 @@ var
     else CheckEquals(Ord(stSmall), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match');
 
     CheckColumnMetadata(Metadata, DEP_NAME_Index, GetColumnLabeName(DEP_NAME_Index, 'DEP_ID'),
-      GetFieldNameFromUnQuoted('DEP_NAME'), GetIdentifierName('DEPARTMENT'), False, True);
+      GetFieldNameFromUnQuoted('dep_name'), GetIdentifierName('department'), False, True);
     Check(Metadata.GetColumnType(DEP_NAME_Index) in [stString, stUnicodeString], 'ColumnType does not match');
 
     CheckColumnMetadata(Metadata, DEP_SHNAME_Index, GetColumnLabeName(DEP_SHNAME_Index, 'DEP_ADDRESS') ,
-      GetFieldNameFromUnQuoted('DEP_SHNAME'), GetIdentifierName('DEPARTMENT'), False, True);
+      GetFieldNameFromUnQuoted('dep_shname'), GetIdentifierName('department'), False, True);
     Check(Metadata.GetColumnType(DEP_SHNAME_Index) in [stString, stUnicodeString], 'ColumnType does not match');
 
     CheckColumnMetadata(Metadata, DEP_ADDRESS_Index, GetColumnLabeName(DEP_ADDRESS_Index, 'DEP_ADDRESS_1'), '', '',
@@ -311,13 +310,13 @@ var
 begin
   Statement := Connection.CreateStatement;
 
-  ResultSet := Statement.ExecuteQuery('SELECT T.DEP_ID AS DEP_NAME, T.DEP_NAME AS DEP_ID,'
-    + ' T.DEP_SHNAME as DEP_ADDRESS, 2+2 AS DEP_ADDRESS FROM DEPARTMENT T WHERE T.DEP_ID < 100');
+  ResultSet := Statement.ExecuteQuery('SELECT T.dep_id AS DEP_NAME, T.dep_name AS DEP_ID,'
+    + ' T.dep_shname as DEP_ADDRESS, 2+2 AS DEP_ADDRESS FROM department T WHERE T.dep_id < 100');
   Metadata := ResultSet.GetMetadata;
   TestAll;
 
-  ResultSet := Statement.ExecuteQuery('SELECT DEP_ID AS DEP_NAME, DEP_NAME AS DEP_ID,'
-    + ' DEP_SHNAME as DEP_ADDRESS, 2+2 AS DEP_ADDRESS FROM DEPARTMENT WHERE DEP_ID < 100');
+  ResultSet := Statement.ExecuteQuery('SELECT dep_id AS DEP_NAME, dep_name AS DEP_ID,'
+    + ' dep_shname as DEP_ADDRESS, 2+2 AS DEP_ADDRESS FROM department WHERE dep_id < 100');
   Metadata := ResultSet.GetMetadata;
   TestAll;
 end;

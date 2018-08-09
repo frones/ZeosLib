@@ -67,7 +67,6 @@ type
   {** record for holding batch dml stmts }
   TZIBStmt = record
     Obj: TZInterbase6PreparedStatement;
-    Intf: IZPreparedStatement;
     PreparedRowsOfArray: Integer;
   end;
 
@@ -83,7 +82,7 @@ type
     FStmtHandle: TISC_STMT_HANDLE; //the smt handle
     FStatementType: TZIbSqlStatementType; //the stmt type
     FTypeTokens: TRawByteStringDynArray;
-    FBatchStmts: array[Boolean, stInsert..stDelete] of TZIBStmt;
+    FBatchStmts: array[Boolean] of TZIBStmt;
     FMaxRowsPerBatch, FMemPerRow: Integer;
     function ExecuteInternal: ISC_STATUS;
     function ExceuteBatch: Integer;
@@ -125,7 +124,7 @@ type
     constructor Create(const Connection: IZConnection; Info: TStrings);
   end;
 
-  TZInterbase6CallableStatement = class(TZAbstractCallableStatement2, IZCallableStatement)
+  TZInterbase6CallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
   protected
     function CreateExecutionStatement(Mode: TZCallExecKind; const
       StoredProcName: String): TZAbstractPreparedStatement2; override;
@@ -145,27 +144,33 @@ var
   AC: Boolean;
   ArrayOffSet: Integer;
 begin
+  Result := 0;
   AC := Connection.GetAutoCommit;
-  Connection.SetAutoCommit(False);
+  if AC then
+    Connection.SetAutoCommit(False);
   try
     ArrayOffSet := 0;
     FIBConnection.GetTrHandle; //restart transaction if required
     try
-      if ArrayCount >= FBatchStmts[True][FStatementType].PreparedRowsOfArray then
-        while (ArrayOffSet+FBatchStmts[True][FStatementType].PreparedRowsOfArray < ArrayCount) do begin
-          BindSQLDAInParameters(BindList, FBatchStmts[True][FStatementType].Obj.FParamSQLData,
+      if (FBatchStmts[True].Obj <> nil) and (ArrayCount >= FBatchStmts[True].PreparedRowsOfArray) then
+        while (ArrayOffSet+FBatchStmts[True].PreparedRowsOfArray <= ArrayCount) do begin
+          BindSQLDAInParameters(BindList, FBatchStmts[True].Obj.FParamSQLData,
             GetConnection.GetConSettings, FCodePageArray, ArrayOffSet,
-            FBatchStmts[True][FStatementType].PreparedRowsOfArray);
-          FBatchStmts[True][FStatementType].Obj.ExecuteInternal;
-          Inc(ArrayOffSet, FBatchStmts[True][FStatementType].PreparedRowsOfArray);
+            FBatchStmts[True].PreparedRowsOfArray);
+          Result := FBatchStmts[True].Obj.ExecuteInternal;
+          Inc(ArrayOffSet, FBatchStmts[True].PreparedRowsOfArray);
         end;
-      BindSQLDAInParameters(BindList, FBatchStmts[False][FStatementType].Obj.FParamSQLData,
-        GetConnection.GetConSettings, FCodePageArray, ArrayOffSet,
-        FBatchStmts[False][FStatementType].PreparedRowsOfArray);
-      Result := FBatchStmts[False][FStatementType].Obj.ExecuteInternal;
-      Connection.Commit;
+      if (FBatchStmts[False].Obj <> nil) and (ArrayOffSet < ArrayCount) then begin
+        BindSQLDAInParameters(BindList, FBatchStmts[False].Obj.FParamSQLData,
+          GetConnection.GetConSettings, FCodePageArray, ArrayOffSet,
+          FBatchStmts[False].PreparedRowsOfArray);
+        Result := FBatchStmts[False].Obj.ExecuteInternal;
+      end;
+      if AC then
+        Connection.Commit;
     except
-      Connection.Rollback;
+      if AC then
+        Connection.Rollback;
       raise;
     end;
   finally
@@ -229,13 +234,11 @@ procedure TZAbstractInterbase6PreparedStatement.ReleaseImmediat(
   const Sender: IImmediatelyReleasable);
 var
   B: boolean;
-  StatementType: TZIbSqlStatementType;
 begin
   FStmtHandle := 0;
   for B := False to True do
-    for StatementType := stInsert to stDelete do
-      if Assigned(FBatchStmts[b][StatementType].Obj) then
-        FBatchStmts[b][StatementType].Obj.ReleaseImmediat(Sender);
+    if Assigned(FBatchStmts[b].Obj) then
+      FBatchStmts[b].Obj.ReleaseImmediat(Sender);
   inherited ReleaseImmediat(Sender);
 end;
 
@@ -385,11 +388,14 @@ var
 
   procedure PrepareArrayStmt(var Slot: TZIBStmt);
   begin
-    if (Slot.Intf = nil) or (Slot.PreparedRowsOfArray <> PreparedRowsOfArray) then begin
-      if Slot.Obj <> nil then
+    if (Slot.Obj = nil) or (Slot.PreparedRowsOfArray <> PreparedRowsOfArray) then begin
+      if Slot.Obj <> nil then begin
         Slot.Obj.BindList.Count := 0;
+        {$IFNDEF AUTOREFCOUNT}
+        Slot.Obj._Release;
+        {$ENDIF}
+      end;
       Slot.Obj := TZInterbase6PreparedStatement.Create(Connection, '', Info);
-      Slot.Intf := Slot.Obj;
       Slot.Obj.FASQL := eBlock;
       Slot.Obj.BindList.Count := BindList.Count*PreparedRowsOfArray;
       Slot.PreparedRowsOfArray := PreparedRowsOfArray;
@@ -400,9 +406,9 @@ var
   begin
     eBlock := GetExecuteBlockString(FParamSQLData,
       IsParamIndex, BindList.Count, Rows, FCachedQueryRaw,
-      FPlainDriver, FMemPerRow, PreparedRowsOfArray,
+      FPlainDriver, FMemPerRow, PreparedRowsOfArray, FMaxRowsPerBatch,
       FTypeTokens, FStatementType, FIBConnection.GetXSQLDAMaxSize);
-    PrepareArrayStmt(FBatchStmts[False][FStatementType]);
+    PrepareArrayStmt(FBatchStmts[False]);
   end;
 begin
   if (not Prepared) then begin
@@ -422,21 +428,23 @@ begin
     if FMaxRowsPerBatch = 0 then begin
       eBlock := GetExecuteBlockString(FParamSQLData,
         IsParamIndex, BindList.Count, ArrayCount, FCachedQueryRaw,
-        FPlainDriver, FMemPerRow, PreparedRowsOfArray,
+        FPlainDriver, FMemPerRow, PreparedRowsOfArray, FMaxRowsPerBatch,
           FTypeTokens, FStatementType, FIBConnection.GetXSQLDAMaxSize);
     end else
-       eBlock := '';
-    if (FMaxRowsPerBatch < ArrayCount) and (eBlock <> '') then begin
-      FMaxRowsPerBatch := PreparedRowsOfArray;
-      PrepareArrayStmt(FBatchStmts[True][FStatementType]);
-      //final chunk
-      PrepareFinalChunk(ArrayCount mod PreparedRowsOfArray);
+      eBlock := '';
+    if (FMaxRowsPerBatch <= ArrayCount) and (eBlock <> '') then begin
+      PrepareArrayStmt(FBatchStmts[True]); //max block size per batch
+      if ArrayCount > FMaxRowsPerBatch then //final block count
+        PrepareFinalChunk(ArrayCount mod PreparedRowsOfArray);
     end else if (eBlock = '') then begin
-      if (FMaxRowsPerBatch = 0) and (FBatchStmts[False][FStatementType].PreparedRowsOfArray <> ArrayCount) then
-        PrepareFinalChunk(ArrayCount)
-      else if (FMaxRowsPerBatch <> 0) and (FBatchStmts[False][FStatementType].PreparedRowsOfArray <> ArrayCount mod FMaxRowsPerBatch) then
-        PrepareFinalChunk(ArrayCount mod FMaxRowsPerBatch);
-    end;
+      if (FMaxRowsPerBatch > ArrayCount) then begin
+        if (FBatchStmts[False].PreparedRowsOfArray <> ArrayCount) then
+          PrepareFinalChunk(ArrayCount) //full block of batch
+      end else
+        if (FBatchStmts[False].PreparedRowsOfArray <> (ArrayCount mod FMaxRowsPerBatch)) then
+          PrepareFinalChunk(ArrayCount mod FMaxRowsPerBatch); //final block of batch
+    end else if (FBatchStmts[False].PreparedRowsOfArray <> ArrayCount) then
+      PrepareArrayStmt(FBatchStmts[False]); //full block of batch
   end;
 end;
 
@@ -445,15 +453,15 @@ end;
 }
 procedure TZAbstractInterbase6PreparedStatement.Unprepare;
 var b: Boolean;
-  st: TZIbSqlStatementType;
 begin
   for b := False to True do
-    for st := stInsert to stDelete do
-      if FBatchStmts[b][st].Obj <> nil then begin
-        FBatchStmts[b][st].Obj.BindList.Count := 0;
-        FBatchStmts[b][st].Obj := nil;
-        FBatchStmts[False][FStatementType].Intf := nil;
-      end;
+    if FBatchStmts[b].Obj <> nil then begin
+      FBatchStmts[b].Obj.BindList.Count := 0;
+      {$IFNDEF AUTOREFCOUNT}
+      FBatchStmts[b].Obj._Release;
+      {$ENDIF}
+      FBatchStmts[b].Obj := nil;
+    end;
   FMaxRowsPerBatch := 0;
   if (FStmtHandle <> 0) then //check if prepare did fail. otherwise we unprepare the handle
     FreeStatement(FPlainDriver, FStmtHandle, DSQL_UNPREPARE);

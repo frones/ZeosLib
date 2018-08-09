@@ -85,7 +85,7 @@ type
 
 implementation
 
-uses Math, DateUtils, ZVariant, ZCompatibility;
+uses DateUtils, ZVariant, ZCompatibility;
 
 const
   RUN_COUNT = 100000;
@@ -96,11 +96,11 @@ const
   Runs a test for arrays processing.
 }
 procedure TZTestExpressionCase.TestArrays;
-var
-  Expression: IZExpression;
+//var
+//  Expression: IZExpression;
 begin
-  Expression := TZExpression.Create;
-(*
+(*  Expression := TZExpression.Create;
+
   Variant[] values1 = new Variant[10];
   Integer[] values2 = new Integer[10];
   for (int i = 0; i < 10; i++) {
@@ -576,7 +576,8 @@ begin
       Expression := 'B + 321';
       Evaluate;
       Fail('Wrong behaviour with unknown variable.');
-    except
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
 
     Expression := 'A + B';
@@ -662,6 +663,8 @@ var
   end;
 
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
   { Tests speed of repeatable calculations with variables. }
   Expression := TZExpression.Create;
   Stack := TZExecutionStack.Create;
@@ -729,6 +732,8 @@ begin
     Stack.Clear;
   end;
   Stack.Free;
+
+  BlankCheck;
 end;
 
 initialization

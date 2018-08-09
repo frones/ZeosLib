@@ -63,9 +63,10 @@ interface
 {.$DEFINE USE_SYNCOMMONS}
 uses
 {$IFDEF USE_SYNCOMMONS}
-  SynCommons,
+  SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, Contnrs,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
+  {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF},
   ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
   ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement,
   ZPlainMySqlDriver, ZPlainMySqlConstants, ZSelectSchema;
@@ -97,6 +98,7 @@ type
     FFieldCount: ULong;
     FPMYSQL: PPMYSQL; //address of the MYSQL connection handle
     FMYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; //offset descriptor structures
+    FIsOutParamResult: Boolean; //is the result a `Result of Out params?
     procedure InitColumnBinds(Bind: PMYSQL_aligned_BIND; MYSQL_FIELD: PMYSQL_FIELD;
       FieldOffsets: PMYSQL_FIELDOFFSETS; Iters: Integer);
   private //connection resultset
@@ -119,7 +121,7 @@ type
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(const PlainDriver: TZMySQLPlainDriver;
-      const Statement: IZStatement; const SQL: string;
+      const Statement: IZStatement; const SQL: string; IsOutParamResult: Boolean;
       PMYSQL: PPMYSQL; PMYSQL_STMT: PPMYSQL_STMT; AffectedRows: PInteger;
       out OpenCursorCallback: TOpenCursorCallback);
     destructor Destroy; override;
@@ -207,12 +209,8 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
-  ZFastCode, ZSysUtils, ZMessages, ZEncoding, ZClasses,
+  ZFastCode, ZSysUtils, ZMessages, ZEncoding, {$IFNDEF NO_UNIT_CONTNRS}ZClasses,{$ENDIF}
   ZDbcMySqlUtils, ZDbcMySQL, ZDbcUtils, ZDbcMetadata, ZDbcLogging;
-
-{$IFOPT R+}
-  {$DEFINE RangeCheckEnabled}
-{$ENDIF}
 
 { TZMySQLResultSetMetadata }
 
@@ -345,7 +343,6 @@ var
   H, I: Integer;
   P: PAnsiChar;
   Bind: PMYSQL_aligned_BIND;
-  Date1, Date2: TDateTime;
   MS: Word;
 begin
   if JSONWriter.Expand then
@@ -596,7 +593,7 @@ end;
     <code>False</code> to store result.
 }
 constructor TZAbstractMySQLResultSet.Create(const PlainDriver: TZMySQLPlainDriver;
-  const Statement: IZStatement; const SQL: string;
+  const Statement: IZStatement; const SQL: string; IsOutParamResult: Boolean;
   PMYSQL: PPMYSQL; PMYSQL_STMT: PPMYSQL_STMT; AffectedRows: PInteger;
   out OpenCursorCallback: TOpenCursorCallback);
 var ClientVersion: ULong;
@@ -619,6 +616,7 @@ begin
   //hooking very old versions -> we use this struct for some more logic
   ClientVersion := FPlainDriver.mysql_get_client_version;
   FBindOffsets := GetBindOffsets(FPlainDriver.IsMariaDBDriver, Max(40101, ClientVersion));
+  FIsOutParamResult := IsOutParamResult;
   Open;
   if Assigned(AffectedRows) then
     AffectedRows^ := LastRowNo;
@@ -634,6 +632,7 @@ end;
   Opens this recordset.
 }
 procedure TZAbstractMySQLResultSet.Open;
+const One: PAnsiChar = '1';
 var
   I: Integer;
   FieldHandle: PMYSQL_FIELD;
@@ -647,6 +646,14 @@ begin
     OpenCursor;
     QueryHandle := FQueryHandle;
   end else begin
+    if FIsOutParamResult then begin
+      FMYSQL_STMT := FPMYSQL_STMT^;
+      if Assigned(FPlainDriver.mysql_stmt_attr_set517UP)
+      then FPlainDriver.mysql_stmt_attr_set517UP(FPMYSQL_STMT^,STMT_ATTR_UPDATE_MAX_LENGTH,one)
+      else FPlainDriver.mysql_stmt_attr_set(FPMYSQL_STMT^,STMT_ATTR_UPDATE_MAX_LENGTH,one);
+      if FPlainDriver.mysql_stmt_store_result(FPMYSQL_STMT^) <> 0 then
+        checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcOther, 'mysql_stmt_store_result', Self);
+    end;
     if FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) > 0
     then QueryHandle := FPlainDriver.mysql_stmt_result_metadata(FMYSQL_STMT)
     else QueryHandle := nil;
@@ -724,7 +731,7 @@ begin
       Handle := FMYSQL_STMT;
       FMYSQL_STMT := nil;
       //test if more results are pendding
-      if (Handle <> nil) and {not FPlainDriver.IsMariaDBDriver and} (Assigned(FPlainDriver.mysql_stmt_more_results) and (FPlainDriver.mysql_stmt_more_results(FPMYSQL_STMT^) = 1))
+      if (Handle <> nil) and (FIsOutParamResult or ({not FPlainDriver.IsMariaDBDriver and} (Assigned(FPlainDriver.mysql_stmt_more_results) and (FPlainDriver.mysql_stmt_more_results(FPMYSQL_STMT^) = 1))))
       then Close
       else inherited ResetCursor;
     end else begin
@@ -1036,7 +1043,9 @@ begin
     FIELD_TYPE_TINY_BLOB,
     FIELD_TYPE_MEDIUM_BLOB,
     FIELD_TYPE_LONG_BLOB,
-    FIELD_TYPE_GEOMETRY:    Bind^.Length[0] := 0;//http://bugs.mysql.com/file.php?id=12361&bug_id=33086
+    FIELD_TYPE_GEOMETRY:    if FIsOutParamResult
+                            then Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.max_length)^
+                            else Bind^.Length[0] := 0;//http://bugs.mysql.com/file.php?id=12361&bug_id=33086
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING,
@@ -1072,7 +1081,7 @@ begin
   end;
   if (bind^.Length[0] = 0) or (Iters = 0)
   then Bind^.Buffer := nil
-  else GetMem(Bind^.Buffer, ((((bind^.Length^[0]+Byte(Ord(bind^.buffer_type_address^ = FIELD_TYPE_STRING))) shr 3)+1) shl 3) ); //8Byte aligned
+  else GetMem(Bind^.Buffer, ((((bind^.Length^[0]+Byte(Ord(bind^.buffer_type_address^ in [FIELD_TYPE_STRING]))) shr 3)+1) shl 3) ); //8Byte aligned
   Bind^.buffer_address^ := Bind^.buffer;
   Bind^.buffer_length_address^ := bind^.Length[0];
 end;
@@ -1644,7 +1653,7 @@ begin
             FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
             ColBind^.buffer_Length_address^ := 0;
-            RawToFloatDef(PAnsichar(@FSmallLobBuffer[0]), '.', 0, Result);
+            RawToFloatDef(PAnsichar(@FSmallLobBuffer[0]), {$IFDEF NO_ANSICHAR}Ord{$ENDIF}('.'), 0, Result);
           end;
       end
   end else begin
@@ -1863,7 +1872,7 @@ begin
           else Result := PUInt64(ColBind^.buffer)^;
         FIELD_TYPE_YEAR: TryEncodeDate(PWord(ColBind^.buffer)^, 1,1, Result);
         FIELD_TYPE_STRING: begin
-            if (PAnsiChar(ColBind^.buffer)+2)^ = ':' then //possible date if Len = 10 then
+            if PByte(PAnsiChar(ColBind^.buffer)+2)^ = Ord(':') then //possible date if Len = 10 then
               Result := RawSQLTimeToDateTime(PAnsiChar(ColBind^.buffer),
                 ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed{%H-})
             else
@@ -1879,7 +1888,7 @@ begin
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     LastWasNull := Buffer = nil;
     if not LastWasNull then begin
-      if (Buffer+2)^ = ':' then //possible date if Len = 10 then
+      if PByte(Buffer+2)^ = Ord(':') then //possible date if Len = 10 then
         Result := RawSQLTimeToDateTime(Buffer,Len, ConSettings^.ReadFormatSettings, Failed{%H-})
       else
         Result := Frac(RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
@@ -1957,7 +1966,7 @@ begin
           else Result := PUInt64(ColBind^.buffer)^;
         FIELD_TYPE_YEAR: TryEncodeDate(PWord(ColBind^.buffer)^, 1,1, Result);
         FIELD_TYPE_STRING: begin
-            if (PAnsiChar(ColBind^.buffer)+2)^ = ':' then
+            if PByte(PAnsiChar(ColBind^.buffer)+2)^ = Ord(':') then
               Result := RawSQLTimeToDateTime(PAnsiChar(ColBind^.buffer),
                 ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed{%H-})
             else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - ColBind^.Length[0] ) <= 4 then
@@ -1974,7 +1983,7 @@ begin
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     LastWasNull := Buffer = nil;
     if not LastWasNull then
-      if (Buffer+2)^ = ':' then
+      if PByte(Buffer+2)^ = Ord(':') then
         Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
       else
         if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
@@ -2020,7 +2029,7 @@ begin
         else Result := TZMySQLPreparedClob.Create(FplainDriver,
             ColBind, FMYSQL_STMT, ColumnIndex, Self)
       else begin
-          Buffer := GetPAnsiChar(ColumnIndex, Len);
+          Buffer := GetPAnsiChar(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Len);
           Result := TZAbstractClob.CreateWithData(Buffer, Len,
             ConSettings^.ClientCodePage^.CP, ConSettings);
         end;
@@ -2129,10 +2138,12 @@ procedure TZMySQL_Store_ResultSet.OpenCursor;
 begin
   inherited OpenCursor;
   if FPMYSQL_STMT^ <> nil then begin
-    FMYSQL_STMT := FPMYSQL_STMT^;
-    if FPlainDriver.mysql_stmt_store_result(FMYSQL_STMT)=0
-    then LastRowNo := FPlainDriver.mysql_stmt_num_rows(FMYSQL_STMT)
-    else checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcOther, 'mysql_stmt_store_result', Self)
+    if not FIsOutParamResult then begin
+      FMYSQL_STMT := FPMYSQL_STMT^;
+      if FPlainDriver.mysql_stmt_store_result(FMYSQL_STMT)=0
+      then LastRowNo := FPlainDriver.mysql_stmt_num_rows(FMYSQL_STMT)
+      else checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcOther, 'mysql_stmt_store_result', Self)
+    end;
   end else begin
     FQueryHandle := FPlainDriver.mysql_store_result(FPMYSQL^);
     if Assigned(FQueryHandle)
@@ -2328,7 +2339,7 @@ begin
   Bind^.buffer_Length_address^ := 0;
   if Status = 1 then
     checkMySQLError(PlainDriver, nil, StmtHandle^, lcOther, '', Sender);
-  (PAnsiChar(FBlobData)+FBlobSize-1)^ := #0;
+  PByte(PAnsiChar(FBlobData)+FBlobSize-1)^ := Ord(#0);
 End;
 
 { TZMySQLPreparedBlob }

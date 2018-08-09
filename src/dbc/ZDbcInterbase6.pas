@@ -56,7 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
+  {$IF defined(OLDFPC) or defined(NO_UNIT_CONTNRS)}ZClasses,{$IFEND}
   ZPlainFirebirdDriver, ZCompatibility, ZDbcUtils, ZDbcIntfs, ZDbcCachedResultSet,
   ZDbcConnection, ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcLogging,
   ZDbcInterbase6Utils, ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser,
@@ -228,7 +230,8 @@ implementation
 
 uses ZFastCode, ZDbcInterbase6Statement, ZDbcInterbase6Metadata, ZEncoding,
   ZInterbaseToken, ZInterbaseAnalyser, ZDbcMetadata, ZMessages,
-  ZConnProperties, ZDbcProperties, ZClasses
+  ZConnProperties, ZDbcProperties
+  {$IF not defined(NO_UNIT_CONTNRS) and not defined(OLDFPC)},ZClasses{$IFEND}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZInterbase6Driver }
@@ -366,7 +369,6 @@ begin
   if WireCompression then
     Info.Values['isc_dpb_config'] :=
       Info.Values['isc_dpb_config'] + LineEnding + 'WireCompression=true';
-  Info.EndUpdate;
 
   if Info.IndexOf('isc_dpb_sql_dialect') = -1 then
     Info.Values['isc_dpb_sql_dialect'] := IntToStr(FDialect);
@@ -433,19 +435,19 @@ begin
   if GetAutoCommit
   then raise EZSQLException.Create(SInvalidOpInAutoCommit);
   if not (FTrHandle = 0)  then
-    if FHardCommit then begin
+    //if FHardCommit then begin
       FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
       // Jan Baumgarten: Added error checking here because setting the transaction
       // handle to 0 before we have checked for an error is simply wrong.
       CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcTransaction);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
       FTrHandle := 0; //normaly not required! Old server code?
-    end else begin
+    {end else begin
       FPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
       CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcTransaction);
       DriverManager.LogMessage(lcTransaction,
         ConSettings^.Protocol, 'TRANSACTION COMMIT');
-    end;
+    end;}
 end;
 
 {**
@@ -724,14 +726,23 @@ var
   NewDB: RawByteString;
   ConnectionString: String;
   procedure PrepareDPB;
+  var
+    R: RawByteString;
+    P: PAnsiChar;
+    L: LengthInt;
   begin
     if (Info.IndexOf('isc_dpb_utf8_filename') = -1) then begin
-      {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.ConvFuncs.ZStringToRaw(ConnectionString, ConSettings^.CTRL_CP, ZOSCodePage));
-      DPB := GenerateDPB(FPlainDriver, Info, ConSettings, zCP_UTF8);
+      R := ConSettings^.ConvFuncs.ZStringToRaw(ConnectionString, ConSettings^.CTRL_CP, ZOSCodePage);
+      DPB := GenerateDPB(FPlainDriver, Info, ConSettings, ZOSCodePage);
     end else begin
-      {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.ConvFuncs.ZStringToRaw(ConnectionString, ConSettings^.CTRL_CP, zCP_UTF8));
-      DPB := GenerateDPB(FPlainDriver, Info, ConSettings, zOSCodePage);
+      R := ConSettings^.ConvFuncs.ZStringToRaw(ConnectionString, ConSettings^.CTRL_CP, zCP_UTF8);
+      DPB := GenerateDPB(FPlainDriver, Info, ConSettings, zCP_UTF8);
     end;
+    P := Pointer(R);
+    L := Min(SizeOf(DBName)-1, Length(R){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
+    if P <> nil then
+      Move(P^, DBName[0], L);
+    AnsiChar((PAnsiChar(@DBName[0])+L)^) := AnsiChar(#0);
   end;
 begin
   if not Closed then
@@ -752,7 +763,7 @@ begin
       if (Info.Values['isc_dpb_lc_ctype'] <> '') and (Info.Values['isc_dpb_set_db_charset'] = '') then
         Info.Values['isc_dpb_set_db_charset'] := Info.Values['isc_dpb_lc_ctype'];
       PrepareDPB;
-      if FPlainDriver.isc_create_database(@FStatusVector, SmallInt(StrLen(DBName)),
+      if FPlainDriver.isc_create_database(@FStatusVector, SmallInt(StrLen(@DBName[0])),
           @DBName[0], @FHandle, Smallint(Length(DPB)),Pointer(DPB), 0) <> 0 then
         CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcConnect);
     end else begin
@@ -771,7 +782,7 @@ begin
     PrepareDPB;
     { Connect to Interbase6 database. }
     if FPlainDriver.isc_attach_database(@FStatusVector,
-        ZFastCode.StrLen(DBName), DBName, @FHandle, Length(DPB), Pointer(DPB)) <> 0 then
+        ZFastCode.StrLen(@DBName[0]), @DBName[0], @FHandle, Length(DPB), Pointer(DPB)) <> 0 then
       CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcConnect);
 
     { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
@@ -953,18 +964,18 @@ begin
   if GetAutoCommit
   then raise EZSQLException.Create(cSInvalidOpInAutoCommit);
   if FTrHandle <> 0 then begin
-    if FHardCommit then begin
+    //if FHardCommit then begin
       if FPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle) <> 0 then
         CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
       FTrHandle := 0;
-    end else begin
+    {end else begin
       if FPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle) <> 0 then
         CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
-    end;
+    end;}
   end;
 end;
 
@@ -986,7 +997,7 @@ begin
   DatabaseInfoCommand := Char(isc_info_reads);
 
   ErrorCode := FPlainDriver.isc_database_info(@FStatusVector, @FHandle, 1, @DatabaseInfoCommand,
-                           IBLocalBufferLength, Buffer);
+                           IBLocalBufferLength, @Buffer[0]);
 
   case ErrorCode of
     isc_network_error..isc_net_write_err:

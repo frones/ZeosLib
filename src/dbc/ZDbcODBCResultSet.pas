@@ -57,7 +57,7 @@ interface
 
 uses
 {$IFDEF USE_SYNCOMMONS}
-  SynCommons,
+  SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -119,7 +119,9 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetString(ColumnIndex: Integer): String; override;
+    {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ColumnIndex: Integer): AnsiString; override;
+    {$ENDIF}
     function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
     function GetRawByteString(ColumnIndex: Integer): RawByteString; override;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
@@ -205,7 +207,8 @@ const
 implementation
 
 uses Math,
-  ZMessages, ZDbcODBCUtils, ZEncoding, ZDbcODBCStatement, ZDbcProperties, ZClasses;
+  ZMessages, ZDbcODBCUtils, ZEncoding, ZDbcODBCStatement, ZDbcProperties,
+  ZClasses;
 
 { TAbstractODBCResultSet }
 
@@ -417,7 +420,7 @@ begin
     {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_ChunkSize], 4096), False);
   Connection.CheckDbcError(fPlainDriver.AllocHandle(SQL_HANDLE_STMT, ConnectionHandle, StmtHandle));
 end;
-
+{$IFNDEF NO_ANSISTRING}
 function TAbstractODBCResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
 begin
   if Ord(fSQLTypes[ColumnIndex]) < Ord(stString) then
@@ -440,6 +443,7 @@ begin
       end;
     end;
 end;
+{$ENDIF}
 
 function TAbstractODBCResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin
@@ -879,7 +883,7 @@ begin
       stDouble,
       stCurrency,
       stBigDecimal: Result := FloatToSQLRaw(PDouble(fColDataPtr)^);
-      stBytes:      SetString(Result, PAnsiChar(fColDataPtr), fStrLen_or_Ind);
+      stBytes:      ZSetString(PAnsiChar(fColDataPtr), fStrLen_or_Ind, Result);
       stGUID:       Result := GUIDToRaw(PGUID(fColDataPtr)^);
       stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
                       DateTimeToRawSQLTime(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
@@ -1178,10 +1182,7 @@ begin
       stDouble,
       stCurrency,
       stBigDecimal: Result := FloatToSQLUnicode(PDouble(fColDataPtr)^);
-      stBytes: begin
-          SetString(fRawTemp, PAnsiChar(fColDataPtr), fStrLen_or_Ind);
-          Result := ASCII7ToUnicodeString(Pointer(fRawTemp), fStrLen_or_Ind);
-        end;
+      stBytes:      ZSetString(PAnsiChar(fColDataPtr), fStrLen_or_Ind, Result);
       stGUID:       Result := GUIDToUnicode(PGUID(fColDataPtr)^);
       stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
                       DateTimeToUnicodeSQLTime(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
@@ -1762,9 +1763,9 @@ end;
 procedure TODBCResultSetA.InternalDecTrailingSpaces(ColumnIndex: SQLUSMALLINT);
 begin
   if fFixedWidthStrings[ColumnIndex] then begin
-    while (PAnsiChar(fColDataPtr)+fStrLen_or_Ind-1)^ = ' ' do
+    while PByte(PAnsiChar(fColDataPtr)+fStrLen_or_Ind-1)^ = Ord(' ') do
       Dec(fStrLen_or_Ind);
-    (PAnsiChar(fColDataPtr)+fStrLen_or_Ind)^ := #0;
+    PByte(PAnsiChar(fColDataPtr)+fStrLen_or_Ind)^ := Ord(#0);
   end;
 end;
 
@@ -1871,7 +1872,7 @@ begin
       FBlobSize := FBlobSize - ChunkSize + StrLen_or_IndPtr^ +1;
       ReallocMem(FBlobData, FBlobSize);
     end;
-    (PAnsiChar(FBlobData)+FBlobSize-1)^ := #0; //set trailing #0
+    PByte(PAnsiChar(FBlobData)+FBlobSize-1)^ := Ord(#0); //set trailing #0
   end;
 end;
 
