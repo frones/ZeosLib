@@ -221,11 +221,12 @@
                         {$DEFINE NO_INLINE_SIZE_CHECK} 
                         {$DEFINE NO_ANSISTRING}
                         {$DEFINE NO_PANSICHAR}
-                        {$DEFINE NO_ANSICHAR}
+                        {$DEFINE NO_ANSICHAR} 
+                        {$DEFINE TSYSCHARSET_IS_DEPRECATED} //for compiler warning TSysCharSet is deprected use CharHelper function instead
                         {$DEFINE NO_RAW_HEXTOBIN} //raw/pAnsichar version of HexToBin does not exits  
                         {$DEFINE MISS_RBS_SETSTRING_OVERLOAD} //system.SetString is not available for raw strings or i (EH) have no clue how to use it
                         {$DEFINE NO_UNIT_CONTNRS} //unit Contnrs (TObjectList) doesn't exist any mory 
-                        {$DEFINE WITH_USC2_ANSICOMPARESTR_ONLY} //nextgen doesn't have a raw ansicomnparestr function
+						{$DEFINE WITH_USC2_ANSICOMPARESTR_ONLY} //nextgen doesn't have a raw ansicomnparestr function
                         {$IF CompilerVersion <= 30}
                           {$DEFINE NO_UTF8STRING}
                           {$UNDEF WITH_RAWBYTESTRING}

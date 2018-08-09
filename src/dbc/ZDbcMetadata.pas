@@ -79,7 +79,13 @@ uses
 //  procedureNullableUnknown = 2;
 
 type
-  TZWildcardsSet= {$IFDEF UNICODE}TSysCharSet{$ELSE}set of Char{$ENDIF};
+  TZWildcardsSet= {$IFDEF UNICODE}
+                    {$IFNDEF TSYSCHARSET_IS_DEPRECATED}
+                    TSysCharSet
+                    {$ELSE}
+                    array of Char
+                    {$ENDIF}
+                  {$ELSE} set of Char {$ENDIF};
 
   {** Defines a metadata resultset column definition. }
   TZMetadataColumnDef = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
@@ -143,7 +149,7 @@ type
     procedure ToBuf(C: Char; var Value: String); {$IFDEF WITH_INLINE}inline;{$ENDIF}
   protected
     FDatabase: String;
-    WildcardsArray: array of char; //Added by Cipto
+    WildcardsArray: {$IFDEF TSYSCHARSET_IS_DEPRECATED}TZWildcardsSet{$ELSE}array of char{$ENDIF}; //Added by Cipto
     function StripEscape(const Pattern: string): string;
     function HasNoWildcards(const Pattern: string): boolean;
     function EscapeString(const S: string): string; virtual;
@@ -4768,11 +4774,17 @@ end;
   @return TZWildcardsSet type
 }
 function TZAbstractDatabaseMetadata.GetWildcardsSet:TZWildcardsSet;
+{$IFNDEF TSYSCHARSET_IS_DEPRECATED}
 var i:Integer;
+{$ENDIF}
 begin
+  {$IFDEF TSYSCHARSET_IS_DEPRECATED}
+  Result := WildcardsArray;
+  {$ELSE}
   Result:=[];
   for i:=0 to High(WildcardsArray) do
     Result:=Result+[WildcardsArray[i]];
+  {$ENDIF}
 end;
 
 //----------------------------------------------------------------------
@@ -5230,10 +5242,9 @@ end;
 
 function TZDefaultIdentifierConvertor.GetMetaData;
 begin
-  if Assigned(FMetadata) then
-    Result := IZDatabaseMetadata(FMetadata)
-  else
-    Result := nil;
+  if Assigned(FMetadata)
+  then Result := IZDatabaseMetadata(FMetadata)
+  else Result := nil;
 end;
 
 {**
@@ -5288,11 +5299,12 @@ end;
 function TZDefaultIdentifierConvertor.IsQuoted(const Value: string): Boolean;
 var
   QuoteDelim: string;
+  PQ: PChar absolute QuoteDelim;
+  PV: PChar absolute Value;
 begin
   QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-  Result := (QuoteDelim <> '') and (Value <> '') and
-            (Value[1] = QuoteDelim[1]) and
-            (Value[Length(Value)] = QuoteDelim[Length(QuoteDelim)]);
+  Result := (PV <> nil) and (PQ <> nil) and (PV^ = PQ^) and
+            ((PV+Length(Value)-1)^ = (PQ+Length(QuoteDelim)-1)^);
 end;
 
 {**
@@ -5303,14 +5315,14 @@ end;
 function TZDefaultIdentifierConvertor.ExtractQuote(const Value: string): string;
 var
   QuoteDelim: string;
+  PQ: PChar absolute QuoteDelim;
 begin
   if IsQuoted(Value) then begin
     QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
     case Length(QuoteDelim) of
-      1: Result := SQLDequotedStr(Value, QuoteDelim[1]);
-      2: Result := SQLDequotedStr(Value, QuoteDelim[1], QuoteDelim[2]);
-      else
-        Result := Value;
+      1: Result := SQLDequotedStr(Value, PQ^);
+      2: Result := SQLDequotedStr(Value, PQ^, (PQ+1)^);
+      else Result := Value;
     end;
   end else begin
     Result := Value;
@@ -5336,15 +5348,15 @@ end;
 function TZDefaultIdentifierConvertor.Quote(const Value: string): string;
 var
   QuoteDelim: string;
+  PQ: PChar absolute QuoteDelim;
 begin
   Result := Value;
   if IsCaseSensitive(Value) then begin
     QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
     case Length(QuoteDelim) of
-      1: Result := SQLQuotedStr(Value, QuoteDelim[1]);
-      2: Result := SQLQuotedStr(Value, QuoteDelim[1], QuoteDelim[2]);
-      else
-        Result := Value;
+      1: Result := SQLQuotedStr(Value, PQ^);
+      2: Result := SQLQuotedStr(Value, PQ^, (PQ+1)^);
+      else Result := Value;
     end;
   end;
 end;
