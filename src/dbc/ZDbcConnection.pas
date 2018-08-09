@@ -64,7 +64,8 @@ uses
 {$IFDEF WITH_LCONVENCODING}
   LConvEncoding,
 {$ENDIF}
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, StrUtils,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
   ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility, ZGenericSqlToken,
   ZGenericSqlAnalyser, ZPlainDriver, ZURL, ZCollections, ZVariant;
 
@@ -118,7 +119,7 @@ type
     FURL: TZURL;
     FUseMetadata: Boolean;
     FClientVarManager: IZClientVariantManager;
-    fRegisteredStatements: TList; //weak reference to pending stmts
+    fRegisteredStatements: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}; //weak reference to pending stmts
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetPort: Integer;
@@ -239,7 +240,9 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
+    {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; virtual;
+    {$ENDIF}
     function GetBinaryEscapeString(const Value: TBytes): String; overload; virtual;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
@@ -300,9 +303,11 @@ end;
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZEncoding,
+uses ZMessages,{$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}
+  ZDbcMetadata, ZDbcUtils, ZEncoding, StrUtils,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
+  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 { TZAbstractDriver }
 
@@ -807,7 +812,7 @@ begin
   FDriverManager := DriverManager; //just keep refcount high
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
-  fRegisteredStatements := TList.Create;
+  fRegisteredStatements := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   FURL.OnPropertiesChange := OnPropertiesChange;
   FURL.URL := ZUrl.URL;
 
@@ -1207,7 +1212,7 @@ end;
 }
 function TZAbstractConnection.EscapeString(const Value : RawByteString) : RawByteString;
 begin
-  Result := AnsiString(EncodeCString(String(Value)));
+  Result := EncodeCString(Value);
 end;
 
 {**
@@ -1502,10 +1507,9 @@ function TZAbstractConnection.GetEscapeString(const Value: RawByteString): RawBy
 var P: PAnsiChar;
 begin
   P := Pointer(Value);
-  if (P <> nil) and (Length(Value)>1) and (P^=#39) and ((P+Length(Value)-1)^=#39) then
-    Result := Value
-  else
-    Result := SQLQuotedStr(Value, #39);
+  if (P <> nil) and (Length(Value)>1) and (AnsiChar(P^)=AnsiChar(#39)) and (AnsiChar((P+Length(Value)-1)^)=AnsiChar(#39))
+  then Result := Value
+  else Result := SQLQuotedStr(Value, #39);
 end;
 
 {**

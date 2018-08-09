@@ -155,7 +155,7 @@ end;
 }
 function TZMySQLQuoteState.EncodeString(const Value: string; QuoteChar: Char): string;
 begin
-  if CharInSet(QuoteChar, [#39, '"', '`']) then
+  if (Ord(QuoteChar) in [Ord(#39), Ord('"'), Ord('`')]) then
     Result := QuoteChar + EncodeCString(Value) + QuoteChar
   else Result := Value;
 end;

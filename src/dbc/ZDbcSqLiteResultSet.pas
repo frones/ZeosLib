@@ -56,7 +56,11 @@ interface
 {$I ZDbc.inc}
 
 uses
-  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Contnrs{$ENDIF},
+  {$IFDEF WITH_TOBJECTLIST_INLINE}
+    System.Types, System.Contnrs
+  {$ELSE}
+    {$IFNDEF NO_UNIT_CONTNRS} Contnrs{$ELSE}ZClasses{$ENDIF}
+  {$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver,
@@ -144,8 +148,8 @@ type
 implementation
 
 uses
-  ZMessages, ZDbcSqLite, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode,
-  ZVariant, ZDbcSqLiteStatement, ZDbcMetadata, ZClasses
+  ZMessages, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode, ZDbcSqLite,
+  ZVariant, ZDbcMetadata, ZDbcSqLiteStatement {$IFNDEF NO_UNIT_CONTNRS},ZClasses{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**

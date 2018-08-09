@@ -41,6 +41,8 @@
 {********************************************************@}
 // Compilation directives for Lazarus
 
+{$WARN 4055 off : Conversion between ordinals and pointers is not portable} //suppress compiler buggy warning -> our Native(U)Int is Pointer size aligned
+
 {$DEFINE PUREPASCAL}
 
 {$DEFINE MISS_VARIANTCLEAR}           //oleaut32 external function VariantClear is missing
@@ -53,6 +55,7 @@
 {$DEFINE HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES} //seems FPC behaves different to Delphi. Some weired ref issues arrive if Ancastor units using Descendants in implementation uses section??
 {$DEFINE NEED_TYPED_UINT64_CONSTANTS}
 {$DEFINE WITH_PUREPASCAL_INTPOWER}
+{$DEFINE TFIELD_ASWIDESTRING_IS_WIDESTRING}
 {$IFDEF SYSTEMINLINE} //global FPC define
   {$DEFINE WITH_INLINE}           // compiler supports inline methodes
 {$ENDIF}

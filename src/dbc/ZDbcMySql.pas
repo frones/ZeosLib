@@ -289,7 +289,8 @@ begin
 end;
 
 const
-  MySQLSessionTransactionIsolation: array[TZTransactIsolationLevel] of AnsiString = (
+  MySQLSessionTransactionIsolation: array[TZTransactIsolationLevel] of
+    {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF} = (
     'SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ',
     'SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED',
     'SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
@@ -473,8 +474,13 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     end;
 
     { Connect to MySQL database. }
-    if GetPlainDriver.RealConnect(FHandle, PAnsiChar(AnsiString(HostName)),
-                              PAnsiChar(ConSettings^.User), PAnsiChar(AnsiString(Password)),
+    {$IFDEF UNICODE}
+    if GetPlainDriver.RealConnect(FHandle, PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)),
+                              PAnsiChar(ConSettings^.User), PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(Password, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)),
+    {$ELSE}
+    if GetPlainDriver.RealConnect(FHandle, PAnsiChar(HostName),
+                              PAnsiChar(ConSettings^.User), PAnsiChar(Password),
+    {$ENDIF}
                               PAnsiChar(ConSettings^.Database), Port, nil,
                               ClientFlag) = nil then begin
       CheckMySQLError(GetPlainDriver, FHandle, lcConnect, LogMessage, ConSettings);

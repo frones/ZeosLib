@@ -56,7 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, Contnrs, ZDbcIntfs, {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZCollections,
+  Classes, SysUtils, {$IFNDEF NO_UNIT_CONTNRS}Contnrs, {$ENDIF}
+  ZDbcIntfs, ZCollections,
+  {$IF defined(OLDFPC) or defined (NO_UNIT_CONTNRS)}ZClasses,{$IFEND}
   ZGenericSqlAnalyser,
 {$IFDEF FPC}
   {$IFDEF WIN32}

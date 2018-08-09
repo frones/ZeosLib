@@ -57,7 +57,6 @@ interface
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFDEF WITH_WIDESTRUTILS}WideStrUtils, {$ENDIF}
   ZDbcIntfs, ZDbcStatement, ZPlainSqLiteDriver, ZCompatibility, ZDbcLogging,
   ZVariant;
 

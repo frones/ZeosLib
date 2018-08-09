@@ -76,7 +76,7 @@
 {$IFDEF FPC}
   {$I ZeosLazarus.inc}
 {$ELSE}
-  {$IF CompilerVersion >= 31}
+  {$IF CompilerVersion >= 27}
     {$LEGACYIFEND ON}
   {$IFEND}
   {$DEFINE DELPHI}
@@ -209,15 +209,30 @@
                       {$IFNDEF PUREPASCAL}
                         {$DEFINE PUREPASCAL}
                       {$ENDIF}
+                      {$IFDEF NEXTGEN}
+                        {$UNDEF WITH_ASANSISTRING}
+                        {$UNDEF WITH_UNITANSISTRINGS}
+                        {$UNDEF WITH_WIDESTRUTILS}
+                        {$DEFINE TLIST_IS_DEPRECATED}
+                        {$DEFINE NO_INLINE_SIZE_CHECK} 
+                        {$DEFINE NO_ANSISTRING}
+                        {$DEFINE NO_PANSICHAR}
+                        {$DEFINE NO_ANSICHAR} 
+                        {$DEFINE TSYSCHARSET_IS_DEPRECATED} //for compiler warning TSysCharSet is deprected use CharHelper function instead
+                        {$DEFINE NO_RAW_HEXTOBIN} //raw/pAnsichar version of HexToBin does not exits  
+                        {$DEFINE MISS_RBS_SETSTRING_OVERLOAD} //system.SetString is not available for raw strings or i (EH) have no clue how to use it
+                        {$DEFINE NO_UNIT_CONTNRS} //unit Contnrs (TObjectList) doesn't exist any mory 
+						{$DEFINE WITH_USC2_ANSICOMPARESTR_ONLY} //nextgen doesn't have a raw ansicomnparestr function
+                        {$IF CompilerVersion <= 30}
+                          {$DEFINE NO_UTF8STRING}
+                          {$UNDEF WITH_RAWBYTESTRING}
+                          {$DEFINE WITH_TBYTES_AS_RAWBYTESTRING} //this compiler is buggy: _RawByteString is declared but skope is in System.pas only (UTF8Encode returns a unusable value f.e.)
+                        {$IFEND}
+                      {$ENDIF}
                     {$ELSE}
                       {$IFDEF PatchSystemMove}
                         {$UNDEF PatchSystemMove}  //FastCode-Project Move currently not ported to other plattforms
                       {$ENDIF}
-                    {$ENDIF}
-                    {$IFDEF NEXTGEN}
-                      {$UNDEF WITH_UNITANSISTRINGS} //the unit is not available for NEXTGEN
-                      {$UNDEF WITH_ASANSISTRING}    //nextgen does not support the raw AnsiString(GET_ACP) any more
-                      {$DEFINE MISS_RBS_SETSTRING_OVERLOAD} //system.SetString is not available for raw strings or i (EH) have no clue how to use it
                     {$ENDIF}
                     {$DEFINE WITH_SYSTEMCLASSES}          //Need System.Classes
                     {$DEFINE WITH_MAXLISTSIZE_DEPRECATED} //Since XE2 64Bit Integer = Int64 this value is deprecated
@@ -227,17 +242,19 @@
                     {$DEFINE HAVE_TRUE_NATIVE_TYPES}      //since XE2 NativeInt, NativeUint are fixed and behave like FPC SizeInt, PtrInt (4/8Byte)
                     {$DEFINE WITH_FASTCODE_INTTOSTR}      //Since XE2 the full purepascal IntToStr func is included
                     {$DEFINE WITH_PUREPASCAL_INTPOWER}    //Since XE2 a buggy pure pascal version of Math.IntPower was introduced
-
                     {$IF CompilerVersion >= 24} //Delphi XE3+
                       {$UNDEF WIDE_DATASET}                   //TWideDataset and TDataSet are merged together: https://forums.embarcadero.com/thread.jspa?messageID=499588
+                      {$DEFINE NO_POINTER_InternalAddRecord} //since XE3 TDataSet.InternalAddRecord uses the TRecordBuffer
                       {$DEFINE WITH_TVALUEBUFFER}             //SetFieldData/GetFieldData and Parameters using TValueBuffer instead of Pointer
                       {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
                       {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
                       {$DEFINE WITH_GENERIC_TLISTTFIELD}      //GetFieldList() uses the generic TList<TField>
 
                       {$IF CompilerVersion >= 25} //Delphi XE4+
+                        {$UNDEF NO_POINTER_InternalAddRecord}
                         {$DEFINE WITH_VAR_TVALUEBUFFER}	        //GetFieldata overloads using !var! Buffer: TValueBuffer
                         {$DEFINE WITH_BUFFERS_IS_TRECBUF}       //Buffers[index] is TRecBuf type NativeInt
+                        {$DEFINE WITH_GETCALCFIELDS_TRECBUF}    //GetCalcFields expected no TRecordBuffer use TRecBuf type NativeInt instead
                         {$IFNDEF NEXTGEN}
                           {$DEFINE WITH_ANSISTRINGPOS_DEPRECATED} //AnsiStringPos deprecated moved to AnsiStrings
                           {$DEFINE WITH_STRLEN_DEPRECATED}        //StrLen deprecated moved to AnsiStrings
@@ -252,13 +269,17 @@
                           {$DEFINE WITH_STRLCOPY_DEPRECATED}      //StrLCopy is deprecated moved to AnsiStrings
                           {$DEFINE WITH_STRLICOPY_DEPRECATED}     //StrLICopy is deprecated moved to AnsiStrings
                           {$DEFINE WITH_STRLICOMP_DEPRECATED}     //StrLIComp is deprecated moved to AnsiStrings
-                          {$DEFINE WITH_GETCALCFIELDS_TRECBUF}    //GetCalcFields expected no TRecordBuffer use TRecBuf type NativeInt instead
                           {$DEFINE WITH_FLOATTOTEXT_DEPRECATED}   //FloatToText(PAnsi...) is deprecated moved to AnsiStrings
+                        {$ELSE}
+                          {$UNDEF WITH_TRECORDBUFFER} //TRecordBuffer is NativeInt now
                         {$ENDIF}
                         {$IF CompilerVersion >= 26} //Delphi XE5+
                           {$DEFINE WITH_IPROVIDERSUPPORT_NG}    //supports IProviderSupportNG / IProviderSupport is deprecated
                           {$DEFINE TFIELD_HAS_ASLONGWORD}       //TField has supports virtual AsLongWord Gettet & Setter
-
+                          {$IFDEF NEXTGEN}
+                            {$DEFINE WITH_TSYSCHARSET_DEPRECATED}
+                          {$ENDIF}  
+                          {$DEFINE WITH_NATIVEINT_ClearCalcFields} 
                           {$IF CompilerVersion >= 27} //Delphi XE6+
                             {$IF CompilerVersion >= 28} //Delphi XE7+
                               {$UNDEF WITH_DBTABLES} //M.A. In Delphi XE7 no BDE
@@ -266,9 +287,7 @@
                                 {$IF CompilerVersion >= 30} //Delphi Seattle+
                                   {$IF CompilerVersion >= 31} //Delphi Berlin+
                                     {$IFDEF NEXTGEN}
-                                      {$DEFINE NO_ANSISTRING}
                                       {$DEFINE WITH_SYSTEM_PREFIX}
-                                      {$DEFINE WITH_TSYSCHARSET_DEPRECATED}
                                     {$ENDIF}   
                                     {$IF CompilerVersion >= 32} //Delphi Tokyo+
                                       {$DEFINE WITH_SYSTEM_WIN_COMOBJ} //unit ComObj is renamed to System.Win.ComObj 
@@ -312,11 +331,6 @@
       {$DEFINE FAST_MOVE}
     {$IFEND}
   {$IFEND CompilerVersion < 15}
-{$ENDIF}
-
-{$IFDEF NEXTGEN}
-  {$UNDEF WITH_ASANSISTRING}
-  {$UNDEF WITH_UNITANSISTRINGS}
 {$ENDIF}
 
 {$IFDEF LINUX}

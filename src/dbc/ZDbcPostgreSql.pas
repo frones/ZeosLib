@@ -158,7 +158,7 @@ type
     procedure InternalCreate; override;
     function GetUndefinedVarcharAsStringLength: Integer;
     function GetTableInfo(const TblOid: Oid): PZPGTableInfo;
-    function BuildConnectStr: AnsiString;
+    function BuildConnectStr: RawByteString;
     procedure DeallocatePreparedStatements;
     procedure DoStartTransaction;
     procedure DoCommit;
@@ -246,14 +246,14 @@ implementation
 uses
   ZFastCode, ZMessages, ZSysUtils, ZDbcPostgreSqlStatement,
   ZDbcPostgreSqlUtils, ZDbcPostgreSqlMetadata, ZPostgreSqlToken,
-  ZPostgreSqlAnalyser, ZEncoding;
+  ZPostgreSqlAnalyser, ZEncoding, ZDbcUtils;
 
 const
   FON = String('ON');
   standard_conforming_strings = 'standard_conforming_strings';
-  cBegin: AnsiString = 'BEGIN';
-  cCommit: AnsiString = 'COMMIT';
-  cRollback: AnsiString = 'ROLLBACK';
+  cBegin: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF} = 'BEGIN';
+  cCommit: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF} = 'COMMIT';
+  cRollback: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF} = 'ROLLBACK';
 
 procedure DefaultNoticeProcessor({%H-}arg: Pointer; message: PAnsiChar); cdecl;
 begin
@@ -514,27 +514,27 @@ end;
   Builds a connection string for PostgreSQL.
   @return a built connection string.
 }
-function TZPostgreSQLConnection.BuildConnectStr: AnsiString;
+function TZPostgreSQLConnection.BuildConnectStr: RawByteString;
 var
-  ConnectTimeout: Integer;
-  // backslashes and single quotes must be escaped with backslashes
-  function EscapeValue(AValue: String): String;
-  begin
-    Result := StringReplace(AValue, '\', '\\', [rfReplaceAll]);
-    Result := StringReplace(Result, '''', '\''', [rfReplaceAll]);
-  end;
-
+  ConnectTimeout, Cnt: Integer;
+  Buf: TRawBuff;
   //parameters should be separated by whitespace
-  procedure AddParamToResult(AParam, AValue: String);
+  procedure AddParamToResult(const AParam: RawByteString;
+    const AValue: String);
   begin
-    if Result <> '' then
-      Result := Result + ' ';
-
-    Result := Result + AnsiString(AParam+'='+QuotedStr(EscapeValue(AValue)));
+    if Cnt > 0 then
+      ToBuff(AnsiChar(' '),Buf, Result);
+    ToBuff(AParam, Buf, Result);
+    ToBuff(AnsiChar('='),Buf, Result);
+    // backslashes and single quotes must be escaped with backslashes
+    ToBuff(SQLQuotedStr(EncodeCString({$IFDEF UNICODE}RawByteString{$ENDIF}(AValue)), AnsiChar(#39)),Buf, Result);
+    Inc(Cnt);
   end;
 begin
   //Init the result to empty string.
   Result := '';
+  Cnt := 0;
+  Buf.Pos := 0;
   //Entering parameters from the ZConnection
   If IsIpAddr(HostName) then
     AddParamToResult('hostaddr', HostName)
@@ -575,6 +575,7 @@ begin
   { Sets the application name }
   if Info.Values['application_name'] <> '' then
     AddParamToResult('application_name', Info.Values['application_name']);
+  FlushBuff(Buf, Result);
 end;
 
 {**

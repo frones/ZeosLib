@@ -129,7 +129,7 @@ type
 implementation
 
 uses
-  Variants, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF},
+  Variants, Math, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF},
   ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZClasses;
 
 {**

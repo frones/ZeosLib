@@ -58,7 +58,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, Contnrs,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
+  {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF},
   ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
   ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement,
   ZPlainMySqlDriver, ZPlainMySqlConstants, ZSelectSchema;
@@ -230,12 +231,8 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
-  ZFastCode, ZSysUtils, ZMessages, ZEncoding, ZClasses,
+  ZFastCode, ZSysUtils, ZMessages, ZEncoding, {$IFNDEF NO_UNIT_CONTNRS}ZClasses,{$ENDIF}
   ZDbcMySqlUtils, ZDbcMySQL, ZDbcUtils, ZDbcMetadata, ZDbcLogging;
-
-{$IFOPT R+}
-  {$DEFINE RangeCheckEnabled}
-{$ENDIF}
 
 { TZMySQLResultSetMetadata }
 
@@ -2244,7 +2241,7 @@ begin
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColBind^.length > 0 ) and
            (FColBind^.length < 30{Max Extended Length = 28 ??+#0} ) then
-          RawToFloatDef(GetBlob(ColumnIndex).GetBuffer, '.', 0, Result)
+          RawToFloatDef(GetBlob(ColumnIndex).GetBuffer, AnsiChar('.'), 0, Result)
         else //avoid senceless processing
           Result := 0;
       else

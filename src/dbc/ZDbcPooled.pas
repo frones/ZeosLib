@@ -55,8 +55,8 @@ interface
 implementation
 
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs, DateUtils, SysUtils,
-  SyncObjs,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SyncObjs,
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} DateUtils, SysUtils,
   ZCompatibility, ZClasses, ZURL, ZDbcConnection, ZDbcIntfs, ZPlainDriver,
   ZMessages, ZVariant;
 

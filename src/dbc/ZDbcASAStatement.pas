@@ -124,7 +124,7 @@ type
 implementation
 
 uses ZSysUtils, ZDbcUtils, ZMessages, ZPlainASAConstants, ZDbcASAResultSet,
-  ZEncoding;
+  ZEncoding, ZFastCode;
 
 { TZASAPreparedStatement }
 
@@ -142,7 +142,7 @@ begin
   FASAConnection := Connection as IZASAConnection;
   FetchSize := BlockSize;
   ResultSetType := rtScrollSensitive;
-  CursorName := AnsiString(RandomString(12));
+  CursorName := IntToRaw(NativeUInt(FASAConnection.GetDBHandle))+IntToRaw(FStatementId);
   FParamSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
     FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings);
 end;
@@ -402,7 +402,7 @@ begin
   ResultSetConcurrency := rcUpdatable;
   ResultSetType := rtScrollSensitive;
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
-  CursorName := AnsiString(RandomString(12));
+  CursorName := IntToRaw(NativeUInt(FASAConnection.GetDBHandle))+IntToRaw(FStatementId);
   FParamSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
     FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings);
   FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
@@ -558,7 +558,6 @@ end;
 {$HINTS OFF}
 function TZASACallableStatement.ExecuteQueryPrepared: IZResultSet;
 var
-  Cursor: AnsiString;
   CursorOptions: SmallInt;
 begin
   if not FPrepared then
@@ -575,18 +574,17 @@ begin
         CursorOptions := CUR_OPEN_DECLARE + CUR_READONLY;
       if ResultSetType = rtScrollInsensitive then
         CursorOptions := CursorOptions + CUR_INSENSITIVE;
-      Cursor := CursorName;
-      GetPlainDriver.db_open(GetDBHandle, Pointer(Cursor), nil, @FStmtNum,
+      GetPlainDriver.db_open(GetDBHandle, Pointer(FCursorName), nil, @FStmtNum,
         FParamSQLData.GetData, FetchSize, 0, CursorOptions);
       ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, ConSettings, ASQL);
       Closed := false;
       try
         if FMoreResults then
-          DescribeCursor( FASAConnection, FSQLData, Cursor, ASQL);
+          DescribeCursor( FASAConnection, FSQLData, FCursorName, ASQL);
 
         LastUpdateCount := -1;
         Result := GetCachedResultSet( Self.SQL, Self,
-          TZASANativeResultSet.Create( Self, Self.SQL, FStmtNum, Cursor, FSQLData, FCachedBlob));
+          TZASANativeResultSet.Create( Self, Self.SQL, FStmtNum, FCursorName, FSQLData, FCachedBlob));
 
         { Logging SQL Command }
         DriverManager.LogMessage( lcExecute, ConSettings^.Protocol, ASQL);

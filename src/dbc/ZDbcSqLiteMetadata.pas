@@ -1631,7 +1631,7 @@ begin
     begin
       while MainResultSet.Next do
       begin
-        if (ZFastCode.Pos(AnsiString(' autoindex '), MainResultSet.GetRawByteString(main_name_field_index)) = 0)
+        if (ZFastCode.Pos({$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF}(' autoindex '), MainResultSet.GetRawByteString(main_name_field_index)) = 0)
           and ((Unique = False) or (MainResultSet.GetInt(main_unique_field_index) = 0)) then
         begin
           ResultSet := GetConnection.CreateStatement.ExecuteQuery(
@@ -1646,7 +1646,7 @@ begin
             Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, MainResultSet.GetPAnsiChar(main_name_field_index, Len), @Len);
             Result.UpdateInt(IndexInfoColOrdPositionIndex, ResultSet.GetInt(sub_seqno_field_index)+FirstDbcIndex);
             Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, ResultSet.GetPAnsiChar(sub_name_field_index, Len), @Len);
-            Result.UpdateString(IndexInfoColAscOrDescIndex, 'A');
+            Result.UpdateRawByteString(IndexInfoColAscOrDescIndex, 'A');
             Result.UpdateInt(IndexInfoColCardinalityIndex, 0);
             Result.UpdateInt(IndexInfoColPagesIndex, 0);
             Result.InsertRow;

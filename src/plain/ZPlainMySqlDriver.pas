@@ -181,7 +181,7 @@ type
     {ADDED by EgonHugeist}
     function set_character_set(mysql: PMYSQL; const csname: PAnsiChar): Integer; // set_character_set returns 0 if valid
     // set_server_option
-    function GetSQLState (mysql: PMYSQL): AnsiString;
+    function GetSQLState (mysql: PMYSQL): {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
     // warning_count
 
     function EscapeString(mysql: PMYSQL; PTo: PAnsiChar; const PFrom: PAnsiChar; length: ULong): ULong;
@@ -193,7 +193,7 @@ type
     function stmt_close(stmt: PMYSQL_STMT): Byte;
     procedure stmt_data_seek(stmt: PMYSQL_STMT; Offset: Cardinal);
     function stmt_errno(stmt: PMYSQL_STMT): Integer;
-    function stmt_error(stmt: PMYSQL_STMT): AnsiString;
+    function stmt_error(stmt: PMYSQL_STMT): {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
     function stmt_execute(stmt: PMYSQL_STMT): Integer;
     function stmt_fetch(stmt: PMYSQL_STMT): Integer;
     function stmt_fetch_column(stmt: PMYSQL_STMT; bind: Pointer{BIND record}; column: UInt; offset: ULong): Integer;
@@ -354,12 +354,12 @@ type
     mariadb_stmt_execute_direct:  function(stmt: PMYSQL_STMT; query: PAnsiChar; Length: ULong): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   protected
     ServerArgs: array of PAnsiChar;
-    ServerArgsLen: Integer;
+    ServerArgsRaw: array of RawByteString;
     IsEmbeddedDriver: Boolean;
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
     procedure LoadApi; override;
-    procedure BuildServerArguments(Options: TStrings);
+    procedure BuildServerArguments(const Options: TStrings);
   public
     constructor Create;
     destructor Destroy; override;
@@ -397,7 +397,7 @@ type
     function CheckAnotherRowset   (mysql: PMYSQL): Boolean;
     function RetrieveNextRowset   (mysql: PMYSQL): Integer;
     function Rollback (mysql: PMYSQL): Boolean;
-    function GetSQLState (mysql: PMYSQL): AnsiString;
+    function GetSQLState (mysql: PMYSQL): {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
 
     function stmt_attr_set(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType;
                                   arg: Pointer): Byte;
@@ -407,7 +407,7 @@ type
     function stmt_close(stmt: PMYSQL_STMT): Byte;
     procedure stmt_data_seek(stmt: PMYSQL_STMT; Offset: Cardinal);
     function stmt_errno(stmt: PMYSQL_STMT): Integer;
-    function stmt_error(stmt: PMYSQL_STMT): AnsiString;
+    function stmt_error(stmt: PMYSQL_STMT): {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
     function stmt_execute(stmt: PMYSQL_STMT): Integer;
     function stmt_fetch(stmt: PMYSQL_STMT): Integer;
     function stmt_fetch_column(stmt: PMYSQL_STMT; bind: Pointer{BIND record};
@@ -725,7 +725,7 @@ begin
   end;
 end;
 
-procedure TZMySQLPlainDriver.BuildServerArguments(Options: TStrings);
+procedure TZMySQLPlainDriver.BuildServerArguments(const Options: TStrings);
 var
   TmpList: TStringList;
   i: Integer;
@@ -742,18 +742,22 @@ begin
     if TmpList.Values['--datadir'] = '' then
        TmpList.Add('--datadir='+EMBEDDED_DEFAULT_DATA_DIR);
 
-    for i := 0 to ServerArgsLen - 1 do
-      {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(ServerArgs[i]);
-    ServerArgsLen := TmpList.Count;
-    SetLength(ServerArgs, ServerArgsLen);
-    for i := 0 to ServerArgsLen - 1 do
+    SetLength(ServerArgs, TmpList.Count);
+    SetLength(ServerArgsRaw, TmpList.Count);
+    for i := 0 to TmpList.Count - 1 do begin
       {$IFDEF UNICODE}
-      ServerArgs[i] := {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(AnsiString(TmpList[i])));
+      ServerArgsRaw[i] := ZUnicodeToRaw(TmpList[i], ZOSCodePage);
       {$ELSE}
-      ServerArgs[i] := StrNew(PAnsiChar(TmpList[i]));
+      ServerArgsRaw[i] := TmpList[i];
       {$ENDIF}
+      ServerArgs[i] :=  Pointer(TmpList[i]);
+    end;
   finally
+    {$IFDEF AUTOREFCOUNT}
+    TmpList := nil;
+    {$ELSE}
     TmpList.Free;
+    {$ENDIF}
   end;
 end;
 
@@ -768,18 +772,14 @@ begin
     FLoader.AddLocation(LINUX_DLL_LOCATION);
   {$ENDIF}
 {$ENDIF}
-  ServerArgsLen := 0;
-  SetLength(ServerArgs, ServerArgsLen);
   IsEmbeddedDriver := False;
   LoadCodePages;
 end;
 
 destructor TZMySQLPlainDriver.Destroy;
-var
-  i : integer;
 begin
-  for i := 0 to ServerArgsLen - 1 do
-    {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(ServerArgs[i]);
+  SetLength(ServerArgs, 0);
+  SetLength(ServerArgsRaw, 0);
 
   if (FLoader.Loaded) then
     if Assigned(mysql_library_end) then
@@ -975,16 +975,17 @@ var
   ErrorNo: Integer;
 begin
   if (Assigned(mysql_server_init) or Assigned(mysql_library_init)){ and (ServerArgsLen > 0) }then begin
-    if Assigned(mysql_library_init) then
-      //http://dev.mysql.com/doc/refman/5.7/en/mysql-library-init.html
-      ErrorNo := mysql_library_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS) //<<<-- Isn't threadsafe
-    else
-      //http://dev.mysql.com/doc/refman/5.7/en/mysql-server-init.html
-      ErrorNo := mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS); //<<<-- Isn't threadsafe
-    if ErrorNo <> 0 then raise Exception.Create('Could not initialize the MySQL / MariaDB client library. Error No: ' + ZFastCode.IntToStr(ErrorNo));  // The manual says nothing else can be called until this call succeeds. So lets just throw the error number...
+    ErrorNo := Length(ServerArgs);
+    if Assigned(mysql_library_init) then //http://dev.mysql.com/doc/refman/5.7/en/mysql-library-init.html
+      ErrorNo := mysql_library_init(ErrorNo, ServerArgs, @SERVER_GROUPS) //<<<-- Isn't threadsafe
+    else //http://dev.mysql.com/doc/refman/5.7/en/mysql-server-init.html
+      ErrorNo := mysql_server_init(ErrorNo, ServerArgs, @SERVER_GROUPS); //<<<-- Isn't threadsafe
+    if ErrorNo <> 0 then
+      raise Exception.Create('Could not initialize the MySQL / MariaDB client library. Error No: ' + ZFastCode.IntToStr(ErrorNo));  // The manual says nothing else can be called until this call succeeds. So lets just throw the error number...
   end;
   Result := mysql_init(mysql);
-  if not Assigned(Result) then raise Exception.Create('Could not finish the call to mysql_init. Not enough memory?');
+  if not Assigned(Result) then
+    raise Exception.Create('Could not finish the call to mysql_init. Not enough memory?');
   ClientInfo := GetClientInfo;
   L := ZFastCode.StrLen(ClientInfo);
   FIsMariaDBDriver := Assigned(mariadb_stmt_execute_direct) or CompareMem(ClientInfo+L-7, PAnsiChar('MariaDB'), 7);
@@ -1079,7 +1080,7 @@ begin
   Result := mysql_rollback(mysql) = 0;
 end;
 
-function TZMySQLPlainDriver.GetSQLState(mysql: PMYSQL): AnsiString;
+function TZMySQLPlainDriver.GetSQLState(mysql: PMYSQL): {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
 begin
   Result := mysql_sqlstate (mysql);
 end;
@@ -1124,7 +1125,7 @@ begin
     Result := mysql_stmt_errno(stmt);
 end;
 
-function TZMySQLPlainDriver.stmt_error(stmt: PMYSQL_STMT):AnsiString;
+function TZMySQLPlainDriver.stmt_error(stmt: PMYSQL_STMT):{$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
 begin
     Result := mysql_stmt_error(stmt);
 end;

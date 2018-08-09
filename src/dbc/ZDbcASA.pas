@@ -56,7 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  ZCompatibility, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs, SysUtils,
+  ZCompatibility, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}SysUtils,
+  {$IF defined (OLDFPC) or defined(NO_UNIT_CONTNRS)}ZClasses,{$IFEND}
   ZDbcIntfs, ZDbcConnection, ZPlainASADriver, ZTokenizer, ZDbcGenericResolver,
   ZURL, ZGenericSqlAnalyser, ZPlainASAConstants;
 
@@ -128,7 +130,8 @@ implementation
 
 uses
   ZFastCode, ZDbcASAMetadata, ZDbcASAStatement, ZDbcASAUtils, ZSybaseToken,
-  ZSybaseAnalyser, ZDbcLogging, ZSysUtils, ZClasses
+  ZSybaseAnalyser, ZDbcLogging, ZSysUtils, ZEncoding
+  {$IF not defined(OLDFPC) and not defined(NO_UNIT_CONTNRS)},ZClasses{$IFEND}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZASADriver }
@@ -390,6 +393,9 @@ end;
 procedure TZASAConnection.Open;
 var
   ConnectionString, Links: string;
+  {$IFDEF UNICODE}
+  RawTemp: RawBytEString;
+  {$ENDIF}
 begin
   if not Closed then
      Exit;
@@ -430,8 +436,13 @@ begin
     if Links <> ''
       then ConnectionString := ConnectionString + Links + '; ';
 
-    GetPlainDriver.db_string_connect(FHandle, PAnsiChar(AnsiString(ConnectionString)));
-    CheckASAError( GetPlainDriver, FHandle, lcConnect, ConSettings);
+    {$IFDEF UNICODE}
+    RawTemp := ZUnicodeToRaw(ConnectionString, ZOSCodePage);
+    GetPlainDriver.db_string_connect(FHandle, Pointer(RawTemp));
+    {$ELSE}
+    FPlainDriver.db_string_connect(FHandle, PAnsiChar(ConnectionString));
+    {$ENDIF}
+    CheckASAError( FPlainDriver, FHandle, lcConnect, ConSettings);
 
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
       'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"');
@@ -439,6 +450,15 @@ begin
     if ( FClientCodePage <> '' ) then
       if ( GetPlainDriver.db_change_char_charset(FHandle, PAnsiChar(AnsiString(FClientCodePage))) = 0 ) or
          ( GetPlainDriver.db_change_nchar_charset(FHandle, PAnsiChar(AnsiString(FClientCodePage))) = 0 ) then
+        CheckASAError( GetPlainDriver, FHandle, lcOther, ConSettings, 'Set client CharacterSet failed.');
+      {$IFDEF UNICODE}
+      RawTemp := ZUnicodeToRaw(FClientCodePage, ZOSCodePage);
+      if ( GetPlainDriver.db_change_char_charset(FHandle, Pointer(RawTemp)) = 0 ) or
+         ( GetPlainDriver.db_change_nchar_charset(FHandle, Pointer(RawTemp)) = 0 ) then
+      {$ELSE}
+      if ( GetPlainDriver.db_change_char_charset(FHandle, PAnsiChar(FClientCodePage)) = 0 ) or
+         ( GetPlainDriver.db_change_nchar_charset(FHandle, PAnsiChar(FClientCodePage)) = 0 ) then
+      {$ENDIF}
         CheckASAError( GetPlainDriver, FHandle, lcOther, ConSettings, 'Set client CharacterSet failed.');
 
     StartTransaction;
@@ -482,6 +502,9 @@ begin
   end;
 end;
 
+const
+  SQLDA_sqldaid: PAnsiChar = 'SQLDA   ';
+
 procedure TZASAConnection.SetOption(Temporary: Integer; User: PAnsiChar;
   const Option: string; const Value: string);
 var
@@ -497,7 +520,7 @@ begin
     Sz := SizeOf( TASASQLDA) - 32767 * SizeOf( TZASASQLVAR);
     SQLDA := AllocMem( Sz);
     try
-      {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy( SQLDA.sqldaid, 'SQLDA   ', 8);
+      Move(SQLDA_sqldaid^, SQLDA.sqldaid[0], 8);
       SQLDA.sqldabc := Sz;
       SQLDA.sqln := 1;
       SQLDA.sqld := 1;

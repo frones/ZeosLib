@@ -56,7 +56,7 @@ interface
 {$I ZCore.inc}
 
 uses SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
-  {$IFDEF NEXTGEN}System.Generics.Collections{$ELSE}Contnrs{$ENDIF},
+  {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF},
   ZCompatibility, ZVariant, ZTokenizer;
 
 type
@@ -89,9 +89,9 @@ type
   private
     FTokenizer: IZTokenizer;
     FExpression: string;
-    FInitialTokens: TObjectList{$IFDEF NEXTGEN}<TZExpressionToken>{$ENDIF};
+    FInitialTokens: TObjectList;
     FTokenIndex: Integer;
-    FResultTokens: TObjectList{$IFDEF NEXTGEN}<TZExpressionToken>{$ENDIF};
+    FResultTokens: TObjectList;
     FVariables: TStrings;
 
     function HasMoreTokens: Boolean;
@@ -119,7 +119,7 @@ type
 
     property Tokenizer: IZTokenizer read FTokenizer write FTokenizer;
     property Expression: string read FExpression write Parse;
-    property ResultTokens: TObjectList{$IFDEF NEXTGEN}<TZExpressionToken>{$ENDIF} read FResultTokens;
+    property ResultTokens: TObjectList read FResultTokens;
     property Variables: TStrings read FVariables;
   end;
 
@@ -167,9 +167,9 @@ constructor TZExpressionParser.Create(const Tokenizer: IZTokenizer);
 begin
   FTokenizer := Tokenizer;
   FExpression := '';
-  FInitialTokens := TObjectList{$IFDEF NEXTGEN}<TZExpressionToken>{$ENDIF}.Create;
+  FInitialTokens := TObjectList.Create;
   FTokenIndex := 0;
-  FResultTokens := TObjectList{$IFDEF NEXTGEN}<TZExpressionToken>{$ENDIF}.Create;
+  FResultTokens := TObjectList.Create;
   FVariables := TStringList.Create;
 end;
 

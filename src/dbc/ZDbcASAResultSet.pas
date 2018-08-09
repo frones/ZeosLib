@@ -69,7 +69,7 @@ type
     FSQLDA: PASASQLDA;
     FCachedBlob: boolean;
     FFetchStat: Integer;
-    FCursorName: AnsiString;
+    FCursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
     FStmtNum: SmallInt;
     FSqlData: IZASASQLDA;
     FASAConnection: IZASAConnection;
@@ -81,7 +81,7 @@ type
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
-      var StmtNum: SmallInt; const CursorName: AnsiString;
+      var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
       const SqlData: IZASASQLDA; CachedBlob: boolean);
 
     procedure Close; override;
@@ -113,7 +113,7 @@ type
   TZASAParamererResultSet = Class(TZASAAbstractResultSet)
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
-      var StmtNum: SmallInt; const CursorName: AnsiString; const SqlData: IZASASQLDA;
+      var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SqlData: IZASASQLDA;
       CachedBlob: boolean);
     function Next: Boolean; override;
   end;
@@ -136,7 +136,7 @@ type
     procedure PrepareUpdateSQLData;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
-      var StmtNum: SmallInt; const CursorName: AnsiString; const SqlData: IZASASQLDA;
+      var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SqlData: IZASASQLDA;
       CachedBlob: boolean);
 
     procedure Close; override;
@@ -207,7 +207,7 @@ uses
   @param the Interbase sql dialect
 }
 constructor TZASAAbstractResultSet.Create(const Statement: IZStatement;
-  const SQL: string; var StmtNum: SmallInt; const CursorName: AnsiString;
+  const SQL: string; var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
   const SqlData: IZASASQLDA; CachedBlob: boolean);
 begin
   inherited Create( Statement, SQL, nil,Statement.GetConnection.GetConSettings);
@@ -1045,7 +1045,7 @@ begin
           begin
             P := @PZASASQLSTRING(sqlData).data[0];
             Len := PZASASQLSTRING( sqlData).length;
-            if (P+2)^ = ':' then //possible date if Len = 10 then
+            if AnsiChar((P+2)^) = AnsiChar(':') then //possible date if Len = 10 then
               Result := RawSQLTimeToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
               Result := Frac(RawSQLTimeStampToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed));
@@ -1094,7 +1094,7 @@ begin
           begin
             P := @PZASASQLSTRING(sqlData).data[0];
             Len := PZASASQLSTRING( sqlData).length;
-            if (P+2)^ = ':' then
+            if AnsiChar((P+2)^) = AnsiChar(':') then
               Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
               if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
@@ -1323,7 +1323,7 @@ end;
 { TZASAParamererResultSet }
 
 constructor TZASAParamererResultSet.Create(const Statement: IZStatement;
-  const SQL: string; var StmtNum: SmallInt; const CursorName: AnsiString;
+  const SQL: string; var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
   const SqlData: IZASASQLDA; CachedBlob: boolean);
 begin
   inherited Create(Statement, SQL, StmtNum, CursorName, SqlData, CachedBlob);
@@ -1500,7 +1500,7 @@ end;
 
 { TZASACachedResultSet }
 constructor TZASACachedResultSet.Create(const Statement: IZStatement; const SQL: string;
-  var StmtNum: SmallInt; const CursorName: AnsiString; const SqlData: IZASASQLDA;
+  var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SqlData: IZASASQLDA;
   CachedBlob: boolean);
 begin
   inherited Create(Statement, SQL, StmtNum, CursorName, SqlData, CachedBlob);

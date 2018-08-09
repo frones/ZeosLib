@@ -497,10 +497,9 @@ begin
   begin
     LastState := pg_CS_stat(LastState,integer(SrcBuffer^),
       TZPgCharactersetType(ConSettings.ClientCodePage.ID));
-    if (SrcBuffer^ in [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
-      Inc(DestLength, 4)
-    else
-      Inc(DestLength);
+    if (PByte(SrcBuffer)^ in [Ord(#0), Ord(#39)]) or ((PByte(SrcBuffer)^ = Ord('\')) and (LastState = 0))
+    then Inc(DestLength, 4)
+    else Inc(DestLength);
     Inc(SrcBuffer);
   end;
 
@@ -508,32 +507,28 @@ begin
   SetLength(Result, DestLength);
   DestBuffer := Pointer(Result);
   if Quoted then begin
-    DestBuffer^ := '''';
+    PByte(DestBuffer)^ := Ord(#39);
     Inc(DestBuffer);
   end;
 
   LastState := 0;
-  for I := 1 to SrcLength do
-  begin
+  for I := 1 to SrcLength do begin
     LastState := pg_CS_stat(LastState,integer(SrcBuffer^),
       TZPgCharactersetType(ConSettings.ClientCodePage.ID));
-    if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
-    begin
-      DestBuffer[0] := '\';
-      DestBuffer[1] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) shr 6));
-      DestBuffer[2] := AnsiChar(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
-      DestBuffer[3] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) and $07));
+    if (PByte(SrcBuffer)^ in [Ord(#0), Ord(#39)]) or ((PByte(SrcBuffer)^ = Ord('\')) and (LastState = 0)) then begin
+      PByte(DestBuffer)^ := Ord('\');
+      PByte(DestBuffer+1)^ := Ord('0') + (Byte(SrcBuffer^) shr 6);
+      PByte(DestBuffer+2)^ := Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07);
+      PByte(DestBuffer+3)^ := Ord('0') + (Byte(SrcBuffer^) and $07);
       Inc(DestBuffer, 4);
-    end
-    else
-    begin
+    end else begin
       DestBuffer^ := SrcBuffer^;
       Inc(DestBuffer);
     end;
     Inc(SrcBuffer);
   end;
   if Quoted then
-    DestBuffer^ := '''';
+    PByte(DestBuffer)^ := Ord(#39);
 end;
 
 
@@ -556,11 +551,9 @@ begin
   DestLength := Ord(Quoted) shl 1;
   for I := 1 to Len do
   begin
-    if (Byte(SrcBuffer^) < 32) or (Byte(SrcBuffer^) > 126)
-    or (SrcBuffer^ in ['''', '\']) then
-      Inc(DestLength, 5)
-    else
-      Inc(DestLength);
+    if (Byte(SrcBuffer^) < 32) or (Byte(SrcBuffer^) > 126) or (PByte(SrcBuffer)^ in [Ord(#39), Ord('\')])
+    then Inc(DestLength, 5)
+    else Inc(DestLength);
     Inc(SrcBuffer);
   end;
   SrcBuffer := DestBuffer; //restore
@@ -568,23 +561,19 @@ begin
   SetLength(Result, DestLength);
   DestBuffer := Pointer(Result);
   if Quoted then begin
-    DestBuffer^ := '''';
+    PByte(DestBuffer)^ := Ord(#39);
     Inc(DestBuffer);
   end;
 
-  for I := 1 to Len do
-  begin
-    if (Byte(SrcBuffer^) < 32) or (Byte(SrcBuffer^) > 126) or (SrcBuffer^ in ['''', '\']) then
-    begin
-      DestBuffer[0] := '\';
-      DestBuffer[1] := '\';
-      DestBuffer[2] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) shr 6));
-      DestBuffer[3] := AnsiChar(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
-      DestBuffer[4] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) and $07));
+  for I := 1 to Len do begin
+    if (Byte(SrcBuffer^) < 32) or (Byte(SrcBuffer^) > 126) or (PByte(SrcBuffer)^ in [Ord(#39), Ord('\')]) then begin
+      PByte(DestBuffer)^ := Ord('\');
+      PByte(DestBuffer+1)^ := Ord('\');
+      PByte(DestBuffer+2)^ := Ord('0') + (Byte(SrcBuffer^) shr 6);
+      PByte(DestBuffer+3)^ := Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07);
+      PByte(DestBuffer+4)^ := Ord('0') + (Byte(SrcBuffer^) and $07);
       Inc(DestBuffer, 5);
-    end
-    else
-    begin
+    end else begin
       DestBuffer^ := SrcBuffer^;
       Inc(DestBuffer);
     end;

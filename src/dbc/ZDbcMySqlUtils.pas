@@ -160,7 +160,8 @@ function GetFieldOffsets(Version: Integer): PMYSQL_FIELDOFFSETS;
 
 implementation
 
-uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} Math,
+uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
+  Math, TypInfo,
   ZMessages, ZDbcUtils, ZFastCode, ZEncoding, ZClasses;
 
 threadvar
@@ -426,7 +427,7 @@ var
   var tmp: ZWideString;
   {$ENDIF}
   begin
-    if (Buf = nil) or (Buf^ = #0) then
+    if (Buf = nil) or (AnsiChar(Buf^) = AnsiChar(#0)) then
       Result := ''
     else begin
       {$IFDEF UNICODE}

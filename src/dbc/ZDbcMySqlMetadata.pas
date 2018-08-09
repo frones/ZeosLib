@@ -1295,20 +1295,16 @@ begin
             { Sets nullable fields. }
             Nullable := GetString(ColumnIndexes[3]);
             if Nullable <> '' then
-              if Nullable = 'YES' then
-              begin
+              if Nullable = 'YES' then begin
                 Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
-                Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
-              end
-              else
-              begin
+                Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'YES');
+              end else begin
                 Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNoNulls));
-                Result.UpdateString(TableColColumnIsNullableIndex, 'NO');
+                Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'NO');
               end
-            else
-            begin
+            else begin
               Result.UpdateInt(TableColColumnNullableIndex, 0);
-              Result.UpdateString(TableColColumnIsNullableIndex, 'NO');
+              Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'NO');
             end;
             Result.UpdatePAnsiChar(TableColColumnRemarksIndex, GetPAnsiChar(ColumnIndexes[4], Len), @Len);
             // MySQL is a bit bizarre.
@@ -2678,7 +2674,7 @@ begin
                   Params.Insert(0,'IN'); //Function in value
 
             Result.MoveToInsertRow;
-            Result.UpdatePAnsiChar(CatalogNameIndex, 'def');
+            Result.UpdateRawByteString(CatalogNameIndex, 'def');
             Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(PROCEDURE_SCHEM_index, Len), @Len); //PROCEDURE_SCHEM
             Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiChar(PROCEDURE_NAME_Index, Len), @Len); //PROCEDURE_NAME
             TypeName := ConSettings^.ConvFuncs.ZStringToRaw(Params[2], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
@@ -2687,7 +2683,7 @@ begin
             { process COLUMN_NAME }
             if Params[1] = '' then
               if Params[0] = 'RETURNS' then
-                Result.UpdateString(ProcColColumnNameIndex, 'ReturnValue')
+                Result.UpdateRawByteString(ProcColColumnNameIndex, 'ReturnValue')
               else
                 Result.UpdateString(ProcColColumnNameIndex, GetNextName('$', True))
             else

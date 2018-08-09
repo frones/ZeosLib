@@ -299,29 +299,27 @@ end;
 procedure TZDBLibConnection.InternalLogin;
 var
   Loginrec: PLOGINREC;
-  LogMessage: RawByteString;
-  S: string;
+  RawTemp, LogMessage: RawByteString;
   lLogFile  : String;
 begin
-  LogMessage := 'CONNECT TO "'+AnsiString(HostName)+'"';
+  LogMessage := 'CONNECT TO "'+ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings.CTRL_CP, ZOSCodePage)+'"';
   LoginRec := GetPLainDriver.dbLogin;
   try
 //Common parameters
-    S := Info.Values['workstation'];
-    if S <> '' then
-      GetPlainDriver.dbSetLHost(LoginRec, PAnsiChar(AnsiString(S)));
+    RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values['workstation'], ConSettings.CTRL_CP, ZOSCodePage);
+    if Pointer(RawTemp) <> nil then
+      GetPlainDriver.dbSetLHost(LoginRec, Pointer(RawTemp));
 
-    S := Info.Values['appname'];
-    if S <> '' then
-      GetPlainDriver.dbSetLApp(LoginRec, PAnsiChar(AnsiString(S)));
+    RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values['appname'], ConSettings.CTRL_CP, ZOSCodePage);
+    if Pointer(RawTemp) <> nil then
+      GetPlainDriver.dbSetLApp(LoginRec, Pointer(RawTemp));
 
-    S := Info.Values['language'];
-    if S <> '' then
-      GetPlainDriver.dbSetLNatLang(LoginRec, PAnsiChar(AnsiString(S)));
+    RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values['language'], ConSettings.CTRL_CP, ZOSCodePage);
+    if Pointer(RawTemp) <> nil then
+      GetPlainDriver.dbSetLNatLang(LoginRec, Pointer(RawTemp));
 
-    S := Info.Values['timeout'];
-    if S <> '' then
-      GetPlainDriver.dbSetLoginTime(StrToIntDef(S, 60));
+    if Info.Values['timeout'] <> '' then
+      GetPlainDriver.dbSetLoginTime(StrToIntDef(Info.Values['timeout'], 60));
 
     if FFreeTDS then
     begin
@@ -339,47 +337,35 @@ begin
     end;
 
 
-    //mssql specific parameters
-    if ( FProvider = dpMsSQL ) then
-    begin
-      if ( StrToBoolEx(Info.Values['NTAuth']) or StrToBoolEx(Info.Values['trusted'])
-        or StrToBoolEx(Info.Values['secure']) ) and ( not FFreeTDS ) then
+    if ( FProvider = dpMsSQL ) and ( StrToBoolEx(Info.Values['NTAuth']) or StrToBoolEx(Info.Values['trusted'])
+      or StrToBoolEx(Info.Values['secure']) ) and ( not FFreeTDS ) then
       begin
         GetPlainDriver.dbsetlsecure(LoginRec);
         LogMessage := LogMessage + ' USING WINDOWS AUTHENTICATION';
-      end
-      else
-      begin
+    end else begin
         GetPlainDriver.dbsetluser(LoginRec, PAnsiChar(ConSettings^.User));
-        GetPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(AnsiString(Password)));
+      {$IFDEF UNICODE}
+      RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Password, ConSettings.CTRL_CP, ZOSCodePage);
+      {$ELSE}
+      RawTemp := Password;
+      {$ENDIF}
+      GetPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(RawTemp));
         LogMessage := LogMessage + ' AS USER "'+ConSettings^.User+'"';
       end;
-
-      if FFreeTDS then begin
-        S := Info.Values['codepage'];
-        if S <> '' then begin
-          GetPlainDriver.dbSetLCharSet(LoginRec, Pointer({$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S)));
-          CheckCharEncoding(s);
+    if FFreeTDS or (FProvider = dpSybase) then begin
+      RawTemp := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values['codepage']);
+      if Pointer(RawTemp) <> nil then begin
+        GetPlainDriver.dbSetLCharSet(LoginRec, Pointer(RawTemp));
+        CheckCharEncoding(Info.Values['codepage']);
         end;
       end;
-    end;
-
-    //sybase specific parameters
-    if FProvider = dpSybase then
-    begin
-      S := Info.Values['codepage'];
-      if S <> '' then
-        GetPlainDriver.dbSetLCharSet(LoginRec, Pointer({$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S)));
-      GetPlainDriver.dbsetluser(LoginRec, PAnsiChar(ConSettings^.User));
-      GetPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(AnsiString(Password)));
-        LogMessage := LogMessage + ' AS USER "'+ConSettings^.User+'"';
-    end;
 
     CheckDBLibError(lcConnect, LogMessage);
-    s := HostName;
+    RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings.CTRL_CP, ZOSCodePage);
     // add port number if FreeTDS is used, the port number was specified and no server instance name was given:
-    if FreeTDS and (Port <> 0) and (ZFastCode.Pos('\', HostName) = 0)  then s := s + ':' + ZFastCode.IntToStr(Port);
-    FHandle := GetPlainDriver.dbOpen(LoginRec, PAnsiChar(AnsiString(s)));
+    if FreeTDS and (Port <> 0) and (ZFastCode.Pos('\', HostName) = 0)  then
+      RawTemp := RawTemp + ':' + ZFastCode.IntToRaw(Port);
+    FHandle := GetPlainDriver.dbOpen(LoginRec, Pointer(RawTemp));
     CheckDBLibError(lcConnect, LogMessage);
     if not Assigned(FHandle) then raise EZSQLException.Create('The connection to the server failed, no proper handle was returned. Insufficient memory, unable to connect for any reason. ');
 
@@ -424,6 +410,7 @@ end;
 {**
   Opens a connection to database server with specified parameters.
 }
+const textlimit: PAnsichar = '2147483647';
 procedure TZDBLibConnection.Open;
 var
   LogMessage: RawByteString;
@@ -439,7 +426,7 @@ begin
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
   LogMessage := 'set textlimit=2147483647';
-  if GetPlainDriver.dbsetopt(FHandle, GetPlainDriver.GetVariables.dboptions[Z_TEXTLIMIT] , '2147483647') <> DBSUCCEED then
+  if GetPlainDriver.dbsetopt(FHandle, GetPlainDriver.GetVariables.dboptions[Z_TEXTLIMIT],Pointer(textlimit)) <> DBSUCCEED then
     CheckDBLibError(lcConnect, LogMessage);
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
@@ -634,7 +621,7 @@ begin
 end;
 
 const
-  DBLibIsolationLevels: array[Boolean, TZTransactIsolationLevel] of AnsiString = ((
+  DBLibIsolationLevels: array[Boolean, TZTransactIsolationLevel] of RawByteString = ((
    'SET TRANSACTION ISOLATION LEVEL READ COMMITTED',
    'SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED',
    'SET TRANSACTION ISOLATION LEVEL READ COMMITTED',
@@ -676,7 +663,7 @@ var
   Tmp: RawByteString;
 begin
   Tmp := 'SELECT DATABASEPROPERTYEX('+
-    SQLQuotedStr(ConSettings^.Database, #39)+
+    SQLQuotedStr(ConSettings^.Database, {$IFDEF NO_ANSICHAR}Ord{$ENDIF}(#39))+
     ', ''Collation'') as DatabaseCollation';
   if (GetPlainDriver.dbcmd(FHandle, Pointer(Tmp)) <> DBSUCCEED) or
      (GetPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED) or
@@ -706,7 +693,7 @@ var
 begin
   Result := High(Word);
   Tmp := 'SELECT COLLATIONPROPERTY('+
-    SQLQuotedStr({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Collation), #39)+
+    SQLQuotedStr({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Collation), {$IFDEF NO_ANSICHAR}Ord{$ENDIF}(#39))+
     ', ''Codepage'') as Codepage';
   if (GetPlainDriver.dbcmd(FHandle, Pointer(Tmp)) <> DBSUCCEED) or
      (GetPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED) or
