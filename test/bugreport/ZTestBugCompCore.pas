@@ -121,6 +121,8 @@ type
     procedure TestSF270_1;
     procedure TestSF270_2;
     procedure TestSF279;
+    procedure TestSF286_getBigger;
+    procedure TestSF286_getSmaller;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -137,7 +139,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  SysUtils, ZSysUtils, ZTestConsts, ZTestCase;
+  SysUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcMetadata;
 
 { ZTestCompCoreBugReport }
 
@@ -1886,6 +1888,7 @@ begin
     Query.FieldByName(FieldName).FieldKind := fkCalculated;
     Query.OnCalcFields := TestSF279CalcFields;
     Query.Open;
+    Check(Assigned(Query.FindField(FieldName)), 'Checking, if the calculated field really exists.');
     try
       Query.Filter := 'calculated LIKE ' + QuotedStr('*Krasnodar*');
       Query.Filtered := True;
@@ -1896,6 +1899,70 @@ begin
     FreeAndNil(Query);
   end;
 end;
+
+procedure ZTestCompCoreBugReport.TestSF286_getBigger;
+var
+ x: Integer;
+ y: Integer;
+ Metadata: TZSQLMetadata;
+begin
+  Metadata := TZSQLMetadata.Create(nil);
+  try
+    Metadata.Connection := Connection;
+    // this part never should fail.
+    Metadata.MetadataType := mdTables;
+    Metadata.Open;
+    CheckEquals(Length(TableColumnsDynArray), Metadata.FieldCount, 'Checking if Metadata object has the correct count of columns for mdTables.');
+    y := Low(TableColumnsDynArray);
+    for x := Low(TableColumnsDynArray) to High(TableColumnsDynArray)
+    do CheckEquals(TableColumnsDynArray[x].Name, Metadata.Fields[x-y].FieldName, 'Checking if field name is as expected for mdTables.');
+    Metadata.Close;
+
+    // here it fails if we have a bug.
+    Metadata.MetadataType := mdColumns;
+    Metadata.Open;
+    CheckEquals(Length(TableColColumnsDynArray), Metadata.FieldCount, 'Checking if Metadata object has the correct count of columns for mdTables.');
+    y := Low(TableColColumnsDynArray);
+    for x := Low(TableColColumnsDynArray) to High(TableColColumnsDynArray)
+    do CheckEquals(TableColColumnsDynArray[x].Name, Metadata.Fields[x-y].FieldName, 'Checking if field name is as expected for mdColumns.');
+    Metadata.Close;
+  finally
+    FreeAndNil(Metadata);
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF286_getSmaller;
+var
+ x: Integer;
+ y: Integer;
+ Metadata: TZSQLMetadata;
+begin
+  Metadata := TZSQLMetadata.Create(nil);
+  try
+    Metadata.Connection := Connection;
+    // this part never should fail.
+    Metadata.MetadataType := mdColumns;
+    Metadata.Open;
+    CheckEquals(Length(TableColColumnsDynArray), Metadata.FieldCount, 'Checking if Metadata object has the correct count of columns for mdTables.');
+    y := Low(TableColColumnsDynArray);
+    for x := Low(TableColColumnsDynArray) to High(TableColColumnsDynArray)
+    do CheckEquals(TableColColumnsDynArray[x].Name, Metadata.Fields[x-y].FieldName, 'Checking if field name is as expected for mdColumns.');
+    Metadata.Close;
+
+    // here it fails if we have a bug.
+    Metadata.MetadataType := mdTables;
+    Metadata.Open;
+    CheckEquals(Length(TableColumnsDynArray), Metadata.FieldCount, 'Checking if Metadata object has the correct count of columns for mdTables.');
+    y := Low(TableColumnsDynArray);
+    for x := Low(TableColumnsDynArray) to High(TableColumnsDynArray)
+    do CheckEquals(TableColumnsDynArray[x].Name, Metadata.Fields[x-y].FieldName, 'Checking if field name is as expected for mdTables.');
+    Metadata.Close;
+  finally
+    FreeAndNil(Metadata);
+  end;
+end;
+
+
 
 const {Test Strings}
   Str1: ZWideString = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';

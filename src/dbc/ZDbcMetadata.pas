@@ -65,16 +65,17 @@ uses
   ZSysUtils, ZClasses, ZDbcIntfs, ZDbcResultSetMetadata, ZDbcCachedResultSet,
   ZDbcCache, ZCompatibility, ZSelectSchema, ZURL, ZDbcConnection;
 
-const
-  procedureColumnUnknown = 0;
-  procedureColumnIn = 1;
-  procedureColumnInOut = 2;
-  procedureColumnOut = 4;
-  procedureColumnReturn = 5;
-  procedureColumnResult = 3;
-  procedureNoNulls = 0;
-  procedureNullable = 1;
-  procedureNullableUnknown = 2;
+//commented out because we don't use them and because they have different ordinal values than TZProcedureColumnType
+//const
+//  procedureColumnUnknown = 0;
+//  procedureColumnIn = 1;
+//  procedureColumnInOut = 2;
+//  procedureColumnOut = 4;
+//  procedureColumnReturn = 5;
+//  procedureColumnResult = 3;
+//  procedureNoNulls = 0;
+//  procedureNullable = 1;
+//  procedureNullableUnknown = 2;
 
 type
   TZWildcardsSet= {$IFDEF UNICODE}TSysCharSet{$ELSE}set of Char{$ENDIF};

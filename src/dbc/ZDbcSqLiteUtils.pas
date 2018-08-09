@@ -118,7 +118,7 @@ begin
   Decimals := 0;
   pBL := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('('), TypeName);
   if pBL > 0 then begin
-    {%H-}NativeUInt(P) := NativeUInt(TypeName)+Word(pBL);
+    P := {%H-}Pointer(NativeUInt(TypeName)+Word(pBL));
     Precision := ValRawInt(P, pC);
     while (P+pC-1)^ = ' ' do inc(pC);
     if (P+pC-1)^ = ',' then begin

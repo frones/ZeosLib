@@ -326,6 +326,7 @@ function PrepareSQLParameter(const Value: TZVariant; ParamType: TZSQLType;
 var
   TempBytes: TBytes;
   TempBlob: IZBlob;
+  Raw: RawByteString;  
 begin
   TempBytes := nil;
 
@@ -376,7 +377,11 @@ begin
             Result := GetSQLHexAnsiString(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, True)
           else
             if TempBlob.IsClob then
-              if NChar then
+              if ConSettings^.ClientCodePage.IsStringFieldCPConsistent then begin
+                TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage.CP);
+                ZSetString(TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage.CP), TempBlob.Length, Raw);
+                Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(Raw, '''')
+              end else if NChar then
               {$IFDEF WITH_UNITANSISTRINGS}
                 Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
                   TempBlob.GetPAnsiChar(zCP_UTF8), #0, '', [rfReplaceAll]), '''')
