@@ -158,6 +158,15 @@ type
       const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: Int64;
       const Msg: string = ''); overload;
+    {$ELSE}
+      {$IFNDEF UNICODE}
+    procedure CheckEquals(Expected, Actual: Word;
+      const Msg: string = ''); overload;
+    procedure CheckEquals(Expected, Actual: Byte;
+      const Msg: string = ''); overload;
+    procedure CheckNotEquals(Expected, Actual: Byte;
+      const Msg: string = ''); overload;
+      {$ENDIF}
     {$ENDIF}
     procedure CheckEqualsDate(const Expected, Actual: TDateTime;
       Parts: TDateParts = []; const Msg: string = '');
@@ -641,6 +650,26 @@ begin
   else
     Check(True);
 end;
+{$ELSE}
+  {$IFNDEF UNICODE}
+procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Word;
+  const Msg: string);
+begin
+  inherited CheckEquals(Integer(Expected), Integer(Actual), Msg)
+end;
+
+procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Byte;
+  const Msg: string);
+begin
+  inherited CheckEquals(Integer(Expected), Integer(Actual), Msg)
+end;
+
+procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: Byte;
+  const Msg: string = '');
+begin
+  CheckNotEquals(Integer(Expected), Integer(Actual), Msg)
+end;
+  {$ENDIF UNICODE}
 {$ENDIF}
 
 {$IFNDEF UNICODE}
