@@ -278,6 +278,8 @@ resourcestring
 
   cSRowBufferWidthExceeded ='La taille du buffer de lignes a été dépassée. Essayez d''utiliser moins ou de plus longues colonnes dans la requête SQL.';
   cSPreviousResultStillOpen = 'L''ensemble de données résultat précédent de cette instruction est encore ouvert';
+
+  csCantFilterOnComputedColumns = 'Translate: Filtering a data set on computed fields and lookup fields is not supported.';
 //--- end added by Serge Girard ------------------------------------
 {$ELSE !FRENCH}
 // -> ms, 09/05/2005
@@ -444,6 +446,8 @@ resourcestring
   cSInvalidUpdateCount   = '%d registro(s) atualizados. Apenas um registro deveria ter sido atualizado.';
 
   cSRowBufferWidthExceeded ='O tamanho do buffer para linhas (Rows) foi excedido. Tente usar menos ou mais colunas na query SQL';
+
+  csCantFilterOnComputedColumns = 'Translate: Filtering a data set on computed fields and lookup fields is not supported.';
 {$ELSE}
 
 {$IFDEF DUTCH}
@@ -610,6 +614,8 @@ resourcestring
   cSInvalidUpdateCount     = '%d record(s) gewijzigd. Slechts 1 record had gewijzigd mogen zijn.';
 
   cSRowBufferWidthExceeded ='Rij buffer grootte overschreden. Probeer minder kolommen te gebruiken in je SQL query.';
+
+  csCantFilterOnComputedColumns = 'Translate: Filtering a data set on computed fields and lookup fields is not supported.';
 {$ELSE}
 // <- ms, 09/05/2005
 
@@ -778,6 +784,8 @@ resourcestring
   cSInvalidUpdateCount     = '%d Datensätze geändert. Exakt ein Datensatz sollte geändert werden.';
 
   cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
+
+  csCantFilterOnComputedColumns = 'Datasets können nich nach berechneten Feldern und Lookup-Feldern gefiltert werden.';
 {$ELSE}
   // -> fduenas, 28/06/2005
 {$IFDEF SPANISH} //Spanish translations
@@ -945,6 +953,8 @@ resourcestring
   cSInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.';
 
   cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
+
+  csCantFilterOnComputedColumns = 'Translate: Filtering a data set on computed fields and lookup fields is not supported.';
 {$ELSE}
 
 {$IFDEF ROMANA}
@@ -1110,6 +1120,9 @@ resourcestring
   cSUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
 
   cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
+
+  csCantFilterOnComputedColumns = 'Translate: Filtering a data set on computed fields and lookup fields is not supported.';
+
   // <-- added by tohenk
   {$ELSE}
   {$IFDEF INDONESIAN}
@@ -1276,6 +1289,8 @@ resourcestring
   cSInvalidUpdateCount     = '%d rekord terupdate. Seharusnya hanya satu rekord yang terupdate.';
 
   cSRowBufferWidthExceeded = 'Lebar buffer baris terlampaui. Coba kurangi atau gunakan kolom yang lebih panjang dalam query SQL.';
+
+  csCantFilterOnComputedColumns = 'Translate: Filtering a data set on computed fields and lookup fields is not supported.';
   // <--- end added by tohenk
   //--- begin added by ORMADA --------------------------------------------------
 {$ELSE}
@@ -1444,6 +1459,8 @@ resourcestring
   cSInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.';
 
   cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
+
+  csCantFilterOnComputedColumns = 'Translate: Filtering a data set on computed fields and lookup fields is not supported.';
 {$ELSE}
 
 //--- added by Petr Stasiak - pestasoft.com ------------------------------------
@@ -1612,6 +1629,8 @@ resourcestring
   cSInvalidUpdateCount     = '%d záznam(ù) aktualizováno. Pouze jeden záznam byl zmìnìn.';
 
   cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
+
+  csCantFilterOnComputedColumns = 'Translate: Filtering a data set on computed fields and lookup fields is not supported.';
 //--- end added by Petr Stasiak - pestasoft.com ------------------------------------
 
 {$ELSE}
@@ -1783,6 +1802,8 @@ resourcestring
 
   cSRowBufferWidthExceeded ='Przekroczono rozmiar bufora. Spróbuj u¿yæ mniejszej liczby kolumn lub d³u¿szych kolumn w zapytaniu SQL.';
 
+  csCantFilterOnComputedColumns = 'Translate: Filtering a data set on computed fields and lookup fields is not supported.';
+
 {$ELSE} // default: ENGLISH
 
   cSSQLError1 = 'SQL Error: %s';
@@ -1949,6 +1970,8 @@ resourcestring
   cSInvalidUpdateCount     = '%d record(s) updated. Only one record should have been updated.';
 
   cSRowBufferWidthExceeded ='Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
+
+  csCantFilterOnComputedColumns = 'Filtering a data set on computed fields and lookup fields is not supported.';
 
 {$ENDIF} // POLISH
 

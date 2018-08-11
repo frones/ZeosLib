@@ -877,6 +877,9 @@ begin
       Continue;
 
     ColumnIndex := TField(Fields[I]).FieldNo {$IFDEF GENERIC_INDEX}-1{$ENDIF};
+    if ColumnIndex = -1
+    then raise EZDatabaseError.Create(csCantFilterOnComputedColumns);
+
     if not ResultSet.IsNull(ColumnIndex) then
     begin
       case TField(Fields[I]).DataType of

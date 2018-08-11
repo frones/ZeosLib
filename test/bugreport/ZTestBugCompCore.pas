@@ -139,7 +139,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  SysUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcMetadata;
+  SysUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcMetadata, ZMessages;
 
 { ZTestCompCoreBugReport }
 
@@ -1907,7 +1907,13 @@ begin
     Check(Assigned(Query.FindField(FieldName)), 'Checking, if the calculated field really exists.');
     try
       Query.Filter := 'calculated LIKE ' + QuotedStr('*Krasnodar*');
-      Query.Filtered := True;
+      try
+        Query.Filtered := True;
+      except
+        on E: EDatabaseError do begin
+          CheckEquals(csCantFilterOnComputedColumns, E.Message, 'Checking if the received exception has the correct text.');
+        end;
+      end;
     finally
       Query.Close;
     end;
