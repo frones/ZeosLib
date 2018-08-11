@@ -326,8 +326,7 @@ begin
   Statement.Close;
 
   // Update case
-  ResultSet := Statement.ExecuteQuery('UPDATE extension set ext_enum = ''House'' where ext_id = 1');
-  ResultSet.Close;
+  Statement.ExecuteQuery('UPDATE extension set ext_enum = ''House'' where ext_id = 1');
 
   ResultSet := Statement.ExecuteQuery('SELECT * FROM extension where ext_id = 1');
   CheckNotNull(ResultSet);
@@ -338,11 +337,9 @@ begin
   Statement.Close;
 
   // Insert case
-  ResultSet := Statement.ExecuteQuery('DELETE FROM extension where ext_id = 1');
-  ResultSet.Close;
+  Statement.ExecuteQuery('DELETE FROM extension where ext_id = 1');
 
-  ResultSet := Statement.ExecuteQuery('INSERT INTO extension VALUES(1,''Car'')');
-  ResultSet.Close;
+  Statement.ExecuteQuery('INSERT INTO extension VALUES(1,''Car'')');
 
   ResultSet := Statement.ExecuteQuery('SELECT * FROM extension where ext_id = 1');
   CheckNotNull(ResultSet);
