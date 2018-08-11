@@ -170,7 +170,7 @@ label AssignGeneric;
     ColumnInfo.Precision := ColInfo.MaxLength;
     ColumnInfo.CaseSensitive := ColInfo.CaseSensitive = 1;
     ColumnInfo.Nullable := TZColumnNullableType(ColInfo.Null);
-    ColumnInfo.ReadOnly := not ColInfo.Updatable = 1;
+    ColumnInfo.ReadOnly := not (ColInfo.Updatable = 1);
     ColumnInfo.Writable := ColInfo.Updatable = 1;
     ColumnInfo.AutoIncrement := ColInfo.Identity;
     ColumnInfo.Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong];
