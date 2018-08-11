@@ -118,8 +118,6 @@ type
     procedure Test1004584;
     procedure TestParamUx;
     procedure TestTicket228;
-    procedure TestSF270_1;
-    procedure TestSF270_2;
     procedure TestSF279;
     procedure TestSF286_getBigger;
     procedure TestSF286_getSmaller;
@@ -1807,69 +1805,6 @@ begin
     Query.Close;
   finally
     Query.Free;
-  end;
-end;
-
-procedure ZTestCompCoreBugReport.TestSF270_1;
-var
-  Query: TZQuery;
-  PersonName: String;
-begin
-  if SkipForReason(srClosedBug) then Exit;
-
-  Query := CreateQuery;
-  try
-    Query.SQL.Text := 'SELECT * from people';
-    Query.Open;
-    CheckEquals(5, Query.RecordCount, 'Expected to get exactly fife records from the people table.');
-    PersonName := Query.FieldByName('p_name').AsString;
-    Query.Edit;
-    Query.FieldByName('p_name').AsString := '';
-    Query.FieldByName('p_name').AsString := PersonName;
-    try
-      Query.Post;
-    except
-      Query.Cancel;
-      raise;
-    end;
-    Query.Close;
-  finally
-    Query.Free;
-  end;
-end;
-
-procedure ZTestCompCoreBugReport.TestSF270_2;
-var
-  Query: TZQuery;
-  PersonName: String;
-  UpdateSQL: TZUpdateSQL;
-begin
-  if SkipForReason(srClosedBug) then Exit;
-
-  Query := CreateQuery;
-  try
-    UpdateSQL := TZUpdateSQL.Create(nil);
-    Query.UpdateObject := UpdateSQL;
-    UpdateSQL.DeleteSQL.Text := 'delete from people where p_id = :old_p_id';
-    UpdateSQL.InsertSQL.Text := 'insert into people (p_id, p_name) values (:new_p_id, :new_p_name)';
-    UpdateSQL.ModifySQL.Text := 'update people set p_id = :new_p_id, p_name = :new_p_name where p_id = :old_p_id';
-    Query.SQL.Text := 'SELECT p_id, p_name from people';
-    Query.Open;
-    CheckEquals(5, Query.RecordCount, 'Expected to get exactly fife records from the people table.');
-    PersonName := Query.FieldByName('p_name').AsString;
-    Query.Edit;
-    Query.FieldByName('p_name').AsString := '';
-    Query.FieldByName('p_name').AsString := PersonName;
-    try
-      Query.Post;
-    except
-      Query.Cancel;
-      raise;
-    end;
-    Query.Close;
-  finally
-    Query.Free;
-    if Assigned(UpdateSQL) then FreeAndNil(UpdateSQL);
   end;
 end;
 
