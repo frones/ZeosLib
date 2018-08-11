@@ -362,6 +362,8 @@ end;
     query; never <code>null</code>
 }
 function TZPostgreSQLPreparedStatement.ExecuteQueryPrepared: IZResultSet;
+var
+  Status: TZPostgreSQLExecStatusType;
 begin
   Result := nil;
   Prepare;
@@ -376,7 +378,8 @@ begin
     end
   else
     QueryHandle := ExecuteInternal(ASQL, eicExecute);
-  if QueryHandle <> nil then
+  Status := FPlainDriver.PQresultStatus(QueryHandle);
+  if (QueryHandle <> nil) and (Status = PGRES_TUPLES_OK) then
     if Assigned(FOpenResultSet) then
       Result := IZResultSet(FOpenResultSet)
     else
