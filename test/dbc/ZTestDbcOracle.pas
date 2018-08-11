@@ -66,9 +66,10 @@ type
   private
   protected
     function GetSupportedProtocols: string; override;
+    //disabled tests:
+    procedure TestStatement;
   published
     procedure TestConnection;
-    procedure TestStatement;
     procedure TestResultSet;
     procedure TestLongObjects;
     procedure TestPreparedStatement;
