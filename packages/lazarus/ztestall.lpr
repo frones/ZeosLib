@@ -50,6 +50,7 @@ type
     procedure WriteCustomHelp; override;
     function GetShortOpts: string; override;
     function GetResultsWriter: TCustomResultsWriter; override;
+    procedure DoTestRun(ATest: TTest); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -157,6 +158,10 @@ begin
   longopts.Add('norebuild');
   longopts.Add('monitor:');
   longopts.Add('suite:');
+  if CommandLineSwitches.xml
+  then DefaultFormat := fXML;
+  if CommandLineSwitches.xmlfilename <> ''
+  then FileName := CommandLineSwitches.xmlfilename;
 end;
 
 destructor TMyTestRunner.Destroy;
@@ -167,6 +172,14 @@ begin
   FreeAndNil(CurrentRegistryItems); //free possible changed list
   {$ENDIF}
   inherited Destroy;
+end;
+
+procedure TMyTestRunner.DoTestRun(ATest: TTest);
+begin
+  if CommandLineSwitches.suitename <> '' then ;
+    if ATest.TestName = 'SuiteList' then
+      (ATest as TTestSuite).TestName := CommandLineSwitches.suitename;
+  inherited DoTestRun(ATest);
 end;
 
 var
@@ -193,7 +206,7 @@ begin
   If CommandLineSwitches.sqlmonitor then
     EnableZSQLMonitor;
 
-  If CommandLineSwitches.batch then
+  If CommandLineSwitches.batch or CommandLineSwitches.xml then
   begin
     Applicationc := TMyTestRunner.Create(nil);
     Applicationc.Initialize;
