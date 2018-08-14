@@ -337,7 +337,7 @@ procedure TZTestFramework.TestExceptions;
 
   procedure ExceptionFail(AExceptClass: ExceptClass; const ExpectExcMsg, Msg: string);
   begin
-    ExcClass := EAbstractError;
+    ExcClass := EAssertionFailed;
     ExcMessage := 'exc message';
     try
       CheckException(RaiseExc, AExceptClass, ExpectExcMsg, 'Exception fail. ' + Msg);
@@ -354,12 +354,12 @@ begin
   PrintLn('### TestExceptions ###');
 
   // Exception in method - Success
-  ExceptionSuccess(EAbstractError, '', 'exception by class');
-  ExceptionSuccess(EAbstractError, 'exc message', 'exception by message');
+  ExceptionSuccess(EAssertionFailed, '', 'exception by class');
+  ExceptionSuccess(EAssertionFailed, 'exc message', 'exception by message');
 
   // Exception in method - Fail
   ExceptionFail(EAbort, '', 'exception by class');
-  ExceptionFail(EAbstractError, 'other exc message', 'exception by message');
+  ExceptionFail(EAssertionFailed, 'other exc message', 'exception by message');
 
   // Exception in code - Success
   try
