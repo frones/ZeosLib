@@ -226,7 +226,7 @@ begin
     else Result := Add;
 end;
 
-{$IFDEF FPC} // copy from DUnit
+{$IFDEF FPC} // copy from DUnit to implement generic interface
 
 {$IF NOT DECLARED(CallerAddr)} // for older FPC versions < 3.1
 const
@@ -235,7 +235,7 @@ const
 
 function ByteAt(p: pointer; const Offset: integer): byte;
 begin
-  Result:={%H-}pByte(NativeUint(p){%H-}+Offset)^;
+  Result:=(PByte(p)+Offset)^;
 end;
 
 function FirstByteDiff(p1, p2: pointer; size: longword; out b1, b2: byte): integer;
@@ -723,9 +723,10 @@ procedure TZAbstractTestCase.CheckException(AMethod: TTestMethod;
 begin
   {$IFDEF FPC}
     {$IFDEF FPC2_6DOWN}
+    // Note: actually this call won't check exception message
     AssertException(Msg, AExceptionClass, AMethod);
     {$ELSE}
-    AssertException(Msg, AExceptionClass, AMethod, ExpectExcMsg, 0, nil);
+    AssertException(Msg, AExceptionClass, AMethod, ExpectExcMsg, 0, CallerAddr);
     {$ENDIF}
   {$ELSE}
   if ExpectExcMsg = '' then
