@@ -158,15 +158,14 @@ type
       const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: Int64;
       const Msg: string = ''); overload;
-    {$ELSE}
-      {$IFNDEF UNICODE}
+    {$ENDIF}
+    {$IFDEF WITH_OVERLOAD_BUG}
     procedure CheckEquals(Expected, Actual: Word;
       const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: Byte;
       const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: Byte;
       const Msg: string = ''); overload;
-      {$ENDIF}
     {$ENDIF}
     procedure CheckEqualsDate(const Expected, Actual: TDateTime;
       Parts: TDateParts = []; const Msg: string = '');
@@ -255,7 +254,7 @@ begin
       break;
     end;
 end;
-{$ENDIF}
+{$ENDIF FPC}
 
 { TZAbstractTestCase }
 
@@ -324,7 +323,7 @@ begin
   Result:=NotEqualsErrorMessage(IntToHex(db1,2),IntToHex(db2,2),msg);
   Result:=Result+' at Offset = '+IntToHex(Offset,4)+'h';
 end;
-{$ENDIF}
+{$ENDIF FPC}
 
 function TZAbstractTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
 begin
@@ -650,8 +649,9 @@ begin
   else
     Check(True);
 end;
-{$ELSE}
-  {$IFNDEF UNICODE}
+{$ENDIF FPC}
+
+{$IFDEF WITH_OVERLOAD_BUG}
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Word;
   const Msg: string);
 begin
@@ -669,8 +669,7 @@ procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: Byte;
 begin
   CheckNotEquals(Integer(Expected), Integer(Actual), Msg)
 end;
-  {$ENDIF UNICODE}
-{$ENDIF}
+{$ENDIF WITH_OVERLOAD_BUG}
 
 {$IFNDEF UNICODE}
 procedure TZAbstractTestCase.CheckEquals(Expected: ZWideString; Actual: String;
