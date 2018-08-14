@@ -193,12 +193,10 @@ begin
     CheckEquals(8388607, ResultSet.GetUInt(Bit23_Index), 'Bit23_Index');
     CheckEquals(16777215, ResultSet.GetUInt(Bit24_Index), 'Bit24_Index');
     CheckEquals(33554431, ResultSet.GetUInt(Bit25_Index), 'Bit25_Index');
-    {$IF defined(FPC) or defined(Unicode)}
-    CheckEquals(UInt64($FFFFFFFFFF), ResultSet.GetULong(Bit40_Index), 'Bit40_Index');
-    CheckEquals(UInt64($FFFFFFFFFFFFFFFF), ResultSet.GetULong(Bit64_Index), 'Bit64_Index');
-    {$ELSE}
-    Check(False, 'D7 compiler error Ambiguous overloaded call to ''CheckEquals'' since Rev 4849');
-    {$IFEND}
+    // FPC can't determine here which overloaded method to call.
+    // And if we add direct typecast, D7 fails to build with "Ambiguous overload" error
+    CheckEquals({$IFDEF FPC}UInt64{$ENDIF}($FFFFFFFFFF), ResultSet.GetULong(Bit40_Index), 'TEST_BIT_FIELDS');
+    CheckEquals({$IFDEF FPC}UInt64{$ENDIF}($FFFFFFFFFFFFFFFF), ResultSet.GetULong(Bit64_Index), 'TEST_BIT_FIELDS');
   finally
     ResultSet.Close;
   end;
