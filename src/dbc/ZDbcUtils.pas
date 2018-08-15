@@ -163,8 +163,6 @@ function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = Fal
 function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): RawByteString;
 function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
 
-function WideStringStream(const AString: ZWideString): TStream;
-
 function TokenizeSQLQueryRaw(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
   IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
@@ -553,13 +551,6 @@ begin
   {$ELSE}
   Result := GetSQLHexAnsiString(Value, Len, ODBC);
   {$ENDIF}
-end;
-
-function WideStringStream(const AString: ZWideString): TStream;
-begin
-  Result := TMemoryStream.Create;
-  Result.Write(PWideChar(AString)^, Length(AString)*2);
-  Result.Position := 0;
 end;
 
 {**
@@ -1048,7 +1039,6 @@ end;
 function GetValidatedUnicodeStream(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings; FromDB: Boolean): TStream;
 var
-  Len: Integer;
   US: ZWideString;
   Bytes: TByteDynArray;
   Encoding: TZCharEncoding;
@@ -1080,14 +1070,8 @@ begin
       end;
     end;
 
-    Len := Length(US) shl 1;
-    if not Assigned(Result) and (Len > 0) then
-    begin
-      Result := TMemoryStream.Create;
-      Result.Size := Len;
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(US)^, TMemoryStream(Result).Memory^, Len);
-      Result.Position := 0;
-    end;
+    if US <> '' then
+      Result := StreamFromData(US);
   end;
 end;
 

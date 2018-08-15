@@ -152,13 +152,10 @@ var
   StreamOut: TStream;
   ResultString: string;
   ResultBytes: TBytes;
-  WriteNum, ReadNum: integer;
+  ReadNum: integer;
   Buffer: array[0..BINARY_BUFFER_SIZE] of Byte;
 begin
-  StreamIn := TMemoryStream.Create;
-  WriteNum := StreamIn.Write(FBuffer^, BINARY_BUFFER_SIZE);
-  StreamIn.Position := 0;
-  CheckEquals(WriteNum, BINARY_BUFFER_SIZE, 'WritedNum');
+  StreamIn := StreamFromData(FBuffer, BINARY_BUFFER_SIZE);
 
   {Test with defined constructor}
   Blob := TZAbstractBlob.CreateWithStream(StreamIn);
@@ -173,7 +170,7 @@ begin
   StreamIn.Free;
 
   CheckEquals(ReadNum, BINARY_BUFFER_SIZE);
-  Check(CompareMem(@Buffer, FBuffer, BINARY_BUFFER_SIZE));
+  CheckEqualsMem(@Buffer, FBuffer, BINARY_BUFFER_SIZE);
 
   {string test}
   Blob.SetString(RawByteString(FString));
@@ -200,12 +197,10 @@ var
   BlobClone: IZBlob;
   StreamIn: TStream;
   StreamOut: TStream;
-  WriteNum, ReadNum: integer;
+  ReadNum: integer;
   Buffer: array[0..BINARY_BUFFER_SIZE] of Byte;
 begin
-  StreamIn := TMemoryStream.Create;
-  WriteNum := StreamIn.Write(FBuffer^, BINARY_BUFFER_SIZE);
-  CheckEquals(WriteNum, BINARY_BUFFER_SIZE, 'WritedNum');
+  StreamIn := StreamFromData(FBuffer, BINARY_BUFFER_SIZE);
   Blob := TZAbstractBlob.CreateWithStream(StreamIn);
 
  {Test clone blob}
@@ -222,7 +217,7 @@ begin
   StreamIn.Free;
 
   CheckEquals(ReadNum, BINARY_BUFFER_SIZE);
-  Check(CompareMem(@Buffer, FBuffer, BINARY_BUFFER_SIZE));
+  CheckEqualsMem(@Buffer, FBuffer, BINARY_BUFFER_SIZE);
   BlobClone := nil;
 end;
 
@@ -233,12 +228,10 @@ var
   StreamOut: TStream;
   ResultString: string;
   ResultBytes: TBytes;
-  WriteNum, ReadNum: integer;
+  ReadNum: integer;
   Buffer: array[0..BINARY_BUFFER_SIZE] of Byte;
 begin
-  StreamIn := TMemoryStream.Create;
-  WriteNum := StreamIn.Write(FBuffer^, BINARY_BUFFER_SIZE);
-  CheckEquals(WriteNum, BINARY_BUFFER_SIZE, 'WritedNum');
+  StreamIn := StreamFromData(FBuffer, BINARY_BUFFER_SIZE);
 
   {Test with nil constructor}
   Blob := TZAbstractBlob.CreateWithStream(nil);
@@ -258,7 +251,7 @@ begin
   StreamOut.Free;
 
   CheckEquals(ReadNum, BINARY_BUFFER_SIZE);
-  Check(CompareMem(@Buffer, FBuffer, BINARY_BUFFER_SIZE));
+  CheckEqualsMem(@Buffer, FBuffer, BINARY_BUFFER_SIZE);
   Blob := nil;
 
   {string test}

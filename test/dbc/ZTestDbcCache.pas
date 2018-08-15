@@ -256,28 +256,20 @@ end;
   Setup paramters for test such as variables, stream datas and streams
 }
 procedure TZTestRowAccessorCase.SetUp;
-var
-  BufferChar: PAnsiChar;
-  BufferWideChar: PWideChar;
 begin
   FDate := SysUtils.Date;
   FTime := SysUtils.Time;
   FTimeStamp := SysUtils.Now;
 
   FAsciiStreamData := 'Test Ascii Stream Data';
-  FAsciiStream := TMemoryStream.Create;
-  BufferChar := PAnsiChar(FAsciiStreamData);
-  FAsciiStream.Write(BufferChar^, Length(FAsciiStreamData));
+  FAsciiStream := StreamFromData(FAsciiStreamData);
 
   FUnicodeStreamData := 'Test Unicode Stream Data';
-  FUnicodeStream := TMemoryStream.Create;
-  BufferWideChar := PWideChar(FUnicodeStreamData);
-  FUnicodeStream.Write(BufferWideChar^, Length(FUnicodeStreamData) * 2);
+  FUnicodeStream := StreamFromData(FUnicodeStreamData);
 
-  FBinaryStream := TMemoryStream.Create;
   FBinaryStreamData := AllocMem(BINARY_BUFFER_SIZE);
   FillChar(FBinaryStreamData^, BINARY_BUFFER_SIZE, 55);
-  FBinaryStream.Write(FBinaryStreamData^, BINARY_BUFFER_SIZE);
+  FBinaryStream := StreamFromData(FBinaryStreamData, BINARY_BUFFER_SIZE);
 
   FBoolean := true;
   FByte := 255;

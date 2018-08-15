@@ -778,6 +778,17 @@ function Trim(const Value: ZWideString): ZWideString; overload;
 function HexToBin(Hex: PAnsiChar; Bin: PByte; BinBytes: Integer): Boolean;
 {$ENDIF}
 
+{**
+   Creates a memory stream with copy of data in buffer.
+   If buffer contains no data, creates an empty stream.
+}
+function StreamFromData(Buffer: Pointer; Size: Integer): TStream; overload;
+function StreamFromData(const AString: ZWideString): TStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function StreamFromData(const Bytes: TBytes): TStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
+function StreamFromData(const AString: RawByteString): TStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+{$ENDIF}
+
 implementation
 
 uses DateUtils, StrUtils, SysConst,
@@ -5163,6 +5174,34 @@ begin
     BoolStrIntsRaw[B] := UnicodeStringToASCII7(BoolStrInts[B]);
     BoolStrsRaw[B] := UnicodeStringToASCII7(BoolStrsW[B]);
   end;
+end;
+{$ENDIF}
+
+{**
+   Creates a memory stream with copy of data in buffer.
+   If buffer contains no data, creates an empty stream.
+}
+function StreamFromData(Buffer: Pointer; Size: Integer): TStream;
+begin
+  Result := TMemoryStream.Create;
+  Result.Write(Buffer^, Size);
+  Result.Position := 0;
+end;
+
+function StreamFromData(const AString: ZWideString): TStream;
+begin
+  Result := StreamFromData(Pointer(AString), Length(AString)*SizeOf(WideChar));
+end;
+
+function StreamFromData(const Bytes: TBytes): TStream;
+begin
+  Result := StreamFromData(Pointer(Bytes), Length(Bytes));
+end;
+
+{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
+function StreamFromData(const AString: RawByteString): TStream;
+begin
+  Result := StreamFromData(Pointer(AString), Length(AString));
 end;
 {$ENDIF}
 

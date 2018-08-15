@@ -645,13 +645,13 @@ begin
               begin
                 Stream := TStringStream.Create(AnsiString(Temp));
                 RS.UpdateAsciiStream(I, Stream);
-                Stream.Free;
+                FreeAndNil(Stream);
               end;
             stUnicodeString:
               RS.UpdateUnicodeString(i, Temp);
             stUnicodeStream:
               begin
-                Stream := WideStringStream(WideString(Temp));
+                Stream := StreamFromData(WideString(Temp));
                 RS.UpdateUnicodeStream(I, Stream);
                 FreeAndNil(Stream);
               end;
@@ -676,9 +676,7 @@ begin
                   begin
                     P := VarArrayLock(Temp);
                     try
-                      Stream := TMemoryStream.Create;
-                      Stream.Size {%H-}:= VarArrayHighBound(Temp, 1)+1;
-                      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, TMemoryStream(Stream).Memory^, Stream.Size);
+                      Stream := StreamFromData(P, VarArrayHighBound(Temp, 1)+1);
                       RS.UpdateBinaryStream(I, Stream);
                       FreeAndNil(Stream);
                     finally
@@ -695,8 +693,6 @@ begin
       Result := RS;
     finally
       ColumnsInfo.Free;
-      if Stream <> nil then
-        Stream.Free;
     end;
 end;
 

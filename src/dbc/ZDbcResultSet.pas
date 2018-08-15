@@ -4343,13 +4343,10 @@ end;
 }
 function TZAbstractBlob.GetStream: TStream;
 begin
-  Result := TMemoryStream.Create;
   if (FBlobSize > 0) and Assigned(FBlobData) then
-  begin
-    Result.Size := FBlobSize;
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize);
-  end;
-  Result.Position := 0;
+    Result := StreamFromData(FBlobData, FBlobSize)
+  else
+    Result := TMemoryStream.Create;
 end;
 
 {**
@@ -4789,16 +4786,16 @@ end;
 }
 function TZAbstractCLob.GetStream: TStream;
 begin
-  Result := TMemoryStream.Create;
   if (FBlobSize > 0) and Assigned(FBlobData) then
   begin
     if FConSettings^.AutoEncode then
       GetPAnsiChar(FConSettings^.CTRL_CP)
     else
       GetPAnsiChar(FConSettings^.ClientCodePage^.CP);
-    Result.Size := Length;
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, Length)
-  end;
+    Result := StreamFromData(FBlobData, Length);
+  end
+  else
+    Result := TMemoryStream.Create;
 end;
 
 procedure TZAbstractCLob.SetStream(const Value: TStream);
@@ -4823,87 +4820,71 @@ end;
 function TZAbstractCLob.GetRawByteStream: TStream;
 var Tmp: RawByteString;
 begin
-  Result := TMemoryStream.Create;
   if (FBlobSize > 0) and Assigned(FBlobData) then
   begin
     if ZCompatibleCodePages(FCurrentCodePage, FConSettings^.ClientCodePage^.CP) then
-    begin
-      Result.Size := FBlobSize-1;
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize-1)
-    end
+      Result := StreamFromData(FBlobData, FBlobSize-1)
     else
     begin
       Tmp := GetRawByteString;
-      Result.Size := Length;
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Tmp[1], TMemoryStream(Result).Memory^, Length)
+      Result := StreamFromData(Pointer(Tmp), Length);
     end;
-  end;
-  Result.Position := 0;
+  end
+  else
+    Result := TMemoryStream.Create;
 end;
 
 {$IFNDEF NO_ANSISTRING}
 function TZAbstractCLob.GetAnsiStream: TStream;
 begin
-  Result := TMemoryStream.Create;
   if (FBlobSize > 0) and Assigned(FBlobData) then
   begin
     if ZCompatibleCodePages(FCurrentCodePage, ZOSCodePage) then
-    begin
-      Result.Size := Length;
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, Length)
-    end
+      Result := StreamFromData(FBlobData, Length)
     else
     begin
       GetAnsiString; //does the required conversion
-      Result.Size := Length;
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, Length)
+      Result := StreamFromData(FBlobData, Length);
     end;
-  end;
-  Result.Position := 0;
+  end
+  else
+    Result := TMemoryStream.Create;
 end;
 {$ENDIF}
 
 {$IFNDEF NO_UTF8STRING}
 function TZAbstractCLob.GetUTF8Stream: TStream;
 begin
-  Result := TMemoryStream.Create;
   if (FBlobSize > 0) and Assigned(FBlobData) then
   begin
     if ZCompatibleCodePages(FCurrentCodePage, zCP_UTF8) then
-    begin
-      Result.Size := FBlobSize -1;
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize -1)
-    end
+      Result := StreamFromData(FBlobData, FBlobSize-1)
     else
     begin
-      GetUTF8String;
-      Result.Size := Length;
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData, TMemoryStream(Result).Memory^, FBlobSize -1)
+      GetUTF8String; //does the required conversion
+      Result := StreamFromData(FBlobData, Length);
     end;
-  end;
-  Result.Position := 0;
+  end
+  else
+    Result := TMemoryStream.Create;
 end;
 {$ENDIF}
 
 function TZAbstractCLob.GetUnicodeStream: TStream;
 begin
-  Result := TMemoryStream.Create;
   if (FBlobSize > 0) and Assigned(FBlobData) then
   begin
     if (FCurrentCodePage = zCP_UTF16) or
        (FCurrentCodePage = zCP_UTF16) then
-    begin
-      Result.Size := FBlobSize -2;
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize-2)
-    end
+      Result := StreamFromData(FBlobData, FBlobSize-2)
     else
     begin
       GetUnicodeString;
-      Result.Size := FBlobSize-2;
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize-2)
+      Result := StreamFromData(FBlobData, FBlobSize-2)
     end;
-  end;
-  Result.Position := 0;
+  end
+  else
+    Result := TMemoryStream.Create;
 end;
 
 function TZAbstractCLob.GetPAnsiChar(const CodePage: Word): PAnsiChar;
