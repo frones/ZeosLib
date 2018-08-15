@@ -1687,7 +1687,7 @@ begin
   Result := PRawToUnicode(Buffer, BufLen, ConSettings^.ClientCodePage^.CP);
   {$ELSE}
     if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
-      SetString(Result, Buffer, BufLen)
+      SetString(Result, PChar(Buffer), BufLen)
     else
       Result := ZUnicodeToString(PRawToUnicode(Buffer, BufLen, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
   {$ENDIF}
