@@ -275,20 +275,10 @@ procedure CheckInterbase6Error(const PlainDriver: TZInterbasePlainDriver;
   const SQL: RawByteString = '');
 
 { Interbase information functions}
-function GetISC_StringInfo(const PlainDriver: TZInterbasePlainDriver;
+function GetDBStringInfo(const PlainDriver: TZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; isc_info: Byte; const ImmediatelyReleasable: IImmediatelyReleasable): String;
-function GetFB_ISC_IntegerInfo(const PlainDriver: TZInterbasePlainDriver;
+function GetDBIntegerInfo(const PlainDriver: TZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; isc_info: Byte; const ImmediatelyReleasable: IImmediatelyReleasable): LongInt;
-function GetDBImplementationNo(const PlainDriver: TZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const ImmediatelyReleasable: IImmediatelyReleasable): LongInt;
-function GetDBImplementationClass(const PlainDriver: TZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const ImmediatelyReleasable: IImmediatelyReleasable): LongInt;
-function GetLongDbInfo(const PlainDriver: TZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const DatabaseInfoCommand: Integer;
-  const ImmediatelyReleasable: IImmediatelyReleasable): LongInt;
-function GetStringDbInfo(const PlainDriver: TZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const DatabaseInfoCommand: Integer;
-  const ImmediatelyReleasable: IImmediatelyReleasable): RawByteString;
 function GetDBSQLDialect(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const ImmediatelyReleasable: IImmediatelyReleasable): Integer;
 
@@ -575,22 +565,25 @@ var Buf: TRawBuff;
   var Len: Smallint;
   begin
     case Value of
-      0..High(Byte): begin
+      0..High(Byte):
+        begin
           Len := 1;
           ToBuff(AnsiChar(Len), Buf, Result);
           ToBuff(AnsiChar(Byte(Value)), Buf, Result);
         end;
-      High(Byte)+1..High(Word): begin
+      High(Byte)+1..High(Word):
+        begin
           Len := 2;
           ToBuff(AnsiChar(Len), Buf, Result);
           PWord(@Value)^ := Word(Value);
-          PWord(@Value)^ := Word(PlainDriver.isc_portable_integer(@Value, Len));
+          PWord(@Value)^ := Word(PlainDriver.isc_vax_integer(@Value, Len));
           ToBuff(@Value, Len, Buf, Result);
         end;
-      else begin
+      else
+        begin
           Len := 4;
           ToBuff(AnsiChar(Len), Buf, Result);
-          Value := Cardinal(PlainDriver.isc_portable_integer(@Value, Len));
+          Value := Cardinal(PlainDriver.isc_vax_integer(@Value, Len));
           ToBuff(@Value, Len, Buf, Result);
         end;
     end;
@@ -616,13 +609,16 @@ begin
       raise EZSQLException.CreateFmt('Unknown PB parameter "%s"', [ParamName]);
 
     case PParam.ValueType of
-      pvtNone: if VersionCode = isc_tpb_version3 then
+      pvtNone:
+        if VersionCode = isc_tpb_version3 then
           ToBuff(AnsiChar(PParam.Number), Buf, Result)
-        else begin
+        else
+        begin
           ToBuff(AnsiChar(PParam.Number), Buf, Result);
           ToBuff(AnsiChar(#0), Buf, Result);
         end;
-      pvtByteZ: begin
+      pvtByteZ:
+        begin
           ToBuff(AnsiChar(PParam.Number), Buf, Result);
           ToBuff(AnsiChar(#1), Buf, Result);
           ToBuff(AnsiChar(#0), Buf, Result);
@@ -633,7 +629,8 @@ begin
           IntValue := StrToInt(ParamValue);
           NumToPB(IntValue);
         end;
-      pvtString: begin
+      pvtString:
+        begin
           tmp := ConSettings.ConvFuncs.ZStringToRaw(ParamValue, ConSettings^.CTRL_CP, CP);
           ToBuff(AnsiChar(PParam.Number), Buf, Result);
           ToBuff(AnsiChar(Length(tmp)), Buf, Result);
@@ -743,7 +740,7 @@ end;
   @param Buffer - a buffer returned by driver
   @return - a number read
 }
-function ReadInterbase6Number(const PlainDriver: TZInterbasePlainDriver; const Buffer): Integer;
+function ReadInterbase6Number(const PlainDriver: TZInterbasePlainDriver; const Buffer): Integer; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 var
   pBuf: PAnsiChar;
 begin
@@ -873,12 +870,38 @@ begin
   end
 end;
 
-function ConvertConnRawToString(ConSettings: PZConSettings; const Src: RawByteString): string;
+{**
+   Convert raw database string to compiler-native string
+}
+function ConvertConnRawToString(ConSettings: PZConSettings; const Src: RawByteString): string; overload;
 begin
   if ConSettings <> nil then
     Result := ConSettings^.ConvFuncs.ZRawToString(Src, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
   else
     Result := string(Src);
+end;
+
+{**
+   Convert pointer to raw database string to compiler-native string
+}
+function ConvertConnRawToString(ConSettings: PZConSettings; Buffer: Pointer; BufLen: Integer): string; overload;
+var
+  RawStr: RawByteString;
+begin
+  // TODO: having ZPRawToString we could convert the string directly without SetString
+  ZSetString(PAnsiChar(Buffer), BufLen, RawStr);
+  if ConSettings <> nil then
+    Result := ConSettings^.ConvFuncs.ZRawToString(RawStr, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
+  else
+    Result := string(RawStr);
+end;
+
+{**
+   Convert zero-terminated raw database string to compiler-native string
+}
+function ConvertConnRawToString(ConSettings: PZConSettings; Buffer: Pointer): string; overload;
+begin
+  Result := ConvertConnRawToString(ConSettings, Buffer, StrLen(Buffer));
 end;
 
 function ConvertStringToConnRaw(ConSettings: PZConSettings; const Src: string): RawByteString;
@@ -912,8 +935,7 @@ function InterpretInterbaseStatus(const PlainDriver: TZInterbasePlainDriver;
   const StatusVector: TARRAY_ISC_STATUS;
   const ConSettings: PZConSettings) : TZIBStatusVector;
 var
-  Msg: array[0..IBBigLocalBufferLength] of AnsiChar;
-  s: RawByteString;
+  Buffer: array[0..IBBigLocalBufferLength] of AnsiChar;
   PStatusVector: PISC_STATUS;
   StatusIdx: Integer;
   pCurrStatus: PZIBStatus;
@@ -926,9 +948,8 @@ begin
     pCurrStatus := @Result[High(Result)]; // save pointer to avoid multiple High() calls
     // SQL code and status
     pCurrStatus.SQLCode := PlainDriver.isc_sqlcode(PStatusVector);
-    PlainDriver.isc_sql_interprete(pCurrStatus.SQLCode, @Msg, Length(Msg));
-    ZSetString(PAnsiChar(@Msg[0]), StrLen(PAnsiChar(@Msg[0])), S);
-    pCurrStatus.SQLMessage := ConvertConnRawToString(ConSettings, S);
+    PlainDriver.isc_sql_interprete(pCurrStatus.SQLCode, @Buffer, SizeOf(Buffer));
+    pCurrStatus.SQLMessage := ConvertConnRawToString(ConSettings, @Buffer);
     // IB data
     pCurrStatus.IBDataType := StatusVector[StatusIdx];
     case StatusVector[StatusIdx] of
@@ -953,13 +974,12 @@ begin
       isc_arg_interpreted,
       isc_arg_sql_state:
         begin
-          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, RawByteString({%H-}PAnsiChar(StatusVector[StatusIdx + 1])));
+          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, Pointer(StatusVector[StatusIdx + 1]));
           Inc(StatusIdx, 2);
         end;
       isc_arg_cstring: // length and pointer to string
         begin
-          ZSetString({%H-}PAnsiChar(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1], s);
-          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, s);
+          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, Pointer(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1]);
           Inc(StatusIdx, 3);
         end;
       isc_arg_warning: // must not happen for error vector
@@ -970,14 +990,13 @@ begin
 
     // isc_interprete is deprecated so use fb_interpret instead if available
     if Assigned(PlainDriver.fb_interpret) then
-      if PlainDriver.fb_interpret(@Msg, Length(Msg), @PStatusVector) = 0 then
+      if PlainDriver.fb_interpret(@Buffer, Length(Buffer), @PStatusVector) = 0 then
         Break
       else
     else
-    if PlainDriver.isc_interprete(@Msg, @PStatusVector) = 0 then
+    if PlainDriver.isc_interprete(@Buffer, @PStatusVector) = 0 then
       Break;
-    ZSetString(PAnsiChar(@Msg[0]), StrLen(PAnsiChar(@Msg[0])), S);
-    pCurrStatus.IBMessage := ConvertConnRawToString(ConSettings, S);
+    pCurrStatus.IBMessage := ConvertConnRawToString(ConSettings, @Buffer);
   until False;
 end;
 
@@ -1106,18 +1125,19 @@ function GetStatementType(const PlainDriver: TZInterbasePlainDriver;
 var
   TypeItem: AnsiChar;
   StatusVector: TARRAY_ISC_STATUS;
-  StatementBuffer: array[0..7] of AnsiChar;
+  Buffer: array[0..7] of AnsiChar;
 begin
-  Result := stUnknown;
   TypeItem := AnsiChar(isc_info_sql_stmt_type);
 
   { Get information about a prepared DSQL statement. }
   if PlainDriver.isc_dsql_sql_info(@StatusVector, @StmtHandle, 1,
-      @TypeItem, SizeOf(StatementBuffer), @StatementBuffer[0]) <> 0 then
+      @TypeItem, SizeOf(Buffer), @Buffer[0]) <> 0 then
     CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
 
-  if StatementBuffer[0] = AnsiChar(isc_info_sql_stmt_type) then
-    Result := TZIbSqlStatementType(ReadInterbase6Number(PlainDriver, StatementBuffer[1]));
+  if Buffer[0] = AnsiChar(isc_info_sql_stmt_type) then
+    Result := TZIbSqlStatementType(ReadInterbase6Number(PlainDriver, Buffer[1]))
+  else
+    Result := stUnknown;
 end;
 
 {**
@@ -1149,7 +1169,7 @@ type
   TCountType = (cntSel, cntIns, cntDel, cntUpd);
 var
   ReqInfo: AnsiChar;
-  OutBuffer: array[0..255] of AnsiChar;
+  Buffer: array[0..IBLocalBufferLength-1] of AnsiChar;
   StatusVector: TARRAY_ISC_STATUS;
   pBuf, pBufStart: PAnsiChar;
   Len, Item, Count: Integer;
@@ -1159,18 +1179,17 @@ begin
   ReqInfo := AnsiChar(isc_info_sql_records);
 
   if PlainDriver.isc_dsql_sql_info(@StatusVector, @StmtHandle, 1,
-    @ReqInfo, SizeOf(OutBuffer), @OutBuffer[0]) <> 0 then
-  CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
+      @ReqInfo, SizeOf(Buffer), @Buffer[0]) <> 0 then
+    CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
 
-  pBufStart := @OutBuffer[0];
-  if AnsiChar(pBufStart^) <> AnsiChar(isc_info_sql_records) then
+  if Buffer[0] <> AnsiChar(isc_info_sql_records) then
     Exit;
 
+  pBufStart := @Buffer[1];
   pBuf := pBufStart;
-  Inc(pBuf);
-  Len := PlainDriver.isc_vax_integer(pBuf, 2) + 1 + 2;
+  Len := PlainDriver.isc_vax_integer(pBuf, 2) + 2;
   Inc(pBuf, 2);
-  if OutBuffer[Len] <> AnsiChar(isc_info_end) then
+  if Buffer[Len] <> AnsiChar(isc_info_end) then
     Exit;
 
   FillChar(Counts{%H-}, SizeOf(Counts), #0);
@@ -1474,20 +1493,27 @@ end;
    @param ConSettings then PZConSettings of active connection
    @return ISC_INFO string
 }
-function GetISC_StringInfo(const PlainDriver: TZInterbasePlainDriver;
+function GetDBStringInfo(const PlainDriver: TZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; isc_info: Byte; const ImmediatelyReleasable: IImmediatelyReleasable): String;
 var
   StatusVector: TARRAY_ISC_STATUS;
   Buffer: array[0..IBBigLocalBufferLength - 1] of AnsiChar;
 begin
   if PlainDriver.isc_database_info(@StatusVector, Handle, 1, @isc_info,
-      IBBigLocalBufferLength, @Buffer[0]) <> 0 then
+      SizeOf(Buffer), @Buffer[0]) <> 0 then
     CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-  {$IFDEF UNICODE}
-  Result := PRawToUnicode(PAnsiChar(@Buffer[5]),Integer(Buffer[4]), ImmediatelyReleasable.GetConSettings^.ClientCodePage^.CP);
-  {$ELSE}
-  SetString(Result, PAnsiChar(@Buffer[5]),Integer(Buffer[4]));
-  {$ENDIF}
+
+  { Buffer:
+      0     - type of info
+      1..2  - total data length
+      3     - #1
+      4     - string length
+      5..N  - string
+      N+1   - #1 }
+  if Buffer[0] = AnsiChar(isc_info) then
+    Result := ConvertConnRawToString(ImmediatelyReleasable.GetConSettings, @Buffer[5], Integer(Buffer[4]))
+  else
+    Result := '';
 end;
 
 {**
@@ -1498,103 +1524,24 @@ end;
    @param ConSettings then PZConSettings of active connection
    @return ISC_INFO Integer
 }
-function GetFB_ISC_IntegerInfo(const PlainDriver: TZInterbasePlainDriver;
+function GetDBIntegerInfo(const PlainDriver: TZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; isc_info: Byte; const ImmediatelyReleasable: IImmediatelyReleasable): LongInt;
 var
   StatusVector: TARRAY_ISC_STATUS;
-  Buffer: array[0..63] of AnsiChar;
-  Len: Integer;
+  Buffer: array[0..31] of AnsiChar; // this should be enough for any number
 begin
   if PlainDriver.isc_database_info(@StatusVector, Handle, 1, @isc_info,
-      IBLocalBufferLength, @Buffer[0]) <> 0 then
+      SizeOf(Buffer), @Buffer[0]) <> 0 then
     CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-  Len := Integer(PlainDriver.isc_portable_integer(@Buffer[1], 2));
-  Result := Integer(PlainDriver.isc_portable_integer(@Buffer[3], Smallint(Len)));
-end;
 
-{**
-   Return interbase database implementation
-   @param PlainDriver a interbase plain driver
-   @param Handle the database connection handle
-   @return interbase database implementation
-}
-function GetDBImplementationNo(const PlainDriver: TZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const ImmediatelyReleasable: IImmediatelyReleasable): LongInt;
-var
-  DatabaseInfoCommand: AnsiChar;
-  StatusVector: TARRAY_ISC_STATUS;
-  Buffer: array[0..IBBigLocalBufferLength - 1] of AnsiChar;
-begin
-  DatabaseInfoCommand := AnsiChar(isc_info_implementation);
-  if PlainDriver.isc_database_info(@StatusVector, Handle, 1, @DatabaseInfoCommand,
-      IBLocalBufferLength, @Buffer[0]) <> 0 then
-    CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-  result := PlainDriver.isc_vax_integer(@Buffer[3], 1);
-end;
-
-{**
-   Return interbase database implementation class
-   @param PlainDriver a interbase plain driver
-   @param Handle the database connection handle
-   @return interbase database implementation class
-}
-function GetDBImplementationClass(const PlainDriver: TZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const ImmediatelyReleasable: IImmediatelyReleasable): LongInt;
-var
-  DatabaseInfoCommand: AnsiChar;
-  StatusVector: TARRAY_ISC_STATUS;
-  Buffer: array[0..IBBigLocalBufferLength - 1] of AnsiChar;
-begin
-  DatabaseInfoCommand := AnsiChar(isc_info_implementation);
-  if PlainDriver.isc_database_info(@StatusVector, Handle, 1, @DatabaseInfoCommand,
-      IBLocalBufferLength, @Buffer[0]) <> 0 then
-    CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-  result := PlainDriver.isc_vax_integer(@Buffer[4], 1);
-end;
-
-{**
-   Return interbase database info
-   @param PlainDriver a interbase plain driver
-   @param Handle the database connection handle
-   @param DatabaseInfoCommand a database information command
-   @return interbase database info
-}
-function GetLongDbInfo(const PlainDriver: TZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const DatabaseInfoCommand: Integer;
-  const ImmediatelyReleasable: IImmediatelyReleasable): LongInt;
-var
-  DatabaseInfoCommand1: AnsiChar;
-  StatusVector: TARRAY_ISC_STATUS;
-  Buffer: array[0..IBBigLocalBufferLength - 1] of AnsiChar;
-begin
-  DatabaseInfoCommand1 := AnsiChar(DatabaseInfoCommand);
-  if PlainDriver.isc_database_info(@StatusVector, Handle, 1, @DatabaseInfoCommand1,
-    IBLocalBufferLength, @Buffer[0]) <> 0 then
-  CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-  Result := ReadInterbase6Number(PlainDriver, Buffer[1]);
-end;
-
-{**
-   Return interbase database info string
-   @param PlainDriver a interbase plain driver
-   @param Handle a database connection handle
-   @param DatabaseInfoCommand a database information command
-   @return interbase database info string
-}
-function GetStringDbInfo(const PlainDriver: TZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const DatabaseInfoCommand: Integer;
-  const ImmediatelyReleasable: IImmediatelyReleasable): RawByteString;
-var
-  DatabaseInfoCommand1: AnsiChar;
-  StatusVector: TARRAY_ISC_STATUS;
-  Buffer: array[0..IBBigLocalBufferLength - 1] of AnsiChar;
-begin
-  DatabaseInfoCommand1 := AnsiChar(DatabaseInfoCommand);
-  if PlainDriver.isc_database_info(@StatusVector, Handle, 1, @DatabaseInfoCommand1,
-      IBLocalBufferLength, @Buffer[0]) <> 0 then
-    CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-  Byte(Buffer[4 + Integer(Buffer[3])]) := Ord(#0);
-  ZSetString(PAnsiChar(@Buffer[4]), StrLen(PAnsiChar(@Buffer[4])), Result);
+  { Buffer:
+      0     - type of info
+      1..2  - number length
+      3..N  - number
+      N+1   - #1 }
+  if Buffer[0] = AnsiChar(isc_info)
+    then Result := ReadInterbase6Number(PlainDriver, Buffer[1])
+    else Result := -1;
 end;
 
 {**
@@ -1605,18 +1552,10 @@ end;
 }
 function GetDBSQLDialect(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const ImmediatelyReleasable: IImmediatelyReleasable): Integer;
-var
-  DatabaseInfoCommand1: AnsiChar;
-  StatusVector: TARRAY_ISC_STATUS;
-  Buffer: array[0..IBBigLocalBufferLength - 1] of AnsiChar;
 begin
-  DatabaseInfoCommand1 := AnsiChar(isc_info_db_SQL_Dialect);
-  if PlainDriver.isc_database_info(@StatusVector, Handle, 1,
-      @DatabaseInfoCommand1, IBLocalBufferLength, @Buffer[0]) <> 0 then
-    CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-  if (Buffer[0] <> AnsiChar(isc_info_db_SQL_dialect))
-  then Result := 1
-  else Result := ReadInterbase6Number(PlainDriver, Buffer[1]);
+  Result := GetDBIntegerInfo(PlainDriver, Handle, isc_info_db_SQL_Dialect, ImmediatelyReleasable);
+  if Result = -1 then
+    Result := SQL_DIALECT_V5;
 end;
 
 { TZFBSpecificData }
@@ -2029,7 +1968,7 @@ procedure TZSQLDA.IbReAlloc(var P; OldSize, NewSize: Integer);
 begin
   ReallocMem(Pointer(P), NewSize);
   if NewSize > OldSize then
-      Fillchar((PAnsiChar(P) + OldSize)^, NewSize - OldSize, #0);
+    Fillchar((PAnsiChar(P) + OldSize)^, NewSize - OldSize, #0);
 end;
 
 procedure TZSQLDA.SetFieldType(const Index: Word; Size: Integer; Code: Smallint;
@@ -2193,7 +2132,7 @@ begin
     end;
   end;
   {$IFOPT D+}
-  {$R+}
+    {$R+}
   {$ENDIF}
 end;
 
