@@ -518,7 +518,7 @@ begin
     end;
   end;
 
-  if not Result then SysUtils.FindCmdLineSwitch(Switch, IgnoreCase);
+  if not Result then Result := SysUtils.FindCmdLineSwitch(Switch, IgnoreCase);
 end;
 
 {**
