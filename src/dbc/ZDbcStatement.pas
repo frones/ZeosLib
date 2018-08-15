@@ -6412,6 +6412,7 @@ begin
   end;
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure TZAbstractCallableStatement2.GetOrdinal(Index: Integer;
   out Result: UInt64);
 begin
@@ -6430,6 +6431,7 @@ begin
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Retrieves the value of a JDBC <code>CHAR</code>, <code>VARCHAR</code>,

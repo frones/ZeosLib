@@ -1012,13 +1012,8 @@ type
     constructor Create(AOwner: TComponent); override;
     property Value: UInt64 read GetAsUInt64 write SetAsUInt64;
   published
-    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}
-    property MaxValue: UInt64 read FMaxValue write SetMaxValue;
-    property MinValue: UInt64 read FMinValue write SetMinValue;
-    {$ELSE}
-    property MaxValue: UInt64 read FMaxValue write SetMaxValue default 0;
-    property MinValue: UInt64 read FMinValue write SetMinValue default 0;
-    {$IFEND}
+    property MaxValue: UInt64 read FMaxValue write SetMaxValue {$IF NOT(defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR))}default 0{$IFEND};
+    property MinValue: UInt64 read FMinValue write SetMinValue {$IF NOT(defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR))}default 0{$IFEND};
   end;
 
 (*{ TAutoIncField }

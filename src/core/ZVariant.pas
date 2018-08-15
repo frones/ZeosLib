@@ -543,10 +543,6 @@ uses
   Variants, Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZMessages, ZEncoding, ZFastCode, ZSysUtils;
 
-{$IFDEF WITH_UINT64_C1118_ERROR}
-{$R-}
-{$ENDIF}
-
 { TZDefaultVariantManager }
 
 {**
@@ -1433,7 +1429,9 @@ begin
   case Value1.VType of
     vtNull: Result := EncodeNull;
     vtInteger: Result := EncodeInteger(Value1.VInteger + GetAsInteger(Value2));
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     vtUInteger: Result := EncodeUInteger(Value1.VUInteger + GetAsUInteger(Value2));
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     vtFloat: Result := EncodeFloat(Value1.VFloat + GetAsFloat(Value2));
     vtString: Result := EncodeString(Value1.VString + GetAsString(Value2));
     {$IFNDEF NO_ANSISTRING}
@@ -1466,7 +1464,9 @@ begin
     vtNull: Result := EncodeNull;
     vtBoolean: Result := EncodeBoolean(Value1.VBoolean and GetAsBoolean(Value2));
     vtInteger: Result := EncodeInteger(Value1.VInteger and GetAsInteger(Value2));
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     vtUInteger: Result := EncodeUInteger(Value1.VUInteger and GetAsUInteger(Value2));
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     else RaiseUnsupportedOperation;
   end;
 end;
@@ -1483,7 +1483,9 @@ begin
   case Value1.VType of
     vtNull: Result := EncodeNull;
     vtInteger: Result := EncodeInteger(Value1.VInteger div GetAsInteger(Value2));
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     vtUInteger: Result := EncodeUInteger(Value1.VUInteger div GetAsUInteger(Value2));
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     vtFloat: Result := EncodeFloat(Value1.VFloat / GetAsFloat(Value2));
     else RaiseUnsupportedOperation;
   end;
@@ -1537,7 +1539,9 @@ begin
   case Value1.VType of
     vtNull: Result := EncodeNull;
     vtInteger: Result := EncodeInteger(Value1.VInteger mod GetAsInteger(Value2));
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     vtUInteger: Result := EncodeUInteger(Value1.VUInteger mod GetAsUInteger(Value2));
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     else RaiseUnsupportedOperation;
   end;
 end;
@@ -1578,7 +1582,9 @@ begin
   case Value1.VType of
     vtNull: Result := EncodeNull;
     vtInteger: Result := EncodeInteger(Value1.VInteger * GetAsInteger(Value2));
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     vtUInteger: Result := EncodeUInteger(Value1.VUInteger * GetAsUInteger(Value2));
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     vtFloat: Result := EncodeFloat(Value1.VFloat * GetAsFloat(Value2));
     else RaiseUnsupportedOperation;
   end;
@@ -1640,7 +1646,9 @@ begin
     vtNull: SetNull(Result{%H-});
     vtBoolean: Result := EncodeBoolean(Value1.VBoolean or GetAsBoolean(Value2));
     vtInteger: Result := EncodeInteger(Value1.VInteger or GetAsInteger(Value2));
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     vtUInteger: Result := EncodeUInteger(Value1.VInteger or GetAsUInteger(Value2));
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     else RaiseUnsupportedOperation;
   end;
 end;
@@ -1675,7 +1683,9 @@ begin
   case Value1.VType of
     vtNull: Result := EncodeNull;
     vtInteger: Result := EncodeInteger(Value1.VInteger - GetAsInteger(Value2));
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     vtUInteger: Result := EncodeUInteger(Value1.VUInteger - GetAsUInteger(Value2));
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     vtFloat: Result := EncodeFloat(Value1.VFloat - GetAsFloat(Value2));
     else RaiseUnsupportedOperation;
   end;
@@ -1712,10 +1722,12 @@ begin
       end;
     vtUInteger:
       begin
+        {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
         TempUInteger1 := Value1.VUInteger;
         TempUInteger2 := GetAsUInteger(Value2);
         Result := EncodeUInteger((TempUInteger1 and not TempUInteger2)
           or (not TempUInteger1 and TempUInteger2));
+        {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       end;
     else RaiseUnsupportedOperation;
   end;
@@ -2198,6 +2210,7 @@ begin
         else
           RaiseTypeMismatchError;
       end;
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     vtUInteger:
       case Value.VType of
         vtNull:
@@ -2239,6 +2252,7 @@ begin
         vtInterface:
           RaiseTypeMismatchError;
       end;
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     vtFloat:
       case Value.VType of
         vtNull:

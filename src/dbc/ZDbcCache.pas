@@ -283,11 +283,6 @@ const
 
 implementation
 
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}
-  {$R-}
-  {$UNDEF RangeCheckEnabled}
-{$IFEND}
-
 uses ZFastcode, Math, ZMessages, ZSysUtils, ZDbcUtils, ZEncoding
   {$IF not defined(OLDFPC) and not defined(NO_UNIT_CONTNRS)}, ZClasses{$IFEND}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
@@ -1081,6 +1076,7 @@ begin
     IsNull := True;
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZRowAccessor.InternalGetULong(ColumnIndex: Integer; var IsNull: Boolean): UInt64;
 var
   Data: PPointer;
@@ -1089,7 +1085,7 @@ begin
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stBoolean: if PWordBool(Data)^ then Result := 1;
       stByte: Result := PByte(Data)^;
@@ -1123,6 +1119,7 @@ begin
   else
     IsNull := True;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 procedure TZRowAccessor.InternalSetInt(ColumnIndex, Value: Integer);
 var
@@ -1140,7 +1137,9 @@ begin
     stSmall: PSmallInt(Data)^ := Value;
     stLongWord: PCardinal(Data)^ := Value;
     stInteger: PInteger(Data)^ := Value;
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := Value;
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := Value;
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
@@ -3406,8 +3405,9 @@ begin
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
     ValuePtr := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
       stByte:
         begin
           Result.VType := vtUInteger;
@@ -3511,6 +3511,7 @@ begin
       else
         Result.VType := vtNull;
     end;
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
   end
   else
     Result.VType := vtNull;
@@ -3612,7 +3613,9 @@ begin
     stSmall: PSmallInt(Data)^ := Ord(Value);
     stLongWord: PCardinal(Data)^ := Ord(Value);
     stInteger: PInteger(Data)^ := Ord(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := Ord(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := Ord(Value);
     stFloat: PSingle(Data)^ := Ord(Value);
     stDouble: PDouble(Data)^ := Ord(Value);
@@ -3712,7 +3715,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLongWord);
 {$ENDIF}
+  {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
   InternalSetULong(ColumnIndex, Value);
+  {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 end;
 
 {**
@@ -3779,7 +3784,9 @@ begin
     stSmall: PSmallInt(Data)^ := Value;
     stLongWord: PCardinal(Data)^ := Value;
     stInteger: PInteger(Data)^ := Value;
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := Value;
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := Value;
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
@@ -3821,7 +3828,9 @@ begin
     stLongWord: PCardinal(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stInteger: PInteger(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stLong: PInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
@@ -3862,7 +3871,9 @@ begin
     stLongWord: PCardinal(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stInteger: PInteger(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stLong: PInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
@@ -3872,7 +3883,6 @@ begin
       then SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
       else SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
   end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
 {**
@@ -3904,7 +3914,9 @@ begin
     stLongWord: PCardinal(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stInteger: PInteger(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stLong: PInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
@@ -3946,7 +3958,9 @@ begin
     stLongWord: PCardinal(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stInteger: PInteger(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stLong: PInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
@@ -3985,7 +3999,9 @@ begin
     stSmall: PSmallInt(Data)^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
     stLongWord: PCardinal(Data)^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
     stInteger: PInteger(Data)^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
     stFloat: PSingle(Data)^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
     stDouble: PDouble(Data)^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
@@ -4080,7 +4096,9 @@ begin
     stSmall: PSmallInt(Data)^ := RawToIntDef(Value, 0);
     stLongWord: PCardinal(Data)^ := RawToInt64Def(Value, 0);
     stInteger: PInteger(Data)^ := RawToIntDef(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := RawToInt64Def(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := RawToInt64Def(Value, 0);
     stFloat: SQLStrToFloatDef(Value, 0, PSingle(Data)^, Len^);
     stDouble: SQLStrToFloatDef(Value, 0, PDouble(Data)^, Len^);
@@ -4172,7 +4190,9 @@ begin
     stSmall: PSmallInt(Data)^ := UnicodeToIntDef(Value, 0);
     stLongWord: PCardinal(Data)^ := UnicodeToInt64Def(Value, 0);
     stInteger: PInteger(Data)^ := UnicodeToIntDef(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := UnicodeToInt64Def(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := UnicodeToInt64Def(Value, 0);
     stFloat: PSingle(Data)^ := SQLStrToFloatDef(Value, 0, Len^);
     stDouble: PDouble(Data)^ := SQLStrToFloatDef(Value, 0, Len^);
@@ -4286,7 +4306,9 @@ begin
     stSmall: PSmallInt(Data)^ := RawToIntDef(Value, 0);
     stLongWord: PCardinal(Data)^ := RawToInt64Def(Value, 0);
     stInteger: PInteger(Data)^ := RawToIntDef(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := RawToInt64Def(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := RawToInt64Def(Value, 0);
     stFloat: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PSingle(Data)^, Length(Value));
     stDouble: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PDouble(Data)^, Length(Value));
@@ -4363,7 +4385,9 @@ begin
     stSmall: PSmallInt(Data)^ := UnicodeToIntDef(Value, 0);
     stLongWord: PCardinal(Data)^ := UnicodeToInt64Def(Value, 0);
     stInteger: PInteger(Data)^ := UnicodeToIntDef(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := UnicodeToInt64Def(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := UnicodeToInt64Def(Value, 0);
     stFloat: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PSingle(Data)^, Length(Value));
     stDouble: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PDouble(Data)^, Length(Value));
