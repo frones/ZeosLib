@@ -238,7 +238,7 @@ type
     FCapacity: Integer;
     FConSettings: PZConSettings;
     procedure Grow;
-    {$IFOPT R+}
+    {$IFNDEF DISABLE_CHECKING}
     class procedure Error(const Msg: string; Data: Integer);
     {$ENDIF}
     function AquireBuffer(Index: Integer; SQLType: TZSQLType; BindType: TZBindType): PZBindValue; {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -3904,13 +3904,13 @@ end;
 
 procedure TZBindList.Delete(Index: Integer);
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
+  {$ENDIF}
   ClearValue(Index);
   Dec(FCount);
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$R-}
   if Index < FCount then
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FValues^[Index + 1], FValues^[Index],
       (FCount - Index) * SizeOf(TZBindValue));
@@ -3923,20 +3923,13 @@ begin
   inherited;
 end;
 
-{$IFOPT R+}
+{$IFNDEF DISABLE_CHECKING}
 class procedure TZBindList.Error(const Msg: string; Data: Integer);
-{$IFNDEF FPC}
-  function ReturnAddr: Pointer;
-  asm
-          MOV     EAX,[EBP+4]
-  end;
-{$ENDIF}
-
 begin
   {$IFDEF FPC}
   raise EListError.CreateFmt(Msg,[Data]) at get_caller_addr(get_frame);
   {$ELSE}
-  raise EListError.CreateFmt(Msg, [Data]) at ReturnAddr;
+  raise EListError.CreateFmt(Msg, [Data]) at ReturnAddress;
   {$ENDIF}
 end;
 {$ENDIF}
@@ -3950,22 +3943,22 @@ end;
 
 function TZBindList.Get(Index: Integer): PZBindValue;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$ENDIF}
+  {$R-}
   Result := @FValues^[Index];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 function TZBindList.Get8Byte(Index: Integer): P8Bytes;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$ENDIF}
+  {$R-}
   if FValues^[Index].BindType = zbt8Byte
   then Result := {$IFDEF CPU64}@{$ENDIF}FValues^[Index].Value
   else raise EZSQLException.Create(SUnsupportedDataType);
@@ -3974,11 +3967,11 @@ end;
 
 function TZBindList.GetArray(Index: Integer): PZArray;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$ENDIF}
+  {$R-}
   if FValues^[Index].BindType = zbtArray
   then Result := FValues^[Index].Value
   else raise EZSQLException.Create(SUnsupportedDataType);
@@ -3987,33 +3980,33 @@ end;
 
 function TZBindList.GetBindType(Index: Integer): TZBindType;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$ENDIF}
+  {$R-}
   Result := FValues^[Index].BindType
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 function TZBindList.GetSQLType(Index: Integer): TZSQLType;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$ENDIF}
+  {$R-}
   Result := FValues^[Index].SQLType
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 function TZBindList.GetType(Index: Integer): TZParamType;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$ENDIF}
+  {$R-}
   Result := FValues^[Index].ParamType
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
@@ -4089,13 +4082,13 @@ end;
 function TZBindList.AquireBuffer(Index: Integer; SQLType: TZSQLType;
   BindType: TZBindType): PZBindValue;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index > High(Word)) then
     Error(SListIndexError, Index);
-{$ENDIF}
+  {$ENDIF}
   while (Index+1 > FCapacity) do
     Grow;
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$R-}
   if (FValues^[Index].BindType <> zbtNull) and (FValues^[Index].BindType <> BindType) then
     ClearValue(Index);
   if Index+1 > FCount then
@@ -4256,33 +4249,33 @@ procedure TZBindList.SetCapacity(NewCapacity: Integer);
 var
   I: Integer;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (NewCapacity < 0) or (NewCapacity > High(Word)) then
     Error(SListCapacityError, NewCapacity);
-{$ENDIF}
+  {$ENDIF}
   if NewCapacity < FCount then begin
     for I := FCount - 1 downto NewCapacity do
       ClearValue(I);
     FCount := NewCapacity;
   end;
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$R-}
   if NewCapacity <> FCapacity then begin
     ReallocMem(FValues, NewCapacity * SizeOf(TZBindValue));
     if NewCapacity > FCapacity then
       FillChar(FValues^[FCapacity], (NewCapacity - FCapacity) * SizeOf(TZBindValue), #0);
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     FCapacity := NewCapacity;
   end;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 procedure TZBindList.SetCount(NewCount: Integer);
 var
   I: Integer;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (NewCount < 0) or (NewCount > High(Word)) then
     Error(SListCountError, NewCount);
-{$ENDIF}
+  {$ENDIF}
   if NewCount > FCapacity then
     SetCapacity(NewCount);
   if NewCount < FCount then

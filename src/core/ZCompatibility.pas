@@ -457,6 +457,11 @@ function Max(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}
 function BytesOf(InStr: AnsiString): TBytes;
 {$ENDIF}
 
+{$IF NOT DEFINED(FPC) AND NOT DECLARED(ReturnAddress)} // intrinsic since XE2
+{$DEFINE ZReturnAddress}
+function ReturnAddress: Pointer;
+{$IFEND}
+
 var
   ClientCodePageDummy: TZCodepage =
     (Name: ''; ID: 0; CharWidth: 1; Encoding: ceAnsi;
@@ -928,6 +933,19 @@ begin
   if Len > 0 then Move(InStr[1], Result[0], Len);
 end;
 {$ENDIF}
+
+{$IFDEF ZReturnAddress} 
+  function ReturnAddress: Pointer;
+  {$IFDEF PUREPASCAL}
+  begin
+    Result := nil;
+  end;
+  {$ELSE}
+  asm
+          MOV     EAX,[EBP+4]
+  end;
+  {$ENDIF}
+{$ENDIF ZReturnAddress}
 
 initialization
   case ConSettingsDummy.CPType of

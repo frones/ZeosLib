@@ -55,7 +55,7 @@ interface
 
 {$I ZCore.inc}
 
-uses Classes, ZClasses;
+uses Classes, ZClasses, ZCompatibility;
 
 type
 
@@ -271,19 +271,11 @@ end;
   @param Data a integer value to describe an error.
 }
 class procedure TZCollection.Error(const Msg: string; Data: Integer);
-
-{$IF not defined(FPC) and not defined(NEXTGEN)}
-  function ReturnAddr: Pointer;
-  asm
-          MOV     EAX,[EBP+4]
-  end;
-{$IFEND}
-
 begin
   {$IFDEF FPC}
   raise EListError.CreateFmt(Msg,[Data]) at get_caller_addr(get_frame);
   {$ELSE}
-  raise EListError.CreateFmt(Msg, [Data]) at {$IFDEF NEXTGEN}ReturnAddress{$ELSE}ReturnAddr{$ENDIF};
+  raise EListError.CreateFmt(Msg, [Data]) at ReturnAddress;
   {$ENDIF}
 end;
 
@@ -312,10 +304,10 @@ end;
 }
 procedure TZCollection.SetCapacity(NewCapacity: Integer);
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (NewCapacity < FCount) or (NewCapacity > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
     Error(SListCapacityError, NewCapacity);
-{$ENDIF}
+  {$ENDIF}
   if NewCapacity <> FCapacity then
   begin
     ReallocMem(FList, NewCapacity * SizeOf(IZInterface));
@@ -334,10 +326,10 @@ procedure TZCollection.SetCount(NewCount: Integer);
 var
   I: Integer;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (NewCount < 0) or (NewCount > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
     Error(SListCountError, NewCount);
-{$ENDIF}
+  {$ENDIF}
   if NewCount > FCapacity then
     SetCapacity(NewCount);
   if NewCount < FCount then
@@ -441,10 +433,10 @@ end;
 }
 procedure TZCollection.Delete(Index: Integer);
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
+  {$ENDIF}
   FList^[Index] := nil;
   Dec(FCount);
   if Index < FCount then
@@ -465,12 +457,12 @@ procedure TZCollection.Exchange(Index1, Index2: Integer);
 var
   Item: IZInterface;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index1 < 0) or (Index1 >= FCount) then
     Error(SListIndexError, Index1);
   if (Index2 < 0) or (Index2 >= FCount) then
     Error(SListIndexError, Index2);
-{$ENDIF}
+  {$ENDIF}
   Item := FList^[Index1];
   FList^[Index1] := FList^[Index2];
   FList^[Index2] := Item;
@@ -492,10 +484,10 @@ end;
 }
 function TZCollection.Get(Index: Integer): IZInterface;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
+  {$ENDIF}
   Result := FList^[Index];
 end;
 
@@ -568,10 +560,10 @@ end;
 }
 procedure TZCollection.Insert(Index: Integer; const Item: IZInterface);
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index > FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
+  {$ENDIF}
   if FCount = FCapacity then
     Grow;
   if Index < FCount then
@@ -601,10 +593,10 @@ end;
 }
 procedure TZCollection.Put(Index: Integer; const Item: IZInterface);
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
+  {$ENDIF}
   FList^[Index] := Item;
 end;
 
