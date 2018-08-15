@@ -394,6 +394,10 @@
   {$DEFINE RangeCheckEnabled}
 {$ENDIF}
 
+{$IFOPT Q+}
+  {$DEFINE OverFlowCheckEnabled}
+{$ENDIF}
+
 // Disables checking code.
 // Use Range checking option to turn on/off optimization
 {$IFOPT R-}

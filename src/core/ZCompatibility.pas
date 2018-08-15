@@ -598,14 +598,8 @@ end;
   {$ENDIF}
 {$ENDIF}
 
-{$IFOPT Q+}
-  {$DEFINE OverFlowCheckEnabled}
-  {$OVERFLOWCHECKS OFF}
-{$ENDIF}
-{$IFOPT R+}
-  {$DEFINE RangeCheckEnabled}
-  {$R-}
-{$ENDIF}
+{$Q-}
+{$R-}
 
 function Hash(const key: ZWideString): Cardinal;
 var
@@ -709,12 +703,8 @@ begin
   end;
 end;
 
-{$IFDEF RangeCheckEnabled}
-  {$R+}
-{$ENDIF}
-{$IFDEF OverFlowCheckEnabled}
-  {$OVERFLOWCHECKS ON}
-{$ENDIF}
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
 {$IFNDEF FPC}
 {$IFDEF WITH_TSYSCHARSET_DEPRECATED}

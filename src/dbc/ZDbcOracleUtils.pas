@@ -55,10 +55,6 @@ interface
 
 {$I ZDbc.inc}
 
-{$IFOPT R+}
-  {$DEFINE RangeCheck}
-{$ENDIF}
-
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
@@ -366,7 +362,7 @@ begin
     for I := 0 to Variables.AllocNum-1 do begin
       {$R-}
       CurrentVar := @Variables.Variables[I];
-      {$IFDEF RangeCheck} {$R+} {$ENDIF}
+      {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
       if Assigned(CurrentVar^._Obj) then
         DisposeObject(CurrentVar^._Obj);
       if (CurrentVar^.Data <> nil) and (CurrentVar^.DescriptorType > 0) then
@@ -595,7 +591,7 @@ var
     {$R-}
     Variable^.oIndicatorArray^[I] := -1;
     Variable^.oDataSizeArray^[i] := 1; //place of #0
-    {$IFDEF RangeCheck} {$R+} {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     ({%H-}PAnsiChar({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length))^ := #0; //OCI expects the trailing $0 byte
   end;
   procedure MoveString(Const Data: Pointer; Iter: LongWord);
@@ -603,7 +599,7 @@ var
     {$R-}
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Data^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+Iter*Variable^.Length)^, Variable^.oDataSizeArray^[Iter]);
     ({%H-}PAnsiChar({%H-}NativeUInt(Variable^.Data)+Iter*Variable^.Length)+Variable^.oDataSizeArray^[Iter]-1)^ := #0; //improve  StrLCopy... set a leadin #0 if truncation happens
-    {$IFDEF RangeCheck} {$R+} {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 begin
   OracleConnection := Connection as IZOracleConnection;
@@ -1016,7 +1012,7 @@ begin
             end;
       end;
   end;
- {$IFDEF RangeCheck} {$R+} {$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1033,7 +1029,7 @@ begin
     if (Variables^.Variables[i].DescriptorType > 0) and (Length(Variables^.Variables[i].Lobs) > 0) then
       for j := 0 to High(Variables^.Variables[i].Lobs) do
         Variables^.Variables[i].Lobs[j] := nil;
-        {$IFDEF RangeCheck} {$R+} {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**

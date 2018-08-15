@@ -6390,12 +6390,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsByte(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6435,12 +6432,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsShortInt(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6480,12 +6474,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsWord(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6525,12 +6516,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsSmallInt(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6570,12 +6558,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsInteger(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6615,12 +6600,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsLongWord(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6660,12 +6642,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsLargeInt(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6705,12 +6684,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsUInt64(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6820,12 +6796,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsSingle(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6905,12 +6878,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsFloat(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6983,12 +6953,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsCurrency(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;

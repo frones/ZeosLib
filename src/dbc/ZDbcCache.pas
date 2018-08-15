@@ -283,9 +283,6 @@ const
 
 implementation
 
-{$IFOPT Q+}
-  {$DEFINE OverFlowCheckEnabled}
-{$ENDIF}
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}
   {$R-}
   {$UNDEF RangeCheckEnabled}

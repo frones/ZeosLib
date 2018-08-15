@@ -179,21 +179,13 @@ function GetCurrentResultSet(const RowSet: IRowSet; const Statement: IZStatement
 
 implementation
 
-{$IFOPT R+}
-  {$DEFINE WITH_RANGE_CHECK}
-{$ENDIF}
-
 uses
   Variants, Math, {$IFDEF WITH_SYSTEM_WIN_COMOBJ}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode, ZClasses;
 
-{$IFOPT R+}
-  {$DEFINE WITH_RANGE_CHECK}
-{$ENDIF}
 var
   LobReadObj: TDBObject;
   LobDBBinding: TDBBinding;
-
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
@@ -644,7 +636,7 @@ begin
     //note FLength is valid only if DBPART_LENGTH was set in Bindings.dwFlags!!!
     FLength := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
   end;
-  {$IFDEF WITH_RANGE_CHECK} {$R+} {$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**

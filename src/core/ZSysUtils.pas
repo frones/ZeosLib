@@ -3397,8 +3397,8 @@ end;
     in other procedure, and not changed parameters and code).
 }
 //~1.57 times faster than Delphi QuickSort on E6850
-{$UNDEF SaveQ} {$IFOPT Q+} {$Q-} {$DEFINE SaveQ} {$ENDIF}
-{$UNDEF SaveR} {$IFOPT R+} {$R-} {$DEFINE SaveR} {$ENDIF}
+{$Q-}
+{$R-}
 const
   InsCount = 35; //33..49;
   InsLast = InsCount-1;
@@ -3527,8 +3527,8 @@ end;
 {$IFDEF FPC}
   {$HINTS ON}
 {$ENDIF}
-{$IFDEF SaveQ} {$Q+} {$UNDEF SaveQ} {$ENDIF}
-{$IFDEF SaveR} {$R+} {$UNDEF SaveR} {$ENDIF}
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
 {$IFDEF TLIST_IS_DEPRECATED}
 function TZSortedList.Add(Item: Pointer): Integer;
@@ -5008,8 +5008,8 @@ begin
   end;
 end;
 
-{$UNDEF SaveQ} {$IFOPT Q+} {$Q-} {$DEFINE SaveQ} {$ENDIF}
-{$UNDEF SaveR} {$IFOPT R+} {$R-} {$DEFINE SaveR} {$ENDIF}
+{$Q-}
+{$R-}
 function SameText(Val1, Val2: PAnsiChar; Len: LengthInt): Boolean;
 var  PEnd: PAnsiChar;
   B: Byte;
@@ -5079,8 +5079,8 @@ begin
   end;
   Result := True;
 end;
-{$IFDEF SaveQ} {$Q+} {$UNDEF SaveQ} {$ENDIF}
-{$IFDEF SaveR} {$R+} {$UNDEF SaveR} {$ENDIF}
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
 function Trim(P: PAnsiChar; L: LengthInt): RawByteString;
 var PEnd: PAnsiChar;
