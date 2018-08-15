@@ -1681,6 +1681,18 @@ begin
   Assert(Index < Word(FXSQLDA.sqln), 'Out of Range.');
 end;
 
+function ConvertConnRawToStringWithOpt(ConSettings: PZConSettings; Buffer: Pointer; BufLen: Integer): string;
+begin
+  {$IFDEF UNICODE}
+  Result := PRawToUnicode(Buffer, BufLen, ConSettings^.ClientCodePage^.CP);
+  {$ELSE}
+    if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
+      SetString(Result, Buffer, BufLen)
+    else
+      Result := ZUnicodeToString(PRawToUnicode(Buffer, BufLen, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
+  {$ENDIF}
+end;
+
 {**
    Return alias name for field
    @param Index the index fields
@@ -1690,15 +1702,8 @@ function TZSQLDA.GetFieldAliasName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-  {$IFDEF UNICODE}
-  Result := PRawToUnicode(@FXSQLDA.sqlvar[Index].aliasname[0], FXSQLDA.sqlvar[Index].aliasname_length, ConSettings^.ClientCodePage^.CP);
-  {$ELSE}
-    if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
-      SetString(Result, PAnsiChar(@FXSQLDA.sqlvar[Index].aliasname[0]), FXSQLDA.sqlvar[Index].aliasname_length)
-    else
-      Result := ZUnicodeToString(PRawToUnicode(@FXSQLDA.sqlvar[Index].aliasname[0],
-        FXSQLDA.sqlvar[Index].aliasname_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
-  {$ENDIF}
+  Result := ConvertConnRawToStringWithOpt(ConSettings,
+    @FXSQLDA.sqlvar[Index].aliasname[0], FXSQLDA.sqlvar[Index].aliasname_length);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -1731,14 +1736,11 @@ var S: String;
   P1, P2: PChar;
 begin
   {$R-}
-  for Result := 0 to GetFieldCount - 1 do begin
-    {$IFDEF UNICODE}
-    S := PRawToUnicode(@FXSQLDA.sqlvar[Result].aliasname[0], FXSQLDA.sqlvar[Result].aliasname_length, ConSettings^.ClientCodePage.CP);
-    {$ELSE}
-    ZSetString(@FXSQLDA.sqlvar[Result].aliasname[0], FXSQLDA.sqlvar[Result].aliasname_length, S);
-    S := ConSettings^.ConvFuncs.ZRawToString(S, ConSettings^.ClientCodePage^.CP, Consettings^.CTRL_CP);
-    {$ENDIF}
-    if Length(S) = Length(name) then begin
+  for Result := 0 to GetFieldCount - 1 do
+  begin
+    S := ConvertConnRawToString(ConSettings, @FXSQLDA.sqlvar[Result].aliasname[0], FXSQLDA.sqlvar[Result].aliasname_length);
+    if Length(S) = Length(name) then
+    begin
       P1 := Pointer(Name);
       P2 := Pointer(S);
       if StrLIComp(P1, P2, Length(S)) = 0 then
@@ -1853,15 +1855,8 @@ function TZSQLDA.GetFieldOwnerName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-  {$IFDEF UNICODE}
-  Result := PRawToUnicode(@FXSQLDA.sqlvar[Index].OwnName[0], FXSQLDA.sqlvar[Index].OwnName_length, ConSettings^.ClientCodePage^.CP);
-  {$ELSE}
-    if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
-      SetString(Result, PAnsiChar(@FXSQLDA.sqlvar[Index].OwnName[0]), FXSQLDA.sqlvar[Index].OwnName_length)
-    else
-      Result := ZUnicodeToString(PRawToUnicode(@FXSQLDA.sqlvar[Index].OwnName[0],
-        FXSQLDA.sqlvar[Index].OwnName_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
-  {$ENDIF}
+  Result := ConvertConnRawToStringWithOpt(ConSettings,
+    @FXSQLDA.sqlvar[Index].OwnName[0], FXSQLDA.sqlvar[Index].OwnName_length);
   {$IFOPT D+}
     {$R+}
 {$ENDIF}
@@ -1876,15 +1871,8 @@ function TZSQLDA.GetFieldRelationName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-  {$IFDEF UNICODE}
-  Result := PRawToUnicode(@FXSQLDA.sqlvar[Index].RelName[0], FXSQLDA.sqlvar[Index].RelName_length, ConSettings^.ClientCodePage^.CP);
-  {$ELSE}
-    if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
-      SetString(Result, PAnsiChar(@FXSQLDA.sqlvar[Index].RelName[0]), FXSQLDA.sqlvar[Index].RelName_length)
-    else
-      Result := ZUnicodeToString(PRawToUnicode(@FXSQLDA.sqlvar[Index].RelName[0],
-        FXSQLDA.sqlvar[Index].RelName_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
-  {$ENDIF}
+  Result := ConvertConnRawToStringWithOpt(ConSettings,
+    @FXSQLDA.sqlvar[Index].RelName[0], FXSQLDA.sqlvar[Index].RelName_length);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -1914,15 +1902,8 @@ function TZSQLDA.GetFieldSqlName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-  {$IFDEF UNICODE}
-  Result := PRawToUnicode(@FXSQLDA.sqlvar[Index].sqlname[0], FXSQLDA.sqlvar[Index].sqlname_length, ConSettings^.ClientCodePage^.CP);
-  {$ELSE}
-    if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
-      SetString(Result, PAnsiChar(@FXSQLDA.sqlvar[Index].sqlname[0]), FXSQLDA.sqlvar[Index].sqlname_length)
-    else
-      Result := ZUnicodeToString(PRawToUnicode(@FXSQLDA.sqlvar[Index].sqlname[0],
-        FXSQLDA.sqlvar[Index].sqlname_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
-  {$ENDIF}
+  Result := ConvertConnRawToStringWithOpt(ConSettings,
+    @FXSQLDA.sqlvar[Index].sqlname[0], FXSQLDA.sqlvar[Index].sqlname_length);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -1937,7 +1918,7 @@ function TZSQLDA.GetIbSqlSubType(const Index: Word): Smallint;
 begin
   CheckRange(Index);
   {$R-}
-  result := FXSQLDA.sqlvar[Index].sqlsubtype;
+  Result := FXSQLDA.sqlvar[Index].sqlsubtype;
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -1952,7 +1933,7 @@ function TZSQLDA.GetIbSqlType(const Index: Word): Smallint;
 begin
   CheckRange(Index);
   {$R-}
-  result := FXSQLDA.sqlvar[Index].sqltype and not (1);
+  Result := FXSQLDA.sqlvar[Index].sqltype and not (1);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -2003,7 +1984,7 @@ function TZSQLDA.IsBlob(const Index: Word): boolean;
 begin
   CheckRange(Index);
   {$R-}
-  result := ((FXSQLDA.sqlvar[Index].sqltype and not(1)) = SQL_BLOB);
+  Result := ((FXSQLDA.sqlvar[Index].sqltype and not(1)) = SQL_BLOB);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
