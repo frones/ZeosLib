@@ -336,7 +336,7 @@ end;
 procedure TZInterbase6Connection.AssignISC_Parameters;
 var
   RoleName: string;
-  ConnectTimeout : integer;
+  ConnectTimeout, Idx: integer;
   WireCompression: Boolean;
 begin
   { set default sql dialect it can be overriden }
@@ -373,12 +373,13 @@ begin
   if Info.IndexOf('isc_dpb_sql_dialect') = -1 then
     Info.Values['isc_dpb_sql_dialect'] := IntToStr(FDialect);
 
+  Idx := Info.IndexOf('isc_dpb_utf8_filename');
   if (GetClientVersion >= 2005000) and IsFirebirdLib then begin
-    if (Info.IndexOf('isc_dpb_utf8_filename') = -1) and ((FClientCodePage = 'UTF8') or (FClientCodePage = 'UNICODE_FSS')) then
+    if (Idx = -1) and ((FClientCodePage = 'UTF8') or (FClientCodePage = 'UNICODE_FSS')) then
       Info.Add('isc_dpb_utf8_filename');
-  end else
-    if (Info.IndexOf('isc_dpb_utf8_filename') <> -1) then
-      Info.Delete(Info.IndexOf('isc_dpb_utf8_filename'));
+  end
+  else if Idx <> -1 then
+    Info.Delete(Idx);
   Info.EndUpdate;
 end;
 
