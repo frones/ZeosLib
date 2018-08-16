@@ -110,7 +110,7 @@ type
 
 implementation
 
-uses ZTestCase, ZSysUtils, ZDbcResultSet, ZDbcUtils, ZEncoding;
+uses ZTestCase, ZSysUtils, ZDbcResultSet, ZEncoding;
 
 { TZNativeDbcPerformanceTestCase }
 

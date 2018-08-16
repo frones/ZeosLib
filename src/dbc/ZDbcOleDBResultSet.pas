@@ -62,12 +62,9 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
   {$ENDIF}
-{$IFNDEF FPC}
-  DateUtils,
-{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
-  {$IFDEF OLD_FPC}ZClasses, {$ENDIF}ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
+  ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
   ZOleDB, ZDbcOleDBUtils,
   ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility;
 

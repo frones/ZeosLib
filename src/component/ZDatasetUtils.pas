@@ -294,7 +294,7 @@ implementation
 
 uses
   ZFastCode, ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset,
-  ZDbcUtils, ZSysUtils, ZDbcResultSet;
+  ZSysUtils, ZDbcResultSet;
 
 {**
   Converts DBC Field Type to TDataset Field Type.

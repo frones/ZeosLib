@@ -264,7 +264,7 @@ implementation
 
 uses
   Math,
-  ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils, ZClasses, ZDbcUtils;
+  ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils, ZClasses;
 
 { TZPerformanceSQLTestCase }
 

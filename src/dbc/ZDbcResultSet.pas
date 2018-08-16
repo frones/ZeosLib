@@ -69,7 +69,7 @@ uses
 {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
-  ZDbcIntfs, ZClasses, ZCollections, ZSysUtils, ZCompatibility, ZVariant;
+  ZDbcIntfs, ZClasses, ZSysUtils, ZCompatibility, ZVariant;
 
 {$IFDEF FPC}
   {$HINTS OFF} //suppress not used params
