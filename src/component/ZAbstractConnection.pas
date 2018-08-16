@@ -57,10 +57,8 @@ interface
 
 uses
   Types,
-{$IFNDEF UNIX}
 {$IFDEF ENABLE_ADO}
   ZDbcAdo,
-{$ENDIF}
 {$ENDIF}
 {$IFDEF ENABLE_DBLIB}
   ZDbcDbLib,

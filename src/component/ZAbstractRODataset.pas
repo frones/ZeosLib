@@ -4658,7 +4658,7 @@ begin
   if (Src <> nil) then
   begin
     Result := ZFastCode.StrLen(Src);
-  {$IFNDEF UNIX}
+    {$IFDEF MSWINDOWS}
     if doOemTranslate in FOptions then
     begin
       if ToOem then
@@ -4668,7 +4668,7 @@ begin
       Dest[Result] := #0;
     end
     else
-  {$ENDIF}
+    {$ENDIF}
     begin
       if (Src <> Dest) then
       {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(Dest, Src);
