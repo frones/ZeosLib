@@ -246,17 +246,17 @@ type
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; virtual;
     {$ENDIF}
     function GetBinaryEscapeString(const Value: TBytes): String; overload; virtual;
-    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: RawByteString); overload; virtual;
-    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: ZWideString); overload; virtual;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString); overload; virtual;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: ZWideString); overload; virtual;
 
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
     function GetEscapeString(Buf: PAnsichar; Len: LengthInt): RawByteString; overload; virtual;
 
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; var Result: RawByteString); overload; virtual;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; RawCP: Word; var Result: ZWideString); overload; virtual;
-    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; RawCP: Word; var Result: RawByteString); overload; virtual;
-    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; var Result: ZWideString); overload; virtual;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); overload; virtual;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; RawCP: Word; out Result: ZWideString); overload; virtual;
+    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; RawCP: Word; out Result: RawByteString); overload; virtual;
+    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; out Result: ZWideString); overload; virtual;
 
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
@@ -766,13 +766,13 @@ begin
 end;
 
 procedure TZAbstractDbcConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
-  var Result: RawByteString);
+  out Result: RawByteString);
 begin
   Result := SQLQuotedStr(Buf, Len, AnsiChar(#39));
 end;
 
 procedure TZAbstractDbcConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
-  RawCP: Word; var Result: ZWideString);
+  RawCP: Word; out Result: ZWideString);
 var RawTmp: RawByteString;
 begin
   GetEscapeString(Buf, Len, RawTmp);
@@ -826,13 +826,13 @@ begin
 end;
 
 procedure TZAbstractDbcConnection.GetBinaryEscapeString(Buf: Pointer;
-  Len: LengthInt; var Result: ZWideString);
+  Len: LengthInt; out Result: ZWideString);
 begin
   Result := GetSQLHexWideString(Buf, Len);
 end;
 
 procedure TZAbstractDbcConnection.GetBinaryEscapeString(Buf: Pointer;
-  Len: LengthInt; var Result: RawByteString);
+  Len: LengthInt; out Result: RawByteString);
 begin
   Result := GetSQLHexAnsiString(Buf, Len);
 end;
@@ -1735,7 +1735,7 @@ begin
 end;
 
 procedure TZAbstractDbcConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
-  RawCP: Word; var Result: RawByteString);
+  RawCP: Word; out Result: RawByteString);
 var RawTemp: RawByteString;
 begin
   RawTemp := PUnicodeToRaw(Buf, Len, RawCP);
@@ -1743,7 +1743,7 @@ begin
 end;
 
 procedure TZAbstractDbcConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
-  var Result: ZWideString);
+  out Result: ZWideString);
 var RawTemp: RawByteString;
 begin
   if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then

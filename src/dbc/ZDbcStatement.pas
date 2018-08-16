@@ -416,11 +416,11 @@ type
     procedure GetOrdinal(Index: Integer; out Result: UInt64); overload; virtual;
     procedure GetCurrency(Index: Integer; out Result: Currency); overload; virtual;
     procedure GetDouble(Index: Integer; out Result: Double); overload; virtual;
-    procedure GetBigDecimal(Index: Integer; var Result: TZBCD); overload; virtual;
+    procedure GetBigDecimal(Index: Integer; out Result: TZBCD); overload; virtual;
     procedure GetBytes(Index: Integer; out Buf: Pointer; out Len: LengthInt); overload; virtual;
-    procedure GetDateTime(Index: Integer; var Result: TDateTime); virtual;
-    procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); overload; virtual;
-    procedure GetLob(Index: Integer; var Result: IZBlob); virtual;
+    procedure GetDateTime(Index: Integer; out Result: TDateTime); virtual;
+    procedure GetTimeStamp(Index: Integer; out Result: TZTimeStamp); overload; virtual;
+    procedure GetLob(Index: Integer; out Result: IZBlob); virtual;
     procedure GetPChar(Index: Integer; out Buf: Pointer; out Len: LengthInt; CodePage: Word); overload; virtual;
 
     procedure ClearParameters; virtual;
@@ -527,11 +527,11 @@ type
     procedure GetOrdinal(Index: Integer; out Result: UInt64); override;
     procedure GetCurrency(Index: Integer; out Result: Currency); override;
     procedure GetDouble(Index: Integer; out Result: Double); override;
-    procedure GetBigDecimal(Index: Integer; var Result: TZBCD); override;
+    procedure GetBigDecimal(Index: Integer; out Result: TZBCD); override;
     procedure GetBytes(Index: Integer; out Buf: Pointer; out Len: LengthInt); override;
-    procedure GetDateTime(Index: Integer; var Result: TDateTime); override;
-    procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); override;
-    procedure GetLob(Index: Integer; var Result: IZBlob); override;
+    procedure GetDateTime(Index: Integer; out Result: TDateTime); override;
+    procedure GetTimeStamp(Index: Integer; out Result: TZTimeStamp); override;
+    procedure GetLob(Index: Integer; out Result: IZBlob); override;
     procedure GetPChar(Index: Integer; out Buf: Pointer; out Len: LengthInt; CodePage: Word); override;
   public //value getter funcs
     function IsNull(ParameterIndex: Integer): Boolean; override;
@@ -4686,7 +4686,7 @@ begin
 end;
 
 procedure TZAbstractPreparedStatement2.GetBigDecimal(Index: Integer;
-  var Result: TZBCD);
+  out Result: TZBCD);
 begin
   AlignParamterIndex2ResultSetIndex(Index);
   RaiseUnsupportedException
@@ -4724,7 +4724,7 @@ begin
 end;
 
 procedure TZAbstractPreparedStatement2.GetDateTime(Index: Integer;
-  var Result: TDateTime);
+  out Result: TDateTime);
 begin
   Result := IZResultSet(FOpenResultSet).GetTimestamp(AlignParamterIndex2ResultSetIndex(Index));
   if BindList.ParamTypes[Index] = zptInputOutput then
@@ -4782,7 +4782,7 @@ end;
     the specified column
 }
 procedure TZAbstractPreparedStatement2.GetLob(Index: Integer;
-  var Result: IZBlob);
+  out Result: IZBlob);
 begin
   Result := IZResultSet(FOpenResultSet).GetBlob(AlignParamterIndex2ResultSetIndex(Index));
   if BindList.ParamTypes[Index] = zptInputOutput then
@@ -4893,7 +4893,7 @@ begin
 end;
 
 procedure TZAbstractPreparedStatement2.GetTimeStamp(Index: Integer;
-  var Result: TZTimeStamp);
+  out Result: TZTimeStamp);
 begin
   AlignParamterIndex2ResultSetIndex(Index);
   RaiseUnsupportedException
@@ -6183,7 +6183,7 @@ begin
 end;
 
 procedure TZAbstractCallableStatement2.GetBigDecimal(Index: Integer;
-  var Result: TZBCD);
+  out Result: TZBCD);
 begin
   RaiseUnsupportedException
 end;
@@ -6281,7 +6281,7 @@ begin
 end;
 
 procedure TZAbstractCallableStatement2.GetDateTime(Index: Integer;
-  var Result: TDateTime);
+  out Result: TDateTime);
 begin
   if FExecStatements[FCallExecKind] <> nil then begin
     FExecStatements[FCallExecKind].GetDateTime(Index, Result);
@@ -6357,7 +6357,7 @@ begin
 end;
 
 procedure TZAbstractCallableStatement2.GetLob(Index: Integer;
-  var Result: IZBlob);
+  out Result: IZBlob);
 begin
   if FExecStatements[FCallExecKind] <> nil then begin
     FExecStatements[FCallExecKind].GetLob(Index, Result);
@@ -6543,7 +6543,7 @@ begin
 end;
 
 procedure TZAbstractCallableStatement2.GetTimeStamp(Index: Integer;
-  var Result: TZTimeStamp);
+  out Result: TZTimeStamp);
 begin
   RaiseUnsupportedException
 end;

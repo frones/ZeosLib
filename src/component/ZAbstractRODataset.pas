@@ -421,7 +421,7 @@ type
       TGetResult; override;
 {$ENDIF}
     function GetRecordSize: Word; override;
-    function GetActiveBuffer(var RowBuffer: PZRowBuffer): Boolean;
+    function GetActiveBuffer(out RowBuffer: PZRowBuffer): Boolean;
 {$IFDEF WITH_TRECORDBUFFER}
     function AllocRecordBuffer: TRecordBuffer; override;
     procedure FreeRecordBuffer(var Buffer: TRecordBuffer); override;
@@ -2884,7 +2884,7 @@ end;
   @param RowBuffer a reference to the result row buffer.
   @return <code>True</code> if the buffer was defined.
 }
-function TZAbstractRODataset.GetActiveBuffer(var RowBuffer: PZRowBuffer):
+function TZAbstractRODataset.GetActiveBuffer(out RowBuffer: PZRowBuffer):
   Boolean;
 var
   RowNo: NativeInt;
@@ -4658,7 +4658,7 @@ begin
   if (Src <> nil) then
   begin
     Result := ZFastCode.StrLen(Src);
-    {$IFDEF MSWINDOWS}
+  {$IFDEF MSWINDOWS}
     if doOemTranslate in FOptions then
     begin
       if ToOem then
@@ -4668,7 +4668,7 @@ begin
       Dest[Result] := #0;
     end
     else
-    {$ENDIF}
+  {$ENDIF}
     begin
       if (Src <> Dest) then
       {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(Dest, Src);

@@ -189,9 +189,9 @@ type
     function EscapeString(const Value: RawByteString): RawByteString; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
-    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: RawByteString); override;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString); override;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; override;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; var Result: RawByteString); override;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); override;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; override;
     function GetServerSetting(const AName: RawByteString): string;
     procedure SetServerSetting(const AName, AValue: RawbyteString);
@@ -983,7 +983,7 @@ begin
 end;
 
 procedure TZPostgreSQLConnection.GetBinaryEscapeString(Buf: Pointer;
-  Len: LengthInt; var Result: RawByteString);
+  Len: LengthInt; out Result: RawByteString);
 begin
   Result := Self.EncodeBinary(Buf, Len, True)
 end;
@@ -998,7 +998,7 @@ begin
 end;
 
 procedure TZPostgreSQLConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
-  var Result: RawByteString);
+  out Result: RawByteString);
 begin
   Result := EscapeString(Buf, Len, True)
 end;

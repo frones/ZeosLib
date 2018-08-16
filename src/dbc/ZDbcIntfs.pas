@@ -296,15 +296,15 @@ type
     function GetBinaryEscapeString(const Value: RawByteString): String; overload;
     {$ENDIF}
     function GetBinaryEscapeString(const Value: TBytes): String; overload;
-    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: RawByteString); overload;
-    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: ZWideString); overload;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString); overload;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: ZWideString); overload;
 
     function GetEscapeString(const Value: ZWideString): ZWideString; overload;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; var Result: RawByteString); overload;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; RawCP: Word; var Result: ZWideString); overload;
-    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; RawCP: Word; var Result: RawByteString); overload;
-    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; var Result: ZWideString); overload;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); overload;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; RawCP: Word; out Result: ZWideString); overload;
+    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; RawCP: Word; out Result: RawByteString); overload;
+    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; out Result: ZWideString); overload;
 
     function GetClientCodePageInformations: PZCodePage;
     function GetAutoEncodeStrings: Boolean;

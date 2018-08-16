@@ -127,7 +127,7 @@ type
     function GetHostVersion: Integer; override;
     {END ADDED by fduenas 15-06-2006}
     function GetConnectionHandle: PPMYSQL;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; var Result: RawByteString); override;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); override;
 
     function GetDatabaseName: String;
     function GetServerProvider: TZServerProvider; override;
@@ -843,7 +843,7 @@ begin
 end;
 
 procedure TZMySQLConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
-  var Result: RawByteString);
+  out Result: RawByteString);
 var
   StatBuf: array[0..2048] of AnsiChar;
   P: PAnsichar;
