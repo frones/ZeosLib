@@ -5,8 +5,7 @@ program ztestall;
 uses
   custapp, sysutils,
   Interfaces, Forms, GuiTestRunner, LResources,
-  Classes, consoletestrunner, fpcunit, fpcunitreport, testregistry,
-  plaintestreport,latextestreport, xmltestreport,
+  Classes, consoletestrunner, fpcunit, fpcunitreport, plaintestreport,
   ZTestConfig,
   ZSqlTestCase,
   //core
