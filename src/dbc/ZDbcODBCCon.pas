@@ -63,14 +63,12 @@ uses
 
 type
   {** Implements OleDB Database Driver. }
-  {$WARNINGS OFF}
   TZODBCDriver = class(TZAbstractDriver)
   public
     constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;
     function GetTokenizer: IZTokenizer; override;
   end;
-  {$WARNINGS ON}
 
   IZODBCConnection = Interface(IZConnection)
     ['{D149ABA3-AD8B-404F-A804-77608C596394}']
@@ -184,7 +182,6 @@ uses
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-{$WARNINGS OFF}
 function TZODBCDriver.Connect(const Url: TZURL): IZConnection;
 begin
   if Url.Protocol = 'odbc_w' then
@@ -192,7 +189,6 @@ begin
   else
     Result := TZODBCConnectionA.Create(URL)
 end;
-{$WARNINGS ON}
 
 {**
   Constructs this object with default properties.

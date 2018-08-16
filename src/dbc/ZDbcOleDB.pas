@@ -66,14 +66,12 @@ uses
 
 type
   {** Implements OleDB Database Driver. }
-  {$WARNINGS OFF}
   TZOleDBDriver = class(TZAbstractDriver)
   public
     constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;
     function GetTokenizer: IZTokenizer; override;
   end;
-  {$WARNINGS ON}
 
   {** Defines a PostgreSQL specific connection. }
   IZOleDBConnection = interface(IZConnection)
@@ -184,12 +182,10 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-{$WARNINGS OFF}
 function TZOleDBDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := TZOleDBConnection.Create(Url);
 end;
-{$WARNINGS ON}
 
 {**
   Gets a SQL syntax tokenizer.

@@ -72,7 +72,6 @@ uses
 type
 
   {** Implements Abstract Database Driver. }
-  {$WARNINGS OFF} //to supress the deprecated Warning of connect
   TZAbstractDriver = class(TInterfacedObject, IZDriver)
   protected
     FCachedPlainDrivers: IZHashMap;
@@ -101,7 +100,6 @@ type
     function GetStatementAnalyser: IZStatementAnalyser; virtual;
     function GetClientVersion(const {%H-}Url: string): Integer; virtual;
   end;
-  {$WARNINGS OFF}
 
   {** Implements Abstract Database Connection. }
 
@@ -149,7 +147,7 @@ type
     function GetClientCodePageInformations: PZCodePage; //EgonHugeist
     function GetAutoEncodeStrings: Boolean; //EgonHugeist
     procedure SetAutoEncodeStrings(const Value: Boolean);
-    procedure OnPropertiesChange(Sender: TObject); virtual;
+    procedure OnPropertiesChange({%H-}Sender: TObject); virtual;
     procedure RaiseUnsupportedException;
 
     procedure RegisterStatement(const Value: IZStatement);
@@ -383,7 +381,6 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-{$WARNINGS OFF}
 function TZAbstractDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
   TempURL:  TZURL;
@@ -420,7 +417,6 @@ function TZAbstractDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := nil;
 end;
-{$WARNINGS ON}
 
 {**
   Returns true if the driver thinks that it can open a connection
@@ -860,7 +856,6 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-{$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
 constructor TZAbstractDbcConnection.Create(const Driver: IZDriver; const Url: string;
   const PlainDriver: IZPlainDriver;
   const HostName: string; Port: Integer; const Database: string;
@@ -872,13 +867,11 @@ begin
   Create(TempURL);
   TempURL.Free;
 end;
-{$WARNINGS ON}
 
 {**
   Constructs this object and assignes the main properties.
   @param Url a connection ZURL-class which exports all connection parameters.
 }
-{$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
 constructor TZAbstractDbcConnection.Create(const ZUrl: TZURL);
 begin
   FClosed := True;
@@ -916,7 +909,6 @@ begin
   FTestMode := 0;
   {$ENDIF}
 end;
-{$WARNINGS ON}
 
 {**
   Destroys this object and cleanups the memory.

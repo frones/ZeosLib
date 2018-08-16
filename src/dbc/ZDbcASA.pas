@@ -64,7 +64,6 @@ uses
 
 type
   {** Implements a ASA Database Driver. }
-  {$WARNINGS OFF}
   TZASADriver = class(TZAbstractDriver)
   public
     constructor Create; override;
@@ -74,7 +73,6 @@ type
     function GetTokenizer: IZTokenizer; override;
     function GetStatementAnalyser: IZStatementAnalyser; override;
   end;
-  {$WARNINGS ON}
 
   {** Represents a ASA specific connection interface. }
   IZASAConnection = interface (IZConnection)
@@ -161,12 +159,10 @@ uses
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-{$WARNINGS OFF}
 function TZASADriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := TZASAConnection.Create(Url);
 end;
-{$WARNINGS ON}
 
 {**
   Constructs this object with default properties.
