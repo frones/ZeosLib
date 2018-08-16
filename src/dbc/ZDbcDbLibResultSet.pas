@@ -367,7 +367,6 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$WARNINGS OFF} //result might not be undefined
 function TZDBLibResultSet.GetUnicodeString(ColumnIndex: Integer): ZWideString;
 var
   DT: TTDSType;
@@ -434,7 +433,6 @@ begin
     end;
   FDBLibConnection.CheckDBLibError(lcOther, 'GETSTRING');
 end;
-{$WARNINGS ON} //result might not be undefined
 
 {**
   Gets the value of the designated column in the current row

@@ -639,15 +639,13 @@ end;
   @param QuoteChar a string quote character.
   @returns an decoded string.
 }
-{$WARNINGS OFF} //suppress deprecated waring
 function TZQuoteState.DecodeString(const Value: string; QuoteChar: Char): string;
 var Token: TZToken;
 begin
   Token.P := Pointer(Value);
   Token.L := Length(Value);
-  DecodeToken(Token, QuoteChar);
+  Result := DecodeToken(Token, QuoteChar);
 end;
-{$WARNINGS ON}
 
 { TZCommentState }
 

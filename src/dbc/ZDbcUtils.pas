@@ -936,7 +936,6 @@ end;
   @param Stream the Stream with the unknown format and data
   @return a valid utf8 encoded stringstram
 }
-{$WARNINGS OFF}
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings): RawByteString;
 var
@@ -1002,7 +1001,6 @@ begin
     end;
   end;
 end;
-{$WARNINGS ON}
 
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings; ToCP: Word): RawByteString;
