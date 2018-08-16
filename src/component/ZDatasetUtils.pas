@@ -861,9 +861,6 @@ end;
   @param ResultSet an initial result set object.
   @param Variables a list of variables.
 }
-{$IFDEF FPC}
-  {$HINTS OFF} //Temp seems not to be init...
-{$ENDIF}
 procedure CopyDataFieldsToVars(const Fields: TObjectDynArray;
   const ResultSet: IZResultSet; const Variables: IZVariablesList);
 var
@@ -920,9 +917,6 @@ begin
       Variables.Values[I] := NullVariant;
   end;
 end;
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 
 {**
   Compares row field values with the given ones.

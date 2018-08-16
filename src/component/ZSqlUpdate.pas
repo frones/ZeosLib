@@ -148,7 +148,7 @@ type
     procedure FillStatement(const ResultSet: IZCachedResultSet;
       const Statement: IZPreparedStatement; Config: TZSQLStatement;
       OldRowAccessor, NewRowAccessor: TZRowAccessor);
-    procedure UpdateParams(Sender: TObject);
+    procedure UpdateParams({%H-}Sender: TObject);
 
     procedure DoBeforeDeleteSQL;
     procedure DoBeforeInsertSQL;
@@ -946,42 +946,42 @@ procedure TZUpdateSQL.DoAfterDeleteSQLStatement(const Sender: TObject;
   StatementIndex: Integer);
 begin
  if Assigned(FAfterDeleteSQLStatement) then
-    FAfterDeleteSQLStatement(Self, StatementIndex);
+    FAfterDeleteSQLStatement(Sender, StatementIndex);
 end;
 
 procedure TZUpdateSQL.DoAfterInsertSQLStatement(const Sender: TObject;
   StatementIndex: Integer; out UpdateAutoIncFields: Boolean);
 begin
  if Assigned(FAfterInsertSQLStatement) then
-    FAfterInsertSQLStatement(Self, StatementIndex, UpdateAutoIncFields);
+    FAfterInsertSQLStatement(Sender, StatementIndex, UpdateAutoIncFields);
 end;
 
 procedure TZUpdateSQL.DoAfterModifySQLStatement(const Sender: TObject;
   StatementIndex: Integer);
 begin
  if Assigned(FAfterModifySQLStatement) then
-    FAfterModifySQLStatement(Self, StatementIndex);
+    FAfterModifySQLStatement(Sender, StatementIndex);
 end;
 
 procedure TZUpdateSQL.DoBeforeDeleteSQLStatement(const Sender: TObject;
   StatementIndex: Integer; out Execute: Boolean);
 begin
  if Assigned(FBeforeDeleteSQLStatement) then
-    FBeforeDeleteSQLStatement(Self, StatementIndex, Execute);
+    FBeforeDeleteSQLStatement(Sender, StatementIndex, Execute);
 end;
 
 procedure TZUpdateSQL.DoBeforeInsertSQLStatement(const Sender: TObject;
   StatementIndex: Integer; out Execute: Boolean);
 begin
  if Assigned(FBeforeInsertSQLStatement) then
-    FBeforeInsertSQLStatement(Self, StatementIndex, Execute);
+    FBeforeInsertSQLStatement(Sender, StatementIndex, Execute);
 end;
 
 procedure TZUpdateSQL.DoBeforeModifySQLStatement(const Sender: TObject;
   StatementIndex: Integer; out Execute: Boolean);
 begin
  if Assigned(FBeforeModifySQLStatement) then
-    FBeforeModifySQLStatement(Self, StatementIndex, Execute);
+    FBeforeModifySQLStatement(Sender, StatementIndex, Execute);
 end;
 
 end.

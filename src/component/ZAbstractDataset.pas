@@ -388,9 +388,6 @@ end;
 {**
   Performs an internal record updates.
 }
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 procedure TZAbstractDataset.InternalUpdate;
 var
   RowNo: Integer;
@@ -416,9 +413,6 @@ begin
     end;
   end;
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
 
 {**
   Performs an internal adding a new record.
@@ -426,9 +420,6 @@ end;
   @param Append <code>True</code> if record should be added to the end
     of the result set.
 }
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 procedure TZAbstractDataset.InternalAddRecord(Buffer: Pointer; Append: Boolean);
 var
   RowNo: Integer;
@@ -469,17 +460,10 @@ begin
     end;
   end;
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
-
 
 {**
   Performs an internal post updates.
 }
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 procedure TZAbstractDataset.InternalPost;
 var
   RowBuffer: PZRowBuffer;
@@ -611,9 +595,6 @@ begin
          RowAccessor);
   end;
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
 
 {**
   Processes component notifications.
@@ -791,9 +772,6 @@ end;
   @param Delta a dataset where the current position shows the row to update.
   @returns <code>True</code> if updates were successfully applied.
 }
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 function TZAbstractDataset.PSUpdateRecord(UpdateKind: TUpdateKind;
   Delta: TDataSet): Boolean;
 
@@ -961,11 +939,9 @@ begin
     Self.Active := ActiveMode;
   end;
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
 
 {$ENDIF}
+
 procedure TZAbstractDataset.RegisterDetailDataSet(Value: TZAbstractDataset;
   CachedUpdates: Boolean);
 begin

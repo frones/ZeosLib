@@ -292,7 +292,6 @@ type
   {** Implements Abstract Prepared SQL Statement. }
 
   { TZAbstractPreparedStatement }
-  {$WARNINGS OFF}
   TZAbstractPreparedStatement2 = class(TZAbstractStatement, IImmediatelyReleasable)
   private
     FInitialArrayCount: ArrayLenInt;
@@ -408,10 +407,10 @@ type
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); virtual;
 
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
-      ParamType: TZParamType; const Name: String = ''; {%H-}PrecisionOrSize: LengthInt = 0;
-      {%H-}Scale: LengthInt = 0); virtual;
+      ParamType: TZParamType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
+      Scale: LengthInt = 0); virtual;
 
-    function IsNull({%H-}Index: Integer): Boolean; virtual;
+    function IsNull(Index: Integer): Boolean; virtual;
     procedure GetBoolean(Index: Integer; out Result: Boolean); overload; virtual;
     procedure GetOrdinal(Index: Integer; out Result: Int64); overload; virtual;
     procedure GetOrdinal(Index: Integer; out Result: UInt64); overload; virtual;
@@ -433,7 +432,6 @@ type
 
     property MinExecCount2Prepare: Integer read FMinExecCount2Prepare write FMinExecCount2Prepare;
   end;
-  {$WARNINGS ON}
 
   TZRawPreparedStatement = class(TZAbstractPreparedStatement2)
   protected
@@ -536,7 +534,7 @@ type
     procedure GetLob(Index: Integer; var Result: IZBlob); override;
     procedure GetPChar(Index: Integer; out Buf: Pointer; out Len: LengthInt; CodePage: Word); override;
   public //value getter funcs
-    function IsNull({%H-}ParameterIndex: Integer): Boolean; override;
+    function IsNull(ParameterIndex: Integer): Boolean; override;
 
     function GetPChar(ParameterIndex: Integer): PChar; overload;
     function GetBoolean(ParameterIndex: Integer): Boolean; overload;
@@ -570,7 +568,7 @@ type
     function GetLastResultSet: IZResultSet; virtual;
     function BOR: Boolean; virtual;
     function EOR: Boolean; virtual;
-    function GetResultSetByIndex(const {%H-}Index: Integer): IZResultSet; virtual;
+    function GetResultSetByIndex(const Index: Integer): IZResultSet; virtual;
     function GetResultSetCount: Integer; virtual;
 
     procedure RegisterOutParameter(ParameterIndex: Integer;
@@ -758,7 +756,7 @@ type
   end;
 
   {** Implements Abstract Callable SQL statement. }
-  {$WARNINGS OFF}
+
   TZAbstractCallableStatement = class(TZAbstractPreparedStatement,
     IZCallableStatement)
   private
@@ -802,7 +800,7 @@ type
     function GetLastResultSet: IZResultSet; virtual;
     function BOR: Boolean; virtual;
     function EOR: Boolean; virtual;
-    function GetResultSetByIndex(const {%H-}Index: Integer): IZResultSet; virtual;
+    function GetResultSetByIndex(const Index: Integer): IZResultSet; virtual;
     function GetResultSetCount: Integer; virtual;
 
     procedure RegisterOutParameter(ParameterIndex: Integer;
@@ -811,8 +809,8 @@ type
     function WasNull: Boolean; virtual;// deprecated;
 
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
-      ParamType: TZParamType; const Name: String = ''; {%H-}PrecisionOrSize: LengthInt = 0;
-      {%H-}Scale: LengthInt = 0); virtual;
+      ParamType: TZParamType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
+      Scale: LengthInt = 0); virtual;
 
     function IsNull(ParameterIndex: Integer): Boolean; virtual;
     function GetPChar(ParameterIndex: Integer): PChar; virtual;
@@ -844,7 +842,6 @@ type
     function GetTimestamp(ParameterIndex: Integer): TDateTime; virtual;
     function GetValue(ParameterIndex: Integer): TZVariant; virtual;
   end;
-  {$WARNINGS ON}
 
   {** Implements a real Prepared Callable SQL Statement. }
   TZAbstractPreparedCallableStatement = CLass(TZAbstractCallableStatement)
@@ -2097,7 +2094,6 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     query; never <code>null</code>
 }
-{$WARNINGS OFF}
 function TZAbstractPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   { Logging Execution }
@@ -2105,7 +2101,7 @@ begin
     DriverManager.LogMessage(lcExecPrepStmt,Self);
   Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
 end;
-{$WARNINGS ON}
+
 {**
   Executes the SQL INSERT, UPDATE or DELETE statement
   in this <code>PreparedStatement</code> object.
@@ -2116,14 +2112,13 @@ end;
   @return either the row count for INSERT, UPDATE or DELETE statements;
   or 0 for SQL statements that return nothing
 }
-{$WARNINGS OFF}
 function TZAbstractPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   { Logging Execution }
   DriverManager.LogMessage(lcExecPrepStmt,Self);
   Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
 end;
-{$WARNINGS ON}
+
 {**
   Sets the designated parameter the default SQL value.
   <P><B>Note:</B> You must specify the default value.
@@ -2947,6 +2942,8 @@ end;
 
 { TZAbstractCallableStatement }
 
+{$IFDEF FPC} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally
+
 {**
   Constructs this object and assigns main properties.
   @param Connection a database connection object.
@@ -3187,18 +3184,16 @@ end;
   or <code>DECIMAL</code>, the version of
   <code>registerOutParameter</code> that accepts a scale value should be used.
 }
-{$WARNINGS OFF}
 procedure TZAbstractCallableStatement.RegisterOutParameter(ParameterIndex,
   SQLType: Integer);
 begin
   SetOutParamCount(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
   OutParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TZSQLType(SQLType);
 end;
-{$WARNINGS ON}
 
 procedure TZAbstractCallableStatement.RegisterParameter(ParameterIndex: Integer;
-  SQLType: TZSQLType; ParamType: TZParamType; const Name: String = '';
-  {%H-}PrecisionOrSize: LengthInt = 0; {%H-}Scale: LengthInt = 0);
+  SQLType: TZSQLType; ParamType: TZParamType; const Name: String;
+  PrecisionOrSize: LengthInt; Scale: LengthInt);
 begin
   if ParamType in [zptOutput..zptResult] then begin
     SetOutParamCount(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
@@ -3213,7 +3208,6 @@ begin
   if not FHasOutParameter then FHasOutParameter := ParamType in [zptOutput, zptInputOutput];
 end;
 
-{$WARNINGS OFF}
 procedure TZAbstractCallableStatement.RegisterParamType(ParameterIndex,
   ParamType: Integer);
 begin
@@ -3224,7 +3218,6 @@ begin
   if not FIsFunction then FIsFunction := ParamType = 4; //ptResult
   if not FHasOutParameter then FHasOutParameter := ParamType in [2,3]; //ptOutput, ptInputOutput
 end;
-{$WARNINGS ON}
 
 {**
   Gets a output parameter value by it's index.
@@ -3647,6 +3640,8 @@ function TZAbstractCallableStatement.GetValue(ParameterIndex: Integer):
 begin
   Result := GetOutParam(ParameterIndex);
 end;
+
+{$IFDEF FPC} {$WARN 5024 on} {$ENDIF}
 
 { TZAbstractPreparedCallableStatement }
 
@@ -4190,7 +4185,7 @@ end;
 
 procedure TZBindList.Put(Index: Integer; Value: Boolean);
 begin
-  {%H-}NativeUInt(AquireBuffer(Index, stBoolean, zbtPointer).Value) := Ord(Value);
+  AquireBuffer(Index, stBoolean, zbtPointer).Value := Pointer(Ord(Value));
 end;
 
 procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType; _8Byte: P8Bytes);
@@ -4290,6 +4285,8 @@ begin
 end;
 
 { TZAbstractPreparedStatement2 }
+
+{$IFDEF FPC} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally
 
 {**
   Sets a new parameter capacity and initializes the buffers.
@@ -5565,6 +5562,8 @@ begin
     raise Exception.Create('Array count does not equal with initial count!')
 end;
 
+{$IFDEF FPC} {$WARN 5024 on} {$ENDIF}
+
 { TZRawPreparedStatement }
 
 procedure TZRawPreparedStatement.BindRawStr(Index: Integer;
@@ -5972,6 +5971,8 @@ begin
 end;
 
 { TZAbstractCallableStatement2 }
+
+{$IFDEF FPC} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally
 
 {**
   Binds the input parameters
@@ -6746,6 +6747,8 @@ begin
     end;
   inherited Unprepare;
 end;
+
+{$IFDEF FPC} {$WARN 5024 on} {$ENDIF}
 
 { TZAbstractCallableStatement_A }
 

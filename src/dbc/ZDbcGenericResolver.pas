@@ -169,10 +169,10 @@ type
       OldRowAccessor, NewRowAccessor: TZRowAccessor); virtual;
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet;
-      {%H-}UpdateType: TZRowUpdateType;
-      {%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); virtual;
+      UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); virtual;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure RefreshCurrentRow(const Sender: IZCachedResultSet;{%H-}RowAccessor: TZRowAccessor); //FOS+ 07112006
+    procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
 
   end;
 
@@ -911,10 +911,14 @@ begin
   {$ENDIF}
 end;
 
+{$IFDEF FPC} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
+
 procedure TZGenericCachedResolver.RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
 begin
- raise EZSQLException.Create(SRefreshRowOnlySupportedWithUpdateObject);
+  raise EZSQLException.Create(SRefreshRowOnlySupportedWithUpdateObject);
 end;
+
+{$IFDEF FPC} {$WARN 5024 on} {$ENDIF}
 
 {**
   Calculate default values for the fields.
@@ -1012,12 +1016,18 @@ begin
 end;
 
 {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
+
+{$IFDEF FPC} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
+
 procedure TZGenericCachedResolver.UpdateAutoIncrementFields(
   const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
   NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 begin
  //Should be implemented at Specific database Level Cached resolver
 end;
+
+{$IFDEF FPC} {$WARN 5024 on} {$ENDIF}
+
 {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 
 end.

@@ -731,6 +731,8 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // TODO: are unused params correct?
+
 function CompareNativeCLob_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
   Blob1, Blob2: IZBlob;
@@ -776,7 +778,7 @@ begin
   else Result := 0;
 end;
 
-function CompareUnicodeCLob_Asc(const {%H-}Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeCLob_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
   Blob1, Blob2: IZBlob;
   BlobEmpty1, BlobEmpty2: Boolean;
@@ -812,12 +814,12 @@ begin
     Result := ZMemLComp(Blob1.GetBuffer, Blob2.GetBuffer, Max(Blob1.Length, Blob2.Length));
 end;
 
-function CompareUnicodeCLob_Desc(const {%H-}Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeCLob_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   Result:=-CompareUnicodeClob_Asc(Null1,Null2,V1,V2);
 end;
 
-function CompareUnicodeCLob_Equals(const {%H-}Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeCLob_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
   Blob1, Blob2: IZBlob;
   BlobEmpty1, BlobEmpty2: Boolean;
@@ -863,6 +865,8 @@ begin
     else Result := ZMemLComp(Blob1.GetBuffer, Blob2.GetBuffer, Blob1.Length)
   else Result := 1;
 end;
+
+{$IFDEF FPC} {$WARN 5024 on} {$ENDIF}
 
 { TZRowAccessor }
 

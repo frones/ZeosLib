@@ -208,10 +208,6 @@ implementation
 
 uses SysUtils, ZMessages {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
-
 { TZIterator }
 
 {**
@@ -649,6 +645,8 @@ end;
 
 { TZUnmodifiableCollection }
 
+{$IFDEF FPC} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // parameters not used intentionally
+
 {**
   Constructs this object and assignes main properties.
   @param Collection an initial modifiable list of interfaces.
@@ -857,6 +855,8 @@ function TZUnmodifiableCollection.ToString: string;
 begin
   Result := FCollection.ToString;
 end;
+
+{$IFDEF FPC} {$WARN 5024 on} {$ENDIF}
 
 { TZHashMap }
 
