@@ -542,7 +542,7 @@ var
       if (CPType = 'CP_UTF16') then //autoencoding is allways true
         SetCharacterSets(MyCurrent)
       else
-        {$IF defined(MSWINDOWS) or defined(WITH_FPC_STRING_CONVERSATION) or defined(WITH_LCONVENCODING) or defined(DELPHI)}
+        {$IF defined(MSWINDOWS) or defined(WITH_FPC_STRING_CONVERSION) or defined(WITH_LCONVENCODING) or defined(DELPHI)}
         SetAutoEncodings(MyCurrent); //Allow Autoencoding only if supported!
         {$ELSE}
         SetCharacterSets(MyCurrent); //No Autoencoding available

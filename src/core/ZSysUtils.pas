@@ -59,10 +59,10 @@ uses
   Variants, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   ZMessages, ZCompatibility;
 
-{$IFNDEF WITH_EARGUMENTEXCEPTION}     // EArgumentException is supported
+{$IF NOT DECLARED(EArgumentException)}
 type
   EArgumentException = Class(Exception);
-{$ENDIF}
+{$IFEND}
 
 type
   {** Modified comparison function. }

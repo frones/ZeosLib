@@ -1498,7 +1498,7 @@ type
     constructor Create(AOwner: TComponent); override;
   end;   *)
 
-{ TZObjectField }
+{ TObjectField }
 
   {$IFNDEF WITH_TOBJECTFIELD}
   TObjectField = class(TZField)

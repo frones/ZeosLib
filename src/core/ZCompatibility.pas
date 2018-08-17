@@ -141,9 +141,9 @@ type
     CP: Word;      //CodePage of the String
   end;
 
-  {$IFNDEF HAVE_TBYTES}
+  {$IF NOT DECLARED(TBytes)}
   TBytes = TByteDynArray;
-  {$ENDIF}
+  {$IFEND}
 
   TObjectDynArray       = array of TObject;
 
@@ -453,9 +453,10 @@ function Min(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}
 function Max(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
-{$IFDEF FPC2_6DOWN}
-function BytesOf(InStr: AnsiString): TBytes;
-{$ENDIF}
+{$IF NOT DECLARED(BytesOf)}
+{$DEFINE ZBytesOf}
+function BytesOf(const InStr: AnsiString): TBytes;
+{$IFEND}
 
 {$IF NOT DEFINED(FPC) AND NOT DECLARED(ReturnAddress)} // intrinsic since XE2
 {$DEFINE ZReturnAddress}
@@ -923,28 +924,28 @@ begin
     end;
 end;
 
-{$IFDEF FPC2_6DOWN}
-function BytesOf(InStr: AnsiString): TBytes;
+{$IFDEF ZBytesOf}
+function BytesOf(const InStr: AnsiString): TBytes;
 var
-  Len: SizeInt;
+  Len: LengthInt;
 begin
   Len := Length(Instr);
   SetLength(Result, Len);
-  if Len > 0 then Move(InStr[1], Result[0], Len);
+  if Len > 0 then Move(Pointer(InStr)^, Pointer(Result)^, Len);
 end;
 {$ENDIF}
 
 {$IFDEF ZReturnAddress} 
-  function ReturnAddress: Pointer;
-  {$IFDEF PUREPASCAL}
+function ReturnAddress: Pointer;
+{$IFDEF PUREPASCAL}
   begin
     Result := nil;
   end;
-  {$ELSE}
+{$ELSE}
   asm
           MOV     EAX,[EBP+4]
   end;
-  {$ENDIF}
+{$ENDIF}
 {$ENDIF ZReturnAddress}
 
 initialization

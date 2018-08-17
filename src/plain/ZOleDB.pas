@@ -3396,10 +3396,10 @@ const
   DB_NULLID: TDBID = (uguid: (guid: (D1: 0; D2: 0; D3:0; D4: (0, 0, 0, 0, 0, 0, 0, 0))); ekind: DBKIND(DBKIND_GUID_PROPID); uname: (ulpropid:0));
 
 //CoClasses
-{$IFDEF MISS_VARIANTCLEAR}
+{$IF NOT DECLARED(VariantClear)}
 function VariantClear(var varg: OleVariant): HResult; stdcall; external 'oleaut32.dll' name 'VariantClear';
-{$ENDIF}
 {$IFEND}
+{$IFEND ENABLE_ADO or ENABLE_OLEDB}
 implementation
 
 end.
