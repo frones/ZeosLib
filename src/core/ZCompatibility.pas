@@ -453,11 +453,6 @@ function Min(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}
 function Max(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
-{$IF NOT DECLARED(BytesOf)}
-{$DEFINE ZBytesOf}
-function BytesOf(const InStr: AnsiString): TBytes;
-{$IFEND}
-
 {$IF NOT DEFINED(FPC) AND NOT DECLARED(ReturnAddress)} // intrinsic since XE2
 {$DEFINE ZReturnAddress}
 function ReturnAddress: Pointer;
@@ -923,17 +918,6 @@ begin
       Inc(P, L);
     end;
 end;
-
-{$IFDEF ZBytesOf}
-function BytesOf(const InStr: AnsiString): TBytes;
-var
-  Len: LengthInt;
-begin
-  Len := Length(Instr);
-  SetLength(Result, Len);
-  if Len > 0 then Move(Pointer(InStr)^, Pointer(Result)^, Len);
-end;
-{$ENDIF}
 
 {$IFDEF ZReturnAddress} 
 function ReturnAddress: Pointer;
