@@ -168,25 +168,25 @@ type
     function GetAsInterface(const Value: TZVariant): IZInterface;
     function GetAsArray(const Value: TZVariant): TZArray;
 
-    procedure SetAsBoolean(var Value: TZVariant; const Data: Boolean);
-    procedure SetAsBytes(var Value: TZVariant; const Data: TBytes);
-    procedure SetAsInteger(var Value: TZVariant; const Data: Int64);
-    procedure SetAsUInteger(var Value: TZVariant; const Data: UInt64);
-    procedure SetAsFloat(var Value: TZVariant; const Data: Extended);
-    procedure SetAsString(var Value: TZVariant; const Data: String);
+    procedure SetAsBoolean(out Value: TZVariant; const Data: Boolean);
+    procedure SetAsBytes(out Value: TZVariant; const Data: TBytes);
+    procedure SetAsInteger(out Value: TZVariant; const Data: Int64);
+    procedure SetAsUInteger(out Value: TZVariant; const Data: UInt64);
+    procedure SetAsFloat(out Value: TZVariant; const Data: Extended);
+    procedure SetAsString(out Value: TZVariant; const Data: String);
     {$IFNDEF NO_ANSISTRING}
-    procedure SetAsAnsiString(var Value: TZVariant; const Data: AnsiString);
+    procedure SetAsAnsiString(out Value: TZVariant; const Data: AnsiString);
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    procedure SetAsUTF8String(var Value: TZVariant; const Data: UTF8String);
+    procedure SetAsUTF8String(out Value: TZVariant; const Data: UTF8String);
     {$ENDIF}
-    procedure SetAsRawByteString(var Value: TZVariant; const Data: RawByteString);
-    procedure SetAsCharRec(var Value: TZVariant; const Data: TZCharRec);
-    procedure SetAsUnicodeString(var Value: TZVariant; const Data: ZWideString);
-    procedure SetAsDateTime(var Value: TZVariant; const Data: TDateTime);
-    procedure SetAsPointer(var Value: TZVariant; const Data: Pointer);
-    procedure SetAsInterface(var Value: TZVariant; const Data: IZInterface);
-    procedure SetAsArray(var Value: TZVariant; const Data: TZArray);
+    procedure SetAsRawByteString(out Value: TZVariant; const Data: RawByteString);
+    procedure SetAsCharRec(out Value: TZVariant; const Data: TZCharRec);
+    procedure SetAsUnicodeString(out Value: TZVariant; const Data: ZWideString);
+    procedure SetAsDateTime(out Value: TZVariant; const Data: TDateTime);
+    procedure SetAsPointer(out Value: TZVariant; const Data: Pointer);
+    procedure SetAsInterface(out Value: TZVariant; const Data: IZInterface);
+    procedure SetAsArray(out Value: TZVariant; const Data: TZArray);
 
     function OpAdd(const Value1, Value2: TZVariant): TZVariant;
     function OpSub(const Value1, Value2: TZVariant): TZVariant;
@@ -254,25 +254,25 @@ type
     function GetAsInterface(const Value: TZVariant): IZInterface;
     function GetAsArray(const Value: TZVariant): TZArray;
 
-    procedure SetAsBoolean(var Value: TZVariant; const Data: Boolean);
-    procedure SetAsBytes(var Value: TZVariant; const Data: TBytes);
-    procedure SetAsInteger(var Value: TZVariant; const Data: Int64);
-    procedure SetAsUInteger(var Value: TZVariant; const Data: UInt64);
-    procedure SetAsFloat(var Value: TZVariant; const Data: Extended);
-    procedure SetAsString(var Value: TZVariant; const Data: String);
+    procedure SetAsBoolean(out Value: TZVariant; const Data: Boolean);
+    procedure SetAsBytes(out Value: TZVariant; const Data: TBytes);
+    procedure SetAsInteger(out Value: TZVariant; const Data: Int64);
+    procedure SetAsUInteger(out Value: TZVariant; const Data: UInt64);
+    procedure SetAsFloat(out Value: TZVariant; const Data: Extended);
+    procedure SetAsString(out Value: TZVariant; const Data: String);
     {$IFNDEF NO_ANSISTRING}
-    procedure SetAsAnsiString(var Value: TZVariant; const Data: AnsiString);
+    procedure SetAsAnsiString(out Value: TZVariant; const Data: AnsiString);
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    procedure SetAsUTF8String(var Value: TZVariant; const Data: UTF8String);
+    procedure SetAsUTF8String(out Value: TZVariant; const Data: UTF8String);
     {$ENDIF}
-    procedure SetAsRawByteString(var Value: TZVariant; const Data: RawByteString);
-    procedure SetAsCharRec(var Value: TZVariant; const Data: TZCharRec);
-    procedure SetAsUnicodeString(var Value: TZVariant; const Data: ZWideString);
-    procedure SetAsDateTime(var Value: TZVariant; const Data: TDateTime);
-    procedure SetAsPointer(var Value: TZVariant; const Data: Pointer);
-    procedure SetAsInterface(var Value: TZVariant; const Data: IZInterface);
-    procedure SetAsArray(var Value: TZVariant; const Data: TZArray);
+    procedure SetAsRawByteString(out Value: TZVariant; const Data: RawByteString);
+    procedure SetAsCharRec(out Value: TZVariant; const Data: TZCharRec);
+    procedure SetAsUnicodeString(out Value: TZVariant; const Data: ZWideString);
+    procedure SetAsDateTime(out Value: TZVariant; const Data: TDateTime);
+    procedure SetAsPointer(out Value: TZVariant; const Data: Pointer);
+    procedure SetAsInterface(out Value: TZVariant; const Data: IZInterface);
+    procedure SetAsArray(out Value: TZVariant; const Data: TZArray);
 
     function OpAdd(const Value1, Value2: TZVariant): TZVariant;
     function OpSub(const Value1, Value2: TZVariant): TZVariant;
@@ -1253,7 +1253,7 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsBoolean(var Value: TZVariant;
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsBoolean(out Value: TZVariant;
   const Data: Boolean);
 begin
   Value := EncodeBoolean(Data);
@@ -1264,7 +1264,7 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsBytes(var Value: TZVariant;
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsBytes(out Value: TZVariant;
   const Data: TBytes);
 begin
   Value := EncodeBytes(Data);
@@ -1275,7 +1275,7 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsInteger(var Value: TZVariant;
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsInteger(out Value: TZVariant;
   const Data: Int64);
 begin
   Value := EncodeInteger(Data);
@@ -1286,7 +1286,7 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsUInteger(var Value: TZVariant;
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsUInteger(out Value: TZVariant;
   const Data: UInt64);
 begin
   Value := EncodeUInteger(Data);
@@ -1297,7 +1297,7 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsFloat(var Value: TZVariant;
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsFloat(out Value: TZVariant;
   const Data: Extended);
 begin
   Value := EncodeFloat(Data);
@@ -1308,7 +1308,7 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsString(var Value: TZVariant;
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsString(out Value: TZVariant;
   const Data: String);
 begin
   Value := EncodeString(Data);
@@ -1320,7 +1320,7 @@ end;
   @param Data a value to be assigned.
 }
 {$IFNDEF NO_ANSISTRING}
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsAnsiString(var Value: TZVariant;
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsAnsiString(out Value: TZVariant;
   const Data: AnsiString);
 begin
   Value := EncodeAnsiString(Data);
@@ -1333,7 +1333,7 @@ end;
   @param Data a value to be assigned.
 }
 {$IFNDEF NO_UTF8STRING}
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsUTF8String(var Value: TZVariant;
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsUTF8String(out Value: TZVariant;
   const Data: UTF8String);
 begin
   Value := EncodeUTF8String(Data);
@@ -1345,7 +1345,7 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsRawByteString(var Value: TZVariant;
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsRawByteString(out Value: TZVariant;
   const Data: RawByteString);
 begin
   Value := EncodeRawByteString(Data);
@@ -1356,7 +1356,7 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsCharRec(var Value: TZVariant;
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsCharRec(out Value: TZVariant;
   const Data: TZCharRec);
 begin
   Value := EncodeCharRec(Data);
@@ -1367,7 +1367,7 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsUnicodeString(var Value: TZVariant;
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsUnicodeString(out Value: TZVariant;
   const Data: ZWideString);
 begin
   Value := EncodeUnicodeString(Data);
@@ -1378,7 +1378,7 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsDateTime(var Value: TZVariant;
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsDateTime(out Value: TZVariant;
   const Data: TDateTime);
 begin
   Value := EncodeDateTime(Data);
@@ -1389,7 +1389,7 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsPointer(var Value: TZVariant;
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsPointer(out Value: TZVariant;
   const Data: Pointer);
 begin
   Value := EncodePointer(Data);
@@ -1400,7 +1400,7 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsInterface(var Value: TZVariant;
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsInterface(out Value: TZVariant;
   const Data: IZInterface);
 begin
   Value := EncodeInterface(Data);
@@ -1411,7 +1411,7 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsArray(var Value: TZVariant;
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsArray(out Value: TZVariant;
   const Data: TZArray);
 begin
   Value := EncodeArray(Data);
