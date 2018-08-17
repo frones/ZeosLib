@@ -59,11 +59,6 @@ uses
   Variants, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   ZMessages, ZCompatibility;
 
-{$IF NOT DECLARED(EArgumentException)}
-type
-  EArgumentException = Class(Exception);
-{$IFEND}
-
 type
   {** Modified comparison function. }
   TZListSortCompare = function (Item1, Item2: Pointer): Integer of object;
@@ -103,6 +98,11 @@ type
   {$ENDIF}
     procedure Sort(Compare: TZListSortCompare);
   end;
+
+  {$IF NOT DECLARED(EArgumentException)}
+  type
+    EArgumentException = Class(Exception);
+  {$IFEND}
 
 const
   StrFalse = 'False';
