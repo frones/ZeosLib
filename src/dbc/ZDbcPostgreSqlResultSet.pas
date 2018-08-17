@@ -197,6 +197,7 @@ uses
 // added for suporting Infinity, -Infinity and NaN.
 // See https://sourceforge.net/p/zeoslib/tickets/173/
 // maybe this should be pushed into ZSysUtils.SQLStrToFloatDef?
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
   var Result: Extended); overload;
 begin
@@ -209,10 +210,21 @@ begin
   else
     ZSysUtils.SQLStrToFloatDef(Value, Def, Result);
 end;
+{$IFEND}
 
 procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Single;
   var Result: Single); overload;
 begin
+  {$IFDEF FPC2_6DOWN}
+  {$ifopt R+}
+  {$define RangeCheckWasOn}
+  {$R-}
+  {$endif opt R+}
+  {$ifopt Q+}
+  {$define OverflowCheckWasOn}
+  {$Q-}
+  {$endif opt Q+}
+  {$ENDIF}
   if Value = 'Infinity' then
     Result := Infinity
   else if Value = '-Infinity' then
@@ -221,12 +233,31 @@ begin
     Result := NaN
   else
     ZSysUtils.SQLStrToFloatDef(Value, Def, Result);
+  {$IFDEF FPC2_6DOWN}
+  {$ifdef RangeCheckWasOn}
+  {$R+}
+  {$undef RangeCheckWasOn}
+  {$endif}
+  {$ifdef OverflowCheckWasOn}
+  {$Q+}
+  {$undef OverflowCheckWasOn}
+  {$endif}
+  {$ENDIF}
 end;
 
-{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Double;
   var Result: Double); overload;
 begin
+  {$IFDEF FPC2_6DOWN}
+  {$ifopt R+}
+  {$define RangeCheckWasOn}
+  {$R-}
+  {$endif opt R+}
+  {$ifopt Q+}
+  {$define OverflowCheckWasOn}
+  {$Q-}
+  {$endif opt Q+}
+  {$ENDIF}
   if Value = 'Infinity' then
     Result := Infinity
   else if Value = '-Infinity' then
@@ -235,8 +266,17 @@ begin
     Result := NaN
   else
     ZSysUtils.SQLStrToFloatDef(Value, Def, Result);
+  {$IFDEF FPC2_6DOWN}
+  {$ifdef RangeCheckWasOn}
+  {$R+}
+  {$undef RangeCheckWasOn}
+  {$endif}
+  {$ifdef OverflowCheckWasOn}
+  {$Q+}
+  {$undef OverflowCheckWasOn}
+  {$endif}
+  {$ENDIF}
 end;
-{$IFEND}
 
 { TZAbstractPostgreSQLStringResultSet }
 
