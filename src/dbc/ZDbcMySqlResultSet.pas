@@ -53,9 +53,7 @@
   http://blog.ulf-wendel.de/2008/pdo_mysqlnd-prepared-statements-again/}
 
 unit ZDbcMySqlResultSet;
-{$IFDEF FPC}
-{$WARN 4055 off : Conversion between ordinals and pointers is not portable}
-{$ENDIF}
+
 interface
 
 {$I ZDbc.inc}

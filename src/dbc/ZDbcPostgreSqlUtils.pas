@@ -51,9 +51,7 @@
 {********************************************************@}
 
 unit ZDbcPostgreSqlUtils;
-{$IFDEF FPC}
-{$WARN 4055 off : Conversion between ordinals and pointers is not portable}
-{$ENDIF}
+
 interface
 
 {$I ZDbc.inc}
