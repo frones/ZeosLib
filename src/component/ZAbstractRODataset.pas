@@ -50,9 +50,7 @@
 {********************************************************@}
 
 unit ZAbstractRODataset;
-{$IFDEF FPC}
-{$WARN 4056 off : Conversion between ordinals and pointers is not portable}
-{$ENDIF}
+
 interface
 
 {$I ZComponent.inc}
@@ -851,7 +849,7 @@ type
     procedure SetAsString(const Value: string); override;
     procedure SetAsWideString(const Value: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_FTWIDESTRING}override;{$ENDIF}
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
-    procedure SetAsUTF8String(const Value: UTF8String);
+    procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_ASUTF8STRING}override;{$ENDIF}
     procedure SetAsRawByteString(const Value: RawByteString);
   protected
     procedure RangeError(Value, Min, Max: Extended);
@@ -1907,11 +1905,13 @@ begin
   Result := FUpdated;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // parameter not used intentionally
 procedure TFlatList.ListChanging(Sender: TObject);
 begin
   if Locked then
     DatabaseError(SReadOnlyProperty, DataSet);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TFlatList.Update;
 begin
@@ -2321,7 +2321,7 @@ procedure TZAbstractRODataset.SetParamCheck(Value: Boolean);
 begin
   if Value <> FSQL.ParamCheck then begin
     FSQL.ParamCheck := Value;
-    UpdateSQLStrings(Self);
+    UpdateSQLStrings(FSQL);
   end;
 end;
 
@@ -2342,7 +2342,7 @@ procedure TZAbstractRODataset.SetParamChar(Value: Char);
 begin
   if Value <> FSQL.ParamChar then begin
     FSQL.ParamChar := Value;
-    UpdateSQLStrings(Self);
+    UpdateSQLStrings(FSQL);
   end;
 end;
 
@@ -2429,8 +2429,8 @@ begin
   FParams.Clear;
 
   try
-    for I := 0 to FSQL.ParamCount - 1 do
-      FParams.CreateParam(ftUnknown, FSQL.ParamNames[I], ptUnknown);
+    for I := 0 to TZSQLStrings(Sender).ParamCount - 1 do
+      FParams.CreateParam(ftUnknown, TZSQLStrings(Sender).ParamNames[I], ptUnknown);
     FParams.AssignValues(OldParams);
   finally
     OldParams.Free;
@@ -3766,6 +3766,7 @@ end;
   Processes change events from the master dataset.
   @param Sender an event sender object.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // TNotifyEvent - parameter not used intentionally
 procedure TZAbstractRODataset.MasterChanged(Sender: TObject);
 begin
   CheckBrowseMode;
@@ -3782,6 +3783,7 @@ procedure TZAbstractRODataset.MasterDisabled(Sender: TObject);
 begin
   RereadRows;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Initializes new record with master fields.
@@ -4000,9 +4002,11 @@ end;
 {$ENDIF}
 
 {$IFNDEF WITH_VIRTUAL_DEFCHANGED}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // base class - parameter not used intentionally
 procedure TZAbstractRODataset.DefChanged(Sender: TObject);
 begin
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 {$ENDIF}
 
 {$IFNDEF WITH_DATASETFIELD}
@@ -5315,17 +5319,13 @@ end;
   {$WARNINGS ON}
 {$ENDIF}
 
-
 {**
   Reset the calculated (includes fkLookup) fields
   @param Buffer
 }
-
 {$IFDEF WITH_TRECORDBUFFER}
-
 procedure TZAbstractRODataset.ClearCalcFields(Buffer: TRecordBuffer);
 {$ELSE}
-
 procedure TZAbstractRODataset.ClearCalcFields(Buffer: PChar);
 {$ENDIF}
 var

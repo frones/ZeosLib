@@ -242,7 +242,7 @@ begin
             Result.L := (Spos - Result.P)+1;
             Result.TokenType := ttQuoted;
             Exit;
-          end else begin //$body$ .... $1, $2  .... $body$
+          end else begin // $body$ .... $1, $2  .... $body$
             DollarCount := 3;
             TempTag := Spos;
           end;

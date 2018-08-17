@@ -731,7 +731,7 @@ begin
   end;
 end;
 
-{$IFDEF FPC} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // TODO: are unused params correct?
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // TODO: are unused params correct?
 
 function CompareNativeCLob_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
@@ -866,7 +866,7 @@ begin
   else Result := 1;
 end;
 
-{$IFDEF FPC} {$WARN 5024 on} {$ENDIF}
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZRowAccessor }
 

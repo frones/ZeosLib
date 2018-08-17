@@ -2942,8 +2942,6 @@ end;
 
 { TZAbstractCallableStatement }
 
-{$IFDEF FPC} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally
-
 {**
   Constructs this object and assigns main properties.
   @param Connection a database connection object.
@@ -3150,10 +3148,12 @@ end;
   @param Index the index of the Resultset
   @result <code>IZResultSet</code> of the Index or nil.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // encoding unknown - parameter not used intentionally
 function TZAbstractCallableStatement.GetResultSetByIndex(const Index: Integer): IZResultSet;
 begin
   Result := nil;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Returns the Count of retrived ResultSets.
@@ -3640,8 +3640,6 @@ function TZAbstractCallableStatement.GetValue(ParameterIndex: Integer):
 begin
   Result := GetOutParam(ParameterIndex);
 end;
-
-{$IFDEF FPC} {$WARN 5024 on} {$ENDIF}
 
 { TZAbstractPreparedCallableStatement }
 
@@ -4286,8 +4284,6 @@ end;
 
 { TZAbstractPreparedStatement2 }
 
-{$IFDEF FPC} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally
-
 {**
   Sets a new parameter capacity and initializes the buffers.
   @param NewParamCount a new parameters count.
@@ -4685,6 +4681,8 @@ begin
   Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally
+
 procedure TZAbstractPreparedStatement2.GetBigDecimal(Index: Integer;
   out Result: TZBCD);
 begin
@@ -4898,6 +4896,8 @@ begin
   AlignParamterIndex2ResultSetIndex(Index);
   RaiseUnsupportedException
 end;
+
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Indicates whether or not the specified OUT parameter read had the value of
@@ -5562,8 +5562,6 @@ begin
     raise Exception.Create('Array count does not equal with initial count!')
 end;
 
-{$IFDEF FPC} {$WARN 5024 on} {$ENDIF}
-
 { TZRawPreparedStatement }
 
 procedure TZRawPreparedStatement.BindRawStr(Index: Integer;
@@ -5972,8 +5970,6 @@ end;
 
 { TZAbstractCallableStatement2 }
 
-{$IFDEF FPC} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally
-
 {**
   Binds the input parameters
 }
@@ -6105,6 +6101,8 @@ function TZAbstractCallableStatement2.EOR: Boolean;
 begin
   Result := False;
 end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally
 
 function TZAbstractCallableStatement2.Execute(const SQL: ZWideString): Boolean;
 begin
@@ -6652,6 +6650,8 @@ begin
   Result := Word(U);
 end;
 
+{$IFDEF FPC} {$POP} {$ENDIF}
+
 function TZAbstractCallableStatement2.IsFunction: Boolean;
 var I: Integer;
 begin
@@ -6747,8 +6747,6 @@ begin
     end;
   inherited Unprepare;
 end;
-
-{$IFDEF FPC} {$WARN 5024 on} {$ENDIF}
 
 { TZAbstractCallableStatement_A }
 

@@ -911,14 +911,12 @@ begin
   {$ENDIF}
 end;
 
-{$IFDEF FPC} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
-
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
 procedure TZGenericCachedResolver.RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
 begin
   raise EZSQLException.Create(SRefreshRowOnlySupportedWithUpdateObject);
 end;
-
-{$IFDEF FPC} {$WARN 5024 on} {$ENDIF}
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Calculate default values for the fields.
@@ -1017,16 +1015,14 @@ end;
 
 {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 
-{$IFDEF FPC} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
-
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
 procedure TZGenericCachedResolver.UpdateAutoIncrementFields(
   const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
   NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 begin
  //Should be implemented at Specific database Level Cached resolver
 end;
-
-{$IFDEF FPC} {$WARN 5024 on} {$ENDIF}
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 

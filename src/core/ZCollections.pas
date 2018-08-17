@@ -645,8 +645,6 @@ end;
 
 { TZUnmodifiableCollection }
 
-{$IFDEF FPC} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // parameters not used intentionally
-
 {**
   Constructs this object and assignes main properties.
   @param Collection an initial modifiable list of interfaces.
@@ -682,6 +680,8 @@ procedure TZUnmodifiableCollection.RaiseException;
 begin
   raise EInvalidOperation.Create(SImmutableOpIsNotAllowed);
 end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // unmodifyable - parameters not used intentionally
 
 {**
   Adds a new object at the and of this collection.
@@ -856,7 +856,7 @@ begin
   Result := FCollection.ToString;
 end;
 
-{$IFDEF FPC} {$WARN 5024 on} {$ENDIF}
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZHashMap }
 

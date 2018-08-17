@@ -2312,7 +2312,7 @@ var LastWasNull: Boolean;
 begin
   if ((FAutoColumnIndex {$IFDEF GENERIC_INDEX}>={$ELSE}>{$ENDIF} 0) and
           (OldRowAccessor.IsNull(FAutoColumnIndex) or
-          (OldRowAccessor.GetULong(FAutoColumnIndex, LastWasNull{%H-})=0)))
+          (OldRowAccessor.GetULong(FAutoColumnIndex, LastWasNull)=0)))
   then {if FMYSQL_STMT <> nil
     then NewRowAccessor.SetULong(FAutoColumnIndex, FPlainDriver.mysql_stmt_insert_id(FMYSQL_STMT^))  //EH: why does it not work!?
     else }NewRowAccessor.SetULong(FAutoColumnIndex, FPlainDriver.mysql_insert_id(FPMYSQL^)); //and this also works with the prepareds??!
