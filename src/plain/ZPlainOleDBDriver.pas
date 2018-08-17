@@ -54,7 +54,6 @@ unit ZPlainOleDBDriver;
 interface
 
 {$I ZPlain.inc}
-{$IFDEF ENABLE_OLEDB}
 
 uses ZPlainDriver;
 
@@ -103,8 +102,4 @@ begin
   Result := Self;
 end;
 
-{$ELSE !ENABLE_OLEDB}
-implementation
-{$ENDIF ENABLE_OLEDB}
 end.
-

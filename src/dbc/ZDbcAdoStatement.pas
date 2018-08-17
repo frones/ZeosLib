@@ -54,8 +54,6 @@ unit ZDbcAdoStatement;
 interface
 
 {$I ZDbc.inc}
-{.$DEFINE ENABLE_ADO}
-{$IFDEF ENABLE_ADO}
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
@@ -1092,7 +1090,4 @@ SetNull:
   end;
 end;
 
-{$ELSE}
-implementation
-{$ENDIF ENABLE_ADO}
 end.

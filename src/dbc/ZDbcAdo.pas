@@ -54,8 +54,6 @@ unit ZDbcAdo;
 interface
 
 {$I ZDbc.inc}
-{.$DEFINE ENABLE_ADO}
-{$IFDEF ENABLE_ADO}
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -645,9 +643,4 @@ finalization
   if Assigned(DriverManager) then
     DriverManager.DeregisterDriver(AdoDriver);
   AdoDriver := nil;
-//(*
-{$ELSE}
-implementation
-{$ENDIF ENABLE_ADO}
-//*)
 end.

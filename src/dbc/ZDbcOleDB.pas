@@ -55,8 +55,6 @@ interface
 
 {$I ZDbc.inc}
 
-{.$DEFINE ENABLE_OLEDB}
-{$IFDEF ENABLE_OLEDB}
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
@@ -762,9 +760,4 @@ finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(OleDBDriver);
   OleDBDriver := nil;
-//(*
-{$ELSE !ENABLE_OLEDB}
-implementation
-{$ENDIF ENABLE_OLEDB}
-//*)
 end.

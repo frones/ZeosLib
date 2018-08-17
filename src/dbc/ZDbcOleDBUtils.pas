@@ -54,8 +54,7 @@ unit ZDbcOleDBUtils;
 interface
 
 {$I ZDbc.inc}
-{.$DEFINE ENABLE_OLEDB}
-{$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
+
 uses
   Types, SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   ZCompatibility, ZDbcIntfs, ZOleDB, ZVariant, ZDbcStatement, Variants;
@@ -2139,9 +2138,4 @@ begin
     end;
 end;
 
-//(*
-{$ELSE}
-implementation
-{$IFEND}
-//*)
 end.

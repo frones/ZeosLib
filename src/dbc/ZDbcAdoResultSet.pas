@@ -54,8 +54,6 @@ unit ZDbcAdoResultSet;
 interface
 
 {$I ZDbc.inc}
-{.$DEFINE ENABLE_ADO}
-{$IFDEF ENABLE_ADO}
 
 uses
 {$IFDEF USE_SYNCOMMONS}
@@ -1864,11 +1862,4 @@ begin
   ColumnInfo.DefinitelyWritable := False;}
 end;
 
-{$ELSE}
-implementation
-{$ENDIF ENABLE_ADO}
-
 end.
-
-
-

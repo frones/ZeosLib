@@ -54,8 +54,6 @@ unit ZDbcOleDBMetadata;
 interface
 
 {$I ZDbc.inc}
-{.$DEFINE ENABLE_OLEDB}
-{$IF Defined(ENABLE_OLEDB) or defined(ENABLE_ADO)}
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -2876,12 +2874,7 @@ begin
       Break;
     end;
 end;
+
 {$ENDIF ENABLE_OLEDB}
-//(*
-{$ELSE }
-implementation
-{$IFEND}
-//*)
+
 end.
-
-

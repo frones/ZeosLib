@@ -54,8 +54,6 @@ unit ZDbcAdoMetadata;
 interface
 
 {$I ZDbc.inc}
-{.$DEFINE ENABLE_ADO}
-{$IFDEF ENABLE_ADO}
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -1543,9 +1541,4 @@ begin
   end;
 end;
 
-{$ELSE}
-implementation
-{$ENDIF ENABLE_ADO}
 end.
-
-

@@ -55,9 +55,6 @@ interface
 
 {$I ZDbc.inc}
 
-{.$DEFINE ENABLE_OLEDB}
-{$IFDEF ENABLE_OLEDB}
-
 uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
@@ -2425,13 +2422,4 @@ initialization
   LobDBBinding.wType := DBTYPE_IUNKNOWN;
   LobDBBinding.bPrecision := 0;
   LobDBBinding.bScale := 0;
-//(*
-{$ELSE !ENABLE_OLEDB}
-implementation
-{$ENDIF ENABLE_OLEDB}
-//*)
 end.
-
-
-
-

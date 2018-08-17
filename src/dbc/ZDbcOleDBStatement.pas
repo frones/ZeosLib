@@ -54,8 +54,7 @@ unit ZDbcOleDBStatement;
 interface
 
 {$I ZDbc.inc}
-{.$DEFINE ENABLE_OLEDB}
-{$IFDEF ENABLE_OLEDB}
+
 {$IFDEF WIN64}
 {$ALIGN 8}
 {$ELSE}
@@ -580,13 +579,4 @@ begin
   fMoreResultsIndicator := Value;
 end;
 
-//(*
-{$ELSE !ENABLE_OLEDB}
-implementation
-{$ENDIF ENABLE_OLEDB}
-//*)
 end.
-
-
-
-
