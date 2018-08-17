@@ -631,8 +631,8 @@ function EncodeCString(const Value: RawByteString): RawByteString; overload;
 function DecodeCString(const Value: ZWideString): ZWideString; overload;
 function DecodeCString(const Value: RawByteString): RawByteString; overload;
 
-procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; var Result: ZWideString); overload;
-procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; var Result: RawByteString); overload;
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; out Result: ZWideString); overload;
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; out Result: RawByteString); overload;
 
 function DecodeCString(SrcLength: LengthInt; SrcBuffer, DestBuffer: PWideChar): LengthInt; overload;
 function DecodeCString(SrcLength: LengthInt; SrcBuffer, DestBuffer: PAnsiChar): LengthInt; overload;
@@ -3045,7 +3045,6 @@ end;
   @param TimeFormat the result format.
   @return a formated RawByteString with Time-Format pattern.
 }
-{$WARNINGS OFF} //suppress D2007 Warning for undefined result
 function DateTimeToRawSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
@@ -3362,7 +3361,6 @@ begin
       end;
     end;
 end;
-{$WARNINGS ON} //suppress D2007 Warning for undefined result
 
 {**
   Converts DateTime value to native string
@@ -3415,9 +3413,9 @@ const
   InsLast = InsCount-1;
   SOP = SizeOf(pointer);
   MSOP = NativeUInt(-SOP);
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
+
 procedure QuickSortSha_0AA(L, R: NativeUInt; Compare: TZListSortCompare);
 var
   I, J, P, T: NativeUInt;
@@ -3535,9 +3533,9 @@ begin;
     end;
   end;
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
+
+{$IFDEF FPC} {$POP} {$ENDIF}
+
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
@@ -3924,18 +3922,17 @@ end;
   @param SrcBuffer the souce buffer.
   @return a regular string.
 }
-procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; var Result: ZWideString);
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; out Result: ZWideString);
 begin
   SetLength(Result, SrcLength);
   SetLength(Result, DecodeCString(SrcLength, SrcBuffer, Pointer(Result)));
 end;
 
-procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; var Result: RawByteString);
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; out Result: RawByteString);
 begin
   SetLength(Result, SrcLength);
   SetLength(Result, DecodeCString(SrcLength, SrcBuffer, Pointer(Result)));
 end;
-
 
 {**
   Converts a string from escape PostgreSQL format.

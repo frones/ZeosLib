@@ -42,6 +42,7 @@
 // Compilation directives for Lazarus
 
 {$WARN 4055 off : Conversion between ordinals and pointers is not portable} //suppress compiler buggy warning -> our Native(U)Int is Pointer size aligned
+{$WARN 4056 off : Conversion between ordinals and pointers is not portable}
 
 {$DEFINE PUREPASCAL}
 
