@@ -145,6 +145,10 @@
     {$UNDEF WITH_RAWBYTESTRING_CONVERSION_BUG} //issue seems to be fixed
     {$DEFINE WITH_VIRTUAL_TFIELD_BIND} //TField has procedure Bind(Binding: Boolean);
   {$IFEND}
+  {$IF FPC_FULLVERSION>=30002}       // introduced in 3.0.2
+    {$DEFINE WITH_ASANSISTRING} // TFIeld.AsAnsiString is supported
+    {$DEFINE WITH_ASUTF8STRING} // TFIeld.AsUtf8String is supported
+  {$IFEND}
 
   // todo
   //   VIRTUALSETFIELDDATA: in nativeformat versions of SETFIELDDATA, inherited wasn't called.
