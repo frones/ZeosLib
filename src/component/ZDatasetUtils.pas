@@ -267,7 +267,7 @@ function DefineFieldIndices(const FieldsLookupTable: TPointerDynArray;
   and objectname.
 }
 procedure SplitQualifiedObjectName(const QualifiedName: string;
-  var Catalog, Schema, ObjectName: string); overload;
+  out Catalog, Schema, ObjectName: string); overload;
 
 {**
   Splits up a qualified object name into pieces. Catalog, schema
@@ -275,7 +275,7 @@ procedure SplitQualifiedObjectName(const QualifiedName: string;
 }
 procedure SplitQualifiedObjectName(const QualifiedName: string;
   const SupportsCatalogs, SupportsSchemas: Boolean;
-  var Catalog, Schema, ObjectName: string); overload;
+  out Catalog, Schema, ObjectName: string); overload;
 
 {**
   Assigns a Statement value from a TParam
@@ -1569,7 +1569,7 @@ end;
   and objectname.
 }
 procedure SplitQualifiedObjectName(const QualifiedName: string;
-  var Catalog, Schema, ObjectName: string);
+  out Catalog, Schema, ObjectName: string);
 
 {$IFDEF OLDFPC}
 function ExtractStrings(Separators, WhiteSpace: TSysCharSet; Content: PChar;
@@ -1671,7 +1671,7 @@ end;
 }
 procedure SplitQualifiedObjectName(const QualifiedName: string;
   const SupportsCatalogs, SupportsSchemas: Boolean;
-  var Catalog, Schema, ObjectName: string);
+  out Catalog, Schema, ObjectName: string);
 var
   SL: TStringList;
   I: Integer;
