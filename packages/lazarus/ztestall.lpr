@@ -8,6 +8,7 @@ uses
   Classes, consoletestrunner, fpcunit, fpcunitreport, plaintestreport,
   ZTestConfig,
   ZSqlTestCase,
+  zxmltestreport,
   //core
   ZTestCore,
   //parsesql
@@ -138,6 +139,8 @@ function TMyTestRunner.GetResultsWriter: TCustomResultsWriter;
 begin
   if (FormatParam = fPlain) and not CommandLineSwitches.verbose then
     Result := TMyResultsWriter.Create(nil)
+  else if FormatParam = fXML then
+    Result := TZXMLResultsWriter.Create(nil)
   else
     Result:=inherited GetResultsWriter;
 end;
