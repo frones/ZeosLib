@@ -5240,6 +5240,11 @@ begin
   end;
 end;
 
+{$IFDEF WITH_IPROVIDERSUPPORT_GUID}
+type
+  IProviderSupportActual = {$IF DECLARED(IProviderSupportNG)} IProviderSupportNG {$ELSE} IProviderSupport {$IFEND};
+{$ENDIF}
+
 procedure TZAbstractRODataset.CreateFields;
 var
   I: Integer;
@@ -5249,28 +5254,17 @@ var
     Pos, j: Integer;
     KeyFields, FieldName: string;
     {$IFDEF WITH_IPROVIDERSUPPORT_GUID}
-      {$IFDEF WITH_IPROVIDERSUPPORT_NG}
-      PS : IProviderSupportNG;
-      {$ELSE}
-      PS : IProviderSupport;
+    PS: IProviderSupportActual;
     {$ENDIF}
-    {$ENDIF WITH_IPROVIDERSUPPORT_GUID}
   begin
     {$IFDEF WITH_IPROVIDERSUPPORT_GUID}
-      {$IFDEF WITH_IPROVIDERSUPPORT_NG}
-      if Supports(self, IProviderSupportNG, PS) then
+    if Supports(self, IProviderSupportActual, PS) then
       KeyFields := PS.PSGetKeyFields
     else
-        KeyFields := IProviderSupportNG(self).PSGetKeyFields;
+      KeyFields := IProviderSupportActual(Self).PSGetKeyFields;
     {$ELSE}
-      if Supports(self, IProviderSupport, PS) then
-        KeyFields := PS.PSGetKeyFields
-      else
-        KeyFields := IProviderSupport(self).PSGetKeyFields;
+    KeyFields := self.PSGetKeyFields;
     {$ENDIF}
-    {$ELSE WITH_IPROVIDERSUPPORT_GUID}
-      KeyFields := self.PSGetKeyFields;
-    {$ENDIF WITH_IPROVIDERSUPPORT_GUID}
     Pos := 1;
     while Pos <= Length(KeyFields) do
     begin

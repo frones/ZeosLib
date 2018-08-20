@@ -278,7 +278,6 @@
                           {$UNDEF WITH_TRECORDBUFFER} //TRecordBuffer is NativeInt now
                         {$ENDIF}
                         {$IF CompilerVersion >= 26} //Delphi XE5+
-                          {$DEFINE WITH_IPROVIDERSUPPORT_NG}    //supports IProviderSupportNG / IProviderSupport is deprecated
                           {$DEFINE TFIELD_HAS_ASLONGWORD}       //TField has supports virtual AsLongWord Gettet & Setter
                           {$IFDEF NEXTGEN}
                             {$DEFINE WITH_TSYSCHARSET_DEPRECATED}
