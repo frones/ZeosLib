@@ -2427,9 +2427,15 @@ var
   I: Integer;
   ColumnInfo: TZColumnInfo;
   MetaData : IZResultSetMetaData;
+  RequiresLoading: Boolean;
 begin
   ColumnsInfo.Clear;
   MetaData := FResultSet.GetMetadata;
+  RequiresLoading := false;
+  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF}
+  do RequiresLoading := RequiresLoading or (MetaData.GetColumnType(I) = stUnknown);
+  if RequiresLoading
+  then MetaData.IsAutoIncrement(FirstDbcIndex);
   for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
   begin
     ColumnInfo := TZColumnInfo.Create;

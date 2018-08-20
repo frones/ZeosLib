@@ -300,7 +300,7 @@ begin
     //we've NO fixed length for a case(postgres and FB2.5up f.e.) select
     tempColType := TZSQLType(TableColumns.GetSmall(TableColColumnTypeIndex));
     if not (tempColType in [stBinaryStream, stAsciiStream,
-        stUnicodeStream, stBytes, stString, stUnicodeString]) then
+        stUnicodeStream, stBytes, stString, stUnicodeString]) or (ColumnInfo.ColumnType = stUnknown) then
       ColumnInfo.ColumnType := tempColType;
   end;
   if FConSettings = nil then //fix if on creation nil was assigned
@@ -315,6 +315,9 @@ begin
         if (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'NVARCHAR') or
            (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'NCHAR') then
           ColumnInfo.ColumnCodePage := zCP_UTF8
+        else if (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'UNIVARCHAR') or
+           (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'UNICHAR') then
+          ColumnInfo.ColumnCodePage := zCP_UTF16
         else
           ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP //assume locale codepage
   else
