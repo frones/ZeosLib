@@ -1299,7 +1299,6 @@ begin
   end;
 end;
 
-{$WARNINGS OFF}
 procedure TZGenericTestDbcResultSet.TestStringGetter;
 const
   p_name_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
@@ -1376,7 +1375,6 @@ begin
     Statement.Close;
   end;
 end;
-{$WARNINGS ON}
 
 procedure TZGenericTestDbcResultSet.TestStringToSignedIntegerConversions;
 const
@@ -1674,7 +1672,7 @@ const
   stAsciiStream_Index   = FirstDbcIndex+16;
   stUnicodeStream_Index = FirstDbcIndex+17;
   stBinaryStream_Index  = FirstDbcIndex+18;
-{$WARNINGS OFF}
+
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure TZGenericTestDbcArrayBindings.InternalTestArrayBinding(
   PStatement: IZPreparedStatement; FirstID, ArrayLen, LastFieldIndex: Integer);
@@ -1904,7 +1902,6 @@ begin
   PStatement.ExecuteUpdatePrepared;
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-{$WARNINGS ON} //implizit string conversion of...
 
 const
   LastFieldIndices: array[0..2] of Integer = (stBigDecimal_Index, stAsciiStream_Index, stBinaryStream_Index);

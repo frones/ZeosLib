@@ -197,9 +197,6 @@ type
     property Count: Integer read GetCount;
   end;
 
-{$IFDEF WITH_NEWTOBJECT} // to suppress the overload warning of the Equals overload, Marco. (overload a non overload-declared funtion)
-  {$WARNINGS OFF}
-{$ENDIF}
   {** Implements an abstract interfaced object. }
   TZAbstractObject = class(TInterfacedObject, IZObject)
   public
@@ -209,9 +206,6 @@ type
     function ToString: string;{$IFDEF WITH_NEWTOBJECT}override{$ELSE} virtual{$ENDIF} ;
     function InstanceOf(const IId: TGUID): Boolean;
   end;
-{$IFDEF WITH_NEWTOBJECT}
-  {$WARNINGS ON}
-{$ENDIF}
 
   TZCharReaderStream = Class(TStream)
   private
