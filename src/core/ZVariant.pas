@@ -144,7 +144,7 @@ type
     procedure SetNull(var Value: TZVariant);
 
     function Convert(const Value: TZVariant; NewType: TZVariantType): TZVariant;
-    procedure Assign(const SrcValue: TZVariant; var DstValue: TZVariant);
+    procedure Assign(const SrcValue: TZVariant; out DstValue: TZVariant);
     function Clone(const Value: TZVariant): TZVariant;
     function Compare(const Value1, Value2: TZVariant): Integer;
 
@@ -226,7 +226,7 @@ type
     constructor Create;
     function Convert(const Value: TZVariant; NewType: TZVariantType): TZVariant;
       virtual;
-    procedure Assign(const SrcValue: TZVariant; var DstValue: TZVariant);
+    procedure Assign(const SrcValue: TZVariant; out DstValue: TZVariant);
     function Clone(const Value: TZVariant): TZVariant;
     function Compare(const Value1, Value2: TZVariant): Integer;
 
@@ -546,7 +546,7 @@ uses
 { TZDefaultVariantManager }
 
 {**
-  Constructs this object and assignes the main properties.
+  Constructs this object and assigns the main properties.
 }
 constructor {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.Create;
 begin
@@ -575,12 +575,12 @@ begin
 end;
 
 {**
-  Assignes one variant value to another one.
+  Assigns one variant value to another one.
   @param SrcValue a source variant value.
   @param DstValue a destination variant value.
 }
 procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.Assign(const SrcValue: TZVariant;
-  var DstValue: TZVariant);
+  out DstValue: TZVariant);
 begin
   DstValue.VType := SrcValue.VType;
   case SrcValue.VType of
@@ -612,7 +612,7 @@ end;
 }
 function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.Clone(const Value: TZVariant): TZVariant;
 begin
-  Assign(Value, Result{%H-});
+  Assign(Value, Result);
 end;
 
 {**
@@ -1249,7 +1249,7 @@ begin
 end;
 
 {**
-  Assignes a boolean value to variant.
+  Assigns a boolean value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
@@ -1260,7 +1260,7 @@ begin
 end;
 
 {**
-  Assignes a Byte array value to variant.
+  Assigns a Byte array value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
@@ -1271,7 +1271,7 @@ begin
 end;
 
 {**
-  Assignes an integer value to variant.
+  Assigns an integer value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
@@ -1282,7 +1282,7 @@ begin
 end;
 
 {**
-  Assignes an integer value to variant.
+  Assigns an integer value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
@@ -1293,7 +1293,7 @@ begin
 end;
 
 {**
-  Assignes a float value to variant.
+  Assigns a float value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
@@ -1304,7 +1304,7 @@ begin
 end;
 
 {**
-  Assignes a String value to variant.
+  Assigns a String value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
@@ -1315,7 +1315,7 @@ begin
 end;
 
 {**
-  Assignes a AnsiString value to variant.
+  Assigns a AnsiString value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
@@ -1328,7 +1328,7 @@ end;
 {$ENDIF}
 
 {**
-  Assignes a UTF8string value to variant.
+  Assigns a UTF8string value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
@@ -1341,7 +1341,7 @@ end;
 {$ENDIF}
 
 {**
-  Assignes a RawByteString value to variant.
+  Assigns a RawByteString value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
@@ -1352,7 +1352,7 @@ begin
 end;
 
 {**
-  Assignes a RawByteString value to variant.
+  Assigns a RawByteString value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
@@ -1363,7 +1363,7 @@ begin
 end;
 
 {**
-  Assignes a unicode string value to variant.
+  Assigns a unicode string value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
@@ -1374,7 +1374,7 @@ begin
 end;
 
 {**
-  Assignes a datetime value to variant.
+  Assigns a datetime value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
@@ -1385,7 +1385,7 @@ begin
 end;
 
 {**
-  Assignes a pointer value to variant.
+  Assigns a pointer value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
@@ -1396,7 +1396,7 @@ begin
 end;
 
 {**
-  Assignes a interface value to variant.
+  Assigns a interface value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
@@ -1407,7 +1407,7 @@ begin
 end;
 
 {**
-  Assignes a TZArray value to variant.
+  Assigns a TZArray value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
@@ -2340,7 +2340,7 @@ end;
 { TZClientVariantManager }
 
 {**
-  Constructs this object and assignes the main properties.
+  Constructs this object and assigns the main properties.
   @param ClientCodePage the current ClientCodePage.
 }
 constructor TZClientVariantManager.Create(const ConSettings: PZConSettings);
@@ -3047,7 +3047,7 @@ end;
 { TZAnyValue }
 
 {**
-  Constructs this object and assignes the main properties.
+  Constructs this object and assigns the main properties.
   @param Value an any value.
 }
 constructor TZAnyValue.Create(const Value: TZVariant);
@@ -3056,7 +3056,7 @@ begin
 end;
 
 {**
-  Constructs this object and assignes the main properties.
+  Constructs this object and assigns the main properties.
   @param Value a boolean value.
 }
 constructor TZAnyValue.CreateWithBoolean(Value: Boolean);
@@ -3065,7 +3065,7 @@ begin
 end;
 
 {**
-  Constructs this object and assignes the main properties.
+  Constructs this object and assigns the main properties.
   @param Value a datetime value.
 }
 constructor TZAnyValue.CreateWithDateTime(const Value: TDateTime);
@@ -3074,7 +3074,7 @@ begin
 end;
 
 {**
-  Constructs this object and assignes the main properties.
+  Constructs this object and assigns the main properties.
   @param Value a float value.
 }
 constructor TZAnyValue.CreateWithFloat(const Value: Extended);
@@ -3083,7 +3083,7 @@ begin
 end;
 
 {**
-  Constructs this object and assignes the main properties.
+  Constructs this object and assigns the main properties.
   @param Value a integer value.
 }
 constructor TZAnyValue.CreateWithInteger(const Value: Int64);
@@ -3092,7 +3092,7 @@ begin
 end;
 
 {**
-  Constructs this object and assignes the main properties.
+  Constructs this object and assigns the main properties.
   @param Value a string value.
 }
 constructor TZAnyValue.CreateWithString(const Value: String);
@@ -3101,7 +3101,7 @@ begin
 end;
 
 {**
-  Constructs this object and assignes the main properties.
+  Constructs this object and assigns the main properties.
   @param Value a unicode string value.
 }
 {$IFDEF UNICODE}

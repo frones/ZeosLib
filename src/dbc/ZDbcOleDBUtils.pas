@@ -93,7 +93,7 @@ function PrepareOleParamDBBindings(DBUPARAMS: DB_UPARAMS;
   var DBBindingArray: TDBBindingDynArray; const InParamTypes: TZSQLTypeArray;
   ParamInfoArray: PDBParamInfoArray; var TempLobs: TInterfacesDynArray): DBROWOFFSET;
 
-procedure InitOleParamDBBindings(var DBBindingArray: TDBParamInfoDynArray;
+procedure InitOleParamDBBindings(out DBBindingArray: TDBParamInfoDynArray;
   const InParamTypes: TZSQLTypeArray; const InParamValues: TZVariantDynArray;
   const ClientVarManager: IZClientVariantManager);
 
@@ -621,7 +621,7 @@ begin
   Result := DBBindingArray[DBUPARAMS -1].obValue + DBBindingArray[DBUPARAMS -1].cbMaxLen;
 end;
 
-procedure InitOleParamDBBindings(var DBBindingArray: TDBParamInfoDynArray;
+procedure InitOleParamDBBindings(out DBBindingArray: TDBParamInfoDynArray;
   const InParamTypes: TZSQLTypeArray; const InParamValues: TZVariantDynArray;
   const ClientVarManager: IZClientVariantManager);
 var I: Integer;
