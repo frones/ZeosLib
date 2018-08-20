@@ -45,7 +45,7 @@ type
   TZXMLResultsWriter = class(TCustomResultsWriter)
   private
     FDoc: TXMLDocument;
-    FResults{, FListing}: TDOMNode;
+    FResults{, FListing}: TDOMElement;
     FSuitePath: TFPList;
     FResultsPath: TFPList;
     FCurrentTest: TDOMElement;
@@ -235,6 +235,7 @@ begin
   FResults.AppendChild(FDoc.CreateComment(' Generated using FPCUnit on '
     + FormatDateTime('yyyy-mm-dd hh:nn:ss', Now) ));
   FDoc.AppendChild(FResults);
+  FResults['name'] := ParamStr(0);
 //  FListing := FDoc.CreateElement('TestListing');
 //  FResults.AppendChild(FListing);
 end;
@@ -310,36 +311,41 @@ var
   f: text;
 begin
   lResults := FDoc.FindNode('TestResults');
-  (*
-  n := FDoc.CreateElement('NumberOfRunTests');
-  n.AppendChild(FDoc.CreateTextNode(IntToStr(aResult.RunTests)));
-  lResults.AppendChild(n);
 
-  n := FDoc.CreateElement('NumberOfErrors');
-  n.AppendChild(FDoc.CreateTextNode(IntToStr(aResult.NumberOfErrors)));
-  lResults.AppendChild(n);
+  //n := FDoc.CreateElement('NumberOfRunTests');
+  //n.AppendChild(FDoc.CreateTextNode(IntToStr(aResult.RunTests)));
+  //lResults.AppendChild(n);
+  FResults['total'] := IntToStr(aResult.RunTests + aResult.NumberOfIgnoredTests + aResult.NumberOfSkippedTests);
+  FResults['not-run'] := IntToStr(aResult.NumberOfIgnoredTests + aResult.NumberOfSkippedTests);
+  FResults['date'] := FormatDateTime('DD/MM/YYYY', Now);
+  FResults['time'] := FormatDateTime('HH:NN:SS', Now);
 
-  n := FDoc.CreateElement('NumberOfFailures');
-  n.AppendChild(FDoc.CreateTextNode(IntToStr(aResult.NumberOfFailures)));
-  lResults.AppendChild(n);
-  
+  //n := FDoc.CreateElement('NumberOfErrors');
+  //n.AppendChild(FDoc.CreateTextNode(IntToStr(aResult.NumberOfErrors)));
+  //lResults.AppendChild(n);
+
+  //n := FDoc.CreateElement('NumberOfFailures');
+  //n.AppendChild(FDoc.CreateTextNode(IntToStr(aResult.NumberOfFailures)));
+  //lResults.AppendChild(n);
+  FResults['failures'] := IntToStr(aResult.NumberOfErrors + aResult.NumberOfFailures);
+
   n := FDoc.CreateElement('NumberOfIgnoredTests');
   n.AppendChild(FDoc.CreateTextNode(IntToStr(aResult.NumberOfIgnoredTests)));
   lResults.AppendChild(n);
 
-  if not SkipTiming then
-  begin
-    n := FDoc.CreateElement('TotalElapsedTime');
-    n.AppendChild(FDoc.CreateTextNode(FormatDateTime('hh:nn:ss.zzz',
-      Now - aResult.StartingTime)));
-    lResults.AppendChild(n);
-  end;
+  //if not SkipTiming then
+  //begin
+  //  n := FDoc.CreateElement('TotalElapsedTime');
+  //  n.AppendChild(FDoc.CreateTextNode(FormatDateTime('hh:nn:ss.zzz',
+  //    Now - aResult.StartingTime)));
+  //  lResults.AppendChild(n);
+  //end;
 
   { Summary of ISO 8601  http://www.cl.cam.ac.uk/~mgk25/iso-time.html }
-  n := FDoc.CreateElement('DateTimeRan');
-  n.AppendChild(FDoc.CreateTextNode(FormatDateTime('yyyy-mm-dd hh:nn:ss', Now)));
-  lResults.AppendChild(n);
-  *)
+  //n := FDoc.CreateElement('DateTimeRan');
+  //n.AppendChild(FDoc.CreateTextNode(FormatDateTime('yyyy-mm-dd hh:nn:ss', Now)));
+  //lResults.AppendChild(n);
+
   // This is so that the GUI Test Runner doesn't output text as well.
   if FileName <> 'null' then
   begin
