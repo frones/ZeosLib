@@ -3014,18 +3014,20 @@ end;
 
 procedure isc_decode_time(ntime: ISC_TIME; out hours, minutes, seconds: Word; out fractions: LongWord);
 begin
-  hours := ntime div (3600 * ISC_TIME_SECONDS_PRECISION);
-  ntime := ntime mod (3600 * ISC_TIME_SECONDS_PRECISION);
-  minutes := ntime div (60 * ISC_TIME_SECONDS_PRECISION);
-  ntime := ntime mod (60 * ISC_TIME_SECONDS_PRECISION);
+  hours := ntime div (SecsPerHour * ISC_TIME_SECONDS_PRECISION);
+  ntime := ntime mod (SecsPerHour * ISC_TIME_SECONDS_PRECISION);
+  minutes := ntime div (SecsPerMin * ISC_TIME_SECONDS_PRECISION);
+  ntime := ntime mod (SecsPerMin * ISC_TIME_SECONDS_PRECISION);
   seconds := ntime div ISC_TIME_SECONDS_PRECISION;
   fractions := ntime mod ISC_TIME_SECONDS_PRECISION;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4081 off : Converting the operands to "$1" before doing the multiply could prevent overflow errors.} {$ENDIF} // overflow means error so just disable hint
 procedure isc_encode_time(var ntime: ISC_TIME; hours, minutes, seconds: Word; fractions: LongWord);
 begin
-  ntime := ((hours * 60 + minutes) * 60 + seconds) * ISC_TIME_SECONDS_PRECISION + fractions;
+  ntime := ((hours * MinsPerHour + minutes) * SecsPerMin + seconds) * ISC_TIME_SECONDS_PRECISION + fractions;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 const
   //see https://stackoverflow.com/questions/5248827/convert-datetime-to-julian-date-in-c-sharp-tooadate-safe
@@ -3039,6 +3041,7 @@ const
 
 //This formula is taken from the 1939 edition of Funk & Wagnall's College Standard Dictionary (entry for the word "calendar").
 //so there is no IB/FB "hokuspokus" to play with encode/decode
+{$IFDEF FPC} {$PUSH} {$WARN 4081 off : Converting the operands to "$1" before doing the multiply could prevent overflow errors.} {$ENDIF} // overflow means error so just disable hint
 procedure isc_decode_date(nday: ISC_DATE; out year, month, day: Word);
 var century: integer;
 begin
@@ -3081,5 +3084,6 @@ begin
            (DaysOf4YearCycle * year_anno) div 4 +
            (Aug8th * month + 2) div 5 + day + Day0ToIB_BaseDateDiff);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 end.
