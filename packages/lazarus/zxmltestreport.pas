@@ -329,9 +329,9 @@ begin
   //lResults.AppendChild(n);
   FResults['failures'] := IntToStr(aResult.NumberOfErrors + aResult.NumberOfFailures);
 
-  n := FDoc.CreateElement('NumberOfIgnoredTests');
-  n.AppendChild(FDoc.CreateTextNode(IntToStr(aResult.NumberOfIgnoredTests)));
-  lResults.AppendChild(n);
+  //n := FDoc.CreateElement('NumberOfIgnoredTests');
+  //n.AppendChild(FDoc.CreateTextNode(IntToStr(aResult.NumberOfIgnoredTests)));
+  //lResults.AppendChild(n);
 
   //if not SkipTiming then
   //begin
