@@ -290,18 +290,34 @@ uses ZFastcode, Math, ZMessages, ZSysUtils, ZDbcUtils, ZEncoding
 const
   PAnsiInc = SizeOf(Cardinal);
   PWideInc = SizeOf(Word); //PWide inc assumes allways two byte
+  BothNotNull = Low(Integer);
+  // Results of Asc comparation of Null1, Null2 flags.
+  // If both flags are False, comparation of values is required
+  NullsCompareMatrix: array[Boolean] of array[Boolean] of Integer =
+    (
+      (BothNotNull, 1),
+      (-1, 0)
+    );
+  // Results of equality comparation of Null1, Null2 flags.
+  // If both flags are False, comparation of values is required
+  NullsEqualMatrix: array[Boolean] of array[Boolean] of Integer =
+    (
+      (BothNotNull, bIsNotNull),
+      (bIsNotNull, bIsNull)
+    );
 
-function CompareNothing(const {%H-}Null1, {%H-}Null2: Boolean; const {%H-}V1, {%H-}V2): Integer; //emergency exit for types we can't sort like arrays, dataset ...
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // empty function - parameter not used intentionally
+function CompareNothing(const Null1, Null2: Boolean; const V1, V2): Integer; //emergency exit for types we can't sort like arrays, dataset ...
 begin
   Result := 0;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function CompareBoolean_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PWordBool(V1)^) - Ord(PWordBool(V2)^); //overflow safe
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PWordBool(V1)^) - Ord(PWordBool(V2)^); //overflow safe
 end;
 
 function CompareBoolean_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -311,17 +327,16 @@ end;
 
 function CompareBoolean_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PWordBool(V1)^ <> PWordBool(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PWordBool(V1)^ <> PWordBool(V2)^);
 end;
 
 function CompareByte_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := PByte(V1)^ - PByte(V2)^; //overflow safe
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := PByte(V1)^ - PByte(V2)^; //overflow safe
 end;
 
 function CompareByte_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -331,17 +346,16 @@ end;
 
 function CompareByte_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PByte(V1)^ <> PByte(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PByte(V1)^ <> PByte(V2)^);
 end;
 
 function CompareShort_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := PShortInt(V1)^ - PShortInt(V2)^; //overflow safe
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := PShortInt(V1)^ - PShortInt(V2)^; //overflow safe
 end;
 
 function CompareShort_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -351,17 +365,16 @@ end;
 
 function CompareShort_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PShortInt(V1)^ <> PShortInt(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PShortInt(V1)^ <> PShortInt(V2)^);
 end;
 
 function CompareWord_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := PWord(V1)^ - PWord(V2)^; //overflow safe
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := PWord(V1)^ - PWord(V2)^; //overflow safe
 end;
 
 function CompareWord_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -371,17 +384,16 @@ end;
 
 function CompareWord_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PWord(V1)^ <> PWord(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PWord(V1)^ <> PWord(V2)^);
 end;
 
 function CompareSmallInt_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := PSmallInt(V1)^ - PSmallInt(V2)^; //overflow safe
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := PSmallInt(V1)^ - PSmallInt(V2)^; //overflow safe
 end;
 
 function CompareSmallInt_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -391,17 +403,16 @@ end;
 
 function CompareSmallInt_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PSmallInt(V1)^ <> PSmallInt(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PSmallInt(V1)^ <> PSmallInt(V2)^);
 end;
 
 function CompareLongWord_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PLongWord(V1)^ > PLongWord(V2)^)-Ord(PLongWord(V1)^ < PLongWord(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PLongWord(V1)^ > PLongWord(V2)^)-Ord(PLongWord(V1)^ < PLongWord(V2)^);
 end;
 
 function CompareLongWord_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -411,25 +422,23 @@ end;
 
 function CompareLongWord_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PLongWord(V1)^ <> PLongWord(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PLongWord(V1)^ <> PLongWord(V2)^);
 end;
 
 function CompareInteger_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
   //function ShaCompareInt(Item1, Item2: Pointer): Integer;
   begin //on 100 mio execs 200ms faster
     Result := PInteger(V1)^;
     if Result xor PInteger(V2)^>=0
       then Result:=Result-PInteger(V2)^
       else Result:=Result or 1;
-    end; //Than My (EH) overflow save idea
-    //Result := Ord(PLongInt(V1)^ > PLongInt(V2)^)-Ord(PLongInt(V1)^ < PLongInt(V2)^);
+  end; //Than My (EH) overflow save idea
+  //Result := Ord(PLongInt(V1)^ > PLongInt(V2)^)-Ord(PLongInt(V1)^ < PLongInt(V2)^);
 end;
 
 function CompareInteger_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -439,17 +448,16 @@ end;
 
 function CompareInteger_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PLongInt(V1)^ <> PLongInt(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PLongInt(V1)^ <> PLongInt(V2)^);
 end;
 
 function CompareInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PInt64(V1)^ > PInt64(V2)^)-Ord(PInt64(V1)^ < PInt64(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PInt64(V1)^ > PInt64(V2)^)-Ord(PInt64(V1)^ < PInt64(V2)^);
 end;
 
 function CompareInt64_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -459,17 +467,16 @@ end;
 
 function CompareInt64_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PInt64(V1)^ <> PInt64(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PInt64(V1)^ <> PInt64(V2)^);
 end;
 
 function CompareUInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PUInt64(V1)^ > PUInt64(V2)^)-Ord(PUInt64(V1)^ < PUInt64(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PUInt64(V1)^ > PUInt64(V2)^)-Ord(PUInt64(V1)^ < PUInt64(V2)^);
 end;
 
 function CompareUInt64_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -479,17 +486,16 @@ end;
 
 function CompareUInt64_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PUInt64(V1)^ <> PUInt64(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PUInt64(V1)^ <> PUInt64(V2)^);
 end;
 
 function CompareSingle_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PSingle(V1)^ > PSingle(V2)^)-Ord(PSingle(V1)^ < PSingle(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PSingle(V1)^ > PSingle(V2)^)-Ord(PSingle(V1)^ < PSingle(V2)^);
 end;
 
 function CompareSingle_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -499,17 +505,16 @@ end;
 
 function CompareSingle_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PSingle(V1)^ <> PSingle(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PSingle(V1)^ <> PSingle(V2)^);
 end;
 
 function CompareDouble_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PDouble(V1)^ > PDouble(V2)^)-Ord(PDouble(V1)^ < PDouble(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PDouble(V1)^ > PDouble(V2)^)-Ord(PDouble(V1)^ < PDouble(V2)^);
 end;
 
 function CompareDouble_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -519,17 +524,16 @@ end;
 
 function CompareDouble_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PDouble(V1)^ <> PDouble(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PDouble(V1)^ <> PDouble(V2)^);
 end;
 
 function CompareCurrency_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PCurrency(V1)^ > PCurrency(V2)^)-Ord(PCurrency(V1)^ < PCurrency(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PCurrency(V1)^ > PCurrency(V2)^)-Ord(PCurrency(V1)^ < PCurrency(V2)^);
 end;
 
 function CompareCurrency_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -539,17 +543,16 @@ end;
 
 function CompareCurrency_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PCurrency(V1)^ <> PCurrency(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PCurrency(V1)^ <> PCurrency(V2)^);
 end;
 
 function CompareExtended_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PExtended(V1)^ > PExtended(V2)^)-Ord(PExtended(V1)^ < PExtended(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PExtended(V1)^ > PExtended(V2)^)-Ord(PExtended(V1)^ < PExtended(V2)^);
 end;
 
 function CompareExtended_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -559,17 +562,16 @@ end;
 
 function CompareExtended_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PExtended(V1)^ <> PExtended(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PExtended(V1)^ <> PExtended(V2)^);
 end;
 
 function CompareDateTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PDateTime(V1)^ > PDateTime(V2)^)-Ord(PDateTime(V1)^ < PDateTime(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    else Result := Ord(PDateTime(V1)^ > PDateTime(V2)^)-Ord(PDateTime(V1)^ < PDateTime(V2)^);
 end;
 
 function CompareDateTime_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -579,17 +581,16 @@ end;
 
 function CompareDateTime_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PDateTime(V1)^ <> PDateTime(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PDateTime(V1)^ <> PDateTime(V2)^);
 end;
 
 function CompareGUID_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := ZMemLComp(Pointer(V1), Pointer(V2), 16); //Not a endversion! It would be nice to compare field-by-field of TGUID
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := ZMemLComp(Pointer(V1), Pointer(V2), 16); //Not a endversion! It would be nice to compare field-by-field of TGUID
 end;
 
 function CompareGUID_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -599,44 +600,45 @@ end;
 
 function CompareGUID_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := ZMemLComp(Pointer(V1), Pointer(V2), 16);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := ZMemLComp(Pointer(V1), Pointer(V2), 16);
 end;
 
 function CompareBytes_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if (Null1 and Null2) or (
-    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
-  else if (Null1 or Null2) or (
-    ((PPointer(V1)^ <> nil) and (PPointer(V2)^ = nil)) or
-    ((PPointer(V1)^ = nil) and (PPointer(V2)^ <> nil))) then Result := 1 //one of both is null or empty?
-  else if PWord(PAnsiChar(V1)+SizeOf(Pointer))^ <> PWord(PAnsiChar(V1)+SizeOf(Pointer))^ then Result := 1//length different?
-  else Result := ZMemLComp(PPointer(V1)^, PPointer(V2)^, PWord(PAnsiChar(V1)+SizeOf(Pointer))^)
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+    if Result <> BothNotNull then Exit;
+    if PWord(PAnsiChar(V1)+SizeOf(Pointer))^ <> PWord(PAnsiChar(V1)+SizeOf(Pointer))^ then Result := 1//length different?
+    else Result := ZMemLComp(PPointer(V1)^, PPointer(V2)^, PWord(PAnsiChar(V1)+SizeOf(Pointer))^)
+  end;
 end;
 
 function CompareRaw_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if (Null1 and Null2) or (
-    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
-  else if (Null1 or Null2) or (
-    ((PPointer(V1)^ <> nil) and (PPointer(V2)^ = nil)) or
-    ((PPointer(V1)^ = nil) and (PPointer(V2)^ <> nil))) then Result := 1 //one of both is null or empty?
-  else if PLongWord(Pointer(V1)^)^ <> PLongWord(Pointer(V2)^)^ then Result := 1//length different?
-  else Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
-                           PAnsiChar(Pointer(V2)^)+PAnsiInc,
-                           PLongWord(Pointer(V1)^)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+    if Result <> BothNotNull then Exit;
+    if PLongWord(Pointer(V1)^)^ <> PLongWord(Pointer(V2)^)^ then Result := 1//length different?
+    else Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
+                         PAnsiChar(Pointer(V2)^)+PAnsiInc,
+                         PLongWord(Pointer(V1)^)^);
+  end;
 end;
+
 {$IFNDEF WITH_USC2_ANSICOMPARESTR_ONLY}
 function CompareNativeRaw_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if (Null1 and Null2) or (
-    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else if (PPointer(V1)^ = nil) then Result := -1
-  else if (PPointer(V2)^ = nil) then Result := 1
-  else
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+    if Result <> BothNotNull then Exit;
     {$IFDEF MSWINDOWS}
     Result := CompareStringA(LOCALE_USER_DEFAULT, 0,
       PAnsiChar(Pointer(V1)^)+PAnsiInc, PLongWord(Pointer(V1)^)^,
@@ -645,6 +647,7 @@ begin
     Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
       AnsiStrComp(PPAnsiChar(V1)^+PAnsiInc, PPAnsiChar(V2)^+PAnsiInc)
     {$ENDIF}
+  end;
 end;
 
 function CompareNativeRaw_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -657,13 +660,11 @@ function CompareUnicodeFromUTF8_Asc(const Null1, Null2: Boolean; const V1, V2): 
 var
   S1, S2: ZWideString;
 begin
-  if (Null1 and Null2) or (
-    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else if (PPointer(V1)^ = nil) then Result := -1
-  else if (PPointer(V2)^ = nil) then Result := 1
-  else begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+    if Result <> BothNotNull then Exit;
     S1 := PRawToUnicode(PAnsiChar(Pointer(V1)^)+PAnsiInc, PLongWord(Pointer(V1)^)^, zCP_UTF8);
     S2 := PRawToUnicode(PAnsiChar(Pointer(V2)^)+PAnsiInc, PLongWord(Pointer(V2)^)^, zCP_UTF8);
     {$IFDEF UNICODE}
@@ -684,13 +685,11 @@ function CompareUnicode_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 var S1, S2: ZWideString;
 {$ENDIF}
 begin
-  if (Null1 and Null2) or (
-    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else if (PPointer(V1)^ = nil) then Result := -1
-  else if (PPointer(V2)^ = nil) then Result := 1
-  else begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+    if Result <> BothNotNull then Exit;
     {$IFDEF MSWINDOWS}
     SetLastError(0);
     Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
@@ -717,12 +716,12 @@ end;
 
 function CompareUnicode_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if (Null1 and Null2) or (
-    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
-  else if (Null1 or Null2) or (
-    ((PPointer(V1)^ <> nil) and (PPointer(V2)^ = nil)) or
-    ((PPointer(V1)^ = nil) and (PPointer(V2)^ <> nil))) then Result := 1 //one of both is null or empty?
-  else begin
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    // Both values not null
+    Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+    if Result <> BothNotNull then Exit;
     Result := Ord(PLongWord(Pointer(V1)^)^ <> PLongWord(Pointer(V2)^)^);
     if Result = 0 then
        Result := ZMemLComp(Pointer(PWideChar(Pointer(V1)^)+PWideInc),
@@ -731,26 +730,24 @@ begin
   end;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // TODO: are unused params correct?
-
 function CompareNativeCLob_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
   Blob1, Blob2: IZBlob;
-  BlobEmpty1, BlobEmpty2: Boolean;
 begin
-  Blob1 := IZBlob(PPointer(V1)^);
-  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
-  Blob2 := IZBlob(PPointer(V2)^);
-  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
-  if BlobEmpty1 and BlobEmpty2 then Result := 0
-  else if (BlobEmpty1) then Result := 1
-  else if (BlobEmpty2) then Result := -1
-  else
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    // Both values not null
+    Blob1 := IZBlob(PPointer(V1)^);
+    Blob2 := IZBlob(PPointer(V2)^);
+    Result := NullsCompareMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+    if Result <> BothNotNull then Exit;
     {$IFDEF WITH_USC2_ANSICOMPARESTR_ONLY}
     Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
     {$ELSE}
     Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString);
     {$ENDIF}
+  end;
 end;
 
 function CompareNativeCLob_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -761,39 +758,41 @@ end;
 function CompareNativeCLob_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
   Blob1, Blob2: IZBlob;
-  BlobEmpty1, BlobEmpty2: Boolean;
 begin
-  Blob1 := IZBlob(PPointer(V1)^);
-  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
-  Blob2 := IZBlob(PPointer(V2)^);
-  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
-  if BlobEmpty1 and BlobEmpty2 then Result := 0
-  else if (BlobEmpty1 <> BlobEmpty2) then Result := 1
-  else if Blob1.IsUpdated or Blob2.IsUpdated then
-    {$IFDEF WITH_USC2_ANSICOMPARESTR_ONLY}
-    Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString)
-    {$ELSE}
-    Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
-    {$ENDIF}
-  else Result := 0;
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    // Both values not null
+    Blob1 := IZBlob(PPointer(V1)^);
+    Blob2 := IZBlob(PPointer(V2)^);
+    Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+    if Result <> BothNotNull then Exit;
+    if Blob1.IsUpdated or Blob2.IsUpdated then
+      {$IFDEF WITH_USC2_ANSICOMPARESTR_ONLY}
+      Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString)
+      {$ELSE}
+      Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
+      {$ENDIF}
+    else Result := 0;
+  end;
 end;
 
 function CompareUnicodeCLob_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
   Blob1, Blob2: IZBlob;
-  BlobEmpty1, BlobEmpty2: Boolean;
   {$IFDEF MSWINDOWS}
   ValuePtr1, ValuePtr2: Pointer;
   {$ENDIF}
 begin
-  Blob1 := IZBlob(PPointer(V1)^);
-  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
-  Blob2 := IZBlob(PPointer(V2)^);
-  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
-  if BlobEmpty1 and BlobEmpty2 then Result := 0
-  else if BlobEmpty1 then Result := 1
-  else if BlobEmpty2 then Result := -1
-  else if Blob1.IsClob and Blob2.IsClob then
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    // Both values not null
+    Blob1 := IZBlob(PPointer(V1)^);
+    Blob2 := IZBlob(PPointer(V2)^);
+    Result := NullsCompareMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+    if Result <> BothNotNull then Exit;
+    if Blob1.IsClob and Blob2.IsClob then
     begin
       {$IFDEF MSWINDOWS}
       ValuePtr1 := Blob1.GetPWideChar;
@@ -810,63 +809,66 @@ begin
         {$ENDIF}
       {$ENDIF}
     end
-  else
-    Result := ZMemLComp(Blob1.GetBuffer, Blob2.GetBuffer, Max(Blob1.Length, Blob2.Length));
+    else
+      Result := ZMemLComp(Blob1.GetBuffer, Blob2.GetBuffer, Max(Blob1.Length, Blob2.Length));
+  end;
 end;
 
 function CompareUnicodeCLob_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  Result:=-CompareUnicodeClob_Asc(Null1,Null2,V1,V2);
+  Result := -CompareUnicodeClob_Asc(Null1,Null2,V1,V2);
 end;
 
 function CompareUnicodeCLob_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
   Blob1, Blob2: IZBlob;
-  BlobEmpty1, BlobEmpty2: Boolean;
   ValuePtr1, ValuePtr2: Pointer;
 begin
-  Blob1 := IZBlob(PPointer(V1)^);
-  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
-  Blob2 := IZBlob(PPointer(V2)^);
-  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
-  if BlobEmpty1 and BlobEmpty2 then Result := 0
-  else if (BlobEmpty1 <> BlobEmpty2) then Result := 1
-  else if Blob1.IsUpdated or Blob2.IsUpdated then
-    if Blob1.IsClob and Blob2.IsClob then
-    begin
-      ValuePtr1 := Blob1.GetPWideChar;
-      ValuePtr2 := Blob2.GetPWideChar;
-      if Blob1.Length <> Blob2.Length then
-        Result := 1 else
-        Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length  shl 1);
-    end else begin
-      ValuePtr1 := Blob1.GetBuffer;
-      ValuePtr2 := Blob2.GetBuffer;
-      if Blob1.Length <> Blob2.Length then
-        Result := 1 else
-        Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length);
-    end
-  else Result := 0;
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    // Both values not null
+    Blob1 := IZBlob(PPointer(V1)^);
+    Blob2 := IZBlob(PPointer(V2)^);
+    Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+    if Result <> BothNotNull then Exit;
+    if Blob1.IsUpdated or Blob2.IsUpdated then
+      if Blob1.IsClob and Blob2.IsClob then
+      begin
+        ValuePtr1 := Blob1.GetPWideChar;
+        ValuePtr2 := Blob2.GetPWideChar;
+        if Blob1.Length <> Blob2.Length then
+          Result := 1 else
+          Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length  shl 1);
+      end else begin
+        ValuePtr1 := Blob1.GetBuffer;
+        ValuePtr2 := Blob2.GetBuffer;
+        if Blob1.Length <> Blob2.Length then
+          Result := 1 else
+          Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length);
+      end
+    else Result := 0;
+  end;
 end;
 
 function CompareBlob_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
   Blob1, Blob2: IZBlob;
-  BlobEmpty1, BlobEmpty2: Boolean;
 begin
-  Blob1 := IZBlob(PPointer(V1)^);
-  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
-  Blob2 := IZBlob(PPointer(V2)^);
-  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
-  if BlobEmpty1 and BlobEmpty2 then Result := 0
-  else if (BlobEmpty1 <> BlobEmpty2) then Result := 1
-  else if Blob1.IsUpdated or Blob2.IsUpdated then
-    if Blob1.Length <> Blob2.Length then Result := 1
-    else Result := ZMemLComp(Blob1.GetBuffer, Blob2.GetBuffer, Blob1.Length)
-  else Result := 1;
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    // Both values not null
+    Blob1 := IZBlob(PPointer(V1)^);
+    Blob2 := IZBlob(PPointer(V2)^);
+    Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+    if Result <> BothNotNull then Exit;
+    if Blob1.IsUpdated or Blob2.IsUpdated then
+      if Blob1.Length <> Blob2.Length then Result := 1
+      else Result := ZMemLComp(Blob1.GetBuffer, Blob2.GetBuffer, Blob1.Length)
+    else Result := 1;
+  end;
 end;
-
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZRowAccessor }
 
