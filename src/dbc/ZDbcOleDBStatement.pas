@@ -550,13 +550,14 @@ begin
       if FMultipleResults <> nil then
       repeat
         FRowSet := nil;
-        Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
+        Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
           IID_IRowset, @FRowsAffected, @FRowSet);
-      until (Status = DB_S_NORESULT);
-      FMultipleResults := nil;
-      (FCommand as ICommandPrepare).UnPrepare;
-      FCommand := nil;
+        //Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
+          //IID_IRowset, @FRowsAffected, @FRowSet);
+      until Failed(Status) or (Status = DB_S_NORESULT);
+      OleDBCheck((FCommand as ICommandPrepare).UnPrepare);
     finally
+      FCommand := nil;
       FMultipleResults := nil;
     end;
   end;
@@ -565,8 +566,7 @@ end;
 procedure TZOleDBPreparedStatement.SetDataArray(ParameterIndex: Integer;
   const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
 begin
-  if ParameterIndex = FirstDbcIndex then
-  begin
+  if ParameterIndex = FirstDbcIndex then begin
     FArrayOffSet := 0;
     FDBParams.cParamSets := 0;
   end;
