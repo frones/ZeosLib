@@ -276,7 +276,9 @@ end;
 procedure TZAbstractResultSetMetadata.FillColumInfoFromGetColumnsRS(
   ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet;
   const FieldName: String);
-var TempColType: TZSQLType;
+var
+  TempColType: TZSQLType;
+  ColTypeName: string;
 begin
   ColumnInfo.CatalogName := TableColumns.GetString(CatalogNameIndex);
   ColumnInfo.SchemaName := TableColumns.GetString(SchemaNameIndex);
@@ -312,14 +314,15 @@ begin
       ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
     else
       if FConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTf8] then //this excludes ADO which is allways 2Byte-String based
-        if (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'NVARCHAR') or
-           (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'NCHAR') then
+      begin
+        ColTypeName := UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex));
+        if (ColTypeName = 'NVARCHAR') or (ColTypeName = 'NCHAR') then
           ColumnInfo.ColumnCodePage := zCP_UTF8
-        else if (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'UNIVARCHAR') or
-           (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'UNICHAR') then
+        else if (ColTypeName = 'UNIVARCHAR') or (ColTypeName = 'UNICHAR') then
           ColumnInfo.ColumnCodePage := zCP_UTF16
         else
           ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP //assume locale codepage
+      end
   else
     ColumnInfo.ColumnCodePage := zCP_NONE; //not a character column
   {nullable}
