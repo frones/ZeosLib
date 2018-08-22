@@ -141,7 +141,7 @@ type
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings);
 
-    function AllocBuffer(var Buffer: PZRowBuffer): PZRowBuffer;
+    function AllocBuffer: PZRowBuffer;
     procedure InitBuffer(Buffer: PZRowBuffer);
     procedure CopyBuffer(SrcBuffer: PZRowBuffer; DestBuffer: PZRowBuffer; const CloneLobs: Boolean = False);
     procedure MoveBuffer(SrcBuffer: PZRowBuffer; DestBuffer: PZRowBuffer);
@@ -155,7 +155,7 @@ type
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
       const CompareKinds: TComparisonKindArray): TCompareFuncs;
 
-    function Alloc: PZRowBuffer;
+    procedure Alloc;
     procedure Init;
     procedure CopyTo(DestBuffer: PZRowBuffer);
     procedure CopyFrom(SrcBuffer: PZRowBuffer);
@@ -1284,11 +1284,10 @@ end;
   @param Buffer a pointer to row buffer.
   @return a pointer to the allocated buffer.
 }
-function TZRowAccessor.AllocBuffer(var Buffer: PZRowBuffer): PZRowBuffer;
+function TZRowAccessor.AllocBuffer: PZRowBuffer;
 begin
-  GetMem(Buffer, FRowSize);
-  InitBuffer(Buffer);
-  Result := Buffer;
+  GetMem(Result, FRowSize);
+  InitBuffer(Result);
 end;
 
 {**
@@ -1693,12 +1692,11 @@ begin
 end;
 
 {**
-  Allocates a new row buffer.
-  @return a pointer to the allocated buffer.
+  Allocates a new row buffer and saves it as internal field (externally visible as RowBuffer).
 }
-function TZRowAccessor.Alloc: PZRowBuffer;
+procedure TZRowAccessor.Alloc;
 begin
-  Result := AllocBuffer(FBuffer);
+  FBuffer := AllocBuffer;
 end;
 
 {**

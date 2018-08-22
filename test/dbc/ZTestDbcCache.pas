@@ -361,8 +361,8 @@ begin
   RowBuffer1 := AllocMem(RowAccessor.RowSize);
   RowBuffer2 := AllocMem(RowAccessor.RowSize);
   {$ELSE}
-  RowBuffer1 := RowAccessor.AllocBuffer(RowBuffer1);
-  RowBuffer2 := RowAccessor.AllocBuffer(RowBuffer2);
+  RowBuffer1 := RowAccessor.AllocBuffer;
+  RowBuffer2 := RowAccessor.AllocBuffer;
   {$ENDIF}
   RowAccessor.InitBuffer(RowBuffer1);
   RowAccessor.InitBuffer(RowBuffer2);

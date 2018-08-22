@@ -3081,7 +3081,7 @@ begin
   if not (State in dsWriteModes) then
     DatabaseError(SNotEditing, Self);
 
-  if GetActiveBuffer(RowBuffer{%H-}) then
+  if GetActiveBuffer(RowBuffer) then
   begin
     ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
     RowAccessor.RowBuffer := RowBuffer;
@@ -3179,7 +3179,8 @@ end;
 {$IFDEF WITH_TRECORDBUFFER}
 function TZAbstractRODataset.AllocRecordBuffer: TRecordBuffer;
 begin
-   Result := TRecordBuffer(RowAccessor.Alloc);
+  RowAccessor.Alloc;
+  Result := TRecordBuffer(RowAccessor.RowBuffer);
 end;
 {$ELSE}
 function TZAbstractRODataset.AllocRecordBuffer: PChar;
@@ -3188,7 +3189,8 @@ begin
    This will be called for OldRowBuffer, NewRowBuffer and for count of visible rows
    so NO memory wasting happens here!
   }
-  Result := PChar(RowAccessor.Alloc);
+  RowAccessor.Alloc;
+  Result := PChar(RowAccessor.RowBuffer);
 end;
 {$ENDIF}
 
@@ -4830,8 +4832,8 @@ begin
         { Sorts using generic highlevel approach. }
         try
           { Allocates buffers for sorting. }
-          RowAccessor.AllocBuffer(FSortRowBuffer1);
-          RowAccessor.AllocBuffer(FSortRowBuffer2);
+          FSortRowBuffer1 := RowAccessor.AllocBuffer;
+          FSortRowBuffer2 := RowAccessor.AllocBuffer;
           { Converts field objects into field indices. }
           SetLength(FSortedFieldIndices, Length(FSortedFieldRefs));
           for I := 0 to High(FSortedFieldRefs) do

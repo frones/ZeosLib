@@ -441,7 +441,7 @@ function TZAbstractCachedResultSet.AppendRow(Row: PZRowBuffer): PZRowBuffer;
 begin
   if LocateRow(FInitialRowsList, Row.Index) < 0 then
   begin
-    FRowAccessor.AllocBuffer(Result{%H-});
+    Result := FRowAccessor.AllocBuffer;
     FRowAccessor.CopyBuffer(Row, Result);
     FInitialRowsList.Add(Result);
     FCurrentRowsList.Add(Row);
@@ -753,8 +753,8 @@ begin
   FOldRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
   FNewRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
 
-  FRowAccessor.AllocBuffer(FUpdatedRow);
-  FRowAccessor.AllocBuffer(FInsertedRow);
+  FUpdatedRow :=FRowAccessor.AllocBuffer;
+  FInsertedRow := FRowAccessor.AllocBuffer;
   FSelectedRow := nil;
 
   FNextRowIndex := 0;
