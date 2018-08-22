@@ -47,15 +47,16 @@ type
     FDoc: TXMLDocument;
     FResults{, FListing}: TDOMElement;
     FSuitePath: TFPList;
-    FResultsPath: TFPList;
     FCurrentTest: TDOMElement;
   protected
+    FNextId: Integer;
     procedure WriteTestHeader(ATest: TTest; ALevel: integer; ACount: integer); override;
     procedure WriteTestFooter(ATest: TTest; ALevel: integer; ATiming: TDateTime); override;
     procedure WriteSuiteHeader(ATestSuite: TTestSuite; ALevel: integer); override;
     procedure WriteSuiteFooter(ATestSuite: TTestSuite; ALevel: integer; 
       ATiming: TDateTime; ANumRuns: integer; ANumErrors: integer; 
       ANumFailures: integer; ANumIgnores: integer); override;
+    function GetNextId: Integer;
   public
     constructor Create(aOwner: TComponent); override;
     destructor  Destroy; override;
@@ -75,6 +76,14 @@ type
 
 implementation
 
+const
+  strTrue = 'True';
+  strFalse = 'False';
+  strPassed = 'Passed';
+  strFailed = 'Failed';
+  strInconclusive = 'Inconclusive';
+  strSkipped = 'Skipped';
+
 function TimeToSeconds(ATime: TTime): single;
 var
   h, m, s, ms: Word;
@@ -83,76 +92,33 @@ begin
   result := 3600 * h + 60 * m + s + ms / 1000;
 end;
 
-(*
-function GetSuiteAsXML(aSuite: TTestSuite): string;
-var
-  FDoc: TXMLDocument;
-  n: TDOMElement;
-  stream : TStringStream;
-begin
-  Result := '';
-
-  if aSuite <> nil then
-  begin
-    FDoc:= TXMLDocument.Create;
-
-    n := FDoc.CreateElement('TestSuites');
-    FDoc.AppendChild(n);
-
-    TestSuiteAsXML(n, FDoc, aSuite);
-
-    stream := TStringStream.Create('');
-    WriteXMLFile(FDoc, stream);
-    writeln(stream.DataString);
-    stream.Free;
-  end;
-end;
-
-function TestSuiteAsXML(n: TDOMElement; FDoc: TXMLDocument; aSuite:TTestSuite): string;
-var
-  i: integer;
-  E,T : TDomElement;
-  
-begin
-  if aSuite.TestName<>'' then
-    begin
-    E:=FDoc.CreateElement('Suite');
-    E['Name']:=aSuite.TestName;
-    N.AppendChild(E);
-    end
-  else
-    E:=N;
-  for i:=0 to Pred(aSuite.ChildTestCount) do
-    if TTest(aSuite.Test[i]) is TTestSuite then
-      TestSuiteAsXML(E, FDoc, TTestSuite(aSuite.Test[i]))
-    else
-      if TTest(aSuite.Test[i]) is TTestCase then
-        begin
-        T:=FDoc.CreateElement('Test');
-        T['name']:=TTestCase(aSuite.Test[i]).TestName;
-        E.AppendChild(T);
-        end;
-end;
-*)
-
 { TZXMLResultsWriter }
 
-const
-  strTrue = 'True';
-  strFalse = 'False';
+function TZXMLResultsWriter.GetNextId: Integer;
+begin
+  Result := FNextId;
+  Inc(FNextId);
+end;
 
 procedure TZXMLResultsWriter.WriteTestHeader(ATest: TTest; ALevel: integer; ACount: integer);
 var
   n: TDOMElement;
+  ParentName: String;
 begin
   inherited;
   n := FDoc.CreateElement('test-case');
+  n['id'] := IntToStr(GetNextId);
   n['name'] := ATest.TestName;
-  n['executed'] := strTrue;
-  n['success'] := strFalse;
-  if FResultsPath.Count > 0 then
+  n['fullname'] := ATest.TestName + '.' + ATest.TestSuiteName;
+  n['methodname'] := ATest.TestName;
+  n['classname'] := ATest.TestSuiteName;
+  n['runstate'] := 'Runnable';
+  n['result'] := strPassed;
+  n['start-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now);
+
+  if FSuitePath.Count > 0 then
   //test is included in a suite
-    TDOMElement(FResultsPath[FResultsPath.Count -1]).AppendChild(n)
+    TDOMElement(FSuitePath[FSuitePath.Count -1]).AppendChild(n)
   else
   //no suite to append so append directly to the listing node
     FResults.AppendChild(n);
@@ -162,8 +128,8 @@ end;
 procedure TZXMLResultsWriter.WriteTestFooter(ATest: TTest; ALevel: integer; ATiming: TDateTime);
 begin
   inherited;
-  if not SkipTiming then
-    FCurrentTest['time'] := FormatFloat('0.###', ATiming);
+  FCurrentTest['end-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now);
+  FCurrentTest['duration'] := FormatFloat('0.###', TimeToSeconds(ATiming));
 end;
 
 
@@ -175,16 +141,20 @@ begin
   inherited;
   n := FDoc.CreateElement('test-suite');
   FSuitePath.Add(n); 
+  n['type'] := 'TestSuite';
+  n['id'] := IntToStr(GetNextId);
   n['name'] := ATestSuite.TestName;
+  n['fullname'] := ATestSuite.TestName;
+  n['testcasecount'] := IntToStr(ATestSuite.CountTestCases);
+  n['runstate'] := 'Runnable';
+  n['result'] := strInconclusive;
+  n['start-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now);
+  n['total'] := IntToStr(ATestSuite.CountTestCases);
 
   if FSuitePath.Count = 1 then
     FResults.AppendChild(n)
   else
-    TDOMElement(FResultsPath[FResultsPath.Count - 1]).AppendChild(n);
-
-  results := FDoc.CreateElement('results');
-  FResultsPath.Add(results);
-  n.AppendChild(results);
+    TDOMElement(FSuitePath[FSuitePath.Count - 2]).AppendChild(n);
 end;
 
 
@@ -196,15 +166,14 @@ var
 begin
   inherited;
   n := TDomElement(FSuitePath[FSuitePath.Count -1]);
-  //if not SkipTiming then
-  //  n['ElapsedTime'] := FormatDateTime('hh:nn:ss.zzz', ATiming);
+  n['duration'] := FloatToStr(TimeToSeconds(ATiming));
+  n['end-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now);
   n['total'] := IntToStr(ANumRuns);
-  //n['NumberOfErrors'] := IntToStr(ANumErrors);
-  //n['NumberOfFailures'] := IntToStr(ANumFailures);
-  //n['NumberOfIgnoredTests'] := IntToStr(ANumIgnores);
-  n['not-run'] := '0';
+  n['passed'] := IntToStr(ANumRuns - ANumErrors - ANumFailures);
+  n['failed'] := IntToStr(ANumErrors + ANumFailures);
+  n['inconclusive'] := '0';
+  n['skipped'] := IntToStr(ANumIgnores);
   FSuitePath.Delete(FSuitePath.Count - 1);
-  FResultsPath.Delete(FResultsPath.Count - 1);
 end;
 
 constructor TZXMLResultsWriter.Create(aOwner: TComponent);
@@ -212,17 +181,14 @@ begin
   inherited Create(aOwner);
   FDoc:= TXMLDocument.Create;
   FSuitePath := TFPList.Create;
-  FResultsPath := TFPList.Create;
   FResults := nil;
-  //FListing := nil;
+  FNextId := 3;
 end;
 
 destructor  TZXMLResultsWriter.Destroy;
 begin
   FResults := nil;
-  //FListing := nil;
   FSuitePath.Free;
-  FResultsPath.Free;
   FDoc.Free;
   inherited Destroy;
 end;
@@ -231,13 +197,12 @@ end;
 procedure TZXMLResultsWriter.WriteHeader;
 begin
   inherited;
-  FResults := FDoc.CreateElement('test-results');
+  FResults := FDoc.CreateElement('test-run');
   FResults.AppendChild(FDoc.CreateComment(' Generated using FPCUnit on '
     + FormatDateTime('yyyy-mm-dd hh:nn:ss', Now) ));
   FDoc.AppendChild(FResults);
-  FResults['name'] := ParamStr(0);
-//  FListing := FDoc.CreateElement('TestListing');
-//  FResults.AppendChild(FListing);
+  FResults['id'] := '2';
+  FResults['start-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now);
 end;
 
 
@@ -252,9 +217,9 @@ var
 begin
   inherited;
   if AFailure.IsIgnoredTest then
-    FCurrentTest['result'] := 'Ignored'
+    FCurrentTest['result'] := strSkipped
   else
-    FCurrentTest['result'] := 'Failure';
+    FCurrentTest['result'] := strFailed;
     //FCurrentTest.AppendChild(FDoc.CreateElement('message')).AppendChild
     //  (FDoc.CreateTextNode(AFailure.AsString));
     //FCurrentTest.AppendChild(FDoc.CreateElement('ExceptionClass')).AppendChild
@@ -265,7 +230,7 @@ begin
     FCurrentTest.AppendChild(failure);
     message := FDoc.CreateElement('message');
     failure.AppendChild(message);
-    message.AppendChild(FDoc.CreateTextNode(AFailure.ExceptionClassName + #13 + AFailure.ExceptionMessage + #13 + AFailure.AsString));
+    message.AppendChild(FDoc.CreateCDATASection(AFailure.ExceptionClassName + #13 + AFailure.ExceptionMessage + #13 + AFailure.AsString));
 end;
 
 procedure TZXMLResultsWriter.AddError(ATest: TTest; AError: TTestFailure);
@@ -273,7 +238,7 @@ var
   error, message: TDOMElement;
 begin
   inherited;
-  FCurrentTest['result'] := 'Error';
+  FCurrentTest['result'] := strFailed;
   //FCurrentTest.AppendChild(FDoc.CreateElement('Message')).AppendChild
   //  (FDoc.CreateTextNode(AError.AsString));
   //FCurrentTest.AppendChild(FDoc.CreateElement('ExceptionClass')).AppendChild
@@ -290,7 +255,7 @@ begin
   FCurrentTest.AppendChild(error);
   message := FDoc.CreateElement('message');
   error.AppendChild(message);
-  message.AppendChild(FDoc.CreateTextNode(AError.ExceptionClassName + #13 + AError.ExceptionMessage + #13 + AError.SourceUnitName + #13 + IntToStr(AError.LineNumber) + #13 + AError.FailedMethodName + #13 + AError.AsString));
+  message.AppendChild(FDoc.CreateCDATASection(AError.ExceptionClassName + #13 + AError.ExceptionMessage + #13 + AError.SourceUnitName + #13 + IntToStr(AError.LineNumber) + #13 + AError.FailedMethodName + #13 + AError.AsString));
 end;
 
 
