@@ -426,7 +426,7 @@ type
     function CreateNestedDataSet({%H-}DataSetField: TDataSetField): TDataSet; {$IFDEF WITH_FTDATASETSUPPORT}override;{$ENDIF}
     procedure CloseBlob({%H-}Field: TField); override;
 
-    procedure CheckFieldCompatibility(Field: TField; {%H-}FieldDef: TFieldDef); {$IFDEF WITH_CHECKFIELDCOMPATIBILITY} override;{$ENDIF}
+    procedure CheckFieldCompatibility(Field: TField; AFieldDef: TFieldDef); {$IFDEF WITH_CHECKFIELDCOMPATIBILITY} override;{$ENDIF}
     procedure CreateFields; override;
 
     procedure ClearCalcFields(Buffer: TRecordBuffer); override;
@@ -5103,7 +5103,8 @@ end;
 
 {$ENDIF}
 
-procedure TZAbstractRODataset.CheckFieldCompatibility(Field: TField;FieldDef: TFieldDef);
+// NB: FPC has TField.FieldDef property
+procedure TZAbstractRODataset.CheckFieldCompatibility(Field: TField; AFieldDef: TFieldDef);
 const
   {EH: hint all commented types are the fields the RowAccessor can't handle -> avoid stack killing moves in Get/SetFieldData()
   this Error trapping is made for User-added fields like calulateds ....}
@@ -5133,12 +5134,12 @@ const
 begin
   with Field do
   begin
-    if (BaseFieldTypes[DataType] <> BaseFieldTypes[FieldDef.DataType]) then
+    if (BaseFieldTypes[DataType] <> BaseFieldTypes[AFieldDef.DataType]) then
       DatabaseErrorFmt(SFieldTypeMismatch, [DisplayName,
-        FieldTypeNames[DataType], FieldTypeNames[FieldDef.DataType]], Self);
-    if (DataType in CheckTypeSizes) and (Size <> FieldDef.Size) then
+        FieldTypeNames[DataType], FieldTypeNames[AFieldDef.DataType]], Self);
+    if (DataType in CheckTypeSizes) and (Size <> AFieldDef.Size) then
         DatabaseErrorFmt(SFieldSizeMismatch, [DisplayName, Size,
-          FieldDef.Size], Self);
+          AFieldDef.Size], Self);
   end;
 end;
 
