@@ -170,7 +170,6 @@
               {$UNDEF USE_FAST_CHARPOS}                 // Since Unicode this function is useless
 
               {$DEFINE WITH_TBOOKMARK}                  // Have TBookmark
-              {$DEFINE WITH_TRECORDBUFFER}              // Abstract buffer type (pansichar or pbyte)
               {$DEFINE WITH_STSTRINGUNICODE}            // stString is unicodestring.
               {$DEFINE WITH_NEWTOBJECT}                 // allows new methods in TObject (D2009+/FPC 2.4.4)
               {$DEFINE WITH_CHARINSET}                  // D2009's poor substitute for character specific "xx in yy"
@@ -274,8 +273,6 @@
                           {$DEFINE WITH_STRLICOPY_DEPRECATED}     //StrLICopy is deprecated moved to AnsiStrings
                           {$DEFINE WITH_STRLICOMP_DEPRECATED}     //StrLIComp is deprecated moved to AnsiStrings
                           {$DEFINE WITH_FLOATTOTEXT_DEPRECATED}   //FloatToText(PAnsi...) is deprecated moved to AnsiStrings
-                        {$ELSE}
-                          {$UNDEF WITH_TRECORDBUFFER} //TRecordBuffer is NativeInt now
                         {$ENDIF}
                         {$IF CompilerVersion >= 26} //Delphi XE5+
                           {$DEFINE TFIELD_HAS_ASLONGWORD}       //TField has supports virtual AsLongWord Gettet & Setter

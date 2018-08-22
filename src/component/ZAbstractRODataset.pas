@@ -78,6 +78,12 @@ type
   end;
   {$ENDIF}
 
+  {$IF NOT DECLARED(TRecordBuffer)}
+  TRecordBuffer = PChar;
+  {$IFEND}
+
+  TGetCalcFieldsParamType = {$IFDEF WITH_GETCALCFIELDS_TRECBUF}TRecBuf{$ELSE}TRecordBuffer{$ENDIF};
+
   TSortType = (stAscending, stDescending, stIgnored);   {bangfauzan addition}
 
   {** Options for dataset. }
@@ -411,48 +417,29 @@ type
     {$ENDIF}
     procedure DefineProperties(Filer: TFiler); override;
 
-{$IFDEF WITH_TRECORDBUFFER}
     function GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode; DoCheck: Boolean):
       TGetResult; override;
-{$ELSE}
-    function GetRecord(Buffer: PChar; GetMode: TGetMode; DoCheck: Boolean):
-      TGetResult; override;
-{$ENDIF}
     function GetRecordSize: Word; override;
     function GetActiveBuffer(out RowBuffer: PZRowBuffer): Boolean;
-{$IFDEF WITH_TRECORDBUFFER}
     function AllocRecordBuffer: TRecordBuffer; override;
     procedure FreeRecordBuffer(var Buffer: TRecordBuffer); override;
-{$ELSE}
-    function AllocRecordBuffer: PChar; override;
-    procedure FreeRecordBuffer(var Buffer: PChar); override;
-{$ENDIF}
     function CreateNestedDataSet({%H-}DataSetField: TDataSetField): TDataSet; {$IFDEF WITH_FTDATASETSUPPORT}override;{$ENDIF}
     procedure CloseBlob({%H-}Field: TField); override;
 
     procedure CheckFieldCompatibility(Field: TField; {%H-}FieldDef: TFieldDef); {$IFDEF WITH_CHECKFIELDCOMPATIBILITY} override;{$ENDIF}
     procedure CreateFields; override;
 
-{$IFDEF WITH_TRECORDBUFFER}
     procedure ClearCalcFields(Buffer: TRecordBuffer); override;
-{$ELSE}
-    procedure ClearCalcFields(Buffer: PChar); override;
-{$ENDIF}
 
     procedure InternalInitFieldDefs; override;
     procedure InternalOpen; override;
     procedure InternalClose; override;
     procedure InternalFirst; override;
     procedure InternalLast; override;
-{$IFDEF WITH_TRECORDBUFFER}
     procedure InternalInitRecord(Buffer: TRecordBuffer); override;
-{$ELSE}
-    procedure InternalInitRecord(Buffer: PChar); override;
-{$ENDIF}
     procedure InternalGotoBookmark(Bookmark: Pointer); override;
     procedure InternalRefresh; override;
     procedure InternalHandleException; override;
-{$IFDEF WITH_TRECORDBUFFER}
     procedure InternalSetToRecord(Buffer: TRecordBuffer); override;
     procedure GetBookmarkData(Buffer: TRecordBuffer;
       Data:{$IFDEF WITH_BOOKMARKDATA_TBOOKMARK}TBookMark{$ELSE}Pointer{$ENDIF}); override;
@@ -460,13 +447,6 @@ type
     procedure SetBookmarkFlag(Buffer: TRecordBuffer; Value: TBookmarkFlag); override;
     procedure SetBookmarkData(Buffer: TRecordBuffer;
       Data: {$IFDEF WITH_BOOKMARKDATA_TBOOKMARK}TBookMark{$ELSE}Pointer{$ENDIF}); override;
-{$ELSE}
-    procedure InternalSetToRecord(Buffer: PChar); override;
-    procedure GetBookmarkData(Buffer: PChar; Data: Pointer); override;
-    function GetBookmarkFlag(Buffer: PChar): TBookmarkFlag; override;
-    procedure SetBookmarkFlag(Buffer: PChar; Value: TBookmarkFlag); override;
-    procedure SetBookmarkData(Buffer: PChar; Data: Pointer); override;
-{$ENDIF}
 {$IFNDEF WITH_FIELDDEFLIST}
   protected {indirect creation of internal objects}
     function GetFieldDefListClass: TFieldDefListClass; virtual;
@@ -2800,15 +2780,8 @@ end;
   @param DoCheck flag to perform checking.
   @return a location result.
 }
-
-{$IFDEF WITH_TRECORDBUFFER}
 function TZAbstractRODataset.GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode;
   DoCheck: Boolean): TGetResult;
-{$ELSE}
-
-function TZAbstractRODataset.GetRecord(Buffer: PChar; GetMode: TGetMode;
-  DoCheck: Boolean): TGetResult;
-{$ENDIF}
 var
   RowNo: NativeInt;
 begin
@@ -2864,15 +2837,7 @@ begin
     RowAccessor.RowBuffer^.Index := RowNo;
     FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
     FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
-    {$IFDEF WITH_TRECORDBUFFER}
-      {$IFDEF WITH_GETCALCFIELDS_TRECBUF}
-      GetCalcFields(TRecBuf(Buffer));
-      {$ELSE}
-      GetCalcFields(TRecordBuffer(Buffer));
-      {$ENDIF}
-    {$ELSE}
-    GetCalcFields(PChar(Buffer));
-    {$ENDIF}
+    GetCalcFields(TGetCalcFieldsParamType(Buffer));
   end;
 
   if (Result = grError) and DoCheck then
@@ -3175,37 +3140,21 @@ end;
   Allocates a buffer for new record.
   @return an allocated record buffer.
 }
-
-{$IFDEF WITH_TRECORDBUFFER}
 function TZAbstractRODataset.AllocRecordBuffer: TRecordBuffer;
-begin
-  RowAccessor.Alloc;
-  Result := TRecordBuffer(RowAccessor.RowBuffer);
-end;
-{$ELSE}
-function TZAbstractRODataset.AllocRecordBuffer: PChar;
 begin
   {Dev notes:
    This will be called for OldRowBuffer, NewRowBuffer and for count of visible rows
    so NO memory wasting happens here!
   }
   RowAccessor.Alloc;
-  Result := PChar(RowAccessor.RowBuffer);
+  Result := TRecordBuffer(RowAccessor.RowBuffer);
 end;
-{$ENDIF}
 
 {**
   Frees a previously allocated record buffer.
   @param Buffer a previously allocated buffer.
 }
-
-{$IFDEF WITH_TRECORDBUFFER}
-
 procedure TZAbstractRODataset.FreeRecordBuffer(var Buffer: TRecordBuffer);
-{$ELSE}
-
-procedure TZAbstractRODataset.FreeRecordBuffer(var Buffer: PChar);
-{$ENDIF}
 begin
   RowAccessor.DisposeBuffer(PZRowBuffer(Buffer));
   Buffer := nil;
@@ -3529,19 +3478,11 @@ begin
 
   if not FRefreshInProgress then begin
     if (FOldRowBuffer <> nil) then
-{$IFDEF WITH_TRECORDBUFFER}
       FreeRecordBuffer(TRecordBuffer(FOldRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
-{$ELSE}
-      FreeRecordBuffer(PChar(FOldRowBuffer));
-{$ENDIF}
     FOldRowBuffer := nil;
 
     if (FNewRowBuffer <> nil) and not FRefreshInProgress then
-{$IFDEF WITH_TRECORDBUFFER}
       FreeRecordBuffer(TRecordBuffer(FNewRowBuffer));
-{$ELSE}
-      FreeRecordBuffer(PChar(FNewRowBuffer));
-{$ENDIF}
     FNewRowBuffer := nil;
 
     if RowAccessor <> nil then
@@ -3981,11 +3922,7 @@ end;
   @param Buffer the specified row buffer.
 }
 
-{$IFDEF WITH_TRECORDBUFFER}
 procedure TZAbstractRODataset.InternalSetToRecord(Buffer: TRecordBuffer);
-{$ELSE}
-procedure TZAbstractRODataset.InternalSetToRecord(Buffer: PChar);
-{$ENDIF}
 begin
   GotoRow(PZRowBuffer(Buffer)^.Index);
 end;
@@ -4089,11 +4026,7 @@ end;
   @param Buffer a pointer to the record buffer.
   @return a bookmark flag from the specified record.
 }
-{$IFDEF WITH_TRECORDBUFFER}
 function TZAbstractRODataset.GetBookmarkFlag(Buffer: TRecordBuffer): TBookmarkFlag;
-{$ELSE}
-function TZAbstractRODataset.GetBookmarkFlag(Buffer: PChar): TBookmarkFlag;
-{$ENDIF}
 begin
   Result := TBookmarkFlag(PZRowBuffer(Buffer)^.BookmarkFlag);
 end;
@@ -4104,13 +4037,8 @@ end;
   @param Value a new bookmark flag to the specified record.
 }
 
-{$IFDEF WITH_TRECORDBUFFER}
 procedure TZAbstractRODataset.SetBookmarkFlag(Buffer: TRecordBuffer;
   Value: TBookmarkFlag);
-{$ELSE}
-procedure TZAbstractRODataset.SetBookmarkFlag(Buffer: PChar;
-  Value: TBookmarkFlag);
-{$ENDIF}
 begin
   PZRowBuffer(Buffer)^.BookmarkFlag := Ord(Value);
 end;
@@ -4122,7 +4050,7 @@ end;
 }
 
 procedure TZAbstractRODataset.GetBookmarkData(
-  Buffer: {$IFDEF WITH_TRECORDBUFFER}TRecordBuffer{$ELSE}PChar{$ENDIF};
+  Buffer: TRecordBuffer;
   Data: {$IFDEF WITH_BOOKMARKDATA_TBOOKMARK}TBookMark{$ELSE}Pointer{$ENDIF});
 begin
   PInteger(Data)^ := PZRowBuffer(Buffer)^.Index;
@@ -4136,7 +4064,7 @@ end;
 
 
 procedure TZAbstractRODataset.SetBookmarkData(
-  Buffer: {$IFDEF WITH_TRECORDBUFFER}TRecordBuffer{$ELSE}PChar{$ENDIF};
+  Buffer: TRecordBuffer;
   Data: {$IFDEF WITH_BOOKMARKDATA_TBOOKMARK}TBookMark{$ELSE}Pointer{$ENDIF});
 begin
   PZRowBuffer(Buffer)^.Index := PInteger(Data)^;
@@ -4186,11 +4114,7 @@ end;
   @param Buffer a record buffer for initialization.
 }
 
-{$IFDEF WITH_TRECORDBUFFER}
 procedure TZAbstractRODataset.InternalInitRecord(Buffer: TRecordBuffer);
-{$ELSE}
-procedure TZAbstractRODataset.InternalInitRecord(Buffer: PChar);
-{$ENDIF}
 begin
   RowAccessor.ClearBuffer(PZRowBuffer(Buffer));
 end;
@@ -4477,11 +4401,7 @@ begin
         RowAccessor.RowBuffer := SearchRowBuffer;
         RowAccessor.RowBuffer^.Index := RowNo;
         FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
-{$IFDEF WITH_TRECORDBUFFER}
-        GetCalcFields({$IFDEF WITH_GETCALCFIELDS_TRECBUF}NativeInt{$ELSE}TRecordBuffer{$ENDIF}(SearchRowBuffer));
-{$ELSE}
-        GetCalcFields(PChar(SearchRowBuffer));
-{$ENDIF}
+        GetCalcFields(TGetCalcFieldsParamType(SearchRowBuffer));
         RetrieveDataFieldsFromRowAccessor(
           FieldRefs, FieldIndices, RowAccessor, RowValues);
 
@@ -4496,11 +4416,7 @@ begin
       end;
     finally
       if SearchRowBuffer <> nil then
-{$IFDEF WITH_TRECORDBUFFER}
         FreeRecordBuffer(TRecordBuffer(SearchRowBuffer));
-{$ELSE}
-        FreeRecordBuffer(PChar(SearchRowBuffer));
-{$ENDIF}
     end;
   end
   else
@@ -4604,19 +4520,11 @@ begin
     RowAccessor.RowBuffer := SearchRowBuffer;
     RowAccessor.RowBuffer^.Index := RowNo;
     FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
-{$IFDEF WITH_TRECORDBUFFER}
-    GetCalcFields({$IFDEF WITH_GETCALCFIELDS_TRECBUF}NativeInt{$ELSE}TRecordBuffer{$ENDIF}(SearchRowBuffer));
-{$ELSE}
-    GetCalcFields(PChar(SearchRowBuffer));
-{$ENDIF}
+    GetCalcFields(TGetCalcFieldsParamType(SearchRowBuffer));
     RetrieveDataFieldsFromRowAccessor(
       FieldRefs, FieldIndices, RowAccessor, ResultValues);
   finally
-{$IFDEF WITH_TRECORDBUFFER}
     FreeRecordBuffer(TRecordBuffer(SearchRowBuffer));
-{$ELSE}
-    FreeRecordBuffer(PChar(SearchRowBuffer));
-{$ENDIF}
   end;
 
   if Length(FieldIndices) = 1 then
@@ -4893,11 +4801,7 @@ begin
   RowAccessor.RowBuffer^.Index := RowNo;
   FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
   FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
-{$IFDEF WITH_TRECORDBUFFER}
-  GetCalcFields({$IFDEF WITH_GETCALCFIELDS_TRECBUF}NativeInt{$ELSE}TRecordBuffer{$ENDIF}(FSortRowBuffer1));
-{$ELSE}
-  GetCalcFields(PChar(FSortRowBuffer1));
-{$ENDIF}
+  GetCalcFields(TGetCalcFieldsParamType(FSortRowBuffer1));
 
   { Gets the second row. }
   RowNo := {%H-}NativeInt(Item2);
@@ -4906,11 +4810,7 @@ begin
   RowAccessor.RowBuffer^.Index := RowNo;
   FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
   FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
-{$IFDEF WITH_TRECORDBUFFER}
-  GetCalcFields({$IFDEF WITH_GETCALCFIELDS_TRECBUF}NativeInt{$ELSE}TRecordBuffer{$ENDIF}(FSortRowBuffer2));
-{$ELSE}
-  GetCalcFields(PChar(FSortRowBuffer2));
-{$ENDIF}
+  GetCalcFields(TGetCalcFieldsParamType(FSortRowBuffer2));
 
   { Compare both records. }
   Result := RowAccessor.CompareBuffers(FSortRowBuffer1, FSortRowBuffer2,
@@ -5307,11 +5207,7 @@ end;
   Reset the calculated (includes fkLookup) fields
   @param Buffer
 }
-{$IFDEF WITH_TRECORDBUFFER}
 procedure TZAbstractRODataset.ClearCalcFields(Buffer: TRecordBuffer);
-{$ELSE}
-procedure TZAbstractRODataset.ClearCalcFields(Buffer: PChar);
-{$ENDIF}
 var
   Index: Integer;
 begin
