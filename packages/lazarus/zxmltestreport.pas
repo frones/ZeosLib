@@ -142,11 +142,11 @@ var
   n: TDOMElement;
   results: TDomElement;
   x: integer;
+  FullName: String;
 begin
   inherited;
 
   n := FDoc.CreateElement('test-suite');
-  FSuitePath.Add(n); 
   n['type'] := 'TestSuite';
   n['id'] := IntToStr(GetNextId);
   n['name'] := ATestSuite.TestName;
@@ -156,6 +156,14 @@ begin
   n['result'] := strInconclusive;
   n['start-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now);
   n['total'] := IntToStr(ATestSuite.CountTestCases);
+
+  FullName := '';
+  for x := 0 to FSuitePath.Count - 1
+  do FullName := FullName + TDOMElement(FSuitePath[x])['name'] + '.';
+  FullName := FullName + ATestSuite.TestName;
+  n['classname'] := FullName;
+
+  FSuitePath.Add(n);
 
   if FSuitePath.Count = 1 then
     FResults.AppendChild(n)
