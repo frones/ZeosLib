@@ -342,7 +342,7 @@ type
   protected { Internal protected properties. }
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
-    function CreateResultSet(const {%H-}SQL: string; MaxRows: Integer):
+    function CreateResultSet(const SQL: string; MaxRows: Integer):
       IZResultSet; virtual;
     {$IFDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES} //EH: there is something weired with cirtcular references + FPC and implementation uses! So i added this virtual function to get a IsUpdatable state
     function GetUpdatable: Boolean; virtual;
@@ -407,7 +407,7 @@ type
     property NestedDataSetClass: TDataSetClass read FNestedDataSetClass write FNestedDataSetClass;
     {$ENDIF}
   protected { Abstracts methods }
-    procedure InternalAddRecord({%H-}Buffer: Pointer; {%H-}Append: Boolean); override;
+    procedure InternalAddRecord(Buffer: Pointer; Append: Boolean); override;
     procedure InternalDelete; override;
     procedure InternalPost; override;
     {$IFNDEF FPC}
@@ -423,8 +423,8 @@ type
     function GetActiveBuffer(out RowBuffer: PZRowBuffer): Boolean;
     function AllocRecordBuffer: TRecordBuffer; override;
     procedure FreeRecordBuffer(var Buffer: TRecordBuffer); override;
-    function CreateNestedDataSet({%H-}DataSetField: TDataSetField): TDataSet; {$IFDEF WITH_FTDATASETSUPPORT}override;{$ENDIF}
-    procedure CloseBlob({%H-}Field: TField); override;
+    function CreateNestedDataSet(DataSetField: TDataSetField): TDataSet; {$IFDEF WITH_FTDATASETSUPPORT}override;{$ENDIF}
+    procedure CloseBlob(Field: TField); override;
 
     procedure CheckFieldCompatibility(Field: TField; AFieldDef: TFieldDef); {$IFDEF WITH_CHECKFIELDCOMPATIBILITY} override;{$ENDIF}
     procedure CreateFields; override;
@@ -504,7 +504,7 @@ type
     function PSGetQuoteChar: string; override;
     function PSGetKeyFields: string; override;
     function PSExecuteStatement(const ASQL: string; AParams: TParams;
-      {%H-}ResultSet: Pointer = nil): Integer; override;
+      ResultSet: Pointer = nil): Integer; override;
     procedure PSSetCommandText(const CommandText: string); override;
     {$ENDIF}
     function PSGetUpdateException(E: Exception;
@@ -512,8 +512,8 @@ type
     function PSIsSQLBased: Boolean; override;
     function PSIsSQLSupported: Boolean; override;
     procedure PSReset; override;
-    function PSUpdateRecord({%H-}UpdateKind: TUpdateKind;
-      {%H-}Delta: TDataSet): Boolean; override;
+    function PSUpdateRecord(UpdateKind: TUpdateKind;
+      Delta: TDataSet): Boolean; override;
     procedure PSExecute; override;
     function PSGetParams: TParams; override;
     procedure PSSetParams(AParams: TParams); override;
@@ -1489,7 +1489,7 @@ type
     procedure ReadUnNamed(Reader: TReader);
     procedure WriteUnNamed(Writer: TWriter);
   protected
-    class procedure CheckTypeSize({%H-}Value: Integer); override;
+    class procedure CheckTypeSize(Value: Integer); override;
     {$IFNDEF WITH_VIRTUAL_TFIELD_BIND}
     procedure Bind(Binding: Boolean); virtual;
     {$ENDIF}
@@ -2097,7 +2097,7 @@ var
   P: PAnsiChar;
   L: NativeUInt;
 begin
-  P := RowAccessor.GetPAnsiChar(ColumnIndex, Result{%H-}, L);
+  P := RowAccessor.GetPAnsiChar(ColumnIndex, Result, L);
   if Result then
     Buffer^ := #0
   else
@@ -2114,7 +2114,7 @@ var
   P: PWideChar;
   L: NativeUInt;
 begin
-  P := RowAccessor.GetPWideChar(ColumnIndex, Result{%H-}, L);
+  P := RowAccessor.GetPWideChar(ColumnIndex, Result, L);
   if Result then
     Buffer^ := #0
   else //instead of StrPLCopy
@@ -2127,7 +2127,7 @@ var
   P: PAnsiChar;
   L: NativeUInt;
 begin
-  P := RowAccessor.GetPAnsiChar(ColumnIndex, Result{%H-}, L);
+  P := RowAccessor.GetPAnsiChar(ColumnIndex, Result, L);
   if Result then
     PWord(Buffer)^ := Ord(#0)
   else //instead of WStrLCopy
@@ -2141,7 +2141,7 @@ var
   P: PAnsiChar;
   L: NativeUInt;
 begin
-  P := RowAccessor.GetPAnsiChar(ColumnIndex, Result{%H-}, L);
+  P := RowAccessor.GetPAnsiChar(ColumnIndex, Result, L);
   if Result then
     PWord(Buffer)^ := Ord(#0)
   else //instead of WStrLCopy
@@ -2154,7 +2154,7 @@ var
   P: PWideChar;
   L: NativeUInt;
 begin
-  P := RowAccessor.GetPWideChar(ColumnIndex, Result{%H-}, L);
+  P := RowAccessor.GetPWideChar(ColumnIndex, Result, L);
   if not Result then
   begin //instead of StrPLCopy
     L := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(L, Max(dsMaxStringSize shr 1, FieldSize)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
@@ -2559,7 +2559,7 @@ begin
       begin
         Inc(FFetchCount);
         if FilterRow(ResultSet.GetRow) then
-          CurrentRows.Add({%H-}Pointer(ResultSet.GetRow))
+          CurrentRows.Add(Pointer(ResultSet.GetRow))
         else
           Continue;
       end;
@@ -2627,7 +2627,7 @@ begin
     CurrentRows := TZSortedList.Create;
 
     SavedState := SetTempState(dsNewValue);
-    CurrentRows.Add({%H-}Pointer(RowNo));
+    CurrentRows.Add(Pointer(RowNo));
     CurrentRow := 1;
 
     try
@@ -2674,7 +2674,7 @@ var
   Index: Integer;
 begin
   Result := False;
-  Index := CurrentRows.IndexOf({%H-}Pointer(RowNo));
+  Index := CurrentRows.IndexOf(Pointer(RowNo));
   if Index >= 0 then
   begin
     if Index < CurrentRow then
@@ -2697,16 +2697,16 @@ begin
     UpdateCursorPos; //see http://sourceforge.net/p/zeoslib/tickets/89/
     if (CurrentRow > 0) and (CurrentRow <= CurrentRows.Count) and
        (CurrentRows.Count > 0) then
-      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1])
+      RowNo := NativeInt(CurrentRows[CurrentRow - 1])
     else
       RowNo := -1;
     CurrentRows.Clear;
 
     for I := 1 to FetchCount do
       if FilterRow(I) then
-        CurrentRows.Add({%H-}Pointer(I));
+        CurrentRows.Add(Pointer(I));
 
-    CurrentRow := CurrentRows.IndexOf({%H-}Pointer(RowNo)) + 1;
+    CurrentRow := CurrentRows.IndexOf(Pointer(RowNo)) + 1;
     CurrentRow := Min(Max(1, CurrentRow), CurrentRows.Count);
 
     if FSortedFields <> '' then
@@ -2830,7 +2830,7 @@ begin
 
   if Result = grOK then
   begin
-    RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
+    RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
     if ResultSet.GetRow <> RowNo then
       ResultSet.MoveAbsolute(RowNo);
     RowAccessor.RowBuffer := PZRowBuffer(Buffer);
@@ -2866,7 +2866,7 @@ begin
       RowBuffer := PZRowBuffer(CalcBuffer);
     dsOldValue, dsNewValue, dsCurValue:
       begin
-        RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
+        RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
         if RowNo <> ResultSet.GetRow then
           CheckBiDirectional;
 
@@ -2921,7 +2921,7 @@ var
   P: Pointer;
   RowBuffer: PZRowBuffer;
 begin
-  if GetActiveBuffer(RowBuffer{%H-}) then
+  if GetActiveBuffer(RowBuffer) then
   begin
     if FUseZFields and (Field is TZField) then
       ColumnIndex := (Field as TZField).FFieldIndex
@@ -2935,7 +2935,7 @@ begin
         ftDate, ftTime, ftDateTime:
           if Field.DataType <> ftTime then
             DateTimeToNative(Field.DataType,
-              RowAccessor.GetTimestamp(ColumnIndex, Result{%H-}), Buffer)
+              RowAccessor.GetTimestamp(ColumnIndex, Result), Buffer)
           else
             DateTimeToNative(Field.DataType,
               RowAccessor.GetTime(ColumnIndex, Result), Buffer);
@@ -4138,7 +4138,7 @@ begin
   begin
     if CurrentRow > 0 then
     begin
-      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
+      RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
       if ResultSet.GetRow <> RowNo then
         ResultSet.MoveAbsolute(RowNo);
 
@@ -4624,7 +4624,7 @@ begin
 
   Result := nil;
   if (Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}])
-    and GetActiveBuffer(RowBuffer{%H-}) then
+    and GetActiveBuffer(RowBuffer) then
   begin
     ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
     RowAccessor.RowBuffer := RowBuffer;
@@ -4712,7 +4712,7 @@ begin
 
     if (CurrentRow <= CurrentRows.Count) and (CurrentRows.Count > 0)
       and (CurrentRow > 0) then
-      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1])
+      RowNo := NativeInt(CurrentRows[CurrentRow - 1])
     else
       RowNo := -1;
 
@@ -4761,7 +4761,7 @@ begin
       end;
     end;
 
-    CurrentRow := CurrentRows.IndexOf({%H-}Pointer(RowNo)) + 1;
+    CurrentRow := CurrentRows.IndexOf(Pointer(RowNo)) + 1;
     CurrentRow := Min(Max(0, CurrentRow), CurrentRows.Count);
     if not (State in [dsInactive]) then
        Resync([]);
@@ -4778,7 +4778,7 @@ end;
 function TZAbstractRODataset.ClearSort(Item1, Item2: Pointer): Integer;
 begin
   //no real pointer addresses here, just a Integer represented as Pointer! -> overflow save!
-  Result := {%H-}NativeInt(Item1) - {%H-}NativeInt(Item2);
+  Result := NativeUInt(Item1) - NativeUInt(Item2);
 end;
 
 {**
@@ -4795,7 +4795,7 @@ var
   RowNo: NativeInt;
 begin
   { Gets the first row. }
-  RowNo := {%H-}NativeInt(Item1);
+  RowNo := NativeInt(Item1);
   ResultSet.MoveAbsolute(RowNo);
   RowAccessor.RowBuffer := FSortRowBuffer1;
   RowAccessor.RowBuffer^.Index := RowNo;
@@ -4804,7 +4804,7 @@ begin
   GetCalcFields(TGetCalcFieldsParamType(FSortRowBuffer1));
 
   { Gets the second row. }
-  RowNo := {%H-}NativeInt(Item2);
+  RowNo := NativeInt(Item2);
   ResultSet.MoveAbsolute(RowNo);
   RowAccessor.RowBuffer := FSortRowBuffer2;
   RowAccessor.RowBuffer^.Index := RowNo;
@@ -5418,14 +5418,14 @@ function TZField.GetValidationBuffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$EL
 var IsNull: Boolean;
 begin
   {Active RowBuffer is already set!}
-  Result := {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ENDIF}((DataSet as TZAbstractRODataset).RowAccessor.GetColumnData(FFieldIndex, IsNull{%H-}));
+  Result := {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ENDIF}((DataSet as TZAbstractRODataset).RowAccessor.GetColumnData(FFieldIndex, IsNull));
 end;
 
 function TZField.GetAsBoolean: Boolean;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetBoolean(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetBoolean(FFieldIndex, IsNull)
   else
     Result := False;
 end;
@@ -5434,7 +5434,7 @@ function TZField.GetAsDateTime: TDateTime;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetTimestamp(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetTimestamp(FFieldIndex, IsNull)
   else
     Result := 0;
 end;
@@ -5443,7 +5443,7 @@ function TZField.GetAsDate: TDateTime;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetTimestamp(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetTimestamp(FFieldIndex, IsNull)
   else
     Result := 0;
 end;
@@ -5452,7 +5452,7 @@ function TZField.GetAsTime: TDateTime;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetTimestamp(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetTimestamp(FFieldIndex, IsNull)
   else
     Result := 0;
 end;
@@ -5461,7 +5461,7 @@ function TZField.GetAsCurrency: Currency;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetBigDecimal(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetBigDecimal(FFieldIndex, IsNull)
   else
     Result := 0;
 end;
@@ -5470,7 +5470,7 @@ function TZField.GetAsBCD: TBcd;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    TryStrToBcd((DataSet as TZAbstractRODataset).FRowAccessor.GetString(FFieldIndex, IsNull{%H-}), Result{%H-})
+    TryStrToBcd((DataSet as TZAbstractRODataset).FRowAccessor.GetString(FFieldIndex, IsNull), Result)
   else
     Result := NullBcd;
 end;
@@ -5480,7 +5480,7 @@ function TZField.GetAsSingle: Single;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetFloat(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetFloat(FFieldIndex, IsNull)
   else
     Result := 0.0;
 end;
@@ -5489,7 +5489,7 @@ function TZField.GetAsFloat: Double;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetDouble(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetDouble(FFieldIndex, IsNull)
   else
     Result := 0.0;
 end;
@@ -5498,7 +5498,7 @@ function TZField.GetAsExtended: Extended;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetBigDecimal(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetBigDecimal(FFieldIndex, IsNull)
   else
     Result := 0.0;
 end;
@@ -5508,7 +5508,7 @@ function TZField.GetAsShortInt: ShortInt;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetShort(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetShort(FFieldIndex, IsNull)
   else
     Result := 0;
 end;
@@ -5517,7 +5517,7 @@ function TZField.GetAsSmallInt: SmallInt;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetSmall(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetSmall(FFieldIndex, IsNull)
   else
     Result := 0;
 end;
@@ -5526,7 +5526,7 @@ function TZField.GetAsInteger: Longint;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetInt(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetInt(FFieldIndex, IsNull)
   else
     Result := 0;
 end;
@@ -5535,7 +5535,7 @@ function TZField.GetAsLargeInt: Largeint;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetLong(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetLong(FFieldIndex, IsNull)
   else
     Result := 0;
 end;
@@ -5545,7 +5545,7 @@ function TZField.GetAsByte: Byte;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetByte(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetByte(FFieldIndex, IsNull)
   else
     Result := 0;
 end;
@@ -5554,7 +5554,7 @@ function TZField.GetAsWord: Word;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetInt(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetInt(FFieldIndex, IsNull)
   else
     Result := 0;
 end;
@@ -5563,7 +5563,7 @@ function TZField.GetAsLongWord: LongWord;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetUInt(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetUInt(FFieldIndex, IsNull)
   else
     Result := 0;
 end;
@@ -5573,7 +5573,7 @@ function TZField.GetAsUInt64: UInt64;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetLong(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetLong(FFieldIndex, IsNull)
   else
     Result := 0;
 end;
@@ -5584,7 +5584,7 @@ function TZField.GetAsString: string;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetString(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetString(FFieldIndex, IsNull)
   else
     Result := '';
 end;
@@ -5593,7 +5593,7 @@ function TZField.GetAsWideString: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetUnicodeString(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetUnicodeString(FFieldIndex, IsNull)
   else
     Result := '';
 end;
@@ -5602,7 +5602,7 @@ function TZField.GetAsAnsiString: AnsiString;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetAnsiString(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetAnsiString(FFieldIndex, IsNull)
   else
     Result := '';
 end;
@@ -5611,7 +5611,7 @@ function TZField.GetAsUTF8String: UTF8String;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetUTF8String(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetUTF8String(FFieldIndex, IsNull)
   else
     Result := '';
 end;
@@ -5620,7 +5620,7 @@ function TZField.GetAsRawByteString: RawByteString;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetRawByteString(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetRawByteString(FFieldIndex, IsNull)
   else
     Result := '';
 end;
@@ -5629,10 +5629,10 @@ function TZField.GetAsGuid: TGUID;
 var IsNull: Boolean;
   Bytes: TBytes;
 begin
-  FillChar(Result{%H-}, SizeOf(Result), #0);
+  FillChar(Result, SizeOf(Result), #0);
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
   begin
-    Bytes := (DataSet as TZAbstractRODataset).FRowAccessor.GetBytes(FFieldIndex, IsNull{%H-});
+    Bytes := (DataSet as TZAbstractRODataset).FRowAccessor.GetBytes(FFieldIndex, IsNull);
     if not IsNull then
       Result := PGUID(Bytes)^;
   end;
@@ -5642,7 +5642,7 @@ function TZField.GetAsBytes: TBytes;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetBytes(FFieldIndex, IsNull{%H-})
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetBytes(FFieldIndex, IsNull)
   else
     Result := nil;
 end;
