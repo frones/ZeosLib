@@ -120,8 +120,8 @@ type
     FConSettings: PZConSettings;
 
     function GetColumnSize(ColumnInfo: TZColumnInfo): Integer;
-    function InternalGetInt(ColumnIndex: Integer; var IsNull: Boolean): Integer; {$IFDEF WITHINLINE} inline; {$ENDIF}
-    function InternalGetULong(ColumnIndex: Integer; var IsNull: Boolean): UInt64; {$IFDEF WITHINLINE} inline; {$ENDIF}
+    function InternalGetInt(ColumnIndex: Integer; out IsNull: Boolean): Integer; {$IFDEF WITHINLINE} inline; {$ENDIF}
+    function InternalGetULong(ColumnIndex: Integer; out IsNull: Boolean): UInt64; {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetInt(ColumnIndex: Integer; Value: Integer); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetULong(ColumnIndex: Integer; const Value: UInt64); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer;
@@ -166,7 +166,7 @@ type
     procedure Clear;
     procedure Dispose;
 
-    function GetColumnData(ColumnIndex: Integer; var IsNull: Boolean): Pointer;
+    function GetColumnData(ColumnIndex: Integer; out IsNull: Boolean): Pointer;
     function GetColumnDataSize(ColumnIndex: Integer): Integer;
 
     function GetColumnName(ColumnIndex: Integer): string;
@@ -183,41 +183,41 @@ type
     //======================================================================
 
     function IsNull(ColumnIndex: Integer): Boolean;
-    function GetPAnsiChar(ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PAnsiChar;
-    function GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
-    function GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
+    function GetPAnsiChar(ColumnIndex: Integer; out IsNull: Boolean; out Len: NativeUInt): PAnsiChar;
+    function GetCharRec(ColumnIndex: Integer; out IsNull: Boolean): TZCharRec;
+    function GetString(ColumnIndex: Integer; out IsNull: Boolean): String;
     {$IFNDEF NO_ANSISTRING}
-    function GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+    function GetAnsiString(ColumnIndex: Integer; out IsNull: Boolean): AnsiString;
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    function GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
+    function GetUTF8String(ColumnIndex: Integer; out IsNull: Boolean): UTF8String;
     {$ENDIF}
-    function GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
-    function GetPWideChar(ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PWideChar;
-    function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): ZWideString;
-    function GetBoolean(ColumnIndex: Integer; var IsNull: Boolean): Boolean;
-    function GetByte(ColumnIndex: Integer; var IsNull: Boolean): Byte;
-    function GetShort(ColumnIndex: Integer; var IsNull: Boolean): ShortInt;
-    function GetWord(ColumnIndex: Integer; var IsNull: Boolean): Word;
-    function GetSmall(ColumnIndex: Integer; var IsNull: Boolean): SmallInt;
-    function GetUInt(ColumnIndex: Integer; var IsNull: Boolean): Cardinal;
-    function GetInt(ColumnIndex: Integer; var IsNull: Boolean): Integer;
-    function GetULong(ColumnIndex: Integer; var IsNull: Boolean): UInt64;
-    function GetLong(ColumnIndex: Integer; var IsNull: Boolean): Int64;
-    function GetFloat(ColumnIndex: Integer; var IsNull: Boolean): Single;
-    function GetDouble(ColumnIndex: Integer; var IsNull: Boolean): Double;
-    function GetCurrency(ColumnIndex: Integer; var IsNull: Boolean): Currency;
-    function GetBigDecimal(ColumnIndex: Integer; var IsNull: Boolean): Extended;
-    function GetBytes(ColumnIndex: Integer; var IsNull: Boolean): TBytes; overload;
-    function GetBytes(ColumnIndex: Integer; var IsNull: Boolean; out Len: Word): Pointer; overload;
-    function GetDate(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
-    function GetTime(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
-    function GetTimestamp(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
-    function GetAsciiStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
-    function GetUnicodeStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
-    function GetBinaryStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
-    function GetBlob(ColumnIndex: Integer; var IsNull: Boolean): IZBlob;
-    function GetDataSet(ColumnIndex: Integer; var {%H-}IsNull: Boolean): IZDataSet;
+    function GetRawByteString(ColumnIndex: Integer; out IsNull: Boolean): RawByteString;
+    function GetPWideChar(ColumnIndex: Integer; out IsNull: Boolean; out Len: NativeUInt): PWideChar;
+    function GetUnicodeString(ColumnIndex: Integer; out IsNull: Boolean): ZWideString;
+    function GetBoolean(ColumnIndex: Integer; out IsNull: Boolean): Boolean;
+    function GetByte(ColumnIndex: Integer; out IsNull: Boolean): Byte;
+    function GetShort(ColumnIndex: Integer; out IsNull: Boolean): ShortInt;
+    function GetWord(ColumnIndex: Integer; out IsNull: Boolean): Word;
+    function GetSmall(ColumnIndex: Integer; out IsNull: Boolean): SmallInt;
+    function GetUInt(ColumnIndex: Integer; out IsNull: Boolean): Cardinal;
+    function GetInt(ColumnIndex: Integer; out IsNull: Boolean): Integer;
+    function GetULong(ColumnIndex: Integer; out IsNull: Boolean): UInt64;
+    function GetLong(ColumnIndex: Integer; out IsNull: Boolean): Int64;
+    function GetFloat(ColumnIndex: Integer; out IsNull: Boolean): Single;
+    function GetDouble(ColumnIndex: Integer; out IsNull: Boolean): Double;
+    function GetCurrency(ColumnIndex: Integer; out IsNull: Boolean): Currency;
+    function GetBigDecimal(ColumnIndex: Integer; out IsNull: Boolean): Extended;
+    function GetBytes(ColumnIndex: Integer; out IsNull: Boolean): TBytes; overload;
+    function GetBytes(ColumnIndex: Integer; out IsNull: Boolean; out Len: Word): Pointer; overload;
+    function GetDate(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
+    function GetTime(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
+    function GetTimestamp(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
+    function GetAsciiStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
+    function GetUnicodeStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
+    function GetBinaryStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
+    function GetBlob(ColumnIndex: Integer; out IsNull: Boolean): IZBlob;
+    function GetDataSet(ColumnIndex: Integer; out IsNull: Boolean): IZDataSet;
     function GetValue(ColumnIndex: Integer): TZVariant;
 
     //---------------------------------------------------------------------
@@ -1037,7 +1037,7 @@ begin
   end;
 end;
 
-function TZRowAccessor.InternalGetInt(ColumnIndex: Integer; var IsNull: Boolean): Integer;
+function TZRowAccessor.InternalGetInt(ColumnIndex: Integer; out IsNull: Boolean): Integer;
 var
   Data: PPointer;
 begin
@@ -1083,7 +1083,7 @@ begin
 end;
 
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-function TZRowAccessor.InternalGetULong(ColumnIndex: Integer; var IsNull: Boolean): UInt64;
+function TZRowAccessor.InternalGetULong(ColumnIndex: Integer; out IsNull: Boolean): UInt64;
 var
   Data: PPointer;
 begin
@@ -1828,7 +1828,7 @@ begin
 end;
 
 function TZRowAccessor.GetCharRec(ColumnIndex: Integer;
-  var IsNull: Boolean): TZCharRec;
+  out IsNull: Boolean): TZCharRec;
 var Len: NativeUint;
 begin
   if fRaw then begin
@@ -1862,7 +1862,7 @@ end;
   @return a pointer to the column data buffer.
 }
 function TZRowAccessor.GetColumnData(ColumnIndex: Integer;
-  var IsNull: Boolean): Pointer;
+  out IsNull: Boolean): Pointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnIndex(ColumnIndex);
@@ -2001,7 +2001,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetPAnsiChar(ColumnIndex: Integer; var IsNull: Boolean;
+function TZRowAccessor.GetPAnsiChar(ColumnIndex: Integer; out IsNull: Boolean;
   out Len: NativeUInt): PAnsiChar;
 var
   Data: PPointer;
@@ -2076,7 +2076,7 @@ begin
   end;
 end;
 
-function TZRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
+function TZRowAccessor.GetString(ColumnIndex: Integer; out IsNull: Boolean): String;
 var
   Data: PPointer;
 begin
@@ -2159,7 +2159,7 @@ end;
     value returned is <code>null</code>
 }
 {$IFNDEF NO_ANSISTRING}
-function TZRowAccessor.GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+function TZRowAccessor.GetAnsiString(ColumnIndex: Integer; out IsNull: Boolean): AnsiString;
 var
   Data: PPointer;
 begin
@@ -2230,7 +2230,7 @@ end;
     value returned is <code>null</code>
 }
 {$IFNDEF NO_UTF8STRING}
-function TZRowAccessor.GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
+function TZRowAccessor.GetUTF8String(ColumnIndex: Integer; out IsNull: Boolean): UTF8String;
 var Data: PPointer;
 begin
   {$R-}
@@ -2305,7 +2305,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
+function TZRowAccessor.GetRawByteString(ColumnIndex: Integer; out IsNull: Boolean): RawByteString;
 var Data: PPointer;
 begin
   {$R-}
@@ -2371,7 +2371,7 @@ end;
     value returned is <code>null</code>
 }
 function TZRowAccessor.GetPWideChar(ColumnIndex: Integer;
-  var IsNull: Boolean; out Len: NativeUInt): PWideChar;
+  out IsNull: Boolean; out Len: NativeUInt): PWideChar;
 var
   Data: PPointer;
 begin
@@ -2447,7 +2447,7 @@ end;
     value returned is <code>null</code>
 }
 function TZRowAccessor.GetUnicodeString(ColumnIndex: Integer;
-  var IsNull: Boolean): ZWideString;
+  out IsNull: Boolean): ZWideString;
 var Data: PPointer;
 begin
   {$R-}
@@ -2507,7 +2507,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>false</code>
 }
-function TZRowAccessor.GetBoolean(ColumnIndex: Integer; var IsNull: Boolean): Boolean;
+function TZRowAccessor.GetBoolean(ColumnIndex: Integer; out IsNull: Boolean): Boolean;
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2560,7 +2560,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetByte(ColumnIndex: Integer; var IsNull: Boolean): Byte;
+function TZRowAccessor.GetByte(ColumnIndex: Integer; out IsNull: Boolean): Byte;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
@@ -2577,7 +2577,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetShort(ColumnIndex: Integer; var IsNull: Boolean): ShortInt;
+function TZRowAccessor.GetShort(ColumnIndex: Integer; out IsNull: Boolean): ShortInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
@@ -2594,7 +2594,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetWord(ColumnIndex: Integer; var IsNull: Boolean): Word;
+function TZRowAccessor.GetWord(ColumnIndex: Integer; out IsNull: Boolean): Word;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stWord);
@@ -2610,7 +2610,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetSmall(ColumnIndex: Integer; var IsNull: Boolean): SmallInt;
+function TZRowAccessor.GetSmall(ColumnIndex: Integer; out IsNull: Boolean): SmallInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stSmall);
@@ -2627,7 +2627,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetUInt(ColumnIndex: Integer; var IsNull: Boolean): Cardinal;
+function TZRowAccessor.GetUInt(ColumnIndex: Integer; out IsNull: Boolean): Cardinal;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLongWord);
@@ -2644,7 +2644,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetInt(ColumnIndex: Integer; var IsNull: Boolean): Integer;
+function TZRowAccessor.GetInt(ColumnIndex: Integer; out IsNull: Boolean): Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
@@ -2661,7 +2661,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetULong(ColumnIndex: Integer; var IsNull: Boolean): UInt64;
+function TZRowAccessor.GetULong(ColumnIndex: Integer; out IsNull: Boolean): UInt64;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stULong);
@@ -2678,7 +2678,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetLong(ColumnIndex: Integer; var IsNull: Boolean): Int64;
+function TZRowAccessor.GetLong(ColumnIndex: Integer; out IsNull: Boolean): Int64;
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2732,7 +2732,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetFloat(ColumnIndex: Integer; var IsNull: Boolean): Single;
+function TZRowAccessor.GetFloat(ColumnIndex: Integer; out IsNull: Boolean): Single;
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2786,7 +2786,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetDouble(ColumnIndex: Integer; var IsNull: Boolean): Double;
+function TZRowAccessor.GetDouble(ColumnIndex: Integer; out IsNull: Boolean): Double;
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2841,7 +2841,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetCurrency(ColumnIndex: Integer; var IsNull: Boolean): Currency;
+function TZRowAccessor.GetCurrency(ColumnIndex: Integer; out IsNull: Boolean): Currency;
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2896,7 +2896,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetBigDecimal(ColumnIndex: Integer; var IsNull: Boolean): Extended;
+function TZRowAccessor.GetBigDecimal(ColumnIndex: Integer; out IsNull: Boolean): Extended;
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2951,7 +2951,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetBytes(ColumnIndex: Integer; var IsNull: Boolean): TBytes;
+function TZRowAccessor.GetBytes(ColumnIndex: Integer; out IsNull: Boolean): TBytes;
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2998,7 +2998,7 @@ end;
   @param Len return the count of Bytes for the value
   @return the column value
 }
-function TZRowAccessor.GetBytes(ColumnIndex: Integer; var IsNull: Boolean;
+function TZRowAccessor.GetBytes(ColumnIndex: Integer; out IsNull: Boolean;
   out Len: Word): Pointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -3046,7 +3046,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetDate(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+function TZRowAccessor.GetDate(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
 var
   Failed: Boolean;
   Data: Pointer;
@@ -3103,7 +3103,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetTime(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+function TZRowAccessor.GetTime(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
 var
   Failed: Boolean;
   Data: Pointer;
@@ -3163,7 +3163,7 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-function TZRowAccessor.GetTimestamp(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+function TZRowAccessor.GetTimestamp(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
 var
   Failed: Boolean;
   Data: Pointer;
@@ -3222,7 +3222,7 @@ end;
     as a stream of one-byte ASCII characters; if the value is SQL
     <code>NULL</code>, the value returned is <code>null</code>
 }
-function TZRowAccessor.GetAsciiStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
+function TZRowAccessor.GetAsciiStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
 var TempBlob: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -3264,7 +3264,7 @@ end;
     as a stream in Java UTF-8 byte format; if the value is SQL
     <code>NULL</code>, the value returned is <code>null</code>
 }
-function TZRowAccessor.GetUnicodeStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
+function TZRowAccessor.GetUnicodeStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
 var TempBlob: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -3305,7 +3305,7 @@ end;
     as a stream of uninterpreted bytes;
     if the value is SQL <code>NULL</code>, the value returned is <code>null</code>
 }
-function TZRowAccessor.GetBinaryStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
+function TZRowAccessor.GetBinaryStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
 var TempBlob: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -3332,7 +3332,7 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZRowAccessor.GetBlob(ColumnIndex: Integer; var IsNull: Boolean): IZBlob;
+function TZRowAccessor.GetBlob(ColumnIndex: Integer; out IsNull: Boolean): IZBlob;
 var TempBlob: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -3364,7 +3364,7 @@ end;
   @return a <code>ResultSet</code> object representing the SQL
     <code>ResultSet</code> value in the specified column
 }
-function TZRowAccessor.GetDataSet(ColumnIndex: Integer; var IsNull: Boolean): IZDataSet;
+function TZRowAccessor.GetDataSet(ColumnIndex: Integer; out IsNull: Boolean): IZDataSet;
 var
   Ptr: PPointer;
   NullPtr: {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF};
