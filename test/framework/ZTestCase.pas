@@ -374,7 +374,7 @@ begin
   if Temp <> '' then
     FDecimalSeparator := Temp[1]
   else FDecimalSeparator :=  DEFAULT_DECIMAL_SEPARATOR;
-  {$IFDEF WITH_FORMATSETTINGS}Formatsettings.{$ELSE}SysUtils.{$ENDIF}DecimalSeparator := FDecimalSeparator;
+  {$IFDEF WITH_FORMATSETTINGS}Formatsettings.{$ENDIF}DecimalSeparator := FDecimalSeparator;
 
   FSuppressTestOutput := StrToBoolEx(ReadInheritProperty(SUPPRESS_TEST_OUTPUT_KEY, TRUE_VALUE));
   FSkipClosed := StrToBoolEx(ReadInheritProperty(SKIP_CLOSED_KEY, FALSE_VALUE));

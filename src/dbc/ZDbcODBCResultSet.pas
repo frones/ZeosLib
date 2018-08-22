@@ -1389,7 +1389,7 @@ var
   bufSQLLEN: SQLLEN;
   ColumnNumber: SQLUSMALLINT;
   ColumnInfo: TZColumnInfo;
-  RowSize: Integer;
+  RowSize: NativeUInt;
   LobsInResult: Boolean;
   StrBuf: TByteDynArray;
   function NoStreamedColFollows: Boolean;
