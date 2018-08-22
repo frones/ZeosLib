@@ -103,6 +103,7 @@ end;
 procedure TZXMLResultsWriter.WriteTestHeader(ATest: TTest; ALevel: integer; ACount: integer);
 var
   n: TDOMElement;
+  o: TDOMElement;
   ParentName: String;
 begin
   inherited;
@@ -116,12 +117,15 @@ begin
   n['result'] := strPassed;
   n['start-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now);
 
-  if FSuitePath.Count > 0 then
+  if FSuitePath.Count > 0 then begin
   //test is included in a suite
-    TDOMElement(FSuitePath[FSuitePath.Count -1]).AppendChild(n)
-  else
+    o := TDOMElement(FSuitePath[FSuitePath.Count -1]);
+    o.AppendChild(n);
+    o['type'] := 'TestFixture';
+  end else begin
   //no suite to append so append directly to the listing node
     FResults.AppendChild(n);
+  end;
   FCurrentTest := n;
 end;
 
@@ -137,8 +141,10 @@ procedure TZXMLResultsWriter.WriteSuiteHeader(ATestSuite: TTestSuite; ALevel: in
 var
   n: TDOMElement;
   results: TDomElement;
+  x: integer;
 begin
   inherited;
+
   n := FDoc.CreateElement('test-suite');
   FSuitePath.Add(n); 
   n['type'] := 'TestSuite';
