@@ -714,7 +714,9 @@ var
   Current: TZResolverParameter;
   TableName: string;
   Temp1: string;
-  {$IF DEFINED(DSProps_InsertReturningFields)}
+  // NB: INSERT..RETURNING is only aclual for several drivers so we must ensure
+  // this unit is compilable with all these drivers disabled.
+  {$IF DECLARED(DSProps_InsertReturningFields)}
   Fields: TStrings;
   {$IFEND}
 begin
@@ -734,7 +736,7 @@ begin
   Result := 'INSERT INTO '+TableName+' ('+Temp1+') VALUES ('+
     DupeString('?,', Columns.Count - 1) + '?' +')';
 
-  {$IF DEFINED(DSProps_InsertReturningFields)}
+  {$IF DECLARED(DSProps_InsertReturningFields)}
   Temp1 := FStatement.GetParameters.Values[DSProps_InsertReturningFields];
   if Temp1 <> '' then begin
     Fields := ExtractFields(Temp1, [',', ';']);
