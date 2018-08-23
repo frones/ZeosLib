@@ -134,7 +134,7 @@ implementation
 
 uses
   Variants, Math,
-  {$IFDEF WITH_SYSTEM_WIN_COMOBJ}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZDbcOleDB, ZDbcOleDBResultSet, ZEncoding, ZDbcLogging,
   ZFastCode, ZDbcMetadata, ZDbcUtils, ZMessages, ZClasses;
 

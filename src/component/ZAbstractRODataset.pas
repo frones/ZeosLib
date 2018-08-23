@@ -178,11 +178,7 @@ type
   TDataSetField = class;
   {$ENDIF WITH_TDATASETFIELD}
   {** Abstract dataset component optimized for read/only access. }
-  {$IFDEF WITH_WIDEDATASET}
-  TZAbstractRODataset = class(TWideDataSet)
-  {$ELSE}
-  TZAbstractRODataset = class(TDataSet)
-  {$ENDIF}
+  TZAbstractRODataset = class({$IF DECLARED(TWideDataSet)}TWideDataSet{$ELSE}TDataSet{$IFEND})
   private
 {$IFNDEF WITH_FUNIDIRECTIONAL}
     FUniDirectional: Boolean;

@@ -305,8 +305,9 @@ implementation
 
 uses
   Variants, ZGenericSqlToken, ZFastCode,
-  {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj{$else}ComObj{$endif},
-  ZDbcOleDBUtils{$IFDEF ENABLE_OLEDB} //Exclude for ADO
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
+  ZDbcOleDBUtils
+  {$IFDEF ENABLE_OLEDB} //Exclude for ADO
   ,ZDbcOleDB, ZDbcOleDBResultSet, ZDbcOleDBStatement
   {$ENDIF};
 

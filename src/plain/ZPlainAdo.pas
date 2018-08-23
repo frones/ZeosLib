@@ -84,8 +84,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses Windows, Classes, ActiveX;
-
+uses Windows, Classes, ActiveX, {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF};
 
 // *********************************************************************//
 // GUIDS declared in the TypeLibrary. Following prefixes are used:        
@@ -1709,8 +1708,6 @@ type
   end;
 
 implementation
-
-uses {$IFDEF WITH_SYSTEM_WIN_COMOBJ}System.Win.ComObj{$ELSE}ComObj{$ENDIF};
 
 class function CoConnection.Create: Connection15;
 begin

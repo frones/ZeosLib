@@ -119,7 +119,7 @@ implementation
 uses
   Variants,
   Math, ZGenericSqlToken, ZDbcAdoUtils, ZDbcAdo, ZFastCode,
-  {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZDbcAdoResultSet, ZDbcOleDBMetadata;
 
 type

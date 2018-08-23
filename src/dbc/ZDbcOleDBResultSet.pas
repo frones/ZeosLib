@@ -174,7 +174,7 @@ function GetCurrentResultSet(const RowSet: IRowSet; const Statement: IZStatement
 implementation
 
 uses
-  Variants, Math, {$IFDEF WITH_SYSTEM_WIN_COMOBJ}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
+  Variants, Math, {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode, ZClasses;
 
 var
