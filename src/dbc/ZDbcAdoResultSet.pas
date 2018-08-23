@@ -1729,7 +1729,7 @@ begin
       V := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
       if VarIsStr(V) then
         Result := UnicodeSQLTimeStampToDateTime(PWideChar(ZWideString(V)),
-          Length(V), ConSettings^.ReadFormatSettings, Failed{%H-})
+          Length(V), ConSettings^.ReadFormatSettings, Failed)
       else
         Result := V;
     except

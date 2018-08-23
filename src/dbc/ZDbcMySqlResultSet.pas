@@ -1794,7 +1794,7 @@ begin
           begin
             if ColBind^.Length[0]  = ConSettings^.ReadFormatSettings.DateFormatLen then
               Result := RawSQLDateToDateTime(PAnsiChar(ColBind^.buffer),
-                ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed{%H-})
+                ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed)
             else
               Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
                 RawSQLTimeStampToDateTime(PAnsiChar(ColBind^.buffer),
@@ -1810,7 +1810,7 @@ begin
     LastWasNull := Buffer = nil;
     if not LastWasNull then begin
       if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
-        Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+        Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed)
       else
         Result := Int(RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
       LastWasNull := Failed;
@@ -1872,7 +1872,7 @@ begin
         FIELD_TYPE_STRING: begin
             if PByte(PAnsiChar(ColBind^.buffer)+2)^ = Ord(':') then //possible date if Len = 10 then
               Result := RawSQLTimeToDateTime(PAnsiChar(ColBind^.buffer),
-                ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed{%H-})
+                ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed)
             else
               Result := Frac(RawSQLTimeStampToDateTime(PAnsiChar(ColBind^.buffer),
                 ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed));
@@ -1887,7 +1887,7 @@ begin
     LastWasNull := Buffer = nil;
     if not LastWasNull then begin
       if PByte(Buffer+2)^ = Ord(':') then //possible date if Len = 10 then
-        Result := RawSQLTimeToDateTime(Buffer,Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+        Result := RawSQLTimeToDateTime(Buffer,Len, ConSettings^.ReadFormatSettings, Failed)
       else
         Result := Frac(RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
       LastWasNull := Failed;
@@ -1966,7 +1966,7 @@ begin
         FIELD_TYPE_STRING: begin
             if PByte(PAnsiChar(ColBind^.buffer)+2)^ = Ord(':') then
               Result := RawSQLTimeToDateTime(PAnsiChar(ColBind^.buffer),
-                ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed{%H-})
+                ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed)
             else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - ColBind^.Length[0] ) <= 4 then
               Result := RawSQLTimeStampToDateTime(PAnsiChar(ColBind^.buffer), ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed)
             else
@@ -1982,7 +1982,7 @@ begin
     LastWasNull := Buffer = nil;
     if not LastWasNull then
       if PByte(Buffer+2)^ = Ord(':') then
-        Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+        Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
       else
         if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
           Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)

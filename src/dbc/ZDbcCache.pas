@@ -3064,10 +3064,10 @@ begin
       stString, stUnicodeString: if (PPointer(Data)^ <> nil) then
         if fRaw then begin
           Result := ZSysUtils.RawSQLDateToDateTime(PPAnsiChar(Data)^+PAnsiInc,
-            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed{%H-});
+            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed);
           if Failed then
             Result := Int(ZSysUtils.RawSQLTimeStampToDateTime(PPAnsiChar(Data)^+PAnsiInc,
-              PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed{%H-}));
+              PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed));
         end else begin
           Result := ZSysUtils.UnicodeSQLDateToDateTime(ZPPWideChar(Data)^+PWideInc,
             PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed);
@@ -3080,10 +3080,10 @@ begin
           if not TempBlob^.IsEmpty and TempBlob^.IsClob then begin
             Data := TempBlob^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
             Result := ZSysUtils.RawSQLDateToDateTime(Data, TempBlob^.Length,
-              ConSettings^.ReadFormatSettings, Failed{%H-});
+              ConSettings^.ReadFormatSettings, Failed);
             if Failed then
               Result := Int(ZSysUtils.RawSQLTimeStampToDateTime(Data, TempBlob^.Length,
-                ConSettings^.ReadFormatSettings, Failed{%H-}));
+                ConSettings^.ReadFormatSettings, Failed));
           end;
         end;
     end;
@@ -3122,7 +3122,7 @@ begin
       stString, stUnicodeString:
         if fRaw then begin
           Result := ZSysUtils.RawSQLTimeToDateTime(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^,
-            ConSettings^.ReadFormatSettings, Failed{%H-});
+            ConSettings^.ReadFormatSettings, Failed);
           if Failed then
             Result := Frac(ZSysUtils.RawSQLTimeStampToDateTime(PPAnsiChar(Data)^+PAnsiInc,
               PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed));
@@ -3180,7 +3180,7 @@ begin
       stString, stUnicodeString:
         if fRaw then
           Result := ZSysUtils.RawSQLTimeStampToDateTime(PPAnsiChar(Data)^+PAnsiInc,
-            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed{%H-})
+            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed)
         else
           Result := ZSysUtils.UnicodeSQLTimeStampToDateTime(PPWideChar(Data)^+PWideInc,
             PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed);
@@ -4030,7 +4030,7 @@ begin
       begin
         PDateTime(Data)^ :=
           {$IFDEF UNICODE}UnicodeSQLDateToDateTime{$ELSE}RawSQLDateToDateTime{$ENDIF}(
-            PChar(Pointer(Value)), Length(Value), ConSettings^.DisplayFormatSettings, Failed{%H-});
+            PChar(Pointer(Value)), Length(Value), ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
           PDateTime(Data)^ := Int({$IFDEF UNICODE}UnicodeSQLTimeStampToDateTime{$ELSE}RawSQLTimeStampToDateTime{$ENDIF}(
               PChar(Pointer(Value)), Length(Value), ConSettings^.DisplayFormatSettings, Failed));
@@ -4121,7 +4121,7 @@ begin
         else SetNull(ColumnIndex);
     stDate:
       begin
-        PDateTime(Data)^ := RawSQLDateToDateTime (Value, Len^, ConSettings^.DisplayFormatSettings, Failed{%H-});
+        PDateTime(Data)^ := RawSQLDateToDateTime (Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
           PDateTime(Data)^ := Int(RawSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed));
       end;
@@ -4221,7 +4221,7 @@ begin
     stDate:
       begin
         PDateTime(Data)^ :=
-          UnicodeSQLDateToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed{%H-});
+          UnicodeSQLDateToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
         if Failed then PDateTime(Data)^ := Int(UnicodeSQLTimeStampToDateTime(Value, Len^,
               ConSettings^.DisplayFormatSettings, Failed));
       end;
@@ -4332,7 +4332,7 @@ begin
     stDate:
       begin
         PDateTime(Data)^ := RawSQLDateToDateTime(Pointer(Value), Length(Value),
-              ConSettings^.DisplayFormatSettings, Failed{%H-});
+              ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
           PDateTime(Data)^ := Int(RawSQLTimeStampToDateTime(Pointer(Value),
             Length(Value), ConSettings^.DisplayFormatSettings, Failed));
@@ -4424,7 +4424,7 @@ begin
     stDate:
       begin
         PDateTime(Data)^ := UnicodeSQLDateToDateTime(Pointer(Value), Length(Value),
-            ConSettings^.DisplayFormatSettings, Failed{%H-});
+            ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
           PDateTime(Data)^ := Int(UnicodeSQLTimeStampToDateTime(Pointer(Value),
             Length(Value), ConSettings^.DisplayFormatSettings, Failed));

@@ -725,7 +725,7 @@ begin
           begin
             GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
             if Len = ConSettings^.ReadFormatSettings.DateFormatLen
-            then Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            then Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
             else Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
               RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed));
             LastWasNull := Result = 0;
@@ -838,10 +838,10 @@ begin
       if (sqlscale < 0)  then
       begin
         case SQLCode of
-          SQL_SHORT  : Result {%H-}:= PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale];
-          SQL_LONG   : Result {%H-}:= PInteger(sqldata)^  / IBScaleDivisor[sqlscale];
+          SQL_SHORT  : Result := PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale];
+          SQL_LONG   : Result := PInteger(sqldata)^  / IBScaleDivisor[sqlscale];
           SQL_INT64,
-          SQL_QUAD   : Result {%H-}:= PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
+          SQL_QUAD   : Result := PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
           SQL_DOUBLE : Result := PDouble(sqldata)^;
         else
           raise EZIBConvertError.Create(Format(SErrorConvertionField,
@@ -1208,7 +1208,7 @@ begin
           begin
             GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
             if AnsiChar((P+2)^) = AnsiChar(':') then //possible date if Len = 10 then
-              Result := RawSQLTimeToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+              Result := RawSQLTimeToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed)
             else
               Result := Frac(RawSQLTimeStampToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed));
           end;
@@ -1280,7 +1280,7 @@ begin
           begin
             GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
             if AnsiChar((P+2)^) = AnsiChar(':') then
-              Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+              Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
             else
               if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
                 Result := RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
@@ -1859,7 +1859,7 @@ var
 begin
   InternalClear;
   ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FIBConnection.GetTrHandle,
-    FBlobId, Size{%H-}, Buffer{%H-}, True, FIBConnection as IImmediatelyReleasable);
+    FBlobId, Size, Buffer, True, FIBConnection as IImmediatelyReleasable);
   BlobSize := Size;
   BlobData := Buffer;
   inherited ReadLob;
@@ -1889,7 +1889,7 @@ var
 begin
   InternalClear;
   ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FIBConnection.GetTrHandle,
-    FBlobId, Size{%H-}, Buffer{%H-}, False, FIBConnection as IImmediatelyReleasable);
+    FBlobId, Size, Buffer, False, FIBConnection as IImmediatelyReleasable);
   AnsiChar((PAnsiChar(Buffer)+NativeUInt(Size))^) := AnsiChar(#0); //add #0 terminator
   FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
   FBlobSize := Size+1;

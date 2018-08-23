@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata, ZURL,
+  ZClasses, ZDbcIntfs, ZDbcMetadata, ZURL,
   ZCompatibility, ZDbcConnection, ZPlainODBCDriver, ZDbcODBCCon;
 
 type
@@ -1649,7 +1649,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.Procedures(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc)), HSTMT, ODBCConnection);
   if RS <> nil then
@@ -1748,7 +1748,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.ProcedureColumns(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc), Pointer(Col), Length(Col)), HSTMT, ODBCConnection);
   if RS <> nil then
@@ -1847,7 +1847,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.Tables(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem), Length(Schem),
     Pointer(Table), Length(Table), Pointer(TableTypes), Length(TableTypes)), HSTMT, ODBCConnection);
   if Assigned(RS) then
@@ -1940,7 +1940,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.Columns(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Table), Length(Table),
     Pointer(Column), Length(Column)), HSTMT, ODBCConnection);
@@ -2043,7 +2043,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.ColumnPrivileges(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl), Pointer(Col), Length(Col)), HSTMT, ODBCConnection);
   if Assigned(RS) then
@@ -2116,7 +2116,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.TablePrivileges(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Table), Length(Table)), HSTMT, ODBCConnection);
   if Assigned(RS) then
@@ -2179,7 +2179,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.PrimaryKeys(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl)), HSTMT, ODBCConnection);
   if RS <> nil then
@@ -2298,7 +2298,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.ForeignKeys(HSTMT, Pointer(PKCat), Length(PKCat),
     Pointer(PKSchem), Length(PKSchem), Pointer(PKTabl), Length(PKTabl),
     Pointer(FKCat), Length(FKCat),
@@ -2400,7 +2400,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.Statistics(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Table),
     Ord(Unique), Ord(Approximate)), HSTMT, ODBCConnection);
@@ -2485,7 +2485,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.GetTypeInfo(HSTMT, SQL_ALL_TYPES), HSTMT, ODBCConnection);
   with RS do begin
     while Next do begin
@@ -2596,7 +2596,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.Procedures(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc)), HSTMT, ODBCConnection);
   if RS <> nil then
@@ -2695,7 +2695,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.ProcedureColumns(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc), Pointer(Col), Length(Col)),
     HSTMT, ODBCConnection);
@@ -2796,7 +2796,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.Tables(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem), Length(Schem),
     Pointer(Tabl), Length(Tabl), Pointer(TableTypes), Length(TableTypes)), HSTMT, ODBCConnection);
   if Assigned(RS) then
@@ -2889,7 +2889,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.Columns(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem),
     Length(Schem), Pointer(Tabl), Length(Tabl), Pointer(Col), Length(Col)), HSTMT, ODBCConnection);
   if Assigned(RS) then
@@ -2990,7 +2990,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.ColumnPrivileges(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl), Pointer(Col), Length(Col)),
     HSTMT, ODBCConnection);
@@ -3064,7 +3064,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.TablePrivileges(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl)), HSTMT, ODBCConnection);
   if Assigned(RS) then
@@ -3127,7 +3127,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.PrimaryKeys(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem),
     Length(Schem), Pointer(Tabl), Length(Tabl)), HSTMT, ODBCConnection);
   if RS <> nil then
@@ -3246,7 +3246,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.ForeignKeys(HSTMT, Pointer(PKCat), Length(PKCat),
     Pointer(PKSchem), Length(PKSchem), Pointer(PKTabl), Length(PKTabl),
     Pointer(FKCat), Length(FKCat), Pointer(FKSchem), Length(FKSchem), Pointer(FKTabl), Length(FKTabl)),
@@ -3348,7 +3348,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.Statistics(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Table),
     Ord(Unique), Ord(Approximate)), HSTMT, ODBCConnection);
@@ -3433,7 +3433,7 @@ begin
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
-  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT{%H-}, fPHDBC^, ODBCConnection);
+  RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.GetTypeInfo(HSTMT, SQL_ALL_TYPES), HSTMT, ODBCConnection);
   with RS do begin
     while Next do begin

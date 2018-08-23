@@ -141,7 +141,7 @@ type
     ['{DAA373D9-1A98-4AA8-B65E-4C23167EE83F}']
 
     function IsNull(const Value: TZVariant): Boolean;
-    procedure SetNull(var Value: TZVariant);
+    procedure SetNull(out Value: TZVariant);
 
     function Convert(const Value: TZVariant; NewType: TZVariantType): TZVariant;
     procedure Assign(const SrcValue: TZVariant; out DstValue: TZVariant);
@@ -231,7 +231,7 @@ type
     function Compare(const Value1, Value2: TZVariant): Integer;
 
     function IsNull(const Value: TZVariant): Boolean;
-    procedure SetNull(var Value: TZVariant);
+    procedure SetNull(out Value: TZVariant);
 
     function GetAsBoolean(const Value: TZVariant): Boolean;
     function GetAsBytes(const Value: TZVariant): TBytes;
@@ -1086,7 +1086,7 @@ end;
   Sets the NULL value to specified variant.
   @param Value variant value to be set to NULL.
 }
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetNull(var Value: TZVariant);
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetNull(out Value: TZVariant);
 begin
   Value := EncodeNull;
 end;
@@ -2797,7 +2797,7 @@ begin
 DateTimeFromRaw:
             if Ord((PAnsiChar(CharRec.P)+2)^) = Ord(':') then
               Result.VDateTime := RawSQLTimeToDateTime(
-                CharRec.P, CharRec.Len, FConSettings^.ReadFormatSettings, Failed{%H-})
+                CharRec.P, CharRec.Len, FConSettings^.ReadFormatSettings, Failed)
             else
               if (FConSettings^.ReadFormatSettings.DateTimeFormatLen - CharRec.Len) <= 4 then
                 Result.VDateTime := RawSQLTimeStampToDateTime(
@@ -2813,7 +2813,7 @@ DateTimeFromRaw:
 DateTimeFromUnicode:
             if (PWideChar(CharRec.P)+2)^ = ':' then
               Result.VDateTime := UnicodeSQLTimeToDateTime(CharRec.P, CharRec.Len,
-                FConSettings^.ReadFormatSettings, Failed{%H-})
+                FConSettings^.ReadFormatSettings, Failed)
             else
               if (FConSettings^.ReadFormatSettings.DateTimeFormatLen - CharRec.Len) <= 4 then
                 Result.VDateTime := UnicodeSQLTimeStampToDateTime(CharRec.P, CharRec.Len,

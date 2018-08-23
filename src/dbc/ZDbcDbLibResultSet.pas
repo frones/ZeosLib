@@ -851,7 +851,7 @@ begin
         Result := PDBDATETIME(Data)^.dtdays + 2 + (PDBDATETIME(Data)^.dttime / 25920000)
     else if (DT in [tdsNText, tdsNVarChar, tdsText, tdsVarchar, tdsChar]) then
       if AnsiChar((PAnsiChar(Data)+2)^) = AnsiChar(':') then
-        Result := RawSQLTimeToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed{%H-})
+        Result := RawSQLTimeToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
       else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Word(DL)) <= 4 then
           Result := RawSQLTimeStampToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
       else
