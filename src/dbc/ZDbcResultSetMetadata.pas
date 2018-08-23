@@ -60,11 +60,6 @@ uses
   ZDbcIntfs, ZCollections,
   {$IF defined(OLDFPC) or defined (NO_UNIT_CONTNRS)}ZClasses,{$IFEND}
   ZGenericSqlAnalyser,
-{$IFDEF FPC}
-  {$IFDEF WIN32}
-    Comobj,
-  {$ENDIF}
-{$ENDIF}
   ZTokenizer, ZSelectSchema, ZCompatibility, ZDbcResultSet;
 
 type
