@@ -742,7 +742,7 @@ begin
         if not Assigned(AExceptionClass) then
           raise;
         // exception raised is of other class than expected
-        if not E.ClassType.InheritsFrom(AExceptionClass) then
+        if not E.ClassType.InheritsFrom(AExceptionClass) and not (AExceptionClass.ClassName = E.ClassName) then
           FailNotEquals(AExceptionClass.ClassName, E.ClassName, Msg, ReturnAddress);
         // exception raised with message other than expected
         CheckEquals(E.Message, ExpectExcMsg, AddToMsg(Msg, SExceptionMsgDiffer));
