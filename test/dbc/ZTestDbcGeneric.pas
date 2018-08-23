@@ -1326,8 +1326,8 @@ begin
         CheckEquals(PAnsiChar(AnsiString(SNames[name])), ResultSet.GetPAnsiChar(p_name_Index));
         CheckEquals(PAnsiChar(RawByteString(SNames[name])), ResultSet.GetPAnsiChar(p_name_Index, Len), @Len);
         CheckEquals(PChar(SNames[name]), ResultSet.GetPChar(p_name_Index));
-        CheckEquals(PWideChar(ZWideString(SNames[name])), ResultSet.GetPWideChar(p_name_Index));
-        CheckEquals(PWideChar(ZWideString(SNames[name])), ResultSet.GetPWideChar(p_name_Index, Len));
+        CheckEquals(ZWideString(SNames[name]), ZWideString(ResultSet.GetPWideChar(p_name_Index)));
+        CheckEquals(ZWideString(SNames[name]), ZWideString(ResultSet.GetPWideChar(p_name_Index, Len)));
       end;
     finally
       ResultSet.Close;
