@@ -298,7 +298,7 @@ end;
 procedure TZOleDBConnection.SetProviderProps(DBinit: Boolean);
 const
   DBPROPSET_SQLSERVERDBINIT:      TGUID = '{5cf4ca10-ef21-11d0-97e7-00c04fc2ad98}';
-  {%H-}DBPROPSET_SQLSERVERDATASOURCE:  TGUID = '{28efaee4-2d2c-11d1-9807-00c04fc2ad98}';
+  //{%H-}DBPROPSET_SQLSERVERDATASOURCE:  TGUID = '{28efaee4-2d2c-11d1-9807-00c04fc2ad98}'; unused
   SSPROP_INIT_PACKETSIZE	       = 9;
 var
   DBProps: IDBProperties;

@@ -220,7 +220,7 @@ type
   public
     procedure SetBuffer(const Buffer: String);
     function Read(var Buffer; Count: Longint): Longint; override;
-    function Write(const {%H-}Buffer; {%H-}Count: Longint): Longint; override;
+    function Write(const Buffer; Count: Longint): Longint; override;
     function Seek(Offset: Longint; Origin: Word): Longint; override;
     function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; override;
   End;
@@ -426,14 +426,16 @@ begin
   fEnd := fStart+Length(Buffer);
 end;
 
+{$IFDEF FPC} // parameters not used intentionally
+  {$PUSH}
+  {$WARN 5033 off : Function result does not seem to be set}
+  {$WARN 5024 off : Parameter "$1" not used}
+{$ENDIF}
 function TZCharReaderStream.Write(const Buffer; Count: Integer): Longint;
 begin
-  //satisfy FPC:
-  {$IFDEF FPC}
-  Result := 0;
-  {$ENDIF}
   raise Exception.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { EZSQLThrowable }
 

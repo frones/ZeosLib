@@ -463,14 +463,18 @@ function ReturnAddress: Pointer;
 {$IFEND}
 
 var
+  {$IFDEF FPC}
+    {$PUSH}
+    {$WARN 3177 off : Some fields coming after "$1" were not initialized}
+    {$WARN 3175 off : Some fields coming before "$1" were not initialized}
+  {$ENDIF}
   ClientCodePageDummy: TZCodepage =
-    (Name: ''; ID: 0; CharWidth: 1; Encoding: ceAnsi;
-      CP: $ffff; ZAlias: ''{%H-});
+    (CharWidth: 1; Encoding: ceAnsi; CP: $ffff);
 
   ConSettingsDummy: TZConSettings =
     (AutoEncode: False;
       CPType: {$IFDEF DELPHI}{$IFDEF UNICODE}cCP_UTF16{$ELSE}cGET_ACP{$ENDIF}{$ELSE}cCP_UTF8{$ENDIF};
-      ClientCodePage: {%H-}@ClientCodePageDummy;
+      ClientCodePage: @ClientCodePageDummy;
       DisplayFormatSettings:
           (DateFormat: DefDateFormatDMY;
           DateFormatLen: Length(DefDateFormatDMY);
@@ -496,7 +500,8 @@ var
       PlainConvertFunc: @NoConvert;
       DbcConvertFunc: @NoConvert;
       {$ENDIF}
-    {%H-});
+    );
+  {$IFDEF FPC} {$POP} {$ENDIF}
 
 const
   PEmptyUnicodeString: PWideChar = '';
@@ -828,7 +833,7 @@ begin
   else
   begin
     {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-    if (Pointer(Dest{%H-}) = nil) or//empty
+    if (Pointer(Dest) = nil) or//empty
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
        (Len <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
     {$ELSE}

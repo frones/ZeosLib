@@ -1512,7 +1512,7 @@ end;
 function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 const
-  {%H-}PROCEDURE_CAT_Index = FirstDbcIndex + 0;
+  //PROCEDURE_CAT_Index      = FirstDbcIndex + 0; unused
   PROCEDURE_SCHEM_Index    = FirstDbcIndex + 1;
   OBJECT_NAME_Index        = FirstDbcIndex + 2;
   PROCEDURE_NAME_Index     = FirstDbcIndex + 3;

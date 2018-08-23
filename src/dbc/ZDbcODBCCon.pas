@@ -467,8 +467,8 @@ begin
   if Info.Values[ConnProps_Timeout] <> '' then
   begin
     TimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_Timeout],0);
-    CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC, SQL_ATTR_CONNECTION_TIMEOUT, {%H-}Pointer(TimeOut), 0));
-    CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC, SQL_ATTR_LOGIN_TIMEOUT, {%H-}Pointer(TimeOut), SQL_LOGIN_TIMEOUT_DEFAULT));
+    CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC, SQL_ATTR_CONNECTION_TIMEOUT, SQLPOINTER(TimeOut), 0));
+    CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC, SQL_ATTR_LOGIN_TIMEOUT, SQLPOINTER(TimeOut), SQL_LOGIN_TIMEOUT_DEFAULT));
   end;
 
   DriverCompletion := SQL_DRIVER_NOPROMPT;
@@ -493,7 +493,7 @@ begin
 
   SetLength(OutConnectString, 1024);
   try
-    CheckDbcError(fPLainDriver.DriverConnect(fHDBC, {$IFDEF MSWINDOWS}{%H-}Pointer(GetDesktopWindow){$ELSE}nil{$ENDIF},
+    CheckDbcError(fPLainDriver.DriverConnect(fHDBC, {$IFDEF MSWINDOWS}SQLHWND(GetDesktopWindow){$ELSE}nil{$ENDIF},
       Pointer(tmp), Length(tmp), Pointer(OutConnectString),
       Length(OutConnectString), @aLen, DriverCompletion));
     SetLength(OutConnectString, aLen);

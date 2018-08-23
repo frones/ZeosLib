@@ -320,7 +320,7 @@ begin
   with RowAccessor do
     for Index := stAsciiStreamIndex to stBinaryStreamIndex do
     begin
-      Blob := GetBlob(Index, WasNull{%H-});
+      Blob := GetBlob(Index, WasNull);
       CheckNotNull(Blob, 'Not Null blob from ' + FieldTypes[Index] + ' field');
       Check(not Blob.IsEmpty, 'Blob from ' + FieldTypes[Index] + ' empty');
       Blob := nil;
@@ -477,7 +477,7 @@ begin
   with RowAccessor do
   begin
     try
-      Stream := GetAsciiStream(stAsciiStreamIndex, WasNull{%H-});
+      Stream := GetAsciiStream(stAsciiStreamIndex, WasNull);
       CheckEquals(Stream, FAsciiStream, 'AsciiStream');
       Stream.Free;
     except
@@ -495,7 +495,7 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(stBigDecimalIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(True, GetBoolean(stBigDecimalIndex, WasNull), 'GetBoolean');
     CheckEquals(Byte(FBigDecimal), GetByte(stBigDecimalIndex, WasNull), 0, 'GetByte');
     CheckEquals(ShortInt(FBigDecimal), GetShort(stBigDecimalIndex, WasNull), 0, 'GetShort');
     CheckEquals(SmallInt(FBigDecimal), GetSmall(stBigDecimalIndex, WasNull), 0, 'GetSmall');
@@ -523,11 +523,11 @@ begin
   with RowAccessor do
   begin
     try
-      Stream := GetBinaryStream(stBinaryStreamIndex, WasNull{%H-});
+      Stream := GetBinaryStream(stBinaryStreamIndex, WasNull);
       CheckNotNull(Stream, 'BinaryStream');
       CheckEquals(Stream, FBinaryStream, 'BinaryStream');
       Stream.Position := 0;
-      ReadNum := Stream.Read(Buffer{%H-}, BINARY_BUFFER_SIZE);
+      ReadNum := Stream.Read(Buffer, BINARY_BUFFER_SIZE);
       Stream.Free;
       CheckEquals(ReadNum, BINARY_BUFFER_SIZE);
       CheckEqualsMem(@Buffer, FBinaryStreamData, BINARY_BUFFER_SIZE);
@@ -546,7 +546,7 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(stBooleanIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(True, GetBoolean(stBooleanIndex, WasNull), 'GetBoolean');
     CheckEquals(1, GetByte(stBooleanIndex, WasNull), 0, 'GetByte');
     CheckEquals(1, GetShort(stBooleanIndex, WasNull), 0, 'GetShort');
     CheckEquals(1, GetSmall(stBooleanIndex, WasNull), 0, 'GetSmall');
@@ -568,7 +568,7 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(stByteIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(True, GetBoolean(stByteIndex, WasNull), 'GetBoolean');
     CheckEquals(FByte, GetByte(stByteIndex, WasNull), 0, 'GetByte');
     CheckEquals(ShortInt(FByte), GetShort(stByteIndex, WasNull), 0, 'GetShort');
     CheckEquals(SmallInt(FByte), GetSmall(stByteIndex, WasNull), 0, 'GetSmall');
@@ -600,7 +600,7 @@ var
 begin
   with RowAccessor do
   begin
-    ByteArray := GetBytes(stBytesIndex, WasNull{%H-});
+    ByteArray := GetBytes(stBytesIndex, WasNull);
     CheckNotEquals(0, High(ByteArray));
     CheckEquals(ArrayToString(FByteArray), GetString(stBytesIndex, WasNull),
       'strings from bytearray equals');
@@ -618,7 +618,7 @@ begin
   with RowAccessor do
   begin
     CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.DateFormat, FDate),
-      GetString(stDateIndex, WasNull{%H-}), 'GetString');
+      GetString(stDateIndex, WasNull), 'GetString');
     CheckEqualsDate(FDate, GetDate(stDateIndex, WasNull), [], 'GetDate');
     CheckEqualsDate(FDate, GetTimestamp(stDateIndex, WasNull), [], 'GetTimestamp');
   end;
@@ -633,7 +633,7 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(stDoubleIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(True, GetBoolean(stDoubleIndex, WasNull), 'GetBoolean');
     CheckEquals(Byte(Trunc(FDouble)), GetByte(stDoubleIndex, WasNull), 0, 'GetByte');
     CheckEquals(Trunc(FDouble), GetShort(stDoubleIndex, WasNull), 0, 'GetShort');
     CheckEquals(Trunc(FDouble), GetSmall(stDoubleIndex, WasNull), 0, 'GetSmall');
@@ -668,7 +668,7 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(stFloatIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(True, GetBoolean(stFloatIndex, WasNull), 'GetBoolean');
     CheckEquals(Trunc(FFloat), GetByte(stFloatIndex, WasNull), 0, 'GetByte');
     CheckEquals(Trunc(FFloat), GetShort(stFloatIndex, WasNull), 0, 'GetShort');
     CheckEquals(Trunc(FFloat), GetSmall(stFloatIndex, WasNull), 0, 'GetSmall');
@@ -690,7 +690,7 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(stIntegerIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(True, GetBoolean(stIntegerIndex, WasNull), 'GetBoolean');
     CheckEquals(Byte(FInt), GetByte(stIntegerIndex, WasNull), 0, 'GetByte');
     CheckEquals(ShortInt(FInt), GetShort(stIntegerIndex, WasNull), 0, 'GetShort');
     CheckEquals(SmallInt(FInt), GetSmall(stIntegerIndex, WasNull), 0, 'GetSmall');
@@ -712,7 +712,7 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(stLongIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(True, GetBoolean(stLongIndex, WasNull), 'GetBoolean');
     CheckEquals(Byte(FLong), GetByte(stLongIndex, WasNull), 0, 'GetByte');
     CheckEquals(ShortInt(FLong), GetShort(stLongIndex, WasNull), 0, 'GetShort');
     CheckEquals(SmallInt(FLong), GetSmall(stLongIndex, WasNull), 0, 'GetSmall');
@@ -755,7 +755,7 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(stShortIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(True, GetBoolean(stShortIndex, WasNull), 'GetBoolean');
     CheckEquals(Byte(FShort), GetByte(stShortIndex, WasNull), 0, 'GetByte');
     CheckEquals(ShortInt(FShort), GetShort(stShortIndex, WasNull), 0, 'GetShort');
     CheckEquals(SmallInt(FShort), GetSmall(stShortIndex, WasNull), 0, 'GetSmall');
@@ -774,7 +774,7 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(stSmallIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(True, GetBoolean(stSmallIndex, WasNull), 'GetBoolean');
     CheckEquals(Byte(FSmall), GetByte(stSmallIndex, WasNull), 0, 'GetByte');
     CheckEquals(ShortInt(FSmall), GetShort(stSmallIndex, WasNull), 0, 'GetShort');
     CheckEquals(FSmall, GetSmall(stSmallIndex, WasNull), 0, 'GetSmall');
@@ -796,7 +796,7 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(False, GetBoolean(stStringIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(False, GetBoolean(stStringIndex, WasNull), 'GetBoolean');
     CheckEquals(ShortInt(StrToIntDef(FString, 0)), GetByte(stStringIndex, WasNull), 0, 'GetByte');
     CheckEquals(SmallInt(StrToIntDef(FString, 0)), GetSmall(stStringIndex, WasNull), 0, 'GetSmall');
     CheckEquals(Integer(StrToIntDef(FString, 0)), GetInt(stStringIndex, WasNull), 0, 'GetInt');
@@ -828,7 +828,7 @@ begin
   with RowAccessor do
   begin
     CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.TimeFormat, FTime),
-      GetString(stTimeIndex, WasNull{%H-}), 'GetString');
+      GetString(stTimeIndex, WasNull), 'GetString');
     CheckEqualsDate(FTime, GetTime(stTimeIndex, WasNull), [], 'GetTime');
     CheckEqualsDate(FTime, GetTimestamp(stTimeIndex, WasNull), [], 'GetTimestamp');
   end;
@@ -844,7 +844,7 @@ begin
   with RowAccessor do
   begin
     CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.DateTimeFormat, FTimeStamp),
-      GetString(stTimestampIndex, WasNull{%H-}), 'GetString');
+      GetString(stTimestampIndex, WasNull), 'GetString');
     CheckEqualsDate(FTimeStamp, GetDate(stTimestampIndex, WasNull), [dpYear..dpDay], 'GetDate');
     CheckEqualsDate(FTimeStamp, GetTime(stTimestampIndex, WasNull), [dpHour..dpMSec], 'GetTime');
     CheckEqualsDate(FTimeStamp, GetTimestamp(stTimestampIndex, WasNull), [], 'GetTimestamp');
@@ -865,11 +865,11 @@ begin
   with RowAccessor do
   begin
     try
-      Stream := GetUnicodeStream(stUnicodeStreamIndex, WasNull{%H-});
+      Stream := GetUnicodeStream(stUnicodeStreamIndex, WasNull);
       CheckNotNull(Stream, 'UnicodeStream');
       CheckEquals(Stream, FUnicodeStream, 'UnicodeStream');
       Stream.Position := 0;
-      ReadNum := Stream.Read(BufferWideChar{%H-}, 100);
+      ReadNum := Stream.Read(BufferWideChar, 100);
       Stream.Free;
       ResultString := WideCharLenToString(@BufferWideChar, ReadNum div 2);
       CheckEquals(FUnicodeStreamData, ResultString);
