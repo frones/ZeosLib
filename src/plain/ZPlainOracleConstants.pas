@@ -853,6 +853,7 @@ const
   OCI_OBJECTFREE_FORCE =1;
   OCI_OBJECTFREE_NONULL=2;
 
+  OCI_PREP2_CACHE_SEARCHONLY: ub4 = $0010;
 type
   PPointer = ^Pointer;
 
