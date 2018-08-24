@@ -1413,17 +1413,13 @@ begin
           FConnection.GetErrorHandle, LobLocator, FChunkSize, ConSettings,
           ConSettings^.ClientCodePage^.CP);
       (Result as IZOracleBlob).ReadLob; //nasty: we've got only one descriptor if we fetch the rows. Loading on demand isn't possible
-    end
-    else
-      if TypeCode=SQLT_NTY then
-        Result := TZAbstractBlob.CreateWithStream(nil)
-      else
-        if TypeCode in [SQLT_LVB, SQLT_LVC, SQLT_BIN] then
-          Result := TZAbstractBlob.CreateWithData({%H-}PAnsiChar({%H-}NativeUInt(Data)+FCurrentRowBufIndex*Length)+ SizeOf(Integer),
-            {%H-}PInteger({%H-}NativeUInt(Data)+FCurrentRowBufIndex*Length)^)
-        else
-          Result := TZAbstractClob.CreateWithData(GetPAnsiChar(ColumnIndex, Len), Len,
-            ConSettings^.ClientCodePage^.CP, ConSettings);
+    end else if TypeCode=SQLT_NTY then
+      Result := TZAbstractBlob.CreateWithStream(nil)
+    else if TypeCode in [SQLT_LVB, SQLT_LVC, SQLT_BIN]
+    then Result := TZAbstractBlob.CreateWithData({%H-}PAnsiChar({%H-}NativeUInt(Data)+FCurrentRowBufIndex*Length)+ SizeOf(Integer),
+        {%H-}PInteger({%H-}NativeUInt(Data)+FCurrentRowBufIndex*Length)^)
+    else Result := TZAbstractClob.CreateWithData(GetPAnsiChar(ColumnIndex, Len), Len,
+        ConSettings^.ClientCodePage^.CP, ConSettings);
 end;
 
 { TZOracleResultSet }
@@ -1893,6 +1889,7 @@ begin
   FColumns := PrepareOracleOutVars(OutParams, OracleParams);
   inherited Create(Statement, SQL, StmtHandle, ErrorHandle, 0);
   FConnection := Statement.GetConnection as IZOracleConnection;
+  LastRowNo := 1;
   MaxRows := 1;
 end;
 
@@ -1924,9 +1921,9 @@ function TZOracleCallableResultSet.Next: Boolean;
 begin
   { Checks for maximum row. }
   Result := False;
-  if (RowNo >= MaxRows) then
+  if (RowNo = 1) then
     Exit;
-  RowNo := LastRowNo + 1;
+  RowNo := 1;
   Result := True;
 end;
 
@@ -1997,7 +1994,8 @@ begin
   begin
     { Opens a large object or file for read. }
     Status := FPlainDriver.OCILobOpen(FContextHandle, FErrorHandle, FLobLocator, OCI_LOB_READONLY);
-    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Open Large Object', FConSettings);
+    if Status <> OCI_SUCCESS then
+      CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Open Large Object', FConSettings);
     try
       { Reads data in chunks by MemDelta or more }
       Offset := 0;
@@ -2010,9 +2008,10 @@ begin
           ReadNumBytes := Cap - Offset;
 
           Status := FPlainDriver.OCILobRead(FContextHandle, FErrorHandle,
-            FLobLocator, ReadNumBytes, Offset + 1, @Buf[Offset], ReadNumBytes,
+            FLobLocator, ReadNumBytes, Offset + 1, {$R-}@Buf[Offset]{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}, ReadNumBytes,
             nil, nil, 0, SQLCS_IMPLICIT);
-          CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Read Large Object', FConSettings);
+          if Status <> OCI_SUCCESS then
+            CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Read Large Object', FConSettings);
           if ReadNumBytes > 0 then
             Inc(Offset, ReadNumBytes);
         until Offset < Cap;
@@ -2024,7 +2023,8 @@ begin
     finally
       { Closes large object or file. }
       Status := FPlainDriver.OCILobClose(FContextHandle,FErrorHandle, FLobLocator);
-      CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Close Large Object', FConSettings);
+      if Status <> OCI_SUCCESS then
+        CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Close Large Object', FConSettings);
     end;
     { Assigns data }
     InternalSetData(Buf, Offset);
