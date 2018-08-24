@@ -1266,9 +1266,12 @@ begin
     RSQL := ComposeRawSQLQuery;
     if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then begin
       if (FplainDriver.mysql_field_count(FPMYSQL^) > 0) then begin
-        Result := FPlainDriver.mysql_affected_rows(FPMYSQL^);
+        //Result := FPlainDriver.mysql_affected_rows(FPMYSQL^); //raises av's on FPC
         //retrieve outparam
         LastResultSet := CreateResultSet(SQL);
+        LastResultSet.Last;
+        Result := LastResultSet.GetRow;
+        LastResultSet.BeforeFirst;
       end else { Process queries with result sets }
         {if FPlainDriver.mysql_field_count(FPMYSQL^) > 0 then begin
           QueryHandle := FPlainDriver.mysql_store_result(FPMYSQL^);
