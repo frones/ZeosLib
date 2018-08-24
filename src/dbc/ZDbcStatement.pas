@@ -2117,6 +2117,7 @@ begin
   { Logging Execution }
   DriverManager.LogMessage(lcExecPrepStmt,Self);
   Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
+  Result := -1;
 end;
 
 {**
@@ -5534,7 +5535,7 @@ end;
 }
 procedure TZAbstractPreparedStatement2.UnPrepareInParameters;
 begin
-  FBindList.Clear;
+  SetBindCapacity(0);
 end;
 
 procedure TZAbstractPreparedStatement2.ValidateArraySizeAndType(

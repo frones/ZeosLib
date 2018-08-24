@@ -93,7 +93,7 @@ type
     FLastWasOutParams: Boolean;
 //    FHandleStatus: THandleStatus; //indicate status of MYSQL_STMT handle
     function CreateResultSet(const SQL: string): IZResultSet;
-    procedure InitBuffer(SQLType: TZSQLType; Bind: PMYSQL_aligned_BIND; ActualLength: LengthInt = 0);
+    procedure InitBuffer(SQLType: TZSQLType; Index: Integer; Bind: PMYSQL_aligned_BIND; ActualLength: LengthInt = 0);
     procedure FlushPendingResults;
     procedure InternalRealPrepare;
     function CheckPrepareSwitchMode: Boolean;
@@ -251,9 +251,8 @@ begin
     if FUseDefaults and (FInParamDefaultValues[Index] <> '') then
       BindRawStr(Index, Pointer(FInParamDefaultValues[Index]), Length(FInParamDefaultValues[Index]))
     else if (BindList.SQLTypes[Index] <> SQLType) then
-      InitBuffer(SQLType, Bind, 0);
+      InitBuffer(SQLType, Index, Bind, 0);
     Bind^.is_null_address^ := 1;
-    //BindList.SetNull(Index, SQLType);
   end;
 end;
 
@@ -273,7 +272,7 @@ begin
     Bind := @FMYSQL_aligned_BINDs[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     if (BindList.SQLTypes[Index] <> stString) or (Bind.buffer_length_address^ < Cardinal(Len+1)) then
-      InitBuffer(stString, Bind, Len);
+      InitBuffer(stString, Index, Bind, Len);
     if Len = 0
     then PByte(Bind^.buffer)^ := Ord(#0)
     else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Bind^.buffer)^, Len+1);
@@ -297,7 +296,7 @@ begin
     Bind := @FMYSQL_aligned_BINDs[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     if (BindList.SQLTypes[Index] <> stString) or (Bind.buffer_length_address^ < Cardinal(Len+1)) then
-      InitBuffer(stString, Bind, Len);
+      InitBuffer(stString, Index, Bind, Len);
     if Len = 0
     then PByte(Bind^.buffer)^ := Ord(#0)
     else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, Pointer(Bind^.buffer)^, Len+1);
@@ -1021,8 +1020,10 @@ begin
     {$R-}
     Bind := @FMYSQL_aligned_BINDs[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    if (BindList.SQLTypes[Index] <> SQLType) or (Bind^.buffer_length_address^ < Cardinal(Len+1)*Byte(Ord(SQLType <> stBinaryStream))) then
-      InitBuffer(SQLType, Bind, Len);
+    if (BindList.SQLTypes[Index] <> SQLType) or (Bind^.buffer_length_address^ < Cardinal(Len+1)*Byte(Ord(SQLType <> stBinaryStream))) then begin
+      InitBuffer(SQLType, Index, Bind, Len);
+      BindList[Index].SQLType := SQLType;
+    end;
     if SQLType <> stBinaryStream then begin
       if Len = 0
       then PByte(Bind^.buffer)^ := Ord(#0)
@@ -1033,7 +1034,6 @@ begin
       Bind^.Length[0] := 0;
     end;
     Bind^.is_null_address^ := 0;
-    //BindList.SetNull(Index, SQLType);
   end;
 end;
 
@@ -1416,7 +1416,7 @@ begin
 end;
 
 procedure TZAbstractMySQLPreparedStatement.InitBuffer(SQLType: TZSQLType;
-  Bind: PMYSQL_aligned_BIND; ActualLength: LengthInt = 0);
+  Index: Integer; Bind: PMYSQL_aligned_BIND; ActualLength: LengthInt = 0);
 var BuffSize: Integer;
 begin
   case SQLType of
@@ -1513,6 +1513,7 @@ begin
   Bind^.buffer_address^ := Bind.buffer;
   Bind^.buffer_length_address^ := BuffSize;
   Bind^.Iterations := 1;
+  BindList[Index].SQLType := SQLType;
   fBindAgain := True;
   if (SQLType in [stDate, stTime, stTimeStamp]) and not (Bind^.buffer_type_address^ = FIELD_TYPE_STRING) then begin
     FillChar(Bind^.buffer^, SizeOf(TMYSQL_TIME), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
@@ -1555,7 +1556,7 @@ begin
     Bind := @FMYSQL_aligned_BINDs[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     if (BindList.SQLTypes[Index] <> SQLType) or (Bind^.buffer = nil)  then
-      InitBuffer(SQLType, Bind);
+      InitBuffer(SQLType, Index, Bind);
     P := Pointer(bind^.buffer);
     P^.neg := Ord(Value < 0);
     if P^.time_type = MYSQL_TIMESTAMP_DATE then
@@ -1569,7 +1570,6 @@ begin
       P^.second_part := P^.second_part*1000;
     end;
     Bind^.is_null_address^ := 0;
-    //BindList.SetNull(Index, SQLType);
   end;
 end;
 
@@ -1589,10 +1589,9 @@ begin
     Bind := @FMYSQL_aligned_BINDs[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     if (BindList.SQLTypes[Index] <> SQLType) or (Bind^.buffer = nil)  then
-      InitBuffer(SQLType, Bind);
+      InitBuffer(SQLType, Index, Bind);
     PDouble(bind^.buffer)^ := Value;
     Bind^.is_null_address^ := 0;
-    //BindList.SetNull(Index, SQLType);
   end;
 end;
 
@@ -1612,7 +1611,7 @@ begin
     Bind := @FMYSQL_aligned_BINDs[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     if (BindList.SQLTypes[Index] <> SQLType) or (Bind^.buffer = nil) then
-      InitBuffer(SQLType, Bind);
+      InitBuffer(SQLType, Index, Bind);
     case Bind^.buffer_type_address^ of
       FIELD_TYPE_TINY:      if Bind^.is_unsigned_address^ = 0
                             then PShortInt(Bind^.buffer)^ := ShortInt(Value)
@@ -1634,7 +1633,6 @@ begin
                           end;
     end;
     Bind^.is_null_address^ := 0;
-    //BindList.SetNull(Index, SQLType);
   end;
 end;
 
@@ -1655,7 +1653,7 @@ begin
     Bind := @FMYSQL_aligned_BINDs[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     if (BindList.SQLTypes[Index] <> SQLType) or (Bind^.buffer = nil) then
-      InitBuffer(SQLType, Bind);
+      InitBuffer(SQLType, Index, Bind);
     case Bind^.buffer_type_address^ of
       FIELD_TYPE_TINY:      if Bind^.is_unsigned_address^ = 0
                             then PShortInt(Bind^.buffer)^ := ShortInt(Value)
