@@ -90,7 +90,7 @@ type
     is_final_type:  ub1;              //object's OCI_ATTR_IS_FINAL_TYPE
     fields:         TObjFields;       //one object for each field/property
     field_count:    ub2;              //The number of fields Not really needed but nice to have
-    next_subtype:   POCIObject;       //There is strored information about subtypes for inteherited objects
+    next_subtype:   POCIObject;       //There is strored information about subtypes for inherited objects
     stmt_handle:    POCIStmt;         //the Statement-Handle
     Level:          Integer;          //the instance level
     Pinned:         Boolean;          //did we pin the obj on decribe?
@@ -100,6 +100,28 @@ type
   TUB2Array = array[0..0] of ub2;
   PSB2Array = ^TSB2Array;
   TSB2Array = array[0..0] of sb2;
+
+  PZOCIParamBind = ^TZOCIParamBind;
+  TZOCIParamBind = record
+    {OCI Handles}
+    bindpp:     POCIBind; //An address of a bind handle which is implicitly allocated by this call. The bind handle maintains all the bind information for this particular input value. The handle is freed implicitly when the statement handle is deallocated. On input, the value of the pointer must be null or a valid bind handle. binding values
+    valuep:     PAnsiChar; //An address of a data value or an array of data values of the type specified in the dty parameter. An array of data values can be specified for mapping into a PL/SQL table or for providing data for SQL multiple-row operations. When an array of bind values is provided, this is called an array bind in OCI terms.
+                         //For SQLT_NTY or SQLT_REF binds, the valuep parameter is ignored. The pointers to OUT buffers are set in the pgvpp parameter initialized by OCIBindObject().
+                         //If the OCI_ATTR_CHARSET_ID attribute is set to OCI_UTF16ID (replaces the deprecated OCI_UCS2ID, which is retained for backward compatibility), all data passed to and received with the corresponding bind call is assumed to be in UTF-16 encoding.
+    value_sz:   sb4; //The size of a data value. In the case of an array bind, this is the maximum size of any element possible with the actual sizes being specified in the alenp parameter.
+                     //descriptors, locators, or REFs, whose size is unknown to client applications use the size of the structure you are passing in; for example, sizeof (OCILobLocator *).
+    dty:        ub2; //The data type of the value(s) being bound. Named data types (SQLT_NTY) and REFs (SQLT_REF) are valid only if the application has been initialized in object mode. For named data types, or REFs, additional calls must be made with the bind handle to set up the datatype-specific attributes.
+    indp:       PSB2Array; //Pointer to an indicator variable or array. For all data types, this is a pointer to sb2 or an array of sb2s. The only exception is SQLT_NTY, when this pointer is ignored and the actual pointer to the indicator structure or an array of indicator structures is initialized by OCIBindObject(). Ignored for dynamic binds.
+    alenp:      PUB2Array; //Pointer to array of actual lengths of array elements. Each element in alenp is the length (in bytes, unless the data in valuep is in Unicode, when it is in codepoints) of the data in the corresponding element in the bind value array before and after the execute. This parameter is ignored for dynamic binds.
+    {zeos}
+    DescriptorType: sb4; //holds our descriptor type we use
+    curelen:      ub4; //the actual number of elements
+
+    Precision: Integer; //field.precision used 4 out params
+    Scale:     Integer; //field.scale used 4 out params
+  end;
+  PZOCIParamBinds = ^TZOCIParamBinds;
+  TZOCIParamBinds = array[0..MAX_SQLVAR_LIMIT] of TZOCIParamBind; //just a nice dubugging range
 
   PZSQLVar = ^TZSQLVar;
   TZSQLVar = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
@@ -396,20 +418,16 @@ begin
           TypeCode := SQLT_INT;
           Length := SizeOf(LongInt);
         end;
-      stUlong:
-        begin
+      stUlong: begin
           TypeCode := SQLT_STR;
           oDataSize := 23;
           Length := 23; //for trailing #0
         end;
       stLong:
-        if OCICanBindInt64 then
-        begin
+        if OCICanBindInt64 then begin
           TypeCode := SQLT_INT;
           Length := SizeOf(Int64);
-        end
-        else
-        begin
+        end else begin
           TypeCode := SQLT_FLT;
           Length := SizeOf(Double);
         end;
@@ -436,8 +454,7 @@ begin
               DescriptorType := OCI_DTYPE_INTERVAL_YM;
               Length := SizeOf(POCIInterval);
             end;
-          else
-            begin //for all other DateTime vals we would loose msec precision...
+          else begin //for all other DateTime vals we would loose msec precision...
               DescriptorType := OCI_DTYPE_TIMESTAMP;
               TypeCode := SQLT_TIMESTAMP;
               Length := SizeOf(POCIDateTime);
@@ -452,28 +469,22 @@ begin
       stString, stUnicodeString:
         if OracleType = SQLT_AFC then
           Length := oDataSize
-        else
-        begin
+        else begin
           TypeCode := SQLT_STR;
           Length := oDataSize + 1;
         end;
       stAsciiStream, stUnicodeStream, stBinaryStream, stBytes:
-        if (TypeCode in [SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE,SQLT_NTY]) then
-        begin
+        if (TypeCode in [SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE,SQLT_NTY]) then begin
           if not (OracleType = SQLT_NTY) then
             DescriptorType := OCI_DTYPE_LOB;
           Length := SizeOf(POCILobLocator);
-        end
-        else
-        begin
-          if ColType = stAsciiStream then
-            TypeCode := SQLT_LVC
-          else
-            TypeCode := SQLT_LVB;
-          if oDataSize = 0 then
-            Length := 128 * 1024 + SizeOf(Integer)
-          else
-            Length := oDataSize + SizeOf(Integer);
+        end else begin
+          if ColType = stAsciiStream
+          then TypeCode := SQLT_LVC
+          else TypeCode := SQLT_LVB;
+          if oDataSize = 0
+          then Length := 128 * 1024 + SizeOf(Integer)
+          else Length := oDataSize + SizeOf(Integer);
         end;
       stDataSet: ; //Do nothing here!
       stUnknown:
@@ -484,8 +495,7 @@ end;
 procedure SetVariableDataEntrys(var BufferEntry: PAnsiChar; var Variable: PZSQLVar;
   Iteration: NativeUInt);
 begin
-  with Variable^ do
-  begin
+  with Variable^ do begin
   {now let's set binding entrys}
   //step one: set null indicators
     oIndicatorArray := Pointer(BufferEntry);
@@ -1546,7 +1556,8 @@ begin
 
   { Opens a large object or file for read. }
   Status := PlainDriver.OCILobOpen(ContextHandle, ErrorHandle, LobLocator, OCI_LOB_READWRITE);
-  CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Open Large Object', ConSettings);
+  if Status <> OCI_SUCCESS then
+    CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Open Large Object', ConSettings);
 
   { Checks for empty blob.}
   { This test doesn't use IsEmpty because that function does allow for zero length blobs}
@@ -1564,22 +1575,18 @@ begin
         CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Write Large Object', ConSettings);
 
       if (BlobSize - OffSet) > ChunkSize then
-        while (BlobSize - OffSet) > ChunkSize do //take care there is room left for LastPiece
-        begin
+        while (BlobSize - OffSet) > ChunkSize do begin //take care there is room left for LastPiece
           Status := DoWrite(offset, ChunkSize, OCI_NEXT_PIECE);
           if Status <> OCI_NEED_DATA then
             CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Write Large Object', ConSettings);
         end;
       Status := DoWrite(offset, BlobSize - OffSet, OCI_LAST_PIECE);
-    end
-    else
-    begin
+    end else begin
       ContentSize := BlobSize;
       Status := PlainDriver.OCILobWrite(ContextHandle, ErrorHandle, LobLocator,
         ContentSize, 1, BlobData, BlobSize, OCI_ONE_PIECE, nil, nil, 0, SQLCS_IMPLICIT);
     end;
-  end
-  else
+  end else
     Status := PlainDriver.OCILobTrim(ContextHandle, ErrorHandle, LobLocator, 0);
 
   CheckOracleError(PlainDriver, ErrorHandle,
@@ -1587,7 +1594,8 @@ begin
 
   { Closes large object or file. }
   Status := PlainDriver.OCILobClose(ContextHandle, ErrorHandle, LobLocator);
-  CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Close Large Object', ConSettings);
+  if Status <> OCI_SUCCESS then
+    CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Close Large Object', ConSettings);
 end;
 
 end.
