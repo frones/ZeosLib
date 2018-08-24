@@ -1391,7 +1391,7 @@ begin
           else //5..8: makes compiler happy
             Result := ReverseQuadWordBytes(Buffer, Len);
         end
-      end else
+      end else if PByte(Buffer)^ <> Ord(#0) then
         Result := RawToIntDef(Buffer, 0);
   end;
 end;
