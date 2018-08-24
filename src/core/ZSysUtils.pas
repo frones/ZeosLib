@@ -731,17 +731,28 @@ function FloatToSqlUnicode(const Value: Extended): ZWideString;
 procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: LengthInt); overload;
 procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: LengthInt); overload;
 
+type
+  TGUIDConvOption = (guidWithBrackets, guidQuoted, guidSet0Term);
+  TGUIDConvOptions = set of TGUIDConvOption;
+
+procedure GUIDToBuffer(const Source: Pointer; Dest: PAnsiChar; const Options: TGUIDConvOptions); overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 procedure GUIDToBuffer(const Source: Pointer; Dest: PAnsiChar; WithBrackets, SetTerm: Boolean); overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+procedure GUIDToBuffer(const Source: Pointer; Dest: PWideChar; const Options: TGUIDConvOptions); overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 procedure GUIDToBuffer(const Source: Pointer; Dest: PWideChar; WithBrackets, SetTerm: Boolean); overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
+procedure GUIDToRaw(Value: PGUID; const Options: TGUIDConvOptions; var Result: RawByteString); overload;
+function GUIDToRaw(const GUID: TGUID; const Options: TGUIDConvOptions): RawByteString; overload;
 function GUIDToRaw(const GUID: TGUID; WithBrackets: Boolean = True): RawByteString; overload;
 function GUIDToRaw(const Bts: TBytes; WithBrackets: Boolean = True): RawByteString; overload;
 function GUIDToRaw(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): RawByteString; overload;
 
+procedure GUIDToUnicode(Value: PGUID; const Options: TGUIDConvOptions; var Result: ZWideString); overload;
+function GUIDToUnicode(const GUID: TGUID; const Options: TGUIDConvOptions): ZWideString; overload;
 function GUIDToUnicode(const GUID: TGUID; WithBrackets: Boolean = True): ZWideString; overload;
 function GUIDToUnicode(const Bts: TBytes; WithBrackets: Boolean = True): ZWideString; overload;
 function GUIDToUnicode(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): ZWideString; overload;
 
+function GUIDToStr(Value: PGUID; const Options: TGUIDConvOptions): String; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GUIDToStr(const GUID: TGUID; WithBrackets: Boolean = True): string; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GUIDToStr(const Bts: TBytes; WithBrackets: Boolean = True): string; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GUIDToStr(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): string; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
@@ -4372,21 +4383,26 @@ begin
   {$ENDIF}
 end;
 
-//EgonHugeist: my conversion is 10x faster than IDE's
 procedure GUIDToBuffer(const Source: Pointer; Dest: PAnsiChar;
-  WithBrackets, SetTerm: Boolean);
+  const Options: TGUIDConvOptions);
 var
   D1: Cardinal;
   W: Word;
   I: Integer;
 begin
-  if WithBrackets then begin
+  if guidQuoted in Options then begin
+    PByte(Dest)^ := Ord(#39);
+    if guidWithBrackets in Options then begin
+      PByte(Dest+1)^ := Ord('{');
+      Inc(Dest, 2);
+    end else
+      Inc(Dest);
+  end else if guidWithBrackets in Options then begin
     PByte(Dest)^ := Ord('{');
     Inc(Dest);
   end;
   D1 := PCardinal(Source)^; //Process D1
-  for i := 3 downto 0 do
-  begin
+  for i := 3 downto 0 do begin
     PWord(Dest+(I shl 1))^ := TwoDigitLookupHexW[PByte(@D1)^];
     D1 := D1 shr 8;
   end;
@@ -4412,102 +4428,193 @@ begin
   Inc(Dest, 6);
   for i := 0 to 5 do
     PWord(Dest+(I shl 1))^ := TwoDigitLookupHexW[PByte(PAnsiChar(Source)+10+i)^];
-  if WithBrackets then
+  if guidWithBrackets in Options then
     PByte(Dest+12)^ := Ord('}');
-  if SetTerm then
-    PByte(Dest+12+Ord(WithBrackets))^ := Ord(#0); //set trailing term
+  if guidQuoted in Options then
+    PByte(Dest+12+Ord(guidWithBrackets in Options))^ := Ord(#39);
+  if guidSet0Term in Options then
+    PByte(Dest+12+Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options))^ := Ord(#0); //set trailing term
 end;
 
-procedure GUIDToBuffer(const Source: Pointer; Dest: PWideChar; WithBrackets, SetTerm: Boolean);
+//EgonHugeist: my conversion is 10x faster than IDE's
+procedure GUIDToBuffer(const Source: Pointer; Dest: PAnsiChar;
+  WithBrackets, SetTerm: Boolean);
+var Options: TGUIDConvOptions;
+begin
+  Options := [];
+  if WithBrackets then Include(Options, guidWithBrackets);
+  if SetTerm then Include(Options, guidSet0Term);
+  GUIDToBuffer(Source, Dest, Options);
+end;
+
+procedure GUIDToBuffer(const Source: Pointer; Dest: PWideChar; const Options: TGUIDConvOptions);
 var
   I: Integer;
   D1: Cardinal;
   W: Word;
 begin
-  if WithBrackets then begin
-    Dest^ := '{';
+  if guidQuoted in Options then begin
+    PWord(Dest)^ := Ord(#39);
+    if guidWithBrackets in Options then begin
+      PWord(Dest+1)^ := Ord('{');
+      Inc(Dest, 2);
+    end else
+      Inc(Dest);
+  end else if guidWithBrackets in Options then begin
+    PWord(Dest)^ := Ord('{');
     Inc(Dest);
   end;
   D1 := PCardinal(Source)^; //Process D1
-  for i := 3 downto 0 do
-  begin
+  for i := 3 downto 0 do begin
     PLongWord(Dest+(I shl 1))^ := TwoDigitLookupHexLW[PByte(@D1)^];
     if D1 > 0 then D1 := D1 shr 8;
   end;
   Inc(Dest, 8);
-  Dest^ := '-';
+  PWord(Dest)^ := Ord('-');
   W := PWord(PAnsiChar(Source)+4)^; //Process D2
   PLongWord(Dest+3)^ := TwoDigitLookupHexLW[PByte(@W)^];
   if W > 0 then W := W shr 8;
   PLongWord(Dest+1)^ := TwoDigitLookupHexLW[PByte(@W)^];
   Inc(Dest, 5);
-  Dest^ := '-';
+  PWord(Dest)^ := Ord('-');
   W := PWord(PAnsiChar(Source)+6)^; //Process D3
   PLongWord(Dest+3)^ := TwoDigitLookupHexLW[PByte(@W)^];
   if W > 0 then W := W shr 8;
   PLongWord(Dest+1)^ := TwoDigitLookupHexLW[PByte(@W)^];
   Inc(Dest, 5);
-  Dest^ := '-'; //Process D4
+  PWord(Dest)^ := Ord('-'); //Process D4
   PLongWord(Dest+1)^ := TwoDigitLookupHexLW[PByte(PAnsiChar(Source)+8)^];
   PLongWord(Dest+3)^ := TwoDigitLookupHexLW[PByte(PAnsiChar(Source)+9)^];
-  (Dest+5)^ := '-';
+  PWord(Dest+5)^ := Ord('-');
   Inc(Dest, 6);
   for i := 0 to 5 do
     PLongWord(Dest+(I shl 1))^ := TwoDigitLookupHexLW[PByte(PAnsiChar(Source)+10+i)^];
-  if WithBrackets then
-    (Dest+12)^ := '}';
-  if SetTerm then
-    (Dest+12+Ord(WithBrackets))^ := #0; //set trailing term
+  if guidWithBrackets in Options then
+    PWord(Dest+12)^ := Ord('}');
+  if guidQuoted in Options then
+    PWord(Dest+12+Ord(guidWithBrackets in Options))^ := Ord(#39);
+  if guidSet0Term in Options then
+    PWord(Dest+12+Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options))^ := Ord(#0); //set trailing term
+end;
+
+procedure GUIDToBuffer(const Source: Pointer; Dest: PWideChar;
+  WithBrackets, SetTerm: Boolean);
+var Options: TGUIDConvOptions;
+begin
+  Options := [];
+  if WithBrackets then Include(Options, guidWithBrackets);
+  if SetTerm then Include(Options, guidSet0Term);
+  GUIDToBuffer(Source, Dest, Options);
+end;
+
+procedure GUIDToRaw(Value: PGUID; const Options: TGUIDConvOptions; var Result: RawByteString);
+var P: PAnsiChar;
+begin
+  ZSetString(nil, 36+((Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options)) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(Value, P, Options);
+end;
+
+function GUIDToRaw(const GUID: TGUID; const Options: TGUIDConvOptions): RawByteString;
+var P: PAnsiChar;
+begin
+  ZSetString(nil, 36+((Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options)) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(@GUID.D1, P, Options);
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToRaw(const GUID: TGUID; WithBrackets: Boolean): RawByteString;
+var Options: TGUIDConvOptions;
+  P: PAnsiChar;
 begin
-  ZSetString(nil, 38, Result);
-  GUIDToBuffer(@GUID.D1, PAnsiChar(Pointer(Result)), WithBrackets, False);
+  Options := [];
+  if WithBrackets then include(Options, guidWithBrackets);
+  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(@GUID.D1, P, Options);
+end;
+
+function GUIDToRaw(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): RawByteString;
+var Options: TGUIDConvOptions;
+  P: PAnsiChar;
+begin
+  if Len <> 16 then
+    raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
+  Options := [];
+  if WithBrackets then include(Options, guidWithBrackets);
+  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(Buffer, P, Options);
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToRaw(const Bts: TBytes; WithBrackets: Boolean): RawByteString;
+var Options: TGUIDConvOptions;
+  P: PAnsiChar;
 begin
   if Length(Bts) <> 16 then
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
-  ZSetString(nil, 38, Result);
-  GUIDToBuffer(Pointer(Bts), PAnsiChar(Pointer(Result)), WithBrackets, False);
+  Options := [];
+  if WithBrackets then include(Options, guidWithBrackets);
+  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(Pointer(Bts), P, Options);
 end;
 
-//EgonHugeist: my conversion is 10x faster than IDE's
-function GUIDToRaw(Buffer: Pointer; Len: Byte; WithBrackets: Boolean): RawByteString;
+function GUIDToUnicode(const GUID: TGUID; const Options: TGUIDConvOptions): ZWideString;
+var P: PWideChar;
 begin
-  if (Buffer = Nil) or (Len <> 16) then
-    raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
-  ZSetString(nil, 38, Result);
-  GUIDToBuffer(Buffer, PAnsiChar(Pointer(Result)), WithBrackets, False);
+  ZSetString(nil, 36+((Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options)) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(@GUID.D1, P, Options);
+end;
+
+procedure GUIDToUnicode(Value: PGUID; const Options: TGUIDConvOptions; var Result: ZWideString);
+var P: PWideChar;
+begin
+  ZSetString(nil, 36+((Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options)) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(Value, P, Options);
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToUnicode(const GUID: TGUID; WithBrackets: Boolean): ZWideString;
+var Options: TGUIDConvOptions;
+  P: PWideChar;
 begin
-  ZSetString(nil, 38, Result);
-  GUIDToBuffer(@GUID.D1, PWideChar(Pointer(Result)), WithBrackets, False);
+  Options := [];
+  if WithBrackets then include(Options, guidWithBrackets);
+  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(@GUID.D1, P, Options);
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToUnicode(const Bts: TBytes; WithBrackets: Boolean): ZWideString;
+var Options: TGUIDConvOptions;
+  P: PWideChar;
 begin
   if Length(Bts) <> 16 then
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
-  ZSetString(nil, 38, Result);
-  GUIDToBuffer(Pointer(Bts), PWideChar(Pointer(Result)), WithBrackets, False);
+  Options := [];
+  if WithBrackets then include(Options, guidWithBrackets);
+  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(Pointer(Bts), P, Options);
 end;
 
-//EgonHugeist: my conversion is 10x faster than IDE's
-function GUIDToUnicode(Buffer: Pointer; Len: Byte; WithBrackets: Boolean): ZWideString;
+function GUIDToUnicode(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): ZWideString; overload;
+var Options: TGUIDConvOptions;
+  P: PWideChar;
 begin
-  if (Buffer = Nil) or (Len <> 16) then
+  if Len <> 16 then
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
-  ZSetString(nil, 38, Result);
-  GUIDToBuffer(Buffer, PWideChar(Pointer(Result)), WithBrackets, False);
+  Options := [];
+  if WithBrackets then include(Options, guidWithBrackets);
+  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(Buffer, P, Options);
 end;
 
 function GUIDToStr(const GUID: TGUID; WithBrackets: Boolean): string;
@@ -4518,6 +4625,11 @@ end;
 function GUIDToStr(const Bts: TBytes; WithBrackets: Boolean): string;
 begin
   Result := {$IFDEF UNICODE} GUIDToUnicode {$ELSE} GUIDToRaw {$ENDIF} (Bts, WithBrackets);
+end;
+
+function GUIDToStr(Value: PGUID; const Options: TGUIDConvOptions): string;
+begin
+  {$IFDEF UNICODE} GUIDToUnicode {$ELSE} GUIDToRaw {$ENDIF}(Value, Options, {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}(Result));
 end;
 
 function GUIDToStr(Buffer: Pointer; Len: Byte; WithBrackets: Boolean): string;
