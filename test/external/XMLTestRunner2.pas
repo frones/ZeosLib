@@ -391,6 +391,7 @@ var
 begin
   SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode);
   SuiteN.Attributes['duration'] := suite.ElapsedTestTime;
+  SuiteN.Attributes['end-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', now);
   FSuiteStack.Delete(FSuiteStack.Count - 1);
 end;
 
@@ -404,17 +405,26 @@ begin
   if FSuiteStack.Count = 0
   then SuiteN := FDocNode.AddChild('test-suite')
   else SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode).AddChild('test-suite');
-  SuiteN.Attributes['type'] := 'TestSuite';
   SuiteN.Attributes['id'] := IntToStr(GetNextId);
   SuiteN.Attributes['name'] := suite.Name;
+  SuiteN.Attributes['type'] := 'TestSuite';
+  SuiteN.Attributes['total'] := IntToStr(suite.CountTestCases);
+  SuiteN.Attributes['failed'] := '0';
+  SuiteN.Attributes['passed'] := IntToStr(suite.CountTestCases);
+  SuiteN.Attributes['result'] := 'Inconclusive';
+  SuiteN.Attributes['skipped'] := '0';
+  SuiteN.Attributes['duration'] := '0';
+  SuiteN.Attributes['end-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', now);
   SuiteN.Attributes['fullname'] := suite.Name;
-  SuiteN.Attributes['testcasecount'] := IntToStr(suite.CountTestCases);
   if suite.Enabled
   then SuiteN.Attributes['runstate'] := 'Runnable'
   else SuiteN.Attributes['runstate'] := 'Skipped';
+  SuiteN.Attributes['classname'] := GetCurrentSuiteName;
+  SuiteN.Attributes['start-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', now);
+  SuiteN.Attributes['inconclusive'] := '0';
+  SuiteN.Attributes['testcasecount'] := IntToStr(suite.CountTestCases);
   SuiteN.Attributes['total'] := IntToStr(suite.CountTestCases);
   FSuiteStack.Add(SuiteN);
-  SuiteN.Attributes['classname'] := GetCurrentSuiteName;
 end;
 
 {:
