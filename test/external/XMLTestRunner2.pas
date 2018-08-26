@@ -123,6 +123,9 @@ begin
   FXmlDocument := (Doc as IXMLDocument);
   FXmlDocument.Options := FXmlDocument.Options + [doNodeAutoIndent];
   FXmlDocument.Active := true;
+  FXmlDocument.Version := '1.0';
+  FXmlDocument.Encoding := 'UTF-8';
+  FXmlDocument.StandAlone := 'yes';
   FFileName := outputFile;
 end;
 
@@ -146,7 +149,7 @@ var
   TestN: IXMLNode;
 begin
   if test.tests.Count<=0 then begin
-    SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode);
+    SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as TXMLNode);
     SuiteN.Attributes['type'] := 'TestFixture';
     TestN := SuiteN.AddChild('test-case');
     //TestN.Attributes['id'] :=
@@ -399,6 +402,7 @@ begin
   if suite.Enabled
   then SuiteN.Attributes['runstate'] := 'Runnable'
   else SuiteN.Attributes['runstate'] := 'Skipped';
+  SuiteN.Attributes['type'] := 'TestSuite';
   FSuiteStack.Add(SuiteN);
 end;
 
