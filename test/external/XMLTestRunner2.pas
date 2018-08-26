@@ -55,6 +55,7 @@ type
   protected
      startTime : Cardinal;
      dtStartTime : TDateTime;
+     FNextId: Integer;
 
      testStart : TDateTime;
      FSuiteStack : TInterfaceList;
@@ -65,6 +66,7 @@ type
      procedure writeReport(str: String);
      function GetCurrentSuiteName : string;
      function GetCurrentCaseName: string;
+     function GetNextId: Integer;
   public
     // implement the ITestListener interface
     procedure AddSuccess(test: ITest); virtual;
@@ -127,6 +129,7 @@ begin
   FXmlDocument.Encoding := 'UTF-8';
   FXmlDocument.StandAlone := 'yes';
   FFileName := outputFile;
+  FNextId := 3;
 end;
 
 {:
@@ -143,6 +146,12 @@ end;
 const
   TrueFalse : array[Boolean] of string = ('False', 'True');
 
+function TXMLTestListener.GetNextId: Integer;
+begin
+  Result := FNextId;
+  Inc(FNextId);
+end;
+
 procedure TXMLTestListener.AddSuccess(test: ITest);
 var
   SuiteN: IXMLNode;
@@ -152,7 +161,7 @@ begin
     SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode);
     SuiteN.Attributes['type'] := 'TestFixture';
     TestN := SuiteN.AddChild('test-case');
-    //TestN.Attributes['id'] :=
+    TestN.Attributes['id'] := IntToStr(GetNextId);
     TestN.Attributes['name'] :=  test.GetName;
     TestN.Attributes['fullname'] := GetCurrentCaseName + test.GetName;
     TestN.Attributes['methodname'] := test.GetName;
@@ -186,7 +195,7 @@ begin
     SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode);
     SuiteN.Attributes['type'] := 'TestFixture';
     TestN := SuiteN.AddChild('test-case');
-    //TestN.Attributes['id'] :=
+    TestN.Attributes['id'] := IntToStr(GetNextId);
     TestN.Attributes['name'] :=  test.GetName;
     TestN.Attributes['fullname'] := GetCurrentCaseName + test.GetName;
     TestN.Attributes['methodname'] := test.GetName;
@@ -232,7 +241,7 @@ begin
     SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode);
     SuiteN.Attributes['type'] := 'TestFixture';
     TestN := SuiteN.AddChild('test-case');
-    //TestN.Attributes['id'] :=
+    TestN.Attributes['id'] := IntToStr(GetNextId);
     TestN.Attributes['name'] :=  test.GetName;
     TestN.Attributes['fullname'] := GetCurrentCaseName + test.GetName;
     TestN.Attributes['methodname'] := test.GetName;
@@ -365,7 +374,7 @@ begin
     SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode);
     SuiteN.Attributes['type'] := 'TestFixture';
     TestN := SuiteN.AddChild('test-case');
-    //TestN.Attributes['id'] :=
+    TestN.Attributes['id'] := IntToStr(GetNextId);
     TestN.Attributes['name'] :=  test.GetName;
     TestN.Attributes['fullname'] := GetCurrentCaseName + test.GetName;
     TestN.Attributes['methodname'] := test.GetName;
@@ -395,15 +404,17 @@ begin
   if FSuiteStack.Count = 0
   then SuiteN := FDocNode.AddChild('test-suite')
   else SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode).AddChild('test-suite');
+  SuiteN.Attributes['type'] := 'TestSuite';
+  SuiteN.Attributes['id'] := IntToStr(GetNextId);
   SuiteN.Attributes['name'] := suite.Name;
   SuiteN.Attributes['fullname'] := suite.Name;
-  SuiteN.Attributes['classname'] := suite.Name;
   SuiteN.Attributes['testcasecount'] := IntToStr(suite.CountTestCases);
   if suite.Enabled
   then SuiteN.Attributes['runstate'] := 'Runnable'
   else SuiteN.Attributes['runstate'] := 'Skipped';
-  SuiteN.Attributes['type'] := 'TestSuite';
+  SuiteN.Attributes['total'] := IntToStr(suite.CountTestCases);
   FSuiteStack.Add(SuiteN);
+  SuiteN.Attributes['classname'] := GetCurrentSuiteName;
 end;
 
 {:
