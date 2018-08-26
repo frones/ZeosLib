@@ -390,7 +390,7 @@ var
   SuiteN: IXMLNode;
 begin
   SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode);
-  SuiteN.Attributes['duration'] := suite.ElapsedTestTime;
+  SuiteN.Attributes['duration'] := FloatToStr(suite.ElapsedTestTime / 1000);
   SuiteN.Attributes['end-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', now);
   FSuiteStack.Delete(FSuiteStack.Count - 1);
 end;
@@ -419,7 +419,7 @@ begin
   if suite.Enabled
   then SuiteN.Attributes['runstate'] := 'Runnable'
   else SuiteN.Attributes['runstate'] := 'Skipped';
-  SuiteN.Attributes['classname'] := GetCurrentSuiteName;
+  SuiteN.Attributes['classname'] := GetCurrentSuiteName + suite.Name;
   SuiteN.Attributes['start-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', now);
   SuiteN.Attributes['inconclusive'] := '0';
   SuiteN.Attributes['testcasecount'] := IntToStr(suite.CountTestCases);
