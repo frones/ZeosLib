@@ -149,7 +149,7 @@ var
   TestN: IXMLNode;
 begin
   if test.tests.Count<=0 then begin
-    SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as TXMLNode);
+    SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode);
     SuiteN.Attributes['type'] := 'TestFixture';
     TestN := SuiteN.AddChild('test-case');
     //TestN.Attributes['id'] :=
