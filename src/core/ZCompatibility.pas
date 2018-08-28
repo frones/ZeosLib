@@ -177,19 +177,19 @@ const
   DefDateTimeFormat = DefDateFormatDMY + ' ' + DefTimeFormat;
   DefDateTimeFormatMsecs = DefDateFormatDMY + ' ' + DefTimeFormatMsecs;
 
-{$IFNDEF FPC} //delphi and windows
+{$IF NOT DECLARED(LineEnding)} // FPC-style constant, declare for Delphi
 const
-  LineEnding = #13#10;
+  LineEnding = sLineBreak;
+{$IFEND}
+
+{$IF NOT DECLARED(AnsiProperCase)} // FPC has this function in RTL
+{$DEFINE ZAnsiProperCase}
+const
   Brackets = ['(',')','[',']','{','}'];
   StdWordDelims = [#0..' ',',','.',';','/','\',':','''','"','`'] + Brackets;
 
-{$IFDEF WITH_TSYSCHARSET_DEPRECATED}
-function AnsiProperCase(const S: string; const WordDelims: String): string;
-{$ELSE}
-function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
-{$ENDIF}
-
-{$ENDIF}
+function AnsiProperCase(const S: string; const WordDelims: {$IFDEF WITH_TSYSCHARSET_DEPRECATED} String {$ELSE} TSysCharSet {$ENDIF}): string;
+{$IFEND}
 
 {$IFDEF WINDOWS}
 const SharedSuffix='.dll';
@@ -716,12 +716,9 @@ end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
-{$IFNDEF FPC}
-{$IFDEF WITH_TSYSCHARSET_DEPRECATED}
-function AnsiProperCase(const S: string; const WordDelims: String): string;
-{$ELSE}
-function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
-{$ENDIF}
+{$IFDEF ZAnsiProperCase}
+
+function AnsiProperCase(const S: string; const WordDelims: {$IFDEF WITH_TSYSCHARSET_DEPRECATED} String {$ELSE} TSysCharSet {$ENDIF}): string;
 var
   P,PE : PChar;
 begin
