@@ -1141,10 +1141,10 @@ begin
             {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     ConvFromString:
             if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
-              Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+              Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
             else
               Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-                RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-}));
+                RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed));
             LastWasNull := Result = 0;
           end;
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
@@ -1211,9 +1211,9 @@ begin
             {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     ConvFromString:
             if (P+2)^ = ':' then //possible date if Len = 10 then
-              Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+              Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
             else
-              Result := Frac(RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-}));
+              Result := Frac(RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed));
             LastWasNull := Result = 0;
           end;
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
@@ -1281,7 +1281,7 @@ begin
             {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     ConvFromString:
             if (P+2)^ = ':' then //possible date if Len = 10 then
-              Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+              Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
             else
               if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
                 Result := RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)

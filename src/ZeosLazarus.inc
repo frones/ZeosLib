@@ -130,7 +130,6 @@
     {$UNDEF WITH_FPC_FTTIME_BUG} //seems like the never FPC2.6.2 also have fixed the NativData bug for TTimeFields+TDataSet
   {$ENDIF}
   {$IF FPC_FULLVERSION>20700}       // will be introduced in 2.7+
-    {$DEFINE WITH_TRECORDBUFFER}
     {$ifndef MSEgui} 
       {$DEFINE WITH_TBOOKMARK}        // Have TBookmark
     {$endif}
