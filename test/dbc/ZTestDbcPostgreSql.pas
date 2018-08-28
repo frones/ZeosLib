@@ -58,7 +58,7 @@ interface
 
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcPostgreSql, ZSqlTestCase,
-  ZCompatibility;
+  ZURL, ZCompatibility;
 
 type
 
@@ -174,8 +174,11 @@ var
   TextStream: TStream;
   ImageStream: TMemoryStream;
   TempStream: TStream;
+  Url: TZURL;
 begin
-  Connection := DriverManager.GetConnection(GetConnectionUrl('oidasblob=true'));
+  Url := GetConnectionUrl('oidasblob=true');
+  Connection := DriverManager.GetConnection(Url.URL);
+  Url.Free;
   //Connection := DriverManager.GetConnectionWithLogin(
     //GetConnectionUrl + '?oidasblob=true', UserName, Password);
   Connection.SetTransactionIsolation(tiReadCommitted);

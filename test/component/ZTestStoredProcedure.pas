@@ -68,7 +68,6 @@ type
   protected
     procedure SetUp; override;
     procedure TearDown; override;
-    function GetConnectionUrl: string;
   end;
 
   {** Implements a test case for class TZStoredProc. }
@@ -175,25 +174,6 @@ begin
   StoredProc.Close;
   StoredProc.Free;
   inherited TearDown;
-end;
-
-{**
-  Gets a connection URL string.
-  @return a built connection URL string.
-}
-function TZTestStoredProcedure.GetConnectionUrl: string;
-var
-  TempProperties :TStrings;
-  I: Integer;
-begin
-  TempProperties := TStringList.Create;
-  for I := 0 to High(Properties) do
-  begin
-    TempProperties.Add(Properties[I])
-  end;
-  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
-  UserName, Password, Port, TempProperties);
-  TempProperties.Free;
 end;
 
 {**

@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs,
-  ZSqlTestCase, ZCompatibility, ZDbcPostgreSql, ZTestConsts;
+  ZSqlTestCase, ZCompatibility, ZDbcPostgreSql, ZTestConsts, ZURL;
 
 type
 
@@ -118,10 +118,13 @@ var
   Connection: IZConnection;
   ResultSet: IZResultSet;
   Statement: IZStatement;
+  Url: TZURL;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
-  Connection := DriverManager.GetConnection(GetConnectionUrl('oidasblob=true'));
+  Url := GetConnectionUrl('oidasblob=true');
+  Connection := DriverManager.GetConnection(Url.URL);
+  Url.Free;
   //Connection := DriverManager.GetConnectionWithLogin(
     //GetConnectionUrl + '?oidasblob=true', UserName, Password);
   Statement := Connection.CreateStatement;
@@ -130,7 +133,9 @@ begin
   ResultSet.Close;
   Statement.Close;
 
-  Connection := DriverManager.GetConnection(GetConnectionUrl('oidasblob=false'));
+  Url := GetConnectionUrl('oidasblob=false');
+  Connection := DriverManager.GetConnection(Url.URL);
+  Url.Free;
 //  Connection := DriverManager.GetConnectionWithLogin(
   //  GetConnectionUrl + '?oidasblob=false', UserName, Password);
   Statement := Connection.CreateStatement;
@@ -361,10 +366,13 @@ var
   TextStream: TStream;
   ImageStream: TMemoryStream;
   TempStream: TStream;
+  Url: TZURL;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
-  Connection := DriverManager.GetConnection(GetConnectionUrl('oidasblob=true'));
+  Url := GetConnectionUrl('oidasblob=true');
+  Connection := DriverManager.GetConnection(Url.URL);
+  Url.Free;
   Connection.SetTransactionIsolation(tiReadCommitted);
   Connection.SetAutoCommit(False);
   Statement := Connection.CreateStatement;
