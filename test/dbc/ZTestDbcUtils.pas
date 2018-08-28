@@ -62,7 +62,6 @@ type
   {** Implements a test case for class TZAbstractDriver and Utilities. }
   TZTestDbcUtilsCase = class(TTestCase)
   published
-    procedure TestResolveUrl;
     procedure TestCheckConvertion;
     procedure TestDefineColumnTypeName;
     procedure TestAnsiSqlDateToDateTime;
@@ -486,119 +485,6 @@ begin
   CheckEquals('Timestamp', DefineColumnTypeName(stTimestamp));
   CheckEquals('Unknown', DefineColumnTypeName(stUnknown));
   CheckEquals('UnicodeStream', DefineColumnTypeName(stUnicodeStream));
-end;
-
-{**
-  Test for function ResolveUrl
-}
-procedure TZTestDbcUtilsCase.TestResolveUrl;
-var
-  Url, HostName, Database, UserName, Password: string;
-  Info, ResultInfo: TStrings;
-  Port: Integer;
-begin
-  Info := SplitString('trace=true;username=scott', ';');
-  ResultInfo := TStringList.Create;
-  try
-    CheckEquals('true', Info.Values['trace']);
-    CheckEquals('true', Info.Values['TRACE']);
-    CheckEquals('scott', Info.Values['username']);
-    CheckEquals('', Info.Values['unknownparam']);
-
-    Url := 'zdbc:mysql://192.168.0.1:33600/test?UID=admin;PWD=none';
-    ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
-      UserName, Password, ResultInfo);
-    CheckEquals('192.168.0.1', HostName);
-    CheckEquals(33600, Port);
-    CheckEquals('test', Database);
-    CheckEquals('admin', UserName);
-    CheckEquals('none', Password);
-    CheckEquals('true', ResultInfo.Values['trace']);
-
-    Url := 'zdbc:mysql://192.168.0.1/test?PWD=none';
-    ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
-      UserName, Password, ResultInfo);
-    CheckEquals('192.168.0.1', HostName);
-    CheckEquals(0, Port);
-    CheckEquals('test', Database);
-    CheckEquals('scott', UserName);
-    CheckEquals('none', Password);
-    CheckEquals('true', ResultInfo.Values['trace']);
-
-    Url := 'zdbc:mysql:test?UID=admin;PWD=none';
-    ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
-      UserName, Password, ResultInfo);
-    CheckEquals('', HostName);
-    CheckEquals(0, Port);
-    CheckEquals('test', Database);
-    CheckEquals('admin', UserName);
-    CheckEquals('none', Password);
-    CheckEquals('true', ResultInfo.Values['trace']);
-
-    Url := 'zdbc:mysql:test';
-    ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
-      UserName, Password, ResultInfo);
-    CheckEquals('', HostName);
-    CheckEquals(0, Port);
-    CheckEquals('test', Database);
-    CheckEquals('scott', UserName);
-    CheckEquals('', Password);
-    CheckEquals('true', ResultInfo.Values['trace']);
-
-    // Inventory of ResolveDatabaseUrl function (by mdaems and egonhugeist)
-    // parameters from Url have precedence over Info parameters
-    // extra parameters from info are added to ResultsetInfo
-    // password and username from url replace those from the 
-    Url := 'zdbc:mysql:test?UID=admin;PWD=none;trace=false';
-    Info.Values['extrainfo']:='extravalue';
-    ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
-      UserName, Password, ResultInfo);
-    CheckEquals('', HostName);
-    CheckEquals(0, Port);
-    CheckEquals('test', Database);
-    //username from Url has precedence (Info username = scott)
-    CheckEquals('admin', UserName);
-    //password from Url (is not in Info)
-    CheckEquals('none', Password);
-    //trace from Url has precedence (Info trace = true)
-    CheckEquals('false', ResultInfo.Values['trace']);
-    //extravalue from Info (isn't available in URL)
-    CheckEquals('extravalue', ResultInfo.Values['extrainfo']);
-    //url user and pwd are copied from Url into ResultInfo
-    CheckEquals('admin', ResultInfo.Values['UID']);
-    CheckEquals('none', ResultInfo.Values['PWD']);
-    //Strange effect : username from info remains in Resultinfo even if it's not used
-    CheckEquals('scott', ResultInfo.Values['username']);
-
-    // Inventory of ResolveDatabaseUrl function (by mdaems and egonhugeist)
-    // ResultInfo UID/PWD have predence over UserName/Password
-    Url := 'zdbc:mysql:test?trace=false';
-    Info.Values['extrainfo']:='extravalue';
-    Info.Values['UID'] := 'administrator';
-    Info.Values['PWD'] := 'nopwd';
-    ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
-      UserName, Password, ResultInfo);
-    CheckEquals('', HostName);
-    CheckEquals(0, Port);
-    CheckEquals('test', Database);
-    //username from Url has precedence (Info username = scott)
-    CheckEquals('administrator', UserName);
-    //password from Url (is not in Info)
-    CheckEquals('nopwd', Password);
-    //trace from Url has precedence (Info trace = true)
-    CheckEquals('false', ResultInfo.Values['trace']);
-    //extravalue from Info (isn't available in URL)
-    CheckEquals('extravalue', ResultInfo.Values['extrainfo']);
-    //Strange effect : username/Password from info remains in Resultinfo even if it's not used
-    CheckEquals('scott', ResultInfo.Values['UserName']);
-    CheckEquals('', ResultInfo.Values['Password']);
-    //Strange effect : UID/PWD from info remains in Resultinfo even if UserName/Password exists
-    CheckEquals('administrator', ResultInfo.Values['UID']);
-    CheckEquals('nopwd', ResultInfo.Values['PWD']);
-   finally
-    Info.Free;
-    ResultInfo.Free;
-  end;
 end;
 
 initialization
