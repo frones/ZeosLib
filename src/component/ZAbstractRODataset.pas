@@ -1013,6 +1013,9 @@ type
     procedure SetCurrency(Value: Boolean);
   protected
     procedure SetPrecision(Value: Integer); virtual;
+    procedure InternalGetText(Value: Extended; out Text: string; DisplayText: Boolean);
+  public
+    constructor Create(AOwner: TComponent); override;
   published
     { Lowercase to avoid name clash with C++ Currency type }
     property currency: Boolean read FCurrency write SetCurrency default False;
@@ -6262,9 +6265,7 @@ begin
   //Let the IDE do the RangeCheck !
   {$R+}
   inherited SetAsByte(ConvertedValue);
-  {$IFNDEF RangeCheckEnabled}
-    {$R-}
-  {$ENDIF}
+  {$IFNDEF RangeCheckEnabled} {$R-} {$ENDIF}
 end;
 
 procedure TZByteField.SetMaxValue(Value: Byte);
@@ -6304,9 +6305,7 @@ begin
   //Let the IDE do the RangeCheck !
   {$R+}
   inherited SetAsShortInt(ConvertedValue);
-  {$IFNDEF RangeCheckEnabled}
-    {$R-}
-  {$ENDIF}
+  {$IFNDEF RangeCheckEnabled} {$R-} {$ENDIF}
 end;
 
 procedure TZShortIntField.SetMaxValue(Value: ShortInt);
@@ -6346,9 +6345,7 @@ begin
   //Let the IDE do the RangeCheck !
   {$R+}
   inherited SetAsWord(ConvertedValue);
-  {$IFNDEF RangeCheckEnabled}
-    {$R-}
-  {$ENDIF}
+  {$IFNDEF RangeCheckEnabled} {$R-} {$ENDIF}
 end;
 
 procedure TZWordField.SetMaxValue(Value: Word);
@@ -6388,9 +6385,7 @@ begin
   //Let the IDE do the RangeCheck !
   {$R+}
   inherited SetAsSmallInt(ConvertedValue);
-  {$IFNDEF RangeCheckEnabled}
-    {$R-}
-  {$ENDIF}
+  {$IFNDEF RangeCheckEnabled} {$R-} {$ENDIF}
 end;
 
 procedure TZSmallIntField.SetMaxValue(Value: SmallInt);
@@ -6430,9 +6425,7 @@ begin
   //Let the IDE do the RangeCheck !
   {$R+}
   inherited SetAsInteger(ConvertedValue);
-  {$IFNDEF RangeCheckEnabled}
-    {$R-}
-  {$ENDIF}
+  {$IFNDEF RangeCheckEnabled} {$R-} {$ENDIF}
 end;
 
 procedure TZIntegerField.SetMaxValue(Value: Longint);
@@ -6472,9 +6465,7 @@ begin
   //Let the IDE do the RangeCheck !
   {$R+}
   inherited SetAsLongWord(ConvertedValue);
-  {$IFNDEF RangeCheckEnabled}
-    {$R-}
-  {$ENDIF}
+  {$IFNDEF RangeCheckEnabled} {$R-} {$ENDIF}
 end;
 
 procedure TZLongWordField.SetMaxValue(Value: LongWord);
@@ -6514,9 +6505,7 @@ begin
   //Let the IDE do the RangeCheck !
   {$R+}
   inherited SetAsLargeInt(ConvertedValue);
-  {$IFNDEF RangeCheckEnabled}
-    {$R-}
-  {$ENDIF}
+  {$IFNDEF RangeCheckEnabled} {$R-} {$ENDIF}
 end;
 
 procedure TZInt64Field.SetMaxValue(Value: Int64);
@@ -6556,9 +6545,7 @@ begin
   //Let the IDE do the RangeCheck !
   {$R+}
   inherited SetAsUInt64(ConvertedValue);
-  {$IFNDEF RangeCheckEnabled}
-    {$R-}
-  {$ENDIF}
+  {$IFNDEF RangeCheckEnabled} {$R-} {$ENDIF}
 end;
 
 procedure TZUInt64Field.SetMaxValue(Value: UInt64);
@@ -6618,6 +6605,12 @@ end;
 
 { TZFloatField }
 
+constructor TZFloatField.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  ValidChars := [{$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator, '+', '-', '0'..'9', 'E', 'e'];
+end;
+
 procedure TZFloatField.SetCurrency(Value: Boolean);
 begin
   if FCurrency <> Value then
@@ -6634,6 +6627,38 @@ begin
     FPrecision := Value;
     PropertyChanged(False);
   end;
+end;
+
+procedure TZFloatField.InternalGetText(Value: Extended; out Text: string; DisplayText: Boolean);
+  { Note: FloatToStrF / FormatFloat that are called below use Extended type anyway.
+    So there's no sense in personal GetText copies for every float type. }
+var
+  Format: TFloatFormat;
+  FmtStr: string;
+  Digits: Integer;
+begin
+  if DisplayText or (FEditFormat = '')
+    then FmtStr := FDisplayFormat
+    else FmtStr := FEditFormat;
+
+  if FmtStr = '' then
+  begin
+    if FCurrency then
+    begin
+      if DisplayText
+        then Format := ffCurrency
+        else Format := ffFixed;
+      Digits := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}CurrencyDecimals;
+    end
+    else
+    begin
+      Format := ffGeneral;
+      Digits := 0;
+    end;
+    Text := FloatToStrF(Value, Format, FPrecision, Digits {$IFDEF WITH_FORMATSETTINGS}, FormatSettings{$ENDIF});
+  end
+  else
+    Text := FormatFloat(FmtStr, Value {$IFDEF WITH_FORMATSETTINGS}, FormatSettings{$ENDIF});
 end;
 
 { TZSingleField }
@@ -6668,9 +6693,7 @@ begin
   //Let the IDE do the RangeCheck !
   {$R+}
   inherited SetAsSingle(ConvertedValue);
-  {$IFNDEF RangeCheckEnabled}
-    {$R-}
-  {$ENDIF}
+  {$IFNDEF RangeCheckEnabled} {$R-} {$ENDIF}
 end;
 
 function TZSingleField.GetDataSize: Integer;
@@ -6679,35 +6702,11 @@ begin
 end;
 
 procedure TZSingleField.GetText(var Text: string; DisplayText: Boolean);
-var
-  Format: TFloatFormat;
-  FmtStr: string;
-  Digits: Integer;
-  F: Single;
 begin
   if IsNull then
     Text := ''
   else
-  begin
-    F := GetAsSingle;
-    if DisplayText or (FEditFormat = '') then
-      FmtStr := FDisplayFormat else
-      FmtStr := FEditFormat;
-    if FmtStr = '' then
-    begin
-      if FCurrency then
-      begin
-        if DisplayText then Format := ffCurrency else Format := ffFixed;
-        Digits := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}CurrencyDecimals;
-      end
-      else begin
-        Format := ffGeneral;
-        Digits := 0;
-      end;
-      Text := FloatToStrF(F, Format, FPrecision, Digits);
-    end else
-      Text := FormatFloat(FmtStr, F);
-  end;
+    InternalGetText(GetAsSingle, Text, DisplayText);
 end;
 
 constructor TZSingleField.Create(AOwner: TComponent);
@@ -6715,7 +6714,6 @@ begin
   inherited Create(AOwner);
   SetDataType({$IFDEF WITH_FTSINGLE}ftSingle{$ELSE}ftFloat{$ENDIF});
   FPrecision := 7;
-  ValidChars := [{$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator, '+', '-', '0'..'9', 'E', 'e'];
 end;
 
 { TZDoubleField }
@@ -6750,9 +6748,7 @@ begin
   //Let the IDE do the RangeCheck !
   {$R+}
   inherited SetAsFloat(ConvertedValue);
-  {$IFNDEF RangeCheckEnabled}
-    {$R-}
-  {$ENDIF}
+  {$IFNDEF RangeCheckEnabled} {$R-} {$ENDIF}
 end;
 
 function TZDoubleField.GetDataSize: Integer;
@@ -6761,35 +6757,11 @@ begin
 end;
 
 procedure TZDoubleField.GetText(var Text: string; DisplayText: Boolean);
-var
-  Format: TFloatFormat;
-  FmtStr: string;
-  Digits: Integer;
-  F: Double;
 begin
   if IsNull then
     Text := ''
   else
-  begin
-    F := GetAsFloat;
-    if DisplayText or (FEditFormat = '') then
-      FmtStr := FDisplayFormat else
-      FmtStr := FEditFormat;
-    if FmtStr = '' then
-    begin
-      if FCurrency then
-      begin
-        if DisplayText then Format := ffCurrency else Format := ffFixed;
-        Digits := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}CurrencyDecimals;
-      end
-      else begin
-        Format := ffGeneral;
-        Digits := 0;
-      end;
-      Text := FloatToStrF(F, Format, FPrecision, Digits);
-    end else
-      Text := FormatFloat(FmtStr, F);
-  end;
+    InternalGetText(GetAsFloat, Text, DisplayText);
 end;
 
 constructor TZDoubleField.Create(AOwner: TComponent);
@@ -6797,7 +6769,6 @@ begin
   inherited Create(AOwner);
   SetDataType(ftFloat);
   FPrecision := 15;
-  ValidChars := [{$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator, '+', '-', '0'..'9', 'E', 'e'];
 end;
 
 { TZCurrencyField }
@@ -6825,9 +6796,7 @@ begin
   //Let the IDE do the RangeCheck !
   {$R+}
   inherited SetAsCurrency(ConvertedValue);
-  {$IFNDEF RangeCheckEnabled}
-    {$R-}
-  {$ENDIF}
+  {$IFNDEF RangeCheckEnabled} {$R-} {$ENDIF}
 end;
 
 procedure TZCurrencyField.SetPrecision(Value: Integer);
@@ -6843,35 +6812,11 @@ begin
 end;
 
 procedure TZCurrencyField.GetText(var Text: string; DisplayText: Boolean);
-var
-  Format: TFloatFormat;
-  FmtStr: string;
-  Digits: Integer;
-  F: System.Currency;
 begin
   if IsNull then
     Text := ''
   else
-  begin
-    F := GetAsCurrency;
-    if DisplayText or (FEditFormat = '') then
-      FmtStr := FDisplayFormat else
-      FmtStr := FEditFormat;
-    if FmtStr = '' then
-    begin
-      if FCurrency then
-      begin
-        if DisplayText then Format := ffCurrency else Format := ffFixed;
-        Digits := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}CurrencyDecimals;
-      end
-      else begin
-        Format := ffGeneral;
-        Digits := 0;
-      end;
-      Text := FloatToStrF(F, Format, FPrecision, Digits);
-    end else
-      Text := FormatFloat(FmtStr, F);
-  end;
+    InternalGetText(GetAsCurrency, Text, DisplayText);
 end;
 
 constructor TZCurrencyField.Create(AOwner: TComponent);
@@ -6879,7 +6824,6 @@ begin
   inherited Create(AOwner);
   SetDataType(ftCurrency);
   FPrecision := 15;
-  ValidChars := [{$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator, '+', '-', '0'..'9', 'E', 'e'];
 end;
 
 { TZExtendedField }
@@ -6920,35 +6864,11 @@ begin
 end;
 
 procedure TZExtendedField.GetText(var Text: string; DisplayText: Boolean);
-var
-  Format: TFloatFormat;
-  FmtStr: string;
-  Digits: Integer;
-  F: Extended;
 begin
   if IsNull then
     Text := ''
   else
-  begin
-    F := GetAsExtended;
-    if DisplayText or (FEditFormat = '') then
-      FmtStr := FDisplayFormat else
-      FmtStr := FEditFormat;
-    if FmtStr = '' then
-    begin
-      if FCurrency then
-      begin
-        if DisplayText then Format := ffCurrency else Format := ffFixed;
-        Digits := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}CurrencyDecimals;
-      end
-      else begin
-        Format := ffGeneral;
-        Digits := 0;
-      end;
-      Text := FloatToStrF(F, Format, FPrecision, Digits);
-    end else
-      Text := FormatFloat(FmtStr, F);
-  end;
+    InternalGetText(GetAsExtended, Text, DisplayText);
 end;
 
 constructor TZExtendedField.Create(AOwner: TComponent);
@@ -6956,7 +6876,6 @@ begin
   inherited Create(AOwner);
   SetDataType({$IFDEF WITH_FTEXTENDED}ftExtended{$ELSE}ftFloat{$ENDIF});
   FPrecision := 19;
-  ValidChars := [{$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator, '+', '-', '0'..'9', 'E', 'e'];
 end;
 
 { TZFieldDef }
@@ -7445,6 +7364,3 @@ end;
 {$ENDIF !WITH_TDATASETFIELD}
 
 end.
-
-
-
