@@ -555,7 +555,7 @@ begin
         //Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
           //IID_IRowset, @FRowsAffected, @FRowSet);
       until Failed(Status) or (Status = DB_S_NORESULT);
-      OleDBCheck((FCommand as ICommandPrepare).UnPrepare);
+      {OleDBCheck}((FCommand as ICommandPrepare).UnPrepare);
     finally
       FCommand := nil;
       FMultipleResults := nil;
