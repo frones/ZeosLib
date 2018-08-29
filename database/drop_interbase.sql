@@ -9,6 +9,8 @@ drop procedure guidtest;
 
 drop view dep_view;
 
+drop trigger insert_returning_bi;
+
 drop table blob_values;
 drop table cargo;
 drop table people;
@@ -27,6 +29,7 @@ drop table default_values;
 drop table default_values2;
 drop table domain_values;
 drop table guids;
+drop table insert_returning;
 
 drop domain tinteger;
 drop domain tfloat;

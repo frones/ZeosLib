@@ -2289,25 +2289,11 @@ end;
 
 procedure TZGenericTestDataSet.TestInsertReturning;
 const
-  D_ID   = 0;
-  D_FLD1 = 1;
-  D_FLD2 = 2;
-  D_FLD3 = 3;
-  D_FLD4 = 4;
-
-  procedure CheckValues(Query: TZQuery);
-  begin
-    CheckEquals(1, Query.Fields[D_ID].AsInteger);
-    CheckEquals(123456, Query.Fields[D_FLD1].AsInteger);
-    CheckEquals(123.456, Query.Fields[D_FLD2].AsFloat, 0.001);
-    CheckEquals('xyz', Query.Fields[D_FLD3].AsString);
-    CheckEquals(EncodeDate(2003, 12, 11), Query.Fields[D_FLD4].AsDateTime, 0);
-  end;
-
+  D_ID  = 0;
+  D_FLD = 1;
 const
-  SQLDel = 'DELETE FROM DEFAULT_VALUES';
-  SQLIns = 'INSERT INTO DEFAULT_VALUES(D_ID) VALUES(1) RETURNING D_ID,D_FLD1,D_FLD2,D_FLD3,D_FLD4';
-  SQLSel = 'SELECT * FROM DEFAULT_VALUES';
+  SQLDel = 'DELETE FROM insert_returning';
+  SQLSel = 'SELECT * FROM insert_returning';
 var
   Query: TZQuery;
 begin
@@ -2319,23 +2305,22 @@ begin
     Query.SQL.Text := SQLDel;
     Query.ExecSQL;
 
-    // Exec direct query
-    Query.SQL.Text := SQLIns;
-    Query.Open;
-    CheckValues(Query);
-
-    // Cleanup
-    Query.SQL.Text := SQLDel;
-    Query.ExecSQL;
-
     // Let the component generate a query
-    Query.Properties.Values['InsertReturningFields'] := 'D_FLD1,D_FLD2,D_FLD3,D_FLD4';
+    Query.Properties.Values[DSProps_InsertReturningFields] := 'ID,FLD';
     Query.SQL.Text := SQLSel;
     Query.Open;
+
     Query.Insert;
-    Query.Fields[D_ID].Value := 1;
     Query.Post;
-    CheckValues(Query);
+    CheckEquals(1, Query.Fields[D_ID].AsInteger, 'return values when input is null');
+    CheckEquals('ID1', Query.Fields[D_FLD].AsString, 'return values when input is null');
+
+    Query.Insert;
+    Query.Fields[D_ID].Value := TEST_ROW_ID;
+    Query.Post;
+    CheckEquals(TEST_ROW_ID, Query.Fields[D_ID].AsInteger, 'return values when input is not null');
+    CheckEquals('ID'+IntToStr(TEST_ROW_ID), Query.Fields[D_FLD].AsString, 'return values when input is not null');
+
   finally
     Query.Free;
   end;
