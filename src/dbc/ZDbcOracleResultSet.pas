@@ -226,7 +226,7 @@ var Len: Integer;
   Month, Day: Byte;
   Hour, Minute, Second: Byte;
   Year: SmallInt;
-  Millis: Integer;
+  Millis: Cardinal;
 begin
   //init
   if JSONWriter.Expand then
