@@ -208,17 +208,10 @@ begin
     EditUpdateSQL(TZUpdateSQL(Component));
 end;
 
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 function TZUpdateSqlEditor.GetVerb(Index: Integer): string;
 begin
   Result := 'UpdateSql editor...';
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
-
 
 function TZUpdateSqlEditor.GetVerbCount: Integer;
 begin

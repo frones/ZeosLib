@@ -47,8 +47,8 @@ Unit ZOleDB;
 //  Imported oledb on 08.11.2014 00:47:46 from oledb.tlb of http://py-com-tools.googlecode.com/svn/trunk/sdk-tlbs/
 
 interface
+
 {$I ZPlain.inc}
-{$IFDEF ENABLE_ADO}
 
 {$IFDEF WIN64}
 {$ALIGN 8}
@@ -60,7 +60,7 @@ interface
 // Dependency: stdole v2 (stdole2.pas)
 //  Warning: renamed method 'Reset' in IDBBinderProperties to 'Reset_'
 Uses
-  Windows,ActiveX,Classes,Variants, ZCompatibility;//,stdole2;
+  Windows, ActiveX, Classes, Variants, ZCompatibility;
 Const
   IID_IColumnsInfo : TGUID = '{0C733A11-2A1C-11CE-ADE5-00AA0044773D}';
 
@@ -3108,11 +3108,11 @@ type
 //CoClasses
 
 //CoClasses
-{$IFDEF MISS_VARIANTCLEAR}
+{$IF NOT DECLARED(VariantClear)}
 function VariantClear(var varg: OleVariant): HResult; stdcall; external 'oleaut32.dll' name 'VariantClear';
-{$ENDIF}
 
 {$ENDIF ENABLE_ADO}
+
 implementation
 
 end.

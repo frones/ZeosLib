@@ -261,10 +261,10 @@ procedure PrepareResultSqlData(const PlainDriver: IZInterbasePlainDriver;
 procedure PrepareParameters(const PlainDriver: IZInterbasePlainDriver;
   const SQL: RawByteString; const Dialect: Word; var StmtHandle: TISC_STMT_HANDLE;
   const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings);
-procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
-  const InParamValues: TZVariantDynArray;  const InParamCount: Integer;
-  const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings;
-  const CodePageArray: TWordDynArray; ArrayOffSet, ArrayItersCount: Integer); overload;
+procedure BindSQLDAInParameters(const InParamValues: TZVariantDynArray;
+  const InParamCount: Integer; const ParamSqlData: IZParamsSQLDA;
+  const ConSettings: PZConSettings; const CodePageArray: TWordDynArray;
+  ArrayOffSet, ArrayItersCount: Integer); overload;
 procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
   const InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
   const InParamCount: Integer; const ParamSqlData: IZParamsSQLDA;
@@ -1229,10 +1229,10 @@ begin
   {$ENDIF}
 end;
 
-procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
-  const InParamValues: TZVariantDynArray;  const InParamCount: Integer;
-  const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings;
-  const CodePageArray: TWordDynArray; ArrayOffSet, ArrayItersCount: Integer);
+procedure BindSQLDAInParameters(const InParamValues: TZVariantDynArray;
+  const InParamCount: Integer; const ParamSqlData: IZParamsSQLDA;
+  const ConSettings: PZConSettings; const CodePageArray: TWordDynArray;
+  ArrayOffSet, ArrayItersCount: Integer);
 var
   I, J, ParamIndex, CP: Integer;
   TempBlob: IZBlob;
@@ -2323,7 +2323,7 @@ begin
     DecodeDate(Value, y, m, d);
     DecodeTime(Value, hr, min, sec, msec);
 
-    FillChar(TmpDate, SizeOf(TmpDate), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+    FillChar(TmpDate{%H-}, SizeOf(TmpDate), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
     TmpDate.tm_year := y - 1900;
     TmpDate.tm_mon := m - 1;
     TmpDate.tm_mday := d;

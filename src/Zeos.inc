@@ -158,7 +158,6 @@
 
           {$IF CompilerVersion >= 18.5} //Delphi 2007+
             {$UNDEF VER150BELOW}      //found in ZTestBugCompPostgreSql.pas
-            {$DEFINE HAVE_TBYTES}     //Compiler has TBytes. For newer Delphi RTTI Generic Array of <Byte>
 
             {$IF CompilerVersion >= 20} //Delphi 2009+
               {$UNDEF WITH_IPROVIDERSUPPORT2}           //TDataSet IProviderSupport2 has been removed again
@@ -188,7 +187,6 @@
               {$DEFINE WITH_PARAM_ASLARGEINT}           // TParam.AsLargint is supported
               {$DEFINE WITH_VARIANT_UINT64}             // System.TVariant supports UInt64 Values
               {$DEFINE WITH_VARIANT_UNICODESTRING}      // System.TVariant supports UnicodeString Values
-              {$DEFINE WITH_EARGUMENTEXCEPTION}         // EArgumentException is supported
 
               {$IF CompilerVersion >= 21} //Delphi 2010+
                 {$WEAKLINKRTTI ON}                    //suppress extended RTTI
@@ -381,13 +379,12 @@
 
 {$ENDIF}
 
-// Range check mode and UInt64 can't live together on D7 so turn it off for all Zeos units
-{$IFDEF WITH_UINT64_C1118_ERROR}
-{.$R-}
-{$ENDIF}
-
 {$IFOPT R+}
   {$DEFINE RangeCheckEnabled}
+{$ENDIF}
+
+{$IFOPT Q+}
+  {$DEFINE OverFlowCheckEnabled}
 {$ENDIF}
 
 // Disables checking code.
@@ -471,7 +468,8 @@
 {$DEFINE WITH_PROPERTY_EDITOR}
 
 // Turn on multithreading  EH???? nowhere used and can't locate the define for compilers
-{$DEFINE MULTI_THREADED}
+// TODO: seems unused
+{.$DEFINE MULTI_THREADED}
 
 // A large database may have many tables, colums and/or procedures!!!
 // Therefore there is the ability to show a warning
@@ -480,12 +478,14 @@
 
 // Use libfbclient.so under linux
 // and not libfbembed.so when Firebird 1.5.2 is used under linux
-{$DEFINE USELIBFBCLIENTSO}
+// TODO: seems unused
+{.$DEFINE USELIBFBCLIENTSO}
 
 // Use SynEdit for the SQL Editors.
 // Uncomment it when you will use SynEdit instead of a MemoEdit.
 // The SynEdit component must be installed on your system.
 // You can get SynEdit at http://synedit.sourceforge.net/
+// TODO: all uses are commented out. Could they be removed?
 {.$DEFINE USE_SYNEDIT}
 
 //run ZSysUtils benchmarks

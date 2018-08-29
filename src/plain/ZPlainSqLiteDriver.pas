@@ -545,7 +545,7 @@ constructor TZSQLiteBaseDriver.Create;
 begin
    inherited create;
    FLoader := TZNativeLibraryLoader.Create([]);
-  {$IFNDEF UNIX}
+  {$IFDEF MSWINDOWS}
     FLoader.AddLocation(WINDOWS_DLL_LOCATION);
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL_LOCATION);
@@ -1096,7 +1096,7 @@ end;
 constructor TZSQLite3PlainDriver.Create;
 begin
   inherited Create;
-  {$IFNDEF UNIX}
+  {$IFDEF MSWINDOWS}
     FLoader.AddLocation(WINDOWS_DLL3_LOCATION);
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL3_LOCATION);

@@ -110,7 +110,7 @@ type
 
 implementation
 
-uses ZTestCase, ZSysUtils, ZDbcResultSet, ZDbcUtils, ZEncoding;
+uses ZTestCase, ZSysUtils, ZDbcResultSet, ZEncoding;
 
 { TZNativeDbcPerformanceTestCase }
 
@@ -574,16 +574,11 @@ begin
 end;
 
 procedure TZCachedDbcPerformanceTestCase.SetUpTestUpdate;
-var
-  Bts: TBytes;
 begin
   inherited;
   FAsciiStream := TStringStream.Create(RawByteString(RandomStr(GetRecordCount*100)));
-  FUnicodeStream := WideStringStream(ZWideString(RandomStr(GetRecordCount*100)));
-  FBinaryStream := TMemoryStream.Create;
-  Bts := RandomBts(GetRecordCount*100);
-  TMemoryStream(FBinaryStream).Write(Bts, GetRecordCount*100);
-  FBinaryStream.Position := 0;
+  FUnicodeStream := StreamFromData(ZWideString(RandomStr(GetRecordCount*100)));
+  FBinaryStream := StreamFromData(RandomBts(GetRecordCount*100));
 end;
 
 {**

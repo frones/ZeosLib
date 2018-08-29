@@ -50,9 +50,7 @@
 {********************************************************@}
 
 unit ZDbcMySqlResultSet;
-{$IFDEF FPC}
-{$WARN 4055 off : Conversion between ordinals and pointers is not portable}
-{$ENDIF}
+
 interface
 
 {$I ZDbc.inc}
@@ -210,8 +208,8 @@ type
     function FormCalculateStatement(Columns: TObjectList): string; override;
     // <-- ms
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); override;
+    procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet; {%H-}UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor; {%H-}Resolver: IZCachedResolver); override;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
   end;
 
@@ -2941,9 +2939,8 @@ var
   Plaindriver : IZMysqlPlainDriver;
   LastWasNull: Boolean;
 begin
-  inherited UpdateAutoIncrementFields(Sender, UpdateType, OldRowAccessor, NewRowAccessor, Resolver);
   if not ((FAutoColumnIndex {$IFDEF GENERIC_INDEX}>={$ELSE}>{$ENDIF} 0) and
-          (OldRowAccessor.IsNull(FAutoColumnIndex) or (OldRowAccessor.GetULong(FAutoColumnIndex, LastWasNull)=0))) then
+          (OldRowAccessor.IsNull(FAutoColumnIndex) or (OldRowAccessor.GetULong(FAutoColumnIndex, LastWasNull{%H-})=0))) then
      exit;
   Plaindriver := (Connection as IZMysqlConnection).GetPlainDriver;
   // THIS IS WRONG, I KNOW (MDAEMS) : which function to use depends on the insert statement, not the resultset statement

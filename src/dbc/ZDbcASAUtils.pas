@@ -1494,8 +1494,7 @@ begin
                 begin
                   Raw := GetValidatedAnsiStringFromBuffer(
                     TempBlob.GetBuffer, TempBlob.Length, ConSettings);
-                  TempStream := TMemoryStream.Create;
-                  TempStream.Write(Pointer(Raw), Length(Raw){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
+                  TempStream := StreamFromData(Pointer(Raw), Length(Raw){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
                 end
                 {$ELSE}
                   TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(

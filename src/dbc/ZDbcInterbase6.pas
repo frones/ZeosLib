@@ -67,7 +67,6 @@ uses
 type
 
   {** Implements Interbase6 Database Driver. }
-  {$WARNINGS OFF}
   TZInterbase6Driver = class(TZAbstractDriver)
   public
     constructor Create; override;
@@ -78,7 +77,6 @@ type
     function GetTokenizer: IZTokenizer; override;
     function GetStatementAnalyser: IZStatementAnalyser; override;
   end;
-  {$WARNINGS ON}
 
   {** Represents a Interbase specific connection interface. }
   IZInterbase6Connection = interface (IZConnection)
@@ -114,7 +112,7 @@ type
     procedure AssignISC_Parameters;
   protected
     procedure InternalCreate; override;
-    procedure OnPropertiesChange(Sender: TObject); override;
+    procedure OnPropertiesChange({%H-}Sender: TObject); override;
   public
     procedure StartTransaction;
     function GetPlainDriver: IZInterbasePlainDriver;
@@ -206,12 +204,10 @@ uses ZFastCode, ZDbcInterbase6Statement, ZDbcInterbase6Metadata, ZEncoding,
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-{$WARNINGS OFF}
 function TZInterbase6Driver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := TZInterbase6Connection.Create(Url);
 end;
-{$WARNINGS ON}
 
 {**
   Constructs this object with default properties.
@@ -422,7 +418,6 @@ begin
       FTEBs[b][TIL].tpb_length := 0;
       FTEBs[b][TIL].tpb_address := nil;
     end;
-
 end;
 
 {**

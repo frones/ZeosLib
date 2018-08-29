@@ -163,8 +163,6 @@ function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = Fal
 function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): RawByteString;
 function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
 
-function WideStringStream(const AString: ZWideString): TStream;
-
 function TokenizeSQLQueryRaw(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
   ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
@@ -551,13 +549,6 @@ begin
   {$ENDIF}
 end;
 
-function WideStringStream(const AString: ZWideString): TStream;
-begin
-  Result := TMemoryStream.Create;
-  Result.Write(PWideChar(AString)^, Length(AString)*2);
-  Result.Position := 0;
-end;
-
 {**
   Splits a SQL query into a list of sections.
   @returns a list of splitted sections.
@@ -876,7 +867,6 @@ end;
   @param Stream the Stream with the unknown format and data
   @return a valid utf8 encoded stringstram
 }
-{$WARNINGS OFF}
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings): RawByteString;
 var
@@ -942,7 +932,6 @@ begin
     end;
   end;
 end;
-{$WARNINGS ON}
 
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings; ToCP: Word): RawByteString;
@@ -979,7 +968,6 @@ end;
 function GetValidatedUnicodeStream(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings; FromDB: Boolean): TStream;
 var
-  Len: Integer;
   US: ZWideString;
   Bytes: TByteDynArray;
   Encoding: TZCharEncoding;
@@ -1011,14 +999,8 @@ begin
       end;
     end;
 
-    Len := Length(US) shl 1;
-    if not Assigned(Result) and (Len > 0) then
-    begin
-      Result := TMemoryStream.Create;
-      Result.Size := Len;
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(US)^, TMemoryStream(Result).Memory^, Len);
-      Result.Position := 0;
-    end;
+    if US <> '' then
+      Result := StreamFromData(US);
   end;
 end;
 

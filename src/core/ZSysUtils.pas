@@ -59,11 +59,6 @@ uses
   Variants, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   ZMessages, ZCompatibility;
 
-{$IFNDEF WITH_EARGUMENTEXCEPTION}     // EArgumentException is supported
-type
-  EArgumentException = Class(Exception);
-{$ENDIF}
-
 type
   {** Modified comparison function. }
   TZListSortCompare = function (Item1, Item2: Pointer): Integer of object;
@@ -103,6 +98,11 @@ type
   {$ENDIF}
     procedure Sort(Compare: TZListSortCompare);
   end;
+
+  {$IF NOT DECLARED(EArgumentException)}
+  type
+    EArgumentException = Class(Exception);
+  {$IFEND}
 
 const
   StrFalse = 'False';
@@ -631,8 +631,8 @@ function EncodeCString(const Value: RawByteString): RawByteString; overload;
 function DecodeCString(const Value: ZWideString): ZWideString; overload;
 function DecodeCString(const Value: RawByteString): RawByteString; overload;
 
-procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; var Result: ZWideString); overload;
-procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; var Result: RawByteString); overload;
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; out Result: ZWideString); overload;
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; out Result: RawByteString); overload;
 
 function DecodeCString(SrcLength: LengthInt; SrcBuffer, DestBuffer: PWideChar): LengthInt; overload;
 function DecodeCString(SrcLength: LengthInt; SrcBuffer, DestBuffer: PAnsiChar): LengthInt; overload;
@@ -773,6 +773,17 @@ function Trim(const Value: ZWideString): ZWideString; overload;
 
 {$IFDEF NO_RAW_HEXTOBIN}
 function HexToBin(Hex: PAnsiChar; Bin: PByte; BinBytes: Integer): Boolean;
+{$ENDIF}
+
+{**
+   Creates a memory stream with copy of data in buffer.
+   If buffer contains no data, creates an empty stream.
+}
+function StreamFromData(Buffer: Pointer; Size: Integer): TStream; overload;
+function StreamFromData(const AString: ZWideString): TStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function StreamFromData(const Bytes: TBytes): TStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
+function StreamFromData(const AString: RawByteString): TStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 {$ENDIF}
 
 implementation
@@ -3031,7 +3042,6 @@ end;
   @param TimeFormat the result format.
   @return a formated RawByteString with Time-Format pattern.
 }
-{$WARNINGS OFF} //suppress D2007 Warning for undefined result
 function DateTimeToRawSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
@@ -3348,7 +3358,6 @@ begin
       end;
     end;
 end;
-{$WARNINGS ON} //suppress D2007 Warning for undefined result
 
 {**
   Converts DateTime value to native string
@@ -3394,16 +3403,16 @@ end;
     in other procedure, and not changed parameters and code).
 }
 //~1.57 times faster than Delphi QuickSort on E6850
-{$UNDEF SaveQ} {$IFOPT Q+} {$Q-} {$DEFINE SaveQ} {$ENDIF}
-{$UNDEF SaveR} {$IFOPT R+} {$R-} {$DEFINE SaveR} {$ENDIF}
+{$Q-}
+{$R-}
 const
   InsCount = 35; //33..49;
   InsLast = InsCount-1;
   SOP = SizeOf(pointer);
   MSOP = NativeUInt(-SOP);
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
+
 procedure QuickSortSha_0AA(L, R: NativeUInt; Compare: TZListSortCompare);
 var
   I, J, P, T: NativeUInt;
@@ -3521,11 +3530,11 @@ begin;
     end;
   end;
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
-{$IFDEF SaveQ} {$Q+} {$UNDEF SaveQ} {$ENDIF}
-{$IFDEF SaveR} {$R+} {$UNDEF SaveR} {$ENDIF}
+
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
 {$IFDEF TLIST_IS_DEPRECATED}
 function TZSortedList.Add(Item: Pointer): Integer;
@@ -3910,18 +3919,17 @@ end;
   @param SrcBuffer the souce buffer.
   @return a regular string.
 }
-procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; var Result: ZWideString);
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; out Result: ZWideString);
 begin
   SetLength(Result, SrcLength);
   SetLength(Result, DecodeCString(SrcLength, SrcBuffer, Pointer(Result)));
 end;
 
-procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; var Result: RawByteString);
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; out Result: RawByteString);
 begin
   SetLength(Result, SrcLength);
   SetLength(Result, DecodeCString(SrcLength, SrcBuffer, Pointer(Result)));
 end;
-
 
 {**
   Converts a string from escape PostgreSQL format.
@@ -5078,6 +5086,34 @@ begin
     BoolStrIntsRaw[B] := UnicodeStringToASCII7(BoolStrInts[B]);
     BoolStrsRaw[B] := UnicodeStringToASCII7(BoolStrsW[B]);
   end;
+end;
+{$ENDIF}
+
+{**
+   Creates a memory stream with copy of data in buffer.
+   If buffer contains no data, creates an empty stream.
+}
+function StreamFromData(Buffer: Pointer; Size: Integer): TStream;
+begin
+  Result := TMemoryStream.Create;
+  Result.Write(Buffer^, Size);
+  Result.Position := 0;
+end;
+
+function StreamFromData(const AString: ZWideString): TStream;
+begin
+  Result := StreamFromData(Pointer(AString), Length(AString)*SizeOf(WideChar));
+end;
+
+function StreamFromData(const Bytes: TBytes): TStream;
+begin
+  Result := StreamFromData(Pointer(Bytes), Length(Bytes));
+end;
+
+{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
+function StreamFromData(const AString: RawByteString): TStream;
+begin
+  Result := StreamFromData(Pointer(AString), Length(AString));
 end;
 {$ENDIF}
 

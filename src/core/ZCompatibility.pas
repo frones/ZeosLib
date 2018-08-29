@@ -141,9 +141,9 @@ type
     CP: Word;      //CodePage of the String
   end;
 
-  {$IFNDEF HAVE_TBYTES}
+  {$IF NOT DECLARED(TBytes)}
   TBytes = TByteDynArray;
-  {$ENDIF}
+  {$IFEND}
 
   TObjectDynArray       = array of TObject;
 
@@ -453,9 +453,10 @@ function Min(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}
 function Max(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
-{$IFDEF FPC2_6DOWN}
-function BytesOf(InStr: AnsiString): TBytes;
-{$ENDIF}
+{$IF NOT DEFINED(FPC) AND NOT DECLARED(ReturnAddress)} // intrinsic since XE2
+{$DEFINE ZReturnAddress}
+function ReturnAddress: Pointer;
+{$IFEND}
 
 var
   ClientCodePageDummy: TZCodepage =
@@ -600,14 +601,8 @@ end;
   {$ENDIF}
 {$ENDIF}
 
-{$IFOPT Q+}
-  {$DEFINE OverFlowCheckEnabled}
-  {$OVERFLOWCHECKS OFF}
-{$ENDIF}
-{$IFOPT R+}
-  {$DEFINE RangeCheckEnabled}
-  {$R-}
-{$ENDIF}
+{$Q-}
+{$R-}
 
 function Hash(const key: ZWideString): Cardinal;
 var
@@ -711,12 +706,8 @@ begin
   end;
 end;
 
-{$IFDEF RangeCheckEnabled}
-  {$R+}
-{$ENDIF}
-{$IFDEF OverFlowCheckEnabled}
-  {$OVERFLOWCHECKS ON}
-{$ENDIF}
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
 {$IFNDEF FPC}
 {$IFDEF WITH_TSYSCHARSET_DEPRECATED}
@@ -930,16 +921,18 @@ begin
     end;
 end;
 
-{$IFDEF FPC2_6DOWN}
-function BytesOf(InStr: AnsiString): TBytes;
-var
-  Len: SizeInt;
-begin
-  Len := Length(Instr);
-  SetLength(Result, Len);
-  if Len > 0 then Move(InStr[1], Result[0], Len);
-end;
+{$IFDEF ZReturnAddress} 
+function ReturnAddress: Pointer;
+{$IFDEF PUREPASCAL}
+  begin
+    Result := nil;
+  end;
+{$ELSE}
+  asm
+          MOV     EAX,[EBP+4]
+  end;
 {$ENDIF}
+{$ENDIF ZReturnAddress}
 
 initialization
   case ConSettingsDummy.CPType of

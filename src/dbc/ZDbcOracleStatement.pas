@@ -55,10 +55,6 @@ interface
 
 {$I ZDbc.inc}
 
-{$IFOPT R+}
-  {$DEFINE RangeCheck}
-{$ENDIF}
-
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   {$IFDEF MSWINDOWS}{%H-}Windows,{$ENDIF}
@@ -251,7 +247,7 @@ begin
   begin
     {$R-}
     CurrentVar := @FParams.Variables[I];
-    {$IFDEF RangeCheck} {$R+} {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     CurrentVar.Handle := nil;
 
     { Artificially define Oracle internal type. }
@@ -301,7 +297,7 @@ begin
   for I := 0 to FParams^.AllocNum - 1 do
     LoadOracleVar(FPlainDriver, Connection, FErrorHandle, @FParams.Variables[I],
       InParamValues[i], ChunkSize, Max(1, Min(FIteration, ArrayCount)));
-  {$IFDEF RangeCheck} {$R+} {$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   inherited BindInParameters;
 end;
 
@@ -608,7 +604,7 @@ begin
     FParamNames[I] := Self.FOracleParams[I].pName;
     {$R-}
     CurrentVar := @FParams.Variables[I];
-    {$IFDEF RangeCheck} {$R+} {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     CurrentVar.Handle := nil;
     SQLType := TZSQLType(FOracleParams[I].pSQLType);
     { Artificially define Oracle internal type. }
@@ -634,7 +630,7 @@ begin
   begin
     {$R-}
     CurrentVar := @FParams.Variables[I];
-    {$IFDEF RangeCheck} {$R+} {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     CurrentVar.Handle := nil;
     SetVariableDataEntrys(CurrentBufferEntry, CurrentVar, FIteration);
     AllocDesriptors(FPlainDriver, (Connection as IZOracleConnection).GetConnectionHandle,
@@ -667,7 +663,7 @@ begin
         LoadOracleVar(FPlainDriver, Connection, FErrorHandle,
           @FParams.Variables[I], NullVariant, ChunkSize,
             Max(1, Min(FIteration, ArrayCount)));
-    {$IFDEF RangeCheck} {$R+} {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   inherited BindInParameters;
 end;
 
@@ -775,7 +771,7 @@ begin
   for I := 0 to FOracleParamsCount -1 do
     if FOracleParams[i].pType in [2,3,4] then
       SetOutParam(@FParams^.Variables[I], FOracleParams[i].pParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
-  {$IFDEF RangeCheck} {$R+} {$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 function TZOracleCallableStatement.GetProcedureSql: RawByteString;

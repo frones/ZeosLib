@@ -1976,7 +1976,7 @@ begin
   inherited Create;
   Self.FLoader.ClearLocations;
   {$IFNDEF STRICT_DLL_LOADING}
-    {$IFNDEF UNIX}
+  {$IFDEF MSWINDOWS}
       FLoader.AddLocation(WINDOWS_DLL_LOCATION);
     {$ELSE}
       FLoader.AddLocation(LINUX_DLL9_LOCATION);

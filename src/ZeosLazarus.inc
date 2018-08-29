@@ -42,11 +42,10 @@
 // Compilation directives for Lazarus
 
 {$WARN 4055 off : Conversion between ordinals and pointers is not portable} //suppress compiler buggy warning -> our Native(U)Int is Pointer size aligned
+{$WARN 4056 off : Conversion between ordinals and pointers is not portable}
 
 {$DEFINE PUREPASCAL}
 
-{$DEFINE MISS_VARIANTCLEAR}           //oleaut32 external function VariantClear is missing
-{$DEFINE WITH_EARGUMENTEXCEPTION}     // EArgumentException is supported since?????
 {.$DEFINE WITH_VARIANT_UINT64}         // System.TVariant supports UInt64 Values
 {$DEFINE WITH_VARIANT_UNICODESTRING}  // System.TVariant supports UnicodeString Values
 {$DEFINE WITH_TFIELD_FREEBUFFERS} //TField has virtual FreeBuffers procedure
@@ -76,9 +75,6 @@
       {$DEFINE OLDFPC}
     {$IFEND}
 
-//    {$IF FPC_FULLVERSION>=20400}  // 2.4.0 status is unknown. 2.4.2+ should be generally fine.
-//      {$DEFINE FPC2_4UP}
-//    {$IFEND}
     {$DEFINE WITH_PARAM_ASLARGEINT} //supportet since FPC 2.0.4 -> see http://zeoslib.sourceforge.net/viewtopic.php?p=68484#p68484
     {$DEFINE WITH_FTWIDESTRING}  // Supported from somewhere between 2.2 and 2.4
 
@@ -100,10 +96,6 @@
        {$DEFINE FPC2_6UP}
        {$DEFINE FPC2_6DOWN}
     {$IFEND}
-
-    {$IF FPC_FULLVERSION>=20602}
-       {$DEFINE HAVE_TBYTES}         // TBytes is declared only in FPC 2.6.2 instead of 2.6.0 as declared...
-    {$ENDIF}
 
     {$IF FPC_FULLVERSION>=30000}
        {$DEFINE FPC3_0UP}
@@ -140,7 +132,7 @@
     {$UNDEF WITH_FPC_BOF_BUG}
     {$UNDEF WITH_FPC_MODIFIED_BUG}
     {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
-    {$DEFINE WITH_FPC_STRING_CONVERSATION} //After string conversations to RawByteString like AnsiToUTF8 the results are equal to original value
+    {$DEFINE WITH_FPC_STRING_CONVERSION} //After string conversions to RawByteString like AnsiToUTF8 the results are equal to original value
     {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}
     {$DEFINE MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is missing
     {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //Hack for *nix systems where i couldn't locate this define )):
@@ -152,6 +144,10 @@
     {.$UNDEF MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is available now
     {$UNDEF WITH_RAWBYTESTRING_CONVERSION_BUG} //issue seems to be fixed
     {$DEFINE WITH_VIRTUAL_TFIELD_BIND} //TField has procedure Bind(Binding: Boolean);
+  {$IFEND}
+  {$IF FPC_FULLVERSION>30004} // introduced somewhere after 3.0.4 - these defines make the compile break on every 3.0.4 version in Hudson.
+    {$DEFINE WITH_ASANSISTRING} // TField.AsAnsiString is supported
+    {$DEFINE WITH_ASUTF8STRING} // TFIeld.AsUtf8String is supported
   {$IFEND}
 
   // todo

@@ -54,7 +54,6 @@ unit ZDbcAdoUtils;
 interface
 
 {$I ZDbc.inc}
-{$IFDEF ENABLE_ADO}
 
 uses Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   ZDbcIntfs, ZCompatibility, ZPlainAdo, ZDbcAdo, ZVariant;
@@ -900,11 +899,4 @@ initialization
   OleCheck(CoGetMalloc(1, ZAdoMalloc));
 finalization
   ZAdoMalloc := nil;
-
-{$ELSE}
-implementation
-{$ENDIF ENABLE_ADO}
 end.
-
-
-

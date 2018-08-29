@@ -50,9 +50,7 @@
 {********************************************************@}
 
 unit ZAbstractRODataset;
-{$IFDEF FPC}
-{$WARN 4056 off : Conversion between ordinals and pointers is not portable}
-{$ENDIF}
+
 interface
 
 {$I ZComponent.inc}
@@ -417,7 +415,7 @@ type
       TGetResult; override;
 {$ENDIF}
     function GetRecordSize: Word; override;
-    function GetActiveBuffer(var RowBuffer: PZRowBuffer): Boolean;
+    function GetActiveBuffer(out RowBuffer: PZRowBuffer): Boolean;
 {$IFDEF WITH_TRECORDBUFFER}
     function AllocRecordBuffer: TRecordBuffer; override;
     procedure FreeRecordBuffer(var Buffer: TRecordBuffer); override;
@@ -673,7 +671,7 @@ type
     function GetAsString: string; override;
     function GetAsWideString: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_FTWIDESTRING}override;{$ENDIF}
     function GetAsAnsiString: AnsiString; {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
-    function GetAsUTF8String: UTF8String;
+    function GetAsUTF8String: UTF8String; {$IFDEF WITH_ASUTF8STRING}override;{$ENDIF}
     function GetAsRawByteString: RawByteString;
     { record/array types }
     function GetAsGuid: TGUID; {$IFDEF WITH_VIRTUAL_TFIELD_GETASGUID} override; {$ENDIF}
@@ -711,7 +709,7 @@ type
     procedure SetAsString(const Value: string); override;
     procedure SetAsWideString(const Value: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_FTWIDESTRING}override;{$ENDIF}
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
-    procedure SetAsUTF8String(const Value: UTF8String);
+    procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_ASUTF8STRING}override;{$ENDIF}
     procedure SetAsRawByteString(const Value: RawByteString);
 
     procedure SetAsBytes(const Value: TBytes); {$IFDEF TFIELD_HAS_ASBYTES}override;{$ENDIF}
@@ -847,7 +845,7 @@ type
     procedure SetAsString(const Value: string); override;
     procedure SetAsWideString(const Value: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_FTWIDESTRING}override;{$ENDIF}
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
-    procedure SetAsUTF8String(const Value: UTF8String);
+    procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_ASUTF8STRING}override;{$ENDIF}
     procedure SetAsRawByteString(const Value: RawByteString);
   protected
     procedure RangeError(Value, Min, Max: Extended);
@@ -1008,13 +1006,8 @@ type
     constructor Create(AOwner: TComponent); override;
     property Value: UInt64 read GetAsUInt64 write SetAsUInt64;
   published
-    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}
-    property MaxValue: UInt64 read FMaxValue write SetMaxValue;
-    property MinValue: UInt64 read FMinValue write SetMinValue;
-    {$ELSE}
-    property MaxValue: UInt64 read FMaxValue write SetMaxValue default 0;
-    property MinValue: UInt64 read FMinValue write SetMinValue default 0;
-    {$IFEND}
+    property MaxValue: UInt64 read FMaxValue write SetMaxValue {$IF NOT(defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR))}default 0{$IFEND};
+    property MinValue: UInt64 read FMinValue write SetMinValue {$IF NOT(defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR))}default 0{$IFEND};
   end;
 
 (*{ TAutoIncField }
@@ -1499,7 +1492,7 @@ type
     constructor Create(AOwner: TComponent); override;
   end;   *)
 
-{ TZObjectField }
+{ TObjectField }
 
   {$IFNDEF WITH_TOBJECTFIELD}
   TObjectField = class(TZField)
@@ -1900,11 +1893,13 @@ begin
   Result := FUpdated;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // parameter not used intentionally
 procedure TFlatList.ListChanging(Sender: TObject);
 begin
   if Locked then
     DatabaseError(SReadOnlyProperty, DataSet);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TFlatList.Update;
 begin
@@ -2314,7 +2309,7 @@ procedure TZAbstractRODataset.SetParamCheck(Value: Boolean);
 begin
   if Value <> FSQL.ParamCheck then begin
     FSQL.ParamCheck := Value;
-    UpdateSQLStrings(Self);
+    UpdateSQLStrings(FSQL);
   end;
 end;
 
@@ -2335,7 +2330,7 @@ procedure TZAbstractRODataset.SetParamChar(Value: Char);
 begin
   if Value <> FSQL.ParamChar then begin
     FSQL.ParamChar := Value;
-    UpdateSQLStrings(Self);
+    UpdateSQLStrings(FSQL);
   end;
 end;
 
@@ -2422,8 +2417,8 @@ begin
   FParams.Clear;
 
   try
-    for I := 0 to FSQL.ParamCount - 1 do
-      FParams.CreateParam(ftUnknown, FSQL.ParamNames[I], ptUnknown);
+    for I := 0 to TZSQLStrings(Sender).ParamCount - 1 do
+      FParams.CreateParam(ftUnknown, TZSQLStrings(Sender).ParamNames[I], ptUnknown);
     FParams.AssignValues(OldParams);
   finally
     OldParams.Free;
@@ -2877,7 +2872,7 @@ end;
   @param RowBuffer a reference to the result row buffer.
   @return <code>True</code> if the buffer was defined.
 }
-function TZAbstractRODataset.GetActiveBuffer(var RowBuffer: PZRowBuffer):
+function TZAbstractRODataset.GetActiveBuffer(out RowBuffer: PZRowBuffer):
   Boolean;
 var
   RowNo: NativeInt;
@@ -3767,6 +3762,7 @@ end;
   Processes change events from the master dataset.
   @param Sender an event sender object.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // TNotifyEvent - parameter not used intentionally
 procedure TZAbstractRODataset.MasterChanged(Sender: TObject);
 begin
   CheckBrowseMode;
@@ -3783,6 +3779,7 @@ procedure TZAbstractRODataset.MasterDisabled(Sender: TObject);
 begin
   RereadRows;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Initializes new record with master fields.
@@ -3999,9 +3996,11 @@ end;
 {$ENDIF}
 
 {$IFNDEF WITH_VIRTUAL_DEFCHANGED}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // base class - parameter not used intentionally
 procedure TZAbstractRODataset.DefChanged(Sender: TObject);
 begin
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 {$ENDIF}
 
 {$IFNDEF WITH_DATASETFIELD}
@@ -4657,7 +4656,7 @@ begin
   if (Src <> nil) then
   begin
     Result := ZFastCode.StrLen(Src);
-  {$IFNDEF UNIX}
+  {$IFDEF MSWINDOWS}
     if doOemTranslate in FOptions then
     begin
       if ToOem then
@@ -5151,12 +5150,10 @@ end;
 }
 // Silvio Clecio
 {$IFDEF WITH_IPROVIDERWIDE}
-{$WARNINGS OFF}
 function TZAbstractRODataset.PSGetKeyFieldsW: WideString;
 begin
   Result := inherited PSGetKeyFieldsW;
 end;
-{$WARNINGS ON}
 {$ELSE}
 function TZAbstractRODataset.PSGetKeyFields: string;
 begin
@@ -5315,17 +5312,13 @@ end;
   {$WARNINGS ON}
 {$ENDIF}
 
-
 {**
   Reset the calculated (includes fkLookup) fields
   @param Buffer
 }
-
 {$IFDEF WITH_TRECORDBUFFER}
-
 procedure TZAbstractRODataset.ClearCalcFields(Buffer: TRecordBuffer);
 {$ELSE}
-
 procedure TZAbstractRODataset.ClearCalcFields(Buffer: PChar);
 {$ENDIF}
 var
@@ -6383,12 +6376,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsByte(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6428,12 +6418,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsShortInt(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6473,12 +6460,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsWord(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6518,12 +6502,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsSmallInt(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6563,12 +6544,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsInteger(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6608,12 +6586,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsLongWord(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6653,12 +6628,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsLargeInt(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6698,12 +6670,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsUInt64(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6813,12 +6782,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsSingle(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6898,12 +6864,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsFloat(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;
@@ -6976,12 +6939,9 @@ begin
   if (ConvertedValue < FMinValue) or (ConvertedValue > FMaxValue) then
     RangeError(ConvertedValue, FMinValue, FMaxValue);
   //Let the IDE do the RangeCheck !
-  {$IFOPT R-}
-    {$DEFINE DisableRangeChecking}
-    {$R+}
-  {$ENDIF}
+  {$R+}
   inherited SetAsCurrency(ConvertedValue);
-  {$IFDEF DisableRangeChecking}
+  {$IFNDEF RangeCheckEnabled}
     {$R-}
   {$ENDIF}
 end;

@@ -54,16 +54,11 @@ unit ZDbcAdoResultSet;
 interface
 
 {$I ZDbc.inc}
-{.$DEFINE ENABLE_ADO}
-{$IFDEF ENABLE_ADO}
 
 uses
-{$IFNDEF FPC}
-  DateUtils,
-{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFDEF OLD_FPC}ZClasses, {$ENDIF}ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
+  ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
   ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility, ZPlainAdo;
 
 type
@@ -129,7 +124,7 @@ type
 implementation
 
 uses
-  Variants, Math, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF},
+  Variants, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF},
   ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZClasses;
 
 {**
@@ -1746,11 +1741,4 @@ begin
   ColumnInfo.DefinitelyWritable := False;}
 end;
 
-{$ELSE}
-implementation
-{$ENDIF ENABLE_ADO}
-
 end.
-
-
-

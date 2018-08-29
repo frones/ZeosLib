@@ -542,7 +542,7 @@ var
       if (CPType = 'CP_UTF16') then //autoencoding is allways true
         SetCharacterSets(MyCurrent)
       else
-        {$IF defined(MSWINDOWS) or defined(WITH_FPC_STRING_CONVERSATION) or defined(WITH_LCONVENCODING) or defined(DELPHI)}
+        {$IF defined(MSWINDOWS) or defined(WITH_FPC_STRING_CONVERSION) or defined(WITH_LCONVENCODING) or defined(DELPHI)}
         SetAutoEncodings(MyCurrent); //Allow Autoencoding only if supported!
         {$ELSE}
         SetCharacterSets(MyCurrent); //No Autoencoding available
@@ -1081,12 +1081,9 @@ function TZAbstractSQLTestCase.GetDBTestStream(const Value: ZWideString;
 var
   Ansi: RawByteString;
 begin
-  Result := TMemoryStream.Create;
   if ( ConSettings.CPType = cCP_UTF16 ) then
-  begin
-    Result.Write(PWideChar(Value)^, Length(Value)*2);
-    Result.Position := 0;
-  end else begin
+    Result := StreamFromData(Value)
+  else begin
     case ConSettings.ClientCodePage.Encoding of
       ceAnsi:
         if ConSettings.AutoEncode then //Revert the expected value to test
@@ -1112,8 +1109,7 @@ begin
               Ansi := UTF8Encode(Value);
         end;
     end;
-    Result.Write(PAnsiChar(Ansi)^, Length(Ansi));
-    Result.Position := 0;
+    Result := StreamFromData(Ansi);
   end;
 end;
 

@@ -155,14 +155,14 @@ begin
     try
       if (FBatchStmts[True].Obj <> nil) and (ArrayCount >= FBatchStmts[True].PreparedRowsOfArray) then
         while (ArrayOffSet+FBatchStmts[True].PreparedRowsOfArray <= ArrayCount) do begin
-          BindSQLDAInParameters(ClientVarManager, InParamValues, InParamCount,
+          BindSQLDAInParameters(InParamValues, InParamCount,
             FBatchStmts[True].Obj.FParamSQLData, GetConnection.GetConSettings,
             FCodePageArray, ArrayOffSet, FBatchStmts[True].PreparedRowsOfArray);
           Result := FBatchStmts[True].Obj.ExecuteInternal;
           Inc(ArrayOffSet, FBatchStmts[True].PreparedRowsOfArray);
         end;
       if (FBatchStmts[False].Obj <> nil) and (ArrayOffSet < ArrayCount) then begin
-        BindSQLDAInParameters(ClientVarManager, InParamValues, InParamCount,
+        BindSQLDAInParameters(InParamValues, InParamCount,
           FBatchStmts[False].Obj.FParamSQLData, GetConnection.GetConSettings,
           FCodePageArray, ArrayOffSet, FBatchStmts[False].PreparedRowsOfArray);
         Result := FBatchStmts[False].Obj.ExecuteInternal;

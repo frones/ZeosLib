@@ -55,10 +55,6 @@ interface
 
 {$I ZDbc.inc}
 
-{$IFOPT R+}
-  {$DEFINE RangeCheck}
-{$ENDIF}
-
 uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -257,7 +253,7 @@ begin
 {$ENDIF}
   {$R-}
   Result := FColumns^.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].oIndicatorArray^[FCurrentRowBufIndex] < 0;
-  {$IFDEF RangeCheck} {$R+} {$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -307,7 +303,7 @@ begin
             Result := {%H-}Pointer({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length));
             {$R-}
             Len := oDataSizeArray^[FCurrentRowBufIndex];
-            {$IFDEF RangeCheck} {$R+} {$ENDIF}
+            {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
           end;
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           begin
@@ -369,7 +365,7 @@ begin
           Result := ConSettings^.ConvFuncs.ZPRawToUTF8(
             {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length)),
             NativeUInt(oDataSizeArray^[FCurrentRowBufIndex]), ConSettings^.ClientCodePage^.CP);
-          {$IFDEF RangeCheck} {$R+} {$ENDIF}
+          {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           ZSetString({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))+SizeOf(Integer),
             {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^, Result);
@@ -419,7 +415,7 @@ begin
   {$R-}
   Result := @FColumns^.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   LastWasNull := (Result^.oIndicatorArray[FCurrentRowBufIndex] < 0) or (Result.Data = nil);
-  {$IFDEF RangeCheck} {$R+} {$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -546,7 +542,7 @@ begin
         SQLT_STR:
           {$R-}
           ZSetString({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length)), SQLVarHolder.oDataSizeArray[FCurrentRowBufIndex], Result);
-          {$IFDEF RangeCheck} {$R+} {$ENDIF}
+          {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           ZSetString({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length)) + SizeOf(Integer), {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^, Result);
         SQLT_DAT, SQLT_TIMESTAMP:
@@ -800,7 +796,7 @@ begin
            {$R-}
            SqlStrToFloatDef({%H-}PAnsichar({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length)),
             0, Result, oDataSizeArray^[FCurrentRowBufIndex]);
-           {$IFDEF RangeCheck} {$R+} {$ENDIF}
+           {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           Result := 0;
         SQLT_DAT, SQLT_TIMESTAMP:
@@ -853,7 +849,7 @@ begin
           {$R-}
           SqlStrToFloatDef({%H-}PAnsichar({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length)),
             0, Result, oDataSizeArray^[FCurrentRowBufIndex]);
-          {$IFDEF RangeCheck} {$R+} {$ENDIF}
+          {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           Result := 0;
         SQLT_DAT, SQLT_TIMESTAMP:
@@ -907,7 +903,7 @@ begin
           {$R-}
           SqlStrToFloatDef({%H-}PAnsichar({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length)),
             0, Result, oDataSizeArray^[FCurrentRowBufIndex]);
-          {$IFDEF RangeCheck} {$R+} {$ENDIF}
+          {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           Result := 0;
         SQLT_DAT, SQLT_TIMESTAMP:
@@ -982,7 +978,7 @@ begin
             P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length));
             {$R-}
             Len := oDataSizeArray^[FCurrentRowBufIndex];
-            {$IFDEF RangeCheck} {$R+} {$ENDIF}
+            {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     ConvFromString:
             if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
               Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
@@ -1052,7 +1048,7 @@ begin
             P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length));
             {$R-}
             Len := oDataSizeArray^[FCurrentRowBufIndex];
-            {$IFDEF RangeCheck} {$R+} {$ENDIF}
+            {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     ConvFromString:
             if (P+2)^ = ':' then //possible date if Len = 10 then
               Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
@@ -1122,7 +1118,7 @@ begin
             P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length));
             {$R-}
             Len := oDataSizeArray^[FCurrentRowBufIndex];
-            {$IFDEF RangeCheck} {$R+} {$ENDIF}
+            {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     ConvFromString:
             if (P+2)^ = ':' then //possible date if Len = 10 then
               Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
@@ -1178,7 +1174,7 @@ begin
   if CurrentVar.TypeCode = SQLT_NTY then
     {$R-}
     if CurrentVar.oIndicatorArray[FCurrentRowBufIndex] >= 0 then begin
-    {$IFDEF RangeCheck} {$R+} {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
       if CurrentVar._Obj.is_final_type = 1 then
         // here we've the final object lets's read it to test it
         // later we only need the reference-pointers to create a new dataset
@@ -1327,7 +1323,7 @@ begin
   begin
     {$R-}
     CurrentVar := @FColumns.Variables[I-1];
-    {$IFDEF RangeCheck} {$R+} {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     CurrentVar^.Handle := nil;
 
     FPlainDriver.ParamGet(FStmtHandle, OCI_HTYPE_STMT, FErrorHandle,
@@ -1461,7 +1457,7 @@ begin
   begin
     {$R-}
     CurrentVar := @FColumns.Variables[I-1];
-    {$IFDEF RangeCheck} {$R+} {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     SetVariableDataEntrys(BufferPos, CurrentVar, FIteration);
     if CurrentVar^.ColType <> stUnknown then //do not BIND unknown types
     begin
@@ -1475,7 +1471,7 @@ begin
     else
       {$R-}
       CurrentVar := @FColumns.Variables[I-1];
-      {$IFDEF RangeCheck} {$R+} {$ENDIF}
+      {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     if CurrentVar^.oDataType=SQLT_NTY then
       //second step: http://www.csee.umbc.edu/portal/help/oracle8/server.815/a67846/obj_bind.htm
       CheckOracleError(FPlainDriver, FErrorHandle,
@@ -1656,7 +1652,7 @@ begin
       Result.Variables[J].oIndicatorArray := Params.Variables[I].oIndicatorArray; //reference to array entry in stmt buffer -> no move!
       Result.Variables[J].Data := Params.Variables[I].Data; //reference to data entry in stmt buffer -> no move!
       Result.Variables[J].DescriptorType := Params.Variables[I].DescriptorType;
-      {$IFDEF RangeCheck} {$R+} {$ENDIF}
+      {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
       FFieldNames[J] := OracleParams[I].pName;
     end;
   end;
@@ -1674,7 +1670,7 @@ begin
   begin
     {$R-}
     CurrentVar := @FColumns.Variables[I];
-    {$IFDEF RangeCheck} {$R+} {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     ColumnInfo := TZColumnInfo.Create;
 
     with ColumnInfo do

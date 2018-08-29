@@ -56,7 +56,6 @@ interface
 {$I ZDbc.inc}
 
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFNDEF HAVE_TBYTES}Types,{$ENDIF}
   ZDbcIntfs, ZDbcStatement, ZDbcASA, ZDbcASAUtils,
   ZCompatibility, ZDbcLogging, ZVariant;
 

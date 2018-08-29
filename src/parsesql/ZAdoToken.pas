@@ -54,7 +54,6 @@ unit ZAdoToken;
 interface
 
 {$I ZParseSql.inc}
-{$IFDEF ENABLE_ADO}
 
 uses
   Classes, SysUtils, ZTokenizer, ZGenericSqlToken, ZCompatibility;
@@ -76,9 +75,7 @@ type
     procedure CreateTokenStates; override;
   end;
 
-{$ENDIF ENABLE_ADO}
 implementation
-{$IFDEF ENABLE_ADO}
 
 {$IFDEF FAST_MOVE}
 uses ZFastCode;
@@ -198,5 +195,4 @@ begin
   SetCharacterState('/', '/', CommentState);
 end;
 
-{$ENDIF ENABLE_ADO}
 end.

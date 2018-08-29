@@ -226,11 +226,11 @@ end;
 procedure TZPgEventAlerter.TimerTick(Sender: TObject);
 begin
   if not FActive then
-   FTimer.Enabled := False
+    TTimer(Sender).Enabled := False
   else
   begin
     if FProcessor <> nil then
-      FTimer.Enabled := False
+      TTimer(Sender).Enabled := False
     else
      CheckEvents;
   end;

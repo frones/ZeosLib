@@ -288,7 +288,7 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
-  ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZDbcMySql, ZCollections,
+  ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZCollections,
   ZSelectSchema;
 
 { TZMySQLDatabaseInfo }

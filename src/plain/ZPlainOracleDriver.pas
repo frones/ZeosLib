@@ -58,9 +58,6 @@ interface
 {$J+}
 
 uses
-{$IFNDEF UNIX}
-//  Windows,
-{$ENDIF}
   ZPlainLoader, ZCompatibility, ZPlainOracleConstants, ZPlainDriver;
 
 {***************** Plain API types definition ****************}
@@ -1831,7 +1828,7 @@ constructor TZOracle9iPlainDriver.Create;
 begin
   inherited create;
   FLoader := TZNativeLibraryLoader.Create([]);
-  {$IFNDEF UNIX}
+  {$IFDEF MSWINDOWS}
     FLoader.AddLocation(WINDOWS_DLL_LOCATION);
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL_LOCATION);
