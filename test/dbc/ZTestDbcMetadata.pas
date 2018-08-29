@@ -55,7 +55,17 @@ interface
 {$I ZDbc.inc}
 uses
   Types, Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
-  ZDbcIntfs, ZSqlTestCase, ZCompatibility;
+  ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZDbcConnection, ZUrl
+  {$IFDEF ENABLE_ASA}        , ZDbcASAMetadata {$ENDIF}
+  {$IFDEF ENABLE_DBLIB}      , ZDbcDbLibMetadata {$ENDIF}
+  {$IFDEF ENABLE_INTERBASE}  , ZDbcInterbase6Metadata {$ENDIF}
+  {$IFDEF ENABLE_MYSQL}      , ZDbcMySqlMetadata {$ENDIF}
+  {$IFDEF ENABLE_ODBC}       , ZDbcODBCMetadata {$ENDIF}
+  {$IFDEF ENABLE_OLEDB}      , ZDbcOleDBMetadata {$ENDIF}
+  {$IFDEF ENABLE_ORACLE}     , ZDbcOracleMetadata {$ENDIF}
+  {$IFDEF ENABLE_POSTGRESQL} , ZDbcPostgreSqlMetadata {$ENDIF}
+  {$IFDEF ENABLE_SQLITE}     , ZDbcSqLiteMetadata {$ENDIF}
+  ;
 
 type
   {** Implements a test case for. }
@@ -72,6 +82,7 @@ type
     procedure SetUp; override;
     procedure TearDown; override;
   published
+    procedure TestMetadataKeyWords;
     procedure TestMetadataIdentifierQuoting;
     procedure TestMetadataGetCatalogs;
     procedure TestMetadataGetSchemas;
@@ -495,6 +506,80 @@ begin
   ResultSet := MD.GetUDTs(Catalog, Schema, '', nil);
   PrintResultSet(ResultSet, False);
   ResultSet.Close;
+end;
+
+// We need this class because TZAbstractDbcConnection has abstract methods and
+// instances of this class can't be created
+type
+  TDummyDbcConnection = class(TZAbstractDbcConnection)
+  private
+    procedure InternalClose; override;
+    procedure InternalCreate; override;
+  public
+    Metadata: TZAbstractDatabaseMetadata; // arrrgh... need to keep object pointer
+  end;
+
+{ TDummyDbcConnection }
+
+procedure TDummyDbcConnection.InternalCreate;
+begin
+  Metadata := TZAbstractDatabaseMetadata.Create(Self, Url);
+  FMetadata := Metadata;
+end;
+
+procedure TDummyDbcConnection.InternalClose;
+begin
+end;
+
+// Check if all keywords are correct
+procedure TZGenericTestDbcMetadata.TestMetadataKeyWords;
+{ We want to create DBInfo instances for each driver available but they require valid
+  metadata object (not interface) which we don't have. Objects cannot be obtained from
+  interfaces easily. And metadata constructor requires connection object (ARRGH).
+  So we have to declare a special connection class just to get things work. }
+type
+  TZAbstractDatabaseInfoClass = class of TZAbstractDatabaseInfo;
+var
+  IConn: IZConnection;
+  AbsConn: TDummyDbcConnection;
+  Url: TZUrl;
+
+  // Currently check only that keyword is not empty and doesn't contain spaces
+  function CheckKeyword(const KeyWord: string): Boolean;
+  begin
+    Result :=
+      (KeyWord <> '') and (Pos(' ', KeyWord) = 0);
+  end;
+
+  procedure CheckKeywords(DatabaseInfoClass: TZAbstractDatabaseInfoClass);
+  var
+    DBI: IZDatabaseInfo;
+    KeyWords: TStringList;
+    i: Integer;
+  begin
+    DBI := DatabaseInfoClass.Create(AbsConn.Metadata);
+    KeyWords := DBI.GetIdentifierQuoteKeywordsSorted;
+    for i := 0 to KeyWords.Count - 1 do
+      Check(CheckKeyword(KeyWords[i]), Format('%s. Keyword incorrect: "%s"', [DatabaseInfoClass.ClassName, KeyWords[i]]));
+  end;
+
+begin
+  Url := GetConnectionUrl('');
+  AbsConn := TDummyDbcConnection.Create(Url);
+  IConn := AbsConn;
+  try
+    {$IFDEF ENABLE_ASA}        CheckKeywords(TZASADatabaseInfo);        {$ENDIF}
+    {$IFDEF ENABLE_DBLIB}      CheckKeywords(TZDbLibDatabaseInfo);      {$ENDIF}
+    {$IFDEF ENABLE_INTERBASE}  CheckKeywords(TZInterbase6DatabaseInfo); {$ENDIF}
+    {$IFDEF ENABLE_MYSQL}      CheckKeywords(TZMySqlDatabaseInfo);      {$ENDIF}
+    {$IFDEF ENABLE_ODBC}       CheckKeywords(TZAbstractDatabaseInfo);   {$ENDIF}
+    {$IFDEF ENABLE_OLEDB}      CheckKeywords(TZOleDBDatabaseInfo);      {$ENDIF}
+    {$IFDEF ENABLE_ORACLE}     CheckKeywords(TZOracleDatabaseInfo);     {$ENDIF}
+    {$IFDEF ENABLE_POSTGRESQL} CheckKeywords(TZPostgreSqlDatabaseInfo); {$ENDIF}
+    {$IFDEF ENABLE_SQLITE}     CheckKeywords(TZSqLiteDatabaseInfo);     {$ENDIF}
+  finally
+    FreeAndNil(Url);
+  end;
 end;
 
 initialization
