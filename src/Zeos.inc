@@ -127,13 +127,15 @@
     {$DEFINE Use_FastCodeFillChar}          //use ZFastCode FillChar() instead
     {$DEFINE USE_FAST_CHARPOS}              //use ZFastCode CharPos function
     {$DEFINE VER150BELOW}                   //found in ZTestBugCompPostgreSql.pas
+    {$DEFINE WITH_OVERLOAD_BUG}             //D7 Bug -> ambiguous overload error when both Func(Integer) and Func(Cardinal) exist and Func(a: Byte/Word) is called
     {$IF CompilerVersion >= 16} //Delphi 8+
       {$IF CompilerVersion >= 17} //Delphi 2005+
         {$DEFINE WITH_INLINE}          // compiler supports inline methodes
 
         {$IF CompilerVersion >= 18} //Delphi 2006+
-          {$UNDEF WITH_UINT64_C1118_ERROR}            //2006+ has no proplems to assign code constants for UInt64
+          {$UNDEF WITH_UINT64_C1118_ERROR}            //2006+ has no problems to assign code constants for UInt64
           {$UNDEF WITH_MILLISECONDOFTHEYEAR_BUG}      //D7-D005 Bug -> a Int64 Cast of SecondOfTheYear(AValue) is fixed
+          {$UNDEF WITH_OVERLOAD_BUG}                  //2006+ has no problems with ambiguous overload (?)
           {$UNDEF Use_FastCodeFillChar}               //FastCode FillChar() is included since D2006
 
           {$DEFINE WITH_IPROVIDERSUPPORT2}            //TDataSet supports WideString based IProviderSupport2

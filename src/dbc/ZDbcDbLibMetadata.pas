@@ -412,7 +412,7 @@ end;
 }
 function TZDbLibDatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
 begin
-  Result := fCaseIdentifiers = icSpecial;
+  Result := fCaseIdentifiers in [icMixed, icSpecial];
 end;
 
 {**

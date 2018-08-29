@@ -1738,9 +1738,7 @@ begin
       then ReallocMem(SqlVar.sqlind, SizeOf(Short))
       else SqlVar.sqlind := nil;
   end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1760,9 +1758,7 @@ begin
     SqlVar.sqldata := nil;
     SqlVar.sqlind := nil;
   end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1792,9 +1788,7 @@ begin
       Result := ZUnicodeToString(PRawToUnicode(@FXSQLDA.sqlvar[Index].aliasname[0],
         FXSQLDA.sqlvar[Index].aliasname_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
   {$ENDIF}
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1839,9 +1833,7 @@ begin
     end;
   end;
   raise Exception.Create(Format(SFieldNotFound1, [name]));
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1864,9 +1856,7 @@ begin
   CheckRange(Index);
   {$R-}
   Result := Abs(FXSQLDA.sqlvar[Index].sqlscale);
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1955,9 +1945,7 @@ begin
       Result := ZUnicodeToString(PRawToUnicode(@FXSQLDA.sqlvar[Index].OwnName[0],
         FXSQLDA.sqlvar[Index].OwnName_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
   {$ENDIF}
-  {$IFOPT D+}
-    {$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1978,9 +1966,7 @@ begin
       Result := ZUnicodeToString(PRawToUnicode(@FXSQLDA.sqlvar[Index].RelName[0],
         FXSQLDA.sqlvar[Index].RelName_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
   {$ENDIF}
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1992,10 +1978,8 @@ function TZSQLDA.GetIbSqlLen(const Index: Word): Smallint;
 begin
   CheckRange(Index);
   {$R-}
-  result := FXSQLDA.sqlvar[Index].sqllen;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  Result := FXSQLDA.sqlvar[Index].sqllen;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2016,9 +2000,7 @@ begin
       Result := ZUnicodeToString(PRawToUnicode(@FXSQLDA.sqlvar[Index].sqlname[0],
         FXSQLDA.sqlvar[Index].sqlname_length, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
   {$ENDIF}
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2031,9 +2013,7 @@ begin
   CheckRange(Index);
   {$R-}
   result := FXSQLDA.sqlvar[Index].sqlsubtype;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2046,9 +2026,7 @@ begin
   CheckRange(Index);
   {$R-}
   result := FXSQLDA.sqlvar[Index].sqltype and not (1);
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2082,9 +2060,7 @@ begin
       sqldata := nil;
     end;
   end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2097,9 +2073,7 @@ begin
   CheckRange(Index);
   {$R-}
   result := ((FXSQLDA.sqlvar[Index].sqltype and not(1)) = SQL_BLOB);
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2112,9 +2086,7 @@ begin
   CheckRange(Index);
   {$R-}
   Result := FXSQLDA.sqlvar[Index].sqltype and 1 = 1
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2178,9 +2150,7 @@ begin
           sqllen := Len+SizeOf(Short);
         end;
     end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2230,9 +2200,7 @@ begin
     if (sqlind <> nil) then
        sqlind^ := 0; // not null
   end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2282,9 +2250,7 @@ begin
     if (sqlind <> nil) then
        sqlind^ := 0; // not null
   end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2323,9 +2289,7 @@ begin
     if (sqlind <> nil) then
          sqlind^ := 0; // not null
   end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2386,9 +2350,7 @@ begin
     if (sqlind <> nil) then
          sqlind^ := 0; // not null
   end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2441,9 +2403,7 @@ begin
       if (sqlind <> nil) then
          sqlind^ := 0; // not null
   end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2497,9 +2457,7 @@ begin
       if (sqlind <> nil) then
          sqlind^ := 0; // not null
   end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2549,9 +2507,7 @@ begin
       if (sqlind <> nil) then
          sqlind^ := 0; // not null
   end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2602,9 +2558,7 @@ begin
       if (sqlind <> nil) then
          sqlind^ := 0; // not null
   end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2619,9 +2573,7 @@ begin
   with FXSQLDA.sqlvar[Index] do
     if (sqlind <> nil) then
        sqlind^ := -Ord(Value);
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2697,9 +2649,7 @@ begin
     if (sqlind <> nil) then
          sqlind^ := 0; // not null
   end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -2733,9 +2683,7 @@ begin
           else
             raise EZIBConvertError.Create(SErrorConvertion);
         end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 procedure TZParamsSQLDA.UpdateArray(const Index: Word; const Value; const SQLType: TZSQLType;
@@ -2788,10 +2736,7 @@ begin
     if (sqlind <> nil) then
        sqlind^ := 0; // not null
   end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
-  {$IFOPT D+} {$R+} {$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 {**
    Set up parameter Byte value
@@ -2845,9 +2790,7 @@ begin
     if (sqlind <> nil) then
        sqlind^ := 0; // not null
   end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**

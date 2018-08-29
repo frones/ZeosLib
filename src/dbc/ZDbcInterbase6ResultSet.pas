@@ -326,9 +326,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -444,9 +442,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -488,9 +484,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
       end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -552,9 +546,7 @@ begin
           Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}));
       end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -621,9 +613,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -690,9 +680,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -759,9 +747,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -832,9 +818,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -908,9 +892,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1059,9 +1041,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1120,9 +1100,7 @@ begin
           Result := Frac(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}));
       end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1192,9 +1170,7 @@ begin
           Result := GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
       end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1218,9 +1194,7 @@ begin
   {$R-}
   with FXSQLDA.sqlvar[ColumnIndex] do
     Result := (sqlind <> nil) and (sqlind^ = ISC_NULL);
-  {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1303,9 +1277,7 @@ begin
     end;
     Result := Pointer(FRawTemp);
     Len := NativeUInt({%H-}PLengthInt(NativeUInt(FRawTemp) - StringLenOffSet)^);
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1404,9 +1376,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1513,9 +1483,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1629,10 +1597,8 @@ end;
 function TZInterbase6XSQLDAResultSet.GetIbSqlSubType(const Index: Word): Smallint;
 begin
   {$R-}
-  result := FXSQLDA.sqlvar[Index].sqlsubtype;
-  {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+  Result := FXSQLDA.sqlvar[Index].sqlsubtype;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1657,9 +1623,7 @@ begin
   end
   else
     raise EZIBConvertError.Create('Invalid State.');
-  {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
