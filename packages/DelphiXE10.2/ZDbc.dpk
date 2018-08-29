@@ -38,14 +38,6 @@ requires
 contains
 {$I ZPackages.inc} //after simplify Zeos.Inc by using {$IF CompilerVersion > x} i need to move this include AFTER contains!
 
-{$IFDEF ENABLE_ODBC}
-  ZDbcODBCCon in '..\..\src\dbc\ZDbcODBCCon.pas',
-  ZDbcODBCMetadata in '..\..\src\dbc\ZDbcODBCMetadata.pas',
-  ZDbcODBCResultSet in '..\..\src\dbc\ZDbcODBCResultSet.pas',
-  ZDbcODBCStatement in '..\..\src\dbc\ZDbcODBCStatement.pas',
-  ZDbcODBCUtils in '..\..\src\dbc\ZDbcODBCUtils.pas',
-{$ENDIF}
-
 {$IFDEF ENABLE_DBLIB}
   ZDbcDbLib in '..\..\src\dbc\ZDbcDbLib.pas',
   ZDbcDbLibMetadata in '..\..\src\dbc\ZDbcDbLibMetadata.pas',
@@ -76,13 +68,6 @@ contains
   ZDbcPostgreSqlResultSet in '..\..\src\dbc\ZDbcPostgreSqlResultSet.pas',
   ZDbcPostgreSqlStatement in '..\..\src\dbc\ZDbcPostgreSqlStatement.pas',
   ZDbcPostgreSqlUtils in '..\..\src\dbc\ZDbcPostgreSqlUtils.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_OLEDB}
-  ZDbcOleDB in '..\..\src\dbc\ZDbcOleDB.pas',
-  ZDbcOleDBMetadata in '..\..\src\dbc\ZDbcOleDBMetadata.pas',
-  ZDbcOleDBResultSet in '..\..\src\dbc\ZDbcOleDBResultSet.pas',
-  ZDbcOleDBStatement in '..\..\src\dbc\ZDbcOleDBStatement.pas',
 {$ENDIF}
 
 {$IFDEF ENABLE_ADO}

@@ -421,13 +421,17 @@ begin
     end else
     if DT = tdsUnique then
       Result := GUIDToUnicode(PGUID(P)^)
-    else if (DT = tdsImage) then
+    else if DT = tdsSybaseLongBinary then begin
+      SetLength(Result, Len div 2);
+      Move(P^, Result[1], Len);
+    end else if (DT = tdsImage) then
       ZSetString(P, Len, Result)
     else
     begin
       SetLength(Tmp, 4001);
       Len := FPlainDriver.dbconvert(FHandle, Ord(DT), Pointer(P), Len,
         Ord(tdsChar), Pointer(tmp), 4001);
+      FDBLibConnection.CheckDBLibError(lcOther, 'GETSTRING');
       while (Len > 0) and (tmp[Len] = ' ') do Dec(Len);
       Result := USASCII7ToUnicodeString(Pointer(tmp), Len);
     end;
@@ -847,7 +851,7 @@ begin
         Result := PDBDATETIME(Data)^.dtdays + 2 + (PDBDATETIME(Data)^.dttime / 25920000)
     else if (DT in [tdsNText, tdsNVarChar, tdsText, tdsVarchar, tdsChar]) then
       if AnsiChar((PAnsiChar(Data)+2)^) = AnsiChar(':') then
-        Result := RawSQLTimeToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed{%H-})
+        Result := RawSQLTimeToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
       else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Word(DL)) <= 4 then
           Result := RawSQLTimeStampToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
       else

@@ -1259,7 +1259,6 @@ begin
   end;
 end;
 
-{$WARNINGS OFF}
 procedure TZGenericTestDbcResultSet.TestStringGetter;
 const
   p_name_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
@@ -1336,7 +1335,6 @@ begin
     Statement.Close;
   end;
 end;
-{$WARNINGS ON}
 
 procedure TZGenericTestDbcResultSet.TestStringToSignedIntegerConversions;
 const

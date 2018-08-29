@@ -803,7 +803,7 @@ begin
         Len := ZFastCode.StrLen(Buffer);
 
         if (Len = ConSettings^.ReadFormatSettings.DateFormatLen) then
-          Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+          Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed)
         else
           Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
             RawSQLTimeStampToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed));
@@ -849,7 +849,7 @@ begin
         Len := ZFastCode.StrLen(Buffer);
 
         if ((Buffer)+2)^ = ':' then //possible date if Len = 10 then
-          Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+          Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
         else
           Result := Frac(RawSQLTimeStampToDateTime(Buffer, Len,
             ConSettings^.ReadFormatSettings, Failed));
@@ -893,7 +893,7 @@ begin
       else
       begin
         Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
-        Result := RawSQLTimeStampToDateTime(Buffer, ZFastCode.StrLen(Buffer), ConSettings^.ReadFormatSettings, Failed{%H-});
+        Result := RawSQLTimeStampToDateTime(Buffer, ZFastCode.StrLen(Buffer), ConSettings^.ReadFormatSettings, Failed);
       end;
       LastWasNull := Result = 0;
     end;

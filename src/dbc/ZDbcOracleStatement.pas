@@ -483,8 +483,6 @@ begin
   end;
 end;
 
-
-{$WARNINGS OFF} //unreachable code as long FServerStmtCache isn't really used
 procedure TZOracleCallableStatement.UnPrepare;
 const {%H-}RELEASE_MODE: array[boolean] of integer = (OCI_DEFAULT,OCI_STMTCACHE_DELETE);
 begin
@@ -499,7 +497,6 @@ begin
     inherited Unprepare;
   end;
 end;
-{$WARNINGS OFF}
 
 procedure TZOracleCallableStatement.RegisterOutParameter(ParameterIndex,
   SQLType: Integer);

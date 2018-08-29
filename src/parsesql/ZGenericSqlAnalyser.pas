@@ -103,7 +103,7 @@ type
   protected
     function ArrayToStrings(const Value: array of string): TStrings;
     function CheckForKeyword({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TStrings; TokenIndex: Integer;
-      {$IFDEF AUTOREFCOUNT}const{$ENDIF}Keywords: TStrings; var Keyword: string; var WordCount: Integer): Boolean;
+      {$IFDEF AUTOREFCOUNT}const{$ENDIF}Keywords: TStrings; out Keyword: string; out WordCount: Integer): Boolean;
     function FindSectionTokens(Sections: TObjectList; const Name: string): TStrings;
 
     procedure FillFieldRefs(const SelectSchema: IZSelectSchema; SelectTokens: TStrings);
@@ -238,8 +238,8 @@ end;
   @param WordCount a count of words in the found keyword.
 }
 function TZGenericStatementAnalyser.CheckForKeyword({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TStrings;
-  TokenIndex: Integer; {$IFDEF AUTOREFCOUNT}const{$ENDIF} Keywords: TStrings; var Keyword: string;
-  var WordCount: Integer): Boolean;
+  TokenIndex: Integer; {$IFDEF AUTOREFCOUNT}const{$ENDIF} Keywords: TStrings; out Keyword: string;
+  out WordCount: Integer): Boolean;
 var
   I: Integer;
 begin

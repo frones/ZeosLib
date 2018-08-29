@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZSysUtils, {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet, ZURL,
+  ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet, ZURL,
   ZCompatibility, ZGenericSqlAnalyser, ZPlainAdo, ZDbcConnection,
   {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, ActiveX;
 
@@ -299,7 +299,7 @@ implementation
 uses
   Variants,
   Math, ZGenericSqlToken, ZDbcAdoUtils, ZDbcAdo, ZFastCode,
-  {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZDbcAdoResultSet;
 
 type

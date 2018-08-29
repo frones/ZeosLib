@@ -413,7 +413,7 @@ begin
   FProperties.BeginUpdate; // prevent calling OnChange on every iteration
   for I := 0 to Values.Count -1 do
   begin
-    BreakString(Values[I], '=', Param{%H-}, Value{%H-});
+    BreakString(Values[I], '=', Param, Value);
     if Value <> '' then
       FProperties.Values[Param] := Value
     else

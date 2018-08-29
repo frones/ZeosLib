@@ -773,6 +773,7 @@ type
     tdsBigVarChar            = 167,
     tdsBigBinary             = 173,
     tdsBigChar               = 175,
+    tdsSybaseLongBinary      = 225,
     tdsBigNVarChar           = 231,
     tdsBigNChar              = 239,
     tdsUDT                   = 240,

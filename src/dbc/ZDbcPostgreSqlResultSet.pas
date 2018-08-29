@@ -91,7 +91,7 @@ type
     FUndefinedVarcharAsStringLength: Integer;
     FCachedLob: boolean;
     FpgOIDTypes: TIntegerDynArray;
-    function GetBuffer(ColumnIndex: Integer; var Len: NativeUInt): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
+    function GetBuffer(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
     procedure ClearPGResult;
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
@@ -488,7 +488,7 @@ begin
     ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}) <> 0;
 end;
 
-function TZPostgreSQLResultSet.GetBuffer(ColumnIndex: Integer; var Len: NativeUint): PAnsiChar;
+function TZPostgreSQLResultSet.GetBuffer(ColumnIndex: Integer; out Len: NativeUint): PAnsiChar;
 var RNo: Integer;
 begin
   RNo := RowNo - 1;
@@ -538,7 +538,7 @@ end;
 }
 function TZPostgreSQLResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 begin
-  Result := GetBuffer(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len{%H-});
+  Result := GetBuffer(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len);
 end;
 
 {**
@@ -573,7 +573,7 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  P := GetBuffer(ColumnIndex, L{%H-});
+  P := GetBuffer(ColumnIndex, L);
   if LastWasNull then
     Result := ''
   else
@@ -604,7 +604,7 @@ var
   Len: NativeUInt;
   Buffer: PAnsiChar;
 begin
-  Buffer := GetBuffer(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len{%H-});
+  Buffer := GetBuffer(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len);
   if LastWasNull then
     Result := ''
   else
@@ -858,13 +858,13 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len{%H-});
+  Buffer := GetBuffer(ColumnIndex, Len);
 
   if LastWasNull then
     Result := 0
   else
     if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
-      Result := RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+      Result := RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
     else
       Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
         RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
@@ -891,13 +891,13 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len{%H-});
+  Buffer := GetBuffer(ColumnIndex, Len);
 
   if LastWasNull then
     Result := 0
   else
     if not (Len > ConSettings^.ReadFormatSettings.TimeFormatLen) and ( ( ConSettings^.ReadFormatSettings.TimeFormatLen - Len) <= 4 )then
-      Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+      Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
     else
       Result := Frac(RawSQLTimeStampToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed));
 end;
@@ -927,7 +927,7 @@ begin
   LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex) <> 0;
   if not LastWasNull then begin
     Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
-    Result := RawSQLTimeStampToDateTime(Buffer, ZFastCode.StrLen(Buffer), ConSettings^.ReadFormatSettings, Failed{%H-});
+    Result := RawSQLTimeStampToDateTime(Buffer, ZFastCode.StrLen(Buffer), ConSettings^.ReadFormatSettings, Failed);
   end;
 end;
 

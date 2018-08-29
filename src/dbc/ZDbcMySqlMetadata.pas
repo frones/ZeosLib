@@ -58,7 +58,7 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {%H-}ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
+  ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
   ZURL, ZDbcConnection;
 
 type
@@ -67,7 +67,7 @@ type
   {** Implements MySQL Database Information. }
   TZMySQLDatabaseInfo = class(TZAbstractDatabaseInfo)
   protected
-    procedure GetVersion(var MajorVersion, MinorVersion: integer);
+    procedure GetVersion(out MajorVersion, MinorVersion: integer);
   public
     constructor Create(const Metadata: TZAbstractDatabaseMetadata);
 
@@ -524,7 +524,7 @@ var
   MajorVersion: Integer;
   MinorVersion: Integer;
 begin
-  GetVersion(MajorVersion{%H-}, MinorVersion{%H-});
+  GetVersion(MajorVersion, MinorVersion);
   // changed from False by mdaems. After testing with lower versions, please correct.
   Result := MajorVersion >= 5;
 end;
@@ -593,7 +593,7 @@ var
   MajorVersion: Integer;
   MinorVersion: Integer;
 begin
-  GetVersion(MajorVersion{%H-}, MinorVersion{%H-});
+  GetVersion(MajorVersion, MinorVersion);
   Result := ((MajorVersion = 3) and (MinorVersion >= 22)) or (MajorVersion > 3);
 end;
 
@@ -922,7 +922,7 @@ end;
   @param MajorVesion the major version of MySQL server.
   @param MinorVersion the minor version of MySQL server.
 }
-procedure TZMySQLDatabaseInfo.GetVersion(var MajorVersion,
+procedure TZMySQLDatabaseInfo.GetVersion(out MajorVersion,
   MinorVersion: Integer);
 var
   VersionList: TStrings;

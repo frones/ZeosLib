@@ -56,11 +56,6 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFDEF FPC}
-  {$IFDEF WIN32}
-    Comobj,
-  {$ENDIF}
-{$ENDIF}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcConnection, ZDbcIntfs, ZCompatibility, ZDbcLogging, ZPlainDbLibDriver,
   ZPlainDbLibConstants, ZTokenizer, ZGenericSqlAnalyser, ZURL;
@@ -470,6 +465,8 @@ begin
   end
   else
   begin
+    if (FProvider = dpSybase) and (not FreeTDS)
+    then ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := False;
     FServerAnsiCodePage := ConSettings^.ClientCodePage^.CP;
     ConSettings^.ReadFormatSettings.DateFormat := 'yyyy/mm/dd';
     ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat;

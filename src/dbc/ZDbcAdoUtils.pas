@@ -153,10 +153,9 @@ var
 implementation
 
 uses
-  {$IFDEF WITH_SYSTEM_WIN_COMOBJ}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
-  {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, Variants, Types, Math,
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF}, Variants, Math,
   ZSysUtils, ZDbcAdoResultSet, ZDbcCachedResultSet, ZDbcResultSet, ZDbcUtils,
-  ZMessages, ZEncoding, ZFastCode, ZClasses;
+  ZMessages, ZEncoding, ZFastCode, ZClasses, ZOleDB, Types;
 
 {**
   Converts an ADO native types into string related.

@@ -1,12 +1,9 @@
-{$IFDEF LINUX} 
-  {$DEFINE UNIX}
-{$ENDIF}
+{$IFDEF LINUX}{$DEFINE UNIX}{$ENDIF} // Kylix legacy.
+
 {$IFNDEF UNIX}
-
-{$I ..\..\src\Zeos.inc}
-
+  {$I ..\..\src\Zeos.inc}
+  {$I ..\ZTest.inc}
 {$ELSE}
-
-{$I ../../src/Zeos.inc}
-
+  {$I ../../src/Zeos.inc}
+  {$I ../ZTest.inc}
 {$ENDIF}

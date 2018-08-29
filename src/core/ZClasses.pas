@@ -197,21 +197,20 @@ type
     property Count: Integer read GetCount;
   end;
 
-{$IFDEF WITH_NEWTOBJECT} // to suppress the overload warning of the Equals overload, Marco. (overload a non overload-declared funtion)
-  {$WARNINGS OFF}
-{$ENDIF}
   {** Implements an abstract interfaced object. }
+  // New TObject contains some methods with the same names but it has different
+  // result/parameter types so we just hide the inherited methods
   TZAbstractObject = class(TInterfacedObject, IZObject)
   public
-    function Equals(const Value: IZInterface): Boolean; {$IFDEF WITH_NEWTOBJECT}overload;{$ENDIF} virtual;
-    function GetHashCode: LongInt;
+    // Parameter type differs from base (TObject)
+    function Equals(const Value: IZInterface): Boolean; {$IFDEF WITH_NEWTOBJECT} reintroduce; {$ENDIF} virtual;
+    // Result type differs from base (PtrInt @ FPC, Integer @ Delphi)
+    function GetHashCode: LongInt; {$IFDEF WITH_NEWTOBJECT} reintroduce; {$ENDIF} virtual;
     function Clone: IZInterface; virtual;
-    function ToString: string;{$IFDEF WITH_NEWTOBJECT}override{$ELSE} virtual{$ENDIF} ;
+    // Result type differs from base (ansistring/shortstring @ FPC, string @ Delphi)
+    function ToString: string; {$IFDEF WITH_NEWTOBJECT} reintroduce; {$ENDIF} virtual;
     function InstanceOf(const IId: TGUID): Boolean;
   end;
-{$IFDEF WITH_NEWTOBJECT}
-  {$WARNINGS ON}
-{$ENDIF}
 
   TZCharReaderStream = Class(TStream)
   private

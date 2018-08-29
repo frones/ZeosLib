@@ -1336,7 +1336,7 @@ begin
       {$IF not defined(cpui386) and defined(FPC)}
       TimeStamp := MSecsToTimeStamp(System.Trunc(Int(TDateTime(Buffer^))));
       {$ELSE}
-        TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^){%H-});
+        TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^));
       {$IFEND}
     except
       TimeStamp.Time := 0;

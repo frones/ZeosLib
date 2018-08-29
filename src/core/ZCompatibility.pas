@@ -133,6 +133,10 @@ const
   {$ENDIF}
   ArrayLenOffSet              = SizeOf(ArrayLenInt);
 
+  {$IF NOT DECLARED(SecsPerHour)}
+  SecsPerHour = SecsPerMin * MinsPerHour;
+  {$IFEND}
+
 type
   PZCharRec = ^TZCharRec;
   TZCharRec = Record

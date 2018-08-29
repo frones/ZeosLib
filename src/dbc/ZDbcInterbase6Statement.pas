@@ -287,7 +287,7 @@ end;
 procedure TZInterbase6PreparedStatement.Close;
 begin
   inherited Close;
-  if (FStmtHandle <> 0) then begin// Free statement-handle! On the other hand: Exception!
+  if (FStmtHandle <> 0) then begin// Free statement-handle! Otherwise: Exception!
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_drop);
     FStmtHandle := 0;
   end;

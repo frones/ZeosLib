@@ -149,7 +149,6 @@
     {$DEFINE WITH_ASANSISTRING} // TField.AsAnsiString is supported
     {$DEFINE WITH_ASUTF8STRING} // TFIeld.AsUtf8String is supported
   {$IFEND}
-
   // todo
   //   VIRTUALSETFIELDDATA: in nativeformat versions of SETFIELDDATA, inherited wasn't called.
   //                Afaik that methoid is virtual in FPC since December 2006, and there is no comment why

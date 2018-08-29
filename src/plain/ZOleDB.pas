@@ -3110,8 +3110,7 @@ type
 //CoClasses
 {$IF NOT DECLARED(VariantClear)}
 function VariantClear(var varg: OleVariant): HResult; stdcall; external 'oleaut32.dll' name 'VariantClear';
-
-{$ENDIF ENABLE_ADO}
+{$IFEND}
 
 implementation
 

@@ -2437,7 +2437,7 @@ begin
         begin
           if FColBind^.length = ConSettings^.ReadFormatSettings.DateFormatLen then
             Result := RawSQLDateToDateTime(PAnsiChar(FColBind^.buffer),
-              FColBind^.length, ConSettings^.ReadFormatSettings, Failed{%H-})
+              FColBind^.length, ConSettings^.ReadFormatSettings, Failed)
           else
             Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
               RawSQLTimeStampToDateTime(PAnsiChar(FColBind^.buffer),

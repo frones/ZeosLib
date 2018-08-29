@@ -59,10 +59,6 @@ contains
   ZSybaseToken in '..\..\src\parsesql\ZSybaseToken.pas',
 {$ENDIF}
 
-{$IFDEF ENABLE_OLEDB}
-  ZOleDBToken in '..\..\src\parsesql\ZOleDBToken.pas',
-{$ENDIF}
-
 {$IFDEF ENABLE_ORACLE}
   ZOracleToken in '..\..\src\parsesql\ZOracleToken.pas',
   ZOracleAnalyser in '..\..\src\parsesql\ZOracleAnalyser.pas',

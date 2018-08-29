@@ -1504,7 +1504,7 @@ begin
   CheckInterbase6Error(PlainDriver, StatusVector, ConSettings);
 
   { get blob info }
-  GetBlobInfo(PlainDriver, BlobHandle, BlobInfo{%H-}, ConSettings);
+  GetBlobInfo(PlainDriver, BlobHandle, BlobInfo, ConSettings);
   Size := BlobInfo.TotalSize;
   SegLen := BlobInfo.MaxSegmentSize;
 
@@ -2612,7 +2612,7 @@ begin
           if (Len = 0) or (PByte(Value+2)^ = Ord(':')) then
             TempTimeStamp := 0
           else if Len = ConSettings^.WriteFormatSettings.DateFormatLen then
-              TempTimeStamp := RawSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed{%H-})
+            TempTimeStamp := RawSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed)
             else
               TempTimeStamp := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
                 RawSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed));
@@ -2623,7 +2623,7 @@ begin
           if Len = 0 then
             TempTimeStamp := 0
           else if PByte(Value+2)^ = Ord(':') then //possible date if Len = 10 then
-              TempTimeStamp := RawSQLTimeToDateTime(Value,Len, ConSettings^.WriteFormatSettings, Failed{%H-})
+            TempTimeStamp := RawSQLTimeToDateTime(Value,Len, ConSettings^.WriteFormatSettings, Failed)
             else
               TempTimeStamp := Frac(RawSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed));
           UpdateDateTime(Index, TempTimeStamp);
@@ -2634,11 +2634,11 @@ begin
             TempTimeStamp := 0
           else
             if PByte(Value+2)^ = Ord(':') then
-              TempTimeStamp := RawSQLTimeToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed{%H-})
+              TempTimeStamp := RawSQLTimeToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed)
             else if (ConSettings^.WriteFormatSettings.DateTimeFormatLen - Len) <= 4 then
                 TempTimeStamp := RawSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed)
             else if PByte(Value+4)^ = Ord('-') then
-                  TempTimeStamp := RawSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed{%H-})
+              TempTimeStamp := RawSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed)
                 else
                   TempTimeStamp := RawSQLTimeToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed);
           UpdateDateTime(Index, TempTimeStamp);

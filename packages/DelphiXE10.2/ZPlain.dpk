@@ -36,10 +36,6 @@ requires
 contains
 {$I ZPackages.inc} //after simplify Zeos.Inc by using {$IF CompilerVersion > x} i need to move this include AFTER contains!
 
-{$IFDEF ENABLE_ODBC}
-  ZPlainODBCDriver in '..\..\src\plain\ZPlainODBCDriver.pas',
-{$ENDIF}
-
 {$IFDEF ENABLE_DBLIB}
   ZPlainDbLibDriver in '..\..\src\plain\ZPlainDbLibDriver.pas',
   ZPlainDbLibConstants in '..\..\src\plain\ZPlainDbLibConstants.pas',
@@ -62,11 +58,7 @@ contains
 {$IFDEF ENABLE_ADO}
   ZPlainAdoDriver in '..\..\src\plain\ZPlainAdoDriver.pas',
   ZPlainAdo in '..\..\src\plain\ZPlainAdo.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_OLEDB}
   ZOleDB in '..\..\src\plain\ZOleDB.pas',
-  ZPlainOleDBDriver in '..\..\src\plain\ZPlainOleDBDriver.pas',
 {$ENDIF}
 
 {$IFDEF ENABLE_ORACLE}
