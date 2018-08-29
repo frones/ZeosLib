@@ -58,7 +58,7 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {%H-}ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
+  ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
   ZURL, ZDbcConnection;
 
 type
@@ -70,7 +70,7 @@ type
     fClientVersion: Integer;
     fIsMariaDB: Boolean;
   protected
-    procedure GetVersion(var MajorVersion, MinorVersion: integer);
+    procedure GetVersion(out MajorVersion, MinorVersion: integer);
   public
     constructor Create(const Metadata: TZAbstractDatabaseMetadata);
 
@@ -529,7 +529,7 @@ var
   MajorVersion: Integer;
   MinorVersion: Integer;
 begin
-  GetVersion(MajorVersion{%H-}, MinorVersion{%H-});
+  GetVersion(MajorVersion, MinorVersion);
   // changed from False by mdaems. After testing with lower versions, please correct.
   Result := MajorVersion >= 5;
 end;
@@ -608,7 +608,7 @@ var
   MajorVersion: Integer;
   MinorVersion: Integer;
 begin
-  GetVersion(MajorVersion{%H-}, MinorVersion{%H-});
+  GetVersion(MajorVersion, MinorVersion);
   Result := ((MajorVersion = 3) and (MinorVersion >= 22)) or (MajorVersion > 3);
 end;
 
@@ -937,7 +937,7 @@ end;
   @param MajorVesion the major version of MySQL server.
   @param MinorVersion the minor version of MySQL server.
 }
-procedure TZMySQLDatabaseInfo.GetVersion(var MajorVersion,
+procedure TZMySQLDatabaseInfo.GetVersion(out MajorVersion,
   MinorVersion: Integer);
 var
   VersionList: TStrings;
@@ -1463,7 +1463,7 @@ const
   db_Index              = FirstDbcIndex + 1;
   grantor_Index         = FirstDbcIndex + 2;
   user_Index            = FirstDbcIndex + 3;
-  {%H-}table_name_Index = FirstDbcIndex + 4;
+  //table_name_Index      = FirstDbcIndex + 4; unused
   column_name_Index     = FirstDbcIndex + 5;
   column_priv_Index     = FirstDbcIndex + 6;
 var
@@ -2558,12 +2558,12 @@ function TZMySQLDatabaseMetadata.GetProcedureColumnsFromProcTable(const Catalog:
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 const
-  {%H-}PROCEDURE_CAT_index  = FirstDbcIndex + 0;
+  //PROCEDURE_CAT_index  = FirstDbcIndex + 0; unused
   PROCEDURE_SCHEM_index     = FirstDbcIndex + 1;
   PROCEDURE_NAME_Index      = FirstDbcIndex + 2;
   PARAMS_Index              = FirstDbcIndex + 3;
-  {%H-}REMARKS_Index        = FirstDbcIndex + 4;
-  {%H-}PROCEDURE_TYPE_Index = FirstDbcIndex + 5;
+  //REMARKS_Index        = FirstDbcIndex + 4; unused
+  //PROCEDURE_TYPE_Index = FirstDbcIndex + 5; unused
   RETURN_VALUES_Index       = FirstDbcIndex + 6;
 var
   Len: NativeUInt;
@@ -2777,119 +2777,119 @@ var
   begin
     TypeName := LowerCase(TypeName);
     if TypeName = 'tinyint' then begin
-      ZType := 3;
+      ZType := Ord(stShort);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'smallint' then begin
-      ZType := 5;
+      ZType := Ord(stSmall);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'mediumint' then begin
-      ZType := 7;
+      ZType := Ord(stInteger);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'integer' then begin
-      ZType := 7;
+      ZType := Ord(stInteger);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'int' then begin
-      ZType := 7;
+      ZType := Ord(stInteger);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'bigint' then begin
-      ZType := 9;
+      ZType := Ord(stLong);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'double' then begin
-      ZType := 11;
+      ZType := Ord(stDouble);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'float' then begin
-      ZType := 11;
+      ZType := Ord(stDouble);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'decimal' then begin
       if MySqlScale = 0 then begin
-        ZType := 9;
+        ZType := Ord(stLong);
         ZPrecision := -1;
         ZScale := -1;
       end else begin
-        ZType := 11;
+        ZType := Ord(stDouble);
         ZPrecision := MysqlPrecision;
         ZScale := MySqlScale;
       end;
     end else if TypeName = 'numeric' then begin
       if MySqlScale = 0 then begin
-        ZType := 9;
+        ZType := Ord(stLong);
         ZPrecision := -1;
         ZScale := -1;
       end else begin
-        ZType := 11;
+        ZType := Ord(stDouble);
         ZPrecision := MysqlPrecision;
         ZScale := MySqlScale;
       end;
     end else if TypeName = 'varchar' then begin
-      ZType := 19;
+      ZType := Ord(stUnicodeString);
       ZPrecision := MysqlCharLength;
       ZScale := -1;
     end else if TypeName = 'date' then begin
-      ZType := 14;
+      ZType := Ord(stDate);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'time' then begin
-      ZType := 15;
+      ZType := Ord(stTime);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'year' then begin
-      ZType := 4;
+      ZType := Ord(stWord);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'timestamp' then begin
-      ZType := 16;
+      ZType := Ord(stTimestamp);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'datetime' then begin
-      ZType := 16;
+      ZType := Ord(stTimestamp);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'tinyblob' then begin
-      ZType := 23;
+      ZType := Ord(stBinaryStream);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'blob' then begin
-      ZType := 23;
+      ZType := Ord(stBinaryStream);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'mediumblob' then begin
-      ZType := 23;
+      ZType := Ord(stBinaryStream);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'longblob' then begin
-      ZType := 23;
+      ZType := Ord(stBinaryStream);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'tinytext' then begin
-      ZType := 22;
+      ZType := Ord(stUnicodeStream);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'text' then begin
-      ZType := 22;
+      ZType := Ord(stUnicodeStream);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'mediumtext' then begin
-      ZType := 22;
+      ZType := Ord(stUnicodeStream);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'longtext' then begin
-      ZType := 22;
+      ZType := Ord(stUnicodeStream);
       ZPrecision := -1;
       ZScale := -1;
     end else if TypeName = 'varbinary' then begin
-      ZType := 20;
+      ZType := Ord(stBytes);
       ZPrecision := MysqlCharLength;
       ZScale := -1;
     end else if TypeName = 'set' then begin
-      ZType := 19;
+      ZType := Ord(stUnicodeString);
       ZPrecision := MysqlCharLength;
       ZScale := -1;
     end;

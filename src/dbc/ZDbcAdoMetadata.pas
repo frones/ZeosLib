@@ -54,12 +54,10 @@ unit ZDbcAdoMetadata;
 interface
 
 {$I ZDbc.inc}
-{.$DEFINE ENABLE_ADO}
-{$IFDEF ENABLE_ADO}
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZSysUtils, {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet, ZURL,
+  ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet, ZURL,
   ZCompatibility, ZGenericSqlAnalyser, ZPlainAdo, ZDbcConnection,
   ZOleDB, ActiveX;
 
@@ -121,7 +119,7 @@ implementation
 uses
   Variants,
   Math, ZGenericSqlToken, ZDbcAdoUtils, ZDbcAdo, ZFastCode,
-  {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZDbcAdoResultSet, ZDbcOleDBMetadata;
 
 type
@@ -1543,9 +1541,4 @@ begin
   end;
 end;
 
-{$ELSE}
-implementation
-{$ENDIF ENABLE_ADO}
 end.
-
-

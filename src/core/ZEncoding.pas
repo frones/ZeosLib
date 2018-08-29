@@ -1163,9 +1163,8 @@ const
   dsMaxRStringSize = 8192; { Maximum string field size declared in DB.pas }
   dsMaxWStringSize = dsMaxRStringSize shr 1;
 
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // encoding unknown - parameter not used intentionally
+
 function ZUnknownRawToUnicode(const S: RawByteString;
   const CP: Word): ZWideString;
 begin
@@ -1195,9 +1194,8 @@ function ZUnicodeToUnknownRaw(const US: ZWideString; CP: Word): RawByteString;
 begin
   Result := RawByteString(US);
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
+
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function ZRawToUnicode(const S: RawByteString; const CP: Word): ZWideString;
 begin

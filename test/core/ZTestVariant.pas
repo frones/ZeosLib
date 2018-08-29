@@ -855,26 +855,26 @@ procedure TZDefVarManagerConvertCase.TestConvert;
 begin
   Test_AnsiStringFromString;
   Test_AnsiStringFromUTF8String;
-  CheckException(Test_AnsiStringFromRawByteString, Exception, '', 'Wrong RawByteString behavior'+GetOptionString);
+  CheckException(Test_AnsiStringFromRawByteString, EZVariantException, '', 'Wrong RawByteString behavior'+GetOptionString);
   Test_AnsiStringFromUnicodeString;
 
   Test_UTF8StringFromString;
   Test_UTF8StringFromAnsiString;
-  CheckException(Test_UTF8StringFromRawByteString, Exception, '', 'Wrong RawByteString behavior'+GetOptionString);
+  CheckException(Test_UTF8StringFromRawByteString, EZVariantException, '', 'Wrong RawByteString behavior'+GetOptionString);
   Test_UTF8StringFromUnicodeString;
 
   Test_StringFromAnsiString;
   Test_StringFromUTF8String;
-  CheckException(Test_StringFromRawByteString, Exception, '', 'Wrong RawByteString behavior'+GetOptionString);
+  CheckException(Test_StringFromRawByteString, EZVariantException, '', 'Wrong RawByteString behavior'+GetOptionString);
   Test_StringFromUnicodeString;
-  CheckException(Test_RawByteStringFromString, Exception, '', 'Wrong RawByteString behavior'+GetOptionString);
-  CheckException(Test_RawByteStringFromAnsiString, Exception, '', 'Wrong RawByteString behavior'+GetOptionString);
-  CheckException(Test_RawByteStringFromUTF8String, Exception, '', 'Wrong RawByteString behavior'+GetOptionString);
-  CheckException(Test_RawByteStringFromUnicodeString, Exception, '', 'Wrong RawByteString behavior'+GetOptionString);
+  CheckException(Test_RawByteStringFromString, EZVariantException, '', 'Wrong RawByteString behavior'+GetOptionString);
+  CheckException(Test_RawByteStringFromAnsiString, EZVariantException, '', 'Wrong RawByteString behavior'+GetOptionString);
+  CheckException(Test_RawByteStringFromUTF8String, EZVariantException, '', 'Wrong RawByteString behavior'+GetOptionString);
+  CheckException(Test_RawByteStringFromUnicodeString, EZVariantException, '', 'Wrong RawByteString behavior'+GetOptionString);
   Test_UnicodeStringFromString;
   Test_UnicodeStringFromAnsiString;
   Test_UnicodeStringFromUTF8String;
-  CheckException(Test_UnicodeStringFromRawByteString, Exception, '', 'Wrong RawByteString behavior'+GetOptionString);
+  CheckException(Test_UnicodeStringFromRawByteString, EZVariantException, '', 'Wrong RawByteString behavior'+GetOptionString);
 end;
 
 { TZClientVarManagerConvertCase }

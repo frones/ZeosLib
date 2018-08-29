@@ -41,7 +41,7 @@ interface
 uses
   SysUtils,
   Classes,
-  TestFramework;
+  TestFramework, XMLIntf, XMLDoc;
 
 const
    DEFAULT_FILENAME = 'dunit-report.xml';
@@ -51,18 +51,22 @@ type
   private
      FOutputFile : TextFile;
      FFileName : String;
-     
+
   protected
      startTime : Cardinal;
      dtStartTime : TDateTime;
+     FNextId: Integer;
 
      testStart : TDateTime;
-     FSuiteStack : TStringList;
-     
-     procedure writeReport(str: String);
+     FSuiteStack : TInterfaceList;
 
+     FXmlDocument: IXMLDocument;
+     FDocNode: IXMLNode;
+
+     procedure writeReport(str: String);
      function GetCurrentSuiteName : string;
      function GetCurrentCaseName: string;
+     function GetNextId: Integer;
   public
     // implement the ITestListener interface
     procedure AddSuccess(test: ITest); virtual;
@@ -112,10 +116,20 @@ begin
 end;
 
 constructor TXMLTestListener.Create(outputFile : String);
+var
+  Doc: TXMLDocument;
 begin
-   inherited Create;
-   FileName := outputFile;
-   FSuiteStack := TStringList.Create;
+  inherited Create;
+  FSuiteStack := TInterfaceList.Create;
+  Doc := TXmlDocument.Create(nil);
+  FXmlDocument := (Doc as IXMLDocument);
+  FXmlDocument.Options := FXmlDocument.Options + [doNodeAutoIndent];
+  FXmlDocument.Active := true;
+  FXmlDocument.Version := '1.0';
+  FXmlDocument.Encoding := 'UTF-8';
+  FXmlDocument.StandAlone := 'yes';
+  FFileName := outputFile;
+  FNextId := 3;
 end;
 
 {:
@@ -132,37 +146,129 @@ end;
 const
   TrueFalse : array[Boolean] of string = ('False', 'True');
 
-procedure TXMLTestListener.AddSuccess(test: ITest);
+function TXMLTestListener.GetNextId: Integer;
 begin
-   if test.tests.Count<=0 then
-   begin
-      writeReport(Format('    <test-case name="%s%s" executed="%s" success="True" time="%1.3f" result="Pass"/>',
-                         [GetCurrentCaseName, test.GetName, TrueFalse[test.Enabled], test.ElapsedTestTime / 1000]));
-   end;
+  Result := FNextId;
+  Inc(FNextId);
+end;
+
+procedure TXMLTestListener.AddSuccess(test: ITest);
+var
+  SuiteN: IXMLNode;
+  TestN: IXMLNode;
+begin
+  if test.tests.Count<=0 then begin
+    SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode);
+    SuiteN.Attributes['type'] := 'TestFixture';
+    TestN := SuiteN.AddChild('test-case');
+    TestN.Attributes['id'] := IntToStr(GetNextId);
+    TestN.Attributes['name'] :=  test.GetName;
+    TestN.Attributes['fullname'] := GetCurrentCaseName + test.GetName;
+    TestN.Attributes['methodname'] := test.GetName;
+    TestN.Attributes['classname'] := GetCurrentCaseName;
+    if test.Enabled
+    then TestN.Attributes['runstate'] := 'Runnable'
+    else TestN.Attributes['runstate'] := 'Skipped';
+    TestN.Attributes['result'] := 'Passed';
+    //TestN.Attributes['start-time'] :=
+    //TestN.Attributes['end-time'] :=
+    TestN.Attributes['duration'] := test.ElapsedTestTime;
+
+//      writeReport(Format('    <test-case name="%s%s" executed="%s" success="True" time="%1.3f" result="Pass"/>',
+//                         [GetCurrentCaseName, test.GetName, TrueFalse[test.Enabled], test.ElapsedTestTime]));
+ end;
 end;
 
 procedure TXMLTestListener.AddError(error: TTestFailure);
+var
+  SuiteN: IXMLNode;
+  TestN: IXMLNode;
+  test: ITest;
+  FailureN: IXMLNode;
+  MessageN: IXMLNode;
+  MessageStr: String;
+  StackN: IXMLNode;
 begin
-   writeReport(Format('    <test-case name="%s%s" executed="%s" success="False" time="%1.3f" result="Error">',
-                      [GetCurrentCaseName, error.FailedTest.GetName, TrueFalse[error.FailedTest.Enabled], error.FailedTest.ElapsedTestTime / 1000]));
-   writeReport('      <failure>');
-   writeReport(Format('        <message><![CDATA[Exception: [%s] %s', [error.ThrownExceptionName, error.ThrownExceptionMessage]));
-   writeReport(Format('At: %s]]></message>', [text2sgml(error.AddressInfo)]));
-   writeReport(Format('        <stack-trace><![CDATA[%s]]></stack-trace>', [error.StackTrace]));
-   writeReport('      </failure>');
-   writeReport('    </test-case>');
+//   writeReport(Format('    <test-case name="%s%s" executed="%s" success="False" time="%1.3f" result="Failed">',
+//                      [GetCurrentCaseName, error.FailedTest.GetName, TrueFalse[error.FailedTest.Enabled], error.FailedTest.ElapsedTestTime]));
+    Test := error.FailedTest;
+    SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode);
+    SuiteN.Attributes['type'] := 'TestFixture';
+    TestN := SuiteN.AddChild('test-case');
+    TestN.Attributes['id'] := IntToStr(GetNextId);
+    TestN.Attributes['name'] :=  test.GetName;
+    TestN.Attributes['fullname'] := GetCurrentCaseName + test.GetName;
+    TestN.Attributes['methodname'] := test.GetName;
+    TestN.Attributes['classname'] := GetCurrentCaseName;
+    if test.Enabled
+    then TestN.Attributes['runstate'] := 'Runnable'
+    else TestN.Attributes['runstate'] := 'Skipped';
+    TestN.Attributes['result'] := 'Failed';
+    //TestN.Attributes['start-time'] :=
+    //TestN.Attributes['end-time'] :=
+    TestN.Attributes['duration'] := test.ElapsedTestTime;
+
+//   writeReport('      <failure>');
+   FailureN := TestN.AddChild('failure');
+
+//   writeReport(Format('        <message><![CDATA[Exception: [%s] %s', [error.ThrownExceptionName, error.ThrownExceptionMessage]));
+//   writeReport(Format('At: %s]]></message>', [text2sgml(error.AddressInfo)]));
+   MessageN := FailureN.AddChild('message');
+   MessageStr := Format('Exception: [%s] %s'#13'at: %s', [error.ThrownExceptionName, error.ThrownExceptionMessage, text2sgml(error.AddressInfo)]);
+   MessageN.ChildNodes.Add(FXmlDocument.CreateNode(MessageStr, ntCData));
+
+//   writeReport(Format('        <stack-trace><![CDATA[%s]]></stack-trace>', [error.StackTrace]));
+   StackN := FailureN.AddChild('stack-trace');
+   StackN.ChildNodes.Add(FXmlDocument.CreateNode(error.StackTrace, ntCData))
+
+//   writeReport('      </failure>');
+//   writeReport('    </test-case>');
 end;
 
 procedure TXMLTestListener.AddFailure(failure: TTestFailure);
+var
+  SuiteN: IXMLNode;
+  TestN: IXMLNode;
+  test: ITest;
+  FailureN: IXMLNode;
+  MessageN: IXMLNode;
+  MessageStr: String;
+  StackN: IXMLNode;
 begin
-   writeReport(Format('    <test-case name="%s%s" executed="%s" success="False" time="%1.3f" result="Failure">',
-                      [GetCurrentCaseName, failure.FailedTest.GetName, TrueFalse[failure.FailedTest.Enabled], failure.FailedTest.ElapsedTestTime / 1000]));
-   writeReport('      <failure>');
-   writeReport(Format('        <message><![CDATA[Exception: [%s] %s', [failure.ThrownExceptionName, failure.ThrownExceptionMessage]));
-   writeReport(Format('At: %s]]></message>', [text2sgml(failure.AddressInfo)]));
-   writeReport(Format('        <stack-trace><![CDATA[%s]]></stack-trace>', [failure.StackTrace]));
-   writeReport('      </failure>');
-   writeReport('    </test-case>');
+//   writeReport(Format('    <test-case name="%s%s" executed="%s" success="False" time="%1.3f" result="Failed">',
+//                      [GetCurrentCaseName, failure.FailedTest.GetName, TrueFalse[failure.FailedTest.Enabled], failure.FailedTest.ElapsedTestTime / 1000]));
+    Test := failure.FailedTest;
+    SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode);
+    SuiteN.Attributes['type'] := 'TestFixture';
+    TestN := SuiteN.AddChild('test-case');
+    TestN.Attributes['id'] := IntToStr(GetNextId);
+    TestN.Attributes['name'] :=  test.GetName;
+    TestN.Attributes['fullname'] := GetCurrentCaseName + test.GetName;
+    TestN.Attributes['methodname'] := test.GetName;
+    TestN.Attributes['classname'] := GetCurrentCaseName;
+    if test.Enabled
+    then TestN.Attributes['runstate'] := 'Runnable'
+    else TestN.Attributes['runstate'] := 'Skipped';
+    TestN.Attributes['result'] := 'Failed';
+    //TestN.Attributes['start-time'] :=
+    //TestN.Attributes['end-time'] :=
+    TestN.Attributes['duration'] := test.ElapsedTestTime;
+
+//   writeReport('      <failure>');
+   FailureN := TestN.AddChild('failure');
+
+//   writeReport(Format('        <message><![CDATA[Exception: [%s] %s', [failure.ThrownExceptionName, failure.ThrownExceptionMessage]));
+//   writeReport(Format('At: %s]]></message>', [text2sgml(failure.AddressInfo)]));
+   MessageN := FailureN.AddChild('message');
+   MessageStr := Format('Exception: [%s] %s'#13'at: %s', [failure.ThrownExceptionName, failure.ThrownExceptionMessage, text2sgml(failure.AddressInfo)]);
+   MessageN.ChildNodes.Add(FXmlDocument.CreateNode(MessageStr, ntCData));
+
+//   writeReport(Format('        <stack-trace><![CDATA[%s]]></stack-trace>', [failure.StackTrace]));
+   StackN := FailureN.AddChild('stack-trace');
+   StackN.ChildNodes.Add(FXmlDocument.CreateNode(failure.StackTrace, ntCData))
+
+//   writeReport('      </failure>');
+//   writeReport('    </test-case>');
 end;
 
 
@@ -179,18 +285,20 @@ begin
    startTime := GetTickCount;
    dtStartTime := Now;
    
-   if FFileName<>'' then
-   begin
-     AssignFile(FOutputFile, FFileName);
-     Rewrite(FOutputFile);
-   end;
-   
-   writeReport('<?xml version="1.0" encoding="ISO-8859-1" standalone="yes" ?>');
-   writeReport(Format('<test-results name="%s" total="%d" not-run="%d" date="%s" time="%s">',
-                      [RegisteredTests.Name, RegisteredTests.CountTestCases,
-                        RegisteredTests.CountTestCases - RegisteredTests.CountEnabledTestCases,
-                          DateToStr(Now),
-                            TimeToStr(Now)]));
+//   if FFileName<>'' then
+//   begin
+//     AssignFile(FOutputFile, FFileName);
+//     Rewrite(FOutputFile);
+//   end;
+
+//   writeReport('<?xml version="1.0" encoding="ISO-8859-1" standalone="yes" ?>');
+//   writeReport(Format('<test-run id="2" name="%s" total="%d" date="%s" time="%s">',
+//                      [RegisteredTests.Name, RegisteredTests.CountTestCases,
+//                        DateToStr(Now),
+//                          TimeToStr(Now)]));
+  FDocNode := FXmlDocument.CreateNode('test-run', ntElement);
+  FXmlDocument.DocumentElement := FDocNode;
+  FDocNode.Attributes['id'] := '2';
 end;
 
 procedure TXMLTestListener.TestingEnds(testResult: TTestResult);
@@ -198,15 +306,15 @@ var
    runTime : Double;
    successRate : Integer;
 begin
-   runtime := (GetTickCount - startTime) / 1000;
-   if testResult.RunCount > 0 then
-     successRate :=  Trunc(
-        ((testResult.runCount - testResult.failureCount - testResult.errorCount)
-         /testResult.runCount)
-        *100)
-   else
-     successRate := 100;
-
+//   runtime := (GetTickCount - startTime);
+//   if testResult.RunCount > 0 then
+//     successRate :=  Trunc(
+//        ((testResult.runCount - testResult.failureCount - testResult.errorCount)
+//         /testResult.runCount)
+//        *100)
+//   else
+//     successRate := 100;
+(*
    writeReport('<statistics>'+CRLF+
                   '<stat name="tests" value="'+intToStr(testResult.runCount)+'" />'+CRLF+
                   '<stat name="failures" value="'+intToStr(testResult.failureCount)+'" />'+CRLF+
@@ -217,9 +325,10 @@ begin
                   Format('<stat name="runtime" value="%1.3f"/>', [runtime])+CRLF+
                   '</statistics>'+CRLF+
               '</test-results>');
-   
-   if TTextRec(FOutputFile).Mode = fmOutput then
-      Close(FOutputFile);
+*)
+//   if TTextRec(FOutputFile).Mode = fmOutput then
+//      Close(FOutputFile);
+  FXmlDocument.SaveToFile(FFileName);
 end;
 
 class function TXMLTestListener.RunTest(suite: ITest; outputFile:String): TTestResult;
@@ -254,32 +363,68 @@ begin
 end;
 
 function TXMLTestListener.ShouldRunTest(test: ITest): boolean;
+var
+  SuiteN: IXMLNode;
+  TestN: IXMLNode;
 begin
   Result := test.Enabled;
-  if not Result then
-    writeReport(Format('    <test-case name="%s%s" executed="False"/>',
-                       [GetCurrentCaseName, test.GetName]));
+  if not Result then begin
+//    writeReport(Format('    <test-case name="%s%s" executed="False"/>',
+//                       [GetCurrentCaseName, test.GetName]));
+    SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode);
+    SuiteN.Attributes['type'] := 'TestFixture';
+    TestN := SuiteN.AddChild('test-case');
+    TestN.Attributes['id'] := IntToStr(GetNextId);
+    TestN.Attributes['name'] :=  test.GetName;
+    TestN.Attributes['fullname'] := GetCurrentCaseName + test.GetName;
+    TestN.Attributes['methodname'] := test.GetName;
+    TestN.Attributes['classname'] := GetCurrentCaseName;
+    TestN.Attributes['runstate'] := 'Skipped';
+    TestN.Attributes['result'] := 'Skipped';
+    TestN.Attributes['duration'] := '0';
+  end;
 end;
 
 procedure TXMLTestListener.EndSuite(suite: ITest);
+var
+  SuiteN: IXMLNode;
 begin
-     if CompareText(suite.Name, ExtractFileName(Application.ExeName)) = 0 then
-       Exit;
-     writeReport('  </results>');
-     writeReport('</test-suite>');
-     FSuiteStack.Delete(0);
+  SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode);
+  SuiteN.Attributes['duration'] := FloatToStr(suite.ElapsedTestTime / 1000);
+  SuiteN.Attributes['end-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', now);
+  FSuiteStack.Delete(FSuiteStack.Count - 1);
 end;
 
 procedure TXMLTestListener.StartSuite(suite: ITest);
 var
   s : string;
+  SuiteN: IXMLNode;
 begin
-   if CompareText(suite.Name, ExtractFileName(Application.ExeName)) = 0 then
-     Exit;
-   s := GetCurrentSuiteName + suite.Name;
-   writeReport(Format('<test-suite name="%s" total="%d" not-run="%d">', [s, suite.CountTestCases, suite.CountTestCases - suite.CountEnabledTestCases]));
-   FSuiteStack.Insert(0, suite.getName);
-   writeReport('  <results>');
+//   writeReport(Format('<test-suite name="%s" total="%d" not-run="%d">', [s, suite.CountTestCases, suite.CountTestCases - suite.CountEnabledTestCases]));
+//   FSuiteStack.AddObject(suite.getName);
+  if FSuiteStack.Count = 0
+  then SuiteN := FDocNode.AddChild('test-suite')
+  else SuiteN := (FSuiteStack.Items[FSuiteStack.Count - 1] as IXMLNode).AddChild('test-suite');
+  SuiteN.Attributes['id'] := IntToStr(GetNextId);
+  SuiteN.Attributes['name'] := suite.Name;
+  SuiteN.Attributes['type'] := 'TestSuite';
+  SuiteN.Attributes['total'] := IntToStr(suite.CountTestCases);
+  SuiteN.Attributes['failed'] := '0';
+  SuiteN.Attributes['passed'] := IntToStr(suite.CountTestCases);
+  SuiteN.Attributes['result'] := 'Inconclusive';
+  SuiteN.Attributes['skipped'] := '0';
+  SuiteN.Attributes['duration'] := '0';
+  SuiteN.Attributes['end-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', now);
+  SuiteN.Attributes['fullname'] := suite.Name;
+  if suite.Enabled
+  then SuiteN.Attributes['runstate'] := 'Runnable'
+  else SuiteN.Attributes['runstate'] := 'Skipped';
+  SuiteN.Attributes['classname'] := GetCurrentSuiteName + suite.Name;
+  SuiteN.Attributes['start-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', now);
+  SuiteN.Attributes['inconclusive'] := '0';
+  SuiteN.Attributes['testcasecount'] := IntToStr(suite.CountTestCases);
+  SuiteN.Attributes['total'] := IntToStr(suite.CountTestCases);
+  FSuiteStack.Add(SuiteN);
 end;
 
 {:
@@ -310,7 +455,9 @@ end;
 
 destructor TXMLTestListener.Destroy;
 begin
-  FreeAndNil(FSuiteStack);
+  if Assigned(FSuiteStack) then FreeAndNil(FSuiteStack);
+  if Assigned(FXmlDocument) then FXmlDocument := nil;
+
   inherited Destroy;
 end;
 
@@ -319,17 +466,15 @@ var
   c : Integer;
 begin
   Result := '';
-  for c := 0 to FSuiteStack.Count - 1 do
-    Result := FSuiteStack[c] + '.' + Result;
+  for c := FSuiteStack.Count - 1 downto 0 do
+    Result := (FSuiteStack.Items[c] as IXmlNode).Attributes['name']  + '.' + Result;
 end;
 
 function TXMLTestListener.GetCurrentCaseName: string;
 var
   c : Integer;
 begin
-  Result := '';
-  for c := 0 to FSuiteStack.Count - 1 do
-    Result := FSuiteStack[c] + '.' + Result;
+  Result := GetCurrentSuiteName;
   Result := RegisteredTests.Name + '.' + Result;
 end;
 

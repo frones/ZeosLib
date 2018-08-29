@@ -54,10 +54,11 @@
 unit ZTestDbcADO;
 
 interface
+
 {$I ZDbc.inc}
+
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZSqlTestCase,
-  ZCompatibility, DateUtils;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZSqlTestCase;
 
 type
 
@@ -71,8 +72,6 @@ type
   end;
 
 implementation
-
-uses SysUtils, ZTestCase, ZVariant;
 
 { TZTestDbcADOCase }
 

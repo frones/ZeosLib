@@ -266,7 +266,7 @@ type
     // (technobot) end of questioned section
 
     function EscapeString(const S: string): string; override;
-    function UncachedGetTables(const {%H-}Catalog: string; const SchemaPattern: string;
+    function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
     function UncachedGetSchemas: IZResultSet; override;
     function UncachedGetCatalogs: IZResultSet; override;

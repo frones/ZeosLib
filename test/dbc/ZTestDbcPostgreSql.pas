@@ -58,7 +58,7 @@ interface
 
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcPostgreSql, ZSqlTestCase,
-  ZCompatibility;
+  ZURL, ZCompatibility;
 
 type
 
@@ -174,8 +174,11 @@ var
   TextStream: TStream;
   ImageStream: TMemoryStream;
   TempStream: TStream;
+  Url: TZURL;
 begin
-  Connection := DriverManager.GetConnection(GetConnectionUrl('oidasblob=true'));
+  Url := GetConnectionUrl('oidasblob=true');
+  Connection := DriverManager.GetConnection(Url.URL);
+  Url.Free;
   //Connection := DriverManager.GetConnectionWithLogin(
     //GetConnectionUrl + '?oidasblob=true', UserName, Password);
   Connection.SetTransactionIsolation(tiReadCommitted);
@@ -326,8 +329,7 @@ begin
   Statement.Close;
 
   // Update case
-  ResultSet := Statement.ExecuteQuery('UPDATE extension set ext_enum = ''House'' where ext_id = 1');
-  ResultSet.Close;
+  Statement.ExecuteQuery('UPDATE extension set ext_enum = ''House'' where ext_id = 1');
 
   ResultSet := Statement.ExecuteQuery('SELECT * FROM extension where ext_id = 1');
   CheckNotNull(ResultSet);
@@ -338,11 +340,9 @@ begin
   Statement.Close;
 
   // Insert case
-  ResultSet := Statement.ExecuteQuery('DELETE FROM extension where ext_id = 1');
-  ResultSet.Close;
+  Statement.ExecuteQuery('DELETE FROM extension where ext_id = 1');
 
-  ResultSet := Statement.ExecuteQuery('INSERT INTO extension VALUES(1,''Car'')');
-  ResultSet.Close;
+  Statement.ExecuteQuery('INSERT INTO extension VALUES(1,''Car'')');
 
   ResultSet := Statement.ExecuteQuery('SELECT * FROM extension where ext_id = 1');
   CheckNotNull(ResultSet);

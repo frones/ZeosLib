@@ -436,7 +436,7 @@ begin
           end;
         JSONWriter.Add(',');
       end;
-    {$IFOPT D+} {$R+} {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
   if jcoEndJSONObject in JSONComposeOptions then begin
     JSONWriter.CancelLastComma; // cancel last ','
@@ -510,9 +510,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -628,9 +626,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -672,9 +668,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
       end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -731,7 +725,7 @@ begin
           begin
             GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
             if Len = ConSettings^.ReadFormatSettings.DateFormatLen
-            then Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            then Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
             else Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
               RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed));
             LastWasNull := Result = 0;
@@ -740,9 +734,7 @@ begin
           Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}));
       end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -809,9 +801,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -848,10 +838,10 @@ begin
       if (sqlscale < 0)  then
       begin
         case SQLCode of
-          SQL_SHORT  : Result {%H-}:= PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale];
-          SQL_LONG   : Result {%H-}:= PInteger(sqldata)^  / IBScaleDivisor[sqlscale];
+          SQL_SHORT  : Result := PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale];
+          SQL_LONG   : Result := PInteger(sqldata)^  / IBScaleDivisor[sqlscale];
           SQL_INT64,
-          SQL_QUAD   : Result {%H-}:= PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
+          SQL_QUAD   : Result := PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
           SQL_DOUBLE : Result := PDouble(sqldata)^;
         else
           raise EZIBConvertError.Create(Format(SErrorConvertionField,
@@ -878,9 +868,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -947,9 +935,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1020,9 +1006,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1096,9 +1080,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1167,9 +1149,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1228,7 +1208,7 @@ begin
           begin
             GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
             if AnsiChar((P+2)^) = AnsiChar(':') then //possible date if Len = 10 then
-              Result := RawSQLTimeToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+              Result := RawSQLTimeToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed)
             else
               Result := Frac(RawSQLTimeStampToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed));
           end;
@@ -1236,9 +1216,7 @@ begin
           Result := Frac(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}));
       end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1302,7 +1280,7 @@ begin
           begin
             GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
             if AnsiChar((P+2)^) = AnsiChar(':') then
-              Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+              Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
             else
               if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
                 Result := RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
@@ -1313,9 +1291,7 @@ begin
           Result := GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
       end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1339,9 +1315,7 @@ begin
   {$R-}
   with FXSQLDA.sqlvar[ColumnIndex] do
     Result := (sqlind <> nil) and (sqlind^ = ISC_NULL);
-  {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1424,9 +1398,7 @@ begin
     end;
     Result := Pointer(FRawTemp);
     Len := NativeUInt({%H-}PLengthInt(NativeUInt(FRawTemp) - StringLenOffSet)^);
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1525,9 +1497,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1634,9 +1604,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    {$IFOPT D+}
-    {$R+}
-    {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -1750,10 +1718,8 @@ end;
 function TZInterbase6XSQLDAResultSet.GetIbSqlSubType(const Index: Word): Smallint;
 begin
   {$R-}
-  result := FXSQLDA.sqlvar[Index].sqlsubtype;
-  {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+  Result := FXSQLDA.sqlvar[Index].sqlsubtype;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1778,9 +1744,7 @@ begin
   end
   else
     raise EZIBConvertError.Create('Invalid State.');
-  {$IFOPT D+}
-  {$R+}
-  {$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1895,7 +1859,7 @@ var
 begin
   InternalClear;
   ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FIBConnection.GetTrHandle,
-    FBlobId, Size{%H-}, Buffer{%H-}, True, FIBConnection as IImmediatelyReleasable);
+    FBlobId, Size, Buffer, True, FIBConnection as IImmediatelyReleasable);
   BlobSize := Size;
   BlobData := Buffer;
   inherited ReadLob;
@@ -1925,7 +1889,7 @@ var
 begin
   InternalClear;
   ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FIBConnection.GetTrHandle,
-    FBlobId, Size{%H-}, Buffer{%H-}, False, FIBConnection as IImmediatelyReleasable);
+    FBlobId, Size, Buffer, False, FIBConnection as IImmediatelyReleasable);
   AnsiChar((PAnsiChar(Buffer)+NativeUInt(Size))^) := AnsiChar(#0); //add #0 terminator
   FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
   FBlobSize := Size+1;

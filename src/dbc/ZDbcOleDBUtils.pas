@@ -54,8 +54,7 @@ unit ZDbcOleDBUtils;
 interface
 
 {$I ZDbc.inc}
-{.$DEFINE ENABLE_OLEDB}
-{$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
+
 uses
   Types, SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   ZCompatibility, ZDbcIntfs, ZOleDB, ZVariant, ZDbcStatement, Variants;
@@ -94,7 +93,7 @@ function PrepareOleParamDBBindings(DBUPARAMS: DB_UPARAMS;
   var DBBindingArray: TDBBindingDynArray; const InParamTypes: TZSQLTypeArray;
   ParamInfoArray: PDBParamInfoArray; var TempLobs: TInterfacesDynArray): DBROWOFFSET;
 
-procedure InitOleParamDBBindings(var DBBindingArray: TDBParamInfoDynArray;
+procedure InitOleParamDBBindings(out DBBindingArray: TDBParamInfoDynArray;
   const InParamTypes: TZSQLTypeArray; const InParamValues: TZVariantDynArray;
   const ClientVarManager: IZClientVariantManager);
 
@@ -121,7 +120,7 @@ function ProviderNamePrefix2ServerProvider(const ProviderNamePrefix: String): TZ
 implementation
 
 uses
-  {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ActiveX, Windows, Math, TypInfo,
   ZEncoding, ZDbcLogging, ZDbcUtils, ZDbcResultSet, ZFastCode, ZSysUtils, ZMessages,
   ZClasses;
@@ -622,7 +621,7 @@ begin
   Result := DBBindingArray[DBUPARAMS -1].obValue + DBBindingArray[DBUPARAMS -1].cbMaxLen;
 end;
 
-procedure InitOleParamDBBindings(var DBBindingArray: TDBParamInfoDynArray;
+procedure InitOleParamDBBindings(out DBBindingArray: TDBParamInfoDynArray;
   const InParamTypes: TZSQLTypeArray; const InParamValues: TZVariantDynArray;
   const ClientVarManager: IZClientVariantManager);
 var I: Integer;
@@ -2139,9 +2138,4 @@ begin
     end;
 end;
 
-//(*
-{$ELSE}
-implementation
-{$IFEND}
-//*)
 end.

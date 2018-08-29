@@ -302,7 +302,7 @@ begin
   begin
     IBConnection := Metadata.GetConnection as IZInterbase6Connection;
     PlainDriver := TZInterbasePlainDriver(IBConnection.GetIZPlainDriver.GetInstance);
-    FServerVersion := GetISC_StringInfo(PlainDriver,
+    FServerVersion := GetDBStringInfo(PlainDriver,
       IBConnection.GetDBHandle, isc_info_version, IBConnection as IImmediatelyReleasable);
     FIsFireBird := ZFastCode.Pos('Firebird', FServerVersion) > 0;
     FProductVersion := Copy(FServerVersion, ZFastCode.Pos(DBProvider[FIsFireBird],
@@ -2790,7 +2790,7 @@ const
   RDB_INDEX_NAME_Index         = FirstDbcIndex + 2;
   RDB_FIELD_POSITION_Index     = FirstDbcIndex + 3;
   RDB_FIELD_NAME_Index         = FirstDbcIndex + 4;
-  {%H-}RDB_SEGMENT_COUNT_Index = FirstDbcIndex + 5;
+  //RDB_SEGMENT_COUNT_Index      = FirstDbcIndex + 5; unused
   RDB_PAGE_NUMBER_Index        = FirstDbcIndex + 6;
 var
   SQL : string;

@@ -55,25 +55,21 @@ interface
 
 {$I ZDbc.inc}
 
-{.$DEFINE ENABLE_OLEDB}
-{$IFDEF ENABLE_OLEDB}
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
-  {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZDbcIntfs, ZDbcConnection, ZDbcLogging, ZTokenizer,
   ZGenericSqlAnalyser, ZURL, ZCompatibility, ZDbcOleDBUtils,
   ZOleDB, ZPlainOleDBDriver, ZOleDBToken;
 
 type
   {** Implements OleDB Database Driver. }
-  {$WARNINGS OFF}
   TZOleDBDriver = class(TZAbstractDriver)
   public
     constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;
     function GetTokenizer: IZTokenizer; override;
   end;
-  {$WARNINGS ON}
 
   {** Defines a PostgreSQL specific connection. }
   IZOleDBConnection = interface(IZConnection)
@@ -184,12 +180,10 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-{$WARNINGS OFF}
 function TZOleDBDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := TZOleDBConnection.Create(Url);
 end;
-{$WARNINGS ON}
 
 {**
   Gets a SQL syntax tokenizer.
@@ -304,7 +298,7 @@ end;
 procedure TZOleDBConnection.SetProviderProps(DBinit: Boolean);
 const
   DBPROPSET_SQLSERVERDBINIT:      TGUID = '{5cf4ca10-ef21-11d0-97e7-00c04fc2ad98}';
-  {%H-}DBPROPSET_SQLSERVERDATASOURCE:  TGUID = '{28efaee4-2d2c-11d1-9807-00c04fc2ad98}';
+  //{%H-}DBPROPSET_SQLSERVERDATASOURCE:  TGUID = '{28efaee4-2d2c-11d1-9807-00c04fc2ad98}'; unused
   SSPROP_INIT_PACKETSIZE	       = 9;
 var
   DBProps: IDBProperties;
@@ -766,9 +760,4 @@ finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(OleDBDriver);
   OleDBDriver := nil;
-//(*
-{$ELSE !ENABLE_OLEDB}
-implementation
-{$ENDIF ENABLE_OLEDB}
-//*)
 end.

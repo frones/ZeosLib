@@ -56,11 +56,6 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFDEF FPC}
-  {$IFDEF WIN32}
-    Comobj,
-  {$ENDIF}
-{$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   ZSysUtils, ZClasses, ZDbcIntfs, ZDbcResultSetMetadata, ZDbcCachedResultSet,
@@ -329,11 +324,9 @@ type
   TZAbstractDatabaseInfo = class(TInterfacedObject, IZDatabaseInfo)
   private
     FMetadata: TZAbstractDatabaseMetadata;
-    fIdentifierQuoteKeywordArray: TStringDynArray;
-    function CompareStr(Item1, Item2: Pointer): Integer;
+    FIdentifierQuoteKeywords: TStringList;
   protected
     FIdentifierQuotes: String;
-    fIdentifierQuoteKeywords: String;
     property Metadata: TZAbstractDatabaseMetadata read FMetadata;
   public
     constructor Create(const Metadata: TZAbstractDatabaseMetadata); overload;
@@ -473,8 +466,7 @@ type
     function GetCatalogTerm: string; virtual;
     function GetCatalogSeparator: string; virtual;
     function GetSQLKeywords: string; virtual;
-    function GetIdentifierQuoteKeywords: String; virtual;
-    function GetIdentifierQuoteKeywordsSorted: TStringDynArray;
+    function GetIdentifierQuoteKeywordsSorted: TStringList;
     function GetNumericFunctions: string; virtual;
     function GetStringFunctions: string; virtual;
     function GetSystemFunctions: string; virtual;
@@ -816,14 +808,8 @@ end;
 destructor TZAbstractDatabaseInfo.Destroy;
 begin
   FMetadata := nil;
+  FreeAndNil(FIdentifierQuoteKeywords);
   inherited;
-end;
-
-function TZAbstractDatabaseInfo.CompareStr(Item1, Item2: Pointer): Integer;
-begin
-  if NativeUInt(Item1) = NativeUInt(Item2)
-  then Result := 0
-  else Result := AnsiCompareStr(String(Item1), String(Item2));
 end;
 
 //----------------------------------------------------------------------
@@ -1057,86 +1043,34 @@ begin
   Result := False;
 end;
 
-function TZAbstractDatabaseInfo.GetIdentifierQuoteKeywordsSorted: TStringDynArray;
-var SL: TStrings;
-  SortList: TZSortedList;
-  I, j: Integer;
-  {$IFNDEF FPC}
-  OrgList: Pointer;
-  {$ENDIF}
-begin
-  if Pointer(fIdentifierQuoteKeywordArray) = nil then begin
-    SL := ZSysUtils.SplitString(GetIdentifierQuoteKeywords, ', ');//include the whitechar which prevents the trim
-    SortList := TZSortedList.Create;
-    try
-      SortList.Capacity := SL.Count;
-      SetLength(fIdentifierQuoteKeywordArray, SL.Count);
-      for i := 0 to SL.Count-1 do
-        fIdentifierQuoteKeywordArray[i] := SL[I];
-      SortList.Count := SL.Count;
-      {$IFDEF FPC}
-      //bug in FPC again: TList.List uses a getter not a field so we can't address with my quick assign ):
-      for i := 0 to high(fIdentifierQuoteKeywordArray) do
-        SortList.Add(Pointer(fIdentifierQuoteKeywordArray[i]));
-      {$ELSE}
-      //EH: QickAssign first field of the TStringList Object = FList: PStringItemList;
-      OrgList := SortList.List; //safe current
-      PPointer(@SortList.List)^ := Pointer(fIdentifierQuoteKeywordArray);
-      SortList.Sort(CompareStr);
-      PPointer(@SortList.List)^ := OrgList; //asign list back again
-      {$ENDIF}
-      J := 0;
-      for i := 0 to High(fIdentifierQuoteKeywordArray) do
-        if I < High(fIdentifierQuoteKeywordArray) then
-          if fIdentifierQuoteKeywordArray[i] = '' then
-            Break
-          else if fIdentifierQuoteKeywordArray[i] = fIdentifierQuoteKeywordArray[i+1] then begin
-            fIdentifierQuoteKeywordArray[i] := '';
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(
-              Pointer(@fIdentifierQuoteKeywordArray[i+1])^, Pointer(@fIdentifierQuoteKeywordArray[i])^,
-              (Length(fIdentifierQuoteKeywordArray)-i-1)*SizeOf(Pointer));
-            if j = 0 then
-              Pointer(fIdentifierQuoteKeywordArray[High(fIdentifierQuoteKeywordArray)-j]) := nil; //ovoid gpf
-            Inc(j);
-          end;
-      SetLength(fIdentifierQuoteKeywordArray, Length(fIdentifierQuoteKeywordArray)-j);
-    finally
-      SL.Free;
-      SortList.Free;
-    end;
-  end;
-  Result := fIdentifierQuoteKeywordArray;
-end;
-
-function TZAbstractDatabaseInfo.GetIdentifierQuoteKeywords: String;
-const SQL92Keywords = 'insert,update,delete,select,drop,create,for,from,set,values,'
+function TZAbstractDatabaseInfo.GetIdentifierQuoteKeywordsSorted: TStringList;
+const
+  SQL92Keywords = 'insert,update,delete,select,drop,create,for,from,set,values,'
     + 'where,order,group,by,having,into,as,table,index,primary,key,on,is,null,'
     + 'char,varchar,integer,number,alter,column,value,values,'
     + 'current,top,login,status,version';
+
   procedure Append(const Values: String; Dest: TStrings);
   begin
     if StoresUpperCaseIdentifiers
-    then ZSysUtils.AppendSplitString(Dest, UpperCase(Values), ',')
-    else ZSysUtils.AppendSplitString(Dest, LowerCase(Values), ',');
+      then ZSysUtils.AppendSplitString(Dest, UpperCase(Values), ',')
+      else ZSysUtils.AppendSplitString(Dest, LowerCase(Values), ',');
   end;
-var
-  SL: TStrings;
+
 begin
-  if fIdentifierQuoteKeywords = '' then begin
-    SL := TStringList.Create;
-    try
-      Append(SQL92Keywords, SL);
-      Append(GetSQLKeyWords, SL);
-      Append(GetNumericFunctions, SL);
-      Append(GetStringFunctions, SL);
-      Append(GetSystemFunctions, SL);
-      Append(GetTimeDateFunctions, SL);
-      fIdentifierQuoteKeywords := ZSysUtils.ComposeString(SL, ',');
-    finally
-      SL.Free;
-    end;
+  if FIdentifierQuoteKeywords = nil then
+  begin
+    FIdentifierQuoteKeywords := TStringList.Create;
+    FIdentifierQuoteKeywords.Sorted := True;
+    FIdentifierQuoteKeywords.Duplicates := dupIgnore;
+    Append(SQL92Keywords, FIdentifierQuoteKeywords);
+    Append(GetSQLKeyWords, FIdentifierQuoteKeywords);
+    Append(GetNumericFunctions, FIdentifierQuoteKeywords);
+    Append(GetStringFunctions, FIdentifierQuoteKeywords);
+    Append(GetSystemFunctions, FIdentifierQuoteKeywords);
+    Append(GetTimeDateFunctions, FIdentifierQuoteKeywords);
   end;
-  Result := fIdentifierQuoteKeywords
+  Result := FIdentifierQuoteKeywords;
 end;
 
 {**
@@ -5183,11 +5117,9 @@ end;
 function TZDefaultIdentifierConvertor.GetIdentifierCase(
   const Value: String; TestKeyWords: Boolean): TZIdentifierCase;
 var
-  P1, P2: PChar;
+  P1: PChar;
   UpCnt, LoCnt: Integer;
   S: String;
-  I: Integer;
-  KeyWords: TStringDynArray;
 begin
   Result := icNone;
   if Value = '' then Exit;
@@ -5226,17 +5158,9 @@ begin
     else if not Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers and (Result <> icLower) then
       s := LowerCase(Value)
     else S := Value;
-    P1 := Pointer(S);
-    KeyWords := Metadata.GetDatabaseInfo.GetIdentifierQuoteKeywordsSorted; //they are Ascending sorted
-    for i := low(KeyWords) to high(KeyWords) do
-      if S = KeyWords[I] then begin
-        Result := icSpecial;
-        Break;
-      end else begin
-        P2 := Pointer(KeyWords[I]);
-        if (Ord(P1^) < Ord(P2^)) then //break the loop if firstchar is greater than..
-          Break;
-      end;
+    // With sorted list fast binary search is performed
+    if Metadata.GetDatabaseInfo.GetIdentifierQuoteKeywordsSorted.IndexOf(S) <> -1 then
+      Result := icSpecial;
   end;
 end;
 

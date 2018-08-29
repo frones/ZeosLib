@@ -62,7 +62,7 @@ uses
   Types,
 {$ENDIF}
   {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, DB,
-  {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF} ZDataset,
+  {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF} ZDataset, ZURL,
   ZCompatibility, ZDbcIntfs, ZConnection, Contnrs, ZTestCase, ZScriptParser, ZDbcLogging;
 
 const
@@ -241,6 +241,8 @@ type
     procedure PrintResultSet(ResultSet: IZResultSet;
       ShowTypes: Boolean; Note: string = '');
 
+    function GetConnectionUrl(const Param: String): TZURL;
+
     { Properties to access active connection settings. }
     property ConnectionConfig:TZConnectionConfig read FCurrentConnectionConfig write SetCurrentConnectionConfig;
     property ConnectionName: string read GetConnectionName;
@@ -270,7 +272,6 @@ type
     procedure SetUp; override;
     procedure TearDown; override;
     function IsRealPreparableTest: Boolean; override;
-    function GetConnectionUrl(Param: String): string;
 
     property Connection: IZConnection read FConnection write FConnection;
   end;
@@ -324,7 +325,7 @@ implementation
 
 uses
   Math,
-  ZSysUtils, ZEncoding, ZTestConfig, ZSqlProcessor, ZURL, ZAbstractRODataset;
+  ZSysUtils, ZEncoding, ZTestConfig, ZSqlProcessor, ZAbstractRODataset;
 
 function PropPos(const PropDynArray: TStringDynArray; const AProp: String): Integer; overload;
 var
@@ -542,7 +543,7 @@ var
       if (CPType = 'CP_UTF16') then //autoencoding is allways true
         SetCharacterSets(MyCurrent)
       else
-        {$IF defined(MSWINDOWS) or defined(WITH_FPC_STRING_CONVERSATION) or defined(WITH_LCONVENCODING) or defined(DELPHI)}
+        {$IF defined(MSWINDOWS) or defined(WITH_FPC_STRING_CONVERSION) or defined(WITH_LCONVENCODING) or defined(DELPHI)}
         SetAutoEncodings(MyCurrent); //Allow Autoencoding only if supported!
         {$ELSE}
         SetCharacterSets(MyCurrent); //No Autoencoding available
@@ -1081,12 +1082,9 @@ function TZAbstractSQLTestCase.GetDBTestStream(const Value: ZWideString;
 var
   Ansi: RawByteString;
 begin
-  Result := TMemoryStream.Create;
   if ( ConSettings.CPType = cCP_UTF16 ) then
-  begin
-    Result.Write(PWideChar(Value)^, Length(Value)*2);
-    Result.Position := 0;
-  end else begin
+    Result := StreamFromData(Value)
+  else begin
     case ConSettings.ClientCodePage.Encoding of
       ceAnsi:
         if ConSettings.AutoEncode then //Revert the expected value to test
@@ -1112,8 +1110,7 @@ begin
               Ansi := UTF8Encode(Value);
         end;
     end;
-    Result.Write(PAnsiChar(Ansi)^, Length(Ansi));
-    Result.Position := 0;
+    Result := StreamFromData(Ansi);
   end;
 end;
 
@@ -1163,23 +1160,17 @@ end;
 }
 function TZAbstractSQLTestCase.CreateDbcConnection: IZConnection;
 var
-  zURL: TZURL;
-  TempProperties :TStrings;
-  I: Integer;
+  TempURL: TZURL;
 begin
-  zURL := TZURL.Create(Format('zdbc:%s://', [Protocol]), HostName, Port, Database, UserName, Password, nil);
-  zURL.LibLocation := LibLocation;
-  TempProperties := TStringList.Create;
-  for I := 0 to High(Properties) do
-  begin
-    TempProperties.Add(Properties[I])
+  TempURL := GetConnectionUrl('');
+  try
+    Result := DriverManager.GetConnection(TempURL.URL);
+    {$IFDEF ZEOS_TEST_ONLY}
+    Result.SetTestMode(ConnectionConfig.TestMode);
+    {$ENDIF}
+  finally
+    TempURL.Free;
   end;
-  Result := DriverManager.GetConnectionWithParams(zURL.URL, TempProperties);
-  {$IFDEF ZEOS_TEST_ONLY}
-  Result.SetTestMode(ConnectionConfig.TestMode);
-  {$ENDIF}
-  TempProperties.Free;
-  zURL.Free;
 end;
 
 {**
@@ -1293,6 +1284,28 @@ begin
     System.Writeln('====================================');
     System.Writeln;
   end;
+end;
+
+{**
+  Gets a connection URL object.
+  @return a built connection URL object.
+}
+function TZAbstractSQLTestCase.GetConnectionUrl(const Param: String): TZURL;
+var
+  I: Integer;
+begin
+  Result := TZURL.Create;
+  Result.Protocol := Protocol;
+  Result.HostName := HostName;
+  Result.Port := Port;
+  Result.Database := Database;
+  Result.UserName := UserName;
+  Result.Password := Password;
+  Result.LibLocation := LibLocation;
+
+  for I := 0 to High(Properties) do
+    Result.Properties.Add(Properties[I]);
+  Result.Properties.Add(Param);
 end;
 
 type
@@ -1467,22 +1480,6 @@ end;
 function TZAbstractDbcSQLTestCase.IsRealPreparableTest: Boolean;
 begin
   Result:= True;
-end;
-
-function TZAbstractDbcSQLTestCase.GetConnectionUrl(Param: String): string;
-var
-  TempProperties: TStrings;
-  I: Integer;
-begin
-  TempProperties := TStringList.Create;
-  for I := 0 to High(Properties) do
-  begin
-    TempProperties.Add(Properties[I])
-  end;
-  TempProperties.Add(Param);
-  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
-  UserName, Password, Port, TempProperties);
-  TempProperties.Free;
 end;
 
 { TZAbstractCompSQLTestCase }

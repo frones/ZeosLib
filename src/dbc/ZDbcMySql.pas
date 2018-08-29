@@ -65,7 +65,6 @@ type
   {** Implements MySQL Database Driver. }
 
   { TZMySQLDriver }
-  {$WARNINGS OFF}
   TZMySQLDriver = class(TZAbstractDriver)
   protected
     function GetPlainDriver(const Url: TZURL; const InitDriver: Boolean = True): IZPlainDriver; override;
@@ -79,7 +78,6 @@ type
     function GetStatementAnalyser: IZStatementAnalyser; override;
     function GetClientVersion(const Url: string): Integer; override;
   end;
-  {$WARNINGS ON}
 
   {** Represents a MYSQL specific connection interface. }
   IZMySQLConnection = interface (IZConnection)
@@ -127,7 +125,7 @@ type
     function GetHostVersion: Integer; override;
     {END ADDED by fduenas 15-06-2006}
     function GetConnectionHandle: PPMYSQL;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; var Result: RawByteString); override;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); override;
 
     function GetDatabaseName: String;
     function GetServerProvider: TZServerProvider; override;
@@ -182,12 +180,10 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-{$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
 function TZMySQLDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := TZMySQLConnection.Create(Url);
 end;
-{$WARNINGS ON} //suppress the deprecatad warning of calling create from internal
 
 {**
   Gets the driver's major version number. Initially this should be 1.
@@ -843,7 +839,7 @@ begin
 end;
 
 procedure TZMySQLConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
-  var Result: RawByteString);
+  out Result: RawByteString);
 var
   StatBuf: array[0..2048] of AnsiChar;
   P: PAnsichar;

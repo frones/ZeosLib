@@ -167,6 +167,7 @@ begin
   Self.URL := AURL;
 end;
 
+// Values from Info overwrite those from URL
 constructor TZURL.Create(const AURL: String; Info: TStrings);
 begin
   Create(AURL);
@@ -179,6 +180,9 @@ begin
   Create(AURL.URL);
 end;
 
+// Values from parameters overwrite those from URL and values from Info overwrite both
+// TODO: this method is odd... properties of URL, except protocol, get overridden
+// with parameters. Likely AProtocol should go here instead of AURL
 constructor TZURL.Create(Const AURL, AHostName: string; const APort: Integer;
   const ADatabase, AUser, APassword: string; Info: TStrings);
 begin
@@ -378,25 +382,25 @@ var
 begin
   FProperties.OnChange := nil; // prevent re-entering
 
-    S := ExtractValueFromProperties(ConnProps_UID);
-    if S <> '' then
-      UserName := S;
+  S := ExtractValueFromProperties(ConnProps_UID);
+  if S <> '' then
+    UserName := S;
 
-    S := ExtractValueFromProperties(ConnProps_Username);
-    if S <> '' then
-      UserName := S;
+  S := ExtractValueFromProperties(ConnProps_Username);
+  if S <> '' then
+    UserName := S;
 
-    S := ExtractValueFromProperties(ConnProps_PWD);
-    if S <> '' then
-      Password := S;
+  S := ExtractValueFromProperties(ConnProps_PWD);
+  if S <> '' then
+    Password := S;
 
-    S := ExtractValueFromProperties(ConnProps_Password);
-    if S <> '' then
-      Password := S;
+  S := ExtractValueFromProperties(ConnProps_Password);
+  if S <> '' then
+    Password := S;
 
-    S := ExtractValueFromProperties(ConnProps_LibLocation);
-    if S <> '' then
-      LibLocation := S;
+  S := ExtractValueFromProperties(ConnProps_LibLocation);
+  if S <> '' then
+    LibLocation := S;
 
   FProperties.OnChange := DoOnPropertiesChange;
 
@@ -412,7 +416,7 @@ begin
   FProperties.BeginUpdate; // prevent calling OnChange on every iteration
   for I := 0 to Values.Count -1 do
   begin
-    BreakString(Values[I], '=', Param{%H-}, Value{%H-});
+    BreakString(Values[I], '=', Param, Value);
     if Value <> '' then
       FProperties.Values[Param] := Value
     else

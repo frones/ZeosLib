@@ -158,15 +158,14 @@ type
       const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: Int64;
       const Msg: string = ''); overload;
-    {$ELSE}
-      {$IFNDEF UNICODE}
+    {$ENDIF}
+    {$IFDEF WITH_OVERLOAD_BUG}
     procedure CheckEquals(Expected, Actual: Word;
       const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: Byte;
       const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: Byte;
       const Msg: string = ''); overload;
-      {$ENDIF}
     {$ENDIF}
     procedure CheckEqualsDate(const Expected, Actual: TDateTime;
       Parts: TDateParts = []; const Msg: string = '');
@@ -226,7 +225,7 @@ begin
     else Result := Add;
 end;
 
-{$IFDEF FPC} // copy from DUnit
+{$IFDEF FPC} // copy from DUnit to implement generic interface
 
 {$IF NOT DECLARED(CallerAddr)} // for older FPC versions < 3.1
 const
@@ -235,7 +234,7 @@ const
 
 function ByteAt(p: pointer; const Offset: integer): byte;
 begin
-  Result:={%H-}pByte(NativeUint(p){%H-}+Offset)^;
+  Result:=(PByte(p)+Offset)^;
 end;
 
 function FirstByteDiff(p1, p2: pointer; size: longword; out b1, b2: byte): integer;
@@ -255,7 +254,7 @@ begin
       break;
     end;
 end;
-{$ENDIF}
+{$ENDIF FPC}
 
 { TZAbstractTestCase }
 
@@ -324,7 +323,7 @@ begin
   Result:=NotEqualsErrorMessage(IntToHex(db1,2),IntToHex(db2,2),msg);
   Result:=Result+' at Offset = '+IntToHex(Offset,4)+'h';
 end;
-{$ENDIF}
+{$ENDIF FPC}
 
 function TZAbstractTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
 begin
@@ -375,7 +374,7 @@ begin
   if Temp <> '' then
     FDecimalSeparator := Temp[1]
   else FDecimalSeparator :=  DEFAULT_DECIMAL_SEPARATOR;
-  {$IFDEF WITH_FORMATSETTINGS}Formatsettings.{$ELSE}SysUtils.{$ENDIF}DecimalSeparator := FDecimalSeparator;
+  {$IFDEF WITH_FORMATSETTINGS}Formatsettings.{$ENDIF}DecimalSeparator := FDecimalSeparator;
 
   FSuppressTestOutput := StrToBoolEx(ReadInheritProperty(SUPPRESS_TEST_OUTPUT_KEY, TRUE_VALUE));
   FSkipClosed := StrToBoolEx(ReadInheritProperty(SKIP_CLOSED_KEY, FALSE_VALUE));
@@ -650,8 +649,9 @@ begin
   else
     Check(True);
 end;
-{$ELSE}
-  {$IFNDEF UNICODE}
+{$ENDIF FPC}
+
+{$IFDEF WITH_OVERLOAD_BUG}
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Word;
   const Msg: string);
 begin
@@ -669,8 +669,7 @@ procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: Byte;
 begin
   CheckNotEquals(Integer(Expected), Integer(Actual), Msg)
 end;
-  {$ENDIF UNICODE}
-{$ENDIF}
+{$ENDIF WITH_OVERLOAD_BUG}
 
 {$IFNDEF UNICODE}
 procedure TZAbstractTestCase.CheckEquals(Expected: ZWideString; Actual: String;
@@ -723,9 +722,10 @@ procedure TZAbstractTestCase.CheckException(AMethod: TTestMethod;
 begin
   {$IFDEF FPC}
     {$IFDEF FPC2_6DOWN}
+    // Note: actually this call won't check exception message
     AssertException(Msg, AExceptionClass, AMethod);
     {$ELSE}
-    AssertException(Msg, AExceptionClass, AMethod, ExpectExcMsg, 0, nil);
+    AssertException(Msg, AExceptionClass, AMethod, ExpectExcMsg, 0, CallerAddr);
     {$ENDIF}
   {$ELSE}
   if ExpectExcMsg = '' then
@@ -742,7 +742,7 @@ begin
         if not Assigned(AExceptionClass) then
           raise;
         // exception raised is of other class than expected
-        if not E.ClassType.InheritsFrom(AExceptionClass) then
+        if not E.ClassType.InheritsFrom(AExceptionClass) and not (AExceptionClass.ClassName = E.ClassName) then
           FailNotEquals(AExceptionClass.ClassName, E.ClassName, Msg, ReturnAddress);
         // exception raised with message other than expected
         CheckEquals(E.Message, ExpectExcMsg, AddToMsg(Msg, SExceptionMsgDiffer));

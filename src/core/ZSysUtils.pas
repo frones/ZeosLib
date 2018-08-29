@@ -59,11 +59,6 @@ uses
   Variants, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   ZMessages, ZCompatibility;
 
-{$IFNDEF WITH_EARGUMENTEXCEPTION}     // EArgumentException is supported
-type
-  EArgumentException = Class(Exception);
-{$ENDIF}
-
 type
   {** Modified comparison function. }
   TZListSortCompare = function (Item1, Item2: Pointer): Integer of object;
@@ -104,6 +99,11 @@ type
     procedure Sort(Compare: TZListSortCompare);
   end;
 
+  {$IF NOT DECLARED(EArgumentException)}
+  type
+    EArgumentException = Class(Exception);
+  {$IFEND}
+
 const
   StrFalse = 'False';
   StrTrue = 'True';
@@ -114,8 +114,8 @@ const
   {$ENDIF}
   BoolStrs: array[Boolean] of string = (StrFalse, StrTrue);
   BoolStrsW: array[Boolean] of ZWideString = (ZWideString(StrFalse), ZWideString(StrTrue));
-  SQLDateTimeFmt = 'yyyy-mm-dd hh:nn:ss';
-  SQLDateTimeFmtMSecs = 'yyyy-mm-dd hh:nn:ss.zzz';
+  SQLDateTimeFmt = 'YYYY"-"MM"-"DD HH":"NN":"SS';
+  SQLDateTimeFmtMSecs = 'YYYY"-"MM"-"DD HH":"NN":"SS"."ZZZ';
 
 var
   TwoDigitLookupHexW: packed array[Byte] of Word;
@@ -206,12 +206,12 @@ function EndsWith(const Str, SubStr: ZWideString): Boolean; overload;
   @return a converted value or Def if conversion did fail.
 }
 function SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended; Len: Integer = 0): Extended; overload;
-procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended; var Result: Extended; Len: Integer = 0); overload;
-procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency; var Result: Currency; Len: Integer = 0); overload;
+procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended; out Result: Extended; Len: Integer = 0); overload;
+procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency; out Result: Currency; Len: Integer = 0); overload;
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
-procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Double; var Result: Double; Len: Integer = 0); overload;
+procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Double; out Result: Double; Len: Integer = 0); overload;
 {$IFEND}
-procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Single; var Result: Single; Len: Integer = 0); overload;
+procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Single; out Result: Single; Len: Integer = 0); overload;
 
 {**
   Converts SQL PWideChar into float value.
@@ -221,12 +221,12 @@ procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Single; var Result: Sing
   @return a converted value or Def if conversion did fail.
 }
 function SQLStrToFloatDef(Value: PWideChar; const Def: Extended; Len: Integer = 0): Extended; overload;
-procedure SQLStrToFloatDef(Value: PWideChar; const Def: Extended; var Result: Extended; Len: Integer = 0); overload;
-procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency; var Result: Currency; Len: Integer = 0); overload;
+procedure SQLStrToFloatDef(Value: PWideChar; const Def: Extended; out Result: Extended; Len: Integer = 0); overload;
+procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency; out Result: Currency; Len: Integer = 0); overload;
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
-procedure SQLStrToFloatDef(Value: PWideChar; const Def: Double; var Result: Double; Len: Integer = 0); overload;
+procedure SQLStrToFloatDef(Value: PWideChar; const Def: Double; out Result: Double; Len: Integer = 0); overload;
 {$IFEND}
-procedure SQLStrToFloatDef(Value: PWideChar; const Def: Single; var Result: Single; Len: Integer = 0); overload;
+procedure SQLStrToFloatDef(Value: PWideChar; const Def: Single; out Result: Single; Len: Integer = 0); overload;
 
 {**
   Converts a character buffer into pascal string.
@@ -631,8 +631,8 @@ function EncodeCString(const Value: RawByteString): RawByteString; overload;
 function DecodeCString(const Value: ZWideString): ZWideString; overload;
 function DecodeCString(const Value: RawByteString): RawByteString; overload;
 
-procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; var Result: ZWideString); overload;
-procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; var Result: RawByteString); overload;
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; out Result: ZWideString); overload;
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; out Result: RawByteString); overload;
 
 function DecodeCString(SrcLength: LengthInt; SrcBuffer, DestBuffer: PWideChar): LengthInt; overload;
 function DecodeCString(SrcLength: LengthInt; SrcBuffer, DestBuffer: PAnsiChar): LengthInt; overload;
@@ -731,17 +731,28 @@ function FloatToSqlUnicode(const Value: Extended): ZWideString;
 procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: LengthInt); overload;
 procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: LengthInt); overload;
 
+type
+  TGUIDConvOption = (guidWithBrackets, guidQuoted, guidSet0Term);
+  TGUIDConvOptions = set of TGUIDConvOption;
+
+procedure GUIDToBuffer(const Source: Pointer; Dest: PAnsiChar; const Options: TGUIDConvOptions); overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 procedure GUIDToBuffer(const Source: Pointer; Dest: PAnsiChar; WithBrackets, SetTerm: Boolean); overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+procedure GUIDToBuffer(const Source: Pointer; Dest: PWideChar; const Options: TGUIDConvOptions); overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 procedure GUIDToBuffer(const Source: Pointer; Dest: PWideChar; WithBrackets, SetTerm: Boolean); overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
+procedure GUIDToRaw(Value: PGUID; const Options: TGUIDConvOptions; var Result: RawByteString); overload;
+function GUIDToRaw(const GUID: TGUID; const Options: TGUIDConvOptions): RawByteString; overload;
 function GUIDToRaw(const GUID: TGUID; WithBrackets: Boolean = True): RawByteString; overload;
 function GUIDToRaw(const Bts: TBytes; WithBrackets: Boolean = True): RawByteString; overload;
 function GUIDToRaw(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): RawByteString; overload;
 
+procedure GUIDToUnicode(Value: PGUID; const Options: TGUIDConvOptions; var Result: ZWideString); overload;
+function GUIDToUnicode(const GUID: TGUID; const Options: TGUIDConvOptions): ZWideString; overload;
 function GUIDToUnicode(const GUID: TGUID; WithBrackets: Boolean = True): ZWideString; overload;
 function GUIDToUnicode(const Bts: TBytes; WithBrackets: Boolean = True): ZWideString; overload;
 function GUIDToUnicode(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): ZWideString; overload;
 
+function GUIDToStr(Value: PGUID; const Options: TGUIDConvOptions): String; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GUIDToStr(const GUID: TGUID; WithBrackets: Boolean = True): string; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GUIDToStr(const Bts: TBytes; WithBrackets: Boolean = True): string; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GUIDToStr(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): string; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
@@ -778,6 +789,17 @@ function Trim(const Value: ZWideString): ZWideString; overload;
 function HexToBin(Hex: PAnsiChar; Bin: PByte; BinBytes: Integer): Boolean;
 {$ENDIF}
 
+{**
+   Creates a memory stream with copy of data in buffer.
+   If buffer contains no data, creates an empty stream.
+}
+function StreamFromData(Buffer: Pointer; Size: Integer): TStream; overload;
+function StreamFromData(const AString: ZWideString): TStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function StreamFromData(const Bytes: TBytes): TStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
+function StreamFromData(const AString: RawByteString): TStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+{$ENDIF}
+
 implementation
 
 uses DateUtils, StrUtils, SysConst,
@@ -785,10 +807,9 @@ uses DateUtils, StrUtils, SysConst,
   {$IF defined(WITH_RTLCONSTS_SInvalidGuidArray) or defined(TLIST_IS_DEPRECATED)}RTLConsts,{$IFEND}
   ZFastCode;
 
-var
-  // Local copy of current FormatSettings with '.' as DecimalSeparator and
-  // ',' as ThousandSeparator
-  FSSqlFloat: TFormatSettings;
+const
+  // Local copy of current FormatSettings with '.' as DecimalSeparator and empty other fields
+  FmtSettFloatDot: TFormatSettings = ( DecimalSeparator: '.' );
 
 {**
   Determines a position of a first delimiter.
@@ -1009,7 +1030,7 @@ end;
 function SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
   Len: Integer = 0): Extended;
 begin
-  SQLStrToFloatDef(Value, Def, Result{%H-}, Len);
+  SQLStrToFloatDef(Value, Def, Result, Len);
 end;
 
 function CurrToRawBuff(Value: PAnsiChar; Buf: PByteArray; Len: Integer): Boolean;
@@ -1082,7 +1103,7 @@ Fail:
 end;
 
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
-  var Result: Extended; Len: Integer = 0);
+  out Result: Extended; Len: Integer);
 var
   InvalidPos: Integer;
   DynBuf: TBytes;
@@ -1092,7 +1113,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValRawExt(Pointer(Value), AnsiChar('.'), InvalidPos{%H-});
+    Result := ValRawExt(Pointer(Value), AnsiChar('.'), InvalidPos);
     if InvalidPos <> 0 then //posible MoneyType
       if (Ord((Value+InvalidPos-1)^) = Ord(',')) and (Ord((Value+Len*Ord(Len>0)-1)^) in [Ord('0')..Ord('9')]) then  //nope no money. Just a comma instead of dot.
         RawToFloatDef(Value, AnsiChar(','), Def, Result)
@@ -1116,7 +1137,7 @@ begin
 end;
 
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency;
-  var Result: Currency; Len: Integer = 0);
+  out Result: Currency; Len: Integer);
 var
   InvalidPos: Integer;
   DynBuf: TBytes;
@@ -1126,7 +1147,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValRawDbl(Pointer(Value), AnsiChar('.'), InvalidPos{%H-});
+    Result := ValRawDbl(Pointer(Value), AnsiChar('.'), InvalidPos);
     if InvalidPos <> 0 then //posible MoneyType
       if (Ord((Value+InvalidPos-1)^) = Ord(',')) and (Ord((Value+Len*Ord(Len>0)-1)^) in [Ord('0')..Ord('9')]) then  //nope no money. Just a comma instead of dot.
         RawToFloatDef(Value, AnsiChar(','), Def, Result)
@@ -1151,7 +1172,7 @@ end;
 
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Double;
-  var Result: Double; Len: Integer = 0);
+  out Result: Double; Len: Integer);
 var
   InvalidPos: Integer;
   DynBuf: TBytes;
@@ -1161,7 +1182,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValRawDbl(Pointer(Value), AnsiChar('.'), InvalidPos{%H-});
+    Result := ValRawDbl(Pointer(Value), AnsiChar('.'), InvalidPos);
     if InvalidPos <> 0 then //posible MoneyType
       if (Ord((Value+InvalidPos-1)^) = Ord(',')) and (Ord((Value+Len*Ord(Len>0)-1)^) in [Ord('0')..Ord('9')]) then  //nope no money. Just a comma instead of dot.
         RawToFloatDef(Value, AnsiChar(','), Def, Result)
@@ -1186,7 +1207,7 @@ end;
 {$IFEND}
 
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Single;
-  var Result: Single; Len: Integer = 0);
+  out Result: Single; Len: Integer);
 var
   InvalidPos: Integer;
   DynBuf: TBytes;
@@ -1196,7 +1217,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValRawSin(Pointer(Value), AnsiChar('.'), InvalidPos{%H-});
+    Result := ValRawSin(Pointer(Value), AnsiChar('.'), InvalidPos);
     if InvalidPos <> 0 then //posible MoneyType
       if (Ord((Value+InvalidPos-1)^) = Ord(',')) and (Ord((Value+Len*Ord(Len>0)-1)^) in [Ord('0')..Ord('9')]) then  //nope no money. Just a comma instead of dot.
         RawToFloatDef(Value, AnsiChar(','), Def, Result)
@@ -1229,7 +1250,7 @@ end;
 function SQLStrToFloatDef(Value: PWideChar; const Def: Extended;
   Len: Integer = 0): Extended;
 begin
-  SQLStrToFloatDef(Value, Def, Result{%H-}, Len);
+  SQLStrToFloatDef(Value, Def, Result, Len);
 end;
 
 function CurrToUnicodeBuf(Value: PWideChar; Buffer: PWordArray; CodePoints: Integer): Boolean;
@@ -1304,7 +1325,7 @@ Fail:
 end;
 
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Extended;
-  var Result: Extended; Len: Integer = 0);
+  out Result: Extended; Len: Integer);
 var
   InvalidPos: Integer;
   DynBuf: TWordDynArray;
@@ -1314,7 +1335,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValUnicodeExt(PWordArray(Value), WideChar('.'), InvalidPos{%H-});
+    Result := ValUnicodeExt(PWordArray(Value), WideChar('.'), InvalidPos);
     if InvalidPos <> 0 then //posible MoneyType
       if ((Value+InvalidPos-1)^ = ',') and (Ord((Value+Len*Ord(Len>0)-1)^) in [Ord('0')..Ord('9')]) then  //nope no money. Just a comma instead of dot.
         UnicodeToFloatDef(Value, WideChar(','), Def, Result)
@@ -1342,7 +1363,7 @@ begin
 end;
 
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency;
-  var Result: Currency; Len: Integer = 0);
+  out Result: Currency; Len: Integer = 0);
 var
   InvalidPos: Integer;
   DynBuf: TWordDynArray;
@@ -1352,7 +1373,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValUnicodeDbl(PWordArray(Value), WideChar('.'), InvalidPos{%H-});
+    Result := ValUnicodeDbl(PWordArray(Value), WideChar('.'), InvalidPos);
     if InvalidPos <> 0 then //posible MoneyType
       if ((Value+InvalidPos-1)^ = ',') and (Ord((Value+Len*Ord(Len>0)-1)^) in [Ord('0')..Ord('9')]) then  //nope no money. Just a comma instead of dot.
         UnicodeToFloatDef(Value, WideChar(','), Def, Result)
@@ -1381,7 +1402,7 @@ end;
 
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Double;
-  var Result: Double; Len: Integer = 0);
+  out Result: Double; Len: Integer);
 var
   InvalidPos: Integer;
   DynBuf: TWordDynArray;
@@ -1391,7 +1412,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValUnicodeDbl(PWordArray(Value), WideChar('.'), InvalidPos{%H-});
+    Result := ValUnicodeDbl(PWordArray(Value), WideChar('.'), InvalidPos);
     if InvalidPos <> 0 then //posible MoneyType
       if ((Value+InvalidPos-1)^ = ',') and (Ord((Value+Len*Ord(Len>0)-1)^) in [Ord('0')..Ord('9')]) then  //nope no money. Just a comma instead of dot.
         UnicodeToFloatDef(Value, WideChar(','), Def, Result)
@@ -1419,7 +1440,7 @@ end;
 {$IFEND}
 
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Single;
-  var Result: Single; Len: Integer = 0);
+  out Result: Single; Len: Integer);
 var
   InvalidPos: Integer;
   DynBuf: TWordDynArray;
@@ -1429,7 +1450,7 @@ begin
   Result := Def;
   if Assigned(Value) then
   begin
-    Result := ValUnicodeSin(PWordArray(Value), WideChar('.'), InvalidPos{%H-});
+    Result := ValUnicodeSin(PWordArray(Value), WideChar('.'), InvalidPos);
     if InvalidPos <> 0 then //posible MoneyType
       if ((Value+InvalidPos-1)^ = ',') and (Ord((Value+Len*Ord(Len>0)-1)^) in [Ord('0')..Ord('9')]) then  //nope no money. Just a comma instead of dot.
         UnicodeToFloatDef(Value, WideChar(','), Def, Result)
@@ -1874,12 +1895,12 @@ end;
 }
 function FloatToSQLStr(Value: Extended): string;
 begin
-  Result := FloatToStr(Value, FSSqlFloat);
+  Result := FloatToStr(Value, FmtSettFloatDot);
 end;
 
 function SQLStrToFloat(const Str: String): Extended;
 begin
-  Result := StrToFloat(Str, FSSqlFloat);
+  Result := StrToFloat(Str, FmtSettFloatDot);
 end;
 
 {**
@@ -2279,7 +2300,7 @@ var
       end;
       if MPos > 2 then //float ValueTmp
       begin
-        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Pointer(Value), AnsiChar('.'), Code{%H-}));
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Pointer(Value), AnsiChar('.'), Code));
         Failed := Code <> 0;
         if Failed then  Exit;
       end;
@@ -2742,7 +2763,7 @@ var
 
       if (MPos > 2) and ( DotCount = 1) then //float value
       begin
-        Result := ValRawExt(Pointer(Value), AnsiChar('.'), Code{%H-});
+        Result := ValRawExt(Pointer(Value), AnsiChar('.'), Code);
         Failed := Code <> 0;
         if Failed then
           Result := 0;
@@ -2860,14 +2881,14 @@ begin
 end;
 
 procedure PrepareDateTimeStr(const Quoted: Boolean; const Suffix: ZWideString;
-  const Len: LengthInt; var Value: ZWideString); overload;
+  const Len: LengthInt; out Value: ZWideString); overload;
 var
   SLen: LengthInt;
   P: PWideChar;
 begin
   SLen := Length(Suffix);
   { prepare Value if required }
-  ZSetString(nil, len+(2*Ord(Quoted))+Slen, Value);
+  SetLength(Value, len+(2*Ord(Quoted))+Slen);
   P := Pointer(Value);
   if Quoted then begin
     PWord(P)^ := Ord(#39); //starting quote
@@ -2880,14 +2901,14 @@ begin
 end;
 
 procedure PrepareDateTimeStr(const Quoted: Boolean; const Suffix: RawByteString;
-  const Len: LengthInt; var Value: RawByteString); overload;
+  const Len: LengthInt; out Value: RawByteString); overload;
 var
   SLen: LengthInt;
   P: PAnsiChar;
 begin
   SLen := Length(Suffix);
   { prepare Value if required }
-  ZSetString(nil, len+(2*Ord(Quoted))+Slen, Value);
+  SetLength(Value, len+(2*Ord(Quoted))+Slen);
   P := Pointer(Value);
   if Quoted then begin
     PByte(P)^ := Ord(#39); //starting quote
@@ -2981,7 +3002,7 @@ var
 begin
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
   YearSet := False;
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result{%H-});
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result);
   PW := Pointer(Result);
   Inc(PW, Ord(Quoted));
 
@@ -3034,7 +3055,6 @@ end;
   @param TimeFormat the result format.
   @return a formated RawByteString with Time-Format pattern.
 }
-{$WARNINGS OFF} //suppress D2007 Warning for undefined result
 function DateTimeToRawSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
@@ -3116,7 +3136,7 @@ var
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.TimeFormatLen, Result{%H-});
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.TimeFormatLen, Result);
   ZSet := False;
   PW := Pointer(Result);
   Inc(PW, Ord(Quoted));
@@ -3286,7 +3306,7 @@ var
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateTimeFormatLen, Result{%H-});
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateTimeFormatLen, Result);
   ZSet := False;
   YearSet := False;
   PW := Pointer(Result);
@@ -3351,7 +3371,6 @@ begin
       end;
     end;
 end;
-{$WARNINGS ON} //suppress D2007 Warning for undefined result
 
 {**
   Converts DateTime value to native string
@@ -3369,19 +3388,10 @@ end;
   @return a  date and time string.
 }
 function DateTimeToAnsiSQLDate(Value: TDateTime; WithMMSec: Boolean = False): string;
-var
-  a, MSec:Word;
 begin
-  if WithMMSec then
-  begin
-    DecodeTime(Value,a,a,a,MSec);
-    if MSec=0 then
-      Result := FormatDateTime(SQLDateTimeFmt, Value)
-    else
-      Result := FormatDateTime(SQLDateTimeFmtMSecs, Value);
-  end
-  else
-    Result := FormatDateTime(SQLDateTimeFmt, Value);
+  if WithMMSec and (MilliSecondOf(Value) <> 0)
+    then Result := FormatDateTime(SQLDateTimeFmtMSecs, Value)
+    else Result := FormatDateTime(SQLDateTimeFmt, Value);
 end;
 
 { TZSortedList }
@@ -3397,16 +3407,16 @@ end;
     in other procedure, and not changed parameters and code).
 }
 //~1.57 times faster than Delphi QuickSort on E6850
-{$UNDEF SaveQ} {$IFOPT Q+} {$Q-} {$DEFINE SaveQ} {$ENDIF}
-{$UNDEF SaveR} {$IFOPT R+} {$R-} {$DEFINE SaveR} {$ENDIF}
+{$Q-}
+{$R-}
 const
   InsCount = 35; //33..49;
   InsLast = InsCount-1;
   SOP = SizeOf(pointer);
   MSOP = NativeUInt(-SOP);
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
+
 procedure QuickSortSha_0AA(L, R: NativeUInt; Compare: TZListSortCompare);
 var
   I, J, P, T: NativeUInt;
@@ -3524,11 +3534,11 @@ begin;
     end;
   end;
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
-{$IFDEF SaveQ} {$Q+} {$UNDEF SaveQ} {$ENDIF}
-{$IFDEF SaveR} {$R+} {$UNDEF SaveR} {$ENDIF}
+
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
 {$IFDEF TLIST_IS_DEPRECATED}
 function TZSortedList.Add(Item: Pointer): Integer;
@@ -3913,18 +3923,17 @@ end;
   @param SrcBuffer the souce buffer.
   @return a regular string.
 }
-procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; var Result: ZWideString);
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; out Result: ZWideString);
 begin
   SetLength(Result, SrcLength);
   SetLength(Result, DecodeCString(SrcLength, SrcBuffer, Pointer(Result)));
 end;
 
-procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; var Result: RawByteString);
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; out Result: RawByteString);
 begin
   SetLength(Result, SrcLength);
   SetLength(Result, DecodeCString(SrcLength, SrcBuffer, Pointer(Result)));
 end;
-
 
 {**
   Converts a string from escape PostgreSQL format.
@@ -4127,7 +4136,7 @@ end;
 
 function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString;
 begin
-  ZSetString(Src, Len, Result{%H-});
+  ZSetString(Src, Len, Result);
 end;
 
 function UnicodeStringToASCII7(const Src: ZWideString): RawByteString;
@@ -4202,13 +4211,13 @@ var
 {$ENDIF}
 begin
   {$IFDEF FPC}
-  Result := FloatToStr(Value, FSSqlFloat);
+  Result := FloatToStr(Value, FmtSettFloatDot);
   {$ELSE}
     {$IFDEF NEXTGEN}
-    Result := UnicodeStringToASCII7(PWideChar(@Buffer), FloatToText(PWideChar(@Buffer), Value, fvExtended, ffGeneral, 15, 0, FSSqlFloat));
+  Result := UnicodeStringToASCII7(PWideChar(@Buffer), FloatToText(PWideChar(@Buffer), Value, fvExtended, ffGeneral, 15, 0, FmtSettFloatDot));
     {$ELSE}
   SetString(Result, Buffer, {$IFDEF WITH_FLOATTOTEXT_DEPRECATED}AnsiStrings.{$ENDIF}FloatToText(PAnsiChar(@Buffer), Value, fvExtended,
-    ffGeneral, 15, 0, FSSqlFloat));
+    ffGeneral, 15, 0, FmtSettFloatDot));
     {$ENDIF}
   {$ENDIF}
 end;
@@ -4364,21 +4373,26 @@ begin
   {$ENDIF}
 end;
 
-//EgonHugeist: my conversion is 10x faster than IDE's
 procedure GUIDToBuffer(const Source: Pointer; Dest: PAnsiChar;
-  WithBrackets, SetTerm: Boolean);
+  const Options: TGUIDConvOptions);
 var
   D1: Cardinal;
   W: Word;
   I: Integer;
 begin
-  if WithBrackets then begin
+  if guidQuoted in Options then begin
+    PByte(Dest)^ := Ord(#39);
+    if guidWithBrackets in Options then begin
+      PByte(Dest+1)^ := Ord('{');
+      Inc(Dest, 2);
+    end else
+      Inc(Dest);
+  end else if guidWithBrackets in Options then begin
     PByte(Dest)^ := Ord('{');
     Inc(Dest);
   end;
   D1 := PCardinal(Source)^; //Process D1
-  for i := 3 downto 0 do
-  begin
+  for i := 3 downto 0 do begin
     PWord(Dest+(I shl 1))^ := TwoDigitLookupHexW[PByte(@D1)^];
     D1 := D1 shr 8;
   end;
@@ -4404,102 +4418,193 @@ begin
   Inc(Dest, 6);
   for i := 0 to 5 do
     PWord(Dest+(I shl 1))^ := TwoDigitLookupHexW[PByte(PAnsiChar(Source)+10+i)^];
-  if WithBrackets then
+  if guidWithBrackets in Options then
     PByte(Dest+12)^ := Ord('}');
-  if SetTerm then
-    PByte(Dest+12+Ord(WithBrackets))^ := Ord(#0); //set trailing term
+  if guidQuoted in Options then
+    PByte(Dest+12+Ord(guidWithBrackets in Options))^ := Ord(#39);
+  if guidSet0Term in Options then
+    PByte(Dest+12+Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options))^ := Ord(#0); //set trailing term
 end;
 
-procedure GUIDToBuffer(const Source: Pointer; Dest: PWideChar; WithBrackets, SetTerm: Boolean);
+//EgonHugeist: my conversion is 10x faster than IDE's
+procedure GUIDToBuffer(const Source: Pointer; Dest: PAnsiChar;
+  WithBrackets, SetTerm: Boolean);
+var Options: TGUIDConvOptions;
+begin
+  Options := [];
+  if WithBrackets then Include(Options, guidWithBrackets);
+  if SetTerm then Include(Options, guidSet0Term);
+  GUIDToBuffer(Source, Dest, Options);
+end;
+
+procedure GUIDToBuffer(const Source: Pointer; Dest: PWideChar; const Options: TGUIDConvOptions);
 var
   I: Integer;
   D1: Cardinal;
   W: Word;
 begin
-  if WithBrackets then begin
-    Dest^ := '{';
+  if guidQuoted in Options then begin
+    PWord(Dest)^ := Ord(#39);
+    if guidWithBrackets in Options then begin
+      PWord(Dest+1)^ := Ord('{');
+      Inc(Dest, 2);
+    end else
+      Inc(Dest);
+  end else if guidWithBrackets in Options then begin
+    PWord(Dest)^ := Ord('{');
     Inc(Dest);
   end;
   D1 := PCardinal(Source)^; //Process D1
-  for i := 3 downto 0 do
-  begin
+  for i := 3 downto 0 do begin
     PLongWord(Dest+(I shl 1))^ := TwoDigitLookupHexLW[PByte(@D1)^];
     if D1 > 0 then D1 := D1 shr 8;
   end;
   Inc(Dest, 8);
-  Dest^ := '-';
+  PWord(Dest)^ := Ord('-');
   W := PWord(PAnsiChar(Source)+4)^; //Process D2
   PLongWord(Dest+3)^ := TwoDigitLookupHexLW[PByte(@W)^];
   if W > 0 then W := W shr 8;
   PLongWord(Dest+1)^ := TwoDigitLookupHexLW[PByte(@W)^];
   Inc(Dest, 5);
-  Dest^ := '-';
+  PWord(Dest)^ := Ord('-');
   W := PWord(PAnsiChar(Source)+6)^; //Process D3
   PLongWord(Dest+3)^ := TwoDigitLookupHexLW[PByte(@W)^];
   if W > 0 then W := W shr 8;
   PLongWord(Dest+1)^ := TwoDigitLookupHexLW[PByte(@W)^];
   Inc(Dest, 5);
-  Dest^ := '-'; //Process D4
+  PWord(Dest)^ := Ord('-'); //Process D4
   PLongWord(Dest+1)^ := TwoDigitLookupHexLW[PByte(PAnsiChar(Source)+8)^];
   PLongWord(Dest+3)^ := TwoDigitLookupHexLW[PByte(PAnsiChar(Source)+9)^];
-  (Dest+5)^ := '-';
+  PWord(Dest+5)^ := Ord('-');
   Inc(Dest, 6);
   for i := 0 to 5 do
     PLongWord(Dest+(I shl 1))^ := TwoDigitLookupHexLW[PByte(PAnsiChar(Source)+10+i)^];
-  if WithBrackets then
-    (Dest+12)^ := '}';
-  if SetTerm then
-    (Dest+12+Ord(WithBrackets))^ := #0; //set trailing term
+  if guidWithBrackets in Options then
+    PWord(Dest+12)^ := Ord('}');
+  if guidQuoted in Options then
+    PWord(Dest+12+Ord(guidWithBrackets in Options))^ := Ord(#39);
+  if guidSet0Term in Options then
+    PWord(Dest+12+Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options))^ := Ord(#0); //set trailing term
+end;
+
+procedure GUIDToBuffer(const Source: Pointer; Dest: PWideChar;
+  WithBrackets, SetTerm: Boolean);
+var Options: TGUIDConvOptions;
+begin
+  Options := [];
+  if WithBrackets then Include(Options, guidWithBrackets);
+  if SetTerm then Include(Options, guidSet0Term);
+  GUIDToBuffer(Source, Dest, Options);
+end;
+
+procedure GUIDToRaw(Value: PGUID; const Options: TGUIDConvOptions; var Result: RawByteString);
+var P: PAnsiChar;
+begin
+  ZSetString(nil, 36+((Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options)) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(Value, P, Options);
+end;
+
+function GUIDToRaw(const GUID: TGUID; const Options: TGUIDConvOptions): RawByteString;
+var P: PAnsiChar;
+begin
+  ZSetString(nil, 36+((Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options)) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(@GUID.D1, P, Options);
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToRaw(const GUID: TGUID; WithBrackets: Boolean): RawByteString;
+var Options: TGUIDConvOptions;
+  P: PAnsiChar;
 begin
-  ZSetString(nil, 38, Result{%H-});
-  GUIDToBuffer(@GUID.D1, PAnsiChar(Pointer(Result)), WithBrackets, False);
+  Options := [];
+  if WithBrackets then include(Options, guidWithBrackets);
+  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(@GUID.D1, P, Options);
+end;
+
+function GUIDToRaw(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): RawByteString;
+var Options: TGUIDConvOptions;
+  P: PAnsiChar;
+begin
+  if Len <> 16 then
+    raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
+  Options := [];
+  if WithBrackets then include(Options, guidWithBrackets);
+  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(Buffer, P, Options);
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToRaw(const Bts: TBytes; WithBrackets: Boolean): RawByteString;
+var Options: TGUIDConvOptions;
+  P: PAnsiChar;
 begin
   if Length(Bts) <> 16 then
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
-  ZSetString(nil, 38, Result{%H-});
-  GUIDToBuffer(Pointer(Bts), PAnsiChar(Pointer(Result)), WithBrackets, False);
+  Options := [];
+  if WithBrackets then include(Options, guidWithBrackets);
+  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(Pointer(Bts), P, Options);
 end;
 
-//EgonHugeist: my conversion is 10x faster than IDE's
-function GUIDToRaw(Buffer: Pointer; Len: Byte; WithBrackets: Boolean): RawByteString;
+function GUIDToUnicode(const GUID: TGUID; const Options: TGUIDConvOptions): ZWideString;
+var P: PWideChar;
 begin
-  if (Buffer = Nil) or (Len <> 16) then
-    raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
-  ZSetString(nil, 38, Result{%H-});
-  GUIDToBuffer(Buffer, PAnsiChar(Pointer(Result)), WithBrackets, False);
+  ZSetString(nil, 36+((Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options)) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(@GUID.D1, P, Options);
+end;
+
+procedure GUIDToUnicode(Value: PGUID; const Options: TGUIDConvOptions; var Result: ZWideString);
+var P: PWideChar;
+begin
+  ZSetString(nil, 36+((Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options)) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(Value, P, Options);
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToUnicode(const GUID: TGUID; WithBrackets: Boolean): ZWideString;
+var Options: TGUIDConvOptions;
+  P: PWideChar;
 begin
-  ZSetString(nil, 38, Result{%H-});
-  GUIDToBuffer(@GUID.D1, PWideChar(Pointer(Result)), WithBrackets, False);
+  Options := [];
+  if WithBrackets then include(Options, guidWithBrackets);
+  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(@GUID.D1, P, Options);
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToUnicode(const Bts: TBytes; WithBrackets: Boolean): ZWideString;
+var Options: TGUIDConvOptions;
+  P: PWideChar;
 begin
   if Length(Bts) <> 16 then
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
-  ZSetString(nil, 38, Result{%H-});
-  GUIDToBuffer(Pointer(Bts), PWideChar(Pointer(Result)), WithBrackets, False);
+  Options := [];
+  if WithBrackets then include(Options, guidWithBrackets);
+  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(Pointer(Bts), P, Options);
 end;
 
-//EgonHugeist: my conversion is 10x faster than IDE's
-function GUIDToUnicode(Buffer: Pointer; Len: Byte; WithBrackets: Boolean): ZWideString;
+function GUIDToUnicode(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): ZWideString; overload;
+var Options: TGUIDConvOptions;
+  P: PWideChar;
 begin
-  if (Buffer = Nil) or (Len <> 16) then
+  if Len <> 16 then
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
-  ZSetString(nil, 38, Result{%H-});
-  GUIDToBuffer(Buffer, PWideChar(Pointer(Result)), WithBrackets, False);
+  Options := [];
+  if WithBrackets then include(Options, guidWithBrackets);
+  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  P := Pointer(Result);
+  GUIDToBuffer(Buffer, P, Options);
 end;
 
 function GUIDToStr(const GUID: TGUID; WithBrackets: Boolean): string;
@@ -4510,6 +4615,11 @@ end;
 function GUIDToStr(const Bts: TBytes; WithBrackets: Boolean): string;
 begin
   Result := {$IFDEF UNICODE} GUIDToUnicode {$ELSE} GUIDToRaw {$ENDIF} (Bts, WithBrackets);
+end;
+
+function GUIDToStr(Value: PGUID; const Options: TGUIDConvOptions): string;
+begin
+  {$IFDEF UNICODE} GUIDToUnicode {$ELSE} GUIDToRaw {$ENDIF}(Value, Options, {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}(Result));
 end;
 
 function GUIDToStr(Buffer: Pointer; Len: Byte; WithBrackets: Boolean): string;
@@ -5008,8 +5118,8 @@ begin
   end;
 end;
 
-{$UNDEF SaveQ} {$IFOPT Q+} {$Q-} {$DEFINE SaveQ} {$ENDIF}
-{$UNDEF SaveR} {$IFOPT R+} {$R-} {$DEFINE SaveR} {$ENDIF}
+{$Q-}
+{$R-}
 function SameText(Val1, Val2: PAnsiChar; Len: LengthInt): Boolean;
 var  PEnd: PAnsiChar;
   B: Byte;
@@ -5079,8 +5189,8 @@ begin
   end;
   Result := True;
 end;
-{$IFDEF SaveQ} {$Q+} {$UNDEF SaveQ} {$ENDIF}
-{$IFDEF SaveR} {$R+} {$UNDEF SaveR} {$ENDIF}
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
 function Trim(P: PAnsiChar; L: LengthInt): RawByteString;
 var PEnd: PAnsiChar;
@@ -5166,21 +5276,37 @@ begin
 end;
 {$ENDIF}
 
-initialization
+{**
+   Creates a memory stream with copy of data in buffer.
+   If buffer contains no data, creates an empty stream.
+}
+function StreamFromData(Buffer: Pointer; Size: Integer): TStream;
+begin
+  Result := TMemoryStream.Create;
+  Result.Write(Buffer^, Size);
+  Result.Position := 0;
+end;
 
+function StreamFromData(const AString: ZWideString): TStream;
+begin
+  Result := StreamFromData(Pointer(AString), Length(AString)*SizeOf(WideChar));
+end;
+
+function StreamFromData(const Bytes: TBytes): TStream;
+begin
+  Result := StreamFromData(Pointer(Bytes), Length(Bytes));
+end;
+
+{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
+function StreamFromData(const AString: RawByteString): TStream;
+begin
+  Result := StreamFromData(Pointer(AString), Length(AString));
+end;
+{$ENDIF}
+
+initialization
   HexFiller;  //build up lookup table
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
   BoolConstFiller; //build bool consts
 {$ENDIF}
-  {$IFDEF WITH_FORMATSETTINGS}
-  FSSqlFloat := FormatSettings;
-  {$ELSE}
-  FSSqlFloat.CurrencyString := CurrencyString;
-  FSSqlFloat.CurrencyFormat := CurrencyFormat;
-  FSSqlFloat.NegCurrFormat := NegCurrFormat;
-  {$ENDIF}
-  FSSqlFloat.DecimalSeparator := '.';
-  FSSqlFloat.ThousandSeparator := ',';
-
 end.
-

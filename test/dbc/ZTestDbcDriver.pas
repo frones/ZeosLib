@@ -1,14 +1,13 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{         Delphi plain driver interface to ADO            }
-{                                                         }
-{        Originally written by Janos Fegyverneki          }
+{   Test Case for driver manager, plain driver            }
+{   and driver classes                                    }
 {                                                         }
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2006 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -40,73 +39,107 @@
 {                                                         }
 { The project web site is located on:                     }
 {   http://zeos.firmos.at  (FORUM)                        }
-{   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
-{   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
+{   http://zeosbugs.firmos.at (BUGTRACKER)                }
+{   svn://zeos.firmos.at/zeos/trunk (SVN Repository)      }
 {                                                         }
 {   http://www.sourceforge.net/projects/zeoslib.          }
+{   http://www.zeoslib.sourceforge.net                    }
+{                                                         }
 {                                                         }
 {                                                         }
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZPlainAdoDriver;
+unit ZTestDbcDriver;
 
 interface
 
-{$I ZPlain.inc}
+{$I ZDbc.inc}
 
-uses {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZPlainDriver;
+uses
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZSqlTestCase,
+  ZUrl, ZPlainDriver, ZDbcConnection;
 
 type
-  TZAdoPlainDriver = class (TZAbstractPlainDriver, IZPlainDriver)
-  protected
-    function GetUnicodeCodePageName: String; override;
+  TZFooPlainDriver = class (TZAbstractPlainDriver, IZPlainDriver)
   public
-    constructor Create;
-
-    procedure LoadCodePages; override;
     function GetProtocol: string; override;
-    function GetDescription: string; override;
-    procedure Initialize(const {%H-}Location: String = ''); override;
     function Clone: IZPlainDriver; override;
+    procedure LoadCodePages; override;
+    function GetDescription: string; override;
+  end;
+
+  TZFooDriver = class(TZAbstractDriver)
+  public
+    constructor Create; override;
+  end;
+
+  TZTestDriver = class(TZAbstractDbcSQLTestCase)
+  published
+    procedure TestPlainDriver;
   end;
 
 implementation
 
-uses ZCompatibility, ZEncoding, Windows;
+{ TZFooPlainDriver }
 
-procedure TZAdoPlainDriver.LoadCodePages;
+function TZFooPlainDriver.GetProtocol: string;
 begin
-  AddCodePage('CP_UTF16', 0, ceUTF16, GetACP,'', 1, True);
+  Result := 'FOO';
 end;
 
-constructor TZAdoPlainDriver.Create;
-begin
-  LoadCodePages;
-end;
-
-function TZAdoPlainDriver.GetProtocol: string;
-begin
-  Result := 'ado';
-end;
-
-function TZAdoPlainDriver.GetUnicodeCodePageName: String;
-begin
-  Result := 'CP_UTF16';
-end;
-
-function TZAdoPlainDriver.GetDescription: string;
-begin
-  Result := 'Native driver for Microsoft ADO';
-end;
-
-procedure TZAdoPlainDriver.Initialize(const Location: String = '');
-begin
-end;
-
-function TZAdoPlainDriver.Clone: IZPlainDriver;
+function TZFooPlainDriver.Clone: IZPlainDriver;
 begin
   Result := Self;
 end;
 
+procedure TZFooPlainDriver.LoadCodePages;
+begin
+end;
+
+function TZFooPlainDriver.GetDescription: string;
+begin
+  Result := '';
+end;
+
+{ TZFooDriver }
+
+constructor TZFooDriver.Create;
+begin
+  inherited;
+  AddSupportedProtocol(AddPlainDriverToCache(TZFooPlainDriver.Create));
+end;
+
+{ TZTestDriver }
+
+procedure TZTestDriver.TestPlainDriver;
+var
+  FooDriver: IZDriver;
+  Url: TZURL;
+const
+  SUrl = 'zdbc:FOO://foo';
+begin
+  // set up
+  Url := TZURL.Create(SUrl);
+  Url.LibLocation := 'foo.dll';
+  FooDriver := TZFooDriver.Create;
+  DriverManager.RegisterDriver(FooDriver);
+
+  // tests
+  try
+    CheckNotNull(DriverManager.GetDriver(SUrl), 'GetDriver case-sensitive');
+    CheckNotNull(DriverManager.GetDriver(LowerCase(SUrl)), 'GetDriver case-insensitive');
+    CheckNotNull(FooDriver.GetPlainDriver(Url), 'GetPlainDriver case-sensitive');
+    Url.Protocol := LowerCase(Url.Protocol);
+    CheckNotNull(FooDriver.GetPlainDriver(Url), 'GetPlainDriver case-insensitive');
+  finally
+    // tear down
+    FreeAndNil(Url);
+    DriverManager.DeregisterDriver(FooDriver);
+  end;
+end;
+
+initialization
+  RegisterTest('dbc', TZTestDriver.Suite);
 end.
+

@@ -117,8 +117,8 @@ type
     function IsNull(const Index: Integer): Boolean;
     function IsAssigned(const Index: Integer): Boolean;
 
-    procedure ReadBlobToMem(const Index: Word; var Buffer: Pointer; var Length: NativeUInt; const Binary: Boolean = True);
-    procedure ReadBlobToString(const Index: Word; var str: RawByteString);
+    procedure ReadBlobToMem(const Index: Word; out Buffer: Pointer; out Length: NativeUInt; const Binary: Boolean = True);
+    procedure ReadBlobToString(const Index: Word; out str: RawByteString);
   end;
 
   { Base class contain core functions to work with sqlda structure
@@ -184,8 +184,8 @@ type
     function IsNull(const Index: Integer): Boolean;
     function IsAssigned(const Index: Integer): Boolean;
 
-    procedure ReadBlobToMem(const Index: Word; var Buffer: Pointer; var Length: NativeUInt; const Binary: Boolean = True);
-    procedure ReadBlobToString(const Index: Word; var str: RawByteString);
+    procedure ReadBlobToMem(const Index: Word; out Buffer: Pointer; out Length: NativeUInt; const Binary: Boolean = True);
+    procedure ReadBlobToString(const Index: Word; out str: RawByteString);
   end;
 
 {**
@@ -788,7 +788,7 @@ begin
     if Len < MinBLOBSize then
     begin
       SetFieldType( Index, DT_VARCHAR or 1, MinBLOBSize - 1);
-      PZASASQLSTRING( sqlData).length := {%H-}Min(Len, sqllen-3);
+      PZASASQLSTRING( sqlData).length := Min(Len, sqllen-3);
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PZASASQLSTRING( sqlData).data[0], PZASASQLSTRING( sqlData).length);
       AnsiChar((PAnsiChar(@PZASASQLSTRING( sqlData).data[0])+PZASASQLSTRING( sqlData).length)^) := AnsiChar(#0);
     end
@@ -1041,8 +1041,8 @@ end;
    @param Index an filed index
    @param Str destination string
 }
-procedure TZASASQLDA.ReadBlobToMem(const Index: Word; var Buffer: Pointer;
-  var Length: NativeUInt; const Binary: Boolean = True);
+procedure TZASASQLDA.ReadBlobToMem(const Index: Word; out Buffer: Pointer;
+  out Length: NativeUInt; const Binary: Boolean);
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1072,7 +1072,7 @@ end;
    @param Index an filed index
    @param Str destination string
 }
-procedure TZASASQLDA.ReadBlobToString(const Index: Word; var Str: RawByteString);
+procedure TZASASQLDA.ReadBlobToString(const Index: Word; out Str: RawByteString);
 var Buffer: Pointer;
 begin
   CheckRange(Index);
@@ -1499,8 +1499,7 @@ begin
                 begin
                   Raw := GetValidatedAnsiStringFromBuffer(
                     TempBlob.GetBuffer, TempBlob.Length, ConSettings);
-                  TempStream := TMemoryStream.Create;
-                  TempStream.Write(Pointer(Raw), Length(Raw){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
+                  TempStream := StreamFromData(Pointer(Raw), Length(Raw){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
                 end
                 {$ELSE}
                   TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(

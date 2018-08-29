@@ -54,19 +54,14 @@ unit ZDbcAdoResultSet;
 interface
 
 {$I ZDbc.inc}
-{.$DEFINE ENABLE_ADO}
-{$IFDEF ENABLE_ADO}
 
 uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-{$IFNDEF FPC}
-  DateUtils,
-{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFDEF OLD_FPC}ZClasses, {$ENDIF}ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
+  ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
   ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility, ZPlainAdo;
 
 type
@@ -1734,7 +1729,7 @@ begin
       V := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
       if VarIsStr(V) then
         Result := UnicodeSQLTimeStampToDateTime(PWideChar(ZWideString(V)),
-          Length(V), ConSettings^.ReadFormatSettings, Failed{%H-})
+          Length(V), ConSettings^.ReadFormatSettings, Failed)
       else
         Result := V;
     except
@@ -1867,11 +1862,4 @@ begin
   ColumnInfo.DefinitelyWritable := False;}
 end;
 
-{$ELSE}
-implementation
-{$ENDIF ENABLE_ADO}
-
 end.
-
-
-

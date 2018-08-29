@@ -87,21 +87,6 @@ function ResolveConnectionProtocol(const Url: string;
   const SupportedProtocols: TStringDynArray): string;
 
 {**
-  Resolves a database URL and fills the database connection parameters.
-  @param Url an initial database URL.
-  @param Info an initial info parameters.
-  @param HostName a name of the database host.
-  @param Port a port number.
-  @param Database a database name.
-  @param UserName a name of the database user.
-  @param Password a user's password.
-  @param ResutlInfo a result info parameters.
-}
-procedure ResolveDatabaseUrl(const Url: string; Info: TStrings;
-  var HostName: string; var Port: Integer; var Database: string;
-  var UserName: string; var Password: string; ResultInfo: TStrings);
-
-{**
   Checks is the convertion from one type to another type allowed.
   @param InitialType an initial data type.
   @param ResultType a result data type.
@@ -163,8 +148,6 @@ function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = Fal
 function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): RawByteString;
 function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
 
-function WideStringStream(const AString: ZWideString): TStream;
-
 function TokenizeSQLQueryRaw(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
   IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
@@ -223,7 +206,7 @@ procedure FlushBuff(var Buf: TUCS2Buff; var Result: ZWideString); overload;
 implementation
 
 uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken,
-  ZConnProperties, ZDbcProperties {$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
+  ZConnProperties {$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -265,54 +248,6 @@ begin
 
   if Result = '' then
     raise EZSQLException.Create(Format(SUnsupportedProtocol, [Protocol]));
-end;
-
-{**
-  Resolves a database URL and fills the database connection parameters.
-  @param Url an initial database URL.
-  @param Info an initial info parameters.
-  @param HostName a name of the database host.
-  @param Port a port number.
-  @param Database a database name.
-  @param UserName a name of the database user.
-  @param Password a user's password.
-  @param ResutlInfo a result info parameters.
-}
-procedure ResolveDatabaseUrl(const Url: string; Info: TStrings;
-  var HostName: string; var Port: Integer; var Database: string;
-  var UserName: string; var Password: string; ResultInfo: TStrings);
-var
-  Temp: string;
-begin
-   { assign URL first -> define all out out params }
-   {A correct builded URL exports all these Params if they are expected!}
-  DriverManager.ResolveDatabaseUrl(URL, HostName, Port, DataBase, UserName, Password, ResultInfo);
-
-  { Retrieves non special-escaped-parameters }
-  Temp := Url;
-  while FirstDelimiter('?', Temp) > 0 do //Get all aditional Parameters
-    Temp := Copy(Temp, FirstDelimiter('?', Temp)+1, Length(Temp));
-  PutSplitString(ResultInfo, Temp, ';'); //overrides all Strings
-  ResultInfo.Text := ReplaceChar(#9, ';', ResultInfo.Text); //unescape the #9 char
-
-  if Assigned(Info) then //isn't that strange? (Shouldn't we pick out double-values?)
-    Resultinfo.AddStrings(Info);//All possible PWD/Password and UID/UserName are aviable now, but for what? And the can also be doubled!
-
-  { Redefines user name if not avialble in the URL}
-  if UserName = '' then //Priority 1: URL.UserName
-  begin
-    UserName := ResultInfo.Values[ConnProps_UID]; //Priority 2: Info-UID
-    if UserName = '' then
-      UserName := ResultInfo.Values[ConnProps_Username]; //Priority 3: Info-username
-  end;
-
-  { Redefines user password if not avialble in the URL }
-  if Password = '' then //Priority 1: URL.Password
-  begin
-    Password := ResultInfo.Values[ConnProps_PWD]; //Priority 2: Info-PWD
-    if Password = '' then
-      Password := ResultInfo.Values[ConnProps_Password]; //Priority 3: Info-password
-  end;
 end;
 
 {**
@@ -553,13 +488,6 @@ begin
   {$ELSE}
   Result := GetSQLHexAnsiString(Value, Len, ODBC);
   {$ENDIF}
-end;
-
-function WideStringStream(const AString: ZWideString): TStream;
-begin
-  Result := TMemoryStream.Create;
-  Result.Write(PWideChar(AString)^, Length(AString)*2);
-  Result.Position := 0;
 end;
 
 {**
@@ -945,7 +873,6 @@ end;
   @param Stream the Stream with the unknown format and data
   @return a valid utf8 encoded stringstram
 }
-{$WARNINGS OFF}
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings): RawByteString;
 var
@@ -1011,7 +938,6 @@ begin
     end;
   end;
 end;
-{$WARNINGS ON}
 
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings; ToCP: Word): RawByteString;
@@ -1048,7 +974,6 @@ end;
 function GetValidatedUnicodeStream(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings; FromDB: Boolean): TStream;
 var
-  Len: Integer;
   US: ZWideString;
   Bytes: TByteDynArray;
   Encoding: TZCharEncoding;
@@ -1080,14 +1005,8 @@ begin
       end;
     end;
 
-    Len := Length(US) shl 1;
-    if not Assigned(Result) and (Len > 0) then
-    begin
-      Result := TMemoryStream.Create;
-      Result.Size := Len;
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(US)^, TMemoryStream(Result).Memory^, Len);
-      Result.Position := 0;
-    end;
+    if US <> '' then
+      Result := StreamFromData(US);
   end;
 end;
 

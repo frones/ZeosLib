@@ -133,6 +133,10 @@ const
   {$ENDIF}
   ArrayLenOffSet              = SizeOf(ArrayLenInt);
 
+  {$IF NOT DECLARED(SecsPerHour)}
+  SecsPerHour = SecsPerMin * MinsPerHour;
+  {$IFEND}
+
 type
   PZCharRec = ^TZCharRec;
   TZCharRec = Record
@@ -141,9 +145,9 @@ type
     CP: Word;      //CodePage of the String
   end;
 
-  {$IFNDEF HAVE_TBYTES}
+  {$IF NOT DECLARED(TBytes)}
   TBytes = TByteDynArray;
-  {$ENDIF}
+  {$IFEND}
 
   TObjectDynArray       = array of TObject;
 
@@ -173,19 +177,19 @@ const
   DefDateTimeFormat = DefDateFormatDMY + ' ' + DefTimeFormat;
   DefDateTimeFormatMsecs = DefDateFormatDMY + ' ' + DefTimeFormatMsecs;
 
-{$IFNDEF FPC} //delphi and windows
+{$IF NOT DECLARED(LineEnding)} // FPC-style constant, declare for Delphi
 const
-  LineEnding = #13#10;
+  LineEnding = sLineBreak;
+{$IFEND}
+
+{$IF NOT DECLARED(AnsiProperCase)} // FPC has this function in RTL
+{$DEFINE ZAnsiProperCase}
+const
   Brackets = ['(',')','[',']','{','}'];
   StdWordDelims = [#0..' ',',','.',';','/','\',':','''','"','`'] + Brackets;
 
-{$IFDEF WITH_TSYSCHARSET_DEPRECATED}
-function AnsiProperCase(const S: string; const WordDelims: String): string;
-{$ELSE}
-function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
-{$ENDIF}
-
-{$ENDIF}
+function AnsiProperCase(const S: string; const WordDelims: {$IFDEF WITH_TSYSCHARSET_DEPRECATED} String {$ELSE} TSysCharSet {$ENDIF}): string;
+{$IFEND}
 
 {$IFDEF WINDOWS}
 const SharedSuffix='.dll';
@@ -453,19 +457,24 @@ function Min(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}
 function Max(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
-{$IFDEF FPC2_6DOWN}
-function BytesOf(InStr: AnsiString): TBytes;
-{$ENDIF}
+{$IF NOT DEFINED(FPC) AND NOT DECLARED(ReturnAddress)} // intrinsic since XE2
+{$DEFINE ZReturnAddress}
+function ReturnAddress: Pointer;
+{$IFEND}
 
 var
+  {$IFDEF FPC}
+    {$PUSH}
+    {$WARN 3177 off : Some fields coming after "$1" were not initialized}
+    {$WARN 3175 off : Some fields coming before "$1" were not initialized}
+  {$ENDIF}
   ClientCodePageDummy: TZCodepage =
-    (Name: ''; ID: 0; CharWidth: 1; Encoding: ceAnsi;
-      CP: $ffff; ZAlias: ''{%H-});
+    (CharWidth: 1; Encoding: ceAnsi; CP: $ffff);
 
   ConSettingsDummy: TZConSettings =
     (AutoEncode: False;
       CPType: {$IFDEF DELPHI}{$IFDEF UNICODE}cCP_UTF16{$ELSE}cGET_ACP{$ENDIF}{$ELSE}cCP_UTF8{$ENDIF};
-      ClientCodePage: {%H-}@ClientCodePageDummy;
+      ClientCodePage: @ClientCodePageDummy;
       DisplayFormatSettings:
           (DateFormat: DefDateFormatDMY;
           DateFormatLen: Length(DefDateFormatDMY);
@@ -491,7 +500,8 @@ var
       PlainConvertFunc: @NoConvert;
       DbcConvertFunc: @NoConvert;
       {$ENDIF}
-    {%H-});
+    );
+  {$IFDEF FPC} {$POP} {$ENDIF}
 
 const
   PEmptyUnicodeString: PWideChar = '';
@@ -598,14 +608,8 @@ end;
   {$ENDIF}
 {$ENDIF}
 
-{$IFOPT Q+}
-  {$DEFINE OverFlowCheckEnabled}
-  {$OVERFLOWCHECKS OFF}
-{$ENDIF}
-{$IFOPT R+}
-  {$DEFINE RangeCheckEnabled}
-  {$R-}
-{$ENDIF}
+{$Q-}
+{$R-}
 
 function Hash(const key: ZWideString): Cardinal;
 var
@@ -709,19 +713,12 @@ begin
   end;
 end;
 
-{$IFDEF RangeCheckEnabled}
-  {$R+}
-{$ENDIF}
-{$IFDEF OverFlowCheckEnabled}
-  {$OVERFLOWCHECKS ON}
-{$ENDIF}
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
-{$IFNDEF FPC}
-{$IFDEF WITH_TSYSCHARSET_DEPRECATED}
-function AnsiProperCase(const S: string; const WordDelims: String): string;
-{$ELSE}
-function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
-{$ENDIF}
+{$IFDEF ZAnsiProperCase}
+
+function AnsiProperCase(const S: string; const WordDelims: {$IFDEF WITH_TSYSCHARSET_DEPRECATED} String {$ELSE} TSysCharSet {$ENDIF}): string;
 var
   P,PE : PChar;
 begin
@@ -833,7 +830,7 @@ begin
   else
   begin
     {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-    if (Pointer(Dest{%H-}) = nil) or//empty
+    if (Pointer(Dest) = nil) or//empty
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
        (Len <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
     {$ELSE}
@@ -928,16 +925,18 @@ begin
     end;
 end;
 
-{$IFDEF FPC2_6DOWN}
-function BytesOf(InStr: AnsiString): TBytes;
-var
-  Len: SizeInt;
-begin
-  Len := Length(Instr);
-  SetLength(Result, Len);
-  if Len > 0 then Move(InStr[1], Result[0], Len);
-end;
+{$IFDEF ZReturnAddress} 
+function ReturnAddress: Pointer;
+{$IFDEF PUREPASCAL}
+  begin
+    Result := nil;
+  end;
+{$ELSE}
+  asm
+          MOV     EAX,[EBP+4]
+  end;
 {$ENDIF}
+{$ENDIF ZReturnAddress}
 
 initialization
   case ConSettingsDummy.CPType of

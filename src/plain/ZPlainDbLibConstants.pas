@@ -773,6 +773,7 @@ type
     tdsBigVarChar            = 167,
     tdsBigBinary             = 173,
     tdsBigChar               = 175,
+    tdsSybaseLongBinary      = 225,
     tdsBigNVarChar           = 231,
     tdsBigNChar              = 239,
     tdsUDT                   = 240,
@@ -1411,199 +1412,199 @@ DBPIVOT_FUNC dbpivot_lookup_name( const char name[] );
 {Sybase API definitions}
 type
   SYBDBERRHANDLE_PROC = function(Proc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
-    DbErrStr, OsErrStr: PAnsiChar): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    DbErrStr, OsErrStr: PAnsiChar): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   SYBDBMSGHANDLE_PROC = function(Proc: PDBPROCESS; MsgNo: DBINT; MsgState,
     Severity: Integer; MsgText, SrvName, ProcName: PAnsiChar; Line: DBUSMALLINT):
-    Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TSybdb12hour = function(Proc: PDBPROCESS; Language: PAnsiChar): DBBOOL; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdb12hour = function(Proc: PDBPROCESS; Language: PAnsiChar): DBBOOL; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TSybdberrhandle = function(Handler: SYBDBERRHANDLE_PROC): SYBDBERRHANDLE_PROC; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbmsghandle = function(Handler: SYBDBMSGHANDLE_PROC): SYBDBMSGHANDLE_PROC; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdberrhandle = function(Handler: SYBDBERRHANDLE_PROC): SYBDBERRHANDLE_PROC; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbmsghandle = function(Handler: SYBDBMSGHANDLE_PROC): SYBDBMSGHANDLE_PROC; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   { Two-phase commit functions }
-  TSybabort_xact = function(Proc: PDBPROCESS; CommId: DBINT): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybabort_xact = function(Proc: PDBPROCESS; CommId: DBINT): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybbuild_xact_string = procedure(XActName, Service: PAnsiChar; CommId: DBINT;
-      Result: PAnsiChar); {$IFNDEF UNIX}stdcall{$ELSE}cdecl{$ENDIF};
-  TSybclose_commit = procedure(Proc: PDBPROCESS); {$IFNDEF UNIX}stdcall{$ELSE}cdecl{$ENDIF};
-  TSybcommit_xact = function(Proc: PDBPROCESS; CommId: DBINT): RETCODE; {$IFNDEF UNIX}stdcall{$ELSE}cdecl{$ENDIF};
-  TSybopen_commit = function(Login: PLOGINREC; ServerName: PAnsiChar): PDBPROCESS; {$IFNDEF UNIX}stdcall{$ELSE}cdecl{$ENDIF};
-  TSybremove_xact = function(Proc: PDBPROCESS; CommId: DBINT; SiteCount: Integer): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybscan_xact = function(Proc: PDBPROCESS; CommId: DBINT): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+      Result: PAnsiChar); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybclose_commit = procedure(Proc: PDBPROCESS); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybcommit_xact = function(Proc: PDBPROCESS; CommId: DBINT): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybopen_commit = function(Login: PLOGINREC; ServerName: PAnsiChar): PDBPROCESS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybremove_xact = function(Proc: PDBPROCESS; CommId: DBINT; SiteCount: Integer): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybscan_xact = function(Proc: PDBPROCESS; CommId: DBINT): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybstart_xact = function(Proc: PDBPROCESS; AppName, XActName: PAnsiChar;
-    SiteCount: Integer): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybstat_xact = function(Proc: PDBPROCESS; CommId: DBINT): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    SiteCount: Integer): DBINT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybstat_xact = function(Proc: PDBPROCESS; CommId: DBINT): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
 { BCP functions }
-  TSybbcp_batch = function(const Proc: PDBPROCESS): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybbcp_batch = function(const Proc: PDBPROCESS): DBINT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybbcp_bind = function(Proc: PDBPROCESS; VarAddr: PByte; PrefixLen: Integer;
     VarLen: DBINT; Terminator: PByte; TermLen, Typ, TableColumn: Integer):
-    RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybbcp_colfmt = function(Proc: PDBPROCESS; FileColumn: Integer; FileType: Byte;
     FilePrefixLen: Integer; FileColLen: DBINT; FileTerm: PByte; FileTermLen,
-    TableColumn: Integer): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    TableColumn: Integer): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybbcp_collen = function(Proc: PDBPROCESS; VarLen: DBINT; TableColumn: Integer):
-    RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybbcp_colptr = function(Proc: PDBPROCESS; ColPtr: PByte; TableColumn: Integer):
-    RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybbcp_columns = function(Proc: PDBPROCESS; FileColCount: Integer): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybbcp_columns = function(Proc: PDBPROCESS; FileColCount: Integer): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybbcp_control = function(Proc: PDBPROCESS; Field: Integer; Value: DBINT):
-    RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybbcp_done = function(Proc: PDBPROCESS): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybbcp_exec = function(Proc: PDBPROCESS; RowsCopied: PDBINT): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybbcp_done = function(Proc: PDBPROCESS): DBINT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybbcp_exec = function(Proc: PDBPROCESS; RowsCopied: PDBINT): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybbcp_init = function(Proc: PDBPROCESS; TableName, hFile, ErrFile: PAnsiChar;
-    Direction: Integer): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    Direction: Integer): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybbcp_moretext = function(Proc: PDBPROCESS; Size: DBINT; Text: PByte):
-    RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybbcp_readfmt = function(Proc: PDBPROCESS; FileName: PAnsiChar): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybbcp_sendrow = function(Proc: PDBPROCESS): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybbcp_setl = function(Login: PLOGINREC; Enable: LongBool): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybbcp_writefmt = function(Proc: PDBPROCESS; FileName: PAnsiChar): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybbcp_readfmt = function(Proc: PDBPROCESS; FileName: PAnsiChar): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybbcp_sendrow = function(Proc: PDBPROCESS): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybbcp_setl = function(Login: PLOGINREC; Enable: LongBool): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybbcp_writefmt = function(Proc: PDBPROCESS; FileName: PAnsiChar): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
 { Standard DB-Library functions }
-  TSybdbadata = function(Proc: PDBPROCESS; ComputeId, Column: Integer): PByte; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbadlen = function(Proc: PDBPROCESS; ComputeId, Column: Integer): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbadata = function(Proc: PDBPROCESS; ComputeId, Column: Integer): PByte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbadlen = function(Proc: PDBPROCESS; ComputeId, Column: Integer): DBINT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbaltbind = function(Proc: PDBPROCESS; ComputeId, Column: Integer;
-    VarType: Integer; VarLen: DBINT; VarAddr: PByte): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbaltcolid = function(Proc: PDBPROCESS; ComputeId, Column: Integer): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbaltlen = function(Proc: PDBPROCESS; ComputeId, Column: Integer): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbaltop = function(Proc: PDBPROCESS; ComputeId, Column: Integer): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbalttype = function(Proc: PDBPROCESS; ComputeId, Column: Integer): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbaltutype = function(Proc: PDBPROCESS; ComputeId, Column: Integer): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    VarType: Integer; VarLen: DBINT; VarAddr: PByte): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbaltcolid = function(Proc: PDBPROCESS; ComputeId, Column: Integer): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbaltlen = function(Proc: PDBPROCESS; ComputeId, Column: Integer): DBINT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbaltop = function(Proc: PDBPROCESS; ComputeId, Column: Integer): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbalttype = function(Proc: PDBPROCESS; ComputeId, Column: Integer): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbaltutype = function(Proc: PDBPROCESS; ComputeId, Column: Integer): DBINT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbanullbind = function(Proc: PDBPROCESS; ComputeId, Column: Integer;
-    Indicator: PDBINT): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    Indicator: PDBINT): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbbind = function(Proc: PDBPROCESS; Column, VarType, VarLen: Integer;
-    VarAddr: PByte): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    VarAddr: PByte): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbbylist = function(Proc: PDBPROCESS; ComputeId: Integer; Size: PInteger):
-    PByte; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcancel = function(Proc: PDBPROCESS): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcanquery = function(Proc: PDBPROCESS): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbchange = function(Proc: PDBPROCESS): PAnsiChar; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbclose = function(Proc: PDBPROCESS): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbclrbuf = procedure(Proc: PDBPROCESS; N: DBINT); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbclropt = function(Proc: PDBPROCESS; Option: Integer; Param: PAnsiChar): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcmd = function(Proc: PDBPROCESS; Cmd: PAnsiChar): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcmdrow = function(Proc: PDBPROCESS): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcolbrowse = function(Proc: PDBPROCESS; Column: Integer): LongBool; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcollen = function(Proc: PDBPROCESS; Column: Integer): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcolinfo = function(pdbhandle :PDBHANDLE; _Type: Integer; Column: DBINT; ComputeId: DBINT; lpdbcol: PDBCOL): RETCODE;{$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcolname = function(Proc: PDBPROCESS; Column: Integer): PAnsiChar; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcolsource = function(Proc: PDBPROCESS; Column: Integer): PAnsiChar; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcoltypeinfo = function(Proc: PDBPROCESS; Column: Integer): PDBTYPEINFO; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcoltype = function(Proc: PDBPROCESS; Column: Integer): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcolutype = function(Proc: PDBPROCESS; Column: Integer): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    PByte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcancel = function(Proc: PDBPROCESS): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcanquery = function(Proc: PDBPROCESS): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbchange = function(Proc: PDBPROCESS): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbclose = function(Proc: PDBPROCESS): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbclrbuf = procedure(Proc: PDBPROCESS; N: DBINT); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbclropt = function(Proc: PDBPROCESS; Option: Integer; Param: PAnsiChar): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcmd = function(Proc: PDBPROCESS; Cmd: PAnsiChar): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcmdrow = function(Proc: PDBPROCESS): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcolbrowse = function(Proc: PDBPROCESS; Column: Integer): LongBool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcollen = function(Proc: PDBPROCESS; Column: Integer): DBINT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcolinfo = function(pdbhandle :PDBHANDLE; _Type: Integer; Column: DBINT; ComputeId: DBINT; lpdbcol: PDBCOL): RETCODE;{$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcolname = function(Proc: PDBPROCESS; Column: Integer): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcolsource = function(Proc: PDBPROCESS; Column: Integer): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcoltypeinfo = function(Proc: PDBPROCESS; Column: Integer): PDBTYPEINFO; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcoltype = function(Proc: PDBPROCESS; Column: Integer): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcolutype = function(Proc: PDBPROCESS; Column: Integer): DBINT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbconvert = function(Proc: PDBPROCESS; SrcType: Integer; Src: PByte;
-  SrcLen: DBINT; DestType: Integer; Dest: PByte; DestLen: DBINT): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcount = function(Proc: PDBPROCESS): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcurcmd = function(Proc: PDBPROCESS): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcurrow = function(Proc: PDBPROCESS): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  SrcLen: DBINT; DestType: Integer; Dest: PByte; DestLen: DBINT): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcount = function(Proc: PDBPROCESS): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcurcmd = function(Proc: PDBPROCESS): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcurrow = function(Proc: PDBPROCESS): DBINT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   TSybdbcursor = function(hCursor: PDBCURSOR; OpType, Row: Integer; Table,
-    Values: PAnsiChar): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    Values: PAnsiChar): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbcursorbind = function(hCursor: PDBCURSOR; Col, VarType: Integer; VarLen: DBINT;
-    POutLen: PDBINT; VarAddr: PByte): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbcursorclose = function(DbHandle: PDBHANDLE): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    POutLen: PDBINT; VarAddr: PByte): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcursorclose = function(DbHandle: PDBHANDLE): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbcursorcolinfo = function(hCursor: PDBCURSOR; Column: Integer; ColName: PAnsiChar;
-    ColType: PInteger; ColLen: PDBINT; UserType: PInteger): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    ColType: PInteger; ColLen: PDBINT; UserType: PInteger): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbcursorfetch = function(hCursor: PDBCURSOR; FetchType, RowNum: Integer):
-    RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbcursorinfo = function(hCursor: PDBCURSOR; nCols: PInteger; nRows: PDBINT):
-    RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbcursoropen = function(Proc: PDBPROCESS; Sql: PAnsiChar; ScrollOpt,
-    ConCurOpt: Integer; nRows: Cardinal; PStatus: PDBINT): PDBCURSOR; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbdata = function(Proc: PDBPROCESS; Column: Integer): PByte; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    ConCurOpt: Integer; nRows: Cardinal; PStatus: PDBINT): PDBCURSOR; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbdata = function(Proc: PDBPROCESS; Column: Integer): PByte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbdatecrack = function(Proc: PDBPROCESS; DateInfo: PDBDATEREC;
-    DateType: PDBDATETIME): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbdatlen = function(Proc: PDBPROCESS; Column: Integer): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbdead = function(Proc: PDBPROCESS): LongBool; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbexit = procedure; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbfcmd = function(Proc: PDBPROCESS; CmdString: PAnsiChar; var Params): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbfirstrow = function(Proc: PDBPROCESS): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbfreebuf = procedure(Proc: PDBPROCESS); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbloginfree = procedure(Login: PLOGINREC); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbfreequal = procedure(Ptr: PAnsiChar); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbgetchar = function(Proc: PDBPROCESS; N: Integer): PAnsiChar; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbgetmaxprocs = function: SmallInt; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    DateType: PDBDATETIME): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbdatlen = function(Proc: PDBPROCESS; Column: Integer): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbdead = function(Proc: PDBPROCESS): LongBool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbexit = procedure; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbfcmd = function(Proc: PDBPROCESS; CmdString: PAnsiChar; var Params): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbfirstrow = function(Proc: PDBPROCESS): DBINT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbfreebuf = procedure(Proc: PDBPROCESS); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbloginfree = procedure(Login: PLOGINREC); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbfreequal = procedure(Ptr: PAnsiChar); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbgetchar = function(Proc: PDBPROCESS; N: Integer): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbgetmaxprocs = function: SmallInt; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbgetoff = function(Proc: PDBPROCESS; OffType: DBUSMALLINT;
-    StartFrom: Integer): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbgetpacket = function(Proc: PDBPROCESS): Cardinal; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbgetrow = function(Proc: PDBPROCESS; Row: DBINT): STATUS; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbgetuserdata = function(Proc: PDBPROCESS): Pointer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbhasretstat = function(Proc: PDBPROCESS): LongBool; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbinit = function: RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbisavail = function(Proc: PDBPROCESS): LongBool; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbisopt = function(Proc: PDBPROCESS; Option: Integer; Param: PAnsiChar): LongBool; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdblastrow = function(Proc: PDBPROCESS): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdblogin = function: PLOGINREC; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbmorecmds = function(Proc: PDBPROCESS): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbmoretext = function(Proc: PDBPROCESS; Size: DBINT; Text: PByte): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbname = function(Proc: PDBPROCESS): PAnsiChar; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbnextrow = function(Proc: PDBPROCESS): STATUS; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    StartFrom: Integer): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbgetpacket = function(Proc: PDBPROCESS): Cardinal; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbgetrow = function(Proc: PDBPROCESS; Row: DBINT): STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbgetuserdata = function(Proc: PDBPROCESS): Pointer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbhasretstat = function(Proc: PDBPROCESS): LongBool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbinit = function: RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbisavail = function(Proc: PDBPROCESS): LongBool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbisopt = function(Proc: PDBPROCESS; Option: Integer; Param: PAnsiChar): LongBool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdblastrow = function(Proc: PDBPROCESS): DBINT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdblogin = function: PLOGINREC; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbmorecmds = function(Proc: PDBPROCESS): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbmoretext = function(Proc: PDBPROCESS; Size: DBINT; Text: PByte): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbname = function(Proc: PDBPROCESS): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbnextrow = function(Proc: PDBPROCESS): STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbnullbind = function(Proc: PDBPROCESS; Column: Integer; Indicator: PDBINT):
-    RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbnumalts = function(Proc: PDBPROCESS; ComputeId: Integer): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbnumcols = function(Proc: PDBPROCESS): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbnumcompute = function(Proc: PDBPROCESS): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbnumorders = function(Proc: PDBPROCESS): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbnumrets = function(Proc: PDBPROCESS): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbopen = function(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbordercol = function(Proc: PDBPROCESS; Order: Integer): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbprhead = procedure(Proc: PDBPROCESS); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbprrow = function(Proc: PDBPROCESS): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbprtype = function(Token: Integer): PAnsiChar; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbqual = function(Proc: PDBPROCESS; TabNum: Integer; TabName: PAnsiChar): PAnsiChar; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbreadtext = function(Proc: PDBPROCESS; Buf: Pointer; BufSize: DBINT): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbresults = function(Proc: PDBPROCESS): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbretdata = function(Proc: PDBPROCESS; RetNum: Integer): PByte; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbretlen = function(Proc: PDBPROCESS; RetNum: Integer): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbretname = function(Proc: PDBPROCESS; RetNum: Integer): PAnsiChar; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbretstatus = function(Proc: PDBPROCESS): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbrettype = function(Proc: PDBPROCESS; RetNum: Integer): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbrows = function(Proc: PDBPROCESS): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF}; //!!!
-  TSybdbrowtype = function(Proc: PDBPROCESS): STATUS; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbrpcinit = function(Proc: PDBPROCESS; ProcName: PAnsiChar; Options: DBSMALLINT): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF}; //!!!
+    RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbnumalts = function(Proc: PDBPROCESS; ComputeId: Integer): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbnumcols = function(Proc: PDBPROCESS): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbnumcompute = function(Proc: PDBPROCESS): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbnumorders = function(Proc: PDBPROCESS): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbnumrets = function(Proc: PDBPROCESS): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbopen = function(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbordercol = function(Proc: PDBPROCESS; Order: Integer): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbprhead = procedure(Proc: PDBPROCESS); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbprrow = function(Proc: PDBPROCESS): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbprtype = function(Token: Integer): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbqual = function(Proc: PDBPROCESS; TabNum: Integer; TabName: PAnsiChar): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbreadtext = function(Proc: PDBPROCESS; Buf: Pointer; BufSize: DBINT): DBINT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbresults = function(Proc: PDBPROCESS): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbretdata = function(Proc: PDBPROCESS; RetNum: Integer): PByte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbretlen = function(Proc: PDBPROCESS; RetNum: Integer): DBINT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbretname = function(Proc: PDBPROCESS; RetNum: Integer): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbretstatus = function(Proc: PDBPROCESS): DBINT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbrettype = function(Proc: PDBPROCESS; RetNum: Integer): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbrows = function(Proc: PDBPROCESS): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF}; //!!!
+  TSybdbrowtype = function(Proc: PDBPROCESS): STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbrpcinit = function(Proc: PDBPROCESS; ProcName: PAnsiChar; Options: DBSMALLINT): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF}; //!!!
   TSybdbrpcparam = function(Proc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-    Typ: Integer; MaxLen, DataLen: DBINT; Value: PByte): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbrpcsend = function(Proc: PDBPROCESS): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    Typ: Integer; MaxLen, DataLen: DBINT; Value: PByte): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbrpcsend = function(Proc: PDBPROCESS): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TSybdbrpwclr = procedure(Login: PLOGINREC); {$IFNDEF UNIX}stdcall{$ELSE}cdecl{$ENDIF};
-  TSybdbsetavail = procedure(Proc: PDBPROCESS); {$IFNDEF UNIX}stdcall{$ELSE}cdecl{$ENDIF};
-  TSybdbsetmaxprocs = function(MaxProcs: SmallInt): RETCODE; {$IFNDEF UNIX}stdcall{$ELSE}cdecl{$ENDIF};
-  TSybdbsetlname = function(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE; {$IFNDEF UNIX}stdcall{$ELSE}cdecl{$ENDIF};
-  TSybdbsetlogintime = function(Seconds: Integer): RETCODE; {$IFNDEF UNIX}stdcall{$ELSE}cdecl{$ENDIF};
+  TSybdbrpwclr = procedure(Login: PLOGINREC); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbsetavail = procedure(Proc: PDBPROCESS); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbsetmaxprocs = function(MaxProcs: SmallInt): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbsetlname = function(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbsetlogintime = function(Seconds: Integer): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   TSybdbsetnull = function(Proc: PDBPROCESS; BindType, BindLen: Integer;
-    BindVal: PByte): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    BindVal: PByte): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbsetopt = function(Proc: PDBPROCESS; Option: Integer; CharParam: PAnsiChar; IntParam: Integer):
-    RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbsettime = function(Seconds: Integer): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbsetuserdata = procedure(Proc: PDBPROCESS; Ptr: Pointer); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbsqlexec = function(Proc: PDBPROCESS): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbsqlok = function(Proc: PDBPROCESS): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbsqlsend = function(Proc: PDBPROCESS): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbsettime = function(Seconds: Integer): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbsetuserdata = procedure(Proc: PDBPROCESS; Ptr: Pointer); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbsqlexec = function(Proc: PDBPROCESS): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbsqlok = function(Proc: PDBPROCESS): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbsqlsend = function(Proc: PDBPROCESS): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbstrcpy = function(Proc: PDBPROCESS; Start, NumBytes: Integer; Dest: PAnsiChar):
-    RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbstrlen = function(Proc: PDBPROCESS): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbtabbrowse = function(Proc: PDBPROCESS; TabNum: Integer): LongBool; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbtabcount = function(Proc: PDBPROCESS): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbtabname = function(Proc: PDBPROCESS; Table: Integer): PAnsiChar; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbstrlen = function(Proc: PDBPROCESS): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbtabbrowse = function(Proc: PDBPROCESS; TabNum: Integer): LongBool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbtabcount = function(Proc: PDBPROCESS): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbtabname = function(Proc: PDBPROCESS; Table: Integer): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbtabsource = function(Proc: PDBPROCESS; Column: Integer; TabNum: PInteger):
-    PAnsiChar; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbtsnewlen = function(Proc: PDBPROCESS): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbtsnewval = function(Proc: PDBPROCESS): PDBBINARY; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbtsnewlen = function(Proc: PDBPROCESS): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbtsnewval = function(Proc: PDBPROCESS): PDBBINARY; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbtsput = function(Proc: PDBPROCESS; NewTs: PDBBINARY; NewTsName,
-    TabNum: Integer; TableName: PAnsiChar): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbtxptr = function(Proc: PDBPROCESS; Column: Integer): PDBBINARY; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbtxtimestamp = function(Proc: PDBPROCESS; Column: Integer): PDBBINARY; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbtxtsnewval = function(Proc: PDBPROCESS): PDBBINARY; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    TabNum: Integer; TableName: PAnsiChar): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbtxptr = function(Proc: PDBPROCESS; Column: Integer): PDBBINARY; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbtxtimestamp = function(Proc: PDBPROCESS; Column: Integer): PDBBINARY; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbtxtsnewval = function(Proc: PDBPROCESS): PDBBINARY; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbtxtsput = function(Proc: PDBPROCESS; NewTxts: PDBBINARY; Column: Integer):
-    RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbuse = function(Proc: PDBPROCESS; DbName: PAnsiChar): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbvarylen = function(Proc: PDBPROCESS; Column: Integer): LongBool; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  TSybdbwillconvert = function(SrcType, DestType: Integer): LongBool; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbuse = function(Proc: PDBPROCESS; DbName: PAnsiChar): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbvarylen = function(Proc: PDBPROCESS; Column: Integer): LongBool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbwillconvert = function(SrcType, DestType: Integer): LongBool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbwritetext = function(Proc: PDBPROCESS; ObjName: PAnsiChar; TextPtr: PDBBINARY;
     TextPtrLen: DBTINYINT; Timestamp: PDBBINARY; Log: LongBool; Size: DBINT;
-    Text: PByte): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    Text: PByte): RETCODE; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   TDBLibAPI = Record
     dberrhandle           : Tdberrhandle;

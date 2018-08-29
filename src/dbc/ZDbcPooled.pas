@@ -177,15 +177,15 @@ type
 
     function GetBinaryEscapeString(const Value: RawByteString): String; overload;
     function GetBinaryEscapeString(const Value: TBytes): String; overload;
-    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: RawByteString); overload; virtual;
-    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: ZWideString); overload; virtual;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString); overload; virtual;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: ZWideString); overload; virtual;
 
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; var Result: RawByteString); overload;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; RawCP: Word; var Result: ZWideString); overload;
-    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; RawCP: Word; var Result: RawByteString); overload;
-    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; var Result: ZWideString); overload;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); overload;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; RawCP: Word; out Result: ZWideString); overload;
+    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; RawCP: Word; out Result: RawByteString); overload;
+    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; out Result: ZWideString); overload;
 
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
@@ -196,7 +196,6 @@ type
     function GetServerProvider: TZServerProvider;
   end;
 
-  {$WARNINGS OFF}
   TZDbcPooledConnectionDriver = class(TZAbstractDriver)
   private
     PoolList: TObjectList;
@@ -215,7 +214,6 @@ type
     constructor Create; override;
     destructor Destroy; override;
   end;
-  {$WARNINGS ON}
 
 implementation
 
@@ -752,37 +750,37 @@ begin
 end;
 
 procedure TZDbcPooledConnection.GetBinaryEscapeString(Buf: Pointer;
-  Len: LengthInt; var Result: RawByteString);
+  Len: LengthInt; out Result: RawByteString);
 begin
   GetConnection.GetBinaryEscapeString(Buf, Len, Result)
 end;
 
 procedure TZDbcPooledConnection.GetBinaryEscapeString(Buf: Pointer;
-  Len: LengthInt; var Result: ZWideString);
+  Len: LengthInt; out Result: ZWideString);
 begin
   GetConnection.GetBinaryEscapeString(Buf, Len, Result)
 end;
 
 procedure TZDbcPooledConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
-  RawCP: Word; var Result: ZWideString);
+  RawCP: Word; out Result: ZWideString);
 begin
   GetConnection.GetEscapeString(Buf, Len, RawCP, Result)
 end;
 
 procedure TZDbcPooledConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
-  var Result: RawByteString);
+  out Result: RawByteString);
 begin
   GetConnection.GetEscapeString(Buf, Len, Result)
 end;
 
 procedure TZDbcPooledConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
-  var Result: ZWideString);
+  out Result: ZWideString);
 begin
   GetConnection.GetEscapeString(Buf, Len, Result)
 end;
 
 procedure TZDbcPooledConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
-  RawCP: Word; var Result: RawByteString);
+  RawCP: Word; out Result: RawByteString);
 begin
   GetConnection.GetEscapeString(Buf, Len, RawCP, Result)
 end;

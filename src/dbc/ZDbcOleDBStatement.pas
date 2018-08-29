@@ -54,8 +54,7 @@ unit ZDbcOleDBStatement;
 interface
 
 {$I ZDbc.inc}
-{.$DEFINE ENABLE_OLEDB}
-{$IFDEF ENABLE_OLEDB}
+
 {$IFDEF WIN64}
 {$ALIGN 8}
 {$ELSE}
@@ -65,7 +64,7 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
-  ZCompatibility, {$IFDEF OLD_FPC}ZClasses, {$ENDIF} ZSysUtils, ZOleDB,
+  ZCompatibility, ZSysUtils, ZOleDB,
   ZDbcOleDBUtils, ZDbcIntfs, ZDbcStatement, ZVariant;
 
 type
@@ -135,7 +134,7 @@ implementation
 
 uses
   Variants, Math,
-  {$IFDEF WITH_SYSTEM_WIN_COMOBJ}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZDbcOleDB, ZDbcOleDBResultSet, ZEncoding, ZDbcLogging,
   ZFastCode, ZDbcMetadata, ZDbcUtils, ZMessages, ZClasses;
 
@@ -551,13 +550,14 @@ begin
       if FMultipleResults <> nil then
       repeat
         FRowSet := nil;
-        Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
+        Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
           IID_IRowset, @FRowsAffected, @FRowSet);
-      until (Status = DB_S_NORESULT);
-      FMultipleResults := nil;
-      (FCommand as ICommandPrepare).UnPrepare;
-      FCommand := nil;
+        //Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
+          //IID_IRowset, @FRowsAffected, @FRowSet);
+      until Failed(Status) or (Status = DB_S_NORESULT);
+      OleDBCheck((FCommand as ICommandPrepare).UnPrepare);
     finally
+      FCommand := nil;
       FMultipleResults := nil;
     end;
   end;
@@ -566,8 +566,7 @@ end;
 procedure TZOleDBPreparedStatement.SetDataArray(ParameterIndex: Integer;
   const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
 begin
-  if ParameterIndex = FirstDbcIndex then
-  begin
+  if ParameterIndex = FirstDbcIndex then begin
     FArrayOffSet := 0;
     FDBParams.cParamSets := 0;
   end;
@@ -580,13 +579,4 @@ begin
   fMoreResultsIndicator := Value;
 end;
 
-//(*
-{$ELSE !ENABLE_OLEDB}
-implementation
-{$ENDIF ENABLE_OLEDB}
-//*)
 end.
-
-
-
-

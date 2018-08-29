@@ -58,9 +58,6 @@ interface
 {$J+}
 
 uses
-{$IFNDEF UNIX}
-//  Windows,
-{$ENDIF}
   ZPlainLoader, ZCompatibility, ZPlainOracleConstants, ZPlainDriver;
 
 {***************** Plain API types definition ****************}
@@ -208,11 +205,11 @@ type
       min: ub1; sec: ub1; fsec: ub4; timezone: text;
       timezone_length: size_t): sword; cdecl;
     OCIDateTimeGetDate: function(hndl: POCIEnv; err: POCIError;
-      const date: POCIDateTime; var year: sb2; var month: ub1;
-      var day: ub1): sword; cdecl;
+      const date: POCIDateTime; out year: sb2; out month: ub1;
+      out day: ub1): sword; cdecl;
     OCIDateTimeGetTime: function(hndl: POCIEnv; err: POCIError;
-      datetime: POCIDateTime; var hour: ub1; var minute: ub1; var sec: ub1;
-      var fsec: ub4): sword; cdecl;
+      datetime: POCIDateTime; out hour: ub1; out minute: ub1; out sec: ub1;
+      out fsec: ub4): sword; cdecl;
     { object api}
     OCITypeByRef: function(env: POCIEnv; err: POCIError; type_ref: POCIRef;
       pin_duration: OCIDuration; get_option: OCITypeGetOpt;
@@ -406,7 +403,7 @@ constructor TZOraclePlainDriver.Create;
 begin
   inherited create;
   FLoader := TZNativeLibraryLoader.Create([]);
-  {$IFNDEF UNIX}
+  {$IFDEF MSWINDOWS}
     FLoader.AddLocation(WINDOWS_DLL_LOCATION);
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL_LOCATION);

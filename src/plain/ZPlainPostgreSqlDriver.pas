@@ -967,7 +967,7 @@ constructor TZPostgreSQLPlainDriver.Create;
 begin
   inherited create;
   FLoader := TZNativeLibraryLoader.Create([]);
-  {$IFNDEF UNIX}
+  {$IFDEF MSWINDOWS}
     FLoader.AddLocation(WINDOWS_DLL_LOCATION);
     FLoader.AddLocation(WINDOWS_DLL7_LOCATION);
     FLoader.AddLocation(WINDOWS_DLL8_LOCATION);

@@ -105,7 +105,7 @@ type
     function ArrayToStrings(const Value: array of string): TStrings;
     function CheckForKeyword({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList;
       TokenIndex: Integer; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Keywords: TStrings;
-      var Keyword: string; var WordCount: Integer): Boolean;
+      out Keyword: string; out WordCount: Integer): Boolean;
     function FindSectionTokens(Sections: TObjectList; const Name: string): TZTokenList;
 
     procedure FillFieldRefs(const SelectSchema: IZSelectSchema; SelectTokens: TZTokenList);
@@ -241,7 +241,7 @@ end;
 }
 function TZGenericStatementAnalyser.CheckForKeyword({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList;
   TokenIndex: Integer; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Keywords: TStrings;
-  var Keyword: string; var WordCount: Integer): Boolean;
+  out Keyword: string; out WordCount: Integer): Boolean;
 var
   I: Integer;
 begin
@@ -597,7 +597,6 @@ end;
   @param SelectSchema a select schema object.
   @param FromTokens a list of tokens in from section.
 }
-{$HINTS OFF}
 procedure TZGenericStatementAnalyser.FillTableRefs(
   const SelectSchema: IZSelectSchema; FromTokens: TZTokenList);
 var
@@ -695,7 +694,7 @@ begin
   if Table <> '' then
     SelectSchema.AddTable(TZTableRef.Create(Catalog, Schema, Table, Alias));
 end;
-{$HINTS ON}
+
 {**
   Extracts a select schema from the specified parsed select statement.
   @param Sections a list of sections.

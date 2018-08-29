@@ -56,11 +56,6 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFDEF FPC}
-  {$IFDEF WIN32}
-    Comobj,
-  {$ENDIF}
-{$ENDIF}
 {$IFDEF WITH_LCONVENCODING}
   LConvEncoding,
 {$ENDIF}
@@ -72,7 +67,6 @@ uses
 type
 
   {** Implements Abstract Database Driver. }
-  {$WARNINGS OFF} //to supress the deprecated Warning of connect
   TZAbstractDriver = class(TInterfacedObject, IZDriver)
   protected
     FCachedPlainDrivers: IZHashMap;
@@ -101,7 +95,6 @@ type
     function GetStatementAnalyser: IZStatementAnalyser; virtual;
     function GetClientVersion(const {%H-}Url: string): Integer; virtual;
   end;
-  {$WARNINGS OFF}
 
   {** Implements Abstract Database Connection. }
 
@@ -149,7 +142,7 @@ type
     function GetClientCodePageInformations: PZCodePage; //EgonHugeist
     function GetAutoEncodeStrings: Boolean; //EgonHugeist
     procedure SetAutoEncodeStrings(const Value: Boolean);
-    procedure OnPropertiesChange(Sender: TObject); virtual;
+    procedure OnPropertiesChange({%H-}Sender: TObject); virtual;
     procedure RaiseUnsupportedException;
 
     procedure RegisterStatement(const Value: IZStatement);
@@ -246,17 +239,17 @@ type
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; virtual;
     {$ENDIF}
     function GetBinaryEscapeString(const Value: TBytes): String; overload; virtual;
-    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: RawByteString); overload; virtual;
-    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; var Result: ZWideString); overload; virtual;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString); overload; virtual;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: ZWideString); overload; virtual;
 
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
     function GetEscapeString(Buf: PAnsichar; Len: LengthInt): RawByteString; overload; virtual;
 
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; var Result: RawByteString); overload; virtual;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; RawCP: Word; var Result: ZWideString); overload; virtual;
-    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; RawCP: Word; var Result: RawByteString); overload; virtual;
-    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; var Result: ZWideString); overload; virtual;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); overload; virtual;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; RawCP: Word; out Result: ZWideString); overload; virtual;
+    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; RawCP: Word; out Result: RawByteString); overload; virtual;
+    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; out Result: ZWideString); overload; virtual;
 
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
@@ -383,7 +376,6 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-{$WARNINGS OFF}
 function TZAbstractDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
   TempURL:  TZURL;
@@ -420,7 +412,6 @@ function TZAbstractDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := nil;
 end;
-{$WARNINGS ON}
 
 {**
   Returns true if the driver thinks that it can open a connection
@@ -459,12 +450,12 @@ begin
   if Protocol = '' then
   begin
     Result := PlainDriver.GetProtocol;
-    TempKey := TZAnyValue.CreateWithString(PlainDriver.GetProtocol)
+    TempKey := TZAnyValue.CreateWithString(AnsiLowerCase(PlainDriver.GetProtocol))
   end
   else
   begin
     Result := Protocol;
-    TempKey := TZAnyValue.CreateWithString(Protocol+LibLocation);
+    TempKey := TZAnyValue.CreateWithString(AnsiLowerCase(Protocol+LibLocation));
   end;
   FCachedPlainDrivers.Put(TempKey, PlainDriver);
 end;
@@ -474,12 +465,11 @@ var
   TempKey: IZAnyValue;
   TempPlain: IZPlainDriver;
 begin
-  TempKey := TZAnyValue.CreateWithString(Protocol+LibLocation);
+  TempKey := TZAnyValue.CreateWithString(AnsiLowerCase(Protocol+LibLocation));
   Result := FCachedPlainDrivers.Get(TempKey) as IZPlainDriver;
   if Result = nil then
   begin
-    TempKey := nil;
-    TempKey := TZAnyValue.CreateWithString(Protocol);
+    TempKey := TZAnyValue.CreateWithString(AnsiLowerCase(Protocol));
     TempPlain := FCachedPlainDrivers.Get(TempKey) as IZPlainDriver;
     if Assigned(TempPlain) then
     begin
@@ -766,13 +756,13 @@ begin
 end;
 
 procedure TZAbstractDbcConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
-  var Result: RawByteString);
+  out Result: RawByteString);
 begin
   Result := SQLQuotedStr(Buf, Len, AnsiChar(#39));
 end;
 
 procedure TZAbstractDbcConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
-  RawCP: Word; var Result: ZWideString);
+  RawCP: Word; out Result: ZWideString);
 var RawTmp: RawByteString;
 begin
   GetEscapeString(Buf, Len, RawTmp);
@@ -826,13 +816,13 @@ begin
 end;
 
 procedure TZAbstractDbcConnection.GetBinaryEscapeString(Buf: Pointer;
-  Len: LengthInt; var Result: ZWideString);
+  Len: LengthInt; out Result: ZWideString);
 begin
   Result := GetSQLHexWideString(Buf, Len);
 end;
 
 procedure TZAbstractDbcConnection.GetBinaryEscapeString(Buf: Pointer;
-  Len: LengthInt; var Result: RawByteString);
+  Len: LengthInt; out Result: RawByteString);
 begin
   Result := GetSQLHexAnsiString(Buf, Len);
 end;
@@ -860,7 +850,6 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-{$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
 constructor TZAbstractDbcConnection.Create(const Driver: IZDriver; const Url: string;
   const PlainDriver: IZPlainDriver;
   const HostName: string; Port: Integer; const Database: string;
@@ -872,13 +861,11 @@ begin
   Create(TempURL);
   TempURL.Free;
 end;
-{$WARNINGS ON}
 
 {**
   Constructs this object and assignes the main properties.
   @param Url a connection ZURL-class which exports all connection parameters.
 }
-{$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
 constructor TZAbstractDbcConnection.Create(const ZUrl: TZURL);
 begin
   FClosed := True;
@@ -916,7 +903,6 @@ begin
   FTestMode := 0;
   {$ENDIF}
 end;
-{$WARNINGS ON}
 
 {**
   Destroys this object and cleanups the memory.
@@ -1735,7 +1721,7 @@ begin
 end;
 
 procedure TZAbstractDbcConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
-  RawCP: Word; var Result: RawByteString);
+  RawCP: Word; out Result: RawByteString);
 var RawTemp: RawByteString;
 begin
   RawTemp := PUnicodeToRaw(Buf, Len, RawCP);
@@ -1743,7 +1729,7 @@ begin
 end;
 
 procedure TZAbstractDbcConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
-  var Result: ZWideString);
+  out Result: ZWideString);
 var RawTemp: RawByteString;
 begin
   if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then

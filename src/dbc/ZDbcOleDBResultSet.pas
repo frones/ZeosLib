@@ -55,19 +55,13 @@ interface
 
 {$I ZDbc.inc}
 
-{.$DEFINE ENABLE_OLEDB}
-{$IFDEF ENABLE_OLEDB}
-
 uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
   {$ENDIF}
-{$IFNDEF FPC}
-  DateUtils,
-{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
-  {$IFDEF OLD_FPC}ZClasses, {$ENDIF}ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
+  ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
   ZOleDB, ZDbcOleDBUtils,
   ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility;
 
@@ -179,21 +173,13 @@ function GetCurrentResultSet(const RowSet: IRowSet; const Statement: IZStatement
 
 implementation
 
-{$IFOPT R+}
-  {$DEFINE WITH_RANGE_CHECK}
-{$ENDIF}
-
 uses
-  Variants, Math, {$IFDEF WITH_SYSTEM_WIN_COMOBJ}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
+  Variants, Math, {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode, ZClasses;
 
-{$IFOPT R+}
-  {$DEFINE WITH_RANGE_CHECK}
-{$ENDIF}
 var
   LobReadObj: TDBObject;
   LobDBBinding: TDBBinding;
-
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
@@ -644,7 +630,7 @@ begin
     //note FLength is valid only if DBPART_LENGTH was set in Bindings.dwFlags!!!
     FLength := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
   end;
-  {$IFDEF WITH_RANGE_CHECK} {$R+} {$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1945,9 +1931,9 @@ begin
         System.SetString(Result, PPAnsiChar(FData)^,
           FLength);*)
       DBTYPE_WSTR:
-        Result := UnicodeSQLDateToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed{%H-});
+        Result := UnicodeSQLDateToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeSQLDateToDateTime(ZPPWideChar(FData)^, FLength shr 1, ConSettings^.ReadFormatSettings, Failed{%H-});
+        Result := UnicodeSQLDateToDateTime(ZPPWideChar(FData)^, FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
       DBTYPE_DBDATE:
         Result := EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month,
           PDBDate(FData)^.day);
@@ -1995,9 +1981,9 @@ begin
         System.SetString(Result, PPAnsiChar(FData)^,
           FLength);*)
       DBTYPE_WSTR:
-        Result := UnicodeSQLTimeToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed{%H-});
+        Result := UnicodeSQLTimeToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeSQLTimeToDateTime(ZPPWideChar(FData)^, FLength shr 1, ConSettings^.ReadFormatSettings, Failed{%H-});
+        Result := UnicodeSQLTimeToDateTime(ZPPWideChar(FData)^, FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
       DBTYPE_DBDATE: Result := 0;
       DBTYPE_DBTIME:
         Result := EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute,
@@ -2047,9 +2033,9 @@ begin
         System.SetString(Result, PPAnsiChar(FData)^,
           FLength);*)
       DBTYPE_WSTR:
-        Result := UnicodeSQLTimeStampToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed{%H-});
+        Result := UnicodeSQLTimeStampToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeSQLTimeStampToDateTime(ZPPWideChar(FData)^, FLength shr 1, ConSettings^.ReadFormatSettings, Failed{%H-});
+        Result := UnicodeSQLTimeStampToDateTime(ZPPWideChar(FData)^, FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
       DBTYPE_DBDATE:
         Result := EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month,
           PDBDate(FData)^.day);
@@ -2436,13 +2422,4 @@ initialization
   LobDBBinding.wType := DBTYPE_IUNKNOWN;
   LobDBBinding.bPrecision := 0;
   LobDBBinding.bScale := 0;
-//(*
-{$ELSE !ENABLE_OLEDB}
-implementation
-{$ENDIF ENABLE_OLEDB}
-//*)
 end.
-
-
-
-

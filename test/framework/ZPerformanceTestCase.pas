@@ -264,7 +264,7 @@ implementation
 
 uses
   Math,
-  ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils, ZClasses, ZDbcUtils;
+  ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils, ZClasses;
 
 { TZPerformanceSQLTestCase }
 
@@ -745,7 +745,6 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestInsert;
 var
-  Bts: TBytes;
   Count: Integer;
 begin
   CleanupTable(FPerformanceTable);
@@ -753,11 +752,8 @@ begin
 
   Count := Min(MaxPerformanceLobSize, GetRecordCount);
   FAsciiStream := TStringStream.Create(RawByteString(RandomStr(Count)));
-  FUnicodeStream := WideStringStream(ZWideString(RandomStr(Count)));
-  FBinaryStream := TMemoryStream.Create;
-  Bts := RandomBts(Count);
-  TMemoryStream(FBinaryStream).Write(Bts, Count);
-  FBinaryStream.Position := 0;
+  FUnicodeStream := StreamFromData(ZWideString(RandomStr(Count)));
+  FBinaryStream := StreamFromData(RandomBts(Count));
 end;
 
 {**

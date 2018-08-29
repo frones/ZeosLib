@@ -61,7 +61,7 @@ uses
 {$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFDEF OLD_FPC}ZClasses, {$ENDIF}ZSysUtils, ZDbcIntfs,
+  ZSysUtils, ZDbcIntfs,
   ZCompatibility, ZDbcResultSet, ZFastCode, ZDbcResultsetMetadata, ZDbcStatement,
   ZPlainODBCDriver, ZDbcODBCCon;
 
@@ -109,7 +109,7 @@ type
     constructor Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
       ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
       ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean = True); virtual;
-    constructor CreateForMetadataCall(var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC;
+    constructor CreateForMetadataCall(out StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC;
       {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection); virtual; //fpc skope for (GetConneaction as IZODBCConnection) is different to dephi and crashs
     procedure Open; override;
     procedure Close; override;
@@ -412,7 +412,7 @@ begin
 end;
 
 constructor TAbstractODBCResultSet.CreateForMetadataCall(
-  var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection);
+  out StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection);
 begin
   StmtHandle := nil;
   Create(nil, StmtHandle, ConnectionHandle, '', Connection,
@@ -607,7 +607,7 @@ begin
       stString, stUnicodeString: begin
           InternalDecTrailingSpaces(ColumnIndex);
           if fIsUnicodeDriver then
-            Result := UnicodeSQLDateToDateTime(fColDataPtr, fStrLen_or_Ind shr 1, ConSettings^.ReadFormatSettings, Failed{%H-})
+            Result := UnicodeSQLDateToDateTime(fColDataPtr, fStrLen_or_Ind shr 1, ConSettings^.ReadFormatSettings, Failed)
           else
             Result := RawSQLDateToDateTime(fColDataPtr, fStrLen_or_Ind, ConSettings^.ReadFormatSettings, Failed);
         end;
@@ -1051,7 +1051,7 @@ begin
       stString, stUnicodeString: begin
           InternalDecTrailingSpaces(ColumnIndex);
           if fIsUnicodeDriver then
-            Result := UnicodeSQLTimeToDateTime(fColDataPtr, fStrLen_or_Ind shr 1, ConSettings^.ReadFormatSettings, Failed{%H-})
+            Result := UnicodeSQLTimeToDateTime(fColDataPtr, fStrLen_or_Ind shr 1, ConSettings^.ReadFormatSettings, Failed)
           else
             Result := RawSQLTimeToDateTime(fColDataPtr, fStrLen_or_Ind, ConSettings^.ReadFormatSettings, Failed);
         end;
@@ -1100,7 +1100,7 @@ begin
       stString, stUnicodeString: begin
           InternalDecTrailingSpaces(ColumnIndex);
           if fIsUnicodeDriver then
-            Result := UnicodeSQLTimeStampToDateTime(fColDataPtr, fStrLen_or_Ind shr 1, ConSettings^.ReadFormatSettings, Failed{%H-})
+            Result := UnicodeSQLTimeStampToDateTime(fColDataPtr, fStrLen_or_Ind shr 1, ConSettings^.ReadFormatSettings, Failed)
           else
             Result := RawSQLTimeStampToDateTime(fColDataPtr, fStrLen_or_Ind, ConSettings^.ReadFormatSettings, Failed);
         end;
@@ -1308,7 +1308,7 @@ begin
     if not fBoundColumns[ColumnIndex] then //some drivers allow GetData in mixed order so check it!
       if Ord(fSQLTypes[ColumnIndex]) < Ord(stAsciiStream) then //move data to buffers
         CheckStmtError(fPlainDriver.GetData(fPHSTMT^, ColumnIndex+1, fODBC_CTypes[ColumnIndex],
-          {%H-}Pointer({%H-}NativeUInt(StrLen_or_IndPtr)+SizeOf(SQLLEN)), fColumnBuffSizes[ColumnIndex], StrLen_or_IndPtr))
+          SQLPOINTER(NativeUInt(StrLen_or_IndPtr)+SizeOf(SQLLEN)), fColumnBuffSizes[ColumnIndex], StrLen_or_IndPtr))
       else begin
         { check out length of lob }
         CheckStmtError(fPlainDriver.GetData(fPHSTMT^, ColumnIndex+1,
@@ -1389,7 +1389,7 @@ var
   bufSQLLEN: SQLLEN;
   ColumnNumber: SQLUSMALLINT;
   ColumnInfo: TZColumnInfo;
-  RowSize: Integer;
+  RowSize: NativeUInt;
   LobsInResult: Boolean;
   StrBuf: TByteDynArray;
   function NoStreamedColFollows: Boolean;
@@ -1514,9 +1514,9 @@ begin
       end;
     end;
     //GetData don't work with multiple fetched rows for most drivers
-    fMaxFetchableRows := Max(1, (fZBufferSize div RowSize)*Ord(not LobsInResult)); //calculate max count of rows for a single fetch call
+    fMaxFetchableRows := Max(1, (Cardinal(fZBufferSize) div RowSize)*Byte(Ord(not LobsInResult))); //calculate max count of rows for a single fetch call
     if fMaxFetchableRows > 1 then begin
-      CheckStmtError(fPlainDriver.SetStmtAttr(fPHSTMT^, SQL_ATTR_ROW_ARRAY_SIZE, {%H-}Pointer(fMaxFetchableRows), 0));
+      CheckStmtError(fPlainDriver.SetStmtAttr(fPHSTMT^, SQL_ATTR_ROW_ARRAY_SIZE, SQLPOINTER(fMaxFetchableRows), 0));
       CheckStmtError(fPlainDriver.SetStmtAttr(fPHSTMT^, SQL_ATTR_ROWS_FETCHED_PTR, @fFetchedRowCount, 0));
     end;
     fFirstGetDataIndex := fColumnCount;

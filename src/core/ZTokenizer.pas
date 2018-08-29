@@ -107,7 +107,7 @@ type
     procedure Grow;
     procedure SetCapacity(NewCapacity: Integer);
     procedure SetCount(NewCount: Integer);
-    {$IFOPT R+}
+    {$IFNDEF DISABLE_CHECKING}
     class procedure Error(const Msg: string; Data: Integer);
     {$ENDIF}
   public
@@ -639,15 +639,13 @@ end;
   @param QuoteChar a string quote character.
   @returns an decoded string.
 }
-{$WARNINGS OFF} //suppress deprecated waring
 function TZQuoteState.DecodeString(const Value: string; QuoteChar: Char): string;
 var Token: TZToken;
 begin
   Token.P := Pointer(Value);
   Token.L := Length(Value);
-  DecodeToken(Token, QuoteChar);
+  Result := DecodeToken(Token, QuoteChar);
 end;
-{$WARNINGS ON}
 
 { TZCommentState }
 
@@ -1447,7 +1445,7 @@ var
   P: PChar;
 begin
   P := nil;
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$R-}
   for i := iStart to iEnd do
     Inc(P, FTokens^[I].L);
   SetLength(Result, P-PChar(nil));
@@ -1481,13 +1479,13 @@ end;
 }
 procedure TZTokenList.Delete(Index: Integer);
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
+  {$ENDIF}
   Dec(FCount);
   if Index < FCount then begin
-    {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+    {$R-}
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FTokens^[Index + 1], FTokens^[Index],
       (FCount - Index) * SizeOf(TZToken));
     FillChar(FTokens^[FCount], SizeOf(TZToken), #0);
@@ -1528,20 +1526,13 @@ begin
   else Result := False;
 end;
 
-{$IFOPT R+}
+{$IFNDEF DISABLE_CHECKING}
 class procedure TZTokenList.Error(const Msg: string; Data: Integer);
-{$IFNDEF FPC}
-  function ReturnAddr: Pointer;
-  asm
-          MOV     EAX,[EBP+4]
-  end;
-{$ENDIF}
-
 begin
   {$IFDEF FPC}
   raise EListError.CreateFmt(Msg,[Data]) at get_caller_addr(get_frame);
   {$ELSE}
-  raise EListError.CreateFmt(Msg, [Data]) at ReturnAddr;
+  raise EListError.CreateFmt(Msg, [Data]) at ReturnAddress
   {$ENDIF}
 end;
 {$ENDIF}
@@ -1570,11 +1561,11 @@ end;
 }
 function TZTokenList.GetToken(Index: Integer): PZToken;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$ENDIF}
+  {$R-}
   Result := @FTokens^[Index];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
@@ -1602,14 +1593,14 @@ end;
 }
 procedure TZTokenList.Insert(Index: Integer; const Item: TZToken);
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index > FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
+  {$ENDIF}
   if FCount = FCapacity then
     Grow;
   if Index < FCount then
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$R-}
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FTokens^[Index], FTokens^[Index + 1],
       (FCount - Index) * SizeOf(TZToken));
   Move(Item.P, FTokens^[Index].P, SizeOf(TZToken));
@@ -1619,11 +1610,11 @@ end;
 
 procedure TZTokenList.Put(Index: Integer; const Item: TZToken);
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$ENDIF}
+  {$R-}
   FTokens^[Index] := Item;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
@@ -1634,14 +1625,14 @@ end;
 }
 procedure TZTokenList.SetCapacity(NewCapacity: Integer);
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (NewCapacity < FCount) or (NewCapacity > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
     Error(SListCapacityError, NewCapacity);
-{$ENDIF}
+  {$ENDIF}
   if NewCapacity <> FCapacity then begin
     ReallocMem(FTokens, NewCapacity * SizeOf(TZToken));
     if NewCapacity > FCapacity then
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$R-}
       FillChar(FTokens^[FCount], (NewCapacity - FCapacity) * SizeOf(TZToken), #0);
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     FCapacity := NewCapacity;
@@ -1654,10 +1645,10 @@ end;
 }
 procedure TZTokenList.SetCount(NewCount: Integer);
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (NewCount < 0) or (NewCount > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
     Error(SListCountError, NewCount);
-{$ENDIF}
+  {$ENDIF}
   if NewCount > FCapacity then
     SetCapacity(NewCount);
   FCount := NewCount;
@@ -1731,7 +1722,7 @@ var
   P: PChar;
 begin
   P := nil;
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$R-}
   for i := 0 to FCount - 1 do
     Inc(P, FTokens^[I].L);
   SetLength(Result, P-PChar(Nil));

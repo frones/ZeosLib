@@ -238,7 +238,7 @@ type
     FCapacity: Integer;
     FConSettings: PZConSettings;
     procedure Grow;
-    {$IFOPT R+}
+    {$IFNDEF DISABLE_CHECKING}
     class procedure Error(const Msg: string; Data: Integer);
     {$ENDIF}
     function AquireBuffer(Index: Integer; SQLType: TZSQLType; BindType: TZBindType): PZBindValue; {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -292,7 +292,6 @@ type
   {** Implements Abstract Prepared SQL Statement. }
 
   { TZAbstractPreparedStatement }
-  {$WARNINGS OFF}
   TZAbstractPreparedStatement2 = class(TZAbstractStatement, IImmediatelyReleasable)
   private
     FInitialArrayCount: ArrayLenInt;
@@ -408,20 +407,20 @@ type
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); virtual;
 
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
-      ParamType: TZParamType; const Name: String = ''; {%H-}PrecisionOrSize: LengthInt = 0;
-      {%H-}Scale: LengthInt = 0); virtual;
+      ParamType: TZParamType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
+      Scale: LengthInt = 0); virtual;
 
-    function IsNull({%H-}Index: Integer): Boolean; virtual;
+    function IsNull(Index: Integer): Boolean; virtual;
     procedure GetBoolean(Index: Integer; out Result: Boolean); overload; virtual;
     procedure GetOrdinal(Index: Integer; out Result: Int64); overload; virtual;
     procedure GetOrdinal(Index: Integer; out Result: UInt64); overload; virtual;
     procedure GetCurrency(Index: Integer; out Result: Currency); overload; virtual;
     procedure GetDouble(Index: Integer; out Result: Double); overload; virtual;
-    procedure GetBigDecimal(Index: Integer; var Result: TZBCD); overload; virtual;
+    procedure GetBigDecimal(Index: Integer; out Result: TZBCD); overload; virtual;
     procedure GetBytes(Index: Integer; out Buf: Pointer; out Len: LengthInt); overload; virtual;
-    procedure GetDateTime(Index: Integer; var Result: TDateTime); virtual;
-    procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); overload; virtual;
-    procedure GetLob(Index: Integer; var Result: IZBlob); virtual;
+    procedure GetDateTime(Index: Integer; out Result: TDateTime); virtual;
+    procedure GetTimeStamp(Index: Integer; out Result: TZTimeStamp); overload; virtual;
+    procedure GetLob(Index: Integer; out Result: IZBlob); virtual;
     procedure GetPChar(Index: Integer; out Buf: Pointer; out Len: LengthInt; CodePage: Word); overload; virtual;
 
     procedure ClearParameters; virtual;
@@ -433,7 +432,6 @@ type
 
     property MinExecCount2Prepare: Integer read FMinExecCount2Prepare write FMinExecCount2Prepare;
   end;
-  {$WARNINGS ON}
 
   TZRawPreparedStatement = class(TZAbstractPreparedStatement2)
   protected
@@ -529,14 +527,14 @@ type
     procedure GetOrdinal(Index: Integer; out Result: UInt64); override;
     procedure GetCurrency(Index: Integer; out Result: Currency); override;
     procedure GetDouble(Index: Integer; out Result: Double); override;
-    procedure GetBigDecimal(Index: Integer; var Result: TZBCD); override;
+    procedure GetBigDecimal(Index: Integer; out Result: TZBCD); override;
     procedure GetBytes(Index: Integer; out Buf: Pointer; out Len: LengthInt); override;
-    procedure GetDateTime(Index: Integer; var Result: TDateTime); override;
-    procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); override;
-    procedure GetLob(Index: Integer; var Result: IZBlob); override;
+    procedure GetDateTime(Index: Integer; out Result: TDateTime); override;
+    procedure GetTimeStamp(Index: Integer; out Result: TZTimeStamp); override;
+    procedure GetLob(Index: Integer; out Result: IZBlob); override;
     procedure GetPChar(Index: Integer; out Buf: Pointer; out Len: LengthInt; CodePage: Word); override;
   public //value getter funcs
-    function IsNull({%H-}ParameterIndex: Integer): Boolean; override;
+    function IsNull(ParameterIndex: Integer): Boolean; override;
 
     function GetPChar(ParameterIndex: Integer): PChar; overload;
     function GetBoolean(ParameterIndex: Integer): Boolean; overload;
@@ -570,7 +568,7 @@ type
     function GetLastResultSet: IZResultSet; virtual;
     function BOR: Boolean; virtual;
     function EOR: Boolean; virtual;
-    function GetResultSetByIndex(const {%H-}Index: Integer): IZResultSet; virtual;
+    function GetResultSetByIndex(const Index: Integer): IZResultSet; virtual;
     function GetResultSetCount: Integer; virtual;
 
     procedure RegisterOutParameter(ParameterIndex: Integer;
@@ -758,7 +756,7 @@ type
   end;
 
   {** Implements Abstract Callable SQL statement. }
-  {$WARNINGS OFF}
+
   TZAbstractCallableStatement = class(TZAbstractPreparedStatement,
     IZCallableStatement)
   private
@@ -802,7 +800,7 @@ type
     function GetLastResultSet: IZResultSet; virtual;
     function BOR: Boolean; virtual;
     function EOR: Boolean; virtual;
-    function GetResultSetByIndex(const {%H-}Index: Integer): IZResultSet; virtual;
+    function GetResultSetByIndex(const Index: Integer): IZResultSet; virtual;
     function GetResultSetCount: Integer; virtual;
 
     procedure RegisterOutParameter(ParameterIndex: Integer;
@@ -811,8 +809,8 @@ type
     function WasNull: Boolean; virtual;// deprecated;
 
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
-      ParamType: TZParamType; const Name: String = ''; {%H-}PrecisionOrSize: LengthInt = 0;
-      {%H-}Scale: LengthInt = 0); virtual;
+      ParamType: TZParamType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
+      Scale: LengthInt = 0); virtual;
 
     function IsNull(ParameterIndex: Integer): Boolean; virtual;
     function GetPChar(ParameterIndex: Integer): PChar; virtual;
@@ -844,7 +842,6 @@ type
     function GetTimestamp(ParameterIndex: Integer): TDateTime; virtual;
     function GetValue(ParameterIndex: Integer): TZVariant; virtual;
   end;
-  {$WARNINGS ON}
 
   {** Implements a real Prepared Callable SQL Statement. }
   TZAbstractPreparedCallableStatement = CLass(TZAbstractCallableStatement)
@@ -2097,7 +2094,6 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     query; never <code>null</code>
 }
-{$WARNINGS OFF}
 function TZAbstractPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   { Logging Execution }
@@ -2105,7 +2101,7 @@ begin
     DriverManager.LogMessage(lcExecPrepStmt,Self);
   Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
 end;
-{$WARNINGS ON}
+
 {**
   Executes the SQL INSERT, UPDATE or DELETE statement
   in this <code>PreparedStatement</code> object.
@@ -2116,14 +2112,14 @@ end;
   @return either the row count for INSERT, UPDATE or DELETE statements;
   or 0 for SQL statements that return nothing
 }
-{$WARNINGS OFF}
 function TZAbstractPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   { Logging Execution }
   DriverManager.LogMessage(lcExecPrepStmt,Self);
   Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
+  Result := -1;
 end;
-{$WARNINGS ON}
+
 {**
   Sets the designated parameter the default SQL value.
   <P><B>Note:</B> You must specify the default value.
@@ -3153,10 +3149,12 @@ end;
   @param Index the index of the Resultset
   @result <code>IZResultSet</code> of the Index or nil.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // encoding unknown - parameter not used intentionally
 function TZAbstractCallableStatement.GetResultSetByIndex(const Index: Integer): IZResultSet;
 begin
   Result := nil;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Returns the Count of retrived ResultSets.
@@ -3187,18 +3185,16 @@ end;
   or <code>DECIMAL</code>, the version of
   <code>registerOutParameter</code> that accepts a scale value should be used.
 }
-{$WARNINGS OFF}
 procedure TZAbstractCallableStatement.RegisterOutParameter(ParameterIndex,
   SQLType: Integer);
 begin
   SetOutParamCount(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
   OutParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TZSQLType(SQLType);
 end;
-{$WARNINGS ON}
 
 procedure TZAbstractCallableStatement.RegisterParameter(ParameterIndex: Integer;
-  SQLType: TZSQLType; ParamType: TZParamType; const Name: String = '';
-  {%H-}PrecisionOrSize: LengthInt = 0; {%H-}Scale: LengthInt = 0);
+  SQLType: TZSQLType; ParamType: TZParamType; const Name: String;
+  PrecisionOrSize: LengthInt; Scale: LengthInt);
 begin
   if ParamType in [zptOutput..zptResult] then begin
     SetOutParamCount(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
@@ -3213,7 +3209,6 @@ begin
   if not FHasOutParameter then FHasOutParameter := ParamType in [zptOutput, zptInputOutput];
 end;
 
-{$WARNINGS OFF}
 procedure TZAbstractCallableStatement.RegisterParamType(ParameterIndex,
   ParamType: Integer);
 begin
@@ -3224,7 +3219,6 @@ begin
   if not FIsFunction then FIsFunction := ParamType = 4; //ptResult
   if not FHasOutParameter then FHasOutParameter := ParamType in [2,3]; //ptOutput, ptInputOutput
 end;
-{$WARNINGS ON}
 
 {**
   Gets a output parameter value by it's index.
@@ -3904,13 +3898,13 @@ end;
 
 procedure TZBindList.Delete(Index: Integer);
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
+  {$ENDIF}
   ClearValue(Index);
   Dec(FCount);
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$R-}
   if Index < FCount then
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FValues^[Index + 1], FValues^[Index],
       (FCount - Index) * SizeOf(TZBindValue));
@@ -3923,20 +3917,13 @@ begin
   inherited;
 end;
 
-{$IFOPT R+}
+{$IFNDEF DISABLE_CHECKING}
 class procedure TZBindList.Error(const Msg: string; Data: Integer);
-{$IFNDEF FPC}
-  function ReturnAddr: Pointer;
-  asm
-          MOV     EAX,[EBP+4]
-  end;
-{$ENDIF}
-
 begin
   {$IFDEF FPC}
   raise EListError.CreateFmt(Msg,[Data]) at get_caller_addr(get_frame);
   {$ELSE}
-  raise EListError.CreateFmt(Msg, [Data]) at ReturnAddr;
+  raise EListError.CreateFmt(Msg, [Data]) at ReturnAddress;
   {$ENDIF}
 end;
 {$ENDIF}
@@ -3950,22 +3937,22 @@ end;
 
 function TZBindList.Get(Index: Integer): PZBindValue;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$ENDIF}
+  {$R-}
   Result := @FValues^[Index];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 function TZBindList.Get8Byte(Index: Integer): P8Bytes;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$ENDIF}
+  {$R-}
   if FValues^[Index].BindType = zbt8Byte
   then Result := {$IFDEF CPU64}@{$ENDIF}FValues^[Index].Value
   else raise EZSQLException.Create(SUnsupportedDataType);
@@ -3974,11 +3961,11 @@ end;
 
 function TZBindList.GetArray(Index: Integer): PZArray;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$ENDIF}
+  {$R-}
   if FValues^[Index].BindType = zbtArray
   then Result := FValues^[Index].Value
   else raise EZSQLException.Create(SUnsupportedDataType);
@@ -3987,33 +3974,33 @@ end;
 
 function TZBindList.GetBindType(Index: Integer): TZBindType;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$ENDIF}
+  {$R-}
   Result := FValues^[Index].BindType
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 function TZBindList.GetSQLType(Index: Integer): TZSQLType;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$ENDIF}
+  {$R-}
   Result := FValues^[Index].SQLType
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 function TZBindList.GetType(Index: Integer): TZParamType;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
-{$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$ENDIF}
+  {$R-}
   Result := FValues^[Index].ParamType
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
@@ -4089,13 +4076,13 @@ end;
 function TZBindList.AquireBuffer(Index: Integer; SQLType: TZSQLType;
   BindType: TZBindType): PZBindValue;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (Index < 0) or (Index > High(Word)) then
     Error(SListIndexError, Index);
-{$ENDIF}
+  {$ENDIF}
   while (Index+1 > FCapacity) do
     Grow;
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$R-}
   if (FValues^[Index].BindType <> zbtNull) and (FValues^[Index].BindType <> BindType) then
     ClearValue(Index);
   if Index+1 > FCount then
@@ -4197,7 +4184,7 @@ end;
 
 procedure TZBindList.Put(Index: Integer; Value: Boolean);
 begin
-  {%H-}NativeUInt(AquireBuffer(Index, stBoolean, zbtPointer).Value) := Ord(Value);
+  AquireBuffer(Index, stBoolean, zbtPointer).Value := Pointer(Ord(Value));
 end;
 
 procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType; _8Byte: P8Bytes);
@@ -4256,33 +4243,33 @@ procedure TZBindList.SetCapacity(NewCapacity: Integer);
 var
   I: Integer;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (NewCapacity < 0) or (NewCapacity > High(Word)) then
     Error(SListCapacityError, NewCapacity);
-{$ENDIF}
+  {$ENDIF}
   if NewCapacity < FCount then begin
     for I := FCount - 1 downto NewCapacity do
       ClearValue(I);
     FCount := NewCapacity;
   end;
-  {$IFDEF RangeCheckEnabled} {$R-} {$ENDIF}
+  {$R-}
   if NewCapacity <> FCapacity then begin
     ReallocMem(FValues, NewCapacity * SizeOf(TZBindValue));
     if NewCapacity > FCapacity then
       FillChar(FValues^[FCapacity], (NewCapacity - FCapacity) * SizeOf(TZBindValue), #0);
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     FCapacity := NewCapacity;
   end;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 procedure TZBindList.SetCount(NewCount: Integer);
 var
   I: Integer;
 begin
-{$IFOPT R+}
+  {$IFNDEF DISABLE_CHECKING}
   if (NewCount < 0) or (NewCount > High(Word)) then
     Error(SListCountError, NewCount);
-{$ENDIF}
+  {$ENDIF}
   if NewCount > FCapacity then
     SetCapacity(NewCount);
   if NewCount < FCount then
@@ -4695,8 +4682,10 @@ begin
   Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally
+
 procedure TZAbstractPreparedStatement2.GetBigDecimal(Index: Integer;
-  var Result: TZBCD);
+  out Result: TZBCD);
 begin
   AlignParamterIndex2ResultSetIndex(Index);
   RaiseUnsupportedException
@@ -4734,7 +4723,7 @@ begin
 end;
 
 procedure TZAbstractPreparedStatement2.GetDateTime(Index: Integer;
-  var Result: TDateTime);
+  out Result: TDateTime);
 begin
   Result := IZResultSet(FOpenResultSet).GetTimestamp(AlignParamterIndex2ResultSetIndex(Index));
   if BindList.ParamTypes[Index] = zptInputOutput then
@@ -4792,7 +4781,7 @@ end;
     the specified column
 }
 procedure TZAbstractPreparedStatement2.GetLob(Index: Integer;
-  var Result: IZBlob);
+  out Result: IZBlob);
 begin
   Result := IZResultSet(FOpenResultSet).GetBlob(AlignParamterIndex2ResultSetIndex(Index));
   if BindList.ParamTypes[Index] = zptInputOutput then
@@ -4903,11 +4892,13 @@ begin
 end;
 
 procedure TZAbstractPreparedStatement2.GetTimeStamp(Index: Integer;
-  var Result: TZTimeStamp);
+  out Result: TZTimeStamp);
 begin
   AlignParamterIndex2ResultSetIndex(Index);
   RaiseUnsupportedException
 end;
+
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Indicates whether or not the specified OUT parameter read had the value of
@@ -4988,7 +4979,8 @@ var BindValue: PZBindValue;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   if BindList.Count < ParameterIndex+1 then
-    BindList.SetCount(ParameterIndex+1);
+    SetParamCount(ParameterIndex+1);
+    //BindList.SetCount(ParameterIndex+1);
   BindValue := BindList[ParameterIndex];
   BindValue^.ParamType := ParamType;
   BindValue^.SQLType   := SQLType;
@@ -5544,7 +5536,7 @@ end;
 }
 procedure TZAbstractPreparedStatement2.UnPrepareInParameters;
 begin
-  FBindList.Clear;
+  SetBindCapacity(0);
 end;
 
 procedure TZAbstractPreparedStatement2.ValidateArraySizeAndType(
@@ -6112,6 +6104,8 @@ begin
   Result := False;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally
+
 function TZAbstractCallableStatement2.Execute(const SQL: ZWideString): Boolean;
 begin
   Result := False;
@@ -6189,7 +6183,7 @@ begin
 end;
 
 procedure TZAbstractCallableStatement2.GetBigDecimal(Index: Integer;
-  var Result: TZBCD);
+  out Result: TZBCD);
 begin
   RaiseUnsupportedException
 end;
@@ -6287,7 +6281,7 @@ begin
 end;
 
 procedure TZAbstractCallableStatement2.GetDateTime(Index: Integer;
-  var Result: TDateTime);
+  out Result: TDateTime);
 begin
   if FExecStatements[FCallExecKind] <> nil then begin
     FExecStatements[FCallExecKind].GetDateTime(Index, Result);
@@ -6363,7 +6357,7 @@ begin
 end;
 
 procedure TZAbstractCallableStatement2.GetLob(Index: Integer;
-  var Result: IZBlob);
+  out Result: IZBlob);
 begin
   if FExecStatements[FCallExecKind] <> nil then begin
     FExecStatements[FCallExecKind].GetLob(Index, Result);
@@ -6419,6 +6413,7 @@ begin
   end;
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure TZAbstractCallableStatement2.GetOrdinal(Index: Integer;
   out Result: UInt64);
 begin
@@ -6437,6 +6432,7 @@ begin
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Retrieves the value of a JDBC <code>CHAR</code>, <code>VARCHAR</code>,
@@ -6547,7 +6543,7 @@ begin
 end;
 
 procedure TZAbstractCallableStatement2.GetTimeStamp(Index: Integer;
-  var Result: TZTimeStamp);
+  out Result: TZTimeStamp);
 begin
   RaiseUnsupportedException
 end;
@@ -6655,6 +6651,8 @@ begin
   GetOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, U);
   Result := Word(U);
 end;
+
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZAbstractCallableStatement2.IsFunction: Boolean;
 var I: Integer;

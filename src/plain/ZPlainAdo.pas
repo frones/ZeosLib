@@ -83,10 +83,8 @@ unit ZPlainAdo;
 interface
 
 {$I ZPlain.inc}
-{$IFDEF ENABLE_ADO}
 
-uses Windows, Classes, ActiveX;
-
+uses Windows, Classes, ActiveX, {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF};
 
 // *********************************************************************//
 // GUIDS declared in the TypeLibrary. Following prefixes are used:        
@@ -1709,11 +1707,7 @@ type
     class function CreateRemote(const MachineName: WideString): _Parameter;
   end;
 
-{$ENDIF ENABLE_ADO}
 implementation
-{$IFDEF ENABLE_ADO}
-
-uses {$IFDEF WITH_SYSTEM_WIN_COMOBJ}System.Win.ComObj{$ELSE}ComObj{$ENDIF};
 
 class function CoConnection.Create: Connection15;
 begin
@@ -1775,6 +1769,4 @@ begin
   Result := CreateRemoteComObject(MachineName, CLASS_Parameter) as _Parameter;
 end;
 
-{$ENDIF ENABLE_ADO}
 end.
-

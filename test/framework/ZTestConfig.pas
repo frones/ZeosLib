@@ -464,24 +464,62 @@ end;
   this function should return 'core;parsesql'
 }
 {$IFNDEF FPC}
-function GetCommandLineSwitchValue(ShortSwitch: String; Longswitch: String):String;
+function GetCommandLineSwitchValue(ShortSwitch: String; LongSwitch: String; IgnoreCasse: Boolean = true):String;
 var
   i: integer;
+  expectedShortSwitch, expectedLongSwitch, currentSwitch: String;
 begin
   Result := '';
-  for i := 1 to ParamCount-1 do // Don't check the last one, as we can't return the next param then!!
+  if IgnoreCasse then begin
+    expectedLongSwitch := LowerCase(Longswitch);
+    expectedShortSwitch := LowerCase(ShortSwitch);
+  end else begin
+    expectedLongSwitch := Longswitch;
+    expectedShortSwitch := ShortSwitch;
+  end;
+
+  for i := 1 to ParamCount do // Don't check the last one, as we can't return the next param then!!
   begin
-    If (ParamStr(i)[1]='-') then
-      if (CompareText(ParamStr(i),'-'+ShortSwitch) = 0) or
-         (CompareText(ParamStr(i),'-'+LongSwitch) = 0) then
+    if IgnoreCasse then currentSwitch := LowerCase(ParamStr(i)) else currentSwitch := ParamStr(i);
+    
+    If (currentSwitch[1]='-') then
+      if ((CompareText(currentSwitch,'-'+expectedShortSwitch) = 0) or
+         (CompareText(currentSwitch,'-'+expectedLongSwitch) = 0)) and
+         (i < ParamCount) then
         Result := ParamStr(i+1);
-    If (ParamStr(i)[1]='/') then
-      if (CompareText(ParamStr(i),'/'+ShortSwitch) = 0) or
-         (CompareText(ParamStr(i),'/'+LongSwitch) = 0) then
+    If (currentSwitch[1]='/') then
+      if ((CompareText(currentSwitch,'/'+expectedShortSwitch) = 0) or
+         (CompareText(currentSwitch,'/'+expectedLongSwitch) = 0)) and
+         (i < ParamCount) then
         Result := ParamStr(i+1);
+    if StartsWith(currentSwitch, '--'+expectedLongSwitch+'=') then
+      Result := Copy(ParamStr(i), Length('--'+expectedLongSwitch+'=') + 1, Length(ParamStr(i)));
   end;
 end;
 {$ENDIF}
+
+function FindCmdLineSwitch(Switch: String; IgnoreCase: Boolean): boolean;
+var
+  expectedSwitch, currentSwitch: String;
+  x: Integer;
+begin
+  Result := false;
+  if Length(Switch) > 0 then begin
+    if IgnoreCase then expectedSwitch := LowerCase(Switch) else expectedSwitch := Switch;
+
+    for x := 1 to ParamCount do begin
+      if IgnoreCase then currentSwitch := LowerCase(ParamStr(x)) else currentSwitch := ParamStr(x);
+      if (currentSwitch = '--' + expectedSwitch) or
+        StartsWith(currentSwitch, '--' + expectedSwitch + '=')
+      then begin
+        Result := true;
+        break;
+      end;
+    end;
+  end;
+
+  if not Result then Result := SysUtils.FindCmdLineSwitch(Switch, IgnoreCase);
+end;
 
 {**
   Convert Command Line Switches to aa compiler independent global record
@@ -496,21 +534,21 @@ begin
   CommandLineSwitches.batch := Application.HasOption('b', 'batch');
   CommandLineSwitches.xml := Application.HasOption('x', 'xml');
   if CommandLineSwitches.xml then
-    CommandLineSwitches.XmlFileName := Application.GetOptionValue('xml');
+    CommandLineSwitches.XmlFileName := Application.GetOptionValue('x', 'xml');
   CommandLineSwitches.norebuild := Application.HasOption('n', 'norebuild');
   CommandLineSwitches.memcheck := Application.HasOption('memcheck');
   if CommandLineSwitches.memcheck then
     CommandLineSwitches.memcheck_file := Application.GetOptionValue('memcheck')
   else
     CommandLineSwitches.memcheck_file := '';
-  CommandLineSwitches.suite := Application.HasOption('suite');
+  CommandLineSwitches.suite := Application.HasOption('s', 'suite');
   If CommandLineSwitches.suite then
     CommandLineSwitches.suiteitems := SplitStringToArray(Application.GetOptionValue('suite'),LIST_DELIMITERS);
   CommandLineSwitches.sqlmonitor := Application.HasOption('m','monitor');
   If CommandLineSwitches.sqlmonitor then
     CommandLineSwitches.sqlmonitorfile := Application.GetOptionValue('m', 'monitor');
   if Application.HasOption('suitename') then
-    CommandLineSwitches.suitename := Application.GetOptionValue('m', 'monitor');
+    CommandLineSwitches.suitename := Application.GetOptionValue('suitename');
   {$ELSE}
   CommandLineSwitches.help := (FindCmdLineSwitch('H',true) or FindCmdLineSwitch('Help',true));
   CommandLineSwitches.list := (FindCmdLineSwitch('L',true) or FindCmdLineSwitch('List',true));

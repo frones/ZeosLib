@@ -109,7 +109,7 @@ type
     procedure SetParamCheck(Value: Boolean);
     function GetParamChar: Char;
     procedure SetParamChar(Value: Char);
-    procedure UpdateSQLStrings(Sender: TObject);
+    procedure UpdateSQLStrings({%H-}Sender: TObject);
   protected
     procedure CheckConnected;
     function DoOnError(StatementIndex: Integer; E: Exception):

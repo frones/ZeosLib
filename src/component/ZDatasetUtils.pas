@@ -267,7 +267,7 @@ function DefineFieldIndices(const FieldsLookupTable: TPointerDynArray;
   and objectname.
 }
 procedure SplitQualifiedObjectName(const QualifiedName: string;
-  var Catalog, Schema, ObjectName: string); overload;
+  out Catalog, Schema, ObjectName: string); overload;
 
 {**
   Splits up a qualified object name into pieces. Catalog, schema
@@ -275,7 +275,7 @@ procedure SplitQualifiedObjectName(const QualifiedName: string;
 }
 procedure SplitQualifiedObjectName(const QualifiedName: string;
   const SupportsCatalogs, SupportsSchemas: Boolean;
-  var Catalog, Schema, ObjectName: string); overload;
+  out Catalog, Schema, ObjectName: string); overload;
 
 {**
   Assigns a Statement value from a TParam
@@ -294,7 +294,7 @@ implementation
 
 uses
   ZFastCode, ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset,
-  ZDbcUtils, ZSysUtils, ZDbcResultSet;
+  ZSysUtils, ZDbcResultSet;
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -861,9 +861,6 @@ end;
   @param ResultSet an initial result set object.
   @param Variables a list of variables.
 }
-{$IFDEF FPC}
-  {$HINTS OFF} //Temp seems not to be init...
-{$ENDIF}
 procedure CopyDataFieldsToVars(const Fields: TObjectDynArray;
   const ResultSet: IZResultSet; const Variables: IZVariablesList);
 var
@@ -920,9 +917,6 @@ begin
       Variables.Values[I] := NullVariant;
   end;
 end;
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 
 {**
   Compares row field values with the given ones.
@@ -1337,7 +1331,7 @@ begin
       {$IF not defined(cpui386) and defined(FPC)}
       TimeStamp := MSecsToTimeStamp(System.Trunc(Int(TDateTime(Buffer^))));
       {$ELSE}
-        TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^){%H-});
+        TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^));
       {$IFEND}
     except
       TimeStamp.Time := 0;
@@ -1575,7 +1569,7 @@ end;
   and objectname.
 }
 procedure SplitQualifiedObjectName(const QualifiedName: string;
-  var Catalog, Schema, ObjectName: string);
+  out Catalog, Schema, ObjectName: string);
 
 {$IFDEF OLDFPC}
 function ExtractStrings(Separators, WhiteSpace: TSysCharSet; Content: PChar;
@@ -1677,7 +1671,7 @@ end;
 }
 procedure SplitQualifiedObjectName(const QualifiedName: string;
   const SupportsCatalogs, SupportsSchemas: Boolean;
-  var Catalog, Schema, ObjectName: string);
+  out Catalog, Schema, ObjectName: string);
 var
   SL: TStringList;
   I: Integer;

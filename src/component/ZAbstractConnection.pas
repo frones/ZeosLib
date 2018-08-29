@@ -57,10 +57,8 @@ interface
 
 uses
   Types,
-{$IFNDEF UNIX}
 {$IFDEF ENABLE_ADO}
   ZDbcAdo,
-{$ENDIF}
 {$ENDIF}
 {$IFDEF ENABLE_DBLIB}
   ZDbcDbLib,
@@ -115,7 +113,6 @@ type
     {$ENDIF}
     function GetVersion: string;
     procedure SetUseMetadata(AValue: Boolean);
-    procedure SetVersion(const {%H-}Value: string);
     procedure SetControlsCodePage(const Value: TZControlsCodePage);
   protected
     FURL: TZURL;
@@ -287,7 +284,7 @@ type
       default False;
     property LoginPrompt: Boolean read FLoginPrompt write FLoginPrompt
       default False;
-    property Version: string read GetVersion write SetVersion stored False;
+    property Version: string read GetVersion stored False;
     property DesignConnection: Boolean read FDesignConnection
       write FDesignConnection default False;
 
@@ -1643,10 +1640,6 @@ begin
     end
     else
       SetValue;
-end;
-
-procedure TZAbstractConnection.SetVersion(const Value: string);
-begin
 end;
 
 procedure TZAbstractConnection.CloseAllSequences;

@@ -94,7 +94,7 @@ type
     procedure BindLob(Index: Integer; {%H-}SQLType: TZSQLType; const Value: IZBlob); override;
     procedure BindNull(Index: Integer; {%H-}SQLType: TZSQLType); override;
     procedure BindSignedOrdinal(Index: Integer; {%H-}SQLType: TZSQLType; const Value: Int64); override;
-    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); override;
+    procedure BindUnsignedOrdinal(Index: Integer; {%H-}SQLType: TZSQLType; const Value: UInt64); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
   protected
@@ -375,7 +375,7 @@ end;
 procedure TZAbstractInterbase6PreparedStatement.Close;
 begin
   inherited Close;
-  if (FStmtHandle <> 0) then begin// Free statement-handle! On the other hand: Exception!
+  if (FStmtHandle <> 0) then begin// Free statement-handle! Otherwise: Exception!
     FreeStatement(FPlainDriver, FStmtHandle, DSQL_drop);
     FStmtHandle := 0;
   end;
@@ -394,8 +394,12 @@ var
         {$IFNDEF AUTOREFCOUNT}
         Slot.Obj._Release;
         {$ENDIF}
+        Slot.Obj := nil;
       end;
       Slot.Obj := TZInterbase6PreparedStatement.Create(Connection, '', Info);
+      {$IFNDEF AUTOREFCOUNT}
+      Slot.Obj._AddRef;
+      {$ENDIF}
       Slot.Obj.FASQL := eBlock;
       Slot.Obj.BindList.Count := BindList.Count*PreparedRowsOfArray;
       Slot.PreparedRowsOfArray := PreparedRowsOfArray;
@@ -441,7 +445,7 @@ begin
         if (FBatchStmts[False].PreparedRowsOfArray <> ArrayCount) then
           PrepareFinalChunk(ArrayCount) //full block of batch
       end else
-        if (FBatchStmts[False].PreparedRowsOfArray <> (ArrayCount mod FMaxRowsPerBatch)) then
+        if (ArrayCount <> FMaxRowsPerBatch) and (FBatchStmts[False].PreparedRowsOfArray <> (ArrayCount mod FMaxRowsPerBatch)) then
           PrepareFinalChunk(ArrayCount mod FMaxRowsPerBatch); //final block of batch
     end else if (FBatchStmts[False].PreparedRowsOfArray <> ArrayCount) then
       PrepareArrayStmt(FBatchStmts[False]); //full block of batch

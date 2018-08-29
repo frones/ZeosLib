@@ -66,12 +66,8 @@ type
   protected
     function GetSupportedProtocols: string; override;
   published
-    {$IFDEF FPC}
-    procedure EmptyTest;
-    {$ELSE}
     procedure TestTrailingSpaces;
     procedure TestNotNullValues;
-    {$ENDIF}
   end;
 
 implementation
@@ -84,13 +80,6 @@ function ZTestCompADOBugReport.GetSupportedProtocols: string;
 begin
   Result := 'ado';
 end;
-
-{$IFDEF FPC}
-procedure ZTestCompADOBugReport.EmptyTest;
-begin
-  BlankCheck;
-end;
-{$ELSE}
 
 procedure ZTestCompADOBugReport.TestTrailingSpaces;
 const
@@ -172,7 +161,6 @@ begin
   end;
 end;
 
-{$ENDIF}
 initialization
   RegisterTest('bugreport',ZTestCompADOBugReport.Suite);
 end.

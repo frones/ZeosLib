@@ -412,7 +412,7 @@ end;
 }
 function TZDbLibDatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
 begin
-  Result := fCaseIdentifiers = icSpecial;
+  Result := fCaseIdentifiers in [icMixed, icSpecial];
 end;
 
 {**
@@ -2915,8 +2915,8 @@ begin
       Result.UpdateString(TableNameIndex, GetStringByName('TABLE_NAME'));
       Result.UpdateString(ColumnNameIndex, GetStringByName('COLUMN_NAME'));
 //The value in the resultset will be used
-//      Result.UpdateSmall(TableColColumnTypeIndex,
-//        Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'))));
+      Result.UpdateSmall(TableColColumnTypeIndex,
+        Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
       Result.UpdateString(TableColColumnTypeNameIndex, GetStringByName('TYPE_NAME'));
       Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('COLUMN_SIZE'));
       Result.UpdateInt(TableColColumnBufLengthIndex, GetIntByName('BUFFER_LENGTH'));

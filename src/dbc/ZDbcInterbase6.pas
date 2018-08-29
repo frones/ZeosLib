@@ -67,7 +67,6 @@ uses
 type
 
   {** Implements Interbase6 Database Driver. }
-  {$WARNINGS OFF}
   TZInterbase6Driver = class(TZAbstractDriver)
   public
     constructor Create; override;
@@ -78,7 +77,6 @@ type
     function GetTokenizer: IZTokenizer; override;
     function GetStatementAnalyser: IZStatementAnalyser; override;
   end;
-  {$WARNINGS ON}
 
   TZInterbase6ConnectionGUIDProps = class;
 
@@ -131,7 +129,6 @@ type
   {** Implements Interbase6 Database Connection. }
 
   { TZInterbase6Connection }
-  {$WARNINGS OFF} //suppress deprecated warning
   TZInterbase6Connection = class(TZAbstractDbcConnection, IZInterbase6Connection)
   private
     FDialect: Word;
@@ -153,7 +150,7 @@ type
     procedure AssignISC_Parameters;
   protected
     procedure InternalCreate; override;
-    procedure OnPropertiesChange(Sender: TObject); override;
+    procedure OnPropertiesChange({%H-}Sender: TObject); override;
   public
     constructor Create(const ZUrl: TZURL);
     destructor Destroy; override;
@@ -197,7 +194,6 @@ type
 
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
   end;
-  {$WARNINGS ON} //suppress deprecated warning
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
   TZInterbase6CachedResolver = class(TZGenericCachedResolver)
@@ -259,12 +255,10 @@ uses ZFastCode, ZDbcInterbase6Statement, ZDbcInterbase6Metadata, ZEncoding,
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-{$WARNINGS OFF}
 function TZInterbase6Driver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := TZInterbase6Connection.Create(Url);
 end;
-{$WARNINGS ON}
 
 {**
   Constructs this object with default properties.
@@ -314,7 +308,6 @@ end;
 
 { TZInterbase6Connection }
 
-{$WARNINGS OFF} //suppress deprecated warning
 constructor TZInterbase6Connection.Create(const ZUrl: TZURL);
 begin
   // ! Create the object before parent's constructor because it is used in
@@ -325,7 +318,6 @@ begin
   FIsFirebirdLib := false;
   FIsInterbaseLib := false;
 end;
-{$WARNINGS ON}
 
 destructor TZInterbase6Connection.Destroy;
 begin
@@ -336,7 +328,7 @@ end;
 procedure TZInterbase6Connection.AssignISC_Parameters;
 var
   RoleName: string;
-  ConnectTimeout : integer;
+  ConnectTimeout, Idx: integer;
   WireCompression: Boolean;
 begin
   { set default sql dialect it can be overriden }
@@ -373,12 +365,13 @@ begin
   if Info.IndexOf('isc_dpb_sql_dialect') = -1 then
     Info.Values['isc_dpb_sql_dialect'] := IntToStr(FDialect);
 
+  Idx := Info.IndexOf('isc_dpb_utf8_filename');
   if (GetClientVersion >= 2005000) and IsFirebirdLib then begin
-    if (Info.IndexOf('isc_dpb_utf8_filename') = -1) and ((FClientCodePage = 'UTF8') or (FClientCodePage = 'UNICODE_FSS')) then
+    if (Idx = -1) and ((FClientCodePage = 'UTF8') or (FClientCodePage = 'UNICODE_FSS')) then
       Info.Add('isc_dpb_utf8_filename');
-  end else
-    if (Info.IndexOf('isc_dpb_utf8_filename') <> -1) then
-      Info.Delete(Info.IndexOf('isc_dpb_utf8_filename'));
+  end
+  else if Idx <> -1 then
+    Info.Delete(Idx);
   Info.EndUpdate;
 end;
 
@@ -481,7 +474,6 @@ begin
       FTEBs[b][TIL].tpb_length := 0;
       FTEBs[b][TIL].tpb_address := nil;
     end;
-
 end;
 
 {**

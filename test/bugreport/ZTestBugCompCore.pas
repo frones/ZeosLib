@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase,
-  ZCompatibility, ZSqlUpdate, ZSqlProcessor, ZSqlMetadata;
+  ZCompatibility, ZSqlUpdate, ZSqlProcessor, ZSqlMetadata, ZClasses;
 
 type
 
@@ -315,7 +315,7 @@ begin
   try
     Processor.Connection := Connection;
     Processor.Script.Text := 'AAAAAAAAAAAA BBBBBBBBBBBBBBB CCCCCCCCCCCCCC';
-    CheckException(Processor.Execute, Exception, '', 'SQL Processor must throw exception on invalid script.');
+    CheckException(Processor.Execute, EZSQLException, '', 'SQL Processor must throw exception on invalid script.');
   finally
     Processor.Free;
   end;

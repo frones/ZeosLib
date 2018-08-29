@@ -64,6 +64,8 @@ type
   TZTestDbcMySQLBugReport = class(TZAbstractDbcSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
+    // disabled test:
+    procedure Test924861;
   published
     procedure Test702352;
     procedure Test739448;
@@ -71,7 +73,6 @@ type
     procedure Test768163;
     procedure Test816925;
     procedure Test881634;
-    procedure Test924861;
     procedure Test961337;
     procedure TestBin_Collation;
   end;

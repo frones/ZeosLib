@@ -94,7 +94,7 @@ type
     FUndefinedVarcharAsStringLength: Integer;
     FCachedLob: boolean;
     FpgOIDTypes: TIntegerDynArray;
-    function GetBuffer(ColumnIndex: Integer; var Len: NativeUInt): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
+    function GetBuffer(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
     procedure ClearPGResult;
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
@@ -197,6 +197,7 @@ uses
 // added for suporting Infinity, -Infinity and NaN.
 // See https://sourceforge.net/p/zeoslib/tickets/173/
 // maybe this should be pushed into ZSysUtils.SQLStrToFloatDef?
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
   var Result: Extended); overload;
 begin
@@ -209,10 +210,21 @@ begin
   else
     ZSysUtils.SQLStrToFloatDef(Value, Def, Result);
 end;
+{$IFEND}
 
 procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Single;
   var Result: Single); overload;
 begin
+  {$IFDEF FPC2_6DOWN}
+  {$ifopt R+}
+  {$define RangeCheckWasOn}
+  {$R-}
+  {$endif opt R+}
+  {$ifopt Q+}
+  {$define OverflowCheckWasOn}
+  {$Q-}
+  {$endif opt Q+}
+  {$ENDIF}
   if Value = 'Infinity' then
     Result := Infinity
   else if Value = '-Infinity' then
@@ -221,12 +233,31 @@ begin
     Result := NaN
   else
     ZSysUtils.SQLStrToFloatDef(Value, Def, Result);
+  {$IFDEF FPC2_6DOWN}
+  {$ifdef RangeCheckWasOn}
+  {$R+}
+  {$undef RangeCheckWasOn}
+  {$endif}
+  {$ifdef OverflowCheckWasOn}
+  {$Q+}
+  {$undef OverflowCheckWasOn}
+  {$endif}
+  {$ENDIF}
 end;
 
-{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Double;
   var Result: Double); overload;
 begin
+  {$IFDEF FPC2_6DOWN}
+  {$ifopt R+}
+  {$define RangeCheckWasOn}
+  {$R-}
+  {$endif opt R+}
+  {$ifopt Q+}
+  {$define OverflowCheckWasOn}
+  {$Q-}
+  {$endif opt Q+}
+  {$ENDIF}
   if Value = 'Infinity' then
     Result := Infinity
   else if Value = '-Infinity' then
@@ -235,8 +266,17 @@ begin
     Result := NaN
   else
     ZSysUtils.SQLStrToFloatDef(Value, Def, Result);
+  {$IFDEF FPC2_6DOWN}
+  {$ifdef RangeCheckWasOn}
+  {$R+}
+  {$undef RangeCheckWasOn}
+  {$endif}
+  {$ifdef OverflowCheckWasOn}
+  {$Q+}
+  {$undef OverflowCheckWasOn}
+  {$endif}
+  {$ENDIF}
 end;
-{$IFEND}
 
 { TZAbstractPostgreSQLStringResultSet }
 
@@ -595,7 +635,7 @@ begin
     ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}) <> 0;
 end;
 
-function TZAbstractPostgreSQLStringResultSet.GetBuffer(ColumnIndex: Integer; var Len: NativeUint): PAnsiChar;
+function TZAbstractPostgreSQLStringResultSet.GetBuffer(ColumnIndex: Integer; out Len: NativeUint): PAnsiChar;
 begin
   LastWasNull := FPlainDriver.PQgetisnull(Fres, PGRowNo, ColumnIndex) <> 0;
 
@@ -637,7 +677,7 @@ end;
 }
 function TZAbstractPostgreSQLStringResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 begin
-  Result := GetBuffer(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len{%H-});
+  Result := GetBuffer(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len);
 end;
 
 {**
@@ -672,7 +712,7 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  P := GetBuffer(ColumnIndex, L{%H-});
+  P := GetBuffer(ColumnIndex, L);
   if LastWasNull then
     Result := ''
   else
@@ -703,7 +743,7 @@ var
   Len: NativeUInt;
   Buffer: PAnsiChar;
 begin
-  Buffer := GetBuffer(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len{%H-});
+  Buffer := GetBuffer(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len);
   if LastWasNull then
     Result := ''
   else
@@ -957,13 +997,13 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len{%H-});
+  Buffer := GetBuffer(ColumnIndex, Len);
 
   if LastWasNull then
     Result := 0
   else
     if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
-      Result := RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+      Result := RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
     else
       Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
         RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
@@ -990,13 +1030,13 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len{%H-});
+  Buffer := GetBuffer(ColumnIndex, Len);
 
   if LastWasNull then
     Result := 0
   else
     if not (Len > ConSettings^.ReadFormatSettings.TimeFormatLen) and ( ( ConSettings^.ReadFormatSettings.TimeFormatLen - Len) <= 4 )then
-      Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+      Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
     else
       Result := Frac(RawSQLTimeStampToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed));
 end;
@@ -1026,7 +1066,7 @@ begin
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if not LastWasNull then begin
     Buffer := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
-    Result := RawSQLTimeStampToDateTime(Buffer, ZFastCode.StrLen(Buffer), ConSettings^.ReadFormatSettings, Failed{%H-});
+    Result := RawSQLTimeStampToDateTime(Buffer, ZFastCode.StrLen(Buffer), ConSettings^.ReadFormatSettings, Failed);
   end;
 end;
 

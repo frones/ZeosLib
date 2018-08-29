@@ -71,9 +71,11 @@ type
   { TZTestExpressionCase }
 
   TZTestExpressionCase = class(TZGenericTestCase)
+  protected
+    // removed tests
+    procedure TestArrays;
   published
     procedure TestRegularExpressions;
-    procedure TestArrays;
     procedure TestFunctionsConvert;
     procedure TestFunctionsDateTime;
     procedure TestFunctionsMath;

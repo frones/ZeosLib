@@ -154,10 +154,6 @@ uses Math, DateUtils,
   ZSysUtils, ZMessages, ZEncoding, ZDbcUtils, ZDbcResultSet, ZFastCode, ZDbcLogging,
   ZDbcODBCUtils, ZDbcODBCResultSet, ZDbcCachedResultSet, ZDbcGenericResolver, ZClasses;
 
-{$IFOPT R+}
-  {$DEFINE RangeCheckEnabled}
-{$ENDIF}
-
 const
   NullInd: array[Boolean] of SQLLEN = (SQL_NO_NULLS, SQL_NULL_DATA);
 
@@ -385,7 +381,7 @@ procedure TZAbstractODBCStatement.InternalBeforePrepare;
 begin
   if not Assigned(fHSTMT) then begin
     CheckODBCError(fPlainDriver.AllocHandle(SQL_HANDLE_STMT, fPHDBC^, fHSTMT), fPHDBC^, SQL_HANDLE_DBC, Connection as IZODBCConnection);
-    CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, {%H-}Pointer(fStmtTimeOut), 0));
+    CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, SQLPOINTER(fStmtTimeOut), 0));
     fMoreResultsIndicator := mriUnknown;
   end;
 end;
@@ -1936,7 +1932,7 @@ begin
       if (fMaxBufArrayBound = -1) then
         CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_PARAMSET_SIZE, Pointer(1), 0))
       else
-        CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_PARAMSET_SIZE, {%H-}Pointer(NativeUInt(fCurrentIterations)), 0));
+        CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_PARAMSET_SIZE, SQLPOINTER(NativeUInt(fCurrentIterations)), 0));
   end;
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
@@ -2054,7 +2050,7 @@ begin
     else
       fMaxBufArrayBound := -1;
     if fBindRowWise then
-      CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_PARAM_BIND_TYPE, {%H-}Pointer(fBufferSize), 0))
+      CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_PARAM_BIND_TYPE, SQLPOINTER(fBufferSize), 0))
     else
       CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_PARAM_BIND_TYPE, Pointer(SQL_PARAM_BIND_BY_COLUMN), 0));
   end;

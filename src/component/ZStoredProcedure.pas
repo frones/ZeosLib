@@ -129,9 +129,6 @@ uses
   @param Properties a statement specific properties.
   @returns a created DBC statement.
 }
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 function TZStoredProc.CreateStatement(const SQL: string; Properties: TStrings):
   IZPreparedStatement;
 var
@@ -172,9 +169,6 @@ begin
   end;
   Result := CallableStatement;
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
 
 {**
   Fill prepared statement with parameters.
@@ -183,9 +177,6 @@ end;
   @param Params a collection of SQL parameters.
   @param DataLink a datalink to get parameters.
 }
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 procedure TZStoredProc.SetStatementParams(const Statement: IZPreparedStatement;
   const ParamNames: TStringDynArray; Params: TParams; DataLink: TDataLink);
 var
@@ -202,9 +193,6 @@ begin
     SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, Param);
   end;
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
 
 {**
   Retrieves parameter values from callable statement.
@@ -328,9 +316,6 @@ begin
   Result := Trim(SQL.Text);
 end;
 
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 procedure TZStoredProc.SetStoredProcName(const Value: string);
 var
   OldParams: TParams;
@@ -374,9 +359,6 @@ begin
     end;
   end;
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
 
 procedure TZStoredProc.ExecProc;
 begin

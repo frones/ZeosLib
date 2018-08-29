@@ -169,10 +169,10 @@ type
       OldRowAccessor, NewRowAccessor: TZRowAccessor); virtual;
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet;
-      {%H-}UpdateType: TZRowUpdateType;
-      {%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); virtual;
+      UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); virtual;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure RefreshCurrentRow(const Sender: IZCachedResultSet;{%H-}RowAccessor: TZRowAccessor); //FOS+ 07112006
+    procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
 
   end;
 
@@ -714,7 +714,9 @@ var
   Current: TZResolverParameter;
   TableName: string;
   Temp1: string;
-  {$IF DEFINED(DSProps_InsertReturningFields)}
+  // NB: INSERT..RETURNING is only aclual for several drivers so we must ensure
+  // this unit is compilable with all these drivers disabled.
+  {$IF DECLARED(DSProps_InsertReturningFields)}
   Fields: TStrings;
   {$IFEND}
 begin
@@ -734,7 +736,7 @@ begin
   Result := 'INSERT INTO '+TableName+' ('+Temp1+') VALUES ('+
     DupeString('?,', Columns.Count - 1) + '?' +')';
 
-  {$IF DEFINED(DSProps_InsertReturningFields)}
+  {$IF DECLARED(DSProps_InsertReturningFields)}
   Temp1 := FStatement.GetParameters.Values[DSProps_InsertReturningFields];
   if Temp1 <> '' then begin
     Fields := ExtractFields(Temp1, [',', ';']);
@@ -911,10 +913,12 @@ begin
   {$ENDIF}
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
 procedure TZGenericCachedResolver.RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
 begin
- raise EZSQLException.Create(SRefreshRowOnlySupportedWithUpdateObject);
+  raise EZSQLException.Create(SRefreshRowOnlySupportedWithUpdateObject);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Calculate default values for the fields.
@@ -1012,12 +1016,16 @@ begin
 end;
 
 {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
 procedure TZGenericCachedResolver.UpdateAutoIncrementFields(
   const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
   NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 begin
  //Should be implemented at Specific database Level Cached resolver
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
 {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 
 end.

@@ -441,7 +441,7 @@ function TZAbstractCachedResultSet.AppendRow(Row: PZRowBuffer): PZRowBuffer;
 begin
   if LocateRow(FInitialRowsList, Row.Index) < 0 then
   begin
-    FRowAccessor.AllocBuffer(Result{%H-});
+    Result := FRowAccessor.AllocBuffer;
     FRowAccessor.CopyBuffer(Row, Result);
     FInitialRowsList.Add(Result);
     FCurrentRowsList.Add(Row);
@@ -753,8 +753,8 @@ begin
   FOldRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
   FNewRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
 
-  FRowAccessor.AllocBuffer(FUpdatedRow);
-  FRowAccessor.AllocBuffer(FInsertedRow);
+  FUpdatedRow :=FRowAccessor.AllocBuffer;
+  FInsertedRow := FRowAccessor.AllocBuffer;
   FSelectedRow := nil;
 
   FNextRowIndex := 0;
@@ -2427,9 +2427,15 @@ var
   I: Integer;
   ColumnInfo: TZColumnInfo;
   MetaData : IZResultSetMetaData;
+  RequiresLoading: Boolean;
 begin
   ColumnsInfo.Clear;
   MetaData := FResultSet.GetMetadata;
+  RequiresLoading := false;
+  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF}
+  do RequiresLoading := RequiresLoading or (MetaData.GetColumnType(I) = stUnknown);
+  if RequiresLoading
+  then MetaData.IsAutoIncrement(FirstDbcIndex);
   for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
   begin
     ColumnInfo := TZColumnInfo.Create;

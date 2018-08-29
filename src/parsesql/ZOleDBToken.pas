@@ -57,14 +57,12 @@ interface
 
 {$I ZParseSql.inc}
 
-{$IFDEF ENABLE_OLEDB}
 uses
   ZODBCToken;
 
 type
   {** Implements a default tokenizer object. }
   TZOleDBTokenizer = TZODBCTokenizer;
-{$ENDIF ENABLE_OLEDB}
 
 implementation
 

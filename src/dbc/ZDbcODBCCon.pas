@@ -63,14 +63,12 @@ uses
 
 type
   {** Implements OleDB Database Driver. }
-  {$WARNINGS OFF}
   TZODBCDriver = class(TZAbstractDriver)
   public
     constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;
     function GetTokenizer: IZTokenizer; override;
   end;
-  {$WARNINGS ON}
 
   IZODBCConnection = Interface(IZConnection)
     ['{D149ABA3-AD8B-404F-A804-77608C596394}']
@@ -184,7 +182,6 @@ uses
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-{$WARNINGS OFF}
 function TZODBCDriver.Connect(const Url: TZURL): IZConnection;
 begin
   if Url.Protocol = 'odbc_w' then
@@ -192,7 +189,6 @@ begin
   else
     Result := TZODBCConnectionA.Create(URL)
 end;
-{$WARNINGS ON}
 
 {**
   Constructs this object with default properties.
@@ -471,8 +467,8 @@ begin
   if Info.Values[ConnProps_Timeout] <> '' then
   begin
     TimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_Timeout],0);
-    CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC, SQL_ATTR_CONNECTION_TIMEOUT, {%H-}Pointer(TimeOut), 0));
-    CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC, SQL_ATTR_LOGIN_TIMEOUT, {%H-}Pointer(TimeOut), SQL_LOGIN_TIMEOUT_DEFAULT));
+    CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC, SQL_ATTR_CONNECTION_TIMEOUT, SQLPOINTER(TimeOut), 0));
+    CheckDbcError(fPlainDriver.SetConnectAttr(fHDBC, SQL_ATTR_LOGIN_TIMEOUT, SQLPOINTER(TimeOut), SQL_LOGIN_TIMEOUT_DEFAULT));
   end;
 
   DriverCompletion := SQL_DRIVER_NOPROMPT;
@@ -497,7 +493,7 @@ begin
 
   SetLength(OutConnectString, 1024);
   try
-    CheckDbcError(fPLainDriver.DriverConnect(fHDBC, {$IFDEF MSWINDOWS}{%H-}Pointer(GetDesktopWindow){$ELSE}nil{$ENDIF},
+    CheckDbcError(fPLainDriver.DriverConnect(fHDBC, {$IFDEF MSWINDOWS}SQLHWND(GetDesktopWindow){$ELSE}nil{$ENDIF},
       Pointer(tmp), Length(tmp), Pointer(OutConnectString),
       Length(OutConnectString), @aLen, DriverCompletion));
     SetLength(OutConnectString, aLen);

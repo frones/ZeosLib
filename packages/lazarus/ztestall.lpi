@@ -1,16 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="9"/>
+    <Version Value="10"/>
     <General>
       <SessionStorage Value="InProjectDir"/>
       <MainUnit Value="0"/>
       <UseAppBundle Value="False"/>
       <UseXPManifest Value="True"/>
     </General>
-    <VersionInfo>
-      <StringTable ProductVersion=""/>
-    </VersionInfo>
     <BuildModes Count="1">
       <Item1 Name="default" Default="True"/>
     </BuildModes>
@@ -23,8 +20,7 @@
     <RunParams>
       <local>
         <FormatVersion Value="1"/>
-        <CommandLineParams Value="-b -a -p --format=plain --suite=core -n"/>
-        <LaunchingApplication PathPlusParams="/usr/X11R6/bin/xterm -T 'Lazarus Run Output' -e $(LazarusDir)/tools/runwait.sh $(TargetCmdLine)"/>
+        <Display Value=""/>
       </local>
     </RunParams>
     <RequiredPackages Count="4">
@@ -76,23 +72,41 @@
     <Version Value="11"/>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="../../src/core;../../src/parsesql;../../src/plain;../../src/dbc;../../src/component;../../test/framework;../../test/core;../../test/parsesql;../../test/plain;../../test/dbc;../../test/component;../../test/bugreport;../../test/performance;$(FPCSrcDir)/packages/fcl-fpcunit/src"/>
+      <OtherUnitFiles Value="../../src/core;../../src/parsesql;../../src/plain;../../src/dbc;../../src/component;../../test/framework;../../test/core;../../test/parsesql;../../test/plain;../../test/dbc;../../test/component;../../test/bugreport;../../test/performance"/>
       <UnitOutputDirectory Value="build"/>
     </SearchPaths>
     <Parsing>
       <SyntaxOptions>
         <SyntaxMode Value="fpc"/>
+        <IncludeAssertionCode Value="True"/>
         <UseAnsiStrings Value="False"/>
       </SyntaxOptions>
     </Parsing>
+    <CodeGeneration>
+      <Checks>
+        <IOChecks Value="True"/>
+        <RangeChecks Value="True"/>
+        <OverflowChecks Value="True"/>
+        <StackChecks Value="True"/>
+      </Checks>
+    </CodeGeneration>
     <Linking>
       <Debugging>
         <UseHeaptrc Value="True"/>
       </Debugging>
     </Linking>
+    <Other>
+      <Verbosity>
+        <ShoLineNum Value="True"/>
+        <ShowDebugInfo Value="True"/>
+        <ShowCond Value="True"/>
+        <ShowHintsForSenderNotUsed Value="True"/>
+      </Verbosity>
+      <WriteFPCLogo Value="False"/>
+    </Other>
   </CompilerOptions>
   <Debugging>
-    <Exceptions Count="12">
+    <Exceptions Count="12" IgnoreAll="True">
       <Item1>
         <Name Value="EAbort"/>
       </Item1>

@@ -60,11 +60,6 @@ uses
   ZDbcIntfs, ZCollections,
   {$IF defined(OLDFPC) or defined (NO_UNIT_CONTNRS)}ZClasses,{$IFEND}
   ZGenericSqlAnalyser,
-{$IFDEF FPC}
-  {$IFDEF WIN32}
-    Comobj,
-  {$ENDIF}
-{$ENDIF}
   ZTokenizer, ZSelectSchema, ZCompatibility, ZDbcResultSet;
 
 type
@@ -276,7 +271,9 @@ end;
 procedure TZAbstractResultSetMetadata.FillColumInfoFromGetColumnsRS(
   ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet;
   const FieldName: String);
-var TempColType: TZSQLType;
+var
+  TempColType: TZSQLType;
+  ColTypeName: string;
 begin
   ColumnInfo.CatalogName := TableColumns.GetString(CatalogNameIndex);
   ColumnInfo.SchemaName := TableColumns.GetString(SchemaNameIndex);
@@ -300,7 +297,7 @@ begin
     //we've NO fixed length for a case(postgres and FB2.5up f.e.) select
     tempColType := TZSQLType(TableColumns.GetSmall(TableColColumnTypeIndex));
     if not (tempColType in [stBinaryStream, stAsciiStream,
-        stUnicodeStream, stBytes, stString, stUnicodeString]) then
+        stUnicodeStream, stBytes, stString, stUnicodeString]) or (ColumnInfo.ColumnType = stUnknown) then
       ColumnInfo.ColumnType := tempColType;
   end;
   if FConSettings = nil then //fix if on creation nil was assigned
@@ -312,11 +309,15 @@ begin
       ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
     else
       if FConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTf8] then //this excludes ADO which is allways 2Byte-String based
-        if (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'NVARCHAR') or
-           (UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex)) = 'NCHAR') then
+      begin
+        ColTypeName := UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex));
+        if (ColTypeName = 'NVARCHAR') or (ColTypeName = 'NCHAR') then
           ColumnInfo.ColumnCodePage := zCP_UTF8
+        else if (ColTypeName = 'UNIVARCHAR') or (ColTypeName = 'UNICHAR') then
+          ColumnInfo.ColumnCodePage := zCP_UTF16
         else
           ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP //assume locale codepage
+      end
   else
     ColumnInfo.ColumnCodePage := zCP_NONE; //not a character column
   {nullable}

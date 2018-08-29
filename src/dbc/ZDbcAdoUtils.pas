@@ -54,7 +54,6 @@ unit ZDbcAdoUtils;
 interface
 
 {$I ZDbc.inc}
-{$IFDEF ENABLE_ADO}
 
 uses Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   Types,
@@ -150,7 +149,7 @@ var
 implementation
 
 uses
-  {$IFDEF WITH_SYSTEM_WIN_COMOBJ}System.Win.ComObj{$ELSE}ComObj{$ENDIF}, Variants, Math,
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF}, Variants, Math,
   ZSysUtils, ZDbcAdoResultSet, ZDbcCachedResultSet, ZDbcResultSet, ZDbcUtils,
   ZMessages, ZEncoding, ZFastCode, ZClasses;
 
@@ -878,11 +877,4 @@ initialization
   OleCheck(CoGetMalloc(1, ZAdoMalloc));
 finalization
   ZAdoMalloc := nil;
-
-{$ELSE}
-implementation
-{$ENDIF ENABLE_ADO}
 end.
-
-
-

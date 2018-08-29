@@ -90,7 +90,7 @@ type
   protected
     { Protected declarations }
     function GetNativeHandle: PISC_DB_HANDLE; virtual;
-    procedure EventChange(Sender: TObject); virtual;
+    procedure EventChange({%H-}Sender: TObject); virtual;
     procedure ThreadEnded(Sender: TObject); virtual;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   public
@@ -477,19 +477,19 @@ begin
   end;
 end;
 
-{$WARNINGS OFF}
 constructor TIBEventThread.Create(Owner: TZIBEventAlerter;
   EventGrp: integer; TermEvent: TNotifyEvent);
 begin
-  inherited Create(True);
+  // NB: we call inherited constructor after custom stuff because thread can't
+  // start itself from within constructor (it gets started 2nd time in AfterConstruction
+  // thus raising exception)
   FCancelAlerts := False;
   Signal := TSimpleEvent.Create;
   Parent := Owner;
   EventGroup := EventGrp;
   OnTerminate := TermEvent;
-  Resume;
+  inherited Create(False);
 end;
-{$WARNINGS ON}
 
 destructor TIBEventThread.Destroy;
 begin

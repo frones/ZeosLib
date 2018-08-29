@@ -55,7 +55,6 @@ interface
 
 {$I ZParseSql.inc}
 
-{$IFDEF ENABLE_ADO}
 uses
   ZODBCToken;
 
@@ -65,7 +64,6 @@ type
 
   {** Implements a default tokenizer object. }
   TZAdoSQLTokenizer = TZODBCTokenizer;
-{$ENDIF ENABLE_ADO}
 
 implementation
 

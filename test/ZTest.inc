@@ -1,12 +1,3 @@
-{*********************************************************}
-{                                                         }
-{                 Zeos Database Objects                   }
-{         Delphi plain driver interface to ADO            }
-{                                                         }
-{        Originally written by Janos Fegyverneki          }
-{                                                         }
-{*********************************************************}
-
 {@********************************************************}
 {    Copyright (c) 1999-2012 Zeos Development Group       }
 {                                                         }
@@ -48,65 +39,8 @@
 {                                                         }
 {                                 Zeos Development Group. }
 {********************************************************@}
+// Compilation directives for Test suite units
 
-unit ZPlainAdoDriver;
-
-interface
-
-{$I ZPlain.inc}
-
-uses {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZPlainDriver;
-
-type
-  TZAdoPlainDriver = class (TZAbstractPlainDriver, IZPlainDriver)
-  protected
-    function GetUnicodeCodePageName: String; override;
-  public
-    constructor Create;
-
-    procedure LoadCodePages; override;
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-    procedure Initialize(const {%H-}Location: String = ''); override;
-    function Clone: IZPlainDriver; override;
-  end;
-
-implementation
-
-uses ZCompatibility, ZEncoding, Windows;
-
-procedure TZAdoPlainDriver.LoadCodePages;
-begin
-  AddCodePage('CP_UTF16', 0, ceUTF16, GetACP,'', 1, True);
-end;
-
-constructor TZAdoPlainDriver.Create;
-begin
-  LoadCodePages;
-end;
-
-function TZAdoPlainDriver.GetProtocol: string;
-begin
-  Result := 'ado';
-end;
-
-function TZAdoPlainDriver.GetUnicodeCodePageName: String;
-begin
-  Result := 'CP_UTF16';
-end;
-
-function TZAdoPlainDriver.GetDescription: string;
-begin
-  Result := 'Native driver for Microsoft ADO';
-end;
-
-procedure TZAdoPlainDriver.Initialize(const Location: String = '');
-begin
-end;
-
-function TZAdoPlainDriver.Clone: IZPlainDriver;
-begin
-  Result := Self;
-end;
-
-end.
+// Will suppress any warnings and hints for Test suite units (not the source units!)
+{.$WARNINGS OFF}
+{.$HINTS OFF}

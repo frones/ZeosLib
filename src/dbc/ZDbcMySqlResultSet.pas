@@ -53,9 +53,7 @@
   http://blog.ulf-wendel.de/2008/pdo_mysqlnd-prepared-statements-again/}
 
 unit ZDbcMySqlResultSet;
-{$IFDEF FPC}
-{$WARN 4055 off : Conversion between ordinals and pointers is not portable}
-{$ENDIF}
+
 interface
 
 {$I ZDbc.inc}
@@ -1393,7 +1391,7 @@ begin
           else //5..8: makes compiler happy
             Result := ReverseQuadWordBytes(Buffer, Len);
         end
-      end else
+      end else if PByte(Buffer)^ <> Ord(#0) then
         Result := RawToIntDef(Buffer, 0);
   end;
 end;
@@ -1796,7 +1794,7 @@ begin
           begin
             if ColBind^.Length[0]  = ConSettings^.ReadFormatSettings.DateFormatLen then
               Result := RawSQLDateToDateTime(PAnsiChar(ColBind^.buffer),
-                ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed{%H-})
+                ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed)
             else
               Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
                 RawSQLTimeStampToDateTime(PAnsiChar(ColBind^.buffer),
@@ -1812,7 +1810,7 @@ begin
     LastWasNull := Buffer = nil;
     if not LastWasNull then begin
       if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
-        Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+        Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed)
       else
         Result := Int(RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
       LastWasNull := Failed;
@@ -1874,7 +1872,7 @@ begin
         FIELD_TYPE_STRING: begin
             if PByte(PAnsiChar(ColBind^.buffer)+2)^ = Ord(':') then //possible date if Len = 10 then
               Result := RawSQLTimeToDateTime(PAnsiChar(ColBind^.buffer),
-                ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed{%H-})
+                ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed)
             else
               Result := Frac(RawSQLTimeStampToDateTime(PAnsiChar(ColBind^.buffer),
                 ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed));
@@ -1889,7 +1887,7 @@ begin
     LastWasNull := Buffer = nil;
     if not LastWasNull then begin
       if PByte(Buffer+2)^ = Ord(':') then //possible date if Len = 10 then
-        Result := RawSQLTimeToDateTime(Buffer,Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+        Result := RawSQLTimeToDateTime(Buffer,Len, ConSettings^.ReadFormatSettings, Failed)
       else
         Result := Frac(RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
       LastWasNull := Failed;
@@ -1968,7 +1966,7 @@ begin
         FIELD_TYPE_STRING: begin
             if PByte(PAnsiChar(ColBind^.buffer)+2)^ = Ord(':') then
               Result := RawSQLTimeToDateTime(PAnsiChar(ColBind^.buffer),
-                ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed{%H-})
+                ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed)
             else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - ColBind^.Length[0] ) <= 4 then
               Result := RawSQLTimeStampToDateTime(PAnsiChar(ColBind^.buffer), ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed)
             else
@@ -1984,7 +1982,7 @@ begin
     LastWasNull := Buffer = nil;
     if not LastWasNull then
       if PByte(Buffer+2)^ = Ord(':') then
-        Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+        Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
       else
         if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
           Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
@@ -2312,7 +2310,7 @@ var LastWasNull: Boolean;
 begin
   if ((FAutoColumnIndex {$IFDEF GENERIC_INDEX}>={$ELSE}>{$ENDIF} 0) and
           (OldRowAccessor.IsNull(FAutoColumnIndex) or
-          (OldRowAccessor.GetULong(FAutoColumnIndex, LastWasNull{%H-})=0)))
+          (OldRowAccessor.GetULong(FAutoColumnIndex, LastWasNull)=0)))
   then {if FMYSQL_STMT <> nil
     then NewRowAccessor.SetULong(FAutoColumnIndex, FPlainDriver.mysql_stmt_insert_id(FMYSQL_STMT^))  //EH: why does it not work!?
     else }NewRowAccessor.SetULong(FAutoColumnIndex, FPlainDriver.mysql_insert_id(FPMYSQL^)); //and this also works with the prepareds??!

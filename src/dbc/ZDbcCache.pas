@@ -120,8 +120,8 @@ type
     FConSettings: PZConSettings;
 
     function GetColumnSize(ColumnInfo: TZColumnInfo): Integer;
-    function InternalGetInt(ColumnIndex: Integer; var IsNull: Boolean): Integer; {$IFDEF WITHINLINE} inline; {$ENDIF}
-    function InternalGetULong(ColumnIndex: Integer; var IsNull: Boolean): UInt64; {$IFDEF WITHINLINE} inline; {$ENDIF}
+    function InternalGetInt(ColumnIndex: Integer; out IsNull: Boolean): Integer; {$IFDEF WITHINLINE} inline; {$ENDIF}
+    function InternalGetULong(ColumnIndex: Integer; out IsNull: Boolean): UInt64; {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetInt(ColumnIndex: Integer; Value: Integer); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetULong(ColumnIndex: Integer; const Value: UInt64); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer;
@@ -141,7 +141,7 @@ type
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings);
 
-    function AllocBuffer(var Buffer: PZRowBuffer): PZRowBuffer;
+    function AllocBuffer: PZRowBuffer;
     procedure InitBuffer(Buffer: PZRowBuffer);
     procedure CopyBuffer(SrcBuffer: PZRowBuffer; DestBuffer: PZRowBuffer; const CloneLobs: Boolean = False);
     procedure MoveBuffer(SrcBuffer: PZRowBuffer; DestBuffer: PZRowBuffer);
@@ -155,7 +155,7 @@ type
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
       const CompareKinds: TComparisonKindArray): TCompareFuncs;
 
-    function Alloc: PZRowBuffer;
+    procedure Alloc;
     procedure Init;
     procedure CopyTo(DestBuffer: PZRowBuffer);
     procedure CopyFrom(SrcBuffer: PZRowBuffer);
@@ -166,7 +166,7 @@ type
     procedure Clear;
     procedure Dispose;
 
-    function GetColumnData(ColumnIndex: Integer; var IsNull: Boolean): Pointer;
+    function GetColumnData(ColumnIndex: Integer; out IsNull: Boolean): Pointer;
     function GetColumnDataSize(ColumnIndex: Integer): Integer;
 
     function GetColumnName(ColumnIndex: Integer): string;
@@ -183,41 +183,41 @@ type
     //======================================================================
 
     function IsNull(ColumnIndex: Integer): Boolean;
-    function GetPAnsiChar(ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PAnsiChar;
-    function GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
-    function GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
+    function GetPAnsiChar(ColumnIndex: Integer; out IsNull: Boolean; out Len: NativeUInt): PAnsiChar;
+    function GetCharRec(ColumnIndex: Integer; out IsNull: Boolean): TZCharRec;
+    function GetString(ColumnIndex: Integer; out IsNull: Boolean): String;
     {$IFNDEF NO_ANSISTRING}
-    function GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+    function GetAnsiString(ColumnIndex: Integer; out IsNull: Boolean): AnsiString;
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    function GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
+    function GetUTF8String(ColumnIndex: Integer; out IsNull: Boolean): UTF8String;
     {$ENDIF}
-    function GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
-    function GetPWideChar(ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PWideChar;
-    function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): ZWideString;
-    function GetBoolean(ColumnIndex: Integer; var IsNull: Boolean): Boolean;
-    function GetByte(ColumnIndex: Integer; var IsNull: Boolean): Byte;
-    function GetShort(ColumnIndex: Integer; var IsNull: Boolean): ShortInt;
-    function GetWord(ColumnIndex: Integer; var IsNull: Boolean): Word;
-    function GetSmall(ColumnIndex: Integer; var IsNull: Boolean): SmallInt;
-    function GetUInt(ColumnIndex: Integer; var IsNull: Boolean): Cardinal;
-    function GetInt(ColumnIndex: Integer; var IsNull: Boolean): Integer;
-    function GetULong(ColumnIndex: Integer; var IsNull: Boolean): UInt64;
-    function GetLong(ColumnIndex: Integer; var IsNull: Boolean): Int64;
-    function GetFloat(ColumnIndex: Integer; var IsNull: Boolean): Single;
-    function GetDouble(ColumnIndex: Integer; var IsNull: Boolean): Double;
-    function GetCurrency(ColumnIndex: Integer; var IsNull: Boolean): Currency;
-    function GetBigDecimal(ColumnIndex: Integer; var IsNull: Boolean): Extended;
-    function GetBytes(ColumnIndex: Integer; var IsNull: Boolean): TBytes; overload;
-    function GetBytes(ColumnIndex: Integer; var IsNull: Boolean; out Len: Word): Pointer; overload;
-    function GetDate(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
-    function GetTime(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
-    function GetTimestamp(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
-    function GetAsciiStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
-    function GetUnicodeStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
-    function GetBinaryStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
-    function GetBlob(ColumnIndex: Integer; var IsNull: Boolean): IZBlob;
-    function GetDataSet(ColumnIndex: Integer; var {%H-}IsNull: Boolean): IZDataSet;
+    function GetRawByteString(ColumnIndex: Integer; out IsNull: Boolean): RawByteString;
+    function GetPWideChar(ColumnIndex: Integer; out IsNull: Boolean; out Len: NativeUInt): PWideChar;
+    function GetUnicodeString(ColumnIndex: Integer; out IsNull: Boolean): ZWideString;
+    function GetBoolean(ColumnIndex: Integer; out IsNull: Boolean): Boolean;
+    function GetByte(ColumnIndex: Integer; out IsNull: Boolean): Byte;
+    function GetShort(ColumnIndex: Integer; out IsNull: Boolean): ShortInt;
+    function GetWord(ColumnIndex: Integer; out IsNull: Boolean): Word;
+    function GetSmall(ColumnIndex: Integer; out IsNull: Boolean): SmallInt;
+    function GetUInt(ColumnIndex: Integer; out IsNull: Boolean): Cardinal;
+    function GetInt(ColumnIndex: Integer; out IsNull: Boolean): Integer;
+    function GetULong(ColumnIndex: Integer; out IsNull: Boolean): UInt64;
+    function GetLong(ColumnIndex: Integer; out IsNull: Boolean): Int64;
+    function GetFloat(ColumnIndex: Integer; out IsNull: Boolean): Single;
+    function GetDouble(ColumnIndex: Integer; out IsNull: Boolean): Double;
+    function GetCurrency(ColumnIndex: Integer; out IsNull: Boolean): Currency;
+    function GetBigDecimal(ColumnIndex: Integer; out IsNull: Boolean): Extended;
+    function GetBytes(ColumnIndex: Integer; out IsNull: Boolean): TBytes; overload;
+    function GetBytes(ColumnIndex: Integer; out IsNull: Boolean; out Len: Word): Pointer; overload;
+    function GetDate(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
+    function GetTime(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
+    function GetTimestamp(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
+    function GetAsciiStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
+    function GetUnicodeStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
+    function GetBinaryStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
+    function GetBlob(ColumnIndex: Integer; out IsNull: Boolean): IZBlob;
+    function GetDataSet(ColumnIndex: Integer; out IsNull: Boolean): IZDataSet;
     function GetValue(ColumnIndex: Integer): TZVariant;
 
     //---------------------------------------------------------------------
@@ -283,14 +283,6 @@ const
 
 implementation
 
-{$IFOPT Q+}
-  {$DEFINE OverFlowCheckEnabled}
-{$ENDIF}
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}
-  {$R-}
-  {$UNDEF RangeCheckEnabled}
-{$IFEND}
-
 uses ZFastcode, Math, ZMessages, ZSysUtils, ZDbcUtils, ZEncoding
   {$IF not defined(OLDFPC) and not defined(NO_UNIT_CONTNRS)}, ZClasses{$IFEND}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
@@ -298,18 +290,34 @@ uses ZFastcode, Math, ZMessages, ZSysUtils, ZDbcUtils, ZEncoding
 const
   PAnsiInc = SizeOf(Cardinal);
   PWideInc = SizeOf(Word); //PWide inc assumes allways two byte
+  BothNotNull = Low(Integer);
+  // Results of Asc comparation of Null1, Null2 flags.
+  // If both flags are False, comparation of values is required
+  NullsCompareMatrix: array[Boolean] of array[Boolean] of Integer =
+    (
+      (BothNotNull, 1),
+      (-1, 0)
+    );
+  // Results of equality comparation of Null1, Null2 flags.
+  // If both flags are False, comparation of values is required
+  NullsEqualMatrix: array[Boolean] of array[Boolean] of Integer =
+    (
+      (BothNotNull, bIsNotNull),
+      (bIsNotNull, bIsNull)
+    );
 
-function CompareNothing(const {%H-}Null1, {%H-}Null2: Boolean; const {%H-}V1, {%H-}V2): Integer; //emergency exit for types we can't sort like arrays, dataset ...
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // empty function - parameter not used intentionally
+function CompareNothing(const Null1, Null2: Boolean; const V1, V2): Integer; //emergency exit for types we can't sort like arrays, dataset ...
 begin
   Result := 0;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function CompareBoolean_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PWordBool(V1)^) - Ord(PWordBool(V2)^); //overflow safe
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PWordBool(V1)^) - Ord(PWordBool(V2)^); //overflow safe
 end;
 
 function CompareBoolean_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -319,17 +327,16 @@ end;
 
 function CompareBoolean_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PWordBool(V1)^ <> PWordBool(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PWordBool(V1)^ <> PWordBool(V2)^);
 end;
 
 function CompareByte_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := PByte(V1)^ - PByte(V2)^; //overflow safe
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := PByte(V1)^ - PByte(V2)^; //overflow safe
 end;
 
 function CompareByte_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -339,17 +346,16 @@ end;
 
 function CompareByte_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PByte(V1)^ <> PByte(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PByte(V1)^ <> PByte(V2)^);
 end;
 
 function CompareShort_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := PShortInt(V1)^ - PShortInt(V2)^; //overflow safe
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := PShortInt(V1)^ - PShortInt(V2)^; //overflow safe
 end;
 
 function CompareShort_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -359,17 +365,16 @@ end;
 
 function CompareShort_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PShortInt(V1)^ <> PShortInt(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PShortInt(V1)^ <> PShortInt(V2)^);
 end;
 
 function CompareWord_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := PWord(V1)^ - PWord(V2)^; //overflow safe
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := PWord(V1)^ - PWord(V2)^; //overflow safe
 end;
 
 function CompareWord_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -379,17 +384,16 @@ end;
 
 function CompareWord_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PWord(V1)^ <> PWord(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PWord(V1)^ <> PWord(V2)^);
 end;
 
 function CompareSmallInt_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := PSmallInt(V1)^ - PSmallInt(V2)^; //overflow safe
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := PSmallInt(V1)^ - PSmallInt(V2)^; //overflow safe
 end;
 
 function CompareSmallInt_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -399,17 +403,16 @@ end;
 
 function CompareSmallInt_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PSmallInt(V1)^ <> PSmallInt(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PSmallInt(V1)^ <> PSmallInt(V2)^);
 end;
 
 function CompareLongWord_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PLongWord(V1)^ > PLongWord(V2)^)-Ord(PLongWord(V1)^ < PLongWord(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PLongWord(V1)^ > PLongWord(V2)^)-Ord(PLongWord(V1)^ < PLongWord(V2)^);
 end;
 
 function CompareLongWord_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -419,25 +422,23 @@ end;
 
 function CompareLongWord_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PLongWord(V1)^ <> PLongWord(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PLongWord(V1)^ <> PLongWord(V2)^);
 end;
 
 function CompareInteger_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
   //function ShaCompareInt(Item1, Item2: Pointer): Integer;
   begin //on 100 mio execs 200ms faster
     Result := PInteger(V1)^;
     if Result xor PInteger(V2)^>=0
       then Result:=Result-PInteger(V2)^
       else Result:=Result or 1;
-    end; //Than My (EH) overflow save idea
-    //Result := Ord(PLongInt(V1)^ > PLongInt(V2)^)-Ord(PLongInt(V1)^ < PLongInt(V2)^);
+  end; //Than My (EH) overflow save idea
+  //Result := Ord(PLongInt(V1)^ > PLongInt(V2)^)-Ord(PLongInt(V1)^ < PLongInt(V2)^);
 end;
 
 function CompareInteger_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -447,17 +448,16 @@ end;
 
 function CompareInteger_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PLongInt(V1)^ <> PLongInt(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PLongInt(V1)^ <> PLongInt(V2)^);
 end;
 
 function CompareInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PInt64(V1)^ > PInt64(V2)^)-Ord(PInt64(V1)^ < PInt64(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PInt64(V1)^ > PInt64(V2)^)-Ord(PInt64(V1)^ < PInt64(V2)^);
 end;
 
 function CompareInt64_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -467,17 +467,16 @@ end;
 
 function CompareInt64_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PInt64(V1)^ <> PInt64(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PInt64(V1)^ <> PInt64(V2)^);
 end;
 
 function CompareUInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PUInt64(V1)^ > PUInt64(V2)^)-Ord(PUInt64(V1)^ < PUInt64(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PUInt64(V1)^ > PUInt64(V2)^)-Ord(PUInt64(V1)^ < PUInt64(V2)^);
 end;
 
 function CompareUInt64_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -487,17 +486,16 @@ end;
 
 function CompareUInt64_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PUInt64(V1)^ <> PUInt64(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PUInt64(V1)^ <> PUInt64(V2)^);
 end;
 
 function CompareSingle_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PSingle(V1)^ > PSingle(V2)^)-Ord(PSingle(V1)^ < PSingle(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PSingle(V1)^ > PSingle(V2)^)-Ord(PSingle(V1)^ < PSingle(V2)^);
 end;
 
 function CompareSingle_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -507,17 +505,16 @@ end;
 
 function CompareSingle_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PSingle(V1)^ <> PSingle(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PSingle(V1)^ <> PSingle(V2)^);
 end;
 
 function CompareDouble_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PDouble(V1)^ > PDouble(V2)^)-Ord(PDouble(V1)^ < PDouble(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PDouble(V1)^ > PDouble(V2)^)-Ord(PDouble(V1)^ < PDouble(V2)^);
 end;
 
 function CompareDouble_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -527,17 +524,16 @@ end;
 
 function CompareDouble_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PDouble(V1)^ <> PDouble(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PDouble(V1)^ <> PDouble(V2)^);
 end;
 
 function CompareCurrency_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PCurrency(V1)^ > PCurrency(V2)^)-Ord(PCurrency(V1)^ < PCurrency(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PCurrency(V1)^ > PCurrency(V2)^)-Ord(PCurrency(V1)^ < PCurrency(V2)^);
 end;
 
 function CompareCurrency_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -547,17 +543,16 @@ end;
 
 function CompareCurrency_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PCurrency(V1)^ <> PCurrency(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PCurrency(V1)^ <> PCurrency(V2)^);
 end;
 
 function CompareExtended_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PExtended(V1)^ > PExtended(V2)^)-Ord(PExtended(V1)^ < PExtended(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PExtended(V1)^ > PExtended(V2)^)-Ord(PExtended(V1)^ < PExtended(V2)^);
 end;
 
 function CompareExtended_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -567,17 +562,16 @@ end;
 
 function CompareExtended_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PExtended(V1)^ <> PExtended(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PExtended(V1)^ <> PExtended(V2)^);
 end;
 
 function CompareDateTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(PDateTime(V1)^ > PDateTime(V2)^)-Ord(PDateTime(V1)^ < PDateTime(V2)^);
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    else Result := Ord(PDateTime(V1)^ > PDateTime(V2)^)-Ord(PDateTime(V1)^ < PDateTime(V2)^);
 end;
 
 function CompareDateTime_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -587,17 +581,16 @@ end;
 
 function CompareDateTime_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := Ord(PDateTime(V1)^ <> PDateTime(V2)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PDateTime(V1)^ <> PDateTime(V2)^);
 end;
 
 function CompareGUID_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := ZMemLComp(Pointer(V1), Pointer(V2), 16); //Not a endversion! It would be nice to compare field-by-field of TGUID
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := ZMemLComp(Pointer(V1), Pointer(V2), 16); //Not a endversion! It would be nice to compare field-by-field of TGUID
 end;
 
 function CompareGUID_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -607,44 +600,45 @@ end;
 
 function CompareGUID_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 <> Null2 then Result := 1
-  else Result := ZMemLComp(Pointer(V1), Pointer(V2), 16);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := ZMemLComp(Pointer(V1), Pointer(V2), 16);
 end;
 
 function CompareBytes_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if (Null1 and Null2) or (
-    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
-  else if (Null1 or Null2) or (
-    ((PPointer(V1)^ <> nil) and (PPointer(V2)^ = nil)) or
-    ((PPointer(V1)^ = nil) and (PPointer(V2)^ <> nil))) then Result := 1 //one of both is null or empty?
-  else if PWord(PAnsiChar(V1)+SizeOf(Pointer))^ <> PWord(PAnsiChar(V1)+SizeOf(Pointer))^ then Result := 1//length different?
-  else Result := ZMemLComp(PPointer(V1)^, PPointer(V2)^, PWord(PAnsiChar(V1)+SizeOf(Pointer))^)
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+    if Result <> BothNotNull then Exit;
+    if PWord(PAnsiChar(V1)+SizeOf(Pointer))^ <> PWord(PAnsiChar(V1)+SizeOf(Pointer))^ then Result := 1//length different?
+    else Result := ZMemLComp(PPointer(V1)^, PPointer(V2)^, PWord(PAnsiChar(V1)+SizeOf(Pointer))^)
+  end;
 end;
 
 function CompareRaw_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if (Null1 and Null2) or (
-    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
-  else if (Null1 or Null2) or (
-    ((PPointer(V1)^ <> nil) and (PPointer(V2)^ = nil)) or
-    ((PPointer(V1)^ = nil) and (PPointer(V2)^ <> nil))) then Result := 1 //one of both is null or empty?
-  else if PLongWord(Pointer(V1)^)^ <> PLongWord(Pointer(V2)^)^ then Result := 1//length different?
-  else Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
-                           PAnsiChar(Pointer(V2)^)+PAnsiInc,
-                           PLongWord(Pointer(V1)^)^);
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+    if Result <> BothNotNull then Exit;
+    if PLongWord(Pointer(V1)^)^ <> PLongWord(Pointer(V2)^)^ then Result := 1//length different?
+    else Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
+                         PAnsiChar(Pointer(V2)^)+PAnsiInc,
+                         PLongWord(Pointer(V1)^)^);
+  end;
 end;
+
 {$IFNDEF WITH_USC2_ANSICOMPARESTR_ONLY}
 function CompareNativeRaw_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if (Null1 and Null2) or (
-    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else if (PPointer(V1)^ = nil) then Result := -1
-  else if (PPointer(V2)^ = nil) then Result := 1
-  else
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+    if Result <> BothNotNull then Exit;
     {$IFDEF MSWINDOWS}
     Result := CompareStringA(LOCALE_USER_DEFAULT, 0,
       PAnsiChar(Pointer(V1)^)+PAnsiInc, PLongWord(Pointer(V1)^)^,
@@ -653,6 +647,7 @@ begin
     Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
       AnsiStrComp(PPAnsiChar(V1)^+PAnsiInc, PPAnsiChar(V2)^+PAnsiInc)
     {$ENDIF}
+  end;
 end;
 
 function CompareNativeRaw_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -665,13 +660,11 @@ function CompareUnicodeFromUTF8_Asc(const Null1, Null2: Boolean; const V1, V2): 
 var
   S1, S2: ZWideString;
 begin
-  if (Null1 and Null2) or (
-    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else if (PPointer(V1)^ = nil) then Result := -1
-  else if (PPointer(V2)^ = nil) then Result := 1
-  else begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+    if Result <> BothNotNull then Exit;
     S1 := PRawToUnicode(PAnsiChar(Pointer(V1)^)+PAnsiInc, PLongWord(Pointer(V1)^)^, zCP_UTF8);
     S2 := PRawToUnicode(PAnsiChar(Pointer(V2)^)+PAnsiInc, PLongWord(Pointer(V2)^)^, zCP_UTF8);
     {$IFDEF UNICODE}
@@ -692,13 +685,11 @@ function CompareUnicode_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 var S1, S2: ZWideString;
 {$ENDIF}
 begin
-  if (Null1 and Null2) or (
-    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else if (PPointer(V1)^ = nil) then Result := -1
-  else if (PPointer(V2)^ = nil) then Result := 1
-  else begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+    if Result <> BothNotNull then Exit;
     {$IFDEF MSWINDOWS}
     SetLastError(0);
     Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
@@ -725,12 +716,12 @@ end;
 
 function CompareUnicode_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  if (Null1 and Null2) or (
-    (not Null1 and not Null2) and (PPointer(V1)^ = nil) and (PPointer(V2)^ = nil)) then Result := 0 //both are null or empty?
-  else if (Null1 or Null2) or (
-    ((PPointer(V1)^ <> nil) and (PPointer(V2)^ = nil)) or
-    ((PPointer(V1)^ = nil) and (PPointer(V2)^ <> nil))) then Result := 1 //one of both is null or empty?
-  else begin
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    // Both values not null
+    Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+    if Result <> BothNotNull then Exit;
     Result := Ord(PLongWord(Pointer(V1)^)^ <> PLongWord(Pointer(V2)^)^);
     if Result = 0 then
        Result := ZMemLComp(Pointer(PWideChar(Pointer(V1)^)+PWideInc),
@@ -742,21 +733,21 @@ end;
 function CompareNativeCLob_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
   Blob1, Blob2: IZBlob;
-  BlobEmpty1, BlobEmpty2: Boolean;
 begin
-  Blob1 := IZBlob(PPointer(V1)^);
-  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
-  Blob2 := IZBlob(PPointer(V2)^);
-  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
-  if BlobEmpty1 and BlobEmpty2 then Result := 0
-  else if (BlobEmpty1) then Result := 1
-  else if (BlobEmpty2) then Result := -1
-  else
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    // Both values not null
+    Blob1 := IZBlob(PPointer(V1)^);
+    Blob2 := IZBlob(PPointer(V2)^);
+    Result := NullsCompareMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+    if Result <> BothNotNull then Exit;
     {$IFDEF WITH_USC2_ANSICOMPARESTR_ONLY}
     Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
     {$ELSE}
     Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString);
     {$ENDIF}
+  end;
 end;
 
 function CompareNativeCLob_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -767,39 +758,41 @@ end;
 function CompareNativeCLob_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
   Blob1, Blob2: IZBlob;
-  BlobEmpty1, BlobEmpty2: Boolean;
 begin
-  Blob1 := IZBlob(PPointer(V1)^);
-  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
-  Blob2 := IZBlob(PPointer(V2)^);
-  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
-  if BlobEmpty1 and BlobEmpty2 then Result := 0
-  else if (BlobEmpty1 <> BlobEmpty2) then Result := 1
-  else if Blob1.IsUpdated or Blob2.IsUpdated then
-    {$IFDEF WITH_USC2_ANSICOMPARESTR_ONLY}
-    Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString)
-    {$ELSE}
-    Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
-    {$ENDIF}
-  else Result := 0;
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    // Both values not null
+    Blob1 := IZBlob(PPointer(V1)^);
+    Blob2 := IZBlob(PPointer(V2)^);
+    Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+    if Result <> BothNotNull then Exit;
+    if Blob1.IsUpdated or Blob2.IsUpdated then
+      {$IFDEF WITH_USC2_ANSICOMPARESTR_ONLY}
+      Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString)
+      {$ELSE}
+      Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
+      {$ENDIF}
+    else Result := 0;
+  end;
 end;
 
-function CompareUnicodeCLob_Asc(const {%H-}Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeCLob_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
   Blob1, Blob2: IZBlob;
-  BlobEmpty1, BlobEmpty2: Boolean;
   {$IFDEF MSWINDOWS}
   ValuePtr1, ValuePtr2: Pointer;
   {$ENDIF}
 begin
-  Blob1 := IZBlob(PPointer(V1)^);
-  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
-  Blob2 := IZBlob(PPointer(V2)^);
-  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
-  if BlobEmpty1 and BlobEmpty2 then Result := 0
-  else if BlobEmpty1 then Result := 1
-  else if BlobEmpty2 then Result := -1
-  else if Blob1.IsClob and Blob2.IsClob then
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    // Both values not null
+    Blob1 := IZBlob(PPointer(V1)^);
+    Blob2 := IZBlob(PPointer(V2)^);
+    Result := NullsCompareMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+    if Result <> BothNotNull then Exit;
+    if Blob1.IsClob and Blob2.IsClob then
     begin
       {$IFDEF MSWINDOWS}
       ValuePtr1 := Blob1.GetPWideChar;
@@ -816,60 +809,65 @@ begin
         {$ENDIF}
       {$ENDIF}
     end
-  else
-    Result := ZMemLComp(Blob1.GetBuffer, Blob2.GetBuffer, Max(Blob1.Length, Blob2.Length));
+    else
+      Result := ZMemLComp(Blob1.GetBuffer, Blob2.GetBuffer, Max(Blob1.Length, Blob2.Length));
+  end;
 end;
 
-function CompareUnicodeCLob_Desc(const {%H-}Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeCLob_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  Result:=-CompareUnicodeClob_Asc(Null1,Null2,V1,V2);
+  Result := -CompareUnicodeClob_Asc(Null1,Null2,V1,V2);
 end;
 
-function CompareUnicodeCLob_Equals(const {%H-}Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeCLob_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
   Blob1, Blob2: IZBlob;
-  BlobEmpty1, BlobEmpty2: Boolean;
   ValuePtr1, ValuePtr2: Pointer;
 begin
-  Blob1 := IZBlob(PPointer(V1)^);
-  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
-  Blob2 := IZBlob(PPointer(V2)^);
-  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
-  if BlobEmpty1 and BlobEmpty2 then Result := 0
-  else if (BlobEmpty1 <> BlobEmpty2) then Result := 1
-  else if Blob1.IsUpdated or Blob2.IsUpdated then
-    if Blob1.IsClob and Blob2.IsClob then
-    begin
-      ValuePtr1 := Blob1.GetPWideChar;
-      ValuePtr2 := Blob2.GetPWideChar;
-      if Blob1.Length <> Blob2.Length then
-        Result := 1 else
-        Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length  shl 1);
-    end else begin
-      ValuePtr1 := Blob1.GetBuffer;
-      ValuePtr2 := Blob2.GetBuffer;
-      if Blob1.Length <> Blob2.Length then
-        Result := 1 else
-        Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length);
-    end
-  else Result := 0;
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    // Both values not null
+    Blob1 := IZBlob(PPointer(V1)^);
+    Blob2 := IZBlob(PPointer(V2)^);
+    Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+    if Result <> BothNotNull then Exit;
+    if Blob1.IsUpdated or Blob2.IsUpdated then
+      if Blob1.IsClob and Blob2.IsClob then
+      begin
+        ValuePtr1 := Blob1.GetPWideChar;
+        ValuePtr2 := Blob2.GetPWideChar;
+        if Blob1.Length <> Blob2.Length then
+          Result := 1 else
+          Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length  shl 1);
+      end else begin
+        ValuePtr1 := Blob1.GetBuffer;
+        ValuePtr2 := Blob2.GetBuffer;
+        if Blob1.Length <> Blob2.Length then
+          Result := 1 else
+          Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length);
+      end
+    else Result := 0;
+  end;
 end;
 
 function CompareBlob_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
   Blob1, Blob2: IZBlob;
-  BlobEmpty1, BlobEmpty2: Boolean;
 begin
-  Blob1 := IZBlob(PPointer(V1)^);
-  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
-  Blob2 := IZBlob(PPointer(V2)^);
-  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
-  if BlobEmpty1 and BlobEmpty2 then Result := 0
-  else if (BlobEmpty1 <> BlobEmpty2) then Result := 1
-  else if Blob1.IsUpdated or Blob2.IsUpdated then
-    if Blob1.Length <> Blob2.Length then Result := 1
-    else Result := ZMemLComp(Blob1.GetBuffer, Blob2.GetBuffer, Blob1.Length)
-  else Result := 1;
+  Result := NullsEqualMatrix[Null1, Null2];
+  if Result = BothNotNull then
+  begin
+    // Both values not null
+    Blob1 := IZBlob(PPointer(V1)^);
+    Blob2 := IZBlob(PPointer(V2)^);
+    Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+    if Result <> BothNotNull then Exit;
+    if Blob1.IsUpdated or Blob2.IsUpdated then
+      if Blob1.Length <> Blob2.Length then Result := 1
+      else Result := ZMemLComp(Blob1.GetBuffer, Blob2.GetBuffer, Blob1.Length)
+    else Result := 1;
+  end;
 end;
 
 { TZRowAccessor }
@@ -1039,7 +1037,7 @@ begin
   end;
 end;
 
-function TZRowAccessor.InternalGetInt(ColumnIndex: Integer; var IsNull: Boolean): Integer;
+function TZRowAccessor.InternalGetInt(ColumnIndex: Integer; out IsNull: Boolean): Integer;
 var
   Data: PPointer;
 begin
@@ -1084,7 +1082,8 @@ begin
     IsNull := True;
 end;
 
-function TZRowAccessor.InternalGetULong(ColumnIndex: Integer; var IsNull: Boolean): UInt64;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+function TZRowAccessor.InternalGetULong(ColumnIndex: Integer; out IsNull: Boolean): UInt64;
 var
   Data: PPointer;
 begin
@@ -1092,7 +1091,7 @@ begin
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stBoolean: if PWordBool(Data)^ then Result := 1;
       stByte: Result := PByte(Data)^;
@@ -1126,6 +1125,7 @@ begin
   else
     IsNull := True;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 procedure TZRowAccessor.InternalSetInt(ColumnIndex, Value: Integer);
 var
@@ -1143,7 +1143,9 @@ begin
     stSmall: PSmallInt(Data)^ := Value;
     stLongWord: PCardinal(Data)^ := Value;
     stInteger: PInteger(Data)^ := Value;
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := Value;
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := Value;
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
@@ -1282,11 +1284,10 @@ end;
   @param Buffer a pointer to row buffer.
   @return a pointer to the allocated buffer.
 }
-function TZRowAccessor.AllocBuffer(var Buffer: PZRowBuffer): PZRowBuffer;
+function TZRowAccessor.AllocBuffer: PZRowBuffer;
 begin
-  GetMem(Buffer, FRowSize);
-  InitBuffer(Buffer);
-  Result := Buffer;
+  GetMem(Result, FRowSize);
+  InitBuffer(Result);
 end;
 
 {**
@@ -1691,12 +1692,11 @@ begin
 end;
 
 {**
-  Allocates a new row buffer.
-  @return a pointer to the allocated buffer.
+  Allocates a new row buffer and saves it as internal field (externally visible as RowBuffer).
 }
-function TZRowAccessor.Alloc: PZRowBuffer;
+procedure TZRowAccessor.Alloc;
 begin
-  Result := AllocBuffer(FBuffer);
+  FBuffer := AllocBuffer;
 end;
 
 {**
@@ -1826,7 +1826,7 @@ begin
 end;
 
 function TZRowAccessor.GetCharRec(ColumnIndex: Integer;
-  var IsNull: Boolean): TZCharRec;
+  out IsNull: Boolean): TZCharRec;
 var Len: NativeUint;
 begin
   if fRaw then begin
@@ -1860,7 +1860,7 @@ end;
   @return a pointer to the column data buffer.
 }
 function TZRowAccessor.GetColumnData(ColumnIndex: Integer;
-  var IsNull: Boolean): Pointer;
+  out IsNull: Boolean): Pointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnIndex(ColumnIndex);
@@ -1999,7 +1999,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetPAnsiChar(ColumnIndex: Integer; var IsNull: Boolean;
+function TZRowAccessor.GetPAnsiChar(ColumnIndex: Integer; out IsNull: Boolean;
   out Len: NativeUInt): PAnsiChar;
 var
   Data: PPointer;
@@ -2074,7 +2074,7 @@ begin
   end;
 end;
 
-function TZRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
+function TZRowAccessor.GetString(ColumnIndex: Integer; out IsNull: Boolean): String;
 var
   Data: PPointer;
 begin
@@ -2157,7 +2157,7 @@ end;
     value returned is <code>null</code>
 }
 {$IFNDEF NO_ANSISTRING}
-function TZRowAccessor.GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+function TZRowAccessor.GetAnsiString(ColumnIndex: Integer; out IsNull: Boolean): AnsiString;
 var
   Data: PPointer;
 begin
@@ -2228,7 +2228,7 @@ end;
     value returned is <code>null</code>
 }
 {$IFNDEF NO_UTF8STRING}
-function TZRowAccessor.GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
+function TZRowAccessor.GetUTF8String(ColumnIndex: Integer; out IsNull: Boolean): UTF8String;
 var Data: PPointer;
 begin
   {$R-}
@@ -2303,7 +2303,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
+function TZRowAccessor.GetRawByteString(ColumnIndex: Integer; out IsNull: Boolean): RawByteString;
 var Data: PPointer;
 begin
   {$R-}
@@ -2369,7 +2369,7 @@ end;
     value returned is <code>null</code>
 }
 function TZRowAccessor.GetPWideChar(ColumnIndex: Integer;
-  var IsNull: Boolean; out Len: NativeUInt): PWideChar;
+  out IsNull: Boolean; out Len: NativeUInt): PWideChar;
 var
   Data: PPointer;
 begin
@@ -2445,7 +2445,7 @@ end;
     value returned is <code>null</code>
 }
 function TZRowAccessor.GetUnicodeString(ColumnIndex: Integer;
-  var IsNull: Boolean): ZWideString;
+  out IsNull: Boolean): ZWideString;
 var Data: PPointer;
 begin
   {$R-}
@@ -2505,7 +2505,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>false</code>
 }
-function TZRowAccessor.GetBoolean(ColumnIndex: Integer; var IsNull: Boolean): Boolean;
+function TZRowAccessor.GetBoolean(ColumnIndex: Integer; out IsNull: Boolean): Boolean;
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2558,7 +2558,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetByte(ColumnIndex: Integer; var IsNull: Boolean): Byte;
+function TZRowAccessor.GetByte(ColumnIndex: Integer; out IsNull: Boolean): Byte;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
@@ -2575,7 +2575,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetShort(ColumnIndex: Integer; var IsNull: Boolean): ShortInt;
+function TZRowAccessor.GetShort(ColumnIndex: Integer; out IsNull: Boolean): ShortInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
@@ -2592,7 +2592,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetWord(ColumnIndex: Integer; var IsNull: Boolean): Word;
+function TZRowAccessor.GetWord(ColumnIndex: Integer; out IsNull: Boolean): Word;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stWord);
@@ -2608,7 +2608,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetSmall(ColumnIndex: Integer; var IsNull: Boolean): SmallInt;
+function TZRowAccessor.GetSmall(ColumnIndex: Integer; out IsNull: Boolean): SmallInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stSmall);
@@ -2625,7 +2625,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetUInt(ColumnIndex: Integer; var IsNull: Boolean): Cardinal;
+function TZRowAccessor.GetUInt(ColumnIndex: Integer; out IsNull: Boolean): Cardinal;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLongWord);
@@ -2642,7 +2642,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetInt(ColumnIndex: Integer; var IsNull: Boolean): Integer;
+function TZRowAccessor.GetInt(ColumnIndex: Integer; out IsNull: Boolean): Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
@@ -2659,7 +2659,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetULong(ColumnIndex: Integer; var IsNull: Boolean): UInt64;
+function TZRowAccessor.GetULong(ColumnIndex: Integer; out IsNull: Boolean): UInt64;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stULong);
@@ -2676,7 +2676,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetLong(ColumnIndex: Integer; var IsNull: Boolean): Int64;
+function TZRowAccessor.GetLong(ColumnIndex: Integer; out IsNull: Boolean): Int64;
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2730,7 +2730,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetFloat(ColumnIndex: Integer; var IsNull: Boolean): Single;
+function TZRowAccessor.GetFloat(ColumnIndex: Integer; out IsNull: Boolean): Single;
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2784,7 +2784,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetDouble(ColumnIndex: Integer; var IsNull: Boolean): Double;
+function TZRowAccessor.GetDouble(ColumnIndex: Integer; out IsNull: Boolean): Double;
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2839,7 +2839,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetCurrency(ColumnIndex: Integer; var IsNull: Boolean): Currency;
+function TZRowAccessor.GetCurrency(ColumnIndex: Integer; out IsNull: Boolean): Currency;
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2894,7 +2894,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetBigDecimal(ColumnIndex: Integer; var IsNull: Boolean): Extended;
+function TZRowAccessor.GetBigDecimal(ColumnIndex: Integer; out IsNull: Boolean): Extended;
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2949,7 +2949,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetBytes(ColumnIndex: Integer; var IsNull: Boolean): TBytes;
+function TZRowAccessor.GetBytes(ColumnIndex: Integer; out IsNull: Boolean): TBytes;
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2996,7 +2996,7 @@ end;
   @param Len return the count of Bytes for the value
   @return the column value
 }
-function TZRowAccessor.GetBytes(ColumnIndex: Integer; var IsNull: Boolean;
+function TZRowAccessor.GetBytes(ColumnIndex: Integer; out IsNull: Boolean;
   out Len: Word): Pointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -3044,7 +3044,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetDate(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+function TZRowAccessor.GetDate(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
 var
   Failed: Boolean;
   Data: Pointer;
@@ -3064,10 +3064,10 @@ begin
       stString, stUnicodeString: if (PPointer(Data)^ <> nil) then
         if fRaw then begin
           Result := ZSysUtils.RawSQLDateToDateTime(PPAnsiChar(Data)^+PAnsiInc,
-            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed{%H-});
+            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed);
           if Failed then
             Result := Int(ZSysUtils.RawSQLTimeStampToDateTime(PPAnsiChar(Data)^+PAnsiInc,
-              PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed{%H-}));
+              PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed));
         end else begin
           Result := ZSysUtils.UnicodeSQLDateToDateTime(ZPPWideChar(Data)^+PWideInc,
             PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed);
@@ -3080,10 +3080,10 @@ begin
           if not TempBlob^.IsEmpty and TempBlob^.IsClob then begin
             Data := TempBlob^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
             Result := ZSysUtils.RawSQLDateToDateTime(Data, TempBlob^.Length,
-              ConSettings^.ReadFormatSettings, Failed{%H-});
+              ConSettings^.ReadFormatSettings, Failed);
             if Failed then
               Result := Int(ZSysUtils.RawSQLTimeStampToDateTime(Data, TempBlob^.Length,
-                ConSettings^.ReadFormatSettings, Failed{%H-}));
+                ConSettings^.ReadFormatSettings, Failed));
           end;
         end;
     end;
@@ -3101,7 +3101,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetTime(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+function TZRowAccessor.GetTime(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
 var
   Failed: Boolean;
   Data: Pointer;
@@ -3122,7 +3122,7 @@ begin
       stString, stUnicodeString:
         if fRaw then begin
           Result := ZSysUtils.RawSQLTimeToDateTime(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^,
-            ConSettings^.ReadFormatSettings, Failed{%H-});
+            ConSettings^.ReadFormatSettings, Failed);
           if Failed then
             Result := Frac(ZSysUtils.RawSQLTimeStampToDateTime(PPAnsiChar(Data)^+PAnsiInc,
               PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed));
@@ -3161,7 +3161,7 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-function TZRowAccessor.GetTimestamp(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+function TZRowAccessor.GetTimestamp(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
 var
   Failed: Boolean;
   Data: Pointer;
@@ -3180,7 +3180,7 @@ begin
       stString, stUnicodeString:
         if fRaw then
           Result := ZSysUtils.RawSQLTimeStampToDateTime(PPAnsiChar(Data)^+PAnsiInc,
-            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed{%H-})
+            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed)
         else
           Result := ZSysUtils.UnicodeSQLTimeStampToDateTime(PPWideChar(Data)^+PWideInc,
             PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed);
@@ -3220,7 +3220,7 @@ end;
     as a stream of one-byte ASCII characters; if the value is SQL
     <code>NULL</code>, the value returned is <code>null</code>
 }
-function TZRowAccessor.GetAsciiStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
+function TZRowAccessor.GetAsciiStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
 var TempBlob: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -3262,7 +3262,7 @@ end;
     as a stream in Java UTF-8 byte format; if the value is SQL
     <code>NULL</code>, the value returned is <code>null</code>
 }
-function TZRowAccessor.GetUnicodeStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
+function TZRowAccessor.GetUnicodeStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
 var TempBlob: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -3303,7 +3303,7 @@ end;
     as a stream of uninterpreted bytes;
     if the value is SQL <code>NULL</code>, the value returned is <code>null</code>
 }
-function TZRowAccessor.GetBinaryStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
+function TZRowAccessor.GetBinaryStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
 var TempBlob: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -3330,7 +3330,7 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZRowAccessor.GetBlob(ColumnIndex: Integer; var IsNull: Boolean): IZBlob;
+function TZRowAccessor.GetBlob(ColumnIndex: Integer; out IsNull: Boolean): IZBlob;
 var TempBlob: PIZLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -3362,7 +3362,7 @@ end;
   @return a <code>ResultSet</code> object representing the SQL
     <code>ResultSet</code> value in the specified column
 }
-function TZRowAccessor.GetDataSet(ColumnIndex: Integer; var IsNull: Boolean): IZDataSet;
+function TZRowAccessor.GetDataSet(ColumnIndex: Integer; out IsNull: Boolean): IZDataSet;
 var
   Ptr: PPointer;
   NullPtr: {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF};
@@ -3390,6 +3390,7 @@ begin
   else
     Result := nil;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  IsNull := Result = nil;
 end;
 
 {**
@@ -3409,8 +3410,9 @@ begin
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
     ValuePtr := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
       stByte:
         begin
           Result.VType := vtUInteger;
@@ -3514,6 +3516,7 @@ begin
       else
         Result.VType := vtNull;
     end;
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
   end
   else
     Result.VType := vtNull;
@@ -3615,7 +3618,9 @@ begin
     stSmall: PSmallInt(Data)^ := Ord(Value);
     stLongWord: PCardinal(Data)^ := Ord(Value);
     stInteger: PInteger(Data)^ := Ord(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := Ord(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := Ord(Value);
     stFloat: PSingle(Data)^ := Ord(Value);
     stDouble: PDouble(Data)^ := Ord(Value);
@@ -3715,7 +3720,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLongWord);
 {$ENDIF}
+  {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
   InternalSetULong(ColumnIndex, Value);
+  {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 end;
 
 {**
@@ -3782,7 +3789,9 @@ begin
     stSmall: PSmallInt(Data)^ := Value;
     stLongWord: PCardinal(Data)^ := Value;
     stInteger: PInteger(Data)^ := Value;
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := Value;
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := Value;
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
@@ -3824,7 +3833,9 @@ begin
     stLongWord: PCardinal(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stInteger: PInteger(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stLong: PInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
@@ -3865,7 +3876,9 @@ begin
     stLongWord: PCardinal(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stInteger: PInteger(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stLong: PInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
@@ -3875,7 +3888,6 @@ begin
       then SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
       else SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
   end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
 {**
@@ -3907,7 +3919,9 @@ begin
     stLongWord: PCardinal(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stInteger: PInteger(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stLong: PInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
@@ -3949,7 +3963,9 @@ begin
     stLongWord: PCardinal(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stInteger: PInteger(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stLong: PInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
@@ -3988,7 +4004,9 @@ begin
     stSmall: PSmallInt(Data)^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
     stLongWord: PCardinal(Data)^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
     stInteger: PInteger(Data)^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
     stFloat: PSingle(Data)^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
     stDouble: PDouble(Data)^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
@@ -4013,7 +4031,7 @@ begin
       begin
         PDateTime(Data)^ :=
           {$IFDEF UNICODE}UnicodeSQLDateToDateTime{$ELSE}RawSQLDateToDateTime{$ENDIF}(
-            PChar(Pointer(Value)), Length(Value), ConSettings^.DisplayFormatSettings, Failed{%H-});
+            PChar(Pointer(Value)), Length(Value), ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
           PDateTime(Data)^ := Int({$IFDEF UNICODE}UnicodeSQLTimeStampToDateTime{$ELSE}RawSQLTimeStampToDateTime{$ENDIF}(
               PChar(Pointer(Value)), Length(Value), ConSettings^.DisplayFormatSettings, Failed));
@@ -4083,7 +4101,9 @@ begin
     stSmall: PSmallInt(Data)^ := RawToIntDef(Value, 0);
     stLongWord: PCardinal(Data)^ := RawToInt64Def(Value, 0);
     stInteger: PInteger(Data)^ := RawToIntDef(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := RawToInt64Def(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := RawToInt64Def(Value, 0);
     stFloat: SQLStrToFloatDef(Value, 0, PSingle(Data)^, Len^);
     stDouble: SQLStrToFloatDef(Value, 0, PDouble(Data)^, Len^);
@@ -4102,7 +4122,7 @@ begin
         else SetNull(ColumnIndex);
     stDate:
       begin
-        PDateTime(Data)^ := RawSQLDateToDateTime (Value, Len^, ConSettings^.DisplayFormatSettings, Failed{%H-});
+        PDateTime(Data)^ := RawSQLDateToDateTime (Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
           PDateTime(Data)^ := Int(RawSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed));
       end;
@@ -4175,7 +4195,9 @@ begin
     stSmall: PSmallInt(Data)^ := UnicodeToIntDef(Value, 0);
     stLongWord: PCardinal(Data)^ := UnicodeToInt64Def(Value, 0);
     stInteger: PInteger(Data)^ := UnicodeToIntDef(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := UnicodeToInt64Def(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := UnicodeToInt64Def(Value, 0);
     stFloat: PSingle(Data)^ := SQLStrToFloatDef(Value, 0, Len^);
     stDouble: PDouble(Data)^ := SQLStrToFloatDef(Value, 0, Len^);
@@ -4200,7 +4222,7 @@ begin
     stDate:
       begin
         PDateTime(Data)^ :=
-          UnicodeSQLDateToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed{%H-});
+          UnicodeSQLDateToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
         if Failed then PDateTime(Data)^ := Int(UnicodeSQLTimeStampToDateTime(Value, Len^,
               ConSettings^.DisplayFormatSettings, Failed));
       end;
@@ -4289,7 +4311,9 @@ begin
     stSmall: PSmallInt(Data)^ := RawToIntDef(Value, 0);
     stLongWord: PCardinal(Data)^ := RawToInt64Def(Value, 0);
     stInteger: PInteger(Data)^ := RawToIntDef(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := RawToInt64Def(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := RawToInt64Def(Value, 0);
     stFloat: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PSingle(Data)^, Length(Value));
     stDouble: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PDouble(Data)^, Length(Value));
@@ -4309,7 +4333,7 @@ begin
     stDate:
       begin
         PDateTime(Data)^ := RawSQLDateToDateTime(Pointer(Value), Length(Value),
-              ConSettings^.DisplayFormatSettings, Failed{%H-});
+              ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
           PDateTime(Data)^ := Int(RawSQLTimeStampToDateTime(Pointer(Value),
             Length(Value), ConSettings^.DisplayFormatSettings, Failed));
@@ -4366,7 +4390,9 @@ begin
     stSmall: PSmallInt(Data)^ := UnicodeToIntDef(Value, 0);
     stLongWord: PCardinal(Data)^ := UnicodeToInt64Def(Value, 0);
     stInteger: PInteger(Data)^ := UnicodeToIntDef(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     stULong: PUInt64(Data)^ := UnicodeToInt64Def(Value, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := UnicodeToInt64Def(Value, 0);
     stFloat: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PSingle(Data)^, Length(Value));
     stDouble: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PDouble(Data)^, Length(Value));
@@ -4399,7 +4425,7 @@ begin
     stDate:
       begin
         PDateTime(Data)^ := UnicodeSQLDateToDateTime(Pointer(Value), Length(Value),
-            ConSettings^.DisplayFormatSettings, Failed{%H-});
+            ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
           PDateTime(Data)^ := Int(UnicodeSQLTimeStampToDateTime(Pointer(Value),
             Length(Value), ConSettings^.DisplayFormatSettings, Failed));

@@ -54,12 +54,10 @@ unit ZDbcOleDBMetadata;
 interface
 
 {$I ZDbc.inc}
-{.$DEFINE ENABLE_OLEDB}
-{$IF Defined(ENABLE_OLEDB) or defined(ENABLE_ADO)}
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZSysUtils, {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata,
+  ZSysUtils, ZDbcIntfs, ZDbcMetadata,
   ZCompatibility, ZOleDB, ZDbcConnection, ZURL, ActiveX;
 
 type
@@ -307,8 +305,9 @@ implementation
 
 uses
   Variants, ZGenericSqlToken, ZFastCode,
-  {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj{$else}ComObj{$endif},
-  ZDbcOleDBUtils{$IFDEF ENABLE_OLEDB} //Exclude for ADO
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
+  ZDbcOleDBUtils
+  {$IFDEF ENABLE_OLEDB} //Exclude for ADO
   ,ZDbcOleDB, ZDbcOleDBResultSet, ZDbcOleDBStatement
   {$ENDIF};
 
@@ -2876,12 +2875,7 @@ begin
       Break;
     end;
 end;
+
 {$ENDIF ENABLE_OLEDB}
-//(*
-{$ELSE }
-implementation
-{$IFEND}
-//*)
+
 end.
-
-

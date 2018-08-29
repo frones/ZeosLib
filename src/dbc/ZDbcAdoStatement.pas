@@ -54,12 +54,10 @@ unit ZDbcAdoStatement;
 interface
 
 {$I ZDbc.inc}
-{.$DEFINE ENABLE_ADO}
-{$IFDEF ENABLE_ADO}
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
-  ZCompatibility, {$IFDEF OLD_FPC}ZClasses, {$ENDIF} ZSysUtils, ZOleDB,
+  ZCompatibility, ZSysUtils, ZOleDB,
   ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils,
   ZDbcOleDBUtils;
 
@@ -159,7 +157,7 @@ implementation
 
 uses
   Variants, Math,
-  {$IFDEF WITH_SYSTEM_WIN_COMOBJ}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZFastCode,
   ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages, ZDbcProperties;
@@ -645,13 +643,13 @@ begin
               begin
                 Stream := TStringStream.Create(AnsiString(Temp));
                 RS.UpdateAsciiStream(I, Stream);
-                Stream.Free;
+                FreeAndNil(Stream);
               end;
             stUnicodeString:
               RS.UpdateUnicodeString(i, Temp);
             stUnicodeStream:
               begin
-                Stream := WideStringStream(WideString(Temp));
+                Stream := StreamFromData(WideString(Temp));
                 RS.UpdateUnicodeStream(I, Stream);
                 FreeAndNil(Stream);
               end;
@@ -676,9 +674,7 @@ begin
                   begin
                     P := VarArrayLock(Temp);
                     try
-                      Stream := TMemoryStream.Create;
-                      Stream.Size {%H-}:= VarArrayHighBound(Temp, 1)+1;
-                      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, TMemoryStream(Stream).Memory^, Stream.Size);
+                      Stream := StreamFromData(P, VarArrayHighBound(Temp, 1)+1);
                       RS.UpdateBinaryStream(I, Stream);
                       FreeAndNil(Stream);
                     finally
@@ -695,8 +691,6 @@ begin
       Result := RS;
     finally
       ColumnsInfo.Free;
-      if Stream <> nil then
-        Stream.Free;
     end;
 end;
 
@@ -1096,7 +1090,4 @@ SetNull:
   end;
 end;
 
-{$ELSE}
-implementation
-{$ENDIF ENABLE_ADO}
 end.
