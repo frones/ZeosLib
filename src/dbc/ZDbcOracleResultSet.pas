@@ -595,7 +595,7 @@ var
   yr, mnth, dy, hr, mm, ss, fsec: sb4;
   Month, Day: Byte;
   Hour, Minute, Second: Byte;
-  Millis: Integer;
+  Millis: ub4;
   P: PAnsiChar;
   Ptr: POraDate absolute P;
 begin
