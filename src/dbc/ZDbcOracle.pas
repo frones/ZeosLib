@@ -477,7 +477,7 @@ function TZOracleConnection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
      Open;
-  Result := TZOraclePreparedStatement.Create(Self, '', Info);
+  Result := TZOracleStatement.Create(Self, Info);
 end;
 
 {**

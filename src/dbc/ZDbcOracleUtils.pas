@@ -65,7 +65,7 @@ uses
 
 const
   MAX_SQLVAR_LIMIT = 1024;
-  Max_OCI_String_Size = 4000;
+  Max_OCI_String_Size = 4000; //prevent 'OCI_ERROR: ORA-01459: invalid length for variable character string' if buffer is to small
   Max_OCI_Raw_Size = 2000;
 
 
@@ -103,7 +103,7 @@ type
 
   PZOCIParamBind = ^TZOCIParamBind;
   TZOCIParamBind = record
-    {OCI Handles}
+    {OCI bind Handles}
     bindpp:     POCIBind; //An address of a bind handle which is implicitly allocated by this call. The bind handle maintains all the bind information for this particular input value. The handle is freed implicitly when the statement handle is deallocated. On input, the value of the pointer must be null or a valid bind handle. binding values
     valuep:     PAnsiChar; //An address of a data value or an array of data values of the type specified in the dty parameter. An array of data values can be specified for mapping into a PL/SQL table or for providing data for SQL multiple-row operations. When an array of bind values is provided, this is called an array bind in OCI terms.
                          //For SQLT_NTY or SQLT_REF binds, the valuep parameter is ignored. The pointers to OUT buffers are set in the pgvpp parameter initialized by OCIBindObject().
@@ -112,7 +112,6 @@ type
                      //descriptors, locators, or REFs, whose size is unknown to client applications use the size of the structure you are passing in; for example, sizeof (OCILobLocator *).
     dty:        ub2; //The data type of the value(s) being bound. Named data types (SQLT_NTY) and REFs (SQLT_REF) are valid only if the application has been initialized in object mode. For named data types, or REFs, additional calls must be made with the bind handle to set up the datatype-specific attributes.
     indp:       PSB2Array; //Pointer to an indicator variable or array. For all data types, this is a pointer to sb2 or an array of sb2s. The only exception is SQLT_NTY, when this pointer is ignored and the actual pointer to the indicator structure or an array of indicator structures is initialized by OCIBindObject(). Ignored for dynamic binds.
-    alenp:      PUB2Array; //Pointer to array of actual lengths of array elements. Each element in alenp is the length (in bytes, unless the data in valuep is in Unicode, when it is in codepoints) of the data in the corresponding element in the bind value array before and after the execute. This parameter is ignored for dynamic binds.
     {zeos}
     DescriptorType: sb4; //holds our descriptor type we use
     curelen:      ub4; //the actual number of elements

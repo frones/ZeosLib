@@ -4979,7 +4979,8 @@ var BindValue: PZBindValue;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   if BindList.Count < ParameterIndex+1 then
-    BindList.SetCount(ParameterIndex+1);
+    SetParamCount(ParameterIndex+1);
+    //BindList.SetCount(ParameterIndex+1);
   BindValue := BindList[ParameterIndex];
   BindValue^.ParamType := ParamType;
   BindValue^.SQLType   := SQLType;
