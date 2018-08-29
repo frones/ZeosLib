@@ -3257,6 +3257,7 @@ begin
   else
     Result := nil;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  IsNull := Result = nil;
 end;
 
 {**

@@ -57,7 +57,6 @@ interface
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
-  {$IFDEF MSWINDOWS}{%H-}Windows,{$ENDIF}
   ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainOracleDriver,
   ZCompatibility, ZVariant, ZDbcOracleUtils, ZPlainOracleConstants,
   ZDbcOracle;
@@ -332,7 +331,7 @@ begin
 end;
 
 procedure TZOraclePreparedStatement.UnPrepare;
-const {%H-}RELEASE_MODE: array[boolean] of integer = (OCI_DEFAULT,OCI_STMTCACHE_DELETE);
+const RELEASE_MODE: array[boolean] of integer = (OCI_DEFAULT,OCI_STMTCACHE_DELETE);
 begin
   try
     if False and FServerStmtCache then
@@ -484,7 +483,7 @@ begin
 end;
 
 procedure TZOracleCallableStatement.UnPrepare;
-const {%H-}RELEASE_MODE: array[boolean] of integer = (OCI_DEFAULT,OCI_STMTCACHE_DELETE);
+const RELEASE_MODE: array[boolean] of integer = (OCI_DEFAULT,OCI_STMTCACHE_DELETE);
 begin
   try
     if False{FServerStmtCache} then

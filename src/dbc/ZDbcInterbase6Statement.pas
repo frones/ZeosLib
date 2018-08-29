@@ -306,8 +306,12 @@ var
         {$IFNDEF AUTOREFCOUNT}
         Slot.Obj._Release;
         {$ENDIF}
+        Slot.Obj := nil;
       end;
       Slot.Obj := TZInterbase6PreparedStatement.Create(Connection, '', Info);
+      {$IFNDEF AUTOREFCOUNT}
+      Slot.Obj._AddRef;
+      {$ENDIF}
       Slot.Obj.FASQL := eBlock;
       Slot.Obj.FInParamCount := InParamCount*PreparedRowsOfArray;
       Slot.PreparedRowsOfArray := PreparedRowsOfArray;
@@ -353,7 +357,7 @@ begin
         if (FBatchStmts[False].PreparedRowsOfArray <> ArrayCount) then
           PrepareFinalChunk(ArrayCount) //full block of batch
       end else
-        if (FBatchStmts[False].PreparedRowsOfArray <> (ArrayCount mod FMaxRowsPerBatch)) then
+        if (ArrayCount <> FMaxRowsPerBatch) and (FBatchStmts[False].PreparedRowsOfArray <> (ArrayCount mod FMaxRowsPerBatch)) then
           PrepareFinalChunk(ArrayCount mod FMaxRowsPerBatch); //final block of batch
     end else if (FBatchStmts[False].PreparedRowsOfArray <> ArrayCount) then
       PrepareArrayStmt(FBatchStmts[False]); //full block of batch

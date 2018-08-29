@@ -1262,10 +1262,12 @@ end;
 procedure TZGenericTestDbcResultSet.TestStringGetter;
 const
   p_name_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  SNames: array[0..4] of string =
+    ('Vasia Pupkin', 'Andy Karto', 'Kristen Sato', 'Aleksey Petrov', 'Yan Pater');
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
-  Len: NativeUInt;
+  Len, name: NativeUInt;
 begin
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
@@ -1273,61 +1275,20 @@ begin
   try
     ResultSet := Statement.ExecuteQuery('select * from people');
     try
-      Check(ResultSet.Next);
-      CheckEquals('Vasia Pupkin', ResultSet.GetString(p_name_Index));
-      CheckEquals('Vasia Pupkin', ResultSet.GetAnsiString(p_name_Index));
-      CheckEquals('Vasia Pupkin', ResultSet.GetUTF8String(p_name_Index));
-      CheckEquals('Vasia Pupkin', ResultSet.GetRawByteString(p_name_Index));
-      CheckEquals('Vasia Pupkin', ResultSet.GetUnicodeString(p_name_Index));
-      CheckEquals('Vasia Pupkin', ResultSet.GetPAnsiChar(p_name_Index));
-      CheckEquals(RawByteString('Vasia Pupkin'), ResultSet.GetPAnsiChar(p_name_Index, Len), @Len);
-      CheckEquals('Vasia Pupkin', ResultSet.GetPChar(p_name_Index));
-      CheckEquals('Vasia Pupkin', ResultSet.GetPWideChar(p_name_Index));
-      CheckEquals('Vasia Pupkin', ResultSet.GetPWideChar(p_name_Index, Len));
-      Check(ResultSet.Next);
-      CheckEquals('Andy Karto', ResultSet.GetString(p_name_Index));
-      CheckEquals('Andy Karto', ResultSet.GetAnsiString(p_name_Index));
-      CheckEquals('Andy Karto', ResultSet.GetUTF8String(p_name_Index));
-      CheckEquals('Andy Karto', ResultSet.GetRawByteString(p_name_Index));
-      CheckEquals('Andy Karto', ResultSet.GetUnicodeString(p_name_Index));
-      CheckEquals('Andy Karto', ResultSet.GetPAnsiChar(p_name_Index));
-      CheckEquals(RawByteString('Andy Karto'), ResultSet.GetPAnsiChar(p_name_Index, Len), @Len);
-      CheckEquals('Andy Karto', ResultSet.GetPChar(p_name_Index));
-      CheckEquals('Andy Karto', ResultSet.GetPWideChar(p_name_Index));
-      CheckEquals('Andy Karto', ResultSet.GetPWideChar(p_name_Index, Len));
-      Check(ResultSet.Next);
-      CheckEquals('Kristen Sato', ResultSet.GetString(p_name_Index));
-      CheckEquals('Kristen Sato', ResultSet.GetAnsiString(p_name_Index));
-      CheckEquals('Kristen Sato', ResultSet.GetUTF8String(p_name_Index));
-      CheckEquals('Kristen Sato', ResultSet.GetRawByteString(p_name_Index));
-      CheckEquals('Kristen Sato', ResultSet.GetUnicodeString(p_name_Index));
-      CheckEquals('Kristen Sato', ResultSet.GetPAnsiChar(p_name_Index));
-      CheckEquals(RawByteString('Kristen Sato'), ResultSet.GetPAnsiChar(p_name_Index, Len), @Len);
-      CheckEquals('Kristen Sato', ResultSet.GetPChar(p_name_Index));
-      CheckEquals('Kristen Sato', ResultSet.GetPWideChar(p_name_Index));
-      CheckEquals('Kristen Sato', ResultSet.GetPWideChar(p_name_Index, Len));
-      Check(ResultSet.Next);
-      CheckEquals('Aleksey Petrov', ResultSet.GetString(p_name_Index));
-      CheckEquals('Aleksey Petrov', ResultSet.GetAnsiString(p_name_Index));
-      CheckEquals('Aleksey Petrov', ResultSet.GetUTF8String(p_name_Index));
-      CheckEquals('Aleksey Petrov', ResultSet.GetRawByteString(p_name_Index));
-      CheckEquals('Aleksey Petrov', ResultSet.GetUnicodeString(p_name_Index));
-      CheckEquals('Aleksey Petrov', ResultSet.GetPAnsiChar(p_name_Index));
-      CheckEquals(RawByteString('Aleksey Petrov'), ResultSet.GetPAnsiChar(p_name_Index, Len), @Len);
-      CheckEquals('Aleksey Petrov', ResultSet.GetPChar(p_name_Index));
-      CheckEquals('Aleksey Petrov', ResultSet.GetPWideChar(p_name_Index));
-      CheckEquals('Aleksey Petrov', ResultSet.GetPWideChar(p_name_Index, Len));
-      Check(ResultSet.Next);
-      CheckEquals('Yan Pater', ResultSet.GetString(p_name_Index));
-      CheckEquals('Yan Pater', ResultSet.GetAnsiString(p_name_Index));
-      CheckEquals('Yan Pater', ResultSet.GetUTF8String(p_name_Index));
-      CheckEquals('Yan Pater', ResultSet.GetRawByteString(p_name_Index));
-      CheckEquals('Yan Pater', ResultSet.GetUnicodeString(p_name_Index));
-      CheckEquals('Yan Pater', ResultSet.GetPAnsiChar(p_name_Index));
-      CheckEquals(RawByteString('Yan Pater'), ResultSet.GetPAnsiChar(p_name_Index, Len), @Len);
-      CheckEquals('Yan Pater', ResultSet.GetPChar(p_name_Index));
-      CheckEquals('Yan Pater', ResultSet.GetPWideChar(p_name_Index));
-      CheckEquals('Yan Pater', ResultSet.GetPWideChar(p_name_Index, Len));
+      for name := Low(SNames) to High(SNames) do
+      begin
+        Check(ResultSet.Next);
+        CheckEquals(SNames[name], ResultSet.GetString(p_name_Index));
+        CheckEquals(AnsiString(SNames[name]), ResultSet.GetAnsiString(p_name_Index));
+        CheckEquals(UTF8String(SNames[name]), ResultSet.GetUTF8String(p_name_Index));
+        CheckEquals(RawByteString(SNames[name]), ResultSet.GetRawByteString(p_name_Index));
+        CheckEquals(ZWideString(SNames[name]), ResultSet.GetUnicodeString(p_name_Index));
+        CheckEquals(PAnsiChar(AnsiString(SNames[name])), ResultSet.GetPAnsiChar(p_name_Index));
+        CheckEquals(PAnsiChar(RawByteString(SNames[name])), ResultSet.GetPAnsiChar(p_name_Index, Len), @Len);
+        CheckEquals(PChar(SNames[name]), ResultSet.GetPChar(p_name_Index));
+        CheckEquals(ZWideString(SNames[name]), ZWideString(ResultSet.GetPWideChar(p_name_Index)));
+        CheckEquals(ZWideString(SNames[name]), ZWideString(ResultSet.GetPWideChar(p_name_Index, Len)));
+      end;
     finally
       ResultSet.Close;
     end;

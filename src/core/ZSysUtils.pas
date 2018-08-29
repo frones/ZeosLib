@@ -114,8 +114,8 @@ const
   {$ENDIF}
   BoolStrs: array[Boolean] of string = (StrFalse, StrTrue);
   BoolStrsW: array[Boolean] of ZWideString = (ZWideString(StrFalse), ZWideString(StrTrue));
-  SQLDateTimeFmt = 'yyyy-mm-dd hh:nn:ss';
-  SQLDateTimeFmtMSecs = 'yyyy-mm-dd hh:nn:ss.zzz';
+  SQLDateTimeFmt = 'YYYY"-"MM"-"DD HH":"NN":"SS';
+  SQLDateTimeFmtMSecs = 'YYYY"-"MM"-"DD HH":"NN":"SS"."ZZZ';
 
 var
   TwoDigitLookupHexW: packed array[Byte] of Word;
@@ -793,10 +793,9 @@ uses DateUtils, StrUtils, SysConst,
   {$IF defined(WITH_RTLCONSTS_SInvalidGuidArray) or defined(TLIST_IS_DEPRECATED)}RTLConsts,{$IFEND}
   ZFastCode;
 
-var
-  // Local copy of current FormatSettings with '.' as DecimalSeparator and
-  // ',' as ThousandSeparator
-  FSSqlFloat: TFormatSettings;
+const
+  // Local copy of current FormatSettings with '.' as DecimalSeparator and empty other fields
+  FmtSettFloatDot: TFormatSettings = ( DecimalSeparator: '.' );
 
 {**
   Determines a position of a first delimiter.
@@ -1882,12 +1881,12 @@ end;
 }
 function FloatToSQLStr(Value: Extended): string;
 begin
-  Result := FloatToStr(Value, FSSqlFloat);
+  Result := FloatToStr(Value, FmtSettFloatDot);
 end;
 
 function SQLStrToFloat(const Str: String): Extended;
 begin
-  Result := StrToFloat(Str, FSSqlFloat);
+  Result := StrToFloat(Str, FmtSettFloatDot);
 end;
 
 {**
@@ -3375,19 +3374,10 @@ end;
   @return a  date and time string.
 }
 function DateTimeToAnsiSQLDate(Value: TDateTime; WithMMSec: Boolean = False): string;
-var
-  a, MSec:Word;
 begin
-  if WithMMSec then
-  begin
-    DecodeTime(Value,a,a,a,MSec);
-    if MSec=0 then
-      Result := FormatDateTime(SQLDateTimeFmt, Value)
-    else
-      Result := FormatDateTime(SQLDateTimeFmtMSecs, Value);
-  end
-  else
-    Result := FormatDateTime(SQLDateTimeFmt, Value);
+  if WithMMSec and (MilliSecondOf(Value) <> 0)
+    then Result := FormatDateTime(SQLDateTimeFmtMSecs, Value)
+    else Result := FormatDateTime(SQLDateTimeFmt, Value);
 end;
 
 { TZSortedList }
@@ -4207,13 +4197,13 @@ var
 {$ENDIF}
 begin
   {$IFDEF FPC}
-  Result := FloatToStr(Value, FSSqlFloat);
+  Result := FloatToStr(Value, FmtSettFloatDot);
   {$ELSE}
     {$IFDEF NEXTGEN}
-    Result := UnicodeStringToASCII7(PWideChar(@Buffer), FloatToText(PWideChar(@Buffer), Value, fvExtended, ffGeneral, 15, 0, FSSqlFloat));
+  Result := UnicodeStringToASCII7(PWideChar(@Buffer), FloatToText(PWideChar(@Buffer), Value, fvExtended, ffGeneral, 15, 0, FmtSettFloatDot));
     {$ELSE}
   SetString(Result, Buffer, {$IFDEF WITH_FLOATTOTEXT_DEPRECATED}AnsiStrings.{$ENDIF}FloatToText(PAnsiChar(@Buffer), Value, fvExtended,
-    ffGeneral, 15, 0, FSSqlFloat));
+    ffGeneral, 15, 0, FmtSettFloatDot));
     {$ENDIF}
   {$ENDIF}
 end;
@@ -5118,20 +5108,8 @@ end;
 {$ENDIF}
 
 initialization
-
   HexFiller;  //build up lookup table
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
   BoolConstFiller; //build bool consts
 {$ENDIF}
-  {$IFDEF WITH_FORMATSETTINGS}
-  FSSqlFloat := FormatSettings;
-  {$ELSE}
-  FSSqlFloat.CurrencyString := CurrencyString;
-  FSSqlFloat.CurrencyFormat := CurrencyFormat;
-  FSSqlFloat.NegCurrFormat := NegCurrFormat;
-  {$ENDIF}
-  FSSqlFloat.DecimalSeparator := '.';
-  FSSqlFloat.ThousandSeparator := ',';
-
 end.
-

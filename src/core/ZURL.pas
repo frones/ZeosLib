@@ -167,6 +167,7 @@ begin
   Self.URL := AURL;
 end;
 
+// Values from Info overwrite those from URL
 constructor TZURL.Create(const AURL: String; Info: TStrings);
 begin
   Create(AURL);
@@ -179,6 +180,9 @@ begin
   Create(AURL.URL);
 end;
 
+// Values from parameters overwrite those from URL and values from Info overwrite both
+// TODO: this method is odd... properties of URL, except protocol, get overridden
+// with parameters. Likely AProtocol should go here instead of AURL
 constructor TZURL.Create(Const AURL, AHostName: string; const APort: Integer;
   const ADatabase, AUser, APassword: string; Info: TStrings);
 begin

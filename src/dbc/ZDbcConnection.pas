@@ -421,12 +421,12 @@ begin
   if Protocol = '' then
   begin
     Result := PlainDriver.GetProtocol;
-    TempKey := TZAnyValue.CreateWithString(PlainDriver.GetProtocol)
+    TempKey := TZAnyValue.CreateWithString(AnsiLowerCase(PlainDriver.GetProtocol))
   end
   else
   begin
     Result := Protocol;
-    TempKey := TZAnyValue.CreateWithString(Protocol+LibLocation);
+    TempKey := TZAnyValue.CreateWithString(AnsiLowerCase(Protocol+LibLocation));
   end;
   FCachedPlainDrivers.Put(TempKey, PlainDriver);
 end;
@@ -436,12 +436,11 @@ var
   TempKey: IZAnyValue;
   TempPlain: IZPlainDriver;
 begin
-  TempKey := TZAnyValue.CreateWithString(Protocol+LibLocation);
+  TempKey := TZAnyValue.CreateWithString(AnsiLowerCase(Protocol+LibLocation));
   Result := FCachedPlainDrivers.Get(TempKey) as IZPlainDriver;
   if Result = nil then
   begin
-    TempKey := nil;
-    TempKey := TZAnyValue.CreateWithString(Protocol);
+    TempKey := TZAnyValue.CreateWithString(AnsiLowerCase(Protocol));
     TempPlain := FCachedPlainDrivers.Get(TempKey) as IZPlainDriver;
     if Assigned(TempPlain) then
     begin

@@ -162,9 +162,6 @@ type
 
     function GetDrivers: IZCollection;
 
-    function GetLoginTimeout: Integer;
-    procedure SetLoginTimeout(Seconds: Integer);
-
     procedure AddLoggingListener(Listener: IZLoggingListener);
     procedure RemoveLoggingListener(Listener: IZLoggingListener);
     function HasLoggingListener: Boolean;
@@ -488,7 +485,7 @@ type
 
     // interface details (terms, keywords, etc):
     function GetIdentifierQuoteString: string;
-    function GetIdentifierQuoteKeywordsSorted: TStringDynArray;
+    function GetIdentifierQuoteKeywordsSorted: TStringList;
     function GetSchemaTerm: string;
     function GetProcedureTerm: string;
     function GetCatalogTerm: string;
@@ -1072,11 +1069,11 @@ type
 
   TZDriverManager = class(TInterfacedObject, IZDriverManager)
   private
+    FDriversCS: TCriticalSection; // thread-safety
+    FLogCS: TCriticalSection;
     FDrivers: IZCollection;
-    FLoginTimeout: Integer;
     FLoggingListeners: IZCollection;
     FHasLoggingListener: Boolean;
-    FURL: TZURL;
     procedure LogEvent(const Event: TZLoggingEvent);
   public
     constructor Create;
@@ -1094,9 +1091,6 @@ type
     function GetDrivers: IZCollection;
 
     function GetClientVersion(const Url: string): Integer;
-
-    function GetLoginTimeout: Integer;
-    procedure SetLoginTimeout(Value: Integer);
 
     procedure AddLoggingListener(Listener: IZLoggingListener);
     procedure RemoveLoggingListener(Listener: IZLoggingListener);
@@ -1124,11 +1118,11 @@ type
 }
 constructor TZDriverManager.Create;
 begin
+  FDriversCS := TCriticalSection.Create;
+  FLogCS := TCriticalSection.Create;
   FDrivers := TZCollection.Create;
-  FLoginTimeout := 0;
   FLoggingListeners := TZCollection.Create;
   FHasLoggingListener := False;
-  FURL := TZURL.Create;
 end;
 
 {**
@@ -1136,9 +1130,10 @@ end;
 }
 destructor TZDriverManager.Destroy;
 begin
-  FreeAndNil(FURL);
   FDrivers := nil;
   FLoggingListeners := nil;
+  FreeAndNil(FDriversCS);
+  FreeAndNil(FLogCS);
   inherited Destroy;
 end;
 
@@ -1148,25 +1143,12 @@ end;
 }
 function TZDriverManager.GetDrivers: IZCollection;
 begin
-  Result := TZUnmodifiableCollection.Create(FDrivers);
-end;
-
-{**
-  Gets a login timeout value.
-  @return a login timeout.
-}
-function TZDriverManager.GetLoginTimeout: Integer;
-begin
-  Result := FLoginTimeout;
-end;
-
-{**
-  Sets a new login timeout value.
-  @param Seconds a new login timeout in seconds.
-}
-procedure TZDriverManager.SetLoginTimeout(Value: Integer);
-begin
-  FLoginTimeout := Value;
+  FDriversCS.Enter;
+  try
+    Result := TZUnmodifiableCollection.Create(FDrivers);
+  finally
+    FDriversCS.Leave;
+  end;
 end;
 
 {**
@@ -1175,8 +1157,13 @@ end;
 }
 procedure TZDriverManager.RegisterDriver(Driver: IZDriver);
 begin
-  if not FDrivers.Contains(Driver) then
-    FDrivers.Add(Driver);
+  FDriversCS.Enter;
+  try
+    if not FDrivers.Contains(Driver) then
+      FDrivers.Add(Driver);
+  finally
+    FDriversCS.Leave;
+  end;
 end;
 
 {**
@@ -1185,7 +1172,12 @@ end;
 }
 procedure TZDriverManager.DeregisterDriver(Driver: IZDriver);
 begin
-  FDrivers.Remove(Driver);
+  FDriversCS.Enter;
+  try
+    FDrivers.Remove(Driver);
+  finally
+    FDriversCS.Leave;
+  end;
 end;
 
 {**
@@ -1198,15 +1190,20 @@ var
   I: Integer;
   Current: IZDriver;
 begin
+  FDriversCS.Enter;
   Result := nil;
-  for I := 0 to FDrivers.Count - 1 do
-  begin
-    Current := FDrivers[I] as IZDriver;
-    if Current.AcceptsURL(Url) then
+  try
+    for I := 0 to FDrivers.Count - 1 do
     begin
-      Result := Current;
-      Break;
+      Current := FDrivers[I] as IZDriver;
+      if Current.AcceptsURL(Url) then
+      begin
+        Result := Current;
+        Exit;
+      end;
     end;
+  finally
+    FDriversCS.Leave;
   end;
 end;
 
@@ -1221,10 +1218,15 @@ function TZDriverManager.GetConnectionWithParams(const Url: string; Info: TStrin
 var
   Driver: IZDriver;
 begin
-  Driver := GetDriver(Url);
-  if Driver = nil then
-    raise EZSQLException.Create(SDriverWasNotFound);
-  Result := Driver.Connect(Url, Info);
+  FDriversCS.Enter;
+  try
+    Driver := GetDriver(Url);
+    if Driver = nil then
+      raise EZSQLException.Create(SDriverWasNotFound);
+    Result := Driver.Connect(Url, Info);
+  finally
+    FDriversCS.Leave;
+  end;
 end;
 
 {**
@@ -1236,10 +1238,15 @@ function TZDriverManager.GetClientVersion(const Url: string): Integer;
 var
   Driver: IZDriver;
 begin
-  Driver := GetDriver(Url);
-  if Driver = nil then
-    raise EZSQLException.Create(SDriverWasNotFound);
-  Result := Driver.GetClientVersion(Url);
+  FDriversCS.Enter;
+  try
+    Driver := GetDriver(Url);
+    if Driver = nil then
+      raise EZSQLException.Create(SDriverWasNotFound);
+    Result := Driver.GetClientVersion(Url);
+  finally
+    FDriversCS.Leave;
+  end;
 end;
 
 {**
@@ -1258,8 +1265,10 @@ begin
   try
     Info.Add('username=' + User);
     Info.Add('password=' + Password);
+    FDriversCS.Enter;
     Result := GetConnectionWithParams(Url, Info);
   finally
+    FDriversCS.Leave;
     Info.Free;
   end;
 end;
@@ -1280,12 +1289,12 @@ end;
 }
 procedure TZDriverManager.AddLoggingListener(Listener: IZLoggingListener);
 begin
-  GlobalCriticalSection.Enter;
+  FLogCS.Enter;
   try
     FLoggingListeners.Add(Listener);
     FHasLoggingListener := True;
   finally
-    GlobalCriticalSection.Leave;
+    FLogCS.Leave;
   end;
 end;
 
@@ -1295,18 +1304,18 @@ end;
 }
 procedure TZDriverManager.RemoveLoggingListener(Listener: IZLoggingListener);
 begin
-  GlobalCriticalSection.Enter;
+  FLogCS.Enter;
   try
     FLoggingListeners.Remove(Listener);
     FHasLoggingListener := (FLoggingListeners.Count>0);
   finally
-    GlobalCriticalSection.Leave;
+    FLogCS.Leave;
   end;
 end;
 
 function TZDriverManager.HasLoggingListener: Boolean;
 begin
-  result := FHasLoggingListener;
+  Result := FHasLoggingListener;
 end;
 
 {**
@@ -1352,7 +1361,7 @@ var
 begin
   if not FHasLoggingListener then
     Exit;
-  GlobalCriticalSection.Enter;
+  FLogCS.Enter;
   try
     for I := 0 to FLoggingListeners.Count - 1 do
     begin
@@ -1363,7 +1372,7 @@ begin
       end;
     end;
   finally
-    GlobalCriticalSection.Leave;
+    FLogCS.Leave;
   end;
 end;
 
@@ -1377,7 +1386,7 @@ procedure TZDriverManager.LogMessage(Category: TZLoggingCategory;
   const Protocol: RawByteString; const Msg: RawByteString);
 begin
   if not FHasLoggingListener then
-      Exit;
+    Exit;
   LogError(Category, Protocol, Msg, 0, EmptyRaw);
 end;
 
@@ -1409,18 +1418,20 @@ end;
 function TZDriverManager.ConstructURL(const Protocol, HostName, Database,
   UserName, Password: String; const Port: Integer;
   const Properties: TStrings = nil; const LibLocation: String = ''): String;
+var ZURL: TZURL;
 begin
-  FURL.Protocol := Protocol;
-  FURL.HostName := HostName;
-  FURL.Database := DataBase;
-  FURL.UserName := UserName;
-  FURL.Password := Password;
-  FURL.Port := Port;
-  FURL.Properties.Clear;
+  ZURL := TZURL.Create;
+  ZURL.Protocol := Protocol;
+  ZURL.HostName := HostName;
+  ZURL.Database := DataBase;
+  ZURL.UserName := UserName;
+  ZURL.Password := Password;
+  ZURL.Port := Port;
   if Assigned(Properties) then
-    FURL.Properties.AddStrings(Properties);
-  FURL.LibLocation := LibLocation;
-  Result := FURL.URL;
+    ZURL.Properties.AddStrings(Properties);
+  ZURL.LibLocation := LibLocation;
+  Result := ZURL.URL;
+  ZURL.Free;
 end;
 
 {**
@@ -1436,18 +1447,21 @@ end;
 procedure TZDriverManager.ResolveDatabaseUrl(const Url: string; out HostName: string;
   out Port: Integer; out Database: string; out UserName: string;
   out Password: string; ResultInfo: TStrings = nil);
+var ZURL: TZURL;
 begin
-  FURL.URL := Url;
-  HostName := FURL.HostName;
-  Port := FURL.Port;
-  DataBase := FURL.Database;
-  UserName := FURL.UserName;
-  PassWord := FURL.Password;
+  ZURL := TZURL.Create;
+  ZURL.URL := Url;
+  HostName := ZURL.HostName;
+  Port := ZURL.Port;
+  DataBase := ZURL.Database;
+  UserName := ZURL.UserName;
+  PassWord := ZURL.Password;
   if Assigned(ResultInfo) then
   begin
     ResultInfo.Clear;
-    ResultInfo.AddStrings(FURL.Properties);
+    ResultInfo.AddStrings(ZURL.Properties);
   end;
+  ZURL.Free;
 end;
 
 {**
@@ -1456,9 +1470,12 @@ end;
   @param Database a database name.
 }
 procedure TZDriverManager.ResolveDatabaseUrl(const Url: string; out Database: string);
+var ZURL: TZURL;
 begin
-  FURL.URL := Url;
-  DataBase := FURL.Database;
+  ZURL := TZURL.Create;
+  ZURL.URL := Url;
+  DataBase := ZURL.Database;
+  ZURL.Free;
 end;
 
 initialization
@@ -1468,4 +1485,3 @@ finalization
   DriverManager := nil;
   FreeAndNil(GlobalCriticalSection);
 end.
-

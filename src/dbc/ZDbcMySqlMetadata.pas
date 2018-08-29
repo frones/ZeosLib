@@ -1433,7 +1433,7 @@ const
   db_Index              = FirstDbcIndex + 1;
   grantor_Index         = FirstDbcIndex + 2;
   user_Index            = FirstDbcIndex + 3;
-  {%H-}table_name_Index = FirstDbcIndex + 4;
+  //table_name_Index      = FirstDbcIndex + 4; unused
   column_name_Index     = FirstDbcIndex + 5;
   column_priv_Index     = FirstDbcIndex + 6;
 var
@@ -2531,12 +2531,12 @@ function TZMySQLDatabaseMetadata.GetProcedureColumnsFromProcTable(const Catalog:
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 const
-  {%H-}PROCEDURE_CAT_index  = FirstDbcIndex + 0;
+  //PROCEDURE_CAT_index  = FirstDbcIndex + 0; unused
   PROCEDURE_SCHEM_index     = FirstDbcIndex + 1;
   PROCEDURE_NAME_Index      = FirstDbcIndex + 2;
   PARAMS_Index              = FirstDbcIndex + 3;
-  {%H-}REMARKS_Index        = FirstDbcIndex + 4;
-  {%H-}PROCEDURE_TYPE_Index = FirstDbcIndex + 5;
+  //REMARKS_Index        = FirstDbcIndex + 4; unused
+  //PROCEDURE_TYPE_Index = FirstDbcIndex + 5; unused
   RETURN_VALUES_Index       = FirstDbcIndex + 6;
 var
   Len: NativeUInt;

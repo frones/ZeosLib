@@ -246,7 +246,7 @@ type
     function GetAsUTF8String(const Value: TZVariant): UTF8String;
     {$ENDIF}
     function GetAsRawByteString(const Value: TZVariant): RawByteString; overload;
-    function GetAsRawByteString(const {%H-}Value: TZVariant; const {%H-}RawCP: Word): RawByteString; overload; virtual;
+    function GetAsRawByteString(const Value: TZVariant; const RawCP: Word): RawByteString; overload; virtual;
     function GetAsCharRec(const Value: TZVariant): TZCharRec; overload;
     function GetAsUnicodeString(const Value: TZVariant): ZWideString;
     function GetAsDateTime(const Value: TZVariant): TDateTime;
@@ -1182,11 +1182,17 @@ begin
   Result := Convert(Value, vtRawByteString).VRawByteString;
 end;
 
-function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.{%H-}GetAsRawByteString(const Value: TZVariant;
+{$IFDEF FPC} // parameters not used intentionally
+  {$PUSH}
+  {$WARN 5033 off : Function result does not seem to be set}
+  {$WARN 5024 off : Parameter "$1" not used}
+{$ENDIF}
+function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.GetAsRawByteString(const Value: TZVariant;
   const RawCP: Word): RawByteString;
 begin
   RaiseUnsupportedOperation
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.GetAsCharRec(const Value: TZVariant): TZCharRec;
 begin
