@@ -1514,7 +1514,8 @@ begin
       end;
     end;
     //GetData don't work with multiple fetched rows for most drivers
-    fMaxFetchableRows := Max(1, (Cardinal(fZBufferSize) div RowSize)*Byte(Ord(not LobsInResult))); //calculate max count of rows for a single fetch call
+    //calculate max count of rows for a single fetch call
+    fMaxFetchableRows := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Max(1, (Cardinal(fZBufferSize) div RowSize)*Byte(Ord(not LobsInResult)));
     if fMaxFetchableRows > 1 then begin
       CheckStmtError(fPlainDriver.SetStmtAttr(fPHSTMT^, SQL_ATTR_ROW_ARRAY_SIZE, SQLPOINTER(fMaxFetchableRows), 0));
       CheckStmtError(fPlainDriver.SetStmtAttr(fPHSTMT^, SQL_ATTR_ROWS_FETCHED_PTR, @fFetchedRowCount, 0));
