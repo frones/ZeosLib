@@ -18,7 +18,7 @@
     </CompilerOptions>
     <Description Value="Zeos Plain Database API"/>
     <Version Major="7" Minor="3"/>
-    <Files Count="23">
+    <Files Count="20">
       <Item1>
         <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
         <UnitName Value="ZPlainDbLibDriver"/>
@@ -76,25 +76,13 @@
         <UnitName Value="ZPlainDbLibConstants"/>
       </Item16>
       <Item19>
-        <Filename Value="../../src/plain/ZPlainAdoDriver.pas"/>
-        <UnitName Value="ZPlainAdoDriver"/>
-      </Item19>
-      <Item20>
-        <Filename Value="../../src/plain/ZPlainAdo.pas"/>
-        <UnitName Value="ZPlainAdo"/>
-      </Item20>
-      <Item21>
-        <Filename Value="../../src/plain/ZOleDB.pas"/>
-        <UnitName Value="ZOleDB"/>
-      </Item21>
-      <Item22>
-        <Filename Value="../../src/plain/ZPlainOleDBDriver.pas"/>
-        <UnitName Value="ZPlainOleDBDriver"/>
-      </Item22>
-      <Item23>
         <Filename Value="../../src/plain/ZPlainODBCDriver.pas"/>
         <UnitName Value="ZPlainODBCDriver"/>
-      </Item23>
+      </Item19>
+      <Item20>
+        <Filename Value="zplainplatform.pas"/>
+        <UnitName Value="ZPlainPlatformUnits"/>
+      </Item20>
     </Files>
     <RequiredPkgs Count="3">
       <Item1>
