@@ -102,6 +102,9 @@ type
     procedure TestMetadataGetProcedureColumns;
     procedure TestMetadataGetTypeInfo;
     procedure TestMetadataGetUDTs;
+    procedure TestMetadataGetCharacterSets;
+    procedure TestMetadataGetSequences;
+    procedure TestMetadataGetTriggers;
   end;
 
 implementation
@@ -465,8 +468,8 @@ begin
   CheckEquals(SchemaNameIndex, Resultset.FindColumn('PROCEDURE_SCHEM'));
   CheckEquals(ProcedureNameIndex, Resultset.FindColumn('PROCEDURE_NAME'));
   CheckEquals(ProcedureOverloadIndex, Resultset.FindColumn('PROCEDURE_OVERLOAD'));
-  CheckEquals(ProcedureReserverd1Index, Resultset.FindColumn('RESERVED1'));
-  CheckEquals(ProcedureReserverd2Index, Resultset.FindColumn('RESERVED2'));
+  CheckEquals(ProcedureReserved1Index, Resultset.FindColumn('RESERVED1'));
+  CheckEquals(ProcedureReserved2Index, Resultset.FindColumn('RESERVED2'));
   CheckEquals(ProcedureRemarksIndex, Resultset.FindColumn('REMARKS'));
   CheckEquals(ProcedureTypeIndex, Resultset.FindColumn('PROCEDURE_TYPE'));
   ResultSet.Close;
@@ -580,6 +583,85 @@ begin
   finally
     FreeAndNil(Url);
   end;
+end;
+
+procedure TZGenericTestDbcMetadata.TestMetadataGetSequences;
+begin
+  // Some drivers don't implement this method so just pass the test
+  case ProtocolType of
+    protInterbase, protFirebird:
+      ; // OK
+    protPostgre:
+      begin
+        PrintLn('TODO: implement this');
+        Exit;
+      end;
+    else
+    begin
+      BlankCheck;
+      Exit;
+    end;
+  end;
+ 
+  ResultSet := MD.GetSequences(Catalog, Schema, 'GEN_ID');
+  PrintResultSet(ResultSet, False);
+  Check(ResultSet.Next, 'There should be a sequence "GEN_ID"');
+  CheckEquals(CatalogNameIndex, Resultset.FindColumn('SEQUENCE_CAT'));
+  CheckEquals(SchemaNameIndex, Resultset.FindColumn('SEQUENCE_SCHEM'));
+  CheckEquals(SequenceNameIndex, Resultset.FindColumn('SEQUENCE_NAME'));
+  CheckEquals(Catalog, Resultset.GetStringByName('SEQUENCE_CAT'));
+  CheckEquals(Schema, Resultset.GetStringByName('SEQUENCE_SCHEM'));
+  CheckEquals('GEN_ID', Resultset.GetStringByName('SEQUENCE_NAME'));
+
+  ResultSet.Close;
+end;
+
+procedure TZGenericTestDbcMetadata.TestMetadataGetTriggers;
+begin
+  // Some drivers don't implement this method so just pass the test
+  if not (ProtocolType in [protInterbase, protFirebird]) then
+  begin
+    BlankCheck;
+    Exit;
+  end;
+
+  ResultSet := MD.GetTriggers(Catalog, Schema, '', 'INSERT_RETURNING_BI');
+  PrintResultSet(ResultSet, False);
+  Check(ResultSet.Next, 'There should be a trigger "INSERT_RETURNING_BI"');
+
+  CheckEquals(CatalogNameIndex, Resultset.FindColumn('TRIGGER_CAT'));
+  CheckEquals(SchemaNameIndex, Resultset.FindColumn('TRIGGER_SCHEM'));
+  CheckEquals(TrgColTriggerNameIndex, Resultset.FindColumn('TRIGGER_NAME'));
+  CheckEquals(TrgColRelationNameIndex, Resultset.FindColumn('TRIGGER_RELATION'));
+  CheckEquals(TrgColTriggerTypeIndex, Resultset.FindColumn('TRIGGER_TYPE'));
+  CheckEquals(TrgColTriggerInactiveIndex, Resultset.FindColumn('TRIGGER_INACTIVE'));
+  CheckEquals(TrgColTriggerSourceIndex, Resultset.FindColumn('TRIGGER_SOURCE'));
+  CheckEquals(TrgColDescriptionIndex, Resultset.FindColumn('TRIGGER_DESCRIPTION'));
+
+  CheckEquals(Catalog, Resultset.GetStringByName('TRIGGER_CAT'));
+  CheckEquals(Schema, Resultset.GetStringByName('TRIGGER_SCHEM'));
+  CheckEquals('INSERT_RETURNING_BI', Resultset.GetStringByName('TRIGGER_NAME'));
+  CheckEquals('INSERT_RETURNING', Resultset.GetStringByName('TRIGGER_RELATION'));
+  CheckEquals(1, Resultset.GetSmallByName('TRIGGER_TYPE'));
+  CheckEquals(0, Resultset.GetSmallByName('TRIGGER_INACTIVE'));
+
+  ResultSet.Close;
+end;
+
+procedure TZGenericTestDbcMetadata.TestMetadataGetCharacterSets;
+begin
+  // Some drivers don't implement this method so just pass the test
+  if not (ProtocolType in [protInterbase, protFirebird, protPostgre, protMySQL, protSQLite]) then
+  begin
+    BlankCheck;
+    Exit;
+  end;
+
+  ResultSet := MD.GetCharacterSets;
+  PrintResultSet(ResultSet, False);
+  Check(ResultSet.Next, 'There should be a character set');
+  CheckEquals(CharacterSetsNameIndex, Resultset.FindColumn('CHARACTER_SET_NAME'));
+  CheckEquals(CharacterSetsIDIndex, Resultset.FindColumn('CHARACTER_SET_ID'));
 end;
 
 initialization

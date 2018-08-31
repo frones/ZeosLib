@@ -533,8 +533,8 @@ const
 const
   ProcedureNameIndex       = FirstDbcIndex + 2;
   ProcedureOverloadIndex   = FirstDbcIndex + 3;
-  ProcedureReserverd1Index = FirstDbcIndex + 4;
-  ProcedureReserverd2Index = FirstDbcIndex + 5;
+  ProcedureReserved1Index  = FirstDbcIndex + 4;
+  ProcedureReserved2Index  = FirstDbcIndex + 5;
   ProcedureRemarksIndex    = FirstDbcIndex + 6;
   ProcedureTypeIndex       = FirstDbcIndex + 7;
 type
