@@ -3180,22 +3180,14 @@ end;
   @return <code>ResultSet</code> - each row is a CharacterSetName and it's ID
 }
 function TZMySQLDatabaseMetadata.UncachedGetCharacterSets: IZResultSet; //EgonHugeist
-var Len: NativeUInt;
+var
+  SQL: string;
 begin
-  Result:=inherited UncachedGetCharacterSets;
+  SQL := 'SELECT CHARACTER_SET_NAME FROM INFORMATION_SCHEMA.CHARACTER_SETS';
 
-  with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
-    'SELECT CHARACTER_SET_NAME '+
-    'FROM INFORMATION_SCHEMA.CHARACTER_SETS') do
-  begin
-    while Next do
-    begin
-      Result.MoveToInsertRow;
-      Result.UpdatePAnsiChar(CharacterSetsNameIndex, GetPAnsiChar(FirstDbcIndex, Len), @Len);
-      Result.InsertRow;
-    end;
-    Close;
-  end;
+  Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL),
+    ConstructVirtualResultSet(CharacterSetsColumnsDynArray));
 end;
 
 {**
