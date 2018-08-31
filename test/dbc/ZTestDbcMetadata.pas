@@ -336,8 +336,8 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetImportedKeys;
 begin
-  if StartsWith(Protocol, 'sqlite')
-    or StartsWith(Protocol, 'mysql') then Exit;
+  if ProtocolType in [protSQLite, protMySQL] then
+    Exit;
 
   ResultSet := MD.GetImportedKeys(Catalog, Schema, 'people');
   PrintResultSet(ResultSet, False);
@@ -353,7 +353,7 @@ begin
   CheckEquals(1, Resultset.GetSmallByName('KEY_SEQ'));
   {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
   //Oracle does not provide a update_rule and delete_role is 'no action'
-  if not (Protocol = 'ado') and not StartsWith(Protocol, 'oracle') and not StartsWith(Protocol, 'OleDB') then
+  if not (ProtocolType in [protADO, protOracle, protOleDB]) then
   begin
     CheckEquals(1, Resultset.GetSmallByName('UPDATE_RULE'));
     CheckEquals(1, Resultset.GetSmallByName('DELETE_RULE'));
@@ -378,9 +378,9 @@ procedure TZGenericTestDbcMetadata.TestMetadataGetExportedKeys;
     CheckEquals(FKTable, UpperCase(Resultset.GetStringByName('FKTABLE_NAME')));
     CheckEquals(FKColumn, UpperCase(Resultset.GetStringByName('FKCOLUMN_NAME')));
     CheckEquals(KeySeq, Resultset.GetSmallByName('KEY_SEQ'));
-   {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
-   //Oracle does not provide a update_rule and delete_role is 'no action'
-   if not (Protocol = 'ado') and not StartsWith(Protocol, 'oracle') and not StartsWith(Protocol, 'OleDB') then
+    {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
+    //Oracle does not provide a update_rule and delete_role is 'no action'
+    if not (ProtocolType in [protADO, protOracle, protOleDB]) then
     begin
       CheckEquals(UpdateRule, Resultset.GetSmallByName('UPDATE_RULE'));
       CheckEquals(DeleteRule, Resultset.GetSmallByName('DELETE_RULE'));
@@ -391,8 +391,8 @@ procedure TZGenericTestDbcMetadata.TestMetadataGetExportedKeys;
   end;
 
 begin
-  if StartsWith(Protocol, 'sqlite')
-    or StartsWith(Protocol, 'mysql') then Exit;
+  if ProtocolType in [protSQLite, protMySQL] then
+    Exit;
 
   ResultSet := MD.GetExportedKeys(Catalog, Schema, 'department');
   PrintResultSet(ResultSet, False);
@@ -408,8 +408,8 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetCrossReference;
 begin
-  if StartsWith(Protocol, 'sqlite')
-    or StartsWith(Protocol, 'mysql') then Exit;
+  if ProtocolType in [protSQLite, protMySQL] then
+    Exit;
 
   ResultSet := MD.GetCrossReference(Catalog, Schema, 'department', Catalog, Schema, 'people');
   PrintResultSet(ResultSet, False);
@@ -425,7 +425,7 @@ begin
   CheckEquals(1, Resultset.GetSmallByName('KEY_SEQ'));
   {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
   //Oracle does not provide a update_rule and delete_role is 'no action'
-  if not (Protocol = 'ado') and not StartsWith(Protocol, 'oracle') and not StartsWith(Protocol, 'OleDB') then
+  if not (ProtocolType in [protADO, protOracle, protOleDB]) then
   begin
     CheckEquals(1, Resultset.GetSmallByName('UPDATE_RULE'));
     CheckEquals(1, Resultset.GetSmallByName('DELETE_RULE'));
@@ -501,8 +501,8 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetUDTs;
 begin
-  if StartsWith(Protocol, 'postgresql')
-    or StartsWith(Protocol, 'sqlite') then Exit;
+  if ProtocolType in [protPostgre, protMySQL] then
+    Exit;
   ResultSet := MD.GetUDTs(Catalog, Schema, '', nil);
   PrintResultSet(ResultSet, False);
   ResultSet.Close;

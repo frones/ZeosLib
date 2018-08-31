@@ -199,9 +199,10 @@ begin
 
   NewLine := LineEnding;
   Line := '/AAA/ BBB CCC';
-  if StartsWith(Protocol, 'mysql') then
+  if ProtocolType = protMySQL then
     Comment := '# Comment...'
-  else Comment := '/* Comment... */';
+  else
+    Comment := '/* Comment... */';
   Delimiter := NewLine + 'Go' + NewLine;
 
   Text := Comment + NewLine + Line + Delimiter + NewLine + '   ' + NewLine + Line +

@@ -114,9 +114,7 @@ var
   ResultSet: IZResultSet;
   Metadata: IZResultSetMetadata;
 begin
-  if StartsWith(Protocol, 'interbase')
-    or StartsWith(Protocol, 'firebird')
-    or StartsWith(Protocol, 'oracle') then
+  if ProtocolType in [protInterbase, protFirebird, protOracle] then
     Exit;
 
   Statement := Connection.CreateStatement;
@@ -184,9 +182,7 @@ var
   ResultSet: IZResultSet;
   Metadata: IZResultSetMetadata;
 begin
-  if not StartsWith(Protocol, 'interbase')
-     and not StartsWith(Protocol,'firebird')
-     and not StartsWith(Protocol, 'oracle') then
+  if not (ProtocolType in [protInterbase, protFirebird, protOracle]) then
     Exit;
 
   Statement := Connection.CreateStatement;
@@ -268,6 +264,7 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
   Metadata: IZResultSetMetadata;
+
   function GetIdentifierName(const Value: String): String;
   begin
     if Connection.GetMetadata.GetDatabaseInfo.StoresUpperCaseIdentifiers then
@@ -278,7 +275,7 @@ var
   end;
   function GetColumnLabeName(ColIndex: Integer; const Value: String): String;
   begin
-    if StartsWith(Protocol, 'postgre') then //unquoted alias is also lowercase pffff...
+    if ProtocolType = protPostgre then //unquoted alias is also lowercase pffff...
       Result := lowerCase(Value)
     else
       Result := Value;
@@ -290,11 +287,14 @@ var
     CheckColumnMetadata(Metadata, DEP_ID_Index, GetColumnLabeName(DEP_ID_Index, 'DEP_NAME'),
       GetFieldNameFromUnQuoted('dep_id'), GetIdentifierName('department'), True, True);
 
-    if StartsWith(Protocol, 'postgre')
-    then CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match')
-    else if StartsWith(Protocol, 'oracle')
-    then CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match')
-    else CheckEquals(Ord(stSmall), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match');
+    case ProtocolType of
+      protPostgre:
+        CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match');
+      protOracle:
+        CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match');
+      else
+        CheckEquals(Ord(stSmall), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match');
+    end;
 
     CheckColumnMetadata(Metadata, DEP_NAME_Index, GetColumnLabeName(DEP_NAME_Index, 'DEP_ID'),
       GetFieldNameFromUnQuoted('dep_name'), GetIdentifierName('department'), False, True);
@@ -350,15 +350,15 @@ begin
 
   CheckColumnMetadata(Metadata, Field2, GetColumnLabelFromUnQuoted('d_fld1', 1),
     GetFieldNameFromUnQuoted('d_fld1'), GetFieldNameFromUnQuoted('default_values'), False, True);
-  if StartsWith(Protocol, 'oracle')
-  then Check(Metadata.GetColumnType(Field2) in [stDouble], 'ColumnType does not match')
-  else Check(Metadata.GetColumnType(Field2) in [stInteger], 'ColumnType does not match');
+  if ProtocolType = protOracle
+    then Check(Metadata.GetColumnType(Field2) in [stDouble], 'ColumnType does not match')
+    else Check(Metadata.GetColumnType(Field2) in [stInteger], 'ColumnType does not match');
 
   CheckColumnMetadata(Metadata, Field3, GetColumnLabelFromUnQuoted('d_fld2', 0),
     GetFieldNameFromUnQuoted('d_fld2'), GetFieldNameFromUnQuoted('default_values2'), False, True);
-  if StartsWith(Protocol, 'oracle')
-  then Check(Metadata.GetColumnType(Field3) in [stDouble], 'ColumnType does not match')
-  else Check(Metadata.GetColumnType(Field3) in [stInteger], 'ColumnType does not match');
+  if ProtocolType = protOracle
+    then Check(Metadata.GetColumnType(Field3) in [stDouble], 'ColumnType does not match')
+    else Check(Metadata.GetColumnType(Field3) in [stInteger], 'ColumnType does not match');
 
   CheckColumnMetadata(Metadata, Field4, GetColumnLabelFromUnQuoted('d_fld2', 1),
     GetFieldNameFromUnQuoted('d_fld2'), GetFieldNameFromUnQuoted('default_values'), False, True);
@@ -390,9 +390,9 @@ begin
 
   CheckColumnMetadata(Metadata, FirstDbcIndex, GetColumnLabelFromUnQuoted('d_fld1', 0),
     GetFieldNameFromUnQuoted('d_fld1'), GetFieldNameFromUnQuoted('default_values'), False, True);
-  if StartsWith(Protocol, 'oracle')
-  then Check(Metadata.GetColumnType(Field1) in [stDouble], 'ColumnType does not match')
-  else Check(Metadata.GetColumnType(Field1) in [stInteger], 'ColumnType does not match');
+  if ProtocolType = protOracle
+    then Check(Metadata.GetColumnType(Field1) in [stDouble], 'ColumnType does not match')
+    else Check(Metadata.GetColumnType(Field1) in [stInteger], 'ColumnType does not match');
 
   CheckColumnMetadata(Metadata, Field2, GetColumnLabelFromUnQuoted('d_fld1', 1),
     GetFieldNameFromUnQuoted('d_fld1'), GetFieldNameFromUnQuoted('default_values2'), False, True);
@@ -404,9 +404,9 @@ begin
 
   CheckColumnMetadata(Metadata, Field4, GetColumnLabelFromUnQuoted('d_fld2', 1),
     GetFieldNameFromUnQuoted('d_fld2'), GetFieldNameFromUnQuoted('default_values2'), False, True);
-  if StartsWith(Protocol, 'oracle')
-  then Check(Metadata.GetColumnType(Field4) in [stDouble], 'ColumnType does not match')
-  else Check(Metadata.GetColumnType(Field4) in [stInteger], 'ColumnType does not match');
+  if ProtocolType = protOracle
+    then Check(Metadata.GetColumnType(Field4) in [stDouble], 'ColumnType does not match')
+    else Check(Metadata.GetColumnType(Field4) in [stInteger], 'ColumnType does not match');
 end;
 
 initialization

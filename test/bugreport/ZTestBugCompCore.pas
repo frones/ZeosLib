@@ -2072,8 +2072,8 @@ begin
     RowCounter := 0;
     Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+
       ' values (:s_id, :s_char, :s_varchar, :s_nchar, :s_nvarchar)';
-    if StartsWith(Connection.Protocol, 'oracle') or //oracle asumes one char = one byte except for varchar2
-      ((StartsWith(Connection.Protocol, 'firebird') or StartsWith(Connection.Protocol, 'interbase'))
+    if (ProtocolType = protOracle) or //oracle asumes one char = one byte except for varchar2
+      ( (ProtocolType in [protFirebird, protInterbase])
         and (Connection.DbcConnection.GetConSettings^.ClientCodePage^.ID = 0)) then //avoid CS_NONE string right truncation for UTF8-Data
       InsertValues(str1, Copy(str2, 1, Length(Str2) div 2), str1, Copy(str2, 1, Length(Str2) div 2))
     else
@@ -2086,11 +2086,11 @@ begin
     Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
     Query.Open;
     CheckEquals(True, Query.RecordCount = 5);
-    if StartsWith(Connection.Protocol, 'ASA') then //ASA has a limitation of 125chars for like statements
+    if ProtocolType = protASA then //ASA has a limitation of 125chars for like statements
       Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings , 125)+'%'''
     else
-      if StartsWith(Connection.Protocol, 'oracle') or //oracle asumes one char = one byte except for varchar2
-        ((StartsWith(Connection.Protocol, 'firebird') or StartsWith(Connection.Protocol, 'interbase'))
+      if (ProtocolType = protOracle) or //oracle asumes one char = one byte except for varchar2
+        ( (ProtocolType in [protFirebird, protInterbase])
           and (Connection.DbcConnection.GetConSettings^.ClientCodePage^.ID = 0)) then //avoid CS_NONE string right truncation for UTF8-Data
         Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Copy(str2, 1, Length(Str2) div 2), Connection.DbcConnection.GetConSettings)+'%'''
       else

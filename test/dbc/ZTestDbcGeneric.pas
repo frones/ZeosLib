@@ -252,10 +252,8 @@ var
   ResultSet: IZResultSet;
   Metadata: IZDatabaseMetadata;
 begin
-  if StartsWith(Protocol, 'mysql') or StartsWith(Protocol, 'sqlite') or
-    StartsWith(Protocol, 'FreeTDS') or ( Protocol = 'mssql') or
-    ( Protocol = 'ado') or ( Protocol = 'sybase') or
-    StartsWith(Protocol, 'ASA') or StartsWith(Protocol, 'OleDB') then
+  if ProtocolType in [protMySQL, protSQLite, protFreeTDS, protMSSQL,
+                      protADO, protSyBase, protASA, protOleDB] then
     Exit; //not in build sripts because they depend to locale settings
 
   Metadata := Connection.GetMetadata;
@@ -576,7 +574,7 @@ begin
       StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
       StrStream.Size := 1024;
       SetAsciiStream(Insert_p_resume_Index, StrStream);
-      if StartsWith(Protocol, 'postgres') then //PQExecParams can't convert str to smallint
+      if ProtocolType = protPostgre then //PQExecParams can't convert str to smallint
         SetNull(Insert_p_redundant_Index, stSmall)
       else
         SetNull(Insert_p_redundant_Index, stString);
@@ -1105,7 +1103,7 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if StartsWith(Protocol, 'oracle') then Exit; //oracle doesnt allow '' values for not null columns
+  if ProtocolType = protOracle then Exit; //oracle doesnt allow '' values for not null columns
 
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
@@ -1363,10 +1361,9 @@ var
     Result := PStatement.ExecuteUpdatePrepared = 1;
   end;
 begin
-  Use_S_BIT := Not(StartsWith(Protocol, 'sqlite') or StartsWith(Protocol, 'ado') or
-    StartsWith(Protocol, 'mssql') or StartsWith(Protocol, 'sybase') or
-    StartsWith(Protocol, 'FreeTDS') or StartsWith(Protocol, 'ASA') or
-    StartsWith(Protocol, 'OleDB') or StartsWith(Protocol, 'odbc'));
+  Use_S_BIT := Not (
+    ProtocolType in [protSQLite, protADO, protMSSQL, protSyBase, protFreeTDS, protASA, protOleDB, protODBC]
+  );
   if Use_S_BIT then
     PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)')
   else
@@ -1499,10 +1496,9 @@ var
 begin
   Info := TStringList.Create;
   Info.Add('preferprepared=True');
-  Use_S_BIT := Not(StartsWith(Protocol, 'sqlite') or StartsWith(Protocol, 'ado')
-    or StartsWith(Protocol, 'mssql') or StartsWith(Protocol, 'sybase') or
-    StartsWith(Protocol, 'FreeTDS') or StartsWith(Protocol, 'ASA') or
-    StartsWith(Protocol, 'OleDB') or StartsWith(Protocol, 'odbc'));
+  Use_S_BIT := Not (
+    ProtocolType in [protSQLite, protADO, protMSSQL, protSyBase, protFreeTDS, protASA, protOleDB, protODBC]
+  );
   if Use_S_BIT then
     PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)')
   else

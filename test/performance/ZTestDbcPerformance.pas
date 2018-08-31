@@ -399,28 +399,29 @@ begin
     { check types }
     case ConnectionConfig.PerformanceResultSetTypes[i] of
       stBytes, stBinaryStream:
-        if StartsWith(Protocol, 'firebird') and not EndsWith(Protocol, '2.5') then //firebird below 2.5 doesn't support x'hex' syntax
+        if (ProtocolType = protFirebird) and not EndsWith(Protocol, '2.5') then //firebird below 2.5 doesn't support x'hex' syntax
         begin
           SetLength(FDirectSQLTypes, Length(FDirectSQLTypes)-1); //omit these types to avoid exception
           SetLength(FDirectFieldNames, Length(FDirectFieldNames)-1); //omit these names to avoid exception
           SetLength(FDirectFieldSizes, Length(FDirectFieldSizes)-1); //omit these names to avoid exception
         end;
       stBoolean:
-        if StartsWith(Protocol, 'sqlite') or StartsWith(Protocol, 'mysql') then
-        begin
-          Self.FTrueVal := #39'Y'#39;
-          Self.FFalseVal := #39'N'#39;
-        end
-        else
-          if StartsWith(Protocol, 'postgre')then
-          begin
-            Self.FTrueVal := 'TRUE';
-            Self.FFalseVal := 'FALSE';
-          end
+        case ProtocolType of
+          protSQLite, protMySQL:
+            begin
+              Self.FTrueVal := #39'Y'#39;
+              Self.FFalseVal := #39'N'#39;
+            end;
+          protPostgre:
+            begin
+              Self.FTrueVal := 'TRUE';
+              Self.FFalseVal := 'FALSE';
+            end
           else
-          begin
-            Self.FTrueVal := '1';
-            Self.FFalseVal := '0';
+            begin
+              Self.FTrueVal := '1';
+              Self.FFalseVal := '0';
+            end;
         end;
       stDate, stTime, stTimeStamp: //session dependend values. This i'll solve later
         begin
