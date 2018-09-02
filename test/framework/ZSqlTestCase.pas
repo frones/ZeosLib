@@ -90,17 +90,16 @@ type
   // ! List of protocols totally mirrors protocol conditions used throughout the tests.
   // Protocol type is determined by StartsWith(Protocol, ProtocolPrefixes[drv]),
   // so one prefix means exactly one protocol type!
-  TProtocolType = (protMySQL, protPostgre, protSQLite, protFirebird, protInterbase,
+  TProtocolType = (protUnknown, protMySQL, protPostgre, protSQLite, protFirebird, protInterbase,
     protOracle, protASA, protFreeTDS, protMSSQL, protOleDB, protADO, protSyBase,
     protODBC);
 
 const
   // Strictly in lower-case
   ProtocolPrefixes: array[TProtocolType] of string =
-    ('mysql', 'postgresql', 'sqlite', 'firebird', 'interbase',
+    ('unknown', 'mysql', 'postgresql', 'sqlite', 'firebird', 'interbase',
      'oracle', 'asa', 'freetds', 'mssql', 'oledb', 'ado', 'sybase',
      'odbc');
-  protUnknown = TProtocolType(-1);
 
 type
   {** Represents a SQL test database configuration. }
