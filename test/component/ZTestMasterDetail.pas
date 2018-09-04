@@ -310,10 +310,11 @@ begin
   inherited TearDown;
 end;
 
-procedure TZTestMasterDetailCaseMBCs.TestClientDatasetWithForeignKey_ApplyUpdates;
 const
-  Str1: ZWideString = 'צהüüהצ';
-  Str2: ZWideString = 'A adress of צהüüהצ';
+  Str1: ZWideString = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430; // Abrakadabra in Cyrillic letters
+  Str2: ZWideString = 'An address of ' + #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430; // the same
+
+procedure TZTestMasterDetailCaseMBCs.TestClientDatasetWithForeignKey_ApplyUpdates;
 var
   SQLMonitor: TZSQLMonitor;
   procedure SetTheData(Index: Integer);
@@ -358,7 +359,7 @@ begin
       DetailQuery.ApplyUpdates;
       MasterQuery.ApplyUpdates;
       Connection.Commit;
-      Fail('Wrong ApplayUpdates behavior!');
+      Fail('Wrong ApplyUpdates behavior!');
     except on E: Exception do
       begin
         CheckNotTestFailure(E);
@@ -418,9 +419,9 @@ begin
   try
     MasterQuery.Append;
     MasterQuery.FieldByName('dep_id').AsInteger := TestRowID;
-    MasterQuery.FieldByName('dep_name').AsString := GetDBTestString(ZWideString('צהüüהצ'), Connection.DbcConnection.GetConSettings);
+    MasterQuery.FieldByName('dep_name').AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
     MasterQuery.FieldByName('dep_shname').AsString := 'abc';
-    MasterQuery.FieldByName('dep_address').AsString := GetDBTestString(ZWideString('A adress of צהüüהצ'), Connection.DbcConnection.GetConSettings);
+    MasterQuery.FieldByName('dep_address').AsString := GetDBTestString(Str2, Connection.DbcConnection.GetConSettings);
 
     CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
 

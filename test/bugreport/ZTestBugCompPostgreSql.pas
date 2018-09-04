@@ -1040,7 +1040,7 @@ end;
 procedure TZTestCompPostgreSQLBugReportMBCs.TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);
 const
   QuoteString1 = '\'', 1 --''';
-  QuoteString2: ZWideString = 'ТестЁЙ\000';
+  QuoteString2: ZWideString = #$0422#$0435#$0441#$0442#$0401#$0419'\000'; // Test in Russian + a couple of random Cyrillic letters
 begin
   Query.ParamChar := ':';
   Query.ParamCheck := True;
