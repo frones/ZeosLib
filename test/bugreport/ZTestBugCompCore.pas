@@ -123,6 +123,7 @@ type
     procedure TestSF279;
     procedure TestSF286_getBigger;
     procedure TestSF286_getSmaller;
+    procedure TestSF301;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -1978,7 +1979,20 @@ begin
   end;
 end;
 
-
+procedure ZTestCompCoreBugReport.TestSF301;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from equipment';
+    Query.SortedFields := 'eq_date';
+    Query.Open;
+    Check(true);
+  finally
+    FreeAndNil(Query);
+  end;
+end;
 
 const {Test Strings}
   Str1: ZWideString = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
