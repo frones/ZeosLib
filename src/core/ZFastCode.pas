@@ -3110,9 +3110,9 @@ procedure IntToRaw(Value: Int64; Buf: PAnsiChar; PEnd: PPAnsiChar = nil);
 begin
   if Value < 0 then begin
     PByte(Buf)^ := Byte('-');
-    IntToRaw(Int64(Abs(Value)), Buf+1, PEnd);
+    IntToRaw(UInt64(Value*-1), Buf+1, PEnd);
   end else
-    IntToRaw(Int64(Value), Buf, PEnd);
+    IntToRaw(UInt64(Value), Buf, PEnd);
 end;
 
 procedure IntToRaw(Value: UInt64; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
