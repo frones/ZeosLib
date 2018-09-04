@@ -930,6 +930,7 @@ end;
 procedure TZGenericTestDataSet.TestQueryGeneric(Query: TDataset);
 var
   SQL: string;
+  i: Integer;
 begin
   { select equipment table }
   SQL := 'DELETE FROM equipment where eq_id > 100';
@@ -1107,6 +1108,48 @@ begin
       Last;
       CheckEquals(True, Eof);
     end;
+    Close;
+  end;
+
+  { select equipment table }
+  // test traversing through dataset with FindNext
+  SQL := 'SELECT * FROM equipment';
+  if GetName = 'TestQuery' then
+    (Query as TZQuery).SQL.Text := SQL
+  else
+    (Query as TZReadOnlyQuery).SQL.Text := SQL;
+  with Query do
+  begin
+    Open;
+    i := 0;
+    repeat
+      Inc(i);
+      CheckEquals(i, RecNo);
+    until not Query.FindNext;
+    CheckEquals(i, RecordCount);
+    CheckEquals(4, RecordCount);
+    Close;
+  end;
+
+  { select equipment table }
+  // test traversing through dataset with Next
+  SQL := 'SELECT * FROM equipment';
+  if GetName = 'TestQuery' then
+    (Query as TZQuery).SQL.Text := SQL
+  else
+    (Query as TZReadOnlyQuery).SQL.Text := SQL;
+  with Query do
+  begin
+    Open;
+    i := 0;
+    while not EOF do
+    begin
+      Inc(i);
+      CheckEquals(i, RecNo);
+      Next;
+    end;
+    CheckEquals(i, RecordCount);
+    CheckEquals(4, RecordCount);
     Close;
   end;
 

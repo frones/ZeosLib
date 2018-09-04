@@ -456,6 +456,12 @@ type
     function InternalLocate(const KeyFields: string; const KeyValues: Variant;
       Options: TLocateOptions): LongInt;
     function FindRecord(Restart, GoForward: Boolean): Boolean; override;
+    {$IFDEF FPC} // FPC has these methods virtual plainly returning False while on Delphi they use FindRecord
+    function FindFirst: Boolean; override;
+    function FindLast: Boolean; override;
+    function FindNext: Boolean; override;
+    function FindPrior: Boolean; override;
+    {$ENDIF}
     procedure SetFiltered(Value: Boolean); override;
     procedure SetFilterText(const Value: string); override;
     {$IFNDEF WITH_OBJECTVIEW}
@@ -4258,6 +4264,28 @@ begin
     DoAfterScroll;
   end;
 end;
+
+{$IFDEF FPC}
+function TZAbstractRODataset.FindFirst: Boolean;
+begin
+  Result := FindRecord(True, True);
+end;
+
+function TZAbstractRODataset.FindLast: Boolean;
+begin
+  Result := FindRecord(True, False);
+end;
+
+function TZAbstractRODataset.FindNext: Boolean;
+begin
+  Result := FindRecord(False, True);
+end;
+
+function TZAbstractRODataset.FindPrior: Boolean;
+begin
+  Result := FindRecord(False, False);
+end;
+{$ENDIF}
 
 {**
   Sets a filtering control flag.

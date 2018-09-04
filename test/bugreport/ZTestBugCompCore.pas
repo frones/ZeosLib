@@ -337,10 +337,10 @@ begin
 
     repeat
       Inc(RecNo);
-      CheckEquals(Query.RecNo, RecNo);
+      CheckEquals(Query.RecNo, RecNo, 'check Query.RecNo');
     until not Query.FindNext;
 
-    CheckEquals(Query.RecordCount, RecNo);
+    CheckEquals(Query.RecordCount, RecNo, 'check Query.RecordCount');
     Query.Close;
   finally
     Query.Free;
