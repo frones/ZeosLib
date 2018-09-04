@@ -1293,16 +1293,10 @@ function TZDriverManager.GetClientVersion(const Url: string): Integer;
 var
   Driver: IZDriver;
 begin
-  FDriversCS.Enter;
-  Result := 0;
-  try
-    Driver := GetDriver(Url);
-    if Driver = nil
-    then raise EZSQLException.Create(SDriverWasNotFound)
-    else Result := Driver.GetClientVersion(Url);
-  finally
-    FDriversCS.Leave;
-  end;
+  Driver := GetDriver(Url);
+  if Driver = nil
+  then raise EZSQLException.Create(SDriverWasNotFound)
+  else Result := Driver.GetClientVersion(Url);
 end;
 
 {**
