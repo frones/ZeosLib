@@ -1297,9 +1297,9 @@ begin
   Result := 0;
   try
     Driver := GetDriver(Url);
-    if Driver = nil then
-      raise EZSQLException.Create(SDriverWasNotFound);
-    Result := Driver.GetClientVersion(Url);
+    if Driver = nil
+    then raise EZSQLException.Create(SDriverWasNotFound)
+    else Result := Driver.GetClientVersion(Url);
   finally
     FDriversCS.Leave;
   end;
