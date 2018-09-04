@@ -622,7 +622,6 @@ begin
     CalcField.DataSet := Query;
 
     Query.Open;
-    Query.FieldByName('p_calc').AsInteger;
 
     while not Query.Eof do
     begin
