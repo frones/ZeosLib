@@ -4805,7 +4805,7 @@ end;
 function TZAbstractRODataset.ClearSort(Item1, Item2: Pointer): Integer;
 begin
   //no real pointer addresses here, just a Integer represented as Pointer! -> overflow save!
-  Result := NativeUInt(Item1) - NativeUInt(Item2);
+  Result := NativeInt(Item1) - NativeInt(Item2);
 end;
 
 {**
