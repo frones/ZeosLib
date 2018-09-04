@@ -1052,7 +1052,7 @@ begin
       end;
     SQLT_AFC: Result := SQLQuotedStr(Bind.valuep, Bind.Value_sz, #39);
     SQLT_VCS: ZSetString(@POCIVary(Bind.valuep).data[0], POCIVary(Bind.valuep).Len, Result); //used for big (s/u) ordinals on old oracle
-    SQLT_LVC: Result := SQLQuotedStr(@POCILong(Bind.valuep).data[0], POCILong(Bind.valuep).Len, #39);
+    SQLT_LVC: Result := SQLQuotedStr(PAnsiChar(@POCILong(Bind.valuep).data[0]), POCILong(Bind.valuep).Len, #39);
     SQLT_LVB: Result := GetSQLHexAnsiString(@POCILong(Bind.valuep).data[0], POCILong(Bind.valuep).Len, False);
     SQLT_CLOB: Result := '(CLOB)';
     SQLT_BLOB: Result := '(BLOB)';
