@@ -86,7 +86,7 @@ type
 
   TZAbstractODBCStatement = class(TZAbstractPreparedStatement, IZODBCStatement)
   private
-    fPlainDriver: IODBC3BasePlainDriver;
+    fPlainDriver: TZODBC3PlainDriver;
     fPHDBC: PSQLHDBC;
     fHSTMT: SQLHSTMT;
     fParamInfos: array of TZODBCParamInfo;
@@ -124,6 +124,8 @@ type
     procedure Prepare; override;
     procedure Unprepare; override;
     procedure Close; override;
+    procedure Cancel; override;
+
 
     procedure SetDataArray(ParameterIndex: Integer; const Value;
       const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
@@ -202,12 +204,28 @@ begin
           InternalBindParams;
           InternalExecute;
           Inc(FArrayOffSet, fMaxBufArrayBound);
-          CheckStmtError(fPlainDriver.RowCount(fHSTMT, @RowCount));
+          CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
           LastUpdateCount := LastUpdateCount + RowCount;
         end
       end
     end;
   inherited BindInParameters;
+end;
+
+{**
+  Cancels this <code>Statement</code> object if both the DBMS and
+  driver support aborting an SQL statement.
+  This method can be used by one thread to cancel a statement that
+  is being executed by another thread.
+}
+procedure TZAbstractODBCStatement.Cancel;
+var RetCode: SQLRETURN;
+begin
+  if fHSTMT <> nil then begin
+    RetCode := FPlainDriver.SQLCancel(fHSTMT);
+    if RETCODE <> SQL_SUCCESS then
+      CheckODBCError(RETCODE, fHSTMT, SQL_HANDLE_STMT, Connection as IZODBCConnection);
+  end;
 end;
 
 procedure TZAbstractODBCStatement.CheckStmtError(RETCODE: SQLRETURN);
@@ -227,7 +245,7 @@ procedure TZAbstractODBCStatement.Close;
 begin
   inherited Close;
   if Assigned(fHSTMT) then begin
-    fPlainDriver.FreeHandle(SQL_HANDLE_STMT, fHSTMT);
+    fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, fHSTMT);
     fHSTMT := nil;
   end;
 end;
@@ -237,7 +255,7 @@ constructor TZAbstractODBCStatement.Create(const Connection: IZODBCConnection;
 begin
   inherited Create(Connection, SQL, Info);
   //inherited Create(Connection, Connection.NativeSQL(SQL), Info);
-  fPlainDriver := Connection.GetPlainDriver;
+  fPlainDriver := TZODBC3PlainDriver(Connection.GetPlainDriver.GetInstance);
   fStreamSupport := Connection.ODBCVersion >= {%H-}Word(SQL_OV_ODBC3_80);
   fPHDBC := @ConnectionHandle;
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //by default 128KB
@@ -259,9 +277,9 @@ begin
   BindInParameters;
   try
     InternalExecute;
-    CheckStmtError(fPlainDriver.RowCount(fHSTMT, @RowCount));
+    CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
     LastUpdateCount := LastUpdateCount + RowCount;
-    CheckStmtError(fPlainDriver.NumResultCols(fHSTMT, @ColumnCount));
+    CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
     if ColumnCount > 0 then begin
       LastUpdateCount := -1;
       LastResultSet := GetCurrentResultSet;
@@ -269,10 +287,10 @@ begin
       if Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets and
          (fMoreResultsIndicator <> mriHasNoMoreResults) then
         repeat
-          RETCODE := fPlainDriver.MoreResults(fHSTMT);
+          RETCODE := fPlainDriver.SQLMoreResults(fHSTMT);
           if RETCODE = SQL_SUCCESS then begin
             fMoreResultsIndicator := mriHasMoreResults;
-            CheckStmtError(fPlainDriver.NumResultCols(fHSTMT, @ColumnCount));
+            CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
             if ColumnCount > 0 then
               LastResultSet := GetCurrentResultSet;
           end else if RETCODE = SQL_NO_DATA then begin
@@ -298,7 +316,7 @@ begin
   BindInParameters;
   try
     InternalExecute;
-    CheckStmtError(fPlainDriver.NumResultCols(fHSTMT, @ColumnCount));
+    CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
     if ColumnCount > 0 then
       if Assigned(FOpenResultSet) then
         Result := IZResultSet(FOpenResultSet)
@@ -310,10 +328,10 @@ begin
         (fMoreResultsIndicator <> mriHasNoMoreResults) then
       begin
         repeat
-          RETCODE := fPlainDriver.MoreResults(fHSTMT);
+          RETCODE := fPlainDriver.SQLMoreResults(fHSTMT);
           if RETCODE = SQL_SUCCESS then begin
             fMoreResultsIndicator := mriHasMoreResults;
-            CheckStmtError(fPlainDriver.NumResultCols(fHSTMT, @ColumnCount));
+            CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
             if ColumnCount > 0 then
               Result := GetCurrentResultSet
           end else if RETCODE = SQL_NO_DATA then begin
@@ -342,7 +360,7 @@ begin
   LastUpdateCount := 0;
   try
     InternalExecute;
-    CheckStmtError(fPlainDriver.RowCount(fHSTMT, @RowCount));
+    CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
     LastUpdateCount := LastUpdateCount + RowCount;
     Result := RowCount;
   finally
@@ -380,8 +398,8 @@ end;
 procedure TZAbstractODBCStatement.InternalBeforePrepare;
 begin
   if not Assigned(fHSTMT) then begin
-    CheckODBCError(fPlainDriver.AllocHandle(SQL_HANDLE_STMT, fPHDBC^, fHSTMT), fPHDBC^, SQL_HANDLE_DBC, Connection as IZODBCConnection);
-    CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, SQLPOINTER(fStmtTimeOut), 0));
+    CheckODBCError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fPHDBC^, fHSTMT), fPHDBC^, SQL_HANDLE_DBC, Connection as IZODBCConnection);
+    CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, SQLPOINTER(fStmtTimeOut), 0));
     fMoreResultsIndicator := mriUnknown;
   end;
 end;
@@ -1921,7 +1939,7 @@ begin
       end;
       if (Param.CurrParamDataPtr <> Param.LastParamDataPtr) or
          (Param.CurrStrLen_or_IndPtr <> Param.LastStrLen_or_IndPtr) then begin //..Bindings remain in effect until the application calls SQLBindParameter again...oslt.
-        CheckStmtError(fPlainDriver.BindParameter(fHSTMT, I+1,//0=bookmark and Params do starts with 1
+        CheckStmtError(fPlainDriver.SQLBindParameter(fHSTMT, I+1,//0=bookmark and Params do starts with 1
           Param.InputDataType, Param.C_DataType, Param.DataType, Param.ColumnSize, Param.DecimalDigits * Ord(Param.SQLType in [stDouble, stTime, stTimeStamp]),
             Param.CurrParamDataPtr, Param.BufferSize, Param.CurrStrLen_or_IndPtr));
         Param.LastParamDataPtr := Param.CurrParamDataPtr;
@@ -1929,10 +1947,9 @@ begin
       end;
     end;
     if ParamSetChanged then
-      if (fMaxBufArrayBound = -1) then
-        CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_PARAMSET_SIZE, Pointer(1), 0))
-      else
-        CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_PARAMSET_SIZE, SQLPOINTER(NativeUInt(fCurrentIterations)), 0));
+      if (fMaxBufArrayBound = -1)
+      then CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_PARAMSET_SIZE, Pointer(1), 0))
+      else CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_PARAMSET_SIZE, SQLPOINTER(NativeUInt(fCurrentIterations)), 0));
   end;
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
@@ -1947,10 +1964,10 @@ var
   PRowIndex: PInteger;
   I: Integer;
 begin
-  CheckStmtError(fPlainDriver.FreeStmt(fHSTMT,SQL_CLOSE)); //handle a get data issue
-  RETCODE := fPlainDriver.Execute(fHSTMT);
+  CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE)); //handle a get data issue
+  RETCODE := fPlainDriver.SQLExecute(fHSTMT);
   while RETCODE = SQL_NEED_DATA do begin
-    RETCODE := fPlainDriver.ParamData(fHSTMT, @ValuePtr);
+    RETCODE := fPlainDriver.SQLParamData(fHSTMT, @ValuePtr);
     if RetCode <> SQL_NEED_DATA then break;
     Assert(Assigned(ValuePtr), 'wrong descriptor token');
     PRowIndex := {%H-}Pointer({%H-}NativeUInt(ValuePtr)+LobArrayIndexOffSet);
@@ -1958,29 +1975,29 @@ begin
     TempBlob := PLobArray(PPointer(ValuePtr)^)^[PRowIndex^] as IZBlob; //note ValuePtr is a user defined token we also could use the columnNumber on binding the column -> this is faster
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     if (TempBlob = nil) or TempBlob.IsEmpty then begin
-      CheckStmtError(fPlainDriver.PutData(fHSTMT, nil, SQL_NULL_DATA)); //set to null
+      CheckStmtError(fPlainDriver.SQLPutData(fHSTMT, nil, SQL_NULL_DATA)); //set to null
     end else begin
       Buf := TempBlob.GetBuffer;
       { put data chunked }
       StrLen_or_Ind := Min(ChunkSize, TempBlob.Length);
       for i := 1 to TempBlob.Length div ChunkSize do begin
-        CheckStmtError(fPlainDriver.PutData(fHSTMT, Buf, StrLen_or_Ind));
+        CheckStmtError(fPlainDriver.SQLPutData(fHSTMT, Buf, StrLen_or_Ind));
         Inc(Buf, ChunkSize);
       end;
       StrLen_or_Ind := TempBlob.Length - NativeInt(({%H-}NativeUInt(Buf)-{%H-}NativeUInt(TempBlob.GetBuffer)));
-      CheckStmtError(fPlainDriver.PutData(fHSTMT, Buf, StrLen_or_Ind)); //final chunk
+      CheckStmtError(fPlainDriver.SQLPutData(fHSTMT, Buf, StrLen_or_Ind)); //final chunk
     end;
     inc(PRowIndex^);
   end;
   { roll back PRowIndex^ misses yet}
   if RETCODE = SQL_PARAM_DATA_AVAILABLE then begin //check output params ...
-    RETCODE2 := fPlainDriver.MoreResults(fHSTMT);
+    RETCODE2 := fPlainDriver.SQLMoreResults(fHSTMT);
     if RETCODE2 = SQL_NO_DATA then
       //???
     else begin
       { get data chunked }
       CheckStmtError(RETCODE2);
-      CheckStmtError(fPlainDriver.ParamData(fHSTMT, @ValuePtr));
+      CheckStmtError(fPlainDriver.SQLParamData(fHSTMT, @ValuePtr));
       Assert(Assigned(ValuePtr), 'wrong descriptor pointer');
       TempBlob := IZBlob(ValuePtr);
     end;
@@ -1992,7 +2009,7 @@ procedure TZAbstractODBCStatement.Prepare;
 begin
   if not Prepared then begin
     if Connection.GetServerProvider = spMSSQL then
-      CheckStmtError(FPlainDriver.SetStmtAttr(fHSTMT, SQL_SOPT_SS_CURSOR_OPTIONS, Pointer(SQL_CO_FFO),0));
+      CheckStmtError(FPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_SOPT_SS_CURSOR_OPTIONS, Pointer(SQL_CO_FFO),0));
     inherited Prepare;
   end;
 end;
@@ -2004,7 +2021,7 @@ var
   NoLobBoundParamCount: Integer;
   AllParamsAreArrays: Boolean;
 begin
-  CheckStmtError(fPlainDriver.NumParams(fHSTMT, @ParameterCount));
+  CheckStmtError(fPlainDriver.SQLNumParams(fHSTMT, @ParameterCount));
   if ParameterCount > 0 then begin
     if ParameterCount <> InParamCount then
       raise EZSQLException.Create(SInvalidInputParameterCount);
@@ -2013,7 +2030,7 @@ begin
     fBufferSize := 0;
     AllParamsAreArrays := False;
     for ParameterNumber := 0 to ParameterCount-1 do begin
-      CheckStmtError(fPlainDriver.DescribeParam(fHSTMT, ParameterNumber +1, //0=bookmark and Params do starts with 1
+      CheckStmtError(fPlainDriver.SQLDescribeParam(fHSTMT, ParameterNumber +1, //0=bookmark and Params do starts with 1
         @fParamInfos[ParameterNumber].DataType, @fParamInfos[ParameterNumber].ColumnSize,
         @fParamInfos[ParameterNumber].DecimalDigits, @fParamInfos[ParameterNumber].Nullable));
       //get "best" TZSQLType -> ODBC does not returns the C-Data types
@@ -2032,7 +2049,7 @@ begin
          (not (InParamTypes[ParameterNumber] in [stAsciiStream, stUnicodeStream, stBinaryStream]))));
       //note: Code is prepared to handle any case of Param-Directions  except fetching returned data
       fParamInfos[ParameterNumber].InputDataType := ParamTypeToODBCParamType(pctIn, fParamInfos[ParameterNumber].SQLType, fStreamSupport);
-      fParamInfos[ParameterNumber].BufferSize := CalcBufSize(fParamInfos[ParameterNumber].ColumnSize,
+      fParamInfos[ParameterNumber].BufferSize := CalcBufSize(fParamInfos[ParameterNumber].ColumnSize * Ord(not (fParamInfos[ParameterNumber].SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream])),
         fParamInfos[ParameterNumber].C_DataType, fParamInfos[ParameterNumber].SQLType, ConSettings^.ClientCodePage);
       if fParamInfos[ParameterNumber].SQLType = stTimeStamp then begin
         fParamInfos[ParameterNumber].ColumnSize := 23;
@@ -2049,10 +2066,9 @@ begin
       fMaxBufArrayBound := Max(1, fZBufferSize div fBufferSize)
     else
       fMaxBufArrayBound := -1;
-    if fBindRowWise then
-      CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_PARAM_BIND_TYPE, SQLPOINTER(fBufferSize), 0))
-    else
-      CheckStmtError(fPlainDriver.SetStmtAttr(fHSTMT, SQL_ATTR_PARAM_BIND_TYPE, Pointer(SQL_PARAM_BIND_BY_COLUMN), 0));
+    if fBindRowWise
+    then CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_PARAM_BIND_TYPE, SQLPOINTER(fBufferSize), 0))
+    else CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_PARAM_BIND_TYPE, Pointer(SQL_PARAM_BIND_BY_COLUMN), 0));
   end;
 end;
 
@@ -2099,9 +2115,8 @@ end;
 procedure TZAbstractODBCStatement.Unprepare;
 begin
   inherited Unprepare;
-  if Assigned(fHSTMT) then
-  begin
-    CheckStmtError(fPlainDriver.FreeHandle(SQL_HANDLE_STMT, fHSTMT)); //<- does the trick to get a instance reused
+  if Assigned(fHSTMT) then begin
+    CheckStmtError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, fHSTMT)); //<- does the trick to get a instance reused
     fHSTMT := nil;
   end;
 end;
@@ -2111,7 +2126,7 @@ begin
   SetLength(fParamInfos, 0);
   SetLength(fBatchLobBuf, 0);
   if Assigned(fHSTMT) and Assigned(fPHDBC^) then
-    CheckStmtError(fPlainDriver.FreeStmt(fHSTMT,SQL_RESET_PARAMS));
+    CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_RESET_PARAMS));
 end;
 
 { TZODBCPreparedStatementW }
@@ -2126,11 +2141,11 @@ procedure TZODBCPreparedStatementW.Prepare;
 begin
   if Not Prepared then begin
     InternalBeforePrepare;
-    CheckStmtError((fPlainDriver as IODBC3UnicodePlainDriver).Prepare(fHSTMT, Pointer(WSQL), Length(WSQL)));
+    CheckStmtError(TODBC3UnicodePlainDriver(fPlainDriver).SQLPrepareW(fHSTMT, Pointer(WSQL), Length(WSQL)));
     inherited Prepare;
   end else
     if Assigned(fHSTMT) and Assigned(fPHDBC^) then
-      CheckStmtError(fPlainDriver.FreeStmt(fHSTMT,SQL_CLOSE));
+      CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE));
 end;
 
 { TZODBCPreparedStatementA }
@@ -2145,11 +2160,11 @@ procedure TZODBCPreparedStatementA.Prepare;
 begin
   if Not Prepared then begin
     InternalBeforePrepare;
-    CheckStmtError((fPlainDriver as IODBC3RawPlainDriver).Prepare(fHSTMT, Pointer(ASQL), Length(ASQL)));
+    CheckStmtError(TODBC3RawPlainDriver(fPlainDriver).SQLPrepare(fHSTMT, Pointer(ASQL), Length(ASQL)));
     inherited Prepare;
   end else
     if Assigned(fHSTMT) and Assigned(fPHDBC^) then
-      CheckStmtError(fPlainDriver.FreeStmt(fHSTMT,SQL_CLOSE));
+      CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE));
 end;
 
 end.

@@ -245,7 +245,7 @@ type
   {** Implements ODBC Metadata. }
   TODBCDatabaseMetadataW = class(TAbstractODBCDatabaseMetadata)
   private
-    fPlainW: IODBC3UnicodePlainDriver;
+    fPlainW: TODBC3UnicodePlainDriver;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-27
     function DecomposeObjectString(const S: String): ZWideString; reintroduce;
@@ -277,7 +277,7 @@ type
   {** Implements ODBC Metadata. }
   TODBCDatabaseMetadataA = class(TAbstractODBCDatabaseMetadata)
   private
-    fPlainA: IODBC3RawPlainDriver;
+    fPlainA: TODBC3RawPlainDriver;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-27
     function DecomposeObjectString(const S: String): RawByteString; reintroduce;
@@ -389,7 +389,7 @@ var
 begin
   Result := 0; //satisfy compiler
   ODBCConnection := GetODBCConnection;
-  ODBCConnection.CheckDbcError(ODBCConnection.GetPlainDriver.GetInfo(fPHDBC^,
+  ODBCConnection.CheckDbcError(TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
     InfoType, @Result, SizeOf(SQLUINTEGER), nil));
 end;
 
@@ -400,7 +400,7 @@ var
 begin
   Result := 0; //satisfy compiler
   ODBCConnection := GetODBCConnection;
-  ODBCConnection.CheckDbcError(ODBCConnection.GetPlainDriver.GetInfo(fPHDBC^,
+  ODBCConnection.CheckDbcError(TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
     InfoType, @Result, SizeOf(SQLUSMALLINT), nil));
 end;
 
@@ -851,12 +851,12 @@ begin
   Result := False; //satisfy compiler
   ODBCConnection := GetODBCConnection;
   if ODBCConnection.GetPlainDriver.QueryInterface(IODBC3UnicodePlainDriver, PlainW) = S_OK then begin
-    ODBCConnection.CheckDbcError(ODBCConnection.GetPlainDriver.GetInfo(fPHDBC^,
+    ODBCConnection.CheckDbcError(TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
       InfoType, @Buf[0], SizeOf(Buf), @PropLength));
     Result := ZSysUtils.StrToBoolEx(PWideChar(@Buf[0]), False)
   end else
     if ODBCConnection.GetPlainDriver.QueryInterface(IODBC3RawPlainDriver, PlainA) = S_OK then begin
-      ODBCConnection.CheckDbcError(ODBCConnection.GetPlainDriver.GetInfo(fPHDBC^,
+      ODBCConnection.CheckDbcError(TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
         InfoType, @Buf[0], SizeOf(Buf), @PropLength));
       Result := ZSysUtils.StrToBoolEx(PAnsiChar(@Buf[0]), False)
     end;
@@ -1578,8 +1578,7 @@ constructor TODBCDatabaseMetadataW.Create(Connection: TZAbstractDbcConnection;
   const Url: TZURL; var ConnectionHandle: SQLHDBC);
 begin
   inherited Create(Connection, URL, ConnectionHandle);
-  if not Connection.GetIZPlainDriver.QueryInterface(IODBC3UnicodePlainDriver, fPlainW) = S_OK then
-     raise EZSQLException.Create('Wrong PlainDriver');
+  fPlainW := Connection.GetIZPlainDriver.GetInstance as TODBC3UnicodePlainDriver;
 end;
 
 function TODBCDatabaseMetadataW.CreateDatabaseInfo: IZDatabaseInfo;
@@ -1650,7 +1649,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainW.Procedures(HSTMT, Pointer(Cat), Length(Cat),
+  CheckStmtError(fPLainW.SQLProceduresW(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc)), HSTMT, ODBCConnection);
   if RS <> nil then
     with RS do
@@ -1749,7 +1748,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainW.ProcedureColumns(HSTMT, Pointer(Cat), Length(Cat),
+  CheckStmtError(fPLainW.SQLProcedureColumnsW(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc), Pointer(Col), Length(Col)), HSTMT, ODBCConnection);
   if RS <> nil then
     with RS do
@@ -1848,7 +1847,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainW.Tables(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem), Length(Schem),
+  CheckStmtError(fPLainW.SQLTablesW(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem), Length(Schem),
     Pointer(Table), Length(Table), Pointer(TableTypes), Length(TableTypes)), HSTMT, ODBCConnection);
   if Assigned(RS) then
     with RS do
@@ -1941,7 +1940,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainW.Columns(HSTMT, Pointer(Cat), Length(Cat),
+  CheckStmtError(fPLainW.SQLColumnsW(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Table), Length(Table),
     Pointer(Column), Length(Column)), HSTMT, ODBCConnection);
   if Assigned(RS) then
@@ -2044,7 +2043,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainW.ColumnPrivileges(HSTMT, Pointer(Cat), Length(Cat),
+  CheckStmtError(fPLainW.SQLColumnPrivilegesW(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl), Pointer(Col), Length(Col)), HSTMT, ODBCConnection);
   if Assigned(RS) then
     with RS do
@@ -2117,7 +2116,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainW.TablePrivileges(HSTMT, Pointer(Cat), Length(Cat),
+  CheckStmtError(fPLainW.SQLTablePrivilegesW(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Table), Length(Table)), HSTMT, ODBCConnection);
   if Assigned(RS) then
     with RS do
@@ -2180,7 +2179,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainW.PrimaryKeys(HSTMT, Pointer(Cat), Length(Cat),
+  CheckStmtError(fPLainW.SQLPrimaryKeysW(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl)), HSTMT, ODBCConnection);
   if RS <> nil then
     with RS do
@@ -2299,7 +2298,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainW.ForeignKeys(HSTMT, Pointer(PKCat), Length(PKCat),
+  CheckStmtError(fPLainW.SQLForeignKeysW(HSTMT, Pointer(PKCat), Length(PKCat),
     Pointer(PKSchem), Length(PKSchem), Pointer(PKTabl), Length(PKTabl),
     Pointer(FKCat), Length(FKCat),
     Pointer(FKSchem), Length(FKSchem), Pointer(FKTabl), Length(FKTabl)), HSTMT, ODBCConnection);
@@ -2401,7 +2400,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainW.Statistics(HSTMT, Pointer(Cat), Length(Cat),
+  CheckStmtError(fPLainW.SQLStatisticsW(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Table),
     Ord(Unique), Ord(Approximate)), HSTMT, ODBCConnection);
   with RS do
@@ -2486,7 +2485,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainW.GetTypeInfo(HSTMT, SQL_ALL_TYPES), HSTMT, ODBCConnection);
+  CheckStmtError(fPLainW.SQLGetTypeInfo(HSTMT, SQL_ALL_TYPES), HSTMT, ODBCConnection);
   with RS do begin
     while Next do begin
       Result.MoveToInsertRow;
@@ -2526,8 +2525,7 @@ constructor TODBCDatabaseMetadataA.Create(Connection: TZAbstractDbcConnection;
   const Url: TZURL; var ConnectionHandle: SQLHDBC);
 begin
   inherited Create(Connection, URL, ConnectionHandle);
-  if not Connection.GetIZPlainDriver.QueryInterface(IODBC3RawPlainDriver, fPlainA) = S_OK then
-     raise EZSQLException.Create('Wrong PlainDriver');
+  fPlainA := Connection.GetIZPlainDriver.GetInstance as TODBC3RawPlainDriver;
 end;
 
 function TODBCDatabaseMetadataA.CreateDatabaseInfo: IZDatabaseInfo;
@@ -2597,7 +2595,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainA.Procedures(HSTMT, Pointer(Cat), Length(Cat),
+  CheckStmtError(fPLainA.SQLProcedures(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc)), HSTMT, ODBCConnection);
   if RS <> nil then
     with RS do
@@ -2696,7 +2694,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainA.ProcedureColumns(HSTMT, Pointer(Cat), Length(Cat),
+  CheckStmtError(fPLainA.SQLProcedureColumns(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Proc), Length(Proc), Pointer(Col), Length(Col)),
     HSTMT, ODBCConnection);
   if RS <> nil then
@@ -2797,7 +2795,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainA.Tables(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem), Length(Schem),
+  CheckStmtError(fPLainA.SQLTables(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem), Length(Schem),
     Pointer(Tabl), Length(Tabl), Pointer(TableTypes), Length(TableTypes)), HSTMT, ODBCConnection);
   if Assigned(RS) then
     with RS do
@@ -2890,7 +2888,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainA.Columns(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem),
+  CheckStmtError(fPLainA.SQLColumns(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem),
     Length(Schem), Pointer(Tabl), Length(Tabl), Pointer(Col), Length(Col)), HSTMT, ODBCConnection);
   if Assigned(RS) then
   begin
@@ -2991,7 +2989,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainA.ColumnPrivileges(HSTMT, Pointer(Cat), Length(Cat),
+  CheckStmtError(fPLainA.SQLColumnPrivileges(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl), Pointer(Col), Length(Col)),
     HSTMT, ODBCConnection);
   if Assigned(RS) then
@@ -3065,7 +3063,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainA.TablePrivileges(HSTMT, Pointer(Cat), Length(Cat),
+  CheckStmtError(fPLainA.SQLTablePrivileges(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Tabl)), HSTMT, ODBCConnection);
   if Assigned(RS) then
     with RS do
@@ -3128,7 +3126,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainA.PrimaryKeys(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem),
+  CheckStmtError(fPLainA.SQLPrimaryKeys(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem),
     Length(Schem), Pointer(Tabl), Length(Tabl)), HSTMT, ODBCConnection);
   if RS <> nil then
     with RS do
@@ -3247,7 +3245,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainA.ForeignKeys(HSTMT, Pointer(PKCat), Length(PKCat),
+  CheckStmtError(fPLainA.SQLForeignKeys(HSTMT, Pointer(PKCat), Length(PKCat),
     Pointer(PKSchem), Length(PKSchem), Pointer(PKTabl), Length(PKTabl),
     Pointer(FKCat), Length(FKCat), Pointer(FKSchem), Length(FKSchem), Pointer(FKTabl), Length(FKTabl)),
     HSTMT, ODBCConnection);
@@ -3349,7 +3347,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainA.Statistics(HSTMT, Pointer(Cat), Length(Cat),
+  CheckStmtError(fPLainA.SQLStatistics(HSTMT, Pointer(Cat), Length(Cat),
     Pointer(Schem), Length(Schem), Pointer(Tabl), Length(Table),
     Ord(Unique), Ord(Approximate)), HSTMT, ODBCConnection);
   with RS do
@@ -3434,7 +3432,7 @@ begin
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
   RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
-  CheckStmtError(fPLainA.GetTypeInfo(HSTMT, SQL_ALL_TYPES), HSTMT, ODBCConnection);
+  CheckStmtError(fPLainA.SQLGetTypeInfo(HSTMT, SQL_ALL_TYPES), HSTMT, ODBCConnection);
   with RS do begin
     while Next do begin
       Result.MoveToInsertRow;
@@ -3723,7 +3721,7 @@ var
   ODBCConnection: IZODBCConnection;
 begin
   ODBCConnection := GetODBCConnection;
-  ODBCConnection.CheckDbcError((ODBCConnection.GetPlainDriver as IODBC3UnicodePlainDriver).GetInfo(fPHDBC^,
+  ODBCConnection.CheckDbcError(TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
     InfoType, @Buf[0], SizeOf(Buf), @PropLength));
   {$IFDEF UNICODE}
   SetString(Result, PWideChar(@Buf[0]), PropLength shr 1);
@@ -3741,7 +3739,7 @@ var
   ODBCConnection: IZODBCConnection;
 begin
   ODBCConnection := GetODBCConnection;
-  ODBCConnection.CheckDbcError((ODBCConnection.GetPlainDriver as IODBC3RawPlainDriver).GetInfo(fPHDBC^,
+  ODBCConnection.CheckDbcError(TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
     InfoType, @Buf[0], SizeOf(Buf), @PropLength));
   {$IFDEF UNICODE}
   Result := PRawToUnicode(PAnsiChar(@Buf[0]),PropLength,ZOSCodePage);

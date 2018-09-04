@@ -2002,281 +2002,22 @@ const
 type
   IODBC3BasePlainDriver = interface(IZPlainDriver)
     ['{1B4A3A81-78DF-4097-B715-1D692D35565A}']
-    function AllocHandle(HandleType: SQLSMALLINT; InputHandle: SQLHANDLE;
-      var OutputHandle: SQLHANDLE): SQLRETURN;
-    function BindCol(StatementHandle: SQLHSTMT; ColumnNumber: SQLUSMALLINT;
-      TargetType: SQLSMALLINT; TargetValue: SQLPOINTER;
-      BufferLength: SQLLEN; StrLen_or_Ind: PSQLLEN): SQLRETURN;
-    function BindParameter(StatementHandle: SQLHSTMT; ParameterNumber: SQLUSMALLINT;
-      InputOutputType: SQLSMALLINT; ValueType: SQLSMALLINT; ParameterType: SQLSMALLINT;
-      ColumnSize: SQLULEN; DecimalDigits: SQLSMALLINT; ParameterValuePtr: SQLPOINTER;
-      BufferLength: SQLLEN; StrLen_or_IndPtr: PSQLLEN): SQLRETURN;
-    function BulkOperations(StatementHandle: SQLHSTMT; Operation: SQLUSMALLINT): SQLRETURN;
-    function Cancel(StatementHandle: SQLHSTMT): SQLRETURN;
-    function CancelHandle(HandleType: SQLSMALLINT; InputHandle: SQLHANDLE): SQLRETURN;
-    function CloseCursor(StatementHandle: SQLHSTMT): SQLRETURN;
-    function CompleteAsync(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      var AsyncRetCodePtr: PRETCODE): SQLRETURN;
-    {$IFDEF UNICODE}
-    function Connect(ConnectionHandle: SQLHDBC;
-      ServerName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      UserName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      Authentication: PSQLWCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    {$ELSE}
-    function Connect(ConnectionHandle: SQLHDBC;
-      ServerName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      UserName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      Authentication: PSQLCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    {$ENDIF}
-    function CopyDesc(SourceDescHandle: SQLHDESC; TargetDescHandle: SQLHDESC): SQLRETURN;
-    function DescribeParam(StatementHandle: SQLHSTMT; ParameterNumber: SQLUSMALLINT;
-      DataTypePtr: PSQLSMALLINT; ParameterSizePtr: PSQLULEN;
-      DecimalDigitsPtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
-    function Disconnect(ConnectionHandle: SQLHDBC): SQLRETURN;
-    {$IFDEF UNICODE}
-    function DriverConnect(ConnectionHandle: SQLHDBC; WindowHandle: SQLHWND;
-      InConnectionString: PSQLWCHAR; StringLength1: SQLSMALLINT;
-      OutConnectionString: PSQLWCHAR; BufferLength: SQLSMALLINT;
-      StringLength2Ptr: PSQLSMALLINT; DriverCompletion: SQLUSMALLINT): SQLRETURN;
-    {$ELSE}
-    function DriverConnect(ConnectionHandle: SQLHDBC; WindowHandle: SQLHWND;
-      InConnectionString: PSQLCHAR; StringLength1: SQLSMALLINT;
-      OutConnectionString: PSQLCHAR; BufferLength: SQLSMALLINT;
-      StringLength2Ptr: PSQLSMALLINT; DriverCompletion: SQLUSMALLINT): SQLRETURN;
-    {$ENDIF}
-    function EndTran(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      CompletionType: SQLSMALLINT): SQLRETURN;
-    function GetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-       Value: SQLPOINTER; BufferLength: SQLINTEGER; StringLengthPtr: PSQLINTEGER): SQLRETURN;
-    function Execute(StatementHandle: SQLHSTMT): SQLRETURN;
-    function Fetch(StatementHandle: SQLHSTMT): SQLRETURN;
-    function FetchScroll(StatementHandle: SQLHSTMT; FetchOrientation: SQLSMALLINT;
-      FetchOffset: SQLLEN): SQLRETURN;
-    function FreeHandle(HandleType: SQLSMALLINT; Handle: SQLHANDLE): SQLRETURN;
-    function FreeStmt(StatementHandle: SQLHSTMT; Option: SQLUSMALLINT): SQLRETURN;
-    function GetData(StatementHandle: SQLHSTMT; ColumnNumber: SQLUSMALLINT;
-      TargetType: SQLSMALLINT; TargetValue: SQLPOINTER; BufferLength: SQLLEN;
-      StrLen_or_IndPtr: PSQLLEN): SQLRETURN;
-    function GetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      FieldIdentifier: SQLSMALLINT; Value: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLength: PSQLINTEGER): SQLRETURN;
-    function GetDiagField(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      RecNumber: SQLSMALLINT; DiagIdentifier: SQLSMALLINT; DiagInfo: SQLPOINTER;
-      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN;
-    function GetEnvAttr(EnvironmentHandle: SQLHENV; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER; StringLength: PSQLINTEGER): SQLRETURN;
-    function GetFunctions(ConnectionHandle: SQLHDBC; FunctionId: SQLUSMALLINT;
-      SupportedPtr: PSQLUSMALLINT): SQLRETURN;
-    function GetInfo(ConnectionHandle: SQLHDBC; InfoType: SQLUSMALLINT;
-      InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT): SQLRETURN;
-    function GetTypeInfo(StatementHandle: SQLHSTMT; DataType: SQLSMALLINT): SQLRETURN;
-    function GetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLengthPtr: PSQLINTEGER): SQLRETURN;
-    function MoreResults(StatementHandle: SQLHSTMT): SQLRETURN;
-    function NumParams(StatementHandle: SQLHSTMT; ParameterCountPtr: PSQLSMALLINT): SQLRETURN;
-    function NumResultCols(StatementHandle: SQLHSTMT; ColumnCountPtr: PSQLSMALLINT): SQLRETURN;
-    function ParamData(StatementHandle: SQLHSTMT; ValuePtrPtr: PSQLPOINTER): SQLRETURN;
-    function PutData(StatementHandle: SQLHSTMT; DataPtr: SQLPOINTER;
-      StrLen_or_Ind: SQLLEN): SQLRETURN;
-    function RowCount(StatementHandle: SQLHSTMT; RowCountPtr: PSQLLEN): SQLRETURN;
-    function SetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
-    function SetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      FieldIdentifier: SQLSMALLINT; ValuePtr: SQLPOINTER;
-      BufferLength: SQLINTEGER): SQLRETURN;
-    function SetDescRec(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      _Type: SQLSMALLINT; SubType: SQLSMALLINT; Length: SQLLEN; Precision: SQLSMALLINT;
-      Scale: SQLSMALLINT; DataPtr: SQLPOINTER; StringLengthPtr: PSQLLEN;
-      IndicatorPtr: PSQLLEN): SQLRETURN;
-    function SetEnvAttr(EnvironmentHandle: SQLHENV; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
-    function SetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
-    function SetPos(StatementHandle: SQLHSTMT; RowNumber: SQLSETPOSIROW;
-      Operation: SQLUSMALLINT; LockType: SQLUSMALLINT): SQLRETURN;
   end;
 
   IODBC3UnicodePlainDriver = interface(IODBC3BasePlainDriver)
     ['{40D3EDEF-B1A8-4151-A406-8E8B8F4BD1E4}']
-    function BrowseConnect(ConnectionHandle: SQLHDBC; InConnectionString: PSQLWCHAR;
-      StringLength1: SQLSMALLINT; OutConnectionString: PSQLWCHAR;
-      BufferLength: SQLSMALLINT; StringLength2Ptr: PSQLSMALLINT): SQLRETURN;
-    function ColAttribute(StatementHandle: SQLHSTMT;
-      ColumnNumber, FieldIdentifier: SQLUSMALLINT; CharacterAttributePtr: PSQLWCHAR;
-      BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT; NumericAttributePtr: PSQLLEN): SQLRETURN;
-    function ColumnPrivileges(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-      ColumnName: PSQLWCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-    function Columns(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-      ColumnName: PSQLWCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-    function DataSources(EnvironmentHandle: SQLHENV; Direction: SQLUSMALLINT;
-      ServerName: PSQLWCHAR; BufferLength1: SQLSMALLINT; NameLength1Ptr: PSQLSMALLINT;
-      Description: PSQLWCHAR; BufferLength2: SQLSMALLINT; NameLength2Ptr: PSQLSMALLINT): SQLRETURN;
-    function DescribeCol(StatementHandle: SQLHSTMT;
-      ColumnNumber: SQLUSMALLINT; ColumnName: PSQLWCHAR; BufferLength: SQLSMALLINT;
-      NameLengthPtr: PSQLSMALLINT; DataTypePtr: PSQLSMALLINT; ColumnSizePtr: PSQLULEN;
-      DecimalDigitsPtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
-    function Drivers(EnvironmentHandle: SQLHENV; Direction: SQLUSMALLINT;
-      DriverDescription: PSQLWCHAR; BufferLength1: SQLSMALLINT;
-      DescriptionLengthPtr: PSQLSMALLINT; DriverAttributes: PSQLWCHAR;
-      BufferLength2: SQLSMALLINT; AttributesLengthPtr: PSQLSMALLINT): SQLRETURN;
-    function ExecDirect(StatementHandle: SQLHSTMT; StatementText: PSQLWCHAR;
-      TextLength: SQLINTEGER): SQLRETURN;
-    function ForeignKeys(StatementHandle: SQLHSTMT;
-      PKCatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      PKSchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      PKTableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-      FKCatalogName: PSQLWCHAR; NameLength4: SQLSMALLINT;
-      FKSchemaName: PSQLWCHAR; NameLength5: SQLSMALLINT;
-      FKTableName: PSQLWCHAR; NameLength6: SQLSMALLINT): SQLRETURN;
-    function GetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLWCHAR;
-      BufferLength: SQLSMALLINT; NameLengthPtr: PSQLSMALLINT): SQLRETURN;
-    function GetDescRec(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      Name: PSQLWCHAR; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT;
-      TypePtr: PSQLSMALLINT; SubTypePtr: PSQLSMALLINT; LengthPtr: PSQLLEN;
-      PrecisionPtr: PSQLSMALLINT; ScalePtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
-    function GetDiagRec(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      RecNumber: SQLSMALLINT; Sqlstate: PSQLWCHAR; NativeErrorPtr: PSQLINTEGER;
-      MessageText: PSQLWCHAR; BufferLength: SQLSMALLINT; TextLength: PSQLSMALLINT): SQLRETURN;
-    function NativeSql(ConnectionHandle: SQLHDBC;
-      InStatementText: PSQLWCHAR; TextLength1: SQLINTEGER;
-      OutStatementText: PSQLWCHAR; BufferLength: SQLINTEGER;
-      TextLength2Ptr: PSQLINTEGER): SQLRETURN;
-    function Prepare(StatementHandle: SQLHSTMT; StatementText: PSQLWCHAR;
-      TextLength: SQLINTEGER): SQLRETURN;
-    function PrimaryKeys(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLWCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    function ProcedureColumns(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      ProcName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-      ColumnName: PSQLWCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-    function Procedures(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      ProcName: PSQLWCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    function SetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLWCHAR;
-      NameLength: SQLSMALLINT): SQLRETURN;
-    function SpecialColumns(StatementHandle: SQLHSTMT; IdentifierType: SQLSMALLINT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-      Scope: SQLSMALLINT; Nullable: SQLSMALLINT): SQLRETURN;
-    function Statistics(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-      Unique: SQLUSMALLINT; Reserved: SQLUSMALLINT): SQLRETURN;
-    function TablePrivileges(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLWCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    function Tables(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-      TableType: PSQLWCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
   end;
 
   IODBC3RawPlainDriver = interface(IODBC3BasePlainDriver)
     ['{6CE34B8A-CBC9-411F-8FC9-87E519762C95}']
-    function BrowseConnect(ConnectionHandle: SQLHDBC; InConnectionString: PSQLCHAR;
-      StringLength1: SQLSMALLINT; OutConnectionString: PSQLCHAR;
-      BufferLength: SQLSMALLINT; StringLength2Ptr: PSQLSMALLINT): SQLRETURN;
-    function ColAttribute(StatementHandle: SQLHSTMT;
-      ColumnNumber, FieldIdentifier: SQLUSMALLINT; CharacterAttributePtr: PSQLCHAR;
-      BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT; NumericAttributePtr: PSQLLEN): SQLRETURN;
-    function ColumnPrivileges(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-      ColumnName: PSQLCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-    function Columns(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-      ColumnName: PSQLCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-    function DataSources(EnvironmentHandle: SQLHENV; Direction: SQLUSMALLINT;
-      ServerName: PSQLCHAR; BufferLength1: SQLSMALLINT; NameLength1Ptr: PSQLSMALLINT;
-      Description: PSQLCHAR; BufferLength2: SQLSMALLINT; NameLength2Ptr: PSQLSMALLINT): SQLRETURN;
-    function DescribeCol(StatementHandle: SQLHSTMT;
-      ColumnNumber: SQLUSMALLINT; ColumnName: PSQLCHAR; BufferLength: SQLSMALLINT;
-      NameLengthPtr: PSQLSMALLINT; DataTypePtr: PSQLSMALLINT; ColumnSizePtr: PSQLULEN;
-      DecimalDigitsPtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
-    function Drivers(EnvironmentHandle: SQLHENV; Direction: SQLUSMALLINT;
-      DriverDescription: PSQLCHAR; BufferLength1: SQLSMALLINT;
-      DescriptionLengthPtr: PSQLSMALLINT; DriverAttributes: PSQLCHAR;
-      BufferLength2: SQLSMALLINT; AttributesLengthPtr: PSQLSMALLINT): SQLRETURN;
-    function ExecDirect(StatementHandle: SQLHSTMT; StatementText: PSQLCHAR;
-      TextLength: SQLINTEGER): SQLRETURN;
-    function ForeignKeys(StatementHandle: SQLHSTMT;
-      PKCatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      PKSchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      PKTableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-      FKCatalogName: PSQLCHAR; NameLength4: SQLSMALLINT;
-      FKSchemaName: PSQLCHAR; NameLength5: SQLSMALLINT;
-      FKTableName: PSQLCHAR; NameLength6: SQLSMALLINT): SQLRETURN;
-    function GetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLCHAR;
-      BufferLength: SQLSMALLINT; NameLengthPtr: PSQLSMALLINT): SQLRETURN;
-    function GetDescRec(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-       Name: PSQLCHAR; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT;
-       TypePtr: PSQLSMALLINT; SubTypePtr: PSQLSMALLINT; LengthPtr: PSQLLEN;
-       PrecisionPtr: PSQLSMALLINT; ScalePtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
-    function GetDiagRec(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      RecNumber: SQLSMALLINT; Sqlstate: PSQLCHAR; NativeErrorPtr: PSQLINTEGER;
-      MessageText: PSQLCHAR; BufferLength: SQLSMALLINT; TextLength: PSQLSMALLINT): SQLRETURN;
-    function NativeSql(ConnectionHandle: SQLHDBC;
-      InStatementText: PSQLCHAR; TextLength1: SQLINTEGER;
-      OutStatementText: PSQLCHAR; BufferLength: SQLINTEGER;
-      TextLength2Ptr: PSQLINTEGER): SQLRETURN;
-    function Prepare(StatementHandle: SQLHSTMT; StatementText: PSQLCHAR;
-      TextLength: SQLINTEGER): SQLRETURN;
-    function PrimaryKeys(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    function ProcedureColumns(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      ProcName: PSQLCHAR; NameLength3: SQLSMALLINT;
-      ColumnName: PSQLCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-    function Procedures(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      ProcName: PSQLCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    function SetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLCHAR;
-      NameLength: SQLSMALLINT): SQLRETURN;
-    function SpecialColumns(StatementHandle: SQLHSTMT; IdentifierType: SQLSMALLINT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-      Scope: SQLSMALLINT; Nullable: SQLSMALLINT): SQLRETURN;
-    function Statistics(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-      Unique: SQLUSMALLINT; Reserved: SQLUSMALLINT): SQLRETURN;
-    function TablePrivileges(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    function Tables(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-      TableType: PSQLCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
   end;
 
-  TODBC3BaseDriver = class(TZAbstractPlainDriver, IODBC3BasePlainDriver)
-  private
+  TZODBC3PlainDriver = class(TZAbstractPlainDriver, IODBC3BasePlainDriver)
+  public
+    SQLConnect: function (ConnectionHandle: SQLHDBC;
+      ServerName: {$IFDEF UNICODE}PSQLWCHAR{$ELSE}PSQLCHAR{$ENDIF}; NameLength1: SQLSMALLINT;
+      UserName: PSQLWCHAR; NameLength2: SQLSMALLINT;
+      Authentication: PSQLWCHAR; NameLength3: SQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLAllocHandle: function(HandleType: SQLSMALLINT; InputHandle: SQLHANDLE;
       var OutputHandle: SQLHANDLE): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLBindCol: function(StatementHandle: SQLHSTMT; ColumnNumber: SQLUSMALLINT;
@@ -2292,33 +2033,15 @@ type
     SQLCloseCursor: function(StatementHandle: SQLHSTMT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLCompleteAsync: function(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
       var AsyncRetCodePtr: PRETCODE): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    {$IFDEF UNICODE}
-    SQLConnectW: function (ConnectionHandle: SQLHDBC;
-      ServerName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      UserName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      Authentication: PSQLWCHAR; NameLength3: SQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    {$ELSE}
-    SQLConnect: function (ConnectionHandle: SQLHDBC;
-      ServerName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      UserName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      Authentication: PSQLCHAR; NameLength3: SQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    {$ENDIF}
     SQLCopyDesc: function (SourceDescHandle: SQLHDESC; TargetDescHandle: SQLHDESC): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLDescribeParam: function(StatementHandle: SQLHSTMT; ParameterNumber: SQLUSMALLINT;
       DataTypePtr: PSQLSMALLINT; ParameterSizePtr: PSQLULEN;
       DecimalDigitsPtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLDisconnect: function(ConnectionHandle: SQLHDBC): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    {$IFDEF UNICODE}
-    SQLDriverConnectW: function(ConnectionHandle: SQLHDBC; WindowHandle: SQLHWND;
-      InConnectionString: PSQLWCHAR; StringLength1: SQLSMALLINT;
-      OutConnectionString: PSQLWCHAR; BufferLength: SQLSMALLINT;
-      StringLength2Ptr: PSQLSMALLINT; DriverCompletion: SQLUSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    {$ELSE}
     SQLDriverConnect: function(ConnectionHandle: SQLHDBC; WindowHandle: SQLHWND;
-      InConnectionString: PSQLCHAR; StringLength1: SQLSMALLINT;
-      OutConnectionString: PSQLCHAR; BufferLength: SQLSMALLINT;
+      InConnectionString: {$IFDEF UNICODE}PSQLWCHAR{$ELSE}PSQLCHAR{$ENDIF}; StringLength1: SQLSMALLINT;
+      OutConnectionString: {$IFDEF UNICODE}PSQLWCHAR{$ELSE}PSQLCHAR{$ENDIF}; BufferLength: SQLSMALLINT;
       StringLength2Ptr: PSQLSMALLINT; DriverCompletion: SQLUSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    {$ENDIF}
     SQLEndTran: function(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
       CompletionType: SQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLExecute: function(StatementHandle: SQLHSTMT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
@@ -2350,6 +2073,19 @@ type
       ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLSetPos: function(StatementHandle: SQLHSTMT; RowNumber: SQLSETPOSIROW;
       Operation: SQLUSMALLINT; LockType: SQLUSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+  public //next fields are assigned by descendants:
+    SQLGetInfo: function(ConnectionHandle: SQLHDBC; InfoType: SQLUSMALLINT;
+      InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    SQLGetStmtAttr: function(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
+      ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
+      StringLengthPtr: PSQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    SQLSetConnectAttr: function(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
+      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    SQLSetDescField: function(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
+      FieldIdentifier: SQLSMALLINT; ValuePtr: SQLPOINTER;
+      BufferLength: SQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    SQLSetStmtAttr: function(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
+      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
   private
     FDriverName: String;
   protected
@@ -2357,104 +2093,10 @@ type
   public
     function GetProtocol: string; override;
     constructor Create(const DriverName: String);
-  public
-    function AllocHandle(HandleType: SQLSMALLINT; InputHandle: SQLHANDLE;
-      var OutputHandle: SQLHANDLE): SQLRETURN;
-    function BindCol(StatementHandle: SQLHSTMT; ColumnNumber: SQLUSMALLINT;
-      TargetType: SQLSMALLINT; TargetValue: SQLPOINTER;
-      BufferLength: SQLLEN; StrLen_or_Ind: PSQLLEN): SQLRETURN;
-    function BindParameter(StatementHandle: SQLHSTMT; ParameterNumber: SQLUSMALLINT;
-      InputOutputType: SQLSMALLINT; ValueType: SQLSMALLINT; ParameterType: SQLSMALLINT;
-      ColumnSize: SQLULEN; DecimalDigits: SQLSMALLINT; ParameterValuePtr: SQLPOINTER;
-      BufferLength: SQLLEN; StrLen_or_IndPtr: PSQLLEN): SQLRETURN;
-    function BulkOperations(StatementHandle: SQLHSTMT; Operation: SQLUSMALLINT): SQLRETURN;
-    function Cancel(StatementHandle: SQLHSTMT): SQLRETURN;
-    function CancelHandle(HandleType: SQLSMALLINT; InputHandle: SQLHANDLE): SQLRETURN;
-    function CloseCursor(StatementHandle: SQLHSTMT): SQLRETURN;
-    function CompleteAsync(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      var AsyncRetCodePtr: PRETCODE): SQLRETURN;
-    {$IFDEF UNICODE}
-    function Connect(ConnectionHandle: SQLHDBC;
-      ServerName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      UserName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      Authentication: PSQLWCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    {$ELSE}
-    function Connect(ConnectionHandle: SQLHDBC;
-      ServerName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      UserName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      Authentication: PSQLCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    {$ENDIF}
-    function CopyDesc(SourceDescHandle: SQLHDESC; TargetDescHandle: SQLHDESC): SQLRETURN;
-    function DescribeParam(StatementHandle: SQLHSTMT; ParameterNumber: SQLUSMALLINT;
-      DataTypePtr: PSQLSMALLINT; ParameterSizePtr: PSQLULEN;
-      DecimalDigitsPtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
-    function Disconnect(ConnectionHandle: SQLHDBC): SQLRETURN;
-    {$IFDEF UNICODE}
-    function DriverConnect(ConnectionHandle: SQLHDBC; WindowHandle: SQLHWND;
-      InConnectionString: PSQLWCHAR; StringLength1: SQLSMALLINT;
-      OutConnectionString: PSQLWCHAR; BufferLength: SQLSMALLINT;
-      StringLength2Ptr: PSQLSMALLINT; DriverCompletion: SQLUSMALLINT): SQLRETURN;
-    {$ELSE}
-    function DriverConnect(ConnectionHandle: SQLHDBC; WindowHandle: SQLHWND;
-      InConnectionString: PSQLCHAR; StringLength1: SQLSMALLINT;
-      OutConnectionString: PSQLCHAR; BufferLength: SQLSMALLINT;
-      StringLength2Ptr: PSQLSMALLINT; DriverCompletion: SQLUSMALLINT): SQLRETURN;
-    {$ENDIF}
-    function EndTran(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      CompletionType: SQLSMALLINT): SQLRETURN;
-    function GetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-       Value: SQLPOINTER; BufferLength: SQLINTEGER; StringLengthPtr: PSQLINTEGER): SQLRETURN; virtual; abstract;
-    function Execute(StatementHandle: SQLHSTMT): SQLRETURN;
-    function Fetch(StatementHandle: SQLHSTMT): SQLRETURN;
-    function FetchScroll(StatementHandle: SQLHSTMT; FetchOrientation: SQLSMALLINT;
-      FetchOffset: SQLLEN): SQLRETURN;
-    function FreeHandle(HandleType: SQLSMALLINT; Handle: SQLHANDLE): SQLRETURN;
-    function FreeStmt(StatementHandle: SQLHSTMT; Option: SQLUSMALLINT): SQLRETURN;
-    function GetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      FieldIdentifier: SQLSMALLINT; Value: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLength: PSQLINTEGER): SQLRETURN; virtual; abstract;
-    function GetData(StatementHandle: SQLHSTMT; ColumnNumber: SQLUSMALLINT;
-      TargetType: SQLSMALLINT; TargetValue: SQLPOINTER; BufferLength: SQLLEN;
-      StrLen_or_IndPtr: PSQLLEN): SQLRETURN;
-    function GetDiagField(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      RecNumber: SQLSMALLINT; DiagIdentifier: SQLSMALLINT; DiagInfo: SQLPOINTER;
-      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN; virtual; abstract;
-    function GetEnvAttr(EnvironmentHandle: SQLHENV; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER; StringLength: PSQLINTEGER): SQLRETURN;
-    function GetFunctions(ConnectionHandle: SQLHDBC; FunctionId: SQLUSMALLINT;
-      SupportedPtr: PSQLUSMALLINT): SQLRETURN;
-    function GetInfo(ConnectionHandle: SQLHDBC; InfoType: SQLUSMALLINT;
-      InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT): SQLRETURN;  virtual; abstract;
-    function GetTypeInfo(StatementHandle: SQLHSTMT; DataType: SQLSMALLINT): SQLRETURN;
-    function GetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLengthPtr: PSQLINTEGER): SQLRETURN; virtual; abstract;
-    function MoreResults(StatementHandle: SQLHSTMT): SQLRETURN;
-    function NumParams(StatementHandle: SQLHSTMT; ParameterCountPtr: PSQLSMALLINT): SQLRETURN;
-    function NumResultCols(StatementHandle: SQLHSTMT; ColumnCountPtr: PSQLSMALLINT): SQLRETURN;
-    function ParamData(StatementHandle: SQLHSTMT; ValuePtrPtr: PSQLPOINTER): SQLRETURN;
-    function PutData(StatementHandle: SQLHSTMT; DataPtr: SQLPOINTER;
-      StrLen_or_Ind: SQLLEN): SQLRETURN;
-    function RowCount(StatementHandle: SQLHSTMT; RowCountPtr: PSQLLEN): SQLRETURN;
-    function SetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;  virtual; abstract;
-    function SetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      FieldIdentifier: SQLSMALLINT; ValuePtr: SQLPOINTER;
-      BufferLength: SQLINTEGER): SQLRETURN;  virtual; abstract;
-    function SetDescRec(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      _Type: SQLSMALLINT; SubType: SQLSMALLINT; Length: SQLLEN; Precision: SQLSMALLINT;
-      Scale: SQLSMALLINT; DataPtr: SQLPOINTER; StringLengthPtr: PSQLLEN;
-      IndicatorPtr: PSQLLEN): SQLRETURN;
-    function SetEnvAttr(EnvironmentHandle: SQLHENV; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN;
-    function SetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; virtual; abstract;
-    function SetPos(StatementHandle: SQLHSTMT; RowNumber: SQLSETPOSIROW;
-      Operation: SQLUSMALLINT; LockType: SQLUSMALLINT): SQLRETURN;
   end;
 
-  TODBC3UnicodePlainDriver = class(TODBC3BaseDriver, IODBC3UnicodePlainDriver)
-  private
+  TODBC3UnicodePlainDriver = class(TZODBC3PlainDriver, IODBC3UnicodePlainDriver)
+  public
     SQLBrowseConnectW: function(ConnectionHandle: SQLHDBC; InConnectionString: PSQLWCHAR;
       StringLength1: SQLSMALLINT; OutConnectionString: PSQLWCHAR;
       BufferLength: SQLSMALLINT; StringLength2Ptr: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
@@ -2493,26 +2135,21 @@ type
       FKTableName: PSQLWCHAR; NameLength6: SQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLGetConnectAttrW: function(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
        Value: SQLPOINTER; BufferLength: SQLINTEGER; StringLengthPtr: PSQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    SQLGetCursorNameW: function(StatementHandle: SQLHSTMT; CursorName: PSQLWCHAR;
-      BufferLength: SQLSMALLINT; NameLengthPtr: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLGetDescFieldW: function(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
       FieldIdentifier: SQLSMALLINT; Value: SQLPOINTER; BufferLength: SQLINTEGER;
       StringLength: PSQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    SQLGetDiagFieldW: function(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
+      RecNumber: SQLSMALLINT; DiagIdentifier: SQLSMALLINT; DiagInfo: SQLPOINTER;
+      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    SQLGetCursorNameW: function(StatementHandle: SQLHSTMT; CursorName: PSQLWCHAR;
+      BufferLength: SQLSMALLINT; NameLengthPtr: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLGetDescRecW: function(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
        Name: PSQLWCHAR; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT;
        TypePtr: PSQLSMALLINT; SubTypePtr: PSQLSMALLINT; LengthPtr: PSQLLEN;
        PrecisionPtr: PSQLSMALLINT; ScalePtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    SQLGetDiagFieldW: function(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      RecNumber: SQLSMALLINT; DiagIdentifier: SQLSMALLINT; DiagInfo: SQLPOINTER;
-      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLGetDiagRecW: function(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
       RecNumber: SQLSMALLINT; Sqlstate: PSQLWCHAR; NativeErrorPtr: PSQLINTEGER;
       MessageText: PSQLWCHAR; BufferLength: SQLSMALLINT; TextLength: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    SQLGetInfoW: function(ConnectionHandle: SQLHDBC; InfoType: SQLUSMALLINT;
-      InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    SQLGetStmtAttrW: function(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLengthPtr: PSQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLNativeSqlW: function(ConnectionHandle: SQLHDBC;
       InStatementText: PSQLWCHAR; TextLength1: SQLINTEGER;
       OutStatementText: PSQLWCHAR; BufferLength: SQLINTEGER;
@@ -2532,15 +2169,8 @@ type
       CatalogName: PSQLWCHAR; NameLength2: SQLSMALLINT;
       SchemaName: PSQLWCHAR; NameLength1: SQLSMALLINT;
       ProcName: PSQLWCHAR; NameLength3: SQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    SQLSetConnectAttrW: function(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLSetCursorNameW: function(StatementHandle: SQLHSTMT; CursorName: PSQLWCHAR;
       NameLength: SQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    SQLSetDescFieldW: function(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      FieldIdentifier: SQLSMALLINT; ValuePtr: SQLPOINTER;
-      BufferLength: SQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    SQLSetStmtAttrW: function(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLSpecialColumnsW: function(StatementHandle: SQLHSTMT; IdentifierType: SQLSMALLINT;
       CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
       SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
@@ -2567,116 +2197,10 @@ type
     function GetDescription: string; override;
     procedure LoadCodePages; override;
     constructor Create(const DriverName: String = '_w');
-  public
-    function BrowseConnect(ConnectionHandle: SQLHDBC; InConnectionString: PSQLWCHAR;
-      StringLength1: SQLSMALLINT; OutConnectionString: PSQLWCHAR;
-      BufferLength: SQLSMALLINT; StringLength2Ptr: PSQLSMALLINT): SQLRETURN;
-    function ColAttribute(StatementHandle: SQLHSTMT;
-      ColumnNumber, FieldIdentifier: SQLUSMALLINT; CharacterAttributePtr: PSQLWCHAR;
-      BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT; NumericAttributePtr: PSQLLEN): SQLRETURN;
-    function ColumnPrivileges(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-      ColumnName: PSQLWCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-    function Columns(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-      ColumnName: PSQLWCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-    function DataSources(EnvironmentHandle: SQLHENV; Direction: SQLUSMALLINT;
-      ServerName: PSQLWCHAR; BufferLength1: SQLSMALLINT; NameLength1Ptr: PSQLSMALLINT;
-      Description: PSQLWCHAR; BufferLength2: SQLSMALLINT; NameLength2Ptr: PSQLSMALLINT): SQLRETURN;
-    function DescribeCol(StatementHandle: SQLHSTMT;
-      ColumnNumber: SQLUSMALLINT; ColumnName: PSQLWCHAR; BufferLength: SQLSMALLINT;
-      NameLengthPtr: PSQLSMALLINT; DataTypePtr: PSQLSMALLINT; ColumnSizePtr: PSQLULEN;
-      DecimalDigitsPtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
-    function Drivers(EnvironmentHandle: SQLHENV; Direction: SQLUSMALLINT;
-      DriverDescription: PSQLWCHAR; BufferLength1: SQLSMALLINT;
-      DescriptionLengthPtr: PSQLSMALLINT; DriverAttributes: PSQLWCHAR;
-      BufferLength2: SQLSMALLINT; AttributesLengthPtr: PSQLSMALLINT): SQLRETURN;
-    function ExecDirect(StatementHandle: SQLHSTMT; StatementText: PSQLWCHAR;
-      TextLength: SQLINTEGER): SQLRETURN;
-    function ForeignKeys(StatementHandle: SQLHSTMT;
-      PKCatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      PKSchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      PKTableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-      FKCatalogName: PSQLWCHAR; NameLength4: SQLSMALLINT;
-      FKSchemaName: PSQLWCHAR; NameLength5: SQLSMALLINT;
-      FKTableName: PSQLWCHAR; NameLength6: SQLSMALLINT): SQLRETURN;
-    function GetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-       Value: SQLPOINTER; BufferLength: SQLINTEGER; StringLengthPtr: PSQLINTEGER): SQLRETURN; override;
-    function GetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLWCHAR;
-      BufferLength: SQLSMALLINT; NameLengthPtr: PSQLSMALLINT): SQLRETURN;
-    function GetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      FieldIdentifier: SQLSMALLINT; Value: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLength: PSQLINTEGER): SQLRETURN; override;
-    function GetDescRec(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-       Name: PSQLWCHAR; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT;
-       TypePtr: PSQLSMALLINT; SubTypePtr: PSQLSMALLINT; LengthPtr: PSQLLEN;
-       PrecisionPtr: PSQLSMALLINT; ScalePtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
-    function GetDiagField(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      RecNumber: SQLSMALLINT; DiagIdentifier: SQLSMALLINT; DiagInfo: SQLPOINTER;
-      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN; override;
-    function GetDiagRec(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      RecNumber: SQLSMALLINT; Sqlstate: PSQLWCHAR; NativeErrorPtr: PSQLINTEGER;
-      MessageText: PSQLWCHAR; BufferLength: SQLSMALLINT; TextLength: PSQLSMALLINT): SQLRETURN;
-    function GetInfo(ConnectionHandle: SQLHDBC; InfoType: SQLUSMALLINT;
-      InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT): SQLRETURN; override;
-    function GetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLengthPtr: PSQLINTEGER): SQLRETURN; override;
-    function NativeSql(ConnectionHandle: SQLHDBC;
-      InStatementText: PSQLWCHAR; TextLength1: SQLINTEGER;
-      OutStatementText: PSQLWCHAR; BufferLength: SQLINTEGER;
-      TextLength2Ptr: PSQLINTEGER): SQLRETURN;
-    function Prepare(StatementHandle: SQLHSTMT; StatementText: PSQLWCHAR;
-      TextLength: SQLINTEGER): SQLRETURN;
-    function PrimaryKeys(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLWCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    function ProcedureColumns(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      ProcName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-      ColumnName: PSQLWCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-    function Procedures(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      ProcName: PSQLWCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    function SetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; override;
-    function SetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLWCHAR;
-      NameLength: SQLSMALLINT): SQLRETURN;
-    function SetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      FieldIdentifier: SQLSMALLINT; ValuePtr: SQLPOINTER;
-      BufferLength: SQLINTEGER): SQLRETURN; override;
-    function SetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; override;
-    function SpecialColumns(StatementHandle: SQLHSTMT; IdentifierType: SQLSMALLINT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-      Scope: SQLSMALLINT; Nullable: SQLSMALLINT): SQLRETURN;
-    function Statistics(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-      Unique: SQLUSMALLINT; Reserved: SQLUSMALLINT): SQLRETURN;
-    function TablePrivileges(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLWCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    function Tables(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-      TableType: PSQLWCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-   end;
+  end;
 
-  TODBC3RawPlainDriver = class(TODBC3BaseDriver, IODBC3RawPlainDriver)
-  private
+  TODBC3RawPlainDriver = class(TZODBC3PlainDriver, IODBC3RawPlainDriver)
+  public
     SQLBrowseConnect: function(ConnectionHandle: SQLHDBC; InConnectionString: PSQLCHAR;
       StringLength1: SQLSMALLINT; OutConnectionString: PSQLCHAR;
       BufferLength: SQLSMALLINT; StringLength2Ptr: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
@@ -2715,26 +2239,21 @@ type
       FKTableName: PSQLCHAR; NameLength6: SQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLGetConnectAttr: function(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
        Value: SQLPOINTER; BufferLength: SQLINTEGER; StringLengthPtr: PSQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    SQLGetCursorName: function(StatementHandle: SQLHSTMT; CursorName: PSQLCHAR;
-      BufferLength: SQLSMALLINT; NameLengthPtr: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLGetDescField: function(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
       FieldIdentifier: SQLSMALLINT; Value: SQLPOINTER; BufferLength: SQLINTEGER;
       StringLength: PSQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    SQLGetDiagField: function(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
+      RecNumber: SQLSMALLINT; DiagIdentifier: SQLSMALLINT; DiagInfo: SQLPOINTER;
+      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    SQLGetCursorName: function(StatementHandle: SQLHSTMT; CursorName: PSQLCHAR;
+      BufferLength: SQLSMALLINT; NameLengthPtr: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLGetDescRec: function(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
        Name: PSQLCHAR; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT;
        TypePtr: PSQLSMALLINT; SubTypePtr: PSQLSMALLINT; LengthPtr: PSQLLEN;
        PrecisionPtr: PSQLSMALLINT; ScalePtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    SQLGetDiagField: function(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      RecNumber: SQLSMALLINT; DiagIdentifier: SQLSMALLINT; DiagInfo: SQLPOINTER;
-      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLGetDiagRec: function(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
       RecNumber: SQLSMALLINT; Sqlstate: PSQLCHAR; NativeErrorPtr: PSQLINTEGER;
       MessageText: PSQLCHAR; BufferLength: SQLSMALLINT; TextLength: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    SQLGetInfo: function(ConnectionHandle: SQLHDBC; InfoType: SQLUSMALLINT;
-      InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    SQLGetStmtAttr: function(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLengthPtr: PSQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLNativeSql: function(ConnectionHandle: SQLHDBC;
       InStatementText: PSQLCHAR; TextLength1: SQLINTEGER;
       OutStatementText: PSQLCHAR; BufferLength: SQLINTEGER;
@@ -2754,15 +2273,8 @@ type
       CatalogName: PSQLCHAR; NameLength2: SQLSMALLINT;
       SchemaName: PSQLCHAR; NameLength1: SQLSMALLINT;
       ProcName: PSQLCHAR; NameLength3: SQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    SQLSetConnectAttr: function(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-     ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLSetCursorName: function(StatementHandle: SQLHSTMT; CursorName: PSQLCHAR;
       NameLength: SQLSMALLINT): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    SQLSetDescField: function(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      FieldIdentifier: SQLSMALLINT; ValuePtr: SQLPOINTER;
-      BufferLength: SQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
-    SQLSetStmtAttr: function(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     SQLSpecialColumns: function(StatementHandle: SQLHSTMT; IdentifierType: SQLSMALLINT;
       CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
       SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
@@ -2789,204 +2301,15 @@ type
     function GetDescription: string; override;
     procedure LoadCodePages; override;
     constructor Create(const DriverName: String = '_a');
-  public
-    function BrowseConnect(ConnectionHandle: SQLHDBC; InConnectionString: PSQLCHAR;
-      StringLength1: SQLSMALLINT; OutConnectionString: PSQLCHAR;
-      BufferLength: SQLSMALLINT; StringLength2Ptr: PSQLSMALLINT): SQLRETURN;
-    function ColAttribute(StatementHandle: SQLHSTMT;
-      ColumnNumber, FieldIdentifier: SQLUSMALLINT; CharacterAttributePtr: PSQLCHAR;
-      BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT; NumericAttributePtr: PSQLLEN): SQLRETURN;
-    function ColumnPrivileges(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-      ColumnName: PSQLCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-    function Columns(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-      ColumnName: PSQLCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-    function DataSources(EnvironmentHandle: SQLHENV; Direction: SQLUSMALLINT;
-      ServerName: PSQLCHAR; BufferLength1: SQLSMALLINT; NameLength1Ptr: PSQLSMALLINT;
-      Description: PSQLCHAR; BufferLength2: SQLSMALLINT; NameLength2Ptr: PSQLSMALLINT): SQLRETURN;
-    function DescribeCol(StatementHandle: SQLHSTMT;
-      ColumnNumber: SQLUSMALLINT; ColumnName: PSQLCHAR; BufferLength: SQLSMALLINT;
-      NameLengthPtr: PSQLSMALLINT; DataTypePtr: PSQLSMALLINT; ColumnSizePtr: PSQLULEN;
-      DecimalDigitsPtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
-    function Drivers(EnvironmentHandle: SQLHENV; Direction: SQLUSMALLINT;
-      DriverDescription: PSQLCHAR; BufferLength1: SQLSMALLINT;
-      DescriptionLengthPtr: PSQLSMALLINT; DriverAttributes: PSQLCHAR;
-      BufferLength2: SQLSMALLINT; AttributesLengthPtr: PSQLSMALLINT): SQLRETURN;
-    function ExecDirect(StatementHandle: SQLHSTMT; StatementText: PSQLCHAR;
-      TextLength: SQLINTEGER): SQLRETURN;
-    function ForeignKeys(StatementHandle: SQLHSTMT;
-      PKCatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      PKSchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      PKTableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-      FKCatalogName: PSQLCHAR; NameLength4: SQLSMALLINT;
-      FKSchemaName: PSQLCHAR; NameLength5: SQLSMALLINT;
-      FKTableName: PSQLCHAR; NameLength6: SQLSMALLINT): SQLRETURN;
-    function GetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-       Value: SQLPOINTER; BufferLength: SQLINTEGER; StringLengthPtr: PSQLINTEGER): SQLRETURN; override;
-    function GetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLCHAR;
-      BufferLength: SQLSMALLINT; NameLengthPtr: PSQLSMALLINT): SQLRETURN;
-    function GetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      FieldIdentifier: SQLSMALLINT; Value: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLength: PSQLINTEGER): SQLRETURN; override;
-    function GetDescRec(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-       Name: PSQLCHAR; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT;
-       TypePtr: PSQLSMALLINT; SubTypePtr: PSQLSMALLINT; LengthPtr: PSQLLEN;
-       PrecisionPtr: PSQLSMALLINT; ScalePtr: PSQLSMALLINT; NullablePtr: PSQLSMALLINT): SQLRETURN;
-    function GetDiagField(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      RecNumber: SQLSMALLINT; DiagIdentifier: SQLSMALLINT; DiagInfo: SQLPOINTER;
-      BufferLength: SQLSMALLINT; StringLength: PSQLSMALLINT): SQLRETURN; override;
-    function GetDiagRec(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-      RecNumber: SQLSMALLINT; Sqlstate: PSQLCHAR; NativeErrorPtr: PSQLINTEGER;
-      MessageText: PSQLCHAR; BufferLength: SQLSMALLINT; TextLength: PSQLSMALLINT): SQLRETURN;
-    function GetInfo(ConnectionHandle: SQLHDBC; InfoType: SQLUSMALLINT;
-      InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT): SQLRETURN; override;
-    function GetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
-      StringLengthPtr: PSQLINTEGER): SQLRETURN; override;
-    function NativeSql(ConnectionHandle: SQLHDBC;
-      InStatementText: PSQLCHAR; TextLength1: SQLINTEGER;
-      OutStatementText: PSQLCHAR; BufferLength: SQLINTEGER;
-      TextLength2Ptr: PSQLINTEGER): SQLRETURN;
-    function Prepare(StatementHandle: SQLHSTMT; StatementText: PSQLCHAR;
-      TextLength: SQLINTEGER): SQLRETURN;
-    function PrimaryKeys(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    function ProcedureColumns(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      ProcName: PSQLCHAR; NameLength3: SQLSMALLINT;
-      ColumnName: PSQLCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-    function Procedures(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      ProcName: PSQLCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    function SetConnectAttr(ConnectionHandle: SQLHDBC; Attribute: SQLINTEGER;
-     ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; override;
-    function SetCursorName(StatementHandle: SQLHSTMT; CursorName: PSQLCHAR;
-      NameLength: SQLSMALLINT): SQLRETURN;
-    function SetDescField(DescriptorHandle: SQLHDESC; RecNumber: SQLSMALLINT;
-      FieldIdentifier: SQLSMALLINT; ValuePtr: SQLPOINTER;
-      BufferLength: SQLINTEGER): SQLRETURN; override;
-    function SetStmtAttr(StatementHandle: SQLHSTMT; Attribute: SQLINTEGER;
-      ValuePtr: SQLPOINTER; StringLength: SQLINTEGER): SQLRETURN; override;
-    function SpecialColumns(StatementHandle: SQLHSTMT; IdentifierType: SQLSMALLINT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-      Scope: SQLSMALLINT; Nullable: SQLSMALLINT): SQLRETURN;
-    function Statistics(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-      Unique: SQLUSMALLINT; Reserved: SQLUSMALLINT): SQLRETURN;
-    function TablePrivileges(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-    function Tables(StatementHandle: SQLHSTMT;
-      CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-      SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT;
-      TableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-      TableType: PSQLCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-   end;
+  end;
 
 implementation
 
 uses ZPlainLoader;
 
-{ TODBC3BaseDriver }
+{ TZODBC3PlainDriver }
 
-function TODBC3BaseDriver.AllocHandle(HandleType: SQLSMALLINT;
-  InputHandle: SQLHANDLE; var OutputHandle: SQLHANDLE): SQLRETURN;
-begin
-  if not Assigned(SQLAllocHandle) then
-    Result := SQL_ERROR
-  else
-    Result := SQLAllocHandle(HandleType, InputHandle, OutputHandle);
-end;
-
-function TODBC3BaseDriver.BindCol(StatementHandle: SQLHSTMT;
-  ColumnNumber: SQLUSMALLINT; TargetType: SQLSMALLINT; TargetValue: SQLPOINTER;
-  BufferLength: SQLLEN; StrLen_or_Ind: PSQLLEN): SQLRETURN;
-begin
-  Result := SQLBindCol(StatementHandle, ColumnNumber, TargetType, TargetValue,
-    BufferLength, StrLen_or_Ind);
-end;
-
-function TODBC3BaseDriver.BindParameter(StatementHandle: SQLHSTMT;
-  ParameterNumber: SQLUSMALLINT; InputOutputType, ValueType,
-  ParameterType: SQLSMALLINT; ColumnSize: SQLULEN; DecimalDigits: SQLSMALLINT;
-  ParameterValuePtr: SQLPOINTER; BufferLength: SQLLEN;
-  StrLen_or_IndPtr: PSQLLEN): SQLRETURN;
-begin
-  Result := SQLBindParameter(StatementHandle, ParameterNumber, InputOutputType,
-    ValueType, ParameterType, ColumnSize, DecimalDigits, ParameterValuePtr,
-    BufferLength, StrLen_or_IndPtr);
-end;
-
-function TODBC3BaseDriver.BulkOperations(StatementHandle: SQLHSTMT;
-  Operation: SQLUSMALLINT): SQLRETURN;
-begin
-  Result := SQLBulkOperations(StatementHandle, Operation);
-end;
-
-function TODBC3BaseDriver.Cancel(StatementHandle: SQLHSTMT): SQLRETURN;
-begin
-  Result := SQLCancel(StatementHandle);
-end;
-
-function TODBC3BaseDriver.CancelHandle(HandleType: SQLSMALLINT;
-  InputHandle: SQLHANDLE): SQLRETURN;
-begin
-  Result := SQLCancelHandle(HandleType, InputHandle);
-end;
-
-function TODBC3BaseDriver.CloseCursor(StatementHandle: SQLHSTMT): SQLRETURN;
-begin
-  Result := SQLCloseCursor(StatementHandle);
-end;
-
-function TODBC3BaseDriver.CompleteAsync(HandleType: SQLSMALLINT;
-  Handle: SQLHANDLE; var AsyncRetCodePtr: PRETCODE): SQLRETURN;
-begin
-  Result := SQLCompleteAsync(HandleType, Handle, AsyncRetCodePtr);
-end;
-
-{$IFDEF UNICODE}
-function TODBC3BaseDriver.Connect(ConnectionHandle: SQLHDBC;
-  ServerName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-  UserName: PSQLWCHAR; NameLength2: SQLSMALLINT;
-  Authentication: PSQLWCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLConnectW(ConnectionHandle, ServerName, NameLength1,
-    UserName, NameLength2, Authentication, NameLength3);
-end;
-{$ELSE}
-function TODBC3BaseDriver.Connect(ConnectionHandle: SQLHDBC;
-  ServerName: PSQLCHAR; NameLength1: SQLSMALLINT;
-  UserName: PSQLCHAR; NameLength2: SQLSMALLINT;
-  Authentication: PSQLCHAR; NameLength3: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLConnect(ConnectionHandle, ServerName, NameLength1,
-    UserName, NameLength2, Authentication, NameLength3);
-end;
-{$ENDIF}
-
-
-function TODBC3BaseDriver.CopyDesc(SourceDescHandle,
-  TargetDescHandle: SQLHDESC): SQLRETURN;
-begin
-  Result := SQLCopyDesc(SourceDescHandle, TargetDescHandle);
-end;
-
-constructor TODBC3BaseDriver.Create(const DriverName: String);
+constructor TZODBC3PlainDriver.Create(const DriverName: String);
 begin
   inherited Create;
   FLoader := TZNativeLibraryLoader.Create([]);
@@ -2997,110 +2320,12 @@ begin
   LoadCodePages;
 end;
 
-function TODBC3BaseDriver.DescribeParam(StatementHandle: SQLHSTMT;
-  ParameterNumber: SQLUSMALLINT; DataTypePtr: PSQLSMALLINT;
-  ParameterSizePtr: PSQLULEN; DecimalDigitsPtr: PSQLSMALLINT;
-  NullablePtr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLDescribeParam(StatementHandle, ParameterNumber, DataTypePtr,
-    ParameterSizePtr, DecimalDigitsPtr, NullablePtr)
-end;
-
-function TODBC3BaseDriver.Disconnect(ConnectionHandle: SQLHDBC): SQLRETURN;
-begin
-  Result := SQLDisconnect(ConnectionHandle);
-end;
-
-{$IFDEF UNICODE}
-function TODBC3BaseDriver.DriverConnect(ConnectionHandle: SQLHDBC;
-  WindowHandle: SQLHWND; InConnectionString: PSQLWCHAR;
-  StringLength1: SQLSMALLINT; OutConnectionString: PSQLWCHAR;
-  BufferLength: SQLSMALLINT; StringLength2Ptr: PSQLSMALLINT;
-  DriverCompletion: SQLUSMALLINT): SQLRETURN;
-begin
-  Result := SQLDriverConnectW(ConnectionHandle, WindowHandle, InConnectionString,
-    StringLength1, OutConnectionString, BufferLength, StringLength2Ptr, DriverCompletion);
-end;
-{$ELSE}
-function TODBC3BaseDriver.DriverConnect(ConnectionHandle: SQLHDBC;
-  WindowHandle: SQLHWND; InConnectionString: PSQLCHAR;
-  StringLength1: SQLSMALLINT; OutConnectionString: PSQLCHAR;
-  BufferLength: SQLSMALLINT; StringLength2Ptr: PSQLSMALLINT;
-  DriverCompletion: SQLUSMALLINT): SQLRETURN;
-begin
-  Result := SQLDriverConnect(ConnectionHandle, WindowHandle, InConnectionString,
-    StringLength1, OutConnectionString, BufferLength, StringLength2Ptr, DriverCompletion);
-end;
-{$ENDIF}
-
-function TODBC3BaseDriver.EndTran(HandleType: SQLSMALLINT; Handle: SQLHANDLE;
-  CompletionType: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLEndTran(HandleType, Handle, CompletionType);
-end;
-
-function TODBC3BaseDriver.Execute(StatementHandle: SQLHSTMT): SQLRETURN;
-begin
-  Result := SQLExecute(StatementHandle);
-end;
-
-function TODBC3BaseDriver.Fetch(StatementHandle: SQLHSTMT): SQLRETURN;
-begin
-  Result := SQLFetch(StatementHandle);
-end;
-
-function TODBC3BaseDriver.FetchScroll(StatementHandle: SQLHSTMT;
-  FetchOrientation: SQLSMALLINT; FetchOffset: SQLLEN): SQLRETURN;
-begin
-  Result := SQLFetchScroll(StatementHandle, FetchOrientation, FetchOffset);
-end;
-
-function TODBC3BaseDriver.FreeHandle(HandleType: SQLSMALLINT;
-  Handle: SQLHANDLE): SQLRETURN;
-begin
-  Result := SQLFreeHandle(HandleType, Handle);
-end;
-
-function TODBC3BaseDriver.FreeStmt(StatementHandle: SQLHSTMT;
-  Option: SQLUSMALLINT): SQLRETURN;
-begin
-  Result := SQLFreeStmt(StatementHandle, Option);
-end;
-
-function TODBC3BaseDriver.GetData(StatementHandle: SQLHSTMT;
-  ColumnNumber: SQLUSMALLINT; TargetType: SQLSMALLINT; TargetValue: SQLPOINTER;
-  BufferLength: SQLLEN; StrLen_or_IndPtr: PSQLLEN): SQLRETURN;
-begin
-  Result := SQLGetData(StatementHandle, ColumnNumber, TargetType, TargetValue,
-    BufferLength, StrLen_or_IndPtr);
-end;
-
-function TODBC3BaseDriver.GetEnvAttr(EnvironmentHandle: SQLHENV;
-  Attribute: SQLINTEGER; ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
-  StringLength: PSQLINTEGER): SQLRETURN;
-begin
-  Result := SQLGetEnvAttr(EnvironmentHandle, Attribute, ValuePtr, BufferLength,
-    StringLength);
-end;
-
-function TODBC3BaseDriver.GetFunctions(ConnectionHandle: SQLHDBC;
-  FunctionId: SQLUSMALLINT; SupportedPtr: PSQLUSMALLINT): SQLRETURN;
-begin
-  Result := SQLGetFunctions(ConnectionHandle, FunctionId, SupportedPtr);
-end;
-
-function TODBC3BaseDriver.GetProtocol: string;
+function TZODBC3PlainDriver.GetProtocol: string;
 begin
   Result := FDriverName;
 end;
 
-function TODBC3BaseDriver.GetTypeInfo(StatementHandle: SQLHSTMT;
-  DataType: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLGetTypeInfo(StatementHandle, DataType);
-end;
-
-procedure TODBC3BaseDriver.LoadApi;
+procedure TZODBC3PlainDriver.LoadApi;
 begin
 { ************** Load adresses of API Functions ************* }
   with Loader do
@@ -3113,19 +2338,11 @@ begin
   @SQLCancelHandle          := GetAddress('SQLCancelHandle');
   @SQLCloseCursor           := GetAddress('SQLCloseCursor');
   @SQLCompleteAsync         := GetAddress('SQLCompleteAsync');
-  {$IFDEF UNICODE}
-  @SQLConnectW              := GetAddress('SQLConnectW');
-  {$ELSE}
-  @SQLConnect               := GetAddress('SQLConnect');
-  {$ENDIF}
+  @SQLConnect               := GetAddress({$IFDEF UNICODE}'SQLConnectW'{$ELSE}'SQLConnect'{$ENDIF});
   @SQLCopyDesc              := GetAddress('SQLCopyDesc');
   @SQLDescribeParam         := GetAddress('SQLDescribeParam');
   @SQLDisconnect            := GetAddress('SQLDisconnect');
-  {$IFDEF UNICODE}
-  @SQLDriverConnectW        := GetAddress('SQLDriverConnectW');
-  {$ELSE}
-  @SQLDriverConnect         := GetAddress('SQLDriverConnect');
-  {$ENDIF}
+  @SQLDriverConnect         := GetAddress({$IFDEF UNICODE}'SQLDriverConnectW'{$ELSE}'SQLDriverConnect'{$ENDIF});
   @SQLEndTran               := GetAddress('SQLEndTran');
   @SQLExecute               := GetAddress('SQLExecute');
   @SQLFetch                 := GetAddress('SQLFetch');
@@ -3148,103 +2365,11 @@ begin
   end;
 end;
 
-function TODBC3BaseDriver.MoreResults(StatementHandle: SQLHSTMT): SQLRETURN;
-begin
-  Result := SQLMoreResults(StatementHandle);
-end;
-
-function TODBC3BaseDriver.NumParams(StatementHandle: SQLHSTMT;
-  ParameterCountPtr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLNumParams(StatementHandle, ParameterCountPtr);
-end;
-
-function TODBC3BaseDriver.NumResultCols(StatementHandle: SQLHSTMT;
-  ColumnCountPtr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLNumResultCols(StatementHandle, ColumnCountPtr);
-end;
-
-function TODBC3BaseDriver.ParamData(StatementHandle: SQLHSTMT;
-  ValuePtrPtr: PSQLPOINTER): SQLRETURN;
-begin
-  Result := SQLParamData(StatementHandle, ValuePtrPtr);
-end;
-
-function TODBC3BaseDriver.PutData(StatementHandle: SQLHSTMT;
-  DataPtr: SQLPOINTER; StrLen_or_Ind: SQLLEN): SQLRETURN;
-begin
-  Result := SQLPutData(StatementHandle, DataPtr, StrLen_or_Ind);
-end;
-
-function TODBC3BaseDriver.RowCount(StatementHandle: SQLHSTMT;
-  RowCountPtr: PSQLLEN): SQLRETURN;
-begin
-  Result := SQLRowCount(StatementHandle, RowCountPtr);
-end;
-
-function TODBC3BaseDriver.SetDescRec(DescriptorHandle: SQLHDESC; RecNumber,
-  _Type, SubType: SQLSMALLINT; Length: SQLLEN; Precision, Scale: SQLSMALLINT;
-  DataPtr: SQLPOINTER; StringLengthPtr, IndicatorPtr: PSQLLEN): SQLRETURN;
-begin
-  Result := SQLSetDescRec(DescriptorHandle, RecNumber, _Type, SubType, Length,
-    Precision, Scale, DataPtr, StringLengthPtr, IndicatorPtr);
-end;
-
-function TODBC3BaseDriver.SetEnvAttr(EnvironmentHandle: SQLHENV;
-  Attribute: SQLINTEGER; ValuePtr: SQLPOINTER;
-  StringLength: SQLINTEGER): SQLRETURN;
-begin
-  Result := SQLSetEnvAttr(EnvironmentHandle, Attribute, ValuePtr, StringLength);
-end;
-
-function TODBC3BaseDriver.SetPos(StatementHandle: SQLHSTMT;
-  RowNumber: SQLSETPOSIROW; Operation, LockType: SQLUSMALLINT): SQLRETURN;
-begin
-  Result := SQLSetPos(StatementHandle, RowNumber, Operation, LockType);
-end;
-
 { TODBC3UnicodePlainDriver }
-
-function TODBC3UnicodePlainDriver.BrowseConnect(ConnectionHandle: SQLHDBC;
-  InConnectionString: PSQLWCHAR; StringLength1: SQLSMALLINT;
-  OutConnectionString: PSQLWCHAR; BufferLength: SQLSMALLINT;
-  StringLength2Ptr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLBrowseConnectW(ConnectionHandle, InConnectionString, StringLength1,
-    OutConnectionString, BufferLength, StringLength2Ptr);
-end;
 
 function TODBC3UnicodePlainDriver.Clone: IZPlainDriver;
 begin
   Result := TODBC3UnicodePlainDriver.Create;
-end;
-
-function TODBC3UnicodePlainDriver.ColAttribute(StatementHandle: SQLHSTMT; ColumnNumber,
-  FieldIdentifier: SQLUSMALLINT; CharacterAttributePtr: PSQLWCHAR;
-  BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT;
-  NumericAttributePtr: PSQLLEN): SQLRETURN;
-begin
-  Result := SQLColAttributeW(StatementHandle, ColumnNumber, FieldIdentifier,
-    CharacterAttributePtr, BufferLength, StringLengthPtr, NumericAttributePtr);
-end;
-
-function TODBC3UnicodePlainDriver.ColumnPrivileges(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT; SchemaName: PSQLWCHAR;
-  NameLength2: SQLSMALLINT; TableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-  ColumnName: PSQLWCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLColumnPrivilegesW(StatementHandle, CatalogName, NameLength1,
-    SchemaName, NameLength2, TableName, NameLength3, ColumnName, NameLength4);
-end;
-
-function TODBC3UnicodePlainDriver.Columns(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT; SchemaName: PSQLWCHAR;
-  NameLength2: SQLSMALLINT; TableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-  ColumnName: PSQLWCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLColumnsW(StatementHandle, CatalogName, NameLength1, SchemaName,
-    NameLength2, TableName, NameLength3, ColumnName, NameLength4);
 end;
 
 constructor TODBC3UnicodePlainDriver.Create(const DriverName: String);
@@ -3252,123 +2377,9 @@ begin
   inherited Create(DriverName)
 end;
 
-function TODBC3UnicodePlainDriver.DataSources(EnvironmentHandle: SQLHENV;
-  Direction: SQLUSMALLINT; ServerName: PSQLWCHAR; BufferLength1: SQLSMALLINT;
-  NameLength1Ptr: PSQLSMALLINT; Description: PSQLWCHAR;
-  BufferLength2: SQLSMALLINT; NameLength2Ptr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLDataSourcesW(EnvironmentHandle, Direction, ServerName,
-    BufferLength1, NameLength1Ptr, Description, BufferLength2, NameLength2Ptr);
-end;
-
-function TODBC3UnicodePlainDriver.DescribeCol(StatementHandle: SQLHSTMT;
-  ColumnNumber: SQLUSMALLINT; ColumnName: PSQLWCHAR; BufferLength: SQLSMALLINT;
-  NameLengthPtr, DataTypePtr: PSQLSMALLINT; ColumnSizePtr: PSQLULEN;
-  DecimalDigitsPtr, NullablePtr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLDescribeColW(StatementHandle, ColumnNumber, ColumnName, BufferLength,
-    NameLengthPtr, DataTypePtr, ColumnSizePtr, DecimalDigitsPtr, NullablePtr);
-end;
-
-function TODBC3UnicodePlainDriver.Drivers(EnvironmentHandle: SQLHENV;
-  Direction: SQLUSMALLINT; DriverDescription: PSQLWCHAR;
-  BufferLength1: SQLSMALLINT; DescriptionLengthPtr: PSQLSMALLINT;
-  DriverAttributes: PSQLWCHAR; BufferLength2: SQLSMALLINT;
-  AttributesLengthPtr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLDriversW(EnvironmentHandle, Direction, DriverDescription,
-    BufferLength1, DescriptionLengthPtr, DriverAttributes, BufferLength2,
-    AttributesLengthPtr);
-end;
-
-function TODBC3UnicodePlainDriver.ExecDirect(StatementHandle: SQLHSTMT;
-  StatementText: PSQLWCHAR; TextLength: SQLINTEGER): SQLRETURN;
-begin
-  Result := SQLExecDirectW(StatementHandle, StatementText, TextLength);
-end;
-
-function TODBC3UnicodePlainDriver.ForeignKeys(StatementHandle: SQLHSTMT;
-  PKCatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT; PKSchemaName: PSQLWCHAR;
-  NameLength2: SQLSMALLINT; PKTableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-  FKCatalogName: PSQLWCHAR; NameLength4: SQLSMALLINT; FKSchemaName: PSQLWCHAR;
-  NameLength5: SQLSMALLINT; FKTableName: PSQLWCHAR;
-  NameLength6: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLForeignKeysW(StatementHandle, PKCatalogName, NameLength1,
-    PKSchemaName, NameLength2, PKTableName, NameLength3, FKCatalogName,
-    NameLength4, FKSchemaName, NameLength5, FKTableName, NameLength6);
-end;
-
-function TODBC3UnicodePlainDriver.GetConnectAttr(ConnectionHandle: SQLHDBC;
-  Attribute: SQLINTEGER; Value: SQLPOINTER; BufferLength: SQLINTEGER;
-  StringLengthPtr: PSQLINTEGER): SQLRETURN;
-begin
-  Result := SQLGetConnectAttrW(ConnectionHandle, Attribute, Value, BufferLength,
-    StringLengthPtr);
-end;
-
-function TODBC3UnicodePlainDriver.GetCursorName(StatementHandle: SQLHSTMT;
-  CursorName: PSQLWCHAR; BufferLength: SQLSMALLINT;
-  NameLengthPtr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLGetCursorNameW(StatementHandle, CursorName, BufferLength,
-    NameLengthPtr);
-end;
-
-function TODBC3UnicodePlainDriver.GetDescField(DescriptorHandle: SQLHDESC;
-  RecNumber, FieldIdentifier: SQLSMALLINT; Value: SQLPOINTER;
-  BufferLength: SQLINTEGER; StringLength: PSQLINTEGER): SQLRETURN;
-begin
-  Result := SQLGetDescFieldW(DescriptorHandle, RecNumber, FieldIdentifier,
-    Value, BufferLength, StringLength);
-end;
-
-function TODBC3UnicodePlainDriver.GetDescRec(DescriptorHandle: SQLHDESC;
-  RecNumber: SQLSMALLINT; Name: PSQLWCHAR; BufferLength: SQLSMALLINT;
-  StringLengthPtr, TypePtr, SubTypePtr: PSQLSMALLINT; LengthPtr: PSQLLEN;
-  PrecisionPtr, ScalePtr, NullablePtr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLGetDescRecW(DescriptorHandle, RecNumber, Name, BufferLength,
-    StringLengthPtr, TypePtr, SubTypePtr, LengthPtr, PrecisionPtr, ScalePtr, NullablePtr)
-end;
-
 function TODBC3UnicodePlainDriver.GetDescription: string;
 begin
   Result := 'Native Plain Driver for ODBC Unicode';
-end;
-
-function TODBC3UnicodePlainDriver.GetDiagField(HandleType: SQLSMALLINT;
-  Handle: SQLHANDLE; RecNumber, DiagIdentifier: SQLSMALLINT;
-  DiagInfo: SQLPOINTER; BufferLength: SQLSMALLINT;
-  StringLength: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLGetDiagFieldW(HandleType, Handle, RecNumber, DiagIdentifier,
-    DiagInfo, BufferLength, StringLength);
-end;
-
-function TODBC3UnicodePlainDriver.GetDiagRec(HandleType: SQLSMALLINT;
-  Handle: SQLHANDLE; RecNumber: SQLSMALLINT; Sqlstate: PSQLWCHAR;
-  NativeErrorPtr: PSQLINTEGER; MessageText: PSQLWCHAR;
-  BufferLength: SQLSMALLINT; TextLength: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLGetDiagRecW(HandleType, Handle, RecNumber, Sqlstate, NativeErrorPtr,
-    MessageText, BufferLength, TextLength)
-end;
-
-function TODBC3UnicodePlainDriver.GetInfo(ConnectionHandle: SQLHDBC;
-  InfoType: SQLUSMALLINT; InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT;
-  StringLengthPtr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLGetInfoW(ConnectionHandle, InfoType, InfoValuePtr, BufferLength,
-    StringLengthPtr);
-end;
-
-function TODBC3UnicodePlainDriver.GetStmtAttr(StatementHandle: SQLHSTMT;
-  Attribute: SQLINTEGER; ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
-  StringLengthPtr: PSQLINTEGER): SQLRETURN;
-begin
-  Result := SQLGetStmtAttrW(StatementHandle, Attribute, ValuePtr, BufferLength,
-    StringLengthPtr);
 end;
 
 procedure TODBC3UnicodePlainDriver.LoadApi;
@@ -3392,17 +2403,17 @@ begin
   @SQLGetDescRecW           := GetAddress('SQLGetDescRecW');
   @SQLGetDiagFieldW         := GetAddress('SQLGetDiagFieldW');
   @SQLGetDiagRecW           := GetAddress('SQLGetDiagRecW');
-  @SQLGetInfoW              := GetAddress('SQLGetInfoW');
-  @SQLGetStmtAttrW          := GetAddress('SQLGetStmtAttrW');
+  @SQLGetInfo               := GetAddress('SQLGetInfoW');
+  @SQLGetStmtAttr           := GetAddress('SQLGetStmtAttrW');
   @SQLNativeSqlW            := GetAddress('SQLNativeSqlW');
   @SQLPrepareW              := GetAddress('SQLPrepareW');
   @SQLPrimaryKeysW          := GetAddress('SQLPrimaryKeysW');
   @SQLProcedureColumnsW     := GetAddress('SQLProcedureColumnsW');
   @SQLProceduresW           := GetAddress('SQLProceduresW');
-  @SQLSetConnectAttrW       := GetAddress('SQLSetConnectAttrW');
+  @SQLSetConnectAttr        := GetAddress('SQLSetConnectAttrW');
   @SQLSetCursorNameW        := GetAddress('SQLSetCursorNameW');
-  @SQLSetDescFieldW         := GetAddress('SQLSetDescFieldW');
-  @SQLSetStmtAttrW          := GetAddress('SQLSetStmtAttrW');
+  @SQLSetDescField          := GetAddress('SQLSetDescFieldW');
+  @SQLSetStmtAttr           := GetAddress('SQLSetStmtAttrW');
   @SQLSpecialColumnsW       := GetAddress('SQLSpecialColumnsW');
   @SQLStatisticsW           := GetAddress('SQLStatisticsW');
   @SQLTablePrivilegesW      := GetAddress('SQLTablePrivilegesW');
@@ -3415,153 +2426,11 @@ begin
   AddCodePage('CP_UTF16', 0, ceUTF16, ZOSCodePage, '', 1, False);
 end;
 
-function TODBC3UnicodePlainDriver.NativeSql(ConnectionHandle: SQLHDBC;
-  InStatementText: PSQLWCHAR; TextLength1: SQLINTEGER;
-  OutStatementText: PSQLWCHAR; BufferLength: SQLINTEGER;
-  TextLength2Ptr: PSQLINTEGER): SQLRETURN;
-begin
-  Result := SQLNativeSqlW(ConnectionHandle, InStatementText, TextLength1,
-    OutStatementText, BufferLength, TextLength2Ptr);
-end;
-
-function TODBC3UnicodePlainDriver.Prepare(StatementHandle: SQLHSTMT;
-  StatementText: PSQLWCHAR; TextLength: SQLINTEGER): SQLRETURN;
-begin
-  Result := SQLPrepareW(StatementHandle, StatementText, TextLength);
-end;
-
-function TODBC3UnicodePlainDriver.PrimaryKeys(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT; SchemaName: PSQLWCHAR;
-  NameLength2: SQLSMALLINT; TableName: PSQLWCHAR;
-  NameLength3: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLPrimaryKeysW(StatementHandle, CatalogName, NameLength1, SchemaName,
-    NameLength2, TableName, NameLength3);
-end;
-
-function TODBC3UnicodePlainDriver.ProcedureColumns(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT; SchemaName: PSQLWCHAR;
-  NameLength2: SQLSMALLINT; ProcName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-  ColumnName: PSQLWCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLProcedureColumnsW(StatementHandle, CatalogName, NameLength1,
-    SchemaName, NameLength2, ProcName, NameLength3, ColumnName, NameLength4);
-end;
-
-function TODBC3UnicodePlainDriver.Procedures(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLWCHAR; NameLength2: SQLSMALLINT; SchemaName: PSQLWCHAR;
-  NameLength1: SQLSMALLINT; ProcName: PSQLWCHAR;
-  NameLength3: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLProceduresW(StatementHandle, CatalogName, NameLength2, SchemaName,
-    NameLength1, ProcName, NameLength3);
-end;
-
-function TODBC3UnicodePlainDriver.SetConnectAttr(ConnectionHandle: SQLHDBC;
-  Attribute: SQLINTEGER; ValuePtr: SQLPOINTER;
-  StringLength: SQLINTEGER): SQLRETURN;
-begin
-  Result := SQLSetConnectAttrW(ConnectionHandle, Attribute, ValuePtr, StringLength);
-end;
-
-function TODBC3UnicodePlainDriver.SetCursorName(StatementHandle: SQLHSTMT;
-  CursorName: PSQLWCHAR; NameLength: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLSetCursorNameW(StatementHandle, CursorName, NameLength);
-end;
-
-function TODBC3UnicodePlainDriver.SetDescField(DescriptorHandle: SQLHDESC; RecNumber,
-  FieldIdentifier: SQLSMALLINT; ValuePtr: SQLPOINTER;
-  BufferLength: SQLINTEGER): SQLRETURN;
-begin
-  Result := SQLSetDescFieldW(DescriptorHandle, RecNumber, FieldIdentifier,
-    ValuePtr, BufferLength);
-end;
-
-function TODBC3UnicodePlainDriver.SetStmtAttr(StatementHandle: SQLHSTMT;
-  Attribute: SQLINTEGER; ValuePtr: SQLPOINTER;
-  StringLength: SQLINTEGER): SQLRETURN;
-begin
-  Result := SQLSetStmtAttrW(StatementHandle, Attribute, ValuePtr, StringLength);
-end;
-
-function TODBC3UnicodePlainDriver.SpecialColumns(StatementHandle: SQLHSTMT;
-  IdentifierType: SQLSMALLINT; CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT;
-  SchemaName: PSQLWCHAR; NameLength2: SQLSMALLINT; TableName: PSQLWCHAR;
-  NameLength3, Scope, Nullable: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLSpecialColumnsW(StatementHandle, IdentifierType, CatalogName,
-    NameLength1, SchemaName, NameLength2, TableName, NameLength3, Scope, Nullable);
-end;
-
-function TODBC3UnicodePlainDriver.Statistics(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT; SchemaName: PSQLWCHAR;
-  NameLength2: SQLSMALLINT; TableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-  Unique, Reserved: SQLUSMALLINT): SQLRETURN;
-begin
-  Result := SQLStatisticsW(StatementHandle, CatalogName, NameLength1, SchemaName,
-    NameLength2, TableName, NameLength3, Unique, Reserved);
-end;
-
-function TODBC3UnicodePlainDriver.TablePrivileges(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT; SchemaName: PSQLWCHAR;
-  NameLength2: SQLSMALLINT; TableName: PSQLWCHAR;
-  NameLength3: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLTablePrivilegesW(StatementHandle, CatalogName, NameLength1,
-    SchemaName, NameLength2, TableName, NameLength3);
-end;
-
-function TODBC3UnicodePlainDriver.Tables(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLWCHAR; NameLength1: SQLSMALLINT; SchemaName: PSQLWCHAR;
-  NameLength2: SQLSMALLINT; TableName: PSQLWCHAR; NameLength3: SQLSMALLINT;
-  TableType: PSQLWCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLTablesW(StatementHandle, CatalogName, NameLength1, SchemaName,
-    NameLength2, TableName, NameLength3, TableType, NameLength4);
-end;
-
 { TODBC3RawPlainDriver }
-
-function TODBC3RawPlainDriver.BrowseConnect(ConnectionHandle: SQLHDBC;
-  InConnectionString: PSQLCHAR; StringLength1: SQLSMALLINT;
-  OutConnectionString: PSQLCHAR; BufferLength: SQLSMALLINT;
-  StringLength2Ptr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLBrowseConnect(ConnectionHandle, InConnectionString, StringLength1,
-    OutConnectionString, BufferLength, StringLength2Ptr);
-end;
 
 function TODBC3RawPlainDriver.Clone: IZPlainDriver;
 begin
   Result := TODBC3RawPlainDriver.Create;
-end;
-
-function TODBC3RawPlainDriver.ColAttribute(StatementHandle: SQLHSTMT; ColumnNumber,
-  FieldIdentifier: SQLUSMALLINT; CharacterAttributePtr: PSQLCHAR;
-  BufferLength: SQLSMALLINT; StringLengthPtr: PSQLSMALLINT;
-  NumericAttributePtr: PSQLLEN): SQLRETURN;
-begin
-  Result := SQLColAttribute(StatementHandle, ColumnNumber, FieldIdentifier,
-    CharacterAttributePtr, BufferLength, StringLengthPtr, NumericAttributePtr);
-end;
-
-function TODBC3RawPlainDriver.ColumnPrivileges(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT; SchemaName: PSQLCHAR;
-  NameLength2: SQLSMALLINT; TableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-  ColumnName: PSQLCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLColumnPrivileges(StatementHandle, CatalogName, NameLength1,
-    SchemaName, NameLength2, TableName, NameLength3, ColumnName, NameLength4);
-end;
-
-function TODBC3RawPlainDriver.Columns(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT; SchemaName: PSQLCHAR;
-  NameLength2: SQLSMALLINT; TableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-  ColumnName: PSQLCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLColumns(StatementHandle, CatalogName, NameLength1, SchemaName,
-    NameLength2, TableName, NameLength3, ColumnName, NameLength4);
 end;
 
 constructor TODBC3RawPlainDriver.Create(const DriverName: String);
@@ -3569,123 +2438,9 @@ begin
   inherited Create(DriverName);
 end;
 
-function TODBC3RawPlainDriver.DataSources(EnvironmentHandle: SQLHENV;
-  Direction: SQLUSMALLINT; ServerName: PSQLCHAR; BufferLength1: SQLSMALLINT;
-  NameLength1Ptr: PSQLSMALLINT; Description: PSQLCHAR;
-  BufferLength2: SQLSMALLINT; NameLength2Ptr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLDataSources(EnvironmentHandle, Direction, ServerName,
-    BufferLength1, NameLength1Ptr, Description, BufferLength2, NameLength2Ptr);
-end;
-
-function TODBC3RawPlainDriver.DescribeCol(StatementHandle: SQLHSTMT;
-  ColumnNumber: SQLUSMALLINT; ColumnName: PSQLCHAR; BufferLength: SQLSMALLINT;
-  NameLengthPtr, DataTypePtr: PSQLSMALLINT; ColumnSizePtr: PSQLULEN;
-  DecimalDigitsPtr, NullablePtr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLDescribeCol(StatementHandle, ColumnNumber, ColumnName, BufferLength,
-    NameLengthPtr, DataTypePtr, ColumnSizePtr, DecimalDigitsPtr, NullablePtr);
-end;
-
-function TODBC3RawPlainDriver.Drivers(EnvironmentHandle: SQLHENV;
-  Direction: SQLUSMALLINT; DriverDescription: PSQLCHAR;
-  BufferLength1: SQLSMALLINT; DescriptionLengthPtr: PSQLSMALLINT;
-  DriverAttributes: PSQLCHAR; BufferLength2: SQLSMALLINT;
-  AttributesLengthPtr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLDrivers(EnvironmentHandle, Direction, DriverDescription,
-    BufferLength1, DescriptionLengthPtr, DriverAttributes, BufferLength2,
-    AttributesLengthPtr);
-end;
-
-function TODBC3RawPlainDriver.ExecDirect(StatementHandle: SQLHSTMT;
-  StatementText: PSQLCHAR; TextLength: SQLINTEGER): SQLRETURN;
-begin
-  Result := SQLExecDirect(StatementHandle, StatementText, TextLength);
-end;
-
-function TODBC3RawPlainDriver.ForeignKeys(StatementHandle: SQLHSTMT;
-  PKCatalogName: PSQLCHAR; NameLength1: SQLSMALLINT; PKSchemaName: PSQLCHAR;
-  NameLength2: SQLSMALLINT; PKTableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-  FKCatalogName: PSQLCHAR; NameLength4: SQLSMALLINT; FKSchemaName: PSQLCHAR;
-  NameLength5: SQLSMALLINT; FKTableName: PSQLCHAR;
-  NameLength6: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLForeignKeys(StatementHandle, PKCatalogName, NameLength1,
-    PKSchemaName, NameLength2, PKTableName, NameLength3, FKCatalogName,
-    NameLength4, FKSchemaName, NameLength5, FKTableName, NameLength6);
-end;
-
-function TODBC3RawPlainDriver.GetConnectAttr(ConnectionHandle: SQLHDBC;
-  Attribute: SQLINTEGER; Value: SQLPOINTER; BufferLength: SQLINTEGER;
-  StringLengthPtr: PSQLINTEGER): SQLRETURN;
-begin
-  Result := SQLGetConnectAttr(ConnectionHandle, Attribute, Value, BufferLength,
-    StringLengthPtr);
-end;
-
-function TODBC3RawPlainDriver.GetCursorName(StatementHandle: SQLHSTMT;
-  CursorName: PSQLCHAR; BufferLength: SQLSMALLINT;
-  NameLengthPtr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLGetCursorName(StatementHandle, CursorName, BufferLength,
-    NameLengthPtr);
-end;
-
-function TODBC3RawPlainDriver.GetDescField(DescriptorHandle: SQLHDESC;
-  RecNumber, FieldIdentifier: SQLSMALLINT; Value: SQLPOINTER;
-  BufferLength: SQLINTEGER; StringLength: PSQLINTEGER): SQLRETURN;
-begin
-  Result := SQLGetDescField(DescriptorHandle, RecNumber, FieldIdentifier, Value,
-    BufferLength, StringLength);
-end;
-
-function TODBC3RawPlainDriver.GetDescRec(DescriptorHandle: SQLHDESC;
-  RecNumber: SQLSMALLINT; Name: PSQLCHAR; BufferLength: SQLSMALLINT;
-  StringLengthPtr, TypePtr, SubTypePtr: PSQLSMALLINT; LengthPtr: PSQLLEN;
-  PrecisionPtr, ScalePtr, NullablePtr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLGetDescRec(DescriptorHandle, RecNumber, Name, BufferLength,
-    StringLengthPtr, TypePtr, SubTypePtr, LengthPtr, PrecisionPtr, ScalePtr, NullablePtr)
-end;
-
 function TODBC3RawPlainDriver.GetDescription: string;
 begin
   Result := 'Native Plain Driver for ODBC raw';
-end;
-
-function TODBC3RawPlainDriver.GetDiagField(HandleType: SQLSMALLINT;
-  Handle: SQLHANDLE; RecNumber, DiagIdentifier: SQLSMALLINT;
-  DiagInfo: SQLPOINTER; BufferLength: SQLSMALLINT;
-  StringLength: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLGetDiagField(HandleType, Handle, RecNumber, DiagIdentifier,
-    DiagInfo, BufferLength, StringLength);
-end;
-
-function TODBC3RawPlainDriver.GetDiagRec(HandleType: SQLSMALLINT;
-  Handle: SQLHANDLE; RecNumber: SQLSMALLINT; Sqlstate: PSQLCHAR;
-  NativeErrorPtr: PSQLINTEGER; MessageText: PSQLCHAR;
-  BufferLength: SQLSMALLINT; TextLength: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLGetDiagRec(HandleType, Handle, RecNumber, Sqlstate, NativeErrorPtr,
-    MessageText, BufferLength, TextLength)
-end;
-
-function TODBC3RawPlainDriver.GetInfo(ConnectionHandle: SQLHDBC;
-  InfoType: SQLUSMALLINT; InfoValuePtr: SQLPOINTER; BufferLength: SQLSMALLINT;
-  StringLengthPtr: PSQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLGetInfo(ConnectionHandle, InfoType, InfoValuePtr, BufferLength,
-    StringLengthPtr);
-end;
-
-function TODBC3RawPlainDriver.GetStmtAttr(StatementHandle: SQLHSTMT;
-  Attribute: SQLINTEGER; ValuePtr: SQLPOINTER; BufferLength: SQLINTEGER;
-  StringLengthPtr: PSQLINTEGER): SQLRETURN;
-begin
-  Result := SQLGetStmtAttr(StatementHandle, Attribute, ValuePtr, BufferLength,
-    StringLengthPtr);
 end;
 
 procedure TODBC3RawPlainDriver.LoadApi;
@@ -3730,112 +2485,6 @@ end;
 procedure TODBC3RawPlainDriver.LoadCodePages;
 begin
   AddCodePage('CP_ACP', 0, ceAnsi, ZOSCodePage, '', 1, True);
-end;
-
-function TODBC3RawPlainDriver.NativeSql(ConnectionHandle: SQLHDBC;
-  InStatementText: PSQLCHAR; TextLength1: SQLINTEGER;
-  OutStatementText: PSQLCHAR; BufferLength: SQLINTEGER;
-  TextLength2Ptr: PSQLINTEGER): SQLRETURN;
-begin
-  Result := SQLNativeSql(ConnectionHandle, InStatementText, TextLength1,
-    OutStatementText, BufferLength, TextLength2Ptr);
-end;
-
-function TODBC3RawPlainDriver.Prepare(StatementHandle: SQLHSTMT;
-  StatementText: PSQLCHAR; TextLength: SQLINTEGER): SQLRETURN;
-begin
-  Result := SQLPrepare(StatementHandle, StatementText, TextLength);
-end;
-
-function TODBC3RawPlainDriver.PrimaryKeys(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT; SchemaName: PSQLCHAR;
-  NameLength2: SQLSMALLINT; TableName: PSQLCHAR;
-  NameLength3: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLPrimaryKeys(StatementHandle, CatalogName, NameLength1, SchemaName,
-    NameLength2, TableName, NameLength3);
-end;
-
-function TODBC3RawPlainDriver.ProcedureColumns(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT; SchemaName: PSQLCHAR;
-  NameLength2: SQLSMALLINT; ProcName: PSQLCHAR; NameLength3: SQLSMALLINT;
-  ColumnName: PSQLCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLProcedureColumns(StatementHandle, CatalogName, NameLength1,
-    SchemaName, NameLength2, ProcName, NameLength3, ColumnName, NameLength4);
-end;
-
-function TODBC3RawPlainDriver.Procedures(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLCHAR; NameLength2: SQLSMALLINT; SchemaName: PSQLCHAR;
-  NameLength1: SQLSMALLINT; ProcName: PSQLCHAR;
-  NameLength3: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLProcedures(StatementHandle, CatalogName, NameLength2, SchemaName,
-    NameLength1, ProcName, NameLength3);
-end;
-
-function TODBC3RawPlainDriver.SetConnectAttr(ConnectionHandle: SQLHDBC;
-  Attribute: SQLINTEGER; ValuePtr: SQLPOINTER;
-  StringLength: SQLINTEGER): SQLRETURN;
-begin
-  Result := SQLSetConnectAttr(ConnectionHandle, Attribute, ValuePtr, StringLength);
-end;
-
-function TODBC3RawPlainDriver.SetCursorName(StatementHandle: SQLHSTMT;
-  CursorName: PSQLCHAR; NameLength: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLSetCursorName(StatementHandle, CursorName, NameLength);
-end;
-
-function TODBC3RawPlainDriver.SetDescField(DescriptorHandle: SQLHDESC; RecNumber,
-  FieldIdentifier: SQLSMALLINT; ValuePtr: SQLPOINTER;
-  BufferLength: SQLINTEGER): SQLRETURN;
-begin
-  Result := SQLSetDescField(DescriptorHandle, RecNumber, FieldIdentifier,
-    ValuePtr, BufferLength);
-end;
-
-function TODBC3RawPlainDriver.SetStmtAttr(StatementHandle: SQLHSTMT;
-  Attribute: SQLINTEGER; ValuePtr: SQLPOINTER;
-  StringLength: SQLINTEGER): SQLRETURN;
-begin
-  Result := SQLSetStmtAttr(StatementHandle, Attribute, ValuePtr, StringLength);
-end;
-
-function TODBC3RawPlainDriver.SpecialColumns(StatementHandle: SQLHSTMT;
-  IdentifierType: SQLSMALLINT; CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT;
-  SchemaName: PSQLCHAR; NameLength2: SQLSMALLINT; TableName: PSQLCHAR;
-  NameLength3, Scope, Nullable: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLSpecialColumns(StatementHandle, IdentifierType, CatalogName,
-    NameLength1, SchemaName, NameLength2, TableName, NameLength3, Scope, Nullable);
-end;
-
-function TODBC3RawPlainDriver.Statistics(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT; SchemaName: PSQLCHAR;
-  NameLength2: SQLSMALLINT; TableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-  Unique, Reserved: SQLUSMALLINT): SQLRETURN;
-begin
-  Result := SQLStatistics(StatementHandle, CatalogName, NameLength1, SchemaName,
-    NameLength2, TableName, NameLength3, Unique, Reserved);
-end;
-
-function TODBC3RawPlainDriver.TablePrivileges(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT; SchemaName: PSQLCHAR;
-  NameLength2: SQLSMALLINT; TableName: PSQLCHAR;
-  NameLength3: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLTablePrivileges(StatementHandle, CatalogName, NameLength1,
-    SchemaName, NameLength2, TableName, NameLength3);
-end;
-
-function TODBC3RawPlainDriver.Tables(StatementHandle: SQLHSTMT;
-  CatalogName: PSQLCHAR; NameLength1: SQLSMALLINT; SchemaName: PSQLCHAR;
-  NameLength2: SQLSMALLINT; TableName: PSQLCHAR; NameLength3: SQLSMALLINT;
-  TableType: PSQLCHAR; NameLength4: SQLSMALLINT): SQLRETURN;
-begin
-  Result := SQLTables(StatementHandle, CatalogName, NameLength1, SchemaName,
-    NameLength2, TableName, NameLength3, TableType, NameLength4);
 end;
 
 end.
