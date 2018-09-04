@@ -70,8 +70,19 @@ const
 
 
 type
+  { a struct for the ora long (char/byte) types }
+  POCILong = ^TOCILong;
+  TOCILong = record
+    Len: Integer;
+    data: array[0..7] of Byte; //just something for debugging
+  end;
+  { a struct for the ora var(char/byte) types }
+  POCIVary = ^TOCIVary;
+  TOCIVary = record
+    Len: SmallInt;
+    data: array[0..7] of Byte; //just something for debugging
+  end;
   {** Declares SQL Object }
-
   POCIObject = ^TOCIObject;
   TObjFields = array of POCIObject;
   TOCIObject = Record                 // embedded object or table will work recursively

@@ -113,8 +113,7 @@ end;
 procedure CheckODBCError(RETCODE: SQLRETURN; Handle: SQLHANDLE;
   HandleType: SQLSMALLINT; const Connection: IZODBCConnection);
 var
-  PlainW: IODBC3UnicodePlainDriver;
-  PlainA: IODBC3RawPlainDriver;
+  PlainDriver: TZODBC3PlainDriver;
   SqlstateA: TSQLSTATE;
   SqlstateW: TSQLSTATE_W;
   MessageText: array[0..SQL_MAX_MESSAGE_LENGTH] of WideChar;
@@ -132,9 +131,10 @@ begin
     else begin
       RecNum := 1;
       FirstNativeError := RETCODE;
-      if Connection.GetPlainDriver.QueryInterface(IODBC3UnicodePlainDriver, PlainW) = S_OK then begin
+      PlainDriver := Connection.GetPlainDriver.GetInstance as TZODBC3PlainDriver;
+      if PlainDriver is TODBC3UnicodePlainDriver then begin
         ErrorStringW := '';
-        while PlainW.GetDiagRec(HandleType,Handle,RecNum, @SqlstateW[0],
+        while TODBC3UnicodePlainDriver(PlainDriver).SQLGetDiagRecW(HandleType,Handle,RecNum, @SqlstateW[0],
           @NativeError,@MessageText[0],SQL_MAX_MESSAGE_LENGTH,@TextLength) and (not 1)=0 do begin
           while (TextLength>0) and (MessageText[TextLength-1]<=' ') do //trim trailing lineending and spaces
             dec(TextLength);
@@ -174,10 +174,9 @@ begin
             aException := EZSQLException.CreateWithCodeAndStatus(FirstNativeError, UnicodeStringToASCII7(FirstNErrW),
               PUnicodeToRaw(Pointer(ErrorStringW), Length(ErrorStringW), ZOSCodePage))
           {$ENDIF}
-      end else
-      if Connection.GetPlainDriver.QueryInterface(IODBC3RawPlainDriver, PlainA) = S_OK then begin
+      end else begin
         ErrorStringA := '';
-        while PlainA.GetDiagRec(HandleType,Handle,RecNum, @SqlstateA[0],
+        while TODBC3RawPlainDriver(PlainDriver).SQLGetDiagRec(HandleType,Handle,RecNum, @SqlstateA[0],
           @NativeError,@MessageText[0],SQL_MAX_MESSAGE_LENGTH,@TextLength) and (not 1)=0 do begin
           while (TextLength>0) and (PByte(PAnsiChar(@MessageText[0])+TextLength-1)^ <= Ord(' ')) do //trim trailing lineending and spaces
             dec(TextLength);
@@ -216,7 +215,7 @@ begin
           else
             aException := EZSQLException.CreateWithCodeAndStatus(FirstNativeError, FirstNErrA, ErrorStringA);
           {$ENDIF}
-      end else aException := EZSQLException.Create(SInternalError);
+      end;
     end;
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcOther,
@@ -543,6 +542,7 @@ function GetConnectionString(WindowHandle: SQLHWND; const InConnectionString, Li
 var
   URL: TZURL;
   PlainDriver: IODBC3BasePlainDriver;
+  ODBC3BaseDriver: TZODBC3PlainDriver;
   HENV: SQLHENV;
   HDBC: SQLHDBC;
   aLen: SQLSMALLINT;
@@ -553,18 +553,20 @@ begin
   URL.LibLocation := LibraryLocation;
   HDBC := nil;
   HENV := nil;
+  PlainDriver := DriverManager.GetDriver(URL.URL).GetPlainDriver(URL).Clone as IODBC3BasePlainDriver;
+  ODBC3BaseDriver := TZODBC3PlainDriver(PlainDriver.GetInstance);
   try
-    PlainDriver := DriverManager.GetDriver(URL.URL).GetPlainDriver(URL) as IODBC3BasePlainDriver;
     PlainDriver.Initialize(LibraryLocation);
-    Assert(SQL_SUCCEDED(PlainDriver.AllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), HENV)), 'Couldn''t allocate an Environment handle');
+    Assert(SQL_SUCCEDED(ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), HENV)), 'Couldn''t allocate an Environment handle');
     //Try to SET Major Version 3 and minior Version 8
-    if not SQL_SUCCEDED(PlainDriver.SetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0)) then
+    if not SQL_SUCCEDED(ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0)) then
       //set minimum Major Version 3
-      Assert(SQL_SUCCEDED(PlainDriver.SetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0)), 'Couln''t set minimum ODBC-Version 3.0');
-    Assert(SQL_SUCCEDED(PLainDriver.AllocHandle(SQL_HANDLE_DBC,HENV,HDBC)), 'Couldn''t allocate a DBC handle');
+      Assert(SQL_SUCCEDED(ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0)), 'Couln''t set minimum ODBC-Version 3.0');
+    Assert(SQL_SUCCEDED(ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_DBC,HENV,HDBC)), 'Couldn''t allocate a DBC handle');
     SetLength(Result, 1024);
     aLen := 0;
-    if SQL_SUCCEDED(PlainDriver.DriverConnect(HDBC, WindowHandle, Pointer(InConnectionString), Length(InConnectionString), Pointer(Result),
+    if SQL_SUCCEDED(ODBC3BaseDriver.SQLDriverConnect(HDBC, WindowHandle,
+      Pointer(InConnectionString), Length(InConnectionString), Pointer(Result),
         Length(Result), @aLen, SQL_DRIVER_PROMPT)) then
       SetLength(Result, aLen)
     else
@@ -572,9 +574,10 @@ begin
   finally
     URL.Free;
     if Assigned(HDBC) then
-      PlainDriver.FreeHandle(SQL_HANDLE_DBC, HDBC);
+      ODBC3BaseDriver.SQLFreeHandle(SQL_HANDLE_DBC, HDBC);
     if Assigned(HENV) then
-      PlainDriver.FreeHandle(SQL_HANDLE_ENV, HENV);
+      ODBC3BaseDriver.SQLFreeHandle(SQL_HANDLE_ENV, HENV);
+    PlainDriver := nil;
   end;
 end;
 

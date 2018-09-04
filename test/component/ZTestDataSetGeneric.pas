@@ -930,6 +930,7 @@ end;
 procedure TZGenericTestDataSet.TestQueryGeneric(Query: TDataset);
 var
   SQL: string;
+  i: Integer;
 begin
   { select equipment table }
   SQL := 'DELETE FROM equipment where eq_id > 100';
@@ -1107,6 +1108,48 @@ begin
       Last;
       CheckEquals(True, Eof);
     end;
+    Close;
+  end;
+
+  { select equipment table }
+  // test traversing through dataset with FindNext
+  SQL := 'SELECT * FROM equipment';
+  if GetName = 'TestQuery' then
+    (Query as TZQuery).SQL.Text := SQL
+  else
+    (Query as TZReadOnlyQuery).SQL.Text := SQL;
+  with Query do
+  begin
+    Open;
+    i := 0;
+    repeat
+      Inc(i);
+      CheckEquals(i, RecNo);
+    until not Query.FindNext;
+    CheckEquals(i, RecordCount);
+    CheckEquals(4, RecordCount);
+    Close;
+  end;
+
+  { select equipment table }
+  // test traversing through dataset with Next
+  SQL := 'SELECT * FROM equipment';
+  if GetName = 'TestQuery' then
+    (Query as TZQuery).SQL.Text := SQL
+  else
+    (Query as TZReadOnlyQuery).SQL.Text := SQL;
+  with Query do
+  begin
+    Open;
+    i := 0;
+    while not EOF do
+    begin
+      Inc(i);
+      CheckEquals(i, RecNo);
+      Next;
+    end;
+    CheckEquals(i, RecordCount);
+    CheckEquals(4, RecordCount);
     Close;
   end;
 
@@ -2062,16 +2105,17 @@ end;
 procedure TZGenericTestDataSet.TestSpaced_Names;
 var
   Query: TZQuery;
+
   function GetNonQuotedAlias(const Value: String): String;
   begin
-    if StartsWith(Protocol, 'postgresql') then
-      Result := LowerCase(Value)
-    else
-      if StartsWith(Protocol, 'oracle') or StartsWith(Protocol, 'firebird') or
-         StartsWith(Protocol, 'interbase') then
-        Result := UpperCase(Value)
+    case ProtocolType of
+      protPostgre:
+        Result := LowerCase(Value);
+      protOracle, protFirebird, protInterbase:
+        Result := UpperCase(Value);
       else
         Result := Value;
+    end;
   end;
 begin
   Query := CreateQuery;
@@ -2289,29 +2333,25 @@ end;
 
 procedure TZGenericTestDataSet.TestInsertReturning;
 const
-  D_ID   = 0;
-  D_FLD1 = 1;
-  D_FLD2 = 2;
-  D_FLD3 = 3;
-  D_FLD4 = 4;
-
-  procedure CheckValues(Query: TZQuery);
-  begin
-    CheckEquals(1, Query.Fields[D_ID].AsInteger);
-    CheckEquals(123456, Query.Fields[D_FLD1].AsInteger);
-    CheckEquals(123.456, Query.Fields[D_FLD2].AsFloat, 0.001);
-    CheckEquals('xyz', Query.Fields[D_FLD3].AsString);
-    CheckEquals(EncodeDate(2003, 12, 11), Query.Fields[D_FLD4].AsDateTime, 0);
-  end;
-
+  D_ID  = 0;
+  D_FLD = 1;
 const
-  SQLDel = 'DELETE FROM DEFAULT_VALUES';
-  SQLIns = 'INSERT INTO DEFAULT_VALUES(D_ID) VALUES(1) RETURNING D_ID,D_FLD1,D_FLD2,D_FLD3,D_FLD4';
-  SQLSel = 'SELECT * FROM DEFAULT_VALUES';
+  SQLDel = 'DELETE FROM insert_returning';
+  SQLSel = 'SELECT * FROM insert_returning';
 var
   Query: TZQuery;
 begin
-  if not StartsWith(Protocol, 'firebird') then Exit;
+  case ProtocolType of
+    protOracle, protPostgre:
+      begin
+        Print('TODO: implement this');
+        Exit;
+      end;
+    protFirebird:
+      ;
+    else
+      Exit;
+  end;
 
   Query := CreateQuery;
   try
@@ -2319,23 +2359,22 @@ begin
     Query.SQL.Text := SQLDel;
     Query.ExecSQL;
 
-    // Exec direct query
-    Query.SQL.Text := SQLIns;
-    Query.Open;
-    CheckValues(Query);
-
-    // Cleanup
-    Query.SQL.Text := SQLDel;
-    Query.ExecSQL;
-
     // Let the component generate a query
-    Query.Properties.Values['InsertReturningFields'] := 'D_FLD1,D_FLD2,D_FLD3,D_FLD4';
+    Query.Properties.Values[DSProps_InsertReturningFields] := 'ID,FLD';
     Query.SQL.Text := SQLSel;
     Query.Open;
+
     Query.Insert;
-    Query.Fields[D_ID].Value := 1;
     Query.Post;
-    CheckValues(Query);
+    CheckEquals(1, Query.Fields[D_ID].AsInteger, 'return values when input is null');
+    CheckEquals('ID1', Query.Fields[D_FLD].AsString, 'return values when input is null');
+
+    Query.Insert;
+    Query.Fields[D_ID].Value := TEST_ROW_ID;
+    Query.Post;
+    CheckEquals(TEST_ROW_ID, Query.Fields[D_ID].AsInteger, 'return values when input is not null');
+    CheckEquals('ID'+IntToStr(TEST_ROW_ID), Query.Fields[D_FLD].AsString, 'return values when input is not null');
+
   finally
     Query.Free;
   end;

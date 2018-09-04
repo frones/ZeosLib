@@ -76,7 +76,7 @@ type
   private
     fPHSTMT: PSQLHSTMT; //direct reference the handle of the smt/metadata
     fConnection: IZODBCConnection;
-    fPlainDriver: IODBC3BasePlainDriver;
+    fPlainDriver: TZODBC3PlainDriver;
     fZBufferSize, fChunkSize: Integer;
     fEnhancedColInfo: Boolean;
     fColumnCount: SQLSMALLINT;
@@ -149,7 +149,7 @@ type
 
   TODBCResultSetW = class(TAbstractODBCResultSet)
   private
-    fPlainW: IODBC3UnicodePlainDriver;
+    fPlainW: TODBC3UnicodePlainDriver;
   protected
     function ColStrAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray): String; override;
     function ColNumAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT): SQLLEN; override;
@@ -166,7 +166,7 @@ type
 
   TODBCResultSetA = class(TAbstractODBCResultSet)
   private
-    fPlainA: IODBC3RawPlainDriver;
+    fPlainA: TODBC3RawPlainDriver;
   protected
     function ColStrAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray): String; override;
     function ColNumAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT): SQLLEN; override;
@@ -184,20 +184,20 @@ type
   TZODBCBlob = class(TZAbstractBlob)
   public
     constructor Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
-      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: IODBC3BasePlainDriver);
+      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: TZODBC3PlainDriver);
   end;
 
   TZODBCClobA = class(TZAbstractCLob)
   public
     constructor Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
-      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: IODBC3BasePlainDriver;
+      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: TZODBC3PlainDriver;
       ConSettings: PZConSettings);
   end;
 
   TZODBCClobW = class(TZAbstractCLob)
   public
     constructor Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
-      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: IODBC3BasePlainDriver;
+      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: TZODBC3PlainDriver;
       ConSettings: PZConSettings);
   end;
 
@@ -223,20 +223,20 @@ begin
   if not Closed then begin
     if Assigned(fPHSTMT^) then
       if fFreeHandle then begin // from metadata
-        CheckStmtError(fPlainDriver.FreeHandle(SQL_HANDLE_STMT, fPHSTMT^)); //free handle
+        CheckStmtError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, fPHSTMT^)); //free handle
         fPHSTMT^ := nil;
       end else
         if Assigned(Statement) and ((Statement as IZODBCStatement).GetMoreResultsIndicator = mriUnknown) then begin
           ResetCursor;
-          CheckStmtError(fPlainDriver.FreeStmt(fPHSTMT^,SQL_UNBIND)); //discart bindings
-          RETCODE := fPlainDriver.MoreResults(fPHSTMT^);
+          CheckStmtError(fPlainDriver.SQLFreeStmt(fPHSTMT^,SQL_UNBIND)); //discart bindings
+          RETCODE := fPlainDriver.SQLMoreResults(fPHSTMT^);
           if RETCODE = SQL_SUCCESS then
             (Statement as IZODBCStatement).SetMoreResultsIndicator(mriHasMoreResults)
           else if RETCODE = SQL_NO_DATA then
             (Statement as IZODBCStatement).SetMoreResultsIndicator(mriHasNoMoreResults)
           else CheckStmtError(RETCODE);
         end else
-          CheckStmtError(fPlainDriver.FreeStmt(fPHSTMT^,SQL_UNBIND)); //discart bindings
+          CheckStmtError(fPlainDriver.SQLFreeStmt(fPHSTMT^,SQL_UNBIND)); //discart bindings
     inherited Close;
     RowNo := LastRowNo + 1; //suppress a possible fetch approach
   end;
@@ -394,16 +394,16 @@ var Supported: SQLUSMALLINT;
 begin
   inherited Create(Statement, SQL, TODBCTResultSetMetadata.Create(Connection.GetMetadata, SQL, Self), Connection.GetConSettings);
   fConnection := Connection;
-  fPlainDriver := fConnection.GetPlainDriver;
+  fPlainDriver := TZODBC3PlainDriver(fConnection.GetPlainDriver.GetInstance);
   fIsUnicodeDriver := Supports(fPlainDriver, IODBC3UnicodePlainDriver);
   fPHSTMT := @StmtHandle;
   fZBufferSize := ZBufferSize;
   fChunkSize := ChunkSize;
-  fConnection.CheckDbcError(fPLainDriver.GetFunctions(ConnectionHandle, SQL_API_SQLCOLATTRIBUTE, @Supported));
+  fConnection.CheckDbcError(fPLainDriver.SQLGetFunctions(ConnectionHandle, SQL_API_SQLCOLATTRIBUTE, @Supported));
   fEnhancedColInfo := EnhancedColInfo and (Supported = SQL_TRUE);
   fCurrentBufRowNo := 0;
   fFreeHandle := not Assigned(StmtHandle);
-  Connection.CheckDbcError(fPlainDriver.GetInfo(ConnectionHandle,
+  Connection.CheckDbcError(fPlainDriver.SQLGetInfo(ConnectionHandle,
     SQL_GETDATA_EXTENSIONS, @fSQL_GETDATA_EXTENSIONS, SizeOf(SQLUINTEGER), nil));
   ResultSetType := rtForwardOnly;
   ResultSetConcurrency := rcReadOnly;
@@ -418,7 +418,7 @@ begin
   Create(nil, StmtHandle, ConnectionHandle, '', Connection,
     {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_InternalBufSize], 131072), //by default 128KB
     {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_ChunkSize], 4096), False);
-  Connection.CheckDbcError(fPlainDriver.AllocHandle(SQL_HANDLE_STMT, ConnectionHandle, StmtHandle));
+  Connection.CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, ConnectionHandle, StmtHandle));
 end;
 {$IFNDEF NO_ANSISTRING}
 function TAbstractODBCResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
@@ -1307,11 +1307,11 @@ begin
     StrLen_or_IndPtr := Pointer(fColumnBuffers[ColumnIndex]);
     if not fBoundColumns[ColumnIndex] then //some drivers allow GetData in mixed order so check it!
       if Ord(fSQLTypes[ColumnIndex]) < Ord(stAsciiStream) then //move data to buffers
-        CheckStmtError(fPlainDriver.GetData(fPHSTMT^, ColumnIndex+1, fODBC_CTypes[ColumnIndex],
+        CheckStmtError(fPlainDriver.SQLGetData(fPHSTMT^, ColumnIndex+1, fODBC_CTypes[ColumnIndex],
           SQLPOINTER(NativeUInt(StrLen_or_IndPtr)+SizeOf(SQLLEN)), fColumnBuffSizes[ColumnIndex], StrLen_or_IndPtr))
       else begin
         { check out length of lob }
-        CheckStmtError(fPlainDriver.GetData(fPHSTMT^, ColumnIndex+1,
+        CheckStmtError(fPlainDriver.SQLGetData(fPHSTMT^, ColumnIndex+1,
           fODBC_CTypes[ColumnIndex], Pointer(1){can not be nil}, 0, StrLen_or_IndPtr));
         { store the lob -> a second call to same column is impossible for some Drivers }
         if fSQLTypes[ColumnIndex] = stBinaryStream then
@@ -1339,7 +1339,7 @@ begin
 FetchData:
     fCursorOpened := True;
     fCurrentBufRowNo := 1;
-    RETCODE := fPlainDriver.Fetch(fPHSTMT^);
+    RETCODE := fPlainDriver.SQLFetch(fPHSTMT^);
     if fMaxFetchableRows > 1 then //block cursor mode
       case RetCode of
         SQL_NO_DATA: //SQL_NO_DATA is returned too if final block fetch is done too but less rows than demanded are fetched
@@ -1361,7 +1361,7 @@ FetchData:
     else if RETCODE = SQL_NO_DATA then //single row fetch -> SQL_NO_DATA = end ow row set
       goto Fail
     else begin
-      if (RETCODE <> SQL_PARAM_DATA_AVAILABLE) then
+      if (RETCODE <> SQL_PARAM_DATA_AVAILABLE) and (RETCODE <> SQL_SUCCESS) then
         CheckStmtError(RETCODE);
       fFetchedRowCount := 1;
       LoadUnBoundColumns;
@@ -1404,7 +1404,7 @@ var
   end;
 begin
   if Closed and Assigned(fPHSTMT^) then begin
-    CheckStmtError(fPlainDriver.NumResultCols(fPHSTMT^, @fColumnCount));
+    CheckStmtError(fPlainDriver.SQLNumResultCols(fPHSTMT^, @fColumnCount));
     if fColumnCount = 0 then
       raise EZSQLException.Create(SCanNotOpenResultSet);
     RowSize := 0;
@@ -1514,10 +1514,11 @@ begin
       end;
     end;
     //GetData don't work with multiple fetched rows for most drivers
-    fMaxFetchableRows := Max(1, (Cardinal(fZBufferSize) div RowSize)*Byte(Ord(not LobsInResult))); //calculate max count of rows for a single fetch call
+    //calculate max count of rows for a single fetch call
+    fMaxFetchableRows := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Max(1, (Cardinal(fZBufferSize) div RowSize)*Byte(Ord(not LobsInResult)));
     if fMaxFetchableRows > 1 then begin
-      CheckStmtError(fPlainDriver.SetStmtAttr(fPHSTMT^, SQL_ATTR_ROW_ARRAY_SIZE, SQLPOINTER(fMaxFetchableRows), 0));
-      CheckStmtError(fPlainDriver.SetStmtAttr(fPHSTMT^, SQL_ATTR_ROWS_FETCHED_PTR, @fFetchedRowCount, 0));
+      CheckStmtError(fPlainDriver.SQLSetStmtAttr(fPHSTMT^, SQL_ATTR_ROW_ARRAY_SIZE, SQLPOINTER(fMaxFetchableRows), 0));
+      CheckStmtError(fPlainDriver.SQLSetStmtAttr(fPHSTMT^, SQL_ATTR_ROWS_FETCHED_PTR, @fFetchedRowCount, 0));
     end;
     fFirstGetDataIndex := fColumnCount;
     for ColumnNumber := 0 to fColumnCount -1 do
@@ -1525,7 +1526,7 @@ begin
         SetLength(fColumnBuffers[ColumnNumber], fColumnBuffSizes[ColumnNumber]*fMaxFetchableRows);
         fColumnBuffSizes[ColumnNumber] := fColumnBuffSizes[ColumnNumber]-SizeOf(SQLLEN); // now omit indicator space again
         if (ColumnNumber = 0) or ((ColumnNumber > 0) and fBoundColumns[ColumnNumber-1]) then begin
-          CheckStmtError(fPlainDriver.BindCol(fPHSTMT^, ColumnNumber+1,
+          CheckStmtError(fPlainDriver.SQLBindCol(fPHSTMT^, ColumnNumber+1,
             fODBC_CTypes[ColumnNumber], @fColumnBuffers[ColumnNumber][SizeOf(SQLLEN)*fMaxFetchableRows],
             fColumnBuffSizes[ColumnNumber], @fColumnBuffers[ColumnNumber][0]));
           fBoundColumns[ColumnNumber] := True;
@@ -1536,7 +1537,7 @@ begin
         if (fSQL_GETDATA_EXTENSIONS and SQL_GD_BOUND = SQL_GD_BOUND ) then //E: (DM) The specified column was bound.
           if (fSQL_GETDATA_EXTENSIONS and SQL_GD_ANY_COLUMN = SQL_GD_ANY_COLUMN ) //E: (DM) The number of the specified column was less than or equal to the number of the highest bound column
               or NoStreamedColFollows then begin
-            CheckStmtError(fPlainDriver.BindCol(fPHSTMT^, ColumnNumber+1,
+            CheckStmtError(fPlainDriver.SQLBindCol(fPHSTMT^, ColumnNumber+1,
               fODBC_CTypes[ColumnNumber], nil, SQL_DATA_AT_EXEC, @fColumnBuffers[ColumnNumber][0]));
             fBoundColumns[ColumnNumber] := True;
           end;
@@ -1550,7 +1551,7 @@ end;
 procedure TAbstractODBCResultSet.ResetCursor;
 begin
   if Assigned(fPHSTMT^) and fCursorOpened then begin
-    {CheckStmtError}(fPlainDriver.CloseCursor(fPHSTMT^)); //close cursor and discrad pending result
+    {CheckStmtError}(fPlainDriver.SQLCloseCursor(fPHSTMT^)); //close cursor and discrad pending result
     fCursorOpened := False;
   end;
   inherited ResetCursor;
@@ -1562,7 +1563,7 @@ function TODBCResultSetW.ColNumAttribute(ColumnNumber,
   FieldIdentifier: SQLUSMALLINT): SQLLEN;
 begin
   Result := 0; //init see docs
-  CheckStmtError(fPlainW.ColAttribute(fPHSTMT^, ColumnNumber, FieldIdentifier,
+  CheckStmtError(fPlainW.SQLColAttributeW(fPHSTMT^, ColumnNumber, FieldIdentifier,
       nil, 0, nil, @Result));
 end;
 
@@ -1572,7 +1573,7 @@ var
   StringLength: SQLSMALLINT;
 begin
   StringLength := 0;
-  CheckStmtError(fPlainW.ColAttribute(fPHSTMT^, ColumnNumber, FieldIdentifier,
+  CheckStmtError(fPlainW.SQLColAttributeW(fPHSTMT^, ColumnNumber, FieldIdentifier,
       Pointer(Buf), Length(Buf), @StringLength, nil));
   if StringLength > 0 then
     {$IFDEF UNICODE}
@@ -1587,7 +1588,7 @@ constructor TODBCResultSetW.Create(const Statement: IZStatement; var StmtHandle:
   ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
   ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean);
 begin
-  fPlainW := Connection.GetPLainDriver as IODBC3UnicodePlainDriver;
+  fPlainW := Connection.GetPLainDriver.GetInstance as TODBC3UnicodePlainDriver;
   inherited Create(Statement, StmtHandle, ConnectionHandle, SQL, Connection, ZBufferSize,
     ChunkSize, EnhancedColInfo);
 end;
@@ -1601,7 +1602,7 @@ var
   ColName: String;
   {$ENDIF}
 begin
-  CheckStmtError(fPlainW.DescribeCol(fPHSTMT^, ColumnNumber, Pointer(Buf), Length(Buf),
+  CheckStmtError(fPlainW.SQLDescribeColW(fPHSTMT^, ColumnNumber, Pointer(Buf), Length(Buf),
     @NameLength, @DataType, @ColumnSize, @DecimalDigits, @Nullable));
   if NameLength = 0 then
     ColumnInfo.ColumnName := 'Col_'+ZFastCode.IntToStr(ColumnNumber)
@@ -1675,7 +1676,7 @@ function TODBCResultSetA.ColNumAttribute(ColumnNumber,
   FieldIdentifier: SQLUSMALLINT): SQLLEN;
 begin
   Result := 0; //init see docs
-  CheckStmtError(fPlainA.ColAttribute(fPHSTMT^, ColumnNumber, FieldIdentifier,
+  CheckStmtError(fPlainA.SQLColAttribute(fPHSTMT^, ColumnNumber, FieldIdentifier,
       nil, 0, nil, @Result));
 end;
 
@@ -1685,7 +1686,7 @@ var
   StringLength: SQLSMALLINT;
 begin
   StringLength := 0;
-  CheckStmtError(fPlainA.ColAttribute(fPHSTMT^, ColumnNumber, FieldIdentifier,
+  CheckStmtError(fPlainA.SQLColAttribute(fPHSTMT^, ColumnNumber, FieldIdentifier,
        Pointer(Buf), Length(Buf), @StringLength, nil));
   if StringLength > 0 then
     {$IFDEF UNICODE}
@@ -1700,7 +1701,7 @@ constructor TODBCResultSetA.Create(const Statement: IZStatement; var StmtHandle:
   ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
   ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean);
 begin
-  fPlainA := Connection.GetPLainDriver as IODBC3RawPlainDriver;
+  fPlainA := Connection.GetPLainDriver.GetInstance as TODBC3RawPlainDriver;
   inherited Create(Statement, StmtHandle, ConnectionHandle, SQL, Connection,
     ZBufferSize, ChunkSize, EnhancedColInfo);
 end;
@@ -1714,7 +1715,7 @@ var
   NameLength, DataType, DecimalDigits, Nullable: SQLSMALLINT;
   ColumnSize: SQLULEN;
 begin
-  CheckStmtError(fPlainA.DescribeCol(fPHSTMT^, ColumnNumber, Pointer(Buf), LEngth(Buf),
+  CheckStmtError(fPlainA.SQLDescribeCol(fPHSTMT^, ColumnNumber, Pointer(Buf), LEngth(Buf),
     @NameLength, @DataType, @ColumnSize, @DecimalDigits, @Nullable));
   if NameLength = 0 then
     ColumnInfo.ColumnName := 'Col_'+ZFastCode.IntToStr(ColumnNumber)
@@ -1802,7 +1803,7 @@ end;
 { TZODBCBlob }
 
 constructor TZODBCBlob.Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
-  StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: IODBC3BasePlainDriver);
+  StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: TZODBC3PlainDriver);
 var
   OffSetPtr: PAnsiChar;
   i: Integer;
@@ -1813,10 +1814,10 @@ begin
     GetMem(FBlobData, FBlobSize);
     OffSetPtr := FBlobData;
     for i := 1 to StrLen_or_IndPtr^ div ChunkSize do begin
-      Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.GetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, ChunkSize, StrLen_or_IndPtr));
+      Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, ChunkSize, StrLen_or_IndPtr));
       Inc(OffSetPtr, ChunkSize);
     end;
-    Assert(SQL_SUCCEDED(PlainDriver.GetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, ChunkSize, StrLen_or_IndPtr)));
+    Assert(SQL_SUCCEDED(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, ChunkSize, StrLen_or_IndPtr)));
   end else if StrLen_or_IndPtr^ = SQL_NULL_DATA then
     FBlobSize := -1
   else begin
@@ -1824,7 +1825,7 @@ begin
     GetMem(FBlobData, ChunkSize);
     FBlobSize := ChunkSize;
     OffSetPtr := FBlobData;
-    while (PlainDriver.GetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, ChunkSize, StrLen_or_IndPtr) = SQL_SUCCESS_WITH_INFO) do begin
+    while (PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, ChunkSize, StrLen_or_IndPtr) = SQL_SUCCESS_WITH_INFO) do begin
       ReallocMem(FBlobData, FBlobSize + ChunkSize);
       OffSetPtr := {%H-}Pointer({%H-}NativeUInt(FBlobData)+NativeUInt(FBlobSize));
       FBlobSize := FBlobSize + ChunkSize;
@@ -1838,7 +1839,7 @@ end;
 
 constructor TZODBCClobA.Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
   StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer;
-  const PlainDriver: IODBC3BasePlainDriver; ConSettings: PZConSettings);
+  const PlainDriver: TZODBC3PlainDriver; ConSettings: PZConSettings);
 var
   OffSetPtr: PAnsiChar;
   i: Integer;
@@ -1851,28 +1852,28 @@ begin
   else begin
     { truncated string data always have a trailing #0 on top of data }
     if StrLen_or_IndPtr^ >= 0 then begin
-      FBlobSize := StrLen_or_IndPtr^ +1;
+      FBlobSize := StrLen_or_IndPtr^ +SizeOf(AnsiChar);
       GetMem(FBlobData, FBlobSize);
       OffSetPtr := FBlobData;
       for i := 1 to StrLen_or_IndPtr^ div ChunkSize do begin
-        Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.GetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr));
-        Inc(OffSetPtr, ChunkSize-1);
+        Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr));
+        Inc(OffSetPtr, ChunkSize-SizeOf(AnsiChar));
       end;
-      Assert(SQL_SUCCEDED(PlainDriver.GetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr)));
+      Assert(SQL_SUCCEDED(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr)));
     end else begin
       Assert(StrLen_or_IndPtr^ = SQL_NO_TOTAL);
       GetMem(FBlobData, ChunkSize);
       FBlobSize := ChunkSize;
       OffSetPtr := FBlobData;
-      while (PlainDriver.GetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr) = SQL_SUCCESS_WITH_INFO) do begin
+      while (PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr) = SQL_SUCCESS_WITH_INFO) do begin
         ReallocMem(FBlobData, FBlobSize + ChunkSize);
-        OffSetPtr := {%H-}Pointer({%H-}NativeUInt(FBlobData)+NativeUInt(FBlobSize-1));
-        FBlobSize := FBlobSize + ChunkSize-1;
+        OffSetPtr := PAnsiChar(FBlobData)+FBlobSize-SizeOf(AnsiChar);
+        FBlobSize := FBlobSize + ChunkSize-SizeOf(AnsiChar);
       end;
-      FBlobSize := FBlobSize - ChunkSize + StrLen_or_IndPtr^ +1;
+      FBlobSize := FBlobSize - ChunkSize + StrLen_or_IndPtr^ +SizeOf(AnsiChar);
       ReallocMem(FBlobData, FBlobSize);
     end;
-    PByte(PAnsiChar(FBlobData)+FBlobSize-1)^ := Ord(#0); //set trailing #0
+    PByte(PAnsiChar(FBlobData)+FBlobSize-SizeOf(AnsiChar))^ := Ord(#0); //set trailing #0
   end;
 end;
 
@@ -1880,7 +1881,7 @@ end;
 
 constructor TZODBCClobW.Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
   StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer;
-  const PlainDriver: IODBC3BasePlainDriver; ConSettings: PZConSettings);
+  const PlainDriver: TZODBC3PlainDriver; ConSettings: PZConSettings);
 var
   OffSetPtr: PAnsiChar;
   I: Integer;
@@ -1893,28 +1894,28 @@ begin
   else begin
     { truncated string data always have a trailing #0 on top of data }
     if StrLen_or_IndPtr^ >= 0 then begin
-      FBlobSize := StrLen_or_IndPtr^ +2;
+      FBlobSize := StrLen_or_IndPtr^ +SizeOf(WideChar);
       GetMem(FBlobData, FBlobSize);
       OffSetPtr := FBlobData;
       for i := 1 to StrLen_or_IndPtr^ div ChunkSize do begin
-        Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.GetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr));
+        Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr));
         Inc(OffSetPtr, ChunkSize-2);
       end;
-      Assert(SQL_SUCCEDED(PlainDriver.GetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr)));
+      Assert(SQL_SUCCEDED(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr)));
     end else begin
       Assert(StrLen_or_IndPtr^ = SQL_NO_TOTAL);
       GetMem(FBlobData, ChunkSize);
       FBlobSize := ChunkSize;
       OffSetPtr := FBlobData;
-      while (PlainDriver.GetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr) = SQL_SUCCESS_WITH_INFO) do begin
+      while (PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr) = SQL_SUCCESS_WITH_INFO) do begin
         ReallocMem(FBlobData, FBlobSize + ChunkSize);
-        OffSetPtr := {%H-}Pointer({%H-}NativeUInt(FBlobData)+NativeUInt(FBlobSize){%H-}-2);
-        FBlobSize := FBlobSize + ChunkSize-2;
+        OffSetPtr := PAnsiChar(FBlobData)+FBlobSize-SizeOf(WideChar);
+        FBlobSize := FBlobSize + ChunkSize-SizeOf(WideChar);
       end;
-      FBlobSize := FBlobSize - ChunkSize + StrLen_or_IndPtr^ +2;
+      FBlobSize := FBlobSize - ChunkSize + StrLen_or_IndPtr^ +SizeOf(WideChar);
       ReallocMem(FBlobData, FBlobSize);
     end;
-    (PWideChar(FBlobData)+(FBlobSize shr 1)-1)^ := #0; //set trailing #0
+    PWord(PAnsiChar(FBlobData)+FBlobSize-SizeOf(WideChar))^ := Ord(#0); //set trailing #0
   end;
 end;
 

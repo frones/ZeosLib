@@ -456,6 +456,12 @@ type
     function InternalLocate(const KeyFields: string; const KeyValues: Variant;
       Options: TLocateOptions): LongInt;
     function FindRecord(Restart, GoForward: Boolean): Boolean; override;
+    {$IFDEF FPC} // FPC has these methods virtual plainly returning False while on Delphi they use FindRecord
+    function FindFirst: Boolean; override;
+    function FindLast: Boolean; override;
+    function FindNext: Boolean; override;
+    function FindPrior: Boolean; override;
+    {$ENDIF}
     procedure SetFiltered(Value: Boolean); override;
     procedure SetFilterText(const Value: string); override;
     {$IFNDEF WITH_OBJECTVIEW}
@@ -4259,6 +4265,28 @@ begin
   end;
 end;
 
+{$IFDEF FPC}
+function TZAbstractRODataset.FindFirst: Boolean;
+begin
+  Result := FindRecord(True, True);
+end;
+
+function TZAbstractRODataset.FindLast: Boolean;
+begin
+  Result := FindRecord(True, False);
+end;
+
+function TZAbstractRODataset.FindNext: Boolean;
+begin
+  Result := FindRecord(False, True);
+end;
+
+function TZAbstractRODataset.FindPrior: Boolean;
+begin
+  Result := FindRecord(False, False);
+end;
+{$ENDIF}
+
 {**
   Sets a filtering control flag.
   @param Value <code>True</code> to turn filtering On.
@@ -4777,7 +4805,7 @@ end;
 function TZAbstractRODataset.ClearSort(Item1, Item2: Pointer): Integer;
 begin
   //no real pointer addresses here, just a Integer represented as Pointer! -> overflow save!
-  Result := NativeUInt(Item1) - NativeUInt(Item2);
+  Result := NativeInt(Item1) - NativeInt(Item2);
 end;
 
 {**

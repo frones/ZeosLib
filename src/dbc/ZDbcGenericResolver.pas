@@ -742,11 +742,7 @@ begin
     Fields := ExtractFields(Temp1, [',', ';']);
     Temp1 := '';
     for I := 0 to Fields.Count - 1 do
-    begin
-      if Temp1 <> '' then
-        Temp1 := Temp1 + ',';
-      Temp1 := Temp1 + IdentifierConvertor.Quote(Fields[I]);
-    end;
+      AppendSepString(Temp1, IdentifierConvertor.Quote(Fields[I]), ',');
     Fields.Free;
     Result := Result + ' RETURNING ' + Temp1;
   end;

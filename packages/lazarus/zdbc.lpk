@@ -20,7 +20,7 @@
     </CompilerOptions>
     <Description Value="Zeos Low Level Database API"/>
     <Version Major="7" Minor="3"/>
-    <Files Count="14">
+    <Files Count="13">
       <Item1>
         <Filename Value="..\..\src\dbc\ZDbcDbLib.pas"/>
         <UnitName Value="ZDbcDbLib"/>
@@ -62,21 +62,17 @@
         <UnitName Value="ZDbcPooled"/>
       </Item10>
       <Item11>
-        <Filename Value="..\..\src\dbc\ZDbcAdo.pas"/>
-        <UnitName Value="ZDbcAdo"/>
-      </Item11>
-      <Item12>
-        <Filename Value="..\..\src\dbc\ZDbcOleDB.pas"/>
-        <UnitName Value="ZDbcOleDB"/>
-      </Item12>
-      <Item13>
         <Filename Value="..\..\src\dbc\ZDbcODBCCon.pas"/>
         <UnitName Value="ZDbcODBCCon"/>
-      </Item13>
-      <Item14>
+      </Item11>
+      <Item12>
         <Filename Value="..\..\src\dbc\ZDbcProperties.pas"/>
         <UnitName Value="ZDbcProperties"/>
-      </Item14>
+      </Item12>
+      <Item13>
+        <Filename Value="zdbcplatform.pas"/>
+        <UnitName Value="zplainplatform"/>
+      </Item13>
     </Files>
     <RequiredPkgs Count="5">
       <Item1>

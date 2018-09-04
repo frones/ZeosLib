@@ -107,7 +107,7 @@ begin
   PrintLn('HostName: ' + HostName + ' Port: ' + IntToStr(Port)
     + ' Database: ' + Database + ' UserName: ' + UserName
     + ' Password: ' + Password);
-  if StartsWith(Protocol, 'mysql') then
+  if ProtocolType = protMySQL then
     PrintLn('--- Part specific for mysql');
   PrintLn;
 end;
@@ -123,7 +123,7 @@ begin
   PrintLn('HostName: ' + HostName + ' Port: ' + IntToStr(Port)
     + ' Database: ' + Database + ' UserName: ' + UserName
     + ' Password: ' + Password);
-  if StartsWith(Protocol, 'postgresql') then
+  if ProtocolType = protPostgre then
     PrintLn('--- Part specific for postgresql');
   PrintLn;
 end;
@@ -139,7 +139,7 @@ begin
   PrintLn('HostName: ' + HostName + ' Port: ' + IntToStr(Port)
     + ' Database: ' + Database + ' UserName: ' + UserName
     + ' Password: ' + Password);
-  if StartsWith(Protocol, 'mssql') then
+  if ProtocolType = protMSSQL then
     PrintLn('--- Part specific for mssql');
   PrintLn;
 end;
@@ -166,7 +166,7 @@ begin
   PrintLn('HostName: ' + HostName + ' Port: ' + IntToStr(Port)
     + ' Database: ' + Database + ' UserName: ' + UserName
     + ' Password: ' + Password);
-  if StartsWith(Protocol, 'mysql') then
+  if ProtocolType = protMySQL then
     PrintLn('--- Part specific for mysql');
   PrintLn;
 end;
@@ -182,7 +182,7 @@ begin
   PrintLn('HostName: ' + HostName + ' Port: ' + IntToStr(Port)
     + ' Database: ' + Database + ' UserName: ' + UserName
     + ' Password: ' + Password);
-  if StartsWith(Protocol, 'postgresql') then
+  if ProtocolType = protPostgre then
     PrintLn('--- Part specific for postgresql');
   PrintLn;
 end;
@@ -198,7 +198,7 @@ begin
   PrintLn('HostName: ' + HostName + ' Port: ' + IntToStr(Port)
     + ' Database: ' + Database + ' UserName: ' + UserName
     + ' Password: ' + Password);
-  if StartsWith(Protocol, 'mysql') then
+  if ProtocolType = protMySQL then
     PrintLn('--- Part specific for mysql');
   PrintLn;
 end;

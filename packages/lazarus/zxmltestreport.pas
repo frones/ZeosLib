@@ -187,6 +187,7 @@ begin
   n['failed'] := IntToStr(ANumErrors + ANumFailures);
   n['inconclusive'] := '0';
   n['skipped'] := IntToStr(ANumIgnores);
+  if (ANumErrors = 0) and (ANumFailures = 0) then n['result'] := strPassed;
   FSuitePath.Delete(FSuitePath.Count - 1);
 end;
 

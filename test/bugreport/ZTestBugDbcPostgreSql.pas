@@ -727,8 +727,8 @@ procedure TZTestDbcPostgreSQLBugReportMBCs.Test739514;
 const
   id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   fld_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  Str1: ZWideString = 'Абракадабра';
-  Str2: ZWideString = '\Победа\';
+  Str1: ZWideString = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430 {'Абракадабра'}; // Abrakadabra in kyryllic letters
+  Str2: ZWideString = '\'#$041f#$043e#$0431#$0435#$0434#$0430'\' {'\Победа\'}; // victory / success in russian (according to leo.org)
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;

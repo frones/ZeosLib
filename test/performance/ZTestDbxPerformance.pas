@@ -272,105 +272,107 @@ begin
   DataSetProvider.Options := [poAllowMultiRecordUpdates];
   DataSetProvider.UpdateMode := upWhereKeyOnly;
 
-  if StartsWith(GetProtocol, 'mysql') then
-  begin
-    Connection.DriverName := 'MySQL';
-    Connection.GetDriverFunc := 'getSQLDriverMYSQL';
-    Connection.Params.Add('Database=' + GetDatabase);
-{$IFDEF LINUX}
-    Connection.LibraryName := 'libsqlmy.so';
-    Connection.VendorLib := 'libmysqlclient.so';
-    Connection.Params.Add('ErrorResourceFile=./DbxMySqlErr.msg');
-{$ELSE}
-    Connection.LibraryName := 'dbexpmysql.dll';
-    Connection.VendorLib := 'libmysql.dll';
-    Connection.Params.Add('ErrorResourceFile=');
-{$ENDIF}
-  end else
-  if StartsWith(GetProtocol, 'interbase') then
-  begin
-    Connection.DriverName := 'IBConnection';
-    Connection.GetDriverFunc := 'getSQLDriverINTERBASE';
-    Connection.Params.Add('Database='+ GetHostname + ':' + GetDatabase);
-    Connection.Params.Add('SQLDialect=1');
-    Connection.Params.Add('CommitRetain=False');
-    Connection.Params.Add('WaitOnLocks=True');
-    Connection.Params.Add('ServerCharSet=');
-    //Connection.Params.Add('RoleName=');
-{$IFDEF LINUX}
-    Connection.LibraryName := 'libsqlib.so';
-    Connection.VendorLib := 'libgds.so';
-    Connection.Params.Add('ErrorResourceFile=./DbxIbErr.msg');
-{$ELSE}
-    Connection.LibraryName := 'dbexpint.dll';
-    Connection.VendorLib := 'gds32.dll';
-    Connection.Params.Add('ErrorResourceFile=');
-{$ENDIF}
-  end else
-  if GetProtocol = 'mssql' then
-  begin
-    Connection.DriverName := 'MSSQL';
-    Connection.GetDriverFunc := 'getSQLDriverMSSQL';
-    Connection.Params.Add('Database=' + GetDatabase);
-{$IFDEF LINUX}
-    Connection.LibraryName := 'dbexpmss.dll';
-    Connection.VendorLib := 'libgds.so';
-    Connection.Params.Add('ErrorResourceFile=./DbxErr.msg');
-{$ELSE}
-    Connection.LibraryName := 'dbexpmss.dll';
-    Connection.VendorLib := 'oledb';
-    Connection.Params.Add('ErrorResourceFile=');
-{$ENDIF}
-  end else
-  if StartsWith(GetProtocol, 'firebird') then
-  begin
-    Connection.DriverName := 'IBConnection';
-    Connection.GetDriverFunc := 'getSQLDriverINTERBASE';
-    Connection.Params.Add('SQLDialect=1');
-    Connection.Params.Add('CommitRetain=False');
-    Connection.Params.Add('WaitOnLocks=True');
-    Connection.Params.Add('ServerCharSet=');
-    Connection.Params.Add('Database=' + GetHostname + ':' + GetDatabase);
-    //Connection.Params.Add('RoleName=');
-{$IFDEF LINUX}
-    Connection.LibraryName := 'libsqlib.so';
-    Connection.VendorLib := 'libgds.so';
-    Connection.Params.Add('ErrorResourceFile=./DbxIbErr.msg');
-{$ELSE}
-    Connection.LibraryName := 'dbexpint.dll';
-    Connection.VendorLib := 'gds32.dll';
-    Connection.Params.Add('ErrorResourceFile=');
-{$ENDIF}
-  end else
-  if GetProtocol = 'sybase' then
-  begin
-    Connection.DriverName := 'Sybase';
-    Connection.GetDriverFunc := 'getSQLDriverSYBASE';
-    Connection.Params.Add('Database=' + GetDatabase);
-{$IFDEF LINUX}
-    Connection.LibraryName := '';
-    Connection.VendorLib := '';
-    Connection.Params.Add('ErrorResourceFile=./DbxSYBASEErr.msg');
-{$ELSE}
-    Connection.LibraryName := '';
-    Connection.VendorLib := '';
-    Connection.Params.Add('ErrorResourceFile=');
-{$ENDIF}
-  end else
-  if StartsWith(GetProtocol, 'postgresql') then
-  begin
-    Connection.DriverName := 'PostgreSQL';
-    Connection.GetDriverFunc := 'getSQLDriverMYSQL';
-    Connection.Params.Add('Database=' + GetDatabase);
-{$IFDEF LINUX}
-    Connection.LibraryName := 'libsqlpg.so';
-    Connection.VendorLib := 'libpq.so;
-    Connection.Params.Add('ErrorResourceFile=./DbxPGSQLErr.msg');
-{$ELSE}
-    Connection.LibraryName := '';
-    Connection.VendorLib := '';
-    Connection.Params.Add('ErrorResourceFile=');
-{$ENDIF}
+  case ProtocolType of
+    protMySQL:
+      begin
+        Connection.DriverName := 'MySQL';
+        Connection.GetDriverFunc := 'getSQLDriverMYSQL';
+        Connection.Params.Add('Database=' + GetDatabase);
+    {$IFDEF LINUX}
+        Connection.LibraryName := 'libsqlmy.so';
+        Connection.VendorLib := 'libmysqlclient.so';
+        Connection.Params.Add('ErrorResourceFile=./DbxMySqlErr.msg');
+    {$ELSE}
+        Connection.LibraryName := 'dbexpmysql.dll';
+        Connection.VendorLib := 'libmysql.dll';
+        Connection.Params.Add('ErrorResourceFile=');
+    {$ENDIF}
+      end;
+    protPostgre:
+      begin
+        Connection.DriverName := 'PostgreSQL';
+        Connection.GetDriverFunc := 'getSQLDriverMYSQL';
+        Connection.Params.Add('Database=' + GetDatabase);
+    {$IFDEF LINUX}
+        Connection.LibraryName := 'libsqlpg.so';
+        Connection.VendorLib := 'libpq.so;
+        Connection.Params.Add('ErrorResourceFile=./DbxPGSQLErr.msg');
+    {$ELSE}
+        Connection.LibraryName := '';
+        Connection.VendorLib := '';
+        Connection.Params.Add('ErrorResourceFile=');
+    {$ENDIF}
+      end;
+    protFirebird:
+      begin
+        Connection.DriverName := 'IBConnection';
+        Connection.GetDriverFunc := 'getSQLDriverINTERBASE';
+        Connection.Params.Add('SQLDialect=1');
+        Connection.Params.Add('CommitRetain=False');
+        Connection.Params.Add('WaitOnLocks=True');
+        Connection.Params.Add('ServerCharSet=');
+        Connection.Params.Add('Database=' + GetHostname + ':' + GetDatabase);
+        //Connection.Params.Add('RoleName=');
+    {$IFDEF LINUX}
+        Connection.LibraryName := 'libsqlib.so';
+        Connection.VendorLib := 'libgds.so';
+        Connection.Params.Add('ErrorResourceFile=./DbxIbErr.msg');
+    {$ELSE}
+        Connection.LibraryName := 'dbexpint.dll';
+        Connection.VendorLib := 'gds32.dll';
+        Connection.Params.Add('ErrorResourceFile=');
+    {$ENDIF}
+      end;
+    protInterbase:
+      begin
+        Connection.DriverName := 'IBConnection';
+        Connection.GetDriverFunc := 'getSQLDriverINTERBASE';
+        Connection.Params.Add('Database='+ GetHostname + ':' + GetDatabase);
+        Connection.Params.Add('SQLDialect=1');
+        Connection.Params.Add('CommitRetain=False');
+        Connection.Params.Add('WaitOnLocks=True');
+        Connection.Params.Add('ServerCharSet=');
+        //Connection.Params.Add('RoleName=');
+    {$IFDEF LINUX}
+        Connection.LibraryName := 'libsqlib.so';
+        Connection.VendorLib := 'libgds.so';
+        Connection.Params.Add('ErrorResourceFile=./DbxIbErr.msg');
+    {$ELSE}
+        Connection.LibraryName := 'dbexpint.dll';
+        Connection.VendorLib := 'gds32.dll';
+        Connection.Params.Add('ErrorResourceFile=');
+    {$ENDIF}
+      end;
+    protMSSQL:
+      begin
+        Connection.DriverName := 'MSSQL';
+        Connection.GetDriverFunc := 'getSQLDriverMSSQL';
+        Connection.Params.Add('Database=' + GetDatabase);
+    {$IFDEF LINUX}
+        Connection.LibraryName := 'dbexpmss.dll';
+        Connection.VendorLib := 'libgds.so';
+        Connection.Params.Add('ErrorResourceFile=./DbxErr.msg');
+    {$ELSE}
+        Connection.LibraryName := 'dbexpmss.dll';
+        Connection.VendorLib := 'oledb';
+        Connection.Params.Add('ErrorResourceFile=');
+    {$ENDIF}
+      end;
+    protSyBase:
+      begin
+        Connection.DriverName := 'Sybase';
+        Connection.GetDriverFunc := 'getSQLDriverSYBASE';
+        Connection.Params.Add('Database=' + GetDatabase);
+    {$IFDEF LINUX}
+        Connection.LibraryName := '';
+        Connection.VendorLib := '';
+        Connection.Params.Add('ErrorResourceFile=./DbxSYBASEErr.msg');
+    {$ELSE}
+        Connection.LibraryName := '';
+        Connection.VendorLib := '';
+        Connection.Params.Add('ErrorResourceFile=');
+    {$ENDIF}
+      end;
   end;
 end;
 

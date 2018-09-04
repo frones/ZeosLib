@@ -123,6 +123,7 @@ type
     procedure TestSF279;
     procedure TestSF286_getBigger;
     procedure TestSF286_getSmaller;
+    procedure TestSF301;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -336,10 +337,10 @@ begin
 
     repeat
       Inc(RecNo);
-      CheckEquals(Query.RecNo, RecNo);
+      CheckEquals(Query.RecNo, RecNo, 'check Query.RecNo');
     until not Query.FindNext;
 
-    CheckEquals(Query.RecordCount, RecNo);
+    CheckEquals(Query.RecordCount, RecNo, 'check Query.RecordCount');
     Query.Close;
   finally
     Query.Free;
@@ -621,7 +622,6 @@ begin
     CalcField.DataSet := Query;
 
     Query.Open;
-    Query.FieldByName('p_calc').AsInteger;
 
     while not Query.Eof do
     begin
@@ -1978,7 +1978,20 @@ begin
   end;
 end;
 
-
+procedure ZTestCompCoreBugReport.TestSF301;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from equipment';
+    Query.SortedFields := 'eq_date';
+    Query.Open;
+    Check(true);
+  finally
+    FreeAndNil(Query);
+  end;
+end;
 
 const {Test Strings}
   Str1: ZWideString = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
@@ -2072,8 +2085,8 @@ begin
     RowCounter := 0;
     Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+
       ' values (:s_id, :s_char, :s_varchar, :s_nchar, :s_nvarchar)';
-    if StartsWith(Connection.Protocol, 'oracle') or //oracle asumes one char = one byte except for varchar2
-      ((StartsWith(Connection.Protocol, 'firebird') or StartsWith(Connection.Protocol, 'interbase'))
+    if (ProtocolType = protOracle) or //oracle asumes one char = one byte except for varchar2
+      ( (ProtocolType in [protFirebird, protInterbase])
         and (Connection.DbcConnection.GetConSettings^.ClientCodePage^.ID = 0)) then //avoid CS_NONE string right truncation for UTF8-Data
       InsertValues(str1, Copy(str2, 1, Length(Str2) div 2), str1, Copy(str2, 1, Length(Str2) div 2))
     else
@@ -2086,11 +2099,11 @@ begin
     Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
     Query.Open;
     CheckEquals(True, Query.RecordCount = 5);
-    if StartsWith(Connection.Protocol, 'ASA') then //ASA has a limitation of 125chars for like statements
+    if ProtocolType = protASA then //ASA has a limitation of 125chars for like statements
       Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings , 125)+'%'''
     else
-      if StartsWith(Connection.Protocol, 'oracle') or //oracle asumes one char = one byte except for varchar2
-        ((StartsWith(Connection.Protocol, 'firebird') or StartsWith(Connection.Protocol, 'interbase'))
+      if (ProtocolType = protOracle) or //oracle asumes one char = one byte except for varchar2
+        ( (ProtocolType in [protFirebird, protInterbase])
           and (Connection.DbcConnection.GetConSettings^.ClientCodePage^.ID = 0)) then //avoid CS_NONE string right truncation for UTF8-Data
         Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Copy(str2, 1, Length(Str2) div 2), Connection.DbcConnection.GetConSettings)+'%'''
       else

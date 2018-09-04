@@ -55,7 +55,17 @@ interface
 {$I ZDbc.inc}
 uses
   Types, Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
-  ZDbcIntfs, ZSqlTestCase, ZCompatibility;
+  ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZDbcConnection, ZUrl
+  {$IFDEF ENABLE_ASA}        , ZDbcASAMetadata {$ENDIF}
+  {$IFDEF ENABLE_DBLIB}      , ZDbcDbLibMetadata {$ENDIF}
+  {$IFDEF ENABLE_INTERBASE}  , ZDbcInterbase6Metadata {$ENDIF}
+  {$IFDEF ENABLE_MYSQL}      , ZDbcMySqlMetadata {$ENDIF}
+  {$IFDEF ENABLE_ODBC}       , ZDbcODBCMetadata {$ENDIF}
+  {$IFDEF ENABLE_OLEDB}      , ZDbcOleDBMetadata {$ENDIF}
+  {$IFDEF ENABLE_ORACLE}     , ZDbcOracleMetadata {$ENDIF}
+  {$IFDEF ENABLE_POSTGRESQL} , ZDbcPostgreSqlMetadata {$ENDIF}
+  {$IFDEF ENABLE_SQLITE}     , ZDbcSqLiteMetadata {$ENDIF}
+  ;
 
 type
   {** Implements a test case for. }
@@ -72,6 +82,7 @@ type
     procedure SetUp; override;
     procedure TearDown; override;
   published
+    procedure TestMetadataKeyWords;
     procedure TestMetadataIdentifierQuoting;
     procedure TestMetadataGetCatalogs;
     procedure TestMetadataGetSchemas;
@@ -91,6 +102,9 @@ type
     procedure TestMetadataGetProcedureColumns;
     procedure TestMetadataGetTypeInfo;
     procedure TestMetadataGetUDTs;
+    procedure TestMetadataGetCharacterSets;
+    procedure TestMetadataGetSequences;
+    procedure TestMetadataGetTriggers;
   end;
 
 implementation
@@ -325,8 +339,8 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetImportedKeys;
 begin
-  if StartsWith(Protocol, 'sqlite')
-    or StartsWith(Protocol, 'mysql') then Exit;
+  if ProtocolType in [protSQLite, protMySQL] then
+    Exit;
 
   ResultSet := MD.GetImportedKeys(Catalog, Schema, 'people');
   PrintResultSet(ResultSet, False);
@@ -342,7 +356,7 @@ begin
   CheckEquals(1, Resultset.GetSmallByName('KEY_SEQ'));
   {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
   //Oracle does not provide a update_rule and delete_role is 'no action'
-  if not (Protocol = 'ado') and not StartsWith(Protocol, 'oracle') and not StartsWith(Protocol, 'OleDB') then
+  if not (ProtocolType in [protADO, protOracle, protOleDB]) then
   begin
     CheckEquals(1, Resultset.GetSmallByName('UPDATE_RULE'));
     CheckEquals(1, Resultset.GetSmallByName('DELETE_RULE'));
@@ -367,9 +381,9 @@ procedure TZGenericTestDbcMetadata.TestMetadataGetExportedKeys;
     CheckEquals(FKTable, UpperCase(Resultset.GetStringByName('FKTABLE_NAME')));
     CheckEquals(FKColumn, UpperCase(Resultset.GetStringByName('FKCOLUMN_NAME')));
     CheckEquals(KeySeq, Resultset.GetSmallByName('KEY_SEQ'));
-   {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
-   //Oracle does not provide a update_rule and delete_role is 'no action'
-   if not (Protocol = 'ado') and not StartsWith(Protocol, 'oracle') and not StartsWith(Protocol, 'OleDB') then
+    {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
+    //Oracle does not provide a update_rule and delete_role is 'no action'
+    if not (ProtocolType in [protADO, protOracle, protOleDB]) then
     begin
       CheckEquals(UpdateRule, Resultset.GetSmallByName('UPDATE_RULE'));
       CheckEquals(DeleteRule, Resultset.GetSmallByName('DELETE_RULE'));
@@ -380,8 +394,8 @@ procedure TZGenericTestDbcMetadata.TestMetadataGetExportedKeys;
   end;
 
 begin
-  if StartsWith(Protocol, 'sqlite')
-    or StartsWith(Protocol, 'mysql') then Exit;
+  if ProtocolType in [protSQLite, protMySQL] then
+    Exit;
 
   ResultSet := MD.GetExportedKeys(Catalog, Schema, 'department');
   PrintResultSet(ResultSet, False);
@@ -397,8 +411,8 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetCrossReference;
 begin
-  if StartsWith(Protocol, 'sqlite')
-    or StartsWith(Protocol, 'mysql') then Exit;
+  if ProtocolType in [protSQLite, protMySQL] then
+    Exit;
 
   ResultSet := MD.GetCrossReference(Catalog, Schema, 'department', Catalog, Schema, 'people');
   PrintResultSet(ResultSet, False);
@@ -414,7 +428,7 @@ begin
   CheckEquals(1, Resultset.GetSmallByName('KEY_SEQ'));
   {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
   //Oracle does not provide a update_rule and delete_role is 'no action'
-  if not (Protocol = 'ado') and not StartsWith(Protocol, 'oracle') and not StartsWith(Protocol, 'OleDB') then
+  if not (ProtocolType in [protADO, protOracle, protOleDB]) then
   begin
     CheckEquals(1, Resultset.GetSmallByName('UPDATE_RULE'));
     CheckEquals(1, Resultset.GetSmallByName('DELETE_RULE'));
@@ -454,8 +468,8 @@ begin
   CheckEquals(SchemaNameIndex, Resultset.FindColumn('PROCEDURE_SCHEM'));
   CheckEquals(ProcedureNameIndex, Resultset.FindColumn('PROCEDURE_NAME'));
   CheckEquals(ProcedureOverloadIndex, Resultset.FindColumn('PROCEDURE_OVERLOAD'));
-  CheckEquals(ProcedureReserverd1Index, Resultset.FindColumn('RESERVED1'));
-  CheckEquals(ProcedureReserverd2Index, Resultset.FindColumn('RESERVED2'));
+  CheckEquals(ProcedureReserved1Index, Resultset.FindColumn('RESERVED1'));
+  CheckEquals(ProcedureReserved2Index, Resultset.FindColumn('RESERVED2'));
   CheckEquals(ProcedureRemarksIndex, Resultset.FindColumn('REMARKS'));
   CheckEquals(ProcedureTypeIndex, Resultset.FindColumn('PROCEDURE_TYPE'));
   ResultSet.Close;
@@ -490,11 +504,164 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetUDTs;
 begin
-  if StartsWith(Protocol, 'postgresql')
-    or StartsWith(Protocol, 'sqlite') then Exit;
+  if ProtocolType in [protPostgre, protMySQL] then
+    Exit;
   ResultSet := MD.GetUDTs(Catalog, Schema, '', nil);
   PrintResultSet(ResultSet, False);
   ResultSet.Close;
+end;
+
+// We need this class because TZAbstractDbcConnection has abstract methods and
+// instances of this class can't be created
+type
+  TDummyDbcConnection = class(TZAbstractDbcConnection)
+  private
+    procedure InternalClose; override;
+    procedure InternalCreate; override;
+  public
+    Metadata: TZAbstractDatabaseMetadata; // arrrgh... need to keep object pointer
+  end;
+
+{ TDummyDbcConnection }
+
+procedure TDummyDbcConnection.InternalCreate;
+begin
+  Metadata := TZAbstractDatabaseMetadata.Create(Self, Url);
+  FMetadata := Metadata;
+end;
+
+procedure TDummyDbcConnection.InternalClose;
+begin
+end;
+
+// Check if all keywords are correct
+procedure TZGenericTestDbcMetadata.TestMetadataKeyWords;
+{ We want to create DBInfo instances for each driver available but they require valid
+  metadata object (not interface) which we don't have. Objects cannot be obtained from
+  interfaces easily. And metadata constructor requires connection object (ARRGH).
+  So we have to declare a special connection class just to get things work. }
+type
+  TZAbstractDatabaseInfoClass = class of TZAbstractDatabaseInfo;
+var
+  IConn: IZConnection;
+  AbsConn: TDummyDbcConnection;
+  Url: TZUrl;
+
+  // Currently check only that keyword is not empty and doesn't contain spaces
+  function CheckKeyword(const KeyWord: string): Boolean;
+  begin
+    Result :=
+      (KeyWord <> '') and (Pos(' ', KeyWord) = 0);
+  end;
+
+  procedure CheckKeywords(DatabaseInfoClass: TZAbstractDatabaseInfoClass);
+  var
+    DBI: IZDatabaseInfo;
+    KeyWords: TStringList;
+    i: Integer;
+  begin
+    DBI := DatabaseInfoClass.Create(AbsConn.Metadata);
+    KeyWords := DBI.GetIdentifierQuoteKeywordsSorted;
+    for i := 0 to KeyWords.Count - 1 do
+      Check(CheckKeyword(KeyWords[i]), Format('%s. Keyword incorrect: "%s"', [DatabaseInfoClass.ClassName, KeyWords[i]]));
+  end;
+
+begin
+  Url := GetConnectionUrl('');
+  AbsConn := TDummyDbcConnection.Create(Url);
+  IConn := AbsConn;
+  try
+    {$IFDEF ENABLE_ASA}        CheckKeywords(TZASADatabaseInfo);        {$ENDIF}
+    {$IFDEF ENABLE_DBLIB}      CheckKeywords(TZDbLibDatabaseInfo);      {$ENDIF}
+    {$IFDEF ENABLE_INTERBASE}  CheckKeywords(TZInterbase6DatabaseInfo); {$ENDIF}
+    {$IFDEF ENABLE_MYSQL}      CheckKeywords(TZMySqlDatabaseInfo);      {$ENDIF}
+    {$IFDEF ENABLE_ODBC}       CheckKeywords(TZAbstractDatabaseInfo);   {$ENDIF}
+    {$IFDEF ENABLE_OLEDB}      CheckKeywords(TZOleDBDatabaseInfo);      {$ENDIF}
+    {$IFDEF ENABLE_ORACLE}     CheckKeywords(TZOracleDatabaseInfo);     {$ENDIF}
+    {$IFDEF ENABLE_POSTGRESQL} CheckKeywords(TZPostgreSqlDatabaseInfo); {$ENDIF}
+    {$IFDEF ENABLE_SQLITE}     CheckKeywords(TZSqLiteDatabaseInfo);     {$ENDIF}
+  finally
+    FreeAndNil(Url);
+  end;
+end;
+
+procedure TZGenericTestDbcMetadata.TestMetadataGetSequences;
+begin
+  // Some drivers don't implement this method so just pass the test
+  case ProtocolType of
+    protInterbase, protFirebird:
+      ; // OK
+    protPostgre:
+      begin
+        PrintLn('TODO: implement this');
+        Exit;
+      end;
+    else
+    begin
+      BlankCheck;
+      Exit;
+    end;
+  end;
+ 
+  ResultSet := MD.GetSequences(Catalog, Schema, 'GEN_ID');
+  PrintResultSet(ResultSet, False);
+  Check(ResultSet.Next, 'There should be a sequence "GEN_ID"');
+  CheckEquals(CatalogNameIndex, Resultset.FindColumn('SEQUENCE_CAT'));
+  CheckEquals(SchemaNameIndex, Resultset.FindColumn('SEQUENCE_SCHEM'));
+  CheckEquals(SequenceNameIndex, Resultset.FindColumn('SEQUENCE_NAME'));
+  CheckEquals(Catalog, Resultset.GetStringByName('SEQUENCE_CAT'));
+  CheckEquals(Schema, Resultset.GetStringByName('SEQUENCE_SCHEM'));
+  CheckEquals('GEN_ID', Resultset.GetStringByName('SEQUENCE_NAME'));
+
+  ResultSet.Close;
+end;
+
+procedure TZGenericTestDbcMetadata.TestMetadataGetTriggers;
+begin
+  // Some drivers don't implement this method so just pass the test
+  if not (ProtocolType in [protInterbase, protFirebird]) then
+  begin
+    BlankCheck;
+    Exit;
+  end;
+
+  ResultSet := MD.GetTriggers(Catalog, Schema, '', 'INSERT_RETURNING_BI');
+  PrintResultSet(ResultSet, False);
+  Check(ResultSet.Next, 'There should be a trigger "INSERT_RETURNING_BI"');
+
+  CheckEquals(CatalogNameIndex, Resultset.FindColumn('TRIGGER_CAT'));
+  CheckEquals(SchemaNameIndex, Resultset.FindColumn('TRIGGER_SCHEM'));
+  CheckEquals(TrgColTriggerNameIndex, Resultset.FindColumn('TRIGGER_NAME'));
+  CheckEquals(TrgColRelationNameIndex, Resultset.FindColumn('TRIGGER_RELATION'));
+  CheckEquals(TrgColTriggerTypeIndex, Resultset.FindColumn('TRIGGER_TYPE'));
+  CheckEquals(TrgColTriggerInactiveIndex, Resultset.FindColumn('TRIGGER_INACTIVE'));
+  CheckEquals(TrgColTriggerSourceIndex, Resultset.FindColumn('TRIGGER_SOURCE'));
+  CheckEquals(TrgColDescriptionIndex, Resultset.FindColumn('TRIGGER_DESCRIPTION'));
+
+  CheckEquals(Catalog, Resultset.GetStringByName('TRIGGER_CAT'));
+  CheckEquals(Schema, Resultset.GetStringByName('TRIGGER_SCHEM'));
+  CheckEquals('INSERT_RETURNING_BI', Resultset.GetStringByName('TRIGGER_NAME'));
+  CheckEquals('INSERT_RETURNING', Resultset.GetStringByName('TRIGGER_RELATION'));
+  CheckEquals(1, Resultset.GetSmallByName('TRIGGER_TYPE'));
+  CheckEquals(0, Resultset.GetSmallByName('TRIGGER_INACTIVE'));
+
+  ResultSet.Close;
+end;
+
+procedure TZGenericTestDbcMetadata.TestMetadataGetCharacterSets;
+begin
+  // Some drivers don't implement this method so just pass the test
+  if not (ProtocolType in [protInterbase, protFirebird, protPostgre, protMySQL, protSQLite]) then
+  begin
+    BlankCheck;
+    Exit;
+  end;
+
+  ResultSet := MD.GetCharacterSets;
+  PrintResultSet(ResultSet, False);
+  Check(ResultSet.Next, 'There should be a character set');
+  CheckEquals(CharacterSetsNameIndex, Resultset.FindColumn('CHARACTER_SET_NAME'));
+  CheckEquals(CharacterSetsIDIndex, Resultset.FindColumn('CHARACTER_SET_ID'));
 end;
 
 initialization

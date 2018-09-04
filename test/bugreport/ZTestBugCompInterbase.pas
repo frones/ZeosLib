@@ -142,12 +142,10 @@ end;
 }
 procedure ZTestCompInterbaseBugReport.Test1021705;
 var
-  Error: Boolean;
   Query: TZQuery;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
-  Error := True;
   Query := CreateQuery;
   try
     // Query.RequestLive := True;
@@ -174,12 +172,10 @@ begin
       Query.FieldByName('FLD1').AsFloat := 2.387;
       Query.FieldByName('FLD2').AsFloat := 34257.346;
       Query.Post;
-    except
-      Error := False
-    end;
-
-    if Error then
       Fail('Inserted wrong value 34257.346 into TABLE1021705.FLD2 ');
+    except on E: Exception do
+      CheckNotTestFailure(E);
+    end;
 
   finally
     Query.Free;
@@ -670,13 +666,11 @@ end;
 
 procedure ZTestCompInterbaseBugReport.Test909181;
 var
-  Error: boolean;
   Query: TZQuery;
   UpdateSQL: TZUpdateSQL;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
-  Error := True;
   Query := CreateQuery;
   // Query.RequestLive := True;
   UpdateSQL := TZUpdateSQL.Create(nil);
@@ -706,10 +700,10 @@ begin
       Post;
       Close;
     end;
-  except
-    Error := False;
+    Fail('Problems with set Null prametrs in SQLDA');
+  except on E: Exception do
+    CheckNotTestFailure(E);
   end;
-  CheckEquals(False, Error, 'Problems with set Null prametrs in SQLDA');
   UpdateSQL.Free;
   Query.Free;
 end;
@@ -719,12 +713,10 @@ end;
 }
 procedure ZTestCompInterbaseBugReport.Test984305;
 var
-  Error: boolean;
   Query: TZQuery;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
-  Error := True;
   Query := CreateQuery;
   try
     Query.SQL.Text := 'SELECT * FROM PEOPLE';
@@ -736,10 +728,10 @@ begin
     try
       Connection.User := '';
       Connection.Connect;
-    except
-      Error := False;
+      Fail('Problems with change user name');
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
-    CheckEquals(False, Error, 'Problems with change user name');
 
   finally
     Query.Free;
@@ -872,19 +864,17 @@ end;
 procedure ZTestCompInterbaseBugReport.Test_SF249;
 var
   Query: TZQuery;
-  Succeeded: Boolean;
 begin
   Query := CreateQuery;
   try
     Query.SQL.Text := 'select * from RDB$DATABASE where :TESTPARM=''''';
     Query.ParamByName('TESTPARM').AsString := 'xyz';
-    Succeeded := False;
     try
       Query.Open;
-    except
-      Succeeded := True;
+      Fail('where clause evaulates to true although it shouldn''t: where :TESTPARM = ''''; testparm = ''xyz''');
+    except on E: Exception do
+      CheckNotTestFailure(E);
     end;
-    Check(Succeeded, 'where clause evaulates to true although it shouldn''t: where :TESTPARM = ''''; testparm = ''xyz''');
   finally
     Query.Close;
     Query.Free;

@@ -188,7 +188,7 @@ const
     SizeOf(Single), SizeOf(Double), SizeOf(Double), SizeOf(Double), //floats
     SizeOf(TOraDate), SizeOf(POCIDescriptor), SizeOf(POCIDescriptor), //time values
     StrGUIDLen, //GUID
-    8+SizeOf(Integer), 8+SizeOf(Integer), 8+SizeOf(Integer),  //varying size types in equal order minimum sizes for 8Byte alignment
+    SizeOf(TOCILong), SizeOf(TOCILong), SizeOf(TOCILong),  //varying size types in equal order minimum sizes for 8Byte alignment
     SizeOf(POCIDescriptor), SizeOf(POCIDescriptor), SizeOf(POCIDescriptor)); //lob's
   SQLType2OCIDescriptor: array[stBoolean..stBinaryStream] of sb2 = (
     NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE,  //ordinals
@@ -670,9 +670,9 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.value_sz < Len+SizeOf(Integer)) or (Bind.curelen <> 1) then
     InitBuffer(SQLType, Bind, Index, 1, Len);
-  PInteger(Bind^.valuep)^ := Len;
+  POCILong(Bind.valuep).Len := Len;
   if Buf <> nil then
-    Move(Buf^, (Bind.valuep+SizeOf(Integer))^, Len);
+    Move(Buf^, POCILong(Bind.valuep).data[0], Len);
   Bind.indp[0] := 0;
 end;
 
@@ -792,9 +792,9 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   if (BindList[Index].SQLType <> stString) or (Bind.valuep = nil) or (Bind.value_sz < Len+SizeOf(Integer)) or (Bind.curelen <> 1) then
     InitBuffer(stString, Bind, Index, 1, Len);
-  PInteger(Bind.valuep)^ := Len;
+  POCILong(Bind.valuep).Len := Len;
   if Buf <> nil then
-    Move(Buf^, (Bind.valuep+SizeOf(Integer))^, Len);
+    Move(Buf^, POCILong(Bind.valuep).data[0], Len);
   Bind.indp[0] := 0;
 end;
 
@@ -808,6 +808,7 @@ procedure TZAbstractOraclePreparedStatement.BindSignedOrdinal(Index: Integer;
   SQLType: TZSQLType; const Value: Int64);
 var
   Bind: PZOCIParamBind;
+  P: PAnsiChar;
 begin
   CheckParameterIndex(Index);
   {$R-}
@@ -823,9 +824,8 @@ begin
     else
       PSmallInt(Bind.valuep)^ := Value
   else begin
-    FRawTemp := IntToRaw(Value);
-    PSmallInt(Bind.valuep)^ := Length(FRawTemp){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
-    Move(Pointer(FRawTemp)^, (Bind.valuep+SizeOf(SmallInt))^, PSmallInt(Bind.valuep)^);
+    IntToRaw(Value, PAnsiChar(@POCIVary(Bind.valuep).data[0]), @P);
+    POCIVary(Bind.valuep).Len := P-@POCIVary(Bind.valuep).data[0];
   end;
   Bind.indp[0] := 0;
 end;
@@ -834,6 +834,7 @@ procedure TZAbstractOraclePreparedStatement.BindUnsignedOrdinal(Index: Integer;
   SQLType: TZSQLType; const Value: UInt64);
 var
   Bind: PZOCIParamBind;
+  P: PAnsiChar;
 begin
   CheckParameterIndex(Index);
   {$R-}
@@ -849,9 +850,8 @@ begin
     else
       PWord(Bind.valuep)^ := Value
   else begin
-    FRawTemp := IntToRaw(Value);
-    PSmallInt(Bind.valuep)^ := Length(FRawTemp){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
-    Move(Pointer(FRawTemp)^, (Bind.valuep+SizeOf(SmallInt))^, PSmallInt(Bind.valuep)^);
+    IntToRaw(Value, PAnsiChar(@POCIVary(Bind.valuep).data[0]), @P);
+    POCIVary(Bind.valuep).Len := P-@POCIVary(Bind.valuep).data[0];
   end;
   Bind.indp[0] := 0;
 end;
@@ -1051,9 +1051,9 @@ begin
               EncodeTime(PUB1(@Ts.Hour)^, PUB1(@Ts.Minute)^, PUB1(@Ts.Second)^, Ts.Fractions div 1000000), ConSettings.DisplayFormatSettings, True);
       end;
     SQLT_AFC: Result := SQLQuotedStr(Bind.valuep, Bind.Value_sz, #39);
-    SQLT_VCS: ZSetString(Bind.valuep+SizeOf(SmallInt), PSmallInt(Bind.valuep)^, Result); //used for big (s/u) ordinals on old oracle
-    SQLT_LVC: Result := SQLQuotedStr(Bind.valuep+SizeOf(Integer), PInteger(Bind.valuep)^, #39);
-    SQLT_LVB: Result := GetSQLHexAnsiString(Bind.valuep+SizeOf(Integer), PInteger(Bind.valuep)^);
+    SQLT_VCS: ZSetString(@POCIVary(Bind.valuep).data[0], POCIVary(Bind.valuep).Len, Result); //used for big (s/u) ordinals on old oracle
+    SQLT_LVC: Result := SQLQuotedStr(PAnsiChar(@POCILong(Bind.valuep).data[0]), POCILong(Bind.valuep).Len, #39);
+    SQLT_LVB: Result := GetSQLHexAnsiString(@POCILong(Bind.valuep).data[0], POCILong(Bind.valuep).Len, False);
     SQLT_CLOB: Result := '(CLOB)';
     SQLT_BLOB: Result := '(BLOB)';
     else Result := 'unknown'
@@ -1531,18 +1531,19 @@ from_raw:   ClientStrings := TRawByteStringDynArray(Value);
                 {$ENDIF}
 set_raw:    if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen < ArrayLen) then
               InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, BufferSize);
+            P := Bind.valuep;
             for i := 0 to ArrayLen -1 do begin
               if (Pointer(ClientStrings[I]) = nil) then
-                PInteger(Bind.valuep+I*Bind.value_sz)^ := 0
+                POCILong(P).Len := 0
               else begin
                 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-                BufferSize := Length(ClientStrings[I]) -1;
+                POCILong(P).Len := Length(ClientStrings[I]) -1;
                 {$ELSE}
-                BufferSize := PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^;
+                POCILong(P).Len := PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^;
                 {$ENDIF}
-                PInteger(Bind.valuep+I*Bind.value_sz)^ := BufferSize;
-                Move(Pointer(ClientStrings[i])^,(Bind.valuep+I*Bind.value_sz+SizeOf(Integer))^, BufferSize);
+                Move(Pointer(ClientStrings[i])^,POCILong(P).data[0], POCILong(P).Len);
               end;
+              Inc(P, Bind.value_sz);
             end;
           end;
         vtCharRec: begin
@@ -1552,10 +1553,12 @@ set_raw:    if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Inte
                 BufferSize := Max(BufferSize, TZCharRecDynArray(Value)[i].Len);
               if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen < ArrayLen) then
                 InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, BufferSize);
+              P := Bind.valuep;
               for i := 0 to ArrayLen -1 do begin
-                PInteger(Bind.valuep+I*Bind.value_sz)^ := TZCharRecDynArray(Value)[i].Len;
+                POCILong(P).Len := TZCharRecDynArray(Value)[i].Len;
                 if (TZCharRecDynArray(Value)[i].P <> nil) and (TZCharRecDynArray(Value)[i].Len <> 0) then
-                  Move(TZCharRecDynArray(Value)[i].P^,(Bind.valuep+I*Bind.value_sz+SizeOf(Integer))^, TZCharRecDynArray(Value)[i].Len);
+                  Move(TZCharRecDynArray(Value)[i].P^,POCILong(P).data[0], POCILong(P).Len);
+                Inc(P, Bind.value_sz);
               end;
             end else begin
               SetLength(ClientStrings, ArrayLen);

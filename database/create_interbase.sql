@@ -261,7 +261,43 @@ CREATE TABLE Guids (
     GUID_TYPE_FIELD  CHAR(16) CHARACTER SET OCTETS
 );
 
+/*==============================================================*/
+/* Table : insert_returning                                     */
+/*==============================================================*/
+
+create table insert_returning
+(
+   id                INTEGER not null,
+   fld               VARCHAR(10),
+   primary key (id)
+);
+
+/*==============================================================*/
+/* Generator : GEN_ID                                           */
+/*==============================================================*/
+
+CREATE GENERATOR GEN_ID;
+
+/*==============================================================*/
+/* Start PSQL section                                           */
+/*==============================================================*/
+
 SET TERM ^ ;
+
+/*==============================================================*/
+/* Trigger : insert_returning_bi                                */
+/*==============================================================*/
+
+create trigger insert_returning_bi FOR insert_returning
+ACTIVE BEFORE INSERT POSITION 0
+AS
+BEGIN
+  IF (NEW.ID IS NULL OR NEW.ID = 0) THEN
+    select Coalesce(Max(ID), 0)+1 from insert_returning
+      into NEW.ID;
+  NEW.FLD = 'ID' || NEW.ID;
+END
+^
 
 /*==============================================================*/
 /* Stored procedure: procedure1                                 */
@@ -276,7 +312,6 @@ SUSPEND;
 END
 ^
 
-
 /*==============================================================*/
 /* Stored procedure: procedure2                                 */
 /*==============================================================*/
@@ -290,7 +325,6 @@ BEGIN
   SUSPEND;
 END
 ^
-
 
 /*==============================================================*/
 /* Stored procedure: ABTEST                                     */
@@ -324,6 +358,10 @@ begin
   suspend;
 end
 ^
+
+/*==============================================================*/
+/* Finish PSQL section                                          */
+/*==============================================================*/
 
 SET TERM ; ^
 

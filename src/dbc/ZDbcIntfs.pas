@@ -1128,8 +1128,8 @@ type
 
   TZDriverManager = class(TInterfacedObject, IZDriverManager)
   private
-    FDriversCS: TCriticalSection; // thread-safety
-    FLogCS: TCriticalSection;
+    FDriversCS: TCriticalSection; // thread-safety for FDrivers collection. Not the drivers themselves!
+    FLogCS: TCriticalSection;     // thread-safety for logging listeners
     FDrivers: IZCollection;
     FLoggingListeners: IZCollection;
     FHasLoggingListener: Boolean;
@@ -1273,15 +1273,10 @@ function TZDriverManager.GetConnectionWithParams(const Url: string; Info: TStrin
 var
   Driver: IZDriver;
 begin
-  FDriversCS.Enter;
-  try
-    Driver := GetDriver(Url);
-    if Driver = nil then
-      raise EZSQLException.Create(SDriverWasNotFound);
-    Result := Driver.Connect(Url, Info);
-  finally
-    FDriversCS.Leave;
-  end;
+  Driver := GetDriver(Url);
+  if Driver = nil then
+    raise EZSQLException.Create(SDriverWasNotFound);
+  Result := Driver.Connect(Url, Info);
 end;
 
 {**
@@ -1293,15 +1288,10 @@ function TZDriverManager.GetClientVersion(const Url: string): Integer;
 var
   Driver: IZDriver;
 begin
-  FDriversCS.Enter;
-  try
-    Driver := GetDriver(Url);
-    if Driver = nil then
-      raise EZSQLException.Create(SDriverWasNotFound);
-    Result := Driver.GetClientVersion(Url);
-  finally
-    FDriversCS.Leave;
-  end;
+  Driver := GetDriver(Url);
+  if Driver = nil then
+    raise EZSQLException.Create(SDriverWasNotFound);
+  Result := Driver.GetClientVersion(Url);
 end;
 
 {**
@@ -1320,10 +1310,8 @@ begin
   try
     Info.Values[ConnProps_Username] := User;
     Info.Values[ConnProps_Password] := Password;
-    FDriversCS.Enter;
     Result := GetConnectionWithParams(Url, Info);
   finally
-    FDriversCS.Leave;
     Info.Free;
   end;
 end;

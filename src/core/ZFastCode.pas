@@ -282,6 +282,12 @@ function IntToStr(Value: UInt64; Const Negative: Boolean = False): String; overl
 
 { Integer convertion in Raw and Unicode Strings}
 function IntToRaw(Value: Integer): RawByteString; overload;  //keep always this one @first pos because of the Ansi-Delphi faster BASM code (the int64 version call the 32bit within range)
+
+procedure IntToRaw(Value: Integer; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
+procedure IntToRaw(Value: Cardinal; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
+procedure IntToRaw(Value: Int64; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
+procedure IntToRaw(Value: UInt64; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
+
 function IntToRaw(const Value: ShortInt): RawByteString; overload;
 function IntToRaw(Value: Byte; Const Negative: Boolean = False): RawByteString; overload;
 function IntToRaw(const Value: SmallInt): RawByteString; overload;
@@ -3059,6 +3065,166 @@ begin
       Result := IntToRaw(Cardinal(Value));
 end;
 {$IFEND}
+
+procedure IntToRaw(Value: Integer; Buf: PAnsiChar; PEnd: PPAnsiChar = nil);
+begin
+  if Value < 0 then begin
+    PByte(Buf)^ := Byte('-');
+    IntToRaw(Cardinal(Abs(Value)), Buf+1, PEnd);
+  end else
+    IntToRaw(Cardinal(Value), Buf, PEnd);
+end;
+
+procedure IntToRaw(Value: Cardinal; Buf: PAnsiChar; PEnd: PPAnsiChar = nil);
+var
+  J, K           : Cardinal;
+  Digits         : Integer;
+begin
+  if Value >= 10000 then
+    if Value >= 1000000 then
+      if Value >= 100000000
+      then Digits := 9 + Ord(Value >= 1000000000)
+      else Digits := 7 + Ord(Value >= 10000000)
+    else Digits := 5 + Ord(Value >= 100000)
+  else if Value >= 100 then
+    Digits := 3 + Ord(Value >= 1000)
+  else
+    Digits := 1 + Ord(Value >= 10);
+  if PEnd <> nil then
+    PEnd^ := Buf + Digits;
+  if Digits > 2 then
+    repeat
+      J  := Value div 100;           {Dividend div 100}
+      K  := J * 100;
+      K  := Value - K;               {Dividend mod 100}
+      Value  := J;                   {Next Dividend}
+      Dec(Digits, 2);
+      PWord(@PByteArray(Buf)[Digits])^ := TwoDigitLookupW[K];
+    until Digits <= 2;
+  if Digits = 2
+  then PWord(Buf)^ := TwoDigitLookupW[Value]
+  else PByte(Buf)^ := Value or Byte('0');
+end;
+
+procedure IntToRaw(Value: Int64; Buf: PAnsiChar; PEnd: PPAnsiChar = nil);
+begin
+  if Value < 0 then begin
+    PByte(Buf)^ := Byte('-');
+    IntToRaw(UInt64(Value*-1), Buf+1, PEnd);
+  end else
+    IntToRaw(UInt64(Value), Buf, PEnd);
+end;
+
+procedure IntToRaw(Value: UInt64; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
+//fast pure pascal by John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//function IntToStr64_JOH_PAS_5(Value: Int64): string;
+type
+  PByteArray = ^TByteArray;
+  TByteArray = array[0..32767] of Byte;
+var
+  J64, K64           : UInt64;
+  I32, J32, K32, L32 : Cardinal;
+  Digits             : Byte;
+begin
+  if (Value <= High(Cardinal)) then begin{Within Integer Range - Use Faster Integer Version}
+    IntToRaw(Cardinal(Value), Buf, PEnd);
+    Exit;
+  end;
+  if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000){$ELSE}100000000000000{$ENDIF} then
+    if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000){$ELSE}10000000000000000{$ENDIF} then
+      if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF} then
+        {$IFDEF NEED_TYPED_UINT64_CONSTANTS}
+        if Value >= UInt64(10000000000000000000) then
+        {$ELSE !NEED_TYPED_UINT64_CONSTANTS}
+          {$IFDEF SUPPORTS_UINT64_CONSTS}
+          if Value >= 10000000000000000000 then
+          {$ELSE !SUPPORTS_UINT64_CONSTS}
+          if Value >= $8AC7230489E80000 then
+          {$ENDIF SUPPORTS_UINT64_CONSTS}
+        {$ENDIF NEED_TYPED_UINT64_CONSTANTS}
+          Digits := 20
+        else
+          Digits := 19
+      else
+        Digits := 17 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF})
+    else
+      Digits := 15 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000){$ELSE}1000000000000000{$ENDIF})
+  else
+    if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000){$ELSE}1000000000000{$ENDIF} then
+      Digits := 13 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000){$ELSE}10000000000000{$ENDIF})
+    else
+      if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000){$ELSE}10000000000{$ENDIF} then
+        Digits := 11 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000){$ELSE}100000000000{$ENDIF})
+      else
+        Digits := 10;
+  if PEnd <> nil then
+    PEnd^ := Buf + Digits;
+  if Digits = 20 then
+  begin
+    PByte(Buf)^ := Ord('1');
+    Inc(Buf);
+    {$IFDEF FPC} //fatal error?
+    Value := Value - {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000000){$ELSE}10000000000000000000{$ENDIF};
+    {$ELSE}
+    Dec(Value, {$IFDEF SUPPORTS_UINT64_CONSTS}10000000000000000000{$ELSE}$8AC7230489E80000{$ENDIF});
+    {$ENDIF}
+    Dec(Digits);
+  end;
+  if Digits > 17 then
+  begin {18 or 19 Digits}
+    if Digits = 19 then
+    begin
+      PByte(Buf)^ := Ord('0');
+      while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF} do
+        begin
+          Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF});
+          Inc(Buf^);
+        end;
+      Inc(Buf);
+    end;
+    PByte(Buf)^ := Ord('0');
+    while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF} do
+      begin
+        Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF});
+        Inc(Buf^);
+      end;
+    Inc(Buf);
+    Digits := 17;
+  end;
+  J64 := Value div {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000){$ELSE}100000000{$ENDIF}; {Very Slow prior to Delphi 2005}
+  K64 := Value - (J64 * {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000){$ELSE}100000000{$ENDIF}); {Remainder = 0..99999999}
+  I32 := K64;
+  J32 := I32 div 100;
+  K32 := J32 * 100;
+  K32 := I32 - K32;
+  I32 := J32 div 100;
+  L32 := I32 * 100;
+  L32 := J32 - L32;
+  Dec(Digits, 4);
+  J32 := (TwoDigitLookupW[K32] shl 16) + TwoDigitLookupW[L32];
+  PCardinal(@PByteArray(Buf)[Digits])^ := J32;
+  J32 := I32 div 100;
+  K32 := J32 * 100;
+  K32 := I32 - K32;
+  Dec(Digits, 4);
+  I32 := (TwoDigitLookupW[K32] shl 16) + TwoDigitLookupW[J32];
+  PCardinal(@PByteArray(Buf)[Digits])^ := I32;
+  I32 := J64; {Dividend now Fits within Integer - Use Faster Version}
+  if Digits > 2 then
+    repeat
+      J32 := I32 div 100;
+      K32 := J32 * 100;
+      K32 := I32 - K32;
+      I32 := J32;
+      Dec(Digits, 2);
+      PWord(@PByteArray(Buf)[Digits])^ := TwoDigitLookupW[K32];
+    until Digits <= 2;
+  if Digits = 2 then
+    PWord(@PByteArray(Buf)[Digits-2])^ := TwoDigitLookupW[I32]
+  else
+    PByte(Buf)^ := I32 or ord('0');
+end;
 
 function IntToRaw(Value: UInt64; Const Negative: Boolean = False): RawByteString;
 //fast pure pascal by John O'Harrow see:

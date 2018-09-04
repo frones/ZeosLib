@@ -571,7 +571,7 @@ function CompareDateTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer
 begin
   Result := NullsCompareMatrix[Null1, Null2];
   if Result = BothNotNull then
-    else Result := Ord(PDateTime(V1)^ > PDateTime(V2)^)-Ord(PDateTime(V1)^ < PDateTime(V2)^);
+    Result := Ord(PDateTime(V1)^ > PDateTime(V2)^)-Ord(PDateTime(V1)^ < PDateTime(V2)^);
 end;
 
 function CompareDateTime_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
