@@ -93,12 +93,6 @@ const
   // Same as Statement.ChunkSize, size of chunks for retrieving/sending long data
   // depends to your network speed
   DSProps_ChunkSize = 'chunk_size'; //default is a very low value of 4KB
-  // Type: INT
-  // how many executions must be done to realy prepare the statement?
-  // JDBC does prepare on after 4 executions.
-  // A negative value means never prepare.
-  // actually used on MySQL and PostresSQL only
-  DSProps_MinExecCntBeforePrepare = 'MinExecCountBeforePrepare';
 
   { Parameters for datasets }
 
@@ -281,7 +275,7 @@ const
   ConnProps_Rolename = 'rolename';
   // Type: BOOLEAN
   // Enable the wire compression in Firebird 3.0 and above.
-  // This option generates isc_dpb_config string 
+  // This option generates isc_dpb_config string
   ConnProps_WireCompression = 'WireCompression';
   // Type: STR
   // Create new DB on the given path on connect
@@ -336,7 +330,7 @@ const
 
 {$IFDEF ENABLE_SQLITE}
   // Type: BOOLEAN
-  // Encrypt connection                      
+  // Encrypt connection
   ConnProps_Encrypted = 'encrypted';
   // Type: INT
   // Sets sqlite3_busy_timeout(), refer to SQLite manual for details
@@ -353,7 +347,7 @@ const
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
 
-  // Type: BOOLEAN                        
+  // Type: BOOLEAN
   // If set, directly use value of date/time/datetime fields. Otherwise, use intermediate string
   DSProps_BindDoubleDateTimeValues = 'BindDoubleDateTimeValues';
   // Type: BOOLEAN
@@ -422,6 +416,15 @@ const
   ConnProps_MaxConnections = 'MaxConnections';
   ConnProps_Wait = 'Wait';
 {$ENDIF}
+
+{$IF defined (ENABLE_MYSQL) or defined (ENABLE_POSTGRESQL)}
+  // Type: INT
+  // how many executions must be done to realy prepare the statement?
+  // JDBC does prepare on after 4 executions.
+  // A negative value means never prepare.
+  // actually default is 2 executions before prepare the stmt on the server
+  DSProps_MinExecCntBeforePrepare = 'MinExecCountBeforePrepare';
+{$IFEND}
 
 implementation
 
