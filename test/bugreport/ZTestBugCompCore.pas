@@ -874,9 +874,7 @@ begin
   Query.SQL.Text := 'select p_id, p_name, p_resume from people'
     + ' where p_id < 4 order by p_id';
 
-  if StartsWith(LowerCase(Connection.Protocol), 'interbase')
-    or StartsWith(LowerCase(Connection.Protocol), 'firebird')
-    or StartsWith(LowerCase(Connection.Protocol), 'oracle') then
+  if ProtocolType in [protInterbase, protFirebird, protOracle] then
   begin
     try
       Query.Open;
