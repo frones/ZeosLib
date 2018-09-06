@@ -223,8 +223,7 @@ end;
 }
 procedure TZAbstractODBCConnection.ClearWarnings;
 begin
-  if Assigned(fLastWarning) then
-    FreeAndNil(fLastWarning);
+  FreeAndNil(fLastWarning);
 end;
 
 {**

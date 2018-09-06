@@ -917,12 +917,10 @@ end;
 destructor TZAbstractStatement.Destroy;
 begin
   Close;
-  if Assigned(FBatchQueries) then
-    FreeAndNil(FBatchQueries);
+  FreeAndNil(FBatchQueries);
   FConnection.DeregisterStatement(Self);
   FConnection := nil;
-  if Assigned(FInfo) then
-    FreeAndNil(FInfo);
+  FreeAndNil(FInfo);
   inherited Destroy;
 end;
 

@@ -399,8 +399,7 @@ begin
         except
           on E: Exception do
           begin
-            if Assigned(Statement) then
-              Statement := nil;
+            Statement := nil;
             Action := DoOnError(I, E);
             if Action = eaFail then
               RaiseSQLException(E)

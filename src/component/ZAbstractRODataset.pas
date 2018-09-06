@@ -6981,8 +6981,7 @@ end;
 {$IFNDEF TFIELDDEF_HAS_CHILDEFS}
 destructor TZFieldDef.Destroy;
 begin
-  if Assigned(FChildDefs) then
-    FreeAndNil(FChildDefs);
+  FreeAndNil(FChildDefs);
   inherited Destroy;
 end;
 
