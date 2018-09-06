@@ -1867,7 +1867,7 @@ begin
     Query.Close;
   finally
     Query.Free;
-    if Assigned(UpdateSQL) then FreeAndNil(UpdateSQL);
+    FreeAndNil(UpdateSQL);
   end;
 end;
 
@@ -2052,10 +2052,9 @@ begin
       end;
     end;
   finally
-    Query.Free;
-    SL.Free;
-    if Assigned(StrStream1) then
-      StrStream1.Free;
+    FreeAndNil(Query);
+    FreeAndNil(SL);
+    FreeAndNil(StrStream1);
   end;
 end;
 

@@ -202,12 +202,11 @@ begin
     TempStream := ResultSet.GetBinaryStreamByName('B_IMAGE');
     CheckEquals(ImageStream, TempStream);
   finally
-    if Assigned(TempStream) then
-      TempStream.Free;
+    FreeAndNil(TempStream);
     ResultSet.Close;
 
-    TextStream.Free;
-    ImageStream.Free;
+    FreeAndNil(TextStream);
+    FreeAndNil(ImageStream);
 
     Statement.Close;
   end;

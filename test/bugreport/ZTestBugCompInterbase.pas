@@ -993,8 +993,7 @@ begin
     end;
   finally
     SL.free;
-    If Assigned(StrStream1) then
-      StrStream1.Free;
+    FreeAndNil(StrStream1);
     Query.Free;
   end;
 end;

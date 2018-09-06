@@ -1248,7 +1248,7 @@ begin
     Connection.ExecuteDirect('drop function pc_chartoint(chartoconvert character varying)');
     Connection.ExecuteDirect('delete from blob_values where b_id = 261');
   finally
-    if Assigned(Query) then FreeAndNil(Query);
+    FreeAndNil(Query);
     Connection.Disconnect;
   end;
 end;
@@ -1276,7 +1276,7 @@ begin
     Check(TestSF274_GotNotified, 'Didn''t get PostgreSQL notification.');
   finally
     Connection.Disconnect;
-    if Assigned(Listener) then FreeAndNil(Listener);
+    FreeAndNil(Listener);
   end;
 end;
 

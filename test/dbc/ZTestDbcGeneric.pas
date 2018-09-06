@@ -1015,12 +1015,10 @@ begin
       DeleteRow;
     end;
   finally
-    BinStream.Free;
-    if Assigned(BinStream1) then
-      BinStream1.Free;
-    StrStream.Free;
-    if Assigned(StrStream1) then
-      StrStream1.Free;
+    FreeAndNil(BinStream);
+    FreeAndNil(BinStream1);
+    FreeAndNil(StrStream);
+    FreeAndNil(StrStream1);
   end;
 
 

@@ -647,8 +647,7 @@ begin
       Close;
     end;
   finally
-    if assigned(BinStreamA) then
-      BinStreamA.Free;
+    FreeAndNil(BinStreamA);
   end;
 end;
 
@@ -1758,8 +1757,7 @@ begin
     TestReadCachedLobs(BinLob, aOptions, BinStreamE, Query);
     TestReadCachedLobs(BinLob, aOptions, BinStreamE, ROQuery);
   finally
-    if assigned(BinStreamE) then
-      BinStreamE.Free;
+    FreeAndNil(BinStreamE);
     Query.SQL.Text := 'DELETE FROM blob_values where b_id >= '+ IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
@@ -1770,8 +1768,7 @@ begin
       try
         ROQuery.Free;
       finally
-        if Assigned(TempConnection) then
-          TempConnection.Free;
+        FreeAndNil(TempConnection);
       end;
     end;
   end;
@@ -2082,14 +2079,10 @@ begin
       Close;
     end;
   finally
-    if assigned(BinStreamA) then
-      BinStreamA.Free;
-    if assigned(BinStreamE) then
-      BinStreamE.Free;
-    if assigned(TextStreamA) then
-      TextStreamA.Free;
-    if assigned(TextStreamE) then
-      TextStreamE.Free;
+    FreeAndNil(BinStreamA);
+    FreeAndNil(BinStreamE);
+    FreeAndNil(TextStreamA);
+    FreeAndNil(TextStreamE);
     Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
@@ -2097,8 +2090,7 @@ begin
         TempConnection.Commit;
     finally
       Query.Free;
-      if Assigned(TempConnection) then
-        TempConnection.Free;
+      FreeAndNil(TempConnection);
     end;
   end;
 end;
@@ -2514,8 +2506,7 @@ begin
         TempConnection.Commit;
     finally
       Query.Free;
-      if Assigned(TempConnection) then
-        TempConnection.Free;
+      FreeAndNil(TempConnection);
     end;
   end;
 end;

@@ -277,12 +277,10 @@ begin
       Close;
     end;
   finally
-    BinStream.Free;
-    StrStream.Free;
-    if Assigned(BinStream1) then
-      BinStream1.Free;
-    if Assigned(StrStream1) then
-      StrStream1.Free;
+    FreeAndNil(BinStream);
+    FreeAndNil(StrStream);
+    FreeAndNil(BinStream1);
+    FreeAndNil(StrStream1);
   end;
 end;
 

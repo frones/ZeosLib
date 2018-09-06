@@ -223,10 +223,9 @@ begin
       except
       end;
     end;
-    Query.Free;
-    if Assigned(BinFileStream) then
-      BinFileStream.Free;
-    BinaryStream.Free;
+    FreeAndNil(Query);
+    FreeAndNil(BinFileStream);
+    FreeAndNil(BinaryStream);
   end;
 end;
 

@@ -313,8 +313,7 @@ end;
 }
 destructor TZTestConfiguration.Destroy;
 begin
-  if Assigned(FConfigFile) then
-    ConfigFile.Free;
+  FreeAndNil(FConfigFile);
 
   inherited Destroy;
 end;
@@ -375,8 +374,7 @@ var
   ScriptPath: String;
 begin
   { Reads a configuration file from the disk. }
-  if Assigned(FConfigFile) then
-    FConfigFile.Free;
+  FreeAndNil(FConfigFile);
   ConfigFileName := GetConfigFileName;
   if not FileExists(ConfigFileName)
   then raise Exception.Create('Config file doesn''t exist!');
@@ -653,13 +651,7 @@ initialization
   TestConfig.LoadConfig;
   TestConfig.ActivateMemCheck;
 finalization
-  if Assigned(TestConfig) then
-    TestConfig.Free;
-  if Assigned(SQLMonitor) then
-    begin
-     {$IFNDEF FPC}
-     SQLMonitor.Free;
-     {$ENDIF}
-    end;
+  FreeAndNil(TestConfig);
+  FreeAndNil(SQLMonitor);
 end.
 
