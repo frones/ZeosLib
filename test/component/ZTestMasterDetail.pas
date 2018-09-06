@@ -311,8 +311,8 @@ begin
 end;
 
 const
-  Str1: ZWideString = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430; // Abrakadabra in Cyrillic letters
-  Str2: ZWideString = 'An address of ' + #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430; // the same
+  Str1: ZWideString = #$0422#$0435#$0441#$0442; // "Test" in Cyrillic letters
+  Str2: ZWideString = 'An address of ' + #$0422#$0435#$0441#$0442; // the same
 
 procedure TZTestMasterDetailCaseMBCs.TestClientDatasetWithForeignKey_ApplyUpdates;
 var
