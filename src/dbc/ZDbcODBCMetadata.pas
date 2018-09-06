@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZClasses, ZDbcIntfs, ZDbcMetadata, ZURL,
+  ZDbcIntfs, ZDbcMetadata, ZURL,
   ZCompatibility, ZDbcConnection, ZPlainODBCDriver, ZDbcODBCCon;
 
 type

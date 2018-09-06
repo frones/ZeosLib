@@ -205,8 +205,8 @@ procedure FlushBuff(var Buf: TUCS2Buff; var Result: ZWideString); overload;
 
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken,
-  ZConnProperties {$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
+uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken
+  {$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
 
 {**
   Resolves a connection protocol and raises an exception with protocol
