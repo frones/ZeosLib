@@ -60,7 +60,6 @@ uses
   {$IFDEF ENABLE_DBLIB}      , ZDbcDbLibMetadata {$ENDIF}
   {$IFDEF ENABLE_INTERBASE}  , ZDbcInterbase6Metadata {$ENDIF}
   {$IFDEF ENABLE_MYSQL}      , ZDbcMySqlMetadata {$ENDIF}
-  {$IFDEF ENABLE_ODBC}       , ZDbcODBCMetadata {$ENDIF}
   {$IFDEF ENABLE_OLEDB}      , ZDbcOleDBMetadata {$ENDIF}
   {$IFDEF ENABLE_ORACLE}     , ZDbcOracleMetadata {$ENDIF}
   {$IFDEF ENABLE_POSTGRESQL} , ZDbcPostgreSqlMetadata {$ENDIF}
@@ -515,8 +514,9 @@ end;
 // instances of this class can't be created
 type
   TDummyDbcConnection = class(TZAbstractDbcConnection)
-  private
+  public
     procedure InternalClose; override;
+  protected
     procedure InternalCreate; override;
   public
     Metadata: TZAbstractDatabaseMetadata; // arrrgh... need to keep object pointer
@@ -543,7 +543,9 @@ procedure TZGenericTestDbcMetadata.TestMetadataKeyWords;
 type
   TZAbstractDatabaseInfoClass = class of TZAbstractDatabaseInfo;
 var
-  IConn: IZConnection;
+  // we need this to keep reference to connection. Otherwise bad things happen!
+  // maybe smb could manage to avoid use of this variable
+  {%H-}IConn: IZConnection;
   AbsConn: TDummyDbcConnection;
   Url: TZUrl;
 
@@ -554,16 +556,20 @@ var
       (KeyWord <> '') and (Pos(' ', KeyWord) = 0);
   end;
 
+  procedure CheckKeywordsList(KeyWords: TStringList; const DBIClass: string);
+  var
+    i: Integer;
+  begin
+    for i := 0 to KeyWords.Count - 1 do
+      Check(CheckKeyword(KeyWords[i]), Format('%s. Keyword incorrect: "%s"', [DBIClass, KeyWords[i]]));
+  end;
+
   procedure CheckKeywords(DatabaseInfoClass: TZAbstractDatabaseInfoClass);
   var
     DBI: IZDatabaseInfo;
-    KeyWords: TStringList;
-    i: Integer;
   begin
     DBI := DatabaseInfoClass.Create(AbsConn.Metadata);
-    KeyWords := DBI.GetIdentifierQuoteKeywordsSorted;
-    for i := 0 to KeyWords.Count - 1 do
-      Check(CheckKeyword(KeyWords[i]), Format('%s. Keyword incorrect: "%s"', [DatabaseInfoClass.ClassName, KeyWords[i]]));
+    CheckKeywordsList(DBI.GetIdentifierQuoteKeywordsSorted, DatabaseInfoClass.ClassName);
   end;
 
 begin
@@ -575,11 +581,16 @@ begin
     {$IFDEF ENABLE_DBLIB}      CheckKeywords(TZDbLibDatabaseInfo);      {$ENDIF}
     {$IFDEF ENABLE_INTERBASE}  CheckKeywords(TZInterbase6DatabaseInfo); {$ENDIF}
     {$IFDEF ENABLE_MYSQL}      CheckKeywords(TZMySqlDatabaseInfo);      {$ENDIF}
-    {$IFDEF ENABLE_ODBC}       CheckKeywords(TZAbstractDatabaseInfo);   {$ENDIF}
     {$IFDEF ENABLE_OLEDB}      CheckKeywords(TZOleDBDatabaseInfo);      {$ENDIF}
     {$IFDEF ENABLE_ORACLE}     CheckKeywords(TZOracleDatabaseInfo);     {$ENDIF}
     {$IFDEF ENABLE_POSTGRESQL} CheckKeywords(TZPostgreSqlDatabaseInfo); {$ENDIF}
     {$IFDEF ENABLE_SQLITE}     CheckKeywords(TZSqLiteDatabaseInfo);     {$ENDIF}
+    {$IFDEF ENABLE_ODBC}
+    // ODBC requests list of key words from server so we need active connection to run the test
+    if ProtocolType = protODBC then
+      with Connection.GetMetadata.GetDatabaseInfo do
+        CheckKeywordsList(GetIdentifierQuoteKeywordsSorted, ClassName);
+    {$ENDIF}
   finally
     FreeAndNil(Url);
   end;
