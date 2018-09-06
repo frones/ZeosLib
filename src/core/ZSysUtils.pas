@@ -794,11 +794,11 @@ function HexToBin(Hex: PAnsiChar; Bin: PByte; BinBytes: Integer): Boolean;
    Creates a memory stream with copy of data in buffer.
    If buffer contains no data, creates an empty stream.
 }
-function StreamFromData(Buffer: Pointer; Size: Integer): TStream; overload;
-function StreamFromData(const AString: ZWideString): TStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
-function StreamFromData(const Bytes: TBytes): TStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function StreamFromData(Buffer: Pointer; Size: Integer): TMemoryStream; overload;
+function StreamFromData(const AString: ZWideString): TMemoryStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function StreamFromData(const Bytes: TBytes): TMemoryStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
-function StreamFromData(const AString: RawByteString): TStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function StreamFromData(const AString: RawByteString): TMemoryStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 {$ENDIF}
 
 implementation
@@ -5281,25 +5281,25 @@ end;
    Creates a memory stream with copy of data in buffer.
    If buffer contains no data, creates an empty stream.
 }
-function StreamFromData(Buffer: Pointer; Size: Integer): TStream;
+function StreamFromData(Buffer: Pointer; Size: Integer): TMemoryStream;
 begin
   Result := TMemoryStream.Create;
   Result.Write(Buffer^, Size);
   Result.Position := 0;
 end;
 
-function StreamFromData(const AString: ZWideString): TStream;
+function StreamFromData(const AString: ZWideString): TMemoryStream;
 begin
   Result := StreamFromData(Pointer(AString), Length(AString)*SizeOf(WideChar));
 end;
 
-function StreamFromData(const Bytes: TBytes): TStream;
+function StreamFromData(const Bytes: TBytes): TMemoryStream;
 begin
   Result := StreamFromData(Pointer(Bytes), Length(Bytes));
 end;
 
 {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
-function StreamFromData(const AString: RawByteString): TStream;
+function StreamFromData(const AString: RawByteString): TMemoryStream;
 begin
   Result := StreamFromData(Pointer(AString), Length(AString));
 end;
