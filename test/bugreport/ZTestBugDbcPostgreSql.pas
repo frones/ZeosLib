@@ -238,10 +238,8 @@ begin
 
   StrStream := TMemoryStream.Create;
   StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
-  StrStream.Size := 1024;
   BinStream := TMemoryStream.Create;
   BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
-  BinStream.Size := 1024;
 
   StrStream1 := nil;
   BinStream1 := nil;

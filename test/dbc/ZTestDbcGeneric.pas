@@ -567,12 +567,10 @@ begin
 
       BinStream := TMemoryStream.Create;
       BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
-      BinStream.Size := 1024;
       SetBinaryStream(Insert_p_picture_Index, BinStream);
 
       StrStream := TMemoryStream.Create;
       StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
-      StrStream.Size := 1024;
       SetAsciiStream(Insert_p_resume_Index, StrStream);
       if ProtocolType = protPostgre then //PQExecParams can't convert str to smallint
         SetNull(Insert_p_redundant_Index, stSmall)
@@ -925,10 +923,8 @@ begin
   Sql := 'SELECT * FROM people where p_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   StrStream := TMemoryStream.Create;
   StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
-  StrStream.Size := 1024;
   BinStream := TMemoryStream.Create;
   BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
-  BinStream.Size := 1024;
   StrStream1 := nil;
   BinStream1 := nil;
   try

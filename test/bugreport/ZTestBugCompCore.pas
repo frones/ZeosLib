@@ -269,11 +269,9 @@ begin
   try
     TextStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/gnu.txt');
     TextStream.Position := 0;
-    TextStream.Size := 1024;
 
     BinaryStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/coffee.bmp');
     BinaryStream.Position := 0;
-    BinaryStream.Size := 1024;
 
     { Remove previously created record }
     Query.SQL.Text := 'DELETE FROM people WHERE p_id=:id';
