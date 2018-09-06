@@ -65,7 +65,7 @@ uses
     DBCtrls,
     {$ENDIF}
   {$ENDIF}
-  ZCompatibility, ZEncoding;
+  ZCompatibility, ZEncoding, ZDbcProperties;
 type
 
   {** Implements a bug report test case for SQLite components. }
@@ -101,7 +101,7 @@ var
 begin
   Query := CreateQuery;
   try
-    Query.Properties.Values['Undefined_Varchar_AsString_Length'] := '255';
+    Query.Properties.Values[DSProps_UndefVarcharAsStringLength] := '255';
     Query.SQL.Text := 'select p_name ||'',''|| p_name from people';
     Query.Open;
     CheckEquals(1, Query.FieldCount);

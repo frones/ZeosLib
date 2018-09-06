@@ -115,7 +115,7 @@ const
   DSProps_ResetCodePage = 'ResetCodePage';
 {$IFEND}
 
-{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_ODBC)}
+{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB)}
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
 
@@ -151,6 +151,18 @@ const
   // Type: BOOLEAN
   // Use trusted connection
   ConnProps_TrustedConnection = 'Trusted_Connection';
+  // Type: INT
+  // Execution timeout in seconds
+  DSProps_StatementTimeOut = 'StatementTimeOut';
+{$IFEND}
+
+{$IF defined (ENABLE_MYSQL) or defined (ENABLE_POSTGRESQL)}
+  // Type: INT
+  // how many executions must be done to realy prepare the statement?
+  // JDBC does prepare on after 4 executions.
+  // A negative value means never prepare.
+  // actually default is 2 executions before prepare the stmt on the server
+  DSProps_MinExecCntBeforePrepare = 'MinExecCountBeforePrepare';
 {$IFEND}
 
   { Parameters specific to a single DBC }
@@ -257,7 +269,8 @@ const
   // Is Oid type treated as Large Object handle (blob) or as a regular integer
   DSProps_OidAsBlob = 'OidAsBlob';
   // Type: BOOLEAN
-  DSProps_ExexAsync = 'execute_async';
+  // If set, queries will be executed async-ly
+  DSProps_ExecAsync = 'execute_async';
   // Type: BOOLEAN
   // fetch row by row from Server -> do not cache the results in libpq
   DSProps_SingleRowMode = 'SingleRowMode';
@@ -398,6 +411,9 @@ const
   // Type: STR
   // ?
   ConnProps_Initial_Catalog = 'Initial Catalog';
+  // Type: BOOLEAN
+  // ?
+  DSProps_InMemoryDataLobs = 'InMemoryDataLobs';
 {$ENDIF}
 
 {$IFDEF ENABLE_ODBC}
@@ -407,6 +423,9 @@ const
   // Type: SQL_DRIVER_COMPLETE | SQL_DRIVER_PROMPT | SQL_DRIVER_COMPLETE_REQUIRED
   // Refer to ODBC manual for details
   ConnProps_DriverCompletion = 'DriverCompletion';
+  // Type: BOOLEAN
+  // If set, more info about columns will be retrieved
+  DSProps_EnhancedColumnInfo = 'enhanced_column_info';
 {$ENDIF}
 
 {$IFDEF ENABLE_POOLED}
@@ -417,14 +436,11 @@ const
   ConnProps_Wait = 'Wait';
 {$ENDIF}
 
-{$IF defined (ENABLE_MYSQL) or defined (ENABLE_POSTGRESQL)}
-  // Type: INT
-  // how many executions must be done to realy prepare the statement?
-  // JDBC does prepare on after 4 executions.
-  // A negative value means never prepare.
-  // actually default is 2 executions before prepare the stmt on the server
-  DSProps_MinExecCntBeforePrepare = 'MinExecCountBeforePrepare';
-{$IFEND}
+{$IFDEF ENABLE_ADO}
+  // Type: BOOLEAN
+  // ?
+  DSProps_UseOLEUpdateParams = 'use_ole_update_params';
+{$ENDIF}
 
 implementation
 

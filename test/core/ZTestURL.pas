@@ -93,7 +93,7 @@ type
 
 implementation
 
-uses ZCompatibility;
+uses ZCompatibility, ZConnProperties;
 
 procedure TZURLTest.TestAssignToUrl;
 var
@@ -250,8 +250,8 @@ begin
     ZURL.HostName := '127.0.0.1';
     ZURL.Port := 3050;
     ZURL.Database := 'model';
-    ZURL.Properties.Values['username'] := 'admin';
-    ZURL.Properties.Values['password'] := 'admin';
+    ZURL.Properties.Values[ConnProps_Username] := 'admin';
+    ZURL.Properties.Values[ConnProps_Password] := 'admin';
     ZURL.Properties.Values['prop1'] := 'prop1';
     ZURL.Properties.Values['prop2'] := 'prop2';
     CheckEquals('zdbc:mysql://127.0.0.1:3050/model?username=admin;password=admin;prop1=prop1;prop2=prop2', ZURL.URL);
@@ -272,8 +272,8 @@ begin
     ZURL.Protocol := 'ado';
     ZURL.HostName := 'localhost';
     ZURL.Database := 'database';
-    ZURL.Properties.Values['UID'] := 'admin';
-    ZURL.Properties.Values['PWD'] := '123';
+    ZURL.Properties.Values[ConnProps_UID] := 'admin';
+    ZURL.Properties.Values[ConnProps_PWD] := '123';
     ZURL.Properties.Values['role'] := 'rolename';
     CheckEquals('admin', ZURL.UserName);
     CheckEquals('123', ZURL.Password);
@@ -389,7 +389,7 @@ begin
     ZURLIn.Port := 3050;
     ZURLIn.Database := 'data/;\base';
     ZURLIn.Password := 'pass/;\word';
-    ZURLIn.Properties.Values['UID'] := 'ad/;\min';
+    ZURLIn.Properties.Values[ConnProps_UID] := 'ad/;\min';
     ZURLIn.Properties.Values['role'] := 'role/;\name';
     CheckEquals('data/;\base', ZURLIn.Database);
     CheckEquals('ad/;\min', ZURLIn.UserName);

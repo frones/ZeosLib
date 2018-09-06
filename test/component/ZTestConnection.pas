@@ -76,7 +76,7 @@ type
 
 implementation
 
-uses Classes, ZDbcIntfs;
+uses Classes, ZDbcIntfs, ZConnProperties;
 
 { TZTestExecSQLCase }
 
@@ -186,18 +186,18 @@ begin
     CheckNotEquals('', Connection.DbcConnection.GetMetadata.GetDatabaseInfo.GetIdentifierQuoteString);
     Connection.Disconnect;
 
-    Connection.Properties.Add('identifier_quotes=');
+    Connection.Properties.Add(ConnProps_IdentifierQuotes+'=');
     Connection.Connect;
     CheckEquals('', Connection.DbcConnection.GetMetadata.GetDatabaseInfo.GetIdentifierQuoteString);
     Connection.Disconnect;
-    Connection.Properties.Delete(Connection.Properties.IndexOfName('identifier_quotes'));
+    Connection.Properties.Delete(Connection.Properties.IndexOfName(ConnProps_IdentifierQuotes));
 
-    Connection.Properties.Values['identifier_quotes'] := '{}';
+    Connection.Properties.Values[ConnProps_IdentifierQuotes] := '{}';
     Connection.Connect;
     CheckEquals('{}', Connection.DbcConnection.GetMetadata.GetDatabaseInfo.GetIdentifierQuoteString);
     Connection.Disconnect;
   finally
-    Connection.Properties.Delete(Connection.Properties.IndexOfName('identifier_quotes'));
+    Connection.Properties.Delete(Connection.Properties.IndexOfName(ConnProps_IdentifierQuotes));
   end;
 end;
 

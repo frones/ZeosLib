@@ -1717,7 +1717,7 @@ begin
       TempConnection.Protocol := Connection.Protocol;
       TempConnection.Catalog  := Connection.Catalog;
       TempConnection.Properties.Text := Connection.Properties.Text;
-      TempConnection.Properties.Add('oidasblob=true');
+      TempConnection.Properties.Values[DSProps_OidAsBlob] := StrTrue;
       TempConnection.TransactIsolationLevel := tiReadCommitted;
       TempConnection.AutoCommit := False;    //https://www.postgresql.org/message-id/002701c49d7e%240f059240%24d604460a%40zaphod
       TempConnection.Connect;
@@ -1953,7 +1953,7 @@ begin
       TempConnection.Protocol := Connection.Protocol;
       TempConnection.Catalog  := Connection.Catalog;
       TempConnection.Properties.Text := Connection.Properties.Text;
-      TempConnection.Properties.Add('oidasblob=true');
+      TempConnection.Properties.Values[DSProps_OidAsBlob] := StrTrue;
       TempConnection.TransactIsolationLevel := tiReadCommitted;
       TempConnection.AutoCommit := False;    //https://www.postgresql.org/message-id/002701c49d7e%240f059240%24d604460a%40zaphod
       TempConnection.Connect;
@@ -2416,7 +2416,7 @@ begin
       TempConnection.Protocol := Connection.Protocol;
       TempConnection.Catalog  := Connection.Catalog;
       TempConnection.Properties.Text := Connection.Properties.Text;
-      TempConnection.Properties.Add('oidasblob=true');
+      TempConnection.Properties.Values[DSProps_OidAsBlob] := StrTrue;
       TempConnection.TransactIsolationLevel := tiReadCommitted;
       TempConnection.AutoCommit := False;    //https://www.postgresql.org/message-id/002701c49d7e%240f059240%24d604460a%40zaphod
       TempConnection.Connect;

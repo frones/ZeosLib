@@ -172,16 +172,16 @@ begin
   FAdoCommand.CommandText := WSQL;
   FAdoConnection := Connection as IZAdoConnection;
   FAdoCommand._Set_ActiveConnection(FAdoConnection.GetAdoConnection);
-  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //by default 128KB
-  FUseOle := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'use_ole_update_params', 'true')); //not set by default on 7.2
+  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072); //by default 128KB
+  FUseOle := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_UseOLEUpdateParams, 'true')); //not set by default on 7.2
 end;
 
 constructor TZAdoPreparedStatement.Create(const Connection: IZConnection;
   const Info: TStrings);
 begin
   Create(Connection, '', Info);
-  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //by default 128KB
-  FUseOle := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'use_ole_update_params', ''));
+  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072); //by default 128KB
+  FUseOle := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_UseOLEUpdateParams, ''));
 end;
 
 destructor TZAdoPreparedStatement.Destroy;

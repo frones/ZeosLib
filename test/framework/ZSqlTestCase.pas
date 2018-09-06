@@ -342,7 +342,7 @@ implementation
 
 uses
   Math,
-  ZSysUtils, ZEncoding, ZTestConfig, ZSqlProcessor, ZAbstractRODataset;
+  ZSysUtils, ZEncoding, ZTestConfig, ZSqlProcessor, ZAbstractRODataset, ZDbcProperties;
 
 function PropPos(const PropDynArray: TStringDynArray; const AProp: String): Integer; overload;
 var
@@ -1538,7 +1538,7 @@ begin
   Result := TZQuery.Create(nil);
   Result.Connection := FConnection;
   { do not check for Include_RealPrepared, because it's allways true if set! }
-  if StrToBoolEx(FConnection.Properties.Values['preferprepared']) then
+  if StrToBoolEx(FConnection.Properties.Values[DSProps_PreferPrepared]) then
     Result.Options := Result.Options + [doPreferPrepared];
 end;
 
@@ -1547,7 +1547,7 @@ begin
   Result := TZReadOnlyQuery.Create(nil);
   Result.Connection := FConnection;
   { do not check for Include_RealPrepared, because it's allways true if set! }
-  if StrToBoolEx(FConnection.Properties.Values['preferprepared']) then
+  if StrToBoolEx(FConnection.Properties.Values[DSProps_PreferPrepared]) then
     Result.Options := Result.Options + [doPreferPrepared];
 end;
 
@@ -1556,7 +1556,7 @@ begin
   Result := TZTable.Create(nil);
   Result.Connection := FConnection;
   { do not check for Include_RealPrepared, because it's allways true if set! }
-  if StrToBoolEx(FConnection.Properties.Values['preferprepared']) then
+  if StrToBoolEx(FConnection.Properties.Values[DSProps_PreferPrepared]) then
     Result.Options := Result.Options + [doPreferPrepared];
 end;
 

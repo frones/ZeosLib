@@ -119,7 +119,7 @@ type
 
 implementation
 
-uses ZTestCase, ZDbcMySQL, ZSysUtils;
+uses ZTestCase, ZDbcMySQL, ZSysUtils, ZDbcProperties;
 
 { TZTestCompMySQLBugReport }
 
@@ -230,7 +230,7 @@ begin
   for B := (Connection.DbcConnection as IZMySQLConnection).SupportsFieldTypeBit downto False do begin
     if Connection.Connected then
       Connection.Disconnect;
-    Connection.Properties.Values['MySQL_FieldType_Bit_1_IsBoolean']:= ZSysUtils.BoolStrs[B];
+    Connection.Properties.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean]:= ZSysUtils.BoolStrs[B];
     Query := CreateQuery;
     try
       // Query.RequestLive := True;
@@ -291,7 +291,7 @@ begin
   for B := (Connection.DbcConnection as IZMySQLConnection).SupportsFieldTypeBit downto False do begin
     if Connection.Connected then
       Connection.Disconnect;
-    Connection.Properties.Values['MySQL_FieldType_Bit_1_IsBoolean']:= ZSysUtils.BoolStrs[B];
+    Connection.Properties.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean]:= ZSysUtils.BoolStrs[B];
     Query := CreateQuery;
     try
       // Query.RequestLive := True;
@@ -1104,7 +1104,7 @@ begin
   Connection.Connect;
   for B := (Connection.DbcConnection as IZMySQLConnection).SupportsFieldTypeBit downto False do begin
     Connection.Disconnect;
-    Connection.Properties.Values['MySQL_FieldType_Bit_1_IsBoolean']:= ZSysUtils.BoolStrs[B];
+    Connection.Properties.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean]:= ZSysUtils.BoolStrs[B];
     Query := CreateQuery;
     try
       Query.SQL.Text := 'DELETE FROM table886841';
@@ -1147,7 +1147,7 @@ begin
   Connection.Connect;
   for B := (Connection.DbcConnection as IZMySQLConnection).SupportsFieldTypeBit downto False do begin
     Connection.Disconnect;
-    Connection.Properties.Values['MySQL_FieldType_Bit_1_IsBoolean']:= ZSysUtils.BoolStrs[B];
+    Connection.Properties.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean]:= ZSysUtils.BoolStrs[B];
     Query := CreateQuery;
     try
       Query.SQL.Text := 'SELECT a.fld1, b.fld2, 1 + 2 as fld2, a.fld2,'
@@ -1418,7 +1418,7 @@ begin
   Connection.Connect;
   for B := (Connection.DbcConnection as IZMySQLConnection).SupportsFieldTypeBit downto False do begin
     Connection.Disconnect;
-    Connection.Properties.Values['MySQL_FieldType_Bit_1_IsBoolean']:= ZSysUtils.BoolStrs[B];
+    Connection.Properties.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean]:= ZSysUtils.BoolStrs[B];
     Query := CreateQuery;
     try
       Query.SQL.Text := 'SELECT id, fld1, fld2, fld1 as fld3,'
@@ -1652,7 +1652,7 @@ begin
   for B := True downto False do begin
     if Connection.Connected then
       Connection.Disconnect;
-    Connection.Properties.Values['MySQL_FieldType_Bit_1_IsBoolean']:= ZSysUtils.BoolStrs[B];
+    Connection.Properties.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean]:= ZSysUtils.BoolStrs[B];
 
     Query := CreateReadOnlyQuery;
     Query.Connection.Connect;
@@ -1791,7 +1791,7 @@ begin
 
   Query := CreateQuery;
   try
-    Query.Properties.Values['ValidateUpdateCount'] := 'False';
+    Query.Properties.Values[DSProps_ValidateUpdateCount] := 'False';
     Query.CachedUpdates := False;
 
     { Remove previously created record }

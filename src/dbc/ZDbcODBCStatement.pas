@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZCompatibility, ZDbcIntfs, ZDbcStatement, ZVariant,
+  ZCompatibility, ZDbcIntfs, ZDbcStatement, ZVariant, ZDbcProperties,
   ZDbcODBCCon, ZPlainODBCDriver;
 
 type
@@ -258,9 +258,9 @@ begin
   fPlainDriver := TZODBC3PlainDriver(Connection.GetPlainDriver.GetInstance);
   fStreamSupport := Connection.ODBCVersion >= {%H-}Word(SQL_OV_ODBC3_80);
   fPHDBC := @ConnectionHandle;
-  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //by default 128KB
-  FEnhancedColInfo := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'enhanced_column_info', 'True'));
-  fStmtTimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'StatementTimeOut', ''), SQL_QUERY_TIMEOUT_DEFAULT); //execution timeout in seconds by default 1
+  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072); //by default 128KB
+  FEnhancedColInfo := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_EnhancedColumnInfo, 'True'));
+  fStmtTimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_StatementTimeOut, ''), SQL_QUERY_TIMEOUT_DEFAULT); //execution timeout in seconds by default 1
   fMoreResultsIndicator := TZMoreResultsIndicator(Ord(not Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets));
   fBindRowWise := False;
 end;

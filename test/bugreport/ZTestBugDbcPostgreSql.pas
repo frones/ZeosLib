@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs,
-  ZSqlTestCase, ZCompatibility, ZDbcPostgreSql, ZTestConsts, ZURL;
+  ZSqlTestCase, ZCompatibility, ZDbcPostgreSql, ZTestConsts, ZURL, ZDbcProperties;
 
 type
 
@@ -122,7 +122,7 @@ var
 begin
   if SkipForReason(srClosedBug) then Exit;
 
-  Url := GetConnectionUrl('oidasblob=true');
+  Url := GetConnectionUrl(DSProps_OidAsBlob + '=' + StrTrue);
   Connection := DriverManager.GetConnection(Url.URL);
   Url.Free;
   //Connection := DriverManager.GetConnectionWithLogin(
@@ -133,7 +133,7 @@ begin
   ResultSet.Close;
   Statement.Close;
 
-  Url := GetConnectionUrl('oidasblob=false');
+  Url := GetConnectionUrl(DSProps_OidAsBlob + '=' + StrFalse);
   Connection := DriverManager.GetConnection(Url.URL);
   Url.Free;
 //  Connection := DriverManager.GetConnectionWithLogin(
@@ -368,7 +368,7 @@ var
 begin
   if SkipForReason(srClosedBug) then Exit;
 
-  Url := GetConnectionUrl('oidasblob=true');
+  Url := GetConnectionUrl(DSProps_OidAsBlob + '=' + StrTrue);
   Connection := DriverManager.GetConnection(Url.URL);
   Url.Free;
   Connection.SetTransactionIsolation(tiReadCommitted);

@@ -67,7 +67,7 @@ uses
 {$ENDIF}
   ZConnection, ZDataset,
   ZDbcMySQL, ZDbcPostgreSQL, ZDbcInterbase6, ZDbcCache, ZSqlUpdate, ZSqlMetadata,
-  ZDbcIntfs;
+  ZDbcIntfs, ZDbcProperties;
 
 type
   {** Defines the main form of the application. }
@@ -275,11 +275,9 @@ end;
 procedure TfrmMain.cbxOidAsBlobClick(Sender: TObject);
 begin
   if cbxOidAsBlob.Checked then
-    Connection.Properties.Add('oidasblob=true')
+    Connection.Properties.Values[DSProps_OidAsBlob] := 'true'
   else
     Connection.Properties.Clear;
 end;
 
 end.
-
-

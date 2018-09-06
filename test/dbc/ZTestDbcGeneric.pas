@@ -56,8 +56,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZSqlTestCase,
-  ZCompatibility, Types;
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Types, ZDbcIntfs, ZSqlTestCase,
+  ZCompatibility, ZDbcProperties;
 
 type
   {** Implements a test case for . }
@@ -1493,7 +1493,7 @@ var
   end;
 begin
   Info := TStringList.Create;
-  Info.Add('preferprepared=True');
+  Info.Values[DSProps_PreferPrepared] := StrTrue;
   Use_S_BIT := Not (
     ProtocolType in [protSQLite, protADO, protMSSQL, protSyBase, protFreeTDS, protASA, protOleDB, protODBC]
   );
