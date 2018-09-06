@@ -75,8 +75,6 @@ type
     procedure CheckIntegerValuesEx;
     procedure CheckStringValuesEx;
     procedure CheckBlobValuesEx;
-
-    function CompareStreams(Stream1, Stream2: TStream): boolean;
   protected
     {procedures for test select data}
     procedure TestQuery; virtual;
@@ -114,36 +112,6 @@ uses
 
 
 { TZAbstractQueryCase }
-
-{**
-   Comapre data of two streams
-   @param The First stream
-   @param The Second stream
-   @return true if data equally and false if not equally
-}
-function TZAbstractQueryCase.CompareStreams(Stream1,
-  Stream2: TStream): boolean;
-var
-  Size: integer;
-  Buffer1, Buffer2: Pointer;
-begin
-  Size := Stream1.Size;
-  GetMem(Buffer1, Size);
-  GetMem(Buffer2, Size);
-
-  FillChar(Buffer1^, Size, 1);
-  FillChar(Buffer2^, Size, 1);
-
-  Stream1.Position := 0;
-  Stream2.Position := 0;
-  Stream1.ReadBuffer(Buffer1^, Size);
-  Stream2.ReadBuffer(Buffer2^, Size);
-
-  Result := CompareMem(Buffer1, Buffer2, Size);
-
-  FreeMem(Buffer1, Size);
-  FreeMem(Buffer2, Size);
-end;
 
 //======================================================================
 // Methods for test query records
@@ -188,7 +156,7 @@ begin
     FieldStream := TMemoryStream.Create;
     (Fields[2] as TBlobField).SaveToStream(FieldStream);
     {$ENDIF}
-    Check(CompareStreams(FieldStream, AsciiStream), 'Compare field and file data');
+    CheckEquals(FieldStream, AsciiStream, 'Compare field and file data');
     FieldStream.Free;
 
     {$IFDEF WITH_DBTABLES}
@@ -197,7 +165,7 @@ begin
     FieldStream := TMemoryStream.Create;
     (Fields[3] as TBlobField).SaveToStream(FieldStream);
     {$ENDIF}
-    Check(CompareStreams(FieldStream, AsciiStream), 'Compare file and dfiel data');
+    CheckEquals(FieldStream, AsciiStream, 'Compare file and dfiel data');
     FieldStream.Free;
   end;
   AsciiStream.Free;
@@ -410,7 +378,7 @@ begin
     FieldStream := TMemoryStream.Create;
     (Fields[2] as TBlobField).SaveToStream(FieldStream);
     {$ENDIF}
-    Check(CompareStreams(FieldStream, AsciiStream), 'Compare field and file data');
+    CheckEquals(FieldStream, AsciiStream, 'Compare field and file data');
     FieldStream.Free;
 
     {$IFDEF WITH_DBTABLES}
@@ -419,7 +387,7 @@ begin
     FieldStream := TMemoryStream.Create;
     (Fields[3] as TBlobField).SaveToStream(FieldStream);
     {$ENDIF}
-    Check(CompareStreams(FieldStream, AsciiStream), 'Compare file and dfiel data');
+    CheckEquals(FieldStream, AsciiStream, 'Compare file and dfiel data');
     FieldStream.Free;
   end;
   AsciiStream.Free;
