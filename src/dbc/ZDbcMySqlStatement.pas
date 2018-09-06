@@ -633,7 +633,7 @@ begin
   FBindAgain := True;
   ReAllocMem(Bind^.indicators, ArrayCount);
   Bind^.indicator_address^ := Pointer(Bind^.indicators);
-  FillChar(Pointer(Bind^.indicators)^, ArrayCount, STMT_INDICATOR_NONE);
+  FillChar(Pointer(Bind^.indicators)^, ArrayCount, Char(STMT_INDICATOR_NONE));
   Bind^.Iterations := ArrayCount;
   BufferSize := 0;
   case SQLType of
@@ -935,7 +935,7 @@ begin
   end;
   aArray := BindList[ParameterIndex].Value;
   if Pointer(Value) = nil
-  then FillChar(Bind^.indicators^, ArrayCount, MySQLNullIndicatorMatrix[False, FUseDefaults])
+  then FillChar(Bind^.indicators^, ArrayCount, Char(MySQLNullIndicatorMatrix[False, FUseDefaults]))
   else for i := 0 to ArrayCount -1 do
     Bind^.indicators[I] :=  MySQLNullIndicatorMatrix[IsNullFromArray(aArray, I), FUseDefaults];
 end;

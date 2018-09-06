@@ -448,18 +448,8 @@ end;
 }
 function TZSQLProcessor.CreateStatement(const SQL: string;
   Properties: TStrings): IZPreparedStatement;
-var
-  Temp: TStrings;
 begin
-  Temp := TStringList.Create;
-  try
-    if Assigned(Properties) then
-      Temp.AddStrings(Properties);
-
-    Result := FConnection.DbcConnection.PrepareStatementWithParams(SQL, Temp);
-  finally
-    Temp.Free;
-  end;
+  Result := FConnection.DbcConnection.PrepareStatementWithParams(SQL, Properties);
 end;
 
 {**
