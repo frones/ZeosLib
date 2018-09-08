@@ -200,6 +200,9 @@ procedure ToBuff(Value: AnsiChar; var Buf: TRawBuff; var Result: RawByteString);
 procedure ToBuff(const Value: ZWideString; var Buf: TUCS2Buff; var Result: ZWideString); overload;
 procedure ToBuff(Value: WideChar; var Buf: TUCS2Buff; var Result: ZWideString); overload;
 
+procedure ReplaceOrAddLastChar(cOld, cNew: AnsiChar; var Buf: TRawBuff; var Result: RawByteString); overload;
+procedure ReplaceOrAddLastChar(cOld, cNew: WideChar; var Buf: TUCS2Buff; var Result: ZWideString); overload;
+
 procedure FlushBuff(var Buf: TRawBuff; var Result: RawByteString); overload;
 procedure FlushBuff(var Buf: TUCS2Buff; var Result: ZWideString); overload;
 
@@ -1249,6 +1252,40 @@ begin
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos shl 1);
     Buf.Pos := 0;
   end;
+end;
+
+procedure ReplaceOrAddLastChar(cOld, cNew: AnsiChar; var Buf: TRawBuff; var Result: RawByteString);
+var P: PAnsiChar;
+begin
+  P := nil;
+  if (Buf.Pos > 0) and (Buf.Buf[Buf.Pos-1] = cOld) then
+    P := @Buf.Buf[Buf.Pos-1]
+  else if (Buf.Pos = 0) and (Pointer(Result) <> nil) then begin
+    P := Pointer(Result);
+    if PByte(P + Length(Result) -1)^ = Ord(cOld)
+    then P := P+Length(Result) -1
+    else P := nil;
+  end;
+  if P = nil
+  then ToBuff(cNew, Buf, Result)
+  else PByte(P)^ := Ord(cNew);
+end;
+
+procedure ReplaceOrAddLastChar(cOld, cNew: WideChar; var Buf: TUCS2Buff; var Result: ZWideString);
+var P: PWideChar;
+begin
+  P := nil;
+  if (Buf.Pos > 0) and (Buf.Buf[Buf.Pos-1] = cOld) then
+    P := @Buf.Buf[Buf.Pos-1]
+  else if (Buf.Pos = 0) and (Pointer(Result) <> nil) then begin
+    P := Pointer(Result);
+    if PWord(P + Length(Result) -1)^ = Ord(cOld)
+    then P := P+Length(Result) -1
+    else P := nil;
+  end;
+  if P = nil
+  then ToBuff(cNew, Buf, Result)
+  else PWord(P)^ := Ord(cNew);
 end;
 
 end.
