@@ -141,7 +141,7 @@ type
     BindHandle: POCIBind;
     {binding values}
     Data:      Pointer;
-    oDataType:  ub4;
+    oDataType:  ub2;
     oDataSize:  ub2;
     oIndicatorArray: PSB2Array; //indicates NULL ...
     oDataSizeArray: PUB2Array; //value length for strings/bytes

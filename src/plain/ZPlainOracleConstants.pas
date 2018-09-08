@@ -94,7 +94,6 @@ type
   { Handle Types }
   POCIHandle = Pointer;
   PPOCIHandle = ^Pointer;
-  PPOCIEnv = ^POCIEnv;
   POCIEnv = POCIHandle;
   POCIServer = POCIHandle;
   POCIError = POCIHandle;
@@ -671,7 +670,7 @@ const
   {****************** Describe Handle Parameter Attributes *****************}
 
   { Attributes common to Columns and Stored Procs }
-  OCI_ATTR_DATA_SIZE      = 1;    // ub4 The maximum size of the type attribute.
+  OCI_ATTR_DATA_SIZE      = 1;    // ub2 The maximum size of the type attribute.
                                   // This length is returned in bytes and not
                                   // characters for strings and raws.
                                   // It returns 22 for NUMBERs
