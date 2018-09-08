@@ -127,8 +127,8 @@ type
     DescriptorType: sb4; //holds our descriptor type we use
     curelen:      ub4; //the actual number of elements
 
-    Precision: Integer; //field.precision used 4 out params
-    Scale:     Integer; //field.scale used 4 out params
+    Precision: sb2; //field.precision used 4 out params
+    Scale:     sb1; //field.scale used 4 out params
   end;
   PZOCIParamBinds = ^TZOCIParamBinds;
   TZOCIParamBinds = array[0..MAX_SQLVAR_LIMIT] of TZOCIParamBind; //just a nice dubugging range
@@ -150,8 +150,8 @@ type
     DescriptorType: sb4;
     TypeCode:  ub2;
     Length:    NativeUInt; //indicate size of Data
-    Precision: Integer; //field.precision
-    Scale:     Integer; //field.scale
+    Precision: sb2; //field.precision
+    Scale:     sb1; //field.scale
     ColType:   TZSQLType; //Zeos SQLType
     lobs:      TInterfaceDynArray; //temporary interface
     CodePage:  Word; //ColumnCodePage
@@ -242,7 +242,10 @@ procedure UnloadOracleVars(var Variables: PZSQLVars);
 function ConvertOracleTypeToSQLType(const TypeName: string;
   Precision, Scale: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
 
-{**
+function OracleTypeToSQLType(DataType, DataSize: SB2; Precision, Scale: ub1;
+  CtrlsCPType: TZControlsCodePage): TZSQLType;
+
+  {**
   Checks for possible SQL errors.
   @param PlainDriver an Oracle plain driver.
   @param Handle an Oracle error handle.
@@ -696,7 +699,7 @@ begin
               end;
             end;
             WriteTempBlob := TZOracleBlob.Create(PlainDriver, nil, 0,
-              OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
+              OracleConnection.GetServiceContextHandle, OracleConnection.GetErrorHandle,
               PPOCIDescriptor(Variable^.Data)^, ChunkSize, ConSettings);
             WriteTempBlob.CreateBlob;
             WriteTempBlob.WriteLobFromBuffer(Buffer, Len);
@@ -709,7 +712,7 @@ begin
             begin
               WriteTempBlob := TZOracleClob.Create(PlainDriver,
                 nil, 0, OracleConnection.GetConnectionHandle,
-                OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
+                OracleConnection.GetServiceContextHandle, OracleConnection.GetErrorHandle,
                 PPOCIDescriptor(Variable^.Data)^, ChunkSize, ConSettings,
                 ConSettings^.ClientCodePage^.CP);
               WriteTempBlob.CreateBlob;
@@ -731,7 +734,7 @@ begin
                 Buffer := Pointer(AnsiTemp);
               end;
               WriteTempBlob := TZOracleClob.Create(PlainDriver, nil, 0,
-                OracleConnection.GetConnectionHandle, OracleConnection.GetContextHandle,
+                OracleConnection.GetConnectionHandle, OracleConnection.GetServiceContextHandle,
                 OracleConnection.GetErrorHandle, PPOCIDescriptor(Variable^.Data)^,
                 ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
               WriteTempBlob.CreateBlob;
@@ -996,7 +999,7 @@ begin
               begin
                 WriteTempBlob := TZOracleClob.Create(PlainDriver,
                   nil, 0, OracleConnection.GetConnectionHandle,
-                  OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
+                  OracleConnection.GetServiceContextHandle, OracleConnection.GetErrorHandle,
                   {%H-}PPOCIDescriptor({%H-}NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^,
                   ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
                 WriteTempBlob.CreateBlob;
@@ -1009,7 +1012,7 @@ begin
                     TempBlob.Length, Connection.GetConSettings);
                 LobBuffer := Pointer(AnsiTemp);
                 WriteTempBlob := TZOracleClob.Create(PlainDriver, nil, 0,
-                  OracleConnection.GetConnectionHandle, OracleConnection.GetContextHandle,
+                  OracleConnection.GetConnectionHandle, OracleConnection.GetServiceContextHandle,
                   OracleConnection.GetErrorHandle, {%H-}PPOCIDescriptor({%H-}NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^,
                   ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
                 WriteTempBlob.CreateBlob;
@@ -1023,7 +1026,7 @@ begin
             begin
               TempBlob := ZInterfaceArray[I] as IZBLob;
               WriteTempBlob := TZOracleBlob.Create(PlainDriver, nil, 0,
-                OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
+                OracleConnection.GetServiceContextHandle, OracleConnection.GetErrorHandle,
                 {%H-}PPOCIDescriptor({%H-}NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^,
                 ChunkSize, ConSettings);
               WriteTempBlob.CreateBlob;
@@ -1111,6 +1114,61 @@ begin
       stString: Result := stUnicodeString;
       stAsciiStream: if not (TypeNameUp = 'LONG') then Result := stUnicodeStream; //fix: http://zeos.firmos.at/viewtopic.php?t=3530
     end;
+end;
+
+function OracleTypeToSQLType(DataType, DataSize: SB2; Precision, Scale: ub1;
+  CtrlsCPType: TZControlsCodePage): TZSQLType;
+begin
+  Result := stUnknown; //init
+  case DataType of
+    SQLT_AFC, SQLT_CHR, SQLT_VCS, SQLT_AVC, SQLT_STR, SQLT_VST:
+      Result := stString;
+    SQLT_NUM: //unsigned char[21](binary) see: http://docs.oracle.com/cd/B19306_01/appdev.102/b14250/oci03typ.htm
+      begin
+        {by default convert number to double}
+        Result := stDouble;
+        if (Scale = 0) and (Precision <> 0) then
+          //No digits found, but possible signed or not/overrun of converiosn? No way to find this out -> just use a "save" type
+          case Precision of
+            0..2: Result := stShort; // -128..127
+            3..4: Result := stSmall; // -32768..32767
+            5..9: Result := stInteger; // -2147483648..2147484647
+            10..19: Result := stLong; // -9223372036854775808..9223372036854775807
+            //skip 20 can be UInt64 or Int64  assume Double values instead
+            21: Result := stULong; //0..18446744073709551615
+          end;
+      end;
+    SQLT_BFLOAT, SQLT_BDOUBLE, SQLT_IBFLOAT, SQLT_IBDOUBLE:
+      Result := stDouble;
+    SQLT_INT, _SQLT_PLI:
+      Result := stInteger;
+    SQLT_LNG, SQLT_LVC:
+      Result := stAsciiStream;
+    SQLT_RID, SQLT_RDD:
+      Result := stString;
+    SQLT_DAT, SQLT_DATE:
+      { oracle DATE precission - 1 second}
+       Result := stTimestamp;
+    SQLT_TIME, SQLT_TIME_TZ:
+      Result := stTime;
+    SQLT_TIMESTAMP, SQLT_TIMESTAMP_TZ, SQLT_TIMESTAMP_LTZ, SQLT_INTERVAL_DS, SQLT_INTERVAL_YM:
+      Result := stTimestamp;
+    SQLT_BIN, SQLT_LBI:
+      if DataSize = 0
+      then Result := stBinaryStream
+      else Result := stBytes;
+    SQLT_CLOB: Result := stAsciiStream;
+    SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
+        Result := stBinaryStream;
+    SQLT_NTY: ;
+    else
+        Result := stUnknown;
+  end;
+  if (CtrlsCPType = cCP_UTF16) and (Result in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then
+    if Result = stString
+    then Result := stUnicodeString
+    else if not (DataType in [SQLT_LNG]) then
+        Result := stUnicodeStream;
 end;
 
 {**
@@ -1363,7 +1421,7 @@ var
     FConnection := Connection as IZOracleConnection;
 
     CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
-      PlainDriver.OCIDescribeAny(FConnection.GetContextHandle,
+      PlainDriver.OCIDescribeAny(FConnection.GetServiceContextHandle,
         FConnection.GetErrorHandle, obj.tdo, 0, OCI_OTYPE_PTR, OCI_DEFAULT,
         OCI_PTYPE_TYPE, FConnection.GetDescribeHandle),
       lcOther, 'OCIDescribeAny(OCI_PTYPE_TYPE) of OCI_OTYPE_PTR', ConSettings);
