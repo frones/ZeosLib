@@ -499,9 +499,9 @@ type
   TZAbstractCallableStatement2 = class(TZAbstractPreparedStatement2)
   private
     FStoredProcName: String;
-    FCallExecKind: TZCallExecKind;
     FBindAgain: Boolean;
   protected
+    FCallExecKind: TZCallExecKind;
     FExecStatements: array[TZCallExecKind] of TZAbstractPreparedStatement2;
     function CreateExecutionStatement(Mode: TZCallExecKind; const StoredProcName: String): TZAbstractPreparedStatement2; virtual; abstract;
     function IsFunction: Boolean;
@@ -637,7 +637,7 @@ type
     FTokenMatchIndex, FParamsCnt: Integer;
     FInParamTypes: TZSQLTypeArray;
     FInParamDefaultValues: TStringDynArray;
-    FMinExecCount2Prepare, FInParamCount: Integer;
+    FInParamCount: Integer;
     function GetClientVariantManger: IZClientVariantManager;
     function SupportsSingleColumnArrays: Boolean; virtual;
     procedure PrepareInParameters; virtual;
@@ -668,7 +668,6 @@ type
     property CountOfQueryParams: Integer read fParamsCnt;
     property ArrayCount: ArrayLenInt read FInitialArrayCount;
     property ExecutionCount: Integer read FExecCount;
-    property MinExecCount2Prepare: Integer read FMinExecCount2Prepare;
     property SupportsDMLBatchArrays: Boolean read FSupportsDMLBatchArrays;
     procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
@@ -1806,8 +1805,6 @@ begin
   inherited Create(Connection, Info);
   FClientVariantManger := Connection.GetClientVariantManager;
   FSupportsDMLBatchArrays := Connection.GetMetadata.GetDatabaseInfo.SupportsArrayBindings;
-  //JDBC prepares after 4th execution
-  FMinExecCount2Prepare := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_MinExecCntBeforePrepare, '2'), 2);
   {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
 end;
 
@@ -2092,7 +2089,6 @@ begin
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
-  Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
 end;
 
 {**
@@ -2109,7 +2105,6 @@ function TZAbstractPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   { Logging Execution }
   DriverManager.LogMessage(lcExecPrepStmt,Self);
-  Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
   Result := -1;
 end;
 
@@ -2786,7 +2781,6 @@ begin
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
-  Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
 end;
 
 procedure TZAbstractPreparedStatement.Close;
