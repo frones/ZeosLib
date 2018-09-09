@@ -1025,7 +1025,7 @@ begin
   end;
 
   BindInParameters;
-  if FStatementType in [OCI_STMT_SELECT, OCI_STMT_BEGIN] then begin
+  if FStatementType in [OCI_STMT_SELECT{, OCI_STMT_BEGIN}] then begin
     LastUpdateCount := -1;
     { Executes the statement and gets a resultset. }
     ResultSet := CreateResultSet;
