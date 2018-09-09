@@ -121,6 +121,8 @@ type
     procedure TestSF279;
     procedure TestSF286_getBigger;
     procedure TestSF286_getSmaller;
+    procedure TestSF270_1;
+    procedure TestSF270_2;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
