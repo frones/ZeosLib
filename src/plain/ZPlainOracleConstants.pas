@@ -94,6 +94,7 @@ type
   { Handle Types }
   POCIHandle = Pointer;
   PPOCIHandle = ^Pointer;
+  PPOCIEnv = ^POCIEnv;
   POCIEnv = POCIHandle;
   POCIServer = POCIHandle;
   POCIError = POCIHandle;
@@ -147,7 +148,7 @@ type
   POCIDuration = ^OCIDuration;
   OCITypeEncap = ub2;      //enum!
   OCITypeMethodFlag = ub2; //enum!
-  OCITypeParamMode = ub2;  //enum!
+  OCITypeParamMode = sb4;  //enum!
   OCIObjectPropId = ub1;
   OCIRefreshOpt = ub2;     //enum!
 
@@ -384,12 +385,12 @@ const
   OCI_ATTR_HW_MARK              = 117; // high-water mark
   OCI_ATTR_TYPE_SCHEMA          = 118; // type's schema name
   OCI_ATTR_TIMESTAMP            = 119; // timestamp of the object
-  OCI_ATTR_NUM_ATTRS            = 120; // number of sttributes
-  OCI_ATTR_NUM_PARAMS           = 121; // number of parameters
-  OCI_ATTR_OBJID                = 122; // object id for a table or view
-  OCI_ATTR_PTYPE                = 123; // type of info described by
+  OCI_ATTR_NUM_ATTRS            = 120; // ub2: number of attributes
+  OCI_ATTR_NUM_PARAMS           = 121; // ub2: number of parameters
+  OCI_ATTR_OBJID                = 122; // ub4: object id for a table or view
+  OCI_ATTR_PTYPE                = 123; // ub1: Type of information described by the parameter
   OCI_ATTR_PARAM                = 124; // parameter descriptor
-  OCI_ATTR_OVERLOAD_ID          = 125; // overload ID for funcs and procs
+  OCI_ATTR_OVERLOAD_ID          = 125; // ub2: overload ID for funcs and procs
   OCI_ATTR_TABLESPACE           = 126; // table name space
   OCI_ATTR_TDO                  = 127; // TDO of a type
   OCI_ATTR_LTYPE                = 128; // list type
@@ -670,12 +671,17 @@ const
   {****************** Describe Handle Parameter Attributes *****************}
 
   { Attributes common to Columns and Stored Procs }
-  OCI_ATTR_DATA_SIZE      = 1;    // maximum size of the data
-  OCI_ATTR_DATA_TYPE      = 2;    // the SQL type of the column/argument
+  OCI_ATTR_DATA_SIZE      = 1;    // ub2 The maximum size of the type attribute.
+                                  // This length is returned in bytes and not
+                                  // characters for strings and raws.
+                                  // It returns 22 for NUMBERs
+  OCI_ATTR_DATA_TYPE      = 2;    // ub2: the SQL type of the column/argument
   OCI_ATTR_DISP_SIZE      = 3;    // the display size
   OCI_ATTR_NAME           = 4;    // the name of the column/argument
-  OCI_ATTR_PRECISION      = 5;    // precision if number type
-  OCI_ATTR_SCALE          = 6;    // scale if number type
+  OCI_ATTR_PRECISION      = 5;    // ub1 for explicit describe (OCIDescribeAny)
+                                  // sb2 for implicit describe (stmt)
+                                  // precision if number type
+  OCI_ATTR_SCALE          = 6;    // sb1: scale if number type
   OCI_ATTR_IS_NULL        = 7;    // is it null ?
   OCI_ATTR_TYPE_NAME      = 8;    // name of the named data type or a package name for package private types
   OCI_ATTR_SCHEMA_NAME    = 9;    // the schema name
@@ -695,7 +701,7 @@ const
   OCI_ATTR_OVERLOAD                  = 210;  // is this position overloaded
   OCI_ATTR_LEVEL                     = 211;  // level for structured types
   OCI_ATTR_HAS_DEFAULT               = 212;  // has a default value
-  OCI_ATTR_IOMODE                    = 213;  // in, out inout
+  OCI_ATTR_IOMODE                    = 213;  // OCITypeParamMode(sb4): in, out inout
   OCI_ATTR_RADIX                     = 214;  // returns a radix
   OCI_ATTR_NUM_ARGS                  = 215;  // total number of arguments
 

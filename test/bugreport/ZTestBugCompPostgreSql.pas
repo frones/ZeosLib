@@ -64,7 +64,7 @@ uses
     {$ENDIF}
   {$ENDIF}
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZAbstractRODataset,
-  ZConnection, ZDbcIntfs, ZSqlTestCase, ZSqlUpdate,
+  ZConnection, ZDbcIntfs, ZSqlTestCase, ZSqlUpdate, ZDbcProperties,
   ZCompatibility, SysUtils, ZTestConsts, ZSqlProcessor, ZSqlMetadata;
 
 type
@@ -888,7 +888,7 @@ var
 
   procedure TestMantis229_AsString;
   begin
-    Connection.Properties.Values['Undefined_Varchar_AsString_Length'] := '255';
+    Connection.Properties.Values[DSProps_UndefVarcharAsStringLength] := '255';
     Connection.Connected := False;
     Query := CreateQuery;
     try
@@ -898,7 +898,7 @@ var
       CheckEquals('Mantis229', Query.Fields[0].AsString);
     finally
       Query.Free;
-      Connection.Properties.Values['Undefined_Varchar_AsString_Length'] := '';
+      Connection.Properties.Values[DSProps_UndefVarcharAsStringLength] := '';
     end;
   end;
 
@@ -1040,7 +1040,7 @@ end;
 procedure TZTestCompPostgreSQLBugReportMBCs.TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);
 const
   QuoteString1 = '\'', 1 --''';
-  QuoteString2: ZWideString = 'ТестЁЙ\000';
+  QuoteString2: ZWideString = #$0422#$0435#$0441#$0442#$0401#$0419'\000'; // Test in Russian + a couple of random Cyrillic letters
 begin
   Query.ParamChar := ':';
   Query.ParamCheck := True;
@@ -1066,7 +1066,7 @@ begin
 //??  if SkipForReason(srClosedBug) then Exit;
 
   TempConnection := CreateDatasetConnection;
-  TempConnection.Properties.Add('standard_conforming_strings=ON');
+  TempConnection.Properties.Values[ConnProps_StdConformingStrings] := 'ON';
   Query := TZQuery.Create(nil);
   Query.Connection := TempConnection;
   try
@@ -1085,7 +1085,7 @@ begin
   if SkipForReason(srClosedBug) then Exit;
 
   TempConnection := CreateDatasetConnection;
-  TempConnection.Properties.Add('standard_conforming_strings=OFF');
+  TempConnection.Properties.Values[ConnProps_StdConformingStrings] := 'OFF';
   Query := TZQuery.Create(nil);
   Query.Connection := TempConnection;
   try
@@ -1107,7 +1107,7 @@ begin
   if SkipForReason(srClosedBug) then Exit;
 
   TempConnection := CreateDatasetConnection;
-  TempConnection.Properties.Add('standard_conforming_strings=OFF');
+  TempConnection.Properties.Values[ConnProps_StdConformingStrings] := 'OFF';
   Query := TZQuery.Create(nil);
   TempConnection.Connect;
   Query.Connection := TempConnection;
@@ -1127,7 +1127,7 @@ begin
     Query.Close;
 
     TempConnection.Disconnect;
-    TempConnection.Properties.Add('standard_conforming_strings=ON');
+    TempConnection.Properties.Values[ConnProps_StdConformingStrings] := 'ON';
     TempConnection.Connect;
 
     Query.SQL.Text := 'select s_char||E''\n''||s_varchar from string_values where 1=1 and (s_varbit iLike :param)';
@@ -1151,7 +1151,7 @@ begin
   if SkipForReason(srClosedBug) then Exit;
 
   TempConnection := CreateDatasetConnection;
-  TempConnection.Properties.Add('standard_conforming_strings=OFF');
+  TempConnection.Properties.Values[ConnProps_StdConformingStrings] := 'OFF';
   Query := TZQuery.Create(nil);
   TempConnection.Connect;
   Query.Connection := TempConnection;
@@ -1160,7 +1160,7 @@ begin
     Query.ParamByName('user_id').AsInteger := 1; //royo reports: param not found???
     Query.SQL.Text := '';
     TempConnection.Disconnect;
-    TempConnection.Properties.Add('standard_conforming_strings=ON');
+    TempConnection.Properties.Values[ConnProps_StdConformingStrings] := 'ON';
     TempConnection.Connect;
     Query.Connection := TempConnection;
     Query.SQL.Text := 'select * from sys_user where user_id = :user_id';
@@ -1248,7 +1248,7 @@ begin
     Connection.ExecuteDirect('drop function pc_chartoint(chartoconvert character varying)');
     Connection.ExecuteDirect('delete from blob_values where b_id = 261');
   finally
-    if Assigned(Query) then FreeAndNil(Query);
+    FreeAndNil(Query);
     Connection.Disconnect;
   end;
 end;
@@ -1276,7 +1276,7 @@ begin
     Check(TestSF274_GotNotified, 'Didn''t get PostgreSQL notification.');
   finally
     Connection.Disconnect;
-    if Assigned(Listener) then FreeAndNil(Listener);
+    FreeAndNil(Listener);
   end;
 end;
 

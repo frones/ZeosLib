@@ -456,12 +456,6 @@ type
     function InternalLocate(const KeyFields: string; const KeyValues: Variant;
       Options: TLocateOptions): LongInt;
     function FindRecord(Restart, GoForward: Boolean): Boolean; override;
-    {$IFDEF FPC} // FPC has these methods virtual plainly returning False while on Delphi they use FindRecord
-    function FindFirst: Boolean; override;
-    function FindLast: Boolean; override;
-    function FindNext: Boolean; override;
-    function FindPrior: Boolean; override;
-    {$ENDIF}
     procedure SetFiltered(Value: Boolean); override;
     procedure SetFilterText(const Value: string); override;
     {$IFNDEF WITH_OBJECTVIEW}
@@ -531,6 +525,12 @@ type
     function RowsAffected: LongInt;
     function ParamByName(const Value: string): TParam;
 
+    {$IFDEF FPC} // FPC has these methods virtual plainly returning False while on Delphi they use FindRecord
+    function FindFirst: Boolean; override;
+    function FindLast: Boolean; override;
+    function FindNext: Boolean; override;
+    function FindPrior: Boolean; override;
+    {$ENDIF}
     function Locate(const KeyFields: string; const KeyValues: Variant;
       Options: TLocateOptions): Boolean; override;
     function Lookup(const KeyFields: string; const KeyValues: Variant;
@@ -6981,8 +6981,7 @@ end;
 {$IFNDEF TFIELDDEF_HAS_CHILDEFS}
 destructor TZFieldDef.Destroy;
 begin
-  if Assigned(FChildDefs) then
-    FreeAndNil(FChildDefs);
+  FreeAndNil(FChildDefs);
   inherited Destroy;
 end;
 

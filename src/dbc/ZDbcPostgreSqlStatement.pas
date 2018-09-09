@@ -98,6 +98,9 @@ type
     FPGArrayDMLStmts: array[TArrayDMLType] of TPGArrayDMLStmt;
     FParamNames: TRawByteStringDynArray;
     FOutParamCount: Integer;
+    FMinExecCount2Prepare: Integer; //how many executions must be done to fall into a real prepared mode?
+    FExecCount: Integer; //How often did we execute the stmt until we reached MinExecCount2Prepare?
+    FOrgSQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
     function CheckPrepareSwitchMode: Boolean;
     procedure InternalRealPrepare;
     function OIDToSQLType(Index: Integer; SQLType: TZSQLType): TZSQLType;
@@ -387,7 +390,7 @@ end;
 function TZAbstractPostgreSQLPreparedStatementV3.CheckPrepareSwitchMode: Boolean;
 begin
   Result := not Findeterminate_datatype and ((not FUseEmulatedStmtsOnly) or (ArrayCount > 0 )) and
-    (FRawPlanName = '') and (TokenMatchIndex <> -1) and ((ArrayCount > 0 ) or (ExecutionCount = MinExecCount2Prepare));
+    (FRawPlanName = '') and (TokenMatchIndex <> -1) and ((ArrayCount > 0 ) or (FExecCount = FMinExecCount2Prepare));
 end;
 
 {**
@@ -416,6 +419,8 @@ begin
   fPrepareCnt := 0;
   if FUseEmulatedStmtsOnly then
     FMinExecCount2Prepare := -1;
+  //JDBC prepares after 4th execution
+  FMinExecCount2Prepare := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_MinExecCntBeforePrepare, '2'), 2);
   fAsyncQueries := False;(* not ready yet! StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_ExexAsync, 'FALSE'))
     and Assigned(FplainDriver.PQsendQuery) and Assigned(FplainDriver.PQsendQueryParams) and
     Assigned(FplainDriver.PQsendQueryPrepared);*)
@@ -435,13 +440,15 @@ begin
       @Fres, CachedLob, ChunkSize, FUndefinedVarcharAsStringLength);
 
   NativeResultSet.SetConcurrency(rcReadOnly);
-  if GetResultSetConcurrency = rcUpdatable then
+  if (GetResultSetConcurrency = rcUpdatable) or fServerCursor then
   begin
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, Self.SQL, nil,
       ConSettings);
-    CachedResultSet.SetConcurrency(rcUpdatable);
-    CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
-      Self,  NativeResultSet.GetMetadata));
+    if (GetResultSetConcurrency = rcUpdatable) then begin
+      CachedResultSet.SetConcurrency(rcUpdatable);
+      CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
+        Self,  NativeResultSet.GetMetadata));
+    end;
     Result := CachedResultSet;
   end
   else
@@ -1075,7 +1082,10 @@ begin
   if not Assigned(FconnAddress^) then
     Exit;
   case Category of
-    pqExecute:
+    pqExecute: begin
+        { Logging Execution }
+        if DriverManager.HasLoggingListener then
+          DriverManager.LogMessage(lcExecute,Self);
         if fAsyncQueries then begin
           if (BindList.Capacity > 0) then begin
             if FplainDriver.PQsendQueryParams(FconnAddress^,
@@ -1104,6 +1114,9 @@ begin
                   FPlainDriver.PQclear(Result);
                   Findeterminate_datatype := True;
                   goto retryExecute;
+                end else begin
+                  Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
+                  CheckPrepareSwitchMode;
                 end;
             end else begin
   retryExecute:
@@ -1124,52 +1137,64 @@ begin
             HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
               lcExecute, ASQL, Result);
         end;
-    pqPrepare:
-      if fAsyncQueries then begin
-        if not FPlainDriver.PQsendPrepare(FconnAddress^, Pointer(FRawPlanName),
-           Pointer(FASQL), BindList.Count-FOutParamCount, Pointer(FPQParamOIDs)) = Ord(PGRES_COMMAND_OK) then
-          HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
-            lcExecute, ASQL, nil);
-      end else begin
-        Result := FPlainDriver.PQprepare(FconnAddress^, Pointer(FRawPlanName),
-          Pointer(SQL), BindList.Count-FOutParamCount, nil{Pointer(fParamOIDs)});
-        if Assigned(FPlainDriver.PQresultErrorField)
-        then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
-        else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
-        if (PError <> nil) and (PError^ <> #0) then
-          { check for indermine datatype error}
-          if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) <> 0) then
+      end;
+    pqPrepare: begin
+        { Logging Execution }
+        if DriverManager.HasLoggingListener then
+          DriverManager.LogMessage(lcPrepStmt,Self);
+        if fAsyncQueries then begin
+          if not FPlainDriver.PQsendPrepare(FconnAddress^, Pointer(FRawPlanName),
+             Pointer(FASQL), BindList.Count-FOutParamCount, Pointer(FPQParamOIDs)) = Ord(PGRES_COMMAND_OK) then
             HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
-              lcPrepStmt, ASQL, Result)
+              lcExecute, ASQL, nil);
+        end else begin
+          Result := FPlainDriver.PQprepare(FconnAddress^, Pointer(FRawPlanName),
+            Pointer(SQL), BindList.Count-FOutParamCount, nil{Pointer(fParamOIDs)});
+          if Assigned(FPlainDriver.PQresultErrorField)
+          then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
+          else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
+          if (PError <> nil) and (PError^ <> #0) then
+            { check for indermine datatype error}
+            if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) <> 0) then
+              HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
+                lcPrepStmt, ASQL, Result)
+            else begin
+              FPlainDriver.PQclear(Result);
+              Findeterminate_datatype := True
+            end
           else begin
             FPlainDriver.PQclear(Result);
-            Findeterminate_datatype := True
-          end
-        else begin
-          FPlainDriver.PQclear(Result);
-          Result := nil;
-          PrepareInParameters;
+            Result := nil;
+            PrepareInParameters;
+          end;
         end;
       end;
-    pqExecPrepared:
-      if fAsyncQueries then begin
-        if FPlainDriver.PQsendQueryPrepared(FconnAddress^,
-           Pointer(FRawPlanName), BindList.Count-FOutParamCount, Pointer(FPQparamValues),
-           Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat) <> Ord(PGRES_COMMAND_OK) then
-          HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
-            lcExecPrepStmt, ASQL, Result)
-        else if FServerCursor then
-          FPlainDriver.PQsetSingleRowMode(FconnAddress^);
-        Result := FPlainDriver.PQgetResult(FconnAddress^); //obtaint the first result
-      end else begin
-        Result := FPlainDriver.PQexecPrepared(FconnAddress^,
-          Pointer(FRawPlanName), BindList.Count-FOutParamCount, Pointer(FPQparamValues),
-          Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat);
-        if not PGSucceeded(FPlainDriver.PQerrorMessage(FconnAddress^)) then
-          HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
-            lcExecPrepStmt, ASQL, Result);
+    pqExecPrepared: begin
+        { Logging Execution }
+        if DriverManager.HasLoggingListener then
+          DriverManager.LogMessage(lcExecPrepStmt,Self);
+        if fAsyncQueries then begin
+          if FPlainDriver.PQsendQueryPrepared(FconnAddress^,
+             Pointer(FRawPlanName), BindList.Count-FOutParamCount, Pointer(FPQparamValues),
+             Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat) <> Ord(PGRES_COMMAND_OK) then
+            HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
+              lcExecPrepStmt, ASQL, Result)
+          else if FServerCursor then
+            FPlainDriver.PQsetSingleRowMode(FconnAddress^);
+          Result := FPlainDriver.PQgetResult(FconnAddress^); //obtain the first result
+        end else begin
+          Result := FPlainDriver.PQexecPrepared(FconnAddress^,
+            Pointer(FRawPlanName), BindList.Count-FOutParamCount, Pointer(FPQparamValues),
+            Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat);
+          if not PGSucceeded(FPlainDriver.PQerrorMessage(FconnAddress^)) then
+            HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
+              lcExecPrepStmt, ASQL, Result);
+        end;
       end;
     pqUnprepare: begin
+        { Logging Execution }
+        if DriverManager.HasLoggingListener then
+          DriverManager.LogMessage(lcUnprepStmt,Self);
         Result := FPlainDriver.PQExec(FconnAddress^, Pointer(SQL));
         if Assigned(FPlainDriver.PQresultErrorField)
         then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
@@ -1200,6 +1225,8 @@ function TZAbstractPostgreSQLPreparedStatementV3.ExecutePrepared: Boolean;
 begin
   Prepare;
   PrepareLastResultSetForReUse;
+  if (DriverManager <> nil) and DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcBindPrepStmt,Self);
   if Findeterminate_datatype or (FRawPlanName = '')
   then Fres := ExecuteInternal(ASQL, pqExecute)
   else Fres := ExecuteInternal(ASQL, pqExecPrepared);
@@ -1215,8 +1242,6 @@ begin
       FPlainDriver.PQcmdTuples(Fres), 0);
     FPlainDriver.PQclear(Fres);
   end;
-  inherited ExecutePrepared;
-  CheckPrepareSwitchMode;
 end;
 
 {**
@@ -1232,7 +1257,8 @@ var
 begin
   PrepareOpenResultSetForReUse;
   Prepare;
-  BindInParameters;
+  if (DriverManager <> nil) and DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcBindPrepStmt,Self);
   if Findeterminate_datatype or (FRawPlanName = '')
   then Fres := ExecuteInternal(ASQL, pqExecute)
   else Fres := ExecuteInternal(ASQL, pqExecPrepared);
@@ -1243,8 +1269,6 @@ begin
     else Result := CreateResultSet(fServerCursor)
   else
     Result := nil;
-  inherited ExecuteQueryPrepared;
-  CheckPrepareSwitchMode;
 end;
 
 {**
@@ -1262,7 +1286,8 @@ begin
   PrepareLastResultSetForReuse;
   Result := -1;
   Prepare;
-  BindInParameters;
+  if (DriverManager <> nil) and DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcBindPrepStmt,Self);
   if Findeterminate_datatype or (FRawPlanName = '') then
     Fres := ExecuteInternal(ASQL, pqExecute)
   else if ArrayCount = 0 then
@@ -1282,8 +1307,6 @@ begin
       FPlainDriver.PQclear(Fres);
     end;
   Result := LastUpdateCount;
-  inherited ExecuteUpdatePrepared;
-  CheckPrepareSwitchMode;
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.FlushPendingResults;
@@ -1374,6 +1397,7 @@ var
   end;
 begin
   Result := '';
+  FOrgSQL := SQL;
   if (Length(FCachedQueryRaw) = 0) and (SQL <> '') then begin
     Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     {$IFNDEF UNICODE}
@@ -1617,6 +1641,7 @@ begin
   Fres := nil;
   FRawPlanName := '';
   fPrepareCnt := 0;
+  FExecCount := 0;
   SetParamCount(0);
   for ArrayDMLType := low(TArrayDMLType) to high(ArrayDMLType) do
     if Assigned(FPGArrayDMLStmts[ArrayDMLType].Intf) then
@@ -1629,6 +1654,7 @@ begin
   if fAsyncQueries then
     FlushPendingResults;
   inherited Unprepare;
+  FExecCount := 0;
   if Prepared and Assigned(FconnAddress^) and (FRawPlanName <> '') and not Findeterminate_datatype then
     ExecuteInternal('DEALLOCATE "'+FRawPlanName+'"', pqUnprepare);
   Findeterminate_datatype := False;

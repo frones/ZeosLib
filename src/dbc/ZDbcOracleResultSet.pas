@@ -75,7 +75,7 @@ type
     FStmtHandle: POCIStmt;
     FErrorHandle: POCIError;
     FConnectionHandle: POCIEnv;
-    FContextHandle: POCISvcCtx;
+    FOCISvcCtx: POCISvcCtx;
     FPlainDriver: TZOraclePlainDriver;
     FConnection: IZOracleConnection;
     FColumns: PZSQLVars;
@@ -157,7 +157,7 @@ type
   {** Implements external blob wrapper object for Oracle. }
   TZOracleBlob = class(TZAbstractBlob, IZOracleBlob)
   private
-    FContextHandle: POCISvcCtx;
+    FOCISvcCtx: POCISvcCtx;
     FErrorHandle: POCIError;
     FLobLocator: POCILobLocator;
     FNativePlainDriver: IZPlainDriver; //keep alive
@@ -169,7 +169,7 @@ type
     procedure InternalSetData(AData: Pointer; ASize: Integer);
   public
     constructor Create(const PlainDriver: TZOraclePlainDriver;
-      const Data: Pointer; const Size: Int64; const ContextHandle: POCISvcCtx;
+      const Data: Pointer; const Size: Int64; const OCISvcCtx: POCISvcCtx;
       const ErrorHandle: POCIError; const LobLocator: POCILobLocator;
       const ChunkSize: Integer; const ConSettings: PZConSettings);
     destructor Destroy; override;
@@ -185,7 +185,7 @@ type
   {** Implements external blob wrapper object for Oracle. }
   TZOracleClob = class(TZAbstractCLob, IZOracleBlob)
   private
-    FContextHandle: POCISvcCtx;
+    FOCISvcCtx: POCISvcCtx;
     FErrorHandle: POCIError;
     FLobLocator: POCILobLocator;
     FConnectionHandle: POCIEnv;
@@ -196,7 +196,7 @@ type
   public
     constructor Create(const PlainDriver: TZOraclePlainDriver;
       const Data: Pointer; const Size: Cardinal; const ConnectionHandle: POCIEnv;
-      const ContextHandle: POCISvcCtx; const ErrorHandle: POCIError;
+      const OCISvcCtx: POCISvcCtx; const ErrorHandle: POCIError;
       const LobLocator: POCILobLocator; const ChunkSize: Integer;
       const ConSettings: PZConSettings; const CodePage: Word);
     destructor Destroy; override;
@@ -385,7 +385,7 @@ begin
   ResultSetConcurrency := rcReadOnly;
   FConnection := Statement.GetConnection as IZOracleConnection;
   FConnectionHandle := FConnection.GetConnectionHandle;
-  FContextHandle := FConnection.GetContextHandle;
+  FOCISvcCtx := FConnection.GetServiceContextHandle;
   FChunkSize := Statement.GetChunkSize;
   FIteration := 1;
   FCurrentRowBufIndex := 0;
@@ -621,7 +621,7 @@ begin
       case oDataType of
         SQLT_INTERVAL_DS:
           begin
-            Status := FPlainDriver.OCIIntervalGetDaySecond(FContextHandle, FErrorHandle, @dy, @hr, @mm, @ss, @fsec, {%H-}PPOCIDescriptor({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
+            Status := FPlainDriver.OCIIntervalGetDaySecond(FOCISvcCtx, FErrorHandle, @dy, @hr, @mm, @ss, @fsec, {%H-}PPOCIDescriptor({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
             if (Status = OCI_SUCCESS) then
               Result := EncodeTime(hr, mm, ss, fsec div 100000)
             else
@@ -629,7 +629,7 @@ begin
           end;
         SQLT_INTERVAL_YM:
           begin
-            Status := FPlainDriver.OCIIntervalGetYearMonth(FContextHandle, FErrorHandle, @yr, @mnth, {%H-}PPOCIDescriptor({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
+            Status := FPlainDriver.OCIIntervalGetYearMonth(FOCISvcCtx, FErrorHandle, @yr, @mnth, {%H-}PPOCIDescriptor({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
             if (Status = OCI_SUCCESS) and (not (yr and mnth = 1)) then
               Result := EncodeDate(yr, mnth, 0)
             else Result := 0;
@@ -1346,7 +1346,7 @@ begin
         type_ref := nil;
         CheckOracleError(FPlainDriver, FErrorHandle,
           FPlainDriver.OCIObjectNew(FConnectionHandle,
-            FConnection.GetErrorHandle, FContextHandle, OCI_TYPECODE_REF,
+            FConnection.GetErrorHandle, FOCISvcCtx, OCI_TYPECODE_REF,
               nil, nil, OCI_DURATION_DEFAULT, TRUE, @type_ref),
           lcOther, 'OCITypeByRef from OCI_ATTR_REF_TDO', ConSettings);
         //Get the type reference
@@ -1405,11 +1405,11 @@ begin
     begin
       LobLocator := {%H-}PPOCIDescriptor({%H-}NativeUInt(Data)+FCurrentRowBufIndex*Length)^;
       if TypeCode in [SQLT_BLOB, SQLT_BFILEE] then
-        Result := TZOracleBlob.Create(FPlainDriver, nil, 0, FContextHandle,
+        Result := TZOracleBlob.Create(FPlainDriver, nil, 0, FOCISvcCtx,
           FConnection.GetErrorHandle, LobLocator, FChunkSize, ConSettings)
       else
         Result := TZOracleClob.Create(FPlainDriver, nil, 0,
-          FConnectionHandle, FContextHandle,
+          FConnectionHandle, FOCISvcCtx,
           FConnection.GetErrorHandle, LobLocator, FChunkSize, ConSettings,
           ConSettings^.ClientCodePage^.CP);
       (Result as IZOracleBlob).ReadLob; //nasty: we've got only one descriptor if we fetch the rows. Loading on demand isn't possible
@@ -1461,7 +1461,7 @@ begin
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
 
   CheckOracleError(FPlainDriver, FErrorHandle,
-    FPlainDriver.OCIStmtExecute(FContextHandle, FStmtHandle, FErrorHandle, 1, 0,
+    FPlainDriver.OCIStmtExecute(FOCISvcCtx, FStmtHandle, FErrorHandle, 1, 0,
       nil, nil, OCI_DESCRIBE_ONLY),
       lcExecute, 'OCIStmtExecute', ConSettings);
 
@@ -1734,7 +1734,7 @@ begin
     Exit;
 
   if RowNo = 0 then begin//fetch Iteration count of rows
-    Status := FPlainDriver.OCIStmtExecute(FContextHandle, FStmtHandle,
+    Status := FPlainDriver.OCIStmtExecute(FOCISvcCtx, FStmtHandle,
       FErrorHandle, FIteration, 0, nil, nil, OCI_DEFAULT);
     if Status = OCI_SUCCESS then begin
       FMaxBufIndex := FIteration -1; //FFetchedRows is an index [0...?] / FIteration is Count 1...?
@@ -1939,12 +1939,12 @@ end;
   @param BlobType a blob type.
 }
 constructor TZOracleBlob.Create(const PlainDriver: TZOraclePlainDriver;
-  const Data: Pointer; const Size: Int64; const ContextHandle: POCISvcCtx;
+  const Data: Pointer; const Size: Int64; const OCISvcCtx: POCISvcCtx;
   const ErrorHandle: POCIError; const LobLocator: POCILobLocator;
   const ChunkSize: Integer; const ConSettings: PZConSettings);
 begin
   inherited CreateWithData(Data, Size);
-  FContextHandle := ContextHandle;
+  FOCISvcCtx := OCISvcCtx;
   FErrorHandle := ErrorHandle;
   FLobLocator := LobLocator;
   FPlainDriver := PlainDriver;
@@ -1960,7 +1960,7 @@ end;
 destructor TZOracleBlob.Destroy;
 begin
   if FTemporary then
-    FPlainDriver.OCILobFreeTemporary(FContextHandle, FErrorHandle, FLobLocator);
+    FPlainDriver.OCILobFreeTemporary(FOCISvcCtx, FErrorHandle, FLobLocator);
   inherited Destroy;
 end;
 
@@ -1970,7 +1970,7 @@ end;
 procedure TZOracleBlob.CreateBlob;
 begin
   CheckOracleError(FPlainDriver, FErrorHandle,
-    FPlainDriver.OCILobCreateTemporary(FContextHandle, FErrorHandle,
+    FPlainDriver.OCILobCreateTemporary(FOCISvcCtx, FErrorHandle,
       FLobLocator, OCI_DEFAULT, OCI_DEFAULT, OCI_TEMP_BLOB, False,
       OCI_DURATION_DEFAULT),
     lcOther, 'Create Large Object', FConSettings);
@@ -1993,7 +1993,7 @@ begin
     and (BlobData = nil) and (not FTemporary) then
   begin
     { Opens a large object or file for read. }
-    Status := FPlainDriver.OCILobOpen(FContextHandle, FErrorHandle, FLobLocator, OCI_LOB_READONLY);
+    Status := FPlainDriver.OCILobOpen(FOCISvcCtx, FErrorHandle, FLobLocator, OCI_LOB_READONLY);
     if Status <> OCI_SUCCESS then
       CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Open Large Object', FConSettings);
     try
@@ -2007,7 +2007,7 @@ begin
           ReallocMem(Buf, Cap);
           ReadNumBytes := Cap - Offset;
 
-          Status := FPlainDriver.OCILobRead(FContextHandle, FErrorHandle,
+          Status := FPlainDriver.OCILobRead(FOCISvcCtx, FErrorHandle,
             FLobLocator, ReadNumBytes, Offset + 1, {$R-}@Buf[Offset]{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}, ReadNumBytes,
             nil, nil, 0, SQLCS_IMPLICIT);
           if Status <> OCI_SUCCESS then
@@ -2022,7 +2022,7 @@ begin
       end;
     finally
       { Closes large object or file. }
-      Status := FPlainDriver.OCILobClose(FContextHandle,FErrorHandle, FLobLocator);
+      Status := FPlainDriver.OCILobClose(FOCISvcCtx,FErrorHandle, FLobLocator);
       if Status <> OCI_SUCCESS then
         CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Close Large Object', FConSettings);
     end;
@@ -2037,13 +2037,13 @@ end;
 }
 procedure TZOracleBlob.WriteLob;
 begin
-  OraWriteLob(FPlainDriver, BlobData, FContextHandle, FErrorHandle, FLobLocator,
+  OraWriteLob(FPlainDriver, BlobData, FOCISvcCtx, FErrorHandle, FLobLocator,
     FChunkSize, BlobSize, True, nil);
 end;
 
 procedure TZOracleBlob.WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
 begin
-  OraWriteLob(FPlainDriver, Buffer, FContextHandle, FErrorHandle, FLobLocator,
+  OraWriteLob(FPlainDriver, Buffer, FOCISvcCtx, FErrorHandle, FLobLocator,
     FChunkSize, Len, True, nil);
 end;
 
@@ -2061,7 +2061,7 @@ end;
 
 constructor TZOracleClob.Create(const PlainDriver: TZOraclePlainDriver;
   const Data: Pointer; const Size: Cardinal; const ConnectionHandle: POCIEnv;
-  const ContextHandle: POCISvcCtx; const ErrorHandle: POCIError;
+  const OCISvcCtx: POCISvcCtx; const ErrorHandle: POCIError;
   const LobLocator: POCILobLocator; const ChunkSize: Integer;
   const ConSettings: PZConSettings; const CodePage: Word);
 begin
@@ -2069,7 +2069,7 @@ begin
     inherited CreateWithData(Data, Size shr 1, ConSettings) //shr 1 = div 2 but faster
   else
     inherited CreateWithData(Data, Size, CodePage, ConSettings);
-  FContextHandle := ContextHandle;
+  FOCISvcCtx := OCISvcCtx;
   FConnectionHandle := ConnectionHandle;
   FErrorHandle := ErrorHandle;
   FLobLocator := LobLocator;
@@ -2082,7 +2082,7 @@ end;
 destructor TZOracleClob.Destroy;
 begin
   if FTemporary then
-    FPlainDriver.OCILobFreeTemporary(FContextHandle, FErrorHandle, FLobLocator);
+    FPlainDriver.OCILobFreeTemporary(FOCISvcCtx, FErrorHandle, FLobLocator);
   inherited Destroy;
 end;
 
@@ -2092,7 +2092,7 @@ end;
 procedure TZOracleClob.CreateBlob;
 begin
   CheckOracleError(FPlainDriver, FErrorHandle,
-    FPlainDriver.OCILobCreateTemporary(FContextHandle, FErrorHandle, FLobLocator,
+    FPlainDriver.OCILobCreateTemporary(FOCISvcCtx, FErrorHandle, FLobLocator,
       OCI_DEFAULT, OCI_DEFAULT, OCI_TEMP_CLOB, False, OCI_DURATION_DEFAULT),
     lcOther, 'Create Large Object', FConSettings);
 
@@ -2109,7 +2109,7 @@ var
   procedure DoRead(const csid: ub2; const csfrm: ub1);
   begin
     ReadNumChars := 0;
-    Status := FPlainDriver.OCILobRead(FContextHandle,FErrorHandle, FLobLocator,
+    Status := FPlainDriver.OCILobRead(FOCISvcCtx,FErrorHandle, FLobLocator,
       ReadNumChars, Offset + 1, Buf, FChunkSize, nil, nil, csid, csfrm);
     if ReadNumChars > 0 then
     begin
@@ -2123,7 +2123,7 @@ begin
   if not Updated and (FLobLocator <> nil) and (BlobData = nil) and (not FTemporary) then
   begin
     { Opens a large object or file for read. }
-    Status := FPlainDriver.OCILobOpen(FContextHandle, FErrorHandle, FLobLocator, OCI_LOB_READONLY);
+    Status := FPlainDriver.OCILobOpen(FOCISvcCtx, FErrorHandle, FLobLocator, OCI_LOB_READONLY);
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Open Large Object', FConSettings);
     try
       { Reads data in chunks by MemDelta or more }
@@ -2151,7 +2151,7 @@ begin
       end;
     finally
       { Closes large object or file. }
-      Status := FPlainDriver.OCILobClose(FContextHandle, FErrorHandle, FLobLocator);
+      Status := FPlainDriver.OCILobClose(FOCISvcCtx, FErrorHandle, FLobLocator);
       CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Close Large Object', FConSettings);
       if Buf <> nil then
         FreeMem(Buf);
@@ -2163,17 +2163,17 @@ end;
 procedure TZOracleClob.WriteLob;
 begin
   GetPAnsiChar(FConSettings^.ClientCodePage^.CP); //convert if required
-  OraWriteLob(FPlainDriver, BlobData, FContextHandle, FErrorHandle, FLobLocator,
+  OraWriteLob(FPlainDriver, BlobData, FOCISvcCtx, FErrorHandle, FLobLocator,
     FChunkSize, BlobSize, False, FConSettings);
 end;
 
 procedure TZOracleClob.WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
 begin
   if Buffer = nil then
-    OraWriteLob(FPlainDriver, Buffer, FContextHandle, FErrorHandle, FLobLocator,
+    OraWriteLob(FPlainDriver, Buffer, FOCISvcCtx, FErrorHandle, FLobLocator,
       FChunkSize, Len, False, FConSettings)
   else
-    {%H-}OraWriteLob(FPlainDriver, Buffer, FContextHandle, FErrorHandle, FLobLocator,
+    {%H-}OraWriteLob(FPlainDriver, Buffer, FOCISvcCtx, FErrorHandle, FLobLocator,
       FChunkSize, Int64(Len)+1, False, FConSettings);
 end;
 

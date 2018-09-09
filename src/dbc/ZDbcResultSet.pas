@@ -751,12 +751,10 @@ end;
 destructor TZAbstractResultSet.Destroy;
 begin
   if not FClosed then
-      Close;
-  if Assigned(FMetadata) then
-    FreeAndNil(FMetadata);
+    Close;
+  FreeAndNil(FMetadata);
   FStatement := nil;
-  if Assigned(FColumnsInfo) then
-    FreeAndNil(FColumnsInfo);
+  FreeAndNil(FColumnsInfo);
   inherited Destroy;
 end;
 

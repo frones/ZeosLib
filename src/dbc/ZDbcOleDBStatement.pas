@@ -65,7 +65,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   ZCompatibility, ZSysUtils, ZOleDB,
-  ZDbcOleDBUtils, ZDbcIntfs, ZDbcStatement, ZVariant;
+  ZDbcOleDBUtils, ZDbcIntfs, ZDbcStatement, ZVariant, ZDbcProperties;
 
 type
   IZOleDBPreparedStatement = Interface(IZPreparedStatement)
@@ -144,10 +144,10 @@ constructor TZOleDBPreparedStatement.Create(const Connection: IZConnection;
   const SQL: string; const Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
-  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //by default 128KB
-  FInMemoryDataLobs := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'InMemoryDataLobs', 'False'));
-  fStmtTimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'StatementTimeOut', ''), 60); //execution timeout in seconds by default 1 min
-  fDEFERPREPARE := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'preferprepared', 'True'));
+  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072); //by default 128KB
+  FInMemoryDataLobs := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_InMemoryDataLobs, 'False'));
+  fStmtTimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_StatementTimeOut, ''), 60); //execution timeout in seconds by default 1 min
+  fDEFERPREPARE := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True'));
   FMultipleResults := nil;
 end;
 

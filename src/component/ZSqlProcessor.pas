@@ -399,8 +399,7 @@ begin
         except
           on E: Exception do
           begin
-            if Assigned(Statement) then
-              Statement := nil;
+            Statement := nil;
             Action := DoOnError(I, E);
             if Action = eaFail then
               RaiseSQLException(E)
@@ -449,18 +448,8 @@ end;
 }
 function TZSQLProcessor.CreateStatement(const SQL: string;
   Properties: TStrings): IZPreparedStatement;
-var
-  Temp: TStrings;
 begin
-  Temp := TStringList.Create;
-  try
-    if Assigned(Properties) then
-      Temp.AddStrings(Properties);
-
-    Result := FConnection.DbcConnection.PrepareStatementWithParams(SQL, Temp);
-  finally
-    Temp.Free;
-  end;
+  Result := FConnection.DbcConnection.PrepareStatementWithParams(SQL, Properties);
 end;
 
 {**

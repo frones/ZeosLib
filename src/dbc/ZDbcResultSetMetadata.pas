@@ -259,12 +259,8 @@ destructor TZAbstractResultSetMetadata.Destroy;
 begin
   FIdentifierConvertor := nil;
   FMetadata := nil;
-  if Assigned(FTableColumns) then begin
-    FTableColumns.Clear;
-    FreeAndNil(FTableColumns)
-  end;
-  if FColumnsLabels <> nil then
-    FreeAndNil(FColumnsLabels);
+  FreeAndNil(FTableColumns);
+  FreeAndNil(FColumnsLabels);
   inherited Destroy;
 end;
 

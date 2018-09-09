@@ -725,6 +725,7 @@ procedure TZAbstractMySQLResultSet.ResetCursor;
 var Handle: Pointer;
 begin
   if not Closed then
+    FFirstRowFetched := False;
     if fBindBufferAllocated then begin
       Handle := FMYSQL_STMT;
       FMYSQL_STMT := nil;
@@ -1300,8 +1301,7 @@ begin
           else //5..8: makes compiler happy
             Result := ReverseQuadWordBytes(Buffer, Len) <> 0;
         end
-      end else
-        Result := StrToBoolEx(Buffer, True, False);
+      end else Result := StrToBoolEx(Buffer, True, False);
   end;
 end;
 
@@ -1391,8 +1391,7 @@ begin
           else //5..8: makes compiler happy
             Result := ReverseQuadWordBytes(Buffer, Len);
         end
-      end else if PByte(Buffer)^ <> Ord(#0) then
-        Result := RawToIntDef(Buffer, 0);
+      end else Result := RawToIntDef(Buffer, 0);
   end;
 end;
 

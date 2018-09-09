@@ -81,7 +81,7 @@ type
     ['{C7F36FDF-8A64-477B-A0EB-3E8AB7C09F8D}']
 
     function GetConnectionHandle: POCIEnv;
-    function GetContextHandle: POCISvcCtx;
+    function GetServiceContextHandle: POCISvcCtx;
     function GetErrorHandle: POCIError;
     function GetServerHandle: POCIServer;
     function GetSessionHandle: POCISession;
@@ -133,7 +133,7 @@ type
     function CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence; override;
 
     function GetConnectionHandle: POCIEnv;
-    function GetContextHandle: POCISvcCtx;
+    function GetServiceContextHandle: POCISvcCtx;
     function GetErrorHandle: POCIError;
     function GetServerHandle: POCIServer;
     function GetSessionHandle: POCISession;
@@ -694,7 +694,7 @@ end;
   Gets a reference to Oracle context handle.
   @return a reference to Oracle context handle.
 }
-function TZOracleConnection.GetContextHandle: POCISvcCtx;
+function TZOracleConnection.GetServiceContextHandle: POCISvcCtx;
 begin
   Result := FContextHandle;
 end;

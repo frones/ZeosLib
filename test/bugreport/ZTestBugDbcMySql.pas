@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
-  ZDbcIntfs, ZCompatibility, ZDbcMySql, ZSqlTestCase;
+  ZDbcIntfs, ZCompatibility, ZDbcMySql, ZSqlTestCase, ZDbcProperties;
 
 type
   {** Implements a DBC bug report test case for MySql. }
@@ -357,7 +357,7 @@ begin
   for B := (Connection as IZMySQLConnection).SupportsFieldTypeBit downto False do begin
     if not Connection.IsClosed then
       Connection.Close;
-    Connection.GetParameters.Values['MySQL_FieldType_Bit_1_IsBoolean']:= ZSysUtils.BoolStrs[B];
+    Connection.GetParameters.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean]:= ZSysUtils.BoolStrs[B];
     Statement := Connection.CreateStatement;
     try
       Statement.SetResultSetConcurrency(rcUpdatable);

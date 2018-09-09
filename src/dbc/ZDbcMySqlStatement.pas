@@ -91,6 +91,8 @@ type
     FEmulatedParams: Boolean; //just use emulated String params?
     FIsFunction: Boolean; //did RegisterParameter evaluate against a ResultParameter;
     FLastWasOutParams: Boolean;
+    FMinExecCount2Prepare: Integer; //how many executions must be done to fall into a real prepared mode?
+    FExecCount: Integer; //How often did we execute the stmt until we reached MinExecCount2Prepare?
 //    FHandleStatus: THandleStatus; //indicate status of MYSQL_STMT handle
     function CreateResultSet(const SQL: string): IZResultSet;
     procedure InitBuffer(SQLType: TZSQLType; Index: Integer; Bind: PMYSQL_aligned_BIND; ActualLength: LengthInt = 0);
@@ -228,6 +230,9 @@ var
   MySQL568PreparableTokens: TPreparablePrefixTokens;
 
 const EnumBool: array[Boolean] of {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF} = ('N','Y');
+const MySQLNullIndicatorMatrix: array[Boolean, Boolean] of TIndicator = (
+  (STMT_INDICATOR_NONE, STMT_INDICATOR_NONE), //not null
+  (STMT_INDICATOR_NULL, STMT_INDICATOR_DEFAULT));
 
 { TZAbstractMySQLPreparedStatement }
 
@@ -278,7 +283,6 @@ begin
     else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Bind^.buffer)^, Len+1);
     Bind^.Length[0] := Len;
     Bind^.is_null_address^ := 0;
-    //BindList.SetNull(Index, stString);
   end;
 end;
 
@@ -302,7 +306,6 @@ begin
     else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, Pointer(Bind^.buffer)^, Len+1);
     Bind^.Length[0] := Len;
     Bind^.is_null_address^ := 0;
-    //BindList.SetNull(Index, stString);
   end;
 end;
 
@@ -319,7 +322,7 @@ end;
 function TZAbstractMySQLPreparedStatement.CheckPrepareSwitchMode: Boolean;
 begin
   Result := ((not FInitial_emulate_prepare) or (ArrayCount > 0 )) and (FMYSQL_STMT = nil) and (TokenMatchIndex <> -1) and
-     ((ArrayCount > 0 ) or (ExecutionCount = MinExecCount2Prepare));
+     ((ArrayCount > 0 ) or (FExecCount = FMinExecCount2Prepare));
   if Result then begin
     FEmulatedParams := False;
     if (BindList.Count > 0) then
@@ -396,8 +399,10 @@ begin
     ResultSetType := rtScrollInsensitive;
   FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, DSProps_Defaults, 'true'));
   FPrefetchRows := Max(1,{$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_PrefetchRows, '100'),100));
+  //JDBC prepares after 4th execution
+  FMinExecCount2Prepare := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_MinExecCntBeforePrepare, '2'), 2);
 
-  FInitial_emulate_prepare := (FBindOffset.buffer_type=0) or (MinExecCount2Prepare < 0) or
+  FInitial_emulate_prepare := (FBindOffset.buffer_type=0) or (FMinExecCount2Prepare < 0) or
     StrToBoolEx(DefineStatementParameter(Self, DSProps_EmulatePrepares, 'false'));
   FEmulatedParams := True;
   FMySQL_FieldType_Bit_1_IsBoolean := FMySQLConnection.MySQL_FieldType_Bit_1_IsBoolean;
@@ -419,15 +424,9 @@ var status: Integer;
 begin
   ParamCount := BindList.Count;
   inherited Unprepare;
+  FExecCount := 0;
   FlushPendingResults;
   if not FEmulatedParams and (FMYSQL_STMT <> nil) then begin
-    (*if FStmtHandleIsExecuted then begin
-      Status := FPlainDriver.mysql_stmt_reset(FMYSQL_STMT);
-      if Status <> 0 then
-        checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
-          ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-            ConSettings^.ClientCodePage^.CP), Self);
-    end;*)
     //cancel all pending results:
     //https://mariadb.com/kb/en/library/mysql_stmt_close/
     status := FPlainDriver.mysql_stmt_close(FMYSQL_STMT);
@@ -634,7 +633,7 @@ begin
   FBindAgain := True;
   ReAllocMem(Bind^.indicators, ArrayCount);
   Bind^.indicator_address^ := Pointer(Bind^.indicators);
-  FillChar(Pointer(Bind^.indicators)^, ArrayCount, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+  FillChar(Pointer(Bind^.indicators)^, ArrayCount, Char(STMT_INDICATOR_NONE));
   Bind^.Iterations := ArrayCount;
   BufferSize := 0;
   case SQLType of
@@ -914,14 +913,8 @@ procedure TZAbstractMySQLPreparedStatement.SetNullArray(ParameterIndex: Integer;
   const SQLType: TZSQLType; const Value; const VariantType: TZVariantType);
 var
   Bind: PMYSQL_aligned_BIND;
+  aArray: PZArray;
   I: Integer;
-  procedure SetIndicator(IsNull: Boolean; Bind: PMYSQL_aligned_BIND; Index: Integer);
-  begin
-    if IsNull then
-      if FUseDefaults
-      then Bind^.indicators[Index] := STMT_INDICATOR_DEFAULT
-      else Bind^.indicators[Index] := STMT_INDICATOR_NULL
-  end;
 begin
   inherited SetNullArray(ParameterIndex, SQLType, Value, VariantType);
   {$IFNDEF GENERIC_INDEX}
@@ -938,59 +931,13 @@ begin
     ReAllocMem(Bind^.indicators, ArrayCount);
     Bind^.indicator_address^ := Pointer(Bind^.indicators);
     FBindAgain := True;
+    Bind^.Iterations := ArrayCount;
   end;
-  case SQLType of
-    stBoolean:      for i := 0 to ArrayCount -1 do
-                      SetIndicator(TBooleanDynArray(Value)[i], Bind, I);
-    stByte:         for i := 0 to ArrayCount -1 do
-                      SetIndicator(TByteDynArray(Value)[i]<>0, Bind, I);
-    stShort:        for i := 0 to ArrayCount -1 do
-                      SetIndicator(TShortIntDynArray(Value)[i]<>0, Bind, I);
-    stWord:         for i := 0 to ArrayCount -1 do
-                      SetIndicator(TWordDynArray(Value)[i]<>0, Bind, I);
-    stSmall:        for i := 0 to ArrayCount -1 do
-                      SetIndicator(TSmallIntDynArray(Value)[i]<>0, Bind, I);
-    stLongWord:     for i := 0 to ArrayCount -1 do
-                      SetIndicator(TLongWordDynArray(Value)[i]<>0, Bind, I);
-    stInteger:      for i := 0 to ArrayCount -1 do
-                      SetIndicator(TIntegerDynArray(Value)[i]<>0, Bind, I);
-    stULong:        for i := 0 to ArrayCount -1 do
-                      SetIndicator(TUInt64DynArray(Value)[i]<>0, Bind, I);
-    stLong:         for i := 0 to ArrayCount -1 do
-                      SetIndicator(TInt64DynArray(Value)[i]<>0, Bind, I);
-    stFloat:        for i := 0 to ArrayCount -1 do
-                      SetIndicator(TSingleDynArray(Value)[i]<>0, Bind, I);
-    stDouble:       for i := 0 to ArrayCount -1 do
-                      SetIndicator(TDoubleDynArray(Value)[i]<>0, Bind, I);
-    stCurrency:     for i := 0 to ArrayCount -1 do
-                      SetIndicator(TCurrencyDynArray(Value)[i]<>0, Bind, I);
-    stBigDecimal:   for i := 0 to ArrayCount -1 do
-                      SetIndicator(TExtendedDynArray(Value)[i]<>0, Bind, I);
-    stDate, stTime,
-    stTimestamp:    for i := 0 to ArrayCount -1 do
-                      SetIndicator(TDateTimeDynArray(Value)[i]<>0, Bind, I);
-    stString, stUnicodeString:
-                    case VariantType of
-                      {$IFNDEF UNICODE} vtString, {$ENDIF}
-                      {$IFNDEF NO_ANSISTRING}vtAnsiString, {$ENDIF}
-                      {$IFNDEF NO_UTF8STRING}vtUTF8String, {$ENDIF}
-                      vtRawByteString:
-                        for i := 0 to ArrayCount -1 do
-                          SetIndicator(StrToBoolEx(TRawByteStringDynArray(Value)[i]), Bind, I);
-                      {$IFDEF UNICODE} vtString, {$ENDIF}
-                      vtUnicodeString:
-                        for i := 0 to ArrayCount -1 do
-                          SetIndicator(StrToBoolEx(TUnicodeStringDynArray(Value)[i]), Bind, I);
-                      vtCharRec:
-                        for i := 0 to ArrayCount -1 do
-                          if ZCompatibleCodePages(TZCharRecDynArray(Value)[i].CP, zCP_UTF16)
-                          then SetIndicator(StrToBoolEx(PWideChar(TZCharRecDynArray(Value)[i].P)), Bind, I)
-                          else SetIndicator(StrToBoolEx(PAnsiChar(TZCharRecDynArray(Value)[i].P)), Bind, I);
-                      else
-                        raise EZSQLException.Create(sUnsupportedOperation);
-                    end;
-  end;
-  Bind^.Iterations := ArrayCount;
+  aArray := BindList[ParameterIndex].Value;
+  if Pointer(Value) = nil
+  then FillChar(Bind^.indicators^, ArrayCount, Char(MySQLNullIndicatorMatrix[False, FUseDefaults]))
+  else for i := 0 to ArrayCount -1 do
+    Bind^.indicators[I] :=  MySQLNullIndicatorMatrix[IsNullFromArray(aArray, I), FUseDefaults];
 end;
 
 function TZAbstractMySQLPreparedStatement.AlignParamterIndex2ResultSetIndex(
@@ -1072,8 +1019,7 @@ begin
         Len := IZBlob(BindList[I].Value).Length;
         OffSet := 0;
         PieceSize := ChunkSize;
-        while (OffSet < Len) or (Len = 0) do
-        begin
+        while (OffSet < Len) or (Len = 0) do begin
           if OffSet+PieceSize > Len then
             PieceSize := Len - OffSet;
           if (FPlainDriver.mysql_stmt_send_long_data(FMYSQL_STMT, I, P, PieceSize) <> 0) then begin
@@ -1208,6 +1154,8 @@ begin
   Prepare;
   BindInParameters;
   if FEmulatedParams or (FMYSQL_STMT = nil) then begin
+    if (DriverManager <> nil) and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecute,Self);
     RSQL := ComposeRawSQLQuery;
     if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then begin
       if FPlainDriver.mysql_field_count(FPMYSQL^) = 0 then
@@ -1218,7 +1166,11 @@ begin
       FOpenResultSet := Pointer(Result);
     end else
       CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, RSQL, Self);
+    Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
+    CheckPrepareSwitchMode;
   end else begin
+    if (DriverManager <> nil) and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt,Self);
     if FplainDriver.IsMariaDBDriver and (FTokenMatchIndex = Ord(myCall)) then begin //EH: no idea why but maria db hangs if we do not reset the stmt ):
        if FPlainDriver.mysql_stmt_reset(FMYSQL_STMT) <> 0 then
         checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
@@ -1240,8 +1192,6 @@ begin
         ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
         ConSettings^.ClientCodePage^.CP), Self);
   end;
-  inherited ExecuteQueryPrepared;
-  CheckPrepareSwitchMode;
 end;
 
 {**
@@ -1256,52 +1206,44 @@ end;
 }
 function TZAbstractMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
 var
-//  QueryHandle: PZMySQLResult;
   RSQL: RawByteString;
 begin
   Prepare;
   BindInParameters;
   Result := -1;
   if FEmulatedParams or (FMYSQL_STMT = nil) then begin
+    if (DriverManager <> nil) and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecute,Self);
     RSQL := ComposeRawSQLQuery;
-    if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then begin
+    if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then
       if (FplainDriver.mysql_field_count(FPMYSQL^) > 0) then begin
-        //Result := FPlainDriver.mysql_affected_rows(FPMYSQL^); //raises av's on FPC
         //retrieve outparam
         LastResultSet := CreateResultSet(SQL);
         LastResultSet.Last;
         Result := LastResultSet.GetRow;
         LastResultSet.BeforeFirst;
-      end else { Process queries with result sets }
-        {if FPlainDriver.mysql_field_count(FPMYSQL^) > 0 then begin
-          QueryHandle := FPlainDriver.mysql_store_result(FPMYSQL^);
-          Result := FPlainDriver.mysql_num_rows(QueryHandle);
-          FPlainDriver.mysql_free_result(QueryHandle);
-        end else { Process regular query }
-          Result := FPlainDriver.mysql_affected_rows(FPMYSQL^);
-    end else
+      end else
+        Result := FPlainDriver.mysql_affected_rows(FPMYSQL^)
+    else
       CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, RSQL, Self);
+    Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
+    CheckPrepareSwitchMode;
   end else begin
+    if (DriverManager <> nil) and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt,Self);
     if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
       FStmtHandleIsExecuted := True;
       if (FplainDriver.mysql_stmt_field_count(FMYSQL_STMT) > 0) then begin
         Result := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT);
         //retrieve outparam
         LastResultSet := CreateResultSet(SQL);
-      end else { Process queries with result sets }
-        {if FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) > 0 then begin
-          FPlainDriver.mysql_stmt_store_result(FMYSQL_STMT);
-          Result := FPlainDriver.mysql_stmt_num_rows(FMYSQL_STMT);
-          FPlainDriver.mysql_stmt_free_result(FMYSQL_STMT);
-        end else { Process regular query }
-          Result := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT);
+      end else
+        Result := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
     end else
       checkMySQLError(FPlainDriver,FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
         ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
           ConSettings^.ClientCodePage^.CP),Self);
   end;
-  Inherited ExecuteUpdatePrepared;
-  CheckPrepareSwitchMode;
 end;
 
 procedure TZAbstractMySQLPreparedStatement.FlushPendingResults;
@@ -1372,13 +1314,19 @@ begin
   Prepare;
   BindInParameters;
   if FEmulatedParams or (FMYSQL_STMT = nil) then begin
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecute,Self);
     RSQL := ComposeRawSQLQuery;
     if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then begin
       if FPlainDriver.mysql_field_count(FPMYSQL^) > 0
       then LastResultSet := CreateResultSet(SQL)
       else LastUpdateCount := FPlainDriver.mysql_affected_rows(FPMYSQL^)
     end else CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, RSQL, Self);
+    Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
+    CheckPrepareSwitchMode;
   end else begin
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt,Self);
     if FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0 then begin
       FStmtHandleIsExecuted := True;
       if FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) > 0
@@ -1389,8 +1337,6 @@ begin
           ConSettings^.ClientCodePage^.CP), Self);
   end;
   Result := Assigned(LastResultSet);
-  inherited ExecutePrepared;
-  CheckPrepareSwitchMode;
 end;
 
 {**
@@ -2338,7 +2284,7 @@ begin
   if IsFunction then
     SQL := SQL +' as ReturnValue';
   Result := TZAbstractMySQLPreparedStatement.Create(Connection as IZMySQLConnection, SQL, Info);
-  Result.MinExecCount2Prepare := 0; //prepare immediately
+  TZAbstractMySQLPreparedStatement(Result).FMinExecCount2Prepare := 0; //prepare immediately
   TZAbstractMySQLPreparedStatement(Result).InternalRealPrepare;
   FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
   TZAbstractMySQLPreparedStatement(Result)._AddRef;

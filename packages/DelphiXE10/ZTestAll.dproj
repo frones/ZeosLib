@@ -64,6 +64,8 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
+		<DCC_RangeChecking>true</DCC_RangeChecking>
+		<DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
         <Icns_MainIcns>$(BDS)\bin\delphi_PROJECTICNS.icns</Icns_MainIcns>
         <SanitizedProjectName>ZTestAll</SanitizedProjectName>
         <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>

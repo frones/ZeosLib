@@ -97,8 +97,7 @@ implementation
 
 procedure TZSequence.CloseSequence;
 begin
-  if Assigned(FSequence) then
-    FSequence:=nil;
+  FSequence:=nil;
 end;
 
 constructor TZSequence.Create(AOwner: TComponent);
@@ -186,8 +185,7 @@ begin
   begin
     // Modified by cipto 8/2/2007 12:07:57 PM
     FConnection := nil;
-    if Assigned(FSequence) then
-      FSequence := nil;
+    FSequence := nil;
   end;
 end;
 
@@ -203,8 +201,7 @@ procedure TZSequence.SetConnection(const Value: TZConnection);
 begin
   if FConnection <> Value then
   begin
-    if Assigned(FSequence) then
-      FSequence := nil;
+    FSequence := nil;
     FConnection := Value;
     // Modified by cipto 8/2/2007 11:59:58 AM
     if Assigned(FConnection) then

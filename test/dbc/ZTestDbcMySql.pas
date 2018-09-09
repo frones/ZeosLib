@@ -56,8 +56,8 @@ unit ZTestDbcMySql;
 interface
 {$I ZDbc.inc}
 
-uses Classes, SysUtils, ZDbcIntfs, ZSqlTestCase, ZDbcMySql,
-  ZCompatibility, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
+uses Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZDbcIntfs, ZSqlTestCase, ZDbcMySql, ZDbcProperties, ZCompatibility, ZSysUtils;
 
 type
 
@@ -453,7 +453,7 @@ var
   Info: TStrings;
 begin
   Info := TStringList.Create;
-  Info.Add('preferprepared=true');
+  Info.Values[DSProps_PreferPrepared] := StrTrue;
   Statement := Connection.PrepareStatementWithParams('SELECT * FROM department', Info);
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -485,6 +485,7 @@ var
   Info: TStrings;
 begin
   Info := TStringList.Create;
+  Info.Values[DSProps_PreferPrepared] := StrTrue;
   Info.Add('useresult=true');
   Statement := Connection.CreateStatementWithParams(Info);
   CheckNotNull(Statement);
@@ -652,7 +653,7 @@ var
   Info: TStrings;
 begin
   Info := TStringList.Create;
-  Info.Add('preferprepared=true');
+  Info.Values[DSProps_PreferPrepared] := StrTrue;
   try
     InternalTestSelectThreeQueriesGetMoreResults(Connection.PrepareStatementWithParams('', Info));
     InternalTestSelectThreeQueriesGetMoreResults(Connection.CreateStatement);
@@ -667,7 +668,7 @@ var
   Info: TStrings;
 begin
   Info := TStringList.Create;
-  Info.Add('preferprepared=true');
+  Info.Values[DSProps_PreferPrepared] := StrTrue;
   try
     InternalTestSelectTwoQueriesGetMoreResults(Connection.PrepareStatementWithParams('', Info));
     InternalTestSelectTwoQueriesGetMoreResults(Connection.CreateStatement);
@@ -682,7 +683,7 @@ var
   Info: TStrings;
 begin
   Info := TStringList.Create;
-  Info.Add('preferprepared=true');
+  Info.Values[DSProps_PreferPrepared] := StrTrue;
   try
     InternalTestSelectTwoQueriesNoGetResults(Connection.PrepareStatementWithParams('', Info));
     InternalTestSelectTwoQueriesNoGetResults(Connection.CreateStatement);
@@ -697,7 +698,7 @@ var
   Info: TStrings;
 begin
   Info := TStringList.Create;
-  Info.Add('preferprepared=true');
+  Info.Values[DSProps_PreferPrepared] := StrTrue;
   try
     InternalTestSelectTwoQueriesGetMoreResultsWithCloseOfFirstRS(Connection.PrepareStatementWithParams('', Info));
     InternalTestSelectTwoQueriesGetMoreResultsWithCloseOfFirstRS(Connection.CreateStatement);
@@ -731,7 +732,7 @@ begin
   end;
 
   Info := TStringList.Create;
-  Info.Add('preferprepared=true');
+  Info.Values[DSProps_PreferPrepared] := StrTrue;
   try
     Statement := Connection.PrepareStatementWithParams('', Info);
     CheckNotNull(Statement);

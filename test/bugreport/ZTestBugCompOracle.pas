@@ -150,7 +150,7 @@ end;
 procedure ZTestCompOracleBugReport.TestNCLOBValues;
 const
   row_id = 1000;
-  testString: ZWideString = 'όδόδόδό';
+  testString: ZWideString = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430; // Abrakadabra in Cyrillic letters
 var
   Query: TZQuery;
   BinFileStream: TFileStream;
@@ -223,10 +223,9 @@ begin
       except
       end;
     end;
-    Query.Free;
-    if Assigned(BinFileStream) then
-      BinFileStream.Free;
-    BinaryStream.Free;
+    FreeAndNil(Query);
+    FreeAndNil(BinFileStream);
+    FreeAndNil(BinaryStream);
   end;
 end;
 

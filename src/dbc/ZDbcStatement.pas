@@ -296,15 +296,13 @@ type
   private
     FInitialArrayCount: ArrayLenInt;
     FPrepared : Boolean;
-    FExecCount: Integer;
     FSupportsDMLBatchArrays: Boolean;
     FBindList: TZBindList;
   protected
     FUniTemp: ZWideString;
     FRawTemp: RawByteString;
     FTokenMatchIndex, //did we match a token to indicate if Prepare makes sense?
-    FCountOfQueryParams, //how many params did we found to prepvent mem-reallocs?
-    FMinExecCount2Prepare: Integer; //how many executions must be done to fall into a real prepared mode?
+    FCountOfQueryParams: Integer; //how many params did we found to prepvent mem-reallocs?
     FGUIDAsString: Boolean; //How should a GUID value be treaded?
     FHasInOutParams: Boolean; //are Input/output params registered?
     property TokenMatchIndex: Integer read FTokenMatchIndex;
@@ -326,7 +324,6 @@ type
     function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; virtual;
   protected //Properties
     property ArrayCount: ArrayLenInt read FInitialArrayCount;
-    property ExecutionCount: Integer read FExecCount;
     property SupportsDMLBatchArrays: Boolean read FSupportsDMLBatchArrays;
     property BindList: TZBindList read FBindList;
   protected //the sql conversions
@@ -429,8 +426,6 @@ type
 
     procedure SetResultSetConcurrency(Value: TZResultSetConcurrency); override;
     procedure SetResultSetType(Value: TZResultSetType); override;
-
-    property MinExecCount2Prepare: Integer read FMinExecCount2Prepare write FMinExecCount2Prepare;
   end;
 
   TZRawPreparedStatement = class(TZAbstractPreparedStatement2)
@@ -504,9 +499,9 @@ type
   TZAbstractCallableStatement2 = class(TZAbstractPreparedStatement2)
   private
     FStoredProcName: String;
-    FCallExecKind: TZCallExecKind;
     FBindAgain: Boolean;
   protected
+    FCallExecKind: TZCallExecKind;
     FExecStatements: array[TZCallExecKind] of TZAbstractPreparedStatement2;
     function CreateExecutionStatement(Mode: TZCallExecKind; const StoredProcName: String): TZAbstractPreparedStatement2; virtual; abstract;
     function IsFunction: Boolean;
@@ -642,7 +637,7 @@ type
     FTokenMatchIndex, FParamsCnt: Integer;
     FInParamTypes: TZSQLTypeArray;
     FInParamDefaultValues: TStringDynArray;
-    FMinExecCount2Prepare, FInParamCount: Integer;
+    FInParamCount: Integer;
     function GetClientVariantManger: IZClientVariantManager;
     function SupportsSingleColumnArrays: Boolean; virtual;
     procedure PrepareInParameters; virtual;
@@ -673,7 +668,6 @@ type
     property CountOfQueryParams: Integer read fParamsCnt;
     property ArrayCount: ArrayLenInt read FInitialArrayCount;
     property ExecutionCount: Integer read FExecCount;
-    property MinExecCount2Prepare: Integer read FMinExecCount2Prepare;
     property SupportsDMLBatchArrays: Boolean read FSupportsDMLBatchArrays;
     procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
@@ -922,12 +916,10 @@ end;
 destructor TZAbstractStatement.Destroy;
 begin
   Close;
-  if Assigned(FBatchQueries) then
-    FreeAndNil(FBatchQueries);
+  FreeAndNil(FBatchQueries);
   FConnection.DeregisterStatement(Self);
   FConnection := nil;
-  if Assigned(FInfo) then
-    FreeAndNil(FInfo);
+  FreeAndNil(FInfo);
   inherited Destroy;
 end;
 
@@ -1813,8 +1805,6 @@ begin
   inherited Create(Connection, Info);
   FClientVariantManger := Connection.GetClientVariantManager;
   FSupportsDMLBatchArrays := Connection.GetMetadata.GetDatabaseInfo.SupportsArrayBindings;
-  //JDBC prepares after 4th execution
-  FMinExecCount2Prepare := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_MinExecCntBeforePrepare, '2'), 2);
   {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
 end;
 
@@ -2099,7 +2089,6 @@ begin
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
-  Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
 end;
 
 {**
@@ -2116,7 +2105,6 @@ function TZAbstractPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   { Logging Execution }
   DriverManager.LogMessage(lcExecPrepStmt,Self);
-  Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
   Result := -1;
 end;
 
@@ -2793,7 +2781,6 @@ begin
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
-  Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
 end;
 
 procedure TZAbstractPreparedStatement.Close;
@@ -4469,8 +4456,6 @@ constructor TZAbstractPreparedStatement2.Create(const Connection: IZConnection;
 begin
   inherited Create(Connection, Info);
   FSupportsDMLBatchArrays := Connection.GetMetadata.GetDatabaseInfo.SupportsArrayBindings;
-  //JDBC prepares after 4th execution
-  FMinExecCount2Prepare := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_MinExecCntBeforePrepare, '2'), 2);
   FBindList := TZBindList.Create(ConSettings);
   {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
 end;
@@ -4582,7 +4567,6 @@ begin
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
-  Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
 end;
 
 {**
@@ -4624,7 +4608,6 @@ begin
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
-  Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
 end;
 
 {**
@@ -4679,7 +4662,6 @@ begin
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
-  Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally
@@ -4991,7 +4973,6 @@ procedure TZAbstractPreparedStatement2.ReleaseImmediat(
   const Sender: IImmediatelyReleasable);
 begin
   FPrepared := False;
-  FExecCount := 0;
   inherited ReleaseImmediat(Sender);
 end;
 
@@ -5526,7 +5507,6 @@ begin
   end;
   UnPrepareInParameters;
   FPrepared := False;
-  FExecCount := 0;
   FHasInOutParams := False;
   FInitialArrayCount := 0;
 end;

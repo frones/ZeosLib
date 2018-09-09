@@ -48,6 +48,8 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
+		<DCC_RangeChecking>true</DCC_RangeChecking>
+		<DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
         <Manifest_File>None</Manifest_File>
         <SanitizedProjectName>ZTestAll</SanitizedProjectName>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;VCL;$(DCC_Namespace)</DCC_Namespace>
