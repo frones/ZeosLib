@@ -154,6 +154,7 @@ const
   stUnicodeStream_Index = {$IFDEF GENERIC_INDEX}17{$ELSE}18{$ENDIF};
   stBinaryStream_Index  = {$IFDEF GENERIC_INDEX}18{$ELSE}19{$ENDIF};
 {$WARNINGS OFF}
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure TZTestDbcInterbaseCase.InternalTestArrayBinding(
   PStatement: IZPreparedStatement; FirstID, ArrayLen: Integer);
 var
@@ -431,6 +432,7 @@ begin
   PStatement.ExecuteUpdatePrepared;
   //SetLength(stShortNullArray, 0);
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 {$WARNINGS ON} //implizit string conversion of...
 
 procedure TZTestDbcInterbaseCase.TestConnection;

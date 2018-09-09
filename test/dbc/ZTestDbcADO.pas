@@ -117,6 +117,7 @@ implementation
   Gets an array of protocols valid for this test.
   @return an array of valid protocols
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZTestDbcADOCase.GetSupportedProtocols: string;
 begin
   Result := 'ADO';
@@ -466,6 +467,7 @@ begin
   PStatement.Close;
   Connection.Commit;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 {$WARNINGS ON} //implizit string conversion of...
 
 procedure TZTestDbcADOCase.TestFetchSequenceValue;

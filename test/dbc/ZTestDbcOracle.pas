@@ -648,6 +648,7 @@ begin
 end;
 
 {$WARNINGS OFF} //implizit string conversion of...
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure TZTestDbcOracleCase.TestArrayBindings;
 const
   hl_id_Index           = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
@@ -985,6 +986,7 @@ begin
   PStatement.ExecuteUpdatePrepared;
   //SetLength(stShortNullArray, 0);
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 {$WARNINGS ON} //implizit string conversion of...
 
 initialization
