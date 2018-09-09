@@ -1020,11 +1020,13 @@ begin
   Result := mysql_refresh(mysql, Options);
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure TZMySQLPlainDriver.SeekData(Res: PZMySQLResult;
   Offset: Cardinal);
 begin
   mysql_data_seek(Res, Offset);
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 function TZMySQLPlainDriver.SeekField(Res: PZMySQLResult;
   Offset: Cardinal): Cardinal;
@@ -1115,10 +1117,12 @@ begin
   Result := mysql_stmt_close(stmt);
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure TZMySQLPlainDriver.stmt_data_seek(stmt: PMYSQL_STMT; Offset: Cardinal);
 begin
   mysql_stmt_data_seek(stmt, Offset);
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 function TZMySQLPlainDriver.stmt_errno(stmt: PMYSQL_STMT):Integer;
 begin

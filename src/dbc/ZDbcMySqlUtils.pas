@@ -797,11 +797,13 @@ begin
   ReverseBytes(Src, @Result, Len);
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
 begin
   Result := 0;
   ReverseBytes(Src, @Result, Len);
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 var
   MYSQL_FIELD51_Offset: TMYSQL_FIELDOFFSETS;
