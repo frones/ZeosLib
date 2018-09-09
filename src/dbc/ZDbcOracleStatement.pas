@@ -922,11 +922,11 @@ var
   CachedResultSet: TZCachedResultSet;
 begin
   if FOpenResultSet = nil then begin
-    if Self.FStatementType = OCI_STMT_SELECT then begin
+    //if Self.FStatementType = OCI_STMT_SELECT then begin
       NativeResultSet := TZOracleResultSet.Create(Self, SQL, FOCIStmt, FOCIError, FZBufferSize);
       NativeResultSet.SetConcurrency(rcReadOnly);
-    end else
-      NativeResultSet := TZOracleCallableResultSet.Create(Self, SQL, FOCIStmt, FOCIError, nil, nil);
+    //end else
+      //NativeResultSet := TZOracleCallableResultSet.Create(Self, SQL, FOCIStmt, FOCIError, nil, nil);
     if (GetResultSetConcurrency = rcUpdatable) or (GetResultSetType <> rtForwardOnly) then
     begin
       CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
@@ -1025,7 +1025,7 @@ begin
   end;
 
   BindInParameters;
-  if FStatementType in [OCI_STMT_SELECT, OCI_STMT_BEGIN] then begin
+  if FStatementType in [OCI_STMT_SELECT{, OCI_STMT_BEGIN}] then begin
     LastUpdateCount := -1;
     { Executes the statement and gets a resultset. }
     ResultSet := CreateResultSet;
