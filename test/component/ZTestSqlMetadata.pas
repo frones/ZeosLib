@@ -113,9 +113,7 @@ begin
     Metadata.Close;
   end;
 
-  if StartsWith(Protocol, 'interbase')
-    or StartsWith(Protocol, 'firebird')
-    or StartsWith(Protocol, 'oracle') then
+  if ProtocolType in [protInterbase, protFirebird, protOracle] then
     Metadata.TableName := 'PEOPLE'
   else
     Metadata.TableName := 'people';

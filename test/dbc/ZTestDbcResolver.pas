@@ -90,8 +90,7 @@ var
   Columns: TObjectList;
 *)
 begin
-  if StartsWith(Protocol, 'interbase')
-    or StartsWith(Protocol, 'firebird') then
+  if ProtocolType in [protInterbase, protFirebird] then
     Exit;
 (*
   Statement := Connection.CreateStatement;
@@ -140,7 +139,8 @@ var
   Resolver: TZGenericCachedResolver;
 *)
 begin
-  if not StartsWith(Protocol, 'interbase') then Exit;
+  if ProtocolType <> protInterbase then
+    Exit;
 (*
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
@@ -194,7 +194,7 @@ var
   ResultSet: IZResultSet;
   WhereClause: string;
 begin
-  if not StartsWith(Protocol, 'mysql') then
+  if ProtocolType <> protMySQL then
     Exit;
 
   Statement := Connection.CreateStatement;

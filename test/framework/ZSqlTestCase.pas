@@ -87,6 +87,21 @@ type
   TDataSetTypesDynArray = array of TFieldType;
   TResultSetTypesDynArray = array of TZSQLType;
 
+  // ! List of protocols totally mirrors protocol conditions used throughout the tests.
+  // Protocol type is determined by StartsWith(Protocol, ProtocolPrefixes[drv]),
+  // so one prefix means exactly one protocol type!
+  TProtocolType = (protUnknown, protMySQL, protPostgre, protSQLite, protFirebird, protInterbase,
+    protOracle, protASA, protFreeTDS, protMSSQL, protOleDB, protADO, protSyBase,
+    protODBC);
+
+const
+  // Strictly in lower-case
+  ProtocolPrefixes: array[TProtocolType] of string =
+    ('unknown', 'mysql', 'postgresql', 'sqlite', 'firebird', 'interbase',
+     'oracle', 'asa', 'freetds', 'mssql', 'oledb', 'ado', 'sybase',
+     'odbc');
+
+type
   {** Represents a SQL test database configuration. }
   { TZConnectionConfig }
   TZConnectionConfig = class
@@ -187,6 +202,7 @@ type
     function GetPort: Integer;
     function GetProperties: TStringDynArray;
     function GetProtocol : string;
+    function GetProtocolType: TProtocolType;
     function GetRebuild: Boolean;
     function GetUserName: string;
     procedure SetCurrentConnectionConfig(AValue: TZConnectionConfig);
@@ -249,6 +265,7 @@ type
     property LibLocation: string read GetLibLocation;
     property Alias: string read GetAlias;
     property Protocol: string read GetProtocol;
+    property ProtocolType: TProtocolType read GetProtocolType;
     property HostName: string read GetHostName;
     property Port: Integer read GetPort;
     property Database: string read GetDatabase;
@@ -655,6 +672,16 @@ begin
   If StartsWith(Result,pooledprefix) then
     Result := Copy(Result,Length(PooledPrefix)+1,Length(Result));
   {$ENDIF}
+end;
+
+function TZAbstractSQLTestCase.GetProtocolType: TProtocolType;
+var Prot: string;
+begin
+  Prot := LowerCase(Protocol);
+  for Result := Low(TProtocolType) to High(TProtocolType) do
+    if StartsWith(Prot, ProtocolPrefixes[Result]) then
+      Exit;
+  Result := protUnknown;
 end;
 
 function TZAbstractSQLTestCase.GetRebuild: Boolean;
@@ -1576,4 +1603,5 @@ finalization
   if Assigned(TZAbstractSQLTestCase.CVConnectionConfigs) then
     TZAbstractSQLTestCase.CVConnectionConfigs.Free;
 {$ENDIF}
+
 end.

@@ -129,8 +129,7 @@ begin
 
   Query.FieldByName('d_id').AsInteger := TEST_ROW_ID;
 
-  if StartsWith(Protocol, 'oracle') or (Protocol = 'mssql') or
-    (Protocol = 'sybase') or (Protocol = 'ado') or StartsWith(Protocol, 'FreeTDS') then
+  if (ProtocolType in [protOracle, protMSSQL, protSyBase, protFreeTDS, protADO]) then
   begin
     CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_date').DataType));
     CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_time').DataType))
@@ -149,8 +148,7 @@ begin
   Query.FieldByName('d_timestamp').AsDateTime := NowDate;
 
   {$IFNDEF WITH_FPC_FTTIME_BUG}
-  if StartsWith(Protocol, 'oracle') or (Protocol = 'mssql') or
-    (Protocol = 'sybase') or (Protocol = 'ado') then
+  if (ProtocolType in [protOracle, protMSSQL, protSyBase, protADO]) then
   begin
     CheckEquals(NowDate, Query.FieldByName('d_date').AsDateTime, 1e-10);
     CheckEquals(NowDate, Query.FieldByName('d_time').AsDateTime, 1e-10);
@@ -172,8 +170,7 @@ begin
 
   CheckEquals(1, Query.RecordCount);
   {$IFNDEF WITH_FPC_FTTIME_BUG}
-  if StartsWith(Protocol, 'oracle') or (Protocol = 'mssql') or
-    (Protocol = 'sybase') then
+  if (ProtocolType in [protOracle, protMSSQL, protSyBase]) then
   begin
     CheckEqualsDate(NowDate, Query.FieldByName('d_date').AsDateTime, [dpYear..dpSec]);
     CheckEquals(NowDate, Query.FieldByName('d_time').AsDateTime, 1e-4);

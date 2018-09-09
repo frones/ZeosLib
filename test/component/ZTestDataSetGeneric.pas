@@ -2023,16 +2023,17 @@ end;
 procedure TZGenericTestDataSet.TestSpaced_Names;
 var
   Query: TZQuery;
+
   function GetNonQuotedAlias(const Value: String): String;
   begin
-    if StartsWith(Protocol, 'postgresql') then
-      Result := LowerCase(Value)
+    case ProtocolType of
+      protPostgre:
+        Result := LowerCase(Value);
+      protOracle, protFirebird, protInterbase:
+        Result := UpperCase(Value);
     else
-      if StartsWith(Protocol, 'oracle') or StartsWith(Protocol, 'firebird') or
-         StartsWith(Protocol, 'interbase') then
-        Result := UpperCase(Value)
-      else
         Result := Value;
+  end;
   end;
 begin
   Query := CreateQuery;

@@ -394,7 +394,7 @@ begin
 
     Query1.Connection := Connection;
 
-    if StartsWith(Protocol, 'sqlite') then
+    if ProtocolType = protSQLite then
     begin
       Query1.SQL.Text := Format('SELECT COUNT(*), %s FROM %s', [PrimaryKey, TableName]);
       Query1.Open;

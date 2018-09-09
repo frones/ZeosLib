@@ -116,6 +116,7 @@ const
   BoolStrsW: array[Boolean] of ZWideString = (ZWideString(StrFalse), ZWideString(StrTrue));
   SQLDateTimeFmt = 'YYYY"-"MM"-"DD HH":"NN":"SS';
   SQLDateTimeFmtMSecs = 'YYYY"-"MM"-"DD HH":"NN":"SS"."ZZZ';
+  YesNoStrs: array[Boolean] of string = ('NO', 'YES');
 
 var
   TwoDigitLookupHexW: packed array[Byte] of Word;

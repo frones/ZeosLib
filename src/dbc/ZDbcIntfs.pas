@@ -1239,6 +1239,7 @@ var
   Driver: IZDriver;
 begin
   FDriversCS.Enter;
+  Result := 0;
   try
     Driver := GetDriver(Url);
     if Driver = nil then

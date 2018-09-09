@@ -1693,7 +1693,7 @@ These constant define integer codes that represent the various text encodings su
 
   Result:=inherited UncachedGetCharacterSets;
 
-  for i := 0 to high(Encodings) do
+  for i := Low(Encodings) to High(Encodings) do
   begin
     Result.MoveToInsertRow;
     Result.UpdateString(CharacterSetsNameIndex, Encodings[i].CP); //CHARACTER_SET_NAME
