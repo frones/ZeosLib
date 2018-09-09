@@ -656,11 +656,9 @@ end;
 destructor TZAbstractSQLTestCase.Destroy;
 begin
   {$IFNDEF WITH_CLASS_VARS}
-  if Assigned(CVConnectionConfigs) then
-    CVConnectionConfigs.Free;
+  FreeAndNil(CVConnectionConfigs);
   {$ENDIF}
-  if Assigned(FTraceList) then
-    FTraceList.Free;
+  FreeAndNil(FTraceList);
 
   inherited Destroy;
 end;
@@ -1600,8 +1598,7 @@ initialization
   TZAbstractSQLTestCase.LoadConfigurations;
 
 finalization
-  if Assigned(TZAbstractSQLTestCase.CVConnectionConfigs) then
-    TZAbstractSQLTestCase.CVConnectionConfigs.Free;
+  FreeAndNil(TZAbstractSQLTestCase.CVConnectionConfigs);
 {$ENDIF}
 
 end.

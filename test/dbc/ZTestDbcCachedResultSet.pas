@@ -93,10 +93,7 @@ type
       Nullable: TZColumnNullableType; ReadOnly: Boolean;
       Writable: Boolean): TZColumnInfo;
     function GetColumnsInfoCollection: TObjectList;
-    function CompareArrays(Array1, Array2: TBytes): Boolean;
     procedure FillResultSet(ResultSet: IZResultSet; RecCount: integer);
-    function CompareStreams(Stream1, Stream2: TStream): boolean; overload;
-
   published
     procedure TestTraversalAndPositioning;
     procedure TestInsert;
@@ -149,24 +146,6 @@ const
   LastIndex = stBinaryStreamIndex;
 
 { TZTestCachedResultSetCase }
-
-{**
-  Compares two byte arrays
-  @param Array1 the first array to compare.
-  @param Array2 the second array to compare.
-  @return <code>True</code> if arrays are equal.
-}
-function TZTestCachedResultSetCase.CompareArrays(Array1,
-  Array2: TBytes): Boolean;
-var
-  I: Integer;
-begin
-  Result := False;
-  if High(Array2) <> High(Array1) then Exit;
-  for I := 0 to High(Array1) do
-    if Array1[I] <> Array2[I] then Exit;
-  Result := True;
-end;
 
 procedure TZTestCachedResultSetCase.FillResultSet(
   ResultSet: IZResultSet; RecCount: Integer);
@@ -583,7 +562,7 @@ begin
         CheckEquals(FTimeStamp, GetTimestamp(stTimestampIndex), 0, 'GetTimestamp');
 
         ByteArray := GetBytes(stBytesIndex);
-        Check(CompareArrays(FByteArray, ByteArray));
+        CheckEquals(FByteArray, ByteArray);
 
         CheckEquals(False, FResultSet.WasNull, 'WasNull');
 
@@ -596,7 +575,7 @@ begin
         { AciiStream check }
         try
           Stream := GetAsciiStream(stAsciiStreamIndex);
-          Check(CompareStreams(Stream, FAsciiStream), 'AsciiStream');
+          CheckEquals(Stream, FAsciiStream, 'AsciiStream');
           Stream.Free;
         except
           Fail('Incorrect GetBinaryStream method behavior');
@@ -605,7 +584,7 @@ begin
         { UnicodeStream check }
         try
           Stream := GetUnicodeStream(stUnicodeStreamIndex);
-          Check(CompareStreams(Stream, FUnicodeStream), 'UnicodeStream');
+          CheckEquals(Stream, FUnicodeStream, 'UnicodeStream');
           Stream.Free;
         except
           Fail('Incorrect GetUnicodeStream method behavior');
@@ -614,7 +593,7 @@ begin
         { BinaryStream check }
         try
           Stream := GetBinaryStream(stBinaryStreamIndex);
-          Check(CompareStreams(Stream, FBinaryStream), 'BinaryStream');
+          CheckEquals(Stream, FBinaryStream, 'BinaryStream');
           Stream.Free;
         except
           Fail('Incorrect GetBinaryStream method behavior');
@@ -859,34 +838,6 @@ begin
   finally
     Collection.Free;
   end;
-end;
-
-{**
-  Compare two streams.
-  @param the first stream
-  @param the second stream
-  @result if two streams equals then result true otherwise false
-}
-function TZTestCachedResultSetCase.CompareStreams(Stream1, Stream2: TStream):
-  Boolean;
-var
-  Buffer1, Buffer2: array[0..1024] of Char;
-  ReadNum1, ReadNum2: Integer;
-begin
-  CheckNotNull(Stream1, 'Stream #1 is null');
-  CheckNotNull(Stream2, 'Stream #2 is null');
-  CheckEquals(Stream1.Size, Stream2.Size, 'Stream sizes are not equal');
-
-  Stream1.Position := 0;
-  ReadNum1 := Stream1.Read(Buffer1, 1024);
-  Stream2.Position := 0;
-  ReadNum2 := Stream2.Read(Buffer2, 1024);
-
-  CheckEquals(ReadNum1, ReadNum2, 'Read sizes are not equal.');
-  Result := CompareMem(@Buffer1, @Buffer2, ReadNum1);
-
-  Stream1.Position := 0;
-  Stream2.Position := 0;
 end;
 
 {**

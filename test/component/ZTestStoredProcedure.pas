@@ -578,7 +578,7 @@ begin
 end;
 
 procedure TZTestMySQLStoredProcedure.Test_TEST_All_TYPES;
-const Str1: ZWideString = 'צהüךבאüהצ';
+const Str1: ZWideString = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430; // Abrakadabra in Cyrillic letters
 var
   SQLTime: TDateTime;
   TempBytes: TBytes;

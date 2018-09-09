@@ -3,6 +3,7 @@
   <Package Version="4">
     <PathDelim Value="\"/>
     <Name Value="zcomponent"/>
+    <Type Value="RunAndDesignTime"/>
     <AddToProjectUsesSection Value="True"/>
     <CompilerOptions>
       <Version Value="11"/>
@@ -29,7 +30,7 @@
     <Description Value="Zeos Database Components
 "/>
     <Version Major="7" Minor="2" Release="5"/>
-    <Files Count="6">
+    <Files Count="8">
       <Item1>
         <Filename Value="..\..\src\component\ZComponentReg.pas"/>
         <HasRegisterProc Value="True"/>
@@ -55,8 +56,15 @@
         <Filename Value="..\..\src\component\ZGroupedConnection.pas"/>
         <UnitName Value="ZGroupedConnection"/>
       </Item6>
+      <Item7>
+        <Filename Value="..\..\src\component\ZIBEventAlerter.pas"/>
+        <UnitName Value="ZIBEventAlerter"/>
+      </Item7>
+      <Item8>
+        <Filename Value="..\..\src\component\ZIBEventAlerter.pas"/>
+        <UnitName Value="ZIBEventAlerter"/>
+      </Item8>
     </Files>
-    <Type Value="RunAndDesignTime"/>
     <RequiredPkgs Count="7">
       <Item1>
         <PackageName Value="zplain"/>

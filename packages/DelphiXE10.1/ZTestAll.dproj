@@ -37,6 +37,8 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
+		<DCC_RangeChecking>true</DCC_RangeChecking>
+		<DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
         <Icns_MainIcns>$(BDS)\bin\delphi_PROJECTICNS.icns</Icns_MainIcns>
         <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
         <Manifest_File>None</Manifest_File>
@@ -72,8 +74,6 @@
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
-        <DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
-        <DCC_RangeChecking>true</DCC_RangeChecking>
         <DCC_MapFile>3</DCC_MapFile>
         <DCC_RemoteDebug>true</DCC_RemoteDebug>
         <VerInfo_Locale>1033</VerInfo_Locale>

@@ -733,10 +733,8 @@ destructor TZAbstractResultSet.Destroy;
 begin
   if not FClosed then
       Close;
-
   FreeAndNil(FMetadata);
   FStatement := nil;
-
   FreeAndNil(FColumnsInfo);
   inherited Destroy;
 end;

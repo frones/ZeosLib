@@ -18,7 +18,7 @@ N=1
 O=1
 P=1
 Q=1
-R=0
+R=1
 S=0
 T=0
 U=0
@@ -100,7 +100,7 @@ Conditionals=
 DebugSourceDirs=build
 UsePackages=0
 [Parameters]
-RunParams=-n -s "core" -b
+RunParams=
 HostApplication=
 Launcher=
 UseLauncher=0

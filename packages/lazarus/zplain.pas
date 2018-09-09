@@ -4,6 +4,7 @@
 
 unit zplain;
 
+{$warn 5023 off : no warning about unused units}
 interface
 
 uses
@@ -11,7 +12,7 @@ uses
   ZPlainMySqlDriver, ZPlainOracleConstants, ZPlainOracleDriver, 
   ZPlainPostgreSqlDriver, ZPlainSqLiteDriver, ZPlainASADriver, 
   ZPlainASAConstants, ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants, 
-  ZPlainDbLibConstants, ZPlainAdoDriver, ZPlainAdo, ZOleDB;
+  ZPlainDbLibConstants, zplainplatform;
 
 implementation
 

@@ -1040,7 +1040,7 @@ end;
 procedure TZTestCompPostgreSQLBugReportMBCs.TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);
 const
   QuoteString1 = '\'', 1 --''';
-  QuoteString2: ZWideString = 'ТестЁЙ\000';
+  QuoteString2: ZWideString = #$0422#$0435#$0441#$0442#$0401#$0419'\000'; // Test in Russian + a couple of random Cyrillic letters
 begin
   Query.ParamChar := ':';
   Query.ParamCheck := True;
@@ -1248,7 +1248,7 @@ begin
     Connection.ExecuteDirect('delete from blob_values where b_id = 261');
     Connection.ExecuteDirect('drop function pc_chartoint(chartoconvert character varying)');
   finally
-    if Assigned(Query) then FreeAndNil(Query);
+    FreeAndNil(Query);
     Connection.Disconnect;
   end;
 end;
@@ -1276,7 +1276,7 @@ begin
     Check(TestSF274_GotNotified, 'Didn''t get PostgreSQL notification.');
   finally
     Connection.Disconnect;
-    if Assigned(Listener) then FreeAndNil(Listener);
+    FreeAndNil(Listener);
   end;
 end;
 

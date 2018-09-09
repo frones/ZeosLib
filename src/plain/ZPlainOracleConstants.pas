@@ -147,7 +147,7 @@ type
   POCIDuration = ^OCIDuration;
   OCITypeEncap = ub2;      //enum!
   OCITypeMethodFlag = ub2; //enum!
-  OCITypeParamMode = ub2;  //enum!
+  OCITypeParamMode = sb4;  //enum!
   OCIObjectPropId = ub1;
   OCIRefreshOpt = ub2;     //enum!
 
@@ -670,7 +670,10 @@ const
   {****************** Describe Handle Parameter Attributes *****************}
 
   { Attributes common to Columns and Stored Procs }
-  OCI_ATTR_DATA_SIZE      = 1;    // maximum size of the data
+  OCI_ATTR_DATA_SIZE      = 1;    // ub2 The maximum size of the type attribute.
+                                  // This length is returned in bytes and not
+                                  // characters for strings and raws.
+                                  // It returns 22 for NUMBERs
   OCI_ATTR_DATA_TYPE      = 2;    // the SQL type of the column/argument
   OCI_ATTR_DISP_SIZE      = 3;    // the display size
   OCI_ATTR_NAME           = 4;    // the name of the column/argument

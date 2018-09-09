@@ -69,8 +69,6 @@ type
   protected
     procedure SetUp; override;
     procedure TearDown; override;
-    function CompareStreams(Stream1, Stream2: TStream): Boolean;
-    function CompareArrays(Array1, Array2: TBytes): Boolean;
   published
     procedure TestBlob;
     procedure TestBlobNil;
@@ -88,46 +86,6 @@ implementation
 uses ZDbcResultSetMetadata;
 
 { TZTestAbstractBlobCase }
-
-{**
-  Compare two streams.
-  @param the first stream
-  @param the second stream
-  @result if two streams equals then result true otherwise false
-}
-function TZTestAbstractBlobCase.CompareArrays(Array1,
-  Array2: TBytes): Boolean;
-var
-  I: Integer;
-begin
-  Result := False;
-  if High(Array2) <> High(Array1) then Exit;
-  for I := 0 to High(Array1) do
-    if Array1[I] <> Array2[I] then Exit;
-  Result := True;
-end;
-
-function TZTestAbstractBlobCase.CompareStreams(Stream1,
-  Stream2: TStream): Boolean;
-var
-  Buffer1, Buffer2: array[0..1024] of Char;
-  ReadNum1, ReadNum2: Integer;
-begin
-  CheckNotNull(Stream1, 'Stream #1 is null');
-  CheckNotNull(Stream2, 'Stream #2 is null');
-  CheckEquals(Stream1.Size, Stream2.Size, 'Stream sizes are not equal');
-
-  Stream1.Position := 0;
-  ReadNum1 := Stream1.Read(Buffer1, 1024);
-  Stream2.Position := 0;
-  ReadNum2 := Stream2.Read(Buffer2, 1024);
-
-  CheckEquals(ReadNum1, ReadNum2, 'Read sizes are not equal.');
-  Result := CompareMem(@Buffer1, @Buffer2, ReadNum1);
-
-  Stream1.Position := 0;
-  Stream2.Position := 0;
-end;
 
 procedure TZTestAbstractBlobCase.SetUp;
 var
@@ -164,7 +122,7 @@ begin
   CheckEquals(BINARY_BUFFER_SIZE, Blob.Length, 'Length');
 
   StreamOut := Blob.GetStream;
-  Check(CompareStreams(StreamIn, StreamOut), 'StreamIn = StreamOut');
+  CheckEquals(StreamIn, StreamOut, 'StreamIn = StreamOut');
   ReadNum := StreamOut.Read(Buffer, BINARY_BUFFER_SIZE);
   StreamOut.Free;
   StreamIn.Free;
@@ -186,7 +144,7 @@ begin
   Check(Blob.IsUpdated, 'IsUpdated');
   CheckEquals(BYTES_LEN, Blob.Length, 'Length');
   ResultBytes := Blob.GetBytes;
-  Check(CompareArrays(FBytes, ResultBytes), 'Compare arrays');
+  CheckEquals(FBytes, ResultBytes, 'Compare arrays');
 
   Blob := nil;
 end;
@@ -211,7 +169,7 @@ begin
   CheckEquals(BINARY_BUFFER_SIZE, BlobClone.Length, 'Length');
 
   StreamOut := BlobClone.GetStream;
-  Check(CompareStreams(StreamIn, StreamOut), 'StreamIn = StreamOut');
+  CheckEquals(StreamIn, StreamOut, 'StreamIn = StreamOut');
   ReadNum := StreamOut.Read(Buffer, BINARY_BUFFER_SIZE);
   StreamOut.Free;
   StreamIn.Free;
@@ -245,7 +203,7 @@ begin
   CheckEquals(BINARY_BUFFER_SIZE, Blob.Length, 'Length');
 
   StreamOut := Blob.GetStream;
-  Check(CompareStreams(StreamIn, StreamOut), 'StreamIn = StreamOut');
+  CheckEquals(StreamIn, StreamOut, 'StreamIn = StreamOut');
   ReadNum := StreamOut.Read(Buffer, BINARY_BUFFER_SIZE);
   StreamIn.Free;
   StreamOut.Free;
@@ -271,7 +229,7 @@ begin
   Check(Blob.IsUpdated, 'IsUpdated');
   CheckEquals(BYTES_LEN, Blob.Length, 'Length');
   ResultBytes := Blob.GetBytes;
-  Check(CompareArrays(FBytes, ResultBytes), 'Compare arrays');
+  CheckEquals(FBytes, ResultBytes, 'Compare arrays');
 end;
 
 { TZTestColumnInfoCase }

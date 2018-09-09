@@ -128,11 +128,7 @@ procedure TZDatasetPerformanceTestCase.TearDown;
 begin
   if (not SkipPerformanceTransactionMode) and
     Query.Connection.Connected then Query.Connection.Commit;
-  if Assigned(Query) then
-  begin
-    Query.Free;
-    Query := nil;
-  end;
+  FreeAndNil(FQuery);
   inherited TearDown;
 end;
 

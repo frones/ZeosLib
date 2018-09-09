@@ -314,12 +314,10 @@ begin
 
       BinStream := TMemoryStream.Create;
       BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
-      BinStream.Size := 1024;
       Params[5].LoadFromStream(BinStream, ftBlob);
 
       StrStream := TMemoryStream.Create;
       StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
-      StrStream.Size := 1024;
 //      Params[6].LoadFromStream(StrStream, {$IFDEF UNICODE}ftWideMemo{$ELSE}ftMemo{$ENDIF});
       Params[6].LoadFromStream(StrStream, ftMemo);
 
@@ -608,8 +606,7 @@ begin
       Close;
     end;
   finally
-    if assigned(BinStreamA) then
-      BinStreamA.Free;
+    FreeAndNil(BinStreamA);
   end;
 end;
 
@@ -755,7 +752,6 @@ begin
       Sql_ := 'SELECT * FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
       StrStream := TMemoryStream.Create();
       StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
-      StrStream.Size := 1024;
 
       //Modification by EgonHugeist: Different behavior for the Same Field
       //With dependencies on stUnicodeStream = CP_UTF8 for Delphi-compilers.
@@ -773,7 +769,6 @@ begin
       end;
       BinStream := TMemoryStream.Create();
       BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
-      BinStream.Size := 1024;
       BinStream1 := TMemoryStream.Create;
       StrStream1 := TMemoryStream.Create;
 
@@ -875,22 +870,18 @@ begin
       Close;
     end;
   finally
-    if Assigned(BinStream) then
-       FreeAndNil(BinStream);
-    if Assigned(BinStream1) then
-      FreeAndNil(BinStream1);
-    if Assigned(StrStream) then
-      FreeAndNil(StrStream);
-    if Assigned(StrStream1) then
-      FreeAndNil(StrStream1);
-    if Assigned(Query) then
-      FreeAndNil(Query);
+    FreeAndNil(BinStream);
+    FreeAndNil(BinStream1);
+    FreeAndNil(StrStream);
+    FreeAndNil(StrStream1);
+    FreeAndNil(Query);
   end;
 end;
 
 procedure TZGenericTestDataSet.TestQueryGeneric(Query: TDataset);
 var
   SQL: string;
+  i: Integer;
 begin
   { select equipment table }
   SQL := 'DELETE FROM equipment where eq_id > 100';
@@ -1068,6 +1059,48 @@ begin
       Last;
       CheckEquals(True, Eof);
     end;
+    Close;
+  end;
+
+  { select equipment table }
+  // test traversing through dataset with FindNext
+  SQL := 'SELECT * FROM equipment';
+  if GetName = 'TestQuery' then
+    (Query as TZQuery).SQL.Text := SQL
+  else
+    (Query as TZReadOnlyQuery).SQL.Text := SQL;
+  with Query do
+  begin
+    Open;
+    i := 0;
+    repeat
+      Inc(i);
+      CheckEquals(i, RecNo);
+    until not Query.FindNext;
+    CheckEquals(i, RecordCount);
+    CheckEquals(4, RecordCount);
+    Close;
+  end;
+
+  { select equipment table }
+  // test traversing through dataset with Next
+  SQL := 'SELECT * FROM equipment';
+  if GetName = 'TestQuery' then
+    (Query as TZQuery).SQL.Text := SQL
+  else
+    (Query as TZReadOnlyQuery).SQL.Text := SQL;
+  with Query do
+  begin
+    Open;
+    i := 0;
+    while not EOF do
+    begin
+      Inc(i);
+      CheckEquals(i, RecNo);
+      Next;
+    end;
+    CheckEquals(i, RecordCount);
+    CheckEquals(4, RecordCount);
     Close;
   end;
 
@@ -1625,7 +1658,7 @@ begin
   ROQuery := CreateReadOnlyQuery;
   aOptions := Query.Options;
   try
-    if StartsWith(LowerCase(Connection.Protocol), 'postgre') then
+    if ProtocolType = protPostgre then
     begin
       TempConnection := TZConnection.Create(nil);
       TempConnection.HostName := Connection.HostName;
@@ -1652,12 +1685,12 @@ begin
       Sql.Text := 'INSERT INTO blob_values (b_id) values ('+IntToStr(TEST_ROW_ID-1)+')';
       ExecSQL;
 
-      if StartsWith(LowerCase(Connection.Protocol), 'oracle') then
-        BinLob := 'b_blob'
-      else if StartsWith(LowerCase(Connection.Protocol), 'sqlite') then
-        BinLob := 'b_blob'
-      else
-        BinLob := 'b_image';
+      case ProtocolType of
+        protOracle: BinLob := 'b_blob';
+        protSQLite: BinLob := 'b_blob';
+        else        BinLob := 'b_image';
+      end;
+
       Sql.Text := 'INSERT INTO blob_values (b_id,'+BinLob+')'
         + ' VALUES (:b_id,:b_image)';
       CheckEquals(2, Params.Count);
@@ -1669,7 +1702,6 @@ begin
       Params[1].LoadFromStream(BinStreamE, ftBlob);
       ExecSQL;
       CheckEquals(1, RowsAffected);
-
     end;
     TestReadCachedLobs(BinLob, aOptions, BinStreamE, Query);
     TestReadCachedLobs(BinLob, aOptions, BinStreamE, ROQuery);
@@ -1677,8 +1709,7 @@ begin
     TestReadCachedLobs(BinLob, aOptions, BinStreamE, Query);
     TestReadCachedLobs(BinLob, aOptions, BinStreamE, ROQuery);
   finally
-    if assigned(BinStreamE) then
-      BinStreamE.Free;
+    FreeAndNil(BinStreamE);
     Query.SQL.Text := 'DELETE FROM blob_values where b_id >= '+ IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
@@ -1689,8 +1720,7 @@ begin
       try
         ROQuery.Free;
       finally
-        if Assigned(TempConnection) then
-          TempConnection.Free;
+        FreeAndNil(TempConnection);
       end;
     end;
   end;
@@ -1784,7 +1814,7 @@ begin
     begin
       SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-2);
       ExecSQL;
-      if StartsWith(LowerCase(Connection.Protocol), 'oracle') then
+      if ProtocolType = protOracle then
       begin
         Sql.Text := 'INSERT INTO blob_values (b_id, b_clob)'
           + ' VALUES (:b_id, EMPTY_CLOB())';
@@ -1795,7 +1825,7 @@ begin
       end
       else
       begin
-        if StartsWith(LowerCase(Connection.Protocol), 'sqlite') then
+        if ProtocolType = protSQLite then
           TextLob := 'b_text'
         else
           TextLob := 'b_text';
@@ -1864,7 +1894,7 @@ begin
 
   Query := CreateQuery;
   try
-    if StartsWith(LowerCase(Connection.Protocol), 'postgre') then
+    if ProtocolType = protPostgre then
     begin
       TempConnection := TZConnection.Create(nil);
       TempConnection.HostName := Connection.HostName;
@@ -1886,20 +1916,22 @@ begin
     begin
       SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
       ExecSQL;
-      if StartsWith(LowerCase(Connection.Protocol), 'oracle') then
-      begin
-        TextLob := 'b_clob';
-        BinLob := 'b_blob';
-      end
-      else if StartsWith(LowerCase(Connection.Protocol), 'sqlite') then
-      begin
-        TextLob := 'b_text';
-        BinLob := 'b_blob';
-      end
-      else
-      begin
-        TextLob := 'b_text';
-        BinLob := 'b_image';
+      case ProtocolType of
+        protOracle:
+          begin
+            TextLob := 'b_clob';
+            BinLob := 'b_blob';
+          end;
+        protSQLite:
+          begin
+            TextLob := 'b_text';
+            BinLob := 'b_blob';
+          end;
+        else
+          begin
+            TextLob := 'b_text';
+            BinLob := 'b_image';
+          end;
       end;
       BinStreamE := TMemoryStream.Create;
       BinStreamE.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/horse.jpg');
@@ -1999,14 +2031,10 @@ begin
       Close;
     end;
   finally
-    if assigned(BinStreamA) then
-      BinStreamA.Free;
-    if assigned(BinStreamE) then
-      BinStreamE.Free;
-    if assigned(TextStreamA) then
-      TextStreamA.Free;
-    if assigned(TextStreamE) then
-      TextStreamE.Free;
+    FreeAndNil(BinStreamA);
+    FreeAndNil(BinStreamE);
+    FreeAndNil(TextStreamA);
+    FreeAndNil(TextStreamE);
     Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
@@ -2014,8 +2042,7 @@ begin
         TempConnection.Commit;
     finally
       Query.Free;
-      if Assigned(TempConnection) then
-        TempConnection.Free;
+      FreeAndNil(TempConnection);
     end;
   end;
 end;
@@ -2281,7 +2308,7 @@ begin
 
   Query := CreateQuery;
   try
-    if StartsWith(LowerCase(Connection.Protocol), 'postgre') then
+    if ProtocolType = protPostgre then
     begin
       TempConnection := TZConnection.Create(nil);
       TempConnection.HostName := Connection.HostName;
@@ -2303,20 +2330,22 @@ begin
     begin
       SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
       ExecSQL;
-      if StartsWith(LowerCase(Connection.Protocol), 'oracle') then
-      begin
-        TextLob := 'b_clob';
-        BinLob := 'b_blob';
-      end
-      else if StartsWith(LowerCase(Connection.Protocol), 'sqlite') then
-      begin
-        TextLob := 'b_text';
-        BinLob := 'b_blob';
-      end
-      else
-      begin
-        TextLob := 'b_text';
-        BinLob := 'b_image';
+      case ProtocolType of
+        protOracle:
+          begin
+            TextLob := 'b_clob';
+            BinLob := 'b_blob';
+          end;
+        protSQLite:
+          begin
+            TextLob := 'b_text';
+            BinLob := 'b_blob';
+          end;
+        else
+          begin
+            TextLob := 'b_text';
+            BinLob := 'b_image';
+          end;
       end;
       Sql.Text := 'INSERT INTO blob_values (b_id,'+TextLob+','+BinLob+')'
         + ' VALUES (:b_id,:b_text,:b_image)';
@@ -2370,12 +2399,9 @@ begin
       Close;
     end;
   finally
-    if assigned(BinStreamE) then
-      BinStreamE.Free;
-    if assigned(BinStreamA) then
-      BinStreamA.Free;
-    if assigned(TextStream) then
-      TextStream.Free;
+    FreeAndNil(BinStreamE);
+    FreeAndNil(BinStreamA);
+    FreeAndNil(TextStream);
     Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
@@ -2383,8 +2409,7 @@ begin
         TempConnection.Commit;
     finally
       Query.Free;
-      if Assigned(TempConnection) then
-        TempConnection.Free;
+      FreeAndNil(TempConnection);
     end;
   end;
 end;
@@ -2395,8 +2420,11 @@ var
   TxtValue: String;
   ValueIsNull: Boolean;
 begin
-  if StartsWith(LowerCase(Connection.Protocol), 'oracle') then
+  if ProtocolType = protOracle then
+  begin
+    BlankCheck;
     Exit;   //not resolveable with ora -> empty is always null except use the or func
+  end;
   Query := CreateQuery;
   try
     try

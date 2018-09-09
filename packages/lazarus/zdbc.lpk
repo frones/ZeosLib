@@ -68,8 +68,8 @@
         <UnitName Value="ZDbcPooled"/>
       </Item10>
       <Item11>
-        <Filename Value="..\..\src\dbc\ZDbcAdo.pas"/>
-        <UnitName Value="ZDbcAdo"/>
+        <Filename Value="zdbcplatform.pas"/>
+        <UnitName Value="zplainplatform"/>
       </Item11>
     </Files>
     <RequiredPkgs Count="5">

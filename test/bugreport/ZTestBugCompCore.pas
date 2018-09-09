@@ -266,11 +266,9 @@ begin
   try
     TextStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/gnu.txt');
     TextStream.Position := 0;
-    TextStream.Size := 1024;
 
     BinaryStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/coffee.bmp');
     BinaryStream.Position := 0;
-    BinaryStream.Size := 1024;
 
     { Remove previously created record }
     Query.SQL.Text := 'DELETE FROM people WHERE p_id=:id';
@@ -334,10 +332,10 @@ begin
 
     repeat
       Inc(RecNo);
-      CheckEquals(Query.RecNo, RecNo);
+      CheckEquals(Query.RecNo, RecNo, 'check Query.RecNo');
     until not Query.FindNext;
 
-    CheckEquals(Query.RecordCount, RecNo);
+    CheckEquals(Query.RecordCount, RecNo, 'check Query.RecordCount');
     Query.Close;
   finally
     Query.Free;
@@ -619,7 +617,6 @@ begin
     CalcField.DataSet := Query;
 
     Query.Open;
-    Query.FieldByName('p_calc').AsInteger;
 
     while not Query.Eof do
     begin
@@ -872,9 +869,7 @@ begin
   Query.SQL.Text := 'select p_id, p_name, p_resume from people'
     + ' where p_id < 4 order by p_id';
 
-  if StartsWith(LowerCase(Connection.Protocol), 'interbase')
-    or StartsWith(LowerCase(Connection.Protocol), 'firebird')
-    or StartsWith(LowerCase(Connection.Protocol), 'oracle') then
+  if ProtocolType in [protInterbase, protFirebird, protOracle] then
   begin
     try
       Query.Open;
@@ -1808,6 +1803,69 @@ begin
   end;
 end;
 
+procedure ZTestCompCoreBugReport.TestSF270_1;
+var
+  Query: TZQuery;
+  PersonName: String;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'SELECT * from people';
+    Query.Open;
+    CheckEquals(5, Query.RecordCount, 'Expected to get exactly fife records from the people table.');
+    PersonName := Query.FieldByName('p_name').AsString;
+    Query.Edit;
+    Query.FieldByName('p_name').AsString := '';
+    Query.FieldByName('p_name').AsString := PersonName;
+    try
+      Query.Post;
+    except
+      Query.Cancel;
+      raise;
+    end;
+    Query.Close;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF270_2;
+var
+  Query: TZQuery;
+  PersonName: String;
+  UpdateSQL: TZUpdateSQL;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    UpdateSQL := TZUpdateSQL.Create(nil);
+    Query.UpdateObject := UpdateSQL;
+    UpdateSQL.DeleteSQL.Text := 'delete from people where p_id = :old_p_id';
+    UpdateSQL.InsertSQL.Text := 'insert into people (p_id, p_name) values (:new_p_id, :new_p_name)';
+    UpdateSQL.ModifySQL.Text := 'update people set p_id = :new_p_id, p_name = :new_p_name where p_id = :old_p_id';
+    Query.SQL.Text := 'SELECT p_id, p_name from people';
+    Query.Open;
+    CheckEquals(5, Query.RecordCount, 'Expected to get exactly fife records from the people table.');
+    PersonName := Query.FieldByName('p_name').AsString;
+    Query.Edit;
+    Query.FieldByName('p_name').AsString := '';
+    Query.FieldByName('p_name').AsString := PersonName;
+    try
+      Query.Post;
+    except
+      Query.Cancel;
+      raise;
+    end;
+    Query.Close;
+  finally
+    Query.Free;
+    FreeAndNil(UpdateSQL);
+  end;
+end;
+
 procedure ZTestCompCoreBugReport.TestSF279CalcFields(DataSet: TDataSet);
 begin
   DataSet.FieldByName('calculated').AsString :=
@@ -1923,12 +1981,12 @@ end;
 
 const {Test Strings}
   Str1: ZWideString = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
-  Str2: ZWideString = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
-  Str3: ZWideString = 'ќдной из наиболее';
-  Str4: ZWideString = 'тривиальных задач';
-  Str5: ZWideString = 'решаемых многими';
-  Str6: ZWideString = 'коллективами программистов';
-
+  // some dull text in Russian
+  Str2: ZWideString = #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430#$0438#$0431#$043E#$043B#$0435#$0435#$0020#$0442#$0440#$0438#$0432#$0438#$0430#$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434#$0430#$0447#$002C#$0020#$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438#$0020#$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C#$0438#$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432#$002C#$0020#$044F#$0432#$043B#$044F#$0435#$0442#$0441#$044F#$0020#$043F#$043E#$0441#$0442#$0440#$043E#$0435#$043D#$0438#$0435#$0020#$0438#$043D#$0444#$043E#$0440#$043C#$0430#$0446#$0438#$043E#$043D#$043D#$043E#$0439#$0020#$0441#$0438#$0441#$0442#$0435#$043C#$044B#$0020#$0434#$043B#$044F#$0020#$0430#$0432#$0442#$043E#$043C#$0430#$0442#$0438#$0437#$0430#$0446#$0438#$0438#$0020#$0431#$0438#$0437#$043D#$0435#$0441#$002D#$0434#$0435#$044F#$0442#$0435#$043B#$044C#$043D#$043E#$0441#$0442#$0438#$0020#$043F#$0440#$0435#$0434#$043F#$0440#$0438#$044F#$0442#$0438#$044F#$002E#$0020#$0412#$0441#$0435#$0020#$0430#$0440#$0445#$0438#$0442#$0435#$043A#$0442#$0443#$0440#$043D#$044B#$0435#$0020#$043A#$043E#$043C#$043F#$043E#$043D#$0435#$043D#$0442#$044B#$0020#$0028#$0431#$0430#$0437#$044B#$0020#$0434#$0430#$043D#$043D#$044B#$0445#$002C#$0020#$0441#$0435#$0440#$0432#$0435#$0440#$0430#$0020#$043F#$0440#$0438#$043B#$043E#$0436#$0435#$043D#$0438#$0439#$002C#$0020#$043A#$043B#$0438#$0435#$043D#$0442#$0441#$043A#$043E#$0435#$0020#$002E#$002E#$002E;
+  Str3: ZWideString = #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430#$0438#$0431#$043E#$043B#$0435#$0435;
+  Str4: ZWideString = #$0442#$0440#$0438#$0432#$0438#$0430#$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434#$0430#$0447;
+  Str5: ZWideString = #$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438;
+  Str6: ZWideString = #$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C#$0438#$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432;
 
 procedure ZTestCompCoreBugReportMBCs.TestUnicodeBehavior;
 var
@@ -1982,10 +2040,9 @@ begin
       end;
     end;
   finally
-    Query.Free;
-    SL.Free;
-    if Assigned(StrStream1) then
-      StrStream1.Free;
+    FreeAndNil(Query);
+    FreeAndNil(SL);
+    FreeAndNil(StrStream1);
   end;
 end;
 

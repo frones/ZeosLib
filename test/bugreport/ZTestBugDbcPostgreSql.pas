@@ -238,10 +238,8 @@ begin
 
   StrStream := TMemoryStream.Create;
   StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
-  StrStream.Size := 1024;
   BinStream := TMemoryStream.Create;
   BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
-  BinStream.Size := 1024;
 
   StrStream1 := nil;
   BinStream1 := nil;
@@ -277,12 +275,10 @@ begin
       Close;
     end;
   finally
-    BinStream.Free;
-    StrStream.Free;
-    if Assigned(BinStream1) then
-      BinStream1.Free;
-    if Assigned(StrStream1) then
-      StrStream1.Free;
+    FreeAndNil(BinStream);
+    FreeAndNil(StrStream);
+    FreeAndNil(BinStream1);
+    FreeAndNil(StrStream1);
   end;
 end;
 
@@ -727,8 +723,8 @@ procedure TZTestDbcPostgreSQLBugReportMBCs.Test739514;
 const
   id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   fld_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  Str1: ZWideString = 'Абракадабра';
-  Str2: ZWideString = '\Победа\';
+  Str1: ZWideString = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430 {'Абракадабра'}; // Abrakadabra in Cyrillic letters
+  Str2: ZWideString = '\'#$041f#$043e#$0431#$0435#$0434#$0430'\' {'\Победа\'}; // victory / success in russian (according to leo.org)
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;

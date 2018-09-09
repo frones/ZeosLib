@@ -434,7 +434,6 @@ end;
 {$WARNINGS ON} //implizit string conversion of...
 
 procedure TZTestDbcInterbaseCase.TestConnection;
-var Succeeded: Boolean;
 begin
   CheckEquals(False, Connection.IsReadOnly);
   CheckEquals(True, Connection.IsClosed);
@@ -446,14 +445,13 @@ begin
   { Checks without transactions. }
   Connection.CreateStatement;
   CheckEquals(False, Connection.IsClosed);
-  Succeeded := False;
   try
     Connection.Commit;
     Connection.Rollback;
-  except
-    Succeeded := True;
+    Fail(cSInvalidOpInAutoCommit);
+  except on E: Exception do
+    CheckNotTestFailure(E);
   end;
-  Check(Succeeded, cSInvalidOpInAutoCommit);
   Connection.Close;
   CheckEquals(True, Connection.IsClosed);
 
@@ -461,14 +459,13 @@ begin
   Connection.SetTransactionIsolation(tiSerializable);
   Connection.CreateStatement;
   CheckEquals(False, Connection.IsClosed);
-  Succeeded := False;
   try
     Connection.Commit;
     Connection.Rollback;
-  except
-    Succeeded := True;
+    Fail(cSInvalidOpInAutoCommit);
+  except on E: Exception do
+    CheckNotTestFailure(E);
   end;
-  Check(Succeeded, cSInvalidOpInAutoCommit);
   Check(not Connection.IsClosed, 'Connection should not be closed');
   Connection.SetAutoCommit(False);
   Check(not Connection.IsClosed, 'Connection should not be closed');
@@ -478,14 +475,13 @@ begin
   Connection.Rollback;
   Connection.SetAutoCommit(True);
   Check(not Connection.IsClosed, 'Connection should not be closed');
-  Succeeded := False;
   try
     Connection.Commit;
     Connection.Rollback;
-  except
-    Succeeded := True;
+    Fail(cSInvalidOpInAutoCommit);
+  except on E: Exception do
+    CheckNotTestFailure(E);
   end;
-  Check(Succeeded, cSInvalidOpInAutoCommit);
   Connection.SetTransactionIsolation(tiReadCommitted);
   Check(not Connection.IsClosed, 'Connection should not be closed');
   Connection.CreateStatement;
@@ -577,8 +573,7 @@ begin
     TempStream := ResultSet.GetBinaryStreamByName('B_IMAGE');
     CheckEquals(ImageStream, TempStream);
   finally
-    if Assigned(TempStream) then
-      TempStream.Free;
+    FreeAndNil(TempStream);
     ResultSet.Close;
 
     TextStream.Free;

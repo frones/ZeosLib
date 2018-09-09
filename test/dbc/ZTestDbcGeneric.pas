@@ -528,12 +528,10 @@ begin
 
       BinStream := TMemoryStream.Create;
       BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
-      BinStream.Size := 1024;
       SetBinaryStream(Insert_p_picture_Index, BinStream);
 
       StrStream := TMemoryStream.Create;
       StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
-      StrStream.Size := 1024;
       SetAsciiStream(Insert_p_resume_Index, StrStream);
       if ProtocolType = protPostgre then //PQExecParams can't convert str to smallint
         SetNull(Insert_p_redundant_Index, stSmall)
@@ -886,10 +884,8 @@ begin
   Sql := 'SELECT * FROM people where p_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   StrStream := TMemoryStream.Create;
   StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
-  StrStream.Size := 1024;
   BinStream := TMemoryStream.Create;
   BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
-  BinStream.Size := 1024;
   StrStream1 := nil;
   BinStream1 := nil;
   try
@@ -976,12 +972,10 @@ begin
       DeleteRow;
     end;
   finally
-    BinStream.Free;
-    if Assigned(BinStream1) then
-      BinStream1.Free;
-    StrStream.Free;
-    if Assigned(StrStream1) then
-      StrStream1.Free;
+    FreeAndNil(BinStream);
+    FreeAndNil(BinStream1);
+    FreeAndNil(StrStream);
+    FreeAndNil(StrStream1);
   end;
 
 

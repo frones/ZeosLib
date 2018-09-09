@@ -5,7 +5,7 @@
 /*==============================================================*/
 
 
---SET CLIENT_ENCODING TO WIN1251;
+--SET CLIENT_ENCODING TO WIN1251 -- should not be necessary anymore - everything should be ASCII now;
 
 /*==============================================================*/
 /* Tables for Bug#739514                                        */
@@ -16,7 +16,7 @@ CREATE TABLE test739514 (
   PRIMARY KEY (id)
 );
 
-INSERT INTO test739514 VALUES (1, 'Абракадабра');
+INSERT INTO test739514 VALUES (1, E'\u0410\u0431\u0440\u0430\u043a\u0430\u0434\u0430\u0431\u0440\u0430');  /* the second value is Abrakadabra in kyryllic letters, unicode encoded */
 
 /*==============================================================*/
 /* Tables for Bug#739519                                        */
@@ -36,7 +36,7 @@ CREATE TABLE test766053a (
   fld VARCHAR(50)
 );
 
-INSERT INTO test766053a VALUES (93521, 'Абракадабра');
+INSERT INTO test766053a VALUES (93521, E'\u0410\u0431\u0440\u0430\u043a\u0430\u0434\u0430\u0431\u0440\u0430');  /* the second value is Abrakadabra in kyryllic letters */
 INSERT INTO test766053a VALUES (93522, 'Open this door');
 
 CREATE TABLE test766053b (
@@ -44,7 +44,7 @@ CREATE TABLE test766053b (
   fld VARCHAR(50)
 );
 
-INSERT INTO test766053b VALUES (93521, 'Абракадабра');
+INSERT INTO test766053b VALUES (93521, E'\u0410\u0431\u0440\u0430\u043a\u0430\u0434\u0430\u0431\u0440\u0430');  /* the second value is Abrakadabra in kyryllic letters */
 INSERT INTO test766053b VALUES (93522, 'Open this door');
 
 /*==============================================================*/

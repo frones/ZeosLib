@@ -273,10 +273,8 @@ uses
 }
 destructor TZPerformanceSQLTestCase.Destroy;
 begin
-  if Assigned(FSelectedAPIs) then
-    FSelectedAPIs.Free;
-  if Assigned(FSelectedTests) then
-    FSelectedTests.Free;
+  FreeAndNil(FSelectedAPIs);
+  FreeAndNil(FSelectedTests);
 
   inherited Destroy;
 end;
@@ -298,14 +296,12 @@ begin
   inherited LoadConfiguration;
 
   { Defines a selected APIs }
-  if Assigned(FSelectedAPIs) then
-    FSelectedAPIs.Free;
+  FreeAndNil(FSelectedAPIs);
   FSelectedAPIs := SplitString(ReadGroupProperty('apis', ''),
     LIST_DELIMITERS);
 
   { Defines a selected tests }
-  if Assigned(FSelectedTests) then
-    FSelectedTests.Free;
+  FreeAndNil(FSelectedTests);
   FSelectedTests := SplitString(ReadGroupProperty('tests', ''),
     LIST_DELIMITERS);
 
@@ -1103,14 +1099,12 @@ end;
 procedure TZPerformanceResultProcessor.LoadConfiguration;
 begin
   { Defines a selected APIs }
-  if Assigned(FSelectedAPIs) then
-    FSelectedAPIs.Free;
+  FreeAndNil(FSelectedAPIs);
   FSelectedAPIs := SplitString(TestConfig.ReadProperty(
     TestGroup, 'apis', ''), LIST_DELIMITERS);
 
   { Defines a selected tests }
-  if Assigned(FSelectedTests) then
-    FSelectedTests.Free;
+  FreeAndNil(FSelectedTests);
   FSelectedTests := SplitString(TestConfig.ReadProperty(
     TestGroup, 'tests', ''), LIST_DELIMITERS);
 
@@ -1528,7 +1522,6 @@ initialization
   PerformanceResultProcessor := TZPerformanceResultProcessor.Create;
   PerformanceResultProcessor.LoadConfiguration;
 finalization
-  if Assigned(PerformanceResultProcessor) then
-    PerformanceResultProcessor.Free;
+  FreeAndNil(PerformanceResultProcessor);
 end.
 

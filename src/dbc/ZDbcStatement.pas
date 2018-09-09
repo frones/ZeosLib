@@ -54,6 +54,7 @@ unit ZDbcStatement;
 interface
 
 {$I ZDbc.inc}
+{$Z-}
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -527,7 +528,6 @@ end;
 destructor TZAbstractStatement.Destroy;
 begin
   Close;
-  if Assigned(FBatchQueries) then
     FreeAndNil(FBatchQueries);
   FConnection.DeregisterStatement(Self);
   FConnection := nil;
