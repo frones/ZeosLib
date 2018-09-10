@@ -352,11 +352,11 @@ begin
       Params[4].AsDateTime := EncodeTime(17, 30, 0, 0);
 
       BinStream := TMemoryStream.Create;
-      BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
+      BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
       Params[5].LoadFromStream(BinStream, ftBlob);
 
       StrStream := TMemoryStream.Create;
-      StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
+      StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
 //      Params[6].LoadFromStream(StrStream, {$IFDEF UNICODE}ftWideMemo{$ELSE}ftMemo{$ENDIF});
       Params[6].LoadFromStream(StrStream, ftMemo);
 
@@ -790,7 +790,7 @@ begin
 
       Sql_ := 'SELECT * FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
       StrStream := TMemoryStream.Create();
-      StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
+      StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
 
       //Modification by EgonHugeist: Different behavior for the Same Field
       //With dependencies on stUnicodeStream = CP_UTF8 for Delphi-compilers.
@@ -807,7 +807,7 @@ begin
         StrStream.Position := 0;
       end;
       BinStream := TMemoryStream.Create();
-      BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
+      BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
       BinStream1 := TMemoryStream.Create;
       StrStream1 := TMemoryStream.Create;
 
@@ -1737,7 +1737,7 @@ begin
       Params[1].DataType := ftBlob;
       Params[0].AsInteger := TEST_ROW_ID;
       BinStreamE := TMemoryStream.Create;
-      BinStreamE.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/horse.jpg');
+      BinStreamE.LoadFromFile(TestFilePath('images/horse.jpg'));
       Params[1].LoadFromStream(BinStreamE, ftBlob);
       ExecSQL;
       CheckEquals(1, RowsAffected);
@@ -1973,7 +1973,7 @@ begin
           end;
       end;
       BinStreamE := TMemoryStream.Create;
-      BinStreamE.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/horse.jpg');
+      BinStreamE.LoadFromFile(TestFilePath('images/horse.jpg'));
       BinStreamE.Position := 0;
 
       TextStreamE := TMemoryStream.Create;
@@ -1993,7 +1993,7 @@ begin
       TextStreamA.Write(teststring[1],length(teststring));
       TextStreamA.Free;
       BinStreamA := Query.CreateBlobStream(Query.FieldByName(BinLob), bmWrite);
-      TMemoryStream(BinStreamA).LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/horse.jpg');
+      TMemoryStream(BinStreamA).LoadFromFile(TestFilePath('images/horse.jpg'));
       BinStreamA.Free;
       Post;
 
@@ -2455,7 +2455,7 @@ begin
       Params[1].LoadFromStream(TextStream, ftMemo);
       FreeAndNil(TextStream);
       BinStreamE := TMemoryStream.Create;
-      BinStreamE.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/horse.jpg');
+      BinStreamE.LoadFromFile(TestFilePath('images/horse.jpg'));
       setlength(s,BinStreamE.Size);
       BinStreamE.Read(s[1],length(s));
       s := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}DupeString(s, 10);

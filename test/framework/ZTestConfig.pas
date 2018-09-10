@@ -82,11 +82,6 @@ const
   DEFAULT_CONFIG_DIR  = 'database';
   DEFAULT_LOG_DIR     = 'log';
   DEFAULT_CONFIG_FILE = 'test.properties';
-{$IFDEF UNIX}
-  PATH_DELIMITER      = '/';
-{$ELSE}
-  PATH_DELIMITER      = '\';
-{$ENDIF}
 
 const
   { Names of the main test groups }
@@ -167,6 +162,7 @@ type
   {** Implements a wrapper for test configuration file. }
   TZTestConfiguration = class
   private
+    FRootPath: string;
     FConfigFile: TIniFile;
     FConfigLoaded: Boolean;
     FConfigFileName: string;
@@ -177,14 +173,19 @@ type
 
     function GetConfigFileName: string;
   public
+    constructor Create;
     destructor Destroy; override;
 
     procedure LoadConfig;
     function ReadProperty(const Group, Key, Default: string): string;
 
+    function PathFromRoot(const Path: string): string;
+    function PathFromConfig(const RelativePath: string): string;
+
     procedure ActivateMemCheck;
     procedure DeactivateMemCheck;
 
+    property RootPath: string read FRootPath;
     property ConfigFile: TIniFile read FConfigFile;
     property ConfigFileName: string read FConfigFileName;
     property ConfigLoaded: Boolean read FConfigLoaded;
@@ -308,6 +309,15 @@ end;
 
 { TZTestConfiguration }
 
+constructor TZTestConfiguration.Create;
+begin
+  // determine root path - take exe path and go up until we see the obligatory
+  // DEFAULT_CONFIG_DIR ('database') folder
+  FRootPath := ExtractFileDir(ParamStr(0));
+  while not DirectoryExists(FRootPath + PathDelim + DEFAULT_CONFIG_DIR) do
+    FRootPath := ExtractFileDir(FRootPath);
+end;
+
 {**
   Destroys this test configuration and cleanups the memory.
 }
@@ -344,22 +354,10 @@ begin
   { Searches for default configuration file. }
   if Result = '' then
   begin
-    Path := '.' + PATH_DELIMITER + DEFAULT_CONFIG_DIR
-      + PATH_DELIMITER + DEFAULT_CONFIG_FILE;
-    for I := 1 to 4 do
-    begin
-      if FileExists(Path) then
-      begin
-        Result := Path;
-        Break;
-      end;
-      Path := '.' + PATH_DELIMITER + '.' + Path;
-    end;
+    Path := PathFromRoot(DEFAULT_CONFIG_DIR + PathDelim + DEFAULT_CONFIG_FILE);
+    if FileExists(Path) then
+      Result := Path;
   end;
-
-  { If config file still is not defined set it by default. }
-  if Result = '' then
-    Result := ExtractFileDir(ParamStr(0)) + PATH_DELIMITER + Path;
 
   FConfigFileName := Result;
   Writeln('Config File Name: ' + Result);
@@ -384,20 +382,22 @@ begin
   ScriptPath := FConfigFile.ReadString('common', 'common.scriptpath', '');
 
   if ScriptPath <> '' then begin
-    if DirectoryExists(ScriptPath)
-    then FScriptPath := ExpandFileName(ScriptPath)
+    // check absolute path / relative to root
+    if DirectoryExists(PathFromRoot(ScriptPath))
+    then FScriptPath := PathFromRoot(ScriptPath)
+    // check path relative to executable
     else if DirectoryExists(ExtractFilePath(ParamStr(0)) + ScriptPath)
       then FScriptPath := ExtractFilePath(ParamStr(0)) + ScriptPath
+      // check path relative to config
       else if DirectoryExists(ExtractFilePath(ConfigFileName) + ScriptPath)
         then FScriptPath := ExtractFilePath(ConfigFileName) + ScriptPath
-        else FScriptPath := ExtractFilePath(FConfigFileName);
-  end else begin
-    FScriptPath := ExtractFilePath(FConfigFileName);
   end;
-
-  if FScriptPath <> ''
-    then if FScriptPath[Length(FScriptPath)] <> PathDelim
-      then FScriptPath := FScriptPath + PathDelim;
+  // if no condition triggered, look for scripts near config
+  if FScriptPath = '' then
+    FScriptPath := ExtractFilePath(FConfigFileName)
+  // ensure we have absolute normalized path with trailing delimiter
+  else
+    FScriptPath := IncludeTrailingPathDelimiter(ExpandFileName(FScriptPath));
 
   { Reads default properties. }
   FEnableMemCheck := StrToBoolEx(ReadProperty(COMMON_GROUP,
@@ -427,6 +427,38 @@ begin
   if Assigned(FConfigFile) then
     Result := Trim(FConfigFile.ReadString(Group, Group + '.' + Key, Default))
   else Result := '';
+end;
+
+function PathIsAbsolute(const Path: string): Boolean;
+begin
+  Result :=
+    {$IFDEF MSWINDOWS}
+    ExtractFileDrive(Path) <> ''
+    {$ELSE}
+    (Path <> '') and (Path[1] = PathDelim)
+    {$ENDIF}
+end;
+
+{**
+  Returns absolute path from root folder (NOT current!) from relative path.
+  Also processes absolute paths
+}
+function TZTestConfiguration.PathFromRoot(const Path: string): string;
+begin
+  if PathIsAbsolute(Path)
+    then Result := ExpandFileName(Path)
+    else Result := ExpandFileName(FRootPath + PathDelim + Path);
+end;
+
+{**
+  Returns absolute path from relative from default config folder.
+  Doesn't process absolute paths!
+}
+function TZTestConfiguration.PathFromConfig(const RelativePath: string): string;
+begin
+  if PathIsAbsolute(RelativePath) then
+    raise Exception.CreateFmt('TZTestConfiguration.PathFromConfig, path "%s" is absolute', [RelativePath]);
+  Result := PathFromRoot(DEFAULT_CONFIG_DIR + PathDelim + RelativePath);
 end;
 
 {**

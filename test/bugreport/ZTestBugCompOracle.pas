@@ -174,7 +174,7 @@ begin
   BinaryStream := TMemoryStream.Create;
   BinFileStream := nil;
   try
-    BinFileStream := TFileStream.Create(ExtractFilePath(ParamStr(0)) + '/../../../database/images/horse.jpg', fmOpenRead);
+    BinFileStream := TFileStream.Create(TestFilePath('images/horse.jpg'), fmOpenRead);
     Query.SQL.Text := 'select * from blob_values'; //NCLOB and BFILE is inlcuded
     Query.Open;
     CheckEquals(6, Query.Fields.Count);

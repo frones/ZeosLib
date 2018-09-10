@@ -182,7 +182,7 @@ begin
   TempStream := nil;
   TextStream := TStringStream.Create('ABCDEFG');
   ImageStream := TMemoryStream.Create;
-  ImageStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/zapotec.bmp');
+  ImageStream.LoadFromFile(TestFilePath('images/zapotec.bmp'));
   try
     PreparedStatement := Connection.PrepareStatement(
       'INSERT INTO BLOB_VALUES (B_ID, B_TEXT, B_IMAGE) VALUES(?,?,?)');

@@ -701,7 +701,7 @@ end;
 
 function TZAbstractSQLTestCase.GetLibLocation: string;
 begin
-  Result := FCurrentConnectionConfig.LibLocation;
+  Result := TestConfig.PathFromRoot(FCurrentConnectionConfig.LibLocation);
 end;
 
 function TZAbstractSQLTestCase.GetAlias: string;
@@ -721,7 +721,12 @@ end;
 
 function TZAbstractSQLTestCase.GetDatabase: string;
 begin
-  Result := FCurrentConnectionConfig.Database;
+  // Database could be defined as alias, absolute path or relative path
+  // Consider it a path if a PathDelim is encountered
+  if Pos(PathDelim, FCurrentConnectionConfig.Database) > 0 then
+    Result := TestConfig.PathFromRoot(FCurrentConnectionConfig.Database)
+  else
+    Result := FCurrentConnectionConfig.Database;
 end;
 
 function TZAbstractSQLTestCase.GetDropScripts: TStringDynArray;

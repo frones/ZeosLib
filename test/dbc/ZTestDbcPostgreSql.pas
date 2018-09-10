@@ -193,7 +193,7 @@ begin
 
   TextStream := TStringStream.Create('ABCDEFG');
   ImageStream := TMemoryStream.Create;
-  ImageStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/zapotec.bmp');
+  ImageStream.LoadFromFile(TestFilePath('images/zapotec.bmp'));
 
   PreparedStatement := Connection.PrepareStatement(
     'INSERT INTO blob_values (b_id,b_text,b_image) VALUES($1,$2,$3)');
