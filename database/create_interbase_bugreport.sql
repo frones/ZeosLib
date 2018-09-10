@@ -158,4 +158,4 @@ create table Ticket192 (
     N51 NUMERIC (5,1),
     N41 NUMERIC (4,1),
     D51 DECIMAL (5,1)
-)
+);
