@@ -199,9 +199,9 @@ begin
           ftWideMemo:
             (Fields[i] as TBlobField).LoadFromStream(FUnicodeStream);
           {$ENDIF}
-          ftSmallint:
-            Fields[i].AsInteger := Random(255);
-          ftInteger, ftWord, ftLargeint:
+          ftSmallint, ftWord {$IFDEF WITH_FTBYTE}, ftByte {$ENDIF} {$IFDEF WITH_FTSHORTINT}, ftShortint {$ENDIF}:
+            Fields[i].AsInteger := Random(127);
+          ftInteger, ftLargeint:
             Fields[i].AsInteger := Index;
           ftBoolean:
             Fields[i].AsBoolean := Random(1) = 0;
@@ -275,7 +275,8 @@ begin
           {$IFNDEF FPC}, ftFixedWideChar{$ENDIF}:
             Fields[i].AsWideString;
           {$ENDIF}
-          ftSmallint, ftInteger, ftWord, ftLargeint:
+          ftSmallint, ftWord {$IFDEF WITH_FTBYTE}, ftByte {$ENDIF} {$IFDEF WITH_FTSHORTINT}, ftShortint {$ENDIF},
+          ftInteger, ftLargeint:
             Fields[i].AsInteger;
           ftBoolean:
             Fields[i].AsBoolean;
@@ -333,9 +334,9 @@ begin
           ftWideMemo:
             Fields[i].AsWideString := WideString(RandomStr(RecordCount*100));
           {$ENDIF}
-          ftSmallint:
-            Fields[i].AsInteger := Random(255);
-          ftInteger, ftWord, ftLargeint:
+          ftSmallint, ftWord {$IFDEF WITH_FTBYTE}, ftByte {$ENDIF} {$IFDEF WITH_FTSHORTINT}, ftShortint {$ENDIF}:
+            Fields[i].AsInteger := Random(127);
+          ftInteger, ftLargeint:
             Fields[i].AsInteger := RandomInt(-100, 100);
           ftBoolean:
             Fields[i].AsBoolean := Random(1) = 0;
@@ -469,9 +470,9 @@ begin
             SQL := SQL + FDirectFieldNames[N]+'='+ FTrueVal
           else
             SQL := SQL + FDirectFieldNames[N]+'='+ FFalseVal;
-        ftSmallint:
-          SQL := SQL + FDirectFieldNames[N]+'='+IntToStr(Random(255));
-        ftInteger, ftWord, ftLargeint:
+        ftSmallint, ftWord {$IFDEF WITH_FTBYTE}, ftByte {$ENDIF} {$IFDEF WITH_FTSHORTINT}, ftShortint {$ENDIF}:
+          SQL := SQL + FDirectFieldNames[N]+'='+IntToStr(Random(127));
+        ftInteger, ftLargeint:
           SQL := SQL + FDirectFieldNames[N]+'='+IntToStr(Random(I));
         ftBCD, ftFMTBcd, ftFloat, ftCurrency{$IFDEF WITH_FTEXTENDED}, ftExtended{$ENDIF}:
           {$IFNDEF WITH_FORMATSETTINGS}
