@@ -249,6 +249,7 @@ type
 
     sqlite3_finalize: function(pStmt: Psqlite3_stmt): Integer; cdecl;
     sqlite3_reset: function(pStmt: Psqlite3_stmt): Integer; cdecl;
+    sqlite3_enable_load_extension: function(db: Psqlite; OnOff: Integer): Integer; cdecl;
 
     sqlite3_column_blob: function(Stmt: Psqlite3_stmt; iCol:integer): Pointer; cdecl;
     sqlite3_column_bytes: function(Stmt: Psqlite3_stmt; iCol: Integer): integer; cdecl;
@@ -389,6 +390,7 @@ begin
 
   @sqlite3_finalize               := GetAddress('sqlite3_finalize');
   @sqlite3_reset                  := GetAddress('sqlite3_reset');
+  @sqlite3_enable_load_extension  := GetAddress('sqlite3_enable_load_extension');
 
   @sqlite3_exec                   := GetAddress('sqlite3_exec');
   @sqlite3_last_insert_rowid      := GetAddress('sqlite3_last_insert_rowid');
