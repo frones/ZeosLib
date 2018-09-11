@@ -406,9 +406,12 @@ begin
     { check types }
     case ConnectionConfig.PerformanceDataSetTypes[i] of
       ftBytes, ftBlob:
-        if (ProtocolType = protFirebird) and not EndsWith(Protocol, '2.5') then //firebird below 2.5 doesn't support x'hex' syntax
-        begin
-          SetLength(FDirectFieldTypes, Length(FDirectFieldTypes)-1); //omit these types to avoid exception
+        // check if driver can do GetBinaryEscapeString (f.i., firebird below 2.5 doesn't support x'hex' syntax)
+        // we do a test run of the method and remove type if it raises exception
+        try
+          Connection.DbcConnection.GetBinaryEscapeString(RandomBts(5));
+        except
+          SetLength(FDirectSQLTypes, Length(FDirectSQLTypes)-1); //omit these types to avoid exception
           SetLength(FDirectFieldNames, Length(FDirectFieldNames)-1); //omit these names to avoid exception
           SetLength(FDirectFieldSizes, Length(FDirectFieldSizes)-1); //omit these names to avoid exception
         end;
