@@ -701,7 +701,9 @@ end;
 
 function TZAbstractSQLTestCase.GetLibLocation: string;
 begin
-  Result := TestConfig.PathFromRoot(FCurrentConnectionConfig.LibLocation);
+  if FCurrentConnectionConfig.LibLocation = ''
+  then Result := FCurrentConnectionConfig.LibLocation
+  else Result := TestConfig.PathFromRoot(FCurrentConnectionConfig.LibLocation);
 end;
 
 function TZAbstractSQLTestCase.GetAlias: string;
