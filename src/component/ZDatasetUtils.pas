@@ -306,14 +306,18 @@ begin
   case Value of
     stBoolean:
       Result := ftBoolean;
-    stByte, stShort, stSmall:
+    stByte:
+      Result := {$IFDEF WITH_FTBYTE}ftByte{$ELSE}ftSmallInt{$ENDIF}; // ! dangerous - field will get a type with greater size
+    stShort:
+      Result := {$IFDEF WITH_FTSHORTINT}ftShortint{$ELSE}ftSmallInt{$ENDIF}; // !
+    stSmall:
       Result := ftSmallInt;
     stWord:
       Result := ftWord;
     stInteger:
       Result := ftInteger;
     stLongWord:
-      Result := {$IFDEF WITH_FTLONGWORD}ftLongWord{$ELSE}ftLargeInt{$ENDIF};
+      Result := {$IFDEF WITH_FTLONGWORD}ftLongWord{$ELSE}ftLargeInt{$ENDIF}; // !
     stLong, stULong:
       Result := ftLargeInt;
     {$IFDEF WITH_FTSINGLE}
