@@ -54,11 +54,6 @@ program ZTestAll;
 {$APPTYPE CONSOLE}
 
 uses
-  madExcept,
-  madLinkDisAsm,
-  madListHardware,
-  madListProcesses,
-  madListModules,
   Types,
   SysUtils,
   TestFrameWork,
