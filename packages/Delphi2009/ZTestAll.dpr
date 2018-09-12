@@ -54,6 +54,11 @@ program ZTestAll;
 {$APPTYPE CONSOLE}
 
 uses
+  madExcept,
+  madLinkDisAsm,
+  madListHardware,
+  madListProcesses,
+  madListModules,
   Types,
   SysUtils,
   TestFrameWork,
@@ -72,11 +77,12 @@ uses
 begin
   TestGroup := COMMON_GROUP;
   ReportMemoryLeaksOnShutDown := CommandLineSwitches.memcheck;
-  If Not CommandLineSwitches.norebuild then
-    RebuildTestDatabases;
 
   If CommandLineSwitches.sqlmonitor then
     EnableZSQLMonitor;
+
+  If Not CommandLineSwitches.norebuild then
+    RebuildTestDatabases;
 
   If CommandLineSwitches.batch then
     TextTestRunner.RunTest(CreateTestSuite).Free

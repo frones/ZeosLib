@@ -2387,10 +2387,10 @@ var
   begin
     Msg := Format('set value "%d" to field "%s"', [Value, Query.Fields[i].FieldName]);
     Query.Edit;
-    Query.Fields[i].{$IFDEF WITH_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF} := Value;
+    Query.Fields[i].{$IFDEF TFIELD_HAS_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF} := Value;
     Query.Post;
     // D7 calls _VarToInteger instead of _VarToInt64 if used directly in CheckEquals so we need temp variable
-    ActValue := Query.Fields[i].{$IFDEF WITH_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF};
+    ActValue := Query.Fields[i].{$IFDEF TFIELD_HAS_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF};
     CheckEquals(Value, ActValue);
   end;
 
