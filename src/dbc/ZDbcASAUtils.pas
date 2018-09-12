@@ -223,18 +223,18 @@ procedure CheckASAError(const PlainDriver: TZASAPlainDriver;
 function GetCachedResultSet(const SQL: string;
   const Statement: IZStatement; const NativeResultSet: IZResultSet): IZResultSet;
 
-procedure DescribeCursor(const FASAConnection: IZASAConnection; const FSQLData: IZASASQLDA;
+procedure DescribeCursor(const ASAConnection: IZASAConnection; const SQLData: IZASASQLDA;
   const Cursor: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SQL: RawByteString);
 
-procedure ASAPrepare(const FASAConnection: IZASAConnection; const FSQLData, FParamsSQLData: IZASASQLDA;
-   const SQL: RawByteString; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
+procedure ASAPrepare(const ASAConnection: IZASAConnection; const SQLData, ParamsSQLData: IZASASQLDA;
+   const SQL: RawByteString; StmtNum: PSmallInt; var Prepared, MoreResults: Boolean);
 
 procedure PrepareParameters(const ClientVarManager: IZClientVariantManager;
   const InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
   InParamCount: Integer; const ParamSqlData: IZASASQLDA;
   ConSettings: PZConSettings);
 
-function RandomString( Len: integer): string;
+function RandomString(Len: integer): string;
 
 implementation
 
@@ -1339,86 +1339,89 @@ begin
     Result := NativeResultSet;
 end;
 
-procedure DescribeCursor(const FASAConnection: IZASAConnection; const FSQLData: IZASASQLDA;
+procedure DescribeCursor(const ASAConnection: IZASAConnection; const SQLData: IZASASQLDA;
   const Cursor: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SQL: RawByteString);
+var PlainDriver: TZASAPlainDriver;
 begin
-  //FSQLData.AllocateSQLDA( StdVars);
-  with FASAConnection do
+  //SQLData.AllocateSQLDA( StdVars);
+  with ASAConnection do
   begin
-    GetPlainDriver.dbpp_describe_cursor(GetDBHandle, Pointer(Cursor), FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-    ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, FASAConnection.GetConSettings, SQL);
-    if FSQLData.GetData^.sqld <= 0 then
+    PlainDriver := TZASAPlainDriver(GetIZPlainDriver.GetInstance);
+    PlainDriver.dbpp_describe_cursor(GetDBHandle, Pointer(Cursor), SQLData.GetData, SQL_DESCRIBE_OUTPUT);
+    ZDbcASAUtils.CheckASAError(PlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
+    if SQLData.GetData^.sqld <= 0 then
       raise EZSQLException.Create( SCanNotRetrieveResultSetData)
-    else if ( FSQLData.GetData^.sqld > FSQLData.GetData^.sqln) then
+    else if ( SQLData.GetData^.sqld > SQLData.GetData^.sqln) then
     begin
-      FSQLData.AllocateSQLDA( FSQLData.GetData^.sqld);
-      GetPlainDriver.dbpp_describe_cursor(GetDBHandle, PAnsiChar(Cursor), FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-       ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, FASAConnection.GetConSettings, SQL);
+      SQLData.AllocateSQLDA( SQLData.GetData^.sqld);
+      PlainDriver.dbpp_describe_cursor(GetDBHandle, PAnsiChar(Cursor), SQLData.GetData, SQL_DESCRIBE_OUTPUT);
+      ZDbcASAUtils.CheckASAError(PlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
     end;
-    FSQLData.InitFields;
+    SQLData.InitFields;
   end;
 end;
 
-procedure ASAPrepare(const FASAConnection: IZASAConnection; const FSQLData, FParamsSQLData: IZASASQLDA;
-   const SQL: RawByteString; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
+procedure ASAPrepare(const ASAConnection: IZASAConnection; const SQLData, ParamsSQLData: IZASASQLDA;
+   const SQL: RawByteString; StmtNum: PSmallInt; var Prepared, MoreResults: Boolean);
+var PlainDriver: TZASAPlainDriver;
 begin
-  with FASAConnection do
+  with ASAConnection do
   begin
-    if FPrepared then
+    PlainDriver := TZASAPlainDriver(GetIZPlainDriver.GetInstance);
+    if Prepared then
     begin
-      FParamsSQLData.AllocateSQLDA( StdVars);
-      FSQLData.AllocateSQLDA( StdVars);
+      ParamsSQLData.AllocateSQLDA(StdVars);
+      SQLData.AllocateSQLDA(StdVars);
       if StmtNum^ <> 0 then
       begin
-        GetPlainDriver.dbpp_dropstmt( GetDBHandle, nil, nil, StmtNum);
+        PlainDriver.dbpp_dropstmt(GetDBHandle, nil, nil, StmtNum);
         StmtNum^ := 0;
       end;
     end;
     try
-      if Assigned(GetPlainDriver.dbpp_prepare_describe_12) then
-        GetPlainDriver.dbpp_prepare_describe_12(GetDBHandle, nil, nil, StmtNum, Pointer(SQL),
-          nil, FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
+      if Assigned(PlainDriver.dbpp_prepare_describe_12) then
+        PlainDriver.dbpp_prepare_describe_12(GetDBHandle, nil, nil, StmtNum, Pointer(SQL),
+          nil, ParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
             SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0, 0)
       else
-        GetPlainDriver.dbpp_prepare_describe( GetDBHandle, nil, nil, StmtNum, Pointer(SQL),
-          nil, FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
+        PlainDriver.dbpp_prepare_describe(GetDBHandle, nil, nil, StmtNum, Pointer(SQL),
+          nil, ParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
             SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
-      ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
+      ZDbcASAUtils.CheckASAError(PlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
 
-      FMoreResults := GetDBHandle.sqlerrd[2] = 0;
+      MoreResults := GetDBHandle.sqlerrd[2] = 0;
 
-      if FParamsSQLData.GetData^.sqld > FParamsSQLData.GetData^.sqln then
+      if ParamsSQLData.GetData^.sqld > ParamsSQLData.GetData^.sqln then
       begin
-        FParamsSQLData.AllocateSQLDA( FParamsSQLData.GetData^.sqld);
-        GetPlainDriver.dbpp_describe( GetDBHandle, nil, nil, StmtNum,
-          FParamsSQLData.GetData, SQL_DESCRIBE_INPUT);
-        ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
+        ParamsSQLData.AllocateSQLDA(ParamsSQLData.GetData^.sqld);
+        PlainDriver.dbpp_describe(GetDBHandle, nil, nil, StmtNum,
+          ParamsSQLData.GetData, SQL_DESCRIBE_INPUT);
+        ZDbcASAUtils.CheckASAError(PlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
       end;
 
-      if not FMoreResults then
+      if not MoreResults then
       begin
-        GetPlainDriver.dbpp_describe( GetDBHandle, nil, nil, StmtNum,
-          FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-        ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
-        if FSQLData.GetData^.sqld > FSQLData.GetData^.sqln then
+        PlainDriver.dbpp_describe(GetDBHandle, nil, nil, StmtNum,
+          SQLData.GetData, SQL_DESCRIBE_OUTPUT);
+        ZDbcASAUtils.CheckASAError(PlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
+        if SQLData.GetData^.sqld > SQLData.GetData^.sqln then
         begin
-          FSQLData.AllocateSQLDA( FSQLData.GetData^.sqld);
-          GetPlainDriver.dbpp_describe( GetDBHandle, nil, nil, StmtNum,
-            FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-          ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
+          SQLData.AllocateSQLDA(SQLData.GetData^.sqld);
+          PlainDriver.dbpp_describe(GetDBHandle, nil, nil, StmtNum,
+            SQLData.GetData, SQL_DESCRIBE_OUTPUT);
+          ZDbcASAUtils.CheckASAError(PlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
         end;
-        FSQLData.InitFields;
+        SQLData.InitFields;
       end;
 
-      FPrepared := true;
+      Prepared := true;
       { Logging SQL Command }
-      DriverManager.LogMessage( lcExecute, GetConSettings.Protocol,
-        'Prepare: '+ SQL);
+      DriverManager.LogMessage(lcExecute, GetConSettings.Protocol, 'Prepare: '+ SQL);
     except
       on E: Exception do
       begin
         if StmtNum^ <> 0 then
-          GetPlainDriver.dbpp_dropstmt( GetDBHandle, nil, nil, StmtNum);
+          PlainDriver.dbpp_dropstmt(GetDBHandle, nil, nil, StmtNum);
         raise;
       end;
     end;
