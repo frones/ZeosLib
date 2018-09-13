@@ -1912,7 +1912,7 @@ begin
 end;
 
 initialization
-  CommonTokenizer := TZGenericSQLTokenizer.Create;
+  CommonTokenizer := TZGenericSQLTokenizer.Create as IZTokenizer;
 finalization
   CommonTokenizer := nil;
 end.
