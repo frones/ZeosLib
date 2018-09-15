@@ -168,6 +168,8 @@ label AssignGeneric;
     else
       ColumnInfo.Scale := 0;
     ColumnInfo.Precision := ColInfo.MaxLength;
+    if (DBLibColTypeCache[ArrayIndex] = tdsNumeric) and (colinfo.Scale = 0) and (ColInfo.MaxLength = 17)
+    then ColumnInfo.ColumnType := stUnknown; // we cannot be sure if it is bigint or numeric - let somebody else deal with this...
     ColumnInfo.CaseSensitive := ColInfo.CaseSensitive = 1;
     ColumnInfo.Nullable := TZColumnNullableType(ColInfo.Null);
     ColumnInfo.ReadOnly := not (ColInfo.Updatable = 1);
