@@ -2378,6 +2378,10 @@ var
     Msg := Format('set value "%d" to field "%s"', [Value, Query.Fields[i].FieldName]);
     Query.Edit;
     Query.Fields[i].AsInteger := Value;
+    // This has nothing to do with the test - Sybase and MSSQL just don't allow
+    // setting bit fields to null.
+    if ProtocolType in [protFreeTDS, protSybase]
+    then Query.FieldByName('stBoolean').AsBoolean := true;
     Query.Post;
     CheckEquals(Value, Query.Fields[i].AsInteger);
   end;
@@ -2388,6 +2392,10 @@ var
     Msg := Format('set value "%d" to field "%s"', [Value, Query.Fields[i].FieldName]);
     Query.Edit;
     Query.Fields[i].{$IFDEF TFIELD_HAS_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF} := Value;
+    // This has nothing to do with the test - Sybase and MSSQL just don't allow
+    // setting bit fields to null.
+    if ProtocolType in [protFreeTDS, protSybase]
+    then Query.FieldByName('stBoolean').AsBoolean := true;
     Query.Post;
     // D7 calls _VarToInteger instead of _VarToInt64 if used directly in CheckEquals so we need temp variable
     ActValue := Query.Fields[i].{$IFDEF TFIELD_HAS_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF};
