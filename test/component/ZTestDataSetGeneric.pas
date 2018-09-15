@@ -2396,60 +2396,64 @@ var
 
 begin
   Query := CreateQuery;
-  Query.SQL.Text := 'SELECT * FROM high_load';
-  Query.Open;
-
   try
-    for i := 0 to Query.Fields.Count - 1 do
-      case Query.Fields[i].DataType of
-        {$IFDEF WITH_FTSHORTINT}
-        ftShortint:
-          begin
-            TestSetValue(Low(Shortint));
-            TestSetValue(High(Shortint));
-          end;
-        {$ENDIF}
-        {$IFDEF WITH_FTBYTE}
-        ftByte:
-          begin
-            TestSetValue(Low(Byte));
-            TestSetValue(High(Byte));
-          end;
-        {$ENDIF}
-        ftSmallint:
-          begin
-            // If RTL has no 1-byte field types, they will be mapped to SmallInt
-            // so this test will fail on such fields.
-            {$IF DEFINED(WITH_FTSHORTINT) AND DEFINED(WITH_FTBYTE)}
-            TestSetValue(Low(SmallInt));
-            TestSetValue(High(SmallInt));
-            {$IFEND}
-          end;
-        ftWord:
-          begin
-            TestSetValue(Low(Word));
-            TestSetValue(High(Word));
-          end;
-        ftInteger:
-          begin
-            TestSetValue(Low(Integer));
-            TestSetValue(High(Integer));
-          end;
-        {$IFDEF WITH_FTLONGWORD}
-        ftLongWord:
-          begin
-            TestSetValue(Low(LongWord));
-            TestSetValue(High(LongWord));
-          end;
-        {$ENDIF}
-        ftLargeint:
-          begin
-            TestSetValue(Low(Int64));
-            TestSetValue(High(Int64));
-          end;
-      end;
-  except on E: Exception do
-    Fail(Msg + ' raised exception ' + E.Message);
+    Query.SQL.Text := 'SELECT * FROM high_load';
+    Query.Open;
+
+    try
+      for i := 0 to Query.Fields.Count - 1 do
+        case Query.Fields[i].DataType of
+          {$IFDEF WITH_FTSHORTINT}
+          ftShortint:
+            begin
+              TestSetValue(Low(Shortint));
+              TestSetValue(High(Shortint));
+            end;
+          {$ENDIF}
+          {$IFDEF WITH_FTBYTE}
+          ftByte:
+            begin
+              TestSetValue(Low(Byte));
+              TestSetValue(High(Byte));
+            end;
+          {$ENDIF}
+          ftSmallint:
+            begin
+              // If RTL has no 1-byte field types, they will be mapped to SmallInt
+              // so this test will fail on such fields.
+              {$IF DEFINED(WITH_FTSHORTINT) AND DEFINED(WITH_FTBYTE)}
+              TestSetValue(Low(SmallInt));
+              TestSetValue(High(SmallInt));
+              {$IFEND}
+            end;
+          ftWord:
+            begin
+              TestSetValue(Low(Word));
+              TestSetValue(High(Word));
+            end;
+          ftInteger:
+            begin
+              TestSetValue(Low(Integer));
+              TestSetValue(High(Integer));
+            end;
+          {$IFDEF WITH_FTLONGWORD}
+          ftLongWord:
+            begin
+              TestSetValue(Low(LongWord));
+              TestSetValue(High(LongWord));
+            end;
+          {$ENDIF}
+          ftLargeint:
+            begin
+              TestSetValue(Low(Int64));
+              TestSetValue(High(Int64));
+            end;
+        end;
+    except on E: Exception do
+      Fail(Msg + ' raised exception ' + E.Message);
+    end;
+  finally
+    FreeAndNil(Query);
   end;
 end;
 
