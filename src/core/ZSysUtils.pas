@@ -801,6 +801,10 @@ function StreamFromData(const Bytes: TBytes): TMemoryStream; overload; {$IFDEF W
 function StreamFromData(const AString: RawByteString): TMemoryStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 {$ENDIF}
 
+const
+  // Local copy of current FormatSettings with '.' as DecimalSeparator and empty other fields
+  FmtSettFloatDot: TFormatSettings = ( DecimalSeparator: '.' );
+
 implementation
 
 uses DateUtils, StrUtils, SysConst,
@@ -808,9 +812,6 @@ uses DateUtils, StrUtils, SysConst,
   {$IF defined(WITH_RTLCONSTS_SInvalidGuidArray) or defined(TLIST_IS_DEPRECATED)}RTLConsts,{$IFEND}
   ZFastCode;
 
-const
-  // Local copy of current FormatSettings with '.' as DecimalSeparator and empty other fields
-  FmtSettFloatDot: TFormatSettings = ( DecimalSeparator: '.' );
 
 {**
   Determines a position of a first delimiter.
