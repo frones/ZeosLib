@@ -1331,7 +1331,7 @@ end;
 
 procedure TZGenericTestDbcResultSet.TestStringToSignedIntegerConversions;
 const
-  s_id_Index       = FirstDbcIndex + 0;
+  s_id_Index       = FirstDbcIndex;
   s_char_Index     = FirstDbcIndex + 1;
   s_varchar_Index  = FirstDbcIndex + 2;
   s_nchar_Index    = FirstDbcIndex + 3;
@@ -1360,7 +1360,7 @@ begin
   if Use_S_BIT then
     PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)')
   else
-    PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar) values (?, ?, ?, ?, ?)');
+  PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar) values (?, ?, ?, ?, ?)');
   CheckNotNull(PStatement);
   {Insert ShortInt test values}
   Check(InsertTestString(TEST_ROW_ID, IntToRaw(Low(ShortInt))));
@@ -1457,7 +1457,7 @@ end;
 
 procedure TZGenericTestDbcResultSet.TestStringToUnsignedIntegerConversions;
 const
-  s_id_Index       = FirstDbcIndex + 0;
+  s_id_Index       = FirstDbcIndex;
   s_char_Index     = FirstDbcIndex + 1;
   s_varchar_Index  = FirstDbcIndex + 2;
   s_nchar_Index    = FirstDbcIndex + 3;
@@ -1489,7 +1489,7 @@ begin
   if Use_S_BIT then
     PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)')
   else
-    PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar) values (?, ?, ?, ?, ?)');
+  PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar) values (?, ?, ?, ?, ?)');
   CheckNotNull(PStatement);
   {Insert ShortInt test values}
   Check(InsertTestString(TEST_ROW_ID, IntToRaw(Low(Byte))));
@@ -1871,32 +1871,42 @@ begin
       InternalTestArrayBinding(PStatement, 70, 10, LastFieldIndices[i]);
       PStatement.ClearParameters;
       PStatement.SetInt(hl_id_Index, 81);
-      PStatement.SetBoolean(stBooleanArray_Index, stBooleanArray[Random(9)]);
-      PStatement.SetByte(stByte_Index, stByteArray[Random(9)]);
-      PStatement.SetShort(stShort_Index, stShortArray[Random(9)]);
-      PStatement.SetInt(stInteger_Index, stIntegerArray[Random(9)]);
-      PStatement.SetLong(stLong_Index, stLongArray[Random(9)]);
-      PStatement.SetFloat(stFloat_Index, stFloatArray[Random(9)]);
-      PStatement.SetDouble(stDouble_Index, stDoubleArray[Random(9)]);
-      PStatement.SetBigDecimal(stBigDecimal_Index, stBigDecimalArray[Random(9)]);
-      if LastFieldIndices[i] > stBigDecimal_Index then begin
+      if LastFieldIndices[i] >= stBooleanArray_Index then
+        PStatement.SetBoolean(stBooleanArray_Index, stBooleanArray[Random(9)]);
+      if LastFieldIndices[i] >= stByte_Index then
+        PStatement.SetByte(stByte_Index, stByteArray[Random(9)]);
+      if LastFieldIndices[i] >= stShort_Index then
+        PStatement.SetShort(stShort_Index, stShortArray[Random(9)]);
+      if LastFieldIndices[i] >= stInteger_Index then
+        PStatement.SetInt(stInteger_Index, stIntegerArray[Random(9)]);
+      if LastFieldIndices[i] >= stLong_Index then
+        PStatement.SetLong(stLong_Index, stLongArray[Random(9)]);
+      if LastFieldIndices[i] >= stFloat_Index then
+        PStatement.SetFloat(stFloat_Index, stFloatArray[Random(9)]);
+      if LastFieldIndices[i] >= stDouble_Index then
+        PStatement.SetDouble(stDouble_Index, stDoubleArray[Random(9)]);
+      if LastFieldIndices[i] >= stBigDecimal_Index then
+        PStatement.SetBigDecimal(stBigDecimal_Index, stBigDecimalArray[Random(9)]);
+      if LastFieldIndices[i] >= stString_Index then
         PStatement.SetRawByteString(stString_Index, stStringArray[Random(9)]);
+      if LastFieldIndices[i] >= stUnicode_Index then
         PStatement.SetUnicodeString(stUnicode_Index, stUnicodeStringArray[Random(9)]);
+      if LastFieldIndices[i] >= stBytes_Index then
         PStatement.SetBytes(stBytes_Index, stBytesArray[Random(9)]);
-        if LastFieldIndices[i] > stBytes_Index then begin
-          PStatement.SetDate(stDate_Index, stDateArray[Random(9)]);
-          PStatement.SetTime(stTime_Index, stTimeArray[Random(9)]);
-          PStatement.SetTimestamp(stTimeStamp_Index, stTimeStampArray[Random(9)]);
-          if LastFieldIndices[i] > stTimeStamp_Index then begin
-            PStatement.SetNull(stGUID_Index, stString);
-            PStatement.SetCharRec(stAsciiStream_Index, stAsciiStreamArray[Random(9)]);
-            if LastFieldIndices[i] > stAsciiStream_Index then begin
-              PStatement.SetUTF8String(stUnicodeStream_Index, stUnicodeStreamArray[Random(9)]);
-              PStatement.SetBlob(stBinaryStream_Index, stBinaryStream, stBinaryStreamArray[Random(9)] as IZBlob);
-            end;
-          end;
-        end;
-      end;
+      if LastFieldIndices[i] >= stDate_Index then
+        PStatement.SetDate(stDate_Index, stDateArray[Random(9)]);
+      if LastFieldIndices[i] >= stTime_Index then
+        PStatement.SetTime(stTime_Index, stTimeArray[Random(9)]);
+      if LastFieldIndices[i] >= stTimeStamp_Index then
+        PStatement.SetTimestamp(stTimeStamp_Index, stTimeStampArray[Random(9)]);
+      if LastFieldIndices[i] >= stGUID_Index then
+        PStatement.SetNull(stGUID_Index, stString);
+      if LastFieldIndices[i] >= stAsciiStream_Index then
+        PStatement.SetCharRec(stAsciiStream_Index, stAsciiStreamArray[Random(9)]);
+      if LastFieldIndices[i] >= stUnicodeStream_Index then
+        PStatement.SetUTF8String(stUnicodeStream_Index, stUnicodeStreamArray[Random(9)]);
+      if LastFieldIndices[i] >= stBinaryStream_Index then
+        PStatement.SetBlob(stBinaryStream_Index, stBinaryStream, stBinaryStreamArray[Random(9)] as IZBlob);
       PStatement.ExecuteUpdatePrepared;
       PStatement.ClearParameters;
       with PStatement.ExecuteQuery('select Count(*) from high_load') do
