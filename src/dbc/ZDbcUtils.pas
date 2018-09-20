@@ -57,6 +57,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF}, TypInfo,
+  {$IFDEF BCD_TEST}FmtBcd,{$ENDIF}
   ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata, ZTokenizer, ZVariant;
 
 type
@@ -811,6 +812,16 @@ begin
           OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
         stBytes:
           OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
+        {$IFDEF BCD_TEST}
+        stFloat:
+          OutParamValues[ParamIndex] := EncodeDouble(ResultSet.GetFloat(I));
+        stDouble:
+          OutParamValues[ParamIndex] := EncodeDouble(ResultSet.GetDouble(I));
+        stCurrency:
+          OutParamValues[ParamIndex] := EncodeCurrency(ResultSet.GetCurrency(I));
+        stBigDecimal:
+          OutParamValues[ParamIndex] := EncodeBigDecimal(ResultSet.GetBigDecimal(I));
+        {$ELSE}
         stFloat:
           OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
         stDouble:
@@ -819,6 +830,7 @@ begin
           OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetCurrency(I));
         stBigDecimal:
           OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
+        {$ENDIF}
         stString, stAsciiStream:
           OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
         stUnicodeString, stUnicodeStream:

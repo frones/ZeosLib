@@ -516,7 +516,7 @@ type
     procedure BindNull(Index: Integer; SQLType: TZSQLType); override;
     procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); override;
     procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); override;
-  public //value setter procs
+  public //value getter procs
     procedure GetBoolean(Index: Integer; out Result: Boolean); override;
     procedure GetOrdinal(Index: Integer; out Result: Int64); override;
     procedure GetOrdinal(Index: Integer; out Result: UInt64); override;
