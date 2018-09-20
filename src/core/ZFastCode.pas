@@ -348,6 +348,9 @@ function ValRawSin(const S: PByteArray; const DecimalSep: AnsiChar; out code: In
 
 function ValRawInt(const s: RawByteString; out code: Integer): Integer; overload;
 function ValRawInt(s: PAnsiChar; out code: Integer): Integer; overload;
+function ValRawInt(PStart: PAnsiChar; var PEnd: PAnsiChar): Integer; overload;
+function ValRawInt64(PStart: PAnsiChar; var PEnd: PAnsiChar): Int64; overload;
+function ValRawUInt64(PStart: PAnsiChar; var PEnd: PAnsiChar): UInt64; overload;
 
 function UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar): Extended; overload;
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
@@ -5739,6 +5742,259 @@ begin
   Result := ValLong_JOH_PAS_4_b(S, Code);
   {$IFEND}
 end;
+
+const
+  AdjustLowercase = Ord('a') - 10;
+  AdjustUppercase = Ord('A') - 10;
+
+{$WARNINGS OFF} {Prevent False Compiler Warning on Digit not being Initialized}
+function ValRawInt(PStart: PAnsiChar; var PEnd: PAnsiChar): Integer; overload;
+//function ValLong_JOH_PAS_4_b(const S: PAnsiChar; out code: Integer): Longint;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//EH: -changed to NEXGEN save PByte support
+//    -changed Code to a p(raw)char pointer
+var
+  Digit: Integer;
+  Flags: Byte; {Bit 0 = Valid, Bit 1 = Negative, Bit 2 = Hex}
+begin
+  if (PStart = nil) or (PStart = PEnd)  then begin
+    Result := 0;
+    PEnd := PStart;
+    Exit;
+  end;
+  Flags := 0;
+  while Ord(PStart^) = Ord(' ') do
+    Inc(PStart);
+  if Ord(PStart^) in [Ord('+'), Ord('-')] then begin
+    Flags := Flags or (Ord(PStart^) - Ord('+')); {Set/Reset Neg}
+    inc(PStart);
+  end;
+  if Ord(PStart^) = Ord('$') then begin
+    inc(PStart);
+    Flags := Flags or 4; {Hex := True}
+  end else begin
+    if Ord(PStart^) = Ord('0') then begin
+      Flags := Flags or 1; {Valid := True}
+      inc(PStart);
+    end;
+    if (Ord(PStart^) or $20) = ord('x') then begin //Upcase(P^) = 'X'
+      Flags := Flags or 4; {Hex := True}
+      inc(PStart);
+    end;
+  end;
+  Result := 0;
+  if (Flags and 4) <> 0 then begin
+    Flags := Flags and (not 1); {Valid := False}
+    while PStart < PEnd do begin
+      case Ord(PStart^) of
+        Ord('0')..Ord('9'): Digit := Ord(PStart^) - Ord('0');
+        Ord('a')..Ord('f'): Digit := Ord(PStart^) - AdjustLowercase;
+        Ord('A')..Ord('F'): Digit := Ord(PStart^) - AdjustUppercase;
+        else Break;
+      end;
+      if (Result < 0) or (Result > $0FFFFFFF) then
+        Break;
+      Result := (Result shl 4) + Digit;
+      Flags := Flags or 1; {Valid := True}
+      inc(PStart);
+    end;
+  end else begin
+    while PStart < PEnd do begin
+      if not (Ord(PStart^) in [Ord('0')..Ord('9')]) then
+        break;
+      if Result > (MaxInt div 10) then
+        break;
+      Result := (Result * 10) + Ord(PStart^) - Ord('0');
+      Flags := Flags or 1; {Valid := True}
+      inc(PStart);
+    end;
+    if Result < 0 then {Possible Overflow}
+      if (Cardinal(Result) <> $80000000) or ((Flags and 2) = 0) then begin {Min(LongInt) = $80000000 is a Valid Result}
+        Dec(PStart);
+        Flags := Flags or 1; {Valid := True}
+      end;
+  end;
+  if ((Flags and 2) <> 0) then {Neg=True}
+    Result := -Result;
+  if not (((Flags and 1) <> 0) and (PStart = PEnd)) then
+    PEnd := PStart;
+end;
+
+function ValRawInt64(PStart: PAnsiChar; var PEnd: PAnsiChar): Int64;
+//function ValInt64_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Int64;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified by EgonHugeist for faster conversion and PAnsiChar/PByte
+var
+  I, Digit: Integer;
+  Flags: Byte; {Bit 0 = Valid, Bit 1 = Negative, Bit 2 = Hex}
+begin
+  Result := 0;
+  if (PStart = nil) or (PStart = PEnd) then begin
+    PEnd := PStart;
+    Exit;
+  end;
+  Flags := 0;
+  while Ord(PStart^) = Ord(' ') do
+    Inc(PStart);
+  if Ord(PStart^) in [Ord('+'), Ord('-')] then begin
+    Flags := Flags or Byte((Ord(PStart^) - Ord('+'))); {Set/Reset Neg}
+    inc(PStart);
+  end;
+  if Ord(PStart^) = Ord('$') then begin
+    inc(PStart);
+    Flags := Flags or 4; {Hex := True}
+  end else begin
+    if Ord(PStart^) = Ord('0') then begin
+      Flags := Flags or 1; {Valid := True}
+      inc(PStart);
+    end;
+    if (Ord(PStart^) or $20) = ord('x') then begin {S[Code+1] in ['X','x']}
+      Flags := Flags or 4; {Hex := True}
+      inc(PStart);
+    end;
+  end;
+  if (Flags and 4) <> 0 then begin {Hex = True}
+    Flags := Flags and (not 1); {Valid := False}
+    while PStart < PEnd do begin
+      case Ord(PStart^) of
+        Ord('0')..Ord('9'): Digit := Ord(PStart^) - Ord('0');
+        Ord('a')..Ord('f'): Digit := Ord(PStart^) - AdjustLowercase;
+        Ord('A')..Ord('F'): Digit := Ord(PStart^) - AdjustUppercase;
+        else      Break;
+      end;
+      if UInt64(Result) > (HighInt64 shr 3) then
+        Break;
+      if UInt64(Result) < (MaxInt div 16)-15 then
+        begin {Use Integer Math instead of Int64}
+          I := Result;
+          I := (I shl 4) + Digit;
+          Result := I;
+        end
+      else
+        Result := (Result shl 4) + Digit;
+      Flags := Flags or 1; {Valid := True}
+      Inc(PStart);
+    end;
+  end else begin
+    while PStart < PEnd do begin
+      if ( not (Ord(PStart^) in [Ord('0')..Ord('9')]) ) or
+         ( UInt64(Result) > (HighInt64 div 10)) then begin
+        inc(PStart, Ord(Ord(PStart^) <> Ord(#0)));
+        break;
+      end;
+      if UInt64(Result) < (MaxInt div 10)-9 then begin {Use Integer Math instead of Int64}
+        I := Result;
+        I := (I * 10) + Ord(PStart^) - Ord('0');
+        Result := I;
+      end else {Result := (Result * 10) + Ord(Ch) - Ord('0');}
+        Result := (Result shl 1) + (Result shl 3) + Ord(PStart^) - Ord('0');
+      Flags := Flags or 1; {Valid := True}
+      Inc(PStart);
+    end;
+    {$IFDEF FPC}
+    if UInt64(Result) >= UInt64(Int64($8000000000000000)) then {Possible Overflow}
+      if ((Flags and 2) = 0) or (UInt64(Result) <> UInt64(Int64($8000000000000000))) then
+    {$ELSE}
+    if UInt64(Result) >= $8000000000000000 then {Possible Overflow}
+      if ((Flags and 2) = 0) or (Result <> $8000000000000000) then
+    {$ENDIF}
+        begin {Overflow}
+          if ((Flags and 2) <> 0) then {Neg=True}
+            Result := -Result;
+          PEnd := PStart;
+          Exit;
+        end;
+  end;
+  if ((Flags and 2) <> 0) then {Neg=True}
+    Result := -Result;
+  if not (((Flags and 1) <> 0) and (PStart = PEnd)) then
+    PEnd := PStart;
+end;
+
+function ValRawUInt64(PStart: PAnsiChar; var PEnd: PAnsiChar): UInt64; overload;
+//function ValInt64_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Int64;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified by EgonHugeist for faster conversion, PAnsiChar, UInt64
+var
+  I, Digit: Integer;
+  Flags: Byte; {Bit 0 = Valid, Bit 1 = Negative, Bit 2 = Hex}
+begin
+  Result := 0;
+  if (PStart = nil) or (PStart = PEnd) then begin
+    PEnd := PStart;
+    Exit;
+  end;
+  Flags := 0;
+  while Ord(PStart^) = Ord(' ') do
+    Inc(PStart);
+  if Ord(PStart^) in [Ord('+'), Ord('-')] then
+    if Ord(PStart^) = Ord('-') then begin//can't be negative
+      PEnd := PStart;
+      Exit;
+    end else
+      inc(PStart);
+  if Ord(PStart^) = Ord('$') then begin
+    inc(PStart);
+    Flags := Flags or 4; {Hex := True}
+  end else begin
+    if Ord(PStart^) = Ord('0') then begin
+      Flags := Flags or 1; {Valid := True}
+      inc(PStart);
+    end;
+    if (Ord(PStart^) or $20) = ord('x') then begin {S[Code+1] in ['X','x']}
+      Flags := Flags or 4; {Hex := True}
+      inc(PStart);
+    end;
+  end;
+  if (Flags and 4) <> 0 then begin {Hex = True}
+    Flags := Flags and (not 1); {Valid := False}
+    while PStart < PEnd do begin
+      case Ord(PStart^) of
+        Ord('0')..Ord('9'): Digit := Ord(PStart^) - Ord('0');
+        Ord('a')..Ord('f'): Digit := Ord(PStart^) - AdjustLowercase;
+        Ord('A')..Ord('F'): Digit := Ord(PStart^) - AdjustUppercase;
+        else      Break;
+      end;
+      if UInt64(Result) > (High(UInt64) shr 3) then
+        Break;
+      if UInt64(Result) < (MaxInt div 16)-15 then begin {Use Integer Math instead of Int64}
+        I := Result;
+        I := (I shl 4) + Digit;
+        Result := I;
+      end else
+        Result := (Result shl 4) + Digit;
+      Flags := Flags or 1; {Valid := True}
+      Inc(PStart);
+    end;
+  end else begin
+    while PStart < PEnd do begin
+      if ( not (Ord(PStart^) in [Ord('0')..Ord('9')]) ) or ( (Ord(PStart^) > Ord('5')) and (Result = (High(UInt64) div 10)) ) then //prevent overflow
+      if (Ord(PStart^) > Ord('5')) and ( Result = (High(UInt64) div 10)) then begin //overflow
+          PEnd := PStart+1;
+          Exit;
+        end else begin
+          inc(PStart, Ord(Ord(PStart^) <> Ord(#0)));
+          break;
+        end;
+      if UInt64(Result) < (MaxInt div 10)-9 then begin {Use Integer Math instead of Int64}
+        I := Result;
+        I := (I * 10) + Ord(PStart^) - Ord('0');
+        Result := I;
+      end else {Result := (Result * 10) + Ord(Ch) - Ord('0');}
+        Result := (Result shl 1) + (Result shl 3) + Ord(PStart^) - Ord('0');
+      Flags := Flags or 1; {Valid := True}
+      Inc(PStart);
+    end;
+  end;
+  if ((Flags and 2) <> 0) then {Neg=True}
+    Result := -Result;
+  if not (((Flags and 1) <> 0) and (PStart = PEnd)) then
+    PEnd := PStart;
+end;
+{$WARNINGS ON}
 
 function UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar): Extended; overload;
 var
