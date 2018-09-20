@@ -86,7 +86,7 @@ type
 
 implementation
 
-uses ZTestConsts, ZTestCase, ZVariant;
+uses ZTestConsts, ZTestCase, ZVariant, ZSysUtils;
 
 { TZTestDbcOracleCase }
 
@@ -215,14 +215,12 @@ end;
 }
 procedure TZTestDbcOracleCase.TestPreparedStatement;
 const
-  department_dep_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  department_dep_name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  department_dep_shname_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  department_dep_address_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  //people_count_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  people_p_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  people_p_begin_work_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  people_p_resume_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  department_dep_id_Index = FirstDbcIndex;
+  department_dep_name_Index = FirstDbcIndex+1;
+  department_dep_shname_Index = FirstDbcIndex+2;
+  department_dep_address_Index = FirstDbcIndex+3;
+  people_p_id_Index = FirstDbcIndex;
+  people_p_begin_work_Index = FirstDbcIndex+1;
 var
   Statement: IZPreparedStatement;
   Statement1: IZPreparedStatement;
@@ -281,7 +279,7 @@ begin
     Statement1 := Connection.PrepareStatement('UPDATE people SET p_resume=?');
     CheckNotNull(Statement1);
     try
-      Statement1.SetNull(people_p_resume_Index, stAsciiStream);
+      Statement1.SetNull(FirstDbcIndex, stAsciiStream);
       CheckEquals(5, Statement1.ExecuteUpdatePrepared);
     finally
       Statement1.Close;
@@ -297,8 +295,8 @@ end;
 
 procedure TZTestDbcOracleCase.TestEmptyBlob;
 const
-  update_blob_values_b_blob_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  select_blob_values_b_blob_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  update_blob_values_b_blob_Index = FirstDbcIndex;
+  select_blob_values_b_blob_Index = FirstDbcIndex+1;
 var
   Statement: IZPreparedStatement;
   Statement1: IZPreparedStatement;
@@ -382,14 +380,14 @@ end;
 }
 procedure TZTestDbcOracleCase.TestLongObjects;
 const
-  blob_values_b_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  blob_values_b_long_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  blob_values_b_clob_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  blob_values_b_blob_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  binary_values_n_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  binary_values_n_raw_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  binary_values_n_longraw_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  binary_values_n_blob_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  blob_values_b_id_Index = FirstDbcIndex;
+  blob_values_b_long_Index = FirstDbcIndex+1;
+  blob_values_b_clob_Index = FirstDbcIndex+2;
+  blob_values_b_blob_Index = FirstDbcIndex+3;
+  binary_values_n_id_Index = FirstDbcIndex;
+  binary_values_n_raw_Index = FirstDbcIndex+1;
+  binary_values_n_longraw_Index = FirstDbcIndex+2;
+  binary_values_n_blob_Index = FirstDbcIndex+3;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -439,7 +437,7 @@ begin
   Check(ResultSet.Next);
   CheckEquals(2, ResultSet.GetInt(binary_values_n_id_Index));
   CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    String(ResultSet.GetBlob(binary_values_n_raw_Index).GetString));
+    {$IFDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(BytesToStr(ResultSet.GetBytes(binary_values_n_raw_Index))));
   CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
     String(ResultSet.GetBlob(binary_values_n_longraw_Index).GetString));
   CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
@@ -463,12 +461,12 @@ end;
 
 procedure TZTestDbcOracleCase.TestNumbers;
 const
-  number_values_n_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  number_values_n_tint_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  number_values_n_sint_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  number_values_n_int_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  number_values_n_bdecimal_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  number_values_n_numeric_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  number_values_n_id_Index = FirstDbcIndex;
+  number_values_n_tint_Index = FirstDbcIndex+1;
+  number_values_n_sint_Index = FirstDbcIndex+2;
+  number_values_n_int_Index = FirstDbcIndex+3;
+  number_values_n_bdecimal_Index = FirstDbcIndex+4;
+  number_values_n_numeric_Index = FirstDbcIndex+5;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -486,11 +484,12 @@ begin
   CheckEquals(1, ResultSet.GetInt(number_values_n_id_Index));
   CheckEquals(-128, ResultSet.GetInt(number_values_n_tint_Index));
   CheckEquals(-32768, ResultSet.GetInt(number_values_n_sint_Index));
-{$IFDEF FPC}
   CheckEquals(-2147483648, ResultSet.GetInt(number_values_n_int_Index));
-  // !! in oracle we can only use double precission numbers now
+  {$IFNDEF CPU64} //EH: CPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
+  //this needs to be reviewed with true BCD record structs later on (7.3+)
   CheckEquals(-9223372036854775808, ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
-{$ENDIF}
+  {$ENDIF !CPU64}
+  CheckEquals(-9223372036854775808, ResultSet.GetLong(number_values_n_bdecimal_Index));
   CheckEquals(-99999.9999, ResultSet.GetDouble(number_values_n_numeric_Index), 0.00001);
 end;
 
@@ -500,8 +499,8 @@ end;
 
 procedure TZTestDbcOracleCase.TestLargeBlob;
 const
-  insert_blob_values_b_blob_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  select_blob_values_b_blob_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  insert_blob_values_b_blob_Index = FirstDbcIndex;
+  select_blob_values_b_blob_Index = FirstDbcIndex+1;
 var
   InStm: TMemoryStream;
   OutBytes: TBytes;
@@ -517,7 +516,9 @@ begin
     // randomizing content
     i := 0;
     while i < TestSize do begin
+      {$R-} //EH range check does overrun the defined TByteArray = array[0..32767] of Byte range -> turn off!
       PByteArray(InStm.Memory)[i] := Random(256);
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
       Inc(i, Random(1000));
     end;
     // inserting
@@ -557,8 +558,8 @@ end;
 
 procedure TZTestDbcOracleCase.TestDateWithTime;
 const
-  param_d_date_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  field_d_date_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  param_d_date_Index = FirstDbcIndex;
+  field_d_date_Index = FirstDbcIndex+1;
 var
   TestDate: TDateTime;
   Statement: IZStatement;
@@ -599,8 +600,8 @@ end;
 procedure TZTestDbcOracleCase.TestFKError;
 const
   TestStr = 'The source code of the ZEOS Libraries and packages are distributed under the Library GNU General Public License';
-  s_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  s_varchar_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  s_id_Index = FirstDbcIndex;
+  s_varchar_Index = FirstDbcIndex+1;
 var
   Statement: IZStatement;
   PStatement: IZPreparedStatement;
