@@ -3979,7 +3979,7 @@ begin
             Result[i] := CompareInt64_Asc;
           stByte, stWord, stLongWord, stULong:
             Result[i] := CompareUInt64_Asc;
-          stFloat, stDouble, stBigDecimal:
+          stFloat, stDouble, stCurrency, stBigDecimal:
             Result[i] := CompareFloat_Asc;
           stDate, stTime, stTimestamp:
             Result[i] := CompareDateTime_Asc;
@@ -4006,7 +4006,7 @@ begin
             Result[i] := CompareInt64_Desc;
           stByte, stWord, stLongWord, stULong:
             Result[i] := CompareUInt64_Desc;
-          stFloat, stDouble, stBigDecimal:
+          stFloat, stDouble, stCurrency, stBigDecimal:
             Result[i] := CompareFloat_Desc;
           stDate, stTime, stTimestamp:
             Result[i] := CompareDateTime_Desc;
