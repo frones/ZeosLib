@@ -200,6 +200,7 @@
                   {$DEFINE WITH_FORMATSETTINGS}
                   {$DEFINE WITH_UNICODEFROMLOCALECHARS}
                   {$DEFINE WITH_RTLCONSTS_SInvalidGuidArray}
+                  {$DEFINE WITH_TOBJECTLIST_REQUIRES_CLASSES}       //TObjectList.Remove, add ... are inlined need unit classes
 
                   {$IF CompilerVersion >= 23} //Delphi XE2+
                     {$IFNDEF WIN32}
@@ -251,7 +252,7 @@
                         {$IFNDEF NEXTGEN}
                           {$DEFINE WITH_ANSISTRINGPOS_DEPRECATED} //AnsiStringPos deprecated moved to AnsiStrings
                           {$DEFINE WITH_STRLEN_DEPRECATED}        //StrLen deprecated moved to AnsiStrings
-                          {$DEFINE WITH_TOBJECTLIST_INLINE}       //TObjectList.Remove, add ... are inlined 	need System.Types
+                          {$DEFINE WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES} //TObjectList.Remove, add ... are inlined and System.Types
                           {$DEFINE WITH_ANSISTRCOMP_DEPRECATED}   //AnsiStrComp is deprecated moved to AnsiStrings
                           {$DEFINE WITH_ANSISTRLCOMP_DEPRECATED}  //AnsiStrLComp is deprecated moved to AnsiStrings
                           {$DEFINE WITH_STRDISPOSE_DEPRECATED}    //StrDispose is deprecated moved to AnsiStrings

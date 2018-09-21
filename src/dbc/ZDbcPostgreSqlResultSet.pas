@@ -59,7 +59,7 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZPlainPostgreSqlDriver, ZDbcLogging,
   ZDbcResultSetMetadata, ZCompatibility;
@@ -216,8 +216,8 @@ procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Single;
   var Result: Single); overload;
 begin
   {$IFDEF FPC2_6DOWN}
-    {$R-}
-    {$Q-}
+  {$R-}
+  {$Q-}
   {$ENDIF}
   if Value = 'Infinity' then
     Result := Infinity
