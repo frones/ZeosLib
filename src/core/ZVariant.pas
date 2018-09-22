@@ -2994,14 +2994,14 @@ function TZClientVariantManager.Convert(const Value: TZVariant;
         ResTmp := IntToRaw(Value.VUInteger);
       {$IFDEF BCD_TEST}
       vtDouble:
-        Result.VRawByteString := FloatToSqlRaw(Value.VDouble);
+        ResTmp := FloatToSqlRaw(Value.VDouble);
       vtCurrency:
-        Result.VRawByteString := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CurrToStr(Value.VCurrency, FmtSettFloatDot));
+        ResTmp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CurrToStr(Value.VCurrency, FmtSettFloatDot));
       vtBigDecimal:
-        Result.VRawByteString := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(BCDToStr(Value.VBigDecimal));
+        ResTmp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(BCDToStr(Value.VBigDecimal));
       {$ELSE}
       vtFloat:
-        Result.VRawByteString := FloatToSqlRaw(Value.VFloat);
+        ResTmp := FloatToSqlRaw(Value.VFloat);
       {$ENDIF}
       vtString:
         ResTmp := FConSettings^.ConvFuncs.ZStringToRaw(Value.VString, FConSettings^.CTRL_CP, FConSettings^.ClientCodePage^.CP);
