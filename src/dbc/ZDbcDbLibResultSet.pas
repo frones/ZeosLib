@@ -579,14 +579,16 @@ var
   Tmp: RawByteString;
   P: PAnsiChar;
   Len: LengthInt;
+  DatLen: Integer;
 begin
   {$IFDEF GENERIC_INDEX}
   //DBLib -----> Col/Param starts whith index 1
-  FDataProvider.GetColData(ColumnIndex+1, Pointer(P), Len); //hint DBLib isn't #0 terminated @all
+  FDataProvider.GetColData(ColumnIndex+1, Pointer(P), DatLen); //hint DBLib isn't #0 terminated @all
   {$ELSE}
-  FDataProvider.GetColData(ColumnIndex, Pointer(P), Len); //hint DBLib isn't #0 terminated @all
+  FDataProvider.GetColData(ColumnIndex, Pointer(P), DatLen); //hint DBLib isn't #0 terminated @all
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
+  Len := DatLen;
   DT := DBLibColTypeCache[ColumnIndex];
   LastWasNull := P = nil;
   if LastWasNull then
