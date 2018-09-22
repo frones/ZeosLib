@@ -91,7 +91,7 @@ type
       procedure GetColData(ColIndex: Integer; out DatPtr: Pointer; out DatLen: Integer); override;
   end;
 
-  TZCachedDblibField = class
+  TZCachedDblibField = record
     IsNull: Boolean;
     Data: TBytes;
   end;
@@ -228,9 +228,6 @@ begin
 end;
 
 destructor TZCachedDblibDataProvider.Destroy;
-var
-  currentRow: TZCachedDblibRow;
-  x: Integer;
 begin
   while Next do ; // next removes one row after the other
   inherited;
@@ -245,8 +242,7 @@ begin
   if Assigned(FRootRow) then begin
     currentRow := FRootRow;
     FRootRow := currentRow.NextRow;
-    for x := Low(currentRow.Fields) to High(currentRow.Fields) do
-      FreeAndNil(currentRow.Fields[x]);
+    SetLength(currentRow.Fields, 0);
     FreeAndNil(currentRow);
     Result := Assigned(FRootRow);
   end;
@@ -287,15 +283,12 @@ begin
     FRootRow := TZCachedDblibRow.Create; // this is just a dummy to be on for being before the first row.
     currentRow := FRootRow;
     SetLength(currentRow.Fields, colCount);
-    for x := 0 to colCount - 1 do
-      currentRow.Fields[x] := TZCachedDblibField.Create;
     while plainProvider.Next do begin
       currentRow.NextRow := TZCachedDblibRow.Create;
       currentRow := currentRow.NextRow;
 
       SetLength(currentRow.Fields, colCount);
       for x := 0 to colCount - 1 do begin
-        currentRow.Fields[x] := TZCachedDblibField.Create;
         plainProvider.GetColData(x + 1, Data, DatLen);
         currentRow.Fields[x].IsNull := (Data = nil) and (DatLen = 0);
         if DatLen > 0 then begin
@@ -340,6 +333,7 @@ destructor TZDBLibResultSet.Destroy;
 begin
   if Assigned(FDataProvider) then
     FreeAndNil(FDataProvider);
+  inherited;
 end;
 
 {**
