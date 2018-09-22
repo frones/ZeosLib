@@ -140,6 +140,7 @@ type
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
       UserEncoding: TZCharEncoding = ceDefault);
+    destructor Destroy; override;
 
     procedure Close; override;
 
@@ -333,6 +334,12 @@ begin
   //FDataProvider := TZPlainDblibDataProvider.Create(Statement.GetConnection as IZDbLibConnection , FCheckDBDead);
   FDataProvider := TZCachedDblibDataProvider.Create(Statement.GetConnection as IZDbLibConnection);
   Open;
+end;
+
+destructor TZDBLibResultSet.Destroy;
+begin
+  if Assigned(FDataProvider) then
+    FreeAndNil(FDataProvider);
 end;
 
 {**
