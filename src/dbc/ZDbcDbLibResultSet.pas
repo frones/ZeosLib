@@ -377,6 +377,7 @@ label AssignGeneric;
     {$ENDIF}
   end;
 begin
+  NeedsLoading := false;
 //Check if the current statement can return rows
   if FPlainDriver.dbCmdRow(FHandle) <> DBSUCCEED then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -440,7 +441,8 @@ AssignGeneric:  {this is the old way we did determine the ColumnInformations}
 
   if FDataProvider is TZCachedDblibDataProvider then begin
     (FDataProvider as TZCachedDblibDataProvider).LoadData;
-    if NeedsLoading then (GetMetaData as IZDblibResultSetMetadata).LoadColumns;
+    if NeedsLoading then
+      (GetMetaData as IZDblibResultSetMetadata).LoadColumns;
   end;
 
   inherited Open;
