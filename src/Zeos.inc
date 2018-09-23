@@ -375,9 +375,11 @@
 
 // Disables checking code.
 // Use Range checking option to turn on/off optimization
-{$IFOPT R-}
+// 2018-09-23 - disabled for now because we don't want to test that with the
+// test suites - even though we want the range checks to be enabled.
+//{$IFOPT R-}
 {$DEFINE DISABLE_CHECKING}
-{$ENDIF}
+//{$ENDIF}
 
 
 // Enables MySQL support in TZConnection/TZDataset
