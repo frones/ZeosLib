@@ -2004,7 +2004,22 @@ var
   StrStream1: TMemoryStream;
   SL: TStringList;
   ConSettings: PZConSettings;
+  Str1, Str2, Str3, Str4, Str5, Str6: AnsiString;
 begin
+  Str1 := 'This is an ASCII text and should work on any database.';
+  // This test requires the database to either use the same codepage as the
+  // computer. The strings need to fit into unicode and the local codepage.
+  // now let's create some strings that are not in the ASCII range
+  // rules:
+  // String 2 Starts with String 3
+  // String 2 ends with String 4
+  // String 5 is in the middle of String 2
+  Str2 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)+ Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223) +Chr(200)+Chr(201)+Chr(202)+Chr(203)+Chr(204)+Chr(205)+Chr(206)+Chr(207)+Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
+  Str3 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199);
+  Str4 := Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
+  Str5 := Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223);
+  Str6 := Chr(232)+Chr(233)+Chr(234)+Chr(235)+Chr(236)+Chr(237)+Chr(238)+Chr(239);
+
   StrStream1 := TMemoryStream.Create;
   SL := TStringList.Create;
   Query := CreateQuery;
@@ -2062,6 +2077,8 @@ var
   Query: TZQuery;
   RowCounter: Integer;
   I: Integer;
+  Str1, Str2, Str3, Str4, Str5, Str6: AnsiString;
+
   procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: ZWideString);
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
@@ -2074,6 +2091,20 @@ var
   end;
 
 begin
+  Str1 := 'This is an ASCII text and should work on any database.';
+  // This test requires the database to either use the same codepage as the
+  // computer. The strings need to fit into unicode and the local codepage.
+  // now let's create some strings that are not in the ASCII range
+  // rules:
+  // String 2 Starts with String 3
+  // String 2 ends with String 4
+  // String 5 is in the middle of String 2
+  Str2 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)+ Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223) +Chr(200)+Chr(201)+Chr(202)+Chr(203)+Chr(204)+Chr(205)+Chr(206)+Chr(207)+Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
+  Str3 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199);
+  Str4 := Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
+  Str5 := Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223);
+  Str6 := Chr(232)+Chr(233)+Chr(234)+Chr(235)+Chr(236)+Chr(237)+Chr(238)+Chr(239);
+
   Query := CreateQuery;
   Connection.Connect;  //DbcConnection needed
   try
@@ -2104,16 +2135,16 @@ begin
       else
         Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
-    CheckEquals(Query.RecordCount, 1, 'RowCount of Str2');
+    CheckEquals(1, Query.RecordCount, 'RowCount of Str2');
     Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str3, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
-    CheckEquals(Query.RecordCount, 2, 'RowCount of Str3');
+    CheckEquals(2, Query.RecordCount, 'RowCount of Str3');
     Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str4, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
-    CheckEquals(Query.RecordCount, 2, 'RowCount of Str4');
+    CheckEquals(2, Query.RecordCount, 'RowCount of Str4');
     Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str5, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
-    CheckEquals(Query.RecordCount, 2, 'RowCount of Str5');
+    CheckEquals(2, Query.RecordCount, 'RowCount of Str5');
     Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str6, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
   finally
