@@ -130,8 +130,14 @@ type
   ZTestCompCoreBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
   private
   published
+    {$IFNDEF FPC}
+    //It will be next to impossible to get these tests working correctly on FPC.
+    //On Linux there usually will not be a non-ASCII character set. Other tests
+    //will test Unicode.
     procedure TestUnicodeBehavior;
     procedure TestNonAsciiChars;
+    {$ENDIF}
+    procedure TestUnicodeChars;
   end;
 
 implementation
@@ -1998,6 +2004,7 @@ const {Test Strings}
   Str5: ZWideString = #$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438;
   Str6: ZWideString = #$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C#$0438#$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432;
 
+{$IFNDEF FPC}
 procedure ZTestCompCoreBugReportMBCs.TestUnicodeBehavior;
 var
   Query: TZQuery;
@@ -2156,6 +2163,60 @@ begin
     Query.Free;
   end;
 end;
+{$ENDIF}
+
+procedure ZTestCompCoreBugReportMBCs.TestUnicodeChars;
+var
+  Query: TZQuery;
+const
+  Str6: WideString = #$5317#$4EAC#$0020#$6771#$4EAC; // Beijing + Space + Tokyo
+
+  procedure InsertValue(const id: Integer; const value: WideString);
+  begin
+    Query.ParamByName('id').AsInteger := id;
+    Query.ParamByName('string').AsWideString := value;
+    Query.ExecSQL;
+  end;
+begin
+  Query := CreateQuery;
+  try
+    try
+      Query.SQL.Text := 'insert into string_values (s_id, s_nvarchar) values (:id, :string)';
+      InsertValue(1001, Str1);
+      InsertValue(1002, Str2);
+      InsertValue(1003, Str3);
+      InsertValue(1004, Str4);
+      InsertValue(1005, Str5);
+      InsertValue(1006, Str6);
+      Query.SQL.Text := 'select s_id, s_nvarchar from string_values where s_id in (1001, 1002, 1003, 1004, 1005, 1006) order by s_id';
+      Query.Open;
+      CheckEquals(1001, Query.FieldByName('s_id').AsInteger);
+      Check(Str1 = Query.FieldByName('s_nvarchar').AsWideString);
+      Query.Next;
+      CheckEquals(1002, Query.FieldByName('s_id').AsInteger);
+      Check(Str2 = Query.FieldByName('s_nvarchar').AsWideString);
+      Query.Next;
+      CheckEquals(1003, Query.FieldByName('s_id').AsInteger);
+      Check(Str3 = Query.FieldByName('s_nvarchar').AsWideString);
+      Query.Next;
+      CheckEquals(1004, Query.FieldByName('s_id').AsInteger);
+      Check(Str4 = Query.FieldByName('s_nvarchar').AsWideString);
+      Query.Next;
+      CheckEquals(1005, Query.FieldByName('s_id').AsInteger);
+      Check(Str5 = Query.FieldByName('s_nvarchar').AsWideString);
+      Query.Next;
+      CheckEquals(1006, Query.FieldByName('s_id').AsInteger);
+      Check(Str6 = Query.FieldByName('s_nvarchar').AsWideString);
+    finally
+      Query.Close;
+      Query.SQL.Text := 'delete from string_values where s_id in (1001, 1002, 1003, 1004, 1005, 1006)';
+      Query.ExecSQL;
+    end;
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
 
 initialization
   RegisterTest('bugreport',ZTestCompCoreBugReport.Suite);
