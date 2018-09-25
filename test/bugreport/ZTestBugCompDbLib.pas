@@ -59,9 +59,9 @@ uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDataset, ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZDbcProperties;
 
+{$IFNDEF FPC}
 type
 
-  {$IFNDEF FPC}
   {** Implements a bug report test case for DbLib components. }
   ZTestCompDbLibBugReport = class(TZAbstractCompSQLTestCase)
   protected
