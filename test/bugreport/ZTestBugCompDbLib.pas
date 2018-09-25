@@ -61,20 +61,21 @@ uses
 
 type
 
+  {$IFNDEF FPC}
   {** Implements a bug report test case for DbLib components. }
   ZTestCompDbLibBugReport = class(TZAbstractCompSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published
-    {$IFNDEF FPC}
     procedure Test_NChar_Values;
-    {$ENDIF}
   end;
+  {$ENDIF}
 
 implementation
 
 { ZTestCompDbLibBugReport }
 
+{$IFNDEF FPC}
 function ZTestCompDbLibBugReport.GetSupportedProtocols: string;
 begin
   Result := 'mssql,sybase,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,FreeTDS_Sybase<10,FreeTDS_Sybase-10+';
@@ -90,7 +91,6 @@ end;
 //  Str4 = ZWideString(#$0442#$0440#$0438#$0432#$0438#$0430#$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434#$0430#$0447);
 //  Str5 = ZWideString(#$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438);
 
-{$IFNDEF FPC}
 procedure ZTestCompDbLibBugReport.Test_NChar_Values;
 var
   Query: TZQuery;
@@ -182,5 +182,7 @@ end;
 {$ENDIF}
 
 initialization
+{$IFNDEF FPC}
   RegisterTest('bugreport',ZTestCompDbLibBugReport.Suite);
+{$ENDIF}
 end.
