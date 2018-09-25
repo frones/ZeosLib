@@ -196,11 +196,21 @@ end;
 
 function TZDBLibPreparedStatementEmulated.GetParamAsString(
   ParamIndex: Integer): RawByteString;
+var
+  Connection: IZDBLibConnection;
+  Len: Integer;
 begin
+  // Todo: Talk with EgonHugeist wether this requiresmodifications for his Mextgen effort
   if InParamCount <= ParamIndex
   then Result := 'NULL'
   else Result := PrepareSQLParameter(InParamValues[ParamIndex],
       InParamTypes[ParamIndex], ClientVarManager, ConSettings, IsNCharIndex[ParamIndex]);
+  Len := Length(Result);
+  if (Len > 0) and (Result[1] = '''') and (Result[Len] = '''') then begin
+    Connection := GetConnection as IZDBLibConnection;
+    if (Connection.GetProvider = dpMsSQL) and Connection.FreeTDS then
+      Result := 'N' + Result;
+  end;
 end;
 
 {**
