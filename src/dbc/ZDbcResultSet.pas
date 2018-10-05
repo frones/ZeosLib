@@ -617,6 +617,47 @@ begin
   Result := -CompareUInt64_Asc(Null1, Null2, V1, V2);
 end;
 
+{$IFDEF BCD_TEST}
+function CompareDouble_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1
+  else Result := Ord(TZVariant(V1).VDouble > TZVariant(V2).VDouble)-Ord(TZVariant(V1).VDouble < TZVariant(V2).VDouble);
+end;
+
+function CompareDouble_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := -CompareDouble_Asc(Null1, Null2, V1, V2);
+end;
+
+function CompareCurrency_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1
+  else Result := Ord(TZVariant(V1).VCurrency > TZVariant(V2).VCurrency)-Ord(TZVariant(V1).VCurrency < TZVariant(V2).VCurrency);
+end;
+
+function CompareCurrency_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := -CompareCurrency_Asc(Null1, Null2, V1, V2);
+end;
+
+function CompareBigDecimal_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1
+  else Result := BcdCompare(TZVariant(V1).VBigDecimal, TZVariant(V2).VBigDecimal));
+end;
+
+function CompareBigDecimal_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := -CompareBigDecimal_Asc(Null1, Null2, V1, V2);
+end;
+
+{$ELSE}
 function CompareFloat_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   if Null1 and Null2 then Result := 0
@@ -629,6 +670,8 @@ function CompareFloat_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   Result := -CompareFloat_Asc(Null1, Null2, V1, V2);
 end;
+{$ENDIF}
+
 
 function CompareDateTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
@@ -1061,6 +1104,7 @@ begin
   else
     Result := Pointer(FUniTemp);
 end;
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
