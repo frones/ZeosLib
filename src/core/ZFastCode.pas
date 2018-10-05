@@ -305,6 +305,11 @@ function IntToUnicode(const Value: Integer): ZWideString; overload;
 function IntToUnicode(const Value: Int64): ZWideString; overload;
 function IntToUnicode(Value: UInt64; Const Negative: Boolean = False): ZWideString; overload;
 
+procedure CurrToRaw(const Value: Currency; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
+function CurrToRaw(const Value: Currency): RawByteString; overload;
+
+//procedure CurrToUnicode(const Value: Currency; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
+function CurrToUnicode(const Value: Currency): ZWideString; overload;
 
 function RawToInt(const Value: RawByteString): Integer; overload;
 function RawToInt(const Value: PAnsiChar): Integer; overload;
@@ -316,11 +321,14 @@ function UnicodeToUInt64(const Value: ZWideString): UInt64;
 
 function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer; overload;
 function RawToIntDef(const S: PAnsiChar; const Default: Integer) : Integer; overload;
+function RawToIntDef(Buf, PEnd: PAnsiChar; const Default: Integer) : Integer; overload;
 function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer; overload;
 function UnicodeToIntDef(const S: PWideChar; const Default: Integer) : Integer; overload;
 function RawToInt64Def(const S: RawByteString; const Default: Int64) : Int64; overload;
 function RawToInt64Def(const S: PAnsiChar; const Default: Int64) : Int64; overload;
+function RawToInt64Def(Buf, PEnd: PAnsiChar; const Default: Int64) : Int64; overload;
 function RawToUInt64Def(const S: PAnsiChar; const Default: UInt64) : UInt64; overload;
+function RawToUInt64Def(Buf, PEnd: PAnsiChar; const Default: UInt64) : UInt64; overload;
 function RawToUInt64Def(const S: RawByteString; const Default: UInt64) : UInt64; overload;
 function UnicodeToInt64Def(const S: ZWideString; const Default: Int64) : Int64; overload;
 function UnicodeToInt64Def(const S: PWideChar; const Default: Int64) : Int64; overload;
@@ -3229,6 +3237,61 @@ begin
     PByte(Buf)^ := I32 or ord('0');
 end;
 
+procedure CurrToRaw(const Value: Currency; Buf: PAnsiChar; PEnd: PPAnsiChar = nil);
+var I: Int64;
+begin
+  I := PInt64(@Value)^ div 10000;
+  if i < 0 then begin
+    PByte(Buf)^ := Ord('-');
+    Inc(Buf);
+    I := -I;
+  end;
+  if (I > High(Cardinal))
+  then IntToRaw(UInt64(I), Buf, @Buf)
+  else IntToRaw(Cardinal(I), Buf, @Buf);
+  PByte(Buf)^ := Ord('.');
+  IntToRaw(Word(PInt64(@Value)^ mod 10000), Buf+1, @Buf);
+  if PEnd <> nil
+  then PEnd^ := Buf
+  else PByte(Buf)^ := ord(#0);
+end;
+
+function CurrToRaw(const Value: Currency): RawByteString;
+var buf: array[0..31] of AnsiChar;
+  P: PAnsiChar;
+begin
+  CurrToRaw(Value, @buf[0], @P);
+  ZSetString(PAnsiChar(@Buf[0]), P-@Buf[0], Result);
+end;
+(*
+procedure CurrToUnicode(const Value: Currency; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
+var I: Int64;
+begin
+  I := PInt64(@Value)^ div 10000;
+  if i < 0 then begin
+    PWord(Buf)^ := Ord('-');
+    Inc(Buf);
+    I := -I;
+  end;
+  if (I > High(Cardinal))
+  then IntToUnicode(UInt64(I), Buf, @Buf)
+  else IntToUnicode(Cardinal(I), Buf, @Buf);
+  PWord(Buf)^ := Ord('.');
+  IntToUnicode(Word(PInt64(@Value)^ mod 10000), Buf+1, @Buf);
+  if PEnd <> nil
+  then PEnd^ := Buf
+  else PWord(Buf)^ := ord(#0);
+end;
+*)
+function CurrToUnicode(const Value: Currency): ZWideString;
+//var buf: array[0..31] of WideChar;
+  //P: PWideChar;
+begin
+  Result := IntToUnicode(PInt64(@Value)^ div 10000)+'.'+IntToUnicode(Word(PInt64(@Value)^ mod 10000))
+  //CurrToUnicode(Value, @buf[0], @P);
+  //System.SetString(Result, PWideChar(@Buf[0]), P-@Buf[0]);
+end;
+
 function IntToRaw(Value: UInt64; Const Negative: Boolean = False): RawByteString;
 //fast pure pascal by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
@@ -4413,6 +4476,15 @@ begin
       Result := Default;
 end;
 
+function RawToIntDef(Buf, PEnd: PAnsiChar; const Default: Integer) : Integer;
+var P: PAnsiChar;
+begin
+  P := PEnd;
+  Result := ValRawInt(Buf, PEnd);
+  if PEnd <> P then
+    Result := Default;
+end;
+
 {$WARNINGS OFF} //value digits might not be initialized
 function ValLong_JOH_PAS_4_b_unicode(const S: PWideChar; out code: Integer): Longint;
 //fast pascal from John O'Harrow see:
@@ -5021,6 +5093,15 @@ begin
       Result := Default;
 end;
 
+function RawToInt64Def(Buf, PEnd: PAnsiChar; const Default: Int64) : Int64;
+var P: PAnsiChar;
+begin
+  P := PEnd;
+  Result := ValRawInt64(Buf, PEnd);
+  if P <> PEnd then
+    Result := Default;
+end;
+
 function RawToUInt64Def(const S: PAnsiChar; const Default: UInt64) : UInt64;
 var
   E: Integer;
@@ -5029,6 +5110,15 @@ begin
   if E > 0 then
     if not ((E > 0) and Assigned(S) and (Ord((S+E-1)^)=Ord(' '))) then
       Result := Default;
+end;
+
+function RawToUInt64Def(Buf, PEnd: PAnsiChar; const Default: UInt64) : UInt64;
+var P: PAnsiChar;
+begin
+  P := PEnd;
+  Result := ValRawUInt64(Buf, P);
+  if P <> PEnd then
+    Result := Default;
 end;
 
 function RawToUInt64(const Value: RawByteString) : UInt64;
@@ -6020,7 +6110,7 @@ procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Res
 var
   E: Integer;
 begin
-  Result :=  ValUnicodeDbl(PWordArray(s), DecimalSep, E{%H-});
+  Result :=  ValUnicodeExt(PWordArray(s), DecimalSep, E{%H-});
   if E <> 0 then
     raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
 end;
