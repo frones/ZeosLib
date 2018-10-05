@@ -1820,10 +1820,16 @@ begin
       {$ENDIF}
       ftFloat:
         Statement.SetDouble(Index, Param.AsFloat);
-      {$IFDEF WITH_FTEXTENDED}
-      ftExtended:
-        Statement.SetBigDecimal(Index, Param.AsFloat);
+      {$IFDEF BCD_TEST}
+      ftFmtBCD:
+        Statement.SetBigDecimal(Index, Param.AsFMTBCD);
+      {$ELSE}
+        {$IFDEF WITH_FTEXTENDED}
+        ftExtended:
+          Statement.SetBigDecimal(Index, Param.AsFloat);
+        {$ENDIF}
       {$ENDIF}
+
       {$IFDEF WITH_FTLONGWORD}
       ftLongWord:
         Statement.SetInt(Index, Integer(Param.AsLongWord));
@@ -1831,7 +1837,7 @@ begin
       ftLargeInt:
         Statement.SetLong(Index, {$IFDEF WITH_PARAM_ASLARGEINT}Param.AsLargeInt{$ELSE}StrToInt64(Param.AsString){$ENDIF});
       ftCurrency, ftBCD:
-        Statement.SetBigDecimal(Index, Param.AsCurrency);
+        Statement.SetCurrency(Index, Param.AsCurrency);
       ftString, ftFixedChar:
         Statement.SetString(Index, Param.AsString);
       {$IFDEF WITH_FTWIDESTRING}
