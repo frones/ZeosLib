@@ -3250,7 +3250,7 @@ begin
   then IntToRaw(UInt64(I), Buf, @Buf)
   else IntToRaw(Cardinal(I), Buf, @Buf);
   PByte(Buf)^ := Ord('.');
-  IntToRaw(Word(PInt64(@Value)^ mod 10000), Buf+1, @Buf);
+  IntToRaw(Integer(PInt64(@Value)^ mod 10000), Buf+1, @Buf);
   if PEnd <> nil
   then PEnd^ := Buf
   else PByte(Buf)^ := ord(#0);
@@ -8291,7 +8291,6 @@ end;
 {$ENDIF}
 
 initialization
-
 {$IFDEF NEXTGEN}
 FillTwoDigitLoopW;
 {$ELSE}
