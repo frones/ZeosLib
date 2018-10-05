@@ -70,7 +70,9 @@ type
     FAutoIncrement: Boolean;
     FCaseSensitive: Boolean;
     FSearchable: Boolean;
-    FCurrency: Boolean;
+    FCurrency: Boolean; //note we'll map all fixed numbers to stCurrency(ftBCD)
+                        //if Scale&Precision allows it. But if a field is a true
+                        //currency field like MS-Money should be indicated here
     FNullable: TZColumnNullableType;
     FSigned: Boolean;
     FColumnDisplaySize: Integer;
