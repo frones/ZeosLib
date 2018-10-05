@@ -467,6 +467,10 @@ const
   number_values_n_int_Index = FirstDbcIndex+3;
   number_values_n_bdecimal_Index = FirstDbcIndex+4;
   number_values_n_numeric_Index = FirstDbcIndex+5;
+  number_values_n_float_Index = FirstDbcIndex+6;
+  number_values_n_real_Index = FirstDbcIndex+7;
+  number_values_n_dprecision_Index = FirstDbcIndex+8;
+  number_values_n_money_Index = FirstDbcIndex+9;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -475,22 +479,99 @@ begin
   CheckNotNull(Statement);
 
   ResultSet := Statement.ExecuteQuery(
-    'SELECT * FROM number_values where n_id = 1 ');
+    'SELECT * FROM number_values order by 1');
   CheckNotNull(ResultSet);
 
   Check(ResultSet.Next);
-
   // 1, -128,-32768,-2147483648,-9223372036854775808, -99999.9999
+  // -3.402823466E+38, -3.402823466E+38, -1.7976931348623157E+38, -21474836.48
   CheckEquals(1, ResultSet.GetInt(number_values_n_id_Index));
   CheckEquals(-128, ResultSet.GetInt(number_values_n_tint_Index));
   CheckEquals(-32768, ResultSet.GetInt(number_values_n_sint_Index));
   CheckEquals(-2147483648, ResultSet.GetInt(number_values_n_int_Index));
-  {$IFNDEF CPU64} //EH: CPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
+  {$IFNDEF CPU64} //EH: FPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
   //this needs to be reviewed with true BCD record structs later on (7.3+)
   CheckEquals(-9223372036854775808, ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
   {$ENDIF !CPU64}
   CheckEquals(-9223372036854775808, ResultSet.GetLong(number_values_n_bdecimal_Index));
-  CheckEquals(-99999.9999, ResultSet.GetDouble(number_values_n_numeric_Index), 0.00001);
+  CheckEquals(-99999.9999, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(Currency(-99999.9999), ResultSet.GetCurrency(number_values_n_numeric_Index));
+  CheckEquals(Single(-3.402823466E+38), ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(Single(-3.402823466E+38), ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(Double(-1.7976931348623157E+38), ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(Currency(-21474836.48), ResultSet.GetCurrency(number_values_n_money_Index));
+  Check(ResultSet.Next);
+  //2,-128,-32768,-2147483648,-9223372036854775808, -11111.1111,
+	//-1.175494351E-38, -1.175494351E-38, -2.2250738585072014E-38, 21474836.47
+  CheckEquals(2, ResultSet.GetInt(number_values_n_id_Index));
+  CheckEquals(-128, ResultSet.GetInt(number_values_n_tint_Index));
+  CheckEquals(-32768, ResultSet.GetInt(number_values_n_sint_Index));
+  CheckEquals(-2147483648, ResultSet.GetInt(number_values_n_int_Index));
+  {$IFNDEF CPU64} //EH: FPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
+  //this needs to be reviewed with true BCD record structs later on (7.3+)
+  CheckEquals(-9223372036854775808, ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
+  {$ENDIF !CPU64}
+  CheckEquals(-9223372036854775808, ResultSet.GetLong(number_values_n_bdecimal_Index));
+  CheckEquals(-11111.1111, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(Currency(-11111.1111), ResultSet.GetCurrency(number_values_n_numeric_Index));
+  CheckEquals(Single(-1.175494351E-38), ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(Single(-1.175494351E-38), ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(Double(-2.2250738585072014E-38), ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(Currency(21474836.47), ResultSet.GetCurrency(number_values_n_money_Index));
+  Check(ResultSet.Next);
+  //3, 0, 0, 0, 0, 0, 0, 0, 0, '0'
+  CheckEquals(3, ResultSet.GetInt(number_values_n_id_Index));
+  CheckEquals(0, ResultSet.GetInt(number_values_n_tint_Index));
+  CheckEquals(0, ResultSet.GetInt(number_values_n_sint_Index));
+  CheckEquals(0, ResultSet.GetInt(number_values_n_int_Index));
+  {$IFNDEF CPU64} //EH: FPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
+  //this needs to be reviewed with true BCD record structs later on (7.3+)
+  CheckEquals(0, ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
+  {$ENDIF !CPU64}
+  CheckEquals(0, ResultSet.GetLong(number_values_n_bdecimal_Index));
+  CheckEquals(0, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(Currency(0), ResultSet.GetCurrency(number_values_n_numeric_Index));
+  CheckEquals(Single(0), ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(Single(0), ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(Double(0), ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(Currency(0), ResultSet.GetCurrency(number_values_n_money_Index));
+  Check(ResultSet.Next);
+  //4, 128, 32767, 2147483647, 9223372036854775807, 11111.1111,
+	//3.402823466E+38, 3.402823466E+38, 1.7976931348623157E+38, -922337203685477.5808
+  CheckEquals(4, ResultSet.GetInt(number_values_n_id_Index));
+  CheckEquals(128, ResultSet.GetInt(number_values_n_tint_Index));
+  CheckEquals(32767, ResultSet.GetInt(number_values_n_sint_Index));
+  CheckEquals(2147483647, ResultSet.GetInt(number_values_n_int_Index));
+  {$IFNDEF CPU64} //EH: FPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
+  //this needs to be reviewed with true BCD record structs later on (7.3+)
+  CheckEquals(9223372036854775807, ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
+  {$ENDIF !CPU64}
+  CheckEquals(9223372036854775807, ResultSet.GetLong(number_values_n_bdecimal_Index));
+  CheckEquals(11111.1111, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(Currency(11111.1111), ResultSet.GetCurrency(number_values_n_numeric_Index));
+  CheckEquals(Single(3.402823466E+38), ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(Single(3.402823466E+38), ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(Double(1.7976931348623157E+38), ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(Currency(-922337203685477.5808), ResultSet.GetCurrency(number_values_n_money_Index));
+  Check(ResultSet.Next);
+  //5, 128, 32767, 147483647, 9223372036854775807,  99999.9999,
+	//1.175494351E-38, 1.175494351E-38, 2.2250738585072014E-38, 922337203685477.5807
+  CheckEquals(5, ResultSet.GetInt(number_values_n_id_Index));
+  CheckEquals(128, ResultSet.GetInt(number_values_n_tint_Index));
+  CheckEquals(32767, ResultSet.GetInt(number_values_n_sint_Index));
+  CheckEquals(147483647, ResultSet.GetInt(number_values_n_int_Index));
+  {$IFNDEF CPU64} //EH: FPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
+  //this needs to be reviewed with true BCD record structs later on (7.3+)
+  CheckEquals(9223372036854775807, ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
+  {$ENDIF !CPU64}
+  CheckEquals(9223372036854775807, ResultSet.GetLong(number_values_n_bdecimal_Index));
+  CheckEquals(99999.9999, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(Currency(99999.9999), ResultSet.GetCurrency(number_values_n_numeric_Index));
+  CheckEquals(Single(1.175494351E-38), ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(Single(1.175494351E-38), ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(Double(2.2250738585072014E-38), ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(Currency(922337203685477.5807), ResultSet.GetCurrency(number_values_n_money_Index));
+  Check(not ResultSet.Next);
 end;
 
 {**
