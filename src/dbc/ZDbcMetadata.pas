@@ -2399,7 +2399,7 @@ begin
   begin
     DestResultSet.MoveToInsertRow;
     for I := FirstDbcIndex to Metadata.GetColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}do
-    begin
+    if not SrcResultSet.IsNull(I) then begin
       case Metadata.GetColumnType(I) of
         stBoolean:
           DestResultSet.UpdateBoolean(I, SrcResultSet.GetBoolean(I));
