@@ -495,11 +495,11 @@ begin
   {$ENDIF !CPU64}
   CheckEquals(-9223372036854775808, ResultSet.GetLong(number_values_n_bdecimal_Index));
   CheckEquals(-99999.9999, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
-  CheckEquals(Currency(-99999.9999), ResultSet.GetCurrency(number_values_n_numeric_Index));
-  CheckEquals(Single(-3.402823466E+38), ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
-  CheckEquals(Single(-3.402823466E+38), ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
-  CheckEquals(Double(-1.7976931348623157E+38), ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
-  CheckEquals(Currency(-21474836.48), ResultSet.GetCurrency(number_values_n_money_Index));
+  CheckEquals(-99999.9999, ResultSet.GetCurrency(number_values_n_numeric_Index));
+  CheckEquals(-3.402823466E+38, ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(-3.402823466E+38, ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(-1.7976931348623157E+38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(-21474836.48, ResultSet.GetCurrency(number_values_n_money_Index));
   Check(ResultSet.Next);
   //2,-128,-32768,-2147483648,-9223372036854775808, -11111.1111,
 	//-1.175494351E-38, -1.175494351E-38, -2.2250738585072014E-38, 21474836.47
@@ -513,11 +513,11 @@ begin
   {$ENDIF !CPU64}
   CheckEquals(-9223372036854775808, ResultSet.GetLong(number_values_n_bdecimal_Index));
   CheckEquals(-11111.1111, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
-  CheckEquals(Currency(-11111.1111), ResultSet.GetCurrency(number_values_n_numeric_Index));
-  CheckEquals(Single(-1.175494351E-38), ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
-  CheckEquals(Single(-1.175494351E-38), ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
-  CheckEquals(Double(-2.2250738585072014E-38), ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
-  CheckEquals(Currency(21474836.47), ResultSet.GetCurrency(number_values_n_money_Index));
+  CheckEquals(-11111.1111, ResultSet.GetCurrency(number_values_n_numeric_Index));
+  CheckEquals(-1.175494351E-38, ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(-1.175494351E-38, ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(-2.2250738585072014E-38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(21474836.47, ResultSet.GetCurrency(number_values_n_money_Index));
   Check(ResultSet.Next);
   //3, 0, 0, 0, 0, 0, 0, 0, 0, '0'
   CheckEquals(3, ResultSet.GetInt(number_values_n_id_Index));
@@ -530,11 +530,11 @@ begin
   {$ENDIF !CPU64}
   CheckEquals(0, ResultSet.GetLong(number_values_n_bdecimal_Index));
   CheckEquals(0, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
-  CheckEquals(Currency(0), ResultSet.GetCurrency(number_values_n_numeric_Index));
-  CheckEquals(Single(0), ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
-  CheckEquals(Single(0), ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
-  CheckEquals(Double(0), ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
-  CheckEquals(Currency(0), ResultSet.GetCurrency(number_values_n_money_Index));
+  CheckEquals(0, ResultSet.GetCurrency(number_values_n_numeric_Index));
+  CheckEquals(0, ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(0, ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(0, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(0, ResultSet.GetCurrency(number_values_n_money_Index));
   Check(ResultSet.Next);
   //4, 128, 32767, 2147483647, 9223372036854775807, 11111.1111,
 	//3.402823466E+38, 3.402823466E+38, 1.7976931348623157E+38, -922337203685477.5808
@@ -548,11 +548,11 @@ begin
   {$ENDIF !CPU64}
   CheckEquals(9223372036854775807, ResultSet.GetLong(number_values_n_bdecimal_Index));
   CheckEquals(11111.1111, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
-  CheckEquals(Currency(11111.1111), ResultSet.GetCurrency(number_values_n_numeric_Index));
-  CheckEquals(Single(3.402823466E+38), ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
-  CheckEquals(Single(3.402823466E+38), ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
-  CheckEquals(Double(1.7976931348623157E+38), ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
-  CheckEquals(Currency(-922337203685477.5808), ResultSet.GetCurrency(number_values_n_money_Index));
+  CheckEquals(11111.1111, ResultSet.GetCurrency(number_values_n_numeric_Index));
+  CheckEquals(3.402823466E+38, ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(3.402823466E+38, ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(1.7976931348623157E+38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(-922337203685477.5808, ResultSet.GetCurrency(number_values_n_money_Index));
   Check(ResultSet.Next);
   //5, 128, 32767, 147483647, 9223372036854775807,  99999.9999,
 	//1.175494351E-38, 1.175494351E-38, 2.2250738585072014E-38, 922337203685477.5807
@@ -566,11 +566,11 @@ begin
   {$ENDIF !CPU64}
   CheckEquals(9223372036854775807, ResultSet.GetLong(number_values_n_bdecimal_Index));
   CheckEquals(99999.9999, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
-  CheckEquals(Currency(99999.9999), ResultSet.GetCurrency(number_values_n_numeric_Index));
-  CheckEquals(Single(1.175494351E-38), ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
-  CheckEquals(Single(1.175494351E-38), ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
-  CheckEquals(Double(2.2250738585072014E-38), ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
-  CheckEquals(Currency(922337203685477.5807), ResultSet.GetCurrency(number_values_n_money_Index));
+  CheckEquals(99999.9999, ResultSet.GetCurrency(number_values_n_numeric_Index));
+  CheckEquals(1.175494351E-38, ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(1.175494351E-38, ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(2.2250738585072014E-38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(922337203685477.5807, ResultSet.GetCurrency(number_values_n_money_Index));
   Check(not ResultSet.Next);
 end;
 
