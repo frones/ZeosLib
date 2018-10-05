@@ -2483,7 +2483,7 @@ begin
         vtDouble:
           Result.VInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VDouble);
         vtCurrency:
-          Result.VInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VCurrency);
+          Result.VInteger := PInt64(@Value.VCurrency)^ div 10000;
         vtBigDecimal:
           Result.VInteger := BcdToInt64(Value.VBigDecimal);
         {$ELSE}
@@ -2530,7 +2530,7 @@ begin
         vtDouble:
           Result.VUInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VDouble);
         vtCurrency:
-          Result.VUInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VCurrency);
+          Result.VUInteger := PInt64(@Value.VCurrency)^ div 10000;
         vtBigDecimal:
           Result.VUInteger := BcdToInt64(Value.VBigDecimal);
         {$ELSE}
