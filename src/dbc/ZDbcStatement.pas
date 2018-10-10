@@ -6158,7 +6158,7 @@ function TZAbstractCallableStatement2.GetBigDecimal(
   ParameterIndex: Integer): Extended;
 var D: Double;
 begin
-  GetDouble(ParameterIndex, D);
+  GetDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, D);
   Result := D;
 end;
 

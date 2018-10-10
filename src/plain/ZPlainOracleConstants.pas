@@ -136,15 +136,23 @@ type
   POCIAQMsgProperties = POCIDescriptor;
   POCIAQAgent = POCIDescriptor;
   POCIDateTime = POCIDescriptor;          //OCI DateTime descriptor
-  POCINumber = POCIDescriptor;
+
+const
+  OCI_NUMBER_SIZE = 22;
+type
+  TOCINumberPart = array[0..OCI_NUMBER_SIZE-1] of ub1;
   PPOCINumber = ^POCINumber;
-  POCIString = POCIDescriptor;
+  POCINumber = ^TOCINumber;
+  TOCINumber = TOCINumberPart;
+
+  PPOCIString = ^POCIString;
+  POCIString = Pointer;
+
   POCIInterval = POCIDescriptor;          //OCI Interval descriptor
   POCIResult = POCIDescriptor;            //OCI Result Set Descriptor
   PPOCITypeElem = PPOCIDescriptor;
   PPOCITypeMethod = PPOCIDescriptor;
-
-  OCIDuration = ub2;       //enum!
+  OCIDuration = ub4;       //enum!
   POCIDuration = ^OCIDuration;
   OCITypeEncap = ub2;      //enum!
   OCITypeMethodFlag = ub2; //enum!
@@ -545,7 +553,8 @@ const
   SQLT_INT = 3  ;       //(ORANET TYPE) integer
   SQLT_FLT = 4  ;       //(ORANET TYPE) Floating point number
   SQLT_STR = 5  ;       //zero terminated string
-  SQLT_VNU = 6  ;       //NUM with preceding length byte
+  //see https://stackoverflow.com/questions/25808798/ocidefinebypos-extract-number-value-via-cursor-in-c
+  SQLT_VNU = 6  ;       //NUM with preceding length byte suggested tu use in OCICalls see orl.h
   SQLT_PDN = 7  ;       //(ORANET TYPE) Packed Decimal Numeric
   SQLT_LNG = 8  ;       //long
   SQLT_VCS = 9  ;       //Variable character string
@@ -562,8 +571,8 @@ const
   SQLT_SLS = 91 ;       //Display sign leading separate
   SQLT_LVC = 94 ;       //Longer longs (char)
   SQLT_LVB = 95 ;       //Longer long binary
-  SQLT_AFC = 96 ;       //Ansi fixed char
-  SQLT_AVC = 97 ;       //Ansi Var char
+  SQLT_AFC = 96 ;       //char[n] Ansi fixed char
+  SQLT_AVC = 97 ;       //char[n+1] Ansi Var char
   SQLT_IBFLOAT = 100;   //binary float canonical
   SQLT_IBDOUBLE = 101;  //binary double canonical
   SQLT_CUR = 102;       //cursor  type
@@ -578,7 +587,7 @@ const
   SQLT_CFILEE = 115;    //character file lob
   SQLT_RSET = 116;      //result set type
   SQLT_NCO = 122;       //named collection type (varray or nested table)
-  SQLT_VST = 155;       //OCIString type
+  SQLT_VST = 155;       //OCI STRING type / *OCIString
   SQLT_ODT = 156;       //OCIDate type
 
   { datetimes and intervals }
@@ -860,6 +869,10 @@ const
   OCI_OBJECTFREE_NONULL=2;
 
   OCI_PREP2_CACHE_SEARCHONLY: ub4 = $0010;
+
+  { number }
+  OCI_NUMBER_UNSIGNED = 0;                        // Unsigned type -- ubX
+  OCI_NUMBER_SIGNED = 2;                          // Signed type -- sbX
 type
   PPointer = ^Pointer;
 
@@ -983,12 +996,6 @@ type
 (*****************************************************************************
  *                         NUMBER/FLOAT/DECIMAL TYPE                         *
  *****************************************************************************)
-const
-  OCI_NUMBER_SIZE = 22;
-
-type
-  POCINumberPart = ^TOCINumberPart;
-  TOCINumberPart = array[1..OCI_NUMBER_SIZE] of ub1;
 
 (*
  * OCINumber - OCI Number mapping in c
@@ -1444,97 +1451,6 @@ type
           invalid input string
  *)
 
-(*-------------------------- OCINumberToInt ---------------------------------*)
-
-const
-  OCI_NUMBER_UNSIGNED = 0;                        // Unsigned type -- ubX
-  OCI_NUMBER_SIGNED = 2;                          // Signed type -- sbX
-
-type
-  TOCINumberToInt = function(err: POCIError; const number: POCINumber;
-                rsl_length: uword; rsl_flag: uword; rsl: Pointer): sword; cdecl;
-(*
-   NAME: OCINumberToInt - OCINumber convert number TO Integer
-   PARAMETERS:
-        err (IN/OUT) - error handle. If there is an error, it is
-                recorded in 'err' and this function returns OCI_ERROR.
-                The error recorded in 'err' can be retrieved by calling
-                OCIErrorGet().
-        number (IN) - number to be converted
-        rsl_length (IN) - size of the desired result
-        rsl_s_flag (IN) - flag denoting the desired sign of the output; valid
-                values are OCI_NUMBER_UNSIGNED, OCI_NUMBER_SIGNED
-        rsl (OUT) - pointer to space for the result
-   DESCRIPTION:
-        Native type conversion function.
-        Converts the given Oracle number into an xbx (e.g. ub2, ub4, sb2 etc.)
-   RETURNS:
-        OCI_SUCCESS if the function completes successfully.
-        OCI_INVALID_HANDLE if 'err' is NULL.
-        OCI_ERROR if
-          'number' or 'rsl' is null
-          integer value of 'number' is too big -- overflow
-          integer value of 'number' is too small -- underflow
-          invalid sign flag value ('rsl_s_flag')
- *)
-
-(*--------------------------- OCINumberFromInt ------------------------------*)
-
-  TOCINumberFromInt = function(err: POCIError; const inum: Pointer;
-    inum_length: uword; inum_s_flag: uword; number: POCINumber): sword; cdecl;
-(*
-   NAME: OCINumberFromInt - OCINumber convert Integer TO Number
-   PARAMETERS:
-        err (IN/OUT) - error handle. If there is an error, it is
-                recorded in 'err' and this function returns OCI_ERROR.
-                The error recorded in 'err' can be retrieved by calling
-                OCIErrorGet().
-        inum (IN) - pointer to the integer to be converted
-        inum_length (IN) - size of the integer
-        inum_s_flag (IN) - flag that designates the sign of the integer; valid
-                values are OCI_NUMBER_UNSIGNED, OCI_NUMBER_SIGNED
-        number (OUT) - given integer converted to Oracle number
-   DESCRIPTION:
-        Native type conversion function. Converts any Oracle standard
-        machine-native integer type (xbx) to an Oracle number.
-   RETURNS:
-        OCI_SUCCESS if the function completes successfully.
-        OCI_INVALID_HANDLE if 'err' is NULL.
-        OCI_ERROR if
-          'number' or 'inum' is null
-          integer too BIG -- the number is too large to fit into an Oracle
-                number
-          invalid sign flag value ('inum_s_flag')
- *)
-
-(*------------------------- OCINumberToReal ---------------------------------*)
-
-  TOCINumberToReal = function(err: POCIError; const number: POCINumber;
-                        rsl_length: uword; rsl: Pointer): sword; cdecl;
-(*
-   NAME: OCINumberToReal - OCINumber convert number TO Real
-   PARAMETERS:
-        err (IN/OUT) - error handle. If there is an error, it is
-                recorded in 'err' and this function returns OCI_ERROR.
-                The error recorded in 'err' can be retrieved by calling
-                OCIErrorGet().
-        number (IN) - number to be converted
-        rsl_length (IN) - is the size of the desired result,
-                sizeof( float | double | long double)
-        rsl (OUT) - pointer to space for storing the result
-   DESCRIPTION:
-        Native type conversion function. Converts an Oracle number into a
-        machine-native real type. This function only converts numbers up to
-        LDBL_DIG, DBL_DIG, or FLT_DIG digits of precision and removes
-        trailing zeroes. The above constants are defined in float.h
-   RETURNS:
-        OCI_SUCCESS if the function completes successfully.
-        OCI_INVALID_HANDLE if 'err' is NULL.
-        OCI_ERROR if
-          'number' or 'rsl' is null
-          'rsl_length' is 0
- *)
-
 (*------------------------- OCINumberToRealArray ----------------------------*)
 
   TOCINumberToRealArray = function(err: POCIError; const number: PPOCINumber;
@@ -1562,32 +1478,6 @@ type
         OCI_ERROR if
           'number' or 'rsl' is null
           'rsl_length' is 0
- *)
-
-(*-------------------------- OCINumberFromReal ------------------------------*)
-
-  TOCINumberFromReal = function(err: POCIError; const rnum: Pointer;
-                            rnum_length: uword; number: POCINumber): sword; cdecl;
-(*
-   NAME: OCINumberFromReal - OCINumber convert Real TO Number
-   PARAMETERS:
-        err (IN/OUT) - error handle. If there is an error, it is
-                recorded in 'err' and this function returns OCI_ERROR.
-                The error recorded in 'err' can be retrieved by calling
-                OCIErrorGet().
-        rnum (IN) - pointer to the floating point number to be converted
-        rnum_length (IN) - size of the desired result, i.e.
-                sizeof({float | double | long double})
-        number (OUT) - given float converted to Oracle number
-   DESCRIPTION:
-        Native type conversion function. Converts a machine-native floating
-        point type to an Oracle number.
-   RETURNS:
-        OCI_SUCCESS if the function completes successfully.
-        OCI_INVALID_HANDLE if 'err' is NULL.
-        OCI_ERROR if
-          'number' or 'rnum' is null
-          'rnum_length' is 0
  *)
 
 (*----------------------------- OCINumberCmp --------------------------------*)
@@ -2212,7 +2102,7 @@ type
   end;
 
 (*
- * OCITime - OCI TiMe portion of date
+ * OCITime - OCI Time portion of date
  *
  * This structure should be treated as an opaque structure as the format
  * of this structure may change. Use OCIDateGetTime/OCIDateSetTime
@@ -2902,30 +2792,6 @@ oratext *OCIStringPtr(    OCIEnv *env, const OCIString *vs    );
  */
 
 /*----------------------- OCIStringAllocSize --------------------------------*/
-
-sword OCIStringAllocSize(    OCIEnv *env, OCIError *err, const OCIString *vs,
-                             ub4 *allocsize    );
-/*
-   NAME: OCIStringAllocSize - OCIString get Allocated SiZe of string memory
-                              in bytes
-   PARAMETERS:
-        env (IN/OUT) - OCI environment handle initialized in object mode.
-        err (IN/OUT) - error handle. If there is an error, it is
-                recorded in 'err' and this function returns OCI_ERROR.
-                The error recorded in 'err' can be retrieved by calling
-                OCIErrorGet().
-        vs (IN) - string whose allocated size in bytes is returned
-        allocsize (OUT) - allocated size of string memory in bytes is returned
-   DESCRIPTION:
-        Return the allocated size of the string memory in bytes. The
-        allocated size is >= actual string size.
-   REQUIRES:
-        vs is a non-null pointer
-   RETURNS:
-        OCI_SUCCESS if the function completes successfully.
-        OCI_INVALID_HANDLE if 'env' or 'err' is NULL.
-        OCI_ERROR on error
- */
 
 /*****************************************************************************/
 /*                       VARIABLE-LENGTH RAW                                 */
