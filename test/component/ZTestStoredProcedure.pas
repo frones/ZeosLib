@@ -1229,13 +1229,14 @@ begin
   StoredProc.StoredProcName := prefix+'"myfuncInOutReturn"';
   CheckEquals(2, StoredProc.Params.Count);
 
-  CheckEquals('X', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals('ReturnValue', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
   CheckStringFieldType(StoredProc.Params[0].DataType, Connection.DbcConnection.GetConSettings);
 
-  CheckEquals('ReturnValue', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('X', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[1].ParamType));
   CheckStringFieldType(StoredProc.Params[1].DataType, Connection.DbcConnection.GetConSettings);
+
 
   StoredProc.ParamByName('x').AsString := 'a';
   StoredProc.ExecProc;
@@ -1246,10 +1247,10 @@ begin
 
   StoredProc.Open;
   CheckEquals(2, StoredProc.Fields.Count);
-  CheckStringFieldType(StoredProc.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
-  CheckEquals('X', StoredProc.Fields[0].DisplayName);
   CheckStringFieldType(StoredProc.Fields[1].DataType, Connection.DbcConnection.GetConSettings);
-  CheckEquals('ReturnValue', StoredProc.Fields[1].DisplayName);
+  CheckEquals('X', StoredProc.Fields[1].DisplayName);
+  CheckStringFieldType(StoredProc.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+  CheckEquals('ReturnValue', StoredProc.Fields[0].DisplayName);
 
   CheckEquals('aoutvalueoutvalue', StoredProc.ParamByName('X').AsString);
   CheckEquals('returned string', StoredProc.ParamByName('ReturnValue').AsString);
@@ -1288,72 +1289,72 @@ begin
   StoredProc.StoredProcName := prefix+'MYPACKAGE';
   CheckEquals(9, StoredProc.Params.Count);
 
-  CheckEquals('ABTEST.P1', StoredProc.Params[0].Name);
+  CheckEquals('ABTEST_P1', StoredProc.Params[0].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
   //CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
 
-  CheckEquals('ABTEST.P2', StoredProc.Params[1].Name);
+  CheckEquals('ABTEST_P2', StoredProc.Params[1].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
   //CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
 
-  CheckEquals('ABTEST.P3', StoredProc.Params[2].Name);
+  CheckEquals('ABTEST_P3', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
   CheckStringFieldType(StoredProc.Params[2].DataType, Connection.DbcConnection.GetConSettings);
 
-  CheckEquals('ABTEST.P4', StoredProc.Params[3].Name);
+  CheckEquals('ABTEST_P4', StoredProc.Params[3].Name);
   CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
   //CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
 
-  CheckEquals('ABTEST.P5', StoredProc.Params[4].Name);
+  CheckEquals('ABTEST_P5', StoredProc.Params[4].Name);
   CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
   CheckStringFieldType(StoredProc.Params[4].DataType, Connection.DbcConnection.GetConSettings);
 
-  CheckEquals('myfuncInOutReturn.X', StoredProc.Params[5].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[5].ParamType));
+  CheckEquals('myfuncInOutReturn_ReturnValue', StoredProc.Params[5].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[5].ParamType));
   CheckStringFieldType(StoredProc.Params[5].DataType, Connection.DbcConnection.GetConSettings);
 
-  CheckEquals('myfuncInOutReturn.ReturnValue', StoredProc.Params[6].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[6].ParamType));
+  CheckEquals('myfuncInOutReturn_X', StoredProc.Params[6].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[6].ParamType));
   CheckStringFieldType(StoredProc.Params[6].DataType, Connection.DbcConnection.GetConSettings);
 
-  CheckEquals('SIMPLE_FUNC.ReturnValue', StoredProc.Params[7].Name);
+  CheckEquals('SIMPLE_FUNC_ReturnValue', StoredProc.Params[7].Name);
   CheckEquals(ord(ptResult), ord(StoredProc.Params[7].ParamType));
   //CheckEquals(ord(ftInteger), ord(StoredProc.Params[7].DataType));
 
-  CheckEquals('SIMPLEFUNC.ReturnValue', StoredProc.Params[8].Name);
+  CheckEquals('SIMPLEFUNC_ReturnValue', StoredProc.Params[8].Name);
   CheckEquals(ord(ptResult), ord(StoredProc.Params[8].ParamType));
   //CheckEquals(ord(ftInteger), ord(StoredProc.Params[8].DataType));
 
-  StoredProc.ParamByName('myfuncInOutReturn.X').AsString := 'myfuncInOutReturn';
-  StoredProc.ParamByName('ABTEST.P1').AsInteger := 50;
-  StoredProc.ParamByName('ABTEST.P2').AsInteger := 100;
-  StoredProc.ParamByName('ABTEST.P3').AsString := 'abc';
+  StoredProc.ParamByName('myfuncInOutReturn_X').AsString := 'myfuncInOutReturn';
+  StoredProc.ParamByName('ABTEST_P1').AsInteger := 50;
+  StoredProc.ParamByName('ABTEST_P2').AsInteger := 100;
+  StoredProc.ParamByName('ABTEST_P3').AsString := 'abc';
   StoredProc.ExecProc;
-  CheckEquals(600, StoredProc.ParamByName('ABTEST.P4').AsInteger);
-  CheckEquals('abcabc', StoredProc.ParamByName('ABTEST.P5').AsString);
-  CheckEquals('myfuncInOutReturnoutvalue', StoredProc.ParamByName('myfuncInOutReturn.X').AsString);
-  CheckEquals('returned string', StoredProc.ParamByName('myfuncInOutReturn.ReturnValue').AsString);
-  CheckEquals(1111, StoredProc.ParamByName('SIMPLE_FUNC.ReturnValue').AsInteger);
-  CheckEquals(2222, StoredProc.ParamByName('SIMPLEFUNC.ReturnValue').AsInteger);
+  CheckEquals(600, StoredProc.ParamByName('ABTEST_P4').AsInteger);
+  CheckEquals('abcabc', StoredProc.ParamByName('ABTEST_P5').AsString);
+  CheckEquals('myfuncInOutReturnoutvalue', StoredProc.ParamByName('myfuncInOutReturn_X').AsString);
+  CheckEquals('returned string', StoredProc.ParamByName('myfuncInOutReturn_ReturnValue').AsString);
+  CheckEquals(1111, StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').AsInteger);
+  CheckEquals(2222, StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').AsInteger);
 
   StoredProc.Open;
 
-  CheckEquals(600, StoredProc.ParamByName('ABTEST.P4').AsInteger);
-  CheckEquals('abcabc', StoredProc.ParamByName('ABTEST.P5').AsString);
-  CheckEquals('myfuncInOutReturnoutvalueoutvalue', StoredProc.ParamByName('myfuncInOutReturn.X').AsString);
-  CheckEquals('returned string', StoredProc.ParamByName('myfuncInOutReturn.ReturnValue').AsString);
-  CheckEquals(1111, StoredProc.ParamByName('SIMPLE_FUNC.ReturnValue').AsInteger);
-  CheckEquals(2222, StoredProc.ParamByName('SIMPLEFUNC.ReturnValue').AsInteger);
+  CheckEquals(600, StoredProc.ParamByName('ABTEST_P4').AsInteger);
+  CheckEquals('abcabc', StoredProc.ParamByName('ABTEST_P5').AsString);
+  CheckEquals('myfuncInOutReturnoutvalueoutvalue', StoredProc.ParamByName('myfuncInOutReturn_X').AsString);
+  CheckEquals('returned string', StoredProc.ParamByName('myfuncInOutReturn_ReturnValue').AsString);
+  CheckEquals(1111, StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').AsInteger);
+  CheckEquals(2222, StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').AsInteger);
 
   StoredProc.Close;
   StoredProc.Open;
 
-  CheckEquals(600, StoredProc.FieldByName('ABTEST.P4').AsInteger);
-  CheckEquals('abcabc', StoredProc.FieldByName('ABTEST.P5').AsString);
-  CheckEquals('myfuncInOutReturnoutvalueoutvalueoutvalue', StoredProc.FieldByName('myfuncInOutReturn.X').AsString);
-  CheckEquals('returned string', StoredProc.FieldByName('myfuncInOutReturn.ReturnValue').AsString);
-  CheckEquals(1111, StoredProc.FieldByName('SIMPLE_FUNC.ReturnValue').AsInteger);
-  CheckEquals(2222, StoredProc.FieldByName('SIMPLEFUNC.ReturnValue').AsInteger);
+  CheckEquals(600, StoredProc.FieldByName('ABTEST_P4').AsInteger);
+  CheckEquals('abcabc', StoredProc.FieldByName('ABTEST_P5').AsString);
+  CheckEquals('myfuncInOutReturnoutvalueoutvalueoutvalue', StoredProc.FieldByName('myfuncInOutReturn_X').AsString);
+  CheckEquals('returned string', StoredProc.FieldByName('myfuncInOutReturn_ReturnValue').AsString);
+  CheckEquals(1111, StoredProc.FieldByName('SIMPLE_FUNC_ReturnValue').AsInteger);
+  CheckEquals(2222, StoredProc.FieldByName('SIMPLEFUNC_ReturnValue').AsInteger);
 end;
 
 procedure TZTestOracleStoredProcedure.Test_abtest;

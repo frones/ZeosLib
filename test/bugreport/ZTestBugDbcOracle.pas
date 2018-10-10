@@ -104,7 +104,7 @@ begin
     with GetMetadata do
     begin
       CheckEquals(ord(stInteger), Ord(GetColumnType(col_id_Index)), 'id column type');
-      CheckEquals(ord(stDouble), Ord(GetColumnType(col_num_Index)), 'Num column type');
+      CheckEquals(ord(stBigDecimal), Ord(GetColumnType(col_num_Index)), 'Num column type');
     end;
     CheckEquals(True, Next, 'ResultSet.Next');
     CheckEquals(1, GetInt(col_id_Index), 'id value');
