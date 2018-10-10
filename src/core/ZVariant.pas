@@ -1812,9 +1812,7 @@ begin
     vtCurrency: Result := EncodeCurrency(-Value.VCurrency);
     vtBigDecimal: begin
                     InitializeVariant(Result, vtBigDecimal);
-                    if IsBcdNegative(Value.VBigDecimal)
-                    then Result.VBigDecimal := Value.VBigDecimal
-                    else BcdMultiply(Value.VBigDecimal, StrToBCD('-1'), Result.VBigDecimal);
+                    BcdMultiply(Value.VBigDecimal, StrToBCD('-1'), Result.VBigDecimal);
                   end;
     {$ELSE}
     vtFloat: Result := EncodeFloat(-Value.VFloat);
@@ -2994,14 +2992,14 @@ function TZClientVariantManager.Convert(const Value: TZVariant;
         ResTmp := IntToRaw(Value.VUInteger);
       {$IFDEF BCD_TEST}
       vtDouble:
-        ResTmp := FloatToSqlRaw(Value.VDouble);
+        Result.VRawByteString := FloatToSqlRaw(Value.VDouble);
       vtCurrency:
-        ResTmp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CurrToStr(Value.VCurrency, FmtSettFloatDot));
+        Result.VRawByteString := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CurrToStr(Value.VCurrency, FmtSettFloatDot));
       vtBigDecimal:
-        ResTmp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(BCDToStr(Value.VBigDecimal));
+        Result.VRawByteString := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(BCDToStr(Value.VBigDecimal));
       {$ELSE}
       vtFloat:
-        ResTmp := FloatToSqlRaw(Value.VFloat);
+        Result.VRawByteString := FloatToSqlRaw(Value.VFloat);
       {$ENDIF}
       vtString:
         ResTmp := FConSettings^.ConvFuncs.ZStringToRaw(Value.VString, FConSettings^.CTRL_CP, FConSettings^.ClientCodePage^.CP);
