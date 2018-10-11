@@ -106,7 +106,7 @@ n_numeric            NUMERIC(9,4),
 n_float              FLOAT,
 n_real               FLOAT,
 n_dprecission        DOUBLE PRECISION,
-n_money              NUMERIC(12,2),
+n_money              NUMERIC(19,4),
 primary key (n_id)
 );
 
@@ -134,7 +134,7 @@ create table string_values
    s_char                         CHAR(255),
    s_varchar                      VARCHAR(255),
    s_nchar                        CHAR(255),
-   s_nvarchar                     VARCHAR(255),
+   s_nvarchar                     NVARCHAR2(255),
    s_bit                          CLOB,
    s_varbit                       BLOB,
    primary key (s_id)
