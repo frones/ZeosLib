@@ -435,7 +435,8 @@ implementation
 
 uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
   ZEncoding, ZFastCode, ZClasses
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
+  {$IFDEF UNICODE},StrUtils{$ENDIF};
 (* Oracle Docs: https://docs.oracle.com/cd/B28359_01/appdev.111/b28395/oci03typ.htm#i423688
 Oracle stores values of the NUMBER datatype in a variable-length format.
 The first byte is the exponent and is followed by 1 to 20 mantissa bytes.
