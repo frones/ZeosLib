@@ -1543,8 +1543,11 @@ begin
         begin
           case nvuKind(POCINumber(P), FvnuInfo) of
             nvu0: Result := 0;
+            {$R-} {$Q-}//fix a pre fpc 3.0 comiler bug
             nvuNegInf: Result := NegInfinity;
             nvuPosInf: Result := Infinity;
+            {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+            {$IFDEF OverFlowCheckEnabled}}{$Q+}{$ENDIF}
             vnuNegInt: Result := NegNvu2Int(POCINumber(P), FvnuInfo);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
             vnuPosInt: Result := PosNvu2Int(POCINumber(P), FvnuInfo);
