@@ -1370,7 +1370,7 @@ var
       Result.UpdateUnicodeString(ProcColColumnNameIndex, ParamName);
       Result.UpdateUnicodeString(ProcColTypeNameIndex, OCIType2Name(Descriptor.DataType));
       {$ELSE}
-      Result.UpdatePAnsiChar(ProcColColumnNameIndex, Pointer(ParamName), Length(ParamName));
+      Result.UpdateRawByteString(ProcColColumnNameIndex, ParamName);
       Result.UpdateRawByteString(ProcColTypeNameIndex, OCIType2Name(Descriptor.DataType));
       {$ENDIF}
       if Arg.OrdPos = 0
