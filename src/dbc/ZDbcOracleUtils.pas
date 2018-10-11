@@ -434,7 +434,7 @@ type
 implementation
 
 uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
-  ZEncoding, ZFastCode, ZClasses{$IFDEF UNICODE},StrUtils{$ENDIF}
+  ZEncoding, ZFastCode, ZClasses
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 (* Oracle Docs: https://docs.oracle.com/cd/B28359_01/appdev.111/b28395/oci03typ.htm#i423688
 Oracle stores values of the NUMBER datatype in a variable-length format.
