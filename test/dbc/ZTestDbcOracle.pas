@@ -411,8 +411,7 @@ begin
   CheckEquals(2, ResultSet.GetInt(blob_values_b_id_Index));
   CheckEquals(RawByteString('Test string'), ResultSet.GetBlob(blob_values_b_long_Index).GetString);
   CheckEquals(RawByteString('Test string'), ResultSet.GetBlob(blob_values_b_clob_Index).GetString);
-  CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    String(ResultSet.GetBlob(blob_values_b_blob_Index).GetString));
+  Check(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00 = String(ResultSet.GetBlob(blob_values_b_blob_Index).GetString), 'Comparision of binary strings failed.');
 
   Check(ResultSet.Next);
   CheckEquals(3, ResultSet.GetInt(blob_values_b_id_Index));
@@ -436,12 +435,9 @@ begin
 
   Check(ResultSet.Next);
   CheckEquals(2, ResultSet.GetInt(binary_values_n_id_Index));
-  CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    {$IFDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(BytesToStr(ResultSet.GetBytes(binary_values_n_raw_Index))));
-  CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    String(ResultSet.GetBlob(binary_values_n_longraw_Index).GetString));
-  CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    String(ResultSet.GetBlob(binary_values_n_blob_Index).GetString));
+  Check(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00 = {$IFDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(BytesToStr(ResultSet.GetBytes(binary_values_n_raw_Index))), 'Second comparision of binary strings failed');
+  Check(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00 = String(ResultSet.GetBlob(binary_values_n_longraw_Index).GetString), 'Third comparision of binary strings failed');
+  Check(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00 = String(ResultSet.GetBlob(binary_values_n_blob_Index).GetString), 'Fourth comparision of binary strings failed');
 
   Check(ResultSet.Next);
   CheckEquals(3, ResultSet.GetInt(binary_values_n_id_Index));
