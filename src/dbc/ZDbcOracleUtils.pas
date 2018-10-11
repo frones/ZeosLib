@@ -434,7 +434,7 @@ type
 implementation
 
 uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
-  ZEncoding, ZFastCode, ZClasses
+  ZEncoding, ZFastCode, ZClasses{$IFDEF UNICODE},StrUtils{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 (* Oracle Docs: https://docs.oracle.com/cd/B28359_01/appdev.111/b28395/oci03typ.htm#i423688
 Oracle stores values of the NUMBER datatype in a variable-length format.
@@ -1864,11 +1864,7 @@ begin
       Status := InternalDescribe(tmp, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
         OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
       if Status <> OCI_SUCCESS then begin
-        {$IFDEF UNICODE}
-        ps2 := System.Pos('.', ProcSQL, ps+1);
-        {$ELSE}
-        ps2 := PosEx('.', ProcSQL, ps+1);
-        {$ENDIF}
+        ps2 := {$IFDEF UNICODE}StrUtils{$ELSE}ZFastCode{$ENDIF}.PosEx('.', ProcSQL, ps+1);
         if ps2 <> 0 then //check wether Package or Schema!
           tmp := Copy(ProcSQL, ps+1, ps2-ps-1)
         else begin
@@ -1886,11 +1882,7 @@ begin
           CheckOracleError(Plain, OracleConnection.GetErrorHandle, Status, lcExecute, 'OCIDescribeAny', ConSettings);
         end;
       end else begin
-        {$IFDEF UNICODE}
-        ps2 := System.Pos('.', ProcSQL, ps+1);
-        {$ELSE}
-        ps2 := PosEx('.', ProcSQL, ps+1);
-        {$ENDIF}
+        ps2 := {$IFDEF UNICODE}StrUtils{$ELSE}ZFastCode{$ENDIF}.PosEx('.', ProcSQL, ps+1);
         if ps2 <> 0 //check wether Package or Schema!
         then tmp := copy(ProcSQL, Ps2+1, MaxInt)
         else tmp := copy(ProcSQL, Ps+1, MaxInt)

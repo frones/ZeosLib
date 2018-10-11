@@ -1366,8 +1366,13 @@ var
       Arg.ConcatParentName(False, buf, ParamName, IC);
       ZDbcUtils.ToBuff(Arg.AttributeName, Buf, ParamName);
       ZDbcUtils.FlushBuff(Buf, ParamName);
-      Result.UpdateString(ProcColColumnNameIndex, ParamName);
-      Result.UpdateString(ProcColTypeNameIndex, OCIType2Name(Descriptor.DataType));
+      {$IFDEF UNICODE}
+      Result.UpdateUnicodeString(ProcColColumnNameIndex, ParamName);
+      Result.UpdateUnicodeString(ProcColTypeNameIndex, OCIType2Name(Descriptor.DataType));
+      {$ELSE}
+      Result.UpdatePAnsiChar(ProcColColumnNameIndex, Pointer(ParamName), Length(ParamName));
+      Result.UpdateRawByteString(ProcColTypeNameIndex, OCIType2Name(Descriptor.DataType));
+      {$ENDIF}
       if Arg.OrdPos = 0
       then Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctReturn))
       else case Arg.IODirection of
