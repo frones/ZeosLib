@@ -58,6 +58,7 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant, ZDbcLogging, ZClasses,
   ZDbcUtils;
 
