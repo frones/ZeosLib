@@ -396,6 +396,11 @@ type
   TZOraProcDescriptor_A = class(TObject)
   private
     FParent: TZOraProcDescriptor_A;
+
+    procedure InternalDescribeObject(Obj: POCIHandle;
+      {$IFDEF AUTOREFCOUNT} const {$ENDIF}PlainDriver: TZOraclePlainDriver;
+      ErrorHandle: POCIError; ConSettings: PZConSettings);
+
     function InternalDescribe(const Name: String; _Type: UB4;
       {$IFDEF AUTOREFCOUNT} const {$ENDIF}PlainDriver: TZOraclePlainDriver;
       ErrorHandle: POCIError; OCISvcCtx: POCISvcCtx; Owner: POCIHandle;
@@ -1663,11 +1668,8 @@ function TZOraProcDescriptor_A.InternalDescribe(const Name: String; _Type: UB4;
   ErrorHandle: POCIError; OCISvcCtx: POCISvcCtx; Owner: POCIHandle;
   ConSettings: PZConSettings): SWord;
 var P: PAnsiChar;
-  i, N: sb4;
-  ParamCount: ub2;
+  i: sb4;
   parmh: POCIHandle;
-  Param: TZOraProcDescriptor_A;
-  arglst, arg: POCIHandle;
   Descriptor: POCIDescribe;
   tmp: RawByteString;
 begin
@@ -1681,15 +1683,15 @@ begin
   {$IFDEF UNICODE}
   tmp := PUnicodeToRaw(Pointer(Name), Length(Name), ConSettings^.ClientCodePage.CP);
   Result := PlainDriver.OCIDescribeAny(OCISvcCtx, ErrorHandle, Pointer(tmp),
-        Length(tmp), OCI_OTYPE_NAME, 0, _Type, Descriptor);
+        Length(tmp), OCI_OTYPE_NAME, 0, OCI_PTYPE_UNK, Descriptor);
   {$ELSE}
   Result := PlainDriver.OCIDescribeAny(OCISvcCtx, ErrorHandle, Pointer(Name),
-        Length(Name), OCI_OTYPE_NAME, 0, _Type, Descriptor);
+        Length(Name), OCI_OTYPE_NAME, 0, OCI_PTYPE_UNK, Descriptor);
   {$ENDIF}
   if Result <> OCI_SUCCESS then begin
     tmp := '"PUBLIC".'+{$IFDEF UNICODE}tmp{$ELSE}Name{$ENDIF};
     Result := PlainDriver.OCIDescribeAny(OCISvcCtx, ErrorHandle, Pointer(tmp),
-        Length(tmp), OCI_OTYPE_NAME, 0, _Type, Descriptor);
+        Length(tmp), OCI_OTYPE_NAME, 0, OCI_PTYPE_UNK, Descriptor);
   end;
 
   try
@@ -1703,125 +1705,133 @@ begin
     CheckOracleError(PlainDriver, ErrorHandle,
       PlainDriver.OCIAttrGet(parmh, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_OBJ_SCHEMA, ErrorHandle),
         lcOther,'OCIAttrGet', ConSettings);
+    if P = nil then begin
+      Result := OCI_ERROR;
+      Exit;
+    end;
     {$IFDEF UNICODE}
     SchemaName := PRawToUnicode(P, i, ConSettings.ClientCodePage.CP);
     {$ELSE}
     System.SetString(SchemaName, P, I);
     {$ENDIF}
-    if _Type = OCI_PTYPE_UNK then begin
-      { get the object Name }
-      P := nil;
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIAttrGet(parmh, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_OBJ_NAME, ErrorHandle),
-          lcOther,'OCIAttrGet', ConSettings);
-      if P = nil then begin
-        Result := OCI_ERROR;
-        Exit;
-      end;
-      {$IFDEF UNICODE}
-      AttributeName := PRawToUnicode(P, i, ConSettings.ClientCodePage.CP);
-      {$ELSE}
-      System.SetString(AttributeName, P, I);
-      {$ENDIF}
-      { get the object type }
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIAttrGet(parmh, OCI_HTYPE_DESCRIBE, @ObjType, nil, OCI_ATTR_PTYPE, ErrorHandle),
-          lcOther,'OCIAttrGet', ConSettings);
-    end else
-      ObjType := _Type;
-    arglst := nil;
-    { get a argument-list handle }
+    { get the objectname }
+    P := nil;
     CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIAttrGet(parmh, OCI_DTYPE_PARAM, @arglst, nil,
-        ArgListType[ObjType = OCI_PTYPE_PKG], ErrorHandle),
-          lcExecute, 'OCIAttrGet', ConSettings);
-    { get argument count using of the list handle }
+      PlainDriver.OCIAttrGet(parmh, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_OBJ_NAME, ErrorHandle),
+        lcOther,'OCIAttrGet', ConSettings);
+    {$IFDEF UNICODE}
+    AttributeName := PRawToUnicode(P, i, ConSettings.ClientCodePage.CP);
+    {$ELSE}
+    System.SetString(AttributeName, P, I);
+    {$ENDIF}
+    { get the first object type }
     CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIAttrGet(arglst, OCI_DTYPE_PARAM, @ParamCount, nil,
-        OCI_ATTR_NUM_PARAMS, ErrorHandle),
-        lcOther, 'OCIAttrGet', ConSettings);
-    Args := TObjectList.Create;
-    Args.Capacity := ParamCount;
-    if ObjType <> OCI_PTYPE_PKG then
-      { get the overload position }
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIAttrGet(parmh, OCI_HTYPE_DESCRIBE, @OverloadID, nil, OCI_ATTR_OVERLOAD_ID, ErrorHandle),
-              lcOther,'OCIAttrGet', ConSettings);
-    //as oracle says: result value starts with 0 all other with 1
-    for N := 0+Ord(ObjType = OCI_PTYPE_PROC) to ParamCount-1+Ord(ObjType = OCI_PTYPE_PROC) do begin
-      Param := TZOraProcDescriptor_A.Create(Self);
-      Args.Add(Param);
-      { get a param handle }
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIParamGet(arglst, OCI_DTYPE_PARAM, ErrorHandle, arg, N),
-        lcOther, 'OCIParamGet', ConSettings);
-      { get the param Name }
-      P := nil;
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_NAME, ErrorHandle),
-          lcOther,'OCIAttrGet', ConSettings);
-      {$IFDEF UNICODE}
-      Param.AttributeName := PRawToUnicode(P, i, ConSettings.ClientCodePage.CP);
-      {$ELSE}
-      System.SetString(Param.AttributeName, P, I);
-      {$ENDIF}
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @Param.ObjType, nil, OCI_ATTR_PTYPE, ErrorHandle),
-          lcOther,'OCIAttrGet', ConSettings);
-      if ObjType = OCI_PTYPE_PKG then begin
-        Param.OrdPos := N;
-        { get the object type }
-        Param.InternalDescribe('"'+Param.AttributeName+'"', Param.ObjType,
-          PlainDriver, ErrorHandle, OCISvcCtx, Owner, Consettings)
-      end else begin
-        CheckOracleError(PlainDriver, ErrorHandle,
-          PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @Param.OrdPos, nil, OCI_ATTR_POSITION, ErrorHandle),
-            lcOther,'OCIAttrGet', ConSettings);
-        if (Param.OrdPos = 0) and (Param.AttributeName = '') then
-          Param.AttributeName := 'ReturnValue';
-        P := nil;
-        CheckOracleError(PlainDriver, ErrorHandle,
-          PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_TYPE_NAME, ErrorHandle),
-            lcOther,'OCIAttrGet', ConSettings);
-        ZSetString(P, I, Param.TypeName);
-        { get datasize }
-        CheckOracleError(PlainDriver, ErrorHandle,
-          PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-            @Param.DataSize, nil, OCI_ATTR_DATA_SIZE, ErrorHandle),
-          lcOther, 'OCIAttrGet', ConSettings);
-        { get IO direction }
-        CheckOracleError(PlainDriver, ErrorHandle,
-          PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-            @Param.IODirection, nil, OCI_ATTR_IOMODE, ErrorHandle),
-          lcOther, 'OCIAttrGet', ConSettings);
-        { get oci data type }
-        CheckOracleError(PlainDriver, ErrorHandle,
-          PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-            @Param.DataType, nil, OCI_ATTR_DATA_TYPE, ErrorHandle),
-          lcOther, 'OCIAttrGet', ConSettings);
-        if Param.DataType in [SQLT_NUM, SQLT_VNU] then begin {11g returns Precision = 38 in all cases}
-          CheckOracleError(PlainDriver, ErrorHandle,
-            PlainDriver.OCIAttrGet(Arg, OCI_DTYPE_PARAM,
-              @Precision, nil, OCI_ATTR_PRECISION, ErrorHandle),
-              lcOther, 'OCIAttrGet', ConSettings);
-          CheckOracleError(PlainDriver, ErrorHandle,
-            PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-              @Scale, nil, OCI_ATTR_SCALE, ErrorHandle),
-              lcOther, 'OCIAttrGet', ConSettings);
-          CheckOracleError(PlainDriver, ErrorHandle,
-            PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-              @Radix, nil, OCI_ATTR_RADIX , ErrorHandle),
-              lcOther, 'OCIAttrGet', ConSettings);
-        end;
-        Param.SQLType := NormalizeOracleTypeToSQLType(Param.DataType, Param.DataSize,
-          DescriptorType, Param.Precision, Param.Scale, ConSettings, Param.IODirection);
-      end;
-    end;
+      PlainDriver.OCIAttrGet(parmh, OCI_HTYPE_DESCRIBE, @ObjType, nil, OCI_ATTR_PTYPE, ErrorHandle),
+        lcOther,'OCIAttrGet', ConSettings);
+    InternalDescribeObject(parmh, PlainDriver, ErrorHandle, ConSettings);
   finally
     if Descriptor <> nil then begin
       PlainDriver.OCIDescriptorFree(Descriptor, OCI_HTYPE_DESCRIBE);
       Descriptor := nil;
     end;
+  end;
+end;
+
+procedure TZOraProcDescriptor_A.InternalDescribeObject(Obj: POCIHandle;
+  {$IFDEF AUTOREFCOUNT} const {$ENDIF}PlainDriver: TZOraclePlainDriver;
+  ErrorHandle: POCIError; ConSettings: PZConSettings);
+var
+  arglst, arg: POCIHandle;
+  i, N: sb4;
+  ParamCount: ub2;
+  p: PAnsichar;
+  Param: TZOraProcDescriptor_A;
+begin
+  arglst := nil;
+  if ObjType <> OCI_PTYPE_PKG then
+    { get the overload position }
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.OCIAttrGet(obj, OCI_HTYPE_DESCRIBE, @OverloadID, nil, OCI_ATTR_OVERLOAD_ID, ErrorHandle),
+            lcOther,'OCIAttrGet', ConSettings);
+  { get a argument-list handle }
+  CheckOracleError(PlainDriver, ErrorHandle,
+    PlainDriver.OCIAttrGet(Obj, OCI_DTYPE_PARAM, @arglst, nil,
+      ArgListType[ObjType = OCI_PTYPE_PKG], ErrorHandle),
+        lcExecute, 'OCIAttrGet', ConSettings);
+  { get argument count using of the list handle }
+  CheckOracleError(PlainDriver, ErrorHandle,
+    PlainDriver.OCIAttrGet(arglst, OCI_DTYPE_PARAM, @ParamCount, nil,
+      OCI_ATTR_NUM_PARAMS, ErrorHandle),
+      lcOther, 'OCIAttrGet', ConSettings);
+  Args := TObjectList.Create;
+  Args.Capacity := ParamCount;
+  for N := 0+Ord(ObjType = OCI_PTYPE_PROC) to ParamCount-1+Ord(ObjType = OCI_PTYPE_PROC) do begin
+    { get a argument handle }
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.OCIParamGet(arglst, OCI_DTYPE_PARAM, ErrorHandle, arg, N),
+      lcOther, 'OCIParamGet', ConSettings);
+    Param := TZOraProcDescriptor_A.Create(Self);
+    Args.Add(Param);
+    Param.SchemaName := SchemaName;
+    { get the object type }
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @Param.ObjType, nil, OCI_ATTR_PTYPE, ErrorHandle),
+        lcOther,'OCIAttrGet', ConSettings);
+    { get the attribute Name }
+    P := nil;
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_NAME, ErrorHandle),
+        lcOther,'OCIAttrGet', ConSettings);
+    {$IFDEF UNICODE}
+    Param.AttributeName := PRawToUnicode(P, i, ConSettings.ClientCodePage.CP);
+    {$ELSE}
+    System.SetString(Param.AttributeName, P, I);
+    {$ENDIF}
+    if Param.ObjType = OCI_PTYPE_ARG then begin
+      { get the ordinal position }
+      CheckOracleError(PlainDriver, ErrorHandle,
+        PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @Param.OrdPos, nil, OCI_ATTR_POSITION, ErrorHandle),
+          lcOther,'OCIAttrGet', ConSettings);
+      if (Param.OrdPos = 0) and (Param.AttributeName = '') then
+        Param.AttributeName := 'ReturnValue';
+      P := nil;
+      CheckOracleError(PlainDriver, ErrorHandle,
+        PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_TYPE_NAME, ErrorHandle),
+          lcOther,'OCIAttrGet', ConSettings);
+      ZSetString(P, I, Param.TypeName);
+      { get datasize }
+      CheckOracleError(PlainDriver, ErrorHandle,
+        PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
+          @Param.DataSize, nil, OCI_ATTR_DATA_SIZE, ErrorHandle),
+        lcOther, 'OCIAttrGet', ConSettings);
+      { get IO direction }
+      CheckOracleError(PlainDriver, ErrorHandle,
+        PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
+          @Param.IODirection, nil, OCI_ATTR_IOMODE, ErrorHandle),
+        lcOther, 'OCIAttrGet', ConSettings);
+      { get oci data type }
+      CheckOracleError(PlainDriver, ErrorHandle,
+        PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
+          @Param.DataType, nil, OCI_ATTR_DATA_TYPE, ErrorHandle),
+        lcOther, 'OCIAttrGet', ConSettings);
+      if Param.DataType in [SQLT_NUM, SQLT_VNU] then begin {11g returns Precision = 38 in all cases}
+        CheckOracleError(PlainDriver, ErrorHandle,
+          PlainDriver.OCIAttrGet(Arg, OCI_DTYPE_PARAM,
+            @Param.Precision, nil, OCI_ATTR_PRECISION, ErrorHandle),
+            lcOther, 'OCIAttrGet', ConSettings);
+        CheckOracleError(PlainDriver, ErrorHandle,
+          PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
+            @Param.Scale, nil, OCI_ATTR_SCALE, ErrorHandle),
+            lcOther, 'OCIAttrGet', ConSettings);
+        CheckOracleError(PlainDriver, ErrorHandle,
+          PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
+            @Param.Radix, nil, OCI_ATTR_RADIX , ErrorHandle),
+            lcOther, 'OCIAttrGet', ConSettings);
+      end;
+      Param.SQLType := NormalizeOracleTypeToSQLType(Param.DataType, Param.DataSize,
+        Param.DescriptorType, Param.Precision, Param.Scale, ConSettings, Param.IODirection);
+    end else
+      Param.InternalDescribeObject(arg, PLainDriver, ErrorHandle, ConSettings);
   end;
 end;
 
@@ -1867,9 +1877,14 @@ begin
         end;
         Status := InternalDescribe(tmp, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
           OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
-        if Status = OCI_SUCCESS
-        then tmp := copy(ProcSQL, Ps2+1, MaxInt)
-        else CheckOracleError(Plain, OracleConnection.GetErrorHandle, Status, lcExecute, 'OCIDescribeAny', ConSettings);
+        if Status = OCI_SUCCESS then
+          tmp := copy(ProcSQL, Ps2+1, MaxInt)
+        else begin { final approach to locate the procedure !}
+          tmp := '"PUBLIC".'+tmp;
+          Status := InternalDescribe(tmp, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
+          OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
+          CheckOracleError(Plain, OracleConnection.GetErrorHandle, Status, lcExecute, 'OCIDescribeAny', ConSettings);
+        end;
       end else begin
         {$IFDEF UNICODE}
         ps2 := System.Pos('.', ProcSQL, ps+1);

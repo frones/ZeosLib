@@ -1428,7 +1428,7 @@ begin
   while RS.Next do begin
     TempProcedureNamePattern := '';
     SL := SplitString(RS.GetString(ProcedureNameIndex), '.');
-    SL.Insert(0, RS.GetString(SchemaNameIndex));
+    //SL.Insert(0, RS.GetString(SchemaNameIndex));
     for I := 0 to SL.Count -1 do
       if not IC.IsQuoted(SL[i]) then begin
         ZDbcUtils.ToBuff('"', Buf, TempProcedureNamePattern);
@@ -1510,7 +1510,7 @@ begin
   SQL := 'select NULL AS PROCEDURE_CAT, OWNER AS PROCEDURE_SCHEM, '+
     'OBJECT_NAME, PROCEDURE_NAME AS PROCEDURE_NAME, '+
     'OVERLOAD AS PROCEDURE_OVERLOAD, OBJECT_TYPE AS PROCEDURE_TYPE FROM '+
-    'ALL_PROCEDURES WHERE 1=1';
+    'ALL_PROCEDURES WHERE OBJECT_TYPE in (''FUNCTION'',''PROCEDURE'',''PACKAGE'')';
   if LProcedureNamePattern <> '' then
     SQL := SQL + ' AND ' + LProcedureNamePattern;
   if LSchemaNamePattern <> '' then
