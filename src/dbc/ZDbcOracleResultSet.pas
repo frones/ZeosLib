@@ -391,7 +391,7 @@ begin
         SQLT_LVC        : AddJSONEscape(@POCILong(P).Data[0], POCILong(P).Len);
         SQLT_VST        : AddJSONEscape(@PPOCILong(P)^.data[0], PPOCILong(P)^.Len);
         { fixed char right ' ' padded }
-        SQLT_AFC        : AddJSONEscape(P, GetAbsorbedTrailingSpacesLen(P, Value_sz);
+        SQLT_AFC        : AddJSONEscape(P, GetAbsorbedTrailingSpacesLen(P, Value_sz));
         { the binary raw we support }
         SQLT_LVB        : JSONWriter.WrBase64(@POCILong(P).data[0], POCILong(P).Len, True);
         SQLT_BIN        : JSONWriter.WrBase64(P, value_sz, True);
