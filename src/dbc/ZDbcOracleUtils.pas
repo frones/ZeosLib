@@ -985,7 +985,6 @@ end;
 function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
   out DescriptorType: sb4; Precision, Scale: sb2; ConSettings: PZConSettings;
   IO: OCITypeParamMode): TZSQLType;
-label VST, jmpSQLT_VCS, jmpSQLT_LVC;
 begin
   //some notes before digging in:
   // orl.h:
@@ -1054,7 +1053,7 @@ begin
           Result := stDouble;
           DataType := SQLT_BDOUBLE;
           DataSize := SizeOf(Double);
-        end else if (Scale > 0) and (Scale <= 4) and (Precision-Scale <= 19)  then
+        end else if (Scale > 0) and (Scale <= 4) and ((Precision-Scale) <= 19)  then
          Result := stCurrency;
       end;
     SQLT_INT, _SQLT_PLI {signed short/int/long/longlong}: begin
@@ -1089,7 +1088,7 @@ begin
     SQLT_CHR, {VARCHAR2 / char[n+1]}
     SQLT_STR,{NULL-terminated STRING, char[n+1]}
     SQLT_VCS {VARCHAR / char[n+sizeof(short integer)]}: begin
-jmpSQLT_VCS: DataType := SQLT_VCS;
+                DataType := SQLT_VCS;
                 if (DataSize = 0) then begin
                   if (IO <> OCI_TYPEPARAM_IN) then
                     DataSize := Max_OCI_String_Size+SizeOf(SmallInt);
@@ -1097,22 +1096,16 @@ jmpSQLT_VCS: DataType := SQLT_VCS;
                   DataSize := DataSize+SizeOf(SmallInt);
                 Result := stString;
               end;
-    SQLT_LNG{ LONG /char[n] }: begin
-                if (DataSize = 0)
-                then DataSize := 128 * 1024 + SizeOf(Integer)
-                else DataSize := DataSize+SizeOf(Integer);
-                DataType := SQLT_LVC;
-                Result := stAsciiStream;
-              end;
-
     SQLT_DAT: {char[7]} begin
               DataSize := SizeOf(TOraDate);
               Result := stTimestamp;
             end;
+    SQLT_BIN, {RAW / unsigned char[n]}
     SQLT_VBI { unsigned char[n+sizeof(short integer)] }: begin
         result := stBytes;
         if (DataSize = 0) and (IO <> OCI_TYPEPARAM_IN) then
           DataSize := Max_OCI_Raw_Size;
+        DataType := SQLT_VBI;
         DataSize := DataSize + SizeOf(SmallInt);
       end;
     SQLT_BFLOAT, SQLT_IBFLOAT {native/binary float / float }: begin
@@ -1125,13 +1118,6 @@ jmpSQLT_VCS: DataType := SQLT_VCS;
         Result := stDouble;
         DataSize := SizeOf(Double);
       end;
-    SQLT_LBI, { LONG RAW / unsigned char[n] }
-    SQLT_BIN: begin
-        Result := stBytes;
-        if (DataSize = 0) and (IO <> OCI_TYPEPARAM_IN) then
-          DataSize := Max_OCI_Raw_Size;
-        DataType := SQLT_BIN;
-      end;
     SQLT_UIN {unsigned short/int/long/longlong}: case DataSize of
           SizeOf(UInt64):   Result := stULong;
           SizeOf(Cardinal): Result := stLongWord;
@@ -1142,7 +1128,7 @@ jmpSQLT_VCS: DataType := SQLT_VCS;
             Result := stULong;
           end;
         end;
-    SQLT_VST, { OCI STRING type / *OCIString recommedend by Oracle see:
+    SQLT_VST: begin{ OCI STRING type / *OCIString recommedend by Oracle see:
       https://docs.oracle.com/cd/B28359_01/appdev.111/b28395/oci12oty.htm#i421612
       this is a opaque Type...
       but there advice is using the OCIStringXXX functions for Length/data
@@ -1151,20 +1137,32 @@ jmpSQLT_VCS: DataType := SQLT_VCS;
       are buffered by OCI we can ignore all length buffers on oversized memallocs
       my crystall ball says this is a PP(Raw/Wide)Char-Struct including length like TOCILong
       -> just look to OCIRaw/SQLT_LVB of https://docs.oracle.com/cd/B13789_01/appdev.101/b10779/oci11oty.htm#421682}
-      SQLT_LVC { LONG VARCHAR / char[n+sizeof(integer)] }: begin
-jmpSQLT_LVC:
-        DataType := SQLT_LVC;
-        Result := stString {stAsciiStream was before !};
+        Result := stString;
         if (DataSize = 0) and (IO <> OCI_TYPEPARAM_IN) then
+          DataSize := SizeOf(POCIString);
+      end;
+    SQLT_LNG: { LONG /char[n] } begin
+        Result := stAsciiStream;
+        if (DataSize = 0) or (IO <> OCI_TYPEPARAM_IN) then
+           DataSize := 128 * 1024;
+        DataSize := DataSize + SizeOf(Integer);
+        DataType := SQLT_LVC; { EH: should not be converted to unicodestream
+          that was a bug i do not remember any more }
+        Exit;
+      end;
+    SQLT_LVC { LONG VARCHAR / char[n+sizeof(integer)] }: begin
+        Result := stString;//stAsciiStream;
+        if (DataSize = 0) or (IO <> OCI_TYPEPARAM_IN) then
           DataSize := Max_OCI_String_Size*ConSettings^.ClientCodePage^.CharWidth;
         DataSize := DataSize + SizeOf(Integer);
-      end;//*)
+      end;
+    SQLT_LBI, { LONG RAW / unsigned char[n] }
     SQLT_LVB { LONG VARRAW / unsigned char[n+sizeof(integer)]}:begin
-        DataType := SQLT_LVB;
-        Result := stBytes;
-        if (DataSize = 0) and (IO <> OCI_TYPEPARAM_IN) then
-          DataSize := Max_OCI_String_Size*ConSettings^.ClientCodePage^.CharWidth;
+        Result := stBinaryStream;
+        if (DataSize = 0) then
+          DataSize := 128 * 1024;
         DataSize := DataSize + SizeOf(Integer);
+        DataType := SQLT_LVB;
       end;
     SQLT_RDD {ROWID descriptor / OCIRowid * }: begin
         DescriptorType := OCI_DTYPE_ROWID;
@@ -1238,11 +1236,10 @@ jmpSQLT_LVC:
     SQLT_TIME, SQLT_TIME_TZ:
       Result := stTime;
   end;
-  if (ConSettings^.CPType = cCP_UTF16) and (Result in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then
+  if (ConSettings^.CPType = cCP_UTF16) and (Result in [stString, stAsciiStream]) then
     if Result = stString
     then Result := stUnicodeString
-    else if not (DataType in [SQLT_LNG]) then  {??? https://docs.oracle.com/cd/B12037_01/appdev.101/b10796/adlob_db.htm}
-        Result := stUnicodeStream;
+    else Result := stUnicodeStream;
 end;
 
 {**
