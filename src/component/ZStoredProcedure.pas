@@ -256,7 +256,7 @@ begin
         ftExtended:
           Param.AsFloat := FCallableStatement.GetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         {$ENDIF}
-        ftBCD:
+        ftBCD, ftCurrency:
           Param.AsCurrency := FCallableStatement.GetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftString:
           begin
