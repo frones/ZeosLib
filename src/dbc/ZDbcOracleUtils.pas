@@ -1029,7 +1029,7 @@ begin
         end else begin
           DataType := SQLT_VNU; //see orl.h we can't use any other type using oci
           DataSize := SizeOf(TOCINumber);
-          if (Scale >= 0) and (Scale <= 4) and (Precision <= sAlignCurrencyScale2Precision[Scale])
+          if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision <= sAlignCurrencyScale2Precision[Scale])
           then Result := stCurrency
           else Result := stBigDecimal;
         end;
@@ -1213,6 +1213,12 @@ VCS:            DataType := SQLT_VCS;
       end;
     SQLT_TIME, SQLT_TIME_TZ:
       Result := stTime;
+    _SQLT_BOL: begin
+        { those pl/sql types can't be fetched by OCI -> make it possible}
+        Result := stBoolean;
+        DataType := SQLT_UIN;
+        DataSize := SizeOf(Word);
+      end
   end;
   if (ConSettings^.CPType = cCP_UTF16) and (Result in [stString, stAsciiStream]) then
     if Result = stString
