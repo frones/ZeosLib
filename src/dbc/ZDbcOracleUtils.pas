@@ -1021,7 +1021,7 @@ begin
         Result := stBigDecimal;
         DataSize := SizeOf(TOCINumber);
         DataType := SQLT_VNU; //see orl.h we can't use any other type using oci
-        if (Scale = 0) and (Precision <> 0) then begin
+        (*if (Scale = 0) and (Precision <> 0) then begin
           //No decimal digits found, but possible signed or not/overrun of conversion?
           //actually there is no way to find signed/unsigned out -> just use a "save" type
           case Precision of
@@ -1044,16 +1044,16 @@ begin
                       DataSize := SizeOf(Int64);
                     end;
           end;
-          //if Result <> stBigDecimal then
-            //DataType := SQLT_INT;
+          if Result <> stBigDecimal then
+            DataType := SQLT_INT;
 
-        end else if (Scale = -127) and (Precision > 0) then begin
+        end else *)if (Scale = -127) and (Precision > 0) then begin
           //see: https://docs.oracle.com/cd/B13789_01/appdev.101/b10779/oci06des.htm
           //Table 6-14 OCI_ATTR_PRECISION/OCI_ATTR_SCALE
           Result := stDouble;
           DataType := SQLT_BDOUBLE;
           DataSize := SizeOf(Double);
-        end else if (Scale > 0) and (Scale <= 4) and ((Precision-Scale) <= 19)  then
+        end else if (Scale >= 0) and (Scale <= 4) and ((Precision-Scale) <= 19)  then
          Result := stCurrency;
       end;
     SQLT_INT, _SQLT_PLI {signed short/int/long/longlong}: begin
