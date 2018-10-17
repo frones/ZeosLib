@@ -954,6 +954,8 @@ begin
     Result := stAsciiStream
   else if TypeNameUp = 'LONG' then
     Result := stAsciiStream
+  else if (TypeNameUp = 'ROWID') or (TypeNameUp = 'UROWID') then
+    Result := stString
   else if StartsWith(TypeNameUp, 'TIMESTAMP') then
     Result := stTimestamp
   else if TypeNameUp = 'BFILE' then
