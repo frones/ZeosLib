@@ -1054,9 +1054,13 @@ bind_direct:
             end;
         end;
     stCurrency: begin
-        if (Bind.dty <> SQLT_FLT) or (Bind.value_sz <> SizeOf(Double)) or (Bind.curelen < ArrayLen) then
-          InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(Double));
-        for i := 0 to ArrayLen -1 do PDouble(Bind.valuep+I*SizeOf(Double))^ := TCurrencyDynArray(Value)[i];
+        if (Bind.dty <> SQLT_VNU) or (Bind.value_sz <> SizeOf(TOCINumber)) or (Bind.curelen < ArrayLen) then
+          InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(TOCINumber));
+        for i := 0 to ArrayLen -1 do begin
+          D := TCurrencyDynArray(Value)[i];
+          FplainDriver.OCINumberFromReal(FOCIError, @D, SizeOf(Double),
+            POCINumber(Bind.valuep+I*SizeOf(TOCINumber)));
+        end;
       end;
     stBigDecimal: begin
         if (Bind.dty <> SQLT_VNU) or (Bind.value_sz <> SizeOf(TOCINumber)) or (Bind.curelen < ArrayLen) then
