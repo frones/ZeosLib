@@ -960,20 +960,20 @@ begin
     Result := stTimestamp
   else if TypeNameUp = 'BFILE' then
     Result := stBinaryStream else
-  if TypeNameUp = 'NUMBER' then
-  begin
-    Result := stDouble;  { default for number types}
-    if (Scale = 0) and (Precision <> 0) then
-    begin
+  if TypeNameUp = 'NUMBER' then begin
+    if (Scale = 0) and (Precision > 0) and (Precision < 20) then begin
       if Precision <= 2 then
         Result := stByte
       else if Precision <= 4 then
         Result := stSmall
       else if Precision <= 9 then
         Result := stInteger
-      else if Precision <= 19 then
+      else
         Result := stLong  {!!in fact, unusable}
-    end;
+    end else if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision <= sAlignCurrencyScale2Precision[Scale]) then
+      Result := stCurrency
+    else
+      Result := stBigDecimal;  { default for number types}
   end
   else if StartsWith(TypeNameUp, 'INTERVAL') then
     Result := stTimestamp
@@ -982,7 +982,7 @@ begin
   if ( CtrlsCPType = cCP_UTF16 ) then
     case result of
       stString: Result := stUnicodeString;
-      stAsciiStream: if not (TypeNameUp = 'LONG') then Result := stUnicodeStream; //fix: http://zeos.firmos.at/viewtopic.php?t=3530
+      stAsciiStream: if not (TypeNameUp = 'LONG') then Result := stUnicodeStream; //fix: hhttp://zeoslib.sourceforge.net/viewtopic.php?t=3530
     end;
 end;
 
@@ -1026,7 +1026,31 @@ begin
           Result := stDouble;
           DataType := SQLT_BDOUBLE;
           DataSize := SizeOf(Double);
-        end else begin
+        end else if (Scale = 0) and (Precision > 0) and (Precision < 20) then
+          //No digits found, but possible signed or not/overrun of converiosn? No way to find this out -> just use a "save" type
+          case Precision of
+            1..2: begin // 0/-99..(-)99
+                    Result := stShort;
+                    DataType := SQLT_INT;
+                    DataSize := SizeOf(ShortInt);
+                  end;
+            3..4: begin //(-)999..(-)9999
+                    Result := stSmall; // -32768..32767
+                    DataType := SQLT_INT;
+                    DataSize := SizeOf(SmallInt);
+                  end;
+            5..9: begin //(-)99999..(-)999999999
+                    Result := stInteger; // -2147483648..2.147.484.647
+                    DataType := SQLT_INT;
+                    DataSize := SizeOf(Integer);
+                  end;
+            else begin //(-)9999999999..(-)9999999999999999999
+                    Result := stLong; //  -9223372036854775808..9.223.372.036.854.775.807
+                    DataType := SQLT_INT;
+                    DataSize := SizeOf(Int64);
+                  end;
+          end
+        else begin
           DataType := SQLT_VNU; //see orl.h we can't use any other type using oci
           DataSize := SizeOf(TOCINumber);
           if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision <= sAlignCurrencyScale2Precision[Scale])
@@ -1123,9 +1147,8 @@ VCS:            DataType := SQLT_VCS;
         if (DataSize = 0) or (IO <> OCI_TYPEPARAM_IN) then
            DataSize := 128 * 1024;
         DataSize := DataSize + SizeOf(Integer);
-        DataType := SQLT_LVC; { EH: should not be converted to unicodestream
-          that was a bug i do not remember any more }
-        Exit;
+        DataType := SQLT_LVC; { EH: http://zeoslib.sourceforge.net/viewtopic.php?t=3530 }
+        Exit; //is this correct?
       end;
     SQLT_LVC { LONG VARCHAR / char[n+sizeof(integer)] }: begin
         Result := stString;//stAsciiStream;
@@ -1219,6 +1242,7 @@ VCS:            DataType := SQLT_VCS;
         DataType := SQLT_UIN;
         DataSize := SizeOf(Word);
       end
+    //ELSE raise Exception.Create('Unknown datatype: '+ZFastCode.IntToStr(DataType));
   end;
   if (ConSettings^.CPType = cCP_UTF16) and (Result in [stString, stAsciiStream]) then
     if Result = stString

@@ -2047,6 +2047,7 @@ end;
 }
 procedure TZOracleResultSet_A.Open;
 var
+//  char_semantics: ub1;
   I, J: Integer;
   ColumnInfo: TZColumnInfo;
   CurrentVar: PZSQLVar;
@@ -2107,8 +2108,16 @@ begin
 
     paramdpp := nil; //init
     FPlainDriver.OCIParamGet(FStmtHandle, OCI_HTYPE_STMT, FErrorHandle, paramdpp, I);
-    FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-      @CurrentVar^.value_sz, nil, OCI_ATTR_DATA_SIZE, FErrorHandle);
+    (*CheckOracleError(FPlainDriver, FErrorHandle,
+      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+        @char_semantics, nil, OCI_ATTR_CHAR_USED, FErrorHandle),
+      lcExecute, 'OCI_ATTR_CHAR_USED', ConSettings);
+    if Boolean(char_semantics) then
+      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+        @CurrentVar^.value_sz, nil, OCI_ATTR_MAXCHAR_SIZE, FErrorHandle)
+    else*)
+      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+        @CurrentVar^.value_sz, nil, OCI_ATTR_DATA_SIZE, FErrorHandle);
     CurrentVar^.value_sz := PUB2(@CurrentVar^.value_sz)^; //full init of all 4 Bytes -> is a ub2
     FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
       @CurrentVar^.dty, nil, OCI_ATTR_DATA_TYPE, FErrorHandle);

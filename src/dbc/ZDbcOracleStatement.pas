@@ -946,10 +946,10 @@ end;
 }
 procedure TZAbstractOraclePreparedStatement_A.SetCurrency(
   Index: Integer; const Value: Currency);
-var
+{var
   Bind: PZOCIParamBind;
   SQLType: TZSQLType;
-  P: PAnsiChar;
+  P: PAnsiChar; }
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
