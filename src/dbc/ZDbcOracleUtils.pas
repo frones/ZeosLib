@@ -1144,7 +1144,7 @@ VCS:            DataType := SQLT_VCS;
     SQLT_RDD {ROWID descriptor / OCIRowid * }: begin
         {DescriptorType := OCI_DTYPE_ROWID;
         DataSize := SizeOf(POCIRowid);}
-        DataSize := 20;
+        DataSize := Min(20, DataSize);
         goto VCS;
       end;
     SQLT_NTY {NAMED DATATYPE / struct }: begin
