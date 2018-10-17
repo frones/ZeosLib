@@ -391,6 +391,8 @@ const
       100,
       1000,
       10000);
+  sAlignCurrencyScale2Precision: array[0..4] of Integer = (
+    15, 16, 17, 18, 19);
 type
   { oracle loves it's recursion ... so we need a recursive obj model }
   TZOraProcDescriptor_A = class(TObject)
@@ -1015,47 +1017,19 @@ begin
   DescriptorType := NO_DTYPE; //init
   case DataType of
     SQLT_NUM { NUMBER }, SQLT_PDN, SQLT_VNU { VARNUM recommended by Oracle!}:
-      //unsigned char[21](binary) see: http://docs.oracle.com/cd/B19306_01/appdev.102/b14250/oci03typ.htm
-      begin
-        {by default convert number to double}
-        Result := stBigDecimal;
-        DataSize := SizeOf(TOCINumber);
-        DataType := SQLT_VNU; //see orl.h we can't use any other type using oci
-        (*if (Scale = 0) and (Precision <> 0) then begin
-          //No decimal digits found, but possible signed or not/overrun of conversion?
-          //actually there is no way to find signed/unsigned out -> just use a "save" type
-          case Precision of
-            0..2:   begin
-                      Result := stShort; // -128..127
-                      DataSize := SizeOf(ShortInt);
-                    end;
-            3..4:   begin
-                      Result := stSmall; // -32768..32767
-                      DataSize := SizeOf(SmallInt);
-                    end;
-            5..9:   begin
-                      Result := stInteger; // -2147483648..2147484647
-                      DataSize := SizeOf(LongInt);
-                    end;
-            10..19: begin //skip 20 can be UInt64 or Int64  assume Double ( later BCD ) values instead
-                      // -9.223.372.036.854.775.808.. 9.223.372.036.854.775.807
-                      //                          0..18.446.744.073.709.551.615
-                      Result := stLong;
-                      DataSize := SizeOf(Int64);
-                    end;
-          end;
-          if Result <> stBigDecimal then
-            DataType := SQLT_INT;
-
-        end else *)if (Scale = -127) and (Precision > 0) then begin
+        if (Scale = -127) and (Precision > 0) then begin
           //see: https://docs.oracle.com/cd/B13789_01/appdev.101/b10779/oci06des.htm
           //Table 6-14 OCI_ATTR_PRECISION/OCI_ATTR_SCALE
           Result := stDouble;
           DataType := SQLT_BDOUBLE;
           DataSize := SizeOf(Double);
-        end else if (Scale >= 0) and (Scale <= 4) and ((Precision-Scale) <= 19)  then
-         Result := stCurrency;
-      end;
+        end else begin
+          DataType := SQLT_VNU; //see orl.h we can't use any other type using oci
+          DataSize := SizeOf(TOCINumber);
+          if (Scale >= 0) and (Scale <= 4) and (Precision <= sAlignCurrencyScale2Precision[Scale])
+          then Result := stCurrency
+          else Result := stBigDecimal;
+        end;
     SQLT_INT, _SQLT_PLI {signed short/int/long/longlong}: begin
         DataType := SQLT_INT;
         case DataSize of
