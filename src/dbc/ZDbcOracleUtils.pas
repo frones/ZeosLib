@@ -987,6 +987,7 @@ end;
 function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
   out DescriptorType: sb4; Precision, Scale: sb2; ConSettings: PZConSettings;
   IO: OCITypeParamMode): TZSQLType;
+label VCS;
 begin
   //some notes before digging in:
   // orl.h:
@@ -1062,7 +1063,7 @@ begin
     SQLT_CHR, {VARCHAR2 / char[n+1]}
     SQLT_STR,{NULL-terminated STRING, char[n+1]}
     SQLT_VCS {VARCHAR / char[n+sizeof(short integer)]}: begin
-                DataType := SQLT_VCS;
+VCS:            DataType := SQLT_VCS;
                 if (DataSize = 0) then begin
                   if (IO <> OCI_TYPEPARAM_IN) then
                     DataSize := Max_OCI_String_Size+SizeOf(SmallInt);
@@ -1139,9 +1140,10 @@ begin
         DataType := SQLT_LVB;
       end;
     SQLT_RDD {ROWID descriptor / OCIRowid * }: begin
-        DescriptorType := OCI_DTYPE_ROWID;
-        DataSize := SizeOf(POCIRowid);
-        Result := stUnknown
+        {DescriptorType := OCI_DTYPE_ROWID;
+        DataSize := SizeOf(POCIRowid);}
+        DataSize := 20;
+        goto VCS;
       end;
     SQLT_NTY {NAMED DATATYPE / struct }: begin
         Result := stUnknown;
