@@ -87,7 +87,7 @@ type
     FTinyBuffer: array[Byte] of Byte; //huge because of possible OCINumbers
     FTempLob: IZBlob;
     FClientCP: Word;
-    Fbufsize: UB4; //a temporary varable uses for Number2Text
+    Fbufsize: UB4; //a temporary variable uses for Number2Text
     fStatus: Sword;
     FvnuInfo: TvnuInfo;
     function GetAsDateTimeValue(const SQLVarHolder: PZSQLVar): TDateTime; {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -136,7 +136,7 @@ type
     function Next: Boolean; override;
   end;
 
-  TZOracleCallableResultSet2 = Class(TZOracleAbstractResultSet_A)
+  TZOracleCallableResultSet_A = Class(TZOracleAbstractResultSet_A)
   private
     FFieldNames: TStringDynArray;
   public
@@ -147,21 +147,6 @@ type
   protected
     procedure Open; override;
   public
-    function Next: Boolean; override;
-  End;
-
-  TZOracleCallableResultSet = Class(TZOracleAbstractResultSet_A)
-  private
-    FFieldNames: TStringDynArray;
-    function PrepareOracleOutVars(const Params: PZSQLVars;
-      const OracleParams: TZOracleParams): PZSQLVars;
-  protected
-    procedure Open; override;
-  public
-    constructor Create(
-      const Statement: IZStatement; const SQL: string; StmtHandle: POCIStmt;
-      ErrorHandle: POCIError; const OutParams: PZSQLVars; const OracleParams: TZOracleParams);
-    procedure Close; override;
     function Next: Boolean; override;
   End;
 
@@ -2353,157 +2338,9 @@ Success:
   end;
 end;
 
-{ TZOracleCallableResultSet }
+{ TZOracleCallableResultSet_A }
 
-function TZOracleCallableResultSet.PrepareOracleOutVars(const Params: PZSQLVars;
-  const OracleParams: TZOracleParams): PZSQLVars;
-var
-  I, J: Integer;
-begin
-  J := 0;
-  for i := 0 to High(OracleParams) do
-    if OracleParams[I].pType in [2,3,4] then
-      Inc(J);
-
-  Result := nil;
-  AllocateOracleSQLVars(Result, J);
-  SetLength(FFieldNames, J);
-
-  for I := 0 to High(OracleParams) do
-  begin
-    J := OracleParams[I].pOutIndex;
-    if OracleParams[I].pType in [2,3,4] then //ptInOut, ptOut, ptResult
-    begin
-      {$R-}
-      Result.Variables[J].ColType := Params.Variables[I].ColType;
-      Result.Variables[J].dty := Params.Variables[I].dty;
-      Result.Variables[J].value_sz := Params.Variables[I].value_sz;
-      Result.Variables[J].alenp := Params.Variables[I].alenp;  //reference to array entry in stmt buffer -> no move!
-      Result.Variables[J].indp := Params.Variables[I].indp; //reference to array entry in stmt buffer -> no move!
-      Result.Variables[J].valuep := Params.Variables[I].valuep; //reference to data entry in stmt buffer -> no move!
-      Result.Variables[J].DescriptorType := Params.Variables[I].DescriptorType;
-      {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-      FFieldNames[J] := OracleParams[I].pName;
-    end;
-  end;
-end;
-
-procedure TZOracleCallableResultSet.Open;
-var
-  I: Integer;
-  ColumnInfo: TZColumnInfo;
-  CurrentVar: PZSQLVar;
-begin
-  { Fills the column info. }
-  ColumnsInfo.Clear;
-  for I := 0 to FColumns.AllocNum -1 do
-  begin
-    {$R-}
-    CurrentVar := @FColumns.Variables[I];
-    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    ColumnInfo := TZColumnInfo.Create;
-
-    with ColumnInfo do
-    begin
-      ColumnName := '';
-      TableName := '';
-
-      ColumnLabel := FFieldNames[i];
-      ColumnDisplaySize := 0;
-      AutoIncrement := False;
-      Signed := True;
-      Nullable := ntNullable;
-
-      ColumnType := CurrentVar^.ColType;
-      Scale := CurrentVar^.Scale;
-
-      {Reset the column type which can be changed by user before}
-      if CurrentVar^.ColType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
-      begin
-        ColumnInfo.ColumnCodePage := FClientCP;
-        if (ColumnType = stUnicodeStream) and not ( ConSettings^.CPType = cCP_UTF16) then
-          ColumnType := stAsciiStream;
-        if (ColumnType = stAsciiStream) and ( ConSettings^.CPType = cCP_UTF16) then
-          ColumnType := stUnicodeStream;
-        if (ColumnType = stUnicodeString) and not ( ConSettings^.CPType = cCP_UTF16) then
-          ColumnType := stString;
-        if (ColumnType = stString) and ( ConSettings^.CPType = cCP_UTF16) then
-          ColumnType := stUnicodeString;
-      end
-      else
-        ColumnInfo.ColumnCodePage := High(Word);
-
-      if ( ColumnType in [stString, stUnicodeString] ) then
-      begin
-        ColumnDisplaySize := CurrentVar.value_sz;
-        Precision := CurrentVar.value_sz;
-      end
-      else
-        Precision := CurrentVar.Precision;
-    end;
-    ColumnsInfo.Add(ColumnInfo);
-  end;
-
-  inherited Open;
-end;
-
-{**
-  Constructs this object, assignes main properties and
-  opens the record set.
-  @param PlainDriver a Oracle plain driver.
-  @param Statement a related SQL statement object.
-  @param SQL a SQL statement.
-  @param Handle a Oracle specific query handle.
-}
-constructor TZOracleCallableResultSet.Create(
-  const Statement: IZStatement; const SQL: string; StmtHandle: POCIStmt;
-  ErrorHandle: POCIError; const OutParams: PZSQLVars;
-  const OracleParams: TZOracleParams);
-begin
-  FColumns := PrepareOracleOutVars(OutParams, OracleParams);
-  inherited Create(Statement, SQL, StmtHandle, ErrorHandle, 0);
-  FConnection := Statement.GetConnection as IZOracleConnection;
-  LastRowNo := 1;
-  MaxRows := 1;
-end;
-
-{**
-  Releases this <code>ResultSet</code> object's database and
-  JDBC resources immediately instead of waiting for
-  this to happen when it is automatically closed.
-
-  <P><B>Note:</B> A <code>ResultSet</code> object
-  is automatically closed by the
-  <code>Statement</code> object that generated it when
-  that <code>Statement</code> object is closed,
-  re-executed, or is used to retrieve the next result from a
-  sequence of multiple results. A <code>ResultSet</code> object
-  is also automatically closed when it is garbage collected.
-}
-procedure TZOracleCallableResultSet.Close;
-begin
-  { stmt holds buffers and handles. Here we just reference it. So we do NOTHING here, IDE frees all DynArrays}
-  FreeOracleSQLVars(FPlainDriver, FColumns, FIteration, FConnectionHandle,
-    FErrorHandle, ConSettings);
-  SetLength(Self.FRowsBuffer, 0);
-  { prepared statement own handles, so dont free them }
-  FStmtHandle := nil;
-  inherited Close;
-end;
-
-function TZOracleCallableResultSet.Next: Boolean;
-begin
-  { Checks for maximum row. }
-  Result := False;
-  if (RowNo = 1) then
-    Exit;
-  RowNo := 1;
-  Result := True;
-end;
-
-{ TZOracleCallableResultSet2 }
-
-constructor TZOracleCallableResultSet2.Create(const Statement: IZStatement;
+constructor TZOracleCallableResultSet_A.Create(const Statement: IZStatement;
   const SQL: string; StmtHandle: POCIStmt; ErrorHandle: POCIError;
   OraVariables: PZOCIParamBinds; {$IFDEF AUTOREFCOUNT}const{$ENDIF} BindList: TZBindList);
 var I, N: Integer;
@@ -2540,7 +2377,7 @@ begin
   LastRowNo := 1;
 end;
 
-function TZOracleCallableResultSet2.Next: Boolean;
+function TZOracleCallableResultSet_A.Next: Boolean;
 begin
   { Checks for maximum row. }
   Result := False;
@@ -2550,7 +2387,7 @@ begin
   Result := True;
 end;
 
-procedure TZOracleCallableResultSet2.Open;
+procedure TZOracleCallableResultSet_A.Open;
 var
   I: Integer;
   ColumnInfo: TZColumnInfo;

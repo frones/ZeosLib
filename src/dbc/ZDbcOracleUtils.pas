@@ -145,7 +145,7 @@ type
   TZOCIParamBinds = array[0..MAX_SQLVAR_LIMIT] of TZOCIParamBind; //just a nice dubugging range
 
   PZSQLVar = ^TZSQLVar;
-  TZSQLVar = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
+  TZSQLVar = record
     {OCI Handles}
     defn_or_bindpp:     POCIHandle; //An address of a bind handle which is implicitly allocated by this call. The bind handle maintains all the bind information for this particular input value. The handle is freed implicitly when the statement handle is deallocated. On input, the value of the pointer must be null or a valid bind handle. binding values
     valuep:     PAnsiChar; //An address of a data value or an array of data values of the type specified in the dty parameter. An array of data values can be specified for mapping into a PL/SQL table or for providing data for SQL multiple-row operations. When an array of bind values is provided, this is called an array bind in OCI terms.
@@ -164,10 +164,9 @@ type
     Scale:     sb1; //field.scale used 4 out params
 
     ColType:   TZSQLType; //Zeos SQLType
-    lobs:      TInterfaceDynArray; //temporary interface
   end;
 
-  TZSQLVars = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
+  TZSQLVars = record
     AllocNum:  ub4;
     Variables: array[0..MAX_SQLVAR_LIMIT] of TZSQLVar; //just a nice dubugging range
   end;
@@ -839,7 +838,7 @@ begin
   if Variables <> nil then
     FreeMem(Variables);
 
-  Size := SizeOf(TZSQLVars) + Count * SizeOf(TZSQLVar);
+  Size := SizeOf(ub4) + Max(1,Count) * SizeOf(TZSQLVar);
   GetMem(Variables, Size);
   FillChar(Variables^, Size, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
   Variables^.AllocNum := Count;
@@ -912,11 +911,6 @@ begin
             if Status <> OCI_SUCCESS then
               CheckOracleError(PlainDriver, ErrorHandle, status, lcOther, 'OCIDescriptorFree', ConSettings);
           end;
-      if (CurrentVar^.lobs <> nil) then
-        SetLength(CurrentVar^.lobs, 0);
-      //CurrentVar^.valuep := nil;
-      //CurrentVar^.indp := nil;
-      //CurrentVar^.alenp := nil;
     end;
     FreeMem(Variables);
     Variables := nil;
