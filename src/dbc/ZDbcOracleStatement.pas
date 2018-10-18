@@ -809,7 +809,7 @@ begin
   OCIBind.curelen := ElementCnt;
   { in array bindings we directly OCIBind the pointer of the dyn arrays instead of moving data}
   if not ((ElementCnt > 1) and (Ord(SQLType) > Ord(stShort)) and (Ord(SQLType) < Ord(stCurrency))) then begin
-    Status := FPlainDriver.OCIBindByPos(FOCIStmt, OCIBind.defn_or_bindpp, FOCIError, Index + 1,
+    Status := FPlainDriver.OCIBindByPos(FOCIStmt, OCIBind.bindpp, FOCIError, Index + 1,
       OCIBind.valuep, OCIBind.value_sz, OCIBind.dty, OCIBind.indp, nil, nil, 0, nil, OCI_DEFAULT);
     if Status <> OCI_SUCCESS then
       CheckOracleError(FPlainDriver, FOCIError, Status, lcExecute, ASQL, ConSettings);
@@ -1022,7 +1022,7 @@ begin
 bind_direct:
         InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen);
         if ArrayCount > 1 then begin
-          Status := FPlainDriver.OCIBindByPos(FOCIStmt, Bind.defn_or_bindpp, FOCIError, ParameterIndex + 1,
+          Status := FPlainDriver.OCIBindByPos(FOCIStmt, Bind.bindpp, FOCIError, ParameterIndex + 1,
             Pointer(Value), Bind.value_sz, Bind.dty, Bind.indp, nil, nil, 0, nil, OCI_DEFAULT);
           if Status <> OCI_SUCCESS then
             CheckOracleError(FPlainDriver, FOCIError, Status, lcExecute, ASQL, ConSettings);

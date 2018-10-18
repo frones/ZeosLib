@@ -56,6 +56,7 @@ unit ZTestDbcOracle;
 interface
 {$I ZDbc.inc}
 
+{.$DEFINE EGONHUGEIST}
 uses Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZSqlTestCase, ZDbcOracle,
   ZCompatibility;
 
@@ -81,12 +82,17 @@ type
 (*
     procedure TestDefaultValues;
 *)
+    {$IFDEF EGONHUGEIST}
+    procedure TestVNU;
+    {$ENDIF}
   end;
 
 
 implementation
 
-uses ZTestConsts, ZTestCase, ZVariant, ZSysUtils;
+uses ZTestConsts, ZTestCase, ZVariant, ZSysUtils
+  {$IFDEF EGONHUGEIST}, ZPLainOracleDriver, ZPlainOracleConstants,
+  ZDbcOracleUtils, ZFastCode{$ENDIF};
 
 { TZTestDbcOracleCase }
 
@@ -149,6 +155,80 @@ begin
   Check(Statement.Execute('SELECT * FROM equipment'));
   Statement.Close;
 end;
+{$IFDEF EGONHUGEIST}
+procedure TZTestDbcOracleCase.TestVNU;
+var
+  SI1, SI2: Int64;
+  UI1, UDI2: UInt64;
+  D: Double;
+  C1: Currency absolute Si1;
+  C2: Currency absolute Si2;
+  FPlainDriver: TZOraclePlainDriver;
+  FTinyBuffer: array[byte] of Byte;
+  FvnuInfo: TvnuInfo;
+  FErrorHandle: POCIError;
+begin
+  FErrorHandle := (Connection as IZOracleConnection).GetErrorHandle;
+  FplainDriver := TZOraclePlainDriver(Connection.GetIZPlainDriver.GetInstance);
+  for SI1 := -100000001 to High(Int64) do begin
+    FPlainDriver.OCINumberFromInt(FErrorHandle, @SI1,
+      SizeOf(INT64),OCI_NUMBER_SIGNED, POCINumber(@FTinyBuffer[0]));
+    if SI1 < 0 then begin
+      Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuNegInt);
+        SI2 := NegNvu2Int(POCINumber(@FTinyBuffer[0]), FvnuInfo, SI1);
+      if Si1 <> si2 then begin
+        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuNegInt);
+        SI2 := NegNvu2Int(POCINumber(@FTinyBuffer[0]), FvnuInfo, SI1);
+        Assert(Si2 = SI1, InttoUnicode(SI1));
+      end;
+    end else if SI1 = 0 then
+      Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = nvu0)
+    else begin
+        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuPosInt);
+        SI2 := PosNvu2Int(POCINumber(@FTinyBuffer[0]), FvnuInfo);
+        Assert(SI2 = SI1, InttoUnicode(SI1));
+      end;
+
+    D := C1;
+    FPlainDriver.OCINumberFromReal(FErrorHandle, @D,
+      SizeOf(Double), POCINumber(@FTinyBuffer[0]));
+    if SI1 mod 10000 = 0 then begin
+      (*if SI1 < 0 then begin
+        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuNegInt);
+        SI2 := NegNvu2Int(POCINumber(@FTinyBuffer[0]), FvnuInfo.Exponent);
+        Assert(Si2 = C1, InttoUnicode(SI1));
+      end else if SI1 = 0 then
+        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = nvu0)
+      else begin
+        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuPosInt);
+        SI2 := PosNvu2Int(POCINumber(@FTinyBuffer[0]), FvnuInfo.Exponent);
+        Assert(SI2 = C1, InttoUnicode(SI1));
+      end;
+    end else begin *)
+      if C1 < 0 then begin
+        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuNegCurr);
+          C2 := NegNvu2Curr(POCINumber(@FTinyBuffer[0]), FvnuInfo, c1);
+        if C2 <> C1 then begin
+          C2 := 0;
+        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuNegCurr);
+          C2 := NegNvu2Curr(POCINumber(@FTinyBuffer[0]), FvnuInfo, c1);
+          Assert(C2 = C1, 'Expect '+CurrtoUnicode(C1)+' was '+CurrtoUnicode(C2));
+        end;
+      end else if C1 = 0 then
+        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = nvu0)
+      else begin
+        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuPosCurr);
+        C2 := PosNvu2Curr(POCINumber(@FTinyBuffer[0]), FvnuInfo, C1);
+        if C2 <> C1 then begin
+          C2 := 0;
+          C2 := PosNvu2Curr(POCINumber(@FTinyBuffer[0]), FvnuInfo, C1);
+          Assert(C2 = C1, 'Expect '+CurrtoUnicode(C1)+' was '+CurrtoUnicode(C2));
+        end;
+      end;
+    end;
+  end;
+end;
+{$ENDIF EGONHUGEIST}
 
 {**
   Runs a test for Oracle DBC ResultSet with stored results.

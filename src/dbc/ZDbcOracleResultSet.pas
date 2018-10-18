@@ -235,8 +235,6 @@ var
   Hour, Minute, Second: Byte;
   Year: SmallInt;
   Millis: Cardinal;
-  Status: sword;
-    FvnuInfo: TvnuInfo;
   procedure AddJSONEscape(P: PAnsichar; Len: LengthInt);
   begin
     JSONWriter.Add('"');
@@ -248,71 +246,7 @@ var
     end;
     JSONWriter.Add('"');
   end;
-(*var
-  SI1, SI2: Int64;
-  UI1, UDI2: UInt64;
-  D: Double;
-  C1: Currency absolute Si1;
-  C2: Currency absolute Si2;
 begin
-  for SI1 := -100000001 to High(Int64) do begin
-    FPlainDriver.OCINumberFromInt(FErrorHandle, @SI1,
-      SizeOf(INT64),OCI_NUMBER_SIGNED, POCINumber(@FTinyBuffer[0]));
-    if SI1 < 0 then begin
-      Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuNegInt);
-        SI2 := NegNvu2Int(POCINumber(@FTinyBuffer[0]), FvnuInfo, SI1);
-      if Si1 <> si2 then begin
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuNegInt);
-        SI2 := NegNvu2Int(POCINumber(@FTinyBuffer[0]), FvnuInfo, SI1);
-        Assert(Si2 = SI1, InttoUnicode(SI1));
-      end;
-    end else if SI1 = 0 then
-      Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = nvu0)
-    else begin
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuPosInt);
-        SI2 := PosNvu2Int(POCINumber(@FTinyBuffer[0]), FvnuInfo);
-        Assert(SI2 = SI1, InttoUnicode(SI1));
-      end;
-
-    D := C1;
-    FPlainDriver.OCINumberFromReal(FErrorHandle, @D,
-      SizeOf(Double), POCINumber(@FTinyBuffer[0]));
-    if SI1 mod 10000 = 0 then begin
-      (*if SI1 < 0 then begin
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuNegInt);
-        SI2 := NegNvu2Int(POCINumber(@FTinyBuffer[0]), FvnuInfo.Exponent);
-        Assert(Si2 = C1, InttoUnicode(SI1));
-      end else if SI1 = 0 then
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = nvu0)
-      else begin
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuPosInt);
-        SI2 := PosNvu2Int(POCINumber(@FTinyBuffer[0]), FvnuInfo.Exponent);
-        Assert(SI2 = C1, InttoUnicode(SI1));
-      end;
-    end else begin
-      if C1 < 0 then begin
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuNegCurr);
-          C2 := NegNvu2Curr(POCINumber(@FTinyBuffer[0]), FvnuInfo, c1);
-        if C2 <> C1 then begin
-          C2 := 0;
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuNegCurr);
-          C2 := NegNvu2Curr(POCINumber(@FTinyBuffer[0]), FvnuInfo, c1);
-          Assert(C2 = C1, 'Expect '+CurrtoUnicode(C1)+' was '+CurrtoUnicode(C2));
-        end;
-      end else if C1 = 0 then
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = nvu0)
-      else begin
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuPosCurr);
-        C2 := PosNvu2Curr(POCINumber(@FTinyBuffer[0]), FvnuInfo, C1);
-        if C2 <> C1 then begin
-          C2 := 0;
-          C2 := PosNvu2Curr(POCINumber(@FTinyBuffer[0]), FvnuInfo, C1);
-          Assert(C2 = C1, 'Expect '+CurrtoUnicode(C1)+' was '+CurrtoUnicode(C2));
-        end;
-      end;
-    end;
-  end;
-//*)begin
   //init
   if JSONWriter.Expand then
     JSONWriter.Add('{');
@@ -365,10 +299,10 @@ begin
                             vnuPosInt:  JSONWriter.AddQ(PosNvu2Int(POCINumber(P), FvnuInfo));
                             vnuNegInt:  JSONWriter.Add(NegNvu2Int(POCINumber(P), FvnuInfo));
                             else begin
-                              Status:= FPlainDriver.OCINumberToReal(FErrorHandle, POCINumber(P), SizeOf(Double), @FTinyBuffer[0]);
-                              if Status = OCI_Success
+                              FStatus:= FPlainDriver.OCINumberToReal(FErrorHandle, POCINumber(P), SizeOf(Double), @FTinyBuffer[0]);
+                              if FStatus = OCI_Success
                               then JSONWriter.AddDouble(PDouble(@FTinyBuffer[0])^)
-                              else CheckOracleError(FPLainDriver, FErrorHandle, Status, lcOther, 'OCINumberToReal', ConSettings);
+                              else CheckOracleError(FPLainDriver, FErrorHandle, FStatus, lcOther, 'OCINumberToReal', ConSettings);
                             end;
                           end;
         { the charter types we support }
@@ -2043,6 +1977,7 @@ var
   //CanBindInt64: Boolean;
   paramdpp: Pointer;
   RowSize: Integer;
+  defn_or_bindpp:     POCIHandle;
   function AttributeToString(var P: PAnsiChar; Len: Integer): string;
   begin
     if P <> nil then
@@ -2228,7 +2163,7 @@ begin
       end
     else
       Inc(P, CurrentVar^.value_sz*Cardinal(FIteration));
-    FStatus := FPlainDriver.OCIDefineByPos(FStmtHandle, CurrentVar^.defn_or_bindpp,
+    FStatus := FPlainDriver.OCIDefineByPos(FStmtHandle, defn_or_bindpp,
       FErrorHandle, I, CurrentVar^.valuep, CurrentVar^.value_sz, CurrentVar^.dty,
       CurrentVar^.indp, CurrentVar^.alenp, nil, OCI_DEFAULT);
     if FStatus <> OCI_SUCCESS then
@@ -2236,7 +2171,7 @@ begin
     if CurrentVar^.dty=SQLT_NTY then
       //second step: http://www.csee.umbc.edu/portal/help/oracle8/server.815/a67846/obj_bind.htm
       CheckOracleError(FPlainDriver, FErrorHandle,
-        FPlainDriver.OCIDefineObject(CurrentVar^.defn_or_bindpp, FErrorHandle, CurrentVar^._Obj.tdo,
+        FPlainDriver.OCIDefineObject(defn_or_bindpp, FErrorHandle, CurrentVar^._Obj.tdo,
            @CurrentVar^._Obj.obj_value, nil, nil, nil),
         lcExecute, 'OCIDefineObject', ConSettings);
   end;
