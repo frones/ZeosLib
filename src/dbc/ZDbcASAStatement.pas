@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZDbcIntfs, ZDbcStatement, ZDbcASA, ZDbcASAUtils,
+  ZDbcIntfs, ZDbcStatement, ZDbcASA, ZDbcASAUtils, ZPlainASADriver,
   ZCompatibility, ZDbcLogging, ZVariant;
 
 type
@@ -66,6 +66,7 @@ type
     FCursorOptions: SmallInt;
     FStmtNum: SmallInt;
     FASAConnection: IZASAConnection;
+    FPlainDriver: IZASAPlainDriver;
     FParamSQLData: IZASASQLDA;
     FSQLData: IZASASQLDA;
     FMoreResults: Boolean;
@@ -98,6 +99,7 @@ type
     FCachedBlob: boolean;
     FStmtNum: SmallInt;
     FASAConnection: IZASAConnection;
+    FPlainDriver: IZASAPlainDriver;
     FParamSQLData: IZASASQLDA;
     FSQLData: IZASASQLDA;
     FMoreResults: Boolean;
@@ -139,10 +141,11 @@ begin
   inherited Create(Connection, SQL, Info);
 
   FASAConnection := Connection as IZASAConnection;
+  FPlainDriver := FASAConnection.GetIZPlainDriver as IZASAPlainDriver;
   FetchSize := BlockSize;
   ResultSetType := rtScrollSensitive;
   CursorName := IntToRaw(NativeUInt(FASAConnection.GetDBHandle))+IntToRaw(FStatementId);
-  FParamSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
+  FParamSQLData := TZASASQLDA.Create(FPlainDriver,
     FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings);
 end;
 
@@ -168,15 +171,15 @@ function TZASAPreparedStatement.OpenResultSet: IZResultSet;
 begin
   With FASAConnection do
   begin
-    ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, ConSettings, ASQL);
-    FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
+    ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, ConSettings, ASQL);
+    FSQLData := TZASASQLDA.Create(FPlainDriver,
       FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings);
-    DescribeCursor( FASAConnection, FSQLData, CursorName, ASQL);
+    DescribeCursor(FASAConnection, FSQLData, CursorName, ASQL);
     if ResultSetConcurrency = rcUpdatable then
-      Result := GetCachedResultSet( SQL, Self,
-        {Result :=  TZASACachedResultSet}TZASANativeResultSet.Create( Self, SQL, FStmtNum, CursorName, FSQLData, CachedLob))
+      Result := GetCachedResultSet(SQL, Self,
+        {Result :=  TZASACachedResultSet}TZASANativeResultSet.Create(Self, SQL, FStmtNum, CursorName, FSQLData, CachedLob))
     else
-      Result := TZASANativeResultSet.Create( Self, SQL, FStmtNum, CursorName, FSQLData, CachedLob);
+      Result := TZASANativeResultSet.Create(Self, SQL, FStmtNum, CursorName, FSQLData, CachedLob);
     FOpenResultSet := Pointer(Result);
   end;
 end;
@@ -186,17 +189,17 @@ begin
   with FASAConnection do
     if FParamSQLData.GetData^.sqld > FParamSQLData.GetData^.sqln then
     begin
-      FParamSQLData.AllocateSQLDA( FParamSQLData.GetData^.sqld);
-      GetPlainDriver.db_describe( GetDBHandle, nil, @FStmtNum,
+      FParamSQLData.AllocateSQLDA(FParamSQLData.GetData^.sqld);
+      GetPlainDriver.db_describe(GetDBHandle, nil, @FStmtNum,
         FParamSQLData.GetData, SQL_DESCRIBE_INPUT);
-      ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, GetConSettings, ASQL);
+      ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, GetConSettings, ASQL);
       {sade: initfields doesnt't help > ASA describes !paramcount! only}
     end;
 end;
 
 procedure TZASAPreparedStatement.BindInParameters;
 begin
-  PrepareParameters( ClientVarManager, InParamValues, InParamTypes,
+  PrepareParameters(ClientVarManager, InParamValues, InParamTypes,
     InParamCount, FParamSQLData, FASAConnection.GetConSettings);
 end;
 
@@ -214,7 +217,7 @@ begin
     begin
       if FStmtNum <> 0 then
       begin
-        GetPlainDriver.db_dropstmt( GetDBHandle, nil, nil, @FStmtNum);
+        GetPlainDriver.db_dropstmt(GetDBHandle, nil, nil, @FStmtNum);
         FStmtNum := 0;
       end;
       if ResultSetConcurrency = rcUpdatable then
@@ -223,10 +226,10 @@ begin
         FCursorOptions := CUR_OPEN_DECLARE + CUR_READONLY;
       if ResultSetType = rtScrollInsensitive then
         FCursorOptions := FCursorOptions + CUR_INSENSITIVE;
-      GetPlainDriver.db_prepare_describe( GetDBHandle, nil, @FStmtNum, Pointer(ASQL),
+      GetPlainDriver.db_prepare_describe(GetDBHandle, nil, @FStmtNum, Pointer(ASQL),
         FParamSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
           SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
-      ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, GetConSettings, ASQL);
+      ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, GetConSettings, ASQL);
       FMoreResults := GetDBHandle.sqlerrd[2] = 0; //we need to know if more ResultSets can be retrieved
     end;
     inherited Prepare
@@ -237,7 +240,7 @@ procedure TZASAPreparedStatement.Unprepare;
 begin
   FSQLData := nil;
   if not Assigned(FOpenResultSet) then //on closing the RS we exec db_close
-    FASAConnection.GetPlainDriver.db_close( FASAConnection.GetDBHandle, Pointer(CursorName));
+    FASAConnection.GetPlainDriver.db_close(FASAConnection.GetDBHandle, Pointer(CursorName));
   inherited Unprepare;
 end;
 
@@ -246,7 +249,7 @@ begin
   inherited Close;
   if FStmtNum <> 0 then
   begin
-    FASAConnection.GetPlainDriver.db_dropstmt( FASAConnection.GetDBHandle, nil, nil, @FStmtNum);
+    FASAConnection.GetPlainDriver.db_dropstmt(FASAConnection.GetDBHandle, nil, nil, @FStmtNum);
     FStmtNum := 0;
   end;
   FParamSQLData := nil;
@@ -256,8 +259,8 @@ procedure TZASAPreparedStatement.Cancel;
 begin
   with FASAConnection do
   begin
-    GetPlainDriver.db_cancel_request( GetDBHandle);
-    ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, ConSettings, ASQL);
+    FPlainDriver.db_cancel_request(GetDBHandle);
+    ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, ConSettings, ASQL);
   end;
 end;
 
@@ -269,11 +272,11 @@ begin
     with FASAConnection do
     begin
       GetPlainDriver.db_resume(GetDBHandle, Pointer(CursorName));
-      ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, ConSettings);
+      ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, ConSettings);
       if GetDBHandle.sqlcode = SQLE_PROCEDURE_COMPLETE then
         Result := false
       else
-        DescribeCursor( FASAConnection, FSQLData, CursorName, '');
+        DescribeCursor(FASAConnection, FSQLData, CursorName, '');
     end;
   end;
 end;
@@ -368,9 +371,9 @@ begin
   BindInParameters;
   with FASAConnection do
   begin
-    GetPlainDriver.db_execute_into( GetDBHandle, nil, nil, @FStmtNum,
+    GetPlainDriver.db_execute_into(GetDBHandle, nil, nil, @FStmtNum,
       FParamSQLData.GetData, nil);
-    ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, ConSettings,
+    ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, ConSettings,
       ASQL, SQLE_TOO_MANY_RECORDS);
     Result := GetDBHandle.sqlErrd[2];
     LastUpdateCount := Result;
@@ -397,14 +400,15 @@ begin
   inherited Create(Connection, SQL, Info);
 
   FASAConnection := Connection as IZASAConnection;
+  FPlainDriver := FASAConnection.GetIZPlainDriver as IZASAPlainDriver;
   FetchSize := BlockSize;
   ResultSetConcurrency := rcUpdatable;
   ResultSetType := rtScrollSensitive;
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
   CursorName := IntToRaw(NativeUInt(FASAConnection.GetDBHandle))+IntToRaw(FStatementId);
-  FParamSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
+  FParamSQLData := TZASASQLDA.Create(FPlainDriver,
     FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings);
-  FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
+  FSQLData := TZASASQLDA.Create(FPlainDriver,
     FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings);
 end;
 
@@ -424,7 +428,7 @@ begin
   end;
   if FStmtNum <> 0 then
   begin
-    FASAConnection.GetPlainDriver.db_dropstmt( FASAConnection.GetDBHandle, nil,
+    FASAConnection.GetPlainDriver.db_dropstmt(FASAConnection.GetDBHandle, nil,
      nil, @FStmtNum);
     FStmtNum := 0;
   end;
@@ -435,8 +439,8 @@ procedure TZASACallableStatement.Cancel;
 begin
   with FASAConnection do
   begin
-    GetPlainDriver.db_cancel_request( GetDBHandle);
-    ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, ConSettings, ASQL);
+    FPlainDriver.db_cancel_request(GetDBHandle);
+    ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, ConSettings, ASQL);
   end;
 end;
 
@@ -448,11 +452,11 @@ begin
     with FASAConnection do
     begin
       GetPlainDriver.db_resume(GetDBHandle, PAnsiChar(CursorName));
-      ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, ConSettings);
+      ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, ConSettings);
       if GetDBHandle.sqlcode = SQLE_PROCEDURE_COMPLETE then
         Result := false
       else
-        DescribeCursor( FASAConnection, FSQLData, CursorName, '');
+        DescribeCursor(FASAConnection, FSQLData, CursorName, '');
     end;
   end;
 end;
@@ -487,11 +491,11 @@ var
 begin
   TrimInParameters;
   ProcSQL := GetProcedureSQL;
-  if not FPrepared or ( ASQL <> ProcSQL) then
+  if not FPrepared or (ASQL <> ProcSQL) then
   begin
     Close;
     ASQL := ProcSQL;
-    ASAPrepare( FASAConnection, FSQLData, FParamSQLData, ASQL, @FStmtNum,
+    ASAPrepare(FASAConnection, FSQLData, FParamSQLData, ASQL, @FStmtNum,
       FPrepared, FMoreResults);
   end;
   Result := ExecutePrepared;
@@ -511,8 +515,8 @@ begin
     Result := Execute(ASQL)
   else
   begin
-    if FMoreResults or ( ( FSQLData.GetData.sqld > 0) and
-      ( FSQLData.GetData.sqlVar[0].sqlInd^ and DT_PROCEDURE_OUT = 0)) then
+    if FMoreResults or ((FSQLData.GetData.sqld > 0) and
+      (FSQLData.GetData.sqlVar[0].sqlInd^ and DT_PROCEDURE_OUT = 0)) then
     begin
       LastResultSet := ExecuteQueryPrepared;
       Result := true;
@@ -537,11 +541,11 @@ var
 begin
   TrimInParameters;
   ProcSQL := GetProcedureSQL;
-  if not FPrepared or ( ASQL <> ProcSQL) then
+  if not FPrepared or (ASQL <> ProcSQL) then
   begin
     Close;
     ASQL := ProcSQL;
-    ASAPrepare( FASAConnection, FSQLData, FParamSQLData, ASQL, @FStmtNum,
+    ASAPrepare(FASAConnection, FSQLData, FParamSQLData, ASQL, @FStmtNum,
       FPrepared, FMoreResults);
   end;
   Result := ExecuteQueryPrepared;
@@ -565,7 +569,7 @@ begin
   begin
     with FASAConnection do
     begin
-      PrepareParameters( ClientVarManager, InParamValues, InParamTypes,
+      PrepareParameters(ClientVarManager, InParamValues, InParamTypes,
         InParamCount, FParamSQLData, FASAConnection.GetConSettings);
       if ResultSetConcurrency = rcUpdatable then
         CursorOptions := CUR_OPEN_DECLARE + CUR_UPDATE
@@ -575,18 +579,18 @@ begin
         CursorOptions := CursorOptions + CUR_INSENSITIVE;
       GetPlainDriver.db_open(GetDBHandle, Pointer(FCursorName), nil, @FStmtNum,
         FParamSQLData.GetData, FetchSize, 0, CursorOptions);
-      ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, ConSettings, ASQL);
+      ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, ConSettings, ASQL);
       Closed := false;
       try
         if FMoreResults then
-          DescribeCursor( FASAConnection, FSQLData, FCursorName, ASQL);
+          DescribeCursor(FASAConnection, FSQLData, FCursorName, ASQL);
 
         LastUpdateCount := -1;
-        Result := GetCachedResultSet( Self.SQL, Self,
-          TZASANativeResultSet.Create( Self, Self.SQL, FStmtNum, FCursorName, FSQLData, FCachedBlob));
+        Result := GetCachedResultSet(Self.SQL, Self,
+          TZASANativeResultSet.Create(Self, Self.SQL, FStmtNum, FCursorName, FSQLData, FCachedBlob));
 
         { Logging SQL Command }
-        DriverManager.LogMessage( lcExecute, ConSettings^.Protocol, ASQL);
+        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
       except
         on E: Exception do
         begin
@@ -616,11 +620,11 @@ var
 begin
   TrimInParameters;
   ProcSQL := GetProcedureSQL;
-  if not FPrepared or ( ASQL <> ProcSQL) then
+  if not FPrepared or (ASQL <> ProcSQL) then
   begin
     Close;
     ASQL := ProcSQL;
-    ASAPrepare( FASAConnection, FSQLData, FParamSQLData, ASQL, @FStmtNum,
+    ASAPrepare(FASAConnection, FSQLData, FParamSQLData, ASQL, @FStmtNum,
       FPrepared, FMoreResults);
   end;
   Result := ExecuteUpdatePrepared;
@@ -644,11 +648,11 @@ begin
   begin
     with FASAConnection do
     begin
-      PrepareParameters( ClientVarManager, InParamValues, InParamTypes,
+      PrepareParameters(ClientVarManager, InParamValues, InParamTypes,
         InParamCount, FParamSQLData, FASAConnection.GetConSettings);
-      GetPlainDriver.db_execute_into( GetDBHandle, nil, nil, @FStmtNum,
+      GetPlainDriver.db_execute_into(GetDBHandle, nil, nil, @FStmtNum,
         FParamSQLData.GetData, FSQLData.GetData);
-      ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, ConSettings, ASQL);
+      ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, ConSettings, ASQL);
 
       Result := GetDBHandle.sqlErrd[2];
       LastUpdateCount := Result;
@@ -685,7 +689,7 @@ function TZASACallableStatement.GetProcedureSql: RawByteString;
 var
   InParams: RawByteString;
 begin
-  InParams := GenerateParamsStr( High( InParamValues) + 1);
+  InParams := GenerateParamsStr(High(InParamValues) + 1);
   if InParams <> '' then
     InParams := '(' + InParams + ')';
   Result := 'call ' + ConSettings^.ConvFuncs.ZStringToRaw(SQL,

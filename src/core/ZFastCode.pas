@@ -4165,7 +4165,7 @@ begin
   while Ord(P^) = Ord(' ') do
     Inc(P);
   if Ord(P^) in [Ord('+'), Ord('-')] then begin
-    Flags := Flags or (Ord(S^) - Ord('+')); {Set/Reset Neg}
+    Flags := Flags or (Ord(P^) - Ord('+')); {Set/Reset Neg}
     inc(P);
   end;
   if Ord(P^) = Ord('$') then begin

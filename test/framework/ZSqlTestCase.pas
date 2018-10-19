@@ -91,7 +91,7 @@ type
   // Protocol type is determined by StartsWith(Protocol, ProtocolPrefixes[drv]),
   // so one prefix means exactly one protocol type!
   TProtocolType = (protUnknown, protMySQL, protPostgre, protSQLite, protFirebird, protInterbase,
-    protOracle, protASA, protFreeTDS, protMSSQL, protOleDB, protADO, protSyBase,
+    protOracle, protASA, protFreeTDS, protMSSQL, protOleDB, protADO, protSybase,
     protODBC);
 
 const

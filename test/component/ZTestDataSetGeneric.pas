@@ -97,6 +97,7 @@ type
     procedure TestDateTimeFilterExpression;
     procedure TestTimeLocateExpression;
     procedure TestDateTimeLocateExpression;
+    procedure TestInsertNumbers;
     procedure TestDoubleFloatParams;
     procedure TestClobEmptyString;
     procedure TestLobModes;
@@ -2276,6 +2277,106 @@ begin
   end;
 end;
 
+// Test if fields got the right types - the simplest method is to try
+// assigning boundary values (range checking must be enabled)
+procedure TZGenericTestDataSet.TestInsertNumbers;
+var
+  Query: TZQuery;
+  i: Integer;
+  Msg: string;
+
+  procedure TestSetValue(Value: Integer); overload;
+  begin
+    Msg := Format('set value "%d" to field "%s"', [Value, Query.Fields[i].FieldName]);
+    Query.Edit;
+    Query.Fields[i].AsInteger := Value;
+    // This has nothing to do with the test - Sybase and MSSQL just don't allow
+    // setting bit fields to null.
+    if ProtocolType in [protFreeTDS, protSybase]
+    then Query.FieldByName('stBoolean').AsBoolean := true;
+    Query.Post;
+    CheckEquals(Value, Query.Fields[i].AsInteger);
+  end;
+
+  procedure TestSetValue(Value: Int64); overload;
+  var ActValue: Int64;
+  begin
+    Msg := Format('set value "%d" to field "%s"', [Value, Query.Fields[i].FieldName]);
+    Query.Edit;
+    Query.Fields[i].{$IFDEF TFIELD_HAS_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF} := Value;
+    // This has nothing to do with the test - Sybase and MSSQL just don't allow
+    // setting bit fields to null.
+    if ProtocolType in [protFreeTDS, protSybase]
+    then Query.FieldByName('stBoolean').AsBoolean := true;
+    Query.Post;
+    // D7 calls _VarToInteger instead of _VarToInt64 if used directly in CheckEquals so we need temp variable
+    ActValue := Query.Fields[i].{$IFDEF TFIELD_HAS_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF};
+    CheckEquals(Value, ActValue);
+  end;
+
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'SELECT * FROM high_load';
+    Query.Open;
+
+    try
+      for i := 0 to Query.Fields.Count - 1 do
+        case Query.Fields[i].DataType of
+          {$IFDEF WITH_FTSHORTINT}
+          ftShortint:
+            begin
+              TestSetValue(Low(Shortint));
+              TestSetValue(High(Shortint));
+            end;
+          {$ENDIF}
+          {$IFDEF WITH_FTBYTE}
+          ftByte:
+            begin
+              TestSetValue(Low(Byte));
+              TestSetValue(High(Byte));
+            end;
+          {$ENDIF}
+          ftSmallint:
+            begin
+              // If RTL has no 1-byte field types, they will be mapped to SmallInt
+              // so this test will fail on such fields.
+              {$IF DEFINED(WITH_FTSHORTINT) AND DEFINED(WITH_FTBYTE)}
+              TestSetValue(Low(SmallInt));
+              TestSetValue(High(SmallInt));
+              {$IFEND}
+            end;
+          ftWord:
+            begin
+              TestSetValue(Low(Word));
+              TestSetValue(High(Word));
+            end;
+          ftInteger:
+            begin
+              TestSetValue(Low(Integer));
+              TestSetValue(High(Integer));
+            end;
+          {$IFDEF WITH_FTLONGWORD}
+          ftLongWord:
+            begin
+              TestSetValue(Low(LongWord));
+              TestSetValue(High(LongWord));
+            end;
+          {$ENDIF}
+          ftLargeint:
+            begin
+              TestSetValue(Low(Int64));
+              TestSetValue(High(Int64));
+            end;
+        end;
+    except on E: Exception do
+      Fail(Msg + ' raised exception ' + E.Message);
+    end;
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
 { TZGenericTestDataSetMBCs }
 
 procedure TZGenericTestDataSetMBCs.TestVeryLargeBlobs;
@@ -2468,4 +2569,3 @@ initialization
   RegisterTest('component',TZGenericTestDataSet.Suite);
   RegisterTest('component',TZGenericTestDataSetMBCs.Suite);
 end.
-

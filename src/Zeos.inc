@@ -83,7 +83,6 @@
   // Defines that go for ALL still supported Delphi's   (usually means they were under ifndef fpc)
   {$DEFINE WITH_DBTABLES}                 //Have the BDE DBTables Unit
   {$DEFINE WITH_DBCONSTS}                 //Delphi DBCONSTS, FPC DBCONST
-  {$DEFINE WITH_ASLARGEINT}               // tlargeint aslargeint. Fixed 2.6.0+ or 2.6.2+ probably
   {$DEFINE WITH_ASCURRENCY}               // Has AsCurrency.
   {$DEFINE WITH_ASVARIANT}                // Has AsVariant
   {$DEFINE WITH_IPROVIDER}                // Turn on IProviderSupport interface
@@ -146,6 +145,7 @@
           {$DEFINE WITH_PWIDECHAR_TOWIDESTRING}       //Able to pass pwidechar to a widestring parameter
           {$DEFINE WITH_IPROVIDERWIDE}                //IProvider -W widestring using interface
           {$DEFINE WITH_MM_CAN_REALLOC_EXTERNAL_MEM}  //sinc FastMM4 Memorymanager IDE can FreeMem/AllocMem/ReallocMem for Pointers which have been allocated in a different object
+          {$DEFINE WITH_ASLARGEINT}                   // tlargeint aslargeint. Fixed 2.6.0+ or 2.6.2+ probably
           {$DEFINE WITH_WIDEMEMO}                     //Have ftWideMemo
           {$DEFINE WITH_FTWIDESTRING}                 //Have ftWideString
           {$DEFINE WITH_FTFIXEDWIDECHAR}              //Have ftFixedWideChar

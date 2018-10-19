@@ -1994,7 +1994,10 @@ end;
 function TZAbstractCachedResultSet.MoveAbsolute(Row: Integer): Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
+  // 2018-09-16 commented out because it seems to be current policy for other
+  // result sets to not raise an exception if the result set is closed but simply
+  // return false here. What is our specification?
+  //CheckClosed;
   if (ResultSetType = rtForwardOnly) and (Row < RowNo) then
     RaiseForwardOnlyException;
 {$ENDIF}
@@ -2413,15 +2416,9 @@ var
   I: Integer;
   ColumnInfo: TZColumnInfo;
   MetaData : IZResultSetMetaData;
-  RequiresLoading: Boolean;
 begin
   ColumnsInfo.Clear;
   MetaData := FResultSet.GetMetadata;
-  RequiresLoading := false;
-  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF}
-  do RequiresLoading := RequiresLoading or (MetaData.GetColumnType(I) = stUnknown);
-  if RequiresLoading
-  then MetaData.IsAutoIncrement(FirstDbcIndex);
   for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
   begin
     ColumnInfo := TZColumnInfo.Create;
@@ -2594,7 +2591,7 @@ function TZCachedResultSet.MoveAbsolute(Row: Integer): Boolean;
 begin
   { Checks for maximum row. }
   Result := False;
-  if (MaxRows > 0) and (Row > MaxRows) then
+  if ((MaxRows > 0) and (Row > MaxRows)) then
     Exit;
 
   { Processes negative rows }
