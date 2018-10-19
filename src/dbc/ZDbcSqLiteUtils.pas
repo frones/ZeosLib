@@ -67,8 +67,8 @@ uses
   @result the SQLType field type value
 }
 function ConvertSQLiteTypeToSQLType(var TypeName: RawByteString;
-  UndefinedVarcharAsStringLength: Integer; var Precision: Integer;
-  var Decimals: Integer; CtrlsCPType: TZControlsCodePage): TZSQLType;
+  UndefinedVarcharAsStringLength: Integer; out Precision: Integer;
+  out Decimals: Integer; CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -105,8 +105,8 @@ uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   @result the SQLType field type value
 }
 function ConvertSQLiteTypeToSQLType(var TypeName: RawByteString;
-  UndefinedVarcharAsStringLength: Integer; var Precision: Integer;
-  var Decimals: Integer; CtrlsCPType: TZControlsCodePage): TZSQLType;
+  UndefinedVarcharAsStringLength: Integer; out Precision: Integer;
+  out Decimals: Integer; CtrlsCPType: TZControlsCodePage): TZSQLType;
 var
   pBL, pBR, pC: Integer;
   P: PAnsiChar;

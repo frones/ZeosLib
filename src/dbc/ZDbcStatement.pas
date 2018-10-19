@@ -58,6 +58,7 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant, ZDbcLogging, ZClasses,
   ZDbcUtils;
 
@@ -516,7 +517,7 @@ type
     procedure BindNull(Index: Integer; SQLType: TZSQLType); override;
     procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); override;
     procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); override;
-  public //value setter procs
+  public //value getter procs
     procedure GetBoolean(Index: Integer; out Result: Boolean); override;
     procedure GetOrdinal(Index: Integer; out Result: Int64); override;
     procedure GetOrdinal(Index: Integer; out Result: UInt64); override;
@@ -6158,7 +6159,7 @@ function TZAbstractCallableStatement2.GetBigDecimal(
   ParameterIndex: Integer): Extended;
 var D: Double;
 begin
-  GetDouble(ParameterIndex, D);
+  GetDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, D);
   Result := D;
 end;
 

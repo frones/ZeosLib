@@ -306,14 +306,18 @@ begin
   case Value of
     stBoolean:
       Result := ftBoolean;
-    stByte, stShort, stSmall:
+    stByte:
+      Result := {$IFDEF WITH_FTBYTE}ftByte{$ELSE}ftSmallInt{$ENDIF}; // ! dangerous - field will get a type with greater size
+    stShort:
+      Result := {$IFDEF WITH_FTSHORTINT}ftShortint{$ELSE}ftSmallInt{$ENDIF}; // !
+    stSmall:
       Result := ftSmallInt;
     stWord:
       Result := ftWord;
     stInteger:
       Result := ftInteger;
     stLongWord:
-      Result := {$IFDEF WITH_FTLONGWORD}ftLongWord{$ELSE}ftLargeInt{$ENDIF};
+      Result := {$IFDEF WITH_FTLONGWORD}ftLongWord{$ELSE}ftLargeInt{$ENDIF}; // !
     stLong, stULong:
       Result := ftLargeInt;
     {$IFDEF WITH_FTSINGLE}
@@ -329,7 +333,8 @@ begin
     {$IFNDEF WITH_FTEXTENDED},stBigDecimal{$ENDIF}:
       Result := ftFloat;
     stCurrency:
-      Result := ftCurrency;
+      //Result := ftCurrency;
+      Result := ftBCD;
     stString:
       Result := ftString;
     stBytes{$IFNDEF WITH_FTGUID}, stGUID{$ENDIF}:
@@ -403,7 +408,7 @@ begin
     {$ENDIF}
     ftLargeInt:
       Result := stLong;
-    ftCurrency:
+    ftCurrency, ftBCD:
       Result := stCurrency;
     ftString:
       Result := stString;
@@ -532,7 +537,7 @@ begin
       {$ENDIF}
       ftLargeInt:
         RowAccessor.SetLong(FieldIndex, ResultSet.GetLong(ColumnIndex));
-      ftCurrency:
+      ftCurrency, ftBCD:
         RowAccessor.SetCurrency(FieldIndex, ResultSet.GetCurrency(ColumnIndex));
       ftString, ftWideString:
         if RowAccessor.IsRaw then
@@ -628,7 +633,7 @@ begin
       {$ENDIF}
       ftLargeInt:
         ResultSet.UpdateLong(ColumnIndex, RowAccessor.GetLong(FieldIndex, WasNull));
-      ftCurrency:
+      ftCurrency, ftBCD:
         ResultSet.UpdateCurrency(ColumnIndex,
           RowAccessor.GetCurrency(FieldIndex, WasNull));
       ftString, ftWidestring:
@@ -785,7 +790,7 @@ begin
           ResultValues[I] := EncodeInteger(ResultSet.GetInt(ColumnIndex));
         {$IFDEF WITH_FTSINGLE}ftSingle,{$ENDIF}
         ftFloat,
-        ftCurrency
+        ftCurrency, ftBCD
         {$IFDEF WITH_FTEXTENDED},ftExtended{$ENDIF}:
           ResultValues[I] := EncodeFloat(ResultSet.GetBigDecimal(ColumnIndex));
         {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
@@ -836,7 +841,7 @@ begin
       ftWord, ftSmallInt, ftInteger, ftAutoInc:
         ResultValues[I] := EncodeInteger(RowAccessor.GetInt(ColumnIndex, WasNull));
       {$IFDEF WITH_FTSINGLE}ftSingle,{$ENDIF}
-      ftFloat, ftCurrency
+      ftFloat, ftCurrency, ftBCD
       {$IFDEF WITH_FTEXTENDED},ftExtended{$ENDIF}:
         ResultValues[I] := EncodeFloat(RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
       {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
@@ -892,8 +897,8 @@ begin
         {$ENDIF}
         {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
           Variables.Values[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
-        ftCurrency:
-          Variables.Values[I] := EncodeFloat(ResultSet.GetBigDecimal(ColumnIndex));
+        ftCurrency, ftBCD:
+          Variables.Values[I] := EncodeFloat(ResultSet.GetCurrency(ColumnIndex));
         ftDate:
           Variables.Values[I] := EncodeDateTime(ResultSet.GetDate(ColumnIndex));
         ftTime:
@@ -1395,18 +1400,11 @@ begin
           else
             Result := ResultSet.GetInt(ColumnIndex) = Field2.AsInteger;
         end;
-      ftCurrency:
-        begin
-          Result := Abs(ResultSet.GetBigDecimal(ColumnIndex)
-            - Field2.{$IFDEF WITH_ASCURRENCY}AsCurrency{$ELSE}AsFloat{$ENDIF})
-            < FLOAT_COMPARE_PRECISION;
-        end;
-      ftDate:
-        Result := ResultSet.GetDate(ColumnIndex) = Field2.AsDateTime;
-      ftTime:
-        Result := ResultSet.GetTime(ColumnIndex) = Field2.AsDateTime;
-      ftDateTime:
-        Result := ResultSet.GetTimestamp(ColumnIndex) = Field2.AsDateTime;
+      ftBCD: Result := ResultSet.GetCurrency(ColumnIndex) = TBCDField(Field2).Value;
+      ftCurrency: Result := (ResultSet.GetDouble(ColumnIndex) - Field2.AsFloat) < FLOAT_COMPARE_PRECISION;
+      ftDate: Result := ResultSet.GetDate(ColumnIndex) = Field2.AsDateTime;
+      ftTime: Result := ResultSet.GetTime(ColumnIndex) = Field2.AsDateTime;
+      ftDateTime: Result := ResultSet.GetTimestamp(ColumnIndex) = Field2.AsDateTime;
       ftWideString:
         Result := ResultSet.GetUnicodeString(ColumnIndex) =
           Field2.{$IFDEF WITH_ASVARIANT}AsVariant{$ELSE}AsWideString{$ENDIF};
@@ -1816,10 +1814,16 @@ begin
       {$ENDIF}
       ftFloat:
         Statement.SetDouble(Index, Param.AsFloat);
-      {$IFDEF WITH_FTEXTENDED}
-      ftExtended:
-        Statement.SetBigDecimal(Index, Param.AsFloat);
+      {$IFDEF BCD_TEST}
+      ftFmtBCD:
+        Statement.SetBigDecimal(Index, Param.AsFMTBCD);
+      {$ELSE}
+        {$IFDEF WITH_FTEXTENDED}
+        ftExtended:
+          Statement.SetBigDecimal(Index, Param.AsFloat);
+        {$ENDIF}
       {$ENDIF}
+
       {$IFDEF WITH_FTLONGWORD}
       ftLongWord:
         Statement.SetInt(Index, Integer(Param.AsLongWord));
@@ -1827,7 +1831,7 @@ begin
       ftLargeInt:
         Statement.SetLong(Index, {$IFDEF WITH_PARAM_ASLARGEINT}Param.AsLargeInt{$ELSE}StrToInt64(Param.AsString){$ENDIF});
       ftCurrency, ftBCD:
-        Statement.SetBigDecimal(Index, Param.AsCurrency);
+        Statement.SetCurrency(Index, Param.AsCurrency);
       ftString, ftFixedChar:
         Statement.SetString(Index, Param.AsString);
       {$IFDEF WITH_FTWIDESTRING}
@@ -1908,7 +1912,7 @@ begin
 end;
 
 initialization
-  CommonTokenizer := TZGenericSQLTokenizer.Create;
+  CommonTokenizer := TZGenericSQLTokenizer.Create as IZTokenizer;
 finalization
   CommonTokenizer := nil;
 end.

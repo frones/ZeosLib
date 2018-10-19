@@ -56,6 +56,7 @@ unit ZTestDbcOracle;
 interface
 {$I ZDbc.inc}
 
+{.$DEFINE EGONHUGEIST}
 uses Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZSqlTestCase, ZDbcOracle,
   ZCompatibility;
 
@@ -81,12 +82,17 @@ type
 (*
     procedure TestDefaultValues;
 *)
+    {$IFDEF EGONHUGEIST}
+    procedure TestVNU;
+    {$ENDIF}
   end;
 
 
 implementation
 
-uses ZTestConsts, ZTestCase, ZVariant;
+uses ZTestConsts, ZTestCase, ZVariant, ZSysUtils
+  {$IFDEF EGONHUGEIST}, ZPLainOracleDriver, ZPlainOracleConstants,
+  ZDbcOracleUtils, ZFastCode, ZDbcLogging{$ENDIF};
 
 { TZTestDbcOracleCase }
 
@@ -149,6 +155,268 @@ begin
   Check(Statement.Execute('SELECT * FROM equipment'));
   Statement.Close;
 end;
+{$IFDEF EGONHUGEIST}
+procedure TZTestDbcOracleCase.TestVNU;
+var
+  SI1, SI2: Int64;
+  UI1, UDI2: UInt64;
+  D: Double;
+  C1: Currency absolute Si1;
+  C2: Currency absolute Si2;
+  FPlainDriver: TZOraclePlainDriver;
+  OCINumber: TOCINumber;
+  FvnuInfo: TZvnuInfo;
+  FErrorHandle: POCIError;
+  Status: sword;
+  fTinyBuffer: array[byte] of ansiChar;
+  tmp: RawByteString;
+  function NegNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo; const I2: Int64): Int64;
+  var i: Byte;
+  begin
+    {$R-} {$Q-}
+    { initialize with first negative base-100-digit }
+    Result := -(101 - num[2]); //init
+    { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
+    for i := 3 to vnuInfo.Len do
+      Result := Result * 100 - (101 - num[i]);
+    I := (vnuInfo.Len-1)*2;
+    if I <= vnuInfo.Precision then
+      Result := Result * sPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+    if Result <> I2 then
+      Result := 0;
+  end;
+  function PosNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo; const I2: UInt64): UInt64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+  var i: Byte;
+  begin
+    {$R-} {$Q-}
+    { initialize with first positive base-100-digit }
+    Result := (num[2] - 1);
+    { skip len, exponent and first base-100-digit -> start with 3}
+    for i := 3 to vnuInfo.Len do
+      Result := Result * 100 + Byte(num[i] - 1);
+    I := (vnuInfo.Len-1)*2;
+    if I <= vnuInfo.Precision then
+      {$IFNDEF WITH_UINT64_C1118_ERROR}
+      Result := Result * uPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
+      {$ELSE}
+      Result := Result * UInt64(sPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)]);
+      {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+  end;
+  function PosNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo; const C: Currency): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+  var I64: Int64 absolute Result;
+    i: ShortInt;
+  begin
+    {$R-} {$Q-}
+    { initialize with first positive base-100-digit }
+    I64 := (num[2] - 1);
+    { skip len, exponent and first base-100-digit -> start with 3}
+    for i := 3 to num[0] do
+      i64 := i64 * 100 + Byte(num[i] - 1);
+    I64 := I64 * sCurrScaleFaktor[4-(vnuInfo.Scale+Ord(vnuInfo.LastBase100DigitMod10Was0))];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+    if Result <> c  then
+      Result := 0;
+  end;
+  function NegNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo; const C: Currency): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+  var I64: Int64 absolute Result;
+    i: ShortInt;
+  begin
+    {$R-} {$Q-}
+    i64 := -(101 - num[2]); //init
+    { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
+    for i := 3 to vnuInfo.Len do
+      i64 := i64 * 100 - (101 - num[i]);
+    I64 := I64 * sCurrScaleFaktor[4-(vnuInfo.Scale+Ord(vnuInfo.LastBase100DigitMod10Was0))];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+    if Result <> c  then
+      Result := 0;
+  end;
+  procedure Curr2Nvu2(num: POCINumber; const C: Currency; num2: TOCINumber);
+  var
+    d: ShortInt;
+    l: byte;
+    I: Int64 absolute C;
+    Exp: Byte;
+  begin
+    { a currency allways fits into a 38 precision oracle number }
+    {$R-} {$Q-}
+    l := 0;
+    Exp := 0 ;
+    if C < 0 then begin
+      while i <> 0 do begin
+        d := I mod 100;
+      //  i := i div 100;
+      end;
+      if (Exp = 0) and (d = 0) then
+    end else begin
+
+    end;
+  end;
+function PosNVUCurr2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;
+var i: Byte;
+  PStart: PAnsiChar;
+begin
+  //FillChar(Buf^, 200, #0);
+  PStart := Buf;
+  //fill trailing zero
+  case (vnuInfo.Scale-vnuInfo.Precision) of
+    3:  begin
+          PWord(Buf)^ := 12336;
+          PWord(Buf+2)^ := 12336;
+          Inc(Buf,4);
+        end;
+    2:  begin
+          PByte(Buf)^ := Ord('0');
+          PWord(Buf+2)^ := 12336;
+          Inc(Buf,3);
+        end;
+    1:  begin
+          PWord(Buf)^ := 12336;
+          Inc(Buf,2);
+        end;
+    0: begin
+          PByte(Buf+1)^ := Ord('0');
+          Inc(Buf);
+       end;
+  end;
+  if vnuInfo.FirstBase100DigitDiv10Was0
+  then PByte(Buf)^ := Ord('0')+Byte(num[2] - 1)
+  else PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(num[2] - 1)]);
+  Inc(Buf, 1+Ord(vnuInfo.FirstBase100DigitDiv10Was0));
+  for I := 3 to vnuInfo.Len do begin
+    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(num[i] - 1)]);
+    Inc(Buf,2);
+  end;
+  I := Max(vnuInfo.Precision, vnuInfo.Scale)+Ord(vnuInfo.LastBase100DigitMod10Was0);
+  {move the scaled digits one positon to right }
+  PCardinal(Buf+1-i)^ := PCardinal(Buf-i)^;
+  PByte(Buf-i)^ := Ord('.');
+  if not (vnuInfo.LastBase100DigitMod10Was0 and (PByte(Buf-1)^ <> Ord('.'))) then
+    Inc(Buf);
+  Result := Buf - PStart{sign and decimal digit};
+end;
+  function NegNVUCurr2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;
+  var i: Byte;
+    PStart: PAnsiChar;
+  begin
+    FillChar(Buf^, 200, #0);
+    PStart := Buf;
+    PByte(Buf)^ := Ord('-');
+    //fill trailing zero's of required
+    case (vnuInfo.Scale-vnuInfo.Precision) of
+      3:  begin
+            PWord(Buf+1)^ := 12336;
+            PWord(Buf+3)^ := 12336;
+            Inc(Buf,5);
+          end;
+      2:  begin
+            PByte(Buf+1)^ := Ord('0');
+            PWord(Buf+3)^ := 12336;
+            Inc(Buf,4);
+          end;
+      1:  begin
+            PWord(Buf+1)^ := 12336;
+            Inc(Buf,3);
+          end;
+      0: begin
+            PByte(Buf+1)^ := Ord('0');
+            Inc(Buf,2);
+         end;
+      else Inc(Buf);
+    end;
+    if vnuInfo.FirstBase100DigitDiv10Was0 then begin
+      PByte(Buf)^ := Ord('0')+Byte(101 - num[2]);
+      Inc(Buf);
+    end else begin
+      PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(101 - num[2])]);
+      Inc(Buf,2);
+    end;
+    for I := 3 to vnuInfo.Len do begin
+      PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(101 - num[i])]);
+      Inc(Buf,2);
+    end;
+    I := Max(vnuInfo.Precision, vnuInfo.Scale)+Ord(vnuInfo.LastBase100DigitMod10Was0);
+    {move the scaled digits one positon to right }
+    PCardinal(Buf+1-i)^ := PCardinal(Buf-i)^;
+    PByte(Buf-i)^ := Ord('.');
+    if not (vnuInfo.LastBase100DigitMod10Was0 and (PByte(Buf-1)^ <> Ord('.'))) then
+      Inc(Buf);
+    Result := Buf - PStart{sign and decimal digit};
+  end;
+begin
+  Connection.Open;
+  FErrorHandle := (Connection as IZOracleConnection).GetErrorHandle;
+  FplainDriver := TZOraclePlainDriver(Connection.GetIZPlainDriver.GetInstance);
+  for SI1 := -1001{-99900} to High(Int64) do begin
+    CheckOracleError(FPLainDriver, FErrorHandle,
+      FPlainDriver.OCINumberFromInt(FErrorHandle, @SI1,
+        SizeOf(INT64),OCI_NUMBER_SIGNED, POCINumber(@OCINumber)),
+        lcOther, '', Connection.GetConSettings);
+    if SI1 < 0 then begin
+      Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = vnuNegInt);
+        SI2 := NegNvu2Int(POCINumber(@OCINumber), FvnuInfo, SI1);
+        ZSetString(PAnsiChar(@FTinyBuffer[0]), NegOrdNVU2Raw(POCINumber(@OCINumber),FvnuInfo, @FTinyBuffer[0]), tmp);
+        if tmp <> intToRaw(Si2) then begin
+          NegOrdNVU2Raw(POCINumber(@OCINumber),FvnuInfo, @FTinyBuffer[0]);
+          Assert(tmp = intToRaw(Si2), InttoUnicode(SI1));
+        end;
+      if Si1 <> si2 then begin
+        Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = vnuNegInt);
+        SI2 := NegNvu2Int(POCINumber(@OCINumber), FvnuInfo, SI1);
+        Assert(Si2 = SI1, InttoUnicode(SI1));
+      end;
+    end else if SI1 = 0 then
+      Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = nvu0)
+    else begin
+        Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = vnuPosInt);
+        SI2 := PosNvu2Int(POCINumber(@OCINumber), FvnuInfo, SI1);
+        Assert(SI2 = SI1, InttoUnicode(SI1));
+        ZSetString(PAnsiChar(@FTinyBuffer[0]), PosOrdNVU2Raw(POCINumber(@OCINumber),FvnuInfo, @FTinyBuffer[0]), tmp);
+        if tmp <> intToRaw(Si2) then begin
+          NegOrdNVU2Raw(POCINumber(@OCINumber),FvnuInfo, @FTinyBuffer[0]);
+          Assert(tmp = intToRaw(Si2), InttoUnicode(SI1));
+        end;
+      end;
+
+    if not (SI1 mod 10000 = 0) then begin
+      D := C1;
+    CheckOracleError(FPLainDriver, FErrorHandle,
+      FPlainDriver.OCINumberFromReal(FErrorHandle, @D,
+        SizeOf(Double), POCINumber(@OCINumber)),
+        lcOther, '', Connection.GetConSettings);
+      if C1 < 0 then begin
+        if nvuKind(POCINumber(@OCINumber), FvnuInfo) <> vnuNegCurr then
+          Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = vnuNegCurr);
+            C2 := NegNvu2Curr(POCINumber(@OCINumber), FvnuInfo, c1);
+        if C2 <> C1 then begin
+          C2 := 0;
+        Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = vnuNegCurr);
+          C2 := NegNvu2Curr(POCINumber(@OCINumber), FvnuInfo, c1);
+          Assert(C2 = C1, 'Expect '+CurrtoUnicode(C1)+' was '+CurrtoUnicode(C2));
+        end;
+        NegNVUCurr2Raw(POCINumber(@OCINumber), FvnuInfo, @FTinyBuffer[0]);
+      end else if C1 = 0 then
+        Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = nvu0)
+      else begin
+        Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = vnuPosCurr);
+        C2 := PosNvu2Curr(POCINumber(@OCINumber), FvnuInfo, C1);
+        if C2 <> C1 then begin
+          C2 := 0;
+          C2 := PosNvu2Curr(POCINumber(@OCINumber), FvnuInfo, C1);
+          Assert(C2 = C1, 'Expect '+CurrtoUnicode(C1)+' was '+CurrtoUnicode(C2));
+        end;
+      end;
+      //Curr2Nvu2(@OCINumber, C1, OCINumber);
+    end;
+  end;
+end;
+{$ENDIF EGONHUGEIST}
 
 {**
   Runs a test for Oracle DBC ResultSet with stored results.
@@ -215,14 +483,12 @@ end;
 }
 procedure TZTestDbcOracleCase.TestPreparedStatement;
 const
-  department_dep_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  department_dep_name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  department_dep_shname_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  department_dep_address_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  //people_count_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  people_p_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  people_p_begin_work_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  people_p_resume_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  department_dep_id_Index = FirstDbcIndex;
+  department_dep_name_Index = FirstDbcIndex+1;
+  department_dep_shname_Index = FirstDbcIndex+2;
+  department_dep_address_Index = FirstDbcIndex+3;
+  people_p_id_Index = FirstDbcIndex;
+  people_p_begin_work_Index = FirstDbcIndex+1;
 var
   Statement: IZPreparedStatement;
   Statement1: IZPreparedStatement;
@@ -281,7 +547,7 @@ begin
     Statement1 := Connection.PrepareStatement('UPDATE people SET p_resume=?');
     CheckNotNull(Statement1);
     try
-      Statement1.SetNull(people_p_resume_Index, stAsciiStream);
+      Statement1.SetNull(FirstDbcIndex, stAsciiStream);
       CheckEquals(5, Statement1.ExecuteUpdatePrepared);
     finally
       Statement1.Close;
@@ -297,8 +563,8 @@ end;
 
 procedure TZTestDbcOracleCase.TestEmptyBlob;
 const
-  update_blob_values_b_blob_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  select_blob_values_b_blob_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  update_blob_values_b_blob_Index = FirstDbcIndex;
+  select_blob_values_b_blob_Index = FirstDbcIndex+1;
 var
   Statement: IZPreparedStatement;
   Statement1: IZPreparedStatement;
@@ -382,14 +648,14 @@ end;
 }
 procedure TZTestDbcOracleCase.TestLongObjects;
 const
-  blob_values_b_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  blob_values_b_long_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  blob_values_b_clob_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  blob_values_b_blob_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  binary_values_n_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  binary_values_n_raw_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  binary_values_n_longraw_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  binary_values_n_blob_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  blob_values_b_id_Index = FirstDbcIndex;
+  blob_values_b_long_Index = FirstDbcIndex+1;
+  blob_values_b_clob_Index = FirstDbcIndex+2;
+  blob_values_b_blob_Index = FirstDbcIndex+3;
+  binary_values_n_id_Index = FirstDbcIndex;
+  binary_values_n_raw_Index = FirstDbcIndex+1;
+  binary_values_n_longraw_Index = FirstDbcIndex+2;
+  binary_values_n_blob_Index = FirstDbcIndex+3;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -413,8 +679,7 @@ begin
   CheckEquals(2, ResultSet.GetInt(blob_values_b_id_Index));
   CheckEquals(RawByteString('Test string'), ResultSet.GetBlob(blob_values_b_long_Index).GetString);
   CheckEquals(RawByteString('Test string'), ResultSet.GetBlob(blob_values_b_clob_Index).GetString);
-  CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    String(ResultSet.GetBlob(blob_values_b_blob_Index).GetString));
+  Check(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00 = String(ResultSet.GetBlob(blob_values_b_blob_Index).GetString), 'Comparision of binary strings failed.');
 
   Check(ResultSet.Next);
   CheckEquals(3, ResultSet.GetInt(blob_values_b_id_Index));
@@ -438,12 +703,9 @@ begin
 
   Check(ResultSet.Next);
   CheckEquals(2, ResultSet.GetInt(binary_values_n_id_Index));
-  CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    String(ResultSet.GetBlob(binary_values_n_raw_Index).GetString));
-  CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    String(ResultSet.GetBlob(binary_values_n_longraw_Index).GetString));
-  CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    String(ResultSet.GetBlob(binary_values_n_blob_Index).GetString));
+  Check(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00 = {$IFDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(BytesToStr(ResultSet.GetBytes(binary_values_n_raw_Index))), 'Second comparision of binary strings failed');
+  Check(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00 = String(ResultSet.GetBlob(binary_values_n_longraw_Index).GetString), 'Third comparision of binary strings failed');
+  Check(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00 = String(ResultSet.GetBlob(binary_values_n_blob_Index).GetString), 'Fourth comparision of binary strings failed');
 
   Check(ResultSet.Next);
   CheckEquals(3, ResultSet.GetInt(binary_values_n_id_Index));
@@ -463,12 +725,16 @@ end;
 
 procedure TZTestDbcOracleCase.TestNumbers;
 const
-  number_values_n_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  number_values_n_tint_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  number_values_n_sint_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  number_values_n_int_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  number_values_n_bdecimal_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  number_values_n_numeric_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  number_values_n_id_Index = FirstDbcIndex;
+  number_values_n_tint_Index = FirstDbcIndex+1;
+  number_values_n_sint_Index = FirstDbcIndex+2;
+  number_values_n_int_Index = FirstDbcIndex+3;
+  number_values_n_bdecimal_Index = FirstDbcIndex+4;
+  number_values_n_numeric_Index = FirstDbcIndex+5;
+  number_values_n_float_Index = FirstDbcIndex+6;
+  number_values_n_real_Index = FirstDbcIndex+7;
+  number_values_n_dprecision_Index = FirstDbcIndex+8;
+  number_values_n_money_Index = FirstDbcIndex+9;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -477,21 +743,101 @@ begin
   CheckNotNull(Statement);
 
   ResultSet := Statement.ExecuteQuery(
-    'SELECT * FROM number_values where n_id = 1 ');
+    'SELECT * FROM number_values order by 1');
   CheckNotNull(ResultSet);
 
   Check(ResultSet.Next);
-
   // 1, -128,-32768,-2147483648,-9223372036854775808, -99999.9999
+  // -3.402823466E+38, -3.402823466E+38, -1.7976931348623157E+38, -21474836.48
   CheckEquals(1, ResultSet.GetInt(number_values_n_id_Index));
   CheckEquals(-128, ResultSet.GetInt(number_values_n_tint_Index));
   CheckEquals(-32768, ResultSet.GetInt(number_values_n_sint_Index));
-{$IFDEF FPC}
-  CheckEquals(-2147483648, ResultSet.GetInt(number_values_n_int_Index));
-  // !! in oracle we can only use double precission numbers now
-  CheckEquals(-9223372036854775808, ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
-{$ENDIF}
-  CheckEquals(-99999.9999, ResultSet.GetDouble(number_values_n_numeric_Index), 0.00001);
+  CheckEquals(Low(LongInt), ResultSet.GetInt(number_values_n_int_Index));
+  {$IFNDEF CPU64} //EH: FPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
+  //this needs to be reviewed with true BCD record structs later on (7.3+)
+  CheckEquals(Low(Int64), ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
+  {$ENDIF !CPU64}
+  CheckEquals(Low(Int64), ResultSet.GetLong(number_values_n_bdecimal_Index));
+  CheckEquals(-99999.9999, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(-99999.9999, ResultSet.GetCurrency(number_values_n_numeric_Index));
+  {EH: oracle uses the number here, so we can't compare any other way except using a string or simply forget it
+    it's officially documented the number is not accurate for FPU floats}
+  CheckEquals('-3.402823466E38', ResultSet.GetString(number_values_n_float_Index));
+  CheckEquals('-3.402823466E38', ResultSet.GetString(number_values_n_real_Index));
+  //CheckEquals(-1.7976931348623157E38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(-21474836.48, ResultSet.GetCurrency(number_values_n_money_Index));
+  Check(ResultSet.Next);
+  //2,-128,-32768,-2147483648,-9223372036854775808, -11111.1111,
+	//-1.175494351E-38, -1.175494351E-38, -2.2250738585072014E-38, 21474836.47
+  CheckEquals(2, ResultSet.GetInt(number_values_n_id_Index));
+  CheckEquals(-128, ResultSet.GetInt(number_values_n_tint_Index));
+  CheckEquals(-32768, ResultSet.GetInt(number_values_n_sint_Index));
+  CheckEquals(Low(LongInt), ResultSet.GetInt(number_values_n_int_Index));
+  {$IFNDEF CPU64} //EH: FPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
+  //this needs to be reviewed with true BCD record structs later on (7.3+)
+  CheckEquals(Low(Int64), ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
+  {$ENDIF !CPU64}
+  CheckEquals(Low(Int64), ResultSet.GetLong(number_values_n_bdecimal_Index));
+  CheckEquals(-11111.1111, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(-11111.1111, ResultSet.GetCurrency(number_values_n_numeric_Index));
+  CheckEquals(-1.175494351E-38, ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(-1.175494351E-38, ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(-2.2250738585072014E-38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(21474836.47, ResultSet.GetCurrency(number_values_n_money_Index));
+  Check(ResultSet.Next);
+  //3, 0, 0, 0, 0, 0, 0, 0, 0, '0'
+  CheckEquals(3, ResultSet.GetInt(number_values_n_id_Index));
+  CheckEquals(0, ResultSet.GetInt(number_values_n_tint_Index));
+  CheckEquals(0, ResultSet.GetInt(number_values_n_sint_Index));
+  CheckEquals(0, ResultSet.GetInt(number_values_n_int_Index));
+  {$IFNDEF CPU64} //EH: FPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
+  //this needs to be reviewed with true BCD record structs later on (7.3+)
+  CheckEquals(0, ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
+  {$ENDIF !CPU64}
+  CheckEquals(0, ResultSet.GetLong(number_values_n_bdecimal_Index));
+  CheckEquals(0, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(0, ResultSet.GetCurrency(number_values_n_numeric_Index));
+  CheckEquals(0, ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(0, ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(0, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(0, ResultSet.GetCurrency(number_values_n_money_Index));
+  Check(ResultSet.Next);
+  //4, 128, 32767, 2147483647, 9223372036854775807, 11111.1111,
+	//3.402823466E+38, 3.402823466E+38, 1.7976931348623157E+38, -922337203685477.5808
+  CheckEquals(4, ResultSet.GetInt(number_values_n_id_Index));
+  CheckEquals(128, ResultSet.GetInt(number_values_n_tint_Index));
+  CheckEquals(32767, ResultSet.GetInt(number_values_n_sint_Index));
+  CheckEquals(2147483647, ResultSet.GetInt(number_values_n_int_Index));
+  {$IFNDEF CPU64} //EH: FPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
+  //this needs to be reviewed with true BCD record structs later on (7.3+)
+  CheckEquals(High(Int64), ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
+  {$ENDIF !CPU64}
+  CheckEquals(High(Int64), ResultSet.GetLong(number_values_n_bdecimal_Index));
+  CheckEquals(11111.1111, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(11111.1111, ResultSet.GetCurrency(number_values_n_numeric_Index));
+  CheckEquals('3.402823466E38', ResultSet.GetString(number_values_n_float_Index));
+  CheckEquals('3.402823466E38', ResultSet.GetString(number_values_n_real_Index));
+  //CheckEquals(1.7976931348623157E+38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(-922337203685477.5808, ResultSet.GetCurrency(number_values_n_money_Index));
+  Check(ResultSet.Next);
+  //5, 128, 32767, 147483647, 9223372036854775807,  99999.9999,
+	//1.175494351E-38, 1.175494351E-38, 2.2250738585072014E-38, 922337203685477.5807
+  CheckEquals(5, ResultSet.GetInt(number_values_n_id_Index));
+  CheckEquals(128, ResultSet.GetInt(number_values_n_tint_Index));
+  CheckEquals(32767, ResultSet.GetInt(number_values_n_sint_Index));
+  CheckEquals(147483647, ResultSet.GetInt(number_values_n_int_Index));
+  {$IFNDEF CPU64} //EH: FPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
+  //this needs to be reviewed with true BCD record structs later on (7.3+)
+  CheckEquals(High(Int64), ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
+  {$ENDIF !CPU64}
+  CheckEquals(High(Int64), ResultSet.GetLong(number_values_n_bdecimal_Index));
+  CheckEquals(99999.9999, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(99999.9999, ResultSet.GetCurrency(number_values_n_numeric_Index));
+  CheckEquals(1.175494351E-38, ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(1.175494351E-38, ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(2.2250738585072014E-38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals(922337203685477.5807, ResultSet.GetCurrency(number_values_n_money_Index));
+  Check(not ResultSet.Next);
 end;
 
 {**
@@ -500,8 +846,8 @@ end;
 
 procedure TZTestDbcOracleCase.TestLargeBlob;
 const
-  insert_blob_values_b_blob_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  select_blob_values_b_blob_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  insert_blob_values_b_blob_Index = FirstDbcIndex;
+  select_blob_values_b_blob_Index = FirstDbcIndex+1;
 var
   InStm: TMemoryStream;
   OutBytes: TBytes;
@@ -517,7 +863,9 @@ begin
     // randomizing content
     i := 0;
     while i < TestSize do begin
+      {$R-} //EH range check does overrun the defined TByteArray = array[0..32767] of Byte range -> turn off!
       PByteArray(InStm.Memory)[i] := Random(256);
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
       Inc(i, Random(1000));
     end;
     // inserting
@@ -557,8 +905,8 @@ end;
 
 procedure TZTestDbcOracleCase.TestDateWithTime;
 const
-  param_d_date_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  field_d_date_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  param_d_date_Index = FirstDbcIndex;
+  field_d_date_Index = FirstDbcIndex+1;
 var
   TestDate: TDateTime;
   Statement: IZStatement;
@@ -599,8 +947,8 @@ end;
 procedure TZTestDbcOracleCase.TestFKError;
 const
   TestStr = 'The source code of the ZEOS Libraries and packages are distributed under the Library GNU General Public License';
-  s_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  s_varchar_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  s_id_Index = FirstDbcIndex;
+  s_varchar_Index = FirstDbcIndex+1;
 var
   Statement: IZStatement;
   PStatement: IZPreparedStatement;

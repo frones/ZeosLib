@@ -338,7 +338,7 @@ type
   protected { Internal protected properties. }
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
-    function CreateResultSet(const SQL: string; MaxRows: Integer):
+    function CreateResultSet(const {%H-}SQL: string; MaxRows: Integer):
       IZResultSet; virtual;
     {$IFDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES} //EH: there is something weired with cirtcular references + FPC and implementation uses! So i added this virtual function to get a IsUpdatable state
     function GetUpdatable: Boolean; virtual;
@@ -2564,7 +2564,7 @@ begin
       begin
         Inc(FFetchCount);
         if FilterRow(ResultSet.GetRow) then
-          CurrentRows.Add(Pointer(ResultSet.GetRow))
+          CurrentRows.Add({%H-}Pointer(ResultSet.GetRow))
         else
           Continue;
       end;
@@ -2632,7 +2632,7 @@ begin
     CurrentRows := TZSortedList.Create;
 
     SavedState := SetTempState(dsNewValue);
-    CurrentRows.Add(Pointer(RowNo));
+    CurrentRows.Add({%H-}Pointer(RowNo));
     CurrentRow := 1;
 
     try
@@ -2679,7 +2679,7 @@ var
   Index: Integer;
 begin
   Result := False;
-  Index := CurrentRows.IndexOf(Pointer(RowNo));
+  Index := CurrentRows.IndexOf({%H-}Pointer(RowNo));
   if Index >= 0 then
   begin
     if Index < CurrentRow then
@@ -2709,9 +2709,9 @@ begin
 
     for I := 1 to FetchCount do
       if FilterRow(I) then
-        CurrentRows.Add(Pointer(I));
+        CurrentRows.Add({%H-}Pointer(I));
 
-    CurrentRow := CurrentRows.IndexOf(Pointer(RowNo)) + 1;
+    CurrentRow := CurrentRows.IndexOf({%H-}Pointer(RowNo)) + 1;
     CurrentRow := Min(Max(1, CurrentRow), CurrentRows.Count);
 
     if FSortedFields <> '' then
@@ -2906,7 +2906,7 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
   {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
   NativeFormat: Boolean): Boolean;
 begin
-  if Field.DataType in [ftWideString] then
+  if Field.DataType in [ftWideString, ftBCD] then
     NativeFormat := True;
   Result := inherited GetFieldData(Field, Buffer, NativeFormat);
 end;
@@ -2981,6 +2981,8 @@ begin
         { Processes all other fields. }
         ftCurrency: //sade TCurrencyField is Descendant of TFloatField and uses Double values
           PDouble(Buffer)^ := RowAccessor.GetDouble(ColumnIndex, Result);
+        ftBcd:
+          PCurrency(Buffer)^ := RowAccessor.GetCurrency(ColumnIndex, Result);
         else
           {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^,
             Pointer(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex));
@@ -3016,12 +3018,12 @@ end;
 procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
   NativeFormat: Boolean);
 begin
-  if Field.DataType in [ftWideString] then
+  if Field.DataType in [ftWideString, ftBCD] then
     NativeFormat := True;
 
   {$IFNDEF VIRTUALSETFIELDDATA}
   inherited;
-  {$ELSE}
+  {$ELSE}   *)
   SetFieldData(Field, Buffer);
   {$ENDIF}
 end;
@@ -3090,6 +3092,8 @@ begin
         {$ENDIF}
         ftCurrency:
           RowAccessor.SetCurrency(ColumnIndex, PDouble(Buffer)^); //cast Double to Currency
+        ftBCD:
+          RowAccessor.SetCurrency(ColumnIndex, PCurrency(Buffer)^);
         else  { Processes all other fields. }
           begin
             {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
@@ -3243,6 +3247,8 @@ begin
       for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
       begin
         FieldType := ConvertDbcToDatasetType(GetColumnType(I));
+        if (FieldType = ftCurrency) and not ResultSet.GetMetadata.IsCurrency(I) then
+           FieldType := ftBCD;
         if FieldType in [ftBytes, ftString, ftWidestring] then
           if (FieldType = ftWideString) then
               //most UTF8 DB's assume 4Byte / Char (surrogates included) such encoded characters may kill the heap of the FieldBuffer
@@ -3260,6 +3266,9 @@ begin
             Size := 38
           else
           {$ENDIF}
+          if FieldType = ftBCD then
+            Size := GetScale(I)
+          else
             Size := 0;
 
         J := 0;
@@ -4091,7 +4100,7 @@ begin
   if not Assigned(Bookmark1) or not Assigned(Bookmark2) then
     Exit;
 
-  Index1 := CurrentRows.IndexOf(Pointer(PInteger(Bookmark1)^));
+  Index1 := CurrentRows.IndexOf({%H-}Pointer(PInteger(Bookmark1)^));
   Index2 := CurrentRows.IndexOf(Pointer(PInteger(Bookmark2)^));
 
   if Index1 < Index2 then Result := -1

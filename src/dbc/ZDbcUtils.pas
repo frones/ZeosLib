@@ -57,6 +57,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF}, TypInfo,
+  {$IFDEF BCD_TEST}FmtBcd,{$ENDIF}
   ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata, ZTokenizer, ZVariant;
 
 type
@@ -203,8 +204,16 @@ procedure ToBuff(Value: WideChar; var Buf: TUCS2Buff; var Result: ZWideString); 
 procedure ReplaceOrAddLastChar(cOld, cNew: AnsiChar; var Buf: TRawBuff; var Result: RawByteString); overload;
 procedure ReplaceOrAddLastChar(cOld, cNew: WideChar; var Buf: TUCS2Buff; var Result: ZWideString); overload;
 
+procedure CancelLastChar(var Buf: TRawBuff; var Result: RawByteString); overload;
+procedure CancelLastChar(var Buf: TUCS2Buff; var Result: ZWideString); overload;
+
 procedure FlushBuff(var Buf: TRawBuff; var Result: RawByteString); overload;
 procedure FlushBuff(var Buf: TUCS2Buff; var Result: ZWideString); overload;
+
+function GetAbsorbedTrailingSpacesLen(Buf: PAnsiChar; Len: LengthInt): LengthInt; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+const
+  c4SpaceRaw: PAnsiChar = (#32#32#32#32);
+  i4SpaceRaw: Integer = 538976288;  //integer representation of the four space chars
 
 implementation
 
@@ -811,6 +820,16 @@ begin
           OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
         stBytes:
           OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
+        {$IFDEF BCD_TEST}
+        stFloat:
+          OutParamValues[ParamIndex] := EncodeDouble(ResultSet.GetFloat(I));
+        stDouble:
+          OutParamValues[ParamIndex] := EncodeDouble(ResultSet.GetDouble(I));
+        stCurrency:
+          OutParamValues[ParamIndex] := EncodeCurrency(ResultSet.GetCurrency(I));
+        stBigDecimal:
+          OutParamValues[ParamIndex] := EncodeBigDecimal(ResultSet.GetBigDecimal(I));
+        {$ELSE}
         stFloat:
           OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
         stDouble:
@@ -819,6 +838,7 @@ begin
           OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetCurrency(I));
         stBigDecimal:
           OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
+        {$ENDIF}
         stString, stAsciiStream:
           OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
         stUnicodeString, stUnicodeStream:
@@ -1271,6 +1291,22 @@ begin
   else PByte(P)^ := Ord(cNew);
 end;
 
+procedure CancelLastChar(var Buf: TRawBuff; var Result: RawByteString);
+begin
+  if (Buf.Pos > 0) then
+    Dec(Buf.Pos)
+  else if (Buf.Pos = 0) and (Pointer(Result) <> nil) then
+    Result := Copy(Result, 1, Length(Result)-1);
+end;
+
+procedure CancelLastChar(var Buf: TUCS2Buff; var Result: ZWideString); overload;
+begin
+  if (Buf.Pos > 0) then
+    Dec(Buf.Pos)
+  else if (Buf.Pos = 0) and (Pointer(Result) <> nil) then
+    Result := Copy(Result, 1, Length(Result)-1);
+end;
+
 procedure ReplaceOrAddLastChar(cOld, cNew: WideChar; var Buf: TUCS2Buff; var Result: ZWideString);
 var P: PWideChar;
 begin
@@ -1288,6 +1324,19 @@ begin
   else PWord(P)^ := Ord(cNew);
 end;
 
+function GetAbsorbedTrailingSpacesLen(Buf: PAnsiChar; Len: LengthInt): LengthInt;
+var PEnd: PAnsiChar;
+begin
+  if Len > SizeOf(Integer)+1 then begin
+    PEnd := Buf + Len - SizeOf(Integer) -1;
+    while (PEnd >= Buf) and (PInteger(PEnd)^ = i4SpaceRaw) do
+      Dec(PEnd, SizeOf(Integer));
+    Inc(PEnd, SizeOf(Integer));
+  end else
+    PEnd := Buf+Len-1;
+  while (PEnd >= Buf) and (PByte(PEnd)^ = Ord(' ')) do
+    Dec(PEnd);
+  Result := PEnd+1 - Buf;
+end;
+
 end.
-
-

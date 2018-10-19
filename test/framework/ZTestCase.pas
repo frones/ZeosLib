@@ -112,6 +112,8 @@ type
     function SkipForReason(Reasons: ZSkipReasons): Boolean; overload; virtual;
     function SkipForReason(Reason: ZSkipReason): Boolean; overload;
 
+    function TestFilePath(const RelFilePath: string): string;
+
     { Test configuration methods. }
     procedure LoadConfiguration; virtual;
 
@@ -359,6 +361,14 @@ end;
 destructor TZAbstractTestCase.Destroy;
 begin
   inherited Destroy;
+end;
+
+{**
+  Returns absolute path to a test file located in DEFAULT_CONFIG_DIR
+}
+function TZAbstractTestCase.TestFilePath(const RelFilePath: string): string;
+begin
+  Result := TestConfig.PathFromConfig(RelFilePath);
 end;
 
 {**

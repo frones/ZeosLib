@@ -538,7 +538,7 @@ const
   ProcedureRemarksIndex    = FirstDbcIndex + 6;
   ProcedureTypeIndex       = FirstDbcIndex + 7;
 type
-  TProcedureMap = packed record
+  TProcedureMap = record
     Initilized: Boolean;
     ColIndices: array[CatalogNameIndex..ProcedureTypeIndex] of ShortInt
   end;
@@ -557,7 +557,7 @@ const
   ProcColNullableIndex      = FirstDbcIndex + 11;
   ProcColRemarksIndex       = FirstDbcIndex + 12;
 type
-  TProcedureColumnsColMap = packed record
+  TProcedureColumnsColMap = record
     Initilized: Boolean;
     ColIndices: array[CatalogNameIndex..ProcColRemarksIndex] of ShortInt;
   end;
@@ -599,7 +599,7 @@ const
   TableColColumnDefinitelyWritableIndex = FirstDbcIndex + 22;
   TableColColumnReadonlyIndex           = FirstDbcIndex + 23;
 type
-  TTableColColumnMap = packed record
+  TTableColColumnMap = record
     Initilized: Boolean;
     ColIndices: array[CatalogNameIndex..TableColColumnReadonlyIndex] of ShortInt;
   end;
@@ -611,7 +611,7 @@ const
   TableColPrivPrivilegeIndex   = FirstDbcIndex + 6;
   TableColPrivIsGrantableIndex = FirstDbcIndex + 7;
 type
-  TTableColPrivMap = packed record
+  TTableColPrivMap = record
     Initilized: Boolean;
     ColIndices: array[CatalogNameIndex..TableColPrivIsGrantableIndex] of ShortInt;
   end;
@@ -623,7 +623,7 @@ const
   TablePrivPrivilegeIndex   = FirstDbcIndex + 5;
   TablePrivIsGrantableIndex = FirstDbcIndex + 6;
 type
-  TTablePrivMap = packed record
+  TTablePrivMap = record
     Initilized: Boolean;
     ColIndices: array[CatalogNameIndex..TablePrivIsGrantableIndex] of ShortInt;
   end;
@@ -707,7 +707,7 @@ const
   CrossRefKeyColPKNameIndex         = FirstDbcIndex + 12;
   CrossRefKeyColDeferrabilityIndex  = FirstDbcIndex + 13;
 type
-  TCrossRefKeyCol = packed record
+  TCrossRefKeyCol = record
     Initilized: Boolean;
     ColIndices: array[CrossRefKeyColPKTableCatalogIndex..CrossRefKeyColDeferrabilityIndex] of ShortInt;
   end;
@@ -746,7 +746,7 @@ const
   IndexInfoColPagesIndex           = FirstDbcIndex + 11;
   IndexInfoColFilterConditionIndex = FirstDbcIndex + 12;
 type
-  TIndexInfoMap = packed record
+  TIndexInfoMap = record
     Initilized: Boolean;
     ColIndices: array[CatalogNameIndex..IndexInfoColFilterConditionIndex] of ShortInt;
   end;
@@ -2399,7 +2399,7 @@ begin
   begin
     DestResultSet.MoveToInsertRow;
     for I := FirstDbcIndex to Metadata.GetColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}do
-    begin
+    if not SrcResultSet.IsNull(I) then begin
       case Metadata.GetColumnType(I) of
         stBoolean:
           DestResultSet.UpdateBoolean(I, SrcResultSet.GetBoolean(I));

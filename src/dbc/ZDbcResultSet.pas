@@ -62,6 +62,9 @@ uses
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
+{$IFDEF BCD_TEST}
+  FmtBcd,
+{$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   ZDbcIntfs, ZClasses, ZSysUtils, ZCompatibility, ZVariant;
@@ -159,7 +162,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single; virtual;
     function GetDouble(ColumnIndex: Integer): Double; virtual;
     function GetCurrency(ColumnIndex: Integer): Currency; virtual;
-    function GetBigDecimal(ColumnIndex: Integer): Extended; virtual;
+    function GetBigDecimal(ColumnIndex: Integer): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}; virtual;
     function GetBytes(ColumnIndex: Integer): TBytes; virtual;
     function GetDate(ColumnIndex: Integer): TDateTime; virtual;
     function GetTime(ColumnIndex: Integer): TDateTime; virtual;
@@ -203,7 +206,7 @@ type
     function GetFloatByName(const ColumnName: string): Single; virtual;
     function GetDoubleByName(const ColumnName: string): Double; virtual;
     function GetCurrencyByName(const ColumnName: string): Currency; virtual;
-    function GetBigDecimalByName(const ColumnName: string): Extended; virtual;
+    function GetBigDecimalByName(const ColumnName: string): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}; virtual;
     function GetBytesByName(const ColumnName: string): TBytes; virtual;
     function GetDateByName(const ColumnName: string): TDateTime; virtual;
     function GetTimeByName(const ColumnName: string): TDateTime; virtual;
@@ -280,7 +283,7 @@ type
     procedure UpdateFloat(ColumnIndex: Integer; const Value: Single); virtual;
     procedure UpdateDouble(ColumnIndex: Integer; const Value: Double); virtual;
     procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency); virtual;
-    procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended); virtual;
+    procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}); virtual;
     procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar); virtual;
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar); overload; virtual;
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); overload; virtual;
@@ -325,7 +328,7 @@ type
     procedure UpdateFloatByName(const ColumnName: string; const Value: Single); virtual;
     procedure UpdateDoubleByName(const ColumnName: string; const Value: Double); virtual;
     procedure UpdateCurrencyByName(const ColumnName: string; const Value: Currency); virtual;
-    procedure UpdateBigDecimalByName(const ColumnName: string; const Value: Extended); virtual;
+    procedure UpdateBigDecimalByName(const ColumnName: string; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}); virtual;
     procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar); overload; virtual;
     procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar; Len: PNativeUInt); overload; virtual;
     procedure UpdatePCharByName(const ColumnName: string; const Value: PChar); virtual;
@@ -614,6 +617,47 @@ begin
   Result := -CompareUInt64_Asc(Null1, Null2, V1, V2);
 end;
 
+{$IFDEF BCD_TEST}
+function CompareDouble_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1
+  else Result := Ord(TZVariant(V1).VDouble > TZVariant(V2).VDouble)-Ord(TZVariant(V1).VDouble < TZVariant(V2).VDouble);
+end;
+
+function CompareDouble_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := -CompareDouble_Asc(Null1, Null2, V1, V2);
+end;
+
+function CompareCurrency_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1
+  else Result := Ord(TZVariant(V1).VCurrency > TZVariant(V2).VCurrency)-Ord(TZVariant(V1).VCurrency < TZVariant(V2).VCurrency);
+end;
+
+function CompareCurrency_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := -CompareCurrency_Asc(Null1, Null2, V1, V2);
+end;
+
+function CompareBigDecimal_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1
+  else Result := BcdCompare(TZVariant(V1).VBigDecimal, TZVariant(V2).VBigDecimal));
+end;
+
+function CompareBigDecimal_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := -CompareBigDecimal_Asc(Null1, Null2, V1, V2);
+end;
+
+{$ELSE}
 function CompareFloat_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   if Null1 and Null2 then Result := 0
@@ -626,6 +670,8 @@ function CompareFloat_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   Result := -CompareFloat_Asc(Null1, Null2, V1, V2);
 end;
+{$ENDIF}
+
 
 function CompareDateTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
@@ -1058,6 +1104,7 @@ begin
   else
     Result := Pointer(FUniTemp);
 end;
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -1359,7 +1406,11 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stCurrency);
 {$ENDIF}
+  {$IFDEF BCD_TEST}
+  Result := GetDouble(ColumnIndex);
+  {$ELSE}
   Result := GetBigDecimal(ColumnIndex);
+  {$ENDIF}
 end;
 
 {**
@@ -1372,12 +1423,16 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
+function TZAbstractResultSet.GetBigDecimal(ColumnIndex: Integer): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF};
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
+  {$IFDEF BCD_TEST}
+  Result := NullBCD;
+  {$ELSE}
   Result := 0;
+  {$ENDIF}
 end;
 
 {**
@@ -1640,8 +1695,17 @@ begin
       Result := EncodeInteger(GetLong(ColumnIndex));
     stByte, stWord, stLongWord, stULong:
       Result := EncodeUInteger(GetULong(ColumnIndex));
+    {$IFDEF BCD_TEST}
+    stFloat, stDouble:
+      Result := EncodeDouble(GetDouble(ColumnIndex));
+    stCurrency:
+      Result := EncodeCurrency(GetCurrency(ColumnIndex));
+    stBigDecimal:
+      Result := EncodeBigDecimal(GetBigDecimal(ColumnIndex));
+    {$ELSE}
     stFloat, stDouble, stCurrency, stBigDecimal:
       Result := EncodeFloat(GetBigDecimal(ColumnIndex));
+    {$ENDIF}
     stDate, stTime, stTimestamp:
       Result := EncodeDateTime(GetTimestamp(ColumnIndex));
     stBytes, stBinaryStream, stGUID:
@@ -2023,7 +2087,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetBigDecimalByName(const ColumnName: string): Extended;
+function TZAbstractResultSet.GetBigDecimalByName(const ColumnName: string): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF};
 begin
   Result := GetBigDecimal(GetColumnIndex(ColumnName));
 end;
@@ -2870,7 +2934,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdateBigDecimal(ColumnIndex: Integer;
-  const Value: Extended);
+  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
 begin
   RaiseReadOnlyException;
 end;
@@ -3212,7 +3276,13 @@ begin
   case Value.VType of
     vtBoolean: UpdateBoolean(ColumnIndex, Value.VBoolean);
     vtInteger: UpdateLong(ColumnIndex, Value.VInteger);
+    {$IFDEF BCD_TEST}
+    vtDouble: UpdateDouble(ColumnIndex, Value.VDouble);
+    vtCurrency: UpdateCurrency(ColumnIndex, Value.VCurrency);
+    vtBigDecimal: UpdateBigDecimal(ColumnIndex, Value.VBigDecimal);
+    {$ELSE}
     vtFloat: UpdateBigDecimal(ColumnIndex, Value.VFloat);
+    {$ENDIF}
     vtString: UpdateString(ColumnIndex, Value.VString);
 {$IFNDEF NO_ANSISTRING}
     vtAnsiString: UpdateAnsiString(ColumnIndex, Value.VAnsiString);
@@ -3460,7 +3530,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdateBigDecimalByName(const ColumnName: string;
-  const Value: Extended);
+  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
 begin
   UpdateBigDecimal(GetColumnIndex(ColumnName), Value);
 end;
@@ -3979,8 +4049,17 @@ begin
             Result[i] := CompareInt64_Asc;
           stByte, stWord, stLongWord, stULong:
             Result[i] := CompareUInt64_Asc;
-          stFloat, stDouble, stBigDecimal:
+          {$IFDEF BCD_TEST}
+          stFloat, stDouble:
+            Result[i] := CompareDouble_Asc;
+          stCurrency:
+            Result[i] := CompareCurrency_Asc;
+          stBigDecimal:
+            Result[i] := CompareBigDecimal_Asc;
+          {$ELSE}
+          stFloat, stDouble, stCurrency, stBigDecimal:
             Result[i] := CompareFloat_Asc;
+          {$ENDIF}
           stDate, stTime, stTimestamp:
             Result[i] := CompareDateTime_Asc;
           stBytes, stBinaryStream, stGUID:
@@ -4006,8 +4085,17 @@ begin
             Result[i] := CompareInt64_Desc;
           stByte, stWord, stLongWord, stULong:
             Result[i] := CompareUInt64_Desc;
-          stFloat, stDouble, stBigDecimal:
+          {$IFDEF BCD_TEST}
+          stFloat, stDouble:
+            Result[i] := CompareDouble_Desc;
+          stCurrency:
+            Result[i] := CompareCurrency_Desc;
+          stBigDecimal:
+            Result[i] := CompareBigDecimal_Desc;
+          {$ELSE}
+          stFloat, stDouble, stCurrency, stBigDecimal:
             Result[i] := CompareFloat_Desc;
+          {$ENDIF}
           stDate, stTime, stTimestamp:
             Result[i] := CompareDateTime_Desc;
           stBytes, stBinaryStream, stGUID:

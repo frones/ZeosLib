@@ -128,9 +128,9 @@ begin
     1{char}, 12{varchar}, -8{nchar}, -9{nvarchar}: Result := stString;
     -7{bit}: Result := stBoolean;
 //Bug #889223, bug with tinyint on mssql
-//    -6: Result := stByte;
+    -6: Result := stByte;
     -5: Result := stLong;
-    -6: Result := stSmall;
+//    -6: Result := stSmall;
     5: Result := stSmall;
     4: Result := stInteger;
     2, 3, 6, 7, 8: Result := stDouble;

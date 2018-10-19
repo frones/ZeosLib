@@ -2000,7 +2000,10 @@ end;
 function TZAbstractCachedResultSet.MoveAbsolute(Row: Integer): Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
+  // 2018-09-16 commented out because it seems to be current policy for other
+  // result sets to not raise an exception if the result set is closed but simply
+  // return false here. What is our specification?
+  //CheckClosed;
   if (ResultSetType = rtForwardOnly) and (Row < RowNo) then
     RaiseForwardOnlyException;
 {$ENDIF}
@@ -2374,9 +2377,10 @@ begin
     RowAccessor.RowBuffer.Index := GetNextRowIndex;
     RowAccessor.RowBuffer.UpdateType := utUnmodified;
 
-    for I := FirstDbcIndex to ColumnsInfo.Count{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-    begin
-      case TZColumnInfo(ColumnsInfo[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
+    for I := FirstDbcIndex to ColumnsInfo.Count{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
+      if ResultSet.IsNull(i) then
+        continue
+      else case TZColumnInfo(ColumnsInfo[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
         stBoolean: RowAccessor.SetBoolean(I, ResultSet.GetBoolean(I));
         stByte: RowAccessor.SetByte(I, ResultSet.GetByte(I));
         stShort: RowAccessor.SetShort(I, ResultSet.GetShort(I));
@@ -2398,7 +2402,6 @@ begin
         stAsciiStream, stBinaryStream, stUnicodeStream:
           RowAccessor.SetBlob(I, ResultSet.GetBlob(I));
         stDataSet: RowAccessor.SetDataSet(i, ResultSet.GetDataSet(I));
-
       end;
       if ResultSet.WasNull then
         RowAccessor.SetNull(I);
@@ -2427,15 +2430,9 @@ var
   I: Integer;
   ColumnInfo: TZColumnInfo;
   MetaData : IZResultSetMetaData;
-  RequiresLoading: Boolean;
 begin
   ColumnsInfo.Clear;
   MetaData := FResultSet.GetMetadata;
-  RequiresLoading := false;
-  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF}
-  do RequiresLoading := RequiresLoading or (MetaData.GetColumnType(I) = stUnknown);
-  if RequiresLoading
-  then MetaData.IsAutoIncrement(FirstDbcIndex);
   for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
   begin
     ColumnInfo := TZColumnInfo.Create;
@@ -2608,7 +2605,7 @@ function TZCachedResultSet.MoveAbsolute(Row: Integer): Boolean;
 begin
   { Checks for maximum row. }
   Result := False;
-  if (MaxRows > 0) and (Row > MaxRows) then
+  if ((MaxRows > 0) and (Row > MaxRows)) then
     Exit;
 
   { Processes negative rows }

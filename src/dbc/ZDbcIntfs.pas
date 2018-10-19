@@ -60,7 +60,7 @@ uses
   {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
   {$ENDIF USE_SYNCOMMONS}
-  Types, Classes, SysUtils,
+  {$IFDEF BCD_TEST}FmtBcd, {$ENDIF}Types, Classes, SysUtils,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema,
   ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver, ZURL;
@@ -606,7 +606,7 @@ type
     procedure SetFloat(ParameterIndex: Integer; Value: Single);
     procedure SetDouble(ParameterIndex: Integer; const Value: Double);
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency);
-    procedure SetBigDecimal(ParameterIndex: Integer; const Value: Extended);
+    procedure SetBigDecimal(ParameterIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
     procedure SetPChar(ParameterIndex: Integer; Value: PChar);
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
     procedure SetString(ParameterIndex: Integer; const Value: String);
@@ -697,7 +697,7 @@ type
     function GetFloat(ParameterIndex: Integer): Single;
     function GetDouble(ParameterIndex: Integer): Double;
     function GetCurrency(ParameterIndex: Integer): Currency;
-    function GetBigDecimal(ParameterIndex: Integer): Extended;
+    function GetBigDecimal(ParameterIndex: Integer): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF};
     function GetBytes(ParameterIndex: Integer): TBytes;
     function GetDate(ParameterIndex: Integer): TDateTime;
     function GetTime(ParameterIndex: Integer): TDateTime;
@@ -766,7 +766,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
-    function GetBigDecimal(ColumnIndex: Integer): Extended;
+    function GetBigDecimal(ColumnIndex: Integer): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF};
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -810,7 +810,7 @@ type
     function GetFloatByName(const ColumnName: string): Single;
     function GetDoubleByName(const ColumnName: string): Double;
     function GetCurrencyByName(const ColumnName: string): Currency;
-    function GetBigDecimalByName(const ColumnName: string): Extended;
+    function GetBigDecimalByName(const ColumnName: string): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF};
     function GetBytesByName(const ColumnName: string): TBytes;
     function GetDateByName(const ColumnName: string): TDateTime;
     function GetTimeByName(const ColumnName: string): TDateTime;
@@ -887,7 +887,7 @@ type
     procedure UpdateFloat(ColumnIndex: Integer; const Value: Single);
     procedure UpdateDouble(ColumnIndex: Integer; const Value: Double);
     procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency);
-    procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended);
+    procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
     procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar);
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar); overload;
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); overload;
@@ -932,7 +932,7 @@ type
     procedure UpdateFloatByName(const ColumnName: string; const Value: Single);
     procedure UpdateCurrencyByName(const ColumnName: string; const Value: Currency);
     procedure UpdateDoubleByName(const ColumnName: string; const Value: Double);
-    procedure UpdateBigDecimalByName(const ColumnName: string; const Value: Extended);
+    procedure UpdateBigDecimalByName(const ColumnName: string; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
     procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar); overload;
     procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar; Len: PNativeUInt); overload;
     procedure UpdatePCharByName(const ColumnName: string; const Value: PChar);

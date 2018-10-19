@@ -249,7 +249,8 @@ type
 implementation
 
 uses
-  ZFastCode, ZDbcUtils, ZSelectSchema;
+  ZFastCode, ZDbcUtils, ZSelectSchema, ZPlainOracleDriver, ZDbcOracle,
+  ZPlainOracleConstants{$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF};
 
 { TZOracleDatabaseInfo }
 
@@ -1270,245 +1271,227 @@ begin
 end;
 
 
+{**
+  Gets a description of a catalog's stored procedure parameters
+  and result columns.
+
+  <P>Only descriptions matching the schema, procedure and
+  parameter name criteria are returned.  They are ordered by
+  PROCEDURE_SCHEM and PROCEDURE_NAME. Within this, the return value,
+  if any, is first. Next are the parameter descriptions in call
+  order. The column descriptions follow in column number order.
+
+  <P>Each row in the <code>ResultSet</code> is a parameter description or
+  column description with the following fields:
+   <OL>
+ 	<LI><B>PROCEDURE_CAT</B> String => procedure catalog (may be null)
+ 	<LI><B>PROCEDURE_SCHEM</B> String => procedure schema (may be null)
+ 	<LI><B>PROCEDURE_NAME</B> String => procedure name
+ 	<LI><B>COLUMN_NAME</B> String => column/parameter name
+ 	<LI><B>COLUMN_TYPE</B> Short => kind of column/parameter:
+       <UL>
+       <LI> procedureColumnUnknown - nobody knows
+       <LI> procedureColumnIn - IN parameter
+       <LI> procedureColumnInOut - INOUT parameter
+       <LI> procedureColumnOut - OUT parameter
+       <LI> procedureColumnReturn - procedure return value
+       <LI> procedureColumnResult - result column in <code>ResultSet</code>
+       </UL>
+   <LI><B>DATA_TYPE</B> short => SQL type from java.sql.Types
+ 	<LI><B>TYPE_NAME</B> String => SQL type name, for a UDT type the
+   type name is fully qualified
+ 	<LI><B>PRECISION</B> int => precision
+ 	<LI><B>LENGTH</B> int => length in bytes of data
+ 	<LI><B>SCALE</B> short => scale
+ 	<LI><B>RADIX</B> short => radix
+ 	<LI><B>NULLABLE</B> short => can it contain NULL?
+       <UL>
+       <LI> procedureNoNulls - does not allow NULL values
+       <LI> procedureNullable - allows NULL values
+       <LI> procedureNullableUnknown - nullability unknown
+       </UL>
+ 	<LI><B>REMARKS</B> String => comment describing parameter/column
+   </OL>
+
+  <P><B>Note:</B> Some databases may not return the column
+  descriptions for a procedure. Additional columns beyond
+  REMARKS can be defined by the database.
+
+  @param catalog a catalog name; "" retrieves those without a
+  catalog; null means drop catalog name from the selection criteria
+  @param schemaPattern a schema name pattern; "" retrieves those
+  without a schema
+  @param procedureNamePattern a procedure name pattern
+  @param columnNamePattern a column name pattern
+  @return <code>ResultSet</code> - each row describes a stored procedure parameter or
+       column
+  @see #getSearchStringEscape
+}
 function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
   SchemaPattern, ProcedureNamePattern, ColumnNamePattern: string): IZResultSet;
 var
-  ColumnIndexes : Array[1..9] of integer;
-  colName: string;
-  IZStmt: IZStatement;
-  TempSet: IZResultSet;
-  Names, Procs: TStrings;
-  PackageName, ProcName, TempProcedureNamePattern, TmpSchemaPattern: String;
-
-  function GetNextName(const AName: String; NameEmpty: Boolean = False): String;
-  var
-    N: Integer;
-    NewName: String;
-  begin
-    if ( PackageName = '' ) or ( not ( PackageName = ProcedureNamePattern ) ) then
-      NewName := AName
-    else
-      NewName := ProcName+'.'+AName;
-    if (Names.IndexOf(NewName) = -1) and not NameEmpty then
-    begin
-      Names.Add(NewName);
-      Result := NewName;
-    end
-    else
-      for N := 1 to MaxInt do
-        if Names.IndexOf(NewName+ZFastCode.IntToStr(N)) = -1 then
-        begin
-          Result := NewName+ZFastCode.IntToStr(N);
-          Names.Add(Result);
-          Break;
-        end;
-  end;
-
-  procedure InsertProcedureColumnValues(const Source: IZResultSet; IsResultParam: Boolean = False);
-  var
-    TypeName{, SubTypeName}: string;
-  begin
-    TypeName := Source.GetString(ColumnIndexes[4]);
-    //SubTypeName := Source.GetString(ColumnIndexes[5]);
-    PackageName := Source.GetString(ColumnIndexes[8]);
-    ProcName := Source.GetString(ColumnIndexes[9]);
-
-    Result.MoveToInsertRow;
-    Result.UpdateNull(CatalogNameIndex);    //PROCEDURE_CAT
-    Result.UpdateNull(SchemaNameIndex);    //PROCEDURE_SCHEM
-    Result.UpdateString(ProcColProcedureNameIndex, Source.GetString(ColumnIndexes[1]));
-    ColName := Source.GetString(ColumnIndexes[2]);
-
-    if IsResultParam then
-      Result.UpdateString(ProcColColumnNameIndex, GetNextName('ReturnValue', False))
-    else
-      Result.UpdateString(ProcColColumnNameIndex, GetNextName(ColName, Length(ColName) = 0));
-
-    if IsResultParam then
-      Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctReturn))
-    else
-      if Source.GetString(ColumnIndexes[3]) = 'IN' then
-        Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctIn))
-      else
-        if Source.GetString(ColumnIndexes[3]) = 'OUT' then
-          Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctOut))
-        else
-          if ( Source.GetString(ColumnIndexes[3]) = 'IN/OUT') then
-            Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctInOut))
-          else
-            Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctUnknown));
-
-    Result.UpdateInt(ProcColDataTypeIndex, Ord(ConvertOracleTypeToSQLType(TypeName,
-      Source.GetInt(ColumnIndexes[6]),Source.GetInt(ColumnIndexes[7]),
-      ConSettings.CPType)));
-    Result.UpdateString(ProcColTypeNameIndex,TypeName);    //TYPE_NAME
-    Result.UpdateInt(ProcColPrecisionIndex, Source.GetInt(ColumnIndexes[6])); //PRECISION
-    Result.UpdateNull(ProcColLengthIndex);
-    Result.UpdateInt(ProcColScaleIndex, Source.GetInt(ColumnIndexes[7]));
-    Result.UpdateInt(ProcColRadixIndex, 10);
-    Result.UpdateString(ProcColNullableIndex, Source.GetString(ColumnIndexes[6]));
-    Result.InsertRow;
-  end;
-
-  function GetColumnSQL(const PosChar: String): String;
-  var
-    OwnerCondition, PackageNameCondition, PackageAsProcCondition, PackageProcNameCondition: string;
-
-    procedure SplitPackageAndProc(const Value: String);
-    var
-      iPos: Integer;
-    begin
-      PackageName := '';
-      ProcName := 'Value';
-      iPos := ZFastCode.Pos('.', Value);
-        if (iPos > 0) then
-        begin
-          PackageNameCondition := ConstructNameCondition(Copy(Value, 1, iPos-1),'package_name');
-          PackageProcNameCondition := ConstructNameCondition(Copy(Value, iPos+1,Length(Value)-iPos),'object_name');
-          PackageAsProcCondition := ConstructNameCondition(Copy(Value, iPos+1,Length(Value)-iPos),'package_name');
-          PackageName := '= '+#39+IC.ExtractQuote(Copy(Value, 1, iPos-1))+#39;
-          ProcName := IC.ExtractQuote(Copy(Value, iPos+1,Length(Value)-iPos));
-        end
-        else
-        begin
-          PackageNameCondition := 'package_name IS NULL';
-          PackageProcNameCondition := ConstructNameCondition(Value,'object_name');
-          PackageAsProcCondition := ConstructNameCondition(Value,'package_name');
-          PackageName := 'IS NULL';
-          ProcName := IC.ExtractQuote(Value);
-        end;
-    end;
-  begin
-    OwnerCondition := ConstructNameCondition(TmpSchemaPattern,'OWNER');
-    SplitPackageAndProc(TempProcedureNamePattern);
-    Result := 'select * from all_arguments where ('+PackageNameCondition+
-      ' AND '+PackageProcNameCondition+
-      ' OR '+ PackageAsProcCondition+')'+
-        'AND POSITION '+PosChar+' 0';
-    If OwnerCondition <> '' then
-      Result := Result + ' AND ' + OwnerCondition;
-    Result := Result + ' ORDER BY POSITION';
-  end;
-
-  procedure AddColumns(WasNext: Boolean; WasFunc: Boolean);
-  begin
-    if WasNext then InsertProcedureColumnValues(TempSet, WasFunc);
-    while TempSet.Next do
-      InsertProcedureColumnValues(TempSet, WasFunc);
-    TempSet.Close;
-
-    if not WasFunc then
-    begin
-      TempSet := IZStmt.ExecuteQuery(GetColumnSQL('=')); //ReturnValue has allways Position = 0
-      with TempSet do
-      begin
-        while Next do
-          InsertProcedureColumnValues(TempSet, True);
-        Close;
-      end;
-    end;
-  end;
-
-  procedure GetMoreProcedures;
-  var
-    i: Integer;
-    PackageNameCondition: String;
-  begin
-    PackageNameCondition := ConstructNameCondition(ProcedureNamePattern,'package_name');
-    If PackageNameCondition <> '' then
-      PackageNameCondition := ' WHERE ' + PackageNameCondition;
-    TempSet.Close;
-    TempSet := IZStmt.ExecuteQuery('select object_name from user_arguments '
-               + PackageNameCondition + ' GROUP BY object_name order by object_name');
-    while TempSet.Next do
-      Procs.Add(TempSet.GetString(FirstDbcIndex));
-    TempSet.Close;
-    for i := 0 to Procs.Count -1 do
-    begin
-      TempProcedureNamePattern := ProcedureNamePattern+'.'+IC.Quote(Procs[i]);
-      TempSet := IZStmt.ExecuteQuery(GetColumnSQL('>')); //ParameterValues have allways Position > 0
-      AddColumns(False, False);
-    end;
-  end;
-
+  TempProcedureNamePattern, TmpSchemaPattern: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF};
+  RS: IZResultSet;
+  Descriptor: TZOraProcDescriptor_A;
+  Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
+  SL: TStrings;
+  i: Integer;
   function CheckSchema: Boolean;
   begin
     if TmpSchemaPattern = '' then
       Result := False
-    else
-      with GetConnection.CreateStatement.ExecuteQuery('SELECT COUNT(*) FROM ALL_USERS WHERE '+ConstructNameCondition(TmpSchemaPattern,'username')) do
-      begin
-        Next;
-        Result := GetInt(FirstDbcIndex) > 0;
-        Close;
+    else with GetConnection.CreateStatement.ExecuteQuery('SELECT COUNT( * ) FROM ALL_USERS WHERE '+ConstructNameCondition(TmpSchemaPattern,'username')) do begin
+      Next;
+      Result := GetInt(FirstDbcIndex) > 0;
+      Close;
+    end;
+  end;
+  procedure AddArgs({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+    Descriptor: TZOraProcDescriptor_A);
+  var I: Integer;
+    ProcName, ParamName: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF};
+    Arg: TZOraProcDescriptor_A;
+  begin
+    Buf.Pos := 0;
+    ProcName := '';
+    Descriptor.ConcatParentName(True, buf, ProcName, IC);
+    ZDbcUtils.ToBuff(Descriptor.AttributeName, Buf, ProcName);
+    ZDbcUtils.FlushBuff(Buf, ProcName);
+    for I := 0 to Descriptor.Args.Count-1 do begin
+      Result.MoveToInsertRow;
+      Result.UpdateString(SchemaNameIndex, Descriptor.SchemaName);
+      Result.UpdateString(ProcColProcedureNameIndex, ProcName);
+      ParamName := '';
+      Arg := TZOraProcDescriptor_A(Descriptor.Args[i]);
+      Arg.ConcatParentName(False, buf, ParamName, IC);
+      ZDbcUtils.ToBuff(Arg.AttributeName, Buf, ParamName);
+      ZDbcUtils.FlushBuff(Buf, ParamName);
+      {$IFDEF UNICODE}
+      Result.UpdateUnicodeString(ProcColColumnNameIndex, ParamName);
+      Result.UpdateUnicodeString(ProcColTypeNameIndex, OCIType2Name(Descriptor.DataType));
+      {$ELSE}
+      Result.UpdateRawByteString(ProcColColumnNameIndex, ParamName);
+      Result.UpdateRawByteString(ProcColTypeNameIndex, OCIType2Name(Descriptor.DataType));
+      {$ENDIF}
+      if Arg.OrdPos = 0
+      then Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctReturn))
+      else case Arg.IODirection of
+        OCI_TYPEPARAM_IN    : Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctIn));
+        OCI_TYPEPARAM_OUT   : Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctOut));
+        OCI_TYPEPARAM_INOUT : Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctInOut));
       end;
+      Result.UpdateInt(ProcColPrecisionIndex, Arg.Precision);
+      Result.UpdateInt(ProcColLengthIndex, Arg.DataSize);
+      Result.UpdateInt(ProcColDataTypeIndex, Ord(NormalizeOracleTypeToSQLType(Arg.DataType,
+        Arg.DataSize, Arg.DescriptorType, Arg.Precision, Arg.Scale, ConSettings, Descriptor.IODirection)));
+
+      Result.UpdateInt(ProcColScaleIndex, Arg.Scale);
+      Result.UpdateInt(ProcColRadixIndex, Arg.Radix);
+      Result.UpdateInt(ProcColNullableIndex, Ord(ntNullableUnknown));
+      //ProcColRemarksIndex       = FirstDbcIndex + 12;
+      Result.InsertRow;
+    end;
+  end;
+
+  procedure AddPackageArgs({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
+  var I: Integer;
+  begin
+    for I := 0 to Descriptor.Args.Count -1 do begin
+      if TZOraProcDescriptor_A(Descriptor.Args[I]).ObjType = OCI_PTYPE_PKG
+      then AddPackageArgs(TZOraProcDescriptor_A(Descriptor.Args[I]))
+      else AddArgs(TZOraProcDescriptor_A(Descriptor.Args[i]));
+    end;
   end;
 begin
-  Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
+  Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
-  {improve SplitQualifiedObjectName: Oracle does'nt support catalogs}
-  if Catalog = '' then
-    TmpSchemaPattern := SchemaPattern
-  else
-    TmpSchemaPattern := Catalog;
+  Buf.Pos := 0;
+  if Catalog = ''
+  then TmpSchemaPattern := SchemaPattern
+  else TmpSchemaPattern := Catalog;
+  TempProcedureNamePattern := ProcedureNamePattern;
 
-    if ( TmpSchemaPattern = '' ) then
-      TempProcedureNamePattern := ProcedureNamePattern //just a procedurename or package or both
-    else
-      if CheckSchema then
-        TempProcedureNamePattern := ProcedureNamePattern //Schema exists not a package
-      else
-        begin
-          TempProcedureNamePattern := TmpSchemaPattern+'.'+ProcedureNamePattern; //no Schema so it's a PackageName
-          TmpSchemaPattern := '';
-        end;
-  if TempProcedureNamePattern <> '' then
-  begin
-    Names := TStringList.Create;
-    Procs := TStringList.Create;
-
-    IZStmt := GetConnection.CreateStatement;
-    TempSet := IZStmt.ExecuteQuery(GetColumnSQL('>')); //ParameterValues have allways Position > 0
-
-    with TempSet  do
-    begin
-      ColumnIndexes[1] := FindColumn('object_name');
-      ColumnIndexes[2] := FindColumn('argument_name');
-      ColumnIndexes[3] := FindColumn('IN_OUT'); //'RDB$PARAMETER_TYPE');
-      ColumnIndexes[4] := FindColumn('DATA_TYPE');//'RDB$FIELD_TYPE');
-      ColumnIndexes[5] := FindColumn('TYPE_SUBNAME');//RDB$FIELD_SUB_TYPE');
-      ColumnIndexes[6] := FindColumn('DATA_PRECISION');//RDB$FIELD_PRECISION');
-      ColumnIndexes[7] := FindColumn('DATA_SCALE');//RDB$FIELD_SCALE');
-      ColumnIndexes[8] := FindColumn('package_name');
-      ColumnIndexes[9] := FindColumn('object_name');
+  if (TmpSchemaPattern <> '') and (not CheckSchema) then begin
+    TempProcedureNamePattern  := IC.ExtractQuote(TempProcedureNamePattern);
+    TmpSchemaPattern          := IC.ExtractQuote(TmpSchemaPattern);
+    TempProcedureNamePattern  := TmpSchemaPattern+'.'+TempProcedureNamePattern; //no Schema so it's a PackageName
+    TmpSchemaPattern          := '';
+  end else if ZFastCode.Pos('.', TempProcedureNamePattern) > 0 then begin
+    SL := SplitString(TempProcedureNamePattern, '.');
+    TempProcedureNamePattern := '';
+    for I := 0 to SL.Count -1 do begin
+      ZDbcUtils.ToBuff(IC.ExtractQuote(SL[i]), Buf, TempProcedureNamePattern);
+      ZDbcUtils.ToBuff('.', Buf, TempProcedureNamePattern);
     end;
-      if ( PackageName <> 'IS NULL' ) and ( ProcName <> '' ) then
-        AddColumns(False, False)
-      else
-        if TempSet.Next then
-          if ( TempSet.GetString(ColumnIndexes[8]) = ProcName ) then
-          {Package without proc found}
-            GetMoreProcedures
-          else
-            AddColumns(True, False)
-        else
-        begin
-          TempSet.Close;
-          TempSet := IZStmt.ExecuteQuery(GetColumnSQL('=')); //ParameterValues have allways Position > 0
-          if TempSet.Next then
-            if ( TempSet.GetString(ColumnIndexes[8]) = ProcName ) then
-            {Package without proc found}
-              GetMoreProcedures
-            else
-              AddColumns(True, True)
-        end;
-    TempSet := nil;
-    IZStmt.Close;
-    FreeAndNil(Names);
-    FreeAndNil(Procs);
+    CancelLastChar(Buf, TempProcedureNamePattern);
+    ZDbcUtils.FlushBuff(Buf, TempProcedureNamePattern);
+    FreeAndNil(SL);
   end;
+
+
+  RS := GetProcedures('', TmpSchemaPattern, TempProcedureNamePattern);
+  while RS.Next do begin
+    TempProcedureNamePattern := '';
+    SL := SplitString(RS.GetString(ProcedureNameIndex), '.');
+    //SL.Insert(0, RS.GetString(SchemaNameIndex));
+    for I := 0 to SL.Count -1 do
+      if not IC.IsQuoted(SL[i]) then begin
+        ZDbcUtils.ToBuff('"', Buf, TempProcedureNamePattern);
+        ZDbcUtils.ToBuff(SL[i], Buf, TempProcedureNamePattern);
+        ZDbcUtils.ToBuff('".', Buf, TempProcedureNamePattern);
+      end else begin
+        ZDbcUtils.ToBuff(SL[i], Buf, TempProcedureNamePattern);
+        ZDbcUtils.ToBuff('.', Buf, TempProcedureNamePattern);
+      end;
+    CancelLastChar(Buf, TempProcedureNamePattern);
+    ZDbcUtils.FlushBuff(Buf, TempProcedureNamePattern);
+    Descriptor := TZOraProcDescriptor_A.Create(nil);
+    try
+      Descriptor.Describe(OCI_PTYPE_UNK, GetConnection, TempProcedureNamePattern);
+      if Descriptor.ObjType = OCI_PTYPE_PKG
+      then AddPackageArgs(Descriptor)
+      else AddArgs(Descriptor);
+    finally
+      SL.Free;
+      FreeAndNil(Descriptor);
+    end;
+  end;
+  RS.Close;
 end;
 
+{**
+  Gets a description of the stored procedures available in a
+  catalog.
+
+  <P>Only procedure descriptions matching the schema and
+  procedure name criteria are returned.  They are ordered by
+  PROCEDURE_SCHEM, and PROCEDURE_NAME.
+
+  <P>Each procedure description has the the following columns:
+   <OL>
+ 	<LI><B>PROCEDURE_CAT</B> String => procedure catalog (may be null)
+ 	<LI><B>PROCEDURE_SCHEM</B> String => procedure schema (may be null)
+ 	<LI><B>PROCEDURE_NAME</B> String => procedure name
+   <LI> reserved for future use
+   <LI> reserved for future use
+   <LI> reserved for future use
+ 	<LI><B>REMARKS</B> String => explanatory comment on the procedure
+ 	<LI><B>PROCEDURE_TYPE</B> short => kind of procedure:
+       <UL>
+       <LI> procedureResultUnknown - May return a result
+       <LI> procedureNoResult - Does not return a result
+       <LI> procedureReturnsResult - Returns a result
+       </UL>
+   </OL>
+
+  @param catalog a catalog name; "" retrieves those without a
+  catalog; null means drop catalog name from the selection criteria
+  @param schemaPattern a schema name pattern; "" retrieves those
+  without a schema
+  @param procedureNamePattern a procedure name pattern
+  @return <code>ResultSet</code> - each row is a procedure description
+  @see #getSearchStringEscape
+}
 function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 const
@@ -1521,27 +1504,26 @@ const
 var
   Len: NativeUInt;
   SQL: string;
-  LProcedureNamePattern, LSchemaNamePattern: string;
+  LProcedureNamePattern, LSchemaNamePattern,
   sName:string;
 begin
   Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
   LProcedureNamePattern := ConstructNameCondition(ProcedureNamePattern,'decode(procedure_name,null,object_name,object_name||''.''||procedure_name)');
   LSchemaNamePattern := ConstructNameCondition(SchemaPattern,'owner');
+
   SQL := 'select NULL AS PROCEDURE_CAT, OWNER AS PROCEDURE_SCHEM, '+
     'OBJECT_NAME, PROCEDURE_NAME AS PROCEDURE_NAME, '+
     'OVERLOAD AS PROCEDURE_OVERLOAD, OBJECT_TYPE AS PROCEDURE_TYPE FROM '+
-    'ALL_PROCEDURES WHERE 1=1';
+    'ALL_PROCEDURES WHERE OBJECT_TYPE in (''FUNCTION'',''PROCEDURE'',''PACKAGE'')';
   if LProcedureNamePattern <> '' then
     SQL := SQL + ' AND ' + LProcedureNamePattern;
   if LSchemaNamePattern <> '' then
     SQL := SQL + ' AND ' + LSchemaNamePattern;
   SQL := SQL + ' ORDER BY decode(owner,user,0,1),owner,object_name,procedure_name,overload';
 
-  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
-  begin
-    while Next do
-    begin
+  with GetConnection.CreateStatement.ExecuteQuery(SQL) do begin
+    while Next do begin
       sName := IC.Quote(GetString(OBJECT_NAME_Index));
       if GetString(PROCEDURE_NAME_Index) <> '' then
         sName :=  sName+'.'+IC.Quote(GetString(PROCEDURE_NAME_Index));
@@ -1551,11 +1533,11 @@ begin
       Result.UpdateString(ProcedureNameIndex, sName);
       Result.UpdatePAnsiChar(ProcedureOverloadIndex, GetPAnsiChar(PROCEDURE_OVERLOAD_Index, Len), @Len);
       if GetString(PROCEDURE_TYPE_Index) = 'FUNCTION' then
-          Result.UpdateByte(ProcedureTypeIndex, Ord(prtReturnsResult))
-        else if GetString(PROCEDURE_TYPE_Index) = 'PROCDEURE' then
-          Result.UpdateByte(ProcedureTypeIndex, Ord(prtNoResult))
-        else
-          Result.UpdateByte(ProcedureTypeIndex, Ord(prtUnknown)); //Package
+        Result.UpdateByte(ProcedureTypeIndex, Ord(prtReturnsResult))
+      else if GetString(PROCEDURE_TYPE_Index) = 'PROCDEURE' then
+        Result.UpdateByte(ProcedureTypeIndex, Ord(prtNoResult))
+      else
+        Result.UpdateByte(ProcedureTypeIndex, Ord(prtUnknown)); //Package
       Result.InsertRow;
     end;
     Close;
@@ -1577,10 +1559,10 @@ end;
 }
 function TZOracleDatabaseMetadata.UncachedGetSchemas: IZResultSet;
 begin
-    Result := CopyToVirtualResultSet(
-      GetConnection.CreateStatement.ExecuteQuery(
-        'SELECT USERNAME AS TABLE_SCHEM FROM SYS.ALL_USERS'),
-      ConstructVirtualResultSet(SchemaColumnsDynArray));
+  Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatement.ExecuteQuery(
+      'SELECT USERNAME AS TABLE_SCHEM FROM SYS.ALL_USERS'),
+    ConstructVirtualResultSet(SchemaColumnsDynArray));
 end;
 
 {**

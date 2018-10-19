@@ -302,9 +302,9 @@ begin
 end;
 
 procedure TXMLTestListener.TestingEnds(testResult: TTestResult);
-var
-   runTime : Double;
-   successRate : Integer;
+//var
+//   runTime : Double;
+//   successRate : Integer;
 begin
 //   runtime := (GetTickCount - startTime);
 //   if testResult.RunCount > 0 then
@@ -397,7 +397,6 @@ end;
 
 procedure TXMLTestListener.StartSuite(suite: ITest);
 var
-  s : string;
   SuiteN: IXMLNode;
 begin
 //   writeReport(Format('<test-suite name="%s" total="%d" not-run="%d">', [s, suite.CountTestCases, suite.CountTestCases - suite.CountEnabledTestCases]));
@@ -471,8 +470,6 @@ begin
 end;
 
 function TXMLTestListener.GetCurrentCaseName: string;
-var
-  c : Integer;
 begin
   Result := GetCurrentSuiteName;
   Result := RegisteredTests.Name + '.' + Result;

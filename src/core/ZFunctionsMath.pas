@@ -216,7 +216,7 @@ procedure AddMathFunctions(Functions : TZFunctionsList);
 implementation
 
 uses
-  Math;
+  Math{$IFDEF BCD_TEST}, FmtBCD{$ENDIF};
 
 { TZEFunction }
 
@@ -230,7 +230,11 @@ function TZEFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 0);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(Exp(1));
+  {$ELSE}
   VariantManager.SetAsFloat(Result, Exp(1));
+  {$ENDIF}
 end;
 
 { TZPIFunction }
@@ -245,7 +249,11 @@ function TZPIFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 0);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(PI);
+  {$ELSE}
   VariantManager.SetAsFloat(Result, PI);
+  {$ENDIF}
 end;
 
 { TZRndFunction }
@@ -260,7 +268,11 @@ function TZRndFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 0);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(Random);
+  {$ELSE}
   VariantManager.SetAsFloat(Result, Random);
+  {$ENDIF}
 end;
 
 { TZAbsFunction }
@@ -279,9 +291,23 @@ begin
   CheckParamsCount(Stack, 1);
   Value := Stack.GetParameter(1);
   if Value.VType = vtInteger then
+  {$IFDEF BCD_TEST}
+    Result := EncodeInteger(Abs(Value.VInteger))
+  else if Value.VType = vtDouble then
+    Result := EncodeDouble(Abs(Value.VDouble))
+  else if Value.VType = vtCurrency then
+    Result := EncodeCurrency(Abs(Value.VCurrency))
+  else if (Value.VType = vtBigDecimal) then begin
+    InitializeVariant(Result, vtBigDecimal);
+    if IsBcdNegative(Value.VBigDecimal)
+    then Result.VBigDecimal := Value.VBigDecimal
+    else BcdMultiply(Value.VBigDecimal, StrToBCD('-1'), Result.VBigDecimal);
+  end
+  {$ELSE}
     VariantManager.SetAsInteger(Result, Abs(Value.VInteger))
   else if Value.VType = vtFloat then
     VariantManager.SetAsFloat(Result, Abs(Value.VFloat))
+  {$ENDIF}
   else
     Result := Value;
 end;
@@ -298,8 +324,13 @@ function TZExpFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(Exp(
+    VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsFloat(Result, Exp(
     VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZLogFunction }
@@ -314,8 +345,12 @@ function TZLogFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(Ln(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsFloat(Result, Ln(
     VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZLog10Function }
@@ -330,8 +365,12 @@ function TZLog10Function.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(Log10(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsFloat(Result, Log10(
     VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZCosFunction }
@@ -346,8 +385,12 @@ function TZCosFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(Cos(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsFloat(Result, Cos(
     VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZCotFunction }
@@ -362,8 +405,12 @@ function TZCotFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(Cotan(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsFloat(Result, Cotan(
     VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZSinFunction }
@@ -378,8 +425,12 @@ function TZSinFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(Sin(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsFloat(Result, Sin(
     VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZTanFunction }
@@ -394,8 +445,12 @@ function TZTanFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(Tan(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsFloat(Result, Tan(
     VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZAcosFunction }
@@ -410,8 +465,12 @@ function TZAcosFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(ArcCos(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsFloat(Result, ArcCos(
     VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZAsinFunction }
@@ -426,8 +485,12 @@ function TZAsinFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(ArcSin(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsFloat(Result, ArcSin(
     VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZAtanFunction }
@@ -442,8 +505,12 @@ function TZAtanFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(ArcTan(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsFloat(Result, ArcTan(
     VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZCeilFunction }
@@ -458,8 +525,12 @@ function TZCeilFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeInteger(Ceil(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsInteger(Result, Ceil(
     VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZFloorFunction }
@@ -474,8 +545,12 @@ function TZFloorFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeInteger(Floor(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsInteger(Result, Floor(
     VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZRoundFunction }
@@ -490,7 +565,11 @@ function TZRoundFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeInteger(Round(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsInteger(Result, Round(VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZTruncFunction }
@@ -505,7 +584,11 @@ function TZTruncFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeInteger({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsInteger(Result, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZIntFunction }
@@ -520,7 +603,11 @@ function TZIntFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(Int(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsFloat(Result, Int(VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZFracFunction }
@@ -535,7 +622,11 @@ function TZFracFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(Frac(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsFloat(Result, Frac(VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 { TZSqrFunction }
@@ -550,8 +641,12 @@ function TZSqrFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
+  {$IFDEF BCD_TEST}
+  Result := EncodeDouble(Sqrt(VariantManager.GetAsDouble(Stack.GetParameter(1))));
+  {$ELSE}
   VariantManager.SetAsFloat(Result, Sqrt(
     VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  {$ENDIF}
 end;
 
 procedure AddMathFunctions(Functions : TZFunctionsList);

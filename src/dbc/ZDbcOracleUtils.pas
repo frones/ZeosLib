@@ -60,26 +60,36 @@ uses
   {$IF defined(WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
   {$IFEND}
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} ZDbcUtils, ZSelectSchema,
   ZSysUtils, ZDbcIntfs, ZVariant, ZPlainOracleDriver, ZDbcLogging,
-  ZCompatibility, ZPlainOracleConstants;
+  ZCompatibility, ZPlainOracleConstants, FmtBCD;
 
 const
   MAX_SQLVAR_LIMIT = 1024;
   Max_OCI_String_Size = 4000; //prevent 'OCI_ERROR: ORA-01459: invalid length for variable character string' if buffer is to small
   Max_OCI_Raw_Size = 2000;
 
+  NO_DTYPE = 0;
+  SQLType2OCIDescriptor: array[stBoolean..stBinaryStream] of sb2 = (
+    NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE,  //ordinals
+    NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, //floats
+    NO_DTYPE, OCI_DTYPE_TIMESTAMP, OCI_DTYPE_TIMESTAMP, //time values
+    NO_DTYPE, //GUID
+    NO_DTYPE, NO_DTYPE, NO_DTYPE,  //varying size types in equal order minimum sizes for 8Byte alignment
+    OCI_DTYPE_LOB, OCI_DTYPE_LOB, OCI_DTYPE_LOB); //lob's
 
 type
   { a struct for the ora long (char/byte) types }
+  PPOCILong = ^POCILong;
   POCILong = ^TOCILong;
   TOCILong = record
-    Len: Integer;
+    Len: sb4;
     data: array[0..7] of Byte; //just something for debugging
   end;
   { a struct for the ora var(char/byte) types }
   POCIVary = ^TOCIVary;
   TOCIVary = record
-    Len: SmallInt;
+    Len: sb2;
     data: array[0..7] of Byte; //just something for debugging
   end;
   {** Declares SQL Object }
@@ -129,50 +139,37 @@ type
 
     Precision: sb2; //field.precision used 4 out params
     Scale:     sb1; //field.scale used 4 out params
+    ParamName: String;
   end;
   PZOCIParamBinds = ^TZOCIParamBinds;
   TZOCIParamBinds = array[0..MAX_SQLVAR_LIMIT] of TZOCIParamBind; //just a nice dubugging range
 
   PZSQLVar = ^TZSQLVar;
-  TZSQLVar = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
+  TZSQLVar = record
     {OCI Handles}
-    Handle:    POCIHandle;
-    Define:    POCIHandle;
-    BindHandle: POCIBind;
+    valuep:     PAnsiChar; //An address of a data value or an array of data values of the type specified in the dty parameter. An array of data values can be specified for mapping into a PL/SQL table or for providing data for SQL multiple-row operations. When an array of bind values is provided, this is called an array bind in OCI terms.
+                         //For SQLT_NTY or SQLT_REF binds, the valuep parameter is ignored. The pointers to OUT buffers are set in the pgvpp parameter initialized by OCIBindObject().
+                         //If the OCI_ATTR_CHARSET_ID attribute is set to OCI_UTF16ID (replaces the deprecated OCI_UCS2ID, which is retained for backward compatibility), all data passed to and received with the corresponding bind call is assumed to be in UTF-16 encoding.
+    value_sz:   ub4{(ub2 on describe columns)};
+    dty:        ub2;
+    indp:       PSB2Array; //Pointer to an indicator variable or array. For all data types, this is a pointer to sb2 or an array of sb2s. The only exception is SQLT_NTY, when this pointer is ignored and the actual pointer to the indicator structure or an array of indicator structures is initialized by OCIBindObject(). Ignored for dynamic binds.
+    alenp:      PUB2Array; //Pointer to array of actual lengths of array elements. Each element in alenp is the length (in bytes, unless the data in valuep is in Unicode, when it is in codepoints) of the data in the corresponding element in the bind value array before and after the execute. This parameter is ignored for dynamic binds.
+
     {binding values}
-    Data:      Pointer;
-    oDataType:  ub2;
-    oDataSize:  ub2;
-    oIndicatorArray: PSB2Array; //indicates NULL ...
-    oDataSizeArray: PUB2Array; //value length for strings/bytes
     _Obj:      POCIObject;
     {Zeos proceesing values}
-    DescriptorType: sb4;
-    TypeCode:  ub2;
-    Length:    NativeUInt; //indicate size of Data
-    Precision: sb2; //field.precision
-    Scale:     sb1; //field.scale
+    DescriptorType: sb4; //holds our descriptor type we use
+    Precision: sb2; //field.precision used 4 out params
+    Scale:     sb1; //field.scale used 4 out params
+
     ColType:   TZSQLType; //Zeos SQLType
-    lobs:      TInterfaceDynArray; //temporary interface
-    CodePage:  Word; //ColumnCodePage
   end;
 
-  TZSQLVars = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
+  TZSQLVars = record
     AllocNum:  ub4;
     Variables: array[0..MAX_SQLVAR_LIMIT] of TZSQLVar; //just a nice dubugging range
   end;
   PZSQLVars = ^TZSQLVars;
-
-  TZOracleParam = Record
-    pName: string;
-    pSQLType: Integer;
-    pTypeName: String;
-    pType: ShortInt;
-    pProcIndex: Integer;
-    pParamIndex: Integer; //Current ZeosParameter index
-    pOutIndex: Integer;
-  End;
-  TZOracleParams = array of TZOracleParam;
 
 type
   {$A-}
@@ -200,40 +197,6 @@ procedure FreeOracleSQLVars(const PlainDriver: TZOraclePlainDriver;
   var Variables: PZSQLVars; const Iteration: Integer; const Handle: POCIEnv;
   const ErrorHandle: POCIError; const {%H-}ConSettings: PZConSettings);
 
-procedure DefineOracleVarTypes(var Variable: PZSQLVar; DataType: TZSQLType;
-  DataSize: Integer; OracleType: ub2; OCICanBindInt64: Boolean);
-
-procedure SetVariableDataEntrys(var BufferEntry: PAnsiChar; var Variable: PZSQLVar;
-  Iteration: NativeUInt); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-
-function CalcBufferSizeOfSQLVar(Const Variable: PZSQLVar): Integer; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-
-procedure AllocDesriptors(const PlainDriver: TZOraclePlainDriver;
-  ConnectionHandle: POCIEnv; var Variable: PZSQLVar; Iteration: Integer;
-  AllocTemporyLobs: Boolean);
-
-{**
-  Loads Oracle variable binded to SQL statement with data.
-  @param PlainDriver an Oracle plain driver.
-  @param Connection an Oracle connection Object.
-  @param ErrorHandle the stmt ErrorHandle
-  @param Variable Oracle variable holder.
-  @param Values a values to be loaded.
-  @param ChunkSize the size in bytes we send the lobs in chunks
-  @param Iteration the Iters we can use
-}
-procedure LoadOracleVar(const PlainDriver: TZOraclePlainDriver;
-  const Connection: IZConnection; const ErrorHandle: POCIError;
-  const Variable: PZSQLVar; var Value: TZVariant; ChunkSize: Integer;
-  Iteration: Integer);
-
-{**
-  Unloads Oracle variables binded to SQL statement with data.
-  @param Variables Oracle variable holders or array of TDesciptorRec.
-  @param ArrayCount count of bound arrays
-}
-procedure UnloadOracleVars(var Variables: PZSQLVars);
-
 {**
   Convert string Oracle field type to SQLType
   @param string field type value
@@ -242,8 +205,9 @@ procedure UnloadOracleVars(var Variables: PZSQLVars);
 function ConvertOracleTypeToSQLType(const TypeName: string;
   Precision, Scale: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
 
-function OracleTypeToSQLType(DataType, DataSize: SB2; Precision, Scale: ub1;
-  CtrlsCPType: TZControlsCodePage): TZSQLType;
+function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
+  out DescriptorType: sb4; Precision, Scale: sb2; ConSettings: PZConSettings;
+  IO: OCITypeParamMode): TZSQLType;
 
   {**
   Checks for possible SQL errors.
@@ -258,65 +222,6 @@ procedure CheckOracleError(const PlainDriver: TZOraclePlainDriver;
   const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
   const ConSettings: PZConSettings);
 
-{**
-  Creates an Oracle result set based on the current settings.
-  @return a created result set object.
-}
-function CreateOracleResultSet(
-  const Statement: IZStatement; const LogSQL: string; const Handle: POCIStmt;
-  const ErrorHandle: POCIError; ZBufferSize: Integer): IZResultSet; overload;
-
-{**
-  Creates an Oracle result set based on the current settings.
-  @return a created result set object.
-}
-function CreateOracleResultSet(
-  const Statement: IZStatement; const LogSQL: string; StmtHandle: POCIStmt;
-  ErrorHandle: POCIError; const Params: PZSQLVars;
-  Const OracleParams: TZOracleParams): IZResultSet; overload;
-
-{**
-  Allocates in memory Oracle handlers for Statement object.
-  @param PlainDriver an Oracle plain driver.
-  @param Connection an Oracle connection object.
-  @param Handle a holder for Statement handle.
-  @param ErrorHandle a holder for Error handle.
-}
-procedure AllocateOracleStatementHandles(const PlainDriver: TZOraclePlainDriver;
-  const Connection: IZConnection; var Handle: POCIStmt; var ErrorHandle: POCIError;
-  {%H-}UserServerCachedStmt: Boolean = False);
-
-{**
-  Frees from memory Oracle handlers for Statement object.
-  @param PlainDriver an Oracle plain driver.
-  @param Handle a holder for Statement handle.
-  @param ErrorHandle a holder for Error handle.
-}
-procedure FreeOracleStatementHandles(const PlainDriver: TZOraclePlainDriver;
-  var Handle: POCIStmt; var ErrorHandle: POCIError);
-
-{**
-  Prepares an Oracle statement.
-  @param PlainDriver an Oracle plain driver.
-  @param SQL an SQL query to be prepared.
-  @param Handle a holder for Statement handle.
-  @param ErrorHandle a holder for Error handle.
-}
-procedure PrepareOracleStatement(const PlainDriver: TZOraclePlainDriver;
-  ContextHandle: POCISvcCtx; const SQL: RawByteString; var Handle: POCIStmt;
-  const ErrorHandle: POCIError; PrefetchMemory: ub4; ServerCachedStmtHandle: Boolean;
-  const ConSettings: PZConSettings);
-
-{**
-  Gets a number of updates made by executed Oracle statement.
-  @param PlainDriver an Oracle plain driver.
-  @param Handle a holder for Statement handle.
-  @param ErrorHandle a holder for Error handle.
-  @returns a number of updates.
-}
-function GetOracleUpdateCount(const PlainDriver: TZOraclePlainDriver;
-  const Handle: POCIStmt; const ErrorHandle: POCIError): ub4;
-
 function DescribeObject(const PlainDriver: TZOraclePlainDriver; const Connection: IZConnection;
   ParamHandle: POCIParam; {%H-}stmt_handle: POCIHandle; Level: ub2): POCIObject;
 
@@ -325,11 +230,603 @@ procedure OraWriteLob(const PlainDriver: TZOraclePlainDriver; const BlobData: Po
   const LobLocator: POCILobLocator; const ChunkSize: Integer;
   BlobSize: Int64; Const BinaryLob: Boolean; const ConSettings: PZConSettings);
 
+
+procedure BCD2Nvu(const bcd: TBCD; num: POCINumber);
+procedure Nvu2BCD(num: POCINumber; var bcd: TBCD);
+
+
+type { implements an enumerator of a dedected pascal type from an oracle number }
+  TnvuKind = (nvu0, nvuNegInf, nvuPosInf,
+                        vnuNegInt, vnuPosInt,
+                        vnuNegCurr, vnuPosCurr,
+                        nvuBigDecimal);
+  TZvnuInfo = record
+    Scale                     : ShortInt;
+    Exponent                  : ShortInt;
+    Len                       : Byte;
+    Precision                 : Byte;
+    FirstBase100DigitDiv10Was0: Boolean;
+    LastBase100DigitMod10Was0 : Boolean;
+  end;
+
+{** EH:
+  detects the pascal type from an oracle ocie number oracle number
+  @param num the pointer to the oci-number
+  @param vnuInfo the collected infos about the number comming from nvuKind()
+  @return an an enumerator of a dedected pascal type
+}
+function nvuKind(num: POCINumber; var vnuInfo: TZvnuInfo): TnvuKind; //{$IFDEF WITH_INLINE}inline{$ENDIF};
+
+{** EH:
+  convert a positive oracle oci number into currency value
+  @param num the pointer to the oci-number
+  @param vnuInfo the collected infos about the number comming from nvuKind()
+  @return a converted value
+}
+function PosNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo): Currency; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+{** EH:
+  convert a negative oracle oci number into currency value
+  @param num the pointer to the oci-number
+  @param vnuInfo the collected infos about the number comming from nvuKind()
+  @return a converted value
+}
+function NegNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo): Currency; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+{** EH:
+  convert a positve oracle oci number into a unsigned longlong
+  @param num the pointer to the oci-number
+  @param vnuInfo the collected infos about the number comming from nvuKind()
+  @return a converted value
+}
+function PosNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): UInt64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+{** EH:
+  convert a negative oracle oci number into a signed longlong
+  @param num the pointer to the oci-number
+  @param vnuInfo the collected infos about the number comming from nvuKind()
+  @return a converted value
+}
+function NegNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): Int64; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+
+{** EH:
+  writes a negative unscaled oracle oci number into a buffer
+  @param num the pointer to the oci-number
+  @param vnuInfo the collected infos about the number comming from nvuKind()
+  @param Buf the buffer we're writing into
+  @return length in bytes
+}
+function PosOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+{** EH:
+  writes a positive unscaled oracle oci number into a buffer
+  @param num the pointer to the oci-number
+  @param vnuInfo the collected infos about the number comming from nvuKind()
+  @param Buf the buffer we're writing into
+  @return length in bytes
+}
+function NegOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;  {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+function OCIType2Name(DataType: ub2): String;
+
+const
+  VNU_NUM_INTState: array[Boolean] of TnvuKind = (vnuNegInt, vnuPosInt);
+  VNU_NUM_CurState: array[Boolean] of TnvuKind = (vnuNegCurr, vnuPosCurr);
+  sPosScaleFaktor: array[0..18] of Int64 = (
+      1,
+      10,
+      100,
+      1000,
+      10000,
+      100000,
+      1000000,
+      10000000,
+      100000000,
+      1000000000,
+      10000000000,
+      100000000000,
+      1000000000000,
+      10000000000000,
+      100000000000000,
+      1000000000000000,
+      10000000000000000,
+      100000000000000000,
+      1000000000000000000);
+  {$IFNDEF WITH_UINT64_C1118_ERROR}
+  uPosScaleFaktor: array[0..19] of UInt64 = (
+      1,
+      10,
+      100,
+      1000,
+      10000,
+      100000,
+      1000000,
+      10000000,
+      100000000,
+      1000000000,
+      10000000000,
+      100000000000,
+      1000000000000,
+      10000000000000,
+      100000000000000,
+      1000000000000000,
+      10000000000000000,
+      100000000000000000,
+      1000000000000000000,
+      10000000000000000000);
+  {$ENDIF}
+  sCurrScaleFaktor: array[0..4] of Integer = (
+      1,
+      10,
+      100,
+      1000,
+      10000);
+  sAlignCurrencyScale2Precision: array[0..4] of Integer = (
+    15, 16, 17, 18, 19);
+type
+  { oracle loves it's recursion ... so we need a recursive obj model }
+  TZOraProcDescriptor_A = class(TObject)
+  private
+    FParent: TZOraProcDescriptor_A;
+
+    procedure InternalDescribeObject(Obj: POCIHandle;
+      {$IFDEF AUTOREFCOUNT} const {$ENDIF}PlainDriver: TZOraclePlainDriver;
+      ErrorHandle: POCIError; ConSettings: PZConSettings);
+
+    function InternalDescribe(const Name: String; _Type: UB4;
+      {$IFDEF AUTOREFCOUNT} const {$ENDIF}PlainDriver: TZOraclePlainDriver;
+      ErrorHandle: POCIError; OCISvcCtx: POCISvcCtx; Owner: POCIHandle;
+      ConSettings: PZConSettings): Sword;
+  public
+    procedure Describe(_Type: UB4; const Connection: IZConnection;
+      const Name: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF});
+
+    {$IFDEF UNICODE}
+    procedure ConcatParentName(NotArgName: Boolean; var Buf: TUCS2Buff; var Result: String; const IC: IZIdentifierConvertor);
+    {$ELSE}
+    procedure ConcatParentName(NotArgName: Boolean; var Buf: TRawBuff; var Result: RawByteString; const IC: IZIdentifierConvertor);
+    {$ENDIF}
+    constructor Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}Parent: TZOraProcDescriptor_A);
+    destructor Destroy; override;
+  public
+    Args: TObjectList;
+    SchemaName, AttributeName, TypeName: String;
+    ObjType, Precision, Radix: UB1;
+    Scale: SB1;
+    DataSize: UB4;
+    DataType: UB2;
+    OverloadID: ub2;
+    DescriptorType: SB4;
+    IODirection: OCITypeParamMode;
+    OrdPos: ub2;
+    SQLType: TZSQLType;
+    property Parent: TZOraProcDescriptor_A read FParent;
+  end;
+
 implementation
 
 uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
-  ZDbcUtils, ZEncoding, ZFastCode, ZClasses
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  ZEncoding, ZFastCode, ZClasses
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
+  {$IFDEF UNICODE},StrUtils{$ENDIF};
+(* Oracle Docs: https://docs.oracle.com/cd/B28359_01/appdev.111/b28395/oci03typ.htm#i423688
+Oracle stores values of the NUMBER datatype in a variable-length format.
+The first byte is the exponent and is followed by 1 to 20 mantissa bytes.
+The high-order bit of the exponent byte is the sign bit;
+it is set for positive numbers and it is cleared for negative numbers.
+The lower 7 bits represent the exponent, which is a base-100 digit with an offset of 65.
+
+To calculate the decimal exponent, add 65 to the base-100 exponent and
+add another 128 if the number is positive. If the number is negative,
+you do the same, but subsequently the bits are inverted.
+For example, -5 has a base-100 exponent = 62 (0x3e).
+The decimal exponent is thus (~0x3e) -128 - 65 = 0xc1 -128($7f) -65 = 193 -128($7f) -65 = 0.
+
+Each mantissa byte is a base-100 digit, in the range 1..100. For positive numbers,
+the digit has 1 added to it. So, the mantissa digit for the value 5 is 6.
+For negative numbers, instead of adding 1, the digit is subtracted from 101.
+So, the mantissa digit for the number -5 is 96 (101 - 5).
+Negative numbers have a byte containing 102 appended to the data bytes.
+However, negative numbers that have 20 mantissa bytes do not have the trailing 102 byte.
+Because the mantissa digits are stored in base 100, each byte can represent 2 decimal digits.
+The mantissa is normalized; leading zeroes are not stored.
+
+Up to 20 data bytes can represent the mantissa. However,
+only 19 are guaranteed to be accurate.
+The 19 data bytes, each representing a base-100 digit,
+yield a maximum precision of 38 digits for an Oracle NUMBER.
+
+If you specify the datatype code 2 in the dty parameter of an OCIDefineByPos() call,
+your program receives numeric data in this Oracle internal format.
+The output variable should be a 21-byte array to accommodate the largest possible number.
+Note that only the bytes that represent the number are returned.
+There is no blank padding or NULL termination.
+If you need to know the number of bytes returned,
+use the VARNUM external datatype instead of NUMBER
+*)
+// Conversions
+// original Autor might be Joost van der Sluis
+// Code is from oracleconnection.pp of FPC
+//changed TBCD to TZBCD
+//Procedure FmtBCD2Nvu(bcd:tBCD;b:pByte);
+procedure BCD2Nvu(const bcd: TBCD; num: POCINumber);
+var
+  i,j,cnt   : integer;
+  nibbles   : array [0..maxfmtbcdfractionsize-1] of byte;
+  exp       : shortint;
+  bb        : byte;
+begin
+  //fillchar(num[0],22,#0);
+  FillChar(num[0],SizeOf(TOCINUmber),#0);
+  if BCDPrecision(bcd)=0 then begin// zero, special case
+    num[0] := 1;
+    num[1] := $80;
+  end else begin
+    if (BCDPrecision(bcd)-BCDScale(bcd)) mod 2 <>0 then begin// odd number before decimal point
+      nibbles[0] := 0;
+      j := 1;
+    end else
+      j := 0;
+    for i := 0 to bcd.Precision -1 do
+      if i mod 2 =0
+      then nibbles[i+j] := bcd.Fraction[i div 2] shr 4
+      else nibbles[i+j] := bcd.Fraction[i div 2] and $0f;
+    nibbles[bcd.Precision+j] := 0; // make sure last nibble is also 0 in case we have odd scale
+    exp := (BCDPrecision(bcd)-BCDScale(bcd)+1) div 2;
+    cnt := exp+(BCDScale(bcd)+1) div 2;
+    // to avoid "ora 01438: value larger than specified precision allowed for this column"
+    // remove trailing zeros (scale < 0)...
+    while (nibbles[cnt*2-2]*10+nibbles[cnt*2-1])=0 do
+      cnt := cnt-1;
+    // ... and remove leading zeros (scale > precision)
+    j:=0;
+    while (nibbles[j*2]*10+nibbles[j*2+1])=0 do begin
+      j:=j+1;
+      exp:=exp-1;
+    end;
+    if IsBCDNegative(bcd) then begin
+      num[0]:=cnt-j+1;
+      num[1]:=not(exp+64) and $7f ;
+      for i:=j to cnt-1 do begin
+        bb:=nibbles[i*2]*10+nibbles[i*2+1];
+        num[2+i-j]:=101-bb;
+        end;
+      if 2+cnt-j<22 then begin // add a 102 at the end of the number if place left.
+        num[0]:=num[0]+1;
+        num[2+cnt-j]:=102;
+      end;
+    end else begin
+      num[0]:=cnt-j+1;
+      num[1]:=(exp+64) or $80 ;
+      for i:=j to cnt-1 do begin
+        bb:=nibbles[i*2]*10+nibbles[i*2+1];
+        num[2+i-j]:=1+bb;
+        end;
+      end;
+    end;
+end;
+
+// Conversions
+// original Autor might be Joost van der Sluis
+// Code is from oracleconnection.pp of FPC
+procedure Nvu2BCD(num: POCINumber; var bcd: TBCD);
+var
+  i,j       : integer;
+  bb,size   : byte;
+  exp       : shortint;
+  nibbles   : array [0..MaxFMTBcdFractionSize-1] of byte;
+  scale     : integer;
+begin
+  size := num[0];
+  if (size=1) and (num[1]=$80) then begin// special representation for 0
+    //bcd:=IntegerToBCD(0)
+    FillChar(bcd, SizeOf(bcd), #0);
+    bcd.Precision := 10;
+    bcd.SignSpecialPlaces := 2;
+    Exit;
+  end;
+  bcd.SignSpecialPlaces := 0; //sign positive, non blank, scale 0
+  //bcd.Precision:=1;         //BCDNegate works only if Precision <>0
+  if (num[1] and $80)=$80 then begin// then the number is positive
+    exp := (num[1] and $7f)-65;
+    for i := 0 to size-2 do begin
+      bb := num[i+2]-1;
+      nibbles[i*2]:=bb div 10;
+      nibbles[i*2+1]:=(bb mod 10);
+    end;
+  end else begin
+    bcd.SignSpecialPlaces := bcd.SignSpecialPlaces xor $80; //BCDNegate(bcd);
+    exp := (not(num[1]) and $7f)-65;
+    if num[size]=102 then  // last byte doesn't count if = 102
+      dec(Size);//size:=size-1;
+    for i := 0 to size-2 do begin
+      bb := 101-num[i+2];
+      nibbles[i*2] := bb div 10;
+      nibbles[i*2+1] := (bb mod 10);
+    end;
+  end;
+  nibbles[(size-1)*2] := 0;
+  bcd.Precision:=(size-1)*2;
+  scale := bcd.Precision-(exp*2+2);
+  if scale>=0 then begin
+    if (scale > bcd.Precision) then begin // need to add leading 0s
+      for i:=0 to (scale-bcd.Precision+1) div 2 do
+        bcd.Fraction[i]:=0;
+      i:=scale-bcd.Precision;
+      bcd.Precision:=scale;
+    end else
+      i:=0;
+    j:=i;
+    if (i=0) and (nibbles[0]=0) then begin// get rid of leading zero received from oci
+      bcd.Precision:=bcd.Precision-1;
+      j:=-1;
+    end;
+    while i<=bcd.Precision do begin// copy nibbles
+      if i mod 2 =0
+      then bcd.Fraction[i div 2]:=nibbles[i-j] shl 4
+      else bcd.Fraction[i div 2]:=bcd.Fraction[i div 2] or nibbles[i-j];
+      Inc(i);//i:=i+1;
+    end;
+    bcd.SignSpecialPlaces:=bcd.SignSpecialPlaces or scale;
+  end else begin // add trailing zeroes, increase precision to take them into account
+    i:=0;
+    while i<=bcd.Precision do begin// copy nibbles
+      if i mod 2 =0
+      then bcd.Fraction[i div 2]:=nibbles[i] shl 4
+      else bcd.Fraction[i div 2]:=bcd.Fraction[i div 2] or nibbles[i];
+      Inc(i);//i:=i+1;
+    end;
+    bcd.Precision:=bcd.Precision-scale;
+    for i := size -1 to High(bcd.Fraction) do
+      bcd.Fraction[i] := 0;
+  end;
+end;
+
+{** EH:
+  convert a positive oracle oci number into a unsigned longlong
+  @param num the pointer to the oci-number
+  @param Neg100FactorCnt a scale for truncation if positive or base 100 multiplication if negative
+  @return a converted value
+}
+function PosNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): UInt64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+var i: Byte;
+begin
+  {$R-} {$Q-}
+  { initialize with first positive base-100-digit }
+  Result := (num[2] - 1);
+  { skip len, exponent and first base-100-digit -> start with 3}
+  for i := 3 to vnuInfo.Len do
+    Result := Result * 100 + Byte(num[i] - 1);
+  I := (vnuInfo.Len-1)*2;
+  if I <= vnuInfo.Precision then
+    {$IFNDEF WITH_UINT64_C1118_ERROR}
+    Result := Result * uPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
+    {$ELSE}
+    Result := Result * UInt64(sPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)]);
+    {$ENDIF}
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{** EH:
+  convert a negative oracle oci number into a signed longlong
+  @param num the pointer to the oci-number
+  @param Neg100FactorCnt a scale for truncation if positive or base 100 multiplication if negative
+  @param Len a true len of num gigits to work with
+  @return a converted value
+}
+function NegNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): Int64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+var i: Byte;
+begin
+  {$R-} {$Q-}
+  { initialize with first negative base-100-digit }
+  Result := -(101 - num[2]); //init
+  { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
+  for i := 3 to vnuInfo.Len do
+    Result := Result * 100 - (101 - num[i]);
+  I := (vnuInfo.Len-1)*2;
+  if I <= vnuInfo.Precision then
+    Result := Result * sPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
+end;
+
+procedure Curr2Vnu(const C: Currency; num: POCINumber);
+var BCD: TBCD;
+begin
+  CurrToBCD(C, BCD);
+  BCD2Nvu(Bcd, num);
+end;
+
+{** EH:
+  convert a positive oracle oci number into currency value
+  @param num the pointer to the oci-number
+  @param scale a given scale to align scale to 4 decimal digits
+  @return a converted value
+}
+function PosNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo): Currency; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
+var I64: Int64 absolute Result;
+  i: ShortInt;
+begin
+  {$R-} {$Q-}
+  { initialize with first positive base-100-digit }
+  I64 := (num[2] - 1);
+  { skip len, exponent and first base-100-digit -> start with 3}
+  for i := 3 to vnuInfo.Len do
+    i64 := i64 * 100 + Byte(num[i] - 1);
+  I64 := I64 * sCurrScaleFaktor[4-(vnuInfo.Scale+Ord(vnuInfo.LastBase100DigitMod10Was0))];
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{**
+  convert a negative oracle oci number into currency value
+  @param num the pointer to the oci-number
+  @param scale a given scale to align scale to 4 decimal digits
+  @return a converted value
+}
+function NegNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+var I64: Int64 absolute Result;
+  i: ShortInt;
+begin
+  {$R-} {$Q-}
+  i64 := -(101 - num[2]); //init
+  { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
+  for i := 3 to vnuInfo.Len do
+    i64 := i64 * 100 - (101 - num[i]);
+  I64 := I64 * sCurrScaleFaktor[4-(vnuInfo.Scale+Ord(vnuInfo.LastBase100DigitMod10Was0))];
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{**  EH:
+  writes a negative unscaled oracle oci number into a buffer
+  @param num the pointer to the oci-number
+  @param vnuInfo the collected infos about the number comming from nvuKind()
+  @param Buf the buffer we're writing into
+  @return length in bytes
+}
+function PosOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;
+var i: Byte;
+  PStart: PAnsiChar;
+begin
+  {$R-} {$Q-}
+  PStart := Buf;
+  if vnuInfo.FirstBase100DigitDiv10Was0 then begin
+    PByte(Buf)^ := Ord('0')+Byte(num[2] - 1);
+    Inc(Buf);
+  end else begin
+    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(num[2] - 1)]);
+    Inc(Buf,2);
+  end;
+  for I := 3 to vnuInfo.Len do begin
+    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(num[i] - 1)]);
+    Inc(Buf,2);
+  end;
+  I := (vnuInfo.Len-1)*2;
+  if I <= vnuInfo.Precision then begin
+    i := vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0);
+    while i >= 2 do begin
+      PWord(Buf)^ := Word(TwoDigitLookupRaw[0]);
+      Inc(Buf,2);
+      Dec(i, 2);
+    end;
+    if i > 0 then
+      PByte(Buf)^ := Ord('0');
+  end;
+  Result := Buf-PStart;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{** EH:
+  writes a positive unscaled oracle oci number into a buffer
+  @param num the pointer to the oci-number
+  @param vnuInfo the collected infos about the number comming from nvuKind()
+  @param Buf the buffer we're writing into
+  @return length in bytes
+}
+function NegOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;
+var i: Byte;
+  PStart: PAnsiChar;
+begin
+  {$R-} {$Q-}
+  PStart := Buf;
+  PByte(Buf)^ := Ord('-');
+  if vnuInfo.FirstBase100DigitDiv10Was0 then begin
+    PByte(Buf+1)^ := Ord('0')+Byte(101 - num[2]);
+    Inc(Buf, 2);
+  end else begin
+    PWord(Buf+1)^ := Word(TwoDigitLookupRaw[Byte(101 - num[2])]);
+    Inc(Buf,3);
+  end;
+  for I := 3 to vnuInfo.Len do begin
+    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(101 - num[i])]);
+    Inc(Buf,2);
+  end;
+  I := (vnuInfo.Len-1)*2;
+  if I <= vnuInfo.Precision then begin
+    i := vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0);
+    while i >= 2 do begin
+      PWord(Buf)^ := Word(TwoDigitLookupRaw[0]);
+      Inc(Buf,2);
+      Dec(i, 2);
+    end;
+    if i > 0 then
+      PByte(Buf)^ := Ord('0');
+  end;
+  Result := Buf-PStart;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function nvuKind(num: POCINumber; var vnuInfo: TZvnuInfo): TnvuKind; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+var
+  base100digit: ShortInt;
+  Positive: Boolean;
+begin
+  {$R-} {$Q-}
+  Result := nvuBigDecimal;
+  vnuInfo.len := num[0];
+  if (vnuInfo.len=1) and ((num[1]=$80) or (num[1]=$c1)) then
+    Result := nvu0
+  else if (vnuInfo.len=1) and (num[1]= 0) then
+    Result := nvuNegInf
+  else if (vnuInfo.len=2) and (num[1] = 255) and (num[2] = 101) then
+    Result := nvuPosInf
+  else begin
+    Positive := (num[1] and $80)=$80;
+{To calculate the decimal exponent, add 65 to the base-100 exponent and
+add another 128 if the number is positive. If the number is negative,
+you do the same, but subsequently the bits are inverted.
+For example, -5 has a base-100 exponent = 62 (0x3e).
+The decimal exponent is thus (~0x3e) -128 - 65 = 0xc1 -128($7f) -65 = 193 -128($7f) -65 = 0. }
+    if Positive then //positive num?
+      vnuInfo.Exponent := (num[1] and $7f)-65
+    else begin
+      vnuInfo.Exponent := (not(num[1]) and $7f)-65;
+      if Num[vnuInfo.Len] = 102 then//last byte does not count if 102
+        Dec(vnuInfo.len);
+    end;
+    { align scale and precision! this took me ages and dozens of tests }
+    if vnuInfo.Exponent < 0 then begin
+      vnuInfo.Precision := (Abs(vnuInfo.Exponent) - 1) shl 1 + (vnuInfo.Len - 1) shl 1;
+      vnuInfo.Scale := vnuInfo.Precision;
+    end else if vnuInfo.Exponent >= (vnuInfo.Len - 1) then begin //int range ?
+      vnuInfo.Precision := (vnuInfo.Exponent + 1) shl 1;
+      vnuInfo.Scale := 0;
+    end else begin
+      vnuInfo.Precision := (vnuInfo.Len - 1) shl 1;
+      vnuInfo.Scale := vnuInfo.Precision - (vnuInfo.Exponent + 1) shl 1;
+    end;
+    { final scale and prec calculation -> check first and last digit }
+    if Positive
+    then base100digit := num[2] - 1
+    else base100digit := (101 - num[2]);
+    vnuInfo.FirstBase100DigitDiv10Was0 := (base100digit div 10 = 0);
+    Dec(vnuInfo.Precision, Ord(vnuInfo.FirstBase100DigitDiv10Was0));
+    if Positive
+    then base100digit := num[vnuInfo.len] - 1
+    else base100digit := (101 - num[vnuInfo.len]);
+    vnuInfo.LastBase100DigitMod10Was0 := (base100digit mod 10 = 0);
+    if vnuInfo.LastBase100DigitMod10Was0 then begin
+      if (vnuInfo.Scale > 0) then
+        Dec(vnuInfo.Scale);
+      Dec(vnuInfo.Precision);
+    end;
+
+    { EH: we just test if we're in scale and precision range ..
+      We don't know this for sure and sadly oracle gives us no way to find this out!
+      Nice would by the ATTRIBUT min_val/max_val which is available 4 describing sequences only ):
+
+      Note: Oracle always returns the significant decimal digits! }
+    if (vnuInfo.Scale = 0) and (vnuInfo.Precision <= 19+Ord(Positive)) then
+      Result := VNU_NUM_INTState[Positive]
+    else if (vnuInfo.Scale>0) and (vnuInfo.Scale <= 4) and (vnuInfo.Precision <= 19) then
+      Result := VNU_NUM_CurState[Positive];
+  end;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
 
 {**
   Allocates memory for Oracle SQL Variables.
@@ -343,7 +840,7 @@ begin
   if Variables <> nil then
     FreeMem(Variables);
 
-  Size := SizeOf(TZSQLVars) + Count * SizeOf(TZSQLVar);
+  Size := SizeOf(ub4) + Max(1,Count) * SizeOf(TZSQLVar);
   GetMem(Variables, Size);
   FillChar(Variables^, Size, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
   Variables^.AllocNum := Count;
@@ -364,6 +861,7 @@ var
   I: Integer;
   J: NativeUInt;
   CurrentVar: PZSQLVar;
+  Status: Sword;
 
   procedure DisposeObject(var Obj: POCIObject);
   var
@@ -400,659 +898,25 @@ begin
       {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
       if Assigned(CurrentVar^._Obj) then
         DisposeObject(CurrentVar^._Obj);
-      if (CurrentVar^.Data <> nil) and (CurrentVar^.DescriptorType > 0) then
-        for J := 0 to Iteration-1 do
-          if ({%H-}PPOCIDescriptor({%H-}NativeUInt(CurrentVar^.Data)+(J*SizeOf(Pointer))))^ <> nil then
-            PlainDriver.OCIDescriptorFree({%H-}PPOCIDescriptor({%H-}NativeUInt(CurrentVar^.Data)+(J*SizeOf(Pointer)))^,
-              CurrentVar^.DescriptorType);
-      if (CurrentVar^.lobs <> nil) then
-        SetLength(CurrentVar^.lobs, 0);
-      CurrentVar^.Data := nil;
-      CurrentVar^.oIndicatorArray := nil;
-      CurrentVar^.oDataSizeArray := nil;
+      if (CurrentVar^.valuep <> nil) then
+        if (CurrentVar^.DescriptorType > 0) then begin
+          for J := 0 to Iteration-1 do
+            if (PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer))))^ <> nil then begin
+              Status := PlainDriver.OCIDescriptorFree(PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer)))^,
+                CurrentVar^.DescriptorType);
+              if Status <> OCI_SUCCESS then
+                CheckOracleError(PlainDriver, ErrorHandle, status, lcOther, 'OCIDescriptorFree', ConSettings);
+            end;
+        end else if CurrentVar^.dty = SQLT_VST then
+          for J := 0 to Iteration-1 do begin
+            Status := PlainDriver.OCIStringResize(Handle, ErrorHandle, 0, PPOCIString(CurrentVar^.valuep+(J*SizeOf(POCIString))));
+            if Status <> OCI_SUCCESS then
+              CheckOracleError(PlainDriver, ErrorHandle, status, lcOther, 'OCIDescriptorFree', ConSettings);
+          end;
     end;
     FreeMem(Variables);
     Variables := nil;
   end;
-end;
-
-procedure DefineOracleVarTypes(var Variable: PZSQLVar; DataType: TZSQLType;
-  DataSize: Integer; OracleType: ub2; OCICanBindInt64: Boolean);
-begin
-  with Variable^ do
-  begin
-    ColType := DataType;
-    TypeCode := OracleType;
-    oDataSize := DataSize;
-    DescriptorType := 0; //init ?
-    case ColType of
-      stBoolean, stByte, stShort, stWord, stSmall, stInteger:
-        begin
-          TypeCode := SQLT_INT;
-          Length := SizeOf(LongInt);
-        end;
-      stUlong: begin
-          TypeCode := SQLT_STR;
-          oDataSize := 23;
-          Length := 23; //for trailing #0
-        end;
-      stLong:
-        if OCICanBindInt64 then begin
-          TypeCode := SQLT_INT;
-          Length := SizeOf(Int64);
-        end else begin
-          TypeCode := SQLT_FLT;
-          Length := SizeOf(Double);
-        end;
-      stFloat, stDouble, stLongWord, stCurrency, stBigDecimal:
-        begin
-          TypeCode := SQLT_FLT;
-          Length := SizeOf(Double);
-        end;
-      stDate, stTime, stTimestamp:
-        case OracleType of
-          SQLT_DAT: Length := DataSize; //reading without conversions!
-          SQLT_DATE:
-            begin
-              TypeCode := SQLT_DAT;
-              Length := 7;
-            end;
-          SQLT_INTERVAL_DS:
-            begin
-              DescriptorType := OCI_DTYPE_INTERVAL_DS;
-              Length := SizeOf(POCIInterval);
-            end;
-          SQLT_INTERVAL_YM:
-            begin
-              DescriptorType := OCI_DTYPE_INTERVAL_YM;
-              Length := SizeOf(POCIInterval);
-            end;
-          else begin //for all other DateTime vals we would loose msec precision...
-              DescriptorType := OCI_DTYPE_TIMESTAMP;
-              TypeCode := SQLT_TIMESTAMP;
-              Length := SizeOf(POCIDateTime);
-            end;
-        end;
-      stGUID:
-        begin
-          TypeCode := SQLT_STR;
-          oDataSize := 39;
-          Length := 39; //for trailing #0
-        end;
-      stString, stUnicodeString:
-        if OracleType = SQLT_AFC then
-          Length := oDataSize
-        else begin
-          TypeCode := SQLT_STR;
-          Length := oDataSize + 1;
-        end;
-      stAsciiStream, stUnicodeStream, stBinaryStream, stBytes:
-        if (TypeCode in [SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE,SQLT_NTY]) then begin
-          if not (OracleType = SQLT_NTY) then
-            DescriptorType := OCI_DTYPE_LOB;
-          Length := SizeOf(POCILobLocator);
-        end else begin
-          if ColType = stAsciiStream
-          then TypeCode := SQLT_LVC
-          else TypeCode := SQLT_LVB;
-          if oDataSize = 0
-          then Length := 128 * 1024 + SizeOf(Integer)
-          else Length := oDataSize + SizeOf(Integer);
-        end;
-      stDataSet: ; //Do nothing here!
-      stUnknown:
-    end;
-  end;
-end;
-
-procedure SetVariableDataEntrys(var BufferEntry: PAnsiChar; var Variable: PZSQLVar;
-  Iteration: NativeUInt);
-begin
-  with Variable^ do begin
-  {now let's set binding entrys}
-  //step one: set null indicators
-    oIndicatorArray := Pointer(BufferEntry);
-    Inc(BufferEntry, SizeOf(sb2)*Iteration);
-  //Step two: set Length Indicators if required
-    oDataSizeArray := {%H-}Pointer({%H-}NativeUInt(BufferEntry) * Byte((TypeCode=SQLT_STR) and (oDataSize > 0))); //either nil or valid address
-    Inc(BufferEntry, Byte((TypeCode=SQLT_STR) and (oDataSize > 0))*NativeUInt(SizeOf(ub2))*Iteration); //inc 0 or SizeOf(ub2)
-  //Step three: set data entrys if required
-    Data := {%H-}Pointer({%H-}NativeUInt(BufferEntry) * Byte(ColType <> stUnknown)); //either nil or valid address
-    Inc(BufferEntry, Byte(ColType <> stUnknown)*Length*Iteration); //inc 0 or Length
-  end;
-end;
-
-function CalcBufferSizeOfSQLVar(Const Variable: PZSQLVar): Integer;
-begin
-  Result := (
-    (Integer(Variable^.Length))+ {if we use locale adressation then skip it}
-    SizeOf(sb2){NullIndicator}+ {allways present}
-    (Ord((Variable^.TypeCode = SQLT_STR) and (Variable^.oDataSize > 0))*SizeOf(ub2)){LengthIndicator} //only for SQLT_STR and skip if field is null
-    );
-end;
-
-procedure AllocDesriptors(const PlainDriver: TZOraclePlainDriver;
-  ConnectionHandle: POCIEnv; var Variable: PZSQLVar; Iteration: Integer;
-  AllocTemporyLobs: Boolean);
-var
-  i: LongWord;
-begin
-  if Variable^.DescriptorType > 0 then
-  begin
-    for i := 0 to Iteration -1 do
-      PlainDriver.OCIDescriptorAlloc(ConnectionHandle,
-        {%H-}PPOCIDescriptor({%H-}NativeUInt(Variable^.Data)+(I*SizeOf(POCIDescriptor)))^, Variable^.DescriptorType, 0, nil);
-    if AllocTemporyLobs and (Variable^.DescriptorType = OCI_DTYPE_LOB) then
-    SetLength(Variable^.lobs, Iteration);
-  end;
-end;
-
-{**
-  Loads Oracle variable binded to SQL statement with data.
-  @param PlainDriver an Oracle plain driver.
-  @param Connection an Oracle connection Object.
-  @param ErrorHandle the stmt ErrorHandle
-  @param Variable Oracle variable holder.
-  @param Values a values to be loaded.
-  @param ChunkSize the size in bytes we send the lobs in chunks
-  @param Iteration the Iters we can use
-}
-procedure LoadOracleVar(const PlainDriver: TZOraclePlainDriver;
-  const Connection: IZConnection; const ErrorHandle: POCIError;
-  const Variable: PZSQLVar; var Value: TZVariant; ChunkSize: Integer;
-  Iteration: Integer);
-var
-  Len: Integer;
-  I: Longword; //use unsigned type
-  TempDate: TDateTime;
-  TempBytes: TBytes;
-  TempBlob: IZBlob;
-  WriteTempBlob: IZOracleBlob;
-
-  Year, Month, Day, Hour, Min, Sec, MSec: Word;
-  OracleConnection: IZOracleConnection;
-  ClientVarManager: IZClientVariantManager;
-  Buffer: Pointer;
-  AnsiTemp: RawByteString;
-  ConSettings: PZConSettings;
-  CharRec: TZCharRec;
-  { array DML bindings }
-  ZData: Pointer; //array entry
-  {using mem entry of ZData is faster then casting}
-  ZBooleanArray: TBooleanDynArray absolute ZData;
-  ZByteArray: TByteDynArray absolute ZData;
-  ZShortIntArray: TShortIntDynArray absolute ZData;
-  ZWordArray: TWordDynArray absolute ZData;
-  ZSmallIntArray: TSmallIntDynArray absolute ZData;
-  ZLongWordArray: TLongWordDynArray absolute ZData;
-  ZIntegerArray: TIntegerDynArray absolute ZData;
-  ZInt64Array: TInt64DynArray absolute ZData;
-  ZUInt64Array: TUInt64DynArray absolute ZData;
-  ZSingleArray: TSingleDynArray absolute ZData;
-  ZDoubleArray: TDoubleDynArray absolute ZData;
-  ZCurrencyArray: TCurrencyDynArray absolute ZData;
-  ZExtendedArray: TExtendedDynArray absolute ZData;
-  ZDateTimeArray: TDateTimeDynArray absolute ZData;
-  ZRawByteStringArray: TRawByteStringDynArray absolute ZData;
-  {$IFNDEF NO_ANSISTRING}
-  ZAnsiStringArray: TAnsiStringDynArray absolute ZData;
-  {$ENDIF}
-  {$IFNDEF NO_UTF8STRING}
-  ZUTF8StringArray: TUTF8StringDynArray absolute ZData;
-  {$ENDIF}
-  ZStringArray: TStringDynArray absolute ZData;
-  ZUnicodeStringArray: TUnicodeStringDynArray absolute ZData;
-  ZCharRecArray: TZCharRecDynArray absolute ZData;
-  ZBytesArray: TBytesDynArray absolute ZData;
-  ZInterfaceArray: TInterfaceDynArray absolute ZData;
-  ZGUIDArray: TGUIDDynArray absolute ZData;
-  WS: ZWideString;
-  LobBuffer: Pointer;
-
-  procedure SetEmptyString;
-  begin
-    {$R-}
-    Variable^.oIndicatorArray^[I] := -1;
-    Variable^.oDataSizeArray^[i] := 1; //place of #0
-    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    ({%H-}PAnsiChar({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length))^ := #0; //OCI expects the trailing $0 byte
-  end;
-  procedure MoveString(Const Data: Pointer; Iter: LongWord);
-  begin
-    {$R-}
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Data^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+Iter*Variable^.Length)^, Variable^.oDataSizeArray^[Iter]);
-    ({%H-}PAnsiChar({%H-}NativeUInt(Variable^.Data)+Iter*Variable^.Length)+Variable^.oDataSizeArray^[Iter]-1)^ := #0; //improve  StrLCopy... set a leadin #0 if truncation happens
-    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  end;
-begin
-  OracleConnection := Connection as IZOracleConnection;
-  ClientVarManager := Connection.GetClientVariantManager;
-  ConSettings := Connection.GetConSettings;
-  if (Iteration = 1) and (Value.VType <> vtArray) then
-  { single row execution }
-  begin
-    if ClientVarManager.IsNull(Value) then
-      Variable^.oIndicatorArray^[0] := -1
-    else
-    begin
-      Variable^.oIndicatorArray^[0] := 0;
-      case Variable^.TypeCode of
-        SQLT_INT:
-          if Variable^.Length = 8 then
-            PInt64(Variable^.Data)^ := ClientVarManager.GetAsInteger(Value)
-          else
-            PLongInt(Variable^.Data)^ := ClientVarManager.GetAsInteger(Value);
-        SQLT_FLT:
-          PDouble(Variable^.Data)^ := ClientVarManager.GetAsFloat(Value);
-        SQLT_STR:
-          begin
-            CharRec := ClientVarManager.GetAsCharRec(Value, ConSettings^.ClientCodePage^.CP);
-            Variable^.oDataSizeArray^[0] := Math.Min(CharRec.Len, Max_OCI_String_Size)+1; //need the leading $0, because oracle expects it
-            MoveString(CharRec.P, 0);
-          end;
-        SQLT_TIMESTAMP:
-          begin
-            TempDate := ClientVarManager.GetAsDateTime(Value);
-            DecodeDate(TempDate, Year, Month, Day);
-            DecodeTime(TempDate, Hour, Min, Sec, MSec);
-            CheckOracleError(PlainDriver, ErrorHandle,
-              PlainDriver.OCIDateTimeConstruct(OracleConnection.GetConnectionHandle,
-                ErrorHandle, PPOCIDescriptor(Variable^.Data)^,
-                Year, Month, Day, Hour, Min, Sec, MSec * 1000000, nil, 0),
-              lcOther, '', ConSettings);
-          end;
-        SQLT_LVB, SQLT_LVC:
-            if Pointer(Value.VBytes) = nil then
-            begin
-              Variable^.oIndicatorArray^[0] := -1;
-              PInteger(Variable^.Data)^ := 0;
-            end
-            else
-            begin
-              PInteger(Variable^.Data)^ := Math.Min(System.Length(Value.VBytes), Variable^.oDataSize);
-              {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value.VBytes)^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+SizeOf(Integer))^, PInteger(Variable^.Data)^);
-            end;
-        SQLT_BLOB:
-          begin
-            SetLength(Variable^.lobs, 1);
-            if Value.VType = vtBytes then
-            begin
-              TempBytes := ClientVarManager.GetAsBytes(Value);
-              Len := Length(TempBytes);
-              if Len > 0 then
-                Buffer := @TempBytes[0]
-              else
-                Buffer := nil;
-            end
-            else
-            begin
-              TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
-              if TempBlob.IsEmpty then
-              begin
-                Buffer := nil;
-                Len := 0;
-              end
-              else
-              begin
-                Buffer := TempBlob.GetBuffer;
-                Len := TempBlob.Length;
-              end;
-            end;
-            WriteTempBlob := TZOracleBlob.Create(PlainDriver, nil, 0,
-              OracleConnection.GetServiceContextHandle, OracleConnection.GetErrorHandle,
-              PPOCIDescriptor(Variable^.Data)^, ChunkSize, ConSettings);
-            WriteTempBlob.CreateBlob;
-            WriteTempBlob.WriteLobFromBuffer(Buffer, Len);
-            Variable^.lobs[0] := WriteTempBlob;
-          end;
-        SQLT_CLOB:
-          try
-            TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
-            if TempBlob.IsClob then
-            begin
-              WriteTempBlob := TZOracleClob.Create(PlainDriver,
-                nil, 0, OracleConnection.GetConnectionHandle,
-                OracleConnection.GetServiceContextHandle, OracleConnection.GetErrorHandle,
-                PPOCIDescriptor(Variable^.Data)^, ChunkSize, ConSettings,
-                ConSettings^.ClientCodePage^.CP);
-              WriteTempBlob.CreateBlob;
-              Buffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
-              WriteTempBlob.WriteLobFromBuffer(Buffer, TempBlob.Length);
-            end
-            else
-            begin
-              if TempBlob.IsEmpty then
-              begin
-                Buffer := nil;
-                Len := 0;
-              end
-              else
-              begin
-                AnsiTemp := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, Connection.GetConSettings);
-                Len := Length(AnsiTemp);
-                Buffer := Pointer(AnsiTemp);
-              end;
-              WriteTempBlob := TZOracleClob.Create(PlainDriver, nil, 0,
-                OracleConnection.GetConnectionHandle, OracleConnection.GetServiceContextHandle,
-                OracleConnection.GetErrorHandle, PPOCIDescriptor(Variable^.Data)^,
-                ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
-              WriteTempBlob.CreateBlob;
-              WriteTempBlob.WriteLobFromBuffer(Buffer, Len);
-            end;
-            Variable^.lobs[0] := WriteTempBlob;
-          finally
-            WriteTempBlob := nil;
-          end
-      end;
-    end;
-  end
-  else
-  { array DML binding }
-  {$R-}
-  begin
-    //More code(the loops), i know but this avoids loads of If's /case processing
-    //step one: build up null inticators
-    if (Value.VArray.VArray = nil) then
-      for i := 0 to Iteration -1 do
-      begin
-        Variable^.oIndicatorArray^[i] := -1; //set all null
-        if Variable^.TypeCode = SQLT_STR then
-          {%H-}PAnsiChar({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^ := #0; //oci expects a terminating $0 byte
-        Exit; //we are ready here
-      end
-    else if (Value.VArray.VIsNullArray = nil) then
-      for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[i] := 0 //set all not null
-    else begin
-      ZData := Value.VArray.VIsNullArray;
-      case TZSQLType(Value.VArray.VIsNullArrayType) of
-        stBoolean:        for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(ZBooleanArray[I]);
-        stByte:           for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(ZByteArray[I] <> 0);
-        stShort:          for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(ZShortIntArray[I] <> 0);
-        stWord:           for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(ZWordArray[I] <> 0);
-        stSmall:          for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(ZSmallIntArray[I] <> 0);
-        stLongWord:       for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(ZLongWordArray[I] <> 0);
-        stInteger:        for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(ZIntegerArray[I] <> 0);
-        stULong:          for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(ZUInt64Array[I] <> 0);
-        stLong:           for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(ZInt64Array[I] <> 0);
-        stFloat:          for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(ZSingleArray[I] <> 0);
-        stDouble:         for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(ZDoubleArray[I] <> 0);
-        stCurrency:       for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(ZCurrencyArray[I] <> 0);
-        stBigDecimal:     for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(ZExtendedArray[I] <> 0);
-        stDate,
-        stTime,
-        stTimeStamp: for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(ZDateTimeArray[I] <> 0);
-        stUnicodeString:
-          if Value.VArray.VIsNullArrayVariantType = vtCharRec then
-            for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(StrToBoolEx(PWideChar(ZCharRecArray[I].P)))
-          else
-            for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(StrToBoolEx(ZUnicodeStringArray[I]));
-        stString:
-          if Value.VArray.VIsNullArrayVariantType = vtCharRec then
-            for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(StrToBoolEx(PAnsiChar(ZCharRecArray[I].P)))
-          else
-            for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord(StrToBoolEx(ZRawByteStringArray[I]));
-        stAsciiStream, 
-        stUnicodeStream, 
-        stBinaryStream:   for i := 0 to Iteration -1 do Variable^.oIndicatorArray^[I] := -Ord((ZInterfaceArray[I] <> nil) or not (ZInterfaceArray[I] as IZBLob).IsEmpty);
-       end; 
-    end;
-    { now let's assign the data }    
-    ZData := Value.VArray.VArray;
-    if ZData <> nil then
-      case Variable^.ColType of
-        stBoolean: //Oracle doesn't support boolean types so lets use integers and OCI converts it..
-          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := Ord(ZBooleanArray[I]);
-        stByte: //Oracle doesn't support byte type so lets use integers and OCI converts it..
-          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZByteArray[I];
-        stShort: //Oracle doesn't support ShortInt type so lets use integers and OCI converts it..
-          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZShortIntArray[I];
-        stWord: //Oracle doesn't support word type so lets use integers and OCI converts it..
-          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZWordArray[I];
-        stSmall: //Oracle doesn't support smallint type so lets use integers and OCI converts it..
-          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZSmallIntArray[I];
-        stLongWord:
-          //since 11.2 we can use Int64 types too
-          if Connection.GetClientVersion >= 11002000 then
-            for i := 0 to Iteration -1 do {%H-}PInt64({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Int64))^ := ZLongWordArray[I]
-          else
-            for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZLongWordArray[I];
-        stInteger: { no conversion required }
-          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(ZIntegerArray[0], Variable^.Data^, Iteration*SizeOf(LongInt));
-        stULong: //we use String types here
-          for i := 0 to Iteration -1 do
-          begin
-            AnsiTemp := IntToRaw(ZUInt64Array[I]);
-            Variable^.oDataSizeArray^[i] := Length(AnsiTemp)+1;
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(AnsiTemp)^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^, Variable^.oDataSizeArray^[i]);
-          end;
-        stLong: //conversion required below 11.2
-          //since 11.2 we can use Int64 types too
-          if Connection.GetClientVersion >= 11002000 then
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(ZInt64Array[0], Variable^.Data^, Iteration*SizeOf(Int64))
-          else
-            for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZInt64Array[I];
-        stFloat: //conversion required
-          for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZSingleArray[I];
-        stDouble: //no conversion required
-          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(ZDoubleArray[0], Variable^.Data^, Iteration*SizeOf(Double));
-        stCurrency: //conversion required
-          for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZCurrencyArray[I];
-        stBigDecimal: //conversion required
-          for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZExtendedArray[I];
-        stString:
-          case Value.VArray.VArrayVariantType of
-            vtString:
-              for i := 0 to Iteration -1 do
-                if (Variable^.oIndicatorArray^[I] = -1) or (Pointer(ZStringArray[I]) = nil) then //Length = 0
-                //Oracle doesn't support empty strings. OCI convert empty string to NULL silently
-                  SetEmptyString
-                else
-                begin
-                  AnsiTemp := ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[I], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP); //conversion possible or just an inc of RefCount? ):);
-                  Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
-                  MoveString(Pointer(AnsiTemp), I);
-                end;
-            {$IFNDEF NO_ANSISTRING}
-            vtAnsiString:
-              for i := 0 to Iteration -1 do
-                if (Variable^.oIndicatorArray^[I] = -1) or (Pointer(ZAnsiStringArray[I]) = nil) then //Length = 0
-                  SetEmptyString
-                else
-                begin
-                  AnsiTemp := ConSettings^.ConvFuncs.ZAnsiToRaw(ZAnsiStringArray[I], ConSettings^.ClientCodePage^.CP); //conversion possible or just an inc of RefCount? ):);
-                  Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
-                  MoveString(Pointer(AnsiTemp), I);
-                end;
-            {$ENDIF}
-            {$IFNDEF NO_UTF8STRING}
-            vtUTF8String:
-              if ZCompatibleCodePages(zCP_UTF8, ConSettings^.ClientCodePage^.CP) then
-                for i := 0 to Iteration -1 do
-                  if (Variable^.oIndicatorArray^[I] = -1) or (Pointer(ZUTF8StringArray[I]) = nil) then //Length = 0
-                    SetEmptyString
-                  else
-                  begin
-                    Variable^.oDataSizeArray^[i] := Math.Min(Length(ZUTF8StringArray[I])+1, LengthInt(Variable^.Length));
-                    MoveString(Pointer(ZUTF8StringArray[I]), I);
-                  end
-              else
-                for i := 0 to Iteration -1 do
-                  if (Variable^.oIndicatorArray^[I] = -1) or (Pointer(ZUTF8StringArray[I]) = nil) then //Length = 0
-                    SetEmptyString
-                  else
-                  begin
-                    AnsiTemp := ConSettings^.ConvFuncs.ZUTF8ToRaw(ZUTF8StringArray[I], ConSettings^.ClientCodePage^.CP); //conversion possible or just an inc of RefCount? ):);
-                    Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
-                    MoveString(Pointer(AnsiTemp), I);
-                  end;
-            {$ENDIF}
-            vtRawByteString:
-              for i := 0 to Iteration -1 do
-                if (Variable^.oIndicatorArray^[I] = -1) or (Pointer(ZRawByteStringArray[I]) = nil) then //Length = 0
-                  SetEmptyString
-                else
-                begin
-                  Variable^.oDataSizeArray^[i] := Math.Min(Length(ZRawByteStringArray[I])+1, Variable^.oDataSize);
-                  MoveString(Pointer(ZRawByteStringArray[I]), I);
-                end;
-            vtCharRec:
-              {in array bindings we assume all codepages are equal!}
-              if ZCompatibleCodePages(ZCharRecArray[0].CP, ConSettings^.ClientCodePage^.CP) then
-                for i := 0 to Iteration -1 do
-                  if (Variable^.oIndicatorArray^[I] = -1) or (ZCharRecArray[I].Len = 0) then //Length = 0
-                    SetEmptyString
-                  else
-                  begin
-                    Variable^.oDataSizeArray^[i] := {%H-}Math.Min(ZCharRecArray[I].Len+1, LengthInt(Variable^.Length));
-                    MoveString(Pointer(ZCharRecArray[I].P), I);
-                  end
-              else
-                if ZCompatibleCodePages(ZCharRecArray[0].CP, zCP_UTF16) then
-                  for i := 0 to Iteration -1 do
-                    if (Variable^.oIndicatorArray^[I] = -1) or (ZCharRecArray[I].Len = 0) then //Length = 0
-                      SetEmptyString
-                    else
-                    begin
-                      AnsiTemp := PUnicodeToRaw(ZCharRecArray[i].P, ZCharRecArray[i].Len,ConSettings^.ClientCodePage^.CP); //convert to client encoding
-                      Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
-                      MoveString(Pointer(AnsiTemp), I);
-                    end
-                else
-                  for i := 0 to Iteration -1 do
-                    if (Variable^.oIndicatorArray^[I] = -1) or (ZCharRecArray[I].Len = 0) then
-                      SetEmptyString
-                    else
-                    begin
-                      WS := PRawToUnicode(ZCharRecArray[i].P, ZCharRecArray[i].Len, ZCharRecArray[i].CP); //localize ?WideString? to avoid overrun
-                      AnsiTemp := ZUnicodeToRaw(WS, ConSettings^.ClientCodePage^.CP); //convert to client encoding
-                      Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
-                      MoveString(Pointer(AnsiTemp), I);
-                    end;
-            else
-              raise Exception.Create('Unsupported String Variant');
-          end;
-        stUnicodeString:
-          case Value.VArray.VArrayVariantType of
-            vtUnicodeString:
-              for i := 0 to Iteration -1 do
-                if (Variable^.oIndicatorArray^[I] = -1) or (Pointer(ZUnicodeStringArray[i]) = nil) then
-                  SetEmptyString
-                else
-                begin
-                  AnsiTemp := ZUnicodeToRaw(ZUnicodeStringArray[i], ConSettings^.ClientCodePage^.CP); //convert to client encoding
-                  Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
-                  MoveString(Pointer(AnsiTemp), I);
-                end;
-            vtCharRec:
-              for i := 0 to Iteration -1 do
-                if (Variable^.oIndicatorArray^[I] = -1) or (ZCharRecArray[I].Len = 0) then
-                  SetEmptyString
-                else
-                begin
-                  AnsiTemp := PUnicodeToRaw(ZCharRecArray[I].P, ZCharRecArray[I].Len, ConSettings^.ClientCodePage^.CP); //convert to client encoding
-                  Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
-                  MoveString(Pointer(AnsiTemp), I);
-                end;
-            else
-              raise Exception.Create('Unsupported String Variant');
-          end;
-        stBytes:
-          for i := 0 to Iteration -1 do
-            if Pointer(ZBytesArray[I]) = nil then
-            begin
-              Variable^.oIndicatorArray^[I] := -1;
-              {%H-}PInteger({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^ := 0;
-            end
-            else
-            begin
-              {%H-}PInteger({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^ := Math.Min(System.Length(ZBytesArray[I]), Variable^.oDataSize);
-              {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(ZBytesArray[I])^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length+SizeOf(Integer))^,{%H-}PInteger({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^);
-            end;
-        stGUID: //AFAIK OCI doesn't support GUID fields so let's convert them to stings
-          for i := 0 to Iteration -1 do
-            if (Variable^.oIndicatorArray^[I] = 0) then
-            begin
-              AnsiTemp := GUIDToRaw(ZGUIDArray[I]);
-              Variable^.oDataSizeArray^[i] := 39;
-              {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(AnsiTemp)^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*39)^, 39);
-            end;
-        stDate, stTime, stTimeStamp:
-          for i := 0 to Iteration -1 do
-            if Variable^.oIndicatorArray^[I] = 0 then
-            begin
-              DecodeDate(ZDateTimeArray[i], Year, Month, Day);
-              DecodeTime(ZDateTimeArray[i], Hour, Min, Sec, MSec);
-              CheckOracleError(PlainDriver, ErrorHandle,
-                PlainDriver.OCIDateTimeConstruct(OracleConnection.GetConnectionHandle,
-                  ErrorHandle, {%H-}PPOCIDescriptor({%H-}NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^, //direct addressing descriptore to array. So we don't need to free the mem again
-                  Year, Month, Day, Hour, Min, Sec, MSec * 1000000, nil, 0),
-                lcOther, 'OCIDateTimeConstruct', ConSettings);
-            end;
-        stArray, stDataSet: ; //no idea yet
-        stAsciiStream, stUnicodeStream:
-          for i := 0 to Iteration -1 do
-            if Variable^.oIndicatorArray^[I] = 0 then //we already checked this above
-            begin
-              TempBlob := ZInterfaceArray[I] as IZBLob;
-              if TempBlob.IsClob then
-              begin
-                WriteTempBlob := TZOracleClob.Create(PlainDriver,
-                  nil, 0, OracleConnection.GetConnectionHandle,
-                  OracleConnection.GetServiceContextHandle, OracleConnection.GetErrorHandle,
-                  {%H-}PPOCIDescriptor({%H-}NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^,
-                  ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
-                WriteTempBlob.CreateBlob;
-                LobBuffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
-                WriteTempBlob.WriteLobFromBuffer(LobBuffer, TempBlob.Length);
-              end
-              else
-              begin
-                AnsiTemp := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, Connection.GetConSettings);
-                LobBuffer := Pointer(AnsiTemp);
-                WriteTempBlob := TZOracleClob.Create(PlainDriver, nil, 0,
-                  OracleConnection.GetConnectionHandle, OracleConnection.GetServiceContextHandle,
-                  OracleConnection.GetErrorHandle, {%H-}PPOCIDescriptor({%H-}NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^,
-                  ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
-                WriteTempBlob.CreateBlob;
-                WriteTempBlob.WriteLobFromBuffer(LobBuffer, Length(AnsiTemp));
-              end;
-              Variable^.lobs[I] := WriteTempBlob; //ref interface to keep OCILob alive otherwise OCIFreeLobTemporary will be called
-            end;
-        stBinaryStream:
-          for i := 0 to Iteration -1 do
-            if Variable^.oIndicatorArray^[I] = 0 then //we already checked this above
-            begin
-              TempBlob := ZInterfaceArray[I] as IZBLob;
-              WriteTempBlob := TZOracleBlob.Create(PlainDriver, nil, 0,
-                OracleConnection.GetServiceContextHandle, OracleConnection.GetErrorHandle,
-                {%H-}PPOCIDescriptor({%H-}NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^,
-                ChunkSize, ConSettings);
-              WriteTempBlob.CreateBlob;
-              WriteTempBlob.WriteLobFromBuffer(TempBlob.GetBuffer, TempBlob.Length);
-              Variable^.lobs[I] := WriteTempBlob; //ref interface to keep OCILob alive otherwise OCIFreeLobTemporary will be called
-            end;
-      end;
-  end;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
-{**
-  Unloads Oracle variables binded to SQL statement with data.
-  @param Variables Oracle variable holders.
-}
-procedure UnloadOracleVars(var Variables: PZSQLVars);
-var
-  I: Integer;
-  J: LongWord;
-begin
-  for i := 0 to Variables^.AllocNum -1 do
-    {$R-}
-    if (Variables^.Variables[i].DescriptorType > 0) and (Length(Variables^.Variables[i].Lobs) > 0) then
-      for j := 0 to High(Variables^.Variables[i].Lobs) do
-        Variables^.Variables[i].Lobs[j] := nil;
-    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1086,24 +950,26 @@ begin
     Result := stAsciiStream
   else if TypeNameUp = 'LONG' then
     Result := stAsciiStream
+  else if (TypeNameUp = 'ROWID') or (TypeNameUp = 'UROWID') then
+    Result := stString
   else if StartsWith(TypeNameUp, 'TIMESTAMP') then
     Result := stTimestamp
   else if TypeNameUp = 'BFILE' then
     Result := stBinaryStream else
-  if TypeNameUp = 'NUMBER' then
-  begin
-    Result := stDouble;  { default for number types}
-    if (Scale = 0) and (Precision <> 0) then
-    begin
+  if TypeNameUp = 'NUMBER' then begin
+    if (Scale = 0) and (Precision > 0) and (Precision < 20) then begin
       if Precision <= 2 then
         Result := stByte
       else if Precision <= 4 then
         Result := stSmall
       else if Precision <= 9 then
         Result := stInteger
-      else if Precision <= 19 then
-        Result := stLong  {!!in fact, unusable}
-    end;
+      else
+        Result := stLong
+    end else if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision <= sAlignCurrencyScale2Precision[Scale]) then
+      Result := stCurrency
+    else
+      Result := stBigDecimal;  { default for number types}
   end
   else if StartsWith(TypeNameUp, 'INTERVAL') then
     Result := stTimestamp
@@ -1112,63 +978,272 @@ begin
   if ( CtrlsCPType = cCP_UTF16 ) then
     case result of
       stString: Result := stUnicodeString;
-      stAsciiStream: if not (TypeNameUp = 'LONG') then Result := stUnicodeStream; //fix: http://zeos.firmos.at/viewtopic.php?t=3530
+      stAsciiStream: if not (TypeNameUp = 'LONG') then Result := stUnicodeStream; //fix: hhttp://zeoslib.sourceforge.net/viewtopic.php?t=3530
     end;
 end;
 
-function OracleTypeToSQLType(DataType, DataSize: SB2; Precision, Scale: ub1;
-  CtrlsCPType: TZControlsCodePage): TZSQLType;
+function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
+  out DescriptorType: sb4; Precision, Scale: sb2; ConSettings: PZConSettings;
+  IO: OCITypeParamMode): TZSQLType;
+label VCS;
 begin
-  Result := stUnknown; //init
+  //some notes before digging in:
+  // orl.h:
+  // Strings:
+  // "An ADT attribute declared as "x CHAR(n)" is mapped to "OCIString *x;""
+
+  //The variable-length string is represented in C as a pointer to OCIString
+  //structure. The OCIString structure is opaque to the user. Functions are
+  //provided to allow the user to manipulate a variable-length string.
+  //A variable-length string can be declared as:
+  //OCIString *vstr;
+  //For binding variables of type OCIString* in OCI calls (OCIBindByName(), * OCIBindByPos() and OCIDefineByPos()) use the external type code SQLT_VST.
+  // same for OCIRaw
+
+  // Any kind of Numbers
+  //The OTS types: NUMBER, NUMERIC, INT, SHORTINT, REAL, DOUBLE PRECISION, * FLOAT and DECIMAL are represented by OCINumber.
+  //The contents of OCINumber is opaque to clients.
+  // For binding variables of type OCINumber in OCI calls (OCIBindByName(), * OCIBindByPos(), and OCIDefineByPos()) use the type code SQLT_VNU.
+
+  // Any Kind of Time/data values:
+  //OCIDate represents the C mapping of Oracle date.
+  // This structure should be treated as an opaque structure as the format
+  // of this structure may change. Use OCIDateGetDate/OCIDateSetDate
+  // to access/initialize OCIDate.
+  // For binding variables of type OCIDate in OCI calls (OCIBindByName(), * OCIBindByPos(), and OCIDefineByPos()) use the type code SQLT_ODT.
+
+  Result := stUnknown; //init & satisfy the compiler
+  DescriptorType := NO_DTYPE; //init
   case DataType of
-    SQLT_AFC, SQLT_CHR, SQLT_VCS, SQLT_AVC, SQLT_STR, SQLT_VST:
-      Result := stString;
-    SQLT_NUM: //unsigned char[21](binary) see: http://docs.oracle.com/cd/B19306_01/appdev.102/b14250/oci03typ.htm
-      begin
-        {by default convert number to double}
-        Result := stDouble;
-        if (Scale = 0) and (Precision <> 0) then
+    SQLT_NUM { NUMBER }, SQLT_PDN, SQLT_VNU { VARNUM recommended by Oracle!}:
+        if (Scale = -127) and (Precision > 0) then begin
+          //see: https://docs.oracle.com/cd/B13789_01/appdev.101/b10779/oci06des.htm
+          //Table 6-14 OCI_ATTR_PRECISION/OCI_ATTR_SCALE
+          Result := stDouble;
+          DataType := SQLT_BDOUBLE;
+          DataSize := SizeOf(Double);
+        end else if (Scale = 0) and (Precision > 0) and (Precision < 20) then
           //No digits found, but possible signed or not/overrun of converiosn? No way to find this out -> just use a "save" type
           case Precision of
-            0..2: Result := stShort; // -128..127
-            3..4: Result := stSmall; // -32768..32767
-            5..9: Result := stInteger; // -2147483648..2147484647
-            10..19: Result := stLong; // -9223372036854775808..9223372036854775807
-            //skip 20 can be UInt64 or Int64  assume Double values instead
-            21: Result := stULong; //0..18446744073709551615
+            1..2: begin // 0/-99..(-)99
+                    Result := stShort;
+                    DataType := SQLT_INT;
+                    DataSize := SizeOf(ShortInt);
+                  end;
+            3..4: begin //(-)999..(-)9999
+                    Result := stSmall; // -32768..32767
+                    DataType := SQLT_INT;
+                    DataSize := SizeOf(SmallInt);
+                  end;
+            5..9: begin //(-)99999..(-)999999999
+                    Result := stInteger; // -2147483648..2.147.484.647
+                    DataType := SQLT_INT;
+                    DataSize := SizeOf(Integer);
+                  end;
+            else begin //(-)9999999999..(-)9999999999999999999
+                    Result := stLong; //  -9223372036854775808..9.223.372.036.854.775.807
+                    DataType := SQLT_INT;
+                    DataSize := SizeOf(Int64);
+                  end;
+          end
+        else begin
+          DataType := SQLT_VNU; //see orl.h we can't use any other type using oci
+          DataSize := SizeOf(TOCINumber);
+          if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision <= sAlignCurrencyScale2Precision[Scale])
+          then Result := stCurrency
+          else Result := stBigDecimal;
+        end;
+    SQLT_INT, _SQLT_PLI {signed short/int/long/longlong}: begin
+        DataType := SQLT_INT;
+        case DataSize of
+          SizeOf(Int64):    Result := stLong;
+          SizeOf(LongInt):  Result := stInteger;
+          SizeOf(SmallInt): Result := stSmall;
+          SizeOf(ShortInt): Result := stShort;
+          else begin
+            DataSize := SizeOf(Int64);
+            Result := stLong;
           end;
+        end;
       end;
-    SQLT_BFLOAT, SQLT_BDOUBLE, SQLT_IBFLOAT, SQLT_IBDOUBLE:
-      Result := stDouble;
-    SQLT_INT, _SQLT_PLI:
-      Result := stInteger;
-    SQLT_LNG, SQLT_LVC:
-      Result := stAsciiStream;
-    SQLT_RID, SQLT_RDD:
-      Result := stString;
-    SQLT_DAT, SQLT_DATE:
-      { oracle DATE precission - 1 second}
-       Result := stTimestamp;
+    SQLT_FLT: if DataSize = SizeOf(Double) then begin
+                  Result := stDouble;
+                  DataType := SQLT_BDOUBLE;
+                end else begin
+                  Result := stFloat;
+                  DataType := SQLT_BFLOAT;
+                end;
+    SQLT_AFC{ CHAR / char[n]}: begin
+                if (DataSize = 0) then begin
+                  if (IO <> OCI_TYPEPARAM_IN) then
+                    DataSize := Max_OCI_String_Size;
+                end;
+                Result := stString;
+              end;
+    SQLT_RID, { char[n] }
+    SQLT_AVC{CHAR / char[n+1]},
+    SQLT_CHR, {VARCHAR2 / char[n+1]}
+    SQLT_STR,{NULL-terminated STRING, char[n+1]}
+    SQLT_VCS {VARCHAR / char[n+sizeof(short integer)]}: begin
+VCS:            DataType := SQLT_VCS;
+                if (DataSize = 0) then begin
+                  if (IO <> OCI_TYPEPARAM_IN) then
+                    DataSize := Max_OCI_String_Size+SizeOf(SmallInt);
+                end else
+                  DataSize := DataSize+SizeOf(SmallInt);
+                Result := stString;
+              end;
+    SQLT_DAT: {char[7]} begin
+              DataSize := SizeOf(TOraDate);
+              Result := stTimestamp;
+            end;
+    SQLT_BIN, {RAW / unsigned char[n]}
+    SQLT_VBI { unsigned char[n+sizeof(short integer)] }: begin
+        result := stBytes;
+        if (DataSize = 0) and (IO <> OCI_TYPEPARAM_IN) then
+          DataSize := Max_OCI_Raw_Size;
+        DataType := SQLT_VBI;
+        DataSize := DataSize + SizeOf(SmallInt);
+      end;
+    SQLT_BFLOAT, SQLT_IBFLOAT {native/binary float / float }: begin
+        DataType := SQLT_BFLOAT;
+        Result := stFloat;
+        DataSize := SizeOf(Single);
+      end;
+    SQLT_BDOUBLE, SQLT_IBDOUBLE {native/binary double / double}: begin
+        DataType := SQLT_BDOUBLE;
+        Result := stDouble;
+        DataSize := SizeOf(Double);
+      end;
+    SQLT_UIN {unsigned short/int/long/longlong}: case DataSize of
+          SizeOf(UInt64):   Result := stULong;
+          SizeOf(Cardinal): Result := stLongWord;
+          SizeOf(Word):     Result := stWord;
+          SizeOf(Byte):     Result := stByte;
+          else begin
+            DataSize := SizeOf(UInt64);
+            Result := stULong;
+          end;
+        end;
+    SQLT_VST: begin{ OCI STRING type / *OCIString recommedend by Oracle see:
+      https://docs.oracle.com/cd/B28359_01/appdev.111/b28395/oci12oty.htm#i421612
+      this is a opaque Type...
+      but there advice is using the OCIStringXXX functions for Length/data
+      humm hard to judge! it migth be possible this is fast indeed!
+      The more ... and for me the only advantage : Bidirectional or out params
+      are buffered by OCI we can ignore all length buffers on oversized memallocs
+      my crystall ball says this is a PP(Raw/Wide)Char-Struct including length like TOCILong
+      -> just look to OCIRaw/SQLT_LVB of https://docs.oracle.com/cd/B13789_01/appdev.101/b10779/oci11oty.htm#421682}
+        Result := stString;
+        if (DataSize = 0) and (IO <> OCI_TYPEPARAM_IN) then
+          DataSize := SizeOf(POCIString);
+      end;
+    SQLT_LNG: { LONG /char[n] } begin
+        Result := stAsciiStream;
+        if (DataSize = 0) or (IO <> OCI_TYPEPARAM_IN) then
+           DataSize := 128 * 1024;
+        DataSize := DataSize + SizeOf(Integer);
+        DataType := SQLT_LVC; { EH: http://zeoslib.sourceforge.net/viewtopic.php?t=3530 }
+        Exit; //is this correct?
+      end;
+    SQLT_LVC { LONG VARCHAR / char[n+sizeof(integer)] }: begin
+        Result := stString;//stAsciiStream;
+        if (DataSize = 0) or (IO <> OCI_TYPEPARAM_IN) then
+          DataSize := Max_OCI_String_Size*ConSettings^.ClientCodePage^.CharWidth;
+        DataSize := DataSize + SizeOf(Integer);
+      end;
+    SQLT_LBI, { LONG RAW / unsigned char[n] }
+    SQLT_LVB { LONG VARRAW / unsigned char[n+sizeof(integer)]}:begin
+        Result := stBinaryStream;
+        if (DataSize = 0) then
+          DataSize := 128 * 1024;
+        DataSize := DataSize + SizeOf(Integer);
+        DataType := SQLT_LVB;
+      end;
+    SQLT_RDD {ROWID descriptor / OCIRowid * }: begin
+        {DescriptorType := OCI_DTYPE_ROWID;
+        DataSize := SizeOf(POCIRowid);}
+        DataSize := Max(20, DataSize);
+        goto VCS;
+      end;
+    SQLT_NTY {NAMED DATATYPE / struct }: begin
+        Result := stUnknown;
+        DataSize := SizeOf(Pointer);
+      end;
+    SQLT_REF: { REF / OCIRef } ;
+    SQLT_CLOB: { Character LOB descriptor / OCIClobLocator }begin
+        Result := stAsciiStream;
+        DescriptorType := OCI_DTYPE_LOB;
+        if DataSize > 0 then
+          DataSize := SizeOf(POCILobLocator);
+      end;
+    SQLT_BLOB: { Binary LOB descriptor / OCIBlobLocator } begin
+        Result := stBinaryStream;
+        DescriptorType := OCI_DTYPE_LOB;
+        if DataSize > 0 then
+          DataSize := SizeOf(POCILobLocator);
+      end;
+    SQLT_BFILEE, SQLT_CFILEE: { Binary file descriptor / OCILobLocator } begin
+        Result := stBinaryStream;
+        DescriptorType := OCI_DTYPE_FILE;
+        if DataSize > 0 then
+          DataSize := SizeOf(POCILobLocator);
+      end;
+    SQLT_ODT: { OCI DATE type / OCIDate * recommended as well -> no descriptor alloc? }
+      begin
+        Result := stTimeStamp;
+        DataSize := SizeOf(POCIDate);
+      end;
+    SQLT_DATE:          { ANSI DATE descriptor / OCIDateTime * }
+      begin
+        Result := stTimeStamp; //note Oracle does NOT have a native Date type without hour,min,sec!
+        DataSize := SizeOf(POCIDateTime);
+        DescriptorType := OCI_DTYPE_DATE;
+      end;
+    SQLT_TIMESTAMP:     { TIMESTAMP descriptor / OCIDateTime * }
+      begin
+        Result := stTimeStamp;
+        DataSize := SizeOf(POCIDateTime);
+        DescriptorType := OCI_DTYPE_TIMESTAMP;
+      end;
+    SQLT_TIMESTAMP_TZ:  { TIMESTAMP WITH TIME ZONE descriptor / OCIDateTime * }
+      begin
+        Result := stTimeStamp;
+        DataSize := SizeOf(POCIDateTime);
+        DescriptorType := OCI_DTYPE_TIMESTAMP_TZ;
+      end;
+    SQLT_INTERVAL_YM:   {INTERVAL YEAR TO MONTH descriptor / OCIInterval *}
+      begin
+        DescriptorType := OCI_DTYPE_INTERVAL_YM;
+        Result := stTimeStamp;
+        DataSize := SizeOf(POCIInterval);
+      end;
+    SQLT_INTERVAL_DS:   {INTERVAL DAY TO SECOND descriptor / OCIInterval *}
+      begin
+        DescriptorType := OCI_DTYPE_INTERVAL_DS;
+        Result := stTimeStamp;
+        DataSize := SizeOf(POCIInterval);
+      end;
+    SQLT_TIMESTAMP_LTZ: {TIMESTAMP WITH LOCAL TIME ZONE descriptor / OCIDateTime *}
+      begin
+        DescriptorType := OCI_DTYPE_TIMESTAMP_LTZ;
+        Result := stTimeStamp;
+        DataSize := SizeOf(POCIDateTime);
+      end;
     SQLT_TIME, SQLT_TIME_TZ:
       Result := stTime;
-    SQLT_TIMESTAMP, SQLT_TIMESTAMP_TZ, SQLT_TIMESTAMP_LTZ, SQLT_INTERVAL_DS, SQLT_INTERVAL_YM:
-      Result := stTimestamp;
-    SQLT_BIN, SQLT_LBI:
-      if DataSize = 0
-      then Result := stBinaryStream
-      else Result := stBytes;
-    SQLT_CLOB: Result := stAsciiStream;
-    SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
-        Result := stBinaryStream;
-    SQLT_NTY: ;
-    else
-        Result := stUnknown;
+    _SQLT_BOL: begin
+        { those pl/sql types can't be fetched by OCI -> make it possible}
+        Result := stBoolean;
+        DataType := SQLT_UIN;
+        DataSize := SizeOf(Word);
+      end
+    //ELSE raise Exception.Create('Unknown datatype: '+ZFastCode.IntToStr(DataType));
   end;
-  if (CtrlsCPType = cCP_UTF16) and (Result in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then
+  if (ConSettings^.CPType = cCP_UTF16) and (Result in [stString, stAsciiStream]) then
     if Result = stString
     then Result := stUnicodeString
-    else if not (DataType in [SQLT_LNG]) then
-        Result := stUnicodeStream;
+    else Result := stUnicodeStream;
 end;
 
 {**
@@ -1208,7 +1283,7 @@ begin
         then ErrorMessage := 'OCI_ERROR: Unkown(OCI_NO_DATA)'
         else begin
           ErrorMessage := 'OCI_ERROR: ';
-          ErrorBuffer.Pos := StrLen(@ErrorBuffer.Buf[0])+1;
+          ErrorBuffer.Pos := StrLen(@ErrorBuffer.Buf[0]);
         end;
       end;
     OCI_INVALID_HANDLE:
@@ -1234,161 +1309,6 @@ begin
   if (Status = OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
     if Assigned(DriverManager) then //Thread-Safe patch
       DriverManager.LogMessage(LogCategory, ConSettings^.Protocol, ErrorMessage);
-end;
-
-{**
-  Creates an Oracle result set based on the current settings.
-  @return a created result set object.
-}
-function CreateOracleResultSet(
-  const Statement: IZStatement; const LogSQL: string; const Handle: POCIStmt;
-  const ErrorHandle: POCIError; ZBufferSize: Integer): IZResultSet;
-var
-  NativeResultSet: TZOracleResultSet;
-  CachedResultSet: TZCachedResultSet;
-begin
-  NativeResultSet := TZOracleResultSet.Create(Statement,
-    LogSQL, Handle, ErrorHandle, ZBufferSize);
-  NativeResultSet.SetConcurrency(rcReadOnly);
-  if (Statement.GetResultSetConcurrency = rcUpdatable)
-    or (Statement.GetResultSetType <> rtForwardOnly) then
-  begin
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, LogSQL, nil,
-      Statement.GetConnection.GetConSettings);
-    CachedResultSet.SetConcurrency(rcUpdatable);
-    CachedResultSet.SetResolver(TZOracleCachedResolver.Create(
-      Statement, NativeResultSet.GetMetadata));
-    Result := CachedResultSet;
-  end
-  else
-    Result := NativeResultSet;
-end;
-
-{**
-  Creates an Oracle result set based on the current settings.
-  @return a created result set object.
-}
-function CreateOracleResultSet(
-      const Statement: IZStatement; const LogSQL: string; StmtHandle: POCIStmt;
-      ErrorHandle: POCIError; const Params: PZSQLVars;
-      Const OracleParams: TZOracleParams): IZResultSet;
-var
-  NativeResultSet: TZOracleCallableResultSet;
-  CachedResultSet: TZCachedResultSet;
-begin
-  NativeResultSet := TZOracleCallableResultSet.Create(Statement,
-    LogSQL, StmtHandle, ErrorHandle, Params, OracleParams);
-  NativeResultSet.SetConcurrency(rcReadOnly);
-  CachedResultSet := TZCachedResultSet.Create(NativeResultSet, LogSQL, nil,
-    Statement.GetConnection.GetConSettings);
-  CachedResultSet.SetConcurrency(rcReadOnly);
-  CachedResultSet.SetResolver(TZOracleCachedResolver.Create(
-    Statement, NativeResultSet.GetMetadata));
-  CachedResultSet.Last;
-  CachedResultSet.BeforeFirst;
-  Result := CachedResultSet;
-end;
-
-{**
-  Allocates in memory Oracle handlers for Statement object.
-  @param PlainDriver an Oracle plain driver.
-  @param Connection an Oracle connection object.
-  @param Handle a holder for Statement handle.
-  @param ErrorHandle a holder for Error handle.
-}
-procedure AllocateOracleStatementHandles(const PlainDriver: TZOraclePlainDriver;
-  const Connection: IZConnection; var Handle: POCIStmt; var ErrorHandle: POCIError;
-  UserServerCachedStmt: Boolean);
-var
-  OracleConnection: IZOracleConnection;
-begin
-  OracleConnection := Connection as IZOracleConnection;
-  ErrorHandle := nil;
-  PlainDriver.OCIHandleAlloc(OracleConnection.GetConnectionHandle,
-    ErrorHandle, OCI_HTYPE_ERROR, 0, nil);
-  Handle := nil;
-  //if not UserServerCachedStmt then
-    PlainDriver.OCIHandleAlloc(OracleConnection.GetConnectionHandle,
-      Handle, OCI_HTYPE_STMT, 0, nil);
-end;
-
-{**
-  Frees from memory Oracle handlers for Statement object.
-  @param PlainDriver an Oracle plain driver.
-  @param Handle a holder for Statement handle.
-  @param ErrorHandle a holder for Error handle.
-}
-procedure FreeOracleStatementHandles(const PlainDriver: TZOraclePlainDriver;
-  var Handle: POCIStmt; var ErrorHandle: POCIError);
-begin
-  if ErrorHandle <> nil then
-  begin
-    PlainDriver.OCIHandleFree(ErrorHandle, OCI_HTYPE_ERROR);
-    ErrorHandle := nil;
-  end;
-  if Handle <> nil then
-  begin
-    PlainDriver.OCIHandleFree(Handle, OCI_HTYPE_STMT);
-    Handle := nil;
-  end;
-end;
-
-{**
-  Prepares an Oracle statement.
-  @param PlainDriver an Oracle plain driver.
-  @param SQL an SQL query to be prepared.
-  @param Handle a holder for Statement handle.
-  @param ErrorHandle a holder for Error handle.
-}
-procedure PrepareOracleStatement(const PlainDriver: TZOraclePlainDriver;
-  ContextHandle: POCISvcCtx; const SQL: RawByteString; var Handle: POCIStmt;
-  const ErrorHandle: POCIError; PrefetchMemory: ub4; ServerCachedStmtHandle: Boolean;
-  const ConSettings: PZConSettings);
-var
-  PrefetchCount: ub4;
-begin
-  PrefetchCount := 0;
-  if ServerCachedStmtHandle then
-  begin
-    {indicate length + 1! see: https://sourceforge.net/p/zeoslib/tickets/93/}
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIStmtPrepare2(ContextHandle, Handle, ErrorHandle,
-        Pointer(SQL), Length(SQL)+1,nil,0,OCI_NTV_SYNTAX,OCI_DEFAULT),
-      lcExecute, SQL, ConSettings);
-    CheckOracleError(PlainDriver, ErrorHandle,
-     PlainDriver.OCIAttrSet(Handle,OCI_HTYPE_STMT, @PrefetchCount ,0, OCI_ATTR_PREFETCH_ROWS,ErrorHandle),
-        lcOther, 'Prefetch_Count', ConSettings);
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIAttrSet(Handle,OCI_HTYPE_STMT,@PrefetchMemory,0,OCI_ATTR_PREFETCH_MEMORY,ErrorHandle),
-        lcOther, 'Prefetch_Memory', ConSettings);
-  end
-  else
-  begin
-    CheckOracleError(PlainDriver, ErrorHandle,
-     PlainDriver.OCIAttrSet(Handle,OCI_HTYPE_STMT, @PrefetchCount ,0, OCI_ATTR_PREFETCH_ROWS,ErrorHandle),
-        lcOther, 'Prefetch_Count', ConSettings);
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIAttrSet(Handle,OCI_HTYPE_STMT,@PrefetchMemory,0,OCI_ATTR_PREFETCH_MEMORY,ErrorHandle),
-        lcOther, 'Prefetch_Memory', ConSettings);
-    CheckOracleError(PlainDriver, ErrorHandle, PlainDriver.OCIStmtPrepare(Handle,
-      ErrorHandle, Pointer(SQL), Length(SQL)+1, OCI_NTV_SYNTAX, OCI_DEFAULT),
-      lcExecute, SQL, ConSettings);
-  end;
-end;
-
-{**
-  Gets a number of updates made by executed Oracle statement.
-  @param PlainDriver an Oracle plain driver.
-  @param Handle a holder for Statement handle.
-  @param ErrorHandle a holder for Error handle.
-  @returns a number of updates.
-}
-function GetOracleUpdateCount(const PlainDriver: TZOraclePlainDriver;
-  const Handle: POCIStmt; const ErrorHandle: POCIError): ub4;
-begin
-  Result := 0;
-  PlainDriver.OCIAttrGet(Handle, OCI_HTYPE_STMT, @Result, nil,
-    OCI_ATTR_ROW_COUNT, ErrorHandle);
 end;
 
 {**
@@ -1664,6 +1584,288 @@ begin
   Status := PlainDriver.OCILobClose(ContextHandle, ErrorHandle, LobLocator);
   if Status <> OCI_SUCCESS then
     CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Close Large Object', ConSettings);
+end;
+
+function OCIType2Name(DataType: ub2): String;
+begin
+  Result := '';
+end;
+
+{ TZOraProcDescriptor_A }
+
+Const ArgListType: array[Boolean] of ub4 = (OCI_ATTR_LIST_ARGUMENTS, OCI_ATTR_LIST_SUBPROGRAMS);
+
+{$IFDEF UNICODE}
+procedure TZOraProcDescriptor_A.ConcatParentName(NotArgName: Boolean;
+  var Buf: TUCS2Buff; var Result: String; const IC: IZIdentifierConvertor);
+{$ELSE}
+procedure TZOraProcDescriptor_A.ConcatParentName(NotArgName: Boolean;
+  var Buf: TRawBuff; var Result: RawByteString; const IC: IZIdentifierConvertor);
+{$ENDIF}
+begin
+  if (FParent <> nil) then begin
+    FParent.ConcatParentName(NotArgName, Buf, Result, IC);
+    if NotArgName then begin
+      ZDbcUtils.ToBuff(IC.Quote(FParent.AttributeName), Buf, Result);
+      ZDbcUtils.ToBuff('.', Buf, Result);
+    end else if ((ObjType = OCI_PTYPE_ARG) and (FParent.Parent <> nil) and (FParent.Parent.ObjType = OCI_PTYPE_PKG) and (FParent.Parent.Args.Count > 1)) {or
+       ((FParent.ObjType = OCI_PTYPE_PKG) and (FParent.Args.Count > 1)) }then begin
+      ZDbcUtils.ToBuff(FParent.AttributeName, Buf, Result);
+      ZDbcUtils.ToBuff('_', Buf, Result);
+    end;
+  end;
+end;
+
+constructor TZOraProcDescriptor_A.Create(Parent: TZOraProcDescriptor_A);
+begin
+  fParent := Parent;
+end;
+
+function TZOraProcDescriptor_A.InternalDescribe(const Name: String; _Type: UB4;
+  {$IFDEF AUTOREFCOUNT} const {$ENDIF}PlainDriver: TZOraclePlainDriver;
+  ErrorHandle: POCIError; OCISvcCtx: POCISvcCtx; Owner: POCIHandle;
+  ConSettings: PZConSettings): SWord;
+var P: PAnsiChar;
+  i: sb4;
+  parmh: POCIHandle;
+  Descriptor: POCIDescribe;
+  tmp: RawByteString;
+begin
+  //https://www.bnl.gov/phobos/Detectors/Computing/Orant/doc/appdev.804/a58234/describe.htm#440341
+  //section describing the stored procedure
+  Descriptor := nil;
+  { get a descriptor handle for the param/obj }
+  CheckOracleError(PlainDriver, ErrorHandle,
+    PlainDriver.OCIHandleAlloc(Owner, Descriptor, OCI_HTYPE_DESCRIBE, 0, nil),
+      lcOther,'OCIHandleAlloc', ConSettings);
+  {$IFDEF UNICODE}
+  tmp := PUnicodeToRaw(Pointer(Name), Length(Name), ConSettings^.ClientCodePage.CP);
+  Result := PlainDriver.OCIDescribeAny(OCISvcCtx, ErrorHandle, Pointer(tmp),
+        Length(tmp), OCI_OTYPE_NAME, 0, OCI_PTYPE_UNK, Descriptor);
+  {$ELSE}
+  Result := PlainDriver.OCIDescribeAny(OCISvcCtx, ErrorHandle, Pointer(Name),
+        Length(Name), OCI_OTYPE_NAME, 0, OCI_PTYPE_UNK, Descriptor);
+  {$ENDIF}
+  if Result <> OCI_SUCCESS then begin
+    tmp := '"PUBLIC".'+{$IFDEF UNICODE}tmp{$ELSE}Name{$ENDIF};
+    Result := PlainDriver.OCIDescribeAny(OCISvcCtx, ErrorHandle, Pointer(tmp),
+        Length(tmp), OCI_OTYPE_NAME, 0, OCI_PTYPE_UNK, Descriptor);
+  end;
+
+  try
+    if Result <> OCI_SUCCESS then
+      Exit;
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.OCIAttrGet(Descriptor, OCI_HTYPE_DESCRIBE, @parmh, nil, OCI_ATTR_PARAM, ErrorHandle),
+        lcOther,'OCIAttrGet', ConSettings);
+    { get the schema name }
+    P := nil;
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.OCIAttrGet(parmh, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_OBJ_SCHEMA, ErrorHandle),
+        lcOther,'OCIAttrGet', ConSettings);
+    if P = nil then begin
+      Result := OCI_ERROR;
+      Exit;
+    end;
+    {$IFDEF UNICODE}
+    SchemaName := PRawToUnicode(P, i, ConSettings.ClientCodePage.CP);
+    {$ELSE}
+    System.SetString(SchemaName, P, I);
+    {$ENDIF}
+    { get the objectname }
+    P := nil;
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.OCIAttrGet(parmh, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_OBJ_NAME, ErrorHandle),
+        lcOther,'OCIAttrGet', ConSettings);
+    {$IFDEF UNICODE}
+    AttributeName := PRawToUnicode(P, i, ConSettings.ClientCodePage.CP);
+    {$ELSE}
+    System.SetString(AttributeName, P, I);
+    {$ENDIF}
+    { get the first object type }
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.OCIAttrGet(parmh, OCI_HTYPE_DESCRIBE, @ObjType, nil, OCI_ATTR_PTYPE, ErrorHandle),
+        lcOther,'OCIAttrGet', ConSettings);
+    InternalDescribeObject(parmh, PlainDriver, ErrorHandle, ConSettings);
+  finally
+    if Descriptor <> nil then begin
+      PlainDriver.OCIDescriptorFree(Descriptor, OCI_HTYPE_DESCRIBE);
+      Descriptor := nil;
+    end;
+  end;
+end;
+
+procedure TZOraProcDescriptor_A.InternalDescribeObject(Obj: POCIHandle;
+  {$IFDEF AUTOREFCOUNT} const {$ENDIF}PlainDriver: TZOraclePlainDriver;
+  ErrorHandle: POCIError; ConSettings: PZConSettings);
+var
+  arglst, arg: POCIHandle;
+  i, N: sb4;
+  ParamCount: ub2;
+  p: PAnsichar;
+  Param: TZOraProcDescriptor_A;
+begin
+  arglst := nil;
+  if ObjType <> OCI_PTYPE_PKG then
+    { get the overload position }
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.OCIAttrGet(obj, OCI_HTYPE_DESCRIBE, @OverloadID, nil, OCI_ATTR_OVERLOAD_ID, ErrorHandle),
+            lcOther,'OCIAttrGet', ConSettings);
+  { get a argument-list handle }
+  CheckOracleError(PlainDriver, ErrorHandle,
+    PlainDriver.OCIAttrGet(Obj, OCI_DTYPE_PARAM, @arglst, nil,
+      ArgListType[ObjType = OCI_PTYPE_PKG], ErrorHandle),
+        lcExecute, 'OCIAttrGet', ConSettings);
+  { get argument count using of the list handle }
+  CheckOracleError(PlainDriver, ErrorHandle,
+    PlainDriver.OCIAttrGet(arglst, OCI_DTYPE_PARAM, @ParamCount, nil,
+      OCI_ATTR_NUM_PARAMS, ErrorHandle),
+      lcOther, 'OCIAttrGet', ConSettings);
+  Args := TObjectList.Create;
+  Args.Capacity := ParamCount;
+  for N := 0+Ord(ObjType = OCI_PTYPE_PROC) to ParamCount-1+Ord(ObjType = OCI_PTYPE_PROC) do begin
+    { get a argument handle }
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.OCIParamGet(arglst, OCI_DTYPE_PARAM, ErrorHandle, arg, N),
+      lcOther, 'OCIParamGet', ConSettings);
+    Param := TZOraProcDescriptor_A.Create(Self);
+    Args.Add(Param);
+    Param.SchemaName := SchemaName;
+    { get the object type }
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @Param.ObjType, nil, OCI_ATTR_PTYPE, ErrorHandle),
+        lcOther,'OCIAttrGet', ConSettings);
+    { get the attribute Name }
+    P := nil;
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_NAME, ErrorHandle),
+        lcOther,'OCIAttrGet', ConSettings);
+    {$IFDEF UNICODE}
+    Param.AttributeName := PRawToUnicode(P, i, ConSettings.ClientCodePage.CP);
+    {$ELSE}
+    System.SetString(Param.AttributeName, P, I);
+    {$ENDIF}
+    if Param.ObjType = OCI_PTYPE_ARG then begin
+      { get the ordinal position }
+      CheckOracleError(PlainDriver, ErrorHandle,
+        PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @Param.OrdPos, nil, OCI_ATTR_POSITION, ErrorHandle),
+          lcOther,'OCIAttrGet', ConSettings);
+      if (Param.OrdPos = 0) and (Param.AttributeName = '') then
+        Param.AttributeName := 'ReturnValue';
+      P := nil;
+      CheckOracleError(PlainDriver, ErrorHandle,
+        PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_TYPE_NAME, ErrorHandle),
+          lcOther,'OCIAttrGet', ConSettings);
+      ZSetString(P, I, Param.TypeName);
+      { get datasize }
+      CheckOracleError(PlainDriver, ErrorHandle,
+        PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
+          @Param.DataSize, nil, OCI_ATTR_DATA_SIZE, ErrorHandle),
+        lcOther, 'OCIAttrGet', ConSettings);
+      { get IO direction }
+      CheckOracleError(PlainDriver, ErrorHandle,
+        PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
+          @Param.IODirection, nil, OCI_ATTR_IOMODE, ErrorHandle),
+        lcOther, 'OCIAttrGet', ConSettings);
+      { get oci data type }
+      CheckOracleError(PlainDriver, ErrorHandle,
+        PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
+          @Param.DataType, nil, OCI_ATTR_DATA_TYPE, ErrorHandle),
+        lcOther, 'OCIAttrGet', ConSettings);
+      if Param.DataType in [SQLT_NUM, SQLT_VNU] then begin {11g returns Precision = 38 in all cases}
+        CheckOracleError(PlainDriver, ErrorHandle,
+          PlainDriver.OCIAttrGet(Arg, OCI_DTYPE_PARAM,
+            @Param.Precision, nil, OCI_ATTR_PRECISION, ErrorHandle),
+            lcOther, 'OCIAttrGet', ConSettings);
+        CheckOracleError(PlainDriver, ErrorHandle,
+          PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
+            @Param.Scale, nil, OCI_ATTR_SCALE, ErrorHandle),
+            lcOther, 'OCIAttrGet', ConSettings);
+        CheckOracleError(PlainDriver, ErrorHandle,
+          PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
+            @Param.Radix, nil, OCI_ATTR_RADIX , ErrorHandle),
+            lcOther, 'OCIAttrGet', ConSettings);
+      end;
+      Param.SQLType := NormalizeOracleTypeToSQLType(Param.DataType, Param.DataSize,
+        Param.DescriptorType, Param.Precision, Param.Scale, ConSettings, Param.IODirection);
+    end else
+      Param.InternalDescribeObject(arg, PLainDriver, ErrorHandle, ConSettings);
+  end;
+end;
+
+procedure TZOraProcDescriptor_A.Describe(_Type: UB4; const Connection: IZConnection;
+  const Name: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF});
+var
+  Plain: TZOraclePlainDriver;
+  OracleConnection: IZOracleConnection;
+  ProcSQL, tmp: String;
+  Status, ps, ps2: sword;
+  IC: IZIdentifierConvertor;
+  ConSettings: PZConSettings;
+begin
+  OracleConnection := Connection as IZOracleConnection;
+  ConSettings := Connection.GetConSettings;
+  {$IFNDEF UNICODE}
+  if ConSettings^.AutoEncode
+  then ProcSQL := ConSettings^.ConvFuncs.ZStringToRaw(Name, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage.CP)
+  else {$ENDIF}ProcSQL := Name;
+
+  IC := Connection.GetMetadata.GetIdentifierConvertor;
+  Plain := TZOraclePlainDriver(Connection.GetIZPlainDriver.GetInstance);
+  { describe the object: }
+  Status := InternalDescribe(ProcSQL, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
+    OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
+  if (Status <> OCI_SUCCESS) then begin
+    ps := ZFastCode.Pos('.', ProcSQL);
+    if ps <> 0 then begin //check wether Package or Schema!
+      tmp := Copy(ProcSQL, 1, ps-1);
+      Status := InternalDescribe(tmp, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
+        OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
+      if Status <> OCI_SUCCESS then begin
+        ps2 := {$IFDEF UNICODE}StrUtils{$ELSE}ZFastCode{$ENDIF}.PosEx('.', ProcSQL, ps+1);
+        if ps2 <> 0 then //check wether Package or Schema!
+          tmp := Copy(ProcSQL, ps+1, ps2-ps-1)
+        else begin
+          ps2 := ps;
+          tmp := Copy(ProcSQL, ps+1, maxint)
+        end;
+        Status := InternalDescribe(tmp, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
+          OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
+        if Status = OCI_SUCCESS then
+          tmp := copy(ProcSQL, Ps2+1, MaxInt)
+        else begin { final approach to locate the procedure !}
+          tmp := '"PUBLIC".'+tmp;
+          Status := InternalDescribe(tmp, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
+          OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
+          CheckOracleError(Plain, OracleConnection.GetErrorHandle, Status, lcExecute, 'OCIDescribeAny', ConSettings);
+        end;
+      end else begin
+        ps2 := {$IFDEF UNICODE}StrUtils{$ELSE}ZFastCode{$ENDIF}.PosEx('.', ProcSQL, ps+1);
+        if ps2 <> 0 //check wether Package or Schema!
+        then tmp := copy(ProcSQL, Ps2+1, MaxInt)
+        else tmp := copy(ProcSQL, Ps+1, MaxInt)
+      end;
+      if (ObjType = OCI_PTYPE_PKG) then begin
+        //next stage obj. needs to be compared to package procs
+        //strip all other procs we don't need!
+        //if IC.IsQuoted(Tmp) then
+          Tmp := IC.ExtractQuote(Tmp);
+        for ps := Args.Count -1 downto 0 do begin
+          if TZOraProcDescriptor_A(Args[ps]).AttributeName <> tmp then
+            Args.Delete(ps);
+        end;
+      end;
+    end;
+  end else
+    if (Status <> OCI_SUCCESS) then
+      CheckOracleError(Plain, OracleConnection.GetErrorHandle, Status, lcExecute, 'OCIDescribeAny', ConSettings);
+end;
+
+destructor TZOraProcDescriptor_A.Destroy;
+begin
+  if Args <> nil then
+    FreeAndNil(Args);
+  inherited;
 end;
 
 end.

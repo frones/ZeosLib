@@ -291,7 +291,7 @@ var
       protPostgre:
         CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match');
       protOracle:
-        CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match');
+        CheckEquals(Ord(stBigDecimal), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match');
       else
         CheckEquals(Ord(stSmall), Ord(Metadata.GetColumnType(DEP_ID_Index)), 'ColumnType does not match');
     end;
@@ -351,13 +351,13 @@ begin
   CheckColumnMetadata(Metadata, Field2, GetColumnLabelFromUnQuoted('d_fld1', 1),
     GetFieldNameFromUnQuoted('d_fld1'), GetFieldNameFromUnQuoted('default_values'), False, True);
   if ProtocolType = protOracle
-    then Check(Metadata.GetColumnType(Field2) in [stDouble], 'ColumnType does not match')
+    then Check(Metadata.GetColumnType(Field2) in [stBigDecimal], 'ColumnType does not match')
     else Check(Metadata.GetColumnType(Field2) in [stInteger], 'ColumnType does not match');
 
   CheckColumnMetadata(Metadata, Field3, GetColumnLabelFromUnQuoted('d_fld2', 0),
     GetFieldNameFromUnQuoted('d_fld2'), GetFieldNameFromUnQuoted('default_values2'), False, True);
   if ProtocolType = protOracle
-    then Check(Metadata.GetColumnType(Field3) in [stDouble], 'ColumnType does not match')
+    then Check(Metadata.GetColumnType(Field3) in [stBigDecimal], 'ColumnType does not match')
     else Check(Metadata.GetColumnType(Field3) in [stInteger], 'ColumnType does not match');
 
   CheckColumnMetadata(Metadata, Field4, GetColumnLabelFromUnQuoted('d_fld2', 1),
@@ -391,7 +391,7 @@ begin
   CheckColumnMetadata(Metadata, FirstDbcIndex, GetColumnLabelFromUnQuoted('d_fld1', 0),
     GetFieldNameFromUnQuoted('d_fld1'), GetFieldNameFromUnQuoted('default_values'), False, True);
   if ProtocolType = protOracle
-    then Check(Metadata.GetColumnType(Field1) in [stDouble], 'ColumnType does not match')
+    then Check(Metadata.GetColumnType(Field1) in [stBigDecimal], 'ColumnType does not match')
     else Check(Metadata.GetColumnType(Field1) in [stInteger], 'ColumnType does not match');
 
   CheckColumnMetadata(Metadata, Field2, GetColumnLabelFromUnQuoted('d_fld1', 1),
@@ -405,7 +405,7 @@ begin
   CheckColumnMetadata(Metadata, Field4, GetColumnLabelFromUnQuoted('d_fld2', 1),
     GetFieldNameFromUnQuoted('d_fld2'), GetFieldNameFromUnQuoted('default_values2'), False, True);
   if ProtocolType = protOracle
-    then Check(Metadata.GetColumnType(Field4) in [stDouble], 'ColumnType does not match')
+    then Check(Metadata.GetColumnType(Field4) in [stBigDecimal], 'ColumnType does not match')
     else Check(Metadata.GetColumnType(Field4) in [stInteger], 'ColumnType does not match');
 end;
 

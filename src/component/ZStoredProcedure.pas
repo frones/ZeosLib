@@ -252,6 +252,12 @@ begin
         {$ENDIF WITH_FTSINGLE}
         ftFloat:
           Param.AsFloat := FCallableStatement.GetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$IFDEF WITH_FTEXTENDED}
+        ftExtended:
+          Param.AsFloat := FCallableStatement.GetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$ENDIF}
+        ftBCD, ftCurrency:
+          Param.AsCurrency := FCallableStatement.GetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftString:
           begin
             Param.AsString := FCallableStatement.GetString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});

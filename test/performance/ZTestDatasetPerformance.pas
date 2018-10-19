@@ -199,9 +199,9 @@ begin
           ftWideMemo:
             (Fields[i] as TBlobField).LoadFromStream(FUnicodeStream);
           {$ENDIF}
-          ftSmallint:
-            Fields[i].AsInteger := Random(255);
-          ftInteger, ftWord, ftLargeint:
+          ftSmallint, ftWord {$IFDEF WITH_FTBYTE}, ftByte {$ENDIF} {$IFDEF WITH_FTSHORTINT}, ftShortint {$ENDIF}:
+            Fields[i].AsInteger := Random(127);
+          ftInteger, ftLargeint:
             Fields[i].AsInteger := Index;
           ftBoolean:
             Fields[i].AsBoolean := Random(1) = 0;
@@ -275,7 +275,8 @@ begin
           {$IFNDEF FPC}, ftFixedWideChar{$ENDIF}:
             Fields[i].AsWideString;
           {$ENDIF}
-          ftSmallint, ftInteger, ftWord, ftLargeint:
+          ftSmallint, ftWord {$IFDEF WITH_FTBYTE}, ftByte {$ENDIF} {$IFDEF WITH_FTSHORTINT}, ftShortint {$ENDIF},
+          ftInteger, ftLargeint:
             Fields[i].AsInteger;
           ftBoolean:
             Fields[i].AsBoolean;
@@ -333,9 +334,9 @@ begin
           ftWideMemo:
             Fields[i].AsWideString := WideString(RandomStr(RecordCount*100));
           {$ENDIF}
-          ftSmallint:
-            Fields[i].AsInteger := Random(255);
-          ftInteger, ftWord, ftLargeint:
+          ftSmallint, ftWord {$IFDEF WITH_FTBYTE}, ftByte {$ENDIF} {$IFDEF WITH_FTSHORTINT}, ftShortint {$ENDIF}:
+            Fields[i].AsInteger := Random(127);
+          ftInteger, ftLargeint:
             Fields[i].AsInteger := RandomInt(-100, 100);
           ftBoolean:
             Fields[i].AsBoolean := Random(1) = 0;
@@ -406,9 +407,12 @@ begin
     { check types }
     case ConnectionConfig.PerformanceDataSetTypes[i] of
       ftBytes, ftBlob:
-        if (ProtocolType = protFirebird) and not EndsWith(Protocol, '2.5') then //firebird below 2.5 doesn't support x'hex' syntax
-        begin
-          SetLength(FDirectFieldTypes, Length(FDirectFieldTypes)-1); //omit these types to avoid exception
+        // check if driver can do GetBinaryEscapeString (f.i., firebird below 2.5 doesn't support x'hex' syntax)
+        // we do a test run of the method and remove type if it raises exception
+        try
+          Connection.DbcConnection.GetBinaryEscapeString(RandomBts(5));
+        except
+          SetLength(FDirectSQLTypes, Length(FDirectSQLTypes)-1); //omit these types to avoid exception
           SetLength(FDirectFieldNames, Length(FDirectFieldNames)-1); //omit these names to avoid exception
           SetLength(FDirectFieldSizes, Length(FDirectFieldSizes)-1); //omit these names to avoid exception
         end;
@@ -466,9 +470,9 @@ begin
             SQL := SQL + FDirectFieldNames[N]+'='+ FTrueVal
           else
             SQL := SQL + FDirectFieldNames[N]+'='+ FFalseVal;
-        ftSmallint:
-          SQL := SQL + FDirectFieldNames[N]+'='+IntToStr(Random(255));
-        ftInteger, ftWord, ftLargeint:
+        ftSmallint, ftWord {$IFDEF WITH_FTBYTE}, ftByte {$ENDIF} {$IFDEF WITH_FTSHORTINT}, ftShortint {$ENDIF}:
+          SQL := SQL + FDirectFieldNames[N]+'='+IntToStr(Random(127));
+        ftInteger, ftLargeint:
           SQL := SQL + FDirectFieldNames[N]+'='+IntToStr(Random(I));
         ftBCD, ftFMTBcd, ftFloat, ftCurrency{$IFDEF WITH_FTEXTENDED}, ftExtended{$ENDIF}:
           {$IFNDEF WITH_FORMATSETTINGS}

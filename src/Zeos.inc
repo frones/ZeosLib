@@ -87,7 +87,6 @@
   // Defines that go for ALL still supported Delphi's   (usually means they were under ifndef fpc)
   {$DEFINE WITH_DBTABLES}                 //Have the BDE DBTables Unit
   {$DEFINE WITH_DBCONSTS}                 //Delphi DBCONSTS, FPC DBCONST
-  {$DEFINE WITH_ASLARGEINT}               // tlargeint aslargeint. Fixed 2.6.0+ or 2.6.2+ probably
   {$DEFINE WITH_ASCURRENCY}               // Has AsCurrency.
   {$DEFINE WITH_ASVARIANT}                // Has AsVariant
   {$DEFINE WITH_IPROVIDER}                // Turn on IProviderSupport interface
@@ -150,6 +149,7 @@
           {$DEFINE WITH_PWIDECHAR_TOWIDESTRING}       //Able to pass pwidechar to a widestring parameter
           {$DEFINE WITH_IPROVIDERWIDE}                //IProvider -W widestring using interface
           {$DEFINE WITH_MM_CAN_REALLOC_EXTERNAL_MEM}  //sinc FastMM4 Memorymanager IDE can FreeMem/AllocMem/ReallocMem for Pointers which have been allocated in a different object
+          {$DEFINE WITH_ASLARGEINT}                   // tlargeint aslargeint. Fixed 2.6.0+ or 2.6.2+ probably
           {$DEFINE WITH_WIDEMEMO}                     //Have ftWideMemo
           {$DEFINE WITH_FTWIDESTRING}                 //Have ftWideString
           {$DEFINE WITH_FTFIXEDWIDECHAR}              //Have ftFixedWideChar
@@ -200,6 +200,7 @@
                   {$DEFINE WITH_FORMATSETTINGS}
                   {$DEFINE WITH_UNICODEFROMLOCALECHARS}
                   {$DEFINE WITH_RTLCONSTS_SInvalidGuidArray}
+                  {$DEFINE WITH_TOBJECTLIST_REQUIRES_CLASSES}       //TObjectList.Remove, add ... are inlined need unit classes
 
                   {$IF CompilerVersion >= 23} //Delphi XE2+
                     {$IFNDEF WIN32}
@@ -251,7 +252,7 @@
                         {$IFNDEF NEXTGEN}
                           {$DEFINE WITH_ANSISTRINGPOS_DEPRECATED} //AnsiStringPos deprecated moved to AnsiStrings
                           {$DEFINE WITH_STRLEN_DEPRECATED}        //StrLen deprecated moved to AnsiStrings
-                          {$DEFINE WITH_TOBJECTLIST_INLINE}       //TObjectList.Remove, add ... are inlined 	need System.Types
+                          {$DEFINE WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES} //TObjectList.Remove, add ... are inlined and System.Types
                           {$DEFINE WITH_ANSISTRCOMP_DEPRECATED}   //AnsiStrComp is deprecated moved to AnsiStrings
                           {$DEFINE WITH_ANSISTRLCOMP_DEPRECATED}  //AnsiStrLComp is deprecated moved to AnsiStrings
                           {$DEFINE WITH_STRDISPOSE_DEPRECATED}    //StrDispose is deprecated moved to AnsiStrings
@@ -374,9 +375,11 @@
 
 // Disables checking code.
 // Use Range checking option to turn on/off optimization
-{$IFOPT R-}
+// 2018-09-23 - disabled for now because we don't want to test that with the
+// test suites - even though we want the range checks to be enabled.
+//{$IFOPT R-}
 {$DEFINE DISABLE_CHECKING}
-{$ENDIF}
+//{$ENDIF}
 
 
 // Enables MySQL support in TZConnection/TZDataset

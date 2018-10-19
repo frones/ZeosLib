@@ -59,7 +59,7 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZPlainPostgreSqlDriver, ZDbcLogging,
   ZDbcResultSetMetadata, ZCompatibility;
@@ -216,14 +216,8 @@ procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Single;
   var Result: Single); overload;
 begin
   {$IFDEF FPC2_6DOWN}
-  {$ifopt R+}
-  {$define RangeCheckWasOn}
   {$R-}
-  {$endif opt R+}
-  {$ifopt Q+}
-  {$define OverflowCheckWasOn}
   {$Q-}
-  {$endif opt Q+}
   {$ENDIF}
   if Value = 'Infinity' then
     Result := Infinity
@@ -234,14 +228,12 @@ begin
   else
     ZSysUtils.SQLStrToFloatDef(Value, Def, Result);
   {$IFDEF FPC2_6DOWN}
-  {$ifdef RangeCheckWasOn}
-  {$R+}
-  {$undef RangeCheckWasOn}
-  {$endif}
-  {$ifdef OverflowCheckWasOn}
-  {$Q+}
-  {$undef OverflowCheckWasOn}
-  {$endif}
+    {$ifdef RangeCheckEnabled}
+      {$R+}
+    {$endif}
+    {$ifdef OverFlowCheckEnabled}
+      {$Q+}
+    {$endif}
   {$ENDIF}
 end;
 
@@ -249,14 +241,8 @@ procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Double;
   var Result: Double); overload;
 begin
   {$IFDEF FPC2_6DOWN}
-  {$ifopt R+}
-  {$define RangeCheckWasOn}
-  {$R-}
-  {$endif opt R+}
-  {$ifopt Q+}
-  {$define OverflowCheckWasOn}
-  {$Q-}
-  {$endif opt Q+}
+    {$R-}
+    {$Q-}
   {$ENDIF}
   if Value = 'Infinity' then
     Result := Infinity
@@ -267,14 +253,12 @@ begin
   else
     ZSysUtils.SQLStrToFloatDef(Value, Def, Result);
   {$IFDEF FPC2_6DOWN}
-  {$ifdef RangeCheckWasOn}
-  {$R+}
-  {$undef RangeCheckWasOn}
-  {$endif}
-  {$ifdef OverflowCheckWasOn}
-  {$Q+}
-  {$undef OverflowCheckWasOn}
-  {$endif}
+    {$ifdef RangeCheckEnabled}
+      {$R+}
+    {$endif}
+    {$ifdef OverFlowCheckEnabled}
+      {$Q+}
+    {$endif}
   {$ENDIF}
 end;
 

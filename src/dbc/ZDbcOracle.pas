@@ -276,7 +276,7 @@ function TZOracleConnection.CreateCallableStatement(const SQL: string;
 begin
   if IsClosed then
      Open;
-  Result := TZOracleCallableStatement.Create(Self, SQL, Info);
+  Result := TZOracleCallableStatement_A.Create(Self, SQL, Info);
   Result.ClearParameters;
 end;
 
@@ -477,7 +477,7 @@ function TZOracleConnection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
      Open;
-  Result := TZOracleStatement.Create(Self, Info);
+  Result := TZOracleStatement_A.Create(Self, Info);
 end;
 
 {**
@@ -513,7 +513,7 @@ function TZOracleConnection.CreatePreparedStatement(const SQL: string;
 begin
   if IsClosed then
      Open;
-  Result := TZOraclePreparedStatement.Create(Self, SQL, Info);
+  Result := TZOraclePreparedStatement_A.Create(Self, SQL, Info);
 end;
 
 {**

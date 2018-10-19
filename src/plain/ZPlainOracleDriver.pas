@@ -231,6 +231,27 @@ type
     OCIDescribeAny: function(svchp: POCISvcCtx; errhp: POCIError;
       objptr: Pointer; objnm_len: ub4; objptr_typ: ub1; info_level: ub1;
       objtyp: ub1; dschp: POCIDescribe): sword; cdecl;
+    { number conversion to/from XXX }
+    OCINumberToInt: function(err: POCIError; const number: POCINumber;
+      rsl_length: uword; rsl_flag: uword; rsl: Pointer): sword; cdecl;
+    OCINumberFromInt: function(err: POCIError; const inum: Pointer;
+      inum_length: uword; inum_s_flag: uword; number: POCINumber): sword; cdecl;
+    OCINumberToReal: function(err: POCIError; number: POCINumber;
+      rsl_length: uword; rsl: Pointer): sword; cdecl;
+    OCINumberFromReal: function(err: POCIError; const rnum: Pointer;
+      rnum_length: uword; number: POCINumber): sword; cdecl;
+    OCIStringAllocSize: function(env: POCIEnv; err: POCIError;
+      const vs: POCIString; allocsize: Pub4): sword; cdecl;
+    OCIStringResize: function(env: POCIEnv; err: POCIError;
+      new_size: ub4; str: PPOCIString): sword; cdecl;
+    OCIStringPtr: function(env: POCIEnv; const vs: POCIString): POraText; cdecl;
+    OCIStringSize: function(env: POCIEnv; const vs: POCIString): UB4; cdecl;
+  //Poratext = PAnsiChar;
+  //PPoratext = PPAnsiChar;
+    OCINumberToText: function(err: POCIError; const number: POCINumber;
+                          const fmt: Poratext; fmt_length: ub4;
+                          const nls_params: Poratext; nls_p_length: ub4;
+                          buf_size: pub4; buf: poratext): sword; cdecl;
   public
     {interface required api}
     constructor Create;
@@ -249,7 +270,7 @@ uses ZEncoding;
 
 function TZOraclePlainDriver.GetUnicodeCodePageName: String;
 begin
-  Result := 'UTF8';
+  Result := 'AL32UTF8';
 end;
 
 procedure TZOraclePlainDriver.LoadCodePages;
@@ -308,11 +329,17 @@ begin
   AddCodePage('ZHT16BIG5', 865, ceAnsi, zCP_Big5);
   AddCodePage('ZHT16MSWIN950', 867, ceAnsi, zCP_Big5);
   AddCodePage('ZHT16HKSCS', 868, ceAnsi);
-  AddCodePage('UTF8', 871, ceUTF8, zCP_UTF8);
-  AddCodePage('AL32UTF8', 873, ceUTF8, zCP_UTF8);
-  AddCodePage('UTF16', 1000, ceUTF16, zCP_UTF16);
-  AddCodePage('AL16UTF16', 2000, ceUTF16, zCP_UTF16);
-  AddCodePage('AL16UTF16LE', 2002, ceUTF16, zCP_UTF16);
+  //2018-09-28 UTF8 removed by marsupilami79. UTF8 is CESU-8 in reality which cannot
+  //be converted by Zeos correctly. For more information see:
+  //https://en.wikipedia.org/wiki/CESU-8
+  //https://community.oracle.com/thread/351482
+  //UTF8 is aliased to AL32UTF8 to mitigate those rare problems.
+  //AddCodePage('UTF8', 871, ceUTF8, zCP_UTF8);
+  AddCodePage('UTF8', 871, ceUTF8, zCP_UTF8, 'AL32UTF8', 4);
+  AddCodePage('AL32UTF8', 873, ceUTF8, zCP_UTF8, '', 4);
+  AddCodePage('UTF16', 1000, ceUTF16, zCP_UTF16, '', 2);
+  AddCodePage('AL16UTF16', 2000, ceUTF16, zCP_UTF16BE, '', 4);
+  AddCodePage('AL16UTF16LE', 2002, ceUTF16, zCP_UTF16, '', 4);
 end;
 
 procedure TZOraclePlainDriver.LoadApi;
@@ -391,6 +418,17 @@ begin
     @OCIObjectGetTypeRef          := GetAddress('OCIObjectGetTypeRef');
 
     @OCIDescribeAny               := GetAddress('OCIDescribeAny');
+
+    @OCINumberToInt               := GetAddress('OCINumberToInt');
+    @OCINumberFromInt             := GetAddress('OCINumberFromInt');
+    @OCINumberToReal              := GetAddress('OCINumberToReal');
+    @OCINumberFromReal            := GetAddress('OCINumberFromReal');
+    @OCINumberToText              := GetAddress('OCINumberToText');
+
+    @OCIStringAllocSize           := GetAddress('OCIStringAllocSize');
+    @OCIStringResize              := GetAddress('OCIStringResize');
+    @OCIStringPtr                 := GetAddress('OCIStringPtr');
+    @OCIStringSize                := GetAddress('OCIStringSize');
   end;
 end;
 

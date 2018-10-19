@@ -78,7 +78,6 @@ type
   IZASAConnection = interface (IZConnection)
     ['{FAAAFCE0-F550-4098-96C6-580145813EBF}']
     function GetDBHandle: PZASASQLCA;
-    function GetPlainDriver: TZASAPlainDriver;
 //    procedure CreateNewDatabase(const SQL: String);
   end;
 
@@ -87,7 +86,7 @@ type
   private
     FSQLCA: TZASASQLCA;
     FHandle: PZASASQLCA;
-    FPLainDriver: TZASAPlainDriver;
+    FPlainDriver: TZASAPlainDriver;
   private
     procedure StartTransaction; virtual;
     function DetermineASACharSet: String;
@@ -95,7 +94,6 @@ type
     procedure InternalCreate; override;
   public
     function GetDBHandle: PZASASQLCA;
-    function GetPlainDriver: TZASAPlainDriver;
 //    procedure CreateNewDatabase(const SQL: String);
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -120,7 +118,6 @@ type
   public
     function FormCalculateStatement(Columns: TObjectList): string; override;
   end;
-
 
 var
   {** The common driver manager object. }
@@ -223,22 +220,21 @@ end;
 procedure TZASAConnection.InternalClose;
 begin
   if Closed or (not Assigned(PlainDriver))then
-     Exit;
+    Exit;
 
   if AutoCommit
   then Commit
   else Rollback;
 
-  FPlainDriver.db_string_disconnect( FHandle, nil);
+  FPlainDriver.db_string_disconnect(FHandle, nil);
   CheckASAError(FPlainDriver, FHandle, lcDisconnect, ConSettings);
 
   FHandle := nil;
-  if FPlainDriver.db_fini( @FSQLCA) = 0 then
+  if FPlainDriver.db_fini(@FSQLCA) = 0 then
   begin
-    DriverManager.LogError( lcConnect, ConSettings^.Protocol, 'Inititalizing SQLCA',
+    DriverManager.LogError(lcConnect, ConSettings^.Protocol, 'Inititalizing SQLCA',
       0, 'Error closing SQLCA');
-    raise EZSQLException.CreateWithCode( 0,
-      'Error closing SQLCA');
+    raise EZSQLException.CreateWithCode(0, 'Error closing SQLCA');
   end;
 
   DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
@@ -255,7 +251,7 @@ begin
 
   if FHandle <> nil then
   begin
-    FPlainDriver.dbpp_commit( FHandle, 0);
+    FPlainDriver.dbpp_commit(FHandle, 0);
     CheckASAError(FPlainDriver, FHandle, lcTransaction, ConSettings);
     DriverManager.LogMessage(lcTransaction,
       ConSettings^.Protocol, 'TRANSACTION COMMIT');
@@ -371,11 +367,6 @@ begin
   Result := FHandle;
 end;
 
-function TZASAConnection.GetPlainDriver: TZASAPlainDriver;
-begin
-  Result := FPlainDriver;
-end;
-
 function TZASAConnection.GetServerProvider: TZServerProvider;
 begin
   Result := spSybase;
@@ -388,7 +379,7 @@ procedure TZASAConnection.Open;
 var
   ConnectionString, Links: string;
   {$IFDEF UNICODE}
-  RawTemp: RawBytEString;
+  RawTemp: RawByteString;
   {$ENDIF}
 begin
   if not Closed then
@@ -397,11 +388,11 @@ begin
   FHandle := nil;
   ConnectionString := '';
   try
-    if FPlainDriver.db_init( @FSQLCA) = 0 then
+    if FPlainDriver.db_init(@FSQLCA) = 0 then
     begin
-      DriverManager.LogError( lcConnect, ConSettings^.Protocol, 'Inititalizing SQLCA',
+      DriverManager.LogError(lcConnect, ConSettings^.Protocol, 'Inititalizing SQLCA',
         0, 'Error initializing SQLCA');
-      raise EZSQLException.CreateWithCode( 0,
+      raise EZSQLException.CreateWithCode(0,
         'Error initializing SQLCA');
     end;
     FHandle := @FSQLCA;
@@ -414,7 +405,7 @@ begin
       ConnectionString := ConnectionString + 'PWD="' + Password + '"; ';
     if Database <> '' then
     begin
-      if CompareText( ExtractFileExt( Database), '.db') = 0 then
+      if CompareText(ExtractFileExt(Database), '.db') = 0 then
         ConnectionString := ConnectionString + 'DBF="' + Database + '"; '
       else
         ConnectionString := ConnectionString + 'DBN="' + Database + '"; ';
@@ -436,21 +427,21 @@ begin
     {$ELSE}
     FPlainDriver.db_string_connect(FHandle, PAnsiChar(ConnectionString));
     {$ENDIF}
-    CheckASAError( FPlainDriver, FHandle, lcConnect, ConSettings);
+    CheckASAError(FPlainDriver, FHandle, lcConnect, ConSettings);
 
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
       'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"');
 
-    if ( FClientCodePage <> '' ) then
+    if (FClientCodePage <> '' ) then
       {$IFDEF UNICODE}
       RawTemp := ZUnicodeToRaw(FClientCodePage, ZOSCodePage);
-      if ( FPlainDriver.db_change_char_charset(FHandle, Pointer(RawTemp)) = 0 ) or
-         ( FPlainDriver.db_change_nchar_charset(FHandle, Pointer(RawTemp)) = 0 ) then
+      if (FPlainDriver.db_change_char_charset(FHandle, Pointer(RawTemp)) = 0 ) or
+         (FPlainDriver.db_change_nchar_charset(FHandle, Pointer(RawTemp)) = 0 ) then
       {$ELSE}
-      if ( FPlainDriver.db_change_char_charset(FHandle, PAnsiChar(FClientCodePage)) = 0 ) or
-         ( FPlainDriver.db_change_nchar_charset(FHandle, PAnsiChar(FClientCodePage)) = 0 ) then
+      if (FPlainDriver.db_change_char_charset(FHandle, PAnsiChar(FClientCodePage)) = 0 ) or
+         (FPlainDriver.db_change_nchar_charset(FHandle, PAnsiChar(FClientCodePage)) = 0 ) then
       {$ENDIF}
-        CheckASAError( FPlainDriver, FHandle, lcOther, ConSettings, 'Set client CharacterSet failed.');
+        CheckASAError(FPlainDriver, FHandle, lcOther, ConSettings, 'Set client CharacterSet failed.');
 
     StartTransaction;
 
@@ -459,8 +450,8 @@ begin
   except
     on E: Exception do
     begin
-      if Assigned( FHandle) then
-        FPlainDriver.db_fini( FHandle);
+      if Assigned(FHandle) then
+        FPlainDriver.db_fini(FHandle);
       FHandle := nil;
       raise;
     end;
@@ -484,9 +475,9 @@ begin
   if Closed or AutoCommit then
      Exit;
 
-  if Assigned( FHandle) then
+  if Assigned(FHandle) then
   begin
-    FPlainDriver.dbpp_rollback( FHandle, 0);
+    FPlainDriver.dbpp_rollback(FHandle, 0);
     CheckASAError(FPlainDriver, FHandle, lcTransaction, ConSettings);
     DriverManager.LogMessage(lcTransaction,
       ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
@@ -504,12 +495,12 @@ var
   RawOpt: RawbyteString;
   RawVal: RawByteString;
 begin
-  if Assigned( FHandle) then
+  if Assigned(FHandle) then
   begin
     RawOpt := conSettings^.ConvFuncs.ZStringToRaw(Option, ConSettings^.CTRL_CP, Consettings^.ClientCodePage^.CP);
     RawVal := conSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, Consettings^.ClientCodePage^.CP);
-    Sz := SizeOf( TASASQLDA) - 32767 * SizeOf( TZASASQLVAR);
-    SQLDA := AllocMem( Sz);
+    Sz := SizeOf(TASASQLDA) - 32767 * SizeOf(TZASASQLVAR);
+    SQLDA := AllocMem(Sz);
     try
       Move(SQLDA_sqldaid^, SQLDA.sqldaid[0], 8);
       SQLDA.sqldabc := Sz;
@@ -520,11 +511,11 @@ begin
       SQLDA.sqlVar[0].sqlData := PAnsiChar(RawVal);
       FPlainDriver.dbpp_setoption(FHandle, Temporary, User, PAnsiChar(RawOpt), SQLDA);
 
-      CheckASAError( FPlainDriver, FHandle, lcOther, ConSettings);
-      DriverManager.LogMessage( lcOther, ConSettings^.Protocol,
+      CheckASAError(FPlainDriver, FHandle, lcOther, ConSettings);
+      DriverManager.LogMessage(lcOther, ConSettings^.Protocol,
         'SET OPTION '+ConSettings.User+'.'+RawOpt+' = '+RawVal);
     finally
-      FreeMem( SQLDA);
+      FreeMem(SQLDA);
     end;
   end;
 end;
@@ -537,13 +528,13 @@ var
   ASATL: integer;
 begin
   if AutoCommit then
-    SetOption( 1, nil, 'CHAINED', 'OFF')
+    SetOption(1, nil, 'CHAINED', 'OFF')
   else
-    SetOption( 1, nil, 'CHAINED', 'ON');
-  ASATL := Ord( TransactIsolationLevel);
+    SetOption(1, nil, 'CHAINED', 'ON');
+  ASATL := Ord(TransactIsolationLevel);
   if ASATL > 1 then
     ASATL := ASATL - 1;
-  SetOption( 1, nil, 'ISOLATION_LEVEL', ZFastCode.IntToStr( ASATL));
+  SetOption(1, nil, 'ISOLATION_LEVEL', ZFastCode.IntToStr(ASATL));
 end;
 
 function TZASAConnection.DetermineASACharSet: String;
@@ -552,7 +543,7 @@ var
   RS: IZResultSet;
 begin
   Stmt := Self.CreateRegularStatement(Info);
-  RS := Stmt.ExecuteQuery('SELECT DB_PROPERTY( ''CharSet'')');
+  RS := Stmt.ExecuteQuery('SELECT DB_PROPERTY(''CharSet'')');
   if RS.Next then
     Result := RS.GetString(FirstDbcIndex)
   else

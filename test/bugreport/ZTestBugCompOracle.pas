@@ -109,7 +109,15 @@ begin
     Query.SQL.Text := 'SELECT * FROM Table_Num1';
     Query.Open;
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[0].DataType), 'id field type');
-    CheckEquals(Ord(ftFloat), Ord(Query.Fields[1].DataType), 'Num field type');
+    {$IFDEF BCD_TEST}
+    CheckEquals(Ord(ftFmtBCD), Ord(Query.Fields[1].DataType), 'Num field type');
+    {$ELSE}
+      {$IFDEF WITH_FTEXTENDED}
+      CheckEquals(Ord(ftExtended), Ord(Query.Fields[1].DataType), 'Num field type');
+      {$ELSE}
+      CheckEquals(Ord(ftFloat), Ord(Query.Fields[1].DataType), 'Num field type');
+      {$ENDIF}
+    {$ENDIF}
     CheckEquals(1, Query.Fields[0].AsInteger, 'id value');
     CheckEquals(54321.0123456789, Query.Fields[1].AsFloat, 1E-11, 'Num value');
   finally
@@ -174,7 +182,7 @@ begin
   BinaryStream := TMemoryStream.Create;
   BinFileStream := nil;
   try
-    BinFileStream := TFileStream.Create(ExtractFilePath(ParamStr(0)) + '/../../../database/images/horse.jpg', fmOpenRead);
+    BinFileStream := TFileStream.Create(TestFilePath('images/horse.jpg'), fmOpenRead);
     Query.SQL.Text := 'select * from blob_values'; //NCLOB and BFILE is inlcuded
     Query.Open;
     CheckEquals(6, Query.Fields.Count);

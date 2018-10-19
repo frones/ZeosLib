@@ -196,11 +196,21 @@ end;
 
 function TZDBLibPreparedStatementEmulated.GetParamAsString(
   ParamIndex: Integer): RawByteString;
+var
+  Connection: IZDBLibConnection;
+  Len: Integer;
 begin
+  // Todo: Talk with EgonHugeist wether this requiresmodifications for his Mextgen effort
   if InParamCount <= ParamIndex
   then Result := 'NULL'
   else Result := PrepareSQLParameter(InParamValues[ParamIndex],
       InParamTypes[ParamIndex], ClientVarManager, ConSettings, IsNCharIndex[ParamIndex]);
+  Len := Length(Result);
+  if (Len > 0) and (Result[1] = '''') and (Result[Len] = '''') then begin
+    Connection := GetConnection as IZDBLibConnection;
+    if (Connection.GetProvider = dpMsSQL) and Connection.FreeTDS then
+      Result := 'N' + Result;
+  end;
 end;
 
 {**
@@ -251,8 +261,10 @@ begin
 
   FHandle := FDBLibConnection.GetConnectionHandle;
   FPlainDriver := FDBLibConnection.GetPlainDriver;
-  if FPlainDriver.dbcancel(FHandle) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcExecute, SQL);
+  //2018-09-16 Coomented by marsupilami79 because this hides errors in the logic
+  //result sets might get only partial data without an error
+  //if FPlainDriver.dbcancel(FHandle) <> DBSUCCEED then
+  //  FDBLibConnection.CheckDBLibError(lcExecute, SQL);
 
   if FPlainDriver.dbcmd(FHandle, Pointer(Ansi)) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcExecute, SQL);
