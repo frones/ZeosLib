@@ -1123,21 +1123,10 @@ end;
   catalog name
 }
 function TZMySQLDatabaseMetadata.UncachedGetCatalogs: IZResultSet;
-var
-  Len: NativeUInt;
 begin
-    Result:=inherited UncachedGetCatalogs;
-
-    with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery('SHOW DATABASES') do
-    begin
-      while Next do
-      begin
-        Result.MoveToInsertRow;
-        Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(FirstDbcIndex, Len), @Len);
-        Result.InsertRow;
-      end;
-      Close;
-    end;
+  Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery('SHOW DATABASES'),
+    ConstructVirtualResultSet(CatalogColumnsDynArray));
 end;
 
 {**
@@ -1156,7 +1145,7 @@ end;
 }
 function TZMySQLDatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 begin
-    Result:=inherited UncachedGetTableTypes;
+  Result := inherited UncachedGetTableTypes;
 
     Result.MoveToInsertRow;
     Result.UpdateString(TableTypeColumnTableTypeIndex, 'TABLE');
@@ -1444,7 +1433,7 @@ var
   PrivilegesList: TStrings;
   ColumnNameCondition, TableNameCondition, SchemaCondition: string;
 begin
-  Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
+  Result := inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
     If Catalog = '' then
       If Schema <> '' then
@@ -1455,12 +1444,6 @@ begin
       SchemaCondition := ConstructNameCondition(Catalog,'c.db');
     TableNameCondition := ConstructNameCondition(Table,'c.table_name');
     ColumnNameCondition := ConstructNameCondition(ColumnNamePattern,'c.column_name');
-    If SchemaCondition <> '' then
-      SchemaCondition := ' and ' + SchemaCondition;
-    If TableNameCondition <> '' then
-      TableNameCondition := ' and ' + TableNameCondition;
-    If ColumnNameCondition <> '' then
-      ColumnNameCondition := ' and ' + ColumnNameCondition;
 
     PrivilegesList := TStringList.Create;
     try
@@ -1469,7 +1452,8 @@ begin
         + ' c.column_name, c.column_priv FROM mysql.columns_priv c,'
         + ' mysql.tables_priv t WHERE c.host=t.host AND c.db=t.db'
         + ' AND c.table_name=t.table_name'
-        + SchemaCondition + TableNameCondition + ColumnNameCondition
+      + AppendCondition(SchemaCondition) + AppendCondition(TableNameCondition)
+      + AppendCondition(ColumnNameCondition)
       ) do
       begin
         while Next do
@@ -1555,7 +1539,7 @@ var
   PrivilegesList: TStrings;
   TableNameCondition, SchemaCondition: string;
 begin
-    Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
+  Result := inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
 
     If Catalog = '' then
       If SchemaPattern <> '' then
@@ -1565,17 +1549,13 @@ begin
     else
       SchemaCondition := ConstructNameCondition(Catalog,'db');
     TableNameCondition := ConstructNameCondition(TableNamePattern,'table_name');
-    If SchemaCondition <> '' then
-      SchemaCondition := ' and ' + SchemaCondition;
-    If TableNameCondition <> '' then
-      TableNameCondition := ' and ' + TableNameCondition;
 
     PrivilegesList := TStringList.Create;
     try
       with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
         'SELECT host,db,table_name,grantor,user,table_priv'
         + ' from mysql.tables_priv WHERE 1=1'
-        + SchemaCondition + TableNameCondition
+      + AppendCondition(SchemaCondition) + AppendCondition(TableNameCondition)
       ) do
       begin
         while Next do
@@ -2398,12 +2378,8 @@ begin
   else If Catalog <> ''
     then SchemaCondition := ConstructNameCondition(Catalog, 'R.ROUTINE_SCHEMA')
     else SchemaCondition := ConstructNameCondition(FDatabase, 'R.ROUTINE_SCHEMA');
-  If SchemaCondition <> ''
-  then SchemaCondition := ' and ' + SchemaCondition;
 
   ProcedureNameCondition := ConstructNameCondition(ProcedureNamePattern, 'R.ROUTINE_NAME');
-  If ProcedureNameCondition <> ''
-  then ProcedureNameCondition := ' and ' + ProcedureNameCondition;
 
   SQL := 'select '
        + '  ROUTINE_CATALOG as PROCEDURE_CAT, '
@@ -2415,7 +2391,7 @@ begin
        + '  ROUTINE_COMMENT as REMARKS, '
        + '  case ROUTINE_TYPE when ''FUNCTION'' then 2 when ''PROCEDURE'' then 1 else 0 end as PROCEDURE_TYPE '
        + 'from information_schema.ROUTINES R '
-       + 'where 1=1' + SchemaCondition + ProcedureNameCondition + ' '
+       + 'where 1=1' + AppendCondition(SchemaCondition) + AppendCondition(ProcedureNameCondition)
        + ' ORDER BY R.ROUTINE_SCHEMA, R.ROUTINE_NAME';
 
   Result := GetConnection.CreateStatement.ExecuteQuery(SQL);
@@ -2432,12 +2408,8 @@ begin
   else If Catalog <> ''
     then SchemaCondition := ConstructNameCondition(Catalog, 'p.db')
     else SchemaCondition := ConstructNameCondition(FDatabase, 'p.db');
-  If SchemaCondition <> ''
-  then SchemaCondition := ' and ' + SchemaCondition;
 
   ProcedureNameCondition := ConstructNameCondition(ProcedureNamePattern,'p.name');
-  If ProcedureNameCondition <> ''
-  then ProcedureNameCondition := ' and ' + ProcedureNameCondition;
 
   SQL := 'SELECT '
        + '  ''def'' AS PROCEDURE_CAT, '
@@ -2449,8 +2421,8 @@ begin
        + '  p.comment AS REMARKS, '
        + '  case p.type when ''FUNCTION'' then 2 when ''PROCEDURE'' then 1 else 0 end as PROCEDURE_TYPE '
        + 'FROM mysql.proc p '
-       + 'WHERE 1=1' + SchemaCondition + ProcedureNameCondition + ' '
-       + 'ORDER BY p.db, p.name';
+       + 'WHERE 1=1' + AppendCondition(SchemaCondition) + AppendCondition(ProcedureNameCondition)
+       + ' ORDER BY p.db, p.name';
 
   Result := GetConnection.CreateStatement.ExecuteQuery(SQL);
 end;
@@ -2625,17 +2597,13 @@ begin
   else
     SchemaCondition := ConstructNameCondition(Catalog,'p.db');
   ProcedureNameCondition := ConstructNameCondition(ProcedureNamePattern,'p.name');
-  If SchemaCondition <> '' then
-    SchemaCondition := ' and ' + SchemaCondition;
-  If ProcedureNameCondition <> '' then
-    ProcedureNameCondition := ' and ' + ProcedureNameCondition;
 
   Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
   SQL := 'SELECT ''def'' AS PROCEDURE_CAT, p.db AS PROCEDURE_SCHEM, '+
       'p.name AS PROCEDURE_NAME, p.param_list AS PARAMS, p.comment AS REMARKS, '+
     ZFastCode.IntToStr(Ord(ProcedureReturnsResult))+' AS PROCEDURE_TYPE, p.returns AS RETURN_VALUES '+
-    ' from  mysql.proc p where 1 = 1'+SchemaCondition+ProcedureNameCondition+
+    ' from mysql.proc p where 1=1'+ AppendCondition(SchemaCondition) + AppendCondition(ProcedureNameCondition)+
     ' ORDER BY p.db, p.name';
 
     try
@@ -2873,12 +2841,8 @@ begin
   else If Catalog <> ''
     then SchemaCondition := ConstructNameCondition(Catalog, 'P.SPECIFIC_SCHEMA')
     else SchemaCondition := ConstructNameCondition(FDatabase, 'P.SPECIFIC_SCHEMA');
-  If SchemaCondition <> ''
-  then SchemaCondition := ' and ' + SchemaCondition;
 
   ProcedureNameCondition := ConstructNameCondition(ProcedureNamePattern, 'P.SPECIFIC_NAME');
-  If ProcedureNameCondition <> ''
-  then ProcedureNameCondition := ' and ' + ProcedureNameCondition;
 
   Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
@@ -2888,19 +2852,19 @@ begin
        + '  SPECIFIC_NAME as PROCEDURE_NAME, '
        + '  PARAMETER_NAME as COLUMN_NAME, '
        + '  case when PARAMETER_MODE = ''IN'' then 1 when PARAMETER_MODE = ''INOUT'' then 2 when PARAMETER_MODE = ''OUT'' then 3 when PARAMETER_MODE is null then 4 else 0 end as COLUMN_TYPE, '
-       + '  /* don''t forget the DATA_TYPE column */ '
+       // don''t forget the DATA_TYPE column
        + '  DATA_TYPE as TYPE_NAME, '
-       + '  /* don''t forget the PRECISION column -> mix of CHARACTER_MAXIMUM_LENGTH and NUMERIC_PRECISION*/ '
+       // don''t forget the PRECISION column -> mix of CHARACTER_MAXIMUM_LENGTH and NUMERIC_PRECISION
        + '  CHARACTER_OCTET_LENGTH as LENGTH, '
        + '  NUMERIC_SCALE as SCALE, '
-       + '  /* don''t forget to null the radix column? */ '
-       + '  /* don''t forget nullable -> 2 */ '
-       + '  /* don''t forget remarks -> null */ '
+       // don''t forget to null the radix column?
+       // don''t forget nullable -> 2
+       // don''t forget remarks -> null
        + '  NUMERIC_PRECISION, '
        + '  CHARACTER_MAXIMUM_LENGTH '
        + 'from information_schema.PARAMETERS P '
-       + 'where (P.ORDINAL_POSITION > 0) ' + SchemaCondition + ProcedureNameCondition + ' ' //position 0 is reserved for function results
-       + 'ORDER BY P.SPECIFIC_SCHEMA, P.SPECIFIC_NAME, P.ORDINAL_POSITION) '
+       + 'where (P.ORDINAL_POSITION > 0)' + AppendCondition(SchemaCondition) + AppendCondition(ProcedureNameCondition) //position 0 is reserved for function results
+       + ' ORDER BY P.SPECIFIC_SCHEMA, P.SPECIFIC_NAME, P.ORDINAL_POSITION) '
 
        + 'union all ' // the union all and all this stuff is necessary because the rest of the code expects the return value of functions to be the last parameter.
 
@@ -2910,19 +2874,19 @@ begin
        + '  SPECIFIC_NAME as PROCEDURE_NAME, '
        + '  ''ReturnValue'' as COLUMN_NAME, '
        + '  case when PARAMETER_MODE = ''IN'' then 1 when PARAMETER_MODE = ''INOUT'' then 2 when PARAMETER_MODE = ''OUT'' then 3 when PARAMETER_MODE is null then 4 else 0 end as COLUMN_TYPE, '
-       + '  /* don''t forget the DATA_TYPE column */ '
+       // don''t forget the DATA_TYPE column
        + '  DATA_TYPE as TYPE_NAME, '
-       + '  /* don''t forget the PRECISION column -> mix of CHARACTER_MAXIMUM_LENGTH and NUMERIC_PRECISION*/ '
+       // don''t forget the PRECISION column -> mix of CHARACTER_MAXIMUM_LENGTH and NUMERIC_PRECISION
        + '  CHARACTER_OCTET_LENGTH as LENGTH, '
        + '  NUMERIC_SCALE as SCALE, '
-       + '  /* don''t forget to null the radix column? */ '
-       + '  /* don''t forget nullable -> 2 */ '
-       + '  /* don''t forget remarks -> null */ '
+       // don''t forget to null the radix column?
+       // don''t forget nullable -> 2
+       // don''t forget remarks -> null
        + '  NUMERIC_PRECISION, '
        + '  CHARACTER_MAXIMUM_LENGTH '
        + 'from information_schema.PARAMETERS P '
-       + 'where (P.ORDINAL_POSITION = 0)' + SchemaCondition + ProcedureNameCondition + ' ' //position 0 is reserved for function results
-       + 'ORDER BY P.SPECIFIC_SCHEMA, P.SPECIFIC_NAME, P.ORDINAL_POSITION)';
+       + 'where (P.ORDINAL_POSITION = 0)' + AppendCondition(SchemaCondition) + AppendCondition(ProcedureNameCondition) //position 0 is reserved for function results
+       + ' ORDER BY P.SPECIFIC_SCHEMA, P.SPECIFIC_NAME, P.ORDINAL_POSITION)';
 
   with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL) do begin
     while Next do begin
@@ -3008,7 +2972,7 @@ begin
     Result.MoveToInsertRow;
     Result.UpdateNull(FirstDbcIndex);
     Result.UpdateString(FirstDbcIndex + 1, 'ctid');
-  //  Result.UpdateInt(FirstDbcIndex + 2, GetSQLType('tid')); //FIX IT
+//  Result.UpdateInt(FirstDbcIndex + 2, GetSQLType('tid')); //FIX IT
     Result.UpdateString(FirstDbcIndex + 3, 'tid');
     Result.UpdateNull(FirstDbcIndex + 4);
     Result.UpdateNull(FirstDbcIndex + 5);
@@ -3060,12 +3024,6 @@ begin
     SchemaCondition := ConstructNameCondition(Catalog,'TABLE_SCHEMA');
   TableNameCondition := ConstructNameCondition(TableNamePattern,'TABLE_NAME');
   ColumnNameCondition := ConstructNameCondition(ColumnNamePattern,'COLUMN_NAME');
-  If SchemaCondition <> '' then
-    SchemaCondition := ' and ' + SchemaCondition;
-  If TableNameCondition <> '' then
-    TableNameCondition := ' and ' + TableNameCondition;
-  If ColumnNameCondition <> '' then
-    ColumnNameCondition := ' and ' + ColumnNameCondition;
 
   Result:=inherited UncachedGetCollationAndCharSet(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
@@ -3079,7 +3037,8 @@ begin
           'FROM INFORMATION_SCHEMA.COLUMNS CLMS '+
           'LEFT JOIN INFORMATION_SCHEMA.CHARACTER_SETS CS '+
           'ON CS.DEFAULT_COLLATE_NAME = CLMS.COLLATION_NAME '+
-          'WHERE 1=1'+ SchemaCondition + TableNameCondition + ColumnNameCondition;
+          'WHERE 1=1'+ AppendCondition(SchemaCondition) + AppendCondition(TableNameCondition)
+          + AppendCondition(ColumnNameCondition);
         with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL) do
         begin
           if Next then
@@ -3103,7 +3062,7 @@ begin
           'FROM INFORMATION_SCHEMA.TABLES TBLS LEFT JOIN '+
           'INFORMATION_SCHEMA.CHARACTER_SETS CS ON '+
           'TBLS.TABLE_COLLATION = CS.DEFAULT_COLLATE_NAME '+
-          'WHERE 1=1'+ SchemaCondition + TableNameCondition;
+          'WHERE 1=1'+ AppendCondition(SchemaCondition) + AppendCondition(TableNameCondition);
         with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL) do
         begin
           if Next then
@@ -3123,12 +3082,11 @@ begin
     end
     else
     begin
-      SchemaCondition := ConstructNameCondition(LCatalog, 'and SCHEMA_NAME');
       SQL := 'SELECT S.DEFAULT_COLLATION_NAME, S.DEFAULT_CHARACTER_SET_NAME, '+
         'CS.MAXLEN FROM INFORMATION_SCHEMA.SCHEMATA S '+
         'LEFT JOIN INFORMATION_SCHEMA.CHARACTER_SETS CS '+
         'ON CS.DEFAULT_COLLATE_NAME = S.DEFAULT_COLLATION_NAME '+
-        'WHERE 1=1 '+ SchemaCondition;
+        'WHERE 1=1 '+ AppendCondition(ConstructNameCondition(LCatalog, 'and SCHEMA_NAME'));
       with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL) do
       begin
         if Next then

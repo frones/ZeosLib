@@ -485,9 +485,9 @@ begin
 
     Sql_ := 'SELECT * FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
     StrStream := TMemoryStream.Create();
-    StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
+    StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
     BinStream := TMemoryStream.Create();
-    BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
+    BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
     BinStream1 := TMemoryStream.Create;
     StrStream1 := TMemoryStream.Create;
 
@@ -701,11 +701,11 @@ begin
     Params[4].AsDateTime := EncodeTime(17, 30, 0, 0);
 
     BinStream := TMemoryStream.Create;
-    BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
+    BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
     Params[5].LoadFromStream(BinStream, ftBlob);
 
     StrStream := TMemoryStream.Create;
-    StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
+    StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
     Params[6].LoadFromStream(StrStream, ftMemo);
 
     Params[7].Value := Null;

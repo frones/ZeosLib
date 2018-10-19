@@ -8,7 +8,7 @@
       <Version Value="11"/>
       <PathDelim Value="\"/>
       <SearchPaths>
-        <OtherUnitFiles Value="..\..\src\dbc;build"/>
+        <OtherUnitFiles Value="..\..\src\dbc"/>
         <UnitOutputDirectory Value="lib\zdbc\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
       <Parsing>
@@ -69,7 +69,7 @@
       </Item10>
       <Item11>
         <Filename Value="zdbcplatform.pas"/>
-        <UnitName Value="zplainplatform"/>
+        <UnitName Value="zdbcplatform"/>
       </Item11>
     </Files>
     <RequiredPkgs Count="5">

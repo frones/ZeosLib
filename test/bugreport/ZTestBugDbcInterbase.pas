@@ -169,9 +169,9 @@ begin
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcUpdatable);
   try
-    BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
+    BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
     BinStream.Size := 512;
-    StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
+    StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
     StrStream.Size := 512;
 
     Statement.Execute('DELETE FROM BLOB_VALUES');
@@ -200,9 +200,9 @@ begin
 
     BinStream1.Free;
     StrStream1.Free;
-    BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
+    BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
     BinStream.Size := 1024;
-    StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
+    StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
     StrStream.Size := 1024;
 
     ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES');

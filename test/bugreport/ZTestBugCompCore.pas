@@ -266,10 +266,10 @@ begin
   TextStream := TMemoryStream.Create();
   BinaryStream := TMemoryStream.Create();
   try
-    TextStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/gnu.txt');
+    TextStream.LoadFromFile(TestFilePath('text/gnu.txt'));
     TextStream.Position := 0;
 
-    BinaryStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/coffee.bmp');
+    BinaryStream.LoadFromFile(TestFilePath('images/coffee.bmp'));
     BinaryStream.Position := 0;
 
     { Remove previously created record }

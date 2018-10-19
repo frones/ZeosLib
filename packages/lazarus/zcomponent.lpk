@@ -9,7 +9,7 @@
       <Version Value="11"/>
       <PathDelim Value="\"/>
       <SearchPaths>
-        <OtherUnitFiles Value="..\..\src\component;lib\$(TargetCPU)-$(TargetOS)"/>
+        <OtherUnitFiles Value="..\..\src\component"/>
         <UnitOutputDirectory Value="lib\zcomponent\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
       <Parsing>

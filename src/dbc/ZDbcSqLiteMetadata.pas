@@ -1335,7 +1335,7 @@ begin
         Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(name_index, Len), @Len);
         RawTmp := GetRawByteString(type_index);
         SQLType := ConvertSQLiteTypeToSQLType(RawTmp, UndefinedVarcharAsStringLength,
-          Precision{%H-}, Decimals{%H-}, ConSettings.CPType);
+          Precision, Decimals, ConSettings.CPType);
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
 
         Len := Length(RawTmp);

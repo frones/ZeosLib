@@ -202,10 +202,10 @@ end;
 }
 procedure TZGenericTestDbcResultSet.TestCaseSensitive;
 const
-  cs_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  field1_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  field2_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  field3_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  cs_id_Index  = FirstDbcIndex + 0;
+  field1_Index = FirstDbcIndex + 1;
+  field2_Index = FirstDbcIndex + 2;
+  field3_Index = FirstDbcIndex + 3;
 var
   Sql: string;
   Statement: IZPreparedStatement;
@@ -414,27 +414,27 @@ end;
 }
 procedure TZGenericTestDbcResultSet.TestPreparedStatement;
 const
-  Insert_eq_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  Insert_eq_name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  Insert_eq_type_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  Insert_eq_cost_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  Insert_eq_date_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  Insert_woff_date_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  Select_eq_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  Delete_eq_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  Inserted_eq_name_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  Inserted_eq_id_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  Insert_eq_id_Index        = FirstDbcIndex + 0;
+  Insert_eq_name_Index      = FirstDbcIndex + 1;
+  Insert_eq_type_Index      = FirstDbcIndex + 2;
+  Insert_eq_cost_Index      = FirstDbcIndex + 3;
+  Insert_eq_date_Index      = FirstDbcIndex + 4;
+  Insert_woff_date_Index    = FirstDbcIndex + 5;
+  Select_eq_id_Index        = FirstDbcIndex + 0;
+  Delete_eq_id_Index        = FirstDbcIndex + 0;
+  Inserted_eq_name_Index    = FirstDbcIndex + 0;
+  Inserted_eq_id_Index      = FirstDbcIndex + 1;
 
-  Insert_p_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  Insert_p_dep_id_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  Insert_p_name_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  Insert_p_begin_work_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  Insert_p_end_work_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  Insert_p_picture_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  Insert_p_resume_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
-  Insert_p_redundant_Index = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
-  Select_p_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  Delete_p_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  Insert_p_id_Index         = FirstDbcIndex + 0;
+  Insert_p_dep_id_Index     = FirstDbcIndex + 1;
+  Insert_p_name_Index       = FirstDbcIndex + 2;
+  Insert_p_begin_work_Index = FirstDbcIndex + 3;
+  Insert_p_end_work_Index   = FirstDbcIndex + 4;
+  Insert_p_picture_Index    = FirstDbcIndex + 5;
+  Insert_p_resume_Index     = FirstDbcIndex + 6;
+  Insert_p_redundant_Index  = FirstDbcIndex + 7;
+  Select_p_id_Index         = FirstDbcIndex + 0;
+  Delete_p_id_Index         = FirstDbcIndex + 0;
 var
   Sql: string;
   Statement: IZPreparedStatement;
@@ -527,11 +527,11 @@ begin
       SetTime(Insert_p_end_work_Index, EncodeTime(17, 30, 0, 0));
 
       BinStream := TMemoryStream.Create;
-      BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
+      BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
       SetBinaryStream(Insert_p_picture_Index, BinStream);
 
       StrStream := TMemoryStream.Create;
-      StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
+      StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
       SetAsciiStream(Insert_p_resume_Index, StrStream);
       if ProtocolType = protPostgre then //PQExecParams can't convert str to smallint
         SetNull(Insert_p_redundant_Index, stSmall)
@@ -883,9 +883,9 @@ begin
 
   Sql := 'SELECT * FROM people where p_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   StrStream := TMemoryStream.Create;
-  StrStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/text/lgpl.txt');
+  StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
   BinStream := TMemoryStream.Create;
-  BinStream.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/../../../database/images/dogs.jpg');
+  BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
   StrStream1 := nil;
   BinStream1 := nil;
   try
@@ -1254,7 +1254,7 @@ end;
 
 procedure TZGenericTestDbcResultSet.TestStringGetter;
 const
-  p_name_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  p_name_Index = FirstDbcIndex + 2;
   SNames: array[0..4] of string =
     ('Vasia Pupkin', 'Andy Karto', 'Kristen Sato', 'Aleksey Petrov', 'Yan Pater');
 var
@@ -1292,16 +1292,15 @@ end;
 
 procedure TZGenericTestDbcResultSet.TestStringToSignedIntegerConversions;
 const
-  s_id_Index  = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  s_char_Index  = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  s_varchar_Index  = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  s_nchar_Index  = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  s_nvarchar_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  s_bit_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  s_varbit_Index  = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  s_id_Index       = FirstDbcIndex + 0;
+  s_char_Index     = FirstDbcIndex + 1;
+  s_varchar_Index  = FirstDbcIndex + 2;
+  s_nchar_Index    = FirstDbcIndex + 3;
+  s_nvarchar_Index = FirstDbcIndex + 4;
+  s_bit_Index      = FirstDbcIndex + 5;
+  //s_varbit_Index  = FirstDbcIndex + 6;
 var
   PStatement: IZPreparedStatement;
-  Statement: IZStatement;
   Use_S_BIT: Boolean;
 
   function InsertTestString(ID: Integer; Const Str: RawByteString): Boolean;
@@ -1338,9 +1337,8 @@ begin
   Check(InsertTestString(TEST_ROW_ID+7, IntToRaw(High(Int64))));
 
   PStatement := Connection.PrepareStatement('select * from string_values where s_id >= ? order by s_id');
-  Statement := Connection.CreateStatement;
   try
-    PStatement.SetInt(s_id_Index, TEST_ROW_ID-1);
+    PStatement.SetInt(FirstDbcIndex, TEST_ROW_ID);
     with PStatement.ExecuteQueryPrepared do
     begin
       { Test ShortInt getter}
@@ -1414,26 +1412,21 @@ begin
       Close;
     end;
   finally
-    PStatement.Close;
-    PStatement := nil;
-    Statement.Execute('delete from string_values where s_id >= '+ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
-    Statement.Close;
-    Statement := nil;
+    Connection.CreateStatement.ExecuteUpdate('delete from string_values where s_id >= '+ ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
   end;
 end;
 
 procedure TZGenericTestDbcResultSet.TestStringToUnsignedIntegerConversions;
 const
-  s_id_Index  = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  s_char_Index  = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  s_varchar_Index  = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  s_nchar_Index  = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  s_nvarchar_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  s_bit_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  s_varbit_Index  = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  s_id_Index       = FirstDbcIndex + 0;
+  s_char_Index     = FirstDbcIndex + 1;
+  s_varchar_Index  = FirstDbcIndex + 2;
+  s_nchar_Index    = FirstDbcIndex + 3;
+  s_nvarchar_Index = FirstDbcIndex + 4;
+  s_bit_Index      = FirstDbcIndex + 5;
+  //s_varbit_Index  = FirstDbcIndex + 6;
 var
   PStatement: IZPreparedStatement;
-  Statement: IZStatement;
   Info: TStrings;
   Use_S_BIT: Boolean;
 
@@ -1477,9 +1470,8 @@ begin
   {$ENDIF}
 
   PStatement := Connection.PrepareStatementWithParams('select * from string_values where s_id >= ? order by s_id', Info);
-  Statement := Connection.CreateStatement;
   try
-    PStatement.SetInt(s_id_Index, TEST_ROW_ID-1);
+    PStatement.SetInt(FirstDbcIndex, TEST_ROW_ID);
     with PStatement.ExecuteQueryPrepared do
     begin
       { Test Byte getter}
@@ -1553,11 +1545,7 @@ begin
       Close;
     end;
   finally
-    PStatement.Close;
-    PStatement := nil;
-    Statement.Execute('delete from string_values where s_id >= '+ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
-    Statement.Close;
-    Statement := nil;
+    Connection.CreateStatementWithParams(Info).ExecuteUpdate('delete from string_values where s_id >= '+ ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
     FreeAndNil(Info);
   end;
 end;
