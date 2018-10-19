@@ -92,7 +92,7 @@ implementation
 
 uses ZTestConsts, ZTestCase, ZVariant, ZSysUtils
   {$IFDEF EGONHUGEIST}, ZPLainOracleDriver, ZPlainOracleConstants,
-  ZDbcOracleUtils, ZFastCode{$ENDIF};
+  ZDbcOracleUtils, ZFastCode, ZDbcLogging{$ENDIF};
 
 { TZTestDbcOracleCase }
 
@@ -164,67 +164,255 @@ var
   C1: Currency absolute Si1;
   C2: Currency absolute Si2;
   FPlainDriver: TZOraclePlainDriver;
-  FTinyBuffer: array[byte] of Byte;
-  FvnuInfo: TvnuInfo;
+  OCINumber: TOCINumber;
+  FvnuInfo: TZvnuInfo;
   FErrorHandle: POCIError;
+  Status: sword;
+  fTinyBuffer: array[byte] of ansiChar;
+  tmp: RawByteString;
+  function NegNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo; const I2: Int64): Int64;
+  var i: Byte;
+  begin
+    {$R-} {$Q-}
+    { initialize with first negative base-100-digit }
+    Result := -(101 - num[2]); //init
+    { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
+    for i := 3 to vnuInfo.Len do
+      Result := Result * 100 - (101 - num[i]);
+    I := (vnuInfo.Len-1)*2;
+    if I <= vnuInfo.Precision then
+      Result := Result * sPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+    if Result <> I2 then
+      Result := 0;
+  end;
+  function PosNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo; const I2: UInt64): UInt64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+  var i: Byte;
+  begin
+    {$R-} {$Q-}
+    { initialize with first positive base-100-digit }
+    Result := (num[2] - 1);
+    { skip len, exponent and first base-100-digit -> start with 3}
+    for i := 3 to vnuInfo.Len do
+      Result := Result * 100 + Byte(num[i] - 1);
+    I := (vnuInfo.Len-1)*2;
+    if I <= vnuInfo.Precision then
+      {$IFNDEF WITH_UINT64_C1118_ERROR}
+      Result := Result * uPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
+      {$ELSE}
+      Result := Result * UInt64(sPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)]);
+      {$ENDIF}
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+  end;
+  function PosNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo; const C: Currency): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+  var I64: Int64 absolute Result;
+    i: ShortInt;
+  begin
+    {$R-} {$Q-}
+    { initialize with first positive base-100-digit }
+    I64 := (num[2] - 1);
+    { skip len, exponent and first base-100-digit -> start with 3}
+    for i := 3 to num[0] do
+      i64 := i64 * 100 + Byte(num[i] - 1);
+    I64 := I64 * sCurrScaleFaktor[4-(vnuInfo.Scale+Ord(vnuInfo.LastBase100DigitMod10Was0))];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+    if Result <> c  then
+      Result := 0;
+  end;
+  function NegNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo; const C: Currency): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+  var I64: Int64 absolute Result;
+    i: ShortInt;
+  begin
+    {$R-} {$Q-}
+    i64 := -(101 - num[2]); //init
+    { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
+    for i := 3 to vnuInfo.Len do
+      i64 := i64 * 100 - (101 - num[i]);
+    I64 := I64 * sCurrScaleFaktor[4-(vnuInfo.Scale+Ord(vnuInfo.LastBase100DigitMod10Was0))];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+    if Result <> c  then
+      Result := 0;
+  end;
+  procedure Curr2Nvu2(num: POCINumber; const C: Currency; num2: TOCINumber);
+  var
+    d: ShortInt;
+    l: byte;
+    I: Int64 absolute C;
+    Exp: Byte;
+  begin
+    { a currency allways fits into a 38 precision oracle number }
+    {$R-} {$Q-}
+    l := 0;
+    Exp := 0 ;
+    if C < 0 then begin
+      while i <> 0 do begin
+        d := I mod 100;
+      //  i := i div 100;
+      end;
+      if (Exp = 0) and (d = 0) then
+    end else begin
+
+    end;
+  end;
+function PosNVUCurr2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;
+var i: Byte;
+  PStart: PAnsiChar;
 begin
+  //FillChar(Buf^, 200, #0);
+  PStart := Buf;
+  //fill trailing zero
+  case (vnuInfo.Scale-vnuInfo.Precision) of
+    3:  begin
+          PWord(Buf)^ := 12336;
+          PWord(Buf+2)^ := 12336;
+          Inc(Buf,4);
+        end;
+    2:  begin
+          PByte(Buf)^ := Ord('0');
+          PWord(Buf+2)^ := 12336;
+          Inc(Buf,3);
+        end;
+    1:  begin
+          PWord(Buf)^ := 12336;
+          Inc(Buf,2);
+        end;
+    0: begin
+          PByte(Buf+1)^ := Ord('0');
+          Inc(Buf);
+       end;
+  end;
+  if vnuInfo.FirstBase100DigitDiv10Was0
+  then PByte(Buf)^ := Ord('0')+Byte(num[2] - 1)
+  else PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(num[2] - 1)]);
+  Inc(Buf, 1+Ord(vnuInfo.FirstBase100DigitDiv10Was0));
+  for I := 3 to vnuInfo.Len do begin
+    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(num[i] - 1)]);
+    Inc(Buf,2);
+  end;
+  I := Max(vnuInfo.Precision, vnuInfo.Scale)+Ord(vnuInfo.LastBase100DigitMod10Was0);
+  {move the scaled digits one positon to right }
+  PCardinal(Buf+1-i)^ := PCardinal(Buf-i)^;
+  PByte(Buf-i)^ := Ord('.');
+  if not (vnuInfo.LastBase100DigitMod10Was0 and (PByte(Buf-1)^ <> Ord('.'))) then
+    Inc(Buf);
+  Result := Buf - PStart{sign and decimal digit};
+end;
+  function NegNVUCurr2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;
+  var i: Byte;
+    PStart: PAnsiChar;
+  begin
+    FillChar(Buf^, 200, #0);
+    PStart := Buf;
+    PByte(Buf)^ := Ord('-');
+    //fill trailing zero's of required
+    case (vnuInfo.Scale-vnuInfo.Precision) of
+      3:  begin
+            PWord(Buf+1)^ := 12336;
+            PWord(Buf+3)^ := 12336;
+            Inc(Buf,5);
+          end;
+      2:  begin
+            PByte(Buf+1)^ := Ord('0');
+            PWord(Buf+3)^ := 12336;
+            Inc(Buf,4);
+          end;
+      1:  begin
+            PWord(Buf+1)^ := 12336;
+            Inc(Buf,3);
+          end;
+      0: begin
+            PByte(Buf+1)^ := Ord('0');
+            Inc(Buf,2);
+         end;
+      else Inc(Buf);
+    end;
+    if vnuInfo.FirstBase100DigitDiv10Was0 then begin
+      PByte(Buf)^ := Ord('0')+Byte(101 - num[2]);
+      Inc(Buf);
+    end else begin
+      PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(101 - num[2])]);
+      Inc(Buf,2);
+    end;
+    for I := 3 to vnuInfo.Len do begin
+      PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(101 - num[i])]);
+      Inc(Buf,2);
+    end;
+    I := Max(vnuInfo.Precision, vnuInfo.Scale)+Ord(vnuInfo.LastBase100DigitMod10Was0);
+    {move the scaled digits one positon to right }
+    PCardinal(Buf+1-i)^ := PCardinal(Buf-i)^;
+    PByte(Buf-i)^ := Ord('.');
+    if not (vnuInfo.LastBase100DigitMod10Was0 and (PByte(Buf-1)^ <> Ord('.'))) then
+      Inc(Buf);
+    Result := Buf - PStart{sign and decimal digit};
+  end;
+begin
+  Connection.Open;
   FErrorHandle := (Connection as IZOracleConnection).GetErrorHandle;
   FplainDriver := TZOraclePlainDriver(Connection.GetIZPlainDriver.GetInstance);
-  for SI1 := -100000001 to High(Int64) do begin
-    FPlainDriver.OCINumberFromInt(FErrorHandle, @SI1,
-      SizeOf(INT64),OCI_NUMBER_SIGNED, POCINumber(@FTinyBuffer[0]));
+  for SI1 := -1001{-99900} to High(Int64) do begin
+    CheckOracleError(FPLainDriver, FErrorHandle,
+      FPlainDriver.OCINumberFromInt(FErrorHandle, @SI1,
+        SizeOf(INT64),OCI_NUMBER_SIGNED, POCINumber(@OCINumber)),
+        lcOther, '', Connection.GetConSettings);
     if SI1 < 0 then begin
-      Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuNegInt);
-        SI2 := NegNvu2Int(POCINumber(@FTinyBuffer[0]), FvnuInfo, SI1);
+      Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = vnuNegInt);
+        SI2 := NegNvu2Int(POCINumber(@OCINumber), FvnuInfo, SI1);
+        ZSetString(PAnsiChar(@FTinyBuffer[0]), NegOrdNVU2Raw(POCINumber(@OCINumber),FvnuInfo, @FTinyBuffer[0]), tmp);
+        if tmp <> intToRaw(Si2) then begin
+          NegOrdNVU2Raw(POCINumber(@OCINumber),FvnuInfo, @FTinyBuffer[0]);
+          Assert(tmp = intToRaw(Si2), InttoUnicode(SI1));
+        end;
       if Si1 <> si2 then begin
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuNegInt);
-        SI2 := NegNvu2Int(POCINumber(@FTinyBuffer[0]), FvnuInfo, SI1);
+        Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = vnuNegInt);
+        SI2 := NegNvu2Int(POCINumber(@OCINumber), FvnuInfo, SI1);
         Assert(Si2 = SI1, InttoUnicode(SI1));
       end;
     end else if SI1 = 0 then
-      Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = nvu0)
+      Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = nvu0)
     else begin
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuPosInt);
-        SI2 := PosNvu2Int(POCINumber(@FTinyBuffer[0]), FvnuInfo);
+        Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = vnuPosInt);
+        SI2 := PosNvu2Int(POCINumber(@OCINumber), FvnuInfo, SI1);
         Assert(SI2 = SI1, InttoUnicode(SI1));
+        ZSetString(PAnsiChar(@FTinyBuffer[0]), PosOrdNVU2Raw(POCINumber(@OCINumber),FvnuInfo, @FTinyBuffer[0]), tmp);
+        if tmp <> intToRaw(Si2) then begin
+          NegOrdNVU2Raw(POCINumber(@OCINumber),FvnuInfo, @FTinyBuffer[0]);
+          Assert(tmp = intToRaw(Si2), InttoUnicode(SI1));
+        end;
       end;
 
-    D := C1;
-    FPlainDriver.OCINumberFromReal(FErrorHandle, @D,
-      SizeOf(Double), POCINumber(@FTinyBuffer[0]));
-    if SI1 mod 10000 = 0 then begin
-      (*if SI1 < 0 then begin
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuNegInt);
-        SI2 := NegNvu2Int(POCINumber(@FTinyBuffer[0]), FvnuInfo.Exponent);
-        Assert(Si2 = C1, InttoUnicode(SI1));
-      end else if SI1 = 0 then
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = nvu0)
-      else begin
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuPosInt);
-        SI2 := PosNvu2Int(POCINumber(@FTinyBuffer[0]), FvnuInfo.Exponent);
-        Assert(SI2 = C1, InttoUnicode(SI1));
-      end;
-    end else begin *)
+    if not (SI1 mod 10000 = 0) then begin
+      D := C1;
+    CheckOracleError(FPLainDriver, FErrorHandle,
+      FPlainDriver.OCINumberFromReal(FErrorHandle, @D,
+        SizeOf(Double), POCINumber(@OCINumber)),
+        lcOther, '', Connection.GetConSettings);
       if C1 < 0 then begin
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuNegCurr);
-          C2 := NegNvu2Curr(POCINumber(@FTinyBuffer[0]), FvnuInfo, c1);
+        if nvuKind(POCINumber(@OCINumber), FvnuInfo) <> vnuNegCurr then
+          Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = vnuNegCurr);
+            C2 := NegNvu2Curr(POCINumber(@OCINumber), FvnuInfo, c1);
         if C2 <> C1 then begin
           C2 := 0;
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuNegCurr);
-          C2 := NegNvu2Curr(POCINumber(@FTinyBuffer[0]), FvnuInfo, c1);
+        Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = vnuNegCurr);
+          C2 := NegNvu2Curr(POCINumber(@OCINumber), FvnuInfo, c1);
           Assert(C2 = C1, 'Expect '+CurrtoUnicode(C1)+' was '+CurrtoUnicode(C2));
         end;
+        NegNVUCurr2Raw(POCINumber(@OCINumber), FvnuInfo, @FTinyBuffer[0]);
       end else if C1 = 0 then
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = nvu0)
+        Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = nvu0)
       else begin
-        Assert(nvuKind(POCINumber(@FTinyBuffer[0]), FvnuInfo) = vnuPosCurr);
-        C2 := PosNvu2Curr(POCINumber(@FTinyBuffer[0]), FvnuInfo, C1);
+        Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = vnuPosCurr);
+        C2 := PosNvu2Curr(POCINumber(@OCINumber), FvnuInfo, C1);
         if C2 <> C1 then begin
           C2 := 0;
-          C2 := PosNvu2Curr(POCINumber(@FTinyBuffer[0]), FvnuInfo, C1);
+          C2 := PosNvu2Curr(POCINumber(@OCINumber), FvnuInfo, C1);
           Assert(C2 = C1, 'Expect '+CurrtoUnicode(C1)+' was '+CurrtoUnicode(C2));
         end;
       end;
+      //Curr2Nvu2(@OCINumber, C1, OCINumber);
     end;
   end;
 end;
@@ -572,9 +760,11 @@ begin
   CheckEquals(Low(Int64), ResultSet.GetLong(number_values_n_bdecimal_Index));
   CheckEquals(-99999.9999, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
   CheckEquals(-99999.9999, ResultSet.GetCurrency(number_values_n_numeric_Index));
-  CheckEquals(-3.402823466E+38, ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
-  CheckEquals(-3.402823466E+38, ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
-  CheckEquals(-1.7976931348623157E+38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  {EH: oracle uses the number here, so we can't compare any other way except using a string or simply forget it
+    it's officially documented the number is not accurate for FPU floats}
+  CheckEquals('-3.402823466E38', ResultSet.GetString(number_values_n_float_Index));
+  CheckEquals('-3.402823466E38', ResultSet.GetString(number_values_n_real_Index));
+  //CheckEquals(-1.7976931348623157E38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
   CheckEquals(-21474836.48, ResultSet.GetCurrency(number_values_n_money_Index));
   Check(ResultSet.Next);
   //2,-128,-32768,-2147483648,-9223372036854775808, -11111.1111,
@@ -625,9 +815,9 @@ begin
   CheckEquals(High(Int64), ResultSet.GetLong(number_values_n_bdecimal_Index));
   CheckEquals(11111.1111, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
   CheckEquals(11111.1111, ResultSet.GetCurrency(number_values_n_numeric_Index));
-  CheckEquals(3.402823466E+38, ResultSet.GetFloat(number_values_n_float_Index), FLOAT_COMPARE_PRECISION_SINGLE);
-  CheckEquals(3.402823466E+38, ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
-  CheckEquals(1.7976931348623157E+38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
+  CheckEquals('3.402823466E38', ResultSet.GetString(number_values_n_float_Index));
+  CheckEquals('3.402823466E38', ResultSet.GetString(number_values_n_real_Index));
+  //CheckEquals(1.7976931348623157E+38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
   CheckEquals(-922337203685477.5808, ResultSet.GetCurrency(number_values_n_money_Index));
   Check(ResultSet.Next);
   //5, 128, 32767, 147483647, 9223372036854775807,  99999.9999,
