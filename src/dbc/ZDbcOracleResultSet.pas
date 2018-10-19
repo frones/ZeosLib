@@ -89,7 +89,7 @@ type
     FClientCP: Word;
     Fbufsize: UB4; //a temporary variable uses for Number2Text
     fStatus: Sword;
-    FvnuInfo: TvnuInfo;
+    FvnuInfo: TZvnuInfo;
     function GetAsDateTimeValue(const SQLVarHolder: PZSQLVar): TDateTime; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     function GetFinalObject(Obj: POCIObject): POCIObject;
   protected
@@ -294,10 +294,10 @@ begin
                             nvu0: JSONWriter.Add('0');
                             nvuNegInf: JSONWriter.AddShort('"-Infinity"');
                             nvuPosInf: JSONWriter.AddShort('"Infinity"');
+                            vnuNegInt: JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], NegOrdNVU2Raw(POCINumber(P), FvnuInfo, @FTinyBuffer[0]));
+                            vnuPosInt: JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PosOrdNVU2Raw(POCINumber(P), FvnuInfo, @FTinyBuffer[0]));
                             vnuPosCurr: JSONWriter.AddCurr64(PosNvu2Curr(POCINumber(P), FvnuInfo));
                             vnuNegCurr: JSONWriter.AddCurr64(NegNvu2Curr(POCINumber(P), FvnuInfo));
-                            vnuPosInt:  JSONWriter.AddQ(PosNvu2Int(POCINumber(P), FvnuInfo));
-                            vnuNegInt:  JSONWriter.Add(NegNvu2Int(POCINumber(P), FvnuInfo));
                             else begin
                               FStatus:= FPlainDriver.OCINumberToReal(FErrorHandle, POCINumber(P), SizeOf(Double), @FTinyBuffer[0]);
                               if FStatus = OCI_Success
@@ -519,16 +519,11 @@ begin
                   Len := 8;
                 end;
               vnuNegInt: begin
-                  IntToRaw(NegNvu2Int(POCINumber(Result), FvnuInfo), @FTinyBuffer[SizeOF(TvnuInfo)], @Result);
-                  Len := Result - @FTinyBuffer[0];
+                  Len := NegOrdNVU2Raw(POCINumber(Result), FvnuInfo, @FTinyBuffer[0]);
                   Result := @FTinyBuffer[0];
                 end;
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
               vnuPosInt: begin
-                  IntToRaw(PosNvu2Int(POCINumber(Result), FvnuInfo), @FTinyBuffer[0], @Result);
-                  //IntToRaw(PosNvu2Int(FvnuInfo.Exponent, POCINumber(Result)), @FTinyBuffer[0], @Result);
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-                  Len := Result - @FTinyBuffer[0];
+                  Len := PosOrdNVU2Raw(POCINumber(Result), FvnuInfo, @FTinyBuffer[0]);
                   Result := @FTinyBuffer[0];
                 end;
               vnuPosCurr: begin
@@ -669,11 +664,8 @@ begin
                   nvu0:       Result := '0';
                   nvuNegInf:  Result := cNegInfinity;
                   nvuPosInf:  Result := cInfinity;
-                  vnuNegInt:  Result := IntToRaw(NegNvu2Int(POCINumber(P), FvnuInfo));
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-                  //vnuPosInt:  Result := IntToRaw(PosNvu2Int(FvnuInfo.Exponent, POCINumber(P)));
-                  vnuPosInt:  Result := IntToRaw(PosNvu2Int(POCINumber(P), FvnuInfo));
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+                  vnuNegInt:  ZSetString(PAnsiChar(@FTinyBuffer[0]), NegOrdNVU2Raw(POCINumber(P),FvnuInfo, @FTinyBuffer[0]), Result);
+                  vnuPosInt:  ZSetString(PAnsiChar(@FTinyBuffer[0]), PosOrdNVU2Raw(POCINumber(P),FvnuInfo, @FTinyBuffer[0]), Result);
                   vnuPosCurr: Result := CurrToRaw(PosNvu2Curr(POCINumber(P), FvnuInfo));
                   vnuNegCurr: Result := CurrToRaw(NegNvu2Curr(POCINumber(P), FvnuInfo));
                   else begin
@@ -786,11 +778,8 @@ begin
                   nvu0:       Result := '0';
                   nvuNegInf:  Result := cNegInfinity;
                   nvuPosInf:  Result := cInfinity;
-                  vnuNegInt:  Result := IntToRaw(NegNvu2Int(POCINumber(P), FvnuInfo));
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-                  vnuPosInt:  Result := IntToRaw(PosNvu2Int(POCINumber(P), FvnuInfo));
-                  //vnuPosInt:  Result := IntToRaw(PosNvu2Int(FvnuInfo.Exponent, POCINumber(P)));
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+                  vnuNegInt:  ZSetString(PAnsiChar(@FTinyBuffer[0]), NegOrdNVU2Raw(POCINumber(P),FvnuInfo, @FTinyBuffer[0]), Result);
+                  vnuPosInt:  ZSetString(PAnsiChar(@FTinyBuffer[0]), PosOrdNVU2Raw(POCINumber(P),FvnuInfo, @FTinyBuffer[0]), Result);
                   vnuPosCurr: Result := CurrToRaw(PosNvu2Curr(POCINumber(P), FvnuInfo));
                   vnuNegCurr: Result := CurrToRaw(NegNvu2Curr(POCINumber(P), FvnuInfo));
                   else begin

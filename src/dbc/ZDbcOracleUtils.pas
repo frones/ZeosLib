@@ -222,26 +222,6 @@ procedure CheckOracleError(const PlainDriver: TZOraclePlainDriver;
   const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
   const ConSettings: PZConSettings);
 
-{**
-  Allocates in memory Oracle handlers for Statement object.
-  @param PlainDriver an Oracle plain driver.
-  @param Connection an Oracle connection object.
-  @param Handle a holder for Statement handle.
-  @param ErrorHandle a holder for Error handle.
-}
-procedure AllocateOracleStatementHandles(const PlainDriver: TZOraclePlainDriver;
-  const Connection: IZConnection; var Handle: POCIStmt; var ErrorHandle: POCIError;
-  {%H-}UserServerCachedStmt: Boolean = False);
-
-{**
-  Frees from memory Oracle handlers for Statement object.
-  @param PlainDriver an Oracle plain driver.
-  @param Handle a holder for Statement handle.
-  @param ErrorHandle a holder for Error handle.
-}
-procedure FreeOracleStatementHandles(const PlainDriver: TZOraclePlainDriver;
-  var Handle: POCIStmt; var ErrorHandle: POCIError);
-
 function DescribeObject(const PlainDriver: TZOraclePlainDriver; const Connection: IZConnection;
   ParamHandle: POCIParam; {%H-}stmt_handle: POCIHandle; Level: ub2): POCIObject;
 
@@ -260,8 +240,7 @@ type { implements an enumerator of a dedected pascal type from an oracle number 
                         vnuNegInt, vnuPosInt,
                         vnuNegCurr, vnuPosCurr,
                         nvuBigDecimal);
-  PvnuInfo = ^TvnuInfo;
-  TvnuInfo = record
+  TZvnuInfo = record
     Scale                     : ShortInt;
     Exponent                  : ShortInt;
     Len                       : Byte;
@@ -270,59 +249,64 @@ type { implements an enumerator of a dedected pascal type from an oracle number 
     LastBase100DigitMod10Was0 : Boolean;
   end;
 
-{**
+{** EH:
   detects the pascal type from an oracle ocie number oracle number
   @param num the pointer to the oci-number
-  @param scale a scale in case of currency or neg. count 100 Factors
+  @param vnuInfo the collected infos about the number comming from nvuKind()
   @return an an enumerator of a dedected pascal type
 }
-function nvuKind(num: POCINumber; var vnuInfo: TvnuInfo): TnvuKind; //{$IFDEF WITH_INLINE}inline{$ENDIF};
+function nvuKind(num: POCINumber; var vnuInfo: TZvnuInfo): TnvuKind; //{$IFDEF WITH_INLINE}inline{$ENDIF};
 
-{**
+{** EH:
   convert a positive oracle oci number into currency value
   @param num the pointer to the oci-number
-  @param scale a given scale to align scale to 4 decimal digits
+  @param vnuInfo the collected infos about the number comming from nvuKind()
   @return a converted value
 }
-function PosNvu2Curr(num: POCINumber; const vnuInfo: TvnuInfo): Currency; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-//function PosNvu2Curr(num: POCINumber; const vnuInfo: TvnuInfo; const C: Currency): Currency; overload;
+function PosNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo): Currency; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-{**
+{** EH:
   convert a negative oracle oci number into currency value
   @param num the pointer to the oci-number
-  @param scale a given scale to align scale to 4 decimal digits
+  @param vnuInfo the collected infos about the number comming from nvuKind()
   @return a converted value
 }
-function NegNvu2Curr(num: POCINumber; const vnuInfo: TvnuInfo): Currency; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-//function NegNvu2Curr(num: POCINumber; const vnuInfo: TvnuInfo; const C: Currency): Currency; overload;
+function NegNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo): Currency; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-{** convert a positve oracle oci number into a unsigned longlong
+{** EH:
+  convert a positve oracle oci number into a unsigned longlong
   @param num the pointer to the oci-number
-  @param Neg100FactorCnt a scale for truncation if positive or base 100 multiplication if negative
+  @param vnuInfo the collected infos about the number comming from nvuKind()
   @return a converted value
 }
-function PosNvu2Int(num: POCINumber; const vnuInfo: TvnuInfo): UInt64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PosNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): UInt64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-{**
+{** EH:
   convert a negative oracle oci number into a signed longlong
   @param num the pointer to the oci-number
-  @param Neg100FactorCnt a scale for truncation if positive or base 100 multiplication if negative
-  @param Len a true len of num gigits to work with
+  @param vnuInfo the collected infos about the number comming from nvuKind()
   @return a converted value
 }
-function NegNvu2Int(num: POCINumber; const vnuInfo: TvnuInfo): Int64; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-//function NegNvu2Int(num: POCINumber; const vnuInfo: TvnuInfo; const I2: Int64): Int64; overload;
+function NegNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): Int64; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-{**
+
+{** EH:
   writes a negative unscaled oracle oci number into a buffer
   @param num the pointer to the oci-number
+  @param vnuInfo the collected infos about the number comming from nvuKind()
   @param Buf the buffer we're writing into
-  @param numInfo the number info record contating Length and Exponent
+  @return length in bytes
 }
-procedure Curr2Vnu(const C: Currency; num: POCINumber);
+function PosOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-//function Nvu2UInt64(num: POCINumber; Scale: ShortInt): UInt64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-//function Nvu2Int64(num: POCINumber; Scale: ShortInt): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+{** EH:
+  writes a positive unscaled oracle oci number into a buffer
+  @param num the pointer to the oci-number
+  @param vnuInfo the collected infos about the number comming from nvuKind()
+  @param Buf the buffer we're writing into
+  @return length in bytes
+}
+function NegOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;  {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function OCIType2Name(DataType: ub2): String;
 
@@ -599,13 +583,13 @@ begin
   end;
 end;
 
-{**
+{** EH:
   convert a positive oracle oci number into a unsigned longlong
   @param num the pointer to the oci-number
   @param Neg100FactorCnt a scale for truncation if positive or base 100 multiplication if negative
   @return a converted value
 }
-function PosNvu2Int(num: POCINumber; const vnuInfo: TvnuInfo): UInt64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PosNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): UInt64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 var i: Byte;
 begin
   {$R-} {$Q-}
@@ -625,14 +609,14 @@ begin
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
-{**
+{** EH:
   convert a negative oracle oci number into a signed longlong
   @param num the pointer to the oci-number
   @param Neg100FactorCnt a scale for truncation if positive or base 100 multiplication if negative
   @param Len a true len of num gigits to work with
   @return a converted value
 }
-function NegNvu2Int(num: POCINumber; const vnuInfo: TvnuInfo): Int64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function NegNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): Int64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 var i: Byte;
 begin
   {$R-} {$Q-}
@@ -645,25 +629,7 @@ begin
   if I <= vnuInfo.Precision then
     Result := Result * sPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
 end;
-(*
-function NegNvu2Int(num: POCINumber; const vnuInfo: TvnuInfo; const I2: Int64): Int64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-var i: Byte;
-begin
-  {$R-} {$Q-}
-  { initialize with first negative base-100-digit }
-  Result := -(101 - num[2]); //init
-  { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
-  for i := 3 to vnuInfo.Len do
-    Result := Result * 100 - (101 - num[i]);
-  I := (vnuInfo.Len-1)*2;
-  if I <= vnuInfo.Precision then
-    Result := Result * sPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
-  if Result <> I2 then
-    Result := 0;
-end;
-*)
+
 procedure Curr2Vnu(const C: Currency; num: POCINumber);
 var BCD: TBCD;
 begin
@@ -671,12 +637,13 @@ begin
   BCD2Nvu(Bcd, num);
 end;
 
-{** convert a positive oracle oci number into currency value
+{** EH:
+  convert a positive oracle oci number into currency value
   @param num the pointer to the oci-number
   @param scale a given scale to align scale to 4 decimal digits
   @return a converted value
 }
-function PosNvu2Curr(num: POCINumber; const vnuInfo: TvnuInfo): Currency; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PosNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo): Currency; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
 var I64: Int64 absolute Result;
   i: ShortInt;
 begin
@@ -690,31 +657,14 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
-(*
-function PosNvu2Curr(num: POCINumber; const vnuInfo: TvnuInfo; const C: Currency): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-var I64: Int64 absolute Result;
-  i: ShortInt;
-  len: Byte;
-begin
-  {$R-} {$Q-}
-  { initialize with first positive base-100-digit }
-  I64 := (num[2] - 1);
-  { skip len, exponent and first base-100-digit -> start with 3}
-  for i := 3 to num[0] do
-    i64 := i64 * 100 + Byte(num[i] - 1);
-  I64 := I64 * sCurrScaleFaktor[4-(vnuInfo.Scale+Ord(vnuInfo.LastBase100DigitMod10Was0))];
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
-  if Result <> c  then
-    Result := 0;
-end; *)
 
-{** convert a negative oracle oci number into currency value
+{**
+  convert a negative oracle oci number into currency value
   @param num the pointer to the oci-number
   @param scale a given scale to align scale to 4 decimal digits
   @return a converted value
 }
-function NegNvu2Curr(num: POCINumber; const vnuInfo: TvnuInfo): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function NegNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 var I64: Int64 absolute Result;
   i: ShortInt;
 begin
@@ -727,25 +677,89 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
-(*
-function NegNvu2Curr(num: POCINumber; const vnuInfo: TvnuInfo; const C: Currency): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-var I64: Int64 absolute Result;
-  i: ShortInt;
-  len: Byte;
+
+{**  EH:
+  writes a negative unscaled oracle oci number into a buffer
+  @param num the pointer to the oci-number
+  @param vnuInfo the collected infos about the number comming from nvuKind()
+  @param Buf the buffer we're writing into
+  @return length in bytes
+}
+function PosOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;
+var i: Byte;
+  PStart: PAnsiChar;
 begin
   {$R-} {$Q-}
-  i64 := -(101 - num[2]); //init
-  { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
-  for i := 3 to vnuInfo.Len do
-    i64 := i64 * 100 - (101 - num[i]);
-  I64 := I64 * sCurrScaleFaktor[4-(vnuInfo.Scale+Ord(vnuInfo.LastBase100DigitMod10Was0))];
+  PStart := Buf;
+  if vnuInfo.FirstBase100DigitDiv10Was0 then begin
+    PByte(Buf)^ := Ord('0')+Byte(num[2] - 1);
+    Inc(Buf);
+  end else begin
+    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(num[2] - 1)]);
+    Inc(Buf,2);
+  end;
+  for I := 3 to vnuInfo.Len do begin
+    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(num[i] - 1)]);
+    Inc(Buf,2);
+  end;
+  I := (vnuInfo.Len-1)*2;
+  if I <= vnuInfo.Precision then begin
+    i := vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0);
+    while i >= 2 do begin
+      PWord(Buf)^ := Word(TwoDigitLookupRaw[0]);
+      Inc(Buf,2);
+      Dec(i, 2);
+    end;
+    if i > 0 then
+      PByte(Buf)^ := Ord('0');
+  end;
+  Result := Buf-PStart;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
-  if Result <> c  then
-    Result := 0;
 end;
-*)
-function nvuKind(num: POCINumber; var vnuInfo: TvnuInfo): TnvuKind; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+{** EH:
+  writes a positive unscaled oracle oci number into a buffer
+  @param num the pointer to the oci-number
+  @param vnuInfo the collected infos about the number comming from nvuKind()
+  @param Buf the buffer we're writing into
+  @return length in bytes
+}
+function NegOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;
+var i: Byte;
+  PStart: PAnsiChar;
+begin
+  {$R-} {$Q-}
+  PStart := Buf;
+  PByte(Buf)^ := Ord('-');
+  if vnuInfo.FirstBase100DigitDiv10Was0 then begin
+    PByte(Buf+1)^ := Ord('0')+Byte(101 - num[2]);
+    Inc(Buf, 2);
+  end else begin
+    PWord(Buf+1)^ := Word(TwoDigitLookupRaw[Byte(101 - num[2])]);
+    Inc(Buf,3);
+  end;
+  for I := 3 to vnuInfo.Len do begin
+    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(101 - num[i])]);
+    Inc(Buf,2);
+  end;
+  I := (vnuInfo.Len-1)*2;
+  if I <= vnuInfo.Precision then begin
+    i := vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0);
+    while i >= 2 do begin
+      PWord(Buf)^ := Word(TwoDigitLookupRaw[0]);
+      Inc(Buf,2);
+      Dec(i, 2);
+    end;
+    if i > 0 then
+      PByte(Buf)^ := Ord('0');
+  end;
+  Result := Buf-PStart;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function nvuKind(num: POCINumber; var vnuInfo: TZvnuInfo): TnvuKind; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 var
   base100digit: ShortInt;
   Positive: Boolean;
@@ -951,7 +965,7 @@ begin
       else if Precision <= 9 then
         Result := stInteger
       else
-        Result := stLong  {!!in fact, unusable}
+        Result := stLong
     end else if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision <= sAlignCurrencyScale2Precision[Scale]) then
       Result := stCurrency
     else
@@ -1295,50 +1309,6 @@ begin
   if (Status = OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
     if Assigned(DriverManager) then //Thread-Safe patch
       DriverManager.LogMessage(LogCategory, ConSettings^.Protocol, ErrorMessage);
-end;
-
-{**
-  Allocates in memory Oracle handlers for Statement object.
-  @param PlainDriver an Oracle plain driver.
-  @param Connection an Oracle connection object.
-  @param Handle a holder for Statement handle.
-  @param ErrorHandle a holder for Error handle.
-}
-procedure AllocateOracleStatementHandles(const PlainDriver: TZOraclePlainDriver;
-  const Connection: IZConnection; var Handle: POCIStmt; var ErrorHandle: POCIError;
-  UserServerCachedStmt: Boolean);
-var
-  OracleConnection: IZOracleConnection;
-begin
-  OracleConnection := Connection as IZOracleConnection;
-  ErrorHandle := nil;
-  PlainDriver.OCIHandleAlloc(OracleConnection.GetConnectionHandle,
-    ErrorHandle, OCI_HTYPE_ERROR, 0, nil);
-  Handle := nil;
-  //if not UserServerCachedStmt then
-    PlainDriver.OCIHandleAlloc(OracleConnection.GetConnectionHandle,
-      Handle, OCI_HTYPE_STMT, 0, nil);
-end;
-
-{**
-  Frees from memory Oracle handlers for Statement object.
-  @param PlainDriver an Oracle plain driver.
-  @param Handle a holder for Statement handle.
-  @param ErrorHandle a holder for Error handle.
-}
-procedure FreeOracleStatementHandles(const PlainDriver: TZOraclePlainDriver;
-  var Handle: POCIStmt; var ErrorHandle: POCIError);
-begin
-  if ErrorHandle <> nil then
-  begin
-    PlainDriver.OCIHandleFree(ErrorHandle, OCI_HTYPE_ERROR);
-    ErrorHandle := nil;
-  end;
-  if Handle <> nil then
-  begin
-    PlainDriver.OCIHandleFree(Handle, OCI_HTYPE_STMT);
-    Handle := nil;
-  end;
 end;
 
 {**
