@@ -59,7 +59,7 @@ uses
 {$IFNDEF FPC}
   DateUtils,
 {$ENDIF}
-  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
@@ -91,7 +91,7 @@ type
       procedure GetColData(ColIndex: Integer; out DatPtr: Pointer; out DatLen: Integer); override;
   end;
 
-  TZCachedDblibField = class
+  TZCachedDblibField = record
     IsNull: Boolean;
     Data: TBytes;
   end;
@@ -140,6 +140,7 @@ type
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
       UserEncoding: TZCharEncoding = ceDefault);
+    destructor Destroy; override;
 
     procedure Close; override;
 
@@ -227,9 +228,6 @@ begin
 end;
 
 destructor TZCachedDblibDataProvider.Destroy;
-var
-  currentRow: TZCachedDblibRow;
-  x: Integer;
 begin
   while Next do ; // next removes one row after the other
   inherited;
@@ -244,8 +242,7 @@ begin
   if Assigned(FRootRow) then begin
     currentRow := FRootRow;
     FRootRow := currentRow.NextRow;
-    for x := Low(currentRow.Fields) to High(currentRow.Fields) do
-      FreeAndNil(currentRow.Fields[x]);
+    SetLength(currentRow.Fields, 0);
     FreeAndNil(currentRow);
     Result := Assigned(FRootRow);
   end;
@@ -286,15 +283,12 @@ begin
     FRootRow := TZCachedDblibRow.Create; // this is just a dummy to be on for being before the first row.
     currentRow := FRootRow;
     SetLength(currentRow.Fields, colCount);
-    for x := 0 to colCount - 1 do
-      currentRow.Fields[x] := TZCachedDblibField.Create;
     while plainProvider.Next do begin
       currentRow.NextRow := TZCachedDblibRow.Create;
       currentRow := currentRow.NextRow;
 
       SetLength(currentRow.Fields, colCount);
       for x := 0 to colCount - 1 do begin
-        currentRow.Fields[x] := TZCachedDblibField.Create;
         plainProvider.GetColData(x + 1, Data, DatLen);
         currentRow.Fields[x].IsNull := (Data = nil) and (DatLen = 0);
         if DatLen > 0 then begin
@@ -333,6 +327,13 @@ begin
   //FDataProvider := TZPlainDblibDataProvider.Create(Statement.GetConnection as IZDbLibConnection , FCheckDBDead);
   FDataProvider := TZCachedDblibDataProvider.Create(Statement.GetConnection as IZDbLibConnection);
   Open;
+end;
+
+destructor TZDBLibResultSet.Destroy;
+begin
+  if Assigned(FDataProvider) then
+    FreeAndNil(FDataProvider);
+  inherited;
 end;
 
 {**
@@ -377,6 +378,7 @@ label AssignGeneric;
     {$ENDIF}
   end;
 begin
+  NeedsLoading := false;
 //Check if the current statement can return rows
   if FPlainDriver.dbCmdRow(FHandle) <> DBSUCCEED then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -440,7 +442,8 @@ AssignGeneric:  {this is the old way we did determine the ColumnInformations}
 
   if FDataProvider is TZCachedDblibDataProvider then begin
     (FDataProvider as TZCachedDblibDataProvider).LoadData;
-    if NeedsLoading then (GetMetaData as IZDblibResultSetMetadata).LoadColumns;
+    if NeedsLoading then
+      (GetMetaData as IZDblibResultSetMetadata).LoadColumns;
   end;
 
   inherited Open;
@@ -579,14 +582,16 @@ var
   Tmp: RawByteString;
   P: PAnsiChar;
   Len: LengthInt;
+  DatLen: Integer;
 begin
   {$IFDEF GENERIC_INDEX}
   //DBLib -----> Col/Param starts whith index 1
-  FDataProvider.GetColData(ColumnIndex+1, Pointer(P), Len); //hint DBLib isn't #0 terminated @all
+  FDataProvider.GetColData(ColumnIndex+1, Pointer(P), DatLen); //hint DBLib isn't #0 terminated @all
   {$ELSE}
-  FDataProvider.GetColData(ColumnIndex, Pointer(P), Len); //hint DBLib isn't #0 terminated @all
+  FDataProvider.GetColData(ColumnIndex, Pointer(P), DatLen); //hint DBLib isn't #0 terminated @all
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
+  Len := DatLen;
   DT := DBLibColTypeCache[ColumnIndex];
   LastWasNull := P = nil;
   if LastWasNull then

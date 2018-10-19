@@ -672,10 +672,8 @@ begin
       ClearElements;
       SkipOptionTokens(FromTokens, TokenIndex, FromJoins);
       Continue;
-    end
     { Skips from clause keywords. }
-    else if FromClauses.IndexOf(CurrentUpper) >= 0 then
-    begin
+    end else if FromClauses.IndexOf(CurrentUpper) >= 0 then begin
       Inc(TokenIndex);
       CurrentValue := FromTokens[TokenIndex];
       CurrentUpper := AnsiUpperCase(CurrentValue);
@@ -689,8 +687,7 @@ begin
           begin
             CurrentValue := FromTokens[TokenIndex];
             CurrentUpper := AnsiUpperCase(CurrentValue);
-            CurrentType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
-              FromTokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
+          //CurrentType := FromTokens[TokenIndex]^.TokenType;
           end;
       end;
       // We must jump 1 tokens back now when we stopped on a Join clause.

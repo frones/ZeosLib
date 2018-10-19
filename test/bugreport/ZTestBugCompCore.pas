@@ -129,8 +129,14 @@ type
   ZTestCompCoreBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
   private
   published
+    {$IFNDEF FPC}
+    //It will be next to impossible to get these tests working correctly on FPC.
+    //On Linux there usually will not be a non-ASCII character set. Other tests
+    //will test Unicode.
     procedure TestUnicodeBehavior;
     procedure TestNonAsciiChars;
+    {$ENDIF}
+    procedure TestUnicodeChars;
   end;
 
 implementation
@@ -1990,13 +1996,29 @@ const {Test Strings}
   Str5: ZWideString = #$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438;
   Str6: ZWideString = #$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C#$0438#$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432;
 
+{$IFNDEF FPC}
 procedure ZTestCompCoreBugReportMBCs.TestUnicodeBehavior;
 var
   Query: TZQuery;
   StrStream1: TMemoryStream;
   SL: TStringList;
   ConSettings: PZConSettings;
+  Str1, Str2, Str3, Str4, Str5, Str6: AnsiString;
 begin
+  Str1 := 'This is an ASCII text and should work on any database.';
+  // This test requires the database to either use the same codepage as the
+  // computer. The strings need to fit into unicode and the local codepage.
+  // now let's create some strings that are not in the ASCII range
+  // rules:
+  // String 2 Starts with String 3
+  // String 2 ends with String 4
+  // String 5 is in the middle of String 2
+  Str2 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)+ Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223) +Chr(200)+Chr(201)+Chr(202)+Chr(203)+Chr(204)+Chr(205)+Chr(206)+Chr(207)+Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
+  Str3 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199);
+  Str4 := Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
+  Str5 := Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223);
+  Str6 := Chr(232)+Chr(233)+Chr(234)+Chr(235)+Chr(236)+Chr(237)+Chr(238)+Chr(239);
+
   StrStream1 := TMemoryStream.Create;
   SL := TStringList.Create;
   Query := CreateQuery;
@@ -2054,6 +2076,8 @@ var
   Query: TZQuery;
   RowCounter: Integer;
   I: Integer;
+  Str1, Str2, Str3, Str4, Str5, Str6: AnsiString;
+
   procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: ZWideString);
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
@@ -2066,6 +2090,20 @@ var
   end;
 
 begin
+  Str1 := 'This is an ASCII text and should work on any database.';
+  // This test requires the database to either use the same codepage as the
+  // computer. The strings need to fit into unicode and the local codepage.
+  // now let's create some strings that are not in the ASCII range
+  // rules:
+  // String 2 Starts with String 3
+  // String 2 ends with String 4
+  // String 5 is in the middle of String 2
+  Str2 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)+ Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223) +Chr(200)+Chr(201)+Chr(202)+Chr(203)+Chr(204)+Chr(205)+Chr(206)+Chr(207)+Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
+  Str3 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199);
+  Str4 := Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
+  Str5 := Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223);
+  Str6 := Chr(232)+Chr(233)+Chr(234)+Chr(235)+Chr(236)+Chr(237)+Chr(238)+Chr(239);
+
   Query := CreateQuery;
   Connection.Connect;  //DbcConnection needed
   try
@@ -2096,16 +2134,16 @@ begin
       else
         Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
-    CheckEquals(Query.RecordCount, 1, 'RowCount of Str2');
+    CheckEquals(1, Query.RecordCount, 'RowCount of Str2');
     Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str3, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
-    CheckEquals(Query.RecordCount, 2, 'RowCount of Str3');
+    CheckEquals(2, Query.RecordCount, 'RowCount of Str3');
     Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str4, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
-    CheckEquals(Query.RecordCount, 2, 'RowCount of Str4');
+    CheckEquals(2, Query.RecordCount, 'RowCount of Str4');
     Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str5, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
-    CheckEquals(Query.RecordCount, 2, 'RowCount of Str5');
+    CheckEquals(2, Query.RecordCount, 'RowCount of Str5');
     Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str6, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
   finally
@@ -2117,6 +2155,60 @@ begin
     Query.Free;
   end;
 end;
+{$ENDIF}
+
+procedure ZTestCompCoreBugReportMBCs.TestUnicodeChars;
+var
+  Query: TZQuery;
+const
+  Str6: WideString = #$5317#$4EAC#$0020#$6771#$4EAC; // Beijing + Space + Tokyo
+
+  procedure InsertValue(const id: Integer; const value: WideString);
+  begin
+    Query.ParamByName('id').AsInteger := id;
+    Query.ParamByName('string').AsWideString := value;
+    Query.ExecSQL;
+  end;
+begin
+  Query := CreateQuery;
+  try
+    try
+      Query.SQL.Text := 'insert into string_values (s_id, s_nvarchar) values (:id, :string)';
+      InsertValue(1001, Str1);
+      InsertValue(1002, Str2);
+      InsertValue(1003, Str3);
+      InsertValue(1004, Str4);
+      InsertValue(1005, Str5);
+      InsertValue(1006, Str6);
+      Query.SQL.Text := 'select s_id, s_nvarchar from string_values where s_id in (1001, 1002, 1003, 1004, 1005, 1006) order by s_id';
+      Query.Open;
+      CheckEquals(1001, Query.FieldByName('s_id').AsInteger);
+      Check(Str1 = Query.FieldByName('s_nvarchar').AsWideString);
+      Query.Next;
+      CheckEquals(1002, Query.FieldByName('s_id').AsInteger);
+      Check(Str2 = Query.FieldByName('s_nvarchar').AsWideString);
+      Query.Next;
+      CheckEquals(1003, Query.FieldByName('s_id').AsInteger);
+      Check(Str3 = Query.FieldByName('s_nvarchar').AsWideString);
+      Query.Next;
+      CheckEquals(1004, Query.FieldByName('s_id').AsInteger);
+      Check(Str4 = Query.FieldByName('s_nvarchar').AsWideString);
+      Query.Next;
+      CheckEquals(1005, Query.FieldByName('s_id').AsInteger);
+      Check(Str5 = Query.FieldByName('s_nvarchar').AsWideString);
+      Query.Next;
+      CheckEquals(1006, Query.FieldByName('s_id').AsInteger);
+      Check(Str6 = Query.FieldByName('s_nvarchar').AsWideString);
+    finally
+      Query.Close;
+      Query.SQL.Text := 'delete from string_values where s_id in (1001, 1002, 1003, 1004, 1005, 1006)';
+      Query.ExecSQL;
+    end;
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
 
 initialization
   RegisterTest('bugreport',ZTestCompCoreBugReport.Suite);

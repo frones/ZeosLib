@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  {$IFDEF WITH_TOBJECTLIST_INLINE}
+  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}
     System.Types, System.Contnrs
   {$ELSE}
     {$IFNDEF NO_UNIT_CONTNRS} Contnrs{$ELSE}ZClasses{$ENDIF}
