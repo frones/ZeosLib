@@ -236,7 +236,6 @@ end;
 function TZCachedDblibDataProvider.Next: Boolean;
 var
   currentRow: TZCachedDblibRow;
-  x: Integer;
 begin
   Result := false;
   if Assigned(FRootRow) then begin
