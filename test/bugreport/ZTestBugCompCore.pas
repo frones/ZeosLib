@@ -136,7 +136,9 @@ type
     procedure TestUnicodeBehavior;
     procedure TestNonAsciiChars;
     {$ENDIF}
+    {$IFDEF WITH_FTWIDESTRING}
     procedure TestUnicodeChars;
+    {$ENDIF}
   end;
 
 implementation
@@ -1990,11 +1992,34 @@ end;
 const {Test Strings}
   Str1: ZWideString = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
   // some dull text in Russian
-  Str2: ZWideString = #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430#$0438#$0431#$043E#$043B#$0435#$0435#$0020#$0442#$0440#$0438#$0432#$0438#$0430#$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434#$0430#$0447#$002C#$0020#$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438#$0020#$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C#$0438#$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432#$002C#$0020#$044F#$0432#$043B#$044F#$0435#$0442#$0441#$044F#$0020#$043F#$043E#$0441#$0442#$0440#$043E#$0435#$043D#$0438#$0435#$0020#$0438#$043D#$0444#$043E#$0440#$043C#$0430#$0446#$0438#$043E#$043D#$043D#$043E#$0439#$0020#$0441#$0438#$0441#$0442#$0435#$043C#$044B#$0020#$0434#$043B#$044F#$0020#$0430#$0432#$0442#$043E#$043C#$0430#$0442#$0438#$0437#$0430#$0446#$0438#$0438#$0020#$0431#$0438#$0437#$043D#$0435#$0441#$002D#$0434#$0435#$044F#$0442#$0435#$043B#$044C#$043D#$043E#$0441#$0442#$0438#$0020#$043F#$0440#$0435#$0434#$043F#$0440#$0438#$044F#$0442#$0438#$044F#$002E#$0020#$0412#$0441#$0435#$0020#$0430#$0440#$0445#$0438#$0442#$0435#$043A#$0442#$0443#$0440#$043D#$044B#$0435#$0020#$043A#$043E#$043C#$043F#$043E#$043D#$0435#$043D#$0442#$044B#$0020#$0028#$0431#$0430#$0437#$044B#$0020#$0434#$0430#$043D#$043D#$044B#$0445#$002C#$0020#$0441#$0435#$0440#$0432#$0435#$0440#$0430#$0020#$043F#$0440#$0438#$043B#$043E#$0436#$0435#$043D#$0438#$0439#$002C#$0020#$043A#$043B#$0438#$0435#$043D#$0442#$0441#$043A#$043E#$0435#$0020#$002E#$002E#$002E;
+  Str2: ZWideString = #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430+
+                      #$0438#$0431#$043E#$043B#$0435#$0435#$0020#$0442#$0440#$0438#$0432+
+                      #$0438#$0430#$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434+
+                      #$0430#$0447#$002C#$0020#$0440#$0435#$0448#$0430#$0435#$043C#$044B+
+                      #$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438#$0020#$043A+
+                      #$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C#$0438+
+                      #$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441+
+                      #$0442#$043E#$0432#$002C#$0020#$044F#$0432#$043B#$044F#$0435#$0442+
+                      #$0441#$044F#$0020#$043F#$043E#$0441#$0442#$0440#$043E#$0435#$043D+
+                      #$0438#$0435#$0020#$0438#$043D#$0444#$043E#$0440#$043C#$0430#$0446+
+                      #$0438#$043E#$043D#$043D#$043E#$0439#$0020#$0441#$0438#$0441#$0442+
+                      #$0435#$043C#$044B#$0020#$0434#$043B#$044F#$0020#$0430#$0432#$0442+
+                      #$043E#$043C#$0430#$0442#$0438#$0437#$0430#$0446#$0438#$0438#$0020+
+                      #$0431#$0438#$0437#$043D#$0435#$0441#$002D#$0434#$0435#$044F#$0442+
+                      #$0435#$043B#$044C#$043D#$043E#$0441#$0442#$0438#$0020#$043F#$0440+
+                      #$0435#$0434#$043F#$0440#$0438#$044F#$0442#$0438#$044F#$002E#$0020+
+                      #$0412#$0441#$0435#$0020#$0430#$0440#$0445#$0438#$0442#$0435#$043A+
+                      #$0442#$0443#$0440#$043D#$044B#$0435#$0020#$043A#$043E#$043C#$043F+
+                      #$043E#$043D#$0435#$043D#$0442#$044B#$0020#$0028#$0431#$0430#$0437+
+                      #$044B#$0020#$0434#$0430#$043D#$043D#$044B#$0445#$002C#$0020#$0441+
+                      #$0435#$0440#$0432#$0435#$0440#$0430#$0020#$043F#$0440#$0438#$043B+
+                      #$043E#$0436#$0435#$043D#$0438#$0439#$002C#$0020#$043A#$043B#$0438+
+                      #$0435#$043D#$0442#$0441#$043A#$043E#$0435#$0020#$002E#$002E#$002E;
   Str3: ZWideString = #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430#$0438#$0431#$043E#$043B#$0435#$0435;
   Str4: ZWideString = #$0442#$0440#$0438#$0432#$0438#$0430#$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434#$0430#$0447;
   Str5: ZWideString = #$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438;
-  Str6: ZWideString = #$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C#$0438#$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432;
+  Str6: ZWideString = #$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C+
+                      #$0438#$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432;
 
 {$IFNDEF FPC}
 procedure ZTestCompCoreBugReportMBCs.TestUnicodeBehavior;
@@ -2013,7 +2038,10 @@ begin
   // String 2 Starts with String 3
   // String 2 ends with String 4
   // String 5 is in the middle of String 2
-  Str2 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)+ Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223) +Chr(200)+Chr(201)+Chr(202)+Chr(203)+Chr(204)+Chr(205)+Chr(206)+Chr(207)+Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
+  Str2 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)+
+          Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223)+
+          Chr(200)+Chr(201)+Chr(202)+Chr(203)+Chr(204)+Chr(205)+Chr(206)+Chr(207)+
+          Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
   Str3 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199);
   Str4 := Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
   Str5 := Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223);
@@ -2022,7 +2050,13 @@ begin
   StrStream1 := TMemoryStream.Create;
   SL := TStringList.Create;
   Query := CreateQuery;
+  Query.Connection.Connect;
+  Check(Query.Connection.Connected);
   try
+    (*if not ((Connection.DbcConnection.GetConSettings.ClientCodePage.Encoding in [ceUTF8, ceUTF16]) or
+       (Connection.DbcConnection.GetConSettings.ClientCodePage.CP = zCP_WIN1251) or
+       (Connection.DbcConnection.GetConSettings.ClientCodePage.CP = zCP_KOI8R)) then
+       Exit;*)
     with Query do
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -2098,7 +2132,10 @@ begin
   // String 2 Starts with String 3
   // String 2 ends with String 4
   // String 5 is in the middle of String 2
-  Str2 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)+ Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223) +Chr(200)+Chr(201)+Chr(202)+Chr(203)+Chr(204)+Chr(205)+Chr(206)+Chr(207)+Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
+  Str2 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)+
+          Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223)+
+          Chr(200)+Chr(201)+Chr(202)+Chr(203)+Chr(204)+Chr(205)+Chr(206)+Chr(207)+
+          Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
   Str3 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199);
   Str4 := Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
   Str5 := Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223);
@@ -2106,7 +2143,15 @@ begin
 
   Query := CreateQuery;
   Connection.Connect;  //DbcConnection needed
+  Check(Connection.Connected);
   try
+    { the russion abrakadabra chars can't work with any other encodings then russion/ut8/utf16 : }
+    (*if not ((Connection.DbcConnection.GetConSettings.ClientCodePage.Encoding in [ceUTF8, ceUTF16]) or
+       (Connection.DbcConnection.GetConSettings.ClientCodePage.CP = zCP_WIN1251) or
+       (Connection.DbcConnection.GetConSettings.ClientCodePage.CP = zCP_KOI8R)) then
+       Exit;*)
+
+
     RowCounter := 0;
     Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+
       ' values (:s_id, :s_char, :s_varchar, :s_nchar, :s_nvarchar)';
@@ -2156,7 +2201,7 @@ begin
   end;
 end;
 {$ENDIF}
-
+{$IFDEF WITH_FTWIDESTRING}
 procedure ZTestCompCoreBugReportMBCs.TestUnicodeChars;
 var
   Query: TZQuery;
@@ -2208,7 +2253,7 @@ begin
     FreeAndNil(Query);
   end;
 end;
-
+{$ENDIF}
 
 initialization
   RegisterTest('bugreport',ZTestCompCoreBugReport.Suite);
