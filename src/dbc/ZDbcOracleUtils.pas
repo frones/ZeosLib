@@ -308,6 +308,13 @@ function PosOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar
 }
 function NegOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;  {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
+{** EH:
+  converts a currency value to a oracle oci number
+  @param value the currency to be converted
+  @param num the pointer to the oci-number
+}
+procedure Curr2Vnu(const Value: Currency; num: POCINumber);
+
 function OCIType2Name(DataType: ub2): String;
 
 const
@@ -362,8 +369,23 @@ const
       100,
       1000,
       10000);
+  UInt64Divisor: array[0..10] of UInt64 = (
+      1,
+      100,
+      10000,
+      1000000,
+      100000000,
+      10000000000,
+      1000000000000,
+      100000000000000,
+      10000000000000000,
+      1000000000000000000,
+      10000000000000000000);
+  NVU_CurrencyExponents: array[0..10] of Integer =
+    (-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8);
   sAlignCurrencyScale2Precision: array[0..4] of Integer = (
     15, 16, 17, 18, 19);
+
 type
   { oracle loves it's recursion ... so we need a recursive obj model }
   TZOraProcDescriptor_A = class(TObject)
@@ -445,143 +467,6 @@ There is no blank padding or NULL termination.
 If you need to know the number of bytes returned,
 use the VARNUM external datatype instead of NUMBER
 *)
-// Conversions
-// original Autor might be Joost van der Sluis
-// Code is from oracleconnection.pp of FPC
-//changed TBCD to TZBCD
-//Procedure FmtBCD2Nvu(bcd:tBCD;b:pByte);
-procedure BCD2Nvu(const bcd: TBCD; num: POCINumber);
-var
-  i,j,cnt   : integer;
-  nibbles   : array [0..maxfmtbcdfractionsize-1] of byte;
-  exp       : shortint;
-  bb        : byte;
-begin
-  //fillchar(num[0],22,#0);
-  FillChar(num[0],SizeOf(TOCINUmber),#0);
-  if BCDPrecision(bcd)=0 then begin// zero, special case
-    num[0] := 1;
-    num[1] := $80;
-  end else begin
-    if (BCDPrecision(bcd)-BCDScale(bcd)) mod 2 <>0 then begin// odd number before decimal point
-      nibbles[0] := 0;
-      j := 1;
-    end else
-      j := 0;
-    for i := 0 to bcd.Precision -1 do
-      if i mod 2 =0
-      then nibbles[i+j] := bcd.Fraction[i div 2] shr 4
-      else nibbles[i+j] := bcd.Fraction[i div 2] and $0f;
-    nibbles[bcd.Precision+j] := 0; // make sure last nibble is also 0 in case we have odd scale
-    exp := (BCDPrecision(bcd)-BCDScale(bcd)+1) div 2;
-    cnt := exp+(BCDScale(bcd)+1) div 2;
-    // to avoid "ora 01438: value larger than specified precision allowed for this column"
-    // remove trailing zeros (scale < 0)...
-    while (nibbles[cnt*2-2]*10+nibbles[cnt*2-1])=0 do
-      cnt := cnt-1;
-    // ... and remove leading zeros (scale > precision)
-    j:=0;
-    while (nibbles[j*2]*10+nibbles[j*2+1])=0 do begin
-      j:=j+1;
-      exp:=exp-1;
-    end;
-    if IsBCDNegative(bcd) then begin
-      num[0]:=cnt-j+1;
-      num[1]:=not(exp+64) and $7f ;
-      for i:=j to cnt-1 do begin
-        bb:=nibbles[i*2]*10+nibbles[i*2+1];
-        num[2+i-j]:=101-bb;
-        end;
-      if 2+cnt-j<22 then begin // add a 102 at the end of the number if place left.
-        num[0]:=num[0]+1;
-        num[2+cnt-j]:=102;
-      end;
-    end else begin
-      num[0]:=cnt-j+1;
-      num[1]:=(exp+64) or $80 ;
-      for i:=j to cnt-1 do begin
-        bb:=nibbles[i*2]*10+nibbles[i*2+1];
-        num[2+i-j]:=1+bb;
-        end;
-      end;
-    end;
-end;
-
-// Conversions
-// original Autor might be Joost van der Sluis
-// Code is from oracleconnection.pp of FPC
-procedure Nvu2BCD(num: POCINumber; var bcd: TBCD);
-var
-  i,j       : integer;
-  bb,size   : byte;
-  exp       : shortint;
-  nibbles   : array [0..MaxFMTBcdFractionSize-1] of byte;
-  scale     : integer;
-begin
-  size := num[0];
-  if (size=1) and (num[1]=$80) then begin// special representation for 0
-    //bcd:=IntegerToBCD(0)
-    FillChar(bcd, SizeOf(bcd), #0);
-    bcd.Precision := 10;
-    bcd.SignSpecialPlaces := 2;
-    Exit;
-  end;
-  bcd.SignSpecialPlaces := 0; //sign positive, non blank, scale 0
-  //bcd.Precision:=1;         //BCDNegate works only if Precision <>0
-  if (num[1] and $80)=$80 then begin// then the number is positive
-    exp := (num[1] and $7f)-65;
-    for i := 0 to size-2 do begin
-      bb := num[i+2]-1;
-      nibbles[i*2]:=bb div 10;
-      nibbles[i*2+1]:=(bb mod 10);
-    end;
-  end else begin
-    bcd.SignSpecialPlaces := bcd.SignSpecialPlaces xor $80; //BCDNegate(bcd);
-    exp := (not(num[1]) and $7f)-65;
-    if num[size]=102 then  // last byte doesn't count if = 102
-      dec(Size);//size:=size-1;
-    for i := 0 to size-2 do begin
-      bb := 101-num[i+2];
-      nibbles[i*2] := bb div 10;
-      nibbles[i*2+1] := (bb mod 10);
-    end;
-  end;
-  nibbles[(size-1)*2] := 0;
-  bcd.Precision:=(size-1)*2;
-  scale := bcd.Precision-(exp*2+2);
-  if scale>=0 then begin
-    if (scale > bcd.Precision) then begin // need to add leading 0s
-      for i:=0 to (scale-bcd.Precision+1) div 2 do
-        bcd.Fraction[i]:=0;
-      i:=scale-bcd.Precision;
-      bcd.Precision:=scale;
-    end else
-      i:=0;
-    j:=i;
-    if (i=0) and (nibbles[0]=0) then begin// get rid of leading zero received from oci
-      bcd.Precision:=bcd.Precision-1;
-      j:=-1;
-    end;
-    while i<=bcd.Precision do begin// copy nibbles
-      if i mod 2 =0
-      then bcd.Fraction[i div 2]:=nibbles[i-j] shl 4
-      else bcd.Fraction[i div 2]:=bcd.Fraction[i div 2] or nibbles[i-j];
-      Inc(i);//i:=i+1;
-    end;
-    bcd.SignSpecialPlaces:=bcd.SignSpecialPlaces or scale;
-  end else begin // add trailing zeroes, increase precision to take them into account
-    i:=0;
-    while i<=bcd.Precision do begin// copy nibbles
-      if i mod 2 =0
-      then bcd.Fraction[i div 2]:=nibbles[i] shl 4
-      else bcd.Fraction[i div 2]:=bcd.Fraction[i div 2] or nibbles[i];
-      Inc(i);//i:=i+1;
-    end;
-    bcd.Precision:=bcd.Precision-scale;
-    for i := size -1 to High(bcd.Fraction) do
-      bcd.Fraction[i] := 0;
-  end;
-end;
 
 {** EH:
   convert a positive oracle oci number into a unsigned longlong
@@ -628,13 +513,8 @@ begin
   I := (vnuInfo.Len-1)*2;
   if I <= vnuInfo.Precision then
     Result := Result * sPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
-end;
-
-procedure Curr2Vnu(const C: Currency; num: POCINumber);
-var BCD: TBCD;
-begin
-  CurrToBCD(C, BCD);
-  BCD2Nvu(Bcd, num);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
 {** EH:
@@ -674,6 +554,69 @@ begin
   for i := 3 to vnuInfo.Len do
     i64 := i64 * 100 - (101 - num[i]);
   I64 := I64 * sCurrScaleFaktor[4-(vnuInfo.Scale+Ord(vnuInfo.LastBase100DigitMod10Was0))];
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{** EH:
+  converts a currency value to a oracle oci number
+  to be clear: this might not be the fastest way ( the mul/divs are slow)
+  but is accurate in contrary to
+  using the doubles which have
+  @param value the currency to be converted
+  @param num the pointer to the oci-number
+}
+procedure Curr2Vnu(const Value: Currency; num: POCINumber);
+var I64: UInt64;
+  Positive: Boolean;
+  i, n, p, trailing_zeros: Byte;
+  Exponent: ShortInt;
+  label Cardinal_Range;
+begin
+  {$R-} {$Q-}
+  if Value = 0 then begin
+    num[0] := 1;
+    num[1] := $80;
+  end else begin
+    Positive := Value > 0;
+    if Positive
+    then I64 :=   PInt64(@Value)^
+    else I64 := -PInt64(@Value)^;
+    i := 2;
+    P := 0;
+    trailing_zeros := 0;
+    { reduce the int64 muls/mods by checking the high bytes for leading dbl zeros
+      the docs: "The mantissa is normalized; leading zeroes are not stored."
+      EH: also right packing the trailing zeros by using the exponents makes
+      reading the values back loads faster}
+    for n := Low(UInt64Divisor) to High(UInt64Divisor)-(5*Ord(Int64Rec(I64).Hi=0)) do
+      if I64 >= UInt64Divisor[n]
+      then P := N
+      else Break;
+    Inc(P);
+    Exponent := NVU_CurrencyExponents[p];
+    for P := P downto 1 do begin
+      n := (I64 mod UInt64Divisor[p] div UInt64Divisor[p-1]);
+      if (n = 0) then begin
+        if ((i=2))
+        then continue
+        else Inc(trailing_zeros);
+      end else
+         trailing_zeros := 0; //reset again;
+      if Positive
+      then num[i] := n + 1
+      else num[i] := 101 - n;
+      Inc(i);
+    end;
+    Dec(i, trailing_zeros+Ord(Positive));
+    if Positive then
+      num[1] := (64+Exponent) or $80
+    else begin
+      num[1] := not(64+Exponent) and $7f;
+      num[i] := 102; //"Negative numbers have a byte containing 102 appended to the data bytes."
+    end;
+    num[0] := i;
+  end;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
@@ -826,6 +769,143 @@ The decimal exponent is thus (~0x3e) -128 - 65 = 0xc1 -128($7f) -65 = 193 -128($
   end;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+// Conversions
+// original Autor might be Joost van der Sluis
+// Code is from oracleconnection.pp of FPC
+//Procedure FmtBCD2Nvu(bcd:tBCD;b:pByte);
+procedure BCD2Nvu(const bcd: TBCD; num: POCINumber);
+var
+  i,j,cnt   : integer;
+  nibbles   : array [0..maxfmtbcdfractionsize-1] of byte;
+  exp       : shortint;
+  bb        : byte;
+begin
+  //fillchar(num[0],22,#0);
+  FillChar(num[0],SizeOf(TOCINUmber),#0);
+  if BCDPrecision(bcd)=0 then begin// zero, special case
+    num[0] := 1;
+    num[1] := $80;
+  end else begin
+    if (BCDPrecision(bcd)-BCDScale(bcd)) mod 2 <>0 then begin// odd number before decimal point
+      nibbles[0] := 0;
+      j := 1;
+    end else
+      j := 0;
+    for i := 0 to bcd.Precision -1 do
+      if i mod 2 =0
+      then nibbles[i+j] := bcd.Fraction[i div 2] shr 4
+      else nibbles[i+j] := bcd.Fraction[i div 2] and $0f;
+    nibbles[bcd.Precision+j] := 0; // make sure last nibble is also 0 in case we have odd scale
+    exp := (BCDPrecision(bcd)-BCDScale(bcd)+1) div 2;
+    cnt := exp+(BCDScale(bcd)+1) div 2;
+    // to avoid "ora 01438: value larger than specified precision allowed for this column"
+    // remove trailing zeros (scale < 0)...
+    while (nibbles[cnt*2-2]*10+nibbles[cnt*2-1])=0 do
+      cnt := cnt-1;
+    // ... and remove leading zeros (scale > precision)
+    j:=0;
+    while (nibbles[j*2]*10+nibbles[j*2+1])=0 do begin
+      j:=j+1;
+      exp:=exp-1;
+    end;
+    if IsBCDNegative(bcd) then begin
+      num[0]:=cnt-j+1;
+      num[1]:=not(exp+64) and $7f ;
+      for i:=j to cnt-1 do begin
+        bb:=nibbles[i*2]*10+nibbles[i*2+1];
+        num[2+i-j]:=101-bb;
+        end;
+      if 2+cnt-j<22 then begin // add a 102 at the end of the number if place left.
+        num[0]:=num[0]+1;
+        num[2+cnt-j]:=102;
+      end;
+    end else begin
+      num[0]:=cnt-j+1;
+      num[1]:=(exp+64) or $80 ;
+      for i:=j to cnt-1 do begin
+        bb:=nibbles[i*2]*10+nibbles[i*2+1];
+        num[2+i-j]:=1+bb;
+        end;
+      end;
+    end;
+end;
+
+// Conversions
+// original Autor might be Joost van der Sluis
+// Code is from oracleconnection.pp of FPC
+procedure Nvu2BCD(num: POCINumber; var bcd: TBCD);
+var
+  i,j       : integer;
+  bb,size   : byte;
+  exp       : shortint;
+  nibbles   : array [0..MaxFMTBcdFractionSize-1] of byte;
+  scale     : integer;
+begin
+  size := num[0];
+  if (size=1) and (num[1]=$80) then begin// special representation for 0
+    //bcd:=IntegerToBCD(0)
+    FillChar(bcd, SizeOf(bcd), #0);
+    bcd.Precision := 10;
+    bcd.SignSpecialPlaces := 2;
+    Exit;
+  end;
+  bcd.SignSpecialPlaces := 0; //sign positive, non blank, scale 0
+  //bcd.Precision:=1;         //BCDNegate works only if Precision <>0
+  if (num[1] and $80)=$80 then begin// then the number is positive
+    exp := (num[1] and $7f)-65;
+    for i := 0 to size-2 do begin
+      bb := num[i+2]-1;
+      nibbles[i*2]:=bb div 10;
+      nibbles[i*2+1]:=(bb mod 10);
+    end;
+  end else begin
+    bcd.SignSpecialPlaces := bcd.SignSpecialPlaces xor $80; //BCDNegate(bcd);
+    exp := (not(num[1]) and $7f)-65;
+    if num[size]=102 then  // last byte doesn't count if = 102
+      dec(Size);//size:=size-1;
+    for i := 0 to size-2 do begin
+      bb := 101-num[i+2];
+      nibbles[i*2] := bb div 10;
+      nibbles[i*2+1] := (bb mod 10);
+    end;
+  end;
+  nibbles[(size-1)*2] := 0;
+  bcd.Precision:=(size-1)*2;
+  scale := bcd.Precision-(exp*2+2);
+  if scale>=0 then begin
+    if (scale > bcd.Precision) then begin // need to add leading 0s
+      for i:=0 to (scale-bcd.Precision+1) div 2 do
+        bcd.Fraction[i]:=0;
+      i:=scale-bcd.Precision;
+      bcd.Precision:=scale;
+    end else
+      i:=0;
+    j:=i;
+    if (i=0) and (nibbles[0]=0) then begin// get rid of leading zero received from oci
+      bcd.Precision:=bcd.Precision-1;
+      j:=-1;
+    end;
+    while i<=bcd.Precision do begin// copy nibbles
+      if i mod 2 =0
+      then bcd.Fraction[i div 2]:=nibbles[i-j] shl 4
+      else bcd.Fraction[i div 2]:=bcd.Fraction[i div 2] or nibbles[i-j];
+      Inc(i);//i:=i+1;
+    end;
+    bcd.SignSpecialPlaces:=bcd.SignSpecialPlaces or scale;
+  end else begin // add trailing zeroes, increase precision to take them into account
+    i:=0;
+    while i<=bcd.Precision do begin// copy nibbles
+      if i mod 2 =0
+      then bcd.Fraction[i div 2]:=nibbles[i] shl 4
+      else bcd.Fraction[i div 2]:=bcd.Fraction[i div 2] or nibbles[i];
+      Inc(i);//i:=i+1;
+    end;
+    bcd.Precision:=bcd.Precision-scale;
+    for i := size -1 to High(bcd.Fraction) do
+      bcd.Fraction[i] := 0;
+  end;
 end;
 
 {**
