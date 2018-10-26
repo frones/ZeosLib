@@ -310,6 +310,8 @@ function NegOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar
 
 {** EH:
   converts a currency value to a oracle oci number
+  to be clear: this might not be the fastest way ( the mul/divs are slow)
+  but is accurate in contrary to using the doubles which have
   @param value the currency to be converted
   @param num the pointer to the oci-number
 }
@@ -340,6 +342,16 @@ const
       10000000000000000,
       100000000000000000,
       1000000000000000000);
+  sCurrScaleFaktor: array[0..4] of Integer = (
+      1,
+      10,
+      100,
+      1000,
+      10000);
+  NVU_CurrencyExponents: array[0..10] of Integer =
+    (-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8);
+  sAlignCurrencyScale2Precision: array[0..4] of Integer = (
+    15, 16, 17, 18, 19);
   {$IFNDEF WITH_UINT64_C1118_ERROR}
   uPosScaleFaktor: array[0..19] of UInt64 = (
       1,
@@ -362,13 +374,6 @@ const
       100000000000000000,
       1000000000000000000,
       10000000000000000000);
-  {$ENDIF}
-  sCurrScaleFaktor: array[0..4] of Integer = (
-      1,
-      10,
-      100,
-      1000,
-      10000);
   UInt64Divisor: array[0..10] of UInt64 = (
       1,
       100,
@@ -381,10 +386,11 @@ const
       10000000000000000,
       1000000000000000000,
       10000000000000000000);
-  NVU_CurrencyExponents: array[0..10] of Integer =
-    (-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8);
-  sAlignCurrencyScale2Precision: array[0..4] of Integer = (
-    15, 16, 17, 18, 19);
+  {$ELSE}
+var
+  uPosScaleFaktor: array[0..19] of UInt64;
+  UInt64Divisor: array[0..10] of UInt64;
+  {$ENDIF}
 
 type
   { oracle loves it's recursion ... so we need a recursive obj model }
@@ -485,11 +491,7 @@ begin
     Result := Result * 100 + Byte(num[i] - 1);
   I := (vnuInfo.Len-1)*2;
   if I <= vnuInfo.Precision then
-    {$IFNDEF WITH_UINT64_C1118_ERROR}
     Result := Result * uPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
-    {$ELSE}
-    Result := Result * UInt64(sPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)]);
-    {$ENDIF}
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
@@ -561,8 +563,7 @@ end;
 {** EH:
   converts a currency value to a oracle oci number
   to be clear: this might not be the fastest way ( the mul/divs are slow)
-  but is accurate in contrary to
-  using the doubles which have
+  but is accurate in contrary to using the doubles which have
   @param value the currency to be converted
   @param num the pointer to the oci-number
 }
@@ -1947,5 +1948,30 @@ begin
     FreeAndNil(Args);
   inherited;
 end;
+
+{$IFDEF WITH_UINT64_C1118_ERROR}
+procedure UIntFiller;
+var U: UInt64;
+  I: Byte;
+begin
+  {$R-} {$Q-}
+  U := 1;
+  UInt64Divisor[0] := U;
+  uPosScaleFaktor[0] := U;
+  for i := 1 to 18 do begin
+    U := U * 10;
+    uPosScaleFaktor[i] := U;
+    if not Odd(i) then
+      UInt64Divisor[I div 2] := U;
+  end;
+  U := U * 10;
+  uPosScaleFaktor[19] := U;
+  UInt64Divisor[10] := U;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+initialization
+UIntFiller;
+{$ENDIF}
 
 end.
