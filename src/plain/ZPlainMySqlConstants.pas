@@ -726,6 +726,7 @@ TMYSQL_CLIENT_OPTIONS =
 //see https://docs.oracle.com/cd/E17952_01/mysql-5.0-en/precision-math-decimal-characteristics.html
   Tdecimal_digit_ts = array[Byte{max of old mysql before 5.0.3}] of Tdecimal_digit_t;
   // -> "Leading “+” and “0” characters are not stored."
+  Pdecimal_t = ^Tdecimal_t;
   Tdecimal_t = record
     intg: Integer; //is the number of *decimal* digits (NOT number of decimal_digit_t's !) before the point
     frac: Integer; //is the number of decimal digits after the point
