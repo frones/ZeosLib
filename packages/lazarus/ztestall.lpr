@@ -2,8 +2,10 @@ program ztestall;
 
 {$mode objfpc}{$H+}
 
+{$SAFEFPUEXCEPTIONS ON}
+
 uses
-  custapp, sysutils,
+  custapp, sysutils, math,
   Interfaces, Forms, GuiTestRunner, LResources,
   Classes, consoletestrunner, fpcunit, fpcunitreport, plaintestreport,
   ZTestConfig,
@@ -191,6 +193,7 @@ var
 
 begin
   {$I ztestall.lrs}
+  SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   if CommandLineSwitches.memcheck and (CommandLineSwitches.memcheck_file <> '') then
   begin
     if FileExists(CommandLineSwitches.memcheck_file) then
