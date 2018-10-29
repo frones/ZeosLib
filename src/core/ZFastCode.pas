@@ -310,6 +310,8 @@ function IntToUnicode(const Value: Integer): ZWideString; overload;
 function IntToUnicode(const Value: Int64): ZWideString; overload;
 function IntToUnicode(Value: UInt64; Const Negative: Boolean = False): ZWideString; overload;
 
+function CurrToRaw(const Value: Currency): RawByteString; overload;
+procedure CurrToRaw(const Value: Currency; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
 
 procedure CurrToUnicode(const Value: Currency; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
 function CurrToUnicode(const Value: Currency): ZWideString; overload;
