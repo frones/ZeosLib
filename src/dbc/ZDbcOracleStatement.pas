@@ -946,18 +946,17 @@ end;
 }
 procedure TZAbstractOraclePreparedStatement_A.SetCurrency(
   Index: Integer; const Value: Currency);
-{var
+var
   Bind: PZOCIParamBind;
   SQLType: TZSQLType;
-  P: PAnsiChar; }
+  P: PAnsiChar;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
   CheckParameterIndex(Index);
   {$R-}
-  BindDouble(Index, stCurrency, Value);
-  (*Bind := @FOraVariables[Index];
+  Bind := @FOraVariables[Index];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType)
   then SQLType := BindList[Index].SQLType
@@ -972,7 +971,7 @@ begin
     CurrToRaw(Value, PAnsiChar(@POCIVary(Bind.valuep).data[0]), @P);
     POCIVary(Bind.valuep).Len := P-@POCIVary(Bind.valuep).data[0];
   end;
-  Bind.indp[0] := 0;*)
+  Bind.indp[0] := 0;
 end;
 
 procedure TZAbstractOraclePreparedStatement_A.SetDataArray(

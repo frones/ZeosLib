@@ -160,11 +160,11 @@ procedure TZTestDbcOracleCase.TestVNU;
 var
   SI1, SI2: Int64;
   UI1, UDI2: UInt64;
-  D: Double;
+  D, D2: Double;
   C1: Currency absolute Si1;
   C2: Currency absolute Si2;
   FPlainDriver: TZOraclePlainDriver;
-  OCINumber: TOCINumber;
+  OCINumber, OCINumber2: TOCINumber;
   FvnuInfo: TZvnuInfo;
   FErrorHandle: POCIError;
   Status: sword;
@@ -206,7 +206,7 @@ var
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
   end;
-  function PosNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo; const C: Currency): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+  function PosNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo; const C: Currency): Currency;
   var I64: Int64 absolute Result;
     i: ShortInt;
   begin
@@ -222,7 +222,7 @@ var
     if Result <> c  then
       Result := 0;
   end;
-  function NegNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo; const C: Currency): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+  function NegNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo; const C: Currency): Currency;
   var I64: Int64 absolute Result;
     i: ShortInt;
   begin
@@ -236,27 +236,6 @@ var
     {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
     if Result <> c  then
       Result := 0;
-  end;
-  procedure Curr2Nvu2(num: POCINumber; const C: Currency; num2: TOCINumber);
-  var
-    d: ShortInt;
-    l: byte;
-    I: Int64 absolute C;
-    Exp: Byte;
-  begin
-    { a currency allways fits into a 38 precision oracle number }
-    {$R-} {$Q-}
-    l := 0;
-    Exp := 0 ;
-    if C < 0 then begin
-      while i <> 0 do begin
-        d := I mod 100;
-      //  i := i div 100;
-      end;
-      if (Exp = 0) and (d = 0) then
-    end else begin
-
-    end;
   end;
 function PosNVUCurr2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;
 var i: Byte;
@@ -349,11 +328,310 @@ end;
       Inc(Buf);
     Result := Buf - PStart{sign and decimal digit};
   end;
+  //21,47,48,46,47
+  //42,94,96,72,95
+  {.$DEFINE CPU64}
+procedure Curr2VNU(const Value: Currency; num: POCINumber);
+const
+  NVU_CurrencyExponents: array[0..10] of Integer =
+    (-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8);
+var I64: UInt64;
+  Positive: Boolean;
+  i, n, p, trailing_zeros: Byte;
+  Exponent: ShortInt;
+  label Cardinal_Range;
+begin
+  {$R-} {$Q-}
+  if Value = 0 then begin
+    num[0] := 1;
+    num[1] := $80;
+  end else begin
+    Positive := Value > 0;
+    if Positive
+    then I64 :=   PInt64(@Value)^
+    else I64 := -PInt64(@Value)^;
+    i := 2;
+    P := 0;
+    trailing_zeros := 0;
+    { reduce the int64 muls/mods by checking the high bytes for leading dbl zeros
+      the docs: "The mantissa is normalized; leading zeroes are not stored."
+      also right packing the trailing zeros by using the exponents makes
+      reading the values back loads faster}
+    for n := Low(UInt64Divisor) to High(UInt64Divisor)-(5*Ord(Int64Rec(I64).Hi=0)) do
+      if I64 >= UInt64Divisor[n]
+      then P := N
+      else Break;
+    Exponent := NVU_CurrencyExponents[p+1];
+    for P := P+1 downto 1 do begin
+      n := (I64 mod UInt64Divisor[p] div UInt64Divisor[p-1]);
+      if (n = 0) then begin
+        if ((i=2))
+        then continue
+        else Inc(trailing_zeros);
+      end else
+         trailing_zeros := 0; //reset again;
+      if Positive
+      then num[i] := n + 1
+      else num[i] := 101 - n;
+      Inc(i);
+    end;
+    Dec(i, trailing_zeros+Ord(Positive));
+    if Positive then
+      num[1] := (64+Exponent) or $80
+    else begin
+      num[1] := not(64+Exponent) and $7f;
+      num[i] := 102; //"Negative numbers have a byte containing 102 appended to the data bytes."
+    end;
+    num[0] := i;
+  end;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end; //*)
+(*
+var I64: UInt64;
+  Negative: Boolean;
+  //iRec: Int64Rec absolute i64;
+  i, n, p: Byte;
+  ScaleDigits: ShortInt;
+  label Cardinal_Range;
+begin
+  {$R-} {$Q-}
+  if Value = 0 then begin
+    num[0] := 1;
+    num[1] := $80;
+  end else begin
+    Negative := Value < 0;
+    if Negative
+    then I64 := -PInt64(@Value)^
+    else I64 := PInt64(@Value)^;
+    i := 2;
+    P := 0;
+    { check the scale digits }
+    ScaleDigits := 0;
+    { reduce the int64 muls/mods by checkking the high bytes for leading dbl zeros
+      the docs: "The mantissa is normalized; leading zeroes are not stored." }
+    ( *if iRec.Words[3] = 0
+    then P := 8 + Ord(iRec.Bytes[5] <> 0)
+    else P := 9 + Ord(iRec.Bytes[7] <> 0);* )
+    for n := Low(UInt64Divisor) to High(UInt64Divisor) do
+       if I64 >= UInt64Divisor[n]
+       then P := N
+       else Break;
+    for P := P+1 downto 1 do begin
+      n := (I64 mod UInt64Divisor[p] div UInt64Divisor[p-1]);
+      if (n = 0) then begin
+        if ((i=2)) then
+          continue
+        else if (P=1) then begin
+          if ScaleDigits = 0 then
+            Dec(I);
+          Break;
+        end;
+      end else if (P=1) then
+        ScaleDigits := 2
+      else if (P=2) then
+        ScaleDigits := 1;
+      if Negative
+      then num[i] := 101 - n
+      else num[i] := n + 1;
+      Inc(i);
+    end;
+    ScaleDigits := (i-ScaleDigits+Ord(Negative)) div 2; //calc the exponent
+    if Negative then begin
+      num[1] := not(65+ScaleDigits) and $7f;
+      num[i] := 102; //"Negative numbers have a byte containing 102 appended to the data bytes."
+      num[0] := i;
+    end else begin
+      num[1] := (65+ScaleDigits) or  $80;
+      num[0] := i-1;
+    end;
+  end;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+
+const
+  CardinalDivisor: array[0..4] of Cardinal = (
+      1,
+      100,
+      10000,
+      1000000,
+      100000000);
+  UInt64Divisor: array[0..5] of UInt64 = (
+      100000000,
+      10000000000,
+      1000000000000,
+      100000000000000,
+      10000000000000000,
+      1000000000000000000);
+var I64: UInt64;
+  C: Cardinal;
+  Negative: Boolean;
+  iRec: Int64Rec absolute i64;
+  i, n, p: Byte;
+  ScaleDigits: ShortInt;
+  label Cardinal_Range;
+begin
+  {$R-} {$Q-}
+  if Value = 0 then begin
+    num[0] := 1;
+    num[1] := $80;
+  end else begin
+    Negative := Value < 0;
+    if Negative
+    then I64 := -PInt64(@Value)^
+    else I64 := PInt64(@Value)^;
+    i := 2;
+    { check the scale digits }
+    C := I64 mod 10000;
+    if iRec.Hi <> 0 then begin
+      { reduce the int64 muls/mods by checkking the high bytes for leading dbl zeros
+        the docs: "The mantissa is normalized; leading zeroes are not stored." }
+      if iRec.Words[3] = 0
+      then P := 2 + Ord(iRec.Bytes[5] <> 0)
+      else P := 3 + Ord(iRec.Bytes[7] <> 0);
+      for P := P downto 1 do begin
+        n := (I64 mod UInt64Divisor[p] div UInt64Divisor[p-1]);
+        if (I=2) and (N = 0) then
+          continue; //skip leading zero
+        if Negative
+        then num[i] := 101 - n
+        else num[i] := n + 1;
+        Inc(i);
+      end;
+      C := Cardinal(i64 mod CardinalDivisor[4]);
+    end else begin
+      c := iRec.Lo;
+      if iRec.Bytes[3] <> 0 then begin
+        n := Byte(C div CardinalDivisor[4]);
+        if N <> 0 then begin  //skip leading zero
+          C := C mod CardinalDivisor[4];
+          if Negative
+          then num[i] := 101 - n
+          else num[i] := n + 1;
+          Inc(i);
+        end;
+      end;
+    end;
+    ScaleDigits := 0;
+    for p := 4 downto 1 do begin
+      n := (C mod CardinalDivisor[p] div CardinalDivisor[p-1]);
+      if (n = 0) then begin
+        if ((i=2)) then
+          continue
+        else if (P=1) then begin
+          if ScaleDigits = 0 then
+            Dec(I);
+          Break;
+        end;
+      end else if (P=1) then
+        ScaleDigits := 2
+      else if (P=2) then
+        ScaleDigits := 1;//+Ord(N mod 10 <> 0);
+      if Negative
+      then num[i] := 101 - n
+      else num[i] := n + 1;
+      Inc(i);
+    end;
+    ScaleDigits := (i-ScaleDigits+Ord(Negative)) div 2; //calc the exponent
+    if Negative then begin
+      num[1] := not(65+ScaleDigits) and $7f;
+      num[i] := 102; //"Negative numbers have a byte containing 102 appended to the data bytes."
+      num[0] := i;
+    end else begin
+      num[1] := (65+ScaleDigits) or  $80;
+      num[0] := i-1;
+    end;
+  end;
+end; //*)
+
+  (*
+  //21,47,48,46,47
+  //42,94,96,72,95
+  procedure Curr2VNU(const Value: Currency; num: POCINumber);
+  const uPosScaleFaktor: array[0..6] of Cardinal = (
+    1,
+    100,
+    10000,
+    1000000,
+    100000000,
+    10000000000,
+    100000000000);
+  var I64: UInt64;
+    Pairs: array[Boolean] of Cardinal;
+    Negative, b: Boolean;
+    iRec: Int64Rec absolute i64;
+    i, n, p: Byte;
+    W: Word;
+    trailing_dbl_zeros, ExpAlign: ShortInt;
+  begin
+    if Value = 0 then begin
+      num[0] := 1;
+      num[1] := $80;
+    end else begin
+      Negative := Value < 0;
+      if Negative
+      then I64 := -PInt64(@Value)^
+      else I64 := PInt64(@Value)^;
+      i := 2;
+      if iRec.Hi = 0 then begin
+        Pairs[true] := 0;
+        Pairs[False] := iRec.Lo;
+        ExpAlign := -(Ord(Pairs[False]<=99999999)+Ord(Pairs[False]<=999999)+Ord(Pairs[False]<=9999)+Ord(Pairs[False]<=99));
+      end else begin
+        Pairs[true]  := I64 div 10000000000;
+        Pairs[False] := I64 mod 10000000000;
+        ExpAlign :=  0;//(Ord(Pairs[True]>=100000000)+Ord(Pairs[True]>=10000000)+Ord(Pairs[True]>=100000)+Ord(Pairs[True]>=1000)+Ord(Pairs[True]>=100)+Ord(Pairs[True]>=1));
+      end;
+      trailing_dbl_zeros := 0;
+      for b := True downto (Pairs[false] = 0) do begin
+        for p := 5 downto 0 do begin
+          n := Byte(Pairs[b] mod uPosScaleFaktor[p] div uPosScaleFaktor[p-1]);
+          if (n = 0) then begin
+            if (i=2)
+            then continue
+            else Dec(trailing_dbl_zeros);
+          end else
+            trailing_dbl_zeros := 0; //reset again
+          Inc(ExpAlign, Ord(not B));
+          if Negative
+          then num[i] := 101 - n
+          else num[i] := n + 1;
+          Inc(i);
+        end;
+        //Dec(I, Ord(b));
+      end;
+      Inc(i,trailing_dbl_zeros);
+      if Negative then begin
+        num[1] := not(64+3+ExpAlign) and $7f;
+        num[i] := 102; //satisfy oracle
+      end else begin
+        Dec(i);
+        num[1] := (64+3+ExpAlign) or $80;
+      end;
+      num[0] := i;
+    end;
+  end;
+  //*)
 begin
   Connection.Open;
   FErrorHandle := (Connection as IZOracleConnection).GetErrorHandle;
   FplainDriver := TZOraclePlainDriver(Connection.GetIZPlainDriver.GetInstance);
-  for SI1 := -1001{-99900} to High(Int64) do begin
+  for SI1 := 1234567890 to High(Int64) do begin
+  //for SI1 := 1234567891234567891 to High(Int64) do begin
+  //for SI1 := -11000 to High(Int64) do begin
+  //for SI1 := -16677999001000 to High(Int64) do begin
+  //for SI1 := -1099990000 to High(Int64) do begin
+  //for SI1 := 109998990 to High(Int64) do begin
+  //for SI1 := -119900000000 to High(Int64) do begin
+  //for SI1 := -119999990000 to High(Int64) do begin
+  //for SI1 := -120998999999 to High(Int64) do begin
+  //for SI1 := -10998999999 to High(Int64) do begin
+  //for SI1 := -10999000000 to High(Int64) do begin
+  //for SI1 := -999000000 to High(Int64) do begin
+  //for SI1 := -899999900 to High(Int64) do begin
+  //for SI1 := -900000000 to High(Int64) do begin
+  //-
+  //for SI1 := -99900 to High(Int64) do begin
     CheckOracleError(FPLainDriver, FErrorHandle,
       FPlainDriver.OCINumberFromInt(FErrorHandle, @SI1,
         SizeOf(INT64),OCI_NUMBER_SIGNED, POCINumber(@OCINumber)),
@@ -384,23 +662,31 @@ begin
         end;
       end;
 
-    if not (SI1 mod 10000 = 0) then begin
       D := C1;
     CheckOracleError(FPLainDriver, FErrorHandle,
       FPlainDriver.OCINumberFromReal(FErrorHandle, @D,
         SizeOf(Double), POCINumber(@OCINumber)),
         lcOther, '', Connection.GetConSettings);
+      Curr2VNU(C1, @OCINumber2);
+      FplainDriver.OCINumberToReal(FErrorHandle, @OCINumber2, 8, @D2);
+      C2 := D2;
+      if C1 <> C2 then begin
+        Curr2VNU(C1, @OCINumber2);
+        Assert(C1 = C2);
+      end;
+      //Assert(OCINumber[0] = OCINumber2[0]);
+    if not (SI1 mod 10000 = 0) then begin
       if C1 < 0 then begin
         if nvuKind(POCINumber(@OCINumber), FvnuInfo) <> vnuNegCurr then
           Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = vnuNegCurr);
             C2 := NegNvu2Curr(POCINumber(@OCINumber), FvnuInfo, c1);
         if C2 <> C1 then begin
           C2 := 0;
-        Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = vnuNegCurr);
+          Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = vnuNegCurr);
           C2 := NegNvu2Curr(POCINumber(@OCINumber), FvnuInfo, c1);
           Assert(C2 = C1, 'Expect '+CurrtoUnicode(C1)+' was '+CurrtoUnicode(C2));
         end;
-        NegNVUCurr2Raw(POCINumber(@OCINumber), FvnuInfo, @FTinyBuffer[0]);
+        //NegNVUCurr2Raw(POCINumber(@OCINumber), FvnuInfo, @FTinyBuffer[0]);
       end else if C1 = 0 then
         Assert(nvuKind(POCINumber(@OCINumber), FvnuInfo) = nvu0)
       else begin

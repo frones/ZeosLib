@@ -243,8 +243,10 @@ type { implements an enumerator of a dedected pascal type from an oracle number 
   TZvnuInfo = record
     Scale                     : ShortInt;
     Exponent                  : ShortInt;
+    { dump some values }
     Len                       : Byte;
     Precision                 : Byte;
+    FirstBase100Digit         : Byte;
     FirstBase100DigitDiv10Was0: Boolean;
     LastBase100DigitMod10Was0 : Boolean;
   end;
@@ -308,6 +310,15 @@ function PosOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar
 }
 function NegOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;  {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
+{** EH:
+  converts a currency value to a oracle oci number
+  to be clear: this might not be the fastest way ( the mul/divs are slow)
+  but is accurate in contrary to using the doubles
+  @param value the currency to be converted
+  @param num the pointer to the oci-number
+}
+procedure Curr2Vnu(const Value: Currency; num: POCINumber);
+
 function OCIType2Name(DataType: ub2): String;
 
 const
@@ -333,6 +344,16 @@ const
       10000000000000000,
       100000000000000000,
       1000000000000000000);
+  sCurrScaleFaktor: array[0..4] of Integer = (
+      1,
+      10,
+      100,
+      1000,
+      10000);
+  NVU_CurrencyExponents: array[0..10] of Integer =
+    (-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8);
+  sAlignCurrencyScale2Precision: array[0..4] of Integer = (
+    15, 16, 17, 18, 19);
   {$IFNDEF WITH_UINT64_C1118_ERROR}
   uPosScaleFaktor: array[0..19] of UInt64 = (
       1,
@@ -355,15 +376,24 @@ const
       100000000000000000,
       1000000000000000000,
       10000000000000000000);
-  {$ENDIF}
-  sCurrScaleFaktor: array[0..4] of Integer = (
+  UInt64Divisor: array[0..10] of UInt64 = (
       1,
-      10,
       100,
-      1000,
-      10000);
-  sAlignCurrencyScale2Precision: array[0..4] of Integer = (
-    15, 16, 17, 18, 19);
+      10000,
+      1000000,
+      100000000,
+      10000000000,
+      1000000000000,
+      100000000000000,
+      10000000000000000,
+      1000000000000000000,
+      10000000000000000000);
+  {$ELSE}
+var
+  uPosScaleFaktor: array[0..19] of UInt64;
+  UInt64Divisor: array[0..10] of UInt64;
+  {$ENDIF}
+
 type
   { oracle loves it's recursion ... so we need a recursive obj model }
   TZOraProcDescriptor_A = class(TObject)
@@ -445,10 +475,302 @@ There is no blank padding or NULL termination.
 If you need to know the number of bytes returned,
 use the VARNUM external datatype instead of NUMBER
 *)
+
+{** EH:
+  convert a positive oracle oci number into a unsigned longlong
+  @param num the pointer to the oci-number
+  @param Neg100FactorCnt a scale for truncation if positive or base 100 multiplication if negative
+  @return a converted value
+}
+function PosNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): UInt64;
+var i: Byte;
+begin
+  {$R-} {$Q-}
+  { initialize with first positive base-100-digit }
+  Result := vnuInfo.FirstBase100Digit;
+  { skip len, exponent and first base-100-digit -> start with 3}
+  for i := 3 to vnuInfo.Len do
+    Result := Result * 100 + Byte(num[i] - 1);
+  I := (vnuInfo.Len-1)*2;
+  if I <= vnuInfo.Precision then
+    Result := Result * uPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{** EH:
+  convert a negative oracle oci number into a signed longlong
+  @param num the pointer to the oci-number
+  @param Neg100FactorCnt a scale for truncation if positive or base 100 multiplication if negative
+  @param Len a true len of num gigits to work with
+  @return a converted value
+}
+function NegNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): Int64;
+var i: Byte;
+begin
+  {$R-} {$Q-}
+  { initialize with first negative base-100-digit }
+  Result := vnuInfo.FirstBase100Digit; //init
+  { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
+  for i := 3 to vnuInfo.Len do
+    Result := Result * 100 - (101 - num[i]);
+  I := (vnuInfo.Len-1)*2;
+  if I <= vnuInfo.Precision then
+    Result := Result * sPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{** EH:
+  convert a positive oracle oci number into currency value
+  @param num the pointer to the oci-number
+  @param scale a given scale to align scale to 4 decimal digits
+  @return a converted value
+}
+function PosNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo): Currency;
+var I64: Int64 absolute Result;
+  i: ShortInt;
+begin
+  {$R-} {$Q-}
+  { initialize with first positive base-100-digit }
+  I64 := vnuInfo.FirstBase100Digit;
+  { skip len, exponent and first base-100-digit -> start with 3}
+  for i := 3 to vnuInfo.Len do
+    i64 := i64 * 100 + Byte(num[i] - 1);
+  I64 := I64 * sCurrScaleFaktor[4-(vnuInfo.Scale+Ord(vnuInfo.LastBase100DigitMod10Was0))];
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{**
+  convert a negative oracle oci number into currency value
+  @param num the pointer to the oci-number
+  @param scale a given scale to align scale to 4 decimal digits
+  @return a converted value
+}
+function NegNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo): Currency;
+var I64: Int64 absolute Result;
+  i: ShortInt;
+begin
+  {$R-} {$Q-}
+  i64 := vnuInfo.FirstBase100Digit; //init
+  { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
+  for i := 3 to vnuInfo.Len do
+    i64 := i64 * 100 - (101 - num[i]);
+  I64 := I64 * sCurrScaleFaktor[4-(vnuInfo.Scale+Ord(vnuInfo.LastBase100DigitMod10Was0))];
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{** EH:
+  converts a currency value to a oracle oci number
+  to be clear: this might not be the fastest way ( the mul/divs are slow)
+  but is accurate in contrary to using the doubles
+  @param value the currency to be converted
+  @param num the pointer to the oci-number
+}
+procedure Curr2Vnu(const Value: Currency; num: POCINumber);
+var I64: UInt64;
+  Positive: Boolean;
+  i, n, p, trailing_zeros: Byte;
+  Exponent: ShortInt;
+  label Cardinal_Range;
+begin
+  {$R-} {$Q-}
+  if Value = 0 then begin
+    num[0] := 1;
+    num[1] := $80;
+  end else begin
+    Positive := Value > 0;
+    if Positive
+    then I64 :=  PInt64(@Value)^
+    else I64 := -PInt64(@Value)^;
+    i := 2;
+    P := 0;
+    trailing_zeros := 0;
+    { reduce the int64 muls/mods by checking the high bytes for leading dbl zeros
+      the docs: "The mantissa is normalized; leading zeroes are not stored."
+      EH: also right packing the trailing zeros by using the exponents makes
+      reading the values back loads faster}
+    for n := Low(UInt64Divisor) to High(UInt64Divisor)-(5*Ord(Int64Rec(I64).Hi=0)) do
+      if I64 >= UInt64Divisor[n]
+      then P := N
+      else Break;
+    Inc(P);
+    Exponent := NVU_CurrencyExponents[p];
+    for P := P downto 1 do begin
+      n := (I64 mod UInt64Divisor[p] div UInt64Divisor[p-1]);
+      if (n = 0) then begin
+        if ((i=2))
+        then continue
+        else Inc(trailing_zeros);
+      end else
+         trailing_zeros := 0; //reset again
+      if Positive
+      then num[i] := n + 1
+      else num[i] := 101 - n;
+      Inc(i);
+    end;
+    Dec(i, trailing_zeros+Ord(Positive));
+    if Positive then
+      num[1] := (64+Exponent) or $80
+    else begin
+      num[1] := not(64+Exponent) and $7f;
+      num[i] := 102; //"Negative numbers have a byte containing 102 appended to the data bytes."
+    end;
+    num[0] := i;
+  end;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{**  EH:
+  writes a negative unscaled oracle oci number into a buffer
+  @param num the pointer to the oci-number
+  @param vnuInfo the collected infos about the number comming from nvuKind()
+  @param Buf the buffer we're writing into
+  @return length in bytes
+}
+function PosOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;
+var i: Byte;
+  PStart: PAnsiChar;
+begin
+  {$R-} {$Q-}
+  PStart := Buf;
+  if vnuInfo.FirstBase100DigitDiv10Was0 then begin
+    PByte(Buf)^ := Ord('0')+vnuInfo.FirstBase100Digit;
+    Inc(Buf);
+  end else begin
+    PWord(Buf)^ := Word(TwoDigitLookupRaw[vnuInfo.FirstBase100Digit]);
+    Inc(Buf,2);
+  end;
+  for I := 3 to vnuInfo.Len do begin
+    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(num[i] - 1)]);
+    Inc(Buf,2);
+  end;
+  I := (vnuInfo.Len-1)*2;
+  if I <= vnuInfo.Precision then begin
+    i := vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0);
+    while i >= 2 do begin
+      PWord(Buf)^ := 12336;
+      Inc(Buf,2);
+      Dec(i, 2);
+    end;
+    if i > 0 then
+      PByte(Buf)^ := Ord('0');
+  end;
+  Result := Buf-PStart;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{** EH:
+  writes a positive unscaled oracle oci number into a buffer
+  @param num the pointer to the oci-number
+  @param vnuInfo the collected infos about the number comming from nvuKind()
+  @param Buf the buffer we're writing into
+  @return length in bytes
+}
+function NegOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;
+var i: Byte;
+  PStart: PAnsiChar;
+begin
+  {$R-} {$Q-}
+  PStart := Buf;
+  PByte(Buf)^ := Ord('-');
+  if vnuInfo.FirstBase100DigitDiv10Was0 then begin
+    PByte(Buf+1)^ := Ord('0')+vnuInfo.FirstBase100Digit;
+    Inc(Buf, 2);
+  end else begin
+    PWord(Buf+1)^ := Word(TwoDigitLookupRaw[vnuInfo.FirstBase100Digit]);
+    Inc(Buf,3);
+  end;
+  for I := 3 to vnuInfo.Len do begin
+    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(101 - num[i])]);
+    Inc(Buf,2);
+  end;
+  I := (vnuInfo.Len-1)*2;
+  if I <= vnuInfo.Precision then begin
+    i := vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0);
+    while i >= 2 do begin
+      PWord(Buf)^ := 12336;
+      Inc(Buf,2);
+      Dec(i, 2);
+    end;
+    if i > 0 then
+      PByte(Buf)^ := Ord('0');
+  end;
+  Result := Buf-PStart;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function nvuKind(num: POCINumber; var vnuInfo: TZvnuInfo): TnvuKind;
+var
+  Positive: Boolean;
+begin
+  {$R-} {$Q-}
+  Result := nvuBigDecimal;
+  vnuInfo.len := num[0];
+  vnuInfo.FirstBase100Digit := num[2]; //dump first digit
+  vnuInfo.Precision := num[1];//dump the value -> access packet stucts is dead slow
+  if (vnuInfo.len=1) and ((vnuInfo.Precision=$80) or (vnuInfo.Precision=$c1)) then
+    Result := nvu0
+  else if (vnuInfo.len=1) and (vnuInfo.Precision= 0) then
+    Result := nvuNegInf
+  else if (vnuInfo.len=2) and (vnuInfo.Precision = 255) and (vnuInfo.FirstBase100Digit = 101) then
+    Result := nvuPosInf
+  else begin
+    Positive := (vnuInfo.Precision and $80)=$80;
+    if Positive then begin
+      vnuInfo.Exponent := (vnuInfo.Precision and $7f)-65;
+      vnuInfo.FirstBase100Digit := vnuInfo.FirstBase100Digit - 1;
+      vnuInfo.LastBase100DigitMod10Was0 := (num[vnuInfo.len] - 1) mod 10 = 0;
+    end else begin
+      vnuInfo.Exponent := (not(vnuInfo.Precision) and $7f)-65;
+      if Num[vnuInfo.Len] = 102 then//last byte does not count if 102
+        Dec(vnuInfo.len);
+      vnuInfo.FirstBase100Digit := (101 - vnuInfo.FirstBase100Digit);
+      vnuInfo.LastBase100DigitMod10Was0 := (101 - num[vnuInfo.len]) mod 10 = 0;
+    end;
+    { align scale and precision! this took me ages and dozens of tests }
+    if vnuInfo.Exponent < 0 then begin
+      vnuInfo.Precision := (Abs(vnuInfo.Exponent) - 1) shl 1 + (vnuInfo.Len - 1) shl 1;
+      vnuInfo.Scale := vnuInfo.Precision;
+    end else if vnuInfo.Exponent >= (vnuInfo.Len - 1) then begin //int range ?
+      vnuInfo.Precision := (vnuInfo.Exponent + 1) shl 1;
+      vnuInfo.Scale := 0;
+    end else begin
+      vnuInfo.Precision := (vnuInfo.Len - 1) shl 1;
+      vnuInfo.Scale := vnuInfo.Precision - (vnuInfo.Exponent + 1) shl 1;
+    end;
+    { final scale and prec calculation -> check first and last digit }
+    vnuInfo.FirstBase100DigitDiv10Was0 := (vnuInfo.FirstBase100Digit div 10 = 0);
+    Dec(vnuInfo.Precision, Ord(vnuInfo.FirstBase100DigitDiv10Was0));
+    if vnuInfo.LastBase100DigitMod10Was0 then begin
+      if (vnuInfo.Scale > 0) then
+        Dec(vnuInfo.Scale);
+      Dec(vnuInfo.Precision);
+    end;
+
+    { EH: we just test if we're in scale and precision range ..
+      We don't know this for sure and sadly oracle gives us no way to find this out!
+      Nice would by the ATTRIBUT min_val/max_val which is available 4 describing sequences only ):
+
+      Note: Oracle always returns the significant decimal digits! }
+    if (vnuInfo.Scale = 0) and (vnuInfo.Precision <= 19+Ord(Positive)) then
+      Result := VNU_NUM_INTState[Positive]
+    else if (vnuInfo.Scale>0) and (vnuInfo.Scale <= 4) and
+            (vnuInfo.Precision <= sAlignCurrencyScale2Precision[vnuInfo.Scale]) then
+      Result := VNU_NUM_CurState[Positive];
+  end;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
 // Conversions
 // original Autor might be Joost van der Sluis
 // Code is from oracleconnection.pp of FPC
-//changed TBCD to TZBCD
 //Procedure FmtBCD2Nvu(bcd:tBCD;b:pByte);
 procedure BCD2Nvu(const bcd: TBCD; num: POCINumber);
 var
@@ -581,251 +903,6 @@ begin
     for i := size -1 to High(bcd.Fraction) do
       bcd.Fraction[i] := 0;
   end;
-end;
-
-{** EH:
-  convert a positive oracle oci number into a unsigned longlong
-  @param num the pointer to the oci-number
-  @param Neg100FactorCnt a scale for truncation if positive or base 100 multiplication if negative
-  @return a converted value
-}
-function PosNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): UInt64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-var i: Byte;
-begin
-  {$R-} {$Q-}
-  { initialize with first positive base-100-digit }
-  Result := (num[2] - 1);
-  { skip len, exponent and first base-100-digit -> start with 3}
-  for i := 3 to vnuInfo.Len do
-    Result := Result * 100 + Byte(num[i] - 1);
-  I := (vnuInfo.Len-1)*2;
-  if I <= vnuInfo.Precision then
-    {$IFNDEF WITH_UINT64_C1118_ERROR}
-    Result := Result * uPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
-    {$ELSE}
-    Result := Result * UInt64(sPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)]);
-    {$ENDIF}
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
-end;
-
-{** EH:
-  convert a negative oracle oci number into a signed longlong
-  @param num the pointer to the oci-number
-  @param Neg100FactorCnt a scale for truncation if positive or base 100 multiplication if negative
-  @param Len a true len of num gigits to work with
-  @return a converted value
-}
-function NegNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): Int64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-var i: Byte;
-begin
-  {$R-} {$Q-}
-  { initialize with first negative base-100-digit }
-  Result := -(101 - num[2]); //init
-  { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
-  for i := 3 to vnuInfo.Len do
-    Result := Result * 100 - (101 - num[i]);
-  I := (vnuInfo.Len-1)*2;
-  if I <= vnuInfo.Precision then
-    Result := Result * sPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
-end;
-
-procedure Curr2Vnu(const C: Currency; num: POCINumber);
-var BCD: TBCD;
-begin
-  CurrToBCD(C, BCD);
-  BCD2Nvu(Bcd, num);
-end;
-
-{** EH:
-  convert a positive oracle oci number into currency value
-  @param num the pointer to the oci-number
-  @param scale a given scale to align scale to 4 decimal digits
-  @return a converted value
-}
-function PosNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo): Currency; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
-var I64: Int64 absolute Result;
-  i: ShortInt;
-begin
-  {$R-} {$Q-}
-  { initialize with first positive base-100-digit }
-  I64 := (num[2] - 1);
-  { skip len, exponent and first base-100-digit -> start with 3}
-  for i := 3 to vnuInfo.Len do
-    i64 := i64 * 100 + Byte(num[i] - 1);
-  I64 := I64 * sCurrScaleFaktor[4-(vnuInfo.Scale+Ord(vnuInfo.LastBase100DigitMod10Was0))];
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
-end;
-
-{**
-  convert a negative oracle oci number into currency value
-  @param num the pointer to the oci-number
-  @param scale a given scale to align scale to 4 decimal digits
-  @return a converted value
-}
-function NegNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-var I64: Int64 absolute Result;
-  i: ShortInt;
-begin
-  {$R-} {$Q-}
-  i64 := -(101 - num[2]); //init
-  { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
-  for i := 3 to vnuInfo.Len do
-    i64 := i64 * 100 - (101 - num[i]);
-  I64 := I64 * sCurrScaleFaktor[4-(vnuInfo.Scale+Ord(vnuInfo.LastBase100DigitMod10Was0))];
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
-end;
-
-{**  EH:
-  writes a negative unscaled oracle oci number into a buffer
-  @param num the pointer to the oci-number
-  @param vnuInfo the collected infos about the number comming from nvuKind()
-  @param Buf the buffer we're writing into
-  @return length in bytes
-}
-function PosOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;
-var i: Byte;
-  PStart: PAnsiChar;
-begin
-  {$R-} {$Q-}
-  PStart := Buf;
-  if vnuInfo.FirstBase100DigitDiv10Was0 then begin
-    PByte(Buf)^ := Ord('0')+Byte(num[2] - 1);
-    Inc(Buf);
-  end else begin
-    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(num[2] - 1)]);
-    Inc(Buf,2);
-  end;
-  for I := 3 to vnuInfo.Len do begin
-    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(num[i] - 1)]);
-    Inc(Buf,2);
-  end;
-  I := (vnuInfo.Len-1)*2;
-  if I <= vnuInfo.Precision then begin
-    i := vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0);
-    while i >= 2 do begin
-      PWord(Buf)^ := Word(TwoDigitLookupRaw[0]);
-      Inc(Buf,2);
-      Dec(i, 2);
-    end;
-    if i > 0 then
-      PByte(Buf)^ := Ord('0');
-  end;
-  Result := Buf-PStart;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
-end;
-
-{** EH:
-  writes a positive unscaled oracle oci number into a buffer
-  @param num the pointer to the oci-number
-  @param vnuInfo the collected infos about the number comming from nvuKind()
-  @param Buf the buffer we're writing into
-  @return length in bytes
-}
-function NegOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;
-var i: Byte;
-  PStart: PAnsiChar;
-begin
-  {$R-} {$Q-}
-  PStart := Buf;
-  PByte(Buf)^ := Ord('-');
-  if vnuInfo.FirstBase100DigitDiv10Was0 then begin
-    PByte(Buf+1)^ := Ord('0')+Byte(101 - num[2]);
-    Inc(Buf, 2);
-  end else begin
-    PWord(Buf+1)^ := Word(TwoDigitLookupRaw[Byte(101 - num[2])]);
-    Inc(Buf,3);
-  end;
-  for I := 3 to vnuInfo.Len do begin
-    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(101 - num[i])]);
-    Inc(Buf,2);
-  end;
-  I := (vnuInfo.Len-1)*2;
-  if I <= vnuInfo.Precision then begin
-    i := vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0);
-    while i >= 2 do begin
-      PWord(Buf)^ := Word(TwoDigitLookupRaw[0]);
-      Inc(Buf,2);
-      Dec(i, 2);
-    end;
-    if i > 0 then
-      PByte(Buf)^ := Ord('0');
-  end;
-  Result := Buf-PStart;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
-end;
-
-function nvuKind(num: POCINumber; var vnuInfo: TZvnuInfo): TnvuKind; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-var
-  base100digit: ShortInt;
-  Positive: Boolean;
-begin
-  {$R-} {$Q-}
-  Result := nvuBigDecimal;
-  vnuInfo.len := num[0];
-  if (vnuInfo.len=1) and ((num[1]=$80) or (num[1]=$c1)) then
-    Result := nvu0
-  else if (vnuInfo.len=1) and (num[1]= 0) then
-    Result := nvuNegInf
-  else if (vnuInfo.len=2) and (num[1] = 255) and (num[2] = 101) then
-    Result := nvuPosInf
-  else begin
-    Positive := (num[1] and $80)=$80;
-{To calculate the decimal exponent, add 65 to the base-100 exponent and
-add another 128 if the number is positive. If the number is negative,
-you do the same, but subsequently the bits are inverted.
-For example, -5 has a base-100 exponent = 62 (0x3e).
-The decimal exponent is thus (~0x3e) -128 - 65 = 0xc1 -128($7f) -65 = 193 -128($7f) -65 = 0. }
-    if Positive then //positive num?
-      vnuInfo.Exponent := (num[1] and $7f)-65
-    else begin
-      vnuInfo.Exponent := (not(num[1]) and $7f)-65;
-      if Num[vnuInfo.Len] = 102 then//last byte does not count if 102
-        Dec(vnuInfo.len);
-    end;
-    { align scale and precision! this took me ages and dozens of tests }
-    if vnuInfo.Exponent < 0 then begin
-      vnuInfo.Precision := (Abs(vnuInfo.Exponent) - 1) shl 1 + (vnuInfo.Len - 1) shl 1;
-      vnuInfo.Scale := vnuInfo.Precision;
-    end else if vnuInfo.Exponent >= (vnuInfo.Len - 1) then begin //int range ?
-      vnuInfo.Precision := (vnuInfo.Exponent + 1) shl 1;
-      vnuInfo.Scale := 0;
-    end else begin
-      vnuInfo.Precision := (vnuInfo.Len - 1) shl 1;
-      vnuInfo.Scale := vnuInfo.Precision - (vnuInfo.Exponent + 1) shl 1;
-    end;
-    { final scale and prec calculation -> check first and last digit }
-    if Positive
-    then base100digit := num[2] - 1
-    else base100digit := (101 - num[2]);
-    vnuInfo.FirstBase100DigitDiv10Was0 := (base100digit div 10 = 0);
-    Dec(vnuInfo.Precision, Ord(vnuInfo.FirstBase100DigitDiv10Was0));
-    if Positive
-    then base100digit := num[vnuInfo.len] - 1
-    else base100digit := (101 - num[vnuInfo.len]);
-    vnuInfo.LastBase100DigitMod10Was0 := (base100digit mod 10 = 0);
-    if vnuInfo.LastBase100DigitMod10Was0 then begin
-      if (vnuInfo.Scale > 0) then
-        Dec(vnuInfo.Scale);
-      Dec(vnuInfo.Precision);
-    end;
-
-    { EH: we just test if we're in scale and precision range ..
-      We don't know this for sure and sadly oracle gives us no way to find this out!
-      Nice would by the ATTRIBUT min_val/max_val which is available 4 describing sequences only ):
-
-      Note: Oracle always returns the significant decimal digits! }
-    if (vnuInfo.Scale = 0) and (vnuInfo.Precision <= 19+Ord(Positive)) then
-      Result := VNU_NUM_INTState[Positive]
-    else if (vnuInfo.Scale>0) and (vnuInfo.Scale <= 4) and (vnuInfo.Precision <= 19) then
-      Result := VNU_NUM_CurState[Positive];
-  end;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
 {**
@@ -1867,5 +1944,30 @@ begin
     FreeAndNil(Args);
   inherited;
 end;
+
+{$IFDEF WITH_UINT64_C1118_ERROR}
+procedure UIntFiller;
+var U: UInt64;
+  I: Byte;
+begin
+  {$R-} {$Q-}
+  U := 1;
+  UInt64Divisor[0] := U;
+  uPosScaleFaktor[0] := U;
+  for i := 1 to 18 do begin
+    U := U * 10;
+    uPosScaleFaktor[i] := U;
+    if not Odd(i) then
+      UInt64Divisor[I div 2] := U;
+  end;
+  U := U * 10;
+  uPosScaleFaktor[19] := U;
+  UInt64Divisor[10] := U;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+initialization
+UIntFiller;
+{$ENDIF}
 
 end.
