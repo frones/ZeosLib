@@ -541,7 +541,11 @@ procedure DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString; overload;
+
+procedure DateTimeToUnicodeSQLDate(const Value: TDateTime; Buf: PWideChar;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''); overload;
 
 {**
   Converts DateTime value to native string
@@ -572,8 +576,11 @@ procedure DateTimeToRawSQLTime(const Value: TDateTime; Buffer: PAnsichar;
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString; overload;
 
+procedure DateTimeToUnicodeSQLTime(const Value: TDateTime; Buf: PWideChar;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''); overload;
 {**
   Converts DateTime value to native string
 }
@@ -603,7 +610,11 @@ procedure DateTimeToRawSQLTimeStamp(const Value: TDateTime; Buf: PAnsiChar;
 }
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString; overload;
+
+procedure DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime; Buf: PWideChar;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''); overload;
 
 {**
   Converts DateTime value to native string
@@ -727,9 +738,11 @@ function UnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
 function UnicodeStringToASCII7(const Src: PWideChar; const Len: LengthInt): RawByteString; overload;
 
 function FloatToRaw(const Value: Extended): RawByteString;
-function FloatToSqlRaw(const Value: Extended): RawByteString;
+function FloatToSqlRaw(const Value: Extended): RawByteString; overload;
+function FloatToSqlRaw(const Value: Extended; Buf: PAnsiChar): LengthInt; overload;
 function FloatToUnicode(const Value: Extended): ZWideString;
-function FloatToSqlUnicode(const Value: Extended): ZWideString;
+function FloatToSqlUnicode(const Value: Extended): ZWideString; overload;
+function FloatToSqlUnicode(const Value: Extended; Buf: PWideChar): LengthInt; overload;
 
 procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: LengthInt); overload;
 procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: LengthInt); overload;
@@ -2922,47 +2935,6 @@ begin
     ValLen, ZFormatSettings, Failed)
 end;
 
-procedure PrepareDateTimeStr(const Quoted: Boolean; const Suffix: ZWideString;
-  const Len: LengthInt; out Value: ZWideString); overload;
-var
-  SLen: LengthInt;
-  P: PWideChar;
-begin
-  SLen := Length(Suffix);
-  { prepare Value if required }
-  SetLength(Value, len+(2*Ord(Quoted))+Slen);
-  P := Pointer(Value);
-  if Quoted then begin
-    PWord(P)^ := Ord(#39); //starting quote
-    PWord((P+Len+1))^ := Ord(#39); //leading quote
-    if SLen > 0 then //move suffix after leading quote
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^, (P+Len+2)^, Slen shl 1);
-  end else
-  if SLen > 0 then //move suffix after leading quote
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^, (P+Len)^, Slen shl 1);
-end;
-
-procedure PrepareDateTimeStr(const Quoted: Boolean; const Suffix: RawByteString;
-  const Len: LengthInt; out Value: RawByteString); overload;
-var
-  SLen: LengthInt;
-  P: PAnsiChar;
-begin
-  SLen := Length(Suffix);
-  { prepare Value if required }
-  SetLength(Value, len+(2*Ord(Quoted))+Slen);
-  P := Pointer(Value);
-  if Quoted then begin
-    PByte(P)^ := Ord(#39); //starting quote
-    PByte(P+Len+1)^ := Ord(#39); //leading quote
-    if SLen > 0 then //move suffix after leading quote
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^, (P+Len+2)^, Slen);
-  end
-  else
-    if SLen > 0 then
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^, (P+Len)^, Slen);
-end;
-
 {**
   Converts DateTime value to a rawbyteString
   @param Value a TDateTime value.
@@ -2981,12 +2953,12 @@ procedure DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw);
 var
-  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
+  AYear, AMonth, ADay: Word;
   I: Integer;
   DateFormat: PChar;
   YearSet: Boolean;
 begin
-  DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+  DecodeDate(Value, AYear, AMonth, ADay);
   YearSet := False;
   if Quoted then begin
     PByte(Buf)^ := Ord(#39);
@@ -3026,27 +2998,21 @@ begin
       (Buf+ConFormatSettings.DateFormatLen+Ord(Quoted))^, Length(Suffix));
 end;
 
-{**
-  Converts DateTime value to a rawbyteString
-  @param Value a TDateTime value.
-  @param DateFormat the result format.
-  @return a formated RawByteString with DateFormat pattern.
-}
-function DateTimeToUnicodeSQLDate(const Value: TDateTime;
+procedure DateTimeToUnicodeSQLDate(const Value: TDateTime; Buf: PWideChar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString): ZWideString;
+  const Quoted: Boolean; const Suffix: ZWideString = '');
 var
-  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
+  AYear, AMonth, ADay: Word;
   I: Integer;
   DateFormat: PChar;
-  PW: PWideChar;
   YearSet: Boolean;
 begin
-  DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+  DecodeDate(Value, AYear, AMonth, ADay);
   YearSet := False;
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result);
-  PW := Pointer(Result);
-  Inc(PW, Ord(Quoted));
+  if Quoted then begin
+    PWord(Buf)^ := Ord(#39);
+    Inc(Buf);
+  end;
 
   I := ConFormatSettings.DateFormatLen-1;
   DateFormat := Pointer(ConFormatSettings.DateFormat);
@@ -3055,30 +3021,48 @@ begin
       'Y', 'y':
         begin
           if YearSet then //Year has either two or four digits
-            (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AYear div 100]
-          else
-          begin
-            (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AYear mod 100];
+            (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AYear div 100]
+          else begin
+            (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AYear mod 100];
             YearSet := True;
           end;
           Dec(i,2);
         end;
       'M', 'm':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AMonth];
+          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AMonth];
           Dec(I, 2);
         end;
       'D', 'd':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[ADay];
+          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[ADay];
           Dec(I, 2);
         end;
       else
       begin
-        PWord(PW+i)^ := Ord((DateFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
+        PWord(Buf+i)^ := Ord((DateFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
         Dec(i);
       end;
   end;
+  if Quoted then
+    PWord(Buf+ConFormatSettings.DateFormatLen)^ := Ord(#39);
+  if Suffix <> '' then //move suffix after leading quote
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^,
+      (Buf+ConFormatSettings.DateFormatLen+Ord(Quoted))^, Length(Suffix) shl 1);
+end;
+
+{**
+  Converts DateTime value to a UnicodeString
+  @param Value a TDateTime value.
+  @param DateFormat the result format.
+  @return a formated RawByteString with DateFormat pattern.
+}
+function DateTimeToUnicodeSQLDate(const Value: TDateTime;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString): ZWideString;
+begin
+  SetLength(Result, ConFormatSettings.DateFormatLen+(2*Ord(Quoted))+Length(Suffix));
+  DateTimeToUnicodeSQLDate(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
 end;
 
 {**
@@ -3109,13 +3093,13 @@ procedure DateTimeToRawSQLTime(const Value: TDateTime; Buffer: PAnsichar;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw); overload;
 var
-  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
+  AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
   TimeFormat: PChar;
   ZSet: Boolean;
 begin
   {need fixed size to read from back to front}
-  DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+  DecodeTime(Value, AHour, AMinute, ASecond, AMilliSecond);
   ZSet := False;
   if Quoted then begin
     PByte(Buffer)^ := Ord(#39);
@@ -3169,19 +3153,27 @@ end;
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: ZWideString): ZWideString;
+begin
+  ZSetString(nil, ConFormatSettings.TimeFormatLen+Byte((Ord(Quoted) shl 1))+Cardinal(Length(Suffix)), Result);
+  DateTimeToUnicodeSQLTime(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
+end;
+
+procedure DateTimeToUnicodeSQLTime(const Value: TDateTime; Buf: PWideChar;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = '');
 var
-  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
+  AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
   TimeFormat: PChar;
-  PW: PWideChar;
   ZSet: Boolean;
 begin
   {need fixed size to read from back to front}
-  DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.TimeFormatLen, Result);
+  DecodeTime(Value, AHour, AMinute, ASecond, AMilliSecond);
   ZSet := False;
-  PW := Pointer(Result);
-  Inc(PW, Ord(Quoted));
+  if Quoted then begin
+    PWord(Buf)^ := Ord(#39);
+    Inc(Buf);
+  end;
 
   I := ConFormatSettings.TimeFormatLen-1;
   TimeFormat := Pointer(ConFormatSettings.TimeFormat);
@@ -3189,17 +3181,17 @@ begin
     case (TimeFormat+i)^ of
       'H', 'h':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AHour];
+          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AHour];
           Dec(I, 2);
         end;
       'N', 'n':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AMinute];
+          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AMinute];
           Dec(I, 2);
         end;
       'S', 's':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[ASecond];
+          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[ASecond];
           Dec(I, 2);
         end;
       'Z', 'z':
@@ -3209,17 +3201,22 @@ begin
             Continue
           else
           begin
-            (PLongWord(@PWordArray(PW)[i]))^ := TwoDigitLookupLW[AMilliSecond mod 100];
-            (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AMilliSecond div 10];
+            (PLongWord(@PWordArray(Buf)[i]))^ := TwoDigitLookupLW[AMilliSecond mod 100];
+            (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AMilliSecond div 10];
             ZSet := True;
           end;
         end;
       else
       begin
-        PWord(PW+i)^ := Ord((TimeFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
+        PWord(Buf+i)^ := Ord((TimeFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
         Dec(i);
       end;
     end;
+  if Quoted then
+    PWord(Buf+ConFormatSettings.TimeFormatLen)^ := Ord(#39);
+  if Suffix <> EmptyRaw then //move suffix after leading quote
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^,
+      (Buf+ConFormatSettings.TimeFormatLen+Ord(Quoted))^, Length(Suffix) shl 1);
 end;
 
 {**
@@ -3330,29 +3327,23 @@ begin
       (Buf+ConFormatSettings.DateTimeFormatLen+Ord(Quoted))^, Length(Suffix));
 end;
 
-{**
-  Converts DateTime value to a WideString/UnicodeString
-  @param Value a TDateTime value.
-  @param TimeStampFormat the result format.
-  @return a formated WideString/UnicodeString in TimeStamp-Format pattern.
-}
-function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
+procedure DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime; Buf: PWideChar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
+  const Quoted: Boolean; const Suffix: ZWideString = '');
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
   TimeStampFormat: PChar;
   ZSet, YearSet: Boolean;
-  PW: PWideChar;
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateTimeFormatLen, Result);
   ZSet := False;
   YearSet := False;
-  PW := Pointer(Result);
-  Inc(PW, Ord(Quoted));
+  if Quoted then begin
+    PWord(Buf)^ := Ord(#39);
+    Inc(Buf);
+  end;
 
   I := ConFormatSettings.DateTimeFormatLen-1;
   TimeStampFormat := Pointer(ConFormatSettings.DateTimeFormat);
@@ -3361,37 +3352,37 @@ begin
       'Y', 'y':
         begin
           if YearSet then  //Year has either two or four digits
-            (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AYear div 100]
+            (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AYear div 100]
           else
           begin
-            (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AYear mod 100];
+            (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AYear mod 100];
             YearSet := True;
           end;
           Dec(i,2);
         end;
       'M', 'm':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AMonth];
+          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AMonth];
           Dec(i, 2);
         end;
       'D', 'd':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[ADay];
+          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[ADay];
           Dec(i, 2);
         end;
       'H', 'h':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AHour];
+          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AHour];
           Dec(i, 2);
         end;
       'N', 'n':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AMinute];
+          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AMinute];
           Dec(i, 2);
         end;
       'S', 's':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[ASecond];
+          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[ASecond];
           Dec(i, 2);
         end;
       'Z', 'z':
@@ -3401,17 +3392,36 @@ begin
             Continue
           else
           begin
-            (PLongWord(@PWordArray(PW)[i]))^ := TwoDigitLookupLW[AMilliSecond mod 100];
-            (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AMilliSecond div 10];
+            (PLongWord(@PWordArray(Buf)[i]))^ := TwoDigitLookupLW[AMilliSecond mod 100];
+            (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AMilliSecond div 10];
             ZSet := True;
           end;
         end;
       else
       begin
-        PWord(PW+i)^ := Ord((TimeStampFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
+        PWord(Buf+i)^ := Ord((TimeStampFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
         Dec(i);
       end;
     end;
+  if Quoted then
+    PWord(Buf+ConFormatSettings.DateTimeFormatLen)^ := Ord(#39);
+  if Suffix <> '' then //move suffix after leading quote
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^,
+      (Buf+ConFormatSettings.DateTimeFormatLen+Ord(Quoted))^, Length(Suffix) shl 1);
+end;
+
+{**
+  Converts DateTime value to a WideString/UnicodeString
+  @param Value a TDateTime value.
+  @param TimeStampFormat the result format.
+  @return a formated WideString/UnicodeString in TimeStamp-Format pattern.
+}
+function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
+begin
+  SetLength(Result, ConFormatSettings.DateTimeFormatLen+(2*Ord(Quoted))+Length(Suffix));
+  DateTimeToUnicodeSQLTimeStamp(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
 end;
 
 {**
@@ -4264,6 +4274,33 @@ begin
   {$ENDIF}
 end;
 
+function FloatToSqlRaw(const Value: Extended; Buf: PAnsiChar): LengthInt;
+{$IFNDEF FPC}
+  {$IFDEF NEXTGEN}
+var
+  Buffer: array[0..63] of {$IFDEF NEXTGEN}WideChar{$ELSE}AnsiChar{$ENDIF};
+  I: Integer;
+  {$ENDIF}
+{$ELSE}
+var RawTemp: RawByteString;
+{$ENDIF}
+begin
+  {$IFDEF FPC}
+  RawTemp := FloatToStr(Value, FmtSettFloatDot);
+  Result := Length(RawTemp);
+  Move(Pointer(RawTemp)^, Buf^, Result);
+  {$ELSE}
+    {$IFDEF NEXTGEN}
+  Result := FloatToText(PWideChar(@Buffer[0]), Value, fvExtended, ffGeneral, 15, 0, FmtSettFloatDot);
+  for I := 0 to Result -1 do
+    PByte(Buf+I)^ := Ord(Buffer[i]);
+    {$ELSE}
+  Result := {$IFDEF WITH_FLOATTOTEXT_DEPRECATED}AnsiStrings.{$ENDIF}FloatToText(
+    Buf, Value, fvExtended, ffGeneral, 15, 0, FmtSettFloatDot);
+    {$ENDIF}
+  {$ENDIF}
+end;
+
 function FloatToUnicode(const Value: Extended): ZWideString;
 begin
   Result := ASCII7ToUnicodeString(FloatToRaw(Value));
@@ -4272,6 +4309,28 @@ end;
 function FloatToSqlUnicode(const Value: Extended): ZWideString;
 begin
   Result := ASCII7ToUnicodeString(FloatToSqlRaw(Value));
+end;
+
+function FloatToSqlUnicode(const Value: Extended; Buf: PWideChar): LengthInt; overload;
+{$IFNDEF UNICODE}
+var
+  Buffer: {$IFDEF FPC}PByteArray{$ELSE}array[0..63] of AnsiChar{$ENDIF};
+  I: Integer;
+{$ENDIF}
+begin
+  {$IFDEF UNICODE}
+  Result := FloatToText(Buf, Value, fvExtended, ffGeneral, 15, 0, FmtSettFloatDot);
+  {$ELSE}
+    {$IFDEF FPC}
+    RawTemp := FloatToStr(Value, FmtSettFloatDot);
+    Result := Length(RawTemp);
+    Buffer := Pointer(RawTemp);
+    {$ELSE}
+    Result := FloatToText(PAnsiChar(@Buffer[0]), Value, fvExtended, ffGeneral, 15, 0, FmtSettFloatDot);
+    {$ENDIF}
+    for I := 0 to Result -1 do
+      PWord(Buf+I)^ := Ord(Buffer[i]);
+  {$ENDIF}
 end;
 
 //EgonHugeist: my RTL replacemnet is 2x faster
