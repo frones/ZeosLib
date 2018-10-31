@@ -4314,6 +4314,9 @@ end;
 function FloatToSqlUnicode(const Value: Extended; Buf: PWideChar): LengthInt; overload;
 {$IFNDEF UNICODE}
 var
+  {$IFDEF FPC}
+  RawTemp: RawByteString;
+  {$ENDIF}
   Buffer: {$IFDEF FPC}PByteArray{$ELSE}array[0..63] of AnsiChar{$ENDIF};
   I: Integer;
 {$ENDIF}
