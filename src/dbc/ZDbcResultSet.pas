@@ -87,6 +87,9 @@ type
     FColumnsInfo: TObjectList;
     FMetadata: TContainedObject;
     FStatement: IZStatement;
+    FWeakIZResultSetReferenceOfSelf: Pointer; //EH: reminder for dereferencing on stmt
+    //note: while in destruction IZResultSet(Self) has no longer the same pointer address!
+    //so we mark the address in constructor
   protected
     FRawTemp: RawByteString;
     FUniTemp: ZWideString;
@@ -750,6 +753,7 @@ constructor TZAbstractResultSet.Create(const Statement: IZStatement; const SQL: 
   Metadata: TContainedObject; ConSettings: PZConSettings);
 var
   DatabaseMetadata: IZDatabaseMetadata;
+  RS: IZResultSet;
 begin
   Self.ConSettings := ConSettings;
   LastWasNull := True;
@@ -757,16 +761,17 @@ begin
   FLastRowNo := 0;
   FClosed := True;
 
-  if Statement = nil then
-  begin
+  { the constructor keeps the refcount to 1}
+  QueryInterface(IZResultSet, RS);
+  FWeakIZResultSetReferenceOfSelf := Pointer(RS); //reminder for unregister on stmt!
+  RS := nil;
+  if Statement = nil then begin
     FResultSetType := rtForwardOnly;
     FResultSetConcurrency := rcReadOnly;
     FPostUpdates := poColumnsAll;
     FLocateUpdates := loWhereAll;
     FMaxRows := 0;
-  end
-  else
-  begin
+  end else begin
     FFetchDirection := Statement.GetFetchDirection;
     FFetchSize := Statement.GetFetchSize;
     FResultSetType := Statement.GetResultSetType;
@@ -777,15 +782,12 @@ begin
     FMaxRows := Statement.GetMaxRows;
   end;
 
-  if Metadata = nil then
-  begin
-    if Statement <> nil then
-      DatabaseMetadata := GetStatement.GetConnection.GetMetadata
-    else
-      DatabaseMetadata := nil;
+  if Metadata = nil then begin
+    if Statement <> nil
+    then DatabaseMetadata := GetStatement.GetConnection.GetMetadata
+    else DatabaseMetadata := nil;
     FMetadata := TZAbstractResultSetMetadata.Create(DatabaseMetadata, SQL, Self);
-   end
-   else
+   end else
     FMetadata := Metadata;
 
   FColumnsInfo := TObjectList.Create(True); //Free the MemoryLeaks of TZColumnInfo
@@ -964,7 +966,7 @@ begin
     if FColumnsInfo <> nil then
       FColumnsInfo.Clear;
     if (FStatement <> nil) then begin
-      FStatement.FreeOpenResultSetReference(Self);
+      FStatement.FreeOpenResultSetReference(IZResultSet(FWeakIZResultSetReferenceOfSelf));
       FStatement := nil;
     end;
   end;
@@ -1298,7 +1300,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLongWord);
 {$ENDIF}
-  Result := LongWord(GetLong(ColumnIndex));
+  Result := Cardinal(GetLong(ColumnIndex));
 end;
 
 {**
@@ -1645,7 +1647,6 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
-
   Result := TZAbstractBlob.CreateWithStream(nil);
 end;
 
