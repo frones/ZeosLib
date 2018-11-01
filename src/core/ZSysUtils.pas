@@ -57,6 +57,7 @@ interface
 
 uses
   Variants, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
+  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToText
   ZMessages, ZCompatibility;
 
 type
@@ -737,12 +738,14 @@ function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideStrin
 function UnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
 function UnicodeStringToASCII7(const Src: PWideChar; const Len: LengthInt): RawByteString; overload;
 
-function FloatToRaw(const Value: Extended): RawByteString;
-function FloatToSqlRaw(const Value: Extended): RawByteString; overload;
-function FloatToSqlRaw(const Value: Extended; Buf: PAnsiChar): LengthInt; overload;
-function FloatToUnicode(const Value: Extended): ZWideString;
-function FloatToSqlUnicode(const Value: Extended): ZWideString; overload;
-function FloatToSqlUnicode(const Value: Extended; Buf: PWideChar): LengthInt; overload;
+function FloatToRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): RawByteString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function FloatToRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PAnsiChar): LengthInt; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function FloatToSqlRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): RawByteString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function FloatToSqlRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PAnsiChar): LengthInt; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function FloatToUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): ZWideString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function FloatToUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PWideChar): LengthInt; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function FloatToSqlUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): ZWideString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function FloatToSqlUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PWideChar): LengthInt; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: LengthInt); overload;
 procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: LengthInt); overload;
@@ -823,7 +826,6 @@ const
 implementation
 
 uses DateUtils, StrUtils, SysConst,
-  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   {$IF defined(WITH_RTLCONSTS_SInvalidGuidArray) or defined(TLIST_IS_DEPRECATED)}RTLConsts,{$IFEND}
   ZFastCode;
 
@@ -4238,101 +4240,97 @@ begin
   end;
 end;
 
-function FloatToRaw(const Value: Extended): RawByteString;
-{$IFNDEF FPC}
+function FloatToRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): RawByteString;
 var
-  Buffer: array[0..63] of {$IFDEF NEXTGEN}WideChar{$ELSE}AnsiChar{$ENDIF};
-{$ENDIF}
+  Buffer: array[0..63] of AnsiChar;
 begin
-  {$IFDEF FPC}
-  Result := FloatToStr(Value);
-  {$ELSE}
-    {$IFDEF NEXTGEN}
-  Result := UnicodeStringToASCII7(PWideChar(@Buffer), FloatToText(PWideChar(@Buffer), Value, fvExtended, ffGeneral, 15, 0));
-    {$ELSE}
-  SetString(Result, Buffer, {$IFDEF WITH_FLOATTOTEXT_DEPRECATED}AnsiStrings.{$ENDIF}FloatToText(PAnsiChar(@Buffer), Value, fvExtended,
-    ffGeneral, 15, 0));
-    {$ENDIF}
-  {$ENDIF}
+  ZSetString(PAnsiChar(@Buffer[0]), FloatToRaw(Value, @Buffer[0]), Result);
 end;
 
-function FloatToSqlRaw(const Value: Extended): RawByteString;
-{$IFNDEF FPC}
+function FloatToRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PAnsiChar): LengthInt;
+{$IFDEF NEXTGEN}
 var
-  Buffer: array[0..63] of {$IFDEF NEXTGEN}WideChar{$ELSE}AnsiChar{$ENDIF};
-{$ENDIF}
-begin
-  {$IFDEF FPC}
-  Result := FloatToStr(Value, FmtSettFloatDot);
-  {$ELSE}
-    {$IFDEF NEXTGEN}
-  Result := UnicodeStringToASCII7(PWideChar(@Buffer), FloatToText(PWideChar(@Buffer), Value, fvExtended, ffGeneral, 15, 0, FmtSettFloatDot));
-    {$ELSE}
-  SetString(Result, Buffer, {$IFDEF WITH_FLOATTOTEXT_DEPRECATED}AnsiStrings.{$ENDIF}FloatToText(PAnsiChar(@Buffer), Value, fvExtended,
-    ffGeneral, 15, 0, FmtSettFloatDot));
-    {$ENDIF}
-  {$ENDIF}
-end;
-
-function FloatToSqlRaw(const Value: Extended; Buf: PAnsiChar): LengthInt;
-{$IFNDEF FPC}
-  {$IFDEF NEXTGEN}
-var
-  Buffer: array[0..63] of {$IFDEF NEXTGEN}WideChar{$ELSE}AnsiChar{$ENDIF};
+  Buffer: array[0..63] of WideChar;
   I: Integer;
-  {$ENDIF}
-{$ELSE}
-var RawTemp: RawByteString;
 {$ENDIF}
 begin
-  {$IFDEF FPC}
-  RawTemp := FloatToStr(Value, FmtSettFloatDot);
-  Result := Length(RawTemp);
-  Move(Pointer(RawTemp)^, Buf^, Result);
+  {$IFDEF NEXTGEN}
+  Result := FloatToText(PWideChar(@Buffer[0]), Value, fvExtended, ffGeneral, 15, 0);
+  for I := 0 to Result -1 do
+    PByte(Buf+I)^ := Ord(Buffer[i]);
   {$ELSE}
-    {$IFDEF NEXTGEN}
+  Result := {$IFDEF WITH_FLOATTOTEXT_DEPRECATED}AnsiStrings.{$ENDIF}FloatToText(
+    Buf, Value, {$IFNDEF FPC}fvExtended, {$ENDIF}ffGeneral, 15, 0);
+  {$ENDIF}
+end;
+
+function FloatToSqlRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): RawByteString;
+var
+  Buffer: array[0..63] of AnsiChar;
+begin
+  ZSetString(PAnsiChar(@Buffer[0]), FloatToSqlRaw(Value, @Buffer[0]), Result);
+end;
+
+function FloatToSqlRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PAnsiChar): LengthInt;
+{$IFDEF NEXTGEN}
+var
+  Buffer: array[0..63] of WideChar;
+  I: Integer;
+{$ENDIF}
+begin
+  {$IFDEF NEXTGEN}
   Result := FloatToText(PWideChar(@Buffer[0]), Value, fvExtended, ffGeneral, 15, 0, FmtSettFloatDot);
   for I := 0 to Result -1 do
     PByte(Buf+I)^ := Ord(Buffer[i]);
-    {$ELSE}
+  {$ELSE}
   Result := {$IFDEF WITH_FLOATTOTEXT_DEPRECATED}AnsiStrings.{$ENDIF}FloatToText(
-    Buf, Value, fvExtended, ffGeneral, 15, 0, FmtSettFloatDot);
-    {$ENDIF}
+    Buf, Value, {$IFNDEF FPC}fvExtended, {$ENDIF}ffGeneral, 15, 0, FmtSettFloatDot);
   {$ENDIF}
 end;
 
-function FloatToUnicode(const Value: Extended): ZWideString;
+function FloatToUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): ZWideString;
+var
+  Buffer: array[0..63] of WideChar;
 begin
-  Result := ASCII7ToUnicodeString(FloatToRaw(Value));
+  System.SetString(Result, PWideChar(@Buffer[0]), FloatToUnicode(Value, @Buffer[0]));
 end;
 
-function FloatToSqlUnicode(const Value: Extended): ZWideString;
-begin
-  Result := ASCII7ToUnicodeString(FloatToSqlRaw(Value));
-end;
-
-function FloatToSqlUnicode(const Value: Extended; Buf: PWideChar): LengthInt; overload;
+function FloatToUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PWideChar): LengthInt;
 {$IFNDEF UNICODE}
 var
-  {$IFDEF FPC}
-  RawTemp: RawByteString;
+  Buffer: array[0..63] of AnsiChar;
+  I: Integer;
+{$ENDIF}
+begin
+  {$IFDEF UNICODE}
+  Result := FloatToText(Buf, Value, fvExtended, ffGeneral, 15, 0);
+  {$ELSE}
+  Result := FloatToText(PAnsiChar(@Buffer[0]), Value, {$IFNDEF FPC}fvExtended, {$ENDIF}ffGeneral, 15, 0);
+  for I := 0 to Result -1 do
+    PWord(Buf+I)^ := Ord(Buffer[i]);
   {$ENDIF}
-  Buffer: {$IFDEF FPC}PByteArray{$ELSE}array[0..63] of AnsiChar{$ENDIF};
+end;
+
+function FloatToSqlUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): ZWideString;
+var
+  Buffer: array[0..63] of WideChar;
+begin
+  System.SetString(Result, PWideChar(@Buffer[0]), FloatToSqlUnicode(Value, @Buffer[0]));
+end;
+
+function FloatToSqlUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PWideChar): LengthInt;
+{$IFNDEF UNICODE}
+var
+  Buffer: array[0..63] of AnsiChar;
   I: Integer;
 {$ENDIF}
 begin
   {$IFDEF UNICODE}
   Result := FloatToText(Buf, Value, fvExtended, ffGeneral, 15, 0, FmtSettFloatDot);
   {$ELSE}
-    {$IFDEF FPC}
-    RawTemp := FloatToStr(Value, FmtSettFloatDot);
-    Result := Length(RawTemp);
-    Buffer := Pointer(RawTemp);
-    {$ELSE}
-    Result := FloatToText(PAnsiChar(@Buffer[0]), Value, fvExtended, ffGeneral, 15, 0, FmtSettFloatDot);
-    {$ENDIF}
-    for I := 0 to Result -1 do
-      PWord(Buf+I)^ := Ord(Buffer[i]);
+  Result := FloatToText(PAnsiChar(@Buffer[0]), Value, {$IFNDEF FPC}fvExtended, {$ENDIF}ffGeneral, 15, 0, FmtSettFloatDot);
+  for I := 0 to Result -1 do
+    PWord(Buf+I)^ := Ord(Buffer[i]);
   {$ENDIF}
 end;
 
