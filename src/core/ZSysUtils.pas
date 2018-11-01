@@ -819,6 +819,15 @@ function StreamFromData(const Bytes: TBytes): TMemoryStream; overload; {$IFDEF W
 function StreamFromData(const AString: RawByteString): TMemoryStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 {$ENDIF}
 
+function GetOrdinalDigits(const Value: UInt64): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(const Value: Int64): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(Value: Cardinal): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(Value: Integer): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(Value: Word): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(Value: SmallInt): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(Value: Byte): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(Value: ShortInt): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+
 const
   // Local copy of current FormatSettings with '.' as DecimalSeparator and empty other fields
   FmtSettFloatDot: TFormatSettings = ( DecimalSeparator: '.' );
@@ -5302,6 +5311,117 @@ begin
   Result := StreamFromData(Pointer(AString), Length(AString));
 end;
 {$ENDIF}
+
+function GetOrdinalDigits(const Value: UInt64): Byte;
+var I64Rec: Int64Rec absolute Value;
+begin
+  {$R-} {$Q-}
+  if I64Rec.Hi = 0 then
+    Result := GetOrdinalDigits(i64Rec.Lo) //faster cardinal version
+  else if Value >= UInt64(100000000000000) then
+    if Value    >= UInt64(10000000000000000) then
+      if Value  >= UInt64(1000000000000000000) then
+        Result := 19 + Ord(Value  >=
+          {$IFDEF NEED_TYPED_UINT64_CONSTANTS}
+          UInt64(10000000000000000000)
+          {$ELSE}
+            {$IFDEF SUPPORTS_UINT64_CONSTS}
+            10000000000000000000
+            {$ELSE !SUPPORTS_UINT64_CONSTS}
+            $8AC7230489E80000
+            {$ENDIF SUPPORTS_UINT64_CONSTS}
+          {$ENDIF NEED_TYPED_UINT64_CONSTANTS})
+      else Result := 17 + Ord(Value >= UInt64(100000000000000000))
+    else Result := 15 + Ord(Value >= UInt64(1000000000000000))
+  else if Value >= UInt64(1000000000000) then
+    Result := 13 + Ord(Value >= UInt64(10000000000000))
+  else if Value >= UInt64(10000000000) then
+    Result := 11 + Ord(Value >= UInt64(100000000000))
+  else
+    Result := 10; //it's a nop -> GetOrdinalDigits(i64Rec.Lo)
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function GetOrdinalDigits(const Value: Int64): Byte;
+begin
+  {$R-} {$Q-}
+  if Value < 0
+  then Result := GetOrdinalDigits(UInt64(-Value))
+  else Result := GetOrdinalDigits(UInt64(Value))
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function GetOrdinalDigits(Value: Cardinal): Byte;
+begin
+  {$R-} {$Q-}
+  if Value >= 10000 then
+    if Value >= 1000000 then
+      if Value >= 100000000
+      then Result := 9 + Ord(Value >= 1000000000)
+      else Result := 7 + Ord(Value >= 10000000)
+    else Result := 5 + Ord(Value >= 100000)
+  else if Value >= 100 then
+    Result := 3 + Ord(Value >= 1000)
+  else
+    Result := 1 + Ord(Value >= 10);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function GetOrdinalDigits(Value: Integer): Byte;
+begin
+  {$R-} {$Q-}
+  if Value < 0
+  then Result := GetOrdinalDigits(Cardinal(-Value))
+  else Result := GetOrdinalDigits(Cardinal(Value));
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function GetOrdinalDigits(Value: Word): Byte;
+begin
+  {$R-} {$Q-}
+  if Value >= 10000 then
+    Result := 5
+  else if Value >= 100 then
+    Result := 3 + Ord(Value >= 1000)
+  else
+    Result := 1 + Ord(Value >= 10);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function GetOrdinalDigits(Value: SmallInt): Byte;
+begin
+  {$R-} {$Q-}
+  if Value < 0
+  then Result := GetOrdinalDigits(Word(-Value))
+  else Result := GetOrdinalDigits(Word(Value));
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function GetOrdinalDigits(Value: Byte): Byte;
+begin
+  {$R-} {$Q-}
+  if Value >= 100
+  then Result := 3
+  else Result := 1 + Ord(Value >= 10);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function GetOrdinalDigits(Value: ShortInt): Byte;
+begin
+  {$R-} {$Q-}
+  if Value < 0
+  then Result := GetOrdinalDigits(Byte(-Value))
+  else Result := GetOrdinalDigits(Byte(Value));
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
 
 procedure HexFiller;
 var
