@@ -1536,76 +1536,43 @@ label SkipSpaces;
 begin
   Result := False;
   if Str <> nil then
-    case Ord(Str^) of
-      ORd('T'), Ord('t'): //Check mixed case of 'true' or 't' string
-        begin
+    case Ord(Str^)  or $20 of //lower
+      Ord('t'): //Check mixed case of 'true' or 't' string
+        if PByte(Str+1)^ = Ord(#0) then
+          Result := True
+        else if (PByte(Str+1)^ = Ord(' ')) and IgnoreTrailingSaces then begin
           Inc(Str);
-          case Ord(Str^) of
-            Ord(#0): Result := True;
-            Ord('R'), Ord('r'):
-              begin
-                Inc(Str);
-                case Ord(Str^) of
-                  Ord('U'), Ord('u'):
-                    begin
-                      Inc(Str);
-                      case Ord(Str^) of
-                        Ord('E'), Ord('e'):
-                          begin
-                            inc(Str);
-                            case Ord(Str^) of
-                              Ord(#0): Result := True;
-                              Ord(' '): if IgnoreTrailingSaces then goto SkipSpaces;
-                            end;
-                          end;
-                      end;
-                    end;
-                end;
-              end;
-            Ord(' '): if IgnoreTrailingSaces then goto SkipSpaces;
+          goto SkipSpaces;
+        end else if (PByte(Str+1)^ or $20 = Ord('r')) and (PByte(Str+2)^ or $20 = Ord('u'))
+                and (PByte(Str+3)^ or $20 = Ord('e')) then
+          if PByte(Str+4)^ = Ord(#0) then
+            Result := True
+          else if (PByte(Str+4)^ = Ord(' ')) and IgnoreTrailingSaces then begin
+            Inc(Str,4);
+            goto SkipSpaces;
           end;
-        end;
-      Ord('Y'), Ord('y'): //Check mixed case of 'Yes' or 'y' string
-        begin
+      Ord('y'): //Check mixed case of 'Yes' or 'y' string
+        if PByte(Str+1)^ = Ord(#0) then
+          Result := True
+        else if (PByte(Str+1)^ = Ord(' ')) and IgnoreTrailingSaces then begin
           Inc(Str);
-          case Ord(Str^) of
-            Ord(#0): Result := True;
-            Ord('E'), Ord('e'):
-              begin
-                Inc(Str);
-                case Ord(Str^) of
-                  Ord('S'), Ord('s'):
-                    begin
-                      Inc(Str);
-                      case Ord(Str^) of
-                        Ord(#0): Result := True;
-                        Ord(' '): if IgnoreTrailingSaces then goto SkipSpaces;
-                      end;
-                    end;
-                end;
-              end;
-            Ord(' '):
-              if IgnoreTrailingSaces then
-              begin
-                SkipSpaces:
-                while Ord(Str^) = Ord(' ') do Inc(Str);
-                Result := Ord(Str^) = Ord(#0);
-              end;
+          goto SkipSpaces;
+        end else if (PByte(Str+1)^ or $20 = Ord('e')) and (PByte(Str+2)^ or $20 = Ord('s')) then
+          if PByte(Str+3)^ = Ord(#0) then
+            Result := True
+          else if (PByte(Str+3)^ = Ord(' ')) and IgnoreTrailingSaces then begin
+            Inc(Str,3);
+SkipSpaces: while PByte(Str)^ = Ord(' ') do Inc(Str);
+            Result := PByte(Str)^ = Ord(#0);
           end;
-        end;
-      Ord('O'), Ord('o'): //Check mixed case of 'ON' or 'on' string
-        begin
-          Inc(Str);
-          case Ord(Str^) of
-            Ord('N'), Ord('n'): begin
-                Inc(Str);
-                case Ord(Str^) of
-                  Ord(#0): Result := True;
-                  Ord(' '): if IgnoreTrailingSaces then goto SkipSpaces;
-                end;
-              end;
+      Ord('o'): //Check mixed case of 'ON' or 'on' string
+        if PByte(Str+1)^ or $20 = Ord('n') then
+          if PByte(Str+2)^ = Ord(#0) then
+            Result := True
+          else if (PByte(Str+2)^ = Ord(' ')) and IgnoreTrailingSaces then begin
+            Inc(Str,2);
+            goto SkipSpaces;
           end;
-        end;
       else
         Result := CheckInt and (RawToIntDef(Str, 0) <> 0);
     end;
@@ -1630,14 +1597,14 @@ begin
     while Ord((PEnd-1)^) = Ord(' ') do
       Dec(PEnd);
   case (Ord(Buf^) or $20) of
-    { test lowercase "YES" }
+    { test lowercase "YES" / "Y"}
     Ord('y'): if (Pend-Buf) = 1 then
                 Result := True
               else if (Pend-Buf) = 3 then
                 Result := (Ord((Buf+1)^) or $20 = Ord('e')) and (Ord((Buf+1)^) or $20 = Ord('s'));
     { test lowercase "ON" }
     Ord('o'): Result := (Pend-Buf = 2) and (Ord((Buf+1)^) or $20 = Ord('n'));
-    { test lowercase "TRUE" }
+    { test lowercase "TRUE" / "T"}
     Ord('t'): if Pend-Buf = 1 then
                 Result := True
               else Result := (Pend-Buf = 4) and (Ord((Buf+1)^) or $20 = Ord('r')) and
@@ -1672,76 +1639,43 @@ label SkipSpaces;
 begin
   Result := False;
   if Str <> nil then
-    case Str^ of
-      'T', 't': //Check mixed case of 'true' or 't' string
-        begin
+    case Ord(Str^)  or $20 of //lower
+      Ord('t'): //Check mixed case of 'true' or 't' string
+        if PWord(Str+1)^ = Ord(#0) then
+          Result := True
+        else if (PWord(Str+1)^ = Ord(' ')) and IgnoreTrailingSaces then begin
           Inc(Str);
-          case Str^ of
-            #0: Result := True;
-            'R', 'r':
-              begin
-                Inc(Str);
-                case Str^ of
-                  'U', 'u':
-                    begin
-                      Inc(Str);
-                      case Str^ of
-                        'E', 'e':
-                          begin
-                            inc(Str);
-                            case Str^ of
-                              #0: Result := True;
-                              ' ': if IgnoreTrailingSaces then goto SkipSpaces;
-                            end;
-                          end;
-                      end;
-                    end;
-                end;
-              end;
-            ' ': if IgnoreTrailingSaces then goto SkipSpaces;
+          goto SkipSpaces;
+        end else if (PWord(Str+1)^ or $20 = Ord('r')) and (PWord(Str+2)^ or $20 = Ord('u'))
+                and (PWord(Str+3)^ or $20 = Ord('e')) then
+          if PWord(Str+4)^ = Ord(#0) then
+            Result := True
+          else if (PWord(Str+4)^ = Ord(' ')) and IgnoreTrailingSaces then begin
+            Inc(Str,4);
+            goto SkipSpaces;
           end;
-        end;
-      'Y', 'y': //Check mixed case of 'Yes' or 'y' string
-        begin
+      Ord('y'): //Check mixed case of 'Yes' or 'y' string
+        if PWord(Str+1)^ = Ord(#0) then
+          Result := True
+        else if (PWord(Str+1)^ = Ord(' ')) and IgnoreTrailingSaces then begin
           Inc(Str);
-          case Str^ of
-            #0: Result := True;
-            'E', 'e':
-              begin
-                Inc(Str);
-                case Str^ of
-                  'S', 's':
-                    begin
-                      Inc(Str);
-                      case Str^ of
-                        #0: Result := True;
-                        ' ': if IgnoreTrailingSaces then goto SkipSpaces;
-                      end;
-                    end;
-                end;
-              end;
-            ' ':
-              if IgnoreTrailingSaces then
-              begin
-                SkipSpaces:
-                while Str^ = ' ' do Inc(Str);
-                Result := Str^ = #0;
-              end;
+          goto SkipSpaces;
+        end else if (PWord(Str+1)^ or $20 = Ord('e')) and (PWord(Str+2)^ or $20 = Ord('s')) then
+          if PWord(Str+3)^ = Ord(#0) then
+            Result := True
+          else if (PWord(Str+3)^ = Ord(' ')) and IgnoreTrailingSaces then begin
+            Inc(Str,3);
+SkipSpaces: while PWord(Str)^ = Ord(' ') do Inc(Str);
+            Result := PWord(Str)^ = Ord(#0);
           end;
-        end;
-      'O', 'o': //Check mixed case of 'ON' or 'on' string
-        begin
-          Inc(Str);
-          case Str^ of
-            'N', 'n': begin
-                Inc(Str);
-                case Str^ of
-                  #0: Result := True;
-                  ' ': if IgnoreTrailingSaces then goto SkipSpaces;
-                end;
-              end;
+      Ord('o'): //Check mixed case of 'ON' or 'on' string
+        if PWord(Str+1)^ or $20 = Ord('n') then
+          if PWord(Str+2)^ = Ord(#0) then
+            Result := True
+          else if (PWord(Str+2)^ = Ord(' ')) and IgnoreTrailingSaces then begin
+            Inc(Str,2);
+            goto SkipSpaces;
           end;
-        end;
       else
         Result := CheckInt and (UnicodeToIntDef(Str, 0) <> 0);
     end;
@@ -4183,8 +4117,10 @@ begin
     Result := ''
   else begin
     System.SetString(Result, nil, {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^);
+{$R-}
     for i := 0 to {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^-1 do
       PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -4212,8 +4148,10 @@ begin
     {$ELSE}
     System.SetString(Result,nil, l);
     {$ENDIF}
+{$R-}
     for i := 0 to l-1 do
       PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -4235,8 +4173,10 @@ begin
     {$ELSE}
     System.SetString(Result,nil, Len);
     {$ENDIF}
+{$R-}
     for i := 0 to len-1 do
       PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
@@ -4442,38 +4382,6 @@ begin
   result := true; // conversion OK
 end;
 {$ENDIF}
-
-procedure HexFiller;
-var
-  I{$IFDEF NO_RAW_HEXTOBIN}, v{$ENDIF}: Byte;
-  Hex: String;
-begin
-  for i := Low(Byte) to High(Byte) do
-  begin
-    Hex := IntToHex(I, 2);
-    {$IFDEF UNICODE}
-    TwoDigitLookupHexLW[i] := PLongWord(Pointer(Hex))^;
-    TwoDigitLookupHexW[i] := PWord(Pointer(RawByteString(Hex)))^;
-    {$ELSE}
-    TwoDigitLookupHexW[i] := PWord(Pointer(Hex))^;
-    TwoDigitLookupHexLW[i] := PCardinal(Pointer(ZWideString(Hex)))^;
-    {$ENDIF}
-  end;
-  {$IFDEF NO_RAW_HEXTOBIN}
-  //copy from Arnaud Bouchez syncommons.pas
-  Fillchar(ConvertHexToBin[0],SizeOf(ConvertHexToBin),255); // all to 255
-  V := 0;
-  for i := ord('0') to ord('9') do begin
-    ConvertHexToBin[i] := v;
-    inc(v);
-  end;
-  for i := ord('A') to ord('F') do begin
-    ConvertHexToBin[i] := v;
-    ConvertHexToBin[i+(ord('a')-ord('A'))] := v;
-    inc(v);
-  end;
-  {$ENDIF}
-end;
 
 procedure GUIDToBuffer(const Source: Pointer; Dest: PAnsiChar;
   const Options: TGUIDConvOptions);
@@ -5367,17 +5275,6 @@ end;
 
 {$ENDIF}
 
-{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-procedure BoolConstFiller;
-var B: Boolean;
-begin
-  for B := False to True do begin
-    BoolStrIntsRaw[B] := UnicodeStringToASCII7(BoolStrInts[B]);
-    BoolStrsRaw[B] := UnicodeStringToASCII7(BoolStrsW[B]);
-  end;
-end;
-{$ENDIF}
-
 {**
    Creates a memory stream with copy of data in buffer.
    If buffer contains no data, creates an empty stream.
@@ -5403,6 +5300,49 @@ end;
 function StreamFromData(const AString: RawByteString): TMemoryStream;
 begin
   Result := StreamFromData(Pointer(AString), Length(AString));
+end;
+{$ENDIF}
+
+procedure HexFiller;
+var
+  I{$IFDEF NO_RAW_HEXTOBIN}, v{$ENDIF}: Byte;
+  Hex: String;
+begin
+  for i := Low(Byte) to High(Byte) do
+  begin
+    Hex := IntToHex(I, 2);
+    {$IFDEF UNICODE}
+    TwoDigitLookupHexLW[i] := PLongWord(Pointer(Hex))^;
+    TwoDigitLookupHexW[i] := PWord(Pointer(RawByteString(Hex)))^;
+    {$ELSE}
+    TwoDigitLookupHexW[i] := PWord(Pointer(Hex))^;
+    TwoDigitLookupHexLW[i] := PCardinal(Pointer(ZWideString(Hex)))^;
+    {$ENDIF}
+  end;
+  {$IFDEF NO_RAW_HEXTOBIN}
+  //copy from Arnaud Bouchez syncommons.pas
+  Fillchar(ConvertHexToBin[0],SizeOf(ConvertHexToBin),255); // all to 255
+  V := 0;
+  for i := ord('0') to ord('9') do begin
+    ConvertHexToBin[i] := v;
+    inc(v);
+  end;
+  for i := ord('A') to ord('F') do begin
+    ConvertHexToBin[i] := v;
+    ConvertHexToBin[i+(ord('a')-ord('A'))] := v;
+    inc(v);
+  end;
+  {$ENDIF}
+end;
+
+{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+procedure BoolConstFiller;
+var B: Boolean;
+begin
+  for B := False to True do begin
+    BoolStrIntsRaw[B] := UnicodeStringToASCII7(BoolStrInts[B]);
+    BoolStrsRaw[B] := UnicodeStringToASCII7(BoolStrsW[B]);
+  end;
 end;
 {$ENDIF}
 
