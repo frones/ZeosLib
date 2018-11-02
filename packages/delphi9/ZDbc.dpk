@@ -30,8 +30,7 @@ package ZDbc;
 requires
   ZParseSql,
   ZPlain,
-  rtl,
-  dbrtl;
+  rtl;
 
 contains
 

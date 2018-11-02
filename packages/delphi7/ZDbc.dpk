@@ -29,8 +29,7 @@ requires
   rtl,
   ZPlain,
   ZCore,
-  ZParseSql,
-  dbrtl;
+  ZParseSql;
 
 contains
 

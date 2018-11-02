@@ -33,6 +33,7 @@ requires
   ZParseSql,
   ZPlain,
   rtl,
+  dbrtl,
   dbrtl;
 
 contains

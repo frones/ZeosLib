@@ -58,7 +58,7 @@ interface
 uses
   Variants, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToText
-  ZMessages, ZCompatibility;
+  ZMessages, ZCompatibility, FmtBCD;
 
 type
   {** Modified comparison function. }
@@ -827,6 +827,64 @@ function GetOrdinalDigits(Value: Word): Byte; overload; {$IFDEF WITH_INLINE} inl
 function GetOrdinalDigits(Value: SmallInt): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GetOrdinalDigits(Value: Byte): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GetOrdinalDigits(Value: ShortInt): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+
+{** EH:
+   Encode a currency value to a TBCD
+   @param value the currency to be converted
+   @param Result the slow Delphi result bcd record to be filled
+}
+procedure Currency2Bcd(const Value: Currency; var Result: TBCD);
+
+{** EH:
+   Encode a scaled signed longlong to a TBCD
+   @param value the longlong to be converted
+   @param Scale the scale digits
+   @param Result the slow Delphi result bcd record to be filled
+}
+procedure ScaledOrdinal2Bcd(const Value: Int64; Scale: Byte; var Result: TBCD); overload;
+
+{** EH:
+   Encode a scaled unsigned longlong to a TBCD
+   @param value the longlong to be converted
+   @param Scale the scale digits
+   @param Result the slow Delphi result bcd record to be filled
+   @param Negative the converted value was negative
+}
+procedure ScaledOrdinal2Bcd(Value: UInt64; Scale: Byte; var Result: TBCD; Negative: Boolean); overload;
+
+{** EH:
+   Encode a scaled signed long to a TBCD
+   @param value the long to be converted
+   @param Scale the scale digits
+   @param Result the slow Delphi result bcd record to be filled
+}
+procedure ScaledOrdinal2Bcd(Value: LongInt; Scale: Byte; var Result: TBCD); overload;
+
+{** EH:
+   Encode a scaled unsigned long to a TBCD
+   @param value the longlong to be converted
+   @param Scale the scale digits
+   @param Result the slow Delphi result bcd record to be filled
+   @param Negative the converted value was negative
+}
+procedure ScaledOrdinal2Bcd(Value: Cardinal; Scale: Byte; var Result: TBCD; Negative: Boolean); overload;
+
+{** EH:
+   Encode a scaled signed short to a TBCD
+   @param value the short to be converted
+   @param Scale the scale digits
+   @param Result the slow Delphi result bcd record to be filled
+}
+procedure ScaledOrdinal2Bcd(Value: SmallInt; Scale: Byte; var Result: TBCD); overload;
+
+{** EH:
+   Encode a scaled unsigned short to a TBCD
+   @param value the short to be converted
+   @param Scale the scale digits
+   @param Result the slow Delphi result bcd record to be filled
+   @param Negative the converted value was negative
+}
+procedure ScaledOrdinal2Bcd(Value: Word; Scale: Byte; var Result: TBCD; Negative: Boolean); overload;
 
 const
   // Local copy of current FormatSettings with '.' as DecimalSeparator and empty other fields
@@ -4816,21 +4874,6 @@ begin
   Dest^ := Quote;
 end;
 
-(*
-// replacement implementation of SQLQuotedStr because the above implementation doesn't work in some cases.
-function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWideString; overload;
-var
-  x: integer;
-begin
-  Result := '';
-  SetLength(Result, Len);
-  Move(Src^, Result[1], Len * 2);
-  for x := Length(Result) downto 1 do begin
-    if Result[x] = Quote then Insert(Quote, Result, x);
-  end;
-  Result := Quote + Result + Quote;
-end;
-*)
 function SQLQuotedStr(const S: ZWideString; Quote: WideChar): ZWideString;
 begin
   Result := SQLQuotedStr(Pointer(S), Length(S), Quote);
@@ -5455,6 +5498,193 @@ begin
   {$ENDIF}
 end;
 
+{** EH:
+   Encode a currency value to a TBCD
+   @param value the currency to be converted
+   @param Result the slow Delphi result bcd record to be filled
+}
+procedure Currency2Bcd(const Value: Currency; var Result: TBCD);
+var V2: UInt64;
+  iRec: Int64Rec absolute V2;
+  Negative: Boolean;
+begin
+  {$R-} {$Q-}
+  Negative := Value < 0;
+  if Negative
+  then V2 := UInt64(-PInt64(@Value)^)
+  else V2 := UInt64(PInt64(@Value)^);
+  if IRec.Hi = 0
+  then ScaledOrdinal2Bcd(iRec.Lo, 4, Result, Negative)
+  else ScaledOrdinal2Bcd(V2,      4, Result, Negative);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+const
+  SignSpecialPlacesArr: Array[Boolean] of Byte = ($00, $80);
+var
+  ZBase100Byte2BcdNibbleLookup: array[0..99] of Byte;
+  ZBcdNibble2Base100ByteLookup: array[0..153] of Byte;
+
+{** EH:
+   Encode a scaled signed longlong to a TBCD
+   @param value the longlong to be converted
+   @param Scale the scale digits
+   @param Result the slow Delphi result bcd record to be filled
+}
+procedure ScaledOrdinal2Bcd(const Value: Int64; Scale: Byte; var Result: TBCD); overload;
+var V2: UInt64;
+  iRec: Int64Rec absolute V2;
+  Negative: Boolean;
+begin
+  {$R-} {$Q-}
+  Negative := Value < 0;
+  if Negative
+  then V2 := UInt64(-Value)
+  else V2 := UInt64(Value);
+  if IRec.Hi = 0
+  then ScaledOrdinal2Bcd(iRec.Lo, Scale, Result, Negative)
+  else ScaledOrdinal2Bcd(V2,      Scale, Result, Negative);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{** EH:
+   Encode a scaled unsigned longlong to a TBCD
+   @param value the longlong to be converted
+   @param Scale the scale digits
+   @param Result the slow Delphi result bcd record to be filled
+   @param Negative the converted value was negative
+}
+procedure ScaledOrdinal2Bcd(Value: UInt64; Scale: Byte; var Result: TBCD; Negative: Boolean);
+var V2: UInt64;
+  Precision, Place: Byte;
+begin
+  {$R-} {$Q-}
+  Precision := GetOrdinalDigits(Value);
+  if Odd(Precision) then begin
+    v2 := Value div 10;
+    Result.Precision := Precision+1;
+    Result.Fraction[Precision div 2] := Byte(Value-(V2*10)) shl 4;
+    Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or (Scale +1);
+    Value := V2;
+  end else begin
+    Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
+    Result.Precision := Precision;
+  end;
+  if Precision > 1 then begin
+    for Place := (Precision div 2)-1 downto 1 do begin
+      v2 := Value div 100;
+      Result.Fraction[Place] := ZBase100Byte2BcdNibbleLookup[Byte(Value-(V2*100))];
+      Value := V2;
+    end;
+    Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+  end;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{** EH:
+   Encode a scaled signed long to a TBCD
+   @param value the long to be converted
+   @param Scale the scale digits
+   @param Result the slow Delphi result bcd record to be filled
+}
+procedure ScaledOrdinal2Bcd(Value: LongInt; Scale: Byte; var Result: TBCD);
+begin
+  {$R-} {$Q-}
+  if Value < 0
+  then ScaledOrdinal2Bcd(Cardinal(-Value), Scale, Result, True)
+  else ScaledOrdinal2Bcd(Cardinal(Value), Scale, Result, False);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{** EH:
+   Encode a scaled unsigned long to a TBCD
+   @param value the longlong to be converted
+   @param Scale the scale digits
+   @param Result the slow Delphi result bcd record to be filled
+   @param Negative the converted value was negative
+}
+procedure ScaledOrdinal2Bcd(Value: Cardinal; Scale: Byte; var Result: TBCD; Negative: Boolean);
+var V2: Cardinal;
+  Precision, Place: Byte;
+begin
+  {$R-} {$Q-}
+  Precision := GetOrdinalDigits(Value);
+  if Odd(Precision) then begin
+    v2 := Value div 10;
+    Result.Precision := Precision+1;
+    Result.Fraction[Precision div 2] := Byte(Value-(V2*10)) shl 4;
+    Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or (Scale +1);
+    Value := V2;
+  end else begin
+    Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
+    Result.Precision := Precision;
+  end;
+  if Precision > 1 then begin
+    for Place := (Precision div 2)-1 downto 1 do begin
+      v2 := Value div 100;
+      Result.Fraction[Place] := ZBase100Byte2BcdNibbleLookup[Byte(Value-(V2*100))];
+      Value := V2;
+    end;
+    Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+  end;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{** EH:
+   Encode a scaled signed short to a TBCD
+   @param value the short to be converted
+   @param Scale the scale digits
+   @param Result the slow Delphi result bcd record to be filled
+}
+procedure ScaledOrdinal2Bcd(Value: SmallInt; Scale: Byte; var Result: TBCD); overload;
+begin
+  {$R-} {$Q-}
+  if Value < 0
+  then ScaledOrdinal2Bcd(Word(-Value), Scale, Result, True)
+  else ScaledOrdinal2Bcd(Word(Value), Scale, Result, False);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+{** EH:
+   Encode a scaled unsigned short to a TBCD
+   @param value the short to be converted
+   @param Scale the scale digits
+   @param Result the slow Delphi result bcd record to be filled
+   @param Negative the converted value was negative
+}
+procedure ScaledOrdinal2Bcd(Value: Word; Scale: Byte; var Result: TBCD; Negative: Boolean);
+var V2: Word;
+  Precision: Byte;
+begin
+  {$R-} {$Q-}
+  Precision := GetOrdinalDigits(Value);
+  if Odd(Precision) then begin
+    v2 := Value div 10;
+    Result.Precision := Precision+1;
+    Result.Fraction[Precision div 2] := Byte(Value-(V2*10)) shl 4;
+    Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or (Scale +1);
+    Value := V2;
+  end else begin
+    Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
+    Result.Precision := Precision;
+  end;
+  //unrolled version we're comming from a smallInt/word with max precision of 5
+  if Precision > 1 then
+    if Precision >= 4 then begin
+      v2 := Value div 100;
+      PWord(@Result.Fraction[0])^ := ZBase100Byte2BcdNibbleLookup[Byte(V2)]+ZBase100Byte2BcdNibbleLookup[Byte(Value-(V2*100))] shl 8;
+    end else
+      Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
 procedure BoolConstFiller;
 var B: Boolean;
@@ -5466,7 +5696,17 @@ begin
 end;
 {$ENDIF}
 
-initialization
+procedure BcdNibbleLookupFiller;
+var i: Byte;
+begin
+  for i := 0 to 99 do begin
+    ZBase100Byte2BcdNibbleLookup[i] := ((i div 10) shl 4) + (i mod 10);
+    ZBcdNibble2Base100ByteLookup[ZBase100Byte2BcdNibbleLookup[i]] := i;
+  end;
+end;
+
+initialization;
+  BcdNibbleLookupFiller;
   HexFiller;  //build up lookup table
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
   BoolConstFiller; //build bool consts
