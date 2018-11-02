@@ -87,7 +87,7 @@ type
     FColumnsInfo: TObjectList;
     FMetadata: TContainedObject;
     FStatement: IZStatement;
-    FWeakIZResultSetReferenceOfSelf: Pointer; //EH: reminder for dereferencing on stmt
+    FWeakIntfPtrOfSelf: Pointer; //EH: reminder for dereferencing on stmt
     //note: while in destruction IZResultSet(Self) has no longer the same pointer address!
     //so we mark the address in constructor
   protected
@@ -165,7 +165,11 @@ type
     function GetFloat(ColumnIndex: Integer): Single; virtual;
     function GetDouble(ColumnIndex: Integer): Double; virtual;
     function GetCurrency(ColumnIndex: Integer): Currency; virtual;
-    function GetBigDecimal(ColumnIndex: Integer): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}; virtual;
+    {$IFDEF BCD_TEST}
+    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD); virtual;
+    {$ELSE}
+    function GetBigDecimal(ColumnIndex: Integer): Extended; virtual;
+    {$ENDIF}
     function GetBytes(ColumnIndex: Integer): TBytes; virtual;
     function GetDate(ColumnIndex: Integer): TDateTime; virtual;
     function GetTime(ColumnIndex: Integer): TDateTime; virtual;
@@ -182,44 +186,48 @@ type
     // Methods for accessing results by column name
     //======================================================================
 
-    function IsNullByName(const ColumnName: string): Boolean; virtual;
-    function GetPCharByName(const ColumnName: string): PChar; virtual;
-    function GetPAnsiCharByName(const ColumnName: string): PAnsiChar; overload; virtual;
-    function GetPAnsiCharByName(const ColumnName: string; out Len: NativeUInt): PAnsiChar; overload; virtual;
-    function GetPWideCharByName(const ColumnName: string): PWidechar; overload; virtual;
-    function GetPWideCharByName(const ColumnName: string; out Len: NativeUInt): PWideChar; overload; virtual;
-    function GetStringByName(const ColumnName: string): String; virtual;
+    function IsNullByName(const ColumnName: string): Boolean;
+    function GetPCharByName(const ColumnName: string): PChar;
+    function GetPAnsiCharByName(const ColumnName: string): PAnsiChar; overload;
+    function GetPAnsiCharByName(const ColumnName: string; out Len: NativeUInt): PAnsiChar; overload;
+    function GetPWideCharByName(const ColumnName: string): PWidechar; overload;
+    function GetPWideCharByName(const ColumnName: string; out Len: NativeUInt): PWideChar; overload;
+    function GetStringByName(const ColumnName: string): String;
     {$IFNDEF NO_ANSISTRING}
-    function GetAnsiStringByName(const ColumnName: string): AnsiString; virtual;
+    function GetAnsiStringByName(const ColumnName: string): AnsiString;
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    function GetUTF8StringByName(const ColumnName: string): UTF8String; virtual;
+    function GetUTF8StringByName(const ColumnName: string): UTF8String;
     {$ENDIF}
-    function GetRawByteStringByName(const ColumnName: string): RawByteString; virtual;
-    function GetUnicodeStringByName(const ColumnName: string): ZWideString; virtual;
-    function GetBooleanByName(const ColumnName: string): Boolean; virtual;
-    function GetByteByName(const ColumnName: string): Byte; virtual;
-    function GetShortByName(const ColumnName: string): ShortInt; virtual;
-    function GetWordByName(const ColumnName: string): Word; virtual;
-    function GetSmallByName(const ColumnName: string): SmallInt; virtual;
-    function GetUIntByName(const ColumnName: string): Cardinal; virtual;
-    function GetIntByName(const ColumnName: string): Integer; virtual;
-    function GetULongByName(const ColumnName: string): UInt64; virtual;
-    function GetLongByName(const ColumnName: string): Int64; virtual;
-    function GetFloatByName(const ColumnName: string): Single; virtual;
-    function GetDoubleByName(const ColumnName: string): Double; virtual;
-    function GetCurrencyByName(const ColumnName: string): Currency; virtual;
-    function GetBigDecimalByName(const ColumnName: string): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}; virtual;
-    function GetBytesByName(const ColumnName: string): TBytes; virtual;
-    function GetDateByName(const ColumnName: string): TDateTime; virtual;
-    function GetTimeByName(const ColumnName: string): TDateTime; virtual;
-    function GetTimestampByName(const ColumnName: string): TDateTime; virtual;
-    function GetAsciiStreamByName(const ColumnName: string): TStream; virtual;
-    function GetUnicodeStreamByName(const ColumnName: string): TStream; virtual;
-    function GetBinaryStreamByName(const ColumnName: string): TStream; virtual;
-    function GetBlobByName(const ColumnName: string): IZBlob; virtual;
-    function GetDataSetByName(const ColumnName: String): IZDataSet; virtual;
-    function GetValueByName(const ColumnName: string): TZVariant; virtual;
+    function GetRawByteStringByName(const ColumnName: string): RawByteString;
+    function GetUnicodeStringByName(const ColumnName: string): ZWideString;
+    function GetBooleanByName(const ColumnName: string): Boolean;
+    function GetByteByName(const ColumnName: string): Byte;
+    function GetShortByName(const ColumnName: string): ShortInt;
+    function GetWordByName(const ColumnName: string): Word;
+    function GetSmallByName(const ColumnName: string): SmallInt;
+    function GetUIntByName(const ColumnName: string): Cardinal;
+    function GetIntByName(const ColumnName: string): Integer;
+    function GetULongByName(const ColumnName: string): UInt64;
+    function GetLongByName(const ColumnName: string): Int64;
+    function GetFloatByName(const ColumnName: string): Single;
+    function GetDoubleByName(const ColumnName: string): Double;
+    function GetCurrencyByName(const ColumnName: string): Currency;
+    {$IFDEF BCD_TEST}
+    procedure GetBigDecimalByName(const ColumnName: string; var Result: TBCD);
+    {$ELSE}
+    function GetBigDecimalByName(const ColumnName: string): Extended;
+    {$ENDIF}
+    function GetBytesByName(const ColumnName: string): TBytes;
+    function GetDateByName(const ColumnName: string): TDateTime;
+    function GetTimeByName(const ColumnName: string): TDateTime;
+    function GetTimestampByName(const ColumnName: string): TDateTime;
+    function GetAsciiStreamByName(const ColumnName: string): TStream;
+    function GetUnicodeStreamByName(const ColumnName: string): TStream;
+    function GetBinaryStreamByName(const ColumnName: string): TStream;
+    function GetBlobByName(const ColumnName: string): IZBlob;
+    function GetDataSetByName(const ColumnName: String): IZDataSet;
+    function GetValueByName(const ColumnName: string): TZVariant;
 
     //=====================================================================
     // Advanced features:
@@ -763,7 +771,7 @@ begin
 
   { the constructor keeps the refcount to 1}
   QueryInterface(IZResultSet, RS);
-  FWeakIZResultSetReferenceOfSelf := Pointer(RS); //reminder for unregister on stmt!
+  FWeakIntfPtrOfSelf := Pointer(RS); //reminder for unregister on stmt!
   RS := nil;
   if Statement = nil then begin
     FResultSetType := rtForwardOnly;
@@ -966,7 +974,7 @@ begin
     if FColumnsInfo <> nil then
       FColumnsInfo.Clear;
     if (FStatement <> nil) then begin
-      FStatement.FreeOpenResultSetReference(IZResultSet(FWeakIZResultSetReferenceOfSelf));
+      FStatement.FreeOpenResultSetReference(IZResultSet(FWeakIntfPtrOfSelf));
       FStatement := nil;
     end;
   end;
@@ -1536,10 +1544,11 @@ begin
   CheckColumnConvertion(ColumnIndex, stAsciiStream);
 {$ENDIF}
   Result := nil;
-  if not IsNull(ColumnIndex) then
-  begin
+  if IZResultSet(FWeakIntfPtrOfSelf).IsNull(ColumnIndex) then
+    LastWasNull := True
+  else begin
     Blob := GetBlob(ColumnIndex);
-    if Blob <> nil then
+    if not LastWasNull and (Blob <> nil) then
       if Blob.IsClob then
         Result := Blob.GetStream
       else
@@ -1548,8 +1557,8 @@ begin
             Blob.Length, ConSettings, ConSettings.CTRL_CP))
         else
           Result := Blob.GetStream;
+    LastWasNull := (Result = nil);
   end;
-  LastWasNull := (Result = nil);
 end;
 
 {**
@@ -1584,16 +1593,17 @@ begin
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
   Result := nil;
-  if not IsNull(ColumnIndex) then
-  begin
+  if IZResultSet(FWeakIntfPtrOfSelf).IsNull(ColumnIndex) then
+    LastWasNull := True
+  else begin
     Blob := GetBlob(ColumnIndex);
-    if Blob <> nil then
+    if not LastWasNull and (Blob <> nil) then
       if Blob.IsClob then
         Result := Blob.GetUnicodeStream
       else
         Result := Blob.GetStream;
+    LastWasNull := (Result = nil);
   end;
-  LastWasNull := (Result = nil);
 end;
 
 {**
@@ -1624,13 +1634,14 @@ begin
   CheckColumnConvertion(ColumnIndex, stBinaryStream);
 {$ENDIF}
   Result := nil;
-  if not IsNull(ColumnIndex) then
-  begin
+  if IZResultSet(FWeakIntfPtrOfSelf).IsNull(ColumnIndex) then
+    LastWasNull := True
+  else begin
     Blob := GetBlob(ColumnIndex);
-    if Blob <> nil then
+    if not LastWasNull and (Blob <> nil) then
       Result := Blob.GetStream;
+    LastWasNull := (Result = nil);
   end;
-  LastWasNull := (Result = nil);
 end;
 
 {**
@@ -1691,35 +1702,35 @@ begin
 
   case Metadata.GetColumnType(ColumnIndex) of
     stBoolean:
-      Result := EncodeBoolean(GetBoolean(ColumnIndex));
+      Result := EncodeBoolean(IZResultSet(FWeakIntfPtrOfSelf).GetBoolean(ColumnIndex));
     stShort, stSmall, stInteger, stLong:
-      Result := EncodeInteger(GetLong(ColumnIndex));
+      Result := EncodeInteger(IZResultSet(FWeakIntfPtrOfSelf).GetLong(ColumnIndex));
     stByte, stWord, stLongWord, stULong:
-      Result := EncodeUInteger(GetULong(ColumnIndex));
+      Result := EncodeUInteger(IZResultSet(FWeakIntfPtrOfSelf).GetULong(ColumnIndex));
     {$IFDEF BCD_TEST}
     stFloat, stDouble:
-      Result := EncodeDouble(GetDouble(ColumnIndex));
+      Result := EncodeDouble(IZResultSet(FWeakIntfPtrOfSelf).GetDouble(ColumnIndex));
     stCurrency:
-      Result := EncodeCurrency(GetCurrency(ColumnIndex));
+      Result := EncodeCurrency(IZResultSet(FWeakIntfPtrOfSelf).GetCurrency(ColumnIndex));
     stBigDecimal:
-      Result := EncodeBigDecimal(GetBigDecimal(ColumnIndex));
+      Result := EncodeBigDecimal(IZResultSet(FWeakIntfPtrOfSelf).GetBigDecimal(ColumnIndex));
     {$ELSE}
     stFloat, stDouble, stCurrency, stBigDecimal:
-      Result := EncodeFloat(GetBigDecimal(ColumnIndex));
+      Result := EncodeFloat(IZResultSet(FWeakIntfPtrOfSelf).GetBigDecimal(ColumnIndex));
     {$ENDIF}
     stDate, stTime, stTimestamp:
-      Result := EncodeDateTime(GetTimestamp(ColumnIndex));
+      Result := EncodeDateTime(IZResultSet(FWeakIntfPtrOfSelf).GetTimestamp(ColumnIndex));
     stBytes, stBinaryStream, stGUID:
-      Result := EncodeBytes(GetBytes(ColumnIndex));
+      Result := EncodeBytes(IZResultSet(FWeakIntfPtrOfSelf).GetBytes(ColumnIndex));
     stString, stAsciiStream, stUnicodeString, stUnicodeStream:
       {$IFDEF WITH_USC2_ANSICOMPARESTR_ONLY}
-      Result := EncodeUnicodeString(GetUnicodeString(ColumnIndex));
+      Result := EncodeUnicodeString(IZResultSet(FWeakIntfPtrOfSelf).GetUnicodeString(ColumnIndex));
       {$ELSE}
       if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
          (ConSettings^.ClientCodePage^.Encoding in [ceUTf8, ceUTF16]) then
-        Result := EncodeUnicodeString(GetUnicodeString(ColumnIndex))
+        Result := EncodeUnicodeString(IZResultSet(FWeakIntfPtrOfSelf).GetUnicodeString(ColumnIndex))
       else
-        Result := EncodeRawByteString(GetRawByteString(ColumnIndex));
+        Result := EncodeRawByteString(IZResultSet(FWeakIntfPtrOfSelf).GetRawByteString(ColumnIndex));
       {$ENDIF}
     else
       Result.VType := vtNull;
@@ -1759,7 +1770,7 @@ end;
 }
 function TZAbstractResultSet.IsNullByName(const ColumnName: string): Boolean;
 begin
-  Result := IsNull(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).IsNull(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1773,7 +1784,7 @@ end;
 }
 function TZAbstractResultSet.GetPCharByName(const ColumnName: string): PChar;
 begin
-  Result := GetPChar(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetPChar(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1787,7 +1798,7 @@ end;
 }
 function TZAbstractResultSet.GetPAnsiCharByName(const ColumnName: string): PAnsiChar;
 begin
-  Result := GetPAnsiChar(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1803,7 +1814,7 @@ end;
 function TZAbstractResultSet.GetPAnsiCharByName(const ColumnName: string;
   out Len: NativeUInt): PAnsiChar;
 begin
-  Result := GetPAnsiChar(GetColumnIndex(ColumnName), Len);
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(GetColumnIndex(ColumnName), Len);
 end;
 
 {**
@@ -1819,7 +1830,7 @@ end;
 function TZAbstractResultSet.GetPWideCharByName(const ColumnName: string;
   out Len: NativeUInt): PWideChar;
 begin
-  Result := GetPWideChar(GetColumnIndex(ColumnName), Len);
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(GetColumnIndex(ColumnName), Len);
 end;
 
 {**
@@ -1833,7 +1844,7 @@ end;
 }
 function TZAbstractResultSet.GetPWideCharByName(const ColumnName: string): PWideChar;
 begin
-  Result := GetPWideChar(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1847,7 +1858,7 @@ end;
 }
 function TZAbstractResultSet.GetStringByName(const ColumnName: string): String;
 begin
-  Result := GetString(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetString(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1862,7 +1873,7 @@ end;
 {$IFNDEF NO_ANSISTRING}
 function TZAbstractResultSet.GetAnsiStringByName(const ColumnName: string): AnsiString;
 begin
-  Result := GetAnsiString(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetAnsiString(GetColumnIndex(ColumnName));
 end;
 {$ENDIF}
 
@@ -1878,7 +1889,7 @@ end;
 {$IFNDEF NO_UTF8STRING}
 function TZAbstractResultSet.GetUTF8StringByName(const ColumnName: string): UTF8String;
 begin
-  Result := GetUTF8String(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetUTF8String(GetColumnIndex(ColumnName));
 end;
 {$ENDIF}
 
@@ -1893,7 +1904,7 @@ end;
 }
 function TZAbstractResultSet.GetRawByteStringByName(const ColumnName: string): RawByteString;
 begin
-  Result := GetRawByteString(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetRawByteString(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1908,7 +1919,7 @@ end;
 function TZAbstractResultSet.GetUnicodeStringByName(const ColumnName: string):
   ZWideString;
 begin
-  Result := GetUnicodeString(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetUnicodeString(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1922,7 +1933,7 @@ end;
 }
 function TZAbstractResultSet.GetBooleanByName(const ColumnName: string): Boolean;
 begin
-  Result := GetBoolean(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetBoolean(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1936,7 +1947,7 @@ end;
 }
 function TZAbstractResultSet.GetByteByName(const ColumnName: string): Byte;
 begin
-  Result := GetByte(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetByte(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1950,7 +1961,7 @@ end;
 }
 function TZAbstractResultSet.GetShortByName(const ColumnName: string): ShortInt;
 begin
-  Result := GetSmall(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetSmall(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1964,7 +1975,7 @@ end;
 }
 function TZAbstractResultSet.GetWordByName(const ColumnName: string): Word;
 begin
-  Result := GetWord(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetWord(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1978,7 +1989,7 @@ end;
 }
 function TZAbstractResultSet.GetSmallByName(const ColumnName: string): SmallInt;
 begin
-  Result := GetSmall(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetSmall(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1992,7 +2003,7 @@ end;
 }
 function TZAbstractResultSet.GetUIntByName(const ColumnName: string): Cardinal;
 begin
-  Result := GetUInt(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetUInt(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2006,7 +2017,7 @@ end;
 }
 function TZAbstractResultSet.GetIntByName(const ColumnName: string): Integer;
 begin
-  Result := GetInt(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetInt(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2020,7 +2031,7 @@ end;
 }
 function TZAbstractResultSet.GetULongByName(const ColumnName: string): UInt64;
 begin
-  Result := GetULong(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetULong(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2034,7 +2045,7 @@ end;
 }
 function TZAbstractResultSet.GetLongByName(const ColumnName: string): Int64;
 begin
-  Result := GetLong(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetLong(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2048,7 +2059,7 @@ end;
 }
 function TZAbstractResultSet.GetFloatByName(const ColumnName: string): Single;
 begin
-  Result := GetFloat(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetFloat(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2062,7 +2073,7 @@ end;
 }
 function TZAbstractResultSet.GetDoubleByName(const ColumnName: string): Double;
 begin
-  Result := GetDouble(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetDouble(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2076,7 +2087,7 @@ end;
 }
 function TZAbstractResultSet.GetCurrencyByName(const ColumnName: string): Currency;
 begin
-  Result := GetCurrency(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetCurrency(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2088,10 +2099,17 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetBigDecimalByName(const ColumnName: string): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF};
+{$IFDEF BCD_TEST}
+procedure TZAbstractResultSet.GetBigDecimalByName(const ColumnName: string; var Result: TBCD);
 begin
-  Result := GetBigDecimal(GetColumnIndex(ColumnName));
+  IZResultSet(FWeakIntfPtrOfSelf).GetBigDecimal(GetColumnIndex(ColumnName), Result);
 end;
+{$ELSE}
+function TZAbstractResultSet.GetBigDecimalByName(const ColumnName: string): Extended;
+begin
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetBigDecimal(GetColumnIndex(ColumnName));
+end;
+{$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -2105,7 +2123,7 @@ end;
 }
 function TZAbstractResultSet.GetBytesByName(const ColumnName: string): TBytes;
 begin
-  Result := GetBytes(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetBytes(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2119,7 +2137,7 @@ end;
 }
 function TZAbstractResultSet.GetDateByName(const ColumnName: string): TDateTime;
 begin
-  Result := GetDate(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetDate(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2133,7 +2151,7 @@ end;
 }
 function TZAbstractResultSet.GetTimeByName(const ColumnName: string): TDateTime;
 begin
-  Result := GetTime(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetTime(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2147,7 +2165,7 @@ end;
 }
 function TZAbstractResultSet.GetTimestampByName(const ColumnName: string): TDateTime;
 begin
-  Result := GetTimestamp(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetTimestamp(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2173,7 +2191,7 @@ end;
 }
 function TZAbstractResultSet.GetAsciiStreamByName(const ColumnName: string): TStream;
 begin
-  Result := GetAsciiStream(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetAsciiStream(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2200,7 +2218,7 @@ end;
 }
 function TZAbstractResultSet.GetUnicodeStreamByName(const ColumnName: string): TStream;
 begin
-  Result := GetUnicodeStream(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetUnicodeStream(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2225,7 +2243,7 @@ end;
 }
 function TZAbstractResultSet.GetBinaryStreamByName(const ColumnName: string): TStream;
 begin
-  Result := GetBinaryStream(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetBinaryStream(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2239,12 +2257,12 @@ end;
 }
 function TZAbstractResultSet.GetBlobByName(const ColumnName: string): IZBlob;
 begin
-  Result := GetBlob(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(GetColumnIndex(ColumnName));
 end;
 
 function TZAbstractResultSet.GetDataSetByName(const ColumnName: string): IZDataSet;
 begin
-  Result := GetDataSet(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetDataSet(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2257,7 +2275,7 @@ end;
 }
 function TZAbstractResultSet.GetValueByName(const ColumnName: string): TZVariant;
 begin
-  Result := GetValue(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetValue(GetColumnIndex(ColumnName));
 end;
 
 //=====================================================================
