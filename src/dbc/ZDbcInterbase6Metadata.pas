@@ -1487,7 +1487,7 @@ begin
       end;
 
       SQLType := ConvertInterbase6ToSqlType(TypeName, SubTypeName, GetInt(FIELD_SCALE_Index),
-        ConSettings.CPType);
+        GetInt(FIELD_PRECISION_Index), ConSettings.CPType);
       if GUIDProps.ColumnIsGUID(SQLType, FieldLength, ColumnDomain, ColumnName) then
         SQLType := stGUID;
       Result.UpdateInt(ProcColDataTypeIndex, Ord(SQLType)); //DATA_TYPE
@@ -1574,8 +1574,6 @@ begin
       if Length(Types) = 0 then
       begin
         Result.MoveToInsertRow;
-        Result.UpdateNull(CatalogNameIndex);
-        Result.UpdateNull(SchemaNameIndex);
         Result.UpdateString(TableNameIndex, GetString(RELATION_NAME_Index)); //RDB$RELATION_NAME
         Result.UpdateString(TableColumnsSQLType, TableType);
         Result.UpdateString(TableColumnsRemarks, Copy(GetString(DESCRIPTION_Index),1,255)); //RDB$DESCRIPTION
@@ -1588,8 +1586,6 @@ begin
           if Types[I] = TableType then
           begin
             Result.MoveToInsertRow;
-            Result.UpdateNull(CatalogNameIndex);
-            Result.UpdateNull(SchemaNameIndex);
             Result.UpdateString(TableNameIndex, GetString(RELATION_NAME_Index)); //RDB$RELATION_NAME
             Result.UpdateString(TableColumnsSQLType, TableType);
             Result.UpdateString(TableColumnsRemarks, Copy(GetString(DESCRIPTION_Index),1,255)); //RDB$DESCRIPTION
@@ -1767,17 +1763,16 @@ begin
           blr_sql_date:  DefaultValue := 'CURRENT_DATE';
           blr_sql_time:  DefaultValue := 'CURRENT_TIME';
           blr_timestamp: DefaultValue := 'CURRENT_TIMESTAMP';
-          else begin end;
         end;
 
       Result.MoveToInsertRow;
-      Result.UpdateNull(CatalogNameIndex);    //TABLE_CAT
-      Result.UpdateNull(SchemaNameIndex);    //TABLE_SCHEM
+      //Result.UpdateNull(CatalogNameIndex);    //TABLE_CAT
+      //Result.UpdateNull(SchemaNameIndex);    //TABLE_SCHEM
       Result.UpdateString(TableNameIndex, GetString(RELATION_NAME_Index));    //TABLE_NAME
       Result.UpdateString(ColumnNameIndex, ColumnName);    //COLUMN_NAME
 
       SQLType := ConvertInterbase6ToSqlType(TypeName, SubTypeName, FieldScale,
-        ConSettings.CPType);
+        GetInt(FIELD_PRECISION_Index), ConSettings.CPType);
       if GUIDProps.ColumnIsGUID(SQLType, FieldLength, ColumnDomain, ColumnName) then
         SQLType := stGUID;
       Result.UpdateInt(TableColColumnTypeIndex, Ord(SQLType));
@@ -2645,7 +2640,7 @@ begin
       Result.MoveToInsertRow;
       Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiChar(RDB_TYPE_NAME_Index, Len), @Len);
       Result.UpdateInt(TypeInfoDataTypeIndex, Ord(ConvertInterbase6ToSqlType(
-        GetInt(RDB_TYPE_Index), 0, 10, ConSettings.CPType))); //added a scale > 4 since type_info doesn't deal with user defined scale
+        GetInt(RDB_TYPE_Index), 0, 10, 4, ConSettings.CPType))); //added a scale > 4 since type_info doesn't deal with user defined scale
       Result.UpdateInt(TypeInfoPecisionIndex, 9);
       Result.UpdateInt(TypeInfoNullAbleIndex, Ord(ntNoNulls));
       Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, false);

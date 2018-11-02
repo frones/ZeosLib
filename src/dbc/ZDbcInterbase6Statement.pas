@@ -503,7 +503,7 @@ begin
     if (FStatementType in [stSelect, stExecProc, stSelectForUpdate]) and (FResultXSQLDA.GetFieldCount <> 0) then begin
       if not Assigned(LastResultSet) then
         LastResultSet := CreateIBResultSet(SQL, Self,
-          TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+          TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
             FResultXSQLDA, True, CachedLob, FStatementType));
         FOpenResultSet := Pointer(LastResultSet);
       end else
@@ -534,7 +534,7 @@ begin
         Result := IZResultSet(FOpenResultSet)
       else begin
         Result := CreateIBResultSet(SQL, Self,
-          TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+          TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
             FResultXSQLDA, False, CachedLob, FStatementType));
         FOpenResultSet := Pointer(Result);
       end
@@ -571,7 +571,7 @@ begin
         { Create ResultSet if possible }
         if FResultXSQLDA.GetFieldCount <> 0 then
           LastResultSet := CreateIBResultSet(SQL, Self,
-            TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+            TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
               FResultXSQLDA, True, CachedLob, FStatementType));
         FOpenResultSet := Pointer(LastResultSet);
       end;

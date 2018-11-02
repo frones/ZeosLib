@@ -90,7 +90,7 @@ end;
 
 procedure TZTestDbcInterbaseBugReport.Test789879D;
 const
-  FLD_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  FLD_Index = FirstDbcIndex;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -240,8 +240,8 @@ end;
 }
 procedure TZTestDbcInterbaseBugReport.Test864622;
 const
-  FLD1_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  FLD2_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  FLD1_Index = FirstDbcIndex;
+  FLD2_Index = FirstDbcIndex+1;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -258,11 +258,11 @@ begin
     with GetMetadata do
     begin
       CheckEquals(ord(stInteger), Ord(GetColumnType(FLD1_Index)));
-      CheckEquals(ord(stFloat), Ord(GetColumnType(FLD2_Index)));
+      CheckEquals(ord(stCurrency), Ord(GetColumnType(FLD2_Index)));
     end;
     CheckEquals(True, Next);
     CheckEquals(1, GetInt(FLD1_Index));
-    CheckEquals(1.2, GetFloat(FLD2_Index), 0.01);
+    CheckEquals(1.2, GetCurrency(FLD2_Index));
     Close;
   end;
 end;

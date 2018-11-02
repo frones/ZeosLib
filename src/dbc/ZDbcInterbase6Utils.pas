@@ -303,7 +303,7 @@ function GetAffectedRows(const PlainDriver: TZInterbasePlainDriver;
   const StmtHandle: TISC_STMT_HANDLE; const StatementType: TZIbSqlStatementType;
   const ImmediatelyReleasable: IImmediatelyReleasable): integer;
 
-function ConvertInterbase6ToSqlType(const SqlType, SqlSubType, Scale: Integer;
+function ConvertInterbase6ToSqlType(SqlType, SqlSubType, Scale, Precision: Integer;
   const CtrlsCPType: TZControlsCodePage): TZSqlType;
 
 { interbase blob routines }
@@ -329,7 +329,7 @@ const
   { Default Interbase blob size for reading }
   DefaultBlobSegmentSize = 16 * 1024;
 
-  IBScaleDivisor: array[-18..-1] of Int64 = (
+  IBScaleDivisor: array[-18..0] of Int64 = (
     {sqldialect 3 range 1..18}
     1000000000000000000,
     100000000000000000,
@@ -343,7 +343,14 @@ const
     10000000000,
     1000000000,
     100000000,
-    10000000,1000000,100000,10000,1000,100,10);
+    10000000,
+    1000000,
+    100000,
+    10000,
+    1000,
+    100,
+    10,
+    1);
 
   { count database parameters }
   MAX_DPB_PARAMS = 90;
@@ -757,11 +764,10 @@ end;
 
   <b>Note:</b> The interbase type and subtype get from RDB$TYPES table
 }
-function ConvertInterbase6ToSqlType(const SqlType, SqlSubType, Scale: Integer;
+function ConvertInterbase6ToSqlType(SqlType, SqlSubType, Scale, Precision: Integer;
   const CtrlsCPType: TZControlsCodePage): TZSQLType;
+label testBCD;
 begin
-  Result := ZDbcIntfs.stUnknown;
-
   case SqlType of
     blr_bool, blr_not_nullable: Result := stBoolean;
     blr_domain_name, blr_domain_name2,
@@ -770,47 +776,29 @@ begin
     blr_varying2, blr_varying,
     blr_text, blr_text2,
     blr_cstring, blr_cstring2:
-      case SqlSubType of
-        CS_BINARY: Result := stBytes;
-      else
-        Result := stString;
-      end;
-    blr_d_float: Result := stDouble;
+      if SqlSubType = CS_BINARY
+      then Result := stBytes
+      else Result := stString;
     blr_float: Result := stFloat;
     blr_double: Result := stDouble;
     blr_blob_id, blr_quad: Result := stLong;
-    blr_int64:
-      case SqlSubType of
-        RDB_NUMBERS_NONE:
-          { weired bug! We need to check scale too!
-            see: http://sourceforge.net/p/zeoslib/tickets/106/ }
-          if Scale = 0 then
-            Result := stLong
-          else
-            Result := stBigDecimal;
-        RDB_NUMBERS_NUMERIC: Result := stDouble;
-        RDB_NUMBERS_DECIMAL:
-          if Scale = 0 then
-            Result := stLong
-          else
-            Result := stBigDecimal;
-      end;
-    blr_long:
-      case SqlSubType of
-        RDB_NUMBERS_NONE: Result := stInteger;
-        RDB_NUMBERS_NUMERIC: Result := stDouble;
-        RDB_NUMBERS_DECIMAL:
-          if Scale = 0 then
-            Result := stInteger
-          else
-            Result := stBigDecimal;
-      end;
     blr_short:
-      case SqlSubType of
-        RDB_NUMBERS_NONE: Result := stSmall;
-        RDB_NUMBERS_NUMERIC: Result := stDouble;
-        RDB_NUMBERS_DECIMAL: Result := stDouble;
-      end;
+      if Scale = 0
+      then Result := stSmall
+      else goto testBCD;
+    blr_long:
+      if Scale = 0
+      then Result := stInteger
+      else goto testBCD;
+    blr_int64:
+        if Scale = 0 then
+          Result := stLong
+        else begin
+testBCD:  Scale := Abs(Scale);
+          if (Scale <= 4) and (Precision <= sAlignCurrencyScale2Precision[Scale])
+          then Result := stCurrency
+          else Result := stBigDecimal;
+        end;
     blr_sql_date: Result := stDate;
     blr_sql_time: Result := stTime;
     blr_timestamp: Result := stTimestamp;
