@@ -129,7 +129,7 @@ type
   public //setters
     //a performance thing: direct dispatched methods for the interfaces :
     //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
-    procedure SetNull(Index: Integer; SQLType: TZSQLType); reintroduce;
+    procedure SetNull(Index: Integer; {%H-}SQLType: TZSQLType); reintroduce;
     procedure SetBoolean(Index: Integer; Value: Boolean); reintroduce;
     procedure SetByte(Index: Integer; Value: Byte); reintroduce;
     procedure SetShort(Index: Integer; Value: ShortInt); reintroduce;
@@ -629,7 +629,7 @@ function TZAbstractInterbase6PreparedStatement.GetInParamLogValue(
   Index: Integer): RawByteString;
 var XSQLVAR: PXSQLVAR;
   TempDate: TZTimeStamp;
-  DT, DT2: TDateTime;
+  dDT, tDT: TDateTime;
 begin
   CheckParameterIndex(Index);
   {$R-}
@@ -659,15 +659,15 @@ begin
     SQL_TYPE_TIME : begin
                       isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^,
                         TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                      if TryEncodeTime(TempDate.Hour, TempDate.Minute, TempDate.Second, TempDate.Fractions div 10, DT)
-                      then Result := ZSysUtils.DateTimeToRawSQLTime(Dt, ConSettings.WriteFormatSettings, True)
+                      if TryEncodeTime(TempDate.Hour, TempDate.Minute, TempDate.Second, TempDate.Fractions div 10, tDT)
+                      then Result := ZSysUtils.DateTimeToRawSQLTime(tDT, ConSettings.WriteFormatSettings, True)
                       else Result := '(time)';
                     end;
     SQL_TYPE_DATE : begin
                       isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
                         TempDate.Year, TempDate.Month, Tempdate.Day);
-                      if TryEncodeDate(TempDate.Year,TempDate.Month, TempDate.Day, DT)
-                      then Result := ZSysUtils.DateTimeToRawSQLDate(DT, ConSettings.WriteFormatSettings, True)
+                      if TryEncodeDate(TempDate.Year,TempDate.Month, TempDate.Day, dDT)
+                      then Result := ZSysUtils.DateTimeToRawSQLDate(dDT, ConSettings.WriteFormatSettings, True)
                       else Result := '(date)';
                     end;
     SQL_TIMESTAMP : begin
@@ -675,12 +675,13 @@ begin
                         TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                       isc_decode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date,
                         TempDate.Year, TempDate.Month, Tempdate.Day);
-                      FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(XSQLVAR.sqldata), @TempDate);
-                      if not TryEncodeTime(TempDate.Hour, TempDate.Minute, TempDate.Second, TempDate.Fractions div 10, DT) then
-                        DT := 0;
-                      if not TryEncodeDate(TempDate.Year,TempDate.Month, TempDate.Day, DT2) then
-                        DT2 := 0;
-                      Result := ZSysUtils.DateTimeToRawSQLTimeStamp(DT+DT2, ConSettings.WriteFormatSettings, True)
+                      if not TryEncodeTime(TempDate.Hour, TempDate.Minute, TempDate.Second, TempDate.Fractions div 10, tDT) then
+                        tDT := 0;
+                      if not TryEncodeDate(TempDate.Year,TempDate.Month, TempDate.Day, dDT) then
+                        dDT := 0;
+                      if dDT < 0
+                      then Result := ZSysUtils.DateTimeToRawSQLTimeStamp(dDT-tDT, ConSettings.WriteFormatSettings, True)
+                      else Result := ZSysUtils.DateTimeToRawSQLTimeStamp(dDT+tDT, ConSettings.WriteFormatSettings, True)
                     end;
     else Result := 'unknown'
   end;
@@ -943,7 +944,6 @@ end;
 procedure TZInterbase6PreparedStatement.SetBytes(Index: Integer;
   const Value: TBytes);
 var XSQLVAR: PXSQLVAR;
-  i64: Int64 absolute Value;
   L: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -1242,7 +1242,6 @@ end;
 procedure TZInterbase6PreparedStatement.SetGUID(Index: Integer;
   const Value: TGUID);
 var XSQLVAR: PXSQLVAR;
-  i64: Int64 absolute Value;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
