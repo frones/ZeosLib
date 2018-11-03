@@ -111,14 +111,15 @@ type
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
-
-    procedure SetCurrency(Index: Integer; const Value: Currency); override;
-    procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
-    procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); override;
   end;
 
   {** Implements Prepared SQL Statement for Oracle }
-  TZOraclePreparedStatement_A = class(TZAbstractOraclePreparedStatement_A, IZPreparedStatement);
+  TZOraclePreparedStatement_A = class(TZAbstractOraclePreparedStatement_A, IZPreparedStatement)
+  public
+    procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
+    procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); reintroduce;
+    procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); reintroduce;
+  end;
 
   {** Implements SQL Statement for Oracle }
   TZOracleStatement_A = class(TZAbstractOraclePreparedStatement_A, IZStatement)
@@ -936,6 +937,174 @@ begin
   end;
 end;
 
+function TZAbstractOraclePreparedStatement_A.SupportsBidirectionalParms: Boolean;
+begin
+  Result := True;
+end;
+
+procedure TZAbstractOraclePreparedStatement_A.Unprepare;
+var Status: sword;
+begin
+  try
+    inherited Unprepare;
+  finally
+    if FOCIStmt <> nil then begin
+      if FServerStmtCache
+      then Status := FPlainDriver.OCIStmtRelease(FOCIStmt, FOCIError, nil, 0, OCI_STMTCACHE_DELETE)
+      else Status := FPlainDriver.OCIHandleFree(FOCIStmt, OCI_HTYPE_STMT);
+      FOCIStmt := nil;
+      if Status <> OCI_SUCCESS then
+        CheckOracleError(FPlainDriver, FOCIError, Status, lcUnprepStmt, ASQL, ConSettings)
+    end;
+    if FOCIError <> nil then begin
+      Status := FPlainDriver.OCIHandleFree(FOCIError, OCI_HTYPE_ERROR);
+      FOCIError := nil;
+      if Status <> OCI_SUCCESS then
+        CheckOracleError(FPlainDriver, FOCIError, Status, lcExecute, ASQL, ConSettings)
+    end;
+  end;
+end;
+
+{ TZOracleStatement_A }
+
+constructor TZOracleStatement_A.Create(const Connection: IZConnection;
+  Info: TStrings);
+begin
+  inherited Create(Connection, '', Info);
+end;
+
+{ TZOracleCallableStatement_A }
+
+function TZOracleCallableStatement_A.CreateExecutionStatement(
+  Mode: TZCallExecKind;
+  const StoredProcName: String): TZAbstractPreparedStatement2;
+var
+  ProcSQL: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF};
+  Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
+  IC: IZIdentifierConvertor;
+
+  procedure AddArgs({$IFDEF AUTOREFCOUNT}const{$ENDIF}Params: TObjectList;
+    {$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
+  var I: Integer;
+  begin
+    ZDbcUtils.ToBuff('(', Buf, ProcSQL);
+    for I := 0 to Params.Count-1 do
+      if TZOraProcDescriptor_A(Params[i]).OrdPos > 0 then begin
+        ZDbcUtils.ToBuff(':', Buf, ProcSQL);
+        TZOraProcDescriptor_A(Params[i]).ConcatParentName(False, buf, ProcSQL, IC);
+        ZDbcUtils.ToBuff(TZOraProcDescriptor_A(Params[i]).AttributeName, Buf, ProcSQL);
+        ZDbcUtils.ToBuff(',', Buf, ProcSQL);
+      end;
+    ReplaceOrAddLastChar(',',')',Buf,ProcSQL);
+  end;
+
+  procedure BuildFunction({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
+  begin
+    ZDbcUtils.ToBuff(':', Buf, ProcSQL);
+    TZOraProcDescriptor_A(Descriptor.Args[0]).ConcatParentName(False, buf, ProcSQL, IC);
+    ZDbcUtils.ToBuff(TZOraProcDescriptor_A(Descriptor.Args[0]).AttributeName, Buf, ProcSQL);
+    ZDbcUtils.ToBuff(' := ', Buf, ProcSQL);
+    Descriptor.ConcatParentName(True, Buf, ProcSQL, IC);
+    ZDbcUtils.ToBuff(IC.Quote(Descriptor.AttributeName), Buf, ProcSQL);
+    AddArgs(Descriptor.Args, Descriptor);
+    ZDbcUtils.ToBuff(';', Buf, ProcSQL);
+  end;
+  procedure BuildProcedure({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
+  begin
+    Descriptor.ConcatParentName(True, Buf, ProcSQL, IC);
+    ZDbcUtils.ToBuff(IC.Quote(Descriptor.AttributeName), Buf, ProcSQL);
+    AddArgs(Descriptor.Args, Descriptor);
+    ZDbcUtils.ToBuff(';', Buf, ProcSQL);
+  end;
+  procedure BuildPackage({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
+  var I: Integer;
+  begin
+    for I := 0 to Descriptor.Args.Count -1 do begin
+      if Descriptor.Parent <> nil then
+        ZDbcUtils.ToBuff('BEGIN'#10, Buf, ProcSQL);
+      if TZOraProcDescriptor_A(Descriptor.Args[I]).ObjType = OCI_PTYPE_PKG then
+        BuildPackage(TZOraProcDescriptor_A(Descriptor.Args[I]))
+      else if TZOraProcDescriptor_A(Descriptor.Args[I]).ObjType = OCI_PTYPE_PROC then
+        BuildProcedure(TZOraProcDescriptor_A(Descriptor.Args[I]))
+      else if TZOraProcDescriptor_A(Descriptor.Args[I]).ObjType = OCI_PTYPE_FUNC then
+        BuildFunction(TZOraProcDescriptor_A(Descriptor.Args[I]))
+      else
+        AddArgs(Descriptor.Args, Descriptor);
+      if Descriptor.Parent <> nil then
+        ZDbcUtils.ToBuff(#10'END;', Buf, ProcSQL);
+    end;
+  end;
+begin
+  IC := Connection.GetMetadata.GetIdentifierConvertor;
+  if FProcDescriptor = nil then
+    { describe the object: }
+    FProcDescriptor := TZOraProcDescriptor_A.Create(nil);
+  FProcDescriptor.Describe(OCI_PTYPE_UNK, Connection, StoredProcName);
+  ProcSQL := '';
+  Buf.Pos := 0;
+  ZDbcUtils.ToBuff('BEGIN'#10, Buf, ProcSQL);
+  if FProcDescriptor.ObjType = OCI_PTYPE_PKG then
+    BuildPackage(FProcDescriptor)
+  else if FProcDescriptor.ObjType = OCI_PTYPE_PROC then
+    BuildProcedure(FProcDescriptor)
+  else
+    BuildFunction(FProcDescriptor);
+  ZDbcUtils.ToBuff(#10'END;', Buf, ProcSQL);
+  ZDbcUtils.FlushBuff(Buf,ProcSQL);
+  Result := TZOraclePreparedStatement_A.Create(Connection, '', Info);
+  TZOraclePreparedStatement_A(Result).FASQL := {$IFDEF UNICODE}ZUnicodeToRaw(ProcSQL, ConSettings^.ClientCodePage^.CP){$ELSE}ProcSQL{$ENDIF};
+  TZOraclePreparedStatement_A(Result).Prepare;
+end;
+
+const OCIParamTypeMatrix: array[boolean] of array[OCI_TYPEPARAM_IN..OCI_TYPEPARAM_INOUT] of TZParamType =
+  ((zptInput, zptOutput, zptInputOutput),(zptResult,zptResult,zptResult));
+procedure TZOracleCallableStatement_A.PrepareInParameters;
+var Idx: Integer;
+  procedure RegisterFromDescriptor(ParentDescriptor: TZOraProcDescriptor_A;
+    var IDX: Integer);
+  var i: Integer;
+    Descriptor: TZOraProcDescriptor_A;
+    Tmp: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF};
+    Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
+  begin
+    for I := 0 to ParentDescriptor.Args.Count-1 do begin
+      Descriptor := TZOraProcDescriptor_A(ParentDescriptor.Args[i]);
+      if Descriptor.ObjType <> OCI_PTYPE_ARG then
+        RegisterFromDescriptor(Descriptor, IDX)
+      else begin
+        Tmp := '';
+        Buf.Pos := 0;
+        Descriptor.ConcatParentName(False, Buf, Tmp, nil);
+        ZDbcUtils.ToBuff(Descriptor.AttributeName, Buf, Tmp);
+        ZDbcUtils.FlushBuff(Buf,tmp);
+        FExecStatements[FCallExecKind].RegisterParameter(IDX,
+          Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
+            Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
+        Inc(IDX);
+      end;
+    end;
+  end;
+begin
+  if FProcDescriptor <> nil then begin
+    Idx := {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+    RegisterFromDescriptor(FProcDescriptor, IDX);
+  end;
+end;
+
+function TZOracleCallableStatement_A.SupportsBidirectionalParms: Boolean;
+begin
+  Result := True;
+end;
+
+procedure TZOracleCallableStatement_A.Unprepare;
+begin
+  inherited Unprepare;
+  if FProcDescriptor <> nil then
+    FreeAndNil(FProcDescriptor);
+end;
+
+{ TZOraclePreparedStatement_A }
+
 {**
   Sets the designated parameter to a Java <code>currency</code> value.
   The driver converts this
@@ -944,8 +1113,8 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-procedure TZAbstractOraclePreparedStatement_A.SetCurrency(
-  Index: Integer; const Value: Currency);
+procedure TZOraclePreparedStatement_A.SetCurrency(Index: Integer;
+  const Value: Currency);
 var
   Bind: PZOCIParamBind;
   SQLType: TZSQLType;
@@ -974,9 +1143,8 @@ begin
   Bind.indp[0] := 0;
 end;
 
-procedure TZAbstractOraclePreparedStatement_A.SetDataArray(
-  ParameterIndex: Integer; const Value; const SQLType: TZSQLType;
-  const VariantType: TZVariantType);
+procedure TZOraclePreparedStatement_A.SetDataArray(ParameterIndex: Integer;
+  const Value; const SQLType: TZSQLType; const VariantType: TZVariantType);
 var
   ClientStrings: TRawByteStringDynArray; //conversion buffer
   Bind: PZOCIParamBind; //ora bind variable
@@ -1033,24 +1201,28 @@ bind_direct:
           PDouble(Bind^.valuep)^ := TDoubleDynArray(Value)[0];
       end;
     stLong, stULong: //old oracle does not support 8 byte ordinals
-        if FCanBindInt64 then
+        if FCanBindInt64 and (VariantType <> vtRawByteString) then
           goto bind_direct
         else begin
           if (Bind.dty <> SQLT_VNU) or (Bind.value_sz <> SizeOf(TOciNumber)) or (Bind.curelen < ArrayLen) then
             InitBuffer(stBigDecimal, Bind, ParameterIndex, ArrayLen, 20);
           P := Bind.valuep;
-          if SQLType = stLong then
-            for i := 0 to ArrayLen -1 do begin
-              FPlainDriver.OCINumberFromInt(FOCIError, @TInt64DynArray(Value)[i],
-                SizeOf(Int64), OCI_NUMBER_SIGNED, POCINumber(P));
-              Inc(P, Bind.value_sz);
-            end
-          else
-            for i := 0 to ArrayLen -1 do begin
-              FPlainDriver.OCINumberFromInt(FOCIError, @TUInt64DynArray(Value)[i],
-                SizeOf(Int64), OCI_NUMBER_UNSIGNED, POCINumber(P));
-              Inc(P, Bind.value_sz);
-            end;
+          if (VariantType <> vtRawByteString) then begin
+            if SQLType = stLong then
+              for i := 0 to ArrayLen -1 do begin
+                FPlainDriver.OCINumberFromInt(FOCIError, @TInt64DynArray(Value)[i],
+                  SizeOf(Int64), OCI_NUMBER_SIGNED, POCINumber(P));
+                Inc(P, Bind.value_sz);
+              end
+            else
+              for i := 0 to ArrayLen -1 do begin
+                FPlainDriver.OCINumberFromInt(FOCIError, @TUInt64DynArray(Value)[i],
+                  SizeOf(Int64), OCI_NUMBER_UNSIGNED, POCINumber(P));
+                Inc(P, Bind.value_sz);
+              end;
+          end else begin
+
+          end;
         end;
     stCurrency: begin
         if (Bind.dty <> SQLT_VNU) or (Bind.value_sz <> SizeOf(TOCINumber)) or (Bind.curelen < ArrayLen) then
@@ -1290,9 +1462,8 @@ set_raw:    if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Inte
   FillChar(Bind.indp^, SizeOf(SB2)*ArrayLen, #0);
 end;
 
-procedure TZAbstractOraclePreparedStatement_A.SetNullArray(
-  ParameterIndex: Integer; const SQLType: TZSQLType; const Value;
-  const VariantType: TZVariantType = vtNull);
+procedure TZOraclePreparedStatement_A.SetNullArray(ParameterIndex: Integer;
+  const SQLType: TZSQLType; const Value; const VariantType: TZVariantType);
 var I: Cardinal;
   Bind: PZOCIParamBind;
 begin
@@ -1305,172 +1476,6 @@ begin
   for i := 0 to ArrayCount -1 do
     Bind.indp[I] := -Ord(ZDbcUtils.IsNullFromArray(BindList[ParameterIndex].Value, i));
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-end;
-
-function TZAbstractOraclePreparedStatement_A.SupportsBidirectionalParms: Boolean;
-begin
-  Result := True;
-end;
-
-procedure TZAbstractOraclePreparedStatement_A.Unprepare;
-var Status: sword;
-begin
-  try
-    inherited Unprepare;
-  finally
-    if FOCIStmt <> nil then begin
-      if FServerStmtCache
-      then Status := FPlainDriver.OCIStmtRelease(FOCIStmt, FOCIError, nil, 0, OCI_STMTCACHE_DELETE)
-      else Status := FPlainDriver.OCIHandleFree(FOCIStmt, OCI_HTYPE_STMT);
-      FOCIStmt := nil;
-      if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FOCIError, Status, lcUnprepStmt, ASQL, ConSettings)
-    end;
-    if FOCIError <> nil then begin
-      Status := FPlainDriver.OCIHandleFree(FOCIError, OCI_HTYPE_ERROR);
-      FOCIError := nil;
-      if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FOCIError, Status, lcExecute, ASQL, ConSettings)
-    end;
-  end;
-end;
-
-{ TZOracleStatement_A }
-
-constructor TZOracleStatement_A.Create(const Connection: IZConnection;
-  Info: TStrings);
-begin
-  inherited Create(Connection, '', Info);
-end;
-
-{ TZOracleCallableStatement_A }
-
-function TZOracleCallableStatement_A.CreateExecutionStatement(
-  Mode: TZCallExecKind;
-  const StoredProcName: String): TZAbstractPreparedStatement2;
-var
-  ProcSQL: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF};
-  Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
-  IC: IZIdentifierConvertor;
-
-  procedure AddArgs({$IFDEF AUTOREFCOUNT}const{$ENDIF}Params: TObjectList;
-    {$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
-  var I: Integer;
-  begin
-    ZDbcUtils.ToBuff('(', Buf, ProcSQL);
-    for I := 0 to Params.Count-1 do
-      if TZOraProcDescriptor_A(Params[i]).OrdPos > 0 then begin
-        ZDbcUtils.ToBuff(':', Buf, ProcSQL);
-        TZOraProcDescriptor_A(Params[i]).ConcatParentName(False, buf, ProcSQL, IC);
-        ZDbcUtils.ToBuff(TZOraProcDescriptor_A(Params[i]).AttributeName, Buf, ProcSQL);
-        ZDbcUtils.ToBuff(',', Buf, ProcSQL);
-      end;
-    ReplaceOrAddLastChar(',',')',Buf,ProcSQL);
-  end;
-
-  procedure BuildFunction({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
-  begin
-    ZDbcUtils.ToBuff(':', Buf, ProcSQL);
-    TZOraProcDescriptor_A(Descriptor.Args[0]).ConcatParentName(False, buf, ProcSQL, IC);
-    ZDbcUtils.ToBuff(TZOraProcDescriptor_A(Descriptor.Args[0]).AttributeName, Buf, ProcSQL);
-    ZDbcUtils.ToBuff(' := ', Buf, ProcSQL);
-    Descriptor.ConcatParentName(True, Buf, ProcSQL, IC);
-    ZDbcUtils.ToBuff(IC.Quote(Descriptor.AttributeName), Buf, ProcSQL);
-    AddArgs(Descriptor.Args, Descriptor);
-    ZDbcUtils.ToBuff(';', Buf, ProcSQL);
-  end;
-  procedure BuildProcedure({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
-  begin
-    Descriptor.ConcatParentName(True, Buf, ProcSQL, IC);
-    ZDbcUtils.ToBuff(IC.Quote(Descriptor.AttributeName), Buf, ProcSQL);
-    AddArgs(Descriptor.Args, Descriptor);
-    ZDbcUtils.ToBuff(';', Buf, ProcSQL);
-  end;
-  procedure BuildPackage({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
-  var I: Integer;
-  begin
-    for I := 0 to Descriptor.Args.Count -1 do begin
-      if Descriptor.Parent <> nil then
-        ZDbcUtils.ToBuff('BEGIN'#10, Buf, ProcSQL);
-      if TZOraProcDescriptor_A(Descriptor.Args[I]).ObjType = OCI_PTYPE_PKG then
-        BuildPackage(TZOraProcDescriptor_A(Descriptor.Args[I]))
-      else if TZOraProcDescriptor_A(Descriptor.Args[I]).ObjType = OCI_PTYPE_PROC then
-        BuildProcedure(TZOraProcDescriptor_A(Descriptor.Args[I]))
-      else if TZOraProcDescriptor_A(Descriptor.Args[I]).ObjType = OCI_PTYPE_FUNC then
-        BuildFunction(TZOraProcDescriptor_A(Descriptor.Args[I]))
-      else
-        AddArgs(Descriptor.Args, Descriptor);
-      if Descriptor.Parent <> nil then
-        ZDbcUtils.ToBuff(#10'END;', Buf, ProcSQL);
-    end;
-  end;
-begin
-  IC := Connection.GetMetadata.GetIdentifierConvertor;
-  if FProcDescriptor = nil then
-    { describe the object: }
-    FProcDescriptor := TZOraProcDescriptor_A.Create(nil);
-  FProcDescriptor.Describe(OCI_PTYPE_UNK, Connection, StoredProcName);
-  ProcSQL := '';
-  Buf.Pos := 0;
-  ZDbcUtils.ToBuff('BEGIN'#10, Buf, ProcSQL);
-  if FProcDescriptor.ObjType = OCI_PTYPE_PKG then
-    BuildPackage(FProcDescriptor)
-  else if FProcDescriptor.ObjType = OCI_PTYPE_PROC then
-    BuildProcedure(FProcDescriptor)
-  else
-    BuildFunction(FProcDescriptor);
-  ZDbcUtils.ToBuff(#10'END;', Buf, ProcSQL);
-  ZDbcUtils.FlushBuff(Buf,ProcSQL);
-  Result := TZAbstractOraclePreparedStatement_A.Create(Connection, '', Info);
-  TZAbstractOraclePreparedStatement_A(Result).FASQL := {$IFDEF UNICODE}ZUnicodeToRaw(ProcSQL, ConSettings^.ClientCodePage^.CP){$ELSE}ProcSQL{$ENDIF};
-  TZAbstractOraclePreparedStatement_A(Result).Prepare;
-end;
-
-const OCIParamTypeMatrix: array[boolean] of array[OCI_TYPEPARAM_IN..OCI_TYPEPARAM_INOUT] of TZParamType =
-  ((zptInput, zptOutput, zptInputOutput),(zptResult,zptResult,zptResult));
-procedure TZOracleCallableStatement_A.PrepareInParameters;
-var Idx: Integer;
-  procedure RegisterFromDescriptor(ParentDescriptor: TZOraProcDescriptor_A;
-    var IDX: Integer);
-  var i: Integer;
-    Descriptor: TZOraProcDescriptor_A;
-    Tmp: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF};
-    Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
-  begin
-    for I := 0 to ParentDescriptor.Args.Count-1 do begin
-      Descriptor := TZOraProcDescriptor_A(ParentDescriptor.Args[i]);
-      if Descriptor.ObjType <> OCI_PTYPE_ARG then
-        RegisterFromDescriptor(Descriptor, IDX)
-      else begin
-        Tmp := '';
-        Buf.Pos := 0;
-        Descriptor.ConcatParentName(False, Buf, Tmp, nil);
-        ZDbcUtils.ToBuff(Descriptor.AttributeName, Buf, Tmp);
-        ZDbcUtils.FlushBuff(Buf,tmp);
-        FExecStatements[FCallExecKind].RegisterParameter(IDX,
-          Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
-            Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
-        Inc(IDX);
-      end;
-    end;
-  end;
-begin
-  if FProcDescriptor <> nil then begin
-    Idx := {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-    RegisterFromDescriptor(FProcDescriptor, IDX);
-  end;
-end;
-
-function TZOracleCallableStatement_A.SupportsBidirectionalParms: Boolean;
-begin
-  Result := True;
-end;
-
-procedure TZOracleCallableStatement_A.Unprepare;
-begin
-  inherited Unprepare;
-  if FProcDescriptor <> nil then
-    FreeAndNil(FProcDescriptor);
 end;
 
 initialization

@@ -508,7 +508,7 @@ var i: Byte;
 begin
   {$R-} {$Q-}
   { initialize with first negative base-100-digit }
-  Result := vnuInfo.FirstBase100Digit; //init
+  Result := -vnuInfo.FirstBase100Digit; //init
   { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
   for i := 3 to vnuInfo.Len do
     Result := Result * 100 - (101 - num[i]);
@@ -551,7 +551,7 @@ var I64: Int64 absolute Result;
   i: ShortInt;
 begin
   {$R-} {$Q-}
-  i64 := vnuInfo.FirstBase100Digit; //init
+  i64 := -vnuInfo.FirstBase100Digit; //init
   { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
   for i := 3 to vnuInfo.Len do
     i64 := i64 * 100 - (101 - num[i]);
