@@ -3935,6 +3935,7 @@ end;
 }
 procedure TZRowAccessor.SetBigDecimal(ColumnIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
 var Data: PPointer;
+  {$IFDEF BCD_TEST}BCD_REMINDER: BOOLEAN;{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
@@ -3942,6 +3943,8 @@ begin
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
   Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF BCD_TEST}
+  {$ELSE}
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stBoolean: PWordBool(Data)^ := Value <> 0;
@@ -3964,6 +3967,7 @@ begin
       then SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
       else SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
   end;
+  {$ENDIF}
 end;
 
 {**

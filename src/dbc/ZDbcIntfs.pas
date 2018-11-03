@@ -144,6 +144,8 @@ type
     spPostgreSQL, spIB_FB, spMySQL, spNexusDB, spSQLite, spDB2, spAS400,
     spInformix, spCUBRID, spFoxPro);
 
+  //TZTimeType = (ttTime, ttDate, ttDateTime, ttInterval);
+
 // Interfaces
 type
 
@@ -607,7 +609,7 @@ type
     procedure SetDouble(ParameterIndex: Integer; const Value: Double);
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency);
     procedure SetBigDecimal(ParameterIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
-    procedure SetPChar(ParameterIndex: Integer; Value: PChar);
+    //procedure SetPChar(ParameterIndex: Integer; Value: PChar);
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
     procedure SetString(ParameterIndex: Integer; const Value: String);
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); //AVZ
@@ -641,16 +643,6 @@ type
     Fraction: packed array [0..31] of Byte; { BCD Nibbles, 00..99 per Byte, high Nibble 1st }
   end;
 
-  { TZSQLTimeStamp }
-  TZTimeStamp = packed record
-    Year: Word;
-    Month: Word;
-    Day: Word;
-    Hour: Word;
-    Minute: Word;
-    Second: Word;
-    Fractions: LongWord;
-  end;
   TZParamType = (zptUnknown, zptInput, zptOutput, zptInputOutput, zptResult);
   TZParamTypeDynArray = array of TZParamType;
 
@@ -766,7 +758,11 @@ type
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
-    function GetBigDecimal(ColumnIndex: Integer): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF};
+    {$IFDEF BCD_TEST}
+    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    {$ELSE}
+    function GetBigDecimal(ColumnIndex: Integer): Extended;
+    {$ENDIF}
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -810,7 +806,11 @@ type
     function GetFloatByName(const ColumnName: string): Single;
     function GetDoubleByName(const ColumnName: string): Double;
     function GetCurrencyByName(const ColumnName: string): Currency;
-    function GetBigDecimalByName(const ColumnName: string): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF};
+    {$IFDEF BCD_TEST}
+    procedure GetBigDecimalByName(const ColumnName: string; var Result: TBCD);
+    {$ELSE}
+    function GetBigDecimalByName(const ColumnName: string): Extended;
+    {$ENDIF}
     function GetBytesByName(const ColumnName: string): TBytes;
     function GetDateByName(const ColumnName: string): TDateTime;
     function GetTimeByName(const ColumnName: string): TDateTime;

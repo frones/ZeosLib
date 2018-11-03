@@ -94,13 +94,13 @@ const
   { SQL definitions order by value and versions }
   SQL_VARYING                    = 448; //#0 terminated
   SQL_TEXT                       = 452; //fixed char(N)
-  SQL_DOUBLE                     = 480;
-  SQL_FLOAT                      = 482;
+  SQL_DOUBLE                     = 480; //sizeof (double)
+  SQL_FLOAT                      = 482; //sizeof (single)
   SQL_LONG                       = 496;
   SQL_SHORT                      = 500;
   SQL_TIMESTAMP                  = 510;
   SQL_BLOB                       = 520;
-  SQL_D_FLOAT                    = 530;
+  SQL_D_FLOAT                    = 530;//sizeof (double)
   SQL_ARRAY                      = 540;
   SQL_QUAD                       = 550;
   SQL_TYPE_TIME                  = 560;

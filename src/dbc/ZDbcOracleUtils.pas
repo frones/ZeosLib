@@ -352,8 +352,6 @@ const
       10000);
   NVU_CurrencyExponents: array[0..10] of Integer =
     (-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8);
-  sAlignCurrencyScale2Precision: array[0..4] of Integer = (
-    15, 16, 17, 18, 19);
   {$IFNDEF WITH_UINT64_C1118_ERROR}
   uPosScaleFaktor: array[0..19] of UInt64 = (
       1,
