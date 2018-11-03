@@ -86,7 +86,7 @@ type
     protected
       FCheckDbDead: Boolean;
     public
-      constructor Create(Connection: IZDBLibConnection; const CheckDbDead: Boolean); virtual;
+      constructor Create(Connection: IZDBLibConnection; const CheckDbDead: Boolean); reintroduce;
       function Next: Boolean; override;
       procedure GetColData(ColIndex: Integer; out DatPtr: Pointer; out DatLen: Integer); override;
   end;
