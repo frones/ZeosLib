@@ -204,7 +204,8 @@ function MAXALIGN(nbytes: Integer): Integer;
 
 implementation
 
-uses Math, ZFastCode, ZMessages, ZSysUtils, ZClasses;
+uses Math, ZFastCode, ZMessages, ZSysUtils, ZClasses
+  {$IFDEF TSYSCHARSET_IS_DEPRECATED}, ZDbcUtils{$ENDIF};
 
 {**
    Return ZSQLType from PostgreSQL type name
@@ -725,17 +726,21 @@ end;
    @return a miror version number
 }
 function GetMinorVersion(const Value: string): Word;
-var
-  I: integer;
-  Temp: string;
+var Buf: array[0..20] of Char;
+  P, PEnd, PBuf: PChar;
 begin
-  Temp := '';
-  for I := 1 to Length(Value) do
-    if CharInSet(Value[I], ['0'..'9']) then
-      Temp := Temp + Value[I]
-    else
+  P := Pointer(Value);
+  PEnd := P + Length(Value);
+  PBuf := @Buf[0];
+  while P < PEnd do
+    if (Ord(P^) in [Ord('0')..Ord('9')]) then begin
+      PBuf^:= P^;
+      Inc(P);
+      Inc(PBuf);
+    end else
       Break;
-  Result := StrToIntDef(Temp, 0);
+  PBuf^ := #0;
+  Result := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(PWideChar(@Buf[0]), 0);
 end;
 
 function date2j(y, m, d: Integer): Integer;

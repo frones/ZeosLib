@@ -60,7 +60,7 @@ uses
   {$IF defined(WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
   {$IFEND}
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} ZDbcUtils, ZSelectSchema,
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}, ZDbcUtils, ZSelectSchema,
   ZSysUtils, ZDbcIntfs, ZVariant, ZPlainOracleDriver, ZDbcLogging,
   ZCompatibility, ZPlainOracleConstants, FmtBCD;
 
@@ -435,7 +435,7 @@ type
 implementation
 
 uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
-  ZEncoding, ZFastCode, ZClasses
+  ZEncoding, ZFastCode {$IFNDEF NO_UNIT_CONTNRS},ZClasses{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IFDEF UNICODE},StrUtils{$ENDIF};
 (* Oracle Docs: https://docs.oracle.com/cd/B28359_01/appdev.111/b28395/oci03typ.htm#i423688
@@ -639,11 +639,11 @@ begin
     PByte(Buf)^ := Ord('0')+vnuInfo.FirstBase100Digit;
     Inc(Buf);
   end else begin
-    PWord(Buf)^ := Word(TwoDigitLookupRaw[vnuInfo.FirstBase100Digit]);
+    PWord(Buf)^ := Word(TwoDigitLookupW[vnuInfo.FirstBase100Digit]);
     Inc(Buf,2);
   end;
   for I := 3 to vnuInfo.Len do begin
-    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(num[i] - 1)]);
+    PWord(Buf)^ := Word(TwoDigitLookupW[Byte(num[i] - 1)]);
     Inc(Buf,2);
   end;
   I := (vnuInfo.Len-1)*2;
@@ -680,11 +680,11 @@ begin
     PByte(Buf+1)^ := Ord('0')+vnuInfo.FirstBase100Digit;
     Inc(Buf, 2);
   end else begin
-    PWord(Buf+1)^ := Word(TwoDigitLookupRaw[vnuInfo.FirstBase100Digit]);
+    PWord(Buf+1)^ := Word(TwoDigitLookupW[vnuInfo.FirstBase100Digit]);
     Inc(Buf,3);
   end;
   for I := 3 to vnuInfo.Len do begin
-    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(101 - num[i])]);
+    PWord(Buf)^ := Word(TwoDigitLookupW[Byte(101 - num[i])]);
     Inc(Buf,2);
   end;
   I := (vnuInfo.Len-1)*2;
@@ -1691,7 +1691,8 @@ begin
   end;
 end;
 
-constructor TZOraProcDescriptor_A.Create(Parent: TZOraProcDescriptor_A);
+constructor TZOraProcDescriptor_A.Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}
+  Parent: TZOraProcDescriptor_A);
 begin
   fParent := Parent;
 end;

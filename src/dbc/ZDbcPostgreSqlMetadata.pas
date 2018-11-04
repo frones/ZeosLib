@@ -3702,22 +3702,20 @@ end;
 function TZPostgreSQLIdentifierConvertor.IsSpecialCase(
   const Value: string): Boolean;
 var
-  I: Integer;
+  P, PEnd: PChar;
 begin
   Result := False;
-  if not CharInSet(Value[1], ['a'..'z','_']) then
-  begin
+  P := Pointer(Value);
+  if (P = nil) or not (Ord(P^) in [Ord('a')..Ord('z'),Ord('_')]) then begin
     Result := True;
     Exit;
   end;
-  for I := 1 to Length(Value) do
-  begin
-    if not CharInSet(Value[I], ['A'..'Z','a'..'z','0'..'9','_']) then
-    begin
+  PEnd := P+Length(Value);
+  while P < PEnd do
+    if not (Ord(P^) in [Ord('A')..Ord('Z'),Ord('a')..Ord('z'),Ord('0')..Ord('9'),Ord('_')]) then begin
       Result := True;
       Break;
     end;
-  end;
 end;
 
 function TZPostgreSQLIdentifierConvertor.Quote(const Value: string): string;

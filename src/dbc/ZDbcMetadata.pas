@@ -2181,25 +2181,38 @@ end;
 }
 function TZAbstractDatabaseMetadata.HasNoWildcards(const Pattern: string): boolean;
 var
-  I: Integer;
   PreviousCharWasEscape: Boolean;
   EscapeChar,PreviousChar: Char;
   WildcardsSet: TZWildcardsSet;
+  P, PEnd: PChar;
+{$IFDEF TSYSCHARSET_IS_DEPRECATED}
+function CharInSet(C: Char; const CharSet: TZWildcardsSet): Boolean;
+var I: Integer;
+begin
+  Result := False;
+  for I := Low(CharSet) to High(CharSet) do
+    if CharSet[i] = C then begin
+      Result := True;
+      Break;
+    end;
+end;
+{$ENDIF}
 begin
   Result := False;
   PreviousChar := #0;
   PreviousCharWasEscape := False;
   EscapeChar := GetDatabaseInfo.GetSearchStringEscape[1];
   WildcardsSet := GetWildcardsSet;
-  for I := 1 to Length(Pattern) do begin
-    if (not PreviousCharWasEscape) and CharInset(Pattern[I], WildcardsSet) then
+  P := Pointer(Pattern);
+  PEnd := P+Length(Pattern);
+  while P<PEnd do begin
+    if (not PreviousCharWasEscape) and CharInset(P^, WildcardsSet) then
      Exit;
-
-    PreviousCharWasEscape := (Pattern[I] = EscapeChar) and (PreviousChar <> EscapeChar);
-    if (PreviousCharWasEscape) and (Pattern[I] = EscapeChar) then
-      PreviousChar := #0
-    else
-      PreviousChar := Pattern[I];
+    PreviousCharWasEscape := (P^ = EscapeChar) and (PreviousChar <> EscapeChar);
+    if (PreviousCharWasEscape) and (P^ = EscapeChar)
+    then PreviousChar := #0
+    else PreviousChar := P^;
+    Inc(P);
   end;
   Result := True;
 end;
@@ -5306,7 +5319,6 @@ begin
   Result:= Format('get-tables:%s:%s:%s:%s',
     [Catalog, SchemaPattern, TableNamePattern, Key]);
 end;
-
 
 const
   CharacterSetsColumnsCount = 2;

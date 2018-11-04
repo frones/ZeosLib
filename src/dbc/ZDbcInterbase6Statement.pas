@@ -653,8 +653,8 @@ begin
     SQL_INT64     : if XSQLVAR.sqlscale = 0
                     then Result := IntToRaw(PInt64(XSQLVAR.sqldata)^)
                     else Result := FloatToRaw(PInt64(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_TEXT      : Result := SQLQuotedStr(PAnsiChar(XSQLVAR.sqldata), XSQLVAR.sqllen, #39);
-    SQL_VARYING   : Result := SQLQuotedStr(PAnsiChar(@PISC_VARYING(XSQLVAR.sqldata).str[0]), PISC_VARYING(XSQLVAR.sqldata).strlen, #39);
+    SQL_TEXT      : Result := SQLQuotedStr(PAnsiChar(XSQLVAR.sqldata), XSQLVAR.sqllen, AnsiChar(#39));
+    SQL_VARYING   : Result := SQLQuotedStr(PAnsiChar(@PISC_VARYING(XSQLVAR.sqldata).str[0]), PISC_VARYING(XSQLVAR.sqldata).strlen, AnsiChar(#39));
     SQL_BLOB      : Result := '(LOB)';
     SQL_TYPE_TIME : begin
                       isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^,

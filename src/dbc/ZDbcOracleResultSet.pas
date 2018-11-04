@@ -687,6 +687,7 @@ function TZOracleAbstractResultSet_A.GetPWideChar(ColumnIndex: Integer;
   out Len: NativeUInt): PWideChar;
 var SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
+  D: Double;
 label dbl, sin, set_from_tmp;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -756,15 +757,12 @@ begin
                   Len := Result - @FTinyBuffer[0];
                   Result := @FTinyBuffer[0];
                 end;
-              else begin(*
-                  Fbufsize := SizeOf(FTinyBuffer);
-                  fStatus := FplainDriver.OCINumberToText(FErrorHandle, POCINumber(P),
-                    sql_fmt, sql_fmt_length, sql_nls_params, sql_nls_p_length, @Fbufsize, @FTinyBuffer[0]);
-                  if fStatus <> OCI_SUCCESS then
-                    CheckOracleError(FPlainDriver, FErrorHandle, fStatus, lcOther,
-                          'OCINumberToText', ConSettings);*)
-                  Len := Fbufsize;
+              else begin
                   Result := @FTinyBuffer[0];
+                  fStatus := FplainDriver.OCINumberToReal(FErrorHandle, POCINumber(P), SizeOf(Double), @D);
+                  if fStatus <> OCI_SUCCESS then
+                    CheckOracleError(FPlainDriver, FErrorHandle, fStatus, lcOther, 'OCINumberToReal', ConSettings);
+                  Len := FloatToSQLUnicode(D, @FTinyBuffer)
                 end;
             end;
 
@@ -784,7 +782,7 @@ begin
                   case SQLVarHolder.value_sz of
                     SizeOf(UInt64): IntToUnicode(PUInt64(P)^, @FTinyBuffer[0], @Result);
                     SizeOf(Cardinal): IntToUnicode(PCardinal(P)^, @FTinyBuffer[0], @Result);
-                    SizeOf(SmallInt): IntToUnicode(Cardinal(PWord(P)^), @FTinyBuffer[0], @Result);
+                    SizeOf(Word): IntToUnicode(Cardinal(PWord(P)^), @FTinyBuffer[0], @Result);
                     else IntToUnicode(Cardinal(PByte(P)^), @FTinyBuffer, @Result[0]);
                   end;
                   Len := Result - PWideChar(@FTinyBuffer[0]);
@@ -833,7 +831,7 @@ set_from_tmp:
         end;
       SQLT_CLOB:
         begin
-          FTempLob  := GetBlob(ColumnIndex);
+          FTempLob  := GetBlob(ColumnIndex); //localize
           Result    := FTempLob.GetPWideChar;
           Len       := FTempLob.Length;
         end;
@@ -1396,88 +1394,13 @@ end;
 function TZOracleAbstractResultSet_A.GetUnicodeString(
   ColumnIndex: Integer): ZWideString;
 var
-  SQLVarHolder: PZSQLVar;
-  P: PAnsiChar;
+  Len: NativeUInt;
+  P: PWideChar;
 begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stUnicodeString);
-{$ENDIF}
-  {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-  if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    LastWasNull := True;
-    Result := ''
-  end else begin
-    P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
-    LastWasNull := False;
-    case SQLVarHolder.dty of
-      { the supported String types we use }
-      SQLT_AFC: Result := PRawToUnicode(P, GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz), FClientCP);
-      SQLT_VST: Result := PRawToUnicode(PAnsiChar(@PPOCILong(P)^.data[0]), PPOCILong(P)^.Len, FClientCP);
-      SQLT_VCS: Result := PRawToUnicode(PAnsiChar(@POCIVary(P).data[0]), POCIVary(P).Len, FClientCP);
-      SQLT_LVC: Result := PRawToUnicode(PAnsiChar(@POCILong(P).data[0]), POCILong(P).Len, FClientCP);
-      { the oracle soft decimal }
-      SQLT_VNU: case nvuKind(POCINumber(P), FvnuInfo) of
-                  nvu0:       Result := '0';
-                  nvuNegInf:  Result := '-Infinity';
-                  nvuPosInf:  Result := 'Infinity';
-                  vnuNegInt:  Result := IntToUnicode(NegNvu2Int(POCINumber(P), FvnuInfo));
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-                  vnuPosInt:  Result := IntToUnicode(PosNvu2Int(POCINumber(P), FvnuInfo));
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-                  vnuPosCurr: Result := CurrToUnicode(PosNvu2Curr(POCINumber(P), FvnuInfo));
-                  vnuNegCurr: Result := CurrToUnicode(NegNvu2Curr(POCINumber(P), FvnuInfo));
-                  else begin
-                      Fbufsize := SizeOf(FTinyBuffer);
-                      fStatus := FplainDriver.OCINumberToText(FErrorHandle, POCINumber(P),
-                        sql_fmt, sql_fmt_length, sql_nls_params, sql_nls_p_length, @Fbufsize, @FTinyBuffer[0]);
-                      if fStatus <> OCI_SUCCESS then
-                        CheckOracleError(FPlainDriver, FErrorHandle, fStatus, lcOther,
-                              'OCINumberToText', ConSettings);
-                      ZSetString(PAnsiChar(@FTinyBuffer[0]), Fbufsize, Result);
-                    end;
-                end;
-      { the ordinals we yet do support }
-      SQLT_INT: case SQLVarHolder.value_sz of
-                  SizeOf(Int64):    Result := IntToUnicode(PInt64(P)^);
-                  SizeOf(LongInt):  Result := IntToUnicode(PLongInt(P)^);
-                  SizeOf(SmallInt): Result := IntToUnicode(PSmallInt(P)^);
-                  else              Result := IntToUnicode(PShortInt(P)^);
-                end;
-      SQLT_UIN: case SQLVarHolder.value_sz of
-                  SizeOf(UInt64):   Result := IntToUnicode(PUInt64(P)^);
-                  SizeOf(Cardinal): Result := IntToUnicode(PCardinal(P)^);
-                  SizeOf(Word):     Result := IntToUnicode(PWord(P)^);
-                  else              Result := IntToUnicode(PByte(P)^);
-                end;
-      { the FPU floats we du support }
-      SQLT_FLT: if SQLVarHolder^.value_sz = SizeOf(Double)
-                then Result := FloatToSQLUnicode(PDouble(P)^)
-                else Result := FloatToSQLUnicode(PSingle(P)^);
-      SQLT_BFLOAT:  Result := FloatToSQLUnicode(PSingle(P)^);
-      SQLT_BDOUBLE: Result := FloatToSQLUnicode(PDouble(P)^);
-      { the binary raw we support }
-      SQLT_VBI: Result := Ascii7ToUnicodeString(PAnsiChar(@POCIVary(P)^.data[0]), POCIVary(P)^.Len);
-      SQLT_LVB: Result := Ascii7ToUnicodeString(PAnsiChar(@POCILong(P)^.data[0]), POCILong(P)^.Len);
-      { the date/time types we support }
-      SQLT_DAT, SQLT_TIMESTAMP:
-        Result := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(GetAsDateTimeValue(SQLVarHolder),
-          ConSettings^.ReadFormatSettings, False);
-      SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
-        begin
-          FTempLob := GetBlob(ColumnIndex);
-          Result := Ascii7ToUnicodeString(FTempLob.GetBuffer, FTempLob.Length);
-        end;
-      SQLT_CLOB:
-        begin
-          FTempLob := GetBlob(ColumnIndex);
-          Result := FTempLob.GetUnicodeString;
-        end;
-      else
-        raise Exception.Create('Missing OCI Type?');
-    end;
-  end;
+  P := GetPWidechar(ColumnIndex, Len);
+  if P = Pointer(FUniTemp)
+  then Result := FUniTemp
+  else System.SetString(Result, P, Len);
 end;
 
 

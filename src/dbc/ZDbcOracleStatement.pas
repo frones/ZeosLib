@@ -635,9 +635,9 @@ begin
             Result := DateTimeToRawSQLTimeStamp(EncodeDate(PSB2(@TS.Year)^, PUB1(@TS.Month)^, PUB1(@Ts.Day)^)+
               EncodeTime(PUB1(@Ts.Hour)^, PUB1(@Ts.Minute)^, PUB1(@Ts.Second)^, Ts.Fractions div 1000000), ConSettings.DisplayFormatSettings, True);
       end;
-    SQLT_AFC: Result := SQLQuotedStr(Bind.valuep, Bind.Value_sz, #39);
+    SQLT_AFC: Result := SQLQuotedStr(Bind.valuep, Bind.Value_sz, AnsiChar(#39));
     SQLT_VCS: ZSetString(@POCIVary(Bind.valuep).data[0], POCIVary(Bind.valuep).Len, Result); //used for big (s/u) ordinals on old oracle
-    SQLT_LVC: Result := SQLQuotedStr(PAnsiChar(@POCILong(Bind.valuep).data[0]), POCILong(Bind.valuep).Len, #39);
+    SQLT_LVC: Result := SQLQuotedStr(PAnsiChar(@POCILong(Bind.valuep).data[0]), POCILong(Bind.valuep).Len, AnsiChar(#39));
     SQLT_LVB: Result := GetSQLHexAnsiString(@POCILong(Bind.valuep).data[0], POCILong(Bind.valuep).Len, False);
     SQLT_CLOB: Result := '(CLOB)';
     SQLT_BLOB: Result := '(BLOB)';
@@ -1170,17 +1170,17 @@ begin
   ClientStrings := nil;
   ArrayLen := {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
   case SQLType of
-    stBoolean: begin //Oracle doesn't support inparam boolean types so lets use integers and OCI converts it..
+    stBoolean: begin //Oracle doesn't support inparam boolean types so let's use integers and OCI converts it..
         if (Bind.dty <> SQLT_INT) or (Bind.value_sz <> SizeOf(LongInt)) or (Bind.curelen < ArrayLen) then
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(LongInt));
         for i := 0 to ArrayLen -1 do PLongInt(Bind.valuep+I*SizeOf(LongInt))^ := Ord(TBooleanDynArray(Value)[i]);
       end;
-    stByte: begin //Oracle doesn't support byte types so lets use integers and OCI converts it..
+    stByte: begin //Oracle doesn't support byte types so let's use integers and OCI converts it..
         if (Bind.dty <> SQLT_UIN) or (Bind.value_sz <> SizeOf(Word)) or (Bind.curelen < ArrayLen) then
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen);
         for i := 0 to ArrayLen -1 do PWord(Bind.valuep+I*SizeOf(Word))^ := TByteDynArray(Value)[i];
       end;
-    stShort: begin //Oracle doesn't support shortint types so lets use integers and OCI converts it..
+    stShort: begin //Oracle doesn't support shortint types so let's use integers and OCI converts it..
         if (Bind.dty <> SQLT_INT) or (Bind.value_sz <> SizeOf(SmallInt)) or (Bind.curelen < ArrayLen) then
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen);
         for i := 0 to ArrayLen -1 do PSmallInt(Bind.valuep+I*SizeOf(SmallInt))^ := TShortIntDynArray(Value)[i];
