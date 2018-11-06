@@ -1413,7 +1413,7 @@ begin
     FLoader.AddLocation(LINUX_DLL51_LOCATION);
     FLoader.AddLocation(LINUX_DLL55_LOCATION);
     FLoader.AddLocation(LINUX_DLL56_LOCATION);
-    FLoader.AddLocation(LINUX_DLL56_LOCATION);
+    FLoader.AddLocation(LINUX_DLL57_LOCATION);
   {$ENDIF}
 end;
 
