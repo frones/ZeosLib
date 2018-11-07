@@ -359,6 +359,7 @@ var
 begin
   if Variables <> nil then begin
     { Frees allocated memory for output variables }
+    if Variables.AllocNum > 0 then
     for I := 0 to Variables.AllocNum-1 do begin
       {$R-}
       CurrentVar := @Variables.Variables[I];
@@ -1024,6 +1025,7 @@ var
   I: Integer;
   J: LongWord;
 begin
+  if Variables^.AllocNum > 0 then
   for i := 0 to Variables^.AllocNum -1 do
     {$R-}
     if (Variables^.Variables[i].DescriptorType > 0) and (Length(Variables^.Variables[i].Lobs) > 0) then
