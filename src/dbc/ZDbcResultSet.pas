@@ -87,7 +87,7 @@ type
     FColumnsInfo: TObjectList;
     FMetadata: TContainedObject;
     FStatement: IZStatement;
-    FWeakIntfPtrOfSelf: Pointer; //EH: reminder for dereferencing on stmt
+    FWeakIntfPtrOfSelf: Pointer; //EH: Remainder for dereferencing on stmt
     //note: while in destruction IZResultSet(Self) has no longer the same pointer address!
     //so we mark the address in constructor
   protected
@@ -771,7 +771,7 @@ begin
 
   { the constructor keeps the refcount to 1}
   QueryInterface(IZResultSet, RS);
-  FWeakIntfPtrOfSelf := Pointer(RS); //reminder for unregister on stmt!
+  FWeakIntfPtrOfSelf := Pointer(RS); //Remainder for unregister on stmt!
   RS := nil;
   if Statement = nil then begin
     FResultSetType := rtForwardOnly;
