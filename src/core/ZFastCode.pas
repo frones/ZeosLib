@@ -413,7 +413,7 @@ function GetOrdinalDigits(Value: ShortInt): Byte; overload; {$IFDEF WITH_INLINE}
 implementation
 
 uses
-  {$IF defined(PatchSystemMove) and defined(MSWINDOWS)}Windows,{$ENDIF}
+  {$IF defined(PatchSystemMove) and defined(MSWINDOWS)}Windows,{$IFEND}
   {$IF defined(WITH_STRLEN_DEPRECATED) and defined(WITH_UNITANSISTRINGS)}AnsiStrings, {$IFEND}
   SysConst{$IFNDEF WITH_PUREPASCAL_INTPOWER}, Math{$ENDIF};
 
