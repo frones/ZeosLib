@@ -594,19 +594,15 @@ begin
                   Len := Result - @FTinyBuffer[0];
                   Result := @FTinyBuffer[0];
                 end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_BFLOAT:  goto sin;
       SQLT_BDOUBLE: goto dbl;
       SQLT_FLT: begin
                   if SQLVarHolder^.value_sz = SizeOf(Double) then
-      dbl:          FRawTemp := FloatToSQLRaw(PDouble(Result)^)
+      dbl:          Len := FloatToSQLRaw(PDouble(Result)^, @FTinyBuffer)
                   else
-      sin:          FRawTemp := FloatToSQLRaw(PSingle(Result)^);
-                  {$IFDEF WITH_INLINE}
-                  Len := System.Length(FRawTemp){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}
-                  {$ELSE}
-                  Len := {%H-}PLongInt(NativeUInt(FRawTemp) - 4)^;
-                  {$ENDIF};
+      sin:          Len := FloatToSQLRaw(PSingle(Result)^, @FTinyBuffer);
+                  Result := @FTinyBuffer[0];
                 end;
       { the binary raw we support }
       SQLT_VBI: begin
