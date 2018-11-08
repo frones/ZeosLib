@@ -2185,18 +2185,18 @@ var
   EscapeChar,PreviousChar: Char;
   WildcardsSet: TZWildcardsSet;
   P, PEnd: PChar;
-{$IFDEF TSYSCHARSET_IS_DEPRECATED}
-function CharInSet(C: Char; const CharSet: TZWildcardsSet): Boolean;
-var I: Integer;
-begin
-  Result := False;
-  for I := Low(CharSet) to High(CharSet) do
-    if CharSet[i] = C then begin
-      Result := True;
-      Break;
-    end;
-end;
-{$ENDIF}
+  {$IFDEF TSYSCHARSET_IS_DEPRECATED}
+  function CharInSet(C: Char; const CharSet: TZWildcardsSet): Boolean;
+  var I: Integer;
+  begin
+    Result := False;
+    for I := Low(CharSet) to High(CharSet) do
+      if CharSet[i] = C then begin
+        Result := True;
+        Break;
+      end;
+  end;
+  {$ENDIF}
 begin
   Result := False;
   PreviousChar := #0;
