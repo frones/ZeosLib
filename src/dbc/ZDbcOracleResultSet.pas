@@ -1148,7 +1148,7 @@ begin
                   SizeOf(Word):     Result := PWord(P)^ <> 0;
                   else              Result := PByte(P)^ <> 0;
                 end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_FLT: if SQLVarHolder^.value_sz = SizeOf(Double)
                 then Result := PDouble(P)^ <> 0
                 else Result := PSingle(P)^ <> 0;
@@ -1252,7 +1252,7 @@ begin
           SizeOf(Word):     Result := PSmallInt(P)^;
           else              Result := PByte(P)^;
         end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
                     then Result := Trunc(PDouble(P)^)
                     else Result := Trunc(PSingle(P)^);
@@ -1356,7 +1356,7 @@ begin
           SizeOf(Word):     Result := PWord(P)^;
           else              Result := PByte(P)^;
         end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
                     then Result := Trunc(PDouble(P)^)
                     else Result := Trunc(PSingle(P)^);
@@ -1471,7 +1471,7 @@ begin
             SizeOf(Word):     Result := PSmallInt(P)^;
             else              Result := PByte(P)^;
           end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
                     then Result := PDouble(P)^
                     else Result := PSingle(P)^;
@@ -1576,7 +1576,7 @@ begin
             SizeOf(Word):     Result := PSmallInt(P)^;
             else              Result := PByte(P)^;
           end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
                     then Result := PDouble(P)^
                     else Result := PSingle(P)^;
@@ -1719,7 +1719,7 @@ begin
             SizeOf(Word):     Result := PSmallInt(P)^;
             else              Result := PByte(P)^;
           end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
                     then Result := PDouble(P)^
                     else Result := PSingle(P)^;
@@ -1846,7 +1846,7 @@ ConvFromString:   if (P+2)^ = ':' then //possible date if Len = 10 then
             SizeOf(Word):     Result := PSmallInt(P)^;
             else              Result := PByte(P)^;
           end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
                     then Result := PDouble(P)^
                     else Result := PSingle(P)^;
