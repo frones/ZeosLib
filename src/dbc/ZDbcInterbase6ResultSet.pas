@@ -339,24 +339,26 @@ begin
           SQL_D_FLOAT,
           SQL_DOUBLE    : JSONWriter.AddDouble(PDouble(sqldata)^);
           SQL_FLOAT     : JSONWriter.AddSingle(PSingle(sqldata)^);
-          SQL_LONG      : if sqlscale = 0 then
-                            JSONWriter.Add(PLongInt(sqldata)^)
-                          else if sqlScale = -4 then
-                            JSONWriter.AddCurr64(Int64(PLongInt(sqldata)^))
-                          else
-                            JSONWriter.AddDouble(PLongInt(sqldata)^/IBScaleDivisor[sqlscale]);
           SQL_SHORT     : if sqlscale = 0 then
                             JSONWriter.Add(PSmallint(sqldata)^)
-                          else if sqlScale = -4 then
-                            JSONWriter.AddCurr64(Int64(PSmallint(sqldata)^))
-                          else
-                            JSONWriter.AddDouble(PSmallint(sqldata)^/IBScaleDivisor[sqlscale]);
+                          else begin
+                            ScaledOrdinal2Raw(LongInt(PSmallInt(sqldata)^), @FTinyBuffer, @P, -sqlscale);
+                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PAnsiChar(P)-PAnsiChar(@FTinyBuffer[0]));
+                          end;
+          SQL_LONG      : if sqlscale = 0 then
+                            JSONWriter.Add(PLongInt(sqldata)^)
+                          else begin
+                            ScaledOrdinal2Raw(PLongInt(sqldata)^, @FTinyBuffer, @P, -sqlscale);
+                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PAnsiChar(P)-PAnsiChar(@FTinyBuffer[0]));
+                          end;
           SQL_INT64     : if (sqlscale = 0) then
                             JSONWriter.Add(PInt64(sqldata)^)
                           else if sqlScale = -4 then
                             JSONWriter.AddCurr64(PInt64(sqldata)^)
-                          else
-                            JSONWriter.AddDouble(PSmallint(sqldata)^/IBScaleDivisor[sqlscale]);
+                          else begin
+                            ScaledOrdinal2Raw(PInt64(sqldata)^, @FTinyBuffer, @P, -sqlscale);
+                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PAnsiChar(P)-PAnsiChar(@FTinyBuffer[0]));
+                          end;
           SQL_TIMESTAMP : begin
                             if jcoMongoISODate in JSONComposeOptions then
                               JSONWriter.AddShort('ISODate("')
@@ -1279,9 +1281,9 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZInterbase6XSQLDAResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 var
-  I64: Int64;
   TempDate: TZTimeStamp;
   XSQLVAR: PXSQLVAR;
   label set_Results;
@@ -1291,7 +1293,7 @@ begin
 {$ENDIF}
   {$R-}
   XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
   if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
     LastWasNull := True;
     Len := 0;
@@ -1307,16 +1309,12 @@ begin
       SQL_LONG      : if XSQLVAR.sqlscale = 0 then begin
                         IntToRaw(PLongInt(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result);
                         goto set_Results;
-                      end else if XSQLVAR.sqlscale = -4 then begin
-                        I64 := PLongInt(XSQLVAR.sqldata)^;
-                        CurrToRaw(PCurrency(@i64)^, @FTinyBuffer[0], @Result);
-                        goto set_Results;
                       end else begin
-                        Len := FloatToSQLRaw(PLongInt(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale], @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        ScaledOrdinal2Raw(PLongInt(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result, Abs(XSQLVAR.sqlscale));
+                        goto set_Results;
                       end;
       SQL_FLOAT     : begin
-                        Len := FloatToSQLRaw(PDouble(XSQLVAR.sqldata)^, @FTinyBuffer[0]);
+                        Len := FloatToSQLRaw(PSingle(XSQLVAR.sqldata)^, @FTinyBuffer[0]);
                         Result := @FTinyBuffer[0];
                       end;
       SQL_BOOLEAN   : if PSmallInt(XSQLVAR.sqldata)^ <> 0 then begin
@@ -1336,24 +1334,17 @@ begin
       SQL_SHORT     : if XSQLVAR.sqlscale = 0 then begin
                         IntToRaw(Integer(PSmallInt(XSQLVAR.sqldata)^), @FTinyBuffer[0], @Result);
                         goto set_Results;
-                      end else if XSQLVAR.sqlscale = -4 then begin
-                        I64 := PSmallInt(XSQLVAR.sqldata)^;
-                        CurrToRaw(PCurrency(@i64)^, @FTinyBuffer[0], @Result);
-                        goto set_Results;
                       end else begin
-                        Len := FloatToSQLRaw(PSmallInt(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale], @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        ScaledOrdinal2Raw(Integer(PSmallInt(XSQLVAR.sqldata)^), @FTinyBuffer[0], @Result, Abs(XSQLVAR.sqlscale));
+                        goto set_Results;
                       end;
       SQL_QUAD,
       SQL_INT64     : if XSQLVAR.sqlscale = 0 then begin
                         IntToRaw(PInt64(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result);
                         goto set_Results;
-                      end else if XSQLVAR.sqlscale = -4 then begin
-                        CurrToRaw(PCurrency(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result);
-set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
                       end else begin
-                        Len := FloatToSQLRaw(PInt64(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale], @FTinyBuffer[0]);
+                        ScaledOrdinal2Raw(PInt64(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result, Abs(XSQLVAR.sqlscale));
+set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                         Result := @FTinyBuffer[0];
                       end;
       SQL_TEXT,
@@ -1396,6 +1387,7 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
     end;
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Gets the value of the designated column in the current row
@@ -1460,7 +1452,6 @@ end;
 function TZInterbase6XSQLDAResultSet.GetPWideChar(ColumnIndex: Integer;
   out Len: NativeUInt): PWideChar;
 var
-  I64: Int64;
   TempDate: TZTimeStamp;
   XSQLVAR: PXSQLVAR;
   P: PAnsiChar;
@@ -1471,7 +1462,7 @@ begin
 {$ENDIF}
   {$R-}
   XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
   if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
     LastWasNull := True;
     Len := 0;
@@ -1487,16 +1478,12 @@ begin
       SQL_LONG      : if XSQLVAR.sqlscale = 0 then begin
                         IntToUnicode(PLongInt(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result);
                         goto set_Results;
-                      end else if XSQLVAR.sqlscale = -4 then begin
-                        I64 := PLongInt(XSQLVAR.sqldata)^;
-                        CurrToUnicode(PCurrency(@i64)^, @FTinyBuffer[0], @Result);
-                        goto set_Results;
                       end else begin
-                        Len := FloatToSQLUnicode(PLongInt(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale], @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        ScaledOrdinal2Unicode(PLongInt(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result, Abs(XSQLVAR.sqlscale));
+                        goto set_Results;
                       end;
       SQL_FLOAT     : begin
-                        Len := FloatToSQLUnicode(PDouble(XSQLVAR.sqldata)^, @FTinyBuffer[0]);
+                        Len := FloatToSQLUnicode(PSingle(XSQLVAR.sqldata)^, @FTinyBuffer[0]);
                         Result := @FTinyBuffer[0];
                       end;
       SQL_BOOLEAN   : if PSmallInt(XSQLVAR.sqldata)^ <> 0 then begin
@@ -1516,24 +1503,17 @@ begin
       SQL_SHORT     : if XSQLVAR.sqlscale = 0 then begin
                         IntToUnicode(Integer(PSmallInt(XSQLVAR.sqldata)^), @FTinyBuffer[0], @Result);
                         goto set_Results;
-                      end else if XSQLVAR.sqlscale = -4 then begin
-                        I64 := PSmallInt(XSQLVAR.sqldata)^;
-                        CurrToUnicode(PCurrency(@i64)^, @FTinyBuffer[0], @Result);
-                        goto set_Results;
                       end else begin
-                        Len := FloatToSQLUnicode(PSmallInt(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale], @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        ScaledOrdinal2Unicode(PSmallInt(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result, Abs(XSQLVAR.sqlscale));
+                        goto set_Results;
                       end;
       SQL_QUAD,
       SQL_INT64     : if XSQLVAR.sqlscale = 0 then begin
                         IntToUnicode(PInt64(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result);
                         goto set_Results;
-                      end else if XSQLVAR.sqlscale = -4 then begin
-                        CurrToUnicode(PCurrency(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result);
-set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
                       end else begin
-                        Len := FloatToSQLUnicode(PInt64(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale], @FTinyBuffer[0]);
+                        ScaledOrdinal2Unicode(PInt64(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result, Abs(XSQLVAR.sqlscale));
+set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
                         Result := @FTinyBuffer[0];
                       end;
       SQL_TEXT,
@@ -1594,6 +1574,7 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
     end;
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Gets the value of the designated column in the current row

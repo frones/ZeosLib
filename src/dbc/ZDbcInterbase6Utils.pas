@@ -454,6 +454,16 @@ function ReadInterbase6NumberWithInc(const PlainDriver: TZInterbasePlainDriver; 
 }
 function ReadInterbase6Number(const PlainDriver: TZInterbasePlainDriver; const Buffer): Integer; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
+procedure ScaledOrdinal2Raw(const Value: Int64; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
+procedure ScaledOrdinal2Raw(const Value: UInt64; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
+procedure ScaledOrdinal2Raw(Value: LongInt; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
+procedure ScaledOrdinal2Raw(Value: Cardinal; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
+
+procedure ScaledOrdinal2Unicode(const Value: Int64; Buf: PWideChar; PEnd: ZPPWideChar; Scale: Byte); overload;
+procedure ScaledOrdinal2Unicode(const Value: UInt64; Buf: PWideChar; PEnd: ZPPWideChar; Scale: Byte); overload;
+procedure ScaledOrdinal2Unicode(Value: LongInt; Buf: PWideChar; PEnd: ZPPWideChar; Scale: Byte); overload;
+procedure ScaledOrdinal2Unicode(Value: Cardinal; Buf: PWideChar; PEnd: ZPPWideChar; Scale: Byte); overload;
+
 implementation
 
 uses
@@ -717,6 +727,262 @@ var
 begin
   pBuf := @Buffer;
   Result := ReadInterbase6NumberWithInc(PlainDriver, pBuf);
+end;
+
+procedure ScaledOrdinal2Raw(const Value: Int64; Buf: PAnsiChar; PEnd: PPAnsiChar;
+  Scale: Byte);
+var
+  i64: UInt64;
+  Negative: Boolean;
+begin
+  {$R-} {$Q-}
+  Negative := Value < 0;
+  if Negative then begin
+    i64 := UInt64(-Value);
+    PByte(Buf)^ := Ord('-');
+    Inc(Buf);
+  end else
+    i64 := UInt64(Value);
+  ScaledOrdinal2Raw(i64, Buf, PEnd, Scale);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+procedure ScaledOrdinal2Raw(const Value: UInt64; Buf: PAnsiChar;
+  PEnd: PPAnsiChar; Scale: Byte);
+var
+  Precision: Byte;
+  rEnd: PAnsiChar;//tmp Remainder
+  I: ShortInt;
+begin
+  {$R-} {$Q-}
+  if Value = 0 then begin
+    PByte(Buf)^ := ord('0');
+    rEnd := Buf+1;
+  end else begin
+    Precision := GetOrdinalDigits(Value);
+    if Precision <= Scale then begin
+      PWord(Buf)^ := Ord('0')+Ord('.') shl 8; //write "0."
+      Inc(Buf, 2);
+      for i := 0 to Scale-Precision-1 do begin  //eh: opt? 2/4 digit's per loop?
+        PByte(Buf)^ := Ord('0');
+        Inc(Buf);
+      end;
+      IntToRaw(Value, Buf, Precision);
+      rEnd := Buf+Precision;
+      while (PByte(rEnd-1)^ = Ord('0')) do
+        dec(rEnd);
+    end else begin
+      IntToRaw(Value, Buf, Precision);
+      rEnd := Buf+Precision;
+      while true do begin
+        if (Scale = 0) or (PByte(rEnd-1)^ <> Ord('0')) then
+          Break;
+        Dec(Scale); Dec(rEnd);
+      end;
+      {backward move is now required to set the missing dot char}
+      if Scale > 0 then begin
+        System.Move((rend-Scale)^, (rend+1-Scale)^, Scale); //eh: move call(min 50cycles) required? numbers are not so big...
+        PByte(rend-Scale)^ := Ord('.');
+        Inc(rEnd);
+      end;
+    end;
+  end;
+  if PEnd <> nil
+  then PEnd^ := rEnd
+  else PByte(rEnd)^ := Ord(#0);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+procedure ScaledOrdinal2Raw(Value: LongInt; Buf: PAnsiChar; PEnd: PPAnsiChar;
+  Scale: Byte);
+begin
+  {$R-} {$Q-}
+  if Value < 0 then begin
+    PByte(Buf)^ := Ord('-');
+    ScaledOrdinal2Raw(Cardinal(-Value), Buf+1, PEnd, Scale)
+  end else
+    ScaledOrdinal2Raw(Cardinal(Value), Buf, PEnd, Scale);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+procedure ScaledOrdinal2Raw(Value: Cardinal; Buf: PAnsiChar; PEnd: PPAnsiChar;
+  Scale: Byte);
+var
+  Precision: Byte;
+  rEnd: PAnsiChar;//tmp Remainder
+  I: ShortInt;
+begin
+  {$R-} {$Q-}
+  if Value = 0 then begin
+    PByte(Buf)^ := ord('0');
+    rEnd := Buf+1;
+  end else begin
+    Precision := GetOrdinalDigits(Value);
+    if Precision <= Scale then begin
+      PWord(Buf)^ := Ord('0')+Ord('.') shl 8; //write "0."
+      Inc(Buf, 2);
+      for i := 0 to Scale-Precision-1 do begin  //eh: opt? 2/4 digit's per loop?
+        PByte(Buf)^ := Ord('0');
+        Inc(Buf);
+      end;
+      IntToRaw(Value, Buf, Precision);
+      rEnd := Buf+Precision;
+      while (PByte(rEnd-1)^ = Ord('0')) do
+        dec(rEnd);
+    end else begin
+      IntToRaw(Value, Buf, Precision);
+      rEnd := Buf+Precision;
+      while true do begin
+        if (Scale = 0) or (PByte(rEnd-1)^ <> Ord('0')) then
+          Break;
+        Dec(Scale); Dec(rEnd);
+      end;
+      {backward move is now required to set the missing dot char}
+      if Scale > 0 then begin
+        System.Move((rend-Scale)^, (rend+1-Scale)^, Scale); //eh: move call(min 50cycles) required? numbers are not so big...
+        PByte(rend-Scale)^ := Ord('.');
+        Inc(rEnd);
+      end;
+    end;
+  end;
+  if PEnd <> nil
+  then PEnd^ := rEnd
+  else PByte(rEnd)^ := Ord(#0);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+
+procedure ScaledOrdinal2Unicode(const Value: Int64; Buf: PWideChar;
+  PEnd: ZPPWideChar; Scale: Byte);
+var
+  i64: UInt64;
+  I64Rec: Int64Rec absolute i64;
+  Negative: Boolean;
+begin
+  {$R-} {$Q-}
+  Negative := Value < 0;
+  if Negative then begin
+    i64 := UInt64(-Value);
+    PWord(Buf)^ := Ord('-');
+    Inc(Buf);
+  end else
+    i64 := UInt64(Value);
+  if i64Rec.Hi = 0
+  then ScaledOrdinal2Unicode(i64Rec.Lo, Buf, PEnd, Scale)
+  else ScaledOrdinal2Unicode(i64,       Buf, PEnd, Scale);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+procedure ScaledOrdinal2Unicode(const Value: UInt64; Buf: PWideChar;
+  PEnd: ZPPWideChar; Scale: Byte);
+var
+  Precision: Byte;
+  rEnd: PWideChar;//tmp Remainder
+  I: ShortInt;
+begin
+  {$R-} {$Q-}
+  if Value = 0 then begin
+    PWord(Buf)^ := ord('0');
+    rEnd := Buf+1;
+  end else begin
+    Precision := GetOrdinalDigits(Value);
+    if Precision <= Scale then begin
+      PLongWord(Buf)^ := Ord('0')+Ord('.') shl 16; //write "0."
+      Inc(Buf, 2);
+      for i := 0 to Scale-Precision-1 do begin  //eh: opt? 2/4 digit's per loop?
+        PWord(Buf)^ := Ord('0');
+        Inc(Buf);
+      end;
+      IntToUnicode(Value, Buf, Precision);
+      rEnd := Buf+Precision;
+      while (PWord(rEnd-1)^ = Ord('0')) do
+        dec(rEnd);
+    end else begin
+      IntToUnicode(Value, Buf, Precision);
+      rEnd := Buf+Precision;
+      while true do begin
+        if (Scale = 0) or (PWord(rEnd-1)^ <> Ord('0')) then
+          Break;
+        Dec(Scale); Dec(rEnd);
+      end;
+      {backward move is now required to set the missing dot char}
+      if Scale > 0 then begin
+        System.Move((rend-Scale)^, (rend+1-Scale)^, Scale shl 1); //eh: move call(min 50cycles) required? numbers are not so big...
+        PWord(rend-Scale)^ := Ord('.');
+        Inc(rEnd);
+      end;
+    end;
+  end;
+  if PEnd <> nil
+  then PEnd^ := rEnd
+  else PWord(rEnd)^ := Ord(#0);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+procedure ScaledOrdinal2Unicode(Value: LongInt; Buf: PWideChar;
+  PEnd: ZPPWideChar; Scale: Byte);
+begin
+  {$R-} {$Q-}
+  if Value < 0 then begin
+    PByte(Buf)^ := Ord('-');
+    ScaledOrdinal2Unicode(Cardinal(-Value), Buf+1, PEnd, Scale)
+  end else
+    ScaledOrdinal2Unicode(Cardinal(Value), Buf, PEnd, Scale);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+procedure ScaledOrdinal2Unicode(Value: Cardinal; Buf: PWideChar;
+  PEnd: ZPPWideChar; Scale: Byte);
+var
+  Precision: Byte;
+  rEnd: PWideChar;//tmp Remainder
+  I: ShortInt;
+begin
+  {$R-} {$Q-}
+  if Value = 0 then begin
+    PWord(Buf)^ := ord('0');
+    rEnd := Buf+1;
+  end else begin
+    Precision := GetOrdinalDigits(Value);
+    if Precision <= Scale then begin
+      PLongWord(Buf)^ := Ord('0')+Ord('.') shl 16; //write "0."
+      Inc(Buf, 2);
+      for i := 0 to Scale-Precision-1 do begin  //eh: opt? 2/4 digit's per loop?
+        PWord(Buf)^ := Ord('0');
+        Inc(Buf);
+      end;
+      IntToUnicode(Value, Buf, Precision);
+      rEnd := Buf+Precision;
+      while (PWord(rEnd-1)^ = Ord('0')) do
+        dec(rEnd);
+    end else begin
+      IntToUnicode(Value, Buf, Precision);
+      rEnd := Buf+Precision;
+      while true do begin
+        if (Scale = 0) or (PWord(rEnd-1)^ <> Ord('0')) then
+          Break;
+        Dec(Scale); Dec(rEnd);
+      end;
+      {backward move is now required to set the missing dot char}
+      if Scale > 0 then begin
+        System.Move((rend-Scale)^, (rend+1-Scale)^, Scale shl 1); //eh: move call(min 50cycles) required? numbers are not so big...
+        PWord(rend-Scale)^ := Ord('.');
+        Inc(rEnd);
+      end;
+    end;
+  end;
+  if PEnd <> nil
+  then PEnd^ := rEnd
+  else PWord(rEnd)^ := Ord(#0);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
 {**
