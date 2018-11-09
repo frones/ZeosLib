@@ -434,7 +434,7 @@ type
 
 implementation
 
-uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
+uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet,
   ZEncoding, ZFastCode {$IFNDEF NO_UNIT_CONTNRS},ZClasses{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IFDEF UNICODE},StrUtils{$ENDIF};
@@ -508,7 +508,7 @@ var i: Byte;
 begin
   {$R-} {$Q-}
   { initialize with first negative base-100-digit }
-  Result := -vnuInfo.FirstBase100Digit; //init
+  Result := -ShortInt(vnuInfo.FirstBase100Digit); //init
   { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
   for i := 3 to vnuInfo.Len do
     Result := Result * 100 - (101 - num[i]);
@@ -551,7 +551,7 @@ var I64: Int64 absolute Result;
   i: ShortInt;
 begin
   {$R-} {$Q-}
-  i64 := -vnuInfo.FirstBase100Digit; //init
+  i64 := -ShortInt(vnuInfo.FirstBase100Digit); //init
   { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
   for i := 3 to vnuInfo.Len do
     i64 := i64 * 100 - (101 - num[i]);
@@ -572,7 +572,6 @@ var I64: UInt64;
   Positive: Boolean;
   i, n, p, trailing_zeros: Byte;
   Exponent: ShortInt;
-  label Cardinal_Range;
 begin
   {$R-} {$Q-}
   if Value = 0 then begin
@@ -967,7 +966,7 @@ var
 begin
   if Variables <> nil then begin
     { Frees allocated memory for output variables }
-    for I := 0 to Variables.AllocNum-1 do begin
+    for I := 0 to Integer(Variables.AllocNum)-1 do begin
       {$R-}
       CurrentVar := @Variables.Variables[I];
       {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
@@ -988,7 +987,7 @@ begin
             if Status <> OCI_SUCCESS then
               CheckOracleError(PlainDriver, ErrorHandle, status, lcOther, 'OCIDescriptorFree', ConSettings);
           end;
-    end;
+      end;
     FreeMem(Variables);
     Variables := nil;
   end;
@@ -1797,7 +1796,7 @@ begin
     PlainDriver.OCIAttrGet(arglst, OCI_DTYPE_PARAM, @ParamCount, nil,
       OCI_ATTR_NUM_PARAMS, ErrorHandle),
       lcOther, 'OCIAttrGet', ConSettings);
-  Args := TObjectList.Create;
+  Args := TObjectList.Create;//lse);
   Args.Capacity := ParamCount;
   for N := 0+Ord(ObjType = OCI_PTYPE_PROC) to ParamCount-1+Ord(ObjType = OCI_PTYPE_PROC) do begin
     { get a argument handle }
@@ -1939,9 +1938,9 @@ end;
 
 destructor TZOraProcDescriptor_A.Destroy;
 begin
+  inherited Destroy;
   if Args <> nil then
     FreeAndNil(Args);
-  inherited;
 end;
 
 {$IFDEF WITH_UINT64_C1118_ERROR}
