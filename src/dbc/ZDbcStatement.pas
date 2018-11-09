@@ -91,7 +91,12 @@ type
     FChunkSize: Integer; //size of buffer chunks for large lob's related to network settings
     FClosed: Boolean;
     FCachedLob: Boolean;
-    procedure SetLastResultSet(const ResultSet: IZResultSet); virtual;
+    FDestroying: Boolean;
+    FWeakIntfPtrOfSelf: Pointer; //EH: Remainder for dereregistration on connection
+    //note: while in destruction IZStatement(Self) has no longer the same pointer address!
+    //so we mark the address in constructor
+
+    procedure SetLastResultSet(const ResultSet: IZResultSet); //virtual;
   protected
     FCursorName: RawByteString;
     FRefCountAdded: Boolean; //while closing / unpreparing we need to indicate if closing LastResultSet will detroy this object
@@ -104,6 +109,7 @@ type
     FOpenResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
     procedure PrepareOpenResultSetForReUse; virtual;
     procedure PrepareLastResultSetForReUse; virtual;
+    procedure AfterClose; virtual;
     procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
     procedure SetASQL(const Value: RawByteString); virtual;
     procedure SetWSQL(const Value: ZWideString); virtual;
@@ -895,6 +901,7 @@ var
 }
 constructor TZAbstractStatement.Create(const Connection: IZConnection;
   {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
+var stmt: IZStatement;
 begin
   { Sets the default properties. }
   inherited Create;
@@ -902,7 +909,11 @@ begin
   FLastUpdateCount := -1;
 
   FConnection := Connection;
-  Connection.RegisterStatement(Self);
+  if QueryInterface(IZStatement, stmt) = S_OK then begin
+    FWeakIntfPtrOfSelf := Pointer(stmt);
+    Connection.RegisterStatement(IZStatement(FWeakIntfPtrOfSelf));
+    stmt := nil;
+  end;
   FBatchQueries := TStringList.Create;
 
   FInfo := TStringList.Create;
@@ -918,9 +929,11 @@ end;
 }
 destructor TZAbstractStatement.Destroy;
 begin
-  Close;
+  FDestroying := True;
+  if not Closed then
+     Close;
   FreeAndNil(FBatchQueries);
-  FConnection.DeregisterStatement(Self);
+  FConnection.DeregisterStatement(IZStatement(FWeakIntfPtrOfSelf));
   FConnection := nil;
   FreeAndNil(FInfo);
   inherited Destroy;
@@ -1079,6 +1092,11 @@ begin
     end;
 end;
 
+procedure TZAbstractStatement.AfterClose;
+begin
+  //dummy
+end;
+
 procedure TZAbstractStatement.FlushBuff(var Result: RawByteString);
 var P: PAnsiChar;
 begin
@@ -1187,19 +1205,27 @@ end;
 }
 procedure TZAbstractStatement.Close;
 begin
-  FClosed := True;
-  if FRefCountAdded and Assigned(FLastResultSet) then begin
-    LastResultSet.Close;
-    LastResultSet := nil;
-  end else
-    if not FRefCountAdded and Assigned(FLastResultSet) and (RefCount = 1) then
-    try
+  if not FClosed then begin
+    FClosed := True;
+    if not FRefCountAdded and (Assigned(FOpenResultSet) or Assigned(FLastResultSet)) and (RefCount = 1) then begin
+      FRefCountAdded := True;
       _AddRef;
-      LastResultSet.Close;
-      LastResultSet := nil;
-    finally
-      _Release; // possible running into destructor now
     end;
+    try
+      if Assigned(FLastResultSet) then begin
+        LastResultSet.Close;
+        LastResultSet := nil;
+      end;
+      if Assigned(FOpenResultSet) then begin
+        IZResultSet(FOpenResultSet).Close;
+        FOpenResultSet := nil;
+      end;
+    finally
+      AfterClose;
+      if FRefCountAdded and not FDestroying then
+        _Release; //running into destructor now
+    end;
+  end;
 end;
 
 {**
@@ -4438,19 +4464,14 @@ end;
 }
 procedure TZAbstractPreparedStatement2.Close;
 begin
-  if (RefCount = 1) and Assigned(FOpenResultSet) or Assigned(FLastResultSet) then begin
-    FRefCountAdded := True;
-    _AddRef;
-  end;
-  try
+  if not Closed then begin
+    if not FRefCountAdded and (RefCount = 1) and Assigned(FOpenResultSet) or Assigned(FLastResultSet) then begin
+      FRefCountAdded := True;
+      _AddRef;
+    end;
     if Prepared then
       Unprepare;
     inherited Close;
-  finally
-    if FRefCountAdded then begin
-      FRefCountAdded := False;
-      _Release;
-    end;
   end;
 end;
 

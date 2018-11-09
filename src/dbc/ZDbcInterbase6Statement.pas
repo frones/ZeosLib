@@ -92,9 +92,9 @@ type
     procedure CheckParameterIndex(Value: Integer); override;
     function GetInParamLogValue(Index: Integer): RawByteString; override;
     function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; override;
+    procedure AfterClose; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
-    procedure Close; override;
 
     procedure Prepare; override;
     procedure Unprepare; override;
@@ -359,6 +359,16 @@ begin
   Result := Result - FParamXSQLDA.sqld;
 end;
 
+procedure TZAbstractInterbase6PreparedStatement.AfterClose;
+begin
+  if (FStmtHandle <> 0) then begin// Free statement-handle! Otherwise: Exception!
+    if FPlainDriver.isc_dsql_free_statement(@FStatusVector, @FStmtHandle, DSQL_drop) <> 0 then
+      CheckInterbase6Error(FPlainDriver,
+          FStatusVector, Self, lcOther, 'isc_dsql_free_statement');
+    FStmtHandle := 0;
+  end;
+end;
+
 {**
   Constructs this object and assignes the main properties.
   @param Connection a database connection object.
@@ -387,17 +397,6 @@ begin
     Prepare;
   if (Value<0) or (Value+1 > BindList.Count) then
     raise EZSQLException.Create(SInvalidInputParameterCount)
-end;
-
-procedure TZAbstractInterbase6PreparedStatement.Close;
-begin
-  inherited Close;
-  if (FStmtHandle <> 0) then begin// Free statement-handle! Otherwise: Exception!
-    if FPlainDriver.isc_dsql_free_statement(@FStatusVector, @FStmtHandle, DSQL_drop) <> 0 then
-      CheckInterbase6Error(FPlainDriver,
-          FStatusVector, Self, lcOther, 'isc_dsql_free_statement');
-    FStmtHandle := 0;
-  end;
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.Prepare;
