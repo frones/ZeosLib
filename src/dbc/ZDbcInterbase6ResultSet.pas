@@ -94,7 +94,7 @@ type
       StmtHandleAddr: PISC_STMT_HANDLE; const XSQLDA: IZSQLDA;
       WasLastResult, CachedBlob: boolean; StmtType: TZIbSqlStatementType);
 
-    procedure Close; override;
+    procedure AfterClose; override;
     procedure ResetCursor; override;
 
     //reintroduce is a performance thing (self tested and confirmed!):
@@ -269,15 +269,14 @@ end;
   sequence of multiple results. A <code>ResultSet</code> object
   is also automatically closed when it is garbage collected.
 }
-procedure TZInterbase6XSQLDAResultSet.Close;
+procedure TZInterbase6XSQLDAResultSet.AfterClose;
 begin
   FreeAndNil(FGUIDProps);
   { Free output allocated memory }
   FXSQLDA := nil;
   FIZSQLDA := nil;
-  inherited Close; //Calls ResetCursor so FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_CLOSE); is called
-  { Free allocate sql statement }
   FStmtHandle := 0; //don't forget!
+  inherited AfterClose;
 end;
 
 {$IFDEF USE_SYNCOMMONS}

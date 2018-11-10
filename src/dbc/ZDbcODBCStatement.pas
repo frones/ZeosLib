@@ -123,7 +123,7 @@ type
 
     procedure Prepare; override;
     procedure Unprepare; override;
-    procedure Close; override;
+    procedure AfterClose; override;
     procedure Cancel; override;
 
 
@@ -241,9 +241,8 @@ begin
     SetLength(fBatchLobBuf[i], 0);
 end;
 
-procedure TZAbstractODBCStatement.Close;
+procedure TZAbstractODBCStatement.AfterClose;
 begin
-  inherited Close;
   if Assigned(fHSTMT) then begin
     fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, fHSTMT);
     fHSTMT := nil;

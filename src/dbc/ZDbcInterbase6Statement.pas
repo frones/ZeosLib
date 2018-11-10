@@ -94,7 +94,7 @@ type
     function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
-    procedure Close; override;
+    procedure AfterClose; override;
 
     procedure Prepare; override;
     procedure Unprepare; override;
@@ -389,9 +389,8 @@ begin
     raise EZSQLException.Create(SInvalidInputParameterCount)
 end;
 
-procedure TZAbstractInterbase6PreparedStatement.Close;
+procedure TZAbstractInterbase6PreparedStatement.AfterClose;
 begin
-  inherited Close;
   if (FStmtHandle <> 0) then begin// Free statement-handle! Otherwise: Exception!
     if FPlainDriver.isc_dsql_free_statement(@FStatusVector, @FStmtHandle, DSQL_drop) <> 0 then
       CheckInterbase6Error(FPlainDriver,

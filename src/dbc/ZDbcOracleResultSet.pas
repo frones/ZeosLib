@@ -154,7 +154,7 @@ type
   protected
     procedure Open; override;
   public
-    procedure Close; override;
+    procedure BeforeClose; override;
     function Next: Boolean; override;
   end;
 
@@ -2279,14 +2279,14 @@ end;
   sequence of multiple results. A <code>ResultSet</code> object
   is also automatically closed when it is garbage collected.
 }
-procedure TZOracleResultSet_A.Close;
+procedure TZOracleResultSet_A.BeforeClose;
 begin
   FreeOracleSQLVars(FPlainDriver, FColumns, FIteration, FConnectionHandle,
     FErrorHandle, ConSettings);
   SetLength(Self.FRowsBuffer, 0);
   { prepared statement own handles, so dont free them }
   FStmtHandle := nil;
-  inherited Close;
+  inherited BeforeClose;
 end;
 
 {**

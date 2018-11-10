@@ -115,7 +115,7 @@ type
 
   {** Implements Prepared SQL Statement for Oracle }
   TZOraclePreparedStatement_A = class(TZAbstractOraclePreparedStatement_A, IZPreparedStatement)
-  public
+  protected
     procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); reintroduce;
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); reintroduce;

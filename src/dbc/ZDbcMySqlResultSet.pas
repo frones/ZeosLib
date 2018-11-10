@@ -90,6 +90,9 @@ type
   end;
 
   {** Implements MySQL ResultSet. }
+
+  { TZAbstractMySQLResultSet }
+
   TZAbstractMySQLResultSet = class(TZAbstractResultSet)
   private //common
     FFirstRowFetched: boolean; //we can't seek to a negative index -> hook BeforeFirst state
@@ -114,6 +117,7 @@ type
     FColBuffer: Pointer; //the buffer mysql writes in
     FTempBlob: IZBlob; //temporary Lob
     FSmallLobBuffer: array[Byte] of Byte; //for tiny reads of unbound col-buffers
+    FClosing: Boolean;
   protected
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
@@ -123,7 +127,8 @@ type
       PMYSQL: PPMYSQL; PMYSQL_STMT: PPMYSQL_STMT; AffectedRows: PInteger;
       out OpenCursorCallback: TOpenCursorCallback);
     destructor Destroy; override;
-    procedure Close; override;
+    procedure BeforeClose; override;
+    procedure AfterClose; override;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
@@ -626,6 +631,12 @@ begin
   inherited Destroy;
 end;
 
+procedure TZAbstractMySQLResultSet.BeforeClose;
+begin
+  FClosing := True;
+  inherited BeforeClose;
+end;
+
 {**
   Opens this recordset.
 }
@@ -730,13 +741,13 @@ begin
       Handle := FMYSQL_STMT;
       FMYSQL_STMT := nil;
       //test if more results are pendding
-      if (Handle <> nil) and (FIsOutParamResult or ({not FPlainDriver.IsMariaDBDriver and} (Assigned(FPlainDriver.mysql_stmt_more_results) and (FPlainDriver.mysql_stmt_more_results(FPMYSQL_STMT^) = 1))))
+      if (Handle <> nil) and not FClosing and (FIsOutParamResult or ({not FPlainDriver.IsMariaDBDriver and} (Assigned(FPlainDriver.mysql_stmt_more_results) and (FPlainDriver.mysql_stmt_more_results(FPMYSQL_STMT^) = 1))))
       then Close
       else inherited ResetCursor;
     end else begin
       Handle := FQueryHandle;
       FQueryHandle := nil;
-      if (Handle <> nil) and (FPlainDriver.mysql_more_results(FPMYSQL^) = 1)
+      if (Handle <> nil) and not FClosing and (FPlainDriver.mysql_more_results(FPMYSQL^) = 1)
       then Close
       else inherited ResetCursor;
     end;
@@ -755,15 +766,12 @@ end;
   sequence of multiple results. A <code>ResultSet</code> object
   is also automatically closed when it is garbage collected.
 }
-procedure TZAbstractMySQLResultSet.Close;
+procedure TZAbstractMySQLResultSet.AfterClose;
 begin
-  try
-    inherited Close;
-  finally
-    FQueryHandle := nil;
-    FRowHandle := nil;
-    FMYSQL_STMT := nil;
-  end;
+  FQueryHandle := nil;
+  FRowHandle := nil;
+  FMYSQL_STMT := nil;
+  inherited AfterClose;
 end;
 
 {**

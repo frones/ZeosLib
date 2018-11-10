@@ -107,7 +107,7 @@ type
     constructor Create(const Connection: IZConnection; const Info: TStrings); overload;
     destructor Destroy; override;
 
-    procedure Close; override;
+    procedure AfterClose; override;
 
     procedure Prepare; override;
     procedure Unprepare; override;
@@ -189,9 +189,8 @@ begin
   Result := FZBufferSize;
 end;
 
-procedure TZOleDBPreparedStatement.Close;
+procedure TZOleDBPreparedStatement.AfterClose;
 begin
-  inherited Close;
   FCommand := nil;
 end;
 

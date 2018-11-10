@@ -112,7 +112,7 @@ type
     constructor CreateForMetadataCall(out StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC;
       {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection); virtual; //fpc skope for (GetConneaction as IZODBCConnection) is different to dephi and crashs
     procedure Open; override;
-    procedure Close; override;
+    procedure BeforeClose; override;
 
     function Next: Boolean; override;
     procedure ResetCursor; override;
@@ -217,29 +217,26 @@ begin
   CheckODBCError(RETCODE, fPHSTMT^, SQL_HANDLE_STMT, fConnection);
 end;
 
-procedure TAbstractODBCResultSet.Close;
+procedure TAbstractODBCResultSet.BeforeClose;
 var RETCODE: SQLRETURN;
 begin
-  if not Closed then begin
-    if Assigned(fPHSTMT^) then
-      if fFreeHandle then begin // from metadata
-        CheckStmtError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, fPHSTMT^)); //free handle
-        fPHSTMT^ := nil;
+  inherited BeforeClose;
+  if Assigned(fPHSTMT^) then
+    if fFreeHandle then begin // from metadata
+      CheckStmtError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, fPHSTMT^)); //free handle
+      fPHSTMT^ := nil;
+    end else
+      if Assigned(Statement) and ((Statement as IZODBCStatement).GetMoreResultsIndicator = mriUnknown) then begin
+        ResetCursor;
+        CheckStmtError(fPlainDriver.SQLFreeStmt(fPHSTMT^,SQL_UNBIND)); //discart bindings
+        RETCODE := fPlainDriver.SQLMoreResults(fPHSTMT^);
+        if RETCODE = SQL_SUCCESS then
+          (Statement as IZODBCStatement).SetMoreResultsIndicator(mriHasMoreResults)
+        else if RETCODE = SQL_NO_DATA then
+          (Statement as IZODBCStatement).SetMoreResultsIndicator(mriHasNoMoreResults)
+        else CheckStmtError(RETCODE);
       end else
-        if Assigned(Statement) and ((Statement as IZODBCStatement).GetMoreResultsIndicator = mriUnknown) then begin
-          ResetCursor;
-          CheckStmtError(fPlainDriver.SQLFreeStmt(fPHSTMT^,SQL_UNBIND)); //discart bindings
-          RETCODE := fPlainDriver.SQLMoreResults(fPHSTMT^);
-          if RETCODE = SQL_SUCCESS then
-            (Statement as IZODBCStatement).SetMoreResultsIndicator(mriHasMoreResults)
-          else if RETCODE = SQL_NO_DATA then
-            (Statement as IZODBCStatement).SetMoreResultsIndicator(mriHasNoMoreResults)
-          else CheckStmtError(RETCODE);
-        end else
-          CheckStmtError(fPlainDriver.SQLFreeStmt(fPHSTMT^,SQL_UNBIND)); //discart bindings
-    inherited Close;
-    RowNo := LastRowNo + 1; //suppress a possible fetch approach
-  end;
+        CheckStmtError(fPlainDriver.SQLFreeStmt(fPHSTMT^,SQL_UNBIND)); //discart bindings
 end;
 
 {$IFDEF USE_SYNCOMMONS}
@@ -1332,7 +1329,7 @@ label Fail, FetchData;  //ugly but faster and no double code
 begin
   { Checks for maximum row. }
   Result := False;
-  if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or (fPHSTMT^ = nil) then
+  if Closed or (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or (fPHSTMT^ = nil) then
     goto Fail;
   if (RowNo = 0) then begin//fetch Iteration count of rows
     if Closed then Open;

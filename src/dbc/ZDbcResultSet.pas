@@ -128,7 +128,9 @@ type
     procedure SetConcurrency(Value: TZResultSetConcurrency);
 
     function Next: Boolean; virtual;
+    procedure BeforeClose; virtual;
     procedure Close; virtual;
+    procedure AfterClose; virtual;
     procedure ResetCursor; virtual;
     function WasNull: Boolean; virtual;
     function IsClosed: Boolean;
@@ -809,7 +811,6 @@ begin
   if not FClosed then
     Close;
   FreeAndNil(FMetadata);
-  FStatement := nil;
   FreeAndNil(FColumnsInfo);
   inherited Destroy;
 end;
@@ -942,11 +943,13 @@ end;
 }
 procedure TZAbstractResultSet.ResetCursor;
 begin
-  if not FClosed and Assigned(Statement){virtual RS ! } then begin
-    FFetchSize := Statement.GetFetchSize;
-    FPostUpdates := Statement.GetPostUpdates;
-    FLocateUpdates := Statement.GetLocateUpdates;
-    FMaxRows := Statement.GetMaxRows;
+  if not FClosed then begin
+    if Assigned(Statement){virtual RS ! }  then begin
+      FFetchSize := Statement.GetFetchSize;
+      FPostUpdates := Statement.GetPostUpdates;
+      FLocateUpdates := Statement.GetLocateUpdates;
+      FMaxRows := Statement.GetMaxRows;
+    end;
     FRowNo := 0;
     FLastRowNo := 0;
     LastWasNull := True;
@@ -967,16 +970,23 @@ end;
   is also automatically closed when it is garbage collected.
 }
 procedure TZAbstractResultSet.Close;
+var RefCountAdded: Boolean;
 begin
   if not Closed then begin
-    ResetCursor;
+    BeforeClose;
     FClosed := True;
-    if FColumnsInfo <> nil then
-      FColumnsInfo.Clear;
+    RefCountAdded := False;
     if (FStatement <> nil) then begin
+      if FRefCount = 1 then begin
+        _AddRef;
+        RefCountAdded := True;
+      end;
       FStatement.FreeOpenResultSetReference(IZResultSet(FWeakIntfPtrOfSelf));
       FStatement := nil;
     end;
+    AfterClose;
+    if RefCountAdded then
+       _Release;
   end;
 end;
 
@@ -2448,6 +2458,11 @@ end;
   this <code>ResultSet</code> object, just before the
   first row. This method has no effect if the result set contains no rows.
 }
+procedure TZAbstractResultSet.BeforeClose;
+begin
+  ResetCursor;
+end;
+
 procedure TZAbstractResultSet.BeforeFirst;
 begin
   MoveAbsolute(0);
@@ -2458,6 +2473,11 @@ end;
   this <code>ResultSet</code> object, just after the
   last row. This method has no effect if the result set contains no rows.
 }
+procedure TZAbstractResultSet.AfterClose;
+begin
+  FColumnsInfo.Clear;
+end;
+
 procedure TZAbstractResultSet.AfterLast;
 begin
   Last;
