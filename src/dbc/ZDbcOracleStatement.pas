@@ -1054,6 +1054,8 @@ begin
   Result := TZOraclePreparedStatement_A.Create(Connection, '', Info);
   TZOraclePreparedStatement_A(Result).FASQL := {$IFDEF UNICODE}ZUnicodeToRaw(ProcSQL, ConSettings^.ClientCodePage^.CP){$ELSE}ProcSQL{$ENDIF};
   TZOraclePreparedStatement_A(Result).Prepare;
+  FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
+  TZOraclePreparedStatement_A(Result)._AddRef;
 end;
 
 const OCIParamTypeMatrix: array[boolean] of array[OCI_TYPEPARAM_IN..OCI_TYPEPARAM_INOUT] of TZParamType =

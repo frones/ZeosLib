@@ -99,6 +99,7 @@ type
       const Statement: IZStatement; const SQL: string;
       const StmtHandle: POCIStmt; const ErrorHandle: POCIError;
       const ZBufferSize: Integer);
+    procedure BeforeClose; override;
 
     //reintroduce is a performance thing (self tested and confirmed!):
     //direct dispatched methods for the interfaces makes each call as fast as using a native object!
@@ -436,6 +437,14 @@ end;
   @param SQL a SQL statement.
   @param Handle a Oracle specific query handle.
 }
+procedure TZOracleAbstractResultSet_A.BeforeClose;
+begin
+  FreeOracleSQLVars(FPlainDriver, FColumns, FIteration, FConnectionHandle,
+    FErrorHandle, ConSettings);
+  inherited BeforeClose;
+
+end;
+
 constructor TZOracleAbstractResultSet_A.Create(
   const Statement: IZStatement;
   const SQL: string; const StmtHandle: POCIStmt; const ErrorHandle: POCIError;
@@ -2281,8 +2290,6 @@ end;
 }
 procedure TZOracleResultSet_A.BeforeClose;
 begin
-  FreeOracleSQLVars(FPlainDriver, FColumns, FIteration, FConnectionHandle,
-    FErrorHandle, ConSettings);
   SetLength(Self.FRowsBuffer, 0);
   { prepared statement own handles, so dont free them }
   FStmtHandle := nil;
