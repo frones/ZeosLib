@@ -168,11 +168,14 @@ procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline
 function PG2Word(P: Pointer): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Word2PG(Value: Word; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-function PG2Integer(P: Pointer): Integer; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure Integer2PG(Value: Integer; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PG2LongInt(P: Pointer): LongInt; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure LongInt2PG(Value: LongInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-function PG2LongWord(P: Pointer): LongWord; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure LongWord2PG(Value: LongWord; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PG2Integer(P: Pointer): Integer; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Integer2PG(Value: LongInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+function PG2Cardinal(P: Pointer): Cardinal; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Cardinal2PG(Value: Cardinal; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function PG2Int64(P: Pointer): Int64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -1046,27 +1049,51 @@ begin
   {$IFNDEF ENDIAN_BIG}Reverse2Bytes(Buf){$ENDIF}
 end;
 
+function PG2LongInt(P: Pointer): LongInt;
+begin
+  Result := PLongInt(P)^;
+  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(@Result){$ENDIF}
+end;
+
+procedure LongInt2PG(Value: LongInt; Buf: Pointer);
+begin
+  PLongInt(Buf)^ := Value;
+  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(Buf){$ENDIF}
+end;
+
 function PG2Integer(P: Pointer): Integer;
 begin
   Result := PInteger(P)^;
-  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(@Result){$ENDIF}
+  {$IFNDEF ENDIAN_BIG}
+  if SizeOf(Integer) = 2 then
+    Reverse2Bytes(@Result)
+  else if SizeOf(Integer) = 4 then
+    Reverse4Bytes(@Result)
+  else Reverse8Bytes(@Result)
+  {$ENDIF}
 end;
 
 procedure Integer2PG(Value: Integer; Buf: Pointer);
 begin
   PInteger(Buf)^ := Value;
-  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(Buf){$ENDIF}
+  {$IFNDEF ENDIAN_BIG}
+  if SizeOf(Integer) = 2 then
+    Reverse2Bytes(Buf)
+  else if SizeOf(Integer) = 4 then
+    Reverse4Bytes(Buf)
+  else Reverse8Bytes(Buf)
+  {$ENDIF}
 end;
 
-function PG2LongWord(P: Pointer): LongWord;
+function PG2Cardinal(P: Pointer): Cardinal;
 begin
-  Result := PLongWord(P)^;
+  Result := PCardinal(P)^;
   {$IFNDEF ENDIAN_BIG}Reverse4Bytes(@Result){$ENDIF}
 end;
 
-procedure LongWord2PG(Value: LongWord; Buf: Pointer);
+procedure Cardinal2PG(Value: Cardinal; Buf: Pointer);
 begin
-  PLongWord(Buf)^ := Value;
+  PCardinal(Buf)^ := Value;
   {$IFNDEF ENDIAN_BIG}Reverse4Bytes(Buf){$ENDIF}
 end;
 
@@ -1139,7 +1166,7 @@ begin
   Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType)));
 end;
 
-function  ARR_LBOUND(a: PArrayType): PInteger;
+function ARR_LBOUND(a: PArrayType): PInteger;
 begin
   Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType))+(SizeOf(Integer)*Cardinal(PG2Integer(ARR_NDIM(a)))));
 end;
@@ -1159,7 +1186,7 @@ end;
 function  ARR_DATA_OFFSET(a: PArrayType): Int32;
 begin
   if ARR_HASNULL(a)
-  then Result := PG2Integer(@PArrayType(a).flags)
+  then Result := PG2LongInt(@PArrayType(a).flags)
   else Result := ARR_OVERHEAD_NONULLS(PG2Integer(ARR_NDIM(a)));
 end;
 
