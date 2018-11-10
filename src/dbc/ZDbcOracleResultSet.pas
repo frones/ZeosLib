@@ -442,7 +442,6 @@ begin
   FreeOracleSQLVars(FPlainDriver, FColumns, FIteration, FConnectionHandle,
     FErrorHandle, ConSettings);
   inherited BeforeClose;
-
 end;
 
 constructor TZOracleAbstractResultSet_A.Create(
@@ -2290,10 +2289,10 @@ end;
 }
 procedure TZOracleResultSet_A.BeforeClose;
 begin
+  inherited BeforeClose;
   SetLength(Self.FRowsBuffer, 0);
   { prepared statement own handles, so dont free them }
   FStmtHandle := nil;
-  inherited BeforeClose;
 end;
 
 {**
