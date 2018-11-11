@@ -568,6 +568,7 @@ end;
   @param num the pointer to the oci-number
 }
 procedure Curr2Vnu(const Value: Currency; num: POCINumber);
+(* this version writes from left to right
 var I64: UInt64;
   Positive: Boolean;
   i, n, p, trailing_zeros: Byte;
@@ -616,6 +617,65 @@ begin
       num[i] := 102; //"Negative numbers have a byte containing 102 appended to the data bytes."
     end;
     num[0] := i;
+  end;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+and this version writes from right to left*)
+var I64, IDiv100, IMul100: UInt64;
+  {$IFNDEF CPUX64}c32, cDiv100, cMul100: Cardinal;{$ENDIF}
+  Positive: Boolean;
+  i, n, Digits, l: Byte;
+begin
+  {$R-} {$Q-}
+  if Value = 0 then begin
+    num[0] := 1;
+    num[1] := $80;
+    Exit;
+  end;
+  Positive := Value > 0;
+  if Positive
+  then I64 :=  PInt64(@Value)^
+  else I64 := -PInt64(@Value)^;
+  Digits := GetOrdinalDigits(i64);
+  Digits := (Digits+Ord(Odd(Digits))) div 2;
+  I := Digits+1;
+  L := I;
+  while I > {$IFNDEF CPUX64}6{$ELSE}2{$ENDIF} do begin
+    IDiv100 := I64 div 100; {dividend div 100}
+    IMul100 := IDiv100*100; {remainder}
+    N := Byte(I64-IMul100); {dividend mod 100}
+    I64 := IDiv100; {next dividend }
+    if (n = 0) and (I=L) then
+      Dec(L)
+    else if Positive
+      then num[I] := n + 1
+      else num[I] := 101 - n;
+    Dec(I);
+  end;
+  {$IFNDEF CPUX64}
+  C32 := Int64Rec(I64).Lo;
+  while I > 2 do begin
+    cDiv100 := C32 div 100; {dividend div 100}
+    cMul100 := cDiv100*100; {remainder}
+    N := Byte(c32-cMul100); {dividend mod 100}
+    C32 := cDiv100; {next dividend }
+    if (n = 0) and (I=L) then
+      Dec(L)
+    else if Positive
+      then num[I] := n + 1
+      else num[I] := 101 - n;
+    Dec(I);
+  end;
+  {$ENDIF}
+  if Positive then begin
+    num[1] := (64+NVU_CurrencyExponents[Digits]) or $80;
+    num[I] := Byte({$IFNDEF CPUX64}C32{$ELSE}I64{$ENDIF}) + 1;
+    num[0] := L;
+  end else begin
+    num[1] := not(64+NVU_CurrencyExponents[Digits]) and $7f;
+    num[I] := 101 - Byte({$IFNDEF CPUX64}C32{$ELSE}I64{$ENDIF});
+    num[L+1] := 102; //"Negative numbers have a byte containing 102 appended to the data bytes."
+    num[0] := L+1;
   end;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
