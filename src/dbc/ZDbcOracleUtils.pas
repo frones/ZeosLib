@@ -289,7 +289,7 @@ function PosNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): UInt64; {$IFDEF 
   @param vnuInfo the collected infos about the number comming from nvuKind()
   @return a converted value
 }
-function NegNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): Int64; overload; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
+function NegNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): Int64; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 
 {** EH:
@@ -506,7 +506,6 @@ end;
 function NegNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): Int64;
 var i: Byte;
 begin
-  PInt64(@Result)^ := 0;
   {$R-} {$Q-}
   { initialize with first negative base-100-digit }
   Result := -ShortInt(vnuInfo.FirstBase100Digit); //init
@@ -973,7 +972,7 @@ begin
       {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
       if Assigned(CurrentVar^._Obj) then
         DisposeObject(CurrentVar^._Obj);
-      if (CurrentVar^.valuep <> nil) then begin
+      if (CurrentVar^.valuep <> nil) then
         if (CurrentVar^.DescriptorType > 0) then begin
           for J := 0 to Iteration-1 do
             if (PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer))))^ <> nil then begin
@@ -988,9 +987,7 @@ begin
             if Status <> OCI_SUCCESS then
               CheckOracleError(PlainDriver, ErrorHandle, status, lcOther, 'OCIDescriptorFree', ConSettings);
           end;
-        //FreeMem(CurrentVar^.valuep);
       end;
-    end;
     FreeMem(Variables);
     Variables := nil;
   end;
