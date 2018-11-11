@@ -1710,7 +1710,6 @@ begin
 end;
 
 procedure TZAbstractStatement.BeforeClose;
-var RefCountAdded: Boolean;
 begin
   if Assigned(FLastResultSet) then
     LastResultSet.Close;
@@ -6118,8 +6117,7 @@ end;
 function TZAbstractCallableStatement2.ExecutePrepared: Boolean;
 begin
   FCallExecKind := zcekSelect;
-  if FExecStatements[FCallExecKind] = nil then
-    Prepare;
+  Prepare;
   BindInParameters;
   Result := FExecStatements[FCallExecKind].ExecutePrepared;
 end;
@@ -6141,8 +6139,7 @@ end;
 function TZAbstractCallableStatement2.ExecuteQueryPrepared: IZResultSet;
 begin
   FCallExecKind := zcekSelect;
-  if FExecStatements[FCallExecKind] = nil then
-    Prepare;
+  Prepare;
   BindInParameters;
   Result := FExecStatements[FCallExecKind].ExecuteQueryPrepared;
 end;
@@ -6164,8 +6161,7 @@ end;
 function TZAbstractCallableStatement2.ExecuteUpdatePrepared: Integer;
 begin
   FCallExecKind := zcekParams;
-  if FExecStatements[FCallExecKind] = nil then
-    Prepare;
+  Prepare;
   BindInParameters;
   Result := FExecStatements[FCallExecKind].ExecuteUpdatePrepared;
 end;
@@ -6678,10 +6674,12 @@ begin
   if FExecStatements[FCallExecKind] = nil then begin
     FExecStatements[FCallExecKind] := CreateExecutionStatement(FCallExecKind, FStoredProcName);
     FExecStatements[FCallExecKind]._AddRef;
-    FExecStatements[FCallExecKind].SetResultSetType(GetResultSetType);
     FBindAgain := True;
   end;
-  inherited Prepare;
+  FExecStatements[FCallExecKind].SetResultSetType(GetResultSetType);
+//  FExecStatements[FCallExecKind].SetResultSetConcurrency(GetResultSetConcurrency);
+  if not Prepared then
+    inherited Prepare;
 end;
 
 {**
