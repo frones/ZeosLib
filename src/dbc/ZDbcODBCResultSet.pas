@@ -78,7 +78,7 @@ type
     fConnection: IZODBCConnection;
     fPlainDriver: TZODBC3PlainDriver;
     fZBufferSize, fChunkSize: Integer;
-    fEnhancedColInfo: Boolean;
+    fEnhancedColInfo, FIsMetaData: Boolean;
     fColumnCount: SQLSMALLINT;
     fMaxFetchableRows, fFetchedRowCount, fCurrentBufRowNo: SQLULEN;
     fColumnBuffers: array of TByteDynArray;
@@ -411,6 +411,7 @@ end;
 constructor TAbstractODBCResultSet.CreateForMetadataCall(
   out StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection);
 begin
+  FIsMetaData := True;
   StmtHandle := nil;
   Create(nil, StmtHandle, ConnectionHandle, '', Connection,
     {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_InternalBufSize], 131072), //by default 128KB
@@ -1329,7 +1330,7 @@ label Fail, FetchData;  //ugly but faster and no double code
 begin
   { Checks for maximum row. }
   Result := False;
-  if Closed or (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or (fPHSTMT^ = nil) then
+  if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or (fPHSTMT^ = nil) or (Closed and not FIsMetaData) then
     goto Fail;
   if (RowNo = 0) then begin//fetch Iteration count of rows
     if Closed then Open;
