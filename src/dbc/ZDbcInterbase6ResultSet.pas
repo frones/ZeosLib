@@ -1533,7 +1533,7 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
                         FBlobTemp := GetBlob(ColumnIndex);  //localize interface to keep pointer alive
                         if FBlobTemp.IsClob then begin
                           Result := FBlobTemp.GetPWideChar;
-                          Len := FBlobTemp.Length;
+                          Len := FBlobTemp.Length shr 1;
                         end else begin
                           FUniTemp := Ascii7ToUnicodeString(FBlobTemp.GetBuffer, FBlobTemp.Length);
                           Result := Pointer(FUniTemp);
