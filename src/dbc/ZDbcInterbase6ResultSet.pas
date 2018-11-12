@@ -1306,10 +1306,10 @@ begin
                         Result := @FTinyBuffer[0];
                       end;
       SQL_LONG      : if XSQLVAR.sqlscale = 0 then begin
-                        IntToRaw(PLongInt(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result);
+                        IntToRaw(PLongInt(XSQLVAR.sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Raw(PLongInt(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result, Abs(XSQLVAR.sqlscale));
+                        ScaledOrdinal2Raw(PLongInt(XSQLVAR.sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
                         goto set_Results;
                       end;
       SQL_FLOAT     : begin
@@ -1331,18 +1331,18 @@ begin
                         Len := 5;
                       end;
       SQL_SHORT     : if XSQLVAR.sqlscale = 0 then begin
-                        IntToRaw(Integer(PSmallInt(XSQLVAR.sqldata)^), @FTinyBuffer[0], @Result);
+                        IntToRaw(LongInt(PSmallInt(XSQLVAR.sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Raw(Integer(PSmallInt(XSQLVAR.sqldata)^), @FTinyBuffer[0], @Result, Abs(XSQLVAR.sqlscale));
+                        ScaledOrdinal2Raw(LongInt(PSmallInt(XSQLVAR.sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
                         goto set_Results;
                       end;
       SQL_QUAD,
       SQL_INT64     : if XSQLVAR.sqlscale = 0 then begin
-                        IntToRaw(PInt64(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result);
+                        IntToRaw(PInt64(XSQLVAR.sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Raw(PInt64(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result, Abs(XSQLVAR.sqlscale));
+                        ScaledOrdinal2Raw(PInt64(XSQLVAR.sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
 set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                         Result := @FTinyBuffer[0];
                       end;
@@ -1474,13 +1474,6 @@ begin
                         Len := FloatToSQLUnicode(PDouble(XSQLVAR.sqldata)^, @FTinyBuffer[0]);
                         Result := @FTinyBuffer[0];
                       end;
-      SQL_LONG      : if XSQLVAR.sqlscale = 0 then begin
-                        IntToUnicode(PLongInt(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result);
-                        goto set_Results;
-                      end else begin
-                        ScaledOrdinal2Unicode(PLongInt(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result, Abs(XSQLVAR.sqlscale));
-                        goto set_Results;
-                      end;
       SQL_FLOAT     : begin
                         Len := FloatToSQLUnicode(PSingle(XSQLVAR.sqldata)^, @FTinyBuffer[0]);
                         Result := @FTinyBuffer[0];
@@ -1500,18 +1493,25 @@ begin
                         Len := 5;
                       end;
       SQL_SHORT     : if XSQLVAR.sqlscale = 0 then begin
-                        IntToUnicode(Integer(PSmallInt(XSQLVAR.sqldata)^), @FTinyBuffer[0], @Result);
+                        IntToUnicode(LongInt(PSmallInt(XSQLVAR.sqldata)^), PWideChar(@FTinyBuffer[0]), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Unicode(PSmallInt(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result, Abs(XSQLVAR.sqlscale));
+                        ScaledOrdinal2Unicode(LongInt(PSmallInt(XSQLVAR.sqldata)^), PWideChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
+                        goto set_Results;
+                      end;
+      SQL_LONG      : if XSQLVAR.sqlscale = 0 then begin
+                        IntToUnicode(PLongInt(XSQLVAR.sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
+                        goto set_Results;
+                      end else begin
+                        ScaledOrdinal2Unicode(PLongInt(XSQLVAR.sqldata)^, PWideChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
                         goto set_Results;
                       end;
       SQL_QUAD,
       SQL_INT64     : if XSQLVAR.sqlscale = 0 then begin
-                        IntToUnicode(PInt64(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result);
+                        IntToUnicode(PInt64(XSQLVAR.sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Unicode(PInt64(XSQLVAR.sqldata)^, @FTinyBuffer[0], @Result, Abs(XSQLVAR.sqlscale));
+                        ScaledOrdinal2Unicode(PInt64(XSQLVAR.sqldata)^, PWideChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
 set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
                         Result := @FTinyBuffer[0];
                       end;
@@ -1803,93 +1803,15 @@ end;
     value returned is <code>null</code>
 }
 function TZInterbase6XSQLDAResultSet.GetUnicodeString(ColumnIndex: Integer): ZWideString;
-var
-  I64: Int64;
-  TempDate: TZTimeStamp;
-  XSQLVAR: PXSQLVAR;
-  P: PAnsichar;
+var P: PWideChar;
   L: NativeUInt;
 begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stString);
-{$ENDIF}
-  {$R-}
-  XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
-    LastWasNull := True;
-    Result := '';
-  end else begin
-    LastWasNull := False;
-    case (XSQLVAR.sqltype and not(1)) of
-      SQL_D_FLOAT,
-      SQL_DOUBLE    : Result := FloatToUnicode(PDouble(XSQLVAR.sqldata)^);
-      SQL_LONG      : if XSQLVAR.sqlscale = 0 then
-                        Result := IntToUnicode(PLongInt(XSQLVAR.sqldata)^)
-                      else if XSQLVAR.sqlscale = -4 then begin
-                        I64 := PLongInt(XSQLVAR.sqldata)^;
-                        Result := CurrToUnicode(PCurrency(@i64)^);
-                      end else
-                        Result := FloatToUnicode(PLongInt(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale]);
-      SQL_FLOAT     : Result := FloatToUnicode(PSingle(XSQLVAR.sqldata)^);
-      SQL_BOOLEAN   : Result := BoolToUnicodeEx(PSmallint(XSQLVAR.sqldata)^ <> 0);
-      SQL_BOOLEAN_FB: Result := BoolToUnicodeEx(PByte(XSQLVAR.sqldata)^ <> 0);
-      SQL_SHORT     : if XSQLVAR.sqlscale = 0 then
-                        Result := IntToUnicode(PSmallInt(XSQLVAR.sqldata)^)
-                      else if XSQLVAR.sqlscale = -4 then begin
-                        I64 := PSmallInt(XSQLVAR.sqldata)^;
-                        Result := CurrToUnicode(PCurrency(@i64)^);
-                      end else
-                        Result := FloatToUnicode(PSmallInt(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale]);
-      SQL_QUAD,
-      SQL_INT64     : if XSQLVAR.sqlscale = 0 then
-                        Result := IntToUnicode(PInt64(XSQLVAR.sqldata)^)
-                      else if XSQLVAR.sqlscale = -4 then
-                        Result := CurrToUnicode(PCurrency(XSQLVAR.sqldata)^)
-                      else
-                        Result := FloatToUnicode(PInt64(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale]);
-      SQL_TEXT,
-      SQL_VARYING   : begin
-                        GetPCharFromTextVar(XSQLVAR, P, L);
-                        if XSQLVAR.sqlsubtype in [CS_NONE..CS_ASCII] then
-                          Result := Ascii7toUnicodeString(P, L)
-                        else if XSQLVAR.sqlsubtype > High(FCodePageArray) then
-                          Result := PRawToUnicode(P, L, ConSettings^.ClientCodePage^.CP)
-                        else
-                          Result := PRawToUnicode(P, L, FCodePageArray[XSQLVAR.sqlsubtype]);
-                      end;
-      SQL_BLOB      : Begin
-                        FBlobTemp := GetBlob(ColumnIndex);  //localize interface to keep pointer alive
-                        if FBlobTemp.IsClob
-                        then Result := FBlobTemp.GetUnicodeString
-                        else Result := Ascii7toUnicodeString(FBlobTemp.GetBuffer, FBlobTemp.Length);
-                      End;
-      SQL_TIMESTAMP : begin
-                        isc_decode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date,
-                          TempDate.Year, TempDate.Month, Tempdate.Day);
-                        isc_decode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time,
-                          TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                        Result :=  ZSysUtils.DateTimeToUnicodeSQLTimeStamp(DateUtils.EncodeDateTime(TempDate.Year,
-                          TempDate.Month, TempDate.Day,TempDate.Hour, TempDate.Minute, TempDate.Second,
-                          TempDate.Fractions div 10), ConSettings.ReadFormatSettings, False);
-                      end;
-      SQL_TYPE_DATE : begin
-                        isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
-                          TempDate.Year, TempDate.Month, Tempdate.Day);
-                        Result := ZSysUtils.DateTimeToUnicodeSQLDate(SysUtils.EncodeDate(TempDate.Year,
-                          TempDate.Month, TempDate.Day), ConSettings.ReadFormatSettings, False);
-                      end;
-      SQL_TYPE_TIME : begin
-                        isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^, TempDate.Hour,
-                          TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                        Result := ZSysUtils.DateTimeToUnicodeSQLTime(SysUtils.EncodeTime(TempDate.Hour,
-                          TempDate.Minute, TempDate.Second, TempDate.Fractions div 10),
-                          ConSettings.ReadFormatSettings, False);
-                      end;
-      else raise EZIBConvertError.Create(Format(SErrorConvertionField,
-        [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));
-    end;
-  end;
+  P := GetPWideChar(ColumnIndex, L);
+  if LastWasNull or (L = 0) then
+    Result := ''
+  else if P = Pointer(FUniTemp)
+    then Result := FUniTemp
+    else System.SetString(Result, P, L);
 end;
 
 {**
