@@ -387,7 +387,7 @@ type
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); overload; virtual;
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
-      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); overload; virtual;// deprecated;
+      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); overload; // deprecated;
     {$ENDIF}
   end;
 
@@ -4035,7 +4035,7 @@ begin
     Include(JSONComposeOptions,jcoDATETIME_MAGIC);
   if SkipNullFields then
     Include(JSONComposeOptions,jcsSkipNulls);
-  ColumnsToJSON(JSONWriter, JSONComposeOptions);
+  IZResultSet(FWeakIntfPtrOfSelf).ColumnsToJSON(JSONWriter, JSONComposeOptions);
 end;
 {$ENDIF}
 
