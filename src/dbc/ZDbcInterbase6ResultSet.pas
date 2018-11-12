@@ -1320,14 +1320,14 @@ begin
                         Result := Pointer(BoolStrsRaw[True]);
                         Len := 4;
                       end else begin
-                        Result := Pointer(BoolStrsRaw[True]);
+                        Result := Pointer(BoolStrsRaw[False]);
                         Len := 5;
                       end;
       SQL_BOOLEAN_FB: if PByte(XSQLVAR.sqldata)^ <> 0 then begin
                         Result := Pointer(BoolStrsRaw[True]);
                         Len := 4;
                       end else begin
-                        Result := Pointer(BoolStrsRaw[True]);
+                        Result := Pointer(BoolStrsRaw[False]);
                         Len := 5;
                       end;
       SQL_SHORT     : if XSQLVAR.sqlscale = 0 then begin
@@ -1482,7 +1482,7 @@ begin
                         Result := Pointer(BoolStrsW[True]);
                         Len := 4;
                       end else begin
-                        Result := Pointer(BoolStrsW[True]);
+                        Result := Pointer(BoolStrsW[False]);
                         Len := 5;
                       end;
       SQL_BOOLEAN_FB: if PByte(XSQLVAR.sqldata)^ <> 0 then begin
