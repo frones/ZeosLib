@@ -81,7 +81,7 @@ type
     FColumns: PZSQLVars;
     FChunkSize: Integer;
     FIteration: Integer; //Max count of rows which fit into BufferSize <= FZBufferSize
-    FCurrentRowBufIndex: LongWord; //The current row in buffer! NOT the current row of RS
+    FCurrentRowBufIndex: Cardinal; //The current row in buffer! NOT the current row of RS
     FZBufferSize: Integer; //max size for multiple rows. If Row > Value ignore it!
     FRowsBuffer: TByteDynArray; //Buffer for multiple rows if possible which is reallocated or freed by IDE -> mem leak save!
     FTinyBuffer: array[Byte] of Byte; //huge because of possible OCINumbers
@@ -296,7 +296,7 @@ begin
         { the ordinals we support }
         SQLT_INT        : case value_sz of
                             SizeOf(Int64): JSONWriter.Add(PInt64(P)^);
-                            SizeOf(LongInt): JSONWriter.Add(PLongInt(P)^);
+                            SizeOf(Integer): JSONWriter.Add(PInteger(P)^);
                             SizeOf(SmallInt): JSONWriter.Add(PSmallInt(P)^);
                             else JSONWriter.Add(PShortInt(P)^);
                           end;
@@ -585,7 +585,7 @@ begin
       SQLT_INT: begin
                   case SQLVarHolder.value_sz of
                     SizeOf(Int64): IntToRaw(PInt64(Result)^, @FTinyBuffer[0], @Result);
-                    SizeOf(LongInt): IntToRaw(PLongInt(Result)^, @FTinyBuffer[0], @Result);
+                    SizeOf(Integer): IntToRaw(PInteger(Result)^, @FTinyBuffer[0], @Result);
                     SizeOf(SmallInt): IntToRaw(PSmallInt(Result)^, @FTinyBuffer[0], @Result);
                     else IntToRaw(PShortInt(Result)^, @FTinyBuffer, @Result[0]);
                   end;
@@ -628,13 +628,9 @@ begin
       SQLT_TIMESTAMP_TZ,
       SQLT_TIMESTAMP_LTZ,
       SQLT_TIMESTAMP: begin
-                  FRawTemp := ZSysUtils.DateTimeToRawSQLTimeStamp(GetTimeStamp(ColumnIndex),
-                    ConSettings^.ReadFormatSettings, False);
-                  {$IFDEF WITH_INLINE}
-                  Len := System.Length(FRawTemp){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}
-                  {$ELSE}
-                  Len := {%H-}PLongInt(NativeUInt(FRawTemp) - 4)^;
-                  {$ENDIF};
+                  ZSysUtils.DateTimeToRawSQLTimeStamp(GetTimeStamp(ColumnIndex),
+                    @FTinyBuffer[0], ConSettings^.ReadFormatSettings, False);
+                  Len := ConSettings^.ReadFormatSettings.DateTimeFormatLen;
                 end;
       SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
         begin
@@ -775,7 +771,7 @@ begin
       SQLT_INT: begin
                   case SQLVarHolder.value_sz of
                     SizeOf(Int64): IntToUnicode(PInt64(P)^, @FTinyBuffer[0], @Result);
-                    SizeOf(LongInt): IntToUnicode(PLongInt(P)^, @FTinyBuffer[0], @Result);
+                    SizeOf(Integer): IntToUnicode(PInteger(P)^, @FTinyBuffer[0], @Result);
                     SizeOf(SmallInt): IntToUnicode(PSmallInt(P)^, @FTinyBuffer[0], @Result);
                     else IntToUnicode(PShortInt(P)^, @FTinyBuffer, @Result[0]);
                   end;
@@ -1146,7 +1142,7 @@ begin
       { the ordinals we yet do support }
       SQLT_INT: case SQLVarHolder.value_sz of
                   SizeOf(Int64):    Result := PInt64(P)^ <> 0;
-                  SizeOf(LongInt):  Result := PLongInt(P)^ <> 0;
+                  SizeOf(Integer):  Result := PInteger(P)^ <> 0;
                   SizeOf(SmallInt): Result := PSmallInt(P)^ <> 0;
                   else              Result := PShortInt(P)^ <> 0;
                 end;
@@ -1249,7 +1245,7 @@ begin
       SQLT_INT:
         case SQLVarHolder.value_sz of
           SizeOf(Int64):    Result := PInt64(P)^;
-          SizeOf(LongInt):  Result := PLongInt(P)^;
+          SizeOf(Integer):  Result := PInteger(P)^;
           SizeOf(SmallInt): Result := PSmallInt(P)^;
           else              Result := PShortInt(P)^;
         end;
@@ -1353,7 +1349,7 @@ begin
       SQLT_INT:
         case SQLVarHolder.value_sz of
           SizeOf(Int64):    Result := PInt64(P)^;
-          SizeOf(LongInt):  Result := PLongInt(P)^;
+          SizeOf(Integer):  Result := PInteger(P)^;
           SizeOf(SmallInt): Result := PSmallInt(P)^;
           else              Result := PShortInt(P)^;
         end;
@@ -1466,7 +1462,7 @@ begin
       SQLT_INT:
         case SQLVarHolder.value_sz of
           SizeOf(Int64):    Result := PInt64(P)^;
-          SizeOf(LongInt):  Result := PLongInt(P)^;
+          SizeOf(Integer):  Result := PInteger(P)^;
           SizeOf(SmallInt): Result := PSmallInt(P)^;
           else              Result := PShortInt(P)^;
         end;
@@ -1571,7 +1567,7 @@ begin
       SQLT_INT:
         case SQLVarHolder.value_sz of
           SizeOf(Int64):    Result := PInt64(P)^;
-          SizeOf(LongInt):  Result := PLongInt(P)^;
+          SizeOf(Integer):  Result := PInteger(P)^;
           SizeOf(SmallInt): Result := PSmallInt(P)^;
           else              Result := PShortInt(P)^;
         end;
@@ -1714,7 +1710,7 @@ begin
       SQLT_INT:
         case SQLVarHolder.value_sz of
           SizeOf(Int64):    Result := PInt64(P)^;
-          SizeOf(LongInt):  Result := PLongInt(P)^;
+          SizeOf(Integer):  Result := PInteger(P)^;
           SizeOf(SmallInt): Result := PSmallInt(P)^;
           else              Result := PShortInt(P)^;
         end;
@@ -1843,7 +1839,7 @@ ConvFromString:   if (P+2)^ = ':' then //possible date if Len = 10 then
       SQLT_INT:
         case SQLVarHolder.value_sz of
           SizeOf(Int64):    Result := PInt64(P)^;
-          SizeOf(LongInt):  Result := PLongInt(P)^;
+          SizeOf(Integer):  Result := PInteger(P)^;
           SizeOf(SmallInt): Result := PSmallInt(P)^;
           else              Result := PShortInt(P)^;
         end;

@@ -381,7 +381,7 @@ begin
                                   else JSONWriter.AddU(PWord(Bind^.Buffer)^);
           FIELD_TYPE_LONG       : if Bind^.is_unsigned_address^ = 0
                                   then JSONWriter.Add(PInteger(Bind^.Buffer)^)
-                                  else JSONWriter.AddU(PLongWord(Bind^.Buffer)^);
+                                  else JSONWriter.AddU(PCardinal(Bind^.Buffer)^);
           FIELD_TYPE_FLOAT      : JSONWriter.AddSingle(PSingle(Bind^.Buffer)^);
           FIELD_TYPE_DOUBLE     : JSONWriter.AddDouble(PDouble(Bind^.Buffer)^);
           FIELD_TYPE_LONGLONG   : if Bind^.is_unsigned_address^ = 0
@@ -898,8 +898,8 @@ begin
           else FRawTemp := IntToRaw(PWord(ColBind^.buffer)^);
         FIELD_TYPE_LONG:
           if ColBind^.is_unsigned_address^ = 0
-          then FRawTemp := IntToRaw(PLongInt(ColBind^.buffer)^)
-          else FRawTemp := IntToRaw(PLongWord(ColBind^.buffer)^);
+          then FRawTemp := IntToRaw(PInteger(ColBind^.buffer)^)
+          else FRawTemp := IntToRaw(PCardinal(ColBind^.buffer)^);
         FIELD_TYPE_FLOAT:
           FRawTemp := FloatToSQLRaw(PSingle(ColBind^.buffer)^);
         FIELD_TYPE_DOUBLE:
@@ -1021,7 +1021,7 @@ begin
     FIELD_TYPE_BIT: case PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ of
                       0..8  : Bind^.Length[0] := SizeOf(Byte);
                       9..16 : Bind^.Length[0] := SizeOf(Word);
-                      17..32: Bind^.Length[0] := SizeOf(LongWord);
+                      17..32: Bind^.Length[0] := SizeOf(Cardinal);
                       else    Bind^.Length[0] := SizeOf(UInt64);
                     end;
     FIELD_TYPE_DATE,
@@ -1131,9 +1131,9 @@ begin
             Result := IntToRaw(PWord(ColBind^.buffer)^);
         FIELD_TYPE_LONG:
           if ColBind^.is_unsigned_address^ = 0 then
-            Result := IntToRaw(PLongInt(ColBind^.buffer)^)
+            Result := IntToRaw(PInteger(ColBind^.buffer)^)
           else
-            Result := IntToRaw(PLongWord(ColBind^.buffer)^);
+            Result := IntToRaw(PCardinal(ColBind^.buffer)^);
         FIELD_TYPE_FLOAT:
           Result := FloatToSQLRaw(PSingle(ColBind^.buffer)^);
         FIELD_TYPE_DOUBLE:
@@ -1255,9 +1255,9 @@ begin
             Result := PWord(ColBind^.buffer)^ <> 0;
         FIELD_TYPE_LONG:
           if ColBind^.is_unsigned_address^ = 0 then
-            Result := PLongInt(ColBind^.buffer)^ <> 0
+            Result := PInteger(ColBind^.buffer)^ <> 0
           else
-            Result := PLongWord(ColBind^.buffer)^ <> 0;
+            Result := PCardinal(ColBind^.buffer)^ <> 0;
         FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(ColBind^.buffer)^) <> 0;
         FIELD_TYPE_DOUBLE:    Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(ColBind^.buffer)^) <> 0;
         FIELD_TYPE_LONGLONG:
@@ -1350,8 +1350,8 @@ begin
                           then Result := PSmallInt(ColBind^.buffer)^
                           else Result := PWord(ColBind^.buffer)^;
         FIELD_TYPE_LONG:  if ColBind^.is_unsigned_address^ = 0
-                          then Result := PLongInt(ColBind^.buffer)^
-                          else Result := Integer(PLongWord(ColBind^.buffer)^);
+                          then Result := PInteger(ColBind^.buffer)^
+                          else Result := Integer(PCardinal(ColBind^.buffer)^);
         FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(ColBind^.buffer)^);
         FIELD_TYPE_DOUBLE:    Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(ColBind^.buffer)^);
         FIELD_TYPE_LONGLONG:  if ColBind^.is_unsigned_address^ = 0
@@ -1440,8 +1440,8 @@ begin
                           then Result := PSmallInt(ColBind^.buffer)^
                           else Result := PWord(ColBind^.buffer)^;
         FIELD_TYPE_LONG:  if ColBind^.is_unsigned_address^ = 0
-                          then Result := PLongInt(ColBind^.buffer)^
-                          else Result := PLongWord(ColBind^.buffer)^;
+                          then Result := PInteger(ColBind^.buffer)^
+                          else Result := PCardinal(ColBind^.buffer)^;
         FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(ColBind^.buffer)^);
         FIELD_TYPE_DOUBLE:    Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(ColBind^.buffer)^);
         FIELD_TYPE_LONGLONG:  if ColBind^.is_unsigned_address^ = 0
@@ -1529,8 +1529,8 @@ begin
                           then Result := PSmallInt(ColBind^.buffer)^
                           else Result := PWord(ColBind^.buffer)^;
         FIELD_TYPE_LONG:  if ColBind^.is_unsigned_address^ = 0
-                          then Result := PLongInt(ColBind^.buffer)^
-                          else Result := PLongWord(ColBind^.buffer)^;
+                          then Result := PInteger(ColBind^.buffer)^
+                          else Result := PCardinal(ColBind^.buffer)^;
         FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(ColBind^.buffer)^);
         FIELD_TYPE_DOUBLE:    Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(ColBind^.buffer)^);
         FIELD_TYPE_LONGLONG:  if ColBind^.is_unsigned_address^ = 0
@@ -1632,8 +1632,8 @@ begin
                           then Result := PSmallInt(ColBind^.buffer)^
                           else Result := PWord(ColBind^.buffer)^;
         FIELD_TYPE_LONG:  if ColBind^.is_unsigned_address^ = 0
-                          then Result := PLongInt(ColBind^.buffer)^
-                          else Result := Integer(PLongWord(ColBind^.buffer)^);
+                          then Result := PInteger(ColBind^.buffer)^
+                          else Result := Integer(PCardinal(ColBind^.buffer)^);
         FIELD_TYPE_FLOAT:   if ColBind^.decimals < 20
                             then Result := RoundTo(PSingle(ColBind^.buffer)^, ColBind^.decimals*-1)
                             else Result := PSingle(ColBind^.buffer)^;
@@ -1780,9 +1780,9 @@ begin
       Case ColBind^.buffer_type_address^ of
         FIELD_TYPE_LONG:
           if ColBind^.is_unsigned_address^ = 0 then
-            Result := PLongInt(ColBind^.buffer)^
+            Result := PInteger(ColBind^.buffer)^
           else
-            Result := PLongWord(ColBind^.buffer)^;
+            Result := PCardinal(ColBind^.buffer)^;
         FIELD_TYPE_FLOAT:     Result := PSingle(ColBind^.buffer)^;
         FIELD_TYPE_DOUBLE:    Result := PDouble(ColBind^.buffer)^;
         FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_DATETIME,
@@ -1860,8 +1860,8 @@ begin
       Case ColBind^.buffer_type_address^ of
         FIELD_TYPE_LONG:
           if ColBind^.is_unsigned_address^ = 0
-          then Result := PLongInt(ColBind^.buffer)^
-          else Result := PLongWord(ColBind^.buffer)^;
+          then Result := PInteger(ColBind^.buffer)^
+          else Result := PCardinal(ColBind^.buffer)^;
         FIELD_TYPE_FLOAT:     Result := PSingle(ColBind^.buffer)^;
         FIELD_TYPE_DOUBLE:    Result := PDouble(ColBind^.buffer)^;
         FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATETIME, FIELD_TYPE_TIME:

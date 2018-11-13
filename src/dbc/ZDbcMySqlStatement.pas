@@ -991,7 +991,7 @@ var
   Len: NativeUInt;
   I: Integer;
   bind: PMYSQL_aligned_BIND;
-  OffSet, PieceSize: LongWord;
+  OffSet, PieceSize: Cardinal;
   array_size: UInt;
 begin
   if not FEmulatedParams and FBindAgain and (BindList.Count > 0) and (FMYSQL_STMT <> nil) then begin
@@ -1086,8 +1086,8 @@ begin
         else Result := IntToRaw(PWord(Bind^.buffer_address^)^);
       FIELD_TYPE_LONG:
         if Bind^.is_unsigned_address^ = 0
-        then Result := IntToRaw(PLongInt(Bind^.buffer_address^)^)
-        else Result := IntToRaw(PLongWord(Bind^.buffer_address^)^);
+        then Result := IntToRaw(PInteger(Bind^.buffer_address^)^)
+        else Result := IntToRaw(PCardinal(Bind^.buffer_address^)^);
       FIELD_TYPE_FLOAT:
         Result := FloatToSQLRaw(PSingle(Bind^.buffer_address^)^);
       FIELD_TYPE_DOUBLE:
@@ -1570,8 +1570,8 @@ begin
                             then PSmallInt(Bind^.buffer)^ := SmallInt(Value)
                             else PWord(Bind^.buffer)^ := Word(Value);
       FIELD_TYPE_LONG:      if Bind^.is_unsigned_address^ = 0
-                            then PLongInt(Bind^.buffer)^ := LongInt(Value)
-                            else PLongWord(Bind^.buffer)^ := LongWord(Value);
+                            then PInteger(Bind^.buffer)^ := Integer(Value)
+                            else PCardinal(Bind^.buffer)^ := Cardinal(Value);
       FIELD_TYPE_LONGLONG:  if Bind^.is_unsigned_address^ = 0
                             then PInt64(Bind^.buffer)^ := Value
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
@@ -1612,8 +1612,8 @@ begin
                             then PSmallInt(Bind^.buffer)^ := SmallInt(Value)
                             else PWord(Bind^.buffer)^ := Word(Value);
       FIELD_TYPE_LONG:      if Bind^.is_unsigned_address^ = 0
-                            then PLongInt(Bind^.buffer)^ := LongInt(Value)
-                            else PLongWord(Bind^.buffer)^ := LongWord(Value);
+                            then PInteger(Bind^.buffer)^ := Integer(Value)
+                            else PCardinal(Bind^.buffer)^ := Cardinal(Value);
       FIELD_TYPE_LONGLONG:  if Bind^.is_unsigned_address^ = 0
                             then PInt64(Bind^.buffer)^ := Value
                             else PUInt64(Bind^.buffer)^ := Value;
