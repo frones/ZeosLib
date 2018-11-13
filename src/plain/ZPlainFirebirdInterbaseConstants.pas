@@ -1931,16 +1931,18 @@ type
   ISC_UCHAR            = AnsiChar;
   ISC_SHORT            = SmallInt;
   ISC_USHORT           = Word;
-  ISC_LONG             = LongInt;
+  ISC_LONG             = Integer;
   ISC_ULONG            = Cardinal;
   ISC_INT64            = Int64;
   ISC_UINT64           = UInt64;
   ISC_STATUS           = NativeInt;
+  ISC_BOOLEAN          = Smallint;
   PISC_LONG            = ^ISC_LONG;
   PISC_ULONG           = ^ISC_ULONG;
   PISC_STATUS          = ^ISC_STATUS;
   PISC_UCHAR           = ^ISC_UCHAR;
   PPISC_STATUS         = ^PISC_STATUS;
+  PISC_BOOLEAN         = ^ISC_BOOLEAN;
 
   Short                = SmallInt;
   PShort               = ^Short;
