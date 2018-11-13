@@ -2041,7 +2041,7 @@ type
     sqlsubtype:         ISC_SHORT;     { datatype subtype - BLOBs }
 			           { & text types only }
     sqllen:             ISC_SHORT;     { length of data area }
-    sqldata:            PISC_SCHAR;     { address of data }
+    sqldata:            PAnsiChar;     { address of data }
     sqlind:             PISC_SHORT;  { address of indicator }
                                    { variable }
     sqlname_length:     ISC_SHORT;     { length of sqlname field }
