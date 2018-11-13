@@ -1937,6 +1937,8 @@ type
   ISC_UINT64           = UInt64;
   ISC_STATUS           = NativeInt;
   ISC_BOOLEAN          = Smallint;
+  PISC_SCHAR           = ^ISC_SCHAR;
+  PISC_SHORT           = ^ISC_SHORT;
   PISC_LONG            = ^ISC_LONG;
   PISC_ULONG           = ^ISC_ULONG;
   PISC_STATUS          = ^ISC_STATUS;
@@ -2034,36 +2036,36 @@ type
 
   { Declare the extended SQLDA }
   TXSQLVAR = record
-    sqltype:            Short;     { datatype of field }
-    sqlscale:           Short;     { scale factor }
-    sqlsubtype:         Short;     { datatype subtype - BLOBs }
+    sqltype:            ISC_SHORT;     { datatype of field }
+    sqlscale:           ISC_SHORT;     { scale factor }
+    sqlsubtype:         ISC_SHORT;     { datatype subtype - BLOBs }
 			           { & text types only }
-    sqllen:             Short;     { length of data area }
-    sqldata:            PAnsiChar;     { address of data }
-    sqlind:             PSmallInt;  { address of indicator } 
+    sqllen:             ISC_SHORT;     { length of data area }
+    sqldata:            PISC_SCHAR;     { address of data }
+    sqlind:             PISC_SHORT;  { address of indicator }
                                    { variable }
-    sqlname_length:     Short;     { length of sqlname field }
+    sqlname_length:     ISC_SHORT;     { length of sqlname field }
     { name of field, name length + space for NULL }
     sqlname:            array[0..METADATALEN_V1-1] of ISC_SCHAR;
-    relname_length:     Short;     { length of relation name }
+    relname_length:     ISC_SHORT;     { length of relation name }
     { field's relation name + space for NULL }
     relname:            array[0..METADATALEN_V1-1] of ISC_SCHAR;
-    ownname_length:     Short;     { length of owner name }
+    ownname_length:     ISC_SHORT;     { length of owner name }
     { relation's owner name + space for NULL }
     ownname:            array[0..METADATALEN_V1-1] of ISC_SCHAR;
-    aliasname_length:   Short;     { length of alias name }
+    aliasname_length:   ISC_SHORT;     { length of alias name }
     { relation's alias name + space for NULL }
     aliasname:          array[0..METADATALEN_V1-1] of ISC_SCHAR;
   end;
   PXSQLVAR = ^TXSQLVAR;
 
   TXSQLDA = record
-    version:            Short;     { version of this XSQLDA }
+    version:            ISC_SHORT;     { version of this XSQLDA }
     { XSQLDA name field }
     sqldaid:            array[0..7] of ISC_SCHAR;
     sqldabc:            ISC_LONG;  { length in bytes of SQLDA }
-    sqln:               Short;     { number of fields allocated }
-    sqld:               Short;     { actual number of fields }
+    sqln:               ISC_SHORT;     { number of fields allocated }
+    sqld:               ISC_SHORT;     { actual number of fields }
     { first field address }
     sqlvar:             array[0..0] of TXSQLVAR;
   end;
