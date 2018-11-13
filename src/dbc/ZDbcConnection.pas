@@ -309,6 +309,7 @@ implementation
 uses ZMessages,{$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}
   ZDbcMetadata, ZDbcUtils, ZEncoding, ZConnProperties, StrUtils,
   ZDbcProperties, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
+  {$IFDEF WITH_INLINE},ZFastCode{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
