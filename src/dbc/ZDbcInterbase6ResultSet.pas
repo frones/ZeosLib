@@ -103,10 +103,7 @@ type
     //BUT!!! all GetXXXByName methods don't reach the code here any more
     //This needs to be done by IZResultSet(Self).GetXXXByName
     function IsNull(ColumnIndex: Integer): Boolean; reintroduce;
-    function GetPChar(ColumnIndex: Integer): PChar; reintroduce;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; reintroduce; overload;
-    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; reintroduce; overload;
-    function GetPWideChar(ColumnIndex: Integer): PWideChar; reintroduce; overload;
     function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; reintroduce; overload;
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ColumnIndex: Integer): AnsiString; reintroduce;
@@ -1387,56 +1384,6 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
   end;
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZInterbase6XSQLDAResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
-var Len: NativeUInt;
-begin
-  Result := GetPAnsiChar(ColumnIndex, Len);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZInterbase6XSQLDAResultSet.GetPChar(ColumnIndex: Integer): PChar;
-var Len: NativeUInt;
-begin
-  {$IFDEF UNICODE}
-  Result := GetPWideChar(ColumnIndex, Len);
-  {$ELSE}
-  Result := GetPAnsiChar(ColumnIndex, Len);
-  {$ENDIF}
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PWideChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZInterbase6XSQLDAResultSet.GetPWideChar(
-  ColumnIndex: Integer): PWideChar;
-var Len: NativeUInt;
-begin
-  Result := GetPWideChar(ColumnIndex, Len);
-end;
 
 {**
   Gets the value of the designated column in the current row
