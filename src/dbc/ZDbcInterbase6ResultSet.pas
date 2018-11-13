@@ -513,12 +513,12 @@ begin
     case (XSQLVAR.sqltype and not(1)) of
       SQL_D_FLOAT,
       SQL_DOUBLE    : DoubleToBCD(PDouble(XSQLVAR.sqldata)^, Result);
-      SQL_LONG      : ScaledOrdinal2Bcd(PInteger(XSQLVAR.sqldata)^, Abs(XSQLVAR.sqlscale), Result);
+      SQL_LONG      : ScaledOrdinal2Bcd(PInteger(XSQLVAR.sqldata)^, Byte(-XSQLVAR.sqlscale), Result);
       SQL_FLOAT     : DoubleToBCD(PSingle(XSQLVAR.sqldata)^, Result);
       SQL_BOOLEAN   : ScaledOrdinal2Bcd(Ord(PSmallint(XSQLVAR.sqldata)^ <> 0), 0, Result);
       SQL_BOOLEAN_FB: ScaledOrdinal2Bcd(Ord(PByte(XSQLVAR.sqldata)^ <> 0), 0, Result);
-      SQL_SHORT     : ScaledOrdinal2Bcd(PSmallInt(XSQLVAR.sqldata)^, Abs(XSQLVAR.sqlscale), Result);
-      SQL_INT64     : ScaledOrdinal2Bcd(PInt64(XSQLVAR.sqldata)^, Abs(XSQLVAR.sqlscale), Result);
+      SQL_SHORT     : ScaledOrdinal2Bcd(PSmallInt(XSQLVAR.sqldata)^, Byte(-XSQLVAR.sqlscale), Result);
+      SQL_INT64     : ScaledOrdinal2Bcd(PInt64(XSQLVAR.sqldata)^, Byte(-XSQLVAR.sqlscale), Result);
       SQL_TEXT,
       SQL_VARYING   : if not TryStrToBcd(GetString(ColumnIndex), Result) then begin
                         Result := NullBcd;
@@ -1309,7 +1309,7 @@ begin
                         IntToRaw(PInteger(XSQLVAR.sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Raw(PInteger(XSQLVAR.sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
+                        ScaledOrdinal2Raw(PInteger(XSQLVAR.sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result, Byte(-XSQLVAR.sqlscale));
                         goto set_Results;
                       end;
       SQL_FLOAT     : begin
@@ -1334,7 +1334,7 @@ begin
                         IntToRaw(Integer(PSmallInt(XSQLVAR.sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Raw(Integer(PSmallInt(XSQLVAR.sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
+                        ScaledOrdinal2Raw(Integer(PSmallInt(XSQLVAR.sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result, Byte(-XSQLVAR.sqlscale));
                         goto set_Results;
                       end;
       SQL_QUAD,
@@ -1342,7 +1342,7 @@ begin
                         IntToRaw(PInt64(XSQLVAR.sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Raw(PInt64(XSQLVAR.sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
+                        ScaledOrdinal2Raw(PInt64(XSQLVAR.sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result, Byte(-XSQLVAR.sqlscale));
 set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                         Result := @FTinyBuffer[0];
                       end;
@@ -1496,14 +1496,14 @@ begin
                         IntToUnicode(Integer(PSmallInt(XSQLVAR.sqldata)^), PWideChar(@FTinyBuffer[0]), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Unicode(Integer(PSmallInt(XSQLVAR.sqldata)^), PWideChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
+                        ScaledOrdinal2Unicode(Integer(PSmallInt(XSQLVAR.sqldata)^), PWideChar(@FTinyBuffer[0]), @Result, Byte(-XSQLVAR.sqlscale));
                         goto set_Results;
                       end;
       SQL_LONG      : if XSQLVAR.sqlscale = 0 then begin
                         IntToUnicode(PInteger(XSQLVAR.sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Unicode(PInteger(XSQLVAR.sqldata)^, PWideChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
+                        ScaledOrdinal2Unicode(PInteger(XSQLVAR.sqldata)^, PWideChar(@FTinyBuffer[0]), @Result, Byte(-XSQLVAR.sqlscale));
                         goto set_Results;
                       end;
       SQL_QUAD,
@@ -1511,7 +1511,7 @@ begin
                         IntToUnicode(PInt64(XSQLVAR.sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Unicode(PInt64(XSQLVAR.sqldata)^, PWideChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
+                        ScaledOrdinal2Unicode(PInt64(XSQLVAR.sqldata)^, PWideChar(@FTinyBuffer[0]), @Result, Byte(-XSQLVAR.sqlscale));
 set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
                         Result := @FTinyBuffer[0];
                       end;
