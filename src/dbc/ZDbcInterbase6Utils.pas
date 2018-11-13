@@ -2253,7 +2253,7 @@ begin
     else PShortInt(Dest)^ := i64;
   end;
 end;
-
+(*
 procedure X;
 var BCD1, BCD2: TBCD;
   i64a, i64b: Int64;
@@ -2275,5 +2275,5 @@ end;
 
 initialization
 x;
-
+  *)
 end.

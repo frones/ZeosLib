@@ -158,7 +158,7 @@ const
     SQLT_LVC, SQLT_LVC, SQLT_LVB, //varying size types in equal order
     SQLT_CLOB, SQLT_CLOB, SQLT_BLOB); //lob's
   SQLType2OCISize: array[stBoolean..stBinaryStream] of sb2 = (
-    SizeOf(Boolean), SizeOf(Byte), SizeOf(ShortInt), SizeOf(Word), SizeOf(SmallInt), SizeOf(Cardinal), SizeOf(LongInt), SizeOf(UInt64), SizeOf(Int64),  //ordinals
+    SizeOf(Boolean), SizeOf(Byte), SizeOf(ShortInt), SizeOf(Word), SizeOf(SmallInt), SizeOf(Cardinal), SizeOf(Integer), SizeOf(UInt64), SizeOf(Int64),  //ordinals
     SizeOf(Single), SizeOf(Double), SizeOf(TOCINumber), SizeOf(TOCINumber), //floats
     SizeOf(TOraDate), SizeOf(POCIDescriptor), SizeOf(POCIDescriptor), //time values
     StrGUIDLen, //GUID
@@ -235,8 +235,8 @@ begin
       PShortInt(Bind.valuep)^ := Ord(Value)
     else if Bind.value_sz = SizeOf(Int64) then
       PInt64(Bind.valuep)^ := Ord(Value)
-    else if Bind.value_sz = SizeOf(LongInt) then
-      PLongInt(Bind.valuep)^ := Ord(Value)
+    else if Bind.value_sz = SizeOf(Integer) then
+      PInteger(Bind.valuep)^ := Ord(Value)
     else
       PSmallInt(Bind.valuep)^ := Ord(Value)
   else begin
@@ -274,7 +274,7 @@ begin
     POraDate(Bind^.valuep).Cent   := TS.Year div 100 +100;
     POraDate(Bind^.valuep).Year   := TS.Year mod 100 +100;
     POraDate(Bind^.valuep).Month  := TS.Month;
-    PLongInt(@POraDate(Bind^.valuep).Day)^ := 0; //init all remaining fields to 0 with one 4Byte value
+    PInteger(@POraDate(Bind^.valuep).Day)^ := 0; //init all remaining fields to 0 with one 4Byte value
     POraDate(Bind^.valuep).Day    := TS.Day;
   end else begin //switch to msec precision
     Status := FPlainDriver.OCIDateTimeConstruct(FOracleConnection.GetConnectionHandle,
@@ -413,8 +413,8 @@ begin
   end else if Bind.dty = SQLT_INT then
     if Bind.value_sz = SizeOf(Int64) then
       PInt64(Bind.valuep)^ := Value
-    else if Bind.value_sz = SizeOf(LongInt) then
-      PLongInt(Bind.valuep)^ := Value
+    else if Bind.value_sz = SizeOf(Integer) then
+      PInteger(Bind.valuep)^ := Value
     else if Bind.value_sz = SizeOf(SmallInt) then
       PSmallInt(Bind.valuep)^ := Value
     else
@@ -467,8 +467,8 @@ begin
   else if Bind.dty = SQLT_INT then
     if Bind.value_sz = SizeOf(Int64) then
       PInt64(Bind.valuep)^ := Value
-    else if Bind.value_sz = SizeOf(LongInt) then
-      PLongInt(Bind.valuep)^ := Value
+    else if Bind.value_sz = SizeOf(Integer) then
+      PInteger(Bind.valuep)^ := Value
     else if Bind.value_sz = SizeOf(SmallInt) then
       PSmallInt(Bind.valuep)^ := Value
     else
@@ -677,8 +677,8 @@ begin
   else case Bind.dty of
     SQLT_INT: if Bind.value_sz = SizeOf(Int64) then
                 Result := IntToRaw(PInt64(Bind.valuep)^)
-              else if Bind.value_sz = SizeOf(LongInt) then
-                Result := IntToRaw(PLongInt(Bind.valuep)^)
+              else if Bind.value_sz = SizeOf(Integer) then
+                Result := IntToRaw(PInteger(Bind.valuep)^)
               else
                 Result := IntToRaw(PSmallInt(Bind.valuep)^);
     SQLT_UIN: if Bind.value_sz = SizeOf(UInt64) then
@@ -1313,7 +1313,7 @@ bind_direct:
           OraDate.Cent := Ts.Year div 100 + 100;
           OraDate.Year := Ts.Year mod 100 + 100;
           POraDate(Bind^.valuep).Month := TS.Month;
-          PLongInt(@POraDate(Bind^.valuep).Day)^ := 0; //init all remaining fields to 0 with one 4Byte value
+          PInteger(@POraDate(Bind^.valuep).Day)^ := 0; //init all remaining fields to 0 with one 4Byte value
           POraDate(Bind^.valuep).Day    := TS.Day;
         end;
       end;
