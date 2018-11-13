@@ -117,7 +117,6 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
-    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
@@ -601,21 +600,6 @@ begin
       Result := FPlainDriver.sqlite3_column_blob(Fsqlite3_stmt, ColumnIndex);
       Len := FPlainDriver.sqlite3_column_bytes(Fsqlite3_stmt, ColumnIndex);
     end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZSQLiteResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
-begin
-  Result := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
-  LastWasNull := Result = nil;
 end;
 
 {**

@@ -175,7 +175,6 @@ type
     //======================================================================
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPChar(ColumnIndex: Integer): PChar; override;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; override;
     function GetString(ColumnIndex: Integer): String; override;
@@ -840,35 +839,6 @@ begin
   CheckAvailable;
 {$ENDIF}
   Result := FRowAccessor.IsNull(ColumnIndex);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractCachedResultSet.GetPChar(ColumnIndex: Integer): PChar;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckAvailable;
-{$ENDIF}
-  {$IFDEF UNICODE}
-  FUniTemp := FRowAccessor.GetString(ColumnIndex, LastWasNull);
-  if Pointer(FUniTemp) = nil then
-    Result := PEmptyUnicodeString
-  else
-    Result := Pointer(FUniTemp); // no RTL conversion!
-  {$ELSE}
-  FRawTemp := FRowAccessor.GetString(ColumnIndex, LastWasNull);
-  if Pointer(FRawTemp) = nil then
-    Result := PEmptyAnsiString
-  else
-    Result := Pointer(FRawTemp); // no RTL conversion!
-  {$ENDIF}
 end;
 
 function TZAbstractCachedResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;

@@ -464,6 +464,8 @@ procedure ScaledOrdinal2Unicode(const Value: UInt64; Buf: PWideChar; PEnd: ZPPWi
 procedure ScaledOrdinal2Unicode(Value: Integer; Buf: PWideChar; PEnd: ZPPWideChar; Scale: Byte); overload;
 procedure ScaledOrdinal2Unicode(Value: Cardinal; Buf: PWideChar; PEnd: ZPPWideChar; Scale: Byte); overload;
 
+procedure BCD2ScaledOrdinal(const Value: TBCD; Dest: Pointer; DestSize, Scale: Byte);
+
 implementation
 
 uses

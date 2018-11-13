@@ -141,10 +141,10 @@ type
     //======================================================================
 
     function IsNull(ColumnIndex: Integer): Boolean; virtual;
-    function GetPChar(ColumnIndex: Integer): PChar; virtual;
-    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; overload; virtual;
+    function GetPChar(ColumnIndex: Integer): PChar;
+    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; overload;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload; virtual;
-    function GetPWideChar(ColumnIndex: Integer): PWidechar; overload; virtual;
+    function GetPWideChar(ColumnIndex: Integer): PWidechar; overload;
     function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload; virtual;
     function GetString(ColumnIndex: Integer): String; virtual;
     {$IFNDEF NO_ANSISTRING}
@@ -1036,9 +1036,9 @@ end;
 }
 
 function TZAbstractResultSet.GetPChar(ColumnIndex: Integer): PChar;
+var L: NativeUInt;
 begin
-  {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := GetString(ColumnIndex);
-  Result := PChar({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+  Result := IZResultSet(FWeakIntfPtrOfSelf).{$IFDEF UNICODE}GetPWideChar{$ELSE}GetPAnsiChar{$ENDIF}(ColumnIndex, L);
 end;
 
 {**
@@ -1077,12 +1077,9 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
+var L: NativeUInt;
 begin
-  FRawTemp := GetRawByteString(ColumnIndex);
-  if Pointer(FRawTemp) = nil then
-    Result := PEmptyAnsiString
-  else
-    Result := Pointer(FRawTemp);
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
 end;
 
 {**
@@ -1095,12 +1092,9 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractResultSet.GetPWideChar(ColumnIndex: Integer): PWidechar;
+var L: NativeUInt;
 begin
-  FUniTemp := GetUnicodeString(ColumnIndex);
-  if Pointer(FUniTemp) = nil then
-    Result := PEmptyUnicodeString
-  else
-    Result := Pointer(FUniTemp);
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(ColumnIndex, L)
 end;
 
 {**

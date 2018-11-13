@@ -133,7 +133,6 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
-    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
@@ -991,21 +990,6 @@ begin
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     LastWasNull := Result = nil;
   end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractMySQLResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
-var Len: NativeUInt;
-begin
-  Result := GetPAnsiChar(ColumnIndex, Len);
 end;
 
 procedure TZAbstractMySQLResultSet.InitColumnBinds(Bind: PMYSQL_aligned_BIND;
