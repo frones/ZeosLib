@@ -104,9 +104,9 @@ type
     initial entry(X) - SizeOf(LengthInt) = Length}
 
   PLengthInt            = ^LengthInt;
-  LengthInt             = {$IFDEF FPC}SizeInt{$ELSE}LongInt{$ENDIF};
+  LengthInt             = {$IFDEF FPC}SizeInt{$ELSE}Integer{$ENDIF};
   PRefCntInt            = ^RefCntInt;
-  RefCntInt             = {$IFDEF FPC}SizeInt{$ELSE}LongInt{$ENDIF};
+  RefCntInt             = {$IFDEF FPC}SizeInt{$ELSE}Integer{$ENDIF};
   {EH: just two types for determination DynArray Length if ever something changes we just need a define here.}
   ArrayLenInt           = NativeInt;
   PArrayLenInt          = ^ArrayLenInt;
@@ -128,8 +128,8 @@ const
   StringLenOffSet             = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len};
   StringRefCntOffSet          = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Ref}+SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len};
   {$ELSE} //system.pas
-  StringLenOffSet             = SizeOf(LongInt); {PStrRec.Len}
-  StringRefCntOffSet          = SizeOf(LongInt){PStrRec.RefCnt}+SizeOf(LongInt){PStrRec.Len};
+  StringLenOffSet             = SizeOf(Integer); {PStrRec.Len}
+  StringRefCntOffSet          = SizeOf(Integer){PStrRec.RefCnt}+SizeOf(Integer){PStrRec.Len};
   {$ENDIF}
   ArrayLenOffSet              = SizeOf(ArrayLenInt);
 
@@ -253,7 +253,7 @@ type
   TLongWordDynArray       = array of LongWord;
   {$IFEND}
   {$IF not declared(TIntegerDynArray)}
-  TIntegerDynArray        = array of LongInt;
+  TIntegerDynArray        = array of Integer;
   {$IFEND}
   {$IF not declared(TCardinalDynArray)}
   TCardinalDynArray       = array of Cardinal;

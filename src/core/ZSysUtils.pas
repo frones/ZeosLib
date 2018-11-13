@@ -237,9 +237,9 @@ procedure SQLStrToFloatDef(Value: PWideChar; const Def: Single; out Result: Sing
   @return a string retrived from the buffer.
 }
 {$IFDEF UNICODE}
-function BufferToStr(Buffer: PWideChar; Length: LongInt): string;
+function BufferToStr(Buffer: PWideChar; Length: Integer): string;
 {$ELSE}
-function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string;
+function BufferToStr(Buffer: PAnsiChar; Length: Integer): string;
 {$ENDIF}
 
 {**
@@ -248,7 +248,7 @@ function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string;
   @param Length a buffer length.
   @return a TBytes retrived from the buffer.
 }
-function BufferToBytes(Buffer: Pointer; Length: LongInt): TBytes; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function BufferToBytes(Buffer: Pointer; Length: Integer): TBytes; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 {**
   Converts a string into boolean value.
@@ -849,7 +849,7 @@ procedure ScaledOrdinal2Bcd(Value: UInt64; Scale: Byte; var Result: TBCD; Negati
    @param Scale the scale digits
    @param Result the slow Delphi result bcd record to be filled
 }
-procedure ScaledOrdinal2Bcd(Value: LongInt; Scale: Byte; var Result: TBCD); overload;
+procedure ScaledOrdinal2Bcd(Value: Integer; Scale: Byte; var Result: TBCD); overload;
 
 {** EH:
    Encode a scaled unsigned long to a TBCD
@@ -876,6 +876,9 @@ procedure ScaledOrdinal2Bcd(Value: SmallInt; Scale: Byte; var Result: TBCD); ove
    @param Negative the converted value was negative
 }
 procedure ScaledOrdinal2Bcd(Value: Word; Scale: Byte; var Result: TBCD; Negative: Boolean); overload;
+
+var
+  ZBcdNibble2Base100ByteLookup: array[0..153] of Byte;
 
 const
   // Local copy of current FormatSettings with '.' as DecimalSeparator and empty other fields
@@ -1555,9 +1558,9 @@ end;
 
 { Convert string buffer into pascal string }
 {$IFDEF UNICODE}
-function BufferToStr(Buffer: PWideChar; Length: LongInt): string;
+function BufferToStr(Buffer: PWideChar; Length: Integer): string;
 {$ELSE}
-function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string;
+function BufferToStr(Buffer: PAnsiChar; Length: Integer): string;
 {$ENDIF}
 begin
   Result := '';
@@ -1565,7 +1568,7 @@ begin
     SetString(Result, Buffer, Length);
 end;
 
-function BufferToBytes(Buffer: Pointer; Length: LongInt): TBytes;
+function BufferToBytes(Buffer: Pointer; Length: Integer): TBytes;
 begin
   SetLength(Result, Length);
   {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Result)^, Length);
@@ -5404,7 +5407,7 @@ const
   SignSpecialPlacesArr: Array[Boolean] of Byte = ($00, $80);
 var
   ZBase100Byte2BcdNibbleLookup: array[0..99] of Byte;
-  {%H-}ZBcdNibble2Base100ByteLookup: array[0..153] of Byte;
+  //{%H-}ZBcdNibble2Base100ByteLookup: array[0..153] of Byte;
 
 {** EH:
    Encode a scaled signed longlong to a TBCD
@@ -5470,7 +5473,7 @@ end;
    @param Scale the scale digits
    @param Result the slow Delphi result bcd record to be filled
 }
-procedure ScaledOrdinal2Bcd(Value: LongInt; Scale: Byte; var Result: TBCD);
+procedure ScaledOrdinal2Bcd(Value: Integer; Scale: Byte; var Result: TBCD);
 begin
   {$R-} {$Q-}
   if Value < 0

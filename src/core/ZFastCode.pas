@@ -271,7 +271,7 @@ var
   CharPos: function(ch: char; const s: String): integer;
 {$ENDIF}
 
-function IntToStr(Value: LongInt): String; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function IntToStr(Value: Integer): String; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 function IntToStr(Value: ShortInt): String; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 function IntToStr(Value: Byte): String; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 function IntToStr(Value: SmallInt): String; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -281,7 +281,7 @@ function IntToStr(const Value: Int64): String; overload; {$IFDEF WITH_INLINE}inl
 function IntToStr(const Value: UInt64): String; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 { Integer convertion in Raw and Unicode Strings}
-function IntToRaw(Value: LongInt): RawByteString; overload;  //keep always this one @first pos because of the Ansi-Delphi faster BASM code (the int64 version call the 32bit within range)
+function IntToRaw(Value: Integer): RawByteString; overload;  //keep always this one @first pos because of the Ansi-Delphi faster BASM code (the int64 version call the 32bit within range)
 function IntToRaw(Value: Byte): RawByteString; overload;
 function IntToRaw(Value: ShortInt): RawByteString; overload;
 function IntToRaw(Value: Word): RawByteString; overload;
@@ -290,7 +290,7 @@ function IntToRaw(Value: Cardinal): RawByteString; overload;
 function IntToRaw(Value: Int64): RawByteString; overload;
 function IntToRaw(const Value: UInt64): RawByteString; overload;
 
-procedure IntToRaw(Value: LongInt; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
+procedure IntToRaw(Value: Integer; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
 procedure IntToRaw(Value: Cardinal; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
 procedure IntToRaw(const Value: Int64; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
 procedure IntToRaw(const Value: UInt64; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
@@ -298,7 +298,7 @@ procedure IntToRaw(const Value: UInt64; Buf: PAnsiChar; PEnd: PPAnsiChar = nil);
 procedure IntToRaw(Value: Cardinal; Buf: PAnsiChar; Digits: Byte); overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure IntToRaw(Value: UInt64; Buf: PAnsiChar; Digits: Byte); overload;
 
-procedure IntToUnicode(Value: LongInt; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
+procedure IntToUnicode(Value: Integer; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
 procedure IntToUnicode(Value: Cardinal; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
 procedure IntToUnicode(const Value: Int64; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
 procedure IntToUnicode(const Value: UInt64; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
@@ -311,7 +311,7 @@ function IntToUnicode(Value: ShortInt): ZWideString; overload;
 function IntToUnicode(Value: Word): ZWideString; overload;
 function IntToUnicode(Value: SmallInt): ZWideString; overload;
 function IntToUnicode(Value: Cardinal): ZWideString; overload;
-function IntToUnicode(Value: LongInt): ZWideString; overload;
+function IntToUnicode(Value: Integer): ZWideString; overload;
 function IntToUnicode(const Value: Int64): ZWideString; overload;
 function IntToUnicode(const Value: UInt64): ZWideString; overload;
 
@@ -446,7 +446,7 @@ begin
   Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Integer(Value));
 end;
 
-function IntToStr(Value: LongInt): String;
+function IntToStr(Value: Integer): String;
 begin
   Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value);
 end;
@@ -2532,7 +2532,7 @@ begin
 end;
 
 {$IF defined(Delphi) and defined(WIN32)}
-function IntToRaw(Value: LongInt): RawByteString;
+function IntToRaw(Value: Integer): RawByteString;
 //function IntToStr32_JOH_IA32_6_d(Value: Integer): string;
 asm
   push   ebx
@@ -2886,7 +2886,7 @@ asm
   pop    ebx
 end;
 {$ELSE}
-function IntToRaw(Value: LongInt): RawByteString;
+function IntToRaw(Value: Integer): RawByteString;
 var C: Cardinal;
   Digits: Byte;
   Negative: Boolean;
@@ -2930,7 +2930,7 @@ end;
 
 function IntToRaw(Value: ShortInt): RawByteString;
 begin
-  Result := IntToRaw(LongInt(Value));
+  Result := IntToRaw(Integer(Value));
 end;
 
 function IntToRaw(Value: Word): RawByteString;
@@ -2940,10 +2940,10 @@ end;
 
 function IntToRaw(Value: SmallInt): RawByteString;
 begin
-  Result := IntToRaw(LongInt(Value));
+  Result := IntToRaw(Integer(Value));
 end;
 
-procedure IntToRaw(Value: LongInt; Buf: PAnsiChar; PEnd: PPAnsiChar = nil);
+procedure IntToRaw(Value: Integer; Buf: PAnsiChar; PEnd: PPAnsiChar = nil);
 begin
   if Value < 0 then begin
     PByte(Buf)^ := Ord('-');
@@ -3190,7 +3190,7 @@ begin
   System.SetString(Result, PWideChar(@Buf[0]), P-PWideChar(@Buf[0]));
 end;
 
-procedure IntToUnicode(Value: LongInt; Buf: PWideChar; PEnd: ZPPWideChar = nil);
+procedure IntToUnicode(Value: Integer; Buf: PWideChar; PEnd: ZPPWideChar = nil);
 begin
   if Value < 0 then begin
     PWord(Buf)^ := Ord('-');
@@ -3328,7 +3328,7 @@ end;
 
 function IntToUnicode(Value: ShortInt): ZWideString;
 begin
-  Result := IntToUnicode(LongInt(Value));
+  Result := IntToUnicode(Integer(Value));
 end;
 
 function IntToUnicode(Value: Word): ZWideString;
@@ -3338,7 +3338,7 @@ end;
 
 function IntToUnicode(Value: SmallInt): ZWideString;
 begin
-  Result := IntToUnicode(LongInt(Value));
+  Result := IntToUnicode(Integer(Value));
 end;
 
 function IntToUnicode(Value: Cardinal): ZWideString;
@@ -3350,7 +3350,7 @@ begin
   IntToUnicode(Value, Pointer(Result), Digits);
 end;
 
-function IntToUnicode(Value: LongInt): ZWideString;
+function IntToUnicode(Value: Integer): ZWideString;
 var C: Cardinal;
   Digits: Byte;
   Negative: Boolean;
@@ -3714,7 +3714,7 @@ asm
   inc   edx
   jmp   @@HexLoop
 {$ELSE}
-  //function StrToInt32_JOH_PAS_7_c(const s: string): Longint;
+  //function StrToInt32_JOH_PAS_7_c(const s: string): Integer;
   //originally written by John O'Harrow
   //http://fastcode.sourceforge.net/
   //EgonHugeist:
@@ -3792,7 +3792,7 @@ asm
           end;
         if Result < 0 then {Possible Overflow}
           if (Cardinal(Result) <> $80000000) or (not neg) then
-            begin {Min(LongInt) = $80000000 is a Valid Result}
+            begin {Min(Integer) = $80000000 is a Valid Result}
               Dec(P);
               Valid := False;
             end;
@@ -3807,7 +3807,7 @@ end;
 
 {$WARNINGS OFF}
 function UnicodeToInt(const Value: ZWideString): Integer;
-//function StrToInt32_JOH_PAS_7_c(const s: string): Longint;
+//function StrToInt32_JOH_PAS_7_c(const s: string): Integer;
 //originally wrtten by John O'Harrow
 //http://fastcode.sourceforge.net/
 const
@@ -3880,7 +3880,7 @@ begin
         end;
       if Result < 0 then {Possible Overflow}
         if (Cardinal(Result) <> $80000000) or (not neg) then
-          begin {Min(LongInt) = $80000000 is a Valid Result}
+          begin {Min(Integer) = $80000000 is a Valid Result}
             Dec(P);
             Valid := False;
           end;
@@ -3893,7 +3893,7 @@ end;
 {$WARNINGS ON}
 
 {$IF defined(WIN32) and not defined(FPC)}
-function ValLong_JOH_IA32_8_a(const s: PAnsiChar; out code: Integer): Longint;
+function ValLong_JOH_IA32_8_a(const s: PAnsiChar; out code: Integer): Integer;
 //fast asm by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //EgonHugeist: Changed in S type from String to PAnsiChar
@@ -4018,7 +4018,7 @@ asm
 end;
 {$ELSE}
 {$WARNINGS OFF} {Prevent False Compiler Warning on Digit not being Initialized}
-function ValLong_JOH_PAS_4_b(const S: PAnsiChar; out code: Integer): Longint;
+function ValLong_JOH_PAS_4_b(const S: PAnsiChar; out code: Integer): Integer;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //EH: changed to NEXGEN save PByte support
@@ -4082,7 +4082,7 @@ begin
     end;
     if Result < 0 then {Possible Overflow}
       if (Cardinal(Result) <> $80000000) or ((Flags and 2) = 0) then
-        begin {Min(LongInt) = $80000000 is a Valid Result}
+        begin {Min(Integer) = $80000000 is a Valid Result}
           Dec(P);
           Flags := Flags or 1; {Valid := True}
         end;
@@ -4126,7 +4126,7 @@ begin
 end;
 
 {$WARNINGS OFF} //value digits might not be initialized
-function ValLong_JOH_PAS_4_b_unicode(const S: PWideChar; out code: Integer): Longint;
+function ValLong_JOH_PAS_4_b_unicode(const S: PWideChar; out code: Integer): Integer;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //modified for unicode chars
@@ -4192,7 +4192,7 @@ begin
     end;
     if Result < 0 then {Possible Overflow}
       if (Cardinal(Result) <> $80000000) or ((Flags and 2) = 0) then
-        begin {Min(LongInt) = $80000000 is a Valid Result}
+        begin {Min(Integer) = $80000000 is a Valid Result}
           Dec(P);
           Flags := Flags or 1; {Valid := True}
         end;
@@ -5479,7 +5479,7 @@ const
 
 {$WARNINGS OFF} {Prevent False Compiler Warning on Digit not being Initialized}
 function ValRawInt(PStart: PAnsiChar; var PEnd: PAnsiChar): Integer; overload;
-//function ValLong_JOH_PAS_4_b(const S: PAnsiChar; out code: Integer): Longint;
+//function ValLong_JOH_PAS_4_b(const S: PAnsiChar; out code: Integer): Integer;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //EH: -changed to NEXGEN save PByte support
@@ -5540,7 +5540,7 @@ begin
       inc(PStart);
     end;
     if Result < 0 then {Possible Overflow}
-      if (Cardinal(Result) <> $80000000) or ((Flags and 2) = 0) then begin {Min(LongInt) = $80000000 is a Valid Result}
+      if (Cardinal(Result) <> $80000000) or ((Flags and 2) = 0) then begin {Min(Integer) = $80000000 is a Valid Result}
         Dec(PStart);
         Flags := Flags or 1; {Valid := True}
       end;
