@@ -431,12 +431,12 @@ begin
   if Result = BothNotNull then
   //function ShaCompareInt(Item1, Item2: Pointer): Integer;
   begin //on 100 mio execs 200ms faster
-    Result := PLongInt(V1)^;
-    if Result xor PLongInt(V2)^>=0
-      then Result:=Result-PLongInt(V2)^
+    Result := PInteger(V1)^;
+    if Result xor PInteger(V2)^>=0
+      then Result:=Result-PInteger(V2)^
       else Result:=Result or 1;
   end; //Than My (EH) overflow save idea
-  //Result := Ord(PLongInt(V1)^ > PLongInt(V2)^)-Ord(PLongInt(V1)^ < PLongInt(V2)^);
+  //Result := Ord(PInteger(V1)^ > PInteger(V2)^)-Ord(PInteger(V1)^ < PInteger(V2)^);
 end;
 
 function CompareInteger_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -448,7 +448,7 @@ function CompareInteger_Equals(const Null1, Null2: Boolean; const V1, V2): Integ
 begin
   Result := NullsEqualMatrix[Null1, Null2];
   if Result = BothNotNull then
-    Result := Ord(PLongInt(V1)^ <> PLongInt(V2)^);
+    Result := Ord(PInteger(V1)^ <> PInteger(V2)^);
 end;
 
 function CompareInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -3460,7 +3460,7 @@ begin
       stWord:       Result := EncodeUInteger(PWord(ValuePtr)^);
       stSmall:      Result := EncodeInteger(PSmallInt(ValuePtr)^);
       stLongWord:   Result := EncodeUInteger(PCardinal(ValuePtr)^);
-      stInteger:    Result := EncodeInteger(PLongInt(ValuePtr)^);
+      stInteger:    Result := EncodeInteger(PInteger(ValuePtr)^);
       stULong:      Result := EncodeUInteger(PUInt64(ValuePtr)^);
       stLong:       Result := EncodeInteger(PInt64(ValuePtr)^);
       stFloat:      Result := {$IFDEF BCD_TEST}EncodeDouble{$ELSE}EncodeFloat{$ENDIF}(PSingle(ValuePtr)^);
