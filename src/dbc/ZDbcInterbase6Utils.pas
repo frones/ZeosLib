@@ -239,7 +239,7 @@ procedure CheckInterbase6Error(const PlainDriver: TZInterbasePlainDriver;
 function GetDBStringInfo(const PlainDriver: TZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; isc_info: Byte; const ImmediatelyReleasable: IImmediatelyReleasable): String;
 function GetDBIntegerInfo(const PlainDriver: TZInterbasePlainDriver;
-  Handle: PISC_DB_HANDLE; isc_info: Byte; const ImmediatelyReleasable: IImmediatelyReleasable): LongInt;
+  Handle: PISC_DB_HANDLE; isc_info: Byte; const ImmediatelyReleasable: IImmediatelyReleasable): Integer;
 function GetDBSQLDialect(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const ImmediatelyReleasable: IImmediatelyReleasable): Integer;
 
@@ -456,12 +456,12 @@ function ReadInterbase6Number(const PlainDriver: TZInterbasePlainDriver; const B
 
 procedure ScaledOrdinal2Raw(const Value: Int64; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
 procedure ScaledOrdinal2Raw(const Value: UInt64; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
-procedure ScaledOrdinal2Raw(Value: LongInt; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
+procedure ScaledOrdinal2Raw(Value: Integer; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
 procedure ScaledOrdinal2Raw(Value: Cardinal; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
 
 procedure ScaledOrdinal2Unicode(const Value: Int64; Buf: PWideChar; PEnd: ZPPWideChar; Scale: Byte); overload;
 procedure ScaledOrdinal2Unicode(const Value: UInt64; Buf: PWideChar; PEnd: ZPPWideChar; Scale: Byte); overload;
-procedure ScaledOrdinal2Unicode(Value: LongInt; Buf: PWideChar; PEnd: ZPPWideChar; Scale: Byte); overload;
+procedure ScaledOrdinal2Unicode(Value: Integer; Buf: PWideChar; PEnd: ZPPWideChar; Scale: Byte); overload;
 procedure ScaledOrdinal2Unicode(Value: Cardinal; Buf: PWideChar; PEnd: ZPPWideChar; Scale: Byte); overload;
 
 implementation
@@ -795,7 +795,7 @@ begin
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
-procedure ScaledOrdinal2Raw(Value: LongInt; Buf: PAnsiChar; PEnd: PPAnsiChar;
+procedure ScaledOrdinal2Raw(Value: Integer; Buf: PAnsiChar; PEnd: PPAnsiChar;
   Scale: Byte);
 begin
   {$R-} {$Q-}
@@ -925,7 +925,7 @@ begin
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
-procedure ScaledOrdinal2Unicode(Value: LongInt; Buf: PWideChar;
+procedure ScaledOrdinal2Unicode(Value: Integer; Buf: PWideChar;
   PEnd: ZPPWideChar; Scale: Byte);
 begin
   {$R-} {$Q-}
@@ -1220,7 +1220,7 @@ procedure CheckInterbase6Error(const PlainDriver: TZInterbasePlainDriver;
   const SQL: RawByteString = '');
 var
   ErrorMessage, ErrorSqlMessage, sSQL: string;
-  ErrorCode: LongInt;
+  ErrorCode: Integer;
   i: Integer;
   InterbaseStatusVector: TZIBStatusVector;
   ConSettings: PZConSettings;
@@ -1407,7 +1407,7 @@ procedure ReadBlobBufer(const PlainDriver: TZInterbasePlainDriver;
 var
   TempBuffer: PAnsiChar;
   BlobInfo: TIbBlobInfo;
-  CurPos: LongInt;
+  CurPos: Integer;
   BytesRead, SegLen: ISC_USHORT;
   BlobHandle: TISC_BLOB_HANDLE;
   StatusVector: TARRAY_ISC_STATUS;
@@ -1490,7 +1490,7 @@ end;
    @return ISC_INFO Integer
 }
 function GetDBIntegerInfo(const PlainDriver: TZInterbasePlainDriver;
-  Handle: PISC_DB_HANDLE; isc_info: Byte; const ImmediatelyReleasable: IImmediatelyReleasable): LongInt;
+  Handle: PISC_DB_HANDLE; isc_info: Byte; const ImmediatelyReleasable: IImmediatelyReleasable): Integer;
 var
   StatusVector: TARRAY_ISC_STATUS;
   Buffer: array[0..31] of AnsiChar; // this should be enough for any number
@@ -2206,5 +2206,74 @@ begin
            (Aug8th * month + 2) div 5 + day + Day0ToIB_BaseDateDiff);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+
+procedure BCD2ScaledOrdinal(const Value: TBCD; Dest: Pointer; DestSize, Scale: Byte);
+var
+  Nibbles, BCDScale, P, I, F: Byte;
+  i64: Int64;
+  Negative: boolean;
+begin
+  Nibbles := Value.Precision div 2;
+  F := Value.SignSpecialPlaces;
+  BCDScale := (F and 63);
+  Negative := (F and $80) <> 0;
+  P := 1;
+  { scan for leading zeroes to skip them }
+
+  if Nibbles > 0 then begin
+    for I := 0 to MaxFMTBcdDigits -1 do begin
+      F := Value.Fraction[i];
+      if F = 0 then begin
+         Dec(Nibbles);
+         Inc(P);
+      end else begin
+        F := ZBcdNibble2Base100ByteLookup[F];
+        Break;
+      end;
+    end
+  end else F := 0;
+  { initialize the Result }
+  i64 := F;
+  if Nibbles > 0 then begin
+    for I := P to Nibbles-1-Ord(Odd(BCDScale)) do
+      i64 := i64 * 100 + ZBcdNibble2Base100ByteLookup[Value.Fraction[i]];
+    if Odd(BCDScale) then begin
+      i64 := i64 * 10 + Value.Fraction[P+Nibbles-2] shr 4;
+      Dec(BCDScale);
+    end;
+    if negative then
+      i64 := -i64;
+    if BCDScale < Scale then
+      i64 := i64 * IBScaleDivisor[scale-BCDScale];
+  end;
+  case DestSize of
+    8: PInt64(Dest)^ := i64;
+    4: PInteger(Dest)^ := i64;
+    2: PSmallInt(Dest)^ := i64;
+    else PShortInt(Dest)^ := i64;
+  end;
+end;
+
+procedure X;
+var BCD1, BCD2: TBCD;
+  i64a, i64b: Int64;
+  Ca: Currency absolute i64a;
+  Cb: Currency absolute i64b;
+  i: Integer;
+begin
+  i64a := -99;
+  for I := 1 to 16 do begin
+    i64a := i64a * 10 -9;
+    ScaledOrdinal2BCD(i64a, 4, BCD1);
+    BCD2ScaledOrdinal(BCD1, @i64b, 8, 4);
+    Assert(i64a = i64b);
+    //Assert(BcdCompare(BCD1, BCD2)  = 0);
+  end;
+
+
+end;
+
+initialization
+x;
 
 end.

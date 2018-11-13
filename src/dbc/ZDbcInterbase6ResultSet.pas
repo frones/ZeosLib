@@ -341,13 +341,13 @@ begin
           SQL_SHORT     : if sqlscale = 0 then
                             JSONWriter.Add(PSmallint(sqldata)^)
                           else begin
-                            ScaledOrdinal2Raw(LongInt(PSmallInt(sqldata)^), @FTinyBuffer, @P, -sqlscale);
+                            ScaledOrdinal2Raw(Integer(PSmallInt(sqldata)^), @FTinyBuffer, @P, -sqlscale);
                             JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PAnsiChar(P)-PAnsiChar(@FTinyBuffer[0]));
                           end;
           SQL_LONG      : if sqlscale = 0 then
-                            JSONWriter.Add(PLongInt(sqldata)^)
+                            JSONWriter.Add(PInteger(sqldata)^)
                           else begin
-                            ScaledOrdinal2Raw(PLongInt(sqldata)^, @FTinyBuffer, @P, -sqlscale);
+                            ScaledOrdinal2Raw(PInteger(sqldata)^, @FTinyBuffer, @P, -sqlscale);
                             JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PAnsiChar(P)-PAnsiChar(@FTinyBuffer[0]));
                           end;
           SQL_INT64     : if (sqlscale = 0) then
@@ -513,7 +513,7 @@ begin
     case (XSQLVAR.sqltype and not(1)) of
       SQL_D_FLOAT,
       SQL_DOUBLE    : DoubleToBCD(PDouble(XSQLVAR.sqldata)^, Result);
-      SQL_LONG      : ScaledOrdinal2Bcd(PLongInt(XSQLVAR.sqldata)^, Abs(XSQLVAR.sqlscale), Result);
+      SQL_LONG      : ScaledOrdinal2Bcd(PInteger(XSQLVAR.sqldata)^, Abs(XSQLVAR.sqlscale), Result);
       SQL_FLOAT     : DoubleToBCD(PSingle(XSQLVAR.sqldata)^, Result);
       SQL_BOOLEAN   : ScaledOrdinal2Bcd(Ord(PSmallint(XSQLVAR.sqldata)^ <> 0), 0, Result);
       SQL_BOOLEAN_FB: ScaledOrdinal2Bcd(Ord(PByte(XSQLVAR.sqldata)^ <> 0), 0, Result);
@@ -557,8 +557,8 @@ begin
       SQL_D_FLOAT,
       SQL_DOUBLE    : Result := PDouble(XSQLVAR.sqldata)^;
       SQL_LONG      : if XSQLVAR.sqlscale = 0
-                      then Result := PLongInt(XSQLVAR.sqldata)^
-                      else Result := PLongInt(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale];
+                      then Result := PInteger(XSQLVAR.sqldata)^
+                      else Result := PInteger(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale];
       SQL_FLOAT     : Result := PSingle(XSQLVAR.sqldata)^;
       SQL_BOOLEAN   : Result := PSmallint(XSQLVAR.sqldata)^;
       SQL_BOOLEAN_FB: Result := PByte(XSQLVAR.sqldata)^;
@@ -681,7 +681,7 @@ begin
       SQL_FLOAT     : Result := PSingle(XSQLVAR.sqldata)^ <> 0;
       SQL_BOOLEAN   : Result := PSmallint(XSQLVAR.sqldata)^ <> 0;
       SQL_BOOLEAN_FB: Result := PByte(XSQLVAR.sqldata)^ <> 0;
-      SQL_LONG      : Result := PLongInt(XSQLVAR.sqldata)^ <> 0;
+      SQL_LONG      : Result := PInteger(XSQLVAR.sqldata)^ <> 0;
       SQL_SHORT     : Result := PSmallint(XSQLVAR.sqldata)^ <> 0;
       SQL_QUAD,
       SQL_INT64     : Result := PInt64(XSQLVAR.sqldata)^ <> 0;
@@ -840,8 +840,8 @@ begin
       SQL_D_FLOAT,
       SQL_DOUBLE    : Result := PDouble(XSQLVAR.sqldata)^;
       SQL_LONG      : if XSQLVAR.sqlscale = 0
-                      then Result := PLongInt(XSQLVAR.sqldata)^
-                      else Result := PLongInt(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale];
+                      then Result := PInteger(XSQLVAR.sqldata)^
+                      else Result := PInteger(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale];
       SQL_FLOAT     : Result := PSingle(XSQLVAR.sqldata)^;
       SQL_BOOLEAN   : Result := PSmallint(XSQLVAR.sqldata)^;
       SQL_BOOLEAN_FB: Result := PByte(XSQLVAR.sqldata)^;
@@ -912,11 +912,11 @@ begin
       SQL_D_FLOAT,
       SQL_DOUBLE    : Result := PDouble(XSQLVAR.sqldata)^;
       SQL_LONG      : if XSQLVAR.sqlscale = -4 then
-                        I64 := PLongInt(XSQLVAR.sqldata)^
+                        I64 := PInteger(XSQLVAR.sqldata)^
                       else if XSQLVAR.sqlscale > -4  then
-                        I64 := PLongInt(XSQLVAR.sqldata)^ * IBScaleDivisor[-4-XSQLVAR.sqlscale]
+                        I64 := PInteger(XSQLVAR.sqldata)^ * IBScaleDivisor[-4-XSQLVAR.sqlscale]
                       else
-                        I64 := PLongInt(XSQLVAR.sqldata)^ div IBScaleDivisor[-4-XSQLVAR.sqlscale];
+                        I64 := PInteger(XSQLVAR.sqldata)^ div IBScaleDivisor[-4-XSQLVAR.sqlscale];
       SQL_FLOAT     : Result := PSingle(XSQLVAR.sqldata)^;
       SQL_BOOLEAN   : Result := Ord(PSmallint(XSQLVAR.sqldata)^ <> 0);
       SQL_BOOLEAN_FB: Result := Ord(PByte(XSQLVAR.sqldata)^ <> 0);
@@ -974,8 +974,8 @@ begin
       SQL_D_FLOAT,
       SQL_DOUBLE    : Result := PDouble(XSQLVAR.sqldata)^;
       SQL_LONG      : if XSQLVAR.sqlscale = 0
-                      then Result := PLongInt(XSQLVAR.sqldata)^
-                      else Result := PLongInt(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale];
+                      then Result := PInteger(XSQLVAR.sqldata)^
+                      else Result := PInteger(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale];
       SQL_FLOAT     : Result := PSingle(XSQLVAR.sqldata)^;
       SQL_BOOLEAN   : Result := PSmallint(XSQLVAR.sqldata)^;
       SQL_BOOLEAN_FB: Result := PByte(XSQLVAR.sqldata)^;
@@ -1048,8 +1048,8 @@ begin
       SQL_BOOLEAN   : Result := PSmallint(XSQLVAR.sqldata)^;
       SQL_BOOLEAN_FB: Result := PByte(XSQLVAR.sqldata)^;
       SQL_LONG      : if XSQLVAR.sqlscale = 0
-                      then Result := PLongInt(XSQLVAR.sqldata)^
-                      else Result := PLongInt(XSQLVAR.sqldata)^ div IBScaleDivisor[XSQLVAR.sqlscale];
+                      then Result := PInteger(XSQLVAR.sqldata)^
+                      else Result := PInteger(XSQLVAR.sqldata)^ div IBScaleDivisor[XSQLVAR.sqlscale];
       SQL_SHORT     : if XSQLVAR.sqlscale = 0
                       then Result := PSmallint(XSQLVAR.sqldata)^
                       else Result := PSmallInt(XSQLVAR.sqldata)^ div IBScaleDivisor[XSQLVAR.sqlscale];
@@ -1102,8 +1102,8 @@ begin
       SQL_BOOLEAN   : Result := PSmallint(XSQLVAR.sqldata)^;
       SQL_BOOLEAN_FB: Result := PByte(XSQLVAR.sqldata)^;
       SQL_LONG      : if XSQLVAR.sqlscale = 0
-                      then Result := PLongInt(XSQLVAR.sqldata)^
-                      else Result := PLongInt(XSQLVAR.sqldata)^ div IBScaleDivisor[XSQLVAR.sqlscale];
+                      then Result := PInteger(XSQLVAR.sqldata)^
+                      else Result := PInteger(XSQLVAR.sqldata)^ div IBScaleDivisor[XSQLVAR.sqlscale];
       SQL_SHORT     : if XSQLVAR.sqlscale = 0
                       then Result := PSmallint(XSQLVAR.sqldata)^
                       else Result := PSmallInt(XSQLVAR.sqldata)^ div IBScaleDivisor[XSQLVAR.sqlscale];
@@ -1306,10 +1306,10 @@ begin
                         Result := @FTinyBuffer[0];
                       end;
       SQL_LONG      : if XSQLVAR.sqlscale = 0 then begin
-                        IntToRaw(PLongInt(XSQLVAR.sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(PInteger(XSQLVAR.sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Raw(PLongInt(XSQLVAR.sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
+                        ScaledOrdinal2Raw(PInteger(XSQLVAR.sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
                         goto set_Results;
                       end;
       SQL_FLOAT     : begin
@@ -1331,10 +1331,10 @@ begin
                         Len := 5;
                       end;
       SQL_SHORT     : if XSQLVAR.sqlscale = 0 then begin
-                        IntToRaw(LongInt(PSmallInt(XSQLVAR.sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(Integer(PSmallInt(XSQLVAR.sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Raw(LongInt(PSmallInt(XSQLVAR.sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
+                        ScaledOrdinal2Raw(Integer(PSmallInt(XSQLVAR.sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
                         goto set_Results;
                       end;
       SQL_QUAD,
@@ -1493,17 +1493,17 @@ begin
                         Len := 5;
                       end;
       SQL_SHORT     : if XSQLVAR.sqlscale = 0 then begin
-                        IntToUnicode(LongInt(PSmallInt(XSQLVAR.sqldata)^), PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(Integer(PSmallInt(XSQLVAR.sqldata)^), PWideChar(@FTinyBuffer[0]), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Unicode(LongInt(PSmallInt(XSQLVAR.sqldata)^), PWideChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
+                        ScaledOrdinal2Unicode(Integer(PSmallInt(XSQLVAR.sqldata)^), PWideChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
                         goto set_Results;
                       end;
       SQL_LONG      : if XSQLVAR.sqlscale = 0 then begin
-                        IntToUnicode(PLongInt(XSQLVAR.sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(PInteger(XSQLVAR.sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Unicode(PLongInt(XSQLVAR.sqldata)^, PWideChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
+                        ScaledOrdinal2Unicode(PInteger(XSQLVAR.sqldata)^, PWideChar(@FTinyBuffer[0]), @Result, Abs(XSQLVAR.sqlscale));
                         goto set_Results;
                       end;
       SQL_QUAD,
@@ -1682,8 +1682,8 @@ begin
       SQL_BOOLEAN   : Result := PSmallint(XSQLVAR.sqldata)^;
       SQL_BOOLEAN_FB: Result := PByte(XSQLVAR.sqldata)^;
       SQL_LONG      : if XSQLVAR.sqlscale = 0
-                      then Result := PLongInt(XSQLVAR.sqldata)^
-                      else Result := PLongInt(XSQLVAR.sqldata)^ div IBScaleDivisor[XSQLVAR.sqlscale];
+                      then Result := PInteger(XSQLVAR.sqldata)^
+                      else Result := PInteger(XSQLVAR.sqldata)^ div IBScaleDivisor[XSQLVAR.sqlscale];
       SQL_SHORT     : if XSQLVAR.sqlscale = 0
                       then Result := PSmallint(XSQLVAR.sqldata)^
                       else Result := PSmallInt(XSQLVAR.sqldata)^ div IBScaleDivisor[XSQLVAR.sqlscale];
@@ -1771,8 +1771,8 @@ begin
       SQL_BOOLEAN   : Result := PSmallint(XSQLVAR.sqldata)^;
       SQL_BOOLEAN_FB: Result := PByte(XSQLVAR.sqldata)^;
       SQL_LONG      : if XSQLVAR.sqlscale = 0
-                      then Result := PLongInt(XSQLVAR.sqldata)^
-                      else Result := PLongInt(XSQLVAR.sqldata)^ div IBScaleDivisor[XSQLVAR.sqlscale];
+                      then Result := PInteger(XSQLVAR.sqldata)^
+                      else Result := PInteger(XSQLVAR.sqldata)^ div IBScaleDivisor[XSQLVAR.sqlscale];
       SQL_SHORT     : if XSQLVAR.sqlscale = 0
                       then Result := PSmallint(XSQLVAR.sqldata)^
                       else Result := PSmallInt(XSQLVAR.sqldata)^ div IBScaleDivisor[XSQLVAR.sqlscale];
@@ -1920,7 +1920,7 @@ begin
         case FieldSqlType of
           stString, stUnicodeString:
             begin
-              CP := XSQLVAR.sqlsubtype;
+              CP := XSQLVAR.sqlsubtype mod 256;
               if (CP = ConSettings^.ClientCodePage^.ID) or //avoid the loops if we allready have the info's we need
                  (CP > High(FCodePageArray)) then //spezial case for collations like PXW_INTL850 which are nowhere to find in docs
                 //see test Bug#886194, we retrieve 565 as CP...
