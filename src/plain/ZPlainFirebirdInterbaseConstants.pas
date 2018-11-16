@@ -1937,14 +1937,17 @@ type
   ISC_UINT64           = UInt64;
   ISC_STATUS           = NativeInt;
   ISC_BOOLEAN          = Smallint;
+  ISC_BOOLEAN_FB       = Byte;
   PISC_SCHAR           = ^ISC_SCHAR;
   PISC_SHORT           = ^ISC_SHORT;
   PISC_LONG            = ^ISC_LONG;
   PISC_ULONG           = ^ISC_ULONG;
+  PISC_INT64           = ^ISC_INT64;
   PISC_STATUS          = ^ISC_STATUS;
   PISC_UCHAR           = ^ISC_UCHAR;
   PPISC_STATUS         = ^PISC_STATUS;
   PISC_BOOLEAN         = ^ISC_BOOLEAN;
+  PISC_BOOLEAN_FB      = ^ISC_BOOLEAN_FB;
 
   Short                = SmallInt;
   PShort               = ^Short;
@@ -2042,7 +2045,7 @@ type
 			           { & text types only }
     sqllen:             ISC_SHORT;     { length of data area }
     sqldata:            PAnsiChar;     { address of data }
-    sqlind:             PISC_SHORT;  { address of indicator }
+    sqlind:             PISC_SHORT;    { address of indicator }
                                    { variable }
     sqlname_length:     ISC_SHORT;     { length of sqlname field }
     { name of field, name length + space for NULL }
