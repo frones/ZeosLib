@@ -549,6 +549,67 @@ begin
   end;
 end; //*)
 
+procedure Curr2Vnu(const Value: Currency; num, num2: POCINumber);
+var I64, IDiv100, IMul100: UInt64;
+  c32, cDiv100, cMul100: Cardinal;
+  Positive: Boolean;
+  i, n, trailing_zeros, Digits, l: Byte;
+begin
+  {$R-} {$Q-}
+  if Value = 0 then begin
+    num[0] := 1;
+    num[1] := $80;
+    Exit;
+  end;
+  Positive := Value > 0;
+  if Positive
+  then I64 :=  PInt64(@Value)^
+  else I64 := -PInt64(@Value)^;
+  Digits := GetOrdinalDigits(i64);
+  trailing_zeros := 0;
+  Digits := (Digits+Ord(Odd(Digits))) div 2;
+  I := Digits+1;
+  L := I;
+  while I > 6 do begin
+    IDiv100 := I64 div 100; {dividend div 100}
+    IMul100 := IDiv100*100;
+    N := Byte(I64-IMul100); {dividend mod 100}
+    I64 := IDiv100; {next dividend }
+    if (n = 0) and (I=L) then
+      Dec(L)
+    else if Positive
+      then num[I] := n + 1
+      else num[I] := 101 - n;
+    Dec(I);
+  end;
+  C32 := Int64Rec(I64).Lo;
+  while I > 2 do begin
+    cDiv100 := C32 div 100; {dividend div 100}
+    cMul100 := cDiv100*100;
+    N := Byte(c32-cMul100); {dividend mod 100}
+    C32 := cDiv100; {next dividend }
+    if (n = 0) and (I=L) then
+      Dec(L)
+    else if Positive
+      then num[I] := n + 1
+      else num[I] := 101 - n;
+    Dec(I);
+  end;
+
+  if Positive then begin
+    num[1] := (64+NVU_CurrencyExponents[Digits]) or $80;
+    num[I] := Byte(C32) + 1;
+    num[0] := L;
+  end else begin
+    num[1] := not(64+NVU_CurrencyExponents[Digits]) and $7f;
+    num[I] := 101 - Byte(C32);
+    num[L+1] := 102; //"Negative numbers have a byte containing 102 appended to the data bytes."
+    num[0] := L+1;
+  end;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+  Assert(num2[0] = num[0]);
+end;
 begin
   Connection.Open;
   FErrorHandle := (Connection as IZOracleConnection).GetErrorHandle;
@@ -568,7 +629,7 @@ begin
   //for SI1 := -1234567890 to High(Int64) do begin
   //for SI1 := 1234567891234567891 to High(Int64) do begin
   //for SI1 := -11000 to High(Int64) do begin
-  for SI1 := 19998 to High(Int64) do begin
+  for SI1 := -20000000000 to High(Int64) do begin
   //for SI1 := -1099990000 to High(Int64) do begin
   //for SI1 := 109998990 to High(Int64) do begin
   //for SI1 := -119900000000 to High(Int64) do begin
@@ -615,11 +676,11 @@ begin
       FPlainDriver.OCINumberFromReal(FErrorHandle, @D,
         SizeOf(Double), POCINumber(@OCINumber)),
         lcOther, '', Connection.GetConSettings);
-      Curr2VNU(C1, @OCINumber2);
+      Curr2VNU(C1, @OCINumber2, @OCINumber);
       FplainDriver.OCINumberToReal(FErrorHandle, @OCINumber2, 8, @D2);
       C2 := D2;
       if C1 <> C2 then begin
-        Curr2VNU(C1, @OCINumber2);
+        Curr2VNU(C1, @OCINumber2, @OCINumber);
         Assert(C1 = C2);
       end;
       //Assert(OCINumber[0] = OCINumber2[0]);
