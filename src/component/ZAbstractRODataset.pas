@@ -2067,7 +2067,7 @@ begin
   end else
     Dest := @wBuf[0];
   Len := PRaw2PUnicodeBuf(Buffer, Dest, Len, RowAccessor.ConSettings^.CTRL_CP);
-  RowAccessor.SetPWideChar(ColumnIndex, Dest, @Len);
+  RowAccessor.SetPWideChar(ColumnIndex, Dest, Len);
 end;
 
 

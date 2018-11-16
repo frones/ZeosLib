@@ -82,7 +82,7 @@ type
   end;
 
   {** Implements PostgreSQL ResultSet. }
-  TZAbstractPostgreSQLStringResultSet = class(TZAbstractResultSet)
+  TZAbstractPostgreSQLStringResultSet = class(TZSimpleResultSet)
   private
     FUUIDOIDOutBuff: TBytes;
     FconnAddress: PPGconn;

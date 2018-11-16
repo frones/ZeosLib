@@ -267,8 +267,7 @@ begin
     DecodeTime(Value, TS.Hour, TS.Minute, TS.Second, PWord(@TS.Fractions)^);
     TS.Fractions := Word(TS.Fractions) * 1000000;
   end else begin
-    PInt64(@TS.Hour)^ := 0; //init
-    TS.Fractions := 0;
+    TS.Hour := 0; TS.Minute := 0; Ts.Second := 0; TS.Fractions := 0;
   end;
   if SQLType = stDate then begin
     POraDate(Bind^.valuep).Cent   := TS.Year div 100 +100;
@@ -507,14 +506,13 @@ end;
 
 function TZAbstractOraclePreparedStatement_A.CreateResultSet: IZResultSet;
 var
-  NativeResultSet: TZOracleAbstractResultSet_A;
+  NativeResultSet: IZResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
   if FOpenResultSet = nil then begin
     if FStatementType = OCI_STMT_SELECT
     then NativeResultSet := TZOracleResultSet_A.Create(Self, SQL, FOCIStmt, FOCIError, FZBufferSize)
     else NativeResultSet := TZOracleCallableResultSet_A.Create(Self, SQL, FOCIStmt, FOCIError, FOraVariables, BindList);
-    NativeResultSet.SetConcurrency(rcReadOnly);
     if (GetResultSetConcurrency = rcUpdatable) or (GetResultSetType <> rtForwardOnly) then
     begin
       CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
@@ -1237,7 +1235,7 @@ var
   WriteTempBlob: IZOracleBlob;
   OraDate: POraDate;
   D: Double;
-label set_raw, from_raw, bind_direct;
+label set_raw, from_raw, bind_direct, write_lob;
 begin
   inherited SetDataArray(ParameterIndex, Value, SQLType, VariantType);
   {$IFNDEF GENERIC_INDEX}
@@ -1307,14 +1305,14 @@ bind_direct:
     stDate: begin
         if (Bind.dty <> SQLT_DAT) or (Bind.value_sz <> SizeOf(TOraDate)) or (Bind.curelen < ArrayLen) then
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(TOraDate));
+        FillChar(Bind^.valuep^, ArrayLen*SizeOf(TOraDate), #0);
         for i := 0 to ArrayLen -1 do begin
           DecodeDate(TDateTimeDynArray(Value)[i], TS.Year, TS.Month, TS.Day);
           OraDate := POraDate(Bind^.valuep+I*SizeOf(TOraDate));
-          OraDate.Cent := Ts.Year div 100 + 100;
-          OraDate.Year := Ts.Year mod 100 + 100;
-          POraDate(Bind^.valuep).Month := TS.Month;
-          PInteger(@POraDate(Bind^.valuep).Day)^ := 0; //init all remaining fields to 0 with one 4Byte value
-          POraDate(Bind^.valuep).Day    := TS.Day;
+          OraDate.Cent  := Ts.Year div 100 + 100;
+          OraDate.Year  := Ts.Year mod 100 + 100;
+          OraDate.Month := TS.Month;
+          OraDate.Day   := TS.Day;
         end;
       end;
     stTime, stTimeStamp: begin //msec precision -> need a descriptor
@@ -1481,23 +1479,25 @@ set_raw:    if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Inte
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
         for i := 0 to ArrayLen -1 do
           if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZBlob, Lob) and not Lob.IsEmpty then begin
-            if Lob.IsClob then begin
-              P := Lob.GetPAnsiChar(ClientCP);
-              BufferSize := Lob.Length;
-            end else begin
+            if Lob.IsClob then
+              Lob.GetPAnsiChar(ClientCP)
+            else begin
               FRawTemp := GetValidatedAnsiStringFromBuffer(Lob.GetBuffer, lob.Length, Connection.GetConSettings);
-              P := Pointer(FRawTemp);
-              BufferSize := Length(FRawTemp);
+              Lob := TZOracleClob.Create(FPlainDriver,
+                nil, 0, FOracleConnection.GetConnectionHandle,
+                FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
+                PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^,
+                ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
+              Lob.SetPAnsiChar(Pointer(FRawTemp), ClientCP, Length(FRawTemp));
+              FRawTemp := '';
             end;
-            WriteTempBlob := TZOracleClob.Create(FPlainDriver,
-              nil, 0, FOracleConnection.GetConnectionHandle,
-              FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
-              PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^,
-              ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
-            WriteTempBlob.CreateBlob;
-            WriteTempBlob.WriteLobFromBuffer(P, BufferSize);
-            TInterfaceDynArray(Value)[I] := WriteTempBlob;
-            Bind.indp[i] := 0;
+            if not Supports(Lob, IZOracleBlob, WriteTempBlob) or not (WriteTempBlob.IsCLob) then
+              WriteTempBlob := TZOracleClob.Create(FPlainDriver,
+                nil, 0, FOracleConnection.GetConnectionHandle,
+                FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
+                PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^,
+                ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
+            goto write_lob;
           end else
             Bind.indp[i] := -1;
         Exit;
@@ -1507,12 +1507,21 @@ set_raw:    if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Inte
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
         for i := 0 to ArrayLen -1 do
           if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZBlob, Lob) and not Lob.IsEmpty then begin
-            WriteTempBlob := TZOracleBlob.Create(FPlainDriver,
-              nil, 0, FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
-              PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^, ChunkSize, ConSettings);
-            WriteTempBlob.CreateBlob;
-            WriteTempBlob.WriteLobFromBuffer(Lob.GetBuffer, Lob.Length);
-            TInterfaceDynArray(Value)[I] := WriteTempBlob;
+            if not Supports(Lob, IZOracleBlob, WriteTempBlob) or (WriteTempBlob.IsCLob) then
+              WriteTempBlob := TZOracleBlob.Create(FPlainDriver,
+                nil, 0, FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
+                PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^, ChunkSize, ConSettings);
+write_lob:  WriteTempBlob.CreateBlob;
+            { copy the buffer addresses }
+            WriteTempBlob.GetBufferAddress^ := Lob.GetBufferAddress^;
+            WriteTempBlob.GetLengthAddress^ := Lob.GetLengthAddress^;
+            { nil old buffer }
+            Lob.GetBufferAddress^ := nil;
+            Lob.GetLengthAddress^ := -1;
+            Lob := nil; //decref of old interface
+            WriteTempBlob.WriteLobFromBuffer(WriteTempBlob.GetBufferAddress^, WriteTempBlob.GetLengthAddress^);
+            TInterfaceDynArray(Value)[I] := WriteTempBlob; //destroy old interface or replace it
+            WriteTempBlob := nil;
             Bind.indp[i] := 0;
           end else
             Bind.indp[i] := -1;

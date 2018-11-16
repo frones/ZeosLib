@@ -1332,14 +1332,14 @@ begin
         if SchemaPattern <> '' then
           Result.UpdateString(CatalogNameIndex, SchemaPattern);
         Result.UpdateString(TableNameIndex, TempTableNamePattern);
-        Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(name_index, Len), @Len);
+        Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(name_index, Len), Len);
         RawTmp := GetRawByteString(type_index);
         SQLType := ConvertSQLiteTypeToSQLType(RawTmp, UndefinedVarcharAsStringLength,
           Precision, Decimals, ConSettings.CPType);
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
 
         Len := Length(RawTmp);
-        Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, Pointer(RawTmp), @Len);
+        Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, Pointer(RawTmp), Len);
 
         Result.UpdateInt(TableColColumnSizeIndex, Precision);  //Precision will be converted higher up
         if SQLType = stString then begin
@@ -1369,7 +1369,7 @@ begin
 
         P := GetPAnsiChar(dflt_value_index, Len);
         if Len > 0 then
-          Result.UpdatePAnsiChar(TableColColumnColDefIndex, P, @Len);
+          Result.UpdatePAnsiChar(TableColColumnColDefIndex, P, Len);
 
         Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(cid_index) +1);
         Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetInt(pk_index) = 1) and (Ord(SQLType) > ord(stBoolean)) and (Ord(SQLType) < Ord(stFloat)));
@@ -1440,7 +1440,7 @@ begin
       if Schema <> '' then
         Result.UpdateString(CatalogNameIndex, Schema);
       Result.UpdateString(TableNameIndex, Table);
-      Result.UpdatePAnsiChar(PrimaryKeyColumnNameIndex, GetPAnsiChar(name_index, Len), @Len);
+      Result.UpdatePAnsiChar(PrimaryKeyColumnNameIndex, GetPAnsiChar(name_index, Len), Len);
       Result.UpdateInt(PrimaryKeyKeySeqIndex, GetInt(cid_index)+1);
       Result.InsertRow;
     end;
@@ -1643,9 +1643,9 @@ begin
               Result.UpdateString(CatalogNameIndex, Schema);
             Result.UpdateString(TableNameIndex, Table);
             Result.UpdateBoolean(IndexInfoColNonUniqueIndex, MainResultSet.GetInt(main_unique_field_index) = 0);
-            Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, MainResultSet.GetPAnsiChar(main_name_field_index, Len), @Len);
+            Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, MainResultSet.GetPAnsiChar(main_name_field_index, Len), Len);
             Result.UpdateInt(IndexInfoColOrdPositionIndex, ResultSet.GetInt(sub_seqno_field_index)+FirstDbcIndex);
-            Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, ResultSet.GetPAnsiChar(sub_name_field_index, Len), @Len);
+            Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, ResultSet.GetPAnsiChar(sub_name_field_index, Len), Len);
             Result.UpdateRawByteString(IndexInfoColAscOrDescIndex, 'A');
             Result.UpdateInt(IndexInfoColCardinalityIndex, 0);
             Result.UpdateInt(IndexInfoColPagesIndex, 0);

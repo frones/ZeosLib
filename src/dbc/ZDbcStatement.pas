@@ -101,6 +101,7 @@ type
     FaSQL: RawByteString;
     FStatementId : Integer;
     FOpenResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
+    FClientCP: Word;
     procedure PrepareOpenResultSetForReUse; virtual;
     procedure PrepareLastResultSetForReUse; virtual;
     procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
@@ -136,6 +137,7 @@ type
     property ASQL: RawByteString read FaSQL write SetASQL;
     property ChunkSize: Integer read FChunkSize;
     property CachedLob: Boolean read FCachedLob;
+    property ClientCP: word read FClientCP;
     function CreateStmtLogEvent(Category: TZLoggingCategory;
       const Msg: RawByteString=EmptyRaw): TZLoggingEvent;
   public
@@ -901,7 +903,7 @@ begin
   inherited Create;
   Self.ConSettings := Connection.GetConSettings;
   FLastUpdateCount := -1;
-
+  FClientCP := Connection.GetConSettings.ClientCodePage.CP;
   FConnection := Connection;
   Connection.RegisterStatement(Self);
   FBatchQueries := TStringList.Create;

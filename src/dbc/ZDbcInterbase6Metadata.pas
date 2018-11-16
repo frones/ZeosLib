@@ -1573,22 +1573,22 @@ begin
 
       if Length(Types) = 0 then begin
         Result.MoveToInsertRow;
-        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(RELATION_NAME_Index, L), @L); //RDB$RELATION_NAME
+        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(RELATION_NAME_Index, L), L); //RDB$RELATION_NAME
         Result.UpdateString(TableColumnsSQLType, TableType);
         P := GetPAnsiChar(DESCRIPTION_Index, L);
         L := Min(L, 255);
-        Result.UpdatePAnsiChar(TableColumnsRemarks, P, @L); //RDB$DESCRIPTION
+        Result.UpdatePAnsiChar(TableColumnsRemarks, P, L); //RDB$DESCRIPTION
         Result.InsertRow;
       end
       else
         for I := Low(Types) to High(Types) do
           if Types[I] = TableType then begin
             Result.MoveToInsertRow;
-            Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(RELATION_NAME_Index, L), @L); //RDB$RELATION_NAME
+            Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(RELATION_NAME_Index, L), L); //RDB$RELATION_NAME
             Result.UpdateString(TableColumnsSQLType, TableType);
             P := GetPAnsiChar(DESCRIPTION_Index, L);
             L := Min(L, 255);
-            Result.UpdatePAnsiChar(TableColumnsRemarks, P, @L); //RDB$DESCRIPTION
+            Result.UpdatePAnsiChar(TableColumnsRemarks, P, L); //RDB$DESCRIPTION
             Result.InsertRow;
           end;
     end;
@@ -1765,7 +1765,7 @@ begin
       Result.MoveToInsertRow;
       //Result.UpdateNull(CatalogNameIndex);    //TABLE_CAT
       //Result.UpdateNull(SchemaNameIndex);    //TABLE_SCHEM
-      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(RELATION_NAME_Index, L), @L);    //TABLE_NAME
+      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(RELATION_NAME_Index, L), L);    //TABLE_NAME
       Result.UpdateString(ColumnNameIndex, ColumnName);    //COLUMN_NAME
 
       SQLType := ConvertInterbase6ToSqlType(TypeName, SubTypeName, FieldScale,
@@ -1791,7 +1791,7 @@ begin
           case SubTypeName of
             RDB_NUMBERS_NUMERIC: Result.UpdateRawByteString(TableColColumnTypeNameIndex, 'NUMERIC');
             RDB_NUMBERS_DECIMAL: Result.UpdateRawByteString(TableColColumnTypeNameIndex, 'DECIMAL');
-            else Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(TYPE_NAME_Index, L), @L);
+            else Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(TYPE_NAME_Index, L), L);
           end;
         blr_varying: Result.UpdateRawByteString(TableColColumnTypeNameIndex, 'VARCHAR'); // Instead of VARYING
         else
@@ -2635,7 +2635,7 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiChar(RDB_TYPE_NAME_Index, Len), @Len);
+      Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiChar(RDB_TYPE_NAME_Index, Len), Len);
       Result.UpdateInt(TypeInfoDataTypeIndex, Ord(ConvertInterbase6ToSqlType(
         GetInt(RDB_TYPE_Index), 0, 10, 4, ConSettings.CPType))); //added a scale > 4 since type_info doesn't deal with user defined scale
       Result.UpdateInt(TypeInfoPecisionIndex, 9);

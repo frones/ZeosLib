@@ -2443,9 +2443,9 @@ begin
         stString, stUnicodeString, stAsciiStream, stUnicodeStream:
           if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
              (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then
-            DestResultSet.UpdatePWideChar(I, SrcResultSet.GetPWideChar(I, Len), @Len)
+            DestResultSet.UpdatePWideChar(I, SrcResultSet.GetPWideChar(I, Len), Len)
           else
-            DestResultSet.UpdatePAnsiChar(I, SrcResultSet.GetPAnsiChar(I, Len), @Len);
+            DestResultSet.UpdatePAnsiChar(I, SrcResultSet.GetPAnsiChar(I, Len), Len);
         stBytes, stBinaryStream:
           DestResultSet.UpdateBytes(I, SrcResultSet.GetBytes(I));
         stDate:

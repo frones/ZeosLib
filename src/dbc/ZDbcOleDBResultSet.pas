@@ -67,7 +67,7 @@ uses
 
 type
   {** Implements Ado ResultSet. }
-  TZOleDBResultSet = class(TZAbstractResultSet, IZResultSet)
+  TZOleDBResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet)
   private
     FInMemoryDataLobs: Boolean;
     FChunkSize: Integer;
@@ -108,35 +108,31 @@ type
     //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
     //BUT!!! all GetXXXByName methods don't reach the code here any more
     //This needs to be done by IZResultSet(Self).GetXXXByName
-    function IsNull(ColumnIndex: Integer): Boolean; reintroduce;
-    function GetString(ColumnIndex: Integer): String; reintroduce;
-    function GetAnsiString(ColumnIndex: Integer): AnsiString; reintroduce;
-    function GetUTF8String(ColumnIndex: Integer): UTF8String; reintroduce;
-    function GetRawByteString(ColumnIndex: Integer): RawByteString; override;
-    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; reintroduce; overload;
-    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; reintroduce; overload;
-    function GetUnicodeString(ColumnIndex: Integer): ZWideString; reintroduce;
-    function GetBoolean(ColumnIndex: Integer): Boolean; reintroduce;
-    function GetShort(ColumnIndex: Integer): ShortInt; reintroduce;
-    function GetByte(ColumnIndex: Integer): Byte; reintroduce;
-    function GetSmall(ColumnIndex: Integer): SmallInt; reintroduce;
-    function GetWord(ColumnIndex: Integer): Word; reintroduce;
-    function GetInt(ColumnIndex: Integer): Integer; reintroduce;
-    function GetUInt(ColumnIndex: Integer): Cardinal; reintroduce;
-    function GetLong(ColumnIndex: Integer): Int64; reintroduce;
-    function GetULong(ColumnIndex: Integer): UInt64; reintroduce;
-    function GetFloat(ColumnIndex: Integer): Single; reintroduce;
-    function GetDouble(ColumnIndex: Integer): Double; reintroduce;
-    function GetCurrency(ColumnIndex: Integer): Currency; reintroduce;
-    function GetBigDecimal(ColumnIndex: Integer): Extended; reintroduce;
-    function GetBytes(ColumnIndex: Integer): TBytes; override;
-    function GetDate(ColumnIndex: Integer): TDateTime; reintroduce;
-    function GetTime(ColumnIndex: Integer): TDateTime; reintroduce;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime; reintroduce;
-    function GetBlob(ColumnIndex: Integer): IZBlob; override;
+    function IsNull(ColumnIndex: Integer): Boolean;
+    function GetString(ColumnIndex: Integer): String;
+    function GetAnsiString(ColumnIndex: Integer): AnsiString;
+    function GetUTF8String(ColumnIndex: Integer): UTF8String;
+    function GetRawByteString(ColumnIndex: Integer): RawByteString;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
+    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
+    function GetUnicodeString(ColumnIndex: Integer): ZWideString;
+    function GetBoolean(ColumnIndex: Integer): Boolean;
+    function GetInt(ColumnIndex: Integer): Integer;
+    function GetUInt(ColumnIndex: Integer): Cardinal;
+    function GetLong(ColumnIndex: Integer): Int64;
+    function GetULong(ColumnIndex: Integer): UInt64;
+    function GetFloat(ColumnIndex: Integer): Single;
+    function GetDouble(ColumnIndex: Integer): Double;
+    function GetCurrency(ColumnIndex: Integer): Currency;
+    function GetBigDecimal(ColumnIndex: Integer): Extended;
+    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetDate(ColumnIndex: Integer): TDateTime;
+    function GetTime(ColumnIndex: Integer): TDateTime;
+    function GetTimestamp(ColumnIndex: Integer): TDateTime;
+    function GetBlob(ColumnIndex: Integer): IZBlob;
 
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); reintroduce;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -195,6 +191,7 @@ implementation
 uses
   Variants, Math, DateUtils,
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
+  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode, ZClasses;
 
 var
@@ -749,11 +746,6 @@ begin
   end;
 end;
 
-function TZOleDBResultSet.GetWord(ColumnIndex: Integer): Word;
-begin
-  Result := GetUInt(ColumnIndex);
-end;
-
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -1274,39 +1266,6 @@ begin
         Result := StrToBoolEx(ZPPWideChar(FData)^);
       DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^ <> 0;
     end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZOleDBResultSet.GetByte(ColumnIndex: Integer): Byte;
-begin
-  Result := GetUInt(ColumnIndex);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>short</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZOleDBResultSet.GetShort(ColumnIndex: Integer): ShortInt;
-begin
-  Result := GetInt(ColumnIndex);
-end;
-
-function TZOleDBResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
-begin
-  Result := GetInt(ColumnIndex);
 end;
 
 {**
@@ -2196,14 +2155,14 @@ begin
                                           Len := FLength^ shr 1;
                                           if DBBINDING.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
                                             while (PWideChar(FData^)+Len-1)^ = ' ' do Dec(Len);
-                                          RowAccessor.SetPWideChar(I, FData^, @Len);
+                                          RowAccessor.SetPWideChar(I, FData^, Len);
                                         end;
           DBTYPE_BSTR or DBTYPE_BYREF,
           DBTYPE_WSTR or DBTYPE_BYREF : begin
                                           Len := FLength^ shr 1;
                                           if DBBINDING.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
                                             while (ZPPWideChar(FData^)^+Len-1)^ = ' ' do Dec(Len);
-                                          RowAccessor.SetPWideChar(I, ZPPWideChar(FData^)^, @Len);
+                                          RowAccessor.SetPWideChar(I, ZPPWideChar(FData^)^, Len);
                                         end;
           //DBTYPE_IDISPATCH = 9;
           DBTYPE_BOOL                 : RowAccessor.SetBoolean(I, PWordBool(FData^)^);
@@ -2254,14 +2213,14 @@ begin
                                           if DBBINDING.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
                                             while (PAnsiChar(FData^)+Len-1)^ = ' ' do Dec(Len);
                                           FUniTemp := PRawToUnicode(FData^, Len, ConSettings^.ClientCodePage^.CP);
-                                          RowAccessor.SetPWideChar(I, Pointer(FUniTemp), @Len);
+                                          RowAccessor.SetPWideChar(I, Pointer(FUniTemp), Len);
                                         end;
           DBTYPE_STR or DBTYPE_BYREF  : begin
                                           Len := FLength^;
                                           if DBBINDING.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
                                             while (PPAnsiChar(FData^)^+Len-1)^ = ' ' do Dec(Len);
                                           FUniTemp := PRawToUnicode(PPAnsiChar(FData^)^, Len, ConSettings^.ClientCodePage^.CP);
-                                          RowAccessor.SetPWideChar(I, Pointer(FUniTemp), @Len);
+                                          RowAccessor.SetPWideChar(I, Pointer(FUniTemp), Len);
                                         end;
           //DBTYPE_NUMERIC = 131;
           //DBTYPE_UDT = 132;

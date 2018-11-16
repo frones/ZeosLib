@@ -622,9 +622,9 @@ begin
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 and this version writes from right to left*)
 var I64, IDiv100, IMul100: UInt64;
-  {$IFNDEF CPUX64}c32, cDiv100, cMul100: Cardinal;{$ENDIF}
+  x{$IFNDEF CPUX64}, c32, cDiv100, cMul100{$ENDIF}: Cardinal;
   Positive: Boolean;
-  i, n, Digits, l: Byte;
+  i, Digits, l: Byte;
 begin
   {$R-} {$Q-}
   if Value = 0 then begin
@@ -643,13 +643,13 @@ begin
   while I > {$IFNDEF CPUX64}6{$ELSE}2{$ENDIF} do begin
     IDiv100 := I64 div 100; {dividend div 100}
     IMul100 := IDiv100*100; {remainder}
-    N := Byte(I64-IMul100); {dividend mod 100}
+    X := I64-IMul100; {dividend mod 100}
     I64 := IDiv100; {next dividend }
-    if (n = 0) and (I=L) then
+    if (X = 0) and (I=L) then
       Dec(L)
     else if Positive
-      then num[I] := n + 1
-      else num[I] := 101 - n;
+      then num[I] := X + 1
+      else num[I] := 101 - X;
     Dec(I);
   end;
   {$IFNDEF CPUX64}
@@ -657,13 +657,13 @@ begin
   while I > 2 do begin
     cDiv100 := C32 div 100; {dividend div 100}
     cMul100 := cDiv100*100; {remainder}
-    N := Byte(c32-cMul100); {dividend mod 100}
+    x := c32-cMul100; {dividend mod 100}
     C32 := cDiv100; {next dividend }
-    if (n = 0) and (I=L) then
+    if (x = 0) and (I=L) then
       Dec(L)
     else if Positive
-      then num[I] := n + 1
-      else num[I] := 101 - n;
+      then num[I] := x + 1
+      else num[I] := 101 - X;
     Dec(I);
   end;
   {$ENDIF}

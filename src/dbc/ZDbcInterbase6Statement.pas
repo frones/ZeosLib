@@ -86,6 +86,7 @@ type
     FBatchStmts: array[Boolean] of TZIBStmt;
     FMaxRowsPerBatch, FMemPerRow: Integer;
     FOrgParamInfos: TZFBOrgXSQLDAInfos;
+    FDB_CP_ID: Integer;
     function ExecuteInternal: ISC_STATUS;
     function ExceuteBatch: Integer;
   protected
@@ -109,7 +110,8 @@ type
   TZInterbase6PreparedStatement = class(TZAbstractInterbase6PreparedStatement, IZPreparedStatement)
   private
     procedure EncodePData(XSQLVAR: PXSQLVAR; Index: Word; Value: PAnsiChar; Len: LengthInt);
-    procedure SetPAnsiChar(Index: Integer; Value: PAnsiChar; Len: LengthInt);
+    procedure SetPAnsiChar(Index: Word; Value: PAnsiChar; Len: LengthInt);
+    procedure SetPWideChar(Index: Word; Value: PWideChar; Len: LengthInt);
     procedure WriteLobBuffer(XSQLVAR: PXSQLVAR; Buffer: Pointer; Len: LengthInt);
   protected //setters made by me ->
     //need a effective way to flush them again (IZCallableStmt)
@@ -184,9 +186,7 @@ uses Math,
 procedure BindSQLDAInParameters(BindList: TZBindList;
   Stmt: TZInterbase6PreparedStatement; ArrayOffSet, ArrayItersCount: Integer);
 var
-  I, J, ParamIndex, CP: Integer;
-  RawTemp: RawByteString;
-  UniTemp: ZWideString;
+  I, J, ParamIndex: Integer;
   IsNull: Boolean;
   { array DML bindings }
   ZData: Pointer; //array entry
@@ -216,56 +216,20 @@ begin
           stBigDecimal: Stmt.SetBigDecimal(ParamIndex, TExtendedDynArray(ZData)[J]);
           stGUID: Stmt.SetGUID(ParamIndex, TGUIDDynArray(ZData)[j]);
           stString, stUnicodeString:
-            begin
-              CP := Stmt.FParamSqlData.GetIbSqlSubType(ParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});  //get code page
-              if CP <> CS_BINARY then begin
-                if (CP > High(Stmt.FCodePageArray)) or (CP = CS_NONE)
-                then CP := Stmt.ConSettings^.ClientCodePage^.CP
-                else CP := Stmt.FCodePageArray[CP];
                 case PZArray(BindList[i].Value).VArrayVariantType of
-                  vtString: RawTemp := Stmt.ConSettings.ConvFuncs.ZStringToRaw(TStringDynArray(ZData)[j], Stmt.ConSettings.CTRL_CP, CP);
+                  vtString: Stmt.SetString(ParamIndex, TStringDynArray(ZData)[j]);
                   {$IFNDEF NO_ANSISTRING}
-                  vtAnsiString: RawTemp := Stmt.Consettings^.ConvFuncs.ZAnsiToRaw(TAnsiStringDynArray(ZData)[j], CP);
+                  vtAnsiString: Stmt.SetAnsiString(ParamIndex, TAnsiStringDynArray(ZData)[j]);
                   {$ENDIF}
                   {$IFNDEF NO_UTF8STRING}
-                  vtUTF8String: if ZCompatibleCodePages(CP, zCP_UTF8) then begin
-                        Stmt.SetPAnsiChar(ParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Pointer(TUTF8StringDynArray(ZData)[j]), Length(TUTF8StringDynArray(ZData)[j]));
-                        Inc(ParamIndex);
-                        continue;
-                      end else
-                        RawTemp := Stmt.Consettings^.ConvFuncs.ZUTF8ToRaw(TUTF8StringDynArray(ZData)[j], CP);
+                  vtUTF8String: Stmt.SetUTF8String(ParamIndex, TUTF8StringDynArray(ZData)[j]);
                   {$ENDIF}
-                  vtRawByteString: RawTemp := TRawByteStringDynArray(ZData)[j];
-                  vtUnicodeString: RawTemp := ZUnicodeToRaw(TUnicodeStringDynArray(ZData)[j], CP);
-                  vtCharRec: if ZCompatibleCodePages(TZCharRecDynArray(ZData)[j].CP, cp) or (TZCharRecDynArray(ZData)[j].Len = 0) then begin
-                        Stmt.SetPAnsiChar(ParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, TZCharRecDynArray(ZData)[j].P, TZCharRecDynArray(ZData)[j].Len);
-                        Inc(ParamIndex);
-                        continue;
-                      end else if ZCompatibleCodePages(TZCharRecDynArray(ZData)[j].CP, zCP_UTF16) then
-                        RawTemp := PUnicodeToRaw(TZCharRecDynArray(ZData)[j].P, TZCharRecDynArray(ZData)[j].Len, CP)
-                      else begin
-                        UniTemp := PRawToUnicode(TZCharRecDynArray(ZData)[j].P, TZCharRecDynArray(ZData)[j].Len, TZCharRecDynArray(ZData)[j].CP);
-                        RawTemp := ZUnicodeToRaw(UniTemp, CP)
-                      end;
+                  vtRawByteString: Stmt.SetRawByteString(ParamIndex, TRawByteStringDynArray(ZData)[j]);
+                  vtUnicodeString: Stmt.SetUnicodeString(ParamIndex, TUnicodeStringDynArray(ZData)[j]);
+                  vtCharRec: Stmt.SetCharRec(ParamIndex, TZCharRecDynArray(ZData)[j]);
                   else
                     raise Exception.Create('Unsupported String Variant');
                 end;
-                Stmt.SetPAnsiChar(ParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Pointer(RawTemp), Length(RawTemp));
-              end else case PZArray(BindList[i].Value).VArrayVariantType of
-                {$IFNDEF UNICODE}vtString,{$ENDIF}
-                {$IFNDEF NO_ANSISTRING}vtAnsiString, {$ENDIF}
-                {$IFNDEF NO_UTF8STRING}vtUTF8String, {$ENDIF}
-                vtRawByteString:
-                    Stmt.SetPAnsiChar(ParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Pointer(TRawByteStringDynArray(ZData)[j]), Length(TRawByteStringDynArray(ZData)[j]));
-                vtUnicodeString{$IFDEF UNICODE}, vtString{$ENDIF}:
-                  raise Exception.Create('Unsupported String Variant');
-                vtCharRec: if not ZCompatibleCodePages(TZCharRecDynArray(ZData)[j].CP, zCP_UTF16) or (TZCharRecDynArray(ZData)[j].Len = 0)
-                    then Stmt.SetPAnsiChar(ParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, TZCharRecDynArray(ZData)[j].P, TZCharRecDynArray(ZData)[j].Len)
-                    else raise Exception.Create('Unsupported String Variant');
-                else
-                  raise Exception.Create('Unsupported String Variant');
-              end;
-            end;
           stBytes:      Stmt.SetBytes(ParamIndex, TBytesDynArray(ZData)[j]);
           stDate:       Stmt.SetDate(ParamIndex, TDateTimeDynArray(ZData)[j]);
           stTime:       Stmt.SetTime(ParamIndex, TDateTimeDynArray(ZData)[j]);
@@ -374,7 +338,8 @@ begin
   FIBConnection := Connection as IZInterbase6Connection;
   FPlainDriver := TZInterbasePlainDriver(FIBConnection.GetIZPlainDriver.GetInstance);
   FCodePageArray := FPlainDriver.GetCodePageArray;
-  FCodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
+  FDB_CP_ID := ConSettings^.ClientCodePage^.ID;
+  FCodePageArray[FDB_CP_ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
   ResultSetType := rtForwardOnly;
   FStmtHandle := 0;
   FMaxRowsPerBatch := 0;
@@ -640,18 +605,18 @@ begin
     SQL_D_FLOAT,
     SQL_DOUBLE    : Result := FloatToRaw(PDouble(XSQLVAR.sqldata)^);
     SQL_LONG      : if XSQLVAR.sqlscale = 0
-                    then Result := IntToRaw(PInteger(XSQLVAR.sqldata)^)
-                    else Result := FloatToRaw(PInteger(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale]);
+                    then Result := IntToRaw(PISC_LONG(XSQLVAR.sqldata)^)
+                    else Result := FloatToRaw(PISC_LONG(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale]);
     SQL_FLOAT     : Result := FloatToRaw(PSingle(XSQLVAR.sqldata)^);
-    SQL_BOOLEAN   : Result := BoolToRawEx(PSmallint(XSQLVAR.sqldata)^ <> 0);
-    SQL_BOOLEAN_FB: Result := BoolToRawEx(PByte(XSQLVAR.sqldata)^ <> 0);
+    SQL_BOOLEAN   : Result := BoolToRawEx(PISC_BOOLEAN(XSQLVAR.sqldata)^ <> 0);
+    SQL_BOOLEAN_FB: Result := BoolToRawEx(PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ <> 0);
     SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                    then Result := IntToRaw(PSmallint(XSQLVAR.sqldata)^)
-                    else Result := FloatToRaw(PSmallInt(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale]);
+                    then Result := IntToRaw(PISC_SHORT(XSQLVAR.sqldata)^)
+                    else Result := FloatToRaw(PISC_SHORT(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale]);
     SQL_QUAD,
     SQL_INT64     : if XSQLVAR.sqlscale = 0
-                    then Result := IntToRaw(PInt64(XSQLVAR.sqldata)^)
-                    else Result := FloatToRaw(PInt64(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale]);
+                    then Result := IntToRaw(PISC_INT64(XSQLVAR.sqldata)^)
+                    else Result := FloatToRaw(PISC_INT64(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale]);
     SQL_TEXT      : Result := SQLQuotedStr(PAnsiChar(XSQLVAR.sqldata), XSQLVAR.sqllen, AnsiChar(#39));
     SQL_VARYING   : Result := SQLQuotedStr(PAnsiChar(@PISC_VARYING(XSQLVAR.sqldata).str[0]), PISC_VARYING(XSQLVAR.sqldata).strlen, AnsiChar(#39));
     SQL_BLOB      : Result := '(LOB)';
@@ -765,16 +730,46 @@ end;
 {$IFNDEF NO_ANSISTRING}
 procedure TZInterbase6PreparedStatement.SetAnsiString(Index: Integer;
   const Value: AnsiString);
+var XSQLVAR: PXSQLVAR;
 begin
-  if Value <> '' then
-    if zOSCodePage = ConSettings^.ClientCodePage.CP
-    then SetPAnsiChar(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Pointer(Value), Length(Value))
-    else begin
-      FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), zOSCodePage); //localize
-      SetUnicodeString(Index, FUniTemp)
-    end
-  else
-    SetPAnsiChar(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, PEmptyAnsiString, 0)
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  {$R-}
+  XSQLVAR := @FParamXSQLDA.sqlvar[Index];
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  if Value <> '' then begin
+    case (XSQLVAR.sqltype and not(1)) of
+      SQL_TEXT,
+      SQL_VARYING   : if (ClientCP = ZOSCodePage) or (XSQLVAR.sqlsubtype mod 256 = CS_BINARY)
+                        or ((FDB_CP_ID = CS_NONE) and (FCodePageArray[XSQLVAR.sqlsubtype mod 256] = ZOSCodePage)) then
+                        EncodePData(XSQLVAR, Index, Pointer(Value), Length(Value))
+                      else begin
+                        FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), ZOSCodePage); //localize it
+                        if (FDB_CP_ID = CS_NONE)
+                        then FRawTemp := ZUnicodeToRaw(FUniTemp, FCodePageArray[XSQLVAR.sqlsubtype mod 256])
+                        else FRawTemp := ZUnicodeToRaw(FUniTemp, ClientCP);
+                        if FRawTemp <> ''
+                        then EncodePData(XSQLVAR, Index, Pointer(FRawTemp), Length(FRawTemp))
+                        else EncodePData(XSQLVAR, Index, PEmptyAnsiString, 0);
+                      end;
+      SQL_BLOB,
+      SQL_QUAD      : if XSQLVAR.sqlsubtype = isc_blob_text then
+                        if (ClientCP = ZOSCodePage) then
+                          WriteLobBuffer(XSQLVAR, Pointer(Value), Length(Value))
+                        else begin
+                          FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), ZOSCodePage); //localize it
+                          FRawTemp := ZUnicodeToRaw(FUniTemp, ClientCP);
+                          if FRawTemp <> ''
+                          then WriteLobBuffer(XSQLVAR, Pointer(FRawTemp), Length(FRawTemp))
+                          else WriteLobBuffer(XSQLVAR, PEmptyAnsiString, 0);
+                        end
+                      else WriteLobBuffer(XSQLVAR, Pointer(Value), Length(Value));
+      else SetPAnsiChar(Index, Pointer(Value), Length(Value));
+    end;
+  end else
+    SetPAnsiChar(Index, PEmptyAnsiString, 0)
 end;
 {$ENDIF}
 
@@ -798,17 +793,17 @@ begin
     SQL_D_FLOAT,
     SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
     SQL_LONG      : if XSQLVAR.sqlscale = 0
-                    then PInteger(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PInteger(XSQLVAR.sqldata)^ := Trunc(RoundTo(Value*IBScaleDivisor[XSQLVAR.sqlscale], 0));
-    SQL_BOOLEAN   : PWord(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PByte(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+                    then PISC_LONG(XSQLVAR.sqldata)^ := Trunc(Value)
+                    else PISC_LONG(XSQLVAR.sqldata)^ := Trunc(RoundTo(Value*IBScaleDivisor[XSQLVAR.sqlscale], 0));
+    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
     SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                    then PSmallInt(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PSmallInt(XSQLVAR.sqldata)^ := Trunc(RoundTo(Value*IBScaleDivisor[XSQLVAR.sqlscale], 0));
+                    then PISC_SHORT(XSQLVAR.sqldata)^ := Trunc(Value)
+                    else PISC_SHORT(XSQLVAR.sqldata)^ := Trunc(RoundTo(Value*IBScaleDivisor[XSQLVAR.sqlscale], 0));
     SQL_INT64,
     SQL_QUAD      : if XSQLVAR.sqlscale = 0
-                    then PInt64(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PInt64(XSQLVAR.sqldata)^ := Trunc(RoundTo(Value*IBScaleDivisor[XSQLVAR.sqlscale], 0));
+                    then PISC_INT64(XSQLVAR.sqldata)^ := Trunc(Value)
+                    else PISC_INT64(XSQLVAR.sqldata)^ := Trunc(RoundTo(Value*IBScaleDivisor[XSQLVAR.sqlscale], 0));
     SQL_TEXT,
     SQL_VARYING   : begin
                       tmp := FloatToSQLRaw(Value);
@@ -895,17 +890,17 @@ begin
     SQL_D_FLOAT,
     SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Ord(Value);
     SQL_LONG      : if Value
-                    then PInteger(XSQLVAR.sqldata)^ := IBScaleDivisor[XSQLVAR.sqlscale]
-                    else PInteger(XSQLVAR.sqldata)^ := 0;
-    SQL_BOOLEAN   : PWord(XSQLVAR.sqldata)^ := Ord(Value);
-    SQL_BOOLEAN_FB: PByte(XSQLVAR.sqldata)^ := Ord(Value);
+                    then PISC_LONG(XSQLVAR.sqldata)^ := IBScaleDivisor[XSQLVAR.sqlscale]
+                    else PISC_LONG(XSQLVAR.sqldata)^ := 0;
+    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value);
+    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value);
     SQL_SHORT     : if Value
-                    then PSmallInt(XSQLVAR.sqldata)^ := IBScaleDivisor[XSQLVAR.sqlscale]
-                    else PSmallInt(XSQLVAR.sqldata)^ := 0;
+                    then PISC_SHORT(XSQLVAR.sqldata)^ := IBScaleDivisor[XSQLVAR.sqlscale]
+                    else PISC_SHORT(XSQLVAR.sqldata)^ := 0;
     SQL_INT64,
     SQL_QUAD      : if Value
-                    then PInt64(XSQLVAR.sqldata)^ := IBScaleDivisor[XSQLVAR.sqlscale]
-                    else PInt64(XSQLVAR.sqldata)^ := 0;
+                    then PISC_INT64(XSQLVAR.sqldata)^ := IBScaleDivisor[XSQLVAR.sqlscale]
+                    else PISC_INT64(XSQLVAR.sqldata)^ := 0;
     SQL_TEXT,
     SQL_VARYING   : begin
                       PByte(@fABuffer[0])^ := Ord('0')+Ord(Value);
@@ -957,13 +952,13 @@ begin
     SQL_TEXT,
     SQL_VARYING   : EncodePData(XSQLVAR, Index, Pointer(Value), L);
     SQL_LONG      : if L=SizeOf(Integer)
-                    then PInteger(XSQLVAR.sqldata)^ := PInteger(Value)^
-                    else PInteger(XSQLVAR.sqldata)^ := Round(RawToFloat(PAnsiChar(Pointer(Value)), AnsiChar('.')) * IBScaleDivisor[XSQLVAR.sqlscale]); //AVZ
+                    then PISC_LONG(XSQLVAR.sqldata)^ := PISC_LONG(Value)^
+                    else PISC_LONG(XSQLVAR.sqldata)^ := Round(RawToFloat(PAnsiChar(Pointer(Value)), AnsiChar('.')) * IBScaleDivisor[XSQLVAR.sqlscale]); //AVZ
     SQL_SHORT     : if L=SizeOf(Integer)
-                    then PSmallInt(XSQLVAR.sqldata)^ := PSmallInt(Value)^
-                    else PSmallint(XSQLVAR.sqldata)^ := RawToInt(BytesToStr(Value));
-    SQL_BOOLEAN   : PWord(XSQLVAR.sqldata)^ := Ord(StrToBoolEx(PAnsiChar(Value), PAnsiChar(Value)+L));
-    SQL_BOOLEAN_FB: PByte(XSQLVAR.sqldata)^ := Ord(StrToBoolEx(PAnsiChar(Value), PAnsiChar(Value)+L));
+                    then PISC_SHORT(XSQLVAR.sqldata)^ := PSmallInt(Value)^
+                    else PISC_SHORT(XSQLVAR.sqldata)^ := RawToInt(BytesToStr(Value));
+    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(StrToBoolEx(PAnsiChar(Value), PAnsiChar(Value)+L));
+    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(StrToBoolEx(PAnsiChar(Value), PAnsiChar(Value)+L));
     SQL_D_FLOAT,
     SQL_DOUBLE    : if L=SizeOf(Double)
                     then PDouble(XSQLVAR.sqldata)^ := PDouble(Value)^
@@ -972,8 +967,8 @@ begin
                     then PDouble(XSQLVAR.sqldata)^ := PSingle(Value)^
                     else PSingle (XSQLVAR.sqldata)^ := RawToFloat(PAnsiChar(Pointer(Value)), AnsiChar('.')) * IBScaleDivisor[XSQLVAR.sqlscale];  //AVZ
     SQL_INT64     : if L=SizeOf(Int64)
-                    then PInt64(XSQLVAR.sqldata)^ := PInt64(Value)^
-                    else PInt64(XSQLVAR.sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RawToFloat(PAnsiChar(Pointer(Value)), AnsiChar('.')) * IBScaleDivisor[XSQLVAR.sqlscale]); //AVZ - INT64 value was not recognized
+                    then PISC_INT64(XSQLVAR.sqldata)^ := PISC_INT64(Value)^
+                    else PISC_INT64(XSQLVAR.sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RawToFloat(PAnsiChar(Pointer(Value)), AnsiChar('.')) * IBScaleDivisor[XSQLVAR.sqlscale]); //AVZ - INT64 value was not recognized
     SQL_BLOB,
     SQL_QUAD      : WriteLobBuffer(XSQLVAR, Pointer(Value), L);
     else raise EZIBConvertError.Create(SUnsupportedDataType);
@@ -995,14 +990,28 @@ end;
 }
 procedure TZInterbase6PreparedStatement.SetCharRec(Index: Integer;
   const Value: TZCharRec);
+var XSQLVAR: PXSQLVAR;
 begin
-  if Value.CP = ConSettings^.ClientcodePage.CP then
-    SetPAnsiChar(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value.P, Value.Len)
-  else if Value.CP = zCP_UTF16 then
-    SetRawByteString(Index, PUnicodeToRaw(Value.P, Value.Len, ConSettings^.ClientcodePage.CP))
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  if Value.CP = zCP_UTF16 then
+    SetPWideChar(Index, Value.P, Value.Len)
   else begin
-    FUniTemp := PRawToUnicode(Value.P, Value.Len, Value.CP); //localize it
-    SetUnicodeString(Index, FUniTemp);
+    {$R-}
+    XSQLVAR := @FParamXSQLDA.sqlvar[Index];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    if (Value.CP = ClientCP) or ((FDB_CP_ID = CS_NONE) and
+     ((XSQLVAR.sqltype and not(1) = SQL_TEXT) or (XSQLVAR.sqltype and not(1) = SQL_VARYING)) and
+      (FCodePageArray[XSQLVAR.sqlsubtype mod 256] = Value.CP))
+    then SetPAnsiChar(Index, Value.P, Value.Len)
+    else begin
+      FUniTemp := PRawToUnicode(Value.P, Value.Len, Value.CP); //localize it
+      if FUniTemp <> ''
+      then SetPWideChar(Index, Pointer(FUniTemp), Length(FUniTemp))
+      else SetPWideChar(Index, PEmptyUnicodeString, 0);
+    end;
   end;
 end;
 
@@ -1032,26 +1041,26 @@ begin
     SQL_D_FLOAT,
     SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
     SQL_LONG      : if XSQLVAR.sqlscale = -4 then  //scale fits!
-                      PInteger(XSQLVAR.sqldata)^ := I64
+                      PISC_INT64(XSQLVAR.sqldata)^ := I64
                     else if XSQLVAR.sqlscale > -4 then //EH: check the modulo?
-                      PInteger(XSQLVAR.sqldata)^ := I64 div IBScaleDivisor[4+XSQLVAR.sqlscale] //dec scale digits
+                      PISC_INT64(XSQLVAR.sqldata)^ := I64 div IBScaleDivisor[4+XSQLVAR.sqlscale] //dec scale digits
                     else
-                      PInteger(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[4+XSQLVAR.sqlscale]; //inc scale digits
-    SQL_BOOLEAN   : PWord(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PByte(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+                      PISC_INT64(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[4+XSQLVAR.sqlscale]; //inc scale digits
+    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
     SQL_SHORT     : if XSQLVAR.sqlscale = -4 then  //scale fits!
-                      PSmallInt(XSQLVAR.sqldata)^ := I64
+                      PISC_SHORT(XSQLVAR.sqldata)^ := I64
                     else if XSQLVAR.sqlscale > -4 then //EH: check the modulo?
-                      PSmallInt(XSQLVAR.sqldata)^ := I64 div IBScaleDivisor[4+XSQLVAR.sqlscale] //dec scale digits
+                      PISC_SHORT(XSQLVAR.sqldata)^ := I64 div IBScaleDivisor[4+XSQLVAR.sqlscale] //dec scale digits
                     else
-                      PSmallInt(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[4+XSQLVAR.sqlscale]; //inc scale digits
+                      PISC_SHORT(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[4+XSQLVAR.sqlscale]; //inc scale digits
     SQL_INT64,
     SQL_QUAD      : if XSQLVAR.sqlscale = -4 then //scale fits!
-                      PInt64(XSQLVAR.sqldata)^ := I64
+                      PISC_INT64(XSQLVAR.sqldata)^ := I64
                     else if XSQLVAR.sqlscale > -4 then //EH: check the modulo?
-                      PInt64(XSQLVAR.sqldata)^ := I64 div IBScaleDivisor[-4-XSQLVAR.sqlscale]//dec scale digits
+                      PISC_INT64(XSQLVAR.sqldata)^ := I64 div IBScaleDivisor[-4-XSQLVAR.sqlscale]//dec scale digits
                     else
-                      PInt64(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[-4+XSQLVAR.sqlscale]; //inc scale digits
+                      PISC_INT64(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[-4+XSQLVAR.sqlscale]; //inc scale digits
     SQL_TEXT,
     SQL_VARYING   : begin
                       CurrToRaw(Value, @fABuffer[0], @P);
@@ -1088,17 +1097,17 @@ begin
     SQL_D_FLOAT,
     SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
     SQL_LONG      : if XSQLVAR.sqlscale = 0
-                    then PInteger(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PInteger(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_BOOLEAN   : PWord(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PByte(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+                    then PISC_LONG(XSQLVAR.sqldata)^ := Trunc(Value)
+                    else PISC_LONG(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
+    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
     SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                    then PSmallInt(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PSmallInt(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
+                    then PISC_SHORT(XSQLVAR.sqldata)^ := Trunc(Value)
+                    else PISC_SHORT(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
     SQL_INT64,
     SQL_QUAD      : if XSQLVAR.sqlscale = 0
-                    then PInt64(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PInt64(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
+                    then PISC_INT64(XSQLVAR.sqldata)^ := Trunc(Value)
+                    else PISC_INT64(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
     SQL_TYPE_DATE : begin
                       DecodeDate(Value, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
                       isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
@@ -1146,33 +1155,31 @@ begin
     SQL_D_FLOAT,
     SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
     SQL_LONG      : if XSQLVAR.sqlscale = 0
-                    then PInteger(XSQLVAR.sqldata)^ := Round(Value)
-                    else PInteger(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_BOOLEAN   : PWord(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PByte(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+                    then PISC_LONG(XSQLVAR.sqldata)^ := Round(Value)
+                    else PISC_LONG(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
+    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
     SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                    then PSmallInt(XSQLVAR.sqldata)^ := Round(Value)
-                    else PSmallInt(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
+                    then PISC_SHORT(XSQLVAR.sqldata)^ := Round(Value)
+                    else PISC_SHORT(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
     SQL_INT64,
     SQL_QUAD      : if XSQLVAR.sqlscale = 0
-                    then PInt64(XSQLVAR.sqldata)^ := Round(Value)
-                    else PInt64(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
+                    then PISC_INT64(XSQLVAR.sqldata)^ := Round(Value)
+                    else PISC_INT64(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
     SQL_TYPE_DATE : begin
                       DecodeDate(Value, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
                       isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
                     end;
     SQL_TYPE_TIME : begin
-                      TimeStamp.Fractions := 0; //init
                       DecodeTime(Value, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-                      TimeStamp.Fractions := TimeStamp.Fractions*10;
+                      TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
                       isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
                     end;
     SQL_TIMESTAMP : begin
                       DecodeDate(Value, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
                       isc_encode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-                      TimeStamp.Fractions := 0; //init
                       DecodeTime(Value, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-                      TimeStamp.Fractions := TimeStamp.Fractions*10;
+                      TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
                       isc_encode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
                     end;
     SQL_TEXT,
@@ -1211,17 +1218,17 @@ begin
     SQL_D_FLOAT,
     SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
     SQL_LONG      : if XSQLVAR.sqlscale = 0
-                    then PInteger(XSQLVAR.sqldata)^ := Round(Value)
-                    else PInteger(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_BOOLEAN   : PWord(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PByte(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+                    then PISC_LONG(XSQLVAR.sqldata)^ := Round(Value)
+                    else PISC_LONG(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
+    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
     SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                    then PSmallInt(XSQLVAR.sqldata)^ := Round(Value)
-                    else PSmallInt(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
+                    then PISC_SHORT(XSQLVAR.sqldata)^ := Round(Value)
+                    else PISC_SHORT(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
     SQL_INT64,
     SQL_QUAD      : if XSQLVAR.sqlscale = 0
-                    then PInt64(XSQLVAR.sqldata)^ := Round(Value)
-                    else PInt64(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
+                    then PISC_INT64(XSQLVAR.sqldata)^ := Round(Value)
+                    else PISC_INT64(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
     SQL_TEXT,
     SQL_VARYING   : begin
                       tmp := FloatToSQLRaw(Value);
@@ -1295,17 +1302,17 @@ begin
     SQL_D_FLOAT,
     SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
     SQL_LONG      : if XSQLVAR.sqlscale = 0
-                    then PInteger(XSQLVAR.sqldata)^ := Value
-                    else PInteger(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
-    SQL_BOOLEAN   : PWord(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PByte(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+                    then PISC_LONG(XSQLVAR.sqldata)^ := Value
+                    else PISC_LONG(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
+    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
     SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                    then PSmallInt(XSQLVAR.sqldata)^ := Value
-                    else PSmallInt(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
+                    then PISC_SHORT(XSQLVAR.sqldata)^ := Value
+                    else PISC_SHORT(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
     SQL_INT64,
     SQL_QUAD      : if XSQLVAR.sqlscale = 0
-                    then PInt64(XSQLVAR.sqldata)^ := Value
-                    else PInt64(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
+                    then PISC_INT64(XSQLVAR.sqldata)^ := Value
+                    else PISC_INT64(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
     SQL_TEXT,
     SQL_VARYING   : begin
                       IntToRaw(Value, @fABuffer[0], @P);
@@ -1342,17 +1349,17 @@ begin
     SQL_D_FLOAT,
     SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
     SQL_LONG      : if XSQLVAR.sqlscale = 0
-                    then PInteger(XSQLVAR.sqldata)^ := Value
-                    else PInteger(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
-    SQL_BOOLEAN   : PWord(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PByte(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+                    then PISC_LONG(XSQLVAR.sqldata)^ := Value
+                    else PISC_LONG(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
+    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
     SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                    then PSmallInt(XSQLVAR.sqldata)^ := Value
-                    else PSmallInt(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
+                    then PISC_SHORT(XSQLVAR.sqldata)^ := Value
+                    else PISC_SHORT(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
     SQL_INT64,
     SQL_QUAD      : if XSQLVAR.sqlscale = 0
-                    then PInt64(XSQLVAR.sqldata)^ := Value
-                    else PInt64(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
+                    then PISC_INT64(XSQLVAR.sqldata)^ := Value
+                    else PISC_INT64(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
     SQL_TEXT,
     SQL_VARYING   : begin
                       IntToRaw(Value, @fABuffer[0], @P);
@@ -1391,7 +1398,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZInterbase6PreparedStatement.SetPAnsiChar(Index: Integer;
+procedure TZInterbase6PreparedStatement.SetPAnsiChar(Index: Word;
   Value: PAnsiChar; Len: LengthInt);
 var
   TempTimeStamp: TDateTime;
@@ -1405,14 +1412,14 @@ begin
   case (XSQLVAR.sqltype and not(1)) of
     SQL_TEXT      : EncodePData(XSQLVAR, Index, Value, Len);
     SQL_VARYING   : EncodePData(XSQLVAR, Index, Value, Len);
-    SQL_LONG      : PInteger (XSQLVAR.sqldata)^ := RawToIntDef(Value, Value+Len, 0);
-    SQL_SHORT     : PSmallint (XSQLVAR.sqldata)^ := RawToIntDef(Value, Value+Len,0);
-    SQL_BOOLEAN   : PWordBool(XSQLVAR.sqldata)^ := StrToBoolEx(Value, Value+Len);
-    SQL_BOOLEAN_FB: PByte(XSQLVAR.sqldata)^ := Ord(StrToBoolEx(Value, Value+Len));
+    SQL_LONG      : PISC_LONG (XSQLVAR.sqldata)^ := RawToIntDef(Value, Value+Len, 0);
+    SQL_SHORT     : PISC_SHORT (XSQLVAR.sqldata)^ := RawToIntDef(Value, Value+Len,0);
+    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(StrToBoolEx(Value, Value+Len));
+    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(StrToBoolEx(Value, Value+Len));
     SQL_D_FLOAT,
     SQL_DOUBLE    : SQLStrToFloatDef(Value, 0, PDouble(XSQLVAR.sqldata)^, Len);
     SQL_FLOAT     : SQLStrToFloatDef(Value, 0, PSingle (XSQLVAR.sqldata)^, Len);
-    SQL_INT64     : PInt64(XSQLVAR.sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RoundTo(SQLStrToFloatDef(Value, 0, Len) * IBScaleDivisor[XSQLVAR.sqlscale], 0)); //AVZ - INT64 value was not recognized
+    SQL_INT64     : PISC_INT64(XSQLVAR.sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RoundTo(SQLStrToFloatDef(Value, 0, Len) * IBScaleDivisor[XSQLVAR.sqlscale], 0)); //AVZ - INT64 value was not recognized
     SQL_BLOB, SQL_QUAD: WriteLobBuffer(XSQLVAR, Value, Len);
     SQL_TYPE_DATE :
       begin
@@ -1433,9 +1440,8 @@ begin
           TempTimeStamp := RawSQLTimeToDateTime(Value,Len, ConSettings^.WriteFormatSettings, Failed)
         else
           TempTimeStamp := Frac(RawSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed));
-        TimeStamp.Fractions := 0; //init
         DecodeTime(TempTimeStamp, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-        TimeStamp.Fractions := TimeStamp.Fractions*10;
+        TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
         isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
       end;
     SQL_TIMESTAMP:
@@ -1452,9 +1458,96 @@ begin
           TempTimeStamp := RawSQLTimeToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed);
         DecodeDate(TempTimeStamp, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
         isc_encode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-        TimeStamp.Fractions := 0; //init
         DecodeTime(TempTimeStamp, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-        TimeStamp.Fractions := TimeStamp.Fractions*10;
+        TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
+        isc_encode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
+      end;
+    else raise EZIBConvertError.Create(SErrorConvertion);
+  end;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  if (XSQLVAR.sqlind <> nil) then
+     XSQLVAR.sqlind^ := ISC_NOTNULL;
+end;
+
+procedure TZInterbase6PreparedStatement.SetPWideChar(Index: Word;
+  Value: PWideChar; Len: LengthInt);
+var
+  TempTimeStamp: TDateTime;
+  TimeStamp: TZTimeStamp;
+  Failed: Boolean;
+  XSQLVAR: PXSQLVAR;
+begin
+  {$R-}
+  XSQLVAR := @FParamXSQLDA.sqlvar[Index];
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  case (XSQLVAR.sqltype and not(1)) of
+    SQL_TEXT,
+    SQL_VARYING   : begin
+                      if XSQLVAR.sqlsubtype mod 256 <> CS_BINARY then
+                        if (FDB_CP_ID <> CS_NONE)
+                        then FRawTemp := PUnicodeToRaw(Value, Len, FClientCP)
+                        else FRawTemp := PUnicodeToRaw(Value, Len, FCodePageArray[XSQLVAR.sqlsubtype mod 256])
+                      else FRawTemp := UnicodeStringToAscii7(Value, Len);
+                      if FRawTemp <> ''
+                      then EncodePData(XSQLVAR, Index, Pointer(FRawTemp), Length(FRawTemp))
+                      else EncodePData(XSQLVAR, Index, PEmptyAnsiString, 0)
+                    end;
+    SQL_LONG      : PISC_LONG(XSQLVAR.sqldata)^ := UnicodeToIntDef(Value, Value+Len, 0);
+    SQL_SHORT     : PISC_SHORT(XSQLVAR.sqldata)^ := UnicodeToIntDef(Value, Value+Len,0);
+    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(StrToBoolEx(Value, Value+Len));
+    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(StrToBoolEx(Value, Value+Len));
+    SQL_D_FLOAT,
+    SQL_DOUBLE    : SQLStrToFloatDef(Value, 0, PDouble(XSQLVAR.sqldata)^, Len);
+    SQL_FLOAT     : SQLStrToFloatDef(Value, 0, PSingle (XSQLVAR.sqldata)^, Len);
+    SQL_INT64     : PISC_INT64(XSQLVAR.sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RoundTo(SQLStrToFloatDef(Value, 0, Len) * IBScaleDivisor[XSQLVAR.sqlscale], 0)); //AVZ - INT64 value was not recognized
+    SQL_BLOB,
+    SQL_QUAD      : begin
+                      if XSQLVAR.sqlsubtype = isc_blob_text
+                      then FRawTemp := PUnicodeToRaw(Value, Len, FClientCP)
+                      else FRawTemp := UnicodeStringToAscii7(Value, Len);
+                      if FRawTemp <> ''
+                      then WriteLobBuffer(XSQLVAR, Pointer(FRawTemp), Length(FRawTemp))
+                      else WriteLobBuffer(XSQLVAR, PEmptyAnsiString, 0)
+                    end;
+    SQL_TYPE_DATE :
+      begin
+        if (Len = 0) or (PByte(Value+2)^ = Ord(':')) then
+          TempTimeStamp := 0
+        else if Len = ConSettings^.WriteFormatSettings.DateFormatLen then
+          TempTimeStamp := UnicodeSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed)
+        else
+          TempTimeStamp := Int(UnicodeSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed));
+        DecodeDate(TempTimeStamp, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
+        isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
+      end;
+    SQL_TYPE_TIME:
+      begin
+        if Len = 0 then
+          TempTimeStamp := 0
+        else if PByte(Value+2)^ = Ord(':') then //possible date if Len = 10 then
+          TempTimeStamp := UnicodeSQLTimeToDateTime(Value,Len, ConSettings^.WriteFormatSettings, Failed)
+        else
+          TempTimeStamp := Frac(UnicodeSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed));
+        DecodeTime(TempTimeStamp, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
+        TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
+        isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
+      end;
+    SQL_TIMESTAMP:
+      begin
+        if Len = 0 then
+          TempTimeStamp := 0
+        else if PByte(Value+2)^ = Ord(':') then
+          TempTimeStamp := UnicodeSQLTimeToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed)
+        else if (ConSettings^.WriteFormatSettings.DateTimeFormatLen - Len) <= 4 then
+          TempTimeStamp := UnicodeSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed)
+        else if PByte(Value+4)^ = Ord('-') then
+          TempTimeStamp := UnicodeSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed)
+        else
+          TempTimeStamp := UnicodeSQLTimeToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed);
+        DecodeDate(TempTimeStamp, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
+        isc_encode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
+        DecodeTime(TempTimeStamp, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
+        TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
         isc_encode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
       end;
     else raise EZIBConvertError.Create(SErrorConvertion);
@@ -1482,7 +1575,6 @@ begin
   Index := Index -1;
   {$ENDIF}
   CheckParameterIndex(Index);
-  {$R-}
   if Value <> ''
   then SetPAnsiChar(Index, Pointer(Value), Length(Value))
   else SetPAnsiChar(Index, PEmptyAnsiString, 0)
@@ -1527,17 +1619,17 @@ begin
     SQL_D_FLOAT,
     SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
     SQL_LONG      : if XSQLVAR.sqlscale = 0
-                    then PInteger(XSQLVAR.sqldata)^ := Value
-                    else PInteger(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
-    SQL_BOOLEAN   : PWord(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PByte(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+                    then PISC_LONG(XSQLVAR.sqldata)^ := Value
+                    else PISC_LONG(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
+    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
     SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                    then PSmallInt(XSQLVAR.sqldata)^ := Value
-                    else PSmallInt(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
+                    then PISC_SHORT(XSQLVAR.sqldata)^ := Value
+                    else PISC_SHORT(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
     SQL_INT64,
     SQL_QUAD      : if XSQLVAR.sqlscale = 0
-                    then PInt64(XSQLVAR.sqldata)^ := Value
-                    else PInt64(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
+                    then PISC_INT64(XSQLVAR.sqldata)^ := Value
+                    else PISC_INT64(XSQLVAR.sqldata)^ := Value*IBScaleDivisor[XSQLVAR.sqlscale];
     SQL_TEXT,
     SQL_VARYING   : begin
                       IntToRaw(Integer(Value), @fABuffer[0], @P);
@@ -1562,13 +1654,38 @@ end;
 }
 procedure TZInterbase6PreparedStatement.SetString(Index: Integer;
   const Value: String);
+{$IFDEF UNICODE}
 begin
-  {$IFDEF UNICODE}
-  SetRawByteString(Index, ZUnicodeToRaw(Value, ConSettings.ClientcodePage.CP));
-  {$ELSE}
-  SetRawByteString(Index, 
-    ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.Ctrl_CP,
-    ConSettings.ClientcodePage.CP));
+  SetUnicodeString(Index, Value);
+{$ELSE}
+var XSQLVAR: PXSQLVAR;
+begin
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  if Value <> '' then begin
+    {$R-}
+    XSQLVAR := @FParamXSQLDA.sqlvar[Index];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    case (XSQLVAR.sqltype and not(1)) of
+      SQL_TEXT,
+      SQL_VARYING   : if not ConSettings^.AutoEncode or (XSQLVAR.sqlsubtype mod 256 = CS_BINARY) then
+                        EncodePData(XSQLVAR, Index, Pointer(Value), Length(Value))
+                      else if (ClientCP <> CS_NONE)
+                        then SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+                          ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, ClientCP))
+                        else SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+                          ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, FCodePageArray[XSQLVAR.sqlsubtype mod 256]));
+      SQL_BLOB,
+      SQL_QUAD      : if not ConSettings^.AutoEncode or (XSQLVAR.sqlsubtype <> isc_blob_text)
+                      then WriteLobBuffer(XSQLVAR, Pointer(Value), Length(Value))
+                      else SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+                          ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, ClientCP));
+      else SetPAnsiChar(Index, Pointer(Value), Length(Value));
+    end;
+  end else
+    SetPAnsiChar(Index, PEmptyAnsiString, 0)
   {$ENDIF}
 end;
 
@@ -1596,24 +1713,22 @@ begin
     SQL_FLOAT     : PSingle(XSQLVAR.sqldata)^   := Value;
     SQL_D_FLOAT,
     SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
-    SQL_LONG      : PInteger(XSQLVAR.sqldata)^ := 0;
-    SQL_BOOLEAN   : PWord(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PByte(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_SHORT     : PSmallInt(XSQLVAR.sqldata)^ := 0;
+    SQL_LONG      : PISC_LONG(XSQLVAR.sqldata)^ := 0;
+    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+    SQL_SHORT     : PISC_SHORT(XSQLVAR.sqldata)^ := 0;
     SQL_INT64,
-    SQL_QUAD      : PInt64(XSQLVAR.sqldata)^ := 0;
+    SQL_QUAD      : PISC_INT64(XSQLVAR.sqldata)^ := 0;
     SQL_TYPE_DATE : isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, 1899, 12, 31);
     SQL_TYPE_TIME : begin
-                      TimeStamp.Fractions := 0; //init
                       DecodeTime(Value, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-                      TimeStamp.Fractions := TimeStamp.Fractions*10;
+                      TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
                       isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
                     end;
     SQL_TIMESTAMP : begin
                       isc_encode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date, 1899, 12, 31);
-                      TimeStamp.Fractions := 0; //init
                       DecodeTime(Value, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-                      TimeStamp.Fractions := TimeStamp.Fractions*10;
+                      TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
                       isc_encode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
                     end;
     SQL_TEXT,
@@ -1652,33 +1767,31 @@ begin
     SQL_D_FLOAT,
     SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
     SQL_LONG      : if XSQLVAR.sqlscale = 0
-                    then PInteger(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PInteger(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_BOOLEAN   : PWord(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PByte(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+                    then PISC_LONG(XSQLVAR.sqldata)^ := Trunc(Value)
+                    else PISC_LONG(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
+    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
     SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                    then PSmallInt(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PSmallInt(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
+                    then PISC_SHORT(XSQLVAR.sqldata)^ := Trunc(Value)
+                    else PISC_SHORT(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
     SQL_INT64,
     SQL_QUAD      : if XSQLVAR.sqlscale = 0
-                    then PInt64(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PInt64(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
+                    then PISC_INT64(XSQLVAR.sqldata)^ := Trunc(Value)
+                    else PISC_INT64(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
     SQL_TYPE_DATE : begin
                       DecodeDate(Value, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
                       isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
                     end;
     SQL_TYPE_TIME : begin
-                      TimeStamp.Fractions := 0; //init
                       DecodeTime(Value, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-                      TimeStamp.Fractions := TimeStamp.Fractions*10;
+                      TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
                       isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
                     end;
     SQL_TIMESTAMP : begin
                       DecodeDate(Value, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
                       isc_encode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-                      TimeStamp.Fractions := 0; //init
                       DecodeTime(Value, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-                      TimeStamp.Fractions := TimeStamp.Fractions*10;
+                      TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
                       isc_encode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
                     end;
     SQL_TEXT,
@@ -1736,7 +1849,13 @@ end;
 procedure TZInterbase6PreparedStatement.SetUnicodeString(
   Index: Integer; const Value: ZWideString);
 begin
-  SetRawByteString(Index, ZUnicodeToRaw(Value, ConSettings.ClientcodePage.CP));
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  if Value <> ''
+  then SetPWideChar(Index, Pointer(Value), Length(Value))
+  else SetPAnsiChar(Index, PEmptyAnsiString, 0);
 end;
 
 {**
@@ -1753,16 +1872,46 @@ end;
 {$IFNDEF NO_UTF8STRING}
 procedure TZInterbase6PreparedStatement.SetUTF8String(Index: Integer;
   const Value: UTF8String);
+var XSQLVAR: PXSQLVAR;
 begin
-  if Value <> '' then
-    if zCP_UTF8 = ConSettings^.ClientCodePage.CP
-    then SetPAnsiChar(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Pointer(Value), Length(Value))
-    else begin
-      FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), zCP_UTF8); //localize
-      SetUnicodeString(Index, FUniTemp)
-    end
-  else
-    SetPAnsiChar(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, PEmptyAnsiString, 0)
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  if Value <> '' then begin
+    {$R-}
+    XSQLVAR := @FParamXSQLDA.sqlvar[Index];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    case (XSQLVAR.sqltype and not(1)) of
+      SQL_TEXT,
+      SQL_VARYING   : if (ClientCP = zCP_UTF8) or (XSQLVAR.sqlsubtype mod 256 = CS_BINARY)
+                        or ((FDB_CP_ID = CS_NONE) and (FCodePageArray[XSQLVAR.sqlsubtype mod 256] = zCP_UTF8)) then
+                        EncodePData(XSQLVAR, Index, Pointer(Value), Length(Value))
+                      else begin
+                        FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), zCP_UTF8); //localize it
+                        if (FDB_CP_ID = CS_NONE)
+                        then FRawTemp := ZUnicodeToRaw(FUniTemp, FCodePageArray[XSQLVAR.sqlsubtype mod 256])
+                        else FRawTemp := ZUnicodeToRaw(FUniTemp, ClientCP);
+                        if FRawTemp <> ''
+                        then EncodePData(XSQLVAR, Index, Pointer(FRawTemp), Length(FRawTemp))
+                        else EncodePData(XSQLVAR, Index, PEmptyAnsiString, 0);
+                      end;
+      SQL_BLOB,
+      SQL_QUAD      : if XSQLVAR.sqlsubtype = isc_blob_text then
+                        if (ClientCP = zCP_UTF8) then
+                          WriteLobBuffer(XSQLVAR, Pointer(Value), Length(Value))
+                        else begin
+                          FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), zCP_UTF8); //localize it
+                          FRawTemp := ZUnicodeToRaw(FUniTemp, ClientCP);
+                          if FRawTemp <> ''
+                          then WriteLobBuffer(XSQLVAR, Pointer(FRawTemp), Length(FRawTemp))
+                          else WriteLobBuffer(XSQLVAR, PEmptyAnsiString, 0);
+                        end
+                      else WriteLobBuffer(XSQLVAR, Pointer(Value), Length(Value));
+      else SetPAnsiChar(Index, Pointer(Value), Length(Value));
+    end;
+  end else
+    SetPAnsiChar(Index, PEmptyAnsiString, 0)
 end;
 {$ENDIF NO_UTF8STRING}
 

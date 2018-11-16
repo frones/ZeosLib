@@ -65,6 +65,7 @@ uses
 type
 
   {** Implements a column information structure. }
+  PZColumnInfo = ^TZColumnInfo;
   TZColumnInfo = class(TObject)
   protected
     FAutoIncrement: Boolean;

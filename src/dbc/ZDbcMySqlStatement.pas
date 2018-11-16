@@ -509,7 +509,7 @@ end;
 function TZAbstractMySQLPreparedStatement.CreateResultSet(const SQL: string): IZResultSet;
 var
   CachedResolver: TZMySQLCachedResolver;
-  NativeResultSet: TZAbstractResultSet;
+  NativeResultSet: TZAbstractMySQLResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
   FLastWasOutParams := IsOutParamResult;

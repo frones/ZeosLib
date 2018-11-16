@@ -72,7 +72,7 @@ type
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
   end;
 
-  TAbstractODBCResultSet = Class(TZAbstractResultSet)
+  TAbstractODBCResultSet = Class(TZSimpleResultSet)
   private
     fPHSTMT: PSQLHSTMT; //direct reference the handle of the smt/metadata
     fConnection: IZODBCConnection;
@@ -126,10 +126,6 @@ type
     function GetRawByteString(ColumnIndex: Integer): RawByteString; override;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
-    function GetByte(ColumnIndex: Integer): Byte; override;
-    function GetShort(ColumnIndex: Integer): ShortInt; override;
-    function GetWord(ColumnIndex: Integer): Word; override;
-    function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetUInt(ColumnIndex: Integer): LongWord; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetULong(ColumnIndex: Integer): UInt64; override;
@@ -509,54 +505,6 @@ begin
   end;
 end;
 
-function TAbstractODBCResultSet.GetByte(ColumnIndex: Integer): Byte;
-begin
-  Result := 0;
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case fSQLTypes[ColumnIndex] of
-      stBoolean:    Result := PByte(fColDataPtr)^;
-      stByte:       Result := PByte(fColDataPtr)^;
-      stShort:      Result := PShortInt(fColDataPtr)^;
-      stWord:       Result := PWord(fColDataPtr)^;
-      stSmall:      Result := PSmallInt(fColDataPtr)^;
-      stLongWord:   Result := PLongWord(fColDataPtr)^;
-      stInteger:    Result := PInteger(fColDataPtr)^;
-      stULong:      Result := PUInt64(fColDataPtr)^;
-      stLong:       Result := PInt64(fColDataPtr)^;
-      stFloat:      Result := Trunc(PSingle(fColDataPtr)^);
-      stDouble,
-      stCurrency,
-      stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
-                      Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
-                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
-                    else
-                      Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
-      stDate:
-        Result := Trunc(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
-          PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day));
-      stTimeStamp:
-        Result := Trunc(EncodeDate(Abs(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year),
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.day)+
-          EncodeTime(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction));
-      stString, stUnicodeString: begin
-          InternalDecTrailingSpaces(ColumnIndex);
-          if fIsUnicodeDriver then
-            Result := UnicodeToIntDef(PWideChar(fColDataPtr), 0)
-          else
-            Result := RawToIntDef(PAnsiChar(fColDataPtr), 0);
-        end;
-      //stAsciiStream, stUnicodeStream, stBinaryStream:
-    end;
-  end;
-end;
-
 function TAbstractODBCResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 begin
   if IsNull(ColumnIndex) then //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
@@ -909,102 +857,6 @@ begin
   end;
 end;
 
-function TAbstractODBCResultSet.GetShort(ColumnIndex: Integer): ShortInt;
-begin
-  Result := 0;
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case fSQLTypes[ColumnIndex] of
-      stBoolean:    Result := PByte(fColDataPtr)^;
-      stByte:       Result := PByte(fColDataPtr)^;
-      stShort:      Result := PShortInt(fColDataPtr)^;
-      stWord:       Result := PWord(fColDataPtr)^;
-      stSmall:      Result := PSmallInt(fColDataPtr)^;
-      stLongWord:   Result := PLongWord(fColDataPtr)^;
-      stInteger:    Result := PInteger(fColDataPtr)^;
-      stULong:      Result := PUInt64(fColDataPtr)^;
-      stLong:       Result := PInt64(fColDataPtr)^;
-      stFloat:      Result := Trunc(PSingle(fColDataPtr)^);
-      stDouble,
-      stCurrency,
-      stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
-                      Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
-                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
-                    else
-                      Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
-      stDate:
-        Result := Trunc(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
-          PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day));
-      stTimeStamp:
-        Result := Trunc(EncodeDate(Abs(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year),
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.day)+
-          EncodeTime(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction));
-      stString, stUnicodeString: begin
-          InternalDecTrailingSpaces(ColumnIndex);
-          if fIsUnicodeDriver then
-            Result := UnicodeToIntDef(PWideChar(fColDataPtr), 0)
-          else
-            Result := RawToIntDef(PAnsiChar(fColDataPtr), 0);
-        end;
-      //stAsciiStream, stUnicodeStream, stBinaryStream:
-    end;
-  end;
-end;
-
-function TAbstractODBCResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
-begin
-  Result := 0;
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case fSQLTypes[ColumnIndex] of
-      stBoolean:    Result := PByte(fColDataPtr)^;
-      stByte:       Result := PByte(fColDataPtr)^;
-      stShort:      Result := PShortInt(fColDataPtr)^;
-      stWord:       Result := PWord(fColDataPtr)^;
-      stSmall:      Result := PSmallInt(fColDataPtr)^;
-      stLongWord:   Result := PLongWord(fColDataPtr)^;
-      stInteger:    Result := PInteger(fColDataPtr)^;
-      stULong:      Result := PUInt64(fColDataPtr)^;
-      stLong:       Result := PInt64(fColDataPtr)^;
-      stFloat:      Result := Trunc(PSingle(fColDataPtr)^);
-      stDouble,
-      stCurrency,
-      stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
-                      Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
-                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
-                    else
-                      Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
-      stDate:
-        Result := Trunc(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
-          PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day));
-      stTimeStamp:
-        Result := Trunc(EncodeDate(Abs(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year),
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.day)+
-          EncodeTime(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction));
-      stString, stUnicodeString: begin
-          InternalDecTrailingSpaces(ColumnIndex);
-          if fIsUnicodeDriver then
-            Result := UnicodeToIntDef(PWideChar(fColDataPtr), 0)
-          else
-            Result := RawToIntDef(PAnsiChar(fColDataPtr), 0);
-        end;
-      //stAsciiStream, stUnicodeStream, stBinaryStream:
-    end;
-  end;
-end;
-
 function TAbstractODBCResultSet.GetString(ColumnIndex: Integer): String;
 begin
   {$IFDEF UNICODE}
@@ -1230,54 +1082,6 @@ begin
         else {stArray, stDataSet:} Result := '';
       end;
     end;
-end;
-
-function TAbstractODBCResultSet.GetWord(ColumnIndex: Integer): Word;
-begin
-  Result := 0;
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case fSQLTypes[ColumnIndex] of
-      stBoolean:    Result := PByte(fColDataPtr)^;
-      stByte:       Result := PByte(fColDataPtr)^;
-      stShort:      Result := PShortInt(fColDataPtr)^;
-      stWord:       Result := PWord(fColDataPtr)^;
-      stSmall:      Result := PSmallInt(fColDataPtr)^;
-      stLongWord:   Result := PLongWord(fColDataPtr)^;
-      stInteger:    Result := PInteger(fColDataPtr)^;
-      stULong:      Result := PUInt64(fColDataPtr)^;
-      stLong:       Result := PInt64(fColDataPtr)^;
-      stFloat:      Result := Trunc(PSingle(fColDataPtr)^);
-      stDouble,
-      stCurrency,
-      stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
-                      Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
-                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
-                    else
-                      Result := Trunc(EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0));
-      stDate:
-        Result := Trunc(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
-          PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day));
-      stTimeStamp:
-        Result := Trunc(EncodeDate(Abs(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year),
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.day)+
-          EncodeTime(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction));
-      stString, stUnicodeString: begin
-          InternalDecTrailingSpaces(ColumnIndex);
-          if fIsUnicodeDriver then
-            Result := UnicodeToIntDef(PWideChar(fColDataPtr), 0)
-          else
-            Result := RawToIntDef(PAnsiChar(fColDataPtr), 0);
-        end;
-      //stAsciiStream, stUnicodeStream, stBinaryStream:
-    end;
-  end;
 end;
 
 function TAbstractODBCResultSet.IsNull(ColumnIndex: Integer): Boolean;

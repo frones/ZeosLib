@@ -374,35 +374,35 @@ type
 
     { Types convertion routines }
 
-    isc_decode_date: procedure(ib_date: PISC_QUAD; tm_date: PCTimeStructure);
-      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    //isc_decode_date: procedure(ib_date: PISC_QUAD; tm_date: PCTimeStructure);
+      //{$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
-    isc_encode_date: procedure(tm_date: PCTimeStructure; ib_date: PISC_QUAD);
-      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    //isc_encode_date: procedure(tm_date: PCTimeStructure; ib_date: PISC_QUAD);
+      //{$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     { Interbase Version 6 routines }
-    isc_decode_sql_date: procedure(ib_date: PISC_DATE;
-      tm_date: PCTimeStructure); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    //isc_decode_sql_date: procedure(ib_date: PISC_DATE;
+      //tm_date: PCTimeStructure); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
-    isc_decode_sql_time: procedure(ib_time: PISC_TIME;
-      tm_date: PCTimeStructure); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    //isc_decode_sql_time: procedure(ib_time: PISC_TIME;
+      //tm_date: PCTimeStructure); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
-    isc_decode_timestamp: procedure(ib_timestamp: PISC_TIMESTAMP;
-      tm_date: PCTimeStructure); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    //isc_decode_timestamp: procedure(ib_timestamp: PISC_TIMESTAMP;
+      //tm_date: PCTimeStructure); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
-    isc_encode_sql_date: procedure(tm_date: PCTimeStructure;
-      ib_date: PISC_DATE); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    //isc_encode_sql_date: procedure(tm_date: PCTimeStructure;
+      //ib_date: PISC_DATE); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
-    isc_encode_sql_time: procedure(tm_date: PCTimeStructure;
-      ib_time: PISC_TIME); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    //isc_encode_sql_time: procedure(tm_date: PCTimeStructure;
+      //ib_time: PISC_TIME); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
-    isc_encode_timestamp: procedure(tm_date: PCTimeStructure;
-      ib_timestamp: PISC_TIMESTAMP);
-      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    //isc_encode_timestamp: procedure(tm_date: PCTimeStructure;
+      //ib_timestamp: PISC_TIMESTAMP);
+      //{$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     isc_vax_integer: function(buffer: PAnsiChar; length: Short): ISC_LONG;
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-    isc_portable_integer: function(ptr: pbyte; length: Smallint): Int64;
+    isc_portable_integer: function(ptr: pbyte; length: Smallint): ISC_INT64;
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     isc_get_client_version: procedure(version: PAnsiChar);
@@ -539,8 +539,8 @@ begin
     @isc_get_segment     := GetAddress('isc_get_segment');
     @isc_put_segment     := GetAddress('isc_put_segment');
     @isc_create_blob2    := GetAddress('isc_create_blob2');
-    @isc_decode_date     := GetAddress('isc_decode_date');
-    @isc_encode_date     := GetAddress('isc_encode_date');
+    //@isc_decode_date     := GetAddress('isc_decode_date');
+    //@isc_encode_date     := GetAddress('isc_encode_date');
     @isc_dsql_free_statement := GetAddress('isc_dsql_free_statement');
     @isc_dsql_execute2   := GetAddress('isc_dsql_execute2');
     @isc_dsql_execute    := GetAddress('isc_dsql_execute');
@@ -572,12 +572,12 @@ begin
     @isc_free            := GetAddress('isc_free');
 
     @isc_rollback_retaining := GetAddress( 'isc_rollback_retaining');
-    @isc_decode_sql_date := GetAddress('isc_decode_sql_date');
-    @isc_decode_sql_time := GetAddress('isc_decode_sql_time');
-    @isc_decode_timestamp := GetAddress('isc_decode_timestamp');
-    @isc_encode_sql_date := GetAddress('isc_encode_sql_date');
-    @isc_encode_sql_time := GetAddress('isc_encode_sql_time');
-    @isc_encode_timestamp := GetAddress('isc_encode_timestamp');
+    //@isc_decode_sql_date := GetAddress('isc_decode_sql_date');
+    //@isc_decode_sql_time := GetAddress('isc_decode_sql_time');
+    //@isc_decode_timestamp := GetAddress('isc_decode_timestamp');
+    //@isc_encode_sql_date := GetAddress('isc_encode_sql_date');
+    //@isc_encode_sql_time := GetAddress('isc_encode_sql_time');
+    //@isc_encode_timestamp := GetAddress('isc_encode_timestamp');
 
     @fb_interpret        := GetAddress('fb_interpret');
 

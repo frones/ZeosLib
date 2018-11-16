@@ -541,9 +541,9 @@ begin
         RowAccessor.SetCurrency(FieldIndex, ResultSet.GetCurrency(ColumnIndex));
       ftString, ftWideString:
         if RowAccessor.IsRaw then
-          RowAccessor.SetPAnsiChar(FieldIndex, ResultSet.GetPAnsiChar(ColumnIndex, Len), @Len)
+          RowAccessor.SetPAnsiChar(FieldIndex, ResultSet.GetPAnsiChar(ColumnIndex, Len), Len)
         else
-          RowAccessor.SetPWideChar(FieldIndex, ResultSet.GetPWideChar(ColumnIndex, Len), @Len);
+          RowAccessor.SetPWideChar(FieldIndex, ResultSet.GetPWideChar(ColumnIndex, Len), Len);
       ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         RowAccessor.SetBytes(FieldIndex, ResultSet.GetBytes(ColumnIndex));
       ftDate:
@@ -639,10 +639,10 @@ begin
       ftString, ftWidestring:
         if RowAccessor.IsRaw then
           ResultSet.UpdatePAnsiChar(ColumnIndex,
-            RowAccessor.GetPAnsiChar(FieldIndex, WasNull, Len), @Len)
+            RowAccessor.GetPAnsiChar(FieldIndex, WasNull, Len), Len)
         else
           ResultSet.UpdatePWideChar(ColumnIndex,
-            RowAccessor.GetPWideChar(FieldIndex, WasNull, Len), @Len);
+            RowAccessor.GetPWideChar(FieldIndex, WasNull, Len), Len);
       ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         ResultSet.UpdateBytes(ColumnIndex, RowAccessor.GetBytes(FieldIndex, WasNull));
       ftDate:
@@ -662,8 +662,7 @@ begin
           ResultSet.UpdateLob(ColumnIndex, Blob);
         end;
       {$IFDEF WITH_FTDATASETSUPPORT}
-      ftDataSet:
-        ResultSet.UpdateDataSet(ColumnIndex, RowAccessor.GetDataSet(FieldIndex, WasNull));
+      ftDataSet: ;
       {$ENDIF}
     end;
 

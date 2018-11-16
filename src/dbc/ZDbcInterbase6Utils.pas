@@ -132,6 +132,7 @@ type
     TotalSize: Integer;
   end;
 
+  PZFBOrgXSQLDAInfo = ^TZFBOrgXSQLDAInfo;
   TZFBOrgXSQLDAInfo = record
     AllocatedMem: Integer;
     Scale: SmallInt;
