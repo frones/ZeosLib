@@ -129,14 +129,14 @@ const
   StringLenOffSet             = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len};
   StringRefCntOffSet          = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Ref}+SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len};
   CodePageOffSet              = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Ref}+SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len}+
-                                  {$ifdef CPU64}SizeOf(DWord){Dummy}{$ENDIF}
+                                  {$ifdef CPU64}SizeOf(DWord)+{Dummy}{$ENDIF}
                                   SizeOf(Word){elementsize}+SizeOf(TSystemCodePage){codePage};
   {$ELSE} //system.pas
 const
   StringLenOffSet             = SizeOf(Integer); {PStrRec.Len}
   StringRefCntOffSet          = SizeOf(Integer){PStrRec.RefCnt}+SizeOf(Integer){PStrRec.Len};
   CodePageOffSet              = SizeOf(Integer){PAnsiRec/PUnicodeRec.Ref}+SizeOf(Integer){PAnsiRec/PUnicodeRec.Len}+
-                                  {$IFDEF CPU64BITS}SizeOf(Integer){_Padding}{$ENDIF}+
+                                  {$IFDEF CPU64BITS}SizeOf(Integer)+{_Padding}{$ENDIF}
                                   SizeOf(Word){elementsize}+SizeOf(Word){codePage};
   {$ENDIF}
   ArrayLenOffSet              = SizeOf(ArrayLenInt);
