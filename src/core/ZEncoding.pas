@@ -267,6 +267,8 @@ function ZMoveStringToRaw(const Src: String; const {%H-}StringCP, {%H-}RawCP: Wo
 function ZUnknownRawToUnicode(const S: RawByteString; const CP: Word): ZWideString;
 function ZUnknownRawToUnicodeWithAutoEncode(const S: RawByteString;
   const CP: Word): ZWideString;
+function ZUnknownPRawToUnicodeWithAutoEncode(P: PAnsiChar; L: NativeUInt;
+  const CP: Word): ZWideString;
 function ZUnicodeToUnknownRaw(const US: ZWideString; CP: Word): RawByteString;
 
 {**
@@ -1190,6 +1192,20 @@ begin
   end;
 end;
 
+function ZUnknownPRawToUnicodeWithAutoEncode(P: PAnsiChar; L: NativeUInt;
+  const CP: Word): ZWideString;
+begin
+  if P = nil then
+    Result := ''
+  else case ZDetectUTF8Encoding(P, L) of
+    etUSASCII: Result := USASCII7ToUnicodeString(P, L);
+    etUTF8: Result := PRawToUnicode(P, L, zCP_UTF8);
+    else if ZCompatibleCodePages(ZOSCodePage, zCP_UTF8)
+      then Result := USASCII7ToUnicodeString(P, L) //random success, we don't know the CP here
+      else Result := PRawToUnicode(P, L, ZOSCodePage);
+  end;
+end;
+
 function ZUnicodeToUnknownRaw(const US: ZWideString; CP: Word): RawByteString;
 begin
   Result := RawByteString(US);
@@ -2051,12 +2067,12 @@ begin
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
     if Ulen <= dsMaxRStringSize then
       {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-      ZSetString(@Buf[0], LocaleCharsFromUnicode(CP, 0, Source, SrcCodePoints, @Buf[0], ulen, NIL, NIL), Result)
+      ZSetString(@Buf[0], LocaleCharsFromUnicode(CP, 0, Source, SrcCodePoints, @Buf[0], ulen, NIL, NIL), Result{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF})
       {$ELSE}
-      ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Source, SrcCodePoints, @Buf[0], ulen, NIL, NIL), Result)
+      ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Source, SrcCodePoints, @Buf[0], ulen, NIL, NIL), Result{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF})
       {$ENDIF}
     else begin
-      ZSetString(nil, ULen, Result); //oversized
+      ZSetString(nil, ULen, Result{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF}); //oversized
       {$IFDEF WITH_UNICODEFROMLOCALECHARS}
       SetLength(Result, LocaleCharsFromUnicode(CP, 0, Source, SrcCodePoints, Pointer(Result), ulen, NIL, NIL)); // Convert Unicode down to Ansi
       {$ELSE}

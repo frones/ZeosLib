@@ -286,6 +286,8 @@ function StrToBoolEx(const Str: ZWideString; const CheckInt: Boolean = True): Bo
 }
 function StrToBoolEx(Str: PWideChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
+function StrToBoolEx(Buf, PEnd: PWideChar; const CheckInt: Boolean = True;
+  const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
 
 {**
   Converts a boolean into string value.
@@ -1740,6 +1742,44 @@ SkipSpaces: while PWord(Str)^ = Ord(' ') do Inc(Str);
       else
         Result := CheckInt and (UnicodeToIntDef(Str, 0) <> 0);
     end;
+end;
+
+{**
+  Converts a string into boolean value.
+  @param Buf the usc2 string buffer.
+  @param PEnd the end of the string buffer, might be a trailing #0 term.
+  @param CheckInt Check for "0" char too?
+  @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
+}
+function StrToBoolEx(Buf, PEnd: PWideChar; const CheckInt: Boolean = True;
+  const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
+var P: PWideChar;
+begin
+  Result := False; //init
+  if (Buf = nil) or (PEnd = nil) or (Buf = PEnd) then
+    Exit;
+  if IgnoreTrailingSaces then
+    while Ord((PEnd-1)^) = Ord(' ') do
+      Dec(PEnd);
+  case (Ord(Buf^) or $20) of
+    { test lowercase "YES" / "Y"}
+    Ord('y'): if (Pend-Buf) = 1 then
+                Result := True
+              else if (Pend-Buf) = 3 then
+                Result := (Ord((Buf+1)^) or $20 = Ord('e')) and (Ord((Buf+1)^) or $20 = Ord('s'));
+    { test lowercase "ON" }
+    Ord('o'): Result := (Pend-Buf = 2) and (Ord((Buf+1)^) or $20 = Ord('n'));
+    { test lowercase "TRUE" / "T"}
+    Ord('t'): if Pend-Buf = 1 then
+                Result := True
+              else Result := (Pend-Buf = 4) and (Ord((Buf+1)^) or $20 = Ord('r')) and
+                (Ord((Buf+1)^) or $20 = Ord('u')) and (Ord((Buf+1)^) or $20 = Ord('e'));
+    else begin
+      P := PEnd;
+      Result := CheckInt and (ValUnicodeInt(Buf, P) <> 0) and (P = PEnd);
+    end;
+  end;
 end;
 
 {**
