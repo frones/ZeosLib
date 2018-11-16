@@ -414,13 +414,13 @@ end;
 }
 procedure TZTestDbcInterbaseCase.TestDefaultValues;
 const
-  D_ID = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  D_FLD1 = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  D_FLD2 = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  D_FLD3 = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  D_FLD4 = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  D_FLD5 = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  D_FLD6 = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  D_ID = FirstDbcIndex;
+  D_FLD1 = FirstDbcIndex +1;
+  D_FLD2 = FirstDbcIndex +2;
+  D_FLD3 = FirstDbcIndex +3;
+  D_FLD4 = FirstDbcIndex +4;
+  D_FLD5 = FirstDbcIndex +5;
+  D_FLD6 = FirstDbcIndex +6;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
