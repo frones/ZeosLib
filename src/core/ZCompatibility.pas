@@ -118,6 +118,20 @@ type
   {$IFEND}
 
 {$IFDEF FPC}
+{$IFDEF WITH_RAWBYTESTRING}
+Type
+  PAnsiRec = ^TAnsiRec;
+  TAnsiRec = Record
+    CodePage    : TSystemCodePage;
+    ElementSize : Word;
+{$ifdef CPU64}
+    { align fields  }
+    Dummy       : DWord;
+{$endif CPU64}
+    Ref         : SizeInt;
+    Len         : SizeInt;
+  end;
+  {$ENDIF}
   {@-16 : Code page indicator.
   @-12 : Character size (2 bytes)
   @-8  : SizeInt for reference count;
@@ -128,16 +142,15 @@ type
 const
   StringLenOffSet             = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len};
   StringRefCntOffSet          = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Ref}+SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len};
-  CodePageOffSet              = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Ref}+SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len}+
-                                  {$ifdef CPU64}SizeOf(DWord)+{Dummy}{$ENDIF}
-                                  SizeOf(Word){elementsize}+SizeOf(TSystemCodePage){codePage};
+  {$IFDEF WITH_RAWBYTESTRING}
+  AnsiFirstOff                = SizeOf(TAnsiRec);
+  {$ENDIF}
   {$ELSE} //system.pas
 const
   StringLenOffSet             = SizeOf(Integer); {PStrRec.Len}
   StringRefCntOffSet          = SizeOf(Integer){PStrRec.RefCnt}+SizeOf(Integer){PStrRec.Len};
   CodePageOffSet              = SizeOf(Integer){PAnsiRec/PUnicodeRec.Ref}+SizeOf(Integer){PAnsiRec/PUnicodeRec.Len}+
-                                  {$IFDEF CPU64BITS}SizeOf(Integer)+{_Padding}{$ENDIF}
-                                  SizeOf(Word){elementsize}+SizeOf(Word){codePage};
+                                  SizeOf(Word){elementsize}+SizeOf(Word){codePage};  //=12
   {$ENDIF}
   ArrayLenOffSet              = SizeOf(ArrayLenInt);
 
@@ -912,7 +925,12 @@ begin
       SetLength(Dest, Len);
       if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
     end;
+    {$IFDEF FPC}
+    PAnsiRec(pointer(Dest)-AnsiFirstOff)^.CodePage := CP;
+    {$ELSE}
+    //System.SetCodePage(Dest, CP, False); is not inlined on FPC and the code inside is alreade executed her
     {%H-}PWord(NativeUInt(Dest) - CodePageOffSet)^ := CP;
+    {$ENDIF}
   end;
 end;
 {$ENDIF}
