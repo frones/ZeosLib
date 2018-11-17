@@ -1687,7 +1687,7 @@ begin
           stString, stUnicodeString:
             begin
               //see test Bug#886194, we retrieve 565 as CP... the modula get returns the FBID of CP
-              CP := XSQLVAR.sqlsubtype mod 256;
+              CP := XSQLVAR.sqlsubtype and 255;
               //see: http://sourceforge.net/p/zeoslib/tickets/97/
               if (CP = ConSettings^.ClientCodePage^.ID)
               then ZCodePageInfo := ConSettings^.ClientCodePage

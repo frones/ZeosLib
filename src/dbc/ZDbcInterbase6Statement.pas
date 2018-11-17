@@ -742,13 +742,13 @@ begin
   if Value <> '' then begin
     case (XSQLVAR.sqltype and not(1)) of
       SQL_TEXT,
-      SQL_VARYING   : if (ClientCP = ZOSCodePage) or (XSQLVAR.sqlsubtype mod 256 = CS_BINARY)
-                        or ((FDB_CP_ID = CS_NONE) and (FCodePageArray[XSQLVAR.sqlsubtype mod 256] = ZOSCodePage)) then
+      SQL_VARYING   : if (ClientCP = ZOSCodePage) or (XSQLVAR.sqlsubtype and 255 = CS_BINARY)
+                        or ((FDB_CP_ID = CS_NONE) and (FCodePageArray[XSQLVAR.sqlsubtype and 255] = ZOSCodePage)) then
                         EncodePData(XSQLVAR, Index, Pointer(Value), Length(Value))
                       else begin
                         FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), ZOSCodePage); //localize it
                         if (FDB_CP_ID = CS_NONE)
-                        then FRawTemp := ZUnicodeToRaw(FUniTemp, FCodePageArray[XSQLVAR.sqlsubtype mod 256])
+                        then FRawTemp := ZUnicodeToRaw(FUniTemp, FCodePageArray[XSQLVAR.sqlsubtype and 255])
                         else FRawTemp := ZUnicodeToRaw(FUniTemp, ClientCP);
                         if FRawTemp <> ''
                         then EncodePData(XSQLVAR, Index, Pointer(FRawTemp), Length(FRawTemp))
@@ -1004,7 +1004,7 @@ begin
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     if (Value.CP = ClientCP) or ((FDB_CP_ID = CS_NONE) and
      ((XSQLVAR.sqltype and not(1) = SQL_TEXT) or (XSQLVAR.sqltype and not(1) = SQL_VARYING)) and
-      (FCodePageArray[XSQLVAR.sqlsubtype mod 256] = Value.CP))
+      (FCodePageArray[XSQLVAR.sqlsubtype and 255] = Value.CP))
     then SetPAnsiChar(Index, Value.P, Value.Len)
     else begin
       FUniTemp := PRawToUnicode(Value.P, Value.Len, Value.CP); //localize it
@@ -1483,10 +1483,10 @@ begin
   case (XSQLVAR.sqltype and not(1)) of
     SQL_TEXT,
     SQL_VARYING   : begin
-                      if XSQLVAR.sqlsubtype mod 256 <> CS_BINARY then
+                      if XSQLVAR.sqlsubtype and 255 <> CS_BINARY then
                         if (FDB_CP_ID <> CS_NONE)
                         then FRawTemp := PUnicodeToRaw(Value, Len, FClientCP)
-                        else FRawTemp := PUnicodeToRaw(Value, Len, FCodePageArray[XSQLVAR.sqlsubtype mod 256])
+                        else FRawTemp := PUnicodeToRaw(Value, Len, FCodePageArray[XSQLVAR.sqlsubtype and 255])
                       else FRawTemp := UnicodeStringToAscii7(Value, Len);
                       if FRawTemp <> ''
                       then EncodePData(XSQLVAR, Index, Pointer(FRawTemp), Length(FRawTemp))
@@ -1670,13 +1670,13 @@ begin
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case (XSQLVAR.sqltype and not(1)) of
       SQL_TEXT,
-      SQL_VARYING   : if not ConSettings^.AutoEncode or (XSQLVAR.sqlsubtype mod 256 = CS_BINARY) then
+      SQL_VARYING   : if not ConSettings^.AutoEncode or (XSQLVAR.sqlsubtype and 255 = CS_BINARY) then
                         EncodePData(XSQLVAR, Index, Pointer(Value), Length(Value))
                       else if (ClientCP <> CS_NONE)
                         then SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
                           ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, ClientCP))
                         else SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
-                          ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, FCodePageArray[XSQLVAR.sqlsubtype mod 256]));
+                          ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, FCodePageArray[XSQLVAR.sqlsubtype and 255]));
       SQL_BLOB,
       SQL_QUAD      : if not ConSettings^.AutoEncode or (XSQLVAR.sqlsubtype <> isc_blob_text)
                       then WriteLobBuffer(XSQLVAR, Pointer(Value), Length(Value))
@@ -1884,13 +1884,13 @@ begin
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case (XSQLVAR.sqltype and not(1)) of
       SQL_TEXT,
-      SQL_VARYING   : if (ClientCP = zCP_UTF8) or (XSQLVAR.sqlsubtype mod 256 = CS_BINARY)
-                        or ((FDB_CP_ID = CS_NONE) and (FCodePageArray[XSQLVAR.sqlsubtype mod 256] = zCP_UTF8)) then
+      SQL_VARYING   : if (ClientCP = zCP_UTF8) or (XSQLVAR.sqlsubtype and 255 = CS_BINARY)
+                        or ((FDB_CP_ID = CS_NONE) and (FCodePageArray[XSQLVAR.sqlsubtype and 255] = zCP_UTF8)) then
                         EncodePData(XSQLVAR, Index, Pointer(Value), Length(Value))
                       else begin
                         FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), zCP_UTF8); //localize it
                         if (FDB_CP_ID = CS_NONE)
-                        then FRawTemp := ZUnicodeToRaw(FUniTemp, FCodePageArray[XSQLVAR.sqlsubtype mod 256])
+                        then FRawTemp := ZUnicodeToRaw(FUniTemp, FCodePageArray[XSQLVAR.sqlsubtype and 255])
                         else FRawTemp := ZUnicodeToRaw(FUniTemp, ClientCP);
                         if FRawTemp <> ''
                         then EncodePData(XSQLVAR, Index, Pointer(FRawTemp), Length(FRawTemp))
