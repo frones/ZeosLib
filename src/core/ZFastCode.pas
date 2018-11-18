@@ -3211,8 +3211,8 @@ begin
   Digits := GetOrdinalDigits(Value);
   IntToUnicode(Value, Buf, Digits);
   if PEnd <> nil
-  then PEnd^ := Buf
-  else PWord(Buf)^ := Ord(#0);
+  then PEnd^ := Buf + Digits
+  else PWord(Buf + Digits)^ := Ord(#0);
 end;
 
 //fast pure pascal by John O'Harrow see:
