@@ -4213,15 +4213,36 @@ end;
 
 function ASCII7ToUnicodeString(const Src: RawByteString): ZWideString;
 var I: Integer;
+  Source: PByteArray;
+  PEnd: PAnsiChar;
+  Dest: PWordArray;
 begin
-  if Pointer(Src) = nil then
-    Result := ''
-  else begin
-    System.SetString(Result, nil, {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^);
-{$R-}
-    for i := 0 to {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^-1 do
-      PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
-{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  if Pointer(Src) = nil then begin
+    Result := '';
+    Exit;
+  end;
+  Source := Pointer(Src);
+  I := {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^;
+  System.SetString(Result, nil, i);
+  Dest := Pointer(Result);
+  PEnd := PAnsiChar(Source)+i-8;
+  while PAnsiChar(Source) < PEnd do begin//making a octed processing loop
+    Dest[0] := Source[0];
+    Dest[1] := Source[1];
+    Dest[2] := Source[2];
+    Dest[3] := Source[3];
+    Dest[4] := Source[4];
+    Dest[5] := Source[5];
+    Dest[6] := Source[6];
+    Dest[7] := Source[7];
+    Inc(PWideChar(Dest), 8);
+    Inc(PAnsiChar(Source), 8);
+  end;
+  Inc(PEnd, 8);
+  while PAnsiChar(Source) < PEnd do begin//processing final bytes
+    Dest[0] := Source[0];
+    inc(PAnsiChar(Source));
+    inc(PWideChar(Dest));
   end;
 end;
 
