@@ -88,12 +88,13 @@ type
     procedure TestSelectTwoQueriesNoGetResults;
     procedure TestSelectThreeQueriesGetMoreResults;
     procedure TestBitFields;
+    procedure TestPreparedStatementHighLoad;
   end;
 
 
 implementation
 
-uses ZTestConsts;
+uses ZTestConsts, ZDbcResultSet;
 
 { TZTestDbcMySqlCase }
 procedure TZTestDbcMySQLCase.CheckBitFields(ResultSet: IZResultSet);
@@ -371,6 +372,46 @@ begin
     CheckEquals(0, Statement.GetUpdateCount);
   finally
     Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcMySQLCase.TestPreparedStatementHighLoad;
+var Stmt: IZPreparedStatement;
+  I: Integer;
+  GUID: TGUID;
+  Info: TStrings;
+begin
+  Connection.CreateStatement.ExecuteUpdate('delete from high_load');
+  Info := TStringList.Create;
+  Info.Assign(Connection.GetParameters);
+  Info.Values[DSProps_MinExecCntBeforePrepare] := '2';
+  Stmt := Connection.PrepareStatementWithParams('insert into high_load(hl_id, stTimestamp, stGUID, stBinaryStream) values (?,?,?,?)', Info);
+  try
+    for I := 1 to 5 do begin
+      Stmt.SetInt(FirstDbcIndex, I);
+      Stmt.SetTimeStamp(FirstDbcIndex + 1, now);
+      Stmt.SetGUID(FirstDbcIndex+2, RandomGUID);
+      GUID := RandomGUID;
+      Stmt.SetBLob(FirstDbcIndex+3, stBinaryStream, TZAbstractBlob.CreateWithData(@GUID.D1, SizeOf(TGUID)));
+      Check(Stmt.ExecuteUpdatePrepared = 1);
+    end;
+    Stmt := Connection.PrepareStatementWithParams('update high_load set stTimestamp = ?, stGUID = ?, stBinaryStream =? where hl_id =?', Info);
+    for I := 5 downto 1 do begin
+      Stmt.SetTimeStamp(FirstDbcIndex, now);
+      Stmt.SetGUID(FirstDbcIndex+1, RandomGUID);
+      GUID := RandomGUID;
+      Stmt.SetBLob(FirstDbcIndex+2, stBinaryStream, TZAbstractBlob.CreateWithData(@GUID.D1, SizeOf(TGUID)));
+      Stmt.SetInt(FirstDbcIndex+3, I);
+      Check(Stmt.ExecuteUpdatePrepared = 1);
+    end;
+    Stmt := Connection.PrepareStatementWithParams('delete from high_load where hl_id =?', Info);
+    for I := 5 downto 1 do begin
+      Stmt.SetInt(FirstDbcIndex, I);
+      Check(Stmt.ExecuteUpdatePrepared = 1);
+    end;
+  finally
+    Connection.CreateStatement.ExecuteUpdate('delete from high_load');
+    Info.Free;
   end;
 end;
 

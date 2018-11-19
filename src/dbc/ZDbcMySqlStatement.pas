@@ -1670,35 +1670,22 @@ end;
 
 procedure TZAbstractMySQLPreparedStatement.InternalSetInParamCount(NewParamCount: Integer);
 var I: Integer;
-  V: TZVariant;
-  SQLType: TZSQLType;
 begin
   if not FEmulatedParams then
     if (FMYSQL_BINDs <> nil) and (NewParamCount <> BindList.Count) or ((NewParamCount > 0) and (FMYSQL_aligned_BINDs = nil)) then begin
       ReallocBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffset,
         BindList.Count*Ord(FMYSQL_aligned_BINDs<>nil), NewParamCount, 1);
-      //init buffers and move data to buffer
-      if NewParamCount > 0 then
-        for i := 0 to BindList.Count -1 do begin
-          if BindList.BindTypes[i] in [zbtNull, zbtLob, zbtArray] then begin
-            if BindList.BindTypes[i] = zbtLob then
-              FChunkedData := True;
-            continue;
-          end;
-          V := BindList.Variants[I];
-          SQLType := BindList.SQLTypes[I];
-          BindList.SetNull(I, stUnknown);
-          case V.VType of
-            vtBoolean:  BindBoolean(I, v.VBoolean);
-            vtBytes:    BindBinary(I, SQLType, Pointer(V.VBytes), Length(V.VBytes));
-            vtInteger:  BindSignedOrdinal(i, SQLType, V.VInteger);
-            vtUInteger: BindUnSignedOrdinal(i, SQLType, V.VUInteger);
-            vtFloat:    BindDouble(i, SQLType, V.VFloat);
-            vtDateTime: BindDatetime(i, SQLType, V.VDateTime);
-            vtRawByteString: BindRawStr(i, V.VRawByteString);
-            vtCharRec:  BindRawStr(i, V.VCharRec.P, V.VCharRec.Len);
-          end;
-        end;
+      if NewParamCount > 0 then begin
+        //init types, buffers and move data to buffer
+        BindList.BindValuesToStatement(Self, True);
+        //releas duplicate data now
+        for i := 0 to BindList.Count -1 do
+          if BindList[i].BindType <> zbtLob then
+            BindList.SetNull(I, stUnknown)
+          {$R-}
+          else InitBuffer(BindList[i].SQLType, i, @FMYSQL_aligned_BINDs[I]);
+          {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      end;
     end;
 end;
 
