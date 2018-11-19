@@ -224,10 +224,10 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('PROCEDURE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('PROCEDURE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(ProcedureNameIndex, GetPWideCharByName('PROCEDURE_NAME', Len), @Len);
-        Result.UpdatePWideChar(ProcedureRemarksIndex, GetPWideCharByName('DESCRIPTION', Len), @Len);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('PROCEDURE_CATALOG', Len), Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('PROCEDURE_SCHEMA', Len), Len);
+        Result.UpdatePWideChar(ProcedureNameIndex, GetPWideCharByName('PROCEDURE_NAME', Len), Len);
+        Result.UpdatePWideChar(ProcedureRemarksIndex, GetPWideCharByName('DESCRIPTION', Len), Len);
         Result.UpdateSmall(ProcedureTypeIndex, GetSmallByName('PROCEDURE_TYPE') - 1);
         Result.InsertRow;
       end;
@@ -309,10 +309,10 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('PROCEDURE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('PROCEDURE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(ProcColProcedureNameIndex, GetPWideCharByName('PROCEDURE_NAME', Len), @Len);
-        Result.UpdatePWideChar(ProcColColumnNameIndex, GetPWideCharByName('PARAMETER_NAME', Len), @Len);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('PROCEDURE_CATALOG', Len), Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('PROCEDURE_SCHEMA', Len), Len);
+        Result.UpdatePWideChar(ProcColProcedureNameIndex, GetPWideCharByName('PROCEDURE_NAME', Len), Len);
+        Result.UpdatePWideChar(ProcColColumnNameIndex, GetPWideCharByName('PARAMETER_NAME', Len), Len);
         case GetSmallByName('PARAMETER_TYPE') of
           1: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctIn));
           2: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctInOut));
@@ -323,7 +323,7 @@ begin
         end;
         Result.UpdateSmall(ProcColDataTypeIndex, Ord(ConvertAdoToSqlType(
           GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
-        Result.UpdatePWideChar(ProcColTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), @Len);
+        Result.UpdatePWideChar(ProcColTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), Len);
         Result.UpdateInt(ProcColPrecisionIndex, GetIntByName('NUMERIC_PRECISION'));
         Result.UpdateInt(ProcColLengthIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
         Result.UpdateSmall(ProcColScaleIndex, GetSmallByName('NUMERIC_SCALE'));
@@ -335,7 +335,7 @@ begin
             Result.UpdateSmall(ProcColNullableIndex, 1)
           else
             Result.UpdateSmall(ProcColNullableIndex, 2);
-        Result.UpdatePWideChar(ProcColRemarksIndex, GetPWideCharByName('DESCRIPTION', Len), @Len);
+        Result.UpdatePWideChar(ProcColRemarksIndex, GetPWideCharByName('DESCRIPTION', Len), Len);
         Result.InsertRow;
       end;
       Close;
@@ -400,11 +400,11 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), @Len);
-        Result.UpdatePWideChar(TableColumnsSQLType, GetPWideCharByName('TABLE_TYPE', Len), @Len);
-        Result.UpdatePWideChar(TableColumnsRemarks, GetPWideCharByName('DESCRIPTION', Len), @Len);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), Len);
+        Result.UpdatePWideChar(TableColumnsSQLType, GetPWideCharByName('TABLE_TYPE', Len), Len);
+        Result.UpdatePWideChar(TableColumnsRemarks, GetPWideCharByName('DESCRIPTION', Len), Len);
         Result.InsertRow;
       end;
       Close;
@@ -439,7 +439,7 @@ begin
       begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(SchemaColumnsTableSchemaIndex,
-          GetPWideCharByName('SCHEMA_NAME', Len), @Len);
+          GetPWideCharByName('SCHEMA_NAME', Len), Len);
         Result.InsertRow;
       end;
       Close;
@@ -473,7 +473,7 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('CATALOG_NAME', Len), @Len);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('CATALOG_NAME', Len), Len);
         Result.InsertRow;
       end;
       Close;
@@ -588,10 +588,10 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), @Len);
-        Result.UpdatePWideChar(ColumnNameIndex, GetPWideCharByName('COLUMN_NAME', Len), @Len);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), Len);
+        Result.UpdatePWideChar(ColumnNameIndex, GetPWideCharByName('COLUMN_NAME', Len), Len);
 
         SQLType := ConvertAdoToSqlType(GetSmallByName('DATA_TYPE'),
           ConSettings.CPType);
@@ -612,8 +612,8 @@ begin
           Result.UpdateSmall(TableColColumnNullableIndex, 1)
         else
           Result.UpdateSmall(TableColColumnNullableIndex, 0);
-        Result.UpdatePWideChar(TableColColumnRemarksIndex, GetPWideCharByName('DESCRIPTION', Len), @Len);
-        Result.UpdatePWideChar(TableColColumnColDefIndex, GetPWideCharByName('COLUMN_DEFAULT', Len), @Len);
+        Result.UpdatePWideChar(TableColColumnRemarksIndex, GetPWideCharByName('DESCRIPTION', Len), Len);
+        Result.UpdatePWideChar(TableColColumnColDefIndex, GetPWideCharByName('COLUMN_DEFAULT', Len), Len);
         Result.UpdateSmall(TableColColumnSQLDataTypeIndex, GetSmallByName('DATETIME_PRECISION'));
         Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
         Result.UpdateInt(TableColColumnOrdPosIndex, GetIntByName('ORDINAL_POSITION'));
@@ -681,13 +681,13 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), @Len);
-        Result.UpdatePWideChar(ColumnNameIndex, GetPWideCharByName('COLUMN_NAME', Len), @Len);
-        Result.UpdatePWideChar(TableColPrivGrantorIndex, GetPWideCharByName('GRANTOR', Len), @Len);
-        Result.UpdatePWideChar(TableColPrivGranteeIndex, GetPWideCharByName('GRANTEE', Len), @Len);
-        Result.UpdatePWideChar(TableColPrivPrivilegeIndex, GetPWideCharByName('PRIVILEGE_TYPE', Len), @Len);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), Len);
+        Result.UpdatePWideChar(ColumnNameIndex, GetPWideCharByName('COLUMN_NAME', Len), Len);
+        Result.UpdatePWideChar(TableColPrivGrantorIndex, GetPWideCharByName('GRANTOR', Len), Len);
+        Result.UpdatePWideChar(TableColPrivGranteeIndex, GetPWideCharByName('GRANTEE', Len), Len);
+        Result.UpdatePWideChar(TableColPrivPrivilegeIndex, GetPWideCharByName('PRIVILEGE_TYPE', Len), Len);
         if GetBooleanByName('IS_GRANTABLE') then
           Result.UpdateString(TableColPrivIsGrantableIndex, 'YES')
         else
@@ -749,12 +749,12 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), @Len);
-        Result.UpdatePWideChar(TablePrivGrantorIndex, GetPWideCharByName('GRANTOR', Len), @Len);
-        Result.UpdatePWideChar(TablePrivGranteeIndex, GetPWideCharByName('GRANTEE', Len), @Len);
-        Result.UpdatePWideChar(TablePrivPrivilegeIndex, GetPWideCharByName('PRIVILEGE_TYPE', Len), @Len);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), Len);
+        Result.UpdatePWideChar(TablePrivGrantorIndex, GetPWideCharByName('GRANTOR', Len), Len);
+        Result.UpdatePWideChar(TablePrivGranteeIndex, GetPWideCharByName('GRANTEE', Len), Len);
+        Result.UpdatePWideChar(TablePrivPrivilegeIndex, GetPWideCharByName('PRIVILEGE_TYPE', Len), Len);
         if GetBooleanByName('IS_GRANTABLE') then
           Result.UpdateString(TablePrivIsGrantableIndex, 'YES')
         else
@@ -819,10 +819,10 @@ begin
           Continue;
         Result.MoveToInsertRow;
         Result.UpdateSmall(TableColVerScopeIndex, 0);
-        Result.UpdatePWideChar(TableColVerColNameIndex, GetPWideCharByName('COLUMN_NAME', Len), @Len);
+        Result.UpdatePWideChar(TableColVerColNameIndex, GetPWideCharByName('COLUMN_NAME', Len), Len);
         Result.UpdateSmall(TableColVerDataTypeIndex, Ord(ConvertAdoToSqlType(
           GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
-        Result.UpdatePWideChar(TableColVerTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), @Len);
+        Result.UpdatePWideChar(TableColVerTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), Len);
         Result.UpdateInt(TableColVerColSizeIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
         Result.UpdateInt(TableColVerBufLengthIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
         Result.UpdateInt(TableColVerDecimalDigitsIndex, GetIntByName('NUMERIC_SCALE'));
@@ -874,13 +874,13 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), @Len);
-        Result.UpdatePWideChar(PrimaryKeyColumnNameIndex, GetPWideCharByName('COLUMN_NAME', Len), @Len);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), Len);
+        Result.UpdatePWideChar(PrimaryKeyColumnNameIndex, GetPWideCharByName('COLUMN_NAME', Len), Len);
         Result.UpdateSmall(PrimaryKeyKeySeqIndex, GetSmallByName('ORDINAL'));
         if FindColumn('PK_NAME') > FirstDbcIndex then
-          Result.UpdatePWideChar(PrimaryKeyPKNameIndex, GetPWideCharByName('PK_NAME', Len), @Len);
+          Result.UpdatePWideChar(PrimaryKeyPKNameIndex, GetPWideCharByName('PK_NAME', Len), Len);
         Result.InsertRow;
       end;
       Close;
@@ -1144,19 +1144,19 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CrossRefKeyColPKTableCatalogIndex, GetPWideCharByName('PK_TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColPKTableSchemaIndex, GetPWideCharByName('PK_TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColPKTableNameIndex, GetPWideCharByName('PK_TABLE_NAME', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColPKColumnNameIndex, GetPWideCharByName('PK_COLUMN_NAME', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColFKTableCatalogIndex, GetPWideCharByName('FK_TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColFKTableSchemaIndex, GetPWideCharByName('FK_TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColFKTableNameIndex, GetPWideCharByName('FK_TABLE_NAME', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColFKColumnNameIndex, GetPWideCharByName('FK_COLUMN_NAME', Len), @Len);
+        Result.UpdatePWideChar(CrossRefKeyColPKTableCatalogIndex, GetPWideCharByName('PK_TABLE_CATALOG', Len), Len);
+        Result.UpdatePWideChar(CrossRefKeyColPKTableSchemaIndex, GetPWideCharByName('PK_TABLE_SCHEMA', Len), Len);
+        Result.UpdatePWideChar(CrossRefKeyColPKTableNameIndex, GetPWideCharByName('PK_TABLE_NAME', Len), Len);
+        Result.UpdatePWideChar(CrossRefKeyColPKColumnNameIndex, GetPWideCharByName('PK_COLUMN_NAME', Len), Len);
+        Result.UpdatePWideChar(CrossRefKeyColFKTableCatalogIndex, GetPWideCharByName('FK_TABLE_CATALOG', Len), Len);
+        Result.UpdatePWideChar(CrossRefKeyColFKTableSchemaIndex, GetPWideCharByName('FK_TABLE_SCHEMA', Len), Len);
+        Result.UpdatePWideChar(CrossRefKeyColFKTableNameIndex, GetPWideCharByName('FK_TABLE_NAME', Len), Len);
+        Result.UpdatePWideChar(CrossRefKeyColFKColumnNameIndex, GetPWideCharByName('FK_COLUMN_NAME', Len), Len);
         Result.UpdateSmall(CrossRefKeyColKeySeqIndex, GetSmallByName('ORDINAL'));
         Result.UpdateSmall(CrossRefKeyColUpdateRuleIndex, Ord(GetRuleType(GetStringByName('UPDATE_RULE'))));
         Result.UpdateSmall(CrossRefKeyColDeleteRuleIndex, Ord(GetRuleType(GetStringByName('DELETE_RULE'))));
-        Result.UpdatePWideChar(CrossRefKeyColFKNameIndex, GetPWideCharByName('FK_NAME', Len), @Len);
-        Result.UpdatePWideChar(CrossRefKeyColPKNameIndex, GetPWideCharByName('PK_NAME', Len), @Len);
+        Result.UpdatePWideChar(CrossRefKeyColFKNameIndex, GetPWideCharByName('FK_NAME', Len), Len);
+        Result.UpdatePWideChar(CrossRefKeyColPKNameIndex, GetPWideCharByName('PK_NAME', Len), Len);
         Result.UpdateInt(CrossRefKeyColDeferrabilityIndex, GetSmallByName('DEFERRABILITY'));
         Result.InsertRow;
       end;
@@ -1225,13 +1225,13 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(TypeInfoTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), @Len);
+        Result.UpdatePWideChar(TypeInfoTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), Len);
         Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertAdoToSqlType(
           GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
         Result.UpdateInt(TypeInfoPecisionIndex, 0);//GetIntByName('PRECISION'));
-        Result.UpdatePWideChar(TypeInfoLiteralPrefixIndex, GetPWideCharByName('LITERAL_PREFIX', Len), @Len);
-        Result.UpdatePWideChar(TypeInfoLiteralSuffixIndex, GetPWideCharByName('LITERAL_SUFFIX', Len), @Len);
-        Result.UpdatePWideChar(TypeInfoCreateParamsIndex, GetPWideCharByName('CREATE_PARAMS', Len), @Len);
+        Result.UpdatePWideChar(TypeInfoLiteralPrefixIndex, GetPWideCharByName('LITERAL_PREFIX', Len), Len);
+        Result.UpdatePWideChar(TypeInfoLiteralSuffixIndex, GetPWideCharByName('LITERAL_SUFFIX', Len), Len);
+        Result.UpdatePWideChar(TypeInfoCreateParamsIndex, GetPWideCharByName('CREATE_PARAMS', Len), Len);
         if GetBooleanByName('IS_NULLABLE') then
           Result.UpdateSmall(TypeInfoNullAbleIndex, 1)
         else
@@ -1241,7 +1241,7 @@ begin
         Result.UpdateBoolean(TypeInfoUnsignedAttributeIndex, GetBooleanByName('UNSIGNED_ATTRIBUTE'));
         Result.UpdateBoolean(TypeInfoFixedPrecScaleIndex, GetBooleanByName('FIXED_PREC_SCALE'));
         Result.UpdateBoolean(TypeInfoAutoIncrementIndex, False);
-        Result.UpdatePWideChar(TypeInfoLocaleTypeNameIndex, GetPWideCharByName('LOCAL_TYPE_NAME', Len), @Len);
+        Result.UpdatePWideChar(TypeInfoLocaleTypeNameIndex, GetPWideCharByName('LOCAL_TYPE_NAME', Len), Len);
         Result.UpdateSmall(TypeInfoMinimumScaleIndex, GetSmallByName('MINIMUM_SCALE'));
         Result.UpdateSmall(TypeInfoMaximumScaleIndex, GetSmallByName('MAXIMUM_SCALE'));
   //      Result.UpdateSmall(TypeInfoSQLDataTypeIndex, GetSmallByName('SQL_DATA_TYPE'));
@@ -1323,19 +1323,19 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), @Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), @Len);
+        Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), Len);
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideCharByName('TABLE_NAME', Len), Len);
         Result.UpdateBoolean(IndexInfoColNonUniqueIndex, not GetBooleanByName('UNIQUE'));
-        Result.UpdatePWideChar(IndexInfoColIndexQualifierIndex, GetPWideCharByName('INDEX_CATALOG', Len), @Len);
-        Result.UpdatePWideChar(IndexInfoColIndexNameIndex, GetPWideCharByName('INDEX_NAME', Len), @Len);
+        Result.UpdatePWideChar(IndexInfoColIndexQualifierIndex, GetPWideCharByName('INDEX_CATALOG', Len), Len);
+        Result.UpdatePWideChar(IndexInfoColIndexNameIndex, GetPWideCharByName('INDEX_NAME', Len), Len);
         Result.UpdateSmall(IndexInfoColTypeIndex, GetSmallByName('TYPE'));
         Result.UpdateSmall(IndexInfoColOrdPositionIndex, GetSmallByName('ORDINAL_POSITION'));
-        Result.UpdatePWideChar(IndexInfoColColumnNameIndex, GetPWideCharByName('COLUMN_NAME', Len), @Len);
-  //!!!      Result.UpdatePWideChar(IndexInfoColAscOrDescIndex, GetPWideCharByName('COLLATION', Len), @Len);
+        Result.UpdatePWideChar(IndexInfoColColumnNameIndex, GetPWideCharByName('COLUMN_NAME', Len), Len);
+  //!!!      Result.UpdatePWideChar(IndexInfoColAscOrDescIndex, GetPWideCharByName('COLLATION', Len), Len);
         Result.UpdateInt(IndexInfoColCardinalityIndex, GetIntByName('CARDINALITY'));
         Result.UpdateInt(IndexInfoColPagesIndex, GetIntByName('PAGES'));
-        Result.UpdatePWideChar(IndexInfoColFilterConditionIndex, GetPWideCharByName('FILTER_CONDITION', Len), @Len);
+        Result.UpdatePWideChar(IndexInfoColFilterConditionIndex, GetPWideCharByName('FILTER_CONDITION', Len), Len);
         Result.InsertRow;
       end;
       Close;
@@ -1395,9 +1395,9 @@ begin
 //    while Next do
 //    begin
 //      Result.MoveToInsertRow;
-//      Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar('TYPE_CAT', Len), @Len);
-//      Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar('TYPE_SCHEM', Len), @Len);
-//      Result.UpdatePWideChar(UDTColTypeNameIndex, GetPWideChar('TYPE_NAME', Len), @Len);
+//      Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar('TYPE_CAT', Len), Len);
+//      Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar('TYPE_SCHEM', Len), Len);
+//      Result.UpdatePWideChar(UDTColTypeNameIndex, GetPWideChar('TYPE_NAME', Len), Len);
 //      Result.UpdateNull(UDTColClassNameIndex);
 //      Result.UpdateSmall(UDTColDataTypeIndex, GetSmall('DATA_TYPE'));
 //      Result.UpdateNull(UDTColRemarksIndex);

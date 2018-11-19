@@ -1319,9 +1319,9 @@ begin
     begin
       Result.MoveToInsertRow;
       Result.UpdateNull(CatalogNameIndex);
-      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('PROCEDURE_SCHEM', Len), @Len);
-      Result.UpdatePAnsiChar(ProcedureNameIndex, GetPAnsiCharByName('PROCEDURE_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(ProcedureRemarksIndex, GetPAnsiCharByName('REMARKS', Len), @Len);
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('PROCEDURE_SCHEM', Len), Len);
+      Result.UpdatePAnsiChar(ProcedureNameIndex, GetPAnsiCharByName('PROCEDURE_NAME', Len), Len);
+      Result.UpdatePAnsiChar(ProcedureRemarksIndex, GetPAnsiCharByName('REMARKS', Len), Len);
       Result.UpdateSmall(ProcedureTypeIndex, GetSmallByName('PROCEDURE_TYPE'));
       Result.InsertRow;
     end;
@@ -1402,9 +1402,9 @@ begin
     begin
       Result.MoveToInsertRow;
       Result.UpdateNull(CatalogNameIndex);
-      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('PROCEDURE_SCHEM', Len), @Len);
-      Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiCharByName('PROCEDURE_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(ProcColColumnNameIndex, GetPAnsiCharByName('COLUMN_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('PROCEDURE_SCHEM', Len), Len);
+      Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiCharByName('PROCEDURE_NAME', Len), Len);
+      Result.UpdatePAnsiChar(ProcColColumnNameIndex, GetPAnsiCharByName('COLUMN_NAME', Len), Len);
       case GetSmallByName('COLUMN_TYPE') of
         1: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctIn));
         2: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctInOut));
@@ -1415,13 +1415,13 @@ begin
       end;
       Result.UpdateSmall(ProcColDataTypeIndex, Ord(ConvertASAJDBCToSqlType(
         GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
-      Result.UpdatePAnsiChar(ProcColTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(ProcColTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), Len);
       Result.UpdateInt(ProcColPrecisionIndex, GetIntByName('PRECISION'));
       Result.UpdateInt(ProcColLengthIndex, GetIntByName('LENGTH'));
       Result.UpdateSmall(ProcColScaleIndex, GetSmallByName('SCALE'));
       Result.UpdateSmall(ProcColRadixIndex, GetSmallByName('RADIX'));
       Result.UpdateSmall(ProcColNullableIndex, GetSmallByName('NULLABLE'));
-      Result.UpdatePAnsiChar(ProcColRemarksIndex, GetPAnsiCharByName('REMARKS', Len), @Len);
+      Result.UpdatePAnsiChar(ProcColRemarksIndex, GetPAnsiCharByName('REMARKS', Len), Len);
       Result.InsertRow;
     end;
     Close;
@@ -1480,10 +1480,10 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), @Len);
-      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(TableColumnsSQLType, GetPAnsiCharByName('TABLE_TYPE', Len), @Len);
-      Result.UpdatePAnsiChar(TableColumnsRemarks, GetPAnsiCharByName('REMARKS', Len), @Len);
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), Len);
+      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), Len);
+      Result.UpdatePAnsiChar(TableColumnsSQLType, GetPAnsiCharByName('TABLE_TYPE', Len), Len);
+      Result.UpdatePAnsiChar(TableColumnsRemarks, GetPAnsiCharByName('REMARKS', Len), Len);
       Result.InsertRow;
     end;
     Close;
@@ -1513,7 +1513,7 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePAnsiChar(SchemaColumnsTableSchemaIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), @Len);
+      Result.UpdatePAnsiChar(SchemaColumnsTableSchemaIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), Len);
       Result.InsertRow;
     end;
     Close;
@@ -1624,25 +1624,25 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), @Len);
-      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiCharByName('COLUMN_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), Len);
+      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), Len);
+      Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiCharByName('COLUMN_NAME', Len), Len);
 //The value in the resultset will be used
 //      Result.UpdateSmall(TableColColumnTypeIndex,
 //        Ord(ConvertASAJDBCToSqlType(GetSmallByName('DATA_TYPE'))));
-      Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), Len);
       //Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('COLUMN_SIZE'));
       Result.UpdateInt(TableColColumnBufLengthIndex, GetIntByName('BUFFER_LENGTH'));
       Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetIntByName('DECIMAL_DIGITS'));
       Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmallByName('NUM_PREC_RADIX'));
       Result.UpdateSmall(TableColColumnNullableIndex, GetSmallByName( 'NULLABLE'));
-      Result.UpdatePAnsiChar(TableColColumnRemarksIndex, GetPAnsiCharByName('REMARKS', Len), @Len);
-      Result.UpdatePAnsiChar(TableColColumnColDefIndex, GetPAnsiCharByName('COLUMN_DEF', Len), @Len);
+      Result.UpdatePAnsiChar(TableColColumnRemarksIndex, GetPAnsiCharByName('REMARKS', Len), Len);
+      Result.UpdatePAnsiChar(TableColColumnColDefIndex, GetPAnsiCharByName('COLUMN_DEF', Len), Len);
       Result.UpdateSmall(TableColColumnSQLDataTypeIndex, GetSmallByName('SQL_DATA_TYPE'));
       Result.UpdateSmall(TableColColumnSQLDateTimeSubIndex, GetSmallByName('SQL_DATETIME_SUB'));
       Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetIntByName('CHAR_OCTET_LENGTH'));
       Result.UpdateInt(TableColColumnOrdPosIndex, GetIntByName('ORDINAL_POSITION'));
-      Result.UpdatePAnsiChar(TableColColumnIsNullableIndex, GetPAnsiCharByName('IS_NULLABLE', Len), @Len);
+      Result.UpdatePAnsiChar(TableColColumnIsNullableIndex, GetPAnsiCharByName('IS_NULLABLE', Len), Len);
       Result.UpdateBoolean(TableColColumnAutoIncIndex,
         CompareText( Trim(GetStringByName('COLUMN_DEF')), 'autoincrement') = 0 );
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(GetStringByName('COLUMN_NAME')));
@@ -1722,13 +1722,13 @@ begin
     begin
       Result.MoveToInsertRow;
       //Result.UpdateNull(CatalogNameIndex);
-      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), @Len);
-      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiCharByName('COLUMN_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(TableColPrivGrantorIndex, GetPAnsiCharByName('GRANTOR', Len), @Len);
-      Result.UpdatePAnsiChar(TableColPrivGranteeIndex, GetPAnsiCharByName('GRANTEE', Len), @Len);
-      Result.UpdatePAnsiChar(TableColPrivPrivilegeIndex, GetPAnsiCharByName('PRIVILEGE', Len), @Len);
-      Result.UpdatePAnsiChar(TableColPrivIsGrantableIndex, GetPAnsiCharByName('IS_GRANTABLE', Len), @Len);
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), Len);
+      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), Len);
+      Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiCharByName('COLUMN_NAME', Len), Len);
+      Result.UpdatePAnsiChar(TableColPrivGrantorIndex, GetPAnsiCharByName('GRANTOR', Len), Len);
+      Result.UpdatePAnsiChar(TableColPrivGranteeIndex, GetPAnsiCharByName('GRANTEE', Len), Len);
+      Result.UpdatePAnsiChar(TableColPrivPrivilegeIndex, GetPAnsiCharByName('PRIVILEGE', Len), Len);
+      Result.UpdatePAnsiChar(TableColPrivIsGrantableIndex, GetPAnsiCharByName('IS_GRANTABLE', Len), Len);
       Result.InsertRow;
     end;
     Close;
@@ -1782,12 +1782,12 @@ begin
     begin
       Result.MoveToInsertRow;
       Result.UpdateNull(CatalogNameIndex);
-      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), @Len);
-      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(TablePrivGrantorIndex, GetPAnsiCharByName('GRANTOR', Len), @Len);
-      Result.UpdatePAnsiChar(TablePrivGranteeIndex, GetPAnsiCharByName('GRANTEE', Len), @Len);
-      Result.UpdatePAnsiChar(TablePrivPrivilegeIndex, GetPAnsiCharByName('PRIVILEGE', Len), @Len);
-      Result.UpdatePAnsiChar(TablePrivIsGrantableIndex, GetPAnsiCharByName('IS_GRANTABLE', Len), @Len);
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), Len);
+      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), Len);
+      Result.UpdatePAnsiChar(TablePrivGrantorIndex, GetPAnsiCharByName('GRANTOR', Len), Len);
+      Result.UpdatePAnsiChar(TablePrivGranteeIndex, GetPAnsiCharByName('GRANTEE', Len), Len);
+      Result.UpdatePAnsiChar(TablePrivPrivilegeIndex, GetPAnsiCharByName('PRIVILEGE', Len), Len);
+      Result.UpdatePAnsiChar(TablePrivIsGrantableIndex, GetPAnsiCharByName('IS_GRANTABLE', Len), Len);
       Result.InsertRow;
     end;
     Close;
@@ -1838,10 +1838,10 @@ begin
     begin
       Result.MoveToInsertRow;
       Result.UpdateSmall(TableColVerScopeIndex, GetSmallByName('SCOPE'));
-      Result.UpdatePAnsiChar(TableColVerColNameIndex, GetPAnsiCharByName('COLUMN_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(TableColVerColNameIndex, GetPAnsiCharByName('COLUMN_NAME', Len), Len);
       Result.UpdateSmall(TableColVerDataTypeIndex, Ord(ConvertASAJDBCToSqlType(
         GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
-      Result.UpdatePAnsiChar(TableColVerTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(TableColVerTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), Len);
       Result.UpdateInt(TableColVerColSizeIndex, GetIntByName('COLUMN_SIZE'));
       Result.UpdateInt(TableColVerBufLengthIndex, GetIntByName('BUFFER_LENGTH'));
       Result.UpdateInt(TableColVerDecimalDigitsIndex, GetIntByName('DECIMAL_DIGITS'));
@@ -1887,11 +1887,11 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), @Len);
-      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(PrimaryKeyColumnNameIndex, GetPAnsiCharByName('COLUMN_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), Len);
+      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), Len);
+      Result.UpdatePAnsiChar(PrimaryKeyColumnNameIndex, GetPAnsiCharByName('COLUMN_NAME', Len), Len);
       Result.UpdateSmall(PrimaryKeyKeySeqIndex, GetSmallByName('KEY_SEQ'));
-      Result.UpdatePAnsiChar(PrimaryKeyPKNameIndex, GetPAnsiCharByName('PK_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(PrimaryKeyPKNameIndex, GetPAnsiCharByName('PK_NAME', Len), Len);
       Result.InsertRow;
     end;
     Close;
@@ -1978,17 +1978,17 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePAnsiChar(ImportedKeyColPKTableSchemaIndex, GetPAnsiCharByName('PKTABLE_SCHEM', Len), @Len);
-      Result.UpdatePAnsiChar(ImportedKeyColPKTableNameIndex, GetPAnsiCharByName('PKTABLE_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(ImportedKeyColPKColumnNameIndex, GetPAnsiCharByName('PKCOLUMN_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(ImportedKeyColFKTableSchemaIndex, GetPAnsiCharByName('FKTABLE_SCHEM', Len), @Len);
-      Result.UpdatePAnsiChar(ImportedKeyColFKTableNameIndex, GetPAnsiCharByName('FKTABLE_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(ImportedKeyColFKColumnNameIndex, GetPAnsiCharByName('FKCOLUMN_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(ImportedKeyColPKTableSchemaIndex, GetPAnsiCharByName('PKTABLE_SCHEM', Len), Len);
+      Result.UpdatePAnsiChar(ImportedKeyColPKTableNameIndex, GetPAnsiCharByName('PKTABLE_NAME', Len), Len);
+      Result.UpdatePAnsiChar(ImportedKeyColPKColumnNameIndex, GetPAnsiCharByName('PKCOLUMN_NAME', Len), Len);
+      Result.UpdatePAnsiChar(ImportedKeyColFKTableSchemaIndex, GetPAnsiCharByName('FKTABLE_SCHEM', Len), Len);
+      Result.UpdatePAnsiChar(ImportedKeyColFKTableNameIndex, GetPAnsiCharByName('FKTABLE_NAME', Len), Len);
+      Result.UpdatePAnsiChar(ImportedKeyColFKColumnNameIndex, GetPAnsiCharByName('FKCOLUMN_NAME', Len), Len);
       Result.UpdateSmall(ImportedKeyColKeySeqIndex, GetSmallByName('KEY_SEQ'));
       Result.UpdateSmall(ImportedKeyColUpdateRuleIndex, GetSmallByName('UPDATE_RULE'));
       Result.UpdateSmall(ImportedKeyColDeleteRuleIndex, GetSmallByName('DELETE_RULE'));
-      Result.UpdatePAnsiChar(ImportedKeyColFKNameIndex, GetPAnsiCharByName('FK_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(ImportedKeyColPKNameIndex, GetPAnsiCharByName('PK_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(ImportedKeyColFKNameIndex, GetPAnsiCharByName('FK_NAME', Len), Len);
+      Result.UpdatePAnsiChar(ImportedKeyColPKNameIndex, GetPAnsiCharByName('PK_NAME', Len), Len);
       Result.UpdateInt(ImportedKeyColDeferrabilityIndex, GetIntByName('DEFERRABILITY'));
       Result.InsertRow;
     end;
@@ -2076,17 +2076,17 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePAnsiChar(ExportedKeyColPKTableSchemaIndex, GetPAnsiCharByName('PKTABLE_SCHEM', Len), @Len);
-      Result.UpdatePAnsiChar(ExportedKeyColPKTableNameIndex, GetPAnsiCharByName('PKTABLE_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(ExportedKeyColPKColumnNameIndex, GetPAnsiCharByName('PKCOLUMN_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(ExportedKeyColFKTableSchemaIndex, GetPAnsiCharByName('FKTABLE_SCHEM', Len), @Len);
-      Result.UpdatePAnsiChar(ExportedKeyColFKTableNameIndex, GetPAnsiCharByName('FKTABLE_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(ExportedKeyColFKColumnNameIndex, GetPAnsiCharByName('FKCOLUMN_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(ExportedKeyColPKTableSchemaIndex, GetPAnsiCharByName('PKTABLE_SCHEM', Len), Len);
+      Result.UpdatePAnsiChar(ExportedKeyColPKTableNameIndex, GetPAnsiCharByName('PKTABLE_NAME', Len), Len);
+      Result.UpdatePAnsiChar(ExportedKeyColPKColumnNameIndex, GetPAnsiCharByName('PKCOLUMN_NAME', Len), Len);
+      Result.UpdatePAnsiChar(ExportedKeyColFKTableSchemaIndex, GetPAnsiCharByName('FKTABLE_SCHEM', Len), Len);
+      Result.UpdatePAnsiChar(ExportedKeyColFKTableNameIndex, GetPAnsiCharByName('FKTABLE_NAME', Len), Len);
+      Result.UpdatePAnsiChar(ExportedKeyColFKColumnNameIndex, GetPAnsiCharByName('FKCOLUMN_NAME', Len), Len);
       Result.UpdateSmall(ExportedKeyColKeySeqIndex, GetSmallByName('KEY_SEQ'));
       Result.UpdateSmall(ExportedKeyColUpdateRuleIndex, GetSmallByName('UPDATE_RULE'));
       Result.UpdateSmall(ExportedKeyColDeleteRuleIndex, GetSmallByName('DELETE_RULE'));
-      Result.UpdatePAnsiChar(ExportedKeyColFKNameIndex, GetPAnsiCharByName('FK_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(ExportedKeyColPKNameIndex, GetPAnsiCharByName('PK_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(ExportedKeyColFKNameIndex, GetPAnsiCharByName('FK_NAME', Len), Len);
+      Result.UpdatePAnsiChar(ExportedKeyColPKNameIndex, GetPAnsiCharByName('PK_NAME', Len), Len);
       Result.UpdateInt(ExportedKeyColDeferrabilityIndex, GetIntByName('DEFERRABILITY'));
       Result.InsertRow;
     end;
@@ -2186,17 +2186,17 @@ begin
     begin
       Result.MoveToInsertRow;
       //Result.UpdateNull(CrossRefKeyColPKTableCatalogIndex);
-      Result.UpdatePAnsiChar(CrossRefKeyColPKTableSchemaIndex, GetPAnsiCharByName('PKTABLE_SCHEM', Len), @Len);
-      Result.UpdatePAnsiChar(CrossRefKeyColPKTableNameIndex, GetPAnsiCharByName('PKTABLE_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(CrossRefKeyColPKColumnNameIndex, GetPAnsiCharByName('PKCOLUMN_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(CrossRefKeyColFKTableSchemaIndex, GetPAnsiCharByName('FKTABLE_SCHEM', Len), @Len);
-      Result.UpdatePAnsiChar(CrossRefKeyColFKTableNameIndex, GetPAnsiCharByName('FKTABLE_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(CrossRefKeyColFKColumnNameIndex, GetPAnsiCharByName('FKCOLUMN_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(CrossRefKeyColPKTableSchemaIndex, GetPAnsiCharByName('PKTABLE_SCHEM', Len), Len);
+      Result.UpdatePAnsiChar(CrossRefKeyColPKTableNameIndex, GetPAnsiCharByName('PKTABLE_NAME', Len), Len);
+      Result.UpdatePAnsiChar(CrossRefKeyColPKColumnNameIndex, GetPAnsiCharByName('PKCOLUMN_NAME', Len), Len);
+      Result.UpdatePAnsiChar(CrossRefKeyColFKTableSchemaIndex, GetPAnsiCharByName('FKTABLE_SCHEM', Len), Len);
+      Result.UpdatePAnsiChar(CrossRefKeyColFKTableNameIndex, GetPAnsiCharByName('FKTABLE_NAME', Len), Len);
+      Result.UpdatePAnsiChar(CrossRefKeyColFKColumnNameIndex, GetPAnsiCharByName('FKCOLUMN_NAME', Len), Len);
       Result.UpdateSmall(CrossRefKeyColKeySeqIndex, GetSmallByName('KEY_SEQ'));
       Result.UpdateSmall(CrossRefKeyColUpdateRuleIndex, GetSmallByName('UPDATE_RULE'));
       Result.UpdateSmall(CrossRefKeyColDeleteRuleIndex, GetSmallByName('DELETE_RULE'));
-      Result.UpdatePAnsiChar(CrossRefKeyColFKNameIndex, GetPAnsiCharByName('FK_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(CrossRefKeyColPKNameIndex, GetPAnsiCharByName('PK_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(CrossRefKeyColFKNameIndex, GetPAnsiCharByName('FK_NAME', Len), Len);
+      Result.UpdatePAnsiChar(CrossRefKeyColPKNameIndex, GetPAnsiCharByName('PK_NAME', Len), Len);
       Result.UpdateInt(CrossRefKeyColDeferrabilityIndex, GetIntByName('DEFERRABILITY'));
       Result.InsertRow;
     end;
@@ -2259,20 +2259,20 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), Len);
       Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertASAJDBCToSqlType(
         GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
       Result.UpdateInt(TypeInfoPecisionIndex, GetIntByName('PRECISION'));
-      Result.UpdatePAnsiChar(TypeInfoLiteralPrefixIndex, GetPAnsiCharByName('LITERAL_PREFIX', Len), @Len);
-      Result.UpdatePAnsiChar(TypeInfoLiteralSuffixIndex, GetPAnsiCharByName('LITERAL_SUFFIX', Len), @Len);
-      Result.UpdatePAnsiChar(TypeInfoCreateParamsIndex, GetPAnsiCharByName('CREATE_PARAMS', Len), @Len);
+      Result.UpdatePAnsiChar(TypeInfoLiteralPrefixIndex, GetPAnsiCharByName('LITERAL_PREFIX', Len), Len);
+      Result.UpdatePAnsiChar(TypeInfoLiteralSuffixIndex, GetPAnsiCharByName('LITERAL_SUFFIX', Len), Len);
+      Result.UpdatePAnsiChar(TypeInfoCreateParamsIndex, GetPAnsiCharByName('CREATE_PARAMS', Len), Len);
       Result.UpdateSmall(TypeInfoNullAbleIndex, GetSmallByName('NULLABLE'));
       Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, GetSmallByName('CASE_SENSITIVE') = 1);
       Result.UpdateSmall(TypeInfoSearchableIndex, GetSmallByName('SEARCHABLE'));
       Result.UpdateBoolean(TypeInfoUnsignedAttributeIndex, GetSmallByName('UNSIGNED_ATTRIBUTE') = 1);
       Result.UpdateBoolean(TypeInfoFixedPrecScaleIndex, GetSmallByName('FIXED_PREC_SCALE') = 1);
       Result.UpdateBoolean(TypeInfoAutoIncrementIndex, GetSmallByName('AUTO_INCREMENT') = 1);
-      Result.UpdatePAnsiChar(TypeInfoLocaleTypeNameIndex, GetPAnsiCharByName('LOCAL_TYPE_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(TypeInfoLocaleTypeNameIndex, GetPAnsiCharByName('LOCAL_TYPE_NAME', Len), Len);
       Result.UpdateSmall(TypeInfoMinimumScaleIndex, GetSmallByName('MINIMUM_SCALE'));
       Result.UpdateSmall(TypeInfoMaximumScaleIndex, GetSmallByName('MAXIMUM_SCALE'));
       Result.UpdateSmall(TypeInfoSQLDataTypeIndex, GetSmallByName('SQL_DATA_TYPE'));
@@ -2355,18 +2355,18 @@ begin
     begin
       Result.MoveToInsertRow;
       //Result.UpdateNull(CatalogNameIndex);
-      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), @Len);
-      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), Len);
+      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), Len);
       Result.UpdateBoolean(IndexInfoColNonUniqueIndex, GetSmallByName('NON_UNIQUE') = 1);
-      Result.UpdatePAnsiChar(IndexInfoColIndexQualifierIndex, GetPAnsiCharByName('INDEX_QUALIFIER', Len), @Len);
-      Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiCharByName('INDEX_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(IndexInfoColIndexQualifierIndex, GetPAnsiCharByName('INDEX_QUALIFIER', Len), Len);
+      Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiCharByName('INDEX_NAME', Len), Len);
       Result.UpdateSmall(IndexInfoColTypeIndex, GetSmallByName('TYPE'));
       Result.UpdateSmall(IndexInfoColOrdPositionIndex, GetSmallByName('ORDINAL_POSITION'));
-      Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, GetPAnsiCharByName('COLUMN_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(IndexInfoColAscOrDescIndex, GetPAnsiCharByName('ASC_OR_DESC', Len), @Len);
+      Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, GetPAnsiCharByName('COLUMN_NAME', Len), Len);
+      Result.UpdatePAnsiChar(IndexInfoColAscOrDescIndex, GetPAnsiCharByName('ASC_OR_DESC', Len), Len);
       Result.UpdateInt(IndexInfoColCardinalityIndex, GetIntByName('CARDINALITY'));
       Result.UpdateInt(IndexInfoColPagesIndex, GetIntByName('PAGES'));
-      Result.UpdatePAnsiChar(IndexInfoColFilterConditionIndex, GetPAnsiCharByName('FILTER_CONDITION', Len), @Len);
+      Result.UpdatePAnsiChar(IndexInfoColFilterConditionIndex, GetPAnsiCharByName('FILTER_CONDITION', Len), Len);
       Result.InsertRow;
     end;
     Close;
@@ -2430,13 +2430,13 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiCharByName('TYPE_CAT', Len), @Len);
-      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TYPE_SCHEM', Len), @Len);
-      Result.UpdatePAnsiChar(UDTColTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), @Len);
-      Result.UpdatePAnsiChar(UDTColClassNameIndex, GetPAnsiCharByName('JAVA_CLASS', Len), @Len);
+      Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiCharByName('TYPE_CAT', Len), Len);
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TYPE_SCHEM', Len), Len);
+      Result.UpdatePAnsiChar(UDTColTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), Len);
+      Result.UpdatePAnsiChar(UDTColClassNameIndex, GetPAnsiCharByName('JAVA_CLASS', Len), Len);
       Result.UpdateSmall(UDTColDataTypeIndex, Ord(ConvertASAJDBCToSqlType(
         GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
-      Result.UpdatePAnsiChar(UDTColRemarksIndex, GetPAnsiCharByName('REMARKS', Len), @Len);
+      Result.UpdatePAnsiChar(UDTColRemarksIndex, GetPAnsiCharByName('REMARKS', Len), Len);
       Result.InsertRow;
     end;
     Close;

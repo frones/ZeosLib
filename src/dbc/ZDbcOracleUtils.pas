@@ -60,7 +60,7 @@ uses
   {$IF defined(WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
   {$IFEND}
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} ZDbcUtils, ZSelectSchema,
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}, ZDbcUtils, ZSelectSchema,
   ZSysUtils, ZDbcIntfs, ZVariant, ZPlainOracleDriver, ZDbcLogging,
   ZCompatibility, ZPlainOracleConstants, FmtBCD;
 
@@ -352,8 +352,6 @@ const
       10000);
   NVU_CurrencyExponents: array[0..10] of Integer =
     (-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8);
-  sAlignCurrencyScale2Precision: array[0..4] of Integer = (
-    15, 16, 17, 18, 19);
   {$IFNDEF WITH_UINT64_C1118_ERROR}
   uPosScaleFaktor: array[0..19] of UInt64 = (
       1,
@@ -436,8 +434,8 @@ type
 
 implementation
 
-uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
-  ZEncoding, ZFastCode, ZClasses
+uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet,
+  ZEncoding, ZFastCode {$IFNDEF NO_UNIT_CONTNRS},ZClasses{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IFDEF UNICODE},StrUtils{$ENDIF};
 (* Oracle Docs: https://docs.oracle.com/cd/B28359_01/appdev.111/b28395/oci03typ.htm#i423688
@@ -510,7 +508,7 @@ var i: Byte;
 begin
   {$R-} {$Q-}
   { initialize with first negative base-100-digit }
-  Result := vnuInfo.FirstBase100Digit; //init
+  Result := -ShortInt(vnuInfo.FirstBase100Digit); //init
   { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
   for i := 3 to vnuInfo.Len do
     Result := Result * 100 - (101 - num[i]);
@@ -553,7 +551,7 @@ var I64: Int64 absolute Result;
   i: ShortInt;
 begin
   {$R-} {$Q-}
-  i64 := vnuInfo.FirstBase100Digit; //init
+  i64 := -ShortInt(vnuInfo.FirstBase100Digit); //init
   { skip len, exponent and first base-100-digit / last byte doesn't count if = 102}
   for i := 3 to vnuInfo.Len do
     i64 := i64 * 100 - (101 - num[i]);
@@ -570,11 +568,11 @@ end;
   @param num the pointer to the oci-number
 }
 procedure Curr2Vnu(const Value: Currency; num: POCINumber);
+(* this version writes from left to right
 var I64: UInt64;
   Positive: Boolean;
   i, n, p, trailing_zeros: Byte;
   Exponent: ShortInt;
-  label Cardinal_Range;
 begin
   {$R-} {$Q-}
   if Value = 0 then begin
@@ -622,6 +620,65 @@ begin
   end;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+and this version writes from right to left*)
+var I64, IDiv100, IMul100: UInt64;
+  x{$IFNDEF CPUX64}, c32, cDiv100, cMul100{$ENDIF}: Cardinal;
+  Positive: Boolean;
+  i, Digits, l: Byte;
+begin
+  {$R-} {$Q-}
+  if Value = 0 then begin
+    num[0] := 1;
+    num[1] := $80;
+    Exit;
+  end;
+  Positive := Value > 0;
+  if Positive
+  then I64 :=  PInt64(@Value)^
+  else I64 := -PInt64(@Value)^;
+  Digits := GetOrdinalDigits(i64);
+  Digits := (Digits+Ord(Odd(Digits))) div 2;
+  I := Digits+1;
+  L := I;
+  while I > {$IFNDEF CPUX64}6{$ELSE}2{$ENDIF} do begin
+    IDiv100 := I64 div 100; {dividend div 100}
+    IMul100 := IDiv100*100; {remainder}
+    X := I64-IMul100; {dividend mod 100}
+    I64 := IDiv100; {next dividend }
+    if (X = 0) and (I=L) then
+      Dec(L)
+    else if Positive
+      then num[I] := X + 1
+      else num[I] := 101 - X;
+    Dec(I);
+  end;
+  {$IFNDEF CPUX64}
+  C32 := Int64Rec(I64).Lo;
+  while I > 2 do begin
+    cDiv100 := C32 div 100; {dividend div 100}
+    cMul100 := cDiv100*100; {remainder}
+    x := c32-cMul100; {dividend mod 100}
+    C32 := cDiv100; {next dividend }
+    if (x = 0) and (I=L) then
+      Dec(L)
+    else if Positive
+      then num[I] := x + 1
+      else num[I] := 101 - X;
+    Dec(I);
+  end;
+  {$ENDIF}
+  if Positive then begin
+    num[1] := (64+NVU_CurrencyExponents[Digits]) or $80;
+    num[I] := Byte({$IFNDEF CPUX64}C32{$ELSE}I64{$ENDIF}) + 1;
+    num[0] := L;
+  end else begin
+    num[1] := not(64+NVU_CurrencyExponents[Digits]) and $7f;
+    num[I] := 101 - Byte({$IFNDEF CPUX64}C32{$ELSE}I64{$ENDIF});
+    num[L+1] := 102; //"Negative numbers have a byte containing 102 appended to the data bytes."
+    num[0] := L+1;
+  end;
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
 {**  EH:
@@ -641,11 +698,11 @@ begin
     PByte(Buf)^ := Ord('0')+vnuInfo.FirstBase100Digit;
     Inc(Buf);
   end else begin
-    PWord(Buf)^ := Word(TwoDigitLookupRaw[vnuInfo.FirstBase100Digit]);
+    PWord(Buf)^ := Word(TwoDigitLookupW[vnuInfo.FirstBase100Digit]);
     Inc(Buf,2);
   end;
   for I := 3 to vnuInfo.Len do begin
-    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(num[i] - 1)]);
+    PWord(Buf)^ := Word(TwoDigitLookupW[Byte(num[i] - 1)]);
     Inc(Buf,2);
   end;
   I := (vnuInfo.Len-1)*2;
@@ -682,11 +739,11 @@ begin
     PByte(Buf+1)^ := Ord('0')+vnuInfo.FirstBase100Digit;
     Inc(Buf, 2);
   end else begin
-    PWord(Buf+1)^ := Word(TwoDigitLookupRaw[vnuInfo.FirstBase100Digit]);
+    PWord(Buf+1)^ := Word(TwoDigitLookupW[vnuInfo.FirstBase100Digit]);
     Inc(Buf,3);
   end;
   for I := 3 to vnuInfo.Len do begin
-    PWord(Buf)^ := Word(TwoDigitLookupRaw[Byte(101 - num[i])]);
+    PWord(Buf)^ := Word(TwoDigitLookupW[Byte(101 - num[i])]);
     Inc(Buf,2);
   end;
   I := (vnuInfo.Len-1)*2;
@@ -969,7 +1026,7 @@ var
 begin
   if Variables <> nil then begin
     { Frees allocated memory for output variables }
-    for I := 0 to Variables.AllocNum-1 do begin
+    for I := 0 to Integer(Variables.AllocNum)-1 do begin
       {$R-}
       CurrentVar := @Variables.Variables[I];
       {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
@@ -990,7 +1047,7 @@ begin
             if Status <> OCI_SUCCESS then
               CheckOracleError(PlainDriver, ErrorHandle, status, lcOther, 'OCIDescriptorFree', ConSettings);
           end;
-    end;
+      end;
     FreeMem(Variables);
     Variables := nil;
   end;
@@ -1693,7 +1750,8 @@ begin
   end;
 end;
 
-constructor TZOraProcDescriptor_A.Create(Parent: TZOraProcDescriptor_A);
+constructor TZOraProcDescriptor_A.Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}
+  Parent: TZOraProcDescriptor_A);
 begin
   fParent := Parent;
 end;
@@ -1798,7 +1856,7 @@ begin
     PlainDriver.OCIAttrGet(arglst, OCI_DTYPE_PARAM, @ParamCount, nil,
       OCI_ATTR_NUM_PARAMS, ErrorHandle),
       lcOther, 'OCIAttrGet', ConSettings);
-  Args := TObjectList.Create;
+  Args := TObjectList.Create;//lse);
   Args.Capacity := ParamCount;
   for N := 0+Ord(ObjType = OCI_PTYPE_PROC) to ParamCount-1+Ord(ObjType = OCI_PTYPE_PROC) do begin
     { get a argument handle }
@@ -1940,9 +1998,9 @@ end;
 
 destructor TZOraProcDescriptor_A.Destroy;
 begin
+  inherited Destroy;
   if Args <> nil then
     FreeAndNil(Args);
-  inherited;
 end;
 
 {$IFDEF WITH_UINT64_C1118_ERROR}

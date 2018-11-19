@@ -108,7 +108,7 @@ type
     procedure SetInParamCount(NewParamCount: Integer); override;
   public
     constructor Create(const Connection: IZConnection; const ProcName: string; Info: TStrings);
-    procedure Close; override;
+    procedure BeforeClose; override;
 
     procedure RegisterOutParameter(ParameterIndex: Integer;
       SqlType: Integer); override;
@@ -444,10 +444,10 @@ begin
     Self.FUserEncoding := ceDefault;
 end;
 
-procedure TZDBLibCallableStatement.Close;
+procedure TZDBLibCallableStatement.BeforeClose;
 begin
   FRetrievedResultSet := nil;
-  inherited Close;
+  inherited BeforeClose;
 end;
 
 procedure TZDBLibCallableStatement.FetchResults;
@@ -828,7 +828,7 @@ begin
             PSmallInt(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
         tdsInt4:
           SoftVarManager.SetAsInteger(Temp,
-            PLongInt(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
+            PInteger(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
         tdsInt8:
           SoftVarManager.SetAsInteger(Temp,
             PInt64(FPLainDriver.dbRetData(FHandle, ParamIndex))^);

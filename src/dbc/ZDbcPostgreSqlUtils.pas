@@ -169,10 +169,10 @@ function PG2Word(P: Pointer): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Word2PG(Value: Word; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function PG2Integer(P: Pointer): Integer; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure Integer2PG(Value: Integer; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Integer2PG(Value: LongInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-function PG2LongWord(P: Pointer): LongWord; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure LongWord2PG(Value: LongWord; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PG2Cardinal(P: Pointer): Cardinal; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Cardinal2PG(Value: Cardinal; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function PG2Int64(P: Pointer): Int64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -204,7 +204,8 @@ function MAXALIGN(nbytes: Integer): Integer;
 
 implementation
 
-uses Math, ZFastCode, ZMessages, ZSysUtils, ZClasses;
+uses Math, ZFastCode, ZMessages, ZSysUtils, ZClasses
+  {$IFDEF TSYSCHARSET_IS_DEPRECATED}, ZDbcUtils{$ENDIF};
 
 {**
    Return ZSQLType from PostgreSQL type name
@@ -725,17 +726,21 @@ end;
    @return a miror version number
 }
 function GetMinorVersion(const Value: string): Word;
-var
-  I: integer;
-  Temp: string;
+var Buf: array[0..20] of Char;
+  P, PEnd, PBuf: PChar;
 begin
-  Temp := '';
-  for I := 1 to Length(Value) do
-    if CharInSet(Value[I], ['0'..'9']) then
-      Temp := Temp + Value[I]
-    else
+  P := Pointer(Value);
+  PEnd := P + Length(Value);
+  PBuf := @Buf[0];
+  while P < PEnd do
+    if (Ord(P^) in [Ord('0')..Ord('9')]) then begin
+      PBuf^:= P^;
+      Inc(P);
+      Inc(PBuf);
+    end else
       Break;
-  Result := StrToIntDef(Temp, 0);
+  PBuf^ := #0;
+  Result := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(PWideChar(@Buf[0]), 0);
 end;
 
 function date2j(y, m, d: Integer): Integer;
@@ -1041,27 +1046,27 @@ begin
   {$IFNDEF ENDIAN_BIG}Reverse2Bytes(Buf){$ENDIF}
 end;
 
-function PG2Integer(P: Pointer): Integer;
+function PG2Integer(P: Pointer): LongInt;
 begin
-  Result := PInteger(P)^;
+  Result := PLongInt(P)^;
   {$IFNDEF ENDIAN_BIG}Reverse4Bytes(@Result){$ENDIF}
 end;
 
-procedure Integer2PG(Value: Integer; Buf: Pointer);
+procedure Integer2PG(Value: LongInt; Buf: Pointer);
 begin
-  PInteger(Buf)^ := Value;
+  PLongInt(Buf)^ := Value;
   {$IFNDEF ENDIAN_BIG}Reverse4Bytes(Buf){$ENDIF}
 end;
 
-function PG2LongWord(P: Pointer): LongWord;
+function PG2Cardinal(P: Pointer): Cardinal;
 begin
-  Result := PLongWord(P)^;
+  Result := PCardinal(P)^;
   {$IFNDEF ENDIAN_BIG}Reverse4Bytes(@Result){$ENDIF}
 end;
 
-procedure LongWord2PG(Value: LongWord; Buf: Pointer);
+procedure Cardinal2PG(Value: Cardinal; Buf: Pointer);
 begin
-  PLongWord(Buf)^ := Value;
+  PCardinal(Buf)^ := Value;
   {$IFNDEF ENDIAN_BIG}Reverse4Bytes(Buf){$ENDIF}
 end;
 
@@ -1134,7 +1139,7 @@ begin
   Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType)));
 end;
 
-function  ARR_LBOUND(a: PArrayType): PInteger;
+function ARR_LBOUND(a: PArrayType): PInteger;
 begin
   Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType))+(SizeOf(Integer)*Cardinal(PG2Integer(ARR_NDIM(a)))));
 end;

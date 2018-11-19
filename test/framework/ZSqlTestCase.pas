@@ -725,9 +725,12 @@ function TZAbstractSQLTestCase.GetDatabase: string;
 begin
   // Database could be defined as alias, absolute path or relative path
   // Consider it a path if a PathDelim is encountered
+{ EH@Fr0sT:
+  Driver=SQL Server Native Client 11.0;Initial Catalog=zeoslib;Data Source=EGONDEVLAPTOPW7\SQLEXPRESS;Workstation ID=EGONDEVLAPTOPW7
+  is also a valid database name... so this code wrongly adds path data..
   if Pos(PathDelim, FCurrentConnectionConfig.Database) > 0 then
     Result := TestConfig.PathFromRoot(FCurrentConnectionConfig.Database)
-  else
+  else}
     Result := FCurrentConnectionConfig.Database;
 end;
 

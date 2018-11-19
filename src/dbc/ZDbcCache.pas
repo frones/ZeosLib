@@ -113,6 +113,7 @@ type
     FColumnCodePages: array of Word;
     FBuffer: PZRowBuffer;
     FRaw: Boolean;
+    FClientCP: Word;
 
     {store columnswhere mem-deallocation/copy needs an extra sequence of code}
     FHighBytesCols, FHighStringCols, FHighArrayCols, FHighLobCols, FHighDataSetCols: Integer;
@@ -124,17 +125,14 @@ type
     function InternalGetULong(ColumnIndex: Integer; out IsNull: Boolean): UInt64; {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetInt(ColumnIndex: Integer; Value: Integer); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetULong(ColumnIndex: Integer; const Value: UInt64); {$IFDEF WITHINLINE} inline; {$ENDIF}
-    procedure InternalSetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer;
-      const Value: TBytes; const NewPointer: Boolean = False); overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
-    procedure InternalSetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer;
-      Buf: Pointer; Len: Word; const NewPointer: Boolean = False); overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
-   procedure InternalSetString(Buffer: PZRowBuffer; ColumnIndex: Integer;
-      const Value: RawByteString; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
-    procedure InternalSetPAnsiChar(Buffer: PZRowBuffer; ColumnIndex: Integer;
-      Value: PAnsiChar; Len: Cardinal; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
-    procedure InternalSetPWideChar(Buffer: PZRowBuffer;
-      ColumnIndex: Integer; Value: PWideChar; Len: Cardinal;
-      const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
+    procedure InternalSetBytes(BuffAddr: PPointer; const Value: TBytes); overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
+    procedure InternalSetBytes(BuffAddr: PPointer; Buf: Pointer; Len: Word); overload; {$IFDEF WITHINLINE} inline; {$ENDIF}
+   procedure InternalSetString(BuffAddr: PPointer;
+      const Value: RawByteString); {$IFDEF WITHINLINE} inline; {$ENDIF}
+    procedure InternalSetPAnsiChar(BuffAddr: PPointer;
+      Value: PAnsiChar; Len: Cardinal); {$IFDEF WITHINLINE} inline; {$ENDIF}
+    procedure InternalSetPWideChar(BuffAddr: PPointer; Value: PWideChar;
+      Len: Cardinal); {$IFDEF WITHINLINE} inline; {$ENDIF}
   protected
     procedure CheckColumnIndex(ColumnIndex: Integer);
     procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
@@ -240,9 +238,8 @@ type
     procedure SetCurrency(ColumnIndex: Integer; const Value: Currency);
     procedure SetBigDecimal(ColumnIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
     procedure SetString(ColumnIndex: Integer; const Value: String);
-    procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); overload;
-    procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar); overload; virtual;
-    procedure SetPWideChar(ColumnIndex: Integer; Value: PWideChar; Len: PNativeUInt);
+    procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt); overload;
+    procedure SetPWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUInt);
     {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(ColumnIndex: Integer; const Value: AnsiString); virtual;
     {$ENDIF}
@@ -438,7 +435,7 @@ begin
       then Result:=Result-PInteger(V2)^
       else Result:=Result or 1;
   end; //Than My (EH) overflow save idea
-  //Result := Ord(PLongInt(V1)^ > PLongInt(V2)^)-Ord(PLongInt(V1)^ < PLongInt(V2)^);
+  //Result := Ord(PInteger(V1)^ > PInteger(V2)^)-Ord(PInteger(V1)^ < PInteger(V2)^);
 end;
 
 function CompareInteger_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -450,7 +447,7 @@ function CompareInteger_Equals(const Null1, Null2: Boolean; const V1, V2): Integ
 begin
   Result := NullsEqualMatrix[Null1, Null2];
   if Result = BothNotNull then
-    Result := Ord(PLongInt(V1)^ <> PLongInt(V2)^);
+    Result := Ord(PInteger(V1)^ <> PInteger(V2)^);
 end;
 
 function CompareInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -904,6 +901,7 @@ begin
   FConSettings := ConSettings;
   FRaw := ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]);
+  FClientCP := ConSettings^.ClientCodePage^.CP;
   FBuffer := nil;
   FColumnCount := ColumnsInfo.Count;
   FColumnsSize := 0;
@@ -1085,7 +1083,8 @@ begin
                     {$ELSE}
                     Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^));
                     {$ENDIF}
-      stString, stUnicodeString: if fRaw
+      stString, stUnicodeString: if Data^ <> nil then
+        if fRaw
         then Result := RawToIntDef(PPAnsiChar(Data)^+PAnsiInc, 0)
         else Result := UnicodeToIntDef(ZPPWideChar(Data)^+PWideInc, 0);
       stUnicodeStream:
@@ -1130,7 +1129,8 @@ begin
       stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
       stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^);
-      stString, stUnicodeString: if fRaw
+      stString, stUnicodeString: if Data^ <> nil then
+          if fRaw
           then Result := RawToUInt64Def(PPAnsiChar(Data)^+PAnsiInc, 0)
           else Result := UnicodeToUInt64Def(ZPPWideChar(Data)^+PWideInc, 0);
       stUnicodeStream:
@@ -1209,97 +1209,64 @@ begin
   end;
 end;
 
-procedure TZRowAccessor.InternalSetBytes(Buffer: PZRowBuffer;
-  ColumnIndex: Integer; const Value: TBytes;
-  const NewPointer: Boolean = False);
+procedure TZRowAccessor.InternalSetBytes(BuffAddr: PPointer; const Value: TBytes);
 begin
-  InternalSetBytes(Buffer, ColumnIndex, Pointer(Value), Length(Value), NewPointer);
+  InternalSetBytes(BuffAddr, Pointer(Value), Length(Value));
 end;
 
-procedure TZRowAccessor.InternalSetBytes(Buffer: PZRowBuffer;
-  ColumnIndex: Integer; Buf: Pointer; Len: Word;
-  const NewPointer: Boolean = False);
-var
-  P: PPointer;
+procedure TZRowAccessor.InternalSetBytes(BuffAddr: PPointer; Buf: Pointer; Len: Word);
 begin
-  if Buffer <> nil then
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex -1;
-    {$ENDIF}
-    if NewPointer then
-      PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ := 0;
-    P := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
-    Len := Min(Len, FColumnLengths[ColumnIndex]);
-    PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex] + 1 + SizeOf(Pointer)])^ := Len;
-    if Len > 0 then begin
-      ReallocMem(P^, Len);
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, P^^, Len);
-    end else if P^ <> nil then begin
-      System.FreeMem(P^);
-      P^ := nil;
-    end;
+  if (BuffAddr^ <> nil) and (Len <> PWord(PAnsiChar(BuffAddr)+SizeOf(Pointer))^) then begin
+    FreeMem(BuffAddr^);
+    BuffAddr^ := nil;
+  end;
+  PWord(PAnsiChar(BuffAddr)+SizeOf(Pointer))^ := Len;
+  if (Len > 0) and (Buf <> nil) then begin
+    if BuffAddr^ = nil then
+      GetMem(BuffAddr^, Len);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, BuffAddr^^, Len);
   end;
 end;
 
-procedure TZRowAccessor.InternalSetString(Buffer: PZRowBuffer;
-  ColumnIndex: Integer; const Value: RawByteString;
-  const NewPointer: Boolean = False);
+procedure TZRowAccessor.InternalSetString(BuffAddr: PPointer;
+  const Value: RawByteString);
 begin
-  InternalSetPAnsiChar(Buffer, ColumnIndex, Pointer(Value), Length(Value), NewPointer);
+  InternalSetPAnsiChar(BuffAddr, Pointer(Value), Length(Value));
 end;
 
-procedure TZRowAccessor.InternalSetPWideChar(Buffer: PZRowBuffer;
-  ColumnIndex: Integer; Value: PWideChar; Len: Cardinal;
-  const NewPointer: Boolean = False);
+procedure TZRowAccessor.InternalSetPWideChar(BuffAddr: PPointer;
+  Value: PWideChar; Len: Cardinal);
 var
-  W: ZPPWideChar;
   LMem: Cardinal;
 begin
-  if Buffer <> nil then
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex -1;
-    {$ENDIF}
-    if NewPointer then
-      PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ := 0;
-    W := ZPPWideChar(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
-    if Len > 0 then begin
-      LMem := Len*SizeOf(WideChar);
-      ReallocMem(W^, LMem+SizeOf(LongWord)+SizeOf(WideChar)); //including #0#0 terminator
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, (W^+PWideInc)^, LMem);
-      PLongWord(W^)^ := Len;
-      (W^+PWideInc+Len)^ := WideChar(#0);
-    end else if W^ <> nil then begin
-      FreeMem(W^);
-      W^ := nil;
-    end;
+  if (BuffAddr^ <> nil) and (Len <> PLongWord(BuffAddr^)^) then begin
+    FreeMem(BuffAddr^);
+    BuffAddr^ := nil;
+  end;
+  if (Len > 0) and (Value <> nil) then begin
+    LMem := Len*SizeOf(WideChar);
+    if BuffAddr^ = nil then
+      GetMem(BuffAddr^, LMem+SizeOf(LongWord)+SizeOf(WideChar)); //including #0#0 terminator
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, (PWideChar(BuffAddr^)+PWideInc)^, LMem);
+    PLongWord(BuffAddr^)^ := Len;
+    (PWideChar(BuffAddr^)+PWideInc+Len)^ := WideChar(#0);
   end;
 end;
 
 
-procedure TZRowAccessor.InternalSetPAnsiChar(Buffer: PZRowBuffer;
-  ColumnIndex: Integer; Value: PAnsiChar; Len: Cardinal; const NewPointer: Boolean = False);
-var
-  C: PPAnsiChar;
+procedure TZRowAccessor.InternalSetPAnsiChar(BuffAddr: PPointer;
+  Value: PAnsiChar; Len: Cardinal);
 begin
-  if Buffer <> nil then
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex -1;
-    {$ENDIF}
-    if NewPointer then
-      PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ := 0;
-    C := PPAnsiChar(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
-    if Len > 0 then begin
-      ReallocMem(C^, Len+SizeOf(LongWord)+SizeOf(AnsiChar)); //including #0 terminator
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, (C^+PAnsiInc)^, Len);
-      PLongWord(C^)^ := Len;
-      AnsiChar((C^+PAnsiInc+Len)^) := AnsiChar(#0); //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
-    end else if C^ <> nil then begin
-      FreeMem(C^);
-      C^ := nil;
-    end;
+  if (BuffAddr^ <> nil) and (Len <> PLongWord(BuffAddr^)^) then begin
+    System.FreeMem(BuffAddr^);
+    BuffAddr^ := nil;
+  end;
+  if (Len > 0) and (Value <> nil) then begin
+    if BuffAddr^ = nil then
+      GetMem(BuffAddr^, Len+SizeOf(LongWord)+SizeOf(AnsiChar)); //including #0 terminator
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, (PPAnsiChar(BuffAddr)^+PAnsiInc)^, Len);
+    PLongWord(BuffAddr^)^ := Len;
+    AnsiChar((PPAnsiChar(BuffAddr)^+PAnsiInc+Len)^) := AnsiChar(#0); //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
   end;
 end;
 
@@ -1416,12 +1383,12 @@ begin
                                  (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) then
                                 JSONWriter.AddJSONEscapeW(Pointer(ZPPWideChar(Data)^+PWideInc),
                                   PPLongWord(Data)^^)
-                              else if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+                              else if FClientCP = zCP_UTF8 then
                                 JSONWriter.AddJSONEscape(PPAnsiChar(Data)^+PAnsiInc,
                                   PPLongWord(Data)^^)
                               else begin
                                 FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
-                                  PPLongWord(Data)^^, ConSettings^.ClientCodePage^.CP);
+                                  PPLongWord(Data)^^, FClientCP);
                                 JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
                               end;
                             end;
@@ -1640,7 +1607,7 @@ begin
         case CompareKind of
           ckAscending:
             {$IFNDEF WITH_USC2_ANSICOMPARESTR_ONLY}
-            if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+            if FClientCP = zCP_UTF8 then
               Result := CompareUnicodeFromUTF8_Asc
             else
               Result := CompareNativeRaw_Asc;
@@ -1649,7 +1616,7 @@ begin
             {$ENDIF}
           ckDescending:
             {$IFNDEF WITH_USC2_ANSICOMPARESTR_ONLY}
-            if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+            if FClientCP = zCP_UTF8 then
               Result := CompareUnicodeFromUTF8_Desc
             else
               Result := CompareNativeRaw_Desc;
@@ -1764,6 +1731,7 @@ procedure TZRowAccessor.CopyBuffer(SrcBuffer, DestBuffer: PZRowBuffer;
   const CloneLobs: Boolean);
 var
   I: Integer;
+  DestAddress: PPointer;
 begin
   ClearBuffer(DestBuffer, False);
   DestBuffer^.Index := SrcBuffer^.Index;
@@ -1773,24 +1741,33 @@ begin
 {$R-}
   for i := 0 to FHighBytesCols do
     if (SrcBuffer^.Columns[FColumnOffsets[FBytesCols[i]]] = bIsNotNull) and
-       (PPointer(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1])^ <> nil) then
-      InternalSetBytes(DestBuffer, FBytesCols[i] {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+       (PPointer(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1])^ <> nil) then begin
+      DestAddress := @DestBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1];
+      DestAddress^ := nil;
+      InternalSetBytes(DestAddress,
         PPointer(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1])^,
-        PWord(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1+SizeOf(Pointer)])^, True);
+        PWord(@SrcBuffer.Columns[FColumnOffsets[FBytesCols[i]]+1+SizeOf(Pointer)])^);
+    end;
   if fRaw then begin
     for i := 0 to FHighStringCols do
       if (SrcBuffer^.Columns[FColumnOffsets[FStringCols[i]]] = bIsNotNull) and
-         (PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^ <> nil) then
-        InternalSetPAnsiChar(DestBuffer, FStringCols[i]{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+         (PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^ <> nil) then begin
+        DestAddress := @DestBuffer.Columns[FColumnOffsets[FStringCols[i]]+1];
+        DestAddress^ := nil;
+        InternalSetPAnsiChar(DestAddress,
           PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^+PAnsiInc,
-          PPLongWord(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^^, True);
+          PPLongWord(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^^);
+      end;
   end else begin
     for i := 0 to FHighStringCols do
       if (SrcBuffer^.Columns[FColumnOffsets[FStringCols[i]]] = bIsNotNull) and
-         (ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^ <> nil) then
-        InternalSetPWideChar(DestBuffer, FStringCols[i]{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+         (ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^ <> nil) then begin
+        DestAddress := @DestBuffer.Columns[FColumnOffsets[FStringCols[i]]+1];
+        DestAddress^ := nil;
+        InternalSetPWideChar(DestAddress,
           ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^+PWideInc,
-          PPLongWord(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^^, True);
+          PPLongWord(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^^);
+      end;
   end;
   for i := 0 to FHighLobCols do
     if (SrcBuffer^.Columns[FColumnOffsets[FLobCols[i]]] = bIsNotNull) then begin
@@ -1861,7 +1838,7 @@ var Len: NativeUint;
 begin
   if fRaw then begin
     Result.P := GetPAnsiChar(ColumnIndex, IsNull, Len);
-    Result.CP := ConSettings^.ClientCodePage^.CP;
+    Result.CP := FClientCP;
   end else begin
     Result.P := GetPWideChar(ColumnIndex, IsNull, Len);
     Result.CP := zCP_UTF16;
@@ -2064,7 +2041,7 @@ begin
             Exit;
           end else
             FRawTemp := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^,
-              ConSettings^.ClientCodePage^.CP);
+              FClientCP);
 
       stBytes:  if Data^ <> nil then begin
                   Len := PWord(PAnsiChar(Data)+SizeOf(Pointer))^;
@@ -2081,7 +2058,7 @@ begin
           if PIZLob(Data)^.IsClob then begin
             if ConSettings^.AutoEncode
             then Result := PIZLob(Data)^.GetPAnsiChar(ConSettings^.CTRL_CP)
-            else Result := PIZLob(Data)^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+            else Result := PIZLob(Data)^.GetPAnsiChar(FClientCP);
             Len := PIZLob(Data)^.Length;
           end else begin
             Result := PIZLob(Data)^.GetBuffer;
@@ -2132,18 +2109,18 @@ begin
         else if fRaw
         {$IFDEF UNICODE}
         then Result := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^,
-                ConSettings^.ClientCodePage^.CP)
+                FClientCP)
         else System.SetString(Result, ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^);
         {$ELSE}
-        then if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) or not ConSettings^.AutoEncode
+        then if ZCompatibleCodePages(FClientCP, ConSettings^.CTRL_CP) or not ConSettings^.AutoEncode
           then System.SetString(Result, PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^)
           else Result := ConSettings^.ConvFuncs.ZRawToString(PPAnsiChar(Data)^+PAnsiInc,
-                ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
+                FClientCP, ConSettings^.CTRL_CP)
         else if ConSettings^.AutoEncode
         then Result := PUnicodeToString(ZPPWideChar(Data)^+PWideInc,
               PPLongWord(Data)^^, ConSettings^.CTRL_CP)
         else Result := PUnicodeToString(ZPPWideChar(Data)^+PWideInc,
-              PPLongWord(Data)^^, ConSettings^.ClientCodePage^.CP);
+              PPLongWord(Data)^^, FClientCP);
         {$ENDIF}
       stAsciiStream, stUnicodeStream, stBinaryStream:
         if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then
@@ -2213,11 +2190,11 @@ begin
         if (Data^ = nil)
         then Result := ''
         else if fRaw then
-          if ZCompatibleCodePages(ZOSCodePage, ConSettings^.ClientCodePage^.CP) then
+          if ZCompatibleCodePages(ZOSCodePage, FClientCP) then
             System.SetString(Result, PPAnsiChar(Data)^+PAnsiInc, PLongWord(PPointer(Data)^)^)
           else begin
             FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
-              PPLongWord(Data)^^, ConSettings^.ClientCodePage^.CP); //Localized because of possible WideString overrun
+              PPLongWord(Data)^^, FClientCP); //Localized because of possible WideString overrun
             Result := ZUnicodeToRaw(FUniTemp, ZOSCodePage);
           end
         else Result := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^, ZOSCodePage);
@@ -2287,7 +2264,7 @@ begin
         if (Data^ = nil)
         then Result := ''
         else if fRaw then
-          if ZCompatibleCodePages(zCP_UTF8, ConSettings^.ClientCodePage^.CP) then
+          if ZCompatibleCodePages(zCP_UTF8, FClientCP) then
           {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
           begin
             SetLength(Result, PPLongWord(Data)^^);
@@ -2300,7 +2277,7 @@ begin
           else begin
             FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
               PPLongWord(Data)^^,
-                ConSettings^.ClientCodePage^.CP); //localize the vals to avoid buffer overrun for WideStrings
+                FClientCP); //localize the vals to avoid buffer overrun for WideStrings
             Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(FUniTemp);
           end
         else Result := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^, zCP_UTF8);
@@ -2364,7 +2341,7 @@ begin
           then System.SetString(Result, PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^)
           {$ENDIF}
         else Result := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc,
-          PPLongWord(Data)^^, ConSettings^.ClientCodePage^.CP);
+          PPLongWord(Data)^^, FClientCP);
       stBytes: if Data <> nil
                 then ZSetString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^, Result)
                 else Result := EmptyRaw;
@@ -2429,7 +2406,7 @@ begin
           Exit;
         end else if fRaw then
           FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^,
-            ConSettings^.ClientCodePage^.CP)
+            FClientCP)
         else begin
           Result := ZPPWideChar(Data)^+PWideInc;
           Len := PPLongWord(Data)^^;
@@ -2500,7 +2477,7 @@ begin
           then Result := ''
           else if fRaw
             then Result := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^,
-                ConSettings^.ClientCodePage^.CP)
+                FClientCP)
             else System.SetString(Result, ZPPWideChar(Data)^+PWideInc,
               PPLongWord(Data)^^);
       stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -2792,7 +2769,7 @@ begin
         else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PPLongWord(Data)^^);
       stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
-          then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
+          then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(FClientCP), 0, Result)
           else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
       stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
@@ -2847,7 +2824,7 @@ begin
         else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PPLongWord(Data)^^);
       stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
-          then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
+          then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(FClientCP), 0, Result)
           else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
       stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
@@ -2901,7 +2878,7 @@ begin
         else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PPLongWord(Data)^^);
       stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
-          then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
+          then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(FClientCP), 0, Result)
           else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
       stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
@@ -2961,7 +2938,7 @@ begin
         else StrToBCD(String(ZPPWideChar(Data)^+PWideInc));
       {stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
-          then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
+          then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(FClientCP), 0, Result)
           else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
       stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
@@ -2989,7 +2966,7 @@ begin
         else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PPLongWord(Data)^^);
       stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
-          then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), 0, Result)
+          then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(FClientCP), 0, Result)
           else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
       stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
@@ -3142,7 +3119,7 @@ begin
       stAsciiStream, stUnicodeStream: if (PPointer(Data)^ <> nil ) then begin
           TempBlob := PPointer(Data)^; //from address to obj-pointer
           if not TempBlob^.IsEmpty and TempBlob^.IsClob then begin
-            Data := TempBlob^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+            Data := TempBlob^.GetPAnsiChar(FClientCP);
             Result := ZSysUtils.RawSQLDateToDateTime(Data, TempBlob^.Length,
               ConSettings^.ReadFormatSettings, Failed);
             if Failed then
@@ -3201,7 +3178,7 @@ begin
         if (PPointer(Data)^ <> nil) then begin
           TempBlob := PPointer(Data)^; //from address to obj-pointer
           if TempBlob^.IsEmpty and TempBlob^.IsClob then begin
-            Data := TempBlob^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP); //make a conversion
+            Data := TempBlob^.GetPAnsiChar(FClientCP); //make a conversion
             Result := ZSysUtils.RawSQLTimeToDateTime(Data, TempBlob^.Length,
               ConSettings^.ReadFormatSettings, Failed);
             if Failed then
@@ -3252,7 +3229,7 @@ begin
         if (PPointer(Data)^ <> nil) then begin
           TempBlob := PPointer(Data)^; //from address to obj-pointer
           if TempBlob^.IsEmpty and TempBlob^.IsClob then begin
-            Data := TempBlob^.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+            Data := TempBlob^.GetPAnsiChar(FClientCP);
             Result := ZSysUtils.RawSQLTimeStampToDateTime(Data,
               TempBlob^.Length, ConSettings^.ReadFormatSettings, Failed);
         end;
@@ -3410,7 +3387,7 @@ begin
       Result := TempBlob^
     else if (FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] = stBinaryStream)
       then Result := TZAbstractBlob.CreateWithStream(nil)
-      else Result := TZAbstractClob.CreateWithData(nil, 0, ConSettings^.ClientCodePage^.CP, ConSettings);
+      else Result := TZAbstractClob.CreateWithData(nil, 0, FClientCP, ConSettings);
   end else
     raise EZSQLException.Create(
       Format(SCanNotAccessBlobRecord,
@@ -3482,7 +3459,7 @@ begin
       stWord:       Result := EncodeUInteger(PWord(ValuePtr)^);
       stSmall:      Result := EncodeInteger(PSmallInt(ValuePtr)^);
       stLongWord:   Result := EncodeUInteger(PCardinal(ValuePtr)^);
-      stInteger:    Result := EncodeInteger(PLongInt(ValuePtr)^);
+      stInteger:    Result := EncodeInteger(PInteger(ValuePtr)^);
       stULong:      Result := EncodeUInteger(PUInt64(ValuePtr)^);
       stLong:       Result := EncodeInteger(PInt64(ValuePtr)^);
       stFloat:      Result := {$IFDEF BCD_TEST}EncodeDouble{$ELSE}EncodeFloat{$ENDIF}(PSingle(ValuePtr)^);
@@ -3935,6 +3912,7 @@ end;
 }
 procedure TZRowAccessor.SetBigDecimal(ColumnIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
 var Data: PPointer;
+  {$IFDEF BCD_TEST}BCD_REMINDER: BOOLEAN;{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
@@ -3942,6 +3920,8 @@ begin
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
   Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+  {$IFDEF BCD_TEST}
+  {$ELSE}
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stBoolean: PWordBool(Data)^ := Value <> 0;
@@ -3964,6 +3944,7 @@ begin
       then SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
       else SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
   end;
+  {$ENDIF}
 end;
 
 {**
@@ -4002,16 +3983,16 @@ begin
     stCurrency: PCurrency(Data)^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
     stBigDecimal: PExtended(Data)^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
     stString, stUnicodeString: if fRaw
-      then InternalSetString(FBuffer, ColumnIndex, ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP))
+      then InternalSetString(Data, ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, FClientCP))
       {$IFDEF UNICODE}
-      else InternalSetPWideChar(FBuffer, ColumnIndex, Pointer(Value), Length(Value));
+      else InternalSetPWideChar(Data, Pointer(Value), Length(Value));
       {$ELSE}
       else begin
         fUniTemp := ConSettings^.ConvFuncs.ZStringToUnicode(Value, ConSettings^.CTRL_CP); //localize the value to avoid BSTR overrun of older compilers
-        InternalSetPWideChar(FBuffer, ColumnIndex, Pointer(fUniTemp), Length(fUniTemp));
+        InternalSetPWideChar(Data, Pointer(fUniTemp), Length(fUniTemp));
       end;
       {$ENDIF}
-    stBytes: InternalSetBytes(FBuffer, ColumnIndex, StrToBytes(Value));
+    stBytes: InternalSetBytes(Data, StrToBytes(Value));
     stGUID:
       if Length(Value) in [0, 36, 38]
         then ValidGUIDToBinary(PAnsiChar(Pointer(Value)), PAnsiChar(Data))
@@ -4069,10 +4050,10 @@ end;
 
   @param columnIndex the first column is 1, the second is 2, ...
   @param Value the new column value
-  @param Len the pointer to the length of the String in bytes
+  @param Len then length of the String in bytes
 }
 procedure TZRowAccessor.SetPAnsiChar(ColumnIndex: Integer; Value: PAnsichar;
-  Len: PNativeUInt);
+  var Len: NativeUInt);
 var
   Data: PPointer;
   Failed: Boolean;
@@ -4094,65 +4075,47 @@ begin
     stULong: PUInt64(Data)^ := RawToInt64Def(Value, 0);
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := RawToInt64Def(Value, 0);
-    stFloat: SQLStrToFloatDef(Value, 0, PSingle(Data)^, Len^);
-    stDouble: SQLStrToFloatDef(Value, 0, PDouble(Data)^, Len^);
-    stCurrency: SQLStrToFloatDef(Value, 0, PCurrency(Data)^, Len^);
-    stBigDecimal: SQLStrToFloatDef(Value, 0, PExtended(Data)^, Len^);
-    stString, stUnicodeString: if fRaw
-      then InternalSetPAnsiChar(FBuffer, ColumnIndex, Value, Len^)
+    stFloat: SQLStrToFloatDef(Value, 0, PSingle(Data)^, Len);
+    stDouble: SQLStrToFloatDef(Value, 0, PDouble(Data)^, Len);
+    stCurrency: SQLStrToFloatDef(Value, 0, PCurrency(Data)^, Len);
+    stBigDecimal: SQLStrToFloatDef(Value, 0, PExtended(Data)^, Len);
+    stString, stUnicodeString: if fRaw then
+        InternalSetPAnsiChar(Data, Value, Len)
       else begin
-        tmp := PRawToUnicode(Value, Len^, ConSettings^.ClientCodePage^.CP); //localize because of WideString overrun
-        InternalSetPWideChar(FBuffer, ColumnIndex, Pointer(tmp), Length(tmp));
+        tmp := PRawToUnicode(Value, Len, FClientCP); //localize because of WideString overrun
+        InternalSetPWideChar(Data, Pointer(tmp), Length(tmp));
       end;
-    stBytes: InternalSetBytes(FBuffer, ColumnIndex, Value, len^);
+    stBytes: InternalSetBytes(Data, Value, len);
     stGUID:
-      if (Value <> nil) and ((Len = nil) or (Len^ in [36, 38]))
+      if (Value <> nil) and (Len in [36, 38])
         then ValidGUIDToBinary(Value, PAnsiChar(Data))
         else SetNull(ColumnIndex);
     stDate:
       begin
-        PDateTime(Data)^ := RawSQLDateToDateTime (Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
+        PDateTime(Data)^ := RawSQLDateToDateTime (Value, Len, ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
-          PDateTime(Data)^ := Int(RawSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed));
+          PDateTime(Data)^ := Int(RawSQLTimeStampToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTime:
       begin
-        PDateTime(Data)^ := RawSQLTimeToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
+        PDateTime(Data)^ := RawSQLTimeToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
-          PDateTime(Data)^ := Frac(RawSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed));
+          PDateTime(Data)^ := Frac(RawSQLTimeStampToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTimestamp:
-      PDateTime(Data)^ := RawSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
+      PDateTime(Data)^ := RawSQLTimeStampToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed);
     stUnicodeStream, stAsciiStream:
       if (Data^ = nil) then
-        PIZLob(Data^)^ := TZAbstractCLob.CreateWithData(Value, Len^, ConSettings^.ClientCodePage^.CP, ConSettings)
+        PIZLob(Data^)^ := TZAbstractCLob.CreateWithData(Value, Len, FClientCP, ConSettings)
       else if PIZLob(Data^)^.IsClob then
-        PIZLob(Data^)^.SetPAnsiChar(Value, ConSettings^.ClientCodePage^.CP, Len^)
+        PIZLob(Data^)^.SetPAnsiChar(Value, FClientCP, Len)
       else
-        PIZLob(Data^)^.SetBuffer(Value, Len^);
+        PIZLob(Data^)^.SetBuffer(Value, Len);
     stBinaryStream:
-      if (Data^ = nil) then
-        PIZLob(Data^)^ := TZAbstractBLob.CreateWithData(Value, Len^)
-      else
-        PIZLob(Data^)^.SetBuffer(Value, Len^);
+      if (Data^ = nil)
+      then PIZLob(Data^)^ := TZAbstractBLob.CreateWithData(Value, Len)
+      else PIZLob(Data^)^.SetBuffer(Value, Len);
   end;
-end;
-
-{**
-  Sets the designated column with a <code>PAnsiChar</code> value.
-  The <code>SetXXX</code> methods are used to Set column values in the
-  current row or the insert row.  The <code>SetXXX</code> methods do not
-  Set the underlying database; instead the <code>SetRow</code> or
-  <code>insertRow</code> methods are called to Set the database.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param Value the new column value
-}
-procedure TZRowAccessor.SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar);
-var Len: NativeUInt;
-begin
-  Len := ZFastCode.StrLen(Value);
-  SetPAnsiChar(ColumnIndex, Value, @Len);
 end;
 
 {**
@@ -4163,11 +4126,11 @@ end;
   <code>insertRow</code> methods are called to Set the database.
 
   @param columnIndex the first column is 1, the second is 2, ...
-  @param Len the pointer to the length of the string in codepoints
   @param Value the new column value
+  @param Len the length of the string in codepoints
 }
 procedure TZRowAccessor.SetPWideChar(ColumnIndex: Integer;
-  Value: PWideChar; Len: PNativeUInt);
+  Value: PWideChar; var Len: NativeUInt);
 var
   Data: PPointer;
   Failed: Boolean;
@@ -4188,41 +4151,41 @@ begin
     stULong: PUInt64(Data)^ := UnicodeToInt64Def(Value, 0);
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := UnicodeToInt64Def(Value, 0);
-    stFloat: PSingle(Data)^ := SQLStrToFloatDef(Value, 0, Len^);
-    stDouble: PDouble(Data)^ := SQLStrToFloatDef(Value, 0, Len^);
-    stCurrency: PCurrency(Data)^ := SQLStrToFloatDef(Value, 0, Len^);
-    stBigDecimal: PExtended(Data)^ := SQLStrToFloatDef(Value, 0, Len^);
+    stFloat: PSingle(Data)^ := SQLStrToFloatDef(Value, 0, Len);
+    stDouble: PDouble(Data)^ := SQLStrToFloatDef(Value, 0, Len);
+    stCurrency: PCurrency(Data)^ := SQLStrToFloatDef(Value, 0, Len);
+    stBigDecimal: PExtended(Data)^ := SQLStrToFloatDef(Value, 0, Len);
     stUnicodeString, stString: if fRaw
-      then InternalSetString(FBuffer, ColumnIndex, PUnicodeToRaw(Value, Len^, ConSettings^.ClientCodePage^.CP))
-      else InternalSetPWideChar(FBuffer, ColumnIndex, Value, Len^);
+      then InternalSetString(Data, PUnicodeToRaw(Value, Len, FClientCP))
+      else InternalSetPWideChar(Data, Value, Len);
     stAsciiStream, stUnicodeStream:
       if Data^ = nil then
-        PIZLob(Data^)^ := TZAbstractCLob.CreateWithData(Value, Len^, ConSettings)
+        PIZLob(Data^)^ := TZAbstractCLob.CreateWithData(Value, Len, ConSettings)
       else if PIZLob(Data^)^.IsClob then
-        PIZLob(Data^)^.SetPWideChar(Value, Len^)
+        PIZLob(Data^)^.SetPWideChar(Value, Len)
       else
-        PIZLob(Data^)^.SetBuffer(Value, Len^ shl 1);
+        PIZLob(Data^)^.SetBuffer(Value, Len shl 1);
     stBytes:
       SetBytes(ColumnIndex, StrToBytes(ZWideString(Value)));
     stGUID:
-      if (Value <> nil) and ((Len = nil) or (Len^ in [36, 38]))
+      if (Value <> nil) and (Len in [36, 38])
         then ValidGUIDToBinary(Value, PAnsiChar(Data))
         else SetNull(ColumnIndex);
     stDate:
       begin
         PDateTime(Data)^ :=
-          UnicodeSQLDateToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
-        if Failed then PDateTime(Data)^ := Int(UnicodeSQLTimeStampToDateTime(Value, Len^,
+          UnicodeSQLDateToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed);
+        if Failed then PDateTime(Data)^ := Int(UnicodeSQLTimeStampToDateTime(Value, Len,
               ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTime:
       begin
-        PDateTime(Data)^ := UnicodeSQLTimeToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
+        PDateTime(Data)^ := UnicodeSQLTimeToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
-          PDateTime(Data)^ := Frac(UnicodeSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed));
+          PDateTime(Data)^ := Frac(UnicodeSQLTimeStampToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTimestamp:
-      PDateTime(Data)^ := UnicodeSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
+      PDateTime(Data)^ := UnicodeSQLTimeStampToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed);
     else
       SetString(ColumnIndex, ConSettings^.ConvFuncs.ZUnicodeToString(Value, ConSettings^.CTRL_CP));
   end;
@@ -4242,7 +4205,7 @@ end;
 procedure TZRowAccessor.SetAnsiString(ColumnIndex: Integer; const Value: AnsiString);
 begin
   if fRaw then
-    SetRawByteString(ColumnIndex, ConSettings^.ConvFuncs.ZAnsiToRaw(Value, ConSettings^.ClientCodePage^.CP))
+    SetRawByteString(ColumnIndex, ConSettings^.ConvFuncs.ZAnsiToRaw(Value, FClientCP))
   else begin
     fUniTemp := ZEncoding.ZRawToUnicode(Value, ZOSCodePage); //localize Value becuse of WideString overrun
     SetUnicodeString(ColumnIndex, fUniTemp);
@@ -4264,7 +4227,7 @@ end;
 procedure TZRowAccessor.SetUTF8String(ColumnIndex: Integer; const Value: UTF8String);
 begin
   if fRaw then
-    SetRawByteString(ColumnIndex, ConSettings^.ConvFuncs.ZUTF8ToRaw(Value, ConSettings^.ClientCodePage^.CP))
+    SetRawByteString(ColumnIndex, ConSettings^.ConvFuncs.ZUTF8ToRaw(Value, FClientCP))
   else begin
     fUniTemp := ZEncoding.ZRawToUnicode(Value, zCP_UTF8); //localize Value becuse of WideString overrun
     SetUnicodeString(ColumnIndex, fUniTemp);
@@ -4309,12 +4272,12 @@ begin
     stCurrency: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PCurrency(Data)^, Length(Value));
     stBigDecimal: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PExtended(Data)^, Length(Value));
     stString, stUnicodeString: if fRaw
-      then InternalSetPAnsichar(FBuffer, ColumnIndex, Pointer(Value), Length(Value))
+      then InternalSetPAnsichar(Data, Pointer(Value), Length(Value))
       else begin
-        tmp := ConSettings^.ConvFuncs.ZRawToUnicode(Value, ConSettings^.ClientCodePage^.CP); //localize because of WideString overrun
-        InternalSetPWideChar(FBuffer, ColumnIndex, Pointer(tmp), Length(Tmp));
+        tmp := ConSettings^.ConvFuncs.ZRawToUnicode(Value, FClientCP); //localize because of WideString overrun
+        InternalSetPWideChar(Data, Pointer(tmp), Length(Tmp));
       end;
-    stBytes: InternalSetBytes(fBuffer, ColumnIndex, Pointer(Value), Length(Value));
+    stBytes: InternalSetBytes(Data, Pointer(Value), Length(Value));
     stGUID:
       if Length(Value) in [0, 36, 38]
         then ValidGUIDToBinary(PAnsichar(Pointer(Value)), PAnsiChar(Data))
@@ -4339,9 +4302,9 @@ begin
       Length(Value), ConSettings^.DisplayFormatSettings, Failed);
     stAsciiStream, stUnicodeStream:
       if Data^ = nil then
-        PIZLob(Data^)^ := TZAbstractCLob.CreateWithData(Pointer(Value), Length(Value), ConSettings^.ClientCodePage^.CP, ConSettings)
+        PIZLob(Data^)^ := TZAbstractCLob.CreateWithData(Pointer(Value), Length(Value), FClientCP, ConSettings)
       else if PIZLob(Data^)^.IsClob then
-        PIZLob(Data^)^.SetPAnsiChar(Pointer(Value), ConSettings^.ClientCodePage^.CP, Length(Value))
+        PIZLob(Data^)^.SetPAnsiChar(Pointer(Value), FClientCP, Length(Value))
       else
         PIZLob(Data^)^.SetString(Value);
     stBinaryStream:
@@ -4388,8 +4351,8 @@ begin
     stCurrency: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PCurrency(Data)^, Length(Value));
     stBigDecimal: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PExtended(Data)^, Length(Value));
     stUnicodeString, stString: if fRaw
-      then InternalSetString(FBuffer, ColumnIndex, ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP))
-      else InternalSetPWideChar(FBuffer, ColumnIndex, Pointer(Value), Length(Value));
+      then InternalSetString(Data, ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, FClientCP))
+      else InternalSetPWideChar(Data, Pointer(Value), Length(Value));
     stAsciiStream, stUnicodeStream:
       begin
         if Data ^ = nil then
@@ -4406,7 +4369,7 @@ begin
         PIZLob(Data^)^.SetString(RawByteString(Value));
       end;
     stBytes:
-      InternalSetBytes(FBuffer, ColumnIndex, StrToBytes(Value));
+      InternalSetBytes(Data, StrToBytes(Value));
     stGUID:
       if Length(Value) in [0, 36, 38]
         then ValidGUIDToBinary(PWideChar(Pointer(Value)), PAnsiChar(Data))
@@ -4475,7 +4438,7 @@ begin
         PGUID(Data)^ := PGUID(Buf)^
       else
         SetNull(ColumnIndex);
-    stBytes: InternalSetBytes(FBuffer, ColumnIndex, Buf, Len);
+    stBytes: InternalSetBytes(Data, Buf, Len);
     stBinaryStream:
         if Data^ = nil then
           PIZLob(Data)^ := TZAbstractBlob.CreateWithData(Buf, Len)
@@ -4483,7 +4446,7 @@ begin
           PIZLob(Data)^.SetBuffer(Buf, Len);
     stString, stUnicodeString: begin
         L := Len;
-        SetPAnsiChar(ColumnIndex, Buf, @L);
+        SetPAnsiChar(ColumnIndex, Buf, L);
       end;
     else
       raise EZSQLException.Create(SConvertionIsNotPossible);
@@ -4604,7 +4567,7 @@ begin
         if Data^.IsClob then
           if ConSettings^.AutoEncode
           then Data^.SetStream(Value)
-          else Data^.SetStream(Value, ConSettings^.ClientCodePage^.CP)
+          else Data^.SetStream(Value, FClientCP)
         else Data^.SetStream(Value);
       end;
     else
@@ -4791,10 +4754,10 @@ begin
     vtCharRec:
       if ZCompatibleCodePages(zCP_UTF16, Value.VCharRec.CP) then begin
         Len := Value.VCharRec.Len;
-        SetPWideChar(ColumnIndex, Value.VCharRec.P, @Len);
-      end else if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, Value.VCharRec.CP) then begin
+        SetPWideChar(ColumnIndex, Value.VCharRec.P, Len);
+      end else if ZCompatibleCodePages(FClientCP, Value.VCharRec.CP) then begin
         Len := Value.VCharRec.Len;
-        SetPAnsiChar(ColumnIndex, Value.VCharRec.P, @Len)
+        SetPAnsiChar(ColumnIndex, Value.VCharRec.P, Len)
       end else
         SetUnicodeString(ColumnIndex, PRawToUnicode(Value.VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP));
   end;

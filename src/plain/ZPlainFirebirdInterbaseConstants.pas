@@ -94,13 +94,13 @@ const
   { SQL definitions order by value and versions }
   SQL_VARYING                    = 448; //#0 terminated
   SQL_TEXT                       = 452; //fixed char(N)
-  SQL_DOUBLE                     = 480;
-  SQL_FLOAT                      = 482;
+  SQL_DOUBLE                     = 480; //sizeof (double)
+  SQL_FLOAT                      = 482; //sizeof (single)
   SQL_LONG                       = 496;
   SQL_SHORT                      = 500;
   SQL_TIMESTAMP                  = 510;
   SQL_BLOB                       = 520;
-  SQL_D_FLOAT                    = 530;
+  SQL_D_FLOAT                    = 530;//sizeof (double)
   SQL_ARRAY                      = 540;
   SQL_QUAD                       = 550;
   SQL_TYPE_TIME                  = 560;
@@ -1931,16 +1931,23 @@ type
   ISC_UCHAR            = AnsiChar;
   ISC_SHORT            = SmallInt;
   ISC_USHORT           = Word;
-  ISC_LONG             = LongInt;
+  ISC_LONG             = Integer;
   ISC_ULONG            = Cardinal;
   ISC_INT64            = Int64;
   ISC_UINT64           = UInt64;
   ISC_STATUS           = NativeInt;
+  ISC_BOOLEAN          = Smallint;
+  ISC_BOOLEAN_FB       = Byte;
+  PISC_SCHAR           = ^ISC_SCHAR;
+  PISC_SHORT           = ^ISC_SHORT;
   PISC_LONG            = ^ISC_LONG;
   PISC_ULONG           = ^ISC_ULONG;
+  PISC_INT64           = ^ISC_INT64;
   PISC_STATUS          = ^ISC_STATUS;
   PISC_UCHAR           = ^ISC_UCHAR;
   PPISC_STATUS         = ^PISC_STATUS;
+  PISC_BOOLEAN         = ^ISC_BOOLEAN;
+  PISC_BOOLEAN_FB      = ^ISC_BOOLEAN_FB;
 
   Short                = SmallInt;
   PShort               = ^Short;
@@ -2032,36 +2039,36 @@ type
 
   { Declare the extended SQLDA }
   TXSQLVAR = record
-    sqltype:            Short;     { datatype of field }
-    sqlscale:           Short;     { scale factor }
-    sqlsubtype:         Short;     { datatype subtype - BLOBs }
+    sqltype:            ISC_SHORT;     { datatype of field }
+    sqlscale:           ISC_SHORT;     { scale factor }
+    sqlsubtype:         ISC_SHORT;     { datatype subtype - BLOBs }
 			           { & text types only }
-    sqllen:             Short;     { length of data area }
+    sqllen:             ISC_SHORT;     { length of data area }
     sqldata:            PAnsiChar;     { address of data }
-    sqlind:             PSmallInt;  { address of indicator } 
+    sqlind:             PISC_SHORT;    { address of indicator }
                                    { variable }
-    sqlname_length:     Short;     { length of sqlname field }
+    sqlname_length:     ISC_SHORT;     { length of sqlname field }
     { name of field, name length + space for NULL }
     sqlname:            array[0..METADATALEN_V1-1] of ISC_SCHAR;
-    relname_length:     Short;     { length of relation name }
+    relname_length:     ISC_SHORT;     { length of relation name }
     { field's relation name + space for NULL }
     relname:            array[0..METADATALEN_V1-1] of ISC_SCHAR;
-    ownname_length:     Short;     { length of owner name }
+    ownname_length:     ISC_SHORT;     { length of owner name }
     { relation's owner name + space for NULL }
     ownname:            array[0..METADATALEN_V1-1] of ISC_SCHAR;
-    aliasname_length:   Short;     { length of alias name }
+    aliasname_length:   ISC_SHORT;     { length of alias name }
     { relation's alias name + space for NULL }
     aliasname:          array[0..METADATALEN_V1-1] of ISC_SCHAR;
   end;
   PXSQLVAR = ^TXSQLVAR;
 
   TXSQLDA = record
-    version:            Short;     { version of this XSQLDA }
+    version:            ISC_SHORT;     { version of this XSQLDA }
     { XSQLDA name field }
     sqldaid:            array[0..7] of ISC_SCHAR;
     sqldabc:            ISC_LONG;  { length in bytes of SQLDA }
-    sqln:               Short;     { number of fields allocated }
-    sqld:               Short;     { actual number of fields }
+    sqln:               ISC_SHORT;     { number of fields allocated }
+    sqld:               ISC_SHORT;     { actual number of fields }
     { first field address }
     sqlvar:             array[0..0] of TXSQLVAR;
   end;

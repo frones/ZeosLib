@@ -62,8 +62,8 @@ interface
   {$R-} //disable RangeCheck
 
 
-  uses
-    ZCompatibility, SysUtils;
+uses
+  ZCompatibility, SysUtils;
 
 const
   {$IFDEF NEXTGEN}
@@ -271,44 +271,49 @@ var
   CharPos: function(ch: char; const s: String): integer;
 {$ENDIF}
 
-function IntToStr(Value: Integer): String; overload;  //keep always this one @first pos because of the Ansi-Delphi faster BASM code (the int64 version call the 32bit within range)
-function IntToStr(const Value: ShortInt): String; overload;
-function IntToStr(Value: Byte; Const Negative: Boolean = False): String; overload;
-function IntToStr(const Value: SmallInt): String; overload;
-function IntToStr(Value: Word; Const Negative: Boolean = False): String; overload;
-function IntToStr(Value: Cardinal; Const Negative: Boolean = False): String; overload;
-function IntToStr({$IF not defined(Delphi) or defined(UNICODE)}const{$IFEND} Value: Int64): String; overload;
-function IntToStr(Value: UInt64; Const Negative: Boolean = False): String; overload;
+function IntToStr(Value: Integer): String; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function IntToStr(Value: ShortInt): String; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function IntToStr(Value: Byte): String; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function IntToStr(Value: SmallInt): String; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function IntToStr(Value: Word): String; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function IntToStr(Value: Cardinal): String; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function IntToStr(const Value: Int64): String; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function IntToStr(const Value: UInt64): String; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 { Integer convertion in Raw and Unicode Strings}
 function IntToRaw(Value: Integer): RawByteString; overload;  //keep always this one @first pos because of the Ansi-Delphi faster BASM code (the int64 version call the 32bit within range)
+function IntToRaw(Value: Byte): RawByteString; overload;
+function IntToRaw(Value: ShortInt): RawByteString; overload;
+function IntToRaw(Value: Word): RawByteString; overload;
+function IntToRaw(Value: SmallInt): RawByteString; overload;
+function IntToRaw(Value: Cardinal): RawByteString; overload;
+function IntToRaw(Value: Int64): RawByteString; overload;
+function IntToRaw(const Value: UInt64): RawByteString; overload;
 
 procedure IntToRaw(Value: Integer; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
 procedure IntToRaw(Value: Cardinal; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
 procedure IntToRaw(const Value: Int64; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
-procedure IntToRaw(Value: UInt64; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
+procedure IntToRaw(const Value: UInt64; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
 
-function IntToRaw(const Value: ShortInt): RawByteString; overload;
-function IntToRaw(Value: Byte; Const Negative: Boolean = False): RawByteString; overload;
-function IntToRaw(const Value: SmallInt): RawByteString; overload;
-function IntToRaw(Value: Word; Const Negative: Boolean = False): RawByteString; overload;
-function IntToRaw(Value: Cardinal; Const Negative: Boolean = False): RawByteString; overload;
-function IntToRaw(Value: Int64): RawByteString; overload;
-function IntToRaw(Value: UInt64; Const Negative: Boolean = False): RawByteString; overload;
+procedure IntToRaw(Value: Cardinal; Buf: PAnsiChar; Digits: Byte); overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure IntToRaw(Value: UInt64; Buf: PAnsiChar; Digits: Byte); overload;
 
 procedure IntToUnicode(Value: Integer; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
 procedure IntToUnicode(Value: Cardinal; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
 procedure IntToUnicode(const Value: Int64; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
-procedure IntToUnicode(Value: UInt64; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
+procedure IntToUnicode(const Value: UInt64; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
 
-function IntToUnicode(Value: Byte; Const Negative: Boolean = False): ZWideString; overload;
-function IntToUnicode(const Value: ShortInt): ZWideString; overload;
-function IntToUnicode(Value: Word; Const Negative: Boolean = False): ZWideString; overload;
-function IntToUnicode(const Value: SmallInt): ZWideString; overload;
-function IntToUnicode(Value: Cardinal; Const Negative: Boolean = False): ZWideString; overload;
-function IntToUnicode(const Value: Integer): ZWideString; overload;
+procedure IntToUnicode(Value: Cardinal; Buf: PWideChar; Digits: Byte); overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure IntToUnicode(Value: UInt64; Buf: PWideChar; Digits: Byte); overload;
+
+function IntToUnicode(Value: Byte): ZWideString; overload;
+function IntToUnicode(Value: ShortInt): ZWideString; overload;
+function IntToUnicode(Value: Word): ZWideString; overload;
+function IntToUnicode(Value: SmallInt): ZWideString; overload;
+function IntToUnicode(Value: Cardinal): ZWideString; overload;
+function IntToUnicode(Value: Integer): ZWideString; overload;
 function IntToUnicode(const Value: Int64): ZWideString; overload;
-function IntToUnicode(Value: UInt64; Const Negative: Boolean = False): ZWideString; overload;
+function IntToUnicode(const Value: UInt64): ZWideString; overload;
 
 procedure CurrToRaw(const Value: Currency; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
 function CurrToRaw(const Value: Currency): RawByteString; overload;
@@ -327,16 +332,19 @@ function UnicodeToUInt64(const Value: ZWideString): UInt64;
 function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer; overload;
 function RawToIntDef(const S: PAnsiChar; const Default: Integer) : Integer; overload;
 function RawToIntDef(Buf, PEnd: PAnsiChar; const Default: Integer) : Integer; overload;
-function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer; overload;
-function UnicodeToIntDef(const S: PWideChar; const Default: Integer) : Integer; overload;
 function RawToInt64Def(const S: RawByteString; const Default: Int64) : Int64; overload;
 function RawToInt64Def(const S: PAnsiChar; const Default: Int64) : Int64; overload;
 function RawToInt64Def(Buf, PEnd: PAnsiChar; const Default: Int64) : Int64; overload;
 function RawToUInt64Def(const S: PAnsiChar; const Default: UInt64) : UInt64; overload;
 function RawToUInt64Def(Buf, PEnd: PAnsiChar; const Default: UInt64) : UInt64; overload;
 function RawToUInt64Def(const S: RawByteString; const Default: UInt64) : UInt64; overload;
+
+function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer; overload;
+function UnicodeToIntDef(const S: PWideChar; const Default: Integer) : Integer; overload;
+function UnicodeToIntDef(Buf, PEnd: PWideChar; Default: Integer) : UInt64; overload;
 function UnicodeToInt64Def(const S: ZWideString; const Default: Int64) : Int64; overload;
 function UnicodeToInt64Def(const S: PWideChar; const Default: Int64) : Int64; overload;
+function UnicodeToInt64Def(Buf, PEnd: PWideChar; Default: Integer) : Int64; overload;
 function UnicodeToUInt64Def(const S: ZWideString; const Default: UInt64) : UInt64; overload;
 function UnicodeToUInt64Def(const S: PWideChar; const Default: UInt64) : UInt64; overload;
 
@@ -365,6 +373,9 @@ function ValRawInt(PStart: PAnsiChar; var PEnd: PAnsiChar): Integer; overload;
 function ValRawInt64(PStart: PAnsiChar; var PEnd: PAnsiChar): Int64; overload;
 function ValRawUInt64(PStart: PAnsiChar; var PEnd: PAnsiChar): UInt64; overload;
 
+function ValUnicodeInt(PStart: PWideChar; var PEnd: PWideChar): Integer; overload;
+function ValUnicodeInt64(PStart: PWideChar; var PEnd: PWideChar): Int64; overload;
+
 function UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar): Extended; overload;
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Extended); overload;
@@ -379,6 +390,7 @@ procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; cons
 procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Currency; var Result: Currency); overload;
 procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Double; var Result: Double); overload;
 procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const Default: Single; var Result: Single); overload;
+
 function ValUnicodeExt(const s: PWordArray; const DecimalSep: WideChar; out code: Integer): Extended;
 function ValUnicodeDbl(const s: PWordArray; const DecimalSep: WideChar; out code: Integer): Double;
 function ValUnicodeSin(const s: PWordArray; const DecimalSep: WideChar; out code: Integer): Single;
@@ -395,10 +407,19 @@ function Pos(const SubStr: RawByteString; const Str: RawByteString): Integer; ov
 function PosEx(const SubStr, S: RawByteString; Offset: Integer = 1): Integer;
 function Pos(const SubStr, Str: ZWideString): Integer; overload;
 
+function GetOrdinalDigits(const Value: UInt64): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(const Value: Int64): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(Value: Cardinal): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(Value: Integer): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(Value: Word): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(Value: SmallInt): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(Value: Byte): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(Value: ShortInt): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+
 implementation
 
 uses
-  {$IFDEF MSWINDOWS}Windows, {$ENDIF}
+  {$IF defined(PatchSystemMove) and defined(MSWINDOWS)}Windows,{$IFEND}
   {$IF defined(WITH_STRLEN_DEPRECATED) and defined(WITH_UNITANSISTRINGS)}AnsiStrings, {$IFEND}
   SysConst{$IFNDEF WITH_PUREPASCAL_INTPOWER}, Math{$ENDIF};
 
@@ -411,44 +432,44 @@ const
   TINYSIZE = 36;
 {$IFEND}
 
+function IntToStr(Value: Byte): String;
+begin
+  Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Cardinal(Value));
+end;
+
+function IntToStr(Value: ShortInt): String;
+begin
+  Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Integer(Value));
+end;
+
+function IntToStr(Value: Word): String;
+begin
+  Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Cardinal(Value));
+end;
+
+function IntToStr(Value: SmallInt): String;
+begin
+  Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Integer(Value));
+end;
+
 function IntToStr(Value: Integer): String;
 begin
   Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value);
 end;
 
-function IntToStr(const Value: ShortInt): String;
+function IntToStr(Value: Cardinal): String;
 begin
   Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value);
 end;
 
-function IntToStr(Value: Byte; Const Negative: Boolean = False): String;
-begin
-  Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value, Negative);
-end;
-
-function IntToStr(const Value: SmallInt): String;
+function IntToStr(const Value: Int64): String;
 begin
   Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value);
 end;
 
-function IntToStr(Value: Word; Const Negative: Boolean = False): String;
-begin
-  Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value, Negative);
-end;
-
-function IntToStr(Value: Cardinal; Const Negative: Boolean = False): String;
-begin
-  Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value, Negative);
-end;
-
-function IntToStr({$IF not defined(Delphi) or defined(UNICODE)}const{$IFEND} Value: Int64): String;
+function IntToStr(const Value: UInt64): String;
 begin
   Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value);
-end;
-
-function IntToStr(Value: UInt64; Const Negative: Boolean = False): String;
-begin
-  Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value, Negative);
 end;
 
 {$IFDEF Use_FastCodeFillChar}
@@ -2454,7 +2475,7 @@ asm
 end; {MoveJOH_SSE3}
 
 {-------------------------------------------------------------------------}
-
+{$IFDEF PatchSystemMove}
 procedure PatchMove; {Overwrite System.Move with Main Procedure of New Move}
 const
   JumpFarId = $E9;
@@ -2505,203 +2526,15 @@ begin
   VirtualProtect(@System.Move, 256, OldProtect, @Protect);
   FlushInstructionCache(GetCurrentProcess, @System.Move, SizeOf(NewMove));
 end; {PatchMove}
+{$ENDIF PatchSystemMove}
 {$IFEND} //set in Zeos.inc
 
-function IntToRaw(const Value: ShortInt): RawByteString;
+function IntToRaw(Value: Cardinal): RawByteString;
+var Digits: Byte;
 begin
-  if Value < 0 then
-    Result := IntToRaw(Byte(Abs(Value)), True)
-  else
-    Result := IntToRaw(Byte(Value));
-end;
-
-function IntToRaw(Value: Byte; Const Negative: Boolean = False): RawByteString;
-//fast pure pascal by John O'Harrow see:
-//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
-//function IntToStr_JOH_PAS_5(Value: Integer): string;
-{type
-  PByteArray = ^TByteArray;
-  TByteArray = array[0..32767] of Byte; }
-var
-  Digits         : Integer;
-  P              : PByte;
-  NewLen{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}{%H-},OldLen{$ENDIF}: Integer;
-begin
-  if Value >= 100 then
-    Digits := 3
-  else
-    if Value >= 10 then
-      Digits := 2
-    else
-      Digits := 1;
-  NewLen  := Digits + Ord(Negative);
-  {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
-  if Pointer(Result{%H-}) = nil then
-    SetLength(Result, NewLen)
-  else
-  begin
-    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { ref count }
-      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length }
-    else
-      OldLen := 0;
-    if NewLen <> OldLen then
-    begin
-      Result := '';
-      SetLength(Result, NewLen);
-    end;
-  end;
-  {$ELSE}
-  SetLength(Result, NewLen+1);
-  (PByte(Result)+NewLen)^ := 0;
-  {$ENDIF WITH_TBYTES_AS_RAWBYTESTRING}
-  P := Pointer(Result);
-  P^ := Byte('-');
-  Inc(P, Ord(Negative));
-  if Digits = 3 then
-  begin
-    {$IFDEF WITH_INC_PBYTE_SUPPORT}
-    PWord(P+1)^ := TwoDigitLookupW[Value mod 100];
-    {$ELSE}
-    PWord(@PByteArray(P)[1])^ := TwoDigitLookupW[Value mod 100];
-    {$ENDIF}
-    P^ := Byte('0') + (Value div 100);
-  end
-  else
-    if Digits = 2 then
-      PWord(P)^ := TwoDigitLookupW[Value]
-    else
-      P^ := Value or ord('0');
-end;
-
-function IntToRaw(const Value: SmallInt): RawByteString;
-begin
-  if Value < 0 then
-    Result := IntToRaw(Word(Abs(Value)), True)
-  else
-    Result := IntToRaw(Word(Value));
-end;
-
-function IntToRaw(Value: Word; const Negative: Boolean = False): RawByteString;
-//fast pure pascal by John O'Harrow see:
-//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
-//function IntToStr_JOH_PAS_5(Value: Integer): string;
-type
-  PByteArray = ^TByteArray;
-  TByteArray = array[0..32767] of Byte;
-var
-  J, K           : Word;
-  Digits         : Integer;
-  P              : PByte;
-  NewLen{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING},{%H-}OldLen{$ENDIF}: Integer;
-begin
-  if Value >= 10000 then
-    Digits := 5
-  else
-    if Value >= 100 then
-      Digits := 3 + Ord(Value >= 1000)
-    else
-      Digits := 1 + Ord(Value >= 10);
-  NewLen  := Digits + Ord(Negative);
-  {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
-  if Result = '' then
-    SetLength(Result, NewLen)
-  else
-  begin
-    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { ref count }
-      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length }
-    else
-      OldLen := 0;
-    if NewLen <> OldLen then
-    begin
-      Result := '';
-      SetLength(Result, NewLen);
-    end;
-  end;
-  {$ELSE WITH_TBYTES_AS_RAWBYTESTRING}
-  SetLength(Result, NewLen+1);
-  (PByte(Result)+NewLen)^ := 0;
-  {$ENDIF WITH_TBYTES_AS_RAWBYTESTRING}
-  P := Pointer(Result);
-  P^ := Byte('-');
-  Inc(P, Ord(Negative));
-  if Digits > 2 then
-    repeat
-      J  := Value div 100;           {Dividend div 100}
-      K  := J * 100;
-      K  := Value - K;               {Dividend mod 100}
-      Value  := J;                   {Next Dividend}
-      Dec(Digits, 2);
-      PWord(@PByteArray(P)[Digits])^ := TwoDigitLookupW[K];
-    until Digits <= 2;
-  if Digits = 2 then
-    PWord(@PByteArray(P)[Digits-2])^ := TwoDigitLookupW[Value]
-  else
-    P^ := Value or ord('0');
-end;
-
-
-function IntToRaw(Value: Cardinal; Const Negative: Boolean = False): RawByteString;
-//fast pure pascal by John O'Harrow see:
-//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
-//function IntToStr_JOH_PAS_5(Value: Integer): string;
-type
-  PByteArray = ^TByteArray;
-  TByteArray = array[0..32767] of Byte;
-var
-  J, K           : Cardinal;
-  Digits         : Integer;
-  P              : PByte;
-  NewLen{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING},{%H-}OldLen{$ENDIF}: Integer;
-begin
-  if Value >= 10000 then
-    if Value >= 1000000 then
-      if Value >= 100000000 then
-        Digits := 9 + Ord(Value >= 1000000000)
-      else
-        Digits := 7 + Ord(Value >= 10000000)
-    else
-      Digits := 5 + Ord(Value >= 100000)
-  else
-    if Value >= 100 then
-      Digits := 3 + Ord(Value >= 1000)
-    else
-      Digits := 1 + Ord(Value >= 10);
-  NewLen  := Digits + Ord(Negative);
-  {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
-  if Result {%H-}= '' then
-    SetLength(Result, NewLen)
-  else
-  begin
-    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { ref count }
-      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length }
-    else
-      OldLen := 0;
-    if NewLen <> OldLen then
-    begin
-      Result := '';
-      SetLength(Result, NewLen);
-    end;
-  end;
-  {$ELSE WITH_TBYTES_AS_RAWBYTESTRING}
-  SetLength(Result, NewLen+1);
-  (PByte(Result)+NewLen)^ := 0;
-  {$ENDIF WITH_TBYTES_AS_RAWBYTESTRING}
-  P := Pointer(Result);
-  P^ := Byte('-');
-  Inc(P, Ord(Negative));
-  if Digits > 2 then
-    repeat
-      J  := Value div 100;           {Dividend div 100}
-      K  := J * 100;
-      K  := Value - K;               {Dividend mod 100}
-      Value  := J;                   {Next Dividend}
-      Dec(Digits, 2);
-      PWord(@PByteArray(P)[Digits])^ := TwoDigitLookupW[K];
-    until Digits <= 2;
-  if Digits = 2 then
-    PWord(@PByteArray(P)[Digits-2])^ := TwoDigitLookupW[Value]
-  else
-    P^ := Value or ord('0');
+  Digits := GetOrdinalDigits(Value);
+  ZSetString(nil, Digits, Result);
+  IntToRaw(Value, Pointer(Result), Digits);
 end;
 
 {$IF defined(Delphi) and defined(WIN32)}
@@ -3060,55 +2893,84 @@ asm
 end;
 {$ELSE}
 function IntToRaw(Value: Integer): RawByteString;
+var C: Cardinal;
+  Digits: Byte;
+  Negative: Boolean;
+  P: PAnsiChar;
 begin
-  if Value < 0 then
-    Result := IntToRaw(Cardinal(Abs(Value)), True)
-  else
-    Result := IntToRaw(Cardinal(Value));
+  Negative := Value < 0;
+  if Negative
+  then C := Cardinal(-Value)
+  else C := Cardinal(Value);
+  Digits := GetOrdinalDigits(C);
+  ZSetString(nil, Digits+Ord(Negative), Result);
+  P := Pointer(Result);
+  if Negative then
+    PByte(P)^ := Ord('-');
+  IntToRaw(C, P+Ord(Negative), Digits);
 end;
 
 function IntToRaw(Value: Int64): RawByteString;
+var U: UInt64;
+  Digits: Byte;
+  Negative: Boolean;
+  P: PAnsiChar;
 begin
-  if Value < 0 then
-    if Value <= Low(Integer) then
-      Result := IntToRaw(UInt64(Abs(Value)), True)
-    else
-      Result := IntToRaw(Cardinal(Abs(Value)), True)
-  else
-    if Value > High(Cardinal) then
-      Result := IntToRaw(UInt64(Value))
-    else
-      Result := IntToRaw(Cardinal(Value));
+  Negative := Value < 0;
+  if Negative
+  then U := UInt64(-Value)
+  else U := UInt64(Value);
+  Digits := GetOrdinalDigits(U);
+  ZSetString(nil, Digits+Ord(Negative), Result);
+  P := Pointer(Result);
+  if Negative then
+    PByte(P)^ := Ord('-');
+  IntToRaw(U, P+Ord(Negative), Digits);
 end;
 {$IFEND}
+
+function IntToRaw(Value: Byte): RawByteString;
+begin
+  Result := IntToRaw(Cardinal(Value));
+end;
+
+function IntToRaw(Value: ShortInt): RawByteString;
+begin
+  Result := IntToRaw(Integer(Value));
+end;
+
+function IntToRaw(Value: Word): RawByteString;
+begin
+  Result := IntToRaw(Cardinal(Value));
+end;
+
+function IntToRaw(Value: SmallInt): RawByteString;
+begin
+  Result := IntToRaw(Integer(Value));
+end;
 
 procedure IntToRaw(Value: Integer; Buf: PAnsiChar; PEnd: PPAnsiChar = nil);
 begin
   if Value < 0 then begin
-    PByte(Buf)^ := Byte('-');
-    IntToRaw(Cardinal(Abs(Value)), Buf+1, PEnd);
+    PByte(Buf)^ := Ord('-');
+    IntToRaw(Cardinal(-Value), Buf+1, PEnd);
   end else
     IntToRaw(Cardinal(Value), Buf, PEnd);
 end;
 
 procedure IntToRaw(Value: Cardinal; Buf: PAnsiChar; PEnd: PPAnsiChar = nil);
-var
-  J, K           : Cardinal;
-  Digits         : Integer;
+var Digits: Byte;
 begin
-  if Value >= 10000 then
-    if Value >= 1000000 then
-      if Value >= 100000000
-      then Digits := 9 + Ord(Value >= 1000000000)
-      else Digits := 7 + Ord(Value >= 10000000)
-    else Digits := 5 + Ord(Value >= 100000)
-  else if Value >= 100 then
-    Digits := 3 + Ord(Value >= 1000)
-  else
-    Digits := 1 + Ord(Value >= 10);
+  Digits := GetOrdinalDigits(Value);
+  IntToRaw(Value, Buf, Digits);
   if PEnd <> nil
   then PEnd^ := Buf + Digits
   else PByte(Buf + Digits)^ := Ord(#0);
+end;
+
+procedure IntToRaw(Value: Cardinal; Buf: PAnsiChar; Digits: Byte);
+var J, K: Cardinal;
+begin
   if Digits > 2 then
     repeat
       J  := Value div 100;           {Dividend div 100}
@@ -3116,7 +2978,7 @@ begin
       K  := Value - K;               {Dividend mod 100}
       Value  := J;                   {Next Dividend}
       Dec(Digits, 2);
-      PWord(@PByteArray(Buf)[Digits])^ := TwoDigitLookupW[K];
+      PWord(Buf+Digits)^ := TwoDigitLookupW[K];
     until Digits <= 2;
   if Digits = 2
   then PWord(Buf)^ := TwoDigitLookupW[Value]
@@ -3132,7 +2994,17 @@ begin
     IntToRaw(UInt64(Value), Buf, PEnd);
 end;
 
-procedure IntToRaw(Value: UInt64; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
+procedure IntToRaw(const Value: UInt64; Buf: PAnsiChar; PEnd: PPAnsiChar = nil);
+var Digits: Byte;
+begin
+  Digits := GetOrdinalDigits(Value);
+  IntToRaw(Value, Buf, Digits);
+  if PEnd <> nil
+  then PEnd^ := Buf + Digits
+  else PByte(Buf + Digits)^ := Ord(#0);
+end;
+
+procedure IntToRaw(Value: UInt64; Buf: PAnsiChar; Digits: Byte); overload;
 //fast pure pascal by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //function IntToStr64_JOH_PAS_5(Value: Int64): string;
@@ -3142,44 +3014,13 @@ type
 var
   J64, K64           : UInt64;
   I32, J32, K32, L32 : Cardinal;
-  Digits             : Byte;
+label cardinal_range;
 begin
   if (Int64Rec(Value).Hi = 0) then begin{Within Integer Range - Use Faster Integer Version}
-    IntToRaw(Int64Rec(Value).Lo, Buf, PEnd);
-    Exit;
+    i32 := Int64Rec(Value).Lo;
+    goto cardinal_range;
   end;
-  if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000){$ELSE}100000000000000{$ENDIF} then
-    if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000){$ELSE}10000000000000000{$ENDIF} then
-      if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF} then
-        {$IFDEF NEED_TYPED_UINT64_CONSTANTS}
-        if Value >= UInt64(10000000000000000000) then
-        {$ELSE !NEED_TYPED_UINT64_CONSTANTS}
-          {$IFDEF SUPPORTS_UINT64_CONSTS}
-          if Value >= 10000000000000000000 then
-          {$ELSE !SUPPORTS_UINT64_CONSTS}
-          if Value >= $8AC7230489E80000 then
-          {$ENDIF SUPPORTS_UINT64_CONSTS}
-        {$ENDIF NEED_TYPED_UINT64_CONSTANTS}
-          Digits := 20
-        else
-          Digits := 19
-      else
-        Digits := 17 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF})
-    else
-      Digits := 15 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000){$ELSE}1000000000000000{$ENDIF})
-  else
-    if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000){$ELSE}1000000000000{$ENDIF} then
-      Digits := 13 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000){$ELSE}10000000000000{$ENDIF})
-    else
-      if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000){$ELSE}10000000000{$ENDIF} then
-        Digits := 11 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000){$ELSE}100000000000{$ENDIF})
-      else
-        Digits := 10;
-  if PEnd <> nil
-  then PEnd^ := Buf + Digits
-  else PByte(Buf + Digits)^ := Ord(#0);
-  if Digits = 20 then
-  begin
+  if Digits = 20 then begin
     PByte(Buf)^ := Ord('1');
     Inc(Buf);
     {$IFDEF FPC} //fatal error?
@@ -3189,24 +3030,20 @@ begin
     {$ENDIF}
     Dec(Digits);
   end;
-  if Digits > 17 then
-  begin {18 or 19 Digits}
-    if Digits = 19 then
-    begin
+  if Digits > 17 then begin {18 or 19 Digits}
+    if Digits = 19 then begin
       PByte(Buf)^ := Ord('0');
-      while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF} do
-        begin
-          Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF});
-          Inc(Buf^);
-        end;
+      while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF} do begin
+        Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF});
+        Inc(Buf^);
+      end;
       Inc(Buf);
     end;
     PByte(Buf)^ := Ord('0');
-    while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF} do
-      begin
-        Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF});
-        Inc(Buf^);
-      end;
+    while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF} do begin
+      Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF});
+      Inc(Buf^);
+    end;
     Inc(Buf);
     Digits := 17;
   end;
@@ -3229,6 +3066,7 @@ begin
   I32 := (TwoDigitLookupW[K32] shl 16) + TwoDigitLookupW[J32];
   PCardinal(@PByteArray(Buf)[Digits])^ := I32;
   I32 := J64; {Dividend now Fits within Integer - Use Faster Version}
+cardinal_range:
   if Digits > 2 then
     repeat
       J32 := I32 div 100;
@@ -3244,45 +3082,54 @@ begin
     PByte(Buf)^ := I32 or ord('0');
 end;
 
+function IntToRaw(const Value: UInt64): RawByteString;
+var Digits: Byte;
+begin
+  Digits := GetOrdinalDigits(Value);
+  ZSetString(nil, Digits, Result);
+  IntToRaw(Value, Pointer(Result), Digits);
+end;
+
 procedure CurrToRaw(const Value: Currency; Buf: PAnsiChar; PEnd: PPAnsiChar = nil);
 var
   I64: UInt64;
   I64Rec: Int64Rec absolute I64;
-  label finalize;
+  Digits: Byte;
 begin
   if Value = 0 then begin
-    PLongWord(Buf)^ := ord('0')+ord('.')shl 8+ord('0')shl 16; //write 0.0 @once
-    Inc(Buf,3);
-    goto finalize;
-  end;
-  if Value<0 then begin
-    PByte(Buf)^ := Ord('-');
+    PByte(Buf)^ := ord('0');
     Inc(Buf);
-    I64 := -PInt64(@Value)^;
-  end else
-    I64 := PInt64(@Value)^;
-  if {$IFDEF CPU64}I64<10000{$ELSE}(I64Rec.Hi=0) and (I64Rec.Lo<10000){$ENDIF} then begin
-    PLongWord(Buf)^ := ord('0')+ord('.') shl 8+ord('0') shl 16+ord('0') shl 24; //fill 0.00 @once
-    if {$IFDEF CPU64}I64<10{$ELSE}(I64Rec.Hi=0) and (I64Rec.Lo<10){$ENDIF} then begin
-      PWord(Buf+4)^ := Ord('0')+(Ord('0')+I64Rec.Lo) shl 8; //finalize last 0x pair directyl
-      Inc(Buf, 6);
-    end else begin
-      IntToRaw(I64Rec.Lo, Buf+2+Ord(I64Rec.Lo<100)+Ord(I64Rec.Lo<1000), PEnd);
-      Exit;
-    end;
   end else begin
-    IntToRaw(i64, Buf, @Buf);
-    PCardinal(Buf-3)^ := PCardinal(Buf-4)^; //move trailing digits one pos forward;
-    PByte(Buf-4)^ := Ord('.');
+    if Value<0 then begin
+      PByte(Buf)^ := Ord('-');
+      Inc(Buf);
+      I64 := -PInt64(@Value)^;
+    end else
+      I64 := PInt64(@Value)^;
+    Digits := GetOrdinalDigits(I64);
+    if Digits < 5 then begin
+      PLongWord(Buf)^ := ord('0')+ord('.') shl 8+ord('0') shl 16+ord('0') shl 24; //fill 0.00 @once
+      if Digits = 1
+      then PWord(Buf+4)^ := Ord('0')+(Ord('0')+I64Rec.Lo) shl 8 //finalize last 0x pair directyl
+      else IntToRaw(I64Rec.Lo, Buf+2+Ord(Digits<3)+Ord(Digits<4), Digits);
+      Inc(Buf, 5);
+    end else begin
+      IntToRaw(i64, Buf, Digits);
+      Inc(Buf, Digits);
+      PCardinal(Buf-3)^ := PCardinal(Buf-4)^; //move trailing digits one pos forward;
+      PByte(Buf-4)^ := Ord('.');
+    end;
+    //dec by trailing zeroes
     if PByte(Buf)^ = Ord('0') then begin
       if PByte(Buf-1)^ = Ord('0') then
-        if PByte(Buf-2)^ = Ord('0')
-        then Dec(Buf, 2)
+        if PByte(Buf-2)^ = Ord('0') then
+          if PByte(Buf-3)^ = Ord('0')
+          then Dec(Buf, 4)
+          else Dec(Buf, 2)
         else Dec(Buf)
     end else
       Inc(Buf);
   end;
-finalize:
   if PEnd <> nil
   then PEnd^ := Buf
   else PByte(Buf)^ := Ord(#0);
@@ -3293,50 +3140,49 @@ var buf: array[0..31] of AnsiChar;
   P: PAnsiChar;
 begin
   CurrToRaw(Value, @buf[0], @P);
-  ZSetString(PAnsiChar(@Buf[0]), P-@Buf[0], Result);
+  ZSetString(PAnsiChar(@Buf[0]), P-PAnsiChar(@Buf[0]), Result);
 end;
 
 procedure CurrToUnicode(const Value: Currency; Buf: PWideChar; PEnd: ZPPWideChar = nil);
 var
   I64: UInt64;
   I64Rec: Int64Rec absolute I64;
-  label finalize;
+  Digits: Byte;
 begin
   if Value = 0 then begin
-    PLongWord(Buf)^ := ord('0')+ord('.') shl 16; //write "0." @once
-    PWord(Buf+2)^ := ord('0');
-    Inc(Buf,3);
-    goto finalize;
-  end;
-  if Value<0 then begin
-    PByte(Buf)^ := Ord('-');
+    PWord(Buf)^ := ord('0');
     Inc(Buf);
-    I64 := -PInt64(@Value)^;
-  end else
-    I64 := PInt64(@Value)^;
-  if {$IFDEF CPU64}I64<10000{$ELSE}(I64Rec.Hi=0) and (I64Rec.Lo<10000){$ENDIF} then begin
-    PLongWord(Buf)^   := ord('0') + ord('.') shl 16; //write "0." @once
-    PLongWord(Buf+2)^ := ord('0') + ord('0') shl 16; //fill "00" @once
-    if {$IFDEF CPU64}I64<10{$ELSE}(I64Rec.Hi=0) and (I64Rec.Lo<10){$ENDIF} then begin
-      PWord(Buf+4)^ := Ord('0')+(Ord('0')+I64Rec.Lo) shl 16; //finalize last 0x pair directly
-      Inc(Buf, 6);
-    end else begin
-      IntToUnicode(I64Rec.Lo, Buf+2+Ord(I64Rec.Lo<100)+Ord(I64Rec.Lo<1000), PEnd);
-      Exit;
-    end;
   end else begin
-    IntToUnicode(i64, Buf, @Buf);
-    PUInt64(Buf-3)^ := PUInt64(Buf-4)^; //move trailing digits one pos forward;
-    PByte(Buf-4)^ := Ord('.');
-    if PByte(Buf)^ = Ord('0') then begin
-      if PByte(Buf-1)^ = Ord('0') then
-        if PByte(Buf-2)^ = Ord('0')
-        then Dec(Buf, 2)
+    if Value<0 then begin
+      PWord(Buf)^ := Ord('-');
+      Inc(Buf);
+      I64 := -PInt64(@Value)^;
+    end else
+      I64 := PInt64(@Value)^;
+    Digits := GetOrdinalDigits(I64);
+    if Digits < 5 then begin
+      PLongWord(Buf)^   := ord('0') + ord('.') shl 16; //write "0." @once
+      PLongWord(Buf+2)^ := ord('0') + ord('0') shl 16; //fill "00" @once
+      if Digits = 1
+      then PLongWord(Buf+4)^ := Ord('0')+(Ord('0')+I64Rec.Lo) shl 16 //finalize last 0x pair directly
+      else IntToUnicode(I64Rec.Lo, Buf+2+Ord(Digits<3)+Ord(Digits<4), Digits);
+      Inc(Buf, 5);
+    end else begin
+      IntToUnicode(i64, Buf, Digits);
+      Inc(Buf, Digits);
+      PUInt64(Buf-3)^ := PUInt64(Buf-4)^; //move trailing digits one pos forward;
+      PWord(Buf-4)^ := Ord('.');
+    end;
+    if PWord(Buf)^ = Ord('0') then begin
+      if PWord(Buf-1)^ = Ord('0') then
+        if PWord(Buf-2)^ = Ord('0') then
+          if PWord(Buf-3)^ = Ord('0')
+          then Dec(Buf, 4)
+          else Dec(Buf, 2)
         else Dec(Buf)
     end else
       Inc(Buf);
   end;
-finalize:
   if PEnd <> nil
   then PEnd^ := Buf
   else PWord(Buf)^ := Ord(#0);
@@ -3347,172 +3193,34 @@ var buf: array[0..31] of WideChar;
   P: PWideChar;
 begin
   CurrToUnicode(Value, @buf[0], @P);
-  System.SetString(Result, PWideChar(@Buf[0]), P-@Buf[0]);
-end;
-
-function IntToRaw(Value: UInt64; Const Negative: Boolean = False): RawByteString;
-//fast pure pascal by John O'Harrow see:
-//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
-//function IntToStr64_JOH_PAS_5(Value: Int64): string;
-type
-  PByteArray = ^TByteArray;
-  TByteArray = array[0..32767] of Byte;
-var
-  J64, K64           : UInt64;
-  I32, J32, K32, L32 : Cardinal;
-  Digits             : Byte;
-  P                  : PByte;
-  NewLen{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING},{%H-}OldLen{$ENDIF}: Integer;
-begin
-  if (Negative and (Value <= High(Integer))) or
-     (not Negative and (Value <= High(Cardinal))) then
-  begin {Within Integer Range - Use Faster Integer Version}
-    Result := IntToRaw(Cardinal(Value), Negative);
-    Exit;
-  end;
-  if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000){$ELSE}100000000000000{$ENDIF} then
-    if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000){$ELSE}10000000000000000{$ENDIF} then
-      if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF} then
-        {$IFDEF NEED_TYPED_UINT64_CONSTANTS}
-        if Value >= UInt64(10000000000000000000) then
-        {$ELSE !NEED_TYPED_UINT64_CONSTANTS}
-          {$IFDEF SUPPORTS_UINT64_CONSTS}
-          if Value >= 10000000000000000000 then
-          {$ELSE !SUPPORTS_UINT64_CONSTS}
-          if Value >= $8AC7230489E80000 then
-          {$ENDIF SUPPORTS_UINT64_CONSTS}
-        {$ENDIF NEED_TYPED_UINT64_CONSTANTS}
-          Digits := 20
-        else
-          Digits := 19
-      else
-        Digits := 17 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF})
-    else
-      Digits := 15 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000){$ELSE}1000000000000000{$ENDIF})
-  else
-    if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000){$ELSE}1000000000000{$ENDIF} then
-      Digits := 13 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000){$ELSE}10000000000000{$ENDIF})
-    else
-      if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000){$ELSE}10000000000{$ENDIF} then
-        Digits := 11 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000){$ELSE}100000000000{$ENDIF})
-      else
-        Digits := 10;
-  NewLen  := Digits + Ord(Negative);
-  {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
-  if Result = '' then
-    SetLength(Result, NewLen)
-  else
-  begin
-    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { ref count }
-      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length }
-    else
-      OldLen := 0;
-    if NewLen <> OldLen then
-    begin
-      Result := '';
-      SetLength(Result, NewLen);
-    end;
-  end;
-  {$ELSE WITH_TBYTES_AS_RAWBYTESTRING}
-  SetLength(Result, NewLen+1);
-  (PByte(Result)+NewLen)^ := 0;
-  {$ENDIF WITH_TBYTES_AS_RAWBYTESTRING}
-  P := Pointer(Result);
-  P^ := Byte('-');
-  Inc(P, Ord(Negative));
-  if Digits = 20 then
-  begin
-    P^ := Ord('1');
-    Inc(P);
-    {$IFDEF FPC} //fatal error?
-    Value := Value - {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000000){$ELSE}10000000000000000000{$ENDIF};
-    {$ELSE}
-    Dec(Value, {$IFDEF SUPPORTS_UINT64_CONSTS}10000000000000000000{$ELSE}$8AC7230489E80000{$ENDIF});
-    {$ENDIF}
-    Dec(Digits);
-  end;
-  if Digits > 17 then
-  begin {18 or 19 Digits}
-    if Digits = 19 then
-    begin
-      P^ := Ord('0');
-      while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF} do
-        begin
-          Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF});
-          Inc(P^);
-        end;
-      Inc(P);
-    end;
-    P^ := Ord('0');
-    while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF} do
-      begin
-        Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF});
-        Inc(P^);
-      end;
-    Inc(P);
-    Digits := 17;
-  end;
-  J64 := Value div {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000){$ELSE}100000000{$ENDIF}; {Very Slow prior to Delphi 2005}
-  K64 := Value - (J64 * {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000){$ELSE}100000000{$ENDIF}); {Remainder = 0..99999999}
-  I32 := K64;
-  J32 := I32 div 100;
-  K32 := J32 * 100;
-  K32 := I32 - K32;
-  I32 := J32 div 100;
-  L32 := I32 * 100;
-  L32 := J32 - L32;
-  Dec(Digits, 4);
-  J32 := (TwoDigitLookupW[K32] shl 16) + TwoDigitLookupW[L32];
-  PCardinal(@PByteArray(P)[Digits])^ := J32;
-  J32 := I32 div 100;
-  K32 := J32 * 100;
-  K32 := I32 - K32;
-  Dec(Digits, 4);
-  I32 := (TwoDigitLookupW[K32] shl 16) + TwoDigitLookupW[J32];
-  PCardinal(@PByteArray(P)[Digits])^ := I32;
-  I32 := J64; {Dividend now Fits within Integer - Use Faster Version}
-  if Digits > 2 then
-    repeat
-      J32 := I32 div 100;
-      K32 := J32 * 100;
-      K32 := I32 - K32;
-      I32 := J32;
-      Dec(Digits, 2);
-      PWord(@PByteArray(P)[Digits])^ := TwoDigitLookupW[K32];
-    until Digits <= 2;
-  if Digits = 2 then
-    PWord(@PByteArray(P)[Digits-2])^ := TwoDigitLookupW[I32]
-  else
-    P^ := I32 or ord('0');
+  System.SetString(Result, PWideChar(@Buf[0]), P-PWideChar(@Buf[0]));
 end;
 
 procedure IntToUnicode(Value: Integer; Buf: PWideChar; PEnd: ZPPWideChar = nil);
 begin
   if Value < 0 then begin
-    PByte(Buf)^ := Byte('-');
-    IntToUnicode(Cardinal(Abs(Value)), Buf+1, PEnd);
+    PWord(Buf)^ := Ord('-');
+    IntToUnicode(Cardinal(-Value), Buf+1, PEnd);
   end else
     IntToUnicode(Cardinal(Value), Buf, PEnd);
 end;
 
 procedure IntToUnicode(Value: Cardinal; Buf: PWideChar; PEnd: ZPPWideChar = nil);
-var
-  J, K           : Cardinal;
-  Digits         : Integer;
+var Digits: Byte;
 begin
-  if Value >= 10000 then
-    if Value >= 1000000 then
-      if Value >= 100000000
-      then Digits := 9 + Ord(Value >= 1000000000)
-      else Digits := 7 + Ord(Value >= 10000000)
-    else Digits := 5 + Ord(Value >= 100000)
-  else if Value >= 100 then
-    Digits := 3 + Ord(Value >= 1000)
-  else
-    Digits := 1 + Ord(Value >= 10);
+  Digits := GetOrdinalDigits(Value);
+  IntToUnicode(Value, Buf, Digits);
   if PEnd <> nil
   then PEnd^ := Buf + Digits
   else PWord(Buf + Digits)^ := Ord(#0);
+end;
+
+//fast pure pascal by John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//function IntToStr64_JOH_PAS_5(Value: Int64): string;
+procedure IntToUnicode(Value: Cardinal; Buf: PWideChar; Digits: Byte);
+var J, K: Cardinal;
+begin
   if Digits > 2 then
     repeat
       J  := Value div 100;           {Dividend div 100}
@@ -3530,55 +3238,37 @@ end;
 procedure IntToUnicode(const Value: Int64; Buf: PWideChar; PEnd: ZPPWideChar = nil);
 begin
   if Value < 0 then begin
-    PByte(Buf)^ := Byte('-');
+    PWord(Buf)^ := Ord('-');
     IntToUnicode(UInt64(-Value), Buf+1, PEnd);
   end else
     IntToUnicode(UInt64(Value), Buf, PEnd);
 end;
 
-procedure IntToUnicode(Value: UInt64; Buf: PWideChar; PEnd: ZPPWideChar = nil);
+procedure IntToUnicode(const Value: UInt64; Buf: PWideChar; PEnd: ZPPWideChar = nil);
+var Digits: Byte;
+begin
+  Digits := GetOrdinalDigits(Value);
+  IntToUnicode(Value, Buf, Digits);
+  if PEnd <> nil
+  then PEnd^ := Buf + Digits
+  else PWord(Buf + Digits)^ := Ord(#0);
+end;
+
+procedure IntToUnicode(Value: UInt64; Buf: PWideChar; Digits: Byte);
 //fast pure pascal by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //function IntToStr64_JOH_PAS_5(Value: Int64): string;
 var
   J64, K64           : UInt64;
   I32, J32, K32, L32 : Cardinal;
-  Digits             : Byte;
+  label cardinal_range;
 begin
   if (Int64Rec(Value).Hi = 0) then begin{Within Integer Range - Use Faster Integer Version}
-    IntToUnicode(Int64Rec(Value).Lo, Buf, PEnd);
-    Exit;
+    I32 := Int64Rec(Value).Lo;
+    goto cardinal_range;
   end;
-  if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000){$ELSE}100000000000000{$ENDIF} then
-    if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000){$ELSE}10000000000000000{$ENDIF} then
-      if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF} then
-        {$IFDEF NEED_TYPED_UINT64_CONSTANTS}
-        if Value >= UInt64(10000000000000000000) then
-        {$ELSE !NEED_TYPED_UINT64_CONSTANTS}
-          {$IFDEF SUPPORTS_UINT64_CONSTS}
-          if Value >= 10000000000000000000 then
-          {$ELSE !SUPPORTS_UINT64_CONSTS}
-          if Value >= $8AC7230489E80000 then
-          {$ENDIF SUPPORTS_UINT64_CONSTS}
-        {$ENDIF NEED_TYPED_UINT64_CONSTANTS}
-          Digits := 20
-        else
-          Digits := 19
-      else
-        Digits := 17 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF})
-    else
-      Digits := 15 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000){$ELSE}1000000000000000{$ENDIF})
-  else if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000){$ELSE}1000000000000{$ENDIF} then
-    Digits := 13 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000){$ELSE}10000000000000{$ENDIF})
-  else if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000){$ELSE}10000000000{$ENDIF}
-    then Digits := 11 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000){$ELSE}100000000000{$ENDIF})
-    else Digits := 10;
-  if PEnd <> nil
-  then PEnd^ := Buf + Digits
-  else PWord(Buf + Digits)^ := Ord(#0);
-  if Digits = 20 then
-  begin
-    Word(Buf^) := Word('1');
+  if Digits = 20 then begin
+    PWord(Buf)^ := Word('1');
     Inc(Buf);
     {$IFDEF FPC} //(???? Dec seems not supporting integers with range > MaxInt64 -> Fatal: Internal error 200706094
     Value := Value - {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000000){$ELSE}10000000000000000000{$ENDIF};
@@ -3587,24 +3277,20 @@ begin
     {$ENDIF}
     Dec(Digits);
   end;
-  if Digits > 17 then
-  begin {18 or 19 Digits}
-    if Digits = 19 then
-    begin
-      Word(Buf^) := Word('0');
-      while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF} do
-        begin
-          Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF});
-          Inc(Word(Buf^));
-        end;
+  if Digits > 17 then begin {18 or 19 Digits}
+    if Digits = 19 then begin
+      PWord(Buf)^ := Word('0');
+      while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF} do begin
+        Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF});
+        Inc(PWord(Buf)^);
+      end;
       Inc(Buf);
     end;
-    Word(Buf^) := Word('0');
-    while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF} do
-      begin
-        Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF});
-        Inc(Word(Buf^));
-      end;
+    PWord(Buf)^ := Word('0');
+    while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF} do begin
+      Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF});
+      Inc(PWord(Buf)^);
+    end;
     Inc(Buf);
     Digits := 17;
   end;
@@ -3626,344 +3312,92 @@ begin
   PLongWord(Buf + Digits - 8)^ := TwoDigitLookupLW[J32];
   Dec(Digits, 8);
   I32 := J64; {Dividend now Fits within Integer - Use Faster Version}
+cardinal_range:
   if Digits > 2 then
     repeat
       J32 := I32 div 100;
       K32 := J32 * 100;
-      K32 := I32 - K32;
-      I32 := J32;
+      K32 := I32 - K32;  {Dividend mod 100}
+      I32 := J32;        {next Dividend}
       Dec(Digits, 2);
       PLongWord(Buf + Digits)^ := TwoDigitLookupLW[K32];
     until Digits <= 2;
   if Digits = 2
   then PLongWord(Buf)^ := TwoDigitLookupLW[I32]
-  else Word(Buf^) := Word(I32 or ord('0'));
+  else PWord(Buf)^ := Word(I32 or ord('0'));
 end;
 
-function IntToUnicode(Value: Byte; Const Negative: Boolean): ZWideString;
-//fast pure pascal by John O'Harrow see:
-//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
-//function IntToStr_JOH_PAS_5(Value: Integer): string;
+function IntToUnicode(Value: Byte): ZWideString;
+begin
+  Result := IntToUnicode(Cardinal(Value));
+end;
+
+function IntToUnicode(Value: ShortInt): ZWideString;
+begin
+  Result := IntToUnicode(Integer(Value));
+end;
+
+function IntToUnicode(Value: Word): ZWideString;
+begin
+  Result := IntToUnicode(Cardinal(Value));
+end;
+
+function IntToUnicode(Value: SmallInt): ZWideString;
+begin
+  Result := IntToUnicode(Integer(Value));
+end;
+
+function IntToUnicode(Value: Cardinal): ZWideString;
 var
-  Digits         : Integer;
-  P              : PWideChar;
-  NewLen, {%H-}OldLen : Integer;
+  Digits: Byte;
 begin
-  if Value >= 100 then
-    Digits := 3
-  else
-    if Value >= 10 then
-      Digits := 2
-    else
-      Digits := 1;
-  NewLen  := Digits + Ord(Negative);
-  if Result {%H-}= '' then
-    SetLength(Result, NewLen)
-  else
-  begin
-    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { ref count }
-      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length }
-    else
-      OldLen := 0;
-    if NewLen <> OldLen then
-    begin
-      Result := '';
-      SetLength(Result, NewLen);
-    end;
-  end;
+  Digits := GetOrdinalDigits(Value);
+  System.SetString(Result, nil, Digits);
+  IntToUnicode(Value, Pointer(Result), Digits);
+end;
+
+function IntToUnicode(Value: Integer): ZWideString;
+var C: Cardinal;
+  Digits: Byte;
+  Negative: Boolean;
+  P: PWideChar;
+begin
+  Negative := Value < 0;
+  if Negative
+  then C := Cardinal(-Value)
+  else C := Cardinal(Value);
+  Digits := GetOrdinalDigits(C);
+  System.SetString(Result, nil, Digits+Ord(Negative));
   P := Pointer(Result);
-  P^ := WideChar('-');
-  Inc(P, Ord(Negative));
-  if Digits = 3 then
-  begin
-    PLongWord(P+1)^ := TwoDigitLookupLW[Value mod 100];
-    PWord(P)^ := Word('0') + (Value div 100);
-  end
-  else
-    if Digits = 2 then
-      PLongWord(P)^ := TwoDigitLookupLW[Value]
-    else
-      PWord(P)^ := Value or Word('0');
-end;
-
-function IntToUnicode(const Value: ShortInt): ZWideString;
-begin
-  if Value < 0 then
-    Result := IntToUnicode(Byte(Abs(Value)), True)
-  else
-    Result := IntToUnicode(Byte(Value));
-end;
-
-function IntToUnicode(Value: Word; Const Negative: Boolean = False): ZWideString; overload;
-//fast pure pascal by John O'Harrow see:
-//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
-//function IntToStr_JOH_PAS_5(Value: Integer): string;
-var
-  J, K           : Word;
-  Digits         : Integer;
-  P              : PWideChar;
-  NewLen, {%H-}OldLen : Integer;
-begin
-  if Value >= 10000 then
-    Digits := 5
-  else
-    if Value >= 100 then
-      Digits := 3 + Ord(Value >= 1000)
-    else
-      Digits := 1 + Ord(Value >= 10);
-  NewLen  := Digits + Ord(Negative);
-  if Result {%H-}= '' then
-    SetLength(Result, NewLen)
-  else
-  begin
-    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { ref count }
-      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length }
-    else
-      OldLen := 0;
-    if NewLen <> OldLen then
-    begin
-      Result := '';
-      SetLength(Result, NewLen);
-    end;
-  end;
-  P := Pointer(Result);
-  P^ := WideChar('-');
-  Inc(P, Ord(Negative));
-  if Digits > 2 then
-    repeat
-      J  := Value div 100;           {Dividend div 100}
-      K  := J * 100;
-      K  := Value - K;               {Dividend mod 100}
-      Value  := J;                   {Next Dividend}
-      Dec(Digits, 2);
-      PLongWord(@PWordArray(P)[Digits])^ := TwoDigitLookupLW[K];
-    until Digits <= 2;
-  if Digits = 2 then
-    PLongWord(P)^ := TwoDigitLookupLW[Value]
-  else
-    PWord(P)^ := Value or Word('0');
-end;
-
-function IntToUnicode(const Value: SmallInt): ZWideString;
-begin
-  if Value < 0 then
-    Result := IntToUnicode(Word(Abs(Value)), True)
-  else
-    Result := IntToUnicode(Word(Value));
-end;
-
-
-function IntToUnicode(Value: Cardinal; Const Negative: Boolean): ZWideString;
-//fast pure pascal by John O'Harrow see:
-//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
-//function IntToStr_JOH_PAS_5(Value: Integer): string;
-var
-  J, K           : Cardinal;
-  Digits         : Integer;
-  P              : PByte;
-  NewLen, {%H-}OldLen : Integer;
-begin
-  if Value >= 10000 then
-    if Value >= 1000000 then
-      if Value >= 100000000 then
-        Digits := 9 + Ord(Value >= 1000000000)
-      else
-        Digits := 7 + Ord(Value >= 10000000)
-    else
-      Digits := 5 + Ord(Value >= 100000)
-  else
-    if Value >= 100 then
-      Digits := 3 + Ord(Value >= 1000)
-    else
-      Digits := 1 + Ord(Value >= 10);
-  NewLen  := Digits + Ord(Negative);
-  if Result {%H-}= '' then
-    SetLength(Result, NewLen)
-  else
-  begin
-    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { ref count }
-      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length }
-    else
-      OldLen := 0;
-    if NewLen <> OldLen then
-    begin
-      Result := '';
-      SetLength(Result, NewLen);
-    end;
-  end;
-  P := Pointer(Result);
-  PWord(P)^ := Word('-');
-  Inc(P, Ord(Negative)*2);
-  if Digits > 2 then
-    repeat
-      J  := Value div 100;           {Dividend div 100}
-      K  := J * 100;
-      K  := Value - K;               {Dividend mod 100}
-      Value  := J;                   {Next Dividend}
-      Dec(Digits, 2);
-      PLongWord(@PWordArray(P)[Digits])^ := TwoDigitLookupLW[K];
-    until Digits <= 2;
-  if Digits = 2 then
-    PLongWord(P)^ := TwoDigitLookupLW[Value]
-  else
-    PWord(P)^ := Value or Word('0');
-end;
-
-function IntToUnicode(const Value: Integer): ZWideString;
-begin
-  if Value < 0 then
-    Result := IntToUnicode(Cardinal(Abs(Value)), True)
-  else
-    Result := IntToUnicode(Cardinal(Value));
+  if Negative then
+    PWord(P)^ := Ord('-');
+  IntToUnicode(C, P+Ord(Negative), Digits);
 end;
 
 function IntToUnicode(const Value: Int64): ZWideString;
-{$IF defined(Delphi) and defined(WIN32)} //since XE2 the fastcode pure pascal is used too
-var i, l: integer;
-  tmp: RawByteString;
-{$IFEND}
+var U: UInt64;
+  Digits: Byte;
+  Negative: Boolean;
+  P: PWideChar;
 begin
-  {$IF defined(Delphi) and defined(WIN32)} //since XE2 the fastcode pure pascal is used too
-  Tmp := IntToRaw(Value); //the BASM fastcode is 10x faster than pascal version
-  L := system.Length(tmp); //temp l speeds x2
-  if (Result = '' ) or (not ((PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1) and { ref count }
-       (L = PLengthInt(NativeInt(Result) - StringLenOffSet)^))) then { length }
-    System.SetString(Result,nil, l); //sade we need two mem-allocation until i find the time to patch the raw version to Unicode but it's almost twice faster than RTL
-  for i := 0 to l-1 do
-    PWordArray(Result)[i] := PByteArray(tmp)[i]; //0..255 equals to widechars
-  {$ELSE}
-  if Value < 0 then
-    Result := IntToUnicode(UInt64(Abs(Value)), True)
-  else
-    Result := IntToUnicode(UInt64(Value));
-  {$IFEND}
+  Negative := Value < 0;
+  if Negative
+  then U := UInt64(-Value)
+  else U := UInt64(Value);
+  Digits := GetOrdinalDigits(U);
+  System.SetString(Result, nil, Digits+Ord(Negative));
+  P := Pointer(Result);
+  if Negative then
+    PWord(P)^ := Ord('-');
+  IntToUnicode(U, P+Ord(Negative), Digits);
 end;
 
-function IntToUnicode(Value: UInt64; const Negative: Boolean = False): ZWideString;
-//fast pure pascal by John O'Harrow see:
-//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
-//function IntToStr64_JOH_PAS_5(Value: Int64): string;
-var
-  J64, K64           : UInt64;
-  I32, J32, K32, L32 : Cardinal;
-  Digits             : Byte;
-  P                  : PWideChar;
-  NewLen, {%H-}OldLen     : Integer;
+function IntToUnicode(const Value: UInt64): ZWideString;
+var Digits: Byte;
 begin
-  if (Negative and (Value <= High(Integer))) or
-     (not Negative and (Value <= High(Cardinal))) then
-  begin {Within Integer Range - Use Faster Integer Version}
-    Result := IntToUnicode(Cardinal(Value), Negative);
-    Exit;
-  end;
-  if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000){$ELSE}100000000000000{$ENDIF} then
-    if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000){$ELSE}10000000000000000{$ENDIF} then
-      if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF} then
-        {$IFDEF NEED_TYPED_UINT64_CONSTANTS}
-        if Value >= UInt64(10000000000000000000) then
-        {$ELSE !NEED_TYPED_UINT64_CONSTANTS}
-          {$IFDEF SUPPORTS_UINT64_CONSTS}
-          if Value >= 10000000000000000000 then
-          {$ELSE !SUPPORTS_UINT64_CONSTS}
-          if Value >= $8AC7230489E80000 then
-          {$ENDIF SUPPORTS_UINT64_CONSTS}
-        {$ENDIF NEED_TYPED_UINT64_CONSTANTS}
-          Digits := 20
-        else
-          Digits := 19
-      else
-        Digits := 17 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF})
-    else
-      Digits := 15 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000){$ELSE}1000000000000000{$ENDIF})
-  else
-    if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000){$ELSE}1000000000000{$ENDIF} then
-      Digits := 13 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000){$ELSE}10000000000000{$ENDIF})
-    else
-      if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000){$ELSE}10000000000{$ENDIF} then
-        Digits := 11 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000){$ELSE}100000000000{$ENDIF})
-      else
-        Digits := 10;
-  NewLen  := Digits + Ord(Negative);
-  if Result = '' then
-    SetLength(Result, NewLen)
-  else
-  begin
-    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { unique string ? }
-      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length as expected ? }
-    else
-      OldLen := 0;
-    if NewLen <> OldLen then
-    begin
-      Result := '';
-      SetLength(Result, NewLen);
-    end;
-  end;
-  P := Pointer(Result);
-  P^ := '-';
-  Inc(P, Ord(Negative));
-  if Digits = 20 then
-  begin
-    Word(P^) := Word('1');
-    Inc(P);
-    {$IFDEF FPC} //(???? Dec seems not supporting integers with range > MaxInt64 -> Fatal: Internal error 200706094
-    Value := Value - {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000000){$ELSE}10000000000000000000{$ENDIF};
-    {$ELSE}
-    Dec(Value, {$IFDEF SUPPORTS_UINT64_CONSTS}10000000000000000000{$ELSE}$8AC7230489E80000{$ENDIF});
-    {$ENDIF}
-    Dec(Digits);
-  end;
-  if Digits > 17 then
-  begin {18 or 19 Digits}
-    if Digits = 19 then
-    begin
-      Word(P^) := Word('0');
-      while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF} do
-        begin
-          Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF});
-          Inc(Word(P^));
-        end;
-      Inc(P);
-    end;
-    Word(P^) := Word('0');
-    while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF} do
-      begin
-        Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF});
-        Inc(Word(P^));
-      end;
-    Inc(P);
-    Digits := 17;
-  end;
-  J64 := Value div {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000){$ELSE}100000000{$ENDIF}; {Very Slow prior to Delphi 2005}
-  K64 := Value - (J64 * {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000){$ELSE}100000000{$ENDIF}); {Remainder = 0..99999999}
-  I32 := K64;
-  J32 := I32 div 100;
-  K32 := J32 * 100;
-  K32 := I32 - K32;
-  PLongWord(P + Digits - 2)^ := TwoDigitLookupLW[K32];
-  I32 := J32 div 100;
-  L32 := I32 * 100;
-  L32 := J32 - L32;
-  PLongWord(P + Digits - 4)^ := TwoDigitLookupLW[L32];
-  J32 := I32 div 100;
-  K32 := J32 * 100;
-  K32 := I32 - K32;
-  PLongWord(P + Digits - 6)^ := TwoDigitLookupLW[K32];
-  PLongWord(P + Digits - 8)^ := TwoDigitLookupLW[J32];
-  Dec(Digits, 8);
-  I32 := J64; {Dividend now Fits within Integer - Use Faster Version}
-  if Digits > 2 then
-    repeat
-      J32 := I32 div 100;
-      K32 := J32 * 100;
-      K32 := I32 - K32;
-      I32 := J32;
-      Dec(Digits, 2);
-      PLongWord(P + Digits)^ := TwoDigitLookupLW[K32];
-    until Digits <= 2;
-  if Digits = 2 then
-    PLongWord(P)^ := TwoDigitLookupLW[I32]
-  else
-    Word(P^) := Word(I32 or ord('0'));
+  Digits := GetOrdinalDigits(Value);
+  System.SetString(Result, nil, Digits);
+  IntToUnicode(Value, Pointer(Result), Digits);
 end;
 
 {$IF defined (WIN32) and not defined(FPC)}
@@ -4286,7 +3720,7 @@ asm
   inc   edx
   jmp   @@HexLoop
 {$ELSE}
-  //function StrToInt32_JOH_PAS_7_c(const s: string): Longint;
+  //function StrToInt32_JOH_PAS_7_c(const s: string): Integer;
   //originally written by John O'Harrow
   //http://fastcode.sourceforge.net/
   //EgonHugeist:
@@ -4364,7 +3798,7 @@ asm
           end;
         if Result < 0 then {Possible Overflow}
           if (Cardinal(Result) <> $80000000) or (not neg) then
-            begin {Min(LongInt) = $80000000 is a Valid Result}
+            begin {Min(Integer) = $80000000 is a Valid Result}
               Dec(P);
               Valid := False;
             end;
@@ -4379,7 +3813,7 @@ end;
 
 {$WARNINGS OFF}
 function UnicodeToInt(const Value: ZWideString): Integer;
-//function StrToInt32_JOH_PAS_7_c(const s: string): Longint;
+//function StrToInt32_JOH_PAS_7_c(const s: string): Integer;
 //originally wrtten by John O'Harrow
 //http://fastcode.sourceforge.net/
 const
@@ -4452,7 +3886,7 @@ begin
         end;
       if Result < 0 then {Possible Overflow}
         if (Cardinal(Result) <> $80000000) or (not neg) then
-          begin {Min(LongInt) = $80000000 is a Valid Result}
+          begin {Min(Integer) = $80000000 is a Valid Result}
             Dec(P);
             Valid := False;
           end;
@@ -4465,7 +3899,7 @@ end;
 {$WARNINGS ON}
 
 {$IF defined(WIN32) and not defined(FPC)}
-function ValLong_JOH_IA32_8_a(const s: PAnsiChar; out code: Integer): Longint;
+function ValLong_JOH_IA32_8_a(const s: PAnsiChar; out code: Integer): Integer;
 //fast asm by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //EgonHugeist: Changed in S type from String to PAnsiChar
@@ -4590,7 +4024,7 @@ asm
 end;
 {$ELSE}
 {$WARNINGS OFF} {Prevent False Compiler Warning on Digit not being Initialized}
-function ValLong_JOH_PAS_4_b(const S: PAnsiChar; out code: Integer): Longint;
+function ValLong_JOH_PAS_4_b(const S: PAnsiChar; out code: Integer): Integer;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //EH: changed to NEXGEN save PByte support
@@ -4654,7 +4088,7 @@ begin
     end;
     if Result < 0 then {Possible Overflow}
       if (Cardinal(Result) <> $80000000) or ((Flags and 2) = 0) then
-        begin {Min(LongInt) = $80000000 is a Valid Result}
+        begin {Min(Integer) = $80000000 is a Valid Result}
           Dec(P);
           Flags := Flags or 1; {Valid := True}
         end;
@@ -4698,7 +4132,7 @@ begin
 end;
 
 {$WARNINGS OFF} //value digits might not be initialized
-function ValLong_JOH_PAS_4_b_unicode(const S: PWideChar; out code: Integer): Longint;
+function ValLong_JOH_PAS_4_b_unicode(const S: PWideChar; out code: Integer): Integer;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //modified for unicode chars
@@ -4764,7 +4198,7 @@ begin
     end;
     if Result < 0 then {Possible Overflow}
       if (Cardinal(Result) <> $80000000) or ((Flags and 2) = 0) then
-        begin {Min(LongInt) = $80000000 is a Valid Result}
+        begin {Min(Integer) = $80000000 is a Valid Result}
           Dec(P);
           Flags := Flags or 1; {Valid := True}
         end;
@@ -4796,6 +4230,15 @@ begin
   if E > 0 then
     if not ((E > 0) and Assigned(S) and ((S+E-1)^=' ')) then
       Result := Default;
+end;
+
+function UnicodeToIntDef(Buf, PEnd: PWideChar; Default: Integer) : UInt64;
+var P: PWideChar;
+begin
+  P := PEnd;
+  Result := ValUnicodeInt(Buf, PEnd);
+  if P <> PEnd then
+    Result := Default;
 end;
 
 {$WARNINGS OFF} //value digits might not be initialized
@@ -5471,6 +4914,15 @@ begin
       Result := Default;
 end;
 
+function UnicodeToInt64Def(Buf, PEnd: PWideChar; Default: Integer) : Int64;
+var P: PWideChar;
+begin
+  P := PEnd;
+  Result := ValUnicodeInt64(Buf, PEnd);
+  if P <> PEnd then
+    Result := Default;
+end;
+
 function UnicodeToUInt64(const Value: ZWideString) : UInt64;
 var
   E: Integer;
@@ -6051,7 +5503,7 @@ const
 
 {$WARNINGS OFF} {Prevent False Compiler Warning on Digit not being Initialized}
 function ValRawInt(PStart: PAnsiChar; var PEnd: PAnsiChar): Integer; overload;
-//function ValLong_JOH_PAS_4_b(const S: PAnsiChar; out code: Integer): Longint;
+//function ValLong_JOH_PAS_4_b(const S: PAnsiChar; out code: Integer): Integer;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //EH: -changed to NEXGEN save PByte support
@@ -6112,7 +5564,7 @@ begin
       inc(PStart);
     end;
     if Result < 0 then {Possible Overflow}
-      if (Cardinal(Result) <> $80000000) or ((Flags and 2) = 0) then begin {Min(LongInt) = $80000000 is a Valid Result}
+      if (Cardinal(Result) <> $80000000) or ((Flags and 2) = 0) then begin {Min(Integer) = $80000000 is a Valid Result}
         Dec(PStart);
         Flags := Flags or 1; {Valid := True}
       end;
@@ -6290,6 +5742,172 @@ begin
       Flags := Flags or 1; {Valid := True}
       Inc(PStart);
     end;
+  end;
+  if ((Flags and 2) <> 0) then {Neg=True}
+    Result := -Result;
+  if not (((Flags and 1) <> 0) and (PStart = PEnd)) then
+    PEnd := PStart;
+end;
+
+{$WARNINGS OFF} {Prevent False Compiler Warning on Digit not being Initialized}
+function ValUnicodeInt(PStart: PWideChar; var PEnd: PWideChar): Integer; overload;
+//function ValLong_JOH_PAS_4_b(const S: PAnsiChar; out code: Integer): Integer;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//EH: -changed to NEXGEN save PByte support
+//    -changed Code to a p(raw)char pointer
+var
+  Digit: Integer;
+  Flags: Byte; {Bit 0 = Valid, Bit 1 = Negative, Bit 2 = Hex}
+begin
+  if (PStart = nil) or (PStart = PEnd)  then begin
+    Result := 0;
+    PEnd := PStart;
+    Exit;
+  end;
+  Flags := 0;
+  while Ord(PStart^) = Ord(' ') do
+    Inc(PStart);
+  if Ord(PStart^) in [Ord('+'), Ord('-')] then begin
+    Flags := Flags or (Ord(PStart^) - Ord('+')); {Set/Reset Neg}
+    inc(PStart);
+  end;
+  if Ord(PStart^) = Ord('$') then begin
+    inc(PStart);
+    Flags := Flags or 4; {Hex := True}
+  end else begin
+    if Ord(PStart^) = Ord('0') then begin
+      Flags := Flags or 1; {Valid := True}
+      inc(PStart);
+    end;
+    if (Ord(PStart^) or $20) = ord('x') then begin //Upcase(P^) = 'X'
+      Flags := Flags or 4; {Hex := True}
+      inc(PStart);
+    end;
+  end;
+  Result := 0;
+  if (Flags and 4) <> 0 then begin
+    Flags := Flags and (not 1); {Valid := False}
+    while PStart < PEnd do begin
+      case Ord(PStart^) of
+        Ord('0')..Ord('9'): Digit := Ord(PStart^) - Ord('0');
+        Ord('a')..Ord('f'): Digit := Ord(PStart^) - AdjustLowercase;
+        Ord('A')..Ord('F'): Digit := Ord(PStart^) - AdjustUppercase;
+        else Break;
+      end;
+      if (Result < 0) or (Result > $0FFFFFFF) then
+        Break;
+      Result := (Result shl 4) + Digit;
+      Flags := Flags or 1; {Valid := True}
+      inc(PStart);
+    end;
+  end else begin
+    while PStart < PEnd do begin
+      if not (Ord(PStart^) in [Ord('0')..Ord('9')]) then
+        break;
+      if Result > (MaxInt div 10) then
+        break;
+      Result := (Result * 10) + Ord(PStart^) - Ord('0');
+      Flags := Flags or 1; {Valid := True}
+      inc(PStart);
+    end;
+    if Result < 0 then {Possible Overflow}
+      if (Cardinal(Result) <> $80000000) or ((Flags and 2) = 0) then begin {Min(Integer) = $80000000 is a Valid Result}
+        Dec(PStart);
+        Flags := Flags or 1; {Valid := True}
+      end;
+  end;
+  if ((Flags and 2) <> 0) then {Neg=True}
+    Result := -Result;
+  if not (((Flags and 1) <> 0) and (PStart = PEnd)) then
+    PEnd := PStart;
+end;
+
+function ValUnicodeInt64(PStart: PWideChar; var PEnd: PWideChar): Int64;
+//function ValInt64_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Int64;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified by EgonHugeist for faster conversion and PAnsiChar/PByte
+var
+  I, Digit: Integer;
+  Flags: Byte; {Bit 0 = Valid, Bit 1 = Negative, Bit 2 = Hex}
+begin
+  Result := 0;
+  if (PStart = nil) or (PStart = PEnd) then begin
+    PEnd := PStart;
+    Exit;
+  end;
+  Flags := 0;
+  while Ord(PStart^) = Ord(' ') do
+    Inc(PStart);
+  if Ord(PStart^) in [Ord('+'), Ord('-')] then begin
+    Flags := Flags or Byte((Ord(PStart^) - Ord('+'))); {Set/Reset Neg}
+    inc(PStart);
+  end;
+  if Ord(PStart^) = Ord('$') then begin
+    inc(PStart);
+    Flags := Flags or 4; {Hex := True}
+  end else begin
+    if Ord(PStart^) = Ord('0') then begin
+      Flags := Flags or 1; {Valid := True}
+      inc(PStart);
+    end;
+    if (Ord(PStart^) or $20) = ord('x') then begin {S[Code+1] in ['X','x']}
+      Flags := Flags or 4; {Hex := True}
+      inc(PStart);
+    end;
+  end;
+  if (Flags and 4) <> 0 then begin {Hex = True}
+    Flags := Flags and (not 1); {Valid := False}
+    while PStart < PEnd do begin
+      case Ord(PStart^) of
+        Ord('0')..Ord('9'): Digit := Ord(PStart^) - Ord('0');
+        Ord('a')..Ord('f'): Digit := Ord(PStart^) - AdjustLowercase;
+        Ord('A')..Ord('F'): Digit := Ord(PStart^) - AdjustUppercase;
+        else      Break;
+      end;
+      if UInt64(Result) > (HighInt64 shr 3) then
+        Break;
+      if UInt64(Result) < (MaxInt div 16)-15 then
+        begin {Use Integer Math instead of Int64}
+          I := Result;
+          I := (I shl 4) + Digit;
+          Result := I;
+        end
+      else
+        Result := (Result shl 4) + Digit;
+      Flags := Flags or 1; {Valid := True}
+      Inc(PStart);
+    end;
+  end else begin
+    while PStart < PEnd do begin
+      if ( not (Ord(PStart^) in [Ord('0')..Ord('9')]) ) or
+         ( UInt64(Result) > (HighInt64 div 10)) then begin
+        inc(PStart, Ord(Ord(PStart^) <> Ord(#0)));
+        break;
+      end;
+      if UInt64(Result) < (MaxInt div 10)-9 then begin {Use Integer Math instead of Int64}
+        I := Result;
+        I := (I * 10) + Ord(PStart^) - Ord('0');
+        Result := I;
+      end else {Result := (Result * 10) + Ord(Ch) - Ord('0');}
+        Result := (Result shl 1) + (Result shl 3) + Ord(PStart^) - Ord('0');
+      Flags := Flags or 1; {Valid := True}
+      Inc(PStart);
+    end;
+    {$IFDEF FPC}
+    if UInt64(Result) >= UInt64(Int64($8000000000000000)) then {Possible Overflow}
+      if ((Flags and 2) = 0) or (UInt64(Result) <> UInt64(Int64($8000000000000000))) then
+    {$ELSE}
+    if UInt64(Result) >= $8000000000000000 then {Possible Overflow}
+      if ((Flags and 2) = 0) or (Result <> $8000000000000000) then
+    {$ENDIF}
+        begin {Overflow}
+          if ((Flags and 2) <> 0) then {Neg=True}
+            Result := -Result;
+          PEnd := PStart;
+          Exit;
+        end;
   end;
   if ((Flags and 2) <> 0) then {Neg=True}
     Result := -Result;
@@ -6831,6 +6449,117 @@ asm
 end;}
 
 {$ENDIF USE_FAST_TRUNC}
+
+function GetOrdinalDigits(const Value: UInt64): Byte;
+var I64Rec: Int64Rec absolute Value;
+begin
+  {$R-} {$Q-}
+  if I64Rec.Hi = 0 then
+    Result := GetOrdinalDigits(i64Rec.Lo) //faster cardinal version
+  else if Value >= UInt64(100000000000000) then
+    if Value    >= UInt64(10000000000000000) then
+      if Value  >= UInt64(1000000000000000000) then
+        Result := 19 + Ord(Value  >=
+          {$IFDEF NEED_TYPED_UINT64_CONSTANTS}
+          UInt64(10000000000000000000)
+          {$ELSE}
+            {$IFDEF SUPPORTS_UINT64_CONSTS}
+            10000000000000000000
+            {$ELSE !SUPPORTS_UINT64_CONSTS}
+            $8AC7230489E80000
+            {$ENDIF SUPPORTS_UINT64_CONSTS}
+          {$ENDIF NEED_TYPED_UINT64_CONSTANTS})
+      else Result := 17 + Ord(Value >= UInt64(100000000000000000))
+    else Result := 15 + Ord(Value >= UInt64(1000000000000000))
+  else if Value >= UInt64(1000000000000) then
+    Result := 13 + Ord(Value >= UInt64(10000000000000))
+  else if Value >= UInt64(10000000000) then
+    Result := 11 + Ord(Value >= UInt64(100000000000))
+  else
+    Result := 10; //it's a nop -> GetOrdinalDigits(i64Rec.Lo)
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function GetOrdinalDigits(const Value: Int64): Byte;
+begin
+  {$R-} {$Q-}
+  if Value < 0
+  then Result := GetOrdinalDigits(UInt64(-Value))
+  else Result := GetOrdinalDigits(UInt64(Value))
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function GetOrdinalDigits(Value: Cardinal): Byte;
+begin
+  {$R-} {$Q-}
+  if Value >= 10000 then
+    if Value >= 1000000 then
+      if Value >= 100000000
+      then Result := 9 + Ord(Value >= 1000000000)
+      else Result := 7 + Ord(Value >= 10000000)
+    else Result := 5 + Ord(Value >= 100000)
+  else if Value >= 100 then
+    Result := 3 + Ord(Value >= 1000)
+  else
+    Result := 1 + Ord(Value >= 10);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function GetOrdinalDigits(Value: Integer): Byte;
+begin
+  {$R-} {$Q-}
+  if Value < 0
+  then Result := GetOrdinalDigits(Cardinal(-Value))
+  else Result := GetOrdinalDigits(Cardinal(Value));
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function GetOrdinalDigits(Value: Word): Byte;
+begin
+  {$R-} {$Q-}
+  if Value >= 10000 then
+    Result := 5
+  else if Value >= 100 then
+    Result := 3 + Ord(Value >= 1000)
+  else
+    Result := 1 + Ord(Value >= 10);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function GetOrdinalDigits(Value: SmallInt): Byte;
+begin
+  {$R-} {$Q-}
+  if Value < 0
+  then Result := GetOrdinalDigits(Word(-Value))
+  else Result := GetOrdinalDigits(Word(Value));
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function GetOrdinalDigits(Value: Byte): Byte;
+begin
+  {$R-} {$Q-}
+  if Value >= 100
+  then Result := 3
+  else Result := 1 + Ord(Value >= 10);
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function GetOrdinalDigits(Value: ShortInt): Byte;
+begin
+  {$R-} {$Q-}
+  if Value < 0
+  then Result := GetOrdinalDigits(Byte(-Value))
+  else Result := GetOrdinalDigits(Byte(Value));
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
 
 {$IFDEF USE_FAST_STRLEN}
 function StrLen_JOH_SSE2_2_a(const Str: PAnsiChar): Cardinal; //Unreleased

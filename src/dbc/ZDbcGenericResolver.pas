@@ -982,9 +982,9 @@ begin
                 RowAccessor.SetBigDecimal(Current.ColumnIndex, ResultSet.GetBigDecimal(I));
               stString, stAsciiStream, stUnicodeString, stUnicodeStream:
                 if RowAccessor.IsRaw then
-                  RowAccessor.SetPAnsiChar(Current.ColumnIndex, ResultSet.GetPAnsiChar(I, Len), @Len)
+                  RowAccessor.SetPAnsiChar(Current.ColumnIndex, ResultSet.GetPAnsiChar(I, Len), Len)
                 else
-                  RowAccessor.SetPWideChar(Current.ColumnIndex, ResultSet.GetPWideChar(I, Len), @Len);
+                  RowAccessor.SetPWideChar(Current.ColumnIndex, ResultSet.GetPWideChar(I, Len), Len);
               stBytes, stGUID:
                 RowAccessor.SetBytes(Current.ColumnIndex, ResultSet.GetBytes(I));
               stDate:

@@ -262,8 +262,8 @@ begin
                   Integer2PG(Integer(Trunc(Value)), FPQparamValues[Index]);
                 end;
     stLongWord: begin
-                  LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(LongWord), ParamFormatBin);
-                  LongWord2PG(LongWord(Trunc(Value)), FPQparamValues[Index]);
+                  LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Cardinal), ParamFormatBin);
+                  Cardinal2PG(Cardinal(Trunc(Value)), FPQparamValues[Index]);
                 end;
     stLong:     begin
                   LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Int64), ParamFormatBin);
@@ -352,8 +352,8 @@ begin
                 end;
     stBinaryStream, //oidlobs
     stLongWord: begin
-                  LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(LongWord), ParamFormatBin);
-                  LongWord2PG(LongWord(Value), FPQparamValues[Index]);
+                  LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Cardinal), ParamFormatBin);
+                  Cardinal2PG(Cardinal(Value), FPQparamValues[Index]);
                 end;
     stLong,
     stCurrency: begin
@@ -462,7 +462,7 @@ var
   Stmt: TZPostgreSQLPreparedStatementV3;
 
   procedure AllocArray(Index: Cardinal; TotalSize: Integer;
-    out A: PArrayType; out Buf: Pointer);
+    out A: PArrayType; out Buf: PAnsiChar);
   var
     aOID: OID;
     ArrOverhead, BuffSize: Integer;
@@ -480,7 +480,7 @@ var
     //indicate nullable items
     Integer2PG(0, @A.flags);
     //Write the OID
-    LongWord2PG(aOID, ARR_ELEMTYPE(A));
+    Cardinal2PG(aOID, ARR_ELEMTYPE(A));
     //write item count
     Integer2PG(ArrayCount, ARR_DIMS(A));
     //write lower bounds
@@ -493,7 +493,8 @@ var
 var
   OffSet, J, I: Cardinal;
   UniTemp: ZWideString;
-  D, P: Pointer;
+  D: Pointer;
+  P: PAnsiChar;
   A: PArrayType;
   CP: word;
   aOID: OID;
@@ -657,12 +658,12 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i]);
                         end else begin
                           Integer2PG(SizeOf(Byte), P);
-                          PByte(NativeUInt(P)+SizeOf(int32))^ := Ord(TBooleanDynArray(D)[j]);
-                          Inc(PByte(P),SizeOf(int32)+SizeOf(Byte));
+                          PByte(P+SizeOf(int32))^ := Ord(TBooleanDynArray(D)[j]);
+                          Inc(P,SizeOf(int32)+SizeOf(Byte));
                         end;
                     end;
       stByte:       begin
@@ -670,12 +671,12 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(SmallInt));
                         end else begin
                           Integer2PG(SizeOf(SmallInt), P);
-                          SmallInt2PG(TByteDynArray(D)[j], Pointer(NativeUInt(P)+SizeOf(int32)));
-                          Inc(PByte(P),SizeOf(int32)+SizeOf(SmallInt));
+                          SmallInt2PG(TByteDynArray(D)[j],P+SizeOf(int32));
+                          Inc(P,SizeOf(int32)+SizeOf(SmallInt));
                         end;
                     end;
       stShort:      begin
@@ -683,12 +684,12 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(SmallInt));
                         end else begin
                           Integer2PG(SizeOf(SmallInt), P);
-                          SmallInt2PG(TShortIntDynArray(D)[j], Pointer(NativeUInt(P)+SizeOf(int32)));
-                          Inc(PByte(P),SizeOf(int32)+SizeOf(SmallInt));
+                          SmallInt2PG(TShortIntDynArray(D)[j],P+SizeOf(int32));
+                          Inc(P,SizeOf(int32)+SizeOf(SmallInt));
                         end;
                     end;
       stWord:       begin
@@ -696,12 +697,12 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Integer));
                         end else begin
                           Integer2PG(SizeOf(Integer), P);
-                          SmallInt2PG(TWordDynArray(D)[j], Pointer(NativeUInt(P)+SizeOf(int32)));
-                          Inc(PByte(P),SizeOf(int32)+SizeOf(Integer));
+                          SmallInt2PG(TWordDynArray(D)[j],P+SizeOf(int32));
+                          Inc(P,SizeOf(int32)+SizeOf(Integer));
                         end;
                     end;
       stSmall:      begin
@@ -709,12 +710,12 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(SmallInt));
                         end else begin
                           Integer2PG(SizeOf(SmallInt), P);
-                          SmallInt2PG(TSmallIntDynArray(D)[j], Pointer(NativeUInt(P)+SizeOf(int32)));
-                          Inc(PByte(P),SizeOf(int32)+SizeOf(SmallInt));
+                          SmallInt2PG(TSmallIntDynArray(D)[j],P+SizeOf(int32));
+                          Inc(P,SizeOf(int32)+SizeOf(SmallInt));
                         end;
                     end;
       stInteger:    begin
@@ -722,37 +723,37 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Integer));
                         end else begin
                           Integer2PG(SizeOf(Integer), P);
-                          Integer2PG(TIntegerDynArray(D)[j], Pointer(NativeUInt(P)+SizeOf(int32)));
-                          Inc(PByte(P),SizeOf(int32)+SizeOf(Integer));
+                          Integer2PG(TIntegerDynArray(D)[j],P+SizeOf(int32));
+                          Inc(P,SizeOf(int32)+SizeOf(Integer));
                         end;
                     end;
       stLongWord:   if (stmt.FPQParamOIDs[N] = OIDOID) then begin
-                      AllocArray(I, SizeOf(LongWord)*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
+                      AllocArray(I, SizeOf(OID)*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(OID));
                         end else begin
                           Integer2PG(SizeOf(OID), P);
-                          LongWord2PG(TLongWordDynArray(D)[j], Pointer(NativeUInt(P)+SizeOf(int32)));
-                          Inc(PByte(P),SizeOf(int32)+SizeOf(OID));
+                          Cardinal2PG(TLongWordDynArray(D)[j],P+SizeOf(int32));
+                          Inc(P,SizeOf(int32)+SizeOf(OID));
                         end;
                     end else begin
                       AllocArray(I, SizeOf(Int64)*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Int64));
                         end else begin
                           Integer2PG(SizeOf(LongWord), P);
-                          Int642PG(TLongWordDynArray(D)[j], Pointer(NativeUInt(P)+SizeOf(int32)));
-                          Inc(PByte(P),SizeOf(int32)+SizeOf(Int64));
+                          Int642PG(TLongWordDynArray(D)[j],P+SizeOf(int32));
+                          Inc(P,SizeOf(int32)+SizeOf(Int64));
                         end;
                     end;
       stLong:       begin
@@ -760,12 +761,12 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Int64));
                         end else begin
                           Integer2PG(SizeOf(Int64), P);
-                          Int642PG(TInt64DynArray(D)[j], Pointer(NativeUInt(P)+SizeOf(int32)));
-                          Inc(PByte(P),SizeOf(int32)+SizeOf(Int64));
+                          Int642PG(TInt64DynArray(D)[j],P+SizeOf(int32));
+                          Inc(P,SizeOf(int32)+SizeOf(Int64));
                         end;
                     end;
       stULong:      begin
@@ -773,12 +774,12 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Int64));
                         end else begin
                           Integer2PG(SizeOf(Int64), P);
-                          Int642PG(Int64(TUInt64DynArray(D)[j]), Pointer(NativeUInt(P)+SizeOf(int32)));
-                          Inc(PByte(P),SizeOf(int32)+SizeOf(UInt64));
+                          Int642PG(Int64(TUInt64DynArray(D)[j]),P+SizeOf(int32));
+                          Inc(P,SizeOf(int32)+SizeOf(UInt64));
                         end;
                     end;
       stFloat:      begin
@@ -786,12 +787,12 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Single));
                         end else begin
                           Integer2PG(SizeOf(Single), P);
-                          Single2PG(TSingleDynArray(D)[j], Pointer(NativeUInt(P)+SizeOf(int32)));
-                          Inc(PByte(P),SizeOf(int32)+SizeOf(Single));
+                          Single2PG(TSingleDynArray(D)[j],P+SizeOf(int32));
+                          Inc(P,SizeOf(int32)+SizeOf(Single));
                         end;
                     end;
       stDouble:     begin
@@ -799,12 +800,12 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Int64));
                         end else begin
                           Integer2PG(SizeOf(Double), P);
-                          Double2PG(TDoubleDynArray(D)[j], Pointer(NativeUInt(P)+SizeOf(int32)));
-                          Inc(PByte(P),SizeOf(int32)+SizeOf(Double));
+                          Double2PG(TDoubleDynArray(D)[j],P+SizeOf(int32));
+                          Inc(P,SizeOf(int32)+SizeOf(Double));
                         end;
                     end;
       stCurrency:   begin
@@ -812,14 +813,14 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], 8);
                         end else begin
                           Integer2PG(8, P);
                           if (stmt.FPQParamOIDs[i] = CASHOID)
-                          then Currency2PG(TCurrencyDynArray(D)[j], Pointer(NativeUInt(P)+SizeOf(int32)))
-                          else Double2PG(TCurrencyDynArray(D)[j], Pointer(NativeUInt(P)+SizeOf(int32)));
-                          Inc(PByte(P),SizeOf(int32)+8);
+                          then Currency2PG(TCurrencyDynArray(D)[j],P+SizeOf(int32))
+                          else Double2PG(TCurrencyDynArray(D)[j],P+SizeOf(int32));
+                          Inc(P,SizeOf(int32)+8);
                         end
                     end;
       stBigDecimal: begin
@@ -827,12 +828,12 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Double));
                         end else begin
                           Integer2PG(SizeOf(Double), P);
-                          Double2PG(TExtendedDynArray(D)[j], Pointer(NativeUInt(P)+SizeOf(int32)));
-                          Inc(PByte(P),SizeOf(int32)+SizeOf(Double));
+                          Double2PG(TExtendedDynArray(D)[j],P+SizeOf(int32));
+                          Inc(P,SizeOf(int32)+SizeOf(Double));
                         end;
                     end;
       stDate:       begin
@@ -840,12 +841,12 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Integer));
                         end else begin
                           Integer2PG(SizeOf(Integer), P);
                           Date2PG(TDateTimeDynArray(D)[j], PInteger(NativeUInt(P)+SizeOf(int32))^);
-                          Inc(PByte(P),SizeOf(int32)+SizeOf(Integer));
+                          Inc(P,SizeOf(int32)+SizeOf(Integer));
                         end;
                     end;
       stTime:       begin
@@ -853,14 +854,14 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], 8);
                         end else begin
                           Integer2PG(8, P);
                           if Finteger_datetimes
                           then Time2PG(TDateTimeDynArray(D)[j], PInt64(NativeUInt(P)+SizeOf(int32))^)
                           else Time2PG(TDateTimeDynArray(D)[j], PDouble(NativeUInt(P)+SizeOf(int32))^);
-                          Inc(PByte(P),SizeOf(int32)+8);
+                          Inc(P,SizeOf(int32)+8);
                         end
                     end;
       stTimeStamp:  begin
@@ -868,14 +869,14 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], 8);
                         end else begin
                           Integer2PG(8, P);
                           if Finteger_datetimes
                           then DateTime2PG(TDateTimeDynArray(D)[j], PInt64(NativeUInt(P)+SizeOf(int32))^)
                           else DateTime2PG(TDateTimeDynArray(D)[j], PDouble(NativeUInt(P)+SizeOf(int32))^);
-                          Inc(PByte(P),SizeOf(int32)+8);
+                          Inc(P,SizeOf(int32)+8);
                         end
                     end;
       stGUID:       begin
@@ -883,13 +884,13 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(TGUID));
                         end else begin
                           Integer2PG(SizeOf(TGUID), P);
                           //eh: Network byteOrder?
                           PGUID(NativeUInt(P)+SizeOf(int32))^ := TGUIDDynArray(D)[j];
-                          Inc(PByte(P),SizeOf(int32)+SizeOf(TGUID));
+                          Inc(P,SizeOf(int32)+SizeOf(TGUID));
                         end
                     end;
       stBytes:      begin
@@ -901,13 +902,13 @@ unnest(array[$1..$100]::int8[])
                       for j := 0 to ArrayCount -1 do
                         if IsNullFromArray(BindList.Arrays[I], j) or (Pointer(TBytesDynArray(D)[j]) = nil) then begin
                           Integer2PG(-1, P);
-                          Inc(PByte(P),SizeOf(int32));
+                          Inc(P,SizeOf(int32));
                         end else begin
                           N := Length(TBytesDynArray(D)[j]);
                           Integer2PG(N, P);
                           //eh: Network byteOrder?
                           Move(Pointer(TBytesDynArray(D)[j])^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
-                          Inc(PByte(P),SizeOf(int32)+N);
+                          Inc(P,SizeOf(int32)+N);
                         end
                     end;
       stString, stUnicodeString: begin
@@ -954,12 +955,12 @@ FromRaw:                    N := 0;
                             for j := 0 to ArrayCount -1 do
                               if IsNullFromArray(BindList.Arrays[I], j) then begin
                                 Integer2PG(-1, P);
-                                Inc(PByte(P),SizeOf(int32));
+                                Inc(P,SizeOf(int32));
                               end else begin
                                 N := Length(TRawByteStringDynArray(D)[j]);
                                 Integer2PG(N, P);
                                 Move(Pointer(TRawByteStringDynArray(D)[j])^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
-                                Inc(PByte(P),SizeOf(int32)+N);
+                                Inc(P,SizeOf(int32)+N);
                               end;
                             end;
             {$IFDEF UNICODE}
@@ -997,12 +998,12 @@ FromRaw:                    N := 0;
                             for J := 0 to ArrayCount -1 do
                               if IsNullFromArray(BindList.Arrays[I], j) then begin
                                 Integer2PG(-1, P);
-                                Inc(PByte(P),SizeOf(int32));
+                                Inc(P,SizeOf(int32));
                               end else begin
                                 N := TZCharRecDynArray(D)[j].Len;
                                 Integer2PG(N, P);
                                 Move(TZCharRecDynArray(D)[j].P^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
-                                Inc(PByte(P),SizeOf(int32)+N);
+                                Inc(P,SizeOf(int32)+N);
                               end;
                           end;
                         end;
@@ -1037,24 +1038,24 @@ FromRaw:                    N := 0;
             for j := 0 to ArrayCount -1 do
               if TInterfaceDynArray(D)[j] = nil then begin
                 Integer2PG(-1, P);
-                Inc(PByte(P),SizeOf(int32));
+                Inc(P,SizeOf(int32));
               end else begin
                 Integer2PG(SizeOf(OID), P);
                 WriteTempBlob := TInterfaceDynArray(D)[j] as IZPostgreSQLOidBlob;
-                LongWord2PG(WriteTempBlob.GetBlobOid, Pointer(NativeUInt(P)+SizeOf(int32)));
-                Inc(PByte(P),SizeOf(int32)+SizeOf(OID));
+                Cardinal2PG(WriteTempBlob.GetBlobOid,P+SizeOf(int32));
+                Inc(P,SizeOf(int32)+SizeOf(OID));
               end;
           end else begin
             AllocArray(I, N+(ArrayCount*SizeOf(int32)), A, P);
             for J := 0 to ArrayCount -1 do
               if not ((TInterfaceDynArray(D)[j] <> nil) and Supports(TInterfaceDynArray(D)[j], IZBlob, TempBlob) and not TempBlob.IsEmpty) then begin
                 Integer2PG(-1, P);
-                Inc(PByte(P),SizeOf(int32));
+                Inc(P,SizeOf(int32));
               end else begin
                 N := TempBlob.Length;
                 Integer2PG(N, P);
                 Move(TempBlob.GetBuffer^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
-                Inc(PByte(P),SizeOf(int32)+N);
+                Inc(P,SizeOf(int32)+N);
               end;
           end;
         end;
@@ -1341,7 +1342,7 @@ begin
         INT8OID:  Result := IntToRaw(PG2Int64(BindValue.Value));
         INT2OID:  Result := IntToRaw(PG2SmallInt(BindValue.Value));
         INT4OID:  Result := IntToRaw(PG2Integer(BindValue.Value));
-        OIDOID:   Result := IntToRaw(PG2LongWord(BindValue.Value));
+        OIDOID:   Result := IntToRaw(PG2Cardinal(BindValue.Value));
         FLOAT4OID:Result := FloatToRaw(PG2Single(BindValue.Value));
         FLOAT8OID:Result := FloatToRaw(PG2Double(BindValue.Value));
         CASHOID:  Result := FloatToRaw(PG2Int64(BindValue.Value)/100);
@@ -1587,7 +1588,7 @@ begin
                 stBoolean:  BindBoolean(i, Boolean(PByte(FPQparamValues[i])^));
                 stSmall:    BindSignedOrdinal(i, BindList.SQLTypes[i], PG2SmallInt(FPQparamValues[i]));
                 stInteger:  BindSignedOrdinal(i, BindList.SQLTypes[i], PG2Integer(FPQparamValues[i]));
-                stLongWord: BindSignedOrdinal(i, BindList.SQLTypes[i], PG2LongWord(FPQparamValues[i]));
+                stLongWord: BindSignedOrdinal(i, BindList.SQLTypes[i], PG2Cardinal(FPQparamValues[i]));
                 stLong:     BindSignedOrdinal(i, BindList.SQLTypes[i], PG2Int64(FPQparamValues[i]));
                 stCurrency: BindDouble(i, BindList.SQLTypes[i], PG2Currency(FPQparamValues[i]));
                 stFloat:    BindDouble(i, BindList.SQLTypes[i], PG2Single(FPQparamValues[i]));

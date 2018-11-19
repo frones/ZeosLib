@@ -267,6 +267,8 @@ function ZMoveStringToRaw(const Src: String; const {%H-}StringCP, {%H-}RawCP: Wo
 function ZUnknownRawToUnicode(const S: RawByteString; const CP: Word): ZWideString;
 function ZUnknownRawToUnicodeWithAutoEncode(const S: RawByteString;
   const CP: Word): ZWideString;
+function ZUnknownPRawToUnicodeWithAutoEncode(P: PAnsiChar; L: NativeUInt;
+  const CP: Word): ZWideString;
 function ZUnicodeToUnknownRaw(const US: ZWideString; CP: Word): RawByteString;
 
 {**
@@ -1157,7 +1159,7 @@ const
 
 implementation
 
-uses ZFastCode;
+{$IF defined(FAST_MOVE) and not defined(PatchSystemMove)}uses ZFastCode;{$IFEND}
 
 const
   dsMaxRStringSize = 8192; { Maximum string field size declared in DB.pas }
@@ -1187,6 +1189,20 @@ begin
       else
         Result := PRawToUnicode(Pointer(S), L, ZOSCodePage);
     end;
+  end;
+end;
+
+function ZUnknownPRawToUnicodeWithAutoEncode(P: PAnsiChar; L: NativeUInt;
+  const CP: Word): ZWideString;
+begin
+  if P = nil then
+    Result := ''
+  else case ZDetectUTF8Encoding(P, L) of
+    etUSASCII: Result := USASCII7ToUnicodeString(P, L);
+    etUTF8: Result := PRawToUnicode(P, L, zCP_UTF8);
+    else if ZCompatibleCodePages(ZOSCodePage, zCP_UTF8)
+      then Result := USASCII7ToUnicodeString(P, L) //random success, we don't know the CP here
+      else Result := PRawToUnicode(P, L, ZOSCodePage);
   end;
 end;
 
@@ -1613,7 +1629,7 @@ end;
 procedure PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar;
   SourceBytes, BufCodePoints: LengthInt; CP: Word);
 var
-  C: LongWord;
+  C: Cardinal;
   PEnd: PAnsiChar;
   {$IF not defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
     {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
@@ -1702,12 +1718,12 @@ A2U:
       else begin//for these where we do not have a conversion routine...
         PEnd := Source+SourceBytes-4;
         {first handle leading ASCII if possible }
-        while (Source < PEnd ) and (PLongWord(Source)^ and $80808080 = 0) and (BufCodePoints > 3)  do
+        while (Source < PEnd ) and (PCardinal(Source)^ and $80808080 = 0) and (BufCodePoints > 3)  do
         begin
-          C := PLongWord(Source)^;
-          PLongWord(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
+          C := PCardinal(Source)^;
+          PCardinal(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
           c := c shr 16;
-          PLongWord(Dest+2)^ := (c shl 8 or c) and $00ff00ff;
+          PCardinal(Dest+2)^ := (c shl 8 or c) and $00ff00ff;
           inc(Source,4);
           inc(Dest,4);
           Dec(BufCodePoints, 4);
@@ -1770,7 +1786,7 @@ end;
 function PRaw2PUnicodeBuf(Source: PAnsiChar; Dest: Pointer;
   SourceBytes: LengthInt; CP: Word): LengthInt;
 var
-  C: LongWord;
+  C: Cardinal;
   PEnd: PAnsiChar;
   wlen, BufCodePoints: LengthInt;
   {$IF not defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
@@ -1860,12 +1876,12 @@ begin
       else begin//for these where we do not have a conversion routine...
         PEnd := Source+SourceBytes-4;
         {first handle leading ASCII if possible }
-        while (Source < PEnd ) and (PLongWord(Source)^ and $80808080 = 0) do
+        while (Source < PEnd ) and (PCardinal(Source)^ and $80808080 = 0) do
         begin
-          C := PLongWord(Source)^;
-          PLongWord(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
+          C := PCardinal(Source)^;
+          PCardinal(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
           c := c shr 16;
-          PLongWord(PWideChar(Dest)+2)^ := (c shl 8 or c) and $00ff00ff;
+          PCardinal(PWideChar(Dest)+2)^ := (c shl 8 or c) and $00ff00ff;
           inc(Source,4);
           inc(PWideChar(Dest),4);
         end;
@@ -2051,12 +2067,12 @@ begin
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
     if Ulen <= dsMaxRStringSize then
       {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-      ZSetString(@Buf[0], LocaleCharsFromUnicode(CP, 0, Source, SrcCodePoints, @Buf[0], ulen, NIL, NIL), Result)
+      ZSetString(@Buf[0], LocaleCharsFromUnicode(CP, 0, Source, SrcCodePoints, @Buf[0], ulen, NIL, NIL), Result{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF})
       {$ELSE}
-      ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Source, SrcCodePoints, @Buf[0], ulen, NIL, NIL), Result)
+      ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Source, SrcCodePoints, @Buf[0], ulen, NIL, NIL), Result{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF})
       {$ENDIF}
     else begin
-      ZSetString(nil, ULen, Result); //oversized
+      ZSetString(nil, ULen, Result{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF}); //oversized
       {$IFDEF WITH_UNICODEFROMLOCALECHARS}
       SetLength(Result, LocaleCharsFromUnicode(CP, 0, Source, SrcCodePoints, Pointer(Result), ulen, NIL, NIL)); // Convert Unicode down to Ansi
       {$ELSE}
@@ -3476,15 +3492,15 @@ begin
   Result := etUSASCII;
   if (Source = nil) or (Len = 0) then Exit;
 
-  EndPtr := Source + Len -SizeOf(LongWord);
+  EndPtr := Source + Len -SizeOf(Cardinal);
 
   // skip leading US-ASCII part.
   while Source <= EndPtr do //Check next quad
   begin
-    if PLongWord(Source)^ and $80808080<>0 then Break; //break on first non USASCII sequence
-    inc(Source, SizeOf(LongWord));
+    if PCardinal(Source)^ and $80808080<>0 then Break; //break on first non USASCII sequence
+    inc(Source, SizeOf(Cardinal));
   end;
-  Inc(EndPtr, SizeOf(LongWord));
+  Inc(EndPtr, SizeOf(Cardinal));
 
   while Source < EndPtr do //Check bytes
   begin
@@ -3500,8 +3516,8 @@ begin
     c := Byte(Source^);
     case c of
       $00..$7F:  //Ascii7
-        if (EndPtr - Source > SizeOf(PLongWord)) and (PLongWord(Source)^ and $80808080 = 0) then //Check quad block ASCII again
-          inc(Source, SizeOf(PLongWord))
+        if (EndPtr - Source > SizeOf(PCardinal)) and (PCardinal(Source)^ and $80808080 = 0) then //Check quad block ASCII again
+          inc(Source, SizeOf(PCardinal))
         else
           Inc(Source);
       $C2..$DF:  // non-overlong 2-byte
@@ -3563,7 +3579,7 @@ begin
 end;
 
 function USASCII7ToUnicodeString(Source: PAnsiChar; Len: NativeUInt): ZWideString; overload;
-var C: LongWord;
+var C: Cardinal;
   Dest: PWideChar;
 begin
   SetString(Result, nil, Len);
@@ -3571,12 +3587,12 @@ begin
   {fast quad conversion from SHA}
   while Len >= 4 do
   begin
-    C := PLongWord(Source)^;
+    C := PCardinal(Source)^;
     dec(Len,4);
     inc(Source,4);
-    PLongWord(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
+    PCardinal(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
     c := c shr 16;
-    PLongWord(Dest+2)^ := (c shl 8 or c) and $00ff00ff;
+    PCardinal(Dest+2)^ := (c shl 8 or c) and $00ff00ff;
     inc(Dest,4);
   end;
   while Len > 0 do

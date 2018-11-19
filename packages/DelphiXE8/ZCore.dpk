@@ -30,7 +30,8 @@ package ZCore;
 {$IMPLICITBUILD OFF}
 
 requires
-  rtl;
+  rtl,
+  dbrtl;
 
 contains
   ZVariant in '..\..\src\core\ZVariant.pas',

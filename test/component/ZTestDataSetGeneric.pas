@@ -2461,7 +2461,12 @@ begin
       Fail(Msg + ' raised exception ' + E.Message);
     end;
   finally
-    FreeAndNil(Query);
+    Query.SQL.Text := 'delete from high_load';
+    try
+      Query.ExecSQL;
+    finally
+      FreeAndNil(Query);
+    end;
   end;
 end;
 

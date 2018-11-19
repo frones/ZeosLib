@@ -435,7 +435,7 @@ type
   POid = ^Oid;
   Oid = Cardinal;
   {$IF not declared(Int32)}
-  Int32 = LongInt;
+  Int32 = Integer;
   {$IFEND}
   {$IF not declared(PInt32)}
   PInt32 = ^Int32;

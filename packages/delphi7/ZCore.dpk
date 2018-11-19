@@ -28,7 +28,7 @@ package ZCore;
 
 requires
   rtl,
-  vcl;
+  dbrtl;
 
 contains
   ZVariant in '..\..\src\core\ZVariant.pas',

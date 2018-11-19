@@ -460,8 +460,6 @@ type
     function GetCharacterState(StartChar: Char): TZTokenizerState;
   end;
 
-  TTokenizerStream = Class(TZCharReaderStream); //just a hack to get protected access
-
   {** Implements a default tokenizer object. }
   TZTokenizer = class (TZAbstractObject, IZTokenizer)
   private

@@ -111,7 +111,7 @@ type
   end;
 
   {** Implements cached ResultSet. }
-  TZAbstractCachedResultSet = class (TZAbstractResultSet, IZCachedResultSet)
+  TZAbstractCachedResultSet = class (TZAbstractResultSet, IZResultSet, IZCachedResultSet)
   private
     FCachedUpdates: Boolean;
     FRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
@@ -167,44 +167,39 @@ type
       ConSettings: PZConSettings);
     destructor Destroy; override;
 
-    procedure Close; override;
+    procedure AfterClose; override;
     procedure ResetCursor; override;
 
     //======================================================================
     // Methods for accessing results by column index
     //======================================================================
 
-    function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPChar(ColumnIndex: Integer): PChar; override;
-    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
-    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; override;
-    function GetString(ColumnIndex: Integer): String; override;
+    function IsNull(ColumnIndex: Integer): Boolean;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
+    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
+    function GetString(ColumnIndex: Integer): String;
     {$IFNDEF NO_ANSISTRING}
-    function GetAnsiString(ColumnIndex: Integer): AnsiString; override;
+    function GetAnsiString(ColumnIndex: Integer): AnsiString;
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
+    function GetUTF8String(ColumnIndex: Integer): UTF8String;
     {$ENDIF}
-    function GetRawByteString(ColumnIndex: Integer): RawByteString; override;
-    function GetUnicodeString(ColumnIndex: Integer): ZWidestring; override;
-    function GetBoolean(ColumnIndex: Integer): Boolean; override;
-    function GetByte(ColumnIndex: Integer): Byte; override;
-    function GetShort(ColumnIndex: Integer): ShortInt; override;
-    function GetWord(ColumnIndex: Integer): Word; override;
-    function GetSmall(ColumnIndex: Integer): SmallInt; override;
-    function GetUInt(ColumnIndex: Integer): Cardinal; override;
-    function GetInt(ColumnIndex: Integer): Integer; override;
-    function GetULong(ColumnIndex: Integer): UInt64; override;
-    function GetLong(ColumnIndex: Integer): Int64; override;
-    function GetFloat(ColumnIndex: Integer): Single; override;
-    function GetDouble(ColumnIndex: Integer): Double; override;
-    function GetCurrency(ColumnIndex: Integer): Currency; override;
-    function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    function GetBytes(ColumnIndex: Integer): TBytes; override;
-    function GetDate(ColumnIndex: Integer): TDateTime; override;
-    function GetTime(ColumnIndex: Integer): TDateTime; override;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
-    function GetBlob(ColumnIndex: Integer): IZBlob; override;
+    function GetRawByteString(ColumnIndex: Integer): RawByteString;
+    function GetUnicodeString(ColumnIndex: Integer): ZWidestring;
+    function GetBoolean(ColumnIndex: Integer): Boolean;
+    function GetUInt(ColumnIndex: Integer): Cardinal;
+    function GetInt(ColumnIndex: Integer): Integer;
+    function GetULong(ColumnIndex: Integer): UInt64;
+    function GetLong(ColumnIndex: Integer): Int64;
+    function GetFloat(ColumnIndex: Integer): Single;
+    function GetDouble(ColumnIndex: Integer): Double;
+    function GetCurrency(ColumnIndex: Integer): Currency;
+    function GetBigDecimal(ColumnIndex: Integer): Extended;
+    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetDate(ColumnIndex: Integer): TDateTime;
+    function GetTime(ColumnIndex: Integer): TDateTime;
+    function GetTimestamp(ColumnIndex: Integer): TDateTime;
+    function GetBlob(ColumnIndex: Integer): IZBlob;
     function GetDefaultExpression(ColumnIndex: Integer): string; override;
 
     //---------------------------------------------------------------------
@@ -221,43 +216,40 @@ type
     function RowInserted: Boolean; override;
     function RowDeleted: Boolean; override;
 
-    procedure UpdateNull(ColumnIndex: Integer); override;
-    procedure UpdateBoolean(ColumnIndex: Integer; const Value: Boolean); override;
-    procedure UpdateByte(ColumnIndex: Integer; const Value: Byte); override;
-    procedure UpdateShort(ColumnIndex: Integer; const Value: ShortInt); override;
-    procedure UpdateWord(ColumnIndex: Integer; const Value: Word); override;
-    procedure UpdateSmall(ColumnIndex: Integer; const Value: SmallInt); override;
-    procedure UpdateUInt(ColumnIndex: Integer; const Value: Cardinal); override;
-    procedure UpdateInt(ColumnIndex: Integer; const Value: Integer); override;
-    procedure UpdateULong(ColumnIndex: Integer; const Value: UInt64); override;
-    procedure UpdateLong(ColumnIndex: Integer; const Value: Int64); override;
-    procedure UpdateFloat(ColumnIndex: Integer; const Value: Single); override;
-    procedure UpdateDouble(ColumnIndex: Integer; const Value: Double); override;
-    procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency); override;
-    procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended); override;
-    procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar); override;
-    procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar); override;
-    procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUint); override;
-    procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar); override;
-    procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; Len: PNativeUint); override;
-    procedure UpdateString(ColumnIndex: Integer; const Value: String); override;
+    procedure UpdateNull(ColumnIndex: Integer);
+    procedure UpdateBoolean(ColumnIndex: Integer; Value: Boolean);
+    procedure UpdateByte(ColumnIndex: Integer; Value: Byte);
+    procedure UpdateShort(ColumnIndex: Integer; Value: ShortInt);
+    procedure UpdateWord(ColumnIndex: Integer; Value: Word);
+    procedure UpdateSmall(ColumnIndex: Integer; Value: SmallInt);
+    procedure UpdateUInt(ColumnIndex: Integer; Value: Cardinal);
+    procedure UpdateInt(ColumnIndex: Integer; Value: Integer);
+    procedure UpdateULong(ColumnIndex: Integer; const Value: UInt64);
+    procedure UpdateLong(ColumnIndex: Integer; const Value: Int64);
+    procedure UpdateFloat(ColumnIndex: Integer; Value: Single);
+    procedure UpdateDouble(ColumnIndex: Integer; const Value: Double);
+    procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency);
+    procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
+    procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUint); overload;
+    procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUint); overload;
+    procedure UpdateString(ColumnIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
-    procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString); override;
+    procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString);
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String); override;
+    procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String);
     {$ENDIF}
-    procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString); override;
-    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString); override;
-    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes); override;
-    procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime); override;
-    procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime); override;
-    procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime); override;
-    procedure UpdateAsciiStream(ColumnIndex: Integer; const Value: TStream); override;
-    procedure UpdateUnicodeStream(ColumnIndex: Integer; const Value: TStream); override;
-    procedure UpdateBinaryStream(ColumnIndex: Integer; const Value: TStream); override;
-    procedure UpdateLob(ColumnIndex: Integer; const Value: IZBlob); override;
-    procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string); override;
+    procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
+    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
+    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
+    procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime);
+    procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime);
+    procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime);
+    procedure UpdateAsciiStream(ColumnIndex: Integer; const Value: TStream);
+    procedure UpdateUnicodeStream(ColumnIndex: Integer; const Value: TStream);
+    procedure UpdateBinaryStream(ColumnIndex: Integer; const Value: TStream);
+    procedure UpdateLob(ColumnIndex: Integer; const Value: IZBlob);
+    procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string);
 
     procedure InsertRow; override;
     procedure UpdateRow; override;
@@ -294,7 +286,7 @@ type
     procedure PostUpdatesCached; virtual;
     procedure DisposeCachedUpdates; virtual;
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject, jcoDATETIME_MAGIC]); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject, jcoDATETIME_MAGIC]);
     {$ENDIF USE_SYNCOMMONS}
   end;
 
@@ -323,7 +315,7 @@ type
       const ResultSet: IZResultSet; const SQL: string;
       const Resolver: IZCachedResolver; ConSettings: PZConSettings);
 
-    procedure Close; override;
+    procedure AfterClose; override;
     procedure ResetCursor; override;
     function GetMetaData: IZResultSetMetaData; override;
 
@@ -778,16 +770,12 @@ end;
   sequence of multiple results. A <code>ResultSet</code> object
   is also automatically closed when it is garbage collected.
 }
-procedure TZAbstractCachedResultSet.Close;
+procedure TZAbstractCachedResultSet.AfterClose;
 var
   I: Integer;
 begin
-  if Closed then
-     Exit;
-  inherited Close;
-
-  if Assigned(FRowAccessor) then
-  begin
+  inherited AfterClose;
+  if Assigned(FRowAccessor) then begin
     for I := 0 to FRowsList.Count - 1 do
       FRowAccessor.DisposeBuffer(PZRowBuffer(FRowsList[I]));
     for I := 0 to FInitialRowsList.Count - 1 do
@@ -813,19 +801,17 @@ procedure TZAbstractCachedResultSet.ResetCursor;
 var
   I: Integer;
 begin
-  if not Closed then begin
-    if Assigned(FRowAccessor) then
-    begin
-      for I := 0 to FRowsList.Count - 1 do
-        FRowAccessor.DisposeBuffer(PZRowBuffer(FRowsList[I]));
-      for I := 0 to FInitialRowsList.Count - 1 do
-        FRowAccessor.DisposeBuffer(PZRowBuffer(FInitialRowsList[I]));
-      FRowsList.Clear;
-      FInitialRowsList.Clear;
-      FCurrentRowsList.Clear;
-    end;
-    inherited ResetCursor;
+  if Assigned(FRowAccessor) then
+  begin
+    for I := 0 to FRowsList.Count - 1 do
+      FRowAccessor.DisposeBuffer(PZRowBuffer(FRowsList[I]));
+    for I := 0 to FInitialRowsList.Count - 1 do
+      FRowAccessor.DisposeBuffer(PZRowBuffer(FInitialRowsList[I]));
+    FRowsList.Clear;
+    FInitialRowsList.Clear;
+    FCurrentRowsList.Clear;
   end;
+  inherited ResetCursor;
 end;
 
 //======================================================================
@@ -846,35 +832,6 @@ begin
   CheckAvailable;
 {$ENDIF}
   Result := FRowAccessor.IsNull(ColumnIndex);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractCachedResultSet.GetPChar(ColumnIndex: Integer): PChar;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckAvailable;
-{$ENDIF}
-  {$IFDEF UNICODE}
-  FUniTemp := FRowAccessor.GetString(ColumnIndex, LastWasNull);
-  if Pointer(FUniTemp) = nil then
-    Result := PEmptyUnicodeString
-  else
-    Result := Pointer(FUniTemp); // no RTL conversion!
-  {$ELSE}
-  FRawTemp := FRowAccessor.GetString(ColumnIndex, LastWasNull);
-  if Pointer(FRawTemp) = nil then
-    Result := PEmptyAnsiString
-  else
-    Result := Pointer(FRawTemp); // no RTL conversion!
-  {$ENDIF}
 end;
 
 function TZAbstractCachedResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
@@ -997,74 +954,6 @@ begin
   CheckAvailable;
 {$ENDIF}
   Result := FRowAccessor.GetBoolean(ColumnIndex, LastWasNull);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZAbstractCachedResultSet.GetByte(ColumnIndex: Integer): Byte;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckAvailable;
-{$ENDIF}
-  Result := FRowAccessor.GetByte(ColumnIndex, LastWasNull);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>short</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZAbstractCachedResultSet.GetShort(ColumnIndex: Integer): ShortInt;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckAvailable;
-{$ENDIF}
-  Result := FRowAccessor.GetShort(ColumnIndex, LastWasNull);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>word</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZAbstractCachedResultSet.GetWord(ColumnIndex: Integer): Word;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckAvailable;
-{$ENDIF}
-  Result := FRowAccessor.GetWord(ColumnIndex, LastWasNull);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>small</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZAbstractCachedResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckAvailable;
-{$ENDIF}
-  Result := FRowAccessor.GetSmall(ColumnIndex, LastWasNull);
 end;
 
 {**
@@ -1341,7 +1230,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateBoolean(ColumnIndex: Integer;
-  const Value: Boolean);
+  Value: Boolean);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1361,7 +1250,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateByte(ColumnIndex: Integer;
-  const Value: Byte);
+  Value: Byte);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1381,7 +1270,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateShort(ColumnIndex: Integer;
-  const Value: ShortInt);
+  Value: ShortInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1401,7 +1290,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateWord(ColumnIndex: Integer;
-  const Value: Word);
+  Value: Word);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1421,7 +1310,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateSmall(ColumnIndex: Integer;
-  const Value: SmallInt);
+  Value: SmallInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1441,7 +1330,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateUInt(ColumnIndex: Integer;
-  const Value: Cardinal);
+  Value: Cardinal);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1461,7 +1350,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateInt(ColumnIndex: Integer;
-  const Value: Integer);
+  Value: Integer);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1521,7 +1410,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateFloat(ColumnIndex: Integer;
-  const Value: Single);
+  Value: Single);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1582,53 +1471,13 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateBigDecimal(ColumnIndex: Integer;
-  const Value: Extended);
+  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
   FRowAccessor.SetBigDecimal(ColumnIndex, Value);
-end;
-
-{**
-  Updates the designated column with a <code>String</code> value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param x the new column value
-}
-procedure TZAbstractCachedResultSet.UpdatePChar(ColumnIndex: Integer;
-  const Value: PChar);
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckUpdatable;
-{$ENDIF}
-  PrepareRowForUpdates;
-  FRowAccessor.SetString(ColumnIndex, Value);
-end;
-
-{**
-  Updates the designated column with a <code>PAnsiChar</code> value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param x the new column value
-}
-procedure TZAbstractCachedResultSet.UpdatePAnsiChar(ColumnIndex: Integer;
-  Value: PAnsiChar);
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckUpdatable;
-{$ENDIF}
-  PrepareRowForUpdates;
-  FRowAccessor.SetPAnsiChar(ColumnIndex, Value);
 end;
 
 {**
@@ -1642,7 +1491,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdatePAnsiChar(ColumnIndex: Integer;
-  Value: PAnsiChar; Len: PNativeUInt);
+  Value: PAnsiChar; var Len: NativeUInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1659,36 +1508,11 @@ end;
   <code>insertRow</code> methods are called to update the database.
 
   @param columnIndex the first column is 1, the second is 2, ...
-  @param x the new column value
-}
-procedure TZAbstractCachedResultSet.UpdatePWideChar(ColumnIndex: Integer;
-  Value: PWideChar);
-var Len: NativeUInt;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckUpdatable;
-{$ENDIF}
-  PrepareRowForUpdates;
-  if Value = nil then
-    Len := 0
-  else
-    Len := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(Value);
-  FRowAccessor.SetPWideChar(ColumnIndex, Value, @Len);
-end;
-
-{**
-  Updates the designated column with a <code>PWideChar</code> value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnIndex the first column is 1, the second is 2, ...
   @param Len a pointer to the Length of the value in codepoints
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdatePWideChar(ColumnIndex: Integer;
-  Value: PWideChar; Len: PNativeUInt);
+  Value: PWideChar; var Len: NativeUInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -2345,13 +2169,13 @@ end;
 procedure TZCachedResultSet.ZStringFieldAssignFromResultSet_AnsiRec(ColumnIndex: Integer);
 var Len: NativeUInt;
 begin
-  RowAccessor.SetPAnsiChar(ColumnIndex, ResultSet.GetPAnsiChar(ColumnIndex, Len), @Len);
+  RowAccessor.SetPAnsiChar(ColumnIndex, ResultSet.GetPAnsiChar(ColumnIndex, Len), Len);
 end;
 
 procedure TZCachedResultSet.ZStringFieldAssignFromResultSet_Unicode(ColumnIndex: Integer);
 var Len: NativeUInt;
 begin
-  RowAccessor.SetPWideChar(ColumnIndex, ResultSet.GetPWideChar(ColumnIndex, Len), @Len);
+  RowAccessor.SetPWideChar(ColumnIndex, ResultSet.GetPWideChar(ColumnIndex, Len), Len);
 end;
 
 {**
@@ -2466,16 +2290,12 @@ end;
   sequence of multiple results. A <code>ResultSet</code> object
   is also automatically closed when it is garbage collected.
 }
-procedure TZCachedResultSet.Close;
+procedure TZCachedResultSet.AfterClose;
 begin
-  if not Closed then begin
-    inherited Close;
-    if Assigned(ColumnsInfo) then //close may release the object -> a destroy will be called -> the list does'nt exist anymore
-      ColumnsInfo.Clear;
-    If Assigned(FResultset) then begin
-      FResultset.Close;
-      FResultSet := nil;
-    end;
+  inherited AfterClose;
+  If Assigned(FResultset) then begin
+    FResultset.Close;
+    FResultSet := nil;
   end;
 end;
 

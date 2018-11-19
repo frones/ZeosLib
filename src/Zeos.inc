@@ -138,7 +138,6 @@
         {$IF CompilerVersion >= 18} //Delphi 2006+
           {$UNDEF WITH_UINT64_C1118_ERROR}            //2006+ has no problems to assign code constants for UInt64
           {$UNDEF WITH_MILLISECONDOFTHEYEAR_BUG}      //D7-D005 Bug -> a Int64 Cast of SecondOfTheYear(AValue) is fixed
-          {$UNDEF WITH_OVERLOAD_BUG}                  //2006+ has no problems with ambiguous overload (?)
           {$UNDEF Use_FastCodeFillChar}               //FastCode FillChar() is included since D2006
 
           {$DEFINE WITH_DEPRECATED_EXTRACTFIELDNAME}  //DB.pas proc ExtractFieldName String overload is deprecated}
@@ -161,6 +160,7 @@
             {$UNDEF VER150BELOW}      //found in ZTestBugCompPostgreSql.pas
 
             {$IF CompilerVersion >= 20} //Delphi 2009+
+             {$UNDEF WITH_OVERLOAD_BUG}                  //2009+ has no problems with ambiguous overload (byte/word)
               {$UNDEF WITH_DEPRECATED_EXTRACTFIELDNAME} //DB.pas proc ExtractFieldName String overload is no more deprecated -> Unicode}
               {$UNDEF BCC32_vtDateTime_ERROR}           //resolved by ide
               {$UNDEF USE_FAST_CHARPOS}                 // Since Unicode this function is useless

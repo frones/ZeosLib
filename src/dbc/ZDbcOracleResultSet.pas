@@ -70,7 +70,7 @@ uses
 
 type
   {** Implements Oracle ResultSet. }
-  TZOracleAbstractResultSet_A = class(TZAbstractResultSet)
+  TZOracleAbstractResultSet_A = class(TZAbstractReadOnlyResultSet_A)
   private
     FStmtHandle: POCIStmt;
     FErrorHandle: POCIError;
@@ -81,7 +81,7 @@ type
     FColumns: PZSQLVars;
     FChunkSize: Integer;
     FIteration: Integer; //Max count of rows which fit into BufferSize <= FZBufferSize
-    FCurrentRowBufIndex: LongWord; //The current row in buffer! NOT the current row of RS
+    FCurrentRowBufIndex: Cardinal; //The current row in buffer! NOT the current row of RS
     FZBufferSize: Integer; //max size for multiple rows. If Row > Value ignore it!
     FRowsBuffer: TByteDynArray; //Buffer for multiple rows if possible which is reallocated or freed by IDE -> mem leak save!
     FTinyBuffer: array[Byte] of Byte; //huge because of possible OCINumbers
@@ -90,53 +90,51 @@ type
     Fbufsize: UB4; //a temporary variable uses for Number2Text
     fStatus: Sword;
     FvnuInfo: TZvnuInfo;
-    function GetAsDateTimeValue(const SQLVarHolder: PZSQLVar): TDateTime; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     function GetFinalObject(Obj: POCIObject): POCIObject;
-  protected
-    function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(
       const Statement: IZStatement; const SQL: string;
       const StmtHandle: POCIStmt; const ErrorHandle: POCIError;
       const ZBufferSize: Integer);
-
-    function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
-    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
-    function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
-    function GetString(ColumnIndex: Integer): String; override;
-    function GetRawByteString(ColumnIndex: Integer): RawByteString; override;
-    function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
-    function GetBoolean(ColumnIndex: Integer): Boolean; override;
-    function GetInt(ColumnIndex: Integer): Integer; override;
-    function GetLong(ColumnIndex: Integer): Int64; override;
-    function GetULong(ColumnIndex: Integer): UInt64; override;
-    function GetFloat(ColumnIndex: Integer): Single; override;
-    function GetDouble(ColumnIndex: Integer): Double; override;
-    function GetCurrency(ColumnIndex: Integer): Currency; override;
-    function GetBigDecimal(ColumnIndex: Integer): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}; override;
-    function GetBytes(ColumnIndex: Integer): TBytes; override;
-    function GetDate(ColumnIndex: Integer): TDateTime; override;
-    function GetTime(ColumnIndex: Integer): TDateTime; override;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
+    procedure BeforeClose; override;
+    function IsNull(ColumnIndex: Integer): Boolean;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
+    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
+    function GetBoolean(ColumnIndex: Integer): Boolean;
+    function GetInt(ColumnIndex: Integer): Integer;
+    function GetUInt(ColumnIndex: Integer): Cardinal;
+    function GetLong(ColumnIndex: Integer): Int64;
+    function GetULong(ColumnIndex: Integer): UInt64;
+    function GetFloat(ColumnIndex: Integer): Single;
+    function GetDouble(ColumnIndex: Integer): Double;
+    function GetCurrency(ColumnIndex: Integer): Currency;
+    {$IFDEF BCD_TEST}
+    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    {$ELSE}
+    function GetBigDecimal(ColumnIndex: Integer): Extended;
+    {$ENDIF}
+    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetDate(ColumnIndex: Integer): TDateTime;
+    function GetTime(ColumnIndex: Integer): TDateTime;
+    function GetTimestamp(ColumnIndex: Integer): TDateTime;
     function GetDataSet(ColumnIndex: Integer): IZDataSet; override;
-    function GetBlob(ColumnIndex: Integer): IZBlob; override;
+    function GetBlob(ColumnIndex: Integer): IZBlob;
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); reintroduce;
     {$ENDIF USE_SYNCOMMONS}
   end;
 
-  TZOracleResultSet_A = class(TZOracleAbstractResultSet_A)
+  TZOracleResultSet_A = class(TZOracleAbstractResultSet_A, IZResultSet)
   private
     FMaxBufIndex: Integer;
   protected
     procedure Open; override;
   public
-    procedure Close; override;
-    function Next: Boolean; override;
+    procedure BeforeClose; override;
+    function Next: Boolean; reintroduce;
   end;
 
-  TZOracleCallableResultSet_A = Class(TZOracleAbstractResultSet_A)
+  TZOracleCallableResultSet_A = Class(TZOracleAbstractResultSet_A, IZResultSet)
   private
     FFieldNames: TStringDynArray;
   public
@@ -147,7 +145,7 @@ type
   protected
     procedure Open; override;
   public
-    function Next: Boolean; override;
+    function Next: Boolean; reintroduce;
   End;
 
   {** Represents an interface, specific for Oracle blobs. }
@@ -273,7 +271,7 @@ begin
         { the ordinals we support }
         SQLT_INT        : case value_sz of
                             SizeOf(Int64): JSONWriter.Add(PInt64(P)^);
-                            SizeOf(LongInt): JSONWriter.Add(PLongInt(P)^);
+                            SizeOf(Integer): JSONWriter.Add(PInteger(P)^);
                             SizeOf(SmallInt): JSONWriter.Add(PSmallInt(P)^);
                             else JSONWriter.Add(PShortInt(P)^);
                           end;
@@ -292,12 +290,14 @@ begin
         { the oracle soft decimal }
         SQLT_VNU        : case ZDbcOracleUtils.nvuKind(POCINumber(P), FvnuInfo) of
                             nvu0: JSONWriter.Add('0');
-                            nvuNegInf: JSONWriter.AddShort('"-Infinity"');
-                            nvuPosInf: JSONWriter.AddShort('"Infinity"');
                             vnuNegInt: JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], NegOrdNVU2Raw(POCINumber(P), FvnuInfo, @FTinyBuffer[0]));
                             vnuPosInt: JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PosOrdNVU2Raw(POCINumber(P), FvnuInfo, @FTinyBuffer[0]));
                             vnuPosCurr: JSONWriter.AddCurr64(PosNvu2Curr(POCINumber(P), FvnuInfo));
+                            //vnuPosCurr: JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PosNVUCurr2Raw(POCINumber(P), FvnuInfo, @FTinyBuffer[0]));
                             vnuNegCurr: JSONWriter.AddCurr64(NegNvu2Curr(POCINumber(P), FvnuInfo));
+                            //vnuNegCurr: JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], NegNVUCurr2Raw(POCINumber(P), FvnuInfo, @FTinyBuffer[0]));
+                            nvuNegInf: JSONWriter.AddShort('"-Infinity"');
+                            nvuPosInf: JSONWriter.AddShort('"Infinity"');
                             else begin
                               FStatus:= FPlainDriver.OCINumberToReal(FErrorHandle, POCINumber(P), SizeOf(Double), @FTinyBuffer[0]);
                               if FStatus = OCI_Success
@@ -370,7 +370,7 @@ begin
         SQLT_INTERVAL_DS,
         SQLT_INTERVAL_YM: begin
                             JSONWriter.Add('"');
-                            JSONWriter.AddDateTime(GetAsDateTimeValue(@FColumns^.Variables[C]));
+                            JSONWriter.AddDateTime(GetTimeStamp(C{$IFNDEF GENERIC_INDEX}+1{$ENDIF}));
                             JSONWriter.Add('"');
                           end;
         { large object support }
@@ -412,6 +412,13 @@ end;
   @param SQL a SQL statement.
   @param Handle a Oracle specific query handle.
 }
+procedure TZOracleAbstractResultSet_A.BeforeClose;
+begin
+  FreeOracleSQLVars(FPlainDriver, FColumns, FIteration, FConnectionHandle,
+    FErrorHandle, ConSettings);
+  inherited BeforeClose;
+end;
+
 constructor TZOracleAbstractResultSet_A.Create(
   const Statement: IZStatement;
   const SQL: string; const StmtHandle: POCIStmt; const ErrorHandle: POCIError;
@@ -468,11 +475,11 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-const cInfinity: RawbyteString = 'Infinity';
-const cNegInfinity: RawbyteString = '-Infinity';
+const rInfinity: RawbyteString = 'Infinity';
+const rNegInfinity: RawbyteString = '-Infinity';
 function TZOracleAbstractResultSet_A.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUint): PAnsiChar;
 var SQLVarHolder: PZSQLVar;
-label dbl, sin;
+label dbl, sin, set_Result;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -503,62 +510,57 @@ begin
                   Result := PAnsiChar(@POCILong(Result).data[0]);
                 end;
       { the oracle soft decimal }
-      SQLT_VNU: begin
-            case nvuKind(POCINumber(Result), FvnuInfo) of
-              nvu0: begin
-                  FTinyBuffer[0] := Ord('0');
-                  Len := 1;
-                  Result := @FTinyBuffer[0];
-                end;
-              nvuNegInf: begin
-                  Result := Pointer(cNegInfinity);
-                  Len := 9;
-                end;
-              nvuPosInf: begin
-                  Result := Pointer(cInfinity);
-                  Len := 8;
-                end;
-              vnuNegInt: begin
-                  Len := NegOrdNVU2Raw(POCINumber(Result), FvnuInfo, @FTinyBuffer[0]);
-                  Result := @FTinyBuffer[0];
-                end;
-              vnuPosInt: begin
-                  Len := PosOrdNVU2Raw(POCINumber(Result), FvnuInfo, @FTinyBuffer[0]);
-                  Result := @FTinyBuffer[0];
-                end;
-              vnuPosCurr: begin
-                  CurrToRaw(PosNvu2Curr(POCINumber(Result), FvnuInfo), @FTinyBuffer[0], @Result);
-                  Len := Result - @FTinyBuffer[0];
-                  Result := @FTinyBuffer[0];
-                end;
-              vnuNegCurr: begin
-                  CurrToRaw(NegNvu2Curr(POCINumber(Result), FvnuInfo), @FTinyBuffer[0], @Result);
-                  Len := Result - @FTinyBuffer[0];
-                  Result := @FTinyBuffer[0];
-                end;
-              else begin
-                  Fbufsize := SizeOf(FTinyBuffer);
-                  fStatus := FplainDriver.OCINumberToText(FErrorHandle, POCINumber(Result),
-                    sql_fmt, sql_fmt_length, sql_nls_params, sql_nls_p_length, @Fbufsize, @FTinyBuffer[0]);
-                  if fStatus <> OCI_SUCCESS then
-                    CheckOracleError(FPlainDriver, FErrorHandle, fStatus, lcOther,
-                          'OCINumberToText', ConSettings);
-                  Len := Fbufsize;
-                  Result := @FTinyBuffer[0];
-                end;
+      SQLT_VNU:
+        case nvuKind(POCINumber(Result), FvnuInfo) of
+          nvu0: begin
+              FTinyBuffer[0] := Ord('0');
+              Len := 1;
+              Result := @FTinyBuffer[0];
             end;
-
-          end;
+          nvuNegInf: begin
+              Result := Pointer(rNegInfinity);
+              Len := 9;
+            end;
+          nvuPosInf: begin
+              Result := Pointer(rInfinity);
+              Len := 8;
+            end;
+          vnuNegInt: begin
+              Len := NegOrdNVU2Raw(POCINumber(Result), FvnuInfo, @FTinyBuffer[0]);
+              Result := @FTinyBuffer[0];
+            end;
+          vnuPosInt: begin
+              Len := PosOrdNVU2Raw(POCINumber(Result), FvnuInfo, @FTinyBuffer[0]);
+              Result := @FTinyBuffer[0];
+            end;
+          vnuPosCurr: begin
+              CurrToRaw(PosNvu2Curr(POCINumber(Result), FvnuInfo), @FTinyBuffer[0], @Result);
+              goto set_Result;
+            end;
+          vnuNegCurr: begin
+              CurrToRaw(NegNvu2Curr(POCINumber(Result), FvnuInfo), @FTinyBuffer[0], @Result);
+              goto set_Result;
+            end;
+          else begin
+              Fbufsize := SizeOf(FTinyBuffer);
+              fStatus := FplainDriver.OCINumberToText(FErrorHandle, POCINumber(Result),
+                sql_fmt, sql_fmt_length, sql_nls_params, sql_nls_p_length, @Fbufsize, @FTinyBuffer[0]);
+              if fStatus <> OCI_SUCCESS then
+                CheckOracleError(FPlainDriver, FErrorHandle, fStatus, lcOther,
+                      'OCINumberToText', ConSettings);
+              Len := Fbufsize;
+              Result := @FTinyBuffer[0];
+            end;
+        end;
       { the ordinals we yet do support }
       SQLT_INT: begin
                   case SQLVarHolder.value_sz of
                     SizeOf(Int64): IntToRaw(PInt64(Result)^, @FTinyBuffer[0], @Result);
-                    SizeOf(LongInt): IntToRaw(PLongInt(Result)^, @FTinyBuffer[0], @Result);
+                    SizeOf(Integer): IntToRaw(PInteger(Result)^, @FTinyBuffer[0], @Result);
                     SizeOf(SmallInt): IntToRaw(PSmallInt(Result)^, @FTinyBuffer[0], @Result);
                     else IntToRaw(PShortInt(Result)^, @FTinyBuffer, @Result[0]);
                   end;
-                  Len := Result - @FTinyBuffer[0];
-                  Result := @FTinyBuffer[0];
+                  goto set_Result;
                 end;
       SQLT_UIN: begin
                   case SQLVarHolder.value_sz of
@@ -567,22 +569,18 @@ begin
                     SizeOf(SmallInt): IntToRaw(Cardinal(PWord(Result)^), @FTinyBuffer[0], @Result);
                     else IntToRaw(Cardinal(PByte(Result)^), @FTinyBuffer, @Result[0]);
                   end;
-                  Len := Result - @FTinyBuffer[0];
+set_Result:       Len := Result - @FTinyBuffer[0];
                   Result := @FTinyBuffer[0];
                 end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_BFLOAT:  goto sin;
       SQLT_BDOUBLE: goto dbl;
       SQLT_FLT: begin
                   if SQLVarHolder^.value_sz = SizeOf(Double) then
-      dbl:          FRawTemp := FloatToSQLRaw(PDouble(Result)^)
+      dbl:          Len := FloatToSQLRaw(PDouble(Result)^, @FTinyBuffer)
                   else
-      sin:          FRawTemp := FloatToSQLRaw(PSingle(Result)^);
-                  {$IFDEF WITH_INLINE}
-                  Len := System.Length(FRawTemp){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}
-                  {$ELSE}
-                  Len := {%H-}PLongInt(NativeUInt(FRawTemp) - 4)^;
-                  {$ENDIF};
+      sin:          Len := FloatToSQLRaw(PSingle(Result)^, @FTinyBuffer);
+                  Result := @FTinyBuffer[0];
                 end;
       { the binary raw we support }
       SQLT_VBI: begin
@@ -600,13 +598,9 @@ begin
       SQLT_TIMESTAMP_TZ,
       SQLT_TIMESTAMP_LTZ,
       SQLT_TIMESTAMP: begin
-                  FRawTemp := ZSysUtils.DateTimeToRawSQLTimeStamp(GetTimeStamp(ColumnIndex),
-                    ConSettings^.ReadFormatSettings, False);
-                  {$IFDEF WITH_INLINE}
-                  Len := System.Length(FRawTemp){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}
-                  {$ELSE}
-                  Len := {%H-}PLongInt(NativeUInt(FRawTemp) - 4)^;
-                  {$ENDIF};
+                  ZSysUtils.DateTimeToRawSQLTimeStamp(GetTimeStamp(ColumnIndex),
+                    @FTinyBuffer[0], ConSettings^.ReadFormatSettings, False);
+                  Len := ConSettings^.ReadFormatSettings.DateTimeFormatLen;
                 end;
       SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
         begin
@@ -629,17 +623,23 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>UTF8String</code> in the Java programming language.
+  a <code>PWideChar</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the length of UCS2 string in codepoints
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOracleAbstractResultSet_A.GetRawByteString(
-  ColumnIndex: Integer): RawByteString;
-var
-  SQLVarHolder: PZSQLVar;
+const
+  wNegInfinity: ZWideString = '-Infinity';
+  wInfinity: ZWideString = 'Infinity';
+
+function TZOracleAbstractResultSet_A.GetPWideChar(ColumnIndex: Integer;
+  out Len: NativeUInt): PWideChar;
+var SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
+  D: Double;
+label dbl, sin, set_from_tmp, set_Result;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -649,300 +649,140 @@ begin
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
-    Result := ''
+    Result := nil;
+    Len := 0;
   end else begin
-    P := SQLVarHolder^.valuep+(FCurrentRowBufIndex*SQLVarHolder^.value_sz);
+    P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
       { the supported String types we use }
-      SQLT_AFC: ZSetString(P, GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz), Result);
-      SQLT_VST: ZSetString(PAnsiChar(@PPOCILong(P)^.data[0]), PPOCILong(P)^.Len, Result);
-      SQLT_VCS: ZSetString(PAnsiChar(@POCIVary(P).data[0]), POCIVary(P).Len, Result);
-      SQLT_LVC: ZSetString(PAnsiChar(@POCILong(P).data[0]), POCILong(P).Len, Result);
+      SQLT_AFC: begin
+                  FUniTemp := PRawToUnicode(P, GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz), FClientCP);
+                  goto set_from_tmp;
+                end;
+      SQLT_VST: begin
+                  FUniTemp := PRawToUnicode(@PPOCILong(P)^.data[0], PPOCILong(P)^.Len, FClientCP);
+                  goto set_from_tmp;
+                end;
+      SQLT_VCS: begin
+                  FUniTemp := PRawToUnicode(@POCIVary(P)^.data[0], POCIVary(P)^.Len, FClientCP);
+                  goto set_from_tmp;
+                end;
+      SQLT_LVC: begin
+                  FUniTemp := PRawToUnicode(@POCILong(P)^.data[0], POCILong(P)^.Len, FClientCP);
+                  goto set_from_tmp;
+                end;
       { the oracle soft decimal }
-      SQLT_VNU: case nvuKind(POCINumber(Result), FvnuInfo) of
-                  nvu0:       Result := '0';
-                  nvuNegInf:  Result := cNegInfinity;
-                  nvuPosInf:  Result := cInfinity;
-                  vnuNegInt:  ZSetString(PAnsiChar(@FTinyBuffer[0]), NegOrdNVU2Raw(POCINumber(P),FvnuInfo, @FTinyBuffer[0]), Result);
-                  vnuPosInt:  ZSetString(PAnsiChar(@FTinyBuffer[0]), PosOrdNVU2Raw(POCINumber(P),FvnuInfo, @FTinyBuffer[0]), Result);
-                  vnuPosCurr: Result := CurrToRaw(PosNvu2Curr(POCINumber(P), FvnuInfo));
-                  vnuNegCurr: Result := CurrToRaw(NegNvu2Curr(POCINumber(P), FvnuInfo));
-                  else begin
-                      Fbufsize := SizeOf(FTinyBuffer);
-                      fStatus := FplainDriver.OCINumberToText(FErrorHandle, POCINumber(P),
-                        sql_fmt, sql_fmt_length, sql_nls_params, sql_nls_p_length, @Fbufsize, @FTinyBuffer[0]);
-                      if fStatus <> OCI_SUCCESS then
-                        CheckOracleError(FPlainDriver, FErrorHandle, fStatus, lcOther,
-                              'OCINumberToText', ConSettings);
-                      ZSetString(PAnsiChar(@FTinyBuffer[0]), Fbufsize, Result);
-                    end;
-                end;
+      SQLT_VNU:
+        case nvuKind(POCINumber(P), FvnuInfo) of
+          nvu0: begin
+              PWord(@FTinyBuffer[0])^ := Ord('0');
+              Len := 1;
+              Result := @FTinyBuffer[0];
+            end;
+          nvuNegInf: begin
+              Result := Pointer(wNegInfinity);
+              Len := 9;
+            end;
+          nvuPosInf: begin
+              Result := Pointer(wInfinity);
+              Len := 8;
+            end;
+          vnuNegInt: begin
+              IntToUnicode(NegNvu2Int(POCINumber(P), FvnuInfo), @FTinyBuffer[0], @Result);
+              goto set_Result;
+            end;
+          vnuPosInt: begin
+              IntToUnicode(PosNvu2Int(POCINumber(P), FvnuInfo), @FTinyBuffer[0], @Result);
+              goto set_Result;
+            end;
+          vnuPosCurr: begin
+              CurrToUnicode(PosNvu2Curr(POCINumber(P), FvnuInfo), @FTinyBuffer[0], @Result);
+              goto set_Result;
+            end;
+          vnuNegCurr: begin
+              CurrToUnicode(NegNvu2Curr(POCINumber(P), FvnuInfo), @FTinyBuffer[0], @Result);
+              goto set_Result;
+            end;
+          else begin
+              Result := @FTinyBuffer[0];
+              fStatus := FplainDriver.OCINumberToReal(FErrorHandle, POCINumber(P), SizeOf(Double), @D);
+              if fStatus <> OCI_SUCCESS then
+                CheckOracleError(FPlainDriver, FErrorHandle, fStatus, lcOther, 'OCINumberToReal', ConSettings);
+              Len := FloatToSQLUnicode(D, @FTinyBuffer)
+            end;
+        end;
       { the ordinals we yet do support }
-      SQLT_INT: case SQLVarHolder.value_sz of
-                  SizeOf(Int64):    Result := IntToRaw(PInt64(P)^);
-                  SizeOf(LongInt):  Result := IntToRaw(PLongInt(P)^);
-                  SizeOf(SmallInt): Result := IntToRaw(PSmallInt(P)^);
-                  else              Result := IntToRaw(PShortInt(P)^);
+      SQLT_INT: begin
+                  case SQLVarHolder.value_sz of
+                    SizeOf(Int64): IntToUnicode(PInt64(P)^, @FTinyBuffer[0], @Result);
+                    SizeOf(Integer): IntToUnicode(PInteger(P)^, @FTinyBuffer[0], @Result);
+                    SizeOf(SmallInt): IntToUnicode(PSmallInt(P)^, @FTinyBuffer[0], @Result);
+                    else IntToUnicode(PShortInt(P)^, @FTinyBuffer, @Result[0]);
+                  end;
+                  goto set_Result;
                 end;
-      SQLT_UIN: case SQLVarHolder.value_sz of
-                  SizeOf(UInt64):   Result := IntToRaw(PUInt64(P)^);
-                  SizeOf(Cardinal): Result := IntToRaw(PCardinal(P)^);
-                  SizeOf(Word):     Result := IntToRaw(PWord(P)^);
-                  else              Result := IntToRaw(PByte(P)^);
+      SQLT_UIN: begin
+                  case SQLVarHolder.value_sz of
+                    SizeOf(UInt64): IntToUnicode(PUInt64(P)^, @FTinyBuffer[0], @Result);
+                    SizeOf(Cardinal): IntToUnicode(PCardinal(P)^, @FTinyBuffer[0], @Result);
+                    SizeOf(Word): IntToUnicode(Cardinal(PWord(P)^), @FTinyBuffer[0], @Result);
+                    else IntToUnicode(Cardinal(PByte(P)^), @FTinyBuffer, @Result[0]);
+                  end;
+set_Result:       Len := Result - PWideChar(@FTinyBuffer[0]);
+                  Result := @FTinyBuffer[0];
                 end;
       { the FPU floats we du support }
-      SQLT_FLT: if SQLVarHolder^.value_sz = SizeOf(Double)
-                then Result := FloatToSQLRaw(PDouble(P)^)
-                else Result := FloatToSQLRaw(PSingle(P)^);
-      SQLT_BFLOAT:  Result := FloatToSQLRaw(PSingle(P)^);
-      SQLT_BDOUBLE: Result := FloatToSQLRaw(PDouble(P)^);
+      SQLT_BFLOAT:  goto sin;
+      SQLT_BDOUBLE: goto dbl;
+      SQLT_FLT: begin
+                  if SQLVarHolder^.value_sz = SizeOf(Double) then
+      dbl:          Len := FloatToSQLUnicode(PDouble(P)^, @FTinyBuffer)
+                  else
+      sin:          Len := FloatToSQLUnicode(PSingle(P)^, @FTinyBuffer);
+                  Result := @FTinyBuffer
+                end;
       { the binary raw we support }
-      SQLT_VBI: ZSetString(PAnsiChar(@POCIVary(P)^.data[0]), POCIVary(P)^.Len, Result);
-      SQLT_LVB: ZSetString(PAnsiChar(@POCILong(P)^.data[0]), POCILong(P)^.Len, Result);
+      SQLT_VBI: begin
+                  Len := POCIVary(P)^.Len;
+                  Result := @POCIVary(P)^.data[0];
+                end;
+      SQLT_LVB: begin
+                  Len := POCILong(P)^.Len;
+                  Result := @POCILong(P)^.data[0];
+                end;
       { the date/time types we support }
-      SQLT_DAT, SQLT_TIMESTAMP:
-        Result := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(SQLVarHolder),
-          ConSettings^.ReadFormatSettings, False);
-      SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE, SQLT_CLOB:
-        Result := GetBlob(ColumnIndex).GetString;
-      else
-        raise Exception.Create('Missing OCI Type?');
-    end;
-  end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>String</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZOracleAbstractResultSet_A.GetString(ColumnIndex: Integer): String;
-begin
-  {$IFDEF UNICODE}
-  Result := GetUnicodeString(ColumnIndex);
-  {$ELSE}
-  Result := GetRawByteString(ColumnIndex);
-  if ConSettings^.AutoEncode then
-    Result := ConSettings^.ConvFuncs.ZRawToString(Result,
-      ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-  {$ENDIF}
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>UTF8String</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZOracleAbstractResultSet_A.GetUTF8String(ColumnIndex: Integer): UTF8String;
-var
-  SQLVarHolder: PZSQLVar;
-  P: PAnsiChar;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stString);
-{$ENDIF}
-  {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-  if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    LastWasNull := True;
-    Result := ''
-  end else begin
-    P := SQLVarHolder^.valuep+(FCurrentRowBufIndex*SQLVarHolder^.value_sz);
-    LastWasNull := False;
-    case SQLVarHolder.dty of
-      { the supported String types we use }
-      SQLT_AFC: if FClientCP = zCP_UTF8
-                then ZSetString(P, GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz), Result)
-                else Result := ConSettings.ConvFuncs.ZPRawToUTF8(P, GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz), FClientCP);
-      SQLT_VST: if FClientCP = zCP_UTF8
-                then ZSetString(PAnsiChar(@PPOCILong(P)^.data[0]), PPOCILong(P)^.Len, Result)
-                else Result := ConSettings.ConvFuncs.ZPRawToUTF8(PAnsiChar(@PPOCILong(P)^.data[0]), PPOCILong(P)^.Len, FClientCP);
-      SQLT_VCS: if FClientCP = zCP_UTF8
-                then ZSetString(PAnsiChar(@POCIVary(P).data[0]), POCIVary(P).Len, Result)
-                else Result := ConSettings.ConvFuncs.ZPRawToUTF8(PAnsiChar(@POCIVary(P).data[0]), POCIVary(P).Len, FClientCP);
-      SQLT_LVC: if FClientCP = zCP_UTF8
-                then ZSetString(PAnsiChar(@POCILong(P).data[0]), POCILong(P).Len, Result)
-                else Result := ConSettings.ConvFuncs.ZPRawToUTF8(PAnsiChar(@POCILong(P).data[0]), POCILong(P).Len, FClientCP);
-      { the oracle soft decimal }
-      SQLT_VNU: case nvuKind(POCINumber(Result), FvnuInfo) of
-                  nvu0:       Result := '0';
-                  nvuNegInf:  Result := cNegInfinity;
-                  nvuPosInf:  Result := cInfinity;
-                  vnuNegInt:  ZSetString(PAnsiChar(@FTinyBuffer[0]), NegOrdNVU2Raw(POCINumber(P),FvnuInfo, @FTinyBuffer[0]), Result);
-                  vnuPosInt:  ZSetString(PAnsiChar(@FTinyBuffer[0]), PosOrdNVU2Raw(POCINumber(P),FvnuInfo, @FTinyBuffer[0]), Result);
-                  vnuPosCurr: Result := CurrToRaw(PosNvu2Curr(POCINumber(P), FvnuInfo));
-                  vnuNegCurr: Result := CurrToRaw(NegNvu2Curr(POCINumber(P), FvnuInfo));
-                  else begin
-                      Fbufsize := SizeOf(FTinyBuffer);
-                      fStatus := FplainDriver.OCINumberToText(FErrorHandle, POCINumber(P),
-                        sql_fmt, sql_fmt_length, sql_nls_params, sql_nls_p_length, @Fbufsize, @FTinyBuffer[0]);
-                      if fStatus <> OCI_SUCCESS then
-                        CheckOracleError(FPlainDriver, FErrorHandle, fStatus, lcOther,
-                              'OCINumberToText', ConSettings);
-                      ZSetString(PAnsiChar(@FTinyBuffer[0]), Fbufsize, Result);
-                    end;
+      SQLT_DAT,
+      SQLT_INTERVAL_DS,
+      SQLT_INTERVAL_YM,
+      SQLT_TIMESTAMP_TZ,
+      SQLT_TIMESTAMP_LTZ,
+      SQLT_TIMESTAMP: begin
+                  ZSysUtils.DateTimeToUnicodeSQLTimeStamp(GetTimeStamp(ColumnIndex),
+                    @FTinyBuffer, ConSettings^.ReadFormatSettings, False);
+                  Result := @FTinyBuffer;
+                  Len := ConSettings^.ReadFormatSettings.DateTimeFormatLen;
                 end;
-      { the ordinals we yet do support }
-      SQLT_INT: case SQLVarHolder.value_sz of
-                  SizeOf(Int64):    Result := IntToRaw(PInt64(P)^);
-                  SizeOf(LongInt):  Result := IntToRaw(PLongInt(P)^);
-                  SizeOf(SmallInt): Result := IntToRaw(PSmallInt(P)^);
-                  else              Result := IntToRaw(PShortInt(P)^);
-                end;
-      SQLT_UIN: case SQLVarHolder.value_sz of
-                  SizeOf(UInt64):   Result := IntToRaw(PUInt64(P)^);
-                  SizeOf(Cardinal): Result := IntToRaw(PCardinal(P)^);
-                  SizeOf(Word):     Result := IntToRaw(PWord(P)^);
-                  else              Result := IntToRaw(PByte(P)^);
-                end;
-      { the FPU floats we du support }
-      SQLT_FLT: if SQLVarHolder^.value_sz = SizeOf(Double)
-                then Result := FloatToSQLRaw(PDouble(P)^)
-                else Result := FloatToSQLRaw(PSingle(P)^);
-      SQLT_BFLOAT:  Result := FloatToSQLRaw(PSingle(P)^);
-      SQLT_BDOUBLE: Result := FloatToSQLRaw(PDouble(P)^);
-      { the binary raw we support }
-      SQLT_VBI: ZSetString(PAnsiChar(@POCIVary(P)^.data[0]), POCIVary(P)^.Len, Result);
-      SQLT_LVB: ZSetString(PAnsiChar(@POCILong(P)^.data[0]), POCILong(P)^.Len, Result);
-      { the date/time types we support }
-      SQLT_DAT, SQLT_TIMESTAMP:
-        Result := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(SQLVarHolder),
-          ConSettings^.ReadFormatSettings, False);
       SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
         begin
-          FTempLob := GetBlob(ColumnIndex);
-          ZSetString(PAnsiChar(FTempLob.GetBuffer), FTempLob.Length, Result);
+          FTempLob  := GetBlob(ColumnIndex);
+          FUniTemp := Ascii7ToUnicodeString(FTempLob.GetBuffer, FTempLob.Length);
+set_from_tmp:
+          Len := Length(FUniTemp);
+          if Len = 0
+          then Result := PEmptyUnicodeString
+          else Result := Pointer(FUniTemp);
         end;
       SQLT_CLOB:
         begin
-          FTempLob := GetBlob(ColumnIndex);
-          Result := FTempLob.GetUTF8String;
+          FTempLob  := GetBlob(ColumnIndex); //localize
+          Result    := FTempLob.GetPWideChar;
+          Len       := FTempLob.Length;
         end;
       else
-        raise Exception.Create('Missing OCI Type?');
+        raise Exception.Create('Unsupported OCI Type? '+ZFastCode.IntToStr(SQLVarHolder^.dty));
     end;
   end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZOracleAbstractResultSet_A.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
-var Len: NativeUInt;
-begin
-  Result := GetPAnsiChar(ColumnIndex, Len);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a <code>DateTime</code>.
-
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @param SQLVarHolder a reference to SQL variable holder or <code>nil</code>
-    to force retrieving the variable.
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZOracleAbstractResultSet_A.GetAsDateTimeValue(const SQLVarHolder: PZSQLVar): TDateTime;
-var
-  Status: Integer;
-  Year: SmallInt;
-  yr, mnth, dy, hr, mm, ss, fsec: sb4;
-  Month, Day: Byte;
-  Hour, Minute, Second: Byte;
-  Millis: ub4;
-  P: PAnsiChar;
-  Ptr: POraDate absolute P;
-begin
-  with SQLVarHolder^ do
-  case dty of
-    SQLT_DAT: begin
-        P := {%H-}PAnsiChar(valuep+(FCurrentRowBufIndex*value_sz));
-        if (PInteger(P)^=0) and (PInteger(P+3)^=0) then //all 0 ?
-          result := 0
-        else
-        begin
-          Result := 0;
-          if Ptr^.Cent <= 100 then // avoid TDateTime values < 0 (generates wrong DecodeTime) //thanks to ab of synopse
-            result := 0
-          else
-            if ColType in [stDate, stTimestamp] then
-              result := EncodeDate((Ptr^.Cent-100)*100+Ptr^.Year-100,Ptr^.Month,Ptr^.Day);
-          if (ColType in [stTime, stTimestamp]) and ((Ptr^.Hour<>0) or (Ptr^.Min<>0) or (Ptr^.Sec<>0)) then
-            result := result + EncodeTime(Ptr^.Hour-1,Ptr^.Min-1,Ptr^.Sec-1,0);
-        end;
-      end;
-    SQLT_INTERVAL_DS:
-      begin
-        Status := FPlainDriver.OCIIntervalGetDaySecond(FOCISvcCtx, FErrorHandle, @dy, @hr, @mm, @ss, @fsec, {%H-}PPOCIDescriptor(valuep+(FCurrentRowBufIndex*value_sz))^);
-        if (Status = OCI_SUCCESS) then
-          Result := EncodeTime(hr, mm, ss, fsec div 100000)
-        else
-          Result := 0;
-      end;
-    SQLT_INTERVAL_YM:
-      begin
-        Status := FPlainDriver.OCIIntervalGetYearMonth(FOCISvcCtx, FErrorHandle, @yr, @mnth, {%H-}PPOCIDescriptor(valuep+(FCurrentRowBufIndex*value_sz))^);
-        if (Status = OCI_SUCCESS) and (not (yr and mnth = 1)) then
-          Result := EncodeDate(yr, mnth, 1)
-        else Result := 0;
-      end;
-    else
-    begin
-      if ColType in [stDate, stTimestamp] then
-      begin
-        Status := FPlainDriver.OCIDateTimeGetDate(FConnectionHandle, FErrorHandle,
-          {%H-}PPOCIDescriptor(valuep+(FCurrentRowBufIndex*value_sz))^,
-          Year{%H-}, Month{%H-}, Day{%H-});
-      // attention : this code handles all timestamps on 01/01/0001 as a pure time value
-      // reason : oracle doesn't have a pure time datatype so all time comparisons compare
-      //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
-        if (Status = OCI_SUCCESS) and (not ((Year=1) and (Month=1) and (Day=1))) then
-          Result := EncodeDate(Year, Month, Day)
-        else Result := 0;
-      end
-      else Result := 0;
-      if ColType in [stTime, stTimestamp] then
-      begin
-        Status := FPlainDriver.OCIDateTimeGetTime(FConnectionHandle, FErrorHandle,
-          {%H-}PPOCIDescriptor(valuep+(FCurrentRowBufIndex*value_sz))^,
-            Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-});
-        if Status = OCI_SUCCESS then
-          Result := Result + EncodeTime(
-            Hour, Minute, Second, Millis div 1000000);
-      end;
-    end;
-  end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>String</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZOracleAbstractResultSet_A.InternalGetString(ColumnIndex: Integer): RawByteString;
-begin
-  Result := GetRawByteString(ColumnIndex);
 end;
 
 {**
@@ -996,7 +836,7 @@ begin
       { the ordinals we yet do support }
       SQLT_INT: case SQLVarHolder.value_sz of
                   SizeOf(Int64):    Result := PInt64(P)^ <> 0;
-                  SizeOf(LongInt):  Result := PLongInt(P)^ <> 0;
+                  SizeOf(Integer):  Result := PInteger(P)^ <> 0;
                   SizeOf(SmallInt): Result := PSmallInt(P)^ <> 0;
                   else              Result := PShortInt(P)^ <> 0;
                 end;
@@ -1006,7 +846,7 @@ begin
                   SizeOf(Word):     Result := PWord(P)^ <> 0;
                   else              Result := PByte(P)^ <> 0;
                 end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_FLT: if SQLVarHolder^.value_sz = SizeOf(Double)
                 then Result := PDouble(P)^ <> 0
                 else Result := PSingle(P)^ <> 0;
@@ -1016,7 +856,7 @@ begin
       //SQLT_VBI, SQLT_LVB:
       { the date/time types we support }
       SQLT_DAT, SQLT_TIMESTAMP:
-        Result := GetAsDateTimeValue(SQLVarHolder) <> 0;
+        Result := GetTimeStamp(ColumnIndex) <> 0;
       //SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
       SQLT_CLOB: Result := StrToBoolEx(GetBlob(ColumnIndex).GetPAnsiChar(FClientCP));
       else
@@ -1099,7 +939,7 @@ begin
       SQLT_INT:
         case SQLVarHolder.value_sz of
           SizeOf(Int64):    Result := PInt64(P)^;
-          SizeOf(LongInt):  Result := PLongInt(P)^;
+          SizeOf(Integer):  Result := PInteger(P)^;
           SizeOf(SmallInt): Result := PSmallInt(P)^;
           else              Result := PShortInt(P)^;
         end;
@@ -1110,7 +950,7 @@ begin
           SizeOf(Word):     Result := PSmallInt(P)^;
           else              Result := PByte(P)^;
         end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
                     then Result := Trunc(PDouble(P)^)
                     else Result := Trunc(PSingle(P)^);
@@ -1120,7 +960,7 @@ begin
       //SQLT_VBI, SQLT_LVB:
       { the date/time types we support }
       SQLT_DAT, SQLT_TIMESTAMP:
-        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetAsDateTimeValue(SQLVarHolder));
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetTimeStamp(ColumnIndex));
       SQLT_BLOB, SQLT_CLOB: begin
           FTempLob := GetBlob(ColumnIndex);
           Result := RawToInt64Def(FTempLob.GetBuffer, 0);
@@ -1129,6 +969,20 @@ begin
       Result := 0;
     end;
   end;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  an <code>uint</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZOracleAbstractResultSet_A.GetUInt(ColumnIndex: Integer): Cardinal;
+begin
+  Result := GetLong(ColumnIndex);
 end;
 
 {**
@@ -1189,18 +1043,18 @@ begin
       SQLT_INT:
         case SQLVarHolder.value_sz of
           SizeOf(Int64):    Result := PInt64(P)^;
-          SizeOf(LongInt):  Result := PLongInt(P)^;
+          SizeOf(Integer):  Result := PInteger(P)^;
           SizeOf(SmallInt): Result := PSmallInt(P)^;
           else              Result := PShortInt(P)^;
         end;
       SQLT_UIN:
         case SQLVarHolder.value_sz of
-          SizeOf(UInt64):   Result := Int64(PUInt64(P)^);
+          SizeOf(UInt64):   Result := PUInt64(P)^;
           SizeOf(Cardinal): Result := PCardinal(P)^;
-          SizeOf(Word):     Result := PSmallInt(P)^;
+          SizeOf(Word):     Result := PWord(P)^;
           else              Result := PByte(P)^;
         end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
                     then Result := Trunc(PDouble(P)^)
                     else Result := Trunc(PSingle(P)^);
@@ -1210,10 +1064,10 @@ begin
       //SQLT_VBI, SQLT_LVB:
       { the date/time types we support }
       SQLT_DAT, SQLT_TIMESTAMP:
-        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetAsDateTimeValue(SQLVarHolder));
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetTimeStamp(ColumnIndex));
       SQLT_BLOB, SQLT_CLOB: begin
           FTempLob := GetBlob(ColumnIndex);
-          Result := RawToInt64Def(FTempLob.GetBuffer, 0);
+          Result := RawToUInt64Def(FTempLob.GetBuffer, 0);
         end;
     else
       Result := 0;
@@ -1221,103 +1075,6 @@ begin
   end;
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>WideString</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZOracleAbstractResultSet_A.GetUnicodeString(
-  ColumnIndex: Integer): ZWideString;
-var
-  SQLVarHolder: PZSQLVar;
-  P: PAnsiChar;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stUnicodeString);
-{$ENDIF}
-  {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-  if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    LastWasNull := True;
-    Result := ''
-  end else begin
-    P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
-    LastWasNull := False;
-    case SQLVarHolder.dty of
-      { the supported String types we use }
-      SQLT_AFC: Result := PRawToUnicode(P, GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz), FClientCP);
-      SQLT_VST: Result := PRawToUnicode(PAnsiChar(@PPOCILong(P)^.data[0]), PPOCILong(P)^.Len, FClientCP);
-      SQLT_VCS: Result := PRawToUnicode(PAnsiChar(@POCIVary(P).data[0]), POCIVary(P).Len, FClientCP);
-      SQLT_LVC: Result := PRawToUnicode(PAnsiChar(@POCILong(P).data[0]), POCILong(P).Len, FClientCP);
-      { the oracle soft decimal }
-      SQLT_VNU: case nvuKind(POCINumber(P), FvnuInfo) of
-                  nvu0:       Result := '0';
-                  nvuNegInf:  Result := '-Infinity';
-                  nvuPosInf:  Result := 'Infinity';
-                  vnuNegInt:  Result := IntToUnicode(NegNvu2Int(POCINumber(P), FvnuInfo));
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-                  vnuPosInt:  Result := IntToUnicode(PosNvu2Int(POCINumber(P), FvnuInfo));
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-                  vnuPosCurr: Result := CurrToUnicode(PosNvu2Curr(POCINumber(P), FvnuInfo));
-                  vnuNegCurr: Result := CurrToUnicode(NegNvu2Curr(POCINumber(P), FvnuInfo));
-                  else begin
-                      Fbufsize := SizeOf(FTinyBuffer);
-                      fStatus := FplainDriver.OCINumberToText(FErrorHandle, POCINumber(P),
-                        sql_fmt, sql_fmt_length, sql_nls_params, sql_nls_p_length, @Fbufsize, @FTinyBuffer[0]);
-                      if fStatus <> OCI_SUCCESS then
-                        CheckOracleError(FPlainDriver, FErrorHandle, fStatus, lcOther,
-                              'OCINumberToText', ConSettings);
-                      ZSetString(PAnsiChar(@FTinyBuffer[0]), Fbufsize, Result);
-                    end;
-                end;
-      { the ordinals we yet do support }
-      SQLT_INT: case SQLVarHolder.value_sz of
-                  SizeOf(Int64):    Result := IntToUnicode(PInt64(P)^);
-                  SizeOf(LongInt):  Result := IntToUnicode(PLongInt(P)^);
-                  SizeOf(SmallInt): Result := IntToUnicode(PSmallInt(P)^);
-                  else              Result := IntToUnicode(PShortInt(P)^);
-                end;
-      SQLT_UIN: case SQLVarHolder.value_sz of
-                  SizeOf(UInt64):   Result := IntToUnicode(PUInt64(P)^);
-                  SizeOf(Cardinal): Result := IntToUnicode(PCardinal(P)^);
-                  SizeOf(Word):     Result := IntToUnicode(PWord(P)^);
-                  else              Result := IntToUnicode(PByte(P)^);
-                end;
-      { the FPU floats we du support }
-      SQLT_FLT: if SQLVarHolder^.value_sz = SizeOf(Double)
-                then Result := FloatToSQLUnicode(PDouble(P)^)
-                else Result := FloatToSQLUnicode(PSingle(P)^);
-      SQLT_BFLOAT:  Result := FloatToSQLUnicode(PSingle(P)^);
-      SQLT_BDOUBLE: Result := FloatToSQLUnicode(PDouble(P)^);
-      { the binary raw we support }
-      SQLT_VBI: Result := Ascii7ToUnicodeString(PAnsiChar(@POCIVary(P)^.data[0]), POCIVary(P)^.Len);
-      SQLT_LVB: Result := Ascii7ToUnicodeString(PAnsiChar(@POCILong(P)^.data[0]), POCILong(P)^.Len);
-      { the date/time types we support }
-      SQLT_DAT, SQLT_TIMESTAMP:
-        Result := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(GetAsDateTimeValue(SQLVarHolder),
-          ConSettings^.ReadFormatSettings, False);
-      SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
-        begin
-          FTempLob := GetBlob(ColumnIndex);
-          Result := Ascii7ToUnicodeString(FTempLob.GetBuffer, FTempLob.Length);
-        end;
-      SQLT_CLOB:
-        begin
-          FTempLob := GetBlob(ColumnIndex);
-          Result := FTempLob.GetUnicodeString;
-        end;
-      else
-        raise Exception.Create('Missing OCI Type?');
-    end;
-  end;
-end;
-
 
 {**
   Gets the value of the designated column in the current row
@@ -1377,7 +1134,7 @@ begin
       SQLT_INT:
         case SQLVarHolder.value_sz of
           SizeOf(Int64):    Result := PInt64(P)^;
-          SizeOf(LongInt):  Result := PLongInt(P)^;
+          SizeOf(Integer):  Result := PInteger(P)^;
           SizeOf(SmallInt): Result := PSmallInt(P)^;
           else              Result := PShortInt(P)^;
         end;
@@ -1390,7 +1147,7 @@ begin
             SizeOf(Word):     Result := PSmallInt(P)^;
             else              Result := PByte(P)^;
           end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
                     then Result := PDouble(P)^
                     else Result := PSingle(P)^;
@@ -1400,7 +1157,7 @@ begin
       //SQLT_VBI, SQLT_LVB:
       { the date/time types we support }
       SQLT_DAT, SQLT_TIMESTAMP:
-        Result := GetAsDateTimeValue(SQLVarHolder);
+        Result := GetTimeStamp(ColumnIndex);
       SQLT_BLOB, SQLT_CLOB:
         SqlStrToFloatDef(PAnsiChar(GetBlob(ColumnIndex).GetBuffer), 0, Result);
       else
@@ -1419,7 +1176,11 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOracleAbstractResultSet_A.GetBigDecimal(ColumnIndex: Integer): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF};
+{$IFDEF BCD_TEST}
+procedure TZOracleAbstractResultSet_A.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+{$ELSE}
+function TZOracleAbstractResultSet_A.GetBigDecimal(ColumnIndex: Integer): Extended;
+{$ENDIF}
 var
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
@@ -1478,7 +1239,7 @@ begin
       SQLT_INT:
         case SQLVarHolder.value_sz of
           SizeOf(Int64):    Result := PInt64(P)^;
-          SizeOf(LongInt):  Result := PLongInt(P)^;
+          SizeOf(Integer):  Result := PInteger(P)^;
           SizeOf(SmallInt): Result := PSmallInt(P)^;
           else              Result := PShortInt(P)^;
         end;
@@ -1491,7 +1252,7 @@ begin
             SizeOf(Word):     Result := PSmallInt(P)^;
             else              Result := PByte(P)^;
           end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
                     then Result := PDouble(P)^
                     else Result := PSingle(P)^;
@@ -1501,7 +1262,7 @@ begin
       //SQLT_VBI, SQLT_LVB:
       { the date/time types we support }
       SQLT_DAT, SQLT_TIMESTAMP:
-        Result := GetAsDateTimeValue(SQLVarHolder);
+        Result := GetTimeStamp(ColumnIndex);
       SQLT_BLOB, SQLT_CLOB:
         SqlStrToFloatDef(PAnsiChar(GetBlob(ColumnIndex).GetBuffer), 0, Result);
       else
@@ -1513,12 +1274,11 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>byte</code> array in the Java programming language.
-  The bytes represent the raw values returned by the driver.
+  a <code>byte array</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
+    value returned is <code>0</code>
 }
 function TZOracleAbstractResultSet_A.GetBytes(ColumnIndex: Integer): TBytes;
 var
@@ -1539,7 +1299,6 @@ begin
     LastWasNull := False;
     case SQLVarHolder.dty of
       { the supported character/raw binary types we use }
-      SQLT_AFC: Result := BufferToBytes(P, SQLVarHolder.Value_sz);
       SQLT_VST: Result := BufferToBytes(@PPOCILong(P)^.data[0], PPOCILong(P)^.Len);
       SQLT_VCS, SQLT_VBI: Result := BufferToBytes(@POCIVary(P).data[0], POCIVary(P).Len);
       SQLT_LVC, SQLT_LVB: Result := BufferToBytes(@POCILong(P).data[0], POCILong(P).Len);
@@ -1608,7 +1367,7 @@ begin
       SQLT_INT:
         case SQLVarHolder.value_sz of
           SizeOf(Int64):    Result := PInt64(P)^;
-          SizeOf(LongInt):  Result := PLongInt(P)^;
+          SizeOf(Integer):  Result := PInteger(P)^;
           SizeOf(SmallInt): Result := PSmallInt(P)^;
           else              Result := PShortInt(P)^;
         end;
@@ -1621,7 +1380,7 @@ begin
             SizeOf(Word):     Result := PSmallInt(P)^;
             else              Result := PByte(P)^;
           end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
                     then Result := PDouble(P)^
                     else Result := PSingle(P)^;
@@ -1631,7 +1390,7 @@ begin
       //SQLT_VBI, SQLT_LVB:
       { the date/time types we support }
       SQLT_DAT, SQLT_TIMESTAMP:
-        Result := GetAsDateTimeValue(SQLVarHolder);
+        Result := GetTimeStamp(ColumnIndex);
       SQLT_BLOB, SQLT_CLOB:
         SqlStrToFloatDef(PAnsiChar(GetBlob(ColumnIndex).GetBuffer), 0, Result);
     else
@@ -1737,7 +1496,7 @@ ConvFromString:   if (P+2)^ = ':' then //possible date if Len = 10 then
       SQLT_INT:
         case SQLVarHolder.value_sz of
           SizeOf(Int64):    Result := PInt64(P)^;
-          SizeOf(LongInt):  Result := PLongInt(P)^;
+          SizeOf(Integer):  Result := PInteger(P)^;
           SizeOf(SmallInt): Result := PSmallInt(P)^;
           else              Result := PShortInt(P)^;
         end;
@@ -1748,7 +1507,7 @@ ConvFromString:   if (P+2)^ = ':' then //possible date if Len = 10 then
             SizeOf(Word):     Result := PSmallInt(P)^;
             else              Result := PByte(P)^;
           end;
-      { the FPU floats we du support }
+      { the FPU floats we do support }
       SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
                     then Result := PDouble(P)^
                     else Result := PSingle(P)^;
@@ -2181,14 +1940,12 @@ end;
   sequence of multiple results. A <code>ResultSet</code> object
   is also automatically closed when it is garbage collected.
 }
-procedure TZOracleResultSet_A.Close;
+procedure TZOracleResultSet_A.BeforeClose;
 begin
-  FreeOracleSQLVars(FPlainDriver, FColumns, FIteration, FConnectionHandle,
-    FErrorHandle, ConSettings);
+  inherited BeforeClose;
   SetLength(Self.FRowsBuffer, 0);
   { prepared statement own handles, so dont free them }
   FStmtHandle := nil;
-  inherited Close;
 end;
 
 {**

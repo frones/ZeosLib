@@ -86,7 +86,7 @@ type
   TZVariantType = (vtNull, vtBoolean, vtInteger, vtUInteger,
     {$IFDEF BCD_TEST}vtDouble, vtCurrency, vtBigDecimal{$ELSE}vtFloat{$ENDIF}, vtBytes,
     vtString, {$IFNDEF NO_ANSISTRING}vtAnsiString, {$ENDIF}{$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF} vtRawByteString, vtUnicodeString, //String Types
-    vtDateTime, vtPointer, vtInterface, vtCharRec,
+    {$IFDEF BCD_TEST}vtTimeStamp,{$ENDIF} vtDateTime, vtPointer, vtInterface, vtCharRec,
     vtArray{a dynamic array of [vtNull ... vtCharRec]} );
 
   PZArray =^TZArray;
@@ -99,6 +99,16 @@ type
     VIsNullArrayVariantType: TZVariantType; { better way to determine vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtUnicodeString, vtCharRec}
   end;
 
+  { TZSQLTimeStamp }
+  TZTimeStamp = {packed} record
+    Year: Word;
+    Month: Word;
+    Day: Word;
+    Hour: Word;
+    Minute: Word;
+    Second: Word;
+    Fractions: LongWord;
+  end;
   {** Defines a variant structure. }
   TZVariant = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
     VType: TZVariantType;
@@ -121,6 +131,7 @@ type
       vtDouble: (VDouble: Double);
       vtCurrency: (VCurrency: Currency);
       vtBigDecimal: (VBigDecimal: TBCD);
+      vtTimeStamp: (VTimeStamp: TZTimeStamp);
       {$ELSE}
       vtFloat: (VFloat: Extended);
       {$ENDIF}

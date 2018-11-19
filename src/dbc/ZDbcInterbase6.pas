@@ -804,59 +804,25 @@ begin
   {Check for ClientCodePage: if empty switch to database-defaults
     and/or check for charset 'NONE' which has a different byte-width
     and no conversations where done except the collumns using collations}
-  with GetMetadata.GetCollationAndCharSet('', '', '', '') do
-  begin
-    if Next then
-      if FCLientCodePage = '' then
-      begin
-        FCLientCodePage := GetString(CollationAndCharSetNameIndex);
-        if Info.Values[DSProps_ResetCodePage] <> '' then
-        begin
-          ConSettings^.ClientCodePage := FPlainDriver.ValidateCharEncoding(FClientCodePage);
-          ResetCurrentClientCodePage(Info.Values[DSProps_ResetCodePage]);
-        end
-        else
-          CheckCharEncoding(FClientCodePage);
-      end
-      else
-        if GetString(CollationAndCharSetNameIndex) = sCS_NONE then
-        begin
-          if not ( FClientCodePage = sCS_NONE ) then
-          begin
-            Info.Values['isc_dpb_lc_ctype'] := sCS_NONE;
-            {save the user wanted CodePage-Informations}
-            Info.Values[DSProps_ResetCodePage] := FClientCodePage;
-            FClientCodePage := sCS_NONE;
-            { charset 'NONE' can't convert anything and write 'Data as is'!
-              If another charset was set on attaching the Server then all
-              column collations are retrieved with newly choosen collation.
-              BUT NO string convertations where done! So we need a
-              reopen (since we can set the Client-CharacterSet only on
-              connecting) to determine charset 'NONE' corectly. Then the column
-              collations have there proper CharsetID's to encode all strings
-              correctly. }
-            Self.Close;
-            Self.Open;
-            { Create a new PZCodePage for the new environment-variables }
-          end
-          else
-          begin
-            if Info.Values[DSProps_ResetCodePage] <> '' then
-            begin
-              ConSettings^.ClientCodePage := FPlainDriver.ValidateCharEncoding(sCS_NONE);
-              ResetCurrentClientCodePage(Info.Values[DSProps_ResetCodePage]);
-            end
-            else
-              CheckCharEncoding(sCS_NONE);
-          end;
-        end
-        else
-          if Info.Values[DSProps_ResetCodePage] <> '' then
+  with GetMetadata.GetCollationAndCharSet('', '', '', '') do begin
+    try
+      if Next then
+        if FCLientCodePage = '' then begin
+          FCLientCodePage := GetString(CollationAndCharSetNameIndex);
+          if Info.Values[DSProps_ResetCodePage] <> '' then begin
+            ConSettings^.ClientCodePage := FPlainDriver.ValidateCharEncoding(FClientCodePage);
             ResetCurrentClientCodePage(Info.Values[DSProps_ResetCodePage]);
-    Close;
+          end else
+            CheckCharEncoding(FClientCodePage);
+        end else if GetString(CollationAndCharSetNameIndex) = sCS_NONE then
+           raise EZSQLException.Create('Unsupported database characterset "NONE" found!'+Lineending+
+            'Dump your database and recreate it with a "stable" characterset.')
+        else if Info.Values[DSProps_ResetCodePage] <> '' then
+          ResetCurrentClientCodePage(Info.Values[DSProps_ResetCodePage]);
+    finally
+      Close;
+    end;
   end;
-  if FClientCodePage = sCS_NONE then
-    ConSettings.AutoEncode := True; //Must be set!
 end;
 
 {**
@@ -1302,7 +1268,7 @@ var
   I, ColumnIdx: Integer;
   RS: IZResultSet;
 begin
-  inherited;
+  //inherited;
 
   RS := InsertStatement.GetResultSet;
   if RS = nil then

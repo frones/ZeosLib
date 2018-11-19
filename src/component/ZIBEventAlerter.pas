@@ -577,22 +577,20 @@ end;
 
 procedure TIBEventThread.SQueEvents;
 begin
-  Parent.PlainDriver.isc_que_events(@StatusVector,
+  if Parent.PlainDriver.isc_que_events(@StatusVector,
     Parent.FNativeHandle, @EventID, EventBufferLen,
-    EventBuffer, TISC_CALLBACK(@EventCallback), PVoid(Self));
-
-  if not StatusSucceeded(StatusVector) then
+    EventBuffer, TISC_CALLBACK(@EventCallback), PVoid(Self)) <> 0 then
     if Assigned(Parent.OnError) then // only if someone handles errors
-    // Very Ugly! OnError should accept Exception as parameter.
-    // But we keep backward compatibility here
-    try
-      CheckInterbase6Error(Parent.PlainDriver, StatusVector, nil);
-    except on E: Exception do
-      if E is EZSQLException then
-        Parent.OnError(Parent, EZSQLException(E).ErrorCode)
-      else
-        Parent.OnError(Parent, 0);
-    end;
+      // Very Ugly! OnError should accept Exception as parameter.
+      // But we keep backward compatibility here
+      try
+        CheckInterbase6Error(Parent.PlainDriver, StatusVector, nil);
+      except on E: Exception do
+        if E is EZSQLException then
+          Parent.OnError(Parent, EZSQLException(E).ErrorCode)
+        else
+          Parent.OnError(Parent, 0);
+      end;
 end;
 
 end.

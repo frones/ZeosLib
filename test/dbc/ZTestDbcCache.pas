@@ -814,6 +814,8 @@ begin
     CheckEquals(EncodeTime(12, 01, 02, 0), GetTime(stStringIndex, WasNull), stShortIndex, 'GetTime');
     CheckEquals(EncodeDate(1999, 01, 02)+EncodeTime(12,01,02, 0),
       GetTimestamp(stStringIndex, WasNull), stShortIndex, 'GetTimestamp');
+    SetString(stStringIndex, '');
+    CheckEquals('', GetString(stStringIndex, WasNull));
     SetString(stStringIndex, FString);
   end;
 end;

@@ -56,8 +56,7 @@ interface
 {$I ZDbc.inc}
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF}, TypInfo,
-  {$IFDEF BCD_TEST}FmtBcd,{$ENDIF}
+  {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF}, TypInfo, FmtBcd,
   ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata, ZTokenizer, ZVariant;
 
 type
@@ -211,9 +210,11 @@ procedure FlushBuff(var Buf: TRawBuff; var Result: RawByteString); overload;
 procedure FlushBuff(var Buf: TUCS2Buff; var Result: ZWideString); overload;
 
 function GetAbsorbedTrailingSpacesLen(Buf: PAnsiChar; Len: LengthInt): LengthInt; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
 const
-  c4SpaceRaw: PAnsiChar = (#32#32#32#32);
-  i4SpaceRaw: Integer = 538976288;  //integer representation of the four space chars
+  i4SpaceRaw: Integer = Ord(#32)+Ord(#32) shl 8 + Ord(#32) shl 16 +Ord(#32) shl 24;  //integer representation of the four space chars
+  sAlignCurrencyScale2Precision: array[0..4] of Integer = (
+    15, 16, 17, 18, 19);
 
 implementation
 
@@ -827,8 +828,10 @@ begin
           OutParamValues[ParamIndex] := EncodeDouble(ResultSet.GetDouble(I));
         stCurrency:
           OutParamValues[ParamIndex] := EncodeCurrency(ResultSet.GetCurrency(I));
-        stBigDecimal:
-          OutParamValues[ParamIndex] := EncodeBigDecimal(ResultSet.GetBigDecimal(I));
+        stBigDecimal: begin
+            InitializeVariant(OutParamValues[ParamIndex], vtBigDecimal);
+            ResultSet.GetBigDecimal(I, OutParamValues[ParamIndex].VBigDecimal);
+          end;
         {$ELSE}
         stFloat:
           OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
