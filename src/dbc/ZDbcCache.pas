@@ -119,6 +119,7 @@ type
     FHighBytesCols, FHighStringCols, FHighArrayCols, FHighLobCols, FHighDataSetCols: Integer;
     FBytesCols, FStringCols, FArrayCols, FLobCols, FDataSetCols: array of Integer;
     FConSettings: PZConSettings;
+    FTinyBuffer: array[Byte] of Byte;
 
     function GetColumnSize(ColumnInfo: TZColumnInfo): Integer;
     function InternalGetInt(ColumnIndex: Integer; out IsNull: Boolean): Integer; {$IFDEF WITHINLINE} inline; {$ENDIF}
@@ -238,7 +239,7 @@ type
     procedure SetCurrency(ColumnIndex: Integer; const Value: Currency);
     procedure SetBigDecimal(ColumnIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
     procedure SetString(ColumnIndex: Integer; const Value: String);
-    procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt); overload;
+    procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt);
     procedure SetPWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUInt);
     {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(ColumnIndex: Integer; const Value: AnsiString); virtual;
@@ -2008,8 +2009,8 @@ end;
 }
 function TZRowAccessor.GetPAnsiChar(ColumnIndex: Integer; out IsNull: Boolean;
   out Len: NativeUInt): PAnsiChar;
-var
-  Data: PPointer;
+var Data: PPointer;
+label Set_Results, SetEmpty;
 begin
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
@@ -2017,63 +2018,122 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: FRawTemp := BoolStrsRaw[Boolean(PWordBool(Data)^)];
-      stByte: FRawTemp := IntToRaw(PByte(Data)^);
-      stShort: FRawTemp := IntToRaw(PShortInt(Data)^);
-      stWord: FRawTemp := IntToRaw(PWord(Data)^);
-      stSmall: FRawTemp := IntToRaw(PSmallInt(Data)^);
-      stLongWord: FRawTemp := IntToRaw(PCardinal(Data)^);
-      stInteger: FRawTemp := IntToRaw(PInteger(Data)^);
-      stULong: FRawTemp := IntToRaw(PUInt64(Data)^);
-      stLong: FRawTemp := IntToRaw(PInt64(Data)^);
-      stFloat: FRawTemp := FloatToSqlRaw(PSingle(Data)^);
-      stDouble: FRawTemp := FloatToSqlRaw(PDouble(Data)^);
-      stCurrency: FRawTemp := FloatToSqlRaw(PCurrency(Data)^);
-      stBigDecimal: FRawTemp := FloatToSqlRaw(PExtended(Data)^);
-      stString, stUnicodeString:
-          if (Data^ = nil) then begin //avoid all conversions
-            Len := 0;
-            Result := PEmptyAnsiString;
-            Exit;
-          end else if fRaw then begin
-            Result := PPAnsiChar(Data)^+PAnsiInc;
-            Len := PPLongWord(Data)^^;
-            Exit;
-          end else
-            FRawTemp := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^,
-              FClientCP);
-
-      stBytes:  if Data^ <> nil then begin
-                  Len := PWord(PAnsiChar(Data)+SizeOf(Pointer))^;
-                  Result := Data^;
-                  Exit;
-                end else
-                  FRawTemp := EmptyRaw;
-      stGUID: FRawTemp := GUIDToRaw(PGUID(Data)^);
-      stDate: FRawTemp := DateTimeToRawSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      stTime: FRawTemp := DateTimeToRawSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      stTimestamp: FRawTemp := DateTimeToRawSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
+      stBoolean:  if PWordBool(Data)^ then begin
+                    Result := Pointer(BoolStrsRaw[True]);
+                    Len := 4
+                  end else begin
+                    Result := Pointer(BoolStrsRaw[False]);
+                    Len := 5;
+                  end;
+      stByte:     begin
+                    IntToRaw(Cardinal(PByte(Data)^), @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stShort:    begin
+                    IntToRaw(Integer(PShortInt(Data)^), @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stWord:     begin
+                    IntToRaw(Cardinal(PWord(Data)^), @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stSmall:    begin
+                    IntToRaw(Integer(PSmallInt(Data)^), @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stLongWord: begin
+                    IntToRaw(PCardinal(Data)^, @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stInteger:  begin
+                    IntToRaw(PInteger(Data)^, @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stULong:    begin
+                    IntToRaw(PUInt64(Data)^, @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stLong:     begin
+                    IntToRaw(PInt64(Data)^, @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stFloat:    begin
+                    Len := FloatToSqlRaw(PSingle(Data)^, @FTinyBuffer[0]);
+                    Result := @FTinyBuffer[0];
+                  end;
+      stDouble:   begin
+                    Len := FloatToSqlRaw(PDouble(Data)^, @FTinyBuffer[0]);
+                    Result := @FTinyBuffer[0];
+                  end;
+      stCurrency: begin
+                    CurrToRaw(PCurrency(Data)^, @FTinyBuffer[0], @Result);
+Set_Results:        Len := Result - PAnsiChar(@FTinyBuffer[0]);
+                    Result := @FTinyBuffer[0];
+                  end;
+      stBigDecimal: begin
+                    Len := FloatToSqlRaw(PExtended(Data)^, @FTinyBuffer[0]);
+                    Result := @FTinyBuffer[0];
+                  end;
+      stString,
+      stUnicodeString: if (Data^ = nil) then
+                    goto SetEmpty
+                  else if fRaw then begin
+                    Result := PPAnsiChar(Data)^+PAnsiInc;
+                    Len := PPLongWord(Data)^^;
+                  end else begin
+                    FRawTemp := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc,
+                      PPLongWord(Data)^^, FClientCP);
+                    Len := Length(FRawTemp);
+                    if Len > 0
+                    then Result := Pointer(FRawTemp)
+                    else Result := PEmptyAnsiString;
+                  end;
+      stBytes:    if Data^ <> nil then begin
+                    Len := PWord(PAnsiChar(Data)+SizeOf(Pointer))^;
+                    Result := Data^;
+                  end else
+                    goto SetEmpty;
+      stGUID:     begin
+                    GUIDToBuffer(Data, PAnsiChar(@FTinyBuffer[0]), [guidWithBrackets]);
+                    Result := @FTinyBuffer[0];
+                    Len := 38;
+                  end;
+      stDate:     begin
+                    DateTimeToRawSQLDate(PDateTime(Data)^, @FTinyBuffer[0],
+                      ConSettings^.DisplayFormatSettings, False);
+                    Result := @FTinyBuffer[0];
+                    Len := ConSettings^.DisplayFormatSettings.DateFormatLen;
+                  end;
+      stTime:     begin
+                    DateTimeToRawSQLTime(PDateTime(Data)^, @FTinyBuffer[0],
+                      ConSettings^.DisplayFormatSettings, False);
+                    Result := @FTinyBuffer[0];
+                    Len := ConSettings^.DisplayFormatSettings.TimeFormatLen;
+                  end;
+      stTimestamp:begin
+                    DateTimeToRawSQLTimeStamp(PDateTime(Data)^, @FTinyBuffer[0],
+                      ConSettings^.DisplayFormatSettings, False);
+                    Result := @FTinyBuffer[0];
+                    Len := ConSettings^.DisplayFormatSettings.DateTimeFormatLen;
+                  end;
       stAsciiStream, stUnicodeStream:
-        if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then begin
-          if PIZLob(Data)^.IsClob then begin
-            if ConSettings^.AutoEncode
-            then Result := PIZLob(Data)^.GetPAnsiChar(ConSettings^.CTRL_CP)
-            else Result := PIZLob(Data)^.GetPAnsiChar(FClientCP);
-            Len := PIZLob(Data)^.Length;
-          end else begin
-            Result := PIZLob(Data)^.GetBuffer;
-            Len := PIZLob(Data)^.Length;
-          end;
-          Exit;
-        end else
-          FRawTemp := EmptyRaw;
-      else
-        FRawTemp := EmptyRaw;
+                  if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then begin
+                    if PIZLob(Data)^.IsClob then begin
+                      if ConSettings^.AutoEncode
+                      then Result := PIZLob(Data)^.GetPAnsiChar(ConSettings^.CTRL_CP)
+                      else Result := PIZLob(Data)^.GetPAnsiChar(FClientCP);
+                      Len := PIZLob(Data)^.Length;
+                    end else begin
+                      Result := PIZLob(Data)^.GetBuffer;
+                      Len := PIZLob(Data)^.Length;
+                    end;
+                  end else
+                    goto SetEmpty;
+      else        begin
+SetEmpty:           Len := 0;
+                    Result := PEmptyAnsiString;
+                  end;
     end;
-    Len := Length(FRawTemp);
-    if Len = 0
-    then Result := PEmptyAnsiString
-    else Result := Pointer(FRawTemp);
   end else begin
     Len := 0;
     Result := nil;
@@ -2082,76 +2142,38 @@ begin
 end;
 
 function TZRowAccessor.GetString(ColumnIndex: Integer; out IsNull: Boolean): String;
-var
-  Data: PPointer;
+var P: {$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF};
+  Len: NativeUInt;
 begin
+  {$IFDEF UNICODE}
+  P := GetPWideChar(ColumnIndex, IsNull, Len);
+  if P = Pointer(FUniTemp)
+  then Result := FUniTemp
+  else System.SetString(Result, P, Len);
+  {$ELSE}
   {$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
-    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
-    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: Result := BoolStrs[Boolean(PWordBool(Data)^)];
-      stByte: Result := ZFastCode.IntToStr(PByte(Data)^);
-      stShort: Result := ZFastCode.IntToStr(PShortInt(Data)^);
-      stWord: Result := ZFastCode.IntToStr(PWord(Data)^);
-      stSmall: Result := ZFastCode.IntToStr(PSmallInt(Data)^);
-      stLongWord: Result := ZFastCode.IntToStr(PCardinal(Data)^);
-      stInteger: Result := ZFastCode.IntToStr(PInteger(Data)^);
-      stULong: Result := ZFastCode.IntToStr(PUInt64(Data)^);
-      stLong: Result := ZFastCode.IntToStr(PInt64(Data)^);
-      stFloat: Result := FloatToSQLStr(PSingle(Data)^);
-      stDouble: Result := FloatToSQLStr(PDouble(Data)^);
-      stCurrency: Result := FloatToSQLStr(PCurrency(Data)^);
-      stBigDecimal: Result := FloatToSQLStr(PExtended(Data)^);
-      stString, stUnicodeString:
-        if Data^ = nil then
-          Result := ''
-        else if fRaw
-        {$IFDEF UNICODE}
-        then Result := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^,
-                FClientCP)
-        else System.SetString(Result, ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^);
-        {$ELSE}
-        then if ZCompatibleCodePages(FClientCP, ConSettings^.CTRL_CP) or not ConSettings^.AutoEncode
-          then System.SetString(Result, PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^)
-          else Result := ConSettings^.ConvFuncs.ZRawToString(PPAnsiChar(Data)^+PAnsiInc,
-                FClientCP, ConSettings^.CTRL_CP)
-        else if ConSettings^.AutoEncode
-        then Result := PUnicodeToString(ZPPWideChar(Data)^+PWideInc,
-              PPLongWord(Data)^^, ConSettings^.CTRL_CP)
-        else Result := PUnicodeToString(ZPPWideChar(Data)^+PWideInc,
-              PPLongWord(Data)^^, FClientCP);
-        {$ENDIF}
-      stAsciiStream, stUnicodeStream, stBinaryStream:
-        if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then
-          if PIZLob(Data)^.IsClob
-          {$IFDEF UNICODE}
-          then Result := PIZLob(Data)^.GetUnicodeString
-          else Result := ASCII7ToUnicodeString(PIZLob(Data)^.GetBuffer, PIZLob(Data)^.Length)
-          {$ELSE}
-          then Result := PIZLob(Data)^.GetPAnsiChar(ConSettings^.CTRL_CP)
-          else Result := PIZLob(Data)^.GetString
-          {$ENDIF}
-        else Result := '';
-      stBytes: if (Data^ <> nil) then
-                {$IFDEF UNICODE}
-                Result := ASCII7ToUnicodeString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^)
-                {$ELSE}
-                System.SetString(Result, PAnsiChar(Data^), PWord(PAnsiChar(Data)+SizeOf(Pointer))^)
-                {$ENDIF}
-              else Result := '';
-      stGUID: Result := GUIDToStr(PGUID(Data)^);
-      stDate: Result := DateTimeToSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      stTime: Result := DateTimeToSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      stTimestamp: Result := DateTimeToSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-
-      else Result := '';
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stString, stUnicodeString:
+      if fRaw then begin
+        P := GetPAnsiChar(ColumnIndex, IsNull, Len);
+        if not ConSettings^.AutoEncode or (ConSettings^.CTRL_CP = FClientCP) or (Len=0) then
+          System.SetString(Result, P, Len)
+        else begin
+          fUniTemp := PRawToUnicode(P, Len, FClientCP);
+          Result := PUnicodeToRaw(Pointer(fUniTemp), Length(FUniTemp), ConSettings^.CTRL_CP)
+        end;
+      end else begin
+        PWideChar(P) := GetPWideChar(ColumnIndex, IsNull, Len);
+        if ConSettings^.AutoEncode
+        then Result := PUnicodeToRaw(PWideChar(P), Len, ConSettings^.CTRL_CP)
+        else Result := PUnicodeToRaw(PWideChar(P), Len, FClientCP);
+      end;
+    else begin
+      P := GetPAnsiChar(ColumnIndex, IsNull, Len);
+      System.SetString(Result, P, Len);
     end;
-    IsNull := False;
-  end else begin
-    Result := '';
-    IsNull := True;
   end;
+  {$ENDIF}
 end;
 
 {**
@@ -2165,62 +2187,42 @@ end;
 }
 {$IFNDEF NO_ANSISTRING}
 function TZRowAccessor.GetAnsiString(ColumnIndex: Integer; out IsNull: Boolean): AnsiString;
-var
-  Data: PPointer;
+var P: Pointer;
+  L: NativeUInt;
 begin
-  {$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
-    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
-    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: Result := BoolStrsRaw[Boolean(PWordBool(Data)^)];
-      stByte: Result := IntToRaw(PByte(Data)^);
-      stShort: Result := IntToRaw(PShortInt(Data)^);
-      stWord: Result := IntToRaw(PWord(Data)^);
-      stSmall: Result := IntToRaw(PSmallInt(Data)^);
-      stLongWord: Result := IntToRaw(PCardinal(Data)^);
-      stInteger: Result := IntToRaw(PInteger(Data)^);
-      stULong: Result := IntToRaw(PUInt64(Data)^);
-      stLong: Result := IntToRaw(PInt64(Data)^);
-      stFloat: Result := FloatToSqlRaw(PSingle(Data)^);
-      stDouble: Result := FloatToSqlRaw(PDouble(Data)^);
-      stCurrency: Result := FloatToSqlRaw(PCurrency(Data)^);
-      stBigDecimal: Result := FloatToSqlRaw(PExtended(Data)^);
-      stString, stUnicodeString:
-        if (Data^ = nil)
-        then Result := ''
-        else if fRaw then
-          if ZCompatibleCodePages(ZOSCodePage, FClientCP) then
-            System.SetString(Result, PPAnsiChar(Data)^+PAnsiInc, PLongWord(PPointer(Data)^)^)
-          else begin
-            FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
-              PPLongWord(Data)^^, FClientCP); //Localized because of possible WideString overrun
-            Result := ZUnicodeToRaw(FUniTemp, ZOSCodePage);
-          end
-        else Result := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^, ZOSCodePage);
-      stBytes: if Data^ <> nil
-                then ZSetString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^, Result)
-                else Result := '';
-      stGUID: Result := GUIDToRaw(PGUID(Data)^);
-      stDate: Result := DateTimeToRawSQLDate(PDateTime(Data)^,
-        ConSettings^.DisplayFormatSettings, False);
-      stTime: Result := DateTimeToRawSQLTime(PDateTime(Data)^,
-        ConSettings^.DisplayFormatSettings, False);
-      stTimestamp: Result := DateTimeToRawSQLTimeStamp(PDateTime(Data)^,
-        ConSettings^.DisplayFormatSettings, False);
-      stAsciiStream, stUnicodeStream, stBinaryStream:
-        if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then
-          if PIZLob(Data)^.IsClob
-          then Result := PIZLob(Data)^.GetAnsiString
-          else Result := PIZLob(Data)^.GetString
-        else Result := '';
-      else
-        Result := '';
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stString,
+    stUnicodeString:  if fRaw then begin
+                        P := GetPAnsiChar(ColumnIndex, IsNull, L);
+                        if L > 0 then
+                          if fClientCP = zCP_UTF8 then
+                            System.SetString(Result, PAnsiChar(P), L)
+                          else begin
+                            FUniTemp := PRawToUnicode(P, L, fClientCP);
+                            Result := PUnicodeToRaw(Pointer(FUniTemp), Length(fUniTemp), zOSCodePage);
+                          end
+                        else Result := '';
+                      end else begin
+                        P := GetPWideChar(ColumnIndex, IsNull, L);
+                        if L > 0
+                        then Result := PUnicodeToRaw(P, L, zOSCodePage)
+                        else Result := '';
+                      end;
+    stAsciiStream,
+    stUnicodeStream: {$R-}
+        if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+          P := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+          {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+          if (PPointer(P)^ <> nil) and not PIZLob(P)^.IsEmpty then
+            if PIZLob(P)^.IsClob
+            then Result := PIZLob(P)^.GetAnsiString
+            else Result := PIZLob(P)^.GetString
+          else Result := '';
+        end else Result := '';
+    else begin
+      P := GetPAnsiChar(ColumnIndex, IsNull, L);
+      System.SetString(Result, PAnsiChar(P), L);
     end;
-    IsNull := False;
-  end else begin
-    Result := '';
-    IsNull := True;
   end;
 end;
 {$ENDIF}
@@ -2236,67 +2238,42 @@ end;
 }
 {$IFNDEF NO_UTF8STRING}
 function TZRowAccessor.GetUTF8String(ColumnIndex: Integer; out IsNull: Boolean): UTF8String;
-var Data: PPointer;
+var P: Pointer;
+  L: NativeUInt;
 begin
-  {$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
-    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
-    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: Result := BoolStrsRaw[Boolean(PWordBool(Data)^)];
-      stByte: Result := IntToRaw(PByte(Data)^);
-      stShort: Result := IntToRaw(PShortInt(Data)^);
-      stWord: Result := IntToRaw(PWord(Data)^);
-      stSmall: Result := IntToRaw(PSmallInt(Data)^);
-      stLongWord: Result := IntToRaw(PCardinal(Data)^);
-      stInteger: Result := IntToRaw(PInteger(Data)^);
-      stULong: Result := IntToRaw(PUInt64(Data)^);
-      stLong: Result := IntToRaw(PInt64(Data)^);
-      stFloat: Result := FloatToSqlRaw(PSingle(Data)^);
-      stDouble: Result := FloatToSqlRaw(PDouble(Data)^);
-      stCurrency: Result := FloatToSqlRaw(PCurrency(Data)^);
-      stBigDecimal: Result := FloatToSqlRaw(PExtended(Data)^);
-      stBytes: if Data <> nil
-                then ZSetString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^, Result)
-                else Result := '';
-      stGUID: Result := GUIDToRaw(PGUID(Data)^);
-      stString, stUnicodeString:
-        if (Data^ = nil)
-        then Result := ''
-        else if fRaw then
-          if ZCompatibleCodePages(zCP_UTF8, FClientCP) then
-          {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-          begin
-            SetLength(Result, PPLongWord(Data)^^);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move((PPAnsiChar(Data)^+PAnsiInc)^,
-              Pointer(Result)^, PPLongWord(Data)^^);
-          end
-          {$ELSE}
-            System.SetString(Result, PAnsiChar(PPAnsiChar(Data)^+PAnsiInc), PPLongWord(Data)^^)
-          {$ENDIF}
-          else begin
-            FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
-              PPLongWord(Data)^^,
-                FClientCP); //localize the vals to avoid buffer overrun for WideStrings
-            Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(FUniTemp);
-          end
-        else Result := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^, zCP_UTF8);
-      stAsciiStream, stUnicodeStream, stBinaryStream:
-        if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then
-          if PIZLob(Data)^.IsClob
-          then Result := PIZLob(Data)^.GetUTF8String
-          else Result := PIZLob(Data)^.GetString
-        else Result := '';
-      stDate: Result := DateTimeToRawSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      stTime: Result := DateTimeToRawSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      stTimestamp: Result := DateTimeToRawSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      else
-        Result := '';
+  case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+    stString,
+    stUnicodeString:  if fRaw then begin
+                        P := GetPAnsiChar(ColumnIndex, IsNull, L);
+                        if L > 0 then
+                          if fClientCP = zCP_UTF8 then
+                            ZSetString(PAnsiChar(P), L, Result)
+                          else begin
+                            FUniTemp := PRawToUnicode(P, L, fClientCP);
+                            Result := PUnicodeToRaw(Pointer(FUniTemp), Length(fUniTemp), zCP_UTF8);
+                          end
+                        else Result := '';
+                      end else begin
+                        P := GetPWideChar(ColumnIndex, IsNull, L);
+                        if L > 0
+                        then Result := PUnicodeToRaw(P, L, zCP_UTF8)
+                        else Result := '';
+                      end;
+    stAsciiStream,
+    stUnicodeStream: {$R-}
+        if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+          P := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+          {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+          if (PPointer(P)^ <> nil) and not PIZLob(P)^.IsEmpty then
+            if PIZLob(P)^.IsClob
+            then Result := PIZLob(P)^.GetUTF8String
+            else Result := PIZLob(P)^.GetString
+          else Result := '';
+        end else Result := '';
+    else begin
+      P := GetPAnsiChar(ColumnIndex, IsNull, L);
+      ZSetString(PAnsiChar(P), L, Result);
     end;
-    IsNull := False;
-  end else begin
-    Result := '';
-    IsNull := True;
   end;
 end;
 {$ENDIF}
@@ -2311,58 +2288,11 @@ end;
     value returned is <code>null</code>
 }
 function TZRowAccessor.GetRawByteString(ColumnIndex: Integer; out IsNull: Boolean): RawByteString;
-var Data: PPointer;
+var P: PAnsichar;
+  L: NativeUInt;
 begin
-  {$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
-    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
-    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean:  Result := BoolStrsRaw[Boolean(PWordBool(Data)^)];
-      stByte: Result := IntToRaw(PByte(Data)^);
-      stShort: Result := IntToRaw(PShortInt(Data)^);
-      stWord: Result := IntToRaw(PWord(Data)^);
-      stSmall: Result := IntToRaw(PSmallInt(Data)^);
-      stLongWord: Result := IntToRaw(PCardinal(Data)^);
-      stInteger: Result := IntToRaw(PInteger(Data)^);
-      stULong: Result := IntToRaw(PUInt64(Data)^);
-      stLong: Result := IntToRaw(PInt64(Data)^);
-      stFloat: Result := FloatToSqlRaw(PSingle(Data)^);
-      stDouble: Result := FloatToSqlRaw(PDouble(Data)^);
-      stCurrency: Result := FloatToSqlRaw(PCurrency(Data)^);
-      stBigDecimal: Result := FloatToSqlRaw(PExtended(Data)^);
-      stString, stUnicodeString:
-        if (Data^ = nil)
-        then Result := EmptyRaw
-        else if fRaw
-          {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-          then ZSetString(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^, Result)
-          {$ELSE}
-          then System.SetString(Result, PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^)
-          {$ENDIF}
-        else Result := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc,
-          PPLongWord(Data)^^, FClientCP);
-      stBytes: if Data <> nil
-                then ZSetString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^, Result)
-                else Result := EmptyRaw;
-      stGUID: Result := GUIDToRaw(PGUID(Data)^);
-      stDate: Result := DateTimeToRawSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      stTime: Result := DateTimeToRawSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      stTimestamp: Result := DateTimeToRawSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      stAsciiStream, stUnicodeStream, stBinaryStream:
-        if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then
-          if PIZLob(Data)^.IsClob
-          then Result := PIZLob(Data)^.GetRawByteString
-          else Result := PIZLob(Data)^.GetString
-        else Result := EmptyRaw;
-      else
-        Result := EmptyRaw;
-    end;
-    IsNull := False;
-  end else begin
-    Result := EmptyRaw;
-    IsNull := True;
-  end;
+  P := GetPAnsiChar(ColumnIndex, IsNull, L);
+  ZSetString(P, L, Result);
 end;
 
 {**
@@ -2377,8 +2307,8 @@ end;
 }
 function TZRowAccessor.GetPWideChar(ColumnIndex: Integer;
   out IsNull: Boolean; out Len: NativeUInt): PWideChar;
-var
-  Data: PPointer;
+var Data: PPointer;
+label Set_Results, SetEmpty, Set_From_Temp;
 begin
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
@@ -2386,55 +2316,119 @@ begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean:  FUniTemp := BoolStrsW[Boolean(PWordBool(Data)^)];
-      stByte: FUniTemp := IntToUnicode(PByte(Data)^);
-      stShort: FUniTemp := IntToUnicode(PShortInt(Data)^);
-      stWord: FUniTemp := IntToUnicode(PWord(Data)^);
-      stSmall: FUniTemp := IntToUnicode(PSmallInt(Data)^);
-      stLongWord: FUniTemp := IntToUnicode(PCardinal(Data)^);
-      stInteger: FUniTemp := IntToUnicode(PInteger(Data)^);
-      stULong: FUniTemp := IntToUnicode(PUInt64(Data)^);
-      stLong: FUniTemp := IntToUnicode(PInt64(Data)^);
-      stFloat: FUniTemp := FloatToSqlUnicode(PSingle(Data)^);
-      stDouble: FUniTemp := FloatToSqlUnicode(PDouble(Data)^);
-      stCurrency: FUniTemp := FloatToSqlUnicode(PCurrency(Data)^);
-      stBigDecimal: FUniTemp := FloatToSqlUnicode(PExtended(Data)^);
-      stUnicodeString, stString:
-        if (Data^ = nil) then begin//avoid all conversions
-          Len := 0;
-          Result := PEmptyUnicodeString;
-          Exit;
-        end else if fRaw then
-          FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^,
-            FClientCP)
-        else begin
-          Result := ZPPWideChar(Data)^+PWideInc;
-          Len := PPLongWord(Data)^^;
-          Exit;
-        end;
+      stBoolean:  if PWordBool(Data)^ then begin
+                    Result := Pointer(BoolStrsW[True]);
+                    Len := 4
+                  end else begin
+                    Result := Pointer(BoolStrsW[False]);
+                    Len := 5;
+                  end;
+      stByte:     begin
+                    IntToUnicode(Cardinal(PByte(Data)^), @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stShort:    begin
+                    IntToUnicode(Integer(PShortInt(Data)^), @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stWord:     begin
+                    IntToUnicode(Cardinal(PWord(Data)^), @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stSmall:    begin
+                    IntToUnicode(Integer(PSmallInt(Data)^), @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stLongWord: begin
+                    IntToUnicode(PCardinal(Data)^, @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stInteger:  begin
+                    IntToUnicode(PInteger(Data)^, @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stULong:    begin
+                    IntToUnicode(PUInt64(Data)^, @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stLong:     begin
+                    IntToUnicode(PInt64(Data)^, @FTinyBuffer[0], @Result);
+                    goto Set_Results;
+                  end;
+      stFloat:    begin
+                    Len := FloatToSqlUnicode(PSingle(Data)^, @FTinyBuffer[0]);
+                    Result := @FTinyBuffer[0];
+                  end;
+      stDouble:   begin
+                    Len := FloatToSqlUnicode(PDouble(Data)^, @FTinyBuffer[0]);
+                    Result := @FTinyBuffer[0];
+                  end;
+      stCurrency: begin
+                    CurrToUnicode(PCurrency(Data)^, @FTinyBuffer[0], @Result);
+Set_Results:        Len := Result - PWideChar(@FTinyBuffer[0]);
+                    Result := @FTinyBuffer[0];
+                  end;
+      stBigDecimal: begin
+                    Len := FloatToSqlUnicode(PExtended(Data)^, @FTinyBuffer[0]);
+                    Result := @FTinyBuffer[0];
+                  end;
+      stString,
+      stUnicodeString: if (Data^ = nil) then
+                    goto SetEmpty
+                  else if fRaw then begin
+                    FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^, FClientCP);
+                    goto Set_From_Temp;
+                  end else begin
+                    Result := ZPPWideChar(Data)^+PWideInc;
+                    Len := PLongWord(Data^)^;
+                  end;
+      stBytes:    if Data^ <> nil then begin
+                    fUniTemp := Ascii7ToUnicodeString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^);
+                    goto Set_From_Temp;
+                  end else
+                    goto SetEmpty;
+      stGUID:     begin
+                    GUIDToBuffer(Data, PWideChar(@FTinyBuffer[0]), [guidWithBrackets]);
+                    Result := @FTinyBuffer[0];
+                    Len := 38;
+                  end;
+      stDate:     begin
+                    DateTimeToUnicodeSQLDate(PDateTime(Data)^, @FTinyBuffer[0],
+                      ConSettings^.DisplayFormatSettings, False);
+                    Result := @FTinyBuffer[0];
+                    Len := ConSettings^.DisplayFormatSettings.DateFormatLen;
+                  end;
+      stTime:     begin
+                    DateTimeToUnicodeSQLTime(PDateTime(Data)^, @FTinyBuffer[0],
+                      ConSettings^.DisplayFormatSettings, False);
+                    Result := @FTinyBuffer[0];
+                    Len := ConSettings^.DisplayFormatSettings.TimeFormatLen;
+                  end;
+      stTimestamp:begin
+                    DateTimeToUnicodeSQLTimeStamp(PDateTime(Data)^, @FTinyBuffer[0],
+                      ConSettings^.DisplayFormatSettings, False);
+                    Result := @FTinyBuffer[0];
+                    Len := ConSettings^.DisplayFormatSettings.DateTimeFormatLen;
+                  end;
       stAsciiStream, stUnicodeStream, stBinaryStream:
-        if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
-          if PIZlob(Data)^.IsClob then begin
-            Result := PIZlob(Data)^.GetPWideChar;
-            Len := PIZlob(Data)^.Length shr 1;
-            Exit;
-          end else
-            FUniTemp := ASCII7ToUnicodeString(PIZlob(Data)^.GetBuffer, PIZlob(Data)^.Length)
-        else FUniTemp := '';
-      stBytes: if Data^ <> nil
-                then FUniTemp := ASCII7ToUnicodeString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^)
-                else FUniTemp := '';
-      stGUID: FUniTemp := GUIDToUnicode(PGUID(Data)^);
-      stDate: FUniTemp := DateTimeToUnicodeSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      stTime: FUniTemp := DateTimeToUnicodeSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      stTimestamp: FUniTemp := DateTimeToUnicodeSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      else
-        FUniTemp := '';
+                  if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then begin
+                    if PIZLob(Data)^.IsClob then begin
+                      Result := PIZLob(Data)^.GetPWideChar;
+                      Len := PIZLob(Data)^.Length shr 1;
+                    end else begin
+                      FUniTemp := Ascii7ToUnicodeString(PIZLob(Data)^.GetBuffer, PIZLob(Data)^.Length);
+Set_From_Temp:        Len := Length(FUniTemp);
+                      if Len > 0
+                      then Result := Pointer(FUniTemp)
+                      else Result := PEmptyUnicodeString;
+                    end;
+                  end else
+                    goto SetEmpty;
+      else        begin
+SetEmpty:           Len := 0;
+                    Result := PEmptyUnicodeString;
+                  end;
     end;
-    Len := Length(FUniTemp);
-    if Len = 0
-    then Result := PEmptyUnicodeString
-    else Result := Pointer(FUniTemp);
   end else begin
     Result := nil;
     Len := 0;
@@ -2453,54 +2447,13 @@ end;
 }
 function TZRowAccessor.GetUnicodeString(ColumnIndex: Integer;
   out IsNull: Boolean): ZWideString;
-var Data: PPointer;
+var P: PWideChar;
+  L: NativeUInt;
 begin
-  {$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
-    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
-    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: Result := BoolStrsW[Boolean(PWordBool(Data)^)];
-      stByte: Result := IntToUnicode(PByte(Data)^);
-      stShort: Result := IntToUnicode(PShortInt(Data)^);
-      stWord: Result := IntToUnicode(PWord(Data)^);
-      stSmall: Result := IntToUnicode(PSmallInt(Data)^);
-      stLongWord: Result := IntToUnicode(PCardinal(Data)^);
-      stInteger: Result := IntToUnicode(PInteger(Data)^);
-      stULong: Result := IntToUnicode(PUInt64(Data)^);
-      stLong: Result := IntToUnicode(PInt64(Data)^);
-      stFloat: Result := FloatToSqlUnicode(PSingle(Data)^);
-      stDouble: Result := FloatToSqlUnicode(PDouble(Data)^);
-      stCurrency: Result := FloatToSqlUnicode(PCurrency(Data)^);
-      stBigDecimal: Result := FloatToSqlUnicode(PExtended(Data)^);
-      stUnicodeString, stString: if (Data^ = nil)
-          then Result := ''
-          else if fRaw
-            then Result := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^,
-                FClientCP)
-            else System.SetString(Result, ZPPWideChar(Data)^+PWideInc,
-              PPLongWord(Data)^^);
-      stAsciiStream, stUnicodeStream, stBinaryStream:
-        if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
-          if PIZlob(Data)^.IsClob
-          then Result := PIZlob(Data)^.GetUnicodeString
-          else Result := ASCII7ToUnicodeString(PIZlob(Data)^.GetBuffer, PIZlob(Data)^.Length)
-        else Result := '';
-      stBytes: if Data^ <> nil
-                then Result := ASCII7ToUnicodeString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^)
-                else Result := '';
-      stGUID: Result := GUIDToUnicode(PGUID(Data)^);
-      stDate: Result := DateTimeToUnicodeSQLDate(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      stTime: Result := DateTimeToUnicodeSQLTime(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      stTimestamp: Result := DateTimeToUnicodeSQLTimeStamp(PDateTime(Data)^, ConSettings^.DisplayFormatSettings, False);
-      else
-        Result := '';
-    end;
-    IsNull := False;
-  end else begin
-    Result := '';
-    IsNull := True;
-  end;
+  P := GetPWideChar(ColumnIndex, IsNull, L);
+  if P = Pointer(FUniTemp)
+  then Result := FUniTemp
+  else System.SetString(Result, P, L);
 end;
 
 {**
@@ -2762,7 +2715,11 @@ begin
       stFloat: Result := PSingle(Data)^;
       stDouble: Result := PDouble(Data)^;
       stCurrency: Result := PCurrency(Data)^;
+      {$IFDEF BCD_TEST}
+      stBigDecimal: Result := BCDToDouble(PBCD(Data)^);
+      {$ELSE}
       stBigDecimal: Result := PExtended(Data)^;
+      {$ENDIF}
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
         then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PPLongWord(Data)^^)
@@ -2816,7 +2773,11 @@ begin
       stFloat: Result := PSingle(Data)^;
       stDouble: Result := PDouble(Data)^;
       stCurrency: Result := PCurrency(Data)^;
+      {$IFDEF BCD_TEST}
+      stBigDecimal: Result := BCDToDouble(PBCD(Data)^);
+      {$ELSE}
       stBigDecimal: Result := PExtended(Data)^;
+      {$ENDIF}
       stTime, stDate, stTimeStamp: Result := PDateTime(Data)^;
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
@@ -2871,7 +2832,11 @@ begin
       stFloat: Result := PSingle(Data)^;
       stDouble: Result := PDouble(Data)^;
       stCurrency: Result := PCurrency(Data)^;
+      {$IFDEF BCD_TEST}
+      stBigDecimal: Result := BCDToCurr(PBCD(Data)^);
+      {$ELSE}
       stBigDecimal: Result := PExtended(Data)^;
+      {$ENDIF}
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
         then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PPLongWord(Data)^^)
