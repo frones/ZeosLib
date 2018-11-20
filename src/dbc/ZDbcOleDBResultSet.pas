@@ -137,6 +137,9 @@ type
   end;
 
   TZOleDBMSSQLResultSetMetadata = class(TZAbstractResultSetMetadata)
+  protected
+    procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
+    procedure LoadColumns; override;
   public
     function GetCatalogName(ColumnIndex: Integer): string; override;
     function GetColumnName(ColumnIndex: Integer): string; override;
@@ -192,7 +195,8 @@ uses
   Variants, Math, DateUtils,
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
-  ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode, ZClasses;
+  ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode, ZClasses,
+  ZDbcMetaData;
 
 var
   LobReadObj: TDBObject;
@@ -398,10 +402,10 @@ constructor TZOleDBResultSet.Create(const Statement: IZStatement; const SQL: str
   const RowSet: IRowSet; ZBufferSize, ChunkSize: Integer; InMemoryDataLobs: Boolean;
   const EnhancedColInfo: Boolean);
 begin
-  if (Statement <> nil) and (Statement.GetConnection.GetServerProvider = spMSSQL)
+  {if (Statement <> nil) and (Statement.GetConnection.GetServerProvider = spMSSQL)
   then inherited Create(Statement, SQL, TZOleDBMSSQLResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self), Statement.GetConnection.GetConSettings)
-  else
+  else}
   inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
   FRowSet := RowSet;
   FZBufferSize := ZBufferSize;
@@ -2252,6 +2256,13 @@ end;
 
 { TZOleDBMSSQLResultSetMetadata }
 
+procedure TZOleDBMSSQLResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
+begin
+  ColumnInfo.ReadOnly := True;
+  ColumnInfo.Writable := False;
+  ColumnInfo.DefinitelyWritable := False;
+end;
+
 function TZOleDBMSSQLResultSetMetadata.GetCatalogName(
   ColumnIndex: Integer): string;
 begin
@@ -2286,6 +2297,37 @@ function TZOleDBMSSQLResultSetMetadata.IsAutoIncrement(
   ColumnIndex: Integer): Boolean;
 begin
   Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).AutoIncrement;
+end;
+
+procedure TZOleDBMSSQLResultSetMetadata.LoadColumns;
+{$IFNDEF ZEOS_TEST_ONLY}
+var
+  Current: TZColumnInfo;
+  I: Integer;
+  TableColumns: IZResultSet;
+{$ENDIF}
+begin
+  {$IFDEF ZEOS_TEST_ONLY}
+  inherited LoadColumns;
+  {$ELSE}
+  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
+    for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
+      Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
+      ClearColumn(Current);
+      if Current.TableName = '' then
+        continue;
+      TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(Metadata.GetIdentifierConvertor.Quote(Current.TableName)),'');
+      if TableColumns <> nil then begin
+        TableColumns.BeforeFirst;
+        while TableColumns.Next do
+          if TableColumns.GetString(ColumnNameIndex) = Current.ColumnName then begin
+            FillColumInfoFromGetColumnsRS(Current, TableColumns, Current.ColumnName);
+            Break;
+          end;
+      end;
+    end;
+  Loaded := True;
+  {$ENDIF}
 end;
 
 initialization
