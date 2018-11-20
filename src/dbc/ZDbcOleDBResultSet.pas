@@ -402,10 +402,10 @@ constructor TZOleDBResultSet.Create(const Statement: IZStatement; const SQL: str
   const RowSet: IRowSet; ZBufferSize, ChunkSize: Integer; InMemoryDataLobs: Boolean;
   const EnhancedColInfo: Boolean);
 begin
-  if (Statement <> nil) and (Statement.GetConnection.GetServerProvider = spMSSQL)
+  {if (Statement <> nil) and (Statement.GetConnection.GetServerProvider = spMSSQL)
   then inherited Create(Statement, SQL, TZOleDBMSSQLResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self), Statement.GetConnection.GetConSettings)
-  else
+  else}
   inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
   FRowSet := RowSet;
   FZBufferSize := ZBufferSize;
