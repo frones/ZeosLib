@@ -871,7 +871,6 @@ end;
 }
 function TZAbstractMySQLResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 var
-  DTd, DTt: TDateTime;
   ColBind: PMYSQL_aligned_BIND;
   Status: Integer;
 label set_results;
@@ -927,20 +926,11 @@ begin
           end;
         FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATETIME:
           begin
-            if not sysUtils.TryEncodeDate(
-              PMYSQL_TIME(ColBind^.buffer)^.Year,
-              PMYSQL_TIME(ColBind^.buffer)^.Month,
-              PMYSQL_TIME(ColBind^.buffer)^.Day, DTd) then
-                DTd := encodeDate(1900, 1, 1);
-            if not sysUtils.TryEncodeTime(
-              PMYSQL_TIME(ColBind^.buffer)^.Hour,
-              PMYSQL_TIME(ColBind^.buffer)^.Minute,
-              PMYSQL_TIME(ColBind^.buffer)^.Second,
-              0{PMYSQL_TIME(ColBind^.buffer)^.second_part} , DTt ) then
-                DTt := 0;
-            if DTd<0
-            then DateTimeToRawSQLTimeStamp(DTd-DTt, @FTinyBuffer[0], ConSettings^.ReadFormatSettings, False)
-            else DateTimeToRawSQLTimeStamp(DTd+DTt, @FTinyBuffer[0], ConSettings^.ReadFormatSettings, False);
+            DateTimeToRawSQLTimeStamp(PMYSQL_TIME(ColBind^.buffer)^.Year,
+              PMYSQL_TIME(ColBind^.buffer)^.Month, PMYSQL_TIME(ColBind^.buffer)^.Day,
+              PMYSQL_TIME(ColBind^.buffer)^.Hour, PMYSQL_TIME(ColBind^.buffer)^.Minute,
+              PMYSQL_TIME(ColBind^.buffer)^.Second, 0{PMYSQL_TIME(ColBind^.buffer)^.second_part},
+              @FTinyBuffer[0], ConSettings^.ReadFormatSettings, False);
             Result := @FTinyBuffer[0];
             Len := ConSettings^.ReadFormatSettings.DateTimeFormatLen;
           end;
@@ -951,23 +941,17 @@ begin
             goto set_results;
           end;
         FIELD_TYPE_DATE, FIELD_TYPE_NEWDATE: begin
-            if not sysUtils.TryEncodeDate(
-              PMYSQL_TIME(ColBind^.buffer)^.Year,
+            DateTimeToRawSQLDate(PMYSQL_TIME(ColBind^.buffer)^.Year,
               PMYSQL_TIME(ColBind^.buffer)^.Month,
-              PMYSQL_TIME(ColBind^.buffer)^.Day, DTd) then
-                DTd := encodeDate(1900, 1, 1);
-            DateTimeToRawSQLDate(DTd, @FTinyBuffer, ConSettings^.ReadFormatSettings, False);
+              PMYSQL_TIME(ColBind^.buffer)^.Day, @FTinyBuffer, ConSettings^.ReadFormatSettings, False);
             Result := @FTinyBuffer;
             Len := ConSettings^.ReadFormatSettings.DateFormatLen;
           end;
         FIELD_TYPE_TIME: begin
-            if not sysUtils.TryEncodeTime(
-              PMYSQL_TIME(ColBind^.buffer)^.Hour,
+            DateTimeToRawSQLTime(PMYSQL_TIME(ColBind^.buffer)^.Hour,
               PMYSQL_TIME(ColBind^.buffer)^.Minute,
-              PMYSQL_TIME(ColBind^.buffer)^.Second,
-              0{PMYSQL_TIME(ColBind^.buffer)^.second_part}, DTt) then
-                DTt := 0;
-            DateTimeToRawSQLTime(DTt, @FTinyBuffer, ConSettings^.ReadFormatSettings, False);
+              PMYSQL_TIME(ColBind^.buffer)^.Second, 0{PMYSQL_TIME(ColBind^.buffer)^.second_part},
+              @FTinyBuffer, ConSettings^.ReadFormatSettings, False);
             Result := @FTinyBuffer;
             Len := ConSettings^.ReadFormatSettings.TimeFormatLen;
           end;
@@ -1032,9 +1016,7 @@ end;
 }
 function TZAbstractMySQLResultSet.GetPWideChar(ColumnIndex: Integer;
   out Len: NativeUInt): PWideChar;
-var
-  DTd, DTt: TDateTime;
-  ColBind: PMYSQL_aligned_BIND;
+var ColBind: PMYSQL_aligned_BIND;
   Status: Integer;
 label set_results, set_from_tmp;
 begin
@@ -1088,19 +1070,11 @@ begin
             Len := 0;
           end;
         FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATETIME: begin
-            if not sysUtils.TryEncodeDate(
-              PMYSQL_TIME(ColBind^.buffer)^.Year,
-              PMYSQL_TIME(ColBind^.buffer)^.Month,
-              PMYSQL_TIME(ColBind^.buffer)^.Day, DTd) then
-                DTd := encodeDate(1900, 1, 1);
-            if not sysUtils.TryEncodeTime(
-              PMYSQL_TIME(ColBind^.buffer)^.Hour,
-              PMYSQL_TIME(ColBind^.buffer)^.Minute,
-              PMYSQL_TIME(ColBind^.buffer)^.Second,
-              0{PMYSQL_TIME(ColBind^.buffer)^.second_part} , DTt ) then
-                DTt := 0;
-            if DTd<0 then DTd := DTd-DTt else DTd := DTd+DTt;
-            DateTimeToUnicodeSQLTimeStamp(DTd, @FTinyBuffer[0], ConSettings^.ReadFormatSettings, False);
+            DateTimeToUnicodeSQLTimeStamp(PMYSQL_TIME(ColBind^.buffer)^.Year,
+              PMYSQL_TIME(ColBind^.buffer)^.Month, PMYSQL_TIME(ColBind^.buffer)^.Day,
+              PMYSQL_TIME(ColBind^.buffer)^.Hour, PMYSQL_TIME(ColBind^.buffer)^.Minute,
+              PMYSQL_TIME(ColBind^.buffer)^.Second, 0{PMYSQL_TIME(ColBind^.buffer)^.second_part},
+              @FTinyBuffer[0], ConSettings^.ReadFormatSettings, False);
             Result := @FTinyBuffer[0];
             Len := ConSettings^.ReadFormatSettings.DateTimeFormatLen;
           end;
@@ -1111,23 +1085,17 @@ begin
             goto set_results;
           end;
         FIELD_TYPE_DATE, FIELD_TYPE_NEWDATE: begin
-            if not sysUtils.TryEncodeDate(
-              PMYSQL_TIME(ColBind^.buffer)^.Year,
-              PMYSQL_TIME(ColBind^.buffer)^.Month,
-              PMYSQL_TIME(ColBind^.buffer)^.Day, DTd) then
-                DTd := encodeDate(1900, 1, 1);
-            DateTimeToUnicodeSQLDate(DTd, @FTinyBuffer, ConSettings^.ReadFormatSettings, False);
+            DateTimeToUnicodeSQLDate(PMYSQL_TIME(ColBind^.buffer)^.Year,
+              PMYSQL_TIME(ColBind^.buffer)^.Month, PMYSQL_TIME(ColBind^.buffer)^.Day,
+              @FTinyBuffer, ConSettings^.ReadFormatSettings, False);
             Result := @FTinyBuffer;
             Len := ConSettings^.ReadFormatSettings.DateFormatLen;
           end;
         FIELD_TYPE_TIME: begin
-            if not sysUtils.TryEncodeTime(
-              PMYSQL_TIME(ColBind^.buffer)^.Hour,
-              PMYSQL_TIME(ColBind^.buffer)^.Minute,
-              PMYSQL_TIME(ColBind^.buffer)^.Second,
-              0{PMYSQL_TIME(ColBind^.buffer)^.second_part}, DTt) then
-                DTt := 0;
-            DateTimeToUnicodeSQLTime(DTt, @FTinyBuffer, ConSettings^.ReadFormatSettings, False);
+            DateTimeToUnicodeSQLTime(PMYSQL_TIME(ColBind^.buffer)^.Hour,
+              PMYSQL_TIME(ColBind^.buffer)^.Minute, PMYSQL_TIME(ColBind^.buffer)^.Second,
+              0{PMYSQL_TIME(ColBind^.buffer)^.second_part},
+              @FTinyBuffer, ConSettings^.ReadFormatSettings, False);
             Result := @FTinyBuffer;
             Len := ConSettings^.ReadFormatSettings.TimeFormatLen;
           end;

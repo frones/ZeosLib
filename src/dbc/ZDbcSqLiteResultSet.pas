@@ -104,7 +104,6 @@ type
     FFirstRow: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
     FResetCallBack: TResetCallBack;
-    FTinyBuffer: Array[Byte] of AnsiChar;
   protected
     procedure Open; override;
   public
@@ -124,9 +123,6 @@ type
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
     {$ENDIF}
-    function GetRawByteString(ColumnIndex: Integer): RawByteString;
-    function GetString(ColumnIndex: Integer): String;
-    function GetUnicodeString(ColumnIndex: Integer): ZWideString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetInt(ColumnIndex: Integer): Integer;
     function GetUInt(ColumnIndex: Integer): Cardinal;
@@ -615,9 +611,9 @@ begin
           Result := @FTinyBuffer[0];
         end;
       SQLITE_FLOAT: begin
-          Len := FloatToRaw(FPlainDriver.sqlite3_column_Double(Fsqlite3_stmt, ColumnIndex),
-            @FTinyBuffer[0]);
           Result := @FTinyBuffer[0];
+          Len := FloatToRaw(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex),
+            Result);
         end;
       SQLITE3_TEXT: begin
           Result := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
@@ -667,9 +663,8 @@ begin
           Result := @FTinyBuffer[0];
         end;
       SQLITE_FLOAT: begin
-          Len := FloatToUnicode(FPlainDriver.sqlite3_column_Double(Fsqlite3_stmt, ColumnIndex),
-            @FTinyBuffer[0]);
           Result := @FTinyBuffer[0];
+          Len := FloatToUnicode(FPlainDriver.sqlite3_column_Double(Fsqlite3_stmt, ColumnIndex), Result);
         end;
       SQLITE3_TEXT: begin
           PAnsiChar(Result) := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
@@ -687,62 +682,6 @@ set_From_tmp:
         end;
     end;
   end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>RawByteString</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZSQLiteResultSet.GetRawByteString(
-  ColumnIndex: Integer): RawByteString;
-var P: PAnsiChar;
-  L: NativeUInt;
-begin
-  P := GetPAnsiChar(ColumnIndex, L);
-  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-  ZSetString(P, L, Result);
-  {$ELSE}
-  System.SetString(Result, P, L);
-  {$ENDIF}
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>String</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZSQLiteResultSet.GetString(ColumnIndex: Integer): String;
-var P: {$IFDEF UNICODE}PWidechar{$ELSE}PAnsiChar{$ENDIF};
-  L: NativeUInt;
-begin
-  {$IFDEF UNICODE}
-  P := GetPWideChar(ColumnIndex, L);
-  if P <> nil then
-    if P = Pointer(FUniTemp)
-    then Result := FUniTemp
-    else System.SetString(Result, P, L)
-  else Result := '';
-  {$ELSE}
-  P := GetPAnsiChar(ColumnIndex, L);
-  if P <> nil then
-    if not ConSettings.AutoEncode or (ConSettings^.CTRL_CP = zCP_UTF8) or
-       (FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex) <> SQLITE3_TEXT) then
-      System.SetString(Result, P, L)
-    else begin
-      FUniTemp := PRawToUnicode(P, ZFastCode.StrLen(P), zCP_UTF8);
-      Result := ZUnicodeToRaw(FUniTemp, ZOSCodePage);
-    end
-  else Result := '';
-  {$ENDIF}
 end;
 
 {**
@@ -923,27 +862,6 @@ begin
     else
       Result := 0;
   end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>UnicodeString or WideString</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZSQLiteResultSet.GetUnicodeString(ColumnIndex: Integer): ZWideString;
-var P: PWideChar;
-  L: NativeUInt;
-begin
-  P := GetPWideChar(ColumnIndex, L);
-  if P = Pointer(FUniTemp) then
-    Result := FUniTemp
-  else if LastWasNull
-    then Result := ''
-    else System.SetString(Result, P, L);
 end;
 
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}

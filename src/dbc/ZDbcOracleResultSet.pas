@@ -84,7 +84,6 @@ type
     FCurrentRowBufIndex: Cardinal; //The current row in buffer! NOT the current row of RS
     FZBufferSize: Integer; //max size for multiple rows. If Row > Value ignore it!
     FRowsBuffer: TByteDynArray; //Buffer for multiple rows if possible which is reallocated or freed by IDE -> mem leak save!
-    FTinyBuffer: array[Byte] of Byte; //huge because of possible OCINumbers
     FTempLob: IZBlob;
     FClientCP: Word;
     Fbufsize: UB4; //a temporary variable uses for Number2Text

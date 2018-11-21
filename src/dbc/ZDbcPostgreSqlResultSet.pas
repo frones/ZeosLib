@@ -94,7 +94,7 @@ type
     FUndefinedVarcharAsStringLength: Integer;
     FCachedLob: boolean;
     FpgOIDTypes: TIntegerDynArray;
-    FTempLob: IZBlob;
+    //FTempLob: IZBlob;
     FClientCP: Word;
     procedure ClearPGResult;
   protected
