@@ -347,6 +347,7 @@ function UnicodeToInt64Def(const S: PWideChar; const Default: Int64) : Int64; ov
 function UnicodeToInt64Def(Buf, PEnd: PWideChar; Default: Integer) : Int64; overload;
 function UnicodeToUInt64Def(const S: ZWideString; const Default: UInt64) : UInt64; overload;
 function UnicodeToUInt64Def(const S: PWideChar; const Default: UInt64) : UInt64; overload;
+function UnicodeToUInt64Def(Buf, PEnd: PWideChar; Default: Integer) : UInt64; overload;
 
 { Float convertion in Raw and Unicode Format}
 function RawToFloat(const s: PAnsiChar; const DecimalSep: AnsiChar): Extended; overload;
@@ -375,6 +376,7 @@ function ValRawUInt64(PStart: PAnsiChar; var PEnd: PAnsiChar): UInt64; overload;
 
 function ValUnicodeInt(PStart: PWideChar; var PEnd: PWideChar): Integer; overload;
 function ValUnicodeInt64(PStart: PWideChar; var PEnd: PWideChar): Int64; overload;
+function ValUnicodeUInt64(PStart: PWideChar; var PEnd: PWideChar): UInt64; overload;
 
 function UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar): Extended; overload;
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
@@ -4952,6 +4954,15 @@ begin
       Result := Default;
 end;
 
+function UnicodeToUInt64Def(Buf, PEnd: PWideChar; Default: Integer) : UInt64;
+var P: PWideChar;
+begin
+  P := PEnd;
+  Result := ValUnicodeUInt64(Buf, PEnd);
+  if P <> PEnd then
+    Result := Default;
+end;
+
 function RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar;
   const Default: Extended): Extended;
 var
@@ -5914,9 +5925,92 @@ begin
   if not (((Flags and 1) <> 0) and (PStart = PEnd)) then
     PEnd := PStart;
 end;
+
+function ValUnicodeUInt64(PStart: PWideChar; var PEnd: PWideChar): UInt64;
+//function ValInt64_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Int64;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified by EgonHugeist for faster conversion, PAnsiChar, UInt64
+var
+  I, Digit: Integer;
+  Flags: Byte; {Bit 0 = Valid, Bit 1 = Negative, Bit 2 = Hex}
+begin
+  Result := 0;
+  if (PStart = nil) or (PStart = PEnd) then begin
+    PEnd := PStart;
+    Exit;
+  end;
+  Flags := 0;
+  while Ord(PStart^) = Ord(' ') do
+    Inc(PStart);
+  if Ord(PStart^) in [Ord('+'), Ord('-')] then
+    if Ord(PStart^) = Ord('-') then begin//can't be negative
+      PEnd := PStart;
+      Exit;
+    end else
+      inc(PStart);
+  if Ord(PStart^) = Ord('$') then begin
+    inc(PStart);
+    Flags := Flags or 4; {Hex := True}
+  end else begin
+    if Ord(PStart^) = Ord('0') then begin
+      Flags := Flags or 1; {Valid := True}
+      inc(PStart);
+    end;
+    if (Ord(PStart^) or $20) = ord('x') then begin {S[Code+1] in ['X','x']}
+      Flags := Flags or 4; {Hex := True}
+      inc(PStart);
+    end;
+  end;
+  if (Flags and 4) <> 0 then begin {Hex = True}
+    Flags := Flags and (not 1); {Valid := False}
+    while PStart < PEnd do begin
+      case Ord(PStart^) of
+        Ord('0')..Ord('9'): Digit := Ord(PStart^) - Ord('0');
+        Ord('a')..Ord('f'): Digit := Ord(PStart^) - AdjustLowercase;
+        Ord('A')..Ord('F'): Digit := Ord(PStart^) - AdjustUppercase;
+        else      Break;
+      end;
+      if UInt64(Result) > (High(UInt64) shr 3) then
+        Break;
+      if UInt64(Result) < (MaxInt div 16)-15 then begin {Use Integer Math instead of Int64}
+        I := Result;
+        I := (I shl 4) + Digit;
+        Result := I;
+      end else
+        Result := (Result shl 4) + Digit;
+      Flags := Flags or 1; {Valid := True}
+      Inc(PStart);
+    end;
+  end else begin
+    while PStart < PEnd do begin
+      if ( not (Ord(PStart^) in [Ord('0')..Ord('9')]) ) or ( (Ord(PStart^) > Ord('5')) and (Result = (High(UInt64) div 10)) ) then //prevent overflow
+      if (Ord(PStart^) > Ord('5')) and ( Result = (High(UInt64) div 10)) then begin //overflow
+          PEnd := PStart+1;
+          Exit;
+        end else begin
+          inc(PStart, Ord(Ord(PStart^) <> Ord(#0)));
+          break;
+        end;
+      if UInt64(Result) < (MaxInt div 10)-9 then begin {Use Integer Math instead of Int64}
+        I := Result;
+        I := (I * 10) + Ord(PStart^) - Ord('0');
+        Result := I;
+      end else {Result := (Result * 10) + Ord(Ch) - Ord('0');}
+        Result := (Result shl 1) + (Result shl 3) + Ord(PStart^) - Ord('0');
+      Flags := Flags or 1; {Valid := True}
+      Inc(PStart);
+    end;
+  end;
+  if ((Flags and 2) <> 0) then {Neg=True}
+    Result := -Result;
+  if not (((Flags and 1) <> 0) and (PStart = PEnd)) then
+    PEnd := PStart;
+end;
+
 {$WARNINGS ON}
 
-function UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar): Extended; overload;
+function UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar): Extended;
 var
   E: Integer;
 begin
@@ -5926,7 +6020,7 @@ begin
 end;
 
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
-procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Extended); overload;
+procedure UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar; var Result: Extended);
 var
   E: Integer;
 begin
