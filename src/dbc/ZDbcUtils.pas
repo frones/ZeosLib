@@ -209,10 +209,12 @@ procedure CancelLastChar(var Buf: TUCS2Buff; var Result: ZWideString); overload;
 procedure FlushBuff(var Buf: TRawBuff; var Result: RawByteString); overload;
 procedure FlushBuff(var Buf: TUCS2Buff; var Result: ZWideString); overload;
 
-function GetAbsorbedTrailingSpacesLen(Buf: PAnsiChar; Len: LengthInt): LengthInt; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function GetAbsorbedTrailingSpacesLen(Buf: PAnsiChar; Len: LengthInt): LengthInt; {$IFDEF WITH_INLINE}inline;{$ENDIF} overload;
+function GetAbsorbedTrailingSpacesLen(Buf: PWideChar; Len: LengthInt): LengthInt; {$IFDEF WITH_INLINE}inline;{$ENDIF} overload;
 
 const
   i4SpaceRaw: Integer = Ord(#32)+Ord(#32) shl 8 + Ord(#32) shl 16 +Ord(#32) shl 24;  //integer representation of the four space chars
+  i4SpaceUni: Int64 = 9007336695791648;  //integer representation of the four wide space chars
   sAlignCurrencyScale2Precision: array[0..4] of Integer = (
     15, 16, 17, 18, 19);
 
@@ -1330,16 +1332,31 @@ end;
 function GetAbsorbedTrailingSpacesLen(Buf: PAnsiChar; Len: LengthInt): LengthInt;
 var PEnd: PAnsiChar;
 begin
-  if Len > SizeOf(Integer)+1 then begin
-    PEnd := Buf + Len - SizeOf(Integer) -1;
+  if Len > 4 then begin
+    PEnd := Buf + Len - 4;
     while (PEnd >= Buf) and (PInteger(PEnd)^ = i4SpaceRaw) do
-      Dec(PEnd, SizeOf(Integer));
-    Inc(PEnd, SizeOf(Integer));
+      Dec(PEnd, 4);
+    Inc(PEnd, 4);
   end else
-    PEnd := Buf+Len-1;
-  while (PEnd >= Buf) and (PByte(PEnd)^ = Ord(' ')) do
+    PEnd := Buf+Len;
+  while (PEnd > Buf) and (PByte(PEnd-1)^ = Ord(' ')) do
     Dec(PEnd);
-  Result := PEnd+1 - Buf;
+  Result := PEnd - Buf;
+end;
+
+function GetAbsorbedTrailingSpacesLen(Buf: PWideChar; Len: LengthInt): LengthInt;
+var PEnd: PWideChar;
+begin
+  if Len > 4 then begin
+    PEnd := Buf + Len - 4;
+    while (PEnd >= Buf) and (PInt64(PEnd)^ = i4SpaceUni) do
+      Dec(PEnd, 4);
+    Inc(PEnd, 4);
+  end else
+    PEnd := Buf+Len;
+  while (PEnd > Buf) and (PWord(PEnd-1)^ = Ord(' ')) do
+    Dec(PEnd);
+  Result := PEnd- Buf;
 end;
 
 end.
