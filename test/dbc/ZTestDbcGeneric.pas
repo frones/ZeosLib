@@ -253,8 +253,10 @@ var
   Metadata: IZDatabaseMetadata;
 begin
   if ProtocolType in [protMySQL, protSQLite, protFreeTDS, protMSSQL,
-                      protADO, protSyBase, protASA, protOleDB] then
+                      protADO, protSyBase, protASA, protOleDB, protODBC] then begin
+    BlankCheck;
     Exit; //not in build sripts because they depend to locale settings
+  end;
 
   Metadata := Connection.GetMetadata;
   if not Metadata.GetDatabaseInfo.SupportsMixedCaseQuotedIdentifiers then
