@@ -739,6 +739,9 @@ begin
 
     Check(True);
   finally
+    Query.SQL.Text := 'DELETE FROM people WHERE p_id=:id';
+    Query.ParamByName('id').AsInteger := TEST_ROW_ID;
+    Query.ExecSQL;
     Query.Free;
     RefreshQuery.Free;
   end;
