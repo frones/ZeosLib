@@ -1349,8 +1349,8 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                         isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^, TempDate.Hour,
                           TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                         Result := @FTinyBuffer[0];
-                        ZSysUtils.DateTimeToRawSQLTime(SysUtils.EncodeTime(TempDate.Hour, TempDate.Minute,
-                          TempDate.Second, TempDate.Fractions div 10),
+                        ZSysUtils.DateTimeToRawSQLTime(TempDate.Hour, TempDate.Minute,
+                          TempDate.Second, TempDate.Fractions div 10,
                           Result, ConSettings.ReadFormatSettings, False);
                         Len := ConSettings.ReadFormatSettings.TimeFormatLen;
                       end;
@@ -1490,8 +1490,8 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
                         isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^, TempDate.Hour,
                           TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                         Result := @FTinyBuffer[0];
-                        ZSysUtils.DateTimeToUnicodeSQLTime(SysUtils.EncodeTime(TempDate.Hour, TempDate.Minute,
-                          TempDate.Second, TempDate.Fractions div 10),
+                        ZSysUtils.DateTimeToUnicodeSQLTime(TempDate.Hour, TempDate.Minute,
+                          TempDate.Second, TempDate.Fractions div 10,
                           Result, ConSettings.ReadFormatSettings, False);
                         Len := ConSettings.ReadFormatSettings.TimeFormatLen;
                       end;
