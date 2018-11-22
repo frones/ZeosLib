@@ -307,8 +307,9 @@ begin
     else SQL := DataBase;
     {$ENDIF}
   {$ENDIF}
-  FPlainDriver.sqlite3_open(Pointer(SQL), FHandle);
-  if FHandle = nil then
+  //patch by omaga software see https://sourceforge.net/p/zeoslib/tickets/312/
+  TmpInt := FPlainDriver.sqlite3_open(Pointer(SQL), FHandle);
+  if TmpInt <> SQLITE_OK then
     CheckSQLiteError(FPlainDriver, FHandle, SQLITE_ERROR, lcConnect, LogMessage, ConSettings);
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
