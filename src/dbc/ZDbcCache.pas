@@ -2099,22 +2099,19 @@ Set_Results:        Len := Result - PAnsiChar(@FTinyBuffer[0]);
                     Len := 38;
                   end;
       stDate:     begin
-                    DateTimeToRawSQLDate(PDateTime(Data)^, @FTinyBuffer[0],
-                      ConSettings^.DisplayFormatSettings, False);
                     Result := @FTinyBuffer[0];
-                    Len := ConSettings^.DisplayFormatSettings.DateFormatLen;
+                    Len := DateTimeToRawSQLDate(PDateTime(Data)^, @FTinyBuffer[0],
+                      ConSettings^.DisplayFormatSettings, False);
                   end;
       stTime:     begin
-                    DateTimeToRawSQLTime(PDateTime(Data)^, @FTinyBuffer[0],
-                      ConSettings^.DisplayFormatSettings, False);
                     Result := @FTinyBuffer[0];
-                    Len := ConSettings^.DisplayFormatSettings.TimeFormatLen;
+                    Len := DateTimeToRawSQLTime(PDateTime(Data)^, @FTinyBuffer[0],
+                      ConSettings^.DisplayFormatSettings, False);
                   end;
       stTimestamp:begin
-                    DateTimeToRawSQLTimeStamp(PDateTime(Data)^, @FTinyBuffer[0],
-                      ConSettings^.DisplayFormatSettings, False);
                     Result := @FTinyBuffer[0];
-                    Len := ConSettings^.DisplayFormatSettings.DateTimeFormatLen;
+                    Len := DateTimeToRawSQLTimeStamp(PDateTime(Data)^, @FTinyBuffer[0],
+                      ConSettings^.DisplayFormatSettings, False);
                   end;
       stAsciiStream, stUnicodeStream:
                   if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then begin
@@ -2393,10 +2390,9 @@ Set_Results:        Len := Result - PWideChar(@FTinyBuffer[0]);
                     Len := 38;
                   end;
       stDate:     begin
-                    DateTimeToUnicodeSQLDate(PDateTime(Data)^, @FTinyBuffer[0],
-                      ConSettings^.DisplayFormatSettings, False);
                     Result := @FTinyBuffer[0];
-                    Len := ConSettings^.DisplayFormatSettings.DateFormatLen;
+                    Len := DateTimeToUnicodeSQLDate(PDateTime(Data)^, @FTinyBuffer[0],
+                      ConSettings^.DisplayFormatSettings, False);
                   end;
       stTime:     begin
                     DateTimeToUnicodeSQLTime(PDateTime(Data)^, @FTinyBuffer[0],
@@ -2405,10 +2401,9 @@ Set_Results:        Len := Result - PWideChar(@FTinyBuffer[0]);
                     Len := ConSettings^.DisplayFormatSettings.TimeFormatLen;
                   end;
       stTimestamp:begin
-                    DateTimeToUnicodeSQLTimeStamp(PDateTime(Data)^, @FTinyBuffer[0],
-                      ConSettings^.DisplayFormatSettings, False);
                     Result := @FTinyBuffer[0];
-                    Len := ConSettings^.DisplayFormatSettings.DateTimeFormatLen;
+                    Len := DateTimeToUnicodeSQLTimeStamp(PDateTime(Data)^, @FTinyBuffer[0],
+                      ConSettings^.DisplayFormatSettings, False);
                   end;
       stAsciiStream, stUnicodeStream, stBinaryStream:
                   if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then begin

@@ -921,17 +921,15 @@ Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
                       Len := 38;
                     end;
       stTime:       begin
-                      if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
-                        DateTimeToRawSQLTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
-                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
-                          PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000, @FTinyBuffer[0],
-                          ConSettings^.DisplayFormatSettings, False)
-                      else
-                        DateTimeToRawSQLTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0, @FTinyBuffer[0],
-                          ConSettings^.DisplayFormatSettings, False);
                       Result := @FTinyBuffer[0];
-                      Len := ConSettings^.DisplayFormatSettings.TimeFormatLen;
+                      if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY
+                      then Len := DateTimeToRawSQLTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
+                          PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000, Result,
+                          ConSettings^.DisplayFormatSettings.TimeFormat, False)
+                      else Len := DateTimeToRawSQLTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0, Result,
+                          ConSettings^.DisplayFormatSettings.TimeFormat, False);
                     end;
       stDate:       begin
                       DateTimeToRawSQLDate(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
@@ -942,13 +940,13 @@ Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
                     end;
       stTimeStamp:  begin
                       Result := @FTinyBuffer[0];
-                      DateTimeToRawSQLTimeStamp(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
+                      Len := DateTimeToRawSQLTimeStamp(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
                         PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction, Result,
-                          ConSettings^.DisplayFormatSettings, False);
-                      Len := ConSettings^.DisplayFormatSettings.DateFormatLen;
+                          ConSettings^.DisplayFormatSettings.DateTimeFormat,
+                          False, PSQL_DATE_STRUCT(fColDataPtr)^.year < 0);
                     end;
       stString, stUnicodeString: begin
                       if fIsUnicodeDriver then begin
@@ -1056,17 +1054,15 @@ Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
                       Len := 38;
                     end;
       stTime:       begin
-                      if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
-                        DateTimeToUnicodeSQLTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
-                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
-                          PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000, @FTinyBuffer[0],
-                          ConSettings^.DisplayFormatSettings, False)
-                      else
-                        DateTimeToUnicodeSQLTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
-                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0, @FTinyBuffer[0],
-                          ConSettings^.DisplayFormatSettings, False);
                       Result := @FTinyBuffer[0];
-                      Len := ConSettings^.DisplayFormatSettings.TimeFormatLen;
+                      if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY
+                      then Len := DateTimeToUnicodeSQLTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
+                          PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000, Result,
+                          ConSettings^.DisplayFormatSettings.TimeFormat, False)
+                      else Len := DateTimeToUnicodeSQLTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                        PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0, Result,
+                          ConSettings^.DisplayFormatSettings.TimeFormat, False);
                     end;
       stDate:       begin
                       DateTimeToUnicodeSQLDate(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
@@ -1077,13 +1073,13 @@ Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
                     end;
       stTimeStamp:  begin
                       Result := @FTinyBuffer[0];
-                      DateTimeToUnicodeSQLTimeStamp(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
+                      Len := DateTimeToUnicodeSQLTimeStamp(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
                         PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction, Result,
-                          ConSettings^.DisplayFormatSettings, False);
-                      Len := ConSettings^.DisplayFormatSettings.DateFormatLen;
+                        ConSettings^.DisplayFormatSettings.DateTimeFormat, False,
+                        PSQL_DATE_STRUCT(fColDataPtr)^.year < 0);
                     end;
       stString, stUnicodeString: begin
                       if fIsUnicodeDriver then begin

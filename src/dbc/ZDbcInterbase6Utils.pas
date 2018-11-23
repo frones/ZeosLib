@@ -2171,6 +2171,7 @@ var century: integer;
 begin
   nday := nday + IB_BaseDateToDay0Diff;
   century := (4 * nday - 1) div DaysOf400YearsCycle;
+
   nday := 4 * nday - 1 - DaysOf400YearsCycle * century;
   day := nday div 4;
 

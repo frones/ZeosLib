@@ -734,81 +734,79 @@ begin
                         Len := 5;
                       end;
     DBTYPE_I1:        begin
-                        IntToRaw(Integer(PShortInt(FData)^), @FTinyBuffer, @Result);
+                        IntToRaw(Integer(PShortInt(FData)^), @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_I2:        begin
-                        IntToRaw(Integer(PSmallInt(FData)^), @FTinyBuffer, @Result);
+                        IntToRaw(Integer(PSmallInt(FData)^), @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_I4,
     DBTYPE_ERROR:     begin
-                        IntToRaw(PInteger(FData)^, @FTinyBuffer, @Result);
+                        IntToRaw(PInteger(FData)^, @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_I8:        begin
-                        IntToRaw(PInt64(FData)^, @FTinyBuffer, @Result);
+                        IntToRaw(PInt64(FData)^, @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_UI1:       begin
-                        IntToRaw(Cardinal(PByte(FData)^), @FTinyBuffer, @Result);
+                        IntToRaw(Cardinal(PByte(FData)^), @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_UI2:       begin
-                        IntToRaw(Cardinal(PWord(FData)^), @FTinyBuffer, @Result);
+                        IntToRaw(Cardinal(PWord(FData)^), @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     {$IFNDEF CPUX64}DBTYPE_HCHAPTER,{$ENDIF} //NativeUnit
     DBTYPE_UI4:       begin
-                        IntToRaw(PCardinal(FData)^, @FTinyBuffer, @Result);
+                        IntToRaw(PCardinal(FData)^, @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     {$IFDEF CPUX64}DBTYPE_HCHAPTER,{$ENDIF} //NativeUnit
     DBTYPE_UI8:       begin
-                        IntToRaw(PUInt64(FData)^, @FTinyBuffer, @Result);
+                        IntToRaw(PUInt64(FData)^, @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_R4:        begin
-                        Result := @FTinyBuffer;
+                        Result := @FTinyBuffer[0];
                         Len := FloatToSQLRaw(PSingle(FData)^, Result);
                       end;
     DBTYPE_R8:        begin
-                        Result := @FTinyBuffer;
+                        Result := @FTinyBuffer[0];
                         Len := FloatToSQLRaw(PDouble(FData)^, Result);
                       end;
     DBTYPE_CY:        begin
-                        CurrToRaw(PCurrency(FData)^, @FTinyBuffer, @Result);
-set_from_buf:           Len := Result - PAnsiChar(@FTinyBuffer);
-                        Result := PAnsiChar(@FTinyBuffer)
+                        CurrToRaw(PCurrency(FData)^, @FTinyBuffer[0], @Result);
+set_from_buf:           Len := Result - PAnsiChar(@FTinyBuffer[0]);
+                        Result := PAnsiChar(@FTinyBuffer[0])
                       end;
     DBTYPE_DATE:      begin
-                        DateTimeToRawSQLTimeStamp(PDateTime(FData)^,
-                          @FTinyBuffer, ConSettings.ReadFormatSettings, False);
-                        Result := @FTinyBuffer;
-                        Len := ConSettings.ReadFormatSettings.DateTimeFormatLen;
+                        Result := @FTinyBuffer[0];
+                        Len := DateTimeToRawSQLTimeStamp(PDateTime(FData)^,
+                          Result, ConSettings.ReadFormatSettings, False);
                       end;
     DBTYPE_DBDATE:    begin
-                        DateTimeToRawSQLDate(EncodeDate(Abs(PDBDate(FData)^.year),
-                          PDBDate(FData)^.month, PDBDate(FData)^.day),
-                          @FTinyBuffer, ConSettings.ReadFormatSettings, False);
-                        Result := @FTinyBuffer;
-                        Len := ConSettings.ReadFormatSettings.DateFormatLen;
+                        Result := @FTinyBuffer[0];
+                        Len := DateTimeToRawSQLDate(Abs(PDBDate(FData)^.year),
+                          PDBDate(FData)^.month, PDBDate(FData)^.day,
+                          Result, ConSettings.ReadFormatSettings.DateFormat,
+                          False, PDBDate(FData)^.year < 0);
                       end;
     DBTYPE_DBTIME:    begin
-                        DateTimeToRawSQLTime(EncodeTime(PDBTime(FData)^.hour,
-                          PDBTime(FData)^.minute, PDBTime(FData)^.second,0),
-                          @FTinyBuffer, ConSettings.ReadFormatSettings, False);
-                        Result := @FTinyBuffer;
-                        Len := ConSettings.ReadFormatSettings.TimeFormatLen;
+                        Result := @FTinyBuffer[0];
+                        Len := DateTimeToRawSQLTime(PDBTime(FData)^.hour,
+                          PDBTime(FData)^.minute, PDBTime(FData)^.second,0,
+                          Result, ConSettings.ReadFormatSettings.TimeFormat, False);
                       end;
     DBTYPE_DBTIMESTAMP: begin
-                        DateTimeToRawSQLTimeStamp(Word(Abs(PDBTimeStamp(FData)^.year)),
+                        Result := @FTinyBuffer[0];
+                        Len := DateTimeToRawSQLTimeStamp(Word(Abs(PDBTimeStamp(FData)^.year)),
                           PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day,
                           PDBTimeStamp(FData)^.hour, PDBTimeStamp(FData)^.minute,
                           PDBTimeStamp(FData)^.second, PDBTimeStamp(FData)^.fraction div 1000000,
-                          @FTinyBuffer, ConSettings.ReadFormatSettings, False);
-                        Result := @FTinyBuffer;
-                        Len := ConSettings.ReadFormatSettings.DateTimeFormatLen;
+                          Result, ConSettings.ReadFormatSettings.DateTimeFormat,
+                          False, PDBTimeStamp(FData)^.year < 0);
                       end;
     DBTYPE_VARIANT:   begin
                         FUniTemp := POleVariant(FData)^;
@@ -899,81 +897,79 @@ begin
                         Len := 5;
                       end;
     DBTYPE_I1:        begin
-                        IntToUnicode(Integer(PShortInt(FData)^), @FTinyBuffer, @Result);
+                        IntToUnicode(Integer(PShortInt(FData)^), @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_I2:        begin
-                        IntToUnicode(Integer(PSmallInt(FData)^), @FTinyBuffer, @Result);
+                        IntToUnicode(Integer(PSmallInt(FData)^), @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_I4,
     DBTYPE_ERROR:     begin
-                        IntToUnicode(PInteger(FData)^, @FTinyBuffer, @Result);
+                        IntToUnicode(PInteger(FData)^, @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_I8:        begin
-                        IntToUnicode(PInt64(FData)^, @FTinyBuffer, @Result);
+                        IntToUnicode(PInt64(FData)^, @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_UI1:       begin
-                        IntToUnicode(Cardinal(PByte(FData)^), @FTinyBuffer, @Result);
+                        IntToUnicode(Cardinal(PByte(FData)^), @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_UI2:       begin
-                        IntToUnicode(Cardinal(PWord(FData)^), @FTinyBuffer, @Result);
+                        IntToUnicode(Cardinal(PWord(FData)^), @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     {$IFNDEF CPUX64}DBTYPE_HCHAPTER,{$ENDIF} //NativeUnit
     DBTYPE_UI4:       begin
-                        IntToUnicode(PCardinal(FData)^, @FTinyBuffer, @Result);
+                        IntToUnicode(PCardinal(FData)^, @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     {$IFDEF CPUX64}DBTYPE_HCHAPTER,{$ENDIF} //NativeUnit
     DBTYPE_UI8:       begin
-                        IntToUnicode(PUInt64(FData)^, @FTinyBuffer, @Result);
+                        IntToUnicode(PUInt64(FData)^, @FTinyBuffer[0], @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_R4:        begin
-                        Result := @FTinyBuffer;
+                        Result := @FTinyBuffer[0];
                         Len := FloatToSQLUnicode(PSingle(FData)^, Result);
                       end;
     DBTYPE_R8:        begin
-                        Result := @FTinyBuffer;
+                        Result := @FTinyBuffer[0];
                         Len := FloatToSQLUnicode(PDouble(FData)^, Result);
                       end;
     DBTYPE_CY:        begin
-                        CurrToUnicode(PCurrency(FData)^, @FTinyBuffer, @Result);
-set_from_buf:           Len := Result - PWideChar(@FTinyBuffer);
-                        Result := PWideChar(@FTinyBuffer)
+                        CurrToUnicode(PCurrency(FData)^, @FTinyBuffer[0], @Result);
+set_from_buf:           Len := Result - PWideChar(@FTinyBuffer[0]);
+                        Result := PWideChar(@FTinyBuffer[0])
                       end;
     DBTYPE_DATE:      begin
-                        DateTimeToUnicodeSQLTimeStamp(PDateTime(FData)^,
+                        Result := @FTinyBuffer[0];
+                        Len := DateTimeToUnicodeSQLTimeStamp(PDateTime(FData)^,
                           @FTinyBuffer, ConSettings.ReadFormatSettings, False);
-                        Result := @FTinyBuffer;
-                        Len := ConSettings.ReadFormatSettings.DateTimeFormatLen;
                       end;
     DBTYPE_DBDATE:    begin
-                        DateTimeToUnicodeSQLDate(EncodeDate(Abs(PDBDate(FData)^.year),
-                          PDBDate(FData)^.month, PDBDate(FData)^.day),
-                          @FTinyBuffer, ConSettings.ReadFormatSettings, False);
-                        Result := @FTinyBuffer;
-                        Len := ConSettings.ReadFormatSettings.DateFormatLen;
+                        Result := @FTinyBuffer[0];
+                        Len := DateTimeToUnicodeSQLDate(Abs(PDBDate(FData)^.year),
+                          PDBDate(FData)^.month, PDBDate(FData)^.day,
+                          Result, ConSettings.ReadFormatSettings.DateFormat,
+                          False, PDBDate(FData)^.year < 0);
                       end;
     DBTYPE_DBTIME:    begin
-                        DateTimeToUnicodeSQLTime(EncodeTime(PDBTime(FData)^.hour,
-                          PDBTime(FData)^.minute, PDBTime(FData)^.second,0),
-                          @FTinyBuffer, ConSettings.ReadFormatSettings, False);
-                        Result := @FTinyBuffer;
-                        Len := ConSettings.ReadFormatSettings.TimeFormatLen;
+                        Result := @FTinyBuffer[0];
+                        Len := DateTimeToUnicodeSQLTime(PDBTime(FData)^.hour,
+                          PDBTime(FData)^.minute, PDBTime(FData)^.second,0,
+                          Result, ConSettings.ReadFormatSettings.TimeFormat, False);
                       end;
     DBTYPE_DBTIMESTAMP: begin
-                        DateTimeToUnicodeSQLTimeStamp(EncodeDateTime(Abs(PDBTimeStamp(FData)^.year), PDBTimeStamp(FData)^.month,
-                          PDBTimeStamp(FData)^.day, PDBTimeStamp(FData)^.hour,
-                          PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second,
-                          PDBTimeStamp(FData)^.fraction div 1000000),
-                          @FTinyBuffer, ConSettings.ReadFormatSettings, False);
-                        Result := @FTinyBuffer;
-                        Len := ConSettings.ReadFormatSettings.DateTimeFormatLen;
+                        Result := @FTinyBuffer[0];
+                        Len := DateTimeToUnicodeSQLTimeStamp(Abs(PDBTimeStamp(FData)^.year),
+                          PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day,
+                          PDBTimeStamp(FData)^.hour, PDBTimeStamp(FData)^.minute,
+                          PDBTimeStamp(FData)^.second, PDBTimeStamp(FData)^.fraction div 1000000,
+                          Result, ConSettings.ReadFormatSettings.DateTimeFormat,
+                          False, PDBTimeStamp(FData)^.year < 0);
                       end;
     DBTYPE_BSTR:      begin
                         Result := PWideChar(FData);

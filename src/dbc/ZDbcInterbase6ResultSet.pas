@@ -1332,27 +1332,25 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                         isc_decode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time,
                           TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                         Result := @FTinyBuffer[0];
-                        ZSysUtils.DateTimeToRawSQLTimeStamp(TempDate.Year, TempDate.Month, TempDate.Day,
-                          TempDate.Hour, TempDate.Minute, TempDate.Second, TempDate.Fractions div 10,
-                          Result, ConSettings.ReadFormatSettings, False);
-                        Len := ConSettings.ReadFormatSettings.DateTimeFormatLen;
+                        Len := ZSysUtils.DateTimeToRawSQLTimeStamp(TempDate.Year,
+                          TempDate.Month, TempDate.Day, TempDate.Hour, TempDate.Minute,
+                          TempDate.Second, TempDate.Fractions div 10,
+                          Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
                       end;
       SQL_TYPE_DATE : begin
                         isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
                         Result := @FTinyBuffer[0];
-                        ZSysUtils.DateTimeToRawSQLDate(TempDate.Year, TempDate.Month, Tempdate.Day,
-                          Result, ConSettings.ReadFormatSettings, False);
-                        Len := ConSettings.ReadFormatSettings.DateFormatLen;
+                        Len := ZSysUtils.DateTimeToRawSQLDate(TempDate.Year, TempDate.Month, Tempdate.Day,
+                          Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
                       end;
       SQL_TYPE_TIME : begin
                         isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^, TempDate.Hour,
                           TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                         Result := @FTinyBuffer[0];
-                        ZSysUtils.DateTimeToRawSQLTime(TempDate.Hour, TempDate.Minute,
+                        Len := DateTimeToRawSQLTime(TempDate.Hour, TempDate.Minute,
                           TempDate.Second, TempDate.Fractions div 10,
-                          Result, ConSettings.ReadFormatSettings, False);
-                        Len := ConSettings.ReadFormatSettings.TimeFormatLen;
+                          Result, ConSettings.ReadFormatSettings.TimeFormat, False);
                       end;
       else raise EZIBConvertError.Create(Format(SErrorConvertionField,
         [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));
@@ -1376,7 +1374,6 @@ function TZInterbase6XSQLDAResultSet.GetPWideChar(ColumnIndex: Integer;
 var
   TempDate: TZTimeStamp;
   XSQLVAR: PXSQLVAR;
-  dDT,tDT: TDateTime;
   P: PAnsiChar;
   label set_Results;
 begin
@@ -1467,33 +1464,25 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
                         isc_decode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time,
                           TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                         Result := @FTinyBuffer[0];
-                        if not TryEncodeDate(TempDate.Year, TempDate.Month, TempDate.Day, dDT) then
-                          dDT := 0;
-                        if not TryEncodeTime(TempDate.Hour, TempDate.Minute,
-                                TempDate.Second, TempDate.Fractions div 10, tDT) then
-                          tDT :=0;
-                        if dDT < 0
-                        then dDT := dDT-tDT
-                        else dDT := dDT+tDT;
-                        ZSysUtils.DateTimeToUnicodeSQLTimeStamp(dDT, Result, ConSettings.ReadFormatSettings, False);
-                        Len := ConSettings.ReadFormatSettings.DateTimeFormatLen;
+                        Len := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(TempDate.Year,
+                          TempDate.Month, TempDate.Day, TempDate.Hour, TempDate.Minute,
+                          TempDate.Second, TempDate.Fractions div 10,
+                          Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
                       end;
       SQL_TYPE_DATE : begin
                         isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
                         Result := @FTinyBuffer[0];
-                        ZSysUtils.DateTimeToUnicodeSQLDate(TempDate.Year, TempDate.Month, Tempdate.Day,
-                          Result, ConSettings.ReadFormatSettings, False);
-                        Len := ConSettings.ReadFormatSettings.DateFormatLen;
+                        Len := ZSysUtils.DateTimeToUnicodeSQLDate(TempDate.Year, TempDate.Month, Tempdate.Day,
+                          Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
                       end;
       SQL_TYPE_TIME : begin
                         isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^, TempDate.Hour,
                           TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                         Result := @FTinyBuffer[0];
-                        ZSysUtils.DateTimeToUnicodeSQLTime(TempDate.Hour, TempDate.Minute,
+                        Len := ZSysUtils.DateTimeToUnicodeSQLTime(TempDate.Hour, TempDate.Minute,
                           TempDate.Second, TempDate.Fractions div 10,
-                          Result, ConSettings.ReadFormatSettings, False);
-                        Len := ConSettings.ReadFormatSettings.TimeFormatLen;
+                          Result, ConSettings.ReadFormatSettings.TimeFormat, False);
                       end;
       else raise EZIBConvertError.Create(Format(SErrorConvertionField,
         [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));

@@ -926,13 +926,13 @@ begin
           end;
         FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATETIME:
           begin
-            DateTimeToRawSQLTimeStamp(PMYSQL_TIME(ColBind^.buffer)^.Year,
+            Result := @FTinyBuffer[0];
+            Len := DateTimeToRawSQLTimeStamp(PMYSQL_TIME(ColBind^.buffer)^.Year,
               PMYSQL_TIME(ColBind^.buffer)^.Month, PMYSQL_TIME(ColBind^.buffer)^.Day,
               PMYSQL_TIME(ColBind^.buffer)^.Hour, PMYSQL_TIME(ColBind^.buffer)^.Minute,
               PMYSQL_TIME(ColBind^.buffer)^.Second, 0{PMYSQL_TIME(ColBind^.buffer)^.second_part},
-              @FTinyBuffer[0], ConSettings^.ReadFormatSettings, False);
-            Result := @FTinyBuffer[0];
-            Len := ConSettings^.ReadFormatSettings.DateTimeFormatLen;
+              Result, ConSettings^.ReadFormatSettings.DateTimeFormat,
+              False, PMYSQL_TIME(ColBind^.buffer)^.neg <> 0);
           end;
         FIELD_TYPE_LONGLONG: begin
             if ColBind^.is_unsigned_address^ = 0
@@ -941,19 +941,17 @@ begin
             goto set_results;
           end;
         FIELD_TYPE_DATE, FIELD_TYPE_NEWDATE: begin
-            DateTimeToRawSQLDate(PMYSQL_TIME(ColBind^.buffer)^.Year,
-              PMYSQL_TIME(ColBind^.buffer)^.Month,
-              PMYSQL_TIME(ColBind^.buffer)^.Day, @FTinyBuffer, ConSettings^.ReadFormatSettings, False);
             Result := @FTinyBuffer;
-            Len := ConSettings^.ReadFormatSettings.DateFormatLen;
+            Len := DateTimeToRawSQLDate(PMYSQL_TIME(ColBind^.buffer)^.Year,
+              PMYSQL_TIME(ColBind^.buffer)^.Month, PMYSQL_TIME(ColBind^.buffer)^.Day,
+              Result, ConSettings^.ReadFormatSettings.DateFormat, False, PMYSQL_TIME(ColBind^.buffer)^.neg <> 0);
           end;
         FIELD_TYPE_TIME: begin
-            DateTimeToRawSQLTime(PMYSQL_TIME(ColBind^.buffer)^.Hour,
+            Result := @FTinyBuffer;
+            Len := DateTimeToRawSQLTime(PMYSQL_TIME(ColBind^.buffer)^.Hour,
               PMYSQL_TIME(ColBind^.buffer)^.Minute,
               PMYSQL_TIME(ColBind^.buffer)^.Second, 0{PMYSQL_TIME(ColBind^.buffer)^.second_part},
-              @FTinyBuffer, ConSettings^.ReadFormatSettings, False);
-            Result := @FTinyBuffer;
-            Len := ConSettings^.ReadFormatSettings.TimeFormatLen;
+              @FTinyBuffer, ConSettings^.ReadFormatSettings.TimeFormat, False);
           end;
         FIELD_TYPE_YEAR: begin
             IntToRaw(Cardinal(PWord(ColBind^.buffer)^), @FTinyBuffer, @Result);
@@ -1070,13 +1068,13 @@ begin
             Len := 0;
           end;
         FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATETIME: begin
-            DateTimeToUnicodeSQLTimeStamp(PMYSQL_TIME(ColBind^.buffer)^.Year,
+            Result := @FTinyBuffer[0];
+            Len := DateTimeToUnicodeSQLTimeStamp(PMYSQL_TIME(ColBind^.buffer)^.Year,
               PMYSQL_TIME(ColBind^.buffer)^.Month, PMYSQL_TIME(ColBind^.buffer)^.Day,
               PMYSQL_TIME(ColBind^.buffer)^.Hour, PMYSQL_TIME(ColBind^.buffer)^.Minute,
               PMYSQL_TIME(ColBind^.buffer)^.Second, 0{PMYSQL_TIME(ColBind^.buffer)^.second_part},
-              @FTinyBuffer[0], ConSettings^.ReadFormatSettings, False);
-            Result := @FTinyBuffer[0];
-            Len := ConSettings^.ReadFormatSettings.DateTimeFormatLen;
+              Result, ConSettings^.ReadFormatSettings.DateTimeFormat, False,
+              PMYSQL_TIME(ColBind^.buffer)^.neg <> 0);
           end;
         FIELD_TYPE_LONGLONG: begin
             if ColBind^.is_unsigned_address^ = 0
@@ -1085,19 +1083,18 @@ begin
             goto set_results;
           end;
         FIELD_TYPE_DATE, FIELD_TYPE_NEWDATE: begin
-            DateTimeToUnicodeSQLDate(PMYSQL_TIME(ColBind^.buffer)^.Year,
-              PMYSQL_TIME(ColBind^.buffer)^.Month, PMYSQL_TIME(ColBind^.buffer)^.Day,
-              @FTinyBuffer, ConSettings^.ReadFormatSettings, False);
             Result := @FTinyBuffer;
-            Len := ConSettings^.ReadFormatSettings.DateFormatLen;
+            Len := DateTimeToUnicodeSQLDate(PMYSQL_TIME(ColBind^.buffer)^.Year,
+              PMYSQL_TIME(ColBind^.buffer)^.Month, PMYSQL_TIME(ColBind^.buffer)^.Day,
+              Result, ConSettings^.ReadFormatSettings.DateFormat, False,
+              PMYSQL_TIME(ColBind^.buffer)^.neg <> 0);
           end;
         FIELD_TYPE_TIME: begin
-            DateTimeToUnicodeSQLTime(PMYSQL_TIME(ColBind^.buffer)^.Hour,
+            Len := DateTimeToUnicodeSQLTime(PMYSQL_TIME(ColBind^.buffer)^.Hour,
               PMYSQL_TIME(ColBind^.buffer)^.Minute, PMYSQL_TIME(ColBind^.buffer)^.Second,
               0{PMYSQL_TIME(ColBind^.buffer)^.second_part},
-              @FTinyBuffer, ConSettings^.ReadFormatSettings, False);
+              @FTinyBuffer, ConSettings^.ReadFormatSettings.TimeFormat, False);
             Result := @FTinyBuffer;
-            Len := ConSettings^.ReadFormatSettings.TimeFormatLen;
           end;
         FIELD_TYPE_YEAR: begin
             IntToUnicode(Cardinal(PWord(ColBind^.buffer)^), @FTinyBuffer, @Result);
