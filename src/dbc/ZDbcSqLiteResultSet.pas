@@ -440,10 +440,13 @@ constructor TZSQLiteResultSet.Create(const Statement: IZStatement;
   const SQL: string; Psqlite: PPsqlite; Psqlite3_stmt: PPsqlite3_stmt;
   PErrorCode: PInteger; UndefinedVarcharAsStringLength: Integer;
   ResetCallBack: TResetCallback);
+var Metadata: TContainedObject;
 begin
-  inherited Create(Statement, SQL, TZSQLiteResultSetMetadata.Create(
-    Statement.GetConnection.GetMetadata, SQL, Self),
-    Statement.GetConnection.GetConSettings);
+  FPlainDriver := TZSQLitePlainDriver(Statement.GetConnection.GetIZPlainDriver.GetInstance);
+  if Assigned(FPlainDriver.sqlite3_column_table_name) and Assigned(FPlainDriver.sqlite3_column_name)
+  then MetaData := TZSQLiteResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self)
+  else MetaData := TZAbstractResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self);
+  inherited Create(Statement, SQL, MetaData, Statement.GetConnection.GetConSettings);
 
   FPsqlite := Psqlite;
   FPsqlite3_stmt := Psqlite3_stmt;
