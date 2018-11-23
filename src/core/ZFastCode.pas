@@ -3286,7 +3286,7 @@ var buf: array[0..31] of AnsiChar;
   P: PAnsiChar;
 begin
   CurrToRaw(Value, @buf[0], @P);
-  ZSetString(PAnsiChar(@Buf[0]), P-@Buf[0], Result);
+  ZSetString(PAnsiChar(@Buf[0]), P-PAnsiChar(@Buf[0]), Result);
 end;
 
 procedure CurrToUnicode(const Value: Currency; Buf: PWideChar; PEnd: ZPPWideChar = nil);
@@ -3340,7 +3340,7 @@ var buf: array[0..31] of WideChar;
   P: PWideChar;
 begin
   CurrToUnicode(Value, @buf[0], @P);
-  System.SetString(Result, PWideChar(@Buf[0]), P-@Buf[0]);
+  System.SetString(Result, PWideChar(@Buf[0]), P-PWideChar(@Buf[0]));
 end;
 
 function IntToRaw(Value: UInt64; Const Negative: Boolean = False): RawByteString;
