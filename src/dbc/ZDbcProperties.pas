@@ -163,6 +163,9 @@ const
   // A negative value means never prepare.
   // actually default is 2 executions before prepare the stmt on the server
   DSProps_MinExecCntBeforePrepare = 'MinExecCountBeforePrepare';
+  // Type: BOOLEAN
+  // http://zeoslib.sourceforge.net/viewtopic.php?f=20&t=10695&p=30151#p30151
+  DSProps_EmulatePrepares = 'emulate_prepares';
 {$IFEND}
 
   { Parameters specific to a single DBC }
@@ -262,9 +265,6 @@ const
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
 
-  // Type: BOOLEAN
-  // http://zeoslib.sourceforge.net/viewtopic.php?f=20&t=10695&p=30151#p30151
-  DSProps_EmulatePrepares = 'emulate_prepares';
   // Type: BOOLEAN
   // Is Oid type treated as Large Object handle (blob) or as a regular integer
   DSProps_OidAsBlob = 'OidAsBlob';
