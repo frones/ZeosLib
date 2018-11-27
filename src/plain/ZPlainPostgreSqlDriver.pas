@@ -390,9 +390,9 @@ type
   NOTE: in Postgres 6.4 and later, the be_pid is the notifying backend's,
   whereas in earlier versions it was always your own backend's PID.
 }
-  TZPostgreSQLNotify = packed record
+  TZPostgreSQLNotify = {packed }record //the reocord is NOT packet
     relname: PAnsiChar;   { name of relation containing data }
-    be_pid:  NativeInt; { process id of backend }
+    be_pid:  Integer; { process id of backend }
     payload: PAnsiChar; {additional data in notify}
   end;
 
