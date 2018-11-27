@@ -93,7 +93,7 @@ type
 
 implementation
 
-uses SysUtils, ZSysUtils, ZTestCase, ZDbcPostgreSqlUtils;
+uses SysUtils, ZSysUtils, ZTestCase, ZDbcPostgreSqlUtils, ZEncoding;
 
 { TZTestDbcPostgreSQLBugReport }
 
@@ -288,9 +288,9 @@ end;
 }
 procedure TZTestDbcPostgreSQLBugReport.Test739444;
 const
-  items_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  total_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  average_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  items_index = FirstDbcIndex;
+  total_index = FirstDbcIndex+1;
+  average_index = FirstDbcIndex+2;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -324,7 +324,7 @@ end;
 }
 procedure TZTestDbcPostgreSQLBugReport.Test759184;
 const
-  expr_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  expr_index = FirstDbcIndex;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -351,9 +351,9 @@ end;
 }
 procedure TZTestDbcPostgreSQLBugReport.Test798336;
 const
-  b_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  b_text_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  b_image_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  b_id_index = FirstDbcIndex;
+  b_text_index = FirstDbcIndex+1;
+  b_image_index = FirstDbcIndex+2;
 var
   Connection: IZConnection;
   PreparedStatement: IZPreparedStatement;
@@ -422,8 +422,8 @@ end;
 }
 procedure TZTestDbcPostgreSQLBugReport.Test815852;
 const
-  fld1_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  fld2_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  fld1_index = FirstDbcIndex;
+  fld2_index = FirstDbcIndex+1;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -482,8 +482,8 @@ end;
 }
 procedure TZTestDbcPostgreSQLBugReport.Test815854;
 const
-  fld1_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  fld2_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  fld1_index = FirstDbcIndex;
+  fld2_index = FirstDbcIndex+1;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -604,9 +604,9 @@ end;
 }
 procedure TZTestDbcPostgreSQLBugReport.Test1014416;
 const
-  fld1_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  fld2_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  fld3_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  fld1_index = FirstDbcIndex;
+  fld2_index = FirstDbcIndex+1;
+  fld3_index = FirstDbcIndex+2;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -655,7 +655,7 @@ can't open table pg_class
 }
 procedure TZTestDbcPostgreSQLBugReport.Test_Mantis0000148;
 const
-  relacl_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  relacl_index = FirstDbcIndex;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -721,15 +721,25 @@ end;
 
 procedure TZTestDbcPostgreSQLBugReportMBCs.Test739514;
 const
-  id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  fld_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  id_index = FirstDbcIndex;
+  fld_index = FirstDbcIndex;
   Str1: ZWideString = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430 {'Абракадабра'}; // Abrakadabra in Cyrillic letters
   Str2: ZWideString = '\'#$041f#$043e#$0431#$0435#$0434#$0430'\' {'\Победа\'}; // victory / success in russian (according to leo.org)
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
 begin
-  if SkipForReason(srClosedBug) then Exit;
+  Connection.Open;
+  if SkipForReason(srClosedBug) or
+     //eh the russion abrakadabra can no be mapped to other charsets then:
+    (Connection.GetConSettings.ClientCodePage.CP <> zCP_UTF8) or
+    (Connection.GetConSettings.ClientCodePage.CP <> zCP_WIN1251) or
+    (Connection.GetConSettings.ClientCodePage.CP <> zcp_DOS855) or
+    (Connection.GetConSettings.ClientCodePage.CP <> zCP_KOI8R)
+      {add some more if you run into same issue !!} then begin
+    BlankCheck;
+    Exit;
+  end;
 
   Statement := Connection.CreateStatement;
   Statement.ExecuteUpdate('delete from test739514 where id<>1');
