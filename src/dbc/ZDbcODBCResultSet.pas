@@ -950,9 +950,10 @@ Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
                     end;
       stString, stUnicodeString: begin
                       if fIsUnicodeDriver then begin
-                        if fFixedWidthStrings[ColumnIndex]
-                        then fRawTemp := PUnicodeToRaw(fColDataPtr, GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), fStrLen_or_Ind shr 1), FClientCP)
-                        else fRawTemp := PUnicodeToRaw(fColDataPtr, fStrLen_or_Ind shr 1, FClientCP);
+                        Len := fStrLen_or_Ind shr 1;
+                        if fFixedWidthStrings[ColumnIndex] then
+                          Len := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), Len);
+                        fRawTemp := PUnicodeToRaw(fColDataPtr, Len, FClientCP);
                         Len := Length(fRawTemp);
                         if Len > 0
                         then Result := Pointer(fRawTemp)
@@ -1090,8 +1091,8 @@ Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
                       end else begin
                         Len := fStrLen_or_Ind;
                         if fFixedWidthStrings[ColumnIndex] then
-                          Len := GetAbsorbedTrailingSpacesLen(Result, Len);
-                        fUniTemp := PRawToUnicode(fColDataPtr, GetAbsorbedTrailingSpacesLen(Result, fStrLen_or_Ind), FClientCP);
+                          Len := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), Len);
+                        fUniTemp := PRawToUnicode(fColDataPtr, Len, FClientCP);
                         goto Set_From_Temp;
                       end;
                     end;
