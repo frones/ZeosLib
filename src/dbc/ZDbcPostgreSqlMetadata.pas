@@ -257,7 +257,7 @@ type
 
     // (technobot) should any of these be moved to TZPostgreSQLDatabaseInfo?:
     function GetPostgreSQLType(Oid: OID): string;
-    function GetSQLTypeByOid(Oid: OID): TZSQLType;
+    function GetSQLTypeByOid(Oid: OID; AttTypMod: Integer): TZSQLType;
     function GetSQLTypeByName(const TypeName: string): TZSQLType;
     function TableTypeSQLExpression(const TableType: string; UseSchemas: Boolean):
       string;
@@ -1671,7 +1671,7 @@ begin
 
           InsertProcedureColumnRow(Result, GetStringByName('nspname'),
             GetStringByName('proname'), ColumnName, ColumnType,
-            Ord(GetSQLTypeByOid(ArgOid)), GetPostgreSQLType(ArgOid),
+            Ord(GetSQLTypeByOid(ArgOid, -1)), GetPostgreSQLType(ArgOid),
             Ord(ntNullableUnknown));
         end;
 
@@ -1688,14 +1688,14 @@ begin
             ColumnTypeOid := ColumnsRS.GetUIntByName('atttypid');
             InsertProcedureColumnRow(Result, GetStringByName('nspname'),
               GetStringByName('proname'), ColumnsRS.GetStringByName('attname'),
-              Ord(pctResultSet), Ord(GetSQLTypeByOid(ColumnTypeOid)),
+              Ord(pctResultSet), Ord(GetSQLTypeByOid(ColumnTypeOid, -1)),
               GetPostgreSQLType(ColumnTypeOid), Ord(ntNullableUnknown));
           end;
           ColumnsRS.Close;
         end else if (ReturnTypeType <> 'p') then // Single non-pseudotype return value
           InsertProcedureColumnRow(Result, GetStringByName('nspname'),
             GetStringByName('proname'), 'returnValue', Ord(pctReturn),
-            Ord(GetSQLTypeByOid(ReturnType)), GetPostgreSQLType(ReturnType),
+            Ord(GetSQLTypeByOid(ReturnType, -1)), GetPostgreSQLType(ReturnType),
             Ord(ntNullableUnknown));
       end;
       Close;
@@ -3256,13 +3256,14 @@ begin
   Result := (GetConnection as IZPostgreSQLConnection).GetTypeNameByOid(Oid);
 end;
 
-function TZPostgreSQLDatabaseMetadata.GetSQLTypeByOid(Oid: OID): TZSQLType;
+function TZPostgreSQLDatabaseMetadata.GetSQLTypeByOid(Oid: OID; AttTypMod: Integer): TZSQLType;
 var
   PostgreSQLConnection: IZPostgreSQLConnection;
 begin
   PostgreSQLConnection := GetConnection as IZPostgreSQLConnection;
-  Result := PostgreSQLToSQLType(PostgreSQLConnection,
-    PostgreSQLConnection.GetTypeNameByOid(Oid));
+  Result := ZDbcPostgreSQLUtils.PostgreSQLToSQLType(ConSettings, PostgreSQLConnection.IsOidAsBlob, OID, AttTypMod);
+  if Result = stUnknown then
+    Result := PostgreSQLToSQLType(PostgreSQLConnection, PostgreSQLConnection.GetTypeNameByOid(Oid));
 end;
 
 function TZPostgreSQLDatabaseMetadata.InternalUncachedGetColumns(const Catalog,
@@ -3375,7 +3376,7 @@ begin
         Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(nspname_index, Len), Len);
       Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(relname_index, Len), Len);
       Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(attname_index, Len), Len);
-      SQLType := GetSQLTypeByOid(TypeOid);
+      SQLType := GetSQLTypeByOid(TypeOid, AttTypMod);
       Result.UpdateInt(TableColColumnTypeIndex, Ord(SQLType));
       Result.UpdateString(TableColColumnTypeNameIndex, PgType);
 
@@ -3396,12 +3397,10 @@ FillSizes:
           end;
         end else
           if (PgType = 'varchar') then
-            if ( (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength = 0 ) then
-            begin
-              Result.UpdateInt(TableColColumnTypeIndex, Ord(GetSQLTypeByOid(25))); //Assume text-lob instead
+            if ( (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength = 0 ) then begin
+              Result.UpdateInt(TableColColumnTypeIndex, Ord(GetSQLTypeByOid(25, -1))); //Assume text-lob instead
               Result.UpdateInt(TableColColumnSizeIndex, 0); // need no size for streams
-            end
-            else begin //keep the string type but with user defined count of chars
+            end else begin //keep the string type but with user defined count of chars
               Precision := (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength;
               goto FillSizes;
             end
@@ -3460,9 +3459,10 @@ end;
 
 function TZPostgreSQLDatabaseMetadata.GetSQLTypeByName(
   const TypeName: string): TZSQLType;
+var PGConn: IZPostgreSQLConnection;
 begin
-  Result := PostgreSQLToSQLType(
-    GetConnection as IZPostgreSQLConnection, TypeName);
+  PGConn := GetConnection as IZPostgreSQLConnection;
+  Result := PostgreSQLToSQLType(PGConn, TypeName);
 end;
 
 function TZPostgreSQLDatabaseMetadata.TableTypeSQLExpression(

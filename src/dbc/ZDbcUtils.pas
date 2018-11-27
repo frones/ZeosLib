@@ -77,6 +77,8 @@ type
     Buf: array[Byte] of WideChar;
   end;
 
+  TBCDDynArray = array of TBCD;
+
 {**
   Resolves a connection protocol and raises an exception with protocol
   is not supported.

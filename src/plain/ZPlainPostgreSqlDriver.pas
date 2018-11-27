@@ -68,6 +68,8 @@ const
 
 { Type Lengths }
   NAMEDATALEN  = 32;
+{ used for type modifier calculation }
+  VARHDRSZ = 4;
 
 { OIDNAMELEN should be set to NAMEDATALEN + sizeof(Oid) }
   OIDNAMELEN   = 36;
@@ -491,33 +493,31 @@ type
     csWIN,           { WIN ( < Ver8.1) }
     csOTHER
   );
-const
-  NUMERIC_MAX_PRECISION = 1000;
-  DECSIZE = 30;
-type
+
 //pgtypes_numeric.h
-  TNumericDigit = Byte;
-  TNumericDigits = array[0..NUMERIC_MAX_PRECISION-1] of TNumericDigit; //no fix size -> aligned against scale or digits
+const
+  NUMERIC_POS   = $0000;
+  NUMERIC_NEG   = $4000;
+  NUMERIC_NAN   = $C000;
+  NUMERIC_NULL  = $F000;
+  NUMERIC_MAX_PRECISION = 1000;
+  NUMERIC_MAX_DISPLAY_SCALE = NUMERIC_MAX_PRECISION;
+  NUMERIC_MIN_DISPLAY_SCALE = 0;
+  NUMERIC_MIN_SIG_DIGITS = 16;
 
-  TNumeric = packed record
-    ndigits:      integer; //* number of digits in digits[] - can be 0! */
-    weight:       integer; //* weight of first digit */
-    rscale:       integer; //* result scale */
-    dscale:       integer; //* display scale */
-    sign:         integer; //* NUMERIC_POS, NUMERIC_NEG, or NUMERIC_NAN */
-    buf:          ^TNumericDigits;  //* start of alloc'd space for digits[] */
-    digits:       ^TNumericDigits;  //* decimal digits */
-  end;
+  NBASE = 10000;
+  DECSIZE = 30;
+
 type
-  TDecimal = packed record
-    ndigits:      integer; //* number of digits in digits[] - can be 0! */
-    weight:       integer; //* weight of first digit */
-    rscale:       integer; //* result scale */
-    dscale:       integer; //* display scale */
-    sign:         integer; //* NUMERIC_POS, NUMERIC_NEG, or NUMERIC_NAN */
-    digits:       Array[0..DECSIZE-1] of TNumericDigit;  //* decimal digits */
+  //https://www.postgresql.org/message-id/16572.1091489720%40sss.pgh.pa.us
+  PPGNumeric_External = ^TPGNumeric_External;
+  TPGNumeric_External = packed record
+    NBASEDigits:  Word; //count of NBASE digits
+    weight:       SmallInt; //* weight of first digit */
+    sign:         Word; //* NUMERIC_POS, NUMERIC_NEG, or NUMERIC_NAN */
+    dscale:       Word; //* display scale */
+    digits:       array[0..NUMERIC_MAX_PRECISION-1] of SmallInt; //no fix size -> aligned against scale or digits
   end;
-
 
 { ****************** Plain API Types definition ***************** }
 

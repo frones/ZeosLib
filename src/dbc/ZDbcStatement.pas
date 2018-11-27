@@ -211,7 +211,7 @@ type
 
   TZBindType = (zbtNull, zbt8Byte, zbtRawString, zbtUTF8String, {$IFNDEF NEXTGEN}zbtAnsiString,{$ENDIF}
     zbtUniString, zbtCharByRef, zbtBinByRef, zbtGUID, zbtBytes, zbtArray,
-    zbtLob, zbtPointer, zbtBCD, zbtTimeStamp);
+    zbtLob, zbtPointer, zbtBCD, zbtTimeStamp, zbtCustom);
 
   PZBindValue = ^TZBindValue;
   TZBindValue = record
@@ -222,9 +222,15 @@ type
   end;
   PZBufRec = ^TZBufRec;
   TZBufRec = record
-    Buf: Pointer;
     Len: LengthInt;
+    Buf: Pointer;
   end;
+  PZCustomData =  ^TZCustomData;
+  TZCustomData = packed record
+    Len: LengthInt;
+    //data goes here : array[0..?] of byte;
+  end;
+
   P8Bytes = PInt64;
 
   PZBcd = ^TZBcd;
@@ -274,6 +280,7 @@ type
     procedure Put(Index: Integer; const Value: TZArray); overload;
     procedure Put(Index: Integer; SQLType: TZSQLType; const Value: IZBLob); overload;
     procedure Put(Index: Integer; Value: PZBindValue); overload;
+    function AquireCustomValue(Index: Integer; SQLType: TZSQLType; Len: LengthInt): Pointer;
 
     procedure SetCount(NewCount: Integer);
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
@@ -3797,6 +3804,20 @@ end;
 
 { TZBindList }
 
+function TZBindList.AquireCustomValue(Index: Integer; SQLType: TZSQLType;
+  Len: LengthInt): Pointer;
+var BindValue: PZBindValue;
+begin
+  BindValue := AquireBuffer(Index, SQLType, zbtCustom);
+  if (BindValue.Value <> nil) and (PLengthInt(BindValue.Value)^ <> Len) then
+    ClearValue(Index);
+  if BindValue.Value = nil then begin
+    GetMem(BindValue.Value, SizeOf(LengthInt)+Len);
+    PLengthInt(BindValue.Value)^ := Len;
+  end;
+  Result := PAnsiChar(BindValue.Value)+SizeOf(LengthInt);
+end;
+
 procedure TZBindList.BindValuesToStatement(Stmt: TZAbstractPreparedStatement2;
   SupportsBidirectionalParms: Boolean);
 var
@@ -3881,10 +3902,14 @@ begin
       zbtPointer:   BindValue.Value := nil;
       zbt8Byte:     begin
                       {$IFNDEF CPU64}
-                      FreeMem(BindValue.Value);
+                      FreeMem(BindValue.Value, 8);
                       {$ENDIF}
                       BindValue.Value := nil;
                     end;
+      zbtCustom:    begin
+                      FreeMem(BindValue.Value,  PLengthInt(BindValue.Value)^+SizeOf(LengthInt));
+                      BindValue.Value := nil;
+                    end
       else begin
         FreeMem(BindValue.Value);
         BindValue.Value := nil;

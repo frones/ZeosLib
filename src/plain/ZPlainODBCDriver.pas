@@ -222,9 +222,9 @@ type
       SQL_IS_DAY_TO_SECOND: (day_second: SQL_DAY_SECOND_STRUCT);
   end;
 
+//https://docs.microsoft.com/de-de/sql/odbc/reference/appendixes/retrieve-numeric-data-sql-numeric-struct-kb222831?view=sql-server-2017
 const
   SQL_MAX_NUMERIC_LEN = 16;
-
 type
   SQL_NUMERIC_STRUCT = packed record
     precision:  SQLCHAR;

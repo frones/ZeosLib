@@ -99,7 +99,8 @@ type
     procedure ClearPGResult;
   protected
     procedure Open; override;
-    procedure DefinePostgreSQLToSQLType(ColumnInfo: TZColumnInfo; const TypeOid: Oid);
+    procedure DefinePostgreSQLToSQLType({$IFDEF AUTOREFCOUNT}var{$ENDIF}ColumnInfo: TZPGColumnInfo;
+      TypeOid: Oid; TypeModifier: Integer);
     function PGRowNo: Integer; virtual; abstract;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
@@ -450,7 +451,8 @@ end;
   @return a SQL undepended type.
 }
 procedure TZAbstractPostgreSQLStringResultSet.DefinePostgreSQLToSQLType(
-  ColumnInfo: TZColumnInfo; const TypeOid: Oid);
+  {$IFDEF AUTOREFCOUNT}var{$ENDIF}ColumnInfo: TZPGColumnInfo; TypeOid: Oid;
+  TypeModifier: Integer);
 var
   SQLType: TZSQLType;
   Connection: IZPostgreSQLConnection;
@@ -470,11 +472,25 @@ begin
     INTERVALOID: ColumnInfo.Precision := 32; { interval }
     REGPROCOID: ColumnInfo.Precision := 64; { regproc } // M.A. was 10
     BYTEAOID:{ bytea }
-      if Connection.IsOidAsBlob then
+      if TypeModifier >= VARHDRSZ then
+        ColumnInfo.Precision := TypeModifier - VARHDRSZ
+      else if Connection.IsOidAsBlob then
         ColumnInfo.Precision := 256;
+    //see: https://www.postgresql.org/message-id/slrnd6hnhn.27a.andrew%2Bnonews%40trinity.supernews.net
+    //macro:
+    //numeric: this is ugly, the typmod is ((prec << 16) | scale) + VARHDRSZ,
+    //i.e. numeric(10,2) is ((10 << 16) | 2) + 4
+    NUMERICOID: if TypeModifier <> -1 then begin
+        ColumnInfo.Precision := (TypeModifier - VARHDRSZ) shr 16 and $FFFF;
+        ColumnInfo.Scale     := (TypeModifier - VARHDRSZ) and $FFFF;
+        if (ColumnInfo.Scale <= 4) and (ColumnInfo.Precision <= sAlignCurrencyScale2Precision[ColumnInfo.Scale])
+        then ColumnInfo.ColumnType := stCurrency
+        else ColumnInfo.ColumnType := stBigDecimal;
+        Exit;
+      end;
   end;
 
-  SQLType := PostgreSQLToSQLType(ConSettings, Connection.IsOidAsBlob, TypeOid);
+  SQLType := PostgreSQLToSQLType(ConSettings, Connection.IsOidAsBlob, TypeOid, TypeModifier);
 
   if SQLType <> stUnknown then
     ColumnInfo.ColumnType := SQLType
@@ -543,13 +559,13 @@ begin
       FieldType := FPlainDriver.PQftype(Fres, I);
 
       FpgOIDTypes[i] := FieldType;
-      DefinePostgreSQLToSQLType(ColumnInfo, FieldType);
+      FieldMode := FPlainDriver.PQfmod(Fres, I);
+      DefinePostgreSQLToSQLType(ColumnInfo, FieldType, FieldMode);
       if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]
       then ColumnCodePage := FClientCP
       else ColumnCodePage := High(Word);
 
       if Precision = 0 then begin
-        FieldMode := FPlainDriver.PQfmod(Fres, I);
         FieldSize := FPlainDriver.PQfsize(Fres, I);
         Precision := Max(Max(FieldMode - 4, FieldSize), 0);
 
@@ -559,7 +575,7 @@ begin
             if FUndefinedVarcharAsStringLength > 0 then begin
               Precision := FUndefinedVarcharAsStringLength;
             end else
-              DefinePostgreSQLToSQLType(ColumnInfo, 25) //assume text instead!
+              DefinePostgreSQLToSQLType(ColumnInfo, 25, FieldMode) //assume text instead!
           else if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
             Precision := 255;
           if ColumnType = stString then begin
