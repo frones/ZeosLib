@@ -1797,6 +1797,23 @@ type
 
   {$A-}
 
+  PDB_NUMERIC = ^TDB_NUMERIC;
+  TDB_NUMERIC = record { oledb.h }
+    precision:  Byte;
+    scale:      Byte;
+    sign:       Byte;
+    val:        array[0..15] of BYTE; //fixed len
+  end;
+
+  PDB_VARNUMERIC = ^TDB_VARNUMERIC;
+  TDB_VARNUMERIC = record
+    precision:  Byte;
+    scale:      ShortInt;
+    sign:       Byte;
+    val:        array[0..0] of BYTE; //just taken from oledb.h iiuc it's and array[precision] of Byte
+  end;
+
+
 {end:-----------------------used by zeos---------------------------------------}
 (*
  PTYPEATTR = ^TYPEATTR;
