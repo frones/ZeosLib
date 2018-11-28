@@ -117,7 +117,11 @@ type
 
     procedure InternalClose; override;
     procedure InternalEdit; override;
+    {$IFNDEF WITH_InternalAddRecord_TRecBuf}
     procedure InternalAddRecord(Buffer: Pointer; Append: Boolean); override;
+    {$ELSE}
+    procedure InternalAddRecord(Buffer: TRecBuf; Append: Boolean); override;
+    {$ENDIF}
     procedure InternalPost; override;
     procedure InternalDelete; override;
     procedure InternalUpdate;
@@ -420,7 +424,11 @@ end;
   @param Append <code>True</code> if record should be added to the end
     of the result set.
 }
+{$IFNDEF WITH_InternalAddRecord_TRecBuf}
 procedure TZAbstractDataset.InternalAddRecord(Buffer: Pointer; Append: Boolean);
+{$ELSE}
+procedure TZAbstractDataset.InternalAddRecord(Buffer: TRecBuf; Append: Boolean);
+{$ENDIF}
 var
   RowNo: Integer;
   RowBuffer: PZRowBuffer;

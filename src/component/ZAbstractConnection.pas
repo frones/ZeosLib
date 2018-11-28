@@ -92,6 +92,7 @@ uses
 {$ENDIF}
 
   SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
+  {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
   ZDbcIntfs, ZCompatibility, ZURL;
 
 
@@ -121,9 +122,9 @@ type
     FReadOnly: Boolean;
     FTransactIsolationLevel: TZTransactIsolationLevel;
     FConnection: IZConnection;
-    FDatasets: TList;
+    FDatasets: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     // Modified by cipto 8/1/2007 1:44:22 PM
-    FSequences: TList;
+    FSequences: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
 
     FLoginPrompt: Boolean;
     FStreamedConnected: Boolean;
@@ -243,7 +244,7 @@ type
     procedure GetTriggerNames(const TablePattern, SchemaPattern: string; List: TStrings);
 
     //EgonHugeist
-    function GetBinaryEscapeStringFromString(const BinaryString: AnsiString): String; overload;
+    function GetBinaryEscapeStringFromString(const BinaryString: RawByteString): String; overload;
     function GetBinaryEscapeStringFromStream(const Stream: TStream): String; overload;
     function GetBinaryEscapeStringFromFile(const FileName: String): String; overload;
     function GetURL: String;
@@ -1421,7 +1422,7 @@ end;
   @param BinaryString Represents the BinaryString wich has to prepered
   @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Bytes)''~<|1023|<~
 }
-function TZAbstractConnection.GetBinaryEscapeStringFromString(const BinaryString: AnsiString): String;
+function TZAbstractConnection.GetBinaryEscapeStringFromString(const BinaryString: RawByteString): String;
 begin
   CheckConnected;
 
