@@ -317,7 +317,8 @@ type
 
 implementation
 
-uses ZMessages, ZClasses, ZAbstractRODataset, ZSysUtils, ZConnProperties,
+uses ZMessages, ZClasses, ZAbstractRODataset,
+  {$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}ZConnProperties,
       // Modified by cipto 8/2/2007 10:00:22 AM
       ZSequence, ZAbstractDataset, ZEncoding;
 
@@ -349,9 +350,9 @@ begin
   FTransactIsolationLevel := tiNone;
   FConnection := nil;
   FUseMetadata := True;
-  FDatasets := TList.Create;
+  FDatasets := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   // Modified by cipto 8/1/2007 1:45:56 PM
-  FSequences:= TList.Create;
+  FSequences:= {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   FLoginPrompt := False;
   FDesignConnection := False;
 end;
@@ -1440,7 +1441,7 @@ function TZAbstractConnection.GetBinaryEscapeStringFromStream(const Stream: TStr
 var
   FBlobSize: Integer;
   FBlobData: Pointer;
-  TempAnsi: AnsiString;
+  TempAnsi: RawByteString;
 begin
   CheckConnected;
 

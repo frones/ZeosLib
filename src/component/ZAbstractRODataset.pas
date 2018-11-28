@@ -2128,7 +2128,11 @@ end;
 procedure TZAbstractRODataset.StringFieldSetterFromAnsi(
   ColumnIndex: Integer; Buffer: PAnsiChar);
 begin
+  {$IFNDEF NO_ANSISTRING}
   RowAccessor.SetAnsiString(ColumnIndex, Buffer);
+  {$ELSE}
+  RowAccessor.SetRawByteString(ColumnIndex, Buffer);
+  {$ENDIF}
 end;
 {$ENDIF}
 
@@ -2679,7 +2683,11 @@ begin
     end;
 
     CurrentRow := SavedRow;
+    {$IFDEF AUTOREFCOUNT}
+    CurrentRows := nil;
+    {$ELSE}
     CurrentRows.Free;
+    {$ENDIF}
     CurrentRows := SavedRows;
     RestoreState(SavedState);
 
@@ -2830,7 +2838,7 @@ begin
   // we always use same TDataSet-level buffer, because we can see only one row
   {$IFNDEF WITH_UNIDIRECTIONALBUG}
   if IsUniDirectional then
-    Buffer := {$IFDEF WITH_BUFFERS_IS_TRECBUF}Pointer{$ENDIF}(Buffers[0]);
+    Buffer := TRecordBuffer(Buffers[0]);
   {$ENDIF}
 
   Result := grOK;
@@ -3209,13 +3217,17 @@ end;
 }
 {$IFNDEF WITH_FreeRecBuf_TRecBuf}
 procedure TZAbstractRODataset.FreeRecordBuffer(var Buffer: TRecordBuffer);
-{$ELSE}
-procedure TZAbstractRODataset.FreeRecBuf(var Buffer: TRecBuf);
-{$ENDIF}
 begin
   RowAccessor.DisposeBuffer(PZRowBuffer(Buffer));
   Buffer := nil;
 end;
+{$ELSE}
+procedure TZAbstractRODataset.FreeRecBuf(var Buffer: TRecBuf);
+begin
+  RowAccessor.DisposeBuffer(PZRowBuffer(Buffer));
+  Buffer := 0;
+end;
+{$ENDIF}
 
 {**
   Fetch all records. Added by Patyi
@@ -3506,8 +3518,13 @@ begin
       end;
       if not IsUnidirectional then
       begin
+        {$IFDEF WITH_AllocRecBuf_TRecBuf}
+        FOldRowBuffer := PZRowBuffer(AllocRecBuf);
+        FNewRowBuffer := PZRowBuffer(AllocRecBuf);
+        {$ELSE}
         FOldRowBuffer := PZRowBuffer(AllocRecordBuffer);
         FNewRowBuffer := PZRowBuffer(AllocRecordBuffer);
+        {$ENDIF}
       end;
 
       SetStringFieldSetterAndSetter;
@@ -3540,15 +3557,25 @@ begin
 
   if not FRefreshInProgress then begin
     if (FOldRowBuffer <> nil) then
+      {$IFNDEF WITH_FreeRecBuf_TRecBuf}
       FreeRecordBuffer(TRecordBuffer(FOldRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+      {$ELSE}
+      FreeRecBuf(TRecordBuffer(FOldRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+      {$ENDIF}
     FOldRowBuffer := nil;
 
     if (FNewRowBuffer <> nil) and not FRefreshInProgress then
-      FreeRecordBuffer(TRecordBuffer(FNewRowBuffer));
+      {$IFNDEF WITH_FreeRecBuf_TRecBuf}
+      FreeRecordBuffer(TRecordBuffer(FNewRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+      {$ELSE}
+      FreeRecBuf(TRecordBuffer(FNewRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+      {$ENDIF}
     FNewRowBuffer := nil;
 
+    {$IFNDEF AUTOREFCOUNT}
     if RowAccessor <> nil then
       RowAccessor.Free;
+    {$ENDIF}
     RowAccessor := nil;
 
     { Destroy default fields }
@@ -4474,7 +4501,11 @@ begin
   if not OnlyDataFields then
   begin
     { Processes fields if come calculated or lookup fields are involved. }
+    {$IFDEF WITH_AllocRecBuf_TRecBuf}
+    SearchRowBuffer := PZRowBuffer(AllocRecBuf);
+    {$ELSE}
     SearchRowBuffer := PZRowBuffer(AllocRecordBuffer);
+    {$ENDIF}
     try
       I := 0;
       FieldIndices := DefineFieldIndices(FieldsLookupTable, FieldRefs);
@@ -4505,7 +4536,11 @@ begin
       end;
     finally
       if SearchRowBuffer <> nil then
-        FreeRecordBuffer(TRecordBuffer(SearchRowBuffer));
+        {$IFNDEF WITH_FreeRecBuf_TRecBuf}
+        FreeRecordBuffer(TRecordBuffer(SearchRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+        {$ELSE}
+        FreeRecBuf(TRecordBuffer(SearchRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+        {$ENDIF}
     end;
   end
   else
@@ -4600,7 +4635,11 @@ begin
   FieldRefs := DefineFields(Self, ResultFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
   FieldIndices := DefineFieldIndices(FieldsLookupTable, FieldRefs);
   SetLength(ResultValues, Length(FieldRefs));
+  {$IFDEF WITH_AllocRecBuf_TRecBuf}
+  SearchRowBuffer := PZRowBuffer(AllocRecBuf);
+  {$ELSE}
   SearchRowBuffer := PZRowBuffer(AllocRecordBuffer);
+  {$ENDIF}
   try
     RowNo := Integer(CurrentRows[RowNo - 1]);
     if ResultSet.GetRow <> RowNo then
@@ -4613,7 +4652,11 @@ begin
     RetrieveDataFieldsFromRowAccessor(
       FieldRefs, FieldIndices, RowAccessor, ResultValues);
   finally
-    FreeRecordBuffer(TRecordBuffer(SearchRowBuffer));
+    {$IFNDEF WITH_FreeRecBuf_TRecBuf}
+    FreeRecordBuffer(TRecordBuffer(SearchRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+    {$ELSE}
+    FreeRecBuf(TRecordBuffer(SearchRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+    {$ENDIF}
   end;
 
   if Length(FieldIndices) = 1 then
@@ -5236,7 +5279,7 @@ end;
 
 {$IFDEF WITH_IPROVIDERSUPPORT_GUID}
 type
-  IProviderSupportActual = {$IF DECLARED(IProviderSupportNG)} IProviderSupportNG {$ELSE} IProviderSupport {$IFEND};
+  IProviderSupportActual = {$IF DECLARED(IProviderSupportNG)}IProviderSupportNG{$ELSE} IProviderSupport {$IFEND};
 {$ENDIF}
 
 procedure TZAbstractRODataset.CreateFields;
@@ -5746,7 +5789,7 @@ function TZField.GetAsVariant: Variant;
 begin
   case  Self.DataType of
     ftUnknown: Result := Null;
-    ftString: Result := GetAsAnsiString;
+    ftString: Result := {$IFNDEF NO_ANSISTRING}GetAsAnsiString{$ELSE}GetAsRawByteString{$ENDIF};
     ftSmallint: Result := GetAsSmallInt;
     ftInteger: Result := GetAsInteger;
     ftWord: Result := GetAsWord;
@@ -5761,14 +5804,14 @@ begin
     ftVarBytes: Result := GetAsBytes;
     ftAutoInc: Result := GetAsInteger;
     ftBlob: Result := GetAsBytes;
-    ftMemo: Result := GetAsAnsiString;
+    ftMemo: Result := {$IFNDEF NO_ANSISTRING}GetAsAnsiString{$ELSE}GetAsRawByteString{$ENDIF};
     //ftGraphic: ;
     //ftFmtMemo: ;
     //ftParadoxOle: ;
     //ftDBaseOle: ;
     //ftTypedBinary: ;
     ftCursor: ;
-    ftFixedChar: Result := GetAsAnsiString;
+    ftFixedChar: Result := {$IFNDEF NO_ANSISTRING}GetAsAnsiString{$ELSE}GetAsRawByteString{$ENDIF};
     ftWideString: Result := GetAsWideString;
     ftLargeint: Result := GetAsLargeInt;
     ftADT: ;

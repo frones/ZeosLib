@@ -433,7 +433,11 @@ var
   RowNo: Integer;
   RowBuffer: PZRowBuffer;
 begin
+{$IFNDEF WITH_InternalAddRecord_TRecBuf}
   if not GetActiveBuffer(RowBuffer) or (RowBuffer <> Buffer) then
+{$ELSE}
+  if not GetActiveBuffer(RowBuffer) or (TRecBuf(RowBuffer) <> Buffer) then
+{$ENDIF}
     raise EZDatabaseError.Create(SInternalError);
 
   if Append then
@@ -511,7 +515,11 @@ begin
         end;
 
     if State = dsInsert then
+      {$IFNDEF WITH_InternalAddRecord_TRecBuf}
       InternalAddRecord(RowBuffer, False)
+      {$ELSE}
+      InternalAddRecord(TRecBuf(RowBuffer), False)
+      {$ENDIF}
     else
       InternalUpdate;
 
