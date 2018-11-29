@@ -208,34 +208,6 @@
                       {$IFNDEF PUREPASCAL}
                         {$DEFINE PUREPASCAL}
                       {$ENDIF}
-                      {$IFDEF NEXTGEN}
-                        {$UNDEF WITH_UNIT_WIDESTRINGS}
-                        {$UNDEF WITH_ASANSISTRING}
-                        {$UNDEF WITH_UNITANSISTRINGS}
-                        {$UNDEF WITH_WIDESTRUTILS}
-                        {$DEFINE WITH_UNIT_FMX_TYPES}
-                        {$DEFINE TLIST_IS_DEPRECATED}
-                        {$DEFINE NO_INLINE_SIZE_CHECK} 
-                        {$DEFINE NO_ANSISTRING}
-                        {$DEFINE NO_RAW_STRINGSTREAM}
-                        {$DEFINE NO_TDATASET_TRANSLATE} //deprecated TDataSet procedure translate is omitted
-                        {$DEFINE NO_PANSICHAR}
-                        {$DEFINE NO_ANSICHAR} 
-                        {$DEFINE TSYSCHARSET_IS_DEPRECATED} //for compiler warning TSysCharSet is deprected use CharHelper function instead
-                        {$DEFINE NO_RAW_HEXTOBIN} //raw/pAnsichar version of HexToBin does not exits  
-                        {$DEFINE MISS_RBS_SETSTRING_OVERLOAD} //system.SetString is not available for raw strings or i (EH) have no clue how to use it
-                        {$DEFINE NO_UNIT_CONTNRS} //unit Contnrs (TObjectList) doesn't exist any mory 
-						{$DEFINE WITH_USC2_ANSICOMPARESTR_ONLY} //nextgen doesn't have a raw ansicomnparestr function
-                        {$DEFINE WITH_TRECBUF_PBYTE} 
-                        {$DEFINE WITH_InternalAddRecord_TRecBuf}
-                        {$DEFINE WITH_AllocRecBuf_TRecBuf}
-                        {$DEFINE WITH_FreeRecBuf_TRecBuf}
-                        {$IF CompilerVersion <= 30}
-                          {$DEFINE NO_UTF8STRING}
-                          {$UNDEF WITH_RAWBYTESTRING}
-                          {$DEFINE WITH_TBYTES_AS_RAWBYTESTRING} //this compiler is buggy: _RawByteString is declared but skope is in System.pas only (UTF8Encode returns a unusable value f.e.)
-                        {$IFEND}
-                      {$ENDIF}
                     {$ELSE}
                       {$IFDEF PatchSystemMove}
                         {$UNDEF PatchSystemMove}  //FastCode-Project Move currently not ported to other plattforms
@@ -253,6 +225,36 @@
                       {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
                       {$DEFINE WITH_GENERIC_TLISTTFIELD}      //GetFieldList() uses the generic TList<TField>
 
+                      {$IFDEF NEXTGEN}
+                        {$UNDEF WITH_UNIT_WIDESTRINGS}
+                        {$UNDEF WITH_ASANSISTRING}
+                        {$UNDEF WITH_UNITANSISTRINGS}
+                        {$UNDEF WITH_WIDESTRUTILS}
+                        {$DEFINE WITH_UNIT_FMX_TYPES}
+                        {$DEFINE TLIST_IS_DEPRECATED}
+                        {$DEFINE NO_INLINE_SIZE_CHECK}
+                        {$DEFINE NO_ANSISTRING}
+                        {$DEFINE NO_RAW_STRINGSTREAM}
+                        {$DEFINE NO_TDATASET_TRANSLATE} //deprecated TDataSet procedure translate is omitted
+                        {$DEFINE NO_PANSICHAR}
+                        {$DEFINE NO_ANSICHAR}
+                        {$DEFINE TSYSCHARSET_IS_DEPRECATED} //for compiler warning TSysCharSet is deprected use CharHelper function instead
+                        {$DEFINE NO_RAW_HEXTOBIN} //raw/pAnsichar version of HexToBin does not exits
+                        {$DEFINE MISS_RBS_SETSTRING_OVERLOAD} //system.SetString is not available for raw strings or i (EH) have no clue how to use it
+                        {$DEFINE NO_UNIT_CONTNRS} //unit Contnrs (TObjectList) doesn't exist any mory
+                        {$DEFINE WITH_USC2_ANSICOMPARESTR_ONLY} //nextgen doesn't have a raw ansicomnparestr function
+                        {$DEFINE WITH_TRECBUF_PBYTE}
+                        {$DEFINE WITH_InternalAddRecord_TRecBuf}
+                        {$DEFINE WITH_AllocRecBuf_TRecBuf}
+                        {$DEFINE WITH_FreeRecBuf_TRecBuf}
+                        {$IF CompilerVersion <= 30}
+                          {$DEFINE NO_UTF8STRING}
+                          {$UNDEF WITH_RAWBYTESTRING}
+                          {$DEFINE WITH_TBYTES_AS_RAWBYTESTRING} //this compiler is buggy: _RawByteString is declared but skope is in System.pas only (UTF8Encode returns a unusable value f.e.)
+                        {$IFEND}
+                      {$ELSE}
+                        {$DEFINE WITH_VCL_PREFIX}
+                      {$ENDIF}
                       {$IF CompilerVersion >= 25} //Delphi XE4+
                         {$DEFINE WITH_VAR_TVALUEBUFFER}	        //GetFieldata overloads using !var! Buffer: TValueBuffer
                         {$DEFINE WITH_BUFFERS_IS_TRECBUF}       //Buffers[index] is TRecBuf type NativeInt
