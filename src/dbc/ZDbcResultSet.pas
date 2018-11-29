@@ -4350,8 +4350,12 @@ begin
   if (P <> nil) and (L > 0) then
     if P = Pointer(FRawTemp)
     then Result := FRawTemp
+    {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+    else ZSetString(P, L, Result)
+    {$ELSE}
     else System.SetString(Result, P, L)
-  else Result := '';
+    {$ENDIF}
+  else Result := EmptyRaw;
 end;
 
 {**
@@ -5015,6 +5019,7 @@ begin
   P := GetPAnsiChar(ColumnIndex, Len);
   Result := ConSettings^.ConvFuncs.ZPRawToUTF8(P, Len, ConSettings^.ClientCodePage^.CP);
 end;
+{$ENDIF}
 
 {**
   Indicates if the value of the designated column in the current row
@@ -5038,7 +5043,6 @@ function TZSimpleResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
   Result := True;
 end;
-{$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
