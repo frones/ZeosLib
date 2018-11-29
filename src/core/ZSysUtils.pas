@@ -3171,7 +3171,11 @@ begin
   L := DateTimeToRawSQLDate(Year, Month, Day, @Buffer[0],
     ConFormatSettings.DateFormat, Quoted, False);
   l2 := Length(Suffix);
+  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  ZSetString(nil, l+l2, Result);
+  {$ELSE}
   System.SetString(Result, nil , L+L2);
+  {$ENDIF}
   P := Pointer(Result);
   Move(Buffer[0], P^, L);
   if L2 > 0 then
@@ -3475,7 +3479,11 @@ begin
   L := DateTimeToRawSQLTime(Hour, Minute, Second, MSec, @Buffer[0],
     ConFormatSettings.TimeFormat, Quoted);
   l2 := Length(Suffix);
+  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  ZSetString(nil, l+l2, Result);
+  {$ELSE}
   System.SetString(Result, nil , L+L2);
+  {$ENDIF}
   P := Pointer(Result);
   Move(Buffer[0], P^, L);
   if L2 > 0 then
@@ -3745,7 +3753,11 @@ begin
   L := DateTimeToRawSQLTimeStamp(Year, Month, Day, Hour, Minute, Second, MSec,
     @Buffer[0], ConFormatSettings.DateTimeFormat, Quoted, False);
   l2 := Length(Suffix);
+  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  ZSetString(nil, l+l2, Result);
+  {$ELSE}
   System.SetString(Result, nil, L+L2);
+  {$ENDIF}
   P := Pointer(Result);
   Move(Buffer[0], P^, L);
   if L2 > 0 then
