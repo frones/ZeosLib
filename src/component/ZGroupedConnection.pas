@@ -54,10 +54,10 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, Messages, Classes, ZDbcIntfs, DB,Forms,
-  ZCompatibility, ZAbstractConnection, ZSequence, Dialogs,
+  SysUtils, {Messages, }Classes, ZDbcIntfs, DB, {Forms,}
+  ZCompatibility, ZAbstractConnection, ZSequence, //Dialogs,
   ZConnectionGroup {$IFDEF FPC}, LMessages{$ENDIF};
-
+(*
 {$IFNDEF FPC}
  const  CM_ZCONNECTIONGROUPCHANGED = WM_USER + 100;
  const  CM_ZCONNECTIONGROUPCHANGE  = WM_USER + 101;
@@ -65,7 +65,7 @@ uses
 const  CM_ZCONNECTIONGROUPCHANGED = LM_USER + 100;
 const  CM_ZCONNECTIONGROUPCHANGE  = LM_USER + 101;
 {$ENDIF}
-
+  *)
 type
   TMsgZDbConnecitionChange = record
     Msg: Cardinal;
@@ -82,7 +82,7 @@ type
     procedure SetConnectionGroup(Value: TZConnectionGroup);
     procedure Notification(AComponent: TComponent; Operation: TOperation);
       override;
-  private
+(*  private
     function getUser: string;
     function getPassword: string;
     function getHostName: string;
@@ -90,7 +90,7 @@ type
     function GetLibLocation: String;
     //function getCatalog: string;
     procedure DoZConnectionGroupChange(Sender: TObject);
-    procedure ParentZConnectionGroupChange(var Msg: TMessage);
+    procedure ParentZConnectionGroupChange(var Msg: TMessage); *)
   published
     property ConnectionGroup: TZConnectionGroup read FZConnectionGroup write SetConnectionGroup;
   public
@@ -100,7 +100,7 @@ type
 
 implementation
 
-procedure InternalZConnectionGroupChanged(AControl: TComponent; AZConnectionGroup: TZConnectionGroup);
+(*procedure InternalZConnectionGroupChanged(AControl: TComponent; AZConnectionGroup: TZConnectionGroup);
 var
   Msg: TMsgZDbConnecitionChange;
 begin
@@ -109,14 +109,14 @@ begin
   Msg.ZConnectionGroup := AZConnectionGroup;
   Msg.Result := 0;
   //AControl.Broadcast(Msg);
-end;
+end;*)
 
 // === { TZGroupedConnection  } =============================================
 constructor TZGroupedConnection .Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FZConnectionGroupLink := TZConnectionGroupLink.Create;
-  FZConnectionGroupLink.OnChange := DoZConnectionGroupChange;
+  //FZConnectionGroupLink.OnChange := DoZConnectionGroupChange;
 end;
 
 destructor TZGroupedConnection .Destroy;
@@ -125,7 +125,7 @@ begin
   inherited Destroy;
 end;
 
-procedure TZGroupedConnection .DoZConnectionGroupChange(Sender: TObject);
+(*procedure TZGroupedConnection .DoZConnectionGroupChange(Sender: TObject);
 begin
   if (Sender is TZConnectionGroup) then
   begin
@@ -142,7 +142,7 @@ procedure TZGroupedConnection .ParentZConnectionGroupChange(var Msg: TMessage);
 begin
   InternalZConnectionGroupChanged(Self, FZConnectionGroup);
 end;
-
+*)
 procedure TZGroupedConnection .Notification(AComponent: TComponent;
   Operation: TOperation);
 begin
@@ -175,9 +175,9 @@ begin
     FURL.Database := FZConnectionGroup.Database;
     FURL.LibLocation := FZConnectionGroup.LibraryLocation;
   end;
-  InternalZConnectionGroupChanged(Self, Value);
+  //InternalZConnectionGroupChanged(Self, Value);
 end;
-
+(*
 function TZGroupedConnection .getUser: string;
 begin
   if FZConnectionGroup <> nil then
@@ -258,5 +258,5 @@ begin
     FCatalog := '';
 end;
 }
-
+  *)
 end.
