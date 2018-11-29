@@ -27,7 +27,7 @@ package ZParseSql;
 {$DESCRIPTION 'Zeos SQL Parsing Classes and Interfaces'}
 {$LIBSUFFIX '250'}
 {$RUNONLY}
-{$IMPLICITBUILD OFF}
+{$IMPLICITBUILD ON}
 
 requires
   ZCore;

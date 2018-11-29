@@ -27,7 +27,7 @@ package ZPlain;
 {$DESCRIPTION 'Zeos Plain Database API'}
 {$LIBSUFFIX '250'}
 {$RUNONLY}
-{$IMPLICITBUILD OFF}
+{$IMPLICITBUILD ON}
 
 requires
   ZCore,
@@ -85,6 +85,5 @@ contains
 
   ZPlainDriver in '..\..\src\plain\ZPlainDriver.pas',
   ZPlainLoader in '..\..\src\plain\ZPlainLoader.pas';
-
 
 end.
