@@ -62,7 +62,8 @@ uses
   Windows,
 {$IFEND}
   ZDbcInterbase6, ZDbcInterbase6Utils, ZConnection, ZDbcIntfs, ZFastCode,
-  ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants;
+  ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants
+  {$IFDEF TLIST_IS_DEPRECATED}, ZSysUtils{$ENDIF};
 
 type
 
@@ -74,7 +75,7 @@ type
   private
     FEvents: TStrings;
     FOnEventAlert: TEventAlert;
-    FThreads: TList;
+    FThreads: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FNativeHandle: PISC_DB_HANDLE;
     ThreadException: boolean;
     FConnection: TZConnection;
@@ -83,8 +84,8 @@ type
     FAutoRegister: boolean;
     FRegistered: boolean;
 
-    procedure SetConnection(Value: TZConnection);
-    procedure SetEvents(Value: TStrings);
+    procedure SetConnection({$IFDEF AUTOREFCOUNT}const{$ENDIF}Value: TZConnection);
+    procedure SetEvents({$IFDEF AUTOREFCOUNT}const{$ENDIF}Value: TStrings);
     function GetRegistered: boolean;
     procedure SetRegistered(const Value: boolean);
   protected
@@ -116,7 +117,7 @@ type
 implementation
 
 uses
-  SyncObjs, ZClasses;
+  SyncObjs, ZClasses{$IFDEF NO_PANSICHAR}, ZCompatibility{$ENDIF};
 
 const
   IB_MAX_EVENT_BLOCK = 15;   // maximum events handled per block by InterBase
@@ -176,13 +177,12 @@ begin
   inherited Create(AOwner);
 
   FEvents := TStringList.Create;
-  with TStringList(FEvents) do
-  begin
+  with TStringList(FEvents) do begin
     Sorted := True;  // dupIgnore only works when the TStringList is sorted
     OnChange := EventChange; // assign the routine which validates the event lenghts
     Duplicates := dupIgnore; // don't allow duplicate events
   end;
-  FThreads := TList.Create;
+  FThreads := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
 end;
 
 destructor TZIBEventAlerter.Destroy;
@@ -254,7 +254,7 @@ End; // RegisterEvents
 //    Modified so that the native DB handle will now be retrieved by
 //    method RegisterEvents. Retrieving it here caused an Exception
 //    even if DB was connected.
-Procedure TZIBEventAlerter.SetConnection(Value: TZConnection);
+Procedure TZIBEventAlerter.SetConnection({$IFDEF AUTOREFCOUNT}const{$ENDIF}Value: TZConnection);
 Var
   WasRegistered: boolean;
 Begin
@@ -274,7 +274,7 @@ Begin
 End; // SetConnection
 
 
-procedure TZIBEventAlerter.SetEvents(Value: TStrings);
+procedure TZIBEventAlerter.SetEvents({$IFDEF AUTOREFCOUNT}const{$ENDIF}Value: TStrings);
 begin
   FEvents.Assign(Value);
 end;
@@ -379,7 +379,7 @@ var
   // Holder for ANSI strings converted from Unicode items of FEvents.
   // Obligatory! Otherwise pointer returned from EBP will point to
   // invalid (released) memory.
-  EBPArray: array[1..IB_MAX_EVENT_BLOCK] of AnsiString;
+  EBPArray: array[1..IB_MAX_EVENT_BLOCK] of RawByteString;
 {$ENDIF}
 
   function EBP(Index: integer): PAnsiChar;
@@ -392,7 +392,7 @@ var
     else
     {$IFDEF UNICODE}
     begin
-      EBPArray[Index] := AnsiString(Parent.FEvents[EvListIndex]);
+      EBPArray[Index] := RawByteString(Parent.FEvents[EvListIndex]);
       Result := PAnsiChar(EBPArray[Index]);
     end;
     {$ELSE}
@@ -496,10 +496,9 @@ begin
   try
     UnRegisterEvents;
   except
-    if HandleException then
-      ReturnValue := 1
-    else
-      ReturnValue := 0;
+    if HandleException
+    then ReturnValue := 1
+    else ReturnValue := 0;
   end;
   Signal.Free;
   inherited Destroy;
@@ -517,16 +516,10 @@ begin
     TStringList(FEvents).OnChange := nil;
     try
       for i := (FEvents.Count - 1) downto 0 do
-      begin
         if (FEvents[i] = EmptyStr) then
-        begin
-          FEvents.Delete(i);
-        end
+          FEvents.Delete(i)
         else if (Length(FEvents[i]) > (IB_MAX_EVENT_LENGTH - 1)) then
-        begin
           FEvents[i] := Copy(FEvents[i], 1, (IB_MAX_EVENT_LENGTH - 1));
-        end;
-      end;
     finally
       TStringList(FEvents).OnChange := EventChange;
     end;
@@ -545,13 +538,11 @@ procedure TZIBEventAlerter.ThreadEnded(Sender: TObject);
 var
   ThreadIdx: integer;
 begin
-  if (Sender is TIBEventThread) then
-  begin
+  if (Sender is TIBEventThread) then begin
     ThreadIdx := FThreads.IndexOf(Sender);
     if (ThreadIdx > -1) then
       FThreads.Delete(ThreadIdx);
-    if (TIBEventThread(Sender).ReturnValue = 1) then
-    begin
+    if (TIBEventThread(Sender).ReturnValue = 1) then begin
       if Registered then
         UnRegisterEvents;
       ThreadException := False;
@@ -561,8 +552,7 @@ end;
 
 procedure TZIBEventAlerter.SetAutoRegister(const Value: boolean);
 begin
-  if FAutoRegister <> Value then
-  begin
+  if FAutoRegister <> Value then begin
     FAutoRegister := Value;
     if FAutoRegister and (not Registered) and
       Assigned(FConnection) and FConnection.Connected then

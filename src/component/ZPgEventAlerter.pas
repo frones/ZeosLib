@@ -65,7 +65,10 @@ unit ZPgEventAlerter;
 interface
 {$I ZComponent.inc}
 uses
-  SysUtils, Classes, {$IFDEF WITH_VCL_PREFIX}Vcl.ExtCtrls{$ELSE}ExtCtrls{$ENDIF},
+  SysUtils, Classes,
+  {$IFDEF WITH_VCL_PREFIX}Vcl.ExtCtrls{$ELSE}
+      {$IFDEF WITH_UNIT_FMX_TYPES}FMX.Types {$ELSE} ExtCtrls {$ENDIF}
+  {$ENDIF}, {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
   ZDbcPostgreSql, ZPlainPostgreSqlDriver, ZConnection, ZAbstractRODataset;
 
 type
@@ -85,7 +88,7 @@ type
 
     FProcessor   : TZPgEventAlerter; //processor component - it will actually handle notifications received from DB
     //if processor is not assignet - component is handling notifications by itself
-    FChildAlerters :TList; //list of TZPgEventAlerter that have our component attached as processor
+    FChildAlerters :{$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}; //list of TZPgEventAlerter that have our component attached as processor
     FChildEvents : TStrings; //list of actual events to be handled - gathered from events of all childe
   protected
     procedure SetActive     (Value: Boolean);
@@ -131,7 +134,7 @@ var
 begin
   inherited Create(AOwner);
   FEvents := TStringList.Create;
-  FChildAlerters := TList.Create;
+  FChildAlerters := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   FChildEvents := TStringList.Create;
   with TStringList(FEvents) do
   begin
@@ -192,31 +195,21 @@ end;
 procedure TZPgEventAlerter.SetActive(Value: Boolean);
 begin
   if FActive <> Value then
-  begin
     if FProcessor = nil then
-    begin
-      if Value then
-      begin
+      if Value then begin
         RefreshEvents;
         OpenNotify;
-      end
-      else
-      begin
-        CloseNotify;
-      end
-    end
-    else  //we have processor attached - we dont need to open or close notifications
-    begin
+      end else
+        CloseNotify
+    else begin //we have processor attached - we dont need to open or close notifications
       FActive := Value;
       FProcessor.RefreshEvents;
     end;
-  end;
 end;
 
 procedure TZPgEventAlerter.SetConnection(Value: TZConnection);
 begin
-  if FConnection <> Value then
-  begin
+  if FConnection <> Value then begin
     if FProcessor = nil then //we are closing notifiers only whern there is no processor attached
       CloseNotify;
     FConnection := Value;
@@ -227,19 +220,16 @@ procedure TZPgEventAlerter.TimerTick(Sender: TObject);
 begin
   if not FActive then
     TTimer(Sender).Enabled := False
+  else if FProcessor <> nil then
+    TTimer(Sender).Enabled := False
   else
-  begin
-    if FProcessor <> nil then
-      TTimer(Sender).Enabled := False
-    else
-     CheckEvents;
-  end;
+   CheckEvents;
 end;
 
 procedure TZPgEventAlerter.OpenNotify;
 var
   I        : Integer;
-  Tmp      : array [0..255] of AnsiChar;
+  Tmp      : RawByteString;
   Handle   : TPGconn;
   ICon     : IZPostgreSQLConnection;
   PlainDRV : TZPostgreSQLPlainDriver;
@@ -261,17 +251,15 @@ begin
   PlainDRV := ICon.GetPlainDriver;
   if Handle = nil then
     Exit;
-    for I := 0 to FChildEvents.Count-1 do
-  begin
-    {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(Tmp, 'listen ' + AnsiString(FChildEvents.Strings[I]));
-    Res := PlainDRV.PQExec(Handle, Tmp);
-    if (PlainDRV.PQresultStatus(Res) <> TZPostgreSQLExecStatusType(
-      PGRES_COMMAND_OK)) then
-   begin
+  for I := 0 to FChildEvents.Count-1 do begin
+    Tmp := 'listen ' + ICon.GetConSettings.ConvFuncs.ZStringToRaw(FChildEvents.Strings[I],
+      ICon.GetConSettings.CTRL_CP, ICon.GetConSettings.ClientCodePage.CP);
+    Res := PlainDRV.PQExec(Handle, Pointer(Tmp));
+    if (PlainDRV.PQresultStatus(Res) <> TZPostgreSQLExecStatusType(PGRES_COMMAND_OK)) then begin
       PlainDRV.PQclear(Res);
-    Exit;
-   end;
-   PlainDRV.PQclear(Res);
+      Exit;
+    end;
+    PlainDRV.PQclear(Res);
   end;
   FActive        := True;
   FTimer.Enabled := True;
@@ -280,7 +268,7 @@ end;
 procedure TZPgEventAlerter.CloseNotify;
 var
   I        : Integer;
-  tmp      : array [0..255] of AnsiChar;
+  Tmp      : RawByteString;
   Handle   : TPGconn;
   ICon     : IZPostgreSQLConnection;
   PlainDRV : TZPostgreSQLPlainDriver;
@@ -295,12 +283,11 @@ begin
   PlainDRV       := ICon.GetPlainDriver;
   if Handle = nil then
     Exit;
-  for I := 0 to FChildEvents.Count-1 do
-  begin
-    {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(Tmp, 'unlisten ' + AnsiString(FChildEvents.Strings[i]));
-    Res := PlainDRV.PQExec(Handle, Tmp);
-    if (PlainDRV.PQresultStatus(Res) <> TZPostgreSQLExecStatusType(PGRES_COMMAND_OK)) then
-    begin
+  for I := 0 to FChildEvents.Count-1 do begin
+    Tmp := 'unlisten ' + ICon.GetConSettings.ConvFuncs.ZStringToRaw(FChildEvents.Strings[I],
+      ICon.GetConSettings.CTRL_CP, ICon.GetConSettings.ClientCodePage.CP);
+    Res := PlainDRV.PQExec(Handle, Pointer(Tmp));
+    if (PlainDRV.PQresultStatus(Res) <> TZPostgreSQLExecStatusType(PGRES_COMMAND_OK)) then begin
       PlainDRV.PQclear(Res);
       Exit;
     end;

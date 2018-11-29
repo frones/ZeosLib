@@ -209,9 +209,11 @@
                         {$DEFINE PUREPASCAL}
                       {$ENDIF}
                       {$IFDEF NEXTGEN}
+                        {$UNDEF WITH_UNIT_WIDESTRINGS}
                         {$UNDEF WITH_ASANSISTRING}
                         {$UNDEF WITH_UNITANSISTRINGS}
                         {$UNDEF WITH_WIDESTRUTILS}
+                        {$DEFINE WITH_UNIT_FMX_TYPES}
                         {$DEFINE TLIST_IS_DEPRECATED}
                         {$DEFINE NO_INLINE_SIZE_CHECK} 
                         {$DEFINE NO_ANSISTRING}
