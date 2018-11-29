@@ -85,7 +85,7 @@
         <VerInfo_Locale>1031</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <DCC_Description>Zeos Low Level Database API</DCC_Description>
-        <DCC_UnitSearchPath>..\..\src\core;..\..\src\parsesql;..\..\src\plain;..\..\src\dbc;$(BDSCOMMONDIR)\Dcp\$(Platform);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\src\core;..\..\src\parsesql;..\..\src\plain;..\..\src\dbc;$(BDSCOMMONDIR)\Dcp\$(Platform);$(BDSCOMMONDIR)\Bpl\$(Platform);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DllSuffix>250</DllSuffix>
         <DCC_DcpOutput>$(BDSCOMMONDIR)\Dcp\$(Platform)</DCC_DcpOutput>
         <DCC_BplOutput>$(BDSCOMMONDIR)\Bpl\$(Platform)</DCC_BplOutput>
@@ -167,6 +167,7 @@
         </DelphiCompile>
         <DCCReference Include="ZParseSql.dcp"/>
         <DCCReference Include="ZPlain.dcp"/>
+        <DCCReference Include="ZCore.dcp"/>
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="..\..\src\dbc\ZDbcProperties.pas"/>
         <DCCReference Include="..\..\src\dbc\ZDbcUtils.pas"/>

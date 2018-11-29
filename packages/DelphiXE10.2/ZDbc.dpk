@@ -27,11 +27,12 @@ package ZDbc;
 {$DESCRIPTION 'Zeos Low Level Database API'}
 {$LIBSUFFIX '250'}
 {$RUNONLY}
-{$IMPLICITBUILD OFF}
+{$IMPLICITBUILD ON}
 
 requires
   ZParseSql,
   ZPlain,
+  ZCore,
   rtl;
 
 contains

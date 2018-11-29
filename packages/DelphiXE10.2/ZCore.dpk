@@ -27,7 +27,7 @@ package ZCore;
 {$DESCRIPTION 'Zeos Core Classes and Interfaces'}
 {$LIBSUFFIX '250'}
 {$RUNONLY}
-{$IMPLICITBUILD OFF}
+{$IMPLICITBUILD ON}
 
 requires
   rtl,
