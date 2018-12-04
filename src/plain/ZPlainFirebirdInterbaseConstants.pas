@@ -55,6 +55,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_INTERBASE}
+
 uses
    ZCompatibility; 
 
@@ -1953,7 +1955,8 @@ type
   PShort               = ^Short;
   PVoid                = Pointer;
 
-  { C Date/Time Structure }
+  (* EH: commented the struct is different in timestamp.h from compiler to compiler
+  C Date/Time Structure }
   TCTimeStructure = record
     tm_sec:        Integer;   { Seconds }
     tm_min:        Integer;   { Minutes }
@@ -1967,7 +1970,7 @@ type
   end;
   PCTimeStructure = ^TCTimeStructure;
   TM = TCTimeStructure;
-  PTM = ^TM;
+  PTM = ^TM; *)
 
   TISC_VARYING = record
     strlen:       ISC_USHORT;
@@ -2104,6 +2107,8 @@ type
   { Interbase event counts array }
   PARRAY_ISC_EVENTCOUNTS = ^TARRAY_ISC_EVENTCOUNTS;
   TARRAY_ISC_EVENTCOUNTS = array[0..ISC_STATUS_LENGTH-1] of ISC_ULONG;
+
+{$ENDIF ZEOS_DISABLE_INTERBASE}
 
 implementation
 

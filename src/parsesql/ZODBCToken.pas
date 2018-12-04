@@ -57,6 +57,13 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IF defined(ZEOS_DISABLE_ODBC) and defined(ZEOS_DISABLE_ADO) and defined(ZEOS_DISABLE_OLEDB)}
+  {$DEFINE ZEOS_DISABLE_ODBC}
+{$ELSE}
+  {$UNDEF ZEOS_DISABLE_ODBC}
+{$IFEND}
+
+{$IFNDEF ZEOS_DISABLE_ODBC}
 uses
   Classes, SysUtils, ZTokenizer, ZGenericSqlToken;
 
@@ -70,7 +77,11 @@ type
     procedure CreateTokenStates; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_ODBC}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_ODBC}
 
 { TZODBCTokenizer }
 
@@ -107,5 +118,7 @@ begin
 
   SetCharacterState('/', '/', CommentState);
 end;
+
+{$ENDIF ZEOS_DISABLE_ODBC}
 
 end.

@@ -56,6 +56,7 @@ unit ZIBEventAlerter;
 
 interface
 
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses
   SysUtils, Classes,
 {$IF defined(MSWINDOWS)and not defined(FPC)}
@@ -114,7 +115,9 @@ type
     property OnError: TErrorEvent read FOnError write FOnError;
   end;
 
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses
   SyncObjs, ZClasses{$IFDEF NO_PANSICHAR}, ZCompatibility{$ENDIF};
@@ -583,4 +586,5 @@ begin
       end;
 end;
 
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.

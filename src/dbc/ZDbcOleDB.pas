@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
@@ -141,7 +142,9 @@ var
   {** The common driver manager object. }
   OleDBDriver: IZDriver;
 
+{$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 
 uses ZDbcOleDBMetadata, ZDbcOleDBStatement, ZSysUtils, ZDbcUtils,
   ZMessages, ZFastCode, ZConnProperties, ZDbcProperties;
@@ -760,4 +763,5 @@ finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(OleDBDriver);
   OleDBDriver := nil;
+{$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 end.

@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
@@ -185,7 +186,9 @@ function GetCurrentResultSet(const RowSet: IRowSet; const Statement: IZStatement
   Const SQL: String; ConSettings: PZConSettings; BuffSize, ChunkSize: Integer;
     InMemoryDataLobs: Boolean; var PCurrRS: Pointer): IZResultSet;
 
+{$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 
 uses
   Variants, Math, DateUtils,
@@ -2180,4 +2183,5 @@ initialization
   LobDBBinding.wType := DBTYPE_IUNKNOWN;
   LobDBBinding.bPrecision := 0;
   LobDBBinding.bScale := 0;
+{$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 end.

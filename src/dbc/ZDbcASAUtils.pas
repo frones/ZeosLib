@@ -56,6 +56,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_ASA}
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   ZSysUtils, ZDbcIntfs, ZPlainASADriver, ZDbcLogging, ZCompatibility, ZDbcASA,
@@ -236,7 +237,9 @@ procedure PrepareParameters(const ClientVarManager: IZClientVariantManager;
 
 function RandomString(Len: integer): string;
 
+{$ENDIF ZEOS_DISABLE_ASA}
 implementation
+{$IFNDEF ZEOS_DISABLE_ASA}
 
 uses Variants, Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZFastCode, ZMessages, ZDbcCachedResultSet, ZEncoding, ZDbcUtils, ZClasses;
@@ -1536,5 +1539,6 @@ begin
     Result := Copy( Result, 1, Len);
 end;
 
+{$ENDIF ZEOS_DISABLE_ASA}
 end.
 

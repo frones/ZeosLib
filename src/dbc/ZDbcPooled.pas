@@ -52,6 +52,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_POOLED} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SyncObjs,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} DateUtils, SysUtils,
@@ -215,7 +216,9 @@ type
     destructor Destroy; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_POOLED} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_POOLED} //if set we have an empty unit
 
 uses ZDbcProperties;
 
@@ -947,5 +950,6 @@ initialization
 finalization
   DriverManager.DeregisterDriver(_Driver);
 
+{$ENDIF ZEOS_DISABLE_POOLED} //if set we have an empty unit
 end.
 

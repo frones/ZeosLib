@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
@@ -222,7 +223,9 @@ var
   {** The common driver manager object. }
   Interbase6Driver: IZDriver;
 
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses ZFastCode, ZDbcInterbase6Statement, ZDbcInterbase6Metadata, ZEncoding,
   ZInterbaseToken, ZInterbaseAnalyser, ZDbcMetadata, ZMessages,
@@ -1467,4 +1470,5 @@ finalization
   if Assigned(DriverManager) then
     DriverManager.DeregisterDriver(Interbase6Driver);
   Interbase6Driver := nil;
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.

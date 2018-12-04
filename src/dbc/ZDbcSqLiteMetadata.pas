@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
   ZCompatibility, ZDbcSQLiteUtils;
@@ -241,7 +242,9 @@ type
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   end;
 
+{$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 
 uses
   ZDbcUtils, ZDbcSqLite, ZFastCode, ZSelectSchema, ZClasses;
@@ -1702,5 +1705,6 @@ These constant define integer codes that represent the various text encodings su
   end;
 end;
 
+{$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 end.
 

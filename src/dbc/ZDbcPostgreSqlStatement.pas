@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
@@ -185,7 +186,9 @@ type
     function CheckKeyColumn(ColumnIndex: Integer): Boolean; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
@@ -1851,5 +1854,6 @@ PGPreparableTokens[Ord(dmlUpdate)].MatchingGroup := 'UPDATE';
 PGPreparableTokens[Ord(dmlDelete)].MatchingGroup := 'DELETE';
 PGPreparableTokens[4].MatchingGroup := 'VALUES';
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 end.
 

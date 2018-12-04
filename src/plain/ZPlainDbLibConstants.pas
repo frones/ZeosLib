@@ -56,6 +56,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_DBLIB}
+
 uses // M.A.
    ZCompatibility; // M.A.
    
@@ -2041,6 +2043,8 @@ type
     dbwillconvert         : TSybdbwillconvert;
     dbwritetext           : TSybdbwritetext;
   end;
+
+{$ENDIF ZEOS_DISABLE_DBLIB}
 
 implementation
 

@@ -55,6 +55,12 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IF not defined(MSWINDOWS)}
+  {$DEFINE ZEOS_DISABLE_ADO}
+{$IFEND}
+
+{$IFNDEF ZEOS_DISABLE_ADO}
+
 uses
   ZODBCToken;
 
@@ -64,6 +70,8 @@ type
 
   {** Implements a default tokenizer object. }
   TZAdoSQLTokenizer = TZODBCTokenizer;
+
+{$ENDIF ZEOS_DISABLE_ADO}
 
 implementation
 

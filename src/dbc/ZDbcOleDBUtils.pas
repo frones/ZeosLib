@@ -55,6 +55,11 @@ interface
 
 {$I ZDbc.inc}
 
+{$IF defined(ZEOS_DISABLE_OLEDB) and defined(ZEOS_DISABLE_ADO)}
+  {$DEFINE ZEOS_DISABLE_OLEDB_UTILS}//if set we have an empty unit
+{$IFEND}
+
+{$IFNDEF ZEOS_DISABLE_OLEDB_UTILS} //if set we have an empty unit
 uses
   Types, SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   ZCompatibility, ZDbcIntfs, ZOleDB, ZVariant, ZDbcStatement, Variants;
@@ -117,7 +122,9 @@ procedure SetOleCommandProperties(const Command: ICommandText; TimeOut: SmallInt
 
 function ProviderNamePrefix2ServerProvider(const ProviderNamePrefix: String): TZServerProvider;
 
+{$ENDIF ZEOS_DISABLE_OLEDB_UTILS} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_OLEDB_UTILS} //if set we have an empty unit
 
 uses
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
@@ -2138,4 +2145,5 @@ begin
     end;
 end;
 
+{$ENDIF ZEOS_DISABLE_OLEDB_UTILS} //if set we have an empty unit
 end.

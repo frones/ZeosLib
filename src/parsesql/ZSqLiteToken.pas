@@ -55,6 +55,7 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IFNDEF ZEOS_DISABLE_SQLITE}
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   ZTokenizer, ZGenericSqlToken;
@@ -91,7 +92,9 @@ type
     procedure CreateTokenStates; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_SQLITE}
 implementation
+{$IFNDEF ZEOS_DISABLE_SQLITE}
 
 {$IFDEF FAST_MOVE}uses ZFastCode;{$ENDIF}
 
@@ -162,6 +165,8 @@ begin
   SetCharacterState('/', '/', CommentState);
   SetCharacterState('-', '-', CommentState);
 end;
+
+{$ENDIF ZEOS_DISABLE_SQLITE}
 
 end.
 

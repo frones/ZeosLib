@@ -410,8 +410,12 @@
 {$ENDIF}
 
 // Enables ADO support in TZConnection/TZDataset
-{$IF not defined(ZEOS_DISABLE_ADO) and defined(MSWINDOWS)}
-  {$DEFINE ENABLE_ADO}
+{$IF defined(MSWINDOWS)}
+  {$IF not defined(ZEOS_DISABLE_ADO)}	
+    {$DEFINE ENABLE_ADO}
+  {$IFEND}
+{$ELSE}
+  {$DEFINE ZEOS_DISABLE_ADO}
 {$IFEND}
 
 // Enables Interbase/Firebird support in TZConnection/TZDataset
@@ -435,8 +439,12 @@
 {$ENDIF}
 
 // Enables OleDB support in TZConnection/TZDataset
-{$IF not defined(ZEOS_DISABLE_OLEDB) and defined(MSWINDOWS)}
-  {$DEFINE ENABLE_OLEDB}
+{$IF defined(MSWINDOWS)}
+  {$IF not defined(ZEOS_DISABLE_OLEDB)}	
+    {$DEFINE ENABLE_OLEDB}
+  {$IFEND}
+{$ELSE}
+  {$DEFINE ZEOS_DISABLE_OLEDB}
 {$IFEND}
 
 // Enables ODBC support in TZConnection/TZDataset

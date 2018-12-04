@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils,
   ZPlainFirebirdInterbaseConstants, ZPlainFirebirdDriver, ZCompatibility,
@@ -177,7 +178,9 @@ type
       StoredProcName: String): TZAbstractPreparedStatement2; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses Math,
   ZSysUtils, ZFastCode, ZEncoding, ZDbcInterbase6ResultSet, ZClasses,
@@ -2076,4 +2079,5 @@ begin
   Result := TZInterbase6PreparedStatement.Create(Connection, SQL, Info);
 end;
 
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.

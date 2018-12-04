@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
   ZCompatibility, ZSelectSchema;
@@ -309,7 +310,9 @@ type
     function RemoveQuotesFromIdentifier(const Identifier: String): String;
   end;
 
+{$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
 uses ZFastCode, ZDbcDbLibUtils, ZDbcDbLib;
 
@@ -3750,7 +3753,5 @@ begin
   end;
 end;
 
+{$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 end.
-
-
-

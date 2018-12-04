@@ -55,6 +55,8 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IFNDEF ZEOS_DISABLE_MYSQL}
+
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZTokenizer, ZGenericSqlToken, ZCompatibility;
@@ -101,7 +103,11 @@ type
     procedure CreateTokenStates; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_MYSQL}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_MYSQL}
 
 {$IFDEF FAST_MOVE}uses ZFastCode;{$ENDIF}
 
@@ -298,6 +304,8 @@ begin
   SetCharacterState('#', '#', CommentState);
   SetCharacterState('-', '-', CommentState);
 end;
+
+{$ENDIF ZEOS_DISABLE_MYSQL}
 
 end.
 

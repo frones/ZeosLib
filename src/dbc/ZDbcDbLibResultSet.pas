@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 uses
 {$IFNDEF FPC}
   DateUtils,
@@ -173,11 +174,12 @@ type
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
   end;
 
+{$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
 uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding, ZSysUtils, ZFastCode, ZClasses
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
-;
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 constructor TZAbstractDblibDataProvider.Create(Connection: IZDBLibConnection);
 begin
@@ -1139,6 +1141,5 @@ begin
     end;
   end;
 end;
-
+{$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 end.
-

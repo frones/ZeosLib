@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_ASA}
 uses
   ZCompatibility, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}SysUtils,
@@ -123,7 +124,9 @@ var
   {** The common driver manager object. }
   ASADriver: IZDriver;
 
+{$ENDIF ZEOS_DISABLE_ASA}
 implementation
+{$IFNDEF ZEOS_DISABLE_ASA}
 
 uses
   ZFastCode, ZDbcASAMetadata, ZDbcASAStatement, ZDbcASAUtils, ZSybaseToken,
@@ -591,4 +594,5 @@ finalization
   if Assigned(DriverManager) then
     DriverManager.DeregisterDriver(ASADriver);
   ASADriver := nil;
+{$ENDIF ZEOS_DISABLE_ASA}
 end.

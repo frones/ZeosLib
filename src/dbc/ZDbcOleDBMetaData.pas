@@ -55,6 +55,11 @@ interface
 
 {$I ZDbc.inc}
 
+{$IF not defined(MSWINDOWS) or (defined(ZEOS_DISABLE_OLEDB) and defined(ZEOS_DISABLE_ADO))}
+  {$DEFINE DISABLE_OLE_METADATA}
+{$IFEND}
+
+{$IFNDEF DISABLE_OLE_METADATA} //if set we have an empty unit
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcMetadata,
@@ -243,7 +248,8 @@ type
     //Ole related
     procedure InitilizePropertiesFromDBInfo(const DBInitialize: IDBInitialize; const Malloc: IMalloc);
   end;
-  {$IFDEF ENABLE_OLEDB}
+
+{$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
   {** Implements Ado Metadata. }
   TOleDBDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
@@ -299,9 +305,11 @@ type
   public
     constructor Create(Connection: TZAbstractDbcConnection; const Url: TZURL); override;
   end;
-  {$ENDIF ENABLE_OLEDB}
+{$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 
+{$ENDIF DISABLE_OLE_METADATA} //if set we have an empty unit
 implementation
+{$IFNDEF DISABLE_OLE_METADATA} //if set we have an empty unit
 
 uses
   Variants, ZGenericSqlToken, ZFastCode,
@@ -1487,7 +1495,7 @@ begin
   Result := True;
 end;
 
-{$IFDEF ENABLE_OLEDB}
+{$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 { TOleDBDatabaseMetadata }
 
 {**
@@ -2875,7 +2883,6 @@ begin
       Break;
     end;
 end;
-
-{$ENDIF ENABLE_OLEDB}
-
+{$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
+{$ENDIF DISABLE_OLE_METADATA} //if set we have an empty unit
 end.

@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
@@ -167,7 +168,9 @@ type
       OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); override;
   end;
 
+{$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 
 uses
   ZMessages, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode,
@@ -1334,4 +1337,5 @@ begin
 end;
 // <-- ms
 
+{$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 end.

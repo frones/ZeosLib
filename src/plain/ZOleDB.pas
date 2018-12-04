@@ -51,6 +51,13 @@ interface
 
 {$I ZPlain.inc}
 
+{$IF not defined(MSWINDOWS) or (defined(ZEOS_DISABLE_ADO) and defined(ZEOS_DISABLE_OLEDB))}
+  {$DEFINE ZEOS_DISABLE_OLEDB}
+{$ELSE}
+  {$UNDEF ZEOS_DISABLE_OLEDB}
+{$IFEND}
+
+{$IFNDEF ZEOS_DISABLE_OLEDB}
 {$IFDEF WIN64}
 {$ALIGN 8}
 {$ELSE}
@@ -3418,6 +3425,7 @@ const
 function VariantClear(var varg: OleVariant): HResult; stdcall; external 'oleaut32.dll' name 'VariantClear';
 {$IFEND}
 
+{$ENDIF ZEOS_DISABLE_OLEDB}
 implementation
 
 end.

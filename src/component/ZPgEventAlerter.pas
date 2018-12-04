@@ -64,6 +64,7 @@ unit ZPgEventAlerter;
 
 interface
 {$I ZComponent.inc}
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 uses
   SysUtils, Classes,
   {$IFDEF WITH_VCL_PREFIX}Vcl.ExtCtrls{$ELSE}
@@ -120,7 +121,9 @@ type
     property ChildEvents:   TStrings         read FChildEvents write SetChildEvents; //read onlu property to keep all events in one place
   end;
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
 {$IFDEF WITH_UNITANSISTRINGS}
 uses AnsiStrings;
@@ -420,6 +423,5 @@ procedure TZPgEventAlerter.SetChildEvents(Value: TStrings);
 begin
   Exit;
 end;
-
+{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 end.
-

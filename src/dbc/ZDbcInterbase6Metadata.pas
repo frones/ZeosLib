@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses
   Types, Classes, SysUtils, StrUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
   ZDbcInterbase6, ZPlainFirebirdDriver;
@@ -278,7 +279,9 @@ type
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   end;
 
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses ZMessages, ZDbcInterbase6Utils, ZPlainFirebirdInterbaseConstants, ZClasses,
   ZFastCode, ZSelectSchema;
@@ -2909,5 +2912,5 @@ begin
     GetConnection.CreateStatement.ExecuteQuery(SQL),
     ConstructVirtualResultSet(CharacterSetsColumnsDynArray));
 end;
-
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.

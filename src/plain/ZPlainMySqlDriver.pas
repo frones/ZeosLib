@@ -60,6 +60,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_MYSQL}
+
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   ZPlainDriver, ZCompatibility, ZPlainMySqlConstants;
 
@@ -257,7 +259,11 @@ type
     function GetDescription: string; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_MYSQL}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_MYSQL}
 
 uses SysUtils, ZPlainLoader, ZEncoding, ZFastCode, ZConnProperties
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
@@ -582,6 +588,8 @@ begin
   if Assigned(mysql_library_init) and Assigned(mysql_library_end) then
     BuildServerArguments(Options);
 end;
+
+{$ENDIF ZEOS_DISABLE_MYSQL}
 
 end.
 

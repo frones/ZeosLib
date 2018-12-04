@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
@@ -215,7 +216,9 @@ type
     function GetMoreResults: Boolean; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 
 uses
   Math, DateUtils, ZFastCode, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZDbcProperties,
@@ -2609,4 +2612,5 @@ MySQL568PreparableTokens[29].MatchingGroup := 'UNINSTALL';
   SetLength(MySQL568PreparableTokens[29].ChildMatches, 1);
   MySQL568PreparableTokens[29].ChildMatches[0] := 'PLUGIN'; *)
 
+{$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 end.

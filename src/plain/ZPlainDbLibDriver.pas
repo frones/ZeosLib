@@ -56,6 +56,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_DBLIB}
+
 uses Classes, ZCompatibility, ZPlainDriver, ZPlainDbLibConstants
   {$IFDEF TLIST_IS_DEPRECATED},ZSysUtils{$ENDIF};
 
@@ -516,7 +518,11 @@ var
   SQLErrors: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
   SQLMessages: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
 
+{$ENDIF ZEOS_DISABLE_DBLIB}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_DBLIB}
 
 uses SysUtils, ZPlainLoader, ZEncoding, ZClasses, ZFastCode;
 
@@ -2547,4 +2553,6 @@ finalization
   end;
   if SQLMessages <> nil then
     FreeAndNil(SQLMessages);
+{$ENDIF ZEOS_DISABLE_DBLIB}
+
 end.

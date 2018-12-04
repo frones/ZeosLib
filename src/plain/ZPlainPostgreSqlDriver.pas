@@ -55,6 +55,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
+
 uses {$IFDEF OLDFPC}ZClasses, {$ENDIF}ZCompatibility, ZPlainDriver;
 
 const
@@ -768,7 +770,11 @@ type
     lo_export       : function(conn: TPGconn; lobjId: Oid; filename: PAnsiChar): Integer; cdecl;
   end;
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 
 uses ZPlainLoader, ZEncoding;
 
@@ -978,6 +984,9 @@ begin
   {$ENDIF}
   LoadCodePages;
 end;
+
+{$ENDIF ZEOS_DISABLE_POSTGRESQL}
+
 
 end.
 

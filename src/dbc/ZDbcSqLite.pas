@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcConnection, ZPlainSqLiteDriver, ZDbcLogging, ZTokenizer,
@@ -135,7 +136,9 @@ var
   {** The common driver manager object. }
   SQLiteDriver: IZDriver;
 
+{$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 
 uses
   ZSysUtils, ZDbcSqLiteStatement, ZSqLiteToken, ZFastCode, ZDbcProperties,
@@ -593,5 +596,6 @@ finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(SQLiteDriver);
   SQLiteDriver := nil;
-end.
 
+{$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
+end.

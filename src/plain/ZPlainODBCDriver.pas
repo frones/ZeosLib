@@ -55,6 +55,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_ODBC}
+
 uses
   ZCompatibility, ZPlainDriver;
 
@@ -2303,7 +2305,11 @@ type
     constructor Create(const DriverName: String = '_a');
   end;
 
+{$ENDIF ZEOS_DISABLE_ODBC}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_ODBC}
 
 uses ZPlainLoader;
 
@@ -2486,5 +2492,7 @@ procedure TODBC3RawPlainDriver.LoadCodePages;
 begin
   AddCodePage('CP_ACP', 0, ceAnsi, ZOSCodePage, '', 1, True);
 end;
+
+{$ENDIF ZEOS_DISABLE_ODBC}
 
 end.

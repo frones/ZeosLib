@@ -61,6 +61,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_MYSQL}
+
 //{$A-} //pack the records!   EH: nope this is wrong!
 {$Z+} //enum to DWORD
 uses
@@ -779,6 +781,8 @@ const
   //mysql_com.h
   SERVER_PS_OUT_PARAMS = LongWord(4096); //To mark ResultSet containing output parameter values.
   SERVER_MORE_RESULTS_EXIST = LongWord(8); //Multi query - next query exists
+
+{$ENDIF ZEOS_DISABLE_MYSQL}
 
 implementation
 

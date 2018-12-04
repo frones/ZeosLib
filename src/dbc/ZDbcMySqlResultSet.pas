@@ -58,7 +58,7 @@ interface
 
 {$I ZDbc.inc}
 
-{.$DEFINE USE_SYNCOMMONS}
+{$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
@@ -213,7 +213,9 @@ type
       StmtHandle: PMySql_Stmt; ColumnIndex: Cardinal; const Sender: IImmediatelyReleasable);
   End;
 
+{$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
@@ -2593,4 +2595,5 @@ begin
   end;
 end;
 
+{$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 end.

@@ -55,6 +55,7 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IFNDEF ZEOS_DISABLE_INTERBASE}
 uses Classes, ZGenericSqlAnalyser;
 
 type
@@ -62,6 +63,8 @@ type
   {** Implements an Interbase statements analyser. }
   TZInterbaseStatementAnalyser = class (TZGenericStatementAnalyser)
   end;
+
+{$ENDIF ZEOS_DISABLE_INTERBASE}
 
 implementation
 

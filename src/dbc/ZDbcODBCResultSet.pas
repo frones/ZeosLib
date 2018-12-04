@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
@@ -189,7 +190,9 @@ type
 const
   StringStreamTypes: Array[Boolean] of SQLSMALLINT = (SQL_C_CHAR, SQL_C_WCHAR);
 
+{$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 
 uses Math,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
@@ -1961,4 +1964,5 @@ begin
   end;
 end;
 
+{$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 end.

@@ -28,20 +28,14 @@ package ZComponent;
 {$DESCRIPTION 'Zeos Database Components'}
 {$LIBSUFFIX '250'}
 {$RUNONLY}
-{$IMPLICITBUILD ON}
+{$IMPLICITBUILD OFF}
 
 requires
   rtl,
-  dbrtl,
-  ZPlain,
   ZDbc,
-  ZCore,
-  ZParseSql,
-  {$IFDEF NEXTGEN}FMX{$ELSE}Vcl{$ENDIF};
+  {$IFDEF NEXTGEN}fmx{$ELSE}vcl{$ENDIF};
 
 contains
-  {$I ZPackages.inc} //after simplify Zeos.Inc by using {$IF CompilerVersion > x} i need to move this include AFTER contains!
-
   ZAbstractConnection in '..\..\src\component\ZAbstractConnection.pas',
   ZAbstractDataset in '..\..\src\component\ZAbstractDataset.pas',
   ZAbstractRODataset in '..\..\src\component\ZAbstractRODataset.pas',
@@ -51,6 +45,8 @@ contains
   ZDataset in '..\..\src\component\ZDataset.pas',
   ZDatasetUtils in '..\..\src\component\ZDatasetUtils.pas',
   ZGroupedConnection in '..\..\src\component\ZGroupedConnection.pas',
+  ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas',
+  ZPgEventAlerter in '..\..\src\component\ZPgEventAlerter.pas',
   ZSequence in '..\..\src\component\ZSequence.pas',
   ZSqlMetadata in '..\..\src\component\ZSqlMetadata.pas',
   ZSqlMonitor in '..\..\src\component\ZSqlMonitor.pas',
@@ -58,7 +54,6 @@ contains
   ZSqlStrings in '..\..\src\component\ZSqlStrings.pas',
   ZSqlUpdate in '..\..\src\component\ZSqlUpdate.pas',
   ZStoredProcedure in '..\..\src\component\ZStoredProcedure.pas',
-  ZStreamBlob in '..\..\src\component\ZStreamBlob.pas'
-  {$IFDEF ENABLE_INTERBASE}, ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas' {$ENDIF}
-  {$IFDEF ENABLE_POSTGRESQL}, ZPgEventAlerter in '..\..\src\component\ZPgEventAlerter.pas' {$ENDIF};
+  ZStreamBlob in '..\..\src\component\ZStreamBlob.pas';
+
 end.

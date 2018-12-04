@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 {$IFDEF WIN64}
 {$ALIGN 8}
 {$ELSE}
@@ -130,7 +131,9 @@ type
   end;
   TZOleDBStatement = class(TZOleDBPreparedStatement);
 
+{$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 
 uses
   Variants, Math,
@@ -578,4 +581,5 @@ begin
   fMoreResultsIndicator := Value;
 end;
 
+{$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 end.

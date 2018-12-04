@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
@@ -163,7 +164,9 @@ type
     function IsAutoIncrement({%H-}ColumnIndex: Integer): Boolean; override;
   End;
 
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses
 {$IFNDEF FPC}
@@ -1882,5 +1885,5 @@ begin
   Loaded := True;
   {$ENDIF}
 end;
-
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.

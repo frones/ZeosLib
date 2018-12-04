@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcMetadata, ZURL,
@@ -305,7 +306,9 @@ type
   public
     constructor Create(Connection: TZAbstractDbcConnection; const Url: TZURL; var ConnectionHandle: SQLHDBC); override;
   end;
+{$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 
 uses
   ZGenericSqlToken, ZDbcODBCUtils, ZDbcODBCResultSet, ZEncoding, ZSysUtils, ZFastCode;
@@ -3748,6 +3751,5 @@ begin
   {$ENDIF}
 end;
 
+{$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 end.
-
-
