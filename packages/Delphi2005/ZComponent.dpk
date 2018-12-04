@@ -55,8 +55,8 @@ contains
   ZStoredProcedure in '..\..\src\component\ZStoredProcedure.pas',
   ZAbstractTable in '..\..\src\component\ZAbstractTable.pas',
   ZSqlMetadata in '..\..\src\component\ZSqlMetadata.pas',
-  ZSequence in '..\..\src\component\ZSequence.pas'
-  {$IFDEF ENABLE_INTERBASE}, ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas' {$ENDIF}
-  {$IFDEF ENABLE_POSTGRESQL}, ZPgEventAlerter in '..\..\src\component\ZPgEventAlerter.pas' {$ENDIF};
+  ZSequence in '..\..\src\component\ZSequence.pas',
+  ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas',
+  ZPgEventAlerter in '..\..\src\component\ZPgEventAlerter.pas';
 
 end.
