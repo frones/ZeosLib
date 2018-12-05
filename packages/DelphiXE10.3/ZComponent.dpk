@@ -31,9 +31,7 @@ package ZComponent;
 {$IMPLICITBUILD OFF}
 
 requires
-  rtl,
-  ZDbc,
-  {$IFDEF NEXTGEN}fmx{$ELSE}vcl{$ENDIF};
+  ZDbc;
 
 contains
   ZAbstractConnection in '..\..\src\component\ZAbstractConnection.pas',

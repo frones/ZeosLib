@@ -992,7 +992,7 @@ begin
     FClosed := True;
     RefCountAdded := False;
     if (FStatement <> nil) then begin
-      if FRefCount = 1 then begin
+      if (RefCount = 1) then begin
         _AddRef;
         RefCountAdded := True;
       end;
@@ -1000,8 +1000,11 @@ begin
       FStatement := nil;
     end;
     AfterClose;
-    if RefCountAdded then
-       _Release;
+    if RefCountAdded then begin
+      if (RefCount = 1) then
+        DriverManager.AddGarbage(Self);
+      _Release;
+    end;
   end;
 end;
 

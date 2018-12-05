@@ -1121,6 +1121,7 @@ begin
     Result := -Result;
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Integer);
 var
   U64, U64b: UInt64;
@@ -1163,6 +1164,7 @@ begin
   SmallInt2PG(SmallInt(Int64Rec(u64).Lo), @Numeric_External.digits[0]); //set first digit
   Size := (4+NBASEDigits) * SizeOf(Word);
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 function PGCash2Currency(P: Pointer): Currency;
 begin

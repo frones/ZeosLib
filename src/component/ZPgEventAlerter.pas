@@ -67,10 +67,9 @@ interface
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 uses
   SysUtils, Classes,
-  {$IFDEF WITH_VCL_PREFIX}Vcl.ExtCtrls{$ELSE}
-      {$IFDEF WITH_UNIT_FMX_TYPES}FMX.Types {$ELSE} ExtCtrls {$ENDIF}
-  {$ENDIF}, {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
-  ZDbcPostgreSql, ZPlainPostgreSqlDriver, ZConnection, ZAbstractRODataset;
+  {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
+  ZDbcPostgreSql, ZPlainPostgreSqlDriver, ZConnection, ZAbstractRODataset
+  {$IFNDEF WITH_RAWBYTESTRING},ZCompatibility{$ENDIF}, ZClasses;
 
 type
   TZPgNotifyEvent = procedure(Sender: TObject; Event: string;
@@ -83,7 +82,7 @@ type
     FActive      : Boolean;
     FEvents      : TStrings;
 
-    FTimer       : TTimer;
+    FTimer       : TZThreadTimer;
     FConnection: TZConnection;
     FNotifyFired : TZPgNotifyEvent;
 
@@ -97,7 +96,7 @@ type
     procedure SetInterval   (Value: Cardinal);
     procedure SetEvents     (Value: TStrings);
     procedure SetConnection (Value: TZConnection);
-    procedure TimerTick     (Sender: TObject);
+    procedure TimerTick;
     procedure CheckEvents;
     procedure OpenNotify;
     procedure CloseNotify;
@@ -149,10 +148,7 @@ begin
     Duplicates := dupIgnore;
   end;
 
-  FTimer         := TTimer.Create(Self);
-  FTimer.Enabled := False;
-  SetInterval(250);
-  FTimer.OnTimer := TimerTick;
+  FTimer         := TZThreadTimer.Create(TimerTick, 250, False);
   FActive        := False;
   if (csDesigning in ComponentState) and Assigned(AOwner) then
    for I := AOwner.ComponentCount - 1 downto 0 do
@@ -219,14 +215,12 @@ begin
   end;
 end;
 
-procedure TZPgEventAlerter.TimerTick(Sender: TObject);
+procedure TZPgEventAlerter.TimerTick;
 begin
-  if not FActive then
-    TTimer(Sender).Enabled := False
-  else if FProcessor <> nil then
-    TTimer(Sender).Enabled := False
+  if not FActive or (FProcessor <> nil) then
+    FTimer.Enabled := False
   else
-   CheckEvents;
+    CheckEvents;
 end;
 
 procedure TZPgEventAlerter.OpenNotify;

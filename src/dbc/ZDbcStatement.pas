@@ -94,7 +94,6 @@ type
     procedure SetLastResultSet(const ResultSet: IZResultSet); virtual;
   protected
     FCursorName: RawByteString;
-    FRefCountAdded: Boolean; //while closing / unpreparing we need to indicate if closing LastResultSet will detroy this object
     fWBuffer: array[Byte] of WideChar;
     fABuffer: array[Byte] of AnsiChar;
     FWSQL: ZWideString;
@@ -1203,8 +1202,11 @@ begin
     AfterClose;
   finally
     FClosed := True;
-    if RefCountAdded then
+    if RefCountAdded then begin
+      if (RefCount = 1) then
+        DriverManager.AddGarbage(Self);
       _Release;
+    end;
   end;
 end;
 
@@ -5549,8 +5551,11 @@ begin
     FLastResultSet.Close;
   if Assigned(FOpenResultSet) then
     IZResultSet(FOpenResultSet).Close;
-  if RefCountAdded then
+  if RefCountAdded then begin
+    if (RefCount = 1) then
+      DriverManager.AddGarbage(Self);
     _Release; //possible running into destructor now if just a ResultSet was last owner of Self-interface
+  end;
 end;
 
 {**
