@@ -3,7 +3,7 @@
         <ProjectGuid>{51B256BA-FA64-42BA-84CF-7953A75F7C05}</ProjectGuid>
         <MainSource>ZComponent.dpk</MainSource>
         <ProjectVersion>18.4</ProjectVersion>
-        <FrameworkType>VCL</FrameworkType>
+        <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
