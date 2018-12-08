@@ -1332,9 +1332,9 @@ end;
 
 procedure TZDriverManager.AddGarbage(const Value: IZInterface);
 begin
+  FTimer.Reset; //take care the garbe will be cleared a little bit later
   FDriversCS.Enter;
   try
-    Self.FTimer.Reset;
     FGarbageCollector.Add(Value);
   finally
     FDriversCS.Leave;

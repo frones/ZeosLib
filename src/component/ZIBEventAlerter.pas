@@ -120,7 +120,8 @@ implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses
-  SyncObjs, ZClasses{$IFDEF NO_PANSICHAR}, ZCompatibility{$ENDIF};
+  SyncObjs, ZClasses{$IFDEF UNICODE}, ZCompatibility{$ENDIF}
+  {$IFDEF UNICODE}, ZEncoding{$ENDIF};
 
 const
   IB_MAX_EVENT_BLOCK = 15;   // maximum events handled per block by InterBase
@@ -149,22 +150,25 @@ type
     FExceptObject: TObject;
     FExceptAddr: Pointer;
     FCancelAlerts: boolean;
+    {$IFDEF UNICODE}
+    FCodePage: Word;
+    {$ENDIF}
   protected
     procedure Execute; override;
-    procedure SignalEvent; virtual;
-    procedure SignalTerminate; virtual;
-    procedure RegisterEvents; virtual;
-    procedure UnRegisterEvents; virtual;
-    procedure QueueEvents; virtual;
+    procedure SignalEvent;
+    procedure SignalTerminate;
+    procedure RegisterEvents;
+    procedure UnRegisterEvents;
+    procedure QueueEvents;
     procedure SQueEvents;
-    procedure ProcessEvents; virtual;
+    procedure ProcessEvents;
     procedure DoEvent;
     procedure DoHandleException;
-    function HandleException: boolean; virtual;
+    function HandleException: boolean;
     procedure UpdateResultBuffer(Length: Integer; Updated: Pointer);
   public
     constructor Create(Owner: TZIBEventAlerter; EventGrp: integer;
-      TermEvent: TNotifyEvent); virtual;
+      TermEvent: TNotifyEvent);
     destructor Destroy; override;
   end;
 
@@ -395,11 +399,11 @@ var
     else
     {$IFDEF UNICODE}
     begin
-      EBPArray[Index] := RawByteString(Parent.FEvents[EvListIndex]);
-      Result := PAnsiChar(EBPArray[Index]);
+      EBPArray[Index] := ZUnicodeToRaw(Parent.FEvents[EvListIndex], FCodePage);
+      Result := Pointer(EBPArray[Index]);
     end;
     {$ELSE}
-    Result := PAnsiChar(Parent.FEvents[EvListIndex]);
+    Result := Pointer(Parent.FEvents[EvListIndex]);
     {$ENDIF}
   end;
 
@@ -426,8 +430,7 @@ end;
 
 procedure TIBEventThread.SignalTerminate;
 begin
-  if not Terminated then
-  begin
+  if not Terminated then begin
     Terminate;
     Signal.SetEvent;
   end;
@@ -440,8 +443,7 @@ end;
 
 function TIBEventThread.HandleException: boolean;
 begin
-  if not Parent.ThreadException then
-  begin
+  if not Parent.ThreadException then begin
     Result := True;
     Parent.ThreadException := True;
     FExceptObject := ExceptObject;
@@ -465,18 +467,16 @@ begin
   try
     repeat
       Signal.WaitFor(INFINITE);
-      if EventsReceived then
-      begin
+      if EventsReceived then begin
         ProcessEvents;
         QueueEvents;
       end;
     until Terminated;
     ReturnValue := 0;
   except
-    if HandleException then
-      ReturnValue := 1
-    else
-      ReturnValue := 0;
+    if HandleException
+    then ReturnValue := 1
+    else ReturnValue := 0;
   end;
 end;
 
@@ -491,6 +491,9 @@ begin
   Parent := Owner;
   EventGroup := EventGrp;
   OnTerminate := TermEvent;
+  {$IFDEF UNICODE}
+  FCodePage := Owner.Connection.DbcConnection.GetConSettings.ClientCodePage.CP;
+  {$ENDIF}
   inherited Create(False);
 end;
 
