@@ -1050,7 +1050,11 @@ begin
     stWord, stSmall: Result := 2;
     stLongWord, stInteger, stFloat: Result := 4;
     stULong, stLong, stDouble, stCurrency, stDate, stTime, stTimestamp: Result := 8;
+    {$IFDEF BCD_TEST}
+    stBigDecimal: Result := SizeOf(TBCD);
+    {$ELSE}
     stBigDecimal: Result := SizeOf(Extended);
+    {$ENDIF}
     stGUID: Result := SizeOf(TGUID);
   end;
 end;

@@ -1695,10 +1695,19 @@ begin
             case FieldSqlType of
               stBytes: Precision := XSQLVAR.sqllen;
               stShort, stSmall, stInteger, stLong: Signed := True;
+              stCurrency, stBigDecimal: begin
+                Signed  := True;
+                Scale   := -XSQLVAR.sqlscale;
+                //first digit does not count because of overflow (FB does not allow this)
+                case XSQLVAR.sqltype and not (1) of
+                  SQL_SHORT:  Precision := 4;
+                  SQL_LONG:   Precision := 9;
+                  SQL_INT64:  Precision := 18;
+                end;
+              end;
             end;
           end;
         end;
-
         ReadOnly := (TableName = '') or (ColumnName = '') or
           (ColumnName = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
 
