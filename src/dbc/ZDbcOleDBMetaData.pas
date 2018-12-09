@@ -1960,9 +1960,8 @@ begin
         fTableColColumnMap.ColIndices[TableColColumnTypeIndex] := FindColumn('DATA_TYPE');
         fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex] := fTableColColumnMap.ColIndices[TableColColumnTypeIndex];
         fTableColColumnMap.ColIndices[TableColColumnSizeIndex] := FindColumn('CHARACTER_MAXIMUM_LENGTH');
-        fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex] := FindColumn('CHARACTER_OCTET_LENGTH');
         fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex] := FindColumn('NUMERIC_SCALE');
-        fTableColColumnMap.ColIndices[TableColColumnNumPrecRadixIndex] := FindColumn('NUMERIC_PRECISION');;
+        fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex] := FindColumn('NUMERIC_PRECISION');;
         fTableColColumnMap.ColIndices[TableColColumnNullableIndex] := FindColumn('IS_NULLABLE');
         fTableColColumnMap.ColIndices[TableColColumnRemarksIndex] := FindColumn('DESCRIPTION');
         fTableColColumnMap.ColIndices[TableColColumnColDefIndex] := FindColumn('COLUMN_DEFAULT');
@@ -1985,7 +1984,9 @@ begin
         SQLType := ConvertOleDBTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]),
           ((FLAGS and DBCOLUMNFLAGS_ISLONG) <> 0), ConSettings.CPType);
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
-        Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex]));
+        if SQLType in [stCurrency, stBigDecimal]
+        then Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]))
+        else Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex]));
         Result.UpdateInt(TableColColumnBufLengthIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]));
         Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]));
         Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnNumPrecRadixIndex]));

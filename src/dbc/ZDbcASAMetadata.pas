@@ -1634,7 +1634,7 @@ begin
 //      Result.UpdateSmall(TableColColumnTypeIndex,
 //        Ord(ConvertASAJDBCToSqlType(GetSmallByName('DATA_TYPE'))));
       Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), Len);
-      //Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('COLUMN_SIZE'));
+      Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('COLUMN_SIZE'));
       Result.UpdateInt(TableColColumnBufLengthIndex, GetIntByName('BUFFER_LENGTH'));
       Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetIntByName('DECIMAL_DIGITS'));
       Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmallByName('NUM_PREC_RADIX'));
