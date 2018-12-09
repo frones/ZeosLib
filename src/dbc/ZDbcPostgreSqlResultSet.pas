@@ -485,7 +485,7 @@ begin
     //i.e. numeric(10,2) is ((10 << 16) | 2) + 4
     NUMERICOID: if TypeModifier <> -1 then begin
         ColumnInfo.Precision := (TypeModifier - VARHDRSZ) shr 16 and $FFFF;
-        ColumnInfo.Scale     := (TypeModifier - VARHDRSZ) and $FFFF;
+        ColumnInfo.Scale     := (TypeModifier - VARHDRSZ)        and $FFFF;
         if (ColumnInfo.Scale <= 4) and (ColumnInfo.Precision <= sAlignCurrencyScale2Precision[ColumnInfo.Scale])
         then ColumnInfo.ColumnType := stCurrency
         else ColumnInfo.ColumnType := stBigDecimal;
@@ -575,10 +575,9 @@ begin
         if ColumnType in [stString, stUnicodeString] then begin
           {begin patch: varchar() is equal to text!}
           if ( FieldMode = -1 ) and ( FieldSize = -1 ) and ( FieldType = 1043) then
-            if FUndefinedVarcharAsStringLength > 0 then begin
-              Precision := FUndefinedVarcharAsStringLength;
-            end else
-              DefinePostgreSQLToSQLType(ColumnInfo, 25, FieldMode) //assume text instead!
+            if FUndefinedVarcharAsStringLength > 0
+            then Precision := FUndefinedVarcharAsStringLength
+            else DefinePostgreSQLToSQLType(ColumnInfo, 25, FieldMode) //assume text instead!
           else if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
             Precision := 255;
           if ColumnType = stString then begin
