@@ -179,7 +179,7 @@ begin
   Result := TZAdoSQLTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
 
-threadvar
+var //eh: was threadvar but this defintely does not work! we just need !one! value
   AdoCoInitialized: integer;
 
 procedure CoInit;
