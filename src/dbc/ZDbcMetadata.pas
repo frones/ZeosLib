@@ -581,7 +581,7 @@ const
   TableColColumnTypeIndex               = FirstDbcIndex + 4;
   TableColColumnTypeNameIndex           = FirstDbcIndex + 5;
   TableColColumnSizeIndex               = FirstDbcIndex + 6;
-  TableColColumnBufLengthIndex          = FirstDbcIndex + 7;
+  TableColColumnBufLengthIndex          = FirstDbcIndex + 7; //unused as documented
   TableColColumnDecimalDigitsIndex      = FirstDbcIndex + 8;
   TableColColumnNumPrecRadixIndex       = FirstDbcIndex + 9;
   TableColColumnNullableIndex           = FirstDbcIndex + 10;

@@ -605,7 +605,8 @@ begin
           {$ELSE}
           ColumnLabel := FAdoCommand.Parameters.Item[i].Name;
           {$ENDIF}
-          ColumnType := ConvertAdoToSqlType(FAdoCommand.Parameters.Item[I].Type_, ConSettings.CPType);
+          ColumnType := ConvertAdoToSqlType(FAdoCommand.Parameters.Item[I].Type_,
+            FAdoCommand.Parameters.Item[I].Precision, FAdoCommand.Parameters.Item[I].NumericScale, ConSettings.CPType);
           ColumnDisplaySize := FAdoCommand.Parameters.Item[I].Precision;
           Precision := FAdoCommand.Parameters.Item[I].Precision;
           IndexAlign[High(IndexAlign)] := I;
@@ -818,7 +819,8 @@ begin
     Temp := FAdoCommand.Parameters.Item[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
 
     case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Type_,
-      ConSettings.CPType) of
+      FAdoCommand.Parameters.Item[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Precision,
+      FAdoCommand.Parameters.Item[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].NumericScale, ConSettings.CPType) of
       stBoolean:
         ClientVarManager.SetAsBoolean(Result, Temp);
       stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong:

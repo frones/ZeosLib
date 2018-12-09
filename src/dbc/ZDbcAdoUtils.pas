@@ -80,7 +80,7 @@ function ConvertAdoToTypeName(FieldType: SmallInt): string;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertAdoToSqlType(const FieldType: SmallInt;
+function ConvertAdoToSqlType(const FieldType, Precision, Scale: SmallInt;
   const CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
@@ -218,7 +218,7 @@ end;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertAdoToSqlType(const FieldType: SmallInt;
+function ConvertAdoToSqlType(const FieldType, Precision, Scale: SmallInt;
   const CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   //http://msdn.microsoft.com/en-us/library/windows/desktop/ms675318%28v=vs.85%29.aspx
@@ -237,7 +237,10 @@ begin
     adSingle: Result := stFloat;
     adDouble: Result := stDouble;
     adDecimal: Result := stBigDecimal;
-    adNumeric, adVarNumeric: Result := stBigDecimal;
+    adNumeric, adVarNumeric:
+        if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision <= sAlignCurrencyScale2Precision[Scale])
+        then Result := stCurrency
+        else Result := stBigDecimal;
     adCurrency: Result := stCurrency;
     adDBDate: Result := stDate;
     adDBTime: Result := stTime;

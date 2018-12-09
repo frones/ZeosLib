@@ -136,7 +136,7 @@ implementation
 
 uses
   Variants, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF},
-  ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZClasses;
+  ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZClasses, ZDbcUtils;
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZAdoResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
@@ -338,7 +338,7 @@ begin
         ColumnInfo.AutoIncrement := Prop.Value
     end;
 
-    ColumnInfo.ColumnType := ConvertAdoToSqlType(ColType, ConSettings.CPType);
+    ColumnInfo.ColumnType := ConvertAdoToSqlType(ColType, F.Precision, F.NumericScale, ConSettings.CPType);
     FieldSize := F.DefinedSize;
     if FieldSize < 0 then
       FieldSize := 0;
@@ -1148,9 +1148,8 @@ begin
           Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
   ProcessFixedChar:
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          while (P+Len-1)^ = ' ' do dec(Len);
-          System.SetString(FUniTemp, P, Len);
-          Result := UnicodeToInt64Def(FUniTemp, 0);
+          Len := GetAbsorbedTrailingSpacesLen(P, Len);
+          Result := UnicodeToInt64Def(P, P+Len, 0);
         end;
       adVarChar,
       adLongVarChar, {varying char fields}
