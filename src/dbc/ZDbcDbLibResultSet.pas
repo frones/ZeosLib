@@ -86,7 +86,7 @@ type
     protected
       FCheckDbDead: Boolean;
     public
-      constructor Create(Connection: IZDBLibConnection; const CheckDbDead: Boolean); virtual;
+      constructor Create(Connection: IZDBLibConnection; const CheckDbDead: Boolean); reintroduce;
       function Next: Boolean; override;
       procedure GetColData(ColIndex: Integer; out DatPtr: Pointer; out DatLen: Integer); override;
   end;
@@ -142,7 +142,7 @@ type
       UserEncoding: TZCharEncoding = ceDefault);
     destructor Destroy; override;
 
-    procedure Close; override;
+    procedure BeforeClose; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
@@ -461,7 +461,7 @@ end;
   sequence of multiple results. A <code>ResultSet</code> object
   is also automatically closed when it is garbage collected.
 }
-procedure TZDBLibResultSet.Close;
+procedure TZDBLibResultSet.BeforeClose;
 begin
 { TODO -ofjanos -cGeneral : Maybe it needs a dbcanquery here. }
   if FDataProvider.needDbCanQuery then
@@ -470,7 +470,7 @@ begin
         if FPlainDriver.dbCanQuery(FHandle) <> DBSUCCEED then
           FDBLibConnection.CheckDBLibError(lcDisconnect, 'CLOSE QUERY');
   FHandle := nil;
-  inherited Close;
+  inherited BeforeClose;
 end;
 
 {**

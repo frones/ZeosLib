@@ -84,7 +84,7 @@ type
     procedure Prepare; override;
     procedure Unprepare; override;
 
-    procedure Close; override;
+    procedure AfterClose; override;
     procedure Cancel; override;
     function GetMoreResults: Boolean; override;
 
@@ -110,7 +110,7 @@ type
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;
 
-    procedure Close; override;
+    procedure BeforeClose; override;
     procedure Cancel; override;
     function GetMoreResults: Boolean; override;
     function ExecuteQuery(const {%H-}SQL: RawByteString): IZResultSet; override;
@@ -244,11 +244,9 @@ begin
   inherited Unprepare;
 end;
 
-procedure TZASAPreparedStatement.Close;
+procedure TZASAPreparedStatement.AfterClose;
 begin
-  inherited Close;
-  if FStmtNum <> 0 then
-  begin
+  if FStmtNum <> 0 then begin
     FASAConnection.GetPlainDriver.db_dropstmt(FASAConnection.GetDBHandle, nil, nil, @FStmtNum);
     FStmtNum := 0;
   end;
@@ -419,7 +417,7 @@ begin
   inherited;
 end;
 
-procedure TZASACallableStatement.Close;
+procedure TZASACallableStatement.BeforeClose;
 begin
   if not Closed then
   begin
@@ -432,7 +430,7 @@ begin
      nil, @FStmtNum);
     FStmtNum := 0;
   end;
-  inherited;
+  inherited BeforeClose;
 end;
 
 procedure TZASACallableStatement.Cancel;

@@ -108,7 +108,7 @@ type
     procedure SetInParamCount(const NewParamCount: Integer); override;
   public
     constructor Create(const Connection: IZConnection; const ProcName: string; Info: TStrings);
-    procedure Close; override;
+    procedure BeforeClose; override;
 
     procedure RegisterOutParameter(ParameterIndex: Integer;
       SqlType: Integer); override;
@@ -444,10 +444,10 @@ begin
     Self.FUserEncoding := ceDefault;
 end;
 
-procedure TZDBLibCallableStatement.Close;
+procedure TZDBLibCallableStatement.BeforeClose;
 begin
   FRetrievedResultSet := nil;
-  inherited Close;
+  inherited BeforeClose;
 end;
 
 procedure TZDBLibCallableStatement.FetchResults;

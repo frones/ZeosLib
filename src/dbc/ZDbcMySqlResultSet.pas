@@ -83,6 +83,9 @@ type
   end;
 
   {** Implements MySQL ResultSet. }
+
+  { TZAbstractMySQLResultSet }
+
   TZAbstractMySQLResultSet = class(TZAbstractResultSet)
   private
     FHandle: PMySQL;
@@ -101,7 +104,8 @@ type
     constructor Create(const PlainDriver: IZMySQLPlainDriver;
       const Statement: IZStatement; const SQL: string; Handle: PMySQL;
       AffectedRows: PInteger);
-    procedure Close; override;
+    procedure BeforeClose; override;
+    procedure AfterClose; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
@@ -151,7 +155,7 @@ type
     constructor Create(const PlainDriver: IZMySQLPlainDriver; const Statement: IZStatement;
       const SQL: string; MySQL: PMySQL; MySQL_Stmt: PMySql_Stmt);
 
-    procedure Close; override;
+    procedure AfterClose; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
@@ -403,6 +407,11 @@ begin
   LastWasNull := Result = nil;
 end;
 
+procedure TZAbstractMySQLResultSet.BeforeClose;
+begin
+  inherited BeforeClose;
+end;
+
 function TZAbstractMySQLResultSet.GetBuffer(ColumnIndex: Integer): PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -471,11 +480,11 @@ end;
   sequence of multiple results. A <code>ResultSet</code> object
   is also automatically closed when it is garbage collected.
 }
-procedure TZAbstractMySQLResultSet.Close;
+procedure TZAbstractMySQLResultSet.AfterClose;
 begin
-  inherited Close;
   FQueryHandle := nil;
   FRowHandle := nil;
+  inherited AfterClose;
 end;
 
 {**
@@ -1136,11 +1145,11 @@ end;
   sequence of multiple results. A <code>ResultSet</code> object
   is also automatically closed when it is garbage collected.
 }
-procedure TZAbstractMySQLPreparedResultSet.Close;
+procedure TZAbstractMySQLPreparedResultSet.AfterClose;
 begin
   if Assigned(FBindBuffer) then
     FreeAndNil(FBindBuffer);
-  inherited Close;
+  inherited AfterClose;
   FPrepStmt := nil;
 end;
 

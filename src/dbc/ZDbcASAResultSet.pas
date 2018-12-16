@@ -85,7 +85,8 @@ type
       StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
       const SqlData: IZASASQLDA; CachedBlob: boolean);
 
-    procedure Close; override;
+    procedure BeforeClose; override;
+    procedure AfterClose; override;
     procedure ResetCursor; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
@@ -141,7 +142,7 @@ type
       var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SqlData: IZASASQLDA;
       CachedBlob: boolean);
 
-    procedure Close; override;
+    procedure BeforeClose; override;
 
     function RowUpdated: Boolean; override;
     function RowInserted: Boolean; override;
@@ -1304,11 +1305,16 @@ end;
   sequence of multiple results. A <code>ResultSet</code> object
   is also automatically closed when it is garbage collected.
 }
-procedure TZASAAbstractResultSet.Close;
+procedure TZASAAbstractResultSet.AfterClose;
+begin
+  FCursorName := '';
+  inherited AfterClose;
+end;
+
+procedure TZASAAbstractResultSet.BeforeClose;
 begin
   FSqlData := nil;
   inherited Close; //Calls ResetCursor so db_close is called!
-  FCursorName := '';
 end;
 
 {**
@@ -1527,10 +1533,10 @@ begin
       FUpdateSQLData.AllocateSQLDA(FSQLData.GetFieldCount);
 end;
 
-procedure TZASACachedResultSet.Close;
+procedure TZASACachedResultSet.BeforeClose;
 begin
   FUpdateSQLData := nil;
-  inherited Close;
+  inherited BeforeClose;
 end;
 
 function TZASACachedResultSet.RowUpdated: Boolean;

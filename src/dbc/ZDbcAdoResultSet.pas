@@ -80,7 +80,7 @@ type
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
       const AdoRecordSet: ZPlainAdo.RecordSet);
-    procedure Close; override;
+    procedure AfterClose; override;
     procedure ResetCursor; override;
     function Next: Boolean; override;
     function MoveAbsolute(Row: Integer): Boolean; override;
@@ -259,10 +259,10 @@ end;
   sequence of multiple results. A <code>ResultSet</code> object
   is also automatically closed when it is garbage collected.
 }
-procedure TZAdoResultSet.Close;
+procedure TZAdoResultSet.AfterClose;
 begin
   FAdoRecordSet := nil;
-  inherited Close;
+  inherited AfterClose;
 end;
 
 procedure TZAdoResultSet.ResetCursor;

@@ -87,6 +87,7 @@ type
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
+    procedure BeforeClose; override;
     constructor Create(const PlainDriver: IZOraclePlainDriver;
       const Statement: IZStatement; const SQL: string;
       const StmtHandle: POCIStmt; const ErrorHandle: POCIError;
@@ -117,7 +118,7 @@ type
   protected
     procedure Open; override;
   public
-    procedure Close; override;
+    procedure BeforeClose; override;
     function Next: Boolean; override;
   end;
 
@@ -204,6 +205,13 @@ uses
 
 { TZOracleAbstractResultSet }
 
+procedure TZOracleAbstractResultSet.BeforeClose;
+begin
+  FreeOracleSQLVars(FPlainDriver, FColumns, FIteration, FConnectionHandle,
+    FErrorHandle, ConSettings);
+  inherited BeforeClose;
+end;
+
 {**
   Constructs this object, assignes main properties and
   opens the record set.
@@ -212,10 +220,9 @@ uses
   @param SQL a SQL statement.
   @param Handle a Oracle specific query handle.
 }
-constructor TZOracleAbstractResultSet.Create(
-  const PlainDriver: IZOraclePlainDriver; const Statement: IZStatement;
-  const SQL: string; const StmtHandle: POCIStmt; const ErrorHandle: POCIError;
-  const ZBufferSize: Integer);
+constructor TZOracleAbstractResultSet.Create(const PlainDriver: IZOraclePlainDriver;
+  const Statement: IZStatement; const SQL: string; const StmtHandle: POCIStmt;
+  const ErrorHandle: POCIError; const ZBufferSize: Integer);
 begin
   inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
 
@@ -1537,14 +1544,12 @@ end;
   sequence of multiple results. A <code>ResultSet</code> object
   is also automatically closed when it is garbage collected.
 }
-procedure TZOracleResultSet.Close;
+procedure TZOracleResultSet.BeforeClose;
 begin
-  FreeOracleSQLVars(FPlainDriver, FColumns, FIteration, FConnectionHandle,
-    FErrorHandle, ConSettings);
+  inherited BeforeClose;
   SetLength(Self.FRowsBuffer, 0);
   { prepared statement own handles, so dont free them }
   FStmtHandle := nil;
-  inherited Close;
 end;
 
 {**

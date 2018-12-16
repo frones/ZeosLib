@@ -1157,7 +1157,7 @@ const
 
 implementation
 
-uses ZFastCode;
+{$IF defined(FAST_MOVE) and not defined(PatchSystemMove)}uses ZFastCode;{$IFEND}
 
 const
   dsMaxRStringSize = 8192; { Maximum string field size declared in DB.pas }

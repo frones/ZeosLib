@@ -92,7 +92,7 @@ type
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings); overload;
     constructor Create(const Connection: IZConnection; Info: TStrings); overload;
-    procedure Close; override;
+    procedure AfterClose; override;
 
     procedure Prepare; override;
     procedure Unprepare; override;
@@ -123,7 +123,7 @@ type
     procedure UnPrepareInParameters; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
-    procedure Close; override;
+    procedure AfterClose; override;
 
     procedure Prepare(SelectProc: Boolean); reintroduce;
     procedure Unprepare; override;
@@ -284,9 +284,8 @@ begin
   Create(Connection,'', Info);
 end;
 
-procedure TZInterbase6PreparedStatement.Close;
+procedure TZInterbase6PreparedStatement.AfterClose;
 begin
-  inherited Close;
   if (FStmtHandle <> 0) then begin// Free statement-handle! Otherwise: Exception!
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_drop);
     FStmtHandle := 0;
@@ -607,9 +606,9 @@ begin
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_UNPREPARE);
 end;
 
-procedure TZInterbase6CallableStatement.Close;
+procedure TZInterbase6CallableStatement.AfterClose;
 begin
-  inherited Close;
+  inherited AfterClose;
   if FStmtHandle <> 0 then begin// Free statement-handle! On the other hand: Exception!
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_DROP);
     FStmtHandle := 0;

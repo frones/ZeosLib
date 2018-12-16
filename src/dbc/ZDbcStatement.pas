@@ -94,7 +94,6 @@ type
   protected
     FCursorName: RawByteString;
     FRefCountAdded: Boolean; //while closing / unpreparing we need to indicate if closing LastResultSet will detroy this object
-    //FLastResultSetRefCountAdded: Boolean; //did we do a _addref to the weak pointer referenced LastResulSet?
     fWBuffer: array[Byte] of WideChar;
     fABuffer: array[Byte] of AnsiChar;
     FWSQL: ZWideString;
@@ -156,7 +155,9 @@ type
 
     function GetSQL : String;
 
-    procedure Close; virtual;
+    procedure BeforeClose; virtual;
+    procedure Close;
+    procedure AfterClose; virtual;
 
     function GetMaxFieldSize: Integer; virtual;
     procedure SetMaxFieldSize(Value: Integer); virtual;
@@ -265,7 +266,7 @@ type
     function ExecuteUpdatePrepared: Integer; virtual;
     function ExecutePrepared: Boolean; virtual;
 
-    procedure Close; override;
+    procedure BeforeClose; override;
     function GetSQL : String;
     procedure Prepare; virtual;
     procedure Unprepare; virtual;
@@ -358,7 +359,7 @@ type
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
     procedure ClearParameters; override;
-    procedure Close; override;
+    procedure BeforeClose; override;
 
     function IsFunction: Boolean;
     function HasOutParameter: Boolean;
@@ -444,7 +445,7 @@ type
     function PrepareWideSQLQuery: ZWideString; virtual;
     function PrepareAnsiSQLQuery: RawByteString; virtual;
   public
-    procedure Close; override;
+    procedure BeforeClose; override;
 
     function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
@@ -709,11 +710,8 @@ procedure TZAbstractStatement.FreeOpenResultSetReference(const ResultSet: IZResu
 begin
   if FOpenResultSet = Pointer(ResultSet) then
     FOpenResultSet := nil;
-  //note: if refcount of FLastResultSet = 1 and the call to FreeOpenResultSetReference by IZResultSet.Close is done
-  //the object has been destroyed while we're still closing the resultset.
-  //Each further code sequence in IZResultSet.Close is invalid then!
-  //if Pointer(FLastResultSet) = Pointer(ResultSet) then
-    //FLastResultSet := nil;
+  if Pointer(FLastResultSet) = Pointer(ResultSet) then
+    FLastResultSet := nil;
 end;
 
 class function TZAbstractStatement.GetNextStatementId: integer;
@@ -788,19 +786,18 @@ end;
   <code>ResultSet</code> object, if one exists, is also closed.
 }
 procedure TZAbstractStatement.Close;
+var RefCountAdded: Boolean;
 begin
+  RefCountAdded := (RefCount = 1) and Assigned(FOpenResultSet) or Assigned(FLastResultSet);
+  if RefCountAdded then _AddRef;
+  try
+    BeforeClose;
   FClosed := True;
-  if FRefCountAdded and Assigned(FLastResultSet) then begin
-    LastResultSet.Close;
-    LastResultSet := nil;
-  end else
-    if not FRefCountAdded and Assigned(FLastResultSet) and (RefCount = 1) then
-    try
-      _AddRef;
-      LastResultSet.Close;
-      LastResultSet := nil;
+    AfterClose;
     finally
-      _Release; // possible running into destructor now
+    FClosed := True;
+    if RefCountAdded then
+      _Release;
     end;
 end;
 
@@ -1113,7 +1110,10 @@ end;
 }
 function TZAbstractStatement.GetResultSet: IZResultSet;
 begin
-  Result := LastResultSet;
+  Result := FLastResultSet;
+  { does not work as TZGenericTestDbcResultSet.TestLastQuery does expect it! }
+  {FLastResultSet := nil;
+  FOpenResultSet := Pointer(Result);}
 end;
 
 {**
@@ -1321,6 +1321,21 @@ end;
 procedure TZAbstractStatement.AddBatchRequest(const SQL: string);
 begin
   FBatchQueries.Add(SQL);
+end;
+
+procedure TZAbstractStatement.AfterClose;
+begin
+
+end;
+
+procedure TZAbstractStatement.BeforeClose;
+begin
+  if Assigned(FLastResultSet) then
+    LastResultSet.Close;
+  if Assigned(FOpenResultSet) then begin
+    IZResultSet(FOpenResultSet).Close;
+    FOpenResultSet := nil;
+  end;
 end;
 
 {**
@@ -2388,22 +2403,11 @@ begin
   DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
-procedure TZAbstractPreparedStatement.Close;
+procedure TZAbstractPreparedStatement.BeforeClose;
 begin
-  if (RefCount = 1) and Assigned(FOpenResultSet) or Assigned(FLastResultSet) then begin
-    FRefCountAdded := True;
-    _AddRef;
-  end;
-  try
+  inherited BeforeClose;
     if Prepared then
       Unprepare;
-    inherited Close;
-  finally
-    if FRefCountAdded then begin
-      FRefCountAdded := False;
-      _Release;
-    end;
-  end;
 end;
 
 function TZAbstractPreparedStatement.GetSQL: String;
@@ -2671,10 +2675,10 @@ end;
   garbage collected. When a <code>Statement</code> object is closed, its current
   <code>ResultSet</code> object, if one exists, is also closed.
 }
-procedure TZAbstractCallableStatement.Close;
+procedure TZAbstractCallableStatement.BeforeClose;
 begin
   ClearResultSets;
-  inherited Close;
+  inherited BeforeClose;
 end;
 
 
@@ -3444,9 +3448,9 @@ end;
 {**
   Closes this statement and frees all resources.
 }
-procedure TZEmulatedPreparedStatement.Close;
+procedure TZEmulatedPreparedStatement.BeforeClose;
 begin
-  inherited Close;
+  inherited BeforeClose;
   if LastStatement <> nil then
   begin
     FLastStatement.Close;

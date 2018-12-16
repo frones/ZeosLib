@@ -164,7 +164,7 @@ type
       ConSettings: PZConSettings);
     destructor Destroy; override;
 
-    procedure Close; override;
+    procedure AfterClose; override;
     procedure ResetCursor; override;
 
     //======================================================================
@@ -317,7 +317,7 @@ type
       const ResultSet: IZResultSet; const SQL: string;
       const Resolver: IZCachedResolver; ConSettings: PZConSettings);
 
-    procedure Close; override;
+    procedure AfterClose; override;
     procedure ResetCursor; override;
     function GetMetaData: IZResultSetMetaData; override;
 
@@ -772,16 +772,12 @@ end;
   sequence of multiple results. A <code>ResultSet</code> object
   is also automatically closed when it is garbage collected.
 }
-procedure TZAbstractCachedResultSet.Close;
+procedure TZAbstractCachedResultSet.AfterClose;
 var
   I: Integer;
 begin
-  if Closed then
-     Exit;
-  inherited Close;
-
-  if Assigned(FRowAccessor) then
-  begin
+  inherited AfterClose;
+  if Assigned(FRowAccessor) then begin
     for I := 0 to FRowsList.Count - 1 do
       FRowAccessor.DisposeBuffer(PZRowBuffer(FRowsList[I]));
     for I := 0 to FInitialRowsList.Count - 1 do
@@ -807,19 +803,17 @@ procedure TZAbstractCachedResultSet.ResetCursor;
 var
   I: Integer;
 begin
-  if not Closed then begin
-    if Assigned(FRowAccessor) then
-    begin
-      for I := 0 to FRowsList.Count - 1 do
-        FRowAccessor.DisposeBuffer(PZRowBuffer(FRowsList[I]));
-      for I := 0 to FInitialRowsList.Count - 1 do
-        FRowAccessor.DisposeBuffer(PZRowBuffer(FInitialRowsList[I]));
-      FRowsList.Clear;
-      FInitialRowsList.Clear;
-      FCurrentRowsList.Clear;
-    end;
-    inherited ResetCursor;
+  if Assigned(FRowAccessor) then
+  begin
+    for I := 0 to FRowsList.Count - 1 do
+      FRowAccessor.DisposeBuffer(PZRowBuffer(FRowsList[I]));
+    for I := 0 to FInitialRowsList.Count - 1 do
+      FRowAccessor.DisposeBuffer(PZRowBuffer(FInitialRowsList[I]));
+    FRowsList.Clear;
+    FInitialRowsList.Clear;
+    FCurrentRowsList.Clear;
   end;
+  inherited ResetCursor;
 end;
 
 //======================================================================
@@ -2452,16 +2446,12 @@ end;
   sequence of multiple results. A <code>ResultSet</code> object
   is also automatically closed when it is garbage collected.
 }
-procedure TZCachedResultSet.Close;
+procedure TZCachedResultSet.AfterClose;
 begin
-  if not Closed then begin
-    inherited Close;
-    if Assigned(ColumnsInfo) then //close may release the object -> a destroy will be called -> the list does'nt exist anymore
-      ColumnsInfo.Clear;
-    If Assigned(FResultset) then begin
-      FResultset.Close;
-      FResultSet := nil;
-    end;
+  inherited AfterClose;
+  If Assigned(FResultset) then begin
+    FResultset.Close;
+    FResultSet := nil;
   end;
 end;
 

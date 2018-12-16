@@ -80,7 +80,7 @@ type
     FColumnsInfo: TObjectList;
     FMetadata: TContainedObject;
     FStatement: IZStatement;
-    FWeakIZResultSetReferenceOfSelf: Pointer; //EH: reminder for dereferencing on stmt
+    FWeakIntfPtrOfSelf: Pointer; //EH: Remainder for dereferencing on stmt
     //note: while in destruction IZResultSet(Self) has no longer the same pointer address!
     //so we mark the address in constructor
   protected
@@ -121,7 +121,9 @@ type
     procedure SetConcurrency(Value: TZResultSetConcurrency);
 
     function Next: Boolean; virtual;
+    procedure BeforeClose; virtual;
     procedure Close; virtual;
+    procedure AfterClose; virtual;
     procedure ResetCursor; virtual;
     function WasNull: Boolean; virtual;
 
@@ -698,7 +700,7 @@ begin
 
   { the constructor keeps the refcount to 1}
   QueryInterface(IZResultSet, RS);
-  FWeakIZResultSetReferenceOfSelf := Pointer(RS); //reminder for unregister on stmt!
+  FWeakIntfPtrOfSelf := Pointer(RS); //Remainder for unregister on stmt!
   RS := nil;
   if Statement = nil then begin
     FResultSetType := rtForwardOnly;
@@ -736,7 +738,6 @@ begin
   if not FClosed then
       Close;
   FreeAndNil(FMetadata);
-  FStatement := nil;
   FreeAndNil(FColumnsInfo);
   inherited Destroy;
 end;
@@ -869,11 +870,13 @@ end;
 }
 procedure TZAbstractResultSet.ResetCursor;
 begin
-  if not FClosed and Assigned(Statement){virtual RS ! } then begin
+  if not FClosed then begin
+    if Assigned(Statement){virtual RS ! }  then begin
     FFetchSize := Statement.GetFetchSize;
     FPostUpdates := Statement.GetPostUpdates;
     FLocateUpdates := Statement.GetLocateUpdates;
     FMaxRows := Statement.GetMaxRows;
+    end;
     FRowNo := 0;
     FLastRowNo := 0;
     LastWasNull := True;
@@ -894,16 +897,23 @@ end;
   is also automatically closed when it is garbage collected.
 }
 procedure TZAbstractResultSet.Close;
+var RefCountAdded: Boolean;
 begin
   if not Closed then begin
-    ResetCursor;
+    BeforeClose;
     FClosed := True;
-    if FColumnsInfo <> nil then
-      FColumnsInfo.Clear;
+    RefCountAdded := False;
     if (FStatement <> nil) then begin
-      FStatement.FreeOpenResultSetReference(IZResultSet(FWeakIZResultSetReferenceOfSelf));
+      if FRefCount = 1 then begin
+        _AddRef;
+        RefCountAdded := True;
+      end;
+      FStatement.FreeOpenResultSetReference(IZResultSet(FWeakIntfPtrOfSelf));
       FStatement := nil;
     end;
+    AfterClose;
+    if RefCountAdded then
+       _Release;
   end;
 end;
 
@@ -2386,6 +2396,11 @@ end;
   this <code>ResultSet</code> object, just before the
   first row. This method has no effect if the result set contains no rows.
 }
+procedure TZAbstractResultSet.BeforeClose;
+begin
+  ResetCursor;
+end;
+
 procedure TZAbstractResultSet.BeforeFirst;
 begin
   MoveAbsolute(0);
@@ -2396,6 +2411,11 @@ end;
   this <code>ResultSet</code> object, just after the
   last row. This method has no effect if the result set contains no rows.
 }
+procedure TZAbstractResultSet.AfterClose;
+begin
+  FColumnsInfo.Clear;
+end;
+
 procedure TZAbstractResultSet.AfterLast;
 begin
   Last;

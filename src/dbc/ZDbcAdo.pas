@@ -108,8 +108,6 @@ type
     procedure Open; override;
     procedure InternalClose; override;
 
-    procedure SetReadOnly(ReadOnly: Boolean); override;
-
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
@@ -130,7 +128,7 @@ uses
 const                                                //adXactUnspecified
   IL: array[TZTransactIsolationLevel] of TOleEnum = (adXactChaos, adXactReadUncommitted, adXactReadCommitted, adXactRepeatableRead, adXactSerializable);
 
-{ TZDBLibDriver }
+{ TZAdoDriver }
 
 {**
   Constructs this object with default properties.
@@ -569,21 +567,6 @@ begin
       raise;
     end;
   end;
-end;
-
-{**
-  Puts this connection in read-only mode as a hint to enable
-  database optimizations.
-
-  <P><B>Note:</B> This method cannot be called while in the
-  middle of a transaction.
-
-  @param readOnly true enables read-only mode; false disables
-    read-only mode.
-}
-procedure TZAdoConnection.SetReadOnly(ReadOnly: Boolean);
-begin
-  inherited;
 end;
 
 {**
