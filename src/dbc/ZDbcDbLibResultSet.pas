@@ -833,7 +833,7 @@ begin
   Result := 0;
   if Data <> nil then
     if DT = tdsInt4 then
-      Result := PLongint(Data)^
+      Result := PInteger(Data)^
     else
       FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsInt4),
         @Result, SizeOf(Result));

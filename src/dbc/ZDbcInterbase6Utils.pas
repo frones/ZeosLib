@@ -94,7 +94,7 @@ type
     NumSegments: Word;
     MaxSegmentSize: Word;
     BlobType: SmallInt;
-    TotalSize: LongInt;
+    TotalSize: Integer;
   end;
 
   { Base interface for sqlda }

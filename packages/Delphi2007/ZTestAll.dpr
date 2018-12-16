@@ -81,7 +81,7 @@ begin
   If CommandLineSwitches.batch then
     TextTestRunner.RunTest(CreateTestSuite).Free
   else if CommandLineSwitches.xml then
-    XMLTestRunner2.RunTest(CreateTestSuite, CommandLineSwitches.xmlfilename).Fre	
+    XMLTestRunner2.RunTest(CreateTestSuite, CommandLineSwitches.xmlfilename)	
   else
     GUITestRunner.RunTest(CreateTestSuite);
 end.

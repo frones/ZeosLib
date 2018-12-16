@@ -237,9 +237,9 @@ procedure SQLStrToFloatDef(Value: PWideChar; const Def: Single; out Result: Sing
   @return a string retrived from the buffer.
 }
 {$IFDEF UNICODE}
-function BufferToStr(Buffer: PWideChar; Length: LongInt): string;
+function BufferToStr(Buffer: PWideChar; Length: Integer): string;
 {$ELSE}
-function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string;
+function BufferToStr(Buffer: PAnsiChar; Length: Integer): string;
 {$ENDIF}
 
 {**
@@ -248,7 +248,7 @@ function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string;
   @param Length a buffer length.
   @return a TBytes retrived from the buffer.
 }
-function BufferToBytes(Buffer: Pointer; Length: LongInt): TBytes; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function BufferToBytes(Buffer: Pointer; Length: Integer): TBytes; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 {**
   Converts a string into boolean value.
@@ -1481,9 +1481,9 @@ end;
 
 { Convert string buffer into pascal string }
 {$IFDEF UNICODE}
-function BufferToStr(Buffer: PWideChar; Length: LongInt): string;
+function BufferToStr(Buffer: PWideChar; Length: Integer): string;
 {$ELSE}
-function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string;
+function BufferToStr(Buffer: PAnsiChar; Length: Integer): string;
 {$ENDIF}
 begin
   Result := '';
@@ -1491,7 +1491,7 @@ begin
     SetString(Result, Buffer, Length);
 end;
 
-function BufferToBytes(Buffer: Pointer; Length: LongInt): TBytes;
+function BufferToBytes(Buffer: Pointer; Length: Integer): TBytes;
 begin
   SetLength(Result, Length);
   {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Result)^, Length);

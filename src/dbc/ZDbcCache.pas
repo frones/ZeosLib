@@ -424,12 +424,12 @@ begin
   if Result = BothNotNull then
   //function ShaCompareInt(Item1, Item2: Pointer): Integer;
   begin //on 100 mio execs 200ms faster
-    Result := PLongInt(V1)^;
-    if Result xor PLongInt(V2)^>=0
-      then Result:=Result-PLongInt(V2)^
+    Result := PInteger(V1)^;
+    if Result xor PInteger(V2)^>=0
+      then Result:=Result-PInteger(V2)^
       else Result:=Result or 1;
   end; //Than My (EH) overflow save idea
-  //Result := Ord(PLongInt(V1)^ > PLongInt(V2)^)-Ord(PLongInt(V1)^ < PLongInt(V2)^);
+  //Result := Ord(PInteger(V1)^ > PInteger(V2)^)-Ord(PInteger(V1)^ < PInteger(V2)^);
 end;
 
 function CompareInteger_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -441,7 +441,7 @@ function CompareInteger_Equals(const Null1, Null2: Boolean; const V1, V2): Integ
 begin
   Result := NullsEqualMatrix[Null1, Null2];
   if Result = BothNotNull then
-    Result := Ord(PLongInt(V1)^ <> PLongInt(V2)^);
+    Result := Ord(PInteger(V1)^ <> PInteger(V2)^);
 end;
 
 function CompareInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -3258,106 +3258,31 @@ begin
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stByte:
-        begin
-          Result.VType := vtUInteger;
-          Result.VUInteger := PByte(ValuePtr)^;
-        end;
-      stShort:
-        begin
-          Result.VType := vtInteger;
-          Result.VInteger := PShortInt(ValuePtr)^;
-        end;
-      stWord:
-        begin
-          Result.VType := vtUInteger;
-          Result.VUInteger := PWord(ValuePtr)^;
-        end;
-      stSmall:
-        begin
-          Result.VType := vtInteger;
-          Result.VInteger := PSmallInt(ValuePtr)^;
-        end;
-      stLongWord:
-        begin
-          Result.VType := vtUInteger;
-          Result.VUInteger := PLongWord(ValuePtr)^;
-        end;
-      stInteger:
-        begin
-          Result.VType := vtInteger;
-          Result.VInteger := PInteger(ValuePtr)^;
-        end;
-      stULong:
-        begin
-          Result.VType := vtUInteger;
-          Result.VUInteger := PUInt64(ValuePtr)^;
-        end;
-      stLong:
-        begin
-          Result.VType := vtInteger;
-          Result.VInteger := PInt64(ValuePtr)^;
-        end;
-      stFloat:
-        begin
-          Result.VType := vtFloat;
-          Result.VFloat := PSingle(ValuePtr)^;
-        end;
-      stDouble:
-        begin
-          Result.VType := vtFloat;
-          Result.VFloat := PDouble(ValuePtr)^;
-        end;
-      stCurrency:
-        begin
-          Result.VType := vtFloat;
-          Result.VFloat := PCurrency(ValuePtr)^;
-        end;
-      stBigDecimal:
-        begin
-          Result.VType := vtFloat;
-          Result.VFloat := PExtended(ValuePtr)^;
-        end;
-      stBoolean:
-        begin
-          Result.VType := vtBoolean;
-          Result.VBoolean := PWordBool(ValuePtr)^;
-        end;
-      stDate, stTime, stTimestamp:
-        begin
-          Result.VType := vtDateTime;
-          Result.VDateTime := PDateTime(ValuePtr)^;
-        end;
-      stString:
-        begin
-          Result.VType := vtString;
-          Result.VString := GetString(ColumnIndex, IsNull);
-        end;
-      stUnicodeString:
-        begin
-          Result.VType := vtUnicodeString;
-          Result.VUnicodeString := GetUnicodeString(ColumnIndex, IsNull);
-        end;
-      stBytes, stGUID, stBinaryStream:
-        begin
-          Result.VType := vtBytes;
-          Result.VBytes := GetBytes(ColumnIndex, IsNull);
-        end;
-      stAsciiStream:
-        begin
-          Result.VType := vtString;
-          Result.VString := GetString(ColumnIndex, IsNull);
-        end;
-      stUnicodeStream:
-        begin
-          Result.VType := vtUnicodeString;
-          Result.VUnicodeString := GetUnicodeString(ColumnIndex, IsNull);
-        end;
-      stDataSet:
-        begin
-          Result.VType := vtInterface;
-          Result.VInterface := GetDataSet(ColumnIndex, IsNull);
-        end;
+      stByte:       Result := EncodeUInteger(PByte(ValuePtr)^);
+      stShort:      Result := EncodeInteger(PShortInt(ValuePtr)^);
+      stWord:       Result := EncodeUInteger(PWord(ValuePtr)^);
+      stSmall:      Result := EncodeInteger(PSmallInt(ValuePtr)^);
+      stLongWord:   Result := EncodeUInteger(PCardinal(ValuePtr)^);
+      stInteger:    Result := EncodeInteger(PInteger(ValuePtr)^);
+      stULong:      Result := EncodeUInteger(PUInt64(ValuePtr)^);
+      stLong:       Result := EncodeInteger(PInt64(ValuePtr)^);
+      stFloat:      Result := {$IFDEF BCD_TEST}EncodeDouble{$ELSE}EncodeFloat{$ENDIF}(PSingle(ValuePtr)^);
+      stDouble:     Result := {$IFDEF BCD_TEST}EncodeDouble{$ELSE}EncodeFloat{$ENDIF}(PDouble(ValuePtr)^);
+      stCurrency:   Result := {$IFDEF BCD_TEST}EncodeCurrency{$ELSE}EncodeFloat{$ENDIF}(PCurrency(ValuePtr)^);
+      stBigDecimal: {$IFDEF BCD_TEST}
+                    Result := EncodeBigDecimal(PBCD(ValuePtr)^);
+                    {$ELSE}
+                    Result := EncodeFloat(PCurrency(ValuePtr)^);
+                    {$ENDIF}
+      stBoolean:    Result := EncodeBoolean(PWordBool(ValuePtr)^);
+      stDate,
+      stTime,
+      stTimestamp:  Result := EncodeDateTime(PDateTime(ValuePtr)^);
+      stString,
+      stAsciiStream:Result := EncodeString(GetString(ColumnIndex, IsNull));
+      stUnicodeString,
+      stUnicodeStream: Result := EncodeUnicodeString(GetUnicodeString(ColumnIndex, IsNull));
+      stBytes, stGUID, stBinaryStream: Result := EncodeBytes(GetBytes(ColumnIndex, IsNull));
       else
         Result.VType := vtNull;
     end;

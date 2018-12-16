@@ -828,7 +828,7 @@ begin
             PSmallInt(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
         tdsInt4:
           SoftVarManager.SetAsInteger(Temp,
-            PLongInt(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
+            PInteger(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
         tdsInt8:
           SoftVarManager.SetAsInteger(Temp,
             PInt64(FPLainDriver.dbRetData(FHandle, ParamIndex))^);

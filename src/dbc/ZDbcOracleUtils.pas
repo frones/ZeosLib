@@ -395,7 +395,7 @@ begin
       stBoolean, stByte, stShort, stWord, stSmall, stInteger:
         begin
           TypeCode := SQLT_INT;
-          Length := SizeOf(LongInt);
+          Length := SizeOf(Integer);
         end;
       stUlong:
         begin
@@ -619,7 +619,7 @@ begin
           if Variable^.Length = 8 then
             PInt64(Variable^.Data)^ := ClientVarManager.GetAsInteger(Value)
           else
-            PLongInt(Variable^.Data)^ := ClientVarManager.GetAsInteger(Value);
+            PInteger(Variable^.Data)^ := ClientVarManager.GetAsInteger(Value);
         SQLT_FLT:
           PDouble(Variable^.Data)^ := ClientVarManager.GetAsFloat(Value);
         SQLT_STR:
@@ -780,15 +780,15 @@ begin
     if ZData <> nil then
       case Variable^.ColType of
         stBoolean: //Oracle doesn't support boolean types so lets use integers and OCI converts it..
-          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := Ord(ZBooleanArray[I]);
+          for i := 0 to Iteration -1 do {%H-}PInteger({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Integer))^ := Ord(ZBooleanArray[I]);
         stByte: //Oracle doesn't support byte type so lets use integers and OCI converts it..
-          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZByteArray[I];
+          for i := 0 to Iteration -1 do {%H-}PInteger({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Integer))^ := ZByteArray[I];
         stShort: //Oracle doesn't support ShortInt type so lets use integers and OCI converts it..
-          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZShortIntArray[I];
+          for i := 0 to Iteration -1 do {%H-}PInteger({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Integer))^ := ZShortIntArray[I];
         stWord: //Oracle doesn't support word type so lets use integers and OCI converts it..
-          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZWordArray[I];
+          for i := 0 to Iteration -1 do {%H-}PInteger({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Integer))^ := ZWordArray[I];
         stSmall: //Oracle doesn't support smallint type so lets use integers and OCI converts it..
-          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZSmallIntArray[I];
+          for i := 0 to Iteration -1 do {%H-}PInteger({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Integer))^ := ZSmallIntArray[I];
         stLongWord:
           //since 11.2 we can use Int64 types too
           if Connection.GetClientVersion >= 11002000 then
@@ -796,7 +796,7 @@ begin
           else
             for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZLongWordArray[I];
         stInteger: { no conversion required }
-          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(ZIntegerArray[0], Variable^.Data^, Iteration*SizeOf(LongInt));
+          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(ZIntegerArray[0], Variable^.Data^, Iteration*SizeOf(Integer));
         stULong: //we use String types here
           for i := 0 to Iteration -1 do
           begin

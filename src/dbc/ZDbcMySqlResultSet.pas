@@ -1205,9 +1205,9 @@ begin
           FRawTemp := IntToRaw(PWord(FColBind^.buffer)^);
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          FRawTemp := IntToRaw(PLongInt(FColBind^.buffer)^)
+          FRawTemp := IntToRaw(PInteger(FColBind^.buffer)^)
         else
-          FRawTemp := IntToRaw(PLongWord(FColBind^.buffer)^);
+          FRawTemp := IntToRaw(PCardinal(FColBind^.buffer)^);
       FIELD_TYPE_FLOAT:
         FRawTemp := FloatToSQLRaw(PSingle(FColBind^.buffer)^);
       FIELD_TYPE_DOUBLE:
@@ -1327,9 +1327,9 @@ begin
           Result := IntToRaw(PWord(FColBind^.buffer)^);
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := IntToRaw(PLongInt(FColBind^.buffer)^)
+          Result := IntToRaw(PInteger(FColBind^.buffer)^)
         else
-          Result := IntToRaw(PLongWord(FColBind^.buffer)^);
+          Result := IntToRaw(PCardinal(FColBind^.buffer)^);
       FIELD_TYPE_FLOAT:
         Result := FloatToSQLRaw(PSingle(FColBind^.buffer)^);
       FIELD_TYPE_DOUBLE:
@@ -1426,9 +1426,9 @@ begin
           Result := PWord(FColBind^.buffer)^ <> 0;
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := PLongInt(FColBind^.buffer)^ <> 0
+          Result := PInteger(FColBind^.buffer)^ <> 0
         else
-          Result := PLongWord(FColBind^.buffer)^ <> 0;
+          Result := PCardinal(FColBind^.buffer)^ <> 0;
       FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(FColBind^.buffer)^) <> 0;
       FIELD_TYPE_DOUBLE:    Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(FColBind^.buffer)^) <> 0;
       FIELD_TYPE_NULL:      Result := False;
@@ -1505,7 +1505,7 @@ begin
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := PLongInt(FColBind^.buffer)^
+          Result := PInteger(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
       FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(FColBind^.buffer)^);
@@ -1587,7 +1587,7 @@ begin
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := PLongInt(FColBind^.buffer)^
+          Result := PInteger(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
       FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(FColBind^.buffer)^);
@@ -1668,9 +1668,9 @@ begin
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := PLongInt(FColBind^.buffer)^
+          Result := PInteger(FColBind^.buffer)^
         else
-          Result := PLongWord(FColBind^.buffer)^;
+          Result := PCardinal(FColBind^.buffer)^;
       FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(FColBind^.buffer)^);
       FIELD_TYPE_DOUBLE:    Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(FColBind^.buffer)^);
       FIELD_TYPE_NULL:      Result := 0;
@@ -1749,7 +1749,7 @@ begin
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := PLongInt(FColBind^.buffer)^
+          Result := PInteger(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
       FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(FColBind^.buffer)^);
@@ -1831,9 +1831,9 @@ begin
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := PLongInt(FColBind^.buffer)^
+          Result := PInteger(FColBind^.buffer)^
         else
-          Result := PLongWord(FColBind^.buffer)^;
+          Result := PCardinal(FColBind^.buffer)^;
       FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(FColBind^.buffer)^);
       FIELD_TYPE_DOUBLE:    Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(FColBind^.buffer)^);
       FIELD_TYPE_NULL:      Result := 0;
@@ -1913,7 +1913,7 @@ begin
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := PLongInt(FColBind^.buffer)^
+          Result := PInteger(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
       FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(FColBind^.buffer)^);
@@ -1995,9 +1995,9 @@ begin
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := PLongInt(FColBind^.buffer)^
+          Result := PInteger(FColBind^.buffer)^
         else
-          Result := PLongWord(FColBind^.buffer)^;
+          Result := PCardinal(FColBind^.buffer)^;
       FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(FColBind^.buffer)^);
       FIELD_TYPE_DOUBLE:    Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(FColBind^.buffer)^);
       FIELD_TYPE_NULL:      Result := 0;
@@ -2077,7 +2077,7 @@ begin
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := PLongInt(FColBind^.buffer)^
+          Result := PInteger(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
       FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(FColBind^.buffer)^);
@@ -2158,7 +2158,7 @@ begin
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := PLongInt(FColBind^.buffer)^
+          Result := PInteger(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
       FIELD_TYPE_FLOAT:     Result := PSingle(FColBind^.buffer)^;
@@ -2225,9 +2225,9 @@ begin
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := PLongInt(FColBind^.buffer)^
+          Result := PInteger(FColBind^.buffer)^
         else
-          Result := PLongWord(FColBind^.buffer)^;
+          Result := PCardinal(FColBind^.buffer)^;
       FIELD_TYPE_FLOAT:     if FColBind^.decimals < 20
                             then Result := RoundTo(PSingle(FColBind^.buffer)^, FColBind^.decimals*-1)
                             else Result := PSingle(FColBind^.buffer)^;
@@ -2297,7 +2297,7 @@ begin
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := PLongInt(FColBind^.buffer)^
+          Result := PInteger(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
       FIELD_TYPE_FLOAT:     if FColBind^.decimals < 20
@@ -2423,9 +2423,9 @@ begin
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := PLongInt(FColBind^.buffer)^
+          Result := PInteger(FColBind^.buffer)^
         else
-          Result := PLongWord(FColBind^.buffer)^;
+          Result := PCardinal(FColBind^.buffer)^;
       FIELD_TYPE_FLOAT:     Result := PSingle(FColBind^.buffer)^;
       FIELD_TYPE_DOUBLE:    Result := PDouble(FColBind^.buffer)^;
       FIELD_TYPE_NULL:      Result := 0;
@@ -2505,9 +2505,9 @@ begin
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := PLongInt(FColBind^.buffer)^
+          Result := PInteger(FColBind^.buffer)^
         else
-          Result := PLongWord(FColBind^.buffer)^;
+          Result := PCardinal(FColBind^.buffer)^;
       FIELD_TYPE_FLOAT:     Result := PSingle(FColBind^.buffer)^;
       FIELD_TYPE_DOUBLE:    Result := PDouble(FColBind^.buffer)^;
       FIELD_TYPE_NULL:      Result := 0;
@@ -2588,7 +2588,7 @@ begin
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
         if FColBind^.is_signed then
-          Result := PLongInt(FColBind^.buffer)^
+          Result := PInteger(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
       FIELD_TYPE_FLOAT:     Result := PSingle(FColBind^.buffer)^;

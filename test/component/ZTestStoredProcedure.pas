@@ -588,11 +588,11 @@ begin
 
   CheckEquals('P1', StoredProc.Params[0].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[0].ParamType));
-  CheckEquals(ord(ftSmallInt), ord(StoredProc.Params[0].DataType));
+  CheckEquals(ord({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF}), ord(StoredProc.Params[0].DataType));
 
   CheckEquals('P2', StoredProc.Params[1].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[1].ParamType));
-  CheckEquals(ord(ftSmallInt), ord(StoredProc.Params[1].DataType));
+  CheckEquals(ord({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF}), ord(StoredProc.Params[1].DataType));
 
   CheckEquals('P3', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[2].ParamType));

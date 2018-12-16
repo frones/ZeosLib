@@ -74,7 +74,7 @@ type
   psword  = ^sword;
   eword   = Integer;
   uword   = Cardinal;
-  sb4     = LongInt;
+  sb4     = Integer;
   ub4     = Cardinal;
   sb2     = SmallInt;
   ub2     = Word;

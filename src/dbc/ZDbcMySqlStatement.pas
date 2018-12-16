@@ -739,8 +739,8 @@ begin
           else PWord(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
         FIELD_TYPE_LONG:
           if Bind^.is_signed
-          then PLongInt(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
-          else PLongWord(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
+          then PInteger(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
+          else PCardinal(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
         FIELD_TYPE_LONGLONG:
           if Bind^.is_signed
           then PInt64(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
@@ -1663,7 +1663,7 @@ begin
     FIELD_TYPE_BIT: case PULong(NativeUInt(MYSQL_FIELD)+FieldOffSets.length)^ of
                       0..8  : bind^.Length := SizeOf(Byte);
                       9..16 : bind^.Length := SizeOf(Word);
-                      17..32: bind^.Length := SizeOf(LongWord);
+                      17..32: bind^.Length := SizeOf(Cardinal);
                       else    bind^.Length := SizeOf(UInt64);
                     end;
     FIELD_TYPE_DATE:        bind^.Length := sizeOf(TMYSQL_TIME);

@@ -719,7 +719,7 @@ var
       outParamValues[Index] := NullVariant
     else
       case CurrentVar^.TypeCode of
-        SQLT_INT: outParamValues[Index] := EncodeInteger(PLongInt(CurrentVar^.Data)^ );
+        SQLT_INT: outParamValues[Index] := EncodeInteger(PInteger(CurrentVar^.Data)^ );
         SQLT_FLT: outParamValues[Index] := EncodeFloat(PDouble(CurrentVar^.Data)^ );
         SQLT_STR:
           begin

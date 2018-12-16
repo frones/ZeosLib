@@ -78,7 +78,7 @@ type
     FColumns: PZSQLVars;
     FChunkSize: Integer;
     FIteration: Integer; //Max count of rows which fit into BufferSize <= FZBufferSize
-    FCurrentRowBufIndex: LongWord; //The current row in buffer! NOT the current row of RS
+    FCurrentRowBufIndex: Cardinal; //The current row in buffer! NOT the current row of RS
     FZBufferSize: Integer; //max size for multiple rows. If Row > Value ignore it!
     FRowsBuffer: TByteDynArray; //Buffer for multiple rows if possible which is reallocated or freed by IDE -> mem leak save!
     function GetSQLVarHolder(ColumnIndex: Integer): PZSQLVar; {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -295,15 +295,15 @@ begin
           end;
         SQLT_INT:
           begin
-            FRawTemp := IntToRaw({%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
+            FRawTemp := IntToRaw({%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
             Result := Pointer(FRawTemp);
-            Len := {$IFDEF WITH_INLINE}System.Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
+            Len := {$IFDEF WITH_INLINE}System.Length(FRawTemp){$ELSE}{%H-}PInteger(NativeUInt(FRawTemp) - 4)^{$ENDIF};
           end;
         SQLT_FLT:
           begin
             FRawTemp := FloatToSQLRaw({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
             Result := Pointer(FRawTemp);
-            Len := {$IFDEF WITH_INLINE}System.Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
+            Len := {$IFDEF WITH_INLINE}System.Length(FRawTemp){$ELSE}{%H-}PInteger(NativeUInt(FRawTemp) - 4)^{$ENDIF};
           end;
         SQLT_STR:
           begin
@@ -364,8 +364,8 @@ begin
             while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
             Result := ConSettings^.ConvFuncs.ZPRawToUTF8(P, Len, ConSettings^.ClientCodePage^.CP)
           end;
-        SQLT_INT: Result := IntToRaw({%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
-        SQLT_UIN: Result := IntToRaw({%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
+        SQLT_INT: Result := IntToRaw({%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
+        SQLT_UIN: Result := IntToRaw({%H-}PCardinal({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
         SQLT_FLT: Result := FloatToSQLRaw({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
         SQLT_STR:
           {$R-}
@@ -375,7 +375,7 @@ begin
           {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           ZSetString({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))+SizeOf(Integer),
-            {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^, Result);
+            {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^, Result);
         SQLT_DAT, SQLT_TIMESTAMP:
           Result := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(SQLVarHolder),
             ConSettings^.ReadFormatSettings, False);
@@ -543,7 +543,7 @@ begin
             ZSetString(P, Len, Result);
           end;
         SQLT_INT:
-          Result := IntToRaw({%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
+          Result := IntToRaw({%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
         SQLT_FLT:
           Result := FloatToSQLRaw({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
         SQLT_STR:
@@ -605,9 +605,9 @@ begin
     with SQLVarHolder^ do
       case TypeCode of
         SQLT_INT:
-          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^ <> 0;
+          Result := {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^ <> 0;
         SQLT_UIN:
-          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^ <> 0;
+          Result := {%H-}PCardinal({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^ <> 0;
         SQLT_FLT:
           Result := Trunc({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^) <> 0;
         SQLT_AFC:
@@ -656,9 +656,9 @@ begin
         SQLT_AFC:
           Result := RawToIntDef({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length)), 0);
         SQLT_INT:
-          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_UIN:
-          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PCardinal({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_FLT:
           Result := Trunc({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
         SQLT_STR:
@@ -699,9 +699,9 @@ begin
         SQLT_AFC:
           Result := RawToInt64Def({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length)), 0);
         SQLT_INT:
-          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_UIN:
-          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PCardinal({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_FLT:
           Result := Trunc({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
         SQLT_STR:
@@ -743,9 +743,9 @@ begin
         SQLT_AFC:
           Result := RawToUInt64Def({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length)), 0);
         SQLT_INT:
-          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_UIN:
-          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PCardinal({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_FLT:
           Result := Trunc({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
         SQLT_STR:
@@ -794,9 +794,9 @@ begin
             SqlStrToFloatDef(P, 0, Result, Len);
           end;
         SQLT_INT:
-          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_UIN:
-          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PCardinal({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_FLT:
           Result := {%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_STR:
@@ -847,9 +847,9 @@ begin
             SqlStrToFloatDef(P, 0, Result, Len);
           end;
         SQLT_INT:
-          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_UIN:
-          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PCardinal({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_FLT:
           Result := {%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_STR:
@@ -901,9 +901,9 @@ begin
             SqlStrToFloatDef(P, 0, Result, Len);
           end;
         SQLT_INT:
-          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_UIN:
-          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PCardinal({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_FLT:
           Result := {%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_STR:
@@ -975,9 +975,9 @@ begin
             goto ConvFromString;
           end;
         SQLT_INT:
-          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_UIN:
-          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PCardinal({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_FLT:
           Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
         SQLT_STR:
@@ -1045,9 +1045,9 @@ begin
             goto ConvFromString;
           end;
         SQLT_INT:
-          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_UIN:
-          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PCardinal({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_FLT:
           Result := Frac({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^);
         SQLT_STR:
@@ -1115,9 +1115,9 @@ begin
             goto ConvFromString;
           end;
         SQLT_INT:
-          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_UIN:
-          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
+          Result := {%H-}PCardinal({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_FLT:
           Result := {%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentRowBufIndex*Length))^;
         SQLT_STR:
