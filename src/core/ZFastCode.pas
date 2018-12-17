@@ -4286,27 +4286,25 @@ begin
   end;
   if (Flags and 4) <> 0 then begin {Hex = True}
     Flags := Flags and (not 1); {Valid := False}
-    while true do
-      begin
-        case Ord(P^) of
-          Ord('0')..Ord('9'): Digit := Ord(P^) - Ord('0');
-          Ord('a')..Ord('f'): Digit := Ord(P^) - AdjustLowercase;
-          Ord('A')..Ord('F'): Digit := Ord(P^) - AdjustUppercase;
-          else      Break;
-        end;
-        if UInt64(Result) > (HighInt64 shr 3) then
-          Break;
-        if UInt64(Result) < (MaxInt div 16)-15 then
-          begin {Use Integer Math instead of Int64}
-            I := Result;
-            I := (I shl 4) + Digit;
-            Result := I;
-          end
-        else
-          Result := (Result shl 4) + Digit;
-        Flags := Flags or 1; {Valid := True}
-        Inc(P);
+    while true do begin
+      case Ord(P^) of
+        Ord('0')..Ord('9'): Digit := Ord(P^) - Ord('0');
+        Ord('a')..Ord('f'): Digit := Ord(P^) - AdjustLowercase;
+        Ord('A')..Ord('F'): Digit := Ord(P^) - AdjustUppercase;
+        else      Break;
       end;
+      if UInt64(Result) > (HighInt64 shr 3) then
+        Break;
+      if UInt64(Result) < (MaxInt div 16)-15 then begin {Use Integer Math instead of Int64}
+          I := Result;
+          I := (I shl 4) + Digit;
+          Result := I;
+        end
+      else
+        Result := (Result shl 4) + Digit;
+      Flags := Flags or 1; {Valid := True}
+      Inc(P);
+    end;
   end else begin
     while true do begin
       if ( not (Ord(P^) in [Ord('0')..Ord('9')]) ) or

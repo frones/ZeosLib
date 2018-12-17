@@ -3290,7 +3290,7 @@ Inc_dbl:            Inc(Buf, 2);
                   goto inc_dbl;
                 end else
                   PByte(Buf)^ := Ord('0') + Day;
-      else      PByte(Buf)^ := C1;
+      else      PByte(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
     end;
     Inc(Buf);
     Inc(PFormat);
@@ -3409,7 +3409,7 @@ Inc_dbl:            Inc(Buf, 2);
                   goto Inc_Dbl;
                 end else
                   PWord(Buf)^ := Ord('0') + Day;
-      else      PWord(Buf)^ := C1;
+      else      PWord(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
     end;
     Inc(Buf);
     Inc(PFormat);
@@ -3580,7 +3580,7 @@ Inc_dbl:          Inc(Buf, 2);
                   end else
                     PByte(Buf)^ := Ord('0') + MSec;
                 end;
-      else      PByte(Buf)^ := C1;
+      else      PByte(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
     end;
     Inc(Buf);
     Inc(PFormat);
@@ -3710,7 +3710,7 @@ Inc_dbl:          Inc(Buf, 2);
                   end else
                     PWord(Buf)^ := Ord('0') + MSec;
                 end
-      else      PWord(Buf)^ := C1;
+      else      PWord(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
     end;
     Inc(Buf);
     Inc(PFormat)
@@ -3910,7 +3910,7 @@ Inc_dbl:            Inc(Buf, 2);
                   end else
                     PByte(Buf)^ := Ord('0') + MSec;
                 end;
-      else      PByte(Buf)^ := C1;
+      else      PByte(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
     end;
     Inc(Buf);
     Inc(PFormat);
@@ -4069,7 +4069,7 @@ Inc_dbl:            Inc(Buf, 2);
                   end else
                     PWord(Buf)^ := Ord('0') + MSec;
                 end;
-      else      PWord(Buf)^ := C1;
+      else      PWord(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
     end;
     Inc(Buf);
     Inc(PFormat);
