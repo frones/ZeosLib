@@ -1260,11 +1260,12 @@ begin
   if FLastWasOutParams and Assigned(LastResultSet) then
     LastResultSet.Close;
   if (FEmulatedParams or not FStmtHandleIsExecuted) and (FPMYSQL^ <> nil) then
-    while true do begin
+    //old lib's do not have mysql_next_result method
+    while Assigned(FPlainDriver.mysql_next_result) do begin
       Status := FPlainDriver.mysql_next_result(FPMYSQL^);
       if Status = -1 then
         Break
-      else if (Status = 0) {and (FPlainDriver.mysql_field_count(FPMYSQL) > 0)} then begin
+      else if (Status = 0) then begin
         FQueryHandle := FPlainDriver.mysql_store_result(FPMYSQL^);
         if FQueryHandle <> nil then begin
           FPlainDriver.mysql_free_result(FQueryHandle);
@@ -1282,11 +1283,13 @@ begin
         checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
           ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
             ConSettings^.ClientCodePage^.CP), Self);
-    end else *)while true do begin //so we need to do the job by hand now
+    end else *)
+       //old lib's do not have mysql_stmt_next_result method
+      while Assigned(FPlainDriver.mysql_stmt_next_result) do begin //so we need to do the job by hand now
       Status := FPlainDriver.mysql_stmt_next_result(FMYSQL_STMT);
       if Status = -1 then
         Break
-      else if (Status = 0) {and (FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) > 0)} then begin
+      else if (Status = 0) then begin
         //horray we can't store the result -> https://dev.mysql.com/doc/refman/5.7/en/mysql-stmt-store-result.html
         if FPlainDriver.mysql_stmt_free_result(FMYSQL_STMT) <> 0 then //MySQL allows this Mariadb is viny nilly now
           checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
