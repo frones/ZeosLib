@@ -292,17 +292,17 @@ begin
   LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
 
   SQL := {$IFDEF UNICODE}UTF8String{$ENDIF}(Database);
-  FHandle := GetPlainDriver.Open(Pointer(SQL));
-  if FHandle = nil then
-    CheckSQLiteError(GetPlainDriver, FHandle, SQLITE_ERROR,
-      lcConnect, LogMessage, ConSettings, FExtendedErrorMessage);
+  //patch by omaga software see https://sourceforge.net/p/zeoslib/tickets/312/
+  TmpInt := GetPlainDriver.open(Pointer(SQL), FHandle);
+  if TmpInt <> SQLITE_OK then
+    CheckSQLiteError(FPlainDriver, FHandle, TmpInt, lcConnect, LogMessage, ConSettings, FExtendedErrorMessage);
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
   { Turn on encryption if requested }
   if StrToBoolEx(Info.Values['encrypted']) then
   begin
     SQL := {$IFDEF UNICODE}UTF8String{$ENDIF}(Password);
-    CheckSQLiteError(GetPlainDriver, FHandle,
+    CheckSQLiteError(FPlainDriver, FHandle,
       GetPlainDriver.Key(FHandle, Pointer(SQL), Length(SQL)),
       lcConnect, 'SQLite.Key', ConSettings, FExtendedErrorMessage);
   end;

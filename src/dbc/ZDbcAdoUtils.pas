@@ -749,7 +749,7 @@ begin
                   else
                     raise Exception.Create('Unsupported String Variant');
                 end;
-                P.Precision := Max(P.Precision, Length(UniTemp));
+                //P.Precision := Max(P.Precision, Length(UniTemp));
                 P.Size := Max(1, Length(UniTemp) shl 1);
                 P.Value := UniTemp;
               end;

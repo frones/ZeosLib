@@ -86,6 +86,7 @@ uses
 {$ENDIF}
 
   SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
+  {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
   ZDbcIntfs, ZCompatibility, ZURL;
 
 
@@ -115,9 +116,9 @@ type
     FReadOnly: Boolean;
     FTransactIsolationLevel: TZTransactIsolationLevel;
     FConnection: IZConnection;
-    FDatasets: TList;
+    FDatasets: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     // Modified by cipto 8/1/2007 1:44:22 PM
-    FSequences: TList;
+    FSequences: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
 
     FLoginPrompt: Boolean;
     FStreamedConnected: Boolean;
@@ -237,7 +238,7 @@ type
     procedure GetTriggerNames(const TablePattern, SchemaPattern: string; List: TStrings);
 
     //EgonHugeist
-    function GetBinaryEscapeStringFromString(const BinaryString: AnsiString): String; overload;
+    function GetBinaryEscapeStringFromString(const BinaryString: RawByteString): String; overload;
     function GetBinaryEscapeStringFromStream(const Stream: TStream): String; overload;
     function GetBinaryEscapeStringFromFile(const FileName: String): String; overload;
     function GetURL: String;
@@ -310,7 +311,8 @@ type
 
 implementation
 
-uses ZMessages, ZClasses, ZAbstractRODataset, ZSysUtils,
+uses ZMessages, ZClasses, ZAbstractRODataset,
+  {$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}
       // Modified by cipto 8/2/2007 10:00:22 AM
       ZSequence, ZAbstractDataset, ZEncoding;
 
@@ -343,9 +345,9 @@ begin
   FTransactIsolationLevel := tiNone;
   FConnection := nil;
   FUseMetadata := True;
-  FDatasets := TList.Create;
+  FDatasets := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   // Modified by cipto 8/1/2007 1:45:56 PM
-  FSequences:= TList.Create;
+  FSequences:= {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   FLoginPrompt := False;
   FDesignConnection := False;
 end;
@@ -1416,7 +1418,7 @@ end;
   @param BinaryString Represents the BinaryString wich has to prepered
   @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Bytes)''~<|1023|<~
 }
-function TZAbstractConnection.GetBinaryEscapeStringFromString(const BinaryString: AnsiString): String;
+function TZAbstractConnection.GetBinaryEscapeStringFromString(const BinaryString: RawByteString): String;
 begin
   CheckConnected;
 
@@ -1434,7 +1436,7 @@ function TZAbstractConnection.GetBinaryEscapeStringFromStream(const Stream: TStr
 var
   FBlobSize: Integer;
   FBlobData: Pointer;
-  TempAnsi: AnsiString;
+  TempAnsi: RawByteString;
 begin
   CheckConnected;
 

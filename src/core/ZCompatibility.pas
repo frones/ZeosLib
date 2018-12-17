@@ -117,25 +117,40 @@ type
   PPAnsiChar = ^PAnsiChar;
   {$IFEND}
 
-const
-  {$IFDEF FPC}
-  { ustrings.inc/astrings.inc:
-  ....
+{$IFDEF FPC}
+{$IFDEF WITH_RAWBYTESTRING}
+Type
+  PAnsiRec = ^TAnsiRec;
+  TAnsiRec = Record
+    CodePage    : TSystemCodePage;
+    ElementSize : Word;
+{$ifdef CPU64}
+    { align fields  }
+    Dummy       : DWord;
+{$endif CPU64}
+    Ref         : SizeInt;
+    Len         : SizeInt;
+  end;
+  {$ENDIF}
+  {@-16 : Code page indicator.
+  @-12 : Character size (2 bytes)
   @-8  : SizeInt for reference count;
   @-4  : SizeInt for size;
   @    : String + Terminating #0;
-  .... }
+  Pchar(Ansistring) is a valid typecast.
+  So AS[i] is converted to the address @AS+i-1.}
+const
   StringLenOffSet             = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len};
   StringRefCntOffSet          = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Ref}+SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len};
-  CodePageOffSet              = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Ref}+SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len}+
-                                  {$ifdef CPU64}SizeOf(DWord)+{Dummy}{$ENDIF}
-                                  SizeOf(Word){elementsize}+SizeOf(TSystemCodePage){codePage};
+  {$IFDEF WITH_RAWBYTESTRING}
+  AnsiFirstOff                = SizeOf(TAnsiRec);
+  {$ENDIF}
   {$ELSE} //system.pas
+const
   StringLenOffSet             = SizeOf(Integer); {PStrRec.Len}
   StringRefCntOffSet          = SizeOf(Integer){PStrRec.RefCnt}+SizeOf(Integer){PStrRec.Len};
   CodePageOffSet              = SizeOf(Integer){PAnsiRec/PUnicodeRec.Ref}+SizeOf(Integer){PAnsiRec/PUnicodeRec.Len}+
-                                  {$IFDEF CPU64BITS}SizeOf(Integer)+{_Padding}{$ENDIF}
-                                  SizeOf(Word){elementsize}+SizeOf(Word){codePage};
+                                  SizeOf(Word){elementsize}+SizeOf(Word){codePage};  //=12
   {$ENDIF}
   ArrayLenOffSet              = SizeOf(ArrayLenInt);
 
@@ -446,15 +461,18 @@ function Hash(const S : RawByteString) : LongWord; overload;
 function Hash(const Key : ZWideString) : Cardinal; overload;
 
 {$IFNDEF NO_ANSISTRING}
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: {$IFDEF UNICODE}AnsiString{$ELSE}String{$ENDIF}); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: {$IFDEF UNICODE}AnsiString{$ELSE}String{$ENDIF}); overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 {$IFNDEF NO_UTF8STRING}
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
-procedure ZSetString(Src: PAnsiChar; const Len: LengthInt; var Dest: ZWideString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+procedure ZSetString(Src: PAnsiChar; const Len: LengthInt; var Dest: ZWideString); overload; //{$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$IF defined (WITH_RAWBYTESTRING) or defined(WITH_TBYTES_AS_RAWBYTESTRING)}
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$IFEND}
+{$IFDEF WITH_RAWBYTESTRING}
+procedure ZSetString(Src: PAnsiChar; Len: Cardinal; var Dest: RawByteString; CP: Word); overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+{$ENDIF}
 
 function RawConcat(const Vals: array of RawByteString): RawByteString;
 
@@ -885,7 +903,8 @@ begin
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
       begin
         Dest := EmptyRaw;
-        SetLength(Dest, Len);
+        SetLength(Dest, Len{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}(PByte(Dest)+Len)^ := Ord(#0);{$ENDIF}
         if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
       end;
       {$ELSE}
@@ -893,6 +912,31 @@ begin
       {$ENDIF}
 end;
 {$IFEND}
+
+{$IFDEF WITH_RAWBYTESTRING}
+procedure ZSetString(Src: PAnsiChar; Len: Cardinal; var Dest: RawByteString; CP: Word); overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+begin
+  if ( Len = 0 ) then
+    Dest := EmptyRaw
+  else begin
+    if (Pointer(Dest) <> nil) and //Empty?
+       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
+       ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then begin
+      if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
+    end else begin
+      Dest := EmptyRaw;
+      SetLength(Dest, Len);
+      if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
+    end;
+    {$IFDEF FPC}
+    PAnsiRec(pointer(Dest)-AnsiFirstOff)^.CodePage := CP;
+    {$ELSE}
+    //System.SetCodePage(Dest, CP, False); is not inlined on FPC and the code inside is alreade executed her
+    {%H-}PWord(NativeUInt(Dest) - CodePageOffSet)^ := CP;
+    {$ENDIF}
+  end;
+end;
+{$ENDIF}
 
 {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}
 function Min(const A, B: NativeUInt): NativeUInt;
@@ -933,7 +977,7 @@ begin
     end;
 end;
 
-{$IFDEF ZReturnAddress} 
+{$IFDEF ZReturnAddress}
 function ReturnAddress: Pointer;
 {$IFDEF PUREPASCAL}
   begin

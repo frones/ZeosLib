@@ -1613,7 +1613,7 @@ end;
 procedure PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar;
   SourceBytes, BufCodePoints: LengthInt; CP: Word);
 var
-  C: LongWord;
+  C: Cardinal;
   PEnd: PAnsiChar;
   {$IF not defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
     {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
@@ -1702,12 +1702,12 @@ A2U:
       else begin//for these where we do not have a conversion routine...
         PEnd := Source+SourceBytes-4;
         {first handle leading ASCII if possible }
-        while (Source < PEnd ) and (PLongWord(Source)^ and $80808080 = 0) and (BufCodePoints > 3)  do
+        while (Source < PEnd ) and (PCardinal(Source)^ and $80808080 = 0) and (BufCodePoints > 3)  do
         begin
-          C := PLongWord(Source)^;
-          PLongWord(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
+          C := PCardinal(Source)^;
+          PCardinal(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
           c := c shr 16;
-          PLongWord(Dest+2)^ := (c shl 8 or c) and $00ff00ff;
+          PCardinal(Dest+2)^ := (c shl 8 or c) and $00ff00ff;
           inc(Source,4);
           inc(Dest,4);
           Dec(BufCodePoints, 4);
@@ -1770,7 +1770,7 @@ end;
 function PRaw2PUnicodeBuf(Source: PAnsiChar; Dest: Pointer;
   SourceBytes: LengthInt; CP: Word): LengthInt;
 var
-  C: LongWord;
+  C: Cardinal;
   PEnd: PAnsiChar;
   wlen, BufCodePoints: LengthInt;
   {$IF not defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
@@ -1860,12 +1860,12 @@ begin
       else begin//for these where we do not have a conversion routine...
         PEnd := Source+SourceBytes-4;
         {first handle leading ASCII if possible }
-        while (Source < PEnd ) and (PLongWord(Source)^ and $80808080 = 0) do
+        while (Source < PEnd ) and (PCardinal(Source)^ and $80808080 = 0) do
         begin
-          C := PLongWord(Source)^;
-          PLongWord(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
+          C := PCardinal(Source)^;
+          PCardinal(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
           c := c shr 16;
-          PLongWord(PWideChar(Dest)+2)^ := (c shl 8 or c) and $00ff00ff;
+          PCardinal(PWideChar(Dest)+2)^ := (c shl 8 or c) and $00ff00ff;
           inc(Source,4);
           inc(PWideChar(Dest),4);
         end;
@@ -3476,15 +3476,15 @@ begin
   Result := etUSASCII;
   if (Source = nil) or (Len = 0) then Exit;
 
-  EndPtr := Source + Len -SizeOf(LongWord);
+  EndPtr := Source + Len -SizeOf(Cardinal);
 
   // skip leading US-ASCII part.
   while Source <= EndPtr do //Check next quad
   begin
-    if PLongWord(Source)^ and $80808080<>0 then Break; //break on first non USASCII sequence
-    inc(Source, SizeOf(LongWord));
+    if PCardinal(Source)^ and $80808080<>0 then Break; //break on first non USASCII sequence
+    inc(Source, SizeOf(Cardinal));
   end;
-  Inc(EndPtr, SizeOf(LongWord));
+  Inc(EndPtr, SizeOf(Cardinal));
 
   while Source < EndPtr do //Check bytes
   begin
@@ -3500,8 +3500,8 @@ begin
     c := Byte(Source^);
     case c of
       $00..$7F:  //Ascii7
-        if (EndPtr - Source > SizeOf(PLongWord)) and (PLongWord(Source)^ and $80808080 = 0) then //Check quad block ASCII again
-          inc(Source, SizeOf(PLongWord))
+        if (EndPtr - Source > SizeOf(PCardinal)) and (PCardinal(Source)^ and $80808080 = 0) then //Check quad block ASCII again
+          inc(Source, SizeOf(PCardinal))
         else
           Inc(Source);
       $C2..$DF:  // non-overlong 2-byte
@@ -3563,7 +3563,7 @@ begin
 end;
 
 function USASCII7ToUnicodeString(Source: PAnsiChar; Len: NativeUInt): ZWideString; overload;
-var C: LongWord;
+var C: Cardinal;
   Dest: PWideChar;
 begin
   SetString(Result, nil, Len);
@@ -3571,12 +3571,12 @@ begin
   {fast quad conversion from SHA}
   while Len >= 4 do
   begin
-    C := PLongWord(Source)^;
+    C := PCardinal(Source)^;
     dec(Len,4);
     inc(Source,4);
-    PLongWord(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
+    PCardinal(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
     c := c shr 16;
-    PLongWord(Dest+2)^ := (c shl 8 or c) and $00ff00ff;
+    PCardinal(Dest+2)^ := (c shl 8 or c) and $00ff00ff;
     inc(Dest,4);
   end;
   while Len > 0 do

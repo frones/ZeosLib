@@ -138,7 +138,7 @@ type THackedDataset = class(TDataset);
 }
 destructor TZBlobStream.Destroy;
 var
-  ATmp: AnsiString;
+  ATmp: RawByteString;
   UTmp: ZWideString;
   UnCachedLob: IZUnCachedLob;
 begin

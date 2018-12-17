@@ -253,8 +253,8 @@ type
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-27
 
     // (technobot) should any of these be moved to TZPostgreSQLDatabaseInfo?:
-    function GetPostgreSQLType(Oid: Integer): string;
-    function GetSQLTypeByOid(Oid: Integer): TZSQLType;
+    function GetPostgreSQLType(Oid: OID): string;
+    function GetSQLTypeByOid(Oid: OID): TZSQLType;
     function GetSQLTypeByName(const TypeName: string): TZSQLType;
     function TableTypeSQLExpression(const TableType: string; UseSchemas: Boolean):
       string;
@@ -1541,7 +1541,8 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog:
   end;
 
 var
-  I, ReturnType, ColumnTypeOid, ArgOid: Integer;
+  I, ReturnType: Integer;
+  ColumnTypeOid, ArgOid: OID;
   SQL, ReturnTypeType: string;
   IsInParam, IsOutParam: Boolean;
   ArgTypes, ArgNames, ArgModes: TStrings;
@@ -1666,33 +1667,25 @@ begin
         if (OutParamCount > 0) then
           Continue;
 
-        if (ReturnTypeType = 'c') then // Extract composit type columns
-        begin
+        if (ReturnTypeType = 'c') then begin // Extract composit type columns
           ColumnsRS := GetConnection.CreateStatement.ExecuteQuery(
             Format('SELECT a.attname,a.atttypid'
               + ' FROM pg_catalog.pg_attribute a WHERE a.attrelid=%s'
               + ' ORDER BY a.attnum',
               [ResultSet.GetStringByName('typrelid')]));
-          while ColumnsRS.Next do
-          begin
-            ColumnTypeOid := ColumnsRS.GetIntByName('atttypid');
+          while ColumnsRS.Next do begin
+            ColumnTypeOid := ColumnsRS.GetUIntByName('atttypid');
             InsertProcedureColumnRow(Result, GetStringByName('nspname'),
               GetStringByName('proname'), ColumnsRS.GetStringByName('attname'),
               Ord(pctResultSet), Ord(GetSQLTypeByOid(ColumnTypeOid)),
               GetPostgreSQLType(ColumnTypeOid), Ord(ntNullableUnknown));
           end;
           ColumnsRS.Close;
-        end
-        else
-        begin
-          if (ReturnTypeType <> 'p') then // Single non-pseudotype return value
-          begin
-            InsertProcedureColumnRow(Result, GetStringByName('nspname'),
-              GetStringByName('proname'), 'returnValue', Ord(pctReturn),
-              Ord(GetSQLTypeByOid(ReturnType)), GetPostgreSQLType(ReturnType),
-              Ord(ntNullableUnknown));
-          end;
-        end;
+        end else if (ReturnTypeType <> 'p') then // Single non-pseudotype return value
+          InsertProcedureColumnRow(Result, GetStringByName('nspname'),
+            GetStringByName('proname'), 'returnValue', Ord(pctReturn),
+            Ord(GetSQLTypeByOid(ReturnType)), GetPostgreSQLType(ReturnType),
+            Ord(ntNullableUnknown));
       end;
       Close;
     end;
@@ -3247,12 +3240,12 @@ begin
     end;
 end;
 
-function TZPostgreSQLDatabaseMetadata.GetPostgreSQLType(Oid: Integer): string;
+function TZPostgreSQLDatabaseMetadata.GetPostgreSQLType(Oid: OID): string;
 begin
   Result := (GetConnection as IZPostgreSQLConnection).GetTypeNameByOid(Oid);
 end;
 
-function TZPostgreSQLDatabaseMetadata.GetSQLTypeByOid(Oid: Integer): TZSQLType;
+function TZPostgreSQLDatabaseMetadata.GetSQLTypeByOid(Oid: OID): TZSQLType;
 var
   PostgreSQLConnection: IZPostgreSQLConnection;
 begin

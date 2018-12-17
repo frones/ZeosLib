@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  {$IFDEF TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,

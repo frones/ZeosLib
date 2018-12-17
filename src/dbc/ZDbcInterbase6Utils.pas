@@ -1163,18 +1163,15 @@ begin
           ClientVarManager.GetAsFloat(InParamValues[I]));
       stGUID, stString, stUnicodeString:
         begin
-          CP := ParamSqlData.GetIbSqlType(I);
-          case CP of
+          case ParamSqlData.GetIbSqlType(I) of
             SQL_TEXT, SQL_VARYING:
               begin
-                CP := ParamSqlData.GetIbSqlSubType(I);  //get code page
-                if CP > High(CodePageArray) then
-                  CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP)
-                else
-                  CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], CodePageArray[CP]);
+                if ConSettings^.ClientCodePage^.ID = CS_NONE
+                then CP := CodePageArray[ParamSqlData.GetIbSqlSubType(I) and 255]  //get code page
+                else CP := ConSettings^.ClientCodePage^.CP;
+                CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], CP);
               end;
-            else
-              CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP)
+            else CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP)
           end;
           ParamSqlData.UpdatePAnsiChar(I, CharRec.P, CharRec.Len);
         end;
@@ -1326,11 +1323,11 @@ begin
                   end;
           stString, stUnicodeString:
             begin
-              CP := ParamSqlData.GetIbSqlSubType(ParamIndex);  //get code page
+              CP := ParamSqlData.GetIbSqlSubType(ParamIndex) and 255;  //get code page
               if CP <> CS_BINARY then begin
-                if (CP > High(CodePageArray)) or (CP = CS_NONE)
-                then CP := ConSettings^.ClientCodePage^.CP
-                else CP := CodePageArray[CP];
+                if ConSettings.ClientCodePage^.ID = CS_NONE
+                then CP := CodePageArray[CP]  //get code page
+                else CP := ConSettings.ClientCodePage^.CP;
                 case InParamValues[i].VArray.VArrayVariantType of
                   vtString: RawTemp := ConSettings.ConvFuncs.ZStringToRaw(TStringDynArray(ZData)[j], ConSettings.CTRL_CP, CP);
                   {$IFNDEF NO_ANSISTRING}

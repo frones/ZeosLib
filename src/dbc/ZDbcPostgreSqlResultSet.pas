@@ -115,6 +115,7 @@ type
     function GetULong(ColumnIndex: Integer): UInt64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
+    function GetCurrency(ColumnIndex: Integer): Currency; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
     function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
@@ -819,6 +820,25 @@ begin
     end else
       Result := StrToBytes(DecodeString(InternalGetString(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}))); // Marsupilami79: InternalGetString is doing the same index decrement, as it is done here, so we need to increment it again before we call it here.
   end else Result := nil;
+end;
+
+function TZPostgreSQLResultSet.GetCurrency(
+  ColumnIndex: Integer): Currency;
+var
+  Len: NativeUInt;
+  Buffer: PAnsiChar;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stDate);
+{$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  Buffer := GetBuffer(ColumnIndex, Len);
+
+  if LastWasNull
+  then Result := 0
+  else ZSysUtils.SQLStrToFloatDef(Buffer, 0, Result);
 end;
 
 {**

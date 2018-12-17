@@ -123,7 +123,8 @@ type
   end;
 implementation
 
-uses ZSysUtils, ZTestCase, ZPgEventAlerter, DateUtils, {$IFDEF WITH_VCL_PREFIX}Vcl.Forms{$ELSE}Forms{$ENDIF};
+uses ZSysUtils, ZTestCase, ZPgEventAlerter, DateUtils, ZEncoding,
+  {$IFDEF WITH_VCL_PREFIX}Vcl.Forms{$ELSE}Forms{$ENDIF};
 
 { TZTestCompPostgreSQLBugReport }
 
@@ -451,7 +452,17 @@ var
   LookUp: TDBLookupComboBox;
 {$ENDIF}
 begin
-  if SkipForReason(srClosedBug) then Exit;
+  Connection.Connect;
+  if SkipForReason(srClosedBug) or
+     //eh the russion abrakadabra can no be mapped to other charsets then:
+    (connection.DbcConnection.GetConSettings.ClientCodePage.CP <> zCP_UTF8) or
+    (connection.DbcConnection.GetConSettings.ClientCodePage.CP <> zCP_WIN1251) or
+    (connection.DbcConnection.GetConSettings.ClientCodePage.CP <> zcp_DOS855) or
+    (connection.DbcConnection.GetConSettings.ClientCodePage.CP <> zCP_KOI8R)
+      {add some more if you run into same issue !!} then begin
+    BlankCheck;
+    Exit;
+  end;
 
 {$IFNDEF LINUX}
   Query1 := CreateQuery;

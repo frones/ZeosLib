@@ -67,7 +67,7 @@ uses
   Variants, Types, SysUtils, Classes, FMTBcd, {$IFNDEF FPC}SqlTimSt,{$ENDIF}
   {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings,
-  Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression, ZClasses
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs, {$ENDIF}ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression, ZClasses
   {$IFDEF WITH_GENERIC_TLISTTFIELD}, Generics.Collections{$ENDIF};
 
 type
@@ -79,7 +79,7 @@ type
   {$ENDIF}
 
   {$IF NOT DECLARED(TRecordBuffer)}
-  TRecordBuffer = PChar;
+  TRecordBuffer = {$IFDEF WITH_TRECBUF_PBYTE}TRecBuf{$ELSE}PChar{$ENDIF};
   {$IFEND}
 
   TGetCalcFieldsParamType = {$IFDEF WITH_GETCALCFIELDS_TRECBUF}TRecBuf{$ELSE}TRecordBuffer{$ENDIF};
@@ -87,7 +87,8 @@ type
   TSortType = (stAscending, stDescending, stIgnored);   {bangfauzan addition}
 
   {** Options for dataset. }
-  TZDatasetOption = (doOemTranslate, doCalcDefaults, doAlwaysDetailResync,
+  TZDatasetOption = ({$IFNDEF NO_TDATASET_TRANSLATE}doOemTranslate, {$ENDIF}
+    doCalcDefaults, doAlwaysDetailResync,
     doSmartOpen, doPreferPrepared, doDontSortOnPost, doUpdateMasterFirst,
     doCachedLobs, doAlignMaxRequiredWideStringFieldSize, doNoAlignDisplayWidth);
 
@@ -399,7 +400,11 @@ type
     property NestedDataSetClass: TDataSetClass read FNestedDataSetClass write FNestedDataSetClass;
     {$ENDIF}
   protected { Abstracts methods }
+    {$IFNDEF WITH_InternalAddRecord_TRecBuf}
     procedure InternalAddRecord(Buffer: Pointer; Append: Boolean); override;
+    {$ELSE}
+    procedure InternalAddRecord(Buffer: TRecBuf; Append: Boolean); override;
+    {$ENDIF}
     procedure InternalDelete; override;
     procedure InternalPost; override;
     {$IFNDEF FPC}
@@ -408,13 +413,19 @@ type
     procedure SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}); override;
     {$ENDIF}
     procedure DefineProperties(Filer: TFiler); override;
-
-    function GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode; DoCheck: Boolean):
-      TGetResult; override;
+    function GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode; DoCheck: Boolean): TGetResult; override;
     function GetRecordSize: Word; override;
     function GetActiveBuffer(out RowBuffer: PZRowBuffer): Boolean;
+    {$IFNDEF WITH_AllocRecBuf_TRecBuf}
     function AllocRecordBuffer: TRecordBuffer; override;
+    {$ELSE}
+    function AllocRecBuf: TRecBuf; override;
+    {$ENDIF}
+    {$IFNDEF WITH_FreeRecBuf_TRecBuf}
     procedure FreeRecordBuffer(var Buffer: TRecordBuffer); override;
+    {$ELSE}
+    procedure FreeRecBuf(var Buffer: TRecBuf); override;
+    {$ENDIF}
     function CreateNestedDataSet(DataSetField: TDataSetField): TDataSet; {$IFDEF WITH_FTDATASETSUPPORT}override;{$ENDIF}
     procedure CloseBlob(Field: TField); override;
 
@@ -429,7 +440,11 @@ type
     procedure InternalFirst; override;
     procedure InternalLast; override;
     procedure InternalInitRecord(Buffer: TRecordBuffer); override;
+    {$IFDEF WITH_InternalGotoBookmark_TBookmark}
+    procedure InternalGotoBookmark(Bookmark: TBookmark); override;
+    {$ELSE}
     procedure InternalGotoBookmark(Bookmark: Pointer); override;
+    {$ENDIF}
     procedure InternalRefresh; override;
     procedure InternalHandleException; override;
     procedure InternalSetToRecord(Buffer: TRecordBuffer); override;
@@ -496,7 +511,8 @@ type
     function PSGetQuoteChar: string; override;
     function PSGetKeyFields: string; override;
     function PSExecuteStatement(const ASQL: string; AParams: TParams;
-      ResultSet: Pointer = nil): Integer; override;
+      {$IFDEF WITH_IProviderSupportNG}var ResultSet: TDataSet
+      {$ELSE} ResultSet: Pointer = nil{$ENDIF}): Integer; override;
     procedure PSSetCommandText(const CommandText: string); override;
     {$ENDIF}
     function PSGetUpdateException(E: Exception;
@@ -548,7 +564,9 @@ type
     function CreateBlobStream(Field: TField; Mode: TBlobStreamMode): TStream;
       override;
     function UpdateStatus: TUpdateStatus; override;
+    {$IFNDEF NO_TDATASET_TRANSLATE}
     function Translate(Src, Dest: PAnsiChar; ToOem: Boolean): Integer; override;
+    {$ENDIF}
     procedure Prepare;
     procedure Unprepare;
     {$IFNDEF WITH_FIELDDEFLIST}
@@ -652,8 +670,12 @@ type
     { string values }
     function GetAsString: string; override;
     function GetAsWideString: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_FTWIDESTRING}override;{$ENDIF}
+    {$IFNDEF NO_ANSISTRING}
     function GetAsAnsiString: AnsiString; {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     function GetAsUTF8String: UTF8String; {$IFDEF WITH_ASUTF8STRING}override;{$ENDIF}
+    {$ENDIF}
     function GetAsRawByteString: RawByteString;
     { record/array types }
     function GetAsGuid: TGUID; {$IFDEF WITH_VIRTUAL_TFIELD_GETASGUID} override; {$ENDIF}
@@ -690,8 +712,12 @@ type
     { string values }
     procedure SetAsString(const Value: string); override;
     procedure SetAsWideString(const Value: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_FTWIDESTRING}override;{$ENDIF}
+    {$IFNDEF NO_ANSISTRING}
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_ASUTF8STRING}override;{$ENDIF}
+    {$ENDIF}
     procedure SetAsRawByteString(const Value: RawByteString);
 
     procedure SetAsBytes(const Value: TBytes); {$IFDEF TFIELD_HAS_ASBYTES}override;{$ENDIF}
@@ -728,8 +754,12 @@ type
     property AsUInt64: UInt64 read GetAsUInt64 write SetAsUInt64;
     property AsString;
     property AsWideString{$IFNDEF WITH_FTWIDESTRING}: WideString read GetAsWideString write SetAsWideString{$ENDIF};
+    {$IFNDEF NO_ANSISTRING}
     property AsAnsiString{$IFNDEF WITH_ASANSISTRING}: AnsiString read GetAsAnsiString write SetAsAnsiString{$ENDIF};
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     property AsUTF8String: UTF8String read GetAsUTF8String write SetAsUTF8String;
+    {$ENDIF}
     property AsBytes{$IFNDEF WITH_ASBYTES}: TBytes read GetAsBytes write SetAsBytes{$ENDIF};
     property AsVariant;
     property AttributeSet;
@@ -776,7 +806,9 @@ type
     property Transliterate: Boolean read FTransliterate write FTransliterate default False;//we try to prevent this case!
   public
     constructor Create(AOwner: TComponent); override;
+    {$IFNDEF NO_ANSISTRING}
     property Value: AnsiString read GetAsAnsiString write SetAsAnsiString;
+    {$ENDIF}
   published
     property EditMask;
     property FixedChar: Boolean read FFixedChar write FFixedChar default False;
@@ -826,8 +858,12 @@ type
     { string values }
     procedure SetAsString(const Value: string); override;
     procedure SetAsWideString(const Value: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_FTWIDESTRING}override;{$ENDIF}
+    {$IFNDEF NO_ANSISTRING}
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_ASUTF8STRING}override;{$ENDIF}
+    {$ENDIF}
     procedure SetAsRawByteString(const Value: RawByteString);
   protected
     procedure RangeError(Value, Min, Max: Extended);
@@ -2080,7 +2116,11 @@ end;
 procedure TZAbstractRODataset.StringFieldSetterFromAnsi(
   ColumnIndex: Integer; Buffer: PAnsiChar);
 begin
+  {$IFNDEF NO_ANSISTRING}
   RowAccessor.SetAnsiString(ColumnIndex, Buffer);
+  {$ELSE}
+  RowAccessor.SetRawByteString(ColumnIndex, Buffer);
+  {$ENDIF}
 end;
 {$ENDIF}
 
@@ -2631,7 +2671,11 @@ begin
     end;
 
     CurrentRow := SavedRow;
+    {$IFDEF AUTOREFCOUNT}
+    CurrentRows := nil;
+    {$ELSE}
     CurrentRows.Free;
+    {$ENDIF}
     CurrentRows := SavedRows;
     RestoreState(SavedState);
 
@@ -2782,7 +2826,7 @@ begin
   // we always use same TDataSet-level buffer, because we can see only one row
   {$IFNDEF WITH_UNIDIRECTIONALBUG}
   if IsUniDirectional then
-    Buffer := {$IFDEF WITH_BUFFERS_IS_TRECBUF}Pointer{$ENDIF}(Buffers[0]);
+    Buffer := TRecordBuffer(Buffers[0]);
   {$ENDIF}
 
   Result := grOK;
@@ -3137,25 +3181,41 @@ end;
   Allocates a buffer for new record.
   @return an allocated record buffer.
 }
+{$IFNDEF WITH_AllocRecBuf_TRecBuf}
 function TZAbstractRODataset.AllocRecordBuffer: TRecordBuffer;
+{$ELSE}
+function TZAbstractRODataset.AllocRecBuf: TRecBuf;
+{$ENDIF}
 begin
   {Dev notes:
    This will be called for OldRowBuffer, NewRowBuffer and for count of visible rows
    so NO memory wasting happens here!
   }
   RowAccessor.Alloc;
+  {$IFNDEF WITH_AllocRecBuf_TRecBuf}
   Result := TRecordBuffer(RowAccessor.RowBuffer);
+  {$ELSE}
+  Result := TRecBuf(RowAccessor.RowBuffer);
+  {$ENDIF}
 end;
 
 {**
   Frees a previously allocated record buffer.
   @param Buffer a previously allocated buffer.
 }
+{$IFNDEF WITH_FreeRecBuf_TRecBuf}
 procedure TZAbstractRODataset.FreeRecordBuffer(var Buffer: TRecordBuffer);
 begin
   RowAccessor.DisposeBuffer(PZRowBuffer(Buffer));
   Buffer := nil;
 end;
+{$ELSE}
+procedure TZAbstractRODataset.FreeRecBuf(var Buffer: TRecBuf);
+begin
+  RowAccessor.DisposeBuffer(PZRowBuffer(Buffer));
+  Buffer := 0;
+end;
+{$ENDIF}
 
 {**
   Fetch all records. Added by Patyi
@@ -3454,8 +3514,13 @@ begin
       end;
       if not IsUnidirectional then
       begin
+        {$IFDEF WITH_AllocRecBuf_TRecBuf}
+        FOldRowBuffer := PZRowBuffer(AllocRecBuf);
+        FNewRowBuffer := PZRowBuffer(AllocRecBuf);
+        {$ELSE}
         FOldRowBuffer := PZRowBuffer(AllocRecordBuffer);
         FNewRowBuffer := PZRowBuffer(AllocRecordBuffer);
+        {$ENDIF}
       end;
 
       SetStringFieldSetterAndSetter;
@@ -3488,15 +3553,25 @@ begin
 
   if not FRefreshInProgress then begin
     if (FOldRowBuffer <> nil) then
+      {$IFNDEF WITH_FreeRecBuf_TRecBuf}
       FreeRecordBuffer(TRecordBuffer(FOldRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+      {$ELSE}
+      FreeRecBuf(TRecordBuffer(FOldRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+      {$ENDIF}
     FOldRowBuffer := nil;
 
     if (FNewRowBuffer <> nil) and not FRefreshInProgress then
-      FreeRecordBuffer(TRecordBuffer(FNewRowBuffer));
+      {$IFNDEF WITH_FreeRecBuf_TRecBuf}
+      FreeRecordBuffer(TRecordBuffer(FNewRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+      {$ELSE}
+      FreeRecBuf(TRecordBuffer(FNewRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+      {$ENDIF}
     FNewRowBuffer := nil;
 
+    {$IFNDEF AUTOREFCOUNT}
     if RowAccessor <> nil then
       RowAccessor.Free;
+    {$ENDIF}
     RowAccessor := nil;
 
     { Destroy default fields }
@@ -3919,7 +3994,11 @@ end;
   Performs internal switch to the specified bookmark.
   @param Bookmark a specified bookmark.
 }
+{$IFDEF WITH_InternalGotoBookmark_TBookmark}
+procedure TZAbstractRODataset.InternalGotoBookmark(Bookmark: TBookmark);
+{$ELSE}
 procedure TZAbstractRODataset.InternalGotoBookmark(Bookmark: Pointer);
+{$ENDIF}
 begin
   if not GotoRow(PInteger(Bookmark)^) then
     raise EZDatabaseError.Create(SBookmarkWasNotFound);
@@ -3980,8 +4059,11 @@ end;
   @param Append <code>True</code> if record should be added to the end
     of the result set.
 }
-procedure TZAbstractRODataset.InternalAddRecord(Buffer: Pointer;
-  Append: Boolean);
+{$IFNDEF WITH_InternalAddRecord_TRecBuf}
+procedure TZAbstractRODataset.InternalAddRecord(Buffer: Pointer; Append: Boolean);
+{$ELSE}
+procedure TZAbstractRODataset.InternalAddRecord(Buffer: TRecBuf; Append: Boolean);
+{$ENDIF}
 begin
   RaiseReadOnlyError;
 end;
@@ -4413,13 +4495,16 @@ begin
   if not OnlyDataFields then
   begin
     { Processes fields if come calculated or lookup fields are involved. }
+    {$IFDEF WITH_AllocRecBuf_TRecBuf}
+    SearchRowBuffer := PZRowBuffer(AllocRecBuf);
+    {$ELSE}
     SearchRowBuffer := PZRowBuffer(AllocRecordBuffer);
+    {$ENDIF}
     try
       I := 0;
       FieldIndices := DefineFieldIndices(FieldsLookupTable, FieldRefs);
       RowCount := CurrentRows.Count;
-      while True do
-      begin
+      while True do begin
         while (I >= RowCount) and FetchOneRow do
           RowCount := CurrentRows.Count;
         if I >= RowCount then
@@ -4436,8 +4521,7 @@ begin
           FieldRefs, FieldIndices, RowAccessor, RowValues);
 
         if CompareDataFields(DecodedKeyValues, RowValues,
-          PartialKey, CaseInsensitive) then
-        begin
+          PartialKey, CaseInsensitive) then begin
           Result := I + 1;
           Break;
         end;
@@ -4446,7 +4530,11 @@ begin
       end;
     finally
       if SearchRowBuffer <> nil then
-        FreeRecordBuffer(TRecordBuffer(SearchRowBuffer));
+        {$IFNDEF WITH_FreeRecBuf_TRecBuf}
+        FreeRecordBuffer(TRecordBuffer(SearchRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+        {$ELSE}
+        FreeRecBuf(TRecordBuffer(SearchRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+        {$ENDIF}
     end;
   end
   else
@@ -4541,7 +4629,11 @@ begin
   FieldRefs := DefineFields(Self, ResultFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
   FieldIndices := DefineFieldIndices(FieldsLookupTable, FieldRefs);
   SetLength(ResultValues, Length(FieldRefs));
+  {$IFDEF WITH_AllocRecBuf_TRecBuf}
+  SearchRowBuffer := PZRowBuffer(AllocRecBuf);
+  {$ELSE}
   SearchRowBuffer := PZRowBuffer(AllocRecordBuffer);
+  {$ENDIF}
   try
     RowNo := Integer(CurrentRows[RowNo - 1]);
     if ResultSet.GetRow <> RowNo then
@@ -4554,7 +4646,11 @@ begin
     RetrieveDataFieldsFromRowAccessor(
       FieldRefs, FieldIndices, RowAccessor, ResultValues);
   finally
-    FreeRecordBuffer(TRecordBuffer(SearchRowBuffer));
+    {$IFNDEF WITH_FreeRecBuf_TRecBuf}
+    FreeRecordBuffer(TRecordBuffer(SearchRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+    {$ELSE}
+    FreeRecBuf(TRecordBuffer(SearchRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
+    {$ENDIF}
   end;
 
   if Length(FieldIndices) = 1 then
@@ -4590,6 +4686,7 @@ end;
 {**
   Translates strings between ansi and oem character sets.
 }
+{$IFNDEF NO_TDATASET_TRANSLATE}
 function TZAbstractRODataset.Translate(Src, Dest: PAnsiChar; ToOem: Boolean):
    Integer;
 begin
@@ -4615,7 +4712,7 @@ begin
   else
     Result := 0;
 end;
-
+{$ENDIF}
 {**
   Prepares the query.
   If this actually does happen at the database connection level depends on the
@@ -5106,7 +5203,8 @@ function TZAbstractRODataset.PSExecuteStatement(const ASQL: WideString; AParams:
   ResultSet: Pointer = nil): Integer;
 {$ELSE}
 function TZAbstractRODataset.PSExecuteStatement(const ASQL: string;
-  AParams: TParams; ResultSet: Pointer): Integer;
+  AParams: TParams; {$IFDEF WITH_IProviderSupportNG}var ResultSet: TDataSet
+      {$ELSE}ResultSet: Pointer = nil{$ENDIF}): Integer;
 {$ENDIF}
 var
   I: Integer;
@@ -5174,7 +5272,7 @@ end;
 
 {$IFDEF WITH_IPROVIDERSUPPORT_GUID}
 type
-  IProviderSupportActual = {$IF DECLARED(IProviderSupportNG)} IProviderSupportNG {$ELSE} IProviderSupport {$IFEND};
+  IProviderSupportActual = {$IF DECLARED(IProviderSupportNG)}IProviderSupportNG{$ELSE} IProviderSupport {$IFEND};
 {$ENDIF}
 
 procedure TZAbstractRODataset.CreateFields;
@@ -5627,6 +5725,7 @@ begin
     Result := '';
 end;
 
+{$IFNDEF NO_ANSISTRING}
 function TZField.GetAsAnsiString: AnsiString;
 var IsNull: Boolean;
 begin
@@ -5635,7 +5734,9 @@ begin
   else
     Result := '';
 end;
+{$ENDIF}
 
+{$IFNDEF NO_UTF8STRING}
 function TZField.GetAsUTF8String: UTF8String;
 var IsNull: Boolean;
 begin
@@ -5644,6 +5745,7 @@ begin
   else
     Result := '';
 end;
+{$ENDIF}
 
 function TZField.GetAsRawByteString: RawByteString;
 var IsNull: Boolean;
@@ -5680,7 +5782,7 @@ function TZField.GetAsVariant: Variant;
 begin
   case  Self.DataType of
     ftUnknown: Result := Null;
-    ftString: Result := GetAsAnsiString;
+    ftString: Result := {$IFNDEF NO_ANSISTRING}GetAsAnsiString{$ELSE}GetAsRawByteString{$ENDIF};
     ftSmallint: Result := GetAsSmallInt;
     ftInteger: Result := GetAsInteger;
     ftWord: Result := GetAsWord;
@@ -5695,14 +5797,14 @@ begin
     ftVarBytes: Result := GetAsBytes;
     ftAutoInc: Result := GetAsInteger;
     ftBlob: Result := GetAsBytes;
-    ftMemo: Result := GetAsAnsiString;
+    ftMemo: Result := {$IFNDEF NO_ANSISTRING}GetAsAnsiString{$ELSE}GetAsRawByteString{$ENDIF};
     //ftGraphic: ;
     //ftFmtMemo: ;
     //ftParadoxOle: ;
     //ftDBaseOle: ;
     //ftTypedBinary: ;
     ftCursor: ;
-    ftFixedChar: Result := GetAsAnsiString;
+    ftFixedChar: Result := {$IFNDEF NO_ANSISTRING}GetAsAnsiString{$ELSE}GetAsRawByteString{$ENDIF};
     ftWideString: Result := GetAsWideString;
     ftLargeint: Result := GetAsLargeInt;
     ftADT: ;
@@ -5929,6 +6031,7 @@ begin
   end;
 end;
 
+{$IFNDEF NO_ANSISTRING}
 procedure TZField.SetAsAnsiString(const Value: AnsiString);
 begin
   if IsFieldEditable then
@@ -5937,7 +6040,9 @@ begin
     (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
+{$ENDIF}
 
+{$IFNDEF NO_UTF8STRING}
 procedure TZField.SetAsUTF8String(const Value: UTF8String);
 begin
   if IsFieldEditable then
@@ -5946,6 +6051,7 @@ begin
     (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
+{$ENDIF}
 
 procedure TZField.SetAsRawByteString(const Value: RawByteString);
 begin
@@ -6235,6 +6341,7 @@ begin
     inherited SetAsWideString(Value);
 end;
 
+{$IFNDEF NO_ANSISTRING}
 procedure TZNumericField.SetAsAnsiString(const Value: AnsiString);
 begin
   if FRangeCheck then
@@ -6242,7 +6349,9 @@ begin
   else
     inherited SetAsAnsiString(Value);
 end;
+{$ENDIF}
 
+{$IFNDEF NO_UTF8STRING}
 procedure TZNumericField.SetAsUTF8String(const Value: UTF8String);
 begin
   if FRangeCheck then
@@ -6250,6 +6359,7 @@ begin
   else
     inherited SetAsUTF8String(Value);
 end;
+{$ENDIF}
 
 procedure TZNumericField.SetAsRawByteString(const Value: RawByteString);
 begin

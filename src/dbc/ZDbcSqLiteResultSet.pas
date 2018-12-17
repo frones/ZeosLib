@@ -280,10 +280,12 @@ constructor TZSQLiteResultSet.Create(const PlainDriver: IZSQLitePlainDriver;
   const Statement: IZStatement; const SQL: string; const Handle: Psqlite;
   const StmtHandle: Psqlite_vm; const UndefinedVarcharAsStringLength: Integer;
   ExtendedErrorMessage: Boolean);
+var Metadata: TContainedObject;
 begin
-  inherited Create(Statement, SQL, TZSQLiteResultSetMetadata.Create(
-    Statement.GetConnection.GetMetadata, SQL, Self),
-    Statement.GetConnection.GetConSettings);
+  if PlainDriver.CompiledWith_SQLITE_ENABLE_COLUMN_METADATA
+  then MetaData := TZSQLiteResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self)
+  else MetaData := TZAbstractResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self);
+  inherited Create(Statement, SQL, MetaData, Statement.GetConnection.GetConSettings);
 
   FHandle := Handle;
   FStmtHandle := StmtHandle;
